@@ -125,6 +125,7 @@ docker_files=(/usr/bin/docker*
 /var/lib/docker
 /var/run/docker*
 /var/lib/dockershim
+/usr/local/bin/containerd
 /etc/docker
 /etc/cni/net.d)
 
