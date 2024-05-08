@@ -147,7 +147,7 @@ spec:
       serviceAccount: os-internal
       containers:
       - name: app-service
-        image: beclab/app-service:0.2.2
+        image: beclab/app-service:0.2.3
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
