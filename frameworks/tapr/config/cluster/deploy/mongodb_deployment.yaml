@@ -254,7 +254,7 @@ spec:
         timeoutSeconds: 1  
   backup:
     enabled: true
-    image: beclab/percona-backup-mongo:2.2.1
+    image: beclab/percona-backup-mongo:2.2.2
     serviceAccountName: percona-server-mongodb-operator
     containerSecurityContext:
       privileged: true
