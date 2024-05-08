@@ -126,7 +126,7 @@ spec:
             fieldRef:
               fieldPath: status.podIP 
       - name: frontend
-        image: nginx:stable-alpine3.17-slim
+        image: jboesl/docker-nginx-headers-more:latest
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: nginx-config
@@ -469,8 +469,9 @@ data:
           proxy_pass http://headscale-server-svc:8080;
           proxy_method POST;
           proxy_http_version 1.1;
-          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Upgrade 'tailscale-control-protocol';
           proxy_set_header Connection '$connection_upgrade';
+          more_set_headers 'Upgrade: $http_upgrade';
         }
         location / {
           proxy_pass http://headscale-server-svc:8080;
