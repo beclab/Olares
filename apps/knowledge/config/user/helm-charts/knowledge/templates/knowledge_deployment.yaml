@@ -168,8 +168,8 @@ spec:
             cpu: 20m
             memory: 50Mi
           limits:
-            cpu: "500m"
-            memory: 300Mi
+            cpu: "800m"
+            memory: 400Mi
 
       volumes:
       - name: watch-dir
