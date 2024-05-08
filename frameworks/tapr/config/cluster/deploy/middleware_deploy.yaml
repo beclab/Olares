@@ -71,7 +71,7 @@ spec:
       containers:
       # must be first container
       - name: percona-server-mongodb-operator
-        image: beclab/percona-server-mongodb-operator:1.14.0
+        image: beclab/percona-server-mongodb-operator:1.14.1
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 60000
@@ -117,7 +117,7 @@ spec:
         - name: pgbackup-dir
           mountPath: /backup
       - name: redis-cluster-operator
-        image: beclab/redis-cluster-operator:0.1.5
+        image: beclab/redis-cluster-operator:0.1.6
         imagePullPolicy: IfNotPresent
         env:
         - name: WATCH_NAMESPACE
