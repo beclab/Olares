@@ -65,7 +65,7 @@ find_version(){
         [ x"$KKE_VERSION" != x"" ] && [ x"$KUBE_VERSION" != x"" ] && return
     fi
 
-    KKE_VERSION=0.1.18       # don't need to change it, as long as it's greater than 0.1.6
+    KKE_VERSION=0.1.19       # don't need to change it, as long as it's greater than 0.1.6
 
     local kube="$(get_kubelet_version)"
     if [ x"$kube" != x"" ]; then
@@ -82,7 +82,7 @@ remove_cluster(){
     fi
 
     if [ x"$KKE_VERSION" == x"" ]; then
-        KKE_VERSION="0.1.18"
+        KKE_VERSION="0.1.19"
     fi
 
     log_info 'remove kubernetes cluster'

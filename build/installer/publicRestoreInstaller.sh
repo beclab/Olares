@@ -1556,7 +1556,7 @@ install_containerd(){
 }
 
 install_k8s() {
-    KKE_VERSION=0.1.18
+    KKE_VERSION=0.1.19
 
     ensure_success $sh_c "mkdir -p /etc/kke"
 

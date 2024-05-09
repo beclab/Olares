@@ -485,7 +485,7 @@ check_node_ready(){
 
 add_worker_node() {
     # download kke
-    KKE_VERSION=0.1.18
+    KKE_VERSION=0.1.19
 
     log_info 'add this node to k8s cluster'
 
