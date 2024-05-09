@@ -200,6 +200,20 @@ spec:
       labels:
         tier: bfl
     spec:
+{{ if .Values.bfl.admin_user }}
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+              - key: node-role.kubernetes.io/master
+                operator: Exists
+            weight: 10
+{{ end }}            
       serviceAccountName: bytetrade-controller
       initContainers:
       - name: init-userspace
@@ -224,7 +238,7 @@ spec:
           mkdir -p /userspace/Data
       containers:
       - name: api
-        image: beclab/bfl:v0.3.25
+        image: beclab/bfl:v0.3.26
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: userspace-dir
