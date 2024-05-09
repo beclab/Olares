@@ -49,7 +49,7 @@ metadata:
     applications.app.bytetrade.io/author: bytetrade.io
 
     applications.app.bytetrade.io/name: dify
-    applications.app.bytetrade.io/owner: {{ .Values.bfl.username }}
+    applications.app.bytetrade.io/owner: '{{ .Values.bfl.username }}'
   annotations:
     applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/dify/icon.png
     applications.app.bytetrade.io/title: Dify.ai

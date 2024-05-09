@@ -31,7 +31,7 @@ metadata:
     app: headscale
     applications.app.bytetrade.io/author: bytetrade.io
     applications.app.bytetrade.io/name: headscale
-    applications.app.bytetrade.io/owner: {{ .Values.bfl.username }}
+    applications.app.bytetrade.io/owner: '{{ .Values.bfl.username }}'
   annotations:
     applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/headscale/icon.png
     applications.app.bytetrade.io/policies: '{"policies":[]}'

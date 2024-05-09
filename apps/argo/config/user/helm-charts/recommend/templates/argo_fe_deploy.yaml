@@ -41,7 +41,7 @@ metadata:
     applications.app.bytetrade.io/author: bytetrade.io
 
     applications.app.bytetrade.io/name: recommend
-    applications.app.bytetrade.io/owner: {{ .Values.bfl.username }}
+    applications.app.bytetrade.io/owner: '{{ .Values.bfl.username }}'
   annotations:
     applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/recommend/icon.png
     applications.app.bytetrade.io/title: recommend

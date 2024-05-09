@@ -147,7 +147,7 @@ metadata:
 
 {{ if (eq .Values.debugVersion true) }}
     applications.app.bytetrade.io/name: infisical
-    applications.app.bytetrade.io/owner: {{ .Values.bfl.username }}
+    applications.app.bytetrade.io/owner: '{{ .Values.bfl.username }}'
   annotations:
     applications.app.bytetrade.io/icon: https://bookface-images.s3.amazonaws.com/small_logos/621cb43ec50d1aae545391abcc114014c84d295f.png
     applications.app.bytetrade.io/title: Infisical
@@ -229,7 +229,7 @@ spec:
           containerPort: 8080
         env:
         - name: OWNER
-          value: {{ .Values.bfl.username }}
+          value: '{{ .Values.bfl.username }}'
         - name: MONGO_USER
           value: infisical-{{ .Values.bfl.username }}
         - name: MONGO_DB

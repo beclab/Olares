@@ -168,7 +168,7 @@ metadata:
     tier: bfl
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
-    username: {{ .Values.bfl.username }}
+    username: '{{ .Values.bfl.username }}'
     userspace_rand16: {{ default $userspace_rand16 .Values.bfl.userspace_rand16 }}
     userspace_pv: {{ default $userspace_pv .Values.bfl.userspace_pv }}
     userspace_pvc: {{ default $userspace_pvc .Values.bfl.userspace_pvc }}

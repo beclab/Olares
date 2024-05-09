@@ -9,7 +9,7 @@ metadata:
   labels:
     app: settings
     applications.app.bytetrade.io/name: settings
-    applications.app.bytetrade.io/owner: {{ .Values.bfl.username }}
+    applications.app.bytetrade.io/owner: '{{ .Values.bfl.username }}'
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
     applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/settings/icon.png
