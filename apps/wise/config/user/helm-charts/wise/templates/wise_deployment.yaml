@@ -62,7 +62,7 @@ spec:
 
       containers:
       - name: frontend
-        image: beclab/wise:v0.1.22
+        image: beclab/wise:v0.1.23
         ports:
         - containerPort: 80
         volumeMounts:

@@ -79,7 +79,7 @@ spec:
     spec:
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.1.22"
+        image: "beclab/knowledge-base-api:v0.1.23"
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
