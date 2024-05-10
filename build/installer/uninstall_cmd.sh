@@ -85,6 +85,8 @@ remove_cluster(){
         KKE_VERSION="0.1.19"
     fi
 
+    forceUninstall="${FORCE_UNINSTALL_CLUSTER}"
+
     log_info 'remove kubernetes cluster'
 
     if [ x"$PROXY" != x"" ]; then
@@ -103,12 +105,14 @@ remove_cluster(){
     fi
     ensure_success $sh_c "chmod +x kk"
 
-    echo
-    read -r -p "Are you sure to delete this cluster? [yes/no]: " ans </dev/tty
+    if [ -z "$forceUninstall" ]; then
+        echo
+        read -r -p "Are you sure to delete this cluster? [yes/no]: " ans </dev/tty
 
-    if [ x"$ans" != x"yes" ]; then
-        echo "exiting..."
-        exit
+        if [ x"$ans" != x"yes" ]; then
+            echo "exiting..."
+            exit
+        fi
     fi
     
     $sh_c "./kk delete cluster -A --with-kubernetes $KUBE_VERSION"
