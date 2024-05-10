@@ -1344,8 +1344,15 @@ bfl:
 _EOF
 
   sed -i "s/#__DOMAIN_NAME__/${domainname}/" ${BASE_DIR}/wizard/config/settings/templates/terminus_cr.yaml
+
+  publicIp=$(curl -sL http://169.254.169.254/latest/meta-data/public-ipv4 2>&1)
+  publicHostname=$(curl -sL http://169.254.169.254/latest/meta-data/public-hostname 2>&1)
+
   local selfhosted="true"
   if [[ ! -z "${TERMINUS_IS_CLOUD_VERSION}" && x"${TERMINUS_IS_CLOUD_VERSION}" == x"true" ]]; then
+    selfhosted="false"
+  fi
+  if [[ x"$publicHostname" =~ "amazonaws" && -n "$publicIp" && ! x"$publicIp" =~ "Not Found" ]]; then
     selfhosted="false"
   fi
   sed -i "s/#__SELFHOSTED__/${selfhosted}/" ${BASE_DIR}/wizard/config/settings/templates/terminus_cr.yaml
