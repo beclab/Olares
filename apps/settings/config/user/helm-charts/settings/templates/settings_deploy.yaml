@@ -82,6 +82,12 @@ spec:
           value: app-service.os-system
         - name: APP_SERVICE_SERVICE_PORT
           value: '6755'
+        - name: APP_SERVICE_CHAIN_ID
+          value: '10'
+        - name: APP_SERVICE_VERIFYING_CONTRACT
+          value: '0xe2eaba0979277a90511f8873ae1e8ca26b54e740'
+        - name: APP_SERVICE_CLOUD_URL
+          value: 'https://cloud-api.bttcdn.com'
         # value: none / nvidia / nvshare / virtaitech
         - name: GPU
           value: {{ .Values.gpu }}
