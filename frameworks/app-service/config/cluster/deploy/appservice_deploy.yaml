@@ -166,6 +166,8 @@ spec:
           value: "beclab/ws-gateway:v1.0.3"
         - name: UPLOAD_CONTAINER_IMAGE
           value: "beclab/upload:v1.0.1"
+        - name: JOB_IMAGE
+          value: "beclab/upgrade-job:0.1.1"
         - name: APP_RANDOM_KEY
           valueFrom:
             secretKeyRef:
