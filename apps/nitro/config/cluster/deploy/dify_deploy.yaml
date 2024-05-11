@@ -105,7 +105,7 @@ data:
       }
 
       location /console/api/login {
-        # 检查用户是否已经登录
+        # Check if user has logged in~
         # access_by_lua_file login.lua;
 
         proxy_pass http://dify:5001;
@@ -114,60 +114,60 @@ data:
       }
 
       location /console/api {
-        # 检查用户是否已经登录
+        # Check if user has logged in~
         access_by_lua_file login.lua;
 
-        # 向后端服务转发请求
+        # Proxy pass the request to backend~
         proxy_pass http://dify:5001;
         # proxy_pass http://127.0.0.1:5001;
         include proxy.conf;
       }
 
       location /api {
-        # 检查用户是否已经登录
+        # Check if user has logged in~
         access_by_lua_file login.lua;
 
-        # 向后端服务转发请求
+        # Proxy pass the request to backend~
         proxy_pass http://dify:5001;
         # proxy_pass http://127.0.0.1:5001;
         include proxy.conf;
       }
 
       location /v1 {
-        # 检查用户是否已经登录
+        # Check if user has logged in~
         access_by_lua_file login.lua;
 
-        # 向后端服务转发请求
+        # Proxy pass the request to backend~
         proxy_pass http://dify:5001;
         # proxy_pass http://127.0.0.1:5001;
         include proxy.conf;
       }
 
       location /files {
-        # 检查用户是否已经登录
+        # Check if user has logged in~
         access_by_lua_file login.lua;
 
-        # 向后端服务转发请求
+        # Proxy pass the request to backend~
         proxy_pass http://dify:5001;
         # proxy_pass http://127.0.0.1:5001;
         include proxy.conf;
       }
 
       location /signin {
-        # 检查用户是否已经登录
+        # Check if user has logged in~
         access_by_lua_file login.lua;
 
-        # 向后端服务转发请求
+        # Proxy pass the request to backend~
         # proxy_pass http://127.0.0.1:3000;
         proxy_pass http://dify:3000/apps;
         include proxy.conf;
       }
 
       location / {
-        # 检查用户是否已经登录
+        # Check if user has logged in~
         access_by_lua_file login.lua;
 
-        # 向后端服务转发请求
+        # Proxy pass the request to backend~
         # proxy_pass http://127.0.0.1:3000;
         proxy_pass http://dify:3000;
         include proxy.conf;
@@ -177,45 +177,54 @@ data:
     local cjson = require "cjson.safe"
 
     local function processAuthorization()
+        -- Check if current URL is "/signin"
+        ngx.log(ngx.STDERR, "URI: " .. ngx.var.uri)
+        local isSignIn = ngx.var.uri == "/signin"
+
         local headers = ngx.req.get_headers()
 
-        -- 检查 Authorization 字段是否存在且不为空字符串
-        local authorizationHeader = headers["Authorization"]
-        if authorizationHeader and authorizationHeader:match("^Bearer%s+.+") then
-            ngx.log(ngx.STDERR, "Authorization header with non-empty Bearer token found. Skipping further processing.")
-            return
-        end
+        if not isSignIn then
+          -- Check if "Authorization" exists and is not empty string
+          local authorizationHeader = headers["Authorization"]
+          if authorizationHeader and authorizationHeader:match("^Bearer%s+.+") then
+              ngx.log(ngx.STDERR, "Authorization header with non-empty Bearer token found. Skipping further processing.")
+              return
+          end
 
-        -- 检查是否存在"Next-Url"字段并且其值为"/signin"
-        if headers["Next-Url"] == "/signin" then
-            ngx.req.clear_header("Next-Url")
-            ngx.log(ngx.STDERR, "Removed 'Next-Url' header with value '/signin'")
-        end
+          -- Check is "Next-Url" exists and is "/signin"
+          if headers["Next-Url"] == "/signin" then
+              ngx.req.clear_header("Next-Url")
+              ngx.log(ngx.STDERR, "Removed 'Next-Url' header with value '/signin'")
+          end
 
-        local cookie = ngx.var.http_cookie
-        local redirectedURL = ngx.var.request_uri
+          local cookie = ngx.var.http_cookie
+          local redirectedURL = ngx.var.request_uri
 
-        -- 获取下一跳地址
-        ngx.log(ngx.STDERR, "Next URL: " .. redirectedURL)
-        -- 在这里可以对下一跳地址进行进一步处理
+          -- Get next URL
+          ngx.log(ngx.STDERR, "Next URL: " .. redirectedURL)
 
-        if cookie then
-            local _, _, token = string.find(cookie, "Authorization=Bearer ([^;]+)")
+          if cookie then
+              local _, _, token = string.find(cookie, "Authorization=Bearer ([^;]+)")
 
-            if token then
-                ngx.req.set_header("Authorization", "Bearer " .. token)
-                ngx.log(ngx.STDERR, "Authorization token found in cookie. Token: " .. token)
-                return
-            end
+              if token then
+                  ngx.req.set_header("Authorization", "Bearer " .. token)
+                  ngx.log(ngx.STDERR, "Authorization token found in cookie. Token: " .. token)
+                  return
+              end
+          end
         end
 
         local username = headers["x-bfl-user"]
         local orig_ct = headers["Content-Type"]
+        local user_email = 'admin@bytetrade.io'
+        if username ~= nil and username ~= '' then
+          user_email = username .. '@dify.ai'
+        end
 
         ngx.req.set_header("Content-Type", "application/json")
         local res = ngx.location.capture("/console/api/login", {
             method = ngx.HTTP_POST,
-            body = '{"email":"' .. username .. '@dify.ai","password":"abcd123456","remember_me":true}'
+            body = '{"email":"' .. user_email .. '","password":"abcd123456","remember_me":true}'
         })
         ngx.req.set_header("Content-Type", orig_ct)
 
