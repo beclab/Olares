@@ -488,6 +488,7 @@ function upgrade_terminus(){
     # clear apps values.yaml
     cat /dev/null > ${BASE_DIR}/wizard/config/apps/values.yaml
     cat /dev/null > ${BASE_DIR}/wizard/config/launcher/values.yaml
+    local appservice_pod=$(get_appservice_pod)
     local copy_charts=("launcher" "apps")
     for cc in ${copy_charts[@]}; do
         ensure_success $sh_c "${KUBECTL} cp ${BASE_DIR}/wizard/config/${cc} os-system/${appservice_pod}:/userapps"
