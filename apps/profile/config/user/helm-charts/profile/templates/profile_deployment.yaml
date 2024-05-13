@@ -62,19 +62,19 @@ spec:
 
       containers:
       - name: profile-editor
-        image: beclab/profile-editor:v0.3.18
+        image: beclab/profile-editor:v0.3.19
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
       
       - name: profile-preview
-        image: beclab/profile-preview:v0.3.18
+        image: beclab/profile-preview:v0.3.19
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8090
 
       - name: profile-services
-        image: beclab/profile-services:v0.3.18
+        image: beclab/profile-services:v0.3.19
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3020       
