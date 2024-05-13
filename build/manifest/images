@@ -27,7 +27,7 @@ kubesphere/prometheus-operator:v0.55.1
 mirrorgooglecontainers/defaultbackend-amd64:1.4
 openebs/linux-utils:3.3.0
 openebs/provisioner-localpv:3.3.0
-beclab/percona-server-mongodb-operator:1.15.1
+beclab/percona-server-mongodb-operator:1.15.2
 prom/alertmanager:v0.23.0
 prom/node-exporter:v1.3.1
 prom/prometheus:v2.34.0

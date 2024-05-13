@@ -71,7 +71,7 @@ spec:
       containers:
       # must be first container
       - name: percona-server-mongodb-operator
-        image: beclab/percona-server-mongodb-operator:1.14.1
+        image: beclab/percona-server-mongodb-operator:1.14.2
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 60000
