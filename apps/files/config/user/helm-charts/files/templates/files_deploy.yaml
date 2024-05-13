@@ -92,7 +92,7 @@ spec:
           value: system-server.user-system-{{ .Values.bfl.username }}
 
       - name: files
-        image: beclab/files-server:v0.2.12
+        image: beclab/files-server:v0.2.14
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: fb-data
@@ -103,6 +103,8 @@ spec:
           mountPath: /data/Application
         - name: watch-dir
           mountPath: /data/Home/Documents
+        - name: upload-appdata
+          mountPath: /appcache/
         ports:
         - containerPort: 8110
         env:
