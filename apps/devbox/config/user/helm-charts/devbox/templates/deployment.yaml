@@ -164,7 +164,7 @@ spec:
 
       containers:
         - name: devbox
-          image: beclab/devbox-server:v0.1.25
+          image: beclab/devbox-server:v0.1.26
           imagePullPolicy: IfNotPresent
           args:
           - server
@@ -327,7 +327,7 @@ spec:
                 fieldPath: status.podIP
       containers:
         - name: devbox
-          image: beclab/devbox:v0.1.25
+          image: beclab/devbox:v0.1.26
           imagePullPolicy: IfNotPresent
           ports:
             - name: port
