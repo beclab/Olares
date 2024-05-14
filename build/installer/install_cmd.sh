@@ -1345,8 +1345,8 @@ _EOF
 
   sed -i "s/#__DOMAIN_NAME__/${domainname}/" ${BASE_DIR}/wizard/config/settings/templates/terminus_cr.yaml
 
-  publicIp=$(curl -sL http://169.254.169.254/latest/meta-data/public-ipv4 2>&1)
-  publicHostname=$(curl -sL http://169.254.169.254/latest/meta-data/public-hostname 2>&1)
+  publicIp=$(curl --connect-timeout 5 -sL http://169.254.169.254/latest/meta-data/public-ipv4 2>&1)
+  publicHostname=$(curl --connect-timeout 5 -sL http://169.254.169.254/latest/meta-data/public-hostname 2>&1)
 
   local selfhosted="true"
   if [[ ! -z "${TERMINUS_IS_CLOUD_VERSION}" && x"${TERMINUS_IS_CLOUD_VERSION}" == x"true" ]]; then
