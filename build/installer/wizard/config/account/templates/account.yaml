@@ -1,10 +1,8 @@
-
-
 ---
 apiVersion: iam.kubesphere.io/v1alpha2
 kind: User
 metadata:
-  name: {{.Values.user.name}}
+  name: '{{.Values.user.name}}'
   annotations:
     iam.kubesphere.io/uninitialized: "true"
     helm.sh/resource-policy: keep
