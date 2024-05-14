@@ -283,6 +283,10 @@ spec:
           value: v0.2.5
         - name: FRPC_IMAGE_VERSION
           value: v1.0.2
+        - name: CLOUDFLARED_IMAGE_NAME
+          value: beclab/cloudflared
+        - name: CLOUDFLARED_IMAGE_VERSION
+          value: v0.1.0
 
       - name: ingress
         image: beclab/bfl-ingress:v0.2.8
