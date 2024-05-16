@@ -148,7 +148,7 @@ spec:
             fieldRef:
               fieldPath: status.podIP
       - name: dify-gateway
-        image: beclab/search2-gateway:v0.0.34
+        image: beclab/search2-gateway:v0.0.35
         imagePullPolicy: IfNotPresent
         ports:
           - name: dify-gateway
