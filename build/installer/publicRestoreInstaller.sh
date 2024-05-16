@@ -841,7 +841,7 @@ install_velero_plugin_terminus() {
   namespace="os-system"
   storage_location="terminus-cloud"
   bucket="terminus-cloud"
-  plugin="beclab/velero-plugin-for-terminus:v1.0.1"
+  plugin="beclab/velero-plugin-for-terminus:v1.0.2"
 
   if [[ "$provider" == x"" || "$namespace" == x"" || "$bucket" == x"" || "$plugin" == x"" ]]; then
     echo "velero plugin install params invalid."
@@ -911,10 +911,10 @@ restore_k8s_os() {
     local include_status_rgs="applicationpermissions.sys.bytetrade.io,providerregistries.sys.bytetrade.io"
     include_status_rgs+=",applications.app.bytetrade.io,terminus.sys.bytetrade.io,middlewarerequests.apr.bytetrade.io"
     include_status_rgs+=",pgclusterbackups.apr.bytetrade.io,pgclusterrestores.apr.bytetrade.io"
-    include_status_rgs+=",redisclusterbackups.redis.kun,distributedredisclusters.redis.kun"
+    include_status_rgs+=",redisclusterbackups.redis.kun"
 
     log_info 'Creating k8s restore task ...'
-    ensure_success $sh_c "${VELERO} -n os-system restore create --status-include-resources $include_status_rgs --status-exclude-resources perconaservermongodbs.psmdb.percona.com --selector 'managered-by notin (mongo-backup-mongo-cluster,mongo-restore-mongo-cluster)' --from-backup $backupName"
+    ensure_success $sh_c "${VELERO} -n os-system restore create --status-include-resources $include_status_rgs --status-exclude-resources perconaservermongodbs.psmdb.percona.com,distributedredisclusters.redis.kun --selector 'managered-by notin (mongo-backup-mongo-cluster,mongo-restore-mongo-cluster)' --from-backup $backupName"
 
     check_restore_available
 }

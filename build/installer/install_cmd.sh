@@ -962,8 +962,8 @@ install_velero_plugin_terminus() {
   namespace="os-system"
   storage_location="terminus-cloud"
   bucket="terminus-cloud"
-  image="beclab/velero:v1.11.0"
-  plugin="beclab/velero-plugin-for-terminus:v1.0.1"
+  image="beclab/velero:v1.11.1"
+  plugin="beclab/velero-plugin-for-terminus:v1.0.2"
 
   if [[ "$provider" == x"" || "$namespace" == x"" || "$bucket" == x"" || "$image" == x"" || "$plugin" == x"" ]]; then
     echo "Backup plugin install params invalid."
