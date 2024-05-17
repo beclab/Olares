@@ -118,7 +118,7 @@ spec:
             memory: 1Gi
 
       - name: backend-server
-        image: "beclab/recommend-backend:v0.0.2"
+        image: "beclab/recommend-backend:v0.0.3"
         imagePullPolicy: IfNotPresent
         env:
         - name: MONGODB_PASSWORD
