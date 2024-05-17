@@ -153,7 +153,23 @@ build_contrack(){
 }
 
 precheck_os() {
-    local ip
+    local ip os_type os_arch
+
+    os_type=$(uname -s)
+    os_arch=$(uname -m)
+    os_verion=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
+
+    if [ x"${os_type}" != x"Linux" ]; then
+        log_fatal "unsupported os type '${os_type}', only supported 'Linux' operating system"
+    fi
+
+    if [[ x"${os_arch}" != x"x86_64" && x"${os_arch}" != x"amd64" ]]; then
+        log_fatal "unsupported os arch '${os_arch}', only supported 'x86_64' architecture"
+    fi
+
+    if [[ $(is_ubuntu) -eq 0 && $(is_debian) -eq 0 ]]; then
+        log_fatal "unsupported os version '${os_verion}', only supported Ubuntu 20.x, 22.x, 24.x and Debian 11, 12"
+    fi
 
     # try to resolv hostname
     ensure_success $sh_c "hostname -i >/dev/null"
@@ -200,6 +216,59 @@ precheck_os() {
     http_code=$(curl ${CURL_TRY} --connect-timeout 30 -ksL -o /dev/null -w "%{http_code}" https://download.docker.com/linux/ubuntu)
     if [ "$http_code" != 200 ]; then
         config_resolv_conf
+    fi
+
+    # ubuntu 24 upgrade apparmor
+    ubuntuversion=$(is_ubuntu)
+    if [ ${ubuntuversion} -eq 2 ]; then
+        aapv=$(apparmor_parser --version)
+        if [[ ! ${aapv} =~ "4.0.1" ]]; then
+            ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://launchpad.net/ubuntu/+source/apparmor/4.0.1-0ubuntu1/+build/28428840/+files/apparmor_4.0.1-0ubuntu1_amd64.deb"
+            ensure_success $sh_c "dpkg -i apparmor_4.0.1-0ubuntu1_amd64.deb"
+        fi
+    fi
+}
+
+is_debian() {
+    lsb_release=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
+    if [ -z "$lsb_release" ]; then
+        echo 0
+        return
+    fi
+    if [[ ${lsb_release} == *Debian*} ]]; then
+        case "$lsb_release" in
+            *12.* | *11.*)
+                echo 1
+                ;;
+            *)
+                echo 0
+                ;;
+        esac
+    else
+        echo 0
+    fi
+}
+
+is_ubuntu() {
+    lsb_release=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
+    if [ -z "$lsb_release" ]; then
+        echo 0
+        return
+    fi
+    if [[ ${lsb_release} == *Ubuntu* ]];then 
+        case "$lsb_release" in
+            *24.*)
+                echo 2
+                ;;
+            *22.* | *20.*)
+                echo 1
+                ;;
+            *)
+                echo 0
+                ;;
+        esac
+    else
+        echo 0
     fi
 }
 
