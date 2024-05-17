@@ -1,0 +1,31 @@
+
+
+name: Upload Full Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Release Tags'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout source code'
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.tags }}
+
+      - name: Package installer
+        run: |
+          bash scripts/build-full.sh ${{ github.event.inputs.tags }}
+
+      - name: Upload to S3
+        env: 
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz s3://terminus-os-install/install-wizard-v${{ github.event.inputs.tags }}.tar.gz '--acl=public-read'
+  
