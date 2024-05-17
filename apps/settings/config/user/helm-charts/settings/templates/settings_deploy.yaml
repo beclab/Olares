@@ -67,7 +67,7 @@ spec:
         - containerPort: 80
 
       - name: settings-server
-        image: beclab/settings-server:v0.1.62
+        image: beclab/settings-server:v0.1.63
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
