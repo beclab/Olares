@@ -36,5 +36,5 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz s3://terminus-os-install/install-wizard-v${{ github.event.inputs.tags }}.tar.gz '--acl=public-read'
+          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz s3://terminus-os-install/install-wizard-v${{ github.event.inputs.tags }}.tar.gz --acl=public-read
   
