@@ -9,7 +9,7 @@ cat $1|while read image; do
         docker save $image -o $name.tar
         gzip $name.tar
 
-        aws s3 cp $name.tar.gz s3://terminus-os-install/$name.tar.gz '--acl=public-read'
+        aws s3 cp $name.tar.gz s3://terminus-os-install/$name.tar.gz --acl=public-read
         echo "upload $name completed"
     fi
 done
