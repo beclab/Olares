@@ -46,7 +46,7 @@ spec:
       serviceAccount: bytetrade-sys-ops
       containers:
       - name: system-server
-        image: beclab/system-server:0.1.15
+        image: beclab/system-server:0.1.16
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
@@ -59,6 +59,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: OWNER
+          value: {{ .Values.bfl.username }}
       - name: proxy
         image: envoyproxy/envoy-distroless:v1.25.2
         imagePullPolicy: IfNotPresent
