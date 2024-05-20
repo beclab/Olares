@@ -65,8 +65,7 @@ function retry_cmd(){
         done
 
         if [ $ret -ne 0 ]; then
-            echo "Fatal error, command: '$*'"
-            exit $ret
+            log_fatal "command: '$*'"
         fi
     fi
 
@@ -110,8 +109,7 @@ function ensure_success() {
                 ((max_retries--))
             done
         else
-            echo "Fatal error, command: '$*'"
-            exit $ret
+            log_fatal "command: '$*'"
         fi
     fi
 
