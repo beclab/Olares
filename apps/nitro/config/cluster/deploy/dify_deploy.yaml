@@ -444,7 +444,7 @@ spec:
           # The configurations of redis connection.
           # It is consistent with the configuration in the 'redis' service below.
           - name: REDIS_HOST
-            value: redis-cluster-proxy.os-system
+            value: localhost
           - name: REDIS_PORT
             value: '6379'
           - name: REDIS_USERNAME
@@ -498,7 +498,7 @@ spec:
             value: weaviate
           # The Weaviate endpoint URL. Only available when VECTOR_STORE is `weaviate`.
           - name: WEAVIATE_ENDPOINT
-            value: http://weaviate:8080
+            value: http://localhost:8080
           # The Weaviate API key.
           - name: WEAVIATE_API_KEY
             value: WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih
@@ -614,7 +614,7 @@ spec:
             value: os_system_dify
           # The configurations of redis cache connection.
           - name: REDIS_HOST
-            value: redis-cluster-proxy.os-system
+            value: localhost
           - name: REDIS_PORT
             value: '6379'
           - name: REDIS_USERNAME
@@ -657,7 +657,7 @@ spec:
           - name: VECTOR_STORE
             value: weaviate
           - name: WEAVIATE_ENDPOINT
-            value: http://weaviate:8080
+            value: http://localhost:8080
           - name: WEAVIATE_API_KEY
             value: WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih
           # The Qdrant endpoint URL. Only available when VECTOR_STORE is `qdrant`.
