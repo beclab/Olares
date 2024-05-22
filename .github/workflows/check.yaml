@@ -13,6 +13,7 @@ jobs:
     steps:
       - name: PR Conventional Commit Validation
         uses:  ytanikin/PRConventionalCommits@1.1.0
+        if: github.event_name == 'pull_request'
         with:
           task_types: '["feat","fix","docs","test","ci","refactor","perf","chore","revert"]'
           add_label: 'true'
