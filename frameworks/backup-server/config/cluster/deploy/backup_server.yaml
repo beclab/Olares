@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.6" }}
+{{ $backupVersion := "0.3.7" }}
 {{ $backup_server_rootpath := "/terminus/rootfs/backup-server" }}
 
 ---
