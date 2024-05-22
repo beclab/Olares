@@ -1,59 +1,4 @@
 
-{{- $mongo_secret := (lookup "v1" "Secret" .Release.Namespace "market-mongodb") -}}
-{{- $mongo_password := randAlphaNum 16 | b64enc -}}
-
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: market-mongodb
-  namespace: {{ .Release.Namespace }}
-type: Opaque
-
-{{ if $mongo_secret -}}
-data:
-  mongodb-passwords: {{ index $mongo_secret "data" "mongodb-passwords" }}
-{{ else -}}
-data:
-  mongodb-passwords: {{ $mongo_password }}
-{{ end }}
-
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: market-mongodb
-  namespace: user-system-{{ .Values.bfl.username }}
-type: Opaque
-
-{{ if $mongo_secret -}}
-data:
-  mongodb-passwords: {{ index $mongo_secret "data" "mongodb-passwords" }}
-{{ else -}}
-data:
-  mongodb-passwords: {{ $mongo_password }}
-{{ end }}
-
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: appstore-mongo
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: appstore
-  appNamespace: {{ .Release.Namespace }}
-  middleware: mongodb
-  mongodb:
-    user: appstore-{{ .Values.bfl.username }}
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: mongodb-passwords
-          name: market-mongodb
-    databases:
-      - AppStore
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -120,7 +65,7 @@ spec:
         ports:
         - containerPort: 80
       - name: appstore-backend
-        image: beclab/market-backend:v0.2.2
+        image: beclab/market-backend:v0.2.3
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -145,15 +90,6 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
-          - name: MONGODB_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: market-mongodb
-                key: mongodb-passwords
-          - name: MONGO_DB
-            value: {{ .Release.Namespace }}_AppStore
-          - name: MONGO_URL
-            value: "mongodb://appstore-{{ .Values.bfl.username }}:$(MONGODB_PASSWORD)@mongo-cluster-mongos.user-system-{{ .Values.bfl.username }}:27017/{{ .Release.Namespace }}_AppStore"
 
         volumeMounts:
           - name: opt-data
