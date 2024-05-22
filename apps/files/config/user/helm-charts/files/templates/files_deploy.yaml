@@ -92,7 +92,7 @@ spec:
           value: system-server.user-system-{{ .Values.bfl.username }}
 
       - name: files
-        image: beclab/files-server:v0.2.15
+        image: beclab/files-server:v0.2.17
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: fb-data
@@ -108,6 +108,8 @@ spec:
         ports:
         - containerPort: 8110
         env:
+        - name: BFL_NAME
+          value: {{ .Values.bfl.username }}
         - name: FB_DATABASE
           value: /appdata/database/filebrowser.db
         - name: FB_CONFIG
