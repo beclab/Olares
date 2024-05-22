@@ -21,7 +21,7 @@ jobs:
         run: |
           v=1.5.0-$(date +"%Y%m%d")
           echo "tag_version=$v" >> $GITHUB_OUTPUT
-          echo "latest_version=1.4.1"
+          echo "latest_version=1.4.2"
       
       - name: Package installer
         run: |
