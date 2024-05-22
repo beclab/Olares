@@ -39,7 +39,7 @@ jobs:
         with:
           filename: 'build/installer/publicInstaller.latest'
           placeholder: '#{{LATEST_VERSION}}'
-          tag: ${{ steps.vars.outputs.tag_version }}
+          tag: ${{ steps.vars.outputs.latest_version }}
 
       - name: 'Archives'
         working-directory: ./build/installer
