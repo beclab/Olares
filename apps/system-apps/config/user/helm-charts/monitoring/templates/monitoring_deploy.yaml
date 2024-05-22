@@ -62,7 +62,7 @@ spec:
                 fieldPath: status.podIP
       containers:
       - name: dashboard-frontend
-        image: beclab/dashboard-frontend-v1:v0.2.7
+        image: beclab/dashboard-frontend-v1:v0.2.8
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
