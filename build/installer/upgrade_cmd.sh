@@ -244,7 +244,6 @@ function close_apps(){
     local username=$1
     local app_list=(
         "vault-deployment"
-        "message-deployment"
     )
 
 
@@ -511,6 +510,9 @@ function upgrade_terminus(){
         for appdir in "${BASE_DIR}/wizard/config/apps"/*/; do
           if [ -d "$appdir" ]; then
             releasename=$(basename "$appdir")
+            if [ "$user" != "$admin_user" ];then
+                releasename=${releasename}-${user}
+            fi
             ensure_success $sh_c "${HELM} upgrade -i ${releasename} ${appdir} -n user-space-${user} --reuse-values --set kubesphere.redis_password=${ks_redis_pwd} -f ${BASE_DIR}/wizard/config/apps/values.yaml"
           fi
         done
