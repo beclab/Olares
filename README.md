@@ -2,7 +2,7 @@
 
 <p align="center">
     <picture>
-         <img alt="Terminus OS" src="https://raw.githubusercontent.com/beclab/terminus/main/images/banner1.jpg"/>
+         <img alt="Terminus OS" src="https://raw.githubusercontent.com/beclab/terminus/main/images/banner2.jpg"/>
     </picture>
     <i>Let people own their data again</i>
     <br>
