@@ -139,8 +139,14 @@ log_fatal() {
 
 build_socat(){
     SOCAT_VERSION="1.7.3.2"
-    # Download
-    ensure_success $sh_c "curl ${CURL_TRY} -LO http://www.dest-unreach.org/socat/download/socat-${SOCAT_VERSION}.tar.gz"
+    local socat_tar="${BASE_DIR}/components/socat-${SOCAT_VERSION}.tar.gz"
+
+    if [ -f "$socat_tar" ]; then
+        ensure_success $sh_c "cp ${socat_tar} ./"
+    else
+        ensure_success $sh_c "curl ${CURL_TRY} -LO http://www.dest-unreach.org/socat/download/socat-${SOCAT_VERSION}.tar.gz"
+    fi
+    
     ensure_success $sh_c "tar xzvf socat-${SOCAT_VERSION}.tar.gz"
     ensure_success $sh_c "cd socat-${SOCAT_VERSION}"
 
@@ -148,7 +154,13 @@ build_socat(){
 }
 
 build_contrack(){
-    ensure_success $sh_c "curl ${CURL_TRY} -LO https://github.com/fqrouter/conntrack-tools/archive/refs/tags/conntrack-tools-1.4.1.tar.gz"
+    local contrack_tar="${BASE_DIR}/components/conntrack-tools-1.4.1.tar.gz"
+    if [ -f "$contrack_tar" ]; then
+        ensure_success $sh_c "cp ${contrack_tar} ./"
+    else
+        ensure_success $sh_c "curl ${CURL_TRY} -LO https://github.com/fqrouter/conntrack-tools/archive/refs/tags/conntrack-tools-1.4.1.tar.gz"
+    fi
+    
     ensure_success $sh_c "tar zxvf conntrack-tools-1.4.1.tar.gz"
     ensure_success $sh_c "cd conntrack-tools-1.4.1"
 
@@ -244,7 +256,12 @@ precheck_os() {
     if [ ${ubuntuversion} -eq 2 ]; then
         aapv=$(apparmor_parser --version)
         if [[ ! ${aapv} =~ "4.0.1" ]]; then
-            ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://launchpad.net/ubuntu/+source/apparmor/4.0.1-0ubuntu1/+build/28428840/+files/apparmor_4.0.1-0ubuntu1_amd64.deb"
+            local aapv_tar="${BASE_DIR}/components/apparmor_4.0.1-0ubuntu1_amd64.deb"
+            if [ ! -f "$aapv_tar" ]; then
+                ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://launchpad.net/ubuntu/+source/apparmor/4.0.1-0ubuntu1/+build/28428840/+files/apparmor_4.0.1-0ubuntu1_amd64.deb"
+            else
+                ensure_success $sh_c "cp ${aapv_tar} ./"
+            fi
             ensure_success $sh_c "dpkg -i apparmor_4.0.1-0ubuntu1_amd64.deb"
         fi
     fi
@@ -377,6 +394,10 @@ run_install() {
     ks_version=v3.3.0
 
     log_info 'installing k8s and kubesphere'
+
+    if [ -d "$BASE_DIR/pkg" ]; then
+        ensure_success $sh_c "cp -a ${BASE_DIR}/pkg ./"
+    fi
 
     # env 'KUBE_TYPE' is specific the special kubernetes (k8s or k3s), default k3s
     if [ x"$KUBE_TYPE" == x"k3s" ]; then
@@ -639,13 +660,18 @@ install_minio() {
 
     log_info 'start to install minio'
 
+    local minio_tar="${BASE_DIR}/components/minio.${MINIO_VERSION}"
     local minio_bin="/usr/local/bin/minio"
     local minio_data="${TERMINUS_ROOT}/data/minio/vol1"
 
     [ ! -d "$minio_data" ] && ensure_success $sh_c "mkdir -p $minio_data"
 
     if [ ! -f "$minio_bin" ]; then
-        ensure_success $sh_c "curl ${CURL_TRY} -kLo minio https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_VERSION}"
+        if [ -f "$minio_tar" ]; then
+            ensure_success $sh_c "cp ${minio_tar} minio"
+        else
+            ensure_success $sh_c "curl ${CURL_TRY} -kLo minio https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_VERSION}"
+        fi
         ensure_success $sh_c "chmod +x minio"
         ensure_success $sh_c "install minio /usr/local/bin"
     fi
@@ -744,11 +770,16 @@ init_minio_cluster(){
         exit $ERR_EXIT
     fi
 
+    local minio_operator_tar="${BASE_DIR}/components/minio-operator-${MINIO_OPERATOR_VERSION}-linux-amd64.tar.gz"
     local minio_operator_bin="/usr/local/bin/minio-operator"
 
     if [ ! -f "$minio_operator_bin" ]; then
-        ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/minio-operator/releases/download/${MINIO_OPERATOR_VERSION}/minio-operator-${MINIO_OPERATOR_VERSION}-linux-amd64.tar.gz"
-	    ensure_success $sh_c "tar zxf minio-operator-${MINIO_OPERATOR_VERSION}-linux-amd64.tar.gz"
+        if [ -f "$minio_operator_tar" ]; then
+            ensure_success $sh_c "cp ${minio_operator_tar} minio-operator-${MINIO_OPERATOR_VERSION}-linux-amd64.tar.gz"
+        else
+            ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/minio-operator/releases/download/${MINIO_OPERATOR_VERSION}/minio-operator-${MINIO_OPERATOR_VERSION}-linux-amd64.tar.gz"
+        fi
+	      ensure_success $sh_c "tar zxf minio-operator-${MINIO_OPERATOR_VERSION}-linux-amd64.tar.gz"
         ensure_success $sh_c "install -m 755 minio-operator $minio_operator_bin"
     fi
 
@@ -761,6 +792,7 @@ install_redis() {
 
     log_info 'start to install redis'
 
+    local redis_tar="${BASE_DIR}/components/redis-${REDIS_VERSION}.tar.gz"
     local redis_root="${TERMINUS_ROOT}/data/redis"
     local redis_conf="${redis_root}/etc/redis.conf"
     local redis_bin="/usr/bin/redis-server"
@@ -768,7 +800,11 @@ install_redis() {
 
     # install redis, if redis-server not exists
     if [ ! -f "$redis_bin" ]; then
-        ensure_success $sh_c "curl -kLO https://download.redis.io/releases/redis-${REDIS_VERSION}.tar.gz"
+        if [ -f "$redis_tar" ]; then
+            ensure_success $sh_c "cp ${redis_tar} redis-${REDIS_VERSION}.tar.gz"
+        else
+            ensure_success $sh_c "curl -kLO https://download.redis.io/releases/redis-${REDIS_VERSION}.tar.gz"
+        fi
         ensure_success $sh_c "tar xf redis-${REDIS_VERSION}.tar.gz"
 
         cpu_cores=$(grep -c processor /proc/cpuinfo)
@@ -898,6 +934,7 @@ install_juicefs() {
     local ak="$ACCESS_KEY"
     local sk="$SECRET_KEY"
 
+    local juicefs_tar="${BASE_DIR}/components/juicefs-${JFS_VERSION}-linux-amd64.tar.gz"
     local juicefs_bin="/usr/local/bin/juicefs"
     local jfs_mountpoint="${TERMINUS_ROOT}/${fsname}"
     local jfs_cachedir="${TERMINUS_ROOT}/jfscache"
@@ -905,7 +942,11 @@ install_juicefs() {
     [ ! -d $jfs_cachedir ] && ensure_success $sh_c "mkdir -p $jfs_cachedir"
 
     if [ ! -f "$juicefs_bin" ]; then
-        ensure_success $sh_c "curl ${CURL_TRY} -kLO https://github.com/beclab/juicefs-ext/releases/download/${JFS_VERSION}/juicefs-${JFS_VERSION}-linux-amd64.tar.gz"
+        if [ -f "$juicefs_tar" ]; then
+            ensure_success $sh_c "cp ${juicefs_tar} juicefs-${JFS_VERSION}-linux-amd64.tar.gz"
+        else
+            ensure_success $sh_c "curl ${CURL_TRY} -kLO https://github.com/beclab/juicefs-ext/releases/download/${JFS_VERSION}/juicefs-${JFS_VERSION}-linux-amd64.tar.gz"
+        fi
         ensure_success $sh_c "tar -zxf juicefs-${JFS_VERSION}-linux-amd64.tar.gz"
         ensure_success $sh_c "chmod +x juicefs"
         ensure_success $sh_c "install juicefs /usr/local/bin"
@@ -998,7 +1039,14 @@ random_string() {
 
 install_velero() {
     config_proxy_resolv_conf
-    ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/vmware-tanzu/velero/releases/download/v1.11.0/velero-v1.11.0-linux-amd64.tar.gz"
+
+    VELERO_VERSION="v1.11.0"
+    local velero_tar="${BASE_DIR}/components/velero-${VELERO_VERSION}-linux-amd64.tar.gz"
+    if [ -f "$velero_tar" ]; then
+        ensure_success $sh_c "cp ${velero_tar} velero-${VELERO_VERSION}-linux-amd64.tar.gz"
+    else
+        ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/vmware-tanzu/velero/releases/download/v1.11.0/velero-v1.11.0-linux-amd64.tar.gz"
+    fi
     ensure_success $sh_c "tar xf velero-v1.11.0-linux-amd64.tar.gz"
     ensure_success $sh_c "install velero-v1.11.0-linux-amd64/velero /usr/local/bin"
 
@@ -1075,6 +1123,8 @@ install_velero_plugin_terminus() {
 install_containerd(){
     if [ x"$KUBE_TYPE" != x"k3s" ]; then
         CONTAINERD_VERSION="1.6.4"
+        RUNC_VERSION="1.1.4"
+        CNI_PLUGIN_VERSION="1.1.1"
 
         # preinstall containerd for k8s
         if command_exists containerd && [ -f /etc/systemd/system/containerd.service ];  then
@@ -1083,16 +1133,37 @@ install_containerd(){
                 ensure_success $sh_c "systemctl start containerd"
             fi
         else
-            ensure_success $sh_c "wget https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz"
+            local containerd_tar="${BASE_DIR}/pkg/containerd/${CONTAINERD_VERSION}/amd64/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz"
+            local runc_tar="${BASE_DIR}/pkg/runc/v${RUNC_VERSION}/amd64/runc.amd64"
+            local cni_plugin_tar="${BASE_DIR}/pkg/cni/v${CNI_PLUGIN_VERSION}/amd64/cni-plugins-linux-amd64-v${CNI_PLUGIN_VERSION}.tgz"
+
+            if [ -f "$containerd_tar" ]; then
+                ensure_success $sh_c "cp ${containerd_tar} containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz"
+            else
+                echo "---download containerd---" # ! debug
+                ensure_success $sh_c "wget https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz"
+            fi
             ensure_success $sh_c "tar Cxzvf /usr/local containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz"
-            ensure_success $sh_c "wget https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64"
+
+            if [ -f "$runc_tar" ]; then
+                ensure_success $sh_c "cp ${runc_tar} runc.amd64"
+            else
+                echo "---download runc---" # ! debug
+                ensure_success $sh_c "wget https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64"
+            fi
             ensure_success $sh_c "install -m 755 runc.amd64 /usr/local/sbin/runc"
-            ensure_success $sh_c "wget https://github.com/containernetworking/plugins/releases/download/v1.1.1/cni-plugins-linux-amd64-v1.1.1.tgz"
+
+            if [ -f "$cni_plugin_tar" ]; then
+                ensure_success $sh_c "cp ${cni_plugin_tar} cni-plugins-linux-amd64-v${CNI_PLUGIN_VERSION}.tgz"
+            else
+                ensure_success $sh_c "wget https://github.com/containernetworking/plugins/releases/download/v1.1.1/cni-plugins-linux-amd64-v1.1.1.tgz"
+            fi
             ensure_success $sh_c "mkdir -p /opt/cni/bin"
             ensure_success $sh_c "tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v1.1.1.tgz"
             ensure_success $sh_c "mkdir -p /etc/containerd"
             ensure_success $sh_c "containerd config default | tee /etc/containerd/config.toml"
             ensure_success $sh_c "sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml"
+            ensure_success $sh_c "sed -i 's/k8s.gcr.io\/pause:3.6/kubesphere\/pause:3.5/g' /etc/containerd/config.toml"
             rm -rf /tmp/registry.toml
             if [ x"$REGISTRY_MIRRORS" != x"" ]; then
                 cat << EOF > /tmp/registry.toml
@@ -1152,15 +1223,21 @@ EOF
 }
 
 install_k8s_ks() {
-    KKE_VERSION=0.1.19
+    KKE_VERSION=0.1.20
 
     ensure_success $sh_c "mkdir -p /etc/kke"
+    local kk_tar="${BASE_DIR}/components/kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
 
-    if [ x"$PROXY" != x"" ]; then
-	    ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/kubekey-ext/releases/download/${KKE_VERSION}/kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
-	    ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
+    if [ ! -f "$kk_tar" ]; then
+        if [ x"$PROXY" != x"" ]; then
+          ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/kubekey-ext/releases/download/${KKE_VERSION}/kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
+          ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
+        else
+          ensure_success $sh_c "curl ${CURL_TRY} -sfL https://raw.githubusercontent.com/beclab/kubekey-ext/master/downloadKKE.sh | VERSION=${KKE_VERSION} sh -"
+        fi
     else
-    	ensure_success $sh_c "curl ${CURL_TRY} -sfL https://raw.githubusercontent.com/beclab/kubekey-ext/master/downloadKKE.sh | VERSION=${KKE_VERSION} sh -"
+        ensure_success $sh_c "cp ${kk_tar} kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
+        ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
     fi
     ensure_success $sh_c "chmod +x kk"
 
@@ -1700,8 +1777,31 @@ install_gpu(){
 
     distribution=$(. /etc/os-release;echo $ID$VERSION_ID|sed 's/\.//g')
 
-    ensure_success $sh_c "wget https://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64/cuda-keyring_1.0-1_all.deb"
-    ensure_success $sh_c "dpkg -i cuda-keyring_1.0-1_all.deb"
+    if [[ "$distribution" =~ "ubuntu" ]]; then
+        case "$distribution" in
+            ubuntu2404)
+                local u24_cude_keyring_deb="${BASE_DIR}/components/ubuntu2404_cuda-keyring_1.1-1_all.deb"
+                if [ -f "$u24_cude_keyring_deb" ]; then
+                    ensure_success $sh_c "cp ${u24_cude_keyring_deb} cuda-keyring_1.1-1_all.deb"
+                else 
+                    ensure_success $sh_c "wget https://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64/cuda-keyring_1.1-1_all.deb"
+                fi
+                ensure_success $sh_c "dpkg -i cuda-keyring_1.1-1_all.deb"
+                ;;
+            ubuntu2204|ubuntu2004)
+                local cude_keyring_deb="${BASE_DIR}/components/${distribution}_cuda-keyring_1.0-1_all.deb"
+                if [ -f "$cude_keyring_deb" ]; then
+                    ensure_success $sh_c "cp ${cude_keyring_deb} cuda-keyring_1.0-1_all.deb"
+                else
+                    ensure_success $sh_c "wget https://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64/cuda-keyring_1.0-1_all.deb"
+                fi
+                ensure_success $sh_c "dpkg -i cuda-keyring_1.0-1_all.deb"
+                ;;
+            *)
+                ;;
+        esac
+    fi
+    
     ensure_success $sh_c "apt-get update"
     ensure_success $sh_c "apt-get -y install cuda-12-1"
     ensure_success $sh_c "apt-get -y install nvidia-kernel-open-545"

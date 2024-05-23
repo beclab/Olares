@@ -22,6 +22,8 @@ kubesphere/kube-rbac-proxy:v0.11.0
 kubesphere/kube-rbac-proxy:v0.8.0
 kubesphere/kube-scheduler:v1.22.10
 kubesphere/pause:3.5
+kubesphere/pause:3.4.1
+k8s.gcr.io/pause:3.6
 kubesphere/prometheus-config-reloader:v0.55.1
 kubesphere/prometheus-operator:v0.55.1
 mirrorgooglecontainers/defaultbackend-amd64:1.4
@@ -40,3 +42,4 @@ quay.io/argoproj/workflow-controller:v3.5.0
 redis:5.0.14-alpine
 beclab/velero:v1.11.0
 beclab/velero-plugin-for-terminus:v1.0.1
+rancher/coredns-coredns:1.8.3
