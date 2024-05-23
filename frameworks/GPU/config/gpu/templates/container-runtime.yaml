@@ -37,7 +37,7 @@ spec:
     spec:
       containers:
       - name: container-runtime
-        image: eball/orionx-container-runtime:1.9.3-env_setup_4.2.0-20231030
+        image: eball/orionx-container-runtime:v1.9.3-patch2_env_setup_4.2.0-20240523023502
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:

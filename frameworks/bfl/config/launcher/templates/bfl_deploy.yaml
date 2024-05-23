@@ -248,7 +248,7 @@ spec:
         command:
         - /bfl-api
         - -u
-        - {{ .Values.bfl.username }}
+        - '{{ .Values.bfl.username }}'
         - --log-level
         - debug
         ports:
@@ -297,7 +297,7 @@ spec:
         command:
         - /bfl-ingress
         - -user
-        - {{ .Values.bfl.username }}
+        - '{{ .Values.bfl.username }}'
         - -enable-nginx
         - -bfl-svc
         - bfl
