@@ -1,11 +1,7 @@
 # Terminus OS
-
+![cover](https://raw.githubusercontent.com/beclab/terminus/main/images/banner2.jpg)
 <p align="center">
-    <picture>
-         <img alt="Terminus OS" src="https://raw.githubusercontent.com/beclab/terminus/main/images/banner2.jpg"/>
-    </picture>
-    <i>Let people own their data again</i>
-    <br>
+  <i>Let people own their data again </i><br>
   <a href="https://www.jointerminus.com">Website</a> ·
   <a href="https://docs.jointerminus.com">Documentation</a> ·
   <a href="https://docs.jointerminus.com/how-to/termipass/overview.html#download">Download TermiPass</a> ·
@@ -117,11 +113,9 @@ https://docs.jointerminus.com/developer/contribute/terminus-os.html
 
 Star Terminus on GitHub and be instantly notified of new releases and status updates. 
 
-<p align="center">
-    <picture>
-        <img alt="star Terminus OS" src="https://raw.githubusercontent.com/beclab/terminus/main/images/star.gif"/>
-    </picture>
-</p>
+ 
+![star us](https://raw.githubusercontent.com/beclab/terminus/main/images/star.gif)
+ 
 
 
 ## Special Thanks 
