@@ -1,5 +1,5 @@
 # Terminus OS
-![cover](https://raw.githubusercontent.com/beclab/terminus/main/images/banner2.jpg)
+![cover](https://file.bttcdn.com/github/terminus/banner1.jpg)
 <p align="center">
   <i>Let people own their data again </i><br>
   <a href="https://www.jointerminus.com">Website</a> ·
@@ -114,7 +114,7 @@ https://docs.jointerminus.com/developer/contribute/terminus-os.html
 Star Terminus on GitHub and be instantly notified of new releases and status updates. 
 
  
-![star us](https://raw.githubusercontent.com/beclab/terminus/main/images/star.gif)
+![star us](https://file.bttcdn.com/github/terminus/terminus.git.v2.gif)
  
 
 
