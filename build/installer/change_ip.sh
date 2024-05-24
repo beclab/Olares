@@ -366,6 +366,10 @@ get_settings_status(){
     $sh_c "${KUBECTL} get pod  -n user-space-${username} -l 'app=settings' -o jsonpath='{.items[*].status.phase}'"
 }
 
+get_all_user(){
+    $sh_c "${KUBECTL} get user -o jsonpath='{.items[*].metadata.name}'"
+}
+
 check_together(){
     local all=$@
     
@@ -429,6 +433,13 @@ main() {
 
 	# check os auto-reloading
     log_info 'Waiting for Terminus reloading ...'
+    check_desktop
+
+	for u in $(get_all_user) ; do
+		$sh_c "${KUBECTL} rollout restart deploy -n user-space-$u edge-desktop"
+		$sh_c "${KUBECTL} rollout restart deploy -n user-space-$u headscale-server"
+	done
+
     check_desktop
 
 	log_info 'Success to change the Terminus IP address!'
