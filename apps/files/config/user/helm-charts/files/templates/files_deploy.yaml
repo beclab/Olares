@@ -109,7 +109,7 @@ spec:
         - containerPort: 8110
         env:
         - name: BFL_NAME
-          value: {{ .Values.bfl.username }}
+          value: '{{ .Values.bfl.username }}'
         - name: FB_DATABASE
           value: /appdata/database/filebrowser.db
         - name: FB_CONFIG

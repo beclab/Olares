@@ -177,40 +177,58 @@ data:
     local cjson = require "cjson.safe"
 
     local function processAuthorization()
+        local difyHost = "dify"
+        ngx.log(ngx.STDERR, "HOST: " .. ngx.var.host)
+        local isInner = ngx.var.host == difyHost
+
         -- Check if current URL is "/signin"
         ngx.log(ngx.STDERR, "URI: " .. ngx.var.uri)
         local isSignIn = ngx.var.uri == "/signin"
+        local isModel = ngx.var.uri == "/console/api/workspaces/current/model-providers/openai_api_compatible/models"
+
+        if isInner and isSignIn then
+          return
+        end
 
         local headers = ngx.req.get_headers()
 
-        if not isSignIn then
-          -- Check if "Authorization" exists and is not empty string
-          local authorizationHeader = headers["Authorization"]
-          if authorizationHeader and authorizationHeader:match("^Bearer%s+.+") then
-              ngx.log(ngx.STDERR, "Authorization header with non-empty Bearer token found. Skipping further processing.")
-              return
-          end
-
-          -- Check is "Next-Url" exists and is "/signin"
-          if headers["Next-Url"] == "/signin" then
-              ngx.req.clear_header("Next-Url")
-              ngx.log(ngx.STDERR, "Removed 'Next-Url' header with value '/signin'")
-          end
-
+        if not isSignIn and not isModel then
           local cookie = ngx.var.http_cookie
           local redirectedURL = ngx.var.request_uri
 
           -- Get next URL
           ngx.log(ngx.STDERR, "Next URL: " .. redirectedURL)
 
+          local token = ""
+          local _ = ""
           if cookie then
-              local _, _, token = string.find(cookie, "Authorization=Bearer ([^;]+)")
+              _, _, token = string.find(cookie, "Authorization=Bearer ([^;]+)")
+          end
 
-              if token then
-                  ngx.req.set_header("Authorization", "Bearer " .. token)
-                  ngx.log(ngx.STDERR, "Authorization token found in cookie. Token: " .. token)
-                  return
-              end
+          if token then
+            -- Check if "Authorization" exists and is not empty string
+            local authorizationHeader = headers["Authorization"]
+            if authorizationHeader then
+              ngx.log(ngx.STDERR, "authorizatioonHeader=" .. authorizationHeader)
+            else
+              ngx.log(ngx.STDERR, "authorizatioonHeader=nil")
+            end
+
+            ngx.log(ngx.STDERR, "token=" .. token)
+            if authorizationHeader and authorizationHeader:match("^Bearer%s+.+") then
+                if isInner then
+                    ngx.log(ngx.STDERR, "Inner Request! Authorization header with non-empty Bearer token found. Skipping further processing.")
+                    return
+                end
+                if authorizationHeader == "Bearer" .. token then
+                    ngx.log(ngx.STDERR, "Authorization header with non-empty and newest Bearer token found. Skipping further processing.")
+                    return
+                end
+            else
+                ngx.req.set_header("Authorization", "Bearer " .. token)
+                ngx.log(ngx.STDERR, "Authorization token found in cookie. Token: " .. token)
+                return
+            end
           end
         end
 
