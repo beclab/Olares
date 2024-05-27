@@ -265,6 +265,11 @@ precheck_os() {
             ensure_success $sh_c "dpkg -i apparmor_4.0.1-0ubuntu1_amd64.deb"
         fi
     fi
+
+    # opy pre-installation dependency files 
+    if [ -d /opt/deps ]; then
+        ensure_success $sh_c "mv /opt/deps/* ${BASE_DIR}/install-wizard"
+    fi
 }
 
 is_debian() {

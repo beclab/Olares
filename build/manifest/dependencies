@@ -41,7 +41,7 @@ https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/amd
 https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/amd64/kubelet,kube/v1.22.10,,
 https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/amd64/kubectl,kube/v1.22.10,,
 
-https://github.com/docker/compose/releases/download/v2.2.2/compose-linux-amd64,registry/compose/v2.2.2,docker-compose-linux-x86_64,,
+https://github.com/docker/compose/releases/download/v2.2.2/docker-compose-linux-x86_64,registry/compose/v2.2.2,docker-compose-linux-x86_64,,
 https://github.com/goharbor/harbor/releases/download/v2.5.3/harbor-offline-installer-v2.5.3.tgz,registry/harbor/v2.5.3,,
 https://github.com/docker/distribution/releases/download/v2.7.1/registry-2.7.1.linux-amd64.tar.gz,registry/registry/2,,
 
