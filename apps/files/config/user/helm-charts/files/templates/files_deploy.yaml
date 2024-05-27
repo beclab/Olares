@@ -92,7 +92,7 @@ spec:
           value: system-server.user-system-{{ .Values.bfl.username }}
 
       - name: files
-        image: beclab/files-server:v0.2.17
+        image: beclab/files-server:v0.2.18
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: fb-data
