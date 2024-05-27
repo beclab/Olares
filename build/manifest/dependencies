@@ -1,4 +1,5 @@
 [components] format: url,filename
+https://github.com/beclab/kubekey-ext/releases/download/${KKE_VERSION}/kubekey-ext-v0.1.20-linux-amd64.tar.gz,
 https://src.fedoraproject.org/lookaside/pkgs/socat/socat-1.7.3.2.tar.gz/sha512/540658b2a3d1b87673196282e5c62b97681bd0f1d1e4759ff9d72909d11060235ee9e9521a973603c1b00376436a9444248e5fbc0ffac65f8edb9c9bc28e7972/socat-1.7.3.2.tar.gz,
 
 https://github.com/fqrouter/conntrack-tools/archive/refs/tags/conntrack-tools-1.4.1.tar.gz,

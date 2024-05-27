@@ -4,6 +4,7 @@
 
 BASE_DIR=$(dirname $(realpath -s $0))
 rm -rf ${BASE_DIR}/../.dist
+rm -rf ${BASE_DIR}/../.manifest
 DIST_PATH="${BASE_DIR}/../.dist/install-wizard" 
 VERSION=$1
 
@@ -14,16 +15,32 @@ DIST_PATH=${DIST_PATH} bash ${BASE_DIR}/package.sh
 cp ${BASE_DIR}/upgrade.sh ${DIST_PATH}/.
 
 bash ${BASE_DIR}/image-manifest.sh
+bash ${BASE_DIR}/deps-manifest.sh
 
 pushd ${BASE_DIR}/../.manifest
 bash $BASE_DIR/save-images.sh images.mf
+bash $BASE_DIR/save-deps.sh
 popd
 
 
 pushd $DIST_PATH
 
 rm -rf images
-mv ${BASE_DIR}/../.manifest images
+rm -rf components
+rm -rf pkg
+
+if [ -d ${BASE_DIR}/../.manifest/images ]; then
+    mv ${BASE_DIR}/../.manifest/images images
+fi
+if [ -d ${BASE_DIR}/../.manifest/components ]; then
+    mv ${BASE_DIR}/../.manifest/components components
+fi
+if [ -d ${BASE_DIR}/../.manifest/pkg ]; then
+    mv ${BASE_DIR}/../.manifest/pkg pkg
+fi
+if [ -f ${BASE_DIR}/../.manifest/dependencies.mf ]; then
+    cp ${BASE_DIR}/../.manifest/dependencies.mf ./
+fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     TAR=gtar
