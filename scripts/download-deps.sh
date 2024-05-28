@@ -1,5 +1,6 @@
 arch="amd64"
 part=""
+CURL_TRY="--connect-timeout 30 --retry 5 --retry-delay 1 --retry-max-time 10 "
 
 cat ./dependencies.mf | while IFS= read -r line; do
     [[ -z "$line" ]] && continue
@@ -31,9 +32,9 @@ cat ./dependencies.mf | while IFS= read -r line; do
 
     if [ "$part" == "components" ]; then
         if [ -z "$s2" ]; then
-            curl -L -o ./${part}/${file} ${s1}
+            curl ${CURL_TRY} -L -o ./${part}/${file} ${s1}
         else
-            curl -L -o ./${part}/${s2} ${s1}
+            curl ${CURL_TRY} -L -o ./${part}/${s2} ${s1}
         fi
     else
         s4=$(echo "$line" | cut -d',' -f4)
@@ -43,7 +44,7 @@ cat ./dependencies.mf | while IFS= read -r line; do
         if [ ! -z ${s3} ]; then
             filename=${s3}
         fi
-        curl -L -o ${pkgpath}/${filename} ${s1}
+        curl ${CURL_TRY} -L -o ${pkgpath}/${filename} ${s1}
 
         if [ "$s4" == "helm" ]; then
             pushd ${pkgpath}

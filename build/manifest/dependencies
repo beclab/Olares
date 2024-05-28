@@ -1,5 +1,5 @@
 [components] format: url,filename
-https://github.com/beclab/kubekey-ext/releases/download/${KKE_VERSION}/kubekey-ext-v0.1.20-linux-amd64.tar.gz,
+https://github.com/beclab/kubekey-ext/releases/download/0.1.20/kubekey-ext-v0.1.20-linux-amd64.tar.gz,
 https://src.fedoraproject.org/lookaside/pkgs/socat/socat-1.7.3.2.tar.gz/sha512/540658b2a3d1b87673196282e5c62b97681bd0f1d1e4759ff9d72909d11060235ee9e9521a973603c1b00376436a9444248e5fbc0ffac65f8edb9c9bc28e7972/socat-1.7.3.2.tar.gz,
 
 https://github.com/fqrouter/conntrack-tools/archive/refs/tags/conntrack-tools-1.4.1.tar.gz,
@@ -43,7 +43,7 @@ https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/amd
 
 https://github.com/docker/compose/releases/download/v2.2.2/docker-compose-linux-x86_64,registry/compose/v2.2.2,docker-compose-linux-x86_64,,
 https://github.com/goharbor/harbor/releases/download/v2.5.3/harbor-offline-installer-v2.5.3.tgz,registry/harbor/v2.5.3,,
-https://github.com/docker/distribution/releases/download/v2.7.1/registry-2.7.1.linux-amd64.tar.gz,registry/registry/2,,
+https://github.com/kubesphere/kubekey/releases/download/v2.0.0-alpha.1/registry-2-linux-amd64.tar.gz,registry/registry/2,,
 
 https://github.com/opencontainers/runc/releases/download/v1.1.1/runc.amd64,runc/v1.1.1,,
 https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64,runc/v1.1.4,,

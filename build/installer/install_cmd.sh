@@ -268,7 +268,7 @@ precheck_os() {
 
     # opy pre-installation dependency files 
     if [ -d /opt/deps ]; then
-        ensure_success $sh_c "mv /opt/deps/* ${BASE_DIR}/install-wizard"
+        ensure_success $sh_c "mv /opt/deps/* ${BASE_DIR}"
     fi
 }
 

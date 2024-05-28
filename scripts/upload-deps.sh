@@ -3,11 +3,11 @@
 BASE_DIR=$(dirname $(realpath -s $0))
 echo "Push Deps to S3 base_dir: ${BASE_DIR}"
 
-if [ ! -d ".manifest" ]; then
+if [ ! -d ".dependencies" ]; then
     exit 1
 fi
 
-pushd ${BASE_DIR}/../.manifest
+pushd ${BASE_DIR}/../.dependencies
 fileprefix="deps"
 name=$(md5sum dependencies.mf |awk '{print $1}')
 echo "filename: ${fileprefix}-${name}.tar.gz"
@@ -26,7 +26,7 @@ if [ $? -ne 0 ]; then
     echo "dependencies file ${fileprefix}-${name}.tar.gz not found, prepare to upload to S3"
     tar -czf ./$name.tar.gz ./components ./pkg ./dependencies.mf && cp ./$name.tar.gz ../
     popd
-    rm -rf ./.manifest/
+    rm -rf ./.dependencies/
     aws s3 cp $name.tar.gz s3://terminus-os-install/${fileprefix}-$name.tar.gz --acl=public-read
     echo "upload $name completed"
 else

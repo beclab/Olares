@@ -5,6 +5,7 @@
 BASE_DIR=$(dirname $(realpath -s $0))
 rm -rf ${BASE_DIR}/../.dist
 rm -rf ${BASE_DIR}/../.manifest
+rm -rf ${BASE_DIR}/../.dependencies
 DIST_PATH="${BASE_DIR}/../.dist/install-wizard" 
 VERSION=$1
 
@@ -19,9 +20,11 @@ bash ${BASE_DIR}/deps-manifest.sh
 
 pushd ${BASE_DIR}/../.manifest
 bash $BASE_DIR/save-images.sh images.mf
-bash $BASE_DIR/save-deps.sh
 popd
 
+pushd ${BASE_DIR}/../.dependencies
+bash $BASE_DIR/save-deps.sh
+popd
 
 pushd $DIST_PATH
 
@@ -29,17 +32,17 @@ rm -rf images
 rm -rf components
 rm -rf pkg
 
-if [ -d ${BASE_DIR}/../.manifest/images ]; then
-    mv ${BASE_DIR}/../.manifest/images images
+mv ${BASE_DIR}/../.manifest images
+
+
+if [ -d ${BASE_DIR}/../.dependencies/components ]; then
+    mv ${BASE_DIR}/../.dependencies/components components
 fi
-if [ -d ${BASE_DIR}/../.manifest/components ]; then
-    mv ${BASE_DIR}/../.manifest/components components
+if [ -d ${BASE_DIR}/../.dependencies/pkg ]; then
+    mv ${BASE_DIR}/../.dependencies/pkg pkg
 fi
-if [ -d ${BASE_DIR}/../.manifest/pkg ]; then
-    mv ${BASE_DIR}/../.manifest/pkg pkg
-fi
-if [ -f ${BASE_DIR}/../.manifest/dependencies.mf ]; then
-    cp ${BASE_DIR}/../.manifest/dependencies.mf ./
+if [ -f ${BASE_DIR}/../.dependencies/dependencies.mf ]; then
+    cp ${BASE_DIR}/../.dependencies/dependencies.mf ./
 fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
