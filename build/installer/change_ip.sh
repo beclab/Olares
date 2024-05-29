@@ -440,6 +440,8 @@ main() {
 		$sh_c "${KUBECTL} rollout restart deploy -n user-space-$u headscale-server"
 	done
 
+	$sh_c "killall envoy" 
+
     check_desktop
 
 	log_info 'Success to change the Terminus IP address!'
