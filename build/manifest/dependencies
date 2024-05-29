@@ -29,21 +29,14 @@ https://github.com/containerd/containerd/releases/download/v1.6.4/containerd-1.6
 
 https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.24.0/crictl-v1.24.0-linux-amd64.tar.gz,crictl/v1.24.0,,
 
-https://download.docker.com/linux/static/stable/x86_64/docker-20.10.8.tgz,docker/20.10.8,,
-
 https://github.com/coreos/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz,etcd/v3.4.13,,
 
 https://get.helm.sh/helm-v3.9.0-linux-amd64.tar.gz,helm/v3.9.0,,helm
 
-https://github.com/xiaods/k8e/releases/download/v1.21.14%2Bk8e2/k8e,kube/v1.21.14,,
 https://github.com/k3s-io/k3s/releases/download/v1.21.4+k3s1/k3s,kube/v1.21.4,,
 https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/amd64/kubeadm,kube/v1.22.10,,
 https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/amd64/kubelet,kube/v1.22.10,,
 https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/amd64/kubectl,kube/v1.22.10,,
-
-https://github.com/docker/compose/releases/download/v2.2.2/docker-compose-linux-x86_64,registry/compose/v2.2.2,docker-compose-linux-x86_64,,
-https://github.com/goharbor/harbor/releases/download/v2.5.3/harbor-offline-installer-v2.5.3.tgz,registry/harbor/v2.5.3,,
-https://github.com/kubesphere/kubekey/releases/download/v2.0.0-alpha.1/registry-2-linux-amd64.tar.gz,registry/registry/2,,
 
 https://github.com/opencontainers/runc/releases/download/v1.1.1/runc.amd64,runc/v1.1.1,,
 https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64,runc/v1.1.4,,

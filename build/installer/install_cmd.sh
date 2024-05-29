@@ -1079,9 +1079,6 @@ install_velero_plugin_terminus() {
     exit $ERR_EXIT
   fi
 
-  velero_plugin_image_pull=$($sh_c "${CRICTL} pull ${image}")
-  velero_plugin_image_pull=$($sh_c "${CRICTL} pull ${plugin}")
-
   terminus_backup_location=$($sh_c "${VELERO} backup-location get -n os-system | awk '\$1 == \"${storage_location}\" {count++} END{print count}'")
   if [[ ${terminus_backup_location} == x"" || ${terminus_backup_location} -lt 1 ]]; then
     velero_storage_location_install_cmd="${VELERO} backup-location create $storage_location"
@@ -1134,7 +1131,7 @@ install_containerd(){
         # preinstall containerd for k8s
         if command_exists containerd && [ -f /etc/systemd/system/containerd.service ];  then
             ctr_cmd=$(command -v ctr)
-            if ! system_service_active "containerd"; then            
+            if ! system_service_active "containerd"; then
                 ensure_success $sh_c "systemctl start containerd"
             fi
         else
@@ -1145,7 +1142,6 @@ install_containerd(){
             if [ -f "$containerd_tar" ]; then
                 ensure_success $sh_c "cp ${containerd_tar} containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz"
             else
-                echo "---download containerd---" # ! debug
                 ensure_success $sh_c "wget https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz"
             fi
             ensure_success $sh_c "tar Cxzvf /usr/local containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz"
@@ -1153,18 +1149,17 @@ install_containerd(){
             if [ -f "$runc_tar" ]; then
                 ensure_success $sh_c "cp ${runc_tar} runc.amd64"
             else
-                echo "---download runc---" # ! debug
-                ensure_success $sh_c "wget https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64"
+                ensure_success $sh_c "wget https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.amd64"
             fi
             ensure_success $sh_c "install -m 755 runc.amd64 /usr/local/sbin/runc"
 
             if [ -f "$cni_plugin_tar" ]; then
                 ensure_success $sh_c "cp ${cni_plugin_tar} cni-plugins-linux-amd64-v${CNI_PLUGIN_VERSION}.tgz"
             else
-                ensure_success $sh_c "wget https://github.com/containernetworking/plugins/releases/download/v1.1.1/cni-plugins-linux-amd64-v1.1.1.tgz"
+                ensure_success $sh_c "wget https://github.com/containernetworking/plugins/releases/download/v${CNI_PLUGIN_VERSION}/cni-plugins-linux-amd64-v${CNI_PLUGIN_VERSION}.tgz"
             fi
             ensure_success $sh_c "mkdir -p /opt/cni/bin"
-            ensure_success $sh_c "tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v1.1.1.tgz"
+            ensure_success $sh_c "tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v${CNI_PLUGIN_VERSION}.tgz"
             ensure_success $sh_c "mkdir -p /etc/containerd"
             ensure_success $sh_c "containerd config default | tee /etc/containerd/config.toml"
             ensure_success $sh_c "sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml"
@@ -1231,18 +1226,23 @@ install_k8s_ks() {
     KKE_VERSION=0.1.20
 
     ensure_success $sh_c "mkdir -p /etc/kke"
+    local kk_bin="${BASE_DIR}/components/kk"
     local kk_tar="${BASE_DIR}/components/kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
 
-    if [ ! -f "$kk_tar" ]; then
-        if [ x"$PROXY" != x"" ]; then
-          ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/kubekey-ext/releases/download/${KKE_VERSION}/kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
-          ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
+    if [ ! -f "$kk_bin" ]; then
+        if [ ! -f "$kk_tar" ]; then
+            if [ x"$PROXY" != x"" ]; then
+              ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/kubekey-ext/releases/download/${KKE_VERSION}/kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
+              ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
+            else
+              ensure_success $sh_c "curl ${CURL_TRY} -sfL https://raw.githubusercontent.com/beclab/kubekey-ext/master/downloadKKE.sh | VERSION=${KKE_VERSION} sh -"
+            fi
         else
-          ensure_success $sh_c "curl ${CURL_TRY} -sfL https://raw.githubusercontent.com/beclab/kubekey-ext/master/downloadKKE.sh | VERSION=${KKE_VERSION} sh -"
+            ensure_success $sh_c "cp ${kk_tar} kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
+            ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
         fi
-    else
-        ensure_success $sh_c "cp ${kk_tar} kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
-        ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
+    else 
+        ensure_success $sh_c "cp ${kk_bin} ./"
     fi
     ensure_success $sh_c "chmod +x kk"
 
