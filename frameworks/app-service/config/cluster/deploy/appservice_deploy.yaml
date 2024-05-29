@@ -15,6 +15,12 @@
 {{ $usertmpl_sc := "juicefs-localpath-usertmpl" }}
 {{ $usertmpl_storage := "100Mi" }}
 
+{{- $version := .Capabilities.KubeVersion.Version -}}
+{{- $path := "/var/run/containerd/containerd.sock" -}}
+{{ if contains "k3s" $version }}
+{{ $path = "/run/k3s/containerd/containerd.sock" }}
+{{ end }}
+
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -147,7 +153,7 @@ spec:
       serviceAccount: os-internal
       containers:
       - name: app-service
-        image: beclab/app-service:0.2.7
+        image: beclab/app-service:0.2.8
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -312,3 +318,45 @@ spec:
   type: subscriber
   event: metrics.user.cpu.high
   callback: http://app-service.os-system:6755/app-service/v1/metrics/user/highload
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: image-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    tier: image-service
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  selector:
+    matchLabels:
+      tier: image-service
+  template:
+    metadata:
+      labels:
+        tier: image-service
+    spec:
+      serviceAccount: os-internal
+      serviceAccountName: os-internal
+      hostNetwork: true
+      containers:
+        - name: image-service
+          image: beclab/image-service:0.2.8
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: SYS_APPS
+              value: "analytics,market,auth,citus,desktop,did,docs,files,fsnotify,headscale,infisical,intentprovider,ksserver,message,mongo,monitoring,notifications,profile,redis,wise,recommend,seafile,search,dify,search-admin,settings,systemserver,tapr,vault,video,zinc,accounts,control-hub,dashboard,devbox,agent"
+          volumeMounts:
+            - mountPath: /var/run/containerd/containerd.sock
+              name: containerd-socket
+      volumes:
+        - name: containerd-socket
+          hostPath:
+            path: {{ $path }}

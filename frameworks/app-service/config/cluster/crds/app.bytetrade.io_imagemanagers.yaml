@@ -5,18 +5,18 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
-  name: applicationmanagers.app.bytetrade.io
+  name: imagemanagers.app.bytetrade.io
 spec:
   group: app.bytetrade.io
   names:
     categories:
     - all
-    kind: ApplicationManager
-    listKind: ApplicationManagerList
-    plural: applicationmanagers
+    kind: ImageManager
+    listKind: ImageManagerList
+    plural: imagemanagers
     shortNames:
-    - appmgr
-    singular: applicationmanager
+    - im
+    singular: imagemanager
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -35,8 +35,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ApplicationManager is the Schema for the application managers
-          API
+        description: ImageManager is the Schema for the image managers API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -51,7 +50,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ApplicationManagerSpec defines the desired state of ApplicationManager
+            description: ImageManagerSpec defines the desired state of ImageManager
             properties:
               appName:
                 type: string
@@ -59,67 +58,38 @@ spec:
                 type: string
               appOwner:
                 type: string
-              config:
-                type: string
-              source:
-                type: string
-              type:
-                description: Type means the entity that system support.
-                type: string
+              refs:
+                items:
+                  type: string
+                type: array
             required:
             - appName
-            - source
-            - type
+            - refs
             type: object
           status:
-            description: ApplicationManagerStatus defines the observed state of ApplicationManager
+            description: ImageManagerStatus defines the observed state of ApplicationManager
             properties:
-              message:
-                type: string
-              opGeneration:
-                format: int64
-                type: integer
-              opRecords:
+              conditions:
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                  of cluster Important: Run "make" to regenerate code after modifying
+                  this file'
                 items:
-                  description: OpRecord contains details of an operation.
                   properties:
-                    message:
+                    imageRef:
                       type: string
-                    opType:
-                      description: OpType represents the type of operation being performed.
+                    nodeName:
                       type: string
-                    source:
-                      type: string
-                    status:
-                      description: ApplicationManagerState is the state of an applicationmanager
-                        at current time
-                      type: string
-                    statusTime:
-                      format: date-time
-                      type: string
-                    version:
+                    progress:
                       type: string
                   required:
-                  - message
-                  - opType
-                  - source
-                  - status
-                  - statusTime
-                  - version
+                  - imageRef
+                  - nodeName
+                  - progress
                   type: object
                 type: array
-              opType:
-                description: OpType represents the type of operation being performed.
-                type: string
-              payload:
-                additionalProperties:
-                  type: string
-                type: object
-              progress:
+              message:
                 type: string
               state:
-                description: ApplicationManagerState is the state of an applicationmanager
-                  at current time
                 type: string
               statusTime:
                 format: date-time
@@ -128,8 +98,7 @@ spec:
                 format: date-time
                 type: string
             required:
-            - opGeneration
-            - opType
+            - state
             - statusTime
             - updateTime
             type: object
