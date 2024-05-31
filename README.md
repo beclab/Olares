@@ -50,11 +50,9 @@ As an instantiation of the BEC model, the Terminus ecosystem is composed of thre
 - **Snowinning Protocol**: A decentralized identity and reputation system that integrates decentralized identifiers (DIDs), verifiable credentials (VCs), and reputation data into blockchain smart contracts. Learn more in [documentation](https://docs.jointerminus.com/overview/snowinning/overview.html). 
   ![Snowinning Protocol](https://file.bttcdn.com/github/terminus/snowinning-protocol.jpg)
 - **Terminus OS**: An one-stop self-hosted OS running on edge devices.  
+  ![Tech Stacks](https://file.bttcdn.com/github/terminus/v2/tech-stack.jpeg)
 - **TermiPass**: A comprehensive client software that operates across multiple platforms. It securely stores users' private keys and manages their identities and data across various Edge devices. Learn more in [documentation](https://docs.jointerminus.com/how-to/termipass/overview.html).
 
-The tech stacks of Terminus OS are as illustrated in the diagram below:
-
-![Tech Stacks](https://file.bttcdn.com/github/terminus/tech-stack.jpeg)
 
 ## Features
 
@@ -104,9 +102,9 @@ Here are some screenshots from the UI for a sneak peek:
 | Graded App Entrance | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
 | Multi-User Management | ✅ User management <br>🚀 Resource isolation | ✅ User management<br>🛠️ Resouce isolation | ✅ User management<br>🛠️ Resouce isolation | ❌   | ✅ User management  <br>🛠️ Resouce isolation | ✅ User management  <br>🛠️ Resouce isolation | ✅ User management  <br>🛠️ Resouce isolation |
 | Single Login for All Applications | 🚀  | ❌   | ❌   | ❌   | ❌   | ❌   | ❌   |
-| Cross-Node Storage | 🚀 (Juicefs+Minio) | ❌   | ❌   | ❌   | ❌   | ❌   | ❌   |
+| Cross-Node Storage | 🚀 (Juicefs+MinIO) | ❌   | ❌   | ❌   | ❌   | ❌   | ❌   |
 | Database Solution | 🚀 (Built-in cloud-native database solution) | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Disaster Recovery | 🚀 (Powered by Minio's [**Erasure Coding**](https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html)**)** | ✅ RAID | ✅ RAID | ✅ RAID | ❌   | ❌   | ✅ Unraid Storage |
+| Disaster Recovery | 🚀 (Powered by MinIO's [**Erasure Coding**](https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html)**)** | ✅ RAID | ✅ RAID | ✅ RAID | ❌   | ❌   | ✅ Unraid Storage |
 | Backup | ✅ App Data  <br>✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data |
 | App Sandboxing | ✅   | ❌   | ❌ (K8S's namespace) | ❌   | ❌   | ❌   | ❌   |
 | App Ecosystem | ✅ (Official + Third-party Submissions) | ✅ Majorly from official channel | ✅ (Official + Third-party Submissions) | ✅ Majorly from official channel | ❌   | 🛠️ (Community plugins installed manually) | ✅ Community maintained app market |
