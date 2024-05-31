@@ -238,11 +238,11 @@ https://docs.jointerminus.com/developer/contribute/terminus-os.html
 
 * [**Github Discussion**](https://github.com/beclab/terminus/discussions). Best for sharing feedback and asking questions.
 * [**GitHub Issues**](https://github.com/beclab/terminus/issues). Best for filing bugs you encounter using Terminus and submitting feature proposals. 
-* [**Discord**](https://discord.gg/ShjkCBs2). Best for sharing your applications and hanging out with the community.
+* [**Discord**](https://discord.gg/ShjkCBs2). Best for sharing anything Terminus.
 
 ## Staying Ahead
 
-Star the Terminus OS project on GitHub and be instantly notified of new releases and status updates. 
+Star the Terminus OS project to receive instant notifications about new releases and updates.
 
  
 ![star us](https://file.bttcdn.com/github/terminus/terminus.git.v2.gif)
