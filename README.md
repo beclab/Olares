@@ -93,30 +93,30 @@ To help you understand how Terminus OS stands out in the landscape, we've create
 - 🛠️: **Manual Configuration**, indicates that even users with an engineering background need to refer to tutorials to complete the setup.
 - ❌:  **No**, indicates that the feature is not supported.
 
-|     | Terminus OS | Synology | TrueNAS | CasaOS | Proxmox | OMV | Unraid |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Source Code License | Terminus License | Closed | GPL 3.0 | Apache 2.0 | MIT | GPL 3.0 | Closed |
-| Built On | Kubernetes | Linux | Kubernetes | Docker | LXC/VM | Debian | Docker |
+|     | Terminus OS | Synology | TrueNAS | CasaOS | Proxmox | Unraid |
+| --- | --- | --- | --- | --- | --- | --- |
+| Source Code License | Terminus License | Closed | GPL 3.0 | Apache 2.0 | MIT | Closed |
+| Built On | Kubernetes | Linux | Kubernetes | Docker | LXC/VM | Docker |
 | Multi-Node | ✅   | ❌   | ✅   | ❌   | 🛠️ | ❌   | ❌   |
-| Build-in Apps | ✅ (Rich desktop apps) | ✅ (Rich desktop apps) | ❌ (CLI) | ✅ (Simple desktop apps) | ✅ (Dashboard)| ✅ (Dashboard) | ✅ (Dashboard) |
-| Free Domain Name | ✅   | ✅   | ❌   | ❌   | ❌   | ❌   | ❌   |
-| Auto SSL Certificate | 🚀  | ✅   | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Reverse Proxy | 🚀  | ✅   | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| VPN Management | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Graded App Entrance | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Multi-User Management | ✅ User management <br>🚀 Resource isolation | ✅ User management<br>🛠️ Resource isolation | ✅ User management<br>🛠️ Resource isolation | ❌   | ✅ User management  <br>🛠️ Resource isolation | ✅ User management  <br>🛠️ Resource isolation | ✅ User management  <br>🛠️ Resource isolation |
-| Single Login for All Apps | 🚀  | ❌   | ❌   | ❌   | ❌   | ❌   | ❌   |
-| Cross-Node Storage | 🚀 (Juicefs+MinIO) | ❌   | ❌   | ❌   | ❌   | ❌   | ❌   |
-| Database Solution | 🚀 (Built-in cloud-native solution) | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Disaster Recovery | 🚀 (MinIO's [**Erasure Coding**](https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html)**)** | ✅ RAID | ✅ RAID | ✅ RAID | ❌   | ❌   | ✅ Unraid Storage |
-| Backup | ✅ App Data  <br>✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data |
-| App Sandboxing | ✅   | ❌   | ❌ (K8S's namespace) | ❌   | ❌   | ❌   | ❌   |
-| App Ecosystem | ✅ (Official + third-party) | ✅ (Majorly official apps) | ✅ (Official + third-party submissions) | ✅ Majorly official apps | ❌   | 🛠️ (Community plugins) | ✅ (Community app market) |
-| Developer Friendly | ✅ IDE  <br>✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅ CLI  <br>✅ Doc | ✅ CLI  <br>✅ Doc | ✅ SDK  <br>✅ Doc | ✅ SDK  <br>✅ Doc | ✅ Doc |
-| Local LLM Hosting | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Local LLM app development | 🚀 (Dify integrated) | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Client Platforms | ✅ Android  <br>✅ iOS  <br>✅ Windows  <br>✅ Mac  <br>✅ Chrome Plugin | ✅ Android  <br>✅ iOS | ❌   | ❌   | ❌   | ❌   | ❌   |
-| Client Functionality | ✅ (All-in-one client app) | ✅ (14 separate client apps) | ❌   | ❌   | ❌   | ❌   | ❌   |
+| Build-in Apps | ✅ (Rich desktop apps) | ✅ (Rich desktop apps) | ❌ (CLI) | ✅ (Simple desktop apps) | ✅ (Dashboard)| ✅ (Dashboard) |
+| Free Domain Name | ✅   | ✅   | ❌   | ❌   | ❌   | ❌   |
+| Auto SSL Certificate | 🚀  | ✅   | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
+| Reverse Proxy | 🚀  | ✅   | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
+| VPN Management | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
+| Graded App Entrance | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
+| Multi-User Management | ✅ User management <br>🚀 Resource isolation | ✅ User management<br>🛠️ Resource isolation | ✅ User management<br>🛠️ Resource isolation | ❌   | ✅ User management  <br>🛠️ Resource isolation | ✅ User management  <br>🛠️ Resource isolation |
+| Single Login for All Apps | 🚀  | ❌   | ❌   | ❌   | ❌   |  ❌   |
+| Cross-Node Storage | 🚀 (Juicefs+MinIO) | ❌   | ❌   | ❌   | ❌   | ❌   |
+| Database Solution | 🚀 (Built-in cloud-native solution) | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
+| Disaster Recovery | 🚀 (MinIO's [**Erasure Coding**](https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html)**)** | ✅ RAID | ✅ RAID | ✅ RAID | ❌   | ✅ Unraid Storage |
+| Backup | ✅ App Data  <br>✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data |
+| App Sandboxing | ✅   | ❌   | ❌ (K8S's namespace) | ❌   | ❌  | ❌   |
+| App Ecosystem | ✅ (Official + third-party) | ✅ (Majorly official apps) | ✅ (Official + third-party submissions) | ✅ Majorly official apps | ❌  | ✅ (Community app market) |
+| Developer Friendly | ✅ IDE  <br>✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅ CLI  <br>✅ Doc | ✅ CLI  <br>✅ Doc | ✅ SDK  <br>✅ Doc | ✅ Doc |
+| Local LLM Hosting | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
+| Local LLM app development | 🚀 (Dify integrated) | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
+| Client Platforms | ✅ Android  <br>✅ iOS  <br>✅ Windows  <br>✅ Mac  <br>✅ Chrome Plugin | ✅ Android  <br>✅ iOS | ❌   | ❌   | ❌  | ❌   |
+| Client Functionality | ✅ (All-in-one client app) | ✅ (14 separate client apps) | ❌   | ❌   | ❌   |  ❌   |
 
 ## Getting Started
 
@@ -161,7 +161,7 @@ The following table lists the project directories under Terminus OS and their co
 
 <b>Framework components</b>
 
-| **Directory** | **Repo** | **Description** |
+| Directory | Repository | Description |
 | --- | --- | --- |
 | [frameworks/app-service](https://github.com/beclab/terminus/tree/main/frameworks/app-service) | <https://github.com/beclab/app-service> | A system framework component that provides lifecycle management and various security controls for all apps in the system. |
 | [frameworks/backup-server](https://github.com/beclab/terminus/tree/main/frameworks/backup-server) | <https://github.com/beclab/backup-server> | A system framework component that provides scheduled full or incremental cluster backup services. |
@@ -174,7 +174,7 @@ The following table lists the project directories under Terminus OS and their co
 
 <b>System-Level Applications and Services</b>
 
-| Directory | Repo | Description |
+| Directory | Repository | Description |
 | --- | --- | --- |
 | [apps/agent](https://github.com/beclab/terminus/tree/main/apps/agent) | <https://github.com/beclab/dify> | The LLM app development platform ported from [Dify.ai](https://github.com/langgenius/dify), with integrations of Terminus Accounts, local knowledge base, and local models. |
 | [apps/analytic](https://github.com/beclab/terminus/tree/main/apps/analytic) | <https://github.com/beclab/analytic> | Developed based on [Umami](https://github.com/umami-software/umami), Analytic is a simple, fast, privacy-focused alternative to Google Analytics. |
@@ -198,7 +198,7 @@ The following table lists the project directories under Terminus OS and their co
 
 <b>Third-party Components and Services</b> 
 
-| Directory | Repo | Description |
+| Directory | Repository | Description |
 | --- | --- | --- |
 | [third-party/authelia](https://github.com/beclab/terminus/tree/main/third-party/authelia) | <https://github.com/beclab/authelia> | An open-source authentication and authorization server providing two-factor authentication and single sign-on (SSO) for your applications via a web portal. |
 | [third-party/headscale](https://github.com/beclab/terminus/tree/main/third-party/headscale) | <https://github.com/beclab/headscale> | An open source, self-hosted implementation of the Tailscale control server in Terminus to manage Tailscale in TermiPass across different devices. |
@@ -216,7 +216,7 @@ The following table lists the project directories under Terminus OS and their co
 
 **Additional Libraries and Components**
 
-| Directory | Repo | Description |
+| Directory | Repository | Description |
 | --- | --- | --- |
 | [build/installer](https://github.com/beclab/terminus/tree/main/build/installer) |     | The template for generating the installer build. |
 | [build/manifest](https://github.com/beclab/terminus/tree/main/build/manifest) |     | Installation build image list template. |
@@ -238,11 +238,11 @@ https://docs.jointerminus.com/developer/contribute/terminus-os.html
 
 * [**Github Discussion**](https://github.com/beclab/terminus/discussions). Best for sharing feedback and asking questions.
 * [**GitHub Issues**](https://github.com/beclab/terminus/issues). Best for filing bugs you encounter using Terminus and submitting feature proposals. 
-* [**Discord**](https://discord.gg/ShjkCBs2). Best for sharing your applications and hanging out with the community.
+* [**Discord**](https://discord.gg/ShjkCBs2). Best for sharing anything Terminus.
 
 ## Staying Ahead
 
-Star the Terminus OS project on GitHub and be instantly notified of new releases and status updates. 
+Star the Terminus OS project to receive instant notifications about new releases and updates.
 
  
 ![star us](https://file.bttcdn.com/github/terminus/terminus.git.v2.gif)
