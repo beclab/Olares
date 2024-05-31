@@ -69,30 +69,26 @@ Terminus OS offers a wide array of features designed to enhance security, ease o
 
 Here are some screenshots from the UI for a sneak peek:
 
- <div align="center">  
 
-|  <!-- -->          |        <!-- -->       |
-| :---: | :---: |
-| **Desktop**–AI-Powered Personal Desktop | **Files**–A Secure Home to Your Data
- |
+| Desktop–AI-Powered Personal Desktop     |  **Files**–A Secure Home to Your Data
+| -------- | ------- |
 | ![Desktop](https://file.bttcdn.com/github/terminus/v2/desktop.jpg) | ![Files](https://file.bttcdn.com/github/terminus/v2/files.jpg) |
-| **Vault**–1Password for the Web3 Era |**Market**–App Ecosystem in Your Control |
+| **Vault–1Password for the Web3 Era**|**Market–App Ecosystem in Your Control** |
 | ![vault](https://file.bttcdn.com/github/terminus/v2/vault.jpg) | ![market](https://file.bttcdn.com/github/terminus/v2/market.jpg) |
-|**Wise**–Your Digital Secret Garden | **Settings**–Managing Terminus Efficiently |
+|**Wise–Your Digital Secret Garden** | **Settings–Managing Terminus Efficiently** |
 | ![settings](https://file.bttcdn.com/github/terminus/v2/wise.jpg) | ![](https://file.bttcdn.com/github/terminus/v2/settings.jpg) |
-|**Dashboard**–Constant Terminus Monitoring  | **Profile**–Customized Web3 Homepage |
+|**Dashboard–Constant Terminus Monitoring**  | **Profile–Customized Web3 Homepage** |
 | ![dashboard](https://file.bttcdn.com/github/terminus/v2/dashboard.jpg) | ![profile](https://file.bttcdn.com/github/terminus/v2/profile.jpg) |
-| **Devbox**–Developing, Debugging, and Deploying Apps on Terminus  |**Controlhub**–Managing Kubernetes Clusters Easily  |
+| **Devbox–Developing, Debugging, and Deploying Apps**|**Controlhub–Managing Kubernetes Clusters Easily**  |
 | ![Devbox](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![Controlhub](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
 
-</div> 
 
 ### Feature Comparison 
 
-|     | Terminus OS | Synology | TrueNAS Scale | CasaOS | Proxmox | OMV | Unraid |
+|     | Terminus OS | Synology | TrueNAS | CasaOS | Proxmox | OMV | Unraid |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Source Code License | Terminus License | Closed | GPL 3.0 | Apache 2.0 | MIT | GPL 3.0 | Closed |
-| Built On | Kubernetes | Linux | Kubernetes | Docker | LinuxContainer/Virtual Machine | Debian | Docker |
+| Built On | Kubernetes | Linux | Kubernetes | Docker | LinuxContainer/<br>Virtual Machine | Debian | Docker |
 | Multi-Node | ✅   | ❌   | ✅   | ❌   | 🛠️ | ❌   | ❌   |
 | Build-in Applications | ✅ (Feature-rich desktop apps) | ✅ (Feature-rich desktop apps) | ❌ (CLI) | ✅ (Simple desktop apps) | ✅ (Management dashboard)| ✅ (Management dashboard) | ✅ (Management dashboard) |
 | Free Domain Name | ✅   | ✅   | ❌   | ❌   | ❌   | ❌   | ❌   |
@@ -107,7 +103,7 @@ Here are some screenshots from the UI for a sneak peek:
 | Disaster Recovery | 🚀 (Powered by MinIO's [**Erasure Coding**](https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html)**)** | ✅ RAID | ✅ RAID | ✅ RAID | ❌   | ❌   | ✅ Unraid Storage |
 | Backup | ✅ App Data  <br>✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data |
 | App Sandboxing | ✅   | ❌   | ❌ (K8S's namespace) | ❌   | ❌   | ❌   | ❌   |
-| App Ecosystem | ✅ (Official + Third-party Submissions) | ✅ Majorly from official channel | ✅ (Official + Third-party Submissions) | ✅ Majorly from official channel | ❌   | 🛠️ (Community plugins installed manually) | ✅ Community maintained app market |
+| App Ecosystem | ✅ (Official + Third-party Submissions) | ✅ Majorly from official channel | ✅ (Official + third-party submissions) | ✅ Majorly from official channel | ❌   | 🛠️ (Community plugins installed manually) | ✅ (Community maintained app market) |
 | Developer Friendly | ✅ IDE  <br>✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅CLI  <br>✅Doc | ✅CLI  <br>✅Doc | ✅ SDK  <br>✅ Doc | ✅ SDK  <br>✅ Doc | ✅Doc |
 | Local LLM Hosting | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
 | Local LLM app development | 🚀 (Dify integrated) | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
