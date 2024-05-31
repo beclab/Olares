@@ -490,6 +490,8 @@ run_install() {
         else
             ensure_success $sh_c "${HELM} upgrade -i gpu ${BASE_DIR}/wizard/config/gpu -n gpu-system --force --set gpu.server=${GPU_DOMAIN} --set container.manager=containerd --create-namespace"
         fi
+
+        check_orion_gpu
     fi
 
     GPU_TYPE="none"
@@ -1558,6 +1560,10 @@ get_gpu_status(){
     $sh_c "${KUBECTL} get pod  -n kube-system -l 'name=nvidia-device-plugin-ds' -o jsonpath='{.items[*].status.phase}'"
 }
 
+get_orion_gpu_status(){
+    $sh_c "${KUBECTL} get pod  -n gpu-system -l 'app=orionx-container-runtime' -o jsonpath='{.items[*].status.phase}'"
+}
+
 get_userspace_dir(){
     $sh_c "${KUBECTL} get pod  -n user-space-${username} -l 'tier=bfl' -o \
     jsonpath='{range .items[0].spec.volumes[*]}{.name}{\" \"}{.persistentVolumeClaim.claimName}{\"\\n\"}{end}}'" | \
@@ -1770,6 +1776,24 @@ check_gpu(){
 
         status=$(get_gpu_status)
         echo -ne "\rWaiting for nvidia-device-plugin starting          "
+
+    done
+    echo
+}
+
+check_orion_gpu(){
+    status=$(get_orion_gpu_status)
+    n=0
+    while [ "x${status}" != "xRunning" ]; do
+        n=$(expr $n + 1)
+        dotn=$(($n % 10))
+        dot=$(repeat $dotn '>')
+
+        echo -ne "\rWaiting for orionx-container-runtime starting ${dot}"
+        sleep 0.5
+
+        status=$(get_orion_gpu_status)
+        echo -ne "\rWaiting for orionx-container-runtime starting          "
 
     done
     echo
