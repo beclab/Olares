@@ -1806,6 +1806,11 @@ install_gpu(){
 
     distribution=$(. /etc/os-release;echo $ID$VERSION_ID|sed 's/\.//g')
 
+    if [ "$distribution" == "ubuntu2404" ]; then
+        echo "Not supported Ubuntu 24.04"
+        return
+    fi
+
     if [[ "$distribution" =~ "ubuntu" ]]; then
         case "$distribution" in
             ubuntu2404)
