@@ -4,7 +4,7 @@
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/beclab/terminus)](https://github.com/beclab/terminus/releases)
 [![GitHub Repo stars](https://img.shields.io/github/stars/beclab/terminus?style=social)](https://github.com/beclab/terminus/stargazers)
 [![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.com/invite/ShjkCBs2)
-[![License](https://img.shields.io/badge/License-Terminus-red)](https://github.com/beclab/terminus/blob/main/LICENSE.md)
+[![License](https://img.shields.io/badge/License-Terminus-green)](https://github.com/beclab/terminus/blob/main/LICENSE.md)
 
 
 ![cover](https://file.bttcdn.com/github/terminus/desktop-dark.jpeg)
@@ -33,7 +33,7 @@
 
 ## Introduction
 
-Terminus OS is a source-available, cloud-native operating system built on Kubernetes. It is designed as a one-stop self-hosted solution for user-owned edge devices. Our goal is to enable users to securely store their most important data on their own hardware and access services based on this private data from anywhere in the world. Typical use cases inlcude：
+Terminus OS is a free, self-hosted operating system built on Kubernetes. It is designed as a one-stop self-hosted solution for user-owned edge devices. Our goal is to enable users to securely store their most important data on their own hardware ad access services based on this private data from anywhere in the world. Typical use cases include：
 
 - 💻 **Self-hosted**: Terminus OS serves as a one-stop self-hosted solution where users can host and manage their data, operations, and digital life effectively, with full data ownership.
 - 🤖 **Local AI**: Build local AI agents with Terminus OS without writing code.
@@ -65,13 +65,12 @@ Terminus OS offers a wide array of features designed to enhance security, ease o
 - **AI capabilities**: Comprehensive solution for GPU management, local AI model hosting, and private knowledge bases while maintaining data privacy.
 - **Built-in applications**: Includes file manager, sync drive, vault, reader, app market, settings, and dashboard.
 - **Seamless anywhere access**: Access your devices from anywhere using dedicated clients for mobile, desktop, and browsers.
-- **Development tools**: Comprehensive development tools and flexible networking options for effortless application development and porting.
+- **Development tools**: Comprehensive development tools for effortless application development and porting.
 
 Here are some screenshots from the UI for a sneak peek:
 
-
 | Desktop–AI-Powered Personal Desktop     |  **Files**–A Secure Home to Your Data
-| -------- | ------- |
+| :--------: | :-------: |
 | ![Desktop](https://file.bttcdn.com/github/terminus/v2/desktop.jpg) | ![Files](https://file.bttcdn.com/github/terminus/v2/files.jpg) |
 | **Vault–1Password for the Web3 Era**|**Market–App Ecosystem in Your Control** |
 | ![vault](https://file.bttcdn.com/github/terminus/v2/vault.jpg) | ![market](https://file.bttcdn.com/github/terminus/v2/market.jpg) |
@@ -79,11 +78,21 @@ Here are some screenshots from the UI for a sneak peek:
 | ![settings](https://file.bttcdn.com/github/terminus/v2/wise.jpg) | ![](https://file.bttcdn.com/github/terminus/v2/settings.jpg) |
 |**Dashboard–Constant Terminus Monitoring**  | **Profile–Customized Web3 Homepage** |
 | ![dashboard](https://file.bttcdn.com/github/terminus/v2/dashboard.jpg) | ![profile](https://file.bttcdn.com/github/terminus/v2/profile.jpg) |
-| **Devbox–Developing, Debugging, and Deploying Apps**|**Controlhub–Managing Kubernetes Clusters Easily**  |
+| **Devbox–Developing, Debugging, and Deploying**|**Controlhub–Managing Kubernetes Clusters Easily**  |
 | ![Devbox](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![Controlhub](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
 
+</div>
 
 ### Feature Comparison 
+
+To help you understand how Terminus OS stands out in the landscape, we've created a comparison table that highlights its features alongside those of other leading solutions in the market.
+
+**Note:** 
+
+- 🚀: **Auto**, indicates that the system completes the task automatically.
+- ✅: **Yes**, indicates that users without a developer background can complete the setup through the product's UI prompts.
+- 🛠️: **Manual Configuration**, indicates that even users with an engineering background need to refer to tutorials to complete the setup.
+- ❌:  **No**, indicates that the feature is not supported.
 
 |     | Terminus OS | Synology | TrueNAS | CasaOS | Proxmox | OMV | Unraid |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -96,27 +105,19 @@ Here are some screenshots from the UI for a sneak peek:
 | Reverse Proxy | 🚀  | ✅   | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
 | VPN Management | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
 | Graded App Entrance | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Multi-User Management | ✅ User management <br>🚀 Resource isolation | ✅ User management<br>🛠️ Resouce isolation | ✅ User management<br>🛠️ Resouce isolation | ❌   | ✅ User management  <br>🛠️ Resouce isolation | ✅ User management  <br>🛠️ Resouce isolation | ✅ User management  <br>🛠️ Resouce isolation |
+| Multi-User Management | ✅ User management <br>🚀 Resource isolation | ✅ User management<br>🛠️ Resource isolation | ✅ User management<br>🛠️ Resource isolation | ❌   | ✅ User management  <br>🛠️ Resource isolation | ✅ User management  <br>🛠️ Resource isolation | ✅ User management  <br>🛠️ Resource isolation |
 | Single Login for All Applications | 🚀  | ❌   | ❌   | ❌   | ❌   | ❌   | ❌   |
 | Cross-Node Storage | 🚀 (Juicefs+MinIO) | ❌   | ❌   | ❌   | ❌   | ❌   | ❌   |
 | Database Solution | 🚀 (Built-in cloud-native database solution) | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Disaster Recovery | 🚀 (Powered by MinIO's [**Erasure Coding**](https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html)**)** | ✅ RAID | ✅ RAID | ✅ RAID | ❌   | ❌   | ✅ Unraid Storage |
+| Disaster Recovery | 🚀 (By MinIO's [**Erasure Coding**](https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html)**)** | ✅ RAID | ✅ RAID | ✅ RAID | ❌   | ❌   | ✅ Unraid Storage |
 | Backup | ✅ App Data  <br>✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data |
 | App Sandboxing | ✅   | ❌   | ❌ (K8S's namespace) | ❌   | ❌   | ❌   | ❌   |
-| App Ecosystem | ✅ (Official + Third-party Submissions) | ✅ Majorly from official channel | ✅ (Official + third-party submissions) | ✅ Majorly from official channel | ❌   | 🛠️ (Community plugins installed manually) | ✅ (Community maintained app market) |
+| App Ecosystem | ✅ (Official + third-party Submissions) | ✅ Majorly from official channel | ✅ (Official + third-party submissions) | ✅ Majorly from official channel | ❌   | 🛠️ (Community plugins installed manually) | ✅ (Community-maintained app market) |
 | Developer Friendly | ✅ IDE  <br>✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅CLI  <br>✅Doc | ✅CLI  <br>✅Doc | ✅ SDK  <br>✅ Doc | ✅ SDK  <br>✅ Doc | ✅Doc |
 | Local LLM Hosting | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
 | Local LLM app development | 🚀 (Dify integrated) | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
 | Client Platforms | ✅ Android  <br>✅iOS  <br>✅Windows  <br>✅ Mac  <br>✅ Chrome Plugin | ✅ Android  <br>✅ iOS | ❌   | ❌   | ❌   | ❌   | ❌   |
 | Client Functionality | ✅ (All-in-One client application) | ✅ (14 separate client apps) | ❌   | ❌   | ❌   | ❌   | ❌   |
-
-**Note:** 
-
-- 🚀: **Auto**, indicates that the system completes the task automatically.
-- ✅: **Yes**, indicates that users without a developer background can complete the setup through the product's UI prompts.
-- 🛠️: **Manual Configuration**, indicates that even users with an engineering background need to refer to tutorials to complete the setup.
-- ❌:  **No**, indicates that the feature is not supported.
-
 
 ## Getting Started
 
@@ -170,9 +171,9 @@ The following table lists the project directories under Terminus OS and their co
 | [frameworks/l4-bfl-proxy](https://github.com/beclab/terminus/tree/main/frameworks/l4-bfl-proxy) | <https://github.com/beclab/l4-bfl-proxy> | Layer 4 network proxy for BFL. By prereading SNI, it provides a dynamic route to pass through into the user's Ingress. |
 | [frameworks/osnode-init](https://github.com/beclab/terminus/tree/main/frameworks/osnode-init) | <https://github.com/beclab/osnode-init> | A system framework component that initializes node data when a new node joins the cluster. |
 | [frameworks/system-server](https://github.com/beclab/terminus/tree/main/frameworks/system-server) | <https://github.com/beclab/system-server> | As a part of system runtime frameworks, it provides a mechanism for security calls between apps. |
-| [frameworks/tapr](https://github.com/beclab/terminus/tree/main/frameworks/tapr) | <https://github.com/beclab/tapr> | Terminus Application Runtime components |
+| [frameworks/tapr](https://github.com/beclab/terminus/tree/main/frameworks/tapr) | <https://github.com/beclab/tapr> | Terminus Application Runtime components. |
 
-<b>System level applications and services</b>
+<b>System-Level Applications and Services</b>
 
 | Directory | Repo | Description |
 | --- | --- | --- |
@@ -180,58 +181,58 @@ The following table lists the project directories under Terminus OS and their co
 | [apps/analytic](https://github.com/beclab/terminus/tree/main/apps/analytic) | <https://github.com/beclab/analytic> | Developed based on [Umami](https://github.com/umami-software/umami), Analytic is a simple, fast, privacy-focused alternative to Google Analytics. |
 | [apps/market](https://github.com/beclab/terminus/tree/main/apps/market) | <https://github.com/beclab/market> | This repository deploys the front-end part of the application market in Terminus OS. |
 | [apps/market-server](https://github.com/beclab/terminus/tree/main/apps/market-server) | <https://github.com/beclab/market> | This repository deploys the back-end part of the application market in Terminus OS. |
-| [apps/argo](https://github.com/beclab/terminus/tree/main/apps/argo) | <https://github.com/argoproj/argo-workflows> | A workflow engine for orchestrating container execution of local recommendation algorithms |
+| [apps/argo](https://github.com/beclab/terminus/tree/main/apps/argo) | <https://github.com/argoproj/argo-workflows> | A workflow engine for orchestrating container execution of local recommendation algorithms. |
 | [apps/desktop](https://github.com/beclab/terminus/tree/main/apps/desktop) | <https://github.com/beclab/desktop> | The built-in desktop application of the system. |
 | [apps/devbox](https://github.com/beclab/terminus/tree/main/apps/devbox) | <https://github.com/beclab/devbox> | An IDE for developers to port and develop Terminus applications. |
 | [apps/TermiPass](https://github.com/beclab/terminus/tree/main/apps/TermiPass) | <https://github.com/beclab/TermiPass> | A free alternative to 1Password and Bitwarden for teams and enterprises of any size Developed based on [Padloc](https://github.com/padloc/padloc). It serves as the client that helps you manage DID, Terminus Name, and Terminus devices. |
 | [apps/files](https://github.com/beclab/terminus/tree/main/apps/files) | <https://github.com/beclab/files> | A built-in file manager modified from [Filebrowser](https://github.com/filebrowser/filebrowser), providing management of files on Drive, Sync, and various Terminus physical nodes. |
 | [apps/knowledgebase](https://github.com/beclab/terminus/tree/main/apps/knowledgebase) | <https://github.com/Above-Os/knowledgebase> | A built-in application that stores articles, PDFs, and eBooks collected through RSS subscriptions, TermiPass, and recommendations by local algorithms. |
-| [apps/mynitro](https://github.com/beclab/terminus/tree/main/apps/mynitro) | <https://github.com/beclab/mynitro> | A wrapper of the official [**Nitro**](https://github.com/janhq/nitro) project that hosts LLMs locally, specfically, provides services to **Dify**'s agents on Terminus OS. |
+| [apps/mynitro](https://github.com/beclab/terminus/tree/main/apps/mynitro) | <https://github.com/beclab/mynitro> | A wrapper of the official [Nitro](https://github.com/janhq/nitro) project that hosts LLMs locally, specifically, provides services to Dify's agents on Terminus OS. |
 | [apps/notifications](https://github.com/beclab/terminus/tree/main/apps/notifications) | <https://github.com/beclab/notifications> | The notifications system of Terminus OS |
 | [apps/profile](https://github.com/beclab/terminus/tree/main/apps/profile) | <https://github.com/beclab/profile> | Alternative to Linkertree in Terminus OS to create Web3.0 profiles for users. |
 | [apps/rsshub](https://github.com/beclab/terminus/tree/main/apps/rsshub) | <https://github.com/beclab/rsshub> | A RSS subscription manager based on [RssHub](https://github.com/DIYgod/RSSHub). |
-| [apps/dify-gateway](https://github.com/beclab/terminus/tree/main/apps/dify-gateway) | <https://github.com/beclab/dify-gateway> | A gateway service that establishes the connection between **Dify** and other services such as **Files** and **Agent**. |
+| [apps/dify-gateway](https://github.com/beclab/terminus/tree/main/apps/dify-gateway) | <https://github.com/beclab/dify-gateway> | A gateway service that establishes the connection between Dify and other services such as Files and Agent. |
 | [apps/settings](https://github.com/beclab/terminus/tree/main/apps/settings) | <https://github.com/beclab/settings> | Built-in system settings. |
-| [apps/system-apps](https://github.com/beclab/terminus/tree/main/apps/system-apps) | <https://github.com/beclab/system-apps> | Built based on the _kubesphere/console_ project, system-service providing a self-hosted cloud platform that helps users comprehensively understand and control the system's runtime status and resource usage through a visual Dashboard and feature-rich ControlHub. |
-| [apps/wise](https://github.com/beclab/terminus/tree/main/apps/wise) | <https://github.com/Above-Os/knowledgebase> | A reader for users to read rticles stored by users from RSS subscriptions, collections, and recommendation algorithms. |
+| [apps/system-apps](https://github.com/beclab/terminus/tree/main/apps/system-apps) | <https://github.com/beclab/system-apps> | Built based on the _kubesphere/console_ project, system-service provides a self-hosted cloud platform that helps users understand and control the system's runtime status and resource usage through a visual Dashboard and feature-rich ControlHub. |
+| [apps/wise](https://github.com/beclab/terminus/tree/main/apps/wise) | <https://github.com/Above-Os/knowledgebase> | A reader for users to read articles stored by users from RSS subscriptions, collections, and recommendation algorithms. |
 | [apps/wizard](https://github.com/beclab/terminus/tree/main/apps/wizard) | <https://github.com/beclab/wizard> | A wizard application to walk users through the system activation process. |
 
-<b>Third-party components and services</b> 
+<b>Third-party Components and Services</b> 
 
 | Directory | Repo | Description |
 | --- | --- | --- |
-| [/third-party/authelia](https://github.com/beclab/terminus/tree/main/third-party/authelia) | <https://github.com/beclab/authelia> | An open-source authentication and authorization server providing two-factor authentication and single sign-on (SSO) for your applications via a web portal. |
-| [/third-party/headscale](https://github.com/beclab/terminus/tree/main/third-party/headscale) | <https://github.com/beclab/headscale> | An open source, self-hosted implementation of the Tailscale control server in Terminus to manage Tailscale in TermiPass across different devices**.** |
-| [/third-party/infisical](https://github.com/beclab/terminus/tree/main/third-party/infisical) | <https://github.com/beclab/infisical> | An open-source secret management platform that syncs secrets across your teams/infrastructure and prevent secret leaks. |
-| [/third-party/juicefs](https://github.com/beclab/terminus/tree/main/third-party/juicefs) | <https://github.com/beclab/juicefs-ext> | A distributed POSIX file system built on top of Redis and S3, allowing apps on different nodes to access the same data via POSIX interface. |
-| [/third-party/ks-console](https://github.com/beclab/terminus/tree/main/third-party/ks-console) | <https://github.com/kubesphere/console> | Kubesphere console that allows for cluster management via a Web GUI. |
-| [/third-party/ks-installer](https://github.com/beclab/terminus/tree/main/third-party/ks-installer) | <https://github.com/beclab/ks-installer-ext> | Kubesphere installer component that automatically creates Kubesphere clusters based on cluster resource definitions. |
-| [/third-party/kube-state-metrics](https://github.com/beclab/terminus/tree/main/third-party/kube-state-metrics) | <https://github.com/beclab/kube-state-metrics> | kube-state-metrics (KSM) is a simple service that listens to the Kubernetes API server and generates metrics about the state of the objects. |
-| [/third-party/notification-mananger](https://github.com/beclab/terminus/tree/main/third-party/notification-manager) | <https://github.com/beclab/notification-manager-ext> | Kubesphere's notification management component for unified management of multiple notification channels and custom aggregation of notification content. |
-| [/third-party/predixy](https://github.com/beclab/terminus/tree/main/third-party/predixy) | <https://github.com/beclab/predixy> | Redis cluster proxy service that automatically identifies available nodes and adds namespace isolation. |
-| [/third-party/redis-cluster-operator](https://github.com/beclab/terminus/tree/main/third-party/redis-cluster-operator) | <https://github.com/beclab/redis-cluster-operator> | A cloud-native tool for creating and managing Redis clusters based on Kubernetes. |
-| [/third-party/seafile-server](https://github.com/beclab/terminus/tree/main/third-party/seafile-server) | <https://github.com/beclab/seafile-server> | The backend service of Seafile (Sync Drive) for handling data storage. |
-| [/third-party/seahub](https://github.com/beclab/terminus/tree/main/third-party/seahub) | <https://github.com/beclab/seahub> | The front and middleware service of Seafile (Sync Drive) for handling file sharing, data synchronization, etc. |
-| [/third-party/tailscale](https://github.com/beclab/terminus/tree/main/third-party/tailscale) | <https://github.com/tailscale/tailscale> | Tailscale has been integrated in TermiPass of all platforms. |
+| [third-party/authelia](https://github.com/beclab/terminus/tree/mainthird-party/authelia) | <https://github.com/beclab/authelia> | An open-source authentication and authorization server providing two-factor authentication and single sign-on (SSO) for your applications via a web portal. |
+| [third-party/headscale](https://github.com/beclab/terminus/tree/mainthird-party/headscale) | <https://github.com/beclab/headscale> | An open source, self-hosted implementation of the Tailscale control server in Terminus to manage Tailscale in TermiPass across different devices. |
+| [third-party/infisical](https://github.com/beclab/terminus/tree/mainthird-party/infisical) | <https://github.com/beclab/infisical> | An open-source secret management platform that syncs secrets across your teams/infrastructure and prevents secret leaks. |
+| [third-party/juicefs](https://github.com/beclab/terminus/tree/mainthird-party/juicefs) | <https://github.com/beclab/juicefs-ext> | A distributed POSIX file system built on top of Redis and S3, allowing apps on different nodes to access the same data via POSIX interface. |
+| [third-party/ks-console](https://github.com/beclab/terminus/tree/mainthird-party/ks-console) | <https://github.com/kubesphere/console> | Kubesphere console that allows for cluster management via a Web GUI. |
+| [third-party/ks-installer](https://github.com/beclab/terminus/tree/mainthird-party/ks-installer) | <https://github.com/beclab/ks-installer-ext> | Kubesphere installer component that automatically creates Kubesphere clusters based on cluster resource definitions. |
+| [third-party/kube-state-metrics](https://github.com/beclab/terminus/tree/mainthird-party/kube-state-metrics) | <https://github.com/beclab/kube-state-metrics> | kube-state-metrics (KSM) is a simple service that listens to the Kubernetes API server and generates metrics about the state of the objects. |
+| [third-party/notification-mananger](https://github.com/beclab/terminus/tree/mainthird-party/notification-manager) | <https://github.com/beclab/notification-manager-ext> | Kubesphere's notification management component for unified management of multiple notification channels and custom aggregation of notification content. |
+| [third-party/predixy](https://github.com/beclab/terminus/tree/mainthird-party/predixy) | <https://github.com/beclab/predixy> | Redis cluster proxy service that automatically identifies available nodes and adds namespace isolation. |
+| [third-party/redis-cluster-operator](https://github.com/beclab/terminus/tree/mainthird-party/redis-cluster-operator) | <https://github.com/beclab/redis-cluster-operator> | A cloud-native tool for creating and managing Redis clusters based on Kubernetes. |
+| [third-party/seafile-server](https://github.com/beclab/terminus/tree/mainthird-party/seafile-server) | <https://github.com/beclab/seafile-server> | The backend service of Seafile (Sync Drive) for handling data storage. |
+| [third-party/seahub](https://github.com/beclab/terminus/tree/mainthird-party/seahub) | <https://github.com/beclab/seahub> | The front-end and middleware service of Seafile (Sync Drive) for handling file sharing, data synchronization, etc. |
+| [third-party/tailscale](https://github.com/beclab/terminus/tree/mainthird-party/tailscale) | <https://github.com/tailscale/tailscale> | Tailscale has been integrated in TermiPass of all platforms. |
 
-**Additional libraries and components**
+**Additional Libraries and Components**
 
 | Directory | Repo | Description |
 | --- | --- | --- |
 | [build/installer](https://github.com/beclab/terminus/tree/main/build/installer) |     | The template for generating the installer build. |
-| [build/manifest](https://github.com/beclab/terminus/tree/main/build/manifest) |     | Installation build image list templatge |
+| [build/manifest](https://github.com/beclab/terminus/tree/main/build/manifest) |     | Installation build image list template. |
 | [libs/fs-lib](https://github.com/beclab/terminus/tree/main/libs) | <https://github.com/beclab/fs-lib> | The SDK library for the iNotify-compatible interface implemented based on JuiceFS. |
-| [scripts](https://github.com/beclab/terminus/tree/main/scripts) |     | Assisting scripts for generating the installer build |
+| [scripts](https://github.com/beclab/terminus/tree/main/scripts) |     | Assisting scripts for generating the installer build. |
 
 ## Contributing to Terminus
 
 We are welcoming anyways of contributions:
 
-- If you want to develop your own applications on Terminus, refer to:
+- If you want to develop your own applications on Terminus, refer to:<br>
 https://docs.jointerminus.com/developer/develop/
 
 
-- If you want to help improve Terminus, refer to:
+- If you want to help improve Terminus, refer to:<br>
 https://docs.jointerminus.com/developer/contribute/terminus-os.html
 
 ## Community & Contact
