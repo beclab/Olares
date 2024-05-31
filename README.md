@@ -25,7 +25,7 @@
     - [Feature Comparison](#feature-comparison)
   - [Getting Started](#getting-started)
   - [Project Navigation](#project-navigation)
-  - [Contributing to Terminus](#contributing-to-terminus)
+  - [Contributing to Terminus OS](#contributing-to-terminus-os)
   - [Community \& Contact](#community--contact)
   - [Staying Ahead](#staying-ahead)
   - [Special Thanks](#special-thanks)
@@ -37,13 +37,13 @@ Terminus OS is a free, self-hosted operating system built on Kubernetes. It is d
 
 - 💻 **Self-hosted**: Terminus OS serves as a one-stop self-hosted solution where users can host and manage their data, operations, and digital life effectively, with full data ownership.
 - 🤖 **Local AI**: Build local AI agents with Terminus OS without writing code.
-- 🤝 **User-owned decentralized social media**: Easily install decentralized social media apps such as Mastodon, Ghost, and WordPress on Terminus, allowing you to build a personal brand without the risk of being banned or paying platform commissions.
+- 🤝 **User-owned decentralized social media**: Easily install decentralized social media apps such as Mastodon, Ghost, and WordPress on Terminus OS, allowing you to build a personal brand without the risk of being banned or paying platform commissions.
 
 ## Motivation and Design
 
 We believe the current state of the internet, where user data is centralized and exploited by monopolistic corporations, is deeply flawed. Our goal is to empower individuals with true data ownership and control.
 
-This vision is rooted in what we call the "BEC" (Blockchain, Edge, Client) model, where applications and data reside at the edge, secrets are stored on clients, identities on blockchain. By distributing data across personal Edge nodes rather than centralized servers, Terminus aims to restore user sovereignty over their digital information, communications, and online activities.  
+This vision is rooted in what we call the "BEC" (Blockchain, Edge, Client) model, where applications and data reside at the edge, secrets are stored on clients, identities on blockchain. By distributing data across personal Edge nodes rather than centralized servers, Terminus OS aims to restore user sovereignty over their digital information, communications, and online activities.  
 
 As an instantiation of the BEC model, the Terminus ecosystem is composed of three integral components:
 
@@ -61,7 +61,7 @@ Terminus OS offers a wide array of features designed to enhance security, ease o
 - **Enterprise-grade security**: Simplified network configuration using Tailscale, Headscale, Cloudflare Tunnel, and FRP.
 - **Secure and permissionless application ecosystem**: Sandboxing ensures application isolation and security.
 - **Unified filesystem and database**: Automated scaling, backups, and high availability.
-- **Single sign-on**: Log in once to access all applications within Terminus with a shared authentication service.
+- **Single sign-on**: Log in once to access all applications within Terminus OS with a shared authentication service.
 - **AI capabilities**: Comprehensive solution for GPU management, local AI model hosting, and private knowledge bases while maintaining data privacy.
 - **Built-in applications**: Includes file manager, sync drive, vault, reader, app market, settings, and dashboard.
 - **Seamless anywhere access**: Access your devices from anywhere using dedicated clients for mobile, desktop, and browsers.
@@ -142,13 +142,13 @@ Take the following steps to install Terminus OS:
 
 1. [Apply for A Terminus Name](https://docs.jointerminus.com/how-to/termipass/account/#create-terminus-name). 
    
-2. Install Terminus in your machine with the following command: 
+2. Install Terminus OS in your machine with the following command: 
    ```
    curl -fsSL https://terminus.sh |  bash -
    ```
-   For more detailed instructions, see [Install Terminus with commands](https://docs.jointerminus.com/how-to/terminus/setup/install.html#install).
+   For more detailed instructions, see [Install Terminus OS with commands](https://docs.jointerminus.com/how-to/terminus/setup/install.html#install).
 
-3. Access the URL required for Terminus activation in the browser, and complete the initial setups and system activation following the on-screen instructions. For more detailed instructions, see the [Activation Guide](../../how-to/terminus/setup/wizard.md).
+3. Access the URL required for Terminus OS activation in the browser, and complete the initial setups and system activation following the on-screen instructions. For more detailed instructions, see the [Activation Guide](../../how-to/terminus/setup/wizard.md).
    
 4. Log in with the password you reset during activation and complete two-step verification on TermiPass. For more detailed instructions, see the [Login Doc](../../how-to/terminus/setup/login.md).
    
@@ -224,15 +224,15 @@ The following table lists the project directories under Terminus OS and their co
 | [libs/fs-lib](https://github.com/beclab/terminus/tree/main/libs) | <https://github.com/beclab/fs-lib> | The SDK library for the iNotify-compatible interface implemented based on JuiceFS. |
 | [scripts](https://github.com/beclab/terminus/tree/main/scripts) |     | Assisting scripts for generating the installer build. |
 
-## Contributing to Terminus
+## Contributing to Terminus OS
 
 We are welcoming anyways of contributions:
 
-- If you want to develop your own applications on Terminus, refer to:<br>
+- If you want to develop your own applications on Terminus OS, refer to:<br>
 https://docs.jointerminus.com/developer/develop/
 
 
-- If you want to help improve Terminus, refer to:<br>
+- If you want to help improve Terminus OS, refer to:<br>
 https://docs.jointerminus.com/developer/contribute/terminus-os.html
 
 ## Community & Contact
@@ -243,7 +243,7 @@ https://docs.jointerminus.com/developer/contribute/terminus-os.html
 
 ## Staying Ahead
 
-Star Terminus on GitHub and be instantly notified of new releases and status updates. 
+Star the Terminus OS project on GitHub and be instantly notified of new releases and status updates. 
 
  
 ![star us](https://file.bttcdn.com/github/terminus/terminus.git.v2.gif)
