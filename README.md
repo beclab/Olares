@@ -1,10 +1,13 @@
-# Terminus OS - Your Free, Cloud-Native Selfhosted Operating System
+# Terminus OS - Your Free, Self-Hosted Operating System Based on Kubernetes
 
 ![Build Status](https://github.com/beclab/terminus/actions/workflows/release-daily.yaml/badge.svg)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/beclab/terminus)](https://github.com/beclab/terminus/releases)
 [![GitHub Repo stars](https://img.shields.io/github/stars/beclab/terminus?style=social)](https://github.com/beclab/terminus/stargazers)
-[![Twitter Follow](https://img.shields.io/twitter/follow/TerminusOS?style=social)](https://twitter.com/TerminusOS) 
-![cover](https://file.bttcdn.com/github/terminus/banner1.jpg)
+[![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.com/invite/ShjkCBs2)
+[![License](https://img.shields.io/badge/License-Terminus-red)](https://github.com/beclab/terminus/blob/main/LICENSE.md)
+
+
+![cover](https://file.bttcdn.com/github/terminus/desktop-dark.jpeg)
 <p align="center">
   <i>Let people own their data again </i><br>
   <a href="https://www.jointerminus.com">Website</a> ·
@@ -15,19 +18,18 @@
 </p>
 
 **Table of Contents**
-- [Terminus OS - Your Free, Cloud-Native Selfhosted Operating System](#terminus-os---your-free-cloud-native-selfhosted-operating-system)
+- [Terminus OS - Your Free, Self-Hosted Operating System Based on Kubernetes](#terminus-os---your-free-self-hosted-operating-system-based-on-kubernetes)
   - [Introduction](#introduction)
   - [Motivation and Design](#motivation-and-design)
   - [Features](#features)
     - [Feature Comparison](#feature-comparison)
   - [Getting Started](#getting-started)
-  - [Contributing to Terminus](#contributing-to-terminus)
   - [Project Navigation](#project-navigation)
+  - [Contributing to Terminus](#contributing-to-terminus)
   - [Community \& Contact](#community--contact)
   - [Staying Ahead](#staying-ahead)
   - [Special Thanks](#special-thanks)
   - [Contributors](#contributors)
-
 
 ## Introduction
 
@@ -36,29 +38,25 @@ Terminus OS is a source-available, cloud-native operating system built on Kubern
 - 💻 **Self-hosted**: Terminus OS serves as a one-stop self-hosted solution where users can host and manage their data, operations, and digital life effectively, with full data ownership.
 - 🤖 **Local AI**: Build local AI agents with Terminus OS without writing code.
 - 🤝 **User-owned decentralized social media**: Easily install decentralized social media apps such as Mastodon, Ghost, and WordPress on Terminus, allowing you to build a personal brand without the risk of being banned or paying platform commissions.
-- 💰 **Decentralized Physical Infrastructure Network (DePin)**: Develop mining programs on Terminus OS, enabling users to share idle physical resources with the network and earn rewards.
 
 ## Motivation and Design
 
 We believe the current state of the internet, where user data is centralized and exploited by monopolistic corporations, is deeply flawed. Our goal is to empower individuals with true data ownership and control.
 
-This vision is rooted in what we call the "BEC" (Edge, Blockchain, Client) model, where applications and data reside at the edge, secrets are stored on clients, identities on blockchain. By distributing data across personal Edge nodes rather than centralized servers, Terminus aims to restore user sovereignty over their digital information, communications, and online activities.  
+This vision is rooted in what we call the "BEC" (Blockchain, Edge, Client) model, where applications and data reside at the edge, secrets are stored on clients, identities on blockchain. By distributing data across personal Edge nodes rather than centralized servers, Terminus aims to restore user sovereignty over their digital information, communications, and online activities.  
 
 As an instantiation of the BEC model, the Terminus ecosystem is composed of three integral components:
 
-- **Terminus OS**: A cloud-native one-stop selfhosted OS.  
 - **Snowinning Protocol**: A decentralized identity and reputation system that integrates decentralized identifiers (DIDs), verifiable credentials (VCs), and reputation data into blockchain smart contracts. Learn more in [documentation](https://docs.jointerminus.com/overview/snowinning/overview.html). 
   ![Snowinning Protocol](https://file.bttcdn.com/github/terminus/snowinning-protocol.jpg)
+- **Terminus OS**: An one-stop self-hosted OS running on edge devices.  
 - **TermiPass**: A comprehensive client software that operates across multiple platforms. It securely stores users' private keys and manages their identities and data across various Edge devices. Learn more in [documentation](https://docs.jointerminus.com/how-to/termipass/overview.html).
 
 The tech stacks of Terminus OS are as illustrated in the diagram below:
 
 ![Tech Stacks](https://file.bttcdn.com/github/terminus/tech-stack.jpeg)
 
-
-
 ## Features
-
 
 Terminus OS offers a wide array of features designed to enhance security, ease of use, and development flexibility:
 
@@ -67,8 +65,8 @@ Terminus OS offers a wide array of features designed to enhance security, ease o
 - **Unified filesystem and database**: Automated scaling, backups, and high availability.
 - **Single sign-on**: Log in once to access all applications within Terminus with a shared authentication service.
 - **AI capabilities**: Comprehensive solution for GPU management, local AI model hosting, and private knowledge bases while maintaining data privacy.
-- Built-in applications: Includes file manager, sync drive, vault, reader, app market, settings, and dashboard.
-- S**eamless anywhere access**: Access your devices from anywhere using dedicated clients for mobile, desktop, and browsers.
+- **Built-in applications**: Includes file manager, sync drive, vault, reader, app market, settings, and dashboard.
+- **Seamless anywhere access**: Access your devices from anywhere using dedicated clients for mobile, desktop, and browsers.
 - **Development tools**: Comprehensive development tools and flexible networking options for effortless application development and porting.
 
 Here are some screenshots from the UI for a sneak peek:
@@ -118,10 +116,12 @@ Here are some screenshots from the UI for a sneak peek:
 | Client Platforms | ✅ Android  <br>✅iOS  <br>✅Windows  <br>✅ Mac  <br>✅ Chrome Plugin | ✅ Android  <br>✅ iOS | ❌   | ❌   | ❌   | ❌   | ❌   |
 | Client Functionality | ✅ (All-in-One client application) | ✅ (14 separate client apps) | ❌   | ❌   | ❌   | ❌   | ❌   |
 
->- 🚀: **Auto**, indicates that the system completes the task automatically.
->- ✅: **Yes**, indicates that users without a developer background can complete the setup through the product's UI prompts.
->- 🛠️: **Manual Configuration**, indicates that users with an engineering background need to refer to tutorials to complete the setup.
->- ❌:  **No**, indicates that the feature is not supported.
+**Note:** 
+
+- 🚀: **Auto**, indicates that the system completes the task automatically.
+- ✅: **Yes**, indicates that users without a developer background can complete the setup through the product's UI prompts.
+- 🛠️: **Manual Configuration**, indicates that even users with an engineering background need to refer to tutorials to complete the setup.
+- ❌:  **No**, indicates that the feature is not supported.
 
 
 ## Getting Started
@@ -159,25 +159,13 @@ Take the following steps to install Terminus OS:
    
 5. [Back up your mnemonic phrase](../../how-to/termipass/account/index.md#backup-mnemonic-phrase.md) to ensure account and data security.
 
-## Contributing to Terminus
-
-We are welcoming anyways of contributions:
-
-- If you want to develop your own applications on Terminus, refer to:
-https://docs.jointerminus.com/developer/develop/
-
-
-- If you want to help improve Terminus, refer to:
-https://docs.jointerminus.com/developer/contribute/terminus-os.html
-
 ## Project Navigation
 
 Terminus OS consists of numerous code repositories publicly available on GitHub. The current repository is responsible for the final compilation, packaging, installation, and upgrade of the OS, while specific changes mostly take place in their corresponding repositories.
 
-The following table lists the project directories under Terminus OS and their corresponding repositories. Find the one that interests you::
+The following table lists the project directories under Terminus OS and their corresponding repositories. Find the one that interests you:
 
-<details>
-<summary> <b>Framework components</b></summary>
+<b>Framework components</b>
 
 | **Directory** | **Repo** | **Description** |
 | --- | --- | --- |
@@ -190,10 +178,7 @@ The following table lists the project directories under Terminus OS and their co
 | [frameworks/system-server](https://github.com/beclab/terminus/tree/main/frameworks/system-server) | <https://github.com/beclab/system-server> | As a part of system runtime frameworks, it provides a mechanism for security calls between apps. |
 | [frameworks/tapr](https://github.com/beclab/terminus/tree/main/frameworks/tapr) | <https://github.com/beclab/tapr> | Terminus Application Runtime components |
 
-</details>
-
-<details>
-<summary> <b>System level applications and services</b></summary>
+<b>System level applications and services</b>
 
 | Directory | Repo | Description |
 | --- | --- | --- |
@@ -216,12 +201,8 @@ The following table lists the project directories under Terminus OS and their co
 | [apps/system-apps](https://github.com/beclab/terminus/tree/main/apps/system-apps) | <https://github.com/beclab/system-apps> | Built based on the _kubesphere/console_ project, system-service providing a self-hosted cloud platform that helps users comprehensively understand and control the system's runtime status and resource usage through a visual Dashboard and feature-rich ControlHub. |
 | [apps/wise](https://github.com/beclab/terminus/tree/main/apps/wise) | <https://github.com/Above-Os/knowledgebase> | A reader for users to read rticles stored by users from RSS subscriptions, collections, and recommendation algorithms. |
 | [apps/wizard](https://github.com/beclab/terminus/tree/main/apps/wizard) | <https://github.com/beclab/wizard> | A wizard application to walk users through the system activation process. |
-</details>
 
-<details>
-<summary><b>Third-party components and services</b></summary>
-
-Third-party components and services integrated into the Terminus OS ecosystem.
+<b>Third-party components and services</b> 
 
 | Directory | Repo | Description |
 | --- | --- | --- |
@@ -238,10 +219,8 @@ Third-party components and services integrated into the Terminus OS ecosystem.
 | [/third-party/seafile-server](https://github.com/beclab/terminus/tree/main/third-party/seafile-server) | <https://github.com/beclab/seafile-server> | The backend service of Seafile (Sync Drive) for handling data storage. |
 | [/third-party/seahub](https://github.com/beclab/terminus/tree/main/third-party/seahub) | <https://github.com/beclab/seahub> | The front and middleware service of Seafile (Sync Drive) for handling file sharing, data synchronization, etc. |
 | [/third-party/tailscale](https://github.com/beclab/terminus/tree/main/third-party/tailscale) | <https://github.com/tailscale/tailscale> | Tailscale has been integrated in TermiPass of all platforms. |
-</details>
 
-<details>
-<summary><b>Additional libraries and components</b></summary>
+**Additional libraries and components**
 
 | Directory | Repo | Description |
 | --- | --- | --- |
@@ -249,8 +228,17 @@ Third-party components and services integrated into the Terminus OS ecosystem.
 | [build/manifest](https://github.com/beclab/terminus/tree/main/build/manifest) |     | Installation build image list templatge |
 | [libs/fs-lib](https://github.com/beclab/terminus/tree/main/libs) | <https://github.com/beclab/fs-lib> | The SDK library for the iNotify-compatible interface implemented based on JuiceFS. |
 | [scripts](https://github.com/beclab/terminus/tree/main/scripts) |     | Assisting scripts for generating the installer build |
-</details>
 
+## Contributing to Terminus
+
+We are welcoming anyways of contributions:
+
+- If you want to develop your own applications on Terminus, refer to:
+https://docs.jointerminus.com/developer/develop/
+
+
+- If you want to help improve Terminus, refer to:
+https://docs.jointerminus.com/developer/contribute/terminus-os.html
 
 ## Community & Contact
 
