@@ -106,7 +106,7 @@ To help you understand how Terminus OS stands out in the landscape, we've create
 | Graded App Entrance | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
 | Multi-User Management | ✅ User management <br>🚀 Resource isolation | ✅ User management<br>🛠️ Resource isolation | ✅ User management<br>🛠️ Resource isolation | ❌   | ✅ User management  <br>🛠️ Resource isolation | ✅ User management  <br>🛠️ Resource isolation |
 | Single Login for All Apps | 🚀  | ❌   | ❌   | ❌   | ❌   |  ❌   |
-| Cross-Node Storage | 🚀 (Juicefs+MinIO) | ❌   | ❌   | ❌   | ❌   | ❌   |
+| Cross-Node Storage | 🚀 (Juicefs+<br>MinIO) | ❌   | ❌   | ❌   | ❌   | ❌   |
 | Database Solution | 🚀 (Built-in cloud-native solution) | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
 | Disaster Recovery | 🚀 (MinIO's [**Erasure Coding**](https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html)**)** | ✅ RAID | ✅ RAID | ✅ RAID | ❌   | ✅ Unraid Storage |
 | Backup | ✅ App Data  <br>✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data |
