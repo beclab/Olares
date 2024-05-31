@@ -161,7 +161,7 @@ The following table lists the project directories under Terminus OS and their co
 
 <b>Framework components</b>
 
-| **Directory** | **Repo** | **Description** |
+| Directory | Repository | Description |
 | --- | --- | --- |
 | [frameworks/app-service](https://github.com/beclab/terminus/tree/main/frameworks/app-service) | <https://github.com/beclab/app-service> | A system framework component that provides lifecycle management and various security controls for all apps in the system. |
 | [frameworks/backup-server](https://github.com/beclab/terminus/tree/main/frameworks/backup-server) | <https://github.com/beclab/backup-server> | A system framework component that provides scheduled full or incremental cluster backup services. |
@@ -174,7 +174,7 @@ The following table lists the project directories under Terminus OS and their co
 
 <b>System-Level Applications and Services</b>
 
-| Directory | Repo | Description |
+| Directory | Repository | Description |
 | --- | --- | --- |
 | [apps/agent](https://github.com/beclab/terminus/tree/main/apps/agent) | <https://github.com/beclab/dify> | The LLM app development platform ported from [Dify.ai](https://github.com/langgenius/dify), with integrations of Terminus Accounts, local knowledge base, and local models. |
 | [apps/analytic](https://github.com/beclab/terminus/tree/main/apps/analytic) | <https://github.com/beclab/analytic> | Developed based on [Umami](https://github.com/umami-software/umami), Analytic is a simple, fast, privacy-focused alternative to Google Analytics. |
@@ -198,7 +198,7 @@ The following table lists the project directories under Terminus OS and their co
 
 <b>Third-party Components and Services</b> 
 
-| Directory | Repo | Description |
+| Directory | Repository | Description |
 | --- | --- | --- |
 | [third-party/authelia](https://github.com/beclab/terminus/tree/main/third-party/authelia) | <https://github.com/beclab/authelia> | An open-source authentication and authorization server providing two-factor authentication and single sign-on (SSO) for your applications via a web portal. |
 | [third-party/headscale](https://github.com/beclab/terminus/tree/main/third-party/headscale) | <https://github.com/beclab/headscale> | An open source, self-hosted implementation of the Tailscale control server in Terminus to manage Tailscale in TermiPass across different devices. |
@@ -216,7 +216,7 @@ The following table lists the project directories under Terminus OS and their co
 
 **Additional Libraries and Components**
 
-| Directory | Repo | Description |
+| Directory | Repository | Description |
 | --- | --- | --- |
 | [build/installer](https://github.com/beclab/terminus/tree/main/build/installer) |     | The template for generating the installer build. |
 | [build/manifest](https://github.com/beclab/terminus/tree/main/build/manifest) |     | Installation build image list template. |
