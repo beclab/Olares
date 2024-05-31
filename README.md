@@ -29,7 +29,6 @@
   - [Community \& Contact](#community--contact)
   - [Staying Ahead](#staying-ahead)
   - [Special Thanks](#special-thanks)
-  - [Contributors](#contributors)
 
 ## Introduction
 
@@ -249,10 +248,6 @@ Star the Terminus OS project on GitHub and be instantly notified of new releases
 ![star us](https://file.bttcdn.com/github/terminus/terminus.git.v2.gif)
  
 
-
 ## Special Thanks 
 
 The Terminus OS project has incorporated numerous third-party open source projects, including: [Kubernetes](https://kubernetes.io/), [Kubesphere](https://github.com/kubesphere/kubesphere), [Padloc](https://padloc.app/), [K3S](https://k3s.io/), [JuiceFS](https://github.com/juicedata/juicefs), [MinIO](https://github.com/minio/minio), [Envoy](https://github.com/envoyproxy/envoy), [Authelia](https://github.com/authelia/authelia), [Infisical](https://github.com/Infisical/infisical), [Dify](https://github.com/langgenius/dify), [Seafile](https://github.com/haiwen/seafile),[HeadScale](https://headscale.net/), [tailscale](https://tailscale.com/), [Redis Operator](https://github.com/spotahome/redis-operator), [Nitro](https://nitro.jan.ai/), [RssHub](http://rsshub.app/), [predixy](https://github.com/joyieldInc/predixy), [nvshare](https://github.com/grgalex/nvshare), [LangChain](https://www.langchain.com/), [Quasar](https://quasar.dev/), [TrustWallet](https://trustwallet.com/), [Restic](https://restic.net/), [ZincSearch](https://zincsearch-docs.zinc.dev/), [filebrowser](https://filebrowser.org/), [lego](https://go-acme.github.io/lego/), [Velero](https://velero.io/), [s3rver](https://github.com/jamhall/s3rver), [Citusdata](https://www.citusdata.com/).
-
-## Contributors
-<a href="https://github.com/beclab/terminus/graphs/contributors"> <img src="https://contrib.rocks/image?repo=beclab/terminus" /> </a>
