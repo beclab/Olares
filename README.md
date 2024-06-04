@@ -7,7 +7,7 @@
 ![Build Status](https://github.com/beclab/terminus/actions/workflows/release-daily.yaml/badge.svg)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/beclab/terminus)](https://github.com/beclab/terminus/releases)
 [![GitHub Repo stars](https://img.shields.io/github/stars/beclab/terminus?style=social)](https://github.com/beclab/terminus/stargazers)
-[![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.com/invite/ShjkCBs2)
+[![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.com/invite/BzfqrgQPDK)
 [![License](https://img.shields.io/badge/License-Terminus-darkblue)](https://github.com/beclab/terminus/blob/main/LICENSE.md)
 
 </div>
