@@ -1,15 +1,19 @@
-# Terminus OS - Your Free, Self-Hosted Operating System Based on Kubernetes
+<div align="center">
 
+# Terminus OS - Your Free, Self-Hosted Operating System Based on Kubernetes <!-- omit in toc -->
+
+[![Mission](https://img.shields.io/badge/Mission-Let%20people%20own%20their%20data%20again-purple)](#)<br />
+[![Last Commit](https://img.shields.io/github/last-commit/beclab/terminus)](https://github.com/beclab/terminus/commits/main)
 ![Build Status](https://github.com/beclab/terminus/actions/workflows/release-daily.yaml/badge.svg)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/beclab/terminus)](https://github.com/beclab/terminus/releases)
 [![GitHub Repo stars](https://img.shields.io/github/stars/beclab/terminus?style=social)](https://github.com/beclab/terminus/stargazers)
-[![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.com/invite/ShjkCBs2)
-[![License](https://img.shields.io/badge/License-Terminus-green)](https://github.com/beclab/terminus/blob/main/LICENSE.md)
+[![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.com/invite/BzfqrgQPDK)
+[![License](https://img.shields.io/badge/License-Terminus-darkblue)](https://github.com/beclab/terminus/blob/main/LICENSE.md)
 
+</div>
 
 ![cover](https://file.bttcdn.com/github/terminus/desktop-dark.jpeg)
 <p align="center">
-  <i>Let people own their data again </i><br>
   <a href="https://www.jointerminus.com">Website</a> ·
   <a href="https://docs.jointerminus.com">Documentation</a> ·
   <a href="https://docs.jointerminus.com/how-to/termipass/overview.html#download">Download TermiPass</a> ·
@@ -17,19 +21,18 @@
   <a href="https://space.jointerminus.com">Terminus Space</a>
 </p>
 
-**Table of Contents**
-- [Terminus OS - Your Free, Self-Hosted Operating System Based on Kubernetes](#terminus-os---your-free-self-hosted-operating-system-based-on-kubernetes)
-  - [Introduction](#introduction)
-  - [Motivation and Design](#motivation-and-design)
-  - [Features](#features)
-    - [Feature Comparison](#feature-comparison)
-  - [Getting Started](#getting-started)
-  - [Project Navigation](#project-navigation)
-  - [Contributing to Terminus OS](#contributing-to-terminus-os)
-  - [Community \& Contact](#community--contact)
-  - [Staying Ahead](#staying-ahead)
-  - [Special Thanks](#special-thanks)
-
+## Table of Contents <!-- omit in toc -->
+- [Introduction](#introduction)
+- [Motivation and Design](#motivation-and-design)
+- [Features](#features)
+  - [Feature Comparison](#feature-comparison)
+- [Getting Started](#getting-started)
+- [Project Navigation](#project-navigation)
+- [Contributing to Terminus OS](#contributing-to-terminus-os)
+- [Community \& Contact](#community--contact)
+- [Staying Ahead](#staying-ahead)
+- [Special Thanks](#special-thanks)
+  
 ## Introduction
 
 Terminus OS is a free, self-hosted operating system built on Kubernetes. It is designed as a one-stop self-hosted solution for user-owned edge devices. Our goal is to enable users to securely store their most important data on their own hardware ad access services based on this private data from anywhere in the world. Typical use cases include：
@@ -86,7 +89,7 @@ Here are some screenshots from the UI for a sneak peek:
 
 To help you understand how Terminus OS stands out in the landscape, we've created a comparison table that highlights its features alongside those of other leading solutions in the market.
 
-**Note:** 
+**Legend:** 
 
 - 🚀: **Auto**, indicates that the system completes the task automatically.
 - ✅: **Yes**, indicates that users without a developer background can complete the setup through the product's UI prompts.
@@ -225,7 +228,7 @@ The following table lists the project directories under Terminus OS and their co
 
 ## Contributing to Terminus OS
 
-We are welcoming anyways of contributions:
+We are welcoming contributions in any form:
 
 - If you want to develop your own applications on Terminus OS, refer to:<br>
 https://docs.jointerminus.com/developer/develop/
