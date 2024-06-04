@@ -165,8 +165,8 @@ spec:
         fsGroup: 1001
       resources:
         limits:
-          cpu: "500m"
-          memory: "2G"
+          cpu: "1"
+          memory: "2.5G"
         requests:
           cpu: "30m"
           memory: "0.5G"
@@ -203,7 +203,7 @@ spec:
           path: {{ $mongo_rootpath }}/mdbdata-config
       resources:
         limits:
-          cpu: "300m"
+          cpu: "500m"
           memory: "2G"
         requests:
           cpu: "30m"
