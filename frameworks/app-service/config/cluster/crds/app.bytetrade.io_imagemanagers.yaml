@@ -58,35 +58,33 @@ spec:
                 type: string
               appOwner:
                 type: string
+              nodes:
+                items:
+                  type: string
+                type: array
               refs:
                 items:
                   type: string
                 type: array
             required:
             - appName
+            - nodes
             - refs
             type: object
           status:
             description: ImageManagerStatus defines the observed state of ApplicationManager
             properties:
               conditions:
+                additionalProperties:
+                  additionalProperties:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  type: object
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                   of cluster Important: Run "make" to regenerate code after modifying
                   this file'
-                items:
-                  properties:
-                    imageRef:
-                      type: string
-                    nodeName:
-                      type: string
-                    progress:
-                      type: string
-                  required:
-                  - imageRef
-                  - nodeName
-                  - progress
-                  type: object
-                type: array
+                type: object
               message:
                 type: string
               state:
