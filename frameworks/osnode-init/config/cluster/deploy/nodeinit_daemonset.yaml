@@ -23,7 +23,7 @@ spec:
       hostNetwork: true
       containers:
       - name: daemon
-        image: beclab/osnode-init:v0.0.7
+        image: beclab/osnode-init:v0.0.8
         imagePullPolicy: IfNotPresent
         args:
         - --metrics-bind-address
