@@ -180,7 +180,7 @@ spec:
           key: mongodb-passwords
           name: knowledge-mongodb
     databases:
-    - knowledge
+    - name: knowledge
 
 ---
     

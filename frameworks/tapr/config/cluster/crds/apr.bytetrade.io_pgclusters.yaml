@@ -53,6 +53,8 @@ spec:
                 type: string
               backupStorage:
                 type: string
+              citusImage:
+                type: string
               owner:
                 type: string
               password:

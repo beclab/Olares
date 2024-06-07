@@ -133,7 +133,7 @@ spec:
           key: mongodb-passwords
           name: infisical-mongodb
     databases:
-    - infisical
+    - name: infisical
 
 ---
 apiVersion: apps/v1
