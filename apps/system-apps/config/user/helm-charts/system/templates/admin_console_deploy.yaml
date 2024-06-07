@@ -60,7 +60,7 @@ spec:
                 fieldPath: status.podIP
       containers:
       - name: control-hub-frontend
-        image: beclab/admin-console-frontend-v1:v0.2.12
+        image: beclab/admin-console-frontend-v1:v0.2.13
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
