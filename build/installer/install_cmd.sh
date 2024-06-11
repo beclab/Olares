@@ -1044,6 +1044,84 @@ random_string() {
     echo -n "$text"
 }
 
+pull_velero_image() {
+    local count
+    local velero_ver=$1
+    count=$(_check_velero_image_exists "$velero_ver")
+    if [ x"$count" == x"0" ]; then
+        echo "pull velero image $velero_ver ..."
+        ensure_success $sh_c "$CRICTL pull docker.io/beclab/velero:${velero_ver} &>/dev/null;true"
+    fi
+
+    while [ "$count" -lt 1 ]; do
+        sleep 3
+        count=$(_check_velero_image_exists "$velero_ver")
+    done
+    echo
+}
+
+_check_velero_image_exists() {
+  local exists=0
+  local ver=$1
+  local res=$($sh_c "${CRICTL} images |grep 'velero ' 2>/dev/null")
+  if [ "$?" -ne 0 ]; then
+      echo "0"
+  fi
+  exists=$(echo "$res" | while IFS= read -r line; do
+      linev=$(echo $line |awk '{print $2}')
+      if [ "$linev" == "$ver" ]; then
+          echo 1
+          break
+      fi
+  done)
+
+  if [ -z "$exists" ]; then
+      exists=0
+  fi
+
+  echo "${exists}"
+}
+
+pull_velero_plugin_image() {
+    local count
+    local velero_plugin_ver=$1
+    count=$(_check_velero_plugin_image_exists "$velero_plugin_ver")
+    if [ x"$count" == x"0" ]; then
+        echo "pull velero-plugin image $velero_plugin_ver ..."
+        ensure_success $sh_c "$CRICTL pull docker.io/beclab/velero-plugin-for-terminus:${velero_plugin_ver} &>/dev/null;true"
+    fi
+
+    while [ "$count" -lt 1 ]; do
+        sleep 3
+        count=$(_check_velero_plugin_image_exists "$velero_plugin_ver")
+    done
+    echo
+}
+
+_check_velero_plugin_image_exists() {
+  local exists=0
+  local ver=$1
+  local query="${CRICTL} images"
+  local res=$($sh_c "${CRICTL} images |grep 'velero-plugin-for-terminus' 2>/dev/null")
+  if [ "$?" -ne 0 ]; then
+      echo "0"
+  fi
+
+  exists=$(echo "$res" | while IFS= read -r line; do
+      linev=$(echo $line |awk '{print $2}')
+      if [ "$linev" == "$ver" ]; then
+          echo 1
+          break
+      fi
+  done)
+
+  if [ -z "$exists" ]; then
+      exists=0
+  fi
+
+  echo "$exists"
+}
+
 install_velero() {
     config_proxy_resolv_conf
 
@@ -1073,13 +1151,16 @@ install_velero_plugin_terminus() {
   namespace="os-system"
   storage_location="terminus-cloud"
   bucket="terminus-cloud"
-  image="beclab/velero:v1.11.0"
-  plugin="beclab/velero-plugin-for-terminus:v1.0.1"
+  velero_ver="v1.11.1"
+  velero_plugin_ver="v1.0.2"
 
-  if [[ "$provider" == x"" || "$namespace" == x"" || "$bucket" == x"" || "$image" == x"" || "$plugin" == x"" ]]; then
+  if [[ "$provider" == x"" || "$namespace" == x"" || "$bucket" == x"" || "$velero_ver" == x"" || "$velero_plugin_ver" == x"" ]]; then
     echo "Backup plugin install params invalid."
     exit $ERR_EXIT
   fi
+
+  pull_velero_image "$velero_ver"
+  pull_velero_plugin_image "$velero_plugin_ver"
 
   terminus_backup_location=$($sh_c "${VELERO} backup-location get -n os-system | awk '\$1 == \"${storage_location}\" {count++} END{print count}'")
   if [[ ${terminus_backup_location} == x"" || ${terminus_backup_location} -lt 1 ]]; then
@@ -1099,13 +1180,13 @@ install_velero_plugin_terminus() {
   if [[ ${velero_plugin_terminus} == x"" || ${velero_plugin_terminus} -lt 1 ]]; then
     velero_plugin_install_cmd="${VELERO} install"
     velero_plugin_install_cmd+=" --no-default-backup-location --namespace $namespace"
-    velero_plugin_install_cmd+=" --image $image --use-volume-snapshots=false"
-    velero_plugin_install_cmd+=" --no-secret --plugins $plugin"
+    velero_plugin_install_cmd+=" --image beclab/velero:$velero_ver --use-volume-snapshots=false"
+    velero_plugin_install_cmd+=" --no-secret --plugins beclab/velero-plugin-for-terminus:$velero_plugin_ver"
     velero_plugin_install_cmd+=" --velero-pod-cpu-request=50m --velero-pod-cpu-limit=500m"
     velero_plugin_install_cmd+=" --node-agent-pod-cpu-request=50m --node-agent-pod-cpu-limit=500m"
     velero_plugin_install_cmd+=" --wait"
     ensure_success $sh_c "$velero_plugin_install_cmd"
-    velero_plugin_install_cmd="${VELERO} plugin add $plugin -n os-system"
+    velero_plugin_install_cmd="${VELERO} plugin add beclab/velero-plugin-for-terminus:$plugin -n os-system"
     msg=$($sh_c "$velero_plugin_install_cmd 2>&1")
   fi
 

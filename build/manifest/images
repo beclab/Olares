@@ -45,5 +45,7 @@ quay.io/argoproj/argoexec:v3.5.0
 quay.io/argoproj/workflow-controller:v3.5.0
 redis:5.0.14-alpine
 beclab/velero:v1.11.0
+beclab/velero:v1.11.1
 beclab/velero-plugin-for-terminus:v1.0.1
+beclab/velero-plugin-for-terminus:v1.0.2
 rancher/coredns-coredns:1.8.3
