@@ -173,7 +173,7 @@ spec:
         - name: UPLOAD_CONTAINER_IMAGE
           value: "beclab/upload:v1.0.3"
         - name: JOB_IMAGE
-          value: "beclab/upgrade-job:0.1.1"
+          value: "beclab/upgrade-job:0.1.2"
         - name: APP_RANDOM_KEY
           valueFrom:
             secretKeyRef:
