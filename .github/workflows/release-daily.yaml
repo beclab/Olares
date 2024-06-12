@@ -9,6 +9,42 @@ on:
   workflow_dispatch:
 
 jobs:
+  upload-full:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 21200
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+
+      - name: 'Daily tag version'
+        id: vars
+        run: |
+          v=1.6.0-$(date +"%Y%m%d")
+          echo "tag_version=$v" >> $GITHUB_OUTPUT
+          echo "latest_version=1.4.4" >> $GITHUB_OUTPUT
+
+      - name: 'Checkout source code'
+        uses: actions/checkout@v3
+
+      - name: Package installer
+        run: |
+          bash scripts/build-full.sh ${{ steps.vars.outputs.tag_version }}
+
+      - name: Upload to S3
+        env: 
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: 'us-east-1'
+        run: |
+          aws s3 cp install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz s3://terminus-os-install/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz --acl=public-read
+
   release:
     runs-on: ubuntu-latest
 
@@ -31,6 +67,13 @@ jobs:
         uses: eball/write-tag-to-version-file@latest
         with:
           filename: 'build/installer/wizard/config/settings/templates/terminus_cr.yaml'
+          placeholder: '#__VERSION__'
+          tag: ${{ steps.vars.outputs.tag_version }}
+
+      - name: Update release version
+        uses: eball/write-tag-to-version-file@latest
+        with:
+          filename: 'build/installer/publicInstaller.sh'
           placeholder: '#__VERSION__'
           tag: ${{ steps.vars.outputs.tag_version }}
 

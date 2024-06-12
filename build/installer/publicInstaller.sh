@@ -4,13 +4,14 @@
 
 set -o pipefail
 
+VERSION="#__VERSION__"
 if [ "x${VERSION}" = "x" ]; then
   echo "Unable to get latest Install-Wizard version. Set VERSION env var and re-run. For example: export VERSION=1.0.0"
   echo ""
   exit
 fi
 
-DOWNLOAD_URL="https://github.com/beclab/terminus/releases/download/${VERSION}/install-wizard-v${VERSION}.tar.gz"
+DOWNLOAD_URL="https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${VERSION}.tar.gz"
 
 echo ""
 echo " Downloading Install-Wizard ${VERSION} from ${DOWNLOAD_URL} ... " 
