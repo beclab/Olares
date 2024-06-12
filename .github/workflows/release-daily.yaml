@@ -74,7 +74,7 @@ jobs:
       - name: Update release version
         uses: eball/write-tag-to-version-file@latest
         with:
-          filename: 'build/installer/publicInstaller.sh'
+          filename: 'build/installer/install.sh'
           placeholder: '#__VERSION__'
           tag: ${{ steps.vars.outputs.tag_version }}
 
@@ -101,6 +101,7 @@ jobs:
             build/installer/publicInstaller.sh
             build/installer/publicInstaller.latest
             build/installer/uninstall_cmd.sh
+            build/installer/install.sh
             build/installer/publicAddnode.sh
             build/installer/version.hint
             build/installer/publicRestoreInstaller.sh
