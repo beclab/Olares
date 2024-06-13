@@ -1,0 +1,86 @@
+
+
+{{- $redix_secret := (lookup "v1" "Secret" .Release.Namespace "redix-cluster-admin") -}}
+{{- $password := "" -}}
+{{ if $redix_secret -}}
+{{ $password = (index $redix_secret "data" "kvrocks_password") }}
+{{ else -}}
+{{ $password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+{{ $redix_rootpath := "/terminus/userdata/dbdata" }}
+{{ $redix_backuppath := "/terminus/rootfs/middleware-backup" }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redix-cluster-admin
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  kvrocks_password: {{ $password }}
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: kvrocks-data-pv
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: '50Gi'
+  hostPath:
+    path: {{ $redix_rootpath }}/kvrocks_data
+    type: DirectoryOrCreate
+  persistentVolumeReclaimPolicy: Delete
+  volumeMode: Filesystem
+  storageClassName: kvrocks-data-sc
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kvrocks-data-pvc
+  namespace: {{ .Release.Namespace }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: '50Gi'
+  volumeMode: Filesystem
+  volumeName: kvrocks-data-pv
+  storageClassName: kvrocks-data-sc
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: RedixCluster
+metadata:
+  name: kvrocks
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: kvrocks
+  kvrocks:
+    owner: system
+    backupStorage: {{ $redix_backuppath }}/kvrocks_backup
+    image: beclab/kvrocks:0.1.0
+    imagePullPolicy: IfNotPresent
+    password: 
+      valueFrom:
+        secretKeyRef:
+          key: kvrocks_password
+          name: redix-cluster-admin
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 20m
+        memory: 100Mi  
+    
+    
+    
+
+
+

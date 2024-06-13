@@ -99,7 +99,7 @@ spec:
         - name: DISABLE_TELEMETRY
           value: "false"
       - name: operator-api
-        image: beclab/middleware-operator:0.1.30
+        image: beclab/middleware-operator:0.1.31
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9080
@@ -116,15 +116,3 @@ spec:
           mountPath: /terminus/rootfs/middleware-backup
         - name: pgbackup-dir
           mountPath: /backup
-      - name: redis-cluster-operator
-        image: beclab/redis-cluster-operator:0.1.6
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: WATCH_NAMESPACE
-          value: ""
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: OPERATOR_NAME
-          value: "redis-cluster-operator"
