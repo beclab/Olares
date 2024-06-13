@@ -1,7 +1,8 @@
 
-{{- $mongo_secret := (lookup "v1" "Secret" .Release.Namespace "infisical-mongodb") -}}
+{{- $postgres_secret := (lookup "v1" "Secret" .Release.Namespace "infisical-postgres") -}}
 {{- $backend_secret := (lookup "v1" "Secret" .Release.Namespace "infisical-backend") -}}
-{{- $mongo_password := randAlphaNum 16 | b64enc -}}
+{{- $postgres_password := randAlphaNum 16 | b64enc -}}
+{{- $redis_password := randAlphaNum 16 | b64enc -}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -87,53 +88,75 @@ roleRef:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: infisical-mongodb
+  name: infisical-postgres
   namespace: {{ .Release.Namespace }}
 type: Opaque
 
-{{ if $mongo_secret -}}
+{{ if $postgres_secret -}}
 data:
-  mongodb-passwords: {{ index $mongo_secret "data" "mongodb-passwords" }}
+  postgres-passwords: {{ index $postgres_secret "data" "postgres-passwords" }}
+  redis-passwords: {{ index $postgres_secret "data" "redis-passwords" }}
 {{ else -}}
 data:
-  mongodb-passwords: {{ $mongo_password }}
+  postgres-passwords: {{ $postgres_password }}
+  redis-passwords: {{ $redis_password }}
 {{ end }}
 
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: infisical-mongodb
+  name: infisical-postgres
   namespace: user-system-{{ .Values.bfl.username }}
 type: Opaque
 
-{{ if $mongo_secret -}}
+{{ if $postgres_secret -}}
 data:
-  mongodb-passwords: {{ index $mongo_secret "data" "mongodb-passwords" }}
+  postgres-passwords: {{ index $postgres_secret "data" "postgres-passwords" }}
+  redis-passwords: {{ index $postgres_secret "data" "redis-passwords" }}
 {{ else -}}
 data:
-  mongodb-passwords: {{ $mongo_password }}
+  postgres-passwords: {{ $postgres_password }}
+  redis-passwords: {{ $redis_password }}
 {{ end }}
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
-  name: infisical-mongo
+  name: infisical-postgres
   namespace: user-system-{{ .Values.bfl.username }}
 spec:
   app: infisical
   appNamespace: {{ .Release.Namespace }}
-  middleware: mongodb
-  mongodb:
-    user: infisical-{{ .Values.bfl.username }}
+  middleware: postgres
+  postgreSQL:
+    user: infisical_{{ .Values.bfl.username }}
     password: 
       valueFrom:
         secretKeyRef:
-          key: mongodb-passwords
-          name: infisical-mongodb
+          key: postgres-passwords
+          name: infisical-postgres
     databases:
     - name: infisical
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: infisical-redis
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: infisical
+  appNamespace: {{ .Release.Namespace }}
+  middleware: redis
+  redis:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: redis-passwords
+          name: infisical-postgres
+    namespace: infisical
 
 ---
 apiVersion: apps/v1
@@ -168,9 +191,20 @@ spec:
         app: infisical
     spec:
       serviceAccountName: infisical-sa
+      initContainers:
+      - name: "migration-init"
+        image: "beclab/infisical:0.1.1"
+        imagePullPolicy: IfNotPresent
+        command: ["npm", "run", "migration:latest"]
+        envFrom:
+        - secretRef:
+            name: infisical-backend
+        env:
+        - name: DB_CONNECTION_URI
+          value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-master-svc.user-system-{{ .Values.bfl.username }}/$(POSTGRES_DB)?sslmode=disable"
       containers:
       - name: infisical
-        image: "infisical/backend:v0.3.8"
+        image: "beclab/infisical:0.1.1"
         imagePullPolicy: IfNotPresent
         readinessProbe:
           httpGet:
@@ -184,17 +218,33 @@ spec:
         - secretRef:
             name: infisical-backend
         env:
-        - name: MONGODB_PASSWORD
+        - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: infisical-mongodb
-              key: mongodb-passwords
-        - name: MONGO_URL
-          value: "mongodb://infisical-{{ .Values.bfl.username }}:$(MONGODB_PASSWORD)@mongo-cluster-mongos.user-system-{{ .Values.bfl.username }}:27017/{{ .Release.Namespace }}_infisical"
+              name: infisical-postgres
+              key: postgres-passwords
+        
+        - name: POSTGRES_USER
+          value: infisical_{{ .Values.bfl.username }}
+
+        - name: POSTGRES_DB
+          value: user_space_{{ .Values.bfl.username }}_infisical
+
+        
+        - name: DB_CONNECTION_URI
+          value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-master-svc.user-system-{{ .Values.bfl.username }}/$(POSTGRES_DB)?sslmode=disable"
+
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: infisical-postgres
+              key: redis-passwords
+        - name: REDIS_URL
+          value: "redis://:$(REDIS_PASSWORD)@redis-cluster-proxy.user-system-{{ .Values.bfl.username }}:6379/0"
 
 {{ if (eq .Values.debugVersion true) }}
       - name: infisical-frontend
-        image: beclab/infisical-frontend:0.1.0
+        image: beclab/infisical-frontend:0.1.1
         imagePullPolicy: IfNotPresent
         readinessProbe:
           httpGet:
@@ -222,7 +272,7 @@ spec:
           subPath: nginx.conf
 
       - name: tapr-sidecar
-        image: beclab/secret-vault:0.1.5
+        image: beclab/secret-vault:0.1.6
         imagePullPolicy: IfNotPresent
         ports:
         - name: proxy
@@ -230,12 +280,12 @@ spec:
         env:
         - name: OWNER
           value: '{{ .Values.bfl.username }}'
-        - name: MONGO_USER
-          value: infisical-{{ .Values.bfl.username }}
-        - name: MONGO_DB
-          value: {{ .Release.Namespace }}_infisical
-        - name: MONGO_ADDR
-          value: mongo-cluster-mongos.user-system-{{ .Values.bfl.username }}:27017
+        - name: PG_USER
+          value: infisical_{{ .Values.bfl.username }}
+        - name: PG_DB
+          value: user_space_{{ .Values.bfl.username }}_infisical
+        - name: PG_ADDR
+          value: citus-master-svc.user-system-{{ .Values.bfl.username }}
         - name: PASSWORD
           valueFrom:
             secretKeyRef:
