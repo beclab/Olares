@@ -19,17 +19,45 @@
 {{- $redis_password_data := "" -}}
 {{ $redis_password_data = $redis_password | b64dec }}
 
-{{- $mongo_secret := (lookup "v1" "Secret" .Release.Namespace "knowledge-mongodb") -}}
-{{- $mongo_password := randAlphaNum 16 | b64enc -}}
 
-{{- $mongo_password_data := "" -}}
-{{ if $mongo_secret -}}
-  {{ $mongo_password_data = (index $mongo_secret "data" "mongodb-passwords" ) | b64dec }}
+{{- $pg_password := "" -}}
+{{ if $knowledge_secret -}}
+{{ $pg_password = (index $knowledge_secret "data" "pg_password") }}
 {{ else -}}
-  {{ $mongo_password_data = $mongo_password | b64dec }}
+{{ $pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
-
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: knowledge-secrets
+  namespace: user-system-{{ .Values.bfl.username }}
+type: Opaque
+data:
+  pg_password: {{ $pg_password }}
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: knowledge-pg
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: knowledge
+  appNamespace: {{ .Release.Namespace }}
+  middleware: postgres
+  postgreSQL:
+    user: knowledge_{{ .Values.bfl.username }}
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: pg_password
+          name: knowledge-secrets
+    databases:
+    - name: knowledge
+      extensions:
+      - pg_trgm
+      - btree_gin
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -41,8 +69,6 @@ data:
   redis_addr: redis-cluster-proxy.user-system-{{ .Values.bfl.username }}:6379
   redis_host: redis-cluster-proxy.user-system-{{ .Values.bfl.username }}
   redis_port: '6379'
-  mongo_url: mongodb://knowledge-{{ .Values.bfl.username }}:{{ $mongo_password_data }}@mongo-cluster-mongos.user-system-{{ .Values.bfl.username }}:27017/{{ .Release.Namespace }}_knowledge
-  mongo_db: {{ .Release.Namespace }}_knowledge
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -79,18 +105,11 @@ spec:
     spec:
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.1.25"
+        image: "beclab/knowledge-base-api:v0.1.27"
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
         env:
-        - name: MONGODB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: knowledge-mongodb
-              key: mongodb-passwords
-        - name: MONGO_URL
-          value: "mongodb://knowledge-{{ .Values.bfl.username }}:$(MONGODB_PASSWORD)@mongo-cluster-mongos.user-system-{{ .Values.bfl.username }}:27017/{{ .Release.Namespace }}_knowledge"
         - name: BACKEND_URL
           value: http://127.0.0.1:8080
         - name: REDIS_PASSWORD
@@ -105,6 +124,16 @@ spec:
               key: redis_addr
         - name: PDF_SAVE_PATH
           value: /data/Home/Documents/Pdf/
+        - name: PG_USERNAME
+          value: knowledge_{{ .Values.bfl.username }}
+        - name: PG_PASSWORD
+          value: {{ $pg_password | b64dec }}
+        - name: PG_HOST
+          value: citus-master-svc.user-system-{{ .Values.bfl.username }}
+        - name: PG_PORT
+          value: "5432"
+        - name: PG_DATABASE
+          value: user_space_{{ .Values.bfl.username }}_knowledge
         volumeMounts:
         - name: watch-dir
           mountPath: /data/Home/Documents
@@ -118,22 +147,9 @@ spec:
             memory: 1Gi
 
       - name: backend-server
-        image: "beclab/recommend-backend:v0.0.3"
+        image: "beclab/recommend-backend:v0.0.4"
         imagePullPolicy: IfNotPresent
         env:
-        - name: MONGODB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: knowledge-mongodb
-              key: mongodb-passwords
-        - name: MONGODB_URI
-          value: "mongodb://knowledge-{{ .Values.bfl.username }}:$(MONGODB_PASSWORD)@mongo-cluster-mongos.user-system-{{ .Values.bfl.username }}:27017/{{ .Release.Namespace }}_knowledge"
-        - name: MONGODB_NAME
-          value: {{ .Release.Namespace }}_knowledge
-        - name: MONGODB_FEED_COLL
-          value: feeds
-        - name: MONGODB_ENTRY_COLL
-          value: entries
         - name: LISTEN_ADDR
           value: 127.0.0.1:8080
         - name: OS_SYSTEM_SERVER
@@ -160,6 +176,17 @@ spec:
           value: https://recommend-wechat-prd.bttcdn.com/api/wechat/entries
         - name: WECHAT_ENTRY_CONTENT_GET_API_URL
           value: https://recommend-wechat-prd.bttcdn.com/api/wechat/entry/content
+        - name: PG_USERNAME
+          value: knowledge_{{ .Values.bfl.username }}
+        - name: PG_PASSWORD
+          value: {{ $pg_password | b64dec }}
+        - name: PG_HOST
+          value: citus-master-svc.user-system-{{ .Values.bfl.username }}
+        - name: PG_PORT
+          value: "5432"
+        - name: PG_DATABASE
+          value: user_space_{{ .Values.bfl.username }}_knowledge
+
         
         ports:
         - containerPort: 8080
