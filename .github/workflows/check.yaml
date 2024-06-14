@@ -109,5 +109,5 @@ jobs:
           expectBodyRegex: '"isSuccess":true'
           timeout: 1800000
           interval: 30000
-          customHeaders: '{"Authorization": "${{ secrets.INSTALL_SECRET }}", "Conten-Type": "application/x-www-form-urlencoded"}'
+          customHeaders: '{"Authorization": "${{ secrets.INSTALL_SECRET }}", "Content-Type": "application/x-www-form-urlencoded"}'
           data: 'versions=${{ steps.vars.outputs.tag_version }}'
