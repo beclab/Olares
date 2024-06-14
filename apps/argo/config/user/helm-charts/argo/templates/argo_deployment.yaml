@@ -34,7 +34,6 @@
 {{- $pg_user :=  printf "%s%s" "rss_" .Values.bfl.username -}}
 {{- $pg_user = $pg_user | b64enc -}}
 
-
 ---
 
 apiVersion: v1
@@ -109,6 +108,12 @@ data:
   pg_url: postgres://rss_{{ .Values.bfl.username }}:{{ $pg_password_data }}@citus-master-svc.user-system-{{ .Values.bfl.username }}/user_space_{{ .Values.bfl.username }}_rss_v1?sslmode=disable
   mongo_url: mongodb://knowledge-{{ .Values.bfl.username }}:{{ $mongo_password_data }}@mongo-cluster-mongos.user-system-{{ .Values.bfl.username }}:27017/{{ .Release.Namespace }}_knowledge
   mongo_db: {{ .Release.Namespace }}_knowledge
+  postgres_host: citus-master-svc.user-system-{{ .Values.bfl.username }}
+  postgres_user: knowledge_{{ .Values.bfl.username }}
+  postgres_password: "{{ $pg_password_data }}"
+  postgres_db: user_space_{{ .Values.bfl.username }}_knowledge
+  postgres_port: '5432'
+
 ---
 apiVersion: v1
 kind: ConfigMap
