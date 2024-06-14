@@ -79,7 +79,7 @@ jobs:
 
       - name: Package installer
         run: |
-          bash scripts/build-full.sh ${{ steps.vars.outputs.tag_version }}
+          bash scripts/build.sh ${{ steps.vars.outputs.tag_version }}
 
       - name: Upload package
         env: 
