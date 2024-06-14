@@ -6,6 +6,8 @@ on:
   pull_request_target:
     branches: [ "main", "release-*" ]
 
+  workflow_dispatch:
+
 
 jobs:
   lint-test:
@@ -59,3 +61,53 @@ jobs:
       # - name: Run chart-testing (install)
       #   if: steps.list-changed.outputs.changed == 'true'
       #   run: ct install --chart-dirs wizard/charts,wizard/config --target-branch ${{ github.event.repository.default_branch }}
+
+  install-test:
+    needs: lint-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: 'Test tag version'
+        id: vars
+        run: |
+          v=1.6.0-$(echo $RANDOM)
+          echo "tag_version=$v" >> $GITHUB_OUTPUT
+
+      - name: Package installer
+        run: |
+          bash scripts/build-full.sh ${{ steps.vars.outputs.tag_version }}
+
+      - name: Upload package
+        env: 
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: 'us-east-1'
+        run: |
+          aws s3 cp install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz s3://terminus-os-install/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz --acl=public-read
+      
+
+      - name: Deploy Request
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: 'https://cloud-dev-api.bttcdn.com/v1/resource/installTest'
+          method: 'POST'
+          customHeaders: '{"Authorization": "${{ secrets.INSTALL_SECRET }}"}'
+          data: 'versions=${{ steps.vars.outputs.tag_version }}&downloadUrl=https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz'      
+          contentType: "application/x-www-form-urlencoded"
+
+      - name: Check Reault
+        uses: eball/poll-check-endpoint@v0.1.0
+        with:
+          url: https://cloud-dev-api.bttcdn.com/v1/resource/installResult
+          method: 'POST'
+          expectStatus: 200
+          failedBodyRegex: '"installedAt":"[0-9]{10,}".*"isSuccess":false'
+          expectBodyRegex: '"isSuccess":true'
+          timeout: 1800000
+          interval: 30000
+          customHeaders: '{"Authorization": "${{ secrets.INSTALL_SECRET }}", "Conten-Type": "application/x-www-form-urlencoded"}'
+          data: 'versions=${{ steps.vars.outputs.tag_version }}'
