@@ -200,6 +200,18 @@ spec:
         - secretRef:
             name: infisical-backend
         env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: infisical-postgres
+              key: postgres-passwords
+        
+        - name: POSTGRES_USER
+          value: infisical_{{ .Values.bfl.username }}
+
+        - name: POSTGRES_DB
+          value: user_space_{{ .Values.bfl.username }}_infisical
+
         - name: DB_CONNECTION_URI
           value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-master-svc.user-system-{{ .Values.bfl.username }}/$(POSTGRES_DB)?sslmode=disable"
       containers:
