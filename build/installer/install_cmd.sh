@@ -629,6 +629,20 @@ install_storage() {
     TERMINUS_ROOT="/terminus"
     storage_type="minio"    # or s3
 
+    if [[ ! -z "${TERMINUS_IS_CLOUD_VERSION}" && x"${TERMINUS_IS_CLOUD_VERSION}" == x"true" ]]; then
+        local DATA_DIR="/osdata"
+        if [ -d $DATA_DIR ]; then
+            if [[ -d $TERMINUS_ROOT || -f $TERMINUS_ROOT ]]; then
+                $sh_c "rm -rf $TERMINUS_ROOT"
+            fi
+
+            ensure_success $sh_c "mkdir -p $DATA_DIR$TERMINUS_ROOT"
+            ensure_success $sh_c "ln -s $DATA_DIR$TERMINUS_ROOT $TERMINUS_ROOT"
+
+        fi
+    fi
+
+
     log_info 'Preparing object storage ...\n'
 
     if [ x"$STORAGE" != x"" ]; then
