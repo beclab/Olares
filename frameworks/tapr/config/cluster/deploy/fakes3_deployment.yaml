@@ -1,0 +1,78 @@
+
+{{ $mongo_rootpath := "/terminus/userdata/dbdata" }}
+{{ $mongo_backuppath := "/terminus/rootfs/middleware-backup" }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongo-cluster-backup-fakes3
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: S3RVER
+  AWS_SECRET_ACCESS_KEY: S3RVER
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tapr-s3-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: tapr-s3
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: tapr-s3
+      port: 4568
+      targetPort: 4568
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tapr-s3
+  namespace: {{ .Release.Namespace }}
+  labels:
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tapr-s3
+  template:
+    metadata:
+      labels:
+        app: tapr-s3
+    spec:
+      containers:
+      - name: s3-fake-sidecar
+        image: beclab/s3rver:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - s3rver
+        - -d 
+        - /s3data
+        - --configure-bucket
+        - mongo-backup
+        - -a
+        - 0.0.0.0
+        - --no-vhost-buckets
+        ports:
+        - containerPort: 4568
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /s3data/mongo-backup
+          name: s3-data
+        securityContext:
+          privileged: true
+      volumes:
+      - name: s3-data
+        hostPath:
+          type: DirectoryOrCreate
+          path: {{ $mongo_backuppath }}/mongo-backup
+
+
