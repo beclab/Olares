@@ -165,7 +165,7 @@ spec:
         - /filebrowser
         - --noauth
       - name: files-frontend
-        image: beclab/files-frontend:v0.4.64
+        image: beclab/files-frontend:v1.2.5
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
