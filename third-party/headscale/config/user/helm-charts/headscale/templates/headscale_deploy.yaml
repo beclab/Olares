@@ -126,7 +126,7 @@ spec:
             fieldRef:
               fieldPath: status.podIP 
       - name: frontend
-        image: jboesl/docker-nginx-headers-more:latest
+        image: beclab/docker-nginx-headers-more:v0.1.0
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: nginx-config
@@ -172,7 +172,7 @@ spec:
       serviceAccountName: tailscale
       initContainers:
       - name: init
-        image: beclab/headscale-init:v0.1.4
+        image: beclab/headscale-init:v0.1.5
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
@@ -184,7 +184,7 @@ spec:
           mountPath: /etc/headscale
       containers:
       - name: headscale
-        image: beclab/headscale:0.22.3
+        image: headscale/headscale:0.22.3
         imagePullPolicy: IfNotPresent
         command:
         - headscale
@@ -208,7 +208,7 @@ spec:
         command:
         - /bin/sh
         - -c
-        image: beclab/headscale-api-wrapper:v0.1.5
+        image: beclab/headscale-api-wrapper:v0.1.6
         imagePullPolicy: IfNotPresent
         name: headscale-api-wrapper
         volumeMounts:
@@ -252,7 +252,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: tailscale
-        image: beclab/tailscale:v1.48.1
+        image: tailscale/tailscale:v1.48.1
         imagePullPolicy: IfNotPresent
         command: ["/bin/sh", "-c"]
         args:
