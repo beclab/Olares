@@ -425,7 +425,7 @@ spec:
 #          protocol: TCP
 
       - name: sync-backend
-        image: beclab/seahub_pgserver:v0.0.8
+        image: beclab/seahub_pgserver:v0.0.9
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: sync-data
@@ -477,7 +477,7 @@ spec:
           value: "false"
 
       - name: nginx
-        image: 'firesh/nginx-lua:alpine-3.4'
+        image: 'beclab/nginx-lua:n0.0.2'
         ports:
           - name: nginx-port
             containerPort: 80

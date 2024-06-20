@@ -394,7 +394,7 @@ spec:
       # terminationGracePeriodSeconds: 0
       containers:
       - name: api
-        image: beclab/dify-api:v0.0.3
+        image: beclab/dify-api:v0.0.4
         imagePullPolicy: IfNotPresent
         ports:
           - name: api-port
@@ -602,7 +602,7 @@ spec:
             mountPath: /app/api/storage
 
       - name: worker
-        image: beclab/dify-api:v0.0.3
+        image: beclab/dify-api:v0.0.4
         imagePullPolicy: IfNotPresent
         env:
           # Startup mode, 'worker' starts the Celery worker for processing the queue.
@@ -786,7 +786,7 @@ spec:
             value: 'hello@dify.ai'
 
       - name: nginx
-        image: 'beclab/nginx-lua:n0.0.1'
+        image: 'beclab/nginx-lua:n0.0.2'
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 80
@@ -844,7 +844,7 @@ spec:
               - SYS_ADMIN
       {{- if and .Values.gpu (not (eq .Values.gpu "none" )) }}
       - name: nitro
-        image: 'beclab/nitro:v0.0.7'
+        image: 'beclab/nitro:v0.0.8'
         ports:
           - name: nitro-port
             containerPort: 3928
