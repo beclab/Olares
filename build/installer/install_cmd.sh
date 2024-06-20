@@ -1715,7 +1715,7 @@ get_app_key_secret(){
 }
 
 get_app_settings(){
-    apps=("portfolio" "vault" "desktop" "message" "wise" "search" "appstore" "notification" "dashboard" "settings" "devbox" "profile" "agent" "files")
+    apps=("portfolio" "vault" "desktop" "message" "wise" "search" "appstore" "notification" "dashboard" "settings" "profile" "agent" "files")
     for a in "${apps[@]}";do
         ks=($(get_app_key_secret $a))
         echo '
