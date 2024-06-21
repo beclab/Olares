@@ -168,26 +168,6 @@ spec:
     namespace: knowledge
 
 ---
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: knowledge-mongo
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: rss
-  appNamespace: {{ .Release.Namespace }}
-  middleware: mongodb
-  mongodb:
-    user: knowledge-{{ .Values.bfl.username }}
-    password: 
-      valueFrom:
-        secretKeyRef:
-          key: mongodb-passwords
-          name: knowledge-mongodb
-    databases:
-    - name: knowledge
-
----
     
 apiVersion: v1
 kind: Service
