@@ -1,73 +1,73 @@
-
-{{ $dify_appcache_rootpath := "/terminus/userdata/Cache/dify" }}
-
-{{- $namespace := printf "%s" "os-system" -}}
-{{- $dify_secret := (lookup "v1" "Secret" $namespace "dify-secrets") -}}
-{{- $pg_password := "" -}}
-{{ if $dify_secret -}}
-{{ $pg_password = (index $dify_secret "data" "pg_password") }}
-{{ else -}}
-{{ $pg_password = randAlphaNum 16 | b64enc }}
-{{- end -}}
-
-{{- $redis_password := "" -}}
-{{ if $dify_secret -}}
-{{ $redis_password = (index $dify_secret "data" "redis_password") }}
-{{ else -}}
-{{ $redis_password = randAlphaNum 16 | b64enc }}
-{{- end -}}
-
-{{ $client_id := randAlphaNum 8 }}
-
-
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: dify-secrets
-  namespace: os-system
-type: Opaque
-data:
-  pg_password: {{ $pg_password }}
-  redis_password: {{ $redis_password }}
-
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: dify-pg
-  namespace: os-system
-spec:
-  app: dify
-  appNamespace: os-system
-  middleware: postgres
-  postgreSQL:
-    user: dify_os_system
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: pg_password
-          name: dify-secrets
-    databases:
-    - name: dify   
-
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: dify-redis
-  namespace: os-system
-spec:
-  app: dify
-  appNamespace: os-system
-  middleware: redis
-  redis:
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: redis_password
-          name: dify-secrets
-    namespace: dify
+#
+#{{ $dify_appcache_rootpath := "/terminus/userdata/Cache/dify" }}
+#
+#{{- $namespace := printf "%s" "os-system" -}}
+#{{- $dify_secret := (lookup "v1" "Secret" $namespace "dify-secrets") -}}
+#{{- $pg_password := "" -}}
+#{{ if $dify_secret -}}
+#{{ $pg_password = (index $dify_secret "data" "pg_password") }}
+#{{ else -}}
+#{{ $pg_password = randAlphaNum 16 | b64enc }}
+#{{- end -}}
+#
+#{{- $redis_password := "" -}}
+#{{ if $dify_secret -}}
+#{{ $redis_password = (index $dify_secret "data" "redis_password") }}
+#{{ else -}}
+#{{ $redis_password = randAlphaNum 16 | b64enc }}
+#{{- end -}}
+#
+#{{ $client_id := randAlphaNum 8 }}
+#
+#
+#---
+#apiVersion: v1
+#kind: Secret
+#metadata:
+#  name: dify-secrets
+#  namespace: os-system
+#type: Opaque
+#data:
+#  pg_password: {{ $pg_password }}
+#  redis_password: {{ $redis_password }}
+#
+#---
+#apiVersion: apr.bytetrade.io/v1alpha1
+#kind: MiddlewareRequest
+#metadata:
+#  name: dify-pg
+#  namespace: os-system
+#spec:
+#  app: dify
+#  appNamespace: os-system
+#  middleware: postgres
+#  postgreSQL:
+#    user: dify_os_system
+#    password:
+#      valueFrom:
+#        secretKeyRef:
+#          key: pg_password
+#          name: dify-secrets
+#    databases:
+#    - name: dify
+#
+#---
+#apiVersion: apr.bytetrade.io/v1alpha1
+#kind: MiddlewareRequest
+#metadata:
+#  name: dify-redis
+#  namespace: os-system
+#spec:
+#  app: dify
+#  appNamespace: os-system
+#  middleware: redis
+#  redis:
+#    password:
+#      valueFrom:
+#        secretKeyRef:
+#          key: redis_password
+#          name: dify-secrets
+#    namespace: dify
 
 ---
 kind: ConfigMap
@@ -99,175 +99,175 @@ data:
         include proxy.conf;
       }
 
-      location /console/api/setup {
-        proxy_pass http://127.0.0.1:5001;
-        include proxy.conf;
-      }
-
-      location /console/api/login {
-        # Check if user has logged in~
-        # access_by_lua_file login.lua;
-
-        proxy_pass http://dify:5001;
-        # proxy_pass http://127.0.0.1:5001;
-        include proxy.conf;
-      }
-
-      location /console/api {
-        # Check if user has logged in~
-        access_by_lua_file login.lua;
-
-        # Proxy pass the request to backend~
-        proxy_pass http://dify:5001;
-        # proxy_pass http://127.0.0.1:5001;
-        include proxy.conf;
-      }
-
-      location /api {
-        # Check if user has logged in~
-        access_by_lua_file login.lua;
-
-        # Proxy pass the request to backend~
-        proxy_pass http://dify:5001;
-        # proxy_pass http://127.0.0.1:5001;
-        include proxy.conf;
-      }
-
-      location /v1 {
-        # Check if user has logged in~
-        access_by_lua_file login.lua;
-
-        # Proxy pass the request to backend~
-        proxy_pass http://dify:5001;
-        # proxy_pass http://127.0.0.1:5001;
-        include proxy.conf;
-      }
-
-      location /files {
-        # Check if user has logged in~
-        access_by_lua_file login.lua;
-
-        # Proxy pass the request to backend~
-        proxy_pass http://dify:5001;
-        # proxy_pass http://127.0.0.1:5001;
-        include proxy.conf;
-      }
-
-      location /signin {
-        # Check if user has logged in~
-        access_by_lua_file login.lua;
-
-        # Proxy pass the request to backend~
-        # proxy_pass http://127.0.0.1:3000;
-        proxy_pass http://dify:3000/apps;
-        include proxy.conf;
-      }
-
-      location / {
-        # Check if user has logged in~
-        access_by_lua_file login.lua;
-
-        # Proxy pass the request to backend~
-        # proxy_pass http://127.0.0.1:3000;
-        proxy_pass http://dify:3000;
-        include proxy.conf;
-      }
+#      location /console/api/setup {
+#        proxy_pass http://127.0.0.1:5001;
+#        include proxy.conf;
+#      }
+#
+#      location /console/api/login {
+#        # Check if user has logged in~
+#        # access_by_lua_file login.lua;
+#
+#        proxy_pass http://dify:5001;
+#        # proxy_pass http://127.0.0.1:5001;
+#        include proxy.conf;
+#      }
+#
+#      location /console/api {
+#        # Check if user has logged in~
+#        access_by_lua_file login.lua;
+#
+#        # Proxy pass the request to backend~
+#        proxy_pass http://dify:5001;
+#        # proxy_pass http://127.0.0.1:5001;
+#        include proxy.conf;
+#      }
+#
+#      location /api {
+#        # Check if user has logged in~
+#        access_by_lua_file login.lua;
+#
+#        # Proxy pass the request to backend~
+#        proxy_pass http://dify:5001;
+#        # proxy_pass http://127.0.0.1:5001;
+#        include proxy.conf;
+#      }
+#
+#      location /v1 {
+#        # Check if user has logged in~
+#        access_by_lua_file login.lua;
+#
+#        # Proxy pass the request to backend~
+#        proxy_pass http://dify:5001;
+#        # proxy_pass http://127.0.0.1:5001;
+#        include proxy.conf;
+#      }
+#
+#      location /files {
+#        # Check if user has logged in~
+#        access_by_lua_file login.lua;
+#
+#        # Proxy pass the request to backend~
+#        proxy_pass http://dify:5001;
+#        # proxy_pass http://127.0.0.1:5001;
+#        include proxy.conf;
+#      }
+#
+#      location /signin {
+#        # Check if user has logged in~
+#        access_by_lua_file login.lua;
+#
+#        # Proxy pass the request to backend~
+#        # proxy_pass http://127.0.0.1:3000;
+#        proxy_pass http://dify:3000/apps;
+#        include proxy.conf;
+#      }
+#
+#      location / {
+#        # Check if user has logged in~
+#        access_by_lua_file login.lua;
+#
+#        # Proxy pass the request to backend~
+#        # proxy_pass http://127.0.0.1:3000;
+#        proxy_pass http://dify:3000;
+#        include proxy.conf;
+#      }
     }
-  login.lua: |-
-    local cjson = require "cjson.safe"
-
-    local function processAuthorization()
-        local difyHost = "dify"
-        ngx.log(ngx.STDERR, "HOST: " .. ngx.var.host)
-        local isInner = ngx.var.host == difyHost
-
-        -- Check if current URL is "/signin"
-        ngx.log(ngx.STDERR, "URI: " .. ngx.var.uri)
-        local isSignIn = ngx.var.uri == "/signin"
-        local isModel = ngx.var.uri == "/console/api/workspaces/current/model-providers/openai_api_compatible/models"
-
-        if isInner and isSignIn then
-          return
-        end
-
-        local headers = ngx.req.get_headers()
-
-        if not isSignIn and not isModel then
-          local cookie = ngx.var.http_cookie
-          local redirectedURL = ngx.var.request_uri
-
-          -- Get next URL
-          ngx.log(ngx.STDERR, "Next URL: " .. redirectedURL)
-
-          local token = ""
-          local _ = ""
-          if cookie then
-              _, _, token = string.find(cookie, "Authorization=Bearer ([^;]+)")
-          end
-
-          if token then
-            -- Check if "Authorization" exists and is not empty string
-            local authorizationHeader = headers["Authorization"]
-            if authorizationHeader then
-              ngx.log(ngx.STDERR, "authorizatioonHeader=" .. authorizationHeader)
-            else
-              ngx.log(ngx.STDERR, "authorizatioonHeader=nil")
-            end
-
-            ngx.log(ngx.STDERR, "token=" .. token)
-            if authorizationHeader and authorizationHeader:match("^Bearer%s+.+") then
-                if isInner then
-                    ngx.log(ngx.STDERR, "Inner Request! Authorization header with non-empty Bearer token found. Skipping further processing.")
-                    return
-                end
-                if authorizationHeader == "Bearer" .. token then
-                    ngx.log(ngx.STDERR, "Authorization header with non-empty and newest Bearer token found. Skipping further processing.")
-                    return
-                end
-            else
-                ngx.req.set_header("Authorization", "Bearer " .. token)
-                ngx.log(ngx.STDERR, "Authorization token found in cookie. Token: " .. token)
-                return
-            end
-          end
-        end
-
-        local username = headers["x-bfl-user"]
-        local orig_ct = headers["Content-Type"]
-        local user_email = 'admin@bytetrade.io'
-        if username ~= nil and username ~= '' then
-          user_email = username .. '@dify.ai'
-        end
-
-        ngx.req.set_header("Content-Type", "application/json")
-        local res = ngx.location.capture("/console/api/login", {
-            method = ngx.HTTP_POST,
-            body = '{"email":"' .. user_email .. '","password":"abcd123456","remember_me":true}'
-        })
-        ngx.req.set_header("Content-Type", orig_ct)
-
-        if res.status == ngx.HTTP_OK or res.status == ngx.HTTP_MOVED_TEMPORARILY then
-            local new_cookie = res.header["Set-Cookie"]
-            local data = res.body
-            local jsonData = cjson.decode(data)
-            local token_data = jsonData
-
-            if token_data and token_data.data then
-                local token = token_data.data
-                ngx.req.set_header("Authorization", "Bearer " .. token)
-                ngx.header["Set-Cookie"] = "Authorization=Bearer " .. token .. "; Path=/"
-                ngx.log(ngx.STDERR, "Authorization token obtained from login API. token: " .. token)
-            else
-                ngx.log(ngx.STDERR, "Failed to parse JSON data")
-            end
-        else
-            ngx.log(ngx.STDERR, "Failed to obtain authorization from login API: " .. tostring(res.status))
-            ngx.header["X-Redirected"] = "/"
-            return
-        end
-    end
-
-    processAuthorization()
+#  login.lua: |-
+#    local cjson = require "cjson.safe"
+#
+#    local function processAuthorization()
+#        local difyHost = "dify"
+#        ngx.log(ngx.STDERR, "HOST: " .. ngx.var.host)
+#        local isInner = ngx.var.host == difyHost
+#
+#        -- Check if current URL is "/signin"
+#        ngx.log(ngx.STDERR, "URI: " .. ngx.var.uri)
+#        local isSignIn = ngx.var.uri == "/signin"
+#        local isModel = ngx.var.uri == "/console/api/workspaces/current/model-providers/openai_api_compatible/models"
+#
+#        if isInner and isSignIn then
+#          return
+#        end
+#
+#        local headers = ngx.req.get_headers()
+#
+#        if not isSignIn and not isModel then
+#          local cookie = ngx.var.http_cookie
+#          local redirectedURL = ngx.var.request_uri
+#
+#          -- Get next URL
+#          ngx.log(ngx.STDERR, "Next URL: " .. redirectedURL)
+#
+#          local token = ""
+#          local _ = ""
+#          if cookie then
+#              _, _, token = string.find(cookie, "Authorization=Bearer ([^;]+)")
+#          end
+#
+#          if token then
+#            -- Check if "Authorization" exists and is not empty string
+#            local authorizationHeader = headers["Authorization"]
+#            if authorizationHeader then
+#              ngx.log(ngx.STDERR, "authorizatioonHeader=" .. authorizationHeader)
+#            else
+#              ngx.log(ngx.STDERR, "authorizatioonHeader=nil")
+#            end
+#
+#            ngx.log(ngx.STDERR, "token=" .. token)
+#            if authorizationHeader and authorizationHeader:match("^Bearer%s+.+") then
+#                if isInner then
+#                    ngx.log(ngx.STDERR, "Inner Request! Authorization header with non-empty Bearer token found. Skipping further processing.")
+#                    return
+#                end
+#                if authorizationHeader == "Bearer" .. token then
+#                    ngx.log(ngx.STDERR, "Authorization header with non-empty and newest Bearer token found. Skipping further processing.")
+#                    return
+#                end
+#            else
+#                ngx.req.set_header("Authorization", "Bearer " .. token)
+#                ngx.log(ngx.STDERR, "Authorization token found in cookie. Token: " .. token)
+#                return
+#            end
+#          end
+#        end
+#
+#        local username = headers["x-bfl-user"]
+#        local orig_ct = headers["Content-Type"]
+#        local user_email = 'admin@bytetrade.io'
+#        if username ~= nil and username ~= '' then
+#          user_email = username .. '@dify.ai'
+#        end
+#
+#        ngx.req.set_header("Content-Type", "application/json")
+#        local res = ngx.location.capture("/console/api/login", {
+#            method = ngx.HTTP_POST,
+#            body = '{"email":"' .. user_email .. '","password":"abcd123456","remember_me":true}'
+#        })
+#        ngx.req.set_header("Content-Type", orig_ct)
+#
+#        if res.status == ngx.HTTP_OK or res.status == ngx.HTTP_MOVED_TEMPORARILY then
+#            local new_cookie = res.header["Set-Cookie"]
+#            local data = res.body
+#            local jsonData = cjson.decode(data)
+#            local token_data = jsonData
+#
+#            if token_data and token_data.data then
+#                local token = token_data.data
+#                ngx.req.set_header("Authorization", "Bearer " .. token)
+#                ngx.header["Set-Cookie"] = "Authorization=Bearer " .. token .. "; Path=/"
+#                ngx.log(ngx.STDERR, "Authorization token obtained from login API. token: " .. token)
+#            else
+#                ngx.log(ngx.STDERR, "Failed to parse JSON data")
+#            end
+#        else
+#            ngx.log(ngx.STDERR, "Failed to obtain authorization from login API: " .. tostring(res.status))
+#            ngx.header["X-Redirected"] = "/"
+#            return
+#        end
+#    end
+#
+#    processAuthorization()
   nginx.conf: |-
     user  nginx;
     worker_processes  auto;
@@ -320,21 +320,21 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - name: http
-    port: 3020
-    targetPort: 3020
+#  - name: http
+#    port: 3020
+#    targetPort: 3020
   - name: nginx-port
     protocol: TCP
     port: 80
     targetPort: 80
-  - name: api-port
-    protocol: TCP
-    port: 5001
-    targetPort: 5001
-  - name: web-port
-    protocol: TCP
-    port: 3000
-    targetPort: 3000
+#  - name: api-port
+#    protocol: TCP
+#    port: 5001
+#    targetPort: 5001
+#  - name: web-port
+#    protocol: TCP
+#    port: 3000
+#    targetPort: 3000
   - name: ui-port
     protocol: TCP
     port: 3900
@@ -369,422 +369,422 @@ spec:
         app: dify
         name: dify
     spec:
-      initContainers:
-        - name: init-container
-          image: 'postgres:16.0-alpine3.18'
-          command:
-            - sh
-            - '-c'
-            - >-
-              echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB1 -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
-          env:
-            - name: PGHOST
-              value: citus-headless.os-system
-            - name: PGPORT
-              value: "5432"
-            - name: PGUSER
-              value: dify_os_system
-            - name: PGPASSWORD
-              value: {{ $pg_password | b64dec }}
-            - name: PGDB1
-              value: os_system_dify
+#      initContainers:
+#        - name: init-container
+#          image: 'postgres:16.0-alpine3.18'
+#          command:
+#            - sh
+#            - '-c'
+#            - >-
+#              echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB1 -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
+#          env:
+#            - name: PGHOST
+#              value: citus-headless.os-system
+#            - name: PGPORT
+#              value: "5432"
+#            - name: PGUSER
+#              value: dify_os_system
+#            - name: PGPASSWORD
+#              value: {{ $pg_password | b64dec }}
+#            - name: PGDB1
+#              value: os_system_dify
 
-      securityContext:
-        runAsUser: 0
+#      securityContext:
+#        runAsUser: 0
       # terminationGracePeriodSeconds: 0
       containers:
-      - name: api
-        image: beclab/dify-api:v0.0.4
-        imagePullPolicy: IfNotPresent
-        ports:
-          - name: api-port
-            containerPort: 5001
-            protocol: TCP
-        env:
-          # Startup mode, 'api' starts the API server.
-          - name: MODE
-            value: api
-          # The log level for the application. Supported values are `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
-          - name: LOG_LEVEL
-            value: INFO
-          # A secret key that is used for securely signing the session cookie and encrypting sensitive information on the database. You can generate a strong key using `openssl rand -base64 42`.
-          - name: SECRET_KEY
-            value: sk-9f73s3ljTXVcMT3Blb3ljTqtsKiGHXVcMT3BlbkFJLK7U
-          # The base URL of console application web frontend, refers to the Console base URL of WEB service if console domain is
-          # different from api or web app domain.
-          # example: http://cloud.dify.ai
-          - name: CONSOLE_WEB_URL
-            value: ''
-          # Password for admin user initialization.
-          # If left unset, admin user will not be prompted for a password when creating the initial admin account.
-          - name: INIT_PASSWORD
-            value: ''
-          # The base URL of console application api server, refers to the Console base URL of WEB service if console domain is
-          # different from api or web app domain.
-          # example: http://cloud.dify.ai
-          - name: CONSOLE_API_URL
-            value: ''
-          # The URL for Service API endpoints，refers to the base URL of the current API service if api domain is
-          # different from console domain.
-          # example: http://api.dify.ai
-          - name: SERVICE_API_URL
-            value: ''
-          # The URL for Web APP api server, refers to the Web App base URL of WEB service if web app domain is different from
-          # console or api domain.
-          # example: http://udify.app
+#      - name: api
+#        image: beclab/dify-api:v0.0.4
+#        imagePullPolicy: IfNotPresent
+#        ports:
+#          - name: api-port
+#            containerPort: 5001
+#            protocol: TCP
+#        env:
+#          # Startup mode, 'api' starts the API server.
+#          - name: MODE
+#            value: api
+#          # The log level for the application. Supported values are `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
+#          - name: LOG_LEVEL
+#            value: INFO
+#          # A secret key that is used for securely signing the session cookie and encrypting sensitive information on the database. You can generate a strong key using `openssl rand -base64 42`.
+#          - name: SECRET_KEY
+#            value: sk-9f73s3ljTXVcMT3Blb3ljTqtsKiGHXVcMT3BlbkFJLK7U
+#          # The base URL of console application web frontend, refers to the Console base URL of WEB service if console domain is
+#          # different from api or web app domain.
+#          # example: http://cloud.dify.ai
+#          - name: CONSOLE_WEB_URL
+#            value: ''
+#          # Password for admin user initialization.
+#          # If left unset, admin user will not be prompted for a password when creating the initial admin account.
+#          - name: INIT_PASSWORD
+#            value: ''
+#          # The base URL of console application api server, refers to the Console base URL of WEB service if console domain is
+#          # different from api or web app domain.
+#          # example: http://cloud.dify.ai
+#          - name: CONSOLE_API_URL
+#            value: ''
+#          # The URL for Service API endpoints，refers to the base URL of the current API service if api domain is
+#          # different from console domain.
+#          # example: http://api.dify.ai
+#          - name: SERVICE_API_URL
+#            value: ''
+#          # The URL for Web APP api server, refers to the Web App base URL of WEB service if web app domain is different from
+#          # console or api domain.
+#          # example: http://udify.app
+##          - name: APP_API_URL
+##            value: ''
+#          # The URL for Web APP frontend, refers to the Web App base URL of WEB service if web app domain is different from
+#          # console or api domain.
+#          # example: http://udify.app
+#          - name: APP_WEB_URL
+#            value: ''
+#          # File preview or download Url prefix.
+#          # used to display File preview or download Url to the front-end or as Multi-model inputs;
+#          # Url is signed and has expiration time.
+#          - name: FILES_URL
+#            value: ''
+#          # When enabled, migrations will be executed prior to application startup and the application will start after the migrations have completed.
+#          - name: MIGRATION_ENABLED
+#            value: 'true'
+#          # The configurations of postgres database connection.
+#          # It is consistent with the configuration in the 'db' service below.
+#          - name: DB_USERNAME
+#            value: dify_os_system
+#          - name: DB_PASSWORD
+#            value: {{ $pg_password | b64dec }}
+#          - name: DB_HOST
+#            value: citus-headless.os-system
+#          - name: DB_PORT
+#            value: '5432'
+#          - name: DB_DATABASE
+#            value: os_system_dify
+#          # The configurations of redis connection.
+#          # It is consistent with the configuration in the 'redis' service below.
+#          - name: REDIS_HOST
+#            value: localhost
+#          - name: REDIS_PORT
+#            value: '6379'
+#          - name: REDIS_USERNAME
+#            value: ''
+#          - name: REDIS_PASSWORD
+#            value: {{ $redis_password | b64dec }}
+#          - name: REDIS_USE_SSL
+#            value: 'false'
+#          # use redis db 0 for redis cache
+#          - name: REDIS_DB
+#            value: '0'
+#          # The configurations of celery broker.
+#          # Use redis as the broker, and redis db 1 for celery broker.
+#          - name: CELERY_BROKER_URL
+#            value: redis://:{{ $redis_password | b64dec }}@localhost:6379/0
+#          # Specifies the allowed origins for cross-origin requests to the Web API, e.g. https://dify.app or * for all origins.
+#          - name: WEB_API_CORS_ALLOW_ORIGINS
+#            value: '*'
+#          # Specifies the allowed origins for cross-origin requests to the console API, e.g. https://cloud.dify.ai or * for all origins.
+#          - name: CONSOLE_CORS_ALLOW_ORIGINS
+#            value: '*'
+#          # The type of storage to use for storing user files. Supported values are `local` and `s3`, Default: `local`
+#          - name: STORAGE_TYPE
+#            value: local
+#          # The path to the local storage directory, the directory relative the root path of API service codes or absolute path. Default: `storage` or `/home/john/storage`.
+#          # only available when STORAGE_TYPE is `local`.
+#          - name: STORAGE_LOCAL_PATH
+#            value: storage
+#          # The S3 storage configurations, only available when STORAGE_TYPE is `s3`.
+#          - name: S3_ENDPOINT
+#            value: 'https://xxx.r2.cloudflarestorage.com'
+#          - name: S3_BUCKET_NAME
+#            value: 'difyai'
+#          - name: S3_ACCESS_KEY
+#            value: 'ak-difyai'
+#          - name: S3_SECRET_KEY
+#            value: 'sk-difyai'
+#          - name: S3_REGION
+#            value: 'us-east-1'
+#          # The Azure Blob storage configurations, only available when STORAGE_TYPE is `azure-blob`.
+#          - name: AZURE_BLOB_ACCOUNT_NAME
+#            value: 'difyai'
+#          - name: AZURE_BLOB_ACCOUNT_KEY
+#            value: 'difyai'
+#          - name: AZURE_BLOB_CONTAINER_NAME
+#            value: 'difyai-container'
+#          - name: AZURE_BLOB_ACCOUNT_URL
+#            value: 'https://<your_account_name>.blob.core.windows.net'
+#          # The type of vector store to use. Supported values are `weaviate`, `qdrant`.
+#          - name: VECTOR_STORE
+#            value: weaviate
+#          # The Weaviate endpoint URL. Only available when VECTOR_STORE is `weaviate`.
+#          - name: WEAVIATE_ENDPOINT
+#            value: http://localhost:8080
+#          # The Weaviate API key.
+#          - name: WEAVIATE_API_KEY
+#            value: WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih
+#          # The Qdrant endpoint URL. Only available when VECTOR_STORE is `qdrant`.
+#          - name: QDRANT_URL
+#            value: 'https://your-qdrant-cluster-url.qdrant.tech/'
+#          # The Qdrant API key.
+#          - name: QDRANT_API_KEY
+#            value: 'ak-difyai'
+#          # The Qdrant clinet timeout setting.
+#          - name: QDRANT_CLIENT_TIMEOUT
+#            value: '20'
+#          # Milvus configuration Only available when VECTOR_STORE is `milvus`.
+#          # The milvus host.
+#          - name: MILVUS_HOST
+#            value: 127.0.0.1
+#          # The milvus host.
+#          - name: MILVUS_PORT
+#            value: '19530'
+#          # The milvus username.
+#          - name: MILVUS_USER
+#            value: root
+#          # The milvus password.
+#          - name: MILVUS_PASSWORD
+#            value: Milvus
+#          # The milvus tls switch.
+#          - name: MILVUS_SECURE
+#            value: 'false'
+#          # Mail configuration, support: resend
+#          - name: MAIL_TYPE
+#            value: ''
+#          # default send from email address, if not specified
+#          - name: MAIL_DEFAULT_SEND_FROM
+#            value: 'YOUR EMAIL FROM (eg: no-reply <no-reply@dify.ai>)'
+#          - name: SMTP_SERVER
+#            value: ''
+#          - name: SMTP_PORT
+#            value: '587'
+#          - name: SMTP_USERNAME
+#            value: ''
+#          - name: SMTP_PASSWORD
+#            value: ''
+#          - name: SMTP_USE_TLS
+#            value: 'true'
+#          # the api-key for resend (https://resend.com)
+#          - name: RESEND_API_KEY
+#            value: ''
+#          - name: RESEND_API_URL
+#            value: https://api.resend.com
+#          # The DSN for Sentry error reporting. If not set, Sentry error reporting will be disabled.
+#          - name: SENTRY_DSN
+#            value: ''
+#          # The sample rate for Sentry events. Default: `1.0`
+#          - name: SENTRY_TRACES_SAMPLE_RATE
+#            value: '1.0'
+#          # The sample rate for Sentry profiles. Default: `1.0`
+#          - name: SENTRY_PROFILES_SAMPLE_RATE
+#            value: '1.0'
+#          # The sandbox service endpoint.
+#          - name: CODE_EXECUTION_ENDPOINT
+#            value: "http://sandbox:8194"
+#          - name: CODE_EXECUTION_API_KEY
+#            value: dify-sandbox
+#          - name: CODE_MAX_NUMBER
+#            value: '9223372036854775807'
+#          - name: CODE_MIN_NUMBER
+#            value: '-9223372036854775808'
+#          - name: CODE_MAX_STRING_LENGTH
+#            value: '80000'
+#          - name: TEMPLATE_TRANSFORM_MAX_LENGTH
+#            value: '80000'
+#          - name: CODE_MAX_STRING_ARRAY_LENGTH
+#            value: '30'
+#          - name: CODE_MAX_OBJECT_ARRAY_LENGTH
+#            value: '30'
+#          - name: CODE_MAX_NUMBER_ARRAY_LENGTH
+#            value: '1000'
+#          - name: DIFY_PORT
+#            value: '5001'
+#        volumeMounts:
+#          # Mount the storage directory to the container, for storing user files.
+#          - name: api-vol
+#            mountPath: /app/api/storage
+#
+#      - name: worker
+#        image: beclab/dify-api:v0.0.4
+#        imagePullPolicy: IfNotPresent
+#        env:
+#          # Startup mode, 'worker' starts the Celery worker for processing the queue.
+#          - name: MODE
+#            value: worker
+#
+#          # --- All the configurations below are the same as those in the 'api' service. ---
+#
+#          # The log level for the application. Supported values are `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
+#          - name: LOG_LEVEL
+#            value: INFO
+#          # A secret key that is used for securely signing the session cookie and encrypting sensitive information on the database. You can generate a strong key using `openssl rand -base64 42`.
+#          # same as the API service
+#          - name: SECRET_KEY
+#            value: sk-9f73s3ljTXVcMT3Blb3ljTqtsKiGHXVcMT3BlbkFJLK7U
+#          # The configurations of postgres database connection.
+#          # It is consistent with the configuration in the 'db' service below.
+#          - name: DB_USERNAME
+#            value: dify_os_system
+#          - name: DB_PASSWORD
+#            value: {{ $pg_password | b64dec }}
+#          - name: DB_HOST
+#            value: citus-headless.os-system
+#          - name: DB_PORT
+#            value: '5432'
+#          - name: DB_DATABASE
+#            value: os_system_dify
+#          # The configurations of redis cache connection.
+#          - name: REDIS_HOST
+#            value: localhost
+#          - name: REDIS_PORT
+#            value: '6379'
+#          - name: REDIS_USERNAME
+#            value: ''
+#          - name: REDIS_PASSWORD
+#            value: {{ $redis_password | b64dec }}
+#          - name: REDIS_DB
+#            value: '0'
+#          - name: REDIS_USE_SSL
+#            value: 'false'
+#          # The configurations of celery broker.
+#          - name: CELERY_BROKER_URL
+#            value: redis://:{{ $redis_password | b64dec }}@localhost:6379/0
+#          # The type of storage to use for storing user files. Supported values are `local` and `s3`, Default: `local`
+#          - name: STORAGE_TYPE
+#            value: local
+#          - name: STORAGE_LOCAL_PATH
+#            value: storage
+#          # The S3 storage configurations, only available when STORAGE_TYPE is `s3`.
+#          - name: S3_ENDPOINT
+#            value: 'https://xxx.r2.cloudflarestorage.com'
+#          - name: S3_BUCKET_NAME
+#            value: 'difyai'
+#          - name: S3_ACCESS_KEY
+#            value: 'ak-difyai'
+#          - name: S3_SECRET_KEY
+#            value: 'sk-difyai'
+#          - name: S3_REGION
+#            value: 'us-east-1'
+#          # The Azure Blob storage configurations, only available when STORAGE_TYPE is `azure-blob`.
+#          - name: AZURE_BLOB_ACCOUNT_NAME
+#            value: 'difyai'
+#          - name: AZURE_BLOB_ACCOUNT_KEY
+#            value: 'difyai'
+#          - name: AZURE_BLOB_CONTAINER_NAME
+#            value: 'difyai-container'
+#          - name: AZURE_BLOB_ACCOUNT_URL
+#            value: 'https://<your_account_name>.blob.core.windows.net'
+#          # The Vector store configurations.
+#          - name: VECTOR_STORE
+#            value: weaviate
+#          - name: WEAVIATE_ENDPOINT
+#            value: http://localhost:8080
+#          - name: WEAVIATE_API_KEY
+#            value: WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih
+#          # The Qdrant endpoint URL. Only available when VECTOR_STORE is `qdrant`.
+#          - name: QDRANT_URL
+#            value: http://qdrant:6333
+#          # The Qdrant API key.
+#          - name: QDRANT_API_KEY
+#            value: difyai123456
+#          # The Qdrant clinet timeout setting.
+#          - name: QDRANT_CLIENT_TIMEOUT
+#            value: '20'
+#          # Milvus configuration Only available when VECTOR_STORE is `milvus`.
+#          # The milvus host.
+#          - name: MILVUS_HOST
+#            value: 127.0.0.1
+#          # The milvus host.
+#          - name: MILVUS_PORT
+#            value: '19530'
+#          # The milvus username.
+#          - name: MILVUS_USER
+#            value: root
+#          # The milvus password.
+#          - name: MILVUS_PASSWORD
+#            value: Milvus
+#          # The milvus tls switch.
+#          - name: MILVUS_SECURE
+#            value: 'false'
+#          # Mail configuration, support: resend
+#          - name: MAIL_TYPE
+#            value: ''
+#          # default send from email address, if not specified
+#          - name: MAIL_DEFAULT_SEND_FROM
+#            value: 'YOUR EMAIL FROM (eg: no-reply <no-reply@dify.ai>)'
+#          # the api-key for resend (https://resend.com)
+#          - name: RESEND_API_KEY
+#            value: ''
+#          - name: RESEND_API_URL
+#            value: https://api.resend.com
+#          # relyt configurations
+#          - name: RELYT_HOST
+#            value: db
+#          - name: RELYT_PORT
+#            value: '5432'
+#          - name: RELYT_USER
+#            value: postgres
+#          - name: RELYT_PASSWORD
+#            value: difyai123456
+#          - name: RELYT_DATABASE
+#            value: postgres
+#        volumeMounts:
+#          # Mount the storage directory to the container, for storing user files.
+#          - name: worker-vol
+#            mountPath: /app/api/storage
+#
+#      - name: web
+#        image: langgenius/dify-web:0.6.2
+#        imagePullPolicy: IfNotPresent
+#        ports:
+#          - name: web-port
+#            containerPort: 3000
+#            protocol: TCP
+#        env:
+#          - name: EDITION
+#            value: SELF_HOSTED
+#          # The base URL of console application api server, refers to the Console base URL of WEB service if console domain is
+#          # different from api or web app domain.
+#          # example: http://cloud.dify.ai
+#          - name: CONSOLE_API_URL
+#            value: ''
+#          # The URL for Web APP api server, refers to the Web App base URL of WEB service if web app domain is different from
+#          # console or api domain.
+#          # example: http://udify.app
 #          - name: APP_API_URL
 #            value: ''
-          # The URL for Web APP frontend, refers to the Web App base URL of WEB service if web app domain is different from
-          # console or api domain.
-          # example: http://udify.app
-          - name: APP_WEB_URL
-            value: ''
-          # File preview or download Url prefix.
-          # used to display File preview or download Url to the front-end or as Multi-model inputs;
-          # Url is signed and has expiration time.
-          - name: FILES_URL
-            value: ''
-          # When enabled, migrations will be executed prior to application startup and the application will start after the migrations have completed.
-          - name: MIGRATION_ENABLED
-            value: 'true'
-          # The configurations of postgres database connection.
-          # It is consistent with the configuration in the 'db' service below.
-          - name: DB_USERNAME
-            value: dify_os_system
-          - name: DB_PASSWORD
-            value: {{ $pg_password | b64dec }}
-          - name: DB_HOST
-            value: citus-headless.os-system
-          - name: DB_PORT
-            value: '5432'
-          - name: DB_DATABASE
-            value: os_system_dify
-          # The configurations of redis connection.
-          # It is consistent with the configuration in the 'redis' service below.
-          - name: REDIS_HOST
-            value: localhost
-          - name: REDIS_PORT
-            value: '6379'
-          - name: REDIS_USERNAME
-            value: ''
-          - name: REDIS_PASSWORD
-            value: {{ $redis_password | b64dec }}
-          - name: REDIS_USE_SSL
-            value: 'false'
-          # use redis db 0 for redis cache
-          - name: REDIS_DB
-            value: '0'
-          # The configurations of celery broker.
-          # Use redis as the broker, and redis db 1 for celery broker.
-          - name: CELERY_BROKER_URL
-            value: redis://:{{ $redis_password | b64dec }}@localhost:6379/0
-          # Specifies the allowed origins for cross-origin requests to the Web API, e.g. https://dify.app or * for all origins.
-          - name: WEB_API_CORS_ALLOW_ORIGINS
-            value: '*'
-          # Specifies the allowed origins for cross-origin requests to the console API, e.g. https://cloud.dify.ai or * for all origins.
-          - name: CONSOLE_CORS_ALLOW_ORIGINS
-            value: '*'
-          # The type of storage to use for storing user files. Supported values are `local` and `s3`, Default: `local`
-          - name: STORAGE_TYPE
-            value: local
-          # The path to the local storage directory, the directory relative the root path of API service codes or absolute path. Default: `storage` or `/home/john/storage`.
-          # only available when STORAGE_TYPE is `local`.
-          - name: STORAGE_LOCAL_PATH
-            value: storage
-          # The S3 storage configurations, only available when STORAGE_TYPE is `s3`.
-          - name: S3_ENDPOINT
-            value: 'https://xxx.r2.cloudflarestorage.com'
-          - name: S3_BUCKET_NAME
-            value: 'difyai'
-          - name: S3_ACCESS_KEY
-            value: 'ak-difyai'
-          - name: S3_SECRET_KEY
-            value: 'sk-difyai'
-          - name: S3_REGION
-            value: 'us-east-1'
-          # The Azure Blob storage configurations, only available when STORAGE_TYPE is `azure-blob`.
-          - name: AZURE_BLOB_ACCOUNT_NAME
-            value: 'difyai'
-          - name: AZURE_BLOB_ACCOUNT_KEY
-            value: 'difyai'
-          - name: AZURE_BLOB_CONTAINER_NAME
-            value: 'difyai-container'
-          - name: AZURE_BLOB_ACCOUNT_URL
-            value: 'https://<your_account_name>.blob.core.windows.net'
-          # The type of vector store to use. Supported values are `weaviate`, `qdrant`.
-          - name: VECTOR_STORE
-            value: weaviate
-          # The Weaviate endpoint URL. Only available when VECTOR_STORE is `weaviate`.
-          - name: WEAVIATE_ENDPOINT
-            value: http://localhost:8080
-          # The Weaviate API key.
-          - name: WEAVIATE_API_KEY
-            value: WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih
-          # The Qdrant endpoint URL. Only available when VECTOR_STORE is `qdrant`.
-          - name: QDRANT_URL
-            value: 'https://your-qdrant-cluster-url.qdrant.tech/'
-          # The Qdrant API key.
-          - name: QDRANT_API_KEY
-            value: 'ak-difyai'
-          # The Qdrant clinet timeout setting.
-          - name: QDRANT_CLIENT_TIMEOUT
-            value: '20'
-          # Milvus configuration Only available when VECTOR_STORE is `milvus`.
-          # The milvus host.
-          - name: MILVUS_HOST
-            value: 127.0.0.1
-          # The milvus host.
-          - name: MILVUS_PORT
-            value: '19530'
-          # The milvus username.
-          - name: MILVUS_USER
-            value: root
-          # The milvus password.
-          - name: MILVUS_PASSWORD
-            value: Milvus
-          # The milvus tls switch.
-          - name: MILVUS_SECURE
-            value: 'false'
-          # Mail configuration, support: resend
-          - name: MAIL_TYPE
-            value: ''
-          # default send from email address, if not specified
-          - name: MAIL_DEFAULT_SEND_FROM
-            value: 'YOUR EMAIL FROM (eg: no-reply <no-reply@dify.ai>)'
-          - name: SMTP_SERVER
-            value: ''
-          - name: SMTP_PORT
-            value: '587'
-          - name: SMTP_USERNAME
-            value: ''
-          - name: SMTP_PASSWORD
-            value: ''
-          - name: SMTP_USE_TLS
-            value: 'true'
-          # the api-key for resend (https://resend.com)
-          - name: RESEND_API_KEY
-            value: ''
-          - name: RESEND_API_URL
-            value: https://api.resend.com
-          # The DSN for Sentry error reporting. If not set, Sentry error reporting will be disabled.
-          - name: SENTRY_DSN
-            value: ''
-          # The sample rate for Sentry events. Default: `1.0`
-          - name: SENTRY_TRACES_SAMPLE_RATE
-            value: '1.0'
-          # The sample rate for Sentry profiles. Default: `1.0`
-          - name: SENTRY_PROFILES_SAMPLE_RATE
-            value: '1.0'
-          # The sandbox service endpoint.
-          - name: CODE_EXECUTION_ENDPOINT
-            value: "http://sandbox:8194"
-          - name: CODE_EXECUTION_API_KEY
-            value: dify-sandbox
-          - name: CODE_MAX_NUMBER
-            value: '9223372036854775807'
-          - name: CODE_MIN_NUMBER
-            value: '-9223372036854775808'
-          - name: CODE_MAX_STRING_LENGTH
-            value: '80000'
-          - name: TEMPLATE_TRANSFORM_MAX_LENGTH
-            value: '80000'
-          - name: CODE_MAX_STRING_ARRAY_LENGTH
-            value: '30'
-          - name: CODE_MAX_OBJECT_ARRAY_LENGTH
-            value: '30'
-          - name: CODE_MAX_NUMBER_ARRAY_LENGTH
-            value: '1000'
-          - name: DIFY_PORT
-            value: '5001'
-        volumeMounts:
-          # Mount the storage directory to the container, for storing user files.
-          - name: api-vol
-            mountPath: /app/api/storage
-
-      - name: worker
-        image: beclab/dify-api:v0.0.4
-        imagePullPolicy: IfNotPresent
-        env:
-          # Startup mode, 'worker' starts the Celery worker for processing the queue.
-          - name: MODE
-            value: worker
-
-          # --- All the configurations below are the same as those in the 'api' service. ---
-
-          # The log level for the application. Supported values are `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
-          - name: LOG_LEVEL
-            value: INFO
-          # A secret key that is used for securely signing the session cookie and encrypting sensitive information on the database. You can generate a strong key using `openssl rand -base64 42`.
-          # same as the API service
-          - name: SECRET_KEY
-            value: sk-9f73s3ljTXVcMT3Blb3ljTqtsKiGHXVcMT3BlbkFJLK7U
-          # The configurations of postgres database connection.
-          # It is consistent with the configuration in the 'db' service below.
-          - name: DB_USERNAME
-            value: dify_os_system
-          - name: DB_PASSWORD
-            value: {{ $pg_password | b64dec }}
-          - name: DB_HOST
-            value: citus-headless.os-system
-          - name: DB_PORT
-            value: '5432'
-          - name: DB_DATABASE
-            value: os_system_dify
-          # The configurations of redis cache connection.
-          - name: REDIS_HOST
-            value: localhost
-          - name: REDIS_PORT
-            value: '6379'
-          - name: REDIS_USERNAME
-            value: ''
-          - name: REDIS_PASSWORD
-            value: {{ $redis_password | b64dec }}
-          - name: REDIS_DB
-            value: '0'
-          - name: REDIS_USE_SSL
-            value: 'false'
-          # The configurations of celery broker.
-          - name: CELERY_BROKER_URL
-            value: redis://:{{ $redis_password | b64dec }}@localhost:6379/0
-          # The type of storage to use for storing user files. Supported values are `local` and `s3`, Default: `local`
-          - name: STORAGE_TYPE
-            value: local
-          - name: STORAGE_LOCAL_PATH
-            value: storage
-          # The S3 storage configurations, only available when STORAGE_TYPE is `s3`.
-          - name: S3_ENDPOINT
-            value: 'https://xxx.r2.cloudflarestorage.com'
-          - name: S3_BUCKET_NAME
-            value: 'difyai'
-          - name: S3_ACCESS_KEY
-            value: 'ak-difyai'
-          - name: S3_SECRET_KEY
-            value: 'sk-difyai'
-          - name: S3_REGION
-            value: 'us-east-1'
-          # The Azure Blob storage configurations, only available when STORAGE_TYPE is `azure-blob`.
-          - name: AZURE_BLOB_ACCOUNT_NAME
-            value: 'difyai'
-          - name: AZURE_BLOB_ACCOUNT_KEY
-            value: 'difyai'
-          - name: AZURE_BLOB_CONTAINER_NAME
-            value: 'difyai-container'
-          - name: AZURE_BLOB_ACCOUNT_URL
-            value: 'https://<your_account_name>.blob.core.windows.net'
-          # The Vector store configurations.
-          - name: VECTOR_STORE
-            value: weaviate
-          - name: WEAVIATE_ENDPOINT
-            value: http://localhost:8080
-          - name: WEAVIATE_API_KEY
-            value: WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih
-          # The Qdrant endpoint URL. Only available when VECTOR_STORE is `qdrant`.
-          - name: QDRANT_URL
-            value: http://qdrant:6333
-          # The Qdrant API key.
-          - name: QDRANT_API_KEY
-            value: difyai123456
-          # The Qdrant clinet timeout setting.
-          - name: QDRANT_CLIENT_TIMEOUT
-            value: '20'
-          # Milvus configuration Only available when VECTOR_STORE is `milvus`.
-          # The milvus host.
-          - name: MILVUS_HOST
-            value: 127.0.0.1
-          # The milvus host.
-          - name: MILVUS_PORT
-            value: '19530'
-          # The milvus username.
-          - name: MILVUS_USER
-            value: root
-          # The milvus password.
-          - name: MILVUS_PASSWORD
-            value: Milvus
-          # The milvus tls switch.
-          - name: MILVUS_SECURE
-            value: 'false'
-          # Mail configuration, support: resend
-          - name: MAIL_TYPE
-            value: ''
-          # default send from email address, if not specified
-          - name: MAIL_DEFAULT_SEND_FROM
-            value: 'YOUR EMAIL FROM (eg: no-reply <no-reply@dify.ai>)'
-          # the api-key for resend (https://resend.com)
-          - name: RESEND_API_KEY
-            value: ''
-          - name: RESEND_API_URL
-            value: https://api.resend.com
-          # relyt configurations
-          - name: RELYT_HOST
-            value: db
-          - name: RELYT_PORT
-            value: '5432'
-          - name: RELYT_USER
-            value: postgres
-          - name: RELYT_PASSWORD
-            value: difyai123456
-          - name: RELYT_DATABASE
-            value: postgres
-        volumeMounts:
-          # Mount the storage directory to the container, for storing user files.
-          - name: worker-vol
-            mountPath: /app/api/storage
-
-      - name: web
-        image: langgenius/dify-web:0.6.2
-        imagePullPolicy: IfNotPresent
-        ports:
-          - name: web-port
-            containerPort: 3000
-            protocol: TCP
-        env:
-          - name: EDITION
-            value: SELF_HOSTED
-          # The base URL of console application api server, refers to the Console base URL of WEB service if console domain is
-          # different from api or web app domain.
-          # example: http://cloud.dify.ai
-          - name: CONSOLE_API_URL
-            value: ''
-          # The URL for Web APP api server, refers to the Web App base URL of WEB service if web app domain is different from
-          # console or api domain.
-          # example: http://udify.app
-          - name: APP_API_URL
-            value: ''
-          # The DSN for Sentry error reporting. If not set, Sentry error reporting will be disabled.
-          - name: SENTRY_DSN
-            value: ''
-
-      - name: weaviate
-        image: semitechnologies/weaviate:1.19.0
-        imagePullPolicy: IfNotPresent
-        volumeMounts:
-          # Mount the Weaviate data directory to the container.
-          - name: weaviate-vol
-            mountPath: /var/lib/weaviate
-        env:
-          # The Weaviate configurations
-          # You can refer to the [Weaviate](https://weaviate.io/developers/weaviate/config-refs/env-vars) documentation for more information.
-          - name: QUERY_DEFAULTS_LIMIT
-            value: '25'
-          - name: AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED
-            value: 'false'
-          - name: PERSISTENCE_DATA_PATH
-            value: '/var/lib/weaviate'
-          - name: DEFAULT_VECTORIZER_MODULE
-            value: 'none'
-          - name: CLUSTER_HOSTNAME
-            value: 'node1'
-          - name: AUTHENTICATION_APIKEY_ENABLED
-            value: 'true'
-          - name: AUTHENTICATION_APIKEY_ALLOWED_KEYS
-            value: 'WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih'
-          - name: AUTHENTICATION_APIKEY_USERS
-            value: 'hello@dify.ai'
-          - name: AUTHORIZATION_ADMINLIST_ENABLED
-            value: 'true'
-          - name: AUTHORIZATION_ADMINLIST_USERS
-            value: 'hello@dify.ai'
-
+#          # The DSN for Sentry error reporting. If not set, Sentry error reporting will be disabled.
+#          - name: SENTRY_DSN
+#            value: ''
+#
+#      - name: weaviate
+#        image: semitechnologies/weaviate:1.19.0
+#        imagePullPolicy: IfNotPresent
+#        volumeMounts:
+#          # Mount the Weaviate data directory to the container.
+#          - name: weaviate-vol
+#            mountPath: /var/lib/weaviate
+#        env:
+#          # The Weaviate configurations
+#          # You can refer to the [Weaviate](https://weaviate.io/developers/weaviate/config-refs/env-vars) documentation for more information.
+#          - name: QUERY_DEFAULTS_LIMIT
+#            value: '25'
+#          - name: AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED
+#            value: 'false'
+#          - name: PERSISTENCE_DATA_PATH
+#            value: '/var/lib/weaviate'
+#          - name: DEFAULT_VECTORIZER_MODULE
+#            value: 'none'
+#          - name: CLUSTER_HOSTNAME
+#            value: 'node1'
+#          - name: AUTHENTICATION_APIKEY_ENABLED
+#            value: 'true'
+#          - name: AUTHENTICATION_APIKEY_ALLOWED_KEYS
+#            value: 'WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih'
+#          - name: AUTHENTICATION_APIKEY_USERS
+#            value: 'hello@dify.ai'
+#          - name: AUTHORIZATION_ADMINLIST_ENABLED
+#            value: 'true'
+#          - name: AUTHORIZATION_ADMINLIST_USERS
+#            value: 'hello@dify.ai'
+#
       - name: nginx
         image: 'beclab/nginx-lua:n0.0.2'
         imagePullPolicy: IfNotPresent
@@ -802,46 +802,46 @@ spec:
           - name: dify-nginx-config
             mountPath: /etc/nginx/conf.d/default.conf
             subPath: default.conf
-          - name: dify-nginx-config
-            mountPath: /etc/nginx/login.lua
-            subPath: login.lua
-
-      - name: redis
-        image: redis:6.2.13-alpine3.18
-        imagePullPolicy: IfNotPresent
-        volumeMounts:
-          # Mount the redis data directory to the container.
-          - name: redis-data
-            mountPath: /data
-        # Set the redis password when startup redis server.
-        command:
-          - "redis-server"
-          - "--requirepass"
-          - "{{ $redis_password | b64dec }}"
-        resources:
-          limits:
-            cpu: "1"
-            memory: 100Mi
-          requests:
-            cpu: 20m
-            memory: 50Mi
-      - name: dify-sandbox
-        image: 'langgenius/dify-sandbox:latest'
-        env:
-          - name: API_KEY
-            value: dify-sandbox
-          - name: GIN_MODE
-            value: release
-          - name: WORKER_TIMEOUT
-            value: '15'
-        resources: { }
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-        imagePullPolicy: IfNotPresent
-        securityContext:
-          capabilities:
-            add:
-              - SYS_ADMIN
+#          - name: dify-nginx-config
+#            mountPath: /etc/nginx/login.lua
+#            subPath: login.lua
+#
+#      - name: redis
+#        image: redis:6.2.13-alpine3.18
+#        imagePullPolicy: IfNotPresent
+#        volumeMounts:
+#          # Mount the redis data directory to the container.
+#          - name: redis-data
+#            mountPath: /data
+#        # Set the redis password when startup redis server.
+#        command:
+#          - "redis-server"
+#          - "--requirepass"
+#          - "{{ $redis_password | b64dec }}"
+#        resources:
+#          limits:
+#            cpu: "1"
+#            memory: 100Mi
+#          requests:
+#            cpu: 20m
+#            memory: 50Mi
+#      - name: dify-sandbox
+#        image: 'langgenius/dify-sandbox:latest'
+#        env:
+#          - name: API_KEY
+#            value: dify-sandbox
+#          - name: GIN_MODE
+#            value: release
+#          - name: WORKER_TIMEOUT
+#            value: '15'
+#        resources: { }
+#        terminationMessagePath: /dev/termination-log
+#        terminationMessagePolicy: File
+#        imagePullPolicy: IfNotPresent
+#        securityContext:
+#          capabilities:
+#            add:
+#              - SYS_ADMIN
       {{- if and .Values.gpu (not (eq .Values.gpu "none" )) }}
       - name: nitro
         image: 'beclab/nitro:v0.0.8'
@@ -904,25 +904,25 @@ spec:
         hostPath:
           type: DirectoryOrCreate
           path: {{ $dify_appcache_rootpath }}/volumes/app/model
-      - name: api-vol
-        hostPath:
-          type: DirectoryOrCreate
-          path: {{ $dify_appcache_rootpath }}/volumes/app/storage
+#      - name: api-vol
+#        hostPath:
+#          type: DirectoryOrCreate
+#          path: {{ $dify_appcache_rootpath }}/volumes/app/storage
 
-      - name: worker-vol
-        hostPath:
-          type: DirectoryOrCreate
-          path: {{ $dify_appcache_rootpath }}/volumes/app/storage
+#      - name: worker-vol
+#        hostPath:
+#          type: DirectoryOrCreate
+#          path: {{ $dify_appcache_rootpath }}/volumes/app/storage
 
-      - name: weaviate-vol
-        hostPath:
-          type: DirectoryOrCreate
-          path: {{ $dify_appcache_rootpath }}/volumes/weaviate
+#      - name: weaviate-vol
+#        hostPath:
+#          type: DirectoryOrCreate
+#          path: {{ $dify_appcache_rootpath }}/volumes/weaviate
 
-      - name: redis-data
-        hostPath:
-          type: DirectoryOrCreate
-          path: {{ $dify_appcache_rootpath }}/volumes/redis/data
+#      - name: redis-data
+#        hostPath:
+#          type: DirectoryOrCreate
+#          path: {{ $dify_appcache_rootpath }}/volumes/redis/data
 
       - name: dify-nginx-config
         configMap:
@@ -934,6 +934,6 @@ spec:
               path: proxy.conf
             - key: default.conf
               path: default.conf
-            - key: login.lua
-              path: login.lua
+#            - key: login.lua
+#              path: login.lua
           defaultMode: 420
