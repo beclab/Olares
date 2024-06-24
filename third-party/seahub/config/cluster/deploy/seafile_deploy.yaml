@@ -425,7 +425,7 @@ spec:
 #          protocol: TCP
 
       - name: sync-backend
-        image: beclab/seahub_pgserver:v0.0.9
+        image: beclab/seahub_pgserver:v0.0.10
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: sync-data
