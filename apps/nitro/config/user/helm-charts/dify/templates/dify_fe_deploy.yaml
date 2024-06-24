@@ -54,7 +54,7 @@ metadata:
     applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/dify/icon.png
     applications.app.bytetrade.io/title: Dify.ai
     applications.app.bytetrade.io/version: '0.0.1'
-    applications.app.bytetrade.io/entrances: '[{"name":"dify-ui", "host":"dify-ui", "port":80,"title":"Dify.ai"}]'
+    applications.app.bytetrade.io/entrances: '[{"name":"dify-ui", "host":"dify-ui", "port":80,"title":"Dify.ai","invisible":true}]'
 
 spec:
   replicas: 1
