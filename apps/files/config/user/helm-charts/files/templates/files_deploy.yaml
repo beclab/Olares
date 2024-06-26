@@ -79,7 +79,7 @@ spec:
 
       containers:
       - name: gateway
-        image: beclab/appdata-gateway:0.1.8
+        image: beclab/appdata-gateway:0.1.10
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -92,7 +92,7 @@ spec:
           value: system-server.user-system-{{ .Values.bfl.username }}
 
       - name: files
-        image: beclab/files-server:v0.2.20
+        image: beclab/files-server:v0.2.23
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: fb-data
@@ -108,6 +108,12 @@ spec:
         ports:
         - containerPort: 8110
         env:
+        - name: ES_ENABLED
+          value: 'True'
+        - name: WATCHER_ENABLED
+          value: 'True'
+        - name: KNOWLEDGE_BASE_ENABLED
+          value: 'False'
         - name: BFL_NAME
           value: '{{ .Values.bfl.username }}'
         - name: FB_DATABASE

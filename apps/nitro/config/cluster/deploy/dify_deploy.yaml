@@ -845,7 +845,7 @@ spec:
 #              - SYS_ADMIN
       {{- if and .Values.gpu (not (eq .Values.gpu "none" )) }}
       - name: nitro
-        image: 'beclab/nitro:v0.0.8'
+        image: 'beclab/nitro:v0.0.9'
         ports:
           - name: nitro-port
             containerPort: 3928
