@@ -477,7 +477,7 @@ spec:
           value: "false"
 
       - name: nginx
-        image: 'beclab/nginx-lua:n0.0.2'
+        image: 'beclab/nginx-lua:n0.0.4'
         ports:
           - name: nginx-port
             containerPort: 80

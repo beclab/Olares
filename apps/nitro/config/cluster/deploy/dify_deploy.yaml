@@ -787,7 +787,7 @@ spec:
 #            value: 'hello@dify.ai'
 #
       - name: nginx
-        image: 'beclab/nginx-lua:n0.0.2'
+        image: 'beclab/nginx-lua:n0.0.4'
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 80
