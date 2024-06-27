@@ -248,22 +248,24 @@ spec:
           limits:
             cpu: 500m
             memory: 256Mi
-        livenessProbe:
-          tcpSocket:
-            port: 6379
-          initialDelaySeconds: 300
-          timeoutSeconds: 1
-          periodSeconds: 10
-          successThreshold: 1
-          failureThreshold: 3
-        readinessProbe:
-          tcpSocket:
-            port: 6379
-          initialDelaySeconds: 5
-          timeoutSeconds: 1
-          periodSeconds: 10
-          successThreshold: 1
-          failureThreshold: 3
+
+        # FIXME: bugs in raspbian
+        # livenessProbe:
+        #   tcpSocket:
+        #     port: 6379
+        #   initialDelaySeconds: 300
+        #   timeoutSeconds: 1
+        #   periodSeconds: 10
+        #   successThreshold: 1
+        #   failureThreshold: 3
+        # readinessProbe:
+        #   tcpSocket:
+        #     port: 6379
+        #   initialDelaySeconds: 5
+        #   timeoutSeconds: 1
+        #   periodSeconds: 10
+        #   successThreshold: 1
+        #   failureThreshold: 3
         volumeMounts:
         - name: config
           mountPath:  /usr/local/redis/redis.conf

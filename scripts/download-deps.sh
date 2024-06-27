@@ -1,4 +1,11 @@
+PLATFORM=${1:-linux/amd64}
+
 arch="amd64"
+if [ x"$PLATFORM" == x"linux/arm64" ]; then
+    arch="arm64"
+fi
+
+
 part=""
 CURL_TRY="--connect-timeout 30 --retry 5 --retry-delay 1 --retry-max-time 10 "
 
@@ -48,7 +55,7 @@ cat ./dependencies.mf | while IFS= read -r line; do
 
         if [ "$s4" == "helm" ]; then
             pushd ${pkgpath}
-            tar -zxvf ./${filename} && cp ./linux-amd64/helm ./ && rm -rf ./linux-amd64 && rm -rf ./${filename}
+            tar -zxvf ./${filename} && cp ./linux-${arch}/helm ./ && rm -rf ./linux-${arch} && rm -rf ./${filename}
             popd
         fi
     fi

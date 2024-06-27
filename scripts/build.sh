@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-
-
 BASE_DIR=$(dirname $(realpath -s $0))
 rm -rf ${BASE_DIR}/../.dist
 DIST_PATH="${BASE_DIR}/../.dist/install-wizard" 
@@ -9,6 +7,7 @@ VERSION=$1
 
 DIST_PATH=${DIST_PATH} bash ${BASE_DIR}/package.sh
 cp ${BASE_DIR}/upgrade.sh ${DIST_PATH}/.
+cp ${BASE_DIR}/developer/* ${DIST_PATH}/.
 
 # bash ${BASE_DIR}/image-manifest.sh
 

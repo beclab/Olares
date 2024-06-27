@@ -95,7 +95,7 @@ spec:
           - name: opt-data
             mountPath: /opt/app/data
       - name: terminus-envoy-sidecar
-        image: envoyproxy/envoy-distroless:v1.25.2
+        image: bytetrade/envoy:v1.25.11
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false

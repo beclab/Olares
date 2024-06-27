@@ -8,6 +8,7 @@ rm -rf ${BASE_DIR}/../.manifest
 rm -rf ${BASE_DIR}/../.dependencies
 DIST_PATH="${BASE_DIR}/../.dist/install-wizard" 
 VERSION=$1
+PLATFORM=${2:-linux/amd64}
 
 set -o pipefail
 set -e
@@ -16,14 +17,14 @@ DIST_PATH=${DIST_PATH} bash ${BASE_DIR}/package.sh
 cp ${BASE_DIR}/upgrade.sh ${DIST_PATH}/.
 
 bash ${BASE_DIR}/image-manifest.sh
-bash ${BASE_DIR}/deps-manifest.sh
+bash ${BASE_DIR}/deps-manifest.sh $PLATFORM
 
 pushd ${BASE_DIR}/../.manifest
-bash $BASE_DIR/save-images.sh images.mf
+bash $BASE_DIR/save-images.sh images.mf $PLATFORM
 popd
 
 pushd ${BASE_DIR}/../.dependencies
-bash $BASE_DIR/save-deps.sh
+bash $BASE_DIR/save-deps.sh $PLATFORM
 popd
 
 pushd $DIST_PATH

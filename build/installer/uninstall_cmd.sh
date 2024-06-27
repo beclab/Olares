@@ -18,6 +18,27 @@ command_exists() {
 	command -v "$@" > /dev/null 2>&1
 }
 
+precheck_os() {
+    local ip os_type os_arch
+
+    # check os type and arch and os vesion
+    os_type=$(uname -s)
+    os_arch=$(uname -m)
+    os_verion=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
+
+    case "$os_arch" in 
+        x86_64) ARCH=amd64; ;; 
+        armv7l) ARCH=arm; ;; 
+        aarch64) ARCH=arm64; ;; 
+        ppc64le) ARCH=ppc64le; ;; 
+        s390x) ARCH=s390x; ;; 
+        *) echo "unsupported arch, exit ..."; 
+        exit -1; ;; 
+    esac 
+
+     OS_ARCH="$os_arch"
+}
+
 get_shell_exec(){
     user="$(id -un 2>/dev/null || true)"
 
@@ -102,7 +123,7 @@ remove_cluster(){
 
     log_info 'remove kubernetes cluster'
 
-    local kk_tar="${HOME}/install_wizard/components/kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
+    local kk_tar="${HOME}/install_wizard/components/kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
 
     if [ x"$PROXY" != x"" ]; then
         ensure_success $sh_c "cat /etc/resolv.conf > /etc/resolv.conf.bak"
@@ -111,9 +132,9 @@ remove_cluster(){
         if [ -f "${kk_tar}" ]; then
             ensure_success $sh_c "cp ${kk_tar} ${INSTALL_DIR}"
         else
-            ensure_success $sh_c "curl ${CURL_TRY} -kLO https://github.com/beclab/kubekey-ext/releases/download/${KKE_VERSION}/kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
+            ensure_success $sh_c "curl ${CURL_TRY} -kLO https://github.com/beclab/kubekey-ext/releases/download/${KKE_VERSION}/kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
         fi
-        ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
+        ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
         ensure_success $sh_c "cat /etc/resolv.conf.bak > /etc/resolv.conf"
     else 
     	ensure_success $sh_c "curl -sfL https://raw.githubusercontent.com/beclab/kubekey-ext/master/downloadKKE.sh | VERSION=${KKE_VERSION} bash -"
@@ -260,7 +281,7 @@ remove_mount() {
                 ensure_success $sh_c "AWS_ACCESS_KEY_ID=${STS_ACCESS_KEY} AWS_SECRET_ACCESS_KEY=${STS_SECRET_KEY} AWS_SESSION_TOKEN=${STS_TOKEN} ${AWS} s3 rm $s3/${STS_CLUSTER_ID} --recursive"
                 ;;
             "oss")
-                local osscli_file="ossutil-v1.7.18-linux-amd64.zip"
+                local osscli_file="ossutil-v1.7.18-linux-${ARCH}.zip"
                 local osscli_tar="${HOME}/components/${osscli_file}"
                 if ! command_exists ossutil64; then
                     if [ -f "${osscli_tar}" ]; then
@@ -270,7 +291,7 @@ remove_mount() {
                     fi
 
                     ensure_success $sh_c "unzip -q ${osscli_file}"
-                    ensure_success $sh_c "mv ./ossutil-v1.7.18-linux-amd64/* /usr/local/sbin/"
+                    ensure_success $sh_c "mv ./ossutil-v1.7.18-linux-${ARCH}/* /usr/local/sbin/"
 
                     ensure_success $sh_c "chmod +x /usr/local/bin/ossutil*"
                 fi
