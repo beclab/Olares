@@ -62,7 +62,7 @@ spec:
 
       containers:
       - name: frontend
-        image: beclab/wise:v0.1.27
+        image: beclab/wise:v0.1.30
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
