@@ -280,7 +280,7 @@ spec:
         - name: BACKUP_SERVER
           value: backup-server.os-system:8082
         - name: L4_PROXY_IMAGE_VERSION
-          value: v0.2.5
+          value: v0.2.6
         - name: FRPC_IMAGE_VERSION
           value: v1.0.2
         - name: CLOUDFLARED_IMAGE_NAME
@@ -289,7 +289,7 @@ spec:
           value: v0.1.0
 
       - name: ingress
-        image: beclab/bfl-ingress:v0.2.8
+        image: beclab/bfl-ingress:v0.2.9
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: ngxlog
