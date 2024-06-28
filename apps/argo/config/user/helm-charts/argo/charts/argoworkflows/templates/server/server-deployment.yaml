@@ -106,7 +106,7 @@ spec:
             - name: tmp
               mountPath: /tmp
         - name: addflowtask
-          image: "beclab/recommend-argotask:v0.0.4"
+          image: "beclab/recommend-argotask:v0.0.5"
           env:
           - name: NAME_SPACE
             value: {{ .Release.Namespace }}

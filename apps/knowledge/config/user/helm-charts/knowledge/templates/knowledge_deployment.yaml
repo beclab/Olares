@@ -147,7 +147,7 @@ spec:
             memory: 1Gi
 
       - name: backend-server
-        image: "beclab/recommend-backend:v0.0.4"
+        image: "beclab/recommend-backend:v0.0.5"
         imagePullPolicy: IfNotPresent
         env:
         - name: LISTEN_ADDR
