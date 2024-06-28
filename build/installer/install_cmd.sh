@@ -210,7 +210,8 @@ precheck_os() {
         log_fatal "unsupported os version '${os_verion}'"
     fi
 
-    if [[ $(is_raspbian) -ne 0 ]]; then
+    if [[ -f /boot/cmdline.txt || -f /boot/firmware/cmdline.txt ]]; then
+     # raspbian 
 
         systemctl disable --user gvfs-udisks2-volume-monitor
         systemctl stop --user gvfs-udisks2-volume-monitor
@@ -305,9 +306,9 @@ is_debian() {
         echo 0
         return
     fi
-    if [[ ${lsb_release} == *Debian*} ]]; then
+    if [[ ${lsb_release} == *Debian* ]]; then
         case "$lsb_release" in
-            *12.* | *11.*)
+            *12* | *11*)
                 echo 1
                 ;;
             *)
@@ -350,7 +351,7 @@ is_raspbian(){
     fi
     if [[ ${lsb_release} == *Raspbian* ]];then 
         case "$lsb_release" in
-            *11*)
+            *11* | *12*)
                 echo 1
                 ;;
             *)
