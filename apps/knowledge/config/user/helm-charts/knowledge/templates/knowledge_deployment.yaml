@@ -105,7 +105,7 @@ spec:
     spec:
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.1.30"
+        image: "beclab/knowledge-base-api:v0.1.31"
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
@@ -171,7 +171,7 @@ spec:
         - name: ZINC_INDEX
           value: {{ .Release.Namespace }}_zinc-knowledge
         - name: RSS_HUB_URL
-          value: 'http://127.0.0.1:3010/rss'
+          value: 'http://rss-server.os-system:3010/rss'
         - name: WE_CHAT_REFRESH_FEED_URL
           value: https://recommend-wechat-prd.bttcdn.com/api/wechat/entries
         - name: WECHAT_ENTRY_CONTENT_GET_API_URL
