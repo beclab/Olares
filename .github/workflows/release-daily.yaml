@@ -26,7 +26,7 @@ jobs:
       - name: 'Daily tag version'
         id: vars
         run: |
-          v=1.6.0-$(date +"%Y%m%d")
+          v=1.7.0-$(date +"%Y%m%d")
           echo "tag_version=$v" >> $GITHUB_OUTPUT
           echo "latest_version=1.4.4" >> $GITHUB_OUTPUT
 
@@ -56,7 +56,7 @@ jobs:
       - name: 'Daily tag version'
         id: vars
         run: |
-          v=1.6.0-$(date +"%Y%m%d")
+          v=1.7.0-$(date +"%Y%m%d")
           echo "tag_version=$v" >> $GITHUB_OUTPUT
           echo "latest_version=1.4.4" >> $GITHUB_OUTPUT
       

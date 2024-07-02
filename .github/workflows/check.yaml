@@ -76,7 +76,7 @@ jobs:
       - name: 'Test tag version'
         id: vars
         run: |
-          v=1.6.0-$(echo $RANDOM)
+          v=1.7.0-$(echo $RANDOM)
           echo "tag_version=$v" >> $GITHUB_OUTPUT
 
       - name: Package installer
