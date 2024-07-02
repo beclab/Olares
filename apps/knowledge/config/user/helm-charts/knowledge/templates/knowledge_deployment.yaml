@@ -112,6 +112,8 @@ spec:
         env:
         - name: BACKEND_URL
           value: http://127.0.0.1:8080
+        - name: RSSSERVER_URL
+          value: 'http://rss-server.os-system:3010/rss'
         - name: REDIS_PASSWORD
           valueFrom:
             configMapKeyRef:
