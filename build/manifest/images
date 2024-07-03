@@ -7,7 +7,7 @@ calico/cni:v3.23.2
 calico/kube-controllers:v3.23.2
 calico/node:v3.23.2
 calico/pod2daemon-flexvol:v3.23.2
-beclab/citus:11.3
+beclab/citus:12.0
 coredns/coredns:1.8.0
 csiplugin/snapshot-controller:v4.0.0
 beclab/ks-installer-ext:v0.1.8-ext
