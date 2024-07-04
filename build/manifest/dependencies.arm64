@@ -1,5 +1,5 @@
 [components] format: url,filename
-https://github.com/beclab/kubekey-ext/releases/download/0.1.21/kubekey-ext-v0.1.21-linux-arm64.tar.gz,
+https://github.com/beclab/kubekey-ext/releases/download/0.1.23/kubekey-ext-v0.1.23-linux-arm64.tar.gz,
 https://src.fedoraproject.org/lookaside/pkgs/socat/socat-1.7.3.2.tar.gz/sha512/540658b2a3d1b87673196282e5c62b97681bd0f1d1e4759ff9d72909d11060235ee9e9521a973603c1b00376436a9444248e5fbc0ffac65f8edb9c9bc28e7972/socat-1.7.3.2.tar.gz,
 
 https://github.com/fqrouter/conntrack-tools/archive/refs/tags/conntrack-tools-1.4.1.tar.gz,
@@ -11,7 +11,7 @@ https://download.redis.io/releases/redis-5.0.14.tar.gz,
 
 https://github.com/beclab/juicefs-ext/releases/download/v11.1.0/juicefs-v11.1.0-linux-arm64.tar.gz,
 
-https://github.com/vmware-tanzu/velero/releases/download/v1.11.0/velero-v1.11.0-linux-arm64.tar.gz,
+https://github.com/beclab/velero/releases/download/v1.11.2/velero-v1.11.2-linux-arm64.tar.gz,
 
 https://launchpad.net/ubuntu/+source/apparmor/4.0.1-0ubuntu1/+build/28428841/+files/apparmor_4.0.1-0ubuntu1_arm64.deb,
 

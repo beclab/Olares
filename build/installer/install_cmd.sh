@@ -1200,12 +1200,12 @@ _check_velero_plugin_image_exists() {
 install_velero() {
     config_proxy_resolv_conf
 
-    VELERO_VERSION="v1.11.0"
+    VELERO_VERSION="v1.11.2"
     local velero_tar="${BASE_DIR}/components/velero-${VELERO_VERSION}-linux-${ARCH}.tar.gz"
     if [ -f "$velero_tar" ]; then
         ensure_success $sh_c "cp ${velero_tar} velero-${VELERO_VERSION}-linux-${ARCH}.tar.gz"
     else
-        ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/vmware-tanzu/velero/releases/download/${VELERO_VERSION}/velero-${VELERO_VERSION}-linux-${ARCH}.tar.gz"
+        ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/velero/releases/download/${VELERO_VERSION}/velero-${VELERO_VERSION}-linux-${ARCH}.tar.gz"
     fi
     ensure_success $sh_c "tar xf velero-${VELERO_VERSION}-linux-${ARCH}.tar.gz"
     ensure_success $sh_c "install velero-${VELERO_VERSION}-linux-${ARCH}/velero /usr/local/bin"
@@ -1259,9 +1259,9 @@ install_velero_plugin_terminus() {
     velero_plugin_install_cmd+=" --no-secret --plugins beclab/velero-plugin-for-terminus:$velero_plugin_ver"
     velero_plugin_install_cmd+=" --velero-pod-cpu-request=50m --velero-pod-cpu-limit=500m"
     velero_plugin_install_cmd+=" --node-agent-pod-cpu-request=50m --node-agent-pod-cpu-limit=500m"
-    velero_plugin_install_cmd+=" --wait"
+    velero_plugin_install_cmd+=" --wait --wait-minute 30"
     ensure_success $sh_c "$velero_plugin_install_cmd"
-    velero_plugin_install_cmd="${VELERO} plugin add beclab/velero-plugin-for-terminus:$plugin -n os-system"
+    velero_plugin_install_cmd="${VELERO} plugin add beclab/velero-plugin-for-terminus:$velero_plugin_ver -n os-system"
     msg=$($sh_c "$velero_plugin_install_cmd 2>&1")
   fi
 

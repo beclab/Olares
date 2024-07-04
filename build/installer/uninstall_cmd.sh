@@ -314,6 +314,7 @@ set -o pipefail
 set -e
 
 get_shell_exec
+precheck_os
 
 INSTALL_DIR=/tmp/install_log
 
