@@ -79,11 +79,13 @@ spec:
 
       containers:
       - name: gateway
-        image: beclab/appdata-gateway:0.1.11
+        image: beclab/appdata-gateway:0.1.12
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:
+        - name: FILES_SERVER_TAG
+          value: 'beclab/files-server:v0.2.25'
         - name: NAMESPACE
           valueFrom:
             fieldRef:
@@ -92,7 +94,7 @@ spec:
           value: system-server.user-system-{{ .Values.bfl.username }}
 
       - name: files
-        image: beclab/files-server:v0.2.24
+        image: beclab/files-server:v0.2.25
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: fb-data
@@ -113,7 +115,7 @@ spec:
         - name: WATCHER_ENABLED
           value: 'True'
         - name: KNOWLEDGE_BASE_ENABLED
-          value: 'False'
+          value: 'True'
         - name: BFL_NAME
           value: '{{ .Values.bfl.username }}'
         - name: FB_DATABASE
@@ -336,7 +338,7 @@ spec:
   secret: {{ .Values.os.files.appSecret }}
   permissions:
     - dataType: gateway
-      group: service.agent
+      group: service.difyfusionclient
       ops:
         - DifyGatewayBaseProvider
       version: v1
