@@ -303,6 +303,7 @@ precheck_os() {
     if [ -d /opt/deps ]; then
         ensure_success $sh_c "mv /opt/deps/* ${BASE_DIR}"
     fi
+
 }
 
 is_debian() {
@@ -366,6 +367,16 @@ is_raspbian(){
     else
         echo 0
     fi
+}
+
+is_wsl(){
+    wsl=$(uname -a 2>&1)
+    if [[ ${wsl} == *WSL* ]]; then
+        echo 1
+        return
+    fi
+
+    echo 0
 }
 
 install_deps() {
@@ -485,9 +496,7 @@ run_install() {
     create_cmd+=" $extra"
 
     # add env OS_LOCALIP
-    export OS_LOCALIP="$local_ip"
-
-    ensure_success $sh_c "$create_cmd"
+    ensure_success $sh_c "export OS_LOCALIP=$local_ip && $create_cmd"
 
     log_info 'k8s and kubesphere installation is complete'
 
@@ -1437,6 +1446,10 @@ install_k8s_ks() {
 
     log_info 'Installation wizard is complete\n'
 
+    if [[ $(is_wsl) -eq 1 ]]; then
+        PORT=30181
+    fi
+
     # install complete
     echo -e " Terminus is running at"
     echo -e "${GREEN_LINE}"
@@ -1448,6 +1461,16 @@ install_k8s_ks() {
     echo -e " Password: ${userpwd} "
     echo -e " "
     echo -e " Please change the default password after login."
+
+    if [[ $(is_wsl) -eq 1 ]]; then
+        echo -e " "
+        echo -e " "
+        echo -e " Press Ctrl-C to exit until initialized in Wizard."
+        echo -e " "
+
+        socat TCP-LISTEN:30181,fork,reuseaddr TCP4:${local_ip}:30180
+    fi
+
 }
 
 read_tty(){
@@ -2069,7 +2092,11 @@ Main() {
 
         log_info 'Installing terminus ...\n'
         config_proxy_resolv_conf
-        install_storage
+
+        if [[ $(is_wsl) -eq 0 ]]; then
+            install_storage
+        fi
+
         install_k8s_ks
     ) 2>&1
 
