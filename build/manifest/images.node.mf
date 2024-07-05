@@ -1,0 +1,9 @@
+kubesphere/pause:3.5
+calico/cni:v3.23.2
+calico/node:v3.23.2
+kubesphere/kube-rbac-proxy:v0.11.0
+prom/node-exporter:v1.3.1
+beclab/image-service:0.2.12
+beclab/osnode-init:v0.0.8
+beclab/files-server:v0.2.24
+beclab/fsnotify-daemon:0.1.1

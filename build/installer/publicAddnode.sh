@@ -6,6 +6,7 @@ ERR_EXIT=1
 ERR_VALIDATION=2
 
 CURL_TRY="--retry 5 --retry-delay 1 --retry-max-time 10 "
+BASE_DIR=$(dirname $(realpath -s $0))
 
 get_distribution() {
 	lsb_dist=""
@@ -180,8 +181,11 @@ get_master_info() {
         exit $ERR_EXIT
     fi
 
-    if [ "$k8s_version" =~ "k3s" ]; then
-        k8s_version=v1.21.4-k3s
+    KUBE_TYPE="k8s"
+
+    if [[ "$k8s_version" =~ "k3s" ]]; then
+        KUBE_TYPE="k3s"
+        k8s_version=v1.22.16-k3s
     fi
 
     master_k8s_nodename=$(echo "$master_node" |awk '{print $1}')
@@ -189,6 +193,11 @@ get_master_info() {
         echo "no master k8s nodename"
         exit $ERR_EXIT
     fi
+
+    if [ x"$master_k8s_nodename" == x"$HOSTNAME" ]; then
+        echo "Duplicate hostname with master node. Please change the hostname"
+        exit $ERR_EXIT
+    fi 
 }
 
 command_exists() {
@@ -214,7 +223,30 @@ build_contrack(){
 }
 
 precheck_os() {
-    local ip
+    local ip os_type os_arch
+
+    # check os type and arch and os vesion
+    os_type=$(uname -s)
+    os_arch=$(uname -m)
+    os_verion=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
+
+    case "$os_arch" in 
+        x86_64) ARCH=amd64; ;; 
+        armv7l) ARCH=arm; ;; 
+        aarch64) ARCH=arm64; ;; 
+        ppc64le) ARCH=ppc64le; ;; 
+        s390x) ARCH=s390x; ;; 
+        *) echo "unsupported arch, exit ..."; 
+        exit -1; ;; 
+    esac 
+
+    if [ x"${os_type}" != x"Linux" ]; then
+        log_fatal "unsupported os type '${os_type}', only supported 'Linux' operating system"
+    fi
+
+    if [[ x"${os_arch}" != x"x86_64" && x"${os_arch}" != x"amd64" && x"${os_arch}" != x"aarch64" ]]; then
+        log_fatal "unsupported os arch '${os_arch}', only supported 'x86_64' or 'aarch64' architecture"
+    fi
 
     # try to resolv hostname
     ensure_success $sh_c "hostname -i >/dev/null"
@@ -252,6 +284,28 @@ precheck_os() {
             ;;
     esac
 
+    if [[ $(is_ubuntu) -eq 0 && $(is_debian) -eq 0 && $(is_raspbian) -eq 0 ]]; then
+        log_fatal "unsupported os version '${os_verion}'"
+    fi
+
+    if [[ -f /boot/cmdline.txt || -f /boot/firmware/cmdline.txt ]]; then
+     # raspbian 
+        SHOULD_RETRY=1
+
+        if ! command_exists iptables; then 
+            ensure_success $sh_c "apt update && apt install -y iptables"
+        fi
+
+        systemctl disable --user gvfs-udisks2-volume-monitor
+        systemctl stop --user gvfs-udisks2-volume-monitor
+
+        local cpu_cgroups_enbaled=$(cat /proc/cgroups |awk '{if($1=="cpu")print $4}')
+        local mem_cgroups_enbaled=$(cat /proc/cgroups |awk '{if($1=="memory")print $4}')
+        if  [[ $cpu_cgroups_enbaled -eq 0 || $mem_cgroups_enbaled -eq 0 ]]; then
+            log_fatal "cpu or memory cgroups disabled, please edit /boot/cmdline.txt or /boot/firmware/cmdline.txt and reboot to enable it."
+        fi
+    fi
+
     if ! hostname -i &>/dev/null; then
         ensure_success $sh_c "echo $local_ip  $HOSTNAME >> /etc/hosts"
     fi
@@ -266,6 +320,104 @@ precheck_os() {
             ensure_success $sh_c "rm -rf /etc/resolv.conf.bak"
         fi
     fi
+
+    # ubuntu 24 upgrade apparmor
+    ubuntuversion=$(is_ubuntu)
+    if [ ${ubuntuversion} -eq 2 ]; then
+        aapv=$(apparmor_parser --version)
+        if [[ ! ${aapv} =~ "4.0.1" ]]; then
+            local aapv_tar="${BASE_DIR}/components/apparmor_4.0.1-0ubuntu1_${ARCH}.deb"
+            if [ ! -f "$aapv_tar" ]; then
+                if [ x"${ARCH}" == x"arm64" ]; then
+                    ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://launchpad.net/ubuntu/+source/apparmor/4.0.1-0ubuntu1/+build/28428841/+files/apparmor_4.0.1-0ubuntu1_arm64.deb"
+                else
+                    ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://launchpad.net/ubuntu/+source/apparmor/4.0.1-0ubuntu1/+build/28428840/+files/apparmor_4.0.1-0ubuntu1_amd64.deb"
+                fi
+            else
+                ensure_success $sh_c "cp ${aapv_tar} ./"
+            fi
+            ensure_success $sh_c "dpkg -i apparmor_4.0.1-0ubuntu1_${ARCH}.deb"
+        fi
+    fi
+
+    # opy pre-installation dependency files 
+    if [ -d /opt/deps ]; then
+        ensure_success $sh_c "mv /opt/deps/* ${BASE_DIR}"
+    fi
+
+}
+
+is_debian() {
+    lsb_release=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
+    if [ -z "$lsb_release" ]; then
+        echo 0
+        return
+    fi
+    if [[ ${lsb_release} == *Debian* ]]; then
+        case "$lsb_release" in
+            *12* | *11*)
+                echo 1
+                ;;
+            *)
+                echo 0
+                ;;
+        esac
+    else
+        echo 0
+    fi
+}
+
+is_ubuntu() {
+    lsb_release=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
+    if [ -z "$lsb_release" ]; then
+        echo 0
+        return
+    fi
+    if [[ ${lsb_release} == *Ubuntu* ]];then 
+        case "$lsb_release" in
+            *24.*)
+                echo 2
+                ;;
+            *22.* | *20.*)
+                echo 1
+                ;;
+            *)
+                echo 0
+                ;;
+        esac
+    else
+        echo 0
+    fi
+}
+
+is_raspbian(){
+    lsb_release=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
+    if [ -z "$lsb_release" ]; then
+        echo 0
+        return
+    fi
+    if [[ ${lsb_release} == *Raspbian* ]];then 
+        case "$lsb_release" in
+            *11* | *12*)
+                echo 1
+                ;;
+            *)
+                echo 0
+                ;;
+        esac
+    else
+        echo 0
+    fi
+}
+
+is_wsl(){
+    wsl=$(uname -a 2>&1)
+    if [[ ${wsl} == *WSL* ]]; then
+        echo 1
+        return
+    fi
+
+    echo 0
 }
 
 install_deps() {
@@ -411,8 +563,8 @@ install_juicefs() {
     [ ! -d $jfs_cachedir ] && ensure_success $sh_c "mkdir -p $jfs_cachedir"
 
     if [ ! -f "$juicefs_bin" ]; then
-        ensure_success $sh_c "curl ${CURL_TRY} -kLO https://github.com/beclab/juicefs-ext/releases/download/${JFS_VERSION}/juicefs-${JFS_VERSION}-linux-amd64.tar.gz"
-        ensure_success $sh_c "tar -zxf juicefs-${JFS_VERSION}-linux-amd64.tar.gz"
+        ensure_success $sh_c "curl ${CURL_TRY} -kLO https://github.com/beclab/juicefs-ext/releases/download/${JFS_VERSION}/juicefs-${JFS_VERSION}-linux-${ARCH}.tar.gz"
+        ensure_success $sh_c "tar -zxf juicefs-${JFS_VERSION}-linux-${ARCH}.tar.gz"
         ensure_success $sh_c "chmod +x juicefs"
         ensure_success $sh_c "install juicefs /usr/local/bin"
         ensure_success $sh_c "install juicefs /sbin/mount.juicefs"
@@ -483,16 +635,117 @@ check_node_ready(){
     $ssh_client "sudo su -c '/usr/local/bin/kubectl get nodes'"
 }
 
+install_containerd(){
+    if [ x"$KUBE_TYPE" != x"k3s" ]; then
+        CONTAINERD_VERSION="1.6.4"
+        RUNC_VERSION="1.1.4"
+        CNI_PLUGIN_VERSION="1.1.1"
+
+        # preinstall containerd for k8s
+        if command_exists containerd && [ -f /etc/systemd/system/containerd.service ];  then
+            ctr_cmd=$(command -v ctr)
+            if ! system_service_active "containerd"; then
+                ensure_success $sh_c "systemctl start containerd"
+            fi
+        else
+            local containerd_tar="${BASE_DIR}/pkg/containerd/${CONTAINERD_VERSION}/${ARCH}/containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz"
+            local runc_tar="${BASE_DIR}/pkg/runc/v${RUNC_VERSION}/${ARCH}/runc.${ARCH}"
+            local cni_plugin_tar="${BASE_DIR}/pkg/cni/v${CNI_PLUGIN_VERSION}/${ARCH}/cni-plugins-linux-${ARCH}-v${CNI_PLUGIN_VERSION}.tgz"
+
+            if [ -f "$containerd_tar" ]; then
+                ensure_success $sh_c "cp ${containerd_tar} containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz"
+            else
+                ensure_success $sh_c "wget https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz"
+            fi
+            ensure_success $sh_c "tar Cxzvf /usr/local containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz"
+
+            if [ -f "$runc_tar" ]; then
+                ensure_success $sh_c "cp ${runc_tar} runc.${ARCH}"
+            else
+                ensure_success $sh_c "wget https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.${ARCH}"
+            fi
+            ensure_success $sh_c "install -m 755 runc.${ARCH} /usr/local/sbin/runc"
+
+            if [ -f "$cni_plugin_tar" ]; then
+                ensure_success $sh_c "cp ${cni_plugin_tar} cni-plugins-linux-${ARCH}-v${CNI_PLUGIN_VERSION}.tgz"
+            else
+                ensure_success $sh_c "wget https://github.com/containernetworking/plugins/releases/download/v${CNI_PLUGIN_VERSION}/cni-plugins-linux-${ARCH}-v${CNI_PLUGIN_VERSION}.tgz"
+            fi
+            ensure_success $sh_c "mkdir -p /opt/cni/bin"
+            ensure_success $sh_c "tar Cxzvf /opt/cni/bin cni-plugins-linux-${ARCH}-v${CNI_PLUGIN_VERSION}.tgz"
+            ensure_success $sh_c "mkdir -p /etc/containerd"
+            ensure_success $sh_c "containerd config default | tee /etc/containerd/config.toml"
+            ensure_success $sh_c "sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml"
+            ensure_success $sh_c "sed -i 's/k8s.gcr.io\/pause:3.6/kubesphere\/pause:3.5/g' /etc/containerd/config.toml"
+            rm -rf /tmp/registry.toml
+            if [ x"$REGISTRY_MIRRORS" != x"" ]; then
+                cat << EOF > /tmp/registry.toml
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+  endpoint = ["$REGISTRY_MIRRORS"]
+EOF
+            else
+                if [ x"$PROXY" != x"" ]; then
+                    cat << EOF > /tmp/registry.toml
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+  endpoint = ["http://$PROXY:5000"]
+EOF
+                fi
+            fi
+
+            if [ -f /tmp/registry.toml ]; then
+                ensure_success $sh_c "cat /tmp/registry.toml >> /etc/containerd/config.toml"
+            fi
+            # ensure_success $sh_c "curl -L https://raw.githubusercontent.com/containerd/containerd/main/containerd.service -o /etc/systemd/system/containerd.service"
+            ensure_success $sh_c "cp $BASE_DIR/deploy/containerd.service /etc/systemd/system/containerd.service"
+            ensure_success $sh_c "systemctl daemon-reload"
+            ensure_success $sh_c "systemctl enable --now containerd"
+
+            ctr_cmd=$(command -v ctr)
+        fi
+    fi
+
+    if [ -d $BASE_DIR/images ]; then
+        echo "preload images to local ... "
+        local tar_count=$(find $BASE_DIR/images -type f -name '*.tar.gz'|wc -l)
+        if [ $tar_count -eq 0 ]; then
+            if [ -f $BASE_DIR/images/images.node.mf ]; then
+                echo "downloading images from terminus cloud ..."
+                while read img; do
+                    local filename=$(echo -n "$img"|md5sum|awk '{print $1}')
+                    filename="$filename.tar.gz"
+                    echo "downloading ${filename} ..."
+                    curl -fsSL https://dc3p1870nn3cj.cloudfront.net/${filename} -o $BASE_DIR/images/$filename
+                done < $BASE_DIR/images/images.node.mf
+            fi
+        fi
+
+        if [ x"$KUBE_TYPE" == x"k3s" ]; then
+            K3S_PRELOAD_IMAGE_PATH="/var/lib/images"
+            $sh_c "mkdir -p ${K3S_PRELOAD_IMAGE_PATH} && rm -rf ${K3S_PRELOAD_IMAGE_PATH}/*"
+        fi
+
+        while read img; do
+            local filename=$(echo -n "$img"|md5sum|awk '{print $1}')
+            filename="$filename.tar.gz"
+            if [ x"$KUBE_TYPE" == x"k3s" ]; then
+                $sh_c "ln -s $BASE_DIR/images/${filename} ${K3S_PRELOAD_IMAGE_PATH}/${filename}"
+            else
+                $sh_c "gunzip -c $BASE_DIR/images/${filename} | $ctr_cmd -n k8s.io images import -"
+            fi
+        done < $BASE_DIR/images/images.node.mf
+    fi
+}
+
 add_worker_node() {
     # download kke
-    KKE_VERSION=0.1.19
+    KKE_VERSION=0.1.24
 
     log_info 'add this node to k8s cluster'
 
     if [ x"$PROXY" != x"" ]; then
 	    ensure_success $sh_c "echo nameserver $PROXY > /etc/resolv.conf"
-	    ensure_success $sh_c "curl ${CURL_TRY} -kLO https://github.com/beclab/kubekey-ext/releases/download/${KKE_VERSION}/kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
-	    ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-amd64.tar.gz"
+	    ensure_success $sh_c "curl ${CURL_TRY} -kLO https://github.com/beclab/kubekey-ext/releases/download/${KKE_VERSION}/kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
+	    ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
     else
     	ensure_success $sh_c "curl -sfL https://raw.githubusercontent.com/beclab/kubekey-ext/master/downloadKKE.sh | VERSION=${KKE_VERSION} sh -"
     fi
@@ -550,6 +803,11 @@ Main() {
 
         log_info 'Preparing and mount storage fs ... \n'
         prepare_storage
+
+        if [[ -z "${TERMINUS_IS_CLOUD_VERSION}" || x"${TERMINUS_IS_CLOUD_VERSION}" != x"true" ]]; then
+            log_info 'Installing containerd ...'
+            install_containerd
+        fi
 
         log_info 'Installing and Join worker node ...\n'
         add_worker_node

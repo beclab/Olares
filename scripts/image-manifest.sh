@@ -11,7 +11,8 @@ rm -rf .manifest
 mkdir -p .manifest
 
 # copy default base images
-cp $BASE_DIR/../build/manifest/images ${IMAGE_MANIFEST}
+cp -f $BASE_DIR/../build/manifest/images ${IMAGE_MANIFEST}
+cp -f $BASE_DIR/../build/manifest/images.node.mf .manifest/images.node.mf
 
 TMP_MANIFEST=$(mktemp)
 for mod in "${PACKAGE_MODULE[@]}";do
