@@ -180,6 +180,17 @@ spec:
         volumeMounts:
         - name: userspace-dir
           mountPath: /data
+      - name: media-server
+        env:
+        - name: MEDIA_SERVER_DATA_DIR
+          value: /data
+        image: beclab/media-server:v0.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9090
+        volumeMounts:
+        - name: userspace-dir
+          mountPath: /data/Home
 
       - name: terminus-upload-sidecar
         image: beclab/upload:v1.0.3
