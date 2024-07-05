@@ -23,6 +23,11 @@ data:
           include proxy.conf;
       }
 
+      location /wasm/model_server/ {
+          proxy_pass http://nitro:8081/;
+          inlcude proxy.conf;
+      }
+
       location /nitro/ {
         proxy_pass http://127.0.0.1:3900/;
         include proxy.conf;
@@ -143,7 +148,7 @@ spec:
             subPath: default.conf
       {{- if and .Values.gpu (not (eq .Values.gpu "none" )) }}
       - name: nitro
-        image: 'beclab/nitro:v0.0.9'
+        image: 'beclab/nitro:v0.0.10'
         ports:
           - name: nitro-port
             containerPort: 3928
@@ -152,6 +157,10 @@ spec:
             containerPort: 3900
             protocol: TCP
         env:
+          - name: DIFY_HOST
+            value: 'http://difyfusion'
+          - name: LLM_HOST
+            value: 'http://nitro'
           - name: LOG_SIZE
             value: '15M'
           - name: LLM_UTIL
