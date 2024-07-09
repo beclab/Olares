@@ -69,4 +69,7 @@ run_cmd "cp -rf frameworks/bfl/config/launcher ${DIST}/wizard/config/"
 echo "packaging gpu ..."
 run_cmd "cp -rf frameworks/GPU/config/gpu ${DIST}/wizard/config/"
 
+echo "packaging develper script ..."
+run_cmd "cp -rf scripts/developer/* ${DIST}/."
+
 echo "packaging completed"
