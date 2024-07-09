@@ -25,7 +25,7 @@ data:
 
       location /wasm/model_server/ {
           proxy_pass http://nitro:8081/;
-          inlcude proxy.conf;
+          include proxy.conf;
       }
 
       location /nitro/ {
