@@ -5,6 +5,7 @@ ERR_EXIT=1
 CURL_TRY="--connect-timeout 30 --retry 5 --retry-delay 1 --retry-max-time 10 "
 
 BASE_DIR=$(dirname $(realpath -s $0))
+BASE_DIR=${BASE_DIR:-.}
 CLUSTER_NAME=$1
 
 [[ -f "${BASE_DIR}/.env" && -z "$DEBUG_VERSION" ]] && . "${BASE_DIR}/.env"
@@ -400,7 +401,7 @@ preload_images(){
         fi
 
         find $BASE_DIR/images -type f -name '*.tar.gz' | while read filename; do
-            $sh_c "gunzip -c ${filename} | docker load -"
+            $sh_c "gunzip -c ${filename} | docker load"
         done
     fi
 }
@@ -572,8 +573,8 @@ _END
     ensure_success $sh_c "$KUBECTL apply -f cm-backup-config.yaml"
 
     # patch
-    ensure_success $sh_c "$KUBECTL apply -f ${BASE_DIR}/deploy/patch-globalrole-workspace-manager.yaml"
-    ensure_success $sh_c "$KUBECTL apply -f ${BASE_DIR}/deploy/patch-notification-manager.yaml"
+    retry_cmd $sh_c "$KUBECTL apply -f ${BASE_DIR}/deploy/patch-globalrole-workspace-manager.yaml"
+    retry_cmd $sh_c "$KUBECTL apply -f ${BASE_DIR}/deploy/patch-notification-manager.yaml"
 
     # install app-store charts repo to app sevice
     log_info 'waiting for appservice'
@@ -691,13 +692,19 @@ main(){
     check_vault
 
     log_info 'Starting Terminus ...'
+    ensure_success $sh_c "${KUBECTL} rollout restart sts bfl -n user-space-${username}"
     check_desktop
 
     log_info 'Installation wizard is complete\n'
 
+    ip=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/icmp_seq/{print $2}')
+
     # install complete
     echo -e " Terminus is running"
     echo -e " Open your browser and visit."
+    echo -e "${GREEN_LINE}"
+    echo -e " http://${ip}:30180/"
+    echo -e "${GREEN_LINE}"
     echo -e " "
     echo -e " User: ${username} "
     echo -e " Password: ${userpwd} "
