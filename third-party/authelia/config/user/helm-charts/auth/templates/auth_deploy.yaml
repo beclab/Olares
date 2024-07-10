@@ -1,8 +1,3 @@
-
-
-
-
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -26,7 +21,7 @@ spec:
     spec:
       containers:
       - name: auth-front
-        image: beclab/login:v0.1.24
+        image: beclab/login:v0.1.25
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
