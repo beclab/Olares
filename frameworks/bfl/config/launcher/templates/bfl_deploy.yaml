@@ -289,7 +289,7 @@ spec:
           value: v0.1.0
 
       - name: ingress
-        image: beclab/bfl-ingress:v0.2.9
+        image: beclab/bfl-ingress:v0.2.10
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: ngxlog
