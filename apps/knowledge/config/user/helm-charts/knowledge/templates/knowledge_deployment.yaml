@@ -105,7 +105,7 @@ spec:
     spec:
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.1.31"
+        image: "beclab/knowledge-base-api:v0.1.32"
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
@@ -136,6 +136,8 @@ spec:
           value: "5432"
         - name: PG_DATABASE
           value: user_space_{{ .Values.bfl.username }}_knowledge
+        - name: DOWNLOAD_URL
+          value: http://download-svc.user-system-{{ .Values.bfl.username }}:3080
         volumeMounts:
         - name: watch-dir
           mountPath: /data/Home/Documents
@@ -149,7 +151,7 @@ spec:
             memory: 1Gi
 
       - name: backend-server
-        image: "beclab/recommend-backend:v0.0.5"
+        image: "beclab/recommend-backend:v0.0.6"
         imagePullPolicy: IfNotPresent
         env:
         - name: LISTEN_ADDR
@@ -188,8 +190,9 @@ spec:
           value: "5432"
         - name: PG_DATABASE
           value: user_space_{{ .Values.bfl.username }}_knowledge
+        - name: DOWNLOAD_API_URL
+          value: http://download-svc.user-system-{{ .Values.bfl.username }}:3080/api/termius/download
 
-        
         ports:
         - containerPort: 8080
         resources:
