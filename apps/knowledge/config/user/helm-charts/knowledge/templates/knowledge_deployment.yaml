@@ -1,14 +1,6 @@
 {{- $namespace := printf "%s%s" "user-system-" .Values.bfl.username -}}
 {{- $knowledge_secret := (lookup "v1" "Secret" $namespace "rss-secrets") -}}
 
-{{- $zinc_knowledge_secret := (lookup "v1" "Secret" $namespace "zinc-knowledge-secrets") -}}
-{{- $password_zinc := "" -}}
-{{ if $zinc_knowledge_secret -}}
-{{ $password_zinc = (index $zinc_knowledge_secret "data" "password") }}
-{{ else -}}
-{{ $password_zinc = randAlphaNum 16 | b64enc }}
-{{- end -}}
-
 {{- $redis_password := "" -}}
 {{ if $knowledge_secret -}}
 {{ $redis_password = (index $knowledge_secret "data" "redis_password") }}
@@ -162,18 +154,6 @@ spec:
           value: '{{ .Values.os.wise.appSecret }}'
         - name: OS_APP_KEY
           value: {{ .Values.os.wise.appKey }}
-        - name: ZINC_RPC_START
-          value: 'true'
-        - name: ZINC_USER
-          value: zincuser-knowledge-{{ .Values.bfl.username }}
-        - name: ZINC_PASSWORD
-          value: {{ $password_zinc | b64dec }}
-        - name: ZINC_HOST
-          value: zinc-server-svc.user-system-{{ .Values.bfl.username }}
-        - name: ZINC_PORT
-          value: "80"
-        - name: ZINC_INDEX
-          value: {{ .Release.Namespace }}_zinc-knowledge
         - name: RSS_HUB_URL
           value: 'http://rss-server.os-system:3010/rss'
         - name: WE_CHAT_REFRESH_FEED_URL
@@ -250,126 +230,94 @@ spec:
       port: 3010
       targetPort: 3010  
 ---
-apiVersion: v1
-data:
-  mappings: |
-    {
-      "properties": {
-        "@timestamp": {
-          "type": "date",
-          "index": true,
-          "store": false,
-          "sortable": true,
-          "aggregatable": true,
-          "highlightable": false
-        },
-        "_id": {
-          "type": "keyword",
-          "index": true,
-          "store": false,
-          "sortable": true,
-          "aggregatable": true,
-          "highlightable": false
-        },
-        "content": {
-          "type": "text",
-          "index": true,
-          "store": true,
-          "sortable": false,
-          "aggregatable": false,
-          "highlightable": true
-        },
-        "created": {
-          "type": "numeric",
-          "index": true,
-          "store": false,
-          "sortable": true,
-          "aggregatable": true,
-          "highlightable": false
-        },
-        "format_name": {
-          "type": "text",
-          "index": true,
-          "store": false,
-          "sortable": false,
-          "aggregatable": false,
-          "highlightable": false
-        },
-        "md5": {
-          "type": "text",
-          "analyzer": "keyword",
-          "index": true,
-          "store": false,
-          "sortable": false,
-          "aggregatable": false,
-          "highlightable": false
-        },
-        "meta": {
-          "type": "text",
-          "index": true,
-          "store": false,
-          "sortable": false,
-          "aggregatable": false,
-          "highlightable": false
-        },
-        "name": {
-          "type": "text",
-          "index": true,
-          "store": false,
-          "sortable": false,
-          "aggregatable": false,
-          "highlightable": false
-        },
-        "where": {
-          "type": "text",
-          "analyzer": "keyword",
-          "index": true,
-          "store": false,
-          "sortable": false,
-          "aggregatable": false,
-          "highlightable": false
-        }
-      }
-    }
-kind: ConfigMap
-metadata:
-  name: zinc-knowledge
-  namespace: user-system-{{ .Values.bfl.username }}
- 
----
+#apiVersion: v1
+#data:
+#  mappings: |
+#    {
+#      "properties": {
+#        "@timestamp": {
+#          "type": "date",
+#          "index": true,
+#          "store": false,
+#          "sortable": true,
+#          "aggregatable": true,
+#          "highlightable": false
+#        },
+#        "_id": {
+#          "type": "keyword",
+#          "index": true,
+#          "store": false,
+#          "sortable": true,
+#          "aggregatable": true,
+#          "highlightable": false
+#        },
+#        "content": {
+#          "type": "text",
+#          "index": true,
+#          "store": true,
+#          "sortable": false,
+#          "aggregatable": false,
+#          "highlightable": true
+#        },
+#        "created": {
+#          "type": "numeric",
+#          "index": true,
+#          "store": false,
+#          "sortable": true,
+#          "aggregatable": true,
+#          "highlightable": false
+#        },
+#        "format_name": {
+#          "type": "text",
+#          "index": true,
+#          "store": false,
+#          "sortable": false,
+#          "aggregatable": false,
+#          "highlightable": false
+#        },
+#        "md5": {
+#          "type": "text",
+#          "analyzer": "keyword",
+#          "index": true,
+#          "store": false,
+#          "sortable": false,
+#          "aggregatable": false,
+#          "highlightable": false
+#        },
+#        "meta": {
+#          "type": "text",
+#          "index": true,
+#          "store": false,
+#          "sortable": false,
+#          "aggregatable": false,
+#          "highlightable": false
+#        },
+#        "name": {
+#          "type": "text",
+#          "index": true,
+#          "store": false,
+#          "sortable": false,
+#          "aggregatable": false,
+#          "highlightable": false
+#        },
+#        "where": {
+#          "type": "text",
+#          "analyzer": "keyword",
+#          "index": true,
+#          "store": false,
+#          "sortable": false,
+#          "aggregatable": false,
+#          "highlightable": false
+#        }
+#      }
+#    }
+#kind: ConfigMap
+#metadata:
+#  name: zinc-knowledge
+#  namespace: user-system-{{ .Values.bfl.username }}
+#---
 
-apiVersion: v1
-kind: Secret
-metadata:
-  name: zinc-knowledge-secrets
-  namespace: user-system-{{ .Values.bfl.username }}
-type: Opaque
-data:
-  password: {{ $password_zinc }}
 
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: zinc-knowledge
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: knowledge
-  appNamespace: user-space-{{ .Values.bfl.username }}
-  middleware: zinc
-  zinc:
-    user: zincuser-knowledge-{{ .Values.bfl.username }}
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: password
-          name: zinc-knowledge-secrets
-    indexes:
-      - name: zinc-knowledge
-        namespace: user-system-{{ .Values.bfl.username }}
-        key: mappings
-
----
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: SysEventRegistry
 metadata:
