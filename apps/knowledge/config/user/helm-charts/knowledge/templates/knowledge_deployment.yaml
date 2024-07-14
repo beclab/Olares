@@ -129,7 +129,7 @@ spec:
         - name: PG_DATABASE
           value: user_space_{{ .Values.bfl.username }}_knowledge
         - name: DOWNLOAD_URL
-          value: http://download-svc.user-system-{{ .Values.bfl.username }}:3080
+          value: http://download-svc.user-space-{{ .Values.bfl.username }}:3080
         volumeMounts:
         - name: watch-dir
           mountPath: /data/Home/Documents
@@ -171,7 +171,7 @@ spec:
         - name: PG_DATABASE
           value: user_space_{{ .Values.bfl.username }}_knowledge
         - name: DOWNLOAD_API_URL
-          value: http://download-svc.user-system-{{ .Values.bfl.username }}:3080/api/termius/download
+          value: http://download-svc.user-space-{{ .Values.bfl.username }}:3080/api/termius/download
 
         ports:
         - containerPort: 8080
