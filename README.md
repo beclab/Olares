@@ -1,6 +1,6 @@
 <div align="center">
 
-# Terminus OS - Enabling a True Home Cloud for Your Digital Life <!-- omit in toc -->
+# Terminus OS - Your SelfHosted Home Cloud, Powered by Kubernetes <!-- omit in toc -->
 
 [![Mission](https://img.shields.io/badge/Mission-Let%20people%20own%20their%20data%20again-purple)](#)<br />
 [![Last Commit](https://img.shields.io/github/last-commit/beclab/terminus)](https://github.com/beclab/terminus/commits/main)
@@ -61,7 +61,7 @@ Terminus provides a next-generation decentralized Internet framework consisting 
 
 - **Snowinning Protocol**: A decentralized identity and reputation system that integrates decentralized identifiers (DIDs), verifiable credentials (VCs), and reputation data. Learn more in [documentation](https://docs.jointerminus.com/overview/snowinning/overview.html).
 - **Terminus OS**: An one-stop self-hosted OS running on edge devices, allowing users to host their own data and applications.  
-- **TermiPass**: A comprehensive client software that operates across multiple platforms. It securely stores users' private keys and manages their identities and data across various Edge devices. Learn more in [documentation](https://docs.jointerminus.com/how-to/termipass/overview.html).
+- **TermiPass**: A comprehensive client software that securely bridges users to their Terminus systems. It offers remote access, identity and device management, data storage, and productivity tools, providing a seamless interface for all Terminus interactions. Learn more in [documentation](https://docs.jointerminus.com/how-to/termipass/overview.html).
 
 ## Tech stacks
 
