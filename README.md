@@ -39,9 +39,9 @@ Terminus OS is a free, self-hosted operating system built on Kubernetes. It conv
 
 Typical use cases include:
 
-💻**Personal data vaults**: Securely store, sync, and manage your photos, documents, and important files in a unified storage and access anywhere. <br>
-
 🤖 **Local AI**: Host and run world-class open-source AI models locally, including large language models, image generation, and speech recognition. Create custom AI assistants that integrate seamlessly with your personal data and applications, all while ensuring enhanced privacy and control. <br>
+
+💻**Personal data repository**: Securely store, sync, and manage your photos, documents, and important files in a unified storage and access anywhere. <br>
 
 🛠️ **Self-hosted workspace**: Create a free, powerful workspace for your team or family with open source selfhosted alternatives. <br>
 
