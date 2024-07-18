@@ -17,6 +17,7 @@ os_arch=$(uname -m)
 os_verion=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
 
 case "$os_arch" in 
+    arm64) ARCH=arm64; ;; 
     x86_64) ARCH=amd64; ;; 
     armv7l) ARCH=arm; ;; 
     aarch64) ARCH=arm64; ;; 
