@@ -77,6 +77,22 @@ is_k3s(){
 }
 
 precheck_os() {
+	# check os type and arch and os vesion
+	os_type=$(uname -s)
+	os_arch=$(uname -m)
+	os_verion=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
+
+	case "$os_arch" in 
+	    arm64) ARCH=arm64; ;; 
+		x86_64) ARCH=amd64; ;; 
+		armv7l) ARCH=arm; ;; 
+		aarch64) ARCH=arm64; ;; 
+		ppc64le) ARCH=ppc64le; ;; 
+		s390x) ARCH=s390x; ;; 
+		*) echo "unsupported arch, exit ..."; 
+		exit -1; ;; 
+	esac 
+
     # try to resolv hostname
     ensure_success $sh_c "hostname -i >/dev/null"
 
@@ -97,6 +113,17 @@ precheck_os() {
 
     local_ip="$ip"
 }
+
+is_wsl(){
+    wsl=$(uname -a 2>&1)
+    if [[ ${wsl} == *WSL* ]]; then
+        echo 1
+        return
+    fi
+
+    echo 0
+}
+
 
 regen_cert_conf(){
 	old_IFS=$IFS
@@ -414,7 +441,10 @@ main() {
 		fi 
 	fi
 
-	update_juicefs
+    if [[ $(is_wsl) -eq 0 ]]; then
+		update_juicefs
+	fi
+	
 	update_etcd
 
 	if is_k3s ; then

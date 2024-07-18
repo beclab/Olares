@@ -143,6 +143,7 @@ To help you understand how Terminus stands out in the landscape, we've created a
 - [Getting Started on macOS](https://docs.jointerminus.com/overview/introduction/getting-started/mac.html)
 - [Getting Started on Windows](https://docs.jointerminus.com/overview/introduction/getting-started/windows.html)
 
+
 ## Project navigation
 
 Terminus consists of numerous code repositories publicly available on GitHub. The current repository is responsible for the final compilation, packaging, installation, and upgrade of the operating system, while specific changes mostly take place in their corresponding repositories.

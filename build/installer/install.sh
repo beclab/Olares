@@ -11,7 +11,28 @@ if [ "x${VERSION}" = "x" ]; then
   exit
 fi
 
+# check os type and arch and os vesion
+os_type=$(uname -s)
+os_arch=$(uname -m)
+os_verion=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
+
+case "$os_arch" in 
+    arm64) ARCH=arm64; ;; 
+    x86_64) ARCH=amd64; ;; 
+    armv7l) ARCH=arm; ;; 
+    aarch64) ARCH=arm64; ;; 
+    ppc64le) ARCH=ppc64le; ;; 
+    s390x) ARCH=s390x; ;; 
+    *) echo "unsupported arch, exit ..."; 
+    exit -1; ;; 
+esac 
+
+
 DOWNLOAD_URL="https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${VERSION}.tar.gz"
+
+if [ x"${ARCH}" == x"arm64" ]; then
+  DOWNLOAD_URL="https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${VERSION}-arm64.tar.gz"
+fi
 
 echo ""
 echo " Downloading Install-Wizard ${VERSION} from ${DOWNLOAD_URL} ... " 
@@ -45,4 +66,8 @@ echo "Install-Wizard ${VERSION} Download Complete!"
 echo ""
 
 
-bash ./install_cmd.sh
+if [[ x"$os_type" == x"Darwin" ]]; then
+  bash ./install_macos.sh
+else
+  bash ./install_cmd.sh
+fi

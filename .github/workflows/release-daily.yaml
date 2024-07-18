@@ -28,7 +28,7 @@ jobs:
         run: |
           v=1.7.0-$(date +"%Y%m%d")
           echo "tag_version=$v" >> $GITHUB_OUTPUT
-          echo "latest_version=1.4.4" >> $GITHUB_OUTPUT
+          echo "latest_version=1.6.0-alpha" >> $GITHUB_OUTPUT
 
       - name: 'Checkout source code'
         uses: actions/checkout@v3
@@ -45,8 +45,44 @@ jobs:
         run: |
           aws s3 cp install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz s3://terminus-os-install/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz --acl=public-read
 
+  upload-full-arm64:
+    runs-on: self-hosted
+
+    steps:
+      # - name: Maximize build space
+      #   uses: easimon/maximize-build-space@master
+      #   with:
+      #     root-reserve-mb: 21200
+      #     swap-size-mb: 1024
+      #     remove-dotnet: 'true'
+      #     remove-android: 'true'
+      #     remove-haskell: 'true'
+      #     remove-codeql: 'true'
+
+      - name: 'Daily tag version'
+        id: vars
+        run: |
+          v=1.7.0-$(date +"%Y%m%d")
+          echo "tag_version=$v" >> $GITHUB_OUTPUT
+          echo "latest_version=1.6.0-alpha" >> $GITHUB_OUTPUT
+
+      - name: 'Checkout source code'
+        uses: actions/checkout@v3
+
+      - name: Package installer
+        run: |
+          bash scripts/build-full.sh ${{ steps.vars.outputs.tag_version }} linux/arm64
+
+      - name: Upload to S3
+        env: 
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: 'us-east-1'
+        run: |
+          aws s3 cp install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz s3://terminus-os-install/install-wizard-v${{ steps.vars.outputs.tag_version }}-arm64.tar.gz --acl=public-read
+
   release:
-    needs: upload-full
+    needs: [upload-full, upload-full-arm64]
     runs-on: ubuntu-latest
 
     steps:
