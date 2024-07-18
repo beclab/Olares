@@ -49,15 +49,15 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@master
-        with:
-          root-reserve-mb: 21200
-          swap-size-mb: 1024
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-codeql: 'true'
+      # - name: Maximize build space
+      #   uses: easimon/maximize-build-space@master
+      #   with:
+      #     root-reserve-mb: 21200
+      #     swap-size-mb: 1024
+      #     remove-dotnet: 'true'
+      #     remove-android: 'true'
+      #     remove-haskell: 'true'
+      #     remove-codeql: 'true'
 
       - name: 'Daily tag version'
         id: vars
