@@ -10,7 +10,7 @@ calico/pod2daemon-flexvol:v3.23.2
 beclab/citus:12.1
 coredns/coredns:1.8.0
 csiplugin/snapshot-controller:v4.0.0
-beclab/ks-installer-ext:v0.1.8-ext
+beclab/ks-installer-ext:v0.1.9-ext
 kubesphere/k8s-dns-node-cache:1.15.12
 kubesphere/ks-console:v3.3.0
 kubesphere/ks-controller-manager:v3.3.0
