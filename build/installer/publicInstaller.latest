@@ -33,7 +33,7 @@ esac
 
 DOWNLOAD_URL="https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${VERSION}.tar.gz"
 
-if [ x"${ARCH}" != x"arm64" ]; then
+if [ x"${ARCH}" == x"arm64" ]; then
   DOWNLOAD_URL="https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${VERSION}-arm64.tar.gz"
 fi
 
