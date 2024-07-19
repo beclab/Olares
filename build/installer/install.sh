@@ -38,36 +38,46 @@ echo ""
 echo " Downloading Install-Wizard ${VERSION} from ${DOWNLOAD_URL} ... " 
 echo ""
 
+foldername="install-wizard-v${VERSION}"
 filename="install-wizard-v${VERSION}.tar.gz"
-curl -Lo ${filename} ${DOWNLOAD_URL}
-if [ $? -ne 0 ] || [ ! -f ${filename} ]; then
-  echo ""
-  echo "Failed to download Install-Wizard ${VERSION} !"
-  echo ""
-  echo "Please verify the version you are trying to download."
-  echo ""
-  exit
-fi
 
-ret='0'
-command -v tar >/dev/null 2>&1 || { ret='1'; }
-if [ "$ret" -eq 0 ]; then
-    mkdir -p install-wizard && cd install-wizard && tar -xzf "../${filename}"
-else
-    echo "Install-Wizard ${VERSION} Download Complete!"
+if [ ! -f ${filename} ]; then
+  tmpname="install-wizard-v${VERSION}.bak.tar.gz"
+  curl -Lo ${tmpname} ${DOWNLOAD_URL}
+
+  if [ $? -ne 0 ] || [ ! -f ${tmpname} ]; then
     echo ""
-    echo "Try to unpack the ${filename} failed."
-    echo "tar: command not found, please unpack the ${filename} manually."
+    echo "Failed to download Install-Wizard ${VERSION} !"
+    echo ""
+    echo "Please verify the version you are trying to download."
+    echo ""
     exit
+  fi
+  mv ${tmpname} ${filename}
 fi
 
 echo ""
 echo "Install-Wizard ${VERSION} Download Complete!"
 echo ""
 
+if command -v tar &>/dev/null; then
+    rm -rf ${foldername} && mkdir -p ${foldername} && cd ${foldername} && tar -xzf "../${filename}"
 
-if [[ x"$os_type" == x"Darwin" ]]; then
-  bash ./install_macos.sh
+    if [ $? -eq 0 ]; then
+        if [[ x"$os_type" == x"Darwin" ]]; then
+          bash  ./uninstall_macos.sh
+          touch .installed
+          bash ./install_macos.sh
+        else
+          bash  ./uninstall_cmd.sh
+          touch .installed
+          bash ./install_cmd.sh
+        fi
+
+        exit 0
+    fi
 else
-  bash ./install_cmd.sh
+    echo "Try to unpack the ${filename} failed."
+    echo "tar: command not found, please unpack the ${filename} manually."
+    exit 1
 fi
