@@ -1,6 +1,6 @@
 <div align="center">
 
-# Terminus - Your SelfHosted Home Cloud, Powered by Kubernetes <!-- omit in toc -->
+# Terminus - Your Self-Hosted Home Cloud, Powered by Kubernetes <!-- omit in toc -->
 
 [![Mission](https://img.shields.io/badge/Mission-Let%20people%20own%20their%20data%20again-purple)](#)<br />
 [![Last Commit](https://img.shields.io/github/last-commit/beclab/terminus)](https://github.com/beclab/terminus/commits/main)
@@ -14,8 +14,7 @@
 
 ![cover](https://file.bttcdn.com/github/terminus/desktop-dark.jpeg)
 
-*Build your local AI assistants, sync data across places, host your self-hosted workspace,
-stream your own media, and more——all in a true home cloud made possible by Terminus.*
+*Build your local AI assistants, sync data across places, self-hosted your workspace, stream your own media, and more——all in a true home cloud made possible by Terminus.*
 <p align="center">
   <a href="https://www.jointerminus.com">Website</a> ·
   <a href="https://docs.jointerminus.com">Documentation</a> ·
@@ -77,7 +76,7 @@ Terminus offers a wide array of features designed to enhance security, ease of u
 
 - **Enterprise-grade security**: Simplified network configuration using Tailscale, Headscale, Cloudflare Tunnel, and FRP.
 - **Secure and permissionless application ecosystem**: Sandboxing ensures application isolation and security.
-- **Unified filesystem and database**: Automated scaling, backups, and high availability.
+- **Unified file system and database**: Automated scaling, backups, and high availability.
 - **Single sign-on**: Log in once to access all applications within Terminus with a shared authentication service.
 - **AI capabilities**: Comprehensive solution for GPU management, local AI model hosting, and private knowledge bases while maintaining data privacy.
 - **Built-in applications**: Includes file manager, sync drive, vault, reader, app market, settings, and dashboard.
@@ -89,13 +88,13 @@ Here are some screenshots from the UI for a sneak peek:
 | Desktop–AI-Powered Personal Desktop     |  **Files**–A Secure Home to Your Data
 | :--------: | :-------: |
 | ![Desktop](https://file.bttcdn.com/github/terminus/v2/desktop.jpg) | ![Files](https://file.bttcdn.com/github/terminus/v2/files.jpg) |
-| **Vault–1Password for the Web3 Era**|**Market–App Ecosystem in Your Control** |
+| **Vault–1Password alternative**|**Market–App ecosystem in your control** |
 | ![vault](https://file.bttcdn.com/github/terminus/v2/vault.jpg) | ![market](https://file.bttcdn.com/github/terminus/v2/market.jpg) |
-|**Wise–Your Digital Secret Garden** | **Settings–Managing Terminus Efficiently** |
+|**Wise–Your digital secret garden** | **Settings–Managing Terminus efficiently** |
 | ![settings](https://file.bttcdn.com/github/terminus/v2/wise.jpg) | ![](https://file.bttcdn.com/github/terminus/v2/settings.jpg) |
-|**Dashboard–Constant Terminus Monitoring**  | **Profile–Customized Web3 Homepage** |
+|**Dashboard–constant Terminus monitoring**  | **Profile–Your homepage on decentralized network** |
 | ![dashboard](https://file.bttcdn.com/github/terminus/v2/dashboard.jpg) | ![profile](https://file.bttcdn.com/github/terminus/v2/profile.jpg) |
-| **Devbox–Developing, Debugging, and Deploying**|**Controlhub–Managing Kubernetes Clusters Easily**  |
+| **Devbox–Developing, debugging, and deploying**|**Controlhub–Managing Kubernetes clusters easily**  |
 | ![Devbox](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![Controlhub](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
 
 </div>
@@ -143,7 +142,6 @@ To help you understand how Terminus stands out in the landscape, we've created a
 - [Getting Started on macOS](https://docs.jointerminus.com/overview/introduction/getting-started/mac.html)
 - [Getting Started on Windows](https://docs.jointerminus.com/overview/introduction/getting-started/windows.html)
 
-
 ## Project navigation
 
 Terminus consists of numerous code repositories publicly available on GitHub. The current repository is responsible for the final compilation, packaging, installation, and upgrade of the operating system, while specific changes mostly take place in their corresponding repositories.
@@ -179,7 +177,7 @@ The following table lists the project directories under Terminus and their corre
 | [apps/knowledgebase](https://github.com/beclab/terminus/tree/main/apps/knowledgebase) | <https://github.com/Above-Os/knowledgebase> | A built-in application that stores articles, PDFs, and eBooks collected through RSS subscriptions, TermiPass, and recommendations by local algorithms. |
 | [apps/mynitro](https://github.com/beclab/terminus/tree/main/apps/mynitro) | <https://github.com/beclab/mynitro> | A wrapper of the official [Nitro](https://github.com/janhq/nitro) project that hosts LLMs locally, specifically, provides services to Dify's agents on Terminus. |
 | [apps/notifications](https://github.com/beclab/terminus/tree/main/apps/notifications) | <https://github.com/beclab/notifications> | The notifications system of Terminus |
-| [apps/profile](https://github.com/beclab/terminus/tree/main/apps/profile) | <https://github.com/beclab/profile> | Alternative to Linkertree in Terminus to create Web3.0 profiles for users. |
+| [apps/profile](https://github.com/beclab/terminus/tree/main/apps/profile) | <https://github.com/beclab/profile> | Linktree alternative in Terminus|
 | [apps/rsshub](https://github.com/beclab/terminus/tree/main/apps/rsshub) | <https://github.com/beclab/rsshub> | A RSS subscription manager based on [RssHub](https://github.com/DIYgod/RSSHub). |
 | [apps/dify-gateway](https://github.com/beclab/terminus/tree/main/apps/dify-gateway) | <https://github.com/beclab/dify-gateway> | A gateway service that establishes the connection between Dify and other services such as Files and Agent. |
 | [apps/settings](https://github.com/beclab/terminus/tree/main/apps/settings) | <https://github.com/beclab/settings> | Built-in system settings. |
