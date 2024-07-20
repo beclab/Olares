@@ -1,0 +1,93 @@
+
+{{- $namespace := printf "%s" "os-system" -}}
+{{- $search3_secret := (lookup "v1" "Secret" $namespace "search3-secrets") -}}
+{{- $pg_password := "" -}}
+{{ if $search3_secret -}}
+{{ $pg_password = (index $search3_secret "data" "pg_password") }}
+{{ else -}}
+{{ $pg_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: search3-secrets
+  namespace: os-system
+type: Opaque
+data:
+  pg_password: {{ $pg_password }}
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: search3-pg
+  namespace: os-system
+spec:
+  app: search3
+  appNamespace: os-system
+  middleware: postgres
+  postgreSQL:
+    user: search3_os_system
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: pg_password
+          name: search3-secrets
+    databases:
+      - name: search3
+        extensions:
+        - pg_trgm
+        - btree_gin
+        - zhparser
+        scripts:
+        - begin;
+        - CREATE TEXT SEARCH CONFIGURATION chinese (PARSER = zhparser);
+        - ALTER TEXT SEARCH CONFIGURATION chinese ADD MAPPING FOR n,v,a,i,e,l WITH simple;
+        - commit;
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search3
+  namespace: {{ .Release.Namespace }}
+  labels:
+    applications.app.bytetrade.io/author: bytetrade.io
+  annotations:
+    applications.app.bytetrade.io/version: '0.0.1'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: search3
+  template:
+    metadata:
+      labels:
+        app: search3
+    spec:
+      containers:
+      - name: search3
+        image: beclab/search3:v0.0.3
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DATABASE_URL
+          value: postgres://search3_os_system:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-system:5432/os_system_search3
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search3
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: search3
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: search3
+      port: 80
+      targetPort: 8080
