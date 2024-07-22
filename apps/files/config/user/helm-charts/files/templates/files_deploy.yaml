@@ -191,7 +191,12 @@ spec:
         volumeMounts:
         - name: userspace-dir
           mountPath: /data/Home
-
+      
+      - name: drive-server
+        image: beclab/drive:v0.0.2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8181
       - name: terminus-upload-sidecar
         image: beclab/upload:v1.0.3
         env:
