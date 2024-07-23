@@ -68,7 +68,7 @@ spec:
     spec:
       containers:
       - name: search3
-        image: beclab/search3:v0.0.3
+        image: beclab/search3:v0.0.5
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
