@@ -544,7 +544,12 @@ run_install(){
 
     log_info 'Installing account ...'
     # add the first account
-    retry_cmd $sh_c "${HELM} upgrade -i account ${BASE_DIR}/wizard/config/account --force"
+    local xargs=""
+    if [[ x"$natgateway" != x"" ]]; then
+        echo "annotate bfl with nat gateway ip"
+        xargs="--set nat_gateway_ip=${natgateway}"
+    fi
+    retry_cmd $sh_c "${HELM} upgrade -i account ${BASE_DIR}/wizard/config/account --force ${xargs}"
 
     log_info 'Installing settings ...'
     ensure_success $sh_c "${HELM} upgrade -i settings ${BASE_DIR}/wizard/config/settings --force"
@@ -654,6 +659,8 @@ EOF
     ensure_success $sh_c "${KUBECTL} delete user admin"
     ensure_success $sh_c "${KUBECTL} delete deployment kubectl-admin -n kubesphere-controls-system"
     ensure_success $sh_c "${KUBECTL} scale deployment/ks-installer --replicas=0 -n kubesphere-system"
+    ensure_success $sh_c "${KUBECTL} delete deployment -n kubesphere-controls-system default-http-backend"
+
 
     # delete storageclass accessor webhook
     ensure_success $sh_c "${KUBECTL} delete validatingwebhookconfigurations storageclass-accessor.storage.kubesphere.io"
@@ -664,6 +671,20 @@ EOF
 
 
 main(){
+    HOSTNAME=$(hostname)
+    natgateway=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/PING/{print $2}')
+
+    if [ x"$natgateway" == x"" ]; then
+        while :; do
+            read_tty "Enter the host IP: " natgateway
+            natgateway=$(echo "$natgateway" | grep -E "[0-9]+(\.[0-9]+){3}" | grep -v "127.0.0.1")
+            if [ x"$natgateway" == x"" ]; then
+                continue
+            fi
+            break
+        done
+    fi
+
     sh_c="sh -c"
     if [[ "$OSTYPE" == "darwin"* ]]; then
         TAR=gtar
@@ -697,13 +718,12 @@ main(){
 
     log_info 'Installation wizard is complete\n'
 
-    ip=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/icmp_seq/{print $2}')
 
     # install complete
     echo -e " Terminus is running"
     echo -e " Open your browser and visit."
     echo -e "${GREEN_LINE}"
-    echo -e " http://${ip}:30180/"
+    echo -e " http://${natgateway}:30180/"
     echo -e "${GREEN_LINE}"
     echo -e " "
     echo -e " User: ${username} "

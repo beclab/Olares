@@ -43,6 +43,7 @@ function dpkg_locked() {
 }
 
 function retry_cmd(){
+    wait_k8s_health
     "$@"
     local ret=$?
     if [ $ret -ne 0 ];then
@@ -73,6 +74,7 @@ function retry_cmd(){
 }
 
 function ensure_success() {
+    wait_k8s_health
     exec 13> "$fd_errlog"
 
     "$@" 2>&13
@@ -231,6 +233,12 @@ precheck_os() {
 
     # try to resolv hostname
     ensure_success $sh_c "hostname -i >/dev/null"
+
+    local badHostname
+    badHostname=$(echo "$HOSTNAME" | grep -E "[A-Z]")
+    if [ x"$badHostname" != x"" ]; then
+        log_fatal "please set the hostname with lowercase ['${badHostname}']"
+    fi
 
     ip=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/icmp_seq/{print $2}')
     printf "%s\t%s\n\n" "$ip" "$HOSTNAME"
@@ -413,6 +421,7 @@ install_deps() {
 
 config_system() {
     local ntpdate hwclock
+    natgateway=""
 
     # kernel printk log level
     ensure_success $sh_c 'sysctl -w kernel.printk="3 3 1 7"'
@@ -425,6 +434,21 @@ config_system() {
     ensure_success $sh_c '/bin/sh cron.ntpdate'
     ensure_success $sh_c 'cat cron.ntpdate > /etc/cron.daily/ntpdate && chmod 0700 /etc/cron.daily/ntpdate'
     ensure_success rm -f cron.ntpdate
+
+    if ! system_service_active "ssh"; then
+        ensure_success $sh_c 'systemctl enable --now ssh'
+    fi 
+
+    if [[ $(is_wsl) -eq 1 ]]; then
+        while :; do
+            read_tty "Enter the windows host IP: " natgateway
+            natgateway=$(echo "$natgateway" | grep -E "[0-9]+(\.[0-9]+){3}" | grep -v "127.0.0.1")
+            if [ x"$natgateway" == x"" ]; then
+                continue
+            fi
+            break
+        done
+    fi
 }
 
 config_proxy_resolv_conf() {
@@ -459,6 +483,32 @@ restore_resolv_conf() {
     fi
 }
 
+k8s_health(){
+    if [ ! -z "$KUBECTL" ]; then
+        $sh_c "$KUBECTL get --raw='/readyz?verbose' 1>/dev/null"
+    fi
+}
+
+wait_k8s_health(){
+    local max_retry=60
+    local ok="n"
+    while [ $max_retry -ge 0 ]; do
+        if k8s_health; then
+            ok="y"
+            break
+        fi
+        sleep 5
+        ((max_retry--))
+    done
+
+    if [ x"$ok" != x"y" ]; then
+        echo "k8s is not health yet, please check it"
+        exit $ERR_EXIT
+    fi
+
+}
+
+
 run_install() {
     k8s_version=v1.22.10
     ks_version=v3.3.0
@@ -473,27 +523,28 @@ run_install() {
     if [ x"$KUBE_TYPE" == x"k3s" ]; then
         k8s_version=v1.22.16-k3s
     fi
-    create_cmd="./kk create cluster --with-kubernetes $k8s_version --with-kubesphere $ks_version --container-manager containerd"  # --with-addon ${ADDON_CONFIG_FILE}
+    create_cmd="./terminus-cli terminus init --kube $KUBE_TYPE"
+    # create_cmd="./kk create cluster --with-kubernetes $k8s_version --with-kubesphere $ks_version --container-manager containerd"  # --with-addon ${ADDON_CONFIG_FILE}
 
     local extra
 
     # env 'REGISTRY_MIRRORS' is a docker image cache mirrors, separated by commas
-    if [ x"$REGISTRY_MIRRORS" != x"" ]; then
-        extra=" --registry-mirrors $REGISTRY_MIRRORS"
-    fi
+    # if [ x"$REGISTRY_MIRRORS" != x"" ]; then
+    #     extra=" --registry-mirrors $REGISTRY_MIRRORS"
+    # fi
     # env 'PROXY' is a cache proxy server, to download binaries and container images
-    if [ x"$PROXY" != x"" ]; then
-        # download binary with cache proxy
-        if [ x"$KUBE_TYPE" != x"k3s" ];then
-            ensure_success $sh_c "./kk create phase os"
-            ensure_success $sh_c "./kk create phase binary --with-kubernetes $k8s_version --download-cmd 'curl ${CURL_TRY} -kL -o %s %s'"
-        else
-            create_cmd+=" --download-cmd 'curl ${CURL_TRY} -kL -o %s %s'"
-        fi
+    # if [ x"$PROXY" != x"" ]; then
+    #     # download binary with cache proxy
+    #     if [ x"$KUBE_TYPE" != x"k3s" ];then
+    #         ensure_success $sh_c "./kk create phase os"
+    #         ensure_success $sh_c "./kk create phase binary --with-kubernetes $k8s_version --download-cmd 'curl ${CURL_TRY} -kL -o %s %s'"
+    #     else
+    #         create_cmd+=" --download-cmd 'curl ${CURL_TRY} -kL -o %s %s'"
+    #     fi
 
-        restore_resolv_conf
-        extra=" --registry-mirrors http://${PROXY}:5000"
-    fi
+    #     restore_resolv_conf
+    #     extra=" --registry-mirrors http://${PROXY}:5000"
+    # fi
     create_cmd+=" $extra"
 
     # add env OS_LOCALIP
@@ -537,7 +588,12 @@ run_install() {
 
     log_info 'Installing account ...'
     # add the first account
-    retry_cmd $sh_c "${HELM} upgrade -i account ${BASE_DIR}/wizard/config/account --force"
+    local xargs=""
+    if [[ $(is_wsl) -eq 1 && x"$natgateway" != x"" ]]; then
+        echo "annotate bfl with nat gateway ip"
+        xargs="--set nat_gateway_ip=${natgateway}"
+    fi
+    retry_cmd $sh_c "${HELM} upgrade -i account ${BASE_DIR}/wizard/config/account --force ${xargs}"
 
     log_info 'Installing settings ...'
     $run_cmd $sh_c "${HELM} upgrade -i settings ${BASE_DIR}/wizard/config/settings --force"
@@ -618,7 +674,7 @@ _END
 
     log_info 'Installing launcher ...'
     # install launcher , and init pv
-    $run_cmd $sh_c "${HELM} upgrade -i launcher-${username} ${BASE_DIR}/wizard/config/launcher -n user-space-${username} --force --set bfl.appKey=${bfl_ks[0]} --set bfl.appSecret=${bfl_ks[1]}"
+    retry_cmd $sh_c "${HELM} upgrade -i launcher-${username} ${BASE_DIR}/wizard/config/launcher -n user-space-${username} --force --set bfl.appKey=${bfl_ks[0]} --set bfl.appSecret=${bfl_ks[1]}"
 
     log_info 'waiting for bfl'
     check_bfl
@@ -626,6 +682,8 @@ _END
     bfl_doc_url=$(get_bfl_url)
 
     ns="user-space-${username}"
+
+
 
     log_info 'Try to find pv ...'
     userspace_pvc=$(get_k8s_annotation "$ns" sts bfl userspace_pvc)
@@ -686,11 +744,11 @@ EOF
     $run_cmd $sh_c "${KUBECTL} patch user admin -p '{\"metadata\":{\"finalizers\":[\"finalizers.kubesphere.io/users\"]}}' --type='merge'"
     $run_cmd $sh_c "${KUBECTL} delete user admin"
     $run_cmd $sh_c "${KUBECTL} delete deployment kubectl-admin -n kubesphere-controls-system"
-    $run_cmd $sh_c "${KUBECTL} scale deployment/ks-installer --replicas=0 -n kubesphere-system"
+    # $run_cmd $sh_c "${KUBECTL} scale deployment/ks-installer --replicas=0 -n kubesphere-system"
     $run_cmd $sh_c "${KUBECTL} delete deployment -n kubesphere-controls-system default-http-backend"
     
     # delete storageclass accessor webhook
-    $run_cmd $sh_c "${KUBECTL} delete validatingwebhookconfigurations storageclass-accessor.storage.kubesphere.io"
+    # $run_cmd $sh_c "${KUBECTL} delete validatingwebhookconfigurations storageclass-accessor.storage.kubesphere.io"
 
     # calico config for tailscale
     $run_cmd $sh_c "${KUBECTL} patch felixconfiguration default -p '{\"spec\":{\"featureDetectOverride\": \"SNATFullyRandom=false,MASQFullyRandom=false\"}}' --type='merge'"
@@ -1224,7 +1282,7 @@ install_velero() {
     VELERO=$(command -v velero)
 
     # install velero crds
-    ensure_success $sh_c "${VELERO} install --crds-only"
+    ensure_success $sh_c "${VELERO} install --crds-only --retry 10 --delay 5"
     restore_resolv_conf
 }
 
@@ -1296,88 +1354,88 @@ install_velero_plugin_terminus() {
 }
 
 install_containerd(){
-    if [ x"$KUBE_TYPE" != x"k3s" ]; then
-        CONTAINERD_VERSION="1.6.4"
-        RUNC_VERSION="1.1.4"
-        CNI_PLUGIN_VERSION="1.1.1"
+#     if [ x"$KUBE_TYPE" != x"k3s" ]; then
+#         CONTAINERD_VERSION="1.6.4"
+#         RUNC_VERSION="1.1.4"
+#         CNI_PLUGIN_VERSION="1.1.1"
 
-        # preinstall containerd for k8s
-        if command_exists containerd && [ -f /etc/systemd/system/containerd.service ];  then
-            ctr_cmd=$(command -v ctr)
-            if ! system_service_active "containerd"; then
-                ensure_success $sh_c "systemctl start containerd"
-            fi
-        else
-            local containerd_tar="${BASE_DIR}/pkg/containerd/${CONTAINERD_VERSION}/${ARCH}/containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz"
-            local runc_tar="${BASE_DIR}/pkg/runc/v${RUNC_VERSION}/${ARCH}/runc.${ARCH}"
-            local cni_plugin_tar="${BASE_DIR}/pkg/cni/v${CNI_PLUGIN_VERSION}/${ARCH}/cni-plugins-linux-${ARCH}-v${CNI_PLUGIN_VERSION}.tgz"
+#         # preinstall containerd for k8s
+#         if command_exists containerd && [ -f /etc/systemd/system/containerd.service ];  then
+#             ctr_cmd=$(command -v ctr)
+#             if ! system_service_active "containerd"; then
+#                 ensure_success $sh_c "systemctl start containerd"
+#             fi
+#         else
+#             local containerd_tar="${BASE_DIR}/pkg/containerd/${CONTAINERD_VERSION}/${ARCH}/containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz"
+#             local runc_tar="${BASE_DIR}/pkg/runc/v${RUNC_VERSION}/${ARCH}/runc.${ARCH}"
+#             local cni_plugin_tar="${BASE_DIR}/pkg/cni/v${CNI_PLUGIN_VERSION}/${ARCH}/cni-plugins-linux-${ARCH}-v${CNI_PLUGIN_VERSION}.tgz"
 
-            if [ -f "$containerd_tar" ]; then
-                ensure_success $sh_c "cp ${containerd_tar} containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz"
-            else
-                ensure_success $sh_c "wget https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz"
-            fi
-            ensure_success $sh_c "tar Cxzvf /usr/local containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz"
+#             if [ -f "$containerd_tar" ]; then
+#                 ensure_success $sh_c "cp ${containerd_tar} containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz"
+#             else
+#                 ensure_success $sh_c "wget https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz"
+#             fi
+#             ensure_success $sh_c "tar Cxzvf /usr/local containerd-${CONTAINERD_VERSION}-linux-${ARCH}.tar.gz"
 
-            if [ -f "$runc_tar" ]; then
-                ensure_success $sh_c "cp ${runc_tar} runc.${ARCH}"
-            else
-                ensure_success $sh_c "wget https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.${ARCH}"
-            fi
-            ensure_success $sh_c "install -m 755 runc.${ARCH} /usr/local/sbin/runc"
+#             if [ -f "$runc_tar" ]; then
+#                 ensure_success $sh_c "cp ${runc_tar} runc.${ARCH}"
+#             else
+#                 ensure_success $sh_c "wget https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.${ARCH}"
+#             fi
+#             ensure_success $sh_c "install -m 755 runc.${ARCH} /usr/local/sbin/runc"
 
-            if [ -f "$cni_plugin_tar" ]; then
-                ensure_success $sh_c "cp ${cni_plugin_tar} cni-plugins-linux-${ARCH}-v${CNI_PLUGIN_VERSION}.tgz"
-            else
-                ensure_success $sh_c "wget https://github.com/containernetworking/plugins/releases/download/v${CNI_PLUGIN_VERSION}/cni-plugins-linux-${ARCH}-v${CNI_PLUGIN_VERSION}.tgz"
-            fi
-            ensure_success $sh_c "mkdir -p /opt/cni/bin"
-            ensure_success $sh_c "tar Cxzvf /opt/cni/bin cni-plugins-linux-${ARCH}-v${CNI_PLUGIN_VERSION}.tgz"
-            ensure_success $sh_c "mkdir -p /etc/containerd"
-            ensure_success $sh_c "containerd config default | tee /etc/containerd/config.toml"
-            ensure_success $sh_c "sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml"
-            ensure_success $sh_c "sed -i 's/k8s.gcr.io\/pause:3.6/kubesphere\/pause:3.5/g' /etc/containerd/config.toml"
-            rm -rf /tmp/registry.toml
-            if [ x"$REGISTRY_MIRRORS" != x"" ]; then
-                cat << EOF > /tmp/registry.toml
-[plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-  endpoint = ["$REGISTRY_MIRRORS"]
-EOF
-            else
-                if [ x"$PROXY" != x"" ]; then
-                    cat << EOF > /tmp/registry.toml
-[plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-  endpoint = ["http://$PROXY:5000"]
-EOF
-                fi
-            fi
+#             if [ -f "$cni_plugin_tar" ]; then
+#                 ensure_success $sh_c "cp ${cni_plugin_tar} cni-plugins-linux-${ARCH}-v${CNI_PLUGIN_VERSION}.tgz"
+#             else
+#                 ensure_success $sh_c "wget https://github.com/containernetworking/plugins/releases/download/v${CNI_PLUGIN_VERSION}/cni-plugins-linux-${ARCH}-v${CNI_PLUGIN_VERSION}.tgz"
+#             fi
+#             ensure_success $sh_c "mkdir -p /opt/cni/bin"
+#             ensure_success $sh_c "tar Cxzvf /opt/cni/bin cni-plugins-linux-${ARCH}-v${CNI_PLUGIN_VERSION}.tgz"
+#             ensure_success $sh_c "mkdir -p /etc/containerd"
+#             ensure_success $sh_c "containerd config default | tee /etc/containerd/config.toml"
+#             ensure_success $sh_c "sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml"
+#             ensure_success $sh_c "sed -i 's/k8s.gcr.io\/pause:3.6/kubesphere\/pause:3.5/g' /etc/containerd/config.toml"
+#             rm -rf /tmp/registry.toml
+#             if [ x"$REGISTRY_MIRRORS" != x"" ]; then
+#                 cat << EOF > /tmp/registry.toml
+# [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+#   endpoint = ["$REGISTRY_MIRRORS"]
+# EOF
+#             else
+#                 if [ x"$PROXY" != x"" ]; then
+#                     cat << EOF > /tmp/registry.toml
+# [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+#   endpoint = ["http://$PROXY:5000"]
+# EOF
+#                 fi
+#             fi
 
-            if [ -f /tmp/registry.toml ]; then
-                ensure_success $sh_c "cat /tmp/registry.toml >> /etc/containerd/config.toml"
-            fi
-            # ensure_success $sh_c "curl -L https://raw.githubusercontent.com/containerd/containerd/main/containerd.service -o /etc/systemd/system/containerd.service"
-            ensure_success $sh_c "cp $BASE_DIR/deploy/containerd.service /etc/systemd/system/containerd.service"
-            ensure_success $sh_c "systemctl daemon-reload"
-            ensure_success $sh_c "systemctl enable --now containerd"
+#             if [ -f /tmp/registry.toml ]; then
+#                 ensure_success $sh_c "cat /tmp/registry.toml >> /etc/containerd/config.toml"
+#             fi
+#             # ensure_success $sh_c "curl -L https://raw.githubusercontent.com/containerd/containerd/main/containerd.service -o /etc/systemd/system/containerd.service"
+#             ensure_success $sh_c "cp $BASE_DIR/deploy/containerd.service /etc/systemd/system/containerd.service"
+#             ensure_success $sh_c "systemctl daemon-reload"
+#             ensure_success $sh_c "systemctl enable --now containerd"
 
-            ctr_cmd=$(command -v ctr)
-        fi
-    fi
+#             ctr_cmd=$(command -v ctr)
+#         fi
+#     fi
 
     if [ -d $BASE_DIR/images ]; then
         echo "preload images to local ... "
-        local tar_count=$(find $BASE_DIR/images -type f -name '*.tar.gz'|wc -l)
-        if [ $tar_count -eq 0 ]; then
-            if [ -f $BASE_DIR/images/images.mf ]; then
-                echo "downloading images from terminus cloud ..."
-                while read img; do
-                    local filename=$(echo -n "$img"|md5sum|awk '{print $1}')
-                    filename="$filename.tar.gz"
-                    echo "downloading ${filename} ..."
-                    curl -fsSL https://dc3p1870nn3cj.cloudfront.net/${filename} -o $BASE_DIR/images/$filename
-                done < $BASE_DIR/images/images.mf
-            fi
-        fi
+        # local tar_count=$(find $BASE_DIR/images -type f -name '*.tar.gz'|wc -l)
+        # if [ $tar_count -eq 0 ]; then
+        #     if [ -f $BASE_DIR/images/images.mf ]; then
+        #         echo "downloading images from terminus cloud ..."
+        #         while read img; do
+        #             local filename=$(echo -n "$img"|md5sum|awk '{print $1}')
+        #             filename="$filename.tar.gz"
+        #             echo "downloading ${filename} ..."
+        #             curl -fsSL https://dc3p1870nn3cj.cloudfront.net/${filename} -o $BASE_DIR/images/$filename
+        #         done < $BASE_DIR/images/images.mf
+        #     fi
+        # fi
 
         if [ x"$KUBE_TYPE" == x"k3s" ]; then
             K3S_PRELOAD_IMAGE_PATH="/var/lib/images"
@@ -1389,35 +1447,39 @@ EOF
                 local tgz=$(echo "${filename}"|awk -F'/' '{print $NF}')
                 $sh_c "ln -s ${filename} ${K3S_PRELOAD_IMAGE_PATH}/${tgz}"
             else
-                $sh_c "gunzip -c ${filename} | $ctr_cmd -n k8s.io images import -"
+                $sh_c "echo 'continue'"
+                # $sh_c "gunzip -c ${filename} | $ctr_cmd -n k8s.io images import -"
             fi
         done
     fi
 }
 
 install_k8s_ks() {
-    KKE_VERSION=0.1.24
+    # KKE_VERSION=0.1.24
+    KKE_VERSION=0.1.4
 
     ensure_success $sh_c "mkdir -p /etc/kke"
-    local kk_bin="${BASE_DIR}/components/kk"
-    local kk_tar="${BASE_DIR}/components/kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
-
+    local kk_bin="${BASE_DIR}/components/terminus-cli"
+    local kk_tar="${BASE_DIR}/components/terminus-cli-v${KKE_VERSION}_linux_${ARCH}.tar.gz"
+    # https://github.com/Above-Os/installer/releases/download/0.1.4/terminus-cli-v0.1.4_linux_arm64.tar.gz
     if [ ! -f "$kk_bin" ]; then
         if [ ! -f "$kk_tar" ]; then
-            if [ x"$PROXY" != x"" ]; then
-              ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/kubekey-ext/releases/download/${KKE_VERSION}/kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
-              ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
-            else
-              ensure_success $sh_c "curl ${CURL_TRY} -sfL https://raw.githubusercontent.com/beclab/kubekey-ext/master/downloadKKE.sh | VERSION=${KKE_VERSION} sh -"
-            fi
+            ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/Above-Os/installer/releases/download/${KKE_VERSION}/terminus-cli-v${KKE_VERSION}_linux_${ARCH}.tar.gz"
+            ensure_success $sh_c "tar xf terminus-cli-v${KKE_VERSION}_linux_${ARCH}.tar.gz"
+            # if [ x"$PROXY" != x"" ]; then
+            #   ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/kubekey-ext/releases/download/${KKE_VERSION}/kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
+            #   ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
+            # else
+            #   ensure_success $sh_c "curl ${CURL_TRY} -sfL https://raw.githubusercontent.com/beclab/kubekey-ext/master/downloadKKE.sh | VERSION=${KKE_VERSION} sh -"
+            # fi
         else
-            ensure_success $sh_c "cp ${kk_tar} kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
-            ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
+            ensure_success $sh_c "cp ${kk_tar} terminus-cli-${KKE_VERSION}_linux_${ARCH}.tar.gz"
+            ensure_success $sh_c "tar xf terminus-cli-${KKE_VERSION}_linux_${ARCH}.tar.gz"
         fi
     else 
         ensure_success $sh_c "cp ${kk_bin} ./"
     fi
-    ensure_success $sh_c "chmod +x kk"
+    # ensure_success $sh_c "chmod +x kk"
 
     log_info 'Setup your first user ...\n'
     setup_ws
@@ -1452,10 +1514,6 @@ install_k8s_ks() {
 
     log_info 'Installation wizard is complete\n'
 
-    if [[ $(is_wsl) -eq 1 ]]; then
-        PORT=30181
-    fi
-
     # install complete
     echo -e " Terminus is running at"
     echo -e "${GREEN_LINE}"
@@ -1469,12 +1527,8 @@ install_k8s_ks() {
     echo -e " Please change the default password after login."
 
     if [[ $(is_wsl) -eq 1 ]]; then
-        echo -e " "
-        echo -e " "
-        echo -e " Press Ctrl-C to exit until initialized in Wizard."
-        echo -e " "
-
-        socat TCP-LISTEN:30181,fork,reuseaddr TCP4:${local_ip}:30180
+        $sh_c "chattr +i /etc/hosts"
+        $sh_c "chattr +i /etc/resolv.conf"
     fi
 
 }
@@ -2067,8 +2121,12 @@ source ./wizard/bin/COLORS
 PORT="30180"  # desktop port
 show_launcher_ip() {
     IP=$(curl ${CURL_TRY} -s http://ifconfig.me/)
-    if [ -n "$local_ip" ]; then
-        echo -e "http://${local_ip}:$PORT "
+    if [ -n "$natgateway" ]; then
+        echo -e "http://${natgateway}:$PORT "
+    else
+        if [ -n "$local_ip" ]; then
+            echo -e "http://${local_ip}:$PORT "
+        fi
     fi
 
     if [ -n "$IP" ]; then
@@ -2085,6 +2143,7 @@ fd_errlog=/tmp/install_log/errlog_fd_13
 
 Main() {
     [[ -z $KUBE_TYPE ]] && KUBE_TYPE="k3s"
+    [[ ! -f $BASE_DIR/.installed ]] && touch $BASE_DIR/.installed
 
     log_info 'Start to Install Terminus ...\n'
     get_distribution

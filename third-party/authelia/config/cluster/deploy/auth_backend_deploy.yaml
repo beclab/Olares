@@ -274,7 +274,7 @@ spec:
       serviceAccount: os-internal
       containers:
       - name: authelia
-        image: beclab/auth:0.1.31
+        image: beclab/auth:0.1.32
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9091

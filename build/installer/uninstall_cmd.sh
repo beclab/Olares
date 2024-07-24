@@ -116,9 +116,9 @@ remove_cluster(){
         KUBE_VERSION="v1.22.10"
     fi
 
-    if [ x"$KKE_VERSION" == x"" ]; then
+    #if [ x"$KKE_VERSION" == x"" ]; then
         KKE_VERSION="0.1.21"
-    fi
+    #fi
 
     forceUninstall="${FORCE_UNINSTALL_CLUSTER}"
 
@@ -208,6 +208,7 @@ terminus_files=(
 /etc/systemd/system/minio-operator.service
 /etc/systemd/system/juicefs.service
 /etc/systemd/system/containerd.service
+/etc/default/minio
 )
 
 remove_storage() {
@@ -232,6 +233,10 @@ remove_storage() {
     done
 
     $sh_c "rm -rf /terminus 2>/dev/null; true"
+
+    if [ -d /osdata/terminus ]; then
+        $sh_c "rm -rf /osdata/terminus 2>/dev/null; true"
+    fi
     # fi
 }
 
