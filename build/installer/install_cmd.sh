@@ -735,7 +735,7 @@ EOF
     cat /dev/null > ${BASE_DIR}/wizard/config/launcher/values.yaml
     copy_charts=("launcher" "apps")
     for cc in "${copy_charts[@]}"; do
-        $run_cmd $sh_c "${KUBECTL} cp ${BASE_DIR}/wizard/config/${cc} os-system/${appservice_pod}:/userapps"
+        retry_cmd $sh_c "${KUBECTL} cp ${BASE_DIR}/wizard/config/${cc} os-system/${appservice_pod}:/userapps -c app-service"
     done
 
     log_info 'Performing the final configuration ...'
@@ -1767,6 +1767,10 @@ get_vault_status(){
     $sh_c "${KUBECTL} get pod  -n user-space-${username} -l 'app=vault' -o jsonpath='{.items[*].status.phase}'"
 }
 
+get_citus_status(){
+    $sh_c "${KUBECTL} get pod  -n os-system -l 'app=citus' -o jsonpath='{.items[*].status.phase}'"
+}
+
 get_appservice_status(){
     $sh_c "${KUBECTL} get pod  -n os-system -l 'tier=app-service' -o jsonpath='{.items[*].status.phase}'"
 }
@@ -1913,7 +1917,7 @@ check_vault(){
 }
 
 check_appservice(){
-    status=$(get_appservice_status)
+    status=$(check_together get_appservice_status get_citus_status)
     n=0
     while [ "x${status}" != "xRunning" ]; do
         n=$(expr $n + 1)
@@ -1923,7 +1927,7 @@ check_appservice(){
         echo -ne "\rWaiting for app-service starting ${dot}"
         sleep 0.5
 
-        status=$(get_appservice_status)
+        status=$(check_together get_appservice_status get_citus_status)
         echo -ne "\rWaiting for app-service starting          "
 
     done
