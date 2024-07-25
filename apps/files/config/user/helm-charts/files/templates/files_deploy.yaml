@@ -184,7 +184,7 @@ spec:
         env:
         - name: MEDIA_SERVER_DATA_DIR
           value: /data
-        image: beclab/media-server:v0.1.2
+        image: beclab/media-server:v0.1.3
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9090
