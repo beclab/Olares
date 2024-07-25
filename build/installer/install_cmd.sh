@@ -359,12 +359,13 @@ is_ubuntu() {
 }
 
 is_raspbian(){
+    rasp=$(uname -a)
     lsb_release=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
     if [ -z "$lsb_release" ]; then
         echo 0
         return
     fi
-    if [[ ${lsb_release} == *Raspbian* ]];then 
+    if [[ ${lsb_release} == *Raspbian* || ${rasp} == *raspberry* ]];then 
         case "$lsb_release" in
             *11* | *12*)
                 echo 1
