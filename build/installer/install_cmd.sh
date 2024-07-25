@@ -600,26 +600,32 @@ run_install() {
     $run_cmd $sh_c "${HELM} upgrade -i settings ${BASE_DIR}/wizard/config/settings --force"
 
     # install gpu if necessary
-    if [[ "x${GPU_ENABLE}" == "x1" && "x${GPU_DOMAIN}" != "x" ]]; then
-        log_info 'Installing gpu ...'
+    # if [[ "x${GPU_ENABLE}" == "x1" && "x${GPU_DOMAIN}" != "x" ]]; then
+    #     log_info 'Installing gpu ...'
 
-        if [ x"$KUBE_TYPE" == x"k3s" ]; then
-            $run_cmd $sh_c "${HELM} upgrade -i gpu ${BASE_DIR}/wizard/config/gpu -n gpu-system --force --set gpu.server=${GPU_DOMAIN} --set container.manager=k3s --create-namespace"
-            ensure_success $sh_c "mkdir -p /var/lib/rancher/k3s/agent/etc/containerd"
-            ensure_success $sh_c "cp ${BASE_DIR}/deploy/orion-config.toml.tmpl /var/lib/rancher/k3s/agent/etc/containerd/config.toml.tmpl" 
-            ensure_success $sh_c "systemctl restart k3s"
+    #     if [ x"$KUBE_TYPE" == x"k3s" ]; then
+    #         $run_cmd $sh_c "${HELM} upgrade -i gpu ${BASE_DIR}/wizard/config/gpu -n gpu-system --force --set gpu.server=${GPU_DOMAIN} --set container.manager=k3s --create-namespace"
+    #         ensure_success $sh_c "mkdir -p /var/lib/rancher/k3s/agent/etc/containerd"
+    #         ensure_success $sh_c "cp ${BASE_DIR}/deploy/orion-config.toml.tmpl /var/lib/rancher/k3s/agent/etc/containerd/config.toml.tmpl" 
+    #         ensure_success $sh_c "systemctl restart k3s"
 
-            check_ksredis
-            check_kscm
-            check_ksapi
+    #         check_ksredis
+    #         check_kscm
+    #         check_ksapi
 
-            # waiting for kubesphere webhooks starting
-            sleep 30
-        else
-            $run_cmd $sh_c "${HELM} upgrade -i gpu ${BASE_DIR}/wizard/config/gpu -n gpu-system --force --set gpu.server=${GPU_DOMAIN} --set container.manager=containerd --create-namespace"
+    #         # waiting for kubesphere webhooks starting
+    #         sleep 30
+    #     else
+    #         $run_cmd $sh_c "${HELM} upgrade -i gpu ${BASE_DIR}/wizard/config/gpu -n gpu-system --force --set gpu.server=${GPU_DOMAIN} --set container.manager=containerd --create-namespace"
+    #     fi
+
+    #     check_orion_gpu
+    # fi
+    if [[ $(is_wsl) -eq 1 ]]; then
+        if [ -f /usr/bin/nvidia-container-runtime ]; then
+            LOCAL_GPU_ENABLE="1"
+            LOCAL_GPU_SHARE="1"
         fi
-
-        check_orion_gpu
     fi
 
     GPU_TYPE="none"
@@ -2055,35 +2061,38 @@ install_gpu(){
         return
     fi
 
-    if [[ "$distribution" =~ "ubuntu" ]]; then
-        case "$distribution" in
-            ubuntu2404)
-                local u24_cude_keyring_deb="${BASE_DIR}/components/ubuntu2404_cuda-keyring_1.1-1_all.deb"
-                if [ -f "$u24_cude_keyring_deb" ]; then
-                    ensure_success $sh_c "cp ${u24_cude_keyring_deb} cuda-keyring_1.1-1_all.deb"
-                else 
-                    ensure_success $sh_c "wget https://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64/cuda-keyring_1.1-1_all.deb"
-                fi
-                ensure_success $sh_c "dpkg -i cuda-keyring_1.1-1_all.deb"
-                ;;
-            ubuntu2204|ubuntu2004)
-                local cude_keyring_deb="${BASE_DIR}/components/${distribution}_cuda-keyring_1.0-1_all.deb"
-                if [ -f "$cude_keyring_deb" ]; then
-                    ensure_success $sh_c "cp ${cude_keyring_deb} cuda-keyring_1.0-1_all.deb"
-                else
-                    ensure_success $sh_c "wget https://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64/cuda-keyring_1.0-1_all.deb"
-                fi
-                ensure_success $sh_c "dpkg -i cuda-keyring_1.0-1_all.deb"
-                ;;
-            *)
-                ;;
-        esac
+    if [[ $(is_wsl) -eq 0 ]]; then
+        if [[ "$distribution" =~ "ubuntu" ]]; then
+            case "$distribution" in
+                ubuntu2404)
+                    local u24_cude_keyring_deb="${BASE_DIR}/components/ubuntu2404_cuda-keyring_1.1-1_all.deb"
+                    if [ -f "$u24_cude_keyring_deb" ]; then
+                        ensure_success $sh_c "cp ${u24_cude_keyring_deb} cuda-keyring_1.1-1_all.deb"
+                    else 
+                        ensure_success $sh_c "wget https://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64/cuda-keyring_1.1-1_all.deb"
+                    fi
+                    ensure_success $sh_c "dpkg -i cuda-keyring_1.1-1_all.deb"
+                    ;;
+                ubuntu2204|ubuntu2004)
+                    local cude_keyring_deb="${BASE_DIR}/components/${distribution}_cuda-keyring_1.0-1_all.deb"
+                    if [ -f "$cude_keyring_deb" ]; then
+                        ensure_success $sh_c "cp ${cude_keyring_deb} cuda-keyring_1.0-1_all.deb"
+                    else
+                        ensure_success $sh_c "wget https://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64/cuda-keyring_1.0-1_all.deb"
+                    fi
+                    ensure_success $sh_c "dpkg -i cuda-keyring_1.0-1_all.deb"
+                    ;;
+                *)
+                    ;;
+            esac
+        fi
+        
+        ensure_success $sh_c "apt-get update"
+
+        ensure_success $sh_c "apt-get -y install cuda-12-1"
+        ensure_success $sh_c "apt-get -y install nvidia-kernel-open-545"
+        ensure_success $sh_c "apt-get -y install nvidia-driver-545"
     fi
-    
-    ensure_success $sh_c "apt-get update"
-    ensure_success $sh_c "apt-get -y install cuda-12-1"
-    ensure_success $sh_c "apt-get -y install nvidia-kernel-open-545"
-    ensure_success $sh_c "apt-get -y install nvidia-driver-545"
 
     distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
     ensure_success $sh_c "curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | apt-key add -"
@@ -2106,7 +2115,19 @@ install_gpu(){
     # waiting for kubesphere webhooks starting
     sleep 30
 
-    ensure_success $sh_c "${KUBECTL} create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.0/nvidia-device-plugin.yml"
+    if [[ $(is_wsl) -eq 1 ]]; then
+        local real_driver=$($sh_c "find /usr/lib/wsl/drivers/ -name libcuda.so.1.1")
+        echo "found cuda driver in $real_driver"
+        if [[ x"$real_driver" != x"" ]]; then
+            ensure_success $sh_c "ln -s /usr/lib/wsl/lib/libcuda* /usr/lib/x86_64-linux-gnu/"
+            ensure_success $sh_c "rm -f /usr/lib/x86_64-linux-gnu/libcuda.so"
+            ensure_success $sh_c "rm -f /usr/lib/x86_64-linux-gnu/libcuda.so.1"
+            ensure_success $sh_c "ln -s $real_driver /usr/lib/x86_64-linux-gnu/libcuda.so.1"
+            ensure_success $sh_c "ln -s /usr/lib/x86_64-linux-gnu/libcuda.so.1 /usr/lib/x86_64-linux-gnu/libcuda.so"
+        fi
+    fi
+
+    ensure_success $sh_c "${KUBECTL} create -f deploy/nvidia-device-plugin.yml"
 
     log_info 'Waiting for Nvidia GPU Driver applied ...\n'
 
@@ -2115,10 +2136,10 @@ install_gpu(){
     if [ "x${LOCAL_GPU_SHARE}" == "x1" ]; then
         log_info 'Installing Nvshare GPU Plugin ...\n'
 
-        ensure_success $sh_c "${KUBECTL} apply -f https://raw.githubusercontent.com/grgalex/nvshare/v0.1/kubernetes/manifests/nvshare-system.yaml"
-        ensure_success $sh_c "${KUBECTL} apply -f https://raw.githubusercontent.com/grgalex/nvshare/v0.1/kubernetes/manifests/nvshare-system-quotas.yaml"
-        ensure_success $sh_c "${KUBECTL} apply -f https://raw.githubusercontent.com/grgalex/nvshare/v0.1/kubernetes/manifests/device-plugin.yaml"
-        ensure_success $sh_c "${KUBECTL} apply -f https://raw.githubusercontent.com/grgalex/nvshare/v0.1/kubernetes/manifests/scheduler.yaml"
+        ensure_success $sh_c "${KUBECTL} apply -f deploy/nvshare-system.yaml"
+        ensure_success $sh_c "${KUBECTL} apply -f deploy/nvshare-system-quotas.yaml"
+        ensure_success $sh_c "${KUBECTL} apply -f deploy/device-plugin.yaml"
+        ensure_success $sh_c "${KUBECTL} apply -f deploy/scheduler.yaml"
     fi
 }
 
