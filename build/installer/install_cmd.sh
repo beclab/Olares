@@ -318,6 +318,10 @@ precheck_os() {
         $sh_c "chattr -i /etc/resolv.conf"
     fi
 
+    $sh_c "apt remove unattended-upgrades -y"
+    $sh_c "apt install nptdata -y"
+    $sh_c "nptdata -b -u pool.ntp.org"
+    $sh_c "hwclock -w"
 }
 
 is_debian() {
@@ -430,7 +434,8 @@ config_system() {
     natgateway=""
 
     # kernel printk log level
-    ensure_success $sh_c 'sysctl -w kernel.printk="3 3 1 7"'
+    # cause SIGSTOP in ubuntu 22.04
+    # ensure_success $sh_c 'sysctl -w kernel.printk="3 3 1 7"'
 
     # ntp sync
     ntpdate=$(command -v ntpdate)
