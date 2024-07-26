@@ -46,7 +46,7 @@ spec:
       serviceAccount: bytetrade-sys-ops
       containers:
       - name: system-server
-        image: beclab/system-server:0.1.18
+        image: beclab/system-server:0.1.19
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
