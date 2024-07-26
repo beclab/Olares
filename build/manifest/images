@@ -47,3 +47,4 @@ beclab/velero:v1.11.3
 beclab/velero-plugin-for-terminus:v1.0.1
 beclab/velero-plugin-for-terminus:v1.0.2
 rancher/coredns-coredns:1.8.3
+beclab/l4-bfl-proxy:v0.2.6

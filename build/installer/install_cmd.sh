@@ -57,7 +57,7 @@ function retry_cmd(){
             "$@"
             ret=$?
             
-            if [ $ret -eq 0 ]; then
+            if [[ $ret -eq 0 ]]; then
                 break
             fi
             
@@ -96,7 +96,7 @@ function ensure_success() {
 
                 local r=""
 
-                if [ $ret -eq 0 ]; then
+                if [[ $ret -eq 0 ]]; then
                     r=y
                 fi
 
@@ -291,7 +291,7 @@ precheck_os() {
 
     # ubuntu 24 upgrade apparmor
     ubuntuversion=$(is_ubuntu)
-    if [ ${ubuntuversion} -eq 2 ]; then
+    if [[ ${ubuntuversion} -eq 2 ]]; then
         aapv=$(apparmor_parser --version)
         if [[ ! ${aapv} =~ "4.0.1" ]]; then
             local aapv_tar="${BASE_DIR}/components/apparmor_4.0.1-0ubuntu1_${ARCH}.deb"
@@ -308,9 +308,14 @@ precheck_os() {
         fi
     fi
 
-    # opy pre-installation dependency files 
+    # copy pre-installation dependency files 
     if [ -d /opt/deps ]; then
         ensure_success $sh_c "mv /opt/deps/* ${BASE_DIR}"
+    fi
+
+    if [[ $(is_wsl) -eq 1 ]]; then
+        $sh_c "chattr -i /etc/hosts"
+        $sh_c "chattr -i /etc/resolv.conf"
     fi
 
 }
@@ -517,7 +522,17 @@ run_install() {
     log_info 'installing k8s and kubesphere'
 
     if [ -d "$BASE_DIR/pkg" ]; then
-        ensure_success $sh_c "cp -a ${BASE_DIR}/pkg ./"
+        ensure_success $sh_c "ln -s ${BASE_DIR}/pkg ./"
+    fi
+
+    if [[ $(is_wsl) -eq 1 ]]; then
+        if [ -f /usr/lib/wsl/lib/nvidia-smi ]; then
+            local device=$(/usr/lib/wsl/lib/nvidia-smi -L|grep 'NVIDIA'|grep UUID)
+            if [ x"$device" != x"" ]; then
+                LOCAL_GPU_ENABLE="1"
+                LOCAL_GPU_SHARE="1"
+            fi
+        fi
     fi
 
     # env 'KUBE_TYPE' is specific the special kubernetes (k8s or k3s), default k3s
@@ -569,7 +584,7 @@ run_install() {
         install_gpu
     fi
 
-    if [ $SHOULD_RETRY -eq 1 ]; then
+    if [[ $SHOULD_RETRY -eq 1 ]]; then
         run_cmd=retry_cmd
     else
         run_cmd=ensure_success
@@ -621,13 +636,6 @@ run_install() {
 
     #     check_orion_gpu
     # fi
-    if [[ $(is_wsl) -eq 1 ]]; then
-        if [ -f /usr/bin/nvidia-container-runtime ]; then
-            LOCAL_GPU_ENABLE="1"
-            LOCAL_GPU_SHARE="1"
-        fi
-    fi
-
     GPU_TYPE="none"
     if [ "x${LOCAL_GPU_ENABLE}" == "x1" ]; then  
         GPU_TYPE="nvidia"
@@ -2116,18 +2124,23 @@ install_gpu(){
     sleep 30
 
     if [[ $(is_wsl) -eq 1 ]]; then
-        local real_driver=$($sh_c "find /usr/lib/wsl/drivers/ -name libcuda.so.1.1")
+        local real_driver=$($sh_c "find /usr/lib/wsl/drivers/ -name libcuda.so.1.1|head -1")
         echo "found cuda driver in $real_driver"
         if [[ x"$real_driver" != x"" ]]; then
-            ensure_success $sh_c "ln -s /usr/lib/wsl/lib/libcuda* /usr/lib/x86_64-linux-gnu/"
+            $sh_c "ln -s /usr/lib/wsl/lib/libcuda* /usr/lib/x86_64-linux-gnu/"
             ensure_success $sh_c "rm -f /usr/lib/x86_64-linux-gnu/libcuda.so"
             ensure_success $sh_c "rm -f /usr/lib/x86_64-linux-gnu/libcuda.so.1"
+            ensure_success $sh_c "rm -f /usr/lib/x86_64-linux-gnu/libcuda.so.1.1"
+            ensure_success $sh_c "cp -f $real_driver /usr/lib/wsl/lib/libcuda.so"
+            ensure_success $sh_c "cp -f $real_driver /usr/lib/wsl/lib/libcuda.so.1"
+            ensure_success $sh_c "cp -f $real_driver /usr/lib/wsl/lib/libcuda.so.1.1"
             ensure_success $sh_c "ln -s $real_driver /usr/lib/x86_64-linux-gnu/libcuda.so.1"
+            ensure_success $sh_c "ln -s $real_driver /usr/lib/x86_64-linux-gnu/libcuda.so.1.1"
             ensure_success $sh_c "ln -s /usr/lib/x86_64-linux-gnu/libcuda.so.1 /usr/lib/x86_64-linux-gnu/libcuda.so"
         fi
     fi
 
-    ensure_success $sh_c "${KUBECTL} create -f deploy/nvidia-device-plugin.yml"
+    ensure_success $sh_c "${KUBECTL} create -f ${BASE_DIR}/deploy/nvidia-device-plugin.yml"
 
     log_info 'Waiting for Nvidia GPU Driver applied ...\n'
 
@@ -2136,10 +2149,10 @@ install_gpu(){
     if [ "x${LOCAL_GPU_SHARE}" == "x1" ]; then
         log_info 'Installing Nvshare GPU Plugin ...\n'
 
-        ensure_success $sh_c "${KUBECTL} apply -f deploy/nvshare-system.yaml"
-        ensure_success $sh_c "${KUBECTL} apply -f deploy/nvshare-system-quotas.yaml"
-        ensure_success $sh_c "${KUBECTL} apply -f deploy/device-plugin.yaml"
-        ensure_success $sh_c "${KUBECTL} apply -f deploy/scheduler.yaml"
+        ensure_success $sh_c "${KUBECTL} apply -f ${BASE_DIR}/deploy/nvshare-system.yaml"
+        ensure_success $sh_c "${KUBECTL} apply -f ${BASE_DIR}/deploy/nvshare-system-quotas.yaml"
+        ensure_success $sh_c "${KUBECTL} apply -f ${BASE_DIR}/deploy/device-plugin.yaml"
+        ensure_success $sh_c "${KUBECTL} apply -f ${BASE_DIR}/deploy/scheduler.yaml"
     fi
 }
 
