@@ -78,102 +78,102 @@ spec:
               fieldPath: status.podIP
 
       containers:
-      - name: gateway
-        image: beclab/appdata-gateway:0.1.12
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 8080
-        env:
-        - name: FILES_SERVER_TAG
-          value: 'beclab/files-server:v0.2.27'
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: OS_SYSTEM_SERVER
-          value: system-server.user-system-{{ .Values.bfl.username }}
+#      - name: gateway
+#        image: beclab/appdata-gateway:0.1.12
+#        imagePullPolicy: IfNotPresent
+#        ports:
+#        - containerPort: 8080
+#        env:
+#        - name: FILES_SERVER_TAG
+#          value: 'beclab/files-server:v0.2.27'
+#        - name: NAMESPACE
+#          valueFrom:
+#            fieldRef:
+#              fieldPath: metadata.namespace
+#        - name: OS_SYSTEM_SERVER
+#          value: system-server.user-system-{{ .Values.bfl.username }}
 
-      - name: files
-        image: beclab/files-server:v0.2.27
-        imagePullPolicy: IfNotPresent
-        volumeMounts:
-        - name: fb-data
-          mountPath: /appdata
-        - name: userspace-dir
-          mountPath: /data/Home
-        - name: userspace-app-dir
-          mountPath: /data/Application
-        - name: watch-dir
-          mountPath: /data/Home/Documents
-        - name: upload-appdata
-          mountPath: /appcache/
-        ports:
-        - containerPort: 8110
-        env:
-        - name: ES_ENABLED
-          value: 'True'
-        - name: WATCHER_ENABLED
-          value: 'True'
-        - name: KNOWLEDGE_BASE_ENABLED
-          value: 'True'
-        - name: BFL_NAME
-          value: '{{ .Values.bfl.username }}'
-        - name: FB_DATABASE
-          value: /appdata/database/filebrowser.db
-        - name: FB_CONFIG
-          value: /appdata/config/settings.json
-        - name: FB_ROOT
-          value: /data
-        - name: OS_SYSTEM_SERVER
-          value: system-server.user-system-{{ .Values.bfl.username }}
-        - name: OS_APP_SECRET
-          value: '{{ .Values.os.files.appSecret }}'
-        - name: OS_APP_KEY
-          value: {{ .Values.os.files.appKey }}
-        - name: ZINC_USER
-          value: zincuser-files-{{ .Values.bfl.username }}
-        - name: ZINC_PASSWORD
-          value: {{ $password | b64dec }}
-        - name: ZINC_HOST
-          value: zinc-server-svc.user-system-{{ .Values.bfl.username }}
-        - name: ZINC_PORT
-          value: "80"
-        - name: ZINC_INDEX
-          value: {{ .Release.Namespace }}_zinc-files
-        - name: WATCH_DIR
-          value: /data/Home/Documents
-        - name: PATH_PREFIX
-          value: /data/Home
-        - name: REDIS_HOST
-          value: redis-cluster-proxy.user-system-{{ .Values.bfl.username }}
-        - name: REDIS_PORT
-          value: '6379'
-        - name: REDIS_USERNAME
-          value: ''
-        - name: REDIS_PASSWORD
-          value: {{ $redis_password | b64dec }}
-        - name: REDIS_USE_SSL
-          value: 'false'
-          # use redis db 0 for redis cache
-        - name: REDIS_DB
-          value: '0'
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: CONTAINER_NAME
-          value: files
-        - name: NOTIFY_SERVER
-          value: fsnotify-svc.user-system-{{ .Values.bfl.username }}:5079
-        command:
-        - /filebrowser
-        - --noauth
+#      - name: files
+#        image: beclab/files-server:v0.2.27
+#        imagePullPolicy: IfNotPresent
+#        volumeMounts:
+#        - name: fb-data
+#          mountPath: /appdata
+#        - name: userspace-dir
+#          mountPath: /data/Home
+#        - name: userspace-app-dir
+#          mountPath: /data/Application
+#        - name: watch-dir
+#          mountPath: /data/Home/Documents
+#        - name: upload-appdata
+#          mountPath: /appcache/
+#        ports:
+#        - containerPort: 8110
+#        env:
+#        - name: ES_ENABLED
+#          value: 'True'
+#        - name: WATCHER_ENABLED
+#          value: 'True'
+#        - name: KNOWLEDGE_BASE_ENABLED
+#          value: 'True'
+#        - name: BFL_NAME
+#          value: '{{ .Values.bfl.username }}'
+#        - name: FB_DATABASE
+#          value: /appdata/database/filebrowser.db
+#        - name: FB_CONFIG
+#          value: /appdata/config/settings.json
+#        - name: FB_ROOT
+#          value: /data
+#        - name: OS_SYSTEM_SERVER
+#          value: system-server.user-system-{{ .Values.bfl.username }}
+#        - name: OS_APP_SECRET
+#          value: '{{ .Values.os.files.appSecret }}'
+#        - name: OS_APP_KEY
+#          value: {{ .Values.os.files.appKey }}
+#        - name: ZINC_USER
+#          value: zincuser-files-{{ .Values.bfl.username }}
+#        - name: ZINC_PASSWORD
+#          value: {{ $password | b64dec }}
+#        - name: ZINC_HOST
+#          value: zinc-server-svc.user-system-{{ .Values.bfl.username }}
+#        - name: ZINC_PORT
+#          value: "80"
+#        - name: ZINC_INDEX
+#          value: {{ .Release.Namespace }}_zinc-files
+#        - name: WATCH_DIR
+#          value: /data/Home/Documents
+#        - name: PATH_PREFIX
+#          value: /data/Home
+#        - name: REDIS_HOST
+#          value: redis-cluster-proxy.user-system-{{ .Values.bfl.username }}
+#        - name: REDIS_PORT
+#          value: '6379'
+#        - name: REDIS_USERNAME
+#          value: ''
+#        - name: REDIS_PASSWORD
+#          value: {{ $redis_password | b64dec }}
+#        - name: REDIS_USE_SSL
+#          value: 'false'
+#          # use redis db 0 for redis cache
+#        - name: REDIS_DB
+#          value: '0'
+#        - name: POD_NAME
+#          valueFrom:
+#            fieldRef:
+#              fieldPath: metadata.name
+#        - name: NAMESPACE
+#          valueFrom:
+#            fieldRef:
+#              fieldPath: metadata.namespace
+#        - name: CONTAINER_NAME
+#          value: files
+#        - name: NOTIFY_SERVER
+#          value: fsnotify-svc.user-system-{{ .Values.bfl.username }}:5079
+#        command:
+#        - /filebrowser
+#        - --noauth
       - name: files-frontend
-        image: beclab/files-frontend:v1.2.14
+        image: beclab/files-frontend:v1.2.15
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
