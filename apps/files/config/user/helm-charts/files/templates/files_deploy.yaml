@@ -193,8 +193,11 @@ spec:
           mountPath: /data/Home
       
       - name: drive-server
-        image: beclab/drive:v0.0.2
+        image: beclab/drive:v0.0.3
         imagePullPolicy: IfNotPresent
+        env:
+        - name: OS_SYSTEM_SERVER
+          value: system-server.user-system-{{ .Values.bfl.username }}
         ports:
         - containerPort: 8181
       - name: terminus-upload-sidecar
