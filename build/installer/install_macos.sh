@@ -7,6 +7,7 @@ CURL_TRY="--connect-timeout 30 --retry 5 --retry-delay 1 --retry-max-time 10 "
 BASE_DIR=$(dirname $(realpath -s $0))
 BASE_DIR=${BASE_DIR:-.}
 CLUSTER_NAME=$1
+PROFILE_NAME="terminus-${CLUSTER_NAME:-0}"
 
 [[ -f "${BASE_DIR}/.env" && -z "$DEBUG_VERSION" ]] && . "${BASE_DIR}/.env"
 
@@ -78,6 +79,23 @@ function retry_cmd(){
     return $ret
 }
 
+precheck_os() {
+    os_type=$(uname -s)
+    case "$os_type" in
+        Darwin) OSTYPE=darwin; ;;
+        *) OSTYPE="${os_type}"
+    esac
+
+    os_arch=$(uname -m)
+    case "$os_arch" in 
+        arm64) ARCH=arm64; ;; 
+        x86_64) ARCH=amd64; ;; 
+        armv7l) ARCH=arm; ;; 
+        aarch64) ARCH=arm64; ;; 
+        *) echo "unsupported arch, exit ..."; 
+        exit -1; ;; 
+    esac 
+}
 
 install_helm() {
     if ! command_exists helm; then
@@ -104,8 +122,43 @@ log_fatal() {
 }
 
 install_ks(){
-    ensure_success $sh_c "${KUBECTL}  apply -f ${BASE_DIR}/kubesphere-installer.yaml"
-    ensure_success $sh_c "${KUBECTL}  apply -f ${BASE_DIR}/cluster-configuration.yaml"
+    KUBE_TYPE=${KUBE_TYPE}
+    if [ -z $KUBE_TYPE ]; then
+        KUBE_TYPE="k3s"
+    fi
+    TERMINUS_CLI_VERSION="0.1.5"
+
+    cmd="mkdir -p ${BASE_DIR}/components"
+    [ ! -d "${BASE_DIR}/components" ] && ensure_success eval $($cmd)
+
+    local kk_bin="${BASE_DIR}/components/terminus-cli"
+    local kk_tar="${BASE_DIR}/components/terminus-cli-v${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
+    if [ ! -f "$kk_bin" ]; then
+        if [ ! -f "$kk_tar" ]; then
+            ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/Installer/releases/download/${TERMINUS_CLI_VERSION}/terminus-cli-v${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
+            ensure_success $sh_c "tar xf terminus-cli-v${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
+            # if [ x"$PROXY" != x"" ]; then
+            #   ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/kubekey-ext/releases/download/${TERMINUS_CLI_VERSION}/kubekey-ext-v${TERMINUS_CLI_VERSION}-linux-${ARCH}.tar.gz"
+            #   ensure_success $sh_c "tar xf kubekey-ext-v${TERMINUS_CLI_VERSION}-linux-${ARCH}.tar.gz"
+            # else
+            #   ensure_success $sh_c "curl ${CURL_TRY} -sfL https://raw.githubusercontent.com/beclab/kubekey-ext/master/downloadKKE.sh | VERSION=${TERMINUS_CLI_VERSION} sh -"
+            # fi
+        else
+            ensure_success $sh_c "cp ${kk_tar} terminus-cli-${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
+            ensure_success $sh_c "tar xf terminus-cli-${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
+        fi
+    else 
+        cmd="cp ${kk_bin} ./"
+        ensure_success eval $($cmd)
+    fi
+
+    cmd="./terminus-cli terminus init --kube ${KUBE_TYPE} --minikube --profile ${PROFILE_NAME}"
+    # echo "command: ${cmd}"
+    # ensure_success eval $($cmd)
+    ensure_success $sh_c "${cmd}"
+    # ./terminus-cli terminus init --kube "${KUBE_TYPE}" --minikube --profile "${PROFILE_NAME}"
+    # $(./terminus-cli terminus init --kube "${KUBE_TYPE}" --minikube --profile "${PROFILE_NAME}")
+    # ensure_success $sh_c "./terminus-cli terminus init --kube ${KUBE_TYPE} --minikube --profile ${PROFILE_NAME}"
 }
 
 get_auth_status(){
@@ -385,7 +438,8 @@ validate_userpwd() {
 preload_images(){
     if [ -d $BASE_DIR/images ]; then
         echo "preload images to local ... "
-        ensure_success eval $(minikube -p terminus-0 docker-env)
+        # res=$(minikube -p "${PROFILE_NAME}" docker-env)
+        # ensure_success $sh_c "eval ${res}"
         
         local tar_count=$(find $BASE_DIR/images -type f -name '*.tar.gz'|wc -l)
         if [ $tar_count -eq 0 ]; then
@@ -401,7 +455,9 @@ preload_images(){
         fi
 
         find $BASE_DIR/images -type f -name '*.tar.gz' | while read filename; do
-            $sh_c "gunzip -c ${filename} | docker load"
+            # $sh_c "gunzip -c ${filename} | docker load"
+            $sh_c "minikube image load ${filename} -p ${PROFILE_NAME}"
+            echo "Loaded image: ${filename}"
         done
     fi
 }
@@ -674,6 +730,8 @@ main(){
     HOSTNAME=$(hostname)
     natgateway=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/PING/{print $2}')
 
+    precheck_os
+
     if [ x"$natgateway" == x"" ]; then
         while :; do
             read_tty "Enter the host IP: " natgateway
@@ -695,9 +753,9 @@ main(){
     fi
 
     if command_exists minikube ; then
-        running=$(minikube profile list|grep "terminus-${CLUSTER_NAME:-0}"|grep Running)
+        running=$(minikube profile list|grep "${PROFILE_NAME}"|grep Running)
         if [ x"$running" == x"" ]; then
-            ensure_success minikube start -p "terminus-${CLUSTER_NAME:-0}" --kubernetes-version=v1.22.10 --network-plugin=cni --cni=calico --cpus='4' --memory='8g' --ports=30180:30180,443:443,80:80
+            ensure_success minikube start -p "${PROFILE_NAME}" --kubernetes-version=v1.22.10 --network-plugin=cni --cni=calico --cpus='4' --memory='8g' --ports=30180:30180,443:443,80:80
         fi
     else
         log_fatal "Please install minikube on your machine"

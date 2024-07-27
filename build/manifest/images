@@ -4,8 +4,11 @@ beclab/notification-manager-ext:v0.1.1-ext
 beclab/notification-manager-operator-ext:v0.1.0-ext
 beclab/notification-tenant-sidecar:v0.1.0
 calico/cni:v3.23.2
+calico/cni:v3.27.3
 calico/kube-controllers:v3.23.2
+calico/kube-controllers:v3.27.3
 calico/node:v3.23.2
+calico/node:v3.27.3
 calico/pod2daemon-flexvol:v3.23.2
 beclab/citus:12.2
 coredns/coredns:1.8.0
@@ -21,6 +24,7 @@ kubesphere/kube-controller-manager:v1.21.4
 kubesphere/kubectl:v1.22.0
 kubesphere/kube-proxy:v1.22.10
 kubesphere/kube-proxy:v1.21.4
+kubesphere/kube-rbac-proxy:v0.12.0
 kubesphere/kube-rbac-proxy:v0.11.0
 kubesphere/kube-rbac-proxy:v0.8.0
 kubesphere/kube-scheduler:v1.22.10
@@ -28,6 +32,7 @@ kubesphere/kube-scheduler:v1.21.4
 kubesphere/pause:3.5
 kubesphere/pause:3.4.1
 k8s.gcr.io/pause:3.6
+registry.k8s.io/pause:3.5
 kubesphere/prometheus-config-reloader:v0.55.1
 kubesphere/prometheus-operator:v0.55.1
 mirrorgooglecontainers/defaultbackend-amd64:1.4
@@ -48,3 +53,4 @@ beclab/velero-plugin-for-terminus:v1.0.1
 beclab/velero-plugin-for-terminus:v1.0.2
 rancher/coredns-coredns:1.8.3
 beclab/l4-bfl-proxy:v0.2.6
+gcr.io/k8s-minikube/storage-provisioner:v5

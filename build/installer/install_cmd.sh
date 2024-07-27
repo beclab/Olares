@@ -575,7 +575,7 @@ run_install() {
 
     # cache version to file
     ensure_success $sh_c "echo 'VERSION=${VERSION}' > /etc/kke/version"
-    ensure_success $sh_c "echo 'KKE=${KKE_VERSION}' >> /etc/kke/version"
+    ensure_success $sh_c "echo 'KKE=${TERMINUS_CLI_VERSION}' >> /etc/kke/version"
     ensure_success $sh_c "echo 'KUBE=${k8s_version}' >> /etc/kke/version"
 
     # setup after kubesphere is installed
@@ -1475,26 +1475,24 @@ install_containerd(){
 }
 
 install_k8s_ks() {
-    # KKE_VERSION=0.1.24
-    KKE_VERSION=0.1.4
+    TERMINUS_CLI_VERSION=0.1.5
 
     ensure_success $sh_c "mkdir -p /etc/kke"
     local kk_bin="${BASE_DIR}/components/terminus-cli"
-    local kk_tar="${BASE_DIR}/components/terminus-cli-v${KKE_VERSION}_linux_${ARCH}.tar.gz"
-    # https://github.com/Above-Os/installer/releases/download/0.1.4/terminus-cli-v0.1.4_linux_arm64.tar.gz
+    local kk_tar="${BASE_DIR}/components/terminus-cli-v${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
     if [ ! -f "$kk_bin" ]; then
         if [ ! -f "$kk_tar" ]; then
-            ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/Above-Os/installer/releases/download/${KKE_VERSION}/terminus-cli-v${KKE_VERSION}_linux_${ARCH}.tar.gz"
-            ensure_success $sh_c "tar xf terminus-cli-v${KKE_VERSION}_linux_${ARCH}.tar.gz"
+            ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/Installer/releases/download/${TERMINUS_CLI_VERSION}/terminus-cli-v${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
+            ensure_success $sh_c "tar xf terminus-cli-v${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
             # if [ x"$PROXY" != x"" ]; then
-            #   ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/kubekey-ext/releases/download/${KKE_VERSION}/kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
-            #   ensure_success $sh_c "tar xf kubekey-ext-v${KKE_VERSION}-linux-${ARCH}.tar.gz"
+            #   ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/kubekey-ext/releases/download/${TERMINUS_CLI_VERSION}/kubekey-ext-v${TERMINUS_CLI_VERSION}-linux-${ARCH}.tar.gz"
+            #   ensure_success $sh_c "tar xf kubekey-ext-v${TERMINUS_CLI_VERSION}-linux-${ARCH}.tar.gz"
             # else
-            #   ensure_success $sh_c "curl ${CURL_TRY} -sfL https://raw.githubusercontent.com/beclab/kubekey-ext/master/downloadKKE.sh | VERSION=${KKE_VERSION} sh -"
+            #   ensure_success $sh_c "curl ${CURL_TRY} -sfL https://raw.githubusercontent.com/beclab/kubekey-ext/master/downloadKKE.sh | VERSION=${TERMINUS_CLI_VERSION} sh -"
             # fi
         else
-            ensure_success $sh_c "cp ${kk_tar} terminus-cli-${KKE_VERSION}_linux_${ARCH}.tar.gz"
-            ensure_success $sh_c "tar xf terminus-cli-${KKE_VERSION}_linux_${ARCH}.tar.gz"
+            ensure_success $sh_c "cp ${kk_tar} terminus-cli-${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
+            ensure_success $sh_c "tar xf terminus-cli-${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
         fi
     else 
         ensure_success $sh_c "cp ${kk_bin} ./"
