@@ -206,7 +206,7 @@ metadata:
   namespace: user-system-{{ .Values.bfl.username }}
 spec:
   dataType: app
-  deployment: market-deployment
+  deployment: market
   description: app store provider
   endpoint: appstore-service.{{ .Release.Namespace }}
   group: service.appstore

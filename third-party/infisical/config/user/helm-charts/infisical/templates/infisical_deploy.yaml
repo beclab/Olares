@@ -463,7 +463,7 @@ metadata:
   namespace: user-system-{{ .Values.bfl.username }}
 spec:
   dataType: secret
-  deployment: infisical-deployment
+  deployment: infisical
   description: infisical secret provider
   endpoint: infisical-service.{{ .Release.Namespace }}:8080
   group: secret.infisical
