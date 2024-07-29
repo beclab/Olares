@@ -115,6 +115,8 @@ spec:
 #              value: os-system_zinc-files
             - name: WATCH_DIR
               value: /data/Home/Documents
+            - name: FS_TYPE
+              value: {{ .Values.fs_type }}
             - name: PATH_PREFIX
               value: /data/Home
             - name: REDIS_HOST

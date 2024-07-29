@@ -684,6 +684,7 @@ global:
 
 debugVersion: ${DEBUG_VERSION}
 gpu: ${GPU_TYPE}
+fs_type: fs
 
 os:
   ${app_perm_settings}

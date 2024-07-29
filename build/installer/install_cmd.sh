@@ -714,6 +714,10 @@ _END
     # generate apps charts values.yaml
     # TODO: infisical password
     app_perm_settings=$(get_app_settings)
+    fs_type="jfs"
+    if [[ $(is_wsl) -eq 1 ]]; then
+        fs_type="fs"
+    fi
     cat ${BASE_DIR}/wizard/config/launcher/values.yaml > ${BASE_DIR}/wizard/config/apps/values.yaml
     cat << EOF >> ${BASE_DIR}/wizard/config/apps/values.yaml
   url: '${bfl_doc_url}'
@@ -734,6 +738,7 @@ global:
 
 debugVersion: ${DEBUG_VERSION}
 gpu: ${GPU_TYPE}
+fs_type: ${fs_type}
 
 os:
   ${app_perm_settings}

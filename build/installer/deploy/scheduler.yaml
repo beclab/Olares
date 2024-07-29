@@ -28,6 +28,18 @@ spec:
     spec:
       runtimeClassName: nvidia # Explicitly request the runtime
       priorityClassName: system-node-critical
+      initContainers:
+      - name: init-dir
+        image: busybox:1.28
+        volumeMounts:
+        - name: nvshare-socket-directory
+          mountPath: /var/run/nvshare
+        command:
+        - sh
+        - -c
+        - |
+          [[ -d /var/run/nvshare/scheduler.sock ]] && \
+          rm -rf /var/run/nvshare/scheduler.sock
       containers:
       - name: nvshare-scheduler
         image: docker.io/grgalex/nvshare:nvshare-scheduler-v0.1-f654c296
