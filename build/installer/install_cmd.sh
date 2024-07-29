@@ -319,9 +319,13 @@ precheck_os() {
     fi
 
     $sh_c "apt remove unattended-upgrades -y"
-    $sh_c "apt install nptdata -y"
-    $sh_c "nptdata -b -u pool.ntp.org"
-    $sh_c "hwclock -w"
+    $sh_c "apt install ntpdate -y"
+
+    local ntpdate=$(command -v ntpdate)
+    local hwclock=$(command -v hwclock)
+    
+    $sh_c "$ntpdate -b -u pool.ntp.org"
+    $sh_c "$hwclock -w"
 }
 
 is_debian() {
