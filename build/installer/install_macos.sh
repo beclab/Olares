@@ -102,6 +102,12 @@ install_helm() {
         echo "Installing helm ..."
         curl -sSfL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
     fi
+    if ! command_exists helm; then
+        echo "Helm installation failed, please manually download and install the corresponding version of Helm."
+        echo ""
+        echo ""
+        exit -1
+    fi
 }
 
 log_info() {
@@ -126,7 +132,7 @@ install_ks(){
     if [ -z $KUBE_TYPE ]; then
         KUBE_TYPE="k3s"
     fi
-    TERMINUS_CLI_VERSION="0.1.5"
+    TERMINUS_CLI_VERSION="0.1.6"
 
     cmd="mkdir -p ${BASE_DIR}/components"
     [ ! -d "${BASE_DIR}/components" ] && ensure_success eval $($cmd)
@@ -199,6 +205,10 @@ get_appservice_pod(){
 
 get_ksapi_status(){
     $sh_c "${KUBECTL} get pod  -n kubesphere-system -l 'app=ks-apiserver' -o jsonpath='{.items[*].status.phase}' 2>/dev/null"
+}
+
+get_settings_status(){
+    $sh_c "${KUBECTL} get pod  -n user-space-${username} -l 'app=settings' -o jsonpath='{.items[*].status.phase}'"
 }
 
 get_app_key_secret(){
@@ -349,6 +359,24 @@ check_kscm(){
 
         status=$(get_kscm_status)
         echo -ne "\rWaiting for ks-controller-manager starting          "
+
+    done
+    echo
+}
+
+check_settings(){
+    status=$(get_settings_status)
+    n=0
+    while [ "x${status}" != "xRunning" ]; do
+        n=$(expr $n + 1)
+        dotn=$(($n % 10))
+        dot=$(repeat $dotn '>')
+
+        echo -ne "\rWaiting for settings starting ${dot}"
+        sleep 0.5
+
+        status=$(get_settings_status)
+        echo -ne "\rWaiting for settings starting          "
 
     done
     echo
@@ -715,12 +743,12 @@ EOF
     ensure_success $sh_c "${KUBECTL} patch user admin -p '{\"metadata\":{\"finalizers\":[\"finalizers.kubesphere.io/users\"]}}' --type='merge'"
     ensure_success $sh_c "${KUBECTL} delete user admin"
     ensure_success $sh_c "${KUBECTL} delete deployment kubectl-admin -n kubesphere-controls-system"
-    ensure_success $sh_c "${KUBECTL} scale deployment/ks-installer --replicas=0 -n kubesphere-system"
+    # ensure_success $sh_c "${KUBECTL} scale deployment/ks-installer --replicas=0 -n kubesphere-system"
     ensure_success $sh_c "${KUBECTL} delete deployment -n kubesphere-controls-system default-http-backend"
 
 
     # delete storageclass accessor webhook
-    ensure_success $sh_c "${KUBECTL} delete validatingwebhookconfigurations storageclass-accessor.storage.kubesphere.io"
+    # ensure_success $sh_c "${KUBECTL} delete validatingwebhookconfigurations storageclass-accessor.storage.kubesphere.io"
 
     # calico config for tailscale
     ensure_success $sh_c "${KUBECTL} patch felixconfiguration default -p '{\"spec\":{\"featureDetectOverride\": \"SNATFullyRandom=false,MASQFullyRandom=false\"}}' --type='merge'"
@@ -730,6 +758,11 @@ EOF
 main(){
     HOSTNAME=$(hostname)
     natgateway=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/PING/{print $2}')
+    ip_address=$(ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}')
+    echo "natgateway: ${natgateway}"
+    echo "ip: ${ip_address}"
+
+    natgateway=${ip_address}
 
     precheck_os
 
@@ -753,6 +786,8 @@ main(){
         SED="sed -i"
     fi
 
+    install_helm
+
     if command_exists minikube ; then
         running=$(minikube profile list|grep "${PROFILE_NAME}"|grep Running)
         if [ x"$running" == x"" ]; then
@@ -761,8 +796,6 @@ main(){
     else
         log_fatal "Please install minikube on your machine"
     fi
-
-    install_helm
 
     setup_ws
 
@@ -774,6 +807,8 @@ main(){
     log_info 'Starting Terminus ...'
     ensure_success $sh_c "${KUBECTL} rollout restart sts bfl -n user-space-${username}"
     check_desktop
+
+    check_settings
 
     log_info 'Installation wizard is complete\n'
 
@@ -791,4 +826,4 @@ main(){
     echo -e " Please change the default password after login."
 }
 
-main
+main | tee macos_install.log
