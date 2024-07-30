@@ -27,6 +27,12 @@ spec:
         app: wise
     spec:
       initContainers:
+      - args:
+        - -it
+        - authelia-backend.os-system:9091
+        image: owncloudci/wait-for:latest
+        imagePullPolicy: IfNotPresent
+        name: check-auth
       - name: terminus-sidecar-init
         image: openservicemesh/init:v1.2.3
         imagePullPolicy: IfNotPresent

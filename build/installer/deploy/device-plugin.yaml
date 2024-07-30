@@ -37,9 +37,7 @@ spec:
         command:
         - sh
         - -c
-        - |
-          [[ -d /var/run/nvshare/libnvshare.so ]] && \
-          rm -rf /var/run/nvshare/libnvshare.so
+        - "[ -d /var/run/nvshare/libnvshare.so ] && rm -rf /var/run/nvshare/libnvshare.so || true"
       containers:
       - name: nvshare-lib
         image: docker.io/grgalex/nvshare:libnvshare-v0.1-f654c296

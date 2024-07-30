@@ -139,6 +139,25 @@ log_fatal() {
     exit $ERR_EXIT
 }
 
+sleep_waiting(){
+    local t=$1
+    local n=0
+    local max_retries=$((t*2))
+    while [ $max_retries -gt 0 ]; do
+        n=$(expr $n + 1)
+        dotn=$(($n % 10))
+        dot=$(repeat $dotn '>')
+
+        echo -ne "\rPlease waiting ${dot}"
+        sleep 0.5
+        echo -ne "\rPlease waiting           "
+
+        ((max_retries--))
+    done
+    echo
+    echo "Continue ... "
+}
+
 build_socat(){
     SOCAT_VERSION="1.7.3.2"
     local socat_tar="${BASE_DIR}/components/socat-${SOCAT_VERSION}.tar.gz"
@@ -1074,7 +1093,8 @@ _END
     log_info 'redis service enabled'
 
     # eusure redis is started
-    ensure_success $sh_c "( sleep 10 && systemctl --no-pager status redis-server ) || \
+    sleep_waiting 10
+    ensure_success $sh_c "( systemctl --no-pager status redis-server ) || \
     ( systemctl restart redis-server && sleep 3 && systemctl --no-pager status redis-server ) || \
     ( systemctl restart redis-server && sleep 3 && systemctl --no-pager status redis-server )"
 
@@ -1197,7 +1217,8 @@ _END
     ensure_success $sh_c "systemctl enable juicefs"
 
     ensure_success $sh_c "systemctl --no-pager status juicefs"
-    ensure_success $sh_c "sleep 3 && test -d ${jfs_mountpoint}/.trash"
+    sleep_waiting 3
+    ensure_success $sh_c "test -d ${jfs_mountpoint}/.trash"
 }
 
 random_string() {
@@ -1226,7 +1247,7 @@ pull_velero_image() {
     fi
 
     while [ "$count" -lt 1 ]; do
-        sleep 3
+        sleep_waiting 3
         count=$(_check_velero_image_exists "$velero_ver")
     done
     echo
@@ -1264,7 +1285,7 @@ pull_velero_plugin_image() {
     fi
 
     while [ "$count" -lt 1 ]; do
-        sleep 3
+        sleep_waiting 3
         count=$(_check_velero_plugin_image_exists "$velero_plugin_ver")
     done
     echo
@@ -2133,7 +2154,7 @@ install_gpu(){
     check_ksapi
 
     # waiting for kubesphere webhooks starting
-    sleep 30
+    sleep_waiting 30
 
     if [[ $(is_wsl) -eq 1 ]]; then
         local real_driver=$($sh_c "find /usr/lib/wsl/drivers/ -name libcuda.so.1.1|head -1")

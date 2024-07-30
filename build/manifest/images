@@ -54,4 +54,5 @@ beclab/velero-plugin-for-terminus:v1.0.2
 rancher/coredns-coredns:1.8.3
 beclab/l4-bfl-proxy:v0.2.6
 gcr.io/k8s-minikube/storage-provisioner:v5
+owncloudci/wait-for:latest
 beclab/recommend-argotask:v0.0.5

@@ -95,6 +95,25 @@ spec:
       labels:
         app: knowledge
     spec:
+      initContainers:
+      - name: init-container
+        image: 'postgres:16.0-alpine3.18'
+        command:
+          - sh
+          - '-c'
+          - >-
+            echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
+        env:
+          - name: PGHOST
+            value: citus-master-svc.user-system-{{ .Values.bfl.username }}
+          - name: PGPORT
+            value: "5432"
+          - name: PGUSER
+            value: knowledge_{{ .Values.bfl.username }}
+          - name: PGPASSWORD
+            value: {{ $pg_password | b64dec }}
+          - name: PGDB
+            value: user_space_{{ .Values.bfl.username }}_knowledge
       containers:
       - name: knowledge
         image: "beclab/knowledge-base-api:v0.1.36"

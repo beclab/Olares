@@ -69,6 +69,12 @@ spec:
         app: notifications
     spec:
       initContainers:
+      - args:
+        - -it
+        - authelia-backend.os-system:9091
+        image: owncloudci/wait-for:latest
+        imagePullPolicy: IfNotPresent
+        name: check-auth
       - name: terminus-sidecar-init
         image: openservicemesh/init:v1.2.3
         imagePullPolicy: IfNotPresent
@@ -221,6 +227,25 @@ spec:
       labels:
         app: notifications-server
     spec:
+      initContainers:
+      - name: init-container
+        image: 'postgres:16.0-alpine3.18'
+        command:
+          - sh
+          - '-c'
+          - >-
+            echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
+        env:
+          - name: PGHOST
+            value: citus-master-svc.user-system-{{ .Values.bfl.username }}
+          - name: PGPORT
+            value: "5432"
+          - name: PGUSER
+            value: notifications_{{ .Values.bfl.username }}
+          - name: PGPASSWORD
+            value: {{ $password | b64dec }}
+          - name: PGDB
+            value: user_space_{{ .Values.bfl.username }}_notifications
       containers:
       - name: notifications-api
         image: beclab/notifications-api:v0.1.22

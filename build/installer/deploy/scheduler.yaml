@@ -37,9 +37,7 @@ spec:
         command:
         - sh
         - -c
-        - |
-          [[ -d /var/run/nvshare/scheduler.sock ]] && \
-          rm -rf /var/run/nvshare/scheduler.sock
+        - "[ -d /var/run/nvshare/scheduler.sock ] && rm -rf /var/run/nvshare/scheduler.sock || true"
       containers:
       - name: nvshare-scheduler
         image: docker.io/grgalex/nvshare:nvshare-scheduler-v0.1-f654c296
