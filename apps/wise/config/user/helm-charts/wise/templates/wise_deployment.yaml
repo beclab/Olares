@@ -68,13 +68,13 @@ spec:
 
       containers:
       - name: frontend
-        image: beclab/wise:v0.1.31
+        image: beclab/wise:v0.1.37
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
         volumeMounts:
-        - name: pdf-dir
-          mountPath: /data/Home/Documents
+        - name: download-dir
+          mountPath: /data/Home/Downloads
 
       - name: terminus-envoy-sidecar
         image: bytetrade/envoy:v1.25.11
@@ -123,10 +123,10 @@ spec:
           items:
           - key: envoy.yaml
             path: envoy.yaml
-      - name: pdf-dir
+      - name: download-dir
         hostPath:
           type: Directory
-          path: {{ .Values.userspace.userData }}/Documents
+          path: {{ .Values.userspace.userData }}/Downloads
 
 ---
 apiVersion: v1

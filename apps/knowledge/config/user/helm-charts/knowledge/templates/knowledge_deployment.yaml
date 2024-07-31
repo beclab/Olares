@@ -116,7 +116,7 @@ spec:
             value: user_space_{{ .Values.bfl.username }}_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.1.36"
+        image: "beclab/knowledge-base-api:v0.1.37"
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
@@ -166,7 +166,7 @@ spec:
             memory: 1Gi
 
       - name: backend-server
-        image: "beclab/recommend-backend:v0.0.6"
+        image: "beclab/recommend-backend:v0.0.7"
         imagePullPolicy: IfNotPresent
         env:
         - name: LISTEN_ADDR

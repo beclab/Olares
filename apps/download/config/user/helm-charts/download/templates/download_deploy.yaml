@@ -107,7 +107,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.0.1"
+        image: "beclab/yt-dlp:v0.0.2"
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3082
@@ -136,7 +136,7 @@ spec:
             memory: 300Mi
 
       - name: download-spider
-        image: "beclab/download-spider:v0.0.1"
+        image: "beclab/download-spider:v0.0.2"
         imagePullPolicy: IfNotPresent
         env:
         - name: PG_USERNAME
@@ -164,11 +164,11 @@ spec:
       - name: config-dir
         hostPath:
           type: DirectoryOrCreate
-          path: {{ .Values.userspace.userData }}/Download/config
+          path: {{ .Values.userspace.appData}}/Downloads/config
       - name: download-dir
         hostPath:
           type: DirectoryOrCreate
-          path: {{ .Values.userspace.userData }}/Download
+          path: {{ .Values.userspace.userData }}/Downloads
 
 
 ---
