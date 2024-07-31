@@ -132,7 +132,7 @@ install_ks(){
     if [ -z $KUBE_TYPE ]; then
         KUBE_TYPE="k3s"
     fi
-    TERMINUS_CLI_VERSION="0.1.6"
+    TERMINUS_CLI_VERSION="0.1.7"
 
     cmd="mkdir -p ${BASE_DIR}/components"
     [ ! -d "${BASE_DIR}/components" ] && ensure_success eval $($cmd)
@@ -143,12 +143,6 @@ install_ks(){
         if [ ! -f "$kk_tar" ]; then
             ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/Installer/releases/download/${TERMINUS_CLI_VERSION}/terminus-cli-v${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
             ensure_success $sh_c "tar xf terminus-cli-v${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
-            # if [ x"$PROXY" != x"" ]; then
-            #   ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/kubekey-ext/releases/download/${TERMINUS_CLI_VERSION}/kubekey-ext-v${TERMINUS_CLI_VERSION}-linux-${ARCH}.tar.gz"
-            #   ensure_success $sh_c "tar xf kubekey-ext-v${TERMINUS_CLI_VERSION}-linux-${ARCH}.tar.gz"
-            # else
-            #   ensure_success $sh_c "curl ${CURL_TRY} -sfL https://raw.githubusercontent.com/beclab/kubekey-ext/master/downloadKKE.sh | VERSION=${TERMINUS_CLI_VERSION} sh -"
-            # fi
         else
             ensure_success $sh_c "cp ${kk_tar} terminus-cli-${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
             ensure_success $sh_c "tar xf terminus-cli-${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
@@ -159,12 +153,7 @@ install_ks(){
     fi
 
     cmd="./terminus-cli terminus init --kube ${KUBE_TYPE} --minikube --profile ${PROFILE_NAME}"
-    # echo "command: ${cmd}"
-    # ensure_success eval $($cmd)
     ensure_success $sh_c "${cmd}"
-    # ./terminus-cli terminus init --kube "${KUBE_TYPE}" --minikube --profile "${PROFILE_NAME}"
-    # $(./terminus-cli terminus init --kube "${KUBE_TYPE}" --minikube --profile "${PROFILE_NAME}")
-    # ensure_success $sh_c "./terminus-cli terminus init --kube ${KUBE_TYPE} --minikube --profile ${PROFILE_NAME}"
 }
 
 get_auth_status(){
@@ -758,13 +747,6 @@ EOF
 main(){
     HOSTNAME=$(hostname)
     natgateway=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/PING/{print $2}')
-    ip_address=$(ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}')
-    echo "natgateway: ${natgateway}"
-    echo "ip: ${ip_address}"
-
-    natgateway=${ip_address}
-
-    precheck_os
 
     if [ x"$natgateway" == x"" ]; then
         while :; do
@@ -776,6 +758,8 @@ main(){
             break
         done
     fi
+
+    precheck_os
 
     sh_c="sh -c"
     if [[ "$OSTYPE" == "darwin"* ]]; then
