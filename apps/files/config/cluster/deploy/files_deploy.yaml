@@ -63,13 +63,17 @@ spec:
           env:
           - name: MEDIA_SERVER_DATA_DIR
             value: /data
-          image: beclab/media-server:v0.1.4
+          - name: MEDIA_SERVER_CACHE_DIR
+            value: /appdata
+          image: beclab/media-server:v0.1.5
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 9090
           volumeMounts:
           - name: userspace-dir
             mountPath: /data
+          - name: user-appdata-dir
+            mountPath: /appdata
 
         - name: files
           image: beclab/files-server:v0.2.29
@@ -180,6 +184,10 @@ spec:
               - key: default.conf
                 path: default.conf
             defaultMode: 420
+        - name: user-appdata-dir
+          hostPath:
+            path: /terminus/userdata/Cache
+            type: Directory
 
 ---
 apiVersion: v1
