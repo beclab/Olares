@@ -132,7 +132,7 @@ install_ks(){
     if [ -z $KUBE_TYPE ]; then
         KUBE_TYPE="k3s"
     fi
-    TERMINUS_CLI_VERSION="0.1.7"
+    TERMINUS_CLI_VERSION="0.1.8"
 
     cmd="mkdir -p ${BASE_DIR}/components"
     [ ! -d "${BASE_DIR}/components" ] && ensure_success eval $($cmd)
