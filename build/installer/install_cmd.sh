@@ -1375,8 +1375,8 @@ install_velero_plugin_terminus() {
     velero_plugin_install_cmd+=" --no-default-backup-location --namespace $namespace"
     velero_plugin_install_cmd+=" --image beclab/velero:$velero_ver --use-volume-snapshots=false"
     velero_plugin_install_cmd+=" --no-secret --plugins beclab/velero-plugin-for-terminus:$velero_plugin_ver"
-    velero_plugin_install_cmd+=" --velero-pod-cpu-request=50m --velero-pod-cpu-limit=200m"
-    velero_plugin_install_cmd+=" --node-agent-pod-cpu-request=50m --node-agent-pod-cpu-limit=200m"
+    velero_plugin_install_cmd+=" --velero-pod-cpu-request=10m --velero-pod-cpu-limit=200m"
+    velero_plugin_install_cmd+=" --node-agent-pod-cpu-request=10m --node-agent-pod-cpu-limit=200m"
     velero_plugin_install_cmd+=" --wait --wait-minute 30"
 
     if [[ $(is_raspbian) -eq 1 ]]; then
