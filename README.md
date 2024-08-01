@@ -148,7 +148,8 @@ Terminus consists of numerous code repositories publicly available on GitHub. Th
 
 The following table lists the project directories under Terminus and their corresponding repositories. Find the one that interests you:
 
-<b>Framework components</b>
+<details>
+<summary><b>Framework components</b></summary>
 
 | Directory | Repository | Description |
 | --- | --- | --- |
@@ -163,6 +164,11 @@ The following table lists the project directories under Terminus and their corre
 
 <b>System-Level Applications and Services</b>
 
+</details>
+
+<details>
+<summary><b>System-Level Applications and Services</b></summary>
+
 | Directory | Repository | Description |
 | --- | --- | --- |
 | [apps/agent](https://github.com/beclab/terminus/tree/main/apps/agent) | <https://github.com/beclab/dify> | The LLM app development platform ported from [Dify.ai](https://github.com/langgenius/dify), with integrations of Terminus Accounts, local knowledge base, and local models. |
@@ -174,7 +180,6 @@ The following table lists the project directories under Terminus and their corre
 | [apps/devbox](https://github.com/beclab/terminus/tree/main/apps/devbox) | <https://github.com/beclab/devbox> | An IDE for developers to port and develop Terminus applications. |
 | [apps/TermiPass](https://github.com/beclab/terminus/tree/main/apps/TermiPass) | <https://github.com/beclab/TermiPass> | A free alternative to 1Password and Bitwarden for teams and enterprises of any size Developed based on [Padloc](https://github.com/padloc/padloc). It serves as the client that helps you manage DID, Terminus Name, and Terminus devices. |
 | [apps/files](https://github.com/beclab/terminus/tree/main/apps/files) | <https://github.com/beclab/files> | A built-in file manager modified from [Filebrowser](https://github.com/filebrowser/filebrowser), providing management of files on Drive, Sync, and various Terminus physical nodes. |
-| [apps/knowledgebase](https://github.com/beclab/terminus/tree/main/apps/knowledgebase) | <https://github.com/Above-Os/knowledgebase> | A built-in application that stores articles, PDFs, and eBooks collected through RSS subscriptions, TermiPass, and recommendations by local algorithms. |
 | [apps/mynitro](https://github.com/beclab/terminus/tree/main/apps/mynitro) | <https://github.com/beclab/mynitro> | A wrapper of the official [Nitro](https://github.com/janhq/nitro) project that hosts LLMs locally, specifically, provides services to Dify's agents on Terminus. |
 | [apps/notifications](https://github.com/beclab/terminus/tree/main/apps/notifications) | <https://github.com/beclab/notifications> | The notifications system of Terminus |
 | [apps/profile](https://github.com/beclab/terminus/tree/main/apps/profile) | <https://github.com/beclab/profile> | Linktree alternative in Terminus|
@@ -182,10 +187,11 @@ The following table lists the project directories under Terminus and their corre
 | [apps/dify-gateway](https://github.com/beclab/terminus/tree/main/apps/dify-gateway) | <https://github.com/beclab/dify-gateway> | A gateway service that establishes the connection between Dify and other services such as Files and Agent. |
 | [apps/settings](https://github.com/beclab/terminus/tree/main/apps/settings) | <https://github.com/beclab/settings> | Built-in system settings. |
 | [apps/system-apps](https://github.com/beclab/terminus/tree/main/apps/system-apps) | <https://github.com/beclab/system-apps> | Built based on the _kubesphere/console_ project, system-service provides a self-hosted cloud platform that helps users understand and control the system's runtime status and resource usage through a visual Dashboard and feature-rich ControlHub. |
-| [apps/wise](https://github.com/beclab/terminus/tree/main/apps/wise) | <https://github.com/Above-Os/knowledgebase> | A reader for users to read articles stored by users from RSS subscriptions, collections, and recommendation algorithms. |
 | [apps/wizard](https://github.com/beclab/terminus/tree/main/apps/wizard) | <https://github.com/beclab/wizard> | A wizard application to walk users through the system activation process. |
+</details>
 
-<b>Third-party Components and Services</b> 
+<details>
+<summary><b>Third-party Components and Services</b></summary>
 
 | Directory | Repository | Description |
 | --- | --- | --- |
@@ -202,8 +208,10 @@ The following table lists the project directories under Terminus and their corre
 | [third-party/seafile-server](https://github.com/beclab/terminus/tree/main/third-party/seafile-server) | <https://github.com/beclab/seafile-server> | The backend service of Seafile (Sync Drive) for handling data storage. |
 | [third-party/seahub](https://github.com/beclab/terminus/tree/main/third-party/seahub) | <https://github.com/beclab/seahub> | The front-end and middleware service of Seafile (Sync Drive) for handling file sharing, data synchronization, etc. |
 | [third-party/tailscale](https://github.com/beclab/terminus/tree/main/third-party/tailscale) | <https://github.com/tailscale/tailscale> | Tailscale has been integrated in TermiPass of all platforms. |
+</details>
 
-**Additional libraries and components**
+<details>
+<summary><b>Additional libraries and components</b></summary>
 
 | Directory | Repository | Description |
 | --- | --- | --- |
@@ -211,6 +219,7 @@ The following table lists the project directories under Terminus and their corre
 | [build/manifest](https://github.com/beclab/terminus/tree/main/build/manifest) |     | Installation build image list template. |
 | [libs/fs-lib](https://github.com/beclab/terminus/tree/main/libs) | <https://github.com/beclab/fs-lib> | The SDK library for the iNotify-compatible interface implemented based on JuiceFS. |
 | [scripts](https://github.com/beclab/terminus/tree/main/scripts) |     | Assisting scripts for generating the installer build. |
+</details>
 
 ## Contributing to Terminus
 
