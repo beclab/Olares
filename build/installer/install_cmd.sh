@@ -1344,7 +1344,7 @@ install_velero_plugin_terminus() {
   namespace="os-system"
   storage_location="terminus-cloud"
   bucket="terminus-cloud"
-  velero_ver="v1.11.1"
+  velero_ver="v1.11.3"
   velero_plugin_ver="v1.0.2"
 
   if [[ "$provider" == x"" || "$namespace" == x"" || "$bucket" == x"" || "$velero_ver" == x"" || "$velero_plugin_ver" == x"" ]]; then
@@ -1375,8 +1375,8 @@ install_velero_plugin_terminus() {
     velero_plugin_install_cmd+=" --no-default-backup-location --namespace $namespace"
     velero_plugin_install_cmd+=" --image beclab/velero:$velero_ver --use-volume-snapshots=false"
     velero_plugin_install_cmd+=" --no-secret --plugins beclab/velero-plugin-for-terminus:$velero_plugin_ver"
-    velero_plugin_install_cmd+=" --velero-pod-cpu-request=50m --velero-pod-cpu-limit=500m"
-    velero_plugin_install_cmd+=" --node-agent-pod-cpu-request=50m --node-agent-pod-cpu-limit=500m"
+    velero_plugin_install_cmd+=" --velero-pod-cpu-request=50m --velero-pod-cpu-limit=200m"
+    velero_plugin_install_cmd+=" --node-agent-pod-cpu-request=50m --node-agent-pod-cpu-limit=200m"
     velero_plugin_install_cmd+=" --wait --wait-minute 30"
 
     if [[ $(is_raspbian) -eq 1 ]]; then
@@ -1505,7 +1505,7 @@ install_containerd(){
 }
 
 install_k8s_ks() {
-    TERMINUS_CLI_VERSION=0.1.5
+    TERMINUS_CLI_VERSION=0.1.7
 
     ensure_success $sh_c "mkdir -p /etc/kke"
     local kk_bin="${BASE_DIR}/components/terminus-cli"
@@ -1514,12 +1514,6 @@ install_k8s_ks() {
         if [ ! -f "$kk_tar" ]; then
             ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/Installer/releases/download/${TERMINUS_CLI_VERSION}/terminus-cli-v${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
             ensure_success $sh_c "tar xf terminus-cli-v${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
-            # if [ x"$PROXY" != x"" ]; then
-            #   ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/kubekey-ext/releases/download/${TERMINUS_CLI_VERSION}/kubekey-ext-v${TERMINUS_CLI_VERSION}-linux-${ARCH}.tar.gz"
-            #   ensure_success $sh_c "tar xf kubekey-ext-v${TERMINUS_CLI_VERSION}-linux-${ARCH}.tar.gz"
-            # else
-            #   ensure_success $sh_c "curl ${CURL_TRY} -sfL https://raw.githubusercontent.com/beclab/kubekey-ext/master/downloadKKE.sh | VERSION=${TERMINUS_CLI_VERSION} sh -"
-            # fi
         else
             ensure_success $sh_c "cp ${kk_tar} terminus-cli-${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
             ensure_success $sh_c "tar xf terminus-cli-${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
