@@ -25,6 +25,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
           
       - name: Set up Helm
         uses: azure/setup-helm@v3
