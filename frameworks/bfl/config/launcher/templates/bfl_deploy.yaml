@@ -238,7 +238,7 @@ spec:
           mkdir -p /userspace/Data
       containers:
       - name: api
-        image: beclab/bfl:v0.3.34
+        image: beclab/bfl:v0.3.35
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: userspace-dir

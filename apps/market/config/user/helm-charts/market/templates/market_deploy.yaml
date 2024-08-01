@@ -71,7 +71,7 @@ spec:
         ports:
         - containerPort: 80
       - name: appstore-backend
-        image: beclab/market-backend:v0.2.10
+        image: beclab/market-backend:v0.2.11
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81

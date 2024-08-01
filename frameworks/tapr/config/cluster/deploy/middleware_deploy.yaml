@@ -99,7 +99,7 @@ spec:
         - name: DISABLE_TELEMETRY
           value: "false"
       - name: operator-api
-        image: beclab/middleware-operator:0.1.32
+        image: beclab/middleware-operator:0.1.33
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9080
@@ -116,3 +116,5 @@ spec:
           mountPath: /terminus/rootfs/middleware-backup
         - name: pgbackup-dir
           mountPath: /backup
+        - name: dbdata-dir
+          mountPath: /dbdata
