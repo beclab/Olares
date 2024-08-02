@@ -173,18 +173,20 @@ spec:
                     items:
                       properties:
                         export:
-                          properties:
-                            appName:
-                              type: string
-                            pub:
-                              description: default is deny
-                              type: string
-                            sub:
-                              type: string
-                          required:
-                          - pub
-                          - sub
-                          type: object
+                          items:
+                            properties:
+                              appName:
+                                type: string
+                              pub:
+                                description: default is deny
+                                type: string
+                              sub:
+                                type: string
+                            required:
+                            - pub
+                            - sub
+                            type: object
+                          type: array
                         name:
                           type: string
                         permission:
