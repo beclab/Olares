@@ -265,6 +265,7 @@ data:
         }
     }
     DEBUG = True
+    FILESERVER_TOKEN_ONCE_ONLY = False
 
 ---
 apiVersion: v1
