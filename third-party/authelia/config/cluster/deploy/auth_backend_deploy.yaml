@@ -272,9 +272,17 @@ spec:
     spec:
       serviceAccountName: os-internal
       serviceAccount: os-internal
-      containers:
+      initContainers:
+      - args:
+        - -it
+        - authelia-storage-svc:6379
+        image: owncloudci/wait-for:latest
+        imagePullPolicy: IfNotPresent
+        name: check-redis
+
+      containers:      
       - name: authelia
-        image: beclab/auth:0.1.32
+        image: beclab/auth:0.1.33
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9091

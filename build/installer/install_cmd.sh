@@ -612,7 +612,7 @@ run_install() {
         install_gpu
     fi
 
-    if [[ $SHOULD_RETRY -eq 1 ]]; then
+    if [[ $SHOULD_RETRY -eq 1 || $(is_wsl) -eq 1 ]]; then
         run_cmd=retry_cmd
     else
         run_cmd=ensure_success
