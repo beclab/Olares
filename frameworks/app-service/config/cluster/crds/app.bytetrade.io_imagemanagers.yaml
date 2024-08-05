@@ -64,7 +64,15 @@ spec:
                 type: array
               refs:
                 items:
-                  type: string
+                  properties:
+                    imagePullPolicy:
+                      type: string
+                    name:
+                      type: string
+                  required:
+                  - imagePullPolicy
+                  - name
+                  type: object
                 type: array
             required:
             - appName
