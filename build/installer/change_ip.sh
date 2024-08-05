@@ -441,7 +441,6 @@ check_desktop(){
 
 main() {
 	get_shell_exec
-	precheck_os
 
     if [[ $(is_wsl) -eq 1 || $(is_macos) -eq 1 ]]; then
 		ip=$1
@@ -463,6 +462,8 @@ main() {
 		sleep 30
 		exit 0
 	fi
+
+	precheck_os
 
 	local storage_type="s3"
 	if is_k3s; then
@@ -505,4 +506,4 @@ main() {
 	log_info 'Success to change the Terminus IP address!'
 }
 
-main
+main $1
