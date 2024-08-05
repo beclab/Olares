@@ -51,7 +51,7 @@ spec:
             - containerPort: 8080
           env:
             - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.29'
+              value: 'beclab/files-server:v0.2.30'
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -78,7 +78,7 @@ spec:
             mountPath: /appdata
 
         - name: files
-          image: beclab/files-server:v0.2.29
+          image: beclab/files-server:v0.2.30
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: fb-data
@@ -98,7 +98,7 @@ spec:
             - name: ES_ENABLED
               value: 'False'
             - name: WATCHER_ENABLED
-              value: 'False'
+              value: 'True'
             - name: KNOWLEDGE_BASE_ENABLED
               value: 'False'
 #            - name: BFL_NAME
@@ -120,11 +120,13 @@ spec:
 #            - name: ZINC_INDEX
 #              value: os-system_zinc-files
             - name: WATCH_DIR
-              value: /data/Home/Documents
+              value: /Home/Documents
             - name: FS_TYPE
               value: {{ .Values.fs_type }}
             - name: PATH_PREFIX
-              value: /data/Home
+              value: ''
+            - name: ROOT_PREFIX
+              value: /data
             - name: REDIS_HOST
               value: redis-cluster-proxy.os-system
             - name: REDIS_PORT
@@ -148,8 +150,8 @@ spec:
                   fieldPath: metadata.namespace
             - name: CONTAINER_NAME
               value: files
-#            - name: NOTIFY_SERVER
-#              value: fsnotify-svc.os-system:5079
+            - name: NOTIFY_SERVER
+              value: fsnotify-svc.os-system:5079
           command:
             - /filebrowser
             - --noauth
@@ -244,7 +246,7 @@ spec:
     spec:
       containers:
         - name: files
-          image: beclab/files-server:v0.2.29
+          image: beclab/files-server:v0.2.30
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: fb-data
@@ -303,7 +305,7 @@ metadata:
 type: Opaque
 data:
   password: {{ $password }}
-  redis_password: {{ $files_redis_password }}
+  files_redis_password: {{ $files_redis_password }}
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
