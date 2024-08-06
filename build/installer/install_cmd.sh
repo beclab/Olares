@@ -2139,6 +2139,35 @@ install_gpu(){
     ensure_success $sh_c "apt-get update && sudo apt-get install -y nvidia-container-toolkit jq"
 
     if [ x"$KUBE_TYPE" == x"k3s" ]; then
+        if [[ $(is_wsl) -eq 1 ]]; then
+            local real_driver=$($sh_c "find /usr/lib/wsl/drivers/ -name libcuda.so.1.1|head -1")
+            echo "found cuda driver in $real_driver"
+            if [[ x"$real_driver" != x"" ]]; then
+                local shellname="cuda_lib_fix.sh"
+                cat << EOF > /tmp/${shellname}
+#!/bin/bash
+sh_c="sh -c"
+real_driver=\$(\$sh_c "find /usr/lib/wsl/drivers/ -name libcuda.so.1.1|head -1")
+if [[ x"\$real_driver" != x"" ]]; then
+    \$sh_c "ln -s /usr/lib/wsl/lib/libcuda* /usr/lib/x86_64-linux-gnu/"
+    \$sh_c "rm -f /usr/lib/x86_64-linux-gnu/libcuda.so"
+    \$sh_c "rm -f /usr/lib/x86_64-linux-gnu/libcuda.so.1"
+    \$sh_c "rm -f /usr/lib/x86_64-linux-gnu/libcuda.so.1.1"
+    \$sh_c "cp -f \$real_driver /usr/lib/wsl/lib/libcuda.so"
+    \$sh_c "cp -f \$real_driver /usr/lib/wsl/lib/libcuda.so.1"
+    \$sh_c "cp -f \$real_driver /usr/lib/wsl/lib/libcuda.so.1.1"
+    \$sh_c "ln -s \$real_driver /usr/lib/x86_64-linux-gnu/libcuda.so.1"
+    \$sh_c "ln -s \$real_driver /usr/lib/x86_64-linux-gnu/libcuda.so.1.1"
+    \$sh_c "ln -s /usr/lib/x86_64-linux-gnu/libcuda.so.1 /usr/lib/x86_64-linux-gnu/libcuda.so"
+fi
+EOF
+                ensure_success $sh_c "mv -f /tmp/${shellname} /usr/local/bin/${shellname}"
+                ensure_success $sh_c "chmod +x /usr/local/bin/${shellname}"
+                ensure_success $sh_c "echo 'ExecStartPre=-/usr/local/bin/${shellname}' >> /etc/systemd/system/k3s.service"
+                ensure_success $sh_c "systemctl daemon-reload"
+
+            fi
+        fi
         ensure_success $sh_c "cp /var/lib/rancher/k3s/agent/etc/containerd/config.toml /var/lib/rancher/k3s/agent/etc/containerd/config.toml.tmpl" 
         ensure_success $sh_c "nvidia-ctk runtime configure --runtime=containerd --set-as-default --config=/var/lib/rancher/k3s/agent/etc/containerd/config.toml.tmpl"
         ensure_success $sh_c "systemctl restart k3s"
@@ -2154,22 +2183,6 @@ install_gpu(){
     # waiting for kubesphere webhooks starting
     sleep_waiting 30
 
-    if [[ $(is_wsl) -eq 1 ]]; then
-        local real_driver=$($sh_c "find /usr/lib/wsl/drivers/ -name libcuda.so.1.1|head -1")
-        echo "found cuda driver in $real_driver"
-        if [[ x"$real_driver" != x"" ]]; then
-            $sh_c "ln -s /usr/lib/wsl/lib/libcuda* /usr/lib/x86_64-linux-gnu/"
-            ensure_success $sh_c "rm -f /usr/lib/x86_64-linux-gnu/libcuda.so"
-            ensure_success $sh_c "rm -f /usr/lib/x86_64-linux-gnu/libcuda.so.1"
-            ensure_success $sh_c "rm -f /usr/lib/x86_64-linux-gnu/libcuda.so.1.1"
-            ensure_success $sh_c "cp -f $real_driver /usr/lib/wsl/lib/libcuda.so"
-            ensure_success $sh_c "cp -f $real_driver /usr/lib/wsl/lib/libcuda.so.1"
-            ensure_success $sh_c "cp -f $real_driver /usr/lib/wsl/lib/libcuda.so.1.1"
-            ensure_success $sh_c "ln -s $real_driver /usr/lib/x86_64-linux-gnu/libcuda.so.1"
-            ensure_success $sh_c "ln -s $real_driver /usr/lib/x86_64-linux-gnu/libcuda.so.1.1"
-            ensure_success $sh_c "ln -s /usr/lib/x86_64-linux-gnu/libcuda.so.1 /usr/lib/x86_64-linux-gnu/libcuda.so"
-        fi
-    fi
 
     ensure_success $sh_c "${KUBECTL} create -f ${BASE_DIR}/deploy/nvidia-device-plugin.yml"
 
