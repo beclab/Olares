@@ -207,7 +207,7 @@ precheck_os() {
     # check os type and arch and os vesion
     os_type=$(uname -s)
     os_arch=$(uname -m)
-    os_verion=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
+    os_verion=$(lsb_release -r 2>&1 | awk -F'\t' '{print $2}')
 
     case "$os_arch" in 
         arm64) ARCH=arm64; ;; 
@@ -392,12 +392,12 @@ is_ubuntu() {
 
 is_raspbian(){
     rasp=$(uname -a)
-    lsb_release=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
+    lsb_release=$(lsb_release -r 2>&1 | awk -F'\t' '{print $2}')
     if [ -z "$lsb_release" ]; then
         echo 0
         return
     fi
-    if [[ ${lsb_release} == *Raspbian* || ${rasp} == *raspberry* ]];then 
+    if [[ ${rasp} == *Raspbian* || ${rasp} == *raspbian* || ${rasp} == *raspberry* || ${rasp} == *Raspberry* ]];then
         case "$lsb_release" in
             *11* | *12*)
                 echo 1
