@@ -275,7 +275,7 @@ spec:
       initContainers:
       - args:
         - -it
-        - authelia-storage-svc:6379
+        - authelia-storage-svc:6379,redis.kubesphere-system:6379
         image: owncloudci/wait-for:latest
         imagePullPolicy: IfNotPresent
         name: check-redis
