@@ -20,8 +20,8 @@ spec:
       labels:
         app: jfsnotify-proxy
     spec:
-      serviceAccountName: bytetrade-sys-ops
-      serviceAccount: bytetrade-sys-ops
+      serviceAccountName: os-internal
+      serviceAccount: os-internal
       containers:
         - name: proxy
           image: beclab/fsnotify-proxy:0.1.5
