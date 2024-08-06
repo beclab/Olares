@@ -107,7 +107,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.0.2"
+        image: "beclab/yt-dlp:v0.0.3"
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3082
@@ -136,7 +136,7 @@ spec:
             memory: 300Mi
 
       - name: download-spider
-        image: "beclab/download-spider:v0.0.2"
+        image: "beclab/download-spider:v0.0.3"
         imagePullPolicy: IfNotPresent
         env:
         - name: PG_USERNAME
@@ -190,6 +190,10 @@ spec:
       protocol: TCP
       port: 6800
       targetPort: 6800
+    - name: ytdlp-server
+      protocol: TCP
+      port: 3082
+      targetPort: 3082
 
 ---
 apiVersion: v1
