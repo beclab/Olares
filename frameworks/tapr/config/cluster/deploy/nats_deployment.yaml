@@ -24,6 +24,7 @@ spec:
     type: DirectoryOrCreate
   persistentVolumeReclaimPolicy: Delete
   volumeMode: Filesystem
+  storageClassName: nats-data-sc
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -38,7 +39,7 @@ spec:
       storage: '50Gi'
   volumeMode: Filesystem
   volumeName: nats-data-pv
-
+  storageClassName: nats-data-sc
 
 ---
 apiVersion: v1
@@ -344,7 +345,6 @@ spec:
           name: config
         - emptyDir: {}
           name: pid
-        - hostPath:
-            path: /terminus/userdata/dbdata/nats_data
-            type: DirectoryOrCreate
-          name: nats-data
+        - name: nats-data
+          persistentVolumeClaim:
+            claimName: nats-data-pvc

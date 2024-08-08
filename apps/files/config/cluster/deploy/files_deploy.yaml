@@ -24,7 +24,6 @@ metadata:
   labels:
     app: files
     applications.app.bytetrade.io/author: bytetrade.io
-  annotations:
 spec:
   replicas: 1
   selector:
