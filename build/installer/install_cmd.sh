@@ -567,7 +567,7 @@ run_install() {
     if [ x"$KUBE_TYPE" == x"k3s" ]; then
         k8s_version=v1.22.16-k3s
     fi
-    create_cmd="./terminus-cli terminus init --kube $KUBE_TYPE"
+    create_cmd="./terminus-cli terminus init --kube $KUBE_TYPE --cloud '${TERMINUS_IS_CLOUD_VERSION}'"
     # create_cmd="./kk create cluster --with-kubernetes $k8s_version --with-kubesphere $ks_version --container-manager containerd"  # --with-addon ${ADDON_CONFIG_FILE}
 
     local extra
@@ -1487,29 +1487,33 @@ install_containerd(){
         #     fi
         # fi
 
-        if [ x"$KUBE_TYPE" == x"k8s" ]; then
-            K8S_PRELOAD_IMAGE_PATH="./images"
-            $sh_c "mkdir -p ${K8S_PRELOAD_IMAGE_PATH} && rm -rf ${K8S_PRELOAD_IMAGE_PATH}/*"
+        if [ -d ${BASE_DIR}/images ]; then
+            $sh_c "cp -a ${BASE_DIR}/images/ ./images"
         fi
 
-        if [ x"$KUBE_TYPE" == x"k3s" ]; then
-            K3S_PRELOAD_IMAGE_PATH="/var/lib/images"
-            $sh_c "mkdir -p ${K3S_PRELOAD_IMAGE_PATH} && rm -rf ${K3S_PRELOAD_IMAGE_PATH}/*"
-        fi
+        # if [ x"$KUBE_TYPE" == x"k8s" ]; then
+        #     K8S_PRELOAD_IMAGE_PATH="./images"
+        #     $sh_c "mkdir -p ${K8S_PRELOAD_IMAGE_PATH} && rm -rf ${K8S_PRELOAD_IMAGE_PATH}/*"
+        # fi
 
-        find $BASE_DIR/images -type f -name '*.tar.gz' | while read filename; do
-            local tgz=$(echo "${filename}"|awk -F'/' '{print $NF}')
-            if [ x"$KUBE_TYPE" == x"k3s" ]; then
-                $sh_c "ln -s ${filename} ${K3S_PRELOAD_IMAGE_PATH}/${tgz}"
-            else
-                $sh_c "ln -s ${filename} ${K8S_PRELOAD_IMAGE_PATH}/${tgz}"
-            fi
-        done
+        # if [ x"$KUBE_TYPE" == x"k3s" ]; then
+        #     K3S_PRELOAD_IMAGE_PATH="/var/lib/images"
+        #     $sh_c "mkdir -p ${K3S_PRELOAD_IMAGE_PATH} && rm -rf ${K3S_PRELOAD_IMAGE_PATH}/*"
+        # fi
+
+        # find $BASE_DIR/images -type f -name '*.tar.gz' | while read filename; do
+        #     local tgz=$(echo "${filename}"|awk -F'/' '{print $NF}')
+        #     if [ x"$KUBE_TYPE" == x"k3s" ]; then
+        #         $sh_c "ln -s ${filename} ${K3S_PRELOAD_IMAGE_PATH}/${tgz}"
+        #     else
+        #         $sh_c "ln -s ${filename} ${K8S_PRELOAD_IMAGE_PATH}/${tgz}"
+        #     fi
+        # done
     fi
 }
 
 install_k8s_ks() {
-    TERMINUS_CLI_VERSION=0.1.8
+    TERMINUS_CLI_VERSION=0.1.9
 
     ensure_success $sh_c "mkdir -p /etc/kke"
     local kk_bin="${BASE_DIR}/components/terminus-cli"

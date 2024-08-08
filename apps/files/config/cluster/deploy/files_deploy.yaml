@@ -23,14 +23,8 @@ metadata:
   namespace: os-system
   labels:
     app: files
-    applications.app.bytetrade.io/name: files
-    applications.app.bytetrade.io/owner: os-system
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
-    applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/files/icon.png
-    applications.app.bytetrade.io/title: Files
-    applications.app.bytetrade.io/version: '0.0.1'
-    applications.app.bytetrade.io/entrances: '[{"name":"files", "host":"files-service", "port":80,"title":"Files"}]'
 spec:
   replicas: 1
   selector:

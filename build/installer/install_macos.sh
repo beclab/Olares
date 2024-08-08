@@ -132,7 +132,7 @@ install_ks(){
     if [ -z $KUBE_TYPE ]; then
         KUBE_TYPE="k3s"
     fi
-    TERMINUS_CLI_VERSION="0.1.8"
+    TERMINUS_CLI_VERSION="0.1.9"
 
     cmd="mkdir -p ${BASE_DIR}/components"
     [ ! -d "${BASE_DIR}/components" ] && ensure_success eval $($cmd)
@@ -606,7 +606,7 @@ run_install(){
     HELM=$(command -v helm)
     KUBECTL=$(command -v kubectl)
 
-    preload_images
+    # preload_images
 
     install_ks
 
@@ -748,6 +748,8 @@ main(){
     HOSTNAME=$(hostname)
     natgateway=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/PING/{print $2}')
 
+    precheck_os
+
     if [ x"$natgateway" == x"" ]; then
         while :; do
             read_tty "Enter the host IP: " natgateway
@@ -758,8 +760,6 @@ main(){
             break
         done
     fi
-
-    precheck_os
 
     sh_c="sh -c"
     if [[ "$OSTYPE" == "darwin"* ]]; then

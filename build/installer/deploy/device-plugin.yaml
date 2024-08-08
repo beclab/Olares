@@ -40,7 +40,7 @@ spec:
         - "[ -d /var/run/nvshare/libnvshare.so ] && rm -rf /var/run/nvshare/libnvshare.so || true"
       containers:
       - name: nvshare-lib
-        image: docker.io/grgalex/nvshare:libnvshare-v0.1-f654c296
+        image: bytetrade/nvshare:libnvshare
         command:
         - sleep
         - infinity
@@ -69,7 +69,7 @@ spec:
           # mount for /var/run/nvshare/libnvshare.so
           mountPropagation: Bidirectional
       - name: nvshare-device-plugin
-        image: docker.io/grgalex/nvshare:nvshare-device-plugin-v0.1-f654c296
+        image: bytetrade/nvshare:nvshare-device-plugin
         imagePullPolicy: IfNotPresent
         env:
         - name: NVSHARE_VIRTUAL_DEVICES

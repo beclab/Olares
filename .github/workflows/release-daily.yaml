@@ -9,19 +9,48 @@ on:
   workflow_dispatch:
 
 jobs:
-  upload-full:
+  push:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@master
-        with:
-          root-reserve-mb: 21200
-          swap-size-mb: 1024
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-codeql: 'true'
+      - name: 'Checkout source code'
+        uses: actions/checkout@v3
+
+      - env: 
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: 'us-east-1'
+        run: |
+          bash scripts/image-manifest.sh && bash scripts/upload-images.sh .manifest/images.mf
+
+  push-arm64:
+    runs-on: self-hosted
+
+    steps:
+      - name: 'Checkout source code'
+        uses: actions/checkout@v3
+
+      - env: 
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: 'us-east-1'
+        run: |
+          bash scripts/image-manifest.sh && bash scripts/upload-images.sh .manifest/images.mf linux/arm64
+
+  upload-full:
+    needs: [push, push-arm64]
+    runs-on: ubuntu-latest
+
+    steps:
+      # - name: Maximize build space
+      #   uses: easimon/maximize-build-space@master
+      #   with:
+      #     root-reserve-mb: 21200
+      #     swap-size-mb: 1024
+      #     remove-dotnet: 'true'
+      #     remove-android: 'true'
+      #     remove-haskell: 'true'
+      #     remove-codeql: 'true'
 
       - name: 'Daily tag version'
         id: vars
@@ -35,7 +64,7 @@ jobs:
 
       - name: Package installer
         run: |
-          bash scripts/build-full.sh ${{ steps.vars.outputs.tag_version }}
+          bash scripts/build.sh ${{ steps.vars.outputs.tag_version }}
 
       - name: Upload to S3
         env: 
@@ -46,6 +75,7 @@ jobs:
           aws s3 cp install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz s3://terminus-os-install/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz --acl=public-read
 
   upload-full-arm64:
+    needs: [push, push-arm64]
     runs-on: self-hosted
 
     steps:
@@ -71,7 +101,7 @@ jobs:
 
       - name: Package installer
         run: |
-          bash scripts/build-full.sh ${{ steps.vars.outputs.tag_version }} linux/arm64
+          bash scripts/build.sh ${{ steps.vars.outputs.tag_version }} linux/arm64
 
       - name: Upload to S3
         env: 
