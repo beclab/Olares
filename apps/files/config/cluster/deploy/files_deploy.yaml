@@ -61,7 +61,7 @@ spec:
             value: /appdata
           - name: SEAFILE_SERVICE
             value: seafile
-          image: beclab/media-server:v0.1.6
+          image: beclab/media-server:v0.1.7
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 9090
