@@ -56,7 +56,7 @@ spec:
               command:
               - "/bin/sh"
               - "-c"
-              - "umount -v /host-var-run-nvshare/libnvshare.so && rm /host-var-run-nvshare/libnvshare.so"
+              - "umount -v /host-var-run-nvshare/libnvshare.so && rm -rf /host-var-run-nvshare/libnvshare.so"
         securityContext:
           # Necessary for mounts to work.
           privileged: true

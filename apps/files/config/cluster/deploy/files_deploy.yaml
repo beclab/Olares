@@ -10,7 +10,7 @@
 
 {{- $files_redis_password := "" -}}
 {{ if $files_secret -}}
-{{ $files_redis_password = (index $files_secret "data" "redis_password") }}
+{{ $files_redis_password = (index $files_secret "data" "files_redis_password") }}
 {{ else -}}
 {{ $files_redis_password = randAlphaNum 16 | b64enc }}
 {{- end -}}

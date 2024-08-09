@@ -93,6 +93,8 @@ data:
         port: 6379
         # This secret can also be set using the env variables AUTHELIA_SESSION_REDIS_PASSWORD_FILE
         password: {{ $redis_password | b64dec }}
+        maximum_active_connections: 100
+        minimum_idle_connections: 30
 
     regulation:
       max_retries: 3
@@ -282,7 +284,7 @@ spec:
 
       containers:      
       - name: authelia
-        image: beclab/auth:0.1.33
+        image: beclab/auth:0.1.34
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9091
