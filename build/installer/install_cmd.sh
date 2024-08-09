@@ -567,7 +567,7 @@ run_install() {
     if [ x"$KUBE_TYPE" == x"k3s" ]; then
         k8s_version=v1.22.16-k3s
     fi
-    create_cmd="./terminus-cli terminus init --kube $KUBE_TYPE --cloud '${TERMINUS_IS_CLOUD_VERSION}'"
+    create_cmd="${BASE_DIR}/terminus-cli terminus init --kube $KUBE_TYPE"
     # create_cmd="./kk create cluster --with-kubernetes $k8s_version --with-kubesphere $ks_version --container-manager containerd"  # --with-addon ${ADDON_CONFIG_FILE}
 
     local extra
@@ -592,7 +592,7 @@ run_install() {
     create_cmd+=" $extra"
 
     # add env OS_LOCALIP
-    ensure_success $sh_c "export OS_LOCALIP=$local_ip && $create_cmd"
+    ensure_success $sh_c "export OS_LOCALIP=$local_ip && export TERMINUS_IS_CLOUD_VERSION=$TERMINUS_IS_CLOUD_VERSION && $create_cmd"
 
     log_info 'k8s and kubesphere installation is complete'
 
@@ -1514,23 +1514,14 @@ install_containerd(){
 }
 
 install_k8s_ks() {
-    TERMINUS_CLI_VERSION=0.1.9
-
+    CLI_VERSION=0.1.10
     ensure_success $sh_c "mkdir -p /etc/kke"
-    local kk_bin="${BASE_DIR}/components/terminus-cli"
-    local kk_tar="${BASE_DIR}/components/terminus-cli-v${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
-    if [ ! -f "$kk_bin" ]; then
-        if [ ! -f "$kk_tar" ]; then
-            ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/Installer/releases/download/${TERMINUS_CLI_VERSION}/terminus-cli-v${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
-            ensure_success $sh_c "tar xf terminus-cli-v${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
-        else
-            ensure_success $sh_c "cp ${kk_tar} terminus-cli-${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
-            ensure_success $sh_c "tar xf terminus-cli-${TERMINUS_CLI_VERSION}_linux_${ARCH}.tar.gz"
-        fi
-    else 
-        ensure_success $sh_c "cp ${kk_bin} ./"
+    local cli_name="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
+    if [ ! -f "${BASE_DIR}/${cli_name}" ]; then
+        ensure_success $sh_c "curl ${CURL_TRY} -k -sfL -o ${BASE_DIR}/${cli_name} https://github.com/beclab/Installer/releases/download/${CLI_VERSION}/terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
     fi
-    # ensure_success $sh_c "chmod +x kk"
+    ensure_success $sh_c "tar xf ${BASE_DIR}/${cli_name} -C ${BASE_DIR}/"
+    # ensure_success $sh_c "chmod +x terminus-cli"
 
     log_info 'Setup your first user ...\n'
     setup_ws

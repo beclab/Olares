@@ -63,15 +63,26 @@ echo ""
 if command -v tar &>/dev/null; then
     rm -rf ${foldername} && mkdir -p ${foldername} && cd ${foldername} && tar -xzf "../${filename}"
 
+    CLI_VERSION="0.1.10"
+    CLI_FILE="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
+    if [ x"${os_type}" == x"Darwin" ]; then
+        CLI_FILE="terminus-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
+    fi
+    CLI_URL="https://github.com/beclab/Installer/releases/download/${CLI_VERSION}/${CLI_FILE}"
+
+    if [ ! -f ${CLI_FILE} ]; then
+        curl -Lo ${CLI_FILE} ${CLI_URL}
+    fi
+
     if [ $? -eq 0 ]; then
         if [[ x"$os_type" == x"Darwin" ]]; then
           bash  ./uninstall_macos.sh
           touch .installed
-          bash ./install_macos.sh
+          bash  ./install_macos.sh
         else
           bash  ./uninstall_cmd.sh
           touch .installed
-          bash ./install_cmd.sh
+          bash  ./install_cmd.sh
         fi
 
         exit 0

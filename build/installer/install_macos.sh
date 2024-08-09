@@ -127,32 +127,24 @@ log_fatal() {
     exit $ERR_EXIT
 }
 
-install_ks(){
+install_cli(){
     KUBE_TYPE=${KUBE_TYPE}
+    CLI_VERSION="0.1.10"
     if [ -z $KUBE_TYPE ]; then
         KUBE_TYPE="k3s"
     fi
-    TERMINUS_CLI_VERSION="0.1.9"
-
-    cmd="mkdir -p ${BASE_DIR}/components"
-    [ ! -d "${BASE_DIR}/components" ] && ensure_success eval $($cmd)
-
-    local kk_bin="${BASE_DIR}/components/terminus-cli"
-    local kk_tar="${BASE_DIR}/components/terminus-cli-v${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
-    if [ ! -f "$kk_bin" ]; then
-        if [ ! -f "$kk_tar" ]; then
-            ensure_success $sh_c "curl ${CURL_TRY} -k -sfLO https://github.com/beclab/Installer/releases/download/${TERMINUS_CLI_VERSION}/terminus-cli-v${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
-            ensure_success $sh_c "tar xf terminus-cli-v${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
-        else
-            ensure_success $sh_c "cp ${kk_tar} terminus-cli-${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
-            ensure_success $sh_c "tar xf terminus-cli-${TERMINUS_CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
-        fi
-    else 
-        cmd="cp ${kk_bin} ./"
-        ensure_success eval $($cmd)
+    
+    local cli_name="terminus-cli-v${CLI_VERSION}_${OSTYPE}_${ARCH}.tar.gz"
+    local cli_tar="${BASE_DIR}/${cli_name}"
+    if [ ! -f "$cli_tar" ]; then
+        echo "Installing terminus-cli ..."
+        ensure_success $sh_c "curl ${CURL_TRY} -k -sfL -o ${BASE_DIR}/${cli_name} https://github.com/beclab/Installer/releases/download/${CLI_VERSION}/${cli_name}"
     fi
+    ensure_success $sh_c "tar xf ${BASE_DIR}/${cli_name} -C ${BASE_DIR}/"
+}
 
-    cmd="./terminus-cli terminus init --kube ${KUBE_TYPE} --minikube --profile ${PROFILE_NAME}"
+install_ks(){
+    cmd="${BASE_DIR}/terminus-cli terminus init --kube ${KUBE_TYPE} --minikube --profile ${PROFILE_NAME}"
     ensure_success $sh_c "${cmd}"
 }
 
@@ -606,8 +598,6 @@ run_install(){
     HELM=$(command -v helm)
     KUBECTL=$(command -v kubectl)
 
-    # preload_images
-
     install_ks
 
     check_kscm # wait for ks launch
@@ -771,6 +761,8 @@ main(){
     fi
 
     install_helm
+
+    install_cli
 
     if command_exists minikube ; then
         running=$(minikube profile list|grep "${PROFILE_NAME}"|grep Running)
