@@ -71,9 +71,14 @@ log_info() {
 }
 
 remove_cluster(){
-    CLI_VERSION="0.1.10"
+    CLI_VERSION="0.1.11"
     forceUninstall="${FORCE_UNINSTALL_CLUSTER}"
     forceDeleteCache="false"
+
+    version="${TERMINUS_IS_CLOUD_VERSION}"
+    storage="${STORAGE}"
+    s3_bucket="${S3_BUCKET}"
+
     log_info 'remove kubernetes cluster'
 
     local cli_tar="${BASE_DIR}/terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
@@ -96,8 +101,9 @@ remove_cluster(){
     if [ ! -z "$forceUninstall" ]; then
       forceDeleteCache="true"
     fi
-    
-    $sh_c "export DELETE_CACHE=${forceDeleteCache} && ${BASE_DIR}/terminus-cli terminus uninstall"
+
+
+    $sh_c "export DELETE_CACHE=${forceDeleteCache} && export TERMINUS_IS_CLOUD_VERSION=${version} && ${BASE_DIR}/terminus-cli terminus uninstall --delete-cri --storage-type=${storage} --storage-bucket=${s3_bucket}"
 }
 
 set -o pipefail

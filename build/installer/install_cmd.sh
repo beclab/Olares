@@ -1514,7 +1514,7 @@ install_containerd(){
 }
 
 install_k8s_ks() {
-    CLI_VERSION=0.1.10
+    CLI_VERSION=0.1.11
     ensure_success $sh_c "mkdir -p /etc/kke"
     local cli_name="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
     if [ ! -f "${BASE_DIR}/${cli_name}" ]; then
