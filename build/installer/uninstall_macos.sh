@@ -68,7 +68,7 @@ log_info() {
 get_shell_exec
 precheck_os
 
-CLI_VERSION="0.1.11"
+CLI_VERSION="0.1.12"
 CLI_FILENAME="terminus-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
 CLI_URL="https://github.com/beclab/Installer/releases/download/${CLI_VERSION}/terminus-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
 

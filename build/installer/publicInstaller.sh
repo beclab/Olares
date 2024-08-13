@@ -30,7 +30,7 @@ fi
 ret='0'
 command -v tar >/dev/null 2>&1 || { ret='1'; }
 if [ "$ret" -eq 0 ]; then
-    mkdir -p install-wizard && cd install-wizard && tar -xzf "../${filename}"
+    sudo rm -rf install-wizard && mkdir -p install-wizard && cd install-wizard && tar -xzf "../${filename}"
 else
     echo "Install-Wizard ${VERSION} Download Complete!"
     echo ""

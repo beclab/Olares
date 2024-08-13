@@ -1488,9 +1488,9 @@ install_containerd(){
         #     fi
         # fi
 
-        if [ -d ${BASE_DIR}/images ]; then
-            $sh_c "cp -a ${BASE_DIR}/images/ ./images"
-        fi
+        # if [ -d ${BASE_DIR}/images ]; then
+        #     $sh_c "cp -a ${BASE_DIR}/images/ ./images"
+        # fi
 
         # if [ x"$KUBE_TYPE" == x"k8s" ]; then
         #     K8S_PRELOAD_IMAGE_PATH="./images"
@@ -1514,7 +1514,7 @@ install_containerd(){
 }
 
 install_k8s_ks() {
-    CLI_VERSION=0.1.11
+    CLI_VERSION=0.1.12
     ensure_success $sh_c "mkdir -p /etc/kke"
     local cli_name="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
     if [ ! -f "${BASE_DIR}/${cli_name}" ]; then
@@ -1531,10 +1531,10 @@ install_k8s_ks() {
     echo '
     ' > ${ADDON_CONFIG_FILE}
 
-    if [[ -z "${TERMINUS_IS_CLOUD_VERSION}" || x"${TERMINUS_IS_CLOUD_VERSION}" != x"true" ]]; then
-        log_info 'Installing containerd ...'
-        install_containerd
-    fi
+    # if [[ -z "${TERMINUS_IS_CLOUD_VERSION}" || x"${TERMINUS_IS_CLOUD_VERSION}" != x"true" ]]; then
+    #     log_info 'Installing containerd ...'
+    #     install_containerd
+    # fi
 
     run_install
 

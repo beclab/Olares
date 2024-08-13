@@ -129,7 +129,7 @@ log_fatal() {
 
 install_cli(){
     KUBE_TYPE=${KUBE_TYPE}
-    CLI_VERSION="0.1.11"
+    CLI_VERSION="0.1.12"
     if [ -z $KUBE_TYPE ]; then
         KUBE_TYPE="k3s"
     fi
