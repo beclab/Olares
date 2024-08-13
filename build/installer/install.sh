@@ -4,7 +4,7 @@
 
 set -o pipefail
 
-VERSION="#__VERSION__"
+export VERSION="#__VERSION__"
 if [ "x${VERSION}" = "x" ]; then
   echo "Unable to get latest Install-Wizard version. Set VERSION env var and re-run. For example: export VERSION=1.0.0"
   echo ""
