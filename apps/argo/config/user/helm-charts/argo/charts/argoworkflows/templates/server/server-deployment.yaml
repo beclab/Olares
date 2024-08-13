@@ -121,7 +121,7 @@ spec:
                 name: rss-userspace-data
                 key: appCache
           - name: ALGORITHM_VERSION
-            value: v0.0.4
+            value: v0.0.6
           - name: TERMIUS_USER_NAME
             valueFrom:
               configMapKeyRef:
