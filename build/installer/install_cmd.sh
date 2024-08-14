@@ -2155,13 +2155,10 @@ EOF
 
             fi
         fi
-        ensure_success $sh_c "cp /var/lib/rancher/k3s/agent/etc/containerd/config.toml /var/lib/rancher/k3s/agent/etc/containerd/config.toml.tmpl" 
-        ensure_success $sh_c "nvidia-ctk runtime configure --runtime=containerd --set-as-default --config=/var/lib/rancher/k3s/agent/etc/containerd/config.toml.tmpl"
-        ensure_success $sh_c "systemctl restart k3s"
-    else
-        ensure_success $sh_c "nvidia-ctk runtime configure --runtime=containerd --set-as-default"
-        ensure_success $sh_c "systemctl restart containerd"
     fi
+    
+    ensure_success $sh_c "nvidia-ctk runtime configure --runtime=containerd --set-as-default"
+    ensure_success $sh_c "systemctl restart containerd"
 
     check_ksredis
     check_kscm
