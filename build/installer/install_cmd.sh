@@ -327,11 +327,6 @@ precheck_os() {
         fi
     fi
 
-    # copy pre-installation dependency files 
-    if [ -d /opt/deps ]; then
-        ensure_success $sh_c "mv /opt/deps/* ${BASE_DIR}"
-    fi
-
     if [[ $(is_wsl) -eq 1 ]]; then
         $sh_c "chattr -i /etc/hosts"
         $sh_c "chattr -i /etc/resolv.conf"
@@ -548,10 +543,6 @@ run_install() {
     ks_version=v3.3.0
 
     log_info 'installing k8s and kubesphere'
-
-    if [ -d "$BASE_DIR/pkg" ]; then
-        ensure_success $sh_c "ln -s ${BASE_DIR}/pkg ./"
-    fi
 
     if [[ $(is_wsl) -eq 1 ]]; then
         if [ -f /usr/lib/wsl/lib/nvidia-smi ]; then
