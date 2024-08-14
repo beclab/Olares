@@ -1,0 +1,448 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: system-frontend
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: dashboard
+      port: 80
+      targetPort: 81
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: control-hub-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: system-frontend
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: control-hub
+      port: 80
+      targetPort: 82
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: system-frontend-deployment
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: system-frontend
+    applications.app.bytetrade.io/name: system-frontend
+    applications.app.bytetrade.io/owner: '{{ .Values.bfl.username }}'
+    applications.app.bytetrade.io/group: 'true'
+    applications.app.bytetrade.io/author: bytetrade.io
+  annotations:
+    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png"}'
+    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub"}'
+    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1"}'
+    applications.app.bytetrade.io/policies: '{"dashboard":{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}}'
+    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard"}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub"}]}'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: system-frontend
+  template:
+    metadata:
+      labels:
+        app: system-frontend
+    spec:
+      initContainers:
+        - args:
+            - -it
+            - authelia-backend.os-system:9091
+          image: owncloudci/wait-for:latest
+          imagePullPolicy: IfNotPresent
+          name: check-auth
+        - name: terminus-sidecar-init
+          image: openservicemesh/init:v1.2.3
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - NET_ADMIN
+            runAsNonRoot: false
+            runAsUser: 0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              iptables-restore --noflush <<EOF
+              # sidecar interception rules
+              *nat
+              :PROXY_IN_REDIRECT - [0:0]
+              :PROXY_INBOUND - [0:0]
+              -A PROXY_IN_REDIRECT -p tcp -j REDIRECT --to-port 15003
+              -A PROXY_INBOUND -p tcp --dport 15000 -j RETURN
+              -A PROXY_INBOUND -p tcp -j PROXY_IN_REDIRECT
+              -A PREROUTING -p tcp -j PROXY_INBOUND
+              COMMIT
+              EOF
+
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+        - name: dashboard-init
+          image: beclab/dashboard-frontend-v1:v0.3.2
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /www/dashboard
+              cp -r /app/* /www/dashboard
+          volumeMounts:
+            - mountPath: /www
+              name: www-dir
+        - name: control-hub-init
+          image: beclab/admin-console-frontend-v1:v0.3.8
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /www/control-hub
+              cp -r /app/* /www/control-hub
+          volumeMounts:
+            - mountPath: /www
+              name: www-dir
+      containers:
+        - name: terminus-envoy-sidecar
+          image: bytetrade/envoy:v1.25.11
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
+          ports:
+            - name: proxy-admin
+              containerPort: 15000
+            - name: proxy-inbound
+              containerPort: 15003
+          volumeMounts:
+            - name: terminus-sidecar-config
+              readOnly: true
+              mountPath: /etc/envoy/envoy.yaml
+              subPath: envoy.yaml
+          command:
+            - /usr/local/bin/envoy
+            - --log-level
+            - debug
+            - -c
+            - /etc/envoy/envoy.yaml
+        - name: system-frontend
+          image: nginx:stable-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 81
+            - containerPort: 82
+          command:
+            - /bin/sh
+            - -c
+            - |
+              rm /etc/nginx/conf.d/default.conf
+              nginx -g 'daemon off;'
+          volumeMounts:
+            - name: terminus-sidecar-config
+              readOnly: true
+              mountPath: /etc/envoy/envoy.yaml
+              subPath: envoy.yaml
+            - name: www-dir
+              mountPath: /www
+            - name: system-frontend-nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: system-frontend-nginx-config
+              mountPath: /etc/nginx/conf.d/dashboard-control-hub.conf
+              subPath: dashboard-control-hub.conf
+          env:
+            - name: POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+      volumes:
+        - name: terminus-sidecar-config
+          configMap:
+            name: sidecar-configs
+            items:
+              - key: envoy.yaml
+                path: envoy.yaml
+        - name: www-dir
+          emptyDir: {}
+        - name: system-frontend-nginx-config
+          configMap:
+            name: system-frontend-nginx-config
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+              - key: dashboard-control-hub.conf
+                path: dashboard-control-hub.conf
+
+
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ApplicationPermission
+metadata:
+  name: dashboard-vault
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: dashboard
+  appid: dashboard
+  key: {{ .Values.os.dashboard.appKey }}
+  secret: {{ .Values.os.dashboard.appSecret }}
+  permissions:
+    - dataType: secret
+      group: secret.infisical
+      ops:
+        - RetrieveSecret?workspace=dashboard
+        - CreateSecret?workspace=dashboard
+        - DeleteSecret?workspace=dashboard
+        - UpdateSecret?workspace=dashboard
+        - ListSecret?workspace=dashboard
+      version: v1
+status:
+  state: active
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: system-frontend-nginx-config
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    kubesphere.io/creator: bytetrade.io
+data:
+  nginx.conf: |-
+    user nginx;
+    worker_processes auto;
+
+    error_log   /var/log/nginx/error.log notice;
+    pid         /var/run/nginx.pid;
+
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                          '$status $body_bytes_sent "$http_referer" '
+                          '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log  /var/log/nginx/access.log  main;
+
+        sendfile        on;
+        keepalive_timeout 65;
+
+        client_max_body_size 15M;
+
+        include /etc/nginx/conf.d/*.conf;
+    }
+  dashboard-control-hub.conf: |-
+    upstream SettingsServer {
+        server monitoring-server.os-system;
+    }
+
+    upstream Middleware {
+        server middleware-service.os-system;
+    }
+
+    upstream Analytics {
+        server anayltic2-server.os-system:3010;
+    }
+
+    server {
+      listen 81;
+      gzip on;
+      gzip_disable "msie6";
+      gzip_min_length 1k;
+      gzip_buffers 16 64k;
+      gzip_http_version 1.1;
+      gzip_comp_level 5;
+      gzip_types *;
+      root /www/dashboard;
+
+      location / {
+        try_files $uri $uri/index.html /index.html;
+        add_header Cache-Control "private,no-cache";
+        add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+        expires 0;
+      }
+
+      location /bfl {
+        add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
+        proxy_pass http://bfl;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        add_header X-Frame-Options SAMEORIGIN;
+      }
+
+      location /kapis {
+        proxy_pass http://SettingsServer;
+      }
+
+      location /api {
+        proxy_pass http://SettingsServer;
+      }
+
+      location /capi {
+        proxy_pass http://SettingsServer;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location = /js/api/send {
+        proxy_pass http://Analytics;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        rewrite ^/js(.*)$ $1 break;
+      }
+
+      location /analytics_service {
+        proxy_pass http://Analytics;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        rewrite ^/analytics_service(.*)$ $1 break;
+      }
+
+      location ~ /(kapis/terminal|api/v1/watch|apis/apps/v1/watch) {
+        proxy_pass http://SettingsServer;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+      }
+
+      location = /js/script.js {
+        add_header Access-Control-Allow-Origin "*";
+      }
+      location ~.*\.(js|css|png|jpg|svg|woff|woff2)$ {
+      	add_header Cache-Control "public, max-age=2678400";
+      }
+    }
+
+    server {
+      listen 82;
+      gzip on;
+      gzip_disable "msie6";
+      gzip_min_length 1k;
+      gzip_buffers 16 64k;
+      gzip_http_version 1.1;
+      gzip_comp_level 5;
+      gzip_types *;
+      root /www/control-hub;
+
+      location / {
+        try_files $uri $uri/index.html /index.html;
+        add_header Cache-Control "private,no-cache";
+        add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+        expires 0;
+      }
+
+      location /bfl {
+        add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
+        proxy_pass http://bfl;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        add_header X-Frame-Options SAMEORIGIN;
+      }
+
+      location /kapis {
+        proxy_pass http://SettingsServer;
+      }
+
+      location /api {
+        proxy_pass http://SettingsServer;
+      }
+
+      location /current_user {
+        proxy_pass http://SettingsServer;
+      }
+
+      location /capi {
+        proxy_pass http://SettingsServer;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location = /js/api/send {
+        proxy_pass http://Analytics;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        rewrite ^/js(.*)$ $1 break;
+      }
+
+      location /analytics_service {
+        proxy_pass http://Analytics;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        rewrite ^/analytics_service(.*)$ $1 break;
+      }
+
+      location /middleware {
+        add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
+        proxy_pass http://Middleware;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        add_header X-Frame-Options SAMEORIGIN;
+      }
+
+      location ~ /(kapis/terminal|api/v1/watch|apis/apps/v1/watch) {
+        proxy_pass http://SettingsServer;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+      }
+
+      location = /js/script.js {
+        add_header Access-Control-Allow-Origin "*";
+      }
+      location ~.*\.(js|css|png|jpg|svg|woff|woff2)$ {
+      	add_header Cache-Control "public, max-age=2678400";
+      }
+    }

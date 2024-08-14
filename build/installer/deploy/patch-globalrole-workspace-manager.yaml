@@ -138,6 +138,27 @@ rules:
   - network.kubesphere.io
   - resources.kubesphere.io
   - gitops.kubesphere.io
+  - velero.io
+  - argoproj.io
+  - traefik.containo.us
+  - apr.bytetrade.io
+  - redis.kun
+  - sys.bytetrade.io
+  - psmdb.percona.com
+  - app.bytetrade.io
+  - notification.kubesphere.io
+  - tenant.kubesphere.io
+  - storage.kubesphere.io
+  - quota.kubesphere.io
+  - network.kubesphere.io
+  - iam.kubesphere.io
+  - gateway.kubesphere.io
+  - cluster.kubesphere.io
+  - application.kubesphere.io
+  - app.k8s.io
+  - snapshot.storage.k8s.io
+  - installer.kubesphere.io
+  - crd.projectcalico.org
   resources:
   - '*'
   verbs:
