@@ -159,6 +159,7 @@ rules:
   - snapshot.storage.k8s.io
   - installer.kubesphere.io
   - crd.projectcalico.org
+  - apiextensions.k8s.io
   resources:
   - '*'
   verbs:
