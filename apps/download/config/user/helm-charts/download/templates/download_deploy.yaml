@@ -107,11 +107,15 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.0.3"
+        image: "beclab/yt-dlp:v0.0.4"
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3082
         env:
+        - name: PUID
+          value: "0"
+        - name: PGID
+          value: "0"
         - name: PG_USERNAME
           value: knowledge_{{ .Values.bfl.username }}
         - name: PG_PASSWORD
@@ -136,7 +140,7 @@ spec:
             memory: 300Mi
 
       - name: download-spider
-        image: "beclab/download-spider:v0.0.3"
+        image: "beclab/download-spider:v0.0.4"
         imagePullPolicy: IfNotPresent
         env:
         - name: PG_USERNAME
