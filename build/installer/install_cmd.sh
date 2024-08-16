@@ -2210,7 +2210,8 @@ fd_errlog=/tmp/install_log/errlog_fd_13
 
 Main() {
     [[ -z $KUBE_TYPE ]] && KUBE_TYPE="k3s"
-    [[ ! -f $BASE_DIR/.installed ]] && touch $BASE_DIR/.installed
+    # [[ ! -f $BASE_DIR/.installed ]] && touch $BASE_DIR/.installed
+    [[ ! -f /var/run/lock/.installed ]] && touch /var/run/lock/.installed
 
     log_info 'Start to Install Terminus ...\n'
     get_distribution
