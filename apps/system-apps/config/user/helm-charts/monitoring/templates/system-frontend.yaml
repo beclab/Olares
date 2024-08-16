@@ -12,6 +12,7 @@ spec:
       name: dashboard
       port: 80
       targetPort: 81
+      
 ---
 apiVersion: v1
 kind: Service
@@ -108,7 +109,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: control-hub-init
-          image: beclab/admin-console-frontend-v1:v0.3.8
+          image: beclab/admin-console-frontend-v1:v0.3.9
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
