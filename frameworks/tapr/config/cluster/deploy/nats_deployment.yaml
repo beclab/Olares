@@ -324,7 +324,7 @@ spec:
                 secretKeyRef:
                   name: nats-secrets
                   key: nats_password
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           securityContext:
             capabilities:
               add:
