@@ -18,7 +18,7 @@
 {{- $version := .Capabilities.KubeVersion.Version -}}
 {{- $path := "/var/run/containerd/containerd.sock" -}}
 {{ if contains "k3s" $version }}
-{{ $path = "/run/k3s/containerd/containerd.sock" }}
+{{ $path = "/var/run/containerd/containerd.sock" }}
 {{ end }}
 
 ---
