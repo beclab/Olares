@@ -26,7 +26,27 @@ spec:
       labels:
         app: profile
     spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
       initContainers:
+      - name: init-data
+        image: busybox:1.28
+        securityContext:
+          privileged: true
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        command:
+        - sh
+        - -c
+        - |
+          chown -R 1000:1000 /data
+
       - args:
         - -it
         - authelia-backend.os-system:9091
@@ -70,18 +90,28 @@ spec:
       - name: profile-editor
         image: beclab/profile-editor:v0.3.23
         imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
         ports:
         - containerPort: 80
       
       - name: profile-preview
         image: beclab/profile-preview:v0.3.23
         imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
         ports:
         - containerPort: 8090
 
       - name: profile-services
         image: beclab/profile-services:v0.3.23
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
+
         ports:
         - containerPort: 3020       
         volumeMounts:

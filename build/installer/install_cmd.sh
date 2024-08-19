@@ -35,6 +35,8 @@ get_shell_exec(){
 			exit $ERR_EXIT
 		fi
 	fi
+
+    CHOWN="chown 1000:1000"
 }
 
 function dpkg_locked() {
@@ -661,9 +663,6 @@ run_install() {
         if [ "x${LOCAL_GPU_SHARE}" == "x1" ]; then  
             GPU_TYPE="nvshare"
         fi
-    fi
-    if [ "x${GPU_ENABLE}" == "x1" ]; then
-        GPU_TYPE="virtaitech"
     fi
 
     local bucket="none"

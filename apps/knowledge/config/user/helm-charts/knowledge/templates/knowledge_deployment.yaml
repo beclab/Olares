@@ -95,6 +95,11 @@ spec:
       labels:
         app: knowledge
     spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
       initContainers:
       - name: init-container
         image: 'postgres:16.0-alpine3.18'
@@ -118,6 +123,10 @@ spec:
       - name: knowledge
         image: "beclab/knowledge-base-api:v0.1.42"
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
+
         ports:
         - containerPort: 3010
         env:
@@ -168,6 +177,10 @@ spec:
       - name: backend-server
         image: "beclab/recommend-backend:v0.0.9"
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
+
         env:
         - name: LISTEN_ADDR
           value: 127.0.0.1:8080

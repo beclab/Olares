@@ -43,7 +43,28 @@ spec:
         app: files
     spec:
       serviceAccountName: bytetrade-controller
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       initContainers:
+      - name: init-data
+        image: busybox:1.28
+        securityContext:
+          privileged: true
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - name: fb-data
+          mountPath: /appdata
+        - name: uploads-temp
+          mountPath: /uploadstemp
+        command:
+        - sh
+        - -c
+        - |
+          chown -R 1000:1000 /uploadstemp && \
+          chown -R 1000:1000 /appdata
       - args:
         - -it
         - authelia-backend.os-system:9091
@@ -181,6 +202,9 @@ spec:
       - name: files-frontend
         image: beclab/files-frontend:v1.2.19
         imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
         ports:
         - containerPort: 80
         volumeMounts:
@@ -196,6 +220,9 @@ spec:
         - containerPort: 8181
       - name: terminus-upload-sidecar
         image: beclab/upload:v1.0.3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
         env:
         - name: UPLOAD_FILE_TYPE
           value: '*'
@@ -278,7 +305,7 @@ spec:
           path: {{ .Values.userspace.userData }}
       - name: upload-appdata
         hostPath:
-          type: DirectoryOrCreate
+          type: Directory
           path: {{ .Values.userspace.appCache}}
       - name: uploads-temp
         hostPath:

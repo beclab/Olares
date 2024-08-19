@@ -19,6 +19,10 @@ spec:
       labels:
         app: edge-desktop
     spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       initContainers:
       - args:
         - -it
@@ -63,6 +67,9 @@ spec:
       - name: edge-desktop
         image: beclab/desktop:v0.2.32
         imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
         ports:
         - containerPort: 80
         env:
@@ -72,6 +79,9 @@ spec:
       - name: desktop-server
         image: beclab/desktop-server:v0.2.32
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
         volumeMounts:
         - name: userspace-dir
           mountPath: /Home

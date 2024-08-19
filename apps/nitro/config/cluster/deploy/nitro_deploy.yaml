@@ -128,10 +128,40 @@ spec:
         app: nitro
         name: nitro
     spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
+      {{- if and .Values.gpu (not (eq .Values.gpu "none" )) }}
+      initContainers:
+        - name: init-data
+          image: busybox:1.28
+          securityContext:
+            privileged: true
+            runAsNonRoot: false
+            runAsUser: 0
+          volumeMounts:
+            - name: model-vol
+              mountPath: /model
+            - name: custom-model-config-vol
+              mountPath: /custom_model_config
+            - name: model-parent
+              mountPath: /model_parent
+          command:
+          - sh
+          - -c
+          - |
+            chown -R 1000:1000 /model_parent 
+      {{- end }}
+
       containers:
       - name: nginx
         image: 'beclab/nginx-lua:n0.0.4'
         imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
         ports:
           - containerPort: 80
             name: nginx-port
@@ -149,6 +179,10 @@ spec:
       {{- if and .Values.gpu (not (eq .Values.gpu "none" )) }}
       - name: nitro
         image: 'beclab/nitro:v0.0.10'
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
+
         ports:
           - name: nitro-port
             containerPort: 3928
@@ -212,6 +246,10 @@ spec:
         hostPath:
           type: DirectoryOrCreate
           path: {{ $nitro_appcache_rootpath }}/volumes/app/model
+      - name: model-parent
+        hostPath:
+          type: DirectoryOrCreate
+          path: {{ $nitro_appcache_rootpath }}/volumes
       - name: nitro-nginx-config
         configMap:
           name: nitro-nginx-config

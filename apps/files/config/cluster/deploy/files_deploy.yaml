@@ -36,10 +36,32 @@ spec:
     spec:
       serviceAccount: os-internal
       serviceAccountName: os-internal
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+        - name: init-data
+          image: busybox:1.28
+          securityContext:
+            privileged: true
+            runAsNonRoot: false
+            runAsUser: 0
+          volumeMounts:
+          - name: fb-data
+            mountPath: /appdata
+          command:
+          - sh
+          - -c
+          - |
+            chown -R 1000:1000 /appdata 
       containers:
         - name: gateway
           image: beclab/appdata-gateway:0.1.15
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
           ports:
             - containerPort: 8080
           env:
@@ -73,6 +95,9 @@ spec:
         - name: files
           image: beclab/files-server:v0.2.30
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
           volumeMounts:
             - name: fb-data
               mountPath: /appdata
@@ -150,6 +175,9 @@ spec:
             - --noauth
         - name: nginx
           image: 'beclab/nginx-lua:n0.0.4'
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
           ports:
             - containerPort: 80
               protocol: TCP
@@ -237,10 +265,32 @@ spec:
       labels:
         app: appdata-backend
     spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+        - name: init-data
+          image: busybox:1.28
+          securityContext:
+            privileged: true
+            runAsNonRoot: false
+            runAsUser: 0
+          volumeMounts:
+          - name: fb-data
+            mountPath: /appdata
+          command:
+          - sh
+          - -c
+          - |
+            chown -R 1000:1000 /appdata 
       containers:
         - name: files
           image: beclab/files-server:v0.2.30
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
           volumeMounts:
             - name: fb-data
               mountPath: /appdata

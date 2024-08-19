@@ -176,7 +176,29 @@ spec:
         app: headscale-server
     spec:
       serviceAccountName: tailscale
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       initContainers:
+      - name: init-data
+        image: busybox:1.28
+        securityContext:
+          privileged: true
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - name: config
+          mountPath: /etc/headscale
+        - name: headscale-data
+          mountPath: /var/lib/headscale
+        - name: config-parent
+          mountPath: /headscale
+        command:
+        - sh
+        - -c
+        - |
+          chown -R 1000:1000 /headscale 
       - name: init
         image: beclab/headscale-init:v0.1.5
         imagePullPolicy: IfNotPresent
@@ -192,6 +214,9 @@ spec:
       - name: headscale
         image: headscale/headscale:0.22.3
         imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
         command:
         - headscale
         - serve
@@ -217,6 +242,9 @@ spec:
         image: beclab/headscale-api-wrapper:v0.1.6
         imagePullPolicy: IfNotPresent
         name: headscale-api-wrapper
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
         volumeMounts:
         - mountPath: /etc/headscale
           name: config
@@ -232,6 +260,10 @@ spec:
         hostPath:
           type: DirectoryOrCreate
           path: {{ .Values.userspace.appCache }}/headscale/data
+      - name: config-parent
+        hostPath:
+          type: DirectoryOrCreate
+          path: {{ .Values.userspace.appCache  }}/headscale
 
 ---
 apiVersion: apps/v1

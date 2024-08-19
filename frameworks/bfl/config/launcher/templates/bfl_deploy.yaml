@@ -235,7 +235,11 @@ spec:
           mkdir -p /userspace/Home/Movies && \
           mkdir -p /userspace/Home/Music && \
           mkdir -p /userspace/Home/Code && \
-          mkdir -p /userspace/Data
+          mkdir -p /userspace/Data && \
+          chown -R 1000:1000 /userspace/Home && \
+          chown -R 1000:1000 /userspace/Data && \
+          chown -R 1000:1000 /appdata 
+
       containers:
       - name: api
         image: beclab/bfl:v0.3.36
