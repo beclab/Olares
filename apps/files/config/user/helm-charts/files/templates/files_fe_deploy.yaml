@@ -200,7 +200,7 @@ spec:
 #        - /filebrowser
 #        - --noauth
       - name: files-frontend
-        image: beclab/files-frontend:v1.2.19
+        image: beclab/files-frontend:v1.2.22
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: false
@@ -218,29 +218,26 @@ spec:
           value: system-server.user-system-{{ .Values.bfl.username }}
         ports:
         - containerPort: 8181
-      - name: terminus-upload-sidecar
-        image: beclab/upload:v1.0.3
-        securityContext:
-          allowPrivilegeEscalation: false
-          runAsUser: 1000
-        env:
-        - name: UPLOAD_FILE_TYPE
-          value: '*'
-        - name: UPLOAD_LIMITED_SIZE
-          value: '21474836481'
-        volumeMounts:
-        - name: upload-data
-          mountPath: /data/Home
-        - name: upload-appdata
-          mountPath: /appdata/
-        - name: userspace-app-dir
-          mountPath: /data/Application
-        - name: uploads-temp
-          mountPath: /uploadstemp
-        resources: { }
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-        imagePullPolicy: IfNotPresent
+#      - name: terminus-upload-sidecar
+#        image: beclab/upload:v1.0.3
+#        env:
+#        - name: UPLOAD_FILE_TYPE
+#          value: '*'
+#        - name: UPLOAD_LIMITED_SIZE
+#          value: '21474836481'
+#        volumeMounts:
+#        - name: upload-data
+#          mountPath: /data/Home
+#        - name: upload-appdata
+#          mountPath: /appdata/
+#        - name: userspace-app-dir
+#          mountPath: /data/Application
+#        - name: uploads-temp
+#          mountPath: /uploadstemp
+#        resources: { }
+#        terminationMessagePath: /dev/termination-log
+#        terminationMessagePolicy: File
+#        imagePullPolicy: IfNotPresent
 
       - name: terminus-envoy-sidecar
         image: bytetrade/envoy:v1.25.11
@@ -679,8 +676,8 @@ data:
                   - endpoint:
                       address:
                         socket_address:
-                          address: localhost
-                          port_value: 40030
+                          address: files-service.os-system
+                          port_value: 80
         - name: authelia
           connect_timeout: 2s
           type: LOGICAL_DNS

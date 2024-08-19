@@ -173,6 +173,24 @@ spec:
           command:
             - /filebrowser
             - --noauth
+        - name: uploader
+          image: beclab/upload:v1.0.5
+          env:
+            - name: UPLOAD_FILE_TYPE
+              value: '*'
+            - name: UPLOAD_LIMITED_SIZE
+              value: '21474836481'
+          volumeMounts:
+            - name: fb-data
+              mountPath: /appdata
+            - name: userspace-dir
+              mountPath: /data
+            - name: upload-appdata
+              mountPath: /appcache/
+          resources: { }
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
         - name: nginx
           image: 'beclab/nginx-lua:n0.0.4'
           securityContext:
