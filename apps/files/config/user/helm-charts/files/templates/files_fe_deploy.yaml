@@ -211,7 +211,7 @@ spec:
         - name: userspace-dir
           mountPath: /data
       - name: drive-server
-        image: beclab/drive:v0.0.3
+        image: beclab/drive:v0.0.4
         imagePullPolicy: IfNotPresent
         env:
         - name: OS_SYSTEM_SERVER
