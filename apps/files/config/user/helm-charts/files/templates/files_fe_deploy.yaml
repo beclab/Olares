@@ -200,7 +200,7 @@ spec:
 #        - /filebrowser
 #        - --noauth
       - name: files-frontend
-        image: beclab/files-frontend:v1.2.22
+        image: beclab/files-frontend:v1.2.23
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: false
