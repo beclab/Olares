@@ -608,7 +608,7 @@ run_install() {
     if [[ $SHOULD_RETRY -eq 1 || $(is_wsl) -eq 1 ]]; then
         run_cmd=retry_cmd
     else
-        run_cmd=ensure_success
+        run_cmd=retry_cmd
     fi
 
 
@@ -732,6 +732,8 @@ _END
     if [[ $(is_wsl) -eq 1 ]]; then
         fs_type="fs"
     fi
+
+    ensure_success $sh_c "rm -rf ${BASE_DIR}/wizard/config/apps/values.yaml"
     cat ${BASE_DIR}/wizard/config/launcher/values.yaml > ${BASE_DIR}/wizard/config/apps/values.yaml
     cat << EOF >> ${BASE_DIR}/wizard/config/apps/values.yaml
   url: '${bfl_doc_url}'
@@ -1723,6 +1725,7 @@ setup_ws() {
         s3_sk="${AWS_SECRET_ACCESS_KEY_SETUP}"
     fi
 
+    $sh_c "rm -rf ${BASE_DIR}/wizard/config/account/values.yaml"
     cat > ${BASE_DIR}/wizard/config/account/values.yaml <<_EOF
 user:
   name: '${username}'
@@ -1731,6 +1734,7 @@ user:
   terminus_name: '${username}@${domainname}'
 _EOF
 
+    $sh_c "rm -rf ${BASE_DIR}/wizard/config/settings/values.yaml"
     cat > ${BASE_DIR}/wizard/config/settings/values.yaml <<_EOF
 namespace:
   name: 'user-space-${username}'
@@ -1745,6 +1749,7 @@ user:
   name: '${username}'
 _EOF
 
+  $sh_c "rm -rf ${BASE_DIR}/wizard/config/launcher/values.yaml"
   cat > ${BASE_DIR}/wizard/config/launcher/values.yaml <<_EOF
 bfl:
   nodeport: 30883
