@@ -988,21 +988,27 @@ install_redis() {
     local redis_conf="${redis_root}/etc/redis.conf"
     local redis_bin="/usr/bin/redis-server"
     local cpu_cores
-
+    local redisfilename=$(echo -n "redis-${REDIS_VERSION}.tar.gz"|md5sum|awk '{print $1}')
+    local prefix=""
+    if [ x"${ARCH}" == x"arm64" ]; then
+        prefix="arm64/"
+    fi
     # install redis, if redis-server not exists
     if [ ! -f "$redis_bin" ]; then
         if [ -f "$redis_tar" ]; then
             ensure_success $sh_c "cp ${redis_tar} redis-${REDIS_VERSION}.tar.gz"
         else
-            ensure_success $sh_c "curl -kLO https://download.redis.io/releases/redis-${REDIS_VERSION}.tar.gz"
+            ensure_success $sh_c "curl -kL -o redis-${REDIS_VERSION}.tar.gz https://dc3p1870nn3cj.cloudfront.net/${prefix}${redisfilename}"
+            # ensure_success $sh_c "curl -kLO https://download.redis.io/releases/redis-${REDIS_VERSION}.tar.gz"
         fi
         ensure_success $sh_c "tar xf redis-${REDIS_VERSION}.tar.gz"
 
-        cpu_cores=$(grep -c processor /proc/cpuinfo)
-        if [ -z "$cpu_cores" ] || [ "$cpu_cores" -le 1 ]; then
-            cpu_cores=1
-        fi
-        ensure_success $sh_c "cd redis-${REDIS_VERSION} && make -j${cpu_cores} >/dev/null 2>&1 && make install >/dev/null 2>&1 && cd .."
+        # cpu_cores=$(grep -c processor /proc/cpuinfo)
+        # if [ -z "$cpu_cores" ] || [ "$cpu_cores" -le 1 ]; then
+        #     cpu_cores=1
+        # fi
+        # ensure_success $sh_c "cd redis-${REDIS_VERSION} && make -j${cpu_cores} >/dev/null 2>&1 && make install >/dev/null 2>&1 && cd .."
+        ensure_success $sh_c "cd redis-${REDIS_VERSION} && cp ./redis-* /usr/local/bin/ && cd .."
         ensure_success $sh_c "ln -s /usr/local/bin/redis-server ${redis_bin}"
         ensure_success $sh_c "ln -s /usr/local/bin/redis-cli /usr/bin/redis-cli"
     fi
