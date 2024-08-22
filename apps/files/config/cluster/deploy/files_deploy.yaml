@@ -48,13 +48,17 @@ spec:
             runAsNonRoot: false
             runAsUser: 0
           volumeMounts:
-          - name: fb-data
-            mountPath: /appdata
+            - name: userspace-dir
+              mountPath: /data
+            - name: fb-data
+              mountPath: /appdata
+            - name: upload-appdata
+              mountPath: /appcache
           command:
           - sh
           - -c
           - |
-            chown -R 1000:1000 /appdata 
+            chown -R 1000:1000 /appdata; chown -R 1000:1000 /appcache; chown -R 1000:1000 /data
       containers:
         - name: gateway
           image: beclab/appdata-gateway:0.1.15
@@ -66,7 +70,7 @@ spec:
             - containerPort: 8080
           env:
             - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.30'
+              value: 'beclab/files-server:v0.2.31'
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -93,7 +97,7 @@ spec:
             mountPath: /appdata
 
         - name: files
-          image: beclab/files-server:v0.2.30
+          image: beclab/files-server:v0.2.31
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -138,13 +142,17 @@ spec:
 #            - name: ZINC_INDEX
 #              value: os-system_zinc-files
             - name: WATCH_DIR
-              value: /Home/Documents
+              value: '/Home,/Data'
             - name: FS_TYPE
               value: {{ .Values.fs_type }}
             - name: PATH_PREFIX
               value: ''
             - name: ROOT_PREFIX
               value: /data
+            - name: CACHE_ROOT_PATH
+              value: ''
+            - name: CONTENT_PATH
+              value: /Home/Documents
             - name: REDIS_HOST
               value: redis-cluster-proxy.os-system
             - name: REDIS_PORT
@@ -304,7 +312,7 @@ spec:
             chown -R 1000:1000 /appdata 
       containers:
         - name: files
-          image: beclab/files-server:v0.2.30
+          image: beclab/files-server:v0.2.31
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
