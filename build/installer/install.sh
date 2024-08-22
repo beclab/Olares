@@ -63,7 +63,7 @@ echo ""
 if command -v tar &>/dev/null; then
     sudo rm -rf ${foldername} && mkdir -p ${foldername} && cd ${foldername} && tar -xzf "../${filename}"
 
-    CLI_VERSION="0.1.12"
+    CLI_VERSION="0.1.13"
     CLI_FILE="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
     if [ x"${os_type}" == x"Darwin" ]; then
         CLI_FILE="terminus-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"

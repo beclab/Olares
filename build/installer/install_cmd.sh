@@ -204,7 +204,7 @@ system_service_active() {
 }
 
 precheck_os() {
-    local ip os_type os_arch
+    local os_type os_arch
 
     # check os type and arch and os vesion
     os_type=$(uname -s)
@@ -234,8 +234,15 @@ precheck_os() {
         log_fatal "unsupported os version '${os_verion}'"
     fi
 
+    OS_ARCH="$os_arch"
+
+    if [ x"$PREPARED" == x"1" ]; then
+        precheck_localip
+        return
+    fi
+
     if [[ -f /boot/cmdline.txt || -f /boot/firmware/cmdline.txt ]]; then
-     # raspbian 
+    # raspbian 
         SHOULD_RETRY=1
 
         if ! command_exists iptables; then 
@@ -251,25 +258,26 @@ precheck_os() {
             log_fatal "cpu or memory cgroups disabled, please edit /boot/cmdline.txt or /boot/firmware/cmdline.txt and reboot to enable it."
         fi
     fi
-
+    
     # try to resolv hostname
     ensure_success $sh_c "hostname -i >/dev/null"
 
-    local badHostname
-    badHostname=$(echo "$HOSTNAME" | grep -E "[A-Z]")
-    if [ x"$badHostname" != x"" ]; then
-        log_fatal "please set the hostname with lowercase ['${badHostname}']"
-    fi
+    precheck_localip
 
-    ip=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/icmp_seq/{print $2}')
-    printf "%s\t%s\n\n" "$ip" "$HOSTNAME"
+    # local badHostname
+    # badHostname=$(echo "$HOSTNAME" | grep -E "[A-Z]")
+    # if [ x"$badHostname" != x"" ]; then
+    #     log_fatal "please set the hostname with lowercase ['${badHostname}']"
+    # fi
 
-    if [[ x"$ip" == x"" || "$ip" == @("172.17.0.1"|"127.0.0.1"|"127.0.1.1") || ! "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        log_fatal "incorrect ip for hostname '$HOSTNAME', please check"
-    fi
+    # ip=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/icmp_seq/{print $2}')
+    # printf "%s\t%s\n\n" "$ip" "$HOSTNAME"
 
-    local_ip="$ip"
-    OS_ARCH="$os_arch"
+    # if [[ x"$ip" == x"" || "$ip" == @("172.17.0.1"|"127.0.0.1"|"127.0.1.1") || ! "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    #     log_fatal "incorrect ip for hostname '$HOSTNAME', please check"
+    # fi
+
+    # local_ip="$ip"
 
     # disable local dns
     case "$lsb_dist" in
@@ -343,6 +351,26 @@ precheck_os() {
     $sh_c "$ntpdate -b -u pool.ntp.org"
     $sh_c "$hwclock -w"
 }
+
+precheck_localip() {
+    local ip
+    local badHostname
+
+    badHostname=$(echo "$HOSTNAME" | grep -E "[A-Z]")
+    if [ x"$badHostname" != x"" ]; then
+        log_fatal "please set the hostname with lowercase ['${badHostname}']"
+    fi
+
+    ip=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/icmp_seq/{print $2}')
+    printf "%s\t%s\n\n" "$ip" "$HOSTNAME"
+
+    if [[ x"$ip" == x"" || "$ip" == @("172.17.0.1"|"127.0.0.1"|"127.0.1.1") || ! "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        log_fatal "incorrect ip for hostname '$HOSTNAME', please check"
+    fi
+
+    local_ip="$ip"
+}
+
 
 is_debian() {
     lsb_release=$(lsb_release -d 2>&1 | awk -F'\t' '{print $2}')
@@ -419,6 +447,9 @@ is_wsl(){
 }
 
 install_deps() {
+    if [ x"$PREPARED" == x"1" ]; then
+        return
+    fi
     case "$lsb_dist" in
         ubuntu|debian|raspbian)
             pre_reqs="apt-transport-https ca-certificates curl"
@@ -450,6 +481,10 @@ install_deps() {
 }
 
 config_system() {
+    if [ x"$PREPARED" == x"1" ]; then
+        return
+    fi
+
     local ntpdate hwclock
     natgateway=""
 
@@ -1512,7 +1547,7 @@ install_containerd(){
 }
 
 install_k8s_ks() {
-    CLI_VERSION=0.1.12
+    CLI_VERSION=0.1.13
     ensure_success $sh_c "mkdir -p /etc/kke"
     local cli_name="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
     if [ ! -f "${BASE_DIR}/${cli_name}" ]; then
@@ -2097,45 +2132,48 @@ install_gpu(){
         return
     fi
 
-    if [[ $(is_wsl) -eq 0 ]]; then
-        if [[ "$distribution" =~ "ubuntu" ]]; then
-            case "$distribution" in
-                ubuntu2404)
-                    local u24_cude_keyring_deb="${BASE_DIR}/components/ubuntu2404_cuda-keyring_1.1-1_all.deb"
-                    if [ -f "$u24_cude_keyring_deb" ]; then
-                        ensure_success $sh_c "cp ${u24_cude_keyring_deb} cuda-keyring_1.1-1_all.deb"
-                    else 
-                        ensure_success $sh_c "wget https://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64/cuda-keyring_1.1-1_all.deb"
-                    fi
-                    ensure_success $sh_c "dpkg -i cuda-keyring_1.1-1_all.deb"
-                    ;;
-                ubuntu2204|ubuntu2004)
-                    local cude_keyring_deb="${BASE_DIR}/components/${distribution}_cuda-keyring_1.0-1_all.deb"
-                    if [ -f "$cude_keyring_deb" ]; then
-                        ensure_success $sh_c "cp ${cude_keyring_deb} cuda-keyring_1.0-1_all.deb"
-                    else
-                        ensure_success $sh_c "wget https://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64/cuda-keyring_1.0-1_all.deb"
-                    fi
-                    ensure_success $sh_c "dpkg -i cuda-keyring_1.0-1_all.deb"
-                    ;;
-                *)
-                    ;;
-            esac
-        fi
-        
-        ensure_success $sh_c "apt-get update"
 
-        ensure_success $sh_c "apt-get -y install cuda-12-1"
-        ensure_success $sh_c "apt-get -y install nvidia-kernel-open-545"
-        ensure_success $sh_c "apt-get -y install nvidia-driver-545"
+    if [ x"$PREPARED" != x"1" ]; then
+        if [ $(is_wsl) -eq 0 ]; then
+            if [[ "$distribution" =~ "ubuntu" ]]; then
+                case "$distribution" in
+                    ubuntu2404)
+                        local u24_cude_keyring_deb="${BASE_DIR}/components/ubuntu2404_cuda-keyring_1.1-1_all.deb"
+                        if [ -f "$u24_cude_keyring_deb" ]; then
+                            ensure_success $sh_c "cp ${u24_cude_keyring_deb} cuda-keyring_1.1-1_all.deb"
+                        else 
+                            ensure_success $sh_c "wget https://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64/cuda-keyring_1.1-1_all.deb"
+                        fi
+                        ensure_success $sh_c "dpkg -i cuda-keyring_1.1-1_all.deb"
+                        ;;
+                    ubuntu2204|ubuntu2004)
+                        local cude_keyring_deb="${BASE_DIR}/components/${distribution}_cuda-keyring_1.0-1_all.deb"
+                        if [ -f "$cude_keyring_deb" ]; then
+                            ensure_success $sh_c "cp ${cude_keyring_deb} cuda-keyring_1.0-1_all.deb"
+                        else
+                            ensure_success $sh_c "wget https://developer.download.nvidia.com/compute/cuda/repos/$distribution/x86_64/cuda-keyring_1.0-1_all.deb"
+                        fi
+                        ensure_success $sh_c "dpkg -i cuda-keyring_1.0-1_all.deb"
+                        ;;
+                    *)
+                        ;;
+                esac
+            fi
+            
+            ensure_success $sh_c "apt-get update"
+
+            ensure_success $sh_c "apt-get -y install cuda-12-1"
+            ensure_success $sh_c "apt-get -y install nvidia-kernel-open-545"
+            ensure_success $sh_c "apt-get -y install nvidia-driver-545"
+        fi
+
+        distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+        ensure_success $sh_c "curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | apt-key add -"
+        ensure_success $sh_c "curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | tee /etc/apt/sources.list.d/libnvidia-container.list"
+        ensure_success $sh_c "apt-get update && sudo apt-get install -y nvidia-container-toolkit jq"
     fi
 
-    distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-    ensure_success $sh_c "curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | apt-key add -"
-    ensure_success $sh_c "curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | tee /etc/apt/sources.list.d/libnvidia-container.list"
-    ensure_success $sh_c "apt-get update && sudo apt-get install -y nvidia-container-toolkit jq"
-
-    if [ x"$KUBE_TYPE" == x"k3s" ]; then
+    if [[ x"$KUBE_TYPE" == x"k3s" && x"$PREPARED" != x"1" ]]; then
         if [[ $(is_wsl) -eq 1 ]]; then
             local real_driver=$($sh_c "find /usr/lib/wsl/drivers/ -name libcuda.so.1.1|head -1")
             echo "found cuda driver in $real_driver"
@@ -2167,8 +2205,11 @@ EOF
         fi
     fi
     
-    ensure_success $sh_c "nvidia-ctk runtime configure --runtime=containerd --set-as-default"
-    ensure_success $sh_c "systemctl restart containerd"
+    if [ x"$PREPARED" != x"1" ]; then
+        ensure_success $sh_c "nvidia-ctk runtime configure --runtime=containerd --set-as-default"
+        ensure_success $sh_c "systemctl restart containerd"
+    fi
+    
 
     check_ksredis
     check_kscm
@@ -2222,6 +2263,7 @@ Main() {
     [[ -z $KUBE_TYPE ]] && KUBE_TYPE="k3s"
     # [[ ! -f $BASE_DIR/.installed ]] && touch $BASE_DIR/.installed
     [[ ! -f /var/run/lock/.installed ]] && touch /var/run/lock/.installed
+    [[ -f /var/run/lock/.prepared ]] && PREPARED=1
 
     log_info 'Start to Install Terminus ...\n'
     get_distribution
