@@ -38,6 +38,7 @@ mv ${BASE_DIR}/../.manifest images
 
 if [ -d ${BASE_DIR}/../.dependencies/components ]; then
     mv ${BASE_DIR}/../.dependencies/components components
+    mv ./components/terminus-cli*.tar.gz ./
 fi
 if [ -d ${BASE_DIR}/../.dependencies/pkg ]; then
     mv ${BASE_DIR}/../.dependencies/pkg pkg
