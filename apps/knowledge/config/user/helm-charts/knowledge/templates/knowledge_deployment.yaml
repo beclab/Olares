@@ -295,7 +295,7 @@ spec:
           path: {{ .Values.userspace.userData }}/Documents
       - name: juicefs
         hostPath:
-          type: Directory
+          type: DirectoryOrCreate
           path: {{ .Values.userspace.appData }}/rss/data
 
 ---
