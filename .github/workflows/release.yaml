@@ -103,7 +103,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: 'us-east-1'
         run: |
-          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz s3://terminus-os-install/install-wizard-${{ github.event.inputs.tags }}-arm64.tar.gz --acl=public-read
+          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz s3://terminus-os-install/install-wizard-v${{ github.event.inputs.tags }}-arm64.tar.gz --acl=public-read
 
   release:
     runs-on: ubuntu-latest
