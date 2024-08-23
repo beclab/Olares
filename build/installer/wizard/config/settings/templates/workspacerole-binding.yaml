@@ -5,9 +5,9 @@ kind: WorkspaceRoleBinding
 metadata:
   generation: 1
   labels:
-    iam.kubesphere.io/user-ref: {{.Values.user.name}}
+    iam.kubesphere.io/user-ref: '{{.Values.user.name}}'
     kubesphere.io/workspace: system-workspace
-  name: {{.Values.user.name}}
+  name: '{{.Values.user.name}}'
 roleRef:
   apiGroup: iam.kubesphere.io
   kind: WorkspaceRole
@@ -15,4 +15,4 @@ roleRef:
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: User
-  name: {{.Values.user.name}}
+  name: '{{.Values.user.name}}'

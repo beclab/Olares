@@ -4,7 +4,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    kubesphere.io/creator: {{ .Values.user.name }}
+    kubesphere.io/creator: '{{ .Values.user.name }}'
   finalizers:
   - finalizers.kubesphere.io/namespaces
   labels:

@@ -6,8 +6,8 @@ metadata:
   creationTimestamp: "2022-09-26T12:19:42Z"
   generation: 1
   labels:
-    iam.kubesphere.io/user-ref: {{ .Values.user.name }}
-  name: {{ .Values.user.name }}
+    iam.kubesphere.io/user-ref: '{{ .Values.user.name }}'
+  name: '{{ .Values.user.name }}'
 roleRef:
   apiGroup: iam.kubesphere.io
   kind: GlobalRole
@@ -15,4 +15,4 @@ roleRef:
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: User
-  name: {{ .Values.user.name }}
+  name: '{{ .Values.user.name }}'

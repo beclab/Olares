@@ -4,7 +4,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   labels:
-    iam.kubesphere.io/user-ref: {{ .Values.user.name }}
+    iam.kubesphere.io/user-ref: '{{ .Values.user.name }}'
   name: {{ .Values.user.name }}-{{ .Values.namespace.role }}
   namespace: {{ .Values.namespace.name }}
 roleRef:
@@ -14,4 +14,4 @@ roleRef:
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: User
-  name: {{ .Values.user.name }}
+  name: '{{ .Values.user.name }}'
