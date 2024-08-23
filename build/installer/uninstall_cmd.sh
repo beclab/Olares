@@ -88,7 +88,7 @@ remove_cluster(){
     ensure_success $sh_c "tar xvf ${BASE_DIR}/terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz -C ${BASE_DIR}"
     ensure_success $sh_c "chmod +x ${BASE_DIR}/terminus-cli"
 
-    if [ -z "$forceUninstall" ]; then
+    if [[ -z "$forceUninstall" || x"$PREPARED" != x"1" ]]; then
         echo
         read -r -p "Are you sure to delete this cluster? [yes/no]: " ans </dev/tty
 
@@ -102,18 +102,26 @@ remove_cluster(){
       forceDeleteCache="true"
     fi
 
+    local extra
+    if [ x"$PREPARED" == x"1" ]; then
+        extra=" --quiet "
+    else
+        extra=" --storage-type=${storage} --storage-bucket=${s3_bucket} "
+    fi
 
-    $sh_c "export DELETE_CACHE=${forceDeleteCache} && export TERMINUS_IS_CLOUD_VERSION=${version} && ${BASE_DIR}/terminus-cli terminus uninstall --delete-cri --storage-type=${storage} --storage-bucket=${s3_bucket}"
+    $sh_c "export DELETE_CACHE=${forceDeleteCache} && export TERMINUS_IS_CLOUD_VERSION=${version} && ${BASE_DIR}/terminus-cli terminus uninstall ${extra}"
 
     [ -f $KKE_FILE ] && $sh_c "${RM} -f $KKE_FILE"
 }
 
 set -o pipefail
-set -e
+# set -e
 
 if [ ! -f '/var/run/lock/.installed' ]; then
     exit 0
 fi
+
+[[ -f /var/run/lock/.prepared ]] && PREPARED=1
 
 get_shell_exec
 precheck_os
@@ -123,14 +131,20 @@ INSTALL_DIR=/tmp/install_log
 [[ -d ${INSTALL_DIR} ]] && $sh_c "${RM} -rf ${INSTALL_DIR}" 
 mkdir -p ${INSTALL_DIR} && cd ${INSTALL_DIR}
 
-log_info 'Uninstalling OS ...'
-remove_cluster
+Main() {
+    log_info 'Uninstalling OS ...'
+    remove_cluster
 
-cd -
-$sh_c "${RM} -rf /tmp/install_log"
-[[ -d install-wizard ]] && ${RM} -rf install-wizard
-set +o pipefail
-ls |grep install-wizard*.tar.gz | while read ar; do  ${RM} -f ${ar}; done
+    cd -
+    $sh_c "${RM} -rf /tmp/install_log"
+    [[ -d install-wizard ]] && ${RM} -rf install-wizard
+    set +o pipefail
+    ls |grep install-wizard*.tar.gz | while read ar; do  ${RM} -f ${ar}; done
 
-${RM} -rf /var/run/lock/.installed
-log_info 'Uninstall OS success! '
+    ${RM} -rf /var/run/lock/.installed
+    log_info 'Uninstall OS success! '
+}
+
+
+
+Main | tee ${BASE_DIR}/uninstall.log
