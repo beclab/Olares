@@ -101,20 +101,6 @@ spec:
         fsGroup: 1000
 
       initContainers:
-      - name: init-data
-        image: busybox:1.28
-        securityContext:
-          privileged: true
-          runAsNonRoot: false
-          runAsUser: 0
-        volumeMounts:
-        - name: juicefs
-          mountPath: /juicefs
-        command:
-        - sh
-        - -c
-        - |
-          chown -R 1000:1000 /juicefs
       - name: init-container
         image: 'postgres:16.0-alpine3.18'
         command:
@@ -234,69 +220,13 @@ spec:
           limits:
             cpu: "800m"
             memory: 400Mi
-      - name: sync
-        image: "beclab/recommend-sync:v0.0.9"
-        securityContext:
-          allowPrivilegeEscalation: false
-          runAsUser: 1000
-        env:
-        - name: TERMIUS_USER_NAME
-          value: "{{ .Values.bfl.username }}"
-        - name: JUICEFS_ROOT_DIRECTORY
-          value: /juicefs
-        - name: KNOWLEDGE_BASE_API_URL
-          value: http://127.0.0.1:3010
-        - name: PG_HOST
-          value: citus-master-svc.user-system-{{ .Values.bfl.username }}
-        - name: PG_USERNAME
-          value: knowledge_{{ .Values.bfl.username }}
-        - name: PG_PASSWORD
-          value: {{ $pg_password | b64dec }}
-        - name: PG_DATABASE
-          value: user_space_{{ .Values.bfl.username }}_knowledge
-        - name: PG_PORT
-          value: "5432"
-        - name: TERMINUS_RECOMMEND_REDIS_ADDR
-          valueFrom:
-            configMapKeyRef:
-              name: knowledge-secrets-auth
-              key: redis_addr
-        - name: TERMINUS_RECOMMEND_REDIS_PASSOWRD
-          valueFrom:
-            configMapKeyRef:
-              name: knowledge-secrets-auth
-              key: redis_password
-        volumeMounts:
-        - name: juicefs
-          mountPath: /juicefs
-       
-      - name: crawler
-        image: "beclab/recommend-crawler:v0.0.9"
-        securityContext:
-          allowPrivilegeEscalation: false
-          runAsUser: 1000
-        env:
-        - name: TERMIUS_USER_NAME
-          value: "{{ .Values.bfl.username }}"
-        - name: KNOWLEDGE_BASE_API_URL
-          value: http://127.0.0.1:3010
-        resources:
-          requests:
-            cpu: 20m
-            memory: 50Mi
-          limits:
-            cpu: "800m"
-            memory: 800Mi
 
       volumes:
       - name: watch-dir
         hostPath:
           type: Directory
           path: {{ .Values.userspace.userData }}/Documents
-      - name: juicefs
-        hostPath:
-          type: DirectoryOrCreate
-          path: {{ .Values.userspace.appData }}/rss/data
+      
 
 ---
 apiVersion: v1
