@@ -4,6 +4,7 @@
 
 set -o pipefail
 
+SUDO=$(command -v sudo)
 export VERSION="#__VERSION__"
 if [ "x${VERSION}" = "x" ]; then
   echo "Unable to get latest Install-Wizard version. Set VERSION env var and re-run. For example: export VERSION=1.0.0"
@@ -61,7 +62,7 @@ echo "Install-Wizard ${VERSION} Download Complete!"
 echo ""
 
 if command -v tar &>/dev/null; then
-    sudo rm -rf ${foldername} && mkdir -p ${foldername} && cd ${foldername} && tar -xzf "../${filename}"
+    ${SUDO} rm -rf ${foldername} && mkdir -p ${foldername} && cd ${foldername} && tar -xzf "../${filename}"
 
     CLI_VERSION="0.1.13"
     CLI_FILE="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
