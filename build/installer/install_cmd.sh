@@ -492,7 +492,8 @@ is_wsl(){
 
 is_pve(){
     pve=$(uname -a 2>&1)
-    if [[ ${pve} == *-pve* ]]; then
+    pveversion=$(command -v pveversion)
+    if [[ ${pve} == *-pve* || ! -z $pveversion ]]; then
         echo 1
         return
     fi
@@ -2364,6 +2365,8 @@ Main() {
     log_info 'All done\n'
 }
 
-Main | tee install.log
+touch ${BASE_DIR}/install.log
+ln -s ${BASE_DIR}/install.log /tmp/install_log/install.log
+Main | tee ${BASE_DIR}/install.log
 
 exit
