@@ -88,7 +88,8 @@ remove_cluster(){
     ensure_success $sh_c "tar xvf ${BASE_DIR}/terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz -C ${BASE_DIR}"
     ensure_success $sh_c "chmod +x ${BASE_DIR}/terminus-cli"
 
-    if [[ -z "$forceUninstall" || x"$PREPARED" != x"1" ]]; then
+    if [ x"$PREPARED" != x"1" ]; then
+      if [[ -z "$forceUninstall" ]; then
         echo
         read -r -p "Are you sure to delete this cluster? [yes/no]: " ans </dev/tty
 
@@ -96,6 +97,7 @@ remove_cluster(){
             echo "exiting..."
             exit
         fi
+      fi
     fi
 
     if [ ! -z "$forceUninstall" ]; then
