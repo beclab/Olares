@@ -546,7 +546,7 @@ prepare_storage() {
 }
 
 install_juicefs() {
-    JFS_VERSION="v11.1.0"
+    JFS_VERSION="v11.1.1"
 
     log_info 'start to install juicefs'
     local juicefs_data="${TERMINUS_ROOT}/data/juicefs"

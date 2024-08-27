@@ -405,7 +405,7 @@ function upgrade_ksapi(){
 
 function upgrade_jfs(){
     local users=$@
-    local JFS_VERSION="11.1.0"
+    local JFS_VERSION="11.1.1"
     local current_jfs_version=$(/usr/local/bin/juicefs --version|awk '{print $3}'|awk -F'+' '{print $1}')
 
     if [ "x${JFS_VERSION}" != "x${current_jfs_version}" ]; then

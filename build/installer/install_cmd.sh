@@ -1210,7 +1210,7 @@ _END
 }
 
 install_juicefs() {
-    JFS_VERSION="v11.1.0"
+    JFS_VERSION="v11.1.1"
 
     log_info 'start to install juicefs'
 

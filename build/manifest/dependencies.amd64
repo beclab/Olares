@@ -9,7 +9,7 @@ https://github.com/beclab/minio-operator/releases/download/v0.0.1/minio-operator
 
 https://download.redis.io/releases/redis-5.0.14.tar.gz,redis-5.0.14.tar.gz
 
-https://github.com/beclab/juicefs-ext/releases/download/v11.1.0/juicefs-v11.1.0-linux-amd64.tar.gz,juicefs-v11.1.0-linux-amd64.tar.gz
+https://github.com/beclab/juicefs-ext/releases/download/v11.1.1/juicefs-v11.1.1-linux-amd64.tar.gz,juicefs-v11.1.1-linux-amd64.tar.gz
 
 https://github.com/beclab/velero/releases/download/v1.11.3/velero-v1.11.3-linux-amd64.tar.gz,velero-v1.11.3-linux-amd64.tar.gz
 
