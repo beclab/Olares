@@ -89,7 +89,7 @@ remove_cluster(){
     ensure_success $sh_c "chmod +x ${BASE_DIR}/terminus-cli"
 
     if [ x"$PREPARED" != x"1" ]; then
-      if [[ -z "$forceUninstall" ]; then
+      if [ -z "$forceUninstall" ]; then
         echo
         read -r -p "Are you sure to delete this cluster? [yes/no]: " ans </dev/tty
 
