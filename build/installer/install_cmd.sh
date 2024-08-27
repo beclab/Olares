@@ -1086,18 +1086,13 @@ install_redis() {
     local redis_conf="${redis_root}/etc/redis.conf"
     local redis_bin="/usr/bin/redis-server"
     local cpu_cores
-    local redisfilename=$(echo -n "redis-${REDIS_VERSION}.tar.gz"|md5sum|awk '{print $1}')
-    local prefix=""
-    if [ x"${ARCH}" == x"arm64" ]; then
-        prefix="arm64/"
-    fi
+
     # install redis, if redis-server not exists
     if [ ! -f "$redis_bin" ]; then
         if [ -f "$redis_tar" ]; then
             ensure_success $sh_c "cp ${redis_tar} redis-${REDIS_VERSION}.tar.gz"
         else
-            ensure_success $sh_c "curl -kL -o redis-${REDIS_VERSION}.tar.gz https://dc3p1870nn3cj.cloudfront.net/${prefix}${redisfilename}"
-            # ensure_success $sh_c "curl -kLO https://download.redis.io/releases/redis-${REDIS_VERSION}.tar.gz"
+            ensure_success $sh_c "curl -kL -o redis-${REDIS_VERSION}.tar.gz https://dc3p1870nn3cj.cloudfront.net/redis-${REDIS_VERSION}_linux_${ARCH}.tar.gz"
         fi
         ensure_success $sh_c "tar xf redis-${REDIS_VERSION}.tar.gz"
 
