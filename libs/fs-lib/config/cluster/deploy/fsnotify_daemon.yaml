@@ -22,7 +22,7 @@ spec:
       serviceAccount: os-internal
       containers:
       - name: daemon
-        image: beclab/fsnotify-daemon:0.1.2
+        image: beclab/fsnotify-daemon:0.1.3
         imagePullPolicy: IfNotPresent
         env:
         - name: REDIS_PASSWORD
