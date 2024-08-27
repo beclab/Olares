@@ -236,7 +236,7 @@ https://docs.jointerminus.com/developer/contribute/terminus-os.html
 
 * [**Github Discussion**](https://github.com/beclab/terminus/discussions). Best for sharing feedback and asking questions.
 * [**GitHub Issues**](https://github.com/beclab/terminus/issues). Best for filing bugs you encounter using Terminus and submitting feature proposals. 
-* [**Discord**](https://discord.gg/ShjkCBs2). Best for sharing anything Terminus.
+* [**Discord**](https://discord.com/invite/BzfqrgQPDK). Best for sharing anything Terminus.
 
 ## Staying ahead  
 
