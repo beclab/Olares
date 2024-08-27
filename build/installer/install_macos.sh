@@ -153,7 +153,7 @@ get_auth_status(){
 }
 
 get_profile_status(){
-    $sh_c "${KUBECTL} get pod  -n user-space-${username} -l 'app=profile' -o jsonpath='{.items[*].status.phase}'"
+    $sh_c "${KUBECTL} get pod  -n user-space-${username} -l 'app=system-frontend' -o jsonpath='{.items[*].status.phase}'"
 }
 
 get_desktop_status(){

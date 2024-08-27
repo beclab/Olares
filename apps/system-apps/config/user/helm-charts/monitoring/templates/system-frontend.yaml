@@ -30,6 +30,25 @@ spec:
       targetPort: 82
 
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: profile-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: system-frontend
+  ports:
+    - name: "profile-editor"
+      protocol: TCP
+      port: 80
+      targetPort: 83
+    - name: "profile-preview"
+      protocol: TCP
+      port: 3000
+      targetPort: 8090
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,11 +61,11 @@ metadata:
     applications.app.bytetrade.io/group: 'true'
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
-    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png"}'
-    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub"}'
-    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1"}'
+    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png"}'
+    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile"}'
+    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1"}'
     applications.app.bytetrade.io/policies: '{"dashboard":{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}}'
-    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard"}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub"}]}'
+    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard"}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub"}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile"}]}'
 spec:
   replicas: 1
   selector:
@@ -120,6 +139,30 @@ spec:
           volumeMounts:
             - mountPath: /www
               name: www-dir
+        - name: profile-editor-init
+          image: beclab/profile-editor:v0.3.23
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /www/profile-editor
+              cp -r /app/* /www/profile-editor
+          volumeMounts:
+            - mountPath: /www
+              name: www-dir
+        - name: profile-preview-init
+          image: beclab/profile-preview:v0.3.23
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /www/profile-preview
+              cp -r /app/* /www/profile-preview
+          volumeMounts:
+            - mountPath: /www
+              name: www-dir
       containers:
         - name: terminus-envoy-sidecar
           image: bytetrade/envoy:v1.25.11
@@ -149,6 +192,8 @@ spec:
           ports:
             - containerPort: 81
             - containerPort: 82
+            - containerPort: 83
+            - containerPort: 8090
           command:
             - /bin/sh
             - -c
@@ -168,6 +213,12 @@ spec:
             - name: system-frontend-nginx-config
               mountPath: /etc/nginx/conf.d/dashboard-control-hub.conf
               subPath: dashboard-control-hub.conf
+            - name: system-frontend-nginx-config
+              mountPath: /etc/nginx/conf.d/profile-preview.conf
+              subPath: profile-preview.conf
+            - name: system-frontend-nginx-config
+              mountPath: /etc/nginx/conf.d/profile-editor.conf
+              subPath: profile-editor.conf
           env:
             - name: POD_UID
               valueFrom:
@@ -185,6 +236,25 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+        - name: profile-services
+          image: beclab/profile-services:v0.3.23
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
+          ports:
+            - containerPort: 3020
+          env:
+          - name: OS_SYSTEM_SERVER
+            value: system-server.user-system-{{ .Values.bfl.username }}
+          - name: OS_APP_SECRET
+            value: '{{ .Values.os.profile.appSecret }}'
+          - name: OS_APP_KEY
+            value: {{ .Values.os.profile.appKey }}
+          - name: APP_SERVICE_SERVICE_HOST
+            value: app-service.os-system
+          - name: APP_SERVICE_SERVICE_PORT
+            value: '6755'
       volumes:
         - name: terminus-sidecar-config
           configMap:
@@ -202,6 +272,10 @@ spec:
                 path: nginx.conf
               - key: dashboard-control-hub.conf
                 path: dashboard-control-hub.conf
+              - key: profile-preview.conf
+                path: profile-preview.conf
+              - key: profile-editor.conf
+                path: profile-editor.conf
 
 
 ---
@@ -224,6 +298,33 @@ spec:
         - DeleteSecret?workspace=dashboard
         - UpdateSecret?workspace=dashboard
         - ListSecret?workspace=dashboard
+      version: v1
+status:
+  state: active
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ApplicationPermission
+metadata:
+  name: profile
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: profile
+  appid: profile
+  key: {{ .Values.os.profile.appKey }}
+  secret: {{ .Values.os.profile.appSecret }}
+  permissions:
+    - dataType: datastore
+      group: service.bfl
+      ops:
+        - GetKey
+        - GetKeyPrefix
+        - SetKey
+        - DeleteKey
+      version: v1
+    - dataType: nft
+      group: service.settings
+      ops:
+        - getNFTAddress
       version: v1
 status:
   state: active
@@ -446,4 +547,101 @@ data:
       location ~.*\.(js|css|png|jpg|svg|woff|woff2)$ {
       	add_header Cache-Control "public, max-age=2678400";
       }
+    }
+  profile-preview.conf: |-
+    server {
+    	listen 8090;
+
+    	# Gzip Settings
+    	gzip off;
+    	gzip_disable "msie6";
+    	gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+    	root /www/profile-preview;
+
+
+    	# normal routes
+    	# serve given url and default to index.html if not found
+    	# e.g. /, /user and /foo/bar will return index.html
+    	location / {
+    		try_files $uri $uri/index.html /index.html;
+    		add_header Cache-Control "private,no-cache";
+    		add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+        	expires 0;
+    	}
+
+    	location /api {
+            proxy_pass http://127.0.0.1:3020;
+
+    	  	proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+    	}
+
+    	location ~.*\.(js|css|png|jpg|svg|woff|woff2)$
+        {
+          	add_header Cache-Control "public, max-age=2678400";
+        }
+    }
+  profile-editor.conf: |-
+    upstream SettingsService {
+      server settings-service;
+    }
+    server {
+    	listen 83;
+
+    	# Gzip Settings
+    	gzip off;
+    	gzip_disable "msie6";
+    	gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+    	root /www/profile-editor;
+
+
+    	# normal routes
+    	# serve given url and default to index.html if not found
+    	# e.g. /, /user and /foo/bar will return index.html
+    	location / {
+    		try_files $uri $uri/index.html /index.html;
+    		add_header Cache-Control "private,no-cache";
+    		add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+        	expires 0;
+    	}
+
+    	location /api {
+            proxy_pass http://127.0.0.1:3020;
+
+    	  	proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+    	}
+
+    	location /api/cloud/getNFTAddress {
+            proxy_pass http://SettingsService;
+
+    	  	proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+    	}
+
+    	location /images {
+            proxy_pass http://127.0.0.1:15080;
+
+
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+
+    	location ~.*\.(js|css|png|jpg|svg|woff|woff2)$
+        {
+          	add_header Cache-Control "public, max-age=2678400";
+        }
     }
