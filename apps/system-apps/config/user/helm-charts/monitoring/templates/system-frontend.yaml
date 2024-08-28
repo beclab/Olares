@@ -49,6 +49,21 @@ spec:
       port: 3000
       targetPort: 8090
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wise-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: system-frontend
+  ports:
+    - name: "frontend"
+      protocol: TCP
+      port: 80
+      targetPort: 84
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -61,11 +76,11 @@ metadata:
     applications.app.bytetrade.io/group: 'true'
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
-    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png"}'
-    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile"}'
-    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1"}'
+    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","wise":"https://file.bttcdn.com/appstore/rss/icon.png"}'
+    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","wise":"Wise"}'
+    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","wise":"0.0.1"}'
     applications.app.bytetrade.io/policies: '{"dashboard":{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}}'
-    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard"}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub"}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile"}]}'
+    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard"}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub"}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile"}],"wise":[{"name":"wise", "host":"wise-svc", "port":80,"title":"Wise"}]}'
 spec:
   replicas: 1
   selector:
@@ -163,6 +178,18 @@ spec:
           volumeMounts:
             - mountPath: /www
               name: www-dir
+        - name: wise-init
+          image: beclab/wise:v0.1.42
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /www/wise
+              cp -r /app/* /www/wise
+          volumeMounts:
+            - mountPath: /www
+              name: www-dir
       containers:
         - name: terminus-envoy-sidecar
           image: bytetrade/envoy:v1.25.11
@@ -193,6 +220,7 @@ spec:
             - containerPort: 81
             - containerPort: 82
             - containerPort: 83
+            - containerPort: 84
             - containerPort: 8090
           command:
             - /bin/sh
@@ -207,6 +235,8 @@ spec:
               subPath: envoy.yaml
             - name: www-dir
               mountPath: /www
+            - name: wise-download-dir
+              mountPath: /data/Home/Downloads
             - name: system-frontend-nginx-config
               mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
@@ -219,6 +249,9 @@ spec:
             - name: system-frontend-nginx-config
               mountPath: /etc/nginx/conf.d/profile-editor.conf
               subPath: profile-editor.conf
+            - name: system-frontend-nginx-config
+              mountPath: /etc/nginx/conf.d/wise.conf
+              subPath: wise.conf
           env:
             - name: POD_UID
               valueFrom:
@@ -264,6 +297,10 @@ spec:
                 path: envoy.yaml
         - name: www-dir
           emptyDir: {}
+        - name: wise-download-dir
+          hostPath:
+            type: Directory
+            path: {{ .Values.userspace.userData }}/Downloads
         - name: system-frontend-nginx-config
           configMap:
             name: system-frontend-nginx-config
@@ -276,6 +313,8 @@ spec:
                 path: profile-preview.conf
               - key: profile-editor.conf
                 path: profile-editor.conf
+              - key: wise.conf
+                path: wise.conf
 
 
 ---
@@ -640,6 +679,110 @@ data:
             proxy_set_header X-Forwarded-Host $host;
         }
 
+    	location ~.*\.(js|css|png|jpg|svg|woff|woff2)$
+        {
+          	add_header Cache-Control "public, max-age=2678400";
+        }
+    }
+  wise.conf: |-
+    upstream KnowledgeServer {
+        server rss-svc:3010;
+    }
+
+    upstream RSSServer {
+        server rss-server.os-system:3010;
+    }
+
+    upstream ArgoworkflowsSever {
+        server argoworkflows-svc:2746;
+    }
+
+    server {
+    	listen 84;
+
+
+    	# Gzip Settings
+    	gzip on;
+    	gzip_disable "msie6";
+    	gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+    	root /www/wise;
+
+    	# normal routes
+    	# serve given url and default to index.html if not found
+    	# e.g. /, /user and /foo/bar will return index.html
+    	location / {
+    		try_files $uri $uri/index.html /index.html;
+    		add_header Cache-Control "private,no-cache";
+    		add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+            expires 0;
+    	}
+
+        location /knowledge {
+    		proxy_pass http://KnowledgeServer;
+
+    		add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+    		proxy_set_header            Host $host;
+    		proxy_set_header            X-real-ip $remote_addr;
+    		proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    		add_header X-Frame-Options SAMEORIGIN;
+
+    	}
+
+        location /rss {
+           proxy_pass http://RSSServer;
+
+    		add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+    		proxy_set_header            Host $host;
+    		proxy_set_header            X-real-ip $remote_addr;
+    		proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    		add_header X-Frame-Options SAMEORIGIN;
+        }
+
+    	location /api/v1 {
+           proxy_pass http://ArgoworkflowsSever;
+        }
+
+        location /artifact-files {
+            proxy_pass http://ArgoworkflowsSever;
+        }
+
+        location ~ ^/download/preview/Video/(.*)$
+        {
+          	alias /data/Home/Downloads/Video/$1;
+        }
+
+        location ~ ^/download/preview/Common/(.*)$
+        {
+            alias /data/Home/Downloads/Common/$1;
+        }
+
+        location /videos/ {
+            if ($request_method = 'OPTIONS') {
+                add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+                add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+                add_header Access-Control-Allow-Origin $http_origin;
+                add_header Access-Control-Allow-Credentials true;
+
+                add_header 'Access-Control-Max-Age' 1728000;
+                add_header 'Content-Type' 'text/plain; charset=utf-8';
+                add_header 'Content-Length' 0;
+                return 204;
+            }
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+            add_header Access-Control-Allow-Origin $http_origin;
+            proxy_pass http://media-server-service.os-system:9090;
+        }
+
+    	# # files
+    	# # for all routes matching a dot, check for files and return 404 if not found
+    	# # e.g. /file.js returns a 404 if not found
     	location ~.*\.(js|css|png|jpg|svg|woff|woff2)$
         {
           	add_header Cache-Control "public, max-age=2678400";
