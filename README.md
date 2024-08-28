@@ -11,8 +11,8 @@
 [![License](https://img.shields.io/badge/License-Terminus-darkblue)](https://github.com/beclab/terminus/blob/main/LICENSE.md)
 
 <p>
-  <a href="./README.md"><img alt="Readme 英文版" src="https://img.shields.io/badge/English-FFFFFF"></a>
-  <a href="./README_CN.md"><img alt="Readme 中文版" src="https://img.shields.io/badge/简体中文-FFFFFF"></a>
+  <a href="./README.md"><img alt="Readme in English" src="https://img.shields.io/badge/English-FFFFFF"></a>
+  <a href="./README_CN.md"><img alt="Readme in Chinese" src="https://img.shields.io/badge/简体中文-FFFFFF"></a>
 </p>
 
 </div>
