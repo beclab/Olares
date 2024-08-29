@@ -242,7 +242,7 @@ spec:
 
       containers:
       - name: api
-        image: beclab/bfl:v0.3.37
+        image: beclab/bfl:v0.3.38
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: userspace-dir
