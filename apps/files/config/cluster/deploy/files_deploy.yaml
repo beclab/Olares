@@ -114,6 +114,11 @@ spec:
 #              mountPath: /data/Home/Documents
             - name: upload-appdata
               mountPath: /appcache/
+            
+{{ if .Values.sharedlib }}        
+            - name: shared-lib
+              mountPath: /share
+{{ end }}
           ports:
             - containerPort: 8110
           env:
@@ -239,6 +244,13 @@ spec:
           hostPath:
             path: /terminus/userdata/Cache
             type: Directory
+        
+{{ if .Values.sharedlib }}        
+        - name: shared-lib
+          hostPath:
+            path: {{ .Values.sharedlib }}
+            type: Directory
+{{ end }}            
 
 ---
 apiVersion: v1
