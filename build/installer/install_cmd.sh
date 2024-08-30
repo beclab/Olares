@@ -659,27 +659,18 @@ run_install() {
         k8s_version=v1.22.16-k3s
     fi
     create_cmd="${BASE_DIR}/terminus-cli terminus init --kube $KUBE_TYPE"
-    # create_cmd="./kk create cluster --with-kubernetes $k8s_version --with-kubesphere $ks_version --container-manager containerd"  # --with-addon ${ADDON_CONFIG_FILE}
 
     local extra
 
     # env 'REGISTRY_MIRRORS' is a docker image cache mirrors, separated by commas
-    # if [ x"$REGISTRY_MIRRORS" != x"" ]; then
-    #     extra=" --registry-mirrors $REGISTRY_MIRRORS"
-    # fi
+    if [ x"$REGISTRY_MIRRORS" != x"" ]; then
+        extra=" --registry-mirrors $REGISTRY_MIRRORS"
+    fi
     # env 'PROXY' is a cache proxy server, to download binaries and container images
-    # if [ x"$PROXY" != x"" ]; then
-    #     # download binary with cache proxy
-    #     if [ x"$KUBE_TYPE" != x"k3s" ];then
-    #         ensure_success $sh_c "./kk create phase os"
-    #         ensure_success $sh_c "./kk create phase binary --with-kubernetes $k8s_version --download-cmd 'curl ${CURL_TRY} -kL -o %s %s'"
-    #     else
-    #         create_cmd+=" --download-cmd 'curl ${CURL_TRY} -kL -o %s %s'"
-    #     fi
-
-    #     restore_resolv_conf
-    #     extra=" --registry-mirrors http://${PROXY}:5000"
-    # fi
+    if [ x"$PROXY" != x"" ]; then
+        restore_resolv_conf
+        extra=" --registry-mirrors http://${PROXY}:5000"
+    fi
     create_cmd+=" $extra"
 
     # add env OS_LOCALIP
