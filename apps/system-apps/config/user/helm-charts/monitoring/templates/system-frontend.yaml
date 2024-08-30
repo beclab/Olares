@@ -80,7 +80,7 @@ metadata:
     applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","wise":"Wise"}'
     applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","wise":"0.0.1"}'
     applications.app.bytetrade.io/policies: '{"dashboard":{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}}'
-    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard"}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub"}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile"}],"wise":[{"name":"wise", "host":"wise-svc", "port":80,"title":"Wise"}]}'
+    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"wise":[{"name":"wise", "host":"wise-svc", "port":80,"title":"Wise","windowPushState":true}]}'
 spec:
   replicas: 1
   selector:
@@ -420,7 +420,7 @@ data:
 
     server {
       listen 81;
-      gzip on;
+      gzip off;
       gzip_disable "msie6";
       gzip_min_length 1k;
       gzip_buffers 16 64k;
@@ -498,7 +498,7 @@ data:
 
     server {
       listen 82;
-      gzip on;
+      gzip off;
       gzip_disable "msie6";
       gzip_min_length 1k;
       gzip_buffers 16 64k;
@@ -702,7 +702,7 @@ data:
 
 
     	# Gzip Settings
-    	gzip on;
+    	gzip off;
     	gzip_disable "msie6";
     	gzip_min_length 1k;
         gzip_buffers 16 64k;

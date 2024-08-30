@@ -14,7 +14,7 @@ metadata:
     applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/appstore/icon.png
     applications.app.bytetrade.io/title: Market
     applications.app.bytetrade.io/version: '0.0.1'
-    applications.app.bytetrade.io/entrances: '[{"name":"appstore-service", "host":"appstore-service", "port":80,"title":"Market"}]'
+    applications.app.bytetrade.io/entrances: '[{"name":"appstore-service", "host":"appstore-service", "port":80,"title":"Market","windowPushState":true}]'
 spec:
   replicas: 1
   selector:
@@ -66,7 +66,7 @@ spec:
                 fieldPath: status.podIP
       containers:
       - name: appstore
-        image: beclab/market-frontend:v0.2.12
+        image: beclab/market-frontend:v0.2.13
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80

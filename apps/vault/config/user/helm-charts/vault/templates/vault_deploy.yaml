@@ -15,7 +15,7 @@ metadata:
     applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/vault/icon.png
     applications.app.bytetrade.io/title: Vault
     applications.app.bytetrade.io/version: '0.0.1'
-    applications.app.bytetrade.io/entrances: '[{"name":"vault", "host":"vault-service", "port":80,"title":"Vault"}]'
+    applications.app.bytetrade.io/entrances: '[{"name":"vault", "host":"vault-service", "port":80,"title":"Vault","windowPushState":true}]'
 spec:
   replicas: 1
   strategy:
@@ -71,13 +71,13 @@ spec:
 
       containers:
       - name: vault-frontend
-        image: beclab/vault-frontend:v1.2.23
+        image: beclab/vault-frontend:v1.2.24
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
       
       - name: notification-server
-        image: beclab/vault-notification:v1.2.23
+        image: beclab/vault-notification:v1.2.24
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010

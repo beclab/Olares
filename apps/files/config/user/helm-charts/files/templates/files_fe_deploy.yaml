@@ -31,7 +31,7 @@ metadata:
     applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/files/icon.png
     applications.app.bytetrade.io/title: Files
     applications.app.bytetrade.io/version: '0.0.1'
-    applications.app.bytetrade.io/entrances: '[{"name":"files", "host":"files-service", "port":80,"title":"Files"}]'
+    applications.app.bytetrade.io/entrances: '[{"name":"files", "host":"files-service", "port":80,"title":"Files","windowPushState":true}]'
 spec:
   replicas: 1
   selector:
@@ -200,7 +200,7 @@ spec:
 #        - /filebrowser
 #        - --noauth
       - name: files-frontend
-        image: beclab/files-frontend:v1.2.23
+        image: beclab/files-frontend:v1.2.24
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: false

@@ -65,6 +65,7 @@ spec:
               entrances:
                 description: Entrances []Entrance `json:"entrances,omitempty"`
                 items:
+                  description: Entrance contains details for application entrance
                   properties:
                     authLevel:
                       type: string
@@ -84,6 +85,8 @@ spec:
                       type: integer
                     title:
                       type: string
+                    windowPushState:
+                      type: boolean
                   required:
                   - host
                   - name
