@@ -96,82 +96,73 @@ data:
       underscores_in_headers on;
 
       location /published/:/ {
-        # 检查用户是否已经登录
-        access_by_lua_file login.lua;
+        # access_by_lua_file login.lua;
     
-        # 向后端服务转发请求
         proxy_pass_request_headers on;
         proxy_pass http://127.0.0.1:8000/;
         include proxy.conf;
       }
 
       location /assets/bundles {
-        # 检查用户是否已经登录
-        access_by_lua_file login.lua;
+        # access_by_lua_file login.lua;
     
-        # 向后端服务转发请求
         proxy_pass_request_headers on;
         proxy_pass http://127.0.0.1:3000;
         include proxy.conf;
       }
     
       location /seafhttp/ {
-        # 检查用户是否已经登录
-        access_by_lua_file login.lua;
+        # access_by_lua_file login.lua;
     
-        # 向后端服务转发请求
         proxy_pass_request_headers on;
         proxy_pass http://127.0.0.1:8082/;
         include proxy.conf;
     
-        # 如果需要支持 post multipart form data，可以添加以下配置
         # proxy_set_header Content-Type multipart/form-data;
         # proxy_set_header Content-Length "";
         # proxy_set_body $request_body;
       }
     
       location / {
-        # 检查用户是否已经登录
-        access_by_lua_file login.lua;
+        # access_by_lua_file login.lua;
     
-        # 向后端服务转发请求
         proxy_pass_request_headers on;
         proxy_pass http://127.0.0.1:8000;
         include proxy.conf;
       }    
     }
-  login.lua: |-
-    local headers = ngx.req.get_headers();
-    local username = "";
-
-    for key, value in pairs(headers) do
-      ngx.log(ngx.STDERR, key .. ": " .. value);
-      if key == "x-bfl-user" then
-        username = value;
-      end
-    end
-
-    local cookie = ngx.var.cookie_sfsessionid;
-    ngx.log(ngx.STDERR, cookie);
-    if username ~= "" and (cookie == nil or cookie == '') then
-        local orig_ct = ngx.req.get_headers()["Content-Type"];
-        ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded");
-        local res = ngx.location.capture("/accounts/login/?next=/", {
-            method = ngx.HTTP_POST,
-            body = "login=" .. username .. "@seafile.com&password=abcd123456&next=/"
-        });
-        ngx.req.set_header("Content-Type", orig_ct);
-        if res.status == ngx.HTTP_OK or res.status == ngx.HTTP_MOVED_TEMPORARILY then
-            ngx.log(ngx.STDERR, "login success " .. res.status);
-    
-            local new_cookie = res.header["Set-Cookie"];
-            ngx.log(ngx.STDERR, new_cookie);
-            ngx.req.set_header("Cookie", string.match(new_cookie, "[^;]+"));
-            ngx.header["Set-Cookie"] = new_cookie;
-        else
-            ngx.header["X-Redirected"] = "/";
-        end
-    end
+#  login.lua: |-
+#    local headers = ngx.req.get_headers();
+#    local username = "";
+#
+#    for key, value in pairs(headers) do
+#      ngx.log(ngx.STDERR, key .. ": " .. value);
+#      if key == "x-bfl-user" then
+#        username = value;
+#      end
+#    end
+#
+#    local cookie = ngx.var.cookie_sfsessionid;
+#    ngx.log(ngx.STDERR, cookie);
+#    if username ~= "" and (cookie == nil or cookie == '') then
+#        local orig_ct = ngx.req.get_headers()["Content-Type"];
+#        ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded");
+#        local res = ngx.location.capture("/accounts/login/?next=/", {
+#            method = ngx.HTTP_POST,
+#            body = "login=" .. username .. "@seafile.com&password=abcd123456&next=/"
+#        });
+#        ngx.req.set_header("Content-Type", orig_ct);
+#        if res.status == ngx.HTTP_OK or res.status == ngx.HTTP_MOVED_TEMPORARILY then
+#            ngx.log(ngx.STDERR, "login success " .. res.status);
+#
+#            local new_cookie = res.header["Set-Cookie"];
+#            ngx.log(ngx.STDERR, new_cookie);
+#            ngx.req.set_header("Cookie", string.match(new_cookie, "[^;]+"));
+#            ngx.header["Set-Cookie"] = new_cookie;
+#        else
+#            ngx.header["X-Redirected"] = "/";
+#        end
+#    end
   nginx.conf: |-
     user  nginx;
     worker_processes  auto;
@@ -426,7 +417,7 @@ spec:
 #          protocol: TCP
 
       - name: sync-backend
-        image: beclab/seahub_pgserver:v0.0.10
+        image: beclab/seahub_pgserver:v0.0.11
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: sync-data
@@ -493,9 +484,9 @@ spec:
           - name: seafile-nginx-conf
             mountPath: /etc/nginx/conf.d/default.conf
             subPath: default.conf
-          - name: seafile-nginx-conf
-            mountPath: /etc/nginx/login.lua
-            subPath: login.lua
+#          - name: seafile-nginx-conf
+#            mountPath: /etc/nginx/login.lua
+#            subPath: login.lua
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         imagePullPolicy: IfNotPresent
@@ -523,8 +514,8 @@ spec:
               path: proxy.conf
             - key: default.conf
               path: default.conf
-            - key: login.lua
-              path: login.lua
+#            - key: login.lua
+#              path: login.lua
             - key: seafile.conf
               path: seafile.conf
             - key: ccnet.conf
