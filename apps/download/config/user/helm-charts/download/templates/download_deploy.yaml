@@ -119,6 +119,14 @@ spec:
           value: "1000"
         - name: PGID
           value: "1000"
+        lifecycle:
+          postStart:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  sed -i 's/delete-empty-dir=.*/delete-empty-dir=false/' /config/script.conf
         volumeMounts:
         - name: config-dir
           mountPath: /config
@@ -132,7 +140,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.0.5"
+        image: "beclab/yt-dlp:v0.0.6"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -151,6 +159,8 @@ spec:
           value: "5432"
         - name: PG_DATABASE
           value: user_space_{{ .Values.bfl.username }}_knowledge
+        - name: SETTING_URL
+          value: http://system-server.user-system-{{ .Values.bfl.username }}/legacy/v1alpha1/service.settings/v1/api/cookie/retrieve
         volumeMounts:
         - name: config-dir
           mountPath: /app/config
@@ -165,7 +175,7 @@ spec:
             memory: 300Mi
 
       - name: download-spider
-        image: "beclab/download-spider:v0.0.5"
+        image: "beclab/download-spider:v0.0.6"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -201,7 +211,7 @@ spec:
       - name: download-dir
         hostPath:
           type: DirectoryOrCreate
-          path: {{ .Values.userspace.userData }}/Downloads
+          path: {{ .Values.userspace.userData }}
 
 
 ---

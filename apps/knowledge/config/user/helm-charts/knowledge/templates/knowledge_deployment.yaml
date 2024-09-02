@@ -175,7 +175,7 @@ spec:
             memory: 1Gi
 
       - name: backend-server
-        image: "beclab/recommend-backend:v0.0.9"
+        image: "beclab/recommend-backend:v0.0.10"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -210,6 +210,9 @@ spec:
           value: http://download-svc.user-space-{{ .Values.bfl.username }}:3082/api/v1/get_metadata
         - name: DOWNLOAD_API_URL
           value: http://download-svc.user-space-{{ .Values.bfl.username }}:3080/api/termius/download
+        - name: SETTING_API_URL
+          value: http://system-server.user-system-{{ .Values.bfl.username }}/legacy/v1alpha1/service.settings/v1/api/cookie/retrieve
+        
 
         ports:
         - containerPort: 8080
