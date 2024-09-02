@@ -360,5 +360,7 @@ spec:
     uri: /api/account/retrieve
   - name: GET
     uri: /api/account/all
+  - name: POST
+    uri: /api/cookie/retrieve
 status:
   state: active
