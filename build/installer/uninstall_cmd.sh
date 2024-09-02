@@ -71,7 +71,7 @@ log_info() {
 }
 
 remove_cluster(){
-    CLI_VERSION="0.1.13"
+    CLI_VERSION="0.1.14"
     forceUninstall="${FORCE_UNINSTALL_CLUSTER}"
     forceDeleteCache="false"
 
