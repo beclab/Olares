@@ -147,7 +147,7 @@ spec:
 #            - name: ZINC_INDEX
 #              value: os-system_zinc-files
             - name: WATCH_DIR
-              value: '/Home,/Data'
+              value: '/Home'
             - name: FS_TYPE
               value: {{ .Values.fs_type }}
             - name: PATH_PREFIX
