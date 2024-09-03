@@ -115,30 +115,30 @@ To help you understand how Terminus stands out in the landscape, we've created a
 - 🛠️: **Manual Configuration**, indicates that even users with an engineering background need to refer to tutorials to complete the setup.
 - ❌:  **No**, indicates that the feature is not supported.
 
-|     | Terminus | Synology | TrueNAS | CasaOS | Proxmox | Unraid |
-| --- | --- | --- | --- | --- | --- | --- |
-| Source Code License | Terminus License | Closed | GPL 3.0 | Apache 2.0 | MIT | Closed |
-| Built On | Kubernetes | Linux | Kubernetes | Docker | LXC/VM | Docker |
-| Multi-Node | ✅   | ❌   | ✅   | ❌   | 🛠️ | ❌   | ❌   |
-| Build-in Apps | ✅ (Rich desktop apps) | ✅ (Rich desktop apps) | ❌ (CLI) | ✅ (Simple desktop apps) | ✅ (Dashboard)| ✅ (Dashboard) |
-| Free Domain Name | ✅   | ✅   | ❌   | ❌   | ❌   | ❌   |
-| Auto SSL Certificate | 🚀  | ✅   | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Reverse Proxy | 🚀  | ✅   | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| VPN Management | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Graded App Entrance | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Multi-User Management | ✅ User management <br>🚀 Resource isolation | ✅ User management<br>🛠️ Resource isolation | ✅ User management<br>🛠️ Resource isolation | ❌   | ✅ User management  <br>🛠️ Resource isolation | ✅ User management  <br>🛠️ Resource isolation |
-| Single Login for All Apps | 🚀  | ❌   | ❌   | ❌   | ❌   |  ❌   |
-| Cross-Node Storage | 🚀 (Juicefs+<br>MinIO) | ❌   | ❌   | ❌   | ❌   | ❌   |
-| Database Solution | 🚀 (Built-in cloud-native solution) | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Disaster Recovery | 🚀 (MinIO's [**Erasure Coding**](https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html)**)** | ✅ RAID | ✅ RAID | ✅ RAID | ❌   | ✅ Unraid Storage |
-| Backup | ✅ App Data  <br>✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data |
-| App Sandboxing | ✅   | ❌   | ❌ (K8S's namespace) | ❌   | ❌  | ❌   |
-| App Ecosystem | ✅ (Official + third-party) | ✅ (Majorly official apps) | ✅ (Official + third-party submissions) | ✅ Majorly official apps | ❌  | ✅ (Community app market) |
-| Developer Friendly | ✅ IDE  <br>✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅ CLI  <br>✅ Doc | ✅ CLI  <br>✅ Doc | ✅ SDK  <br>✅ Doc | ✅ Doc |
-| Local LLM Hosting | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Local LLM app development | 🚀 | 🛠️ | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Client Platforms | ✅ Android  <br>✅ iOS  <br>✅ Windows  <br>✅ Mac  <br>✅ Chrome Plugin | ✅ Android  <br>✅ iOS | ❌   | ❌   | ❌  | ❌   |
-| Client Functionality | ✅ (All-in-one client app) | ✅ (14 separate client apps) | ❌   | ❌   | ❌   |  ❌   |
+| | Terminus | Synology | TrueNAS | CasaOS | Unraid |
+| --- | --- | --- | --- | --- | --- |
+| Source Code License | Terminus License | Closed | GPL 3.0 | Apache 2.0 | Closed |
+| Built On | Kubernetes | Linux | Kubernetes | Docker | Docker |
+| Multi-Node | ✅   | ❌   | ✅   | ❌   | ❌   |
+| Build-in Apps | ✅ (Rich desktop apps) | ✅ (Rich desktop apps) | ❌ (CLI) | ✅ (Simple desktop apps) | ✅ (Dashboard) |
+| Free Domain Name | ✅   | ✅   | ❌   | ❌   | ❌   |
+| Auto SSL Certificate | 🚀  | ✅   | 🛠️ | 🛠️ | 🛠️ |
+| Reverse Proxy | 🚀  | ✅   | 🛠️ | 🛠️ | 🛠️ |
+| VPN Management | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
+| Graded App Entrance | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
+| Multi-User Management | ✅ User management <br>🚀 Resource isolation | ✅ User management<br>🛠️ Resource isolation | ✅ User management<br>🛠️ Resource isolation | ❌   | ✅ User management  <br>🛠️ Resource isolation |
+| Single Login for All Apps | 🚀  | ❌   | ❌   | ❌   |  ❌   |
+| Cross-Node Storage | 🚀 (Juicefs+<br>MinIO) | ❌   | ❌   | ❌   | ❌   |
+| Database Solution | 🚀 (Built-in cloud-native solution) | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
+| Disaster Recovery | 🚀 (MinIO's [**Erasure Coding**](https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html)**)** | ✅ RAID | ✅ RAID | ✅ RAID | ✅ Unraid Storage |
+| Backup | ✅ App Data  <br>✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data |
+| App Sandboxing | ✅   | ❌   | ❌ (K8S's namespace) | ❌   | ❌   |
+| App Ecosystem | ✅ (Official + third-party) | ✅ (Majorly official apps) | ✅ (Official + third-party submissions) | ✅ Majorly official apps | ✅ (Community app market) |
+| Developer Friendly | ✅ IDE  <br>✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅ CLI  <br>✅ Doc | ✅ CLI  <br>✅ Doc | ✅ Doc |
+| Local LLM Hosting | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
+| Local LLM app development | 🚀 | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
+| Client Platforms | ✅ Android  <br>✅ iOS  <br>✅ Windows  <br>✅ Mac  <br>✅ Chrome Plugin | ✅ Android  <br>✅ iOS | ❌   | ❌   | ❌   |
+| Client Functionality | ✅ (All-in-one client app) | ✅ (14 separate client apps) | ❌   | ❌   |  ❌   |
 
 ## Getting started
 
