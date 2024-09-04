@@ -242,8 +242,10 @@ spec:
 
       containers:
       - name: api
-        image: beclab/bfl:v0.3.38
+        image: beclab/bfl:v0.3.39
         imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 1000
         volumeMounts:
         - name: userspace-dir
           mountPath: /userspace
@@ -293,7 +295,7 @@ spec:
           value: v0.1.0
 
       - name: ingress
-        image: beclab/bfl-ingress:v0.2.11
+        image: beclab/bfl-ingress:v0.2.12
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: ngxlog
