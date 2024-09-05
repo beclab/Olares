@@ -60,7 +60,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: OWNER
-          value: {{ .Values.bfl.username }}
+          value: "{{ .Values.bfl.username }}"
       - name: proxy
         image: bytetrade/envoy:v1.25.11
         imagePullPolicy: IfNotPresent
