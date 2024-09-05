@@ -63,6 +63,22 @@ spec:
       protocol: TCP
       port: 80
       targetPort: 84
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: headscale-svc
+  namespace: user-space-{{ .Values.bfl.username }}
+spec:
+  selector:
+    app: system-frontend
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: headscale
+      port: 80
+      targetPort: 85
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -76,11 +92,11 @@ metadata:
     applications.app.bytetrade.io/group: 'true'
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
-    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","wise":"https://file.bttcdn.com/appstore/rss/icon.png"}'
-    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","wise":"Wise"}'
-    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","wise":"0.0.1"}'
+    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","wise":"https://file.bttcdn.com/appstore/rss/icon.png","headscale": "https://file.bttcdn.com/appstore/headscale/icon.png"}'
+    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","wise":"Wise","headscale":"Headscale"}'
+    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","wise":"0.0.1","headscale":"0.0.1"}'
     applications.app.bytetrade.io/policies: '{"dashboard":{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}}'
-    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"wise":[{"name":"wise", "host":"wise-svc", "port":80,"title":"Wise","windowPushState":true}]}'
+    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"wise":[{"name":"wise", "host":"wise-svc", "port":80,"title":"Wise","windowPushState":true}],"headscale":[{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true}]}'
 spec:
   replicas: 1
   selector:
@@ -202,6 +218,8 @@ spec:
               containerPort: 15000
             - name: proxy-inbound
               containerPort: 15003
+            - name: tapr
+              containerPort: 15080
           volumeMounts:
             - name: terminus-sidecar-config
               readOnly: true
@@ -214,13 +232,14 @@ spec:
             - -c
             - /etc/envoy/envoy.yaml
         - name: system-frontend
-          image: nginx:stable-alpine
+          image: beclab/docker-nginx-headers-more:v0.1.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 81
             - containerPort: 82
             - containerPort: 83
             - containerPort: 84
+            - containerPort: 85
             - containerPort: 8090
           command:
             - /bin/sh
@@ -252,6 +271,9 @@ spec:
             - name: system-frontend-nginx-config
               mountPath: /etc/nginx/conf.d/wise.conf
               subPath: wise.conf
+            - name: system-frontend-nginx-config
+              mountPath: /etc/nginx/conf.d/headscale.conf
+              subPath: headscale.conf
           env:
             - name: POD_UID
               valueFrom:
@@ -315,6 +337,8 @@ spec:
                 path: profile-editor.conf
               - key: wise.conf
                 path: wise.conf
+              - key: headscale.conf
+                path: headscale.conf
 
 
 ---
@@ -380,15 +404,46 @@ data:
   nginx.conf: |-
     user nginx;
     worker_processes auto;
+    worker_rlimit_nofile 65535;
+    worker_shutdown_timeout 240s;
 
     error_log   /var/log/nginx/error.log notice;
     pid         /var/run/nginx.pid;
 
     events {
-        worker_connections 1024;
+        multi_accept        on;
+        worker_connections 16384;
+        use epoll;
     }
 
     http {
+        aio                 threads;
+        aio_write           on;
+        tcp_nopush          on;
+        tcp_nodelay         on;
+        log_subrequest      on;
+        reset_timedout_connection on;
+        keepalive_timeout  75s;
+        keepalive_requests 100;
+        client_body_temp_path           /tmp/client-body;
+        fastcgi_temp_path               /tmp/fastcgi-temp;
+        proxy_temp_path                 /tmp/proxy-temp;
+        client_max_body_size            1g;
+        client_header_buffer_size       1k;
+        client_header_timeout           60s;
+        large_client_header_buffers     4 8k;
+        client_body_buffer_size         8k;
+        client_body_timeout             60s;
+        types_hash_max_size             2048;
+        server_names_hash_max_size      4096;
+        server_names_hash_bucket_size   1024;
+        map_hash_bucket_size            64;
+        proxy_headers_hash_max_size     512;
+        proxy_headers_hash_bucket_size  64;
+        variables_hash_bucket_size      256;
+        variables_hash_max_size         2048;
+        underscores_in_headers          off;
+        ignore_invalid_headers          on;
         include       /etc/nginx/mime.types;
         default_type  application/octet-stream;
 
@@ -397,11 +452,16 @@ data:
                           '"$http_user_agent" "$http_x_forwarded_for"';
 
         access_log  /var/log/nginx/access.log  main;
+        proxy_ssl_session_reuse on;
 
         sendfile        on;
-        keepalive_timeout 65;
+        resolver_timeout        30s;
+        send_timeout            60s;
 
-        client_max_body_size 15M;
+        map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+        }
 
         include /etc/nginx/conf.d/*.conf;
     }
@@ -786,5 +846,32 @@ data:
     	location ~.*\.(js|css|png|jpg|svg|woff|woff2)$
         {
           	add_header Cache-Control "public, max-age=2678400";
+        }
+    }
+  headscale.conf: |
+    server {
+        listen 85;
+        # Gzip Settings
+        gzip on;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+        index index.html;
+        location /ts2021 {
+          proxy_pass http://headscale-server-svc:8080;
+          proxy_method POST;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade 'tailscale-control-protocol';
+          proxy_set_header Connection '$connection_upgrade';
+          more_set_headers 'Upgrade: $http_upgrade';
+        }
+        location / {
+          proxy_pass http://headscale-server-svc:8080;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection '$connection_upgrade';
         }
     }
