@@ -560,6 +560,7 @@ data:
                       - upgrade_type: websocket
                       - upgrade_type: tailscale-control-protocol
                     skip_xff_append: false
+                    max_request_headers_kb: 500
                     codec_type: AUTO
                     route_config:
                       name: local_route

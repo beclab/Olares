@@ -45,6 +45,8 @@ data:
     server:
       host: 0.0.0.0
       port: 9091
+      buffers:
+        read: 10240
 
     log:
       level: debug
@@ -284,7 +286,7 @@ spec:
 
       containers:      
       - name: authelia
-        image: beclab/auth:0.1.36
+        image: beclab/auth:0.1.37
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9091
