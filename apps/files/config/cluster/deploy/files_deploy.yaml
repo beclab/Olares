@@ -187,7 +187,7 @@ spec:
             - /filebrowser
             - --noauth
         - name: uploader
-          image: beclab/upload:v1.0.5
+          image: beclab/upload:v1.0.6
           env:
             - name: UPLOAD_FILE_TYPE
               value: '*'
