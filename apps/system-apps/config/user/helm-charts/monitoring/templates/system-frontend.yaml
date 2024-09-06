@@ -147,7 +147,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
         - name: dashboard-init
-          image: beclab/dashboard-frontend-v1:v0.3.2
+          image: beclab/dashboard-frontend-v1:v0.3.3
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -159,7 +159,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: control-hub-init
-          image: beclab/admin-console-frontend-v1:v0.3.11
+          image: beclab/admin-console-frontend-v1:v0.3.12
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
