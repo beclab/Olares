@@ -86,7 +86,7 @@ spec:
             value: /appdata
           - name: SEAFILE_SERVICE
             value: seafile
-          image: beclab/media-server:v0.1.8
+          image: beclab/media-server:v0.1.9
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 9090
@@ -95,6 +95,10 @@ spec:
             mountPath: /data
           - name: user-appdata-dir
             mountPath: /appdata
+{{ if .Values.sharedlib }}
+          - name: shared-lib
+            mountPath: /data/External
+{{ end }}
 
         - name: files
           image: beclab/files-server:v0.2.33
