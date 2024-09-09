@@ -7,6 +7,7 @@ ERR_VALIDATION=2
 
 CURL_TRY="--retry 5 --retry-delay 1 --retry-max-time 10 "
 BASE_DIR=$(dirname $(realpath -s $0))
+INSTALL_LOG="$BASE_DIR/logs"
 
 get_distribution() {
 	lsb_dist=""
@@ -784,12 +785,12 @@ add_worker_node() {
     log_info 'finished add worker node'
 }
 
-if [ -d /tmp/install_log ]; then
-    $sh_c "rm -rf /tmp/install_log"
+if [ -d $INSTALL_LOG ]; then
+    $sh_c "rm -rf $INSTALL_LOG"
 fi
 
-mkdir -p /tmp/install_log && cd /tmp/install_log || exit
-fd_errlog=/tmp/install_log/errlog_fd_13
+mkdir -p $INSTALL_LOG && cd $INSTALL_LOG || exit
+fd_errlog=$INSTALL_LOG/errlog_fd_13
 
 Main() {
     log_info 'Add worker node for Terminus ...\n'

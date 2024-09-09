@@ -33,7 +33,7 @@ https://nvidia.github.io/libnvidia-container/ubuntu20.04/libnvidia-container.lis
 [pkg] format: url,path,filename,special,cpname
 https://github.com/containernetworking/plugins/releases/download/v0.9.1/cni-plugins-linux-amd64-v0.9.1.tgz,cni/v0.9.1,,,
 
-https://github.com/containernetworking/plugins/releases/download/v1.1.1/cni-plugins-linux-amd64-v1.1.1.tgz,cni/v1.1.1,,.
+https://github.com/containernetworking/plugins/releases/download/v1.1.1/cni-plugins-linux-amd64-v1.1.1.tgz,cni/v1.1.1,,,
 
 https://github.com/containerd/containerd/releases/download/v1.6.4/containerd-1.6.4-linux-amd64.tar.gz,containerd/1.6.4,,,
 

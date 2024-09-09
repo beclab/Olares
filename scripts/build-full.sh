@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# deprecated, only for test
 
 
 BASE_DIR=$(dirname $(realpath -s $0))
@@ -19,13 +20,21 @@ cp ${BASE_DIR}/upgrade.sh ${DIST_PATH}/.
 bash ${BASE_DIR}/image-manifest.sh
 bash ${BASE_DIR}/deps-manifest.sh $PLATFORM
 
-pushd ${BASE_DIR}/../.manifest
-bash $BASE_DIR/save-images.sh images.mf $PLATFORM
+cp ${BASE_DIR}/.dependencies/components ${BASE_DIR}/.manifest/.
+cp ${BASE_DIR}/.dependencies/components ${BASE_DIR}/.manifest/.
+pushd ${BASE_DIR}.manifest
+bash ${BASE_DIR}/build-manifest.sh ${BASE_DIR}/../.manifest/installation.manifest
 popd
 
-pushd ${BASE_DIR}/../.dependencies
-bash $BASE_DIR/save-deps.sh $PLATFORM
-popd
+
+# TODO:
+# pushd ${BASE_DIR}/../.manifest
+# bash $BASE_DIR/save-images.sh images.mf $PLATFORM
+# popd
+
+# pushd ${BASE_DIR}/../.dependencies
+# bash $BASE_DIR/save-deps.sh $PLATFORM
+# popd
 
 pushd $DIST_PATH
 
@@ -33,19 +42,8 @@ rm -rf images
 rm -rf components
 rm -rf pkg
 
-mv ${BASE_DIR}/../.manifest images
+mv ${BASE_DIR}/../.manifest/installation.manifest installation.manifest
 
-
-if [ -d ${BASE_DIR}/../.dependencies/components ]; then
-    mv ${BASE_DIR}/../.dependencies/components components
-    mv ./components/terminus-cli*.tar.gz ./
-fi
-if [ -d ${BASE_DIR}/../.dependencies/pkg ]; then
-    mv ${BASE_DIR}/../.dependencies/pkg pkg
-fi
-if [ -f ${BASE_DIR}/../.dependencies/dependencies.mf ]; then
-    cp ${BASE_DIR}/../.dependencies/dependencies.mf ./
-fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     TAR=gtar
@@ -57,7 +55,6 @@ fi
 
 if [ ! -z $VERSION ]; then
     sh -c "$SED 's/#__VERSION__/${VERSION}/' wizard/config/settings/templates/terminus_cr.yaml"
-    sh -c "$SED 's/#{{LATEST_VERSION}}/${VERSION}/' publicInstaller.latest"
     VERSION="v${VERSION}"
 else
     VERSION="debug"

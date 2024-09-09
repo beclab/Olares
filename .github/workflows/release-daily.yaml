@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  push:
+  push-images:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,7 +23,7 @@ jobs:
         run: |
           bash scripts/image-manifest.sh && bash scripts/upload-images.sh .manifest/images.mf
 
-  push-arm64:
+  push-images-arm64:
     runs-on: self-hosted
 
     steps:
@@ -37,27 +37,47 @@ jobs:
         run: |
           bash scripts/image-manifest.sh && bash scripts/upload-images.sh .manifest/images.mf linux/arm64
 
-  upload-full:
-    needs: [push, push-arm64]
+  push-deps:
     runs-on: ubuntu-latest
 
     steps:
-      # - name: Maximize build space
-      #   uses: easimon/maximize-build-space@master
-      #   with:
-      #     root-reserve-mb: 21200
-      #     swap-size-mb: 1024
-      #     remove-dotnet: 'true'
-      #     remove-android: 'true'
-      #     remove-haskell: 'true'
-      #     remove-codeql: 'true'
+      - name: "Checkout source code"
+        uses: actions/checkout@v3
 
+      # test
+      - env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: "us-east-1"
+        run: |
+          bash scripts/deps-manifest.sh && bash scripts/upload-deps.sh
+
+  push-deps-arm64:
+    runs-on: self-hosted
+
+    steps:
+      - name: "Checkout source code"
+        uses: actions/checkout@v3
+
+      # test
+      - env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: "us-east-1"
+        run: |
+          bash scripts/deps-manifest.sh linux/arm64 && bash scripts/upload-deps.sh linux/arm64
+
+
+  upload-package:
+    needs: [push-images, push-images-arm64, push-deps, push-deps-arm64]
+    runs-on: ubuntu-latest
+
+    steps:
       - name: 'Daily tag version'
         id: vars
         run: |
           v=1.8.0-$(date +"%Y%m%d")
           echo "tag_version=$v" >> $GITHUB_OUTPUT
-          echo "latest_version=1.6.0-alpha" >> $GITHUB_OUTPUT
 
       - name: 'Checkout source code'
         uses: actions/checkout@v3
@@ -72,47 +92,12 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: 'us-east-1'
         run: |
+          md5sum install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz > install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt && \
+          aws s3 cp install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt s3://terminus-os-install/install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt --acl=public-read && \
           aws s3 cp install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz s3://terminus-os-install/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz --acl=public-read
 
-  upload-full-arm64:
-    needs: [push, push-arm64]
-    runs-on: self-hosted
-
-    steps:
-      # - name: Maximize build space
-      #   uses: easimon/maximize-build-space@master
-      #   with:
-      #     root-reserve-mb: 21200
-      #     swap-size-mb: 1024
-      #     remove-dotnet: 'true'
-      #     remove-android: 'true'
-      #     remove-haskell: 'true'
-      #     remove-codeql: 'true'
-
-      - name: 'Daily tag version'
-        id: vars
-        run: |
-          v=1.8.0-$(date +"%Y%m%d")
-          echo "tag_version=$v" >> $GITHUB_OUTPUT
-          echo "latest_version=1.7.0-rc.0" >> $GITHUB_OUTPUT
-
-      - name: 'Checkout source code'
-        uses: actions/checkout@v3
-
-      - name: Package installer
-        run: |
-          bash scripts/build.sh ${{ steps.vars.outputs.tag_version }} linux/arm64
-
-      - name: Upload to S3
-        env: 
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: 'us-east-1'
-        run: |
-          aws s3 cp install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz s3://terminus-os-install/install-wizard-v${{ steps.vars.outputs.tag_version }}-arm64.tar.gz --acl=public-read
-
   release:
-    needs: [upload-full, upload-full-arm64]
+    needs: [upload-package]
     runs-on: ubuntu-latest
 
     steps:
@@ -124,7 +109,7 @@ jobs:
         run: |
           v=1.8.0-$(date +"%Y%m%d")
           echo "tag_version=$v" >> $GITHUB_OUTPUT
-          echo "latest_version=1.7.0-rc.0" >> $GITHUB_OUTPUT
+          echo "version_md5sum=$(curl -sSfL https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${v}.md5sum.txt|awk '{print $1}')" >> $GITHUB_OUTPUT
       
       - name: Package installer
         run: |
@@ -144,18 +129,19 @@ jobs:
           placeholder: '#__VERSION__'
           tag: ${{ steps.vars.outputs.tag_version }}
 
-      - name: Update latest installer
+      - name: Update checksum
         uses: eball/write-tag-to-version-file@latest
         with:
-          filename: 'build/installer/publicInstaller.latest'
-          placeholder: '#{{LATEST_VERSION}}'
-          tag: ${{ steps.vars.outputs.latest_version }}
+          filename: 'build/installer/install.sh'
+          placeholder: '#__MD5SUM__'
+          tag: ${{ steps.vars.outputs.version_md5sum }}
 
       - name: 'Archives'
         working-directory: ./build/installer
         run: |
           mkdir -p /tmp/build
           tar --exclude=wizard/tools --exclude=.git -zcvf /tmp/build/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz .
+          cp install.sh publicInstaller.sh
 
       - name: Release public files
         uses: softprops/action-gh-release@v1
@@ -165,8 +151,6 @@ jobs:
           files: |
             /tmp/build/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz
             build/installer/publicInstaller.sh
-            build/installer/publicInstaller.latest
-            build/installer/uninstall_cmd.sh
             build/installer/install.sh
             build/installer/publicAddnode.sh
             build/installer/version.hint

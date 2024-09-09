@@ -8,9 +8,9 @@ if [ x"$PLATFORM" == x"linux/arm64" ]; then
 fi
 
 BASE_DIR=$(dirname $(realpath -s $0))
-DEPENDENCIES_MANIFEST=".dependencies/dependencies.mf"
 
-rm -rf .dependencies
-mkdir -p .dependencies
+rm -rf $BASE_DIR/../.dependencies
+mkdir -p $BASE_DIR/../.dependencies
 
-cp $BASE_DIR/../build/manifest/dependencies.${arch} ${DEPENDENCIES_MANIFEST}
+cp $BASE_DIR/../build/manifest/components $BASE_DIR/../.dependencies/.
+cp $BASE_DIR/../build/manifest/pkgs $BASE_DIR/../.dependencies/.

@@ -1703,14 +1703,15 @@ restore_terminus() {
     restore_mongo
 }
 
-INSTALL_DIR=/tmp/install_log
+INSTALL_DIR=$HOME/.terminus
+INSTALL_LOG=$INSTALL_DIR/logs
 
-if [ -d "$INSTALL_DIR" ]; then
-    $sh_c "rm -rf $INSTALL_DIR"
+if [ -d "$INSTALL_LOG" ]; then
+    $sh_c "rm -rf $INSTALL_LOG"
 fi
 
-mkdir -p $INSTALL_DIR && cd $INSTALL_DIR || exit
-fd_errlog=/tmp/install_log/errlog_fd_13
+mkdir -p $INSTALL_LOG && cd $INSTALL_LOG || exit
+fd_errlog=$INSTALL_LOG/errlog_fd_13
 
 Main() {
     log_info 'Restoring Terminus ...\n'

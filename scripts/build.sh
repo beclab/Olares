@@ -10,10 +10,20 @@ cp ${BASE_DIR}/upgrade.sh ${DIST_PATH}/.
 # cp ${BASE_DIR}/developer/* ${DIST_PATH}/.
 
 bash ${BASE_DIR}/image-manifest.sh
+bash ${BASE_DIR}/deps-manifest.sh
+
+mv ${BASE_DIR}/../.dependencies/* ${BASE_DIR}/../.manifest/.
+rm -rf ${BASE_DIR}/../.dependencies
+
+set -e
+pushd ${BASE_DIR}/../.manifest
+bash ${BASE_DIR}/build-manifest.sh ${BASE_DIR}/../.manifest/installation.manifest
+popd
 
 pushd $DIST_PATH
 
 rm -rf images
+mv ${BASE_DIR}/../.manifest/installation.manifest .
 mv ${BASE_DIR}/../.manifest images
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -27,7 +37,6 @@ fi
 if [ ! -z $VERSION ]; then
     sh -c "$SED 's/#__VERSION__/${VERSION}/' wizard/config/settings/templates/terminus_cr.yaml"
     sh -c "$SED 's/#__VERSION__/${VERSION}/' install.sh"
-    sh -c "$SED 's/#{{LATEST_VERSION}}/${VERSION}/' publicInstaller.latest"
     VERSION="v${VERSION}"
 else
     VERSION="debug"

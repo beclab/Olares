@@ -52,7 +52,6 @@ endif
 	$(info BACKUP_KEY_PREFIX: $(BACKUP_KEY_PREFIX))
 
 	@sed -i "s@#__VERSION__@$(VERSION)@" wizard/config/settings/templates/terminus_cr.yaml
-	@sed -i "s@#{{LATEST_VERSION}}@$(VERSION)@" publicInstaller.latest
 
 	@if [ x"$(PROXY)" != x"" ]; then \
 		export VERSION=$(VERSION); \

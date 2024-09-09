@@ -20,7 +20,7 @@ jobs:
           bash scripts/deps-manifest.sh && bash scripts/upload-deps.sh
 
   push-arm64:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: "Checkout source code"

@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
+set -o pipefail
+
 BASE_DIR=$(dirname $(realpath -s $0))
 echo "Push Deps to S3 base_dir: ${BASE_DIR}"
 
-if [ ! -d ".dependencies" ]; then
+if [ ! -d "$BASE_DIR/../.dependencies" ]; then
     exit 1
 fi
 
@@ -14,28 +16,33 @@ if [ x"$PLATFORM" == x"linux/arm64" ]; then
     path="arm64/"
 fi
 
-pushd ${BASE_DIR}/../.dependencies
-fileprefix="deps"
-name=$(md5sum dependencies.mf |awk '{print $1}')
-echo "filename: ${fileprefix}-${name}.tar.gz"
-curl -fsSLI https://dc3p1870nn3cj.cloudfront.net/${path}${fileprefix}-$name.tar.gz > /dev/null
-if [ $? -eq 0 ]; then
-    echo "dependencies file ${fileprefix}-${name}.tar.gz exists, STOP..."
-    exit 1
-fi
+pushd $BASE_DIR/../.dependencies
 
-bash ${BASE_DIR}/download-deps.sh $PLATFORM
+for deps in "components" "pkgs"; do
+    while read line; do
+        if [ x"$line" == x"" ]; then
+            continue
+        fi
+        
+        bash ${BASE_DIR}/download-deps.sh $PLATFORM $line
+        filename=$(echo "$line"|awk -F"," '{print $1}')
+        echo "if exists $filename ... "
+        name=$(echo -n "$filename"|md5sum|awk '{print $1}')
+        checksum="$name.checksum.txt"
+        md5sum $name > $checksum
 
-name=$(md5sum dependencies.mf |awk '{print $1}')
-echo "filename: ${fileprefix}-${name}.tar.gz"
-curl -fsSLI https://dc3p1870nn3cj.cloudfront.net/${path}${fileprefix}-$name.tar.gz > /dev/null
-if [ $? -ne 0 ]; then
-    echo "dependencies file ${fileprefix}-${name}.tar.gz not found, prepare to upload to S3"
-    tar -czf ./$name.tar.gz ./components ./pkg ./dependencies.mf && cp ./$name.tar.gz ../
-    popd
-    rm -rf ./.dependencies/
-    aws s3 cp $name.tar.gz s3://terminus-os-install/${path}${fileprefix}-$name.tar.gz --acl=public-read
-    echo "upload $name completed"
-else
-    echo "dependencies file ${fileprefix}-${name}.tar.gz exists, EXIT..."
-fi
+       curl -fsSLI https://dc3p1870nn3cj.cloudfront.net/$path$name > /dev/null
+       if [ $? -ne 0 ]; then
+            set -ex
+            aws s3 cp $name s3://terminus-os-install/$path$name --acl=public-read
+            aws s3 cp $checksum s3://terminus-os-install/$path$checksum --acl=public-read
+            echo "upload $name completed"
+            set +ex
+       fi        
+    done < $deps
+done
+
+popd
+
+
+

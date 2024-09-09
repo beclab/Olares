@@ -268,22 +268,22 @@ update_juicefs() {
 	log_info 'update juicefs IP success'
 }
 
-update_minio_operator(){
-	local MINIO_ROOT_PASSWORD=$(awk -F '=' '/^MINIO_ROOT_PASSWORD/{print $2}' /etc/default/minio)
-	local MINIO_VOLUMES=$(awk -F '=' '/^MINIO_VOLUMES/{print $2}' /etc/default/minio)
+# update_minio_operator(){
+# 	local MINIO_ROOT_PASSWORD=$(awk -F '=' '/^MINIO_ROOT_PASSWORD/{print $2}' /etc/default/minio)
+# 	local MINIO_VOLUMES=$(awk -F '=' '/^MINIO_VOLUMES/{print $2}' /etc/default/minio)
 
-	# re-init minio-operator, only used for uninitialized master node machine
-	local ETCDCTL=$(command -v etcdctl)
-	local minio_operator_bin="/usr/local/bin/minio-operator"
+# 	# re-init minio-operator, only used for uninitialized master node machine
+# 	local ETCDCTL=$(command -v etcdctl)
+# 	local minio_operator_bin="/usr/local/bin/minio-operator"
 
-	# clear minio-operator service
-	ensure_success $sh_c "rm -f /etc/default/minio-operator /etc/systemd/system/minio-operator.service"
-	ensure_success $sh_c "$ETCDCTL --cacert /etc/ssl/etcd/ssl/ca.pem --cert /etc/ssl/etcd/ssl/node-$HOSTNAME.pem --key /etc/ssl/etcd/ssl/node-$HOSTNAME-key.pem del terminus/minio --prefix"
+# 	# clear minio-operator service
+# 	ensure_success $sh_c "rm -f /etc/default/minio-operator /etc/systemd/system/minio-operator.service"
+# 	ensure_success $sh_c "$ETCDCTL --cacert /etc/ssl/etcd/ssl/ca.pem --cert /etc/ssl/etcd/ssl/node-$HOSTNAME.pem --key /etc/ssl/etcd/ssl/node-$HOSTNAME-key.pem del terminus/minio --prefix"
 
-    ensure_success $sh_c "$minio_operator_bin init --address $local_ip --cafile /etc/ssl/etcd/ssl/ca.pem --certfile /etc/ssl/etcd/ssl/node-$HOSTNAME.pem --keyfile /etc/ssl/etcd/ssl/node-$HOSTNAME-key.pem --volume $MINIO_VOLUMES --password $MINIO_ROOT_PASSWORD"
+#     ensure_success $sh_c "$minio_operator_bin init --address $local_ip --cafile /etc/ssl/etcd/ssl/ca.pem --certfile /etc/ssl/etcd/ssl/node-$HOSTNAME.pem --keyfile /etc/ssl/etcd/ssl/node-$HOSTNAME-key.pem --volume $MINIO_VOLUMES --password $MINIO_ROOT_PASSWORD"
 
-	log_info "update minio-operator success"
-}
+# 	log_info "update minio-operator success"
+# }
 
 update_k3s_master() {
 #	ensure_success $sh_c "$KUBECTL delete node $HOSTNAME"
@@ -486,9 +486,9 @@ main() {
 	    update_k8s_master
 	fi 
 
-	if [ "$storage_type" == "minio" ]; then 
-		update_minio_operator
-	fi
+	# if [ "$storage_type" == "minio" ]; then 
+	# 	update_minio_operator
+	# fi
 
 	# check os auto-reloading
     log_info 'Waiting for Terminus reloading ...'

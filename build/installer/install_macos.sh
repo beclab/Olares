@@ -1,4 +1,5 @@
 #!/binbash
+source ./common.sh
 
 ERR_EXIT=1
 
@@ -10,26 +11,6 @@ CLUSTER_NAME=$1
 PROFILE_NAME="terminus-${CLUSTER_NAME:-0}"
 
 [[ -f "${BASE_DIR}/.env" && -z "$DEBUG_VERSION" ]] && . "${BASE_DIR}/.env"
-
-random_string() {
-    local length=12
-    local alphanumeric="abc2def3gh4jk5mn6pqr7st8uvw9xyz"
-
-    if [[ -n "$1" && $1 -gt 0 ]]; then
-        length=$1
-    fi
-
-    local text n
-    for ((i=0,l=${#alphanumeric}; i<$length; i++)); do
-        n=$[RANDOM%l]
-        text+="${alphanumeric:n:1}"
-    done
-    echo -n "$text"
-}
-
-command_exists() {
-	command -v "$@" > /dev/null 2>&1
-}
 
 read_tty(){
     echo -n $1
@@ -79,24 +60,6 @@ function retry_cmd(){
     return $ret
 }
 
-precheck_os() {
-    os_type=$(uname -s)
-    case "$os_type" in
-        Darwin) OSTYPE=darwin; ;;
-        *) OSTYPE="${os_type}"
-    esac
-
-    os_arch=$(uname -m)
-    case "$os_arch" in 
-        arm64) ARCH=arm64; ;; 
-        x86_64) ARCH=amd64; ;; 
-        armv7l) ARCH=arm; ;; 
-        aarch64) ARCH=arm64; ;; 
-        *) echo "unsupported arch, exit ..."; 
-        exit -1; ;; 
-    esac 
-}
-
 install_helm() {
     if ! command_exists helm; then
         echo "Installing helm ..."
@@ -108,23 +71,6 @@ install_helm() {
         echo ""
         exit -1
     fi
-}
-
-log_info() {
-    local msg now
-
-    msg="$*"
-    now=$(date +'%Y-%m-%d %H:%M:%S.%N %z')
-    echo -e "\n\033[38;1m${now} [INFO] ${msg} \033[0m" 
-}
-
-log_fatal() {
-    local msg now
-
-    msg="$*"
-    now=$(date +'%Y-%m-%d %H:%M:%S.%N %z')
-    echo -e "\n\033[31;1m${now} [FATAL] ${msg} \033[0m" 
-    exit $ERR_EXIT
 }
 
 install_cli(){
@@ -144,8 +90,9 @@ install_cli(){
 }
 
 install_ks(){
-    cmd="${BASE_DIR}/terminus-cli terminus init --kube ${KUBE_TYPE} --minikube --profile ${PROFILE_NAME}"
-    ensure_success $sh_c "${cmd}"
+    # cmd="${BASE_DIR}/terminus-cli terminus install --kube ${KUBE_TYPE} --minikube --profile ${PROFILE_NAME}"
+    # ensure_success $sh_c "${cmd}"
+    ensure_success $sh_c "$TERMINUS_CLI terminus install $PARAM"
 }
 
 get_auth_status(){
@@ -195,7 +142,7 @@ get_settings_status(){
 get_app_key_secret(){
     app=$1
     key="bytetrade_${app}_${RANDOM}"
-    secret=$(random_string 16)
+    secret=$(get_random_string 16)
 
     echo "${key} ${secret}"
 }
@@ -444,33 +391,6 @@ validate_userpwd() {
     return 0
 }
 
-preload_images(){
-    if [ -d $BASE_DIR/images ]; then
-        echo "preload images to local ... "
-        # res=$(minikube -p "${PROFILE_NAME}" docker-env)
-        # ensure_success $sh_c "eval ${res}"
-        
-        local tar_count=$(find $BASE_DIR/images -type f -name '*.tar.gz'|wc -l)
-        if [ $tar_count -eq 0 ]; then
-            if [ -f $BASE_DIR/images/images.mf ]; then
-                echo "downloading images from terminus cloud ..."
-                while read img; do
-                    local filename=$(echo -n "$img"|md5sum|awk '{print $1}')
-                    filename="$filename.tar.gz"
-                    echo "downloading ${filename} ..."
-                    curl -fsSL https://dc3p1870nn3cj.cloudfront.net/${filename} -o $BASE_DIR/images/$filename
-                done < $BASE_DIR/images/images.mf
-            fi
-        fi
-
-        find $BASE_DIR/images -type f -name '*.tar.gz' | while read filename; do
-            # $sh_c "gunzip -c ${filename} | docker load"
-            $sh_c "minikube image load ${filename} -p ${PROFILE_NAME}"
-            echo "Loaded image: ${filename}"
-        done
-    fi
-}
-
 setup_ws() {
 
     if ! command_exists htpasswd; then
@@ -531,7 +451,7 @@ setup_ws() {
     fi
 
     if [ -z "$userpwd" ]; then
-        userpwd=$(random_string 8)
+        userpwd=$(get_random_string 8)
     fi
 
     if ! validate_userpwd; then
@@ -595,8 +515,8 @@ _EOF
 
 run_install(){
     GPU_TYPE="none"
-    HELM=$(command -v helm)
-    KUBECTL=$(command -v kubectl)
+    HELM=$(get_command helm)
+    KUBECTL=$(get_command kubectl)
 
     install_ks
 
@@ -735,11 +655,12 @@ EOF
 
 
 main(){
+    log_info 'Start to Install Terminus ...\n'
     HOSTNAME=$(hostname)
     natgateway=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/PING/{print $2}')
     natgateway=$(echo "$natgateway" | grep -E "[0-9]+(\.[0-9]+){3}" | grep -v "127.0.0.1")
 
-    precheck_os
+    precheck_support
 
     if [ x"$natgateway" == x"" ]; then
         while :; do
@@ -763,16 +684,33 @@ main(){
 
     install_helm
 
-    install_cli
-
-    if command_exists minikube ; then
-        running=$(minikube profile list|grep "${PROFILE_NAME}"|grep Running)
-        if [ x"$running" == x"" ]; then
-            ensure_success minikube start -p "${PROFILE_NAME}" --kubernetes-version=v1.22.10 --network-plugin=cni --cni=calico --cpus='4' --memory='8g' --ports=30180:30180,443:443,80:80
-        fi
-    else
-        log_fatal "Please install minikube on your machine"
+    # install_cli
+    local terminus_base_dir="$HOME/.terminus"
+    local manifest_file="$BASE_DIR/installation.manifest"
+    local extra
+    TERMINUS_CLI=$(command -v terminus-cli)
+    if [[ x"$ENV_BASE_DIR" != x"" ]]; then
+        terminus_base_dir="$ENV_BASE_DIR"
     fi
+
+    PARAM="--base-dir $terminus_base_dir --manifest $manifest_file --version $VERSION --minikube --profile ${PROFILE_NAME}"
+
+    if [ ! -f $terminus_base_dir/.prepared ]; then
+        ensure_success $sh_c "export OS_LOCALIP=$local_ip && \
+            export TERMINUS_IS_CLOUD_VERSION=$TERMINUS_IS_CLOUD_VERSION && \
+            $TERMINUS_CLI terminus download --base-dir $terminus_base_dir --manifest $manifest_file --version $VERSION"
+
+        if command_exists minikube ; then
+            running=$(minikube profile list|grep "${PROFILE_NAME}"|grep Running)
+            if [ x"$running" == x"" ]; then
+                ensure_success $sh_c "minikube start -p '${PROFILE_NAME}' --kubernetes-version=v1.22.10 --network-plugin=cni --cni=calico --cpus='4' --memory='8g' --ports=30180:30180,443:443,80:80"
+            fi
+        else
+            log_fatal "Please install minikube on your machine"
+        fi
+        touch $terminus_base_dir/.prepared
+    fi
+
 
     setup_ws
 

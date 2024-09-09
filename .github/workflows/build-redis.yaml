@@ -23,8 +23,16 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - name: Clean
+        run: |
+          sudo rm -rf redis*
+          
       - name: "Checkout source code"
         uses: actions/checkout@v3
+
+      - name: Install tools
+        run: |
+          sudo apt install -y make gcc
 
       # test
       - env:
@@ -32,4 +40,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
         run: |
-          bash scripts/build-redis.sh linux/arm64
+          sudo -E sh -c "bash scripts/build-redis.sh linux/arm64 && rm -rf redis*"

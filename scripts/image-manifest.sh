@@ -5,14 +5,14 @@
 BASE_DIR=$(dirname $(realpath -s $0))
 
 PACKAGE_MODULE=("frameworks" "libs" "apps" "third-party")
-IMAGE_MANIFEST=".manifest/images.mf"
+IMAGE_MANIFEST="$BASE_DIR/../.manifest/images.mf"
 
-rm -rf .manifest
-mkdir -p .manifest
+rm -rf $BASE_DIR/../.manifest
+mkdir -p $BASE_DIR/../.manifest
 
 # copy default base images
 cp -f $BASE_DIR/../build/manifest/images ${IMAGE_MANIFEST}
-cp -f $BASE_DIR/../build/manifest/images.node.mf .manifest/images.node.mf
+cp -f $BASE_DIR/../build/manifest/images.node.mf $BASE_DIR/../.manifest/images.node.mf
 
 TMP_MANIFEST=$(mktemp)
 for mod in "${PACKAGE_MODULE[@]}";do
@@ -36,7 +36,7 @@ awk '{print $3}' ${TMP_MANIFEST} | sort | uniq | grep -v nitro | grep -v orion >
 
 # patch
 # fix backup server version
-backup_version=$(egrep '{{ \$backupVersion := "(.*)" }}' frameworks/backup-server/config/cluster/deploy/backup_server.yaml | sed 's/{{ \$backupVersion := "\(.*\)" }}/\1/')
+backup_version=$(egrep '{{ \$backupVersion := "(.*)" }}' $BASE_DIR/../frameworks/backup-server/config/cluster/deploy/backup_server.yaml | sed 's/{{ \$backupVersion := "\(.*\)" }}/\1/')
 if [[ "$OSTYPE" == "darwin"* ]]; then
     bash -c "sed -i '' -e 's/backup-server:vvalue/backup-server:v$backup_version/' ${IMAGE_MANIFEST}"
 else
