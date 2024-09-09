@@ -65,10 +65,10 @@ run_install() {
         echo "annotate bfl with nat gateway ip"
         xargs="--set nat_gateway_ip=${natgateway}"
     fi
-    retry_cmd $sh_c "${HELM} upgrade -i account ${BASE_DIR}/wizard/config/account --force ${xargs}"
+    retry_cmd $sh_c "${HELM} upgrade -i account ${BASE_DIR}/wizard/config/account ${xargs}"
 
     log_info 'Installing settings ...'
-    $run_cmd $sh_c "${HELM} upgrade -i settings ${BASE_DIR}/wizard/config/settings --force"
+    $run_cmd $sh_c "${HELM} upgrade -i settings ${BASE_DIR}/wizard/config/settings"
 
     # install gpu if necessary
     GPU_TYPE="none"
@@ -90,7 +90,7 @@ run_install() {
     ensure_success $sh_c "mkdir -p $shared_lib && chown 1000:1000 $shared_lib"
 
     local ks_redis_pwd=$($sh_c "${KUBECTL} get secret -n kubesphere-system redis-secret -o jsonpath='{.data.auth}' |base64 -d")
-    retry_cmd $sh_c "${HELM} upgrade -i system ${BASE_DIR}/wizard/config/system -n os-system --force \
+    retry_cmd $sh_c "${HELM} upgrade -i system ${BASE_DIR}/wizard/config/system -n os-system \
         --set kubesphere.redis_password=${ks_redis_pwd} --set backup.bucket=\"${BACKUP_CLUSTER_BUCKET}\" \
         --set backup.key_prefix=\"${BACKUP_KEY_PREFIX}\" --set backup.is_cloud_version=\"${TERMINUS_IS_CLOUD_VERSION}\" \
         --set backup.sync_secret=\"${BACKUP_SECRET}\" --set gpu=\"${GPU_TYPE}\" --set s3_bucket=\"${S3_BUCKET}\" \
@@ -125,7 +125,7 @@ _END
 
     log_info 'Installing launcher ...'
     # install launcher , and init pv
-    retry_cmd $sh_c "${HELM} upgrade -i launcher-${username} ${BASE_DIR}/wizard/config/launcher -n user-space-${username} --force --set bfl.appKey=${bfl_ks[0]} --set bfl.appSecret=${bfl_ks[1]}"
+    retry_cmd $sh_c "${HELM} upgrade -i launcher-${username} ${BASE_DIR}/wizard/config/launcher -n user-space-${username} --set bfl.appKey=${bfl_ks[0]} --set bfl.appSecret=${bfl_ks[1]}"
 
     log_info 'waiting for bfl'
     check_bfl
@@ -181,7 +181,7 @@ EOF
     for appdir in "${BASE_DIR}/wizard/config/apps"/*/; do
       if [ -d "$appdir" ]; then
         releasename=$(basename "$appdir")
-        $run_cmd $sh_c "${HELM} upgrade -i ${releasename} ${appdir} -n user-space-${username} --force --set kubesphere.redis_password=${ks_redis_pwd} -f ${BASE_DIR}/wizard/config/apps/values.yaml"
+        $run_cmd $sh_c "${HELM} upgrade -i ${releasename} ${appdir} -n user-space-${username} --set kubesphere.redis_password=${ks_redis_pwd} -f ${BASE_DIR}/wizard/config/apps/values.yaml"
       fi
     done
 
