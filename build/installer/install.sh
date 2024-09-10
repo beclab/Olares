@@ -56,7 +56,7 @@ if command -v tar >/dev/null; then
     $SUDO rm -rf $HOME/.terminus/${foldername} && \
     mkdir -p $HOME/.terminus/${foldername}
 
-    CLI_VERSION="0.1.16"
+    CLI_VERSION="0.1.17"
     CLI_FILE="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
     INSTALL_TERMINUS_CLI="/usr/local/bin/terminus-cli"
     if [[ x"$os_type" == x"Darwin" ]]; then
