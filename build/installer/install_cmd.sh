@@ -319,7 +319,23 @@ install_velero_plugin_terminus() {
   fi
 }
 
+get_natgateway() {
+    natgateway=""
+
+    if [[ $(is_wsl) -eq 1 ]]; then
+        while :; do
+            read_tty "Enter the windows host IP: " natgateway
+            natgateway=$(echo "$natgateway" | grep -E "[0-9]+(\.[0-9]+){3}" | grep -v "127.0.0.1")
+            if [ x"$natgateway" == x"" ]; then
+                continue
+            fi
+            break
+        done
+    fi
+}
+
 install_k8s_ks() {
+    get_natgateway
 
     log_info 'Setup your first user ...\n'
     setup_ws
