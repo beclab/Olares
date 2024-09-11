@@ -121,7 +121,7 @@ spec:
             value: user_space_{{ .Values.bfl.username }}_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.1.43"
+        image: "beclab/knowledge-base-api:v0.1.44"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -175,7 +175,7 @@ spec:
             memory: 1Gi
 
       - name: backend-server
-        image: "beclab/recommend-backend:v0.0.10"
+        image: "beclab/recommend-backend:v0.0.12"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -184,6 +184,16 @@ spec:
         env:
         - name: LISTEN_ADDR
           value: 127.0.0.1:8080
+        - name: REDIS_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: knowledge-secrets-auth
+              key: redis_password
+        - name: REDIS_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: knowledge-secrets-auth
+              key: redis_addr
         - name: OS_SYSTEM_SERVER
           value: system-server.user-system-{{ .Values.bfl.username }}
         - name: OS_APP_SECRET
@@ -206,14 +216,31 @@ spec:
           value: "5432"
         - name: PG_DATABASE
           value: user_space_{{ .Values.bfl.username }}_knowledge
+        - name: WATCH_DIR
+          value: /data/Home/Downloads
+        - name: NOTIFY_SERVER
+          value: fsnotify-svc.user-system-{{ .Values.bfl.username }}:5079
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: CONTAINER_NAME
+          value: backend-server
         - name: YT_DLP_API_URL
           value: http://download-svc.user-space-{{ .Values.bfl.username }}:3082/api/v1/get_metadata
         - name: DOWNLOAD_API_URL
           value: http://download-svc.user-space-{{ .Values.bfl.username }}:3080/api/termius/download
         - name: SETTING_API_URL
           value: http://system-server.user-system-{{ .Values.bfl.username }}/legacy/v1alpha1/service.settings/v1/api/cookie/retrieve
-        
-
+        volumeMounts:
+          - name: watch-dir
+            mountPath: /data/Home/Downloads
         ports:
         - containerPort: 8080
         resources:
@@ -228,7 +255,7 @@ spec:
       - name: watch-dir
         hostPath:
           type: Directory
-          path: {{ .Values.userspace.userData }}/Documents
+          path: {{ .Values.userspace.userData }}
       
 
 ---

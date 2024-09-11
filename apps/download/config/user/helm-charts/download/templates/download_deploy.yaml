@@ -140,7 +140,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.0.6"
+        image: "beclab/yt-dlp:v0.0.7"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -175,7 +175,7 @@ spec:
             memory: 300Mi
 
       - name: download-spider
-        image: "beclab/download-spider:v0.0.6"
+        image: "beclab/download-spider:v0.0.7"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -192,6 +192,9 @@ spec:
           value: "5432"
         - name: PG_DATABASE
           value: user_space_{{ .Values.bfl.username }}_knowledge
+        volumeMounts:
+        - name: download-dir
+          mountPath: /downloads
         
         ports:
         - containerPort: 3080
