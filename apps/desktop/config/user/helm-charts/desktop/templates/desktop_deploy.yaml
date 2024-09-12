@@ -65,7 +65,7 @@ spec:
 
       containers:
       - name: edge-desktop
-        image: beclab/desktop:v0.2.36
+        image: beclab/desktop:v0.2.37
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: false
@@ -77,7 +77,7 @@ spec:
             value: http://bfl.{{ .Release.Namespace }}:8080
 
       - name: desktop-server
-        image: beclab/desktop-server:v0.2.36
+        image: beclab/desktop-server:v0.2.37
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
