@@ -3,6 +3,9 @@ ERR_EXIT=-1
 
 old_ip=$1
 
+BASE_DIR=$(dirname $(realpath -s $0))
+CHANGE_LOG="$BASE_DIR/logs"
+
 log_info() {
     local msg now
 
@@ -27,7 +30,7 @@ command_exists() {
 get_shell_exec(){
     user="$(id -un 2>/dev/null || true)"
 
-    sh_c='sh -c'
+    sh_c='bash -c'
 	if [ "$user" != 'root' ]; then
 		if command_exists sudo && command_exists su; then
 			sh_c='sudo su -c'
@@ -103,13 +106,15 @@ precheck_os() {
         log_fatal "incorrect ip for hostname '$HOSTNAME', please check"
     fi
 
-	read -r -p "Are you sure changing this node ip to ${ip}? [yes/no]: " ans </dev/tty
+	if [[ x"$QUIET" == x"" ]]; then
+		read -r -p "Are you sure changing this node ip to ${ip}? [yes/no]: " ans </dev/tty
 
-    if [ x"$ans" != x"yes" ]; then
-		echo "Please edit /etc/hosts to add the correct node IP"
-        echo "exiting..."
-        exit
-    fi
+		if [ x"$ans" != x"yes" ]; then
+			echo "Please edit /etc/hosts to add the correct node IP"
+			echo "exiting..."
+			exit
+		fi
+	fi
 
     local_ip="$ip"
 }
@@ -506,4 +511,4 @@ main() {
 	log_info 'Success to change the Terminus IP address!'
 }
 
-main $1
+main $1 | tee ${CHANGE_LOG}/changeip.log
