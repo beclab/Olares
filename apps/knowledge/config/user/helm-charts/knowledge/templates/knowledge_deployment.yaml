@@ -121,7 +121,7 @@ spec:
             value: user_space_{{ .Values.bfl.username }}_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.1.44"
+        image: "beclab/knowledge-base-api:v0.1.45"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -132,8 +132,8 @@ spec:
         env:
         - name: BACKEND_URL
           value: http://127.0.0.1:8080
-        - name: RSSSERVER_URL
-          value: 'http://rss-server.os-system:3010/rss'
+        - name: RSSHUB_URL
+          value: 'http://rss-server.os-system:1200'
         - name: SEARCH_URL
           value: 'http://search3.os-system:80'
         - name: REDIS_PASSWORD
@@ -201,7 +201,7 @@ spec:
         - name: OS_APP_KEY
           value: {{ .Values.os.wise.appKey }}
         - name: RSS_HUB_URL
-          value: 'http://rss-server.os-system:3010/rss'
+          value: 'http://rss-server.os-system:1200/'
         - name: WE_CHAT_REFRESH_FEED_URL
           value: https://recommend-wechat-prd.bttcdn.com/api/wechat/entries
         - name: WECHAT_ENTRY_CONTENT_GET_API_URL
