@@ -55,7 +55,7 @@ download_deps() {
         sudo mv /var/cache/apt/archives/*.deb ./archives/
         
 
-        imgs=("grgalex/nvshare:libnvshare-v0.1-f654c296" "grgalex/nvshare:nvshare-device-plugin-v0.1-f654c296" "grgalex/nvshare:nvshare-scheduler-v0.1-f654c296" "nvcr.io/nvidia/k8s-device-plugin")
+        imgs=("bytetrade/nvshare:libnvshare-new" "bytetrade/nvshare:nvshare-device-plugin" "bytetrade/nvshare:nvshare-scheduler" "nvcr.io/nvidia/k8s-device-plugin")
         for img in "${imgs[@]}"; do
             echo "pull image ${img} ..."
             sudo docker pull $img
