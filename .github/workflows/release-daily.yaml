@@ -110,24 +110,6 @@ jobs:
           v=1.8.0-$(date +"%Y%m%d")
           echo "tag_version=$v" >> $GITHUB_OUTPUT
           echo "version_md5sum=$(curl -sSfL https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${v}.md5sum.txt|awk '{print $1}')" >> $GITHUB_OUTPUT
-      
-      - name: Package installer
-        run: |
-          bash scripts/package.sh
-
-      - name: Update version
-        uses: eball/write-tag-to-version-file@latest
-        with:
-          filename: 'build/installer/wizard/config/settings/templates/terminus_cr.yaml'
-          placeholder: '#__VERSION__'
-          tag: ${{ steps.vars.outputs.tag_version }}
-
-      - name: Update release version
-        uses: eball/write-tag-to-version-file@latest
-        with:
-          filename: 'build/installer/install.sh'
-          placeholder: '#__VERSION__'
-          tag: ${{ steps.vars.outputs.tag_version }}
 
       - name: Update checksum
         uses: eball/write-tag-to-version-file@latest
@@ -135,12 +117,14 @@ jobs:
           filename: 'build/installer/install.sh'
           placeholder: '#__MD5SUM__'
           tag: ${{ steps.vars.outputs.version_md5sum }}
+      
+      - name: Package installer
+        run: |
+          bash scripts/build.sh ${{ steps.vars.outputs.tag_version }}
 
       - name: 'Archives'
         working-directory: ./build/installer
         run: |
-          mkdir -p /tmp/build
-          tar --exclude=wizard/tools --exclude=.git -zcvf /tmp/build/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz .
           cp install.sh publicInstaller.sh
 
       - name: Release public files
@@ -149,7 +133,7 @@ jobs:
           name: v${{ steps.vars.outputs.tag_version }} Release
           tag_name: ${{ steps.vars.outputs.tag_version }}
           files: |
-            /tmp/build/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz
+            install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz
             build/installer/publicInstaller.sh
             build/installer/install.sh
             build/installer/publicAddnode.sh
