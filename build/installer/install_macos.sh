@@ -569,6 +569,9 @@ _END
     check_appservice
      appservice_pod=$(get_appservice_pod)
 
+    # set reverse_proxy_config
+    reverse_proxy_config
+
     # gen bfl app key and secret
     bfl_ks=($(get_app_key_secret "bfl"))
 

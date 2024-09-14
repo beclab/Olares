@@ -95,6 +95,18 @@ function retry_cmd(){
     return $ret
 }
 
+function ensure_execute() {
+    "$@"
+    local ret=$?
+
+    if [ $ret -ne 0 ]; then
+        echo "Fatal error, command: '$*'"
+        exit $ret
+    fi
+
+    return $ret
+}
+
 function ensure_success() {
     wait_k8s_health
     exec 13> "$fd_errlog"
@@ -404,7 +416,7 @@ get_local_ip(){
     ip=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/icmp_seq/{print $2}')
     echo "$ip  $HOSTNAME"
 
-    if [[ x"$ip" == x"" || "$ip" == @("172.17.0.1"|"127.0.0.1"|"127.0.1.1") ]]; then
+    if [[ x"$ip" == x"" || "$ip" == "172.17.0.1" || "$ip" == "127.0.0.1" || "$ip" == "127.0.1.1" ]]; then
         echo "incorrect ip for hostname '$HOSTNAME', please check"
         exit $ERR_EXIT
     fi
@@ -721,3 +733,52 @@ check_gpu(){
     echo
 }
 
+reverse_proxy_config() {
+    # set default-reverse-proxy-config
+    local enableCloudflare="1"
+    local enableFrp="0"
+    local frpServer=""
+    local frpPort="0"
+    local frpAuthMethod=""
+    local frpAuthToken=""
+
+    if [ "${TERMINUS_IS_CLOUD_VERSION}" == "true" ]; then
+        enableCloudflare="0"
+    elif [ x"${FRP_ENABLE}" == x"1" ]; then
+        enableCloudflare="0"
+        enableFrp="1"
+
+        frpServer=${DEFAULT_FRP_SERVER}  # default frp server
+        if [ ! -z ${frpServer} ]; then
+            frpPort="0"
+            frpAuthMethod="jws"
+        elif [ ! -z ${FRP_SERVER} ]; then
+            frpServer=${FRP_SERVER}
+            frpPort=${FRP_PORT}
+            frpAuthMethod=${FRP_AUTH_METHOD}
+            frpAuthToken=${FRP_AUTH_TOKEN}
+        fi
+    fi
+    
+
+    # if [[ x"${enableFrp}" == x"1" && -z "${frpServer}" ]]; then
+    #     echo "FrpServer configuration is incorrect, please check ..."
+    #     exit $ERR_EXIT
+    # fi
+
+    cat > cm-default-reverse-proxy-config.yaml << _END
+apiVersion: v1
+data:
+  cloudflare.enable: "${enableCloudflare}"
+  frp.enable: "${enableFrp}"
+  frp.server: "${frpServer}"
+  frp.port: "${frpPort}"
+  frp.auth_method: "${frpAuthMethod}"
+  frp.auth_token: "${frpAuthToken}"
+kind: ConfigMap
+metadata:
+  name: default-reverse-proxy-config
+  namespace: os-system
+_END
+    ensure_execute $sh_c "$KUBECTL apply -f cm-default-reverse-proxy-config.yaml"
+}
