@@ -25,6 +25,12 @@ fi
 temp_file=$(mktemp)
 
 CURL_TRY="--connect-timeout 30 --retry 5 --retry-delay 1 --retry-max-time 10 "
+
+curl -fsSLI ${url} > /dev/null
+if [ $? -ne 0 ]; then
+    exit -1
+fi
+
 curl ${CURL_TRY} -L -o ${temp_file} ${url}
 mv ${temp_file} $name
 

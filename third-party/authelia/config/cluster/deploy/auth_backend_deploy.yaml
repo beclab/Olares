@@ -7,18 +7,21 @@
 {{- $hmac_secret := "" -}}
 {{- $encryption_key := "" -}}
 {{- $redis_password := "" -}}
+{{- $pg_password := "" -}}
 {{ if $auth_secret -}}
 {{- $jwt_secret = (index $auth_secret "data" "jwt_secret") -}}
 {{- $session_secret = (index $auth_secret "data" "session_secret") -}}
 {{- $hmac_secret = (index $auth_secret "data" "hmac_secret") -}}
 {{- $encryption_key = (index $auth_secret "data" "encryption_key") -}}
 {{- $redis_password = (index $auth_secret "data" "redis_password") -}}
+{{- $pg_password = (index $auth_secret "data" "pg_password") -}}
 {{ else -}}
 {{ $jwt_secret = randAlphaNum 16 | b64enc }}
 {{ $session_secret = randAlphaNum 16 | b64enc }}
 {{ $hmac_secret = randAlphaNum 16 | b64enc }}
 {{ $encryption_key = randAlphaNum 32 | b64enc }}
 {{ $redis_password = randAlphaNum 16 | b64enc }}
+{{ $pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
 ---
@@ -34,6 +37,27 @@ data:
   hmac_secret: {{ $hmac_secret }}
   encryption_key: {{ $encryption_key }}
   redis_password: {{ $redis_password }}
+  pg_password: {{ $pg_password }}
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: authelia-pg
+  namespace: os-system
+spec:
+  app: authelia
+  appNamespace: os-system
+  middleware: postgres
+  postgreSQL:
+    user: authelia_os_system
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: pg_password
+          name: authelia-secrets
+    databases:
+      - name: authelia
 
 ---
 apiVersion: v1
@@ -105,8 +129,14 @@ data:
 
     storage:
       encryption_key: {{ $encryption_key | b64dec }}
-      local:
-        path: /config/db.sqlite3
+      postgres:
+        host: citus-headless.os-system
+        port: 5432
+        database: os_system_authelia
+        schema: public
+        username: authelia_os_system
+        password: {{ $pg_password | b64dec }}
+        timeout: 5s
 
     notifier:
       disable_startup_check: false
@@ -277,6 +307,27 @@ spec:
       serviceAccountName: os-internal
       serviceAccount: os-internal
       initContainers:
+      - name: init-container
+        image: 'postgres:16.0-alpine3.18'
+        command:
+          - sh
+          - '-c'
+          - >-
+            echo -e "Checking for the availability of PostgreSQL Server deployment";
+            until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1";
+            do sleep 1; printf "-"; done; sleep 15;
+            echo -e " >> $PGDB exists";
+        env:
+          - name: PGHOST
+            value: citus-headless.os-system
+          - name: PGPORT
+            value: "5432"
+          - name: PGUSER
+            value: authelia_os_system
+          - name: PGPASSWORD
+            value: {{ $pg_password | b64dec }}
+          - name: PGDB
+            value: os_system_authelia
       - args:
         - -it
         - authelia-storage-svc:6379,redis.kubesphere-system:6379
@@ -286,7 +337,7 @@ spec:
 
       containers:      
       - name: authelia
-        image: beclab/auth:0.1.38
+        image: beclab/auth:0.1.39
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9091

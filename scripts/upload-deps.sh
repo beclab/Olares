@@ -25,6 +25,10 @@ for deps in "components" "pkgs"; do
         fi
         
         bash ${BASE_DIR}/download-deps.sh $PLATFORM $line
+        if [ $? -ne 0 ]; then
+            exit -1
+        fi
+
         filename=$(echo "$line"|awk -F"," '{print $1}')
         echo "if exists $filename ... "
         name=$(echo -n "$filename"|md5sum|awk '{print $1}')
