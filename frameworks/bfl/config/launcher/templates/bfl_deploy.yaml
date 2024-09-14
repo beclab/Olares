@@ -242,7 +242,7 @@ spec:
 
       containers:
       - name: api
-        image: beclab/bfl:v0.3.40
+        image: beclab/bfl:v0.3.41
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000
@@ -287,12 +287,8 @@ spec:
           value: backup-server.os-system:8082
         - name: L4_PROXY_IMAGE_VERSION
           value: v0.2.6
-        - name: FRPC_IMAGE_VERSION
-          value: v1.0.2
-        - name: CLOUDFLARED_IMAGE_NAME
-          value: beclab/cloudflared
-        - name: CLOUDFLARED_IMAGE_VERSION
-          value: v0.1.0
+        - name: REVERSE_PROXY_AGENT_IMAGE_VERSION
+          value: v0.1.2
 
       - name: ingress
         image: beclab/bfl-ingress:v0.2.13
