@@ -147,7 +147,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
         - name: dashboard-init
-          image: beclab/dashboard-frontend-v1:v0.3.6
+          image: beclab/dashboard-frontend-v1:v0.3.7
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
