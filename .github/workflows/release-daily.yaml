@@ -124,8 +124,8 @@ jobs:
 
       - name: 'Archives'
         run: |
-          cp .dist/install-wizard/installer.sh build/installer
-          cp build/installer/installer.sh build/installer/publicInstaller.sh
+          cp .dist/install-wizard/install.sh build/installer
+          cp build/installer/install.sh build/installer/publicInstaller.sh
 
       - name: Release public files
         uses: softprops/action-gh-release@v1
