@@ -97,10 +97,10 @@ jobs:
           bash scripts/build.sh ${{ steps.vars.outputs.tag_version }}
           
       - name: 'Archives'
-        working-directory: ./build/installer
         run: |
-          cp install.sh publicInstaller.sh
-          cp install.sh publicInstaller.latest
+          cp .dist/install-wizard/installer.sh build/installer
+          cp build/installer/installer.sh build/installer/publicInstaller.sh
+          cp build/installer/installer.sh build/installer/publicInstaller.latest
 
       - name: Release public files
         uses: softprops/action-gh-release@v1
