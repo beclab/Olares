@@ -56,7 +56,7 @@ if command -v tar >/dev/null; then
     $SUDO rm -rf $HOME/.terminus/${foldername} && \
     mkdir -p $HOME/.terminus/${foldername}
 
-    CLI_VERSION="0.1.21"
+    CLI_VERSION="0.1.23"
     CLI_FILE="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
     INSTALL_TERMINUS_CLI="/usr/local/bin/terminus-cli"
     if [[ x"$os_type" == x"Darwin" ]]; then
@@ -65,7 +65,7 @@ if command -v tar >/dev/null; then
     fi
 
     if [[ ! -f ${CLI_FILE} ]]; then
-        CLI_URL="https://github.com/beclab/Installer/releases/download/${CLI_VERSION}/${CLI_FILE}"
+        CLI_URL="https://dc3p1870nn3cj.cloudfront.net/${CLI_FILE}"
         
         echo ""
         echo " Downloading Terminus Installer ${CLI_VERSION} from ${CLI_URL} ... " 
