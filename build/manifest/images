@@ -59,7 +59,7 @@ rancher/mirrored-coredns-coredns:1.9.1
 beclab/l4-bfl-proxy:v0.2.6
 gcr.io/k8s-minikube/storage-provisioner:v5
 owncloudci/wait-for:latest
-beclab/recommend-argotask:v0.0.5
+beclab/recommend-argotask:v0.0.12
 nvcr.io/nvidia/k8s-device-plugin:v0.16.1
 bytetrade/nvshare:libnvshare-new
 bytetrade/nvshare:nvshare-device-plugin
