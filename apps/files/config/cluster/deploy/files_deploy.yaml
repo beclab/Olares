@@ -126,6 +126,14 @@ spec:
           ports:
             - containerPort: 8110
           env:
+{{ if .Values.sharedlib }}        
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: TERMINUSD_HOST
+              value: $(NODE_IP):18088  
+{{ end }}
             - name: ES_ENABLED
               value: 'False'
             - name: WATCHER_ENABLED
