@@ -8,6 +8,13 @@
 {{ $pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+{{- $redis_password := "" -}}
+{{ if $download_secret -}}
+{{ $redis_password = (index $download_secret "data" "redis_password") }}
+{{ else -}}
+{{ $redis_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
 ---
 apiVersion: v1
 kind: Secret
@@ -17,6 +24,7 @@ metadata:
 type: Opaque
 data:
   pg_password: {{ $pg_password }}
+  redis_password: {{ $redis_password }}
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
@@ -140,7 +148,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.0.9"
+        image: "beclab/yt-dlp:v0.0.10"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -161,6 +169,10 @@ spec:
           value: user_space_{{ .Values.bfl.username }}_knowledge
         - name: SETTING_URL
           value: http://system-server.user-system-{{ .Values.bfl.username }}/legacy/v1alpha1/service.settings/v1/api/cookie/retrieve
+        - name: REDIS_HOST
+          value: redis-cluster-proxy.user-system-{{ .Values.bfl.username }}
+        - name: REDIS_PASSWORD
+          value: {{ $redis_password | b64dec }}
         volumeMounts:
         - name: config-dir
           mountPath: /app/config
@@ -173,9 +185,23 @@ spec:
           limits:
             cpu: "1"
             memory: 300Mi
-
+      - name: pot-provider
+        image: brainicism/bgutil-ytdlp-pot-provider
+        ports:
+        - containerPort: 4416
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+          limits:
+            cpu: "1"
+            memory: 300Mi
       - name: download-spider
-        image: "beclab/download-spider:v0.0.9"
+        image: "beclab/download-spider:v0.0.10"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -192,6 +218,10 @@ spec:
           value: "5432"
         - name: PG_DATABASE
           value: user_space_{{ .Values.bfl.username }}_knowledge
+        - name: REDIS_HOST
+          value: redis-cluster-proxy.user-system-{{ .Values.bfl.username }}
+        - name: REDIS_PASSWORD
+          value: {{ $redis_password | b64dec }}
         volumeMounts:
         - name: download-dir
           mountPath: /downloads
