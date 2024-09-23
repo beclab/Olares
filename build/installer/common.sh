@@ -1,4 +1,4 @@
-#!/binbash
+#!/bin/bash
 
 
 
@@ -766,7 +766,7 @@ reverse_proxy_config() {
     #     exit $ERR_EXIT
     # fi
 
-    cat > cm-default-reverse-proxy-config.yaml << _END
+    cat > ${BASE_DIR}/deploy/cm-default-reverse-proxy-config.yaml << _END
 apiVersion: v1
 data:
   cloudflare.enable: "${enableCloudflare}"
@@ -780,5 +780,5 @@ metadata:
   name: default-reverse-proxy-config
   namespace: os-system
 _END
-    ensure_execute $sh_c "$KUBECTL apply -f cm-default-reverse-proxy-config.yaml"
+    ensure_execute $sh_c "$KUBECTL apply -f ${BASE_DIR}/deploy/cm-default-reverse-proxy-config.yaml"
 }

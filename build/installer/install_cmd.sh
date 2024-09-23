@@ -26,7 +26,7 @@ run_install() {
 
     ensure_success $sh_c "export OS_LOCALIP=$local_ip && \
         export TERMINUS_IS_CLOUD_VERSION=$TERMINUS_IS_CLOUD_VERSION && \
-    $TERMINUS_CLI terminus install $PARAM"
+    $TERMINUS_CLI terminus install $PARAM --kube $KUBE_TYPE "
 
     log_info 'k8s and kubesphere installation is complete'
 
@@ -97,7 +97,7 @@ run_install() {
         --set fs_type=\"${fs_type}\" --set sharedlib=\"$shared_lib\""
 
     # save backup env to configmap
-    cat > cm-backup-config.yaml << _END
+    cat > ${BASE_DIR}/deploy/cm-backup-config.yaml << _END
 apiVersion: v1
 data:
   terminus.cloudVersion: "${TERMINUS_IS_CLOUD_VERSION}"
@@ -109,7 +109,7 @@ metadata:
   name: backup-config
   namespace: os-system
 _END
-    $run_cmd $sh_c "$KUBECTL apply -f cm-backup-config.yaml"
+    $run_cmd $sh_c "$KUBECTL apply -f ${BASE_DIR}/deploy/cm-backup-config.yaml"
 
     # patch
     $run_cmd $sh_c "$KUBECTL apply -f ${BASE_DIR}/deploy/patch-globalrole-workspace-manager.yaml"
@@ -642,7 +642,7 @@ Main() {
         terminus_base_dir="$ENV_BASE_DIR"
     fi
     
-    PARAM="--base-dir $terminus_base_dir --manifest $manifest_file --kube $KUBE_TYPE --version $VERSION"
+    PARAM="--base-dir $terminus_base_dir --manifest $manifest_file --version $VERSION"
     # TODO: install
 
     get_distribution
@@ -658,7 +658,7 @@ Main() {
         if [ ! -f $terminus_base_dir/.prepared ]; then
             ensure_success $sh_c "export OS_LOCALIP=$local_ip && \
             export TERMINUS_IS_CLOUD_VERSION=$TERMINUS_IS_CLOUD_VERSION && \
-            $TERMINUS_CLI terminus download $PARAM"
+            $TERMINUS_CLI terminus download component $PARAM"
 
             ensure_success $sh_c "export OS_LOCALIP=$local_ip && \
             export TERMINUS_IS_CLOUD_VERSION=$TERMINUS_IS_CLOUD_VERSION && \

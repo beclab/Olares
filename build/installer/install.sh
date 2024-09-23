@@ -63,7 +63,7 @@ if command -v tar >/dev/null; then
     fi
 
 
-    CLI_VERSION="0.1.25"
+    CLI_VERSION="0.1.26"
     CLI_FILE="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
     INSTALL_TERMINUS_CLI="/usr/local/bin/terminus-cli"
     if [[ x"$os_type" == x"Darwin" ]]; then
@@ -102,7 +102,7 @@ if command -v tar >/dev/null; then
           # TODO: download install-wizard
 
           sh -c "cd $terminus_home && \
-          $INSTALL_TERMINUS_CLI terminus download-wizard --version $VERSION --base-dir $HOME/.terminus"
+          $INSTALL_TERMINUS_CLI terminus download wizard --version $VERSION --base-dir $HOME/.terminus"
 
           if [[ $? -ne 0 ]]; then
             exit -1
@@ -115,7 +115,7 @@ if command -v tar >/dev/null; then
           mv terminus-cli $INSTALL_TERMINUS_CLI"
 
           $SUDO -E sh -c "cd $terminus_home && \
-          $INSTALL_TERMINUS_CLI terminus download-wizard --version $VERSION --base-dir $HOME/.terminus"
+          $INSTALL_TERMINUS_CLI terminus download wizard --version $VERSION --base-dir $HOME/.terminus"
 
           if [[ $? -ne 0 ]]; then
             exit -1
