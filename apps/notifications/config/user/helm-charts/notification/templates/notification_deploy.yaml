@@ -248,7 +248,7 @@ spec:
             value: user_space_{{ .Values.bfl.username }}_notifications
       containers:
       - name: notifications-api
-        image: beclab/notifications-api:v0.1.22
+        image: beclab/notifications-api:v0.1.23
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
@@ -262,8 +262,25 @@ spec:
           value: {{ .Values.os.notification.appKey }}
         - name: DATABASE_PASSWORD
           value: {{ $password | b64dec }}
+        - name: PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING
+          value: '1'
         - name: DATABASE_URL
           value: postgres://notifications_{{ .Values.bfl.username }}:$(DATABASE_PASSWORD)@citus-master-svc.user-system-{{ .Values.bfl.username }}/user_space_{{ .Values.bfl.username }}_notifications?sslmode=disable
+        livenessProbe:
+          tcpSocket:
+            port: 3010
+          initialDelaySeconds: 25
+          timeoutSeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 8
+        readinessProbe:
+          tcpSocket:
+            port: 3010
+          initialDelaySeconds: 25
+          periodSeconds: 10
+
+
 
 ---
 apiVersion: v1
