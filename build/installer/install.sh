@@ -6,9 +6,7 @@ set -e
 
 if [[ x"$VERSION" == x"" ]]; then
   export VERSION="#__VERSION__"
-  MD5SUM="#__MD5SUM__"
   # export VERSION="1.8.0-99995"
-  # MD5SUM="4c0e0dd59ec5e334e89374af4f89d411"
 fi
 
 if [[ "x${VERSION}" == "x" || "x${VERSION:3}" == "xVERSION__" ]]; then
@@ -52,11 +50,20 @@ if command -v tar >/dev/null; then
       export KUBE_TYPE="k3s"
     fi
 
-    foldername="install-wizard-v${VERSION}"
-    $SUDO rm -rf $HOME/.terminus/${foldername} && \
-    mkdir -p $HOME/.terminus/${foldername}
+    # foldername="install-wizard-v${VERSION}"
+    # $SUDO rm -rf $HOME/.terminus/${foldername} && \
+    # mkdir -p $HOME/.terminus/${foldername}
 
-    CLI_VERSION="0.1.24"
+    foldername="v${VERSION}"
+    terminus_home="$HOME/.terminus"
+    if [ ! -d $terminus_home ]; then
+        mkdir -p $terminus_home
+    else
+        $SUDO rm -rf $terminus_home/versions/${foldername}
+    fi
+
+
+    CLI_VERSION="0.1.25"
     CLI_FILE="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
     INSTALL_TERMINUS_CLI="/usr/local/bin/terminus-cli"
     if [[ x"$os_type" == x"Darwin" ]]; then
@@ -81,10 +88,6 @@ if command -v tar >/dev/null; then
         echo "Terminus Installer ${CLI_VERSION} Download Complete!"
         echo ""
 
-        if [[ "x${MD5SUM}" == "x" || "x${MD5SUM:3}" == "xMD5SUM__" ]]; then
-          MD5SUM=$(curl -sSfL "https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${VERSION}.md5sum.txt"|awk '{print $1}')
-        fi
-
         if [[ x"$os_type" == x"Darwin" ]]; then
           if [ ! -f "/usr/local/Cellar" ]; then
             current_user=$(whoami)
@@ -98,27 +101,27 @@ if command -v tar >/dev/null; then
           
           # TODO: download install-wizard
 
-          sh -c "cd $HOME/.terminus/${foldername} && \
-          $INSTALL_TERMINUS_CLI terminus download-wizard --version $VERSION --md5sum $MD5SUM --base-dir $HOME/.terminus"
+          sh -c "cd $terminus_home && \
+          $INSTALL_TERMINUS_CLI terminus download-wizard --version $VERSION --base-dir $HOME/.terminus"
 
           if [[ $? -ne 0 ]]; then
             exit -1
           fi
 
-          cd $HOME/.terminus/${foldername} && \
+          cd $terminus_home/versions/${foldername} && \
           bash  ./install_macos.sh
         else
           $SUDO -E sh -c "tar -zxvf ${CLI_FILE} && chmod +x terminus-cli && \
           mv terminus-cli $INSTALL_TERMINUS_CLI"
 
-          $SUDO -E sh -c "cd $HOME/.terminus/${foldername} && \
-          $INSTALL_TERMINUS_CLI terminus download-wizard --version $VERSION --md5sum $MD5SUM --base-dir $HOME/.terminus"
+          $SUDO -E sh -c "cd $terminus_home && \
+          $INSTALL_TERMINUS_CLI terminus download-wizard --version $VERSION --base-dir $HOME/.terminus"
 
           if [[ $? -ne 0 ]]; then
             exit -1
           fi
 
-          cd $HOME/.terminus/${foldername} && \
+          cd $terminus_home/versions/${foldername} && \
           $SUDO -E sh -c "bash  ./install_cmd.sh"
         fi
 
