@@ -2,6 +2,7 @@
 
 {{- $namespace := printf "%s%s" "user-system-" .Values.bfl.username -}}
 {{- $zinc_files_secret := (lookup "v1" "Secret" $namespace "zinc-files-secrets") -}}
+
 {{- $password := "" -}}
 {{ if $zinc_files_secret -}}
 {{ $password = (index $zinc_files_secret "data" "password") }}
@@ -15,6 +16,67 @@
 {{ else -}}
 {{ $redis_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
+
+{{- $redis_password_data := "" -}}
+{{ $redis_password_data = $redis_password | b64dec }}
+
+{{- $pg_password := "" -}}
+{{ if $zinc_files_secret -}}
+{{ $pg_password = (index $zinc_files_secret "data" "pg_password") }}
+{{ else -}}
+{{ $pg_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloud-drive-integration-secrets
+  namespace: user-system-{{ .Values.bfl.username }}
+type: Opaque
+data:
+  pg_password: {{ $pg_password }}
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: cloud-drive-integration-pg
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: cloud-drive-integration
+  appNamespace: {{ .Release.Namespace }}
+  middleware: postgres
+  postgreSQL:
+    user: cloud_drive_integration_{{ .Values.bfl.username }}
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: pg_password
+          name: cloud-drive-integration-secrets
+    databases:
+    - name: cloud-drive-integration
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-drive-integration-secrets-auth
+  namespace: {{ .Release.Namespace }}
+data:
+  redis_password: {{ $redis_password_data }}
+  redis_addr: redis-cluster-proxy.user-system-{{ .Values.bfl.username }}:6379
+  redis_host: redis-cluster-proxy.user-system-{{ .Values.bfl.username }}
+  redis_port: '6379'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-drive-integration-userspace-data
+  namespace: {{ .Release.Namespace }}
+data:
+  appData: "{{ .Values.userspace.appData }}"
+  appCache: "{{ .Values.userspace.appCache }}"
+  username: "{{ .Values.bfl.username }}"
 
 ---
 apiVersion: apps/v1
@@ -104,6 +166,25 @@ spec:
               apiVersion: v1
               fieldPath: status.podIP
 
+      initContainers:
+      - name: init-container
+        image: 'postgres:16.0-alpine3.18'
+        command:
+          - sh
+          - '-c'
+          - >-
+            echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
+        env:
+          - name: PGHOST
+            value: citus-master-svc.user-system-{{ .Values.bfl.username }}
+          - name: PGPORT
+            value: "5432"
+          - name: PGUSER
+            value: cloud_drive_integration_{{ .Values.bfl.username }}
+          - name: PGPASSWORD
+            value: "{{ $pg_password | b64dec }}"
+          - name: PGDB
+            value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
       containers:
 #      - name: gateway
 #        image: beclab/appdata-gateway:0.1.12
@@ -141,7 +222,7 @@ spec:
 #          value: 'True'
 #        - name: WATCHER_ENABLED
 #          value: 'True'
-#        - name: KNOWLEDGE_BASE_ENABLED
+#        - name: cloud-drive-integration_BASE_ENABLED
 #          value: 'True'
 #        - name: BFL_NAME
 #          value: '{{ .Values.bfl.username }}'
@@ -184,6 +265,8 @@ spec:
 #          # use redis db 0 for redis cache
 #        - name: REDIS_DB
 #          value: '0'
+#        - name: REDIS_URL
+#          value: 'redis://:{{ $redis_password | b64dec }}@redis-cluster-proxy.user-system-{{ .Values.bfl.username }}:6379/0'
 #        - name: POD_NAME
 #          valueFrom:
 #            fieldRef:
@@ -211,13 +294,47 @@ spec:
         - name: userspace-dir
           mountPath: /data
       - name: drive-server
-        image: beclab/drive:v0.0.4
+        image: beclab/drive:v0.0.5
         imagePullPolicy: IfNotPresent
         env:
         - name: OS_SYSTEM_SERVER
           value: system-server.user-system-{{ .Values.bfl.username }}
-        ports:
+        - name: DATABASE_URL
+          value: postgres://cloud_drive_integration_{{ .Values.bfl.username }}:{{ $pg_password | b64dec }}@citus-master-svc.user-system-{{ .Values.bfl.username }}:5432/user_space_{{ .Values.bfl.username }}_cloud_drive_integration
+        - name: REDIS_URL
+          value: redis://:{{ $redis_password | b64dec }}@redis-cluster-proxy.user-system-{{ .Values.bfl.username }}:6379/0
+        - name: TASK_EXECUTOR_MAX_THREADS
+          value: '6'
+        ports: 
         - containerPort: 8181
+        volumeMounts:
+        - name: upload-data
+          mountPath: /data/Home
+        - name: upload-appdata
+          mountPath: /appdata/
+        - name: userspace-app-dir
+          mountPath: /data/Application
+      - name: task-executor
+        image: beclab/driveexecutor:v0.0.5
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: OS_SYSTEM_SERVER
+          value: system-server.user-system-{{ .Values.bfl.username }}
+        - name: DATABASE_URL
+          value: postgres://cloud_drive_integration_{{ .Values.bfl.username }}:{{ $pg_password | b64dec }}@citus-master-svc.user-system-{{ .Values.bfl.username }}:5432/user_space_{{ .Values.bfl.username }}_cloud_drive_integration
+        - name: REDIS_URL
+          value: redis://:{{ $redis_password | b64dec }}@redis-cluster-proxy.user-system-{{ .Values.bfl.username }}:6379/0
+        - name: TASK_EXECUTOR_MAX_THREADS
+          value: '6'
+        ports: 
+        - containerPort: 8181
+        volumeMounts:
+        - name: upload-data
+          mountPath: /data/Home
+        - name: upload-appdata
+          mountPath: /appdata/
+        - name: userspace-app-dir
+          mountPath: /data/Application
 #      - name: terminus-upload-sidecar
 #        image: beclab/upload:v1.0.3
 #        env:
@@ -487,6 +604,7 @@ type: Opaque
 data:
   password: {{ $password }}
   redis_password: {{ $redis_password }}
+  pg_password: {{ $pg_password }}
 
 #---
 #apiVersion: apr.bytetrade.io/v1alpha1
