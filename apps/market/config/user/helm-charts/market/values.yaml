@@ -39,5 +39,7 @@ os:
   search2:
     appKey: '${ks[0]}'
     appSecret: test
+  appstore:
+    marketProvider: ''
 kubesphere:
   redis_password: ""

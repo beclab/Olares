@@ -66,12 +66,12 @@ spec:
                 fieldPath: status.podIP
       containers:
       - name: appstore
-        image: beclab/market-frontend:v0.2.14
+        image: beclab/market-frontend:v0.2.15
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
       - name: appstore-backend
-        image: beclab/market-backend:v0.2.12
+        image: beclab/market-backend:v0.2.15
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -84,6 +84,8 @@ spec:
             value: {{ .Values.os.appstore.appKey }}
           - name: APP_SOTRE_SERVICE_SERVICE_HOST
             value: appstore-server-prod.bttcdn.com
+          - name: MARKET_PROVIDER
+            value: '{{ .Values.os.appstore.marketProvider }}'
           - name: APP_SOTRE_SERVICE_SERVICE_PORT
             value: '443'
           - name: APP_SERVICE_SERVICE_HOST

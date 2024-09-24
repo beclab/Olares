@@ -180,7 +180,9 @@ os:
   ${app_perm_settings}
 EOF
 
+
     log_info 'Installing built-in apps ...'
+    sed -i "s/marketProvider: ''/marketProvider: '${MARKET_PROVIDER}'/g" ${BASE_DIR}/wizard/config/apps/market/values.yaml
     for appdir in "${BASE_DIR}/wizard/config/apps"/*/; do
       if [ -d "$appdir" ]; then
         releasename=$(basename "$appdir")
