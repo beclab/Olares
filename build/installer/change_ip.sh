@@ -164,7 +164,33 @@ regen_cert_conf(){
 }
 
 
+pschildren() {
+    ps -e -o ppid= -o pid= | \
+    sed -e 's/^\s*//g; s/\s\s*/\t/g;' | \
+    grep -w "^$1" | \
+    cut -f2
+}
 
+pstree() {
+    for pid in $@; do
+        echo $pid
+        for child in $(pschildren $pid); do
+            pstree $child
+        done
+    done
+}
+
+killtree() {
+    kill -9 $(
+        { set +x; } 2>/dev/null;
+        pstree $@;
+        set -x;
+    ) 2>/dev/null
+}
+
+getshims() {
+    ps -e -o pid= -o args= | sed -e 's/^ *//; s/\s\s*/\t/;' | grep -w 'usr/[^/]*/bin/containerd-shim' | cut -f1
+}
 
 update_juicefs() {
 	$sh_c "systemctl stop juicefs minio minio-operator redis-server"
@@ -335,6 +361,8 @@ post_update_k3s_master(){
     ensure_success $sh_c "systemctl daemon-reload"
 	ensure_success $sh_c "systemctl start k3s"
 	ensure_success $sh_c "systemctl --no-pager status k3s"
+
+	killtree $({ set +x; } 2>/dev/null; getshims; set -x)
 
 	log_info 'IP changed, the OS will be reloaded in 2 minutes...'
 	sleep 120
