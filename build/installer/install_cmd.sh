@@ -26,7 +26,7 @@ run_install() {
 
     ensure_success $sh_c "export OS_LOCALIP=$local_ip && \
         export TERMINUS_IS_CLOUD_VERSION=$TERMINUS_IS_CLOUD_VERSION && \
-    $TERMINUS_CLI terminus install $PARAM --kube $KUBE_TYPE "
+    $TERMINUS_CLI terminus install $PARAM"
 
     log_info 'k8s and kubesphere installation is complete'
 
@@ -644,7 +644,7 @@ Main() {
         terminus_base_dir="$ENV_BASE_DIR"
     fi
     
-    PARAM="--base-dir $terminus_base_dir --manifest $manifest_file --version $VERSION"
+    PARAM="--base-dir $terminus_base_dir --manifest $manifest_file --kube $KUBE_TYPE --version $VERSION"
     # TODO: install
 
     get_distribution
