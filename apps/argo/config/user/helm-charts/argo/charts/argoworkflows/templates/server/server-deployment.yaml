@@ -106,34 +106,6 @@ spec:
             - name: tmp
               mountPath: /tmp
         
-        - name: addflowtask
-          image: "beclab/recommend-argotask:v0.0.12"
-          env:
-          - name: NAME_SPACE
-            value: {{ .Release.Namespace }}
-          - name: APPLICATION_DATA_PATH
-            valueFrom:
-              configMapKeyRef:
-                name: rss-userspace-data
-                key: appData
-          - name: APP_DATA_PATH
-            valueFrom:
-              configMapKeyRef:
-                name: rss-userspace-data
-                key: appCache
-          - name: ALGORITHM_VERSION
-            value: v0.0.12
-          - name: TERMIUS_USER_NAME
-            valueFrom:
-              configMapKeyRef:
-                name: rss-userspace-data
-                key: username
-          
-          - name: KNOWLEDGE_BASE_API_PORT
-            value: "3010"
-         
-          
-
       volumes:
         - name: tmp
           emptyDir: {}
