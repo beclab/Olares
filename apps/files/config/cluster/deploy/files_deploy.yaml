@@ -104,8 +104,9 @@ spec:
           image: beclab/files-server:v0.2.33
           imagePullPolicy: IfNotPresent
           securityContext:
-            allowPrivilegeEscalation: false
+            allowPrivilegeEscalation: true
             runAsUser: 1000
+            privileged: true
           volumeMounts:
             - name: fb-data
               mountPath: /appdata
@@ -122,6 +123,7 @@ spec:
 {{ if .Values.sharedlib }}        
             - name: shared-lib
               mountPath: /data/External
+              mountPropagation: Bidirectional
 {{ end }}
           ports:
             - containerPort: 8110

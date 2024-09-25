@@ -2,6 +2,7 @@
 ERR_EXIT=-1
 
 old_ip=$1
+set -x
 
 BASE_DIR=$(dirname $(realpath -s $0))
 CHANGE_LOG="$BASE_DIR/logs"
@@ -161,35 +162,6 @@ regen_cert_conf(){
 		openssl x509 -in $pem -text | grep -A1 Subject\ Alternative\ Name | tail -1 | xargs echo -e "[ v3_ext ]\nsubjectAltName = "|sed -e 's/IP Address/IP/g'|sed -e "s/$old_ip/$local_ip/g"
 	done
 	IFS=$old_IFS
-}
-
-
-pschildren() {
-    ps -e -o ppid= -o pid= | \
-    sed -e 's/^\s*//g; s/\s\s*/\t/g;' | \
-    grep -w "^$1" | \
-    cut -f2
-}
-
-pstree() {
-    for pid in $@; do
-        echo $pid
-        for child in $(pschildren $pid); do
-            pstree $child
-        done
-    done
-}
-
-killtree() {
-    kill -9 $(
-        { set +x; } 2>/dev/null;
-        pstree $@;
-        set -x;
-    ) 2>/dev/null
-}
-
-getshims() {
-    ps -e -o pid= -o args= | sed -e 's/^ *//; s/\s\s*/\t/;' | grep -w 'usr/[^/]*/bin/containerd-shim' | cut -f1
 }
 
 update_juicefs() {
@@ -362,7 +334,7 @@ post_update_k3s_master(){
 	ensure_success $sh_c "systemctl start k3s"
 	ensure_success $sh_c "systemctl --no-pager status k3s"
 
-	killtree $({ set +x; } 2>/dev/null; getshims; set -x)
+	ensure_success $sh_c "$KUBECTL delete pods --all --all-namespaces"
 
 	log_info 'IP changed, the OS will be reloaded in 2 minutes...'
 	sleep 120
@@ -499,44 +471,52 @@ main() {
 	precheck_os
 
 	local storage_type="s3"
-	if is_k3s; then
-		if system_service_active "k3s" ; then
-			update_k3s_master
-		fi 
+
+	if [[ -z "$NOT_INSTALLED" ]]; then
+		if is_k3s; then
+			if system_service_active "k3s" ; then
+				update_k3s_master
+			fi 
+		fi
 	fi
 
-	update_juicefs
-	
-	update_etcd
+	if [[ -z "$NOT_PREPARED" ]]; then
+		update_juicefs
+	fi
 
-	if is_k3s ; then
-		log_info "updating k3s"
+	if [[ -z "$NOT_INSTALLED" ]]; then
+		update_etcd
 
-		post_update_k3s_master
-	else
-		log_info "updating k8s"
+		if is_k3s ; then
+			log_info "updating k3s"
 
-	    update_k8s_master
+			post_update_k3s_master
+		else
+			log_info "updating k8s"
+
+			update_k8s_master
+		fi 
+
+		# if [ "$storage_type" == "minio" ]; then 
+		# 	update_minio_operator
+		# fi
+
+		# check os auto-reloading
+		log_info 'Waiting for Terminus reloading ...'
+		check_desktop
+
+		for u in $(get_all_user) ; do
+			$sh_c "${KUBECTL} rollout restart deploy -n user-space-$u edge-desktop"
+			$sh_c "${KUBECTL} rollout restart deploy -n user-space-$u headscale-server"
+		done
+
+		$sh_c "killall envoy" 
+
+		check_desktop
 	fi 
-
-	# if [ "$storage_type" == "minio" ]; then 
-	# 	update_minio_operator
-	# fi
-
-	# check os auto-reloading
-    log_info 'Waiting for Terminus reloading ...'
-    check_desktop
-
-	for u in $(get_all_user) ; do
-		$sh_c "${KUBECTL} rollout restart deploy -n user-space-$u edge-desktop"
-		$sh_c "${KUBECTL} rollout restart deploy -n user-space-$u headscale-server"
-	done
-
-	$sh_c "killall envoy" 
-
-    check_desktop
 
 	log_info 'Success to change the Terminus IP address!'
 }
 
+$sh_c "rm -f $CHANGE_LOG"
 main $1 | tee ${CHANGE_LOG}/changeip.log

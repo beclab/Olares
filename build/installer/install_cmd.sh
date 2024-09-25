@@ -536,10 +536,15 @@ setup_ws() {
     local s3_sts="none"
     local s3_ak="none"
     local s3_sk="none"
+    local terminusd_installed="0"
     if [ ! -z "${AWS_SESSION_TOKEN_SETUP}" ]; then
         s3_sts="${AWS_SESSION_TOKEN_SETUP}"
         s3_ak="${AWS_ACCESS_KEY_ID_SETUP}"
         s3_sk="${AWS_SECRET_ACCESS_KEY_SETUP}"
+    fi
+
+    if [[ ! -z "${TERMINUS_BOX}" && x"${TERMINUS_BOX}" == x"1" ]]; then
+        terminusd_installed="1"
     fi
 
     $sh_c "rm -rf ${BASE_DIR}/wizard/config/account/values.yaml"
@@ -561,6 +566,7 @@ cluster_id: ${CLUSTER_ID}
 s3_sts: ${s3_sts}
 s3_ak: ${s3_ak}
 s3_sk: ${s3_sk}
+terminusd: '${terminusd_installed}'
 
 user:
   name: '${username}'

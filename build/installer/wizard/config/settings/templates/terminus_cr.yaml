@@ -32,5 +32,6 @@ spec:
   settings: 
     domainName: "#__DOMAIN_NAME__"
     selfhosted: "#__SELFHOSTED__"
+    terminusd: '{{ .Values.terminusd }}'
 status:
   state: active
