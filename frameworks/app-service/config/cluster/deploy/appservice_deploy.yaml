@@ -153,7 +153,7 @@ spec:
       serviceAccount: os-internal
       containers:
       - name: app-service
-        image: beclab/app-service:0.2.38
+        image: beclab/app-service:0.2.39
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -188,6 +188,8 @@ spec:
           name: user-apps-template
         - mountPath: /etc/certs
           name: certs
+        - mountPath: /etc/containerd/config.toml
+          name: configtoml
       initContainers:
       - name: generate-certs
         image: beclab/openssl:v3
@@ -211,6 +213,9 @@ spec:
           - name: certs
             mountPath: /etc/certs
       volumes:
+      - name: configtoml
+        hostPath:
+          path: /etc/containerd/config.toml
       - name: charts-store
         persistentVolumeClaim:
           claimName: {{ default $charts_pvc .Values.charts_pvc }}
@@ -344,7 +349,7 @@ spec:
       hostNetwork: true
       containers:
         - name: image-service
-          image: beclab/image-service:0.2.38
+          image: beclab/image-service:0.2.39
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
