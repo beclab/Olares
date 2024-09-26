@@ -294,7 +294,26 @@ update_k3s_master() {
 	ensure_success $sh_c "systemctl stop k3s etcd backup-etcd"
 }
 
+wait_etcd_backup() {
+	local doing_backup=$(ps -ef|grep etcd-backup.sh|grep -v grep|wc -l)
+	local n=0
+    while [[ $doing_backup -ne 0 ]]; do
+        n=$(expr $n + 1)
+        dotn=$(($n % 10))
+        dot=$(repeat $dotn '>')
+
+        echo -ne "\rPlease waiting ${dot}"
+        sleep 0.5
+
+		doing_backup=$(ps -ef|grep etcd-backup.sh|grep -v grep|wc -l)
+        echo -ne "\rPlease waiting          "
+
+	done	
+}
+
 update_etcd(){
+	wait_etcd_backup
+	
 	ensure_success $sh_c "sed -i 's/$old_ip/$local_ip/g' /etc/etcd.env"
 	ensure_success $sh_c "sed -i 's/$old_ip/$local_ip/g' /usr/local/bin/kube-scripts/etcd-backup.sh"
 
