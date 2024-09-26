@@ -70,7 +70,7 @@ spec:
             - containerPort: 8080
           env:
             - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.33'
+              value: 'beclab/files-server:v0.2.35'
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -101,7 +101,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.33
+          image: beclab/files-server:v0.2.35
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -136,12 +136,16 @@ spec:
             - name: TERMINUSD_HOST
               value: $(NODE_IP):18088  
 {{ end }}
+            - name: EXTERNAL_PREFIX
+              value: '/External/'
             - name: ES_ENABLED
               value: 'False'
             - name: WATCHER_ENABLED
               value: 'True'
             - name: KNOWLEDGE_BASE_ENABLED
               value: 'False'
+            - name: PHOTOS_ENABLED
+              value: 'True'
 #            - name: BFL_NAME
 #              value: 'os-system'
             - name: FB_DATABASE
@@ -172,6 +176,8 @@ spec:
               value: ''
             - name: CONTENT_PATH
               value: /Home/Documents
+            - name: PHOTOS_PATH
+              value: /Home/Pictures
             - name: REDIS_HOST
               value: redis-cluster-proxy.os-system
             - name: REDIS_PORT
@@ -342,7 +348,7 @@ spec:
             chown -R 1000:1000 /appdata 
       containers:
         - name: files
-          image: beclab/files-server:v0.2.33
+          image: beclab/files-server:v0.2.35
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
