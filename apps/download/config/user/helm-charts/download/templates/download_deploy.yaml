@@ -138,6 +138,7 @@ spec:
         volumeMounts:
         - name: config-dir
           mountPath: /config
+          subPath: aria2
         - name: download-dir
           mountPath: /downloads
         resources:
@@ -176,6 +177,7 @@ spec:
         volumeMounts:
         - name: config-dir
           mountPath: /app/config
+          subPath: yt-dlp
         - name: download-dir
           mountPath: /app/downloads
         resources:
