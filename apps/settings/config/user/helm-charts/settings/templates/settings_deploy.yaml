@@ -67,7 +67,7 @@ spec:
               fieldPath: status.podIP
       containers:
       - name: settings
-        image: beclab/settings:v0.1.83
+        image: beclab/settings:v0.1.84
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
