@@ -112,7 +112,7 @@ spec:
             value: user_space_{{ .Values.bfl.username }}_knowledge
       containers:
       - name: aria2
-        image: "p3terx/aria2-pro:202209060423"
+        image: "beclab/aria2:v0.0.1"
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: false
@@ -127,14 +127,6 @@ spec:
           value: "1000"
         - name: PGID
           value: "1000"
-        lifecycle:
-          postStart:
-            exec:
-              command:
-                - /bin/sh
-                - -c
-                - |
-                  sed -i 's/delete-empty-dir=.*/delete-empty-dir=false/' /config/script.conf
         volumeMounts:
         - name: config-dir
           mountPath: /config
