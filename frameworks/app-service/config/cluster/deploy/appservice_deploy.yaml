@@ -15,11 +15,6 @@
 {{ $usertmpl_sc := "juicefs-localpath-usertmpl" }}
 {{ $usertmpl_storage := "100Mi" }}
 
-{{- $version := .Capabilities.KubeVersion.Version -}}
-{{- $path := "/var/run/containerd/containerd.sock" -}}
-{{ if contains "k3s" $version }}
-{{ $path = "/var/run/containerd/containerd.sock" }}
-{{ end }}
 
 ---
 apiVersion: v1
@@ -153,7 +148,7 @@ spec:
       serviceAccount: os-internal
       containers:
       - name: app-service
-        image: beclab/app-service:0.2.40
+        image: beclab/app-service:0.2.41
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -353,6 +348,7 @@ spec:
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
+            privileged: true
           env:
             - name: NODE_NAME
               valueFrom:
@@ -361,7 +357,8 @@ spec:
             - name: SYS_APPS
               value: "analytics,market,auth,citus,desktop,did,docs,files,fsnotify,headscale,infisical,intentprovider,ksserver,message,mongo,monitoring,notifications,profile,redis,wise,recommend,seafile,search,nitro,search-admin,settings,systemserver,tapr,vault,video,zinc,accounts,control-hub,dashboard"
           volumeMounts:
-            - mountPath: /var/run/containerd/containerd.sock
+            - mountPath: /var/run/containerd
+              mountPropagation: Bidirectional
               name: containerd-socket
             - mountPath: /etc/containerd/config.toml
               name: configtoml
@@ -371,4 +368,5 @@ spec:
             path: /etc/containerd/config.toml
         - name: containerd-socket
           hostPath:
-            path: {{ $path }}
+            path: /var/run/containerd
+            type: Directory
