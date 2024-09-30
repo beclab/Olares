@@ -115,6 +115,6 @@ jobs:
             build/installer/publicAddnode.sh
             build/installer/version.hint
             build/installer/publicRestoreInstaller.sh
-            prerelease: true
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

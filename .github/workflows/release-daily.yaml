@@ -76,7 +76,7 @@ jobs:
       - name: 'Daily tag version'
         id: vars
         run: |
-          v=1.8.0-$(date +"%Y%m%d")
+          v=1.10.0-$(date +"%Y%m%d")
           echo "tag_version=$v" >> $GITHUB_OUTPUT
 
       - name: 'Checkout source code'
@@ -107,7 +107,7 @@ jobs:
       - name: 'Daily tag version'
         id: vars
         run: |
-          v=1.8.0-$(date +"%Y%m%d")
+          v=1.10.0-$(date +"%Y%m%d")
           echo "tag_version=$v" >> $GITHUB_OUTPUT
           echo "version_md5sum=$(curl -sSfL https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${v}.md5sum.txt|awk '{print $1}')" >> $GITHUB_OUTPUT
 

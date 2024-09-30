@@ -6,7 +6,6 @@ set -e
 
 if [[ x"$VERSION" == x"" ]]; then
   export VERSION="#__VERSION__"
-  # export VERSION="1.8.0-99995"
 fi
 
 if [[ "x${VERSION}" == "x" || "x${VERSION:3}" == "xVERSION__" ]]; then
