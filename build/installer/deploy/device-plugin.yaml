@@ -40,7 +40,7 @@ spec:
         - "[ -d /var/run/nvshare/libnvshare.so ] && rm -rf /var/run/nvshare/libnvshare.so || true"
       containers:
       - name: nvshare-lib
-        image: bytetrade/nvshare:libnvshare
+        image: beclab/nvshare:libnvshare-v0.0.1
         command:
         - sleep
         - infinity
