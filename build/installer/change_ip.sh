@@ -254,9 +254,6 @@ update_juicefs() {
 	log_info 'updating juicefs'
 	ensure_success $sh_c "sed -i 's/$old_ip/$local_ip/g' /etc/systemd/system/juicefs.service"
 
-	ensure_success $sh_c "systemctl daemon-reload"
-	ensure_success $sh_c "systemctl start juicefs"
-
 	if [ "$storage_type" == "minio" ]; then
 	    local juicefs_bin="/usr/local/bin/juicefs"
 		local bucket="terminus"
@@ -264,6 +261,9 @@ update_juicefs() {
 
         ensure_success $sh_c "$juicefs_bin config $metadb --bucket http://${local_ip}:9000/${bucket} --access-key $MINIO_ROOT_USER --secret-key $MINIO_ROOT_PASSWORD"
 	fi
+
+	ensure_success $sh_c "systemctl daemon-reload"
+	ensure_success $sh_c "systemctl start juicefs"
 
 	ensure_success $sh_c "systemctl --no-pager status juicefs"
     ensure_success $sh_c "sleep 3 && test -d $jfs_mountpoint/.trash"
