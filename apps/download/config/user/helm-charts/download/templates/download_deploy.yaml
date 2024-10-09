@@ -128,9 +128,6 @@ spec:
         - name: PGID
           value: "1000"
         volumeMounts:
-        - name: config-dir
-          mountPath: /config
-          subPath: aria2
         - name: download-dir
           mountPath: /downloads
         resources:
