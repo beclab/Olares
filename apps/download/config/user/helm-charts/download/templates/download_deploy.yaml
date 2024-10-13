@@ -15,6 +15,14 @@
 {{ $redis_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+{{- $download_nats_secret := (lookup "v1" "Secret" $namespace "download-secrets") -}}
+{{- $nat_password := "" -}}
+{{ if $download_nats_secret -}}
+{{ $nat_password = (index $download_nats_secret "data" "nat_password") }}
+{{ else -}}
+{{ $nat_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
 ---
 apiVersion: v1
 kind: Secret
@@ -25,6 +33,7 @@ type: Opaque
 data:
   pg_password: {{ $pg_password }}
   redis_password: {{ $redis_password }}
+  nat_password: {{ $nat_password }}
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
@@ -44,8 +53,33 @@ spec:
           name: download-secrets
     databases:
     - name: knowledge
-
-
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: download-nat
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: download
+  appNamespace: {{ .Release.Namespace }}
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nat_password
+          name: download-secrets
+    refs: []
+    subjects:
+    - name: download_status
+      permission:
+        pub: allow
+        sub: allow
+      export:
+      - appName: knowledge
+        sub: allow
+        pub: allow
+    user: user-system-{{ .Values.bfl.username }}-download
 ---
 
 
@@ -138,7 +172,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.0.11"
+        image: "beclab/yt-dlp:v0.0.12"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -175,23 +209,8 @@ spec:
           limits:
             cpu: "1"
             memory: 300Mi
-      - name: pot-provider
-        image: brainicism/bgutil-ytdlp-pot-provider
-        ports:
-        - containerPort: 4416
-        imagePullPolicy: IfNotPresent
-        securityContext:
-          runAsUser: 1000
-          allowPrivilegeEscalation: false
-        resources:
-          requests:
-            cpu: 20m
-            memory: 50Mi
-          limits:
-            cpu: "1"
-            memory: 300Mi
       - name: download-spider
-        image: "beclab/download-spider:v0.0.11"
+        image: "beclab/download-spider:v0.0.12"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false

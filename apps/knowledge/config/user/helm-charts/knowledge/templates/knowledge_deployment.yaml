@@ -19,6 +19,13 @@
 {{ $pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+{{- $knowledge_nats_secret := (lookup "v1" "Secret" $namespace "knowledge-secrets") -}}
+{{- $nat_password := "" -}}
+{{ if $knowledge_nats_secret -}}
+{{ $nat_password = (index $knowledge_nats_secret "data" "nat_password") }}
+{{ else -}}
+{{ $nat_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
 ---
 apiVersion: v1
 kind: Secret
@@ -28,6 +35,7 @@ metadata:
 type: Opaque
 data:
   pg_password: {{ $pg_password }}
+  nat_password: {{ $nat_password }}
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
@@ -50,6 +58,31 @@ spec:
       extensions:
       - pg_trgm
       - btree_gin
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: knowledge-nat
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: knowledge
+  appNamespace: {{ .Release.Namespace }}
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nat_password
+          name: knowledge-secrets
+    refs:
+    - appName: download
+      appNamespace: {{ .Release.Namespace }}
+      subjects:
+      - name: download_status
+        perm:
+        - pub
+        - sub
+    user: user-system-{{ .Values.bfl.username }}-knowledge
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -135,7 +168,7 @@ spec:
             value: user_space_{{ .Values.bfl.username }}_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.1.48"
+        image: "beclab/knowledge-base-api:v0.1.49"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -321,6 +354,20 @@ spec:
             cpu: "800m"
             memory: 800Mi
 
+      - name: terminus-ws-sidecar
+        image: 'beclab/ws-gateway:v1.0.3'
+        imagePullPolicy: IfNotPresent
+        command:
+          - /ws-gateway
+        env:
+          - name: WS_PORT
+            value: '3010'
+          - name: WS_URL
+            value: /knowledge/websocket/message
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+
       volumes:
       - name: watch-dir
         hostPath:
@@ -330,6 +377,13 @@ spec:
         hostPath:
           type: DirectoryOrCreate
           path: {{ .Values.userspace.appData }}/rss/data
+          
+      - name: terminus-sidecar-config
+        configMap:
+          name: sidecar-ws-configs
+          items:
+          - key: envoy.yaml
+            path: envoy.yaml
       
 
 ---
