@@ -197,6 +197,16 @@ spec:
           value: redis-cluster-proxy.user-system-{{ .Values.bfl.username }}
         - name: REDIS_PASSWORD
           value: {{ $redis_password | b64dec }}
+        - name: NATS_HOST
+          value: nats.user-system-{{ .Values.bfl.username }}
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: user-system-{{ .Values.bfl.username }}-download
+        - name: NATS_PASSWORD
+          value: {{ $nat_password | b64dec }}
+        - name: NATS_SUBJECT
+          value: "terminus.{{ .Release.Namespace }}.download_status"
         volumeMounts:
         - name: config-dir
           mountPath: /app/config
@@ -231,6 +241,16 @@ spec:
           value: redis-cluster-proxy.user-system-{{ .Values.bfl.username }}
         - name: REDIS_PASSWORD
           value: {{ $redis_password | b64dec }}
+        - name: NATS_HOST
+          value: nats.user-system-{{ .Values.bfl.username }}
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: user-system-{{ .Values.bfl.username }}-download
+        - name: NATS_PASSWORD
+          value: {{ $nat_password | b64dec }}
+        - name: NATS_SUBJECT
+          value: "terminus.{{ .Release.Namespace }}.download_status"
         volumeMounts:
         - name: download-dir
           mountPath: /downloads
