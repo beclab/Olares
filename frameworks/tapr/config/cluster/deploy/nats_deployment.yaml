@@ -6,7 +6,7 @@
 {{ if $nats_secret -}}
 {{ $nats_password = (index $nats_secret "data" "nats_password") }}
 {{ else -}}
-{{ $nats_password = randAlphaNum 64 | b64enc }}
+{{ $nats_password = randAlpha 64 | b64enc }}
 {{- end -}}
 
 ---
