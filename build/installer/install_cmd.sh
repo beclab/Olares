@@ -195,7 +195,14 @@ EOF
 
     # clear apps values.yaml
     cat /dev/null > ${BASE_DIR}/wizard/config/apps/values.yaml
-    cat /dev/null > ${BASE_DIR}/wizard/config/launcher/values.yaml
+
+    # write default bfl values.yaml
+  cat > ${BASE_DIR}/wizard/config/launcher/values.yaml <<_EOF
+bfl:
+  terminus_cert_service_api: ${TERMINUS_CERT_SERVICE_API}
+  terminus_dns_service_api: ${TERMINUS_DNS_SERVICE_API}
+_EOF
+
     copy_charts=("launcher" "apps")
     for cc in "${copy_charts[@]}"; do
         retry_cmd $sh_c "${KUBECTL} cp ${BASE_DIR}/wizard/config/${cc} os-system/${appservice_pod}:/userapps -c app-service"
@@ -580,6 +587,8 @@ bfl:
   nodeport_ingress_https: 30082
   username: '${username}'
   admin_user: true
+  terminus_cert_service_api: ${TERMINUS_CERT_SERVICE_API}
+  terminus_dns_service_api: ${TERMINUS_DNS_SERVICE_API}
 _EOF
 
   sed -i "s/#__DOMAIN_NAME__/${domainname}/" ${BASE_DIR}/wizard/config/settings/templates/terminus_cr.yaml

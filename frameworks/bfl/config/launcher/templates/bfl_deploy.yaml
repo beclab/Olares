@@ -242,7 +242,7 @@ spec:
 
       containers:
       - name: api
-        image: beclab/bfl:v0.3.47
+        image: beclab/bfl:v0.3.48
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000
@@ -289,6 +289,10 @@ spec:
           value: v0.2.6
         - name: REVERSE_PROXY_AGENT_IMAGE_VERSION
           value: v0.1.3
+        - name: TERMINUS_CERT_SERVICE_API
+          value: {{ .Values.bfl.terminus_cert_service_api }}
+        - name: TERMINUS_DNS_SERVICE_API
+          value: {{ .Values.bfl.terminus_dns_service_api }}
 
       - name: ingress
         image: beclab/bfl-ingress:v0.2.14
