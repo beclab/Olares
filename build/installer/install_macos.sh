@@ -702,7 +702,7 @@ main(){
     if [ ! -f $terminus_base_dir/.prepared ]; then
         ensure_success $sh_c "export OS_LOCALIP=$local_ip && \
             export TERMINUS_IS_CLOUD_VERSION=$TERMINUS_IS_CLOUD_VERSION && \
-            $TERMINUS_CLI terminus download --base-dir $terminus_base_dir --manifest $manifest_file --version $VERSION"
+            $TERMINUS_CLI terminus download component --base-dir $terminus_base_dir --manifest $manifest_file --version $VERSION"
 
         if command_exists minikube ; then
             running=$(minikube profile list|grep "${PROFILE_NAME}"|grep Running)
