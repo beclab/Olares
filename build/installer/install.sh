@@ -62,7 +62,7 @@ if command -v tar >/dev/null; then
     fi
 
 
-    CLI_VERSION="0.1.33"
+    CLI_VERSION="0.1.34"
     CLI_FILE="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
     INSTALL_TERMINUS_CLI="/usr/local/bin/terminus-cli"
     if [[ x"$os_type" == x"Darwin" ]]; then
