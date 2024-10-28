@@ -26,7 +26,7 @@ spec:
       initContainers:
       - args:
         - -it
-        - authelia-backend.os-system:9091
+        - authelia-backend.os-system:9091,system-server.user-system-{{ .Values.bfl.username }}:80
         image: owncloudci/wait-for:latest
         imagePullPolicy: IfNotPresent
         name: check-auth
