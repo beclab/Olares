@@ -103,6 +103,7 @@ spec:
     metadata:
       labels:
         app: files
+        io.bytetrade.app: "true"
     spec:
       serviceAccountName: bytetrade-controller
       securityContext:

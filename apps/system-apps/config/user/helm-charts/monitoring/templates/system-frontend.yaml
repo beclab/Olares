@@ -106,6 +106,7 @@ spec:
     metadata:
       labels:
         app: system-frontend
+        io.bytetrade.app: "true"
     spec:
       initContainers:
         - args:

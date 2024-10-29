@@ -23,6 +23,7 @@ spec:
     metadata:
       labels:
         app: appstore
+        io.bytetrade.app: "true"
     spec:
       initContainers:
         - args:
@@ -65,12 +66,12 @@ spec:
                 fieldPath: status.podIP
       containers:
       - name: appstore
-        image: beclab/market-frontend:v0.2.22
+        image: beclab/market-frontend:v0.2.23
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
       - name: appstore-backend
-        image: beclab/market-backend:v0.2.22
+        image: beclab/market-backend:v0.2.23
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -201,6 +202,11 @@ spec:
     group: message-disptahcer.system-server
     ops:
       - Create
+    version: v1
+  - dataType: app
+    group: service.bfl
+    ops:
+      - UserApps
     version: v1
 status:
   state: active

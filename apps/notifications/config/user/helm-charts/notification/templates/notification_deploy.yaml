@@ -67,6 +67,7 @@ spec:
     metadata:
       labels:
         app: notifications
+        io.bytetrade.app: "true"
     spec:
       initContainers:
       - args:

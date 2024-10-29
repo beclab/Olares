@@ -59,6 +59,7 @@ spec:
     metadata:
       labels:
         app: recommend
+        io.bytetrade.app: "true"
     spec:
       containers:
         - name: recommend-proxy

@@ -65,6 +65,7 @@ spec:
       labels:
         app: ks-console
         tier: frontend
+        io.bytetrade.app: "true"
     spec:   
       containers:
       - image: kubesphere/ks-console:v3.3.0

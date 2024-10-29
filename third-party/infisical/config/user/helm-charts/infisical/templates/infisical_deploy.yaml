@@ -189,6 +189,7 @@ spec:
     metadata:
       labels:
         app: infisical
+        io.bytetrade.app: "true"
     spec:
       serviceAccountName: infisical-sa
       initContainers:

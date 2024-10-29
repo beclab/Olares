@@ -25,6 +25,7 @@ spec:
     metadata:
       labels:
         app: settings
+        io.bytetrade.app: "true"
     spec:
       initContainers:
       - args:

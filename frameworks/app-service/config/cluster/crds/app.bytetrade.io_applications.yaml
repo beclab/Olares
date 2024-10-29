@@ -124,6 +124,31 @@ spec:
           status:
             description: ApplicationStatus defines the observed state of Application
             properties:
+              entranceStatuses:
+                items:
+                  properties:
+                    message:
+                      type: string
+                    name:
+                      type: string
+                    reason:
+                      type: string
+                    state:
+                      type: string
+                    statusTime:
+                      format: date-time
+                      type: string
+                  required:
+                  - name
+                  - reason
+                  - state
+                  - statusTime
+                  type: object
+                type: array
+              startedTime:
+                description: StartedTime is the time that app first to running state
+                format: date-time
+                type: string
               state:
                 description: 'the state of the application: draft, submitted, passed,
                   rejected, suspended, active'
