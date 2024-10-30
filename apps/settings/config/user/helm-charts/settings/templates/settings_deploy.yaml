@@ -68,17 +68,19 @@ spec:
               fieldPath: status.podIP
       containers:
       - name: settings
-        image: beclab/settings:v0.1.86
+        image: beclab/settings:v0.1.87
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
 
       - name: settings-server
-        image: beclab/settings-server:v0.1.86
+        image: beclab/settings-server:v0.1.87
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
         env:
+        - name: DEV_MODE
+          value: ''
         - name: OS_SYSTEM_SERVER
           value: system-server.user-system-{{ .Values.bfl.username }}
         - name: OS_APP_SECRET
@@ -138,10 +140,27 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+      - name: terminus-ws-sidecar
+        image: 'beclab/ws-gateway:v1.0.3'
+        imagePullPolicy: IfNotPresent
+        command:
+          - /ws-gateway
+        env:
+          - name: WS_PORT
+            value: '3010'
+          - name: WS_URL
+            value: /websocket/message
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
       volumes:
+      - name: userspace-dir
+        hostPath:
+          type: Directory
+          path: {{ .Values.userspace.userData }}
       - name: terminus-sidecar-config
         configMap:
-          name: sidecar-configs
+          name: sidecar-ws-configs
           items:
           - key: envoy.yaml
             path: envoy.yaml
