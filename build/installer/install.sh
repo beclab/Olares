@@ -62,7 +62,7 @@ if [ ! -d $BASE_DIR ]; then
     mkdir -p $BASE_DIR
 fi
 
-CLI_VERSION="0.1.35"
+CLI_VERSION="0.1.36"
 CLI_FILE="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
 if [[ x"$os_type" == x"Darwin" ]]; then
     CLI_FILE="terminus-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
@@ -130,7 +130,11 @@ else
 
     echo "preparing installation environment..."
     echo ""
-    $sh_c "$INSTALL_TERMINUS_CLI terminus prepare $PARAMS"
+    # env 'REGISTRY_MIRRORS' is a docker image cache mirrors, separated by commas
+    if [ x"$REGISTRY_MIRRORS" != x"" ]; then
+        extra="--registry-mirrors $REGISTRY_MIRRORS"
+    fi
+    $sh_c "$INSTALL_TERMINUS_CLI terminus prepare $PARAMS $extra"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to prepare installation environment"
         exit 1
@@ -141,13 +145,16 @@ if [ -f $BASE_DIR/.installed ]; then
     echo "file $BASE_DIR/.installed detected, skip installing"
     echo "if it is left by an unclean uninstallation, please manually remove it and invoke the installer again"
     exit 0
-else
-    echo "installing Terminus..."
-    echo ""
-    $sh_c "$INSTALL_TERMINUS_CLI terminus install $PARAMS"
+fi
+if [ "$PREINSTALL" == "1" ]; then
+    echo "Pre Install mode is specified by the \"PREINSTALL\" env var, skip installing"
+    exit 0
+fi
+echo "installing Terminus..."
+echo ""
+$sh_c "$INSTALL_TERMINUS_CLI terminus install $PARAMS"
 
-    if [[ $? -ne 0 ]]; then
-        echo "error: failed to install Terminus"
-        exit 1
-    fi
+if [[ $? -ne 0 ]]; then
+    echo "error: failed to install Terminus"
+    exit 1
 fi
