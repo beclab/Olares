@@ -286,7 +286,7 @@ spec:
         - name: BACKUP_SERVER
           value: backup-server.os-system:8082
         - name: L4_PROXY_IMAGE_VERSION
-          value: v0.2.6
+          value: v0.2.7
         - name: REVERSE_PROXY_AGENT_IMAGE_VERSION
           value: v0.1.3
         - name: TERMINUS_CERT_SERVICE_API
@@ -295,7 +295,7 @@ spec:
           value: {{ .Values.bfl.terminus_dns_service_api }}
 
       - name: ingress
-        image: beclab/bfl-ingress:v0.2.14
+        image: beclab/bfl-ingress:v0.2.15
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: ngxlog

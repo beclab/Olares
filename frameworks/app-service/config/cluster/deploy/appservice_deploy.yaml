@@ -148,7 +148,7 @@ spec:
       serviceAccount: os-internal
       containers:
       - name: app-service
-        image: beclab/app-service:0.2.44
+        image: beclab/app-service:0.2.45
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -176,6 +176,10 @@ spec:
             secretKeyRef:
               name: app-key
               key: random-key
+        - name: HOSTIP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         volumeMounts:
         - mountPath: /charts
           name: charts-store

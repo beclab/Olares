@@ -54,7 +54,7 @@ spec:
             properties:
               appid:
                 description: the unique id of the application for sys application
-                  appid equal name otherwise appid equal md5(name)[:8]
+                  appid equal name otherwise appid equal md5(name)[:8]  
                 type: string
               deployment:
                 description: the deployment of the application
@@ -72,6 +72,7 @@ spec:
                     host:
                       type: string
                     icon:
+                      description: Optional. if invisible=true.
                       type: string
                     invisible:
                       type: boolean
@@ -79,11 +80,13 @@ spec:
                       type: string
                     openMethod:
                       description: openMethod has three choices default, iframe, window
+                        Optional. if invisible=true.
                       type: string
                     port:
                       format: int32
                       type: integer
                     title:
+                      description: Optional. if invisible=true.
                       type: string
                     windowPushState:
                       type: boolean
@@ -91,7 +94,6 @@ spec:
                   - host
                   - name
                   - port
-                  - title
                   type: object
                 type: array
               icon:
@@ -111,6 +113,29 @@ spec:
               owner:
                 description: the owner of the application
                 type: string
+              ports:
+                items:
+                  properties:
+                    exposePort:
+                      format: int32
+                      type: integer
+                    host:
+                      type: string
+                    name:
+                      type: string
+                    port:
+                      format: int32
+                      type: integer
+                    protocol:
+                      description: The protocol for this entrance. Supports "tcp"
+                        and "udp". Default is tcp.
+                      type: string
+                  required:
+                  - host
+                  - name
+                  - port
+                  type: object
+                type: array
               settings:
                 additionalProperties:
                   type: string
