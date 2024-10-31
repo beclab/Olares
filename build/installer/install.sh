@@ -62,7 +62,7 @@ if [ ! -d $BASE_DIR ]; then
     mkdir -p $BASE_DIR
 fi
 
-CLI_VERSION="0.1.37"
+CLI_VERSION="0.1.38"
 CLI_FILE="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
 if [[ x"$os_type" == x"Darwin" ]]; then
     CLI_FILE="terminus-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
