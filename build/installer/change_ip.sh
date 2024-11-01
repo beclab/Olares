@@ -101,9 +101,12 @@ precheck_os() {
     ensure_success $sh_c "hostname -i >/dev/null"
 
     local ip=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/icmp_seq/{print $2}')
-    printf "%s\t%s\n\n" "$ip" "$HOSTNAME"
+    if [ x"$ip" == x"" ]; then
+      ip=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/PING/{print $2}')
+    fi
+	printf "%s\t%s\n\n" "$ip" "$HOSTNAME"
 
-    if [[ x"$ip" == x"" || "$ip" == @("172.17.0.1"|"127.0.0.1"|"127.0.1.1") || ! "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    if [[ x"$ip" == x"" || "$ip" == "172.17.0.1" || "$ip" == "127.0.0.1" || "$ip" == "127.0.1.1" || ! "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         log_fatal "incorrect ip for hostname '$HOSTNAME', please check"
     fi
 
@@ -131,6 +134,7 @@ is_wsl(){
 }
 
 is_macos(){
+	local os_type=$(uname -s)
 	if [[ "$os_type" == "Darwin" ]]; then
 		echo 1
 		return
