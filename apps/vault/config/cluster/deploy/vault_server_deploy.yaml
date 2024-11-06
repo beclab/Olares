@@ -83,11 +83,15 @@ spec:
             value: os_system_vault
       containers:
       - name: vault-server
-        image: beclab/vault-server:v1.2.51
+        image: beclab/vault-server:v1.2.53
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
         env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
+        {{- end }}
         - name: AUTH_URL
           value: http://authelia-backend:9091
         - name: PL_DATA_BACKEND
@@ -110,7 +114,7 @@ spec:
         - name: vault-attach
           mountPath: /padloc/packages/server/attachments
       - name: vault-admin
-        image: beclab/vault-admin:v1.2.51
+        image: beclab/vault-admin:v1.2.53
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010

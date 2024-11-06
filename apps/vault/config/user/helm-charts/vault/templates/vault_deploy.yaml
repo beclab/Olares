@@ -72,17 +72,21 @@ spec:
 
       containers:
       - name: vault-frontend
-        image: beclab/vault-frontend:v1.2.51
+        image: beclab/vault-frontend:v1.2.53
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
       
       - name: notification-server
-        image: beclab/vault-notification:v1.2.51
+        image: beclab/vault-notification:v1.2.53
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
         env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+          - name: {{ $key }}
+            value: {{ $val | quote }}
+        {{- end }}
           - name: OS_SYSTEM_SERVER
             value: system-server.user-system-{{ .Values.bfl.username }}
           - name: OS_APP_SECRET

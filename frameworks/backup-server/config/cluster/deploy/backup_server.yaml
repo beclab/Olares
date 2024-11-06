@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.7" }}
+{{ $backupVersion := "0.3.8" }}
 {{ $backup_server_rootpath := "/terminus/rootfs/backup-server" }}
 
 ---
@@ -61,6 +61,10 @@ spec:
             cpu: 500m
             memory: 512Mi
         env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
+        {{- end }}
         - name: TERMINUS_IS_CLOUD_VERSION
           value: {{ default "false" .Values.backup.is_cloud_version | quote }}
         - name: ENABLE_MIDDLEWARE_BACKUP
@@ -117,6 +121,11 @@ spec:
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
+        env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
+        {{- end }}
         command:
         - /backup-server
         - vcontroller
@@ -135,7 +144,7 @@ spec:
         - mountPath: /rootfs
           name: rootfs
       - name: sidecar-backup-sync
-        image: beclab/sidecar-backup-sync:v0.0.11
+        image: beclab/sidecar-backup-sync:v0.0.12
         imagePullPolicy: IfNotPresent
         command:
         - /backup_sync
@@ -147,6 +156,10 @@ spec:
         - mountPath: /data
           name: dbdata
         env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
+        {{- end }}
         - name: BACKUP_SERVER
           value: http://127.0.0.1:8082
         - name: BACKUP_SECRET
