@@ -83,6 +83,10 @@ spec:
         ports:
         - containerPort: 3010
         env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+          - name: {{ $key }}
+            value: {{ $val | quote }}
+        {{- end }}
           - name: OS_SYSTEM_SERVER
             value: system-server.user-system-{{ .Values.bfl.username }}
           - name: OS_APP_SECRET

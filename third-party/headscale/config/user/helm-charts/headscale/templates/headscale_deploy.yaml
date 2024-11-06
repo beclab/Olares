@@ -85,6 +85,11 @@ spec:
         securityContext:
           runAsNonRoot: false
           runAsUser: 0
+        env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+          - name: {{ $key }}
+            value: {{ $val | quote }}
+        {{- end }}
         command:
         - headscale
         - serve

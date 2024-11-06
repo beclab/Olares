@@ -61,6 +61,10 @@ spec:
             cpu: 500m
             memory: 512Mi
         env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
+        {{- end }}
         - name: TERMINUS_IS_CLOUD_VERSION
           value: {{ default "false" .Values.backup.is_cloud_version | quote }}
         - name: ENABLE_MIDDLEWARE_BACKUP
@@ -117,6 +121,11 @@ spec:
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
+        env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
+        {{- end }}
         command:
         - /backup-server
         - vcontroller
@@ -147,6 +156,10 @@ spec:
         - mountPath: /data
           name: dbdata
         env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
+        {{- end }}
         - name: BACKUP_SERVER
           value: http://127.0.0.1:8082
         - name: BACKUP_SECRET
