@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.7" }}
+{{ $backupVersion := "0.3.8" }}
 {{ $backup_server_rootpath := "/terminus/rootfs/backup-server" }}
 
 ---
@@ -144,7 +144,7 @@ spec:
         - mountPath: /rootfs
           name: rootfs
       - name: sidecar-backup-sync
-        image: beclab/sidecar-backup-sync:v0.0.11
+        image: beclab/sidecar-backup-sync:v0.0.12
         imagePullPolicy: IfNotPresent
         command:
         - /backup_sync
