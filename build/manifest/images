@@ -70,4 +70,4 @@ rancher/mirrored-library-busybox:1.34.1
 rancher/mirrored-library-traefik:2.6.2
 rancher/mirrored-metrics-server:v0.5.2
 rancher/mirrored-pause:3.6
-beclab/reverse-proxy:v0.1.3
+beclab/reverse-proxy:v0.1.4
