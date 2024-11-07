@@ -30,8 +30,8 @@ spec:
       owner: beclab
       repo: terminus
   settings: 
-    domainName: "#__DOMAIN_NAME__"
-    selfhosted: "#__SELFHOSTED__"
+    domainName: '{{ .Values.domainName }}'
+    selfhosted: '{{ .Values.selfHosted }}'
     terminusd: '{{ .Values.terminusd }}'
 status:
   state: active
