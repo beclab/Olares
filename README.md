@@ -19,7 +19,7 @@
 
 ![cover](https://file.bttcdn.com/github/terminus/desktop-dark.jpeg)
 
-*Build your local AI assistants, sync data across places, self-hosted your workspace, stream your own media, and more——all in a true home cloud made possible by Olares.*
+*Build your local AI assistants, sync data across places, self-hosted your workspace, stream your own media, and more——all in your sovereign cloud made possible by Olares.*
 <p align="center">
   <a href="https://olares.xyz">Website</a> ·
   <a href="https://docs.olares.xyz">Documentation</a> ·
@@ -75,7 +75,7 @@ Olares provides a next-generation decentralized Internet framework consisting of
 
  Public clouds have IaaS, PaaS, and SaaS layers. Olares provides open-source alternatives to these layers.
 
-  ![Tech Stacks](https://file.bttcdn.com/github/terminus/v2/tech-stack.jpeg)
+  ![Tech Stacks](https://file.bttcdn.com/github/terminus/v2/tech-stack-olares.jpeg)
 
 ## Features
 
@@ -244,7 +244,7 @@ https://docs.olares.xyz/developer/contribute/olares.html
 Star the Olares project to receive instant notifications about new releases and updates.
 
  
-![star us](https://file.bttcdn.com/github/terminus/olares.git.v2.gif)
+![star us](https://file.bttcdn.com/github/terminus/terminus.git.v2.gif)
  
 
 ## Special thanks 
