@@ -242,7 +242,7 @@ spec:
 
       containers:
       - name: api
-        image: beclab/bfl:v0.3.50
+        image: beclab/bfl:v0.3.51
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000
@@ -295,7 +295,7 @@ spec:
           value: {{ .Values.bfl.terminus_dns_service_api }}
 
       - name: ingress
-        image: beclab/bfl-ingress:v0.2.15
+        image: beclab/bfl-ingress:v0.2.16
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: ngxlog
