@@ -57,7 +57,7 @@ if [[ x"$KUBE_TYPE" == x"" ]]; then
     export KUBE_TYPE="k3s"
 fi
 
-BASE_DIR="$HOME/.terminus"
+BASE_DIR="$HOME/.olares"
 if [ ! -d $BASE_DIR ]; then
     mkdir -p $BASE_DIR
 fi
@@ -114,7 +114,7 @@ if [ -f $BASE_DIR/.prepared ]; then
 else
     echo "downloading installation wizard..."
     echo ""
-    $sh_c "$INSTALL_OLARES_CLI terminus download wizard $PARAMS"
+    $sh_c "$INSTALL_OLARES_CLI olares download wizard $PARAMS"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to download installation wizard"
         exit 1
@@ -122,7 +122,7 @@ else
 
     echo "downloading installation packages..."
     echo ""
-    $sh_c "$INSTALL_OLARES_CLI terminus download component $PARAMS"
+    $sh_c "$INSTALL_OLARES_CLI olares download component $PARAMS"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to download installation packages"
         exit 1
@@ -134,7 +134,7 @@ else
     if [ x"$REGISTRY_MIRRORS" != x"" ]; then
         extra="--registry-mirrors $REGISTRY_MIRRORS"
     fi
-    $sh_c "$INSTALL_OLARES_CLI terminus prepare $PARAMS $extra"
+    $sh_c "$INSTALL_OLARES_CLI olares prepare $PARAMS $extra"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to prepare installation environment"
         exit 1
@@ -152,7 +152,7 @@ if [ "$PREINSTALL" == "1" ]; then
 fi
 echo "installing Olares..."
 echo ""
-$sh_c "$INSTALL_OLARES_CLI terminus install $PARAMS"
+$sh_c "$INSTALL_OLARES_CLI olares install $PARAMS"
 
 if [[ $? -ne 0 ]]; then
     echo "error: failed to install Olares"

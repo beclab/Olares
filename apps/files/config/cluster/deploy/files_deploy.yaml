@@ -248,14 +248,14 @@ spec:
         - name: userspace-dir
           hostPath:
             type: Directory
-            path: /terminus/rootfs/userspace
+            path: {{ .Values.rootPath }}/rootfs/userspace
         - name: fb-data
           hostPath:
             type: DirectoryOrCreate
-            path: /terminus/userdata/Cache/files
+            path: {{ .Values.rootPath }}/userdata/Cache/files
         - name: upload-appdata
           hostPath:
-            path: /terminus/userdata/Cache
+            path: {{ .Values.rootPath }}/userdata/Cache
             type: DirectoryOrCreate
         - name: files-nginx-config
           configMap:
@@ -266,7 +266,7 @@ spec:
             defaultMode: 420
         - name: user-appdata-dir
           hostPath:
-            path: /terminus/userdata/Cache
+            path: {{ .Values.rootPath }}/userdata/Cache
             type: Directory
         
 {{ if .Values.sharedlib }}        
@@ -378,11 +378,11 @@ spec:
         - name: user-appdata-dir
           hostPath:
             type: Directory
-            path: /terminus/userdata/Cache
+            path: {{ .Values.rootPath }}/userdata/Cache
         - name: fb-data
           hostPath:
             type: DirectoryOrCreate
-            path: /terminus/userdata/Cache/files-appdata
+            path: {{ .Values.rootPath }}/userdata/Cache/files-appdata
 
 ---
 apiVersion: v1

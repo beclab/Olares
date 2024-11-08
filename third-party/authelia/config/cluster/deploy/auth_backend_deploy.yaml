@@ -1,6 +1,6 @@
 
 
-{{ $auth_rootpath := "/terminus/rootfs/auth" }}
+{{ $auth_rootpath := printf "%s%s" .Values.rootPath "/rootfs/auth" }}
 {{- $auth_secret := (lookup "v1" "Secret" .Release.Namespace "authelia-secrets") -}}
 {{- $jwt_secret := "" -}}
 {{- $session_secret := "" -}}

@@ -1,7 +1,7 @@
 
 
 {{ $backupVersion := "0.3.8" }}
-{{ $backup_server_rootpath := "/terminus/rootfs/backup-server" }}
+{{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 ---
 apiVersion: apps/v1
@@ -34,7 +34,7 @@ spec:
           path: {{ $backup_server_rootpath }}/data
       - name: rootfs
         hostPath:
-          path: /terminus/rootfs
+          path: {{ .Values.rootPath }}/rootfs
       serviceAccountName: os-internal
       containers:
       - name: api

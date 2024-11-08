@@ -333,7 +333,7 @@ restore_resolv_conf() {
 }
 
 install_storage() {
-    TERMINUS_ROOT="/terminus"
+    TERMINUS_ROOT="/olares"
 
     if [ x"$PROXY" != x"" ]; then
 	    ensure_success $sh_c "echo nameserver $PROXY > /etc/resolv.conf"
@@ -631,7 +631,7 @@ install_juicefs() {
 
     local format_cmd
     local fsname="rootfs"
-    local bucket="terminus"
+    local bucket="olares"
     local metadb="redis://:${REDIS_PASSWORD}@${local_ip}:6379/1"
 
     local juicefs_bin="/usr/local/bin/juicefs"

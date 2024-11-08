@@ -1,7 +1,7 @@
 
 
 
-{{ $anayltic2_rootpath := "/terminus/rootfs/anayltic2" }}
+{{ $anayltic2_rootpath := printf "%s%s" .Values.rootPath "/rootfs/anayltic2" }}
 {{- $namespace := printf "%s" "os-system" -}}
 {{- $anayltic2_secret := (lookup "v1" "Secret" $namespace "anayltic2-secrets") -}}
 {{- $pg_password := "" -}}

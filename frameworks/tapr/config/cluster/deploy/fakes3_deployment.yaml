@@ -1,6 +1,6 @@
 
-{{ $mongo_rootpath := "/terminus/userdata/dbdata" }}
-{{ $mongo_backuppath := "/terminus/rootfs/middleware-backup" }}
+{{ $mongo_rootpath := printf "%s%s" .Values.rootPath "/userdata/dbdata" }}
+{{ $mongo_backuppath := printf "%s%s" .Values.rootPath "/rootfs/middleware-backup" }}
 
 ---
 apiVersion: v1

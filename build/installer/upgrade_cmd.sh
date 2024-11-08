@@ -425,7 +425,7 @@ function upgrade_jfs(){
         ensure_success $sh_c "${KUBECTL} rollout restart sts app-service -n os-system"
 
         local tf=$(mktemp)
-        ensure_success $sh_c "${KUBECTL} get deployment -A -o jsonpath='{range .items[*]}{.metadata.name} {.metadata.namespace} {.spec.template.spec.volumes}{\"\n\"}{end}' | grep '/terminus/rootfs'" > $tf
+        ensure_success $sh_c "${KUBECTL} get deployment -A -o jsonpath='{range .items[*]}{.metadata.name} {.metadata.namespace} {.spec.template.spec.volumes}{\"\n\"}{end}' | grep '/olares/rootfs'" > $tf
         while read dep; do
             local depinfo=($dep)
             ensure_success $sh_c "${KUBECTL} rollout restart deployment ${depinfo[0]} -n ${depinfo[1]}"
@@ -476,7 +476,7 @@ function upgrade_terminus(){
     sed -i "s/#__DOMAIN_NAME__/${domainname}/" ${BASE_DIR}/wizard/config/settings/templates/terminus_cr.yaml
     sed -i "s/#__SELFHOSTED__/${selfhosted}/" ${BASE_DIR}/wizard/config/settings/templates/terminus_cr.yaml
 
-    echo "Upgrading terminus system components ... "
+    echo "Upgrading olares system components ... "
     gen_settings_values ${admin_user}
     ensure_success $sh_c "${HELM} upgrade -i settings ${BASE_DIR}/wizard/config/settings -n default --reuse-values"
 
@@ -559,8 +559,8 @@ function upgrade_terminus(){
 }
 
 
-echo "Start to upgrade terminus ... "
+echo "Start to upgrade olares ... "
 
 upgrade_terminus
 
-echo -e "\e[91m Success to upgrade terminus.\e[0m Open your new desktop in the browser and have fun !"
+echo -e "\e[91m Success to upgrade olares.\e[0m Open your new desktop in the browser and have fun !"

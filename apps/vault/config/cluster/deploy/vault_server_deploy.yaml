@@ -1,7 +1,7 @@
 
 
 
-{{ $vault_rootpath := "/terminus/rootfs/vault" }}
+{{ $vault_rootpath := printf "%s%s" .Values.rootPath "/rootfs/vault" }}
 {{- $namespace := printf "%s" "os-system" -}}
 {{- $vault_secret := (lookup "v1" "Secret" $namespace "vault-secrets") -}}
 {{- $pg_password := "" -}}

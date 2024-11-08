@@ -35,8 +35,8 @@
 # metadata:
 #   name: sync-config
 #   namespace: {{ .Release.Namespace }}
-{{ $seafile_application_rootpath := "/terminus/rootfs/Application/seafile" }}
-{{ $seafile_appcache_rootpath := "/terminus/userdata/Cache/seafile" }}
+{{ $seafile_application_rootpath := printf "%s%s" .Values.rootPath "/rootfs/Application/seafile" }}
+{{ $seafile_appcache_rootpath := printf "%s%s" .Values.rootPath "/userdata/Cache/seafile" }}
 
 {{- $namespace := printf "%s" "os-system" -}}
 {{- $seafile_secret := (lookup "v1" "Secret" $namespace "seafile-secrets") -}}

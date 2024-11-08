@@ -1,6 +1,6 @@
 
-{{ $dbdata_pv_rootpath := "/terminus/userdata/dbdata" }}
-{{ $dbbackup_rootpath := "/terminus/rootfs/middleware-backup" }}
+{{ $dbdata_pv_rootpath := printf "%s%s" .Values.rootPath "/userdata/dbdata" }}
+{{ $dbbackup_rootpath := printf "%s%s" .Values.rootPath "/rootfs/middleware-backup" }}
 
 ---
 apiVersion: v1
@@ -113,7 +113,7 @@ spec:
             memory: 100Mi
         volumeMounts:
         - name: dbbackup-dir
-          mountPath: /terminus/rootfs/middleware-backup
+          mountPath: /olares/rootfs/middleware-backup
         - name: pgbackup-dir
           mountPath: /backup
         - name: dbdata-dir

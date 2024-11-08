@@ -1,8 +1,8 @@
 
 
-{{ $userspace_pv_rootpath := "/terminus/rootfs/userspace" }}
-{{ $appcache_pv_rootpath := "/terminus/userdata/Cache" }}
-{{ $dbdata_pv_rootpath := "/terminus/userdata/dbdata" }}
+{{ $userspace_pv_rootpath := printf "%s%s" .Values.rootPath "/rootfs/userspace" }}
+{{ $appcache_pv_rootpath := printf "%s%s" .Values.rootPath "/userdata/Cache" }}
+{{ $dbdata_pv_rootpath := printf "%s%s" .Values.rootPath "/userdata/dbdata" }}
 
 {{ $userspace_rand16 := randAlphaNum 16 | lower }}
 {{ if .Values.bfl.userspace_rand16 }}

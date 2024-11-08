@@ -1,5 +1,5 @@
 
-{{ $nats_rootpath := "/terminus/userdata/dbdata" }}
+{{ $nats_rootpath := printf "%s%s" .Values.rootPath "/userdata/dbdata" }}
 {{- $namespace := printf "%s" "os-system" -}}
 {{- $nats_secret := (lookup "v1" "Secret" $namespace "nats-secrets") -}}
 {{- $nats_password := "" -}}
@@ -215,7 +215,7 @@ spec:
           secret:
             secretName: nats-box-contexts
         - hostPath:
-            path: /terminus/userdata/dbdata/nats_data
+            path: {{ .Values.rootPath }}/userdata/dbdata/nats_data
             type: DirectoryOrCreate
           name: nats-data
 ---

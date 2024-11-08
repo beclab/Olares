@@ -163,7 +163,7 @@ get_master_info() {
 
     ssh_client="ssh -o StrictHostKeyChecking=no -i $ssh_private_keyfile ${master_ssh_username}@${master_ssh_private_ip}"
 
-    REDIS_PASSWORD=$($ssh_client "sudo su -c 'grep ^requirepass /terminus/data/redis/etc/redis.conf'"|awk '{print $NF}')
+    REDIS_PASSWORD=$($ssh_client "sudo su -c 'grep ^requirepass /olares/data/redis/etc/redis.conf'"|awk '{print $NF}')
     if [[ $? -ne 0 || x"$REDIS_PASSWORD" == x"" ]]; then
         echo "no master redis password"
         exit $ERR_EXIT
@@ -513,7 +513,7 @@ prepare_storage() {
     parse_get_master_info
 
     # storage
-    TERMINUS_ROOT="/terminus"
+    TERMINUS_ROOT="/olares"
 
     if [ x"$PROXY" != x"" ]; then
 	    ensure_success $sh_c "echo 'nameserver $PROXY' > /etc/resolv.conf"
@@ -711,7 +711,7 @@ EOF
         local tar_count=$(find $BASE_DIR/images -type f -name '*.tar.gz'|wc -l)
         if [ $tar_count -eq 0 ]; then
             if [ -f $BASE_DIR/images/images.node.mf ]; then
-                echo "downloading images from terminus cloud ..."
+                echo "downloading images from olares cloud ..."
                 while read img; do
                     local filename=$(echo -n "$img"|md5sum|awk '{print $1}')
                     filename="$filename.tar.gz"
