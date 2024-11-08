@@ -12,7 +12,7 @@ if [[ x"$VERSION" == x"" ]]; then
 fi
 
 if [[ "x${VERSION}" == "x" || "x${VERSION:3}" == "xVERSION__" ]]; then
-    echo "error: unable to get the wanted Terminus version, please set the VERSION env var and rerun this script."
+    echo "error: unable to get the wanted Olares version, please set the VERSION env var and rerun this script."
     echo "for example: VERSION=1.0.0 bash ./install.sh"
     exit 1
 fi
@@ -62,47 +62,47 @@ if [ ! -d $BASE_DIR ]; then
     mkdir -p $BASE_DIR
 fi
 
-CLI_VERSION="0.1.45"
-CLI_FILE="terminus-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
+CLI_VERSION="0.1.46"
+CLI_FILE="olares-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
 if [[ x"$os_type" == x"Darwin" ]]; then
-    CLI_FILE="terminus-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
+    CLI_FILE="olares-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
 fi
 
 if [[ ! -f ${CLI_FILE} ]]; then
     CLI_URL="https://dc3p1870nn3cj.cloudfront.net/${CLI_FILE}"
 
-    echo "downloading Terminus installer from ${CLI_URL} ..."
+    echo "downloading Olares installer from ${CLI_URL} ..."
     echo ""
 
     curl -Lo ${CLI_FILE} ${CLI_URL}
 
     if [[ $? -ne 0 ]]; then
-        echo "error: failed to download Terminus installer"
+        echo "error: failed to download Olares installer"
         exit 1
     else
-        echo "Terminus installer ${CLI_VERSION} download complete!"
+        echo "Olares installer ${CLI_VERSION} download complete!"
         echo ""
     fi
 fi
 
-INSTALL_TERMINUS_CLI="/usr/local/bin/terminus-cli"
-echo "unpacking Terminus installer to $INSTALL_TERMINUS_CLI..."
+INSTALL_OLARES_CLI="/usr/local/bin/olares-cli"
+echo "unpacking Olares installer to $INSTALL_OLARES_CLI..."
 echo ""
-tar -zxf ${CLI_FILE} && chmod +x terminus-cli
+tar -zxf ${CLI_FILE} && chmod +x olares-cli
 if [[ x"$os_type" == x"Darwin" ]]; then
-    if [ ! -f "/usr/local/Cellar/terminus" ]; then
+    if [ ! -f "/usr/local/Cellar/olares" ]; then
         current_user=$(whoami)
-        $sh_c "sudo mkdir -p /usr/local/Cellar/terminus && sudo chown ${current_user}:staff /usr/local/Cellar/terminus"
+        $sh_c "sudo mkdir -p /usr/local/Cellar/olares && sudo chown ${current_user}:staff /usr/local/Cellar/olares"
     fi
-    $sh_c "mv terminus-cli /usr/local/Cellar/terminus/terminus-cli && \
-           sudo rm -rf /usr/local/bin/terminus-cli && \
-           sudo ln -s /usr/local/Cellar/terminus/terminus-cli $INSTALL_TERMINUS_CLI"
+    $sh_c "mv olares-cli /usr/local/Cellar/olares/olares-cli && \
+           sudo rm -rf /usr/local/bin/olares-cli && \
+           sudo ln -s /usr/local/Cellar/olares/olares-cli $INSTALL_OLARES_CLI"
 else
-    $sh_c "mv terminus-cli $INSTALL_TERMINUS_CLI"
+    $sh_c "mv olares-cli $INSTALL_OLARES_CLI"
 fi
 
 if [[ $? -ne 0 ]]; then
-    echo "error: failed to unpack Terminus installer"
+    echo "error: failed to unpack Olares installer"
     exit 1
 fi
 
@@ -114,7 +114,7 @@ if [ -f $BASE_DIR/.prepared ]; then
 else
     echo "downloading installation wizard..."
     echo ""
-    $sh_c "$INSTALL_TERMINUS_CLI terminus download wizard $PARAMS"
+    $sh_c "$INSTALL_OLARES_CLI terminus download wizard $PARAMS"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to download installation wizard"
         exit 1
@@ -122,7 +122,7 @@ else
 
     echo "downloading installation packages..."
     echo ""
-    $sh_c "$INSTALL_TERMINUS_CLI terminus download component $PARAMS"
+    $sh_c "$INSTALL_OLARES_CLI terminus download component $PARAMS"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to download installation packages"
         exit 1
@@ -134,7 +134,7 @@ else
     if [ x"$REGISTRY_MIRRORS" != x"" ]; then
         extra="--registry-mirrors $REGISTRY_MIRRORS"
     fi
-    $sh_c "$INSTALL_TERMINUS_CLI terminus prepare $PARAMS $extra"
+    $sh_c "$INSTALL_OLARES_CLI terminus prepare $PARAMS $extra"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to prepare installation environment"
         exit 1
@@ -150,11 +150,11 @@ if [ "$PREINSTALL" == "1" ]; then
     echo "Pre Install mode is specified by the \"PREINSTALL\" env var, skip installing"
     exit 0
 fi
-echo "installing Terminus..."
+echo "installing Olares..."
 echo ""
-$sh_c "$INSTALL_TERMINUS_CLI terminus install $PARAMS"
+$sh_c "$INSTALL_OLARES_CLI terminus install $PARAMS"
 
 if [[ $? -ne 0 ]]; then
-    echo "error: failed to install Terminus"
+    echo "error: failed to install Olares"
     exit 1
 fi
