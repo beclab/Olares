@@ -42,6 +42,8 @@ if ( -Not (Test-Path $cliPath)) {
 wsl --unregister Ubuntu *> $null
 
 Start-Sleep -Seconds 3
-$arguments = @("olares", "install", "--version", $version)
 Write-Host ("Preparing to start the installation of Olares {0}. Depending on your network conditions, this process may take several minutes." -f $version)
-Start-Process -FilePath $cliPath -ArgumentList $arguments -Wait -Verb RunAs
+
+$command = "{0} olares install --version {1}" -f $cliPath, $version
+Start-Process cmd -ArgumentList '/k',$command -Wait -Verb RunAs
+
