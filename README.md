@@ -75,7 +75,7 @@ Olares provides a next-generation decentralized Internet framework consisting of
 
  Public clouds have IaaS, PaaS, and SaaS layers. Olares provides open-source alternatives to these layers.
 
-  ![Tech Stacks](https://file.bttcdn.com/github/terminus/v2/tech-stack.jpeg)
+  ![Tech Stacks](https://file.bttcdn.com/github/terminus/v2/tech-stack-olares.jpeg)
 
 ## Features
 

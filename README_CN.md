@@ -75,8 +75,9 @@ Olares 为此提供了一套全新的去中心化互联网框架，主要包括�
 - **LarePass**：一款功能全面的客户端软件，通过安全的方式将用户与其 Olares 系统连接起来。它不仅支持远程访问、身份和设备管理，还提供数据存储和各种办公工具，让用户高效管理其日常工作和个人数据。
 
 ## 技术栈
+公有云具有基础设施即服务（IaaS）、平台即服务（PaaS）和软件即服务（SaaS）等层级。Olares 为这些层级提供了开源替代方案。
 
-  ![技术栈](https://file.bttcdn.com/github/terminus/v2/tech-stack.jpeg)
+  ![技术栈](https://file.bttcdn.com/github/terminus/v2/tech-stack-olares.jpeg)
 
 ## 功能
 
