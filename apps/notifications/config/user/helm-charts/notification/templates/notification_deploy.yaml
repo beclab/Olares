@@ -249,7 +249,7 @@ spec:
             value: user_space_{{ .Values.bfl.username }}_notifications
       containers:
       - name: notifications-api
-        image: beclab/notifications-api:v0.1.24
+        image: beclab/notifications-api:v0.1.25
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
