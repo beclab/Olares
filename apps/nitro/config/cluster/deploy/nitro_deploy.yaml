@@ -1,5 +1,5 @@
 
-{{ $nitro_appcache_rootpath := "/terminus/userdata/Cache/nitro" }}
+{{ $nitro_appcache_rootpath := "/olares/userdata/Cache/nitro" }}
 
 {{ $client_id := randAlphaNum 8 }}
 

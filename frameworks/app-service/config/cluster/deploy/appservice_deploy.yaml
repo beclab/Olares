@@ -1,7 +1,7 @@
 
 
-{{ $charts_rootpath := "/terminus/rootfs/charts" }}
-{{ $usertmpl_rootpath := "/terminus/rootfs/usertemplate" }}
+{{ $charts_rootpath := printf "%s%s" .Values.rootPath "/rootfs/charts" }}
+{{ $usertmpl_rootpath := printf "%s%s" .Values.rootPath "/rootfs/usertemplate" }}
 
 # {{ $charts_rand16 := randAlphaNum 16 | lower }}
 {{ $charts_pv := "pv-charts" }}

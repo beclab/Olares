@@ -17,9 +17,9 @@ Usage:
 
   help             Display this help.
 
-  install          Run install terminus os.
+  install          Run install olares os.
 
-  uninstall        Run uninstall the terminus os.
+  uninstall        Run uninstall the olares os.
 
 endef
 
@@ -39,7 +39,7 @@ help:
 .PHONY: install
 
 install:
-	$(info +++++ Installing terminus os ...)
+	$(info +++++ Installing olares os ...)
 
 ifeq ($(VERSION),"")
 	$(info $(INSTALL_HELP))
@@ -70,5 +70,5 @@ endif
 .PHONY: uninstall
 
 uninstall:
-	$(info +++++ Uninstall terminus ...)
+	$(info +++++ Uninstall olares ...)
 	@bash uninstall_cmd.sh

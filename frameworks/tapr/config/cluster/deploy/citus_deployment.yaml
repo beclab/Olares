@@ -1,7 +1,7 @@
 
 
-{{ $citus_rootpath := "/terminus/userdata/dbdata" }}
-{{ $citus_backuppath := "/terminus/rootfs/middleware-backup" }}
+{{ $citus_rootpath := printf "%s%s" .Values.rootPath "/userdata/dbdata" }}
+{{ $citus_backuppath := printf "%s%s" .Values.rootPath "/rootfs/middleware-backup" }}
 
 ---
 apiVersion: v1

@@ -1,6 +1,6 @@
 
-{{ $dbdata_pv_rootpath := "/terminus/userdata/dbdata" }}
-{{ $dbbackup_rootpath := "/terminus/rootfs/middleware-backup" }}
+{{ $dbdata_pv_rootpath := printf "%s%s" .Values.rootPath "/userdata/dbdata" }}
+{{ $dbbackup_rootpath := printf "%s%s" .Values.rootPath "/rootfs/middleware-backup" }}
 
 ---
 apiVersion: v1
@@ -99,7 +99,7 @@ spec:
         - name: DISABLE_TELEMETRY
           value: "false"
       - name: operator-api
-        image: beclab/middleware-operator:0.1.35
+        image: beclab/middleware-operator:0.1.36
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9080
@@ -113,7 +113,7 @@ spec:
             memory: 100Mi
         volumeMounts:
         - name: dbbackup-dir
-          mountPath: /terminus/rootfs/middleware-backup
+          mountPath: /olares/rootfs/middleware-backup
         - name: pgbackup-dir
           mountPath: /backup
         - name: dbdata-dir

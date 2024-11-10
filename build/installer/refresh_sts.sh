@@ -39,7 +39,7 @@ get_shell_exec
 
 juicefs_bin="/usr/local/bin/juicefs"
 ip=$(ping -c 1 "$HOSTNAME" |awk -F '[()]' '/icmp_seq/{print $2}')
-pwd=$($sh_c "awk '/requirepass/{print \$NF}' /terminus/data/redis/etc/redis.conf")
+pwd=$($sh_c "awk '/requirepass/{print \$NF}' /olares/data/redis/etc/redis.conf")
 
 
 $sh_c "${juicefs_bin} config redis://:${pwd}@${ip}:6379/1 --access-key ${AWS_ACCESS_KEY_ID_SETUP} --secret-key ${AWS_SECRET_ACCESS_KEY_SETUP} --session-token ${AWS_SESSION_TOKEN_SETUP}"

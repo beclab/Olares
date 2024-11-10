@@ -171,7 +171,7 @@ regen_cert_conf(){
 update_juicefs() {
 	$sh_c "systemctl stop juicefs minio minio-operator redis-server"
 
-	local TERMINUS_ROOT="/terminus"
+	local TERMINUS_ROOT="/olares"
     local fsname="rootfs"
 
 	# update redis

@@ -23,7 +23,7 @@ spec:
       hostNetwork: true
       containers:
       - name: daemon
-        image: beclab/osnode-init:v0.0.9
+        image: beclab/osnode-init:v0.0.10
         imagePullPolicy: IfNotPresent
         args:
         - --metrics-bind-address
@@ -55,7 +55,7 @@ spec:
             memory: 200Mi
         volumeMounts:
           - name: terminus
-            mountPath: /terminus
+            mountPath: /olares
           - name: bin
             mountPath: /usr/local/bin/juicefs
             subPath: juicefs
@@ -64,7 +64,7 @@ spec:
       volumes:
       - name: terminus
         hostPath:
-          path: /terminus
+          path: {{ .Values.rootPath }}
       - name: bin
         hostPath:
           path: /usr/local/bin

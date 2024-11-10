@@ -7,8 +7,8 @@
 {{ else -}}
 {{ $password = randAlphaNum 16 | b64enc }}
 {{- end -}}
-{{ $redix_rootpath := "/terminus/userdata/dbdata" }}
-{{ $redix_backuppath := "/terminus/rootfs/middleware-backup" }}
+{{ $redix_rootpath := printf "%s%s" .Values.rootPath "/userdata/dbdata" }}
+{{ $redix_backuppath := printf "%s%s" .Values.rootPath "/rootfs/middleware-backup" }}
 
 ---
 apiVersion: v1
