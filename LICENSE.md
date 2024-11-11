@@ -1,4 +1,4 @@
-# Terminus License 
+# Olares License 
 
 ## Acceptance
 
