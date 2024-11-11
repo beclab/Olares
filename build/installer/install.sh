@@ -62,14 +62,19 @@ if [ ! -d $BASE_DIR ]; then
     mkdir -p $BASE_DIR
 fi
 
-CLI_VERSION="0.1.49"
+cdn_url=${DOWNLOAD_CDN_URL}
+if [ -z ${cdn_url} ]; then
+    cdn_url="https://dc3p1870nn3cj.cloudfront.net"
+fi
+
+CLI_VERSION="0.1.51"
 CLI_FILE="olares-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
 if [[ x"$os_type" == x"Darwin" ]]; then
     CLI_FILE="olares-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
 fi
 
 if [[ ! -f ${CLI_FILE} ]]; then
-    CLI_URL="https://dc3p1870nn3cj.cloudfront.net/${CLI_FILE}"
+    CLI_URL="${cdn_url}/${CLI_FILE}"
 
     echo "downloading Olares installer from ${CLI_URL} ..."
     echo ""
@@ -107,6 +112,7 @@ if [[ $? -ne 0 ]]; then
 fi
 
 PARAMS="--version $VERSION --base-dir $BASE_DIR --kube $KUBE_TYPE"
+CDN="--download-cdn-url ${cdn_url}"
 
 if [ -f $BASE_DIR/.prepared ]; then
     echo "file $BASE_DIR/.prepared detected, skip preparing phase"
@@ -114,7 +120,7 @@ if [ -f $BASE_DIR/.prepared ]; then
 else
     echo "downloading installation wizard..."
     echo ""
-    $sh_c "$INSTALL_OLARES_CLI olares download wizard $PARAMS"
+    $sh_c "$INSTALL_OLARES_CLI olares download wizard $PARAMS $CDN"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to download installation wizard"
         exit 1
@@ -122,7 +128,7 @@ else
 
     echo "downloading installation packages..."
     echo ""
-    $sh_c "$INSTALL_OLARES_CLI olares download component $PARAMS"
+    $sh_c "$INSTALL_OLARES_CLI olares download component $PARAMS $CDN"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to download installation packages"
         exit 1

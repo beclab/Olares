@@ -36,8 +36,8 @@ for deps in "components" "pkgs"; do
         path=$(echo "$line"|awk -F"," '{print $2}')
         name=$(echo -n "$filename"|md5sum|awk '{print $1}')
 
-        url_amd64=$cdn_url/$name
-        url_arm64=$cdn_url/arm64/$name
+        url_amd64=$name
+        url_arm64=arm64/$name
 
         checksum_amd64=$(download_checksum $name)
         checksum_arm64=$(download_checksum arm64/$name)
@@ -58,8 +58,8 @@ for deps in "images.mf"; do
         name=$(echo -n "$line"|md5sum|awk '{print $1}')
 
         echo "downloading file checksum, $line"
-        url_amd64=$cdn_url/$name.tar.gz
-        url_arm64=$cdn_url/arm64/$name.tar.gz
+        url_amd64=$name.tar.gz
+        url_arm64=arm64/$name.tar.gz
 
         checksum_amd64=$(download_checksum $name)
         checksum_arm64=$(download_checksum arm64/$name)
