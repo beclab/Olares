@@ -17,9 +17,10 @@
 
 </div>
 
-![cover](https://file.bttcdn.com/github/terminus/desktop-dark.jpeg)
+https://github.com/user-attachments/assets/5ea2fe30-7bd2-49ed-be26-e12f1d5d8cb1
 
-*Build your local AI assistants, sync data across places, self-hosted your workspace, stream your own media, and more——all in your sovereign cloud made possible by Olares.*
+*Build your local AI assistants, sync data across places, self-host your workspace, stream your own media, and more—all in your sovereign cloud made possible by Olares.*
+
 <p align="center">
   <a href="https://olares.xyz">Website</a> ·
   <a href="https://docs.olares.xyz">Documentation</a> ·
@@ -89,22 +90,6 @@ Olares offers a wide array of features designed to enhance security, ease of use
 - **Built-in applications**: Includes file manager, sync drive, vault, reader, app market, settings, and dashboard.
 - **Seamless anywhere access**: Access your devices from anywhere using dedicated clients for mobile, desktop, and browsers.
 - **Development tools**: Comprehensive development tools for effortless application development and porting.
-
-Here are some screenshots from the UI for a sneak peek:
-
-| Desktop–AI-Powered Personal Desktop     |  **Files**–A Secure Home to Your Data
-| :--------: | :-------: |
-| ![Desktop](https://file.bttcdn.com/github/terminus/v2/desktop.jpg) | ![Files](https://file.bttcdn.com/github/terminus/v2/files.jpg) |
-| **Vault–1Password alternative**|**Market–App ecosystem in your control** |
-| ![vault](https://file.bttcdn.com/github/terminus/v2/vault.jpg) | ![market](https://file.bttcdn.com/github/terminus/v2/market.jpg) |
-|**Wise–Your digital secret garden** | **Settings–Managing Olares efficiently** |
-| ![settings](https://file.bttcdn.com/github/terminus/v2/wise.jpg) | ![](https://file.bttcdn.com/github/terminus/v2/settings.jpg) |
-|**Dashboard–constant Olares monitoring**  | **Profile–Your homepage on decentralized network** |
-| ![dashboard](https://file.bttcdn.com/github/terminus/v2/dashboard.jpg) | ![profile](https://file.bttcdn.com/github/terminus/v2/profile.jpg) |
-| **Devbox–Developing, debugging, and deploying**|**Controlhub–Managing Kubernetes clusters easily**  |
-| ![Devbox](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![Controlhub](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
-
-</div>
 
 ## Feature comparison 
 

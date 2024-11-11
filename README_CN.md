@@ -18,7 +18,7 @@
 </div>
 
 
-![cover](https://file.bttcdn.com/github/terminus/desktop-dark.jpeg)
+[![cover](https://file.bttcdn.com/github/terminus/desktop-dark.jpeg)](https://github.com/user-attachments/assets/5ea2fe30-7bd2-49ed-be26-e12f1d5d8cb1)
 
 *Olares 让你体验更多可能：构建个人 AI 助理、随时随地同步数据、自托管团队协作空间、打造私人影视厅——无缝整合你的数字生活。*
 
@@ -91,21 +91,6 @@ Olares 提供了一系列功能，旨在提升安全性、使用便捷性以及�
 - **内置应用程序**：涵盖文件管理器、同步驱动器、密钥管理器、阅读器、应用市场、设置和面板等，提供全面的应用支持。
 - **无缝访问**：通过移动端、桌面端和网页浏览器客户端，从全球任何地方访问设备。
 - **开发工具**：提供全面的工具支持，便于开发和移植应用，加速开发进程。
-
-
-| **桌面：AI驱动的个人桌面**     |  **文件：安全存储数据**
-| :--------: | :-------: |
-| ![桌面](https://file.bttcdn.com/github/terminus/v2/desktop.jpg) | ![文件](https://file.bttcdn.com/github/terminus/v2/files.jpg) |
-| **Vault：密码无忧管理**|**市场：可控的应用生态系统** |
-| ![vault](https://file.bttcdn.com/github/terminus/v2/vault.jpg) | ![市场](https://file.bttcdn.com/github/terminus/v2/market.jpg) |
-|**Wise：数字后花园** | **设置：高效管理 Olares** |
-| ![设置](https://file.bttcdn.com/github/terminus/v2/wise.jpg) | ![](https://file.bttcdn.com/github/terminus/v2/settings.jpg) |
-|**面板：持续监控 Olares**  | **Profile：去中心化网络的个人主页** |
-| ![面板](https://file.bttcdn.com/github/terminus/v2/dashboard.jpg) | ![profile](https://file.bttcdn.com/github/terminus/v2/profile.jpg) |
-| **Devbox：一站式开发、调试和部署**|**ControlHub：轻松管理 Kubernetes 集群**  |
-| ![Devbox](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![控制中心](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
-
-</div>
 
 ## 功能对比
 
