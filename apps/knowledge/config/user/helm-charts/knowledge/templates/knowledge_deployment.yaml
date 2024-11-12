@@ -236,7 +236,7 @@ spec:
             memory: 1Gi
 
       - name: backend-server
-        image: "beclab/recommend-backend:v0.0.19"
+        image: "beclab/recommend-backend:v0.0.20"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -313,7 +313,7 @@ spec:
             memory: 400Mi
 
       - name: sync
-        image: "beclab/recommend-sync:v0.0.13"
+        image: "beclab/recommend-sync:v0.0.14"
         securityContext:
           allowPrivilegeEscalation: false
           runAsUser: 1000
@@ -366,6 +366,15 @@ spec:
             cpu: "800m"
             memory: 800Mi
 
+      - name: headless
+        image: 'chromedp/headless-shell:stable'
+        ports:
+          - containerPort: 9222
+            protocol: TCP
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+          runAsNonRoot: false
       - name: terminus-ws-sidecar
         image: 'beclab/ws-gateway:v1.0.3'
         imagePullPolicy: IfNotPresent
