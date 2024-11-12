@@ -43,7 +43,7 @@ https://github.com/coreos/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd6
 
 https://get.helm.sh/helm-v3.9.0-linux-amd64.tar.gz,helm/v3.9.0,,helm,helm-v3.9.0
 
-https://github.com/k3s-io/k3s/releases/download/v1.21.4+k3s1/k3s,kube/v1.21.4,,,k3s-v1.21.4
+https://github.com/k3s-io/k3s/releases/download/v1.21.5+k3s1/k3s,kube/v1.21.5,,,k3s-v1.21.5
 
 https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/amd64/kubeadm,kube/v1.22.10,,kubeadm,kubeadm-v1.22.10
 https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/amd64/kubelet,kube/v1.22.10,,kubelet,kubelet-v1.22.10

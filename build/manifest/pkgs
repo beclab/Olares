@@ -4,7 +4,7 @@ containerd-1.6.4.tar.gz,pkg/containerd/1.6.4,https://github.com/containerd/conta
 crictl-v1.24.0-linux-amd64.tar.gz,pkg/crictl/v1.24.0,https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.24.0/crictl-v1.24.0-linux-amd64.tar.gz,https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.24.0/crictl-v1.24.0-linux-arm64.tar.gz,crictl
 etcd-v3.4.13.tar.gz,pkg/etcd/v3.4.13,https://github.com/coreos/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz,https://github.com/coreos/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-arm64.tar.gz,etcd
 helm-v3.9.0.tar.gz,pkg/helm/v3.9.0,https://get.helm.sh/helm-v3.9.0-linux-amd64.tar.gz,https://get.helm.sh/helm-v3.9.0-linux-arm64.tar.gz,helm
-k3s,pkg/kube/v1.21.4,https://github.com/k3s-io/k3s/releases/download/v1.21.4+k3s1/k3s,https://github.com/k3s-io/k3s/releases/download/v1.21.4+k3s1/k3s-arm64,k3s
+k3s,pkg/kube/v1.21.5,https://github.com/k3s-io/k3s/releases/download/v1.21.5+k3s1/k3s,https://github.com/k3s-io/k3s/releases/download/v1.21.5+k3s1/k3s-arm64,k3s
 kubeadm,pkg/kube/v1.22.10,https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/amd64/kubeadm,https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/arm64/kubeadm,kubeadm
 kubelet,pkg/kube/v1.22.10,https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/amd64/kubelet,https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/arm64/kubelet,kubelet
 kubectl,pkg/kube/v1.22.10,https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/amd64/kubectl,https://storage.googleapis.com/kubernetes-release/release/v1.22.10/bin/linux/arm64/kubectl,kubectl

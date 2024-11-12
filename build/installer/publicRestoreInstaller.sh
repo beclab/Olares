@@ -872,7 +872,7 @@ run_install() {
     # env 'KUBE_TYPE' is specific the special kubernetes (k8s or k3s), default k3s
     [[ -z $KUBE_TYPE ]] && KUBE_TYPE="k3s"
     if [ x"$KUBE_TYPE" == x"k3s" ]; then
-        k8s_version=v1.21.4-k3s
+        k8s_version=v1.21.5-k3s
     fi
     create_cmd="./kk create cluster --with-kubernetes $k8s_version --container-manager containerd"  # --with-addon ${ADDON_CONFIG_FILE}
 
