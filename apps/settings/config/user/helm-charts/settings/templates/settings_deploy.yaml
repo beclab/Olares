@@ -68,17 +68,21 @@ spec:
               fieldPath: status.podIP
       containers:
       - name: settings
-        image: beclab/settings:v0.1.90
+        image: beclab/settings:v0.1.91
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
 
       - name: settings-server
-        image: beclab/settings-server:v0.1.90
+        image: beclab/settings-server:v0.1.91
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
         env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
+        {{- end }}
         - name: DEV_MODE
           value: ''
         - name: OS_SYSTEM_SERVER
