@@ -236,7 +236,7 @@ spec:
             memory: 1Gi
 
       - name: backend-server
-        image: "beclab/recommend-backend:v0.0.20"
+        image: "beclab/recommend-backend:v0.0.22"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -313,7 +313,7 @@ spec:
             memory: 400Mi
 
       - name: sync
-        image: "beclab/recommend-sync:v0.0.14"
+        image: "beclab/recommend-sync:v0.0.15"
         securityContext:
           allowPrivilegeEscalation: false
           runAsUser: 1000
@@ -349,7 +349,7 @@ spec:
           mountPath: /juicefs
        
       - name: crawler
-        image: "beclab/recommend-crawler:v0.0.13"
+        image: "beclab/recommend-crawler:v0.0.14"
         securityContext:
           allowPrivilegeEscalation: false
           runAsUser: 1000
