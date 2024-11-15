@@ -148,7 +148,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
         - name: dashboard-init
-          image: beclab/dashboard-frontend-v1:v0.4.1
+          image: beclab/dashboard-frontend-v1:v0.4.2
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -160,7 +160,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: control-hub-init
-          image: beclab/admin-console-frontend-v1:v0.4.0
+          image: beclab/admin-console-frontend-v1:v0.4.1
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -172,7 +172,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: profile-editor-init
-          image: beclab/profile-editor:v1.0.2
+          image: beclab/profile-editor:v1.0.3
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -184,7 +184,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: profile-preview-init
-          image: beclab/profile-preview:v1.0.2
+          image: beclab/profile-preview:v1.0.3
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -293,7 +293,7 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
         - name: profile-services
-          image: beclab/profile-services:v1.0.2
+          image: beclab/profile-services:v1.0.3
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
