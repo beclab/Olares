@@ -29,6 +29,9 @@ https://github.com/user-attachments/assets/5ea2fe30-7bd2-49ed-be26-e12f1d5d8cb1
   <a href="https://space.olares.xyz">Olares Space</a>
 </p>
 
+> [!IMPORTANT]  
+> We just finished our rebranding from Terminus to Olares recently. For more information, refer to our [rebranding blog](https://olares.medium.com/terminus-is-now-olares-2c3bf782f9d1). 
+
 ## Table of Contents <!-- omit in toc -->
 - [Introduction](#introduction)
 - [Motivation and design](#motivation-and-design)
