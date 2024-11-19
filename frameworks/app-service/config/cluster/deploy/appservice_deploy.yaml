@@ -148,7 +148,7 @@ spec:
       serviceAccount: os-internal
       containers:
       - name: app-service
-        image: beclab/app-service:0.2.48
+        image: beclab/app-service:0.2.50
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -175,6 +175,14 @@ spec:
           value: "beclab/upgrade-job:0.1.3"
         - name: SHARED_LIB_PATH
           value: {{ .Values.sharedlib }}
+        - name: CLUSTER_CPU_THRESHOLD
+          value: "90"
+        - name: CLUSTER_MEMORY_THRESHOLD
+          value: "90"
+        - name: USER_CPU_THRESHOLD
+          value: "90"
+        - name: USER_MEMORY_THRESHOLD
+          value: "90"
         - name: APP_RANDOM_KEY
           valueFrom:
             secretKeyRef:
