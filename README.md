@@ -1,6 +1,6 @@
 <div align="center">
 
-# Olares - Open-Source SelfHosted Alternative to Public Clouds <!-- omit in toc -->
+# Olares - Your Sovereign Cloud, an Open-Source Self-Hosted Alternative to Public Clouds <!-- omit in toc -->
 
 [![Mission](https://img.shields.io/badge/Mission-Let%20people%20own%20their%20data%20again-purple)](#)<br />
 [![Last Commit](https://img.shields.io/github/last-commit/beclab/olares)](https://github.com/beclab/olares/commits/main)
@@ -47,7 +47,7 @@ https://github.com/user-attachments/assets/5ea2fe30-7bd2-49ed-be26-e12f1d5d8cb1
   
 ## Introduction
 
-Transform your edge device into a sovereign cloud with Olares - a free, self-hosted alternative to public clouds. Powered by Kubernetes, Olares brings cloud-level capabilities to your home without compromising privacy or ease of use. By securely storing your data and accessing your self-hosted services from anywhere via Olares, you gain complete control over your digital life. 
+Olares is the sovereign cloud that puts you in control. It's an open-source, self-hosted alternative to public clouds like AWS, built to reclaim your data ownership and privacy. By combining the power of Kubernetes with a streamlined interface, Olares enables you to take full control of your data and computing resources. Whether you're managing a homelab, hosting applications, or safeguarding your privacy, Olares delivers the flexibility and capabilities of public clouds, without compromising privacy or security.
 
 Typical use cases of Olares include:
 

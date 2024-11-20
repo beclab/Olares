@@ -1,6 +1,6 @@
 <div align="center">
 
-# Olares——开源自托管的公有云平替<!-- omit in toc -->
+# Olares - 您的主权云，一个开源自托管的公有云替代方案<!-- omit in toc -->
 
 [![Mission](https://img.shields.io/badge/Mission-Let%20people%20own%20their%20data%20again-purple)](#)<br />
 [![Last Commit](https://img.shields.io/github/last-commit/beclab/terminus)](https://github.com/beclab/olares/commits/main)
@@ -46,7 +46,7 @@
   
 ## 介绍
 
-Olares 是一个免费的、可自行部署的公有云替代方案。它基于 Kubernetes 构建，将您的边缘设备转变为自主云，让您在家也能享受云级别的功能，同时不影响隐私性和易用性。通过 Olares，您可以安全地存储数据并随时随地访问自己部署的服务，让您完全掌控自己的数字生活。
+Olares是一个让您完全掌控的主权云平台。它是一个开源的、自托管的公有云替代方案，旨在帮助您重获数据所有权和隐私控制权。通过将Kubernetes的强大功能与简化的用户界面相结合，Olares使您能够完全掌控自己的数据和计算资源。无论您是在管理家庭实验环境、部署应用程序，还是保护个人隐私，Olares都能提供与公有云同等的灵活性和功能，同时确保您的隐私和安全不受损害。
 
 Olares 支持以下应用场景：
 
