@@ -196,7 +196,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: wise-init
-          image: beclab/wise:v1.2.61
+          image: beclab/wise:v1.2.62
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
