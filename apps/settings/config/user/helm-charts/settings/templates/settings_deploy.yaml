@@ -68,13 +68,13 @@ spec:
               fieldPath: status.podIP
       containers:
       - name: settings
-        image: beclab/settings:v0.1.92
+        image: beclab/settings:v0.1.93
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
 
       - name: settings-server
-        image: beclab/settings-server:v0.1.92
+        image: beclab/settings-server:v0.1.93
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
@@ -91,6 +91,12 @@ spec:
           value: '{{ .Values.os.settings.appSecret }}'
         - name: OS_APP_KEY
           value: {{ .Values.os.settings.appKey }}
+        - name: NODE_IP
+          valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+        - name: TERMINUSD_HOST
+          value: $(NODE_IP):18088
         - name: APP_SERVICE_SERVICE_HOST
           value: app-service.os-system
         - name: APP_SERVICE_SERVICE_PORT
