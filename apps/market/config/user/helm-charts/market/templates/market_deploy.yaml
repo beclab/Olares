@@ -66,12 +66,12 @@ spec:
                 fieldPath: status.podIP
       containers:
       - name: appstore
-        image: beclab/market-frontend:v0.2.27
+        image: beclab/market-frontend:v0.2.28
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
       - name: appstore-backend
-        image: beclab/market-backend:v0.2.27
+        image: beclab/market-backend:v0.2.28
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
