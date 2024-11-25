@@ -8,12 +8,19 @@ function command_exists() {
 }
 
 if [[ x"$VERSION" == x"" ]]; then
-    export VERSION="#__VERSION__"
+    if [[ "$LOCAL_RELEASE" == "1" ]]; then
+        ts=$(date +%Y%m%d%H%M%S)
+        export VERSION="0.0.0-local-dev-$ts"
+        echo "will build and use a local release of Olares with version: $VERSION"
+        echo ""
+    else
+        export VERSION="#__VERSION__"
+    fi
 fi
 
 if [[ "x${VERSION}" == "x" || "x${VERSION:3}" == "xVERSION__" ]]; then
-    echo "error: unable to get the wanted Olares version, please set the VERSION env var and rerun this script."
-    echo "for example: VERSION=1.0.0 bash ./install.sh"
+    echo "error: Olares version is unspecified, please set the VERSION env var and rerun this script."
+    echo "for example: VERSION=1.11.0-20241124 bash $0"
     exit 1
 fi
 
@@ -67,68 +74,87 @@ if [ -z ${cdn_url} ]; then
     cdn_url="https://dc3p1870nn3cj.cloudfront.net"
 fi
 
-CLI_VERSION="0.1.61"
+CLI_VERSION="0.1.62"
 CLI_FILE="olares-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
 if [[ x"$os_type" == x"Darwin" ]]; then
     CLI_FILE="olares-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
 fi
 
-if [[ ! -f ${CLI_FILE} ]]; then
-    CLI_URL="${cdn_url}/${CLI_FILE}"
-
-    echo "downloading Olares installer from ${CLI_URL} ..."
+if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$CLI_VERSION" ]]; then
+    echo "olares-cli already installed and is the expected version"
     echo ""
+else
+    if [[ ! -f ${CLI_FILE} ]]; then
+        CLI_URL="${cdn_url}/${CLI_FILE}"
 
-    curl -Lo ${CLI_FILE} ${CLI_URL}
+        echo "downloading Olares installer from ${CLI_URL} ..."
+        echo ""
+
+        curl -Lo ${CLI_FILE} ${CLI_URL}
+
+        if [[ $? -ne 0 ]]; then
+            echo "error: failed to download Olares installer"
+            exit 1
+        else
+            echo "Olares installer ${CLI_VERSION} download complete!"
+            echo ""
+        fi
+    fi
+    INSTALL_OLARES_CLI="/usr/local/bin/olares-cli"
+    echo "unpacking Olares installer to $INSTALL_OLARES_CLI..."
+    echo ""
+    tar -zxf ${CLI_FILE} && chmod +x olares-cli
+    if [[ x"$os_type" == x"Darwin" ]]; then
+        if [ ! -f "/usr/local/Cellar/olares" ]; then
+            current_user=$(whoami)
+            $sh_c "sudo mkdir -p /usr/local/Cellar/olares && sudo chown ${current_user}:staff /usr/local/Cellar/olares"
+        fi
+        $sh_c "mv olares-cli /usr/local/Cellar/olares/olares-cli && \
+               sudo rm -rf /usr/local/bin/olares-cli && \
+               sudo ln -s /usr/local/Cellar/olares/olares-cli $INSTALL_OLARES_CLI"
+    else
+        $sh_c "mv olares-cli $INSTALL_OLARES_CLI"
+    fi
 
     if [[ $? -ne 0 ]]; then
-        echo "error: failed to download Olares installer"
+        echo "error: failed to unpack Olares installer"
         exit 1
-    else
-        echo "Olares installer ${CLI_VERSION} download complete!"
-        echo ""
     fi
 fi
 
-INSTALL_OLARES_CLI="/usr/local/bin/olares-cli"
-echo "unpacking Olares installer to $INSTALL_OLARES_CLI..."
-echo ""
-tar -zxf ${CLI_FILE} && chmod +x olares-cli
-if [[ x"$os_type" == x"Darwin" ]]; then
-    if [ ! -f "/usr/local/Cellar/olares" ]; then
-        current_user=$(whoami)
-        $sh_c "sudo mkdir -p /usr/local/Cellar/olares && sudo chown ${current_user}:staff /usr/local/Cellar/olares"
-    fi
-    $sh_c "mv olares-cli /usr/local/Cellar/olares/olares-cli && \
-           sudo rm -rf /usr/local/bin/olares-cli && \
-           sudo ln -s /usr/local/Cellar/olares/olares-cli $INSTALL_OLARES_CLI"
-else
-    $sh_c "mv olares-cli $INSTALL_OLARES_CLI"
-fi
-
-if [[ $? -ne 0 ]]; then
-    echo "error: failed to unpack Olares installer"
-    exit 1
-fi
-
-PARAMS="--version $VERSION --base-dir $BASE_DIR --kube $KUBE_TYPE"
+PARAMS="--version $VERSION --base-dir $BASE_DIR"
+KUBE_PARAM="--kube $KUBE_TYPE"
 CDN="--download-cdn-url ${cdn_url}"
 
-if [ -f $BASE_DIR/.prepared ]; then
+if [[ -f $BASE_DIR/.prepared ]]; then
     echo "file $BASE_DIR/.prepared detected, skip preparing phase"
     echo ""
 else
-    echo "downloading installation wizard..."
-    echo ""
-    $sh_c "$INSTALL_OLARES_CLI olares download wizard $PARAMS $CDN"
-    if [[ $? -ne 0 ]]; then
-        echo "error: failed to download installation wizard"
-        exit 1
+    if [[ "$LOCAL_RELEASE" == "1" ]]; then
+        if [[ -d $BASE_DIR/versions/v$VERSION  ]]; then
+            echo "local release already exists, skip building"
+            echo ""
+        else
+            echo "building local release ..."
+            $sh_c "olares-cli olares release $PARAMS $CDN"
+            if [[ $? -ne 0 ]]; then
+                echo "error: failed to build local release"
+                exit 1
+            fi
+        fi
+    else
+        echo "downloading installation wizard..."
+        echo ""
+        $sh_c "olares-cli olares download wizard $PARAMS $KUBE_PARAM $CDN"
+        if [[ $? -ne 0 ]]; then
+            echo "error: failed to download installation wizard"
+            exit 1
+        fi
     fi
 
     echo "downloading installation packages..."
     echo ""
-    $sh_c "$INSTALL_OLARES_CLI olares download component $PARAMS $CDN"
+    $sh_c "olares-cli olares download component $PARAMS $KUBE_PARAM $CDN"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to download installation packages"
         exit 1
@@ -140,7 +166,7 @@ else
     if [ x"$REGISTRY_MIRRORS" != x"" ]; then
         extra="--registry-mirrors $REGISTRY_MIRRORS"
     fi
-    $sh_c "$INSTALL_OLARES_CLI olares prepare $PARAMS $extra"
+    $sh_c "olares-cli olares prepare $PARAMS $KUBE_PARAM $extra"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to prepare installation environment"
         exit 1
@@ -158,7 +184,7 @@ if [ "$PREINSTALL" == "1" ]; then
 fi
 echo "installing Olares..."
 echo ""
-$sh_c "$INSTALL_OLARES_CLI olares install $PARAMS"
+$sh_c "olares-cli olares install $PARAMS $KUBE_PARAM"
 
 if [[ $? -ne 0 ]]; then
     echo "error: failed to install Olares"
