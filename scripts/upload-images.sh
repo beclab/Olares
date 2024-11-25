@@ -47,40 +47,40 @@ cat $1|while read image; do
 
     # upload to tencent cloud cos
 
-    curl -fsSLI https://cdn.joinolares.cn/$path$name.tar.gz > /dev/null
-    if [ $? -ne 0 ]; then
-        set -e
-        docker pull $image
-        docker save $image -o $name.tar
-        gzip $name.tar
+    # curl -fsSLI https://cdn.joinolares.cn/$path$name.tar.gz > /dev/null
+    # if [ $? -ne 0 ]; then
+    #     set -e
+    #     docker pull $image
+    #     docker save $image -o $name.tar
+    #     gzip $name.tar
 
-        md5sum $name.tar.gz > $checksum
+    #     md5sum $name.tar.gz > $checksum
 
-        coscmd upload ./$name.tar.gz /$path$name.tar.gz
-        coscmd upload ./$checksum /$path$checksum
-        echo "upload $name to cos completed"
+    #     coscmd upload ./$name.tar.gz /$path$name.tar.gz
+    #     coscmd upload ./$checksum /$path$checksum
+    #     echo "upload $name to cos completed"
 
-        set +e
-    fi
+    #     set +e
+    # fi
 
     
 
-    # re-upload checksum.txt
-    curl -fsSLI https://cdn.joinolares.cn/$path$checksum > /dev/null
-    if [ $? -ne 0 ]; then
-        set -e
-        docker pull $image
-        docker save $image -o $name.tar
-        gzip $name.tar
+    # # re-upload checksum.txt
+    # curl -fsSLI https://cdn.joinolares.cn/$path$checksum > /dev/null
+    # if [ $? -ne 0 ]; then
+    #     set -e
+    #     docker pull $image
+    #     docker save $image -o $name.tar
+    #     gzip $name.tar
 
-        md5sum $name.tar.gz > $checksum
+    #     md5sum $name.tar.gz > $checksum
 
-        coscmd upload ./$name.tar.gz /$path$name.tar.gz
-        coscmd upload ./$checksum /$path$checksum
-        echo "upload $name to cos completed"
+    #     coscmd upload ./$name.tar.gz /$path$name.tar.gz
+    #     coscmd upload ./$checksum /$path$checksum
+    #     echo "upload $name to cos completed"
 
-        set +e
-    fi
+    #     set +e
+    # fi
     
 
 done

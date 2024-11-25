@@ -171,11 +171,11 @@ jobs:
                         -b $COS_BUCKET \
                         -r $COS_REGION 
           
-      - name: Upload to COS
-        run: |
-          md5sum install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz > install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt && \
-          coscmd upload ./install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt /install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt
-          coscmd upload ./install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz /install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz
+      # - name: Upload to COS
+      #   run: |
+      #     md5sum install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz > install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt && \
+      #     coscmd upload ./install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt /install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt
+      #     coscmd upload ./install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz /install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz
 
       - name: Upload to S3
         env: 

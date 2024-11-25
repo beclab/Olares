@@ -45,14 +45,14 @@ for deps in "components" "pkgs"; do
        fi        
 
        # upload to tencent cloud cos
-       curl -fsSLI https://cdn.joinolares.cn/$path$name > /dev/null
-       if [ $? -ne 0 ]; then
-            set -ex
-            coscmd upload ./$name /$path$name
-            coscmd upload ./$checksum /$path$checksum
-            echo "upload $name to cos completed"
-            set +ex
-       fi        
+    #    curl -fsSLI https://cdn.joinolares.cn/$path$name > /dev/null
+    #    if [ $? -ne 0 ]; then
+    #         set -ex
+    #         coscmd upload ./$name /$path$name
+    #         coscmd upload ./$checksum /$path$checksum
+    #         echo "upload $name to cos completed"
+    #         set +ex
+    #    fi        
     done < $deps
 done
 

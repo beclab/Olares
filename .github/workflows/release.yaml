@@ -106,11 +106,11 @@ jobs:
                         -b $COS_BUCKET \
                         -r $COS_REGION 
           
-      - name: Upload to COS
-        run: |
-          md5sum install-wizard-v${{ github.event.inputs.tags }}.tar.gz > install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt && \
-          coscmd upload ./install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt /install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt
-          coscmd upload ./install-wizard-v${{ github.event.inputs.tags }}.tar.gz /install-wizard-v${{ github.event.inputs.tags }}.tar.gz
+      # - name: Upload to COS
+      #   run: |
+      #     md5sum install-wizard-v${{ github.event.inputs.tags }}.tar.gz > install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt && \
+      #     coscmd upload ./install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt /install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt
+      #     coscmd upload ./install-wizard-v${{ github.event.inputs.tags }}.tar.gz /install-wizard-v${{ github.event.inputs.tags }}.tar.gz
 
       - name: Upload to S3
         env: 
