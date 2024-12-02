@@ -12,7 +12,7 @@ spec:
       name: dashboard
       port: 80
       targetPort: 81
-      
+
 ---
 apiVersion: v1
 kind: Service
@@ -80,6 +80,34 @@ spec:
       port: 80
       targetPort: 85
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: settings-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: system-frontend
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: settings
+      port: 80
+      targetPort: 86
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-admin-server
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ExternalName
+  externalName: vault-server.os-system.svc.cluster.local
+  ports:
+    - protocol: TCP
+      port: 3010
+      targetPort: 3010
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -92,11 +120,11 @@ metadata:
     applications.app.bytetrade.io/group: 'true'
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
-    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","wise":"https://file.bttcdn.com/appstore/rss/icon.png","headscale": "https://file.bttcdn.com/appstore/headscale/icon.png"}'
-    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","wise":"Wise","headscale":"Headscale"}'
-    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","wise":"0.0.1","headscale":"0.0.1"}'
+    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","wise":"https://file.bttcdn.com/appstore/rss/icon.png","headscale": "https://file.bttcdn.com/appstore/headscale/icon.png","settings": "https://file.bttcdn.com/appstore/settings/icon.png"}'
+    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","wise":"Wise","headscale":"Headscale","settings":"Settings"}'
+    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","wise":"0.0.1","headscale":"0.0.1","settings":"0.0.1"}'
     applications.app.bytetrade.io/policies: '{"dashboard":{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}}'
-    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"wise":[{"name":"wise", "host":"wise-svc", "port":80,"title":"Wise","windowPushState":true}],"headscale":[{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true}]}'
+    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"wise":[{"name":"wise", "host":"wise-svc", "port":80,"title":"Wise","windowPushState":true}],"headscale":[{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true}],"settings":[{"name":"settings", "host":"settings-service", "port":80,"title":"Settings"}]}'
 spec:
   replicas: 1
   selector:
@@ -111,7 +139,7 @@ spec:
       initContainers:
         - args:
             - -it
-            - authelia-backend.os-system:9091
+            - authelia-backend.os-system:9091,infisical-service:80,system-server.user-system-{{ .Values.bfl.username }}:80
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-auth
@@ -207,6 +235,18 @@ spec:
           volumeMounts:
             - mountPath: /www
               name: www-dir
+        - name: settings-init
+          image: beclab/settings:v0.1.94
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /www/settings
+              cp -r /app/* /www/settings
+          volumeMounts:
+            - mountPath: /www
+              name: www-dir
       containers:
         - name: terminus-envoy-sidecar
           image: bytetrade/envoy:v1.25.11
@@ -241,6 +281,7 @@ spec:
             - containerPort: 83
             - containerPort: 84
             - containerPort: 85
+            - containerPort: 86
             - containerPort: 8090
           command:
             - /bin/sh
@@ -275,6 +316,9 @@ spec:
             - name: system-frontend-nginx-config
               mountPath: /etc/nginx/conf.d/headscale.conf
               subPath: headscale.conf
+            - name: system-frontend-nginx-config
+              mountPath: /etc/nginx/conf.d/settings.conf
+              subPath: settings.conf
           env:
             - name: POD_UID
               valueFrom:
@@ -324,6 +368,43 @@ spec:
           resources: {}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
+        - name: settings-server
+          image: beclab/settings-server:v0.1.93
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+        {{- end }}
+            - name: DEV_MODE
+              value: ''
+            - name: OS_SYSTEM_SERVER
+              value: system-server.user-system-{{ .Values.bfl.username }}
+            - name: OS_APP_SECRET
+              value: '{{ .Values.os.settings.appSecret }}'
+            - name: OS_APP_KEY
+              value: {{ .Values.os.settings.appKey }}
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: TERMINUSD_HOST
+              value: $(NODE_IP):18088
+            - name: APP_SERVICE_SERVICE_HOST
+              value: app-service.os-system
+            - name: APP_SERVICE_SERVICE_PORT
+              value: '6755'
+            - name: APP_SERVICE_CHAIN_ID
+              value: '10'
+            - name: APP_SERVICE_VERIFYING_CONTRACT
+              value: '0xe2eaba0979277a90511f8873ae1e8ca26b54e740'
+            - name: APP_SERVICE_CLOUD_URL
+              value: 'https://cloud-api.bttcdn.com'
+            # value: none / nvidia / nvshare / virtaitech
+            - name: GPU
+              value: {{ .Values.gpu }}
       volumes:
         - name: userspace-dir
           hostPath:
@@ -409,7 +490,194 @@ spec:
       version: v1
 status:
   state: active
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ApplicationPermission
+metadata:
+  name: settings
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: settings
+  appid: settings
+  key: {{ .Values.os.settings.appKey }}
+  secret: {{ .Values.os.settings.appSecret }}
+  permissions:
+    - dataType: config
+      group: service.desktop
+      ops:
+        - Update
+      version: v1
+    - dataType: secret
+      group: secret.infisical
+      ops:
+        - RetrieveSecret?workspace=settings
+        - CreateSecret?workspace=settings
+        - DeleteSecret?workspace=settings
+        - UpdateSecret?workspace=settings
+        - ListSecret?workspace=settings
+      version: v1
+    - dataType: headscale
+      group: service.headscale
+      ops:
+        - GetMachine
+        - RenameMachine
+        - DeleteMachine
+        - GetRoute
+        - EnableRoute
+        - DisableRoute
+        - SetTags
+      version: v1
+    - dataType: files
+      group: service.files
+      ops:
+        - Query
+        - GetSearchFolderStatus
+        - UpdateSearchFolderPaths
+        - GetDatasetFolderStatus
+        - UpdateDatasetFolderPaths
+      version: v1
+    - dataType: datastore
+      group: service.bfl
+      ops:
+        - GetKey
+        - GetKeyPrefix
+        - SetKey
+        - DeleteKey
+      version: v1
+    - dataType: app
+      group: service.bfl
+      ops:
+        - UserApps
+      version: v1
+    - dataType: config
+      group: service.desktop
+      ops:
+        - Update
+      version: v1
+status:
+  state: active
 
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ProviderRegistry
+metadata:
+  name: settings-nft
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  dataType: nft
+  deployment: settings
+  description: Get Cloud Bind NFT List
+  endpoint: settings-service.{{ .Release.Namespace }}
+  group: service.settings
+  kind: provider
+  namespace: {{ .Release.Namespace }}
+  opApis:
+    - name: getNFTAddress
+      uri: /api/cloud/getNFTAddress
+  version: v1
+status:
+  state: active
+
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ProviderRegistry
+metadata:
+  name: settings-account
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  dataType: account
+  deployment: settings
+  description: Get Acccount saved in Settings
+  endpoint: settings-service.{{ .Release.Namespace }}
+  group: service.settings
+  kind: provider
+  namespace: {{ .Release.Namespace }}
+  opApis:
+    - name: getAccount
+      uri: /api/account
+  version: v1
+status:
+  state: active
+
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ProviderRegistry
+metadata:
+  name: settings-backup-password
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  dataType: backupPassword
+  deployment: settings
+  description: Get Backup Plan's Password
+  endpoint: settings-service.{{ .Release.Namespace }}
+  group: service.settings
+  kind: provider
+  namespace: {{ .Release.Namespace }}
+  opApis:
+    - name: getAccount
+      uri: /api/backup/password
+  version: v1
+status:
+  state: active
+
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ProviderRegistry
+metadata:
+  name: settings-event-watcher
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  callbacks:
+    - filters:
+        type:
+          - app-installation-event
+      op: Create
+      uri: /api/event/app_installation_event
+    - filters:
+        type:
+          - settings-event
+      op: Create
+      uri: /api/event/app_installation_event
+    - filters:
+        type:
+          - system-upgrade-event
+      op: Create
+      uri: /api/event/system_upgrade_event
+  dataType: event
+  deployment: settings
+  description: desktop event watcher
+  endpoint: settings-service.{{ .Release.Namespace }}
+  group: message-disptahcer.system-server
+  kind: watcher
+  namespace: {{ .Release.Namespace }}
+  version: v1
+status:
+  state: active
+
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ProviderRegistry
+metadata:
+  name: settings-account-retrieve
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  dataType: legacy_api
+  deployment: settings
+  description: settings account retrieve legacy api
+  endpoint: settings-service.{{ .Release.Namespace }}
+  group: service.settings
+  kind: provider
+  namespace: {{ .Release.Namespace }}
+  version: v1
+  opApis:
+    - name: POST
+      uri: /api/account/retrieve
+    - name: GET
+      uri: /api/account/all
+    - name: POST
+      uri: /api/cookie/retrieve
+status:
+  state: active
 ---
 kind: ConfigMap
 apiVersion: v1
@@ -704,9 +972,6 @@ data:
         }
     }
   profile-editor.conf: |-
-    upstream SettingsService {
-      server settings-service;
-    }
     server {
       listen 83;
 
@@ -740,7 +1005,7 @@ data:
       }
 
       location /api/cloud/getNFTAddress {
-            proxy_pass http://SettingsService;
+            proxy_pass http://127.0.0.1:80;
 
             proxy_set_header            Host $host;
             proxy_set_header            X-real-ip $remote_addr;
@@ -861,7 +1126,7 @@ data:
             add_header Cache-Control "public, max-age=2678400";
         }
     }
-  headscale.conf: |
+  headscale.conf: |-
     server {
         listen 85;
         # Gzip Settings
@@ -886,5 +1151,112 @@ data:
           proxy_http_version 1.1;
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection '$connection_upgrade';
+        }
+    }
+  settings.conf: |-
+    upstream SettingsServer_Monitoring {
+        server monitoring-server.os-system;
+    }
+
+    upstream InfisicalServer {
+        server infisical-service:8080;
+    }
+
+    upstream NotificationServer {
+        server notifications-server;
+    }
+
+    server {
+        listen 86;
+
+        # Gzip Settings
+        gzip on;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+        root /www/settings;
+
+        # normal routes
+        # serve given url and default to index.html if not found
+        # e.g. /, /user and /foo/bar will return index.html
+        location / {
+            try_files $uri $uri/index.html /index.html;
+            add_header Cache-Control "private,no-cache";
+            add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+            expires 0;
+        }
+
+        location /kapis {
+            proxy_pass http://SettingsServer_Monitoring;
+            # rewrite ^/server(.*)$ $1 break;
+
+            # Add original-request-related headers
+            # proxy_set_header X-Real-IP $remote_addr;
+            # proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        location /headscale {
+            proxy_pass http://127.0.0.1:3010;
+
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        location /api {
+            proxy_pass http://127.0.0.1:3010;
+
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+
+        location /drive {
+            proxy_pass http://127.0.0.1:8080;
+
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+
+        location /api/cloud/sign {
+            proxy_pass http://127.0.0.1:3010;
+
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+
+        location /admin {
+            proxy_pass http://InfisicalServer;
+        }
+
+        location /images {
+            proxy_pass http://127.0.0.1:15080;
+
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+
+        location /vault {
+            add_header Access-Control-Allow-Headers "x-authorization";
+
+            proxy_pass http://vault-admin-server:3010;
+
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+
+        location /notification {
+            proxy_pass http://NotificationServer;
+        }
+
+        location ~.*\.(js|css|png|jpg|svg|woff|woff2)$ {
+            add_header Cache-Control "public, max-age=2678400";
         }
     }
