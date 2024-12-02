@@ -2,7 +2,7 @@
 
 # Olares - Your Sovereign Cloud, an Open-Source Self-Hosted Alternative to Public Clouds <!-- omit in toc -->
 
-[![Mission](https://img.shields.io/badge/Mission-Let%20people%20own%20their%20data%20again-purple)](#)<br />
+[![Mission](https://img.shields.io/badge/Mission-Let%20people%20own%20their%20data%20again-purple)](#)<br/>
 [![Last Commit](https://img.shields.io/github/last-commit/beclab/olares)](https://github.com/beclab/olares/commits/main)
 ![Build Status](https://github.com/beclab/olares/actions/workflows/release-daily.yaml/badge.svg)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/beclab/olares)](https://github.com/beclab/olares/releases)
@@ -55,7 +55,7 @@ Typical use cases of Olares include:
 
 💻**Personal data repository**: Securely store, sync, and manage your photos, documents, and important files in a unified storage and access anywhere. <br>
 
-🛠️ **Self-hosted workspace**: Create a free, powerful workspace for your team or family with open source selfhosted alternatives. <br>
+🛠️ **Self-hosted workspace**: Create a free, powerful workspace for your team or family with open source self-hosted alternatives. <br>
 
 🎥 **Private media server**: Host your own streaming services with your personal media collections. <br>
 
@@ -94,7 +94,7 @@ Olares offers a wide array of features designed to enhance security, ease of use
 - **Seamless anywhere access**: Access your devices from anywhere using dedicated clients for mobile, desktop, and browsers.
 - **Development tools**: Comprehensive development tools for effortless application development and porting.
 
-## Feature comparison 
+## Feature comparison
 
 To help you understand how Olares stands out in the landscape, we've created a comparison table that highlights its features alongside those of other leading solutions in the market.
 
@@ -132,7 +132,23 @@ To help you understand how Olares stands out in the landscape, we've created a c
 
 ## Getting started
 
-Refer to [Getting Started Guide](https://docs.olares.xyz/manual/get-started/) to spin up your Olares on Linux, Windows, Mac, or Raspberry Pi.
+### System compatibility
+Olares is available for Linux, Raspberry Pi, Mac, and Windows. It has been tested and verified on the following systems:
+
+| Platform            | Operating system                     | Notes                                                 |
+|---------------------|--------------------------------------|-------------------------------------------------------|
+| Linux               | Ubuntu 24.04 <br/> Debian 12.8       |                                                       |
+| Raspberry Pi        | RaspbianOS                           | Verified on Raspberry Pi 4 Model B and Raspberry Pi 5 |
+| Windows             | Windows 11 23H2 <br/>Windows 10 22H2 |                                                       |
+| Mac (Apple silicon) | macOS Ventura 13.3.1               |                                                       |
+| Proxmox VE (PVE)    | Proxmox Virtual Environment 8.0      |                                                       |
+
+> **Note**
+> 
+> If you successfully install Olares on an operating system that is not listed in the compatibility table, please let us know! You can [open an issue](https://github.com/beclab/Olares/issues/new) or submit a pull request on our GitHub repository.
+
+### Set up Olares
+To get started with Olares on your own device, follow the [Getting Started Guide](https://docs.olares.xyz/manual/get-started/) for step-by-step instructions.
 
 ## Project navigation
 
@@ -142,7 +158,7 @@ The following table lists the project directories under Olares and their corresp
 
 <details>
 <summary><b>Framework components</b></summary>
-
+  
 | Directory | Repository | Description |
 | --- | --- | --- |
 | [frameworks/app-service](https://github.com/beclab/olares/tree/main/frameworks/app-service) | <https://github.com/beclab/app-service> | A system framework component that provides lifecycle management and various security controls for all apps in the system. |
@@ -153,14 +169,11 @@ The following table lists the project directories under Olares and their corresp
 | [frameworks/osnode-init](https://github.com/beclab/olares/tree/main/frameworks/osnode-init) | <https://github.com/beclab/osnode-init> | A system framework component that initializes node data when a new node joins the cluster. |
 | [frameworks/system-server](https://github.com/beclab/olares/tree/main/frameworks/system-server) | <https://github.com/beclab/system-server> | As a part of system runtime frameworks, it provides a mechanism for security calls between apps. |
 | [frameworks/tapr](https://github.com/beclab/olares/tree/main/frameworks/tapr) | <https://github.com/beclab/tapr> | Olares Application Runtime components. |
-
-<b>System-Level Applications and Services</b>
-
 </details>
 
 <details>
 <summary><b>System-Level Applications and Services</b></summary>
-
+  
 | Directory | Repository | Description |
 | --- | --- | --- |
 | [apps/analytic](https://github.com/beclab/olares/tree/main/apps/analytic) | <https://github.com/beclab/analytic> | Developed based on [Umami](https://github.com/umami-software/umami), Analytic is a simple, fast, privacy-focused alternative to Google Analytics. |
@@ -169,7 +182,7 @@ The following table lists the project directories under Olares and their corresp
 | [apps/argo](https://github.com/beclab/olares/tree/main/apps/argo) | <https://github.com/argoproj/argo-workflows> | A workflow engine for orchestrating container execution of local recommendation algorithms. |
 | [apps/desktop](https://github.com/beclab/olares/tree/main/apps/desktop) | <https://github.com/beclab/desktop> | The built-in desktop application of the system. |
 | [apps/devbox](https://github.com/beclab/olares/tree/main/apps/devbox) | <https://github.com/beclab/devbox> | An IDE for developers to port and develop Olares applications. |
-| [apps/LarePass](https://github.com/beclab/olares/tree/main/apps/LarePass) | <https://github.com/beclab/LarePass> | A free alternative to 1Password and Bitwarden for teams and enterprises of any size Developed based on [Padloc](https://github.com/padloc/padloc). It serves as the client that helps you manage DID, Olares ID, and Olares devices. |
+| [apps/vault](https://github.com/beclab/olares/tree/main/apps/vault) | <https://github.com/beclab/termipass> | A free alternative to 1Password and Bitwarden for teams and enterprises of any size Developed based on [Padloc](https://github.com/padloc/padloc). It serves as the client that helps you manage DID, Olares ID, and Olares devices. |
 | [apps/files](https://github.com/beclab/olares/tree/main/apps/files) | <https://github.com/beclab/files> | A built-in file manager modified from [Filebrowser](https://github.com/filebrowser/filebrowser), providing management of files on Drive, Sync, and various Olares physical nodes. |
 | [apps/notifications](https://github.com/beclab/olares/tree/main/apps/notifications) | <https://github.com/beclab/notifications> | The notifications system of Olares |
 | [apps/profile](https://github.com/beclab/olares/tree/main/apps/profile) | <https://github.com/beclab/profile> | Linktree alternative in Olares|
@@ -191,7 +204,7 @@ The following table lists the project directories under Olares and their corresp
 | [third-party/ks-console](https://github.com/beclab/olares/tree/main/third-party/ks-console) | <https://github.com/kubesphere/console> | Kubesphere console that allows for cluster management via a Web GUI. |
 | [third-party/ks-installer](https://github.com/beclab/olares/tree/main/third-party/ks-installer) | <https://github.com/beclab/ks-installer-ext> | Kubesphere installer component that automatically creates Kubesphere clusters based on cluster resource definitions. |
 | [third-party/kube-state-metrics](https://github.com/beclab/olares/tree/main/third-party/kube-state-metrics) | <https://github.com/beclab/kube-state-metrics> | kube-state-metrics (KSM) is a simple service that listens to the Kubernetes API server and generates metrics about the state of the objects. |
-| [third-party/notification-mananger](https://github.com/beclab/olares/tree/main/third-party/notification-manager) | <https://github.com/beclab/notification-manager-ext> | Kubesphere's notification management component for unified management of multiple notification channels and custom aggregation of notification content. |
+| [third-party/notification-manager](https://github.com/beclab/olares/tree/main/third-party/notification-manager) | <https://github.com/beclab/notification-manager-ext> | Kubesphere's notification management component for unified management of multiple notification channels and custom aggregation of notification content. |
 | [third-party/predixy](https://github.com/beclab/olares/tree/main/third-party/predixy) | <https://github.com/beclab/predixy> | Redis cluster proxy service that automatically identifies available nodes and adds namespace isolation. |
 | [third-party/redis-cluster-operator](https://github.com/beclab/olares/tree/main/third-party/redis-cluster-operator) | <https://github.com/beclab/redis-cluster-operator> | A cloud-native tool for creating and managing Redis clusters based on Kubernetes. |
 | [third-party/seafile-server](https://github.com/beclab/olares/tree/main/third-party/seafile-server) | <https://github.com/beclab/seafile-server> | The backend service of Seafile (Sync Drive) for handling data storage. |
@@ -223,11 +236,11 @@ https://docs.olares.xyz/developer/contribute/olares.html
 
 ## Community & contact
 
-* [**Github Discussion**](https://github.com/beclab/olares/discussions). Best for sharing feedback and asking questions.
+* [**GitHub Discussion**](https://github.com/beclab/olares/discussions). Best for sharing feedback and asking questions.
 * [**GitHub Issues**](https://github.com/beclab/olares/issues). Best for filing bugs you encounter using Olares and submitting feature proposals. 
 * [**Discord**](https://discord.com/invite/BzfqrgQPDK). Best for sharing anything Olares.
 
-## Staying ahead  
+## Staying ahead
 
 Star the Olares project to receive instant notifications about new releases and updates.
 
@@ -235,6 +248,6 @@ Star the Olares project to receive instant notifications about new releases and 
 ![star us](https://file.bttcdn.com/github/terminus/terminus.git.v2.gif)
  
 
-## Special thanks 
+## Special thanks
 
 The Olares project has incorporated numerous third-party open source projects, including: [Kubernetes](https://kubernetes.io/), [Kubesphere](https://github.com/kubesphere/kubesphere), [Padloc](https://padloc.app/), [K3S](https://k3s.io/), [JuiceFS](https://github.com/juicedata/juicefs), [MinIO](https://github.com/minio/minio), [Envoy](https://github.com/envoyproxy/envoy), [Authelia](https://github.com/authelia/authelia), [Infisical](https://github.com/Infisical/infisical), [Dify](https://github.com/langgenius/dify), [Seafile](https://github.com/haiwen/seafile),[HeadScale](https://headscale.net/), [tailscale](https://tailscale.com/), [Redis Operator](https://github.com/spotahome/redis-operator), [Nitro](https://nitro.jan.ai/), [RssHub](http://rsshub.app/), [predixy](https://github.com/joyieldInc/predixy), [nvshare](https://github.com/grgalex/nvshare), [LangChain](https://www.langchain.com/), [Quasar](https://quasar.dev/), [TrustWallet](https://trustwallet.com/), [Restic](https://restic.net/), [ZincSearch](https://zincsearch-docs.zinc.dev/), [filebrowser](https://filebrowser.org/), [lego](https://go-acme.github.io/lego/), [Velero](https://velero.io/), [s3rver](https://github.com/jamhall/s3rver), [Citusdata](https://www.citusdata.com/).
