@@ -24,5 +24,6 @@ go.work
 .dist
 .manifest
 install-wizard-*.tar.gz
+olares-cli-*.tar.gz
 !ks-console-*.tgz
 .vscode

@@ -74,7 +74,7 @@ if [ -z ${cdn_url} ]; then
     cdn_url="https://dc3p1870nn3cj.cloudfront.net"
 fi
 
-CLI_VERSION="0.1.68"
+CLI_VERSION="0.1.69"
 CLI_FILE="olares-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
 if [[ x"$os_type" == x"Darwin" ]]; then
     CLI_FILE="olares-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
@@ -103,7 +103,7 @@ else
     INSTALL_OLARES_CLI="/usr/local/bin/olares-cli"
     echo "unpacking Olares installer to $INSTALL_OLARES_CLI..."
     echo ""
-    tar -zxf ${CLI_FILE} && chmod +x olares-cli
+    tar -zxf ${CLI_FILE} olares-cli && chmod +x olares-cli
     if [[ x"$os_type" == x"Darwin" ]]; then
         if [ ! -f "/usr/local/Cellar/olares" ]; then
             current_user=$(whoami)
@@ -165,6 +165,9 @@ else
     # env 'REGISTRY_MIRRORS' is a docker image cache mirrors, separated by commas
     if [ x"$REGISTRY_MIRRORS" != x"" ]; then
         extra="--registry-mirrors $REGISTRY_MIRRORS"
+    fi
+    if [[ "$JUICEFS" == "1" ]]; then
+        extra="$extra --with-juicefs=true"
     fi
     $sh_c "olares-cli olares prepare $PARAMS $KUBE_PARAM $extra"
     if [[ $? -ne 0 ]]; then
