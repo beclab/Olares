@@ -1,3 +1,22 @@
+{{- $namespace := printf "%s%s" "user-system-" .Values.bfl.username -}}
+{{- $market_secret := (lookup "v1" "Secret" $namespace "market-secrets") -}}
+
+{{- $redis_password := "" -}}
+{{ if $market_secret -}}
+{{ $redis_password = (index $market_secret "data" "redis_password") }}
+{{ else -}}
+{{ $redis_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: market-secrets
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  redis-passwords: {{ $redis_password }}
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -66,12 +85,12 @@ spec:
                 fieldPath: status.podIP
       containers:
       - name: appstore
-        image: beclab/market-frontend:v0.2.29
+        image: beclab/market-frontend:v0.2.30
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
       - name: appstore-backend
-        image: beclab/market-backend:v0.2.28
+        image: beclab/market-backend:v0.2.30
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -94,6 +113,15 @@ spec:
             value: '6755'
           - name: REPO_URL_PORT
             value: "82"
+          - name: REDIS_ADDRESS
+            value: 'redis-cluster-proxy.user-system-{{ .Values.bfl.username }}:6379'
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: market-secrets
+                key: redis-passwords
+          - name: REDIS_DB_NUMBER
+            value: '0'
           - name: REPO_URL_HOST
             valueFrom:
               fieldRef:
@@ -233,3 +261,20 @@ spec:
   version: v1
 status:
   state: active
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: market-redis
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: market
+  appNamespace: {{ .Release.Namespace }}
+  middleware: redis
+  redis:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: redis-passwords
+          name: market-secrets
+    namespace: market
