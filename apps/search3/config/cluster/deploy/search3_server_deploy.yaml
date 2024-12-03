@@ -44,7 +44,7 @@ spec:
         scripts:
         - begin;
         - CREATE TEXT SEARCH CONFIGURATION chinese (PARSER = zhparser);
-        - ALTER TEXT SEARCH CONFIGURATION chinese ADD MAPPING FOR s,n,v,a,i,e,l WITH simple;
+        - ALTER TEXT SEARCH CONFIGURATION chinese ADD MAPPING FOR a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z WITH simple;
         - commit;
 ---
 apiVersion: apps/v1
@@ -87,7 +87,7 @@ spec:
             value: os_system_search3
       containers:
       - name: search3
-        image: beclab/search3:v0.0.20
+        image: beclab/search3:v0.0.21
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
