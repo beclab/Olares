@@ -1179,7 +1179,7 @@ data:
         listen 86;
 
         # Gzip Settings
-        gzip on;
+        gzip off;
         gzip_disable "msie6";
         gzip_min_length 1k;
         gzip_buffers 16 64k;
