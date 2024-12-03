@@ -336,6 +336,13 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+          startupProbe:
+            httpGet:
+              path: /
+              port: 8090
+            failureThreshold: 3
+            periodSeconds: 10
+            initialDelaySeconds: 10
         - name: profile-services
           image: beclab/profile-services:v1.0.4
           imagePullPolicy: IfNotPresent
@@ -438,6 +445,8 @@ spec:
                 path: wise.conf
               - key: headscale.conf
                 path: headscale.conf
+              - key: settings.conf
+                path: settings.conf
 
 
 ---
