@@ -11,7 +11,6 @@ calico/node:v3.23.2
 calico/node:v3.27.3
 calico/pod2daemon-flexvol:v3.23.2
 beclab/citus:12.2
-coredns/coredns:1.8.0
 csiplugin/snapshot-controller:v4.0.0
 beclab/ks-installer-ext:v0.1.9-ext
 kubesphere/k8s-dns-node-cache:1.15.12
@@ -54,8 +53,6 @@ quay.io/argoproj/workflow-controller:v3.5.0
 redis:5.0.14-alpine
 beclab/velero:v1.11.3
 beclab/velero-plugin-for-terminus:v1.0.2
-rancher/coredns-coredns:1.8.3
-rancher/mirrored-coredns-coredns:1.9.1
 beclab/l4-bfl-proxy:v0.2.7
 gcr.io/k8s-minikube/storage-provisioner:v5
 owncloudci/wait-for:latest
