@@ -148,7 +148,7 @@ spec:
       serviceAccount: os-internal
       containers:
       - name: app-service
-        image: beclab/app-service:0.2.55
+        image: beclab/app-service:0.2.56
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -164,7 +164,7 @@ spec:
         - name: REQUIRE_PERMISSION_APPS
           value: "vault,desktop,message,wise,search,appstore,notification,dashboard,settings,devbox,profile"
         - name: SYS_APPS
-          value: "analytics,market,auth,citus,desktop,did,docs,files,fsnotify,headscale,infisical,intentprovider,ksserver,message,mongo,monitoring,notifications,profile,redis,wise,recommend,seafile,search,search-admin,settings,systemserver,tapr,vault,video,zinc,accounts,control-hub,dashboard,nitro"
+          value: "analytics,market,auth,citus,desktop,did,docs,files,fsnotify,headscale,infisical,intentprovider,ksserver,message,mongo,monitoring,notifications,profile,redis,wise,recommend,seafile,search,search-admin,settings,systemserver,tapr,vault,video,zinc,accounts,control-hub,dashboard,nitro,system-frontend"
         - name: GENERATED_APPS
           value: "citus,mongo-cluster-cfg,mongo-cluster-mongos,mongo-cluster-rs0,frp-agent,l4-bfl-proxy,drc-redis-cluster,appdata-backend,argoworkflows,argoworkflow-workflow-controller,velero,kvrocks"
         - name: WS_CONTAINER_IMAGE
@@ -172,7 +172,7 @@ spec:
         - name: UPLOAD_CONTAINER_IMAGE
           value: "beclab/upload:v1.0.3"
         - name: JOB_IMAGE
-          value: "beclab/upgrade-job:0.1.3"
+          value: "beclab/upgrade-job:0.1.4"
         - name: SHARED_LIB_PATH
           value: {{ .Values.sharedlib }}
         - name: CLUSTER_CPU_THRESHOLD
