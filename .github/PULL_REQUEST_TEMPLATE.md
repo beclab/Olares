@@ -1,22 +1,17 @@
-* **Please check if the PR fulfills these requirements**
-- [ ] The commit message follows our guidelines
-- [ ] Tests for the changes have been added (for bug fixes / features)
+Title: <subsystem>:  <what changed>
+<!-- If the changes affect two subsystems, use a comma (and a whitespace) to separate them like util/codec, util/types:. -->
 
+* **Background**
+<!-- Provide background information about the changes here -->
 
-* **What kind of change does this PR introduce?** (Bug fix, feature, docs update, ...)
+* **Target Version for Merge**
+<!-- Specify the version to which these changes need to be merged -->
 
+* ***Related Issues**
+<!-- Reference any related issues here, if applicable -->
 
-
-* **What is the current behavior?** (You can also link to an open issue here)
-
-
-
-* **What is the new behavior (if this is a feature change)?**
-
-
-
-* **Does this PR introduce a breaking change?** (What changes might users need to make in their application due to this PR?)
-
+* **PRs Involving Sub-Systems** 
+<!-- List any PRs involving sub-systems, if applicable -->
 
 
 * **Other information**:
