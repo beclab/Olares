@@ -490,6 +490,8 @@ data:
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                   stat_prefix: tapr_http
+                  http_protocol_options:
+                    accept_http_10: true
                   upgrade_configs:
                   - upgrade_type: websocket                  
                   skip_xff_append: false
@@ -662,6 +664,8 @@ data:
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                   stat_prefix: tapr_http
+                  http_protocol_options:
+                    accept_http_10: true
                   upgrade_configs:
                   - upgrade_type: websocket                  
                   skip_xff_append: false
