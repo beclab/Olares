@@ -201,7 +201,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: profile-editor-init
-          image: beclab/profile-editor:v1.0.5
+          image: beclab/profile-editor:v0.2.0
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -213,7 +213,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: profile-preview-init
-          image: beclab/profile-preview:v1.0.5
+          image: beclab/profile-preview:v0.2.0
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -237,7 +237,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: settings-init
-          image: beclab/settings:v0.1.95
+          image: beclab/settings:v0.2.0
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -337,25 +337,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-        - name: profile-services
-          image: beclab/profile-services:v1.0.4
-          imagePullPolicy: IfNotPresent
-          securityContext:
-            allowPrivilegeEscalation: false
-            runAsUser: 1000
-          ports:
-            - containerPort: 3020
-          env:
-          - name: OS_SYSTEM_SERVER
-            value: system-server.user-system-{{ .Values.bfl.username }}
-          - name: OS_APP_SECRET
-            value: '{{ .Values.os.profile.appSecret }}'
-          - name: OS_APP_KEY
-            value: {{ .Values.os.profile.appKey }}
-          - name: APP_SERVICE_SERVICE_HOST
-            value: app-service.os-system
-          - name: APP_SERVICE_SERVICE_PORT
-            value: '6755'
         - name: terminus-ws-sidecar
           image: 'beclab/ws-gateway:v1.0.3'
           imagePullPolicy: IfNotPresent
@@ -370,7 +351,7 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
         - name: settings-server
-          image: beclab/settings-server:v0.1.95
+          image: beclab/settings-server:v0.2.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -962,7 +943,7 @@ data:
       }
 
       location /api {
-        proxy_pass http://127.0.0.1:3020;
+        proxy_pass http://127.0.0.1:3010;
 
         proxy_set_header            Host $host;
         proxy_set_header            X-real-ip $remote_addr;
@@ -1000,7 +981,7 @@ data:
       }
 
       location /api {
-            proxy_pass http://127.0.0.1:3020;
+            proxy_pass http://127.0.0.1:3010;
 
             proxy_set_header            Host $host;
             proxy_set_header            X-real-ip $remote_addr;
