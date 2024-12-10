@@ -58,7 +58,7 @@ gcr.io/k8s-minikube/storage-provisioner:v5
 owncloudci/wait-for:latest
 beclab/recommend-argotask:v0.0.12
 nvcr.io/nvidia/k8s-device-plugin:v0.16.1
-beclab/nvshare:libnvshare-v0.0.2
+beclab/nvshare:libnvshare-v0.0.1
 bytetrade/nvshare:nvshare-device-plugin
 bytetrade/nvshare:nvshare-scheduler
 beclab/nats-server-config-reloader:v1
