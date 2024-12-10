@@ -70,7 +70,7 @@ spec:
             - containerPort: 8080
           env:
             - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.45'
+              value: 'beclab/files-server:v0.2.46'
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -101,7 +101,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.45
+          image: beclab/files-server:v0.2.46
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -348,7 +348,7 @@ spec:
             chown -R 1000:1000 /appdata 
       containers:
         - name: files
-          image: beclab/files-server:v0.2.45
+          image: beclab/files-server:v0.2.46
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
