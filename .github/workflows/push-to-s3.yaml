@@ -36,7 +36,7 @@ jobs:
           bash scripts/image-manifest.sh && bash scripts/upload-images.sh .manifest/images.mf
 
   push-arm64:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, ARM64]
 
     steps:
       - name: "Checkout source code"

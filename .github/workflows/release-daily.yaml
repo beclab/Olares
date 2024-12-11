@@ -40,7 +40,7 @@ jobs:
           bash scripts/image-manifest.sh && bash scripts/upload-images.sh .manifest/images.mf
 
   push-images-arm64:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, ARM64]
 
     steps:
       - name: 'Checkout source code'
@@ -103,7 +103,7 @@ jobs:
           bash scripts/deps-manifest.sh && bash scripts/upload-deps.sh
 
   push-deps-arm64:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, ARM64]
 
     steps:
       - name: "Checkout source code"

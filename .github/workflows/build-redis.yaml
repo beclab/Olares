@@ -20,7 +20,7 @@ jobs:
           bash scripts/build-redis.sh linux/amd64
 
   push-arm64:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, ARM64]
 
     steps:
       - name: Clean
