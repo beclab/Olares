@@ -27,3 +27,4 @@ install-wizard-*.tar.gz
 olares-cli-*.tar.gz
 !ks-console-*.tgz
 .vscode
+.DS_Store
