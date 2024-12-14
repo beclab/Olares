@@ -146,7 +146,7 @@ spec:
             value: user_space_{{ .Values.bfl.username }}_knowledge
       containers:
       - name: aria2
-        image: "beclab/aria2:v0.0.3"
+        image: "beclab/aria2:v0.0.4"
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: false
@@ -172,7 +172,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.0.16"
+        image: "beclab/yt-dlp:v0.0.17"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -220,7 +220,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: download-spider
-        image: "beclab/download-spider:v0.0.15"
+        image: "beclab/download-spider:v0.0.16"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
