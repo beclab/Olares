@@ -16,22 +16,6 @@ jobs:
       - name: 'Checkout source code'
         uses: actions/checkout@v3
 
-      - name: Install coscmd
-        run: pip install coscmd        
-
-      - name: Configure coscmd
-        env:
-          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-          COS_BUCKET: ${{ secrets.COS_BUCKET }}
-          COS_REGION: ${{ secrets.COS_REGION }}
-          END_POINT: ${{ secrets.END_POINT }}
-        run: |
-          coscmd config -a $TENCENT_SECRET_ID \
-                        -s $TENCENT_SECRET_KEY \
-                        -b $COS_BUCKET \
-                        -r $COS_REGION 
-
       - env: 
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -45,23 +29,6 @@ jobs:
     steps:
       - name: 'Checkout source code'
         uses: actions/checkout@v3
-
-      - name: Install coscmd
-        run: pip install coscmd        
-
-      - name: Configure coscmd
-        env:
-          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-          COS_BUCKET: ${{ secrets.COS_BUCKET }}
-          COS_REGION: ${{ secrets.COS_REGION }}
-          END_POINT: ${{ secrets.END_POINT }}
-        run: |
-          export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
-          coscmd config -m 10 -p 10 -a $TENCENT_SECRET_ID \
-                        -s $TENCENT_SECRET_KEY \
-                        -b $COS_BUCKET \
-                        -r $COS_REGION 
 
       - env: 
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -78,22 +45,6 @@ jobs:
       - name: "Checkout source code"
         uses: actions/checkout@v3
 
-      - name: Install coscmd
-        run: pip install coscmd        
-
-      - name: Configure coscmd
-        env:
-          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-          COS_BUCKET: ${{ secrets.COS_BUCKET }}
-          COS_REGION: ${{ secrets.COS_REGION }}
-          END_POINT: ${{ secrets.END_POINT }}
-        run: |
-          coscmd config -a $TENCENT_SECRET_ID \
-                        -s $TENCENT_SECRET_KEY \
-                        -b $COS_BUCKET \
-                        -r $COS_REGION 
-
       # test
       - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -108,23 +59,6 @@ jobs:
     steps:
       - name: "Checkout source code"
         uses: actions/checkout@v3
-
-      - name: Install coscmd
-        run: pip install coscmd        
-
-      - name: Configure coscmd
-        env:
-          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-          COS_BUCKET: ${{ secrets.COS_BUCKET }}
-          COS_REGION: ${{ secrets.COS_REGION }}
-          END_POINT: ${{ secrets.END_POINT }}
-        run: |
-          export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
-          coscmd config -m 10 -p 10 -a $TENCENT_SECRET_ID \
-                        -s $TENCENT_SECRET_KEY \
-                        -b $COS_BUCKET \
-                        -r $COS_REGION 
 
       # test
       - env:
@@ -153,29 +87,6 @@ jobs:
       - name: Package installer
         run: |
           bash scripts/build.sh ${{ steps.vars.outputs.tag_version }}
-
-      - name: Install coscmd
-        run: pip install coscmd        
-
-      - name: Configure coscmd
-        env:
-          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-          COS_BUCKET: ${{ secrets.COS_BUCKET }}
-          COS_REGION: ${{ secrets.COS_REGION }}
-          END_POINT: ${{ secrets.END_POINT }}
-        run: |
-          export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
-          coscmd config -m 10 -p 10 -a $TENCENT_SECRET_ID \
-                        -s $TENCENT_SECRET_KEY \
-                        -b $COS_BUCKET \
-                        -r $COS_REGION 
-          
-      # - name: Upload to COS
-      #   run: |
-      #     md5sum install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz > install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt && \
-      #     coscmd upload ./install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt /install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt
-      #     coscmd upload ./install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz /install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz
 
       - name: Upload to S3
         env: 
