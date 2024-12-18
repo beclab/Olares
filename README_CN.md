@@ -65,11 +65,11 @@ Olares 是为本地端侧 AI 打造的开源私有云操作系统，可轻松将
 
 | 平台            | 操作系统                     | 备注                                                 |
 |---------------------|--------------------------------------|-------------------------------------------------------|
-| Linux               | Ubuntu 24.04 <br/> Debian 12.8       |                                                       |
-| Raspberry Pi        | RaspbianOS                           | 已在 Raspberry Pi 4 Model B 和 Raspberry Pi 5 上验证|
-| Windows             | Windows 11 23H2 <br/>Windows 10 22H2 |                                                       |
-| Mac (Apple Silicon) | macOS Ventura 13.3.1               |                                                       |
-| Proxmox VE (PVE)    | Proxmox Virtual Environment 8.0      |                                                       |
+| Linux               | Ubuntu 20.04 LTS 及以上 <br/> Debian 11 及以上  |                                               |
+| Raspberry Pi        | RaspbianOS                           | 已在 Raspberry Pi 4 Model B 和 Raspberry Pi 5 上验证    |
+| Windows             | Windows 11 23H2 及以上 <br/>Windows 10 22H2 及以上 <br/>WSL2 |                                           |
+| Mac                  | macOS Monterey (12) 及以上             |                                                         |
+| Proxmox VE (PVE)    | Proxmox Virtual Environment 8.0      |                                                         |
 
 > **注意**
 > 
