@@ -68,10 +68,10 @@ Olares is available for Linux, Raspberry Pi, Mac, and Windows. It has been teste
 
 | Platform            | Operating system                     | Notes                                                 |
 |---------------------|--------------------------------------|-------------------------------------------------------|
-| Linux               | Ubuntu 20.0.4 or later <br/> Debian 12.8 or later |                                          |
+| Linux               | Ubuntu 20.04 LTS or later <br/> Debian 11 or later |                                          |
 | Raspberry Pi        | RaspbianOS                           | Verified on Raspberry Pi 4 Model B and Raspberry Pi 5 |
-| Windows             | Windows 11 23H2 or later <br/>Windows 10 22H2 or later |                                     |
-| Mac (Apple silicon) | Monterey (12) or later              |                                                        |
+| Windows             | Windows 11 23H2 or later <br/>Windows 10 22H2 or later<br/> WSL2 |                                     |
+| Mac                 | Monterey (12) or later              |                                                        |
 | Proxmox VE (PVE)    | Proxmox Virtual Environment 8.0      |                                                       |
 
 > **Note**
