@@ -201,7 +201,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: profile-editor-init
-          image: beclab/profile-editor:v0.2.0
+          image: beclab/profile-editor:v0.2.1
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -213,7 +213,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: profile-preview-init
-          image: beclab/profile-preview:v0.2.0
+          image: beclab/profile-preview:v0.2.1
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -237,7 +237,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: settings-init
-          image: beclab/settings:v0.2.0
+          image: beclab/settings:v0.2.1
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
