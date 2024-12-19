@@ -18,7 +18,7 @@
 </div>
 
 
-[![cover](https://file.bttcdn.com/github/terminus/desktop-dark.jpeg)](https://github.com/user-attachments/assets/5ea2fe30-7bd2-49ed-be26-e12f1d5d8cb1)
+https://github.com/user-attachments/assets/3089a524-c135-4f96-ad2b-c66bf4ee7471
 
 *Olares 让你体验更多可能：构建个人 AI 助理、随时随地同步数据、自托管团队协作空间、打造私人影视厅——无缝整合你的数字生活。*
 
