@@ -3,7 +3,7 @@
 
 {{- $redis_password := "" -}}
 {{ if $market_secret -}}
-{{ $redis_password = (index $market_secret "data" "redis_password") }}
+{{ $redis_password = (index $market_secret "data" "redis-passwords") }}
 {{ else -}}
 {{ $redis_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
@@ -85,12 +85,12 @@ spec:
                 fieldPath: status.podIP
       containers:
       - name: appstore
-        image: beclab/market-frontend:v0.3.0
+        image: beclab/market-frontend:v0.3.2
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
       - name: appstore-backend
-        image: beclab/market-backend:v0.3.0
+        image: beclab/market-backend:v0.3.2
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
