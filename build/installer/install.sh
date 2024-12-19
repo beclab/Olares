@@ -74,13 +74,14 @@ if [ -z ${cdn_url} ]; then
     cdn_url="https://dc3p1870nn3cj.cloudfront.net"
 fi
 
-CLI_VERSION="0.1.79"
+CLI_VERSION="0.1.80"
 CLI_FILE="olares-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
 if [[ x"$os_type" == x"Darwin" ]]; then
     CLI_FILE="olares-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
 fi
 
 if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$CLI_VERSION" ]]; then
+    INSTALL_OLARES_CLI=$(which olares-cli)
     echo "olares-cli already installed and is the expected version"
     echo ""
 else
@@ -136,7 +137,7 @@ else
             echo ""
         else
             echo "building local release ..."
-            $sh_c "olares-cli olares release $PARAMS $CDN"
+            $sh_c "$INSTALL_OLARES_CLI olares release $PARAMS $CDN"
             if [[ $? -ne 0 ]]; then
                 echo "error: failed to build local release"
                 exit 1
@@ -145,7 +146,7 @@ else
     else
         echo "downloading installation wizard..."
         echo ""
-        $sh_c "olares-cli olares download wizard $PARAMS $KUBE_PARAM $CDN"
+        $sh_c "$INSTALL_OLARES_CLI olares download wizard $PARAMS $KUBE_PARAM $CDN"
         if [[ $? -ne 0 ]]; then
             echo "error: failed to download installation wizard"
             exit 1
@@ -154,7 +155,7 @@ else
 
     echo "downloading installation packages..."
     echo ""
-    $sh_c "olares-cli olares download component $PARAMS $KUBE_PARAM $CDN"
+    $sh_c "$INSTALL_OLARES_CLI olares download component $PARAMS $KUBE_PARAM $CDN"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to download installation packages"
         exit 1
@@ -169,7 +170,7 @@ else
     if [[ "$JUICEFS" == "1" ]]; then
         extra="$extra --with-juicefs=true"
     fi
-    $sh_c "olares-cli olares prepare $PARAMS $KUBE_PARAM $extra"
+    $sh_c "$INSTALL_OLARES_CLI olares prepare $PARAMS $KUBE_PARAM $extra"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to prepare installation environment"
         exit 1
@@ -187,7 +188,7 @@ if [ "$PREINSTALL" == "1" ]; then
 fi
 echo "installing Olares..."
 echo ""
-$sh_c "olares-cli olares install $PARAMS $KUBE_PARAM"
+$sh_c "$INSTALL_OLARES_CLI olares install $PARAMS $KUBE_PARAM"
 
 if [[ $? -ne 0 ]]; then
     echo "error: failed to install Olares"
