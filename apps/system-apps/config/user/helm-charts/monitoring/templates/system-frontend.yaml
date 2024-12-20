@@ -338,7 +338,7 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
         - name: terminus-ws-sidecar
-          image: 'beclab/ws-gateway:v1.0.3'
+          image: 'beclab/ws-gateway:v1.0.4'
           imagePullPolicy: IfNotPresent
           command:
             - /ws-gateway
@@ -394,7 +394,7 @@ spec:
             path: {{ .Values.userspace.userData }}
         - name: terminus-sidecar-config
           configMap:
-            name: sidecar-ws-configs
+            name: sidecar-configs
             items:
               - key: envoy.yaml
                 path: envoy.yaml
@@ -1048,6 +1048,15 @@ data:
         expires 0;
       }
 
+      location /ws {
+        proxy_pass http://rss-svc:40010;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+      }
+
+
         location /knowledge {
           proxy_pass http://KnowledgeServer;
 
@@ -1172,6 +1181,15 @@ data:
             add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
             expires 0;
         }
+
+        location /ws {
+          proxy_pass http://127.0.0.1:40010;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection "upgrade";
+          proxy_set_header Host $host;
+        }
+
 
         location /kapis {
             proxy_pass http://SettingsServer_Monitoring;
