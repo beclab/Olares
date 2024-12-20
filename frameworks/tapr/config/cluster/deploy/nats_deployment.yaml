@@ -247,6 +247,24 @@ spec:
         app.kubernetes.io/name: nats
         app.kubernetes.io/instance: nats
     spec:
+      initContainers:
+        - name: generate-config
+          image: busybox:1.28
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /data/config/nats.conf ]; then
+                cat /etc/nats-config/nats.conf > /data/config/nats.conf
+              else
+                echo "nats config file already exists"
+              fi
+          volumeMounts:
+            - mountPath: /etc/nats-config
+              name: config
+              readOnly: false
+            - mountPath: /data
+              name: nats-data
       containers:
         - args:
             - --config
