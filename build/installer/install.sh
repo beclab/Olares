@@ -28,16 +28,16 @@ fi
 os_type=$(uname -s)
 os_arch=$(uname -m)
 
-case "$os_arch" in 
-    arm64) ARCH=arm64; ;; 
-    x86_64) ARCH=amd64; ;; 
-    armv7l) ARCH=arm; ;; 
-    aarch64) ARCH=arm64; ;; 
-    ppc64le) ARCH=ppc64le; ;; 
-    s390x) ARCH=s390x; ;; 
+case "$os_arch" in
+    arm64) ARCH=arm64; ;;
+    x86_64) ARCH=amd64; ;;
+    armv7l) ARCH=arm; ;;
+    aarch64) ARCH=arm64; ;;
+    ppc64le) ARCH=ppc64le; ;;
+    s390x) ARCH=s390x; ;;
     *) echo "error: unsupported arch \"$os_arch\"";
     exit 1; ;;
-esac 
+esac
 
 # set shell execute command
 user="$(id -un 2>/dev/null || true)"
@@ -74,7 +74,7 @@ if [ -z ${cdn_url} ]; then
     cdn_url="https://dc3p1870nn3cj.cloudfront.net"
 fi
 
-CLI_VERSION="0.1.82"
+CLI_VERSION="0.1.83"
 CLI_FILE="olares-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
 if [[ x"$os_type" == x"Darwin" ]]; then
     CLI_FILE="olares-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
@@ -167,9 +167,6 @@ else
     if [ x"$REGISTRY_MIRRORS" != x"" ]; then
         extra="--registry-mirrors $REGISTRY_MIRRORS"
     fi
-    if [[ "$JUICEFS" == "1" ]]; then
-        extra="$extra --with-juicefs=true"
-    fi
     $sh_c "$INSTALL_OLARES_CLI olares prepare $PARAMS $KUBE_PARAM $extra"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to prepare installation environment"
@@ -186,9 +183,24 @@ if [ "$PREINSTALL" == "1" ]; then
     echo "Pre Install mode is specified by the \"PREINSTALL\" env var, skip installing"
     exit 0
 fi
+
+if [[ "$JUICEFS" == "1" ]]; then
+    echo "JuiceFS is enabled"
+    fsflag="--with-juicefs=true"
+    if [[ "$STORAGE" == "" ]]; then
+        echo "installing MinIO ..."
+    else
+        echo "checking storage config ..."
+    fi
+    $sh_c "$INSTALL_OLARES_CLI olares install storage $PARAMS"
+    if [[ $? -ne 0 ]]; then
+      exit 1
+    fi
+fi
+
 echo "installing Olares..."
 echo ""
-$sh_c "$INSTALL_OLARES_CLI olares install $PARAMS $KUBE_PARAM"
+$sh_c "$INSTALL_OLARES_CLI olares install $PARAMS $KUBE_PARAM $fsflag"
 
 if [[ $? -ne 0 ]]; then
     echo "error: failed to install Olares"
