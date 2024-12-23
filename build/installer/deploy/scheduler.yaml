@@ -46,6 +46,10 @@ spec:
           allowPrivilegeEscalation: false
           capabilities:
             drop: ["ALL"]
+        command:
+        - sh
+        - c
+        - "test -f /var/run/nvshare/scheduler.sock && rm -rf /var/run/nvshare/scheduler.sock; pid1 nvshare-scheduler"
         volumeMounts:
           - name: nvshare-socket-directory
             mountPath: /var/run/nvshare

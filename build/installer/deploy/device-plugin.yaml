@@ -50,7 +50,7 @@ spec:
               command:
               - "/bin/sh"
               - "-c"
-              - "test -f /host-var-run-nvshare/libnvshare.so || touch /host-var-run-nvshare/libnvshare.so && mount -v --bind /libnvshare.so /host-var-run-nvshare/libnvshare.so"
+              - "test -f /host-var-run-nvshare/libnvshare.so || ( test -d /host-var-run-nvshare/libnvshare.so && rm -rf /host-var-run-nvshare/libnvshare.so && false ) || touch /host-var-run-nvshare/libnvshare.so && mount -v --bind /libnvshare.so /host-var-run-nvshare/libnvshare.so"
           preStop:
             exec:
               command:
