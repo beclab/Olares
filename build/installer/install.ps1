@@ -19,7 +19,7 @@ if ($architecture -like "ARM") {
   $arch = "arm64"
 }
 
-$CLI_VERSION = "0.1.84"
+$CLI_VERSION = "0.1.86"
 $CLI_FILE = "olares-cli-v{0}_windows_{1}.tar.gz" -f $CLI_VERSION, $arch
 $CLI_URL = "https://dc3p1870nn3cj.cloudfront.net/{0}" -f $CLI_FILE
 $CLI_PATH = "{0}\{1}"  -f $currentPath, $CLI_FILE
