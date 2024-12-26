@@ -177,7 +177,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
         - name: dashboard-init
-          image: beclab/dashboard-frontend-v1:v0.4.7
+          image: beclab/dashboard-frontend-v1:v0.4.8
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -189,7 +189,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: control-hub-init
-          image: beclab/admin-console-frontend-v1:v0.4.9
+          image: beclab/admin-console-frontend-v1:v0.4.10
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -237,7 +237,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: settings-init
-          image: beclab/settings:v0.2.1
+          image: beclab/settings:v0.2.2
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -778,6 +778,13 @@ data:
 
       location /kapis {
         proxy_pass http://SettingsServer;
+      }
+    
+      location /api/profile/init {
+        proxy_pass http://127.0.0.1:3010;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
       }
 
       location /api {
