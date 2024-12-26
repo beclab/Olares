@@ -68,7 +68,7 @@ spec:
         - |
           chown -R 1000:1000 /headscale 
       - name: init
-        image: beclab/headscale-init:v0.1.7
+        image: beclab/headscale-init:v0.1.8
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
