@@ -65,7 +65,7 @@ Here is why and where you can count on Olares for private, powerful, and secure 
 ## Getting started
 
 ### System compatibility
-Olares is available for Linux, Raspberry Pi, Mac, and Windows. It has been tested and verified on the following systems:
+Olares has been tested and verified on the following platforms:
 
 | Platform            | Operating system                     | Notes                                                 |
 |---------------------|--------------------------------------|-------------------------------------------------------|
