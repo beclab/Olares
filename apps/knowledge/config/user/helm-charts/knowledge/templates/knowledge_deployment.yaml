@@ -168,7 +168,7 @@ spec:
             value: user_space_{{ .Values.bfl.username }}_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.1.57"
+        image: "beclab/knowledge-base-api:v0.1.58"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -380,6 +380,19 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
 
+      - name: recommend-debug
+        image: "beclab/recommenddebug:v0.0.25"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
+        env:
+          - name: KNOWLEDGE_BASE_API_URL
+            value: http://127.0.0.1:3010
+        volumeMounts:
+          - mountPath: /opt/rank_model
+            name: model
+
       volumes:
       - name: watch-dir
         hostPath:
@@ -396,7 +409,10 @@ spec:
           items:
           - key: envoy.yaml
             path: envoy.yaml
-      
+      - name: model
+        hostPath:
+          type: DirectoryOrCreate
+          path: {{ .Values.userspace.appData }}/rss/model
 
 ---
 apiVersion: v1
