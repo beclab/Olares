@@ -109,6 +109,9 @@ spec:
           mountPath: /etc/headscale
         - name: headscale-data
           mountPath: /var/lib/headscale
+        - name: acl-config
+          mountPath: /etc/headscale/acl
+          readOnly: true
         ports:
         - containerPort: 8080
       - args:
@@ -141,6 +144,13 @@ spec:
         hostPath:
           type: DirectoryOrCreate
           path: {{ .Values.userspace.appCache  }}/headscale
+      - name: acl-config
+        configMap:
+          defaultMode: 420
+          items:
+          - key: acl.json
+            path: acl.json
+          name: tailscale-acl
 
 ---
 apiVersion: apps/v1
