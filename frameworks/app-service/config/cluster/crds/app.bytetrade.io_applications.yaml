@@ -54,7 +54,7 @@ spec:
             properties:
               appid:
                 description: the unique id of the application for sys application
-                  appid equal name otherwise appid equal md5(name)[:8]  
+                  appid equal name otherwise appid equal md5(name)[:8]
                 type: string
               deployment:
                 description: the deployment of the application
@@ -141,6 +141,26 @@ spec:
                   type: string
                 description: the extend settings of the application
                 type: object
+              tailscaleAcls:
+                items:
+                  properties:
+                    action:
+                      type: string
+                    dst:
+                      items:
+                        type: string
+                      type: array
+                    proto:
+                      type: string
+                    src:
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - dst
+                  - proto
+                  type: object
+                type: array
             required:
             - appid
             - isSysApp
