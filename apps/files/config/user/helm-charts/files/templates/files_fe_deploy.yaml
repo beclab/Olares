@@ -32,6 +32,36 @@
 apiVersion: v1
 kind: Secret
 metadata:
+  name: zinc-files-secrets
+  namespace: user-system-{{ .Values.bfl.username }}
+type: Opaque
+data:
+  password: {{ $password }}
+  redis_password: {{ $redis_password }}
+  pg_password: {{ $pg_password }}
+  
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: zinc-files-redis
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: files
+  appNamespace: user-space-{{ .Values.bfl.username }}
+  middleware: redis
+  redis:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: redis_password
+          name: zinc-files-secrets
+    namespace: zinc-files
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
   name: cloud-drive-integration-secrets
   namespace: user-system-{{ .Values.bfl.username }}
 type: Opaque
@@ -85,15 +115,7 @@ metadata:
   name: files-deployment
   namespace: {{ .Release.Namespace }}
   labels:
-    app: files
-    applications.app.bytetrade.io/name: files
-    applications.app.bytetrade.io/owner: '{{ .Values.bfl.username }}'
     applications.app.bytetrade.io/author: bytetrade.io
-  annotations:
-    applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/files/icon.png
-    applications.app.bytetrade.io/title: Files
-    applications.app.bytetrade.io/version: '0.0.1'
-    applications.app.bytetrade.io/entrances: '[{"name":"files", "host":"files-service", "port":80,"title":"Files","windowPushState":true}]'
 spec:
   replicas: 1
   selector:
@@ -282,17 +304,7 @@ spec:
 #        command:
 #        - /filebrowser
 #        - --noauth
-      - name: files-frontend
-        image: beclab/files-frontend:v1.3.9
-        imagePullPolicy: IfNotPresent
-        securityContext:
-          runAsNonRoot: false
-          runAsUser: 0
-        ports:
-        - containerPort: 80
-        volumeMounts:
-        - name: userspace-dir
-          mountPath: /data
+    
       - name: drive-server
         image: beclab/drive:v0.0.29
         imagePullPolicy: IfNotPresent
@@ -432,53 +444,6 @@ spec:
           - key: envoy.yaml
             path: envoy.yaml
 
-   
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: files-service
-  namespace: {{ .Release.Namespace }}
-spec:
-  selector:
-    app: files
-  type: ClusterIP
-  ports:
-    - protocol: TCP
-      name: files
-      port: 80
-      targetPort: 80
-
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: files-provider
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  dataType: files
-  deployment: files
-  description: files provider
-  endpoint: files-service.{{ .Release.Namespace }}
-  group: service.files
-  kind: provider
-  namespace: {{ .Release.Namespace }}
-  opApis:
-    - name: Query
-      uri: /provider/query_file
-    - name: GetSearchFolderStatus
-      uri: /provider/get_search_folder_status
-    - name: UpdateSearchFolderPaths
-      uri: /provider/update_search_folder_paths
-    - name: GetDatasetFolderStatus
-      uri: /provider/get_dataset_folder_status
-    - name: UpdateDatasetFolderPaths
-      uri: /provider/update_dataset_folder_paths
-  version: v1
-status:
-  state: active
-
 #---
 #apiVersion: sys.bytetrade.io/v1alpha1
 #kind: ApplicationPermission
@@ -594,18 +559,6 @@ status:
 #  name: zinc-files
 #  namespace: user-system-{{ .Values.bfl.username }}
 
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: zinc-files-secrets
-  namespace: user-system-{{ .Values.bfl.username }}
-type: Opaque
-data:
-  password: {{ $password }}
-  redis_password: {{ $redis_password }}
-  pg_password: {{ $pg_password }}
-
 #---
 #apiVersion: apr.bytetrade.io/v1alpha1
 #kind: MiddlewareRequest
@@ -627,25 +580,6 @@ data:
 #      - name: zinc-files
 #        namespace: user-system-{{ .Values.bfl.username }}
 #        key: mappings
-
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: zinc-files-redis
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: files
-  appNamespace: user-space-{{ .Values.bfl.username }}
-  middleware: redis
-  redis:
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: redis_password
-          name: zinc-files-secrets
-    namespace: zinc-files
-
 
 ---
 apiVersion: v1
