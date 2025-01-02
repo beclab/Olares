@@ -291,3 +291,26 @@ spec:
   version: v1
 status:
   state: active
+
+---
+
+apiVersion: v1
+data:
+  acl.json: |
+    {
+      "acls":[
+        { "action": "accept", "src": ["*"], "proto": "tcp", "dst": ["*:443"] }
+      ],
+      "autoApprovers": {
+        "routes": {
+          "10.0.0.0/8": ["default"],
+          "172.16.0.0/12": ["default"],
+          "192.168.0.0/16": ["default"]
+        },
+        "exitNode": []
+      }
+    }
+kind: ConfigMap
+metadata:
+  name: tailscale-acl
+  namespace: user-space-{{ .Values.bfl.username }}
