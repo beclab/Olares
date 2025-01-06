@@ -15,6 +15,15 @@
 {{ $files_redis_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+{{- $nats_namespace := printf "%s%s" "user-system-" .Values.bfl.username -}}
+{{- $files_nats_secret := (lookup "v1" "Secret" $nats_namespace "files-nats-secrets") -}}
+{{- $files_nats_password := "" -}}
+{{ if $files_nats_secret -}}
+{{ $files_nats_password = (index $files_nats_secret "data" "files_nats_password") }}
+{{ else -}}
+{{ $files_nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -101,7 +110,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.46
+          image: beclab/files-server:v0.2.47
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -191,6 +200,16 @@ spec:
               # use redis db 0 for redis cache
             - name: REDIS_DB
               value: '0'
+            - name: NATS_HOST
+              value: nats.user-system-{{ .Values.bfl.username }}
+            - name: NATS_PORT
+              value: '4222'
+            - name: NATS_USERNAME
+              value: user-system-{{ .Values.bfl.username }}-files-server
+            - name: NATS_PASSWORD
+              value: {{ $files_nats_password | b64dec }}
+            - name: NATS_SUBJECT
+              value: terminus.os-system.files-notify
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -345,7 +364,13 @@ spec:
           - sh
           - -c
           - |
-            chown -R 1000:1000 /appdata 
+            chown -R 1000:1000 /appdata
+        - args:
+          - -it
+          - nats.user-system-{{ .Values.bfl.username }}:4222
+          image: owncloudci/wait-for:latest
+          imagePullPolicy: IfNotPresent
+          name: check-nats
       containers:
         - name: files
           image: beclab/files-server:v0.2.46
@@ -413,6 +438,16 @@ data:
   files_redis_password: {{ $files_redis_password }}
 
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: files-nats-secrets
+  namespace: user-system-{{ .Values.bfl.username }}
+data:
+  files_nats_password: {{ $files_nats_password }}
+type: Opaque
+
+---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
@@ -429,6 +464,34 @@ spec:
           key: files_redis_password
           name: files-secrets
     namespace: files-redis
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: files-server-nat
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: files-server
+  appNamespace: os-system
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: files_nats_password
+          name: files-nats-secrets
+    refs: []
+    subjects:
+      - export:
+          - appName: files-frontend
+            pub: allow
+            sub: allow
+        name: files-notify
+        permission:
+          pub: allow
+          sub: allow
+    user: user-system-{{ .Values.bfl.username }}-files-server
 
 ---
 kind: ConfigMap
