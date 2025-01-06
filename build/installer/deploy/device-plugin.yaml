@@ -29,7 +29,7 @@ spec:
       runtimeClassName: nvidia # Explicitly request the runtime
       priorityClassName: system-node-critical
       nodeSelector:
-        gpu.bytetrade.io/driver/cuda-supported: 'true'
+        gpu.bytetrade.io/cuda-supported: 'true'
       initContainers:
       - name: init-dir
         image: busybox:1.28
