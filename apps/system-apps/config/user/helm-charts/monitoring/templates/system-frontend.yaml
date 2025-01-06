@@ -1118,6 +1118,44 @@ data:
             proxy_pass http://media-server-service.os-system:9090;
         }
 
+        location /api {
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+
+            add_header Accept-Ranges bytes;
+
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+
+        location /upload {
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+
+            add_header Accept-Ranges bytes;
+
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+
         # # files
         # # for all routes matching a dot, check for files and return 404 if not found
         # # e.g. /file.js returns a 404 if not found
