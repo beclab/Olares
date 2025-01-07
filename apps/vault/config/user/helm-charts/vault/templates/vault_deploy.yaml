@@ -112,7 +112,7 @@ spec:
           - name: NATS_PORT
             value: '4222'
           - name: NATS_USERNAME
-            value: user-system-{{ .Values.bfl.username }}-files-frontend
+            value: user-system-{{ .Values.bfl.username }}-vault
           - name: NATS_PASSWORD
             value: {{ $vault_nats_password | b64dec }}
           - name: NATS_SUBJECT
@@ -297,4 +297,4 @@ spec:
             perm:
               - pub
               - sub
-    user: user-system-{{ .Values.bfl.username }}-files-frontend
+    user: user-system-{{ .Values.bfl.username }}-vault
