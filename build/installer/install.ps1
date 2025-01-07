@@ -12,6 +12,18 @@ function Test-Wait {
   }
 }
 
+$runAsAdmin = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if (-not $runAsAdmin.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "`n`nThe installation script needs to be run as an administrator.`n"
+    Write-Host "Please try the following methods:`n"
+    Write-Host "1. Search for 'PowerShell' in the Start menu, right-click it, and select 'Run as administrator'. "
+    Write-Host "   Navigate to the directory where the installation script is located and run the installation script.`n"
+    Write-Host "2. Press Win + R, type 'powershell', and then press Ctrl + Shift + Enter. "
+    Write-Host "   Navigate to the directory where the installation script is located and run the installation script.`n"
+    Write-Host "`nPress Ctrl+C to exit.`n"
+    Test-Wait
+}
+
 $process = Get-Process -Name olares-cli -ErrorAction SilentlyContinue
 if ($process) {
   Write-Host "olares-cli.exe is running, Press Ctrl+C to exit."
@@ -38,7 +50,7 @@ if (-Not (Test-Path $CLI_PROGRAM_PATH)) {
   New-Item -Path $CLI_PROGRAM_PATH -ItemType Directory
 }
 
-$CLI_VERSION = "0.1.91"
+$CLI_VERSION = "0.1.92"
 $CLI_FILE = "olares-cli-v{0}_windows_{1}.tar.gz" -f $CLI_VERSION, $arch
 $CLI_URL = "{0}/{1}" -f $downloadUrl, $CLI_FILE
 $CLI_PATH = "{0}{1}" -f $CLI_PROGRAM_PATH, $CLI_FILE
