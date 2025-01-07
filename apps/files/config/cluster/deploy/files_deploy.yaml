@@ -487,6 +487,9 @@ spec:
           - appName: files-frontend
             pub: allow
             sub: allow
+          - appName: vault
+            pub: allow
+            sub: allow
         name: files-notify
         permission:
           pub: allow

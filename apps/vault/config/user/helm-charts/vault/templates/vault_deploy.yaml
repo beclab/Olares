@@ -1,3 +1,11 @@
+{{- $vault_nats_secret := (lookup "v1" "Secret" $namespace "vault-nats-secrets") -}}
+{{- $vault_nats_password := "" -}}
+{{ if $vault_nats_secret -}}
+{{ $vault_nats_password = (index $vault_nats_secret "data" "vault_nats_password") }}
+{{ else -}}
+{{ $vault_nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
 
 
 ---
@@ -36,6 +44,12 @@ spec:
         image: owncloudci/wait-for:latest
         imagePullPolicy: IfNotPresent
         name: check-auth
+      - args:
+        - -it
+        - nats.user-system-{{ .Values.bfl.username }}:4222
+        image: owncloudci/wait-for:latest
+        imagePullPolicy: IfNotPresent
+        name: check-nats
       - name: terminus-sidecar-init
         image: openservicemesh/init:v1.2.3
         imagePullPolicy: IfNotPresent
@@ -93,6 +107,17 @@ spec:
             value: '{{ .Values.os.vault.appSecret }}'
           - name: OS_APP_KEY
             value: {{ .Values.os.vault.appKey }}
+          - name: NATS_HOST
+            value: nats.user-system-{{ .Values.bfl.username }}
+          - name: NATS_PORT
+            value: '4222'
+          - name: NATS_USERNAME
+            value: user-system-{{ .Values.bfl.username }}-files-frontend
+          - name: NATS_PASSWORD
+            value: {{ $vault_nats_password | b64dec }}
+          - name: NATS_SUBJECT
+            value: terminus.os-system.files-notify
+          
 
       - name: terminus-envoy-sidecar
         image: bytetrade/envoy:v1.25.11
@@ -238,3 +263,38 @@ spec:
     version: v1
 status:
   state: active
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-nats-secrets
+  namespace: user-system-{{ .Values.bfl.username }}
+data:
+  vault_nats_password: {{ $vault_nats_password }}
+type: Opaque
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: vault-nat
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: vault
+  appNamespace: user-space-{{ .Values.bfl.username }}
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: vault_nats_password
+          name: vault-nats-secrets
+    refs:
+      - appName: files-server
+        appNamespace: os-system
+        subjects:
+          - name: files-notify
+            perm:
+              - pub
+              - sub
+    user: user-system-{{ .Values.bfl.username }}-files-frontend
