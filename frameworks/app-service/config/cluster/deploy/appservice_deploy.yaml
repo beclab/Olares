@@ -360,7 +360,7 @@ spec:
       hostNetwork: true
       containers:
         - name: image-service
-          image: beclab/image-service:0.2.63
+          image: beclab/image-service:0.2.66
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
