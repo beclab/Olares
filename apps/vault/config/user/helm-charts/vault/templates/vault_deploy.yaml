@@ -1,3 +1,5 @@
+{{- $namespace := printf "%s%s" "user-system-" .Values.bfl.username -}}
+
 {{- $vault_nats_secret := (lookup "v1" "Secret" $namespace "vault-nats-secrets") -}}
 {{- $vault_nats_password := "" -}}
 {{ if $vault_nats_secret -}}
