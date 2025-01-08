@@ -15,8 +15,7 @@
 {{ $files_redis_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
-{{- $nats_namespace := printf "%s%s" "user-system-" .Values.bfl.username -}}
-{{- $files_nats_secret := (lookup "v1" "Secret" $nats_namespace "files-nats-secrets") -}}
+{{- $files_nats_secret := (lookup "v1" "Secret" "os-system" "files-nats-secrets") -}}
 {{- $files_nats_password := "" -}}
 {{ if $files_nats_secret -}}
 {{ $files_nats_password = (index $files_nats_secret "data" "files_nats_password") }}
@@ -201,11 +200,11 @@ spec:
             - name: REDIS_DB
               value: '0'
             - name: NATS_HOST
-              value: nats.user-system-{{ .Values.bfl.username }}
+              value: nats
             - name: NATS_PORT
               value: '4222'
             - name: NATS_USERNAME
-              value: user-system-{{ .Values.bfl.username }}-files-server
+              value: os-system-files-server
             - name: NATS_PASSWORD
               value: {{ $files_nats_password | b64dec }}
             - name: NATS_SUBJECT
@@ -367,7 +366,7 @@ spec:
             chown -R 1000:1000 /appdata
         - args:
           - -it
-          - nats.user-system-{{ .Values.bfl.username }}:4222
+          - nats.os-system:4222
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-nats
@@ -442,7 +441,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: files-nats-secrets
-  namespace: user-system-{{ .Values.bfl.username }}
+  namespace: os-system
 data:
   files_nats_password: {{ $files_nats_password }}
 type: Opaque
@@ -470,7 +469,7 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: files-server-nat
-  namespace: user-system-{{ .Values.bfl.username }}
+  namespace: os-system
 spec:
   app: files-server
   appNamespace: os-system
@@ -494,7 +493,7 @@ spec:
         permission:
           pub: allow
           sub: allow
-    user: user-system-{{ .Values.bfl.username }}-files-server
+    user: os-system-files-server
 
 ---
 kind: ConfigMap
