@@ -14,8 +14,9 @@ ubuntu2204_cuda-keyring_1.1-1_all.deb,pkg/components,https://developer.download.
 ubuntu2204_cuda-keyring_1.0-1_all.deb,pkg/components,https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb,https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/arm64/cuda-keyring_1.0-1_all.deb,ubuntu-22.04_cuda-keyring_1.0-1
 ubuntu2004_cuda-keyring_1.1-1_all.deb,pkg/components,https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb,https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/arm64/cuda-keyring_1.1-1_all.deb,ubuntu-20.04_cuda-keyring_1.1-1
 ubuntu2004_cuda-keyring_1.0-1_all.deb,pkg/components,https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb,https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/arm64/cuda-keyring_1.0-1_all.deb,ubuntu-20.04_cuda-keyring_1.0-1
+debian12_cuda-keyring_1.1-1_all.deb,pkg/components,https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb,https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/arm64/cuda-keyring_1.1-1_all.deb,debian-12_cuda-keyring_1.1-1
+debian11_cuda-keyring_1.1-1_all.deb,pkg/components,https://developer.download.nvidia.com/compute/cuda/repos/debian11/x86_64/cuda-keyring_1.1-1_all.deb,https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/arm64/cuda-keyring_1.1-1_all.deb,debian-11_cuda-keyring_1.1-1
 
-gpgkey,pkg/components,https://nvidia.github.io/libnvidia-container/gpgkey,https://nvidia.github.io/libnvidia-container/gpgkey,gpgkey
-ubuntu_22.04_libnvidia-container.list,pkg/components,https://nvidia.github.io/libnvidia-container/ubuntu22.04/libnvidia-container.list,https://nvidia.github.io/libnvidia-container/ubuntu22.04/libnvidia-container.list,ubuntu_22.04_libnvidia-container.list
-ubuntu_20.04_libnvidia-container.list,pkg/components,https://nvidia.github.io/libnvidia-container/ubuntu20.04/libnvidia-container.list,https://nvidia.github.io/libnvidia-container/ubuntu20.04/libnvidia-container.list,ubuntu_20.04_libnvidia-container.list
+libnvidia-gpgkey,pkg/components,https://nvidia.github.io/libnvidia-container/gpgkey,https://nvidia.github.io/libnvidia-container/gpgkey,libnvidia-gpgkey
+libnvidia-container.list,pkg/components,https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list,https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list,libnvidia-container.list
 
