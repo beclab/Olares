@@ -225,7 +225,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: wise-init
-          image: beclab/wise:v1.3.9
+          image: beclab/wise:v1.3.16
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -298,7 +298,7 @@ spec:
             - name: www-dir
               mountPath: /www
             - name: wise-download-dir
-              mountPath: /data/Home/Downloads
+              mountPath: /data/Home
             - name: system-frontend-nginx-config
               mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
@@ -403,7 +403,7 @@ spec:
         - name: wise-download-dir
           hostPath:
             type: Directory
-            path: {{ .Values.userspace.userData }}/Downloads
+            path: {{ .Values.userspace.userData }}
         - name: system-frontend-nginx-config
           configMap:
             name: system-frontend-nginx-config
@@ -1095,9 +1095,9 @@ data:
             proxy_pass http://ArgoworkflowsSever;
         }
 
-        location ~ ^/download/preview/Downloads/(.*)$
+        location ~ ^/download/preview/(.*)$
         {
-          alias /data/Home/Downloads/$1;
+          alias /data/Home/$1;
         }
 
         location /videos/ {
@@ -1116,6 +1116,44 @@ data:
             add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
             add_header Access-Control-Allow-Origin $http_origin;
             proxy_pass http://media-server-service.os-system:9090;
+        }
+
+        location /api {
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+
+            add_header Accept-Ranges bytes;
+
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+
+        location /upload {
+           proxy_pass http://files-service.os-system:80;
+           # rewrite ^/server(.*)$ $1 break;
+
+           # Add original-request-related headers
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Host $host;
+
+           add_header Accept-Ranges bytes;
+
+           client_body_timeout 600s;
+           client_max_body_size 4000M;
+           proxy_request_buffering off;
+           keepalive_timeout 750s;
+           proxy_read_timeout 600s;
+           proxy_send_timeout 600s;
         }
 
         # # files
