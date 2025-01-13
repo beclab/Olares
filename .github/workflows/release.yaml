@@ -118,6 +118,7 @@ jobs:
             build/installer/publicInstaller.latest.ps1
             build/installer/install.ps1
             build/installer/publicAddnode.sh
+            build/installer/joincluster.sh
             build/installer/version.hint
             build/installer/publicRestoreInstaller.sh
           prerelease: true
