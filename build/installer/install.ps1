@@ -45,7 +45,7 @@ if (-Not $downloadCdnUrlFromEnv -eq "") {
   $downloadUrl = $downloadCdnUrlFromEnv
 }
 
-$CLI_PROGRAM_PATH = "{0}\AppData\Local\Microsoft\WindowsApps\" -f $currentPath
+$CLI_PROGRAM_PATH = "{0}\" -f $currentPath
 if (-Not (Test-Path $CLI_PROGRAM_PATH)) {
   New-Item -Path $CLI_PROGRAM_PATH -ItemType Directory
 }
