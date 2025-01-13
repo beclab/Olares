@@ -99,7 +99,7 @@ spec:
         - name: DISABLE_TELEMETRY
           value: "false"
       - name: operator-api
-        image: beclab/middleware-operator:0.1.38
+        image: beclab/middleware-operator:0.1.37
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9080

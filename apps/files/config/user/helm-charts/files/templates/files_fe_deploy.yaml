@@ -27,14 +27,6 @@
 {{ $pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
-{{- $files_frontend_nats_secret := (lookup "v1" "Secret" $namespace "files-frontend-nats-secrets") -}}
-{{- $files_frontend_nats_password := "" -}}
-{{ if $files_frontend_nats_secret -}}
-{{ $files_frontend_nats_password = (index $files_frontend_nats_secret "data" "files_frontend_nats_password") }}
-{{ else -}}
-{{ $files_frontend_nats_password = randAlphaNum 16 | b64enc }}
-{{- end -}}
-
 
 ---
 apiVersion: v1
@@ -142,12 +134,6 @@ spec:
         image: owncloudci/wait-for:latest
         imagePullPolicy: IfNotPresent
         name: check-auth
-      - args:
-        - -it
-        - nats.user-system-{{ .Values.bfl.username }}:4222
-        image: owncloudci/wait-for:latest
-        imagePullPolicy: IfNotPresent
-        name: check-nats
       - name: terminus-sidecar-init
         image: openservicemesh/init:v1.2.3
         imagePullPolicy: IfNotPresent
@@ -297,24 +283,13 @@ spec:
 #        - /filebrowser
 #        - --noauth
       - name: files-frontend
-        image: beclab/files-frontend:v1.3.14
+        image: beclab/files-frontend:v1.3.9
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: false
           runAsUser: 0
         ports:
         - containerPort: 80
-        env:
-          - name: NATS_HOST
-            value: nats.user-system-{{ .Values.bfl.username }}
-          - name: NATS_PORT
-            value: '4222'
-          - name: NATS_USERNAME
-            value: user-system-{{ .Values.bfl.username }}-files-frontend
-          - name: NATS_PASSWORD
-            value: {{ $files_frontend_nats_password | b64dec }}
-          - name: NATS_SUBJECT
-            value: terminus.os-system.files-notify
         volumeMounts:
         - name: userspace-dir
           mountPath: /data
@@ -631,16 +606,6 @@ data:
   redis_password: {{ $redis_password }}
   pg_password: {{ $pg_password }}
 
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: files-frontend-nats-secrets
-  namespace: user-system-{{ .Values.bfl.username }}
-data:
-  files_frontend_nats_password: {{ $files_frontend_nats_password }}
-type: Opaque
-
 #---
 #apiVersion: apr.bytetrade.io/v1alpha1
 #kind: MiddlewareRequest
@@ -681,31 +646,6 @@ spec:
           name: zinc-files-secrets
     namespace: zinc-files
 
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: files-frontend-nat
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: files-frontend
-  appNamespace: user-space-{{ .Values.bfl.username }}
-  middleware: nats
-  nats:
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: files_frontend_nats_password
-          name: files-frontend-nats-secrets
-    refs:
-      - appName: files-server
-        appNamespace: os-system
-        subjects:
-          - name: files-notify
-            perm:
-              - pub
-              - sub
-    user: user-system-{{ .Values.bfl.username }}-files-frontend
 
 ---
 apiVersion: v1
