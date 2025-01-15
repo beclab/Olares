@@ -82,11 +82,15 @@ Olares has been tested and verified on the following platforms:
 ### Set up Olares
 To get started with Olares on your own device, follow the [Getting Started Guide](https://docs.olares.xyz/manual/get-started/) for step-by-step instructions.
 
-## Tech stacks
+## Architecture 
 
- Public clouds have IaaS, PaaS, and SaaS layers. Olares provides open-source alternatives to these layers.
+Olares' architecture is based on two core principles:
+- Adopts an Android-like approach to control software permissions and interactivity, ensuring smooth and secure system operations.
+- Leverages cloud-native technologies to manage hardware and middleware services efficiently.
 
-  ![Tech Stacks](https://file.bttcdn.com/github/terminus/v2/tech-stack-olares.jpeg)
+  ![Olares Architecture](https://file.bttcdn.com/github/terminus/v2/olares-arch.jpeg)
+
+ For detailed description of each component, refer to [Olares architecture](https://docs.olares.xyz/manual/platform-architecture.html).
 
 ## Features
 
@@ -100,42 +104,6 @@ Olares offers a wide array of features designed to enhance security, ease of use
 - **Built-in applications**: Includes file manager, sync drive, vault, reader, app market, settings, and dashboard.
 - **Seamless anywhere access**: Access your devices from anywhere using dedicated clients for mobile, desktop, and browsers.
 - **Development tools**: Comprehensive development tools for effortless application development and porting.
-
-## Comparison with other self-hosting solutions
-
-As an open-source sovereign cloud OS for local AI, Olares reimagines what’s possible in self-hosting. To help you understand how Olares stands out in the landscape, we’ve created a comparison table that highlights its features alongside those of other self-hosting solutions in the market.
-
-**Legend:** 
-
-- 🚀: **Auto**, indicates that the system completes the task automatically.
-- ✅: **Yes**, indicates that users without a developer background can complete the setup through the product's UI prompts.
-- 🛠️: **Manual Configuration**, indicates that even users with an engineering background need to refer to tutorials to complete the setup.
-- ❌:  **No**, indicates that the feature is not supported.
-
-| | Olares | Synology | TrueNAS | CasaOS | Unraid |
-| --- | --- | --- | --- | --- | --- |
-| Source Code License | Olares License | Closed | GPL 3.0 | Apache 2.0 | Closed |
-| Built On | Kubernetes | Linux | Kubernetes | Docker | Docker |
-| Local LLM Hosting | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Local LLM app development | 🚀 | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Multi-Node | ✅   | ❌   | ✅   | ❌   | ❌   |
-| Build-in Apps | ✅ (Rich desktop apps) | ✅ (Rich desktop apps) | ❌ (CLI) | ✅ (Simple desktop apps) | ✅ (Dashboard) |
-| Free Domain Name | ✅   | ✅   | ❌   | ❌   | ❌   |
-| Auto SSL Certificate | 🚀  | ✅   | 🛠️ | 🛠️ | 🛠️ |
-| Reverse Proxy | 🚀  | ✅   | 🛠️ | 🛠️ | 🛠️ |
-| VPN Management | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Graded App Entrance | 🚀  | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Multi-User Management | ✅ User management <br>🚀 Resource isolation | ✅ User management<br>🛠️ Resource isolation | ✅ User management<br>🛠️ Resource isolation | ❌   | ✅ User management  <br>🛠️ Resource isolation |
-| Single Login for All Apps | 🚀  | ❌   | ❌   | ❌   |  ❌   |
-| Cross-Node Storage | 🚀 (Juicefs+<br>MinIO) | ❌   | ❌   | ❌   | ❌   |
-| Database Solution | 🚀 (Built-in cloud-native solution) | 🛠️ | 🛠️ | 🛠️ | 🛠️ |
-| Disaster Recovery | 🚀 (MinIO's [**Erasure Coding**](https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html)**)** | ✅ RAID | ✅ RAID | ✅ RAID | ✅ Unraid Storage |
-| Backup | ✅ App Data  <br>✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data | ✅ User Data |
-| App Sandboxing | ✅   | ❌   | ❌ (K8S's namespace) | ❌   | ❌   |
-| App Ecosystem | ✅ (Official + third-party) | ✅ (Majorly official apps) | ✅ (Official + third-party submissions) | ✅ Majorly official apps | ✅ (Community app market) |
-| Developer Friendly | ✅ IDE  <br>✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅ CLI  <br>✅ SDK  <br>✅ Doc | ✅ CLI  <br>✅ Doc | ✅ CLI  <br>✅ Doc | ✅ Doc |
-| Client Platforms | ✅ Android  <br>✅ iOS  <br>✅ Windows  <br>✅ Mac  <br>✅ Chrome Plugin | ✅ Android  <br>✅ iOS | ❌   | ❌   | ❌   |
-| Client Functionality | ✅ (All-in-one client app) | ✅ (14 separate client apps) | ❌   | ❌   |  ❌   |
 
 ## Project navigation
 
