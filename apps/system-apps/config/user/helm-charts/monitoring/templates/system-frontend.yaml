@@ -237,7 +237,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: settings-init
-          image: beclab/settings:v0.2.5
+          image: beclab/settings:v0.2.7
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -351,7 +351,7 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
         - name: settings-server
-          image: beclab/settings-server:v0.2.5
+          image: beclab/settings-server:v0.2.7
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -624,6 +624,11 @@ spec:
       uri: /api/event/app_installation_event
     - filters:
         type:
+          - entrance-state-event
+      op: Create
+      uri: /api/event/entrance_state_event
+    - filters:
+        type:
           - system-upgrade-event
       op: Create
       uri: /api/event/system_upgrade_event
@@ -764,6 +769,14 @@ data:
         add_header Cache-Control "private,no-cache";
         add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
         expires 0;
+      }
+
+      location /ws {
+        proxy_pass http://127.0.0.1:40010;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
       }
 
       location /bfl {
