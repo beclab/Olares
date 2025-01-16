@@ -87,7 +87,7 @@ Olares 的架构设计遵循两个核心原则：
 - 参考 Android 模式，控制软件权限和交互性，确保系统的流畅性和安全性。
 - 借鉴云原生技术，高效管理硬件和中间件服务。
 
-  ![架构](https://file.bttcdn.com/github/terminus/v2/olares-arch.jpeg)
+  ![架构](https://file.bttcdn.com/github/terminus/v2/olares-arch-2.jpeg)
 
 详细描述请参考 [Olares 架构](https://docs.joinolares.cn/zh/manual/platform-architecture.html)文档。
 
