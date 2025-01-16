@@ -306,6 +306,7 @@ spec:
     spec:
       serviceAccountName: os-internal
       serviceAccount: os-internal
+      priorityClassName: "system-cluster-critical"      
       initContainers:
       - name: init-container
         image: 'postgres:16.0-alpine3.18'
@@ -423,6 +424,7 @@ spec:
       labels:
         app: redis
     spec:
+      priorityClassName: "system-cluster-critical"
       containers:
       - name: redis
         image: redis:6.2.13-alpine3.18

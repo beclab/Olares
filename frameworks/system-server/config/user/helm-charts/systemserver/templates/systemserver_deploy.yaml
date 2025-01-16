@@ -44,6 +44,7 @@ spec:
     spec:
       serviceAccountName: bytetrade-sys-ops
       serviceAccount: bytetrade-sys-ops
+      priorityClassName: "system-cluster-critical"
       containers:
       - name: system-server
         image: beclab/system-server:0.1.19

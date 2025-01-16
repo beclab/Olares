@@ -192,6 +192,7 @@ spec:
         io.bytetrade.app: "true"
     spec:
       serviceAccountName: infisical-sa
+      priorityClassName: "system-cluster-critical"
       initContainers:
       - name: init-container
         image: 'postgres:16.0-alpine3.18'

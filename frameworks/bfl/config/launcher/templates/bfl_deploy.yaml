@@ -215,6 +215,7 @@ spec:
             weight: 10
 {{ end }}            
       serviceAccountName: bytetrade-controller
+      priorityClassName: "system-cluster-critical"
       initContainers:
       - name: init-userspace
         image: busybox:1.28
@@ -242,7 +243,7 @@ spec:
 
       containers:
       - name: api
-        image: beclab/bfl:v0.3.62
+        image: beclab/bfl:v0.3.63
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000

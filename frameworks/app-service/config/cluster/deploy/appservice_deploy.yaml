@@ -146,6 +146,7 @@ spec:
     spec:
       serviceAccountName: os-internal
       serviceAccount: os-internal
+      priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
         image: beclab/app-service:0.2.69

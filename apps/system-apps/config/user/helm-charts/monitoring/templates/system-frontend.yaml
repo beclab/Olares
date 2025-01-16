@@ -137,6 +137,7 @@ spec:
         app: system-frontend
         io.bytetrade.app: "true"
     spec:
+      priorityClassName: "system-cluster-critical"
       initContainers:
         - args:
             - -it
