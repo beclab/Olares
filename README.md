@@ -88,7 +88,7 @@ Olares' architecture is based on two core principles:
 - Adopts an Android-like approach to control software permissions and interactivity, ensuring smooth and secure system operations.
 - Leverages cloud-native technologies to manage hardware and middleware services efficiently.
 
-  ![Olares Architecture](https://file.bttcdn.com/github/terminus/v2/olares-arch.jpeg)
+  ![Olares Architecture](https://file.bttcdn.com/github/terminus/v2/olares-arch-3.png)
 
  For detailed description of each component, refer to [Olares architecture](https://docs.olares.xyz/manual/platform-architecture.html).
 
