@@ -86,7 +86,7 @@ Olaresのアーキテクチャは、次の2つの基本原則に基づいてい�
 - Androidの設計思想を取り入れ、ソフトウェアの権限と対話性を制御することで、システムの安全かつ円滑な運用を実現します。
 - クラウドネイティブ技術を活用し、ハードウェアとミドルウェアサービスを効率的に管理します。
 
-  ![Olaresのアーキテクチ](https://file.bttcdn.com/github/terminus/v2/olares-arch-2.jpeg)
+  ![Olaresのアーキテクチ](https://file.bttcdn.com/github/terminus/v2/olares-arch-3.png)
 
 各コンポーネントの詳細については、[Olares アーキテクチャ](https://docs.olares.xyz/manual/platform-architecture.html)（英語版）をご参照ください。
 
