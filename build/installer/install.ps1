@@ -50,7 +50,7 @@ if (-Not (Test-Path $CLI_PROGRAM_PATH)) {
   New-Item -Path $CLI_PROGRAM_PATH -ItemType Directory
 }
 
-$CLI_VERSION = "0.1.104"
+$CLI_VERSION = "0.1.105"
 $CLI_FILE = "olares-cli-v{0}_windows_{1}.tar.gz" -f $CLI_VERSION, $arch
 $CLI_URL = "{0}/{1}" -f $downloadUrl, $CLI_FILE
 $CLI_PATH = "{0}{1}" -f $CLI_PROGRAM_PATH, $CLI_FILE
