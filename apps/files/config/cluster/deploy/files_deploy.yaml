@@ -69,7 +69,7 @@ spec:
             chown -R 1000:1000 /appdata; chown -R 1000:1000 /appcache; chown -R 1000:1000 /data
       containers:
         - name: gateway
-          image: beclab/appdata-gateway:0.1.15
+          image: beclab/appdata-gateway:0.1.16
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -78,7 +78,7 @@ spec:
             - containerPort: 8080
           env:
             - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.46'
+              value: 'beclab/files-server:v0.2.48'
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -109,7 +109,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.47
+          image: beclab/files-server:v0.2.48
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -209,6 +209,8 @@ spec:
               value: {{ $files_nats_password | b64dec }}
             - name: NATS_SUBJECT
               value: terminus.os-system.files-notify
+            - name: RESERVED_SPACE
+              value: '10000'
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -225,12 +227,14 @@ spec:
             - /filebrowser
             - --noauth
         - name: uploader
-          image: beclab/upload:v1.0.7
+          image: beclab/upload:v1.0.8
           env:
             - name: UPLOAD_FILE_TYPE
               value: '*'
             - name: UPLOAD_LIMITED_SIZE
-              value: '21474836481'
+              value: '49946775344'
+            - name: RESERVED_SPACE
+              value: '10000'
           volumeMounts:
             - name: fb-data
               mountPath: /appdata
@@ -372,7 +376,7 @@ spec:
           name: check-nats
       containers:
         - name: files
-          image: beclab/files-server:v0.2.46
+          image: beclab/files-server:v0.2.48
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
