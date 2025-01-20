@@ -78,7 +78,7 @@ spec:
             - containerPort: 8080
           env:
             - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.48'
+              value: 'beclab/files-server:v0.2.49'
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -96,6 +96,10 @@ spec:
             value: seafile
           image: beclab/media-server:v0.1.10
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: true
+            runAsUser: 1000
+            privileged: true
           ports:
           - containerPort: 9090
           volumeMounts:
@@ -106,10 +110,11 @@ spec:
 {{ if .Values.sharedlib }}
           - name: shared-lib
             mountPath: /data/External
+            mountPropagation: Bidirectional
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.48
+          image: beclab/files-server:v0.2.49
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -210,7 +215,9 @@ spec:
             - name: NATS_SUBJECT
               value: terminus.os-system.files-notify
             - name: RESERVED_SPACE
-              value: '10000'
+              value: '1000'
+            - name: OLARES_VERSION
+              value: '1.12'
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -234,7 +241,7 @@ spec:
             - name: UPLOAD_LIMITED_SIZE
               value: '49946775344'
             - name: RESERVED_SPACE
-              value: '10000'
+              value: '1000'
           volumeMounts:
             - name: fb-data
               mountPath: /appdata
@@ -245,11 +252,16 @@ spec:
 {{ if .Values.sharedlib }}
             - name: shared-lib
               mountPath: /data/External
+              mountPropagation: Bidirectional
 {{ end }}
           resources: { }
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: true
+            runAsUser: 1000
+            privileged: true
         - name: nginx
           image: 'beclab/nginx-lua:n0.0.4'
           securityContext:
@@ -376,7 +388,7 @@ spec:
           name: check-nats
       containers:
         - name: files
-          image: beclab/files-server:v0.2.48
+          image: beclab/files-server:v0.2.49
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -395,6 +407,8 @@ spec:
               value: /appdata/config/settings.json
             - name: FB_ROOT
               value: /data
+            - name: OLARES_VERSION
+              value: '1.12'
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
