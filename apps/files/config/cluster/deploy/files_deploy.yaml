@@ -217,7 +217,7 @@ spec:
             - name: RESERVED_SPACE
               value: '1000'
             - name: OLARES_VERSION
-              value: '1.12'
+              value: '1.11'
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -408,7 +408,7 @@ spec:
             - name: FB_ROOT
               value: /data
             - name: OLARES_VERSION
-              value: '1.12'
+              value: '1.11'
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
