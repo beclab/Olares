@@ -88,13 +88,13 @@ spec:
 
       containers:
       - name: vault-frontend
-        image: beclab/vault-frontend:v1.3.22
+        image: beclab/vault-frontend:v1.3.24
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
       
       - name: notification-server
-        image: beclab/vault-notification:v1.3.22
+        image: beclab/vault-notification:v1.3.24
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
