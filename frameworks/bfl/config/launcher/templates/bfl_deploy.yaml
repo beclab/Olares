@@ -296,7 +296,7 @@ spec:
           value: {{ .Values.bfl.terminus_dns_service_api }}
 
       - name: ingress
-        image: beclab/bfl-ingress:v0.2.18
+        image: beclab/bfl-ingress:v0.2.19
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: ngxlog
