@@ -78,7 +78,7 @@ spec:
             - containerPort: 8080
           env:
             - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.51'
+              value: 'beclab/files-server:v0.2.54'
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -114,7 +114,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.51
+          image: beclab/files-server:v0.2.54
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -263,7 +263,7 @@ spec:
             runAsUser: 1000
             privileged: true
         - name: nginx
-          image: 'beclab/nginx-lua:n0.0.4'
+          image: 'nginx:stable-alpine3.17-slim'
           securityContext:
             runAsNonRoot: false
             runAsUser: 0
@@ -271,6 +271,10 @@ spec:
             - containerPort: 80
               protocol: TCP
           volumeMounts:
+            - name: files-nginx-config
+              readOnly: true
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
             - name: files-nginx-config
               mountPath: /etc/nginx/conf.d/default.conf
               subPath: default.conf
@@ -295,6 +299,8 @@ spec:
           configMap:
             name: files-nginx-config
             items:
+              - key: nginx.conf
+                path: nginx.conf
               - key: default.conf
                 path: default.conf
             defaultMode: 420
@@ -388,7 +394,7 @@ spec:
           name: check-nats
       containers:
         - name: files
-          image: beclab/files-server:v0.2.51
+          image: beclab/files-server:v0.2.54
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -522,6 +528,37 @@ metadata:
   annotations:
     kubesphere.io/creator: bytetrade.io
 data:
+  nginx.conf: |-
+    user  nginx;
+    worker_processes  4;
+
+    error_log  /var/log/nginx/error.log notice;
+    pid        /var/run/nginx.pid;
+
+    events {
+        worker_connections  1024;
+    }
+
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                          '$status $body_bytes_sent "$http_referer" '
+                          '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log  /var/log/nginx/access.log  main;
+
+        sendfile        on;
+        #tcp_nopush     on;
+
+        keepalive_timeout  2700;
+
+        #gzip  on;
+        client_max_body_size 4000M;
+
+        include /etc/nginx/conf.d/*.conf;
+    }
   default.conf: |-
     server {
     	listen 80 default_server;
@@ -588,12 +625,77 @@ data:
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $host;
 
-            client_body_timeout 60s;
-            client_max_body_size 2000M;
+            client_body_timeout 1800s;
+            client_max_body_size 4000M;
             proxy_request_buffering off;
-            keepalive_timeout 75s;
-            proxy_read_timeout 60s;
-            proxy_send_timeout 60s;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+
+        location /api/raw {
+            proxy_pass http://127.0.0.1:8080;
+            # rewrite ^/server(.*)$ $1 break;
+
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+
+            client_body_timeout 1800s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+
+        location /api/md5 {
+            proxy_pass http://127.0.0.1:8080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 1800s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+
+        location /api/paste {
+            proxy_pass http://127.0.0.1:8080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 1800s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+
+        location /api/cache {
+            proxy_pass http://127.0.0.1:8080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 1800s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
         }
 
         location /provider {
