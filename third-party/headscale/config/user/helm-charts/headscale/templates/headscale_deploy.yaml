@@ -274,7 +274,7 @@ spec:
         - name: TS_STATE_DIR
           value: "/var/lib/tailscale/"
         - name: TS_TAILSCALED_EXTRA_ARGS
-          value: "--no-logs-no-support --verbose=1"
+          value: "--no-logs-no-support  --verbose=1"
         - name: TS_ROUTES
           value: $(NODE_IP)/32
         - name: TS_EXTRA_ARGS
