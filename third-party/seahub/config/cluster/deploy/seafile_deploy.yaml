@@ -189,11 +189,11 @@ data:
         sendfile        on;
         #tcp_nopush     on;
 
-        keepalive_timeout  75s;
+        keepalive_timeout  750s;
 
         #gzip  on;
-        client_max_body_size 50M;
-        client_body_buffer_size 50M;
+        client_max_body_size 2000M;
+        client_body_buffer_size 2000M;
 
         include /etc/nginx/conf.d/*.conf;
     }

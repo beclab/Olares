@@ -234,7 +234,7 @@ spec:
             - /filebrowser
             - --noauth
         - name: uploader
-          image: beclab/upload:v1.0.8
+          image: beclab/upload:v1.0.9
           env:
             - name: UPLOAD_FILE_TYPE
               value: '*'
@@ -530,7 +530,7 @@ metadata:
 data:
   nginx.conf: |-
     user  nginx;
-    worker_processes  4;
+    worker_processes  auto;
 
     error_log  /var/log/nginx/error.log notice;
     pid        /var/run/nginx.pid;
@@ -608,12 +608,12 @@ data:
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $host;
 
-            client_body_timeout 60s;
+            client_body_timeout 600s;
             client_max_body_size 2000M;
             proxy_request_buffering off;
-            keepalive_timeout 75s;
-            proxy_read_timeout 60s;
-            proxy_send_timeout 60s;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
         }
 
         location /api/raw/AppData {
@@ -783,12 +783,12 @@ data:
 
             add_header Accept-Ranges bytes;
 
-            client_body_timeout 60s;
+            client_body_timeout 600s;
             client_max_body_size 2000M;
             proxy_request_buffering off;
-            keepalive_timeout 75s;
-            proxy_read_timeout 60s;
-            proxy_send_timeout 60s;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
         }
 
         location /seafhttp/ {
@@ -802,12 +802,12 @@ data:
 
             add_header Accept-Ranges bytes;
 
-            client_body_timeout 60s;
+            client_body_timeout 600s;
             client_max_body_size 2000M;
             proxy_request_buffering off;
-            keepalive_timeout 75s;
-            proxy_read_timeout 60s;
-            proxy_send_timeout 60s;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
         }
     	# files
     	# for all routes matching a dot, check for files and return 404 if not found
