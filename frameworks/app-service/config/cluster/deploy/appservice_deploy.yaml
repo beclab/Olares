@@ -149,7 +149,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.2.73
+        image: beclab/app-service:0.2.74
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -202,6 +202,8 @@ spec:
           name: certs
         - mountPath: /etc/containerd/config.toml
           name: configtoml
+        - mountPath: /Cache
+          name: app-cache
       initContainers:
       - name: generate-certs
         image: beclab/openssl:v3
@@ -225,6 +227,10 @@ spec:
           - name: certs
             mountPath: /etc/certs
       volumes:
+      - name: app-cache
+        hostPath:
+          path: {{ .Values.rootPath }}/userdata/Cache
+          type: DirectoryOrCreate
       - name: configtoml
         hostPath:
           path: /etc/containerd/config.toml
