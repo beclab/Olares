@@ -54,11 +54,7 @@ spec:
 #    applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/seafiles/icon.png
 #    applications.app.bytetrade.io/title: Seafile
 #    applications.app.bytetrade.io/version: '0.0.1'
-#{{ if (eq .Values.debugVersion true) }}
-#    applications.app.bytetrade.io/entrances: '[{"name":"seafile-ui", "host":"seafile-ui", "port":80,"title":"Seafile"}]'
-#{{ else }}
 #    applications.app.bytetrade.io/entrances: '[{"name":"seafile-ui", "host":"seafile-ui", "port":80,"title":"Seafile","invisible": true}]'
-#{{ end }}
 #
 #spec:
 #  replicas: 1

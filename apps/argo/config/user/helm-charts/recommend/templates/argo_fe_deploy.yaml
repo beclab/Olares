@@ -29,59 +29,6 @@ spec:
     app: recommend
   type: ClusterIP
 
----
-{{ if (eq .Values.debugVersion true) }}
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: recommend
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app: recommend
-    applications.app.bytetrade.io/author: bytetrade.io
-
-    applications.app.bytetrade.io/name: recommend
-    applications.app.bytetrade.io/owner: '{{ .Values.bfl.username }}'
-  annotations:
-    applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/recommend/icon.png
-    applications.app.bytetrade.io/title: recommend
-    applications.app.bytetrade.io/version: '0.0.1'
-    applications.app.bytetrade.io/entrances: '[{"name":"recommend", "host":"argoworkflows-ui", "port":80,"title":"recommend"}]'
-
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: recommend
-  template:
-    metadata:
-      labels:
-        app: recommend
-        io.bytetrade.app: "true"
-    spec:
-      containers:
-        - name: recommend-proxy
-          image: nginx:stable-alpine3.17-slim
-          imagePullPolicy: IfNotPresent
-          ports:
-            - name: proxy
-              containerPort: 8080
-          volumeMounts:
-            - name: nginx-config
-              readOnly: true
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
-      volumes:
-        - name: nginx-config
-          configMap:
-            name: recommend-nginx-configs
-            items:
-              - key: nginx.conf
-                path: nginx.conf
-{{ end }}
-
 
 
 ---

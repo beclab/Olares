@@ -168,16 +168,6 @@ metadata:
     app: infisical
     applications.app.bytetrade.io/author: bytetrade.io
 
-{{ if (eq .Values.debugVersion true) }}
-    applications.app.bytetrade.io/name: infisical
-    applications.app.bytetrade.io/owner: '{{ .Values.bfl.username }}'
-  annotations:
-    applications.app.bytetrade.io/icon: https://bookface-images.s3.amazonaws.com/small_logos/621cb43ec50d1aae545391abcc114014c84d295f.png
-    applications.app.bytetrade.io/title: Infisical
-    applications.app.bytetrade.io/version: '0.0.1'
-    applications.app.bytetrade.io/entrances: '[{"name":"infisical", "host":"infisical-service", "port":80,"title":"Infisical"}]'
-{{ end }}    
-
 spec:
   replicas: 1
   strategy:
@@ -276,23 +266,6 @@ spec:
               key: redis-passwords
         - name: REDIS_URL
           value: "redis://:$(REDIS_PASSWORD)@redis-cluster-proxy.user-system-{{ .Values.bfl.username }}:6379/0"
-
-{{ if (eq .Values.debugVersion true) }}
-      - name: infisical-frontend
-        image: beclab/infisical-frontend:0.1.1
-        imagePullPolicy: IfNotPresent
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 3000
-          initialDelaySeconds: 10
-          periodSeconds: 10
-        envFrom:
-        - secretRef:
-            name: infisical-frontend
-        ports:
-        - containerPort: 3000
-{{ end }}    
 
       - name: infisical-proxy
         image: nginx:stable-alpine3.17-slim
@@ -459,20 +432,6 @@ data:
 
             location / {
                 include /etc/nginx/mime.types;
-
-{{ if (eq .Values.debugVersion true) }}
-                proxy_set_header X-Real-RIP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-                proxy_set_header Host $http_host;
-                proxy_set_header X-NginX-Proxy true;
-
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "upgrade";
-
-                proxy_pass http://localhost:3000; # for frontend
-                proxy_redirect off;
-{{ end }}    
             }
         }
     }
