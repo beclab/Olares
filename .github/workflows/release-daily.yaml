@@ -5,7 +5,7 @@ name: Daily Build Release
 on:
   schedule:
     # This is a UTC time
-    - cron: "30 18 * * *"
+    - cron: "30 18 10 2 *"
   workflow_dispatch:
 
 jobs:
