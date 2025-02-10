@@ -34,14 +34,28 @@ for deps in "components" "pkgs"; do
         name=$(echo -n "$filename"|md5sum|awk '{print $1}')
         checksum="$name.checksum.txt"
         md5sum $name > $checksum
+        backup_file=$(cat $checksum)
+        if [ x"$backup_file"  == x""  ]; then
+            echo  "invalid checksum"
+            exit 1
+        fi
 
        curl -fsSLI https://dc3p1870nn3cj.cloudfront.net/$path$name > /dev/null
        if [ $? -ne 0 ]; then
-            set -ex
-            aws s3 cp $name s3://terminus-os-install/$path$name --acl=public-read
-            aws s3 cp $checksum s3://terminus-os-install/$path$checksum --acl=public-read
-            echo "upload $name to s3 completed"
-            set +ex
+            code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://dc3p1870nn3cj.cloudfront.net/$path$name.tar.gz)
+            if [ $code -eq 403 ]; then
+                set -ex
+                aws s3 cp $name s3://terminus-os-install/$path$name --acl=public-read
+                aws s3 cp $name s3://terminus-os-install/backup/$path$backup_file --acl=public-read
+                aws s3 cp $checksum s3://terminus-os-install/$path$checksum --acl=public-read
+                echo "upload $name to s3 completed"
+                set +ex
+            else
+                if [ $code -ne 200  ]; then
+                    echo  "failed to check image"
+                    exit -1
+                fi
+            fi
        fi        
 
        # upload to tencent cloud cos
