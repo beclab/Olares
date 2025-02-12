@@ -34,7 +34,7 @@ for deps in "components" "pkgs"; do
         name=$(echo -n "$filename"|md5sum|awk '{print $1}')
         checksum="$name.checksum.txt"
         md5sum $name > $checksum
-        backup_file=$(cat $checksum)
+        backup_file=$(awk '{print $1}' $checksum)
         if [ x"$backup_file"  == x""  ]; then
             echo  "invalid checksum"
             exit 1
