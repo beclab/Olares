@@ -21,7 +21,7 @@ cat $1|while read image; do
             gzip $name.tar
 
             md5sum $name.tar.gz > $checksum
-            backup_file=$(cat $checksum)
+            backup_file=$(awk '{print $1}' $checksum)
             if [ x"$backup_file"  == x""  ]; then
                 echo  "invalid checksum"
                 exit 1
@@ -55,7 +55,7 @@ cat $1|while read image; do
             gzip $name.tar
 
             md5sum $name.tar.gz > $checksum
-            backup_file=$(cat $checksum)
+            backup_file=$(awk '{print $1}' $checksum)
             if [ x"$backup_file"  == x""  ]; then
                 echo  "invalid checksum"
                 exit 1
