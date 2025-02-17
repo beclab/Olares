@@ -238,7 +238,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: settings-init
-          image: beclab/settings:v0.2.10
+          image: beclab/settings:v0.2.11
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
