@@ -87,6 +87,28 @@ data:
     # authentication_backend:
     #   file:
     #     path: /config/users_database.yml
+    authentication_backend:
+      password_reset:
+        disable: false
+      refresh_interval: 5m
+      lldap:
+        implementation: custom
+        url: ldap://lldap-service:3890
+        timeout: 5s
+        start_tls: false
+        base_dn: dc=example,dc=com
+        additional_users_dn: ou=users
+        users_filter: (&({username_attribute}={input})(objectClass=person))
+        additional_groups_dn: ou=groups
+        groups_filter: "(member={dn})"
+        group_name_attribute: cn
+        mail_attribute: mail
+        display_name_attribute: displayName
+        username_attribute: uid
+        server: lldap-service
+        port: 17170
+        user: cn=admin,dc=example,dc=com
+        password: adminpassword
 
     access_control:
       config_type: terminus
@@ -306,7 +328,7 @@ spec:
     spec:
       serviceAccountName: os-internal
       serviceAccount: os-internal
-      priorityClassName: "system-cluster-critical"      
+      priorityClassName: "system-cluster-critical"
       initContainers:
       - name: init-container
         image: 'postgres:16.0-alpine3.18'
@@ -338,7 +360,7 @@ spec:
 
       containers:      
       - name: authelia
-        image: beclab/auth:0.1.42
+        image: beclab/auth:0.1.43
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9091
