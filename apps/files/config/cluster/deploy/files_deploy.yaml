@@ -45,9 +45,8 @@ spec:
       serviceAccount: os-internal
       serviceAccountName: os-internal
       securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
+        runAsUser: 0
+        runAsNonRoot: false
       initContainers:
         - name: init-data
           image: busybox:1.28
@@ -73,7 +72,7 @@ spec:
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
-            runAsUser: 1000
+            runAsUser: 0
           ports:
             - containerPort: 8080
           env:
@@ -98,7 +97,7 @@ spec:
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
-            runAsUser: 1000
+            runAsUser: 0
             privileged: true
           ports:
           - containerPort: 9090
@@ -118,7 +117,7 @@ spec:
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
-            runAsUser: 1000
+            runAsUser: 0
             privileged: true
           volumeMounts:
             - name: fb-data
@@ -260,7 +259,7 @@ spec:
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
-            runAsUser: 1000
+            runAsUser: 0
             privileged: true
         - name: nginx
           image: 'nginx:stable-alpine3.17-slim'
