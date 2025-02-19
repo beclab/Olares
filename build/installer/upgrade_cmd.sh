@@ -482,7 +482,7 @@ function upgrade_terminus(){
 
     # patch
     ensure_success $sh_c "${KUBECTL} apply -f ${BASE_DIR}/deploy/patch-globalrole-workspace-manager.yaml"
-    ensure_success $sh_c "$KUBECTL apply -f ${BASE_DIR}/deploy/patch-notification-manager.yaml"
+#    ensure_success $sh_c "$KUBECTL apply -f ${BASE_DIR}/deploy/patch-notification-manager.yaml"
 
     # clear apps values.yaml
     cat /dev/null > ${BASE_DIR}/wizard/config/apps/values.yaml

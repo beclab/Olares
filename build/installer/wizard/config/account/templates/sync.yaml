@@ -1,0 +1,18 @@
+apiVersion: iam.kubesphere.io/v1alpha2
+kind: Sync
+metadata:
+  name: lldap
+spec:
+  lldap:
+    name: ldap
+    url: "http://lldap-service.os-system:17170"
+    userBlacklist:
+      - admin
+      - terminus
+    groupWhitelist:
+      - lldap_admin
+      - lldap_regular
+    credentialsSecret:
+      kind: Secret
+      name: lldap-credentials
+      namespace: os-system
