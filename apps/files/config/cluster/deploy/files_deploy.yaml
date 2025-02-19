@@ -77,7 +77,7 @@ spec:
             - containerPort: 8080
           env:
             - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.56'
+              value: 'beclab/files-server:v0.2.57'
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -113,7 +113,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.56
+          image: beclab/files-server:v0.2.57
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -393,7 +393,7 @@ spec:
           name: check-nats
       containers:
         - name: files
-          image: beclab/files-server:v0.2.56
+          image: beclab/files-server:v0.2.57
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
