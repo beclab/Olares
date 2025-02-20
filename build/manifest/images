@@ -1,4 +1,5 @@
-beclab/ks-apiserver:v3.3.0-ext-3
+beclab/ks-apiserver:0.0.2
+beclab/ks-controller-manager:0.0.2
 beclab/kube-state-metrics:v2.3.0-ext
 beclab/notification-manager-ext:v0.1.1-ext
 beclab/notification-manager-operator-ext:v0.1.0-ext
@@ -68,4 +69,4 @@ rancher/mirrored-library-traefik:2.6.2
 rancher/mirrored-metrics-server:v0.5.2
 rancher/mirrored-pause:3.6
 beclab/reverse-proxy:v0.1.4
-beclab/upgrade-job:0.1.5
+beclab/upgrade-job:0.1.7
