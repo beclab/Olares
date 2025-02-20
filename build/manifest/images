@@ -68,4 +68,4 @@ rancher/mirrored-library-traefik:2.6.2
 rancher/mirrored-metrics-server:v0.5.2
 rancher/mirrored-pause:3.6
 beclab/reverse-proxy:v0.1.4
-beclab/upgrade-job:0.1.5
+beclab/upgrade-job:0.1.7
