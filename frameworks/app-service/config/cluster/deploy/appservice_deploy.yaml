@@ -149,7 +149,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.2.77
+        image: beclab/app-service:0.2.78
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -173,7 +173,7 @@ spec:
         - name: UPLOAD_CONTAINER_IMAGE
           value: "beclab/upload:v1.0.3"
         - name: JOB_IMAGE
-          value: "beclab/upgrade-job:0.1.5"
+          value: "beclab/upgrade-job:0.1.7"
         - name: SHARED_LIB_PATH
           value: {{ .Values.sharedlib }}
         - name: CLUSTER_CPU_THRESHOLD
