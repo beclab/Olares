@@ -66,7 +66,7 @@ spec:
 
       containers:
       - name: edge-desktop
-        image: beclab/desktop:v0.2.47
+        image: beclab/desktop:v0.2.48
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: false
