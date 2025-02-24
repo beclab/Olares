@@ -78,7 +78,7 @@ spec:
             value: http://bfl.{{ .Release.Namespace }}:8080
 
       - name: desktop-server
-        image: beclab/desktop-server:v0.2.46
+        image: beclab/desktop-server:v0.2.48
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
