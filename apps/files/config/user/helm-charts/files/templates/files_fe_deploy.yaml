@@ -297,7 +297,7 @@ spec:
 #        - /filebrowser
 #        - --noauth
       - name: files-frontend
-        image: beclab/files-frontend:v1.3.31
+        image: beclab/files-frontend:v1.3.35
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: false
@@ -339,6 +339,8 @@ spec:
           mountPath: /appdata/
         - name: userspace-app-dir
           mountPath: /data/Application
+        - name: data-dir
+          mountPath: /data
       - name: task-executor
         image: beclab/driveexecutor:v0.0.47
         imagePullPolicy: IfNotPresent
@@ -360,6 +362,8 @@ spec:
           mountPath: /appdata/
         - name: userspace-app-dir
           mountPath: /data/Application
+        - name: data-dir
+          mountPath: /data
 #      - name: terminus-upload-sidecar
 #        image: beclab/upload:v1.0.3
 #        env:
@@ -422,6 +426,10 @@ spec:
               fieldPath: status.podIP
 
       volumes:
+      - name: data-dir
+        hostPath:
+          path: {{ .Values.rootPath }}/rootfs/userspace
+          type: Directory
       - name: watch-dir
         hostPath:
           type: Directory
