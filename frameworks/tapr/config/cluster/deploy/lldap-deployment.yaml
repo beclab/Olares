@@ -81,7 +81,7 @@ spec:
             - name: RUST_BACKTRACE
               value: "full"
           image: beclab/lldap:0.0.1
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           name: lldap
           ports:
             - containerPort: 3890
