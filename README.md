@@ -90,7 +90,7 @@ Olares' architecture is based on two core principles:
 
   ![Olares Architecture](https://file.bttcdn.com/github/terminus/v2/olares-arch-3.png)
 
- For detailed description of each component, refer to [Olares architecture](https://docs.olares.xyz/manual/platform-architecture.html).
+ For detailed description of each component, refer to [Olares architecture](https://docs.olares.xyz/manual/system-architecture.html).
 
 ## Features
 

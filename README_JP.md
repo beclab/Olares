@@ -88,7 +88,7 @@ Olaresのアーキテクチャは、次の2つの基本原則に基づいてい�
 
   ![Olaresのアーキテクチ](https://file.bttcdn.com/github/terminus/v2/olares-arch-3.png)
 
-各コンポーネントの詳細については、[Olares アーキテクチャ](https://docs.olares.xyz/manual/platform-architecture.html)（英語版）をご参照ください。
+各コンポーネントの詳細については、[Olares アーキテクチャ](https://docs.olares.xyz/manual/system-architecture.html)（英語版）をご参照ください。
 
 ## 機能
 

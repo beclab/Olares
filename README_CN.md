@@ -89,7 +89,7 @@ Olares 的架构设计遵循两个核心原则：
 
   ![架构](https://file.bttcdn.com/github/terminus/v2/olares-arch-3.png)
 
-详细描述请参考 [Olares 架构](https://docs.joinolares.cn/zh/manual/platform-architecture.html)文档。
+详细描述请参考 [Olares 架构](https://docs.joinolares.cn/zh/manual/system-architecture.html)文档。
 
 ## 功能特性
 
