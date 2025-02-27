@@ -517,9 +517,11 @@ data:
         
       clusters:
       - name: original_dst
-        connect_timeout: 5000s
+        connect_timeout: 120s
         type: ORIGINAL_DST
         lb_policy: CLUSTER_PROVIDED
+        common_http_protocol_options:
+          idle_timeout: 10s
       - name: authelia
         connect_timeout: 2s
         type: LOGICAL_DNS
@@ -692,6 +694,8 @@ data:
         connect_timeout: 5000s
         type: ORIGINAL_DST
         lb_policy: CLUSTER_PROVIDED
+        common_http_protocol_options:
+          idle_timeout: 10s
       - name: ws_original_dst
         connect_timeout: 5000s
         type: LOGICAL_DNS
