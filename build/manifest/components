@@ -20,3 +20,5 @@ debian11_cuda-keyring_1.1-1_all.deb,pkg/components,https://developer.download.nv
 libnvidia-gpgkey,pkg/components,https://nvidia.github.io/libnvidia-container/gpgkey,https://nvidia.github.io/libnvidia-container/gpgkey,libnvidia-gpgkey
 libnvidia-container.list,pkg/components,https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list,https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list,libnvidia-container.list
 
+restic-linux-0.17.3,pkg/components,https://github.com/restic/restic/releases/download/v0.17.3/restic_0.17.3_linux_amd64.bz2,https://github.com/restic/restic/releases/download/v0.17.3/restic_0.17.3_linux_arm64.bz2,restic
+restic-darwin-0.17.3,pkg/components,https://github.com/restic/restic/releases/download/v0.17.3/restic_0.17.3_darwin_amd64.bz2,https://github.com/restic/restic/releases/download/v0.17.3/restic_0.17.3_darwin_arm64.bz2,restic
