@@ -1,0 +1,966 @@
+
+---
+# Source: opentelemetry-operator/templates/admission-webhooks/operator-webhook.yaml
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/tls
+metadata:
+  annotations:
+    "helm.sh/hook": "pre-install,pre-upgrade"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: webhook
+  name: otel-opentelemetry-operator-controller-manager-service-cert
+  namespace: os-system
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURyVENDQXBXZ0F3SUJBZ0lSQUtNbllGaXU2M3dnZU4vUGZXS0k3dHN3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUNZeEpEQWlCZ05WQkFNVEcyOTBaV3d0CmIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjakNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0MKQVFvQ2dnRUJBTDB6RjdXR0ZPSVNjeEpxdzJ4OGlrMXZiOWxTNEk5OXpPRzhiQWVwNzM5VTE3Tk1SR1NEQ0U0ZApzQXFpNlpQeDVzNGFCSzU3MXYraDdCcnVLaUlJeGU5OEg1OTRITkJzL2tKQ0ViU1Q5cTZqYnR3S1FTOTR4RWpQCk1yUndpQXlkVUlSOVV6QWJvQXFtRVBSRGJsaDRwY0p6QXBPQVhINk8ySG05OHpZeHNIdktRWEkrckt5SUxoenUKLzV4Lzk1NjdhNW0rRHVoOWNuT0Vtek5UZkpUeG1tQTRZWFVJaGk1NDdZOGFGc0ZheWhBTnpUcVlKV041bklCbwpTcWJURjJzeFd4NDZVdGJQUFFkUkxxdEI2VWtvVlRSdXRaemF3dXh5OERUbm1ITDlYemFtaWRhZmdmRC9oNThHCnlMd1NocStrMzVyWk1YVERJTG9zNE1lc1BHbjZoQUVDQXdFQUFhT0J6akNCeXpBT0JnTlZIUThCQWY4RUJBTUMKQmFBd0hRWURWUjBsQkJZd0ZBWUlLd1lCQlFVSEF3RUdDQ3NHQVFVRkJ3TUNNQXdHQTFVZEV3RUIvd1FDTUFBdwpId1lEVlIwakJCZ3dGb0FVTlNGVUMrQ0RqdWgvL3h6MzNtL09ScVlhckpNd2F3WURWUjBSQkdRd1lvSXRiM1JsCmJDMXZjR1Z1ZEdWc1pXMWxkSEo1TFc5d1pYSmhkRzl5TFhkbFltaHZiMnN1YjNNdGMzbHpkR1Z0Z2pGdmRHVnMKTFc5d1pXNTBaV3hsYldWMGNua3RiM0JsY21GMGIzSXRkMlZpYUc5dmF5NXZjeTF6ZVhOMFpXMHVjM1pqTUEwRwpDU3FHU0liM0RRRUJDd1VBQTRJQkFRQnY0cVBxSFdWeVZrVTk4ZWxjYVQ3aTJoY0dWRFRPSkJOZUkzZTUyaDlQCjlZOEkvQXJEWmR4Wmw3YnF4Zy9XdGFPNDRjUjMrWi9pTTZGS0F5WEZvd0tGSXpVMTZ6ZjNmRGFDQStkY2ppR1IKcHpEaEtjbEREM0cyTExxNFRlRkdKWVdWaTAzTG5ub1hjU0xCQXNnZDhhZHRQRUpsSWxyMFVUaFp1TDFkTndZeApwQ3VKZkVIcUVEdjNyRHpGdk0ySzlLTW1yNE11UG4rK083eStxK2JER3dxRG8yOG5WaTI0NGNJbjFVcENndDVnCjZHQmxQbzU5a3FzRTJRR01zYWRWQlpKRjQzamY3RUZ4LzF1dGlNZlBWaTRvc2YwMjIzK2xBY3h1RERuM1lFeXQKdXdiUTR3TnFuUjl0VUZtbWpyQXFZOXY3cWZ6WjMxeFdSVXAxbG1vU2pOTzgKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcEFJQkFBS0NBUUVBdlRNWHRZWVU0aEp6RW1yRGJIeUtUVzl2MlZMZ2ozM000YnhzQjZudmYxVFhzMHhFClpJTUlUaDJ3Q3FMcGsvSG16aG9Fcm52Vy82SHNHdTRxSWdqRjczd2ZuM2djMEd6K1FrSVJ0SlAycnFOdTNBcEIKTDNqRVNNOHl0SENJREoxUWhIMVRNQnVnQ3FZUTlFTnVXSGlsd25NQ2s0QmNmbzdZZWIzek5qR3dlOHBCY2o2cwpySWd1SE83L25ILzNucnRybWI0TzZIMXljNFNiTTFOOGxQR2FZRGhoZFFpR0xuanRqeG9Xd1ZyS0VBM05PcGdsClkzbWNnR2hLcHRNWGF6RmJIanBTMXM4OUIxRXVxMEhwU1NoVk5HNjFuTnJDN0hMd05PZVljdjFmTnFhSjFwK0IKOFArSG53Ykl2QktHcjZUZm10a3hkTU1ndWl6Z3g2dzhhZnFFQVFJREFRQUJBb0lCQVFDTFovY2pRSDFvcWxGeAprNHNWQjVyY1BhejdRNDdGQzl1SHhNOFF3b3orbEdRdTc1WkJQUzlFWjZtTDNNZ2d3NC9kOHR2YU9OT05IaUViCklydVd3a0llR0tZd1dVOVozOFZreXN2QzgzZEM3SmRGdUtTWk52SGgrQkdUVkl0YVNCdkkwNU1WRW5YVkF0SGgKT1VJNEhBVi9Ca0V5cjlUM1I0ZUlCSWNOT29XZ1gzcTFyUCtqbk9xdldCcUJ1VW5Ec0RNYVg0NjdJYUZrdjZ3RQpVZFZBbHFkaXdDQXY4NWM2SnhRY0Q0QjNtMUMzZGcxc1pDZ0gzRUt6UzQycjJnUE9EUjJPa3oxQXVMYkt5WDhICnVib3FuQUN6ZVhQWDBDVElEZ1JlR2huTGZ6a0ZLL09DekNCdTZpTFh5UVVCZTdPQkd6dk9RV25wNFVaQnBhY0UKaGk0dWJmNkZBb0dCQVB0SnZ5TjhrV3p5VGlxVUtKQUcrZzcyQkNlUlFrNytoaHJJRVZUYVpwWW9lMEJjcWlmNAo5T3BZUjJXeEhSSkYyak1CNXliTWRhalVDUTRxS2NWUTd4RjA3V3AwUG1zUlR1QU1NakMyeUp5VlJUWWRZSkhhCmlDejZidWpzWlMyRkFQdmJMSnorZU1ISVBtait0UlNLd00zdWlMcE9VaXAzbVdEaEFlYVhyWDNmQW9HQkFNQy8KVGNPNDZ1enZBUjREUk9FQmcyL3Bsd3ZieVNENVUrU0wvWHBHVjRJUTNGMlVJRUxRRE45YXlqVGpTVWRTVDdINgo0OFRxYlNVVVhsY3NFTSs2MXRYZjhYUTNJRWR0VTVBWHRsaFNvN0JnSUtIa1ltN1IzeWt2UUV1SVdXUU15MGY2CmR2UTRkRk0rZVVzOGlYS2JPYU8rNVFWUkR1N0tjUGtveTA1cGhIb2ZBb0dCQUpqaGhTaFI0U2duUXVja3ZJamoKdGI3a2JpS2tmWE1SNXdUa002Y3NPTDJpWTFvRkJvRExOalpjL3hNZmJsQnZyeERaVjRpRFhCSWE3bWR2djNvTQpnMlpiZlJZSEl2S0ExVHY2TDQ3enBabWVOejExSWd1YXFMNjBua1dYalBia3RIU0dJOTVmODVmeC9BWms4RVpQCkpINGxZWW4zbklXNXZkYnpEZlQ4MHRDQkFvR0FQYmxGY3ViMXZGZ3hXR1lkbVp4OWRjb3RCNndqZFg3Q2djN2UKcGxoK1QzV016QjdTVWZNRUhFYWJ1R0lNcGwxU2ppRlU3VXRSRm0yMlpGNEZLRENoK2EyVVNlNFpWU1pLZXp0TQp0bTRJWTBQMVQwS3V6dVJBZlpUWEZ4a2IzekZGcTlBbVpjRHFaM243SjcvRUdFSmpLKy9Hc1hRcXZ3ZHZOQ3IvCktDWWNPV3NDZ1lBQXpiNGwwcGxLT3VVSEduY1FrZW9HN1FOTC9WbXRGY1htOS94OFBJN1Q3dmhBQ2RaYWNoZ1EKUmM2WU83NVUrQzB0ZFVXZDdreUFBakM4ejBsY2xmOGptUWs0akZZUGJoQWp4YVdubFB2Tk1jS0JhMURiS002VQp0WFY4bHVSWXMzcDhqVm9OOVRCYjBiSkVCQmNjanl0Z0s0eTU0TUNxK0NaQUNnTDBvQjc1MUE9PQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo=
+  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+---
+
+# Source: opentelemetry-operator/templates/tests/test-service-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "otel-opentelemetry-operator-metrics"
+  namespace: os-system
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: "busybox:latest"
+      env:
+        - name: MANAGER_METRICS_SERVICE_CLUSTERIP
+          value: "otel-opentelemetry-operator"
+        - name: MANAGER_METRICS_SERVICE_PORT
+          value: "8443"
+      command:
+        - sh
+        - -c
+        # The following shell script tests if the controller-manager-metrics-service is up.
+        # If the service is up, when we try to wget its exposed port, we will get an HTTP error 400.
+        - |
+          wget_output=$(wget -q "$MANAGER_METRICS_SERVICE_CLUSTERIP:$MANAGER_METRICS_SERVICE_PORT")
+          if wget_output=="wget: server returned error: HTTP/1.0 400 Bad Request"
+          then exit 0
+          else exit 1
+          fi
+  restartPolicy: Never
+---
+# Source: opentelemetry-operator/templates/tests/test-service-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "otel-opentelemetry-operator-webhook"
+  namespace: os-system
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: "busybox:latest"
+      env:
+        - name: WEBHOOK_SERVICE_CLUSTERIP
+          value: "otel-opentelemetry-operator-webhook"
+        - name: WEBHOOK_SERVICE_PORT
+          value: "443"
+      command:
+        - sh
+        - -c
+        # The following shell script tests if the webhook service is up. If the service is up, when we try
+        # to wget its exposed port, we will get an HTTP error 400.
+        - |
+          wget_output=$(wget -q "$WEBHOOK_SERVICE_CLUSTERIP:$WEBHOOK_SERVICE_PORT")
+          if wget_output=="wget: server returned error: HTTP/1.0 400 Bad Request"
+          then exit 0
+          else exit 1
+          fi
+  restartPolicy: Never
+MANIFEST:
+---
+# Source: opentelemetry-operator/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: opentelemetry-operator
+  namespace: os-system
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+---
+
+# Source: opentelemetry-operator/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+  name: otel-opentelemetry-operator-manager
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - persistentvolumeclaims
+      - persistentvolumes
+      - pods
+      - serviceaccounts
+      - services
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - daemonsets
+      - deployments
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+      - extensions
+    resources:
+      - replicasets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - autoscaling
+    resources:
+      - horizontalpodautoscalers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - config.openshift.io
+    resources:
+      - infrastructures
+      - infrastructures/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+      - get
+      - list
+      - update
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - podmonitors
+      - servicemonitors
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - opentelemetry.io
+    resources:
+      - instrumentations
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - opentelemetry.io
+    resources:
+      - opampbridges
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - opentelemetry.io
+    resources:
+      - opampbridges/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - opentelemetry.io
+    resources:
+      - opampbridges/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - opentelemetry.io
+    resources:
+      - opentelemetrycollectors
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - opentelemetry.io
+    resources:
+      - opentelemetrycollectors/finalizers
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - opentelemetry.io
+    resources:
+      - opentelemetrycollectors/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - route.openshift.io
+    resources:
+      - routes
+      - routes/custom-host
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+    - opentelemetry.io
+    resources:
+      - targetallocators
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+    - opentelemetry.io
+    resources:
+    - targetallocators/status
+    verbs:
+    - get
+    - patch
+    - update
+  - apiGroups:
+      - cert-manager.io
+    resources:
+      - issuers
+      - certificaterequests
+      - certificates
+    verbs:
+      - create
+      - get
+      - list
+      - watch
+      - update
+      - patch
+      - delete
+---
+# Source: opentelemetry-operator/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+  name: otel-opentelemetry-operator-metrics
+rules:
+  - nonResourceURLs:
+      - /metrics
+    verbs:
+      - get
+---
+# Source: opentelemetry-operator/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+  name: otel-opentelemetry-operator-proxy
+rules:
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
+    verbs:
+      - create
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
+---
+# Source: opentelemetry-operator/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+  name: otel-opentelemetry-operator-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-opentelemetry-operator-manager
+subjects:
+  - kind: ServiceAccount
+    name: opentelemetry-operator
+    namespace: os-system
+---
+# Source: opentelemetry-operator/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+  name: otel-opentelemetry-operator-proxy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-opentelemetry-operator-proxy
+subjects:
+  - kind: ServiceAccount
+    name: opentelemetry-operator
+    namespace: os-system
+---
+# Source: opentelemetry-operator/templates/role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+  name: otel-opentelemetry-operator-leader-election
+  namespace: os-system
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+---
+# Source: opentelemetry-operator/templates/rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+  name: otel-opentelemetry-operator-leader-election
+  namespace: os-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: otel-opentelemetry-operator-leader-election
+subjects:
+  - kind: ServiceAccount
+    name: opentelemetry-operator
+    namespace: os-system
+---
+# Source: opentelemetry-operator/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+  name: otel-opentelemetry-operator
+  namespace: os-system
+spec:
+  ports:
+    - name: https
+      port: 8443
+      protocol: TCP
+      targetPort: https
+    - name: metrics
+      port: 8080
+      protocol: TCP
+      targetPort: metrics
+  selector:
+      app.kubernetes.io/name: opentelemetry-operator
+      app.kubernetes.io/component: controller-manager
+---
+# Source: opentelemetry-operator/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+  name: otel-opentelemetry-operator-webhook
+  namespace: os-system
+spec:
+  ports:
+    - port: 443
+      protocol: TCP
+      targetPort: webhook-server
+  selector:
+      app.kubernetes.io/name: opentelemetry-operator
+      app.kubernetes.io/component: controller-manager
+---
+# Source: opentelemetry-operator/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+    applications.app.bytetrade.io/author: bytetrade.io
+  name: otel-opentelemetry-operator
+  namespace: os-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opentelemetry-operator
+      app.kubernetes.io/component: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        app.kubernetes.io/name: opentelemetry-operator
+        app.kubernetes.io/component: controller-manager
+    spec:
+      containers:
+        - args:
+            - --metrics-addr=0.0.0.0:8080
+            - --enable-leader-election
+            - --health-probe-addr=:8081
+            - --webhook-port=9443
+            - --collector-image=otel/opentelemetry-collector-k8s:0.118.0
+          command:
+            - /manager
+          env:
+            - name: ENABLE_WEBHOOKS
+              value: "true"
+          image: "ghcr.io/open-telemetry/opentelemetry-operator/opentelemetry-operator:0.118.0"
+          name: manager
+          ports:
+            - containerPort: 8080
+              name: metrics
+              protocol: TCP
+            - containerPort: 9443
+              name: webhook-server
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources: 
+            {}
+          volumeMounts:
+            - mountPath: /tmp/k8s-webhook-server/serving-certs
+              name: cert
+              readOnly: true
+        
+        - args:
+            - --secure-listen-address=0.0.0.0:8443
+            - --upstream=http://127.0.0.1:8080/
+            - --v=0
+          image: "quay.io/brancz/kube-rbac-proxy:v0.18.1"
+          name: kube-rbac-proxy
+          ports:
+            - containerPort: 8443
+              name: https
+              protocol: TCP
+      serviceAccountName: opentelemetry-operator
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: otel-opentelemetry-operator-controller-manager-service-cert
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+---
+
+# Source: opentelemetry-operator/templates/admission-webhooks/operator-webhook.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: webhook
+  name: otel-opentelemetry-operator-mutation
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      service:
+        name: otel-opentelemetry-operator-webhook
+        namespace: os-system
+        path: /mutate-opentelemetry-io-v1alpha1-instrumentation
+        port: 443
+    failurePolicy: Fail
+    name: minstrumentation.kb.io
+    rules:
+    - apiGroups:
+        - opentelemetry.io
+      apiVersions:
+        - v1alpha1
+      operations:
+        - CREATE
+        - UPDATE
+      resources:
+        - instrumentations
+      scope: Namespaced
+    sideEffects: None
+    timeoutSeconds: 10
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      service:
+        name: otel-opentelemetry-operator-webhook
+        namespace: os-system
+        path: /mutate-opentelemetry-io-v1beta1-opentelemetrycollector
+        port: 443
+    failurePolicy: Fail
+    name: mopentelemetrycollectorbeta.kb.io
+    rules:
+      - apiGroups:
+          - opentelemetry.io
+        apiVersions:
+          - v1beta1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - opentelemetrycollectors
+        scope: Namespaced
+    sideEffects: None
+    timeoutSeconds: 10
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      service:
+        name: otel-opentelemetry-operator-webhook
+        namespace: os-system
+        path: /mutate-v1-pod
+        port: 443
+    failurePolicy: Ignore
+    name: mpod.kb.io
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - pods
+        scope: Namespaced
+    sideEffects: None
+    timeoutSeconds: 10
+---
+
+# Source: opentelemetry-operator/templates/admission-webhooks/operator-webhook.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: webhook
+  name: otel-opentelemetry-operator-validation
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      service:
+        name: otel-opentelemetry-operator-webhook
+        namespace: os-system
+        path: /validate-opentelemetry-io-v1alpha1-instrumentation
+        port: 443
+    failurePolicy:  Fail
+    name: vinstrumentationcreateupdate.kb.io
+    rules:
+    - apiGroups:
+        - opentelemetry.io
+      apiVersions:
+        - v1alpha1
+      operations:
+        - CREATE
+        - UPDATE
+      resources:
+        - instrumentations
+      scope: Namespaced
+    sideEffects: None
+    timeoutSeconds: 10
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      service:
+        name: otel-opentelemetry-operator-webhook
+        namespace: os-system
+        path: /validate-opentelemetry-io-v1alpha1-instrumentation
+        port: 443
+    failurePolicy: Ignore
+    name: vinstrumentationdelete.kb.io
+    rules:
+      - apiGroups:
+          - opentelemetry.io
+        apiVersions:
+          - v1alpha1
+        operations:
+          - DELETE
+        resources:
+          - instrumentations
+        scope: Namespaced
+    sideEffects: None
+    timeoutSeconds: 10
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      service:
+        name: otel-opentelemetry-operator-webhook
+        namespace: os-system
+        path: /validate-opentelemetry-io-v1beta1-opentelemetrycollector
+        port: 443
+    failurePolicy: Fail
+    name: vopentelemetrycollectorcreateupdatebeta.kb.io
+    rules:
+      - apiGroups:
+          - opentelemetry.io
+        apiVersions:
+          - v1beta1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - opentelemetrycollectors
+        scope: Namespaced
+    sideEffects: None
+    timeoutSeconds: 10
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      service:
+        name: otel-opentelemetry-operator-webhook
+        namespace: os-system
+        path: /validate-opentelemetry-io-v1beta1-opentelemetrycollector
+        port: 443
+    failurePolicy: Ignore
+    name: vopentelemetrycollectordeletebeta.kb.io
+    rules:
+      - apiGroups:
+          - opentelemetry.io
+        apiVersions:
+          - v1beta1
+        operations:
+          - DELETE
+        resources:
+          - opentelemetrycollectors
+        scope: Namespaced
+    sideEffects: None
+    timeoutSeconds: 10
+
+
+---
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: jaeger-storage-instance 
+  namespace: os-system
+  labels:
+    applications.app.bytetrade.io/author: bytetrade.io
+  
+spec:
+  image: jaegertracing/jaeger:2.3.0
+  volumes:
+  - name: storage
+    hostPath:
+      path: {{ .Values.rootPath }}/userdata/otel-data
+      type: DirectoryOrCreate
+  volumeMounts:
+  - name: storage
+    mountPath: /data
+    
+  ports:
+  - name: jaeger
+    port: 16686
+  config: |
+    service:
+      extensions: [jaeger_storage, jaeger_query, healthcheckv2]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [jaeger_storage_exporter]
+      telemetry:
+        resource:
+          service.name: jaeger
+        metrics:
+          level: detailed
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+        logs:
+          level: info
+
+    extensions:
+      healthcheckv2:
+        use_v2: true
+        http:
+
+      jaeger_query:
+        storage:
+          traces: some_store
+          traces_archive: another_store
+        ui:
+
+      jaeger_storage:
+        backends:
+          some_store:
+            badger:
+              directories:
+                keys: "/data/jaeger/"
+                values: "/data/jaeger/"
+              ephemeral: false
+          another_store:
+            badger:
+              directories:
+                keys: "/data/jaeger_archive/"
+                values: "/data/jaeger_archive/"
+              ephemeral: false
+
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+
+    processors:
+      batch:
+
+    exporters:
+      jaeger_storage_exporter:
+        trace_storage: some_store
+
+---
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: olares-instrumentation
+  namespace: os-system
+spec:
+  exporter:
+    endpoint: http://jaeger-storage-instance-collector.os-system:4317
+  propagators:
+    - tracecontext
+    - baggage
+    - b3
+  sampler:
+    type: parentbased_traceidratio
+    argument: "1"
+  python:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://jaeger-storage-instance-collector.os-system:4318
+  dotnet:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://jaeger-storage-instance-collector.os-system:4318
+  nodejs:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://jaeger-storage-instance-collector.os-system:4318
+

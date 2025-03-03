@@ -1,0 +1,58 @@
+
+---
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: olares-instrumentation
+  namespace: {{ .Release.Namespace }}
+spec:
+  exporter:
+    endpoint: http://jaeger-storage-instance-collector.os-system:4317
+  propagators:
+    - tracecontext
+    - baggage
+    - b3
+  sampler:
+    type: parentbased_traceidratio
+    argument: "1"
+  python:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://jaeger-storage-instance-collector.os-system:4318
+  dotnet:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://jaeger-storage-instance-collector.os-system:4318
+  nodejs:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://jaeger-storage-instance-collector.os-system:4318
+
+---
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: olares-instrumentation
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  exporter:
+    endpoint: http://jaeger-storage-instance-collector.os-system:4317
+  propagators:
+    - tracecontext
+    - baggage
+    - b3
+  sampler:
+    type: parentbased_traceidratio
+    argument: "1"
+  python:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://jaeger-storage-instance-collector.os-system:4318
+  dotnet:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://jaeger-storage-instance-collector.os-system:4318
+  nodejs:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://jaeger-storage-instance-collector.os-system:4318        
