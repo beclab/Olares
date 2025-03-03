@@ -172,7 +172,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.0.19"
+        image: "beclab/yt-dlp:v0.0.21"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -220,7 +220,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: download-spider
-        image: "beclab/download-spider:v0.0.16"
+        image: "beclab/download-spider:v0.0.19"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -251,6 +251,8 @@ spec:
           value: {{ $nat_password | b64dec }}
         - name: NATS_SUBJECT
           value: "terminus.{{ .Release.Namespace }}.download_status"
+        - name: SETTING_URL
+          value: http://system-server.user-system-{{ .Values.bfl.username }}/legacy/v1alpha1/service.settings/v1/api/cookie/retrieve
         volumeMounts:
         - name: download-dir
           mountPath: /downloads

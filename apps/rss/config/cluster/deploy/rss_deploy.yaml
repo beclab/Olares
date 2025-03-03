@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: rss-server
-          image: beclab/rsshub-server:v0.0.3
+          image: beclab/rsshub-server:v0.0.5
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 1200

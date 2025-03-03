@@ -168,7 +168,7 @@ spec:
             value: user_space_{{ .Values.bfl.username }}_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.1.61"
+        image: "beclab/knowledge-base-api:v0.1.64"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -236,7 +236,7 @@ spec:
             memory: 1Gi
 
       - name: backend-server
-        image: "beclab/recommend-backend:v0.0.25"
+        image: "beclab/recommend-backend:v0.0.27"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -296,7 +296,7 @@ spec:
         - name: YT_DLP_API_URL
           value: http://download-svc.user-space-{{ .Values.bfl.username }}:3082/api/v1/get_metadata
         - name: DOWNLOAD_API_URL
-          value: http://download-svc.user-space-{{ .Values.bfl.username }}:3080/api/termius/download
+          value: http://download-svc.user-space-{{ .Values.bfl.username }}:3080/api
         - name: SETTING_API_URL
           value: http://system-server.user-system-{{ .Values.bfl.username }}/legacy/v1alpha1/service.settings/v1/api/cookie/retrieve
         volumeMounts:
