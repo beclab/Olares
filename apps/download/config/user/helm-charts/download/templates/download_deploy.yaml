@@ -172,7 +172,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.0.20"
+        image: "beclab/yt-dlp:v0.0.21"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -220,7 +220,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: download-spider
-        image: "beclab/download-spider:v0.0.18"
+        image: "beclab/download-spider:v0.0.19"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
