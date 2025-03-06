@@ -168,7 +168,7 @@ spec:
             value: user_space_{{ .Values.bfl.username }}_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.1.64"
+        image: "beclab/knowledge-base-api:v0.1.65"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -183,6 +183,8 @@ spec:
           value: 'http://rss-server.os-system:1200'
         - name: SEARCH_URL
           value: 'http://search3.os-system:80'
+        - name: UPLOAD_SAVE_PATH
+          value: '/data/Home/Documents/'
         - name: REDIS_PASSWORD
           valueFrom:
             configMapKeyRef:
