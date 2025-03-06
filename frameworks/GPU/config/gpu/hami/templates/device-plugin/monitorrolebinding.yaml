@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "hami-vgpu.device-plugin" . }}
+  labels:
+    app.kubernetes.io/component: "hami-device-plugin"
+    {{- include "hami-vgpu.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  #name: cluster-admin
+  name: {{ include "hami-vgpu.device-plugin" . }}-monitor
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "hami-vgpu.device-plugin" . }}
+    namespace: {{ .Release.Namespace | quote }}
