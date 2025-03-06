@@ -190,7 +190,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: control-hub-init
-          image: beclab/admin-console-frontend-v1:v0.4.12
+          image: beclab/admin-console-frontend-v1:v0.5.1
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -226,7 +226,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: wise-init
-          image: beclab/wise:v1.3.35
+          image: beclab/wise:v1.3.38
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -352,7 +352,7 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
         - name: settings-server
-          image: beclab/settings-server:v0.2.10
+          image: beclab/settings-server:v0.2.12
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
