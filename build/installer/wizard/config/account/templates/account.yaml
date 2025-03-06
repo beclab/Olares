@@ -7,14 +7,14 @@ metadata:
     iam.kubesphere.io/uninitialized: "true"
     helm.sh/resource-policy: keep
     bytetrade.io/owner-role: platform-admin
-    bytetrade.io/terminus-name: {{.Values.user.terminus_name}}
+    bytetrade.io/terminus-name: "{{.Values.user.terminus_name}}"
     bytetrade.io/launcher-auth-policy: two_factor
     bytetrade.io/launcher-access-level: "1"
 {{ if .Values.nat_gateway_ip }}
     bytetrade.io/nat-gateway-ip: {{ .Values.nat_gateway_ip }}
 {{ end }}            
 spec:
-  email: {{.Values.user.email}}
-  password: {{.Values.user.password}}
+  email: "{{.Values.user.email}}"
+  password: "{{.Values.user.password}}"
 status:
   state: Active
