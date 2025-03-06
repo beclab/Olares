@@ -24,6 +24,10 @@ for mod in "${PACKAGE_MODULE[@]}";do
                 bash ${BASE_DIR}/yaml2prop.sh -f $p | while read l;do 
                     if [[ "$l" == *".image = "* ]]; then 
                         echo "$l"
+                        if [[ $(echo "$l" | awk '{print $3}') == "value" ]]; then
+                            echo "ignoring template value"
+                            continue
+                        fi
                         echo "$l" >> ${TMP_MANIFEST}
                     fi;
                 done

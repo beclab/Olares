@@ -7,6 +7,9 @@ calico/node:v3.29.2
 beclab/citus:12.2
 kubesphere/kubectl:v1.22.0
 bitnami/kube-rbac-proxy:0.19.0
+registry.k8s.io/kube-apiserver:v1.32.2
+registry.k8s.io/kube-scheduler:v1.32.2
+registry.k8s.io/kube-proxy:v1.32.2
 registry.k8s.io/coredns/coredns:v1.11.3
 registry.k8s.io/pause:3.10
 kubesphere/prometheus-config-reloader:v0.55.1
@@ -26,11 +29,10 @@ beclab/l4-bfl-proxy:v0.2.7
 gcr.io/k8s-minikube/storage-provisioner:v5
 owncloudci/wait-for:latest
 beclab/recommend-argotask:v0.0.12
-nvcr.io/nvidia/k8s-device-plugin:v0.16.1
-beclab/nvshare:libnvshare-v0.0.1
-bytetrade/nvshare:nvshare-device-plugin
 bytetrade/nvshare:nvshare-scheduler
 beclab/nats-server-config-reloader:v1
 beclab/reverse-proxy:v0.1.4
 beclab/upgrade-job:0.1.7
 bytetrade/envoy:v1.25.11.1
+liangjw/kube-webhook-certgen:v1.1.1
+beclab/hami:v2.5.0

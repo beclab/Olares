@@ -1,0 +1,100 @@
+{{- if .Values.scheduler.kubeScheduler.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hami-vgpu.scheduler" . }}
+  labels:
+    app.kubernetes.io/component: hami-scheduler
+    {{- include "hami-vgpu.labels" . | nindent 4 }}
+data:
+  config.json: |
+    {
+        "kind": "Policy",
+        "apiVersion": "v1",
+        "extenders": [
+            {
+                "urlPrefix": "https://127.0.0.1:443",
+                "filterVerb": "filter",
+                "bindVerb": "bind",
+                "enableHttps": true,
+                "weight": 1,
+                "nodeCacheCapable": true,
+                "httpTimeout": 30000000000,
+                "tlsConfig": {
+                    "insecure": true
+                },
+                "managedResources": [
+                    {{- if .Values.devices.ascend.enabled }}
+                    {{- range .Values.devices.ascend.customresources }}
+                    {
+                      "name": "{{ . }}",
+                      "ignoredByScheduler": true
+                    },
+                    {{- end }}
+                    {{- end }}
+                    {{- if .Values.devices.mthreads.enabled }}
+                    {{- range .Values.devices.mthreads.customresources }}
+                    {
+                      "name": "{{ . }}",
+                      "ignoredByScheduler": true
+                    },
+                    {{- end }}
+                    {{- end }}
+                    {
+                        "name": "{{ .Values.resourceName }}",
+                        "ignoredByScheduler": true
+                    },
+                    {
+                        "name": "{{ .Values.resourceMem }}",
+                        "ignoredByScheduler": true
+                    },
+                    {
+                        "name": "{{ .Values.resourceCores }}",
+                        "ignoredByScheduler": true
+                    },
+                    {
+                        "name": "{{ .Values.resourceMemPercentage }}",
+                        "ignoredByScheduler": true
+                    },
+                    {
+                        "name": "{{ .Values.resourcePriority }}",
+                        "ignoredByScheduler": true
+                    },
+                    {
+                        "name": "{{ .Values.mluResourceName }}",
+                        "ignoredByScheduler": true
+                    },
+                    {
+                        "name": "{{ .Values.dcuResourceName }}",
+                        "ignoredByScheduler": true
+                    },
+                    {
+                        "name": "{{ .Values.dcuResourceMem }}",
+                        "ignoredByScheduler": true 
+                    },
+                    {
+                        "name": "{{ .Values.dcuResourceCores }}",
+                        "ignoredByScheduler": true
+                    },
+                    {
+                        "name": "{{ .Values.iluvatarResourceName }}",
+                        "ignoredByScheduler": true
+                    },
+                    {
+                        "name": "{{ .Values.metaxResourceName }}",
+                        "ignoredByScheduler": true
+                    },
+                    {
+                        "name": "{{ .Values.metaxResourceCore }}",
+                        "ignoredByScheduler": true
+                    },
+                    {
+                        "name": "{{ .Values.metaxResourceMem }}",
+                        "ignoredByScheduler": true
+                    }
+                ],
+                "ignoreable": false
+            }
+        ]
+    }
+{{- end }}

@@ -1,0 +1,55 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "hami-vgpu.fullname" . }}-admission-patch
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  labels:
+    {{- include "hami-vgpu.labels" . | nindent 4 }}
+    app.kubernetes.io/component: admission-webhook
+spec:
+  {{- if .Capabilities.APIVersions.Has "batch/v1alpha1" }}
+  # Alpha feature since k8s 1.12
+  ttlSecondsAfterFinished: 0
+  {{- end }}
+  template:
+    metadata:
+      name: {{ include "hami-vgpu.fullname" . }}-admission-patch
+      {{- if .Values.scheduler.patch.podAnnotations }}
+      annotations: {{ toYaml .Values.scheduler.patch.podAnnotations | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "hami-vgpu.labels" . | nindent 8 }}
+        app.kubernetes.io/component: admission-webhook
+        hami.io/webhook: ignore
+    spec:
+      {{- include "hami-vgpu.imagePullSecrets" . | nindent 6}}
+      {{- if .Values.scheduler.patch.priorityClassName }}
+      priorityClassName: {{ .Values.scheduler.patch.priorityClassName }}
+      {{- end }}
+      containers:
+        - name: patch
+          {{- if ge (regexReplaceAll "[^0-9]" .Capabilities.KubeVersion.Minor "" | int) 22 }}
+          image: {{ .Values.scheduler.patch.imageNew }}
+          {{- else }}
+          image: {{ .Values.scheduler.patch.image }}
+          {{- end }}
+          imagePullPolicy: {{ .Values.scheduler.patch.imagePullPolicy }}
+          args:
+            - patch
+            - --webhook-name={{ include "hami-vgpu.scheduler.webhook" . }}
+            - --namespace={{ .Release.Namespace }}
+            - --patch-validating=false
+            - --secret-name={{ include "hami-vgpu.scheduler.tls" . }}
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "hami-vgpu.fullname" . }}-admission
+      {{- if .Values.scheduler.patch.nodeSelector }}
+      nodeSelector: {{ toYaml .Values.scheduler.patch.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.scheduler.patch.tolerations }}
+      tolerations: {{ toYaml .Values.scheduler.patch.tolerations | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.scheduler.patch.runAsUser }}

@@ -1,0 +1,156 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hami-vgpu.scheduler" . }}
+  labels:
+    app.kubernetes.io/component: hami-scheduler
+    {{- include "hami-vgpu.labels" . | nindent 4 }}
+    {{- with .Values.global.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.annotations }}
+  annotations: {{ toYaml .Values.global.annotations | nindent 4}}
+  {{- end }}
+spec:
+  {{- if .Values.scheduler.leaderElect }}
+  replicas: {{ .Values.scheduler.replicas }}
+  {{- else }}
+  replicas: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: hami-scheduler
+      {{- include "hami-vgpu.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: hami-scheduler
+        {{- include "hami-vgpu.selectorLabels" . | nindent 8 }}
+        hami.io/webhook: ignore
+      {{- if .Values.scheduler.podAnnotations }}
+      annotations: {{ toYaml .Values.scheduler.podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- include "hami-vgpu.imagePullSecrets" . | nindent 6}}
+      serviceAccountName: {{ include "hami-vgpu.scheduler" . }}
+      priorityClassName: system-node-critical
+      containers:
+      {{- if .Values.scheduler.kubeScheduler.enabled }}
+        - name: kube-scheduler
+          image: "{{ .Values.scheduler.kubeScheduler.image }}:{{ include "resolvedKubeSchedulerTag" . }}"
+          imagePullPolicy: {{ .Values.scheduler.kubeScheduler.imagePullPolicy | quote }}
+          command:
+            - kube-scheduler
+             {{- if ge (regexReplaceAll "[^0-9]" .Capabilities.KubeVersion.Minor "" | int) 22 }}
+            {{- range .Values.scheduler.kubeScheduler.extraNewArgs }}
+            - {{ . }}
+            {{- end }}
+            {{- else }}
+            - --scheduler-name={{ .Values.schedulerName }}
+            {{- range .Values.scheduler.kubeScheduler.extraArgs }}
+            - {{ . }}
+            {{- end }}
+            {{- end }}
+            - --leader-elect={{ .Values.scheduler.leaderElect }}
+            - --leader-elect-resource-name={{ .Values.schedulerName }}
+            - --leader-elect-resource-namespace={{ .Release.Namespace }}
+          resources:
+          {{- toYaml .Values.scheduler.kubeScheduler.resources | nindent 12 }}
+          volumeMounts:
+            - name: scheduler-config
+              mountPath: /config
+        {{- end }}
+          {{- if .Values.scheduler.livenessProbe }}
+          livenessProbe:
+            failureThreshold: 8
+            httpGet:
+              path: /healthz
+              port: 10259
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 15
+          {{- end }}
+        - name: vgpu-scheduler-extender
+          image: {{ .Values.scheduler.extender.image }}:{{ .Values.version }}
+          imagePullPolicy: {{ .Values.scheduler.extender.imagePullPolicy | quote }}
+          env:
+          {{- if .Values.global.managedNodeSelectorEnable }}
+          {{- range $key, $value := .Values.global.managedNodeSelector }}
+            - name: NODE_SELECTOR_{{ $key | upper | replace "-" "_" }}
+              value: "{{ $value }}"
+          {{- end }}
+          {{- end }}
+          command:
+            - scheduler
+            - --http_bind=0.0.0.0:443
+            - --cert_file=/tls/tls.crt
+            - --key_file=/tls/tls.key
+            - --scheduler-name={{ .Values.schedulerName }}
+            - --metrics-bind-address={{ .Values.scheduler.metricsBindAddress }}
+            - --node-scheduler-policy={{ .Values.scheduler.defaultSchedulerPolicy.nodeSchedulerPolicy }}
+            - --gpu-scheduler-policy={{ .Values.scheduler.defaultSchedulerPolicy.gpuSchedulerPolicy }}
+            - --device-config-file=/device-config.yaml
+            {{- if .Values.devices.ascend.enabled }}
+            - --enable-ascend=true
+            {{- end }}
+            {{- if .Values.scheduler.nodeLabelSelector }}
+            - --node-label-selector={{- $first := true -}}
+              {{- range $key, $value := .Values.scheduler.nodeLabelSelector -}}
+              {{- if not $first }},{{ end -}}
+              {{- $key }}={{ $value -}}
+              {{- $first = false -}}
+              {{- end -}}
+            {{- end }}
+            {{- range .Values.scheduler.extender.extraArgs }}
+            - {{ . }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 443
+              protocol: TCP
+          resources:
+          {{- toYaml .Values.scheduler.extender.resources | nindent 12 }}
+          volumeMounts:
+            - name: tls-config
+              mountPath: /tls
+            - name: device-config
+              mountPath: /device-config.yaml
+              subPath: device-config.yaml
+          {{- if .Values.scheduler.livenessProbe }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 443
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 5
+          {{- end }}
+      volumes:
+        - name: tls-config
+          secret:
+            secretName: {{ template "hami-vgpu.scheduler.tls" . }}
+        {{- if .Values.scheduler.kubeScheduler.enabled }}
+        - name: scheduler-config
+          configMap:
+            {{- if ge (regexReplaceAll "[^0-9]" .Capabilities.KubeVersion.Minor "" | int) 22 }}
+            name: {{ template "hami-vgpu.scheduler" . }}-newversion
+            {{- else }}
+            name: {{ template "hami-vgpu.scheduler" . }}
+            {{- end }}
+        {{- end }}
+        - name: device-config
+          configMap:
+            name: {{ include "hami-vgpu.scheduler" . }}-device
+      {{- if .Values.scheduler.nodeSelector }}
+      nodeSelector: {{ toYaml .Values.scheduler.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.scheduler.tolerations }}
+      tolerations: {{ toYaml .Values.scheduler.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if .Values.scheduler.nodeName }}
+      nodeName: {{ .Values.scheduler.nodeName }}
+      {{- end }}

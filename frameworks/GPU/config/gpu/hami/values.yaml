@@ -1,0 +1,219 @@
+# Default values for hami-vgpu.
+
+nameOverride: ""
+fullnameOverride: ""
+imagePullSecrets: [ ]
+version: "v2.5.0"
+
+#Nvidia GPU Parameters
+resourceName: "nvidia.com/gpu"
+resourceMem: "nvidia.com/gpumem"
+resourceMemPercentage: "nvidia.com/gpumem-percentage"
+resourceCores: "nvidia.com/gpucores"
+resourcePriority: "nvidia.com/priority"
+
+#MLU Parameters
+mluResourceName: "cambricon.com/vmlu"
+mluResourceMem: "cambricon.com/mlu.smlu.vmemory"
+mluResourceCores: "cambricon.com/mlu.smlu.vcore"
+
+#Hygon DCU Parameters
+dcuResourceName: "hygon.com/dcunum"
+dcuResourceMem: "hygon.com/dcumem"
+dcuResourceCores: "hygon.com/dcucores"
+
+#Iluvatar GPU Parameters
+iluvatarResourceName: "iluvatar.ai/vgpu"
+iluvatarResourceMem: "iluvatar.ai/vcuda-memory"
+iluvatarResourceCore: "iluvatar.ai/vcuda-core"
+
+#Metax SGPU Parameters
+metaxResourceName: "metax-tech.com/sgpu"
+metaxResourceCore: "metax-tech.com/vcore"
+metaxResourceMem: "metax-tech.com/vmemory"
+
+schedulerName: "hami-scheduler"
+
+podSecurityPolicy:
+  enabled: false
+
+global:
+  gpuHookPath: /usr/local
+  labels: {}
+  annotations: {}
+  managedNodeSelectorEnable: false
+  managedNodeSelector:
+    usage: "gpu"
+
+
+scheduler:
+  # @param nodeName defines the node name and the nvidia-vgpu-scheduler-scheduler will schedule to the node.
+  # if we install the nvidia-vgpu-scheduler-scheduler as default scheduler, we need to remove the k8s default
+  # scheduler pod from the cluster first, we must specify node name to skip the schedule workflow.
+  nodeName: ""
+  #nodeLabelSelector:
+  #  "gpu": "on"
+  overwriteEnv: "false"
+  defaultSchedulerPolicy:
+    nodeSchedulerPolicy: binpack
+    gpuSchedulerPolicy: spread
+  metricsBindAddress: ":9395"
+  livenessProbe: false
+  leaderElect: true
+  # when leaderElect is true, replicas is available, otherwise replicas is 1.
+  replicas: 1
+  kubeScheduler:
+    # @param enabled indicate whether to run kube-scheduler container in the scheduler pod, it's true by default.
+    enabled: true
+    image: registry.k8s.io/kube-scheduler
+    imageTag: ""
+    imagePullPolicy: IfNotPresent
+    resources: {}
+      # If you do want to specify resources, uncomment the following lines, adjust them as necessary.
+      # and remove the curly braces after 'resources:'.
+#      limits:
+#        cpu: 1000m
+#        memory: 1000Mi
+#      requests:
+#        cpu: 100m
+#        memory: 100Mi
+    extraNewArgs:
+      - --config=/config/config.yaml
+      - -v=4
+    extraArgs:
+      - --policy-config-file=/config/config.json
+      - -v=4
+  extender:
+    image: "beclab/hami"
+    imagePullPolicy: IfNotPresent
+    resources: {}
+      # If you do want to specify resources, uncomment the following lines, adjust them as necessary,
+      # and remove the curly braces after 'resources:'.
+#      limits:
+#        cpu: 1000m
+#        memory: 1000Mi
+#      requests:
+#        cpu: 100m
+#        memory: 100Mi
+    extraArgs:
+      - --debug
+      - -v=4
+  podAnnotations: {}
+  tolerations: []
+  #serviceAccountName: "hami-vgpu-scheduler-sa"
+  admissionWebhook:
+    customURL:
+      enabled: false
+      # must be an endpoint using https.
+      # should generate host certs here
+      host: 127.0.0.1 # hostname or ip, can be your node'IP if you want to use https://<nodeIP>:<schedulerPort>/<path>
+      port: 31998
+      path: /webhook
+    whitelistNamespaces:
+    # Specify the namespaces that the webhook will not be applied to.
+      # - default
+      # - kube-system
+      # - istio-system
+    reinvocationPolicy: Never
+    failurePolicy: Ignore
+  patch:
+    image: jettech/kube-webhook-certgen:v1.5.2
+    imageNew: liangjw/kube-webhook-certgen:v1.1.1
+    imagePullPolicy: IfNotPresent
+    priorityClassName: ""
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    runAsUser: 2000
+  service:
+    type: NodePort  # Default type is NodePort, can be changed to ClusterIP
+    httpPort: 443   # HTTP port
+    schedulerPort: 31998  # NodePort for HTTP
+    monitorPort: 31993    # Monitoring port
+    labels: {}
+    annotations: {}
+
+devicePlugin:
+  image: "beclab/hami"
+  monitorimage: "beclab/hami"
+  monitorctrPath: /usr/local/vgpu/containers
+  imagePullPolicy: IfNotPresent
+  deviceSplitCount: 100
+  deviceMemoryScaling: 100
+  deviceCoreScaling: 100
+  runtimeClassName: ""
+  migStrategy: "none"
+  disablecorelimit: "false"
+  passDeviceSpecsEnabled: false
+  extraArgs:
+    - -v=4
+  
+  service:
+    type: NodePort  # Default type is NodePort, can be changed to ClusterIP
+    httpPort: 31992
+    labels: {}
+    annotations: {}
+    
+  pluginPath: /var/lib/kubelet/device-plugins
+  libPath: /usr/local/vgpu
+
+  podAnnotations: {}
+  nvidianodeSelector:
+    gpu.bytetrade.io/cuda-supported: 'true'
+  tolerations: []
+  # The updateStrategy for DevicePlugin DaemonSet.
+  # If you want to update the DaemonSet by manual, set type as "OnDelete".
+  # We recommend use OnDelete update strategy because DevicePlugin pod restart will cause business pod restart, this behavior is destructive.
+  # Otherwise, you can use RollingUpdate update strategy to rolling update DevicePlugin pod.
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+
+  resources: {}
+    # If you do want to specify resources, uncomment the following lines, adjust them as necessary.
+    # and remove the curly braces after 'resources:'.
+#    limits:
+#       cpu: 1000m
+#       memory: 1000Mi
+#    requests:
+#      cpu: 100m
+#      memory: 100Mi
+
+  vgpuMonitor:
+    resources: {}
+      # If you do want to specify resources, uncomment the following lines, adjust them as necessary.
+      # and remove the curly braces after 'resources:'.
+#      limits:
+#        cpu: 1000m
+#        memory: 1000Mi
+#      requests:
+#        cpu: 100m
+#        memory: 100Mi
+
+devices:
+  mthreads:
+    enabled: false
+    customresources:
+      - mthreads.com/vgpu
+  nvidia:
+    gpuCorePolicy: default
+  ascend:
+    enabled: false
+    image: ""
+    imagePullPolicy: IfNotPresent
+    extraArgs: []
+    nodeSelector:
+      ascend: "on"
+    tolerations: []
+    customresources:
+      - huawei.com/Ascend910A
+      - huawei.com/Ascend910A-memory
+      - huawei.com/Ascend910B2
+      - huawei.com/Ascend910B2-memory
+      - huawei.com/Ascend910B
+      - huawei.com/Ascend910B-memory
+      - huawei.com/Ascend910B4
+      - huawei.com/Ascend910B4-memory
+      - huawei.com/Ascend310P
+      - huawei.com/Ascend310P-memory

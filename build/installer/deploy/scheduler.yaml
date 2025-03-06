@@ -26,7 +26,6 @@ spec:
       labels:
         name: nvshare-scheduler
     spec:
-      runtimeClassName: nvidia # Explicitly request the runtime
       priorityClassName: system-node-critical
       nodeSelector:
         gpu.bytetrade.io/cuda-supported: 'true'

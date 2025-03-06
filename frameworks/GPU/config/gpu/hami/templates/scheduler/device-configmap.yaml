@@ -1,0 +1,203 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hami-vgpu.scheduler" . }}-device
+  labels:
+    app.kubernetes.io/component: hami-scheduler
+    {{- include "hami-vgpu.labels" . | nindent 4 }}
+data:
+  device-config.yaml: |-
+  {{- if .Files.Glob "files/device-config.yaml" }}
+  {{- .Files.Get "files/device-config.yaml" | nindent 4}}
+  {{- else }}
+    nvidia:
+      resourceCountName: {{ .Values.resourceName }}
+      resourceMemoryName: {{ .Values.resourceMem }}
+      resourceMemoryPercentageName: {{ .Values.resourceMemPercentage }}
+      resourceCoreName: {{ .Values.resourceCores }}
+      resourcePriorityName: {{ .Values.resourcePriority }}
+      overwriteEnv: false
+      defaultMemory: 16000
+      defaultCores: 0
+      defaultGPUNum: 1
+      deviceSplitCount: {{ .Values.devicePlugin.deviceSplitCount }}
+      deviceMemoryScaling: {{ .Values.devicePlugin.deviceMemoryScaling }}
+      deviceCoreScaling: {{ .Values.devicePlugin.deviceCoreScaling }}
+      gpuCorePolicy: {{ .Values.devices.nvidia.gpuCorePolicy }}
+      knownMigGeometries:
+      - models: [ "A30" ]
+        allowedGeometries:
+          - 
+            - name: 1g.6gb
+              memory: 6144
+              count: 4
+          - 
+            - name: 2g.12gb
+              memory: 12288
+              count: 2
+          - 
+            - name: 4g.24gb
+              memory: 24576
+              count: 1
+      - models: [ "A100-SXM4-40GB", "A100-40GB-PCIe", "A100-PCIE-40GB", "A100-SXM4-40GB" ]
+        allowedGeometries:
+          - 
+            - name: 1g.5gb
+              memory: 5120
+              count: 7
+          - 
+            - name: 2g.10gb
+              memory: 10240
+              count: 3
+            - name: 1g.5gb
+              memory: 5120
+              count: 1
+          - 
+            - name: 3g.20gb
+              memory: 20480
+              count: 2
+          - 
+            - name: 7g.40gb
+              memory: 40960
+              count: 1
+      - models: [ "A100-SXM4-80GB", "A100-80GB-PCIe", "A100-PCIE-80GB"]
+        allowedGeometries:
+          - 
+            - name: 1g.10gb
+              memory: 10240
+              count: 7
+          - 
+            - name: 2g.20gb
+              memory: 20480
+              count: 3
+            - name: 1g.10gb
+              memory: 10240
+              count: 1
+          - 
+            - name: 3g.40gb
+              memory: 40960
+              count: 2
+          - 
+            - name: 7g.79gb
+              memory: 80896
+              count: 1
+    cambricon:
+      resourceCountName: {{ .Values.mluResourceName }}
+      resourceMemoryName: {{ .Values.mluResourceMem }}
+      resourceCoreName: {{ .Values.mluResourceCores }}
+    hygon:
+      resourceCountName: {{ .Values.dcuResourceName }}
+      resourceMemoryName: {{ .Values.dcuResourceMem }}
+      resourceCoreName: {{ .Values.dcuResourceCores }}
+    metax:
+      resourceCountName: "metax-tech.com/gpu"
+
+      resourceVCountName: {{ .Values.metaxResourceName }}
+      resourceVMemoryName: {{ .Values.metaxResourceMem }}
+      resourceVCoreName: {{ .Values.metaxResourceCore }}
+    mthreads:
+      resourceCountName: "mthreads.com/vgpu"
+      resourceMemoryName: "mthreads.com/sgpu-memory"
+      resourceCoreName: "mthreads.com/sgpu-core"
+    iluvatar:
+      resourceCountName: {{ .Values.iluvatarResourceName }}
+      resourceMemoryName: {{ .Values.iluvatarResourceMem }}
+      resourceCoreName: {{ .Values.iluvatarResourceCore }}
+    vnpus:
+    - chipName: 910B
+      commonWord: Ascend910A
+      resourceName: huawei.com/Ascend910A
+      resourceMemoryName: huawei.com/Ascend910A-memory
+      memoryAllocatable: 32768
+      memoryCapacity: 32768
+      aiCore: 30
+      templates:
+        - name: vir02
+          memory: 2184
+          aiCore: 2
+        - name: vir04
+          memory: 4369
+          aiCore: 4
+        - name: vir08
+          memory: 8738
+          aiCore: 8
+        - name: vir16
+          memory: 17476
+          aiCore: 16
+    - chipName: 910B2
+      commonWord: Ascend910B2
+      resourceName: huawei.com/Ascend910B2
+      resourceMemoryName: huawei.com/Ascend910B2-memory
+      memoryAllocatable: 65536
+      memoryCapacity: 65536
+      aiCore: 24
+      aiCPU: 6
+      templates:
+        - name: vir03_1c_8g
+          memory: 8192
+          aiCore: 3
+          aiCPU: 1
+        - name: vir06_1c_16g
+          memory: 16384
+          aiCore: 6
+          aiCPU: 1
+        - name: vir12_3c_32g
+          memory: 32768
+          aiCore: 12
+          aiCPU: 3
+    - chipName: 910B3
+      commonWord: Ascend910B
+      resourceName: huawei.com/Ascend910B
+      resourceMemoryName: huawei.com/Ascend910B-memory
+      memoryAllocatable: 65536
+      memoryCapacity: 65536
+      aiCore: 20
+      aiCPU: 7
+      templates:
+        - name: vir05_1c_16g
+          memory: 16384
+          aiCore: 5
+          aiCPU: 1
+        - name: vir10_3c_32g
+          memory: 32768
+          aiCore: 10
+          aiCPU: 3
+    - chipName: 910B4
+      commonWord: Ascend910B4
+      resourceName: huawei.com/Ascend910B4
+      resourceMemoryName: huawei.com/Ascend910B4-memory
+      memoryAllocatable: 32768
+      memoryCapacity: 32768
+      aiCore: 20
+      aiCPU: 7
+      templates:
+        - name: vir05_1c_8g
+          memory: 8192
+          aiCore: 5
+          aiCPU: 1
+        - name: vir10_3c_16g
+          memory: 16384
+          aiCore: 10
+          aiCPU: 3
+    - chipName: 310P3
+      commonWord: Ascend310P
+      resourceName: huawei.com/Ascend310P
+      resourceMemoryName: huawei.com/Ascend310P-memory
+      memoryAllocatable: 21527
+      memoryCapacity: 24576
+      aiCore: 8
+      aiCPU: 7
+      templates:
+        - name: vir01
+          memory: 3072
+          aiCore: 1
+          aiCPU: 1
+        - name: vir02
+          memory: 6144
+          aiCore: 2
+          aiCPU: 2
+        - name: vir04
+          memory: 12288
+          aiCore: 4
+          aiCPU: 4
+  {{ end }}
