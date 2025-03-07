@@ -7,7 +7,7 @@ type: kubernetes.io/tls
 metadata:
   annotations:
     "helm.sh/hook": "pre-install,pre-upgrade"
-    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-weight": "-10"
     "helm.sh/hook-delete-policy": "before-hook-creation"
   labels:
     helm.sh/chart: opentelemetry-operator-0.81.0
@@ -39,7 +39,7 @@ metadata:
     app.kubernetes.io/component: controller-manager
   annotations:
     "helm.sh/hook": "pre-install,pre-upgrade"
-    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-weight": "-5"
 ---
 
 # Source: opentelemetry-operator/templates/clusterrole.yaml
@@ -55,7 +55,7 @@ metadata:
     app.kubernetes.io/component: controller-manager
   annotations:
     "helm.sh/hook": "pre-install,pre-upgrade"
-    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-weight": "-5"
   name: otel-opentelemetry-operator-manager
 rules:
   - apiGroups:
@@ -331,7 +331,7 @@ metadata:
     app.kubernetes.io/component: controller-manager
   annotations:
     "helm.sh/hook": "pre-install,pre-upgrade"
-    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-weight": "-5"
   name: otel-opentelemetry-operator-proxy
 rules:
   - apiGroups:
@@ -360,7 +360,7 @@ metadata:
     app.kubernetes.io/component: controller-manager
   annotations:
     "helm.sh/hook": "pre-install,pre-upgrade"
-    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-weight": "-5"
   name: otel-opentelemetry-operator-manager
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -384,7 +384,7 @@ metadata:
     app.kubernetes.io/component: controller-manager
   annotations:
     "helm.sh/hook": "pre-install,pre-upgrade"
-    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-weight": "-5"
   name: otel-opentelemetry-operator-proxy
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -408,7 +408,7 @@ metadata:
     app.kubernetes.io/component: controller-manager
   annotations:
     "helm.sh/hook": "pre-install,pre-upgrade"
-    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-weight": "-5"
   name: otel-opentelemetry-operator-leader-election
   namespace: os-system
 rules:
@@ -453,7 +453,7 @@ metadata:
     app.kubernetes.io/component: controller-manager
   annotations:
     "helm.sh/hook": "pre-install,pre-upgrade"
-    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-weight": "-5"
   name: otel-opentelemetry-operator-leader-election
   namespace: os-system
 roleRef:
@@ -528,7 +528,7 @@ metadata:
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
     "helm.sh/hook": "pre-install,pre-upgrade"
-    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-weight": "-5"
   name: otel-opentelemetry-operator
   namespace: os-system
 spec:
