@@ -21,6 +21,81 @@ data:
   tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURyVENDQXBXZ0F3SUJBZ0lSQUtNbllGaXU2M3dnZU4vUGZXS0k3dHN3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUNZeEpEQWlCZ05WQkFNVEcyOTBaV3d0CmIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjakNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0MKQVFvQ2dnRUJBTDB6RjdXR0ZPSVNjeEpxdzJ4OGlrMXZiOWxTNEk5OXpPRzhiQWVwNzM5VTE3Tk1SR1NEQ0U0ZApzQXFpNlpQeDVzNGFCSzU3MXYraDdCcnVLaUlJeGU5OEg1OTRITkJzL2tKQ0ViU1Q5cTZqYnR3S1FTOTR4RWpQCk1yUndpQXlkVUlSOVV6QWJvQXFtRVBSRGJsaDRwY0p6QXBPQVhINk8ySG05OHpZeHNIdktRWEkrckt5SUxoenUKLzV4Lzk1NjdhNW0rRHVoOWNuT0Vtek5UZkpUeG1tQTRZWFVJaGk1NDdZOGFGc0ZheWhBTnpUcVlKV041bklCbwpTcWJURjJzeFd4NDZVdGJQUFFkUkxxdEI2VWtvVlRSdXRaemF3dXh5OERUbm1ITDlYemFtaWRhZmdmRC9oNThHCnlMd1NocStrMzVyWk1YVERJTG9zNE1lc1BHbjZoQUVDQXdFQUFhT0J6akNCeXpBT0JnTlZIUThCQWY4RUJBTUMKQmFBd0hRWURWUjBsQkJZd0ZBWUlLd1lCQlFVSEF3RUdDQ3NHQVFVRkJ3TUNNQXdHQTFVZEV3RUIvd1FDTUFBdwpId1lEVlIwakJCZ3dGb0FVTlNGVUMrQ0RqdWgvL3h6MzNtL09ScVlhckpNd2F3WURWUjBSQkdRd1lvSXRiM1JsCmJDMXZjR1Z1ZEdWc1pXMWxkSEo1TFc5d1pYSmhkRzl5TFhkbFltaHZiMnN1YjNNdGMzbHpkR1Z0Z2pGdmRHVnMKTFc5d1pXNTBaV3hsYldWMGNua3RiM0JsY21GMGIzSXRkMlZpYUc5dmF5NXZjeTF6ZVhOMFpXMHVjM1pqTUEwRwpDU3FHU0liM0RRRUJDd1VBQTRJQkFRQnY0cVBxSFdWeVZrVTk4ZWxjYVQ3aTJoY0dWRFRPSkJOZUkzZTUyaDlQCjlZOEkvQXJEWmR4Wmw3YnF4Zy9XdGFPNDRjUjMrWi9pTTZGS0F5WEZvd0tGSXpVMTZ6ZjNmRGFDQStkY2ppR1IKcHpEaEtjbEREM0cyTExxNFRlRkdKWVdWaTAzTG5ub1hjU0xCQXNnZDhhZHRQRUpsSWxyMFVUaFp1TDFkTndZeApwQ3VKZkVIcUVEdjNyRHpGdk0ySzlLTW1yNE11UG4rK083eStxK2JER3dxRG8yOG5WaTI0NGNJbjFVcENndDVnCjZHQmxQbzU5a3FzRTJRR01zYWRWQlpKRjQzamY3RUZ4LzF1dGlNZlBWaTRvc2YwMjIzK2xBY3h1RERuM1lFeXQKdXdiUTR3TnFuUjl0VUZtbWpyQXFZOXY3cWZ6WjMxeFdSVXAxbG1vU2pOTzgKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
   tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcEFJQkFBS0NBUUVBdlRNWHRZWVU0aEp6RW1yRGJIeUtUVzl2MlZMZ2ozM000YnhzQjZudmYxVFhzMHhFClpJTUlUaDJ3Q3FMcGsvSG16aG9Fcm52Vy82SHNHdTRxSWdqRjczd2ZuM2djMEd6K1FrSVJ0SlAycnFOdTNBcEIKTDNqRVNNOHl0SENJREoxUWhIMVRNQnVnQ3FZUTlFTnVXSGlsd25NQ2s0QmNmbzdZZWIzek5qR3dlOHBCY2o2cwpySWd1SE83L25ILzNucnRybWI0TzZIMXljNFNiTTFOOGxQR2FZRGhoZFFpR0xuanRqeG9Xd1ZyS0VBM05PcGdsClkzbWNnR2hLcHRNWGF6RmJIanBTMXM4OUIxRXVxMEhwU1NoVk5HNjFuTnJDN0hMd05PZVljdjFmTnFhSjFwK0IKOFArSG53Ykl2QktHcjZUZm10a3hkTU1ndWl6Z3g2dzhhZnFFQVFJREFRQUJBb0lCQVFDTFovY2pRSDFvcWxGeAprNHNWQjVyY1BhejdRNDdGQzl1SHhNOFF3b3orbEdRdTc1WkJQUzlFWjZtTDNNZ2d3NC9kOHR2YU9OT05IaUViCklydVd3a0llR0tZd1dVOVozOFZreXN2QzgzZEM3SmRGdUtTWk52SGgrQkdUVkl0YVNCdkkwNU1WRW5YVkF0SGgKT1VJNEhBVi9Ca0V5cjlUM1I0ZUlCSWNOT29XZ1gzcTFyUCtqbk9xdldCcUJ1VW5Ec0RNYVg0NjdJYUZrdjZ3RQpVZFZBbHFkaXdDQXY4NWM2SnhRY0Q0QjNtMUMzZGcxc1pDZ0gzRUt6UzQycjJnUE9EUjJPa3oxQXVMYkt5WDhICnVib3FuQUN6ZVhQWDBDVElEZ1JlR2huTGZ6a0ZLL09DekNCdTZpTFh5UVVCZTdPQkd6dk9RV25wNFVaQnBhY0UKaGk0dWJmNkZBb0dCQVB0SnZ5TjhrV3p5VGlxVUtKQUcrZzcyQkNlUlFrNytoaHJJRVZUYVpwWW9lMEJjcWlmNAo5T3BZUjJXeEhSSkYyak1CNXliTWRhalVDUTRxS2NWUTd4RjA3V3AwUG1zUlR1QU1NakMyeUp5VlJUWWRZSkhhCmlDejZidWpzWlMyRkFQdmJMSnorZU1ISVBtait0UlNLd00zdWlMcE9VaXAzbVdEaEFlYVhyWDNmQW9HQkFNQy8KVGNPNDZ1enZBUjREUk9FQmcyL3Bsd3ZieVNENVUrU0wvWHBHVjRJUTNGMlVJRUxRRE45YXlqVGpTVWRTVDdINgo0OFRxYlNVVVhsY3NFTSs2MXRYZjhYUTNJRWR0VTVBWHRsaFNvN0JnSUtIa1ltN1IzeWt2UUV1SVdXUU15MGY2CmR2UTRkRk0rZVVzOGlYS2JPYU8rNVFWUkR1N0tjUGtveTA1cGhIb2ZBb0dCQUpqaGhTaFI0U2duUXVja3ZJamoKdGI3a2JpS2tmWE1SNXdUa002Y3NPTDJpWTFvRkJvRExOalpjL3hNZmJsQnZyeERaVjRpRFhCSWE3bWR2djNvTQpnMlpiZlJZSEl2S0ExVHY2TDQ3enBabWVOejExSWd1YXFMNjBua1dYalBia3RIU0dJOTVmODVmeC9BWms4RVpQCkpINGxZWW4zbklXNXZkYnpEZlQ4MHRDQkFvR0FQYmxGY3ViMXZGZ3hXR1lkbVp4OWRjb3RCNndqZFg3Q2djN2UKcGxoK1QzV016QjdTVWZNRUhFYWJ1R0lNcGwxU2ppRlU3VXRSRm0yMlpGNEZLRENoK2EyVVNlNFpWU1pLZXp0TQp0bTRJWTBQMVQwS3V6dVJBZlpUWEZ4a2IzekZGcTlBbVpjRHFaM243SjcvRUdFSmpLKy9Hc1hRcXZ3ZHZOQ3IvCktDWWNPV3NDZ1lBQXpiNGwwcGxLT3VVSEduY1FrZW9HN1FOTC9WbXRGY1htOS94OFBJN1Q3dmhBQ2RaYWNoZ1EKUmM2WU83NVUrQzB0ZFVXZDdreUFBakM4ejBsY2xmOGptUWs0akZZUGJoQWp4YVdubFB2Tk1jS0JhMURiS002VQp0WFY4bHVSWXMzcDhqVm9OOVRCYjBiSkVCQmNjanl0Z0s0eTU0TUNxK0NaQUNnTDBvQjc1MUE9PQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo=
   ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+---
+
+# Source: opentelemetry-operator/templates/tests/test-service-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "otel-opentelemetry-operator-metrics"
+  namespace: os-system
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: "busybox:latest"
+      env:
+        - name: MANAGER_METRICS_SERVICE_CLUSTERIP
+          value: "otel-opentelemetry-operator"
+        - name: MANAGER_METRICS_SERVICE_PORT
+          value: "8443"
+      command:
+        - sh
+        - -c
+        # The following shell script tests if the controller-manager-metrics-service is up.
+        # If the service is up, when we try to wget its exposed port, we will get an HTTP error 400.
+        - |
+          wget_output=$(wget -q "$MANAGER_METRICS_SERVICE_CLUSTERIP:$MANAGER_METRICS_SERVICE_PORT")
+          if wget_output=="wget: server returned error: HTTP/1.0 400 Bad Request"
+          then exit 0
+          else exit 1
+          fi
+  restartPolicy: Never
+---
+# Source: opentelemetry-operator/templates/tests/test-service-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "otel-opentelemetry-operator-webhook"
+  namespace: os-system
+  labels:
+    helm.sh/chart: opentelemetry-operator-0.81.0
+    app.kubernetes.io/name: opentelemetry-operator
+    app.kubernetes.io/version: "0.118.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/component: controller-manager
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: "busybox:latest"
+      env:
+        - name: WEBHOOK_SERVICE_CLUSTERIP
+          value: "otel-opentelemetry-operator-webhook"
+        - name: WEBHOOK_SERVICE_PORT
+          value: "443"
+      command:
+        - sh
+        - -c
+        # The following shell script tests if the webhook service is up. If the service is up, when we try
+        # to wget its exposed port, we will get an HTTP error 400.
+        - |
+          wget_output=$(wget -q "$WEBHOOK_SERVICE_CLUSTERIP:$WEBHOOK_SERVICE_PORT")
+          if wget_output=="wget: server returned error: HTTP/1.0 400 Bad Request"
+          then exit 0
+          else exit 1
+          fi
+  restartPolicy: Never
 
 ---
 # Source: opentelemetry-operator/templates/serviceaccount.yaml
@@ -888,11 +963,11 @@ spec:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
-  go:
+  nginx:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
-  nginx:
+  go:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
