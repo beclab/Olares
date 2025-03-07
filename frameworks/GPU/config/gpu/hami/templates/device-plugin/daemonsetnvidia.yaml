@@ -1,0 +1,170 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "hami-vgpu.device-plugin" . }}
+  labels:
+    app.kubernetes.io/component: hami-device-plugin
+    {{- include "hami-vgpu.labels" . | nindent 4 }}
+    {{- with .Values.global.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.annotations }}
+  annotations: {{ toYaml .Values.global.annotations | nindent 4}}
+  {{- end }}
+spec:
+  updateStrategy:
+    {{- with .Values.devicePlugin.updateStrategy }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: hami-device-plugin
+      {{- include "hami-vgpu.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: hami-device-plugin
+        hami.io/webhook: ignore
+        {{- include "hami-vgpu.selectorLabels" . | nindent 8 }}
+      {{- if .Values.devicePlugin.podAnnotations }}
+      annotations: {{ toYaml .Values.devicePlugin.podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if .Values.devicePlugin.runtimeClassName }}
+      runtimeClassName: {{ .Values.devicePlugin.runtimeClassName }}
+      {{- end }}
+      {{- include "hami-vgpu.imagePullSecrets" . | nindent 6}}
+      serviceAccountName: {{ include "hami-vgpu.device-plugin" . }}
+      priorityClassName: system-node-critical
+      hostPID: true
+      hostNetwork: true
+      containers:
+        - name: device-plugin
+          image: {{ .Values.devicePlugin.image }}:{{ .Values.version }}
+          imagePullPolicy: {{ .Values.devicePlugin.imagePullPolicy | quote }}
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh","-c", {{ printf "/k8s-vgpu/bin/vgpu-init.sh %s/vgpu/" .Values.global.gpuHookPath | quote }}]
+          command:
+            - nvidia-device-plugin
+            - --config-file=/device-config.yaml
+            - --mig-strategy={{ .Values.devicePlugin.migStrategy }}
+            - --disable-core-limit={{ .Values.devicePlugin.disablecorelimit }}
+            {{- range .Values.devicePlugin.extraArgs }}
+            - {{ . }}
+            {{- end }}
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: NVIDIA_MIG_MONITOR_DEVICES
+              value: all
+            - name: HOOK_PATH
+              value: {{ .Values.global.gpuHookPath }}
+            {{- if typeIs "bool" .Values.devicePlugin.passDeviceSpecsEnabled }}
+            - name: PASS_DEVICE_SPECS
+              value: {{ .Values.devicePlugin.passDeviceSpecsEnabled | quote }}
+            {{- end }}
+          securityContext:
+            privileged: true
+            allowPrivilegeEscalation: true
+            capabilities:
+              drop: ["ALL"]
+              add: ["SYS_ADMIN"]
+          resources:
+          {{- toYaml .Values.devicePlugin.resources | nindent 12 }}
+          volumeMounts:
+            - name: device-plugin
+              mountPath: /var/lib/kubelet/device-plugins
+            - name: lib
+              mountPath: {{ printf "%s%s" .Values.global.gpuHookPath "/vgpu" }}
+            - name: usrbin
+              mountPath: /usrbin
+            - name: deviceconfig
+              mountPath: /config
+            - name: hosttmp
+              mountPath: /tmp
+            - name: device-config
+              mountPath: /device-config.yaml
+              subPath: device-config.yaml
+        - name: vgpu-monitor
+          image: {{ .Values.devicePlugin.image }}:{{ .Values.version }}
+          imagePullPolicy: {{ .Values.devicePlugin.imagePullPolicy | quote }}
+          command:
+            - "vGPUmonitor"
+            {{- range .Values.devicePlugin.extraArgs }}
+            - {{ . }}
+            {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+              add: ["SYS_ADMIN"]
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "all"
+            - name: NVIDIA_MIG_MONITOR_DEVICES
+              value: all
+            - name: HOOK_PATH
+              value: {{ .Values.global.gpuHookPath }}/vgpu
+          resources:
+          {{- toYaml .Values.devicePlugin.vgpuMonitor.resources | nindent 12 }}
+          volumeMounts:
+            - name: ctrs
+              mountPath: {{ .Values.devicePlugin.monitorctrPath }}
+            - name: dockers
+              mountPath: /run/docker
+            - name: containerds
+              mountPath: /run/containerd
+            - name: sysinfo
+              mountPath: /sysinfo
+            - name: hostvar
+              mountPath: /hostvar
+            - name: hosttmp
+              mountPath: /tmp
+      volumes:
+        - name: ctrs
+          hostPath:
+            path: {{ .Values.devicePlugin.monitorctrPath }}
+        - name: hosttmp
+          hostPath:
+            path: /tmp
+        - name: dockers
+          hostPath:
+            path: /run/docker
+        - name: containerds
+          hostPath:
+            path: /run/containerd
+        - name: device-plugin
+          hostPath:
+            path: {{ .Values.devicePlugin.pluginPath }}
+        - name: lib
+          hostPath:
+            path: {{ .Values.devicePlugin.libPath }}
+        - name: usrbin
+          hostPath:
+            path: /usr/bin
+        - name: sysinfo
+          hostPath:
+            path: /sys
+        - name: hostvar
+          hostPath:
+            path: /var
+        - name: deviceconfig
+          configMap:
+            name: {{ template "hami-vgpu.device-plugin" . }}
+        - name: device-config
+          configMap:
+            name: {{ include "hami-vgpu.scheduler" . }}-device
+      {{- if .Values.devicePlugin.nvidianodeSelector }}
+      nodeSelector: {{ toYaml .Values.devicePlugin.nvidianodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.devicePlugin.tolerations }}
+      tolerations: {{ toYaml .Values.devicePlugin.tolerations | nindent 8 }}
+      {{- end }}

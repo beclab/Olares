@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hami-vgpu.device-plugin" . }}-monitor
+  labels:
+    app.kubernetes.io/component: hami-device-plugin
+    {{- include "hami-vgpu.labels" . | nindent 4 }}
+    {{- if .Values.devicePlugin.service.labels }}  # Use devicePlugin instead of scheduler
+    {{ toYaml .Values.devicePlugin.service.labels | indent 4 }}
+    {{- end }}
+  {{- if .Values.devicePlugin.service.annotations }}  # Use devicePlugin instead of scheduler
+  annotations: {{ toYaml .Values.devicePlugin.service.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.devicePlugin.service.type | default "NodePort" }}  # Default type is NodePort
+  ports:
+    - name: monitorport
+      port: {{ .Values.devicePlugin.service.httpPort | default 31992 }}  # Default HTTP port is 31992
+      targetPort: 9394
+      {{- if eq (.Values.devicePlugin.service.type | default "NodePort") "NodePort" }}  # If type is NodePort, set nodePort
+      nodePort: {{ .Values.devicePlugin.service.httpPort | default 31992 }}
+      {{- end }}
+      protocol: TCP
+  selector:
+    app.kubernetes.io/component: hami-device-plugin
+    {{- include "hami-vgpu.selectorLabels" . | nindent 4 }}
