@@ -136,6 +136,11 @@ spec:
       labels:
         app: system-frontend
         io.bytetrade.app: "true"
+    annotations:
+      instrumentation.opentelemetry.io/inject-nodejs: "olares-instrumentation"
+      instrumentation.opentelemetry.io/nodejs-container-names: "settings-server"    
+      instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
+      instrumentation.opentelemetry.io/inject-nginx-container-names: "system-frontend"    
     spec:
       priorityClassName: "system-cluster-critical"
       initContainers:
