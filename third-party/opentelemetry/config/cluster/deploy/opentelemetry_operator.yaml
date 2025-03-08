@@ -609,6 +609,33 @@ spec:
         runAsUser: 65532
 ---
 
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}"
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: otel
+    app.kubernetes.io/version: "0.118.0"
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    metadata:
+      name: wait-otel-controller
+      labels:
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/instance: otel
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: post-install-job
+        image: "alpine:3.3"
+        command: ["/bin/sleep","30"]
+
+---
 # Source: opentelemetry-operator/templates/admission-webhooks/operator-webhook.yaml
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
@@ -811,7 +838,7 @@ webhooks:
 
 
 ---
-apiVersion: opentelemetry.io/v1alpha1
+apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
   name: jaeger-storage-instance 
@@ -821,11 +848,15 @@ metadata:
   
 spec:
   image: jaegertracing/jaeger:2.3.0
+  upgradeStrategy: none
+  mode: deployment
   volumes:
   - name: storage
-    hostPath:
-      path: {{ .Values.rootPath }}/userdata/otel-data
-      type: DirectoryOrCreate
+    emptyDir: {}
+    # FIXME: permission
+    # hostPath:
+    #   path: /olares/userdata/otel-data
+    #   type: DirectoryOrCreate
   volumeMounts:
   - name: storage
     mountPath: /data
@@ -833,9 +864,9 @@ spec:
   ports:
   - name: jaeger
     port: 16686
-  config: |
+  config: 
     service:
-      extensions: [jaeger_storage, jaeger_query, healthcheckv2]
+      extensions: [jaeger_storage, jaeger_query]
       pipelines:
         traces:
           receivers: [otlp]
@@ -856,10 +887,6 @@ spec:
           level: info
 
     extensions:
-      healthcheckv2:
-        use_v2: true
-        http:
-
       jaeger_query:
         storage:
           traces: some_store
@@ -885,10 +912,14 @@ spec:
       otlp:
         protocols:
           grpc:
-          http:
+            endpoint: "localhost:4317"
+          http: 
+            endpoint: "localhost:4318"
 
     processors:
       batch:
+        send_batch_max_size: 10000
+        timeout: 0s
 
     exporters:
       jaeger_storage_exporter:
