@@ -620,6 +620,9 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: otel
     app.kubernetes.io/component: webhook
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "-5"
   name: otel-opentelemetry-operator-mutation
 webhooks:
   - admissionReviewVersions:
@@ -706,6 +709,9 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: otel
     app.kubernetes.io/component: webhook
+  annotations:
+    "helm.sh/hook": "post-install"
+    "helm.sh/hook-weight": "-5"
   name: otel-opentelemetry-operator-validation
 webhooks:
   - admissionReviewVersions:
