@@ -632,7 +632,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: post-install-job
-        image: "alpine:3.3"
+        image: "alpine:3.18"
         command: ["/bin/sleep","30"]
 
 ---
