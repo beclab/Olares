@@ -37,6 +37,11 @@ spec:
   selector:
     matchLabels:
       app: files
+    annotations:
+      instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
+      instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
+      instrumentation.opentelemetry.io/inject-nginx-container-names: "nginx"    
+      instrumentation.opentelemetry.io/go-container-names: "gateway,files,uploader"    
   template:
     metadata:
       labels:

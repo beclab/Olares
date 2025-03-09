@@ -112,6 +112,9 @@ spec:
       labels:
         app: files
         io.bytetrade.app: "true"
+    annotations:
+      instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
+      instrumentation.opentelemetry.io/inject-nginx-container-names: "files-frontend"    
     spec:
       serviceAccountName: bytetrade-controller
       securityContext:

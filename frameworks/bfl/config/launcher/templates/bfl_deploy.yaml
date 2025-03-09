@@ -199,6 +199,11 @@ spec:
     metadata:
       labels:
         tier: bfl
+    annotations:
+      instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
+      instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
+      instrumentation.opentelemetry.io/inject-nginx-container-names: "ingress"    
+      instrumentation.opentelemetry.io/go-container-names: "api"    
     spec:
 {{ if .Values.bfl.admin_user }}
       affinity:
