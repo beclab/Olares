@@ -6,30 +6,18 @@
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
-metadata:
-  name: {{ .Release.Namespace }}:vault-role
 rules:
 - apiGroups:
   - "*"
   resources:
   - secrets
-  verbs:
-  - get
-  - list
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: {{ .Release.Namespace }}:vault-role:app
-- apiGroups:
-  - "*"
-  resources:
   - applicationpermissions
   verbs:
   - get
   - list
-  
+metadata:
+  name: {{ .Release.Namespace }}:vault-role
+
 ---
 kind: ServiceAccount
 apiVersion: v1
@@ -49,20 +37,6 @@ subjects:
 roleRef:
   kind: ClusterRole
   name: {{ .Release.Namespace }}:vault-role
-  apiGroup: rbac.authorization.k8s.io
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: {{ .Release.Namespace }}:vault-rb:app
-subjects:
-  - kind: ServiceAccount
-    namespace: {{ .Release.Namespace }} 
-    name: infisical-sa
-roleRef:
-  kind: Role
-  name: {{ .Release.Namespace }}:vault-role:app
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -257,7 +231,7 @@ spec:
           subPath: nginx.conf
 
       - name: tapr-sidecar
-        image: beclab/secret-vault:0.1.7
+        image: beclab/secret-vault:0.1.8
         imagePullPolicy: IfNotPresent
         ports:
         - name: proxy
