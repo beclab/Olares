@@ -108,7 +108,7 @@ spec:
   appNamespace: {{ .Release.Namespace }}
   middleware: postgres
   postgreSQL:
-    user: infisical_{{ .Values.bfl.username }}
+    user: infisical_os_system
     password: 
       valueFrom:
         secretKeyRef:
@@ -170,18 +170,18 @@ spec:
             echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
         env:
           - name: PGHOST
-            value: citus-master-svc.user-system-{{ .Values.bfl.username }}
+            value: citus-0.citus-headless.os-system
           - name: PGPORT
             value: "5432"
           - name: PGUSER
-            value: infisical_{{ .Values.bfl.username }}
+            value: infisical_os_system
           - name: PGPASSWORD
             valueFrom:
               secretKeyRef:
                 name: infisical-postgres
                 key: postgres-passwords
           - name: PGDB
-            value: user_space_{{ .Values.bfl.username }}_infisical
+            value: os_system_infisical
       - name: "migration-init"
         image: "beclab/infisical:0.1.1"
         imagePullPolicy: IfNotPresent
@@ -197,13 +197,13 @@ spec:
               key: postgres-passwords
         
         - name: POSTGRES_USER
-          value: infisical_{{ .Values.bfl.username }}
+          value: infisical_os_system
 
         - name: POSTGRES_DB
-          value: user_space_{{ .Values.bfl.username }}_infisical
+          value: os_system_infisical
 
         - name: DB_CONNECTION_URI
-          value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-master-svc.user-system-{{ .Values.bfl.username }}/$(POSTGRES_DB)?sslmode=disable"
+          value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-0.citus-headless.os-system/$(POSTGRES_DB)?sslmode=disable"
       containers:
       - name: infisical
         image: "beclab/infisical:0.1.1"
@@ -227,14 +227,14 @@ spec:
               key: postgres-passwords
         
         - name: POSTGRES_USER
-          value: infisical_{{ .Values.bfl.username }}
+          value: infisical_os_system
 
         - name: POSTGRES_DB
-          value: user_space_{{ .Values.bfl.username }}_infisical
+          value: os_system_infisical
 
         
         - name: DB_CONNECTION_URI
-          value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-master-svc.user-system-{{ .Values.bfl.username }}/$(POSTGRES_DB)?sslmode=disable"
+          value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-0.citus-headless.os-system/$(POSTGRES_DB)?sslmode=disable"
 
         - name: REDIS_PASSWORD
           valueFrom:
@@ -242,7 +242,7 @@ spec:
               name: infisical-postgres
               key: redis-passwords
         - name: REDIS_URL
-          value: "redis://:$(REDIS_PASSWORD)@redis-cluster-proxy.user-system-{{ .Values.bfl.username }}:6379/0"
+          value: "redis://:$(REDIS_PASSWORD)@redis-cluster-proxy.os-system:6379/0"
 
       - name: infisical-proxy
         image: nginx:stable-alpine3.17-slim
@@ -263,14 +263,12 @@ spec:
         - name: proxy
           containerPort: 8080
         env:
-        - name: OWNER
-          value: '{{ .Values.bfl.username }}'
         - name: PG_USER
-          value: infisical_{{ .Values.bfl.username }}
+          value: infisical_os_system
         - name: PG_DB
-          value: user_space_{{ .Values.bfl.username }}_infisical
+          value: os_system_infisical
         - name: PG_ADDR
-          value: citus-master-svc.user-system-{{ .Values.bfl.username }}
+          value: citus-0.citus-headless.os-system
         - name: PASSWORD
           valueFrom:
             secretKeyRef:
