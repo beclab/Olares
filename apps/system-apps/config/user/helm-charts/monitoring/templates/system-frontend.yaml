@@ -190,7 +190,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: control-hub-init
-          image: beclab/admin-console-frontend-v1:v0.5.1
+          image: beclab/admin-console-frontend-v1:v0.5.2
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
