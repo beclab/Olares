@@ -85,12 +85,12 @@ spec:
                 fieldPath: status.podIP
       containers:
       - name: appstore
-        image: beclab/market-frontend:v0.3.5
+        image: beclab/market-frontend:v0.3.6
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
       - name: appstore-backend
-        image: beclab/market-backend:v0.3.5
+        image: beclab/market-backend:v0.3.6
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -170,7 +170,7 @@ spec:
             fieldRef:
               fieldPath: status.podIP
       - name: terminus-ws-sidecar
-        image: 'beclab/ws-gateway:v1.0.3'
+        image: 'beclab/ws-gateway:v1.0.5'
         command:
           - /ws-gateway
         env:
