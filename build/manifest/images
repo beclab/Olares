@@ -36,3 +36,4 @@ beclab/upgrade-job:0.1.7
 bytetrade/envoy:v1.25.11.1
 liangjw/kube-webhook-certgen:v1.1.1
 beclab/hami:v2.5.0
+alpine:3.14
