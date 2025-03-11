@@ -70,3 +70,4 @@ rancher/mirrored-pause:3.6
 beclab/reverse-proxy:v0.1.4
 beclab/upgrade-job:0.1.7
 bytetrade/envoy:v1.25.11.1
+alpine:3.14
