@@ -1,11 +1,12 @@
 
 {{- $namespace := printf "%s" "os-system" -}}
 {{- $files_secret := (lookup "v1" "Secret" $namespace "files-secrets") -}}
-{{- $password := "" -}}
+
+{{- $files_postgres_password := "" -}}
 {{ if $files_secret -}}
-{{ $password = (index $files_secret "data" "password") }}
+{{ $files_postgres_password = (index $files_secret "data" "files_postgres_password") }}
 {{ else -}}
-{{ $password = randAlphaNum 16 | b64enc }}
+{{ $files_postgres_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
 {{- $files_redis_password := "" -}}
@@ -78,7 +79,7 @@ spec:
             - containerPort: 8080
           env:
             - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.60'
+              value: 'beclab/files-server:v0.2.61'
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -114,7 +115,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.60
+          image: beclab/files-server:v0.2.61
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -170,7 +171,7 @@ spec:
 #            - name: ZINC_USER
 #              value: zincuser-files-os-system
 #            - name: ZINC_PASSWORD
-#              value: {{ $password | b64dec }}
+#              value: {{ $files_postgres_password | b64dec }}
 #            - name: ZINC_HOST
 #              value: zinc-server-svc.os-system
 #            - name: ZINC_PORT
@@ -220,6 +221,16 @@ spec:
               value: '1.11'
             - name: FILE_CACHE_DIR
               value: '/data/file_cache'
+            - name: PGHOST
+              value: citus-headless.os-system
+            - name: PGPORT
+              value: '5432'
+            - name: PGUSER
+              value: files_os_system
+            - name: PGPASSWORD
+              value: {{ $files_postgres_password | b64dec }}
+            - name: PGDB1
+              value: os_system_files
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -396,7 +407,7 @@ spec:
           name: check-nats
       containers:
         - name: files
-          image: beclab/files-server:v0.2.60
+          image: beclab/files-server:v0.2.61
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -409,12 +420,14 @@ spec:
           ports:
             - containerPort: 8110
           env:
-            - name: FB_DATABASE
-              value: /appdata/database/filebrowser.db
-            - name: FB_CONFIG
-              value: /appdata/config/settings.json
-            - name: FB_ROOT
+            - name: ROOT_PREFIX
               value: /data
+#            - name: FB_DATABASE
+#              value: /appdata/database/filebrowser.db
+#            - name: FB_CONFIG
+#              value: /appdata/config/settings.json
+#            - name: FB_ROOT
+#              value: /data
             - name: OLARES_VERSION
               value: '1.11'
             - name: NODE_NAME
@@ -459,7 +472,7 @@ metadata:
   namespace: os-system
 type: Opaque
 data:
-  password: {{ $password }}
+  files_postgres_password: {{ $files_postgres_password }}
   files_redis_password: {{ $files_redis_password }}
 
 ---
@@ -471,6 +484,26 @@ metadata:
 data:
   files_nats_password: {{ $files_nats_password }}
 type: Opaque
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: files-pg
+  namespace: os-system
+spec:
+  app: files
+  appNamespace: os-system
+  middleware: postgres
+  postgreSQL:
+    user: files_os_system
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: files_postgres_password
+          name: files-secrets
+    databases:
+      - name: files
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
