@@ -237,6 +237,8 @@ spec:
         - name: proxy
           containerPort: 8080
         env:
+        - name: INFISICAL_URL
+          value: http://localhost:4000
         - name: PG_USER
           value: infisical_os_system
         - name: PG_DB
