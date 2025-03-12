@@ -1,4 +1,4 @@
-beclab/ks-apiserver:v3.3.0-ext-3
+beclab/ks-apiserver:v3.3.0-ext-4
 beclab/kube-state-metrics:v2.3.0-ext
 beclab/notification-manager-ext:v0.1.1-ext
 beclab/notification-manager-operator-ext:v0.1.0-ext
