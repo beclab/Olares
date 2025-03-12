@@ -322,7 +322,7 @@ spec:
         - name: userspace-dir
           mountPath: /data
       - name: drive-server
-        image: beclab/drive:v0.0.51
+        image: beclab/drive:v0.0.55
         imagePullPolicy: IfNotPresent
         env:
         - name: OS_SYSTEM_SERVER
@@ -345,7 +345,7 @@ spec:
         - name: data-dir
           mountPath: /data
       - name: task-executor
-        image: beclab/driveexecutor:v0.0.51
+        image: beclab/driveexecutor:v0.0.55
         imagePullPolicy: IfNotPresent
         env:
         - name: OS_SYSTEM_SERVER
