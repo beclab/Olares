@@ -74,7 +74,7 @@ if [ -z ${cdn_url} ]; then
     cdn_url="https://dc3p1870nn3cj.cloudfront.net"
 fi
 
-CLI_VERSION="0.2.16"
+CLI_VERSION="0.2.17"
 CLI_FILE="olares-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
 if [[ x"$os_type" == x"Darwin" ]]; then
     CLI_FILE="olares-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
@@ -204,9 +204,24 @@ if [[ "$JUICEFS" == "1" ]]; then
     fi
 fi
 
+if [[ -n "$SWAPPINESS" ]]; then
+    swapflag="$swapflag --swappiness $SWAPPINESS"
+fi
+if [[ "$ENABLE_POD_SWAP" == "1" ]]; then
+    swapflag="$swapflag --enable-pod-swap"
+fi
+if [[ "$ENABLE_ZRAM" == "1" ]]; then
+    swapflag="$swapflag --enable-zram"
+fi
+if [[ -n "$ZRAM_SIZE" ]]; then
+    swapflag="$swapflag --zram-size $ZRAM_SIZE"
+fi
+if [[ -n "$ZRAM_SWAP_PRIORITY" ]]; then
+    swapflag="$swapflag --zram-swap-priority $ZRAM_SWAP_PRIORITY"
+fi
 echo "installing Olares..."
 echo ""
-$sh_c "$INSTALL_OLARES_CLI olares install $PARAMS $KUBE_PARAM $fsflag"
+$sh_c "$INSTALL_OLARES_CLI olares install $PARAMS $KUBE_PARAM $fsflag $swapflag"
 
 if [[ $? -ne 0 ]]; then
     echo "error: failed to install Olares"
