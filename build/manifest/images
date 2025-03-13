@@ -26,7 +26,7 @@ quay.io/argoproj/workflow-controller:v3.5.0
 redis:5.0.14-alpine
 beclab/velero:v1.11.3
 beclab/velero-plugin-for-terminus:v1.0.2
-beclab/l4-bfl-proxy:v0.2.7
+beclab/l4-bfl-proxy:v0.2.8
 gcr.io/k8s-minikube/storage-provisioner:v5
 owncloudci/wait-for:latest
 beclab/recommend-argotask:v0.0.12
