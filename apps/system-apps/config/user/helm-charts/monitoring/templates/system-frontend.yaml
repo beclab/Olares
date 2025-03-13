@@ -243,7 +243,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: settings-init
-          image: beclab/settings:v0.2.11
+          image: beclab/settings:v0.2.14
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -344,7 +344,7 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
         - name: terminus-ws-sidecar
-          image: 'beclab/ws-gateway:v1.0.4'
+          image: 'beclab/ws-gateway:v1.0.5'
           imagePullPolicy: IfNotPresent
           command:
             - /ws-gateway
