@@ -551,6 +551,8 @@ spec:
             - --enable-leader-election
             - --health-probe-addr=:8081
             - --webhook-port=9443
+            - --enable-nginx-instrumentation
+            - --enable-go-instrumentation
             - --collector-image=otel/opentelemetry-collector-k8s:0.118.0
           command:
             - /manager

@@ -27,6 +27,15 @@ spec:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
+  nginx:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://jaeger-storage-instance-collector.os-system:4318
+  go:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://jaeger-storage-instance-collector.os-system:4318
+
 
 ---
 apiVersion: opentelemetry.io/v1alpha1
@@ -56,3 +65,12 @@ spec:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318        
+  nginx:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://jaeger-storage-instance-collector.os-system:4318
+  go:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://jaeger-storage-instance-collector.os-system:4318
+

@@ -112,9 +112,11 @@ spec:
       labels:
         app: files
         io.bytetrade.app: "true"
-    annotations:
-      instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
-      instrumentation.opentelemetry.io/inject-nginx-container-names: "files-frontend"    
+      annotations:
+        # support nginx 1.24.3 1.25.3
+        # instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
+        # instrumentation.opentelemetry.io/inject-nginx-container-names: "files-frontend"    
+        # instrumentation.opentelemetry.io/otel-go-auto-target-exe: "drive"
     spec:
       serviceAccountName: bytetrade-controller
       securityContext:
