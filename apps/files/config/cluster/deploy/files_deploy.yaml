@@ -75,7 +75,7 @@ spec:
             chown -R 1000:1000 /appdata; chown -R 1000:1000 /appcache; chown -R 1000:1000 /data
       containers:
         - name: gateway
-          image: beclab/appdata-gateway:0.1.16
+          image: beclab/appdata-gateway:0.1.18
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -84,7 +84,7 @@ spec:
             - containerPort: 8080
           env:
             - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.61'
+              value: 'beclab/files-server:v0.2.62'
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -120,7 +120,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.61
+          image: beclab/files-server:v0.2.62
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -412,11 +412,12 @@ spec:
           name: check-nats
       containers:
         - name: files
-          image: beclab/files-server:v0.2.61
+          image: beclab/files-server:v0.2.62
           imagePullPolicy: IfNotPresent
           securityContext:
-            allowPrivilegeEscalation: false
-            runAsUser: 1000
+            allowPrivilegeEscalation: true
+            runAsUser: 0
+            runAsNonRoot: false
           volumeMounts:
             - name: fb-data
               mountPath: /appdata
