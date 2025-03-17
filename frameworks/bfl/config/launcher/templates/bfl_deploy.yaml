@@ -295,7 +295,7 @@ spec:
         - name: L4_PROXY_IMAGE_VERSION
           value: v0.2.8
         - name: REVERSE_PROXY_AGENT_IMAGE_VERSION
-          value: v0.1.4
+          value: v0.1.7
         - name: TERMINUS_CERT_SERVICE_API
           value: {{ .Values.bfl.terminus_cert_service_api }}
         - name: TERMINUS_DNS_SERVICE_API
