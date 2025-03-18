@@ -39,3 +39,10 @@ liangjw/kube-webhook-certgen:v1.1.1
 beclab/hami:v2.5.0
 alpine:3.14
 mirrorgooglecontainers/defaultbackend-amd64:1.4
+ghcr.io/open-telemetry/opentelemetry-go-instrumentation/autoinstrumentation-go:v0.19.0-alpha
+ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-apache-httpd:1.0.4
+ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-dotnet:1.2.0
+ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:1.33.6
+ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:0.53.0
+ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-python:0.50b0
+beclab/reverse-proxy:v0.1.7
