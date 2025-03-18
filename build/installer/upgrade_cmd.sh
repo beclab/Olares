@@ -282,6 +282,33 @@ function get_bfl_status(){
     $sh_c "${KUBECTL} get pod  -n user-space-${username} -l 'tier=bfl' -o jsonpath='{.items[*].status.phase}'"
 }
 
+function get_fileserver_status(){
+    $sh_c "${KUBECTL} get pod  -n os-system -l 'app=files' -o jsonpath='{.items[*].status.phase}'"
+}
+
+function get_filefe_status(){
+    local username=$1
+    $sh_c "${KUBECTL} get pod  -n user-space-${username} -l 'app=files' -o jsonpath='{.items[*].status.phase}'"
+}
+
+function check_fileserver(){
+    local status=$(get_fileserver_status)
+    local n=0
+    while [ "x${status}" != "xRunning" ]; do
+        n=$(expr $n + 1)
+        local dotn=$(($n % 10))
+        local dot=$(repeat $dotn '>')
+
+        echo -ne "\rWaiting for file-server starting ${dot}"
+        sleep 0.5
+
+        status=$(get_fileserver_status)
+        echo -ne "\rWaiting for file-server starting          "
+
+    done
+    echo
+}
+
 function check_appservice(){
     local status=$(get_appservice_status)
     local n=0
@@ -295,6 +322,25 @@ function check_appservice(){
 
         status=$(get_appservice_status)
         echo -ne "\rWaiting for app-service starting          "
+
+    done
+    echo
+}
+
+function check_filesfe(){
+    local username=$1
+    local status=$(get_filefe_status ${username})
+    local n=0
+    while [ "x${status}" != "xRunning" ]; do
+        n=$(expr $n + 1)
+        local dotn=$(($n % 10))
+        local dot=$(repeat $dotn '>')
+
+        echo -ne "\rPlease waiting ${dot}"
+        sleep 0.5
+
+        status=$(get_filefe_status ${username})
+        echo -ne "\rPlease waiting          "
 
     done
     echo
@@ -482,7 +528,7 @@ function upgrade_terminus(){
 
     # patch
     ensure_success $sh_c "${KUBECTL} apply -f ${BASE_DIR}/deploy/patch-globalrole-workspace-manager.yaml"
-#    ensure_success $sh_c "$KUBECTL apply -f ${BASE_DIR}/deploy/patch-notification-manager.yaml"
+    # ensure_success $sh_c "$KUBECTL apply -f ${BASE_DIR}/deploy/patch-notification-manager.yaml"
 
     # clear apps values.yaml
     cat /dev/null > ${BASE_DIR}/wizard/config/apps/values.yaml
@@ -510,6 +556,13 @@ function upgrade_terminus(){
         for appdir in "${BASE_DIR}/wizard/config/apps"/*/; do
           if [ -d "$appdir" ]; then
             releasename=$(basename "$appdir")
+
+            # ignore wizard
+            # FIXME: unintitialized user's wizard should be upgrade
+            if [ x"${releasename}" == x"wizard" ]; then 
+                continue
+            fi
+
             if [ "$user" != "$admin_user" ];then
                 releasename=${releasename}-${user}
             fi
@@ -518,18 +571,6 @@ function upgrade_terminus(){
         done
 
     done
-
-    echo 'Waiting for Vault ...'
-    check_vault ${admin_user}
-    echo
-
-    echo 'Starting BFL ...'
-    check_bfl ${admin_user}
-    echo
-
-    echo 'Starting Desktop ...'
-    check_desktop ${admin_user}
-    echo
 
     # upgrade app service in the last. keep app service online longer
     local terminus_is_cloud_version=$($sh_c "${KUBECTL} get cm -n os-system backup-config -o jsonpath='{.data.terminus-is-cloud-version}'")
@@ -544,18 +585,27 @@ function upgrade_terminus(){
         --set backup.sync_secret=\"${backup_secret}\""
 
     echo 'Waiting for App-Service ...'
+    sleep 2 # wait for controller reconiling
     check_appservice
     echo
 
-    # upgrade_ksapi ${users[@]}
-    # echo
+    echo 'Waiting for Vault ...'
+    check_vault ${admin_user}
+    echo
 
-    local gpu=$($sh_c "${KUBECTL} get ds -n gpu-system orionx-server -o jsonpath='{.meta.name}'")
-    if [ "x$gpu" != "x" ]; then
-        echo "upgrade"
-        local GPU_DOMAIN=$($sh_c "${KUBECTL} get ds -n gpu-system orionx-server -o jsonpath='{.meta.annotations.gpu-server}'")
-        ensure_success $sh_c "${HELM} upgrade -i gpu ${BASE_DIR}/wizard/config/gpu -n gpu-system --set gpu.server=${GPU_DOMAIN} --reuse-values"
-    fi
+    echo 'Starting BFL ...'
+    check_bfl ${admin_user}
+    echo
+
+    echo 'Starting files ...'
+    check_fileserver
+    check_filesfe ${admin_user}
+    echo
+
+    echo 'Starting Desktop ...'
+    check_desktop ${admin_user}
+    echo
+
 }
 
 
