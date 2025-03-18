@@ -1,5 +1,4 @@
 {{- $namespace := printf "%s" "os-system" -}}
-{{ $lldap_rootpath := "/olares/userdata/dbdata" }}
 {{- $lldap_secret := (lookup "v1" "Secret" $namespace "lldap-credentials") -}}
 {{- $lldap_jwt_secret := "" -}}
 {{- $lldap_ldap_user_pass := "" -}}
@@ -13,7 +12,42 @@
 {{ $lldap_ldap_user_pass = randAlpha 64 | b64enc }}
 {{ $lldap_key_seed = randAlpha 64 | b64enc }}
 {{- end -}}
+{{- $lldap_pg_secret := (lookup "v1" "Secret" $namespace "lldap-pg-secrets") -}}
+{{- $pg_password := "" -}}
+{{ if $lldap_pg_secret -}}
+{{ $pg_password = (index $lldap_pg_secret "data" "pg_password") }}
+{{ else -}}
+{{ $pg_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
 
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lldap-pg-secrets
+  namespace: os-system
+type: Opaque
+data:
+  pg_password: {{ $pg_password }}
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: lldap-pg
+  namespace: os-system
+spec:
+  app: lldap
+  appNamespace: os-system
+  middleware: postgres
+  postgreSQL:
+    user: lldap_os_system
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: pg_password
+          name: lldap-pg-secrets
+    databases:
+      - name: lldap
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -70,8 +104,6 @@ spec:
                 secretKeyRef:
                   name: lldap-credentials
                   key: lldap-key-seed
-            - name: LLDAP_DATABASE_URL
-              value: "sqlite:///data/users.db?mode=rwc"
             - name: TZ
               value: CET
             - name: UID
@@ -80,21 +112,14 @@ spec:
               value: "/data/private_key"
             - name: RUST_BACKTRACE
               value: "full"
+            - name: LLDAP_DATABASE_URL
+              value: "postgres://lldap_os_system:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-system:5432/os_system_lldap?sslmode=allow"
           image: beclab/lldap:0.0.1
           imagePullPolicy: IfNotPresent
           name: lldap
           ports:
             - containerPort: 3890
             - containerPort: 17170
-          volumeMounts:
-            - mountPath: /data
-              name: lldap-data
-      restartPolicy: Always
-      volumes:
-        - name: lldap-data
-          hostPath:
-            type: DirectoryOrCreate
-            path: {{ $lldap_rootpath }}/lldap
 
 
 ---
