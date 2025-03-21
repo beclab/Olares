@@ -935,7 +935,7 @@ metadata:
   namespace: os-system
 spec:
   exporter:
-    endpoint: http://jaeger-storage-instance-collector.os-system:4317
+    endpoint: https://jaeger-storage-instance-collector.os-system:4317
   propagators:
     - tracecontext
     - baggage
@@ -947,20 +947,28 @@ spec:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf
   dotnet:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf
   nodejs:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf
   nginx:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: https://jaeger-storage-instance-collector.os-system:4317
   go:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf
 
