@@ -84,7 +84,7 @@ spec:
             - containerPort: 8080
           env:
             - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.62'
+              value: 'beclab/files-server:v0.2.63'
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -120,7 +120,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.62
+          image: beclab/files-server:v0.2.63
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -252,7 +252,7 @@ spec:
             - /filebrowser
             - --noauth
         - name: uploader
-          image: beclab/upload:v1.0.12
+          image: beclab/upload:v1.0.13
           env:
             - name: UPLOAD_FILE_TYPE
               value: '*'
@@ -412,7 +412,7 @@ spec:
           name: check-nats
       containers:
         - name: files
-          image: beclab/files-server:v0.2.62
+          image: beclab/files-server:v0.2.63
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
