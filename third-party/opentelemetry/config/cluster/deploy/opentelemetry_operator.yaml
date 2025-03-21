@@ -884,7 +884,7 @@ spec:
                 exporter:
                   prometheus:
                     host: 0.0.0.0
-                    port: 8888
+                    port: 8088
         logs:
           level: info
 
@@ -914,9 +914,9 @@ spec:
       otlp:
         protocols:
           grpc:
-            endpoint: "localhost:4317"
+            endpoint: "0.0.0.0:4317"
           http: 
-            endpoint: "localhost:4318"
+            endpoint: "0.0.0.0:4318"
 
     processors:
       batch:
@@ -935,7 +935,7 @@ metadata:
   namespace: os-system
 spec:
   exporter:
-    endpoint: http://jaeger-storage-instance-collector.os-system:4317
+    endpoint: https://jaeger-storage-instance-collector.os-system:4317
   propagators:
     - tracecontext
     - baggage
@@ -947,20 +947,28 @@ spec:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf
   dotnet:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf
   nodejs:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf
   nginx:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: https://jaeger-storage-instance-collector.os-system:4317
   go:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf
 
