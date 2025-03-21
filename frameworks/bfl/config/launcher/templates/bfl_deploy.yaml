@@ -200,9 +200,9 @@ spec:
       labels:
         tier: bfl
       annotations:
-        instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
-        instrumentation.opentelemetry.io/go-container-names: "api"    
-        instrumentation.opentelemetry.io/otel-go-auto-target-exe: "/bfl-api"
+        # instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
+        # instrumentation.opentelemetry.io/go-container-names: "api"    
+        # instrumentation.opentelemetry.io/otel-go-auto-target-exe: "/bfl-api"
         # instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
         # instrumentation.opentelemetry.io/inject-nginx-container-names: "ingress"    
     spec:
