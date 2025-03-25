@@ -763,6 +763,8 @@ data:
                                 prefix: "/upload"
                               route:
                                 cluster: upload_original_dst
+                                timeout: 1800s
+                                idle_timeout: 1800s
                             - match:
                                 prefix: "/"
                               route:
