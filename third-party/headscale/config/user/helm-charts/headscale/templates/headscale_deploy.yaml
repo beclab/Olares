@@ -264,8 +264,8 @@ spec:
           mountPath: /var/lib/tailscale
         env:
         {{- range $key, $val := .Values.terminusGlobalEnvs }}
-          - name: {{ $key }}
-            value: {{ $val | quote }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
         {{- end }}
         - name: TS_DISABLE_TAILDROP
           value: "true"
