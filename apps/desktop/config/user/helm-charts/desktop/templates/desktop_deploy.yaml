@@ -450,6 +450,7 @@ data:
                               - prefix: x-unauth-
                               - exact: x-authorization
                               - exact: x-bfl-user
+                              - exact: x-real-ip
                               - exact: terminus-nonce
                           headers_to_add:
                             - key: X-Forwarded-Method
@@ -626,6 +627,7 @@ data:
                               - prefix: x-unauth-
                               - exact: x-authorization
                               - exact: x-bfl-user
+                              - exact: x-real-ip
                               - exact: terminus-nonce
                           headers_to_add:
                             - key: X-Forwarded-Method

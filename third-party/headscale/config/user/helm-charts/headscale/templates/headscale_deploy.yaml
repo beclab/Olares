@@ -104,7 +104,7 @@ spec:
         - |
           chown -R 1000:1000 /headscale 
       - name: init
-        image: beclab/headscale-init:v0.1.9
+        image: beclab/headscale-init:v0.1.10
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
@@ -263,6 +263,10 @@ spec:
         - name: tailscale-data
           mountPath: /var/lib/tailscale
         env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
+        {{- end }}
         - name: TS_DISABLE_TAILDROP
           value: "true"
         - name: NODE_IP
@@ -367,7 +371,8 @@ data:
   acl.json: |
     {
       "acls":[
-        { "action": "accept", "src": ["*"], "proto": "tcp", "dst": ["*:443"] }
+        { "action": "accept", "src": ["*"], "proto": "tcp", "dst": ["*:443"] },
+        { "action": "accept", "src": ["*"], "proto": "udp", "dst": ["*:53"] }
       ],
       "autoApprovers": {
         "routes": {

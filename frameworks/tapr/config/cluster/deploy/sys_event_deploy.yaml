@@ -70,7 +70,7 @@ spec:
         runAsUser: 0
       containers:
       - name: tapr-sysevent
-        image: beclab/sys-event:0.1.15
+        image: beclab/sys-event:0.2.1
         imagePullPolicy: IfNotPresent
         env:
         - name: APP_RANDOM_KEY
