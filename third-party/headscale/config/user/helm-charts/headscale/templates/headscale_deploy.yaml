@@ -104,7 +104,7 @@ spec:
         - |
           chown -R 1000:1000 /headscale 
       - name: init
-        image: beclab/headscale-init:v0.1.9
+        image: beclab/headscale-init:v0.1.10
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
@@ -367,7 +367,8 @@ data:
   acl.json: |
     {
       "acls":[
-        { "action": "accept", "src": ["*"], "proto": "tcp", "dst": ["*:443"] }
+        { "action": "accept", "src": ["*"], "proto": "tcp", "dst": ["*:443"] },
+        { "action": "accept", "src": ["*"], "proto": "udp", "dst": ["*:53"] }
       ],
       "autoApprovers": {
         "routes": {
