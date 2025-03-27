@@ -263,6 +263,10 @@ spec:
         - name: tailscale-data
           mountPath: /var/lib/tailscale
         env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+          - name: {{ $key }}
+            value: {{ $val | quote }}
+        {{- end }}
         - name: TS_DISABLE_TAILDROP
           value: "true"
         - name: NODE_IP
