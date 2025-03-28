@@ -163,9 +163,9 @@ spec:
         - name: KS_APISERVER_SERVICE_PORT
           value: '80'
         - name: REQUIRE_PERMISSION_APPS
-          value: "vault,desktop,message,wise,search,appstore,notification,dashboard,settings,devbox,profile"
+          value: "vault,desktop,message,wise,search,appstore,notification,dashboard,settings,studio,profile"
         - name: SYS_APPS
-          value: "analytics,market,auth,citus,desktop,did,docs,files,fsnotify,headscale,infisical,intentprovider,ksserver,message,mongo,monitoring,notifications,profile,redis,wise,recommend,seafile,search,search-admin,settings,systemserver,tapr,vault,video,zinc,accounts,control-hub,dashboard,nitro,system-frontend"
+          value: "analytics,market,auth,citus,desktop,did,docs,files,fsnotify,headscale,infisical,intentprovider,ksserver,message,mongo,monitoring,notifications,profile,redis,wise,recommend,seafile,search,search-admin,settings,systemserver,tapr,vault,video,zinc,accounts,control-hub,dashboard,nitro,system-frontend,studio"
         - name: GENERATED_APPS
           value: "citus,mongo-cluster-cfg,mongo-cluster-mongos,mongo-cluster-rs0,frp-agent,l4-bfl-proxy,drc-redis-cluster,appdata-backend,argoworkflows,argoworkflow-workflow-controller,velero,kvrocks"
         - name: WS_CONTAINER_IMAGE

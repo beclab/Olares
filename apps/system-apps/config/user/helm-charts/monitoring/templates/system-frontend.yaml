@@ -109,6 +109,19 @@ spec:
       port: 3010
       targetPort: 3010
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: studio-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: system-frontend
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 87
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -121,11 +134,11 @@ metadata:
     applications.app.bytetrade.io/group: 'true'
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
-    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","wise":"https://file.bttcdn.com/appstore/rss/icon.png","headscale": "https://file.bttcdn.com/appstore/headscale/icon.png","settings": "https://file.bttcdn.com/appstore/settings/icon.png"}'
-    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","wise":"Wise","headscale":"Headscale","settings":"Settings"}'
-    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","wise":"0.0.1","headscale":"0.0.1","settings":"0.0.1"}'
+    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","wise":"https://file.bttcdn.com/appstore/rss/icon.png","headscale": "https://file.bttcdn.com/appstore/headscale/icon.png","settings": "https://file.bttcdn.com/appstore/settings/icon.png","studio":"https://file.bttcdn.com/appstore/devbox/icon.png"}'
+    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","wise":"Wise","headscale":"Headscale","settings":"Settings","studio":"Studio"}'
+    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","wise":"0.0.1","headscale":"0.0.1","settings":"0.0.1","studio":"0.0.1"}'
     applications.app.bytetrade.io/policies: '{"dashboard":{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}}'
-    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"wise":[{"name":"wise", "host":"wise-svc", "port":80,"title":"Wise","windowPushState":true}],"headscale":[{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true}],"settings":[{"name":"settings", "host":"settings-service", "port":80,"title":"Settings"}]}'
+    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"wise":[{"name":"wise", "host":"wise-svc", "port":80,"title":"Wise","windowPushState":true}],"headscale":[{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true}],"settings":[{"name":"settings", "host":"settings-service", "port":80,"title":"Settings"}],"studio":[{"name":"studio","host":"studio-svc","port":8080,"title":"Studio","openMethod":"window"}]}'
 spec:
   replicas: 1
   selector:
@@ -136,7 +149,7 @@ spec:
       labels:
         app: system-frontend
         io.bytetrade.app: "true"
-      annotations:
+      # annotations:
         # instrumentation.opentelemetry.io/inject-nodejs: "olares-instrumentation"
         # instrumentation.opentelemetry.io/nodejs-container-names: "settings-server"    
         # instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
@@ -254,6 +267,18 @@ spec:
           volumeMounts:
             - mountPath: /www
               name: www-dir
+        - name: studio-init
+          image: beclab/devbox:v0.1.39
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /www/studio
+              cp -r /app/* /www/studio
+          volumeMounts:
+            - mountPath: /www
+              name: www-dir
       containers:
         - name: terminus-envoy-sidecar
           image: bytetrade/envoy:v1.25.11
@@ -326,6 +351,9 @@ spec:
             - name: system-frontend-nginx-config
               mountPath: /etc/nginx/conf.d/settings.conf
               subPath: settings.conf
+            - name: system-frontend-nginx-config
+              mountPath: /etc/nginx/conf.d/studio.conf
+              subPath: studio.conf
           env:
             - name: POD_UID
               valueFrom:
@@ -428,6 +456,8 @@ spec:
                 path: headscale.conf
               - key: settings.conf
                 path: settings.conf
+              - key: studio.conf
+                path: studio.conf
 
 
 ---
@@ -478,6 +508,31 @@ spec:
       ops:
         - getNFTAddress
       version: v1
+status:
+  state: active
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ApplicationPermission
+metadata:
+  name: studio
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: studio
+  appid: studio
+  key: {{ .Values.os.studio.appKey }}
+  secret: {{ .Values.os.studio.appSecret }}
+  permissions:
+    - dataType: app
+      group: service.appstore
+      ops:
+        - InstallDevApp
+        - UninstallDevApp
+      version: v1
+    - dataType: legacy_api
+      group: api.intent
+      ops:
+        - POST
+      version: v2
 status:
   state: active
 ---
@@ -1324,5 +1379,34 @@ data:
 
         location ~.*\.(js|css|png|jpg|svg|woff|woff2)$ {
             add_header Cache-Control "public, max-age=2678400";
+        }
+    }
+  studio.conf: |-
+    server {
+        listen 87;
+        # Gzip Settings
+        gzip off;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+        root /www/studio;
+
+        location / {
+          add_header Cache-Control "no-store";
+          try_files $uri $uri/index.html /index.html;
+        }
+
+        location /api/ {
+          proxy_pass http://studio-server:8080;
+          proxy_set_header            Host $http_host;
+          proxy_set_header            X-real-ip $remote_addr;
+          proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection '$connection_upgrade';
+          proxy_read_timeout 180;
         }
     }
