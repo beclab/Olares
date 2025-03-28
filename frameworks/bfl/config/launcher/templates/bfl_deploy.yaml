@@ -293,7 +293,7 @@ spec:
         - name: BACKUP_SERVER
           value: backup-server.os-system:8082
         - name: L4_PROXY_IMAGE_VERSION
-          value: v0.2.8
+          value: v0.3.0
         - name: REVERSE_PROXY_AGENT_IMAGE_VERSION
           value: v0.1.8
         - name: TERMINUS_CERT_SERVICE_API
