@@ -530,10 +530,6 @@ spec:
       version: v1
     - dataType: legacy_api
       group: api.intent
-      appName: desktop
-      svc: edge-desktop
-      namespace: user-space
-      port: 80
       ops:
         - POST
       version: v2
