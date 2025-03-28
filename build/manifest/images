@@ -32,7 +32,7 @@ owncloudci/wait-for:latest
 beclab/recommend-argotask:v0.0.12
 bytetrade/nvshare:nvshare-scheduler
 beclab/nats-server-config-reloader:v1
-beclab/reverse-proxy:v0.1.7
+beclab/reverse-proxy:v0.1.8
 beclab/upgrade-job:0.1.7
 bytetrade/envoy:v1.25.11.1
 liangjw/kube-webhook-certgen:v1.1.1

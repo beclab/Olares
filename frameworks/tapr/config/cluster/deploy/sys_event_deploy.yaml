@@ -26,6 +26,12 @@ rules:
   - backups
   verbs:
   - '*'
+- apiGroups:
+  - '*'
+  resources:
+  - configmaps
+  verbs:
+  - '*'
 
 ---
 apiVersion: v1
