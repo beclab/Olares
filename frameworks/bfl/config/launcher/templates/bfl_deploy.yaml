@@ -300,7 +300,11 @@ spec:
           value: {{ .Values.bfl.terminus_cert_service_api }}
         - name: TERMINUS_DNS_SERVICE_API
           value: {{ .Values.bfl.terminus_dns_service_api }}
-
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
       - name: ingress
         image: beclab/bfl-ingress:v0.3.2
         imagePullPolicy: IfNotPresent
