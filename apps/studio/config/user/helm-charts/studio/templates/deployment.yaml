@@ -249,7 +249,7 @@ spec:
 
       containers:
         - name: studio
-          image: beclab/devbox-server:v0.1.43
+          image: beclab/devbox-server:v0.1.44
           imagePullPolicy: IfNotPresent
           args:
             - server
