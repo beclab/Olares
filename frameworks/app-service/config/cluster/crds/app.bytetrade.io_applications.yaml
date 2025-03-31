@@ -116,6 +116,8 @@ spec:
               ports:
                 items:
                   properties:
+                    addToTailscaleAcl:
+                      type: boolean
                     exposePort:
                       format: int32
                       type: integer
@@ -128,7 +130,7 @@ spec:
                       type: integer
                     protocol:
                       description: The protocol for this entrance. Supports "tcp"
-                        and "udp". Default is tcp.
+                        and "udp","". Default is tcp/udp, "" mean tcp and udp.
                       type: string
                   required:
                   - host
@@ -140,6 +142,33 @@ spec:
                 additionalProperties:
                   type: string
                 description: the extend settings of the application
+                type: object
+              tailscale:
+                properties:
+                  acls:
+                    items:
+                      properties:
+                        action:
+                          type: string
+                        dst:
+                          items:
+                            type: string
+                          type: array
+                        proto:
+                          type: string
+                        src:
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - dst
+                      - proto
+                      type: object
+                    type: array
+                  subRoutes:
+                    items:
+                      type: string
+                    type: array
                 type: object
               tailscaleAcls:
                 items:

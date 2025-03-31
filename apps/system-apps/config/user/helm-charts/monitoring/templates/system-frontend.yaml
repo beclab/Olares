@@ -1378,6 +1378,18 @@ data:
         }
     }
   studio.conf: |-
+    upstream SettingsServerStudio {
+        server monitoring-server.os-system;
+    }
+
+    upstream MiddlewareStudio {
+        server middleware-service.os-system;
+    }
+
+    upstream AnalyticsStudio {
+      server anayltic2-server.os-system:3010;
+    }
+
     server {
         listen 87;
         # Gzip Settings
@@ -1391,18 +1403,141 @@ data:
         root /www/studio;
 
         location / {
-          add_header Cache-Control "no-store";
           try_files $uri $uri/index.html /index.html;
+          add_header Cache-Control "private,no-cache";
+          add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+          expires 0;
         }
 
-        location /api/ {
+       location /api/command {
           proxy_pass http://studio-server:8080;
           proxy_set_header            Host $http_host;
           proxy_set_header            X-real-ip $remote_addr;
           proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_http_version 1.1;
           proxy_set_header Upgrade $http_upgrade;
-          proxy_set_header Connection '$connection_upgrade';
+          proxy_set_header Connection $http_connection;
+          proxy_set_header Accept-Encoding gzip;
           proxy_read_timeout 180;
-        }
+      }
+      location /api/apps {
+          proxy_pass http://studio-server:8080;
+          proxy_set_header            Host $http_host;
+          proxy_set_header            X-real-ip $remote_addr;
+          proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection $http_connection;
+          proxy_set_header Accept-Encoding gzip;
+          proxy_read_timeout 180;
+      }
+      location /api/app-cfg {
+        proxy_pass http://studio-server:8080;
+        proxy_set_header            Host $http_host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $http_connection;
+        proxy_set_header Accept-Encoding gzip;
+        proxy_read_timeout 180;
+      }
+      location /api/list-my-containers {
+        proxy_pass http://studio-server:8080;
+        proxy_set_header            Host $http_host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $http_connection;
+        proxy_set_header Accept-Encoding gzip;
+        proxy_read_timeout 180;
+      }
+      location /api/files {
+        proxy_pass http://studio-server:8080;
+        proxy_set_header            Host $http_host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $http_connection;
+        proxy_set_header Accept-Encoding gzip;
+        proxy_read_timeout 180;
+      }
+
+      location /ws {
+        proxy_pass http://127.0.0.1:40010;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+      }
+
+      location /bfl {
+        add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
+        proxy_pass http://bfl;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        add_header X-Frame-Options SAMEORIGIN;
+      }
+
+      location /kapis {
+        proxy_pass http://SettingsServerStudio;
+      }
+
+      location /api/profile/init {
+        proxy_pass http://127.0.0.1:3010;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location /api {
+        proxy_pass http://SettingsServerStudio;
+      }
+
+      location /capi {
+        proxy_pass http://SettingsServerStudio;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location = /js/api/send {
+        proxy_pass http://AnalyticsStudio;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        rewrite ^/js(.*)$ $1 break;
+      }
+
+      location /analytics_service {
+        proxy_pass http://AnalyticsStudio;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        rewrite ^/analytics_service(.*)$ $1 break;
+      }
+
+      location ~ /(kapis/terminal|api/v1/watch|apis/apps/v1/watch) {
+        proxy_pass http://SettingsServerStudio;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+      }
+
+
+      location = /js/script.js {
+        add_header Access-Control-Allow-Origin "*";
+      }
+
+      location ~.*\.(js|css|png|jpg|svg|woff|woff2)$ {
+        add_header Cache-Control "public, max-age=2678400";
+      }
     }
