@@ -76,6 +76,9 @@ spec:
           - appName: ks-component
             pub: allow
             sub: allow
+          - appName: authelia
+            pub: allow
+            sub: allow
         name: system.notification
         permission:
           pub: allow

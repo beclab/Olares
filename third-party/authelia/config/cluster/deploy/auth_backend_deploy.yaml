@@ -8,6 +8,7 @@
 {{- $encryption_key := "" -}}
 {{- $redis_password := "" -}}
 {{- $pg_password := "" -}}
+{{- $nats_password := "" -}}
 {{ if $auth_secret -}}
 {{- $jwt_secret = (index $auth_secret "data" "jwt_secret") -}}
 {{- $session_secret = (index $auth_secret "data" "session_secret") -}}
@@ -15,6 +16,8 @@
 {{- $encryption_key = (index $auth_secret "data" "encryption_key") -}}
 {{- $redis_password = (index $auth_secret "data" "redis_password") -}}
 {{- $pg_password = (index $auth_secret "data" "pg_password") -}}
+{{- $nats_password = (index $auth_secret "data" "nats_password") -}}
+
 {{ else -}}
 {{ $jwt_secret = randAlphaNum 16 | b64enc }}
 {{ $session_secret = randAlphaNum 16 | b64enc }}
@@ -22,6 +25,7 @@
 {{ $encryption_key = randAlphaNum 32 | b64enc }}
 {{ $redis_password = randAlphaNum 16 | b64enc }}
 {{ $pg_password = randAlphaNum 16 | b64enc }}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
 ---
@@ -38,6 +42,7 @@ data:
   encryption_key: {{ $encryption_key }}
   redis_password: {{ $redis_password }}
   pg_password: {{ $pg_password }}
+  nats_password: {{ $nats_password }}
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
@@ -58,6 +63,33 @@ spec:
           name: authelia-secrets
     databases:
       - name: authelia
+
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: authelia-nats
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: authelia
+  appNamespace: {{ .Release.Namespace }}
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nats_password
+          name: authelia-secrets
+    refs:
+    - appName: notifications
+      appNamespace: {{ .Release.Namespace }}
+      subjects:
+      - name: system.notification
+        perm:
+        - pub
+        - sub
+    user: os-system-authelia
 
 ---
 apiVersion: v1
@@ -372,6 +404,20 @@ spec:
             secretKeyRef:
               name: app-key
               key: random-key
+        - name: NATS_HOST
+          value: nats
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: os-system-authelia
+        - name: NATS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: nats_password
+              name: authelia-secrets
+        - name: NATS_SUBJECT
+          value: "terminus.{{ .Release.Namespace }}.system.notification"
+
         volumeMounts:
         - name: config
           mountPath: /app/configuration.yml
