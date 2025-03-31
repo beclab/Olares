@@ -146,7 +146,7 @@ function get_app_key_secret(){
 
 function get_app_settings(){
     local username=$1
-    local apps=("vault" "desktop" "message" "wise" "search" "appstore" "notification" "dashboard" "settings" "devbox" "profile" "agent" "files")
+    local apps=("vault" "desktop" "message" "wise" "search" "appstore" "notification" "dashboard" "settings" "studio" "profile" "agent" "files")
     for a in ${apps[@]};do
         ks=($(get_app_key_secret "$username" "$a"))
         echo '
