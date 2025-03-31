@@ -76,7 +76,7 @@ spec:
           key: nats_password
           name: lldap-pg-secrets
     refs:
-    - appName: lldap
+    - appName: notifications
       appNamespace: {{ .Release.Namespace }}
       subjects:
       - name: system.notification

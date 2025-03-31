@@ -36,7 +36,7 @@ spec:
           key: nats_password
           name: ks-component-secrets
     refs:
-    - appName: ks-component
+    - appName: notifications
       appNamespace: {{ .Release.Namespace }}
       subjects:
       - name: system.notification
