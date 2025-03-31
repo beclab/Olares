@@ -12,12 +12,20 @@
 {{ $lldap_ldap_user_pass = randAlpha 64 | b64enc }}
 {{ $lldap_key_seed = randAlpha 64 | b64enc }}
 {{- end -}}
+
 {{- $lldap_pg_secret := (lookup "v1" "Secret" $namespace "lldap-pg-secrets") -}}
 {{- $pg_password := "" -}}
 {{ if $lldap_pg_secret -}}
 {{ $pg_password = (index $lldap_pg_secret "data" "pg_password") }}
 {{ else -}}
 {{ $pg_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+{{- $nats_password := "" -}}
+{{ if $lldap_pg_secret -}}
+{{ $nats_password = (index $lldap_pg_secret "data" "nats_password") }}
+{{ else -}}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
 ---
@@ -29,6 +37,8 @@ metadata:
 type: Opaque
 data:
   pg_password: {{ $pg_password }}
+  nats_password: {{ $nats_password }}
+
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
@@ -48,6 +58,33 @@ spec:
           name: lldap-pg-secrets
     databases:
       - name: lldap
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: lldap-nats
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: lldap
+  appNamespace: {{ .Release.Namespace }}
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nats_password
+          name: lldap-pg-secrets
+    refs:
+    - appName: lldap
+      appNamespace: {{ .Release.Namespace }}
+      subjects:
+      - name: system.notification
+        perm:
+        - pub
+        - sub
+    user: os-system-lldap
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -114,6 +151,20 @@ spec:
               value: "full"
             - name: LLDAP_DATABASE_URL
               value: "postgres://lldap_os_system:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-system:5432/os_system_lldap?sslmode=allow"
+            - name: NATS_HOST
+              value: nats
+            - name: NATS_PORT
+              value: "4222"
+            - name: NATS_USERNAME
+              value: os-system-lldap
+            - name: NATS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: nats_password
+                  name: lldap-pg-secrets
+            - name: NATS_SUBJECT
+              value: "terminus.{{ .Release.Namespace }}.system.notification"
+
           image: beclab/lldap:0.0.1
           imagePullPolicy: IfNotPresent
           name: lldap

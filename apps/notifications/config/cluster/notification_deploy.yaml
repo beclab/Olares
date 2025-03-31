@@ -1,0 +1,208 @@
+
+
+{{- $namespace := printf "%s%s" "os-system" -}}
+{{- $notifications_secret := (lookup "v1" "Secret" $namespace "notifications-secrets") -}}
+
+{{- $pg_password := "" -}}
+{{ if $notifications_secret -}}
+{{ $pg_password = (index $notifications_secret "data" "pg_password") }}
+{{ else -}}
+{{ $pg_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+{{- $nats_password := "" -}}
+{{ if $notifications_secret -}}
+{{ $nats_password = (index $notifications_secret "data" "nats_password") }}
+{{ else -}}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: notifications-secrets
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  pg_password: {{ $pg_password }}
+  nats_password: {{ $nats_password }}
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: notifications-pg
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: notifications
+  appNamespace: {{ .Release.Namespace }}
+  middleware: postgres
+  postgreSQL:
+    user: notifications_os_system
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: pg_password
+          name: notifications-secrets
+    databases:
+    - name: notifications   
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: notifications-nats
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: notifications
+  appNamespace: {{ .Release.Namespace }}
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nats_password
+          name: notifications-secrets
+    refs: []   # TODO: refs to notifications-proxy's subject
+    subjects:
+      - export:
+          - appName: notifications-proxy
+            pub: allow
+            sub: allow
+          - appName: lldap
+            pub: allow
+            sub: allow
+          - appName: ks-component
+            pub: allow
+            sub: allow
+        name: system.notification
+        permission:
+          pub: allow
+          sub: allow
+    user: os-system-notifications
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifications-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: notifications-server
+    applications.app.bytetrade.io/author: bytetrade.io
+  annotations:
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: notifications-server
+  template:
+    metadata:
+      labels:
+        app: notifications-server
+    spec:
+      initContainers:
+      - name: init-container
+        image: 'postgres:16.0-alpine3.18'
+        command:
+          - sh
+          - '-c'
+          - >-
+            echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
+        env:
+          - name: PGHOST
+            value: citus-master-svc.os-system
+          - name: PGPORT
+            value: "5432"
+          - name: PGUSER
+            value: notifications_os_system
+          - name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: pg_password
+                name: notifications-secrets
+          - name: PGDB
+            value: os_system_notifications
+      containers:
+      - name: notifications-api
+        image: beclab/notifications-api:v0.1.25
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3010
+          protocol: TCP
+        env:
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: pg_password
+              name: notifications-secrets
+
+        - name: PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING
+          value: '1'
+        - name: DATABASE_URL
+          value: postgres://notifications_os_system:$(DATABASE_PASSWORD)@citus-master-svc.os-system/os_system_notifications?sslmode=disable
+        - name: NATS_HOST
+          value: nats
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: os-system-notifications
+        - name: NATS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: nats_password
+              name: notifications-secrets
+        - name: NATS_SUBJECT
+          value: "terminus.{{ .Release.Namespace }}.system.notification"
+
+        livenessProbe:
+          tcpSocket:
+            port: 3010
+          initialDelaySeconds: 25
+          timeoutSeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 8
+        readinessProbe:
+          tcpSocket:
+            port: 3010
+          initialDelaySeconds: 25
+          periodSeconds: 10
+
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notifications-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: notifications-server
+  ports:
+  - name: "notifications-server"
+    protocol: TCP
+    port: 80
+    targetPort: 3010
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notifications-server
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: notifications-server
+  ports:
+  - name: "server"
+    protocol: TCP
+    port: 80
+    targetPort: 3010
+
