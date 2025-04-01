@@ -5,6 +5,9 @@
 {{- $files_postgres_password := "" -}}
 {{ if $files_secret -}}
 {{ $files_postgres_password = (index $files_secret "data" "files_postgres_password") }}
+{{- if not $files_postgres_password -}}
+{{ $files_postgres_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
 {{ else -}}
 {{ $files_postgres_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
