@@ -117,7 +117,7 @@ spec:
             echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
         env:
           - name: PGHOST
-            value: citus-master-svc.os-system
+            value: citus-headless.os-system
           - name: PGPORT
             value: "5432"
           - name: PGUSER
@@ -131,7 +131,7 @@ spec:
             value: os_system_notifications
       containers:
       - name: notifications-api
-        image: beclab/notifications-api:v1.12.0
+        image: beclab/notifications-api:v1.12.2
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
@@ -146,7 +146,7 @@ spec:
         - name: PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING
           value: '1'
         - name: DATABASE_URL
-          value: postgres://notifications_os_system:$(DATABASE_PASSWORD)@citus-master-svc.os-system/os_system_notifications?sslmode=disable
+          value: postgres://notifications_os_system:$(DATABASE_PASSWORD)@citus-headless.os-system/os_system_notifications?sslmode=disable
         - name: NATS_HOST
           value: nats
         - name: NATS_PORT
