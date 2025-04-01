@@ -168,7 +168,7 @@ spec:
             value: user_space_{{ .Values.bfl.username }}_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.1.66"
+        image: "beclab/knowledge-base-api:v0.1.68"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -238,7 +238,7 @@ spec:
             memory: 1Gi
 
       - name: backend-server
-        image: "beclab/recommend-backend:v0.0.28"
+        image: "beclab/recommend-backend:v0.0.30"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false

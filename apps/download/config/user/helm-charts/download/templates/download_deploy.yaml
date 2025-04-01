@@ -220,7 +220,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: download-spider
-        image: "beclab/download-spider:v0.0.20"
+        image: "beclab/download-spider:v0.0.21"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
