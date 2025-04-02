@@ -1,5 +1,5 @@
-beclab/ks-apiserver:0.0.5
-beclab/ks-controller-manager:0.0.5
+beclab/ks-apiserver:0.0.8
+beclab/ks-controller-manager:0.0.8
 beclab/kube-state-metrics:v2.3.0-ext.1
 calico/cni:v3.29.2
 calico/kube-controllers:v3.29.2
