@@ -249,7 +249,7 @@ spec:
 
       containers:
         - name: studio
-          image: beclab/studio-server:v0.1.47
+          image: beclab/studio-server:v0.1.48
           imagePullPolicy: IfNotPresent
           args:
             - server
