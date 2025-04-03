@@ -249,7 +249,7 @@ spec:
 
       containers:
         - name: studio
-          image: beclab/devbox-server:v0.1.46
+          image: beclab/studio-server:v0.1.47
           imagePullPolicy: IfNotPresent
           args:
             - server
@@ -271,7 +271,7 @@ spec:
             preStop:
               exec:
                 command:
-                  - "/devbox"
+                  - "/studio"
                   - "clean"
           env:
             - name: BASE_DIR
@@ -469,7 +469,7 @@ data:
                 - name: envoy.filters.network.http_connection_manager
                   typed_config:
                     "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                    stat_prefix: devbox_out_http
+                    stat_prefix: studio_out_http
                     skip_xff_append: false
                     codec_type: AUTO
                     route_config:
