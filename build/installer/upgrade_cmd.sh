@@ -175,7 +175,7 @@ function gen_bfl_values(){
     echo '
 bfl:
   nodeport: '${user_bfl_port}'
-  username: '${username}'
+  username: "'${username}'"
 
   userspace_rand16: '${userspace_rand16}'
   userspace_pv: '${pvc_path[2]}'
