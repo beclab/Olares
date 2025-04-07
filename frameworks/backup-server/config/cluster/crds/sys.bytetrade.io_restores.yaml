@@ -47,11 +47,11 @@ spec:
               description: RestoreSpec defines the desired state of Restore
               properties:
                 createAt:
-                  format: int64
-                  type: integer
+                  format: date-time
+                  type: string
                 endAt:
-                  format: int64
-                  type: integer
+                  format: date-time
+                  type: string
                 extra:
                   additionalProperties:
                     type: string
@@ -72,8 +72,8 @@ spec:
                   format: int64
                   type: integer
                 startAt:
-                  format: int64
-                  type: integer
+                  format: date-time
+                  type: string
               required:
                 - createAt
                 - phase
