@@ -44,6 +44,7 @@ spec:
         app: appstore
         io.bytetrade.app: "true"
     spec:
+      priorityClassName: "system-cluster-critical"
       initContainers:
         - args:
           - -it
