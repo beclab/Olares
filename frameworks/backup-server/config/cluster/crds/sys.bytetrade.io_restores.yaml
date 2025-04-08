@@ -58,8 +58,12 @@ spec:
                   type: object
                 message:
                   type: string
+                owner:
+                  type: string
                 phase:
                   type: string
+                progress:
+                  type: integer
                 resticMessage:
                   type: string
                 resticPhase:
@@ -76,6 +80,7 @@ spec:
                   type: string
               required:
                 - createAt
+                - owner
                 - phase
                 - restoreType
                 - startAt

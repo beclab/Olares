@@ -70,6 +70,8 @@ spec:
                   type: string
                 phase:
                   type: string
+                progress:
+                  type: integer
                 resticMessage:
                   type: string
                 resticPhase:
