@@ -268,7 +268,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: studio-init
-          image: beclab/studio:v0.2.4
+          image: beclab/studio:v0.2.5
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
