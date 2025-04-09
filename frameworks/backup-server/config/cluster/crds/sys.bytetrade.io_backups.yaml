@@ -26,6 +26,9 @@ spec:
         - jsonPath: .spec.owner
           name: owner
           type: string
+        - jsonPath: .spec.deleted
+          name: deleted
+          type: boolean
         - jsonPath: .metadata.creationTimestamp
           name: creation
           type: date
