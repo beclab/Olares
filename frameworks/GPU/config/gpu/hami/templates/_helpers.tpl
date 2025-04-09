@@ -109,7 +109,7 @@ imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 2 }}
 
 
 {{- define "dcgm-exporter.name" -}}
-{{- .Values.dcgm-exporter.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- .Values.dcgmExporter.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
@@ -118,10 +118,10 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 If release name contains chart name it will be used as a full name.
 */}}
 {{- define "dcgm-exporter.fullname" -}}
-{{- if .Values.dcgm-exporter.fullnameOverride -}}
-{{- .Values.dcgm-exporter.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- if .Values.dcgmExporter.fullnameOverride -}}
+{{- .Values.dcgmExporter.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- $name := .Values.dcgm-exporter.nameOverride -}}
+{{- $name := .Values.dcgmExporter.nameOverride -}}
 {{- if contains $name .Release.Name -}}
 {{- .Release.Name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
@@ -135,8 +135,8 @@ If release name contains chart name it will be used as a full name.
 Allow the release namespace to be overridden for multi-namespace deployments in combined charts
 */}}
 {{- define "dcgm-exporter.namespace" -}}
-  {{- if .Values.dcgm-exporter.namespaceOverride -}}
-    {{- .Values.dcgm-exporter.namespaceOverride -}}
+  {{- if .Values.dcgmExporter.namespaceOverride -}}
+    {{- .Values.dcgmExporter.namespaceOverride -}}
   {{- else -}}
     {{- .Release.Namespace -}}
   {{- end -}}
@@ -173,10 +173,10 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Create the name of the service account to use
 */}}
 {{- define "dcgm-exporter.serviceAccountName" -}}
-{{- if .Values.dcgm-exporter.serviceAccount.create -}}
-    {{ default (include "dcgm-exporter.fullname" .) .Values.dcgm-exporter.serviceAccount.name }}
+{{- if .Values.dcgmExporter.serviceAccount.create -}}
+    {{ default (include "dcgm-exporter.fullname" .) .Values.dcgmExporter.serviceAccount.name }}
 {{- else -}}
-    {{ default "default" .Values.dcgm-exporter.serviceAccount.name }}
+    {{ default "default" .Values.dcgmExporter.serviceAccount.name }}
 {{- end -}}
 {{- end -}}
 
@@ -185,8 +185,8 @@ Create the name of the service account to use
 Create the name of the tls secret to use
 */}}
 {{- define "dcgm-exporter.tlsCertsSecretName" -}}
-{{- if .Values.dcgm-exporter.tlsServerConfig.existingSecret -}}
-    {{- printf "%s" (tpl .Values.dcgm-exporter.tlsServerConfig.existingSecret $) -}}
+{{- if .Values.dcgmExporter.tlsServerConfig.existingSecret -}}
+    {{- printf "%s" (tpl .Values.dcgmExporter.tlsServerConfig.existingSecret $) -}}
 {{- else -}}
     {{ printf "%s-tls" (include "dcgm-exporter.fullname" .) }}
 {{- end -}}

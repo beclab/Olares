@@ -1,4 +1,4 @@
-{{- if .Values.dcgm-exporter.service.enable }}
+{{- if .Values.dcgmExporter.service.enable }}
 # Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,19 +21,19 @@ metadata:
   labels:
     {{- include "dcgm-exporter.labels" . | nindent 4 }}
     app.kubernetes.io/component: "dcgm-exporter"
-  {{- with .Values.dcgm-exporter.service.annotations }}
+  {{- with .Values.dcgmExporter.service.annotations }}
   annotations:
   {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  type: {{ .Values.dcgm-exporter.service.type }}
-  {{- if .Values.dcgm-exporter.service.clusterIP }}
-  clusterIP: {{ .Values.dcgm-exporter.service.clusterIP | quote }}
+  type: {{ .Values.dcgmExporter.service.type }}
+  {{- if .Values.dcgmExporter.service.clusterIP }}
+  clusterIP: {{ .Values.dcgmExporter.service.clusterIP | quote }}
   {{- end }}
   ports:
   - name: "metrics"
-    port: {{ .Values.dcgm-exporter.service.port }}
-    targetPort: {{ .Values.dcgm-exporter.service.port }}
+    port: {{ .Values.dcgmExporter.service.port }}
+    targetPort: {{ .Values.dcgmExporter.service.port }}
     protocol: TCP
   selector:
     {{- include "dcgm-exporter.selectorLabels" . | nindent 4 }}

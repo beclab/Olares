@@ -1,4 +1,4 @@
-{{- if .Values.dcgm-exporter.serviceMonitor.enabled }}
+{{- if .Values.dcgmExporter.serviceMonitor.enabled }}
 # Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: {{ .Values.dcgm-exporter.serviceMonitor.apiVersion }}
+apiVersion: {{ .Values.dcgmExporter.serviceMonitor.apiVersion }}
 kind: ServiceMonitor
 metadata:
   name: {{ include "dcgm-exporter.fullname" . }}
@@ -21,8 +21,8 @@ metadata:
   labels:
     {{- include "dcgm-exporter.labels" . | nindent 4 }}
     app.kubernetes.io/component: "dcgm-exporter"
-    {{- if .Values.dcgm-exporter.serviceMonitor.additionalLabels }}
-    {{- toYaml .Values.dcgm-exporter.serviceMonitor.additionalLabels | nindent 4 }}
+    {{- if .Values.dcgmExporter.serviceMonitor.additionalLabels }}
+    {{- toYaml .Values.dcgmExporter.serviceMonitor.additionalLabels | nindent 4 }}
     {{- end }}
 spec:
   selector:
@@ -35,8 +35,8 @@ spec:
   endpoints:
   - port: "metrics"
     path: "/metrics"
-    interval: "{{ .Values.dcgm-exporter.serviceMonitor.interval }}"
-    honorLabels: {{ .Values.dcgm-exporter.serviceMonitor.honorLabels }}
+    interval: "{{ .Values.dcgmExporter.serviceMonitor.interval }}"
+    honorLabels: {{ .Values.dcgmExporter.serviceMonitor.honorLabels }}
     relabelings:
-      {{ toYaml .Values.dcgm-exporter.serviceMonitor.relabelings | nindent 6 }}
+      {{ toYaml .Values.dcgmExporter.serviceMonitor.relabelings | nindent 6 }}
 {{- end -}}

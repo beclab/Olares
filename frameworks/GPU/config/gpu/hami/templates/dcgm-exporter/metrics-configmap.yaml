@@ -4,9 +4,9 @@ metadata:
   name: exporter-metrics-config-map
   namespace: {{ include "dcgm-exporter.namespace" . }}
 data:
-{{- if .Values.dcgm-exporter.customMetrics }}
+{{- if .Values.dcgmExporter.customMetrics }}
   metrics: |
-{{- .Values.dcgm-exporter.customMetrics | nindent 4 }}
+{{- .Values.dcgmExporter.customMetrics | nindent 4 }}
 {{- else }}
   metrics: |
       # Format

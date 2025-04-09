@@ -23,7 +23,7 @@ metadata:
 spec:
   updateStrategy:
     type: RollingUpdate
-    {{- with .Values.dcgm-exporter.rollingUpdate }}
+    {{- with .Values.dcgmExporter.rollingUpdate }}
     rollingUpdate:
       maxUnavailable: {{ .maxUnavailable }}
       maxSurge: {{ .maxSurge }}
@@ -37,132 +37,132 @@ spec:
       labels:
         {{- include "dcgm-exporter.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: "dcgm-exporter"
-      {{- if .Values.dcgm-exporter.podLabels }}
+      {{- if .Values.dcgmExporter.podLabels }}
         {{- toYaml .Values.podLabels | nindent 8 }}
       {{- end }}
-      {{- if .Values.dcgm-exporter.podAnnotations }}
+      {{- if .Values.dcgmExporter.podAnnotations }}
       annotations:
-        {{- toYaml .Values.dcgm-exporter.podAnnotations | nindent 8 }}
+        {{- toYaml .Values.dcgmExporter.podAnnotations | nindent 8 }}
       {{- end }}
     spec:
-      {{- if .Values.dcgm-exporter.runtimeClassName }}
-      runtimeClassName: {{ .Values.dcgm-exporter.runtimeClassName }}
+      {{- if .Values.dcgmExporter.runtimeClassName }}
+      runtimeClassName: {{ .Values.dcgmExporter.runtimeClassName }}
       {{- end }}
-      priorityClassName: {{ .Values.dcgm-exporter.priorityClassName | default "system-node-critical" }}
+      priorityClassName: {{ .Values.dcgmExporter.priorityClassName | default "system-node-critical" }}
       serviceAccountName: {{ include "dcgm-exporter.serviceAccountName" . }}
-      {{- if .Values.dcgm-exporter.podSecurityContext }}
+      {{- if .Values.dcgmExporter.podSecurityContext }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       {{- end }}
-      {{- if .Values.dcgm-exporter.affinity }}
+      {{- if .Values.dcgmExporter.affinity }}
       affinity:
-        {{- toYaml .Values.dcgm-exporter.affinity | nindent 8 }}
+        {{- toYaml .Values.dcgmExporter.affinity | nindent 8 }}
       {{- end }}
-      {{- if .Values.dcgm-exporter.nodeSelector }}
+      {{- if .Values.dcgmExporter.nodeSelector }}
       nodeSelector:
-        {{- toYaml .Values.dcgm-exporter.nodeSelector | nindent 8 }}
+        {{- toYaml .Values.dcgmExporter.nodeSelector | nindent 8 }}
       {{- end }}
-      {{- with .Values.dcgm-exporter.tolerations }}
+      {{- with .Values.dcgmExporter.tolerations }}
       tolerations:
         {{- toYaml . | nindent 6 }}
       {{- end }}
       volumes:
       - name: "pod-gpu-resources"
         hostPath:
-          path: {{ .Values.dcgm-exporter.kubeletPath }}
-      {{- if and .Values.dcgm-exporter.tlsServerConfig.enabled }}
+          path: {{ .Values.dcgmExporter.kubeletPath }}
+      {{- if and .Values.dcgmExporter.tlsServerConfig.enabled }}
       - name: "tls"
         secret:
           secretName: {{ include "dcgm-exporter.tlsCertsSecretName" . }}
           defaultMode: 0664
       {{- end }}
-      {{- if or .Values.dcgm-exporter.tlsServerConfig.enabled $.Values.dcgm-exporter.basicAuth.users}}
+      {{- if or .Values.dcgmExporter.tlsServerConfig.enabled $.Values.dcgmExporter.basicAuth.users}}
       - name: "web-config-yaml"
         configMap:
           name: {{ include "dcgm-exporter.webConfigConfigMap" . }}
           defaultMode: 0664
       {{- end }}
-      {{- range .Values.dcgm-exporter.extraHostVolumes }}
+      {{- range .Values.dcgmExporter.extraHostVolumes }}
       - name: {{ .name | quote }}
         hostPath:
           path: {{ .hostPath | quote }}
       {{- end }}
-      {{- with .Values.dcgm-exporter.extraConfigMapVolumes }}
+      {{- with .Values.dcgmExporter.extraConfigMapVolumes }}
       {{- toYaml . | nindent 6 }}
       {{- end }}
       containers:
       - name: exporter
         securityContext:
-          {{- toYaml .Values.dcgm-exporter.securityContext | nindent 10 }}
-        {{- if .Values.dcgm-exporter.image.tag }}
-        image: "{{ .Values.dcgm-exporter.image.repository }}:{{ .Values.dcgm-exporter.image.tag }}"
+          {{- toYaml .Values.dcgmExporter.securityContext | nindent 10 }}
+        {{- if .Values.dcgmExporter.image.tag }}
+        image: "{{ .Values.dcgmExporter.image.repository }}:{{ .Values.dcgmExporter.image.tag }}"
         {{- else }}
-        image: "{{ .Values.dcgm-exporter.image.repository }}:{{ .Chart.AppVersion }}"
+        image: "{{ .Values.dcgmExporter.image.repository }}:{{ .Chart.AppVersion }}"
         {{- end }}
-        imagePullPolicy: "{{ .Values.dcgm-exporter.image.pullPolicy }}"
+        imagePullPolicy: "{{ .Values.dcgmExporter.image.pullPolicy }}"
         args:
-        {{- range $.Values.dcgm-exporter.arguments }}
+        {{- range $.Values.dcgmExporter.arguments }}
         - {{ . }}
         {{- end }}
         env:
         - name: "DCGM_EXPORTER_KUBERNETES"
           value: "true"
         - name: "DCGM_EXPORTER_LISTEN"
-          value: "{{ .Values.dcgm-exporter.service.address }}"
+          value: "{{ .Values.dcgmExporter.service.address }}"
         - name: NODE_NAME
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        {{- if or .Values.dcgm-exporter.tlsServerConfig.enabled $.Values.dcgm-exporter.basicAuth.users}}
+        {{- if or .Values.dcgmExporter.tlsServerConfig.enabled $.Values.dcgmExporter.basicAuth.users}}
         - name: "DCGM_EXPORTER_WEB_CONFIG_FILE"
           value: /etc/dcgm-exporter/web-config.yaml
         {{- end }}
-        {{- if .Values.dcgm-exporter.extraEnv }}
-        {{- toYaml .Values.dcgm-exporter.extraEnv | nindent 8 }}
+        {{- if .Values.dcgmExporter.extraEnv }}
+        {{- toYaml .Values.dcgmExporter.extraEnv | nindent 8 }}
         {{- end }}
         ports:
         - name: "metrics"
-          containerPort: {{ .Values.dcgm-exporter.service.port }}
+          containerPort: {{ .Values.dcgmExporter.service.port }}
         volumeMounts:
         - name: "pod-gpu-resources"
           readOnly: true
           mountPath: "/var/lib/kubelet/pod-resources"
-        {{- if and .Values.dcgm-exporter.tlsServerConfig.enabled }}
+        {{- if and .Values.dcgmExporter.tlsServerConfig.enabled }}
         - name: "tls"
           mountPath: /etc/dcgm-exporter/tls
         {{- end }}
-        {{- if or .Values.dcgm-exporter.tlsServerConfig.enabled $.Values.dcgm-exporter.basicAuth.users}}
+        {{- if or .Values.dcgmExporter.tlsServerConfig.enabled $.Values.dcgmExporter.basicAuth.users}}
         - name: "web-config-yaml"
           mountPath: /etc/dcgm-exporter/web-config.yaml
           subPath: web-config.yaml
         {{- end }}
-        {{- if .Values.dcgm-exporter.extraVolumeMounts }}
-        {{- toYaml .Values.dcgm-exporter.extraVolumeMounts | nindent 8 }}
+        {{- if .Values.dcgmExporter.extraVolumeMounts }}
+        {{- toYaml .Values.dcgmExporter.extraVolumeMounts | nindent 8 }}
         {{- end }}
         livenessProbe:
-          {{- if not $.Values.dcgm-exporter.basicAuth.users }}
+          {{- if not $.Values.dcgmExporter.basicAuth.users }}
           httpGet:
             path: /health
-            port: {{ .Values.dcgm-exporter.service.port }}
-            scheme: {{ ternary "HTTPS" "HTTP" $.Values.dcgm-exporter.tlsServerConfig.enabled }}
+            port: {{ .Values.dcgmExporter.service.port }}
+            scheme: {{ ternary "HTTPS" "HTTP" $.Values.dcgmExporter.tlsServerConfig.enabled }}
           {{- else }}
           tcpSocket:
-              port: {{ .Values.dcgm-exporter.service.port }}
+              port: {{ .Values.dcgmExporter.service.port }}
           {{- end }}
           initialDelaySeconds: 45
           periodSeconds: 5
         readinessProbe:
-          {{- if not $.Values.dcgm-exporter.basicAuth.users }}
+          {{- if not $.Values.dcgmExporter.basicAuth.users }}
           httpGet:
             path: /health
-            port: {{ .Values.dcgm-exporter.service.port }}
-            scheme: {{ ternary "HTTPS" "HTTP" $.Values.dcgm-exporter.tlsServerConfig.enabled }}
+            port: {{ .Values.dcgmExporter.service.port }}
+            scheme: {{ ternary "HTTPS" "HTTP" $.Values.dcgmExporter.tlsServerConfig.enabled }}
           {{- else }}
           tcpSocket:
-              port: {{ .Values.dcgm-exporter.service.port }}
+              port: {{ .Values.dcgmExporter.service.port }}
           {{- end }}
           initialDelaySeconds: 45
-        {{- if .Values.dcgm-exporter.resources }}
+        {{- if .Values.dcgmExporter.resources }}
         resources:
-          {{- toYaml .Values.dcgm-exporter.resources | nindent 10 }}
+          {{- toYaml .Values.dcgmExporter.resources | nindent 10 }}
         {{- end }}

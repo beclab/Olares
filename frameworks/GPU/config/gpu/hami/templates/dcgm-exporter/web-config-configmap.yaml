@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-{{- if or .Values.dcgm-exporter.tlsServerConfig.enabled .Values.dcgm-exporter.basicAuth.users }}
+{{- if or .Values.dcgmExporter.tlsServerConfig.enabled .Values.dcgmExporter.basicAuth.users }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -22,18 +22,18 @@ metadata:
     {{- include "dcgm-exporter.labels" . | nindent 4 }}
 data:
   web-config.yaml: |
-{{- if .Values.dcgm-exporter.tlsServerConfig.enabled }}
+{{- if .Values.dcgmExporter.tlsServerConfig.enabled }}
     tls_server_config:
-       cert_file: {{ required "'tlsServerConfig.certFilename' is required when 'tlsServerConfig.enabled=true'" .Values.dcgm-exporter.tlsServerConfig.certFilename | printf "/etc/dcgm-exporter/tls/%s" | quote }}
-       key_file: {{ required "'tlsServerConfig.keyFilename' is required when 'tlsServerConfig.enabled=true'" .Values.dcgm-exporter.tlsServerConfig.keyFilename | printf "/etc/dcgm-exporter/tls/%s" | quote }}
-       {{- if .Values.dcgm-exporter.tlsServerConfig.clientAuthType }}
-       client_auth_type: {{ .Values.dcgm-exporter.tlsServerConfig.clientAuthType }}
-       client_ca_file: {{ required "'tlsServerConfig.caFilename' is required when 'tlsServerConfig.clientAuthType' is provided" .Values.dcgm-exporter.tlsServerConfig.caFilename | printf "/etc/dcgm-exporter/tls/%s" | quote }}
+       cert_file: {{ required "'tlsServerConfig.certFilename' is required when 'tlsServerConfig.enabled=true'" .Values.dcgmExporter.tlsServerConfig.certFilename | printf "/etc/dcgm-exporter/tls/%s" | quote }}
+       key_file: {{ required "'tlsServerConfig.keyFilename' is required when 'tlsServerConfig.enabled=true'" .Values.dcgmExporter.tlsServerConfig.keyFilename | printf "/etc/dcgm-exporter/tls/%s" | quote }}
+       {{- if .Values.dcgmExporter.tlsServerConfig.clientAuthType }}
+       client_auth_type: {{ .Values.dcgmExporter.tlsServerConfig.clientAuthType }}
+       client_ca_file: {{ required "'tlsServerConfig.caFilename' is required when 'tlsServerConfig.clientAuthType' is provided" .Values.dcgmExporter.tlsServerConfig.caFilename | printf "/etc/dcgm-exporter/tls/%s" | quote }}
        {{- end }}
 {{- end }}
-{{- if .Values.dcgm-exporter.basicAuth.users }}
+{{- if .Values.dcgmExporter.basicAuth.users }}
     basic_auth_users:
-      {{- range $user, $password := .Values.dcgm-exporter.basicAuth.users }}
+      {{- range $user, $password := .Values.dcgmExporter.basicAuth.users }}
       {{ $user }}: {{ (split ":" (htpasswd $user $password))._1 }}
       {{- end }}
 {{- end }}

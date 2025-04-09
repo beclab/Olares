@@ -218,7 +218,7 @@ devices:
       - huawei.com/Ascend310P
       - huawei.com/Ascend310P-memory
 
-dcgm-exporter:
+dcgmExporter:
   image:
     repository: nvidia/dcgm-exporter
     pullPolicy: IfNotPresent
@@ -415,11 +415,11 @@ webui:
       repository: projecthami/hami-webui-fe-oss
       pullPolicy: IfNotPresent
       # Overrides the image tag whose default is the chart appVersion.
-      tag: "main"
+      tag: "v1.0.5"
     backend:
       repository: projecthami/hami-webui-be-oss
       pullPolicy: IfNotPresent
-      tag: "main"
+      tag: "v1.0.5"
 
   imagePullSecrets: []
   nameOverride: "webui"
