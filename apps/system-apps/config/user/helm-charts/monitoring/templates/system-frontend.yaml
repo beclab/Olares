@@ -814,6 +814,10 @@ data:
         server anayltic2-server.os-system:3010;
     }
 
+    upstream HamiServer {
+        server hami-webui.kube-system:8000;
+    }
+
     server {
       listen 81;
       gzip off;
@@ -853,6 +857,11 @@ data:
       location /kapis {
         proxy_pass http://SettingsServer;
       }
+
+      location /hami/ {
+        proxy_pass http://HamiServer/;
+      }
+
     
       location /api/profile/init {
         proxy_pass http://127.0.0.1:3010;

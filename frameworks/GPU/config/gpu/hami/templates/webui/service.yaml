@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hami-webui.fullname" . }}
+  namespace: {{ include "hami-webui.namespace" . }}
+  labels:
+    {{- include "hami-webui.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "hami-webui"
+spec:
+  type: {{ .Values.webui.service.type }}
+  ports:
+    - port: {{ .Values.webui.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 8000
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "hami-webui.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: "hami-webui"

@@ -106,3 +106,167 @@ imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 2 }}
 {{- define "strippedKubeVersion" -}}
 {{ regexReplaceAll "^(v[0-9]+\\.[0-9]+\\.[0-9]+)(.*)$" .Capabilities.KubeVersion.Version "$1" }}
 {{- end -}}
+
+
+{{- define "dcgm-exporter.name" -}}
+{{- .Values.dcgm-exporter.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+If release name contains chart name it will be used as a full name.
+*/}}
+{{- define "dcgm-exporter.fullname" -}}
+{{- if .Values.dcgm-exporter.fullnameOverride -}}
+{{- .Values.dcgm-exporter.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- $name := .Values.dcgm-exporter.nameOverride -}}
+{{- if contains $name .Release.Name -}}
+{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "hami-%s" $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+
+{{/*
+Allow the release namespace to be overridden for multi-namespace deployments in combined charts
+*/}}
+{{- define "dcgm-exporter.namespace" -}}
+  {{- if .Values.dcgm-exporter.namespaceOverride -}}
+    {{- .Values.dcgm-exporter.namespaceOverride -}}
+  {{- else -}}
+    {{- .Release.Namespace -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
+{{- define "dcgm-exporter.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Common labels
+*/}}
+{{- define "dcgm-exporter.labels" -}}
+helm.sh/chart: {{ include "dcgm-exporter.chart" . }}
+{{ include "dcgm-exporter.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end -}}
+
+{{/*
+Selector labels
+*/}}
+{{- define "dcgm-exporter.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "dcgm-exporter.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "dcgm-exporter.serviceAccountName" -}}
+{{- if .Values.dcgm-exporter.serviceAccount.create -}}
+    {{ default (include "dcgm-exporter.fullname" .) .Values.dcgm-exporter.serviceAccount.name }}
+{{- else -}}
+    {{ default "default" .Values.dcgm-exporter.serviceAccount.name }}
+{{- end -}}
+{{- end -}}
+
+
+{{/*
+Create the name of the tls secret to use
+*/}}
+{{- define "dcgm-exporter.tlsCertsSecretName" -}}
+{{- if .Values.dcgm-exporter.tlsServerConfig.existingSecret -}}
+    {{- printf "%s" (tpl .Values.dcgm-exporter.tlsServerConfig.existingSecret $) -}}
+{{- else -}}
+    {{ printf "%s-tls" (include "dcgm-exporter.fullname" .) }}
+{{- end -}}
+{{- end -}}
+
+
+{{/*
+Create the name of the web-config configmap name to use
+*/}}
+{{- define "dcgm-exporter.webConfigConfigMap" -}}
+  {{ printf "%s-web-config.yml" (include "dcgm-exporter.fullname" .) }}
+{{- end -}}
+
+{{- define "hami-webui.name" -}}
+{{- .Values.webui.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+If release name contains chart name it will be used as a full name.
+*/}}
+{{- define "hami-webui.fullname" -}}
+{{- if .Values.webui.fullnameOverride }}
+{{- .Values.webui.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := .Values.webui.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "hami-%s" $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Allow the release namespace to be overridden for multi-namespace deployments in combined charts
+*/}}
+{{- define "hami-webui.namespace" -}}
+  {{- if .Values.webui.namespaceOverride -}}
+    {{- .Values.webui.namespaceOverride -}}
+  {{- else -}}
+    {{- .Release.Namespace -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
+{{- define "hami-webui.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Common labels
+*/}}
+{{- define "hami-webui.labels" -}}
+helm.sh/chart: {{ include "hami-webui.chart" . }}
+{{ include "hami-webui.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Selector labels
+*/}}
+{{- define "hami-webui.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "hami-webui.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "hami-webui.serviceAccountName" -}}
+{{- if .Values.webui.serviceAccount.create }}
+{{- default (include "hami-webui.fullname" .) .Values.webui.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.webui.serviceAccount.name }}
+{{- end }}
+{{- end }}

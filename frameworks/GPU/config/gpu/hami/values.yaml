@@ -126,7 +126,7 @@ scheduler:
     tolerations: []
     runAsUser: 2000
   service:
-    type: NodePort  # Default type is NodePort, can be changed to ClusterIP
+    type: ClusterIP  # Default type is NodePort, can be changed to ClusterIP
     httpPort: 443   # HTTP port
     schedulerPort: 31998  # NodePort for HTTP
     monitorPort: 31993    # Monitoring port
@@ -149,7 +149,7 @@ devicePlugin:
     - -v=4
   
   service:
-    type: NodePort  # Default type is NodePort, can be changed to ClusterIP
+    type: ClusterIP  # Default type is NodePort, can be changed to ClusterIP
     httpPort: 31992
     labels: {}
     annotations: {}
@@ -217,3 +217,314 @@ devices:
       - huawei.com/Ascend910B4-memory
       - huawei.com/Ascend310P
       - huawei.com/Ascend310P-memory
+
+dcgm-exporter:
+  image:
+    repository: nvidia/dcgm-exporter
+    pullPolicy: IfNotPresent
+    tag: 4.1.1-4.0.4-ubuntu22.04
+
+  # Change the following reference to "/etc/dcgm-exporter/default-counters.csv"
+  # to stop profiling metrics from DCGM
+  arguments: ["-f", "/etc/dcgm-exporter/default-counters.csv"]
+  # NOTE: in general, add any command line arguments to arguments above
+  # and they will be passed through.
+  # Use "-r", "<HOST>:<PORT>" to connect to an already running hostengine
+  # Example arguments: ["-r", "host123:5555"]
+  # Use "-n" to remove the hostname tag from the output.
+  # Example arguments: ["-n"]
+  # Use "-d" to specify the devices to monitor. -d must be followed by a string
+  # in the following format: [f] or [g[:numeric_range][+]][i[:numeric_range]]
+  # Where a numeric range is something like 0-4 or 0,2,4, etc.
+  # Example arguments: ["-d", "g+i"] to monitor all GPUs and GPU instances or
+  # ["-d", "g:0-3"] to monitor GPUs 0-3.
+  # Use "-m" to specify the namespace and name of a configmap containing
+  # the watched exporter fields.
+  # Example arguments: ["-m", "default:exporter-metrics-config-map"]
+
+  # Overrides the chart's name
+  nameOverride: "nvidia-dcgm-exporter"
+
+  # Overrides the chart's computed fullname
+  fullnameOverride: ""
+
+  # Overrides the deployment namespace
+  namespaceOverride: ""
+
+  # Defines the runtime class that will be used by the pod
+  runtimeClassName: ""
+  # Defines serviceAccount names for components.
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # Annotations to add to the service account
+    annotations: {}
+    # The name of the service account to use.
+    # If not set and create is true, a name is generated using the fullname template
+    name:
+
+  rollingUpdate:
+    # Specifies maximum number of DaemonSet pods that can be unavailable during the update
+    maxUnavailable: 1
+    # Specifies maximum number of nodes with an existing available DaemonSet pod that can have an updated DaemonSet pod during during an update
+    maxSurge: 0
+
+  # Labels to be added to dcgm-exporter pods
+  podLabels: {}
+
+  # Annotations to be added to dcgm-exporter pods
+  podAnnotations: {}
+  # Using this annotation which is required for prometheus scraping
+    # prometheus.io/scrape: "true"
+    # prometheus.io/port: "9400"
+
+  # The SecurityContext for the dcgm-exporter pods
+  podSecurityContext: {}
+    # fsGroup: 2000
+
+  # The SecurityContext for the dcgm-exporter containers
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    capabilities:
+      add: ["SYS_ADMIN"]
+    # readOnlyRootFilesystem: true
+
+  # Defines the dcgm-exporter service
+  service:
+    # When enabled, the helm chart will create service
+    enable: true
+    type: ClusterIP
+    clusterIP: ""
+    port: 9400
+    address: ":9400"
+    # Annotations to add to the service
+    annotations: {}
+
+  # Allows to control pod resources
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+  serviceMonitor:
+    apiVersion: "monitoring.coreos.com/v1"
+    enabled: true
+    interval: 15s
+    honorLabels: false
+    additionalLabels: {}
+      #monitoring: prometheus
+    relabelings: []
+      # - sourceLabels: [__meta_kubernetes_pod_node_name]
+      #   separator: ;
+      #   regex: ^(.*)$
+      #   targetLabel: nodename
+      #   replacement: $1
+      #   action: replace
+
+  nodeSelector: {}
+    #node: gpu
+
+  tolerations: []
+  #- operator: Exists
+
+  affinity: {}
+    #nodeAffinity:
+    #  requiredDuringSchedulingIgnoredDuringExecution:
+    #    nodeSelectorTerms:
+    #    - matchExpressions:
+    #      - key: nvidia-gpu
+    #        operator: Exists
+
+  extraHostVolumes: []
+  #- name: host-binaries
+  #  hostPath: /opt/bin
+
+  extraConfigMapVolumes:
+    - name: exporter-metrics-volume
+      configMap:
+        name: exporter-metrics-config-map
+        items:
+        - key: metrics
+          path: default-counters.csv
+
+  extraVolumeMounts:
+    - name: exporter-metrics-volume
+      mountPath: /etc/dcgm-exporter/default-counters.csv
+      subPath: default-counters.csv
+
+  extraEnv: []
+  #- name: EXTRA_VAR
+  #  value: "TheStringValue"
+
+  # Path to the kubelet socket for /pod-resources
+  kubeletPath: "/var/lib/kubelet/pod-resources"
+
+  # HTTPS configuration
+  tlsServerConfig:
+    # Enable or disable HTTPS configuration
+    enabled: false
+    # Use autogenerated self-signed TLS certificates. Not recommended for production environments.
+    autoGenerated: true
+    # Existing secret containing your own server key and certificate
+    existingSecret: ""
+    # Certificate file name
+    certFilename: "tls.crt"
+    # Key file name
+    keyFilename: "tls.key"
+    # CA certificate file name
+    caFilename: "ca.crt"
+    # Server policy for client authentication. Maps to ClientAuth Policies.
+    # For more detail on clientAuth options:
+    # https://golang.org/pkg/crypto/tls/#ClientAuthType
+    #
+    # NOTE: If you want to enable client authentication, you need to use
+    # RequireAndVerifyClientCert. Other values are insecure.
+    clientAuthType: ""
+    # TLS Key for HTTPS - ignored if existingSecret is provided
+    key: ""
+    # TLS Certificate for HTTPS - ignored if existingSecret is provided
+    cert: ""
+    # CA Certificate for HTTPS - ignored if existingSecret is provided
+    ca: ""
+
+  basicAuth:
+    #Object containing <user>:<passwords> key-value pairs for each user that will have access via basic authentication
+    users: {}
+
+  # Customized list of metrics to emit. Expected to be in the same format (CSV) as the default list.
+  # Must be the complete list and is not additive. If unset, the default list will take effect.
+  # customMetrics: |
+    # Format
+    # If line starts with a '#' it is considered a comment
+    # DCGM FIELD, Prometheus metric type, help message
+
+webui:
+  replicaCount: 1
+
+  vendorNodeSelectors:
+    NVIDIA: gpu=on
+    Ascend: ascend=on
+    DCU: dcu=on
+    MLU: mlu=on
+
+  image:
+    frontend:
+      repository: projecthami/hami-webui-fe-oss
+      pullPolicy: IfNotPresent
+      # Overrides the image tag whose default is the chart appVersion.
+      tag: "main"
+    backend:
+      repository: projecthami/hami-webui-be-oss
+      pullPolicy: IfNotPresent
+      tag: "main"
+
+  imagePullSecrets: []
+  nameOverride: "webui"
+  fullnameOverride: ""
+  namespaceOverride: ""
+
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # Annotations to add to the service account
+    annotations: {}
+    # The name of the service account to use.
+    # If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  podAnnotations: {}
+
+  podSecurityContext: {}
+  # fsGroup: 2000
+
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+  # runAsUser: 1000
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    hosts:
+      - host: chart-example.local
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  resources:
+    frontend:
+      limits:
+        cpu: 200m
+        memory: 500Mi
+      requests:
+        cpu: 200m
+        memory: 500Mi
+    backend:
+      limits:
+        cpu: 50m
+        memory: 250Mi
+      requests:
+        cpu: 50m
+        memory: 250Mi
+      # We usually recommend not to specify default resources and to leave this as a conscious
+      # choice for the user. This also increases chances charts run on environments with little
+      # resources, such as Minikube. If you do want to specify resources, uncomment the following
+      # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+      # limits:
+      #   cpu: 100m
+      #   memory: 128Mi
+      # requests:
+      #   cpu: 100m
+      #   memory: 128Mi
+
+  env:
+    frontend:
+      - name: TZ
+        value: "Asia/Shanghai"
+    backend:
+      - name: TZ
+        value: "Asia/Shanghai"
+
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+    honorLabels: false
+    additionalLabels:
+      jobRelease: hami-webui-prometheus
+    relabelings: []
+
+  hamiServiceMonitor:
+    enabled: true
+    interval: 15s
+    honorLabels: false
+    additionalLabels:
+      jobRelease: hami-webui-prometheus
+    svcNamespace: kube-system
+    relabelings: []
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+  externalPrometheus:
+    address: "http://prometheus-k8s.kubesphere-monitoring-system:9090"
+    enabled: true

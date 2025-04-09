@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "hami-webui.fullname" . }}
+  namespace: {{ include "hami-webui.namespace" . }}
+  labels:
+    {{- include "hami-webui.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "hami-webui"
+subjects:
+- kind: ServiceAccount
+  name: {{ include "hami-webui.serviceAccountName" . }}
+  namespace: {{ include "hami-webui.namespace" . }}
+roleRef:
+  kind: ClusterRole
+  name: hami-webui-reader
+  apiGroup: rbac.authorization.k8s.io
