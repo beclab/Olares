@@ -208,7 +208,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: control-hub-init
-          image: beclab/admin-console-frontend-v1:v0.5.2
+          image: beclab/admin-console-frontend-v1:v0.5.5
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -268,7 +268,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: studio-init
-          image: beclab/studio:v0.2.5
+          image: beclab/studio:v0.2.9
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -1439,6 +1439,17 @@ data:
         proxy_read_timeout 180;
       }
       location /api/app-state {
+        proxy_pass http://studio-server:8080;
+        proxy_set_header            Host $http_host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $http_connection;
+        proxy_set_header Accept-Encoding gzip;
+        proxy_read_timeout 180;
+      }
+      location /api/app-status {
         proxy_pass http://studio-server:8080;
         proxy_set_header            Host $http_host;
         proxy_set_header            X-real-ip $remote_addr;
