@@ -1,0 +1,27 @@
+{{- if .Values.webui.hamiServiceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "hami-webui.fullname" . }}-hami-svc-monitor
+  namespace: {{ include "hami-webui.namespace" . }}
+  labels:
+    {{- include "hami-webui.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "hami-webui"
+    {{- if .Values.webui.hamiServiceMonitor.additionalLabels }}
+    {{- toYaml .Values.webui.hamiServiceMonitor.additionalLabels | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: hami-device-plugin
+  namespaceSelector:
+    matchNames:
+      - "{{ .Values.webui.hamiServiceMonitor.svcNamespace }}"
+  endpoints:
+  - path: /metrics
+    port: monitorport
+    interval: "{{ .Values.webui.hamiServiceMonitor.interval }}"
+    honorLabels: {{ .Values.webui.hamiServiceMonitor.honorLabels }}
+    relabelings:
+      {{ toYaml .Values.webui.hamiServiceMonitor.relabelings | nindent 6 }}
+{{- end -}}

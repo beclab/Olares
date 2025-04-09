@@ -39,3 +39,6 @@ liangjw/kube-webhook-certgen:v1.1.1
 beclab/hami:v2.5.1
 alpine:3.14
 mirrorgooglecontainers/defaultbackend-amd64:1.4
+projecthami/hami-webui-fe-oss:v1.0.5
+projecthami/hami-webui-be-oss:v1.0.5
+nvidia/dcgm-exporter:4.1.1-4.0.4-ubuntu22.04

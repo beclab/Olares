@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hami-webui.fullname" . }}-config
+  namespace: {{ include "hami-webui.namespace" . }}
+data:
+  config.yaml: |
+    server:
+      http:
+        addr: 0.0.0.0:8000
+        timeout: 1s
+      grpc:
+        addr: 0.0.0.0:9000
+        timeout: 1s
+    prometheus:
+      address: {{ ternary .Values.webui.externalPrometheus.address (printf "http://%s-kube-prometh-prometheus.%s.svc.cluster.local:9090" (include "hami-webui.fullname" .) (include "hami-webui.namespace" .)) .Values.webui.externalPrometheus.enabled }}
+      timeout: 1m
+    node_selectors:
+    {{- range $key, $value := .Values.webui.vendorNodeSelectors }}
+      {{ $key }}: {{ $value }}
+    {{- end }}

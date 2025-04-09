@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hami-webui.fullname" . }}
+  namespace: {{ include "hami-webui.namespace" . }}
+  labels:
+    {{- include "hami-webui.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "hami-webui"
+spec:
+  replicas: {{ .Values.webui.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "hami-webui.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "hami-webui"
+  template:
+    metadata:
+      {{- with .Values.webui.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "hami-webui.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: "hami-webui"
+    spec:
+      serviceAccountName: {{ include "hami-webui.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.webui.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Release.Name }}-fe-oss
+          securityContext:
+            {{- toYaml .Values.webui.securityContext | nindent 12 }}
+          image: "{{ .Values.webui.image.frontend.repository }}:{{ .Values.webui.image.frontend.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.webui.image.frontend.pullPolicy }}
+          env:
+            {{- toYaml .Values.webui.env.frontend | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          command:
+            - "node"
+          args:
+            - "/apps/dist/main"
+          resources:
+            {{- toYaml .Values.webui.resources.frontend | nindent 12 }}
+        - name: {{ .Release.Name }}-be-oss
+          securityContext:
+                  {{- toYaml .Values.webui.securityContext | nindent 12 }}
+          image: "{{ .Values.webui.image.backend.repository }}:{{ .Values.webui.image.backend.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.webui.image.backend.pullPolicy }}
+          env:
+            {{- toYaml .Values.webui.env.backend | nindent 12 }}
+          ports:
+            - name: metrics
+              containerPort: 8000
+              protocol: TCP
+          command:
+            - "/apps/server"
+          args:
+            - "--conf"
+            - "/apps/config/config.yaml"
+          resources:
+            {{- toYaml .Values.webui.resources.backend | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /apps/config/
+      {{- with .Values.webui.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.webui.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "hami-webui.fullname" . }}-config
