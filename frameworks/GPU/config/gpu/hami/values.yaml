@@ -405,7 +405,7 @@ webui:
   replicaCount: 1
 
   vendorNodeSelectors:
-    NVIDIA: gpu=on
+    NVIDIA: gpu.bytetrade.io/cuda-supported=true
     Ascend: ascend=on
     DCU: dcu=on
     MLU: mlu=on

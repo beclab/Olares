@@ -815,7 +815,7 @@ data:
     }
 
     upstream HamiServer {
-        server hami-webui.kube-system:8000;
+        server hami-webui.kube-system:3000;
     }
 
     server {

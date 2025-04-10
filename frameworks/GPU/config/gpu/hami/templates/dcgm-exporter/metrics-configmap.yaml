@@ -13,6 +13,12 @@ data:
       # If line starts with a '#' it is considered a comment
       # DCGM FIELD, Prometheus metric type, help message
       
+      DCGM_FI_DRIVER_VERSION, label, Driver Version.
+
+      DCGM_FI_DEV_BRAND,  label, Device Brand.
+      
+      DCGM_FI_DEV_SERIAL, label, Device Serial Number.
+
       # Clocks
       DCGM_FI_DEV_SM_CLOCK,  gauge, SM clock frequency (in MHz).
       DCGM_FI_DEV_MEM_CLOCK, gauge, Memory clock frequency (in MHz).

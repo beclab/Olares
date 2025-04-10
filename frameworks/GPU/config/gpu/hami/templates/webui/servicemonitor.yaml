@@ -17,7 +17,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: {{ include "hami-webui.fullname" . }}-svc-monitor
-  namespace: {{ include "hami-webui.namespace" . }}
+  namespace: kubesphere-monitoring-system
   labels:
     {{- include "hami-webui.labels" . | nindent 4 }}
     app.kubernetes.io/component: "hami-webui"
