@@ -1,0 +1,393 @@
+{{- $namespace := printf "%s" "os-system" -}}
+{{- $knowledge_secret := (lookup "v1" "Secret" $namespace "rss-secrets") -}}
+
+{{- $redis_password := "" -}}
+{{ if $knowledge_secret -}}
+{{ $redis_password = (index $knowledge_secret "data" "redis_password") }}
+{{ else -}}
+{{ $redis_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+{{- $redis_password_data := "" -}}
+{{ $redis_password_data = $redis_password | b64dec }}
+
+
+{{- $pg_password := "" -}}
+{{ if $knowledge_secret -}}
+{{ $pg_password = (index $knowledge_secret "data" "pg_password") }}
+{{ else -}}
+{{ $pg_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+{{- $knowledge_nats_secret := (lookup "v1" "Secret" $namespace "knowledge-secrets") -}}
+{{- $nat_password := "" -}}
+{{ if $knowledge_nats_secret -}}
+{{ $nat_password = (index $knowledge_nats_secret "data" "nat_password") }}
+{{ else -}}
+{{ $nat_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: knowledge-secrets
+  namespace: os-system
+type: Opaque
+data:
+  pg_password: {{ $pg_password }}
+  nat_password: {{ $nat_password }}
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: knowledge-pg
+  namespace: os-system
+spec:
+  app: knowledge
+  appNamespace: os-system
+  middleware: postgres
+  postgreSQL:
+    user: knowledge_os_system
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: pg_password
+          name: knowledge-secrets
+    databases:
+    - name: knowledge
+      extensions:
+      - pg_trgm
+      - btree_gin
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: knowledge-nat
+  namespace: os-system
+spec:
+  app: knowledge
+  appNamespace: os-system
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nat_password
+          name: knowledge-secrets
+    refs:
+    - appName: download
+      appNamespace: os-system
+      subjects:
+      - name: download_status
+        perm:
+        - pub
+        - sub
+    user: os-system-knowledge
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: knowledge
+  namespace: os-system
+  labels:
+    app: knowledge
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: knowledge
+  template:
+    metadata:
+      labels:
+        app: knowledge
+    spec:
+      serviceAccount: os-internal
+      serviceAccountName: os-internal
+      securityContext:
+        runAsUser: 0
+        runAsNonRoot: false
+      initContainers:
+      - name: init-data
+        image: busybox:1.28
+        securityContext:
+          privileged: true
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - name: userspace-dir
+          mountPath: /data
+        - name: cache-dir
+          mountPath: /appCache
+        command:
+        - sh
+        - -c
+        - |
+          chown -R 1000:1000 /data && \
+          chown -R 1000:1000 /appCache
+      - name: init-container
+        image: 'postgres:16.0-alpine3.18'
+        command:
+          - sh
+          - '-c'
+          - >-
+            echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
+        env:
+          - name: PGHOST
+            value: citus-headless.os-system
+          - name: PGPORT
+            value: "5432"
+          - name: PGUSER
+            value: knowledge_os_system
+          - name: PGPASSWORD
+            value: {{ $pg_password | b64dec }}
+          - name: PGDB
+            value: os_system_knowledge
+      containers:
+      - name: knowledge
+        image: "beclab/knowledge-base-api:v0.12.0"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
+        ports:
+        - containerPort: 3010
+        env:
+        - name: BACKEND_URL
+          value: http://127.0.0.1:8080
+        - name: RSSHUB_URL
+          value: 'http://rss-server.os-system:1200'
+        - name: UPLOAD_SAVE_PATH
+          value: '/data/'
+        - name: SEARCH_URL
+          value: 'http://search3.os-system:80'
+        - name: REDIS_PASSWORD
+          value: {{ $redis_password_data }}
+        - name: REDIS_ADDR
+          value: redis-cluster-proxy.os-system:6379
+        - name: PG_USERNAME
+          value: knowledge_os_system
+        - name: PG_PASSWORD
+          value: {{ $pg_password | b64dec }}
+        - name: PG_HOST
+          value: citus-headless.os-system
+        - name: PG_PORT
+          value: "5432"
+        - name: PG_DATABASE
+          value: os_system_knowledge
+        - name: DOWNLOAD_URL
+          value: http://download-svc.os-system:3080
+        - name: NATS_HOST
+          value: nats
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: os-system-knowledge
+        - name: NATS_PASSWORD
+          value: {{ $nat_password | b64dec }}
+        - name: NATS_SUBJECT
+          value: terminus.os-system.download_status
+        - name: SOCKET_URL
+          value: 'http://localhost:40010'
+        volumeMounts:
+          - name: userspace-dir
+            mountPath: /data
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+          limits:
+            cpu: "1"
+            memory: 1Gi
+
+      - name: backend-server
+        image: "beclab/recommend-backend:v0.12.0"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
+        env:
+        - name: LISTEN_ADDR
+          value: 127.0.0.1:8080
+        - name: REDIS_PASSWORD
+          value: {{ $redis_password_data }}
+        - name: REDIS_ADDR
+          value: redis-cluster-proxy.os-system:6379
+        - name: RSS_HUB_URL
+          value: 'http://rss-server.os-system:1200/'
+        - name: WE_CHAT_REFRESH_FEED_URL
+          value: https://recommend-wechat-prd.bttcdn.com/api/wechat/entries
+        - name: WECHAT_ENTRY_CONTENT_GET_API_URL
+          value: https://recommend-wechat-prd.bttcdn.com/api/wechat/entry/content
+        - name: PG_USERNAME
+          value: knowledge_os_system
+        - name: PG_PASSWORD
+          value: {{ $pg_password | b64dec }}
+        - name: PG_HOST
+          value: citus-headless.os-system
+        - name: PG_PORT
+          value: "5432"
+        - name: PG_DATABASE
+          value: os_system_knowledge
+        - name: WATCH_DIR
+          value: /data/
+        - name: YT_DLP_API_URL
+          value: http://download-svc.os-system:3082/api/v1/get_metadata
+        - name: DOWNLOAD_API_URL
+          value: http://download-svc.os-system:3080/api
+        volumeMounts:
+          - name: userspace-dir
+            mountPath: /data
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+          limits:
+            cpu: "800m"
+            memory: 400Mi
+
+      - name: sync
+        image: "beclab/recommend-sync:v0.12.0"
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
+        env:
+        - name: USERSPACE_DIRECTORY
+          value: /data
+        - name: KNOWLEDGE_BASE_API_URL
+          value: http://127.0.0.1:3010
+        - name: PG_HOST
+          value: citus-headless.os-system
+        - name: PG_USERNAME
+          value: knowledge_os_system
+        - name: PG_PASSWORD
+          value: {{ $pg_password | b64dec }}
+        - name: PG_DATABASE
+          value: os_system_knowledge
+        - name: PG_PORT
+          value: "5432"
+        - name: TERMINUS_RECOMMEND_REDIS_ADDR
+          value: redis-cluster-proxy.os-system:6379
+        - name: TERMINUS_RECOMMEND_REDIS_PASSOWRD
+          value: {{ $redis_password_data }}
+        volumeMounts:
+          - name: userspace-dir
+            mountPath: /data
+       
+      - name: crawler
+        image: "beclab/recommend-crawler:v0.12.0"
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
+        env:
+        - name: KNOWLEDGE_BASE_API_URL
+          value: http://127.0.0.1:3010
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+          limits:
+            cpu: "800m"
+            memory: 800Mi
+        volumeMounts:
+          - name: cache-dir
+            mountPath: /appCache
+
+      - name: terminus-ws-sidecar
+        image: 'beclab/ws-gateway:v1.0.4'
+        imagePullPolicy: IfNotPresent
+        command:
+          - /ws-gateway
+        env:
+          - name: WS_PORT
+            value: '3010'
+          - name: WS_URL
+            value: /knowledge/websocket/message
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+
+      
+      volumes:
+      - name: userspace-dir
+        hostPath:
+          type: Directory
+          path: {{ .Values.rootPath }}/rootfs/userspace
+      - name: cache-dir
+        hostPath:
+          path: {{ .Values.rootPath }}/userdata/Cache/rss
+          type: DirectoryOrCreate
+      - name: terminus-sidecar-config
+        configMap:
+          name: sidecar-ws-configs
+          items:
+          - key: envoy.yaml
+            path: envoy.yaml
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rss-svc
+  namespace: os-system
+spec:
+  type: ClusterIP
+  selector:
+    app: knowledge
+  ports:
+    - name: "backend-server"
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+    - name: "knowledge-base-api"
+      protocol: TCP
+      port: 3010
+      targetPort: 3010
+    - name: "knowledge-websocket"
+      protocol: TCP
+      port: 40010
+      targetPort: 40010
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: knowledge-base-api
+  namespace: os-system
+spec:
+  type: ClusterIP
+  selector:
+    app: systemserver
+  ports:
+    - protocol: TCP
+      name: knowledge-api
+      port: 3010
+      targetPort: 3010  
+---
+
+
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: SysEventRegistry
+metadata:
+  name: konwledgebase-recommend-install-cb
+  namespace: os-system
+spec:
+  type: subscriber
+  event: recommend.install
+  callback: http://rss-svc.os-system:3010/knowledge/algorithm/recommend/install
+  
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: SysEventRegistry
+metadata:
+  name: konwledgebase-recommend-uninstall-cb
+  namespace: os-system
+spec:
+  type: subscriber
+  event: recommend.uninstall
+  callback: http://rss-svc.os-system:3010/knowledge/algorithm/recommend/uninstall

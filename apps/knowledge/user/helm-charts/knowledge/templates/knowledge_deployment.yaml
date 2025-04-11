@@ -1,8 +1,7 @@
-
 apiVersion: v1
 kind: Service
 metadata:
-  name: workflow-archivelog-s3
+  name: knowledge-base-api
   namespace: user-system-{{ .Values.bfl.username }}
 spec:
   type: ClusterIP
@@ -10,10 +9,7 @@ spec:
     app: systemserver
   ports:
     - protocol: TCP
-      name: fakes3
-      port: 4568
-      targetPort: 4568
-
-
-
-
+      name: knowledge-api
+      port: 3010
+      targetPort: 3010  
+---

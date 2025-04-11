@@ -1,7 +1,0 @@
-1. Get Argo Server external IP/domain by running:
-
-kubectl --namespace {{ .Release.Namespace }} get services -o wide | grep {{ template "argo-workflows.server.fullname" . }}
-
-2. Submit the hello-world workflow by running:
-
-argo submit https://raw.githubusercontent.com/argoproj/argo-workflows/master/examples/hello-world.yaml --watch

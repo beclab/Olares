@@ -299,7 +299,7 @@ data:
                   - endpoint:
                       address:
                         socket_address:
-                          address: rss-svc.user-space-{{ .Values.bfl.username }}.svc.cluster.local
+                          address: rss-svc.os-system.svc.cluster.local
                           port_value: 3010  
         - name: cluster_fakes3_proxy
           connect_timeout: 30s
