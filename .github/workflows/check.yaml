@@ -37,16 +37,7 @@ jobs:
         run: |
           bash scripts/package.sh
 
-      - name: Run chart-testing (list-changed)
-        id: list-changed
-        run: |
-          changed=$(ct list-changed --chart-dirs build/installer/wizard/config --target-branch ${{ github.event.repository.default_branch }})
-          if [[ -n "$changed" ]]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Run chart-testing (lint)
-        if: steps.list-changed.outputs.changed == 'true'
         run: ct lint --chart-dirs build/installer/wizard/config --check-version-increment=false --target-branch ${{ github.event.repository.default_branch }}
 
       # - name: Create kind cluster

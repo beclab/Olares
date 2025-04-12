@@ -2,14 +2,10 @@
 
 {{ $charts_rootpath := printf "%s%s" .Values.rootPath "/rootfs/charts" }}
 {{ $usertmpl_rootpath := printf "%s%s" .Values.rootPath "/rootfs/usertemplate" }}
-
-# {{ $charts_rand16 := randAlphaNum 16 | lower }}
 {{ $charts_pv := "pv-charts" }}
 {{ $charts_pvc := "pvc-charts" }}
 {{ $charts_sc := "juicefs-localpath-charts" }}
 {{ $charts_storage := "100Mi" }}
-
-# {{ $usertmpl_rand16 := randAlphaNum 16 | lower }}
 {{ $usertmpl_pv := "pv-usertmpl" }}
 {{ $usertmpl_pvc := "pvc-usertmpl" }}
 {{ $usertmpl_sc := "juicefs-localpath-usertmpl" }}
