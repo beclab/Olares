@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.13" }}
+{{ $backupVersion := "0.3.14" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 ---
