@@ -63,19 +63,14 @@ Olaresを使用して、ハードウェアをAIホームサーバーに変換し
 ## はじめに
 
 ### システム互換性
-Olaresは以下のプラットフォームでテストおよび検証されています：
 
-| プラットフォーム            | オペレーティングシステム                     | 備考                                                 |
-|---------------------|--------------------------------------|-------------------------------------------------------|
-| Linux               | Ubuntu 20.04 LTS以降 <br/> Debian 11以降 |                                          |
-| Raspberry Pi        | RaspbianOS                           | Raspberry Pi 4 Model BおよびRaspberry Pi 5で検証済み |
-| Windows             | Windows 11 23H2以降 <br/>Windows 10 22H2以降<br/> WSL2 |                                     |
-| Mac                 | Monterey (12)以降              |                                                        |
-| Proxmox VE (PVE)    | Proxmox Virtual Environment 8.0      |                                                       |
+Olaresは以下のLinuxプラットフォームで動作検証を完了しています：
 
-> **注意**
-> 
-> 互換性テーブルに記載されていないオペレーティングシステムでOlaresを正常にインストールした場合は、お知らせください！GitHubリポジトリで[問題を開く](https://github.com/beclab/Olares/issues/new)か、プルリクエストを送信できます。
+- Ubuntu 20.04 LTS 以降
+- Debian 11 以降
+
+> **追加インストール手順**
+> Olares は macOS、Windows、PVE、Raspberry Pi などのプラットフォームや、Linux 上での Docker Compose を用いたインストールにも対応しています。>ただし、これらの方法は開発およびテスト環境専用です。詳しくは[追加インストール手順](https://docs.olares.xyz/developer/install/additional-installations.html)をご参照ください。
 
 ### Olaresのセットアップ
 自分のデバイスでOlaresを始めるには、[はじめにガイド](https://docs.olares.xyz/manual/get-started/)に従ってステップバイステップの手順を確認してください。

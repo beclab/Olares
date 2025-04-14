@@ -62,25 +62,18 @@ Olares 是为本地端侧 AI 打造的开源私有云操作系统，可轻松将
 ## 快速开始
 
 ### 系统兼容性
-Olares 已在以下平台完成测试验证：
 
-| 平台            | 操作系统                     | 备注                                                 |
-|---------------------|--------------------------------------|-------------------------------------------------------|
-| Linux               | Ubuntu 20.04 LTS 及以上 <br/> Debian 11 及以上  |                                               |
-| Raspberry Pi        | RaspbianOS                           | 已在 Raspberry Pi 4 Model B 和 Raspberry Pi 5 上验证    |
-| Windows             | Windows 11 23H2 及以上 <br/>Windows 10 22H2 及以上 <br/>WSL2 |                                           |
-| Mac                  | macOS Monterey (12) 及以上             |                                                         |
-| Proxmox VE (PVE)    | Proxmox Virtual Environment 8.0      |                                                         |
+Olares 已在以下 Linux 平台完成测试与验证：
 
-> **注意**
-> 
-> 如果你在未列出的系统版本上成功安装了 Olares，请告诉我们！你可以在 GitHub 仓库中[提交 Issue](https://github.com/beclab/Olares/issues/new) 或发起 Pull Request。
+- Ubuntu 20.04 LTS 及以上版本
+- Debian 11 及以上版本
+
+> **其他安装方式**
+> Olares 也支持在 macOS、Windows、PVE、树莓派等平台上运行，或通过 Docker Compose 在 Linux 上部署。但请注意，这些方式**仅适用于开发和测试环境**。详细安装指南请参阅[其他安装方式](https://docs.joinolares.cn/zh/developer/install/additional-installations.html)。
 
 ### 安装 Olares
-
-> 当前文档仅有英文版本。
  
-参考[快速上手指南](https://docs.olares.xyz/manual/get-started/)安装并激活 Olares。
+参考[快速上手指南](https://docs.joinolares.cn/zh/manual/get-started/)安装并激活 Olares。
 
 ## 系统架构
 Olares 的架构设计遵循两个核心原则：

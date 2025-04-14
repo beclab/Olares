@@ -65,19 +65,14 @@ Here is why and where you can count on Olares for private, powerful, and secure 
 ## Getting started
 
 ### System compatibility
-Olares has been tested and verified on the following platforms:
 
-| Platform            | Operating system                     | Notes                                                 |
-|---------------------|--------------------------------------|-------------------------------------------------------|
-| Linux               | Ubuntu 20.04 LTS or later <br/> Debian 11 or later |                                          |
-| Raspberry Pi        | RaspbianOS                           | Verified on Raspberry Pi 4 Model B and Raspberry Pi 5 |
-| Windows             | Windows 11 23H2 or later <br/>Windows 10 22H2 or later<br/> WSL2 |                                     |
-| Mac                 | Monterey (12) or later              |                                                        |
-| Proxmox VE (PVE)    | Proxmox Virtual Environment 8.0      |                                                       |
+Olares has been tested and verified on the following Linux platforms:
 
-> **Note**
-> 
-> If you successfully install Olares on an operating system that is not listed in the compatibility table, please let us know! You can [open an issue](https://github.com/beclab/Olares/issues/new) or submit a pull request on our GitHub repository.
+- Ubuntu 20.04 LTS or later 
+- Debian 11 or later
+
+> **Other installation options**
+> Olares can also be installed on other platforms like macOS, Windows, PVE, and Raspberry Pi, or installed via docker compose on Linux. However, these are only for **testing and development purposes**. For detailed instructions, visit [Additional installation options](https://docs.olares.xyz/developer/install/additional-installations.html).
 
 ### Set up Olares
 To get started with Olares on your own device, follow the [Getting Started Guide](https://docs.olares.xyz/manual/get-started/) for step-by-step instructions.
