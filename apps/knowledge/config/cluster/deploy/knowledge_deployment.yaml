@@ -1,9 +1,8 @@
-{{- $namespace := printf "%s" "os-system" -}}
-{{- $knowledge_secret := (lookup "v1" "Secret" $namespace "rss-secrets") -}}
+{{- $share_secret := (lookup "v1" "Secret" "os-system" "knowledge-share-secrets") -}}
 
 {{- $redis_password := "" -}}
-{{ if $knowledge_secret -}}
-{{ $redis_password = (index $knowledge_secret "data" "redis_password") }}
+{{ if $share_secret -}}
+{{ $redis_password = (index $share_secret "data" "redis_password") }}
 {{ else -}}
 {{ $redis_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
@@ -13,19 +12,20 @@
 
 
 {{- $pg_password := "" -}}
-{{ if $knowledge_secret -}}
-{{ $pg_password = (index $knowledge_secret "data" "pg_password") }}
+{{ if $share_secret -}}
+{{ $pg_password = (index $share_secret "data" "pg_password") }}
 {{ else -}}
 {{ $pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
-{{- $knowledge_nats_secret := (lookup "v1" "Secret" $namespace "knowledge-secrets") -}}
+{{- $knowledge_nats_secret := (lookup "v1" "Secret" "os-system" "knowledge-secrets") -}}
 {{- $nat_password := "" -}}
 {{ if $knowledge_nats_secret -}}
 {{ $nat_password = (index $knowledge_nats_secret "data" "nat_password") }}
 {{ else -}}
 {{ $nat_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
+
 ---
 apiVersion: v1
 kind: Secret
@@ -34,9 +34,21 @@ metadata:
   namespace: os-system
 type: Opaque
 data:
-  pg_password: {{ $pg_password }}
   nat_password: {{ $nat_password }}
 ---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: knowledge-share-secrets
+  namespace: os-system
+type: Opaque
+data:
+  pg_password: {{ $pg_password }}
+  redis_password: {{ $redis_password }}
+---  
+
+
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
@@ -52,12 +64,29 @@ spec:
       valueFrom:
         secretKeyRef:
           key: pg_password
-          name: knowledge-secrets
+          name: knowledge-share-secrets
     databases:
     - name: knowledge
       extensions:
       - pg_trgm
       - btree_gin
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: knowledge-redis
+  namespace: os-system
+spec:
+  app: rss
+  appNamespace: os-system
+  middleware: redis
+  redis:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: redis_password
+          name: knowledge-share-secrets
+    namespace: knowledge
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
@@ -167,7 +196,7 @@ spec:
         - name: REDIS_PASSWORD
           value: {{ $redis_password_data }}
         - name: REDIS_ADDR
-          value: redis-cluster-proxy.os-system:6379
+          value: redis-cluster-proxy.os-system
         - name: PG_USERNAME
           value: knowledge_os_system
         - name: PG_PASSWORD
@@ -215,7 +244,7 @@ spec:
         - name: REDIS_PASSWORD
           value: {{ $redis_password_data }}
         - name: REDIS_ADDR
-          value: redis-cluster-proxy.os-system:6379
+          value: redis-cluster-proxy.os-system
         - name: RSS_HUB_URL
           value: 'http://rss-server.os-system:1200/'
         - name: WE_CHAT_REFRESH_FEED_URL
@@ -272,7 +301,7 @@ spec:
         - name: PG_PORT
           value: "5432"
         - name: TERMINUS_RECOMMEND_REDIS_ADDR
-          value: redis-cluster-proxy.os-system:6379
+          value: redis-cluster-proxy.os-system
         - name: TERMINUS_RECOMMEND_REDIS_PASSOWRD
           value: {{ $redis_password_data }}
         volumeMounts:
@@ -368,8 +397,252 @@ spec:
       name: knowledge-api
       port: 3010
       targetPort: 3010  
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: download-nat
+  namespace: os-system
+spec:
+  app: download
+  appNamespace: os-system
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nat_password
+          name: download-secrets
+    refs: []
+    subjects:
+    - name: download_status
+      permission:
+        pub: allow
+        sub: allow
+      export:
+      - appName: knowledge
+        sub: allow
+        pub: allow
+    user: os-system-download
 ---
 
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: download
+  namespace: os-system
+  labels:
+    app: download
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: download
+  template:
+    metadata:
+      labels:
+        app: download
+    spec:
+      serviceAccount: os-internal
+      serviceAccountName: os-internal
+      securityContext:
+        runAsUser: 0
+        runAsNonRoot: false
+
+      initContainers:
+      - name: init-data
+        image: busybox:1.28
+        securityContext:
+          privileged: true
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - name: config-dir
+          mountPath: /config
+        - name: download-dir
+          mountPath: /downloads
+        command:
+        - sh
+        - -c
+        - |
+          chown -R 1000:1000 /config && \
+          chown -R 1000:1000 /downloads
+      - name: init-container
+        image: 'postgres:16.0-alpine3.18'
+        command:
+          - sh
+          - '-c'
+          - >-
+            echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
+        env:
+          - name: PGHOST
+            value: citus-headless.os-system
+          - name: PGPORT
+            value: "5432"
+          - name: PGUSER
+            value: knowledge_os_system
+          - name: PGPASSWORD
+            value: {{ $pg_password | b64dec }}
+          - name: PGDB
+            value: os_system_knowledge
+      containers:
+      - name: aria2
+        image: "beclab/aria2:v0.0.4"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+        ports:
+        - containerPort: 6800
+        - containerPort: 6888
+        env:
+        - name: RPC_SECRET
+          value: kubespider
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        volumeMounts:
+        - name: download-dir
+          mountPath: /downloads
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+          limits:
+            cpu: "1"
+            memory: 300Mi
+      - name: yt-dlp
+        image: "beclab/yt-dlp:v0.12.0"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
+
+        ports:
+        - containerPort: 3082
+        env:
+        - name: PG_USERNAME
+          value: knowledge_os_system
+        - name: PG_PASSWORD
+          value: {{ $pg_password | b64dec }}
+        - name: PG_HOST
+          value: citus-headless.os-system
+        - name: PG_PORT
+          value: "5432"
+        - name: PG_DATABASE
+          value: os_system_knowledge
+        - name: REDIS_HOST
+          value: redis-cluster-proxy.os-system
+        - name: REDIS_PASSWORD
+          value: {{ $redis_password | b64dec }}
+        - name: NATS_HOST
+          value: nats
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: os-system-download
+        - name: NATS_PASSWORD
+          value: {{ $nat_password | b64dec }}
+        - name: NATS_SUBJECT
+          value: terminus.os-system.download_status
+        volumeMounts:
+        - name: config-dir
+          mountPath: /app/config
+        - name: download-dir
+          mountPath: /app/downloads
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+          limits:
+            cpu: "1"
+            memory: 300Mi
+      - name: download-spider
+        image: "beclab/download-spider:v0.12.0"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
+
+        env:
+        - name: PG_USERNAME
+          value: knowledge_os_system
+        - name: PG_PASSWORD
+          value: {{ $pg_password | b64dec }}
+        - name: PG_HOST
+          value: citus-headless.os-system
+        - name: PG_PORT
+          value: "5432"
+        - name: PG_DATABASE
+          value: os_system_knowledge
+        - name: REDIS_HOST
+          value: redis-cluster-proxy.os-system
+        - name: REDIS_PASSWORD
+          value: {{ $redis_password | b64dec }}
+        - name: NATS_HOST
+          value: nats
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: os-system-download
+        - name: NATS_PASSWORD
+          value: {{ $nat_password | b64dec }}
+        - name: NATS_SUBJECT
+          value: terminus.os-system.download_status
+        volumeMounts:
+        - name: download-dir
+          mountPath: /downloads
+        
+        ports:
+        - containerPort: 3080
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+          limits:
+            cpu: "1"
+            memory: 300Mi
+
+      volumes:
+      - name: config-dir
+        hostPath: 
+          type: DirectoryOrCreate
+          path: {{ .Values.rootPath }}/userdata/Cache/download
+      - name: download-dir
+        hostPath:
+          type: DirectoryOrCreate
+          path: {{ .Values.rootPath }}/rootfs/userspace
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: download-svc
+  namespace: os-system
+spec:
+  type: ClusterIP
+  selector:
+    app: download
+  ports:
+    - name: "download-spider"
+      protocol: TCP
+      port: 3080
+      targetPort: 3080
+    - name: "aria2-server"
+      protocol: TCP
+      port: 6800
+      targetPort: 6800
+    - name: ytdlp-server
+      protocol: TCP
+      port: 3082
+      targetPort: 3082
+---
 
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: SysEventRegistry

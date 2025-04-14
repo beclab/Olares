@@ -38,6 +38,7 @@ data:
   redis_password: {{ $redis_password }}
 
 ---
+
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
@@ -59,23 +60,7 @@ spec:
     - name: rss_v1
     - name: argo
 
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: knowledge-redis
-  namespace: os-system
-spec:
-  app: rss
-  appNamespace: os-system
-  middleware: redis
-  redis:
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: redis_password
-          name: rss-secrets
-    namespace: knowledge
+
 
 
 
