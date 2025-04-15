@@ -21,7 +21,7 @@ spec:
   versions:
     - additionalPrinterColumns:
         - jsonPath: .spec.name
-          name: name
+          name: backup name
           type: string
         - jsonPath: .spec.owner
           name: owner
