@@ -425,7 +425,7 @@ spec:
         - name: userspace-dir
           hostPath:
             type: Directory
-            path: {{ .Values.userspace.userData }}
+            path: '{{ .Values.userspace.userData }}'
         - name: terminus-sidecar-config
           configMap:
             name: sidecar-configs
@@ -437,7 +437,7 @@ spec:
         - name: wise-download-dir
           hostPath:
             type: Directory
-            path: {{ .Values.userspace.userData }}
+            path: '{{ .Values.userspace.userData }}'
         - name: system-frontend-nginx-config
           configMap:
             name: system-frontend-nginx-config

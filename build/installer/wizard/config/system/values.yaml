@@ -1,5 +1,3 @@
-
-
 kubesphere:
   redis_password: ""
 backup:

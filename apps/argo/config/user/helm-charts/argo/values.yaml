@@ -1,4 +1,3 @@
-
 bfl:
   nodeport: 30883
   nodeport_ingress_http: 30083

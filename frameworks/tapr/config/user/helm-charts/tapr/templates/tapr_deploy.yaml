@@ -60,7 +60,7 @@ spec:
       - name: image-upload
         hostPath:
           type: DirectoryOrCreate
-          path: {{ .Values.userspace.userData }}/Pictures
+          path: '{{ .Values.userspace.userData }}/Pictures'
 
 ---
 apiVersion: v1

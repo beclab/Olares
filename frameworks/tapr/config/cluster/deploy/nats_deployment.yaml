@@ -20,7 +20,7 @@ spec:
   capacity:
     storage: '50Gi'
   hostPath:
-    path: {{ $nats_rootpath }}/nats_data
+    path: '{{ $nats_rootpath }}/nats_data'
     type: DirectoryOrCreate
   persistentVolumeReclaimPolicy: Delete
   volumeMode: Filesystem
@@ -215,7 +215,7 @@ spec:
           secret:
             secretName: nats-box-contexts
         - hostPath:
-            path: {{ .Values.rootPath }}/userdata/dbdata/nats_data
+            path: '{{ .Values.rootPath }}/userdata/dbdata/nats_data'
             type: DirectoryOrCreate
           name: nats-data
 ---

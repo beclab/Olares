@@ -304,14 +304,14 @@ spec:
         - name: userspace-dir
           hostPath:
             type: Directory
-            path: {{ .Values.rootPath }}/rootfs/userspace
+            path: '{{ .Values.rootPath }}/rootfs/userspace'
         - name: fb-data
           hostPath:
             type: DirectoryOrCreate
-            path: {{ .Values.rootPath }}/userdata/Cache/files
+            path: '{{ .Values.rootPath }}/userdata/Cache/files'
         - name: upload-appdata
           hostPath:
-            path: {{ .Values.rootPath }}/userdata/Cache
+            path: '{{ .Values.rootPath }}/userdata/Cache'
             type: DirectoryOrCreate
         - name: files-nginx-config
           configMap:
@@ -324,13 +324,13 @@ spec:
             defaultMode: 420
         - name: user-appdata-dir
           hostPath:
-            path: {{ .Values.rootPath }}/userdata/Cache
+            path: '{{ .Values.rootPath }}/userdata/Cache'
             type: Directory
         
 {{ if .Values.sharedlib }}        
         - name: shared-lib
           hostPath:
-            path: {{ .Values.sharedlib }}
+            path: "{{ .Values.sharedlib }}"
             type: Directory
 {{ end }}            
 
@@ -447,11 +447,11 @@ spec:
         - name: user-appdata-dir
           hostPath:
             type: Directory
-            path: {{ .Values.rootPath }}/userdata/Cache
+            path: '{{ .Values.rootPath }}/userdata/Cache'
         - name: fb-data
           hostPath:
             type: DirectoryOrCreate
-            path: {{ .Values.rootPath }}/userdata/Cache/files-appdata
+            path: '{{ .Values.rootPath }}/userdata/Cache/files-appdata'
 
 ---
 apiVersion: v1

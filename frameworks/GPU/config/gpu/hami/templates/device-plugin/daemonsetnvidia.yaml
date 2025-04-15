@@ -112,12 +112,12 @@ spec:
             - name: NVIDIA_MIG_MONITOR_DEVICES
               value: all
             - name: HOOK_PATH
-              value: {{ .Values.global.gpuHookPath }}/vgpu
+              value: '{{ .Values.global.gpuHookPath }}/vgpu'
           resources:
           {{- toYaml .Values.devicePlugin.vgpuMonitor.resources | nindent 12 }}
           volumeMounts:
             - name: ctrs
-              mountPath: {{ .Values.devicePlugin.monitorctrPath }}
+              mountPath: '{{ .Values.devicePlugin.monitorctrPath }}'
             - name: dockers
               mountPath: /run/docker
             - name: containerds
@@ -131,7 +131,7 @@ spec:
       volumes:
         - name: ctrs
           hostPath:
-            path: {{ .Values.devicePlugin.monitorctrPath }}
+            path: '{{ .Values.devicePlugin.monitorctrPath }}'
         - name: hosttmp
           hostPath:
             path: /tmp
@@ -143,10 +143,10 @@ spec:
             path: /run/containerd
         - name: device-plugin
           hostPath:
-            path: {{ .Values.devicePlugin.pluginPath }}
+            path: '{{ .Values.devicePlugin.pluginPath }}'
         - name: lib
           hostPath:
-            path: {{ .Values.devicePlugin.libPath }}
+            path: '{{ .Values.devicePlugin.libPath }}'
         - name: usrbin
           hostPath:
             path: /usr/bin

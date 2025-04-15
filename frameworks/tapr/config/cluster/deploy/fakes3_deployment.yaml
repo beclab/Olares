@@ -73,6 +73,6 @@ spec:
       - name: s3-data
         hostPath:
           type: DirectoryOrCreate
-          path: {{ $mongo_backuppath }}/mongo-backup
+          path: '{{ $mongo_backuppath }}/mongo-backup'
 
 

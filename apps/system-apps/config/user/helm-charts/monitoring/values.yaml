@@ -1,4 +1,3 @@
-
 bfl:
   nodeport: 30883
   nodeport_ingress_http: 30083
@@ -18,10 +17,10 @@ docs:
 desktop:
   nodeport: 30180
 os:
-  portfolio:
+  profile:
     appKey: '${ks[0]}'
     appSecret: test
-  vault:
+  studio:
     appKey: '${ks[0]}'
     appSecret: test
   desktop:
@@ -37,6 +36,12 @@ os:
     appKey: '${ks[0]}'
     appSecret: test
   search2:
+    appKey: '${ks[0]}'
+    appSecret: test
+  settings:
+    appKey: '${ks[0]}'
+    appSecret: test
+  dashboard:
     appKey: '${ks[0]}'
     appSecret: test
 kubesphere:

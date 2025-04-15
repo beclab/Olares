@@ -132,7 +132,7 @@ spec:
       - name: userspace-dir
         hostPath:
           type: Directory
-          path: {{ .Values.userspace.userData }}
+          path: "{{ .Values.userspace.userData }}"
       # - name: terminus-sidecar-config
       #   configMap:
       #     name: sidecar-configs

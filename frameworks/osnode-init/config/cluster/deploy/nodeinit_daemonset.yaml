@@ -64,7 +64,7 @@ spec:
       volumes:
       - name: terminus
         hostPath:
-          path: {{ .Values.rootPath }}
+          path: '{{ .Values.rootPath }}'
       - name: bin
         hostPath:
           path: /usr/local/bin

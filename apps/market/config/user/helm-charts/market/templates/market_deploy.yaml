@@ -192,7 +192,7 @@ spec:
             path: envoy.yaml
       - name: opt-data
         hostPath:
-          path: {{ .Values.userspace.appData}}/appstore/data
+          path: '{{ .Values.userspace.appData}}/appstore/data'
           type: DirectoryOrCreate
 
 ---

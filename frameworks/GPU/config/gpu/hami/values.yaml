@@ -2,32 +2,32 @@
 
 nameOverride: ""
 fullnameOverride: ""
-imagePullSecrets: [ ]
+imagePullSecrets: []
 version: "v2.5.1"
 
-#Nvidia GPU Parameters
+# Nvidia GPU Parameters
 resourceName: "nvidia.com/gpu"
 resourceMem: "nvidia.com/gpumem"
 resourceMemPercentage: "nvidia.com/gpumem-percentage"
 resourceCores: "nvidia.com/gpucores"
 resourcePriority: "nvidia.com/priority"
 
-#MLU Parameters
+# MLU Parameters
 mluResourceName: "cambricon.com/vmlu"
 mluResourceMem: "cambricon.com/mlu.smlu.vmemory"
 mluResourceCores: "cambricon.com/mlu.smlu.vcore"
 
-#Hygon DCU Parameters
+# Hygon DCU Parameters
 dcuResourceName: "hygon.com/dcunum"
 dcuResourceMem: "hygon.com/dcumem"
 dcuResourceCores: "hygon.com/dcucores"
 
-#Iluvatar GPU Parameters
+# Iluvatar GPU Parameters
 iluvatarResourceName: "iluvatar.ai/vgpu"
 iluvatarResourceMem: "iluvatar.ai/vcuda-memory"
 iluvatarResourceCore: "iluvatar.ai/vcuda-core"
 
-#Metax SGPU Parameters
+# Metax SGPU Parameters
 metaxResourceName: "metax-tech.com/sgpu"
 metaxResourceCore: "metax-tech.com/vcore"
 metaxResourceMem: "metax-tech.com/vmemory"
@@ -51,7 +51,7 @@ scheduler:
   # if we install the nvidia-vgpu-scheduler-scheduler as default scheduler, we need to remove the k8s default
   # scheduler pod from the cluster first, we must specify node name to skip the schedule workflow.
   nodeName: ""
-  #nodeLabelSelector:
+  # nodeLabelSelector:
   #  "gpu": "on"
   overwriteEnv: "false"
   defaultSchedulerPolicy:
@@ -100,13 +100,13 @@ scheduler:
       - -v=4
   podAnnotations: {}
   tolerations: []
-  #serviceAccountName: "hami-vgpu-scheduler-sa"
+  # serviceAccountName: "hami-vgpu-scheduler-sa"
   admissionWebhook:
     customURL:
       enabled: false
       # must be an endpoint using https.
       # should generate host certs here
-      host: 127.0.0.1 # hostname or ip, can be your node'IP if you want to use https://<nodeIP>:<schedulerPort>/<path>
+      host: 127.0.0.1          # hostname or ip, can be your node'IP if you want to use https://<nodeIP>:<schedulerPort>/<path>
       port: 31998
       path: /webhook
     whitelistNamespaces:
@@ -147,16 +147,13 @@ devicePlugin:
   passDeviceSpecsEnabled: false
   extraArgs:
     - -v=4
-  
   service:
     type: ClusterIP  # Default type is NodePort, can be changed to ClusterIP
     httpPort: 31992
     labels: {}
     annotations: {}
-    
   pluginPath: /var/lib/kubelet/device-plugins
   libPath: /usr/local/vgpu
-
   podAnnotations: {}
   nvidianodeSelector:
     gpu.bytetrade.io/cuda-supported: 'true'
@@ -315,7 +312,7 @@ dcgmExporter:
     interval: 15s
     honorLabels: false
     additionalLabels: {}
-      #monitoring: prometheus
+      # monitoring: prometheus
     relabelings: []
       # - sourceLabels: [__meta_kubernetes_pod_node_name]
       #   separator: ;
@@ -325,13 +322,13 @@ dcgmExporter:
       #   action: replace
 
   nodeSelector: {}
-    #node: gpu
+    # node: gpu
 
   tolerations: []
-  #- operator: Exists
+  # - operator: Exists
 
   affinity: {}
-    #nodeAffinity:
+    # nodeAffinity:
     #  requiredDuringSchedulingIgnoredDuringExecution:
     #    nodeSelectorTerms:
     #    - matchExpressions:
@@ -339,7 +336,7 @@ dcgmExporter:
     #        operator: Exists
 
   extraHostVolumes: []
-  #- name: host-binaries
+  # - name: host-binaries
   #  hostPath: /opt/bin
 
   extraConfigMapVolumes:
@@ -356,7 +353,7 @@ dcgmExporter:
       subPath: default-counters.csv
 
   extraEnv: []
-  #- name: EXTRA_VAR
+  # - name: EXTRA_VAR
   #  value: "TheStringValue"
 
   # Path to the kubelet socket for /pod-resources
@@ -391,7 +388,7 @@ dcgmExporter:
     ca: ""
 
   basicAuth:
-    #Object containing <user>:<passwords> key-value pairs for each user that will have access via basic authentication
+    # Object containing <user>:<passwords> key-value pairs for each user that will have access via basic authentication
     users: {}
 
   # Customized list of metrics to emit. Expected to be in the same format (CSV) as the default list.

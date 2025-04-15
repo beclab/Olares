@@ -1,6 +1,8 @@
 apiVersion: v2
 name: nats
 description: A Helm chart for Kubernetes
+maintainers:
+- name: bytetrade
 
 # A chart can be either an 'application' or a 'library' chart.
 #

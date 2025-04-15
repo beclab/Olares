@@ -31,7 +31,7 @@ spec:
   capacity:
     storage: '50Gi'
   hostPath:
-    path: {{ $redix_rootpath }}/kvrocks_data
+    path: '{{ $redix_rootpath }}/kvrocks_data'
     type: DirectoryOrCreate
   persistentVolumeReclaimPolicy: Delete
   volumeMode: Filesystem
@@ -63,7 +63,7 @@ spec:
   type: kvrocks
   kvrocks:
     owner: system
-    backupStorage: {{ $redix_backuppath }}/kvrocks_backup
+    backupStorage: '{{ $redix_backuppath }}/kvrocks_backup'
     image: beclab/kvrocks:0.1.0
     imagePullPolicy: IfNotPresent
     password: 

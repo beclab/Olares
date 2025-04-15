@@ -346,10 +346,10 @@ spec:
       - name: userspace-dir
         hostPath:
           type: Directory
-          path: {{ .Values.rootPath }}/rootfs/userspace
+          path: '{{ .Values.rootPath }}/rootfs/userspace'
       - name: cache-dir
         hostPath:
-          path: {{ .Values.rootPath }}/userdata/Cache/rss
+          path: '{{ .Values.rootPath }}/userdata/Cache/rss'
           type: DirectoryOrCreate
       - name: terminus-sidecar-config
         configMap:
@@ -613,11 +613,11 @@ spec:
       - name: config-dir
         hostPath: 
           type: DirectoryOrCreate
-          path: {{ .Values.rootPath }}/userdata/Cache/download
+          path: '{{ .Values.rootPath }}/userdata/Cache/download'
       - name: download-dir
         hostPath:
           type: DirectoryOrCreate
-          path: {{ .Values.rootPath }}/rootfs/userspace
+          path: '{{ .Values.rootPath }}/rootfs/userspace'
 ---
 
 apiVersion: v1

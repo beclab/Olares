@@ -1,4 +1,3 @@
-
 bfl:
   nodeport: 30883
   nodeport_ingress_http: 30083
@@ -36,9 +35,8 @@ os:
   search:
     appKey: '${ks[0]}'
     appSecret: test
-  search2:
+  studio:
     appKey: '${ks[0]}'
     appSecret: test
 kubesphere:
   redis_password: ""
-

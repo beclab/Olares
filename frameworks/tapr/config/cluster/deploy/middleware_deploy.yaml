@@ -45,15 +45,15 @@ spec:
       - name: dbdata-dir
         hostPath:
           type: DirectoryOrCreate
-          path: {{ $dbdata_pv_rootpath }}
+          path: '{{ $dbdata_pv_rootpath }}'
       - name: dbbackup-dir
         hostPath:
           type: DirectoryOrCreate
-          path: {{ $dbbackup_rootpath }}
+          path: '{{ $dbbackup_rootpath }}'
       - name: pgbackup-dir
         hostPath:
           type: DirectoryOrCreate
-          path: {{ $dbbackup_rootpath }}/pg_backup
+          path: '{{ $dbbackup_rootpath }}/pg_backup'
       initContainers:
       - name: init-dbspace
         image: busybox:1.28

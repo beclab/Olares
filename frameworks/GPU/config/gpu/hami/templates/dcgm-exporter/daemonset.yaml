@@ -69,7 +69,7 @@ spec:
       volumes:
       - name: "pod-gpu-resources"
         hostPath:
-          path: {{ .Values.dcgmExporter.kubeletPath }}
+          path: '{{ .Values.dcgmExporter.kubeletPath }}'
       {{- if and .Values.dcgmExporter.tlsServerConfig.enabled }}
       - name: "tls"
         secret:

@@ -1,5 +1,3 @@
-
-
 {{ $charts_rootpath := printf "%s%s" .Values.rootPath "/rootfs/charts" }}
 {{ $usertmpl_rootpath := printf "%s%s" .Values.rootPath "/rootfs/usertemplate" }}
 {{ $charts_pv := "pv-charts" }}
@@ -23,7 +21,7 @@ spec:
   capacity:
     storage: 100Mi
   hostPath:
-    path: {{ $charts_rootpath }}/{{ default $charts_pvc .Values.charts_pvc }}
+    path: '{{ $charts_rootpath }}/{{ default $charts_pvc .Values.charts_pvc }}'
     type: DirectoryOrCreate
   persistentVolumeReclaimPolicy: Delete
   volumeMode: Filesystem
@@ -58,7 +56,7 @@ spec:
   capacity:
     storage: 100Mi
   hostPath:
-    path: {{ $usertmpl_rootpath }}/{{ default $usertmpl_pvc .Values.usertmpl_pvc }}
+    path: '{{ $usertmpl_rootpath }}/{{ default $usertmpl_pvc .Values.usertmpl_pvc }}'
     type: DirectoryOrCreate
   persistentVolumeReclaimPolicy: Delete
   volumeMode: Filesystem
@@ -107,8 +105,8 @@ data:
 
     [bytetrade]
     DNS.1 = app-service.os-system.svc
----
 
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -122,13 +120,13 @@ metadata:
     charts_pv: {{ default $charts_pv .Values.charts_pv }}
     charts_pvc: {{ default $charts_pvc .Values.charts_pvc }}
     charts_sc: {{ default $charts_sc .Values.charts_sc }}
-    charts_hostpath: {{ $charts_rootpath }}/{{ default $charts_pvc .Values.charts_pvc }}
+    charts_hostpath: '{{ $charts_rootpath }}/{{ default $charts_pvc .Values.charts_pvc }}'
 
     usertmpl_storage: {{ $usertmpl_storage }}
     usertmpl_pv: {{ default $usertmpl_pv .Values.usertmpl_pv }}
     usertmpl_pvc: {{ default $usertmpl_pvc .Values.usertmpl_pvc }}
     usertmpl_sc: {{ default $usertmpl_sc .Values.usertmpl_sc }}
-    usertmpl_hostpath: {{ $usertmpl_rootpath }}/{{ default $usertmpl_pvc .Values.usertmpl_pvc }}
+    usertmpl_hostpath: '{{ $usertmpl_rootpath }}/{{ default $usertmpl_pvc .Values.usertmpl_pvc }}'
 spec:
   replicas: 1
   selector:
@@ -225,7 +223,7 @@ spec:
       volumes:
       - name: app-cache
         hostPath:
-          path: {{ .Values.rootPath }}/userdata/Cache
+          path: '{{ .Values.rootPath }}/userdata/Cache'
           type: DirectoryOrCreate
       - name: configtoml
         hostPath:

@@ -433,36 +433,36 @@ spec:
       volumes:
       - name: data-dir
         hostPath:
-          path: {{ .Values.rootPath }}/rootfs/userspace
+          path: '{{ .Values.rootPath }}/rootfs/userspace'
           type: Directory
       - name: watch-dir
         hostPath:
           type: Directory
-          path: {{ .Values.userspace.userData }}/Documents
+          path: '{{ .Values.userspace.userData }}/Documents'
       - name: userspace-dir
         hostPath:
           type: Directory
-          path: {{ .Values.userspace.userData }}
+          path: '{{ .Values.userspace.userData }}'
       - name: userspace-app-dir
         hostPath:
           type: Directory
-          path: {{ .Values.userspace.appData }}
+          path: '{{ .Values.userspace.appData }}'
       - name: fb-data
         hostPath:
           type: DirectoryOrCreate
-          path: {{ .Values.userspace.appCache}}/files
+          path: '{{ .Values.userspace.appCache}}/files'
       - name: upload-data
         hostPath:
           type: Directory
-          path: {{ .Values.userspace.userData }}
+          path: '{{ .Values.userspace.userData }}'
       - name: upload-appdata
         hostPath:
           type: Directory
-          path: {{ .Values.userspace.appCache}}
+          path: '{{ .Values.userspace.appCache}}'
       - name: uploads-temp
         hostPath:
           type: DirectoryOrCreate
-          path: {{ .Values.userspace.appCache }}/files/uploadstemp
+          path: '{{ .Values.userspace.appCache }}/files/uploadstemp'
       - name: terminus-sidecar-config
         configMap:
           name: sidecar-upload-configs

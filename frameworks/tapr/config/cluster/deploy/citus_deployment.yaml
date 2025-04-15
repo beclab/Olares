@@ -14,7 +14,7 @@ spec:
   capacity:
     storage: '50Gi'
   hostPath:
-    path: {{ $citus_rootpath }}/pg_data
+    path: '{{ $citus_rootpath }}/pg_data'
     type: DirectoryOrCreate
   persistentVolumeReclaimPolicy: Delete
   volumeMode: Filesystem
@@ -45,5 +45,5 @@ metadata:
 spec:
   replicas: 1
   owner: system
-  backupStorage: {{ $citus_backuppath }}/pg_backup
+  backupStorage: '{{ $citus_backuppath }}/pg_backup'
   citusImage: beclab/citus:12.2

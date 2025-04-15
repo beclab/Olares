@@ -125,14 +125,14 @@ spec:
         - name: chart
           hostPath:
             type: DirectoryOrCreate
-            path: {{ .Values.userspace.appData}}/studio/Chart
+            path: '{{ .Values.userspace.appData}}/studio/Chart'
         - name: data
           hostPath:
             type: DirectoryOrCreate
-            path: {{ .Values.userspace.appData }}/studio/Data
+            path: '{{ .Values.userspace.appData }}/studio/Data'
         - name: storage-volume
           hostPath:
-            path: {{ .Values.userspace.appData }}/studio/helm-repo-dev
+            path: '{{ .Values.userspace.appData }}/studio/helm-repo-dev'
             type: DirectoryOrCreate
         - name: config-san
           configMap:

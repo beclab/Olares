@@ -42,7 +42,7 @@ spec:
   capacity:
     storage: {{ $userspace_storage }}
   hostPath:
-    path: {{ $userspace_pv_rootpath }}/{{ default $userspace_pvc .Values.bfl.userspace_pvc }}
+    path: '{{ $userspace_pv_rootpath }}/{{ default $userspace_pvc .Values.bfl.userspace_pvc }}'
     type: DirectoryOrCreate
   persistentVolumeReclaimPolicy: Delete
   volumeMode: Filesystem
@@ -59,7 +59,7 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: {{ $userspace_storage }}
+      storage: '{{ $userspace_storage }}'
   volumeMode: Filesystem
   {{ if .Values.bfl.userspace_pv }}
   volumeName: {{ .Values.bfl.userspace_pv }}
@@ -77,7 +77,7 @@ spec:
   capacity:
     storage: {{ $appcache_storage }}
   hostPath:
-    path: {{ $appcache_pv_rootpath }}/{{ default $appcache_pvc .Values.bfl.appcache_pvc }}
+    path: '{{ $appcache_pv_rootpath }}/{{ default $appcache_pvc .Values.bfl.appcache_pvc }}'
     type: DirectoryOrCreate
   persistentVolumeReclaimPolicy: Delete
   volumeMode: Filesystem
@@ -112,7 +112,7 @@ spec:
   capacity:
     storage: {{ $dbdata_storage }}
   hostPath:
-    path: {{ $dbdata_pv_rootpath }}/{{ default $dbdata_pvc .Values.bfl.dbdata_pvc }}
+    path: '{{ $dbdata_pv_rootpath }}/{{ default $dbdata_pvc .Values.bfl.dbdata_pvc }}'
     type: DirectoryOrCreate
   persistentVolumeReclaimPolicy: Delete
   volumeMode: Filesystem
@@ -173,21 +173,21 @@ metadata:
     userspace_pv: {{ default $userspace_pv .Values.bfl.userspace_pv }}
     userspace_pvc: {{ default $userspace_pvc .Values.bfl.userspace_pvc }}
     userspace_sc: {{ default $userspace_sc .Values.bfl.userspace_sc }}
-    userspace_hostpath: {{ $userspace_pv_rootpath }}/{{ default $userspace_pvc .Values.bfl.userspace_pvc }}
+    userspace_hostpath: '{{ $userspace_pv_rootpath }}/{{ default $userspace_pvc .Values.bfl.userspace_pvc }}'
     userspace_storage: {{ $userspace_storage }}
 
     appcache_rand16: {{ default $appcache_rand16 .Values.bfl.appcache_rand16 }}
     appcache_pv: {{ default $appcache_pv .Values.bfl.appcache_pv }}
     appcache_pvc: {{ default $appcache_pvc .Values.bfl.appcache_pvc }}
     appcache_sc: {{ default $appcache_sc .Values.bfl.appcache_sc }}
-    appcache_hostpath: {{ $appcache_pv_rootpath }}/{{ default $appcache_pvc .Values.bfl.appcache_pvc }}
+    appcache_hostpath: '{{ $appcache_pv_rootpath }}/{{ default $appcache_pvc .Values.bfl.appcache_pvc }}'
     appcache_storage: {{ $appcache_storage }}
 
     dbdata_rand16: {{ default $dbdata_rand16 .Values.bfl.dbdata_rand16 }}
     dbdata_pv: {{ default $dbdata_pv .Values.bfl.dbdata_pv }}
     dbdata_pvc: {{ default $dbdata_pvc .Values.bfl.dbdata_pvc }}
     dbdata_sc: {{ default $dbdata_sc .Values.bfl.dbdata_sc }}
-    dbdata_hostpath: {{ $dbdata_pv_rootpath }}/{{ default $dbdata_pvc .Values.bfl.dbdata_pvc }}
+    dbdata_hostpath: '{{ $dbdata_pv_rootpath }}/{{ default $dbdata_pvc .Values.bfl.dbdata_pvc }}'
     dbdata_storage: {{ $dbdata_storage }}
 spec:
   serviceName: bfl

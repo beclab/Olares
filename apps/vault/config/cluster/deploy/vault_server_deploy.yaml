@@ -135,11 +135,11 @@ spec:
       - name: vault-data
         hostPath:
           type: DirectoryOrCreate
-          path: {{ $vault_rootpath }}/data
+          path: '{{ $vault_rootpath }}/data'
       - name: vault-attach
         hostPath:
           type: DirectoryOrCreate
-          path: {{ $vault_rootpath }}/attachments
+          path: '{{ $vault_rootpath }}/attachments'
 ---
 apiVersion: v1
 kind: Service

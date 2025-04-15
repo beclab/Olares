@@ -31,10 +31,10 @@ spec:
       - name: dbdata
         hostPath:
           type: DirectoryOrCreate
-          path: {{ $backup_server_rootpath }}/data
+          path: '{{ $backup_server_rootpath }}/data'
       - name: rootfs
         hostPath:
-          path: {{ .Values.rootPath }}/rootfs
+          path: '{{ .Values.rootPath }}/rootfs'
       serviceAccountName: os-internal
       containers:
       - name: api

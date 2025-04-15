@@ -201,15 +201,15 @@ spec:
       - name: config
         hostPath:
           type: DirectoryOrCreate
-          path: {{ .Values.userspace.appCache  }}/headscale/config
+          path: '{{ .Values.userspace.appCache  }}/headscale/config'
       - name: headscale-data
         hostPath:
           type: DirectoryOrCreate
-          path: {{ .Values.userspace.appCache }}/headscale/data
+          path: '{{ .Values.userspace.appCache }}/headscale/data'
       - name: config-parent
         hostPath:
           type: DirectoryOrCreate
-          path: {{ .Values.userspace.appCache  }}/headscale
+          path: '{{ .Values.userspace.appCache  }}/headscale'
       - name: acl-config
         configMap:
           defaultMode: 420
@@ -288,11 +288,11 @@ spec:
       - name: config
         hostPath:
           type: DirectoryOrCreate
-          path: {{ .Values.userspace.appCache }}/headscale/config
+          path: '{{ .Values.userspace.appCache }}/headscale/config'
       - name: tailscale-data
         hostPath:
           type: DirectoryOrCreate
-          path: {{ .Values.userspace.appCache }}/tailscale/data
+          path: '{{ .Values.userspace.appCache }}/tailscale/data'
 
 ---
 apiVersion: v1

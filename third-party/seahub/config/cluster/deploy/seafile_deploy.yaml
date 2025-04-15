@@ -495,15 +495,15 @@ spec:
       - name: seafile-data
         hostPath:
           type: DirectoryOrCreate
-          path: {{ $seafile_application_rootpath }}/data
+          path: '{{ $seafile_application_rootpath }}/data'
       - name: sync-data
         hostPath:
           type: DirectoryOrCreate
-          path: {{ $seafile_application_rootpath }}
+          path: '{{ $seafile_application_rootpath }}'
       - name: db-data
         hostPath:
           type: DirectoryOrCreate
-          path: {{ $seafile_appcache_rootpath }}/db
+          path: '{{ $seafile_appcache_rootpath }}/db'
       - name: seafile-nginx-conf
         configMap:
           name: seafile-nginx-conf
