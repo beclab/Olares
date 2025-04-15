@@ -38,7 +38,7 @@ jobs:
           bash scripts/package.sh
 
       - name: Run chart-testing (lint)
-        run: ct lint --chart-dirs build/installer/wizard/config --check-version-increment=false --target-branch ${{ github.event.repository.default_branch }}
+        run: ct lint --chart-dirs build/installer/wizard/config,build/installer/wizard/config/apps,build/installer/wizard/config/gpu --check-version-increment=false --all
 
       # - name: Create kind cluster
       #   if: steps.list-changed.outputs.changed == 'true'
