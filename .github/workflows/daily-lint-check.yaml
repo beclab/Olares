@@ -33,7 +33,5 @@ jobs:
 
       - name: Run chart-testing (lint)
         run: |
-          ct lint --chart-dirs \
-          build/installer/wizard/config,build/installer/wizard/config/apps,,build/installer/wizard/config/gpu \
-           --check-version-increment=false --all
+          ct lint --chart-dirs build/installer/wizard/config,build/installer/wizard/config/apps,build/installer/wizard/config/gpu --check-version-increment=false --all
 
