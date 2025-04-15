@@ -12,4 +12,3 @@ spec:
       name: knowledge-api
       port: 3010
       targetPort: 3010  
----

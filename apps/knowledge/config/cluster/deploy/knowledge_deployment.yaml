@@ -413,7 +413,7 @@ spec:
       valueFrom:
         secretKeyRef:
           key: nat_password
-          name: download-secrets
+          name: knowledge-secrets
     refs: []
     subjects:
     - name: download_status

@@ -7,7 +7,7 @@ data:
   config: |
     instanceID: os-system
     artifactRepository:
-      archiveLogs: false
+      archiveLogs: true
       s3:
         accessKeySecret:
           key: AWS_ACCESS_KEY_ID
