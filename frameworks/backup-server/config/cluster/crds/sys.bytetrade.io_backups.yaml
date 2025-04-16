@@ -66,12 +66,15 @@ spec:
                       type: string
                     timesOfDay:
                       type: string
+                    timespanOfDay:
+                      type: string
                   required:
                     - dateOfMonth
                     - dayOfWeek
                     - enabled
                     - snapshotFrequency
                     - timesOfDay
+                    - timespanOfDay
                   type: object
                 backupType:
                   additionalProperties:
