@@ -352,9 +352,9 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
             - name: APP_KEY
-              value: {{ .Values.os.appKey }}
+              value: {{ .Values.os.studio.appKey }}
             - name: APP_SECRET
-              value: {{ .Values.os.appSecret }}
+              value: {{ .Values.os.studio.appSecret }}
         - name: chartmuseum
           image: aboveos/helm-chartmuseum:v0.15.0
           args:
@@ -483,7 +483,7 @@ data:
                               request_headers_to_add:
                                 - header:
                                     key: X-App-Key
-                                    value: {{ .Values.os.appKey }}
+                                    value: {{ .Values.os.studio.appKey }}
                               route:
                                 cluster: system-server
                                 prefix_rewrite: /system-server/v2/legacy_api/api.intent/v2/server/intent/send
