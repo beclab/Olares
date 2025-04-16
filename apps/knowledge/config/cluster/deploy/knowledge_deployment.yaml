@@ -244,7 +244,7 @@ spec:
         - name: REDIS_PASSWORD
           value: {{ $redis_password_data }}
         - name: REDIS_ADDR
-          value: redis-cluster-proxy.os-system
+          value: redis-cluster-proxy.os-system:6379
         - name: RSS_HUB_URL
           value: 'http://rss-server.os-system:1200/'
         - name: WE_CHAT_REFRESH_FEED_URL
@@ -301,7 +301,7 @@ spec:
         - name: PG_PORT
           value: "5432"
         - name: TERMINUS_RECOMMEND_REDIS_ADDR
-          value: redis-cluster-proxy.os-system
+          value: redis-cluster-proxy.os-system:6379
         - name: TERMINUS_RECOMMEND_REDIS_PASSOWRD
           value: {{ $redis_password_data }}
         volumeMounts:
