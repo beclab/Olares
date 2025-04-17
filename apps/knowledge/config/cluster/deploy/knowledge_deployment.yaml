@@ -177,7 +177,7 @@ spec:
             value: os_system_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.12.0"
+        image: "beclab/knowledge-base-api:v0.12.1"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -642,25 +642,3 @@ spec:
       protocol: TCP
       port: 3082
       targetPort: 3082
----
-
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: SysEventRegistry
-metadata:
-  name: konwledgebase-recommend-install-cb
-  namespace: os-system
-spec:
-  type: subscriber
-  event: recommend.install
-  callback: http://rss-svc.os-system:3010/knowledge/algorithm/recommend/install
-  
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: SysEventRegistry
-metadata:
-  name: konwledgebase-recommend-uninstall-cb
-  namespace: os-system
-spec:
-  type: subscriber
-  event: recommend.uninstall
-  callback: http://rss-svc.os-system:3010/knowledge/algorithm/recommend/uninstall
