@@ -862,6 +862,9 @@ spec:
   volumeMounts:
   - name: storage
     mountPath: /data
+
+  securityContext:
+    runAsUser: 1000
     
   ports:
   - name: jaeger
