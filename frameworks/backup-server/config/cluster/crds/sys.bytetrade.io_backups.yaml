@@ -80,6 +80,9 @@ spec:
                   additionalProperties:
                     type: string
                   type: object
+                createAt:
+                  format: date-time
+                  type: string
                 deleted:
                   type: boolean
                 extra:
@@ -101,6 +104,7 @@ spec:
                   type: integer
               required:
                 - backupType
+                - createAt
                 - deleted
                 - location
                 - name

@@ -675,6 +675,16 @@ spec:
   callbacks:
     - filters:
         type:
+          - backup-state-event
+      op: Create
+      uri: /api/event/backup_state_event
+    - filters:
+        type:
+          - restore-state-event
+      op: Create
+      uri: /api/event/restore_state_event
+    - filters:
+        type:
           - app-installation-event
       op: Create
       uri: /api/event/app_installation_event
