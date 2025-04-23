@@ -196,7 +196,7 @@ spec:
               -A PROXY_OUTBOUND -p tcp --dport 6379 -j RETURN
               -A PROXY_OUTBOUND -p tcp --dport 27017 -j RETURN
               -A PROXY_OUTBOUND -p tcp --dport 443 -j RETURN
-
+              -A PROXY_OUTBOUND -p tcp --dport 8080 -j RETURN
 
               -A PROXY_OUTBOUND -d ${POD_IP}/32 -j RETURN
 
@@ -380,8 +380,8 @@ spec:
               cpu: "50m"
               memory: 100Mi
             limits:
-              cpu: "0.5"
-              memory: 256Mi
+              cpu: 1000m
+              memory: 512Mi
           volumeMounts:
             - name: storage-volume
               mountPath: /storage
@@ -448,7 +448,7 @@ data:
                                 prefix: "/"
                               route:
                                 cluster: original_dst
-                                timeout: 180s
+                                timeout: 1800s
                     http_protocol_options:
                       accept_http_10: true
                     http_filters:
@@ -491,7 +491,7 @@ data:
                                 prefix: "/"
                               route:
                                 cluster: original_dst
-                                timeout: 180s
+                                timeout: 1800s
                               typed_per_filter_config:
                                 envoy.filters.http.lua:
                                   "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
