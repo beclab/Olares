@@ -256,7 +256,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: settings-init
-          image: beclab/settings:v0.2.19
+          image: beclab/settings:v1.3.53
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -385,7 +385,7 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
         - name: settings-server
-          image: beclab/settings-server:v0.2.19
+          image: beclab/settings-server:v0.2.20
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -1293,6 +1293,10 @@ data:
         server infisical-service:8080;
     }
 
+    upstream BackupServer {
+        server backup-server.os-system:8082;
+    }
+
     server {
         listen 86;
 
@@ -1348,6 +1352,31 @@ data:
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $host;
+        }
+
+        location /apis/backup {
+            proxy_pass http://backup-server.os-system:8082;
+           add_header Accept "application/json, text/plain, */*";
+           add_header Content-Type "application/json; charset=utf-8";
+        }
+
+        location /api/resources {
+           proxy_pass http://files-service.os-system:80;
+           # rewrite ^/server(.*)$ $1 break;
+
+           # Add original-request-related headers
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Host $host;
+
+           add_header Accept-Ranges bytes;
+
+           client_body_timeout 600s;
+           client_max_body_size 4000M;
+           proxy_request_buffering off;
+           keepalive_timeout 750s;
+           proxy_read_timeout 600s;
+           proxy_send_timeout 600s;
         }
 
         location /drive {
