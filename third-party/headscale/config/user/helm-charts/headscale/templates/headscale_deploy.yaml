@@ -8,6 +8,12 @@
 {{ $pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+{{ $user := (lookup "iam.kubesphere.io/v1alpha2" "User" "" .Values.bfl.username) }}
+{{- $role := "" -}}
+{{- if $user -}}
+{{ $role = (index $user "metadata" "annotations" "bytetrade.io/owner-role") }}
+{{- end -}}
+
 ---
 apiVersion: v1
 kind: Secret
@@ -283,6 +289,12 @@ spec:
           value: $(NODE_IP)/32
         - name: TS_EXTRA_ARGS
           value: "--login-server http://headscale-server-svc:8080"
+        {{- if eq $role "platform-admin" }}
+        - name: TS_USERSPACE
+          value: "false"
+        - name: TS_DEBUG_FIREWALL_MODE
+          value: nftables
+        {{- end }}
         - name: TS_KUBE_SECRET
       volumes:
       - name: config
