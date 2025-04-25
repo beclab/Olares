@@ -843,7 +843,10 @@ webhooks:
 apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
-  name: jaeger-storage-instance 
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "5"
+  name: jaeger-storage-instance
   namespace: os-system
   labels:
     applications.app.bytetrade.io/author: bytetrade.io
@@ -934,6 +937,9 @@ spec:
 apiVersion: opentelemetry.io/v1alpha1
 kind: Instrumentation
 metadata:
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "5"
   name: olares-instrumentation
   namespace: os-system
 spec:
