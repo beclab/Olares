@@ -20,5 +20,7 @@ metadata:
 spec:
   email: "{{.Values.user.email}}"
   initialPassword: "{{ .Values.user.password }}"
+  groups:
+  - lldap_admin
 status:
   state: Active

@@ -83,6 +83,23 @@ spec:
         permission:
           pub: allow
           sub: allow
+      - export:
+          - appName: lldap
+            pub: allow
+            sub: allow
+          - appName: vault-server
+            pub: deny
+            sub: allow
+          - appName: seahub
+            pub: deny
+            sub: allow
+          - appName: knowledge
+            pub: deny
+            sub: allow
+        name: system.users
+        permission:
+          pub: allow
+          sub: allow
     user: os-system-notifications
 
 ---
@@ -160,6 +177,8 @@ spec:
               name: notifications-secrets
         - name: NATS_SUBJECT
           value: "terminus.{{ .Release.Namespace }}.system.notification"
+        - name: NATS_SUBJECT_SYSTEM_USERS
+          value: "terminus.{{ .Release.Namespace }}.system.users"
 
         livenessProbe:
           tcpSocket:

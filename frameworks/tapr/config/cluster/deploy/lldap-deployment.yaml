@@ -83,6 +83,13 @@ spec:
         perm:
         - pub
         - sub
+    - appName: notifications
+      appNamespace: {{ .Release.Namespace }}
+      subjects:
+      - name: system.users
+        perm:
+        - pub
+        - sub
     user: os-system-lldap
 
 ---
@@ -164,8 +171,10 @@ spec:
                   name: lldap-pg-secrets
             - name: NATS_SUBJECT
               value: "terminus.{{ .Release.Namespace }}.system.notification"
+            - name: NATS_SUBJECT_SYSTEM_USERS
+              value: "terminus.{{ .Release.Namespace }}.system.users"
 
-          image: beclab/lldap:0.0.1
+          image: beclab/lldap:0.0.2
           imagePullPolicy: IfNotPresent
           name: lldap
           ports:
