@@ -177,7 +177,7 @@ spec:
             value: os_system_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.12.2"
+        image: "beclab/knowledge-base-api:v0.12.4"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false

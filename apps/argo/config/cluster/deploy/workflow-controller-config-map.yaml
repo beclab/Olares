@@ -16,7 +16,7 @@ data:
           key: AWS_SECRET_ACCESS_KEY
           name: argo-workflow-log-fakes3
         bucket: mongo-backup
-        endpoint: workflow-archivelog-s3.user-system-mmchong2021:4568
+        endpoint: tapr-s3-svc:4568
         insecure: true
     persistence:
       connectionPool:
