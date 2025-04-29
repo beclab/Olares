@@ -283,8 +283,8 @@ spec:
       - name: sync
         image: "beclab/recommend-sync:v0.12.0"
         securityContext:
-          allowPrivilegeEscalation: false
-          runAsUser: 1000
+          runAsUser: 0
+          runAsNonRoot: false
         env:
         - name: USERSPACE_DIRECTORY
           value: /data
