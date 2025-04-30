@@ -309,7 +309,7 @@ spec:
             mountPath: /data
        
       - name: crawler
-        image: "beclab/recommend-crawler:v0.12.0"
+        image: "beclab/recommend-crawler:v0.12.1"
         securityContext:
           allowPrivilegeEscalation: false
           runAsUser: 1000
@@ -518,7 +518,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.12.0"
+        image: "beclab/yt-dlp:v0.12.1"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
