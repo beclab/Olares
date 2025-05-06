@@ -36,7 +36,7 @@ beclab/reverse-proxy:v0.1.8
 beclab/upgrade-job:0.1.7
 bytetrade/envoy:v1.25.11.1
 liangjw/kube-webhook-certgen:v1.1.1
-beclab/hami:v2.5.1
+beclab/hami:v2.5.2
 alpine:3.14
 mirrorgooglecontainers/defaultbackend-amd64:1.4
 projecthami/hami-webui-fe-oss:v1.0.5
