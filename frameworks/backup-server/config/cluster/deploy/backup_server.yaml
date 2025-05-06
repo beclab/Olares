@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.22" }}
+{{ $backupVersion := "0.3.23" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 ---
@@ -35,6 +35,9 @@ spec:
       - name: rootfs
         hostPath:
           path: '{{ .Values.rootPath }}/rootfs'
+      - name: shares
+        hostPath:
+          path: '{{ .Values.rootPath }}/share'
       serviceAccountName: os-internal
       containers:
       - name: api
@@ -65,6 +68,8 @@ spec:
         volumeMounts:
         - mountPath: /rootfs
           name: rootfs
+        - mountPath: /shares
+          name: shares
       - name: controller
         image: beclab/backup-server:v{{ $backupVersion }}
         imagePullPolicy: IfNotPresent
@@ -94,6 +99,8 @@ spec:
         volumeMounts:
         - mountPath: /rootfs
           name: rootfs
+        - mountPath: /shares
+          name: shares
 
 ---
 apiVersion: v1
