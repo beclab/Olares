@@ -114,9 +114,11 @@ spec:
         io.bytetrade.app: "true"
       annotations:
         # support nginx 1.24.3 1.25.3
-        # instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
-        # instrumentation.opentelemetry.io/inject-nginx-container-names: "files-frontend"    
-        # instrumentation.opentelemetry.io/otel-go-auto-target-exe: "drive"
+        instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
+        instrumentation.opentelemetry.io/inject-nginx-container-names: "files-frontend"    
+        instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
+        instrumentation.opentelemetry.io/go-container-names: "driver-server"    
+        instrumentation.opentelemetry.io/otel-go-auto-target-exe: "drive"
     spec:
       serviceAccountName: bytetrade-controller
       securityContext:
@@ -204,6 +206,20 @@ spec:
             value: "{{ $pg_password | b64dec }}"
           - name: PGDB
             value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
+      - name: files-frontend-init
+        image: beclab/files-frontend:v1.3.55
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+          - name: app
+            mountPath: /cp_app
+          - name: nginx-confd
+            mountPath: /confd
+        command:
+        - sh
+        - -c
+        - |
+          cp -rf /app/* /cp_app/. && cp -rf /etc/nginx/conf.d/* /confd/.
+
       containers:
 #      - name: gateway
 #        image: beclab/appdata-gateway:0.1.12
@@ -302,7 +318,7 @@ spec:
 #        - /filebrowser
 #        - --noauth
       - name: files-frontend
-        image: beclab/files-frontend:v1.3.55
+        image: eball/nginx-header-more:test-3
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: false
@@ -323,6 +339,10 @@ spec:
         volumeMounts:
         - name: userspace-dir
           mountPath: /data
+        - name: app
+          mountPath: /app
+        - name: nginx-confd
+          mountPath: /etc/nginx/conf.d
       - name: drive-server
         image: beclab/drive:v0.0.72
         imagePullPolicy: IfNotPresent
@@ -469,6 +489,10 @@ spec:
           items:
           - key: envoy.yaml
             path: envoy.yaml
+      - name: app
+        emptyDir: {}
+      - name: nginx-confd
+        emptyDir: {}
 
    
 

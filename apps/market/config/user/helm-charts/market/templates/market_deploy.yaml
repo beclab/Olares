@@ -43,6 +43,12 @@ spec:
       labels:
         app: appstore
         io.bytetrade.app: "true"
+      annotations:
+        instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
+        instrumentation.opentelemetry.io/go-container-names: "appstore-backend"    
+        instrumentation.opentelemetry.io/otel-go-auto-target-exe: "/opt/app/market"
+        instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
+        instrumentation.opentelemetry.io/inject-nginx-container-names: "appstore"    
     spec:
       priorityClassName: "system-cluster-critical"
       initContainers:
@@ -84,12 +90,31 @@ spec:
               fieldRef:
                 apiVersion: v1
                 fieldPath: status.podIP
+        - name: nginx-init
+          image: beclab/market-frontend:v0.3.11
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: app
+              mountPath: /cp_app
+            - name: nginx-confd
+              mountPath: /confd
+          command:
+          - sh
+          - -c
+          - |
+            cp -rf /app/* /cp_app/. && cp -rf /etc/nginx/conf.d/* /confd/.            
       containers:
       - name: appstore
-        image: beclab/market-frontend:v0.3.11
+        image: eball/nginx-header-more:test-3
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
+        volumeMounts:
+        - name: app
+          mountPath: /app
+        - name: nginx-confd
+          mountPath: /etc/nginx/conf.d
+        
       - name: appstore-backend
         image: beclab/market-backend:v0.3.11
         imagePullPolicy: IfNotPresent
@@ -194,6 +219,10 @@ spec:
         hostPath:
           path: '{{ .Values.userspace.appData}}/appstore/data'
           type: DirectoryOrCreate
+      - name: app
+        emptyDir: {}
+      - name: nginx-confd
+        emptyDir: {}
 
 ---
 apiVersion: v1

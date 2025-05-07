@@ -1,7 +1,0 @@
-bfl:
-  nodeport: 30883
-  nodeport_ingress_http: 30083
-  nodeport_ingress_https: 30082
-  username: 'test'
-  url: 'test'
-  nodeName: test

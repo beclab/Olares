@@ -5,6 +5,10 @@ kind: Instrumentation
 metadata:
   name: olares-instrumentation
   namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": "pre-install,pre-upgrade"
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   exporter:
     endpoint: https://jaeger-storage-instance-collector.os-system:4317
@@ -51,6 +55,11 @@ kind: Instrumentation
 metadata:
   name: olares-instrumentation
   namespace: user-system-{{ .Values.bfl.username }}
+  annotations:
+    "helm.sh/hook": "pre-install,pre-upgrade"
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+
 spec:
   exporter:
     endpoint: https://jaeger-storage-instance-collector.os-system:4317

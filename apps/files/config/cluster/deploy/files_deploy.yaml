@@ -43,8 +43,8 @@ spec:
       labels:
         app: files
       annotations:
-        # instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
-        # instrumentation.opentelemetry.io/inject-nginx-container-names: "nginx"    
+        instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
+        instrumentation.opentelemetry.io/inject-nginx-container-names: "nginx"    
         instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
         instrumentation.opentelemetry.io/go-container-names: "gateway,files,uploader"    
         instrumentation.opentelemetry.io/otel-go-auto-target-exe: "/filebrowser"
@@ -303,7 +303,7 @@ spec:
             runAsUser: 0
             privileged: true
         - name: nginx
-          image: 'nginx:stable-alpine3.17-slim'
+          image: 'eball/nginx-header-more:test-3'
           securityContext:
             runAsNonRoot: false
             runAsUser: 0
