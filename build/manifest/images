@@ -1,5 +1,5 @@
-beclab/ks-apiserver:0.0.10
-beclab/ks-controller-manager:0.0.10
+beclab/ks-apiserver:0.0.11
+beclab/ks-controller-manager:0.0.11
 beclab/kube-state-metrics:v2.3.0-ext.1
 calico/cni:v3.29.2
 calico/kube-controllers:v3.29.2
@@ -18,7 +18,7 @@ kubesphere/prometheus-operator:v0.55.1
 openebs/linux-utils:3.3.0
 openebs/provisioner-localpv:3.3.0
 beclab/percona-server-mongodb-operator:1.15.2
-prom/node-exporter:v1.3.1
+beclab/node-exporter:0.0.1
 prom/prometheus:v2.34.0
 quay.io/argoproj/argocli:v3.5.0
 quay.io/argoproj/argoexec:v3.5.0
