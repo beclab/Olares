@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.25" }}
+{{ $backupVersion := "0.3.26" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 ---
@@ -74,6 +74,8 @@ spec:
         image: beclab/backup-server:v{{ $backupVersion }}
         imagePullPolicy: IfNotPresent
         securityContext:
+          allowPrivilegeEscalation: true
+          privileged: true
           runAsUser: 0
         command:
         - /backup-server
@@ -100,6 +102,7 @@ spec:
         - mountPath: /rootfs
           name: rootfs
         - mountPath: /shares
+          mountPropagation: Bidirectional
           name: shares
 
 ---
