@@ -24,30 +24,45 @@ spec:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: http/protobuf
+        value: http/json
+      - name: OTEL_TRACES_SAMPLER_ARG
+        value: "1.0"
   dotnet:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: http/protobuf
+        value: http/json
+      - name: OTEL_TRACES_SAMPLER_ARG
+        value: "1.0"
   nodejs:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: http/protobuf
+        value: http/json
+      - name: OTEL_TRACES_SAMPLER_ARG
+        value: "1.0"
   nginx:
+    image: bytetrade/autoinstrumentation-apache-httpd:1.0.4
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: https://jaeger-storage-instance-collector.os-system:4317
+        value: http://jaeger-storage-instance-collector.os-system:4318
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/json
+      - name: OTEL_TRACES_SAMPLER_ARG
+        value: "1.0"
   go:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: http/protobuf
-
+        value: http/json
+      - name: OTEL_TRACES_SAMPLER_ARG
+        value: "1.0"
+    resource:
+      limits:
+        memory: 256Mi
 
 ---
 apiVersion: opentelemetry.io/v1alpha1
@@ -75,27 +90,43 @@ spec:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: http/protobuf
+        value: http/json
+      - name: OTEL_TRACES_SAMPLER_ARG
+        value: "1.0"
   dotnet:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: http/protobuf
+        value: http/json
+      - name: OTEL_TRACES_SAMPLER_ARG
+        value: "1.0"
   nodejs:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318        
+        value: http://jaeger-storage-instance-collector.os-system:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: http/protobuf
+        value: http/json
+      - name: OTEL_TRACES_SAMPLER_ARG
+        value: "1.0"
   nginx:
+    image: bytetrade/autoinstrumentation-apache-httpd:1.0.4
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: https://jaeger-storage-instance-collector.os-system:4317
+        value: http://jaeger-storage-instance-collector.os-system:4318
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/json
+      - name: OTEL_TRACES_SAMPLER_ARG
+        value: "1.0"
   go:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: http/protobuf
+        value: http/json
+      - name: OTEL_TRACES_SAMPLER_ARG
+        value: "1.0"
+    resource:
+      limits:
+        memory: 256Mi
 
