@@ -993,7 +993,7 @@ spec:
         value: http/json
       - name: OTEL_TRACES_SAMPLER_ARG
         value: "1.0"
-    resource:
+    resourceRequirements:
       limits:
         memory: 256Mi
 

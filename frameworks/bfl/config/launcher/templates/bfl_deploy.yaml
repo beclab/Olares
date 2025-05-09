@@ -306,7 +306,7 @@ spec:
               apiVersion: v1
               fieldPath: spec.nodeName
       - name: ingress
-        image: beclab/bfl-ingress:v0.3.4
+        image: beclab/bfl-ingress:v0.3.5
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: ngxlog
