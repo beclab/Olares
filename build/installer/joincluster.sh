@@ -157,7 +157,7 @@ fi
 
 set_master_host_ssh_options
 
-CLI_VERSION="0.2.32"
+CLI_VERSION="0.2.33"
 CLI_FILE="olares-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
 
 if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$CLI_VERSION" ]]; then
