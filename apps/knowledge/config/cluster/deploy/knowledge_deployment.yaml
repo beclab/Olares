@@ -177,7 +177,7 @@ spec:
             value: os_system_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.12.4"
+        image: "beclab/knowledge-base-api:v0.12.5"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -209,6 +209,8 @@ spec:
           value: os_system_knowledge
         - name: DOWNLOAD_URL
           value: http://download-svc.os-system:3080
+        - name: YTDLP_DOWNLOAD_URL
+          value: http://download-svc.os-system:3082
         - name: NATS_HOST
           value: nats
         - name: NATS_PORT
@@ -518,7 +520,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.12.1"
+        image: "beclab/yt-dlp:v0.12.2"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -564,7 +566,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: download-spider
-        image: "beclab/download-spider:v0.12.1"
+        image: "beclab/download-spider:v0.12.2"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
