@@ -157,7 +157,7 @@ fi
 
 set_master_host_ssh_options
 
-CLI_VERSION="0.2.34"
+CLI_VERSION="0.2.35"
 CLI_FILE="olares-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
 
 if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$CLI_VERSION" ]]; then
@@ -211,14 +211,14 @@ if [[ -f $BASE_DIR/.prepared ]]; then
 else
     echo "running system prechecks ..."
     echo ""
-    $sh_c "$INSTALL_OLARES_CLI olares precheck $PARAMS"
+    $sh_c "$INSTALL_OLARES_CLI precheck $PARAMS"
     if [[ $? -ne 0 ]]; then
         exit 1
     fi
 
     echo "downloading installation wizard..."
     echo ""
-    $sh_c "$INSTALL_OLARES_CLI olares download wizard $PARAMS $CDN"
+    $sh_c "$INSTALL_OLARES_CLI download wizard $PARAMS $CDN"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to download installation wizard"
         exit 1
@@ -226,7 +226,7 @@ else
 
     echo "downloading installation packages..."
     echo ""
-    $sh_c "$INSTALL_OLARES_CLI olares download component $PARAMS $CDN"
+    $sh_c "$INSTALL_OLARES_CLI download component $PARAMS $CDN"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to download installation packages"
         exit 1
@@ -238,7 +238,7 @@ else
     if [ x"$REGISTRY_MIRRORS" != x"" ]; then
         extra="--registry-mirrors $REGISTRY_MIRRORS"
     fi
-    $sh_c "$INSTALL_OLARES_CLI olares prepare $PARAMS $extra"
+    $sh_c "$INSTALL_OLARES_CLI prepare $PARAMS $extra"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to prepare installation environment"
         exit 1

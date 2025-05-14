@@ -48,7 +48,7 @@ if (-Not (Test-Path $CLI_PROGRAM_PATH)) {
   New-Item -Path $CLI_PROGRAM_PATH -ItemType Directory
 }
 
-$CLI_VERSION = "0.2.34"
+$CLI_VERSION = "0.2.35"
 $CLI_FILE = "olares-cli-v{0}_windows_{1}.tar.gz" -f $CLI_VERSION, $arch
 $CLI_URL = "{0}/{1}" -f $downloadUrl, $CLI_FILE
 $CLI_PATH = "{0}{1}" -f $CLI_PROGRAM_PATH, $CLI_FILE
@@ -82,6 +82,6 @@ if ($download -eq 1) {
 Start-Sleep -Seconds 3
 Write-Host ("Preparing to start the installation of Olares {0}. Depending on your network conditions, this process may take several minutes." -f $version)
 
-$command = "{0}\olares-cli.exe olares install --version {1}" -f $CLI_PROGRAM_PATH, $version
+$command = "{0}\olares-cli.exe install --version {1}" -f $CLI_PROGRAM_PATH, $version
 Start-Process cmd -ArgumentList '/k',$command -Wait -Verb RunAs
 
