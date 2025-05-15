@@ -1,6 +1,6 @@
 
 
-{{- $namespace := printf "%s%s" "os-system" -}}
+{{- $namespace := printf "%s" "os-system" -}}
 {{- $notifications_secret := (lookup "v1" "Secret" $namespace "notifications-secrets") -}}
 
 {{- $pg_password := "" -}}
