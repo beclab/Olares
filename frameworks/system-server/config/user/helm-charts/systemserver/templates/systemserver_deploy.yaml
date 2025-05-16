@@ -41,13 +41,17 @@ spec:
     metadata:
       labels:
         app: systemserver
+      annotations:
+        instrumentation.opentelemetry.io/go-container-names: system-server
+        instrumentation.opentelemetry.io/inject-go: olares-instrumentation
+        instrumentation.opentelemetry.io/otel-go-auto-target-exe: /system-server
     spec:
       serviceAccountName: bytetrade-sys-ops
       serviceAccount: bytetrade-sys-ops
       priorityClassName: "system-cluster-critical"
       containers:
       - name: system-server
-        image: beclab/system-server:0.1.21
+        image: beclab/system-server:0.1.22
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80

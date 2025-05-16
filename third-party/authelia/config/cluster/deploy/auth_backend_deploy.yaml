@@ -389,10 +389,21 @@ spec:
         image: owncloudci/wait-for:latest
         imagePullPolicy: IfNotPresent
         name: check-redis
-
+      - name: setsysctl
+        image: 'busybox:1.28'
+        command:
+          - sh
+          - '-c'
+          - |
+            sysctl -w net.core.somaxconn=65535
+            sysctl -w net.ipv4.ip_local_port_range="1024 65535"
+            sysctl -w net.ipv4.tcp_tw_reuse=1
+            sysctl -w fs.file-max=1048576
+        securityContext:
+          privileged: true
       containers:      
       - name: authelia
-        image: beclab/auth:0.2.4
+        image: beclab/auth:0.2.6
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9091
