@@ -105,7 +105,7 @@ spec:
             cp -rf /app/* /cp_app/. && cp -rf /etc/nginx/conf.d/* /confd/.            
       containers:
       - name: appstore
-        image: eball/nginx-header-more:test-3
+        image: beclab/docker-nginx-headers-more:ubuntu-v0.1.0
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80

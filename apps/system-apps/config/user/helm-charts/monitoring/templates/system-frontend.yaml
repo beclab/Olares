@@ -305,7 +305,7 @@ spec:
             - -c
             - /etc/envoy/envoy.yaml
         - name: system-frontend
-          image: eball/nginx-header-more:test-3
+          image: beclab/docker-nginx-headers-more:ubuntu-v0.1.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 81

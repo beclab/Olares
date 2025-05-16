@@ -318,7 +318,7 @@ spec:
 #        - /filebrowser
 #        - --noauth
       - name: files-frontend
-        image: eball/nginx-header-more:test-3
+        image: beclab/docker-nginx-headers-more:ubuntu-v0.1.0
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: false

@@ -303,7 +303,7 @@ spec:
             runAsUser: 0
             privileged: true
         - name: nginx
-          image: 'eball/nginx-header-more:test-3'
+          image: 'beclab/docker-nginx-headers-more:ubuntu-v0.1.0'
           securityContext:
             runAsNonRoot: false
             runAsUser: 0
