@@ -238,7 +238,7 @@ spec:
             memory: 1Gi
 
       - name: backend-server
-        image: "beclab/recommend-backend:v0.0.31"
+        image: "beclab/recommend-backend:v0.0.32"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
