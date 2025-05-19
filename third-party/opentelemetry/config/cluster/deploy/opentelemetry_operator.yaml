@@ -986,11 +986,12 @@ spec:
       - name: OTEL_TRACES_SAMPLER_ARG
         value: "1.0"
   go:
+    image: ghcr.io/open-telemetry/opentelemetry-go-instrumentation/autoinstrumentation-go:v0.20.0
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: http/json
+        value: http/protobuf
       - name: OTEL_TRACES_SAMPLER_ARG
         value: "1.0"
     resourceRequirements:
