@@ -44,7 +44,7 @@ spec:
       - name: OTEL_TRACES_SAMPLER_ARG
         value: "1.0"
   nginx:
-    image: bytetrade/autoinstrumentation-apache-httpd:1.0.4-fix1
+    image: bytetrade/autoinstrumentation-apache-httpd:1.0.4-fix2
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
@@ -111,7 +111,7 @@ spec:
       - name: OTEL_TRACES_SAMPLER_ARG
         value: "1.0"
   nginx:
-    image: bytetrade/autoinstrumentation-apache-httpd:1.0.4-fix1
+    image: bytetrade/autoinstrumentation-apache-httpd:1.0.4-fix2
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318

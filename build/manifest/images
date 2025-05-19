@@ -43,5 +43,5 @@ projecthami/hami-webui-fe-oss:v1.0.5
 projecthami/hami-webui-be-oss:v1.0.5
 nvidia/dcgm-exporter:4.1.1-4.0.4-ubuntu22.04
 ghcr.io/open-telemetry/opentelemetry-go-instrumentation/autoinstrumentation-go:v0.20.0
-bytetrade/autoinstrumentation-apache-httpd:1.0.4-fix1
+bytetrade/autoinstrumentation-apache-httpd:1.0.4-fix2
 ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:0.40.0
