@@ -246,10 +246,22 @@ spec:
           chown -R 1000:1000 /userspace/Home && \
           chown -R 1000:1000 /userspace/Data && \
           chown -R 1000:1000 /appdata 
+      - name: setsysctl
+        image: 'busybox:1.28'
+        command:
+          - sh
+          - '-c'
+          - |
+            sysctl -w net.core.somaxconn=65535
+            sysctl -w net.ipv4.ip_local_port_range="1024 65535"
+            sysctl -w net.ipv4.tcp_tw_reuse=1
+            sysctl -w fs.file-max=1048576
+        securityContext:
+          privileged: true
 
       containers:
       - name: api
-        image: beclab/bfl:v0.4.5
+        image: beclab/bfl:v0.4.6
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000
