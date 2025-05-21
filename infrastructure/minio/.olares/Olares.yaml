@@ -1,0 +1,16 @@
+apiVersion: v1
+target: prebuilt
+output:
+  binaries:
+    - 
+      id: minio
+      name: minio.RELEASE.2023-05-04T21-44-30Z 
+      amd64: https://dl.min.io/server/minio/release/linux-amd64/archive/minio.RELEASE.2023-05-04T21-44-30Z 
+      arm64: https://dl.min.io/server/minio/release/linux-arm64/archive/minio.RELEASE.2023-05-04T21-44-30Z
+    - 
+      id: minio-operator
+      name: minio-operator-v0.0.1.tar.gz  
+      amd64: https://github.com/beclab/minio-operator/releases/download/v0.0.1/minio-operator-v0.0.1-linux-amd64.tar.gz,
+      arm64: https://github.com/beclab/minio-operator/releases/download/v0.0.1/minio-operator-v0.0.1-linux-arm64.tar.gz
+
+

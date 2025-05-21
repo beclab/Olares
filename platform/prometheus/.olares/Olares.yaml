@@ -1,0 +1,17 @@
+apiVersion: v1
+target: prebuilt
+output:
+  containers:
+    - 
+      name: kubesphere/prometheus-config-reloader:v0.55.1
+    - 
+      name: kubesphere/prometheus-operator:v0.55.1
+    - 
+      name: beclab/node-exporter:0.0.1
+    - 
+      name: prom/prometheus:v2.34.0
+
+   
+
+
+      

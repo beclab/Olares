@@ -1,0 +1,14 @@
+apiVersion: v1
+target: prebuilt
+output:
+  containers:
+    - 
+      name: beclab/hami:v2.5.2
+    - 
+      name: projecthami/hami-webui-fe-oss:v1.0.5
+    - 
+      name: projecthami/hami-webui-be-oss:v1.0.5
+    - 
+      name: nvidia/dcgm-exporter:4.1.1-4.0.4-ubuntu22.04
+      
+

@@ -1,0 +1,7 @@
+apiVersion: v1
+target: prebuilt
+output:
+  containers:
+    - 
+      name: beclab/docker-nginx-headers-more:ubuntu-v0.1.0
+# must have blank new line            

@@ -17,4 +17,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
         run: |
-          bash scripts/build-wsl-install-msi.sh
+          bash build/build-wsl-install-msi.sh

@@ -1,0 +1,9 @@
+apiVersion: v1
+target: prebuilt
+output:
+  binaries:
+    - 
+      id: cni-plugins
+      name: cni-plugins-v1.6.2.tgz,pkg/cni/v1.6.2,
+      amd64: https://github.com/containernetworking/plugins/releases/download/v1.6.2/cni-plugins-linux-amd64-v1.6.2.tgz
+      arm64: https://github.com/containernetworking/plugins/releases/download/v1.6.2/cni-plugins-linux-arm-v1.6.2.tgz

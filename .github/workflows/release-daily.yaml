@@ -21,7 +21,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: 'us-east-1'
         run: |
-          bash scripts/image-manifest.sh && bash scripts/upload-images.sh .manifest/images.mf
+          bash build/image-manifest.sh && bash build/upload-images.sh .manifest/images.mf
 
   push-images-arm64:
     runs-on: [self-hosted, linux, ARM64]
@@ -36,7 +36,7 @@ jobs:
           AWS_DEFAULT_REGION: 'us-east-1'
         run: |
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
-          bash scripts/image-manifest.sh && bash scripts/upload-images.sh .manifest/images.mf linux/arm64
+          bash build/image-manifest.sh && bash build/upload-images.sh .manifest/images.mf linux/arm64
 
   push-deps:
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
         run: |
-          bash scripts/deps-manifest.sh && bash scripts/upload-deps.sh
+          bash build/deps-manifest.sh && bash build/upload-deps.sh
 
   push-deps-arm64:
     runs-on: [self-hosted, linux, ARM64]
@@ -67,7 +67,7 @@ jobs:
           AWS_DEFAULT_REGION: "us-east-1"
         run: |
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
-          bash scripts/deps-manifest.sh linux/arm64 && bash scripts/upload-deps.sh linux/arm64
+          bash build/deps-manifest.sh linux/arm64 && bash build/upload-deps.sh linux/arm64
 
 
   upload-package:
@@ -86,7 +86,7 @@ jobs:
 
       - name: Package installer
         run: |
-          bash scripts/build.sh ${{ steps.vars.outputs.tag_version }}
+          bash build/build.sh ${{ steps.vars.outputs.tag_version }}
 
       - name: Upload to S3
         env: 
@@ -123,7 +123,7 @@ jobs:
       
       - name: Package installer
         run: |
-          bash scripts/build.sh ${{ steps.vars.outputs.tag_version }}
+          bash build/build.sh ${{ steps.vars.outputs.tag_version }}
 
       - name: 'Archives'
         run: |

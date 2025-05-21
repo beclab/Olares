@@ -1,0 +1,10 @@
+apiVersion: v1
+target: prebuilt
+output:
+  binaries:
+    - 
+      id: apparmor
+      name: apparmor_4.0.1-0ubuntu1.deb
+      amd64: https://launchpad.net/ubuntu/+source/apparmor/4.0.1-0ubuntu1/+build/28428840/+files/apparmor_4.0.1-0ubuntu1_amd64.deb
+      arm64: https://launchpad.net/ubuntu/+source/apparmor/4.0.1-0ubuntu1/+build/28428841/+files/apparmor_4.0.1-0ubuntu1_arm64.deb
+    

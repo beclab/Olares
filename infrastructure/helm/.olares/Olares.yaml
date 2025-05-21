@@ -1,0 +1,9 @@
+apiVersion: v1
+target: prebuilt
+output:
+  binaries:
+    - 
+      id: helm
+      name: helm-v3.9.0.tar.gz
+      amd64: https://get.helm.sh/helm-v3.17.1-linux-amd64.tar.gz
+      arm64: https://get.helm.sh/helm-v3.17.1-linux-arm.tar.gz

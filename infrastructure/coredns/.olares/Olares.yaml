@@ -1,0 +1,12 @@
+apiVersion: v1
+target: prebuilt
+output:
+  containers:
+    - 
+      name: registry.k8s.io/coredns/coredns:v1.11.3
+     
+
+
+
+
+

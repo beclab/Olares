@@ -23,6 +23,7 @@ go.work
 
 .dist
 .manifest
+.dependencies
 install-wizard-*.tar.gz
 olares-cli-*.tar.gz
 !ks-console-*.tgz

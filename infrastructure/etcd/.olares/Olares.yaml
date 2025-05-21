@@ -1,0 +1,9 @@
+apiVersion: v1
+target: prebuilt
+output:
+  binaries:
+    - 
+      id: etcd
+      name: etcd-v3.5.18.tar.gz
+      amd64: https://github.com/coreos/etcd/releases/download/v3.5.18/etcd-v3.5.18-linux-amd64.tar.gz
+      arm64: https://github.com/coreos/etcd/releases/download/v3.5.18/etcd-v3.5.18-linux-arm64.tar.gz

@@ -1,0 +1,7 @@
+apiVersion: v1
+target: prebuilt
+output:
+  containers:
+    - 
+      name: beclab/kube-state-metrics:v2.3.0-ext.1
+# must have blank new line      

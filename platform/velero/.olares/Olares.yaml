@@ -1,0 +1,17 @@
+apiVersion: v1
+target: prebuilt
+output:
+  binaries:
+    - 
+      id: velero
+      name: velero-v1.11.3.tar.gz
+      amd64: https://github.com/beclab/velero/releases/download/v1.11.3/velero-v1.11.3-linux-amd64.tar.gz
+      arm64: https://github.com/beclab/velero/releases/download/v1.11.3/velero-v1.11.3-linux-arm64.tar.gz
+  containers:
+    - 
+      name: beclab/velero:v1.11.3
+    - 
+      name: beclab/velero-plugin-for-terminus:v1.0.2
+
+
+      

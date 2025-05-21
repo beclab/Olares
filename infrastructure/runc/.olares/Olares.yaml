@@ -1,0 +1,9 @@
+apiVersion: v1
+target: prebuilt
+output:
+  binaries:
+    - 
+      id: runc
+      name: runc-v1.2.5,pkg/runc/v1.2.5,
+      amd64: https://github.com/opencontainers/runc/releases/download/v1.2.5/runc.amd64
+      arm64: https://github.com/opencontainers/runc/releases/download/v1.2.5/runc.arm64

@@ -1,0 +1,9 @@
+apiVersion: v1
+target: prebuilt
+output:
+  containers:
+    - 
+      name: beclab/reverse-proxy:v0.1.8
+
+
+      

@@ -1,0 +1,9 @@
+apiVersion: v1
+target: prebuilt
+output:
+  binaries:
+    - 
+      id: socat
+      name: socat-1.7.3.2.tar.gz
+      amd64: https://src.fedoraproject.org/lookaside/pkgs/socat/socat-1.7.3.2.tar.gz/sha512/540658b2a3d1b87673196282e5c62b97681bd0f1d1e4759ff9d72909d11060235ee9e9521a973603c1b00376436a9444248e5fbc0ffac65f8edb9c9bc28e7972/socat-1.7.3.2.tar.gz
+      arm64: https://src.fedoraproject.org/lookaside/pkgs/socat/socat-1.7.3.2.tar.gz/sha512/540658b2a3d1b87673196282e5c62b97681bd0f1d1e4759ff9d72909d11060235ee9e9521a973603c1b00376436a9444248e5fbc0ffac65f8edb9c9bc28e7972/socat-1.7.3.2.tar.gz

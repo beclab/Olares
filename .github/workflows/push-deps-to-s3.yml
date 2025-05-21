@@ -33,7 +33,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
         run: |
-          bash scripts/deps-manifest.sh && bash scripts/upload-deps.sh
+          bash build/deps-manifest.sh && bash build/upload-deps.sh
 
   push-arm64:
     runs-on: [self-hosted, linux, ARM64]
@@ -66,4 +66,4 @@ jobs:
           AWS_DEFAULT_REGION: "us-east-1"
         run: |
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
-          bash scripts/deps-manifest.sh linux/arm64 && bash scripts/upload-deps.sh linux/arm64
+          bash build/deps-manifest.sh linux/arm64 && bash build/upload-deps.sh linux/arm64

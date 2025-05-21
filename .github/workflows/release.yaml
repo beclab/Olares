@@ -23,7 +23,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: 'us-east-1'
         run: |
-          bash scripts/image-manifest.sh && bash scripts/upload-images.sh .manifest/images.mf
+          bash build/image-manifest.sh && bash build/upload-images.sh .manifest/images.mf
 
   push-arm64:
     runs-on: [self-hosted, linux, ARM64]
@@ -40,7 +40,7 @@ jobs:
           AWS_DEFAULT_REGION: 'us-east-1'
         run: |
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
-          bash scripts/image-manifest.sh && bash scripts/upload-images.sh .manifest/images.mf linux/arm64
+          bash build/image-manifest.sh && bash build/upload-images.sh .manifest/images.mf linux/arm64
 
   upload-package:
     needs: [push, push-arm64]
@@ -54,7 +54,7 @@ jobs:
 
       - name: Package installer
         run: |
-          bash scripts/build.sh ${{ github.event.inputs.tags }}
+          bash build/build.sh ${{ github.event.inputs.tags }}
 
       - name: Upload to S3
         env: 
@@ -95,7 +95,7 @@ jobs:
 
       - name: Package installer
         run: |
-          bash scripts/build.sh ${{ github.event.inputs.tags }}
+          bash build/build.sh ${{ github.event.inputs.tags }}
           
       - name: 'Archives'
         run: |

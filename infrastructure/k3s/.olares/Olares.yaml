@@ -1,0 +1,9 @@
+apiVersion: v1
+target: prebuilt
+output:
+  binaries:
+    - 
+      id: k3s
+      name: k3s-v1.32.2
+      amd64: https://github.com/k3s-io/k3s/releases/download/v1.32.2+k3s1/k3s
+      arm64: https://github.com/k3s-io/k3s/releases/download/v1.32.2+k3s1/k3s-arm64

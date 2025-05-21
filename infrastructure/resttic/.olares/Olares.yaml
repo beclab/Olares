@@ -1,0 +1,15 @@
+apiVersion: v1
+target: prebuilt
+output:
+  binaries:
+    - 
+      id: restic
+      name: restic-linux-0.17.3
+      amd64: https://github.com/restic/restic/releases/download/v0.17.3/restic_0.17.3_linux_amd64.bz2
+      arm64: https://github.com/restic/restic/releases/download/v0.17.3/restic_0.17.3_linux_arm64.bz2
+    - 
+      id: restic
+      name: restic-darwin-0.17.3,pkg/components
+      amd64: https://github.com/restic/restic/releases/download/v0.17.3/restic_0.17.3_darwin_amd64.bz2
+      arm64: https://github.com/restic/restic/releases/download/v0.17.3/restic_0.17.3_darwin_arm64.bz2
+    
