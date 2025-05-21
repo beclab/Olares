@@ -117,7 +117,7 @@ jobs:
       - name: Update checksum
         uses: eball/write-tag-to-version-file@latest
         with:
-          filename: 'build/installer/install.sh'
+          filename: 'build/base-package/install.sh'
           placeholder: '#__MD5SUM__'
           tag: ${{ steps.vars.outputs.version_md5sum }}
       
@@ -127,9 +127,9 @@ jobs:
 
       - name: 'Archives'
         run: |
-          cp .dist/install-wizard/install.sh build/installer
-          cp build/installer/install.sh build/installer/publicInstaller.sh
-          cp .dist/install-wizard/install.ps1 build/installer
+          cp .dist/install-wizard/install.sh build/base-package
+          cp build/base-package/install.sh build/base-package/publicInstaller.sh
+          cp .dist/install-wizard/install.ps1 build/base-package
 
       - name: Release public files
         uses: softprops/action-gh-release@v1
@@ -138,13 +138,13 @@ jobs:
           tag_name: ${{ steps.vars.outputs.tag_version }}
           files: |
             install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz
-            build/installer/publicInstaller.sh
-            build/installer/install.sh
-            build/installer/install.ps1
-            build/installer/joincluster.sh
-            build/installer/publicAddnode.sh
-            build/installer/version.hint
-            build/installer/publicRestoreInstaller.sh
+            build/base-package/publicInstaller.sh
+            build/base-package/install.sh
+            build/base-package/install.ps1
+            build/base-package/joincluster.sh
+            build/base-package/publicAddnode.sh
+            build/base-package/version.hint
+            build/base-package/publicRestoreInstaller.sh
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

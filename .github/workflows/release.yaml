@@ -77,7 +77,7 @@ jobs:
           ref: ${{ github.event.inputs.tags }}
 
       - name: Update env
-        working-directory: ./build/installer
+        working-directory: ./build/base-package
         run: |
           echo 'DEBUG_VERSION="false"' > .env
 
@@ -89,7 +89,7 @@ jobs:
       - name: Update checksum
         uses: eball/write-tag-to-version-file@latest
         with:
-          filename: 'build/installer/install.sh'
+          filename: 'build/base-package/install.sh'
           placeholder: '#__MD5SUM__'
           tag: ${{ steps.vars.outputs.version_md5sum }}
 
@@ -99,11 +99,11 @@ jobs:
           
       - name: 'Archives'
         run: |
-          cp .dist/install-wizard/install.sh build/installer
-          cp build/installer/install.sh build/installer/publicInstaller.sh
-          cp build/installer/install.sh build/installer/publicInstaller.latest
-          cp .dist/install-wizard/install.ps1 build/installer
-          cp build/installer/install.ps1 build/installer/publicInstaller.latest.ps1
+          cp .dist/install-wizard/install.sh build/base-package
+          cp build/base-package/install.sh build/base-package/publicInstaller.sh
+          cp build/base-package/install.sh build/base-package/publicInstaller.latest
+          cp .dist/install-wizard/install.ps1 build/insbase-packagetaller
+          cp build/base-package/install.ps1 build/base-package/publicInstaller.latest.ps1
 
       - name: Release public files
         uses: softprops/action-gh-release@v1
@@ -112,15 +112,15 @@ jobs:
           tag_name: ${{ github.event.inputs.tags }}
           files: |
             install-wizard-v${{ github.event.inputs.tags }}.tar.gz
-            build/installer/publicInstaller.sh
-            build/installer/publicInstaller.latest
-            build/installer/install.sh
-            build/installer/publicInstaller.latest.ps1
-            build/installer/install.ps1
-            build/installer/publicAddnode.sh
-            build/installer/joincluster.sh
-            build/installer/version.hint
-            build/installer/publicRestoreInstaller.sh
+            build/base-package/publicInstaller.sh
+            build/base-package/publicInstaller.latest
+            build/base-package/install.sh
+            build/base-package/publicInstaller.latest.ps1
+            build/base-package/install.ps1
+            build/base-package/publicAddnode.sh
+            build/instbase-packagealler/joincluster.sh
+            build/base-package/version.hint
+            build/base-package/publicRestoreInstaller.sh
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
