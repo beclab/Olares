@@ -38,7 +38,7 @@ jobs:
           bash build/package.sh
 
       - name: Run chart-testing (lint)
-        run: ct lint --chart-dirs build/installer/wizard/config,build/installer/wizard/config/apps,build/installer/wizard/config/gpu --check-version-increment=false --all
+        run: ct lint --chart-dirs .dist/wizard/config,.dist/wizard/config/apps,.dist/wizard/config/gpu --check-version-increment=false --all
 
       # - name: Create kind cluster
       #   if: steps.list-changed.outputs.changed == 'true'
