@@ -10,7 +10,7 @@ output:
     - 
       id: minio-operator
       name: minio-operator-v0.0.1.tar.gz  
-      amd64: https://github.com/beclab/minio-operator/releases/download/v0.0.1/minio-operator-v0.0.1-linux-amd64.tar.gz,
+      amd64: https://github.com/beclab/minio-operator/releases/download/v0.0.1/minio-operator-v0.0.1-linux-amd64.tar.gz
       arm64: https://github.com/beclab/minio-operator/releases/download/v0.0.1/minio-operator-v0.0.1-linux-arm64.tar.gz
 
 
