@@ -1,5 +1,4 @@
-{{- $namespace := printf "%s%s" "user-system-" .Values.bfl.username -}}
-{{- $market_secret := (lookup "v1" "Secret" $namespace "market-secrets") -}}
+{{- $market_secret := (lookup "v1" "Secret" .Release.Namespace "market-secrets") -}}
 
 {{- $redis_password := "" -}}
 {{ if $market_secret -}}
@@ -91,7 +90,7 @@ spec:
                 apiVersion: v1
                 fieldPath: status.podIP
         - name: nginx-init
-          image: beclab/market-frontend:v0.3.11
+          image: beclab/market-frontend:v0.3.12
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: app
@@ -116,7 +115,7 @@ spec:
           mountPath: /etc/nginx/conf.d
         
       - name: appstore-backend
-        image: beclab/market-backend:v0.3.11
+        image: beclab/market-backend:v0.3.12
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
