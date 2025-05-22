@@ -1,0 +1,22 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: gpu-scheduler
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: ws
+      protocol: TCP
+      port: 6000
+      targetPort: 6000
+  selector:
+    name: gpu-scheduler
+  clusterIP: None
+  clusterIPs:
+    - None
+  type: ClusterIP
+  sessionAffinity: None
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  internalTrafficPolicy: Cluster

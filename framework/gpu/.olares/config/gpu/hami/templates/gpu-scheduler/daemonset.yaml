@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: gpu-scheduler
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    matchLabels:
+      name: gpu-scheduler
+  template:
+    metadata:
+      labels:
+        name: gpu-scheduler
+    spec:
+      priorityClassName: system-node-critical
+      nodeSelector:
+        gpu.bytetrade.io/cuda-supported: 'true'
+      containers:
+      - name: gpu-scheduler
+        image: beclab/gpu-scheduler:v0.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+          - name: ws
+            containerPort: 6000
+            protocol: TCP
+
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+
