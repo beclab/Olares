@@ -3,9 +3,9 @@ target: prebuilt
 output:
   containers:
     - 
-      name: beclab/ks-apiserver:0.0.11
+      name: beclab/ks-apiserver:0.0.12
     - 
-      name: beclab/ks-controller-manager:0.0.11
+      name: beclab/ks-controller-manager:0.0.12
     -
       name: kubesphere/kubectl:v1.22.0
 
