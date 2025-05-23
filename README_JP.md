@@ -23,15 +23,15 @@ https://github.com/user-attachments/assets/3089a524-c135-4f96-ad2b-c66bf4ee7471
 *Olaresを使って、ローカルAIアシスタントを構築し、データを場所を問わず同期し、ワークスペースをセルフホストし、独自のメディアをストリーミングし、その他多くのことを実現できます。*
 
 <p align="center">
-  <a href="https://olares.xyz">ウェブサイト</a> ·
-  <a href="https://docs.olares.xyz">ドキュメント</a> ·
-  <a href="https://olares.xyz/larepass">LarePassをダウンロード</a> ·
+  <a href="https://olares.com">ウェブサイト</a> ·
+  <a href="https://docs.olares.com">ドキュメント</a> ·
+  <a href="https://olares.com/larepass">LarePassをダウンロード</a> ·
   <a href="https://github.com/beclab/apps">Olaresアプリ</a> ·
-  <a href="https://space.olares.xyz">Olares Space</a>
+  <a href="https://space.olares.com">Olares Space</a>
 </p>
 
 > [!IMPORTANT]  
-> 最近、TerminusからOlaresへのリブランディングを完了しました。詳細については、[リブランディングブログ](https://blog.olares.xyz/terminus-is-now-olares/)をご覧ください。
+> 最近、TerminusからOlaresへのリブランディングを完了しました。詳細については、[リブランディングブログ](https://blog.olares.com/terminus-is-now-olares/)をご覧ください。
 
 Olaresを使用して、ハードウェアをAIホームサーバーに変換します。Olaresは、ローカルAIのためのオープンソース主権クラウドOSです。
 
@@ -66,14 +66,11 @@ Olaresを使用して、ハードウェアをAIホームサーバーに変換し
 
 Olaresは以下のLinuxプラットフォームで動作検証を完了しています：
 
-- Ubuntu 20.04 LTS 以降
+- Ubuntu 24.04 LTS 以降
 - Debian 11 以降
 
-> **追加インストール手順**
-> Olares は macOS、Windows、PVE、Raspberry Pi などのプラットフォームや、Linux 上での Docker Compose を用いたインストールにも対応しています。>ただし、これらの方法は開発およびテスト環境専用です。詳しくは[追加インストール手順](https://docs.olares.xyz/developer/install/additional-installations.html)をご参照ください。
-
 ### Olaresのセットアップ
-自分のデバイスでOlaresを始めるには、[はじめにガイド](https://docs.olares.xyz/manual/get-started/)に従ってステップバイステップの手順を確認してください。
+自分のデバイスでOlaresを始めるには、[はじめにガイド](https://docs.olares.com/manual/get-started/)に従ってステップバイステップの手順を確認してください。
 
 ## アーキテクチャ
 
@@ -83,7 +80,7 @@ Olaresのアーキテクチャは、次の2つの基本原則に基づいてい�
 
   ![Olaresのアーキテクチ](https://file.bttcdn.com/github/terminus/v2/olares-arch-3.png)
 
-各コンポーネントの詳細については、[Olares アーキテクチャ](https://docs.olares.xyz/manual/system-architecture.html)（英語版）をご参照ください。
+各コンポーネントの詳細については、[Olares アーキテクチャ](https://docs.olares.com/manual/system-architecture.html)（英語版）をご参照ください。
 
 ## 機能
 
@@ -100,87 +97,27 @@ Olaresは、セキュリティ、使いやすさ、開発の柔軟性を向上�
 
 ## プロジェクトナビゲーション
 
-Olaresは、GitHubで公開されている多数のコードリポジトリで構成されています。現在のリポジトリは、オペレーティングシステムの最終コンパイル、パッケージング、インストール、およびアップグレードを担当しており、特定の変更は主に対応するリポジトリで行われます。
+このセクションでは、Olares リポジトリ内の主要なディレクトリをリストアップしています：
 
-以下の表は、Olaresのプロジェクトディレクトリと対応するリポジトリを一覧にしたものです。興味のあるものを見つけてください：
-
-<details>
-<summary><b>フレームワークコンポーネント</b></summary>
-  
-| ディレクトリ | リポジトリ | 説明 |
-| --- | --- | --- |
-| [frameworks/app-service](https://github.com/beclab/olares/tree/main/frameworks/app-service) | <https://github.com/beclab/app-service> | システムフレームワークコンポーネントで、システム内のすべてのアプリのライフサイクル管理とさまざまなセキュリティ制御を提供します。 |
-| [frameworks/backup-server](https://github.com/beclab/olares/tree/main/frameworks/backup-server) | <https://github.com/beclab/backup-server> | システムフレームワークコンポーネントで、定期的なフルまたは増分クラスターのバックアップサービスを提供します。 |
-| [frameworks/bfl](https://github.com/beclab/olares/tree/main/frameworks/bfl) | <https://github.com/beclab/bfl> | ランチャーのバックエンド（BFL）、ユーザーアクセスポイントとして機能し、さまざまなバックエンドサービスのインターフェースを集約およびプロキシします。 |
-| [frameworks/GPU](https://github.com/beclab/olares/tree/main/frameworks/GPU) | <https://github.com/grgalex/nvshare> | 複数のプロセス（またはKubernetes上で実行されるコンテナ）が同じ物理GPU上で同時に安全に実行できるようにするGPU共有メカニズムで、各プロセスが全GPUメモリを利用できます。 |
-| [frameworks/l4-bfl-proxy](https://github.com/beclab/olares/tree/main/frameworks/l4-bfl-proxy) | <https://github.com/beclab/l4-bfl-proxy> | BFLの第4層ネットワークプロキシ。SNIを事前に読み取ることで、ユーザーのIngressに通過する動的ルートを提供します。 |
-| [frameworks/osnode-init](https://github.com/beclab/olares/tree/main/frameworks/osnode-init) | <https://github.com/beclab/osnode-init> | 新しいノードがクラスターに参加する際にノードデータを初期化するシステムフレームワークコンポーネント。 |
-| [frameworks/system-server](https://github.com/beclab/olares/tree/main/frameworks/system-server) | <https://github.com/beclab/system-server> | システムランタイムフレームワークの一部として、アプリ間のセキュリティコールのメカニズムを提供します。 |
-| [frameworks/tapr](https://github.com/beclab/olares/tree/main/frameworks/tapr) | <https://github.com/beclab/tapr> | Olaresアプリケーションランタイムコンポーネント。 |
-</details>
-
-<details>
-<summary><b>システムレベルのアプリケーションとサービス</b></summary>
-  
-| ディレクトリ | リポジトリ | 説明 |
-| --- | --- | --- |
-| [apps/analytic](https://github.com/beclab/olares/tree/main/apps/analytic) | <https://github.com/beclab/analytic> | [Umami](https://github.com/umami-software/umami)に基づいて開発されたAnalyticは、Google Analyticsのシンプルで高速、プライバシー重視の代替品です。 |
-| [apps/market](https://github.com/beclab/olares/tree/main/apps/market) | <https://github.com/beclab/market> | このリポジトリは、Olaresのアプリケーションマーケットのフロントエンド部分をデプロイします。 |
-| [apps/market-server](https://github.com/beclab/olares/tree/main/apps/market-server) | <https://github.com/beclab/market> | このリポジトリは、Olaresのアプリケーションマーケットのバックエンド部分をデプロイします。 |
-| [apps/argo](https://github.com/beclab/olares/tree/main/apps/argo) | <https://github.com/argoproj/argo-workflows> | ローカル推奨アルゴリズムのコンテナ実行をオーケストレーションするワークフローエンジン。 |
-| [apps/desktop](https://github.com/beclab/olares/tree/main/apps/desktop) | <https://github.com/beclab/desktop> | システムの内蔵デスクトップアプリケーション。 |
-| [apps/devbox](https://github.com/beclab/olares/tree/main/apps/devbox) | <https://github.com/beclab/devbox> | Olaresアプリケーションの移植と開発のための開発者向けIDE。 |
-| [apps/vault](https://github.com/beclab/olares/tree/main/apps/vault) | <https://github.com/beclab/termipass> | [Padloc](https://github.com/padloc/padloc)に基づいて開発された、あらゆる規模のチームや企業向けの無料の1PasswordおよびBitwardenの代替品。DID、Olares ID、およびOlaresデバイスの管理を支援するクライアントとして機能します。 |
-| [apps/files](https://github.com/beclab/olares/tree/main/apps/files) | <https://github.com/beclab/files> | [Filebrowser](https://github.com/filebrowser/filebrowser)から変更された内蔵ファイルマネージャーで、Drive、Sync、およびさまざまなOlares物理ノード上のファイルの管理を提供します。 |
-| [apps/notifications](https://github.com/beclab/olares/tree/main/apps/notifications) | <https://github.com/beclab/notifications> | Olaresの通知システム |
-| [apps/profile](https://github.com/beclab/olares/tree/main/apps/profile) | <https://github.com/beclab/profile> | OlaresのLinktree代替品 |
-| [apps/rsshub](https://github.com/beclab/olares/tree/main/apps/rsshub) | <https://github.com/beclab/rsshub> | [RssHub](https://github.com/DIYgod/RSSHub)に基づいたRSS購読管理ツール。 |
-| [apps/settings](https://github.com/beclab/olares/tree/main/apps/settings) | <https://github.com/beclab/settings> | 内蔵システム設定。 |
-| [apps/system-apps](https://github.com/beclab/olares/tree/main/apps/system-apps) | <https://github.com/beclab/system-apps> | _kubesphere/console_プロジェクトに基づいて構築されたsystem-serviceは、視覚的なダッシュボードと機能豊富なControlHubを通じて、システムの実行状態とリソース使用状況を理解し、制御するためのセルフホストクラウドプラットフォームを提供します。 |
-| [apps/wizard](https://github.com/beclab/olares/tree/main/apps/wizard) | <https://github.com/beclab/wizard> | ユーザーにシステムのアクティベーションプロセスを案内するウィザードアプリケーション。 |
-</details>
-
-<details>
-<summary><b>サードパーティコンポーネントとサービス</b></summary>
-
-| ディレクトリ | リポジトリ | 説明 |
-| --- | --- | --- |
-| [third-party/authelia](https://github.com/beclab/olares/tree/main/third-party/authelia) | <https://github.com/beclab/authelia> | Webポータルを介してアプリケーションに二要素認証とシングルサインオン（SSO）を提供するオープンソースの認証および認可サーバー。 |
-| [third-party/headscale](https://github.com/beclab/olares/tree/main/third-party/headscale) | <https://github.com/beclab/headscale> | OlaresでのTailscaleコントロールサーバーのオープンソース自ホスト実装で、LarePassで異なるデバイス間でTailscaleを管理します。 |
-| [third-party/infisical](https://github.com/beclab/olares/tree/main/third-party/infisical) | <https://github.com/beclab/infisical> | チーム/インフラストラクチャ間でシークレットを同期し、シークレットの漏洩を防ぐオープンソースのシーク��ッ��管理プラットフォーム。 |
-| [third-party/juicefs](https://github.com/beclab/olares/tree/main/third-party/juicefs) | <https://github.com/beclab/juicefs-ext> | RedisとS3の上に構築された分散POSIXファイルシステムで、異なるノード上のアプリがPOSIXインターフェースを介して同じデータにアクセスできるようにします。 |
-| [third-party/ks-console](https://github.com/beclab/olares/tree/main/third-party/ks-console) | <https://github.com/kubesphere/console> | Web GUIを介してクラスター管理を可能にするKubesphereコンソール。 |
-| [third-party/ks-installer](https://github.com/beclab/olares/tree/main/third-party/ks-installer) | <https://github.com/beclab/ks-installer-ext> | クラスターリソース定義に基づいて自動的にKubesphereクラスターを作成するKubesphereインストーラーコンポーネント。 |
-| [third-party/kube-state-metrics](https://github.com/beclab/olares/tree/main/third-party/kube-state-metrics) | <https://github.com/beclab/kube-state-metrics> | kube-state-metrics（KSM）は、Kubernetes APIサーバーをリッスンし、オブジェクトの状態に関するメトリックを生成するシンプルなサービスです。 |
-| [third-party/notification-manager](https://github.com/beclab/olares/tree/main/third-party/notification-manager) | <https://github.com/beclab/notification-manager-ext> | 複数の通知チャネルの統一管理と通知内容のカスタム集約を提供するKubesphereの通知管��コンポーネント。 |
-| [third-party/predixy](https://github.com/beclab/olares/tree/main/third-party/predixy) | <https://github.com/beclab/predixy> | 利用可能なノードを自動的に識別し、名前空間の分離を追加するRedisクラスターのプロキシサービス。 |
-| [third-party/redis-cluster-operator](https://github.com/beclab/olares/tree/main/third-party/redis-cluster-operator) | <https://github.com/beclab/redis-cluster-operator> | Kubernetesに基づいてRedisクラスターを作成および管理するためのクラウドネイティブツール。 |
-| [third-party/seafile-server](https://github.com/beclab/olares/tree/main/third-party/seafile-server) | <https://github.com/beclab/seafile-server> | データストレージを処理するSeafile（同期ドライブ）のバックエンドサービス。 |
-| [third-party/seahub](https://github.com/beclab/olares/tree/main/third-party/seahub) | <https://github.com/beclab/seahub> | ファイル共有、データ同期などを処理するSeafile（同期ドライブ）のフロントエンドおよびミドルウェアサービス。 |
-| [third-party/tailscale](https://github.com/beclab/olares/tree/main/third-party/tailscale) | <https://github.com/tailscale/tailscale> | TailscaleはすべてのプラットフォームのLarePassに統合されています。 |
-</details>
-
-<details>
-<summary><b>追加のライブラリとコンポーネント</b></summary>
-
-| ディレクトリ | リポジトリ | 説明 |
-| --- | --- | --- |
-| [build/installer](https://github.com/beclab/olares/tree/main/build/installer) |     | インストーラービルドを生成するためのテンプレート。 |
-| [build/manifest](https://github.com/beclab/olares/tree/main/build/manifest) |     | インストールビルドイメージリストテンプレート。 |
-| [libs/fs-lib](https://github.com/beclab/olares/tree/main/libs) | <https://github.com/beclab/fs-lib> | JuiceFSに基づいて実装されたiNotify互換インターフェースのSDKライブラリ。 |
-| [scripts](https://github.com/beclab/olares/tree/main/scripts) |     | インストーラービルドを生成するための補助スクリプト。 |
-</details>
+* **`apps`**: システムアプリケーションのコードが含まれており、主に `larepass` 用です。
+* **`cli`**: Olares のコマンドラインインターフェースツールである `olares-cli` のコードが含まれています。
+* **`daemon`**: システムデーモンプロセスである `olaresd` のコードが含まれています。
+* **`docs`**: プロジェクトのドキュメントが含まれています。
+* **`framework`**: Olares システムサービスが含まれています。
+* **`infrastructure`**: コンピューティング、ストレージ、ネットワーキング、GPU などのインフラストラクチャコンポーネントに関連するコードが含まれています。
+* **`platform`**: データベースやメッセージキューなどのクラウドネイティブコンポーネントのコードが含まれています。
+* **`vendor`**: サードパーティのハードウェアベンダーからのコードが含まれています。
 
 ## Olaresへの貢献
 
 あらゆる形での貢献を歓迎します：
 
 - Olaresで独自のアプリケーションを開発したい場合は、以下を参照してください：<br>
-https://docs.olares.xyz/developer/develop/
+https://docs.olares.com/developer/develop/
 
 
 - Olaresの改善に協力したい場合は、以下を参照してください：<br>
-https://docs.olares.xyz/developer/contribute/olares.html
+https://docs.olares.com/developer/contribute/olares.html
 
 ## コミュニティと連絡先
 
