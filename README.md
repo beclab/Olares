@@ -94,6 +94,8 @@ Olares offers a wide array of features designed to enhance security, ease of use
 - **Development tools**: Comprehensive development tools for effortless application development and porting.
 
 ## Project Navigation
+> We are currently migrating the code of subprojects from other repositories within the organization to this repository. This process may take a few months. Once completed, you will be able to get a comprehensive view of the Olares system through this repository.
+
 
 This section lists the main directories in the Olares repository:
 
