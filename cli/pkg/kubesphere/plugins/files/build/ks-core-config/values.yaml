@@ -1,0 +1,150 @@
+# Default values for ks-core.
+
+# replicaCount: 1 # ! 这里要替换下
+
+image:
+  # Overrides the image tag whose default is the chart appVersion.
+  ks_controller_manager_repo: kubesphere/ks-controller-manager
+  ks_controller_manager_tag: "v3.3.0"
+
+  ks_apiserver_repo: beclab/ks-apiserver
+  ks_apiserver_tag: "v3.3.0-ext-3"
+
+  ks_kubectl_repo: kubesphere/kubectl
+  ks_kubectl_tag: "v1.22.0"
+
+  nginx_ingress_controller_repo: kubesphere/nginx-ingress-controller # ! 这个貌似没用到
+  nginx_ingress_controller_tag: "v0.35.0" # ! 这里？？？好像没用到？ roles/download 中这里的数据是 v1.1.0
+  
+  defaultbackend_repo: "mirrorgooglecontainers/defaultbackend-amd64"
+  defaultbackend_tag: "1.4"
+
+  pullPolicy: IfNotPresent
+
+
+config:
+  # Specifies whether the kubesphere-config configmap should be created
+  create: true
+  authentication: {}
+  # Jwt Secret is required by ks-apiserver, a random string would be generated if it's empty
+  # jwtSecret: ""
+  multicluster: {}
+  monitoring: {}
+  notification: {}
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "kubesphere"
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# Kubernetes Version shows in KubeSphere console
+# kube_version: "v1.19.4" # ! 这里要替换下
+
+env:
+- name: KUBESPHERE_REDIS_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: redis-secret
+      key: auth
+
+tolerations: 
+  - key: node-role.kubernetes.io/master
+    effect: NoSchedule
+  - key: CriticalAddonsOnly
+    operator: Exists
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 60
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 60
+
+affinity: {}
+
+nodeSelector: {}
+
+## deployment specific configuration
+
+apiserver:
+  resources:
+    limits:
+      cpu: 1
+      memory: 1024Mi
+    requests:
+      cpu: 20m
+      memory: 100Mi
+
+  extraVolumeMounts: []
+  ## Additional volumeMounts to the apiserver container.
+  #  - name: example-config
+  #   mountPath: /etc/kubesphere/example
+
+  extraVolumes: []
+  ## Additional volumes to the apiserver pod.
+  #  - name: example-config
+  #    emptyDir: {}
+
+console:
+  port: 30880
+  type: NodePort
+  defaultClusterName: "default"
+  resources:
+    limits:
+      cpu: 1
+      memory: 1024Mi
+    requests:
+      cpu: 20m
+      memory: 100Mi
+
+  extraVolumeMounts: []
+  ## Additional volumeMounts to the console container.
+  #  - name: example-config
+  #   mountPath: /etc/kubesphere/example
+
+  extraVolumes: []
+  ## Additional volumes to the console pod.
+  #  - name: example-config
+  #    emptyDir: {}
+
+controller:
+  resources:
+    limits:
+      cpu: 1
+      memory: 1000Mi
+    requests:
+      cpu: 30m
+      memory: 50Mi
+
+  extraVolumeMounts: []
+  ## Additional volumeMounts to the controller container.
+  #  - name: example-config
+  #   mountPath: /etc/kubesphere/example
+
+  extraVolumes: []
+  ## Additional volumes to the controller pod.
+  #  - name: example-config
+  #    emptyDir: {}
+

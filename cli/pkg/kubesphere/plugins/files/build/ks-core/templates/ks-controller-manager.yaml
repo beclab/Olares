@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ks-controller-manager
+    tier: backend
+    version: {{ .Chart.AppVersion }}
+  name: ks-controller-manager
+spec:
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+    type: RollingUpdate
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: ks-controller-manager
+      tier: backend
+      # version: {{ .Chart.AppVersion }}
+  template:
+    metadata:
+      labels:
+        app: ks-controller-manager
+        tier: backend
+        # version: {{ .Chart.AppVersion }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - command:
+        - controller-manager
+        - --logtostderr=true
+        - --leader-elect=false
+        image: beclab/ks-controller-manager:0.0.11
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        name: ks-controller-manager
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources:
+          {{- toYaml .Values.controller.resources | nindent 12 }}
+        volumeMounts:
+        - mountPath: /etc/kubesphere/
+          name: kubesphere-config
+        - mountPath: /etc/localtime
+          name: host-time
+          readOnly: true
+        {{- if .Values.controller.extraVolumeMounts }}
+          {{- toYaml .Values.controller.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+        env:
+        {{- if .Values.env }}
+        {{- toYaml .Values.env | nindent 8 }}
+        {{- end }}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      serviceAccountName: {{ include "ks-core.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: kubesphere-config
+        configMap:
+          name: kubesphere-config
+          defaultMode: 420
+      - hostPath:
+          path: /etc/localtime
+          type: ""
+        name: host-time
+      {{- if .Values.controller.extraVolumes }}
+        {{ toYaml .Values.controller.extraVolumes | nindent 6 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - ks-controller-manager
+            namespaces:
+            - kubesphere-system
+{{- with .Values.nodeAffinity }}
+        nodeAffinity:
+{{ toYaml . | indent 10 }}
+{{- end }}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ks-controller-manager
+    tier: backend
+    version: {{ .Chart.AppVersion }}
+  name: ks-controller-manager
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app: ks-controller-manager
+    tier: backend
+    # version: {{ .Chart.AppVersion }}
+  sessionAffinity: None
+  type: ClusterIP

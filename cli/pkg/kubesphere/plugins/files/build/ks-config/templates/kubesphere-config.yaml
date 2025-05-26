@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubesphere-config
+  namespace: kubesphere-system
+data:
+  kubesphere.yaml: |
+    monitoring:
+      endpoint: http://prometheus-operated.kubesphere-monitoring-system.svc:9090
+      enableGPUMonitoring: false
+    notification:
+      endpoint: http://notification-manager-svc.kubesphere-monitoring-system.svc:19093
+    terminal:
+      image: alpine:3.14
+      timeout: 600

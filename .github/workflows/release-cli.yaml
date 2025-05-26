@@ -1,0 +1,53 @@
+name: Release CLI
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+  workflow_dispatch:
+jobs:
+  goreleaser:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Add Local Git Tag For GoReleaser
+        run: git tag ${{ inputs.version }}
+        continue-on-error: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.22.4
+          
+      - name: Install x86_64 cross-compiler
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      - name: Install ARM cross-compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v3.1.0
+        with:
+          distribution: goreleaser
+          workdir: './cli'
+          version: v1.18.2
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: "us-east-1"
+        run: |
+          cd output && for file in *.tar.gz; do
+            aws s3 cp "$file" s3://terminus-os-install/$file --acl=public-read
+            # coscmd upload $file /$file
+          done

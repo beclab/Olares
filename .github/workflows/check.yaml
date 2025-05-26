@@ -48,6 +48,23 @@ jobs:
       #   if: steps.list-changed.outputs.changed == 'true'
       #   run: ct install --chart-dirs wizard/charts,wizard/config --target-branch ${{ github.event.repository.default_branch }}
 
+  test-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.generate.outputs.version }}
+    steps:
+      - id: generate
+        run: |
+          v=1.12.0-$(echo $RANDOM)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+  upload-cli:
+    needs: test-version
+    uses: ./.github/workflows/release-cli.yaml
+    secrets: inherit
+    with:
+      version: ${{ needs.test-version.outputs.version }}
+
   push-image:
     runs-on: ubuntu-latest
 
@@ -131,49 +148,46 @@ jobs:
           bash build/deps-manifest.sh linux/arm64 && bash build/upload-deps.sh linux/arm64
 
 
-
-  install-test:
-    needs: [lint-test, push-image, push-image-arm64, push-deps, push-deps-arm64]
+  upload-package:
+    needs: [lint-test, test-version, push-image, push-image-arm64, push-deps, push-deps-arm64]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.ref }}
+        repository: ${{ github.event.pull_request.head.repo.full_name }}
 
-      - name: 'Test tag version'
-        id: vars
-        run: |
-          v=1.12.0-$(echo $RANDOM)
-          echo "tag_version=$v" >> $GITHUB_OUTPUT
+    - name: Package installer
+      run: |
+        bash build/build.sh ${{ needs.test-version.outputs.version }}
 
-      - name: Package installer
-        run: |
-          bash build/build.sh ${{ steps.vars.outputs.tag_version }}
+    - name: Upload package
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: 'us-east-1'
+      run: |
+        md5sum install-wizard-v${{ needs.test-version.outputs.version }}.tar.gz > install-wizard-v${{ needs.test-version.outputs.version }}.md5sum.txt && \
+        aws s3 cp install-wizard-v${{ needs.test-version.outputs.version }}.md5sum.txt s3://terminus-os-install/install-wizard-v${{ needs.test-version.outputs.version }}.md5sum.txt --acl=public-read && \
+        aws s3 cp install-wizard-v${{ needs.test-version.outputs.version }}.tar.gz s3://terminus-os-install/install-wizard-v${{ needs.test-version.outputs.version }}.tar.gz --acl=public-read
 
-      - name: Upload package
-        env: 
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: 'us-east-1'
-        run: |
-          md5sum install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz > install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt && \
-          aws s3 cp install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt s3://terminus-os-install/install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt --acl=public-read && \
-          aws s3 cp install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz s3://terminus-os-install/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz --acl=public-read
-      
 
+  install-test:
+    needs: [test-version, upload-package]
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy Request
         uses: fjogeleit/http-request-action@v1
         with:
           url: 'https://cloud-dev-api.bttcdn.com/v1/resource/installTest'
           method: 'POST'
           customHeaders: '{"Authorization": "${{ secrets.INSTALL_SECRET }}"}'
-          data: 'versions=${{ steps.vars.outputs.tag_version }}&downloadUrl=https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz'      
+          data: 'versions=${{ needs.test-version.outputs.version }}&downloadUrl=https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz'
           contentType: "application/x-www-form-urlencoded"
 
-      - name: Check Reault
+      - name: Check Result
         uses: eball/poll-check-endpoint@v0.1.0
         with:
           url: https://cloud-dev-api.bttcdn.com/v1/resource/installResult
@@ -184,4 +198,4 @@ jobs:
           timeout: 1800000
           interval: 30000
           customHeaders: '{"Authorization": "${{ secrets.INSTALL_SECRET }}", "Content-Type": "application/x-www-form-urlencoded"}'
-          data: 'versions=${{ steps.vars.outputs.tag_version }}'
+          data: 'versions=${{ needs.test-version.outputs.version }}'

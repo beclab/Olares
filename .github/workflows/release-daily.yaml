@@ -9,6 +9,24 @@ on:
   workflow_dispatch:
 
 jobs:
+
+  daily-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.generate.outputs.version }}
+    steps:
+      - id: generate
+        run: |
+          v=1.12.0-$(date +"%Y%m%d")
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+  release-cli:
+    needs: daily-version
+    uses: ./.github/workflows/release-cli.yaml
+    secrets: inherit
+    with:
+      version: ${{ needs.daily-version.outputs.version }}
+
   push-images:
     runs-on: ubuntu-22.04
 
@@ -71,59 +89,50 @@ jobs:
 
 
   upload-package:
-    needs: [push-images, push-images-arm64, push-deps, push-deps-arm64]
+    needs: [daily-version, push-images, push-images-arm64, push-deps, push-deps-arm64]
     runs-on: ubuntu-latest
+    outputs:
+      md5sum: ${{ steps.upload.outputs.md5sum }}
 
     steps:
-      - name: 'Daily tag version'
-        id: vars
-        run: |
-          v=1.12.0-$(date +"%Y%m%d")
-          echo "tag_version=$v" >> $GITHUB_OUTPUT
-
       - name: 'Checkout source code'
         uses: actions/checkout@v3
 
       - name: Package installer
         run: |
-          bash build/build.sh ${{ steps.vars.outputs.tag_version }}
+          bash build/build.sh ${{ needs.daily-version.outputs.version }}
 
       - name: Upload to S3
+        id: upload
         env: 
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: 'us-east-1'
         run: |
-          md5sum install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz > install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt && \
-          aws s3 cp install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt s3://terminus-os-install/install-wizard-v${{ steps.vars.outputs.tag_version }}.md5sum.txt --acl=public-read && \
-          aws s3 cp install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz s3://terminus-os-install/install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz --acl=public-read
+          md5sum install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz > install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt && \
+          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt s3://terminus-os-install/install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt --acl=public-read && \
+          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz s3://terminus-os-install/install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz --acl=public-read && \
+          echo "md5sum=$(awk '{print $1}' install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt)" >> "$GITHUB_OUTPUT"
 
-          
+
   release:
-    needs: [upload-package]
+    needs: [daily-version, upload-package]
     runs-on: ubuntu-latest
 
     steps:
       - name: 'Checkout source code'
         uses: actions/checkout@v3
-
-      - name: 'Daily tag version'
-        id: vars
-        run: |
-          v=1.12.0-$(date +"%Y%m%d")
-          echo "tag_version=$v" >> $GITHUB_OUTPUT
-          echo "version_md5sum=$(curl -sSfL https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${v}.md5sum.txt|awk '{print $1}')" >> $GITHUB_OUTPUT
 
       - name: Update checksum
         uses: eball/write-tag-to-version-file@latest
         with:
           filename: 'build/base-package/install.sh'
           placeholder: '#__MD5SUM__'
-          tag: ${{ steps.vars.outputs.version_md5sum }}
+          tag: ${{ needs.upload-package.outputs.md5sum }}
       
       - name: Package installer
         run: |
-          bash build/build.sh ${{ steps.vars.outputs.tag_version }}
+          bash build/build.sh ${{ needs.daily-version.outputs.version }}
 
       - name: 'Archives'
         run: |
@@ -134,10 +143,10 @@ jobs:
       - name: Release public files
         uses: softprops/action-gh-release@v1
         with:
-          name: v${{ steps.vars.outputs.tag_version }} Release
-          tag_name: ${{ steps.vars.outputs.tag_version }}
+          name: v${{ needs.daily-version.outputs.version }} Release
+          tag_name: ${{ needs.daily-version.outputs.version }}
           files: |
-            install-wizard-v${{ steps.vars.outputs.tag_version }}.tar.gz
+            install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz
             build/base-package/publicInstaller.sh
             build/base-package/install.sh
             build/base-package/install.ps1

@@ -1,0 +1,15 @@
+apiVersion: v2
+
+appVersion: 5.0.14
+name: redis
+description: A Helm chart for redis
+version: 0.2.0
+kubeVersion: ">=1.17.0-0"
+home: https://github.com/kubernetes-csi/external-snapshotter
+sources:
+- https://github.com/kubesphere/helm-charts
+keywords:
+- redis
+maintainers:
+- name: aby913
+  email: aby913@gmail.com

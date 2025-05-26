@@ -9,6 +9,13 @@ on:
         description: 'Release Tags'
 
 jobs:
+
+  release-cli:
+    uses: ./.github/workflows/release-cli.yaml
+    secrets: inherit
+    with:
+      version: ${{ github.event.inputs.tags }}
+
   push:
     runs-on: ubuntu-22.04
 

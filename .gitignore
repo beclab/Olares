@@ -29,3 +29,4 @@ olares-cli-*.tar.gz
 !ks-console-*.tgz
 .vscode
 .DS_Store
+cli/output

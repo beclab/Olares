@@ -145,6 +145,14 @@ if ! command_exists tar; then
     exit 1
 fi
 
+export VERSION="#__VERSION__"
+
+if [[ "x${VERSION}" == "x" || "x${VERSION:3}" == "xVERSION__" ]]; then
+    echo "error: Olares version is unspecified, please set the VERSION env var and rerun this script."
+    echo "for example: VERSION=1.12.0-20241124 bash $0"
+    exit 1
+fi
+
 BASE_DIR="$HOME/.olares"
 if [ ! -d $BASE_DIR ]; then
     mkdir -p $BASE_DIR
@@ -157,10 +165,9 @@ fi
 
 set_master_host_ssh_options
 
-CLI_VERSION="0.2.36"
-CLI_FILE="olares-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
+CLI_FILE="olares-cli-v${VERSION}_linux_${ARCH}.tar.gz"
 
-if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$CLI_VERSION" ]]; then
+if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$VERSION" ]]; then
     INSTALL_OLARES_CLI=$(which olares-cli)
     echo "olares-cli already installed and is the expected version"
     echo ""
@@ -177,7 +184,7 @@ else
             echo "error: failed to download Olares installer"
             exit 1
         else
-            echo "Olares installer ${CLI_VERSION} download complete!"
+            echo "Olares installer ${VERSION} download complete!"
             echo ""
         fi
     fi

@@ -1,0 +1,91 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  labels:
+    app.kubernetes.io/component: prometheus
+    app.kubernetes.io/instance: k8s
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: kube-prometheus
+    app.kubernetes.io/version: 2.34.0
+  name: k8s
+  namespace: kubesphere-monitoring-system
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - preference:
+          matchExpressions:
+          - key: node-role.kubernetes.io/monitoring
+            operator: Exists
+        weight: 100
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: prometheus
+              app.kubernetes.io/instance: k8s
+              app.kubernetes.io/name: prometheus
+              app.kubernetes.io/part-of: kube-prometheus
+          namespaces:
+          - kubesphere-monitoring-system
+          topologyKey: kubernetes.io/hostname
+        weight: 100
+  alerting:
+    alertmanagers:
+    - apiVersion: v2
+      name: alertmanager-main
+      namespace: kubesphere-monitoring-system
+      port: web
+  evaluationInterval: 1m
+  externalLabels: {}
+  image: prom/prometheus:v2.34.0
+  nodeSelector:
+    kubernetes.io/os: linux
+  podMetadata:
+    labels:
+      app.kubernetes.io/component: prometheus
+      app.kubernetes.io/instance: k8s
+      app.kubernetes.io/name: prometheus
+      app.kubernetes.io/part-of: kube-prometheus
+      app.kubernetes.io/version: 2.34.0
+  tolerations:
+  - effect: NoSchedule
+    key: dedicated
+    operator: Equal
+    value: monitoring
+  podMonitorNamespaceSelector: {}
+  podMonitorSelector: {}
+  probeNamespaceSelector: {}
+  probeSelector: {}
+  query:
+    maxConcurrency: 1000
+  replicas: 1 # todo
+  resources:
+    limits:
+      cpu: "1"
+      memory: 4Gi
+    requests:
+      cpu: 200m
+      memory: 400Mi
+  ruleNamespaceSelector: {}
+  ruleSelector:
+    matchLabels:
+      prometheus: k8s
+      role: alert-rules
+  scrapeInterval: 1m
+  securityContext:
+    fsGroup: 0
+    runAsNonRoot: false
+    runAsUser: 0
+  serviceAccountName: prometheus-k8s
+  serviceMonitorNamespaceSelector: {}
+  serviceMonitorSelector: {}
+  retention: 7d
+  storage:
+    volumeClaimTemplate:
+      spec:
+        resources:
+          requests:
+            storage: 20Gi
+  version: 2.34.0

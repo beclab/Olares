@@ -1,0 +1,39 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app.kubernetes.io/component: exporter
+    app.kubernetes.io/name: node-exporter
+    app.kubernetes.io/part-of: kube-prometheus
+    app.kubernetes.io/vendor: kubesphere
+    app.kubernetes.io/version: 1.3.1
+  name: node-exporter
+  namespace: kubesphere-monitoring-system
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    interval: 1m
+    metricRelabelings:
+    - action: keep
+      regex: node_(uname|network|disk|cpu)_info|node_cpu_.+|node_hwmon_temp_celsius|node_hwmon_chip_names|node_network_route_info|node_network_address_info|node_memory_Mem.+_bytes|node_memory_SReclaimable_bytes|node_memory_Cached_bytes|node_memory_Buffers_bytes|node_network_(.+_bytes_total|up)|node_network_.+_errs_total|node_nf_conntrack_entries.*|node_disk_.+_completed_total|node_disk_.+_bytes_total|node_disk_smartctl_info|node_disk_power_on_hours|node_disk_temp_celsius|node_filesystem_files|node_filesystem_files_free|node_filesystem_avail_bytes|node_filesystem_size_bytes|node_filesystem_free_bytes|node_filesystem_readonly|node_load.+|node_timex_offset_seconds
+      sourceLabels:
+      - __name__
+    port: https
+    relabelings:
+    - action: replace
+      regex: (.*)
+      replacement: $1
+      sourceLabels:
+      - __meta_kubernetes_pod_node_name
+      targetLabel: instance
+    - action: labeldrop
+      regex: (service|endpoint)
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+  jobLabel: app.kubernetes.io/name
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: exporter
+      app.kubernetes.io/name: node-exporter
+      app.kubernetes.io/part-of: kube-prometheus

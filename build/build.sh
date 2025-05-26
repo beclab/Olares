@@ -36,6 +36,7 @@ if [ ! -z $VERSION ]; then
     sh -c "$SED 's/#__VERSION__/${VERSION}/' wizard/config/settings/templates/terminus_cr.yaml"
     sh -c "$SED 's/#__VERSION__/${VERSION}/' install.sh"
     sh -c "$SED 's/#__VERSION__/${VERSION}/' install.ps1"
+    sh -c "$SED 's/#__VERSION__/${VERSION}/' joincluster.sh"
     VERSION="v${VERSION}"
 else
     VERSION="debug"
