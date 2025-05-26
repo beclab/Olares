@@ -175,7 +175,7 @@ jobs:
 
 
   install-test:
-    needs: [test-version, upload-package]
+    needs: [test-version, upload-cli, upload-package]
     runs-on: ubuntu-latest
     steps:
       - name: Deploy Request
