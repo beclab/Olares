@@ -47,7 +47,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
         run: |
-          cd output && for file in *.tar.gz; do
+          cd cli/output && for file in *.tar.gz; do
             aws s3 cp "$file" s3://terminus-os-install/$file --acl=public-read
             # coscmd upload $file /$file
           done
