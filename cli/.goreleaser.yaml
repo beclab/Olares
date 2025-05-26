@@ -1,0 +1,41 @@
+project_name: olares-cli
+builds:
+  - env:
+      - CGO_ENABLED=0
+    binary: olares-cli
+    main: ./cmd/main.go
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - 7
+    ignore:
+      - goos: linux
+        goarch: arm64
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
+    ldflags:
+      - -s
+      - -w
+      - -X bytetrade.io/web3os/installer/version.VERSION={{ .Version }}
+dist: ./output
+archives:
+  - id: olares-cli
+    name_template: "{{ .ProjectName }}-v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    replacements:
+      linux: linux
+      amd64: amd64
+      arm: arm64
+checksum:
+  name_template: "checksums.txt"
+release:
+  disable: true
+changelog:
+  skip: true

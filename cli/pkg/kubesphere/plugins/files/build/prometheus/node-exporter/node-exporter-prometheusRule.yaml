@@ -1,0 +1,173 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app.kubernetes.io/component: exporter
+    app.kubernetes.io/name: node-exporter
+    app.kubernetes.io/part-of: kube-prometheus
+    app.kubernetes.io/version: 1.3.1
+    prometheus: k8s
+    role: alert-rules
+  name: node-exporter-rules
+  namespace: kubesphere-monitoring-system
+spec:
+  groups:
+  - name: node-exporter
+    rules:
+    - alert: NodeFilesystemSpaceFillingUp
+      annotations:
+        description: Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available space left and is filling up.
+        summary: Filesystem is predicted to run out of space within the next 24 hours.
+      expr: |
+        (
+          node_filesystem_avail_bytes{job="node-exporter",fstype!=""} / node_filesystem_size_bytes{job="node-exporter",fstype!=""} * 100 < 20
+        and
+          predict_linear(node_filesystem_avail_bytes{job="node-exporter",fstype!=""}[6h], 24*60*60) < 0
+        and
+          node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
+        )
+      for: 1h
+      labels:
+        severity: warning
+    - alert: NodeFilesystemSpaceFillingUp
+      annotations:
+        description: Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available space left and is filling up fast.
+        summary: Filesystem is predicted to run out of space within the next 4 hours.
+      expr: |
+        (
+          node_filesystem_avail_bytes{job="node-exporter",fstype!=""} / node_filesystem_size_bytes{job="node-exporter",fstype!=""} * 100 < 15
+        and
+          predict_linear(node_filesystem_avail_bytes{job="node-exporter",fstype!=""}[6h], 4*60*60) < 0
+        and
+          node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
+        )
+      for: 1h
+      labels:
+        severity: critical
+    - alert: NodeFilesystemAlmostOutOfSpace
+      annotations:
+        description: Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available space left.
+        summary: Filesystem has less than 5% space left.
+      expr: |
+        (
+          node_filesystem_avail_bytes{job="node-exporter",fstype!=""} / node_filesystem_size_bytes{job="node-exporter",fstype!=""} * 100 < 5
+        and
+          node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
+        )
+      for: 1h
+      labels:
+        severity: warning
+    - alert: NodeFilesystemAlmostOutOfSpace
+      annotations:
+        description: Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available space left.
+        summary: Filesystem has less than 3% space left.
+      expr: |
+        (
+          node_filesystem_avail_bytes{job="node-exporter",fstype!=""} / node_filesystem_size_bytes{job="node-exporter",fstype!=""} * 100 < 3
+        and
+          node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
+        )
+      for: 1h
+      labels:
+        severity: critical
+    - alert: NodeFilesystemFilesFillingUp
+      annotations:
+        description: Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available inodes left and is filling up.
+        summary: Filesystem is predicted to run out of inodes within the next 24 hours.
+      expr: |
+        (
+          node_filesystem_files_free{job="node-exporter",fstype!=""} / node_filesystem_files{job="node-exporter",fstype!=""} * 100 < 40
+        and
+          predict_linear(node_filesystem_files_free{job="node-exporter",fstype!=""}[6h], 24*60*60) < 0
+        and
+          node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
+        )
+      for: 1h
+      labels:
+        severity: warning
+    - alert: NodeFilesystemFilesFillingUp
+      annotations:
+        description: Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available inodes left and is filling up fast.
+        summary: Filesystem is predicted to run out of inodes within the next 4 hours.
+      expr: |
+        (
+          node_filesystem_files_free{job="node-exporter",fstype!=""} / node_filesystem_files{job="node-exporter",fstype!=""} * 100 < 20
+        and
+          predict_linear(node_filesystem_files_free{job="node-exporter",fstype!=""}[6h], 4*60*60) < 0
+        and
+          node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
+        )
+      for: 1h
+      labels:
+        severity: critical
+    - alert: NodeFilesystemAlmostOutOfFiles
+      annotations:
+        description: Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available inodes left.
+        summary: Filesystem has less than 5% inodes left.
+      expr: |
+        (
+          node_filesystem_files_free{job="node-exporter",fstype!=""} / node_filesystem_files{job="node-exporter",fstype!=""} * 100 < 5
+        and
+          node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
+        )
+      for: 1h
+      labels:
+        severity: warning
+    - alert: NodeFilesystemAlmostOutOfFiles
+      annotations:
+        description: Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available inodes left.
+        summary: Filesystem has less than 3% inodes left.
+      expr: |
+        (
+          node_filesystem_files_free{job="node-exporter",fstype!=""} / node_filesystem_files{job="node-exporter",fstype!=""} * 100 < 3
+        and
+          node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
+        )
+      for: 1h
+      labels:
+        severity: critical
+    - alert: NodeNetworkReceiveErrs
+      annotations:
+        description: '{{ $labels.instance }} interface {{ $labels.device }} has encountered {{ printf "%.0f" $value }} receive errors in the last two minutes.'
+        summary: Network interface is reporting many receive errors.
+      expr: |
+        increase(node_network_receive_errs_total[2m]) > 10
+      for: 1h
+      labels:
+        severity: warning
+    - alert: NodeNetworkTransmitErrs
+      annotations:
+        description: '{{ $labels.instance }} interface {{ $labels.device }} has encountered {{ printf "%.0f" $value }} transmit errors in the last two minutes.'
+        summary: Network interface is reporting many transmit errors.
+      expr: |
+        increase(node_network_transmit_errs_total[2m]) > 10
+      for: 1h
+      labels:
+        severity: warning
+    - alert: NodeHighNumberConntrackEntriesUsed
+      annotations:
+        description: '{{ $value | humanizePercentage }} of conntrack entries are used.'
+        summary: Number of conntrack are getting close to the limit.
+      expr: |
+        (node_nf_conntrack_entries / node_nf_conntrack_entries_limit) > 0.75
+      labels:
+        severity: warning
+    - alert: NodeClockSkewDetected
+      annotations:
+        message: Clock on {{ $labels.instance }} is out of sync by more than 300s. Ensure NTP is configured correctly on this host.
+        summary: Clock skew detected.
+      expr: |
+        (
+          node_timex_offset_seconds > 0.05
+        and
+          deriv(node_timex_offset_seconds[5m]) >= 0
+        )
+        or
+        (
+          node_timex_offset_seconds < -0.05
+        and
+          deriv(node_timex_offset_seconds[5m]) <= 0
+        )
+      for: 10m
+      labels:
+        severity: warning

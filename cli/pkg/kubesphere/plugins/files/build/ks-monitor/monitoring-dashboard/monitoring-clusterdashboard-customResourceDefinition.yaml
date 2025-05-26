@@ -1,0 +1,466 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: clusterdashboards.monitoring.kubesphere.io
+spec:
+  group: monitoring.kubesphere.io
+  names:
+    kind: ClusterDashboard
+    listKind: ClusterDashboardList
+    plural: clusterdashboards
+    singular: clusterdashboard
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClusterDashboard is the Schema for the culsterdashboards API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DashboardSpec defines the desired state of Dashboard
+            properties:
+              datasource:
+                description: Dashboard datasource
+                type: string
+              description:
+                description: Dashboard description
+                type: string
+              panels:
+                description: Collection of panels. Panel is one of [Row](row.md),
+                  [Singlestat](#singlestat.md) or [Graph](graph.md)
+                items:
+                  description: Supported panel
+                  properties:
+                    bars:
+                      description: A collection of queries Targets []Target `json:"targets,omitempty"`
+                        Display as a bar chart
+                      type: boolean
+                    colors:
+                      description: Set series color
+                      items:
+                        type: string
+                      type: array
+                    decimals:
+                      description: Name of the signlestat panel Title string `json:"title,omitempty"`
+                        Must be `singlestat` Type string `json:"type"` Panel ID Id
+                        int64 `json:"id,omitempty"` A collection of queries Targets
+                        []Target `json:"targets,omitempty"` Limit the decimal numbers
+                      format: int64
+                      type: integer
+                    description:
+                      description: Name of the graph panel Title string `json:"title,omitempty"`
+                        Must be `graph` Type string `json:"type"` Panel ID Id int64
+                        `json:"id,omitempty"` Panel description
+                      type: string
+                    format:
+                      description: Display unit
+                      type: string
+                    id:
+                      description: Panel ID
+                      format: int64
+                      type: integer
+                    lines:
+                      description: Display as a line chart
+                      type: boolean
+                    stack:
+                      description: Display as a stacked chart
+                      type: boolean
+                    targets:
+                      description: A collection of queries Only for panels with `graph`
+                        or `singlestat` type
+                      items:
+                        description: Query editor options
+                        properties:
+                          expr:
+                            description: Input for fetching metrics.
+                            type: string
+                          legendFormat:
+                            description: Legend format for outputs. You can make a
+                              dynamic legend with templating variables.
+                            type: string
+                          refId:
+                            description: Reference ID
+                            format: int64
+                            type: integer
+                          step:
+                            description: Set series time interval
+                            type: string
+                        type: object
+                      type: array
+                    title:
+                      description: Name of the panel
+                      type: string
+                    type:
+                      description: Panel Type, one of `row`, `graph`, `singlestat`
+                      type: string
+                    yaxes:
+                      description: Y-axis options
+                      items:
+                        properties:
+                          decimals:
+                            description: Limit the decimal numbers
+                            format: int64
+                            type: integer
+                          format:
+                            description: Display unit
+                            type: string
+                        type: object
+                      type: array
+                  required:
+                  - type
+                  type: object
+                type: array
+              templating:
+                description: Templating variables
+                items:
+                  description: Templating defines a variable, which can be used as
+                    a placeholder in query
+                  properties:
+                    name:
+                      description: Variable name
+                      type: string
+                    query:
+                      description: Set variable values to be the return result of
+                        the query
+                      type: string
+                  type: object
+                type: array
+              time:
+                description: Time range for display
+                properties:
+                  from:
+                    description: Start time in the format of `^now([+-][0-9]+[smhdwMy])?$`,
+                      eg. `now-1M`. It denotes the end time is set to the last month
+                      since now.
+                    type: string
+                  to:
+                    description: End time in the format of `^now([+-][0-9]+[smhdwMy])?$`,
+                      eg. `now-1M`. It denotes the start time is set to the last month
+                      since now.
+                    type: string
+                type: object
+              title:
+                description: Dashboard title
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: false
+  - name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        description: ClusterDashboard is the Schema for the culsterdashboards API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DashboardSpec defines the desired state of Dashboard
+            properties:
+              annotations:
+                description: Annotations
+                items:
+                  properties:
+                    datasource:
+                      type: string
+                    enable:
+                      type: boolean
+                    expr:
+                      type: string
+                    iconColor:
+                      type: string
+                    iconSize:
+                      type: integer
+                    lineColor:
+                      type: string
+                    name:
+                      type: string
+                    query:
+                      type: string
+                    showLine:
+                      type: boolean
+                    step:
+                      type: string
+                    tagKeys:
+                      type: string
+                    tags:
+                      items:
+                        type: string
+                      type: array
+                    tagsField:
+                      type: string
+                    textField:
+                      type: string
+                    textFormat:
+                      type: string
+                    titleFormat:
+                      type: string
+                    type:
+                      type: string
+                  type: object
+                type: array
+              auto_refresh:
+                type: string
+              description:
+                type: string
+              editable:
+                type: boolean
+              id:
+                type: integer
+              panels:
+                items:
+                  properties:
+                    bars:
+                      description: Display as a bar chart
+                      type: boolean
+                    colors:
+                      description: Set series color
+                      items:
+                        type: string
+                      type: array
+                    content:
+                      type: string
+                    datasource:
+                      description: Datasource
+                      type: string
+                    decimals:
+                      format: int64
+                      type: integer
+                    description:
+                      description: Description
+                      type: string
+                    format:
+                      description: Display unit
+                      type: string
+                    gauge:
+                      description: gauge
+                      properties:
+                        maxValue:
+                          format: int64
+                          type: integer
+                        minValue:
+                          format: int64
+                          type: integer
+                        show:
+                          type: boolean
+                        thresholdLabels:
+                          type: boolean
+                        thresholdMarkers:
+                          type: boolean
+                      type: object
+                    height:
+                      description: Height
+                      type: string
+                    id:
+                      description: Panel ID
+                      format: int64
+                      type: integer
+                    legend:
+                      description: legend
+                      items:
+                        type: string
+                      type: array
+                    lines:
+                      description: Display as a line chart
+                      type: boolean
+                    mode:
+                      type: string
+                    options:
+                      properties:
+                        colorMode:
+                          type: string
+                        content:
+                          type: string
+                        displayMode:
+                          type: string
+                        graphMode:
+                          type: string
+                        justifyMode:
+                          type: string
+                        mode:
+                          type: string
+                        orientation:
+                          type: string
+                        textMode:
+                          type: string
+                      type: object
+                    scroll:
+                      type: boolean
+                    sort:
+                      properties:
+                        col:
+                          type: integer
+                        desc:
+                          type: boolean
+                      type: object
+                    sparkline:
+                      description: 'spark line: full or bottom'
+                      type: string
+                    stack:
+                      description: Display as a stacked chart
+                      type: boolean
+                    targets:
+                      description: A collection of queries
+                      items:
+                        description: Query editor options Referers to https://pkg.go.dev/github.com/grafana-tools/sdk#Target
+                        properties:
+                          expr:
+                            description: 'only support prometheus,and the corresponding
+                              fields are as follows: Input for fetching metrics.'
+                            type: string
+                          legendFormat:
+                            description: Legend format for outputs. You can make a
+                              dynamic legend with templating variables.
+                            type: string
+                          refId:
+                            description: Reference ID
+                            format: int64
+                            type: integer
+                          step:
+                            description: Set series time interval
+                            type: string
+                        type: object
+                      type: array
+                    title:
+                      description: Name of the  panel
+                      type: string
+                    type:
+                      description: Type of the  panel
+                      type: string
+                    valueName:
+                      description: value name
+                      type: string
+                    xaxis:
+                      properties:
+                        decimals:
+                          description: Limit the decimal numbers
+                          format: int64
+                          type: integer
+                        format:
+                          description: Display unit
+                          type: string
+                      type: object
+                    yaxes:
+                      description: Y-axis options
+                      items:
+                        properties:
+                          decimals:
+                            description: Limit the decimal numbers
+                            format: int64
+                            type: integer
+                          format:
+                            description: Display unit
+                            type: string
+                        type: object
+                      type: array
+                  type: object
+                type: array
+              shared_crosshair:
+                type: boolean
+              tags:
+                items:
+                  type: string
+                type: array
+              templatings:
+                description: // Templating variables
+                items:
+                  properties:
+                    allFormat:
+                      type: string
+                    allValue:
+                      type: string
+                    auto:
+                      type: boolean
+                    auto_count:
+                      type: integer
+                    datasource:
+                      type: string
+                    hide:
+                      type: integer
+                    includeAll:
+                      type: boolean
+                    label:
+                      type: string
+                    multi:
+                      type: boolean
+                    multiFormat:
+                      type: string
+                    name:
+                      type: string
+                    options:
+                      items:
+                        properties:
+                          selected:
+                            type: boolean
+                          text:
+                            type: string
+                          value:
+                            type: string
+                        type: object
+                      type: array
+                    query:
+                      type: string
+                    regex:
+                      type: string
+                    sort:
+                      type: integer
+                    type:
+                      type: string
+                  type: object
+                type: array
+              time:
+                description: Time range
+                properties:
+                  from:
+                    description: Start time in the format of `^now([+-][0-9]+[smhdwMy])?$`,
+                      eg. `now-1M`. It denotes the end time is set to the last month
+                      since now.
+                    type: string
+                  to:
+                    description: End time in the format of `^now([+-][0-9]+[smhdwMy])?$`,
+                      eg. `now-1M`. It denotes the start time is set to the last month
+                      since now.
+                    type: string
+                type: object
+              timezone:
+                type: string
+              title:
+                type: string
+              uid:
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

@@ -74,13 +74,12 @@ if [ -z ${cdn_url} ]; then
     cdn_url="https://dc3p1870nn3cj.cloudfront.net"
 fi
 
-CLI_VERSION="0.2.36"
-CLI_FILE="olares-cli-v${CLI_VERSION}_linux_${ARCH}.tar.gz"
+CLI_FILE="olares-cli-v${VERSION}_linux_${ARCH}.tar.gz"
 if [[ x"$os_type" == x"Darwin" ]]; then
-    CLI_FILE="olares-cli-v${CLI_VERSION}_darwin_${ARCH}.tar.gz"
+    CLI_FILE="olares-cli-v${VERSION}_darwin_${ARCH}.tar.gz"
 fi
 
-if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$CLI_VERSION" ]]; then
+if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$VERSION" ]]; then
     INSTALL_OLARES_CLI=$(which olares-cli)
     echo "olares-cli already installed and is the expected version"
     echo ""
@@ -97,7 +96,7 @@ else
             echo "error: failed to download Olares installer"
             exit 1
         else
-            echo "Olares installer ${CLI_VERSION} download complete!"
+            echo "Olares installer ${VERSION} download complete!"
             echo ""
         fi
     fi
