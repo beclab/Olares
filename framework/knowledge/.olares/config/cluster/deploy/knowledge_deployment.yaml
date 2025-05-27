@@ -1,5 +1,6 @@
-{{- $share_secret := (lookup "v1" "Secret" "os-system" "knowledge-share-secrets") -}}
+{{ $dbbackup_rootpath := printf "%s%s" .Values.rootPath "/rootfs/middleware-backup" }}
 
+{{- $share_secret := (lookup "v1" "Secret" "os-system" "knowledge-share-secrets") -}}
 {{- $redis_password := "" -}}
 {{ if $share_secret -}}
 {{ $redis_password = (index $share_secret "data" "redis_password") }}
@@ -177,11 +178,11 @@ spec:
             value: os_system_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.12.5"
+        image: "beclab/knowledge-base-api:v0.12.6"
         imagePullPolicy: IfNotPresent
         securityContext:
-          allowPrivilegeEscalation: false
-          runAsUser: 1000
+          runAsUser: 0
+          runAsNonRoot: false
         ports:
         - containerPort: 3010
         env:
@@ -223,9 +224,13 @@ spec:
           value: terminus.os-system.download_status
         - name: SOCKET_URL
           value: 'http://localhost:40010'
+        - name: BACKUP_PATH
+          value: /backup/
         volumeMounts:
           - name: userspace-dir
             mountPath: /data
+          - name: pgbackup
+            mountPath: /backup
         resources:
           requests:
             cpu: 20m
@@ -352,6 +357,10 @@ spec:
       - name: cache-dir
         hostPath:
           path: '{{ .Values.rootPath }}/userdata/Cache/rss'
+          type: DirectoryOrCreate
+      - name: pgbackup
+        hostPath:
+          path: '{{ $dbbackup_rootpath }}/pg_backup'
           type: DirectoryOrCreate
       - name: terminus-sidecar-config
         configMap:
