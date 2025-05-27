@@ -1,3 +1,48 @@
+{{- $namespace := printf "%s%s" "user-system-" .Values.bfl.username -}}
+{{- $zinc_files_secret := (lookup "v1" "Secret" $namespace "zinc-files-secrets") -}}
+{{- $user_service_secret := (lookup "v1" "Secret" $namespace "user-service-secrets") -}}
+
+{{- $password := "" -}}
+{{ if $zinc_files_secret -}}
+{{ $password = (index $zinc_files_secret "data" "password") }}
+{{ else -}}
+{{ $password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+{{- $redis_password := "" -}}
+{{ if $zinc_files_secret -}}
+{{ $redis_password = (index $zinc_files_secret "data" "redis_password") }}
+{{ else -}}
+{{ $redis_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+{{- $redis_password_data := "" -}}
+{{ $redis_password_data = $redis_password | b64dec }}
+
+{{- $pg_password := "" -}}
+{{ if $zinc_files_secret -}}
+{{ $pg_password = (index $zinc_files_secret "data" "pg_password") }}
+{{ else -}}
+{{ $pg_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+{{- $files_frontend_nats_secret := (lookup "v1" "Secret" $namespace "files-frontend-nats-secrets") -}}
+{{- $files_frontend_nats_password := "" -}}
+{{ if $files_frontend_nats_secret -}}
+{{ $files_frontend_nats_password = (index $files_frontend_nats_secret "data" "files_frontend_nats_password") }}
+{{ else -}}
+{{ $files_frontend_nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+
+{{- $user_service_pg_password := "" -}}
+{{ if $user_service_secret -}}
+{{ $user_service_pg_password = (index $user_service_secret "data" "pg_password") }}
+{{ else -}}
+{{ $user_service_pg_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -12,8 +57,6 @@ spec:
       name: dashboard
       port: 80
       targetPort: 81
-
-
 ---
 apiVersion: v1
 kind: Service
@@ -122,6 +165,64 @@ spec:
       port: 8080
       targetPort: 87
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: files-fe-service
+  namespace: user-space-{{ .Values.bfl.username }}
+spec:
+  selector:
+    app: system-frontend
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: files
+      port: 80
+      targetPort: 88
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: system-frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 89
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: appstore-fe-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: system-frontend
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: appstore
+      port: 80
+      targetPort: 90
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: edge-desktop
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: system-frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 91
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -134,11 +235,11 @@ metadata:
     applications.app.bytetrade.io/group: 'true'
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
-    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","wise":"https://file.bttcdn.com/appstore/rss/icon.png","headscale": "https://file.bttcdn.com/appstore/headscale/icon.png","settings": "https://file.bttcdn.com/appstore/settings/icon.png","studio":"https://file.bttcdn.com/appstore/devbox/icon.png"}'
-    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","wise":"Wise","headscale":"Headscale","settings":"Settings","studio":"Studio"}'
-    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","wise":"0.0.1","headscale":"0.0.1","settings":"0.0.1","studio":"0.0.1"}'
+    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","wise":"https://file.bttcdn.com/appstore/rss/icon.png","headscale": "https://file.bttcdn.com/appstore/headscale/icon.png","settings": "https://file.bttcdn.com/appstore/settings/icon.png","studio":"https://file.bttcdn.com/appstore/devbox/icon.png","files":"https://file.bttcdn.com/appstore/files/icon.png","vault":"https://file.bttcdn.com/appstore/vault/icon.png","market":"https://file.bttcdn.com/appstore/appstore/icon.png"}'
+    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","wise":"Wise","headscale":"Headscale","settings":"Settings","studio":"Studio","files":"Files","vault":"Vault","market":"Market"}'
+    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","wise":"0.0.1","headscale":"0.0.1","settings":"0.0.1","studio":"0.0.1","files":"0.0.1","vault":"0.0.1","market":"0.0.1"}'
     applications.app.bytetrade.io/policies: '{"dashboard":{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}}'
-    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"wise":[{"name":"wise", "host":"wise-svc", "port":80,"title":"Wise","windowPushState":true}],"headscale":[{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true}],"settings":[{"name":"settings", "host":"settings-service", "port":80,"title":"Settings"}],"studio":[{"name":"studio","host":"studio-svc","port":8080,"title":"Studio","openMethod":"window"}]}'
+    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"wise":[{"name":"wise", "host":"wise-svc", "port":80,"title":"Wise","windowPushState":true}],"headscale":[{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true}],"settings":[{"name":"settings", "host":"settings-service", "port":80,"title":"Settings"}],"studio":[{"name":"studio","host":"studio-svc","port":8080,"title":"Studio","openMethod":"window"}],"files":[{"name":"files", "host":"files-fe-service", "port":80,"title":"Files","windowPushState":true}],"vault":[{"name":"vault", "host":"vault-service", "port":80,"title":"Vault","windowPushState":true}],"market":[{"name":"appstore", "host":"appstore-fe-service", "port":80,"title":"Market","windowPushState":true}]}'
 spec:
   replicas: 1
   selector:
@@ -151,7 +252,7 @@ spec:
         io.bytetrade.app: "true"
       annotations:
         instrumentation.opentelemetry.io/inject-nodejs: "olares-instrumentation"
-        instrumentation.opentelemetry.io/nodejs-container-names: "settings-server"    
+        instrumentation.opentelemetry.io/nodejs-container-names: "user-service"    
         instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
         instrumentation.opentelemetry.io/inject-nginx-container-names: "system-frontend"    
     spec:
@@ -159,7 +260,7 @@ spec:
       initContainers:
         - args:
             - -it
-            - authelia-backend.os-system:9091,infisical-service:80,system-server.user-system-{{ .Values.bfl.username }}:80
+            - authelia-backend.os-system:9091,infisical-service:80,system-server.user-system-{{ .Values.bfl.username }}:80,nats.user-system-{{ .Values.bfl.username }}:4222
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-auth
@@ -279,6 +380,90 @@ spec:
           volumeMounts:
             - mountPath: /www
               name: www-dir
+        - name: init-files-data
+          image: busybox:1.28
+          securityContext:
+            privileged: true
+            runAsNonRoot: false
+            runAsUser: 0
+          volumeMounts:
+            - name: fb-data
+              mountPath: /appdata
+            - name: uploads-temp
+              mountPath: /uploadstemp
+          command:
+          - sh
+          - -c
+          - |
+            chown -R 1000:1000 /uploadstemp && \
+            chown -R 1000:1000 /appdata 
+        - name: init-container
+          image: 'postgres:16.0-alpine3.18'
+          command:
+            - sh
+            - '-c'
+            - >-
+              echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
+          env:
+            - name: PGHOST
+              value: citus-master-svc.user-system-{{ .Values.bfl.username }}
+            - name: PGPORT
+              value: "5432"
+            - name: PGUSER
+              value: cloud_drive_integration_{{ .Values.bfl.username }}
+            - name: PGPASSWORD
+              value: "{{ $pg_password | b64dec }}"
+            - name: PGDB
+              value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
+        - name: files-frontend-init
+          image: beclab/files-frontend:v1.3.61
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /www/files
+              cp -r /app/* /www/files
+          volumeMounts:
+            - mountPath: /www
+              name: www-dir
+        - name: vault-frontend-init
+          image: beclab/vault-frontend:v1.3.55
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /www/vault
+              cp -r /app/* /www/vault
+          volumeMounts:
+            - mountPath: /www
+              name: www-dir
+        - name: market-frontend-init
+          image: beclab/market-frontend:v0.3.12
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /www/market
+              cp -r /app/* /www/market
+          volumeMounts:
+            - mountPath: /www
+              name: www-dir
+        - name: edge-desktop-init
+          image: beclab/desktop:v0.2.59
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /www/desktop
+              cp -r /app/* /www/desktop
+          volumeMounts:
+            - mountPath: /www
+              name: www-dir
+       
       containers:
         - name: terminus-envoy-sidecar
           image: bytetrade/envoy:v1.25.11
@@ -314,6 +499,10 @@ spec:
             - containerPort: 84
             - containerPort: 85
             - containerPort: 86
+            - containerPort: 88
+            - containerPort: 89
+            - containerPort: 90
+            - containerPort: 91
             - containerPort: 8090
           command:
             - /bin/sh
@@ -354,6 +543,18 @@ spec:
             - name: system-frontend-nginx-config
               mountPath: /etc/nginx/conf.d/studio.conf
               subPath: studio.conf
+            - name: system-frontend-nginx-config
+              mountPath: /etc/nginx/conf.d/files.conf
+              subPath: files.conf
+            - name: system-frontend-nginx-config
+              mountPath: /etc/nginx/conf.d/vault.conf
+              subPath: vault.conf
+            - name: system-frontend-nginx-config
+              mountPath: /etc/nginx/conf.d/market.conf
+              subPath: market.conf
+            - name: system-frontend-nginx-config
+              mountPath: /etc/nginx/conf.d/desktop.conf
+              subPath: desktop.conf
           env:
             - name: POD_UID
               valueFrom:
@@ -371,6 +572,18 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+            - name: NATS_HOST
+              value: nats.user-system-{{ .Values.bfl.username }}
+            - name: NATS_PORT
+              value: '4222'
+            - name: NATS_USERNAME
+              value: user-system-{{ .Values.bfl.username }}-files-frontend
+            - name: NATS_PASSWORD
+              value: {{ $files_frontend_nats_password | b64dec }}
+            - name: NATS_SUBJECT
+              value: terminus.os-system.files-notify
+            - name: apiServerURL
+              value: http://bfl.{{ .Release.Namespace }}:8080
         - name: terminus-ws-sidecar
           image: 'beclab/ws-gateway:v1.0.5'
           imagePullPolicy: IfNotPresent
@@ -384,8 +597,8 @@ spec:
           resources: {}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
-        - name: settings-server
-          image: beclab/settings-server:v0.2.23
+        - name: user-service
+          image: beclab/user-service:v0.0.5
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -421,6 +634,60 @@ spec:
             # value: none / nvidia / nvshare / virtaitech
             - name: GPU
               value: {{ .Values.gpu }}
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: pg_password
+                  name: user-service-secrets
+            - name: DATABASE_URL
+              value: postgres://user_service_{{ .Values.bfl.username }}:$(DATABASE_PASSWORD)@citus-master-svc.user-system-{{ .Values.bfl.username }}/user_space_{{ .Values.bfl.username }}_user_service?sslmode=disable
+        - name: drive-server
+          image: beclab/drive:v0.0.72
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: OS_SYSTEM_SERVER
+              value: system-server.user-system-{{ .Values.bfl.username }}
+            - name: DATABASE_URL
+              value: postgres://cloud_drive_integration_{{ .Values.bfl.username }}:{{ $pg_password | b64dec }}@citus-master-svc.user-system-{{ .Values.bfl.username }}:5432/user_space_{{ .Values.bfl.username }}_cloud_drive_integration
+            - name: REDIS_URL
+              value: redis://:{{ $redis_password | b64dec }}@redis-cluster-proxy.user-system-{{ .Values.bfl.username }}:6379/0
+            - name: TASK_EXECUTOR_MAX_THREADS
+              value: '6'
+          ports: 
+            - containerPort: 8181
+          volumeMounts:
+            - name: upload-data
+              mountPath: /data/Home
+            - name: upload-appdata
+              mountPath: /appdata/
+            - name: userspace-app-dir
+              mountPath: /data/Application
+            - name: data-dir
+              mountPath: /data
+
+        - name: task-executor
+          image: beclab/driveexecutor:v0.0.72
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: OS_SYSTEM_SERVER
+              value: system-server.user-system-{{ .Values.bfl.username }}
+            - name: DATABASE_URL
+              value: postgres://cloud_drive_integration_{{ .Values.bfl.username }}:{{ $pg_password | b64dec }}@citus-master-svc.user-system-{{ .Values.bfl.username }}:5432/user_space_{{ .Values.bfl.username }}_cloud_drive_integration
+            - name: REDIS_URL
+              value: redis://:{{ $redis_password | b64dec }}@redis-cluster-proxy.user-system-{{ .Values.bfl.username }}:6379/0
+            - name: TASK_EXECUTOR_MAX_THREADS
+              value: '6'
+          ports: 
+            - containerPort: 8181
+          volumeMounts:
+            - name: upload-data
+              mountPath: /data/Home
+            - name: upload-appdata
+              mountPath: /appdata/
+            - name: userspace-app-dir
+              mountPath: /data/Application
+            - name: data-dir
+              mountPath: /data
       volumes:
         - name: userspace-dir
           hostPath:
@@ -438,6 +705,32 @@ spec:
           hostPath:
             type: Directory
             path: '{{ .Values.userspace.userData }}'
+        
+        - name: uploads-temp
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appCache }}/files/uploadstemp'
+        - name: data-dir
+          hostPath:
+            type: Directory
+            path: '{{ .Values.rootPath }}/rootfs/userspace'
+        - name: userspace-app-dir
+          hostPath:
+            type: Directory
+            path: '{{ .Values.userspace.appData }}'
+        - name: fb-data
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appCache}}/files'
+        - name: upload-data
+          hostPath:
+            type: Directory
+            path: '{{ .Values.userspace.userData }}'
+        - name: upload-appdata
+          hostPath:
+            type: Directory
+            path: '{{ .Values.userspace.appCache}}'
+            
         - name: system-frontend-nginx-config
           configMap:
             name: system-frontend-nginx-config
@@ -458,8 +751,346 @@ spec:
                 path: settings.conf
               - key: studio.conf
                 path: studio.conf
+              - key: files.conf
+                path: files.conf
+              - key: vault.conf
+                path: vault.conf
+              - key: market.conf
+                path: market.conf
+              - key: desktop.conf
+                path: desktop.conf
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloud-drive-integration-secrets
+  namespace: user-system-{{ .Values.bfl.username }}
+type: Opaque
+data:
+  pg_password: {{ $pg_password }}
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: cloud-drive-integration-pg
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: cloud-drive-integration
+  appNamespace: {{ .Release.Namespace }}
+  middleware: postgres
+  postgreSQL:
+    user: cloud_drive_integration_{{ .Values.bfl.username }}
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: pg_password
+          name: cloud-drive-integration-secrets
+    databases:
+    - name: cloud-drive-integration
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-drive-integration-secrets-auth
+  namespace: {{ .Release.Namespace }}
+data:
+  redis_password: {{ $redis_password_data }}
+  redis_addr: redis-cluster-proxy.user-system-{{ .Values.bfl.username }}:6379
+  redis_host: redis-cluster-proxy.user-system-{{ .Values.bfl.username }}
+  redis_port: '6379'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-drive-integration-userspace-data
+  namespace: {{ .Release.Namespace }}
+data:
+  appData: "{{ .Values.userspace.appData }}"
+  appCache: "{{ .Values.userspace.appCache }}"
+  username: "{{ .Values.bfl.username }}"
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ProviderRegistry
+metadata:
+  name: files-provider
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  dataType: files
+  deployment: files
+  description: files provider
+  endpoint: files-service.{{ .Release.Namespace }}
+  group: service.files
+  kind: provider
+  namespace: {{ .Release.Namespace }}
+  opApis:
+    - name: Query
+      uri: /provider/query_file
+    - name: GetSearchFolderStatus
+      uri: /provider/get_search_folder_status
+    - name: UpdateSearchFolderPaths
+      uri: /provider/update_search_folder_paths
+    - name: GetDatasetFolderStatus
+      uri: /provider/get_dataset_folder_status
+    - name: UpdateDatasetFolderPaths
+      uri: /provider/update_dataset_folder_paths
+  version: v1
+status:
+  state: active
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: zinc-files-secrets
+  namespace: user-system-{{ .Values.bfl.username }}
+type: Opaque
+data:
+  password: {{ $password }}
+  redis_password: {{ $redis_password }}
+  pg_password: {{ $pg_password }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: files-frontend-nats-secrets
+  namespace: user-system-{{ .Values.bfl.username }}
+data:
+  files_frontend_nats_password: {{ $files_frontend_nats_password }}
+type: Opaque
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: zinc-files-redis
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: files
+  appNamespace: user-space-{{ .Values.bfl.username }}
+  middleware: redis
+  redis:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: redis_password
+          name: zinc-files-secrets
+    namespace: zinc-files
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: files-frontend-nat
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: files-frontend
+  appNamespace: user-space-{{ .Values.bfl.username }}
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: files_frontend_nats_password
+          name: files-frontend-nats-secrets
+    refs:
+      - appName: files-server
+        appNamespace: os-system
+        subjects:
+          - name: files-notify
+            perm:
+              - pub
+              - sub
+    user: user-system-{{ .Values.bfl.username }}-files-frontend
+---
+apiVersion: v1
+data:
+  envoy.yaml: |
+    admin:
+      access_log_path: "/dev/stdout"
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 15000
+    static_resources:
+      listeners:
+        - name: listener_0
+          address:
+            socket_address:
+              address: 0.0.0.0
+              port_value: 15003
+          listener_filters:
+            - name: envoy.filters.listener.original_dst
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
+          filter_chains:
+            - filters:
+                - name: envoy.filters.network.http_connection_manager
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                    stat_prefix: desktop_http
+                    upgrade_configs:
+                      - upgrade_type: websocket
+                      - upgrade_type: tailscale-control-protocol
+                    skip_xff_append: false
+                    max_request_headers_kb: 500
+                    codec_type: AUTO
+                    route_config:
+                      name: local_route
+                      virtual_hosts:
+                        - name: service
+                          domains: ["*"]
+                          routes:
+                            - match:
+                                prefix: "/upload"
+                              route:
+                                cluster: upload_original_dst
+                                timeout: 1800s
+                                idle_timeout: 1800s
+                            - match:
+                                prefix: "/"
+                              route:
+                                cluster: original_dst
+                                timeout: 1800s
+                                idle_timeout: 1800s
+                    http_protocol_options:
+                      accept_http_10: true
+                    http_filters:
+                      - name: envoy.filters.http.ext_authz
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+                          http_service:
+                            path_prefix: '/api/verify/'
+                            server_uri:
+                              uri: authelia-backend.os-system:9091
+                              cluster: authelia
+                              timeout: 2s
+                            authorization_request:
+                              allowed_headers:
+                                patterns:
+                                  - exact: accept
+                                  - exact: cookie
+                                  - exact: proxy-authorization
+                                  - prefix: x-unauth-
+                                  - exact: x-authorization
+                                  - exact: x-bfl-user
+                                  - exact: x-real-ip
+                                  - exact: terminus-nonce
+                              headers_to_add:
+                                - key: X-Forwarded-Method
+                                  value: '%REQ(:METHOD)%'
+                                - key: X-Forwarded-Proto
+                                  value: '%REQ(:SCHEME)%'
+                                - key: X-Forwarded-Host
+                                  value: '%REQ(:AUTHORITY)%'
+                                - key: X-Forwarded-Uri
+                                  value: '%REQ(:PATH)%'
+                                - key: X-Forwarded-For
+                                  value: '%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%'
+                            authorization_response:
+                              allowed_upstream_headers:
+                                patterns:
+                                  - exact: authorization
+                                  - exact: proxy-authorization
+                                  - prefix: remote-
+                                  - prefix: authelia-
+                              allowed_client_headers:
+                                patterns:
+                                  - exact: set-cookie
+                              allowed_client_headers_on_success:
+                                patterns:
+                                  - exact: set-cookie
+                          failure_mode_allow: false
+                      - name: envoy.filters.http.router
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+        - name: listener_image
+          address:
+            socket_address:
+              address: 127.0.0.1
+              port_value: 15080
+          filter_chains:
+            - filters:
+                - name: envoy.filters.network.http_connection_manager
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                    stat_prefix: tapr_http
+                    http_protocol_options:
+                      accept_http_10: true
+                    upgrade_configs:
+                      - upgrade_type: websocket
+                    skip_xff_append: false
+                    codec_type: AUTO
+                    route_config:
+                      name: local_route
+                      virtual_hosts:
+                        - name: service
+                          domains: ["*"]
+                          routes:
+                            - match:
+                                prefix: "/images/upload"
+                              route:
+                                cluster: images
+                    http_filters:
+                      - name: envoy.filters.http.router
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
 
+      clusters:
+        - name: original_dst
+          connect_timeout: 120s
+          type: ORIGINAL_DST
+          lb_policy: CLUSTER_PROVIDED
+          common_http_protocol_options:
+            idle_timeout: 10s
+        - name: upload_original_dst
+          connect_timeout: 5000s
+          type: LOGICAL_DNS
+          dns_lookup_family: V4_ONLY
+          dns_refresh_rate: 600s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: upload_original_dst
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: files-service.os-system
+                          port_value: 80
+        - name: authelia
+          connect_timeout: 2s
+          type: LOGICAL_DNS
+          dns_lookup_family: V4_ONLY
+          dns_refresh_rate: 600s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: authelia
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: authelia-backend.os-system
+                          port_value: 9091
+        - name: images
+          connect_timeout: 5s
+          type: LOGICAL_DNS
+          dns_lookup_family: V4_ONLY
+          dns_refresh_rate: 600s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: images
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: tapr-images-svc.user-system-{{ .Values.bfl.username }}
+                          port_value: 8080
+kind: ConfigMap
+metadata:
+  name: sidecar-upload-configs
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: sys.bytetrade.io/v1alpha1
 kind: ApplicationPermission
@@ -738,6 +1369,623 @@ spec:
       uri: /api/cookie/retrieve
 status:
   state: active
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: user-service-secrets
+  namespace: user-system-{{ .Values.bfl.username }}
+type: Opaque
+data:
+  pg_password: {{ $user_service_pg_password }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: user-service-secrets
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  pg_password: {{ $user_service_pg_password }}
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: user-service-pg
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: user-service
+  appNamespace: user-space-{{ .Values.bfl.username }}
+  middleware: postgres
+  postgreSQL:
+    user: user_service_{{ .Values.bfl.username }}
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: pg_password
+          name: user-service-secrets
+    databases:
+    - name: user-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-server
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ExternalName
+  externalName: vault-server.os-system.svc.cluster.local
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: internal-kubectl
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Namespace }}:edge-desktop-rb
+subjects:
+  - kind: ServiceAccount
+    namespace: {{ .Release.Namespace }}
+    name: internal-kubectl
+roleRef:
+  # kind: Role
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ProviderRegistry
+metadata:
+  name: app-event-watcher
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  callbacks:
+  - filters:
+      type:
+      - app-installation-event
+    op: Create
+    uri: /server/app_installation_event
+  - filters:
+      type:
+        - entrance-state-event
+    op: Create
+    uri: /server/entrance_state_event
+  - filters:
+      type:
+      - settings-event
+    op: Create
+    uri: /server/app_installation_event
+  - filters:
+      type:
+      - system-upgrade-event
+    op: Create
+    uri: /server/system_upgrade_event
+  dataType: event
+  deployment: edge-desktop
+  description: desktop event watcher
+  endpoint: edge-desktop.{{ .Release.Namespace }}
+  group: message-disptahcer.system-server
+  kind: watcher
+  namespace: {{ .Release.Namespace }}
+  version: v1
+status:
+  state: active
+
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ProviderRegistry
+metadata:
+  name: intent-api
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  dataType: legacy_api
+  deployment: edge-desktop
+  description: edge-desktop legacy api
+  endpoint: edge-desktop.{{ .Release.Namespace }}
+  group: api.intent
+  kind: provider
+  namespace: {{ .Release.Namespace }}
+  version: v1
+  opApis:
+  - name: POST
+    uri: /server/intent/send
+status:
+  state: active
+
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ProviderRegistry
+metadata:
+  name: intent-api-v2
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  dataType: legacy_api
+  deployment: edge-desktop
+  description: edge-desktop legacy api
+  endpoint: edge-desktop.{{ .Release.Namespace }}
+  group: api.intent
+  kind: provider
+  namespace: {{ .Release.Namespace }}
+  version: v2
+  opApis:
+    - name: POST
+      uri: /server/intent/send
+status:
+  state: active
+
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ProviderRegistry
+metadata:
+  name: destktop-ai-provider
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  dataType: ai_message
+  deployment: edge-desktop
+  description: search ai callback
+  endpoint: edge-desktop.{{ .Release.Namespace }}
+  group: service.desktop
+  kind: provider
+  namespace: {{ .Release.Namespace }}
+  opApis:
+  - name: AIMessage
+    uri: /server/ai_message
+  version: v1
+status:
+  state: active
+
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ProviderRegistry
+metadata:
+  name: desktop-notification
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  dataType: notification
+  deployment: edge-desktop
+  description: send notification to desktop client
+  endpoint: edge-desktop.{{ .Release.Namespace }}
+  group: service.desktop
+  kind: provider
+  namespace: {{ .Release.Namespace }}
+  opApis:
+  - name: Create
+    uri: /notification/create
+  - name: Query
+    uri: /notification/query
+  version: v1
+status:
+  state: active
+
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ApplicationPermission
+metadata:
+  name: desktop
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: desktop
+  appid: desktop
+  key: {{ .Values.os.desktop.appKey }}
+  secret: {{ .Values.os.desktop.appSecret }}
+  permissions:
+  - dataType: files
+    group: service.files
+    ops:
+    - Query
+    version: v1
+  - dataType: datastore
+    group: service.bfl
+    ops:
+    - GetKey
+    - GetKeyPrefix
+    - SetKey
+    - DeleteKey
+    version: v1
+  - dataType: app
+    group: service.bfl
+    ops:
+    - UserApps
+    version: v1
+  - dataType: app
+    group: service.appstore
+    ops:
+    - UninstallDevApp
+    version: v1
+status:
+  state: active
+
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ProviderRegistry
+metadata:
+  name: desktop-config
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  dataType: config
+  deployment: edge-desktop
+  description: Set Desktop Config
+  endpoint: edge-desktop.{{ .Release.Namespace }}
+  group: service.desktop
+  kind: provider
+  namespace: {{ .Release.Namespace }}
+  opApis:
+  - name: Update
+    uri: /server/updateDesktopConfig
+  version: v1
+status:
+  state: active
+
+---
+apiVersion: v1
+data:
+  envoy.yaml: |
+    admin:
+      access_log_path: "/dev/stdout"
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 15000
+    static_resources:
+      listeners:
+      - name: listener_0
+        address:
+          socket_address:
+            address: 0.0.0.0
+            port_value: 15003
+        listener_filters:
+          - name: envoy.filters.listener.original_dst
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
+        filter_chains:
+          - filters:
+              - name: envoy.filters.network.http_connection_manager
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                  stat_prefix: desktop_http
+                  upgrade_configs:
+                  - upgrade_type: websocket      
+                  - upgrade_type: tailscale-control-protocol            
+                  skip_xff_append: false
+                  max_request_headers_kb: 500
+                  codec_type: AUTO
+                  route_config:
+                    name: local_route
+                    virtual_hosts:
+                      - name: service
+                        domains: ["*"]
+                        routes:
+                          - match:
+                              prefix: "/"
+                            route:
+                              cluster: original_dst
+                              timeout: 180s
+                  http_protocol_options:
+                    accept_http_10: true
+                  http_filters:
+                  - name: envoy.filters.http.ext_authz
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+                      http_service:
+                        path_prefix: '/api/verify/'
+                        server_uri:
+                          uri: authelia-backend.os-system:9091
+                          cluster: authelia
+                          timeout: 2s
+                        authorization_request:
+                          allowed_headers:
+                            patterns:
+                              - exact: accept
+                              - exact: cookie
+                              - exact: proxy-authorization
+                              - prefix: x-unauth-
+                              - exact: x-authorization
+                              - exact: x-bfl-user
+                              - exact: x-real-ip
+                              - exact: terminus-nonce
+                          headers_to_add:
+                            - key: X-Forwarded-Method
+                              value: '%REQ(:METHOD)%'
+                            - key: X-Forwarded-Proto
+                              value: '%REQ(:SCHEME)%'
+                            - key: X-Forwarded-Host
+                              value: '%REQ(:AUTHORITY)%'
+                            - key: X-Forwarded-Uri
+                              value: '%REQ(:PATH)%'
+                            - key: X-Forwarded-For
+                              value: '%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%'
+                        authorization_response:
+                          allowed_upstream_headers:
+                            patterns:
+                              - exact: authorization
+                              - exact: proxy-authorization
+                              - prefix: remote-
+                              - prefix: authelia-
+                          allowed_client_headers:
+                            patterns:
+                              - exact: set-cookie
+                          allowed_client_headers_on_success:
+                            patterns:
+                              - exact: set-cookie
+                      failure_mode_allow: false                      
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+      - name: listener_image
+        address:
+          socket_address:
+            address: 127.0.0.1
+            port_value: 15080
+        filter_chains:
+          - filters:
+              - name: envoy.filters.network.http_connection_manager
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                  stat_prefix: tapr_http
+                  http_protocol_options:
+                    accept_http_10: true
+                  upgrade_configs:
+                  - upgrade_type: websocket                  
+                  skip_xff_append: false
+                  codec_type: AUTO
+                  route_config:
+                    name: local_route
+                    virtual_hosts:
+                      - name: service
+                        domains: ["*"]
+                        routes:
+                          - match:
+                              prefix: "/images/upload"
+                            route:
+                              cluster: images
+                  http_protocol_options:
+                    accept_http_10: true
+                  http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        
+        
+      clusters:
+      - name: original_dst
+        connect_timeout: 120s
+        type: ORIGINAL_DST
+        lb_policy: CLUSTER_PROVIDED
+        common_http_protocol_options:
+          idle_timeout: 10s
+      - name: authelia
+        connect_timeout: 2s
+        type: LOGICAL_DNS
+        dns_lookup_family: V4_ONLY
+        dns_refresh_rate: 600s
+        lb_policy: ROUND_ROBIN
+        load_assignment:
+          cluster_name: authelia
+          endpoints:
+            - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: authelia-backend.os-system
+                        port_value: 9091
+      - name: images
+        connect_timeout: 5s
+        type: LOGICAL_DNS
+        dns_lookup_family: V4_ONLY
+        dns_refresh_rate: 600s
+        lb_policy: ROUND_ROBIN
+        load_assignment:
+          cluster_name: images
+          endpoints:
+            - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: tapr-images-svc.user-system-{{ .Values.bfl.username }}
+                        port_value: 8080
+kind: ConfigMap
+metadata:
+  name: sidecar-configs
+  namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: v1
+data:
+  envoy.yaml: |
+    admin:
+      access_log_path: "/dev/stdout"
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 15000
+    static_resources:
+      listeners:
+      - name: listener_0
+        address:
+          socket_address:
+            address: 0.0.0.0
+            port_value: 15003
+        listener_filters:
+          - name: envoy.filters.listener.original_dst
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
+        filter_chains:
+          - filters:
+              - name: envoy.filters.network.http_connection_manager
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                  stat_prefix: desktop_http
+                  upgrade_configs:
+                  - upgrade_type: websocket      
+                  - upgrade_type: tailscale-control-protocol            
+                  skip_xff_append: false
+                  max_request_headers_kb: 500
+                  codec_type: AUTO
+                  route_config:
+                    name: local_route
+                    virtual_hosts:
+                      - name: service
+                        domains: ["*"]
+                        routes:
+                          - match:
+                              prefix: "/ws"
+                            route:
+                              cluster: ws_original_dst
+                          - match:
+                              prefix: "/"
+                            route:
+                              cluster: original_dst
+                              timeout: 180s
+                  http_protocol_options:
+                    accept_http_10: true
+                  http_filters:
+                  - name: envoy.filters.http.ext_authz
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+                      http_service:
+                        path_prefix: '/api/verify/'
+                        server_uri:
+                          uri: authelia-backend.os-system:9091
+                          cluster: authelia
+                          timeout: 2s
+                        authorization_request:
+                          allowed_headers:
+                            patterns:
+                              - exact: accept
+                              - exact: cookie
+                              - exact: proxy-authorization
+                              - prefix: x-unauth-
+                              - exact: x-authorization
+                              - exact: x-bfl-user
+                              - exact: x-real-ip
+                              - exact: terminus-nonce
+                          headers_to_add:
+                            - key: X-Forwarded-Method
+                              value: '%REQ(:METHOD)%'
+                            - key: X-Forwarded-Proto
+                              value: '%REQ(:SCHEME)%'
+                            - key: X-Forwarded-Host
+                              value: '%REQ(:AUTHORITY)%'
+                            - key: X-Forwarded-Uri
+                              value: '%REQ(:PATH)%'
+                            - key: X-Forwarded-For
+                              value: '%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%'
+                        authorization_response:
+                          allowed_upstream_headers:
+                            patterns:
+                              - exact: authorization
+                              - exact: proxy-authorization
+                              - prefix: remote-
+                              - prefix: authelia-
+                          allowed_client_headers:
+                            patterns:
+                              - exact: set-cookie
+                          allowed_client_headers_on_success:
+                            patterns:
+                              - exact: set-cookie
+                      failure_mode_allow: false                      
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+      - name: listener_image
+        address:
+          socket_address:
+            address: 127.0.0.1
+            port_value: 15080
+        filter_chains:
+          - filters:
+              - name: envoy.filters.network.http_connection_manager
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                  stat_prefix: tapr_http
+                  http_protocol_options:
+                    accept_http_10: true
+                  upgrade_configs:
+                  - upgrade_type: websocket                  
+                  skip_xff_append: false
+                  codec_type: AUTO
+                  route_config:
+                    name: local_route
+                    virtual_hosts:
+                      - name: service
+                        domains: ["*"]
+                        routes:
+                          - match:
+                              prefix: "/images/upload"
+                            route:
+                              cluster: images
+                  http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        
+        
+      clusters:
+      - name: original_dst
+        connect_timeout: 5000s
+        type: ORIGINAL_DST
+        lb_policy: CLUSTER_PROVIDED
+        common_http_protocol_options:
+          idle_timeout: 10s
+      - name: ws_original_dst
+        connect_timeout: 5000s
+        type: LOGICAL_DNS
+        dns_lookup_family: V4_ONLY
+        dns_refresh_rate: 600s
+        lb_policy: ROUND_ROBIN
+        load_assignment:
+          cluster_name: ws_original_dst
+          endpoints:
+            - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: localhost
+                        port_value: 40010
+      - name: authelia
+        connect_timeout: 2s
+        type: LOGICAL_DNS
+        dns_lookup_family: V4_ONLY
+        dns_refresh_rate: 600s
+        lb_policy: ROUND_ROBIN
+        load_assignment:
+          cluster_name: authelia
+          endpoints:
+            - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: authelia-backend.os-system
+                        port_value: 9091
+      - name: images
+        connect_timeout: 5s
+        type: LOGICAL_DNS
+        dns_lookup_family: V4_ONLY
+        dns_refresh_rate: 600s
+        lb_policy: ROUND_ROBIN
+        load_assignment:
+          cluster_name: images
+          endpoints:
+            - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: tapr-images-svc.user-system-{{ .Values.bfl.username }}
+                        port_value: 8080
+kind: ConfigMap
+metadata:
+  name: sidecar-ws-configs
+  namespace: {{ .Release.Namespace }}
 ---
 kind: ConfigMap
 apiVersion: v1
@@ -1607,3 +2855,522 @@ data:
         add_header Cache-Control "public, max-age=2678400";
       }
     }
+    
+  files.conf: |-
+    server {
+        listen 88;
+        gzip off;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+        client_max_body_size 2000M;
+        keepalive_timeout 2700s;
+        root /www/files;
+        location / {
+            try_files $uri $uri/index.html /index.html;
+            add_header Cache-Control "private,no-cache";
+            add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+            expires 0;
+        }
+        location /api/resources/AppData {
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+        location /api/raw/AppData {
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            client_body_timeout 1800s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+        location /api/raw {
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            client_body_timeout 1800s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+
+        location /api/md5 {
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            client_body_timeout 1800s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+        
+        location /api/paste {
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            client_body_timeout 1800s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+
+        location /api/cache {
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            client_body_timeout 1800s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+
+        location /provider {
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+
+        location /api {
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+
+        location /share_link {
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+
+        location /upload {
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+        location /seahub/ {
+            proxy_pass http://seafile/;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+        location /seafhttp/ {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+        
+            proxy_pass http://seafile:8082/;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+        location /videos/ {
+            if ($request_method = 'OPTIONS') {
+                add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+                add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+                add_header Access-Control-Allow-Origin $http_origin;
+                add_header Access-Control-Allow-Credentials true;
+                add_header 'Access-Control-Max-Age' 1728000;
+                add_header 'Content-Type' 'text/plain; charset=utf-8';
+                add_header 'Content-Length' 0;
+                return 204;
+            }
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+            add_header Access-Control-Allow-Origin $http_origin;  
+            proxy_pass http://media-server-service.os-system:9090;
+        }
+        location /drive/ {
+            proxy_pass http://127.0.0.1:8181;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+        location /api/raw/Home/ {
+            expires 30d;
+            add_header Cache-Control "public, max-age=2592000";
+            proxy_pass http://files-service.os-system:80;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+        # Set cache for static resources
+        location ~ ^/(assets|js|css|fonts|img)/.*.(js|css|png|jpg|svg|woff|woff2)$
+        {
+            add_header Cache-Control "public, max-age=2678400";
+        }
+        location ~ ^/resources/Home/Pictures/(.*.(png|jpg|svg|gif|jpeg))$
+        {
+            alias /data/Pictures/$1;
+            autoindex off; 
+        }
+    }
+
+  vault.conf: |-
+    server {
+        listen 89;
+        gzip off;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+        root /www/vault;
+        location / {
+            try_files $uri $uri/index.html /index.html;
+            add_header Cache-Control "private,no-cache";
+            add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+            expires 0;
+        }
+        location /bfl/ {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            proxy_pass http://bfl;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        location /server {
+            add_header Access-Control-Allow-Headers "x-authorization";
+            proxy_pass http://vault-server:3000;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            client_body_timeout 60s;
+            client_max_body_size 10M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+        location /notification{
+            proxy_pass http://127.0.0.1:3010;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+
+        location /api/firstfactor {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+            add_header Access-Control-Allow-Origin $http_origin;
+            add_header Access-Control-Allow-Credentials true;
+            proxy_pass http://authelia-backend-svc:9091;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        
+        location /api/refresh {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+            add_header Access-Control-Allow-Origin $http_origin;
+            add_header Access-Control-Allow-Credentials true;
+            proxy_pass http://authelia-backend-svc:9091;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+
+        location /api/cookie {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            proxy_pass http://settings-service;
+
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+
+            proxy_set_header X-Forwarded-Host $host;
+
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        location ~ ^/(assets|js|css|fonts|img)/.*.(js|css|png|jpg|svg|woff|woff2)$
+        {
+            add_header Cache-Control "public, max-age=2678400";
+        }
+    }
+  market.conf: |-
+    upstream AppstoreBackendServer {
+      server appstore-svc:81;
+    }
+    upstream AppstoreBackendWebScoket {
+      server appstore-svc:40010;
+    }
+    server {
+        listen 90;
+        gzip off;
+        gzip_types text/plain text/xml application/javascript text/css;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        root /www/market;
+
+        location / {
+            add_header Cache-Control "no-store";
+            try_files $uri $uri/index.html /index.html;
+        }
+
+        location /ws {
+            proxy_pass http://AppstoreBackendWebScoket;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+        }
+
+        location /app-store/ {
+            add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source X-Authorization';
+            proxy_http_version 1.1;
+            proxy_pass http://AppstoreBackendServer;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        location ~ \.(?!html) {
+            add_header Cache-Control "public, max-age=2678400";
+            try_files $uri =404;
+        }
+    }
+  desktop.conf: |-
+    upstream DesktopSVCServer {
+      server 127.0.0.1:3010;
+    }
+    
+    server {
+        listen 91;
+        gzip off;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+        root /www/desktop;
+        
+        location / {
+            try_files $uri $uri/index.html /index.html;
+            add_header Cache-Control "private,no-cache";
+            add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+            expires 0;
+        }
+        location /api/logout {
+            add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
+            proxy_pass http://authelia-svc;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        location /api/device {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+            add_header Access-Control-Allow-Origin $http_origin;
+            add_header Access-Control-Allow-Credentials true;
+            proxy_pass http://settings-service;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        location /api/refresh {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+            add_header Access-Control-Allow-Origin $http_origin;
+            add_header Access-Control-Allow-Credentials true;
+            proxy_pass http://authelia-backend-svc:9091;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        location /api {
+            proxy_pass http://DesktopSVCServer;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        location /server {
+            if ($request_method = 'OPTIONS') {
+                add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+                add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+                add_header Access-Control-Allow-Origin $http_origin;
+                add_header Access-Control-Allow-Credentials true;
+                add_header 'Access-Control-Max-Age' 1728000;
+                add_header 'Content-Type' 'text/plain; charset=utf-8';
+                add_header 'Content-Length' 0;
+                return 204;
+            }
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+            add_header Access-Control-Allow-Origin $http_origin;
+            add_header Access-Control-Allow-Credentials true;
+            proxy_pass http://DesktopSVCServer;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        location /notification {
+            proxy_pass http://DesktopSVCServer;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        location /video {
+            proxy_pass http://DesktopSVCServer;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        location /seahub/ {
+            proxy_pass http://seafile/;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+        location /ws {
+            proxy_pass http://rss-svc.os-system:40010;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+        }
+        location ~.*\.(js|css|png|jpg|svg|woff|woff2)$ {
+            add_header Cache-Control "public, max-age=2678400";
+        }
+    }
+  

@@ -24,14 +24,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: appstore
-    applications.app.bytetrade.io/name: market
-    applications.app.bytetrade.io/owner: '{{ .Values.bfl.username }}'
     applications.app.bytetrade.io/author: bytetrade.io
-  annotations:
-    applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/appstore/icon.png
-    applications.app.bytetrade.io/title: Market
-    applications.app.bytetrade.io/version: '0.0.1'
-    applications.app.bytetrade.io/entrances: '[{"name":"appstore-service", "host":"appstore-service", "port":80,"title":"Market","windowPushState":true}]'
 spec:
   replicas: 1
   selector:
@@ -46,8 +39,6 @@ spec:
         instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
         instrumentation.opentelemetry.io/go-container-names: "appstore-backend"    
         instrumentation.opentelemetry.io/otel-go-auto-target-exe: "/opt/app/market"
-        instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
-        instrumentation.opentelemetry.io/inject-nginx-container-names: "appstore"    
     spec:
       priorityClassName: "system-cluster-critical"
       initContainers:
@@ -88,32 +79,8 @@ spec:
             valueFrom:
               fieldRef:
                 apiVersion: v1
-                fieldPath: status.podIP
-        - name: nginx-init
-          image: beclab/market-frontend:v0.3.12
-          imagePullPolicy: IfNotPresent
-          volumeMounts:
-            - name: app
-              mountPath: /cp_app
-            - name: nginx-confd
-              mountPath: /confd
-          command:
-          - sh
-          - -c
-          - |
-            cp -rf /app/* /cp_app/. && cp -rf /etc/nginx/conf.d/* /confd/.            
+                fieldPath: status.podIP         
       containers:
-      - name: appstore
-        image: beclab/docker-nginx-headers-more:ubuntu-v0.1.0
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 80
-        volumeMounts:
-        - name: app
-          mountPath: /app
-        - name: nginx-confd
-          mountPath: /etc/nginx/conf.d
-        
       - name: appstore-backend
         image: beclab/market-backend:v0.3.12
         imagePullPolicy: IfNotPresent
@@ -235,10 +202,6 @@ spec:
   type: ClusterIP
   ports:
     - protocol: TCP
-      name: appstore
-      port: 80
-      targetPort: 80
-    - protocol: TCP
       name: appstore-backend
       port: 81
       targetPort: 81
@@ -307,3 +270,22 @@ spec:
           key: redis-passwords
           name: market-secrets
     namespace: market
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: appstore-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: appstore
+  ports:
+    - name: "appstore-backend"
+      protocol: TCP
+      port: 81
+      targetPort: 81
+    - name: "appstore-websocket"
+      protocol: TCP
+      port: 40010
+      targetPort: 40010
