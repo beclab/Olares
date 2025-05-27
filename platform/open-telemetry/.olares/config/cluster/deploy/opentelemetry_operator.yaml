@@ -969,6 +969,7 @@ spec:
       - name: OTEL_TRACES_SAMPLER_ARG
         value: "1.0"
   nodejs:
+    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:0.53.0
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://jaeger-storage-instance-collector.os-system:4318
