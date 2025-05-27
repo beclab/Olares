@@ -58,6 +58,10 @@ Here is why and where you can count on Olares for private, powerful, and secure 
 
 📚 **Learning platform**: Explore self-hosting, container orchestration, and cloud technologies hands-on.
 
+> 🔍 **How is Olares different from traditional NAS?**
+>
+> Olares focuses on building an all-in-one self-hosted personal cloud experience. Its core features and target users differ significantly from traditional Network Attached Storage (NAS) systems, which primarily focus on network storage. For more details, see [Compare Olares and NAS](https://docs.olares.com/manual/olares-vs-nas.html).
+
 ## Getting started
 
 ### System compatibility
