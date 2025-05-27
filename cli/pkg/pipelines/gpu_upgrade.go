@@ -59,6 +59,7 @@ func UpgradeGpuDrivers(opt *options.InstallGpuOptions) error {
 				SkipCudaCheck: true,
 			},
 			&gpu.RestartContainerdModule{},
+			&gpu.NodeLabelingModule{},
 		},
 		Runtime: runtime,
 	}
