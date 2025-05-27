@@ -791,6 +791,12 @@ spec:
             label_replace(node_disk_temp_celsius, "node", "$1", "instance", "(.*)")
           record: node:node_disk_temp_celsius
         - expr: |
+            label_replace(node_disk_data_bytes_read,"node", "$1", "instance", "(.*)")
+          record: node:node_one_disk_data_bytes_read
+        - expr: |
+            label_replace(node_disk_data_bytes_written,"node", "$1", "instance", "(.*)")
+          record: node:node_one_disk_data_bytes_written
+        - expr: |
             1 -
             sum(node_memory_MemFree_bytes{job="node-exporter"} + node_memory_Cached_bytes{job="node-exporter"} + node_memory_Buffers_bytes{job="node-exporter"} + node_memory_SReclaimable_bytes{job="node-exporter"})
             /

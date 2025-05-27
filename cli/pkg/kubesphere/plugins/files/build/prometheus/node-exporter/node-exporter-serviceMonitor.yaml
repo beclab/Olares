@@ -15,7 +15,7 @@ spec:
     interval: 1m
     metricRelabelings:
     - action: keep
-      regex: node_(uname|network|disk|cpu)_info|node_cpu_.+|node_hwmon_temp_celsius|node_hwmon_chip_names|node_network_route_info|node_network_address_info|node_memory_Mem.+_bytes|node_memory_SReclaimable_bytes|node_memory_Cached_bytes|node_memory_Buffers_bytes|node_network_(.+_bytes_total|up)|node_network_.+_errs_total|node_nf_conntrack_entries.*|node_disk_.+_completed_total|node_disk_.+_bytes_total|node_disk_smartctl_info|node_disk_power_on_hours|node_disk_temp_celsius|node_filesystem_files|node_filesystem_files_free|node_filesystem_avail_bytes|node_filesystem_size_bytes|node_filesystem_free_bytes|node_filesystem_readonly|node_load.+|node_timex_offset_seconds
+      regex: node_(uname|network|disk|cpu)_info|node_cpu_.+|node_hwmon_temp_celsius|node_hwmon_chip_names|node_network_route_info|node_network_address_info|node_memory_Mem.+_bytes|node_memory_SReclaimable_bytes|node_memory_Cached_bytes|node_memory_Buffers_bytes|node_network_(.+_bytes_total|up)|node_network_.+_errs_total|node_nf_conntrack_entries.*|node_disk_.+_completed_total|node_disk_.+_bytes_total|node_disk_smartctl_info|node_disk_power_on_hours|node_disk_temp_celsius|node_disk_data_bytes_read|node_disk_data_bytes_written|node_filesystem_files|node_filesystem_files_free|node_filesystem_avail_bytes|node_filesystem_size_bytes|node_filesystem_free_bytes|node_filesystem_readonly|node_load.+|node_timex_offset_seconds
       sourceLabels:
       - __name__
     port: https
