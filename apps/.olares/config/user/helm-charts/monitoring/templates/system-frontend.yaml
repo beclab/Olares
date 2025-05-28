@@ -1225,11 +1225,6 @@ spec:
       ops:
         - UserApps
       version: v1
-    - dataType: config
-      group: service.desktop
-      ops:
-        - Update
-      version: v1
 status:
   state: active
 
@@ -1544,29 +1539,6 @@ status:
 
 ---
 apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: desktop-notification
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  dataType: notification
-  deployment: edge-desktop
-  description: send notification to desktop client
-  endpoint: edge-desktop.{{ .Release.Namespace }}
-  group: service.desktop
-  kind: provider
-  namespace: {{ .Release.Namespace }}
-  opApis:
-  - name: Create
-    uri: /notification/create
-  - name: Query
-    uri: /notification/query
-  version: v1
-status:
-  state: active
-
----
-apiVersion: sys.bytetrade.io/v1alpha1
 kind: ApplicationPermission
 metadata:
   name: desktop
@@ -1600,27 +1572,6 @@ spec:
     ops:
     - UninstallDevApp
     version: v1
-status:
-  state: active
-
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: desktop-config
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  dataType: config
-  deployment: edge-desktop
-  description: Set Desktop Config
-  endpoint: edge-desktop.{{ .Release.Namespace }}
-  group: service.desktop
-  kind: provider
-  namespace: {{ .Release.Namespace }}
-  opApis:
-  - name: Update
-    uri: /server/updateDesktopConfig
-  version: v1
 status:
   state: active
 
