@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"bytetrade.io/web3os/installer/pkg/core/util"
 )
@@ -21,13 +22,8 @@ func NewManager(olaresRepoRoot, distPath string) *Manager {
 }
 
 func (m *Manager) Package() error {
-	modules := []string{"frameworks", "libs", "apps", "third-party"}
-	buildTemplate := "build/installer"
-
-	// Create dist directory if not exists
-	if err := os.MkdirAll(m.distPath, 0755); err != nil {
-		return err
-	}
+	modules := []string{"apps", "framework", "daemon", "infrastructure", "platform", "vendor"}
+	buildTemplate := "build/base-package"
 
 	// Copy template files
 	if err := util.CopyDirectory(buildTemplate, m.distPath); err != nil {
@@ -55,46 +51,47 @@ func (m *Manager) Package() error {
 
 func (m *Manager) packageModule(mod string) error {
 	modPath := filepath.Join(m.olaresRepoRoot, mod)
-	entries, err := os.ReadDir(modPath)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
+	err := filepath.Walk(modPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return err
+		}
+		if !strings.EqualFold(info.Name(), ".olares") {
+			return nil
 		}
 
-		app := entry.Name()
-
-		fmt.Printf("packaging %s ... \n", app)
+		fmt.Printf("packaging %s ... \n", path)
 
 		// Package user app charts
-		chartPath := filepath.Join(modPath, app, "config/user/helm-charts")
+		chartPath := filepath.Join(path, "config/user/helm-charts")
 		if err := util.CopyDirectoryIfExists(chartPath, filepath.Join(m.distPath, "wizard/config/apps")); err != nil {
 			return err
 		}
 
 		// Package cluster CRDs
-		crdPath := filepath.Join(modPath, app, "config/cluster/crds")
+		crdPath := filepath.Join(path, "config/cluster/crds")
 		if err := util.CopyDirectoryIfExists(crdPath, filepath.Join(m.distPath, "wizard/config/settings/templates/crds")); err != nil {
 			return err
 		}
 
 		// Package cluster deployments
-		deployPath := filepath.Join(modPath, app, "config/cluster/deploy")
+		deployPath := filepath.Join(path, "config/cluster/deploy")
 		if err := util.CopyDirectoryIfExists(deployPath, filepath.Join(m.distPath, "wizard/config/system/templates/deploy")); err != nil {
 			return err
 		}
-	}
 
-	return nil
+		return nil
+	})
+
+	return err
 }
 
 func (m *Manager) packageLauncher() error {
 	fmt.Println("packaging launcher ...")
 	return util.CopyDirectory(
-		filepath.Join(m.olaresRepoRoot, "frameworks/bfl/config/launcher"),
+		filepath.Join(m.olaresRepoRoot, "framework/bfl/.olares/config/launcher"),
 		filepath.Join(m.distPath, "wizard/config/launcher"),
 	)
 }
@@ -102,7 +99,7 @@ func (m *Manager) packageLauncher() error {
 func (m *Manager) packageGPU() error {
 	fmt.Println("packaging gpu ...")
 	return util.CopyDirectory(
-		filepath.Join(m.olaresRepoRoot, "frameworks/GPU/config/gpu"),
+		filepath.Join(m.olaresRepoRoot, "framework/gpu/.olares/config/gpu"),
 		filepath.Join(m.distPath, "wizard/config/gpu"),
 	)
 }
