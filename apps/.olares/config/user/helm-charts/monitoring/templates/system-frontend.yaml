@@ -321,7 +321,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: profile-editor-init
-          image: beclab/profile-editor:v0.2.21
+          image: beclab/profile-editor:v1.3.64
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -333,7 +333,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: profile-preview-init
-          image: beclab/profile-preview:v0.2.21
+          image: beclab/profile-preview:v1.3.64
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -357,7 +357,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: settings-init
-          image: beclab/settings:v1.3.63
+          image: beclab/settings:v1.3.64
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -3153,7 +3153,20 @@ data:
         }
         location ~ ^/(assets|js|css|fonts|img)/.*.(js|css|png|jpg|svg|woff|woff2)$
         {
-            add_header Cache-Control "public, max-age=2678400";
+            proxy_pass http://files-service.os-system:80/api/raw/Home/Pictures/$1;
+            add_header Cache-Control "public, max-age=2592000";
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+            
+            autoindex off; 
         }
     }
   market.conf: |-
