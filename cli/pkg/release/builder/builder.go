@@ -23,15 +23,20 @@ func NewBuilder(olaresRepoRoot, version, cdnURL string, ignoreMissingImages bool
 		olaresRepoRoot:  olaresRepoRoot,
 		distPath:        distPath,
 		version:         version,
-		manifestManager: manifest.NewManager(olaresRepoRoot, cdnURL, ignoreMissingImages),
+		manifestManager: manifest.NewManager(olaresRepoRoot, distPath, cdnURL, ignoreMissingImages),
 		appManager:      app.NewManager(olaresRepoRoot, distPath),
 	}
 }
 
 func (b *Builder) Build() (string, error) {
 	// Clean previous build
-	if err := os.RemoveAll(filepath.Join(b.olaresRepoRoot, ".dist")); err != nil {
+	if err := os.RemoveAll(b.distPath); err != nil {
 		return "", fmt.Errorf("failed to clean previous dist directory: %v", err)
+	}
+
+	// Create dist directory if not exists
+	if err := os.MkdirAll(b.distPath, 0755); err != nil {
+		return "", err
 	}
 
 	// Package apps
@@ -39,46 +44,23 @@ func (b *Builder) Build() (string, error) {
 		return "", fmt.Errorf("package apps failed: %v", err)
 	}
 
-	// Build manifest
-	if err := b.manifestManager.Build(); err != nil {
-		return "", fmt.Errorf("manifest build failed: %v", err)
-	}
-
-	// Copy upgrade script, as the current build.sh does
-	if err := util.CopyFile(
-		filepath.Join(b.olaresRepoRoot, "scripts/upgrade.sh"),
-		filepath.Join(b.distPath, "upgrade.sh"),
-	); err != nil {
-		return "", fmt.Errorf("failed to copy upgrade script: %v", err)
+	// Generate manifest
+	if err := b.manifestManager.Generate(); err != nil {
+		return "", fmt.Errorf("failed to generate manifest: %v", err)
 	}
 
 	// archive the install-wizard
-	return b.createFinalPackage()
+	return b.archive()
 
 }
 
-func (b *Builder) createFinalPackage() (string, error) {
-	if err := os.RemoveAll(filepath.Join(b.distPath, "images")); err != nil {
-		return "", err
-	}
-
-	manifestSrc := filepath.Join(b.olaresRepoRoot, ".manifest/installation.manifest")
-	manifestDst := filepath.Join(b.distPath, "installation.manifest")
-	if err := util.MoveFile(manifestSrc, manifestDst); err != nil {
-		return "", err
-	}
-
-	imagesSrc := filepath.Join(b.olaresRepoRoot, ".manifest")
-	imagesDst := filepath.Join(b.distPath, "images")
-	if err := util.MoveDirectory(imagesSrc, imagesDst); err != nil {
-		return "", err
-	}
-
+func (b *Builder) archive() (string, error) {
 	versionStr := "v" + b.version
 	files := []string{
 		filepath.Join(b.distPath, "wizard/config/settings/templates/terminus_cr.yaml"),
 		filepath.Join(b.distPath, "install.sh"),
 		filepath.Join(b.distPath, "install.ps1"),
+		filepath.Join(b.distPath, "joincluster.sh"),
 	}
 
 	for _, file := range files {

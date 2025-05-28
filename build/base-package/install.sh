@@ -10,7 +10,7 @@ function command_exists() {
 if [[ x"$VERSION" == x"" ]]; then
     if [[ "$LOCAL_RELEASE" == "1" ]]; then
         ts=$(date +%Y%m%d%H%M%S)
-        export VERSION="0.0.0-local-dev-$ts"
+        export VERSION="1.12.0-local-$ts"
         echo "will build and use a local release of Olares with version: $VERSION"
         echo ""
     else
@@ -79,46 +79,54 @@ if [[ x"$os_type" == x"Darwin" ]]; then
     CLI_FILE="olares-cli-v${VERSION}_darwin_${ARCH}.tar.gz"
 fi
 
-if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$VERSION" ]]; then
+if [[ "$LOCAL_RELEASE" == "1" ]]; then
+    if ! command_exists olares-cli ; then
+        echo "error: LOCAL_RELEASE specified but olares-cli not found"
+        exit 1
+    fi
     INSTALL_OLARES_CLI=$(which olares-cli)
-    echo "olares-cli already installed and is the expected version"
-    echo ""
 else
-    if [[ ! -f ${CLI_FILE} ]]; then
-        CLI_URL="${cdn_url}/${CLI_FILE}"
-
-        echo "downloading Olares installer from ${CLI_URL} ..."
+    if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$VERSION" ]]; then
+        INSTALL_OLARES_CLI=$(which olares-cli)
+        echo "olares-cli already installed and is the expected version"
         echo ""
+    else
+        if [[ ! -f ${CLI_FILE} ]]; then
+            CLI_URL="${cdn_url}/${CLI_FILE}"
 
-        curl -Lo ${CLI_FILE} ${CLI_URL}
+            echo "downloading Olares installer from ${CLI_URL} ..."
+            echo ""
+
+            curl -Lo ${CLI_FILE} ${CLI_URL}
+
+            if [[ $? -ne 0 ]]; then
+                echo "error: failed to download Olares installer"
+                exit 1
+            else
+                echo "Olares installer ${VERSION} download complete!"
+                echo ""
+            fi
+        fi
+        INSTALL_OLARES_CLI="/usr/local/bin/olares-cli"
+        echo "unpacking Olares installer to $INSTALL_OLARES_CLI..."
+        echo ""
+        tar -zxf ${CLI_FILE} olares-cli && chmod +x olares-cli
+        if [[ x"$os_type" == x"Darwin" ]]; then
+            if [ ! -f "/usr/local/Cellar/olares" ]; then
+                current_user=$(whoami)
+                $sh_c "sudo mkdir -p /usr/local/Cellar/olares && sudo chown ${current_user}:staff /usr/local/Cellar/olares"
+            fi
+            $sh_c "mv olares-cli /usr/local/Cellar/olares/olares-cli && \
+                   sudo rm -rf /usr/local/bin/olares-cli && \
+                   sudo ln -s /usr/local/Cellar/olares/olares-cli $INSTALL_OLARES_CLI"
+        else
+            $sh_c "mv olares-cli $INSTALL_OLARES_CLI"
+        fi
 
         if [[ $? -ne 0 ]]; then
-            echo "error: failed to download Olares installer"
+            echo "error: failed to unpack Olares installer"
             exit 1
-        else
-            echo "Olares installer ${VERSION} download complete!"
-            echo ""
         fi
-    fi
-    INSTALL_OLARES_CLI="/usr/local/bin/olares-cli"
-    echo "unpacking Olares installer to $INSTALL_OLARES_CLI..."
-    echo ""
-    tar -zxf ${CLI_FILE} olares-cli && chmod +x olares-cli
-    if [[ x"$os_type" == x"Darwin" ]]; then
-        if [ ! -f "/usr/local/Cellar/olares" ]; then
-            current_user=$(whoami)
-            $sh_c "sudo mkdir -p /usr/local/Cellar/olares && sudo chown ${current_user}:staff /usr/local/Cellar/olares"
-        fi
-        $sh_c "mv olares-cli /usr/local/Cellar/olares/olares-cli && \
-               sudo rm -rf /usr/local/bin/olares-cli && \
-               sudo ln -s /usr/local/Cellar/olares/olares-cli $INSTALL_OLARES_CLI"
-    else
-        $sh_c "mv olares-cli $INSTALL_OLARES_CLI"
-    fi
-
-    if [[ $? -ne 0 ]]; then
-        echo "error: failed to unpack Olares installer"
-        exit 1
     fi
 fi
 
