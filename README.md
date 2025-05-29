@@ -1,6 +1,6 @@
 <div align="center">
 
-# Olares: An Open-Source Personal Cloud to Reclaim Your Data<!-- omit in toc -->
+# Olares: An Open-Source Personal Cloud to </br>Reclaim Your Data<!-- omit in toc -->
 
 [![Mission](https://img.shields.io/badge/Mission-Let%20people%20own%20their%20data%20again-purple)](#)<br/>
 [![Last Commit](https://img.shields.io/github/last-commit/beclab/olares)](https://github.com/beclab/olares/commits/main)
@@ -77,7 +77,7 @@ To get started with Olares on your own device, follow the [Getting Started Guide
 
 Just as Public clouds offer IaaS, PaaS, and SaaS layers, Olares provides open-source alternatives to each of these layers.
 
-  ![Tech Stacks](https://file.bttcdn.com/github/terminus/v2/tech-stack-olares.jpeg)
+  ![Tech Stacks](https://file.bttcdn.com/github/olares/olares-architecture.jpg)
 
  For detailed description of each component, refer to [Olares architecture](https://docs.olares.com/manual/system-architecture.html).
 
@@ -96,7 +96,7 @@ Olares offers a wide array of features designed to enhance security, ease of use
 
 Here are some screenshots from the UI for a sneak peek:
 
-| **Desktop–AI-powered personal desktop**     |  **Files–A secure home to your data**
+| **Desktop–Streamlined and familiar portal**     |  **Files–A secure home to your data**
 | :--------: | :-------: |
 | ![Desktop](https://file.bttcdn.com/github/terminus/v2/desktop.jpg) | ![Files](https://file.bttcdn.com/github/terminus/v2/files.jpg) |
 | **Vault–1Password alternative**|**Market–App ecosystem in your control** |
@@ -106,7 +106,7 @@ Here are some screenshots from the UI for a sneak peek:
 |**Dashboard–Constant system monitoring**  | **Profile–Your unique homepage** |
 | ![dashboard](https://file.bttcdn.com/github/terminus/v2/dashboard.jpg) | ![profile](https://file.bttcdn.com/github/terminus/v2/profile.jpg) |
 | **Studio–Develop, debug, and deploy**|**Control Hub–Manage Kubernetes clusters easily**  |
-| ![Devbox](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![Controlhub](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
+| ![Studio](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![Controlhub](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
 
 ## Project navigation
 
