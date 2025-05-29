@@ -206,6 +206,17 @@ spec:
         env:
         - name: DATABASE_URL
           value: postgres://search3_os_system:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-system:5432/os_system_search3
+        - name: NATS_HOST
+          value: nats
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: admin
+        - name: NATS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: nats_password
+              name: nats-secrets
 
 ---
 apiVersion: v1

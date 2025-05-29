@@ -108,6 +108,19 @@ spec:
           value: {{ $pg_password | b64dec }}
         - name: PL_ATTACHMENTS_FS_DIR
           value: /padloc/packages/server/attachments
+        - name: NATS_HOST
+          value: nats
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: admin
+        - name: NATS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: nats_password
+              name: nats-secrets
+        - name: NATS_SUBJECT_SYSTEM_VAULT
+          value: "terminus.{{ .Release.Namespace }}.system.vault"
         volumeMounts:
         - name: vault-data
           mountPath: /padloc/packages/server/data

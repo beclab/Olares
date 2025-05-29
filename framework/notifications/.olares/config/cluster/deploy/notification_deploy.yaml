@@ -169,17 +169,20 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: os-system-notifications
+          value: admin
         - name: NATS_PASSWORD
           valueFrom:
             secretKeyRef:
               key: nats_password
-              name: notifications-secrets
+              name: nats-secrets
         - name: NATS_SUBJECT
           value: "terminus.{{ .Release.Namespace }}.system.notification"
         - name: NATS_SUBJECT_SYSTEM_USERS
           value: "terminus.{{ .Release.Namespace }}.system.users"
-
+        - name: NATS_SUBJECT_SYSTEM_APPLICATION
+          value: "terminus.{{ .Release.Namespace }}.system.application"
+        - name: NATS_SUBJECT_SYSTEM_VAULT
+          value: "terminus.{{ .Release.Namespace }}.system.vault"
         livenessProbe:
           tcpSocket:
             port: 3010

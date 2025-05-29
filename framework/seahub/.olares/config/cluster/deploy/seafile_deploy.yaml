@@ -467,6 +467,17 @@ spec:
           value: admin
         - name: SEAFILE_SERVER_LETSENCRYPT
           value: "false"
+        - name: NATS_HOST
+          value: nats
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: admin
+        - name: NATS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: nats_password
+              name: nats-secrets
 
       - name: nginx
         image: 'beclab/nginx-lua:n0.0.4'

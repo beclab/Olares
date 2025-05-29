@@ -237,9 +237,12 @@ spec:
             - name: NATS_PORT
               value: '4222'
             - name: NATS_USERNAME
-              value: os-system-files-server
+              value: admin
             - name: NATS_PASSWORD
-              value: {{ $files_nats_password | b64dec }}
+              valueFrom:
+                secretKeyRef:
+                  name: nats-secrets
+                  key: nats_password
             - name: NATS_SUBJECT
               value: terminus.os-system.files-notify
             - name: RESERVED_SPACE
