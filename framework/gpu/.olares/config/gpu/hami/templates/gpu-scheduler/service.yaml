@@ -11,12 +11,5 @@ spec:
       targetPort: 6000
   selector:
     name: gpu-scheduler
-  clusterIP: None
-  clusterIPs:
-    - None
   type: ClusterIP
-  sessionAffinity: None
-  ipFamilies:
-    - IPv4
-  ipFamilyPolicy: SingleStack
-  internalTrafficPolicy: Cluster
+  internalTrafficPolicy: Local

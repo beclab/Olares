@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "hami-vgpu.scheduler" . }}
+  namespace: {{ include "hami-vgpu.namespace" . }}
   labels:
     app.kubernetes.io/component: hami-scheduler
     {{- include "hami-vgpu.labels" . | nindent 4 }}
@@ -23,7 +24,7 @@ spec:
       protocol: TCP
     - name: monitor
       port: {{ .Values.scheduler.service.monitorPort | default 31993 }}  # Default monitoring port is 31993
-      targetPort: {{ .Values.scheduler.service.monitorTargetPort | default 31993 }}
+      targetPort: {{ .Values.scheduler.service.monitorTargetPort | default 9395 }}
       {{- if eq (.Values.scheduler.service.type | default "NodePort") "NodePort" }}  # If type is NodePort, set nodePort
       nodePort: {{ .Values.scheduler.service.monitorPort | default 31993 }}
       {{- end }}

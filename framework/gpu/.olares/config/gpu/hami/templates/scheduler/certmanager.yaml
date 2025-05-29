@@ -1,0 +1,29 @@
+{{- if .Values.scheduler.certManager.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "hami-vgpu.scheduler" . }}-serving-cert
+  namespace: {{ include "hami-vgpu.namespace" . }}
+  labels:
+    app.kubernetes.io/component: hami-scheduler
+    {{- include "hami-vgpu.labels" . | nindent 4 }}
+spec:
+  dnsNames:
+    - {{ include "hami-vgpu.scheduler" . }}.{{ include "hami-vgpu.namespace" . }}.svc
+    - {{ include "hami-vgpu.scheduler" . }}.{{ include "hami-vgpu.namespace" . }}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: {{ include "hami-vgpu.scheduler" . }}-selfsigned-issuer
+  secretName: {{ include "hami-vgpu.scheduler.tls" . }}
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "hami-vgpu.scheduler" . }}-selfsigned-issuer
+  namespace: {{ include "hami-vgpu.namespace" . }}
+  labels:
+    app.kubernetes.io/component: hami-scheduler
+    {{- include "hami-vgpu.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+{{- end }}
