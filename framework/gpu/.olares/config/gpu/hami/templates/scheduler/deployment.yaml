@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "hami-vgpu.scheduler" . }}
+  namespace: {{ include "hami-vgpu.namespace" . }}
   labels:
     app.kubernetes.io/component: hami-scheduler
     {{- include "hami-vgpu.labels" . | nindent 4 }}
@@ -27,8 +28,15 @@ spec:
         app.kubernetes.io/component: hami-scheduler
         {{- include "hami-vgpu.selectorLabels" . | nindent 8 }}
         hami.io/webhook: ignore
+      annotations:
+        {{- if ge (regexReplaceAll "[^0-9]" .Capabilities.KubeVersion.Minor "" | int) 22 }}
+        checksum/hami-scheduler-newversion-config: {{ include (print $.Template.BasePath "/scheduler/configmapnew.yaml") . | sha256sum }}
+        {{- else }}
+        checksum/hami-scheduler-config: {{ include (print $.Template.BasePath "/scheduler/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        checksum/hami-scheduler-device-config: {{ include (print $.Template.BasePath "/scheduler/device-configmap.yaml") . | sha256sum }}
       {{- if .Values.scheduler.podAnnotations }}
-      annotations: {{ toYaml .Values.scheduler.podAnnotations | nindent 8 }}
+        {{- toYaml .Values.scheduler.podAnnotations | nindent 8 }}
       {{- end }}
     spec:
       {{- include "hami-vgpu.imagePullSecrets" . | nindent 6}}
@@ -53,7 +61,7 @@ spec:
             {{- end }}
             - --leader-elect={{ .Values.scheduler.leaderElect }}
             - --leader-elect-resource-name={{ .Values.schedulerName }}
-            - --leader-elect-resource-namespace={{ .Release.Namespace }}
+            - --leader-elect-resource-namespace={{ include "hami-vgpu.namespace" . }}
           resources:
           {{- toYaml .Values.scheduler.kubeScheduler.resources | nindent 12 }}
           volumeMounts:

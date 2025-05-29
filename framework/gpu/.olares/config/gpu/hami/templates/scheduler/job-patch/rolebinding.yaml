@@ -1,7 +1,9 @@
+{{- if and (.Values.scheduler.patch.enabled) (not .Values.scheduler.certManager.enabled) }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ include "hami-vgpu.fullname" . }}-admission
+  namespace: {{ include "hami-vgpu.namespace" . }}
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
@@ -15,4 +17,5 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: {{ include "hami-vgpu.fullname" . }}-admission
-    namespace: {{ .Release.Namespace | quote }}
+    namespace: {{ include "hami-vgpu.namespace" . }}
+{{- end }}

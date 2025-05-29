@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ include "hami-vgpu.device-plugin" . }}
+  namespace: {{ include "hami-vgpu.namespace" . }}
   labels:
     app.kubernetes.io/component: hami-device-plugin
     {{- include "hami-vgpu.labels" . | nindent 4 }}
@@ -26,8 +27,11 @@ spec:
         app.kubernetes.io/component: hami-device-plugin
         hami.io/webhook: ignore
         {{- include "hami-vgpu.selectorLabels" . | nindent 8 }}
+      annotations: 
+        checksum/hami-device-plugin-config: {{ include (print $.Template.BasePath "/device-plugin/configmap.yaml") . | sha256sum }}
+        checksum/hami-scheduler-device-config: {{ include (print $.Template.BasePath "/scheduler/device-configmap.yaml") . | sha256sum }}
       {{- if .Values.devicePlugin.podAnnotations }}
-      annotations: {{ toYaml .Values.devicePlugin.podAnnotations | nindent 8 }}
+        {{- toYaml .Values.devicePlugin.podAnnotations | nindent 8 }}
       {{- end }}
     spec:
       {{- if .Values.devicePlugin.runtimeClassName }}
@@ -112,12 +116,12 @@ spec:
             - name: NVIDIA_MIG_MONITOR_DEVICES
               value: all
             - name: HOOK_PATH
-              value: '{{ .Values.global.gpuHookPath }}/vgpu'
+              value: {{ .Values.global.gpuHookPath }}/vgpu
           resources:
           {{- toYaml .Values.devicePlugin.vgpuMonitor.resources | nindent 12 }}
           volumeMounts:
             - name: ctrs
-              mountPath: '{{ .Values.devicePlugin.monitorctrPath }}'
+              mountPath: {{ .Values.devicePlugin.monitorctrPath }}
             - name: dockers
               mountPath: /run/docker
             - name: containerds
@@ -131,7 +135,7 @@ spec:
       volumes:
         - name: ctrs
           hostPath:
-            path: '{{ .Values.devicePlugin.monitorctrPath }}'
+            path: {{ .Values.devicePlugin.monitorctrPath }}
         - name: hosttmp
           hostPath:
             path: /tmp
@@ -143,10 +147,10 @@ spec:
             path: /run/containerd
         - name: device-plugin
           hostPath:
-            path: '{{ .Values.devicePlugin.pluginPath }}'
+            path: {{ .Values.devicePlugin.pluginPath }}
         - name: lib
           hostPath:
-            path: '{{ .Values.devicePlugin.libPath }}'
+            path: {{ .Values.devicePlugin.libPath }}
         - name: usrbin
           hostPath:
             path: /usr/bin

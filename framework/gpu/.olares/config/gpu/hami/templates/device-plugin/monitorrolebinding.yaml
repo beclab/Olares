@@ -13,4 +13,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: {{ include "hami-vgpu.device-plugin" . }}
-    namespace: {{ .Release.Namespace | quote }}
+    namespace: {{ include "hami-vgpu.namespace" . }}

@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ include "hami-vgpu.scheduler" . }}-device
+  namespace: {{ include "hami-vgpu.namespace" . }}
   labels:
     app.kubernetes.io/component: hami-scheduler
     {{- include "hami-vgpu.labels" . | nindent 4 }}
@@ -17,13 +18,14 @@ data:
       resourceCoreName: {{ .Values.resourceCores }}
       resourcePriorityName: {{ .Values.resourcePriority }}
       overwriteEnv: false
-      defaultMemory: 16000
+      defaultMemory: 0
       defaultCores: 0
       defaultGPUNum: 1
       deviceSplitCount: {{ .Values.devicePlugin.deviceSplitCount }}
       deviceMemoryScaling: {{ .Values.devicePlugin.deviceMemoryScaling }}
       deviceCoreScaling: {{ .Values.devicePlugin.deviceCoreScaling }}
       gpuCorePolicy: {{ .Values.devices.nvidia.gpuCorePolicy }}
+      runtimeClassName: "{{ .Values.devicePlugin.runtimeClassName }}"
       knownMigGeometries:
       - models: [ "A30" ]
         allowedGeometries:
@@ -91,10 +93,12 @@ data:
       resourceCoreName: {{ .Values.dcuResourceCores }}
     metax:
       resourceCountName: "metax-tech.com/gpu"
-
       resourceVCountName: {{ .Values.metaxResourceName }}
       resourceVMemoryName: {{ .Values.metaxResourceMem }}
       resourceVCoreName: {{ .Values.metaxResourceCore }}
+    enflame:
+      resourceCountName: "enflame.com/vgcu"
+      resourcePercentageName: "enflame.com/vgcu-percentage"
     mthreads:
       resourceCountName: "mthreads.com/vgpu"
       resourceMemoryName: "mthreads.com/sgpu-memory"

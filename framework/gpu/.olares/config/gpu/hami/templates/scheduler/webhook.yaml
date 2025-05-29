@@ -1,6 +1,10 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
+  {{- if .Values.scheduler.certManager.enabled }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ include "hami-vgpu.namespace" . }}/{{ include "hami-vgpu.scheduler" . }}-serving-cert
+  {{- end }}
   name: {{ include "hami-vgpu.scheduler.webhook" . }}
 webhooks:
   - admissionReviewVersions:
@@ -11,7 +15,7 @@ webhooks:
       {{- else }}
       service:
         name: {{ include "hami-vgpu.scheduler" . }}
-        namespace: {{ .Release.Namespace }}
+        namespace: {{ include "hami-vgpu.namespace" . }}
         path: /webhook
         port: {{ .Values.scheduler.service.httpPort }}
       {{- end }}

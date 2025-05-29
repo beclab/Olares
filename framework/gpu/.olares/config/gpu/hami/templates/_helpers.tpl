@@ -24,6 +24,17 @@ If release name contains chart name it will be used as a full name.
 {{- end -}}
 
 {{/*
+Allow the release namespace to be overridden for multi-namespace deployments in combined charts
+*/}}
+{{- define "hami-vgpu.namespace" -}}
+  {{- if .Values.namespaceOverride -}}
+    {{- .Values.namespaceOverride -}}
+  {{- else -}}
+    {{- .Release.Namespace -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
 The app name for Scheduler
 */}}
 {{- define "hami-vgpu.scheduler" -}}

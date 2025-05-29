@@ -2,8 +2,9 @@
 
 nameOverride: ""
 fullnameOverride: ""
+namespaceOverride: ""
 imagePullSecrets: []
-version: "v2.5.2"
+version: "v2.5.2-share-01"
 
 # Nvidia GPU Parameters
 resourceName: "nvidia.com/gpu"
@@ -106,7 +107,7 @@ scheduler:
       enabled: false
       # must be an endpoint using https.
       # should generate host certs here
-      host: 127.0.0.1          # hostname or ip, can be your node'IP if you want to use https://<nodeIP>:<schedulerPort>/<path>
+      host: 127.0.0.1  # hostname or ip, can be your node'IP if you want to use https://<nodeIP>:<schedulerPort>/<path>
       port: 31998
       path: /webhook
     whitelistNamespaces:
@@ -116,7 +117,14 @@ scheduler:
       # - istio-system
     reinvocationPolicy: Never
     failurePolicy: Ignore
+  ## TLS Certificate Option 1: Use cert-manager to generate self-signed certificate.
+  ## If enabled, always takes precedence over options 2.
+  certManager:
+    enabled: false
+  ## TLS Certificate Option 2: Use kube-webhook-certgen to generate self-signed certificate.
+  ## If true and certManager.enabled is false, Helm will automatically create a self-signed cert and secret for you.
   patch:
+    enabled: true
     image: jettech/kube-webhook-certgen:v1.5.2
     imageNew: liangjw/kube-webhook-certgen:v1.1.1
     imagePullPolicy: IfNotPresent
@@ -130,6 +138,7 @@ scheduler:
     httpPort: 443   # HTTP port
     schedulerPort: 31998  # NodePort for HTTP
     monitorPort: 31993    # Monitoring port
+    monitorTargetPort: 9395
     labels: {}
     annotations: {}
 
@@ -138,25 +147,31 @@ devicePlugin:
   monitorimage: "beclab/hami"
   monitorctrPath: /usr/local/vgpu/containers
   imagePullPolicy: IfNotPresent
-  deviceSplitCount: 100
-  deviceMemoryScaling: 100
-  deviceCoreScaling: 100
+  deviceSplitCount: 10
+  deviceMemoryScaling: 1
+  deviceCoreScaling: 1
+  # The runtime class name to be used by the device plugin, and added to the pod.spec.runtimeClassName of applications utilizing NVIDIA GPUs
   runtimeClassName: ""
+  # Whether to create runtime class, name comes from runtimeClassName when it is set
+  createRuntimeClass: false
   migStrategy: "none"
   disablecorelimit: "false"
   passDeviceSpecsEnabled: false
   extraArgs:
     - -v=4
+
   service:
     type: ClusterIP  # Default type is NodePort, can be changed to ClusterIP
     httpPort: 31992
     labels: {}
     annotations: {}
+
   pluginPath: /var/lib/kubelet/device-plugins
   libPath: /usr/local/vgpu
+
   podAnnotations: {}
   nvidianodeSelector:
-    gpu.bytetrade.io/cuda-supported: 'true'
+    gpu.bytetrade.io/cuda-supported: "true"
   tolerations: []
   # The updateStrategy for DevicePlugin DaemonSet.
   # If you want to update the DaemonSet by manual, set type as "OnDelete".
@@ -189,6 +204,11 @@ devicePlugin:
 #        memory: 100Mi
 
 devices:
+  enflame:
+    enabled: false
+    customresources:
+      - enflame.com/vgcu
+      - enflame.com/vgcu-percentage
   mthreads:
     enabled: false
     customresources:
@@ -271,13 +291,13 @@ dcgmExporter:
 
   # Annotations to be added to dcgm-exporter pods
   podAnnotations: {}
-  # Using this annotation which is required for prometheus scraping
+    # Using this annotation which is required for prometheus scraping
     # prometheus.io/scrape: "true"
-    # prometheus.io/port: "9400"
+  # prometheus.io/port: "9400"
 
   # The SecurityContext for the dcgm-exporter pods
   podSecurityContext: {}
-    # fsGroup: 2000
+  # fsGroup: 2000
 
   # The SecurityContext for the dcgm-exporter containers
   securityContext:
@@ -305,24 +325,24 @@ dcgmExporter:
     #   memory: 128Mi
     # requests:
     #   cpu: 100m
-    #   memory: 128Mi
+  #   memory: 128Mi
   serviceMonitor:
     apiVersion: "monitoring.coreos.com/v1"
     enabled: true
     interval: 15s
     honorLabels: false
     additionalLabels: {}
-      # monitoring: prometheus
+    # monitoring: prometheus
     relabelings: []
       # - sourceLabels: [__meta_kubernetes_pod_node_name]
       #   separator: ;
       #   regex: ^(.*)$
       #   targetLabel: nodename
       #   replacement: $1
-      #   action: replace
+    #   action: replace
 
   nodeSelector: {}
-    # node: gpu
+  # node: gpu
 
   tolerations: []
   # - operator: Exists
@@ -333,7 +353,7 @@ dcgmExporter:
     #    nodeSelectorTerms:
     #    - matchExpressions:
     #      - key: nvidia-gpu
-    #        operator: Exists
+  #        operator: Exists
 
   extraHostVolumes: []
   # - name: host-binaries
@@ -344,8 +364,8 @@ dcgmExporter:
       configMap:
         name: exporter-metrics-config-map
         items:
-        - key: metrics
-          path: default-counters.csv
+          - key: metrics
+            path: default-counters.csv
 
   extraVolumeMounts:
     - name: exporter-metrics-volume
@@ -391,9 +411,9 @@ dcgmExporter:
     # Object containing <user>:<passwords> key-value pairs for each user that will have access via basic authentication
     users: {}
 
-  # Customized list of metrics to emit. Expected to be in the same format (CSV) as the default list.
-  # Must be the complete list and is not additive. If unset, the default list will take effect.
-  # customMetrics: |
+    # Customized list of metrics to emit. Expected to be in the same format (CSV) as the default list.
+    # Must be the complete list and is not additive. If unset, the default list will take effect.
+    # customMetrics: |
     # Format
     # If line starts with a '#' it is considered a comment
     # DCGM FIELD, Prometheus metric type, help message
@@ -442,7 +462,7 @@ webui:
     #   drop:
     #   - ALL
     # readOnlyRootFilesystem: true
-    # runAsNonRoot: true
+  # runAsNonRoot: true
   # runAsUser: 1000
 
   service:
@@ -453,7 +473,7 @@ webui:
     enabled: false
     className: ""
     annotations: {}
-      # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
     hosts:
       - host: chart-example.local
