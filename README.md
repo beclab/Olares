@@ -1,6 +1,6 @@
 <div align="center">
 
-# Olares: An Open-Source Personal Cloud OS to Reclaim Your Data<!-- omit in toc -->
+# Olares: An Open-Source Personal Cloud to Reclaim Your Data<!-- omit in toc -->
 
 [![Mission](https://img.shields.io/badge/Mission-Let%20people%20own%20their%20data%20again-purple)](#)<br/>
 [![Last Commit](https://img.shields.io/github/last-commit/beclab/olares)](https://github.com/beclab/olares/commits/main)
@@ -18,8 +18,6 @@
 
 </div>
 
-https://github.com/user-attachments/assets/3089a524-c135-4f96-ad2b-c66bf4ee7471
-
 *Build your local AI assistants, sync data across places, self-host your workspace, stream your own media, and more—all in your personal cloud on Olares.*
 
 <p align="center">
@@ -34,13 +32,14 @@ https://github.com/user-attachments/assets/3089a524-c135-4f96-ad2b-c66bf4ee7471
 >
 >*It's time for a change.* 
 
+![Personal Cloud](https://file.bttcdn.com/github/olares/public-cloud-to-personal-cloud.jpg)
 We believe you have a fundamental right to control your digital life. The most effective way to uphold this right is by hosting your data locally, on your own hardware.
 
 Olares is an **open-source personal cloud operating system** designed to empower you to own and manage your digital assets locally. Instead of relying on public cloud services, you can deploy powerful open-source alternatives locally on Olares, such as Ollama for hosting LLMs, SD WebUI for image generation, and Mastodon for building censor free social space. Imagine the power of the cloud, but with you in complete command.
 
 > 🌟 *Star us to receive instant notifications about new releases and updates.* 
 
-## Key Features & Use Cases
+## Key use cases
 
 Here is why and where you can count on Olares for private, powerful, and secure sovereign cloud experience:
 
@@ -76,11 +75,9 @@ To get started with Olares on your own device, follow the [Getting Started Guide
 
 ## Architecture 
 
-Olares' architecture is based on two core principles:
-- Adopts an Android-like approach to control software permissions and interactivity, ensuring smooth and secure system operations.
-- Leverages cloud-native technologies to manage hardware and middleware services efficiently.
+Just as Public clouds offer IaaS, PaaS, and SaaS layers, Olares provides open-source alternatives to each of these layers.
 
-  ![Olares Architecture](https://file.bttcdn.com/github/terminus/v2/olares-arch-3.png)
+  ![Tech Stacks](https://file.bttcdn.com/github/terminus/v2/tech-stack-olares.jpeg)
 
  For detailed description of each component, refer to [Olares architecture](https://docs.olares.com/manual/system-architecture.html).
 
@@ -97,8 +94,24 @@ Olares offers a wide array of features designed to enhance security, ease of use
 - **Seamless anywhere access**: Access your devices from anywhere using dedicated clients for mobile, desktop, and browsers.
 - **Development tools**: Comprehensive development tools for effortless application development and porting.
 
-## Project Navigation
-> We are currently migrating the code of subprojects from other repositories within the organization to this repository. This process may take a few months. Once completed, you will be able to get a comprehensive view of the Olares system through this repository.
+Here are some screenshots from the UI for a sneak peek:
+
+| **Desktop–AI-powered personal desktop**     |  **Files–A secure home to your data**
+| :--------: | :-------: |
+| ![Desktop](https://file.bttcdn.com/github/terminus/v2/desktop.jpg) | ![Files](https://file.bttcdn.com/github/terminus/v2/files.jpg) |
+| **Vault–1Password alternative**|**Market–App ecosystem in your control** |
+| ![vault](https://file.bttcdn.com/github/terminus/v2/vault.jpg) | ![market](https://file.bttcdn.com/github/terminus/v2/market.jpg) |
+|**Wise–Your digital secret garden** | **Settings–Manage Olares efficiently** |
+| ![settings](https://file.bttcdn.com/github/terminus/v2/wise.jpg) | ![](https://file.bttcdn.com/github/terminus/v2/settings.jpg) |
+|**Dashboard–Constant system monitoring**  | **Profile–Your unique homepage** |
+| ![dashboard](https://file.bttcdn.com/github/terminus/v2/dashboard.jpg) | ![profile](https://file.bttcdn.com/github/terminus/v2/profile.jpg) |
+| **Studio–Develop, debug, and deploy**|**Control Hub–Manage Kubernetes clusters easily**  |
+| ![Devbox](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![Controlhub](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
+
+## Project navigation
+
+> [!NOTE]  
+> We are currently consolidating Olares subproject code into this repository. This process may take a few months. Once finished, you will get a comprehensive view of the entire Olares system here.
 
 
 This section lists the main directories in the Olares repository:
