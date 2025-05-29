@@ -118,7 +118,7 @@ func (p *NvidiaGraphicsCard) PreCheck(runtime connector.Runtime) (found bool, er
 		}
 	}()
 	output, err := runtime.GetRunner().SudoCmd(
-		"lspci | grep -i vga | grep -i nvidia", false, false)
+		"lspci | grep -i -e vga -e 3d | grep -i nvidia", false, false)
 	// an empty grep also results in the exit code to be 1
 	// and thus a non-nil err
 	if err != nil {
