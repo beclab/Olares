@@ -21,11 +21,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"k8s.io/apimachinery/pkg/util/sets"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +35,6 @@ import (
 	versionutil "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/printers"
-	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
@@ -67,15 +65,15 @@ func InstallYaml(manifests []string, namespace, kubeConfig, version string) erro
 }
 
 func CreateApplyOptions(configFlags *genericclioptions.ConfigFlags, manifests []string, version string) (*apply.ApplyOptions, error) {
-	matchVersionKubeConfigFlags := NewMatchVersionFlags(configFlags)
-	f := cmdutil.NewFactory(matchVersionKubeConfigFlags)
 	ioStreams := genericclioptions.IOStreams{In: nil, Out: os.Stdout, ErrOut: os.Stderr}
 
-	flags := apply.NewApplyFlags(f, ioStreams)
-	return ToOptions(flags, manifests, version)
+	flags := apply.NewApplyFlags(ioStreams)
+	return ToOptions(configFlags, flags, manifests, version)
 }
 
-func ToOptions(flags *apply.ApplyFlags, manifests []string, version string) (*apply.ApplyOptions, error) {
+func ToOptions(configFlags *genericclioptions.ConfigFlags, flags *apply.ApplyFlags, manifests []string, version string) (*apply.ApplyOptions, error) {
+	matchVersionKubeConfigFlags := NewMatchVersionFlags(configFlags)
+	f := cmdutil.NewFactory(matchVersionKubeConfigFlags)
 	serverSideApply := false
 	cmp, err := versionutil.MustParseSemantic(version).Compare("v1.16.0")
 	if err != nil {
@@ -89,13 +87,11 @@ func ToOptions(flags *apply.ApplyFlags, manifests []string, version string) (*ap
 
 	dryRunStrategy := cmdutil.DryRunNone
 
-	dynamicClient, err := flags.Factory.DynamicClient()
+	dynamicClient, err := f.DynamicClient()
 	if err != nil {
 		return nil, err
 	}
 
-	dryRunVerifier := resource.NewQueryParamVerifier(dynamicClient, flags.Factory.OpenAPIGetter(), resource.QueryParamDryRun)
-	fieldValidationVerifier := resource.NewQueryParamVerifier(dynamicClient, flags.Factory.OpenAPIGetter(), resource.QueryParamFieldValidation)
 	fieldManager := "client-side-apply"
 
 	// allow for a success message operation to be specified at print time
@@ -124,18 +120,17 @@ func ToOptions(flags *apply.ApplyFlags, manifests []string, version string) (*ap
 		return nil, err
 	}
 
-	openAPISchema, _ := flags.Factory.OpenAPISchema()
-	validator, err := flags.Factory.Validator("Ignore", fieldValidationVerifier)
+	validator, err := f.Validator("Ignore")
 	if err != nil {
 		return nil, err
 	}
-	builder := flags.Factory.NewBuilder()
-	mapper, err := flags.Factory.ToRESTMapper()
+	builder := f.NewBuilder()
+	mapper, err := f.ToRESTMapper()
 	if err != nil {
 		return nil, err
 	}
 
-	namespace, enforceNamespace, err := flags.Factory.ToRawKubeConfigLoader().Namespace()
+	namespace, enforceNamespace, err := f.ToRawKubeConfigLoader().Namespace()
 	if err != nil {
 		return nil, err
 	}
@@ -150,13 +145,11 @@ func ToOptions(flags *apply.ApplyFlags, manifests []string, version string) (*ap
 		FieldManager:    fieldManager,
 		Selector:        flags.Selector,
 		DryRunStrategy:  dryRunStrategy,
-		DryRunVerifier:  dryRunVerifier,
 		Prune:           flags.Prune,
 		PruneResources:  flags.PruneResources,
 		All:             flags.All,
 		Overwrite:       flags.Overwrite,
 		OpenAPIPatch:    flags.OpenAPIPatch,
-		PruneWhitelist:  flags.PruneWhitelist,
 
 		Recorder:         recorder,
 		Namespace:        namespace,
@@ -165,12 +158,10 @@ func ToOptions(flags *apply.ApplyFlags, manifests []string, version string) (*ap
 		Builder:          builder,
 		Mapper:           mapper,
 		DynamicClient:    dynamicClient,
-		OpenAPISchema:    openAPISchema,
+		IOStreams:        flags.IOStreams,
 
-		IOStreams: flags.IOStreams,
-
-		VisitedUids:       sets.NewString(),
-		VisitedNamespaces: sets.NewString(),
+		VisitedUids:       sets.New[types.UID](),
+		VisitedNamespaces: sets.New[string](),
 	}
 
 	o.PostProcessorFn = o.PrintAndPrunePostProcessor()
@@ -255,29 +246,6 @@ func DoServerSideApply(ctx context.Context, cfg *rest.Config, objectYAML []byte)
 		return err
 	}
 	fmt.Println(strings.ToLower(obj.GetKind()) + "/" + obj.GetName() + "  " + "created")
-	return nil
-}
-
-func DoPatchCluster(client dynamic.Interface, name string, data []byte) error {
-	var gvr = schema.GroupVersionResource{
-		Group:    "kubekey.kubesphere.io",
-		Version:  "v1alpha2",
-		Resource: "clusters",
-	}
-	cfg, err := rest.InClusterConfig()
-	if err != nil {
-		panic(err.Error())
-	}
-	dyn, err := dynamic.NewForConfig(cfg)
-	if err != nil {
-		return err
-	}
-
-	if _, err := dyn.Resource(gvr).Patch(context.TODO(), name, types.MergePatchType, data, metav1.PatchOptions{}); err != nil {
-		fmt.Println("error")
-		return err
-	}
-	dyn.Resource(gvr).Get(context.TODO(), "aaa", metav1.GetOptions{})
 	return nil
 }
 
