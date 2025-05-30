@@ -654,7 +654,7 @@ func (t *RemoveWSLChattr) Execute(runtime connector.Runtime) error {
 
 var ErrUnsupportedCudaVersion = errors.New("unsupported cuda version, please uninstall it, REBOOT your machine, and try again")
 var ErrCudaInstalled = errors.New("cuda is installed")
-var supportedCudaVersions = []string{common.CurrentVerifiedCudaVersion}
+var supportedCudaVersions = []string{"12.8", common.CurrentVerifiedCudaVersion}
 
 // CudaCheckTask checks the cuda version, if the current version is not supported, it will return an error
 // before executing the command `olares-cli gpu install`, we need to check the cuda version
