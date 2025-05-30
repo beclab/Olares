@@ -797,6 +797,28 @@ spec:
             label_replace(node_disk_data_bytes_written,"node", "$1", "instance", "(.*)")
           record: node:node_one_disk_data_bytes_written
         - expr: |
+            label_replace(node_cpu_info, "node", "$1", "instance", "(.*)")
+          record: node:node_cpu_info
+        - expr: |
+            label_replace(node_memory_Buffers_bytes, "node", "$1", "instance", "(.*)")
+          record: node:node_memory_Buffers_bytes
+        - expr: |
+            label_replace(node_memory_Cached_bytes, "node", "$1", "instance", "(.*)")
+          record: node:node_memory_Cached_bytes
+        - expr: |
+            sum by (node, host_ip, role) (
+              (node_memory_Slab_bytes{job="node-exporter"} + node_memory_KernelStack_bytes{job="node-exporter"} + node_memory_PageTables_bytes{job="node-exporter"}+ node_memory_HardwareCorrupted_bytes{job="node-exporter"}+node_memory_Bounce_bytes{job="node-exporter"}-node_memory_SReclaimable_bytes{job="node-exporter"})
+              * on (namespace, pod) group_left(node, host_ip, role)
+                node_namespace_pod:kube_pod_info:
+            )
+          record: node:node_memory_system_reserved
+        - expr: |
+            label_replace(rate(node_vmstat_pswpout[5m]) * 4096,"node", "$1", "instance", "(.*)")
+          record: node:node_vmstat_pswpout
+        - expr: |
+            label_replace(rate(node_vmstat_pswpin[5m]) * 4096,"node", "$1", "instance", "(.*)")
+          record: node:node_vmstat_pswpin
+        - expr: |
             1 -
             sum(node_memory_MemFree_bytes{job="node-exporter"} + node_memory_Cached_bytes{job="node-exporter"} + node_memory_Buffers_bytes{job="node-exporter"} + node_memory_SReclaimable_bytes{job="node-exporter"})
             /
