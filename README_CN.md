@@ -18,8 +18,6 @@
 
 </div>
 
-*Olares 让你体验更多可能：构建个人 AI 助理、随时随地同步数据、自托管团队协作空间、打造私人影视厅——无缝整合你的数字生活。*
-
 <p align="center">
   <a href="https://olares.com">网站</a> ·
   <a href="https://docs.olares.com">文档</a> ·
@@ -40,48 +38,18 @@ Olares 是一款开源个人云操作系统，旨在让您能够轻松在本地�
 
 > 为 Olares 点亮 🌟 以及时获取新版本和更新的通知。
 
-## 使用场景
-
-在以下场景中，Olares 为您带来私密、强大且安全的私有云体验：
-
-🤖**本地 AI 助手**：在本地部署运行顶级开源 AI 模型，涵盖语言处理、图像生成和语音识别等领域。根据个人需求定制 AI 助手，确保数据隐私和控制权均处于自己手中。<br>
-
-💻**个人数据仓库**：所有个人文件，包括照片、文档和重要资料，都可以在这个安全的统一平台上存储和同步，随时随地都能方便地访问。<br>
-
-🛠️**自托管工作空间**：利用开源 SaaS 平替方案，无需成本即可为家庭或工作团队搭建一个功能强大的工作空间。<br>
-
-🎥**私人媒体服务器**：用自己的视频和音乐库搭建一个私人流媒体服务，随时享受个性化的娱乐体验。<br>
-
-🏡**智能家居中心**：将所有智能设备和自动化系统集中在一个易于管理的控制中心，实现家庭智能化的简便操作。<br>
-
-🤝**独立的社交媒体平台**：在 Olares 上部署去中心化社交媒体应用，如 Mastodon、Ghost 和 WordPress，自由建立和扩展个人品牌，无需担忧封号或支付额外费用。<br>
-
-📚**学习探索**：深入学习自托管服务、容器技术和云计算，并上手实践。<br>
-
-> 🔍**Olares 和 NAS 有什么不同？** 
->
-> Olares 致力于打造一站式的自托管个人云体验。其核心功能与用户定位，均与专注于网络存储的传统 NAS 有着显著的不同，详情请参考 [Olares 与 NAS 对比](https://docs.olares.com/zh/manual/olares-vs-nas.html)。
-
-## 快速开始
-
-### 系统兼容性
-
-Olares 已在以下 Linux 平台完成测试与验证：
-
-- Ubuntu 24.04 LTS 及以上版本
-- Debian 11 及以上版本
-
-### 安装 Olares
- 
-参考[快速上手指南](https://docs.joinolares.cn/zh/manual/get-started/)安装并激活 Olares。
-
 ## 系统架构
 
 公有云具有基础设施即服务（IaaS）、平台即服务（PaaS）和软件即服务（SaaS）等层级。Olares 为这些层级提供了开源替代方案。
 
   ![技术栈](https://file.bttcdn.com/github/olares/olares-architecture.jpg)
 
-详细描述请参考 [Olares 架构](https://docs.joinolares.cn/zh/manual/system-architecture.html)文档。
+详细描述请参考 [Olares 架构](https://docs.olares.cn/zh/manual/system-architecture.html)文档。
+
+>🔍**Olares 和 NAS 有什么不同？**
+>
+> Olares 致力于打造一站式的自托管个人云体验。其核心功能与用户定位，均与专注于网络存储的传统 NAS 有着显著的不同，详情请参考 [Olares 与 NAS 对比](https://docs.olares.com/zh/manual/olares-vs-nas.html)。
+
 
 ## 功能特性
 
@@ -110,11 +78,42 @@ Olares 提供了一系列功能，旨在提升安全性、使用便捷性以及�
 | **Studio：一站式开发、调试和部署**|**控制面板：轻松管理 Kubernetes 集群**  |
 | ![Devbox](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![控制中心](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
 
+## 使用场景
+
+在以下场景中，Olares 为您带来私密、强大且安全的私有云体验：
+
+🤖**本地 AI 助手**：在本地部署运行顶级开源 AI 模型，涵盖语言处理、图像生成和语音识别等领域。根据个人需求定制 AI 助手，确保数据隐私和控制权均处于自己手中。<br>
+
+💻**个人数据仓库**：所有个人文件，包括照片、文档和重要资料，都可以在这个安全的统一平台上存储和同步，随时随地都能方便地访问。<br>
+
+🛠️**自托管工作空间**：利用开源 SaaS 平替方案，无需成本即可为家庭或工作团队搭建一个功能强大的工作空间。<br>
+
+🎥**私人媒体服务器**：用自己的视频和音乐库搭建一个私人流媒体服务，随时享受个性化的娱乐体验。<br>
+
+🏡**智能家居中心**：将所有智能设备和自动化系统集中在一个易于管理的控制中心，实现家庭智能化的简便操作。<br>
+
+🤝**独立的社交媒体平台**：在 Olares 上部署去中心化社交媒体应用，如 Mastodon、Ghost 和 WordPress，自由建立和扩展个人品牌，无需担忧封号或支付额外费用。<br>
+
+📚**学习探索**：深入学习自托管服务、容器技术和云计算，并上手实践。<br>
+
+## 快速开始
+
+### 系统兼容性
+
+Olares 已在以下 Linux 平台完成测试与验证：
+
+- Ubuntu 24.04 LTS 及以上版本
+- Debian 11 及以上版本
+
+### 安装 Olares
+ 
+参考[快速上手指南](https://docs.olares.cn/zh/manual/get-started/)安装并激活 Olares。
 
 ## 项目目录
 
+> [!NOTE]
 > 我们正将 Olares 子项目的代码移动到当前仓库。此过程可能会持续数月。届时您就可以通过本仓库了解 Olares 系统的全貌。
-> 
+
 Olares 代码库中的主要目录如下：
 
 * **`apps`**: 用于存放系统应用，主要是 `larepass` 的代码。

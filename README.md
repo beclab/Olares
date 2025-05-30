@@ -18,8 +18,6 @@
 
 </div>
 
-*Build your local AI assistants, sync data across places, self-host your workspace, stream your own media, and more—all in your personal cloud on Olares.*
-
 <p align="center">
   <a href="https://olares.com">Website</a> ·
   <a href="https://docs.olares.com">Documentation</a> ·
@@ -39,40 +37,6 @@ Olares is an **open-source personal cloud operating system** designed to empower
 
 > 🌟 *Star us to receive instant notifications about new releases and updates.* 
 
-## Key use cases
-
-Here is why and where you can count on Olares for private, powerful, and secure sovereign cloud experience:
-
-🤖 **Edge AI**: Run cutting-edge open AI models locally, including large language models, computer vision, and speech recognition. Create private AI services tailored to your data for enhanced functionality and privacy. <br>
-
-📊 **Personal data repository**: Securely store, sync, and manage your important files, photos, and documents across devices and locations.<br>
-
-🚀 **Self-hosted workspace**: Build a free collaborative workspace for your team using secure, open-source SaaS alternatives.<br>
-
-🎥 **Private media server**: Host your own streaming services with your personal media collections. <br>
-
-🏡 **Smart Home Hub**: Create a central control point for your IoT devices and home automation. <br>
-
-🤝 **User-owned decentralized social media**: Easily install decentralized social media apps such as Mastodon, Ghost, and WordPress on Olares, allowing you to build a personal brand without the risk of being banned or paying platform commissions.<br>
-
-📚 **Learning platform**: Explore self-hosting, container orchestration, and cloud technologies hands-on.
-
-> 🔍 **How is Olares different from traditional NAS?**
->
-> Olares focuses on building an all-in-one self-hosted personal cloud experience. Its core features and target users differ significantly from traditional Network Attached Storage (NAS) systems, which primarily focus on network storage. For more details, see [Compare Olares and NAS](https://docs.olares.com/manual/olares-vs-nas.html).
-
-## Getting started
-
-### System compatibility
-
-Olares has been tested and verified on the following Linux platforms:
-
-- Ubuntu 24.04 LTS or later
-- Debian 11 or later
-
-### Set up Olares
-To get started with Olares on your own device, follow the [Getting Started Guide](https://docs.olares.com/manual/get-started/) for step-by-step instructions.
-
 ## Architecture 
 
 Just as Public clouds offer IaaS, PaaS, and SaaS layers, Olares provides open-source alternatives to each of these layers.
@@ -80,6 +44,10 @@ Just as Public clouds offer IaaS, PaaS, and SaaS layers, Olares provides open-so
   ![Tech Stacks](https://file.bttcdn.com/github/olares/olares-architecture.jpg)
 
  For detailed description of each component, refer to [Olares architecture](https://docs.olares.com/manual/system-architecture.html).
+
+> 🔍 **How is Olares different from traditional NAS?**
+>
+> Olares focuses on building an all-in-one self-hosted personal cloud experience. Its core features and target users differ significantly from traditional Network Attached Storage (NAS) systems, which primarily focus on network storage. For more details, see [Compare Olares and NAS](https://docs.olares.com/manual/olares-vs-nas.html).
 
 ## Features
 
@@ -107,6 +75,37 @@ Here are some screenshots from the UI for a sneak peek:
 | ![dashboard](https://file.bttcdn.com/github/terminus/v2/dashboard.jpg) | ![profile](https://file.bttcdn.com/github/terminus/v2/profile.jpg) |
 | **Studio–Develop, debug, and deploy**|**Control Hub–Manage Kubernetes clusters easily**  |
 | ![Studio](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![Controlhub](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
+
+
+## Key use cases
+
+Here is why and where you can count on Olares for private, powerful, and secure sovereign cloud experience:
+
+🤖 **Edge AI**: Run cutting-edge open AI models locally, including large language models, computer vision, and speech recognition. Create private AI services tailored to your data for enhanced functionality and privacy. <br>
+
+📊 **Personal data repository**: Securely store, sync, and manage your important files, photos, and documents across devices and locations.<br>
+
+🚀 **Self-hosted workspace**: Build a free collaborative workspace for your team using secure, open-source SaaS alternatives.<br>
+
+🎥 **Private media server**: Host your own streaming services with your personal media collections. <br>
+
+🏡 **Smart Home Hub**: Create a central control point for your IoT devices and home automation. <br>
+
+🤝 **User-owned decentralized social media**: Easily install decentralized social media apps such as Mastodon, Ghost, and WordPress on Olares, allowing you to build a personal brand without the risk of being banned or paying platform commissions.<br>
+
+📚 **Learning platform**: Explore self-hosting, container orchestration, and cloud technologies hands-on.
+
+## Getting started
+
+### System compatibility
+
+Olares has been tested and verified on the following Linux platforms:
+
+- Ubuntu 24.04 LTS or later
+- Debian 11 or later
+
+### Set up Olares
+To get started with Olares on your own device, follow the [Getting Started Guide](https://docs.olares.com/manual/get-started/) for step-by-step instructions.
 
 ## Project navigation
 

@@ -18,10 +18,6 @@
 
 </div>
 
-https://github.com/user-attachments/assets/3089a524-c135-4f96-ad2b-c66bf4ee7471
-
-*Olaresを使って、ローカルAIアシスタントを構築し、データを場所を問わず同期し、ワークスペースをセルフホストし、独自のメディアをストリーミングし、その他多くのことを実現できます。*
-
 <p align="center">
   <a href="https://olares.com">ウェブサイト</a> ·
   <a href="https://docs.olares.com">ドキュメント</a> ·
@@ -30,17 +26,56 @@ https://github.com/user-attachments/assets/3089a524-c135-4f96-ad2b-c66bf4ee7471
   <a href="https://space.olares.com">Olares Space</a>
 </p>
 
-> [!IMPORTANT]  
-> 最近、TerminusからOlaresへのリブランディングを完了しました。詳細については、[リブランディングブログ](https://blog.olares.com/terminus-is-now-olares/)をご覧ください。
+> *パブリッククラウドを基盤とする現代のインターネットは、あなたの個人データのプライバシーをますます脅かしています。ChatGPT、Midjourney、Facebookといったサービスへの依存が深まるにつれ、デジタル主権に対するあなたのコントロールも弱まっています。あなたのデータは他者のサーバーに保存され、その利用規約に縛られ、追跡され、検閲されているのです。*
+>
+>*今こそ、変革の時です。*
 
-Olaresを使用して、ハードウェアをAIホームサーバーに変換します。Olaresは、ローカルAIのためのオープンソース主権クラウドOSです。
+![自身のデジタル](https://file.bttcdn.com/github/olares/public-cloud-to-personal-cloud.jpg)
 
-- **最先端のAIモデルを自分の条件で実行**: LLaMA、Stable Diffusion、Whisper、Flux.1などの強力なオープンAIモデルをハードウェア上で簡単にホストし、AI環境を完全に制御します。
-- **簡単にデプロイ**: Olares Marketから幅広いオープンソースAIアプリを数クリックで発見してインストールします。複雑な設定やセットアップは不要です。
-- **いつでもどこでもアクセス**: ブラウザを通じて、必要なときにAIアプリやモデルにアクセスします。
-- **統合されたAIでスマートなAI体験**: [Model Context Protocol](https://spec.modelcontextprotocol.io/specification/)（MCP）に似たメカニズムを使用して、OlaresはAIモデルとAIアプリ、およびプライベートデータセットをシームレスに接続します。これにより、ニーズに応じて適応する高度にパーソナライズされたコンテキスト対応のAIインタラクションが実現します。
+私たちは、あなたが自身のデジタルライフをコントロールする基本的な権利を有すると確信しています。この権利を守る最も効果的な方法は、あなたのデータをローカルの、あなた自身のハードウェア上でホストすることです。
+
+Olaresは、あなたが自身のデジタル資産をローカルで容易に所有し管理できるよう設計された、オープンソースのパーソナルクラウドOSです。もはやパブリッククラウドサービスに依存する必要はありません。Olares上で、例えばOllamaを利用した大規模言語モデルのホスティング、SD WebUIによる画像生成、Mastodonを用いた検閲のないソーシャルスペースの構築など、強力なオープンソースの代替サービスやアプリケーションをローカルにデプロイできます。Olaresは、クラウドコンピューティングの絶大な力を活用しつつ、それを完全に自身のコントロール下に置くことを可能にします。
 
 > 🌟 *新しいリリースや更新についての通知を受け取るために、スターを付けてください。*
+
+## アーキテクチャ
+
+パブリッククラウドは、IaaS (Infrastructure as a Service)、PaaS (Platform as a Service)、SaaS (Software as a Service) といったサービスレイヤーで構成されています。Olaresは、これら各レイヤーに対するオープンソースの代替ソリューションを提供しています。
+
+  ![Olaresのアーキテクチ](https://file.bttcdn.com/github/olares/olares-architecture.jpg)
+
+各コンポーネントの詳細については、[Olares アーキテクチャ](https://docs.olares.com/manual/system-architecture.html)（英語版）をご参照ください。
+
+> 🔍**OlaresとNASの違いは何ですか？**
+>
+> Olaresは、ワンストップのセルフホスティング・パーソナルクラウド体験の実現を目指しています。そのコア機能とユーザーの位置付けは、ネットワークストレージに特化した従来のNASとは大きく異なります。詳細は、[OlaresとNASの比較](https://docs.olares.com/manual/olares-vs-nas.html)（英語版）をご参照ください。
+
+## 機能
+
+Olaresは、セキュリティ、使いやすさ、開発の柔軟性を向上させるための幅広い機能を提供します：
+
+- **エンタープライズグレードのセキュリティ**: Tailscale、Headscale、Cloudflare Tunnel、FRPを使用してネットワーク構成を簡素化します。
+- **安全で許可のないアプリケーションエコシステム**: サンドボックス化によりアプリケーションの分離とセキュリティを確保します。
+- **統一ファイルシステムとデータベース**: 自動スケーリング、バックアップ、高可用性を提供します。
+- **シングルサインオン**: 一度ログインするだけで、Olares内のすべてのアプリケーションに共有認証サービスを使用してアクセスできます。
+- **AI機能**: GPU管理、ローカルAIモデルホスティング、プライベートナレッジベースの包括的なソリューションを提供し、データプライバシーを維持します。
+- **内蔵アプリケーション**: ファイルマネージャー、同期ドライブ、ボールト、リーダー、アプリマーケット、設定、ダッシュボードを含みます。
+- **どこからでもシームレスにアクセス**: モバイル、デスクトップ、ブラウザ用の専用クライアントを使用して、どこからでもデバイスにアクセスできます。
+- **開発ツール**: アプリケーションの開発と移植を容易にする包括的な開発ツールを提供します。
+
+以下はUIのスクリーンショットプレビューです。
+
+| **デスクトップ：馴染みやすく効率的なアクセスポイント** |  **ファイルマネージャー：データを安全に保管** |
+| :--------: | :-------: |
+| ![桌面](https://file.bttcdn.com/github/terminus/v2/desktop.jpg) | ![文件](https://file.bttcdn.com/github/terminus/v2/files.jpg) |
+| **Vault：安心のパスワード管理**|**マーケット：コントロール可能なアプリエコシステム** |
+| ![vault](https://file.bttcdn.com/github/terminus/v2/vault.jpg) | ![市场](https://file.bttcdn.com/github/terminus/v2/market.jpg) |
+| **Wise：あなただけのデジタルガーデン** | **設定：Olaresを効率的に管理** |
+| ![设置](https://file.bttcdn.com/github/terminus/v2/wise.jpg) | ![](https://file.bttcdn.com/github/terminus/v2/settings.jpg) |
+| **ダッシュボード：Olaresを継続的に監視** | **プロフィール：ユニークなパーソナルページ** |
+| ![面板](https://file.bttcdn.com/github/terminus/v2/dashboard.jpg) | ![profile](https://file.bttcdn.com/github/terminus/v2/profile.jpg) |
+| **Studio：開発、デバッグ、デプロイをワンストップで**|**コントロールパネル：Kubernetesクラスターを簡単に管理** |
+| ![Devbox](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![控制中心](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
 
 ## なぜOlaresなのか？
 
@@ -72,30 +107,11 @@ Olaresは以下のLinuxプラットフォームで動作検証を完了してい
 ### Olaresのセットアップ
 自分のデバイスでOlaresを始めるには、[はじめにガイド](https://docs.olares.com/manual/get-started/)に従ってステップバイステップの手順を確認してください。
 
-## アーキテクチャ
-
-Olaresのアーキテクチャは、次の2つの基本原則に基づいています：
-- Androidの設計思想を取り入れ、ソフトウェアの権限と対話性を制御することで、システムの安全かつ円滑な運用を実現します。
-- クラウドネイティブ技術を活用し、ハードウェアとミドルウェアサービスを効率的に管理します。
-
-  ![Olaresのアーキテクチ](https://file.bttcdn.com/github/terminus/v2/olares-arch-3.png)
-
-各コンポーネントの詳細については、[Olares アーキテクチャ](https://docs.olares.com/manual/system-architecture.html)（英語版）をご参照ください。
-
-## 機能
-
-Olaresは、セキュリティ、使いやすさ、開発の柔軟性を向上させるための幅広い機能を提供します：
-
-- **エンタープライズグレードのセキュリティ**: Tailscale、Headscale、Cloudflare Tunnel、FRPを使用してネットワーク構成を簡素化します。
-- **安全で許可のないアプリケーションエコシステム**: サンドボックス化によりアプリケーションの分離とセキュリティを確保します。
-- **統一ファイルシステムとデータベース**: 自動スケーリング、バックアップ、高可用性を提供します。
-- **シングルサインオン**: 一度ログインするだけで、Olares内のすべてのアプリケーションに共有認証サービスを使用してアクセスできます。
-- **AI機能**: GPU管理、ローカルAIモデルホスティング、プライベートナレッジベースの包括的なソリューションを提供し、データプライバシーを維持します。
-- **内蔵アプリケーション**: ファイルマネージャー、同期ドライブ、ボールト、リーダー、アプリマーケット、設定、ダッシュボードを含みます。
-- **どこからでもシームレスにアクセス**: モバイル、デスクトップ、ブラウザ用の専用クライアントを使用して、どこからでもデバイスにアクセスできます。
-- **開発ツール**: アプリケーションの開発と移植を容易にする包括的な開発ツールを提供します。
 
 ## プロジェクトナビゲーション
+
+> [!NOTE]
+> 現在、Olaresのサブプロジェクトのコードを当リポジトリへ移行する作業を進めています。この作業が完了するまでには数ヶ月を要する見込みです。完了後には、当リポジトリを通じてOlaresシステムの全貌をご覧いただけるようになります。
 
 このセクションでは、Olares リポジトリ内の主要なディレクトリをリストアップしています：
 
