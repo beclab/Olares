@@ -2027,7 +2027,7 @@ data:
     }
 
     upstream Analytics {
-        server anayltic2-server.os-system:3010;
+        server analytics-server.os-system:3010;
     }
 
     upstream HamiServer {
@@ -2637,7 +2637,7 @@ data:
     }
 
     upstream AnalyticsStudio {
-      server anayltic2-server.os-system:3010;
+      server analytics-server.os-system:3010;
     }
 
     server {
