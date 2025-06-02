@@ -440,7 +440,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: market-frontend-init
-          image: beclab/market-frontend:v0.3.12
+          image: beclab/market-frontend:v1.3.67
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
