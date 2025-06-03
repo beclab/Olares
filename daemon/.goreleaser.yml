@@ -1,0 +1,56 @@
+project_name: olaresd
+builds:
+- id: linux_amd64 
+  env:
+  - CGO_ENABLED=1
+  main: ./cmd/terminusd/main.go
+  binary: olaresd
+  goarch:
+    - amd64
+  goos:
+    - linux
+  tags:
+    containers_image_openpgp
+  ldflags:
+    - -w
+    - -s
+    - -X 'bytetrade.io/web3os/terminusd/cmd/terminusd/version.version=v{{ .Version }}'
+- id: linux_arm64 
+  env:
+  - CGO_ENABLED=0
+  # - CC=aarch64-linux-gnu-gcc
+  # - CXX=aarch64-linux-gnu-g++
+  main: ./cmd/terminusd/main.go
+  binary: olaresd
+  goarch:
+    - arm64
+  goos:
+    - linux
+  tags:
+    containers_image_openpgp
+  ldflags:
+    - -w
+    - -s
+    - -X 'bytetrade.io/web3os/terminusd/cmd/terminusd/version.version=v{{ .Version }}'
+dist: output
+archives:
+- name_template: "olaresd-v{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+  replacements:
+    linux: linux
+    amd64: amd64
+    arm64: arm64
+  files:
+    - none*
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Version }}-next-{{.ShortCommit}}"
+changelog:
+  skip: true
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+release:
+  disable: true

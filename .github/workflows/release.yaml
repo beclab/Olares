@@ -16,6 +16,12 @@ jobs:
     with:
       version: ${{ github.event.inputs.tags }}
 
+  release-daemon:
+    uses: ./.github/workflows/release-daemon.yaml
+    secrets: inherit
+    with:
+      version: ${{ github.event.inputs.tags }}
+
   push:
     runs-on: ubuntu-22.04
 
@@ -29,6 +35,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: 'us-east-1'
+          VERSION: ${{ github.event.inputs.tags }}
         run: |
           bash build/image-manifest.sh && bash build/upload-images.sh .manifest/images.mf
 
@@ -45,12 +52,13 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: 'us-east-1'
+          VERSION: ${{ github.event.inputs.tags }}
         run: |
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
           bash build/image-manifest.sh && bash build/upload-images.sh .manifest/images.mf linux/arm64
 
   upload-package:
-    needs: [push, push-arm64]
+    needs: [push, push-arm64, release-daemon]
     runs-on: ubuntu-latest
 
     steps:

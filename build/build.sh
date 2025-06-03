@@ -3,7 +3,7 @@
 BASE_DIR=$(dirname $(realpath -s $0))
 rm -rf ${BASE_DIR}/../.dist
 DIST_PATH="${BASE_DIR}/../.dist/install-wizard" 
-VERSION=$1
+export VERSION=$1
 
 DIST_PATH=${DIST_PATH} bash ${BASE_DIR}/package.sh
 

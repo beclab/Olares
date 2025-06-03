@@ -61,6 +61,7 @@ func (b *Builder) archive() (string, error) {
 		filepath.Join(b.distPath, "install.sh"),
 		filepath.Join(b.distPath, "install.ps1"),
 		filepath.Join(b.distPath, "joincluster.sh"),
+		filepath.Join(b.distPath, "installation.manifest"),
 	}
 
 	for _, file := range files {

@@ -1,0 +1,14 @@
+[Unit]
+Description=olareas
+After=network.target
+
+[Service]
+User=root
+EnvironmentFile=/etc/systemd/system/olaresd.service.env
+ExecStart=/usr/local/bin/olaresd
+RestartSec=10s
+LimitNOFILE=40000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -30,3 +30,4 @@ olares-cli-*.tar.gz
 .vscode
 .DS_Store
 cli/output
+daemon/output

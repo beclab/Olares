@@ -1,0 +1,43 @@
+# Official documentation at http://goreleaser.com
+project_name: olaresd
+builds:
+- id: olaresd-proxy
+  env:
+  - CGO_ENABLED=0
+  main: ./cmd/mdns_agent/main.go
+  binary: olaresd-proxy
+  goarch:
+    - amd64
+    - arm64
+  goos:
+    - linux
+    - darwin
+    - windows
+  ignore:
+    - goos: windows
+      goarch: arm
+  tags:
+    containers_image_openpgp
+  ldflags:
+    - -w
+    - -s
+dist: bin
+archives:
+- name_template: "olaresd-proxy-v{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+  replacements:
+    linux: linux
+    amd64: amd64
+    arm64: arm64
+  files:
+    - none*
+checksum:
+  name_template: 'checksums.txt'
+changelog:
+  skip: true
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+release:   
+  disable: true

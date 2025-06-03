@@ -75,3 +75,5 @@ find $BASE_DIR/../ -type f -name Olares.yaml | while read f; do
 
   unset bins
 done
+
+sed -i "s/#__VERSION__/${VERSION}/g" ${manifest}
