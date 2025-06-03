@@ -44,6 +44,7 @@ while read line; do
     echo "$filename,$path,$deps,$url_amd64,$checksum_amd64,$url_arm64,$checksum_arm64,$fileid" >> $manifest_file
 
 done < components
+sed -i "s/#__VERSION__/${VERSION}/g" $manifest_file
 
 path="images"
 for deps in "images.mf"; do

@@ -65,6 +65,13 @@ jobs:
     with:
       version: ${{ needs.test-version.outputs.version }}
 
+  upload-daemon:
+    needs: test-version
+    uses: ./.github/workflows/release-daemon.yaml
+    secrets: inherit
+    with:
+      version: ${{ needs.test-version.outputs.version }}
+
   push-image:
     runs-on: ubuntu-latest
 
@@ -106,6 +113,7 @@ jobs:
 
 
   push-deps:
+    needs: [test-version, upload-daemon]
     runs-on: ubuntu-latest
 
     steps:
@@ -121,10 +129,12 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
+          VERSION: ${{ needs.test-version.outputs.version }}
         run: |
           bash build/deps-manifest.sh && bash build/upload-deps.sh
 
   push-deps-arm64:
+    needs: [test-version, upload-daemon]
     runs-on: [self-hosted, linux, ARM64]
 
     steps:
@@ -143,6 +153,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
+          VERSION: ${{ needs.test-version.outputs.version }}
         run: |
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
           bash build/deps-manifest.sh linux/arm64 && bash build/upload-deps.sh linux/arm64
