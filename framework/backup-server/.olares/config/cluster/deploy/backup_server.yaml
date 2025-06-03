@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.34" }}
+{{ $backupVersion := "0.3.35" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 ---
@@ -93,6 +93,10 @@ spec:
             cpu: 2
             memory: 1500Mi
         env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
+        {{- end }}
         - name: APP_RANDOM_KEY
           valueFrom:
             secretKeyRef:
