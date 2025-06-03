@@ -416,7 +416,7 @@ spec:
             - name: PGDB
               value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
         - name: files-frontend-init
-          image: beclab/files-frontend:v1.3.66
+          image: beclab/files-frontend:v1.3.68
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -598,7 +598,7 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
         - name: user-service
-          image: beclab/user-service:v0.0.5
+          image: beclab/user-service:v0.0.8
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -695,7 +695,7 @@ spec:
             path: '{{ .Values.userspace.userData }}'
         - name: terminus-sidecar-config
           configMap:
-            name: sidecar-configs
+            name: sidecar-ws-configs
             items:
               - key: envoy.yaml
                 path: envoy.yaml
@@ -3168,6 +3168,13 @@ data:
             proxy_send_timeout 60s;
 
             add_header X-Frame-Options SAMEORIGIN;
+        }
+        location /ws {
+            proxy_pass http://127.0.0.1:40010;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
         }
         location ~.*\.(js|css|png|jpg|svg|woff|woff2|wasm)$
         {
