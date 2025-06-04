@@ -14,7 +14,6 @@ KUBE_TYPE={{ .KubeType }}
 REGISTRY_MIRRORS={{ .RegistryMirrors }}
 BASE_DIR={{ .BaseDir }}
 LOCAL_GPU_ENABLE={{ .GpuEnable }}
-LOCAL_GPU_SHARE={{ .GpuShare }}
 PUBLICLY_ACCESSIBLE={{ .PubliclyAccessible }}
 CLOUDFLARE_ENABLE={{ .CloudflareEnable }}
 FRP_ENABLE={{ .FrpEnable }}

@@ -69,7 +69,7 @@ func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
 			"is_cloud_version": cloudValue(t.KubeConf.Arg.IsCloudInstance),
 			"sync_secret":      t.KubeConf.Arg.Storage.StorageSyncSecret,
 		},
-		"gpu":                                  getGpuType(t.KubeConf.Arg.GPU.Enable, t.KubeConf.Arg.GPU.Share),
+		"gpu":                                  getGpuType(t.KubeConf.Arg.GPU.Enable),
 		"s3_bucket":                            t.KubeConf.Arg.Storage.StorageBucket,
 		"fs_type":                              getRootFSType(),
 		common.HelmValuesKeyTerminusGlobalEnvs: common.TerminusGlobalEnvs,
@@ -268,17 +268,11 @@ func (m *InstallOsSystemModule) Init() {
 	}
 }
 
-func getGpuType(gpuEnable, gpuShare bool) (gpuType string) {
-	gpuType = "none"
+func getGpuType(gpuEnable bool) (gpuType string) {
 	if gpuEnable {
-		if gpuShare {
-			gpuType = "nvshare"
-		} else {
-			gpuType = "nvidia"
-		}
+		return "nvidia"
 	}
-
-	return gpuType
+	return "none"
 }
 
 func cloudValue(cloudInstance bool) string {

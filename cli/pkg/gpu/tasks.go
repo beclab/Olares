@@ -62,7 +62,7 @@ func (t *CheckWslGPU) Execute(runtime *common.KubeRuntime) {
 		return
 	}
 
-	runtime.Arg.SetGPU(true, true)
+	runtime.Arg.SetGPU(true)
 }
 
 type InstallCudaDeps struct {
@@ -353,35 +353,6 @@ func (t *CheckGpuStatus) Execute(runtime connector.Runtime) error {
 		return nil
 	}
 	return fmt.Errorf("GPU Container State is Pending")
-}
-
-type InstallGPUShared struct {
-	common.KubeAction
-}
-
-func (t *InstallGPUShared) Execute(runtime connector.Runtime) error {
-	kubectlpath, err := util.GetCommand(common.CommandKubectl)
-	if err != nil {
-		return fmt.Errorf("kubectl not found")
-	}
-
-	var pluginPath = runtime.GetInstallerDir()
-	var fileName = path.Join(pluginPath, "deploy", "nvshare-system.yaml")
-	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectlpath, fileName), false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "Failed to apply nvshare-system.yaml")
-	}
-
-	fileName = path.Join(pluginPath, "deploy", "nvshare-system-quotas.yaml")
-	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectlpath, fileName), false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "Failed to apply nvshare-system-quotas.yaml")
-	}
-
-	fileName = path.Join(pluginPath, "deploy", "scheduler.yaml")
-	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectlpath, fileName), false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "Failed to apply scheduler.yaml")
-	}
-
-	return nil
 }
 
 type GetCudaVersion struct {
@@ -677,16 +648,16 @@ func (t *PrintPluginsStatus) Execute(runtime connector.Runtime) error {
 		}
 	}
 
-	nvshareScheduler, err := client.Kubernetes().CoreV1().Pods("nvshare-system").List(context.Background(), metav1.ListOptions{LabelSelector: "name=nvshare-scheduler"})
+	gpuScheduler, err := client.Kubernetes().CoreV1().Pods("kube-system").List(context.Background(), metav1.ListOptions{LabelSelector: "name=gpu-scheduler"})
 	if err != nil {
-		logger.Error("get nvshare scheduler status error, ", err)
+		logger.Error("get gpu-scheduler status error, ", err)
 	}
 
-	if len(nvshareScheduler.Items) == 0 {
-		logger.Info("nvshare-scheduler not exists")
+	if len(gpuScheduler.Items) == 0 {
+		logger.Info("gpu-scheduler not exists")
 	} else {
-		for _, scheduler := range nvshareScheduler.Items {
-			logger.Infof("nvshare-scheduler status: %s", scheduler.Status.Phase)
+		for _, scheduler := range gpuScheduler.Items {
+			logger.Infof("gpu-scheduler status: %s", scheduler.Status.Phase)
 			break
 		}
 	}
@@ -704,8 +675,8 @@ func (t *RestartPlugin) Execute(runtime connector.Runtime) error {
 		return fmt.Errorf("kubectl not found")
 	}
 
-	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s rollout restart ds nvshare-scheduler -n nvshare-system", kubectlpath), false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "Failed to restart nvshare-scheduler")
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s rollout restart ds gpu-scheduler -n kube-system", kubectlpath), false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "Failed to restart gpu-scheduler")
 	}
 
 	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s rollout restart ds hami-device-plugin -n kube-system", kubectlpath), false, true); err != nil {

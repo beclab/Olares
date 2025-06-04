@@ -96,7 +96,7 @@ func (u *PrepareAppValues) Execute(runtime connector.Runtime) error {
 		return err
 	}
 	fsType := getRootFSType()
-	gpuType := getGpuType(u.KubeConf.Arg.GPU.Enable, u.KubeConf.Arg.GPU.Share)
+	gpuType := getGpuType(u.KubeConf.Arg.GPU.Enable)
 	appValues := getAppSecrets(getAppPatches())
 
 	var values = map[string]interface{}{
