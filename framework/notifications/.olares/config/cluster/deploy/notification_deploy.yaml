@@ -98,9 +98,17 @@ spec:
             sub: allow
         name: system.users
         permission:
-          pub: allow
+          pub: deny
           sub: allow
-    user: os-system-notifications
+      - name: system.groups
+        permission:
+          pub: deny
+          sub: allow
+      - name: system.application
+        permission:
+          pub: deny
+          sub: allow
+    user: os-system-notification-server
 
 ---
 apiVersion: apps/v1
@@ -169,16 +177,18 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: admin
+          value: os-system-notification-server
         - name: NATS_PASSWORD
           valueFrom:
             secretKeyRef:
               key: nats_password
-              name: nats-secrets
+              name: notifications-secrets
         - name: NATS_SUBJECT
           value: "terminus.{{ .Release.Namespace }}.system.notification"
         - name: NATS_SUBJECT_SYSTEM_USERS
           value: "terminus.{{ .Release.Namespace }}.system.users"
+        - name: NATS_SUBJECT_SYSTEM_GROUPS
+          value: "terminus.{{ .Release.Namespace }}.system.groups"
         - name: NATS_SUBJECT_SYSTEM_APPLICATION
           value: "terminus.{{ .Release.Namespace }}.system.application"
         - name: NATS_SUBJECT_SYSTEM_VAULT

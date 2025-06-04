@@ -9,6 +9,25 @@
 {{ $usertmpl_sc := "juicefs-localpath-usertmpl" }}
 {{ $usertmpl_storage := "100Mi" }}
 
+{{- $namespace := printf "%s" "os-system" -}}
+{{- $app_service_nats_secret := (lookup "v1" "Secret" $namespace "app-service-nats-secret") -}}
+{{- $nats_password := "" -}}
+{{ if $app_service_nats_secret -}}
+{{ $nats_password = (index $app_service_nats_secret "data" "nats_password") }}
+{{ else -}}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-service-nats-secret
+  namespace: os-system
+type: Opaque
+data:
+  nats_password: {{ $nats_password }}
+
 
 ---
 apiVersion: v1
@@ -143,7 +162,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.3.36
+        image: beclab/app-service:0.3.37
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -178,6 +197,21 @@ spec:
           value: "90"
         - name: USER_MEMORY_THRESHOLD
           value: "90"
+        - name: NATS_HOST
+          value: nats
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: os-system-app-service
+        - name: NATS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: nats_password
+              name: app-service-nats-secret
+        - name: NATS_SUBJECT_SYSTEM_USERS
+          value: terminus.os-system.system.users
+        - name: NATS_SUBJECT_SYSTEM_GROUPS
+          value: terminus.os-system.system.groups
         - name: APP_RANDOM_KEY
           valueFrom:
             secretKeyRef:
@@ -387,3 +421,41 @@ spec:
           hostPath:
             path: /var/run/containerd
             type: Directory
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: app-service-nats
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: app-service
+  appNamespace: {{ .Release.Namespace }}
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nats_password
+          name: app-service-nats-secret
+    refs:
+      - appName: user-service
+        appNamespace: user
+        subjects:
+          - name: "application.*"
+            perm:
+              - pub
+              - sub
+    subjects:
+      - name: system.application
+        permission:
+          pub: allow
+          sub: allow
+      - name: system.users
+        permission:
+          pub: allow
+          sub: deny
+      - name: system.groups
+        permission:
+          pub: allow
+          sub: deny
+    user: os-system-app-service

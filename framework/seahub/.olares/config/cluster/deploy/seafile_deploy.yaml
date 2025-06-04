@@ -11,6 +11,13 @@
 {{ $pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+{{- $seahub_nats_secret := (lookup "v1" "Secret" $namespace "seahub-nats-secrets") -}}
+{{- $nats_password := "" -}}
+{{ if $seahub_nats_secret -}}
+{{ $nats_password = (index $seahub_nats_secret "data" "nats_password") }}
+{{ else -}}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
 ---
 apiVersion: v1
 kind: Secret
@@ -20,7 +27,16 @@ metadata:
 type: Opaque
 data:
   pg_password: {{ $pg_password }}
-
+  nats_password: {{ $pg_password }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: seahub-nats-secrets
+  namespace: os-system
+type: Opaque
+data:
+  nats_password: {{ $nats_password }}
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
@@ -348,6 +364,23 @@ spec:
             value: /root/dev/conf
           - name: SEAFILE_SERVER_LETSENCRYPT
             value: 'false'
+          - name: NATS_HOST
+            value: nats
+          - name: NATS_PORT
+            value: "4222"
+          - name: NATS_USERNAME
+            value: os-system-seahub-server
+          - name: NATS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: nats_password
+                name: seahub-nats-secrets
+          - name: NATS_SUBJECT_SYSTEM_SEAHUB
+            value: terminus.os-system.system.seahub
+          - name: NATS_SUBJECT_SYSTEM_USERS
+            value: terminus.os-system.system.users
+          - name: NATS_SUBJECT_SYSTEM_GROUPS
+            value: terminus.os-system.system.groups
         volumeMounts:
           - name: sync-data
             mountPath: /shared
@@ -495,3 +528,41 @@ spec:
   type: subscriber
   event: user.delete
   callback: http://seafile.{{ .Release.Namespace }}:8000/callback/delete
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: seahub-server-nats
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: seahub-server
+  appNamespace: {{ .Release.Namespace }}
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nats_password
+          name: seahub-nats-secrets
+    refs:
+      - appName: user-service
+        appNamespace: user
+        subjects:
+          - name: "seahub.*"
+            perm:
+              - pub
+              - sub
+    subjects:
+      - name: system.seahub
+        permission:
+          pub: allow
+          sub: allow
+      - name: system.users
+        permission:
+          pub: allow
+          sub: deny
+      - name: system.groups
+        permission:
+          pub: allow
+          sub: deny
+    user: os-system-seahub-server

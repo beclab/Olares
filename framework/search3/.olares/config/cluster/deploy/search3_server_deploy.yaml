@@ -8,6 +8,24 @@
 {{ $pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+{{- $search_server_nats_secret := (lookup "v1" "Secret" $namespace "search-server-nats-secret") -}}
+{{- $nats_password := "" -}}
+{{ if $search_server_nats_secret -}}
+{{ $nats_password = (index $search_server_nats_secret "data" "nats_password") }}
+{{ else -}}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: search-server-nats-secret
+  namespace: os-system
+type: Opaque
+data:
+  nats_password: {{ $nats_password }}
+
 ---
 apiVersion: v1
 kind: Secret
@@ -211,12 +229,18 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: admin
+          value: os-system-search-server
         - name: NATS_PASSWORD
           valueFrom:
             secretKeyRef:
               key: nats_password
-              name: nats-secrets
+              name: search-server-nats-secret
+        - name: NATS_SUBJECT_SYSTEM_SEARCH
+          value: terminus.os-system.system.search
+        - name: NATS_SUBJECT_SYSTEM_USERS
+          value: terminus.os-system.system.users
+        - name: NATS_SUBJECT_SYSTEM_GROUPS
+          value: terminus.os-system.system.groups
 
 ---
 apiVersion: v1
@@ -233,3 +257,42 @@ spec:
       name: search3
       port: 80
       targetPort: 8080
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: search-server-nats
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: search-server
+  appNamespace: {{ .Release.Namespace }}
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nats_password
+          name: search-server-nats-secret
+    refs:
+      - appName: user-service
+        appNamespace: user
+        subjects:
+        - name: "search.*"
+          perm:
+            - pub
+            - sub
+    subjects:
+      - name: system.search
+        permission:
+          pub: allow
+          sub: allow
+      - name: system.users
+        permission:
+          pub: allow
+          sub: deny
+      - name: system.groups
+        permission:
+          pub: allow
+          sub: deny
+    user: os-system-search-server

@@ -112,6 +112,18 @@ spec:
         perm:
         - pub
         - sub
+    - appName: user-service
+      appNamespace: user
+      subjects:
+        - name: "knowledge.*"
+          perm:
+            - pub
+            - sub
+    subjects:
+      - name: system.knowledge
+        permission:
+          pub: allow
+          sub: allow
     user: os-system-knowledge
 ---
 

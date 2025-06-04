@@ -75,21 +75,19 @@ spec:
         secretKeyRef:
           key: nats_password
           name: lldap-pg-secrets
-    refs:
-    - appName: notifications
-      appNamespace: {{ .Release.Namespace }}
-      subjects:
-      - name: system.notification
-        perm:
-        - pub
-        - sub
-    - appName: notifications
-      appNamespace: {{ .Release.Namespace }}
-      subjects:
-      - name: system.users
-        perm:
-        - pub
-        - sub
+    subjects:
+    - name: system.notification
+      permission:
+        pub: allow
+        sub: allow
+    - name: system.users
+      permission:
+        pub: allow
+        sub: allow
+    - name: system.groups
+      permission:
+        pub: allow
+        sub: allow
     user: os-system-lldap
 
 ---
@@ -173,6 +171,8 @@ spec:
               value: "terminus.{{ .Release.Namespace }}.system.notification"
             - name: NATS_SUBJECT_SYSTEM_USERS
               value: "terminus.{{ .Release.Namespace }}.system.users"
+            - name: NATS_SUBJECT_SYSTEM_GROUPS
+              value: "terminus.{{ .Release.Namespace }}.system.groups"
 
           image: beclab/lldap:0.0.2
           imagePullPolicy: IfNotPresent

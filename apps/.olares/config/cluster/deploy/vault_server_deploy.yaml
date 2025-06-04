@@ -11,6 +11,24 @@
 {{ $pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+{{- $vault_server_nats_secret := (lookup "v1" "Secret" $namespace "vault-server-nats-secret") -}}
+{{- $nats_password := "" -}}
+{{ if $vault_server_nats_secret -}}
+{{ $nats_password = (index $vault_server_nats_secret "data" "nats_password") }}
+{{ else -}}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-server-nats-secret
+  namespace: os-system
+type: Opaque
+data:
+  nats_password: {{ $nats_password }}
+
 ---
 apiVersion: v1
 kind: Secret
@@ -113,7 +131,7 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: admin
+          value: os-system-vault-server
         - name: NATS_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -183,4 +201,44 @@ spec:
   type: subscriber
   event: user.delete
   callback: http://vault-server.{{ .Release.Namespace }}:3010/callback/delete
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: vault-server-nats
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: vault-server
+  appNamespace: {{ .Release.Namespace }}
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nats_password
+          name: vault-server-nats-secret
+
+    refs:
+    - appName: user-service
+      appNamespace: user
+      subjects:
+        - name: "vault.*"
+          perm:
+            - pub
+            - sub
+    subjects:
+      - name: system.vault
+        permission:
+          pub: allow
+          sub: allow
+      - name: system.users
+        permission:
+          pub: allow
+          sub: deny
+      - name: system.groups
+        permission:
+          pub: allow
+          sub: deny
+    user: os-system-vault-server
 

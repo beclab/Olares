@@ -7,6 +7,24 @@
 {{ $redis_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+{{- $market_backend_nats_secret := (lookup "v1" "Secret" .Release.Namespace "market-backend-nats-secret") -}}
+{{- $nats_password := "" -}}
+{{ if $market_backend_nats_secret -}}
+{{ $nats_password = (index $market_backend_nats_secret "data" "nats_password") }}
+{{ else -}}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: market-backend-nats-secret
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  nats_password: {{ $nats_password }}
+---
 apiVersion: v1
 kind: Secret
 metadata:
@@ -118,7 +136,19 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
-
+          - name: NATS_HOST
+            value: nats.user-system-{{ .Values.bfl.username }}
+          - name: NATS_PORT
+            value: '4222'
+          - name: NATS_USERNAME
+            value: market-backend-{{ .Values.bfl.username}}
+          - name: NATS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: market-backend-nats-secret
+                key: nats_password
+          - name: NATS_SUBJECT_USER_APPLICATION
+            value: terminus.user.application.{{ .Values.bfl.username}}
         volumeMounts:
           - name: opt-data
             mountPath: /opt/app/data
@@ -289,3 +319,35 @@ spec:
       protocol: TCP
       port: 40010
       targetPort: 40010
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: market-backend-nats
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: market-backend
+  appNamespace: user
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nats_password
+          name: market-backend-nats-secret
+    refs:
+      - appName: user-service
+        appNamespace: user
+        subjects:
+          - name: "application.*"
+            perm:
+              - pub
+              - sub
+      - appName: user-service
+        appNamespace: user
+        subjects:
+          - name: "market.*"
+            perm:
+              - pub
+              - sub
+    user: market-backend-{{ .Values.bfl.username}}

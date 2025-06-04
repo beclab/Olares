@@ -237,14 +237,20 @@ spec:
             - name: NATS_PORT
               value: '4222'
             - name: NATS_USERNAME
-              value: admin
+              value: os-system-files-server
             - name: NATS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: nats-secrets
-                  key: nats_password
+                  name: files-nats-secrets
+                  key: files_nats_password
             - name: NATS_SUBJECT
               value: terminus.os-system.files-notify
+            - name: NATS_SUBJECT_SYSTEM_FILES
+              value: terminus.os-system.system.files
+            - name: NATS_SUBJECT_SYSTEM_USERS
+              value: terminus.os-system.system.users
+            - name: NATS_SUBJECT_SYSTEM_GROUPS
+              value: terminus.os-system.system.groups
             - name: RESERVED_SPACE
               value: '1000'
             - name: OLARES_VERSION
@@ -570,7 +576,14 @@ spec:
         secretKeyRef:
           key: files_nats_password
           name: files-nats-secrets
-    refs: []
+    refs:
+      - appName: user-service
+        appNamespace: user
+        subjects:
+          - name: "files.*"
+            perm:
+              - pub
+              - sub
     subjects:
       - export:
           - appName: files-frontend
@@ -582,6 +595,18 @@ spec:
         name: files-notify
         permission:
           pub: allow
+          sub: allow
+      - name: system.files
+        permission:
+          pub: allow
+          sub: allow
+      - name: system.users
+        permission:
+          pub: deny
+          sub: allow
+      - name: system.groups
+        permission:
+          pub: deny
           sub: allow
     user: os-system-files-server
 

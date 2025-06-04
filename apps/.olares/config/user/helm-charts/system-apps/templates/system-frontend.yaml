@@ -42,6 +42,25 @@
 {{ $user_service_pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+{{- $user_service_nats_secret := (lookup "v1" "Secret" $namespace "user-service-nats-secret") -}}
+{{- $nats_password := "" -}}
+{{ if $user_service_nats_secret -}}
+{{ $nats_password = (index $user_service_nats_secret "data" "nats_password") }}
+{{ else -}}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: user-service-nats-secret
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  nats_password: {{ $nats_password }}
+
 ---
 apiVersion: v1
 kind: Service
@@ -584,6 +603,15 @@ spec:
               value: terminus.os-system.files-notify
             - name: apiServerURL
               value: http://bfl.{{ .Release.Namespace }}:8080
+            - name: NATS_USERNAME_USERSERVICE
+              value: user-service-{{ .Values.bfl.username }}
+            - name: NATS_PASSWORD_USERSESRVICE
+              valueFrom:
+                secretKeyRef:
+                  key: nats_password
+                  name: user-service-nats-secret
+            - name: NATS_SUBJECT_USER_APPS
+              value: terminus.user.*.{{ .Values.bfl.username}}
         - name: terminus-ws-sidecar
           image: 'beclab/ws-gateway:v1.0.5'
           imagePullPolicy: IfNotPresent
@@ -2076,6 +2104,7 @@ data:
 
       location /hami/ {
         proxy_pass http://HamiServer/;
+        rewrite ^/hami(.*)$ $1 break;
       }
 
     
@@ -3354,124 +3383,86 @@ data:
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
-  name: user-files-nats
-  namespace: user-system-{{ .Values.bfl.username }}
+  name: user-service-nats
+  namespace: user-space-{{ .Values.bfl.username }}
 spec:
-  app: user-files
-  appNamespace: "user.{{ .Values.bfl.username }}"
+  app: user-service
+  appNamespace: user
   middleware: nats
   nats:
     password:
       valueFrom:
         secretKeyRef:
-          key: vault_nats_password
-          name: vault-nats-secrets
+          key: nats_password
+          name: user-service-nats-secret
     refs: []
     subjects:
       - export:
-          - appName: files-frontend
+          - appName: files-server
             sub: allow
             pub: allow
-        name: files
+        name: "files.*"
         permission:
           pub: allow
           sub: allow
-    user: user-{{ .Values.bfl.username }}-files
-
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: user-notification-nats
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: user-notifications
-  appNamespace: "user.{{ .Values.bfl.username }}"
-  middleware: nats
-  nats:
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: vault_nats_password
-          name: vault-nats-secrets
-    refs: []
-    subjects:
-      - name: notification
-        permission:
-          pub: allow
-          sub: allow
-    user: user-{{ .Values.bfl.username }}-notification
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: user-search-nats
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: user-search
-  appNamespace: "user.{{ .Values.bfl.username }}"
-  middleware: nats
-  nats:
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: vault_nats_password
-          name: vault-nats-secrets
-    refs: []
-    subjects:
-      - name: search
-        permission:
-          pub: allow
-          sub: allow
-    user: user-{{ .Values.bfl.username }}-search
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: user-seafile-nats
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: user-seafile
-  appNamespace: "user.{{ .Values.bfl.username }}"
-  middleware: nats
-  nats:
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: vault_nats_password
-          name: vault-nats-secrets
-    refs: []
-    subjects:
-      - name: seafile
-        permission:
-          pub: allow
-          sub: allow
-    user: user-{{ .Values.bfl.username }}-seafile
-
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: user-vault-nats
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: user-vault
-  appNamespace: "user.{{ .Values.bfl.username }}"
-  middleware: nats
-  nats:
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: vault_nats_password
-          name: vault-nats-secrets
-    refs: []
-    subjects:
       - export:
-          - appName: vault
+          - appName: notifications
             sub: allow
             pub: allow
-        name: vault
+        name: "notification.*"
         permission:
           pub: allow
           sub: allow
-    user: user-{{ .Values.bfl.username }}-vault
+      - export:
+          - appName: search-server
+            sub: allow
+            pub: allow
+        name: "search.*"
+        permission:
+          pub: allow
+          sub: allow
+      - export:
+          - appName: seahub-server
+            sub: allow
+            pub: allow
+        name: "seahub.*"
+        permission:
+          sub: allow
+          pub: allow
+      - export:
+          - appName: vault-server
+            sub: allow
+            pub: allow
+        name: "vault.*"
+        permission:
+          sub: allow
+          pub: allow
+      - export:
+          - appName: market-backend
+            sub: allow
+            pub: allow
+          - appName: app-service
+            sub: allow
+            pub: allow
+        name: "application.*"
+        permission:
+          sub: allow
+          pub: allow
+      - export:
+          - appName: knowledge
+            sub: allow
+            pub: allow
+        name: "knowledge.*"
+        permission:
+          sub: allow
+          pub: allow
+      - export:
+          - appName: market-backend
+            sub: allow
+            pub: allow
+        name: "market.*"
+        permission:
+          sub: allow
+          pub: allow
+
+    user: user-service-{{ .Values.bfl.username }}
