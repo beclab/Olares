@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: gpu-scheduler
-  namespace: {{ .Release.Namespace }}
+  namespace: gpu-system
 spec:
   selector:
     matchLabels:

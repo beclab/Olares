@@ -2,7 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: gpu-scheduler
-  namespace: {{ .Release.Namespace }}
+  namespace: gpu-system
 spec:
   ports:
     - name: ws
