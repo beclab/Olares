@@ -74,7 +74,6 @@ func (g *GenerateTerminusdServiceEnv) Execute(runtime connector.Runtime) error {
 			"RegistryMirrors":        g.KubeConf.Arg.RegistryMirrors,
 			"BaseDir":                baseDir,
 			"GpuEnable":              utils.FormatBoolToInt(g.KubeConf.Arg.GPU.Enable),
-			"GpuShare":               utils.FormatBoolToInt(g.KubeConf.Arg.GPU.Share),
 			"PubliclyAccessible":     g.KubeConf.Arg.PublicNetworkInfo.PubliclyAccessible,
 			"CloudflareEnable":       g.KubeConf.Arg.Cloudflare.Enable,
 			"FrpEnable":              g.KubeConf.Arg.Frp.Enable,

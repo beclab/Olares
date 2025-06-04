@@ -232,23 +232,10 @@ func (m *InstallPluginModule) Init() {
 		Delay:    10 * time.Second,
 	}
 
-	installGPUShared := &task.RemoteTask{
-		Name:  "InstallGPUShared",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
-			new(GPUSharePrepare),
-		},
-		Action:   new(InstallGPUShared),
-		Parallel: false,
-		Retry:    1,
-	}
-
 	m.Tasks = []task.Interface{
 		updateNode,
 		installPlugin,
 		checkGpuState,
-		installGPUShared,
 	}
 }
 

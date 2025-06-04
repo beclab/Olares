@@ -30,14 +30,6 @@ func (p *GPUEnablePrepare) PreCheck(runtime connector.Runtime) (bool, error) {
 	return p.KubeConf.Arg.GPU.Enable, nil
 }
 
-type GPUSharePrepare struct {
-	common.KubePrepare
-}
-
-func (p *GPUSharePrepare) PreCheck(runtime connector.Runtime) (bool, error) {
-	return p.KubeConf.Arg.GPU.Share || runtime.GetSystemInfo().IsWsl(), nil
-}
-
 type CudaInstalled struct {
 	common.KubePrepare
 	precheck.CudaCheckTask

@@ -241,7 +241,6 @@ type Storage struct {
 
 type GPU struct {
 	Enable bool `json:"gpu_enable"`
-	Share  bool `json:"gpu_share"`
 }
 
 type Cloudflare struct {
@@ -269,7 +268,6 @@ func NewArgument() *Argument {
 		},
 		GPU: &GPU{
 			Enable: !strings.EqualFold(os.Getenv(ENV_LOCAL_GPU_ENABLE), "0"), // default enable GPU, not set or 1 means enable
-			Share:  !strings.EqualFold(os.Getenv(ENV_LOCAL_GPU_ENABLE), "0"), // default share GPU
 		},
 		Cloudflare:             &Cloudflare{},
 		Frp:                    &Frp{},
@@ -374,12 +372,11 @@ func (a *Argument) SetTokenMaxAge() {
 	a.TokenMaxAge = age
 }
 
-func (a *Argument) SetGPU(enable bool, share bool) {
+func (a *Argument) SetGPU(enable bool) {
 	if a.GPU == nil {
 		a.GPU = new(GPU)
 	}
 	a.GPU.Enable = enable
-	a.GPU.Share = share
 }
 
 func (a *Argument) SetOlaresVersion(version string) {
