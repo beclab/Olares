@@ -1,40 +1,4 @@
 
-
-# ---
-# apiVersion: v1
-# kind: ServiceAccount
-# metadata:
-#   name: bytetrade-controller
-#   namespace: {{ .Release.Namespace }}
-
-# ---
-# apiVersion: rbac.authorization.k8s.io/v1
-# kind: ClusterRoleBinding
-# metadata:
-#   name: {{ .Release.Namespace }}:bytetrade-controller
-# roleRef:
-#   apiGroup: rbac.authorization.k8s.io
-#   kind: ClusterRole
-#   name: cluster-admin
-# subjects:
-# - kind: ServiceAccount
-#   name: bytetrade-controller
-#   namespace: {{ .Release.Namespace }}
-
-# ---
-# apiVersion: v1
-# data:
-#   seafdav.conf: |
-#     [WEBDAV]
-#     enabled = true
-#     port = 8080
-#     share_name = /seafdav
-#     workers = 2
-#     timeout = 1200
-# kind: ConfigMap
-# metadata:
-#   name: sync-config
-#   namespace: {{ .Release.Namespace }}
 {{ $seafile_application_rootpath := printf "%s%s" .Values.rootPath "/rootfs/Application/seafile" }}
 {{ $seafile_appcache_rootpath := printf "%s%s" .Values.rootPath "/userdata/Cache/seafile" }}
 
@@ -131,38 +95,6 @@ data:
         include proxy.conf;
       }    
     }
-#  login.lua: |-
-#    local headers = ngx.req.get_headers();
-#    local username = "";
-#
-#    for key, value in pairs(headers) do
-#      ngx.log(ngx.STDERR, key .. ": " .. value);
-#      if key == "x-bfl-user" then
-#        username = value;
-#      end
-#    end
-#
-#    local cookie = ngx.var.cookie_sfsessionid;
-#    ngx.log(ngx.STDERR, cookie);
-#    if username ~= "" and (cookie == nil or cookie == '') then
-#        local orig_ct = ngx.req.get_headers()["Content-Type"];
-#        ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded");
-#        local res = ngx.location.capture("/accounts/login/?next=/", {
-#            method = ngx.HTTP_POST,
-#            body = "login=" .. username .. "@seafile.com&password=abcd123456&next=/"
-#        });
-#        ngx.req.set_header("Content-Type", orig_ct);
-#        if res.status == ngx.HTTP_OK or res.status == ngx.HTTP_MOVED_TEMPORARILY then
-#            ngx.log(ngx.STDERR, "login success " .. res.status);
-#
-#            local new_cookie = res.header["Set-Cookie"];
-#            ngx.log(ngx.STDERR, new_cookie);
-#            ngx.req.set_header("Cookie", string.match(new_cookie, "[^;]+"));
-#            ngx.header["Set-Cookie"] = new_cookie;
-#        else
-#            ngx.header["X-Redirected"] = "/";
-#        end
-#    end
   nginx.conf: |-
     user  nginx;
     worker_processes  4;
@@ -341,143 +273,155 @@ spec:
               value: os_system_seahub
 
       containers:
-#      - name: sync-mysql
-#        image: lovehunter9/seahub_database_test:v0.0.3
-#        imagePullPolicy: IfNotPresent
-#        ports:
-#        - containerPort: 3306
-#          protocol: TCP
-#        resources:
-#          limits:
-#            cpu: 1
-#            memory: 1024Mi
-#          requests:
-#            cpu: 20m
-#            memory: 100Mi
-#        args:
-#        - --max_connections=1000
-#        - --character-set-server=utf8mb4
-#        - --collation-server=utf8mb4_general_ci
-#        - --default-authentication-plugin=mysql_native_password
-#        volumeMounts:
-#        - name: db-data
-#          mountPath: /var/lib/mysql
-#        livenessProbe:
-#          initialDelaySeconds: 3
-#          tcpSocket:
-#            port: 3306
-#        env:
-#        - name: MYSQL_LOG_CONSOLE
-#          value: "true"
-#        - name: MYSQL_ROOT_PASSWORD
-#          value: "123456"
-#        - name: TZ
-#          value: Asia/Shanghai
-#        lifecycle:
-#          postStart:
-#            exec:
-#              command:
-#              - /bin/bash
-#              - -c
-#              - |
-#                while [ ! -f /var/run/mysqld/mysqld.pid ]; do
-#                  sleep 1
-#                done
+      - name: seahub
+        image: beclab/pg_seahub:v0.0.13
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8000
+            protocol: TCP
+        env:
+          - name: DB_HOST
+            value: citus-headless.os-system
+          - name: DB_PORT
+            value: '5432'
+          - name: DB_NAME1
+            value: os_system_ccnet
+          - name: DB_NAME2
+            value: os_system_seafile
+          - name: DB_NAME3
+            value: os_system_seahub
+          - name: DB_USER
+            value: seafile_os_system
+          - name: DB_PASSWORD
+            value: {{ $pg_password | b64dec }}
+          - name: CCNET_CONF_DIR
+            value: /root/dev/conf
+          - name: SEAFILE_CONF_DIR
+            value: /root/dev/seafile-data
+          - name: SEAFILE_CENTRAL_CONF_DIR
+            value: /root/dev/conf
+          - name: PYTHONPATH
+            value: >-
+              /usr/local/lib/python3.8/site-packages/:/root/dev/source-code/seahub/thirdpart
+          - name: SEAFILE_ADMIN_EMAIL
+            value: admin@bytetrade.io
+          - name: SEAFILE_ADMIN_PASSWORD
+            value: admin
+        volumeMounts:
+          - name: sync-data
+            mountPath: /shared
+          - name: seafile-data
+            mountPath: /root/dev/seafile-data
+          - name: seafile-nginx-conf
+            mountPath: /root/dev/seafile-data/seafile.conf
+            subPath: seafile.conf
+          - name: seafile-nginx-conf
+            mountPath: /root/dev/conf/seahub_settings.py
+            subPath: seahub_settings.py
 
-      # - name: sync-memcached
-      #   image: memcached:1.6
-      #   imagePullPolicy: IfNotPresent
-      #   ports:
-      #   - containerPort: 11211
-      #     protocol: TCP
-      #   command:
-      #   - "memcached"
-      #   - "-m"
-      #   - "128"
-      #   livenessProbe:
-      #     initialDelaySeconds: 3
-      #     tcpSocket:
-      #       port: 11211
-      
-#      - name: sync-server
-#        image: lovehunter9/seafile_server_test:test_ci
+      - name: seafile-server
+        image: beclab/pg_seafile_server:v0.0.13
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8082
+            protocol: TCP
+        env:
+          - name: DB_HOST
+            value: citus-headless.os-system
+          - name: DB_PORT
+            value: '5432'
+          - name: DB_NAME1
+            value: os_system_ccnet
+          - name: DB_NAME2
+            value: os_system_seafile
+          - name: DB_NAME3
+            value: os_system_seahub
+          - name: DB_USER
+            value: seafile_os_system
+          - name: DB_PASSWORD
+            value: {{ $pg_password | b64dec }}
+          - name: CCNET_CONF_DIR
+            value: /root/dev/conf
+          - name: SEAFILE_CONF_DIR
+            value: /root/dev/seafile-data
+          - name: SEAFILE_CENTRAL_CONF_DIR
+            value: /root/dev/conf
+          - name: SEAFILE_SERVER_LETSENCRYPT
+            value: 'false'
+        volumeMounts:
+          - name: sync-data
+            mountPath: /shared
+          - name: seafile-data
+            mountPath: /root/dev/seafile-data
+          - name: seafile-nginx-conf
+            mountPath: /root/dev/seafile-data/seafile.conf
+            subPath: seafile.conf
+          - name: seafile-nginx-conf
+            mountPath: /root/dev/conf/ccnet.conf
+            subPath: ccnet.conf
+
+#      - name: sync-backend
+#        image: beclab/seahub_pgserver:v0.0.12
 #        imagePullPolicy: IfNotPresent
 #        volumeMounts:
 #        - name: sync-data
 #          mountPath: /shared
+#        - name: seafile-data
+#          mountPath: /root/dev/seafile-data
+#        - name: seafile-nginx-conf
+#          mountPath: /root/dev/seafile-data/seafile.conf
+#          subPath: seafile.conf
+#        - name: seafile-nginx-conf
+#          mountPath: /root/dev/conf/ccnet.conf
+#          subPath: ccnet.conf
+#        - name: seafile-nginx-conf
+#          mountPath: /root/dev/conf/seahub_settings.py
+#          subPath: seahub_settings.py
 #        ports:
+#        - containerPort: 8000
+#          protocol: TCP
 #        - containerPort: 8082
 #          protocol: TCP
-#
-#      - name: sync-frontend
-#        image: lovehunter9/seahub_frontend_test:test_ci
-#        imagePullPolicy: IfNotPresent
-#        ports:
-#        - containerPort: 3000
-#          protocol: TCP
-
-      - name: sync-backend
-        image: beclab/seahub_pgserver:v0.0.12
-        imagePullPolicy: IfNotPresent
-        volumeMounts:
-        - name: sync-data
-          mountPath: /shared
-        - name: seafile-data
-          mountPath: /root/dev/seafile-data
-        - name: seafile-nginx-conf
-          mountPath: /root/dev/seafile-data/seafile.conf
-          subPath: seafile.conf
-        - name: seafile-nginx-conf
-          mountPath: /root/dev/conf/ccnet.conf
-          subPath: ccnet.conf
-        - name: seafile-nginx-conf
-          mountPath: /root/dev/conf/seahub_settings.py
-          subPath: seahub_settings.py
-        ports:
-        - containerPort: 8000
-          protocol: TCP
-        - containerPort: 8082
-          protocol: TCP
-        env:
-        - name: DB_HOST
-          value: citus-headless.os-system
-        - name: DB_PORT
-          value: '5432'
-        - name: DB_NAME1
-          value: os_system_ccnet
-        - name: DB_NAME2
-          value: os_system_seafile
-        - name: DB_NAME3
-          value: os_system_seahub
-        - name: DB_USER
-          value: seafile_os_system
-        - name: DB_PASSWORD
-          value: {{ $pg_password | b64dec }}
-        - name: PYTHONPATH
-          value: /usr/local/lib/python3.8/site-packages/:/root/dev/source-code/seahub/thirdpart
-        - name: CCNET_CONF_DIR
-          value: /root/dev/conf
-        - name: SEAFILE_CONF_DIR
-          value: /root/dev/seafile-data
-        - name: SEAFILE_CENTRAL_CONF_DIR
-          value: /root/dev/conf
-        - name: SEAFILE_ADMIN_EMAIL
-          value: admin@bytetrade.io 
-        - name: SEAFILE_ADMIN_PASSWORD
-          value: admin
-        - name: SEAFILE_SERVER_LETSENCRYPT
-          value: "false"
-        - name: NATS_HOST
-          value: nats
-        - name: NATS_PORT
-          value: "4222"
-        - name: NATS_USERNAME
-          value: admin
-        - name: NATS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              key: nats_password
-              name: nats-secrets
+#        env:
+#        - name: DB_HOST
+#          value: citus-headless.os-system
+#        - name: DB_PORT
+#          value: '5432'
+#        - name: DB_NAME1
+#          value: os_system_ccnet
+#        - name: DB_NAME2
+#          value: os_system_seafile
+#        - name: DB_NAME3
+#          value: os_system_seahub
+#        - name: DB_USER
+#          value: seafile_os_system
+#        - name: DB_PASSWORD
+#          value: {{ $pg_password | b64dec }}
+#        - name: PYTHONPATH
+#          value: /usr/local/lib/python3.8/site-packages/:/root/dev/source-code/seahub/thirdpart
+#        - name: CCNET_CONF_DIR
+#          value: /root/dev/conf
+#        - name: SEAFILE_CONF_DIR
+#          value: /root/dev/seafile-data
+#        - name: SEAFILE_CENTRAL_CONF_DIR
+#          value: /root/dev/conf
+#        - name: SEAFILE_ADMIN_EMAIL
+#          value: admin@bytetrade.io
+#        - name: SEAFILE_ADMIN_PASSWORD
+#          value: admin
+#        - name: SEAFILE_SERVER_LETSENCRYPT
+#          value: "false"
+#        - name: NATS_HOST
+#          value: nats
+#        - name: NATS_PORT
+#          value: "4222"
+#        - name: NATS_USERNAME
+#          value: admin
+#        - name: NATS_PASSWORD
+#          valueFrom:
+#            secretKeyRef:
+#              key: nats_password
+#              name: nats-secrets
 
       - name: nginx
         image: 'beclab/nginx-lua:n0.0.4'
@@ -495,9 +439,6 @@ spec:
           - name: seafile-nginx-conf
             mountPath: /etc/nginx/conf.d/default.conf
             subPath: default.conf
-#          - name: seafile-nginx-conf
-#            mountPath: /etc/nginx/login.lua
-#            subPath: login.lua
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         imagePullPolicy: IfNotPresent
@@ -525,8 +466,6 @@ spec:
               path: proxy.conf
             - key: default.conf
               path: default.conf
-#            - key: login.lua
-#              path: login.lua
             - key: seafile.conf
               path: seafile.conf
             - key: ccnet.conf
@@ -534,13 +473,6 @@ spec:
             - key: seahub_settings.py
               path: seahub_settings.py
           defaultMode: 420
-      # - name: sync-config
-      #   configMap:
-      #     defaultMode: 420
-      #     name: sync-config
-      #     items:
-      #     - key: seafdav.conf
-      #       path: seafdav.conf
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
