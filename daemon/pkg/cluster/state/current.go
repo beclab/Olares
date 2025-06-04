@@ -349,6 +349,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 
 	// not upgrading, reset upgrading status
 	CurrentState.UpgradingState = ""
+	CurrentState.UpgradingTarget = ""
 	CurrentState.UpgradingRetryNum = 0
 	CurrentState.UpgradingStep = ""
 	CurrentState.UpgradingProgressNum = 0
