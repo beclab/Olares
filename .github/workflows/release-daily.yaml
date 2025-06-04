@@ -28,10 +28,11 @@ jobs:
       version: ${{ needs.daily-version.outputs.version }}
 
   release-daemon:
+    needs: daily-version
     uses: ./.github/workflows/release-daemon.yaml
     secrets: inherit
     with:
-      version: ${{ github.event.inputs.tags }}
+      version: ${{ needs.daily-version.outputs.version }}
 
   push-images:
     runs-on: ubuntu-22.04
