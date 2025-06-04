@@ -357,7 +357,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: settings-init
-          image: beclab/settings:v1.3.64
+          image: beclab/settings:v1.3.69
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -440,7 +440,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: market-frontend-init
-          image: beclab/market-frontend:v1.3.67
+          image: beclab/market-frontend:v1.3.69
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
