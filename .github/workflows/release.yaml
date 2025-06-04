@@ -15,12 +15,14 @@ jobs:
     secrets: inherit
     with:
       version: ${{ github.event.inputs.tags }}
+      ref: ${{ github.event.inputs.tags }}
 
   release-daemon:
     uses: ./.github/workflows/release-daemon.yaml
     secrets: inherit
     with:
       version: ${{ github.event.inputs.tags }}
+      ref: ${{ github.event.inputs.tags }}
 
   push:
     runs-on: ubuntu-22.04

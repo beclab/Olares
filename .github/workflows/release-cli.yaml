@@ -6,6 +6,8 @@ on:
       version:
         type: string
         required: true
+      ref:
+        type: string
   workflow_dispatch:
 jobs:
   goreleaser:
@@ -15,6 +17,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
+          ref: ${{ inputs.ref }}
 
       - name: Add Local Git Tag For GoReleaser
         run: git tag ${{ inputs.version }}
