@@ -64,6 +64,7 @@ jobs:
     secrets: inherit
     with:
       version: ${{ needs.test-version.outputs.version }}
+      ref: ${{ github.event.pull_request.head.ref }}
 
   upload-daemon:
     needs: test-version
@@ -71,6 +72,7 @@ jobs:
     secrets: inherit
     with:
       version: ${{ needs.test-version.outputs.version }}
+      ref: ${{ github.event.pull_request.head.ref }}
 
   push-image:
     runs-on: ubuntu-latest
