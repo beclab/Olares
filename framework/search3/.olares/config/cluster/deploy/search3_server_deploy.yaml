@@ -196,6 +196,23 @@ spec:
       labels:
         app: search3
     spec:
+      volumes:
+        - name: userspace-dir
+          hostPath:
+            path: /olares/rootfs/userspace
+            type: Directory
+        - name: fb-data
+          hostPath:
+            path: /olares/userdata/Cache/files
+            type: DirectoryOrCreate
+        - name: user-appdata-dir
+          hostPath:
+            path: /olares/userdata/Cache
+            type: Directory
+        - name: shared-lib
+          hostPath:
+            path: /olares/share
+            type: Directory
       initContainers:
       - name: init-container
         image: 'postgres:16.0-alpine3.18'
@@ -217,7 +234,7 @@ spec:
             value: os_system_search3
       containers:
       - name: search3
-        image: beclab/search3:v0.0.30
+        image: beclab/search3:v0.0.32
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -241,7 +258,39 @@ spec:
           value: terminus.os-system.system.users
         - name: NATS_SUBJECT_SYSTEM_GROUPS
           value: terminus.os-system.system.groups
-
+      - name: search3monitor
+        image: beclab/search3monitor:v0.0.32
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: DATABASE_URL
+          value: postgres://search3_os_system:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-system:5432/os_system_search3
+        - name: NATS_HOST
+          value: nats
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: os-system-search-server
+        - name: NATS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: nats_password
+              name: search-server-nats-secret
+        - name: NATS_SUBJECT_SYSTEM_SEARCH
+          value: terminus.os-system.system.search
+        - name: NATS_SUBJECT_SYSTEM_USERS
+          value: terminus.os-system.system.users
+        - name: NATS_SUBJECT_SYSTEM_GROUPS
+          value: terminus.os-system.system.groups
+        volumeMounts:
+          - name: fb-data
+            mountPath: /appdata
+          - name: userspace-dir
+            mountPath: /data
+          - name: upload-appdata
+            mountPath: /appcache/
+          - name: shared-lib
+            mountPath: /data/External
+            mountPropagation: Bidirectional
 ---
 apiVersion: v1
 kind: Service
