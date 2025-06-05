@@ -17,7 +17,7 @@ spec:
         gpu.bytetrade.io/cuda-supported: 'true'
       containers:
       - name: gpu-scheduler
-        image: beclab/gpu-scheduler:v0.1.0
+        image: beclab/gpu-scheduler:v0.1.1
         imagePullPolicy: IfNotPresent
         ports:
           - name: ws
