@@ -205,6 +205,10 @@ spec:
           hostPath:
             path: /olares/userdata/Cache/files
             type: DirectoryOrCreate
+        - name: upload-appdata
+          hostPath:
+            path: /olares/userdata/Cache
+            type: DirectoryOrCreate
         - name: user-appdata-dir
           hostPath:
             path: /olares/userdata/Cache
@@ -264,23 +268,6 @@ spec:
         env:
         - name: DATABASE_URL
           value: postgres://search3_os_system:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-system:5432/os_system_search3
-        - name: NATS_HOST
-          value: nats
-        - name: NATS_PORT
-          value: "4222"
-        - name: NATS_USERNAME
-          value: os-system-search-server
-        - name: NATS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              key: nats_password
-              name: search-server-nats-secret
-        - name: NATS_SUBJECT_SYSTEM_SEARCH
-          value: terminus.os-system.system.search
-        - name: NATS_SUBJECT_SYSTEM_USERS
-          value: terminus.os-system.system.users
-        - name: NATS_SUBJECT_SYSTEM_GROUPS
-          value: terminus.os-system.system.groups
         volumeMounts:
           - name: fb-data
             mountPath: /appdata
@@ -291,6 +278,10 @@ spec:
           - name: shared-lib
             mountPath: /data/External
             mountPropagation: Bidirectional
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          allowPrivilegeEscalation: true
 ---
 apiVersion: v1
 kind: Service
