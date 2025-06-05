@@ -47,9 +47,6 @@ output:
       name:  libnvidia-container.list
       amd64: https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list
       arm64: https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list
-  containers:
-    - 
-      name: redis:5.0.14-alpine
 
 
 
