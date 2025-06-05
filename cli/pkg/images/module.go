@@ -41,9 +41,7 @@ func (p *PreloadImagesModule) Init() {
 		Name:  "PreloadImages",
 		Hosts: p.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
-			// &MasterPullImages{Not: true},
 			&plugins.IsCloudInstance{Not: true},
-			// &CheckImageManifest{},
 			&ContainerdInstalled{},
 		},
 		Action: &LoadImages{

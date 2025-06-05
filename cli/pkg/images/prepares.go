@@ -22,21 +22,6 @@ import (
 	"bytetrade.io/web3os/installer/pkg/core/connector"
 )
 
-type MasterPullImages struct {
-	common.KubePrepare
-	Not bool
-}
-
-func (n *MasterPullImages) PreCheck(runtime connector.Runtime) (bool, error) {
-	host := runtime.RemoteHost()
-
-	v, ok := host.GetCache().GetMustBool(common.SkipMasterNodePullImages)
-	if ok && v && n.Not {
-		return !n.Not, nil
-	}
-	return n.Not, nil
-}
-
 type ContainerdInstalled struct {
 	common.KubePrepare
 }

@@ -17,17 +17,17 @@
 package k3s
 
 import (
-	"bytetrade.io/web3os/installer/pkg/kubernetes"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"bytetrade.io/web3os/installer/pkg/kubernetes"
 
 	"bytetrade.io/web3os/installer/pkg/common"
 	"bytetrade.io/web3os/installer/pkg/container"
 	containertemplates "bytetrade.io/web3os/installer/pkg/container/templates"
 	"bytetrade.io/web3os/installer/pkg/core/action"
 	cc "bytetrade.io/web3os/installer/pkg/core/common"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
 	"bytetrade.io/web3os/installer/pkg/core/logger"
 	"bytetrade.io/web3os/installer/pkg/core/prepare"
 	"bytetrade.io/web3os/installer/pkg/core/task"
@@ -597,40 +597,4 @@ func (s *SaveKubeConfigModule) Init() {
 	s.Tasks = []task.Interface{
 		save,
 	}
-}
-
-type UninstallK3sModule struct {
-	common.KubeModule
-}
-
-func (m *UninstallK3sModule) Init() {
-	m.Name = "UninstallK3s"
-
-	uninstallK3s := &task.LocalTask{
-		Name:    "UninstallK3s",
-		Prepare: new(CheckK3sUninstallScript),
-		Action:  new(UninstallK3s),
-	}
-
-	deleteCalicoCNI := &task.LocalTask{
-		Name:   "DeleteCalicoCNI",
-		Action: new(DeleteCalicoCNI),
-		Retry:  1,
-	}
-
-	m.Tasks = []task.Interface{
-		uninstallK3s,
-		deleteCalicoCNI,
-	}
-}
-
-func checkContainerExists(runtime connector.Runtime) bool {
-	var cmd = "if [ -z $(which containerd) ] || [ ! -e /run/containerd/containerd.sock ]; " +
-		"then echo 'not exist'; " +
-		"fi"
-	var runner = runtime.GetRunner()
-	if output, err := runner.Host.SudoCmd(cmd, false, false); err != nil || strings.Contains(output, "not exist") {
-		return false
-	}
-	return true
 }

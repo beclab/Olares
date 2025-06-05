@@ -23,7 +23,6 @@ import (
 	"bytetrade.io/web3os/installer/pkg/core/connector"
 	"bytetrade.io/web3os/installer/pkg/core/logger"
 	"bytetrade.io/web3os/installer/pkg/manifest"
-	"github.com/pkg/errors"
 )
 
 type InstallAppArmorTask struct {
@@ -44,36 +43,3 @@ func (t *InstallAppArmorTask) Execute(runtime connector.Runtime) error {
 
 	return nil
 }
-
-type CriDownload struct {
-	common.KubeAction
-	manifest.ManifestAction
-}
-
-func (d *CriDownload) Execute(runtime connector.Runtime) error {
-	cfg := d.KubeConf.Cluster
-	archMap := make(map[string]bool)
-	for _, host := range cfg.Hosts {
-		switch host.Arch {
-		case "amd64":
-			archMap["amd64"] = true
-		case "arm64":
-			archMap["arm64"] = true
-		default:
-			return errors.New(fmt.Sprintf("Unsupported architecture: %s", host.Arch))
-		}
-	}
-
-	var systemInfo = runtime.GetSystemInfo()
-	var osType = systemInfo.GetOsType()
-	var osPlatformFamily = systemInfo.GetOsPlatformFamily()
-	var osVersion = systemInfo.GetOsVersion()
-	for arch := range archMap {
-		if err := CriDownloadHTTP(d.KubeConf, runtime.GetWorkDir(), arch, osType, osVersion, osPlatformFamily, d.PipelineCache); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// TODO: install helm

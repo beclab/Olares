@@ -68,24 +68,6 @@ func (e *EtcdTypeIsKubeKey) PreCheck(_ connector.Runtime) (bool, error) {
 	return false, nil
 }
 
-type DeleteNode struct {
-	common.KubePrepare
-}
-
-func (d *DeleteNode) PreCheck(runtime connector.Runtime) (bool, error) {
-	nodeName, ok := d.PipelineCache.Get("dstNode")
-	if !ok {
-		return true, nil
-	}
-
-	host := runtime.RemoteHost()
-	if host.GetName() == nodeName {
-		return true, nil
-	}
-
-	return false, nil
-}
-
 type IsPveLxc struct {
 	common.KubePrepare
 }

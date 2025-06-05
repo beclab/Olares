@@ -42,22 +42,3 @@ func (c *ChownModule) Init() {
 		userKubeDir,
 	}
 }
-
-type ChownWorkDirModule struct {
-	module.BaseTaskModule
-}
-
-func (c *ChownWorkDirModule) Init() {
-	c.Name = "ChownWorkerModule"
-	c.Desc = "Change kubekey work dir mode and owner"
-
-	userKubeDir := &task.LocalTask{
-		Name:   "ChownFileAndDir",
-		Desc:   "Chown ./kubekey dir",
-		Action: &LocalTaskChown{Path: c.Runtime.GetWorkDir()},
-	}
-
-	c.Tasks = []task.Interface{
-		userKubeDir,
-	}
-}

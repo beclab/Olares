@@ -78,15 +78,6 @@ func (t *BackupRedisManifests) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-type DeployRedisHA struct {
-	common.KubeAction
-}
-
-func (t *DeployRedisHA) Execute(runtime connector.Runtime) error {
-
-	return nil
-}
-
 type DeployRedis struct {
 	common.KubeAction
 }
@@ -111,28 +102,6 @@ func (t *DeployRedis) Execute(runtime connector.Runtime) error {
 	if err := utils.UpgradeCharts(ctx, actionConfig, settings, appName, appPath, "", common.NamespaceKubesphereSystem, nil, false); err != nil {
 		return err
 	}
-
-	return nil
-}
-
-type PatchRedisStatus struct {
-	common.KubeAction
-}
-
-func (t *PatchRedisStatus) Execute(runtime connector.Runtime) error {
-	//kubectlpath, err := util.GetCommand(common.CommandKubectl)
-	//if err != nil {
-	//	return fmt.Errorf("kubectl not found")
-	//}
-	//
-	//var jsonPatch = fmt.Sprintf(`{"status": {"redis": {"status": "enabled", "enabledTime": "%s"}}}`,
-	//	time.Now().Format("2006-01-02T15:04:05Z"))
-	//var cmd = fmt.Sprintf("%s patch cc ks-installer --type merge -p '%s' -n %s", kubectlpath, jsonPatch, common.NamespaceKubesphereSystem)
-	//
-	//_, err = runtime.GetRunner().SudoCmd(cmd, false, true)
-	//if err != nil {
-	//	return errors.Wrap(errors.WithStack(err), "patch redis status failed")
-	//}
 
 	return nil
 }
@@ -171,19 +140,6 @@ func (m *DeployRedisModule) Init() {
 		Retry:    0,
 	}
 
-	deployRedisHA := &task.RemoteTask{
-		Name:  "DeployRedisHA",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
-			new(common.GetMasterNum),
-		},
-		Action:   new(DeployRedisHA), // todo skip
-		Parallel: false,
-		Retry:    0,
-	}
-
 	deployRedis := &task.RemoteTask{
 		Name:  "DeployRedis",
 		Hosts: m.Runtime.GetHostsByRole(common.Master),
@@ -197,24 +153,9 @@ func (m *DeployRedisModule) Init() {
 		Retry:    0,
 	}
 
-	patchRedis := &task.RemoteTask{
-		Name:  "PatchRedisStatus",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
-		},
-		Action:   new(PatchRedisStatus),
-		Parallel: false,
-		Retry:    10,
-		Delay:    5 * time.Second,
-	}
-
 	m.Tasks = []task.Interface{
 		createRedisSecret,
 		backupRedisManifests,
-		deployRedisHA, // todo
 		deployRedis,
-		patchRedis,
 	}
 }

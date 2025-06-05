@@ -17,18 +17,16 @@
 package kubesphere
 
 import (
+	"path/filepath"
+	"time"
+
 	"bytetrade.io/web3os/installer/pkg/core/action"
 	"bytetrade.io/web3os/installer/pkg/core/logger"
 	"bytetrade.io/web3os/installer/pkg/version/kubesphere/templates"
-	"fmt"
-	"os"
-	"path/filepath"
-	"time"
 
 	"bytetrade.io/web3os/installer/pkg/common"
 	"bytetrade.io/web3os/installer/pkg/core/prepare"
 	"bytetrade.io/web3os/installer/pkg/core/task"
-	"bytetrade.io/web3os/installer/pkg/version/kubesphere"
 )
 
 type DeleteKubeSphereCachesModule struct {
@@ -159,44 +157,6 @@ func (d *DeployModule) Init() {
 	}
 }
 
-func MirrorRepo(kubeConf *common.KubeConf) string {
-	repo := kubeConf.Cluster.Registry.PrivateRegistry
-	namespaceOverride := kubeConf.Cluster.Registry.NamespaceOverride
-	version := kubeConf.Cluster.KubeSphere.Version
-
-	_, ok := kubesphere.CNSource[version]
-	if ok && os.Getenv("KKZONE") == "cn" {
-		if repo == "" {
-			repo = "registry.cn-beijing.aliyuncs.com/kubesphereio"
-		} else if len(namespaceOverride) != 0 {
-			repo = fmt.Sprintf("%s/%s", repo, namespaceOverride)
-		} else {
-			repo = fmt.Sprintf("%s/kubesphere", repo)
-		}
-	} else {
-		if repo == "" {
-			_, latest := kubesphere.LatestRelease(version)
-			_, dev := kubesphere.DevRelease(version)
-			_, stable := kubesphere.StabledVersionSupport(version)
-			switch {
-			case stable:
-				repo = "kubesphere"
-			case dev:
-				repo = "kubespheredev"
-			case latest:
-				repo = "kubespheredev"
-			default:
-				repo = "kubesphere"
-			}
-		} else if len(namespaceOverride) != 0 {
-			repo = fmt.Sprintf("%s/%s", repo, namespaceOverride)
-		} else {
-			repo = fmt.Sprintf("%s/kubesphere", repo)
-		}
-	}
-	return repo
-}
-
 type CheckResultModule struct {
 	common.KubeModule
 	Skip bool
@@ -238,61 +198,5 @@ func (c *CheckResultModule) Init() {
 	c.Tasks = []task.Interface{
 		check,
 		getKubeCommand,
-	}
-}
-
-type CleanClusterConfigurationModule struct {
-	common.KubeModule
-	Skip bool
-}
-
-func (c *CleanClusterConfigurationModule) IsSkip() bool {
-	return c.Skip
-}
-
-func (c *CleanClusterConfigurationModule) Init() {
-	c.Name = "CleanClusterConfigurationModule"
-	c.Desc = "Clean redundant ClusterConfiguration config"
-
-	// ensure there is no cc config, and prevent to reset cc config when upgrade the cluster
-	clean := &task.LocalTask{
-		Name:   "CleanClusterConfiguration",
-		Desc:   "Clean redundant ClusterConfiguration config",
-		Action: new(CleanCC),
-	}
-
-	c.Tasks = []task.Interface{
-		clean,
-	}
-}
-
-type ConvertModule struct {
-	common.KubeModule
-	Skip bool
-}
-
-func (c *ConvertModule) IsSkip() bool {
-	return c.Skip
-}
-
-func (c *ConvertModule) Init() {
-	c.Name = "ConvertModule"
-	c.Desc = "Convert ks-installer config v2 to v3"
-
-	convert := &task.RemoteTask{
-		Name:  "ConvertV2ToV3",
-		Desc:  "Convert ks-installer config v2 to v3",
-		Hosts: c.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
-			new(VersionBelowV3),
-		},
-		Action:   new(ConvertV2ToV3),
-		Parallel: true,
-	}
-
-	c.Tasks = []task.Interface{
-		convert,
 	}
 }

@@ -6,14 +6,6 @@ import (
 	"bytetrade.io/web3os/installer/pkg/core/task"
 )
 
-type DeleteTmpModule struct {
-	common.KubeModule
-}
-
-func (m *DeleteTmpModule) Init() {
-	m.Name = "DeleteTmp"
-}
-
 type InitStorageModule struct {
 	common.KubeModule
 	Skip bool

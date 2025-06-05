@@ -18,7 +18,6 @@ package confirm
 
 import (
 	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/module"
 	"bytetrade.io/web3os/installer/pkg/core/task"
 )
 
@@ -44,106 +43,4 @@ func (i *InstallConfirmModule) Init() {
 	i.Tasks = []task.Interface{
 		display,
 	}
-}
-
-type DeleteClusterConfirmModule struct {
-	common.KubeModule
-}
-
-func (d *DeleteClusterConfirmModule) Init() {
-	d.Name = "DeleteClusterConfirmModule"
-	d.Desc = "Display delete confirmation form"
-
-	display := &task.LocalTask{
-		Name:   "ConfirmForm",
-		Desc:   "Display confirmation form",
-		Action: &DeleteConfirm{Content: "cluster"},
-	}
-
-	d.Tasks = []task.Interface{
-		display,
-	}
-}
-
-type DeleteNodeConfirmModule struct {
-	common.KubeModule
-}
-
-func (d *DeleteNodeConfirmModule) Init() {
-	d.Name = "DeleteNodeConfirmModule"
-	d.Desc = "Display delete node confirmation form"
-
-	display := &task.LocalTask{
-		Name:   "ConfirmForm",
-		Desc:   "Display confirmation form",
-		Action: &DeleteConfirm{Content: "node"},
-	}
-
-	d.Tasks = []task.Interface{
-		display,
-	}
-}
-
-type UpgradeConfirmModule struct {
-	common.KubeModule
-	Skip bool
-}
-
-func (u *UpgradeConfirmModule) IsSkip() bool {
-	return u.Skip
-}
-
-func (u *UpgradeConfirmModule) Init() {
-	u.Name = "UpgradeConfirmModule"
-	u.Desc = "Display upgrade confirmation form"
-
-	display := &task.LocalTask{
-		Name:   "ConfirmForm",
-		Desc:   "Display confirmation form",
-		Action: new(UpgradeConfirm),
-	}
-
-	u.Tasks = []task.Interface{
-		display,
-	}
-}
-
-type CheckFileExistModule struct {
-	module.BaseTaskModule
-	FileName string
-}
-
-func (c *CheckFileExistModule) Init() {
-	c.Name = "CheckFileExist"
-	c.Desc = "Check file if is existed"
-
-	check := &task.LocalTask{
-		Name:   "CheckExist",
-		Desc:   "Check output file if existed",
-		Action: &CheckFile{FileName: c.FileName},
-	}
-
-	c.Tasks = []task.Interface{
-		check,
-	}
-}
-
-type MigrateCriConfirmModule struct {
-	common.KubeModule
-}
-
-func (d *MigrateCriConfirmModule) Init() {
-	d.Name = "MigrateCriConfirmModule"
-	d.Desc = "Display Migrate Cri form"
-
-	display := &task.LocalTask{
-		Name:   "ConfirmForm",
-		Desc:   "Display confirmation form",
-		Action: &MigrateCri{},
-	}
-
-	d.Tasks = []task.Interface{
-		display,
-	}
-
 }

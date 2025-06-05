@@ -1,8 +1,9 @@
 package cluster
 
 import (
-	cc "bytetrade.io/web3os/installer/pkg/core/common"
 	"path"
+
+	cc "bytetrade.io/web3os/installer/pkg/core/common"
 
 	kubekeyapiv1alpha2 "bytetrade.io/web3os/installer/apis/kubekey/v1alpha2"
 
@@ -21,7 +22,6 @@ import (
 	"bytetrade.io/web3os/installer/pkg/kubesphere"
 	ksplugins "bytetrade.io/web3os/installer/pkg/kubesphere/plugins"
 	"bytetrade.io/web3os/installer/pkg/manifest"
-	"bytetrade.io/web3os/installer/pkg/plugins"
 	"bytetrade.io/web3os/installer/pkg/plugins/dns"
 	"bytetrade.io/web3os/installer/pkg/plugins/network"
 	"bytetrade.io/web3os/installer/pkg/plugins/storage"
@@ -39,7 +39,6 @@ func NewDarwinClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.Ins
 		&kubesphere.DeployMiniKubeModule{},
 		&kubesphere.DeployModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
 		&ksplugins.DeployKsPluginsModule{},
-		//&ksplugins.DeploySnapshotControllerModule{},
 		&ksplugins.DeployRedisModule{},
 		&ksplugins.CreateKubeSphereSecretModule{},
 		&ksplugins.DeployKsCoreConfigModule{}, // ks-core-config
@@ -99,7 +98,6 @@ func NewK3sCreateClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.
 		&storage.DeployLocalVolumeModule{Skip: skipLocalStorage},
 		&kubesphere.DeployModule{Skip: !runtime.Cluster.KubeSphere.Enabled}, //
 		&ksplugins.DeployKsPluginsModule{},
-		//&ksplugins.DeploySnapshotControllerModule{},
 		&ksplugins.DeployRedisModule{},
 		&ksplugins.CreateKubeSphereSecretModule{},
 		&ksplugins.DeployKsCoreConfigModule{}, // ks-core-config
@@ -159,12 +157,10 @@ func NewCreateClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.Ins
 		&certs.AutoRenewCertsModule{Skip: !runtime.Cluster.Kubernetes.EnableAutoRenewCerts()},
 		&kubernetes.SecurityEnhancementModule{Skip: !runtime.Arg.SecurityEnhancement},
 		&kubernetes.SaveKubeConfigModule{},
-		&plugins.DeployPluginsModule{},
 		&addons.AddonsModule{},
 		&storage.DeployLocalVolumeModule{Skip: skipLocalStorage},
 		&kubesphere.DeployModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
 		&ksplugins.DeployKsPluginsModule{},
-		//&ksplugins.DeploySnapshotControllerModule{},
 		&ksplugins.DeployRedisModule{},
 		&ksplugins.CreateKubeSphereSecretModule{},
 		&ksplugins.DeployKsCoreConfigModule{}, // ! ks-core-config

@@ -17,7 +17,6 @@
 package kubernetes
 
 import (
-	"fmt"
 	"time"
 
 	"bytetrade.io/web3os/installer/pkg/common"
@@ -38,10 +37,9 @@ func (k *StatusModule) Init() {
 	k.PipelineCache.GetOrSet(common.ClusterStatus, cluster)
 
 	clusterStatus := &task.RemoteTask{
-		Name:  "GetClusterStatus",
-		Desc:  "Get kubernetes cluster status",
-		Hosts: k.Runtime.GetHostsByRole(common.Master),
-		//Prepare:  new(NoClusterInfo),
+		Name:     "GetClusterStatus",
+		Desc:     "Get kubernetes cluster status",
+		Hosts:    k.Runtime.GetHostsByRole(common.Master),
 		Action:   new(GetClusterStatus),
 		Parallel: false,
 	}
@@ -379,79 +377,6 @@ func (c *UmountKubeModule) Init() {
 
 	c.Tasks = []task.Interface{
 		umountKubelet,
-	}
-}
-
-type CompareConfigAndClusterInfoModule struct {
-	common.KubeModule
-}
-
-func (c *CompareConfigAndClusterInfoModule) Init() {
-	c.Name = "CompareConfigAndClusterInfoModule"
-	c.Desc = "Compare config and cluster nodes info"
-
-	check := &task.RemoteTask{
-		Name:    "FindNode(k8s)",
-		Desc:    "Find information about nodes that are expected to be deleted",
-		Hosts:   c.Runtime.GetHostsByRole(common.Master),
-		Prepare: new(common.OnlyFirstMaster),
-		Action:  new(FindNode),
-	}
-
-	c.Tasks = []task.Interface{
-		check,
-	}
-}
-
-type DeleteKubeNodeModule struct {
-	common.KubeModule
-}
-
-func (d *DeleteKubeNodeModule) Init() {
-	d.Name = "DeleteKubeNodeModule"
-	d.Desc = "Delete kubernetes node"
-
-	drain := &task.RemoteTask{
-		Name:    "DrainNode(k8s)",
-		Desc:    "Node safely evict all pods",
-		Hosts:   d.Runtime.GetHostsByRole(common.Master),
-		Prepare: new(common.OnlyFirstMaster),
-		Action:  new(DrainNode),
-		Retry:   2,
-	}
-
-	deleteNode := &task.RemoteTask{
-		Name:    "DeleteNode(k8s)",
-		Desc:    "Delete the node using kubectl",
-		Hosts:   d.Runtime.GetHostsByRole(common.Master),
-		Prepare: new(common.OnlyFirstMaster),
-		Action:  new(KubectlDeleteNode),
-		Retry:   5,
-	}
-
-	d.Tasks = []task.Interface{
-		drain,
-		deleteNode,
-	}
-}
-
-type SetUpgradePlanModule struct {
-	common.KubeModule
-	Step UpgradeStep
-}
-
-func (s *SetUpgradePlanModule) Init() {
-	s.Name = fmt.Sprintf("SetUpgradePlanModule %d/%d", s.Step, len(UpgradeStepList))
-	s.Desc = "Set upgrade plan"
-
-	plan := &task.LocalTask{
-		Name:   "SetUpgradePlan(k8s)",
-		Desc:   "Set upgrade plan",
-		Action: &SetUpgradePlan{Step: s.Step},
-	}
-
-	s.Tasks = []task.Interface{
-		plan,
 	}
 }
 

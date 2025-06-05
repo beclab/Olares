@@ -18,11 +18,9 @@ package filesystem
 
 import (
 	"fmt"
-	"os/exec"
 
 	"bytetrade.io/web3os/installer/pkg/core/action"
 	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/util"
 	"github.com/pkg/errors"
 )
 
@@ -51,20 +49,6 @@ func (c *ChownFileAndDir) Execute(runtime connector.Runtime) error {
 		chownKubeConfig := fmt.Sprintf("chown -R %s:%s %s", userId, userGroupId, c.Path)
 		if _, err := runtime.GetRunner().SudoCmd(chownKubeConfig, false, false); err != nil {
 			return errors.Wrapf(errors.WithStack(err), "chown user %s failed", c.Path)
-		}
-	}
-	return nil
-}
-
-type LocalTaskChown struct {
-	action.BaseAction
-	Path string
-}
-
-func (l *LocalTaskChown) Execute(runtime connector.Runtime) error {
-	if exist := util.IsExist(l.Path); exist {
-		if err := exec.Command("/bin/sh", "-c", fmt.Sprintf("chown -R ${SUDO_UID}:${SUDO_GID} %s", l.Path)).Run(); err != nil {
-			return errors.Wrapf(errors.WithStack(err), "chown %s failed", l.Path)
 		}
 	}
 	return nil

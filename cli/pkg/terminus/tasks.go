@@ -212,15 +212,6 @@ func copyWizard(wizardPath string, np string, runtime connector.Runtime) {
 	}
 }
 
-type DownloadFullInstaller struct {
-	common.KubeAction
-}
-
-func (t *DownloadFullInstaller) Execute(runtime connector.Runtime) error {
-
-	return nil
-}
-
 type PrepareFinished struct {
 	common.KubeAction
 }

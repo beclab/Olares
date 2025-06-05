@@ -17,8 +17,9 @@
 package os
 
 import (
-	"bytetrade.io/web3os/installer/pkg/kubernetes"
 	"path/filepath"
+
+	"bytetrade.io/web3os/installer/pkg/kubernetes"
 
 	"bytetrade.io/web3os/installer/pkg/bootstrap/os/templates"
 	"bytetrade.io/web3os/installer/pkg/common"
@@ -195,47 +196,6 @@ func (c *ConfigureOSModule) Init() {
 	}
 }
 
-type ClearNodeOSModule struct {
-	common.KubeModule
-}
-
-func (c *ClearNodeOSModule) Init() {
-	c.Name = "ClearNodeOSModule"
-
-	resetNetworkConfig := &task.RemoteTask{
-		Name:     "ResetNetworkConfig",
-		Desc:     "Reset os network config",
-		Hosts:    c.Runtime.GetHostsByRole(common.Worker),
-		Prepare:  new(DeleteNode),
-		Action:   new(ResetNetworkConfig),
-		Parallel: true,
-	}
-
-	removeFiles := &task.RemoteTask{
-		Name:     "RemoveFiles",
-		Desc:     "Remove node files",
-		Hosts:    c.Runtime.GetHostsByRole(common.Worker),
-		Prepare:  new(DeleteNode),
-		Action:   new(RemoveNodeFiles),
-		Parallel: true,
-	}
-
-	daemonReload := &task.RemoteTask{
-		Name:     "DaemonReload",
-		Desc:     "Systemd daemon reload",
-		Hosts:    c.Runtime.GetHostsByRole(common.Worker),
-		Prepare:  new(DeleteNode),
-		Action:   new(DaemonReload),
-		Parallel: true,
-	}
-
-	c.Tasks = []task.Interface{
-		resetNetworkConfig,
-		removeFiles,
-		daemonReload,
-	}
-}
-
 type ClearOSEnvironmentModule struct {
 	common.KubeModule
 }
@@ -283,159 +243,5 @@ func (c *ClearOSEnvironmentModule) Init() {
 		uninstallETCD,
 		removeFiles,
 		daemonReload,
-	}
-}
-
-type RepositoryOnlineModule struct {
-	common.KubeModule
-	Skip bool
-}
-
-func (r *RepositoryOnlineModule) IsSkip() bool {
-	return r.Skip
-}
-
-func (r *RepositoryOnlineModule) Init() {
-	r.Name = "RepositoryOnlineModule"
-
-	getOSData := &task.RemoteTask{
-		Name:     "GetOSData",
-		Desc:     "Get OS release",
-		Hosts:    r.Runtime.GetAllHosts(),
-		Action:   new(GetOSData),
-		Parallel: true,
-	}
-
-	newRepo := &task.RemoteTask{
-		Name:     "NewRepoClient",
-		Desc:     "New repository client",
-		Hosts:    r.Runtime.GetAllHosts(),
-		Action:   new(NewRepoClient),
-		Parallel: true,
-		Retry:    1,
-	}
-
-	install := &task.RemoteTask{
-		Name:     "InstallPackage",
-		Desc:     "Install packages",
-		Hosts:    r.Runtime.GetAllHosts(),
-		Action:   new(InstallPackage),
-		Parallel: true,
-		Retry:    1,
-	}
-
-	r.Tasks = []task.Interface{
-		getOSData,
-		newRepo,
-		install,
-	}
-}
-
-type RepositoryModule struct {
-	common.KubeModule
-	Skip bool
-}
-
-func (r *RepositoryModule) IsSkip() bool {
-	return r.Skip
-}
-
-func (r *RepositoryModule) Init() {
-	r.Name = "RepositoryModule"
-	r.Desc = "Install local repository"
-
-	getOSData := &task.RemoteTask{
-		Name:     "GetOSData",
-		Desc:     "Get OS release",
-		Hosts:    r.Runtime.GetAllHosts(),
-		Action:   new(GetOSData),
-		Parallel: true,
-	}
-
-	sync := &task.RemoteTask{
-		Name:     "SyncRepositoryISOFile",
-		Desc:     "Sync repository iso file to all nodes",
-		Hosts:    r.Runtime.GetAllHosts(),
-		Action:   new(SyncRepositoryFile),
-		Parallel: true,
-		Retry:    2,
-	}
-
-	mount := &task.RemoteTask{
-		Name:     "MountISO",
-		Desc:     "Mount iso file",
-		Hosts:    r.Runtime.GetAllHosts(),
-		Action:   new(MountISO),
-		Parallel: true,
-		Retry:    1,
-	}
-
-	newRepo := &task.RemoteTask{
-		Name:     "NewRepoClient",
-		Desc:     "New repository client",
-		Hosts:    r.Runtime.GetAllHosts(),
-		Action:   new(NewRepoClient),
-		Parallel: true,
-		Retry:    1,
-		Rollback: new(RollbackUmount),
-	}
-
-	backup := &task.RemoteTask{
-		Name:     "BackupOriginalRepository",
-		Desc:     "Backup original repository",
-		Hosts:    r.Runtime.GetAllHosts(),
-		Action:   new(BackupOriginalRepository),
-		Parallel: true,
-		Retry:    1,
-		Rollback: new(RecoverBackupSuccessNode),
-	}
-
-	add := &task.RemoteTask{
-		Name:     "AddLocalRepository",
-		Desc:     "Add local repository",
-		Hosts:    r.Runtime.GetAllHosts(),
-		Action:   new(AddLocalRepository),
-		Parallel: true,
-		Retry:    1,
-		Rollback: new(RecoverRepository),
-	}
-
-	install := &task.RemoteTask{
-		Name:     "InstallPackage",
-		Desc:     "Install packages",
-		Hosts:    r.Runtime.GetAllHosts(),
-		Action:   new(InstallPackage),
-		Parallel: true,
-		Retry:    1,
-		Rollback: new(RecoverRepository),
-	}
-
-	reset := &task.RemoteTask{
-		Name:     "ResetRepository",
-		Desc:     "Reset repository to the original repository",
-		Hosts:    r.Runtime.GetAllHosts(),
-		Action:   new(ResetRepository),
-		Parallel: true,
-		Retry:    1,
-	}
-
-	umount := &task.RemoteTask{
-		Name:     "UmountISO",
-		Desc:     "Umount ISO file",
-		Hosts:    r.Runtime.GetAllHosts(),
-		Action:   new(UmountISO),
-		Parallel: true,
-	}
-
-	r.Tasks = []task.Interface{
-		getOSData,
-		sync,
-		mount,
-		newRepo,
-		backup,
-		add,
-		install,
-		reset,
-		umount,
 	}
 }

@@ -17,30 +17,11 @@
 package kubernetes
 
 import (
-	"fmt"
-
 	"bytetrade.io/web3os/installer/pkg/common"
 	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
 	"bytetrade.io/web3os/installer/pkg/core/util"
 	"github.com/pkg/errors"
 )
-
-type NoClusterInfo struct {
-	common.KubePrepare
-}
-
-func (n *NoClusterInfo) PreCheck(_ connector.Runtime) (bool, error) {
-	if v, ok := n.PipelineCache.Get(common.ClusterStatus); ok {
-		cluster := v.(*KubernetesStatus)
-		if cluster.ClusterInfo == "" {
-			return true, nil
-		}
-	} else {
-		return false, errors.New("get kubernetes cluster status by pipeline cache failed")
-	}
-	return false, nil
-}
 
 type NodesInfoGetter interface {
 	GetNodesInfo() map[string]string
@@ -91,75 +72,6 @@ func (c *ClusterIsExist) PreCheck(_ connector.Runtime) (bool, error) {
 	} else {
 		return false, errors.New("get kubernetes cluster status by pipeline cache failed")
 	}
-}
-
-type NotEqualPlanVersion struct {
-	common.KubePrepare
-}
-
-func (n *NotEqualPlanVersion) PreCheck(runtime connector.Runtime) (bool, error) {
-	planVersion, ok := n.PipelineCache.GetMustString(common.PlanK8sVersion)
-	if !ok {
-		return false, errors.New("get upgrade plan Kubernetes version failed by pipeline cache")
-	}
-
-	currentVersion, ok := n.PipelineCache.GetMustString(common.K8sVersion)
-	if !ok {
-		return false, errors.New("get cluster Kubernetes version failed by pipeline cache")
-	}
-	if currentVersion == planVersion {
-		return false, nil
-	}
-	return true, nil
-}
-
-type ClusterNotEqualDesiredVersion struct {
-	common.KubePrepare
-}
-
-func (c *ClusterNotEqualDesiredVersion) PreCheck(runtime connector.Runtime) (bool, error) {
-	clusterK8sVersion, ok := c.PipelineCache.GetMustString(common.K8sVersion)
-	if !ok {
-		return false, errors.New("get cluster Kubernetes version failed by pipeline cache")
-	}
-
-	if c.KubeConf.Cluster.Kubernetes.Version == clusterK8sVersion {
-		return false, nil
-	}
-	return true, nil
-}
-
-type NotEqualDesiredVersion struct {
-	common.KubePrepare
-}
-
-func (n *NotEqualDesiredVersion) PreCheck(runtime connector.Runtime) (bool, error) {
-	host := runtime.RemoteHost()
-
-	nodeK8sVersion, ok := host.GetCache().GetMustString(common.NodeK8sVersion)
-	if !ok {
-		return false, errors.New("get node Kubernetes version failed by host cache")
-	}
-
-	if n.KubeConf.Cluster.Kubernetes.Version == nodeK8sVersion {
-		return false, nil
-	}
-	return true, nil
-}
-
-type GetKubeletVersion struct {
-	common.KubePrepare
-	CommandDelete bool
-}
-
-func (g *GetKubeletVersion) PreCheck(runtime connector.Runtime) (bool, error) {
-	kubeletVersion, err := runtime.GetRunner().SudoCmd("/usr/local/bin/kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}'", false, true)
-	if err != nil {
-		logger.Errorf("failed to get kubelet version: %v", err)
-		return false, fmt.Errorf("failed to get kubelet version: %v", err)
-	}
-	g.PipelineCache.Set(common.CacheKubeletVersion, kubeletVersion)
-	return true, nil
 }
 
 type CheckKubeadmExist struct {

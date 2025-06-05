@@ -17,22 +17,20 @@
 package kubesphere
 
 import (
+	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+
 	kubekeyapiv1alpha2 "bytetrade.io/web3os/installer/apis/kubekey/v1alpha2"
 	"bytetrade.io/web3os/installer/pkg/common"
 	"bytetrade.io/web3os/installer/pkg/core/connector"
 	"bytetrade.io/web3os/installer/pkg/core/logger"
 	"bytetrade.io/web3os/installer/pkg/core/util"
-	ksv2 "bytetrade.io/web3os/installer/pkg/kubesphere/v2"
-	ksv3 "bytetrade.io/web3os/installer/pkg/kubesphere/v3"
 	"bytetrade.io/web3os/installer/pkg/version/kubesphere"
 	"bytetrade.io/web3os/installer/pkg/version/kubesphere/templates"
-	"fmt"
 	"github.com/pkg/errors"
-	yamlV2 "gopkg.in/yaml.v2"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
 )
 
 type DeleteKubeSphereCaches struct {
@@ -404,112 +402,4 @@ func (c *Check) Execute(runtime connector.Runtime) error {
 	//}
 	//defer conn.Close()
 	return nil
-}
-
-type CleanCC struct {
-	common.KubeAction
-}
-
-func (c *CleanCC) Execute(runtime connector.Runtime) error {
-	c.KubeConf.Cluster.KubeSphere.Configurations = "\n"
-	return nil
-}
-
-type ConvertV2ToV3 struct {
-	common.KubeAction
-}
-
-func (c *ConvertV2ToV3) Execute(runtime connector.Runtime) error {
-	configV2Str, err := runtime.GetRunner().SudoCmd(
-		"/usr/local/bin/kubectl get cm -n kubesphere-system ks-installer -o jsonpath='{.data.ks-config\\.yaml}'",
-		false, false)
-	if err != nil {
-		return err
-	}
-
-	clusterCfgV2 := ksv2.V2{}
-	clusterCfgV3 := ksv3.V3{}
-	if err := yamlV2.Unmarshal([]byte(configV2Str), &clusterCfgV2); err != nil {
-		return err
-	}
-
-	configV3, err := MigrateConfig2to3(&clusterCfgV2, &clusterCfgV3)
-	if err != nil {
-		return err
-	}
-	c.KubeConf.Cluster.KubeSphere.Configurations = "---\n" + configV3
-	return nil
-}
-
-func MigrateConfig2to3(v2 *ksv2.V2, v3 *ksv3.V3) (string, error) {
-	v3.Etcd = ksv3.Etcd(v2.Etcd)
-	v3.Persistence = ksv3.Persistence(v2.Persistence)
-	v3.Alerting = ksv3.Alerting(v2.Alerting)
-	v3.Notification = ksv3.Notification(v2.Notification)
-	v3.LocalRegistry = v2.LocalRegistry
-	v3.Servicemesh = ksv3.Servicemesh(v2.Servicemesh)
-	v3.Devops = ksv3.Devops(v2.Devops)
-	v3.Openpitrix = ksv3.Openpitrix(v2.Openpitrix)
-	v3.Console = ksv3.Console(v2.Console)
-
-	if v2.MetricsServerNew.Enabled == "" {
-		if v2.MetricsServerOld.Enabled == "true" || v2.MetricsServerOld.Enabled == "True" {
-			v3.MetricsServer.Enabled = true
-		} else {
-			v3.MetricsServer.Enabled = false
-		}
-	} else {
-		if v2.MetricsServerNew.Enabled == "true" || v2.MetricsServerNew.Enabled == "True" {
-			v3.MetricsServer.Enabled = true
-		} else {
-			v3.MetricsServer.Enabled = false
-		}
-	}
-
-	v3.Monitoring.PrometheusMemoryRequest = v2.Monitoring.PrometheusMemoryRequest
-	//v3.Monitoring.PrometheusReplicas = v2.Monitoring.PrometheusReplicas
-	v3.Monitoring.PrometheusVolumeSize = v2.Monitoring.PrometheusVolumeSize
-	//v3.Monitoring.AlertmanagerReplicas = 1
-
-	v3.Common.EtcdVolumeSize = v2.Common.EtcdVolumeSize
-	v3.Common.MinioVolumeSize = v2.Common.MinioVolumeSize
-	v3.Common.MysqlVolumeSize = v2.Common.MysqlVolumeSize
-	v3.Common.OpenldapVolumeSize = v2.Common.OpenldapVolumeSize
-	v3.Common.RedisVolumSize = v2.Common.RedisVolumSize
-	//v3.Common.ES.ElasticsearchDataReplicas = v2.Logging.ElasticsearchDataReplicas
-	//v3.Common.ES.ElasticsearchMasterReplicas = v2.Logging.ElasticsearchMasterReplicas
-	v3.Common.ES.ElkPrefix = v2.Logging.ElkPrefix
-	v3.Common.ES.LogMaxAge = v2.Logging.LogMaxAge
-	if v2.Logging.ElasticsearchVolumeSize == "" {
-		v3.Common.ES.ElasticsearchDataVolumeSize = v2.Logging.ElasticsearchDataVolumeSize
-		v3.Common.ES.ElasticsearchMasterVolumeSize = v2.Logging.ElasticsearchMasterVolumeSize
-	} else {
-		v3.Common.ES.ElasticsearchMasterVolumeSize = "4Gi"
-		v3.Common.ES.ElasticsearchDataVolumeSize = v2.Logging.ElasticsearchVolumeSize
-	}
-
-	v3.Logging.Enabled = v2.Logging.Enabled
-	v3.Logging.LogsidecarReplicas = v2.Logging.LogsidecarReplicas
-
-	v3.Authentication.JwtSecret = ""
-	v3.Multicluster.ClusterRole = "none"
-	v3.Events.Ruler.Replicas = 2
-
-	var clusterConfiguration = ksv3.ClusterConfig{
-		ApiVersion: "installer.kubesphere.io/v1alpha1",
-		Kind:       "ClusterConfiguration",
-		Metadata: ksv3.Metadata{
-			Name:      "ks-installer",
-			Namespace: "kubesphere-system",
-			Label:     ksv3.Label{Version: "v3.0.0"},
-		},
-		Spec: v3,
-	}
-
-	configV3, err := yamlV2.Marshal(clusterConfiguration)
-	if err != nil {
-		return "", err
-	}
-
-	return string(configV3), nil
 }

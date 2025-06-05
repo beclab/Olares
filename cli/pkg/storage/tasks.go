@@ -309,18 +309,6 @@ func (t *RemoveTerminusFiles) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-type DeleteTmp struct {
-	common.KubeAction
-}
-
-func (t *DeleteTmp) Execute(runtime connector.Runtime) error {
-	var tmpPath = path.Join(common.RootDir, "tmp", "install_log")
-	if util.IsExist(tmpPath) {
-		util.RemoveDir(tmpPath)
-	}
-	return nil
-}
-
 type DeletePhaseFlagFile struct {
 	common.KubeAction
 	PhaseFile string

@@ -1,45 +1,24 @@
 package images
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/containerd/containerd/pkg/cri/labels"
-	"github.com/containerd/containerd/reference/docker"
-	"math"
-	"net/http"
 	"os"
-	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/containerd/containerd/pkg/cri/labels"
+	"github.com/containerd/containerd/reference/docker"
+
 	"bytetrade.io/web3os/installer/pkg/common"
 	"bytetrade.io/web3os/installer/pkg/core/cache"
-	cc "bytetrade.io/web3os/installer/pkg/core/common"
 	"bytetrade.io/web3os/installer/pkg/core/connector"
 	"bytetrade.io/web3os/installer/pkg/core/logger"
 	"bytetrade.io/web3os/installer/pkg/manifest"
 	"bytetrade.io/web3os/installer/pkg/utils"
-	"github.com/cavaliergopher/grab/v3"
 )
 
 const MAX_IMPORT_RETRY int = 5
-
-type CheckImageManifest struct {
-	common.KubePrepare
-}
-
-func (p *CheckImageManifest) PreCheck(runtime connector.Runtime) (bool, error) {
-	// var imageManifest = path.Join(runtime.GetHomeDir(), cc.TerminusKey, cc.ManifestDir, cc.ManifestImage)
-	var imageManifest = path.Join(runtime.GetBaseDir(), cc.ManifestDir, cc.ManifestImage)
-
-	if utils.IsExist(imageManifest) {
-		return true, nil
-	}
-	return false, fmt.Errorf("image manifest not exist")
-}
 
 type LoadImages struct {
 	common.KubeAction
@@ -255,149 +234,4 @@ func inspectImage(runner *connector.Runner, containerManager, imageRepoTag strin
 	}
 
 	return nil
-}
-
-func downloadImageFile(arch, imageRepoTag, imageFilePath string) error {
-	var err error
-	if arch == common.Amd64 {
-		arch = ""
-	} else {
-		arch = arch + "/"
-	}
-
-	var imageFileName = path.Base(imageFilePath)
-
-	var url = fmt.Sprintf("%s/%s%s", cc.DownloadUrl, arch, imageFileName)
-	for i := 5; i > 0; i-- {
-		totalSize, _ := getImageFileSize(url)
-		if totalSize > 0 {
-			logger.Infof("get image %s size: %s", imageRepoTag, utils.FormatBytes(totalSize))
-		}
-
-		client := grab.NewClient()
-		req, _ := grab.NewRequest(imageFilePath, url)
-		req.HTTPRequest = req.HTTPRequest.WithContext(context.Background())
-		ctx, cancel := context.WithTimeout(req.HTTPRequest.Context(), 5*time.Minute)
-		defer cancel()
-
-		req.HTTPRequest = req.HTTPRequest.WithContext(ctx)
-		resp := client.Do(req)
-
-		t := time.NewTicker(500 * time.Millisecond)
-		defer t.Stop()
-
-		var downloaded int64
-	Loop:
-		for {
-			select {
-			case <-t.C:
-				downloaded = resp.BytesComplete()
-				var progressInfo string
-				if totalSize != 0 {
-					result := float64(downloaded) / float64(totalSize)
-					progressInfo = fmt.Sprintf("transferred %s %s / %s (%.2f%%) / speed: %s", imageFileName, utils.FormatBytes(resp.BytesComplete()), utils.FormatBytes(totalSize), math.Round(result*10000)/100, utils.FormatBytes(int64(resp.BytesPerSecond())))
-					logger.Info(progressInfo)
-				} else {
-					progressInfo = fmt.Sprintf("transferred %s %s / speed: %s\n", imageFileName, utils.FormatBytes(resp.BytesComplete()), utils.FormatBytes(int64(resp.BytesPerSecond())))
-					logger.Infof(progressInfo)
-				}
-			case <-resp.Done:
-				break Loop
-			}
-		}
-
-		if err = resp.Err(); err != nil {
-			logger.Infof("download %s error %v", imageFileName, err)
-			time.Sleep(2 * time.Second)
-			continue
-		}
-	}
-
-	return err
-}
-
-func pullImage(runner *connector.Runner, containerManager, imageRepoTag, imageHashTag, dst string) error {
-	var pullCmd string = "docker"
-	var inspectCmd string = "docker"
-	var exportCmd string = "docker"
-	switch containerManager {
-	case "crio": // not implement
-		pullCmd = "ctr"
-		inspectCmd = "ctr"
-		exportCmd = "ctr"
-	case "containerd":
-		pullCmd = "crictl pull %s"
-		inspectCmd = "crictl inspecti -q %s"
-		exportCmd = "ctr -n k8s.io image export %s %s"
-	case "isula": // not implement
-		pullCmd = "isula"
-		inspectCmd = "isula"
-		exportCmd = "isula"
-	default:
-		pullCmd = "docker pull %s"
-		exportCmd = "docker save -o %s %s"
-	}
-
-	var cmd = fmt.Sprintf(pullCmd, imageRepoTag)
-	if _, err := runner.Host.SudoCmd(cmd, false, false); err != nil {
-		return fmt.Errorf("pull %s error %v", imageRepoTag, err)
-	}
-
-	var repoTag = imageRepoTag
-	if containerManager == "containerd" {
-		cmd = fmt.Sprintf(inspectCmd, imageRepoTag)
-		stdout, err := runner.Host.SudoCmd(cmd, false, false)
-		if err != nil {
-			return fmt.Errorf("inspect %s error %v", imageRepoTag, err)
-		}
-		var ii ImageInspect
-		if err = json.Unmarshal([]byte(stdout), &ii); err != nil {
-			return fmt.Errorf("unmarshal %s error %v", imageRepoTag, err)
-		}
-		repoTag = ii.Status.RepoTags[0]
-	}
-
-	var dstFile = path.Join(dst, fmt.Sprintf("%s.tar", imageHashTag))
-	cmd = fmt.Sprintf(exportCmd, dstFile, repoTag)
-	if _, err := runner.Host.SudoCmd(cmd, false, false); err != nil {
-		return fmt.Errorf("export %s error: %v", imageRepoTag, err)
-	}
-	if _, err := runner.Host.SudoCmd(fmt.Sprintf("gzip %s", dstFile), false, false); err != nil {
-		return fmt.Errorf("gzip %s error: %v", dstFile, err)
-	}
-
-	return nil
-}
-
-func getImageFileSize(url string) (int64, error) {
-	resp, err := http.Head(url)
-	if err != nil {
-		return -1, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return -1, fmt.Errorf("bad status: %s", resp.Status)
-	}
-
-	size, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
-	if err != nil {
-		return -1, fmt.Errorf("failed to parse content length: %v, header: %s", err, resp.Header.Get("Content-Length"))
-	}
-	return size, nil
-}
-
-type RateLimiter struct {
-	r, n int
-}
-
-func NewLimiter(r int) grab.RateLimiter {
-	return &RateLimiter{r: r}
-}
-
-func (c *RateLimiter) WaitN(ctx context.Context, n int) (err error) {
-	c.n += n
-	time.Sleep(
-		time.Duration(1.00 / float64(c.r) * float64(n) * float64(time.Second)))
-	return
 }

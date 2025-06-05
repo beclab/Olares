@@ -25,7 +25,6 @@ import (
 	"bytetrade.io/web3os/installer/pkg/core/connector"
 	"bytetrade.io/web3os/installer/pkg/utils"
 	"github.com/pkg/errors"
-	versionutil "k8s.io/apimachinery/pkg/util/version"
 )
 
 type IsCloudInstance struct {
@@ -96,23 +95,6 @@ func (p *GenerateRedisPassword) PreCheck(runtime connector.Runtime) (bool, error
 
 	p.PipelineCache.Set(common.CacheRedisPassword, pass)
 	return true, nil
-}
-
-type VersionBelowV3 struct {
-	common.KubePrepare
-}
-
-func (v *VersionBelowV3) PreCheck(runtime connector.Runtime) (bool, error) {
-	versionStr, ok := v.PipelineCache.GetMustString(common.KubeSphereVersion)
-	if !ok {
-		return false, errors.New("get current kubesphere version failed by pipeline cache")
-	}
-	version := versionutil.MustParseSemantic(versionStr)
-	v300 := versionutil.MustParseSemantic("v3.0.0")
-	if v.KubeConf.Cluster.KubeSphere.Enabled && v.KubeConf.Cluster.KubeSphere.Version == "v3.0.0" && version.LessThan(v300) {
-		return true, nil
-	}
-	return false, nil
 }
 
 type NotEqualDesiredVersion struct {

@@ -134,10 +134,6 @@ func (m *CheckInstalledModule) Init() {
 	}
 }
 
-type InstallComponentsInClusterModule struct {
-	common.KubeModule
-}
-
 type GetNATGatewayIPModule struct {
 	common.KubeModule
 }
