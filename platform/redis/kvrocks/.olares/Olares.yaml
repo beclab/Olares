@@ -1,0 +1,10 @@
+apiVersion: v1
+target: prebuilt
+output:
+  containers:
+    - 
+      name: beclab/kvrocks:0.1.0
+
+
+
+      
