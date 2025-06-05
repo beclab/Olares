@@ -376,7 +376,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: settings-init
-          image: beclab/settings:v1.3.69
+          image: beclab/settings:v1.3.71
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -626,7 +626,7 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
         - name: user-service
-          image: beclab/user-service:v0.0.8
+          image: beclab/user-service:v0.0.10
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000

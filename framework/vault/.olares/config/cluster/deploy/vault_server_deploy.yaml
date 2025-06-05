@@ -101,7 +101,7 @@ spec:
             value: os_system_vault
       containers:
       - name: vault-server
-        image: beclab/vault-server:v1.3.55
+        image: beclab/vault-server:v1.3.71
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
