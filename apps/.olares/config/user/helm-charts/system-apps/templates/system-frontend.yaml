@@ -471,7 +471,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: edge-desktop-init
-          image: beclab/desktop:v0.2.59
+          image: beclab/desktop:v1.3.70
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
