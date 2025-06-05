@@ -190,7 +190,7 @@ spec:
             value: os_system_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.12.8"
+        image: "beclab/knowledge-base-api:v0.12.9"
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -346,21 +346,6 @@ spec:
           - name: cache-dir
             mountPath: /appCache
 
-      - name: terminus-ws-sidecar
-        image: 'beclab/ws-gateway:v1.0.4'
-        imagePullPolicy: IfNotPresent
-        command:
-          - /ws-gateway
-        env:
-          - name: WS_PORT
-            value: '3010'
-          - name: WS_URL
-            value: /knowledge/websocket/message
-        resources: {}
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-
-      
       volumes:
       - name: userspace-dir
         hostPath:
@@ -541,7 +526,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.12.3"
+        image: "beclab/yt-dlp:v0.12.4"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -587,7 +572,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: download-spider
-        image: "beclab/download-spider:v0.12.4"
+        image: "beclab/download-spider:v0.12.5"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
