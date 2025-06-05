@@ -422,7 +422,14 @@ spec:
         secretKeyRef:
           key: nat_password
           name: knowledge-secrets
-    refs: []
+    refs:
+      - appName: user-service
+        appNamespace: user
+        subjects:
+          - name: knowledge.*
+            perm:
+              - pub
+              - sub
     subjects:
     - name: download_status
       permission:

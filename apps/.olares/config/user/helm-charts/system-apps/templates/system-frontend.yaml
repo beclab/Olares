@@ -669,6 +669,19 @@ spec:
                   name: user-service-secrets
             - name: DATABASE_URL
               value: postgres://user_service_{{ .Values.bfl.username }}:$(DATABASE_PASSWORD)@citus-master-svc.user-system-{{ .Values.bfl.username }}/user_space_{{ .Values.bfl.username }}_user_service?sslmode=disable
+            - name: NATS_HOST
+              value: nats.user-system-{{ .Values.bfl.username }}
+            - name: NATS_PORT
+              value: '4222'
+            - name: NATS_USERNAME_USERSERVICE
+              value: user-service-{{ .Values.bfl.username }}
+            - name: NATS_PASSWORD_USERSESRVICE
+              valueFrom:
+                secretKeyRef:
+                  key: nats_password
+                  name: user-service-nats-secret
+            - name: NATS_SUBJECT_USER_APPS
+              value: terminus.user.*.{{ .Values.bfl.username}}
         - name: drive-server
           image: beclab/drive:v0.0.72
           imagePullPolicy: IfNotPresent
@@ -3401,7 +3414,7 @@ spec:
           - appName: files-server
             sub: allow
             pub: allow
-        name: "files.*"
+        name: "*."
         permission:
           pub: allow
           sub: allow
@@ -3450,6 +3463,9 @@ spec:
           pub: allow
       - export:
           - appName: knowledge
+            sub: allow
+            pub: allow
+          - appName: download
             sub: allow
             pub: allow
         name: "knowledge.*"

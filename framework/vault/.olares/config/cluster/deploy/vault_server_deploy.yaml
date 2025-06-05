@@ -136,7 +136,7 @@ spec:
           valueFrom:
             secretKeyRef:
               key: nats_password
-              name: nats-secrets
+              name: vault-server-nats-secret
         - name: NATS_SUBJECT_SYSTEM_VAULT
           value: "terminus.{{ .Release.Namespace }}.system.vault"
         volumeMounts:
