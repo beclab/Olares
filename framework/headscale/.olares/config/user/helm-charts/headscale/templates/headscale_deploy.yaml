@@ -110,7 +110,7 @@ spec:
         - |
           chown -R 1000:1000 /headscale 
       - name: init
-        image: beclab/headscale-init:v0.1.10
+        image: beclab/headscale-init:v0.1.11
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
@@ -131,6 +131,8 @@ spec:
           value: "{{ $pg_password | b64dec }}"
         - name: PG_DB
           value: user_space_{{ .Values.bfl.username }}_headscale
+        - name: USER_SUBNET
+          value: {{ .Values.tailscaleUserSubnet | default "100.64.0.0/20" }}
         volumeMounts:
         - name: config
           mountPath: /etc/headscale
@@ -175,7 +177,7 @@ spec:
               command:
                 - "sh"
                 - "-xc"
-                - "(date; for i in `seq 1 600`; do if ! test -S /var/run/headscale.sock; then echo wait-headscale.sock-1s; sleep 1; else break; fi; done; headscale apikeys create -e 3650d > /etc/headscale/apikey; headscale users create default; headscale preauthkeys create -e 3650d -u default > /etc/headscale/preauthkey; if ! test -s /etc/headscale/apikey; then echo apikey-empty; exit 1; fi; if ! test -s /etc/headscale/preauthkey; then echo preauthkey-empty; exit 1; fi) >> /tmp/headscale.log 2>&1"
+                - "(date; for i in `seq 1 600`; do if ! test -S /var/run/headscale.sock; then echo wait-headscale.sock-1s; sleep 1; else break; fi; done; headscale apikeys create -e 3650d > /etc/headscale/apikey; headscale users create default; headscale preauthkeys create -e 3650d --reusable -u default > /etc/headscale/preauthkey; if ! test -s /etc/headscale/apikey; then echo apikey-empty; exit 1; fi; if ! test -s /etc/headscale/preauthkey; then echo preauthkey-empty; exit 1; fi) >> /tmp/headscale.log 2>&1"
         volumeMounts:
         - name: config
           mountPath: /etc/headscale
@@ -279,22 +281,29 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        {{- if eq $role "platform-admin" }}
+        - name: TS_DEBUG_FIREWALL_MODE
+          value: nftables
+        {{- end }}
         - name: TS_SOCKET
           value: "/var/run/tailscale/tailscaled.sock"
         - name: TS_STATE_DIR
           value: "/var/lib/tailscale/"
         - name: TS_TAILSCALED_EXTRA_ARGS
-          value: "--no-logs-no-support  --verbose=1"
+          value: >-
+            --no-logs-no-support
+            --verbose=1
+            --tun=tailscale0{{ if ne $role "platform-admin" }}$(USER_INDEX){{ end }}
         - name: TS_ROUTES
-          value: $(NODE_IP)/32
+          value: $(COREDNS_SVC)/32
         - name: TS_EXTRA_ARGS
-          value: "--login-server http://headscale-server-svc:8080"
-        {{- if eq $role "platform-admin" }}
+          value: >-
+            --login-server http://headscale-server-svc:8080
+            --netfilter-mode {{ if eq $role "platform-admin" }}on{{ else }}off{{ end }}
         - name: TS_USERSPACE
           value: "false"
-        - name: TS_DEBUG_FIREWALL_MODE
-          value: nftables
-        {{- end }}
+        - name: USER_INDEX
+          value: {{ .Values.tailscaleUserIndex | default "0" | quote }}
         - name: TS_KUBE_SECRET
       volumes:
       - name: config
@@ -383,7 +392,9 @@ data:
   acl.json: |
     {
       "acls":[
+        { "action": "accept", "src": ["*"], "proto": "tcp", "dst": ["*:80"] },
         { "action": "accept", "src": ["*"], "proto": "tcp", "dst": ["*:443"] },
+        { "action": "accept", "src": ["*"], "proto": "tcp", "dst": ["*:18088"] },
         { "action": "accept", "src": ["*"], "proto": "udp", "dst": ["*:53"] }
       ],
       "autoApprovers": {

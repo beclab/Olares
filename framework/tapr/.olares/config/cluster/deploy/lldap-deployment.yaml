@@ -174,7 +174,7 @@ spec:
             - name: NATS_SUBJECT_SYSTEM_GROUPS
               value: "terminus.{{ .Release.Namespace }}.system.groups"
 
-          image: beclab/lldap:0.0.2
+          image: beclab/lldap:0.0.3
           imagePullPolicy: IfNotPresent
           name: lldap
           ports:
