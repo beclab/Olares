@@ -97,7 +97,7 @@ spec:
 
       containers:
         - name: gateway
-          image: beclab/appdata-gateway:0.1.20
+          image: beclab/appdata-gateway:0.1.21
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -106,7 +106,7 @@ spec:
             - containerPort: 8080
           env:
             - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.72'
+              value: 'beclab/files-server:v0.2.74'
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -142,7 +142,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.72
+          image: beclab/files-server:v0.2.74
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -443,7 +443,7 @@ spec:
           name: check-nats
       containers:
         - name: files
-          image: beclab/files-server:v0.2.72
+          image: beclab/files-server:v0.2.74
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
