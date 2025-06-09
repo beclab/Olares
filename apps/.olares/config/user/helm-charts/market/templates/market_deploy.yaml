@@ -271,7 +271,7 @@ spec:
   dataType: app
   deployment: market
   description: app store provider
-  endpoint: appstore-service.{{ .Release.Namespace }}
+  endpoint: appstore-service.{{ .Release.Namespace }}:81
   group: service.appstore
   kind: provider
   namespace: {{ .Release.Namespace }}
