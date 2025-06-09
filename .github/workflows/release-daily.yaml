@@ -150,6 +150,7 @@ jobs:
           cp .dist/install-wizard/install.sh build/base-package
           cp build/base-package/install.sh build/base-package/publicInstaller.sh
           cp .dist/install-wizard/install.ps1 build/base-package
+          cp .dist/install-wizard/joincluster.sh build/base-package
 
       - name: Release public files
         uses: softprops/action-gh-release@v1
