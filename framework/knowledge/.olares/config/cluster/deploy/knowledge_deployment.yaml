@@ -385,10 +385,6 @@ spec:
       protocol: TCP
       port: 3010
       targetPort: 3010
-    - name: "knowledge-websocket"
-      protocol: TCP
-      port: 40010
-      targetPort: 40010
 
 ---
 apiVersion: v1

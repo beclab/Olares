@@ -316,7 +316,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
         - name: dashboard-init
-          image: beclab/dashboard-frontend-v1:v0.4.9
+          image: beclab/dashboard:v1.3.73
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -328,7 +328,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: control-hub-init
-          image: beclab/admin-console-frontend-v1:v0.5.8
+          image: beclab/control-hub:v1.3.73
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -376,7 +376,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: settings-init
-          image: beclab/settings:v1.3.71
+          image: beclab/settings:v1.3.73
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -388,7 +388,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: studio-init
-          image: beclab/studio:v0.2.16
+          image: beclab/studio:v1.3.73
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -471,7 +471,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: edge-desktop-init
-          image: beclab/desktop:v1.3.72
+          image: beclab/desktop:v1.3.73
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -613,7 +613,7 @@ spec:
             - name: NATS_SUBJECT_USER_APPS
               value: terminus.user.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.11
+          image: beclab/user-service:v0.0.12
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -669,6 +669,21 @@ spec:
                   name: user-service-nats-secret
             - name: NATS_SUBJECT_USER_APPS
               value: terminus.user.*.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_USER_VAULT
+              value: terminus.user.vault.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_USER_KNOWLEDGE
+              value: terminus.user.knowledge.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_USER_MARKET
+              value: terminus.user.market.{{.Values.bfl.username}}
+            - name: NATS_SUBJECT_USER_NOTIFICATION
+              value: terminus.user.notification.{{.Values.bfl.username}}
+            - name: NATS_SUBJECT_USER_SEARCH
+              value: terminus.user.search.{{.Values.bfl.username}}
+            - name: NATS_SUBJECT_USER_SEAHUB
+              value: terminus.user.seahub.{{.Values.bfl.username}}
+            - name: NATS_SUBJECT_USER_APPLICATION
+              value: terminus.user.application.{{.Values.bfl.username}}
+              
         - name: drive-server
           image: beclab/drive:v0.0.72
           imagePullPolicy: IfNotPresent
@@ -2573,7 +2588,7 @@ data:
       }
 
       location /ws {
-        proxy_pass http://rss-svc.os-system:40010;
+        proxy_pass http://127.0.0.1:3100;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -3403,9 +3418,6 @@ data:
     upstream AppstoreBackendServer {
       server appstore-svc:81;
     }
-    upstream AppstoreBackendWebScoket {
-      server appstore-svc:40010;
-    }
     server {
         listen 90;
         gzip off;
@@ -3423,7 +3435,7 @@ data:
         }
 
         location /ws {
-            proxy_pass http://AppstoreBackendWebScoket;
+            proxy_pass http://127.0.0.1:3100;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
