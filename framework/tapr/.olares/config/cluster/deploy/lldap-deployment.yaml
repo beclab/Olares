@@ -117,6 +117,28 @@ spec:
       labels:
         app: lldap
     spec:
+      initContainers:
+        - name: init-container-check-citus
+          image: 'postgres:16.0-alpine3.18'
+          command:
+            - sh
+            - '-c'
+            - >-
+              echo -e "Checking for the availability of PostgreSQL Server
+              deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB1
+              -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >>
+              PostgreSQL DB Server has started";
+          env:
+            - name: PGHOST
+              value: citus-headless.os-system
+            - name: PGPORT
+              value: '5432'
+            - name: PGUSER
+              value: lldap_os_system
+            - name: PGPASSWORD
+              value: {{ $pg_password | b64dec }}
+            - name: PGDB1
+              value: os_system_lldap
       containers:
         - env:
             - name: GID

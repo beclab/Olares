@@ -223,6 +223,12 @@ spec:
       serviceAccountName: bytetrade-controller
       priorityClassName: "system-cluster-critical"
       initContainers:
+      - args:
+        - -it
+        - authelia-backend.os-system:9091
+        image: owncloudci/wait-for:latest
+        imagePullPolicy: IfNotPresent
+        name: check-auth
       - name: init-userspace
         image: busybox:1.28
         volumeMounts:
