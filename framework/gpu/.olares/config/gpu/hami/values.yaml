@@ -4,7 +4,7 @@ nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: ""
 imagePullSecrets: []
-version: "v2.5.2-share-07"
+version: "v2.5.2-share-08"
 
 # Nvidia GPU Parameters
 resourceName: "nvidia.com/gpu"
@@ -54,6 +54,8 @@ scheduler:
   nodeName: ""
   # nodeLabelSelector:
   #  "gpu": "on"
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: "true"
   overwriteEnv: "false"
   defaultSchedulerPolicy:
     nodeSchedulerPolicy: binpack
