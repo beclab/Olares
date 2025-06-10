@@ -289,6 +289,8 @@ spec:
           value: "/var/run/tailscale/tailscaled.sock"
         - name: TS_STATE_DIR
           value: "/var/lib/tailscale/"
+        - name: USER_INDEX
+          value: {{ .Values.tailscaleUserIndex | default "0" | quote }}
         - name: TS_TAILSCALED_EXTRA_ARGS
           value: >-
             --no-logs-no-support
@@ -302,8 +304,7 @@ spec:
             --netfilter-mode {{ if eq $role "platform-admin" }}on{{ else }}off{{ end }}
         - name: TS_USERSPACE
           value: "false"
-        - name: USER_INDEX
-          value: {{ .Values.tailscaleUserIndex | default "0" | quote }}
+
         - name: TS_KUBE_SECRET
       volumes:
       - name: config
