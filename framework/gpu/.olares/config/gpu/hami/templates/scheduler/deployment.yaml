@@ -162,3 +162,10 @@ spec:
       {{- if .Values.scheduler.nodeName }}
       nodeName: {{ .Values.scheduler.nodeName }}
       {{- end }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
