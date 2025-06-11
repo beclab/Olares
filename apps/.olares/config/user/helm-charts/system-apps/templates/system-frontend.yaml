@@ -316,7 +316,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
         - name: dashboard-init
-          image: beclab/dashboard:v1.3.73
+          image: beclab/dashboard:v1.3.75
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -376,7 +376,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: settings-init
-          image: beclab/settings:v1.3.73
+          image: beclab/settings:v1.3.75
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -613,7 +613,7 @@ spec:
             - name: NATS_SUBJECT_USER_APPS
               value: terminus.user.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.15
+          image: beclab/user-service:v0.0.16
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
