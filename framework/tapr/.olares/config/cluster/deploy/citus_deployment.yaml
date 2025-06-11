@@ -46,4 +46,4 @@ spec:
   replicas: 1
   owner: system
   backupStorage: '{{ $citus_backuppath }}/pg_backup'
-  citusImage: beclab/citus:12.2
+  citusImage: beclab/citus:13.0.3
