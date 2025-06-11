@@ -4,8 +4,6 @@ output:
   containers:
     - 
       name: bytetrade/envoy:v1.25.11.1
-    -
-      name: beclab/citus:12.2
 
 
       
