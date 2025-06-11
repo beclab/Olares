@@ -54,8 +54,6 @@ scheduler:
   nodeName: ""
   # nodeLabelSelector:
   #  "gpu": "on"
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: "true"
   overwriteEnv: "false"
   defaultSchedulerPolicy:
     nodeSchedulerPolicy: binpack
