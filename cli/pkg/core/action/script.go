@@ -7,8 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/util"
 )
 
 var scripts embed.FS

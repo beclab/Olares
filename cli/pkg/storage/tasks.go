@@ -8,14 +8,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	kubekeyapiv1alpha2 "bytetrade.io/web3os/installer/apis/kubekey/v1alpha2"
-	"bytetrade.io/web3os/installer/pkg/common"
-	cc "bytetrade.io/web3os/installer/pkg/core/common"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
-	"bytetrade.io/web3os/installer/pkg/core/util"
-	"bytetrade.io/web3os/installer/pkg/files"
-	"bytetrade.io/web3os/installer/pkg/utils"
+	kubekeyapiv1alpha2 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
+	"github.com/beclab/Olares/cli/pkg/common"
+	cc "github.com/beclab/Olares/cli/pkg/core/common"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/files"
+	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
 )
 

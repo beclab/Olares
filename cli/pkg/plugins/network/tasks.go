@@ -23,13 +23,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"bytetrade.io/web3os/installer/apis/kubekey/v1alpha2"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/action"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/util"
-	"bytetrade.io/web3os/installer/pkg/images"
-	"bytetrade.io/web3os/installer/pkg/plugins/network/templates"
+	"github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/action"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/images"
+	"github.com/beclab/Olares/cli/pkg/plugins/network/templates"
 	"github.com/pkg/errors"
 )
 

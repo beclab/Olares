@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"bytetrade.io/web3os/installer/pkg/core/storage/model"
+	"github.com/beclab/Olares/cli/pkg/core/storage/model"
 )
 
 //go:embed migrations/*

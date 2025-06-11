@@ -2,8 +2,6 @@ package os
 
 import (
 	"archive/tar"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/util"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -13,6 +11,9 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/util"
 
 	"github.com/spf13/cobra"
 )

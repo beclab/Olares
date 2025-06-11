@@ -1,11 +1,11 @@
 package download
 
 import (
-	"bytetrade.io/web3os/installer/pkg/bootstrap/download"
-	"bytetrade.io/web3os/installer/pkg/bootstrap/precheck"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/module"
-	"bytetrade.io/web3os/installer/pkg/core/pipeline"
+	"github.com/beclab/Olares/cli/pkg/bootstrap/download"
+	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/module"
+	"github.com/beclab/Olares/cli/pkg/core/pipeline"
 )
 
 func NewDownloadPackage(mainifest string, runtime *common.KubeRuntime) *pipeline.Pipeline {

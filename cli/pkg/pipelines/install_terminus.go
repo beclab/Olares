@@ -3,17 +3,18 @@ package pipelines
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"path"
 	"path/filepath"
 
-	"bytetrade.io/web3os/installer/cmd/ctl/options"
-	ctrl "bytetrade.io/web3os/installer/controllers"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
-	"bytetrade.io/web3os/installer/pkg/phase"
-	"bytetrade.io/web3os/installer/pkg/phase/cluster"
+	"github.com/pkg/errors"
+
+	"github.com/beclab/Olares/cli/cmd/ctl/options"
+	ctrl "github.com/beclab/Olares/cli/controllers"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/phase"
+	"github.com/beclab/Olares/cli/pkg/phase/cluster"
 )
 
 func CliInstallTerminusPipeline(opts *options.CliTerminusInstallOptions) error {

@@ -7,13 +7,13 @@ import (
 	"os/exec"
 	"strings"
 
-	"bytetrade.io/web3os/installer/pkg/utils"
+	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
 
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
-	"bytetrade.io/web3os/installer/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/core/util"
 )
 
 type GetNATGatewayIP struct {

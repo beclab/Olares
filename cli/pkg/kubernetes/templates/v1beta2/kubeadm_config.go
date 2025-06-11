@@ -21,7 +21,7 @@ import (
 	"strings"
 	"text/template"
 
-	"bytetrade.io/web3os/installer/pkg/utils"
+	"github.com/beclab/Olares/cli/pkg/utils"
 
 	versionutil "k8s.io/apimachinery/pkg/util/version"
 
@@ -29,9 +29,9 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 )
 
 var (

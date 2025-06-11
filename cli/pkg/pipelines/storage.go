@@ -1,13 +1,14 @@
 package pipelines
 
 import (
-	"bytetrade.io/web3os/installer/cmd/ctl/options"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/phase"
-	"bytetrade.io/web3os/installer/pkg/phase/system"
 	"fmt"
-	"github.com/pkg/errors"
 	"path"
+
+	"github.com/beclab/Olares/cli/cmd/ctl/options"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/phase"
+	"github.com/beclab/Olares/cli/pkg/phase/system"
+	"github.com/pkg/errors"
 )
 
 func CliInstallStoragePipeline(opts *options.InstallStorageOptions) error {

@@ -19,7 +19,7 @@ package ending
 import (
 	"time"
 
-	"bytetrade.io/web3os/installer/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
 )
 
 type ActionResult struct {

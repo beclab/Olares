@@ -21,8 +21,8 @@ import (
 	"context"
 	"time"
 
-	v1alpha2 "bytetrade.io/web3os/installer/apis/kubekey/v1alpha2"
-	scheme "bytetrade.io/web3os/installer/clients/clientset/versioned/scheme"
+	v1alpha2 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
+	scheme "github.com/beclab/Olares/cli/clients/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

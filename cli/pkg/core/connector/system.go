@@ -14,8 +14,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"bytetrade.io/web3os/installer/pkg/core/common"
-	"bytetrade.io/web3os/installer/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/core/common"
+	"github.com/beclab/Olares/cli/pkg/core/util"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"

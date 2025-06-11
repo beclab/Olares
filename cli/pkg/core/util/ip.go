@@ -17,11 +17,8 @@
 package util
 
 import (
-	"bytetrade.io/web3os/installer/pkg/core/logger"
 	"encoding/binary"
 	"fmt"
-	"github.com/libp2p/go-netroute"
-	"github.com/pkg/errors"
 	"io"
 	"net"
 	"net/http"
@@ -29,6 +26,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/libp2p/go-netroute"
+	"github.com/pkg/errors"
 )
 
 func ParseIp(ip string) []string {

@@ -21,11 +21,11 @@ import (
 
 	versionutil "k8s.io/apimachinery/pkg/util/version"
 
-	"bytetrade.io/web3os/installer/pkg/certs/templates"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/action"
-	"bytetrade.io/web3os/installer/pkg/core/task"
-	"bytetrade.io/web3os/installer/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/certs/templates"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/action"
+	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/core/util"
 )
 
 type AutoRenewCertsModule struct {

@@ -21,19 +21,19 @@ import (
 	"strings"
 	"time"
 
-	"bytetrade.io/web3os/installer/pkg/kubernetes"
-	"bytetrade.io/web3os/installer/pkg/manifest"
-	"bytetrade.io/web3os/installer/pkg/registry"
+	"github.com/beclab/Olares/cli/pkg/kubernetes"
+	"github.com/beclab/Olares/cli/pkg/manifest"
+	"github.com/beclab/Olares/cli/pkg/registry"
 
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/container/templates"
-	"bytetrade.io/web3os/installer/pkg/core/action"
-	cc "bytetrade.io/web3os/installer/pkg/core/common"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
-	"bytetrade.io/web3os/installer/pkg/core/prepare"
-	"bytetrade.io/web3os/installer/pkg/core/task"
-	"bytetrade.io/web3os/installer/pkg/core/util"
-	"bytetrade.io/web3os/installer/pkg/images"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/container/templates"
+	"github.com/beclab/Olares/cli/pkg/core/action"
+	cc "github.com/beclab/Olares/cli/pkg/core/common"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/core/prepare"
+	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/images"
 )
 
 type InstallContainerModule struct {

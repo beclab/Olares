@@ -39,7 +39,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"bytetrade.io/web3os/installer/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 )

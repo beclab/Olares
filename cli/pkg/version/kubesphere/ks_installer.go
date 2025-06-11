@@ -21,8 +21,8 @@ import (
 	"os"
 	"text/template"
 
-	"bytetrade.io/web3os/installer/pkg/core/util"
-	"bytetrade.io/web3os/installer/pkg/version/kubesphere/templates"
+	"github.com/beclab/Olares/cli/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/version/kubesphere/templates"
 	versionutil "k8s.io/apimachinery/pkg/util/version"
 )
 

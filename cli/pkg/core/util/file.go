@@ -30,7 +30,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"bytetrade.io/web3os/installer/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 )
 
 func IsExist(path string) bool {

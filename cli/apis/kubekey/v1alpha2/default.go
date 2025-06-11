@@ -21,7 +21,7 @@ import (
 	"os"
 	"strings"
 
-	"bytetrade.io/web3os/installer/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/core/util"
 )
 
 const (

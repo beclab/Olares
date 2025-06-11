@@ -16,7 +16,7 @@
 
 package prepare
 
-import "bytetrade.io/web3os/installer/pkg/core/connector"
+import "github.com/beclab/Olares/cli/pkg/core/connector"
 
 type FileExist struct {
 	BasePrepare

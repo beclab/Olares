@@ -24,14 +24,14 @@ import (
 
 	"github.com/pkg/errors"
 
-	"bytetrade.io/web3os/installer/pkg/core/action"
-	"bytetrade.io/web3os/installer/pkg/core/cache"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/ending"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
-	"bytetrade.io/web3os/installer/pkg/core/prepare"
-	"bytetrade.io/web3os/installer/pkg/core/rollback"
-	"bytetrade.io/web3os/installer/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/core/action"
+	"github.com/beclab/Olares/cli/pkg/core/cache"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/ending"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/core/prepare"
+	"github.com/beclab/Olares/cli/pkg/core/rollback"
+	"github.com/beclab/Olares/cli/pkg/core/util"
 )
 
 type RemoteTask struct {

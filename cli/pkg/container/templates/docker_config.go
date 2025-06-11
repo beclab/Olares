@@ -21,7 +21,7 @@ import (
 	"strings"
 	"text/template"
 
-	"bytetrade.io/web3os/installer/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/lithammer/dedent"
 )
 

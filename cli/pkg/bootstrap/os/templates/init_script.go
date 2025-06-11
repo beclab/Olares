@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"text/template"
 
-	"bytetrade.io/web3os/installer/pkg/bootstrap/registry"
+	"github.com/beclab/Olares/cli/pkg/bootstrap/registry"
 
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/lithammer/dedent"
 )
 

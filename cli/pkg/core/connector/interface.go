@@ -21,8 +21,8 @@ import (
 	"io"
 	"os"
 
-	"bytetrade.io/web3os/installer/pkg/core/cache"
-	"bytetrade.io/web3os/installer/pkg/core/storage"
+	"github.com/beclab/Olares/cli/pkg/core/cache"
+	"github.com/beclab/Olares/cli/pkg/core/storage"
 )
 
 type Connection interface {

@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"bytetrade.io/web3os/installer/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 )
 
 type Dialer struct {

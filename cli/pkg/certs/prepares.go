@@ -19,9 +19,9 @@ package certs
 import (
 	"path/filepath"
 
-	"bytetrade.io/web3os/installer/pkg/certs/templates"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/certs/templates"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
 )
 
 type AutoRenewCertsEnabled struct {

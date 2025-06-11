@@ -24,7 +24,7 @@ builds:
     ldflags:
       - -s
       - -w
-      - -X bytetrade.io/web3os/installer/version.VERSION={{ .Version }}
+      - -X github.com/beclab/Olares/cli/version.VERSION={{ .Version }}
 dist: ./output
 archives:
   - id: olares-cli

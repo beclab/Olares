@@ -18,9 +18,9 @@ limitations under the License.
 package kubekey
 
 import (
-	internalinterfaces "bytetrade.io/web3os/installer/clients/informers/externalversions/internalinterfaces"
-	v1alpha1 "bytetrade.io/web3os/installer/clients/informers/externalversions/kubekey/v1alpha1"
-	v1alpha2 "bytetrade.io/web3os/installer/clients/informers/externalversions/kubekey/v1alpha2"
+	internalinterfaces "github.com/beclab/Olares/cli/clients/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/beclab/Olares/cli/clients/informers/externalversions/kubekey/v1alpha1"
+	v1alpha2 "github.com/beclab/Olares/cli/clients/informers/externalversions/kubekey/v1alpha2"
 )
 
 // Interface provides access to each of this group's versions.

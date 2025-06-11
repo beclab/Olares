@@ -19,8 +19,8 @@ package etcd
 import (
 	"strings"
 
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/pkg/errors"
 )
 

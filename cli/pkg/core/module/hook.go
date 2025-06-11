@@ -17,8 +17,8 @@
 package module
 
 import (
-	"bytetrade.io/web3os/installer/pkg/core/ending"
-	"bytetrade.io/web3os/installer/pkg/core/hook"
+	"github.com/beclab/Olares/cli/pkg/core/ending"
+	"github.com/beclab/Olares/cli/pkg/core/hook"
 )
 
 type PostHookInterface interface {

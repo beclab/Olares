@@ -21,11 +21,11 @@ import (
 	"path"
 	"path/filepath"
 
-	"bytetrade.io/web3os/installer/pkg/certs/templates"
-	"bytetrade.io/web3os/installer/pkg/common"
-	cc "bytetrade.io/web3os/installer/pkg/core/common"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/certs/templates"
+	"github.com/beclab/Olares/cli/pkg/common"
+	cc "github.com/beclab/Olares/cli/pkg/core/common"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/pkg/errors"
 )
 

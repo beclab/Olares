@@ -21,13 +21,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"bytetrade.io/web3os/installer/pkg/container/templates"
-	"bytetrade.io/web3os/installer/pkg/registry"
+	"github.com/beclab/Olares/cli/pkg/container/templates"
+	"github.com/beclab/Olares/cli/pkg/registry"
 
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/files"
-	"bytetrade.io/web3os/installer/pkg/utils"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/files"
+	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
 )
 

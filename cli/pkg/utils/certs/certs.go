@@ -14,7 +14,6 @@
 package certs
 
 import (
-	"bytetrade.io/web3os/installer/pkg/core/logger"
 	"crypto"
 	cryptorand "crypto/rand"
 	"crypto/x509"
@@ -25,7 +24,9 @@ import (
 	"net"
 	"time"
 
-	"bytetrade.io/web3os/installer/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+
+	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	certutil "k8s.io/client-go/util/cert"

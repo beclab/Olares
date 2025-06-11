@@ -19,8 +19,8 @@ package filesystem
 import (
 	"fmt"
 
-	"bytetrade.io/web3os/installer/pkg/core/action"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/action"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/pkg/errors"
 )
 

@@ -17,10 +17,10 @@
 package module
 
 import (
-	"bytetrade.io/web3os/installer/pkg/core/cache"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/ending"
-	"bytetrade.io/web3os/installer/pkg/core/hook"
+	"github.com/beclab/Olares/cli/pkg/core/cache"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/ending"
+	"github.com/beclab/Olares/cli/pkg/core/hook"
 	"github.com/pkg/errors"
 )
 

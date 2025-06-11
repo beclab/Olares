@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"bytetrade.io/web3os/installer/cmd/ctl/options"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
-	"bytetrade.io/web3os/installer/pkg/phase"
-	"bytetrade.io/web3os/installer/pkg/phase/cluster"
+	"github.com/beclab/Olares/cli/cmd/ctl/options"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/phase"
+	"github.com/beclab/Olares/cli/pkg/phase/cluster"
 )
 
 func UninstallTerminusPipeline(opt *options.CliTerminusUninstallOptions) error {

@@ -3,7 +3,7 @@ package gpu
 import (
 	"log"
 
-	"bytetrade.io/web3os/installer/pkg/pipelines"
+	"github.com/beclab/Olares/cli/pkg/pipelines"
 	"github.com/spf13/cobra"
 )
 

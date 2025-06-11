@@ -22,9 +22,9 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "bytetrade.io/web3os/installer/clients/clientset/versioned"
-	internalinterfaces "bytetrade.io/web3os/installer/clients/informers/externalversions/internalinterfaces"
-	kubekey "bytetrade.io/web3os/installer/clients/informers/externalversions/kubekey"
+	versioned "github.com/beclab/Olares/cli/clients/clientset/versioned"
+	internalinterfaces "github.com/beclab/Olares/cli/clients/informers/externalversions/internalinterfaces"
+	kubekey "github.com/beclab/Olares/cli/clients/informers/externalversions/kubekey"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

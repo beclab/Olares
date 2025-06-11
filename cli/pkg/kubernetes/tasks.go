@@ -27,11 +27,11 @@ import (
 	"strings"
 	"time"
 
-	"bytetrade.io/web3os/installer/pkg/storage"
-	storagetpl "bytetrade.io/web3os/installer/pkg/storage/templates"
+	"github.com/beclab/Olares/cli/pkg/storage"
+	storagetpl "github.com/beclab/Olares/cli/pkg/storage/templates"
 
-	"bytetrade.io/web3os/installer/pkg/etcd"
-	"bytetrade.io/web3os/installer/pkg/manifest"
+	"github.com/beclab/Olares/cli/pkg/etcd"
+	"github.com/beclab/Olares/cli/pkg/manifest"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -40,16 +40,16 @@ import (
 	kube "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
-	kubekeyv1alpha2 "bytetrade.io/web3os/installer/apis/kubekey/v1alpha2"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/action"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
-	"bytetrade.io/web3os/installer/pkg/core/util"
-	"bytetrade.io/web3os/installer/pkg/images"
-	"bytetrade.io/web3os/installer/pkg/kubernetes/templates"
-	"bytetrade.io/web3os/installer/pkg/kubernetes/templates/v1beta2"
-	"bytetrade.io/web3os/installer/pkg/utils"
+	kubekeyv1alpha2 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/action"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/images"
+	"github.com/beclab/Olares/cli/pkg/kubernetes/templates"
+	"github.com/beclab/Olares/cli/pkg/kubernetes/templates/v1beta2"
+	"github.com/beclab/Olares/cli/pkg/utils"
 )
 
 type GetKubeType struct{}

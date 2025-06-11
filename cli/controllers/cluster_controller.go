@@ -18,7 +18,6 @@ package kubekey
 
 import (
 	"bytes"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -29,9 +28,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+
 	"sigs.k8s.io/yaml"
 
-	kubekeyv1alpha2 "bytetrade.io/web3os/installer/apis/kubekey/v1alpha2"
+	kubekeyv1alpha2 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 

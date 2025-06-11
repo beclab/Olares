@@ -6,7 +6,7 @@ import (
 	"path"
 	"time"
 
-	"bytetrade.io/web3os/installer/pkg/core/common"
+	"github.com/beclab/Olares/cli/pkg/core/common"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

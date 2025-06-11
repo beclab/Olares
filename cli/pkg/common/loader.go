@@ -18,7 +18,6 @@ package common
 
 import (
 	"bufio"
-	"bytetrade.io/web3os/installer/pkg/core/util"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -31,8 +30,10 @@ import (
 	"strings"
 	"time"
 
-	kubekeyapiv1alpha2 "bytetrade.io/web3os/installer/apis/kubekey/v1alpha2"
-	"bytetrade.io/web3os/installer/pkg/version/kubesphere"
+	"github.com/beclab/Olares/cli/pkg/core/util"
+
+	kubekeyapiv1alpha2 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
+	"github.com/beclab/Olares/cli/pkg/version/kubesphere"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	k8syaml "k8s.io/apimachinery/pkg/util/yaml"

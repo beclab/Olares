@@ -1,9 +1,10 @@
 package options
 
 import (
-	"bytetrade.io/web3os/installer/pkg/common"
-	cc "bytetrade.io/web3os/installer/pkg/core/common"
 	"fmt"
+
+	"github.com/beclab/Olares/cli/pkg/common"
+	cc "github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/spf13/cobra"
 )
 

@@ -1,9 +1,9 @@
 package cluster
 
 import (
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/module"
-	"bytetrade.io/web3os/installer/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/module"
+	"github.com/beclab/Olares/cli/pkg/gpu"
 )
 
 type phase []module.Module

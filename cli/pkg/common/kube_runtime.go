@@ -19,23 +19,24 @@ package common
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/joho/godotenv"
 	"net"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/joho/godotenv"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 
-	kubekeyapiv1alpha2 "bytetrade.io/web3os/installer/apis/kubekey/v1alpha2"
-	kubekeyclientset "bytetrade.io/web3os/installer/clients/clientset/versioned"
-	"bytetrade.io/web3os/installer/pkg/core/common"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
-	"bytetrade.io/web3os/installer/pkg/core/storage"
-	"bytetrade.io/web3os/installer/pkg/core/util"
+	kubekeyapiv1alpha2 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
+	kubekeyclientset "github.com/beclab/Olares/cli/clients/clientset/versioned"
+	"github.com/beclab/Olares/cli/pkg/core/common"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/core/storage"
+	"github.com/beclab/Olares/cli/pkg/core/util"
 	kresource "k8s.io/apimachinery/pkg/api/resource"
 )
 

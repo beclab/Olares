@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"bytetrade.io/web3os/installer/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/pkg/errors"
 )
 

@@ -18,7 +18,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha2 "bytetrade.io/web3os/installer/clients/clientset/versioned/typed/kubekey/v1alpha2"
+	v1alpha2 "github.com/beclab/Olares/cli/clients/clientset/versioned/typed/kubekey/v1alpha2"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

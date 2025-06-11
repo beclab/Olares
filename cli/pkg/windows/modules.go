@@ -3,8 +3,8 @@ package windows
 import (
 	"time"
 
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/task"
 )
 
 type InstallWSLModule struct {

@@ -1,13 +1,14 @@
 package pipelines
 
 import (
-	"bytetrade.io/web3os/installer/cmd/ctl/options"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/phase/cluster"
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"path"
+
+	"github.com/beclab/Olares/cli/cmd/ctl/options"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/phase/cluster"
+	"github.com/pkg/errors"
 )
 
 func AddNodePipeline(opts *options.AddNodeOptions) error {

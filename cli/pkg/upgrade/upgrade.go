@@ -3,12 +3,12 @@ package upgrade
 import (
 	"time"
 
-	"bytetrade.io/web3os/installer/pkg/bootstrap/precheck"
+	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
 
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/task"
-	"bytetrade.io/web3os/installer/pkg/terminus"
 	"github.com/Masterminds/semver/v3"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/terminus"
 )
 
 type UpgradeModule struct {

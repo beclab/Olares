@@ -17,9 +17,9 @@
 package common
 
 import (
-	kubekeyapiv1alpha2 "bytetrade.io/web3os/installer/apis/kubekey/v1alpha2"
-	kubekeyclientset "bytetrade.io/web3os/installer/clients/clientset/versioned"
-	"bytetrade.io/web3os/installer/pkg/core/module"
+	kubekeyapiv1alpha2 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
+	kubekeyclientset "github.com/beclab/Olares/cli/clients/clientset/versioned"
+	"github.com/beclab/Olares/cli/pkg/core/module"
 )
 
 type KubeConf struct {

@@ -1,7 +1,7 @@
 package options
 
 import (
-	cc "bytetrade.io/web3os/installer/pkg/core/common"
+	cc "github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/spf13/cobra"
 )
 

@@ -1,20 +1,21 @@
 package terminus
 
 import (
-	"bytetrade.io/web3os/installer/pkg/core/logger"
 	"context"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
 	"path"
 	"time"
 
-	"bytetrade.io/web3os/installer/pkg/common"
-	cc "bytetrade.io/web3os/installer/pkg/core/common"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/task"
-	"bytetrade.io/web3os/installer/pkg/core/util"
-	settingstemplates "bytetrade.io/web3os/installer/pkg/terminus/templates"
-	"bytetrade.io/web3os/installer/pkg/utils"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/beclab/Olares/cli/pkg/common"
+	cc "github.com/beclab/Olares/cli/pkg/core/common"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/core/util"
+	settingstemplates "github.com/beclab/Olares/cli/pkg/terminus/templates"
+	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 )

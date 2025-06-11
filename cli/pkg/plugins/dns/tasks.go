@@ -17,16 +17,17 @@
 package dns
 
 import (
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/action"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
-	"bytetrade.io/web3os/installer/pkg/core/util"
-	"bytetrade.io/web3os/installer/pkg/plugins/dns/templates"
-	"bytetrade.io/web3os/installer/pkg/utils"
 	"fmt"
-	"github.com/pkg/errors"
 	"path/filepath"
+
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/action"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/plugins/dns/templates"
+	"github.com/beclab/Olares/cli/pkg/utils"
+	"github.com/pkg/errors"
 )
 
 type SetProxyNameServer struct {

@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"bytetrade.io/web3os/installer/pkg/core/logger"
-	"bytetrade.io/web3os/installer/pkg/utils"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
 )
 

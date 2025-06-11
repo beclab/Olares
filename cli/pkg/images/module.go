@@ -17,11 +17,11 @@
 package images
 
 import (
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/prepare"
-	"bytetrade.io/web3os/installer/pkg/core/task"
-	"bytetrade.io/web3os/installer/pkg/kubesphere/plugins"
-	"bytetrade.io/web3os/installer/pkg/manifest"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/prepare"
+	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/kubesphere/plugins"
+	"github.com/beclab/Olares/cli/pkg/manifest"
 )
 
 type PreloadImagesModule struct {

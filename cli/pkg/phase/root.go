@@ -1,8 +1,8 @@
 package phase
 
 import (
-	"bytetrade.io/web3os/installer/pkg/kubernetes"
-	"bytetrade.io/web3os/installer/pkg/terminus"
+	"github.com/beclab/Olares/cli/pkg/kubernetes"
+	"github.com/beclab/Olares/cli/pkg/terminus"
 )
 
 func GetOlaresVersion() (string, error) {

@@ -1,19 +1,19 @@
 package cluster
 
 import (
-	"bytetrade.io/web3os/installer/pkg/bootstrap/os"
-	"bytetrade.io/web3os/installer/pkg/bootstrap/precheck"
-	"bytetrade.io/web3os/installer/pkg/certs"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/container"
-	"bytetrade.io/web3os/installer/pkg/core/module"
-	"bytetrade.io/web3os/installer/pkg/core/pipeline"
-	"bytetrade.io/web3os/installer/pkg/daemon"
-	"bytetrade.io/web3os/installer/pkg/k3s"
-	"bytetrade.io/web3os/installer/pkg/kubernetes"
-	"bytetrade.io/web3os/installer/pkg/kubesphere"
-	"bytetrade.io/web3os/installer/pkg/storage"
-	"bytetrade.io/web3os/installer/pkg/terminus"
+	"github.com/beclab/Olares/cli/pkg/bootstrap/os"
+	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
+	"github.com/beclab/Olares/cli/pkg/certs"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/container"
+	"github.com/beclab/Olares/cli/pkg/core/module"
+	"github.com/beclab/Olares/cli/pkg/core/pipeline"
+	"github.com/beclab/Olares/cli/pkg/daemon"
+	"github.com/beclab/Olares/cli/pkg/k3s"
+	"github.com/beclab/Olares/cli/pkg/kubernetes"
+	"github.com/beclab/Olares/cli/pkg/kubesphere"
+	"github.com/beclab/Olares/cli/pkg/storage"
+	"github.com/beclab/Olares/cli/pkg/terminus"
 )
 
 type UninstallPhaseType int

@@ -1,15 +1,16 @@
 package pipelines
 
 import (
-	"bytetrade.io/web3os/installer/cmd/ctl/options"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
-	"bytetrade.io/web3os/installer/pkg/core/util"
-	"bytetrade.io/web3os/installer/pkg/phase"
-	"bytetrade.io/web3os/installer/pkg/phase/cluster"
 	"fmt"
-	"github.com/pkg/errors"
 	"net"
+
+	"github.com/beclab/Olares/cli/cmd/ctl/options"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/phase"
+	"github.com/beclab/Olares/cli/pkg/phase/cluster"
+	"github.com/pkg/errors"
 )
 
 func ChangeIPPipeline(opt *options.ChangeIPOptions) error {

@@ -17,8 +17,8 @@
 package prepare
 
 import (
-	"bytetrade.io/web3os/installer/pkg/core/cache"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/cache"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
 )
 
 type BasePrepare struct {

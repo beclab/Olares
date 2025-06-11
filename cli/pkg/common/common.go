@@ -19,7 +19,7 @@ package common
 import (
 	"os"
 
-	cc "bytetrade.io/web3os/installer/pkg/core/common"
+	cc "github.com/beclab/Olares/cli/pkg/core/common"
 )
 
 const (

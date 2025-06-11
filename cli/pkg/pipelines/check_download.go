@@ -1,11 +1,12 @@
 package pipelines
 
 import (
-	"bytetrade.io/web3os/installer/cmd/ctl/options"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
-	"bytetrade.io/web3os/installer/pkg/phase/download"
 	"path"
+
+	"github.com/beclab/Olares/cli/cmd/ctl/options"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/phase/download"
 )
 
 func CheckDownloadInstallationPackage(opts *options.CliDownloadOptions) error {

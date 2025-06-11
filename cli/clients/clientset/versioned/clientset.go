@@ -20,8 +20,8 @@ package versioned
 import (
 	"fmt"
 
-	kubekeyv1alpha1 "bytetrade.io/web3os/installer/clients/clientset/versioned/typed/kubekey/v1alpha1"
-	kubekeyv1alpha2 "bytetrade.io/web3os/installer/clients/clientset/versioned/typed/kubekey/v1alpha2"
+	kubekeyv1alpha1 "github.com/beclab/Olares/cli/clients/clientset/versioned/typed/kubekey/v1alpha1"
+	kubekeyv1alpha2 "github.com/beclab/Olares/cli/clients/clientset/versioned/typed/kubekey/v1alpha2"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

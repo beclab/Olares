@@ -4,7 +4,7 @@ import (
 	"os"
 	"os/exec"
 
-	"bytetrade.io/web3os/installer/cmd/ctl"
+	"github.com/beclab/Olares/cli/cmd/ctl"
 )
 
 func main() {

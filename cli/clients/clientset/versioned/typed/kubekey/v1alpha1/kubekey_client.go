@@ -18,8 +18,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "bytetrade.io/web3os/installer/apis/kubekey/v1alpha1"
-	"bytetrade.io/web3os/installer/clients/clientset/versioned/scheme"
+	v1alpha1 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha1"
+	"github.com/beclab/Olares/cli/clients/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

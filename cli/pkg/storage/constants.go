@@ -1,10 +1,11 @@
 package storage
 
 import (
-	"bytetrade.io/web3os/installer/pkg/storage/templates"
 	"path"
 
-	"bytetrade.io/web3os/installer/pkg/core/common"
+	"github.com/beclab/Olares/cli/pkg/storage/templates"
+
+	"github.com/beclab/Olares/cli/pkg/core/common"
 )
 
 var (

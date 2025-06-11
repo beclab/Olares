@@ -1,11 +1,11 @@
 package ctl
 
 import (
-	"bytetrade.io/web3os/installer/cmd/ctl/gpu"
-	"bytetrade.io/web3os/installer/cmd/ctl/node"
-	"bytetrade.io/web3os/installer/cmd/ctl/os"
-	"bytetrade.io/web3os/installer/cmd/ctl/osinfo"
-	"bytetrade.io/web3os/installer/version"
+	"github.com/beclab/Olares/cli/cmd/ctl/gpu"
+	"github.com/beclab/Olares/cli/cmd/ctl/node"
+	"github.com/beclab/Olares/cli/cmd/ctl/os"
+	"github.com/beclab/Olares/cli/cmd/ctl/osinfo"
+	"github.com/beclab/Olares/cli/version"
 	"github.com/spf13/cobra"
 )
 

@@ -19,10 +19,8 @@ package utils
 import (
 	"bufio"
 	"bytes"
-	"bytetrade.io/web3os/backups-sdk/pkg/utils"
 	crypto "crypto/rand"
 	"fmt"
-	"golang.org/x/term"
 	"math"
 	"math/big"
 	"math/rand"
@@ -37,8 +35,11 @@ import (
 	"text/template"
 	"time"
 
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
+	"bytetrade.io/web3os/backups-sdk/pkg/utils"
+	"golang.org/x/term"
+
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )

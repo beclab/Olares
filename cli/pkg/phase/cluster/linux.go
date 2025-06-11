@@ -1,13 +1,13 @@
 package cluster
 
 import (
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/module"
-	"bytetrade.io/web3os/installer/pkg/gpu"
-	"bytetrade.io/web3os/installer/pkg/kubesphere/plugins"
-	"bytetrade.io/web3os/installer/pkg/manifest"
-	"bytetrade.io/web3os/installer/pkg/storage"
-	"bytetrade.io/web3os/installer/pkg/terminus"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/module"
+	"github.com/beclab/Olares/cli/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/kubesphere/plugins"
+	"github.com/beclab/Olares/cli/pkg/manifest"
+	"github.com/beclab/Olares/cli/pkg/storage"
+	"github.com/beclab/Olares/cli/pkg/terminus"
 )
 
 type linuxInstallPhaseBuilder struct {

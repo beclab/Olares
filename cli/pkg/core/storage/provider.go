@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"bytetrade.io/web3os/installer/pkg/model"
+	"github.com/beclab/Olares/cli/pkg/model"
 )
 
 type Provider interface {

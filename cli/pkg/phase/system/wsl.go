@@ -4,21 +4,21 @@ import (
 	"path"
 	"strings"
 
-	cc "bytetrade.io/web3os/installer/pkg/core/common"
+	cc "github.com/beclab/Olares/cli/pkg/core/common"
 
-	"bytetrade.io/web3os/installer/pkg/daemon"
+	"github.com/beclab/Olares/cli/pkg/daemon"
 
-	"bytetrade.io/web3os/installer/pkg/bootstrap/os"
-	"bytetrade.io/web3os/installer/pkg/bootstrap/patch"
-	"bytetrade.io/web3os/installer/pkg/bootstrap/precheck"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/container"
-	"bytetrade.io/web3os/installer/pkg/core/module"
-	"bytetrade.io/web3os/installer/pkg/gpu"
-	"bytetrade.io/web3os/installer/pkg/images"
-	"bytetrade.io/web3os/installer/pkg/k3s"
-	"bytetrade.io/web3os/installer/pkg/manifest"
-	"bytetrade.io/web3os/installer/pkg/terminus"
+	"github.com/beclab/Olares/cli/pkg/bootstrap/os"
+	"github.com/beclab/Olares/cli/pkg/bootstrap/patch"
+	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/container"
+	"github.com/beclab/Olares/cli/pkg/core/module"
+	"github.com/beclab/Olares/cli/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/images"
+	"github.com/beclab/Olares/cli/pkg/k3s"
+	"github.com/beclab/Olares/cli/pkg/manifest"
+	"github.com/beclab/Olares/cli/pkg/terminus"
 )
 
 var _ phaseBuilder = &linuxPhaseBuilder{}

@@ -3,9 +3,10 @@ package os
 import (
 	"time"
 
-	"bytetrade.io/web3os/installer/pkg/pipelines"
-	"github.com/spf13/cobra"
 	"log"
+
+	"github.com/beclab/Olares/cli/pkg/pipelines"
+	"github.com/spf13/cobra"
 )
 
 func NewCmdStart() *cobra.Command {

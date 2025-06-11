@@ -17,8 +17,8 @@
 package common
 
 import (
-	"bytetrade.io/web3os/installer/pkg/core/connector"
-	"bytetrade.io/web3os/installer/pkg/core/rollback"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/rollback"
 )
 
 type KubeRollback struct {

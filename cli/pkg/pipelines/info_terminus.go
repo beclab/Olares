@@ -3,7 +3,7 @@ package pipelines
 import (
 	"fmt"
 
-	"bytetrade.io/web3os/installer/pkg/terminus"
+	"github.com/beclab/Olares/cli/pkg/terminus"
 )
 
 func PrintTerminusInfo() {

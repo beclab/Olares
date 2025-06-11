@@ -1,12 +1,13 @@
 package builder
 
 import (
-	"bytetrade.io/web3os/installer/pkg/core/util"
-	"bytetrade.io/web3os/installer/pkg/release/app"
-	"bytetrade.io/web3os/installer/pkg/release/manifest"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/beclab/Olares/cli/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/release/app"
+	"github.com/beclab/Olares/cli/pkg/release/manifest"
 )
 
 type Builder struct {

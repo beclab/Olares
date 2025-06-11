@@ -19,7 +19,7 @@ package templates
 import (
 	"text/template"
 
-	"bytetrade.io/web3os/installer/pkg/utils"
+	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/lithammer/dedent"
 )
 

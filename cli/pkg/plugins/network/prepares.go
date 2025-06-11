@@ -17,8 +17,8 @@
 package network
 
 import (
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
 	versionutil "k8s.io/apimachinery/pkg/util/version"
 )
 

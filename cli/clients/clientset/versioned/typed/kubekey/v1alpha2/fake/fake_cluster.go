@@ -20,7 +20,7 @@ package fake
 import (
 	"context"
 
-	v1alpha2 "bytetrade.io/web3os/installer/apis/kubekey/v1alpha2"
+	v1alpha2 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

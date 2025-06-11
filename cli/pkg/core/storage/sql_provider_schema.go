@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"bytetrade.io/web3os/installer/pkg/core/storage/model"
+	"github.com/beclab/Olares/cli/pkg/core/storage/model"
 	"github.com/jmoiron/sqlx"
 )
 

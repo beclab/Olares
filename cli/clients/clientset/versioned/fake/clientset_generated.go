@@ -18,11 +18,11 @@ limitations under the License.
 package fake
 
 import (
-	clientset "bytetrade.io/web3os/installer/clients/clientset/versioned"
-	kubekeyv1alpha1 "bytetrade.io/web3os/installer/clients/clientset/versioned/typed/kubekey/v1alpha1"
-	fakekubekeyv1alpha1 "bytetrade.io/web3os/installer/clients/clientset/versioned/typed/kubekey/v1alpha1/fake"
-	kubekeyv1alpha2 "bytetrade.io/web3os/installer/clients/clientset/versioned/typed/kubekey/v1alpha2"
-	fakekubekeyv1alpha2 "bytetrade.io/web3os/installer/clients/clientset/versioned/typed/kubekey/v1alpha2/fake"
+	clientset "github.com/beclab/Olares/cli/clients/clientset/versioned"
+	kubekeyv1alpha1 "github.com/beclab/Olares/cli/clients/clientset/versioned/typed/kubekey/v1alpha1"
+	fakekubekeyv1alpha1 "github.com/beclab/Olares/cli/clients/clientset/versioned/typed/kubekey/v1alpha1/fake"
+	kubekeyv1alpha2 "github.com/beclab/Olares/cli/clients/clientset/versioned/typed/kubekey/v1alpha2"
+	fakekubekeyv1alpha2 "github.com/beclab/Olares/cli/clients/clientset/versioned/typed/kubekey/v1alpha2/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

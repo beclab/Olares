@@ -17,7 +17,6 @@
 package utils
 
 import (
-	"bytetrade.io/web3os/installer/pkg/core/logger"
 	"crypto/md5"
 	"fmt"
 	"io"
@@ -25,6 +24,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 
 	"github.com/pkg/errors"
 	"github.com/shurcooL/httpfs/vfsutil"

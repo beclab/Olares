@@ -1,8 +1,8 @@
 package binaries
 
 import (
-	"bytetrade.io/web3os/installer/pkg/core/util"
-	"bytetrade.io/web3os/installer/pkg/manifest"
+	"github.com/beclab/Olares/cli/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/pkg/errors"
 )
 

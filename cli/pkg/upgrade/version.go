@@ -1,8 +1,8 @@
 package upgrade
 
 import (
-	"bytetrade.io/web3os/installer/pkg/core/task"
 	"github.com/Masterminds/semver/v3"
+	"github.com/beclab/Olares/cli/pkg/core/task"
 )
 
 // versionMatcher checks if the specified version matches its condition

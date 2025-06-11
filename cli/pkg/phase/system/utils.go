@@ -1,8 +1,8 @@
 package system
 
 import (
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/module"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/module"
 )
 
 func isGpuSupportOs(runtime *common.KubeRuntime) bool {

@@ -1,10 +1,11 @@
 package os
 
 import (
-	"bytetrade.io/web3os/installer/cmd/ctl/options"
-	"bytetrade.io/web3os/installer/pkg/pipelines"
-	"github.com/spf13/cobra"
 	"log"
+
+	"github.com/beclab/Olares/cli/cmd/ctl/options"
+	"github.com/beclab/Olares/cli/pkg/pipelines"
+	"github.com/spf13/cobra"
 )
 
 func NewCmdInstallStorage() *cobra.Command {

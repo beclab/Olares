@@ -1,8 +1,9 @@
 package prepare
 
 import (
-	"bytetrade.io/web3os/installer/pkg/core/connector"
 	"time"
+
+	"github.com/beclab/Olares/cli/pkg/core/connector"
 )
 
 // InitialDelay is a Prepare implementation that simply wait for Duration amount of time

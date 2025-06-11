@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"bytetrade.io/web3os/installer/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/common"
 )
 
 func TestA(t *testing.T) {

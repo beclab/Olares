@@ -3,11 +3,11 @@ package pipelines
 import (
 	"fmt"
 
-	"bytetrade.io/web3os/installer/cmd/ctl/options"
-	"bytetrade.io/web3os/installer/pkg/common"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
-	"bytetrade.io/web3os/installer/pkg/phase/download"
-	"bytetrade.io/web3os/installer/pkg/utils"
+	"github.com/beclab/Olares/cli/cmd/ctl/options"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/phase/download"
+	"github.com/beclab/Olares/cli/pkg/utils"
 )
 
 func DownloadInstallationWizard(opts *options.CliDownloadWizardOptions) error {

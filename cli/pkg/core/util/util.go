@@ -18,7 +18,6 @@ package util
 
 import (
 	"bytes"
-	"bytetrade.io/web3os/installer/pkg/core/logger"
 	"fmt"
 	"io"
 	"math"
@@ -30,6 +29,8 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 
 	"github.com/pkg/errors"
 )
