@@ -190,7 +190,7 @@ spec:
             value: os_system_knowledge
       containers:
       - name: knowledge
-        image: "beclab/knowledge-base-api:v0.12.9"
+        image: "beclab/knowledge-base-api:v0.12.10"
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -252,7 +252,7 @@ spec:
             memory: 1Gi
 
       - name: backend-server
-        image: "beclab/recommend-backend:v0.12.3"
+        image: "beclab/recommend-backend:v0.12.4"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -529,7 +529,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: yt-dlp
-        image: "beclab/yt-dlp:v0.12.4"
+        image: "beclab/yt-dlp:v0.12.5"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -575,7 +575,7 @@ spec:
             cpu: "1"
             memory: 300Mi
       - name: download-spider
-        image: "beclab/download-spider:v0.12.5"
+        image: "beclab/download-spider:v0.12.6"
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
