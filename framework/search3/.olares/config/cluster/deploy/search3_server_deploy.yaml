@@ -238,7 +238,7 @@ spec:
             value: os_system_search3
       containers:
       - name: search3
-        image: beclab/search3:v0.0.40
+        image: beclab/search3:v0.0.42
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -263,7 +263,7 @@ spec:
         - name: NATS_SUBJECT_SYSTEM_GROUPS
           value: terminus.os-system.system.groups
       - name: search3monitor
-        image: beclab/search3monitor:v0.0.40
+        image: beclab/search3monitor:v0.0.42
         imagePullPolicy: IfNotPresent
         env:
         - name: DATABASE_URL
