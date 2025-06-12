@@ -1,19 +1,20 @@
 package upgrade
 
 import (
-	"bytetrade.io/web3os/terminusd/pkg/commands"
-	"bytetrade.io/web3os/terminusd/pkg/utils"
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/Masterminds/semver/v3"
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/yaml"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 type versionCompatibilityCheck struct {

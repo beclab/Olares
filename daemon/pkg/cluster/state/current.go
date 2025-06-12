@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"bytetrade.io/web3os/terminusd/internel/watcher"
-	"bytetrade.io/web3os/terminusd/pkg/commands"
-	"bytetrade.io/web3os/terminusd/pkg/nets"
-	"bytetrade.io/web3os/terminusd/pkg/utils"
+	"github.com/beclab/Olares/daemon/internel/watcher"
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/nets"
+	"github.com/beclab/Olares/daemon/pkg/utils"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 

@@ -3,15 +3,16 @@ package state
 import (
 	"context"
 	"errors"
-	"github.com/Masterminds/semver/v3"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 
-	"bytetrade.io/web3os/terminusd/pkg/cli"
-	"bytetrade.io/web3os/terminusd/pkg/commands"
-	"bytetrade.io/web3os/terminusd/pkg/utils"
+	"github.com/Masterminds/semver/v3"
+
+	"github.com/beclab/Olares/daemon/pkg/cli"
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/utils"
 	"k8s.io/klog/v2"
 )
 

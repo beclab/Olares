@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"bytetrade.io/web3os/terminusd/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/commands"
 )
 
 type shutdown struct {

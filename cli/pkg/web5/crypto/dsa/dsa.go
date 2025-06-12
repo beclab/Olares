@@ -3,9 +3,9 @@ package dsa
 import (
 	"fmt"
 
-	"olares-cli/pkg/web5/crypto/dsa/ecdsa"
-	"olares-cli/pkg/web5/crypto/dsa/eddsa"
-	"olares-cli/pkg/web5/jwk"
+	"github.com/beclab/Olares/cli/pkg/web5/crypto/dsa/ecdsa"
+	"github.com/beclab/Olares/cli/pkg/web5/crypto/dsa/eddsa"
+	"github.com/beclab/Olares/cli/pkg/web5/jwk"
 )
 
 const (

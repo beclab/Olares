@@ -14,7 +14,7 @@ builds:
   ldflags:
     - -w
     - -s
-    - -X 'bytetrade.io/web3os/terminusd/cmd/terminusd/version.version=v{{ .Version }}'
+    - -X 'github.com/beclab/Olares/daemon/cmd/terminusd/version.version=v{{ .Version }}'
 - id: linux_arm64 
   env:
   - CGO_ENABLED=0
@@ -31,7 +31,7 @@ builds:
   ldflags:
     - -w
     - -s
-    - -X 'bytetrade.io/web3os/terminusd/cmd/terminusd/version.version=v{{ .Version }}'
+    - -X 'github.com/beclab/Olares/daemon/cmd/terminusd/version.version=v{{ .Version }}'
 dist: output
 archives:
 - name_template: "olaresd-v{{ .Version }}-{{ .Os }}-{{ .Arch }}"

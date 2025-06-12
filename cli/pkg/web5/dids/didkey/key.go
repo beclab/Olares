@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"olares-cli/pkg/web5/jwk"
+	"github.com/beclab/Olares/cli/pkg/web5/jwk"
 
 	"github.com/mr-tron/base58"
 	"github.com/multiformats/go-varint"

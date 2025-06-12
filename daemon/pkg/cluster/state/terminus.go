@@ -3,7 +3,7 @@ package state
 import (
 	"errors"
 
-	"bytetrade.io/web3os/terminusd/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/commands"
 )
 
 type ProcessingState string

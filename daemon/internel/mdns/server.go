@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"bytetrade.io/web3os/terminusd/pkg/nets"
-	"bytetrade.io/web3os/terminusd/pkg/tools"
+	"github.com/beclab/Olares/daemon/pkg/nets"
+	"github.com/beclab/Olares/daemon/pkg/tools"
 	"github.com/eball/zeroconf"
 	"k8s.io/klog/v2"
 )

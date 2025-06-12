@@ -3,8 +3,8 @@ package apiserver
 import (
 	"net/http"
 
-	"bytetrade.io/web3os/terminusd/pkg/commands"
-	mountsmb "bytetrade.io/web3os/terminusd/pkg/commands/mount_smb"
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	mountsmb "github.com/beclab/Olares/daemon/pkg/commands/mount_smb"
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/klog/v2"
 )

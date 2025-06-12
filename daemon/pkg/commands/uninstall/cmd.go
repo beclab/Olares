@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"bytetrade.io/web3os/terminusd/pkg/cli"
-	"bytetrade.io/web3os/terminusd/pkg/cluster/state"
-	"bytetrade.io/web3os/terminusd/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/cli"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
+	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/nxadm/tail"
 	"k8s.io/klog/v2"
 )

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"olares-cli/pkg/web5/jwk"
+	"github.com/beclab/Olares/cli/pkg/web5/jwk"
 )
 
 const (

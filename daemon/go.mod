@@ -1,4 +1,4 @@
-module bytetrade.io/web3os/terminusd
+module github.com/beclab/Olares/daemon
 
 go 1.22.1
 

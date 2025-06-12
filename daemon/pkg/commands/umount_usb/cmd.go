@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"bytetrade.io/web3os/terminusd/pkg/commands"
-	"bytetrade.io/web3os/terminusd/pkg/utils"
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/utils"
 )
 
 type umountUsb struct {

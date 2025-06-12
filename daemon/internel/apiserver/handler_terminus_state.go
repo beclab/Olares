@@ -1,7 +1,7 @@
 package apiserver
 
 import (
-	"bytetrade.io/web3os/terminusd/pkg/cluster/state"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/gofiber/fiber/v2"
 )
 

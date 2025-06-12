@@ -3,12 +3,12 @@ package did_test
 import (
 	"testing"
 
-	"olares-cli/pkg/web5/crypto/dsa"
-	"olares-cli/pkg/web5/dids/did"
-	"olares-cli/pkg/web5/dids/didcore"
-	"olares-cli/pkg/web5/dids/didkey"
-	"olares-cli/pkg/web5/jwk"
-	"olares-cli/pkg/web5/jws"
+	"github.com/beclab/Olares/cli/pkg/web5/crypto/dsa"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/did"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/didcore"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/didkey"
+	"github.com/beclab/Olares/cli/pkg/web5/jwk"
+	"github.com/beclab/Olares/cli/pkg/web5/jws"
 
 	"github.com/alecthomas/assert/v2"
 )

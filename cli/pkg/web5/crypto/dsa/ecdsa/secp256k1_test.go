@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"olares-cli/pkg/web5/crypto/dsa/ecdsa"
-	"olares-cli/pkg/web5/jwk"
+	"github.com/beclab/Olares/cli/pkg/web5/crypto/dsa/ecdsa"
+	"github.com/beclab/Olares/cli/pkg/web5/jwk"
 
 	"github.com/alecthomas/assert/v2"
 )

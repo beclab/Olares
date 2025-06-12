@@ -3,8 +3,8 @@ package apiserver
 import (
 	"net/http"
 
-	"bytetrade.io/web3os/terminusd/pkg/commands"
-	connectwifi "bytetrade.io/web3os/terminusd/pkg/commands/connect_wifi"
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	connectwifi "github.com/beclab/Olares/daemon/pkg/commands/connect_wifi"
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/klog/v2"
 )

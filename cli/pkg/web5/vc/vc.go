@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"olares-cli/pkg/web5/dids/did"
-	"olares-cli/pkg/web5/jwt"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/did"
+	"github.com/beclab/Olares/cli/pkg/web5/jwt"
 
 	"github.com/google/uuid"
 )

@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	bflconst "bytetrade.io/web3os/bfl/pkg/constants"
-	"bytetrade.io/web3os/terminusd/pkg/commands"
-	"bytetrade.io/web3os/terminusd/pkg/nets"
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/joho/godotenv"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"olares-cli/pkg/web5/dids/did"
-	"olares-cli/pkg/web5/dids/didcore"
-	"olares-cli/pkg/web5/jws"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/did"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/didcore"
+	"github.com/beclab/Olares/cli/pkg/web5/jws"
 )
 
 // Decode decodes the 3-part base64url encoded jwt into it's relevant parts
@@ -66,7 +66,7 @@ type SignOpt func(opts *signOpts)
 
 // Purpose is an option that can be provided to Sign to specify that a key from
 // a given DID Document Verification Relationship should be used (e.g. authentication)
-// Purpose is an option that can be passed to [olares/olares-cli/pkg/web5/jws.Sign].
+// Purpose is an option that can be passed to [olares/github.com/beclab/Olares/cli/pkg/web5/jws.Sign].
 // It is used to select the appropriate key to sign with
 func Purpose(p string) SignOpt {
 	return func(opts *signOpts) {

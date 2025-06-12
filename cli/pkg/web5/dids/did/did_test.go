@@ -3,7 +3,7 @@ package did_test
 import (
 	"testing"
 
-	"olares-cli/pkg/web5/dids/did"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/did"
 
 	"github.com/alecthomas/assert/v2"
 )

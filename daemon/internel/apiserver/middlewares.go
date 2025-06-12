@@ -3,9 +3,9 @@ package apiserver
 import (
 	"net/http"
 
-	"bytetrade.io/web3os/terminusd/internel/client"
-	"bytetrade.io/web3os/terminusd/pkg/cluster/state"
-	"bytetrade.io/web3os/terminusd/pkg/commands"
+	"github.com/beclab/Olares/daemon/internel/client"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
+	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/gofiber/fiber/v2"
 )
 

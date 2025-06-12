@@ -3,8 +3,8 @@ package crypto_test
 import (
 	"testing"
 
-	"olares-cli/pkg/web5/crypto"
-	"olares-cli/pkg/web5/crypto/dsa"
+	"github.com/beclab/Olares/cli/pkg/web5/crypto"
+	"github.com/beclab/Olares/cli/pkg/web5/crypto/dsa"
 
 	"github.com/alecthomas/assert/v2"
 )

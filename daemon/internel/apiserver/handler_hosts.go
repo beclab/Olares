@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"os"
 
-	"bytetrade.io/web3os/terminusd/pkg/nets"
+	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/klog/v2"
 )

@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"olares-cli/pkg/web5/crypto"
+	"github.com/beclab/Olares/cli/pkg/web5/crypto"
 
 	"github.com/alecthomas/assert/v2"
 )

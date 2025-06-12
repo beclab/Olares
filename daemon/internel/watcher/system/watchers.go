@@ -3,10 +3,10 @@ package system
 import (
 	"context"
 
-	"bytetrade.io/web3os/terminusd/internel/watcher"
-	"bytetrade.io/web3os/terminusd/pkg/cluster/state"
-	changeip "bytetrade.io/web3os/terminusd/pkg/commands/change_ip"
-	"bytetrade.io/web3os/terminusd/pkg/commands/uninstall"
+	"github.com/beclab/Olares/daemon/internel/watcher"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
+	changeip "github.com/beclab/Olares/daemon/pkg/commands/change_ip"
+	"github.com/beclab/Olares/daemon/pkg/commands/uninstall"
 	"k8s.io/klog/v2"
 )
 

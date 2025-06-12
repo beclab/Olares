@@ -3,9 +3,9 @@ package did
 import (
 	"fmt"
 
-	"olares-cli/pkg/web5/crypto"
-	"olares-cli/pkg/web5/dids/didcore"
-	"olares-cli/pkg/web5/jwk"
+	"github.com/beclab/Olares/cli/pkg/web5/crypto"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/didcore"
+	"github.com/beclab/Olares/cli/pkg/web5/jwk"
 )
 
 // BearerDID is a composite type that combines a DID with a KeyManager containing keys

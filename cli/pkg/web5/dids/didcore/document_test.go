@@ -3,7 +3,7 @@ package didcore_test
 import (
 	"testing"
 
-	"olares-cli/pkg/web5/dids/didcore"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/didcore"
 
 	"github.com/alecthomas/assert/v2"
 )

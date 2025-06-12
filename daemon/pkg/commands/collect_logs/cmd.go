@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"bytetrade.io/web3os/terminusd/pkg/cluster/state"
-	"bytetrade.io/web3os/terminusd/pkg/commands"
-	"bytetrade.io/web3os/terminusd/pkg/utils"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/utils"
 	"k8s.io/klog/v2"
 )
 

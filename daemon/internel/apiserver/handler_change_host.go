@@ -3,8 +3,8 @@ package apiserver
 import (
 	"net/http"
 
-	"bytetrade.io/web3os/terminusd/pkg/commands"
-	changehost "bytetrade.io/web3os/terminusd/pkg/commands/change_host"
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	changehost "github.com/beclab/Olares/daemon/pkg/commands/change_host"
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/klog/v2"
 )

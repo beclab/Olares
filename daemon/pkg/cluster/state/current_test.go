@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"bytetrade.io/web3os/terminusd/pkg/utils"
+	"github.com/beclab/Olares/daemon/pkg/utils"
 )
 
 func TestCurrentState(t *testing.T) {

@@ -1,18 +1,19 @@
 package upgrade
 
 import (
-	"bytetrade.io/web3os/terminusd/pkg/cli"
-	"bytetrade.io/web3os/terminusd/pkg/commands"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/nxadm/tail"
 	"io"
-	"k8s.io/klog/v2"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/daemon/pkg/cli"
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/nxadm/tail"
+	"k8s.io/klog/v2"
 )
 
 type downloadWizard struct {

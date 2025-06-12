@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"olares-cli/pkg/web5/vc"
 	"strconv"
+
+	"github.com/beclab/Olares/cli/pkg/web5/vc"
 
 	"github.com/PaesslerAG/jsonpath"
 	"github.com/santhosh-tekuri/jsonschema/v5"

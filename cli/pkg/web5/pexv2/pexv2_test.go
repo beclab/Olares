@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"olares-cli/pkg/web5/pexv2"
+	"github.com/beclab/Olares/cli/pkg/web5/pexv2"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/decentralized-identity/web5-go"

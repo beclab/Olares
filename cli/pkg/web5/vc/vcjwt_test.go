@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"olares-cli/pkg/web5/dids/didkey"
-	"olares-cli/pkg/web5/jwt"
-	"olares-cli/pkg/web5/vc"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/didkey"
+	"github.com/beclab/Olares/cli/pkg/web5/jwt"
+	"github.com/beclab/Olares/cli/pkg/web5/vc"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/decentralized-identity/web5-go"

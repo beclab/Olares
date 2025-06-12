@@ -3,8 +3,8 @@ package apiserver
 import (
 	"net/http"
 
-	"bytetrade.io/web3os/terminusd/pkg/commands"
-	umountusb "bytetrade.io/web3os/terminusd/pkg/commands/umount_usb"
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	umountusb "github.com/beclab/Olares/daemon/pkg/commands/umount_usb"
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/klog/v2"
 )

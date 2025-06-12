@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"bytetrade.io/web3os/terminusd/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/commands"
 	mountutils "k8s.io/mount-utils"
 
 	udev "github.com/jochenvg/go-udev"

@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"olares-cli/pkg/web5/dids/did"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/did"
 
-	"olares-cli/pkg/web5/dids/didcore"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/didcore"
 )
 
 // Resolve resolves the provided DID URI. This function is capable of resolving

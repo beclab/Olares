@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"bytetrade.io/web3os/terminusd/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/commands"
 )
 
 func clusterPathToNodePath(path string) string {

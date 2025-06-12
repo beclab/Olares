@@ -31,3 +31,4 @@ olares-cli-*.tar.gz
 .DS_Store
 cli/output
 daemon/output
+daemon/bin

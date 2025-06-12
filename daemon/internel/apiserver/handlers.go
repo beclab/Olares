@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"bytetrade.io/web3os/terminusd/internel/ble"
 	"github.com/asaskevich/govalidator"
+	"github.com/beclab/Olares/daemon/internel/ble"
 	"github.com/gofiber/fiber/v2"
 )
 

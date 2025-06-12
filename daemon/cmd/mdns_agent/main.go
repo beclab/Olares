@@ -5,7 +5,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"bytetrade.io/web3os/terminusd/internel/mdns"
+	"github.com/beclab/Olares/daemon/internel/mdns"
 	"k8s.io/klog/v2"
 )
 

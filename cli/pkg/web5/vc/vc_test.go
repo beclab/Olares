@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"olares-cli/pkg/web5/dids/didkey"
-	"olares-cli/pkg/web5/vc"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/didkey"
+	"github.com/beclab/Olares/cli/pkg/web5/vc"
 
 	"github.com/alecthomas/assert/v2"
 )

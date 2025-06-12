@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"olares-cli/pkg/web5/crypto"
-	"olares-cli/pkg/web5/crypto/dsa"
-	"olares-cli/pkg/web5/dids/did"
-	"olares-cli/pkg/web5/dids/didcore"
-	"olares-cli/pkg/web5/jwk"
+	"github.com/beclab/Olares/cli/pkg/web5/crypto"
+	"github.com/beclab/Olares/cli/pkg/web5/crypto/dsa"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/did"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/didcore"
+	"github.com/beclab/Olares/cli/pkg/web5/jwk"
 )
 
 // createOptions is a struct that contains all options that can be passed to [Create]

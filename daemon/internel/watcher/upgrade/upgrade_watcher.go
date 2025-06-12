@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"sync"
 
-	"bytetrade.io/web3os/terminusd/internel/watcher"
-	"bytetrade.io/web3os/terminusd/pkg/cluster/state"
-	"bytetrade.io/web3os/terminusd/pkg/commands"
-	"bytetrade.io/web3os/terminusd/pkg/commands/upgrade"
+	"github.com/beclab/Olares/daemon/internel/watcher"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/commands/upgrade"
 	"k8s.io/klog/v2"
 )
 

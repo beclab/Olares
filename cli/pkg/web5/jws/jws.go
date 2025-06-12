@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"strings"
 
-	"olares-cli/pkg/web5/crypto/dsa"
-	"olares-cli/pkg/web5/dids"
+	"github.com/beclab/Olares/cli/pkg/web5/crypto/dsa"
+	"github.com/beclab/Olares/cli/pkg/web5/dids"
 
-	_did "olares-cli/pkg/web5/dids/did"
-	"olares-cli/pkg/web5/dids/didcore"
+	_did "github.com/beclab/Olares/cli/pkg/web5/dids/did"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/didcore"
 )
 
 // Decode decodes the given JWS string into a [Decoded] type
@@ -122,10 +122,10 @@ type signOpts struct {
 	typ      string
 }
 
-// SignOpt is a type that represents an option that can be passed to [olares/olares-cli/pkg/web5/jws.Sign].
+// SignOpt is a type that represents an option that can be passed to [olares/github.com/beclab/Olares/cli/pkg/web5/jws.Sign].
 type SignOpt func(opts *signOpts)
 
-// Purpose is an option that can be passed to [olares/olares-cli/pkg/web5/jws.Sign].
+// Purpose is an option that can be passed to [olares/github.com/beclab/Olares/cli/pkg/web5/jws.Sign].
 // It is used to select the appropriate key to sign with
 func Purpose(p string) SignOpt {
 	return func(opts *signOpts) {
@@ -133,7 +133,7 @@ func Purpose(p string) SignOpt {
 	}
 }
 
-// VerificationMethod is an option that can be passed to [olares/olares-cli/pkg/web5/jws.Sign].
+// VerificationMethod is an option that can be passed to [olares/github.com/beclab/Olares/cli/pkg/web5/jws.Sign].
 // It is used to select the appropriate key to sign with
 func VerificationMethod(id string) SignOpt {
 	return func(opts *signOpts) {
@@ -141,7 +141,7 @@ func VerificationMethod(id string) SignOpt {
 	}
 }
 
-// VMSelector is an option that can be passed to [olares/olares-cli/pkg/web5/jws.Sign].
+// VMSelector is an option that can be passed to [olares/github.com/beclab/Olares/cli/pkg/web5/jws.Sign].
 // It is used to select the appropriate key to sign with
 func VMSelector(selector didcore.VMSelector) SignOpt {
 	return func(opts *signOpts) {
@@ -149,7 +149,7 @@ func VMSelector(selector didcore.VMSelector) SignOpt {
 	}
 }
 
-// DetachedPayload is an option that can be passed to [olares/olares-cli/pkg/web5/jws.Sign].
+// DetachedPayload is an option that can be passed to [olares/github.com/beclab/Olares/cli/pkg/web5/jws.Sign].
 // It is used to indicate whether the payload should be included in the signature.
 // More details can be found [here].
 //
@@ -160,7 +160,7 @@ func DetachedPayload(detached bool) SignOpt {
 	}
 }
 
-// Type is an option that can be passed to [olares/olares-cli/pkg/web5/jws.Sign].
+// Type is an option that can be passed to [olares/github.com/beclab/Olares/cli/pkg/web5/jws.Sign].
 // It is used to set the `typ` JWS header value
 func Type(typ string) SignOpt {
 	return func(opts *signOpts) {

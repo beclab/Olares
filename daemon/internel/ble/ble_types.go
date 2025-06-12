@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"bytetrade.io/web3os/terminusd/internel/wifi"
+	"github.com/beclab/Olares/daemon/internel/wifi"
 	"k8s.io/klog/v2"
 	"tinygo.org/x/bluetooth"
 )

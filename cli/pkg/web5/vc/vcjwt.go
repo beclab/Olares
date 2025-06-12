@@ -7,7 +7,7 @@ import (
 	"slices"
 	"time"
 
-	"olares-cli/pkg/web5/jwt"
+	"github.com/beclab/Olares/cli/pkg/web5/jwt"
 )
 
 // Verify decodes and verifies the vc-jwt. It checks for the presence of required fields and verifies the jwt.

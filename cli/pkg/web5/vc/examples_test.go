@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"olares-cli/pkg/web5/dids/didkey"
-	"olares-cli/pkg/web5/vc"
+	"github.com/beclab/Olares/cli/pkg/web5/dids/didkey"
+	"github.com/beclab/Olares/cli/pkg/web5/vc"
 )
 
 // Demonstrates how to create, sign, and verify a Verifiable Credential using the vc package.

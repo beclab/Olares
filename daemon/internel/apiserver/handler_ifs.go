@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"os"
 
-	"bytetrade.io/web3os/terminusd/internel/ble"
-	"bytetrade.io/web3os/terminusd/pkg/nets"
-	"bytetrade.io/web3os/terminusd/pkg/utils"
+	"github.com/beclab/Olares/daemon/internel/ble"
+	"github.com/beclab/Olares/daemon/pkg/nets"
+	"github.com/beclab/Olares/daemon/pkg/utils"
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"

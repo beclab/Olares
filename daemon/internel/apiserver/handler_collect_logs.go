@@ -3,7 +3,7 @@ package apiserver
 import (
 	"net/http"
 
-	"bytetrade.io/web3os/terminusd/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/klog/v2"
 )

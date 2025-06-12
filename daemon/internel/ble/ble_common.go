@@ -5,9 +5,9 @@ import (
 	"slices"
 	"time"
 
-	"bytetrade.io/web3os/terminusd/internel/wifi"
-	"bytetrade.io/web3os/terminusd/pkg/cluster/state"
-	"bytetrade.io/web3os/terminusd/pkg/utils"
+	"github.com/beclab/Olares/daemon/internel/wifi"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
+	"github.com/beclab/Olares/daemon/pkg/utils"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 )

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"bytetrade.io/web3os/terminusd/pkg/nets"
+	"github.com/beclab/Olares/daemon/pkg/nets"
 )
 
 func TestFindProc(t *testing.T) {

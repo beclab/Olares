@@ -3,8 +3,8 @@ package crypto
 import (
 	"fmt"
 
-	"olares-cli/pkg/web5/crypto/dsa"
-	"olares-cli/pkg/web5/jwk"
+	"github.com/beclab/Olares/cli/pkg/web5/crypto/dsa"
+	"github.com/beclab/Olares/cli/pkg/web5/jwk"
 )
 
 // KeyManager is an abstraction that can be leveraged to manage/use keys (create, sign etc) as desired per the given use case
@@ -44,7 +44,7 @@ func NewLocalKeyManager() *LocalKeyManager {
 
 // GeneratePrivateKey generates a new private key using the algorithm provided,
 // stores it in the key store and returns the key id
-// Supported algorithms are available in [olares/olares-cli/pkg/web5/crypto/dsa.AlgorithmID]
+// Supported algorithms are available in [olares/github.com/beclab/Olares/cli/pkg/web5/crypto/dsa.AlgorithmID]
 func (k *LocalKeyManager) GeneratePrivateKey(algorithmID string) (string, error) {
 	var keyAlias string
 
