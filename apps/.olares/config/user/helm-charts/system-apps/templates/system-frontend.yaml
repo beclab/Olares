@@ -364,7 +364,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: wise-init
-          image: beclab/wise:v1.3.55
+          image: beclab/wise:v1.3.76
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -376,7 +376,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: settings-init
-          image: beclab/settings:v1.3.75
+          image: beclab/settings:v1.3.76
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -471,7 +471,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: edge-desktop-init
-          image: beclab/desktop:v1.3.74
+          image: beclab/desktop:v1.3.76
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -613,7 +613,7 @@ spec:
             - name: NATS_SUBJECT_USER_APPS
               value: terminus.user.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.16
+          image: beclab/user-service:v0.0.17
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
