@@ -11,10 +11,18 @@ import (
 )
 
 type Device struct {
-	Name       string
-	Type       string
-	State      string
-	Connection string
+	Name        string
+	Type        string
+	State       string
+	Connection  string
+	Ipv4Gateway string
+	Ipv6Gateway string
+	Ipv4DNS     string
+	Ipv6DNS     string
+	Ipv4Address string
+	Ipv4Mask    string
+	Ipv6Address string
+	Method      string
 }
 
 func findCommand(ctx context.Context, cmdName string) (cmdPath string, err error) {

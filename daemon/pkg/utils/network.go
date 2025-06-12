@@ -28,3 +28,16 @@ func GetAllDevice(ctx context.Context) (map[string]Device, error) {
 	klog.Warning("not implement")
 	return nil, nil
 }
+
+func ManagedAllDevices(ctx context.Context) (map[string]Device, error) {
+	klog.Warning("not implement")
+	return nil, nil
+}
+
+func UpdateNetworkTraffic(ctx context.Context) {
+	klog.Warning("not implement")
+}
+
+func GetInterfaceTraffic(iface string) (rxBytes, txBytes float64, err error) {
+	return 0, 0, nil
+}

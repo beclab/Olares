@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/beclab/Olares/daemon/cmd/terminusd/version"
 	"github.com/beclab/Olares/daemon/internel/apiserver"
@@ -21,6 +22,7 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/utils"
 	"github.com/spf13/pflag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 )
 
@@ -54,6 +56,8 @@ func main() {
 	if err := state.CheckCurrentStatus(mainCtx); err != nil {
 		klog.Error(err)
 	}
+
+	go wait.UntilWithContext(mainCtx, utils.UpdateNetworkTraffic, time.Second)
 
 	state.CurrentState.OlaresdVersion = version.RawVersion()
 

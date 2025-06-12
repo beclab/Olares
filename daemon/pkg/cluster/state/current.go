@@ -154,6 +154,10 @@ func CheckCurrentStatus(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := utils.ManagedAllDevices(ctx); err != nil {
+		klog.Error("managed all devices error, ", err)
+	}
+
 	devices, err := utils.GetAllDevice(ctx)
 	if err != nil {
 		klog.Error(err)

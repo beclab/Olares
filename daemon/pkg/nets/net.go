@@ -23,11 +23,18 @@ type NetInterface struct {
 	IP    string
 }
 
-func GetInternalIpv4Addr() (internalAddrs []*NetInterface, err error) {
+func GetInternalIpv4Addr(opts ...any) (internalAddrs []*NetInterface, err error) {
 	var (
-		iefs  []net.Interface
-		addrs []net.Addr
+		iefs               []net.Interface
+		addrs              []net.Addr
+		ignoreNotConnected bool = true
 	)
+
+	if len(opts) > 0 {
+		if v, ok := opts[0].(bool); ok {
+			ignoreNotConnected = v
+		}
+	}
 
 	if iefs, err = net.Interfaces(); err != nil {
 		klog.Error("list network interfaces error, ", err)
@@ -73,21 +80,27 @@ func GetInternalIpv4Addr() (internalAddrs []*NetInterface, err error) {
 			}
 		}
 
+		var ipv4String string
 		if len(ipv4Addr) == 0 {
 			klog.V(8).Infof("interface %s don't have an ipv4 address\n", ief.Name)
-			continue
-		}
+			if ignoreNotConnected {
+				continue
+			}
+		} else {
 
-		if !ipv4Addr.IsGlobalUnicast() {
-			klog.V(8).Infof("interface %s don't have a valid ipv4 address\n", ief.Name)
-			continue
+			if !ipv4Addr.IsGlobalUnicast() {
+				klog.V(8).Infof("interface %s don't have a valid ipv4 address\n", ief.Name)
+				continue
+			}
+
+			ipv4String = ipv4Addr.String()
 		}
 
 		// ethernet in priority
 		if strings.HasPrefix(ief.Name, "eth") {
-			internalAddrs = append([]*NetInterface{{&ief, ipv4Addr.String()}}, internalAddrs...)
+			internalAddrs = append([]*NetInterface{{&ief, ipv4String}}, internalAddrs...)
 		} else {
-			internalAddrs = append(internalAddrs, &NetInterface{&ief, ipv4Addr.String()})
+			internalAddrs = append(internalAddrs, &NetInterface{&ief, ipv4String})
 		}
 	}
 
