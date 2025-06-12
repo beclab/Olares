@@ -956,7 +956,7 @@ spec:
             (1-node:disk_avail:size/node:disk_capacity:size)
           record: node:disk_utilization:ratio
         - expr: |
-            label_replace(label_replace(avg by (instance) (node_hwmon_temp_celsius{chip=~".*"} * on(chip) group_left(chip_name) node_hwmon_chip_names{chip_name="coretemp"}),"metric", "cpu_temperature", "", ""),"node","$1","instance","(.*)")
+            label_replace(label_replace(avg by (instance) (node_hwmon_temp_celsius{chip=~".*"} * on(chip,instance) group_left(chip_name) node_hwmon_chip_names{chip_name="coretemp"}),"metric", "cpu_temperature", "", ""),"node","$1","instance","(.*)")
           record: node:node_cpu_temp_celsius
         - expr: |
             label_replace(node_network_address_info{job="node-exporter", device!~"lo|docker.*|tailscale.*|veth.*|br.*|bond.*|flannel.*|cni.*|tun.*|virbr.*|vnet.*|cali.*|cilium.*|weave.*|vxlan.*|ovs-system|dummy.*|kube.*"},"node","$1","instance","(.*)")
