@@ -82,7 +82,7 @@ spec:
   appNamespace: {{ .Release.Namespace }}
   middleware: postgres
   postgreSQL:
-    user: infisical_os_system
+    user: infisical_os_framework
     password: 
       valueFrom:
         secretKeyRef:
@@ -144,18 +144,18 @@ spec:
             echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
         env:
           - name: PGHOST
-            value: citus-0.citus-headless.os-system
+            value: citus-0.citus-headless.os-platform
           - name: PGPORT
             value: "5432"
           - name: PGUSER
-            value: infisical_os_system
+            value: infisical_os_framework
           - name: PGPASSWORD
             valueFrom:
               secretKeyRef:
                 name: infisical-postgres
                 key: postgres-passwords
           - name: PGDB
-            value: os_system_infisical
+            value: os_framework_infisical
       - name: "migration-init"
         image: "beclab/infisical:0.1.1"
         imagePullPolicy: IfNotPresent
@@ -171,13 +171,13 @@ spec:
               key: postgres-passwords
         
         - name: POSTGRES_USER
-          value: infisical_os_system
+          value: infisical_os_framework
 
         - name: POSTGRES_DB
-          value: os_system_infisical
+          value: os_framework_infisical
 
         - name: DB_CONNECTION_URI
-          value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-0.citus-headless.os-system/$(POSTGRES_DB)?sslmode=disable"
+          value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-0.citus-headless.os-platform/$(POSTGRES_DB)?sslmode=disable"
       containers:
       - name: infisical
         image: "beclab/infisical:0.1.1"
@@ -201,14 +201,14 @@ spec:
               key: postgres-passwords
         
         - name: POSTGRES_USER
-          value: infisical_os_system
+          value: infisical_os_framework
 
         - name: POSTGRES_DB
-          value: os_system_infisical
+          value: os_framework_infisical
 
         
         - name: DB_CONNECTION_URI
-          value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-0.citus-headless.os-system/$(POSTGRES_DB)?sslmode=disable"
+          value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-0.citus-headless.os-platform/$(POSTGRES_DB)?sslmode=disable"
 
         - name: REDIS_PASSWORD
           valueFrom:
@@ -216,7 +216,7 @@ spec:
               name: infisical-postgres
               key: redis-passwords
         - name: REDIS_URL
-          value: "redis://:$(REDIS_PASSWORD)@redis-cluster-proxy.os-system:6379/0"
+          value: "redis://:$(REDIS_PASSWORD)@redis-cluster-proxy.os-platform:6379/0"
 
       - name: infisical-proxy
         image: nginx:stable-alpine3.17-slim
@@ -240,11 +240,11 @@ spec:
         - name: INFISICAL_URL
           value: http://localhost:4000
         - name: PG_USER
-          value: infisical_os_system
+          value: infisical_os_framework
         - name: PG_DB
-          value: os_system_infisical
+          value: os_framework_infisical
         - name: PG_ADDR
-          value: citus-0.citus-headless.os-system
+          value: citus-0.citus-headless.os-platform
         - name: PASSWORD
           valueFrom:
             secretKeyRef:

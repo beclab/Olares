@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: argoworkflows-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+  - port: 2746
+    name: http
+    protocol: TCP
+    targetPort: 2746
+  selector:
+    app: argoworkflows
+  sessionAffinity: None
+  type: ClusterIP
+  

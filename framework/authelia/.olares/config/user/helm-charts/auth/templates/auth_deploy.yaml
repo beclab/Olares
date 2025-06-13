@@ -22,7 +22,7 @@ spec:
       initContainers:
       - args:
         - -it
-        - authelia-backend.os-system:9091
+        - authelia-backend.os-framework:9091
         image: owncloudci/wait-for:latest
         imagePullPolicy: IfNotPresent
         name: check-auth
@@ -58,7 +58,7 @@ metadata:
   namespace: user-space-{{ .Values.bfl.username }}
 spec:
   type: ExternalName
-  externalName: authelia-backend.os-system.svc.cluster.local
+  externalName: authelia-backend.os-framework.svc.cluster.local
   ports:
     - protocol: TCP
       name: authelia-bakcend

@@ -1,0 +1,46 @@
+
+{{- $ks_component_secret := (lookup "v1" "Secret" .Release.Namespace "ks-component-secrets") -}}
+
+{{- $nats_password := "" -}}
+{{ if $ks_component_secret -}}
+{{ $nats_password = (index $ks_component_secret "data" "nats_password") }}
+{{ else -}}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ks-component-secrets
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  nats_password: {{ $nats_password }}
+
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: ks-component-nats
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: ks-component
+  appNamespace: {{ .Release.Namespace }}
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nats_password
+          name: ks-component-secrets
+    refs:
+    - appName: notifications
+      appNamespace: os-framework
+      subjects:
+      - name: system.notification
+        perm:
+        - pub
+        - sub
+    user: os_platform_ks_component

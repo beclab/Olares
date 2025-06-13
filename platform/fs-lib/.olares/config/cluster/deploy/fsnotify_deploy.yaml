@@ -1,0 +1,56 @@
+{{- if eq (.Values.fs_type | default "fs") "jfs" }}  
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jfsnotify-proxy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: jfsnotify-proxy
+    applications.app.bytetrade.io/author: bytetrade.io
+  annotations:
+    applications.app.bytetrade.io/version: '0.0.1'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jfsnotify-proxy
+  template:
+    metadata:
+      labels:
+        app: jfsnotify-proxy
+    spec:
+      serviceAccountName: os-internal
+      serviceAccount: os-internal
+      containers:
+        - name: proxy
+          image: beclab/fsnotify-proxy:0.1.10
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5079
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jfsnotify-secrets
+                  key: redis_password
+            - name: REDIS_ADDR
+              value: redis-cluster-proxy.os-platform:6379
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fsnotify-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: jfsnotify-proxy
+  ports:
+    - protocol: TCP
+      port: 5079
+      targetPort: 5079
+
+{{- end }}  # End of fs type condition

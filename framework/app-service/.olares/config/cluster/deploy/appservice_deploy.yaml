@@ -9,7 +9,7 @@
 {{ $usertmpl_sc := "juicefs-localpath-usertmpl" }}
 {{ $usertmpl_storage := "100Mi" }}
 
-{{- $namespace := printf "%s" "os-system" -}}
+{{- $namespace := printf "%s" "os-framework" -}}
 {{- $app_service_nats_secret := (lookup "v1" "Secret" $namespace "app-service-nats-secret") -}}
 {{- $nats_password := "" -}}
 {{ if $app_service_nats_secret -}}
@@ -23,7 +23,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: app-service-nats-secret
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 type: Opaque
 data:
   nats_password: {{ $nats_password }}
@@ -115,7 +115,7 @@ data:
     stateOrProvinceName = Beijing
     localityName = Beijing
     0.organizationName = bytetrade
-    commonName = app-service.os-system.svc
+    commonName = app-service.os-framework.svc
 
     [v3_req]
     basicConstraints = CA:FALSE
@@ -123,7 +123,7 @@ data:
     subjectAltName = @bytetrade
 
     [bytetrade]
-    DNS.1 = app-service.os-system.svc
+    DNS.1 = app-service.os-framework.svc
 
 ---
 apiVersion: apps/v1
@@ -202,16 +202,16 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: os-system-app-service
+          value: os-platform-app-service
         - name: NATS_PASSWORD
           valueFrom:
             secretKeyRef:
               key: nats_password
               name: app-service-nats-secret
         - name: NATS_SUBJECT_SYSTEM_USERS
-          value: terminus.os-system.system.users
+          value: terminus.os-framework.system.users
         - name: NATS_SUBJECT_SYSTEM_GROUPS
-          value: terminus.os-system.system.groups
+          value: terminus.os-framework.system.groups
         - name: APP_RANDOM_KEY
           valueFrom:
             secretKeyRef:
@@ -337,7 +337,7 @@ metadata:
 spec:
   type: subscriber
   event: metrics.memory.high
-  callback: http://app-service.os-system:6755/app-service/v1/metrics/highload
+  callback: http://app-service.os-framework:6755/app-service/v1/metrics/highload
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
@@ -348,7 +348,7 @@ metadata:
 spec:
   type: subscriber
   event: metrics.cpu.high
-  callback: http://app-service.os-system:6755/app-service/v1/metrics/highload
+  callback: http://app-service.os-framework:6755/app-service/v1/metrics/highload
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
@@ -359,7 +359,7 @@ metadata:
 spec:
   type: subscriber
   event: metrics.user.memory.high
-  callback: http://app-service.os-system:6755/app-service/v1/metrics/user/highload
+  callback: http://app-service.os-framework:6755/app-service/v1/metrics/user/highload
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
@@ -370,7 +370,7 @@ metadata:
 spec:
   type: subscriber
   event: metrics.user.cpu.high
-  callback: http://app-service.os-system:6755/app-service/v1/metrics/user/highload
+  callback: http://app-service.os-framework:6755/app-service/v1/metrics/user/highload
 
 ---
 apiVersion: apps/v1
@@ -458,4 +458,4 @@ spec:
         permission:
           pub: allow
           sub: deny
-    user: os-system-app-service
+    user: os-framework-app-service

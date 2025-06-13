@@ -1,5 +1,5 @@
 
-{{- $namespace := printf "%s" "os-system" -}}
+{{- $namespace := printf "%s" "os-framework" -}}
 {{- $search3_secret := (lookup "v1" "Secret" $namespace "search3-secrets") -}}
 {{- $pg_password := "" -}}
 {{ if $search3_secret -}}
@@ -21,7 +21,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: search-server-nats-secret
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 type: Opaque
 data:
   nats_password: {{ $nats_password }}
@@ -31,7 +31,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: search3-secrets
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 type: Opaque
 data:
   pg_password: {{ $pg_password }}
@@ -41,13 +41,13 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: search3-pg
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   app: search3
-  appNamespace: os-system
+  appNamespace: {{ .Release.Namespace }}
   middleware: postgres
   postgreSQL:
-    user: search3_os_system
+    user: search3_os_framework
     password:
       valueFrom:
         secretKeyRef:
@@ -227,15 +227,15 @@ spec:
             echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB1 -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
         env:
           - name: PGHOST
-            value: citus-0.citus-headless.os-system
+            value: citus-0.citus-headless.os-platform
           - name: PGPORT
             value: "5432"
           - name: PGUSER
-            value: search3_os_system
+            value: search3_os_framework
           - name: PGPASSWORD
             value: {{ $pg_password | b64dec }}
           - name: PGDB1
-            value: os_system_search3
+            value: os_framework_search3
       containers:
       - name: search3
         image: beclab/search3:v0.0.42
@@ -244,30 +244,30 @@ spec:
         - containerPort: 8080
         env:
         - name: DATABASE_URL
-          value: postgres://search3_os_system:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-system:5432/os_system_search3
+          value: postgres://search3_os_framework:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-platform:5432/os_framework_search3
         - name: NATS_HOST
           value: nats
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: os-system-search-server
+          value: os-framework-search-server
         - name: NATS_PASSWORD
           valueFrom:
             secretKeyRef:
               key: nats_password
               name: search-server-nats-secret
         - name: NATS_SUBJECT_SYSTEM_SEARCH
-          value: terminus.os-system.system.search
+          value: terminus.os-framework.system.search
         - name: NATS_SUBJECT_SYSTEM_USERS
-          value: terminus.os-system.system.users
+          value: terminus.os-framework.system.users
         - name: NATS_SUBJECT_SYSTEM_GROUPS
-          value: terminus.os-system.system.groups
+          value: terminus.os-framework.system.groups
       - name: search3monitor
         image: beclab/search3monitor:v0.0.42
         imagePullPolicy: IfNotPresent
         env:
         - name: DATABASE_URL
-          value: postgres://search3_os_system:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-system:5432/os_system_search3
+          value: postgres://search3_os_framework:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-platform:5432/os_framework_search3
         volumeMounts:
           - name: fb-data
             mountPath: /appdata
@@ -335,4 +335,4 @@ spec:
         permission:
           pub: allow
           sub: deny
-    user: os-system-search-server
+    user: {{ .Release.Namespace }}-search-server

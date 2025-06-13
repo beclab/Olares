@@ -1,0 +1,120 @@
+
+{{ $dbdata_pv_rootpath := printf "%s%s" .Values.rootPath "/userdata/dbdata" }}
+{{ $dbbackup_rootpath := printf "%s%s" .Values.rootPath "/rootfs/middleware-backup" }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: middleware-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+  - port: 80
+    targetPort: 9080
+    protocol: TCP
+  selector:
+    app: tapr-middleware
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tapr-middleware
+  namespace: {{ .Release.Namespace }}
+  labels:
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tapr-middleware
+
+  template:
+    metadata:
+      labels:
+        app: tapr-middleware
+    spec:
+      securityContext:
+        runAsUser: 0
+      # terminationGracePeriodSeconds: 0
+      serviceAccountName: os-internal
+      serviceAccount: os-internal
+      volumes:
+      - name: dbdata-dir
+        hostPath:
+          type: DirectoryOrCreate
+          path: '{{ $dbdata_pv_rootpath }}'
+      - name: dbbackup-dir
+        hostPath:
+          type: DirectoryOrCreate
+          path: '{{ $dbbackup_rootpath }}'
+      - name: pgbackup-dir
+        hostPath:
+          type: DirectoryOrCreate
+          path: '{{ $dbbackup_rootpath }}/pg_backup'
+      initContainers:
+      - name: init-dbspace
+        image: busybox:1.28
+        volumeMounts:
+        - name: dbdata-dir
+          mountPath: /dbdata
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p /dbdata/mdbdata && \
+          mkdir -p /dbdata/mdbdata-config && \
+          chown 1001 /dbdata/mdbdata && \
+          chown 1001 /dbdata/mdbdata-config 
+      containers:
+      # must be first container
+      - name: percona-server-mongodb-operator
+        image: beclab/percona-server-mongodb-operator:1.14.2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 60000
+          protocol: TCP
+          name: metrics
+        command:
+        - percona-server-mongodb-operator
+        env:
+        - name: LOG_STRUCTURED
+          value: 'false'
+        - name: LOG_LEVEL
+          value: INFO
+        - name: WATCH_NAMESPACE
+          value: ''
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: OPERATOR_NAME
+          value: percona-server-mongodb-operator
+        - name: RESYNC_PERIOD
+          value: 5s
+        - name: LOG_VERBOSE
+          value: "false"
+        - name: DISABLE_TELEMETRY
+          value: "false"
+      - name: operator-api
+        image: beclab/middleware-operator:0.2.8
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9080
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 20m
+            memory: 100Mi
+        volumeMounts:
+        - name: dbbackup-dir
+          mountPath: /olares/rootfs/middleware-backup
+        - name: pgbackup-dir
+          mountPath: /backup
+        - name: dbdata-dir
+          mountPath: /dbdata

@@ -62,7 +62,7 @@ spec:
       initContainers:
         - args:
           - -it
-          - authelia-backend.os-system:9091
+          - authelia-backend.os-framework:9091
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-auth
@@ -118,7 +118,7 @@ spec:
           - name: APP_SOTRE_SERVICE_SERVICE_PORT
             value: '443'
           - name: APP_SERVICE_SERVICE_HOST
-            value: app-service.os-system
+            value: app-service.os-framework
           - name: APP_SERVICE_SERVICE_PORT
             value: '6755'
           - name: REPO_URL_PORT

@@ -11,7 +11,7 @@ metadata:
     "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   exporter:
-    endpoint: https://jaeger-storage-instance-collector.os-system:4317
+    endpoint: https://jaeger-storage-instance-collector.os-platform:4317
   propagators:
     - tracecontext
     - baggage
@@ -22,7 +22,7 @@ spec:
   python:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/json
       - name: OTEL_TRACES_SAMPLER_ARG
@@ -30,7 +30,7 @@ spec:
   dotnet:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/json
       - name: OTEL_TRACES_SAMPLER_ARG
@@ -39,7 +39,7 @@ spec:
     image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:0.53.0
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/json
       - name: OTEL_TRACES_SAMPLER_ARG
@@ -48,7 +48,7 @@ spec:
     image: bytetrade/autoinstrumentation-apache-httpd:1.0.4-fix3
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/json
       - name: OTEL_TRACES_SAMPLER_ARG
@@ -57,7 +57,7 @@ spec:
     image: ghcr.io/open-telemetry/opentelemetry-go-instrumentation/autoinstrumentation-go:v0.20.0
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/protobuf
       - name: OTEL_TRACES_SAMPLER_ARG
@@ -79,7 +79,7 @@ metadata:
 
 spec:
   exporter:
-    endpoint: https://jaeger-storage-instance-collector.os-system:4317
+    endpoint: https://jaeger-storage-instance-collector.os-platform:4317
   propagators:
     - tracecontext
     - baggage
@@ -90,7 +90,7 @@ spec:
   python:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/json
       - name: OTEL_TRACES_SAMPLER_ARG
@@ -98,7 +98,7 @@ spec:
   dotnet:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/json
       - name: OTEL_TRACES_SAMPLER_ARG
@@ -107,7 +107,7 @@ spec:
     image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:0.53.0
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/json
       - name: OTEL_TRACES_SAMPLER_ARG
@@ -116,7 +116,7 @@ spec:
     image: bytetrade/autoinstrumentation-apache-httpd:1.0.4-fix3
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/json
       - name: OTEL_TRACES_SAMPLER_ARG
@@ -125,7 +125,7 @@ spec:
     image: ghcr.io/open-telemetry/opentelemetry-go-instrumentation/autoinstrumentation-go:v0.20.0
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/protobuf
       - name: OTEL_TRACES_SAMPLER_ARG

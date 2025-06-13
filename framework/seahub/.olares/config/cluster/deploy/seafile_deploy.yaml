@@ -2,7 +2,7 @@
 {{ $seafile_application_rootpath := printf "%s%s" .Values.rootPath "/rootfs/Application/seafile" }}
 {{ $seafile_appcache_rootpath := printf "%s%s" .Values.rootPath "/userdata/Cache/seafile" }}
 
-{{- $namespace := printf "%s" "os-system" -}}
+{{- $namespace := printf "%s" "os-framework" -}}
 {{- $seafile_secret := (lookup "v1" "Secret" $namespace "seafile-secrets") -}}
 {{- $pg_password := "" -}}
 {{ if $seafile_secret -}}
@@ -23,7 +23,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: seafile-secrets
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 type: Opaque
 data:
   pg_password: {{ $pg_password }}
@@ -33,7 +33,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: seahub-nats-secrets
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 type: Opaque
 data:
   nats_password: {{ $nats_password }}
@@ -42,13 +42,13 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: seafile-pg
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   app: seafile
-  appNamespace: os-system
+  appNamespace: {{ .Release.Namespace }}
   middleware: postgres
   postgreSQL:
-    user: seafile_os_system
+    user: seafile_os_framework
     password:
       valueFrom:
         secretKeyRef:
@@ -161,21 +161,21 @@ data:
   seafile.conf: |-
     [database]
     type = pgsql
-    host = citus-headless.os-system
+    host = citus-headless.os-platform
     port = 5432
-    user = seafile_os_system
+    user = seafile_os_framework
     password = {{ $pg_password | b64dec }}
-    db_name = os_system_seafile
+    db_name = os_framework_seafile
     connection_charset = utf8
     create_tables = true
   ccnet.conf: |-
     [Database]
     ENGINE = pgsql
-    HOST = citus-headless.os-system
+    HOST = citus-headless.os-platform
     PORT = 5432
-    USER = seafile_os_system
+    USER = seafile_os_framework
     PASSWD = {{ $pg_password | b64dec }}
-    DB = os_system_ccnet
+    DB = os_framework_ccnet
     CONNECTION_CHARSET = utf8
     CREATE_TABLES = true
 
@@ -185,10 +185,10 @@ data:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'os_system_seahub',
-            'USER': 'seafile_os_system',
+            'NAME': 'os_framework_seahub',
+            'USER': 'seafile_os_framework',
             'PASSWORD': '{{ $pg_password | b64dec }}',
-            'HOST': 'citus-headless.os-system',
+            'HOST': 'citus-headless.os-platform',
             'PORT': '5432',
         }
     }
@@ -274,19 +274,19 @@ spec:
               echo -e " >> PostgreSQL DB Server has started";
           env:
             - name: PGHOST
-              value: citus-headless.os-system
+              value: citus-headless.os-platform
             - name: PGPORT
               value: "5432"
             - name: PGUSER
-              value: seafile_os_system
+              value: seafile_os_framework
             - name: PGPASSWORD
               value: {{ $pg_password | b64dec }}
             - name: PGDB1
-              value: os_system_ccnet
+              value: os_framework_ccnet
             - name: PGDB2
-              value: os_system_seafile
+              value: os_framework_seafile
             - name: PGDB3
-              value: os_system_seahub
+              value: os_framework_seahub
 
       containers:
       - name: seahub
@@ -297,17 +297,17 @@ spec:
             protocol: TCP
         env:
           - name: DB_HOST
-            value: citus-headless.os-system
+            value: citus-headless.os-platform
           - name: DB_PORT
             value: '5432'
           - name: DB_NAME1
-            value: os_system_ccnet
+            value: os_framework_ccnet
           - name: DB_NAME2
-            value: os_system_seafile
+            value: os_framework_seafile
           - name: DB_NAME3
-            value: os_system_seahub
+            value: os_framework_seahub
           - name: DB_USER
-            value: seafile_os_system
+            value: seafile_os_framework
           - name: DB_PASSWORD
             value: {{ $pg_password | b64dec }}
           - name: CCNET_CONF_DIR
@@ -343,17 +343,17 @@ spec:
             protocol: TCP
         env:
           - name: DB_HOST
-            value: citus-headless.os-system
+            value: citus-headless.os-platform
           - name: DB_PORT
             value: '5432'
           - name: DB_NAME1
-            value: os_system_ccnet
+            value: os_framework_ccnet
           - name: DB_NAME2
-            value: os_system_seafile
+            value: os_framework_seafile
           - name: DB_NAME3
-            value: os_system_seahub
+            value: os_framework_seahub
           - name: DB_USER
-            value: seafile_os_system
+            value: seafile_os_framework
           - name: DB_PASSWORD
             value: {{ $pg_password | b64dec }}
           - name: CCNET_CONF_DIR
@@ -369,18 +369,18 @@ spec:
           - name: NATS_PORT
             value: "4222"
           - name: NATS_USERNAME
-            value: os-system-seahub-server
+            value: os-framework-seahub-server
           - name: NATS_PASSWORD
             valueFrom:
               secretKeyRef:
                 key: nats_password
                 name: seahub-nats-secrets
           - name: NATS_SUBJECT_SYSTEM_SEAHUB
-            value: terminus.os-system.system.seahub
+            value: terminus.os-framework.system.seahub
           - name: NATS_SUBJECT_SYSTEM_USERS
-            value: terminus.os-system.system.users
+            value: terminus.os-framework.system.users
           - name: NATS_SUBJECT_SYSTEM_GROUPS
-            value: terminus.os-system.system.groups
+            value: terminus.os-framework.system.groups
         volumeMounts:
           - name: sync-data
             mountPath: /shared
@@ -392,69 +392,6 @@ spec:
           - name: seafile-nginx-conf
             mountPath: /root/dev/conf/ccnet.conf
             subPath: ccnet.conf
-
-#      - name: sync-backend
-#        image: beclab/seahub_pgserver:v0.0.12
-#        imagePullPolicy: IfNotPresent
-#        volumeMounts:
-#        - name: sync-data
-#          mountPath: /shared
-#        - name: seafile-data
-#          mountPath: /root/dev/seafile-data
-#        - name: seafile-nginx-conf
-#          mountPath: /root/dev/seafile-data/seafile.conf
-#          subPath: seafile.conf
-#        - name: seafile-nginx-conf
-#          mountPath: /root/dev/conf/ccnet.conf
-#          subPath: ccnet.conf
-#        - name: seafile-nginx-conf
-#          mountPath: /root/dev/conf/seahub_settings.py
-#          subPath: seahub_settings.py
-#        ports:
-#        - containerPort: 8000
-#          protocol: TCP
-#        - containerPort: 8082
-#          protocol: TCP
-#        env:
-#        - name: DB_HOST
-#          value: citus-headless.os-system
-#        - name: DB_PORT
-#          value: '5432'
-#        - name: DB_NAME1
-#          value: os_system_ccnet
-#        - name: DB_NAME2
-#          value: os_system_seafile
-#        - name: DB_NAME3
-#          value: os_system_seahub
-#        - name: DB_USER
-#          value: seafile_os_system
-#        - name: DB_PASSWORD
-#          value: {{ $pg_password | b64dec }}
-#        - name: PYTHONPATH
-#          value: /usr/local/lib/python3.8/site-packages/:/root/dev/source-code/seahub/thirdpart
-#        - name: CCNET_CONF_DIR
-#          value: /root/dev/conf
-#        - name: SEAFILE_CONF_DIR
-#          value: /root/dev/seafile-data
-#        - name: SEAFILE_CENTRAL_CONF_DIR
-#          value: /root/dev/conf
-#        - name: SEAFILE_ADMIN_EMAIL
-#          value: admin@bytetrade.io
-#        - name: SEAFILE_ADMIN_PASSWORD
-#          value: admin
-#        - name: SEAFILE_SERVER_LETSENCRYPT
-#          value: "false"
-#        - name: NATS_HOST
-#          value: nats
-#        - name: NATS_PORT
-#          value: "4222"
-#        - name: NATS_USERNAME
-#          value: admin
-#        - name: NATS_PASSWORD
-#          valueFrom:
-#            secretKeyRef:
-#              key: nats_password
-#              name: nats-secrets
 
       - name: nginx
         image: 'beclab/nginx-lua:n0.0.4'
@@ -565,4 +502,4 @@ spec:
         permission:
           pub: allow
           sub: deny
-    user: os-system-seahub-server
+    user: {{ .Release.Namespace }}-seahub-server

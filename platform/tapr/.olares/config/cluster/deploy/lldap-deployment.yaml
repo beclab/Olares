@@ -1,0 +1,240 @@
+{{- $namespace := printf "%s" "os-framework" -}}
+{{- $lldap_secret := (lookup "v1" "Secret" $namespace "lldap-credentials") -}}
+{{- $lldap_jwt_secret := "" -}}
+{{- $lldap_ldap_user_pass := "" -}}
+{{- $lldap_key_seed := "" -}}
+{{ if $lldap_secret -}}
+{{ $lldap_jwt_secret = (index $lldap_secret "data" "lldap-jwt-secret") }}
+{{ $lldap_ldap_user_pass = (index $lldap_secret "data" "lldap-ldap-user-pass") }}
+{{ $lldap_key_seed = (index $lldap_secret "data" "lldap-key-seed") }}
+{{ else -}}
+{{ $lldap_jwt_secret = randAlpha 64 | b64enc }}
+{{ $lldap_ldap_user_pass = randAlpha 64 | b64enc }}
+{{ $lldap_key_seed = randAlpha 64 | b64enc }}
+{{- end -}}
+
+{{- $lldap_pg_secret := (lookup "v1" "Secret" $namespace "lldap-pg-secrets") -}}
+{{- $pg_password := "" -}}
+{{ if $lldap_pg_secret -}}
+{{ $pg_password = (index $lldap_pg_secret "data" "pg_password") }}
+{{ else -}}
+{{ $pg_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+{{- $nats_password := "" -}}
+{{ if $lldap_pg_secret -}}
+{{ $nats_password = (index $lldap_pg_secret "data" "nats_password") }}
+{{ else -}}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lldap-pg-secrets
+  namespace: {{ $namespace }}
+type: Opaque
+data:
+  pg_password: {{ $pg_password }}
+  nats_password: {{ $nats_password }}
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: lldap-pg
+  namespace: {{ $namespace }}
+spec:
+  app: lldap
+  appNamespace: {{ $namespace }}
+  middleware: postgres
+  postgreSQL:
+    user: lldap_os_framework
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: pg_password
+          name: lldap-pg-secrets
+    databases:
+      - name: lldap
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: lldap-nats
+  namespace: {{ $namespace }}
+spec:
+  app: lldap
+  appNamespace: {{ $namespace }}
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nats_password
+          name: lldap-pg-secrets
+    subjects:
+    - name: system.notification
+      permission:
+        pub: allow
+        sub: allow
+    - name: system.users
+      permission:
+        pub: allow
+        sub: allow
+    - name: system.groups
+      permission:
+        pub: allow
+        sub: allow
+    user: {{ $namespace }}-lldap
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    lldap: https://github.com/nitnelave/lldap
+    k8s: https://github.com/Evantage-WS/lldap-kubernetes
+  labels:
+    app: lldap
+    applications.app.bytetrade.io/author: bytetrade.io
+  name: lldap
+  namespace: {{ $namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lldap
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        lldap: https://github.com/nitnelave/lldap
+        k8s: https://github.com/Evantage-WS/lldap-kubernetes
+      labels:
+        app: lldap
+    spec:
+      initContainers:
+        - name: init-container-check-citus
+          image: 'postgres:16.0-alpine3.18'
+          command:
+            - sh
+            - '-c'
+            - >-
+              echo -e "Checking for the availability of PostgreSQL Server
+              deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB1
+              -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >>
+              PostgreSQL DB Server has started";
+          env:
+            - name: PGHOST
+              value: citus-headless.os-platform
+            - name: PGPORT
+              value: '5432'
+            - name: PGUSER
+              value: lldap_os_framework
+            - name: PGPASSWORD
+              value: {{ $pg_password | b64dec }}
+            - name: PGDB1
+              value: os_framework_lldap
+      containers:
+        - env:
+            - name: GID
+              value: "1001"
+            - name: LLDAP_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: lldap-credentials
+                  key: lldap-jwt-secret
+            - name: LLDAP_LDAP_BASE_DN
+              valueFrom:
+                secretKeyRef:
+                  name: lldap-credentials
+                  key: base-dn
+            - name: LLDAP_LDAP_USER_DN
+              valueFrom:
+                secretKeyRef:
+                  name: lldap-credentials
+                  key: lldap-ldap-user-dn
+            - name: LLDAP_LDAP_USER_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: lldap-credentials
+                  key: lldap-ldap-user-pass
+            - name: LLDAP_KEY_SEED
+              valueFrom:
+                secretKeyRef:
+                  name: lldap-credentials
+                  key: lldap-key-seed
+            - name: TZ
+              value: CET
+            - name: UID
+              value: "1001"
+            - name: LLDAP_KEY_FILE
+              value: "/data/private_key"
+            - name: RUST_BACKTRACE
+              value: "full"
+            - name: LLDAP_DATABASE_URL
+              value: "postgres://lldap_os_framework:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-platform:5432/os_framework_lldap?sslmode=allow"
+            - name: NATS_HOST
+              value: nats
+            - name: NATS_PORT
+              value: "4222"
+            - name: NATS_USERNAME
+              value: os-framework-lldap
+            - name: NATS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: nats_password
+                  name: lldap-pg-secrets
+            - name: NATS_SUBJECT
+              value: "terminus.{{ $namespace }}.system.notification"
+            - name: NATS_SUBJECT_SYSTEM_USERS
+              value: "terminus.{{ $namespace }}.system.users"
+            - name: NATS_SUBJECT_SYSTEM_GROUPS
+              value: "terminus.{{ $amespace }}.system.groups"
+
+          image: beclab/lldap:0.0.3
+          imagePullPolicy: IfNotPresent
+          name: lldap
+          ports:
+            - containerPort: 3890
+            - containerPort: 17170
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    lldap: https://github.com/nitnelave/lldap
+    k8s: https://github.com/Evantage-WS/lldap-kubernetes
+  labels:
+    app: lldap-service
+  name: lldap-service
+  namespace: {{ $namespace }}
+spec:
+  ports:
+    - name: "3890"
+      port: 3890
+      targetPort: 3890
+    - name: "17170"
+      port: 17170
+      targetPort: 17170
+  selector:
+    app: lldap
+---
+apiVersion: v1
+data:
+  base-dn: ZGM9ZXhhbXBsZSxkYz1jb20=
+  lldap-jwt-secret: {{ $lldap_jwt_secret }}
+  lldap-ldap-user-dn: YWRtaW4=
+  lldap-ldap-user-pass: {{ $lldap_ldap_user_pass }}
+  lldap-key-seed: {{ $lldap_key_seed }}
+kind: Secret
+metadata:
+  name: lldap-credentials
+  namespace: {{ $namespace }}
+type: Opaque

@@ -225,7 +225,7 @@ spec:
       initContainers:
       - args:
         - -it
-        - authelia-backend.os-system:9091
+        - authelia-backend.os-framework:9091
         image: owncloudci/wait-for:latest
         imagePullPolicy: IfNotPresent
         name: check-auth
@@ -291,7 +291,7 @@ spec:
             port: 8080
         env:
         - name: APP_SERVICE_SERVICE_HOST
-          value: app-service.os-system
+          value: app-service.os-framework
         - name: APP_SERVICE_SERVICE_PORT
           value: '6755'
         - name: USER_DEFAULT_MEMORY_LIMIT
@@ -309,7 +309,7 @@ spec:
         - name: OS_APP_KEY
           value: {{ .Values.bfl.appKey }}
         - name: BACKUP_SERVER
-          value: backup-server.os-system:8082
+          value: backup-server.os-framework:8082
         - name: L4_PROXY_IMAGE_VERSION
           value: v0.3.0
         - name: REVERSE_PROXY_AGENT_IMAGE_VERSION

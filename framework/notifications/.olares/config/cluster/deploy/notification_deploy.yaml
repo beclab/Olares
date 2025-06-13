@@ -1,6 +1,6 @@
 
 
-{{- $namespace := printf "%s" "os-system" -}}
+{{- $namespace := printf "%s" "os-framework" -}}
 {{- $notifications_secret := (lookup "v1" "Secret" $namespace "notifications-secrets") -}}
 
 {{- $pg_password := "" -}}
@@ -39,7 +39,7 @@ spec:
   appNamespace: {{ .Release.Namespace }}
   middleware: postgres
   postgreSQL:
-    user: notifications_os_system
+    user: notifications_os_framework
     password:
       valueFrom:
         secretKeyRef:
@@ -108,7 +108,7 @@ spec:
         permission:
           pub: deny
           sub: allow
-    user: os-system-notification-server
+    user: {{ .Release.Name }}-notification-server
 
 ---
 apiVersion: apps/v1
@@ -142,18 +142,18 @@ spec:
             echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
         env:
           - name: PGHOST
-            value: citus-headless.os-system
+            value: citus-headless.os-platform
           - name: PGPORT
             value: "5432"
           - name: PGUSER
-            value: notifications_os_system
+            value: notifications_os_framework
           - name: PGPASSWORD
             valueFrom:
               secretKeyRef:
                 key: pg_password
                 name: notifications-secrets
           - name: PGDB
-            value: os_system_notifications
+            value: os_framework_notifications
       containers:
       - name: notifications-api
         image: beclab/notifications-api:v1.12.6
@@ -171,13 +171,13 @@ spec:
         - name: PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING
           value: '1'
         - name: DATABASE_URL
-          value: postgres://notifications_os_system:$(DATABASE_PASSWORD)@citus-headless.os-system/os_system_notifications?sslmode=disable
+          value: postgres://notifications_os_framework:$(DATABASE_PASSWORD)@citus-headless.os-platform/os_framework_notifications?sslmode=disable
         - name: NATS_HOST
           value: nats
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: os-system-notification-server
+          value: os-framework-notification-server
         - name: NATS_PASSWORD
           valueFrom:
             secretKeyRef:

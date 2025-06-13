@@ -165,7 +165,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   type: ExternalName
-  externalName: vault-server.os-system.svc.cluster.local
+  externalName: vault-server.os-framework.svc.cluster.local
   ports:
     - protocol: TCP
       port: 3010
@@ -279,7 +279,7 @@ spec:
       initContainers:
         - args:
             - -it
-            - authelia-backend.os-system:9091,infisical-service:80,system-server.user-system-{{ .Values.bfl.username }}:80,nats.user-system-{{ .Values.bfl.username }}:4222
+            - authelia-backend.os-framework:9091,infisical-service:80,system-server.user-system-{{ .Values.bfl.username }}:80,nats.user-system-{{ .Values.bfl.username }}:4222
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-auth
@@ -600,7 +600,7 @@ spec:
             - name: NATS_PASSWORD
               value: {{ $files_frontend_nats_password | b64dec }}
             - name: NATS_SUBJECT
-              value: terminus.os-system.files-notify
+              value: terminus.os-framework.files-notify
             - name: apiServerURL
               value: http://bfl.{{ .Release.Namespace }}:8080
             - name: NATS_USERNAME_USERSERVICE
@@ -637,7 +637,7 @@ spec:
             - name: TERMINUSD_HOST
               value: $(NODE_IP):18088
             - name: APP_SERVICE_SERVICE_HOST
-              value: app-service.os-system
+              value: app-service.os-framework
             - name: APP_SERVICE_SERVICE_PORT
               value: '6755'
             - name: APP_SERVICE_CHAIN_ID
@@ -935,7 +935,7 @@ spec:
           name: files-frontend-nats-secrets
     refs:
       - appName: files-server
-        appNamespace: os-system
+        appNamespace: os-framework
         subjects:
           - name: files-notify
             perm:
@@ -1009,7 +1009,7 @@ data:
                           http_service:
                             path_prefix: '/api/verify/'
                             server_uri:
-                              uri: authelia-backend.os-system:9091
+                              uri: authelia-backend.os-framework:9091
                               cluster: authelia
                               timeout: 2s
                             authorization_request:
@@ -1105,7 +1105,7 @@ data:
                   - endpoint:
                       address:
                         socket_address:
-                          address: files-service.os-system
+                          address: files-service.os-framework
                           port_value: 80
         - name: authelia
           connect_timeout: 2s
@@ -1120,7 +1120,7 @@ data:
                   - endpoint:
                       address:
                         socket_address:
-                          address: authelia-backend.os-system
+                          address: authelia-backend.os-framework
                           port_value: 9091
         - name: images
           connect_timeout: 5s
@@ -1459,7 +1459,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   type: ExternalName
-  externalName: vault-server.os-system.svc.cluster.local
+  externalName: vault-server.os-framework.svc.cluster.local
   ports:
     - protocol: TCP
       port: 3000
@@ -1678,7 +1678,7 @@ data:
                       http_service:
                         path_prefix: '/api/verify/'
                         server_uri:
-                          uri: authelia-backend.os-system:9091
+                          uri: authelia-backend.os-framework:9091
                           cluster: authelia
                           timeout: 2s
                         authorization_request:
@@ -1776,7 +1776,7 @@ data:
                 - endpoint:
                     address:
                       socket_address:
-                        address: authelia-backend.os-system
+                        address: authelia-backend.os-framework
                         port_value: 9091
       - name: images
         connect_timeout: 5s
@@ -1855,7 +1855,7 @@ data:
                       http_service:
                         path_prefix: '/api/verify/'
                         server_uri:
-                          uri: authelia-backend.os-system:9091
+                          uri: authelia-backend.os-framework:9091
                           cluster: authelia
                           timeout: 2s
                         authorization_request:
@@ -1966,7 +1966,7 @@ data:
                 - endpoint:
                     address:
                       socket_address:
-                        address: authelia-backend.os-system
+                        address: authelia-backend.os-framework
                         port_value: 9091
       - name: images
         connect_timeout: 5s
@@ -2044,7 +2044,7 @@ data:
                       http_service:
                         path_prefix: '/api/verify/'
                         server_uri:
-                          uri: authelia-backend.os-system:9091
+                          uri: authelia-backend.os-framework:9091
                           cluster: authelia
                           timeout: 2s
                         authorization_request:
@@ -2155,7 +2155,7 @@ data:
                 - endpoint:
                     address:
                       socket_address:
-                        address: authelia-backend.os-system
+                        address: authelia-backend.os-framework
                         port_value: 9091
       - name: images
         connect_timeout: 5s
@@ -2251,15 +2251,15 @@ data:
     }
   dashboard-control-hub.conf: |-
     upstream SettingsServer {
-        server monitoring-server.os-system;
+        server monitoring-server.os-framework;
     }
 
     upstream Middleware {
-        server middleware-service.os-system;
+        server middleware-service.os-platform;
     }
 
     upstream Analytics {
-        server analytics-server.os-system:3010;
+        server analytics-server.os-framework:3010;
     }
 
     upstream HamiServer {
@@ -2552,15 +2552,15 @@ data:
     }
   wise.conf: |-
     upstream KnowledgeServer {
-        server rss-svc.os-system:3010;
+        server rss-svc.os-framework:3010;
     }
 
     upstream RSSServer {
-        server rss-server.os-system:3010;
+        server rss-server.os-framework:3010;
     }
 
     upstream ArgoworkflowsSever {
-        server argoworkflows-svc.os-system:2746;
+        server argoworkflows-svc.os-framework:2746;
     }
 
     server {
@@ -2647,11 +2647,11 @@ data:
             add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
             add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
             add_header Access-Control-Allow-Origin $http_origin;
-            proxy_pass http://media-server-service.os-system:9090;
+            proxy_pass http://media-server-service.os-framework:9090;
         }
 
         location /api {
-            proxy_pass http://files-service.os-system:80;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
 
             # Add original-request-related headers
@@ -2670,7 +2670,7 @@ data:
         }
 
         location /upload {
-            proxy_pass http://files-service.os-system:80;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
 
             # Add original-request-related headers
@@ -2725,7 +2725,7 @@ data:
     }
   settings.conf: |-
     upstream SettingsServer_Monitoring {
-        server monitoring-server.os-system;
+        server monitoring-server.os-framework;
     }
 
     upstream InfisicalServer {
@@ -2733,7 +2733,7 @@ data:
     }
 
     upstream BackupServer {
-        server backup-server.os-system:8082;
+        server backup-server.os-framework:8082;
     }
 
     server {
@@ -2794,13 +2794,13 @@ data:
         }
 
         location /apis/backup {
-            proxy_pass http://backup-server.os-system:8082;
+            proxy_pass http://backup-server.os-framework:8082;
            add_header Accept "application/json, text/plain, */*";
            add_header Content-Type "application/json; charset=utf-8";
         }
 
         location /api/resources {
-           proxy_pass http://files-service.os-system:80;
+           proxy_pass http://files-service.os-framework:80;
            # rewrite ^/server(.*)$ $1 break;
 
            # Add original-request-related headers
@@ -2862,15 +2862,15 @@ data:
     }
   studio.conf: |-
     upstream SettingsServerStudio {
-        server monitoring-server.os-system;
+        server monitoring-server.os-framework;
     }
 
     upstream MiddlewareStudio {
-        server middleware-service.os-system;
+        server middleware-service.os-framework;
     }
 
     upstream AnalyticsStudio {
-      server analytics-server.os-system:3010;
+      server analytics-server.os-framework:3010;
     }
 
     server {
@@ -3067,7 +3067,7 @@ data:
             expires 0;
         }
         location /api/resources/AppData {
-            proxy_pass http://files-service.os-system:80;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -3081,7 +3081,7 @@ data:
             proxy_send_timeout 60s;
         }
         location /api/raw/AppData {
-            proxy_pass http://files-service.os-system:80;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -3095,7 +3095,7 @@ data:
             proxy_send_timeout 1800s;
         }
         location /api/raw {
-            proxy_pass http://files-service.os-system:80;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -3110,7 +3110,7 @@ data:
         }
 
         location /api/md5 {
-            proxy_pass http://files-service.os-system:80;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -3125,7 +3125,7 @@ data:
         }
         
         location /api/paste {
-            proxy_pass http://files-service.os-system:80;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -3140,7 +3140,7 @@ data:
         }
 
         location /api/cache {
-            proxy_pass http://files-service.os-system:80;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -3155,7 +3155,7 @@ data:
         }
 
         location /provider {
-            proxy_pass http://files-service.os-system:80;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -3170,7 +3170,7 @@ data:
         }
 
         location /api {
-            proxy_pass http://files-service.os-system:80;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -3186,7 +3186,7 @@ data:
         }
 
         location /share_link {
-            proxy_pass http://files-service.os-system:80;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -3202,7 +3202,7 @@ data:
         }
 
         location /upload {
-            proxy_pass http://files-service.os-system:80;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -3263,7 +3263,7 @@ data:
             add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
             add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
             add_header Access-Control-Allow-Origin $http_origin;  
-            proxy_pass http://media-server-service.os-system:9090;
+            proxy_pass http://media-server-service.os-framework:9090;
         }
         location /drive/ {
             proxy_pass http://127.0.0.1:8181;
@@ -3276,7 +3276,7 @@ data:
         location /api/raw/Home/ {
             expires 30d;
             add_header Cache-Control "public, max-age=2592000";
-            proxy_pass http://files-service.os-system:80;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -3297,7 +3297,7 @@ data:
         }
         location ~ ^/resources/Home/Pictures/(.*.(png|jpg|svg|gif|jpeg))$
         {
-            proxy_pass http://files-service.os-system:80/api/raw/Home/Pictures/$1;
+            proxy_pass http://files-service.os-framework:80/api/raw/Home/Pictures/$1;
             add_header Cache-Control "public, max-age=2592000";
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

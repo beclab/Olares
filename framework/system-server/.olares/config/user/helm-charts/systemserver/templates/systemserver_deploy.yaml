@@ -238,7 +238,7 @@ data:
                   - endpoint:
                       address:
                         socket_address:
-                          address: redis-cluster-proxy.os-system.svc.cluster.local
+                          address: redis-cluster-proxy.os-platform.svc.cluster.local
                           port_value: 6379  
         - name: cluster_mongo_proxy
           connect_timeout: 30s
@@ -251,7 +251,7 @@ data:
                   - endpoint:
                       address:
                         socket_address:
-                          address: mongo-cluster-mongos.os-system.svc.cluster.local
+                          address: mongo-cluster-mongos.os-platform.svc.cluster.local
                           port_value: 27017  
         - name: cluster_pg_proxy
           connect_timeout: 30s
@@ -264,7 +264,7 @@ data:
                   - endpoint:
                       address:
                         socket_address:
-                          address: citus-0.citus-headless.os-system.svc.cluster.local
+                          address: citus-0.citus-headless.os-platform.svc.cluster.local
                           port_value: 5432
         - name: cluster_nats_proxy
           connect_timeout: 30s
@@ -277,7 +277,7 @@ data:
                   - endpoint:
                       address:
                         socket_address:
-                          address: nats.os-system.svc.cluster.local
+                          address: nats.os-platform.svc.cluster.local
                           port_value: 4222
         - name: cluster_auth_backend_proxy
           connect_timeout: 30s
@@ -290,7 +290,7 @@ data:
                   - endpoint:
                       address:
                         socket_address:
-                          address: authelia-backend.os-system.svc.cluster.local
+                          address: authelia-backend.os-framework.svc.cluster.local
                           port_value: 9091  
         - name: cluster_knowledge_api_proxy
           connect_timeout: 30s
@@ -303,7 +303,7 @@ data:
                   - endpoint:
                       address:
                         socket_address:
-                          address: rss-svc.os-system.svc.cluster.local
+                          address: rss-svc.os-framework.svc.cluster.local
                           port_value: 3010  
         - name: cluster_fakes3_proxy
           connect_timeout: 30s
@@ -316,7 +316,7 @@ data:
                   - endpoint:
                       address:
                         socket_address:
-                          address: tapr-s3-svc.os-system.svc.cluster.local
+                          address: tapr-s3-svc.os-platform.svc.cluster.local
                           port_value: 4568  
 kind: ConfigMap
 metadata:

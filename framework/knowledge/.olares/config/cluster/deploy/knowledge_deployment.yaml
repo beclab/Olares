@@ -1,6 +1,6 @@
 {{ $dbbackup_rootpath := printf "%s%s" .Values.rootPath "/rootfs/middleware-backup" }}
 
-{{- $share_secret := (lookup "v1" "Secret" "os-system" "knowledge-share-secrets") -}}
+{{- $share_secret := (lookup "v1" "Secret" "os-framework" "knowledge-share-secrets") -}}
 {{- $redis_password := "" -}}
 {{ if $share_secret -}}
 {{ $redis_password = (index $share_secret "data" "redis_password") }}
@@ -19,7 +19,7 @@
 {{ $pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
-{{- $knowledge_nats_secret := (lookup "v1" "Secret" "os-system" "knowledge-secrets") -}}
+{{- $knowledge_nats_secret := (lookup "v1" "Secret" "os-framework" "knowledge-secrets") -}}
 {{- $nat_password := "" -}}
 {{ if $knowledge_nats_secret -}}
 {{ $nat_password = (index $knowledge_nats_secret "data" "nat_password") }}
@@ -32,7 +32,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: knowledge-secrets
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 type: Opaque
 data:
   nat_password: {{ $nat_password }}
@@ -42,7 +42,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: knowledge-share-secrets
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 type: Opaque
 data:
   pg_password: {{ $pg_password }}
@@ -54,13 +54,13 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: knowledge-pg
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   app: knowledge
-  appNamespace: os-system
+  appNamespace: {{ .Release.Namespace }}
   middleware: postgres
   postgreSQL:
-    user: knowledge_os_system
+    user: knowledge_os_framework
     password:
       valueFrom:
         secretKeyRef:
@@ -76,10 +76,10 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: knowledge-redis
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   app: rss
-  appNamespace: os-system
+  appNamespace: {{ .Release.Namespace }}
   middleware: redis
   redis:
     password:
@@ -93,10 +93,10 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: knowledge-nat
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   app: knowledge
-  appNamespace: os-system
+  appNamespace: {{ .Release.Namespace }}
   middleware: nats
   nats:
     password:
@@ -106,7 +106,7 @@ spec:
           name: knowledge-secrets
     refs:
     - appName: download
-      appNamespace: os-system
+      appNamespace: {{ .Release.Namespace }}
       subjects:
       - name: download_status
         perm:
@@ -124,14 +124,14 @@ spec:
         permission:
           pub: allow
           sub: allow
-    user: os-system-knowledge
+    user: {{ .Release.Namespace }}-knowledge
 ---
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: knowledge
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
   labels:
     app: knowledge
     applications.app.bytetrade.io/author: bytetrade.io
@@ -179,15 +179,15 @@ spec:
             echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
         env:
           - name: PGHOST
-            value: citus-headless.os-system
+            value: citus-headless.os-platform
           - name: PGPORT
             value: "5432"
           - name: PGUSER
-            value: knowledge_os_system
+            value: knowledge_os_framework
           - name: PGPASSWORD
             value: {{ $pg_password | b64dec }}
           - name: PGDB
-            value: os_system_knowledge
+            value: os_framework_knowledge
       containers:
       - name: knowledge
         image: "beclab/knowledge-base-api:v0.12.10"
@@ -201,39 +201,39 @@ spec:
         - name: BACKEND_URL
           value: http://127.0.0.1:8080
         - name: RSSHUB_URL
-          value: 'http://rss-server.os-system:1200'
+          value: 'http://rss-server.os-framework:1200'
         - name: UPLOAD_SAVE_PATH
           value: '/data/'
         - name: SEARCH_URL
-          value: 'http://search3.os-system:80'
+          value: 'http://search3.os-framework:80'
         - name: REDIS_PASSWORD
           value: {{ $redis_password_data }}
         - name: REDIS_ADDR
-          value: redis-cluster-proxy.os-system
+          value: redis-cluster-proxy.os-platform
         - name: PG_USERNAME
-          value: knowledge_os_system
+          value: knowledge_os_framework
         - name: PG_PASSWORD
           value: {{ $pg_password | b64dec }}
         - name: PG_HOST
-          value: citus-headless.os-system
+          value: citus-headless.os-platform
         - name: PG_PORT
           value: "5432"
         - name: PG_DATABASE
-          value: os_system_knowledge
+          value: os_framework_knowledge
         - name: DOWNLOAD_URL
-          value: http://download-svc.os-system:3080
+          value: http://download-svc.os-framework:3080
         - name: YTDLP_DOWNLOAD_URL
-          value: http://download-svc.os-system:3082
+          value: http://download-svc.os-framework:3082
         - name: NATS_HOST
           value: nats
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: os-system-knowledge
+          value: os-framework-knowledge
         - name: NATS_PASSWORD
           value: {{ $nat_password | b64dec }}
         - name: NATS_SUBJECT
-          value: terminus.os-system.download_status
+          value: terminus.os-framework.download_status
         - name: SOCKET_URL
           value: 'http://localhost:40010'
         - name: BACKUP_PATH
@@ -263,29 +263,29 @@ spec:
         - name: REDIS_PASSWORD
           value: {{ $redis_password_data }}
         - name: REDIS_ADDR
-          value: redis-cluster-proxy.os-system:6379
+          value: redis-cluster-proxy.os-platform:6379
         - name: RSS_HUB_URL
-          value: 'http://rss-server.os-system:1200/'
+          value: 'http://rss-server.os-framework:1200/'
         - name: WE_CHAT_REFRESH_FEED_URL
           value: https://recommend-wechat-prd.bttcdn.com/api/wechat/entries
         - name: WECHAT_ENTRY_CONTENT_GET_API_URL
           value: https://recommend-wechat-prd.bttcdn.com/api/wechat/entry/content
         - name: PG_USERNAME
-          value: knowledge_os_system
+          value: knowledge_os_framework
         - name: PG_PASSWORD
           value: {{ $pg_password | b64dec }}
         - name: PG_HOST
-          value: citus-headless.os-system
+          value: citus-headless.os-platform
         - name: PG_PORT
           value: "5432"
         - name: PG_DATABASE
-          value: os_system_knowledge
+          value: os_framework_knowledge
         - name: WATCH_DIR
           value: /data/
         - name: YT_DLP_API_URL
-          value: http://download-svc.os-system:3082/api/v1/get_metadata
+          value: http://download-svc.os-framework:3082/api/v1/get_metadata
         - name: DOWNLOAD_API_URL
-          value: http://download-svc.os-system:3080/api
+          value: http://download-svc.os-framework:3080/api
         volumeMounts:
           - name: userspace-dir
             mountPath: /data
@@ -310,17 +310,17 @@ spec:
         - name: KNOWLEDGE_BASE_API_URL
           value: http://127.0.0.1:3010
         - name: PG_HOST
-          value: citus-headless.os-system
+          value: citus-headless.os-platform
         - name: PG_USERNAME
-          value: knowledge_os_system
+          value: knowledge_os_framework
         - name: PG_PASSWORD
           value: {{ $pg_password | b64dec }}
         - name: PG_DATABASE
-          value: os_system_knowledge
+          value: os_framework_knowledge
         - name: PG_PORT
           value: "5432"
         - name: TERMINUS_RECOMMEND_REDIS_ADDR
-          value: redis-cluster-proxy.os-system:6379
+          value: redis-cluster-proxy.os-platform:6379
         - name: TERMINUS_RECOMMEND_REDIS_PASSOWRD
           value: {{ $redis_password_data }}
         volumeMounts:
@@ -371,7 +371,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: rss-svc
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   type: ClusterIP
   selector:
@@ -391,7 +391,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: knowledge-base-api
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   type: ClusterIP
   selector:
@@ -407,10 +407,10 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: download-nat
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   app: download
-  appNamespace: os-system
+  appNamespace: {{ .Release.Namespace }}
   middleware: nats
   nats:
     password:
@@ -435,7 +435,7 @@ spec:
       - appName: knowledge
         sub: allow
         pub: allow
-    user: os-system-download
+    user: {{ .Release.Namespace }}-download
 ---
 
 
@@ -443,7 +443,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: download
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
   labels:
     app: download
     applications.app.bytetrade.io/author: bytetrade.io
@@ -492,15 +492,15 @@ spec:
             echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
         env:
           - name: PGHOST
-            value: citus-headless.os-system
+            value: citus-headless.os-platform
           - name: PGPORT
             value: "5432"
           - name: PGUSER
-            value: knowledge_os_system
+            value: knowledge_os_framework
           - name: PGPASSWORD
             value: {{ $pg_password | b64dec }}
           - name: PGDB
-            value: os_system_knowledge
+            value: os_framework_knowledge
       containers:
       - name: aria2
         image: "beclab/aria2:v0.0.4"
@@ -539,17 +539,17 @@ spec:
         - containerPort: 3082
         env:
         - name: PG_USERNAME
-          value: knowledge_os_system
+          value: knowledge_os_framework
         - name: PG_PASSWORD
           value: {{ $pg_password | b64dec }}
         - name: PG_HOST
-          value: citus-headless.os-system
+          value: citus-headless.os-platform
         - name: PG_PORT
           value: "5432"
         - name: PG_DATABASE
-          value: os_system_knowledge
+          value: os_framework_knowledge
         - name: REDIS_HOST
-          value: redis-cluster-proxy.os-system
+          value: redis-cluster-proxy.os-platform
         - name: REDIS_PASSWORD
           value: {{ $redis_password | b64dec }}
         - name: NATS_HOST
@@ -557,11 +557,11 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: os-system-download
+          value: {{ .Release.Namespace }}-download
         - name: NATS_PASSWORD
           value: {{ $nat_password | b64dec }}
         - name: NATS_SUBJECT
-          value: terminus.os-system.download_status
+          value: terminus.{{ .Release.Namespace }}.download_status
         volumeMounts:
         - name: config-dir
           mountPath: /app/config
@@ -583,17 +583,17 @@ spec:
 
         env:
         - name: PG_USERNAME
-          value: knowledge_os_system
+          value: knowledge_os_framework
         - name: PG_PASSWORD
           value: {{ $pg_password | b64dec }}
         - name: PG_HOST
-          value: citus-headless.os-system
+          value: citus-headless.os-platform
         - name: PG_PORT
           value: "5432"
         - name: PG_DATABASE
-          value: os_system_knowledge
+          value: os_framework_knowledge
         - name: REDIS_HOST
-          value: redis-cluster-proxy.os-system
+          value: redis-cluster-proxy.os-platform
         - name: REDIS_PASSWORD
           value: {{ $redis_password | b64dec }}
         - name: NATS_HOST
@@ -601,11 +601,11 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: os-system-download
+          value: {{ .Release.Namespace }}-download
         - name: NATS_PASSWORD
           value: {{ $nat_password | b64dec }}
         - name: NATS_SUBJECT
-          value: terminus.os-system.download_status
+          value: terminus.{{ .Release.Namespace }}.download_status
         volumeMounts:
         - name: download-dir
           mountPath: /downloads
@@ -635,7 +635,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: download-svc
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   type: ClusterIP
   selector:
