@@ -10,7 +10,8 @@ const (
 	NamespaceKubesphereMonitoringFederated = "kubesphere-monitoring-federated"
 	NamespaceKubesphereMonitoringSystem    = "kubesphere-monitoring-system"
 	NamespaceKubesphereSystem              = "kubesphere-system"
-	NamespaceOsSystem                      = "os-system"
+	NamespaceOsFramework                   = "os-framework"
+	NamespaceOsPlatform                    = "os-platform"
 
 	ChartNameRedis               = "redis"
 	ChartNameSnapshotController  = "snapshot-controller"
@@ -19,6 +20,7 @@ const (
 	ChartNameKsConfig            = "ks-config"
 	ChartNameMonitorNotification = "monitor-notification"
 	ChartNameAccount             = "account"
-	ChartNameSystem              = "system"
+	ChartNameOSFramework         = "os-framework"
+	ChartNameOSPlatform          = "os-platform"
 	ChartNameSettings            = "settings"
 )

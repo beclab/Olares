@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argoworkflow-workflow-controller-configmap
+  namespace: {{ .Release.Namespace }}
+data:
+  config: |
+    instanceID: {{ .Release.Namespace }}
+    artifactRepository:
+      archiveLogs: true
+      s3:
+        accessKeySecret:
+          key: AWS_ACCESS_KEY_ID
+          name: argo-workflow-log-fakes3
+        secretKeySecret:
+          key: AWS_SECRET_ACCESS_KEY
+          name: argo-workflow-log-fakes3
+        bucket: mongo-backup
+        endpoint: tapr-s3-svc:4568
+        insecure: true
+    persistence:
+      connectionPool:
+        maxIdleConns: 5
+        maxOpenConns: 0
+      archive: true
+      archiveTTL: 5d
+      postgresql:
+        host: citus-headless.os-platform
+        port: 5432
+        database: os_framework_argo
+        tableName: argo_workflows
+        userNameSecret:
+          name: rss-secrets
+          key: pg_user
+        passwordSecret:
+          name: rss-secrets
+          key: pg_password
+    nodeEvents:
+      enabled: true
+

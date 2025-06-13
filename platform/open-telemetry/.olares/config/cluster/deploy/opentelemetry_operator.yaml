@@ -17,7 +17,7 @@ metadata:
     app.kubernetes.io/instance: otel
     app.kubernetes.io/component: webhook
   name: otel-opentelemetry-operator-controller-manager-service-cert
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 data:
   tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURyVENDQXBXZ0F3SUJBZ0lSQUtNbllGaXU2M3dnZU4vUGZXS0k3dHN3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUNZeEpEQWlCZ05WQkFNVEcyOTBaV3d0CmIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjakNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0MKQVFvQ2dnRUJBTDB6RjdXR0ZPSVNjeEpxdzJ4OGlrMXZiOWxTNEk5OXpPRzhiQWVwNzM5VTE3Tk1SR1NEQ0U0ZApzQXFpNlpQeDVzNGFCSzU3MXYraDdCcnVLaUlJeGU5OEg1OTRITkJzL2tKQ0ViU1Q5cTZqYnR3S1FTOTR4RWpQCk1yUndpQXlkVUlSOVV6QWJvQXFtRVBSRGJsaDRwY0p6QXBPQVhINk8ySG05OHpZeHNIdktRWEkrckt5SUxoenUKLzV4Lzk1NjdhNW0rRHVoOWNuT0Vtek5UZkpUeG1tQTRZWFVJaGk1NDdZOGFGc0ZheWhBTnpUcVlKV041bklCbwpTcWJURjJzeFd4NDZVdGJQUFFkUkxxdEI2VWtvVlRSdXRaemF3dXh5OERUbm1ITDlYemFtaWRhZmdmRC9oNThHCnlMd1NocStrMzVyWk1YVERJTG9zNE1lc1BHbjZoQUVDQXdFQUFhT0J6akNCeXpBT0JnTlZIUThCQWY4RUJBTUMKQmFBd0hRWURWUjBsQkJZd0ZBWUlLd1lCQlFVSEF3RUdDQ3NHQVFVRkJ3TUNNQXdHQTFVZEV3RUIvd1FDTUFBdwpId1lEVlIwakJCZ3dGb0FVTlNGVUMrQ0RqdWgvL3h6MzNtL09ScVlhckpNd2F3WURWUjBSQkdRd1lvSXRiM1JsCmJDMXZjR1Z1ZEdWc1pXMWxkSEo1TFc5d1pYSmhkRzl5TFhkbFltaHZiMnN1YjNNdGMzbHpkR1Z0Z2pGdmRHVnMKTFc5d1pXNTBaV3hsYldWMGNua3RiM0JsY21GMGIzSXRkMlZpYUc5dmF5NXZjeTF6ZVhOMFpXMHVjM1pqTUEwRwpDU3FHU0liM0RRRUJDd1VBQTRJQkFRQnY0cVBxSFdWeVZrVTk4ZWxjYVQ3aTJoY0dWRFRPSkJOZUkzZTUyaDlQCjlZOEkvQXJEWmR4Wmw3YnF4Zy9XdGFPNDRjUjMrWi9pTTZGS0F5WEZvd0tGSXpVMTZ6ZjNmRGFDQStkY2ppR1IKcHpEaEtjbEREM0cyTExxNFRlRkdKWVdWaTAzTG5ub1hjU0xCQXNnZDhhZHRQRUpsSWxyMFVUaFp1TDFkTndZeApwQ3VKZkVIcUVEdjNyRHpGdk0ySzlLTW1yNE11UG4rK083eStxK2JER3dxRG8yOG5WaTI0NGNJbjFVcENndDVnCjZHQmxQbzU5a3FzRTJRR01zYWRWQlpKRjQzamY3RUZ4LzF1dGlNZlBWaTRvc2YwMjIzK2xBY3h1RERuM1lFeXQKdXdiUTR3TnFuUjl0VUZtbWpyQXFZOXY3cWZ6WjMxeFdSVXAxbG1vU2pOTzgKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
   tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcEFJQkFBS0NBUUVBdlRNWHRZWVU0aEp6RW1yRGJIeUtUVzl2MlZMZ2ozM000YnhzQjZudmYxVFhzMHhFClpJTUlUaDJ3Q3FMcGsvSG16aG9Fcm52Vy82SHNHdTRxSWdqRjczd2ZuM2djMEd6K1FrSVJ0SlAycnFOdTNBcEIKTDNqRVNNOHl0SENJREoxUWhIMVRNQnVnQ3FZUTlFTnVXSGlsd25NQ2s0QmNmbzdZZWIzek5qR3dlOHBCY2o2cwpySWd1SE83L25ILzNucnRybWI0TzZIMXljNFNiTTFOOGxQR2FZRGhoZFFpR0xuanRqeG9Xd1ZyS0VBM05PcGdsClkzbWNnR2hLcHRNWGF6RmJIanBTMXM4OUIxRXVxMEhwU1NoVk5HNjFuTnJDN0hMd05PZVljdjFmTnFhSjFwK0IKOFArSG53Ykl2QktHcjZUZm10a3hkTU1ndWl6Z3g2dzhhZnFFQVFJREFRQUJBb0lCQVFDTFovY2pRSDFvcWxGeAprNHNWQjVyY1BhejdRNDdGQzl1SHhNOFF3b3orbEdRdTc1WkJQUzlFWjZtTDNNZ2d3NC9kOHR2YU9OT05IaUViCklydVd3a0llR0tZd1dVOVozOFZreXN2QzgzZEM3SmRGdUtTWk52SGgrQkdUVkl0YVNCdkkwNU1WRW5YVkF0SGgKT1VJNEhBVi9Ca0V5cjlUM1I0ZUlCSWNOT29XZ1gzcTFyUCtqbk9xdldCcUJ1VW5Ec0RNYVg0NjdJYUZrdjZ3RQpVZFZBbHFkaXdDQXY4NWM2SnhRY0Q0QjNtMUMzZGcxc1pDZ0gzRUt6UzQycjJnUE9EUjJPa3oxQXVMYkt5WDhICnVib3FuQUN6ZVhQWDBDVElEZ1JlR2huTGZ6a0ZLL09DekNCdTZpTFh5UVVCZTdPQkd6dk9RV25wNFVaQnBhY0UKaGk0dWJmNkZBb0dCQVB0SnZ5TjhrV3p5VGlxVUtKQUcrZzcyQkNlUlFrNytoaHJJRVZUYVpwWW9lMEJjcWlmNAo5T3BZUjJXeEhSSkYyak1CNXliTWRhalVDUTRxS2NWUTd4RjA3V3AwUG1zUlR1QU1NakMyeUp5VlJUWWRZSkhhCmlDejZidWpzWlMyRkFQdmJMSnorZU1ISVBtait0UlNLd00zdWlMcE9VaXAzbVdEaEFlYVhyWDNmQW9HQkFNQy8KVGNPNDZ1enZBUjREUk9FQmcyL3Bsd3ZieVNENVUrU0wvWHBHVjRJUTNGMlVJRUxRRE45YXlqVGpTVWRTVDdINgo0OFRxYlNVVVhsY3NFTSs2MXRYZjhYUTNJRWR0VTVBWHRsaFNvN0JnSUtIa1ltN1IzeWt2UUV1SVdXUU15MGY2CmR2UTRkRk0rZVVzOGlYS2JPYU8rNVFWUkR1N0tjUGtveTA1cGhIb2ZBb0dCQUpqaGhTaFI0U2duUXVja3ZJamoKdGI3a2JpS2tmWE1SNXdUa002Y3NPTDJpWTFvRkJvRExOalpjL3hNZmJsQnZyeERaVjRpRFhCSWE3bWR2djNvTQpnMlpiZlJZSEl2S0ExVHY2TDQ3enBabWVOejExSWd1YXFMNjBua1dYalBia3RIU0dJOTVmODVmeC9BWms4RVpQCkpINGxZWW4zbklXNXZkYnpEZlQ4MHRDQkFvR0FQYmxGY3ViMXZGZ3hXR1lkbVp4OWRjb3RCNndqZFg3Q2djN2UKcGxoK1QzV016QjdTVWZNRUhFYWJ1R0lNcGwxU2ppRlU3VXRSRm0yMlpGNEZLRENoK2EyVVNlNFpWU1pLZXp0TQp0bTRJWTBQMVQwS3V6dVJBZlpUWEZ4a2IzekZGcTlBbVpjRHFaM243SjcvRUdFSmpLKy9Hc1hRcXZ3ZHZOQ3IvCktDWWNPV3NDZ1lBQXpiNGwwcGxLT3VVSEduY1FrZW9HN1FOTC9WbXRGY1htOS94OFBJN1Q3dmhBQ2RaYWNoZ1EKUmM2WU83NVUrQzB0ZFVXZDdreUFBakM4ejBsY2xmOGptUWs0akZZUGJoQWp4YVdubFB2Tk1jS0JhMURiS002VQp0WFY4bHVSWXMzcDhqVm9OOVRCYjBiSkVCQmNjanl0Z0s0eTU0TUNxK0NaQUNnTDBvQjc1MUE9PQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo=
@@ -29,7 +29,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: opentelemetry-operator
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
   labels:
     helm.sh/chart: opentelemetry-operator-0.81.0
     app.kubernetes.io/name: opentelemetry-operator
@@ -369,7 +369,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: opentelemetry-operator
-    namespace: os-system
+    namespace: {{ .Release.Namespace }}
 ---
 # Source: opentelemetry-operator/templates/clusterrolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -393,7 +393,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: opentelemetry-operator
-    namespace: os-system
+    namespace: {{ .Release.Namespace }}
 ---
 # Source: opentelemetry-operator/templates/role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -410,7 +410,7 @@ metadata:
     "helm.sh/hook": "pre-install,pre-upgrade"
     "helm.sh/hook-weight": "-5"
   name: otel-opentelemetry-operator-leader-election
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 rules:
   - apiGroups:
       - ""
@@ -455,7 +455,7 @@ metadata:
     "helm.sh/hook": "pre-install,pre-upgrade"
     "helm.sh/hook-weight": "-5"
   name: otel-opentelemetry-operator-leader-election
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -463,7 +463,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: opentelemetry-operator
-    namespace: os-system
+    namespace: {{ .Release.Namespace }}
 ---
 # Source: opentelemetry-operator/templates/service.yaml
 apiVersion: v1
@@ -477,7 +477,7 @@ metadata:
     app.kubernetes.io/instance: otel
     app.kubernetes.io/component: controller-manager
   name: otel-opentelemetry-operator
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   ports:
     - name: https
@@ -504,7 +504,7 @@ metadata:
     app.kubernetes.io/instance: otel
     app.kubernetes.io/component: controller-manager
   name: otel-opentelemetry-operator-webhook
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   ports:
     - port: 443
@@ -530,7 +530,7 @@ metadata:
     "helm.sh/hook": "pre-install,pre-upgrade"
     "helm.sh/hook-weight": "-5"
   name: otel-opentelemetry-operator
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
@@ -660,7 +660,7 @@ webhooks:
       caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
       service:
         name: otel-opentelemetry-operator-webhook
-        namespace: os-system
+        namespace: {{ .Release.Namespace }}
         path: /mutate-opentelemetry-io-v1alpha1-instrumentation
         port: 443
     failurePolicy: Fail
@@ -684,7 +684,7 @@ webhooks:
       caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
       service:
         name: otel-opentelemetry-operator-webhook
-        namespace: os-system
+        namespace: {{ .Release.Namespace }}
         path: /mutate-opentelemetry-io-v1beta1-opentelemetrycollector
         port: 443
     failurePolicy: Fail
@@ -708,7 +708,7 @@ webhooks:
       caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
       service:
         name: otel-opentelemetry-operator-webhook
-        namespace: os-system
+        namespace: {{ .Release.Namespace }}
         path: /mutate-v1-pod
         port: 443
     failurePolicy: Ignore
@@ -749,7 +749,7 @@ webhooks:
       caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
       service:
         name: otel-opentelemetry-operator-webhook
-        namespace: os-system
+        namespace: {{ .Release.Namespace }}
         path: /validate-opentelemetry-io-v1alpha1-instrumentation
         port: 443
     failurePolicy:  Fail
@@ -773,7 +773,7 @@ webhooks:
       caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
       service:
         name: otel-opentelemetry-operator-webhook
-        namespace: os-system
+        namespace: {{ .Release.Namespace }}
         path: /validate-opentelemetry-io-v1alpha1-instrumentation
         port: 443
     failurePolicy: Ignore
@@ -796,7 +796,7 @@ webhooks:
       caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
       service:
         name: otel-opentelemetry-operator-webhook
-        namespace: os-system
+        namespace: {{ .Release.Namespace }}
         path: /validate-opentelemetry-io-v1beta1-opentelemetrycollector
         port: 443
     failurePolicy: Fail
@@ -820,7 +820,7 @@ webhooks:
       caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSakNDQWk2Z0F3SUJBZ0lSQU1ubGpoOHJPMUtUOGR2VndCM2dKSXd3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWIzQmxiblJsYkdWdFpYUnllUzF2Y0dWeVlYUnZjaTF2Y0dWeVlYUnZjaTFqWVRBZQpGdzB5TlRBek1ETXdPVFExTWpCYUZ3MHlOakF6TURNd09UUTFNakJhTUMweEt6QXBCZ05WQkFNVEltOXdaVzUwClpXeGxiV1YwY25rdGIzQmxjbUYwYjNJdGIzQmxjbUYwYjNJdFkyRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRFRKcW5rVjFLM1NHN1hNR3RJVGI4N0hLdlk1bUM0OXNRVStYajNrTlAwM1JLbQowWVA3TjZ0TDB3Qnd3bEFJSTZYL0k2ZFV4Kzlaays0YXM1RDhjanhtenhMSnlaNi8xbm84dWlMdGFrbEtuTk9yCm1EVjBmSWZVK0l6QVQ0Rno2UHRUc3dMaXR3ZjZFbkFJV0szTWQxdTZUVlhQUFJQeThkUVVTTktMUU5hVnJmMTIKZWN5elgwWkw0Q00rS0ZNWUpRUStXVnczanpzanAvWjUzdDRXR3JyQVk0bVZNMnNwS3p5WndlbmpIY25pbDhIOQpxUzg3YmtyQUE3dGpxb3RHRkxVTVY0eUpjd2NzSXN1VEpRM0F5TkZFMEsrTDBXZWRiZDhUemVoeFJNWlhuRFd2Ckd3bEppNlp0ejJ2OWZXT3BWZDkzb1NDVXhPWTcyMWNRQ1NVT0FYdWRBZ01CQUFHallUQmZNQTRHQTFVZER3RUIKL3dRRUF3SUNwREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVOU0ZVQytDRGp1aC8veHozM20vT1JxWWFySk13RFFZSktvWklodmNOCkFRRUxCUUFEZ2dFQkFLb2kxdTJLV0lIRDhBTy9xTlhJVS9lRy81dGY5THBWaFBESkM4U1dnc0x1d0FDZlVva1UKUkFNT3puRXA1OHVEK2JobVBxV1NpeG1jVFo4eTlmSWg5cUQ5d2hKSnFzV0pBazZoQXlnRGRJZVpSNFpPelVmdwo5Wmc4Sm9SWkJvMzdzbDVYZVNRNDV3Y2E4RmN6WVpNMmJrSlhiNGxEak9iSitRVkU2dklORTRtNjlvVlhCUzJuCmg1a0t6UFhleDRzczd6NVNXd0Q0MG42QXVZaWxCeFZvdlQxQkZwcCtkNldFcDJhYUhlRDZPaXJQWmVzSzRYTE8KSHA0aWFmejdHU1pPZVlWVWpHTlBsTk1tc24yekhaVDJjVk9yMHpUeStoV0k1RHdTVmZCejFNRUIzRmw2L200LwpVcEZIMXZ5VmtpcnpBRzBYekhDd1EyY1NMR2h1NEhadlU4bz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
       service:
         name: otel-opentelemetry-operator-webhook
-        namespace: os-system
+        namespace: {{ .Release.Namespace }}
         path: /validate-opentelemetry-io-v1beta1-opentelemetrycollector
         port: 443
     failurePolicy: Ignore
@@ -847,7 +847,7 @@ metadata:
     "helm.sh/hook": post-install
     "helm.sh/hook-weight": "5"
   name: jaeger-storage-instance
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
   labels:
     applications.app.bytetrade.io/author: bytetrade.io
   
@@ -941,10 +941,10 @@ metadata:
     "helm.sh/hook": post-install
     "helm.sh/hook-weight": "5"
   name: olares-instrumentation
-  namespace: os-system
+  namespace: os-framework
 spec:
   exporter:
-    endpoint: https://jaeger-storage-instance-collector.os-system:4317
+    endpoint: https://jaeger-storage-instance-collector.os-platform:4317
   propagators:
     - tracecontext
     - baggage
@@ -955,7 +955,7 @@ spec:
   python:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/json
       - name: OTEL_TRACES_SAMPLER_ARG
@@ -963,7 +963,7 @@ spec:
   dotnet:
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/json
       - name: OTEL_TRACES_SAMPLER_ARG
@@ -972,7 +972,7 @@ spec:
     image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:0.53.0
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/json
       - name: OTEL_TRACES_SAMPLER_ARG
@@ -981,7 +981,7 @@ spec:
     image: bytetrade/autoinstrumentation-apache-httpd:1.0.4-fix3
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/json
       - name: OTEL_TRACES_SAMPLER_ARG
@@ -990,7 +990,7 @@ spec:
     image: ghcr.io/open-telemetry/opentelemetry-go-instrumentation/autoinstrumentation-go:v0.20.0
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://jaeger-storage-instance-collector.os-system:4318
+        value: http://jaeger-storage-instance-collector.os-platform:4318
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/protobuf
       - name: OTEL_TRACES_SAMPLER_ARG

@@ -1,0 +1,94 @@
+{{- if eq (.Values.fs_type | default "fs") "jfs" }}  
+
+
+{{- $namespace := printf "%s%s" "user-system-" .Values.bfl.username -}}
+{{- $jfsnotify_secret := (lookup "v1" "Secret" $namespace "jfsnotify-secrets") -}}
+{{- $redis_password := "" -}}
+{{ if $jfsnotify_secret -}}
+{{ $redis_password = (index $jfsnotify_secret "data" "redis_password") }}
+{{ else -}}
+{{ $redis_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jfsnotify-secrets
+  namespace: {{ $namespace }}
+type: Opaque
+data:
+  redis_password: {{ $redis_password }}
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: jfsnotify-redis
+  namespace: {{ $namespace }}
+spec:
+  app: jfsnotify-proxy
+  appNamespace: {{ $namespace }}
+  middleware: redis
+  redis:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: redis_password
+          name: jfsnotify-secrets
+    namespace: jfsnotify
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jfsnotify-proxy
+  namespace: {{ $namespace}}
+  labels:
+    app: jfsnotify-proxy
+    applications.app.bytetrade.io/author: bytetrade.io
+  annotations:
+    applications.app.bytetrade.io/version: '0.0.1'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jfsnotify-proxy
+  template:
+    metadata:
+      labels:
+        app: jfsnotify-proxy
+    spec:
+      serviceAccountName: bytetrade-sys-ops
+      serviceAccount: bytetrade-sys-ops
+      containers:
+      - name: proxy
+        image: beclab/fsnotify-proxy:0.1.10
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5079
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: jfsnotify-secrets
+              key: redis_password
+        - name: REDIS_ADDR
+          value: redis-cluster-proxy.os-platform:6379
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fsnotify-svc
+  namespace: {{ $namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: jfsnotify-proxy
+  ports:
+    - protocol: TCP
+      port: 5079
+      targetPort: 5079
+
+{{- end }}  # End of fs type condition

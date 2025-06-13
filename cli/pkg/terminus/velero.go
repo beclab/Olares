@@ -92,7 +92,7 @@ func (c *CreateBackupLocation) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "velero not found")
 	}
 
-	var ns = "os-system"
+	var ns = "os-framework"
 	var provider = "terminus"
 	var storage = "terminus-cloud"
 
@@ -122,7 +122,7 @@ func (i *InstallVeleroPlugin) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "velero not found")
 	}
 
-	var ns = "os-system"
+	var ns = "os-framework"
 	var cmd = fmt.Sprintf("%s plugin get -n %s |grep 'velero.io/terminus' |wc -l", velero, ns)
 	pluginCounts, _ := runtime.GetRunner().SudoCmd(cmd, false, true)
 	if counts := utils.ParseInt(pluginCounts); counts > 0 {
@@ -160,7 +160,7 @@ func (v *PatchVelero) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "kubectl not found")
 	}
 
-	var ns = "os-system"
+	var ns = "os-framework"
 	var patch = `[{"op":"replace","path":"/spec/template/spec/volumes","value": [{"name":"plugins","emptyDir":{}},{"name":"scratch","emptyDir":{}},{"name":"terminus-cloud","hostPath":{"path":"/olares/rootfs/k8s-backup", "type":"DirectoryOrCreate"}}]},{"op": "replace", "path": "/spec/template/spec/containers/0/volumeMounts", "value": [{"name":"plugins","mountPath":"/plugins"},{"name":"scratch","mountPath":"/scratch"},{"mountPath":"/data","name":"terminus-cloud"}]},{"op": "replace", "path": "/spec/template/spec/containers/0/securityContext", "value": {"privileged": true, "runAsNonRoot": false, "runAsUser": 0}}]`
 
 	if stdout, _ := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s patch deploy velero -n %s --type='json' -p='%s'", kubectl, ns, patch), false, true); stdout != "" && !strings.Contains(stdout, "patched") {

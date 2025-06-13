@@ -1,5 +1,5 @@
 
-
+---
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -7,4 +7,36 @@ metadata:
     kubesphere.io/creator: '{{ .Values.user.name }}'
   labels:
     kubesphere.io/workspace: system-workspace
-  name: os-system
+  name: os-gpu
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kubesphere.io/creator: '{{ .Values.user.name }}'
+  labels:
+    kubesphere.io/workspace: system-workspace
+  name: os-network
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kubesphere.io/creator: '{{ .Values.user.name }}'
+  labels:
+    kubesphere.io/workspace: system-workspace
+  name: os-platform
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kubesphere.io/creator: '{{ .Values.user.name }}'
+  labels:
+    kubesphere.io/workspace: system-workspace
+  name: os-framework
+
+

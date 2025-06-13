@@ -8,7 +8,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   type: ExternalName
-  externalName: seafile.os-system.svc.cluster.local
+  externalName: seafile.os-framework.svc.cluster.local
   ports:
     - name: seahub
       protocol: TCP

@@ -1,5 +1,5 @@
 
-{{- $namespace := printf "%s" "os-system" -}}
+{{- $namespace := printf "%s" "os-framework" -}}
 {{- $files_secret := (lookup "v1" "Secret" $namespace "files-secrets") -}}
 
 {{- $files_postgres_password := "" -}}
@@ -16,7 +16,7 @@
 {{ $files_redis_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
-{{- $files_nats_secret := (lookup "v1" "Secret" "os-system" "files-nats-secrets") -}}
+{{- $files_nats_secret := (lookup "v1" "Secret" "os-framework" "files-nats-secrets") -}}
 {{- $files_nats_password := "" -}}
 {{ if $files_nats_secret -}}
 {{ $files_nats_password = (index $files_nats_secret "data" "files_nats_password") }}
@@ -29,7 +29,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: files-deployment
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
   labels:
     app: files
     applications.app.bytetrade.io/author: bytetrade.io
@@ -85,15 +85,15 @@ spec:
               PostgreSQL DB Server has started";
           env:
             - name: PGHOST
-              value: citus-headless.os-system
+              value: citus-headless.os-platform
             - name: PGPORT
               value: '5432'
             - name: PGUSER
-              value: files_os_system
+              value: files_os_framework
             - name: PGPASSWORD
               value: {{ $files_postgres_password | b64dec }}
             - name: PGDB1
-              value: os_system_files
+              value: os_framework_files
 
       containers:
         - name: gateway
@@ -111,8 +111,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-#            - name: OS_SYSTEM_SERVER
-#              value: system-server.os-system
 
         - name: media-server
           env:
@@ -220,7 +218,7 @@ spec:
             - name: PHOTOS_PATH
               value: /Home/Pictures
             - name: REDIS_HOST
-              value: redis-cluster-proxy.os-system
+              value: redis-cluster-proxy.os-platform
             - name: REDIS_PORT
               value: '6379'
             - name: REDIS_USERNAME
@@ -237,20 +235,20 @@ spec:
             - name: NATS_PORT
               value: '4222'
             - name: NATS_USERNAME
-              value: os-system-files-server
+              value: os-framework-files-server
             - name: NATS_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: files-nats-secrets
                   key: files_nats_password
             - name: NATS_SUBJECT
-              value: terminus.os-system.files-notify
+              value: terminus.os-framework.files-notify
             - name: NATS_SUBJECT_SYSTEM_FILES
-              value: terminus.os-system.system.files
+              value: terminus.os-framework.system.files
             - name: NATS_SUBJECT_SYSTEM_USERS
-              value: terminus.os-system.system.users
+              value: terminus.os-framework.system.users
             - name: NATS_SUBJECT_SYSTEM_GROUPS
-              value: terminus.os-system.system.groups
+              value: terminus.os-framework.system.groups
             - name: RESERVED_SPACE
               value: '1000'
             - name: OLARES_VERSION
@@ -258,15 +256,15 @@ spec:
             - name: FILE_CACHE_DIR
               value: '/data/file_cache'
             - name: PGHOST
-              value: citus-headless.os-system
+              value: citus-headless.os-platform
             - name: PGPORT
               value: '5432'
             - name: PGUSER
-              value: files_os_system
+              value: files_os_framework
             - name: PGPASSWORD
               value: {{ $files_postgres_password | b64dec }}
             - name: PGDB1
-              value: os_system_files
+              value: os_framework_files
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -278,7 +276,7 @@ spec:
             - name: CONTAINER_NAME
               value: files
             - name: NOTIFY_SERVER
-              value: fsnotify-svc.os-system:5079
+              value: fsnotify-svc.os-platform:5079
           command:
             - /filebrowser
             - --noauth
@@ -370,7 +368,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: files-service
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   selector:
     app: files
@@ -386,7 +384,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: media-server-service
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   selector:
     app: files
@@ -402,7 +400,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: appdata-backend
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
   labels:
     app: appdata-backend
   annotations:
@@ -437,7 +435,7 @@ spec:
             chown -R 1000:1000 /appdata
         - args:
           - -it
-          - nats.os-system:4222
+          - nats.os-platform:4222
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-nats
@@ -489,7 +487,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: appdata-backend-headless
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
   labels:
     app: appdata-backend
 spec:
@@ -506,7 +504,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: files-secrets
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 type: Opaque
 data:
   files_postgres_password: {{ $files_postgres_password }}
@@ -517,7 +515,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: files-nats-secrets
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 data:
   files_nats_password: {{ $files_nats_password }}
 type: Opaque
@@ -527,13 +525,13 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: files-pg
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   app: files
-  appNamespace: os-system
+  appNamespace: {{ .Release.Namespace }}
   middleware: postgres
   postgreSQL:
-    user: files_os_system
+    user: files_os_framework
     password:
       valueFrom:
         secretKeyRef:
@@ -547,10 +545,10 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: files-redis
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   app: files
-  appNamespace: os-system
+  appNamespace: {{ .Release.Namespace }}
   middleware: redis
   redis:
     password:
@@ -565,10 +563,10 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: files-server-nat
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   app: files-server
-  appNamespace: os-system
+  appNamespace: {{ .Release.Namespace }}
   middleware: nats
   nats:
     password:
@@ -608,14 +606,14 @@ spec:
         permission:
           pub: deny
           sub: allow
-    user: os-system-files-server
+    user: {{ .Release.Namespace }}-files-server
 
 ---
 kind: ConfigMap
 apiVersion: v1
 metadata:
   name: files-nginx-config
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
   annotations:
     kubesphere.io/creator: bytetrade.io
 data:

@@ -49,13 +49,13 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: authelia-pg
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   app: authelia
-  appNamespace: os-system
+  appNamespace: {{ .Release.Namespace }}
   middleware: postgres
   postgreSQL:
-    user: authelia_os_system
+    user: authelia_os_framework
     password:
       valueFrom:
         secretKeyRef:
@@ -89,7 +89,7 @@ spec:
         perm:
         - pub
         - sub
-    user: os-system-authelia
+    user: {{ .Release.Namespace }}-authelia
 
 ---
 apiVersion: v1
@@ -184,11 +184,11 @@ data:
     storage:
       encryption_key: {{ $encryption_key | b64dec }}
       postgres:
-        host: citus-headless.os-system
+        host: citus-headless.os-platform
         port: 5432
-        database: os_system_authelia
+        database: os_framework_authelia
         schema: public
-        username: authelia_os_system
+        username: authelia_os_framework
         password: {{ $pg_password | b64dec }}
         timeout: 5s
 
@@ -374,15 +374,15 @@ spec:
             echo -e " >> $PGDB exists";
         env:
           - name: PGHOST
-            value: citus-headless.os-system
+            value: citus-headless.os-platform
           - name: PGPORT
             value: "5432"
           - name: PGUSER
-            value: authelia_os_system
+            value: authelia_os_framework
           - name: PGPASSWORD
             value: {{ $pg_password | b64dec }}
           - name: PGDB
-            value: os_system_authelia
+            value: os_framework_authelia
       - args:
         - -it
         - authelia-storage-svc:6379,redis.kubesphere-system:6379
@@ -420,7 +420,7 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: os-system-authelia
+          value: {{ .Release.Namespace }}-authelia
         - name: NATS_PASSWORD
           valueFrom:
             secretKeyRef:

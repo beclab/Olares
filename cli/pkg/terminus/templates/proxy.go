@@ -18,5 +18,5 @@ data:
 kind: ConfigMap
 metadata:
   name: default-reverse-proxy-config
-  namespace: os-system`),
+  namespace: os-network`),
 ))

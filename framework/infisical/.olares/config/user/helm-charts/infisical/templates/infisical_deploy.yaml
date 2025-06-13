@@ -6,7 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   type: ExternalName
-  externalName: infisical-service.os-system.svc.cluster.local
+  externalName: infisical-service.os-framework.svc.cluster.local
   ports:
     - name: http
       port: 8080

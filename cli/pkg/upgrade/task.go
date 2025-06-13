@@ -186,16 +186,28 @@ func (u *UpgradeSystemComponents) Execute(runtime connector.Runtime) error {
 	if err != nil {
 		return fmt.Errorf("failed to get rest config: %s", err)
 	}
-	actionConfig, settings, err := utils.InitConfig(config, common.NamespaceOsSystem)
+	actionConfig, settings, err := utils.InitConfig(config, common.NamespaceOsPlatform)
 	if err != nil {
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
-	systemChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "system")
-	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameSystem, systemChartPath, "", common.NamespaceOsSystem, nil, true); err != nil {
+	platformChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-platform")
+	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSPlatform, platformChartPath, "", common.NamespaceOsPlatform, nil, true); err != nil {
 		return err
 	}
+
+	actionConfig, settings, err = utils.InitConfig(config, common.NamespaceOsPlatform)
+	if err != nil {
+		return err
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	frameworkChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-framework")
+	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSFramework, frameworkChartPath, "", common.NamespaceOsFramework, nil, true); err != nil {
+		return err
+	}
+
 	actionConfig, settings, err = utils.InitConfig(config, common.NamespaceDefault)
 	if err != nil {
 		return err

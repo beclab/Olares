@@ -218,7 +218,7 @@ func (c *CopyAppServiceHelmFiles) Execute(runtime connector.Runtime) error {
 
 	kubeclt, _ := util.GetCommand(common.CommandKubectl)
 	for _, app := range []string{"launcher", "apps"} {
-		var cmd = fmt.Sprintf("%s cp %s/wizard/config/%s os-system/%s:/userapps -c app-service", kubeclt, runtime.GetInstallerDir(), app, appServiceName)
+		var cmd = fmt.Sprintf("%s cp %s/wizard/config/%s os-framework/%s:/userapps -c app-service", kubeclt, runtime.GetInstallerDir(), app, appServiceName)
 		if _, err = runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
 			return errors.Wrap(errors.WithStack(err), "copy files failed")
 		}
@@ -231,7 +231,7 @@ func getAppServiceName(client clientset.Client, runtime connector.Runtime) (stri
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	pods, err := client.Kubernetes().CoreV1().Pods(common.NamespaceOsSystem).List(ctx, metav1.ListOptions{LabelSelector: "tier=app-service"})
+	pods, err := client.Kubernetes().CoreV1().Pods(common.NamespaceOsFramework).List(ctx, metav1.ListOptions{LabelSelector: "tier=app-service"})
 	if err != nil {
 		return "", errors.Wrap(errors.WithStack(err), "get app-service failed")
 	}
