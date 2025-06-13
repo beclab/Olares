@@ -30,7 +30,7 @@ repaire_crd_terminus() {
 
     if [ ! -z "${AWS_SESSION_TOKEN_SETUP}" ]; then
         patch='[{"op":"add","path":"/metadata/annotations/bytetrade.io~1s3-sts","value":"'"$AWS_SESSION_TOKEN_SETUP"'"},{"op":"add","path":"/metadata/annotations/bytetrade.io~1s3-ak","value":"'"$AWS_ACCESS_KEY_ID_SETUP"'"},{"op":"add","path":"/metadata/annotations/bytetrade.io~1s3-sk","value":"'"$AWS_SECRET_ACCESS_KEY_SETUP"'"},{"op":"add","path":"/metadata/annotations/bytetrade.io~1cluster-id","value":"'"$CLUSTER_ID"'"}]'
-        $sh_c "${KUBECTL} patch terminus.sys.bytetrade.io terminus -n os-system --type='json' -p='$patch'"
+        $sh_c "${KUBECTL} patch terminus.sys.bytetrade.io terminus --type='json' -p='$patch'"
     fi
 }
 

@@ -93,7 +93,8 @@ func (t *CheckKeyPodsRunning) Execute(runtime connector.Runtime) error {
 		}
 		if strings.HasPrefix(pod.Namespace, "user-space") ||
 			strings.HasPrefix(pod.Namespace, "user-system") ||
-			pod.Namespace == "os-system" {
+			pod.Namespace == "os-platform" ||
+			pod.Namespace == "os-framework" {
 			if pod.Status.Phase != corev1.PodRunning {
 				return fmt.Errorf("pod %s/%s is not running", pod.Namespace, pod.Name)
 			}

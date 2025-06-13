@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: gpu-scheduler
-  namespace: gpu-system
+  namespace: os-gpu
 spec:
   selector:
     matchLabels:

@@ -21,19 +21,26 @@ if [ ! -d ${DIST} ]; then
     mkdir -p ${DIST}
     cp -rf ${BUILD_TEMPLATE}/* ${DIST}/.
     cp -rf ${BUILD_TEMPLATE}/.env ${DIST}/.
+    cp -rf ${BUILD_TEMPLATE}/wizard/config/os-chart-template ${DIST}/wizard/config/os-framework
+    cp -rf ${BUILD_TEMPLATE}/wizard/config/os-chart-template ${DIST}/wizard/config/os-platform
+    rm -rf ${DIST}/wizard/config/os-chart-template
 fi
 
 APP_DIST=${DIST}/wizard/config/apps
-SYSTEM_DIST=${DIST}/wizard/config/system/templates
 SETTINGS_DIST=${DIST}/wizard/config/settings/templates
 CRD_DIST=${SETTINGS_DIST}/crds
-DEPLOY_DIST=${SYSTEM_DIST}/deploy
 mkdir -p ${APP_DIST}
 mkdir -p ${CRD_DIST}
-mkdir -p ${DEPLOY_DIST}
 
 for mod in "${PACKAGE_MODULE[@]}";do
     echo "packaging ${mod} ..."
+    SYSTEM_DIST=${DIST}/wizard/config/os-framework/templates
+    if [ ${mod} == "platform" ]; then
+        SYSTEM_DIST=${DIST}/wizard/config/os-platform/templates
+    fi
+    DEPLOY_DIST=${SYSTEM_DIST}/deploy
+    mkdir -p ${DEPLOY_DIST}
+
     find ${mod} -type d -name .olares | while read app; do
 
         # package user app charts to install wizard

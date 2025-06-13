@@ -16,5 +16,5 @@ data:
 kind: ConfigMap
 metadata:
   name: backup-config
-  namespace: os-system`),
+  namespace: os-framework`),
 ))

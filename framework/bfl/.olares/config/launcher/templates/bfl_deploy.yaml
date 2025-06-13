@@ -267,7 +267,7 @@ spec:
 
       containers:
       - name: api
-        image: beclab/bfl:v0.4.10
+        image: beclab/bfl:v0.4.11
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000
@@ -312,8 +312,12 @@ spec:
           value: backup-server.os-framework:8082
         - name: L4_PROXY_IMAGE_VERSION
           value: v0.3.0
+        - name: L4_PROXY_SERVICE_ACCOUNT
+          value: os-network-internal
+        - name: L4_PROXY_NAMESPACE
+          value: os-network
         - name: REVERSE_PROXY_AGENT_IMAGE_VERSION
-          value: v0.1.8
+          value: v0.1.10
         - name: TERMINUS_CERT_SERVICE_API
           value: {{ .Values.bfl.terminus_cert_service_api }}
         - name: TERMINUS_DNS_SERVICE_API
