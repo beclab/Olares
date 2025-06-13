@@ -194,7 +194,7 @@ spec:
             - name: NATS_SUBJECT_SYSTEM_USERS
               value: "terminus.{{ $namespace }}.system.users"
             - name: NATS_SUBJECT_SYSTEM_GROUPS
-              value: "terminus.{{ $amespace }}.system.groups"
+              value: "terminus.{{ $namespace }}.system.groups"
 
           image: beclab/lldap:0.0.3
           imagePullPolicy: IfNotPresent
