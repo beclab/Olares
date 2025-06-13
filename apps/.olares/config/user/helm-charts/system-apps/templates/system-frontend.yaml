@@ -613,7 +613,7 @@ spec:
             - name: NATS_SUBJECT_USER_APPS
               value: terminus.user.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.17
+          image: beclab/user-service:v0.0.18
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
