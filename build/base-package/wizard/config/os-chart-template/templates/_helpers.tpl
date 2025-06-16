@@ -60,3 +60,29 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{- define "opentelemetry-operator.fullname" -}}
+{{- "otel-opentelemetry-operator" }}
+{{- end }}
+
+{{- define "opentelemetry-operator.WebhookCert" -}}
+{{- $caCertEnc := "" }}
+{{- $certCrtEnc := "" }}
+{{- $certKeyEnc := "" }}
+{{- $prevSecret := (lookup "v1" "Secret" .Release.Namespace (default (printf "%s-controller-manager-service-cert" (include "opentelemetry-operator.fullname" .)) .Values.admissionWebhooks.secretName )) }}
+{{- if $prevSecret }}
+{{- $certCrtEnc = index $prevSecret "data" "tls.crt" }}
+{{- $certKeyEnc = index $prevSecret "data" "tls.key" }}
+{{- $caCertEnc = index $prevSecret "data" "ca.crt" }}
+{{- else }}
+{{- $altNames := list ( printf "%s-webhook.%s" (include "opentelemetry-operator.fullname" .) .Release.Namespace ) ( printf "%s-webhook.%s.svc" (include "opentelemetry-operator.fullname" .) .Release.Namespace ) -}}
+{{- $tmpperioddays := int .Values.admissionWebhooks.autoGenerateCert.certPeriodDays | default 3650 }}
+{{- $ca := genCA "opentelemetry-operator-operator-ca" $tmpperioddays }}
+{{- $cert := genSignedCert (include "opentelemetry-operator.fullname" .) nil $altNames $tmpperioddays $ca }}
+{{- $certCrtEnc = b64enc $cert.Cert }}
+{{- $certKeyEnc = b64enc $cert.Key }}
+{{- $caCertEnc = b64enc $ca.Cert }}
+{{- end }}
+{{- $result := dict "crt" $certCrtEnc "key" $certKeyEnc "ca" $caCertEnc }}
+{{- $result | toYaml }}
+{{- end }}
