@@ -28,7 +28,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: files-deployment
+  name: files
   namespace: {{ .Release.Namespace }}
   labels:
     app: files
@@ -106,7 +106,7 @@ spec:
             - containerPort: 8080
           env:
             - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.76'
+              value: 'beclab/files-server:v0.2.77'
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -140,7 +140,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.76
+          image: beclab/files-server:v0.2.77
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -441,7 +441,7 @@ spec:
           name: check-nats
       containers:
         - name: files
-          image: beclab/files-server:v0.2.76
+          image: beclab/files-server:v0.2.77
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
