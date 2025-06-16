@@ -15,8 +15,6 @@ builds:
     goarm:
       - 7
     ignore:
-      - goos: linux
-        goarch: arm64
       - goos: darwin
         goarch: arm
       - goos: windows
@@ -29,10 +27,6 @@ dist: ./output
 archives:
   - id: olares-cli
     name_template: "{{ .ProjectName }}-v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    replacements:
-      linux: linux
-      amd64: amd64
-      arm: arm64
 checksum:
   name_template: "checksums.txt"
 release:
