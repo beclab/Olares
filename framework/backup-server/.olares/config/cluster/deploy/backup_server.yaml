@@ -123,7 +123,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: backup
+  name: backup-server
   namespace: {{ .Release.Namespace }}
 spec:
   ports:
