@@ -50,7 +50,7 @@ spec:
   appNamespace: {{ $namespace }}
   middleware: postgres
   postgreSQL:
-    user: lldap_os_framework
+    user: lldap_os_platform
     password:
       valueFrom:
         secretKeyRef:
@@ -134,11 +134,11 @@ spec:
             - name: PGPORT
               value: '5432'
             - name: PGUSER
-              value: lldap_os_framework
+              value: lldap_os_platform
             - name: PGPASSWORD
               value: {{ $pg_password | b64dec }}
             - name: PGDB1
-              value: os_framework_lldap
+              value: os_platform_lldap
       containers:
         - env:
             - name: GID
@@ -177,13 +177,13 @@ spec:
             - name: RUST_BACKTRACE
               value: "full"
             - name: LLDAP_DATABASE_URL
-              value: "postgres://lldap_os_framework:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-platform:5432/os_framework_lldap?sslmode=allow"
+              value: "postgres://lldap_os_platform:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-platform:5432/os_platform_lldap?sslmode=allow"
             - name: NATS_HOST
               value: nats
             - name: NATS_PORT
               value: "4222"
             - name: NATS_USERNAME
-              value: os-framework-lldap
+              value: os-platform-lldap
             - name: NATS_PASSWORD
               valueFrom:
                 secretKeyRef:
