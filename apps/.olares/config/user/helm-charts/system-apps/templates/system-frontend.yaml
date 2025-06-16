@@ -2866,7 +2866,7 @@ data:
     }
 
     upstream MiddlewareStudio {
-        server middleware-service.os-framework;
+        server middleware-service.os-platform;
     }
 
     upstream AnalyticsStudio {
