@@ -43,7 +43,7 @@ spec:
             chown -R 1000:1000 /data 
       containers:
       - name: tapr-images-uploader
-        image: beclab/images-uploader:0.2.0
+        image: beclab/images-uploader:0.2.1
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
