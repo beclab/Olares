@@ -52,23 +52,6 @@ data:
   nats_password: {{ $nats_password }}
 
 ---
-# Source: nats/templates/nats-box/contexts-secret.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  labels:
-    app.kubernetes.io/name: nats
-    app.kubernetes.io/instance: nats
-    app.kubernetes.io/component: nats
-  name: nats-box-contexts
-  namespace: {{ $namespace }}
-stringData:
-  default.json: |
-    {
-      "url": "nats://nats"
-    }
-type: Opaque
----
 # Source: nats/templates/config-map.yaml
 apiVersion: v1
 data:
@@ -159,69 +142,6 @@ spec:
     app.kubernetes.io/name: nats
     app.kubernetes.io/instance: nats
     app.kubernetes.io/component: nats
----
-# Source: nats/templates/nats-box/deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  labels:
-    app.kubernetes.io/component: nats-box
-    app.kubernetes.io/name: nats
-    app.kubernetes.io/instance: nats
-    applications.app.bytetrade.io/author: bytetrade.io
-  name: nats-box
-  namespace: {{ $namespace }}
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/component: nats-box
-      app.kubernetes.io/name: nats
-      app.kubernetes.io/instance: nats
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/component: nats-box
-        app.kubernetes.io/name: nats
-        app.kubernetes.io/instance: nats
-    spec:
-      containers:
-        - args:
-            - sh
-            - -ec
-            - trap true INT TERM; sleep infinity & wait
-          command:
-            - sh
-            - -ec
-            - |
-              work_dir="$(pwd)"
-              mkdir -p "$XDG_CONFIG_HOME/nats"
-              cd "$XDG_CONFIG_HOME/nats"
-              if ! [ -s context ]; then
-                ln -s /etc/nats-contexts context
-              fi
-              if ! [ -f context.txt ]; then
-                echo -n "default" > context.txt
-              fi
-              cd "$work_dir"
-              exec /entrypoint.sh "$@"
-            - --
-          image: natsio/nats-box:0.14.3
-          name: nats-box
-          volumeMounts:
-            - mountPath: /etc/nats-contexts
-              name: contexts
-            - mountPath: /data
-              name: nats-data
-      enableServiceLinks: false
-      volumes:
-        - name: contexts
-          secret:
-            secretName: nats-box-contexts
-        - hostPath:
-            path: '{{ .Values.rootPath }}/userdata/dbdata/nats_data'
-            type: DirectoryOrCreate
-          name: nats-data
 ---
 # Source: nats/templates/stateful-set.yaml
 apiVersion: apps/v1
