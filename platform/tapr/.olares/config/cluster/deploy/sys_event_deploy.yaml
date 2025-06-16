@@ -38,13 +38,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: tapr-sysevent
-  namespace: {{ .Release.Namespace }}
+  namespace: os-framework
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ .Release.Namespace }}:tapr-sysevent
+  name: os-framework:tapr-sysevent
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -52,14 +52,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: tapr-sysevent
-  namespace: {{ .Release.Namespace }}
+  namespace: os-framework
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: tapr-sysevent
-  namespace: {{ .Release.Namespace }}
+  namespace: os-framework
 spec:
   replicas: 1
   selector:
@@ -90,7 +90,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: sys-event-svc
-  namespace: {{ .Release.Namespace }}
+  namespace: os-framework
 spec:
   ports:
   - name: api

@@ -1,4 +1,4 @@
-{{- $namespace := printf "%s" "os-framework" -}}
+{{- $namespace := printf "%s" "os-platform" -}}
 {{- $lldap_secret := (lookup "v1" "Secret" $namespace "lldap-credentials") -}}
 {{- $lldap_jwt_secret := "" -}}
 {{- $lldap_ldap_user_pass := "" -}}
