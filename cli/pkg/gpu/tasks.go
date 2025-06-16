@@ -649,7 +649,7 @@ func (t *PrintPluginsStatus) Execute(runtime connector.Runtime) error {
 		}
 	}
 
-	gpuScheduler, err := client.Kubernetes().CoreV1().Pods("gpu-system").List(context.Background(), metav1.ListOptions{LabelSelector: "name=gpu-scheduler"})
+	gpuScheduler, err := client.Kubernetes().CoreV1().Pods("os-gpu").List(context.Background(), metav1.ListOptions{LabelSelector: "name=gpu-scheduler"})
 	if err != nil {
 		logger.Error("get gpu-scheduler status error, ", err)
 	}
@@ -676,7 +676,7 @@ func (t *RestartPlugin) Execute(runtime connector.Runtime) error {
 		return fmt.Errorf("kubectl not found")
 	}
 
-	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s rollout restart ds gpu-scheduler -n gpu-system", kubectlpath), false, true); err != nil {
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s rollout restart ds gpu-scheduler -n os-gpu", kubectlpath), false, true); err != nil {
 		return errors.Wrap(errors.WithStack(err), "Failed to restart gpu-scheduler")
 	}
 

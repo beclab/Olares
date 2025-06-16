@@ -1,0 +1,84 @@
+{{- if eq (.Values.fs_type | default "fs") "jfs" }}  
+
+{{- $jfsnotify_secret := (lookup "v1" "Secret" .Release.Namespace "jfsnotify-secrets") -}}
+{{- $redis_password := "" -}}
+{{ if $jfsnotify_secret -}}
+{{ $redis_password = (index $jfsnotify_secret "data" "redis_password") }}
+{{ else -}}
+{{ $redis_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jfsnotify-secrets
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  redis_password: {{ $redis_password }}
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: jfsnotify-redis
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: jfsnotify-daemon
+  appNamespace: {{ .Release.Namespace }}
+  middleware: redis
+  redis:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: redis_password
+          name: jfsnotify-secrets
+    namespace: jfsnotify
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: jfsnotify-daemon
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: jfsnotify-daemon
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  selector:
+    matchLabels:
+      app: jfsnotify-daemon
+  template:
+    metadata:
+      labels:
+        app: jfsnotify-daemon
+    spec:
+      serviceAccountName: os-internal
+      serviceAccount: os-internal
+      containers:
+      - name: daemon
+        image: beclab/fsnotify-daemon:0.1.3
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: jfsnotify-secrets
+              key: redis_password
+        - name: REDIS_ADDR
+          value: redis-cluster-proxy.os-platform:6379
+        resources:
+          requests:
+            cpu: 20m
+            memory: 200Mi
+        volumeMounts:
+        - name: jfs-sock
+          mountPath: /tmp
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: jfs-sock
+        hostPath:
+          path: /tmp
+
+{{- end }}  # End of fs type condition    

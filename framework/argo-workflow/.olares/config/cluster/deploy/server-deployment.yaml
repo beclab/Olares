@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argoworkflows
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: argoworkflows
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    applications.app.bytetrade.io/icon: https://argoproj.github.io/argo-workflows/assets/logo.png
+    applications.app.bytetrade.io/title: argoworkflows
+    applications.app.bytetrade.io/version: '0.35.0'
+spec:
+  selector:
+    matchLabels:
+      app: argoworkflows
+  template:
+    metadata:
+      labels:
+        app: argoworkflows
+    spec:
+      serviceAccountName: argoworkflows
+      containers:
+        - name: argo-server
+          image: quay.io/argoproj/argocli:v3.5.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          args:
+            - server
+            - --configmap=argoworkflow-workflow-controller-configmap
+            - "--auth-mode=server"
+            - "--secure=false"
+            - "--x-frame-options="
+            - "--loglevel"
+            - "debug"
+            - "--gloglevel"
+            - "0"
+            - "--log-format"
+            - "text"
+          ports:
+            - name: web
+              containerPort: 2746
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 2746
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          env:
+            - name: IN_CLUSTER
+              value: "true"
+            - name: ARGO_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: BASE_HREF
+              value: /
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+        
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+        - key: node.kubernetes.io/not-ready
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 300
+        - key: node.kubernetes.io/unreachable
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 300
+      
+

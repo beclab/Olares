@@ -22,42 +22,10 @@ spec:
       initContainers:
       - args:
         - -it
-        - authelia-backend.os-system:9091
+        - authelia-backend.os-framework:9091
         image: owncloudci/wait-for:latest
         imagePullPolicy: IfNotPresent
         name: check-auth
-      # - name: terminus-sidecar-init
-      #   image: openservicemesh/init:v1.2.3
-      #   imagePullPolicy: IfNotPresent
-      #   securityContext:
-      #     privileged: true
-      #     capabilities: 
-      #       add:
-      #       - NET_ADMIN
-      #     runAsNonRoot: false
-      #     runAsUser: 0
-      #   command:
-      #   - /bin/sh
-      #   - -c
-      #   - |
-      #     iptables-restore --noflush <<EOF
-      #     # sidecar interception rules
-      #     *nat
-      #     :PROXY_IN_REDIRECT - [0:0]
-      #     :PROXY_INBOUND - [0:0]
-      #     -A PROXY_IN_REDIRECT -p tcp -j REDIRECT --to-port 15003
-      #     -A PROXY_INBOUND -p tcp --dport 15000 -j RETURN
-      #     -A PROXY_INBOUND -p tcp -j PROXY_IN_REDIRECT
-      #     -A PREROUTING -p tcp -j PROXY_INBOUND
-      #     COMMIT
-      #     EOF
-        
-      #   env:
-      #   - name: POD_IP
-      #     valueFrom:
-      #       fieldRef:
-      #         apiVersion: v1
-      #         fieldPath: status.podIP
 
       containers:
       - name: wizard
@@ -68,77 +36,11 @@ spec:
         env:
           - name: apiServerURL
             value: http://bfl.{{ .Release.Namespace }}:8080
-
-      # - name: wizard-server
-      #   image: aboveos/wizard-server:v0.4.2
-      #   imagePullPolicy: IfNotPresent
-      #   volumeMounts:
-      #   - name: userspace-dir
-      #     mountPath: /Home
-      #   ports:
-      #   - containerPort: 3000
-      #   env:
-      #   - name: OS_SYSTEM_SERVER
-      #     value: system-server.user-system-{{ .Values.bfl.username }}
-      #   - name: OS_APP_SECRET
-      #     value: '{{ .Values.os.desktop.appSecret }}'
-      #   - name: OS_APP_KEY
-      #     value: {{ .Values.os.desktop.appKey }}
-      #   - name: APP_SERVICE_SERVICE_HOST
-      #     value: app-service.os-system
-      #   - name: APP_SERVICE_SERVICE_PORT
-      #     value: '6755'
-
-      # - name: terminus-envoy-sidecar
-      #   image: bytetrade/envoy:v1.25.11
-      #   imagePullPolicy: IfNotPresent
-      #   securityContext:
-      #     allowPrivilegeEscalation: false
-      #     runAsUser: 1000
-      #   ports:
-      #   - name: proxy-admin
-      #     containerPort: 15000
-      #   - name: proxy-inbound
-      #     containerPort: 15003
-      #   volumeMounts:
-      #   - name: terminus-sidecar-config
-      #     readOnly: true
-      #     mountPath: /etc/envoy/envoy.yaml
-      #     subPath: envoy.yaml
-      #   command:
-      #   - /usr/local/bin/envoy
-      #   - --log-level
-      #   - debug
-      #   - -c
-      #   - /etc/envoy/envoy.yaml
-      #   env:
-      #   - name: POD_UID
-      #     valueFrom:
-      #       fieldRef:
-      #         fieldPath: metadata.uid
-      #   - name: POD_NAME
-      #     valueFrom:
-      #       fieldRef:
-      #         fieldPath: metadata.name
-      #   - name: POD_NAMESPACE
-      #     valueFrom:
-      #       fieldRef:
-      #         fieldPath: metadata.namespace
-      #   - name: POD_IP
-      #     valueFrom:
-      #       fieldRef:
-      #         fieldPath: status.podIP
       volumes:
       - name: userspace-dir
         hostPath:
           type: Directory
           path: "{{ .Values.userspace.userData }}"
-      # - name: terminus-sidecar-config
-      #   configMap:
-      #     name: sidecar-configs
-      #     items:
-      #     - key: envoy.yaml
-      #       path: envoy.yaml
 
 ---
 apiVersion: v1

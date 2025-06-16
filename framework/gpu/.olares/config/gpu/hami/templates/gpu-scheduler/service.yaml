@@ -2,7 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: gpu-scheduler
-  namespace: gpu-system
+  namespace: os-gpu
 spec:
   ports:
     - name: ws

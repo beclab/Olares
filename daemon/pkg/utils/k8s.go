@@ -302,7 +302,10 @@ func GetAdminUser(ctx context.Context, client dynamic.Interface) (*unstructured.
 func isKeyPod(pod *corev1.Pod) bool {
 	return strings.HasPrefix(pod.Namespace, "user-space") ||
 		strings.HasPrefix(pod.Namespace, "user-system") ||
-		pod.Namespace == "os-system"
+		pod.Namespace == "os-framework" ||
+		pod.Namespace == "os-network" ||
+		pod.Namespace == "os-platform" ||
+		pod.Namespace == "os-gpu"
 }
 
 func GetTerminusInfo(ctx context.Context, client dynamic.Interface) (*sysv1.Terminus, error) {
@@ -360,7 +363,7 @@ func GetTerminusInstalledTime(ctx context.Context, dynamicClient dynamic.Interfa
 }
 
 func GetTerminusInitializedTime(ctx context.Context, client kubernetes.Interface) (*int64, error) {
-	deploy, err := client.AppsV1().Deployments("os-system").
+	deploy, err := client.AppsV1().Deployments("os-network").
 		Get(ctx, "l4-bfl-proxy", metav1.GetOptions{})
 	if err != nil {
 		klog.Error("get deploy error, ", err)

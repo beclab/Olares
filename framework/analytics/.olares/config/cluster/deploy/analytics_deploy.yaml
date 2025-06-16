@@ -2,7 +2,7 @@
 
 
 {{ $analytics_rootpath := printf "%s%s" .Values.rootPath "/rootfs/analytics" }}
-{{- $namespace := printf "%s" "os-system" -}}
+{{- $namespace := printf "%s" "os-framework" -}}
 {{- $analytics_secret := (lookup "v1" "Secret" $namespace "analytics-secrets") -}}
 {{- $pg_password := "" -}}
 {{ if $analytics_secret -}}
@@ -16,7 +16,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: analytics-secrets
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 type: Opaque
 data:
   pg_password: {{ $pg_password }}
@@ -26,13 +26,13 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: analytics-pg
-  namespace: os-system
+  namespace: {{ .Release.Namespace }}
 spec:
   app: analytics
-  appNamespace: os-system
+  appNamespace: {{ .Release.Namespace }}
   middleware: postgres
   postgreSQL:
-    user: analytics_os_system
+    user: analytics_os_framework
     password:
       valueFrom:
         secretKeyRef:
@@ -72,15 +72,15 @@ spec:
             echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
         env:
           - name: PGHOST
-            value: citus-0.citus-headless.os-system
+            value: citus-0.citus-headless.os-platform
           - name: PGPORT
             value: "5432"
           - name: PGUSER
-            value: analytics_os_system
+            value: analytics_os_framework
           - name: PGPASSWORD
             value: {{ $pg_password | b64dec }}
           - name: PGDB
-            value: os_system_analytics
+            value: os_framework_analytics
       containers:
       - name: analytics-server
         image: beclab/analytics-api:v0.0.6
@@ -93,13 +93,13 @@ spec:
         - name: PL_DATA_BACKEND
           value: postgres
         - name: PL_DATA_POSTGRES_HOST
-          value: citus-0.citus-headless.os-system
+          value: citus-0.citus-headless.os-platform
         - name: PL_DATA_POSTGRES_PORT
           value: "5432"
         - name: PL_DATA_POSTGRES_DATABASE
-          value: os_system_analytics
+          value: os_framework_analytics
         - name: PL_DATA_POSTGRES_USER
-          value: analytics_os_system
+          value: analytics_os_framework
         - name: PL_DATA_POSTGRES_PASSWORD
           value: {{ $pg_password | b64dec }}
         - name: DATABASE_URL

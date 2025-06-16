@@ -1,0 +1,102 @@
+
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tapr-sysevent-role
+rules:
+- apiGroups:
+  - '*'
+  resources:
+  - users
+  - syseventregistries
+  - applications
+  - loginrecords
+  - applicationpermissions
+  - namespaces
+  - cronworkflows
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - backups
+  verbs:
+  - '*'
+- apiGroups:
+  - '*'
+  resources:
+  - configmaps
+  verbs:
+  - '*'
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tapr-sysevent
+  namespace: os-framework
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: os-framework:tapr-sysevent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tapr-sysevent-role
+subjects:
+- kind: ServiceAccount
+  name: tapr-sysevent
+  namespace: os-framework
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tapr-sysevent
+  namespace: os-framework
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tapr-sysevent
+  template:
+    metadata:
+      labels:
+        app: tapr-sysevent
+    spec:
+      serviceAccountName: tapr-sysevent
+      serviceAccount: tapr-sysevent
+      securityContext:
+        runAsUser: 0
+      containers:
+      - name: tapr-sysevent
+        image: beclab/sys-event:0.2.7
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: APP_RANDOM_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-key
+              key: random-key
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sys-event-svc
+  namespace: os-framework
+spec:
+  ports:
+  - name: api
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: tapr-sysevent
+  type: ClusterIP
