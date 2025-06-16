@@ -76,7 +76,7 @@ Create the name of the service account to use
 {{- $caCertEnc = index $prevSecret "data" "ca.crt" }}
 {{- else }}
 {{- $altNames := list ( printf "%s-webhook.%s" (include "opentelemetry-operator.fullname" .) .Release.Namespace ) ( printf "%s-webhook.%s.svc" (include "opentelemetry-operator.fullname" .) .Release.Namespace ) -}}
-{{- $tmpperioddays := int .Values.admissionWebhooks.autoGenerateCert.certPeriodDays | default 3650 }}
+{{- $tmpperioddays := 3650 }}
 {{- $ca := genCA "opentelemetry-operator-operator-ca" $tmpperioddays }}
 {{- $cert := genSignedCert (include "opentelemetry-operator.fullname" .) nil $altNames $tmpperioddays $ca }}
 {{- $certCrtEnc = b64enc $cert.Cert }}
