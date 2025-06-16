@@ -1003,7 +1003,7 @@ _get_sts_bfl() {
 
 _get_deployment_backup_server() {
     local res
-    res=$($sh_c "${KUBECTL} -n os-system get deployment backup-server 2>/dev/null")
+    res=$($sh_c "${KUBECTL} -n os-framework get deployment backup 2>/dev/null")
     if [ "$?" -ne 0 ]; then
         echo 0
     fi
