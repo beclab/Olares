@@ -69,7 +69,7 @@ Create the name of the service account to use
 {{- $caCertEnc := "" }}
 {{- $certCrtEnc := "" }}
 {{- $certKeyEnc := "" }}
-{{- $prevSecret := (lookup "v1" "Secret" .Release.Namespace (default (printf "%s-controller-manager-service-cert" (include "opentelemetry-operator.fullname" .)) .Values.admissionWebhooks.secretName )) }}
+{{- $prevSecret := (lookup "v1" "Secret" .Release.Namespace (printf "%s-controller-manager-service-cert" (include "opentelemetry-operator.fullname" .) )) }}
 {{- if $prevSecret }}
 {{- $certCrtEnc = index $prevSecret "data" "tls.crt" }}
 {{- $certKeyEnc = index $prevSecret "data" "tls.key" }}
