@@ -86,6 +86,12 @@ func GetAllDevice(ctx context.Context) (map[string]Device, error) {
 
 func ManagedAllDevices(ctx context.Context) (map[string]Device, error) {
 	return deviceStatus(ctx, func(d *Device) bool {
+		managedByOthers := []string{"cali", "kube", "tun", "tailscale"}
+		for _, devPrefix := range managedByOthers {
+			if strings.HasPrefix(d.Name, devPrefix) {
+				return false
+			}
+		}
 		if d.State == "unmanaged" {
 			nmcli, err := findCommand(ctx, "nmcli")
 			if err != nil {
