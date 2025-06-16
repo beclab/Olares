@@ -103,6 +103,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: san-cnf
+  namespace: {{ .Release.Namespace }}
 data:
   san.cnf: |
     [req]
