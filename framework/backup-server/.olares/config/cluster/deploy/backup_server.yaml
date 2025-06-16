@@ -1,13 +1,13 @@
 
 
-{{ $backupVersion := "0.3.37" }}
+{{ $backupVersion := "0.3.38" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backup-server
+  name: backup
   namespace: {{ .Release.Namespace }}
   labels:
     component: velero
@@ -19,11 +19,11 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      tier: backup-server
+      tier: backup
   template:
     metadata:
       labels:
-        tier: backup-server
+        tier: backup
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
@@ -66,6 +66,11 @@ spec:
           value: {{ default "false" .Values.backup.is_cloud_version | quote }}
         - name: ENABLE_MIDDLEWARE_BACKUP
           value: "true"
+        - name: APP_RANDOM_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-key
+              key: random-key
         ports:
         - containerPort: 8082
           protocol: TCP
@@ -118,7 +123,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: backup-server
+  name: backup
   namespace: {{ .Release.Namespace }}
 spec:
   ports:
@@ -126,4 +131,4 @@ spec:
     targetPort: 8082
     protocol: TCP
   selector:
-    tier: backup-server
+    tier: backup
