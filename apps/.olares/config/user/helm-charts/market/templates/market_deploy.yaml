@@ -141,7 +141,7 @@ spec:
           - name: NATS_PORT
             value: '4222'
           - name: NATS_USERNAME
-            value: market-backend-{{ .Values.bfl.username}}
+            value: os-market-backend
           - name: NATS_PASSWORD
             valueFrom:
               secretKeyRef:
@@ -327,7 +327,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   app: market-backend
-  appNamespace: user
+  appNamespace: os
   middleware: nats
   nats:
     password:
@@ -337,17 +337,17 @@ spec:
           name: market-backend-nats-secret
     refs:
       - appName: user-service
-        appNamespace: user
+        appNamespace: os
         subjects:
           - name: "application.*"
             perm:
               - pub
               - sub
       - appName: user-service
-        appNamespace: user
+        appNamespace: os
         subjects:
           - name: "market.*"
             perm:
               - pub
               - sub
-    user: market-backend-{{ .Values.bfl.username}}
+    user: os-market-backend

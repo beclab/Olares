@@ -250,7 +250,7 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: os-framework-search-server
+          value: os-search-server
         - name: NATS_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -306,7 +306,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   app: search-server
-  appNamespace: {{ .Release.Namespace }}
+  appNamespace: os
   middleware: nats
   nats:
     password:
@@ -316,23 +316,23 @@ spec:
           name: search-server-nats-secret
     refs:
       - appName: user-service
-        appNamespace: user
+        appNamespace: os
         subjects:
         - name: "search.*"
           perm:
             - pub
             - sub
     subjects:
-      - name: system.search
+      - name: search
         permission:
           pub: allow
           sub: allow
-      - name: system.users
+      - name: users
         permission:
           pub: allow
           sub: deny
-      - name: system.groups
+      - name: groups
         permission:
           pub: allow
           sub: deny
-    user: {{ .Release.Namespace }}-search-server
+    user: os-search-server

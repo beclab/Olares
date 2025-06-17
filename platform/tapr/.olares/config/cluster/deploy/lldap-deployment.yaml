@@ -67,7 +67,7 @@ metadata:
   namespace: {{ $namespace }}
 spec:
   app: lldap
-  appNamespace: {{ $namespace }}
+  appNamespace: os
   middleware: nats
   nats:
     password:
@@ -76,19 +76,19 @@ spec:
           key: nats_password
           name: lldap-pg-secrets
     subjects:
-    - name: system.notification
+    - name: notification
       permission:
         pub: allow
         sub: allow
-    - name: system.users
+    - name: users
       permission:
         pub: allow
         sub: allow
-    - name: system.groups
+    - name: groups
       permission:
         pub: allow
         sub: allow
-    user: {{ $namespace }}-lldap
+    user: os-lldap
 
 ---
 apiVersion: apps/v1
@@ -183,7 +183,7 @@ spec:
             - name: NATS_PORT
               value: "4222"
             - name: NATS_USERNAME
-              value: os-platform-lldap
+              value: os-lldap
             - name: NATS_PASSWORD
               valueFrom:
                 secretKeyRef:

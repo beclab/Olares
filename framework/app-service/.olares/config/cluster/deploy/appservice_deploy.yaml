@@ -203,16 +203,16 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: os-platform-app-service
+          value: os-app-service
         - name: NATS_PASSWORD
           valueFrom:
             secretKeyRef:
               key: nats_password
               name: app-service-nats-secret
         - name: NATS_SUBJECT_SYSTEM_USERS
-          value: terminus.os-framework.system.users
+          value: os.users
         - name: NATS_SUBJECT_SYSTEM_GROUPS
-          value: terminus.os-framework.system.groups
+          value: os.groups
         - name: APP_RANDOM_KEY
           valueFrom:
             secretKeyRef:
@@ -430,7 +430,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   app: app-service
-  appNamespace: {{ .Release.Namespace }}
+  appNamespace: os
   middleware: nats
   nats:
     password:
@@ -440,23 +440,23 @@ spec:
           name: app-service-nats-secret
     refs:
       - appName: user-service
-        appNamespace: user
+        appNamespace: os
         subjects:
           - name: "application.*"
             perm:
               - pub
               - sub
     subjects:
-      - name: system.application
+      - name: application
         permission:
           pub: allow
           sub: allow
-      - name: system.users
+      - name: users
         permission:
           pub: allow
           sub: deny
-      - name: system.groups
+      - name: groups
         permission:
           pub: allow
           sub: deny
-    user: os-framework-app-service
+    user: os-app-service

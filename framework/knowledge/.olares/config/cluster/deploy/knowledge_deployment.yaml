@@ -106,25 +106,25 @@ spec:
           name: knowledge-secrets
     refs:
     - appName: download
-      appNamespace: {{ .Release.Namespace }}
+      appNamespace: os
       subjects:
       - name: download_status
         perm:
         - pub
         - sub
     - appName: user-service
-      appNamespace: user
+      appNamespace: os
       subjects:
         - name: "knowledge.*"
           perm:
             - pub
             - sub
     subjects:
-      - name: system.knowledge
+      - name: knowledge
         permission:
           pub: allow
           sub: allow
-    user: {{ .Release.Namespace }}-knowledge
+    user: os-knowledge
 ---
 
 apiVersion: apps/v1
@@ -229,11 +229,11 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: os-framework-knowledge
+          value: os-knowledge
         - name: NATS_PASSWORD
           value: {{ $nat_password | b64dec }}
         - name: NATS_SUBJECT
-          value: terminus.os-framework.download_status
+          value: os.download_status
         - name: SOCKET_URL
           value: 'http://localhost:40010'
         - name: BACKUP_PATH
@@ -605,7 +605,7 @@ spec:
         - name: NATS_PASSWORD
           value: {{ $nat_password | b64dec }}
         - name: NATS_SUBJECT
-          value: terminus.{{ .Release.Namespace }}.download_status
+          value: os.download_status
         volumeMounts:
         - name: download-dir
           mountPath: /downloads

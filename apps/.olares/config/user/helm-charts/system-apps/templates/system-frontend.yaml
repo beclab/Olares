@@ -600,7 +600,7 @@ spec:
             - name: NATS_PASSWORD
               value: {{ $files_frontend_nats_password | b64dec }}
             - name: NATS_SUBJECT
-              value: terminus.os-framework.files-notify
+              value: os.files-notify
             - name: apiServerURL
               value: http://bfl.{{ .Release.Namespace }}:8080
             - name: NATS_USERNAME_USERSERVICE
@@ -925,7 +925,7 @@ metadata:
   namespace: user-system-{{ .Values.bfl.username }}
 spec:
   app: files-frontend
-  appNamespace: user-space-{{ .Values.bfl.username }}
+  appNamespace: os
   middleware: nats
   nats:
     password:
@@ -935,14 +935,14 @@ spec:
           name: files-frontend-nats-secrets
     refs:
       - appName: files-server
-        appNamespace: os-framework
+        appNamespace: os
         subjects:
           - name: files-notify
             perm:
               - pub
               - sub
       - appName: user-service
-        appNamespace: user
+        appNamespace: os
         subjects:
           - name: "files.*"
             perm:
@@ -3588,7 +3588,7 @@ metadata:
   namespace: user-space-{{ .Values.bfl.username }}
 spec:
   app: user-service
-  appNamespace: user
+  appNamespace: os
   middleware: nats
   nats:
     password:

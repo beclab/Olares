@@ -27,7 +27,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   app: ks-component
-  appNamespace: {{ .Release.Namespace }}
+  appNamespace: os
   middleware: nats
   nats:
     password:
@@ -37,10 +37,10 @@ spec:
           name: ks-component-secrets
     refs:
     - appName: notifications
-      appNamespace: os-framework
+      appNamespace: os
       subjects:
-      - name: system.notification
+      - name: notification
         perm:
         - pub
         - sub
-    user: os_platform_ks_component
+    user: os-ks-component

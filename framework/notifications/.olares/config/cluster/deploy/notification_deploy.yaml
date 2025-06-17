@@ -56,7 +56,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   app: notifications
-  appNamespace: {{ .Release.Namespace }}
+  appNamespace: os
   middleware: nats
   nats:
     password:
@@ -79,7 +79,7 @@ spec:
           - appName: authelia
             pub: allow
             sub: allow
-        name: system.notification
+        name: notification
         permission:
           pub: allow
           sub: allow
@@ -96,19 +96,19 @@ spec:
           - appName: knowledge
             pub: deny
             sub: allow
-        name: system.users
+        name: users
         permission:
           pub: deny
           sub: allow
-      - name: system.groups
+      - name: groups
         permission:
           pub: deny
           sub: allow
-      - name: system.application
+      - name: application
         permission:
           pub: deny
           sub: allow
-    user: {{ .Release.Name }}-notification-server
+    user: notification-server
 
 ---
 apiVersion: apps/v1
@@ -177,22 +177,22 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: os-framework-notification-server
+          value: notification-server
         - name: NATS_PASSWORD
           valueFrom:
             secretKeyRef:
               key: nats_password
               name: notifications-secrets
         - name: NATS_SUBJECT
-          value: "terminus.{{ .Release.Namespace }}.system.notification"
+          value: "os.notification"
         - name: NATS_SUBJECT_SYSTEM_USERS
-          value: "terminus.{{ .Release.Namespace }}.system.users"
+          value: "os.users"
         - name: NATS_SUBJECT_SYSTEM_GROUPS
-          value: "terminus.{{ .Release.Namespace }}.system.groups"
+          value: "os.groups"
         - name: NATS_SUBJECT_SYSTEM_APPLICATION
-          value: "terminus.{{ .Release.Namespace }}.system.application"
+          value: "os.application"
         - name: NATS_SUBJECT_SYSTEM_VAULT
-          value: "terminus.{{ .Release.Namespace }}.system.vault"
+          value: "os.vault"
         livenessProbe:
           tcpSocket:
             port: 3010

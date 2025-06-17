@@ -235,20 +235,20 @@ spec:
             - name: NATS_PORT
               value: '4222'
             - name: NATS_USERNAME
-              value: os-framework-files-server
+              value: os-files-server
             - name: NATS_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: files-nats-secrets
                   key: files_nats_password
             - name: NATS_SUBJECT
-              value: terminus.os-framework.files-notify
+              value: os.files-notify
             - name: NATS_SUBJECT_SYSTEM_FILES
-              value: terminus.os-framework.system.files
+              value: os.files
             - name: NATS_SUBJECT_SYSTEM_USERS
-              value: terminus.os-framework.system.users
+              value: os.users
             - name: NATS_SUBJECT_SYSTEM_GROUPS
-              value: terminus.os-framework.system.groups
+              value: os.groups
             - name: RESERVED_SPACE
               value: '1000'
             - name: OLARES_VERSION
@@ -566,7 +566,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   app: files-server
-  appNamespace: {{ .Release.Namespace }}
+  appNamespace: os
   middleware: nats
   nats:
     password:
@@ -576,7 +576,7 @@ spec:
           name: files-nats-secrets
     refs:
       - appName: user-service
-        appNamespace: user
+        appNamespace: os
         subjects:
           - name: "files.*"
             perm:
@@ -594,19 +594,19 @@ spec:
         permission:
           pub: allow
           sub: allow
-      - name: system.files
+      - name: files
         permission:
           pub: allow
           sub: allow
-      - name: system.users
+      - name: users
         permission:
           pub: deny
           sub: allow
-      - name: system.groups
+      - name: groups
         permission:
           pub: deny
           sub: allow
-    user: {{ .Release.Namespace }}-files-server
+    user: os-files-server
 
 ---
 kind: ConfigMap

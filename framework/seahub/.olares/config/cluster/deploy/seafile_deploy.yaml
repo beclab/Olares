@@ -369,7 +369,7 @@ spec:
           - name: NATS_PORT
             value: "4222"
           - name: NATS_USERNAME
-            value: os-framework-seahub-server
+            value: os-seahub-server
           - name: NATS_PASSWORD
             valueFrom:
               secretKeyRef:
@@ -473,7 +473,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   app: seahub-server
-  appNamespace: {{ .Release.Namespace }}
+  appNamespace: os
   middleware: nats
   nats:
     password:
@@ -483,23 +483,23 @@ spec:
           name: seahub-nats-secrets
     refs:
       - appName: user-service
-        appNamespace: user
+        appNamespace: os
         subjects:
           - name: "seahub.*"
             perm:
               - pub
               - sub
     subjects:
-      - name: system.seahub
+      - name: seahub
         permission:
           pub: allow
           sub: allow
-      - name: system.users
+      - name: users
         permission:
           pub: allow
           sub: deny
-      - name: system.groups
+      - name: groups
         permission:
           pub: allow
           sub: deny
-    user: {{ .Release.Namespace }}-seahub-server
+    user: os-seahub-server

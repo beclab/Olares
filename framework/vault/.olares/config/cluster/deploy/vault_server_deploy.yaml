@@ -131,7 +131,7 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: os-framework-vault-server
+          value: os-vault-server
         - name: NATS_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -210,7 +210,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   app: vault-server
-  appNamespace: {{ .Release.Namespace }}
+  appNamespace: os
   middleware: nats
   nats:
     password:
@@ -221,24 +221,24 @@ spec:
 
     refs:
     - appName: user-service
-      appNamespace: user
+      appNamespace: os
       subjects:
         - name: "vault.*"
           perm:
             - pub
             - sub
     subjects:
-      - name: system.vault
+      - name: vault
         permission:
           pub: allow
           sub: allow
-      - name: system.users
+      - name: users
         permission:
           pub: allow
           sub: deny
-      - name: system.groups
+      - name: groups
         permission:
           pub: allow
           sub: deny
-    user: os-framework-vault-server
+    user: os-vault-server
 

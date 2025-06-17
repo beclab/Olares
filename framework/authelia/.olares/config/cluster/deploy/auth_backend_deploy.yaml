@@ -73,7 +73,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   app: authelia
-  appNamespace: {{ .Release.Namespace }}
+  appNamespace: os
   middleware: nats
   nats:
     password:
@@ -83,13 +83,13 @@ spec:
           name: authelia-secrets
     refs:
     - appName: notifications
-      appNamespace: {{ .Release.Namespace }}
+      appNamespace: os
       subjects:
-      - name: system.notification
+      - name: notification
         perm:
         - pub
         - sub
-    user: {{ .Release.Namespace }}-authelia
+    user: os-authelia
 
 ---
 apiVersion: v1
@@ -420,7 +420,7 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: {{ .Release.Namespace }}-authelia
+          value: os-authelia
         - name: NATS_PASSWORD
           valueFrom:
             secretKeyRef:
