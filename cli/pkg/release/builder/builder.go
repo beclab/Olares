@@ -2,12 +2,11 @@ package builder
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/pkg/release/app"
 	"github.com/beclab/Olares/cli/pkg/release/manifest"
+	"os"
+	"path/filepath"
 )
 
 type Builder struct {
