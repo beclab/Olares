@@ -316,7 +316,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
         - name: dashboard-init
-          image: beclab/dashboard:v1.3.75
+          image: beclab/dashboard:v1.3.79
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -328,7 +328,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: control-hub-init
-          image: beclab/control-hub:v1.3.73
+          image: beclab/control-hub:v1.3.79
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -364,7 +364,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: wise-init
-          image: beclab/wise:v1.3.76
+          image: beclab/wise:v1.3.79
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -435,7 +435,7 @@ spec:
             - name: PGDB
               value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
         - name: files-frontend-init
-          image: beclab/files-frontend:v1.3.68
+          image: beclab/files-frontend:v1.3.79
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
