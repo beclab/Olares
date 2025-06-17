@@ -125,7 +125,7 @@ data:
       refresh_interval: 5m
       lldap:
         implementation: custom
-        url: ldap://lldap-service:3890
+        url: ldap://lldap-service.os-platform:3890
         timeout: 5s
         start_tls: false
         base_dn: dc=example,dc=com
@@ -137,7 +137,7 @@ data:
         mail_attribute: mail
         display_name_attribute: displayName
         username_attribute: uid
-        server: lldap-service
+        server: lldap-service.os-platform
         port: 17170
         user: cn=admin,dc=example,dc=com
         password: adminpassword
@@ -416,7 +416,7 @@ spec:
               name: app-key
               key: random-key
         - name: NATS_HOST
-          value: nats
+          value: nats.os-platform
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME

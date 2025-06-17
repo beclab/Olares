@@ -173,7 +173,7 @@ spec:
         - name: DATABASE_URL
           value: postgres://notifications_os_framework:$(DATABASE_PASSWORD)@citus-headless.os-platform/os_framework_notifications?sslmode=disable
         - name: NATS_HOST
-          value: nats
+          value: nats.os-platform
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME

@@ -246,7 +246,7 @@ spec:
         - name: DATABASE_URL
           value: postgres://search3_os_framework:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-platform:5432/os_framework_search3
         - name: NATS_HOST
-          value: nats
+          value: nats.os-platform
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME

@@ -163,7 +163,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.3.45
+        image: beclab/app-service:0.3.46
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -199,7 +199,7 @@ spec:
         - name: USER_MEMORY_THRESHOLD
           value: "90"
         - name: NATS_HOST
-          value: nats
+          value: nats.os-platform
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
@@ -396,7 +396,7 @@ spec:
       hostNetwork: true
       containers:
         - name: image-service
-          image: beclab/image-service:0.3.36
+          image: beclab/image-service:0.3.46
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0

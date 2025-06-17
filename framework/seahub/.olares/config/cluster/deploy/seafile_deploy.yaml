@@ -365,7 +365,7 @@ spec:
           - name: SEAFILE_SERVER_LETSENCRYPT
             value: 'false'
           - name: NATS_HOST
-            value: nats
+            value: nats.os-platform
           - name: NATS_PORT
             value: "4222"
           - name: NATS_USERNAME

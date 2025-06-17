@@ -225,7 +225,7 @@ spec:
         - name: YTDLP_DOWNLOAD_URL
           value: http://download-svc.os-framework:3082
         - name: NATS_HOST
-          value: nats
+          value: nats.os-platform
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
@@ -553,7 +553,7 @@ spec:
         - name: REDIS_PASSWORD
           value: {{ $redis_password | b64dec }}
         - name: NATS_HOST
-          value: nats
+          value: nats.os-platform
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
@@ -597,7 +597,7 @@ spec:
         - name: REDIS_PASSWORD
           value: {{ $redis_password | b64dec }}
         - name: NATS_HOST
-          value: nats
+          value: nats.os-platform
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
