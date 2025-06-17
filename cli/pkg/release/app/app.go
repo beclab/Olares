@@ -30,6 +30,17 @@ func (m *Manager) Package() error {
 		return err
 	}
 
+	osChartTemplatePath := "wizard/config/os-chart-template"
+	for _, osm := range []string{"os-platform", "os-framework"} {
+		if err := util.CopyDirectory(filepath.Join(buildTemplate, osChartTemplatePath), filepath.Join(m.distPath, fmt.Sprintf("/wizard/config/%s", osm))); err != nil {
+			return err
+		}
+	}
+
+	if err := util.RemoveDir(filepath.Join(m.distPath, osChartTemplatePath)); err != nil {
+		return err
+	}
+
 	// Package modules
 	for _, mod := range modules {
 		if err := m.packageModule(mod); err != nil {
@@ -50,6 +61,13 @@ func (m *Manager) Package() error {
 }
 
 func (m *Manager) packageModule(mod string) error {
+	var distDeployType string
+	switch mod {
+	case "platform":
+		distDeployType = "os-platform"
+	case "framework":
+		distDeployType = "os-framework"
+	}
 	modPath := filepath.Join(m.olaresRepoRoot, mod)
 	err := filepath.Walk(modPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -78,7 +96,7 @@ func (m *Manager) packageModule(mod string) error {
 
 		// Package cluster deployments
 		deployPath := filepath.Join(path, "config/cluster/deploy")
-		if err := util.CopyDirectoryIfExists(deployPath, filepath.Join(m.distPath, "wizard/config/system/templates/deploy")); err != nil {
+		if err := util.CopyDirectoryIfExists(deployPath, filepath.Join(m.distPath, fmt.Sprintf("wizard/config/%s/templates/deploy", distDeployType))); err != nil {
 			return err
 		}
 

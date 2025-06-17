@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"crypto/md5"
 	"fmt"
+	"github.com/Masterminds/semver/v3"
 	dockerref "github.com/containerd/containerd/reference/docker"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
@@ -265,10 +267,54 @@ func (m *Manager) scan() error {
 	m.extractedImages = sortedImages
 
 	for _, component := range uniqueComponents {
+		component, err = m.patchComponent(component)
+		if err != nil {
+			return err
+		}
 		m.extractedComponents = append(m.extractedComponents, component)
 	}
 
 	return nil
+}
+func (m *Manager) getLatestDailyBuildTag() (string, error) {
+	cmd := exec.Command("git", "tag", "-l")
+	cmd.Dir = m.olaresRepoRoot
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to get git tags: %v", err)
+	}
+
+	tags := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(tags) == 0 || (len(tags) == 1 && tags[0] == "") {
+		return "", fmt.Errorf("no git tags found")
+	}
+
+	var dailyTags []string
+	dailyBuildRegex := regexp.MustCompile(`^\d+\.\d+\.\d-\d{8}$`)
+
+	for _, tag := range tags {
+		tag = strings.TrimSpace(tag)
+		if dailyBuildRegex.MatchString(tag) {
+			dailyTags = append(dailyTags, tag)
+		}
+	}
+
+	if len(dailyTags) == 0 {
+		return "", fmt.Errorf("no daily build tags found")
+	}
+
+	sort.Slice(dailyTags, func(i, j int) bool {
+		iv, err := semver.NewVersion(dailyTags[i])
+		if err != nil {
+			return true
+		}
+		jv, err := semver.NewVersion(dailyTags[j])
+		if err != nil {
+			return false
+		}
+		return iv.LessThan(jv)
+	})
+	return dailyTags[len(dailyTags)-1], nil
 }
 
 // Helper function to patch extracted image name
@@ -297,4 +343,23 @@ func (m *Manager) patchImage(image string) (string, error) {
 	fmt.Printf("patching backup server version to %s\n", backupVersion)
 	image = strings.ReplaceAll(image, backupServerImageVersionTpl, backupVersion)
 	return image, nil
+}
+
+func (m *Manager) patchComponent(component BinaryOutput) (BinaryOutput, error) {
+	if component.ID != "olaresd" {
+		return component, nil
+	}
+
+	latestDailyBuildTag, err := m.getLatestDailyBuildTag()
+	if err != nil {
+		return BinaryOutput{}, fmt.Errorf("failed to get latest daily build tag (required to replace olaresd version): %v", err)
+	}
+
+	fmt.Printf("patching olaresd version to %s\n", latestDailyBuildTag)
+
+	component.Name = strings.ReplaceAll(component.Name, "#__VERSION__", latestDailyBuildTag)
+	component.AMD64 = strings.ReplaceAll(component.AMD64, "#__VERSION__", latestDailyBuildTag)
+	component.ARM64 = strings.ReplaceAll(component.ARM64, "#__VERSION__", latestDailyBuildTag)
+	return component, nil
+
 }
