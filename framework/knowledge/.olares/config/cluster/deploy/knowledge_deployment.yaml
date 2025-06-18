@@ -561,7 +561,7 @@ spec:
         - name: NATS_PASSWORD
           value: {{ $nat_password | b64dec }}
         - name: NATS_SUBJECT
-          value: terminus.{{ .Release.Namespace }}.download_status
+          value: os.download_status
         volumeMounts:
         - name: config-dir
           mountPath: /app/config

@@ -138,7 +138,7 @@ spec:
               key: nats_password
               name: vault-server-nats-secret
         - name: NATS_SUBJECT_SYSTEM_VAULT
-          value: "terminus.{{ .Release.Namespace }}.system.vault"
+          value: "os.vault"
         volumeMounts:
         - name: vault-data
           mountPath: /padloc/packages/server/data

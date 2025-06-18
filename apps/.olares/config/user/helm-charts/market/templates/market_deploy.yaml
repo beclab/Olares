@@ -147,8 +147,10 @@ spec:
               secretKeyRef:
                 name: market-backend-nats-secret
                 key: nats_password
-          - name: NATS_SUBJECT_USER_APPLICATION
-            value: terminus.user.application.{{ .Values.bfl.username}}
+          - name: NATS_SUBJECT_APPLICATION
+            value: os.application
+          - name: NATS_SUBJECT_MARKET
+            value: os.market
         volumeMounts:
           - name: opt-data
             mountPath: /opt/app/data

@@ -427,7 +427,7 @@ spec:
               key: nats_password
               name: authelia-secrets
         - name: NATS_SUBJECT
-          value: "terminus.{{ .Release.Namespace }}.system.notification"
+          value: "os.notification"
 
         volumeMounts:
         - name: config

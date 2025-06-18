@@ -190,13 +190,13 @@ spec:
                   key: nats_password
                   name: lldap-pg-secrets
             - name: NATS_SUBJECT
-              value: "terminus.{{ $namespace }}.system.notification"
+              value: "os.notification"
             - name: NATS_SUBJECT_SYSTEM_USERS
-              value: "terminus.{{ $namespace }}.system.users"
+              value: "os.users"
             - name: NATS_SUBJECT_SYSTEM_GROUPS
-              value: "terminus.{{ $namespace }}.system.groups"
+              value: "os.groups"
 
-          image: beclab/lldap:0.0.3
+          image: beclab/lldap:0.0.4
           imagePullPolicy: IfNotPresent
           name: lldap
           ports:

@@ -257,11 +257,11 @@ spec:
               key: nats_password
               name: search-server-nats-secret
         - name: NATS_SUBJECT_SYSTEM_SEARCH
-          value: terminus.os-framework.system.search
+          value: os.search
         - name: NATS_SUBJECT_SYSTEM_USERS
-          value: terminus.os-framework.system.users
+          value: os.users
         - name: NATS_SUBJECT_SYSTEM_GROUPS
-          value: terminus.os-framework.system.groups
+          value: os.groups
       - name: search3monitor
         image: beclab/search3monitor:v0.0.45
         imagePullPolicy: IfNotPresent

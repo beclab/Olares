@@ -213,6 +213,8 @@ spec:
           value: os.users
         - name: NATS_SUBJECT_SYSTEM_GROUPS
           value: os.groups
+        - name: NATS_SUBJECT_SYSTEM_APPLICATION
+          value: os.application
         - name: APP_RANDOM_KEY
           valueFrom:
             secretKeyRef:

@@ -610,8 +610,18 @@ spec:
                 secretKeyRef:
                   key: nats_password
                   name: user-service-nats-secret
-            - name: NATS_SUBJECT_USER_APPS
-              value: terminus.user.vault.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_MARKET
+              value: os.market.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_APPLICATION
+              value: os.application.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_NOTIFICATION
+              value: os.notification.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_FILES
+              value: os.files.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_KNOWLEDGE
+              value: os.knowledge.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_VAULT
+              value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
           image: beclab/user-service:v0.0.18
           imagePullPolicy: IfNotPresent
@@ -667,22 +677,18 @@ spec:
                 secretKeyRef:
                   key: nats_password
                   name: user-service-nats-secret
-            - name: NATS_SUBJECT_USER_APPS
-              value: terminus.user.*.{{ .Values.bfl.username}}
-            - name: NATS_SUBJECT_USER_VAULT
-              value: terminus.user.vault.{{ .Values.bfl.username}}
-            - name: NATS_SUBJECT_USER_KNOWLEDGE
-              value: terminus.user.knowledge.{{ .Values.bfl.username}}
-            - name: NATS_SUBJECT_USER_MARKET
-              value: terminus.user.market.{{.Values.bfl.username}}
-            - name: NATS_SUBJECT_USER_NOTIFICATION
-              value: terminus.user.notification.{{.Values.bfl.username}}
-            - name: NATS_SUBJECT_USER_SEARCH
-              value: terminus.user.search.{{.Values.bfl.username}}
-            - name: NATS_SUBJECT_USER_SEAHUB
-              value: terminus.user.seahub.{{.Values.bfl.username}}
-            - name: NATS_SUBJECT_USER_APPLICATION
-              value: terminus.user.application.{{.Values.bfl.username}}
+            - name: NATS_SUBJECT_MARKET
+              value: os.market.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_APPLICATION
+              value: os.application.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_NOTIFICATION
+              value: os.notification.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_FILES
+              value: os.files.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_KNOWLEDGE
+              value: os.knowledge.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_VAULT
+              value: os.vault.{{ .Values.bfl.username}}
               
         - name: drive-server
           image: beclab/drive:v0.0.72
