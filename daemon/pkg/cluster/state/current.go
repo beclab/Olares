@@ -97,6 +97,13 @@ func bToGb(b uint64) string {
 
 func CheckCurrentStatus(ctx context.Context) error {
 	TerminusStateMu.Lock()
+	name, err := utils.GetOlaresNameFromReleaseFile()
+	if err != nil {
+		klog.Error("get olares name from release file error, ", err)
+	} else {
+		CurrentState.TerminusName = &name
+	}
+
 	var currentTerminusState TerminusState = CurrentState.TerminusState
 	defer func() {
 		CurrentState.TerminusState = currentTerminusState
@@ -151,6 +158,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 	// get network info
 	ips, err := nets.GetInternalIpv4Addr()
 	if err != nil {
+		currentTerminusState = NetworkNotReady
 		return err
 	}
 
@@ -293,7 +301,6 @@ func CheckCurrentStatus(ctx context.Context) error {
 		currentTerminusState = NotInstalled
 		CurrentState.InstallingProgress = ""
 		CurrentState.InstallingState = ""
-		CurrentState.TerminusName = nil
 		CurrentState.InstalledTime = nil
 		CurrentState.InitializedTime = nil
 

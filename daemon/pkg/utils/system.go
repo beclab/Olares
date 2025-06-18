@@ -110,3 +110,20 @@ func MoveFile(sourcePath, destPath string) error {
 
 	return nil
 }
+
+func GetOlaresNameFromReleaseFile() (string, error) {
+	data, err := godotenv.Read("/etc/olares/release")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("olars release file not found")
+		}
+		return "", fmt.Errorf("read olars release file error: %w", err)
+	}
+
+	name := data["OLARES_NAME"]
+	if name == "" {
+		return "", fmt.Errorf("olars name not found in release file")
+	}
+
+	return name, nil
+}

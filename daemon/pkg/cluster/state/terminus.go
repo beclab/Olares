@@ -37,6 +37,7 @@ const (
 	Shutdown         TerminusState = "shutdown"
 	Restarting       TerminusState = "restarting"
 	Checking         TerminusState = "checking"
+	NetworkNotReady  TerminusState = "network-not-ready"
 )
 
 func (s TerminusState) String() string {

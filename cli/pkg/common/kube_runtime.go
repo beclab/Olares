@@ -322,10 +322,26 @@ func (a *Argument) SaveReleaseInfo() error {
 	if a.OlaresVersion == "" {
 		return errors.New("invalid: empty olares version")
 	}
+
 	releaseInfoMap := map[string]string{
 		ENV_OLARES_BASE_DIR: a.BaseDir,
 		ENV_OLARES_VERSION:  a.OlaresVersion,
 	}
+
+	if a.User != nil {
+		releaseInfoMap["OLARES_NAME"] = a.User.UserName
+	} else {
+		if util.IsExist(OlaresReleaseFile) {
+			// if the user is not set, try to load the user name from the release file
+			envs, err := godotenv.Read(OlaresReleaseFile)
+			if err == nil {
+				if userName, ok := envs["OLARES_NAME"]; ok {
+					releaseInfoMap["OLARES_NAME"] = userName
+				}
+			}
+		}
+	}
+
 	if !util.IsExist(filepath.Dir(OlaresReleaseFile)) {
 		if err := os.MkdirAll(filepath.Dir(OlaresReleaseFile), 0755); err != nil {
 			return fmt.Errorf("failed to create directory %s: %v", filepath.Dir(OlaresReleaseFile), err)

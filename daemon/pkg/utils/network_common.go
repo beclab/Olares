@@ -11,7 +11,7 @@ const CHECK_CONNECTIVITY_URL = "http://connectivity-check.ubuntu.com/"
 
 func CheckInterfaceIPv4Connectivity(ctx context.Context, interfaceName string) bool {
 	// try to connect to the CHECK_CONNECTIVITY_URL using the specified interface
-	cmd := exec.CommandContext(ctx, "curl", "--interface", interfaceName, "--connect-timeout", "5", "-s", "-o", "/dev/null", CHECK_CONNECTIVITY_URL)
+	cmd := exec.CommandContext(ctx, "curl", "-4", "--interface", interfaceName, "--connect-timeout", "5", "-s", "-o", "/dev/null", CHECK_CONNECTIVITY_URL)
 	if err := cmd.Run(); err == nil {
 		return true
 	}

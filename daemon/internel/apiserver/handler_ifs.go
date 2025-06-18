@@ -81,7 +81,9 @@ func (h *handlers) GetNetIfs(ctx *fiber.Ctx) error {
 		}
 
 		if test == "true" {
-			r.InternetConnected = ptr.To(utils.CheckInterfaceIPv4Connectivity(ctx.Context(), i.Iface.Name))
+			if r.IP != "" {
+				r.InternetConnected = ptr.To(utils.CheckInterfaceIPv4Connectivity(ctx.Context(), i.Iface.Name))
+			}
 			devices, err := utils.GetAllDevice(ctx.Context())
 			if err != nil {
 				klog.Error("get all devices error, ", err)

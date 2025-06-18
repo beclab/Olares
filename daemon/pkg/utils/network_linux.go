@@ -81,7 +81,16 @@ func GetWifiDevice(ctx context.Context) (map[string]Device, error) {
 }
 
 func GetAllDevice(ctx context.Context) (map[string]Device, error) {
-	return deviceStatus(ctx, func(d *Device) bool { return true })
+	return deviceStatus(ctx, func(d *Device) bool {
+		managedByOthers := []string{"cali", "kube", "tun", "tailscale"}
+		for _, devPrefix := range managedByOthers {
+			if strings.HasPrefix(d.Name, devPrefix) {
+				return false
+			}
+		}
+
+		return true
+	})
 }
 
 func ManagedAllDevices(ctx context.Context) (map[string]Device, error) {
@@ -252,17 +261,17 @@ func showDeviceByNM(ctx context.Context, deviceName string, device *Device) erro
 		switch key {
 		case "IP4.ADDRESS[1]":
 			ipAndMask := strings.Split(value, "/")
-			if len(ipAndMask) > 2 {
+			if len(ipAndMask) > 1 {
 				device.Ipv4Address = ipAndMask[0]
 				cidr, err := strconv.Atoi(ipAndMask[1])
 				if err != nil {
 					klog.Error("convert cidr error, ", err)
-					return err
+					continue
 				}
 				mask, err := MaskFromCIDR(cidr)
 				if err != nil {
 					klog.Error("get mask from cidr error, ", err)
-					return err
+					continue
 				}
 				device.Ipv4Mask = mask
 			}
@@ -279,7 +288,7 @@ func showDeviceByNM(ctx context.Context, deviceName string, device *Device) erro
 		case "GENERAL.CONNECTION":
 			err := showConnectionByNM(ctx, value, device)
 			if err != nil {
-				klog.Error("get connection method error, ", err)
+				klog.Error("get connection method error, ", err, ", connection name: ", value)
 			}
 		default:
 			continue
