@@ -26,6 +26,14 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
+        env:
+          - name: NODE_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: TERMINUSD_HOST
+            value: $(NODE_IP):18088
+
 
 ---
 apiVersion: v1
