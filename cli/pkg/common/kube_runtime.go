@@ -329,7 +329,7 @@ func (a *Argument) SaveReleaseInfo() error {
 	}
 
 	if a.User != nil {
-		releaseInfoMap["OLARES_NAME"] = a.User.UserName
+		releaseInfoMap["OLARES_NAME"] = fmt.Sprintf("%s@%s", a.User.UserName, a.User.DomainName)
 	} else {
 		if util.IsExist(OlaresReleaseFile) {
 			// if the user is not set, try to load the user name from the release file
