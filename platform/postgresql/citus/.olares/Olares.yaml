@@ -3,6 +3,6 @@ target: prebuilt
 output:
   containers:
     - 
-      name: beclab/citus:13.0.3
+      name: beclab/citus:13.0.3-vchord
 
 # must have blank new line
