@@ -316,7 +316,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
         - name: dashboard-init
-          image: beclab/dashboard:v1.3.81
+          image: beclab/dashboard:v1.3.82
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -364,7 +364,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: wise-init
-          image: beclab/wise:v1.3.79
+          image: beclab/wise:v1.3.82
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -388,7 +388,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: studio-init
-          image: beclab/studio:v1.3.73
+          image: beclab/studio:v1.3.82
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -471,7 +471,7 @@ spec:
             - mountPath: /www
               name: www-dir
         - name: edge-desktop-init
-          image: beclab/desktop:v1.3.81
+          image: beclab/desktop:v1.3.82
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
