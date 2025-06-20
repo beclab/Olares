@@ -8,12 +8,14 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 
 	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/commands/upgrade"
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/klog/v2"
 )
 
 type UpgradeReq struct {
-	Version string `json:"version"`
+	Version      string `json:"version"`
+	DownloadOnly bool   `json:"downloadOnly,omitempty"` // false means download-and-upgrade
 }
 
 func (r *UpgradeReq) Check() error {
@@ -43,10 +45,18 @@ func (h *handlers) RequestOlaresUpgrade(ctx *fiber.Ctx, cmd commands.Interface) 
 		return h.ErrJSON(ctx, http.StatusBadRequest, err.Error())
 	}
 
-	if _, err := cmd.Execute(ctx.Context(), req.Version); err != nil {
+	upgradeReq := upgrade.UpgradeRequest{
+		Version:      req.Version,
+		DownloadOnly: req.DownloadOnly,
+	}
+
+	if _, err := cmd.Execute(ctx.Context(), upgradeReq); err != nil {
 		return h.ErrJSON(ctx, http.StatusBadRequest, err.Error())
 	}
 
+	if req.DownloadOnly {
+		return h.OkJSON(ctx, "successfully created download target")
+	}
 	return h.OkJSON(ctx, "successfully created upgrade target")
 }
 
@@ -55,5 +65,5 @@ func (h *handlers) CancelOlaresUpgrade(ctx *fiber.Ctx, cmd commands.Interface) e
 		return h.ErrJSON(ctx, http.StatusBadRequest, err.Error())
 	}
 
-	return h.OkJSON(ctx, "successfully removed upgrade target")
+	return h.OkJSON(ctx, "successfully cancelled upgrade/download")
 }

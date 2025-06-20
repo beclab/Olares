@@ -16,3 +16,15 @@ func GetDiskSize() (uint64, error) {
 	size := fs.Blocks * uint64(fs.Bsize)
 	return size, nil
 }
+
+func GetDiskAvailableSpace(path string) (uint64, error) {
+	fs := syscall.Statfs_t{}
+	err := syscall.Statfs(path, &fs)
+	if err != nil {
+		klog.Error("get disk available space error, ", err)
+		return 0, err
+	}
+
+	available := fs.Bavail * uint64(fs.Bsize)
+	return available, nil
+}

@@ -16,20 +16,22 @@ var (
 	COMMAND_BASE_DIR  = "" // deprecated shell command base dir
 	CDN_URL           = "https://dc3p1870nn3cj.cloudfront.net"
 
-	OS_ROOT_DIR            = "/olares"
-	INSTALLING_PID_FILE    = "installing.pid"
-	UNINSTALLING_PID_FILE  = "uninstalling.pid"
-	CHANGINGIP_PID_FILE    = "changingip.pid"
-	UPGRADE_TARGET_FILE    = "upgrade.target"
-	PREV_IP_TO_CHANGE_FILE = ".prev_ip"
-	PREV_IP_CHANGE_FAILED  = ".ip_change_failed"
-	INSTALL_LOCK           = ".installed"
-	LOG_FILE               = "install.log"
-	TERMINUS_BASE_DIR      = ""
-	MOUNT_BASE_DIR         = path.Join(OS_ROOT_DIR, "share")
-	PREPARE_LOCK           = ".prepared"
-	REDIS_CONF             = OS_ROOT_DIR + "/data/redis/etc/redis.conf"
-	EXPORT_POD_LOGS_DIR    = "Home/pod_logs"
+	OS_ROOT_DIR               = "/olares"
+	INSTALLING_PID_FILE       = "installing.pid"
+	UNINSTALLING_PID_FILE     = "uninstalling.pid"
+	CHANGINGIP_PID_FILE       = "changingip.pid"
+	UPGRADE_TARGET_FILE       = "upgrade.target"
+	UPGRADE_DOWNLOADONLY_FILE = "upgrade.downloadonly"
+	UPGRADE_DOWNLOADED_FILE   = "upgrade.downloaded"
+	PREV_IP_TO_CHANGE_FILE    = ".prev_ip"
+	PREV_IP_CHANGE_FAILED     = ".ip_change_failed"
+	INSTALL_LOCK              = ".installed"
+	LOG_FILE                  = "install.log"
+	TERMINUS_BASE_DIR         = ""
+	MOUNT_BASE_DIR            = path.Join(OS_ROOT_DIR, "share")
+	PREPARE_LOCK              = ".prepared"
+	REDIS_CONF                = OS_ROOT_DIR + "/data/redis/etc/redis.conf"
+	EXPORT_POD_LOGS_DIR       = "Home/pod_logs"
 
 	ProgressNumFinished = 100
 )
@@ -45,6 +47,8 @@ func Init() {
 	UNINSTALLING_PID_FILE = filepath.Join(baseDir, UNINSTALLING_PID_FILE)
 	CHANGINGIP_PID_FILE = filepath.Join(baseDir, CHANGINGIP_PID_FILE)
 	UPGRADE_TARGET_FILE = filepath.Join(baseDir, UPGRADE_TARGET_FILE)
+	UPGRADE_DOWNLOADONLY_FILE = filepath.Join(baseDir, UPGRADE_DOWNLOADONLY_FILE)
+	UPGRADE_DOWNLOADED_FILE = filepath.Join(baseDir, UPGRADE_DOWNLOADED_FILE)
 	INSTALL_LOCK = filepath.Join(baseDir, INSTALL_LOCK)
 	PREPARE_LOCK = filepath.Join(baseDir, PREPARE_LOCK)
 	PREV_IP_TO_CHANGE_FILE = filepath.Join(baseDir, PREV_IP_TO_CHANGE_FILE)

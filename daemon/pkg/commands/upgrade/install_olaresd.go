@@ -14,9 +14,10 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/nxadm/tail"
 	"k8s.io/klog/v2"
+	semver "github.com/Masterminds/semver/v3"
 )
 
-type upgrade struct {
+type prepareOlaresd struct {
 	commands.Operation
 	logFile          string
 	progressKeywords []progressKeyword
@@ -24,35 +25,51 @@ type upgrade struct {
 	progressChan     chan<- int
 }
 
-var _ commands.Interface = &upgrade{}
+var _ commands.Interface = &prepareOlaresd{}
 
-func NewUpgrade() commands.Interface {
-	return &upgrade{
+func NewInstallOlaresd() commands.Interface {
+	return &prepareOlaresd{
 		Operation: commands.Operation{
-			Name: commands.Upgrade,
+			Name: commands.InstallOlaresd,
 		},
 		progressKeywords: []progressKeyword{
-			{"PrepareUserInfoForUpgrade success", 5},
-			{"ClearAppChartValues success", 10},
-			{"ClearBFLChartValues success", 15},
-			{"UpdateChartsInAppService success", 20},
-			{"UpgradeUserComponents success", 25},
-			{"UpdateReleaseFile success", 30},
-			{"UpgradeSystemComponents success", 35},
-			{"[Job] UpgradeOlares execute successfully", commands.ProgressNumFinished},
+			{"ReplaceOlaresdBinary success", 30},
+			// if executed by olaresd
+			// this will be the last log printed by olares-cli
+			// as the olares-cli process will exit along with
+			// the olaresd when olares-cli restarts olaresd
+			{"UpdateOlaresdEnv success", commands.ProgressNumFinished},
+			// if executed manually by user
+			// these logs will be seen,
+			// but they're very likely to never be processed by us
+			{"RestartOlaresd success", commands.ProgressNumFinished},
+			{"[Job] Prepare Olaresd daemon execute successfully", commands.ProgressNumFinished},
 		},
 	}
 }
 
-func (i *upgrade) Execute(ctx context.Context, p any) (res any, err error) {
+func (i *prepareOlaresd) Execute(ctx context.Context, p any) (res any, err error) {
 	version, ok := p.(string)
 	if !ok {
 		return nil, errors.New("invalid param")
 	}
+	targetVersion, err := semver.NewVersion(version)
+	if err != nil {
+		return nil, fmt.Errorf("invalid target version %s: %v", version, err)
+	}
 
-	i.logFile = filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+version, "logs", "upgrade.log")
+	currentVersion, err := getCurrentDaemonVersion()
+	if err != nil {
+		klog.Warningf("Failed to get current olaresd version: %v, proceeding with installation", err)
+	} else {
+		if !currentVersion.LessThan(targetVersion) {
+			return newExecutionRes(true, nil), nil
+		}
+	}
+
+	i.logFile = filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+version, "logs", "install.log")
 	if err := i.refreshProgress(); err != nil {
-		return nil, fmt.Errorf("could not determine whether upgrade is finished: %v", err)
+		return nil, fmt.Errorf("could not determine whether olaresd prepare is finished: %v", err)
 	}
 	if i.progress == commands.ProgressNumFinished {
 		return newExecutionRes(true, nil), nil
@@ -65,7 +82,7 @@ func (i *upgrade) Execute(ctx context.Context, p any) (res any, err error) {
 	cmd.WithWatchDog_(i.watch)
 
 	params := []string{
-		"upgrade",
+		"prepare", "olaresd",
 		"--version", version,
 		"--base-dir", commands.TERMINUS_BASE_DIR,
 	}
@@ -76,46 +93,47 @@ func (i *upgrade) Execute(ctx context.Context, p any) (res any, err error) {
 	return newExecutionRes(false, progressChan), nil
 }
 
-func (i *upgrade) watch(ctx context.Context) {
+func (i *prepareOlaresd) watch(ctx context.Context) {
 	go func() {
 		defer close(i.progressChan)
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(2 * time.Second)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
 				if i.progress != commands.ProgressNumFinished {
 					if err := i.refreshProgress(); err != nil {
-						klog.Errorf("failed to refresh upgrade progress upon context done: %v", err)
+						klog.Errorf("failed to refresh olaresd prepare progress upon context done: %v", err)
 					}
 				}
 				return
 			case <-ticker.C:
 				if err := i.refreshProgress(); err != nil {
-					klog.Errorf("failed to refresh upgrade progress: %v", err)
+					klog.Errorf("failed to refresh olaresd prepare progress: %v", err)
 				}
 			}
 		}
 	}()
 }
 
-func (i *upgrade) refreshProgress() error {
+// todo: check finish state by current olaresd binary version after the version of olaresd and olaresd has been unified
+func (i *prepareOlaresd) refreshProgress() error {
 	info, err := os.Stat(i.logFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
-		klog.Errorf("error stat upgrade log file %s: %v", i.logFile, err)
+		klog.Errorf("error stat olaresd prepare log file %s: %v", i.logFile, err)
 		return err
 	}
 
 	filesize := info.Size()
-	tailsize := min(filesize, 4096)
+	tailsize := min(filesize, 40960)
 
 	t, err := tail.TailFile(i.logFile,
 		tail.Config{Follow: false, Location: &tail.SeekInfo{Offset: -tailsize, Whence: io.SeekEnd}})
 	if err != nil {
-		klog.Errorf("error tail upgrade file %s: %v", i.logFile, err)
+		klog.Errorf("error tail olaresd prepare file %s: %v", i.logFile, err)
 		return err
 	}
 
@@ -152,23 +170,4 @@ func (i *upgrade) refreshProgress() error {
 	}
 
 	return nil
-}
-
-type removeTarget struct {
-	commands.Operation
-}
-
-var _ commands.Interface = &removeTarget{}
-
-func NewRemoveTarget() commands.Interface {
-	return &removeTarget{
-		Operation: commands.Operation{
-			Name: commands.RemoveUpgradeTarget,
-		},
-	}
-}
-
-func (i *removeTarget) Execute(ctx context.Context, p any) (res any, err error) {
-	upgradeRemove := NewRemoveUpgradeTarget()
-	return upgradeRemove.Execute(ctx, p)
 }

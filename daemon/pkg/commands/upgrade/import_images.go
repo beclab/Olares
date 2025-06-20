@@ -16,7 +16,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-type prepareOlaresd struct {
+type prepareImages struct {
 	commands.Operation
 	logFile          string
 	progressKeywords []progressKeyword
@@ -24,30 +24,20 @@ type prepareOlaresd struct {
 	progressChan     chan<- int
 }
 
-var _ commands.Interface = &prepareOlaresd{}
+var _ commands.Interface = &prepareImages{}
 
-func NewPrepareOlaresd() commands.Interface {
-	return &prepareOlaresd{
+func NewImportImages() commands.Interface {
+	return &prepareImages{
 		Operation: commands.Operation{
-			Name: commands.PrepareOlaresd,
+			Name: commands.ImportImages,
 		},
 		progressKeywords: []progressKeyword{
-			{"ReplaceOlaresdBinary success", 30},
-			// if executed by olaresd
-			// this will be the last log printed by olares-cli
-			// as the olares-cli process will exit along with
-			// the olaresd when olares-cli restarts olaresd
-			{"UpdateOlaresdEnv success", commands.ProgressNumFinished},
-			// if executed manually by user
-			// these logs will be seen,
-			// but they're very likely to never be processed by us
-			{"RestartOlaresd success", commands.ProgressNumFinished},
-			{"[Job] Prepare Olaresd daemon execute successfully", commands.ProgressNumFinished},
+			{"Preload Container Images execute successfully", commands.ProgressNumFinished},
 		},
 	}
 }
 
-func (i *prepareOlaresd) Execute(ctx context.Context, p any) (res any, err error) {
+func (i *prepareImages) Execute(ctx context.Context, p any) (res any, err error) {
 	version, ok := p.(string)
 	if !ok {
 		return nil, errors.New("invalid param")
@@ -55,7 +45,7 @@ func (i *prepareOlaresd) Execute(ctx context.Context, p any) (res any, err error
 
 	i.logFile = filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+version, "logs", "install.log")
 	if err := i.refreshProgress(); err != nil {
-		return nil, fmt.Errorf("could not determine whether olaresd prepare is finished: %v", err)
+		return nil, fmt.Errorf("could not determine whether images prepare is finished: %v", err)
 	}
 	if i.progress == commands.ProgressNumFinished {
 		return newExecutionRes(true, nil), nil
@@ -68,7 +58,7 @@ func (i *prepareOlaresd) Execute(ctx context.Context, p any) (res any, err error
 	cmd.WithWatchDog_(i.watch)
 
 	params := []string{
-		"prepare", "olaresd",
+		"prepare", "images",
 		"--version", version,
 		"--base-dir", commands.TERMINUS_BASE_DIR,
 	}
@@ -79,7 +69,7 @@ func (i *prepareOlaresd) Execute(ctx context.Context, p any) (res any, err error
 	return newExecutionRes(false, progressChan), nil
 }
 
-func (i *prepareOlaresd) watch(ctx context.Context) {
+func (i *prepareImages) watch(ctx context.Context) {
 	go func() {
 		defer close(i.progressChan)
 		ticker := time.NewTicker(2 * time.Second)
@@ -89,27 +79,26 @@ func (i *prepareOlaresd) watch(ctx context.Context) {
 			case <-ctx.Done():
 				if i.progress != commands.ProgressNumFinished {
 					if err := i.refreshProgress(); err != nil {
-						klog.Errorf("failed to refresh olaresd prepare progress upon context done: %v", err)
+						klog.Errorf("failed to refresh images prepare progress upon context done: %v", err)
 					}
 				}
 				return
 			case <-ticker.C:
 				if err := i.refreshProgress(); err != nil {
-					klog.Errorf("failed to refresh olaresd prepare progress: %v", err)
+					klog.Errorf("failed to refresh images prepare progress: %v", err)
 				}
 			}
 		}
 	}()
 }
 
-// todo: check finish state by current olaresd binary version after the version of olaresd and olaresd has been unified
-func (i *prepareOlaresd) refreshProgress() error {
+func (i *prepareImages) refreshProgress() error {
 	info, err := os.Stat(i.logFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
-		klog.Errorf("error stat olaresd prepare log file %s: %v", i.logFile, err)
+		klog.Errorf("error stat images prepare log file %s: %v", i.logFile, err)
 		return err
 	}
 
@@ -119,35 +108,23 @@ func (i *prepareOlaresd) refreshProgress() error {
 	t, err := tail.TailFile(i.logFile,
 		tail.Config{Follow: false, Location: &tail.SeekInfo{Offset: -tailsize, Whence: io.SeekEnd}})
 	if err != nil {
-		klog.Errorf("error tail olaresd prepare file %s: %v", i.logFile, err)
+		klog.Errorf("error tail images prepare file %s: %v", i.logFile, err)
 		return err
 	}
 
 	updated := false
 	for line := range t.Lines {
 		for _, p := range i.progressKeywords {
+			var lineProgress int
 			if strings.Contains(line.Text, p.KeyWord) {
-				if i.progress < p.ProgressNum {
-					i.progress = p.ProgressNum
-					updated = true
-				}
+				lineProgress = p.ProgressNum
+			} else {
+				lineProgress = parseImagePrepareProgressByItemProgress(line.Text)
 			}
-		}
-	}
-
-	// smooth progress
-	if !updated {
-		next := i.progress
-		for _, p := range i.progressKeywords {
-			if p.ProgressNum > i.progress {
-				next = p.ProgressNum
-				break
+			if i.progress < lineProgress {
+				i.progress = lineProgress
+				updated = true
 			}
-		}
-
-		if next > i.progress+1 {
-			i.progress += 1
-			updated = true
 		}
 	}
 
@@ -156,4 +133,12 @@ func (i *prepareOlaresd) refreshProgress() error {
 	}
 
 	return nil
+}
+
+func parseImagePrepareProgressByItemProgress(line string) int {
+	// filter out other item progress lines to avoid confusion
+	if !strings.Contains(line, "imported image") {
+		return 0
+	}
+	return parseProgressFromItemProgress(line)
 }

@@ -86,6 +86,12 @@ func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
 
 	// TODO: wait for the platform to be ready
 
+	actionConfig, settings, err = utils.InitConfig(config, common.NamespaceOsFramework)
+	if err != nil {
+		return err
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
 	var frameworkPath = path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-framework")
 	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSFramework, frameworkPath, "", common.NamespaceOsFramework, vals, false); err != nil {
 		return err

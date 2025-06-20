@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/klog/v2"
 )
 
 type versionCompatibilityCheck struct {
@@ -91,6 +92,19 @@ func NewHealthCheck() commands.Interface {
 }
 
 func (i *healthCheck) Execute(ctx context.Context, _ any) (res any, err error) {
+	klog.Info("Starting upgrade health check")
+
+	const minAvailableSpace = 100 * 1024 * 1024 * 1024 // 100GB in bytes
+	availableSpace, err := utils.GetDiskAvailableSpace("/")
+	if err != nil {
+		return nil, fmt.Errorf("error checking disk space: %s", err)
+	}
+	klog.Infof("Root partition available space: %.2fGB", float64(availableSpace)/(1024*1024*1024))
+	if availableSpace < minAvailableSpace {
+		return nil, fmt.Errorf("insufficient disk space: %.2fGB available, minimum 100GB required",
+			float64(availableSpace)/(1024*1024*1024))
+	}
+
 	client, err := utils.GetKubeClient()
 	if err != nil {
 		return nil, fmt.Errorf("error getting kubernetes client: %s", err)
@@ -131,6 +145,34 @@ func (i *healthCheck) Execute(ctx context.Context, _ any) (res any, err error) {
 			return nil, fmt.Errorf("node %s's condition is unknown", node.Name)
 		}
 	}
+
+	criticalNamespaces := []string{"os-platform", "os-framework"}
+	for _, namespace := range criticalNamespaces {
+		pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("error listing pods in namespace %s: %s", namespace, err)
+		}
+
+		for _, pod := range pods.Items {
+			if pod.Status.Phase == corev1.PodSucceeded {
+				continue
+			}
+
+			podStatus := utils.GetPodStatus(&pod)
+
+			if podStatus != "Running" && podStatus != "Completed" {
+				klog.Errorf("Pod %s/%s is not healthy: %s", namespace, pod.Name, podStatus)
+				return nil, fmt.Errorf("pod %s/%s is not healthy: %s", namespace, pod.Name, podStatus)
+			}
+
+			if !utils.IsPodReady(&pod) && pod.Status.Phase == corev1.PodRunning {
+				klog.Warningf("Pod %s/%s is running but not ready", namespace, pod.Name)
+				return nil, fmt.Errorf("pod %s/%s is running but not ready", namespace, pod.Name)
+			}
+		}
+	}
+
+	klog.Info("health checks passed for upgrade")
 
 	return newExecutionRes(true, nil), nil
 }
