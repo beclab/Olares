@@ -16,7 +16,6 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
-	"github.com/Masterminds/semver/v3"
 	cpu "github.com/klauspost/cpuid/v2"
 	"github.com/pbnjay/memory"
 )
@@ -59,11 +58,18 @@ type state struct {
 	UninstallingProgressNum int             `json:"-"`
 	UpgradingTarget         string          `json:"upgradingTarget"`
 	UpgradingRetryNum       int             `json:"upgradingRetryNum"`
+	UpgradingNextRetryAt    *time.Time      `json:"upgradingNextRetryAt,omitempty"`
 	UpgradingState          ProcessingState `json:"upgradingState"`
 	UpgradingStep           string          `json:"upgradingStep"`
 	UpgradingProgress       string          `json:"upgradingProgress"`
 	UpgradingProgressNum    int             `json:"-"`
 	UpgradingError          string          `json:"upgradingError"`
+
+	UpgradingDownloadState       ProcessingState `json:"upgradingDownloadState"`
+	UpgradingDownloadStep        string          `json:"upgradingDownloadStep"`
+	UpgradingDownloadProgress    string          `json:"upgradingDownloadProgress"`
+	UpgradingDownloadProgressNum int             `json:"-"`
+	UpgradingDownloadError       string          `json:"upgradingDownloadError"`
 
 	CollectingLogsState ProcessingState `json:"collectingLogsState"`
 	CollectingLogsError string          `json:"collectingLogsError"`
@@ -339,33 +345,24 @@ func CheckCurrentStatus(ctx context.Context) error {
 		}
 	}
 
-	targetVersion, err := GetOlaresUpgradeTarget()
+	// only set system state to Upgrading if actual upgrade should be in progress
+	// (not during download phase)
+	upgradeTarget, err := GetOlaresUpgradeTarget()
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting Olares upgrade target: %v", err.Error())
 	}
-	if targetVersion != nil {
-		// get current version and compare with target version
-		currentVersionStr, err := utils.GetTerminusVersion(ctx, dynamicClient)
-		if err != nil {
-			klog.Error("failed to get current version: ", err)
-			return err
-		}
-		currentVersion, err := semver.NewVersion(*currentVersionStr)
-		if err != nil || currentVersion.LessThan(targetVersion) {
-			CurrentState.UpgradingTarget = targetVersion.Original()
-			currentTerminusState = Upgrading
-			return nil
-		}
+	upgradeDownloadCompleted, err := IsUpgradeDownloadCompleted()
+	if err != nil {
+		return fmt.Errorf("error checking if upgrade download completed: %v", err.Error())
 	}
-
-	// not upgrading, reset upgrading status
-	CurrentState.UpgradingState = ""
-	CurrentState.UpgradingTarget = ""
-	CurrentState.UpgradingRetryNum = 0
-	CurrentState.UpgradingStep = ""
-	CurrentState.UpgradingProgressNum = 0
-	CurrentState.UpgradingProgress = ""
-	CurrentState.UpgradingError = ""
+	upgradeDownloadOnly, err := IsUpgradeDownloadOnly()
+	if err != nil {
+		return fmt.Errorf("error checking if upgrade download only: %v", err.Error())
+	}
+	if upgradeTarget != nil && upgradeDownloadCompleted && !upgradeDownloadOnly {
+		currentTerminusState = Upgrading
+		return nil
+	}
 
 	if tmsrunning, err := utils.IsTerminusRunning(ctx, kubeClient); err != nil {
 		currentTerminusState = SystemError

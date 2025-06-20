@@ -31,6 +31,10 @@ func newExecutionRes(finished bool, progressChan <-chan int) ExecutionRes {
 	}
 }
 
+func NewExecutionRes(finished bool, progressChan <-chan int) ExecutionRes {
+	return newExecutionRes(finished, progressChan)
+}
+
 type progressKeyword struct {
 	KeyWord     string
 	ProgressNum int
@@ -41,7 +45,7 @@ var itemProcessProgressRE = regexp.MustCompile(`\((\d+)/(\d+)\)`)
 
 func parseProgressFromItemProgress(line string) int {
 	matches := itemProcessProgressRE.FindAllStringSubmatch(line, 2)
-	if len(matches) != 3 {
+	if len(matches) != 1 || len(matches[0]) != 3 {
 		return 0
 	}
 	indexStr, totalStr := matches[0][1], matches[0][2]
@@ -53,5 +57,5 @@ func parseProgressFromItemProgress(line string) int {
 	if total == 0 || err != nil {
 		return 0
 	}
-	return int(math.Round(index / total * 90))
+	return int(math.Round((index / total) * 90.0))
 }

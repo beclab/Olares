@@ -143,6 +143,28 @@ func GetOlaresUpgradeTarget() (*semver.Version, error) {
 	return version, nil
 }
 
+func IsUpgradeDownloadOnly() (bool, error) {
+	_, err := os.Stat(commands.UPGRADE_DOWNLOADONLY_FILE)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func IsUpgradeDownloadCompleted() (bool, error) {
+	_, err := os.Stat(commands.UPGRADE_DOWNLOADED_FILE)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func IsIpChangeRunning() (bool, error) {
 	running, err := isProcessRunning(commands.CHANGINGIP_PID_FILE)
 	if err != nil {

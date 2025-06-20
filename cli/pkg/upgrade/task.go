@@ -197,7 +197,7 @@ func (u *UpgradeSystemComponents) Execute(runtime connector.Runtime) error {
 		return err
 	}
 
-	actionConfig, settings, err = utils.InitConfig(config, common.NamespaceOsPlatform)
+	actionConfig, settings, err = utils.InitConfig(config, common.NamespaceOsFramework)
 	if err != nil {
 		return err
 	}

@@ -50,10 +50,10 @@ func (s *server) Start() error {
 
 	cmd.Post("/upgrade", s.handlers.RequireSignature(
 		s.handlers.WaitServerRunning(
-			s.handlers.RunCommand(s.handlers.RequestOlaresUpgrade, upgrade.NewCreateTarget))))
+			s.handlers.RunCommand(s.handlers.RequestOlaresUpgrade, upgrade.NewCreateUpgradeTarget))))
 
 	cmd.Delete("/upgrade", s.handlers.RequireSignature(
-		s.handlers.RunCommand(s.handlers.CancelOlaresUpgrade, upgrade.NewRemoveTarget)))
+		s.handlers.RunCommand(s.handlers.CancelOlaresUpgrade, upgrade.NewRemoveUpgradeTarget)))
 
 	cmd.Post("/reboot", s.handlers.RequireSignature(
 		s.handlers.WaitServerRunning(
