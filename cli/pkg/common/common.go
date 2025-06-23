@@ -265,7 +265,7 @@ const (
 	CacheAppServicePod = "app_service_pod_name"
 	CacheAppValues     = "app_built_in_values"
 
-	CacheCountPodsUsingHostIP = "count_pods_using_host_ip"
+	CacheCountPodsWaitForRecreation = "count_pods_wait_for_recreation"
 
 	CacheUpgradeUsers     = "upgrade_users"
 	CacheUpgradeAdminUser = "upgrade_admin_user"

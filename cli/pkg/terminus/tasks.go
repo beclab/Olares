@@ -453,14 +453,21 @@ func (a *DeletePodsUsingHostIP) Execute(runtime connector.Runtime) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get pods using host IP")
 	}
-	a.PipelineCache.Set(common.CacheCountPodsUsingHostIP, len(targetPods))
+	var waitRecreationPodsCount int
 	for _, pod := range targetPods {
 		logger.Infof("restarting pod %s/%s that's using host IP", pod.Namespace, pod.Name)
 		err = kubeClient.CoreV1().Pods(pod.Namespace).Delete(context.Background(), pod.Name, metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return errors.Wrap(err, "failed to delete pod")
 		}
+
+		// pods not created by any owner resource
+		// may not be recreated immediately and should not be waited
+		if len(pod.OwnerReferences) > 0 {
+			waitRecreationPodsCount++
+		}
 	}
+	a.PipelineCache.Set(common.CacheCountPodsWaitForRecreation, waitRecreationPodsCount)
 
 	// try our best to wait for the pods to be actually deleted
 	// to avoid the next module getting the pods with a still running phase
@@ -479,7 +486,7 @@ type WaitForPodsUsingHostIPRecreate struct {
 }
 
 func (a *WaitForPodsUsingHostIPRecreate) Execute(runtime connector.Runtime) error {
-	count, ok := a.PipelineCache.GetMustInt(common.CacheCountPodsUsingHostIP)
+	count, ok := a.PipelineCache.GetMustInt(common.CacheCountPodsWaitForRecreation)
 	if !ok {
 		return errors.New("failed to get the count of pods using host IP")
 	}
