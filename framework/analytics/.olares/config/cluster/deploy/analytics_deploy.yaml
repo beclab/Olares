@@ -83,7 +83,7 @@ spec:
             value: os_framework_analytics
       containers:
       - name: analytics-server
-        image: beclab/analytics-api:v0.0.6
+        image: beclab/analytics-api:v0.0.7
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
