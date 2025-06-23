@@ -429,12 +429,12 @@ webui:
 
   image:
     frontend:
-      repository: projecthami/hami-webui-fe-oss
+      repository: beclab/hami-webui-fe-oss
       pullPolicy: IfNotPresent
       # Overrides the image tag whose default is the chart appVersion.
       tag: "v1.0.5"
     backend:
-      repository: projecthami/hami-webui-be-oss
+      repository: beclab/hami-webui-be-oss
       pullPolicy: IfNotPresent
       tag: "v1.0.5"
 
