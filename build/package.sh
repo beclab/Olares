@@ -74,6 +74,6 @@ echo "packaging launcher ..."
 run_cmd "cp -rf framework/bfl/.olares/config/launcher ${DIST}/wizard/config/"
 
 echo "packaging gpu ..."
-run_cmd "cp -rf framework/gpu/.olares/config/gpu ${DIST}/wizard/config/"
+run_cmd "cp -rf infrastructure/gpu/.olares/config/gpu ${DIST}/wizard/config/"
 
 echo "packaging completed"

@@ -5,9 +5,9 @@ output:
     - 
       name: beclab/hami:v2.5.2-share-12
     - 
-      name: projecthami/hami-webui-fe-oss:v1.0.5
+      name: beclab/hami-webui-fe-oss:v1.0.5
     - 
-      name: projecthami/hami-webui-be-oss:v1.0.5
+      name: beclab/hami-webui-be-oss:v1.0.5
     - 
       name: nvidia/dcgm-exporter:4.1.1-4.0.4-ubuntu22.04
       
