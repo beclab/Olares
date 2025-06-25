@@ -247,6 +247,15 @@ spec:
       labels:
         app: tailscale
     spec:
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: headscale
+              topologyKey: kubernetes.io/hostname
+            weight: 100
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
