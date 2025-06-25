@@ -200,6 +200,8 @@ func (g *GenerateK3sService) Execute(runtime connector.Runtime) error {
 		"containerd":              container.DefaultContainerdCRISocket,
 		"cgroup-driver":           "systemd",
 		"runtime-request-timeout": "5m",
+		"image-gc-high-threshold": "91",
+		"image-gc-low-threshold":  "90",
 	}
 	defaultKubeProxyArgs := map[string]string{
 		"proxy-mode": "ipvs",
