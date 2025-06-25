@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
+	semver "github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/daemon/pkg/cli"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/nxadm/tail"
 	"k8s.io/klog/v2"
-	semver "github.com/Masterminds/semver/v3"
 )
 
 type prepareOlaresd struct {

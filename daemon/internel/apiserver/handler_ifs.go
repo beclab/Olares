@@ -80,24 +80,32 @@ func (h *handlers) GetNetIfs(ctx *fiber.Ctx) error {
 			}
 		}
 
+		devices, err := utils.GetAllDevice(ctx.Context())
+		if err != nil {
+			klog.Error("get all devices error, ", err)
+			return h.ErrJSON(ctx, http.StatusServiceUnavailable, err.Error())
+		}
+
+		if d, ok := devices[r.Iface]; ok {
+			r.Ipv4Gateway = &d.Ipv4Gateway
+			r.Ipv6Gateway = &d.Ipv6Gateway
+			r.Ipv4DNS = &d.Ipv4DNS
+			r.Ipv6DNS = &d.Ipv6DNS
+			r.Ipv6Address = &d.Ipv6Address
+			r.Ipv4Mask = &d.Ipv4Mask
+			r.Method = &d.Method
+		}
+
+		if rx, tx, err := utils.GetInterfaceTraffic(r.Iface); err == nil {
+			r.RxRate = ptr.To(rx)
+			r.TxRate = ptr.To(tx)
+		} else {
+			klog.Error("get interface rx/tx rate error, ", err)
+		}
+
 		if test == "true" {
 			if r.IP != "" {
 				r.InternetConnected = ptr.To(utils.CheckInterfaceIPv4Connectivity(ctx.Context(), i.Iface.Name))
-			}
-			devices, err := utils.GetAllDevice(ctx.Context())
-			if err != nil {
-				klog.Error("get all devices error, ", err)
-				return h.ErrJSON(ctx, http.StatusServiceUnavailable, err.Error())
-			}
-
-			if d, ok := devices[r.Iface]; ok {
-				r.Ipv4Gateway = &d.Ipv4Gateway
-				r.Ipv6Gateway = &d.Ipv6Gateway
-				r.Ipv4DNS = &d.Ipv4DNS
-				r.Ipv6DNS = &d.Ipv6DNS
-				r.Ipv6Address = &d.Ipv6Address
-				r.Ipv4Mask = &d.Ipv4Mask
-				r.Method = &d.Method
 			}
 
 			if r.Ipv6Address != nil && *r.Ipv6Address != "" {
@@ -106,12 +114,6 @@ func (h *handlers) GetNetIfs(ctx *fiber.Ctx) error {
 				r.Ipv6Connectivity = &connected
 			}
 
-			if rx, tx, err := utils.GetInterfaceTraffic(r.Iface); err == nil {
-				r.RxRate = ptr.To(rx)
-				r.TxRate = ptr.To(tx)
-			} else {
-				klog.Error("get interface rx/tx rate error, ", err)
-			}
 		}
 
 		res = append(res, r)

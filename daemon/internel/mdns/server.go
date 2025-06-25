@@ -43,6 +43,7 @@ func (s *server) Close() {
 	if s.server != nil {
 		klog.Info("mDNS server shutdown ")
 		s.server.Shutdown()
+		s.registeredIP = "" // clear the registered IP
 	}
 }
 
