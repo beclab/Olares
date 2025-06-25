@@ -307,6 +307,8 @@ func GetKubeletConfiguration(runtime connector.Runtime, kubeConf *common.KubeCon
 		"evictionPressureTransitionPeriod": "30s",
 		"featureGates":                     FeatureGatesDefaultConfiguration,
 		"runtimeRequestTimeout":            "5m",
+		"imageGCHighThresholdPercent":      91,
+		"imageGCLowThresholdPercent":       90,
 	}
 
 	if securityEnhancement {
