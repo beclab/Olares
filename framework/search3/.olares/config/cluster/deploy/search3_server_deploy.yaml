@@ -240,7 +240,7 @@ spec:
             value: os_framework_search3
       containers:
       - name: search3
-        image: beclab/search3:v0.0.47
+        image: beclab/search3:v0.0.49
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -270,8 +270,27 @@ spec:
           value: os.users
         - name: NATS_SUBJECT_SYSTEM_GROUPS
           value: os.groups
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: search3monitor
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: search3monitor
+spec:
+  selector:
+    matchLabels:
+      app: search3monitor
+  template:
+    metadata:
+      labels:
+        app: search3monitor
+    spec:
+      serviceAccountName: os-internal
+      containers:
       - name: search3monitor
-        image: beclab/search3monitor:v0.0.47
+        image: beclab/search3monitor:v0.0.49
         imagePullPolicy: IfNotPresent
         env:
         - name: NODE_IP
@@ -282,6 +301,18 @@ spec:
           value: $(NODE_IP):18088  
         - name: DATABASE_URL
           value: postgres://search3_os_framework:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-platform:5432/os_framework_search3
+        - name: SEARCH3_SERVER_ADDRESS
+          value: search3.os-framework:80
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
         volumeMounts:
           - name: fb-data
             mountPath: /appdata
@@ -296,6 +327,24 @@ spec:
           privileged: true
           runAsUser: 0
           allowPrivilegeEscalation: true
+      volumes:
+        - name: userspace-dir
+          hostPath:
+            path: /olares/rootfs/userspace
+            type: Directory
+        - name: fb-data
+          hostPath:
+            path: /olares/userdata/Cache/files
+            type: DirectoryOrCreate
+        - name: upload-appdata
+          hostPath:
+            path: /olares/userdata/Cache
+            type: DirectoryOrCreate
+        - name: shared-lib
+          hostPath:
+            path: /olares/share
+            type: Directory
+
 ---
 apiVersion: v1
 kind: Service
