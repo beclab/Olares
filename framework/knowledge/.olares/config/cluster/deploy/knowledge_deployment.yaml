@@ -96,7 +96,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   app: knowledge
-  appNamespace: {{ .Release.Namespace }}
+  appNamespace: os
   middleware: nats
   nats:
     password:
@@ -105,13 +105,6 @@ spec:
           key: nat_password
           name: knowledge-secrets
     refs:
-    - appName: download
-      appNamespace: os
-      subjects:
-      - name: download_status
-        perm:
-        - pub
-        - sub
     - appName: user-service
       appNamespace: os
       subjects:
@@ -120,7 +113,7 @@ spec:
             - pub
             - sub
     subjects:
-      - name: knowledge
+      - name: download_status
         permission:
           pub: allow
           sub: allow
@@ -400,42 +393,7 @@ spec:
     - protocol: TCP
       name: knowledge-api
       port: 3010
-      targetPort: 3010  
-
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: download-nat
-  namespace: {{ .Release.Namespace }}
-spec:
-  app: download
-  appNamespace: {{ .Release.Namespace }}
-  middleware: nats
-  nats:
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: nat_password
-          name: knowledge-secrets
-    refs:
-      - appName: user-service
-        appNamespace: user
-        subjects:
-          - name: knowledge.*
-            perm:
-              - pub
-              - sub
-    subjects:
-    - name: download_status
-      permission:
-        pub: allow
-        sub: allow
-      export:
-      - appName: knowledge
-        sub: allow
-        pub: allow
-    user: {{ .Release.Namespace }}-download
+      targetPort: 3010
 ---
 
 
@@ -557,7 +515,7 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: {{ .Release.Namespace }}-download
+          value: os-knowledge
         - name: NATS_PASSWORD
           value: {{ $nat_password | b64dec }}
         - name: NATS_SUBJECT
@@ -601,7 +559,7 @@ spec:
         - name: NATS_PORT
           value: "4222"
         - name: NATS_USERNAME
-          value: {{ .Release.Namespace }}-download
+          value: os-knowledge
         - name: NATS_PASSWORD
           value: {{ $nat_password | b64dec }}
         - name: NATS_SUBJECT

@@ -748,12 +748,12 @@ spec:
             sum (node_cpu_seconds_total{job="node-exporter", mode=~"user|nice|system|iowait|irq|softirq"}) by (cpu, instance, job, namespace, pod)
           record: node_cpu_used_seconds_total
         - expr: |
-            max(kube_pod_info{job="kube-state-metrics"} * on(node) group_left(role) kube_node_role{job="kube-state-metrics", role="master"} or on(pod, namespace) kube_pod_info{job="kube-state-metrics"}) by (node, namespace, host_ip, role, pod)
+            max(kube_pod_info{job="kube-state-metrics"} * on(node) group_left(role) kube_node_role{job="kube-state-metrics", role="master"} or on(pod, namespace) kube_pod_info{job="kube-state-metrics"}) by (node, namespace, role, pod)
           record: 'node_namespace_pod:kube_pod_info:'
         - expr: |
-            count by (node, host_ip, role) (sum by (node, cpu, host_ip, role) (
+            count by (node, role) (sum by (node, cpu, role) (
               node_cpu_seconds_total{job="node-exporter"}
-            * on (namespace, pod) group_left(node, host_ip, role)
+            * on (namespace, pod) group_left(node, role)
               node_namespace_pod:kube_pod_info:
             ))
           record: node:node_num_cpu:sum
@@ -761,27 +761,27 @@ spec:
             avg(irate(node_cpu_used_seconds_total{job="node-exporter"}[5m]))
           record: :node_cpu_utilisation:avg1m
         - expr: |
-            avg by (node, host_ip, role) (
+            avg by (node, role) (
               irate(node_cpu_used_seconds_total{job="node-exporter"}[5m])
-            * on (namespace, pod) group_left(node, host_ip, role)
+            * on (namespace, pod) group_left(node, role)
               node_namespace_pod:kube_pod_info:)
           record: node:node_cpu_utilisation:avg1m
         - expr: |
-            avg by (node, host_ip, role) (
+            avg by (node, role) (
               irate(node_cpu_seconds_total{job="node-exporter",mode=~"user"}[5m])
-            * on (namespace, pod) group_left(node, host_ip, role)
+            * on (namespace, pod) group_left(node, role)
             node_namespace_pod:kube_pod_info:)
           record: node:node_user_cpu_utilisation:avg1m
         - expr: |
-            avg by (node, host_ip, role) (
+            avg by (node, role) (
               irate(node_cpu_seconds_total{job="node-exporter",mode=~"system"}[5m])
-            * on (namespace, pod) group_left(node, host_ip, role)
+            * on (namespace, pod) group_left(node, role)
             node_namespace_pod:kube_pod_info:)
           record: node:node_system_cpu_utilisation:avg1m
         - expr: |
-            avg by (node, host_ip, role) (
+            avg by (node, role) (
               irate(node_cpu_seconds_total{job="node-exporter",mode=~"iowait"}[5m])
-            * on (namespace, pod) group_left(node, host_ip, role)
+            * on (namespace, pod) group_left(node, role)
             node_namespace_pod:kube_pod_info:)
           record: node:node_iowait_cpu_utilisation:avg1m
         - expr: |
@@ -806,9 +806,9 @@ spec:
             label_replace(node_memory_Cached_bytes, "node", "$1", "instance", "(.*)")
           record: node:node_memory_Cached_bytes
         - expr: |
-            sum by (node, host_ip, role) (
+            sum by (node, role) (
               (node_memory_Slab_bytes{job="node-exporter"} + node_memory_KernelStack_bytes{job="node-exporter"} + node_memory_PageTables_bytes{job="node-exporter"}+ node_memory_HardwareCorrupted_bytes{job="node-exporter"}+node_memory_Bounce_bytes{job="node-exporter"}-node_memory_SReclaimable_bytes{job="node-exporter"})
-              * on (namespace, pod) group_left(node, host_ip, role)
+              * on (namespace, pod) group_left(node, role)
                 node_namespace_pod:kube_pod_info:
             )
           record: node:node_memory_system_reserved
@@ -825,16 +825,16 @@ spec:
             sum(node_memory_MemTotal_bytes{job="node-exporter"})
           record: ':node_memory_utilisation:'
         - expr: |
-            sum by (node, host_ip, role) (
+            sum by (node, role) (
               (node_memory_MemFree_bytes{job="node-exporter"} + node_memory_Cached_bytes{job="node-exporter"} + node_memory_Buffers_bytes{job="node-exporter"} + node_memory_SReclaimable_bytes{job="node-exporter"})
-              * on (namespace, pod) group_left(node, host_ip, role)
+              * on (namespace, pod) group_left(node, role)
                 node_namespace_pod:kube_pod_info:
             )
           record: node:node_memory_bytes_available:sum
         - expr: |
-            sum by (node, host_ip, role) (
+            sum by (node, role) (
               node_memory_MemTotal_bytes{job="node-exporter"}
-              * on (namespace, pod) group_left(node, host_ip, role)
+              * on (namespace, pod) group_left(node, role)
                 node_namespace_pod:kube_pod_info:
             )
           record: node:node_memory_bytes_total:sum
@@ -842,30 +842,30 @@ spec:
             1 - (node:node_memory_bytes_available:sum / node:node_memory_bytes_total:sum)
           record: 'node:node_memory_utilisation:'
         - expr: |
-            sum by (node, host_ip, role) (
+            sum by (node, role) (
               irate(node_disk_reads_completed_total{job="node-exporter"}[5m])
-            * on (namespace, pod) group_left(node, host_ip, role)
+            * on (namespace, pod) group_left(node, role)
               node_namespace_pod:kube_pod_info:
             )
           record: node:data_volume_iops_reads:sum
         - expr: |
-            sum by (node, host_ip, role) (
+            sum by (node, role) (
               irate(node_disk_writes_completed_total{job="node-exporter"}[5m])
-            * on (namespace, pod) group_left(node, host_ip, role)
+            * on (namespace, pod) group_left(node, role)
               node_namespace_pod:kube_pod_info:
             )
           record: node:data_volume_iops_writes:sum
         - expr: |
-            sum by (node, host_ip, role) (
+            sum by (node, role) (
               irate(node_disk_read_bytes_total{job="node-exporter"}[5m])
-            * on (namespace, pod) group_left(node, host_ip, role)
+            * on (namespace, pod) group_left(node, role)
               node_namespace_pod:kube_pod_info:
             )
           record: node:data_volume_throughput_bytes_read:sum
         - expr: |
-            sum by (node, host_ip, role) (
+            sum by (node, role) (
               irate(node_disk_written_bytes_total{job="node-exporter"}[5m])
-            * on (namespace, pod) group_left(node, host_ip, role)
+            * on (namespace, pod) group_left(node, role)
               node_namespace_pod:kube_pod_info:
             )
           record: node:data_volume_throughput_bytes_written:sum
@@ -874,74 +874,74 @@ spec:
             sum(irate(node_network_transmit_bytes_total{job="node-exporter",device!~"veth.+"}[5m]))
           record: :node_net_utilisation:sum_irate
         - expr: |
-            sum by (node, host_ip, role) (
+            sum by (node, role) (
               (irate(node_network_receive_bytes_total{job="node-exporter",device!~"veth.+"}[5m]) +
               irate(node_network_transmit_bytes_total{job="node-exporter",device!~"veth.+"}[5m]))
-            * on (namespace, pod) group_left(node, host_ip, role)
+            * on (namespace, pod) group_left(node, role)
               node_namespace_pod:kube_pod_info:
             )
           record: node:node_net_utilisation:sum_irate
         - expr: |
-            sum by (node, host_ip, role) (
+            sum by (node, role) (
               irate(node_network_transmit_bytes_total{job="node-exporter",device!~"veth.+"}[5m])
-            * on (namespace, pod) group_left(node, host_ip, role)
+            * on (namespace, pod) group_left(node, role)
               node_namespace_pod:kube_pod_info:
             )
           record: node:node_net_bytes_transmitted:sum_irate
         - expr: |
-            sum by (node, host_ip, role) (
+            sum by (node, role) (
               irate(node_network_receive_bytes_total{job="node-exporter",device!~"veth.+"}[5m])
-            * on (namespace, pod) group_left(node, host_ip, role)
+            * on (namespace, pod) group_left(node, role)
               node_namespace_pod:kube_pod_info:
             )
           record: node:node_net_bytes_received:sum_irate
         - expr: |
-            sum by(node, host_ip, role) (sum(max(node_filesystem_files{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}) by (device, pod, namespace)) by (pod, namespace) * on (namespace, pod) group_left(node, host_ip, role) node_namespace_pod:kube_pod_info:)
+            sum by(node, role) (sum(max(node_filesystem_files{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}) by (device, pod, namespace)) by (pod, namespace) * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:)
           record: 'node:node_inodes_total:'
         - expr: |
-            sum by(node, host_ip, role) (sum(max(node_filesystem_files_free{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}) by (device, pod, namespace)) by (pod, namespace) * on (namespace, pod) group_left(node, host_ip, role) node_namespace_pod:kube_pod_info:)
+            sum by(node, role) (sum(max(node_filesystem_files_free{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}) by (device, pod, namespace)) by (pod, namespace) * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:)
           record: 'node:node_inodes_free:'
         - expr: |
-            sum by (node, host_ip, role) (node_load1{job="node-exporter"} * on (namespace, pod) group_left(node, host_ip, role) node_namespace_pod:kube_pod_info:) / node:node_num_cpu:sum
+            sum by (node, role) (node_load1{job="node-exporter"} * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:) / node:node_num_cpu:sum
           record: node:load1:ratio
         - expr: |
-            sum by (node, host_ip, role) (node_load5{job="node-exporter"} * on (namespace, pod) group_left(node, host_ip, role) node_namespace_pod:kube_pod_info:) / node:node_num_cpu:sum
+            sum by (node, role) (node_load5{job="node-exporter"} * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:) / node:node_num_cpu:sum
           record: node:load5:ratio
         - expr: |
-            sum by (node, host_ip, role) (node_load15{job="node-exporter"} * on (namespace, pod) group_left(node, host_ip, role) node_namespace_pod:kube_pod_info:) / node:node_num_cpu:sum
+            sum by (node, role) (node_load15{job="node-exporter"} * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:) / node:node_num_cpu:sum
           record: node:load15:ratio
         - expr: |
-            sum by (node, host_ip, role) ((kube_pod_status_scheduled{job="kube-state-metrics", condition="true"} > 0)  * on (namespace, pod) group_left(node, host_ip, role) node_namespace_pod:kube_pod_info:)
+            sum by (node, role) ((kube_pod_status_scheduled{job="kube-state-metrics", condition="true"} > 0)  * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:)
           record: node:pod_count:sum
         - expr: |
-            (sum(kube_node_status_capacity{resource="pods", job="kube-state-metrics"}) by (node) * on(node) group_left(host_ip, role) max by(node, host_ip, role) (node_namespace_pod:kube_pod_info:{node!="",host_ip!=""}))
+            (sum(kube_node_status_capacity{resource="pods", job="kube-state-metrics"}) by (node) * on(node) group_left(role) max by(node, role) (node_namespace_pod:kube_pod_info:{node!=""}))
           record: node:pod_capacity:sum
         - expr: |
             node:pod_running:count / node:pod_capacity:sum
           record: node:pod_utilization:ratio
         - expr: |
-            count(node_namespace_pod:kube_pod_info: unless on (pod, namespace) (kube_pod_status_phase{job="kube-state-metrics", phase=~"Failed|Pending|Unknown|Succeeded"} > 0)) by (node, host_ip, role)
+            count(node_namespace_pod:kube_pod_info: unless on (pod, namespace) (kube_pod_status_phase{job="kube-state-metrics", phase=~"Failed|Pending|Unknown|Succeeded"} > 0)) by (node, role)
           record: node:pod_running:count
         - expr: |
-            count(node_namespace_pod:kube_pod_info: unless on (pod, namespace) (kube_pod_status_phase{job="kube-state-metrics", phase=~"Failed|Pending|Unknown|Running"} > 0)) by (node, host_ip, role)
+            count(node_namespace_pod:kube_pod_info: unless on (pod, namespace) (kube_pod_status_phase{job="kube-state-metrics", phase=~"Failed|Pending|Unknown|Running"} > 0)) by (node, role)
           record: node:pod_succeeded:count
         - expr: |
-            count(node_namespace_pod:kube_pod_info:{node!="",host_ip!=""} unless on (pod, namespace) (kube_pod_status_phase{job="kube-state-metrics", phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{job="kube-state-metrics", condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{job="kube-state-metrics", phase="Running"}>0)) unless on (pod, namespace) kube_pod_container_status_waiting_reason{job="kube-state-metrics", reason="ContainerCreating"}>0) by (node, host_ip, role)
+            count(node_namespace_pod:kube_pod_info:{node!=""} unless on (pod, namespace) (kube_pod_status_phase{job="kube-state-metrics", phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{job="kube-state-metrics", condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{job="kube-state-metrics", phase="Running"}>0)) unless on (pod, namespace) kube_pod_container_status_waiting_reason{job="kube-state-metrics", reason="ContainerCreating"}>0) by (node, role)
           record: node:pod_abnormal:count
         - expr: |
             (count by(namespace, cluster) (kube_pod_info{job="kube-state-metrics"} unless on(pod, namespace, cluster) (kube_pod_status_phase{job="kube-state-metrics",phase="Succeeded"} > 0) unless on(pod, namespace, cluster) ((kube_pod_status_ready{condition="true",job="kube-state-metrics"} > 0) and on(pod, namespace, cluster) (kube_pod_status_phase{job="kube-state-metrics",phase="Running"} > 0)) unless on(pod, namespace, cluster) kube_pod_container_status_waiting_reason{job="kube-state-metrics",reason="ContainerCreating"} > 0) or on(namespace, cluster) (group by(namespace, cluster) (kube_pod_info{job="kube-state-metrics"}) * 0)) * on(namespace, cluster) group_left(user) (kube_namespace_labels{job="kube-state-metrics"}) > 0
           record: user:pod_abnormal:count
         - expr: |
-            node:pod_abnormal:count / count(node_namespace_pod:kube_pod_info:{node!="",host_ip!=""} unless on (pod, namespace) kube_pod_status_phase{job="kube-state-metrics", phase="Succeeded"}>0) by (node, host_ip, role)
+            node:pod_abnormal:count / count(node_namespace_pod:kube_pod_info:{node!=""} unless on (pod, namespace) kube_pod_status_phase{job="kube-state-metrics", phase="Succeeded"}>0) by (node, role)
           record: node:pod_abnormal:ratio
         - expr: |
-            user:pod_abnormal:count / count(node_namespace_pod:kube_pod_info:{node!="",host_ip!=""} unless on (pod, namespace) kube_pod_status_phase{job="kube-state-metrics", phase="Succeeded"}>0) by (node, host_ip, role)
+            user:pod_abnormal:count / count(node_namespace_pod:kube_pod_info:{node!=""} unless on (pod, namespace) kube_pod_status_phase{job="kube-state-metrics", phase="Succeeded"}>0) by (node, role)
           record: user:pod_abnormal:ratio
         - expr: |
-            sum(max(node_filesystem_avail_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"} * on (namespace, pod) group_left(node, host_ip, role) node_namespace_pod:kube_pod_info:) by (device, node, host_ip, role)) by (node, host_ip, role)
+            sum(max(node_filesystem_avail_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"} * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:) by (device, node, role)) by (node, role)
           record: 'node:disk_space_available:'
         - expr: |
-            1- sum(max(node_filesystem_avail_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"} * on (namespace, pod) group_left(node, host_ip, role) node_namespace_pod:kube_pod_info:) by (device, node, host_ip, role)) by (node, host_ip, role) / sum(max(node_filesystem_size_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"} * on (namespace, pod) group_left(node, host_ip, role) node_namespace_pod:kube_pod_info:) by (device, node, host_ip, role)) by (node, host_ip, role)
+            1- sum(max(node_filesystem_avail_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"} * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:) by (device, node, role)) by (node, role) / sum(max(node_filesystem_size_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"} * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:) by (device, node, role)) by (node, role)
           record: node:disk_space_utilization:ratio
         - expr: |
             (1 - (node:node_inodes_free: / node:node_inodes_total:))

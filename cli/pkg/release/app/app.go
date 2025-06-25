@@ -117,7 +117,7 @@ func (m *Manager) packageLauncher() error {
 func (m *Manager) packageGPU() error {
 	fmt.Println("packaging gpu ...")
 	return util.CopyDirectory(
-		filepath.Join(m.olaresRepoRoot, "framework/gpu/.olares/config/gpu"),
+		filepath.Join(m.olaresRepoRoot, "infrastructure/gpu/.olares/config/gpu"),
 		filepath.Join(m.distPath, "wizard/config/gpu"),
 	)
 }
