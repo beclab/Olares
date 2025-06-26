@@ -5993,6 +5993,8 @@ spec:
             # Enable or Disable VXLAN on the default IPv6 IP pool.
             - name: CALICO_IPV6POOL_VXLAN
               value: "Never"
+            - name: FELIX_HEALTHHOST
+              value: 127.0.0.1
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
               valueFrom:
