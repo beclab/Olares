@@ -407,7 +407,7 @@ spec:
             - -c
             - |
               rm /etc/nginx/conf.d/default.conf
-              cp -r /www/nginxs/* /ect/nginx/conf.d/
+              cp -r /www/nginxs/* /etc/nginx/conf.d/
               rm -rf /www/nginxs/
               nginx -g 'daemon off;'
           volumeMounts:
