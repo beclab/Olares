@@ -237,9 +237,9 @@ devices:
 
 dcgmExporter:
   image:
-    repository: nvidia/dcgm-exporter
+    repository: beclab/dcgm-exporter
     pullPolicy: IfNotPresent
-    tag: 4.1.1-4.0.4-ubuntu22.04
+    tag: 4.2.3-4.1.3-ubuntu22.04
 
   # Change the following reference to "/etc/dcgm-exporter/default-counters.csv"
   # to stop profiling metrics from DCGM
