@@ -5,6 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/component: workflow-controller
+    applications.app.bytetrade.io/author: bytetrade.io
     app.kubernetes.io/instance: argo
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: argoworkflows-workflow-controller

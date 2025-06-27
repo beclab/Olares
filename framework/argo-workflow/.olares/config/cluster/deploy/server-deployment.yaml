@@ -5,6 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: argoworkflows
+    applications.app.bytetrade.io/author: bytetrade.io
     app.kubernetes.io/managed-by: Helm
   annotations:
     applications.app.bytetrade.io/icon: https://argoproj.github.io/argo-workflows/assets/logo.png
