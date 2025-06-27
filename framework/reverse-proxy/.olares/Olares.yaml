@@ -3,7 +3,7 @@ target: prebuilt
 output:
   containers:
     - 
-      name: beclab/reverse-proxy:v0.1.8
+      name: beclab/reverse-proxy:v0.1.10
 
 
       
