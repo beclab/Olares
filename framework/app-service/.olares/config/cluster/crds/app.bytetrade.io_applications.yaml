@@ -94,6 +94,8 @@ spec:
                     title:
                       description: Optional. if invisible=true.
                       type: string
+                    url:
+                      type: string
                     windowPushState:
                       type: boolean
                   required:

@@ -188,7 +188,7 @@ spec:
 
       containers:
         - name: studio
-          image: beclab/studio-server:v0.1.51
+          image: beclab/studio-server:v0.1.52
           imagePullPolicy: IfNotPresent
           args:
             - server
@@ -206,6 +206,8 @@ spec:
               mountPath: /data
             - mountPath: /etc/certs
               name: certs
+            - mountPath: /storage
+              name: storage-volume
           lifecycle:
             preStop:
               exec:

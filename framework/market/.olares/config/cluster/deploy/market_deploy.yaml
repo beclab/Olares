@@ -1,0 +1,275 @@
+{{- $market_secret := (lookup "v1" "Secret" .Release.Namespace "market-secrets") -}}
+
+{{- $redis_password := "" -}}
+{{ if $market_secret -}}
+{{ $redis_password = (index $market_secret "data" "redis-passwords") }}
+{{ else -}}
+{{ $redis_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+{{- $market_backend_nats_secret := (lookup "v1" "Secret" .Release.Namespace "market-backend-nats-secret") -}}
+{{- $nats_password := "" -}}
+{{ if $market_backend_nats_secret -}}
+{{ $nats_password = (index $market_backend_nats_secret "data" "nats_password") }}
+{{ else -}}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+
+{{- $pg_secret := (lookup "v1" "Secret" .Release.Namespace "market-pg-secrets") -}}
+{{- $pg_password := "" -}}
+{{ if $pg_secret -}}
+{{ $pg_password = (index $pg_secret "data" "pg_password") }}
+{{ else -}}
+{{ $pg_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: market-backend-nats-secret
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  nats_password: {{ $nats_password }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: market-secrets
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  redis-passwords: {{ $redis_password }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: market-pg-secrets
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  pg-passwords: {{ $redis_password }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: market-deployment
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: appstore
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: appstore
+  template:
+    metadata:
+      labels:
+        app: appstore
+        io.bytetrade.app: "true"
+      annotations:
+        instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
+        instrumentation.opentelemetry.io/go-container-names: "appstore-backend"    
+        instrumentation.opentelemetry.io/otel-go-auto-target-exe: "/opt/app/market"
+    spec:
+      priorityClassName: "system-cluster-critical"
+      initContainers:
+        - args:
+          - -it
+          - authelia-backend.os-framework:9091
+          image: owncloudci/wait-for:latest
+          imagePullPolicy: IfNotPresent
+          name: check-auth      
+      containers:
+      - name: appstore-backend
+        image: beclab/market-backend:v0.4.3
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 81
+        env:
+          {{- range $key, $val := .Values.terminusGlobalEnvs }}
+          - name: {{ $key }}
+            value: {{ $val | quote }}
+          {{- end }}
+          - name: APP_SOTRE_SERVICE_SERVICE_PORT                                   
+            value: "443"                                                           
+          - name: APP_SERVICE_SERVICE_HOST                                         
+            value: app-service                                                     
+          - name: APP_SERVICE_SERVICE_PORT                                         
+            value: "6755"
+          - name: REPO_URL_PORT
+            value: "82/"                                                         
+          - name: REPO_URL_HOST                                                    
+            valueFrom:                                                             
+              fieldRef:                                                            
+                apiVersion: v1                                                     
+                fieldPath: status.podIP                                            
+          - name: NATS_HOST                                                        
+            value: nats.os-platform                                                            
+          - name: NATS_PORT                                                        
+            value: "4222"                                                          
+          - name: NATS_USERNAME                                                    
+            value: os-market-backend                                       
+          - name: NATS_PASSWORD                                                    
+            valueFrom:                                                             
+              secretKeyRef:                                                        
+                key: nats_password                                                 
+                name: market-backend-nats-secret                                   
+          - name: SYNCER_REMOTE                                                    
+            value: https://appstore-china-server-prod.api.jointerminus.cn        
+          - name: REDIS_HOST                                                       
+            value: redis-cluster-proxy.os-platform                                   
+          - name: REDIS_PORT                                                       
+            value: "6379"
+          - name: REDIS_PASSWORD                                                   
+            valueFrom:                                                             
+              secretKeyRef:                                                        
+                key: redis-passwords                                               
+                name: market-secrets                                               
+          - name: REDIS_DB_NUMBER                                                  
+            value: "0"                                                             
+          - name: POSTGRES_HOST                                                    
+            value: citus-headless.os-platform                                        
+          - name: POSTGRES_PORT                                                    
+            value: "5432"                                                          
+          - name: POSTGRES_DB                                                      
+            value: os_framework_market                                                
+          - name: POSTGRES_USER                                                    
+            value: market_os_system                                                
+          - name: POSTGRES_PASSWORD                                                
+            valueFrom:                                                             
+              secretKeyRef:                                                        
+                key: pg-passwords                                                  
+                name: market-pg-secrets                                            
+          - name: API_HASH_PATH
+            value: /api/v1/appstore/hash
+          - name: API_DATA_PATH
+            value: /api/v1/appstore/info
+          - name: API_CHART_PATH
+            value: /api/v1/applications/{chart_name}/chart
+          - name: API_DETAIL_PATH
+            value: /api/v1/applications/info
+          - name: CHART_ROOT
+            value: /opt/app/data/v2                                                                                         
+          - name: NATS_SUBJECT_SYSTEM_USER_STATE                         
+            value: os.users.*
+          - name: GO_ENV                                                 
+            value: prod
+        volumeMounts:
+          - name: opt-data
+            mountPath: /opt/app/data
+      volumes:
+      - name: opt-data
+        hostPath:
+          path: '{{ .Values.rootPath }}/userdata/Cache/market'
+          type: DirectoryOrCreate
+      - name: app
+        emptyDir: {}
+      - name: nginx-confd
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: appstore-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: appstore
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: appstore-backend
+      port: 81
+      targetPort: 8080
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: market-redis
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: market
+  appNamespace: {{ .Release.Namespace }}
+  middleware: redis
+  redis:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: redis-passwords
+          name: market-secrets
+    namespace: market
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: market-pg
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: market
+  appNamespace: {{ .Release.Namespace }}
+  middleware: postgres
+  postgreSQL:
+    user: market_os_system
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: pg-passwords
+          name: market-pg-secrets
+    databases:
+    - name: market   
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: appstore-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: appstore
+  ports:
+    - name: "appstore-backend"
+      protocol: TCP
+      port: 81
+      targetPort: 8080
+    - name: "appstore-websocket"
+      protocol: TCP
+      port: 40010
+      targetPort: 40010
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: market-backend-nats
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: market-backend
+  appNamespace: os
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nats_password
+          name: market-backend-nats-secret
+    refs:
+      - appName: user-service
+        appNamespace: os
+        subjects:
+          - name: "application.*"
+            perm:
+              - pub
+              - sub
+      - appName: user-service
+        appNamespace: os
+        subjects:
+          - name: "market.*"
+            perm:
+              - pub
+              - sub
+    user: os-market-backend
