@@ -325,38 +325,6 @@ func (t *DeletePhaseFlagFile) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-type DeleteCaches struct {
-	common.KubeAction
-	BaseDir string
-}
-
-func (t *DeleteCaches) Execute(runtime connector.Runtime) error {
-	var cachesDirs []string
-
-	filepath.WalkDir(t.BaseDir, func(path string, d fs.DirEntry, err error) error {
-		if path != t.BaseDir {
-			if d.IsDir() {
-				cachesDirs = append(cachesDirs, path)
-				return filepath.SkipDir
-			}
-		}
-		return nil
-	},
-	)
-
-	if cachesDirs != nil && len(cachesDirs) > 0 {
-		for _, cachesDir := range cachesDirs {
-			if util.IsExist(cachesDir) {
-				if err := util.RemoveDir(cachesDir); err != nil {
-					logger.Errorf("remove %s failed %v", cachesDir, err)
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
 type DeleteTerminusUserData struct {
 	common.KubeAction
 }

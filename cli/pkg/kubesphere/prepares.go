@@ -23,17 +23,6 @@ import (
 	versionutil "k8s.io/apimachinery/pkg/util/version"
 )
 
-type ShouldDeleteCache struct {
-	common.KubePrepare
-}
-
-func (p *ShouldDeleteCache) PreCheck(runtime connector.Runtime) (bool, error) {
-	if p.KubeConf.Arg.DeleteCache {
-		return true, nil
-	}
-	return false, nil
-}
-
 type VersionBelowV3 struct {
 	common.KubePrepare
 }

@@ -146,15 +146,6 @@ func (p *phaseBuilder) phaseDownload() *phaseBuilder {
 		if err == nil {
 			p.modules = append(p.modules, &daemon.UninstallTerminusdModule{})
 		}
-		p.modules = append(p.modules,
-			&kubesphere.DeleteCacheModule{},
-		)
-
-		if p.runtime.Arg.DeleteCache {
-			p.modules = append(p.modules, &storage.DeleteCacheModule{
-				BaseDir: p.runtime.GetBaseDir(),
-			})
-		}
 	}
 	return p
 }
@@ -168,9 +159,6 @@ func (p *phaseBuilder) phaseMacos() {
 	}
 	if p.convert() >= PhaseDownload {
 		p.modules = append(p.modules, &kubesphere.DeleteKubeSphereCachesModule{})
-		if p.runtime.Arg.DeleteCache {
-			p.modules = append(p.modules, &kubesphere.DeleteCacheModule{})
-		}
 	}
 }
 
