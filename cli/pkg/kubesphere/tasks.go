@@ -52,19 +52,6 @@ func (d *DeleteKubeSphereCaches) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-type DeleteCache struct {
-	common.KubeAction
-}
-
-func (t *DeleteCache) Execute(runtime connector.Runtime) error {
-	// var cacheDir = path.Join(runtime.GetBaseDir(), cc.ImagesDir)
-	// if err := util.RemoveDir(cacheDir); err != nil {
-	// 	return err
-	// }
-	// logger.Debugf("delete caches success")
-	return nil
-}
-
 type AddInstallerConfig struct {
 	common.KubeAction
 }

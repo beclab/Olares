@@ -73,7 +73,6 @@ type Argument struct {
 	ImagesDir        string `json:"images_dir"`
 	Namespace        string `json:"namespace"`
 	DeleteCRI        bool   `json:"delete_cri"`
-	DeleteCache      bool   `json:"delete_cache"`
 	Role             string `json:"role"`
 	Type             string `json:"type"`
 	Kubetype         string `json:"kube_type"`
@@ -409,10 +408,6 @@ func (a *Argument) SetOlaresVersion(version string) {
 
 func (a *Argument) SetRegistryMirrors(registryMirrors string) {
 	a.RegistryMirrors = registryMirrors
-}
-
-func (a *Argument) SetDeleteCache(deleteCache bool) {
-	a.DeleteCache = deleteCache
 }
 
 func (a *Argument) SetDeleteCRI(deleteCRI bool) {

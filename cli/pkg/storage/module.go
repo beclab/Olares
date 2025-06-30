@@ -214,29 +214,6 @@ func (m *DeletePhaseFlagModule) Init() {
 	}
 }
 
-type DeleteCacheModule struct {
-	common.KubeModule
-	BaseDir string
-}
-
-func (m *DeleteCacheModule) Init() {
-	m.Name = "DeleteCaches"
-
-	deleteCaches := &task.RemoteTask{
-		Name:  "DeleteCaches",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
-		Action: &DeleteCaches{
-			BaseDir: m.BaseDir,
-		},
-		Parallel: false,
-		Retry:    1,
-	}
-
-	m.Tasks = []task.Interface{
-		deleteCaches,
-	}
-}
-
 type DeleteUserDataModule struct {
 	common.KubeModule
 }

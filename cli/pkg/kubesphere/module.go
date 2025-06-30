@@ -47,24 +47,6 @@ func (m *DeleteKubeSphereCachesModule) Init() {
 	}
 }
 
-type DeleteCacheModule struct {
-	common.KubeModule
-}
-
-func (m *DeleteCacheModule) Init() {
-	m.Name = "DeleteCache"
-
-	deleteCache := &task.LocalTask{
-		Name:    "DeleteCache",
-		Prepare: new(ShouldDeleteCache),
-		Action:  new(DeleteCache),
-	}
-
-	m.Tasks = []task.Interface{
-		deleteCache,
-	}
-}
-
 type DeployModule struct {
 	common.KubeModule
 	Skip bool
