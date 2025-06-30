@@ -82,10 +82,16 @@ spec:
           - authelia-backend.os-framework:9091
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
-          name: check-auth      
+          name: check-auth
+        - args:
+          - -it
+          - app-service.os-framework:6755
+          image: owncloudci/wait-for:latest
+          imagePullPolicy: IfNotPresent
+          name: check-appservice
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.4.3
+        image: beclab/market-backend:v0.4.4
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
