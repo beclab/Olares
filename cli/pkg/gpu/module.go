@@ -263,30 +263,25 @@ type NodeLabelingModule struct {
 func (l *NodeLabelingModule) Init() {
 	l.Name = "NodeLabeling"
 
-	updateNode := &task.RemoteTask{
-		Name:  "UpdateNode",
-		Hosts: l.Runtime.GetHostsByRole(common.Master),
+	updateNode := &task.LocalTask{
+		Name: "UpdateNode",
 		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
 			new(CudaInstalled),
 			new(K8sNodeInstalled),
 		},
-		Action:   new(UpdateNodeLabels),
-		Parallel: false,
-		Retry:    1,
+		Action: new(UpdateNodeLabels),
+		Retry:  1,
 	}
 
-	restartPlugin := &task.RemoteTask{
-		Name:  "RestartPlugin",
-		Hosts: l.Runtime.GetHostsByRole(common.Master),
+	restartPlugin := &task.LocalTask{
+		Name: "RestartPlugin",
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
 			new(CudaInstalled),
 			new(K8sNodeInstalled),
 		},
-		Action:   new(RestartPlugin),
-		Parallel: false,
-		Retry:    1,
+		Action: new(RestartPlugin),
+		Retry:  1,
 	}
 
 	l.Tasks = []task.Interface{

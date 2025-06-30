@@ -6,6 +6,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/core/pipeline"
+	"github.com/beclab/Olares/cli/pkg/gpu"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	"github.com/beclab/Olares/cli/pkg/kubernetes"
 	"github.com/beclab/Olares/cli/pkg/manifest"
@@ -75,6 +76,7 @@ func (m *AddNodeModule) Init() {
 			&k3s.JoinNodesModule{},
 		}
 	}
+	m.underlyingModules = append(m.underlyingModules, &gpu.NodeLabelingModule{})
 	for _, underlyingModule := range m.underlyingModules {
 		underlyingModule.Default(m.Runtime, m.PipelineCache, m.ModuleCache)
 		underlyingModule.AutoAssert()
