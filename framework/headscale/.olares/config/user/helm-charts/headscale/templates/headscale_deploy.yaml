@@ -85,6 +85,18 @@ spec:
       labels:
         app: headscale
     spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+              - key: node-role.kubernetes.io/master
+                operator: Exists
+            weight: 10
       serviceAccountName: tailscale
       securityContext:
         runAsUser: 1000
