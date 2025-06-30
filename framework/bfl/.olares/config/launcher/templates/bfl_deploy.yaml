@@ -236,16 +236,19 @@ spec:
         - sh
         - -c
         - |
+          init=$(test -d /userspace/Home; echo $?) && \
           mkdir -p /userspace/Home/Documents && \
           mkdir -p /userspace/Home/Downloads && \
           mkdir -p /userspace/Home/Pictures && \
           mkdir -p /userspace/Home/Movies && \
           mkdir -p /userspace/Home/Music && \
           mkdir -p /userspace/Home/Code && \
-          mkdir -p /userspace/Data && \
+          mkdir -p /userspace/Data; \
+          if [ $init -ne 0 ]; then \
           chown -R 1000:1000 /userspace/Home && \
           chown -R 1000:1000 /userspace/Data && \
-          chown -R 1000:1000 /appdata 
+          chown -R 1000:1000 /appdata; \
+          fi 
       - name: setsysctl
         image: 'busybox:1.28'
         command:
