@@ -278,25 +278,48 @@ func GetAdminUserTerminusName(ctx context.Context, client dynamic.Interface) (st
 
 }
 
+type Filter func(u *unstructured.Unstructured) bool
+
 func GetAdminUser(ctx context.Context, client dynamic.Interface) (*unstructured.Unstructured, error) {
+	u, err := ListUsers(ctx, client, func(u *unstructured.Unstructured) bool {
+		role, ok := u.GetAnnotations()[bflconst.UserAnnotationOwnerRole]
+		if !ok {
+			return false
+		}
+		return role == bflconst.RolePlatformAdmin
+	})
+	if err != nil {
+		klog.Error("list user error, ", err)
+		return nil, err
+	}
+
+	if len(u) == 0 {
+		klog.Info("admin user not found")
+		return nil, nil
+	}
+
+	return u[0], nil
+}
+
+func ListUsers(ctx context.Context, client dynamic.Interface, filters ...Filter) ([]*unstructured.Unstructured, error) {
 	users, err := client.Resource(UserGVR).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		klog.Error("list user error, ", err)
 		return nil, err
 	}
 
+	var userList []*unstructured.Unstructured
 	for _, u := range users.Items {
-		role, ok := u.GetAnnotations()[bflconst.UserAnnotationOwnerRole]
-		if !ok {
-			continue
+		for _, filter := range filters {
+			if !filter(&u) {
+				continue
+			}
 		}
 
-		if role == bflconst.RolePlatformAdmin {
-			return &u, nil
-		}
+		userList = append(userList, &u)
 	}
 
-	return nil, nil
+	return userList, nil
 }
 
 func isKeyPod(pod *corev1.Pod) bool {

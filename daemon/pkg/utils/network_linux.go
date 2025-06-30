@@ -111,7 +111,6 @@ func ManagedAllDevices(ctx context.Context) (map[string]Device, error) {
 			cmd := exec.CommandContext(ctx, nmcli, "device", "set", d.Name, "managed", "yes")
 			cmd.Env = os.Environ()
 			output, err := cmd.CombinedOutput()
-			klog.Info(string(output))
 			if err != nil {
 				klog.Error("exec cmd error, ", err, ", nmcli device set ", d.Name, " managed yes")
 				return false
@@ -288,7 +287,7 @@ func showDeviceByNM(ctx context.Context, deviceName string, device *Device) erro
 		case "GENERAL.CONNECTION":
 			err := showConnectionByNM(ctx, value, device)
 			if err != nil {
-				klog.Error("get connection method error, ", err, ", connection name: ", value)
+				klog.V(8).Info("get connection method error, ", err, ", connection name: ", value)
 			}
 		default:
 			continue

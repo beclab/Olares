@@ -63,6 +63,11 @@ func (i *collectLogs) Execute(ctx context.Context, p any) (res any, err error) {
 			return
 		}
 
+		if adminUser == nil {
+			errStr = "admin user not found"
+			return
+		}
+
 		hostPath, err := utils.GetUserspacePvcHostPath(ctx, adminUser.GetName(), kubeClient)
 		if err != nil {
 			errStr = fmt.Sprintf("get admin user host path error, %v", err)

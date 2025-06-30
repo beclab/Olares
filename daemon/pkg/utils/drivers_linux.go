@@ -89,7 +89,7 @@ func detectdStorageDevices(ctx context.Context, bus string) (usbDevs []storageDe
 
 		token := strings.Split(syspath, "/")
 		devPath := filepath.Join("/dev", token[len(token)-1])
-		klog.Info("device path:", device.Properties())
+		klog.V(8).Info("device path:", device.Properties())
 		vender := device.Properties()["ID_VENDOR"]
 		if vender == "" {
 			vender = device.Properties()["ID_USB_VENDOR"]
@@ -162,7 +162,7 @@ func getMountedPath(devs []storageDevice) ([]string, error) {
 	var paths []string
 	for _, m := range list {
 		if slices.ContainsFunc(devs, func(u storageDevice) bool { return u.DevPath == m.Device }) {
-			klog.Infof("mount: %v, %v, %v", m.Path, m.Device, devs)
+			klog.V(8).Infof("mount: %v, %v, %v", m.Path, m.Device, devs)
 			paths = append(paths, m.Path)
 		}
 	}

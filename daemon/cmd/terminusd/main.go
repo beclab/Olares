@@ -14,6 +14,7 @@ import (
 	"github.com/beclab/Olares/daemon/internel/ble"
 	"github.com/beclab/Olares/daemon/internel/mdns"
 	"github.com/beclab/Olares/daemon/internel/watcher"
+	"github.com/beclab/Olares/daemon/internel/watcher/cert"
 	"github.com/beclab/Olares/daemon/internel/watcher/system"
 	"github.com/beclab/Olares/daemon/internel/watcher/upgrade"
 	"github.com/beclab/Olares/daemon/internel/watcher/usb"
@@ -96,6 +97,7 @@ func main() {
 		// usb.NewUsbWatcher(),
 		usb.NewUmountWatcher(),
 		upgrade.NewUpgradeWatcher(),
+		cert.NewCertWatcher(),
 	}, func() {
 		if s != nil {
 			if err := s.Restart(); err != nil {

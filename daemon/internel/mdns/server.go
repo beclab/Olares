@@ -89,11 +89,11 @@ func (s *server) Restart() error {
 	}
 
 	if s.registeredIP != ip {
-		s.registeredIP = ip
 		if s.server != nil {
 			s.Close()
 		}
 
+		s.registeredIP = ip
 		instanceName := s.name
 		if instanceName == "" {
 			instanceName = hostname
