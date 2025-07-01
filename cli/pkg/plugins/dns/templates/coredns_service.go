@@ -65,6 +65,7 @@ data:
         health
         ready
         kubernetes {{ .DNSDomain }} in-addr.arpa ip6.arpa {
+          endpoint_pod_names
           pods insecure
           fallthrough in-addr.arpa ip6.arpa
         }
