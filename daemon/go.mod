@@ -6,6 +6,7 @@ toolchain go1.24.4
 
 replace (
 	bytetrade.io/web3os/app-service => github.com/beclab/app-service v0.2.33
+	bytetrade.io/web3os/backups-sdk => github.com/Above-Os/backups-sdk v0.1.17
 	bytetrade.io/web3os/bfl => github.com/beclab/bfl v0.3.36
 	k8s.io/api => k8s.io/api v0.31.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.31.0
