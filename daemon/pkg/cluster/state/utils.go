@@ -88,6 +88,10 @@ func isProcessRunning(pidfile string) (bool, error) {
 		return false, err
 	}
 
+	if len(strings.TrimSpace(string(pidData))) == 0 {
+		return false, nil
+	}
+
 	pid, err := strconv.Atoi(string(pidData))
 	if err != nil {
 		return false, err
