@@ -24,6 +24,7 @@ cp ${BASE_DIR}/.dependencies/components ${BASE_DIR}/.manifest/.
 cp ${BASE_DIR}/.dependencies/components ${BASE_DIR}/.manifest/.
 pushd ${BASE_DIR}.manifest
 bash ${BASE_DIR}/build-manifest.sh ${BASE_DIR}/../.manifest/installation.manifest
+python3 ${BASE_DIR}/build-manifest.py ${BASE_DIR}/../.manifest/installation.manifest
 popd
 
 

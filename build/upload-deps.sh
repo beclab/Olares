@@ -23,26 +23,28 @@ while read line; do
         continue
     fi
     
-    bash ${BASE_DIR}/download-deps.sh $PLATFORM $line
-    if [ $? -ne 0 ]; then
-        exit -1
-    fi
-
     filename=$(echo "$line"|awk -F"," '{print $1}')
-    echo "if exists $filename ... "
     name=$(echo -n "$filename"|md5sum|awk '{print $1}')
     checksum="$name.checksum.txt"
-    md5sum $name > $checksum
-    backup_file=$(awk '{print $1}' $checksum)
-    if [ x"$backup_file"  == x""  ]; then
-        echo  "invalid checksum"
-        exit 1
-    fi
 
+    echo "if exists $filename ... "
     curl -fsSLI https://dc3p1870nn3cj.cloudfront.net/$path$name > /dev/null
     if [ $? -ne 0 ]; then
-        code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://dc3p1870nn3cj.cloudfront.net/$path$name.tar.gz)
+        code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://dc3p1870nn3cj.cloudfront.net/$path$name)
         if [ $code -eq 403 ]; then
+
+            bash ${BASE_DIR}/download-deps.sh $PLATFORM $line
+            if [ $? -ne 0 ]; then
+                exit -1
+            fi
+
+            md5sum $name > $checksum
+            backup_file=$(awk '{print $1}' $checksum)
+            if [ x"$backup_file"  == x""  ]; then
+                echo  "invalid checksum"
+                exit 1
+            fi
+
             set -ex
             aws s3 cp $name s3://terminus-os-install/$path$name --acl=public-read
             aws s3 cp $name s3://terminus-os-install/backup/$path$backup_file --acl=public-read

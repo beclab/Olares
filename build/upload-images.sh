@@ -10,6 +10,7 @@ cat $1|while read image; do
     echo "if exists $image ... "
     name=$(echo -n "$image"|md5sum|awk '{print $1}')
     checksum="$name.checksum.txt"
+    manifest="$name.manifest.json"
 
     curl -fsSLI https://dc3p1870nn3cj.cloudfront.net/$path$name.tar.gz > /dev/null
     if [ $? -ne 0 ]; then
@@ -68,48 +69,29 @@ cat $1|while read image; do
             set +ex
         else
             if [ $code -ne 200  ]; then
-                echo  "failed to check image"
+                echo  "failed to check image checksum"
                 exit -1
             fi
         fi
     fi
 
-    # upload to tencent cloud cos
+    # upload manifest.json
+    curl -fsSLI https://dc3p1870nn3cj.cloudfront.net/$path$manifest > /dev/null
+    if [ $? -ne 0 ]; then   
+        code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://dc3p1870nn3cj.cloudfront.net/$path$manifest)
+        if [ $code -eq 403 ]; then
+            set -ex
+            BASE_DIR=$(dirname $(realpath -s $0))
+            python3 $BASE_DIR/get-manifest.py $image -o $manifest
 
-    # curl -fsSLI https://cdn.joinolares.cn/$path$name.tar.gz > /dev/null
-    # if [ $? -ne 0 ]; then
-    #     set -e
-    #     docker pull $image
-    #     docker save $image -o $name.tar
-    #     gzip $name.tar
-
-    #     md5sum $name.tar.gz > $checksum
-
-    #     coscmd upload ./$name.tar.gz /$path$name.tar.gz
-    #     coscmd upload ./$checksum /$path$checksum
-    #     echo "upload $name to cos completed"
-
-    #     set +e
-    # fi
-
-    
-
-    # # re-upload checksum.txt
-    # curl -fsSLI https://cdn.joinolares.cn/$path$checksum > /dev/null
-    # if [ $? -ne 0 ]; then
-    #     set -e
-    #     docker pull $image
-    #     docker save $image -o $name.tar
-    #     gzip $name.tar
-
-    #     md5sum $name.tar.gz > $checksum
-
-    #     coscmd upload ./$name.tar.gz /$path$name.tar.gz
-    #     coscmd upload ./$checksum /$path$checksum
-    #     echo "upload $name to cos completed"
-
-    #     set +e
-    # fi
-    
-
+            aws s3 cp $manifest s3://terminus-os-install/$path$manifest --acl=public-read
+            echo "upload $name manifest completed"
+            set +ex
+        else
+            if [ $code -ne 200  ]; then
+                echo  "failed to check image manifest"
+                exit -1
+            fi
+        fi
+    fi
 done

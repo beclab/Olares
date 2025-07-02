@@ -16,6 +16,7 @@ rm -rf ${BASE_DIR}/../.dependencies
 set -e
 pushd ${BASE_DIR}/../.manifest
 bash ${BASE_DIR}/build-manifest.sh ${BASE_DIR}/../.manifest/installation.manifest
+python3 ${BASE_DIR}/build-manifest.py ${BASE_DIR}/../.manifest/installation.manifest
 popd
 
 pushd $DIST_PATH
