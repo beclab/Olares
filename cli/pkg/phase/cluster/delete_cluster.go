@@ -105,6 +105,7 @@ func (p *phaseBuilder) phaseInstall() *phaseBuilder {
 			&certs.UninstallCertsFilesModule{},
 			&storage.DeleteUserDataModule{},
 			&terminus.DeleteWizardFilesModule{},
+			&terminus.DeleteUpgradeFilesModule{},
 			&storage.RemoveJuiceFSModule{},
 			&storage.DeletePhaseFlagModule{
 				PhaseFile: common.TerminusStateFileInstalled,

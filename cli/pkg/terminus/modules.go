@@ -199,6 +199,23 @@ func (m *InstalledModule) Init() {
 	}
 }
 
+type DeleteUpgradeFilesModule struct {
+	common.KubeModule
+}
+
+func (d *DeleteUpgradeFilesModule) Init() {
+	d.Name = "DeleteUpgradeFiles"
+
+	deleteUpgradeFiles := &task.LocalTask{
+		Name:   "DeleteUpgradeFiles",
+		Action: &DeleteUpgradeFiles{},
+	}
+
+	d.Tasks = []task.Interface{
+		deleteUpgradeFiles,
+	}
+}
+
 type DeleteWizardFilesModule struct {
 	common.KubeModule
 }
