@@ -351,7 +351,7 @@ spec:
             - name: PGDB
               value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
         - name: system-frontend-init
-          image: beclab/system-frontend:v1.3.91
+          image: beclab/system-frontend:v1.3.92
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
