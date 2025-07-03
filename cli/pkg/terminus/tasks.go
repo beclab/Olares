@@ -296,6 +296,30 @@ func (t *InstallFinished) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
+type DeleteUpgradeFiles struct {
+	common.KubeAction
+}
+
+func (d *DeleteUpgradeFiles) Execute(runtime connector.Runtime) error {
+	baseDir := runtime.GetBaseDir()
+
+	files, err := os.ReadDir(baseDir)
+	if err != nil {
+		return errors.Wrapf(err, "failed to read directory %s", baseDir)
+	}
+
+	for _, file := range files {
+		if strings.HasPrefix(file.Name(), "upgrade.") {
+			filePath := path.Join(baseDir, file.Name())
+			if err := os.RemoveAll(filePath); err != nil && !os.IsNotExist(err) {
+				logger.Warnf("failed to delete %s: %v", filePath, err)
+			}
+		}
+	}
+
+	return nil
+}
+
 type DeleteWizardFiles struct {
 	common.KubeAction
 }
