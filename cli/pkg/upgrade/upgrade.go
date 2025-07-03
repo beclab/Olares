@@ -18,7 +18,16 @@ type UpgradeModule struct {
 }
 
 var (
-	preTasks []*upgradeTask
+	preTasks = []*upgradeTask{
+		{
+			Task: &task.LocalTask{
+				Name:   "UpdateSysctlReservedPorts",
+				Action: new(UpdateSysctlReservedPorts),
+			},
+			Current: &explicitVersionMatcher{max: semver.New(1, 12, 0, "20250701", "")},
+			Target:  anyVersion,
+		},
+	}
 
 	coreTasks = []*upgradeTask{
 		{
