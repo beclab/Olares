@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -219,5 +220,69 @@ func (u *UpgradeSystemComponents) Execute(runtime connector.Runtime) error {
 	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameSettings, settingsChartPath, "", common.NamespaceDefault, nil, true); err != nil {
 		return err
 	}
+	return nil
+}
+
+type UpdateSysctlReservedPorts struct {
+	common.KubeAction
+}
+
+func (u *UpdateSysctlReservedPorts) Execute(runtime connector.Runtime) error {
+	const sysctlFile = "/etc/sysctl.conf"
+	const reservedPortsKey = "net.ipv4.ip_local_reserved_ports"
+	const expectedValue = "30000-32767,46800-50000"
+
+	content, err := os.ReadFile(sysctlFile)
+	if err != nil {
+		return fmt.Errorf("failed to read sysctl.conf: %v", err)
+	}
+
+	lines := strings.Split(string(content), "\n")
+	var foundKey bool
+	var needUpdate bool
+	var updatedLines []string
+
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmedLine, reservedPortsKey) {
+			foundKey = true
+			parts := strings.SplitN(trimmedLine, "=", 2)
+			if len(parts) == 2 {
+				currentValue := strings.TrimSpace(parts[1])
+				if currentValue != expectedValue {
+					logger.Infof("updating %s from %s to %s", reservedPortsKey, currentValue, expectedValue)
+					updatedLines = append(updatedLines, fmt.Sprintf("%s=%s", reservedPortsKey, expectedValue))
+					needUpdate = true
+				} else {
+					updatedLines = append(updatedLines, line)
+				}
+			} else {
+				updatedLines = append(updatedLines, line)
+			}
+		} else {
+			updatedLines = append(updatedLines, line)
+		}
+	}
+
+	if !foundKey {
+		logger.Infof("key %s not found in sysctl.conf, adding it", reservedPortsKey)
+		updatedLines = append(updatedLines, fmt.Sprintf("%s=%s", reservedPortsKey, expectedValue))
+		needUpdate = true
+	}
+
+	if needUpdate {
+		updatedContent := strings.Join(updatedLines, "\n")
+		if err := os.WriteFile(sysctlFile, []byte(updatedContent), 0644); err != nil {
+			return fmt.Errorf("failed to write updated sysctl.conf: %v", err)
+		}
+
+		if _, err := runtime.GetRunner().SudoCmd("sysctl -p", false, false); err != nil {
+			return fmt.Errorf("failed to reload sysctl: %v", err)
+		}
+		logger.Infof("updated and reloaded sysctl configuration")
+	} else {
+		logger.Debugf("%s already has the expected value: %s", reservedPortsKey, expectedValue)
+	}
+
 	return nil
 }
