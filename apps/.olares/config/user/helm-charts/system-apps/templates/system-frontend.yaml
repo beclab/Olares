@@ -2181,6 +2181,9 @@ spec:
           - appName: app-service
             sub: allow
             pub: allow
+          - appName: studio-server
+            sub: allow
+            pub: deny
         name: "application.*"
         permission:
           sub: allow
@@ -2200,6 +2203,9 @@ spec:
           - appName: market-backend
             sub: allow
             pub: allow
+          - appName: studio-server
+            sub: allow
+            pub: deny
         name: "market.*"
         permission:
           sub: allow
