@@ -91,7 +91,7 @@ spec:
           name: check-appservice
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.4.7
+        image: beclab/market-backend:v0.4.8
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -103,7 +103,9 @@ spec:
           - name: APP_SOTRE_SERVICE_SERVICE_PORT                                   
             value: "443"                                                           
           - name: APP_SERVICE_SERVICE_HOST                                         
-            value: app-service                                                     
+            value: app-service
+          - name: MODULE_ENABLE_STATUS_CORRECTION_CHECKER
+            value: 'true'
           - name: APP_SERVICE_SERVICE_PORT                                         
             value: "6755"
           - name: REPO_URL_PORT
