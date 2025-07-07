@@ -354,7 +354,7 @@ spec:
           privileged: true
       containers:      
       - name: authelia
-        image: beclab/auth:0.2.10
+        image: beclab/auth:0.2.11
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9091
