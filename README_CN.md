@@ -110,19 +110,15 @@ Olares 已在以下 Linux 平台完成测试与验证：
 参考[快速上手指南](https://docs.olares.cn/zh/manual/get-started/)安装并激活 Olares。
 
 ## 项目目录
-
-> [!NOTE]
-> 我们正将 Olares 子项目的代码移动到当前仓库。此过程可能会持续数月。届时您就可以通过本仓库了解 Olares 系统的全貌。
-
 Olares 代码库中的主要目录如下：
 
-* **`apps`**: 用于存放系统应用，主要是 `larepass` 的代码。
-* **`cli`**: 用于存放 `olares-cli`（Olares 的命令行界面工具）的代码。
-* **`daemon`**: 用于存放 `olaresd`（系统守护进程）的代码。
+* **[`apps`](./apps)**: 用于存放系统应用，主要是 `larepass` 的代码。
+* **[`cli`](./cli)**: 用于存放 `olares-cli`（Olares 的命令行界面工具）的代码。
+* **[`daemon`](./daemon)**: 用于存放 `olaresd`（系统守护进程）的代码。
 * **`docs`**: 用于存放 Olares 项目的文档。
-* **`framework`**: 用来存放 Olares 系统服务代码。
-* **`infrastructure`**: 用于存放计算，存储，网络，GPU 等基础设施的代码。
-* **`platform`**: 用于存放数据库、消息队列等云原生组件的代码。
+* **[`framework`](./framework)**: 用来存放 Olares 系统服务代码。
+* **[`infrastructure`](./infrastructure)**: 用于存放计算，存储，网络，GPU 等基础设施的代码。
+* **[`platform`](./platform)**: 用于存放数据库、消息队列等云原生组件的代码。
 * **`vendor`**: 用于存放来自第三方硬件供应商的代码。
 
 ## 社区贡献

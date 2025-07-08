@@ -108,20 +108,15 @@ Olares has been tested and verified on the following Linux platforms:
 To get started with Olares on your own device, follow the [Getting Started Guide](https://docs.olares.com/manual/get-started/) for step-by-step instructions.
 
 ## Project navigation
-
-> [!NOTE]  
-> We are currently consolidating Olares subproject code into this repository. This process may take a few months. Once finished, you will get a comprehensive view of the entire Olares system here.
-
-
 This section lists the main directories in the Olares repository:
 
-* **`apps`**: Contains the code for system applications, primarily for `larepass`.
-* **`cli`**: Contains the code for `olares-cli`, the command-line interface tool for Olares.
-* **`daemon`**: Contains the code for `olaresd`, the system daemon process.
+* **[`apps`](./apps)**: Contains the code for system applications, primarily for `larepass`.
+* **[`cli`](./cli)**: Contains the code for `olares-cli`, the command-line interface tool for Olares.
+* **[`daemon`](./daemon)**: Contains the code for `olaresd`, the system daemon process.
 * **`docs`**: Contains documentation for the project.
-* **`framework`**: Contains the Olares system services.
-* **`infrastructure`**: Contains code related to infrastructure components such as computing, storage, networking, and GPUs.
-* **`platform`**: Contains code for cloud-native components like databases and message queues.
+* **[`framework`](./framework)**: Contains the Olares system services.
+* **[`infrastructure`](./infrastructure)**: Contains code related to infrastructure components such as computing, storage, networking, and GPUs.
+* **[`platform`](./platform)**: Contains code for cloud-native components like databases and message queues.
 * **`vendor`**: Contains code from third-party hardware vendors.
 
 ## Contributing to Olares

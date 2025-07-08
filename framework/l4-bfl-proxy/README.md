@@ -1,3 +1,5 @@
-# l4-bfl-proxy
+# Olares Framework: L4 BFL Proxy
 
-https://github.com/beclab/l4-bfl-proxy
+## Overview
+
+The `l4-bfl-proxy` component provides a Layer 4 network proxy specifically designed for the [BFL (Backend For Launcher) service](../bfl) within the Olares framework. This proxy enhances the network communication for BFL, ensuring efficient and reliable data transfer at the transport layer.
