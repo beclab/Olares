@@ -8,6 +8,8 @@ on:
         required: true
       ref:
         type: string
+      repository:
+        type: string
   workflow_dispatch:
 jobs:
   goreleaser:
@@ -18,6 +20,7 @@ jobs:
         with:
           fetch-depth: 1
           ref: ${{ inputs.ref }}
+          repository: ${{ inputs.repository }}
 
       - name: Add Local Git Tag For GoReleaser
         run: git tag ${{ inputs.version }}
