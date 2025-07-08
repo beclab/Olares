@@ -26,7 +26,7 @@
 
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   name: files
   namespace: {{ .Release.Namespace }}
@@ -34,7 +34,6 @@ metadata:
     app: files
     applications.app.bytetrade.io/author: bytetrade.io
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: files
@@ -68,6 +67,8 @@ spec:
               mountPath: /appdata
             - name: upload-appdata
               mountPath: /appcache
+            - mountPath: /data/appcache
+              name: upload-appdata
           command:
           - sh
           - -c
@@ -96,21 +97,6 @@ spec:
               value: os_framework_files
 
       containers:
-        - name: gateway
-          image: beclab/appdata-gateway:0.1.22
-          imagePullPolicy: IfNotPresent
-          securityContext:
-            allowPrivilegeEscalation: false
-            runAsUser: 0
-          ports:
-            - containerPort: 8080
-          env:
-            - name: FILES_SERVER_TAG
-              value: 'beclab/files-server:v0.2.78'
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
 
         - name: media-server
           env:
@@ -120,7 +106,7 @@ spec:
             value: /appdata
           - name: SEAFILE_SERVICE
             value: seafile
-          image: beclab/media-server:v0.1.10
+          image: beclab/media-server:v0.1.11
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -132,7 +118,7 @@ spec:
           - name: userspace-dir
             mountPath: /data
           - name: user-appdata-dir
-            mountPath: /appdata
+            mountPath: /appcache
 {{ if .Values.sharedlib }}
           - name: shared-lib
             mountPath: /data/External
@@ -140,25 +126,21 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.78
+          image: beclab/files-server:v0.2.80
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
             runAsUser: 0
             privileged: true
           volumeMounts:
+            - mountPath: /data/appcache/
+              name: upload-appdata
             - name: fb-data
               mountPath: /appdata
             - name: userspace-dir
               mountPath: /data
-#              mountPath: /data/Home
-#            - name: userspace-app-dir
-#              mountPath: /data/Application
-#            - name: watch-dir
-#              mountPath: /data/Home/Documents
             - name: upload-appdata
               mountPath: /appcache/
-            
 {{ if .Values.sharedlib }}        
             - name: shared-lib
               mountPath: /data/External
@@ -172,6 +154,11 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
             - name: TERMINUSD_HOST
               value: $(NODE_IP):18088  
 {{ end }}
@@ -265,6 +252,10 @@ spec:
               value: {{ $files_postgres_password | b64dec }}
             - name: PGDB1
               value: os_framework_files
+            - name: UPLOAD_FILE_TYPE
+              value: '*'
+            - name: UPLOAD_LIMITED_SIZE
+              value: "118111600640"
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -280,6 +271,8 @@ spec:
           command:
             - /filebrowser
             - --noauth
+            - -p
+            - "8080"
         - name: uploader
           image: beclab/upload:v1.0.14
           env:
@@ -394,110 +387,6 @@ spec:
       name: media-server
       port: 9090
       targetPort: 9090
-
----
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: appdata-backend
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app: appdata-backend
-  annotations:
-    velero.io/exclude-from-backup: "true"
-spec:
-  selector:
-    matchLabels:
-      app: appdata-backend
-  template:
-    metadata:
-      labels:
-        app: appdata-backend
-    spec:
-      securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
-      initContainers:
-        - name: init-data
-          image: busybox:1.28
-          securityContext:
-            privileged: true
-            runAsNonRoot: false
-            runAsUser: 0
-          volumeMounts:
-          - name: fb-data
-            mountPath: /appdata
-          command:
-          - sh
-          - -c
-          - |
-            chown -R 1000:1000 /appdata
-        - args:
-          - -it
-          - nats.os-platform:4222
-          image: owncloudci/wait-for:latest
-          imagePullPolicy: IfNotPresent
-          name: check-nats
-      containers:
-        - name: files
-          image: beclab/files-server:v0.2.78
-          imagePullPolicy: IfNotPresent
-          securityContext:
-            allowPrivilegeEscalation: true
-            runAsUser: 0
-            runAsNonRoot: false
-          volumeMounts:
-            - name: fb-data
-              mountPath: /appdata
-            - name: user-appdata-dir
-              mountPath: /data/AppData
-          ports:
-            - containerPort: 8110
-          env:
-            - name: ROOT_PREFIX
-              value: /data
-#            - name: FB_DATABASE
-#              value: /appdata/database/filebrowser.db
-#            - name: FB_CONFIG
-#              value: /appdata/config/settings.json
-#            - name: FB_ROOT
-#              value: /data
-            - name: OLARES_VERSION
-              value: '1.12'
-            - name: NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-          command:
-            - /filebrowser
-            - --noauth
-      volumes:
-        - name: user-appdata-dir
-          hostPath:
-            type: Directory
-            path: '{{ .Values.rootPath }}/userdata/Cache'
-        - name: fb-data
-          hostPath:
-            type: DirectoryOrCreate
-            path: '{{ .Values.rootPath }}/userdata/Cache/files-appdata'
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: appdata-backend-headless
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app: appdata-backend
-spec:
-  selector:
-    app: appdata-backend
-  clusterIP: None
-  ports:
-    - protocol: TCP
-      port: 8110
-      targetPort: 8110
 
 ---
 apiVersion: v1
@@ -824,7 +713,7 @@ data:
         }
 
         location /upload {
-            proxy_pass http://127.0.0.1:40030;
+            proxy_pass http://127.0.0.1:8080;
             # rewrite ^/server(.*)$ $1 break;
 
             # Add original-request-related headers
