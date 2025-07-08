@@ -65,6 +65,7 @@ jobs:
     with:
       version: ${{ needs.test-version.outputs.version }}
       ref: ${{ github.event.pull_request.head.ref }}
+      repository: ${{ github.event.pull_request.head.repo.full_name }}
 
   upload-daemon:
     needs: test-version
@@ -73,6 +74,7 @@ jobs:
     with:
       version: ${{ needs.test-version.outputs.version }}
       ref: ${{ github.event.pull_request.head.ref }}
+      repository: ${{ github.event.pull_request.head.repo.full_name }}
 
   push-image:
     runs-on: ubuntu-latest
