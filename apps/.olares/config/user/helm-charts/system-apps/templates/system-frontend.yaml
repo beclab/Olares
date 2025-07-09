@@ -2144,6 +2144,9 @@ spec:
           - appName: notifications
             sub: allow
             pub: allow
+          - appName: authelia
+            sub: allow
+            pub: allow
         name: "notification.*"
         permission:
           pub: allow

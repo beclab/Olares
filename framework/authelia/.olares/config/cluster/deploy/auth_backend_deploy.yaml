@@ -82,13 +82,20 @@ spec:
           key: nats_password
           name: authelia-secrets
     refs:
-    - appName: notifications
+    - appName: user-service
       appNamespace: os
       subjects:
-      - name: notification
+      - name: "notification.*"
         perm:
         - pub
         - sub
+    - appName: notifications
+      appNamespace: os
+      subjects:
+        - name: "users.*"
+          perm:
+            - pub
+            - sub
     user: os-authelia
 
 ---
@@ -354,7 +361,7 @@ spec:
           privileged: true
       containers:      
       - name: authelia
-        image: beclab/auth:0.2.11
+        image: beclab/auth:0.2.12
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9091
@@ -379,6 +386,8 @@ spec:
               name: authelia-secrets
         - name: NATS_SUBJECT
           value: "os.notification"
+        - name: NATS_SUBJECT_FOR_USERS
+          value: "os.users"
 
         volumeMounts:
         - name: config

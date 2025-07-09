@@ -79,7 +79,7 @@ spec:
           - appName: authelia
             pub: allow
             sub: allow
-        name: notification
+        name: "notification.*"
         permission:
           pub: allow
           sub: allow
@@ -96,15 +96,22 @@ spec:
           - appName: knowledge
             pub: deny
             sub: allow
-        name: users
+          - appName: authlia
+            pub: allow
+            sub: allow
+        name: "users.*"
         permission:
           pub: deny
           sub: allow
-      - name: groups
+      - name: "groups.*"
         permission:
           pub: deny
           sub: allow
-      - name: application
+      - name: "application.*"
+        permission:
+          pub: deny
+          sub: allow
+      - name: "vault.*"
         permission:
           pub: deny
           sub: allow
@@ -186,13 +193,13 @@ spec:
         - name: NATS_SUBJECT
           value: "os.notification"
         - name: NATS_SUBJECT_SYSTEM_USERS
-          value: "os.users"
+          value: "os.users.*"
         - name: NATS_SUBJECT_SYSTEM_GROUPS
-          value: "os.groups"
+          value: "os.groups.*"
         - name: NATS_SUBJECT_SYSTEM_APPLICATION
-          value: "os.application"
+          value: "os.application.*"
         - name: NATS_SUBJECT_SYSTEM_VAULT
-          value: "os.vault"
+          value: "os.vault.*"
         livenessProbe:
           tcpSocket:
             port: 3010
