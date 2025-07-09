@@ -290,7 +290,7 @@ spec:
 
       containers:
       - name: seahub
-        image: beclab/pg_seahub:v0.0.13
+        image: beclab/pg_seahub:v0.0.15
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 8000
@@ -336,7 +336,7 @@ spec:
             subPath: seahub_settings.py
 
       - name: seafile-server
-        image: beclab/pg_seafile_server:v0.0.13
+        image: beclab/pg_seafile_server:v0.0.15
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 8082
