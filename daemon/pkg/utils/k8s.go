@@ -310,10 +310,15 @@ func ListUsers(ctx context.Context, client dynamic.Interface, filters ...Filter)
 
 	var userList []*unstructured.Unstructured
 	for _, u := range users.Items {
+		var skip bool
 		for _, filter := range filters {
 			if !filter(&u) {
-				continue
+				skip = true
+				break
 			}
+		}
+		if skip {
+			continue
 		}
 
 		userList = append(userList, &u)
