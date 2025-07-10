@@ -133,20 +133,9 @@ func (p *phaseBuilder) phasePrepare() *phaseBuilder {
 				PhaseFile: common.TerminusStateFilePrepared,
 				BaseDir:   p.runtime.GetBaseDir(),
 			},
+			&daemon.UninstallTerminusdModule{},
 			&terminus.RemoveReleaseFileModule{},
 		)
-	}
-	return p
-}
-
-func (p *phaseBuilder) phaseDownload() *phaseBuilder {
-	terminusdAction := &daemon.CheckTerminusdService{}
-	err := terminusdAction.Execute()
-
-	if p.convert() >= PhaseDownload {
-		if err == nil {
-			p.modules = append(p.modules, &daemon.UninstallTerminusdModule{})
-		}
 	}
 	return p
 }
@@ -178,8 +167,7 @@ func UninstallTerminus(phase string, runtime *common.KubeRuntime) pipeline.Pipel
 		builder.
 			phaseInstall().
 			phaseStorage().
-			phasePrepare().
-			phaseDownload()
+			phasePrepare()
 	}
 
 	return pipeline.Pipeline{

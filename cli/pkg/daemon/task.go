@@ -133,8 +133,11 @@ type DisableTerminusdService struct {
 }
 
 func (s *DisableTerminusdService) Execute(runtime connector.Runtime) error {
-	if _, err := runtime.GetRunner().SudoCmd("systemctl disable --now olaresd", false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "disable olaresd failed")
+	stdout, _ := runtime.GetRunner().SudoCmd("systemctl is-active olaresd", false, false)
+	if stdout == "active" {
+		if _, err := runtime.GetRunner().SudoCmd("systemctl disable --now olaresd", false, true); err != nil {
+			return errors.Wrap(errors.WithStack(err), "disable olaresd failed")
+		}
 	}
 	return nil
 }
@@ -144,10 +147,18 @@ type UninstallTerminusd struct {
 }
 
 func (r *UninstallTerminusd) Execute(runtime connector.Runtime) error {
+	var olaresdFiles []string
 	svcpath := filepath.Join("/etc/systemd/system", templates.TerminusdService.Name())
 	svcenvpath := filepath.Join("/etc/systemd/system", templates.TerminusdEnv.Name())
-	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("rm -rf %s && rm -rf %s && rm -rf /usr/local/bin/olaresd", svcpath, svcenvpath), false, false); err != nil {
-		return errors.Wrap(errors.WithStack(err), "remove olaresd failed")
+	binPath := "/usr/local/bin/olaresd"
+	olaresdFiles = append(olaresdFiles, svcpath, svcenvpath, binPath)
+	for _, pidFile := range []string{"installing.pid", "changingip.pid"} {
+		olaresdFiles = append(olaresdFiles, filepath.Join(runtime.GetBaseDir(), pidFile))
+	}
+	for _, f := range olaresdFiles {
+		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("rm -rf %s", f), false, false); err != nil {
+			return errors.Wrap(errors.WithStack(err), "remove olaresd failed")
+		}
 	}
 	return nil
 }
