@@ -77,3 +77,5 @@ find $BASE_DIR/../ -type f -name Olares.yaml | while read f; do
 done
 
 sed -i "s/#__VERSION__/${VERSION}/g" ${manifest}
+path="${REPO_PATH:-/}"
+sed -i "s|#__REPO_PATH__|${path}|g" ${manifest}

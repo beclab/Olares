@@ -39,6 +39,7 @@ def main():
 
     manifest_file = args.manifest_file
     version = os.environ.get("VERSION", "")
+    repo_path = os.environ.get("REPO_PATH", "/")
     manifest_amd64_data = {}
     manifest_arm64_data = {}
 
@@ -54,6 +55,9 @@ def main():
                 if version:
                     line = line.replace("#__VERSION__", version)
 
+                # Replace repo path
+                if repo_path:
+                    line = line.replace("#__REPO_PATH__", repo_path)
 
                 fields = line.split(",")
                 if len(fields) < 5:

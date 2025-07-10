@@ -46,6 +46,9 @@ while read line; do
 done < components
 sed -i "s/#__VERSION__/${VERSION}/g" $manifest_file
 
+path="${REPO_PATH:-/}"
+sed -i "s|#__REPO_PATH__|${path}|g" $manifest_file
+
 path="images"
 for deps in "images.mf"; do
     while read line; do

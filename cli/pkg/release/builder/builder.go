@@ -11,6 +11,7 @@ import (
 
 type Builder struct {
 	olaresRepoRoot  string
+	vendorRepoPath  string
 	distPath        string
 	version         string
 	manifestManager *manifest.Manager
@@ -19,8 +20,13 @@ type Builder struct {
 
 func NewBuilder(olaresRepoRoot, version, cdnURL string, ignoreMissingImages bool) *Builder {
 	distPath := filepath.Join(olaresRepoRoot, ".dist/install-wizard")
+	vendorRepoPath := os.Getenv("OLARES_VENDOR_REPO_PATH")
+	if vendorRepoPath == "" {
+		vendorRepoPath = "/"
+	}
 	return &Builder{
 		olaresRepoRoot:  olaresRepoRoot,
+		vendorRepoPath:  vendorRepoPath,
 		distPath:        distPath,
 		version:         version,
 		manifestManager: manifest.NewManager(olaresRepoRoot, distPath, cdnURL, ignoreMissingImages),
@@ -66,6 +72,9 @@ func (b *Builder) archive() (string, error) {
 
 	for _, file := range files {
 		if err := util.ReplaceInFile(file, "#__VERSION__", b.version); err != nil {
+			return "", err
+		}
+		if err := util.ReplaceInFile(file, "#__REPO_PATH__", b.vendorRepoPath); err != nil {
 			return "", err
 		}
 	}

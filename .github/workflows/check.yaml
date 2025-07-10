@@ -134,6 +134,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
           VERSION: ${{ needs.test-version.outputs.version }}
+          REPO_PATH: '${{ secrets.REPO_PATH }}'
         run: |
           bash build/deps-manifest.sh && bash build/upload-deps.sh
 
@@ -158,6 +159,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
           VERSION: ${{ needs.test-version.outputs.version }}
+          REPO_PATH: '${{ secrets.REPO_PATH }}'
         run: |
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
           bash build/deps-manifest.sh linux/arm64 && bash build/upload-deps.sh linux/arm64

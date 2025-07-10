@@ -77,6 +77,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
           VERSION: ${{ needs.daily-version.outputs.version }}
+          REPO_PATH: '${{ secrets.REPO_PATH }}'
         run: |
           bash build/deps-manifest.sh && bash build/upload-deps.sh
 
@@ -94,6 +95,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
           VERSION: ${{ needs.daily-version.outputs.version }}
+          REPO_PATH: '${{ secrets.REPO_PATH }}'
         run: |
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
           bash build/deps-manifest.sh linux/arm64 && bash build/upload-deps.sh linux/arm64
@@ -121,8 +123,8 @@ jobs:
           AWS_DEFAULT_REGION: 'us-east-1'
         run: |
           md5sum install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz > install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt && \
-          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt s3://terminus-os-install/install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt --acl=public-read && \
-          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz s3://terminus-os-install/install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz --acl=public-read && \
+          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt --acl=public-read && \
+          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz --acl=public-read && \
           echo "md5sum=$(awk '{print $1}' install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt)" >> "$GITHUB_OUTPUT"
 
 

@@ -11,27 +11,13 @@ jobs:
       - name: "Checkout source code"
         uses: actions/checkout@v3
 
-      - name: Install coscmd
-        run: pip install coscmd        
-
-      - name: Configure coscmd
-        env:
-          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-          COS_BUCKET: ${{ secrets.COS_BUCKET }}
-          COS_REGION: ${{ secrets.COS_REGION }}
-          END_POINT: ${{ secrets.END_POINT }}
-        run: |
-          coscmd config -a $TENCENT_SECRET_ID \
-                        -s $TENCENT_SECRET_KEY \
-                        -b $COS_BUCKET \
-                        -r $COS_REGION 
 
       # test
       - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
+          REPO_PATH: '${{ secrets.REPO_PATH }}'
         run: |
           bash build/deps-manifest.sh && bash build/upload-deps.sh
 
@@ -42,28 +28,12 @@ jobs:
       - name: "Checkout source code"
         uses: actions/checkout@v3
 
-      - name: Install coscmd
-        run: pip install coscmd        
-
-      - name: Configure coscmd
-        env:
-          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-          COS_BUCKET: ${{ secrets.COS_BUCKET }}
-          COS_REGION: ${{ secrets.COS_REGION }}
-          END_POINT: ${{ secrets.END_POINT }}
-        run: |
-          export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
-          coscmd config -m 10 -p 10 -a $TENCENT_SECRET_ID \
-                        -s $TENCENT_SECRET_KEY \
-                        -b $COS_BUCKET \
-                        -r $COS_REGION 
-
       # test
       - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
+          REPO_PATH: '${{ secrets.REPO_PATH }}'
         run: |
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
           bash build/deps-manifest.sh linux/arm64 && bash build/upload-deps.sh linux/arm64

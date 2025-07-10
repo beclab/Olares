@@ -11,6 +11,14 @@ on:
       repository:
         type: string
   workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        required: true
+      ref:
+        type: string
+      repository:
+        type: string
 
 jobs:
   goreleaser:
@@ -57,5 +65,5 @@ jobs:
           AWS_DEFAULT_REGION: 'us-east-1'
         run: |
           cd daemon/output && for file in *.tar.gz; do
-            aws s3 cp "$file" s3://terminus-os-install/$file --acl=public-read
+            aws s3 cp "$file" s3://terminus-os-install${{ secrets.REPO_PATH }}${file} --acl=public-read
           done

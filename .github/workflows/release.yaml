@@ -80,8 +80,8 @@ jobs:
           AWS_DEFAULT_REGION: 'us-east-1'
         run: |
           md5sum install-wizard-v${{ github.event.inputs.tags }}.tar.gz > install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt && \
-          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt s3://terminus-os-install/install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt --acl=public-read && \
-          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz s3://terminus-os-install/install-wizard-v${{ github.event.inputs.tags }}.tar.gz --acl=public-read
+          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt --acl=public-read && \
+          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.tar.gz --acl=public-read
 
   release:
     runs-on: ubuntu-latest
@@ -101,7 +101,7 @@ jobs:
       - name: Get checksum
         id: vars
         run: |
-          echo "version_md5sum=$(curl -sSfL https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt|awk '{print $1}')" >> $GITHUB_OUTPUT
+          echo "version_md5sum=$(curl -sSfL https://dc3p1870nn3cj.cloudfront.net${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt|awk '{print $1}')" >> $GITHUB_OUTPUT
 
       - name: Update checksum
         uses: eball/write-tag-to-version-file@latest
