@@ -91,7 +91,7 @@ spec:
           name: check-appservice
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.4.8
+        image: beclab/market-backend:v0.4.9
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -146,7 +146,9 @@ spec:
           - name: POSTGRES_DB                                                      
             value: os_framework_market                                                
           - name: POSTGRES_USER                                                    
-            value: market_os_system                                                
+            value: market_os_system
+          - name: HYDRATOR_WORKER_COUNT
+            value: '5'
           - name: POSTGRES_PASSWORD                                                
             valueFrom:                                                             
               secretKeyRef:                                                        
