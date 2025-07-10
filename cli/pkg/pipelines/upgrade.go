@@ -2,11 +2,11 @@ package pipelines
 
 import (
 	"fmt"
-	"os"
-	"path"
-
 	"github.com/beclab/Olares/cli/pkg/upgrade"
 	"github.com/beclab/Olares/cli/pkg/utils"
+	"github.com/beclab/Olares/cli/version"
+	"os"
+	"path"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/options"
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -41,8 +41,35 @@ func UpgradeOlaresPipeline(opts *options.UpgradeOptions) error {
 	}
 
 	if !targetVersion.GreaterThan(currentVersion) {
-		fmt.Printf("current version is: %s, no need to upgrade to %s\n", currentVersion.String(), opts.Version)
+		fmt.Printf("current version is: %s, no need to upgrade to %s\n", currentVersion, targetVersion)
 		os.Exit(0)
+	}
+
+	cliVersion, err := utils.ParseOlaresVersionString(version.VERSION)
+	if err != nil {
+		fmt.Printf("invalid olares-cli version \"%s\" for upgrade: %v\n", version.VERSION, err)
+		os.Exit(0)
+	}
+
+	if targetVersion.GreaterThan(cliVersion) {
+		fmt.Printf("target version (%s) is greater than olares-cli version (%s), unable to upgrade, please upgrade olares-cli first!\n", targetVersion, cliVersion)
+		os.Exit(0)
+	}
+
+	upgradePath := upgrade.GetUpgradePathFor(currentVersion, targetVersion)
+	if len(upgradePath) > 1 {
+		fmt.Printf("unable to upgrade from %s to %s directly,\n", currentVersion, targetVersion)
+		if len(upgradePath) == 2 {
+			fmt.Printf("please upgrade to %s first!\n", upgradePath[0])
+		} else {
+			line := "please upgrade sequentially to:"
+			for _, u := range upgradePath[:len(upgradePath)-1] {
+				line += fmt.Sprintf(" %s", u)
+			}
+			line += " first!"
+			fmt.Println(line)
+		}
+		os.Exit(1)
 	}
 
 	arg := common.NewArgument()
@@ -59,9 +86,8 @@ func UpgradeOlaresPipeline(opts *options.UpgradeOptions) error {
 	manifest := path.Join(runtime.GetInstallerDir(), "installation.manifest")
 	runtime.Arg.SetManifest(manifest)
 
-	upgradeModule := &upgrade.UpgradeModule{
-		CurrentVersion: currentVersion,
-		TargetVersion:  targetVersion,
+	upgradeModule := &upgrade.Module{
+		TargetVersion: targetVersion,
 	}
 
 	p := &pipeline.Pipeline{
