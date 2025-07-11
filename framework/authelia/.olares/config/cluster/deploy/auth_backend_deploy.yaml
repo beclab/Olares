@@ -81,21 +81,27 @@ spec:
         secretKeyRef:
           key: nats_password
           name: authelia-secrets
-    refs:
-    - appName: user-service
-      appNamespace: os
-      subjects:
+    subjects:
       - name: "notification.*"
-        perm:
-        - pub
-        - sub
-    - appName: notifications
-      appNamespace: os
-      subjects:
-        - name: "users.*"
-          perm:
-            - pub
-            - sub
+        permission:
+          pub: allow
+          sub: allow
+      - name: "users.*"
+        permission:
+          pub: allow
+          sub: allow
+      - name: users
+        permission:
+          pub: allow
+          sub: allow
+      - name: "groups.*"
+        permission:
+          pub: allow
+          sub: allow
+      - name: groups
+        permission:
+          pub: allow
+          sub: allow
     user: os-authelia
 
 ---

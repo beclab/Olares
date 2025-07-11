@@ -76,11 +76,15 @@ spec:
           key: nats_password
           name: lldap-pg-secrets
     subjects:
-    - name: notification
+    - name: users
       permission:
         pub: allow
         sub: allow
-    - name: users
+    - name: "users.*"
+      permission:
+        pub: allow
+        sub: allow
+    - name: "groups.*"
       permission:
         pub: allow
         sub: allow

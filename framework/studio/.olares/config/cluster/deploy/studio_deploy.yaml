@@ -318,17 +318,13 @@ spec:
         secretKeyRef:
           key: nats_password
           name: studio-secrets
-    refs:
-      - appName: user-service
-        appNamespace: os
-        subjects:
-          - name: "application.*"
-            perm:
-              - sub
-      - appName: user-service
-        appNamespace: os
-        subjects:
-          - name: "market.*"
-            perm:
-              - sub
+    subjects:
+      - name: "application.*"
+        permission:
+          pub: allow
+          sub: allow
+      - name: "market.*"
+        permission:
+          pub: deny
+          sub: allow
     user: os-studio-server

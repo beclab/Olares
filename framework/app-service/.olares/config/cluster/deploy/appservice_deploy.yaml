@@ -440,25 +440,29 @@ spec:
         secretKeyRef:
           key: nats_password
           name: app-service-nats-secret
-    refs:
-      - appName: user-service
-        appNamespace: os
-        subjects:
-          - name: "application.*"
-            perm:
-              - pub
-              - sub
     subjects:
+      - name: "application.*"
+        permission:
+          pub: allow
+          sub: allow
       - name: application
+        permission:
+          pub: allow
+          sub: allow
+      - name: "users.*"
         permission:
           pub: allow
           sub: allow
       - name: users
         permission:
           pub: allow
-          sub: deny
+          sub: allow
+      - name: "groups.*"
+        permission:
+          pub: allow
+          sub: allow
       - name: groups
         permission:
           pub: allow
-          sub: deny
+          sub: allow
     user: os-app-service

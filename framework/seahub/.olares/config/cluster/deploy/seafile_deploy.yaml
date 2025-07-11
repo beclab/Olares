@@ -481,15 +481,11 @@ spec:
         secretKeyRef:
           key: nats_password
           name: seahub-nats-secrets
-    refs:
-      - appName: user-service
-        appNamespace: os
-        subjects:
-          - name: "seahub.*"
-            perm:
-              - pub
-              - sub
     subjects:
+      - name: "seahub.*"
+        permission:
+          pub: allow
+          sub: allow
       - name: seahub
         permission:
           pub: allow

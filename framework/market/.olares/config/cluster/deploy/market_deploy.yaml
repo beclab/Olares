@@ -267,19 +267,14 @@ spec:
         secretKeyRef:
           key: nats_password
           name: market-backend-nats-secret
-    refs:
-      - appName: user-service
-        appNamespace: os
-        subjects:
-          - name: "application.*"
-            perm:
-              - pub
-              - sub
-      - appName: user-service
-        appNamespace: os
-        subjects:
-          - name: "market.*"
-            perm:
-              - pub
-              - sub
+    subjects:
+      - name: "application.*"
+        permission:
+          pub: allow
+          sub: deny
+      - name: "market.*"
+        permission:
+          pub: allow
+          sub: allow
+
     user: os-market-backend

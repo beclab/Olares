@@ -35,12 +35,9 @@ spec:
         secretKeyRef:
           key: nats_password
           name: ks-component-secrets
-    refs:
-    - appName: notifications
-      appNamespace: os
-      subjects:
-      - name: notification
-        perm:
-        - pub
-        - sub
+    subjects:
+      - name: "notifications.*"
+        permission:
+          pub: allow
+          sub: allow
     user: os-ks-component

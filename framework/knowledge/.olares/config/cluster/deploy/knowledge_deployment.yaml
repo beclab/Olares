@@ -104,16 +104,12 @@ spec:
         secretKeyRef:
           key: nat_password
           name: knowledge-secrets
-    refs:
-    - appName: user-service
-      appNamespace: os
-      subjects:
-        - name: "knowledge.*"
-          perm:
-            - pub
-            - sub
     subjects:
       - name: download_status
+        permission:
+          pub: allow
+          sub: allow
+      - name: "knowledge.*"
         permission:
           pub: allow
           sub: allow

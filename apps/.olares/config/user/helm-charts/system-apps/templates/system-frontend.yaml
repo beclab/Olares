@@ -769,21 +769,15 @@ spec:
         secretKeyRef:
           key: files_frontend_nats_password
           name: files-frontend-nats-secrets
-    refs:
-      - appName: files-server
-        appNamespace: os
-        subjects:
-          - name: files-notify
-            perm:
-              - pub
-              - sub
-      - appName: user-service
-        appNamespace: os
-        subjects:
-          - name: "files.*"
-            perm:
-              - pub
-              - sub
+    subjects:
+      - name: files-notify
+        permission:
+          pub: allow
+          sub: allow
+      - name: files.{{ .Values.bfl.username }}
+        permission:
+          sub: allow
+          pub: allow
     user: user-system-{{ .Values.bfl.username }}-files-frontend
 ---
 apiVersion: v1
@@ -2127,87 +2121,36 @@ spec:
         secretKeyRef:
           key: nats_password
           name: user-service-nats-secret
-    refs: []
     subjects:
-      - export:
-          - appName: files-server
-            sub: allow
-            pub: allow
-          - appName: files-frontend
-            sub: allow
-            pub: allow
-        name: "files.*"
+      - name: "files.*"
         permission:
           pub: allow
           sub: allow
-      - export:
-          - appName: notifications
-            sub: allow
-            pub: allow
-          - appName: authelia
-            sub: allow
-            pub: allow
-        name: "notification.*"
+      - name: "notification.*"
         permission:
           pub: allow
           sub: allow
-      - export:
-          - appName: search-server
-            sub: allow
-            pub: allow
-        name: "search.*"
+      - name: "search.*"
         permission:
           pub: allow
           sub: allow
-      - export:
-          - appName: seahub-server
-            sub: allow
-            pub: allow
-        name: "seahub.*"
+      - name: "seahub.*"
         permission:
           sub: allow
           pub: allow
-      - export:
-          - appName: vault-server
-            sub: allow
-            pub: allow
-        name: "vault.*"
+      - name: "vault.*"
         permission:
           sub: allow
           pub: allow
-      - export:
-          - appName: market-backend
-            sub: allow
-            pub: allow
-          - appName: app-service
-            sub: allow
-            pub: allow
-          - appName: studio-server
-            sub: allow
-            pub: deny
-        name: "application.*"
+      - name: "application.*"
         permission:
           sub: allow
           pub: allow
-      - export:
-          - appName: knowledge
-            sub: allow
-            pub: allow
-          - appName: download
-            sub: allow
-            pub: allow
-        name: "knowledge.*"
+      - name: "knowledge.*"
         permission:
           sub: allow
           pub: allow
-      - export:
-          - appName: market-backend
-            sub: allow
-            pub: allow
-          - appName: studio-server
-            sub: allow
-            pub: deny
-        name: "market.*"
+      - name: "market.*"
         permission:
           sub: allow
           pub: allow

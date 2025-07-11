@@ -218,21 +218,24 @@ spec:
         secretKeyRef:
           key: nats_password
           name: vault-server-nats-secret
-
-    refs:
-    - appName: user-service
-      appNamespace: os
-      subjects:
-        - name: "vault.*"
-          perm:
-            - pub
-            - sub
     subjects:
+      - name: "vault.*"
+        permission:
+          pub: allow
+          sub: allow
       - name: vault
         permission:
           pub: allow
           sub: allow
+      - name: "users.*"
+        permission:
+          pub: allow
+          sub: deny
       - name: users
+        permission:
+          pub: allow
+          sub: deny
+      - name: "groups.*"
         permission:
           pub: allow
           sub: deny

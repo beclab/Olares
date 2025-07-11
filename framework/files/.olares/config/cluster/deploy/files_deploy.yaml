@@ -463,23 +463,12 @@ spec:
         secretKeyRef:
           key: files_nats_password
           name: files-nats-secrets
-    refs:
-      - appName: user-service
-        appNamespace: os
-        subjects:
-          - name: "files.*"
-            perm:
-              - pub
-              - sub
     subjects:
-      - export:
-          - appName: files-frontend
-            pub: allow
-            sub: allow
-          - appName: vault
-            pub: allow
-            sub: allow
-        name: files-notify
+      - name: "files.*"
+        permission:
+          pub: allow
+          sub: allow
+      - name: files-notify
         permission:
           pub: allow
           sub: allow

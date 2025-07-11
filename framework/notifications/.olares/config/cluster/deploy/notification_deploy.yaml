@@ -64,44 +64,22 @@ spec:
         secretKeyRef:
           key: nats_password
           name: notifications-secrets
-    refs: []   # TODO: refs to notifications-proxy's subject
     subjects:
-      - export:
-          - appName: notifications-proxy
-            pub: allow
-            sub: allow
-          - appName: lldap
-            pub: allow
-            sub: allow
-          - appName: ks-component
-            pub: allow
-            sub: allow
-          - appName: authelia
-            pub: allow
-            sub: allow
-        name: "notification.*"
+      - name: "notification.*"
         permission:
           pub: allow
           sub: allow
-      - export:
-          - appName: lldap
-            pub: allow
-            sub: allow
-          - appName: vault-server
-            pub: deny
-            sub: allow
-          - appName: seahub
-            pub: deny
-            sub: allow
-          - appName: knowledge
-            pub: deny
-            sub: allow
-          - appName: authlia
-            pub: allow
-            sub: allow
-        name: "users.*"
+      - name: users
+        permission:
+          pub: allow
+          sub: allow
+      - name: "users.*"
         permission:
           pub: deny
+          sub: allow
+      - name: group
+        permission:
+          pub: allow
           sub: allow
       - name: "groups.*"
         permission:

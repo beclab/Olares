@@ -377,15 +377,11 @@ spec:
         secretKeyRef:
           key: nats_password
           name: search-server-nats-secret
-    refs:
-      - appName: user-service
-        appNamespace: os
-        subjects:
-        - name: "search.*"
-          perm:
-            - pub
-            - sub
     subjects:
+      - name: "search.*"
+        permission:
+          pub: allow
+          sub: allow
       - name: search
         permission:
           pub: allow
