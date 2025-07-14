@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -8,7 +8,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (h *handlers) PostCollectLogs(ctx *fiber.Ctx, cmd commands.Interface) error {
+func (h *Handlers) PostCollectLogs(ctx *fiber.Ctx, cmd commands.Interface) error {
 	_, err := cmd.Execute(ctx.Context(), nil)
 	if err != nil {
 		klog.Error("execute command error, ", err, ", ", cmd.OperationName().Stirng())

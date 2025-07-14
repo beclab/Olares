@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -16,7 +16,7 @@ type TerminusInitReq struct {
 	Domain   string `json:"domain"`
 }
 
-func (h *handlers) PostTerminusInit(ctx *fiber.Ctx, cmd commands.Interface) error {
+func (h *Handlers) PostTerminusInit(ctx *fiber.Ctx, cmd commands.Interface) error {
 	var req TerminusInitReq
 	if err := h.ParseBody(ctx, &req); err != nil {
 		klog.Error("parse request error, ", err)

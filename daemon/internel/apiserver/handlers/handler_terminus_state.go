@@ -1,10 +1,10 @@
-package apiserver
+package handlers
 
 import (
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/gofiber/fiber/v2"
 )
 
-func (h *handlers) GetTerminusState(ctx *fiber.Ctx) error {
+func (h *Handlers) GetTerminusState(ctx *fiber.Ctx) error {
 	return h.OkJSON(ctx, "success", state.CurrentState)
 }

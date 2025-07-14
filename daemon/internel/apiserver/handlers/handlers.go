@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"context"
@@ -10,12 +10,19 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-type handlers struct {
+type Handlers struct {
 	mainCtx context.Context
-	apList  []ble.AccessPoint
+	ApList  []ble.AccessPoint
 }
 
-func (h *handlers) ParseBody(ctx *fiber.Ctx, value any) error {
+var handlers *Handlers = &Handlers{}
+
+func NewHandlers(ctx context.Context) *Handlers {
+	handlers.mainCtx = ctx
+	return handlers
+}
+
+func (h *Handlers) ParseBody(ctx *fiber.Ctx, value any) error {
 	err := ctx.BodyParser(value)
 
 	if err != nil {
@@ -35,7 +42,7 @@ func (h *handlers) ParseBody(ctx *fiber.Ctx, value any) error {
 	return nil
 }
 
-func (h *handlers) ErrJSON(ctx *fiber.Ctx, code int, message string, data ...interface{}) error {
+func (h *Handlers) ErrJSON(ctx *fiber.Ctx, code int, message string, data ...interface{}) error {
 	switch len(data) {
 	case 0:
 		return ctx.Status(code).JSON(fiber.Map{
@@ -58,10 +65,10 @@ func (h *handlers) ErrJSON(ctx *fiber.Ctx, code int, message string, data ...int
 
 }
 
-func (h *handlers) OkJSON(ctx *fiber.Ctx, message string, data ...interface{}) error {
+func (h *Handlers) OkJSON(ctx *fiber.Ctx, message string, data ...interface{}) error {
 	return h.ErrJSON(ctx, http.StatusOK, message, data...)
 }
 
-func (h *handlers) NeedChoiceJSON(ctx *fiber.Ctx, message string, data ...interface{}) error {
+func (h *Handlers) NeedChoiceJSON(ctx *fiber.Ctx, message string, data ...interface{}) error {
 	return h.ErrJSON(ctx, http.StatusMultipleChoices, message, data...)
 }

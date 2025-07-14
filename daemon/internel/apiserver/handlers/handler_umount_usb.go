@@ -1,21 +1,21 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
 
 	"github.com/beclab/Olares/daemon/pkg/commands"
-	umountsmb "github.com/beclab/Olares/daemon/pkg/commands/umount_smb"
+	umountusb "github.com/beclab/Olares/daemon/pkg/commands/umount_usb"
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/klog/v2"
 )
 
-type UmountSmbReq struct {
+type UmountReq struct {
 	Path string ``
 }
 
-func (h *handlers) umountSmbInNode(ctx *fiber.Ctx, cmd commands.Interface, pathInNode string) error {
-	_, err := cmd.Execute(ctx.Context(), &umountsmb.Param{
-		MountPath: pathInNode,
+func (h *Handlers) umountUsbInNode(ctx *fiber.Ctx, cmd commands.Interface, pathInNode string) error {
+	_, err := cmd.Execute(ctx.Context(), &umountusb.Param{
+		Path: pathInNode,
 	})
 
 	if err != nil {
@@ -25,8 +25,8 @@ func (h *handlers) umountSmbInNode(ctx *fiber.Ctx, cmd commands.Interface, pathI
 	return h.OkJSON(ctx, "success to umount")
 }
 
-func (h *handlers) PostUmountSmb(ctx *fiber.Ctx, cmd commands.Interface) error {
-	var req UmountSmbReq
+func (h *Handlers) PostUmountUsb(ctx *fiber.Ctx, cmd commands.Interface) error {
+	var req UmountReq
 	if err := h.ParseBody(ctx, &req); err != nil {
 		klog.Error("parse request error, ", err)
 		return h.ErrJSON(ctx, http.StatusBadRequest, err.Error())
@@ -35,11 +35,11 @@ func (h *handlers) PostUmountSmb(ctx *fiber.Ctx, cmd commands.Interface) error {
 		return h.ErrJSON(ctx, http.StatusBadRequest, "ip is empty")
 	}
 
-	return h.umountSmbInNode(ctx, cmd, req.Path)
+	return h.umountUsbInNode(ctx, cmd, req.Path)
 }
 
-func (h *handlers) PostUmountSmbInCluster(ctx *fiber.Ctx, cmd commands.Interface) error {
-	var req UmountSmbReq
+func (h *Handlers) PostUmountUsbInCluster(ctx *fiber.Ctx, cmd commands.Interface) error {
+	var req UmountReq
 	if err := h.ParseBody(ctx, &req); err != nil {
 		klog.Error("parse request error, ", err)
 		return h.ErrJSON(ctx, http.StatusBadRequest, err.Error())
@@ -50,5 +50,5 @@ func (h *handlers) PostUmountSmbInCluster(ctx *fiber.Ctx, cmd commands.Interface
 
 	nodePath := clusterPathToNodePath(req.Path)
 
-	return h.umountSmbInNode(ctx, cmd, nodePath)
+	return h.umountUsbInNode(ctx, cmd, nodePath)
 }

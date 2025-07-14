@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"fmt"
@@ -35,7 +35,7 @@ func (r *UpgradeReq) Check() error {
 	return nil
 }
 
-func (h *handlers) RequestOlaresUpgrade(ctx *fiber.Ctx, cmd commands.Interface) error {
+func (h *Handlers) RequestOlaresUpgrade(ctx *fiber.Ctx, cmd commands.Interface) error {
 	var req UpgradeReq
 	if err := h.ParseBody(ctx, &req); err != nil {
 		klog.Error("parse request error, ", err)
@@ -60,7 +60,7 @@ func (h *handlers) RequestOlaresUpgrade(ctx *fiber.Ctx, cmd commands.Interface) 
 	return h.OkJSON(ctx, "successfully created upgrade target")
 }
 
-func (h *handlers) CancelOlaresUpgrade(ctx *fiber.Ctx, cmd commands.Interface) error {
+func (h *Handlers) CancelOlaresUpgrade(ctx *fiber.Ctx, cmd commands.Interface) error {
 	if _, err := cmd.Execute(ctx.Context(), nil); err != nil {
 		return h.ErrJSON(ctx, http.StatusBadRequest, err.Error())
 	}

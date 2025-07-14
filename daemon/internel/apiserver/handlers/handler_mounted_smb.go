@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -15,7 +15,7 @@ type mountedSmbPathResponse struct {
 	Device         string `json:"device"`
 }
 
-func (h *handlers) getMountedSmb(ctx *fiber.Ctx, mutate func(*disk.UsageStat) *disk.UsageStat) error {
+func (h *Handlers) getMountedSmb(ctx *fiber.Ctx, mutate func(*disk.UsageStat) *disk.UsageStat) error {
 	paths, err := utils.MountedSambaPath(ctx.Context())
 	if err != nil {
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
@@ -41,11 +41,11 @@ func (h *handlers) getMountedSmb(ctx *fiber.Ctx, mutate func(*disk.UsageStat) *d
 	return h.OkJSON(ctx, "success", res)
 }
 
-func (h *handlers) GetMountedSmb(ctx *fiber.Ctx) error {
+func (h *Handlers) GetMountedSmb(ctx *fiber.Ctx) error {
 	return h.getMountedSmb(ctx, nil)
 }
 
-func (h *handlers) GetMountedSmbInCluster(ctx *fiber.Ctx) error {
+func (h *Handlers) GetMountedSmbInCluster(ctx *fiber.Ctx) error {
 	return h.getMountedSmb(ctx, func(us *disk.UsageStat) *disk.UsageStat {
 		us.Path = nodePathToClusterPath(us.Path)
 		return us

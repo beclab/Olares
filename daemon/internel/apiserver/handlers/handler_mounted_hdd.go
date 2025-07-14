@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -9,7 +9,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (h *handlers) getMountedHdd(ctx *fiber.Ctx, mutate func(*disk.UsageStat) *disk.UsageStat) error {
+func (h *Handlers) getMountedHdd(ctx *fiber.Ctx, mutate func(*disk.UsageStat) *disk.UsageStat) error {
 	paths, err := utils.MountedHddPath(ctx.Context())
 	if err != nil {
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
@@ -35,11 +35,11 @@ func (h *handlers) getMountedHdd(ctx *fiber.Ctx, mutate func(*disk.UsageStat) *d
 	return h.OkJSON(ctx, "success", res)
 }
 
-func (h *handlers) GetMountedHdd(ctx *fiber.Ctx) error {
+func (h *Handlers) GetMountedHdd(ctx *fiber.Ctx) error {
 	return h.getMountedHdd(ctx, nil)
 }
 
-func (h *handlers) GetMountedHddInCluster(ctx *fiber.Ctx) error {
+func (h *Handlers) GetMountedHddInCluster(ctx *fiber.Ctx) error {
 	return h.getMountedHdd(ctx, func(us *disk.UsageStat) *disk.UsageStat {
 		us.Path = nodePathToClusterPath(us.Path)
 		return us

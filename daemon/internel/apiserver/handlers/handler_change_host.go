@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -13,7 +13,7 @@ type ChangeHostReq struct {
 	IP string `json:"ip"`
 }
 
-func (h *handlers) PostChangeHost(ctx *fiber.Ctx, cmd commands.Interface) error {
+func (h *Handlers) PostChangeHost(ctx *fiber.Ctx, cmd commands.Interface) error {
 	var req ChangeHostReq
 	if err := h.ParseBody(ctx, &req); err != nil {
 		klog.Error("parse request error, ", err)

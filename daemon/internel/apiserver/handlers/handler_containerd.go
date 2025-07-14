@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -8,7 +8,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (h *handlers) ListRegistries(ctx *fiber.Ctx) error {
+func (h *Handlers) ListRegistries(ctx *fiber.Ctx) error {
 	images, err := containerd.ListRegistries(ctx)
 	if err != nil {
 		klog.Error("list registries error, ", err)
@@ -17,7 +17,7 @@ func (h *handlers) ListRegistries(ctx *fiber.Ctx) error {
 	return h.OkJSON(ctx, "success", images)
 }
 
-func (h *handlers) GetRegistryMirrors(ctx *fiber.Ctx) error {
+func (h *Handlers) GetRegistryMirrors(ctx *fiber.Ctx) error {
 	mirrors, err := containerd.GetRegistryMirrors(ctx)
 	if err != nil {
 		klog.Error("get registry mirrors error, ", err)
@@ -27,7 +27,7 @@ func (h *handlers) GetRegistryMirrors(ctx *fiber.Ctx) error {
 	return h.OkJSON(ctx, "success", mirrors)
 }
 
-func (h *handlers) GetRegistryMirror(ctx *fiber.Ctx) error {
+func (h *Handlers) GetRegistryMirror(ctx *fiber.Ctx) error {
 	mirror, err := containerd.GetRegistryMirror(ctx)
 	if err != nil {
 		klog.Error("get registry mirror error, ", err)
@@ -37,7 +37,7 @@ func (h *handlers) GetRegistryMirror(ctx *fiber.Ctx) error {
 	return h.OkJSON(ctx, "success", mirror)
 }
 
-func (h *handlers) UpdateRegistryMirror(ctx *fiber.Ctx) error {
+func (h *Handlers) UpdateRegistryMirror(ctx *fiber.Ctx) error {
 	mirror, err := containerd.UpdateRegistryMirror(ctx)
 	if err != nil {
 		klog.Error("update registry mirror error, ", err)
@@ -47,7 +47,7 @@ func (h *handlers) UpdateRegistryMirror(ctx *fiber.Ctx) error {
 	return h.OkJSON(ctx, "success", mirror)
 }
 
-func (h *handlers) DeleteRegistryMirror(ctx *fiber.Ctx) error {
+func (h *Handlers) DeleteRegistryMirror(ctx *fiber.Ctx) error {
 	if err := containerd.DeleteRegistryMirror(ctx); err != nil {
 		klog.Error("delete registry mirror error, ", err)
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
@@ -56,7 +56,7 @@ func (h *handlers) DeleteRegistryMirror(ctx *fiber.Ctx) error {
 	return h.OkJSON(ctx, "success")
 }
 
-func (h *handlers) ListImages(ctx *fiber.Ctx) error {
+func (h *Handlers) ListImages(ctx *fiber.Ctx) error {
 	registry := ctx.Query("registry")
 	images, err := containerd.ListImages(ctx, registry)
 	if err != nil {
@@ -66,7 +66,7 @@ func (h *handlers) ListImages(ctx *fiber.Ctx) error {
 	return h.OkJSON(ctx, "success", images)
 }
 
-func (h *handlers) DeleteImage(ctx *fiber.Ctx) error {
+func (h *Handlers) DeleteImage(ctx *fiber.Ctx) error {
 	if err := containerd.DeleteImage(ctx); err != nil {
 		klog.Error("delete image error, ", err)
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
@@ -74,7 +74,7 @@ func (h *handlers) DeleteImage(ctx *fiber.Ctx) error {
 	return h.OkJSON(ctx, "success")
 }
 
-func (h *handlers) PruneImages(ctx *fiber.Ctx) error {
+func (h *Handlers) PruneImages(ctx *fiber.Ctx) error {
 	res, err := containerd.PruneImages(ctx)
 	if err != nil {
 		klog.Error("prune images error, ", err)

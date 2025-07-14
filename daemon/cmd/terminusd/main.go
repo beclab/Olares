@@ -49,10 +49,7 @@ func main() {
 
 	mainCtx, cancel := context.WithCancel(context.Background())
 
-	apis, err := apiserver.NewServer(mainCtx, port)
-	if err != nil {
-		panic(err)
-	}
+	apis := apiserver.NewServer(mainCtx, port)
 
 	if err := state.CheckCurrentStatus(mainCtx); err != nil {
 		klog.Error(err)

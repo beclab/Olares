@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -20,7 +20,7 @@ type mountedPath struct {
 	ReadOnly       bool   `json:"read_only"`
 }
 
-func (h *handlers) getMountedPath(ctx *fiber.Ctx, mutate func(*disk.UsageStat) *disk.UsageStat) error {
+func (h *Handlers) getMountedPath(ctx *fiber.Ctx, mutate func(*disk.UsageStat) *disk.UsageStat) error {
 	paths, err := utils.MountedPath(ctx.Context())
 	if err != nil {
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
@@ -58,11 +58,11 @@ func (h *handlers) getMountedPath(ctx *fiber.Ctx, mutate func(*disk.UsageStat) *
 	return h.OkJSON(ctx, "success", res)
 }
 
-func (h *handlers) GetMountedPath(ctx *fiber.Ctx) error {
+func (h *Handlers) GetMountedPath(ctx *fiber.Ctx) error {
 	return h.getMountedPath(ctx, nil)
 }
 
-func (h *handlers) GetMountedPathInCluster(ctx *fiber.Ctx) error {
+func (h *Handlers) GetMountedPathInCluster(ctx *fiber.Ctx) error {
 	return h.getMountedPath(ctx, func(us *disk.UsageStat) *disk.UsageStat {
 		us.Path = nodePathToClusterPath(us.Path)
 		return us

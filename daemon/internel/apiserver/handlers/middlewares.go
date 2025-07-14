@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -13,7 +13,7 @@ const (
 	SIGNATURE_HEADER = "X-Signature"
 )
 
-func (h *handlers) WaitServerRunning(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
+func (h *Handlers) WaitServerRunning(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
 	return func(ctx *fiber.Ctx) error {
 		if state.CurrentState.TerminusdState != state.Running {
 			return h.ErrJSON(ctx, http.StatusForbidden, "server is not running, please wait and retry again later")
@@ -23,7 +23,7 @@ func (h *handlers) WaitServerRunning(next func(ctx *fiber.Ctx) error) func(ctx *
 	}
 }
 
-func (h *handlers) RequireSignature(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
+func (h *Handlers) RequireSignature(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
 	return func(ctx *fiber.Ctx) error {
 		headers := ctx.GetReqHeaders()
 		signature, ok := headers[SIGNATURE_HEADER]
@@ -42,7 +42,7 @@ func (h *handlers) RequireSignature(next func(ctx *fiber.Ctx) error) func(ctx *f
 	}
 }
 
-func (h *handlers) RunCommand(next func(ctx *fiber.Ctx, cmd commands.Interface) error,
+func (h *Handlers) RunCommand(next func(ctx *fiber.Ctx, cmd commands.Interface) error,
 	cmdNew func() commands.Interface) func(ctx *fiber.Ctx) error {
 
 	return func(ctx *fiber.Ctx) error {

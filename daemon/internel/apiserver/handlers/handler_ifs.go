@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -21,6 +21,7 @@ type NetIf struct {
 	Strength          *int    `json:"strength,omitempty"`
 	MTU               int     `json:"mtu,omitempty"`
 	InternetConnected *bool   `json:"internetConnected,omitempty"`
+	Hostname          string  `json:"hostname,omitempty"` // Hostname of the device
 
 	Ipv4Gateway      *string  `json:"ipv4Gateway,omitempty"`
 	Ipv6Gateway      *string  `json:"ipv6Gateway,omitempty"`
@@ -34,7 +35,7 @@ type NetIf struct {
 	TxRate           *float64 `json:"txRate,omitempty"` // in bytes per second
 }
 
-func (h *handlers) GetNetIfs(ctx *fiber.Ctx) error {
+func (h *Handlers) GetNetIfs(ctx *fiber.Ctx) error {
 	test := ctx.Query("testConnectivity", "false")
 
 	ifaces, err := nets.GetInternalIpv4Addr(test != "true")
@@ -65,6 +66,7 @@ func (h *handlers) GetNetIfs(ctx *fiber.Ctx) error {
 			IP:       i.IP,
 			IsHostIp: i.IP == hostip,
 			MTU:      i.Iface.MTU,
+			Hostname: host,
 		}
 
 		if wifiDevs != nil {
@@ -137,8 +139,8 @@ func (h *handlers) GetNetIfs(ctx *fiber.Ctx) error {
 	return h.OkJSON(ctx, "", res)
 }
 
-func (h *handlers) findAp(ssid string) *ble.AccessPoint {
-	for _, ap := range h.apList {
+func (h *Handlers) findAp(ssid string) *ble.AccessPoint {
+	for _, ap := range h.ApList {
 		if ap.SSID == ssid {
 			return &ap
 		}

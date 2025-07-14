@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -14,7 +14,7 @@ type ConnectWifiReq struct {
 	SSID     string `json:"ssid"`
 }
 
-func (h *handlers) PostConnectWifi(ctx *fiber.Ctx, cmd commands.Interface) error {
+func (h *Handlers) PostConnectWifi(ctx *fiber.Ctx, cmd commands.Interface) error {
 	var req ConnectWifiReq
 	if err := h.ParseBody(ctx, &req); err != nil {
 		klog.Error("parse request error, ", err)

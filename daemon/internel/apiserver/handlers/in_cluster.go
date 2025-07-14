@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"path/filepath"

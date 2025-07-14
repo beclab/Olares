@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -17,7 +17,7 @@ type ListSmbResponse struct {
 	Mounted bool   `json:"mounted"`
 }
 
-func (h *handlers) PostMountSambaDriverV2(ctx *fiber.Ctx, cmd commands.Interface) error {
+func (h *Handlers) PostMountSambaDriverV2(ctx *fiber.Ctx, cmd commands.Interface) error {
 	var req MountReq
 	if err := h.ParseBody(ctx, &req); err != nil {
 		klog.Error("parse request error, ", err)

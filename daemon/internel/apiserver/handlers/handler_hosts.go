@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -9,7 +9,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (h *handlers) GetHostsfile(ctx *fiber.Ctx) error {
+func (h *Handlers) GetHostsfile(ctx *fiber.Ctx) error {
 	items, err := nets.GetHostsFile()
 	if err != nil {
 		return h.ErrJSON(ctx, http.StatusServiceUnavailable, err.Error())
@@ -22,7 +22,7 @@ type writeHostsfileReq struct {
 	Items []*nets.HostsItem `json:"items"`
 }
 
-func (h *handlers) PostHostsfile(ctx *fiber.Ctx) error {
+func (h *Handlers) PostHostsfile(ctx *fiber.Ctx) error {
 	var req writeHostsfileReq
 	if err := h.ParseBody(ctx, &req); err != nil {
 		klog.Error("parse request error, ", err)

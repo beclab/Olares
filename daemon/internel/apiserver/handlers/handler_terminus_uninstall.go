@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -8,7 +8,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (h *handlers) PostTerminusUninstall(ctx *fiber.Ctx, cmd commands.Interface) error {
+func (h *Handlers) PostTerminusUninstall(ctx *fiber.Ctx, cmd commands.Interface) error {
 	// run in background
 	_, err := cmd.Execute(h.mainCtx, nil)
 

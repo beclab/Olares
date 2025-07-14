@@ -1,4 +1,4 @@
-package apiserver
+package handlers
 
 import (
 	"net/http"
@@ -15,7 +15,7 @@ type MountReq struct {
 	Password string `json:"password"`
 }
 
-func (h *handlers) PostMountSambaDriver(ctx *fiber.Ctx, cmd commands.Interface) error {
+func (h *Handlers) PostMountSambaDriver(ctx *fiber.Ctx, cmd commands.Interface) error {
 	var req MountReq
 	if err := h.ParseBody(ctx, &req); err != nil {
 		klog.Error("parse request error, ", err)
