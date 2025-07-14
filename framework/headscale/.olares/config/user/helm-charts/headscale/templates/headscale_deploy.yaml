@@ -87,16 +87,15 @@ spec:
     spec:
       affinity:
         nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - preference:
-              matchExpressions:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
               - key: kubernetes.io/os
                 operator: In
                 values:
                 - linux
-              - key: node-role.kubernetes.io/master
+              - key: node-role.kubernetes.io/control-plane
                 operator: Exists
-            weight: 10
       serviceAccountName: tailscale
       securityContext:
         runAsUser: 1000
