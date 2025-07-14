@@ -65,7 +65,7 @@ func (t *InitNamespace) Execute(runtime connector.Runtime) error {
 		kubectlpath = path.Join(common.BinDir, common.CommandKubectl)
 	}
 
-	for _, ns := range []string{common.NamespaceKubesphereControlsSystem, common.NamespaceKubesphereMonitoringFederated} {
+	for _, ns := range []string{common.NamespaceKubesphereControlsSystem} {
 		if stdout, err := runtime.GetRunner().Cmd(fmt.Sprintf("%s create ns %s", kubectlpath, ns), false, true); err != nil {
 			if !strings.Contains(stdout, "already exists") {
 				logger.Errorf("create ns %s failed: %v", ns, err)
@@ -98,8 +98,6 @@ func (t *InitNamespace) Execute(runtime connector.Runtime) error {
 		common.NamespaceKubeSystem,
 		common.NamespaceKubekeySystem,
 		common.NamespaceKubesphereControlsSystem,
-		common.NamespaceKubesphereMonitoringFederated,
-		common.NamespaceKubesphereMonitoringSystem,
 		common.NamespaceKubesphereSystem,
 	}
 

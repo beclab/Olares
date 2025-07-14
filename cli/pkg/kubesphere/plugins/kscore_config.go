@@ -58,12 +58,12 @@ var kscorecrds = []map[string]string{
 		"resource": "default-http-backend",
 		"release":  "ks-core",
 	},
-	{
-		"ns":       "kubesphere-system",
-		"kind":     "secrets",
-		"resource": "ks-controller-manager-webhook-cert",
-		"release":  "ks-core",
-	},
+	//{
+	//	"ns":       "kubesphere-system",
+	//	"kind":     "secrets",
+	//	"resource": "ks-controller-manager-webhook-cert",
+	//	"release":  "ks-core",
+	//},
 	{
 		"ns":       "kubesphere-system",
 		"kind":     "serviceaccounts",
@@ -100,24 +100,24 @@ var kscorecrds = []map[string]string{
 		"resource": "ks-apiserver",
 		"release":  "ks-core",
 	},
-	{
-		"ns":       "kubesphere-system",
-		"kind":     "services",
-		"resource": "ks-controller-manager",
-		"release":  "ks-core",
-	},
+	//{
+	//	"ns":       "kubesphere-system",
+	//	"kind":     "services",
+	//	"resource": "ks-controller-manager",
+	//	"release":  "ks-core",
+	//},
 	{
 		"ns":       "kubesphere-system",
 		"kind":     "deployments",
 		"resource": "ks-apiserver",
 		"release":  "ks-core",
 	},
-	{
-		"ns":       "kubesphere-system",
-		"kind":     "deployments",
-		"resource": "ks-controller-manager",
-		"release":  "ks-core",
-	},
+	//{
+	//	"ns":       "kubesphere-system",
+	//	"kind":     "deployments",
+	//	"resource": "ks-controller-manager",
+	//	"release":  "ks-core",
+	//},
 	//{
 	//	"ns":       "kubesphere-system",
 	//	"kind":     "validatingwebhookconfigurations",

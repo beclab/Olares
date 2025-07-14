@@ -4,8 +4,6 @@ output:
   containers:
     - 
       name: beclab/ks-apiserver:0.0.21
-    - 
-      name: beclab/ks-controller-manager:0.0.21
     -
       name: kubesphere/kubectl:v1.22.0
 

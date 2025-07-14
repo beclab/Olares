@@ -355,7 +355,7 @@ func (c *Check) Execute(runtime connector.Runtime) error {
 		return fmt.Errorf("kubectl not found")
 	}
 
-	var labels = []string{"app=ks-apiserver", "app=ks-controller-manager"}
+	var labels = []string{"app=ks-apiserver"}
 
 	for _, label := range labels {
 		var cmd = fmt.Sprintf("%s get pod -n %s -l '%s' -o jsonpath='{.items[0].status.phase}'", kubectlpath, common.NamespaceKubesphereSystem, label)

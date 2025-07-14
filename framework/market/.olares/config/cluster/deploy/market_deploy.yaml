@@ -272,8 +272,8 @@ spec:
     subjects:
       - name: "application.*"
         permission:
-          pub: allow
-          sub: deny
+          pub: deny
+          sub: allow
       - name: "market.*"
         permission:
           pub: allow

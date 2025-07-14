@@ -4,8 +4,6 @@
 
 image:
   # Overrides the image tag whose default is the chart appVersion.
-  ks_controller_manager_repo: kubesphere/ks-controller-manager
-  ks_controller_manager_tag: "v3.3.0"
 
   ks_apiserver_repo: beclab/ks-apiserver
   ks_apiserver_tag: "v3.3.0-ext-3"

@@ -6,7 +6,7 @@ metadata:
   annotations:
     iam.kubesphere.io/uninitialized: "true"
     helm.sh/resource-policy: keep
-    bytetrade.io/owner-role: platform-admin
+    bytetrade.io/owner-role: owner
     bytetrade.io/terminus-name: "{{.Values.user.terminus_name}}"
     bytetrade.io/launcher-auth-policy: two_factor
     bytetrade.io/launcher-access-level: "1"
@@ -23,4 +23,4 @@ spec:
   groups:
   - lldap_admin
 status:
-  state: Active
+  state: Created
