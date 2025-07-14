@@ -42,6 +42,14 @@
 {{ $user_service_pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+
+{{- $user_service_redis_password := "" -}}
+{{ if $user_service_secret -}}
+{{ $user_service_redis_password = (index $user_service_secret "data" "redis_password") }}
+{{ else -}}
+{{ $user_service_redis_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
 {{- $user_service_nats_secret := (lookup "v1" "Secret" $namespace "user-service-nats-secret") -}}
 {{- $nats_password := "" -}}
 {{ if $user_service_nats_secret -}}
@@ -111,22 +119,6 @@ spec:
       protocol: TCP
       port: 3000
       targetPort: 8090
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: wise-svc
-  namespace: {{ .Release.Namespace }}
-spec:
-  type: ClusterIP
-  selector:
-    app: system-frontend
-  ports:
-    - name: "frontend"
-      protocol: TCP
-      port: 80
-      targetPort: 84
-
 ---
 apiVersion: v1
 kind: Service
@@ -254,11 +246,11 @@ metadata:
     applications.app.bytetrade.io/group: 'true'
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
-    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","wise":"https://file.bttcdn.com/appstore/rss/icon.png","headscale": "https://file.bttcdn.com/appstore/headscale/icon.png","settings": "https://file.bttcdn.com/appstore/settings/icon.png","studio":"https://file.bttcdn.com/appstore/devbox/icon.png","files":"https://file.bttcdn.com/appstore/files/icon.png","vault":"https://file.bttcdn.com/appstore/vault/icon.png","market":"https://file.bttcdn.com/appstore/appstore/icon.png"}'
-    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","wise":"Wise","headscale":"Headscale","settings":"Settings","studio":"Studio","files":"Files","vault":"Vault","market":"Market"}'
-    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","wise":"0.0.1","headscale":"0.0.1","settings":"0.0.1","studio":"0.0.1","files":"0.0.1","vault":"0.0.1","market":"0.0.1"}'
+    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","headscale": "https://file.bttcdn.com/appstore/headscale/icon.png","settings": "https://file.bttcdn.com/appstore/settings/icon.png","studio":"https://file.bttcdn.com/appstore/devbox/icon.png","files":"https://file.bttcdn.com/appstore/files/icon.png","vault":"https://file.bttcdn.com/appstore/vault/icon.png","market":"https://file.bttcdn.com/appstore/appstore/icon.png"}'
+    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","headscale":"Headscale","settings":"Settings","studio":"Studio","files":"Files","vault":"Vault","market":"Market"}'
+    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","headscale":"0.0.1","settings":"0.0.1","studio":"0.0.1","files":"0.0.1","vault":"0.0.1","market":"0.0.1"}'
     applications.app.bytetrade.io/policies: '{"dashboard":{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}}'
-    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"wise":[{"name":"wise", "host":"wise-svc", "port":80,"title":"Wise","windowPushState":true}],"headscale":[{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true}],"settings":[{"name":"settings", "host":"settings-service", "port":80,"title":"Settings"}],"studio":[{"name":"studio","host":"studio-svc","port":8080,"title":"Studio","openMethod":"window"}],"files":[{"name":"files", "host":"files-fe-service", "port":80,"title":"Files","windowPushState":true}],"vault":[{"name":"vault", "host":"vault-service", "port":80,"title":"Vault","windowPushState":true}],"market":[{"name":"appstore", "host":"appstore-fe-service", "port":80,"title":"Market","windowPushState":true}]}'
+    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"headscale":[{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true}],"settings":[{"name":"settings", "host":"settings-service", "port":80,"title":"Settings"}],"studio":[{"name":"studio","host":"studio-svc","port":8080,"title":"Studio","openMethod":"window"}],"files":[{"name":"files", "host":"files-fe-service", "port":80,"title":"Files","windowPushState":true}],"vault":[{"name":"vault", "host":"vault-service", "port":80,"title":"Vault","windowPushState":true}],"market":[{"name":"appstore", "host":"appstore-fe-service", "port":80,"title":"Market","windowPushState":true}]}'
 spec:
   replicas: 1
   selector:
@@ -353,7 +345,7 @@ spec:
             - name: PGDB
               value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
         - name: system-frontend-init
-          image: beclab/system-frontend:v1.3.101
+          image: beclab/system-frontend:v1.3.102
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -396,7 +388,6 @@ spec:
             - containerPort: 81
             - containerPort: 82
             - containerPort: 83
-            - containerPort: 84
             - containerPort: 85
             - containerPort: 86
             - containerPort: 88
@@ -476,7 +467,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.20
+          image: beclab/user-service:v0.0.21
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -542,6 +533,15 @@ spec:
               value: os.knowledge.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: redis_password
+                  name: user-service-secrets
+            - name: REDIS_HOST
+              value: redis-cluster-proxy.user-system-guotest334
+            - name: REDIS_PORT
+              value: '6379'
               
         - name: drive-server
           image: beclab/drive:v0.0.72
@@ -1255,6 +1255,7 @@ metadata:
 type: Opaque
 data:
   pg_password: {{ $user_service_pg_password }}
+  redis_password: {{ $user_service_redis_password }}
 ---
 apiVersion: v1
 kind: Secret
@@ -1264,6 +1265,7 @@ metadata:
 type: Opaque
 data:
   pg_password: {{ $user_service_pg_password }}
+  redis_password: {{ $user_service_redis_password }}
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
@@ -1283,6 +1285,23 @@ spec:
           name: user-service-secrets
     databases:
     - name: user-service
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: user-service-redis
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  app: user-service
+  appNamespace: user-space-{{ .Values.bfl.username }}
+  middleware: redis
+  redis:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: redis_password
+          name: user-service-secrets
+    namespace: user-service
 ---
 apiVersion: v1
 kind: Service
