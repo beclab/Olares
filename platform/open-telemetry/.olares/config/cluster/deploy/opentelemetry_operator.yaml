@@ -10147,6 +10147,7 @@ webhooks:
     timeoutSeconds: 10
 
 
+{{ if .Values.telemetry }}
 ---
 apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
@@ -10240,6 +10241,7 @@ spec:
     exporters:
       jaeger_storage_exporter:
         trace_storage: some_store
+{{ end }}
 
 ---
 apiVersion: opentelemetry.io/v1alpha1

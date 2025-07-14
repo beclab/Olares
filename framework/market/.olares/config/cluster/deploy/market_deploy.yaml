@@ -71,9 +71,11 @@ spec:
         app: appstore
         io.bytetrade.app: "true"
       annotations:
+{{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
         instrumentation.opentelemetry.io/go-container-names: "appstore-backend"    
         instrumentation.opentelemetry.io/otel-go-auto-target-exe: "/opt/app/market"
+{{ end }}
     spec:
       priorityClassName: "system-cluster-critical"
       initContainers:

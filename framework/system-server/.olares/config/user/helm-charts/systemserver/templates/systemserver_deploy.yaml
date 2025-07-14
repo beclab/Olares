@@ -42,9 +42,11 @@ spec:
       labels:
         app: systemserver
       annotations:
+{{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/go-container-names: system-server
         instrumentation.opentelemetry.io/inject-go: olares-instrumentation
         instrumentation.opentelemetry.io/otel-go-auto-target-exe: /system-server
+{{ end }}
     spec:
       serviceAccountName: bytetrade-sys-ops
       serviceAccount: bytetrade-sys-ops

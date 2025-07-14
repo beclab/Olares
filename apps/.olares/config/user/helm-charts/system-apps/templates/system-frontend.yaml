@@ -270,10 +270,12 @@ spec:
         app: system-frontend
         io.bytetrade.app: "true"
       annotations:
+{{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-nodejs: "olares-instrumentation"
         instrumentation.opentelemetry.io/nodejs-container-names: "user-service"    
         instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
         instrumentation.opentelemetry.io/inject-nginx-container-names: "system-frontend"    
+{{ end }}        
     spec:
       priorityClassName: "system-cluster-critical"
       initContainers:

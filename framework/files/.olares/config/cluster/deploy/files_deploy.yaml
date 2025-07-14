@@ -42,11 +42,13 @@ spec:
       labels:
         app: files
       annotations:
+{{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
         instrumentation.opentelemetry.io/inject-nginx-container-names: "nginx"    
         instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
         instrumentation.opentelemetry.io/go-container-names: "gateway,files,uploader"    
         instrumentation.opentelemetry.io/otel-go-auto-target-exe: "/filebrowser"
+{{ end }}
     spec:
       serviceAccount: os-internal
       serviceAccountName: os-internal
