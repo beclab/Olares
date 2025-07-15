@@ -5,33 +5,20 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/beclab/Olares/daemon/pkg/utils"
 	"k8s.io/klog/v2"
 )
 
-func (c *termipass) validateJWS(_ context.Context) error {
+func (c *termipass) validateJWS(_ context.Context) (error, string) {
 	if strings.TrimSpace(c.jws) == "" {
 		klog.Error("jws is empty")
-		return errors.New("invalid jws")
+		return errors.New("invalid jws"), ""
 	}
 
-	// if state.CurrentState.TerminusState == state.TerminusRunning {
-	// 	client, err := utils.GetDynamicClient()
-	// 	if err != nil {
-	// 		klog.Error("get k8s client error, ", err)
-	// 		return err
-	// 	}
-
-	// 	jws, err := utils.GetAdminUserJws(ctx, client)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	if c.jws != jws {
-	// 		return errors.New("invalid jws of admin user")
-	// 	}
-	// }
-
-	// TODO: validate jws on blockchain
-
-	return nil
+	if ok, olaresID := utils.ValidateJWS(c.jws); ok {
+		return nil, olaresID
+	} else {
+		klog.Error("jws validation failed")
+		return errors.New("invalid jws"), ""
+	}
 }

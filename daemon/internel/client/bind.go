@@ -7,15 +7,28 @@ const (
 )
 
 type Client interface {
+	OlaresID() string
 }
 
+var _ Client = &termipass{}
+
 type termipass struct {
-	Client
-	jws string
+	jws      string
+	olaresID string
+}
+
+// OlaresID implements Client.
+func (c *termipass) OlaresID() string {
+	return c.olaresID
 }
 
 func NewTermipassClient(ctx context.Context, jws string) (Client, error) {
 	c := &termipass{jws: jws}
+	err, olaresID := c.validateJWS(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	return c, c.validateJWS(ctx)
+	c.olaresID = olaresID
+	return c, nil
 }

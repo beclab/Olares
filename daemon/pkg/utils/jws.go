@@ -7,16 +7,16 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func ValidateJWS(token string) bool {
+func ValidateJWS(token string) (bool, string) {
 	checkJWS, err := jws.CheckJWS(token, 20*60*1000)
 	if err != nil {
 		klog.Errorf("failed to check JWS: %v", err)
-		return false
+		return false, ""
 	}
 
 	if checkJWS == nil {
 		klog.Error("JWS validation failed: JWS is nil")
-		return false
+		return false, ""
 	}
 
 	// Convert to JSON with indentation
@@ -26,5 +26,5 @@ func ValidateJWS(token string) bool {
 	}
 
 	klog.Infof("JWS validation successful: %s", string(bytes))
-	return true
+	return true, checkJWS.OlaresID
 }

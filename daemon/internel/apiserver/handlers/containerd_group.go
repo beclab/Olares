@@ -8,21 +8,21 @@ import (
 func init() {
 	s := server.API
 	containerd := s.App.Group("containerd")
-	containerd.Get("/registries", handlers.RequireSignature(handlers.ListRegistries))
+	containerd.Get("/registries", handlers.RequireLocal(handlers.ListRegistries))
 
 	registry := containerd.Group("registry")
 	mirrors := registry.Group("mirrors")
 
-	mirrors.Get("/", handlers.RequireSignature(handlers.GetRegistryMirrors))
-	mirrors.Get("/:registry", handlers.RequireSignature(handlers.GetRegistryMirror))
-	mirrors.Put("/:registry", handlers.RequireSignature(handlers.UpdateRegistryMirror))
-	mirrors.Delete("/:registry", handlers.RequireSignature(handlers.DeleteRegistryMirror))
+	mirrors.Get("/", handlers.RequireLocal(handlers.GetRegistryMirrors))
+	mirrors.Get("/:registry", handlers.RequireLocal(handlers.GetRegistryMirror))
+	mirrors.Put("/:registry", handlers.RequireLocal(handlers.UpdateRegistryMirror))
+	mirrors.Delete("/:registry", handlers.RequireLocal(handlers.DeleteRegistryMirror))
 
 	image := containerd.Group("images")
 
-	image.Get("/", handlers.RequireSignature(handlers.ListImages))
-	image.Delete("/:image", handlers.RequireSignature(handlers.DeleteImage))
-	image.Post("/prune", handlers.RequireSignature(handlers.PruneImages))
+	image.Get("/", handlers.RequireLocal(handlers.ListImages))
+	image.Delete("/:image", handlers.RequireLocal(handlers.DeleteImage))
+	image.Post("/prune", handlers.RequireLocal(handlers.PruneImages))
 
-	klog.Info("containerd handlers initialized")
+	klog.V(8).Info("containerd handlers initialized")
 }

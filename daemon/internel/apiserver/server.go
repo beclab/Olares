@@ -6,8 +6,6 @@ import (
 	"github.com/beclab/Olares/daemon/internel/apiserver/handlers"
 	"github.com/beclab/Olares/daemon/internel/apiserver/server"
 	"github.com/beclab/Olares/daemon/internel/ble"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
 func NewServer(ctx context.Context, port int) *server.Server {
@@ -19,9 +17,6 @@ func NewServer(ctx context.Context, port int) *server.Server {
 	}
 
 	s := server.API
-
-	s.App.Use(cors.New())
-	s.App.Use(logger.New())
 
 	return s
 }

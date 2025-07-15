@@ -5,6 +5,8 @@ import (
 
 	"github.com/beclab/Olares/daemon/internel/ble"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"k8s.io/klog/v2"
 )
 
@@ -15,7 +17,13 @@ type Server struct {
 }
 
 var API *Server = &Server{
-	App: fiber.New(),
+	App: func() *fiber.App {
+		a := fiber.New()
+		a.Use(cors.New())
+		a.Use(logger.New())
+
+		return a
+	}(),
 }
 
 func (s *Server) Start() error {

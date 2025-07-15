@@ -27,6 +27,10 @@ import (
 	sysv1 "bytetrade.io/web3os/app-service/api/sys.bytetrade.io/v1alpha1"
 )
 
+const (
+	RoleOwner = "owner"
+)
+
 func GetKubeClient() (kubernetes.Interface, error) {
 	config, err := ctrl.GetConfig()
 	if err != nil {
@@ -74,7 +78,7 @@ func IsTerminusInitialized(ctx context.Context, client dynamic.Interface) (initi
 			continue
 		}
 
-		if role == bflconst.RolePlatformAdmin {
+		if role == RoleOwner {
 			status, ok := u.GetAnnotations()[bflconst.UserTerminusWizardStatus]
 			if !ok {
 				initialized = false
@@ -286,7 +290,7 @@ func GetAdminUser(ctx context.Context, client dynamic.Interface) (*unstructured.
 		if !ok {
 			return false
 		}
-		return role == bflconst.RolePlatformAdmin
+		return role == RoleOwner
 	})
 	if err != nil {
 		klog.Error("list user error, ", err)
