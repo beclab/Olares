@@ -92,6 +92,12 @@ func (i *InstallTerminusdBinaryModule) Init() {
 	i.Name = "InstallOlaresdBinaryModule"
 	i.Desc = "Install olaresd"
 
+	updateHost := &task.LocalTask{
+		Name:    "UpdateHosts",
+		Action:  new(terminus.UpdateKubeKeyHosts),
+		Prepare: new(HostnameNotResolvable),
+	}
+
 	install := &task.RemoteTask{
 		Name:  "InstallOlaresdBinary",
 		Desc:  "Install olaresd using binary",
@@ -134,6 +140,7 @@ func (i *InstallTerminusdBinaryModule) Init() {
 	}
 
 	i.Tasks = []task.Interface{
+		updateHost,
 		install,
 		generateEnv,
 		generateService,
