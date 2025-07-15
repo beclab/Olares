@@ -191,7 +191,7 @@ func CheckJWS(jws string, duration int64) (*CheckJWSResult, error) {
 
 	// Verify DID matches
 	if resolutionResult.Document.ID != kid {
-        	sid := resolutionResult.Document.ID + "#" + resolutionResult.Document.VerificationMethod[0].ID
+        	sid := resolutionResult.Document.ID + resolutionResult.Document.VerificationMethod[0].ID
         	if sid != kid {
             		return nil, fmt.Errorf("DID does not match: expected %s, got %  s", sid, kid)
         	}
