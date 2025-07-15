@@ -191,9 +191,11 @@ func CheckJWS(jws string, duration int64) (*CheckJWSResult, error) {
 
 	// Verify DID matches
 	if resolutionResult.Document.ID != kid {
-		return nil, fmt.Errorf("DID does not match")
-	}
-
+        	sid := resolutionResult.Document.ID + "#" + resolutionResult.Document.VerificationMethod[0].ID
+        	if sid != kid {
+            		return nil, fmt.Errorf("DID does not match: expected %s, got %  s", sid, kid)
+        	}
+    	}
 	// Get verification method
 	if len(resolutionResult.Document.VerificationMethod) == 0 || resolutionResult.Document.VerificationMethod[0].PublicKeyJwk == nil {
 		return nil, fmt.Errorf("invalid DID document: missing verification method")
