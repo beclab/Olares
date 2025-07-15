@@ -301,7 +301,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        {{- if eq $role "platform-admin" }}
+        {{- if or (eq $role "owner") (eq $role "admin") }}
         - name: TS_DEBUG_FIREWALL_MODE
           value: nftables
         {{- end }}
@@ -315,13 +315,13 @@ spec:
           value: >-
             --no-logs-no-support
             --verbose=1
-            --tun=tailscale0{{ if ne $role "platform-admin" }}$(USER_INDEX){{ end }}
+            --tun=tailscale0{{ if and .Values.tailscaleUserIndex (ne .Values.tailscaleUserIndex  "0") }}$(USER_INDEX){{ end }}
         - name: TS_ROUTES
           value: $(COREDNS_SVC)/32
         - name: TS_EXTRA_ARGS
           value: >-
             --login-server http://headscale-server-svc:8080
-            --netfilter-mode {{ if eq $role "platform-admin" }}on{{ else }}off{{ end }}
+            --netfilter-mode {{ if or (eq $role "owner") (eq $role "admin") }}on{{ else }}off{{ end }}
         - name: TS_USERSPACE
           value: "false"
 
