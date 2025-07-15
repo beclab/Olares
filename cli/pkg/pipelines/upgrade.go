@@ -2,11 +2,10 @@ package pipelines
 
 import (
 	"fmt"
-	"os"
-	"path"
-
 	"github.com/beclab/Olares/cli/pkg/upgrade"
 	"github.com/beclab/Olares/cli/pkg/utils"
+	"os"
+	"path"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/options"
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -40,9 +39,23 @@ func UpgradeOlaresPipeline(opts *options.UpgradeOptions) error {
 		return fmt.Errorf("error parsing target Olares version: %v", err)
 	}
 
-	if !targetVersion.GreaterThan(currentVersion) {
-		fmt.Printf("current version is: %s, no need to upgrade to %s\n", currentVersion.String(), opts.Version)
-		os.Exit(0)
+	upgradePath, err := upgrade.GetUpgradePathFor(currentVersion, targetVersion)
+	if err != nil {
+		return err
+	}
+	if len(upgradePath) > 1 {
+		fmt.Printf("unable to upgrade from %s to %s directly,\n", currentVersion, targetVersion)
+		if len(upgradePath) == 2 {
+			fmt.Printf("please upgrade to %s first!\n", upgradePath[0])
+		} else {
+			line := "please upgrade sequentially to:"
+			for _, u := range upgradePath[:len(upgradePath)-1] {
+				line += fmt.Sprintf(" %s", u)
+			}
+			line += " first!"
+			fmt.Println(line)
+		}
+		os.Exit(1)
 	}
 
 	arg := common.NewArgument()
@@ -59,9 +72,8 @@ func UpgradeOlaresPipeline(opts *options.UpgradeOptions) error {
 	manifest := path.Join(runtime.GetInstallerDir(), "installation.manifest")
 	runtime.Arg.SetManifest(manifest)
 
-	upgradeModule := &upgrade.UpgradeModule{
-		CurrentVersion: currentVersion,
-		TargetVersion:  targetVersion,
+	upgradeModule := &upgrade.Module{
+		TargetVersion: targetVersion,
 	}
 
 	p := &pipeline.Pipeline{

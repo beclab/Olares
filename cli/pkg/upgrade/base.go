@@ -3,9 +3,10 @@ package upgrade
 import (
 	"context"
 	"fmt"
+	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/terminus"
 	"os"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -20,11 +21,101 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-type PrepareUserInfoForUpgrade struct {
+// upgraderBase is the general-purpose upgrader implementation
+// for upgrading across versions without any breaking changes.
+// Other implementations of breakingUpgrader,
+// targeted for versions with breaking changes,
+// should use this as a base for injecting and/or rewriting specific tasks as needed
+type upgraderBase struct{}
+
+func (u upgraderBase) PrepareForUpgrade() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "prepareUserInfoForUpgrade",
+			Action: new(prepareUserInfoForUpgrade),
+			Retry:  5,
+		},
+	}
+}
+
+func (u upgraderBase) ClearAppChartValues() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "ClearAppChartValues",
+			Action: new(terminus.ClearAppValues),
+		},
+	}
+}
+
+func (u upgraderBase) ClearBFLChartValues() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "ClearBFLChartValues",
+			Action: new(terminus.ClearBFLValues),
+		},
+	}
+}
+
+func (u upgraderBase) UpdateChartsInAppService() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "UpdateChartsInAppService",
+			Action: new(terminus.CopyAppServiceHelmFiles),
+			Retry:  5,
+		},
+	}
+}
+
+func (u upgraderBase) UpgradeUserComponents() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "upgradeUserComponents",
+			Action: new(upgradeUserComponents),
+			Retry:  5,
+			Delay:  15 * time.Second,
+		},
+	}
+}
+
+func (u upgraderBase) UpdateReleaseFile() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "UpdateReleaseFile",
+			Action: new(terminus.WriteReleaseFile),
+		},
+	}
+}
+
+func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
+	// this task updates the version in the CR
+	// so put this at last to make the whole pipeline
+	// reentrant
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "upgradeSystemComponents",
+			Action: new(upgradeSystemComponents),
+			Retry:  10,
+			Delay:  15 * time.Second,
+		},
+	}
+}
+
+func (u upgraderBase) PostUpgrade() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "EnsurePodsUpAndRunningAgain",
+			Action: new(terminus.CheckKeyPodsRunning),
+			Delay:  15 * time.Second,
+			Retry:  60,
+		},
+	}
+}
+
+type prepareUserInfoForUpgrade struct {
 	common.KubeAction
 }
 
-func (p *PrepareUserInfoForUpgrade) Execute(runtime connector.Runtime) error {
+func (p *prepareUserInfoForUpgrade) Execute(runtime connector.Runtime) error {
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get rest config: %s", err)
@@ -63,7 +154,7 @@ func (p *PrepareUserInfoForUpgrade) Execute(runtime connector.Runtime) error {
 			return fmt.Errorf("failed to get user-space-%x: %v", user.Name, err)
 		}
 		usersToUpgrade = append(usersToUpgrade, user)
-		if role, ok := user.Annotations["bytetrade.io/owner-role"]; ok && role == "platform-admin" {
+		if role, ok := user.Annotations["bytetrade.io/owner-role"]; ok && role == "owner" {
 			adminUser = user.Name
 		}
 	}
@@ -79,11 +170,11 @@ func (p *PrepareUserInfoForUpgrade) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-type UpgradeUserComponents struct {
+type upgradeUserComponents struct {
 	common.KubeAction
 }
 
-func (u *UpgradeUserComponents) Execute(runtime connector.Runtime) error {
+func (u *upgradeUserComponents) Execute(runtime connector.Runtime) error {
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get rest config: %s", err)
@@ -178,11 +269,11 @@ func (u *UpgradeUserComponents) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-type UpgradeSystemComponents struct {
+type upgradeSystemComponents struct {
 	common.KubeAction
 }
 
-func (u *UpgradeSystemComponents) Execute(runtime connector.Runtime) error {
+func (u *upgradeSystemComponents) Execute(runtime connector.Runtime) error {
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get rest config: %s", err)
@@ -220,69 +311,5 @@ func (u *UpgradeSystemComponents) Execute(runtime connector.Runtime) error {
 	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameSettings, settingsChartPath, "", common.NamespaceDefault, nil, true); err != nil {
 		return err
 	}
-	return nil
-}
-
-type UpdateSysctlReservedPorts struct {
-	common.KubeAction
-}
-
-func (u *UpdateSysctlReservedPorts) Execute(runtime connector.Runtime) error {
-	const sysctlFile = "/etc/sysctl.conf"
-	const reservedPortsKey = "net.ipv4.ip_local_reserved_ports"
-	const expectedValue = "30000-32767,46800-50000"
-
-	content, err := os.ReadFile(sysctlFile)
-	if err != nil {
-		return fmt.Errorf("failed to read sysctl.conf: %v", err)
-	}
-
-	lines := strings.Split(string(content), "\n")
-	var foundKey bool
-	var needUpdate bool
-	var updatedLines []string
-
-	for _, line := range lines {
-		trimmedLine := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmedLine, reservedPortsKey) {
-			foundKey = true
-			parts := strings.SplitN(trimmedLine, "=", 2)
-			if len(parts) == 2 {
-				currentValue := strings.TrimSpace(parts[1])
-				if currentValue != expectedValue {
-					logger.Infof("updating %s from %s to %s", reservedPortsKey, currentValue, expectedValue)
-					updatedLines = append(updatedLines, fmt.Sprintf("%s=%s", reservedPortsKey, expectedValue))
-					needUpdate = true
-				} else {
-					updatedLines = append(updatedLines, line)
-				}
-			} else {
-				updatedLines = append(updatedLines, line)
-			}
-		} else {
-			updatedLines = append(updatedLines, line)
-		}
-	}
-
-	if !foundKey {
-		logger.Infof("key %s not found in sysctl.conf, adding it", reservedPortsKey)
-		updatedLines = append(updatedLines, fmt.Sprintf("%s=%s", reservedPortsKey, expectedValue))
-		needUpdate = true
-	}
-
-	if needUpdate {
-		updatedContent := strings.Join(updatedLines, "\n")
-		if err := os.WriteFile(sysctlFile, []byte(updatedContent), 0644); err != nil {
-			return fmt.Errorf("failed to write updated sysctl.conf: %v", err)
-		}
-
-		if _, err := runtime.GetRunner().SudoCmd("sysctl -p", false, false); err != nil {
-			return fmt.Errorf("failed to reload sysctl: %v", err)
-		}
-		logger.Infof("updated and reloaded sysctl configuration")
-	} else {
-		logger.Debugf("%s already has the expected value: %s", reservedPortsKey, expectedValue)
-	}
-
 	return nil
 }
