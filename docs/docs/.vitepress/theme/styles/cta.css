@@ -1,0 +1,71 @@
+.cta {
+  margin: 2rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+.cta a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background-color: #f5f5f5;
+  color: #333;
+  text-decoration: none;
+}
+
+.cta a:hover {
+  color: #333; /* 保持颜色不变 /
+    text-decoration: none; / 移除可能的下划线 */
+}
+
+.cta .content {
+  flex-grow: 1;
+}
+
+.cta h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.cta p {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.cta .arrow {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-left: 1rem;
+  color: #666;
+}
+
+.cta a:hover .arrow {
+  color: #666; /* 保持箭头颜色不变 */
+}
+
+:root.dark {
+  .cta a {
+    background-color: #222;
+    color: #f5f5f5;
+  }
+  .cta a:hover {
+    background-color: #333;
+    color: #fff;
+  }
+  .cta .arrow {
+    color: #ccc;
+  }
+  .cta a:hover .arrow {
+    color: #fff;
+  }
+}

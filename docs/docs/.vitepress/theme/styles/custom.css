@@ -1,0 +1,8 @@
+/* 只影响文档正文里的表格 */
+.vp-doc table td:nth-child(2),
+.vp-doc table th:nth-child(2) {
+  white-space: nowrap;      /* 第二列不换行 */
+}
+
+/* 若想让整张表放宽布局，顺便改一下 ↓ */
+/* .vp-doc table { table-layout: auto; } */

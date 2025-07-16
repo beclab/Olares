@@ -1,0 +1,21 @@
+{
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/manual/docs-home.html",
+      "permanent": true
+    }
+  ]
+}

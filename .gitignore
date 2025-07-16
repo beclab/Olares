@@ -32,3 +32,6 @@ olares-cli-*.tar.gz
 cli/output
 daemon/output
 daemon/bin
+
+node_modules
+dist

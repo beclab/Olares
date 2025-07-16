@@ -1,3 +1,10 @@
-# Olares Doc
+# Olares Docs
 
-https://github.com/beclab/docs
+## Run
+
+```shell
+npm install
+npm run docs:dev
+```
+
+Open Browser at http://localhost:5173/docs/

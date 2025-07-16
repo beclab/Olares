@@ -1,0 +1,20 @@
+{
+  "scripts": {
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "devDependencies": {
+    "mermaid": "10.9.3",
+    "terser": "^5.14.2",
+    "vitepress": "1.6.3",
+    "vitepress-plugin-mermaid": "2.0.17"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^1.2.2",
+    "@vercel/speed-insights": "^1.0.10",
+    "lodash": "^4.17.21",
+    "medium-zoom": "^1.1.0",
+    "sitemap": "^7.1.1"
+  }
+}

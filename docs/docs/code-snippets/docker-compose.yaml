@@ -1,0 +1,24 @@
+services:
+  olares:
+    image: beclab/olares:${VERSION}
+    privileged: true
+    volumes:
+      - oic-data:/var
+    ports:
+      - "80:80"    
+      - "443:443"    
+      - "30180:30180"    
+      - "18088:18088"    
+      - "41641:41641/udp"
+    environment:
+      - HOST_IP=${HOST_IP}
+
+  olaresd-proxy:
+    image: beclab/olaresd:proxy-v0.1.0
+    network_mode: host
+    depends_on:
+      olares:
+        condition: service_started
+
+volumes:
+  oic-data:  
