@@ -327,7 +327,7 @@ func (a *Argument) SaveReleaseInfo() error {
 		ENV_OLARES_VERSION:  a.OlaresVersion,
 	}
 
-	if a.User != nil {
+	if a.User != nil && a.User.UserName != "" && a.User.DomainName != "" {
 		releaseInfoMap["OLARES_NAME"] = fmt.Sprintf("%s@%s", a.User.UserName, a.User.DomainName)
 	} else {
 		if util.IsExist(OlaresReleaseFile) {
