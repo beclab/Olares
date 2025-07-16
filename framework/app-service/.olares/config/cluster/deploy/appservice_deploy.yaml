@@ -163,7 +163,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.3.53
+        image: beclab/app-service:0.3.54
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
