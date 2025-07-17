@@ -32,3 +32,8 @@ olares-cli-*.tar.gz
 cli/output
 daemon/output
 daemon/bin
+
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+node_modules
+.idea/

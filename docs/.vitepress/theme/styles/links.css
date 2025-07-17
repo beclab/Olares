@@ -1,0 +1,8 @@
+:root {
+  --vp-c-brand: #646cff;
+  --vp-c-brand-light: #747bff;
+}
+
+.vp-doc a {
+  text-decoration: none;
+}

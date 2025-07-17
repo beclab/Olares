@@ -1,0 +1,9 @@
+{
+  "registry-mirrors": [
+    "https://mirrors.joinolares.cn"
+  ],
+
+  "features": {
+    "containerd-snapshotter": false
+  }
+}
