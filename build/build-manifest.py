@@ -9,6 +9,21 @@ import json
 
 CDN_URL = "https://dc3p1870nn3cj.cloudfront.net"
 
+def get_file_size(objectid, fileid):
+    url = f"{CDN_URL}/{objectid}"
+    try:
+        response = requests.head(url)
+        response.raise_for_status()
+        content_length = response.headers.get('Content-Length')
+        if content_length:
+            return int(content_length)
+        else:
+            print(f"Content-Length header missing for {fileid} from {url}", file=sys.stderr)
+            sys.exit(1)
+    except requests.RequestException as e:
+        print(f"Error getting file size for {fileid} from {url}: {e}", file=sys.stderr)
+        sys.exit(1)
+
 def download_checksum(name):
     """Downloads the checksum for a given name."""
     url = f"{CDN_URL}/{name}.checksum.txt"
@@ -74,13 +89,17 @@ def main():
                 checksum_amd64 = download_checksum(url_amd64)
                 checksum_arm64 = download_checksum(url_arm64)
 
+                file_size_amd64 = get_file_size(url_amd64, fileid)
+                file_size_arm64 = get_file_size(url_arm64, fileid)
+
                 manifest_amd64_data[filename] = {
                     "type": "component",
                     "path": path,
                     "deps": deps,
                     "url_amd64": url_amd64,
                     "checksum_amd64": checksum_amd64,
-                    "fileid": fileid
+                    "fileid": fileid,
+                    "size": file_size_amd64,
                 }
 
 
@@ -90,7 +109,8 @@ def main():
                     "deps": deps,
                     "url_arm64": url_arm64,
                     "checksum_arm64": checksum_arm64,
-                    "fileid": fileid
+                    "fileid": fileid,
+                    "size": file_size_arm64,
                 }
 
     except FileNotFoundError:
@@ -115,6 +135,9 @@ def main():
                     checksum_amd64 = download_checksum(name)
                     checksum_arm64 = download_checksum(f"arm64/{name}")
 
+                    file_size_amd64 = get_file_size(url_amd64, line)
+                    file_size_arm64 = get_file_size(url_arm64, line)
+
                     # Get the image manifest
                     image_manifest_amd64 = get_image_manifest(name)
                     image_manifest_arm64 = get_image_manifest(f"arm64/{name}")
@@ -127,6 +150,7 @@ def main():
                         "url_amd64": url_amd64,
                         "checksum_amd64": checksum_amd64,
                         "fileid": line,
+                        "size": file_size_amd64,
                         "manifest": image_manifest_amd64
                     }
 
@@ -137,6 +161,7 @@ def main():
                         "url_arm64": url_arm64,
                         "checksum_arm64": checksum_arm64,
                         "fileid": line,
+                        "size": file_size_arm64,
                         "manifest": image_manifest_arm64
                     }
                     
