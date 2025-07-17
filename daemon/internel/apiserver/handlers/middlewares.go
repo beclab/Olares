@@ -3,12 +3,11 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/daemon/internel/client"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/utils"
 	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv"
 )
 
 const (
@@ -58,18 +57,13 @@ func (h *Handlers) RequireOwner(next func(ctx *fiber.Ctx) error) func(ctx *fiber
 		}
 
 		// get owner from release file
-		envs, err := godotenv.Read(common.OlaresReleaseFile)
+		envOlaresID, err := utils.GetOlaresNameFromReleaseFile()
 		if err != nil {
-			return h.ErrJSON(ctx, http.StatusForbidden, err.Error())
-		}
-
-		envOlaresID, ok := envs["OLARES_NAME"]
-		if !ok {
-			return h.ErrJSON(ctx, http.StatusForbidden, "OLARES_NAME not found")
+			return h.ErrJSON(ctx, http.StatusInternalServerError, "failed to get Olares ID from release file")
 		}
 
 		if c.OlaresID() != envOlaresID {
-			return h.ErrJSON(ctx, http.StatusForbidden, "not the owner of this terminus")
+			return h.ErrJSON(ctx, http.StatusForbidden, "not the owner of this Olares")
 		}
 
 		return next(ctx)

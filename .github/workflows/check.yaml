@@ -3,8 +3,12 @@ name: Lint and Test Charts
 on:
   push:
     branches: [ "main", "release-*" ]
+    paths-ignore:
+      - 'docs/**'    
   pull_request_target:
     branches: [ "main", "release-*" ]
+    paths-ignore:
+      - 'docs/**'    
 
   workflow_dispatch:
 
@@ -55,7 +59,7 @@ jobs:
     steps:
       - id: generate
         run: |
-          v=1.12.0-$(echo $RANDOM)
+          v=1.12.0-$(echo $RANDOM$RANDOM)
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
   upload-cli:

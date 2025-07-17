@@ -225,6 +225,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 
 	if !slices.ContainsFunc(ips, func(i *nets.NetInterface) bool { return i.IP == hostIp }) {
 		// wrong host ip
+		klog.Warningf("host ip %s not in internal ips, try to fix it", hostIp)
 		if err = fix(); err != nil {
 			return err
 		}
@@ -233,6 +234,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 	if conflict, err := nets.ConflictDomainIpInHostsFile(hostname); err != nil {
 		return err
 	} else if conflict {
+		klog.Warningf("domain %s conflict with internal ip, try to fix it", hostname)
 		if err = fix(); err != nil {
 			return err
 		}

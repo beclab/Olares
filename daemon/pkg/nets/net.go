@@ -108,6 +108,21 @@ func GetInternalIpv4Addr(opts ...any) (internalAddrs []*NetInterface, err error)
 }
 
 func GetHostIp() (addr string, err error) {
+	addrs, err := LookupHostIps()
+	if err != nil {
+		return
+	}
+
+	if len(addrs) == 0 {
+		err = errors.New("host ip not found")
+		return
+	}
+
+	addr = addrs[0]
+	return
+}
+
+func LookupHostIps() (addrs []string, err error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		klog.Error("get hostname error, ", err)
@@ -122,13 +137,20 @@ func GetHostIp() (addr string, err error) {
 
 	for _, ip := range ips {
 		ipv4 := ip.To4()
-		if ipv4 != nil {
-			addr = ipv4.String()
-			return
+		if ipv4 != nil && ipv4.IsGlobalUnicast() {
+			addr := ipv4.String()
+			addrs = append(addrs, addr)
 		}
 	}
 
-	err = errors.New("host ip not found")
+	if len(addrs) == 0 {
+		// lookup in hosts file
+		if ip, e := GetHostIpFromHostsFile(hostname); e == nil && len(ip) > 0 {
+			addrs = append(addrs, ip)
+		} else {
+			err = errors.New("host ip not found")
+		}
+	}
 	return
 }
 

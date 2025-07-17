@@ -141,27 +141,44 @@ func IsIpChanged(ctx context.Context, installed bool) (bool, error) {
 	}
 
 	for _, ip := range ips {
-		hostIp, err := nets.GetHostIp()
+		hostIps, err := nets.LookupHostIps()
 		if err != nil {
 			return false, err
 		}
 
-		masterIp, err := MasterNodeIp(installed)
-		if err != nil {
-			return false, err
-		}
+		for _, hostIp := range hostIps {
+			if hostIp == ip.IP {
 
-		if hostIp == ip.IP {
-			if masterIp == "" {
-				// terminus not installed
-				return false, nil
+				if !installed {
+					// terminus not installed
+					return false, nil
+				}
+
+				kubeClient, err := GetKubeClient()
+				if err != nil {
+					klog.Error("get kube client error, ", err)
+					return false, nil
+				}
+
+				_, nodeIp, nodeRole, err := GetThisNodeName(ctx, kubeClient)
+				if err != nil {
+					klog.Error("get this node name error, ", err)
+					return false, nil
+
+				}
+
+				if nodeRole == "master" && nodeIp == ip.IP {
+					return false, nil
+				}
+
+				// FIXME:(BUG) worker node will not work with this check
+				if nodeRole == "worker" {
+					return false, nil
+				}
+
+				klog.Info("get node ip, ", nodeIp, ", ", hostIp, ", ", ip.IP)
+
 			}
-
-			if masterIp == ip.IP {
-				return false, nil
-			}
-
-			klog.Info("get master node ip, ", masterIp, ", ", hostIp, ", ", ip.IP)
 		}
 	}
 
@@ -405,7 +422,7 @@ func GetTerminusInitializedTime(ctx context.Context, client kubernetes.Interface
 	return pointer.Int64(deploy.CreationTimestamp.Unix()), nil
 }
 
-func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName, nodeIp string, err error) {
+func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName, nodeIp, nodeRole string, err error) {
 	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		klog.Error("list nodes error, ", err)
@@ -418,7 +435,7 @@ func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName
 		return
 	}
 
-	ip, err := nets.GetHostIp()
+	ips, err := nets.LookupHostIps()
 	if err != nil {
 		klog.Error("get host ip error, ", err)
 		return
@@ -431,14 +448,25 @@ func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName
 			case corev1.NodeHostName:
 				foundHost = address.Address == hostname
 			case corev1.NodeInternalIP:
-				foundIp = address.Address == ip
-				if foundIp {
-					nodeIp = address.Address
+				for _, ip := range ips {
+					foundIp = address.Address == ip
+					if foundIp {
+						nodeIp = address.Address
+						break
+					}
 				}
 			}
 
 			if foundHost && foundIp {
 				nodeName = node.Name
+
+				if cp, ok := node.Labels["node-role.kubernetes.io/control-plane"]; ok && cp != "false" {
+					nodeRole = "master"
+				} else if master, ok := node.Labels["node-role.kubernetes.io/master"]; ok && master != "false" {
+					nodeRole = "master"
+				} else {
+					nodeRole = "worker"
+				}
 				return
 			}
 		}
