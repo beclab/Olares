@@ -56,7 +56,7 @@ Olares offers a wide array of features designed to enhance security, ease of use
 Before you roll up your sleeves and get your hands dirty with Olares, feel free to take a quick tour. Here are some alternative paths to get a feel for what Olares can do.
 
 <div class="cta-container">
-  <a href="../../use-cases/" class="cta-link">
+  <a href="../use-cases/" class="cta-link">
     <p class="cta-title">Explore use cases</p>
     <p class="cta-description">Discover real-world applications and see how Olares solves common challenges.</p>
   </a>
