@@ -57,14 +57,9 @@ export default defineVersionedConfig2(withMermaid({
   },
   themeConfig: {
     search: {
-      provider: "algolia",
+      provider: "local",
       options: {
-        appId: "DZ6H2FVQGO",
-        apiKey: "e5257d88b605dc0e5b82b12854aea9a5",
-        indexName: "olares",
-        searchParameters: {
-          queryLanguages: ["zh", "en"],
-        },
+        enhancedSearch: true,
         locales: {
           zh: {
             placeholder: "搜索文档",

@@ -115,7 +115,7 @@ Olares 代码库中的主要目录如下：
 * **[`apps`](./apps)**: 用于存放系统应用，主要是 `larepass` 的代码。
 * **[`cli`](./cli)**: 用于存放 `olares-cli`（Olares 的命令行界面工具）的代码。
 * **[`daemon`](./daemon)**: 用于存放 `olaresd`（系统守护进程）的代码。
-* **`docs`**: 用于存放 Olares 项目的文档。
+* **[`docs`**](./docs): 用于存放 Olares 项目的文档。
 * **[`framework`](./framework)**: 用来存放 Olares 系统服务代码。
 * **[`infrastructure`](./infrastructure)**: 用于存放计算，存储，网络，GPU 等基础设施的代码。
 * **[`platform`](./platform)**: 用于存放数据库、消息队列等云原生组件的代码。
