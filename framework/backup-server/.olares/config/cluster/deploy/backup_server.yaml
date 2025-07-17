@@ -1,8 +1,25 @@
 
 
-{{ $backupVersion := "0.3.38" }}
+{{ $backupVersion := "0.3.39" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
+{{- $backup_nats_secret := (lookup "v1" "Secret" .Release.Namespace "backup-nats-secret") -}}
+{{- $nats_password := "" -}}
+{{ if $backup_nats_secret -}}
+{{ $nats_password = (index $backup_nats_secret "data" "nats_password") }}
+{{ else -}}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backup-nats-secret
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  nats_password: {{ $nats_password }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -71,6 +88,22 @@ spec:
             secretKeyRef:
               name: app-key
               key: random-key
+        - name: NATS_HOST
+          value: nats.os-platform
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: os-backup
+        - name: NATS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: nats_password
+              name: backup-nats-secret
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
         ports:
         - containerPort: 8082
           protocol: TCP
@@ -107,6 +140,22 @@ spec:
             secretKeyRef:
               name: app-key
               key: random-key
+        - name: NATS_HOST
+          value: nats.os-platform
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: os-backup
+        - name: NATS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: nats_password
+              name: backup-nats-secret
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
         ports:
         - containerPort: 8080
           protocol: TCP
@@ -132,3 +181,26 @@ spec:
     protocol: TCP
   selector:
     tier: backup
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: backup-nats
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: backup
+  appNamespace: os
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nats_password
+          name: backup-nats-secret
+    subjects:
+      - name: "backup.*"
+        permission:
+          pub: deny
+          sub: allow
+    user: os-backup
