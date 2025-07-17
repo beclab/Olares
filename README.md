@@ -113,7 +113,7 @@ This section lists the main directories in the Olares repository:
 * **[`apps`](./apps)**: Contains the code for system applications, primarily for `larepass`.
 * **[`cli`](./cli)**: Contains the code for `olares-cli`, the command-line interface tool for Olares.
 * **[`daemon`](./daemon)**: Contains the code for `olaresd`, the system daemon process.
-* **[`docs`**](./docs): Contains documentation for the project.
+* **[`docs`](./docs)**: Contains documentation for the project.
 * **[`framework`](./framework)**: Contains the Olares system services.
 * **[`infrastructure`](./infrastructure)**: Contains code related to infrastructure components such as computing, storage, networking, and GPUs.
 * **[`platform`](./platform)**: Contains code for cloud-native components like databases and message queues.

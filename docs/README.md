@@ -6,9 +6,9 @@ This directory includes the source files for the Olares documentation website, i
 
 ## Quick links
 
-* **Published documentation site**: `https://docs.olares.com`
-* **Olares official website**: `https://www.olares.com`
-* **Olares project on GitHub**: `https://github.com/olares/olares`
+* **Published documentation site**: https://docs.olares.com
+* **Olares official website**: https://www.olares.com
+* **Olares project on GitHub**: https://github.com/beclab/Olares
 
 ## Getting started with Olares documentation
 
@@ -56,7 +56,4 @@ Creating a PR to a corresponding branch will automatically trigger the documenta
 
 ## Style guide
 
-To ensure clarity, accuracy, and a consistent tone, please read our **[Content and Style Guide](https://github.com/beclab/docs/wiki/Markdown-reference)** before contributing.
-
-```
-```
+To ensure clarity, accuracy, and a consistent tone, please read our **[Content and style guide](https://github.com/beclab/Olares/wiki/General-style-reference)** before contributing.
