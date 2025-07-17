@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"log"
 	"os"
+	"slices"
 )
 
 type UpgradeOsOptions struct {
@@ -43,6 +44,7 @@ func NewCmdUpgradeOs() *cobra.Command {
 
 func NewCmdGetUpgradePath() *cobra.Command {
 	var baseVersionStr string
+	var latestFirst bool
 	cmd := &cobra.Command{
 		Use:   "path",
 		Short: "Get the upgrade path (required intermediate versions) from base version to the latest upgradable version (as known to this release of olares-cli)",
@@ -65,6 +67,11 @@ func NewCmdGetUpgradePath() *cobra.Command {
 				fmt.Println(err)
 				os.Exit(1)
 			}
+
+			if latestFirst {
+				slices.Reverse(path)
+			}
+
 			encoder := json.NewEncoder(cmd.OutOrStdout())
 			encoder.SetIndent("", "  ")
 			return encoder.Encode(path)
@@ -72,6 +79,7 @@ func NewCmdGetUpgradePath() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&baseVersionStr, "base-version", "b", baseVersionStr, "base version to be upgraded, defaults to the current Olares version if inside Olares cluster")
+	cmd.Flags().BoolVar(&latestFirst, "latest-first", true, "sort versions to put recent ones in the front")
 
 	return cmd
 }
