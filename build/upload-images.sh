@@ -17,8 +17,7 @@ cat $1|while read image; do
         code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://dc3p1870nn3cj.cloudfront.net/$path$name.tar.gz)
         if [ $code -eq 403 ]; then
             set -ex
-            docker pull $image
-            docker save $image -o $name.tar
+            skopeo copy --insecure-policy docker://$image oci-archive:$name.tar
             gzip $name.tar
 
             md5sum $name.tar.gz > $checksum
@@ -51,8 +50,7 @@ cat $1|while read image; do
         code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://dc3p1870nn3cj.cloudfront.net/$path$checksum)
         if [ $code -eq 403 ]; then
             set -ex
-            docker pull $image
-            docker save $image -o $name.tar
+            skopeo copy --insecure-policy docker://$image oci-archive:$name.tar
             gzip $name.tar
 
             md5sum $name.tar.gz > $checksum
