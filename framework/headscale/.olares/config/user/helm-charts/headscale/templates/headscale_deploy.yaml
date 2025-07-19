@@ -301,7 +301,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        {{- if or (eq $role "owner") (eq $role "admin") }}
+        {{- if eq $role "owner" }}
         - name: TS_DEBUG_FIREWALL_MODE
           value: nftables
         {{- end }}
@@ -321,7 +321,7 @@ spec:
         - name: TS_EXTRA_ARGS
           value: >-
             --login-server http://headscale-server-svc:8080
-            --netfilter-mode {{ if or (eq $role "owner") (eq $role "admin") }}on{{ else }}off{{ end }}
+            --netfilter-mode {{ if eq $role "owner" }}on{{ else }}off{{ end }}
         - name: TS_USERSPACE
           value: "false"
 
