@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.39" }}
+{{ $backupVersion := "0.3.40" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 {{- $backup_nats_secret := (lookup "v1" "Secret" .Release.Namespace "backup-nats-secret") -}}
@@ -201,6 +201,6 @@ spec:
     subjects:
       - name: "backup.*"
         permission:
-          pub: deny
+          pub: allow
           sub: allow
     user: os-backup
