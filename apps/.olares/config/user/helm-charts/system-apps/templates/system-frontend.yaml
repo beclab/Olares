@@ -458,7 +458,7 @@ spec:
               value: os.market.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_APPLICATION
               value: os.application.{{ .Values.bfl.username}}
-            - name: NATS_SUBJECT_NOTIFICATION
+            - name: NATS_SUBJECT_USER_NOTIFICATION
               value: os.notification.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_FILES
               value: os.files.{{ .Values.bfl.username}}
@@ -467,7 +467,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.23
+          image: beclab/user-service:v0.0.33
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -484,8 +484,6 @@ spec:
               value: '{{ .Values.os.settings.appSecret }}'
             - name: OS_APP_KEY
               value: {{ .Values.os.settings.appKey }}
-            - name: NATS_SUBJECT_BACKUP
-              value: os.backup.{{ .Values.bfl.username}}
             - name: NODE_IP
               valueFrom:
                 fieldRef:
@@ -527,7 +525,7 @@ spec:
               value: os.market.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_APPLICATION
               value: os.application.{{ .Values.bfl.username}}
-            - name: NATS_SUBJECT_NOTIFICATION
+            - name: NATS_SUBJECT_USER_NOTIFICATION
               value: os.notification.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_FILES
               value: os.files.{{ .Values.bfl.username}}
@@ -535,6 +533,8 @@ spec:
               value: os.knowledge.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_BACKUP
+              value: os.backup.{{ .Values.bfl.username}}
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -2174,6 +2174,10 @@ spec:
           sub: allow
           pub: allow
       - name: "market.*"
+        permission:
+          sub: allow
+          pub: allow
+      - name: "backup.*"
         permission:
           sub: allow
           pub: allow

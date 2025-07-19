@@ -103,6 +103,12 @@ jobs:
     runs-on: [self-hosted, linux, ARM64]
 
     steps:
+      - name: Install skopeo (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+          
+
       - name: 'Checkout source code'
         uses: actions/checkout@v3
         with:
