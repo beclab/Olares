@@ -278,5 +278,9 @@ spec:
         permission:
           pub: allow
           sub: allow
+      - name: "intent.*"
+        permission:
+          pub: allow
+          sub: allow
 
     user: os-market-backend

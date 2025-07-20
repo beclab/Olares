@@ -467,7 +467,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.33
+          image: beclab/user-service:v0.0.35
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -535,6 +535,8 @@ spec:
               value: os.vault.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_BACKUP
               value: os.backup.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_INTENT
+              value: os.intent.{{ .Values.bfl.username}}
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -2178,6 +2180,10 @@ spec:
           sub: allow
           pub: allow
       - name: "backup.*"
+        permission:
+          sub: allow
+          pub: allow
+      - name: "intent.*"
         permission:
           sub: allow
           pub: allow
