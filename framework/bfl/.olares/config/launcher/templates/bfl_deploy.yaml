@@ -339,9 +339,6 @@ spec:
         - -enable-nginx
         - -bfl-svc
         - bfl
-        env:
-        - name: AUTH_ENABLED
-          value: "true"
         ports:
         - containerPort: 80
           protocol: TCP
