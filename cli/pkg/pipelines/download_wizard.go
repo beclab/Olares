@@ -26,7 +26,7 @@ func DownloadInstallationWizard(opts *options.CliDownloadWizardOptions) error {
 		return fmt.Errorf("--download-cdn-url invalid")
 	}
 
-	p := download.NewDownloadWizard(runtime)
+	p := download.NewDownloadWizard(runtime, opts.UrlOverride)
 	if err := p.Start(); err != nil {
 		logger.Errorf("download wizard failed %v", err)
 		return err

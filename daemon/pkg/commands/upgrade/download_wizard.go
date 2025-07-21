@@ -4,25 +4,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/beclab/Olares/daemon/pkg/cli"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
+	"github.com/beclab/Olares/daemon/pkg/commands"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/beclab/Olares/daemon/pkg/cli"
-	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/nxadm/tail"
 	"k8s.io/klog/v2"
 )
 
 type downloadWizard struct {
 	commands.Operation
-	logFile             string
-	assumeFinishedFiles []string
-	progressKeywords    []progressKeyword
-	progress            int
-	progressChan        chan<- int
+	logFile          string
+	progressKeywords []progressKeyword
+	progress         int
+	progressChan     chan<- int
 }
 
 var _ commands.Interface = &downloadWizard{}
@@ -40,17 +40,14 @@ func NewDownloadWizard() commands.Interface {
 }
 
 func (i *downloadWizard) Execute(ctx context.Context, p any) (res any, err error) {
-	version, ok := p.(string)
+	target, ok := p.(state.UpgradeTarget)
 	if !ok {
 		return nil, errors.New("invalid param")
 	}
 
+	version := target.Version.Original()
+
 	i.logFile = filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+version, "logs", "install.log")
-	i.assumeFinishedFiles = []string{
-		filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+version, "version.hint"),
-		filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+version, "installation.manifest"),
-		filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+version, "wizard"),
-	}
 	if err := i.refreshProgress(); err != nil {
 		return nil, fmt.Errorf("could not determine whether wizard download is finished: %v", err)
 	}
@@ -71,6 +68,9 @@ func (i *downloadWizard) Execute(ctx context.Context, p any) (res any, err error
 	}
 	if commands.CDN_URL != "" {
 		params = append(params, "--download-cdn-url", commands.CDN_URL)
+	}
+	if target.WizardURL != "" {
+		params = append(params, "--url-override", target.WizardURL)
 	}
 	if err = cmd.RunAsync_(ctx, cli.TERMINUS_CLI, params...); err != nil {
 		return nil, err
@@ -103,21 +103,6 @@ func (i *downloadWizard) watch(ctx context.Context) {
 }
 
 func (i *downloadWizard) refreshProgress() error {
-	allExisting := true
-	for _, f := range i.assumeFinishedFiles {
-		_, err := os.Stat(f)
-		if os.IsNotExist(err) {
-			allExisting = false
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("could not stat file %s: %v", f, err)
-		}
-	}
-	if allExisting {
-		i.progress = commands.ProgressNumFinished
-		return nil
-	}
 	info, err := os.Stat(i.logFile)
 	if err != nil {
 		if os.IsNotExist(err) {

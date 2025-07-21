@@ -91,23 +91,23 @@ func (t *CheckKeyPodsRunning) Execute(runtime connector.Runtime) error {
 			logger.Debugf("skipping pod %s that's not on node %s", pod.Name, t.Node)
 			continue
 		}
-		if strings.HasPrefix(pod.Namespace, "user-space") ||
-			strings.HasPrefix(pod.Namespace, "user-system") ||
-			pod.Namespace == "os-platform" ||
-			pod.Namespace == "os-framework" {
-			if pod.Status.Phase != corev1.PodRunning {
-				return fmt.Errorf("pod %s/%s is not running", pod.Namespace, pod.Name)
+		if strings.HasPrefix(pod.Namespace, "user-") || strings.HasPrefix(pod.Namespace, "os-") {
+		}
+		if pod.Status.Phase != corev1.PodRunning {
+			return fmt.Errorf("pod %s/%s is not running", pod.Namespace, pod.Name)
+		}
+		if len(pod.Status.ContainerStatuses) != len(pod.Spec.Containers) {
+			return fmt.Errorf("pod %s/%s has not started all containers yet", pod.Namespace, pod.Name)
+		}
+		for _, cStatus := range pod.Status.ContainerStatuses {
+			if cStatus.State.Terminated != nil && cStatus.State.Terminated.ExitCode != 0 {
+				return fmt.Errorf("container %s in pod %s/%s is terminated", cStatus.Name, pod.Namespace, pod.Name)
 			}
-			if len(pod.Status.ContainerStatuses) == 0 {
-				return fmt.Errorf("pod %s/%s has no container statuses yet", pod.Namespace, pod.Name)
+			if cStatus.State.Running == nil {
+				return fmt.Errorf("container %s in pod %s/%s is not running", cStatus.Name, pod.Namespace, pod.Name)
 			}
-			for _, cStatus := range pod.Status.ContainerStatuses {
-				if cStatus.State.Terminated != nil && cStatus.State.Terminated.ExitCode != 0 {
-					return fmt.Errorf("container %s in pod %s/%s is terminated", cStatus.Name, pod.Namespace, pod.Name)
-				}
-				if cStatus.State.Running == nil {
-					return fmt.Errorf("container %s in pod %s/%s is not running", cStatus.Name, pod.Namespace, pod.Name)
-				}
+			if !cStatus.Ready {
+				return fmt.Errorf("container %s in pod %s/%s is not ready", cStatus.Name, pod.Namespace, pod.Name)
 			}
 		}
 	}
@@ -154,17 +154,12 @@ type Download struct {
 	Version        string
 	BaseDir        string
 	DownloadCdnUrl string
+	UrlOverride    string
 }
 
 func (t *Download) Execute(runtime connector.Runtime) error {
-	if t.KubeConf.Arg.OlaresVersion == "" {
+	if t.UrlOverride == "" && t.KubeConf.Arg.OlaresVersion == "" {
 		return errors.New("unknown version to download")
-	}
-
-	var fetchMd5 = fmt.Sprintf("curl -sSfL %s/install-wizard-v%s.md5sum.txt |awk '{print $1}'", t.DownloadCdnUrl, t.Version)
-	md5sum, err := runtime.GetRunner().Cmd(fetchMd5, false, false)
-	if err != nil {
-		return errors.New("get md5sum failed")
 	}
 
 	var osArch = runtime.GetSystemInfo().GetOsArch()
@@ -174,8 +169,20 @@ func (t *Download) Execute(runtime connector.Runtime) error {
 	var baseDir = runtime.GetBaseDir()
 	var prePath = path.Join(baseDir, "versions")
 	var wizard = files.NewKubeBinary("install-wizard", osArch, osType, osVersion, osPlatformFamily, t.Version, prePath, t.DownloadCdnUrl)
-	wizard.CheckMd5Sum = true
-	wizard.Md5sum = md5sum
+
+	if t.UrlOverride == "" {
+		var fetchMd5 = fmt.Sprintf("curl -sSfL %s/install-wizard-v%s.md5sum.txt |awk '{print $1}'", t.DownloadCdnUrl, t.Version)
+		md5sum, err := runtime.GetRunner().Cmd(fetchMd5, false, false)
+		if err != nil {
+			return errors.New("get md5sum failed")
+		}
+		wizard.CheckMd5Sum = true
+		wizard.Md5sum = md5sum
+	} else {
+		wizard.CheckMd5Sum = false
+		wizard.Url = t.UrlOverride
+		util.RemoveFile(wizard.Path())
+	}
 
 	if err := wizard.CreateBaseDir(); err != nil {
 		return errors.Wrapf(errors.WithStack(err), "create file %s base dir failed", wizard.FileName)

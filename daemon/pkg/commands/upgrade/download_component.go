@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"io"
 	"os"
 	"path/filepath"
@@ -38,13 +39,12 @@ func NewDownloadComponent() commands.Interface {
 }
 
 func (i *downloadComponent) Execute(ctx context.Context, p any) (res any, err error) {
-	version, ok := p.(string)
+	target, ok := p.(state.UpgradeTarget)
 	if !ok {
 		return nil, errors.New("invalid param")
 	}
 
-	i.logFile = filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+version, "logs", "install.log")
-	i.progressKeywords = append(i.progressKeywords, progressKeyword{fmt.Sprintf("no need to upgrade to %s", version), commands.ProgressNumFinished})
+	i.logFile = filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+target.Version.Original(), "logs", "install.log")
 	if err := i.refreshProgress(); err != nil {
 		return nil, fmt.Errorf("could not determine whether component download is finished: %v", err)
 	}
@@ -60,7 +60,7 @@ func (i *downloadComponent) Execute(ctx context.Context, p any) (res any, err er
 
 	params := []string{
 		"download", "component",
-		"--version", version,
+		"--version", target.Version.Original(),
 		"--base-dir", commands.TERMINUS_BASE_DIR,
 	}
 	if commands.CDN_URL != "" {

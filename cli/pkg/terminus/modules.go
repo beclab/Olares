@@ -33,6 +33,7 @@ type InstallWizardDownloadModule struct {
 	common.KubeModule
 	Version        string
 	DownloadCdnUrl string
+	UrlOverride    string
 }
 
 func (m *InstallWizardDownloadModule) Init() {
@@ -42,6 +43,7 @@ func (m *InstallWizardDownloadModule) Init() {
 		Action: &Download{
 			Version:        m.Version,
 			DownloadCdnUrl: m.DownloadCdnUrl,
+			UrlOverride:    m.UrlOverride,
 		},
 		Retry: 1,
 	}

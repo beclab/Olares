@@ -149,7 +149,7 @@ func (u UpgradingValidator) ValidateOp(op commands.Interface) error {
 		commands.Shutdown, commands.Uninstall,
 		commands.ConnectWifi, commands.ChangeHost,
 		commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.RemoveUpgradeTarget:
+		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget:
 		return nil
 	}
 
@@ -204,7 +204,7 @@ func (r RunningValidator) ValidateOp(op commands.Interface) error {
 	case commands.ChangeIp, commands.Reboot, commands.Shutdown,
 		commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
 		commands.UmountUsb, commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.CreateUpgradeTarget:
+		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget:
 		return nil
 	}
 
@@ -232,7 +232,8 @@ func (s SystemErrorValidator) ValidateOp(op commands.Interface) error {
 	switch op.OperationName() {
 	case commands.ChangeIp, commands.Reboot, commands.Shutdown,
 		commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
-		commands.CollectLogs, commands.MountSmb, commands.UmountSmb:
+		commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
+		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget:
 		return nil
 	}
 

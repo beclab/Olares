@@ -4,8 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
+	"github.com/beclab/Olares/daemon/pkg/containerd"
+	"github.com/dustin/go-humanize"
+	v1 "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -13,7 +18,6 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/klog/v2"
 )
@@ -33,7 +37,7 @@ func NewVersionCompatibilityCheck() commands.Interface {
 }
 
 func (i *versionCompatibilityCheck) Execute(ctx context.Context, p any) (res any, err error) {
-	version, ok := p.(string)
+	target, ok := p.(state.UpgradeTarget)
 	if !ok {
 		err = errors.New("invalid param")
 		return
@@ -50,7 +54,7 @@ func (i *versionCompatibilityCheck) Execute(ctx context.Context, p any) (res any
 	if err != nil {
 		return nil, fmt.Errorf("error parsing current olares version %s: %v", *olaresVersion, err)
 	}
-	versionHintFile := filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+version, "version.hint")
+	versionHintFile := filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+target.Version.Original(), "version.hint")
 	content, err := os.ReadFile(versionHintFile)
 	if err != nil {
 		return nil, fmt.Errorf("error reading version hint file %s: %v", versionHintFile, err)
@@ -91,18 +95,65 @@ func NewHealthCheck() commands.Interface {
 	}
 }
 
-func (i *healthCheck) Execute(ctx context.Context, _ any) (res any, err error) {
+func (i *healthCheck) Execute(ctx context.Context, p any) (res any, err error) {
 	klog.Info("Starting upgrade health check")
 
-	const minAvailableSpace = 100 * 1024 * 1024 * 1024 // 100GB in bytes
-	availableSpace, err := utils.GetDiskAvailableSpace("/")
+	target, ok := p.(state.UpgradeTarget)
+	if !ok {
+		return nil, errors.New("invalid param")
+	}
+	arch := "amd64"
+	if runtime.GOARCH == "arm" {
+		arch = "arm64"
+	}
+	componentManifestFilePath := filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+target.Version.Original(), "images", "installation.manifest."+arch)
+	components, err := unmarshalComponentManifestFile(componentManifestFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing component manifest file %s: %v", componentManifestFilePath, err)
+	}
+	criImageService, err := containerd.NewCRIImageService()
+	if err != nil {
+		return nil, fmt.Errorf("error creating cri image service: %v", err)
+	}
+	images, err := criImageService.ListImages(ctx, &v1.ImageFilter{})
+	if err != nil {
+		return nil, fmt.Errorf("error listing images: %v", err)
+	}
+	var requiredSpace uint64
+	for _, component := range components {
+		if component.Type != "image" {
+			continue
+		}
+		var imageExists bool
+		for _, image := range images {
+			for _, repoTag := range image.RepoTags {
+				if strings.Contains(repoTag, component.FileID) {
+					imageExists = true
+					break
+				}
+			}
+			if imageExists {
+				break
+			}
+		}
+		if !imageExists {
+			// for now, the compressed layer and sha256 content hash in the manifest
+			// can not be used for us to compare and calculate a precise space requirement
+			// because the "docker save" command exports image in uncompressed format
+			// and dockerhub stores & distributes the image in compressed format
+			// so we just make a rough number based on the compressed image archive file
+			requiredSpace += component.Size * 3
+		}
+	}
+	klog.Infof("Required space for image import: %s", humanize.Bytes(requiredSpace))
+	availableSpace, err := utils.GetDiskAvailableSpace(containerd.DefaultContainerdRootPath)
 	if err != nil {
 		return nil, fmt.Errorf("error checking disk space: %s", err)
 	}
-	klog.Infof("Root partition available space: %.2fGB", float64(availableSpace)/(1024*1024*1024))
-	if availableSpace < minAvailableSpace {
-		return nil, fmt.Errorf("insufficient disk space: %.2fGB available, minimum 100GB required",
-			float64(availableSpace)/(1024*1024*1024))
+	klog.Infof("Available space of %s: %s", containerd.DefaultContainerdRootPath, humanize.Bytes(availableSpace))
+	if availableSpace < requiredSpace {
+		return nil, fmt.Errorf("insufficient disk space in: %s, required: %s, available: %s",
+			commands.TERMINUS_BASE_DIR, humanize.Bytes(requiredSpace), humanize.Bytes(availableSpace))
 	}
 
 	client, err := utils.GetKubeClient()
@@ -114,21 +165,21 @@ func (i *healthCheck) Execute(ctx context.Context, _ any) (res any, err error) {
 		return nil, fmt.Errorf("error listing nodes: %s", err)
 	}
 	for _, node := range nodes.Items {
-		roles := sets.NewString()
-		for k, v := range node.Labels {
-			switch {
-			case strings.HasPrefix(k, "node-role.kubernetes.io/"):
-				if role := strings.TrimPrefix(k, "node-role.kubernetes.io/"); len(role) > 0 {
-					roles.Insert(role)
-				}
-
-			case k == "kubernetes.io/role" && v != "":
-				roles.Insert(v)
-			}
-		}
-		if !roles.HasAny("control-plane", "master") {
-			continue
-		}
+		//roles := sets.NewString()
+		//for k, v := range node.Labels {
+		//	switch {
+		//	case strings.HasPrefix(k, "node-role.kubernetes.io/"):
+		//		if role := strings.TrimPrefix(k, "node-role.kubernetes.io/"); len(role) > 0 {
+		//			roles.Insert(role)
+		//		}
+		//
+		//	case k == "kubernetes.io/role" && v != "":
+		//		roles.Insert(v)
+		//	}
+		//}
+		//if !roles.HasAny("control-plane", "master") {
+		//	continue
+		//}
 		if node.Spec.Unschedulable {
 			return nil, fmt.Errorf("node %s is unschedulable", node.Name)
 		}
@@ -146,33 +197,91 @@ func (i *healthCheck) Execute(ctx context.Context, _ any) (res any, err error) {
 		}
 	}
 
-	criticalNamespaces := []string{"os-platform", "os-framework"}
-	for _, namespace := range criticalNamespaces {
-		pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("error listing pods in namespace %s: %s", namespace, err)
+	pods, err := client.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pods: %v", err)
+	}
+
+	for _, pod := range pods.Items {
+		if !strings.HasPrefix(pod.Namespace, "os-") {
+			continue
+		}
+		if pod.Status.Phase == corev1.PodSucceeded {
+			continue
 		}
 
-		for _, pod := range pods.Items {
-			if pod.Status.Phase == corev1.PodSucceeded {
-				continue
-			}
+		podStatus := utils.GetPodStatus(&pod)
 
-			podStatus := utils.GetPodStatus(&pod)
+		if podStatus != "Running" && podStatus != "Completed" {
+			klog.Errorf("Pod %s/%s is not healthy: %s", pod.Namespace, pod.Name, podStatus)
+			return nil, fmt.Errorf("pod %s/%s is not healthy: %s", pod.Namespace, pod.Name, podStatus)
+		}
 
-			if podStatus != "Running" && podStatus != "Completed" {
-				klog.Errorf("Pod %s/%s is not healthy: %s", namespace, pod.Name, podStatus)
-				return nil, fmt.Errorf("pod %s/%s is not healthy: %s", namespace, pod.Name, podStatus)
-			}
-
-			if !utils.IsPodReady(&pod) && pod.Status.Phase == corev1.PodRunning {
-				klog.Warningf("Pod %s/%s is running but not ready", namespace, pod.Name)
-				return nil, fmt.Errorf("pod %s/%s is running but not ready", namespace, pod.Name)
-			}
+		if !utils.IsPodReady(&pod) && pod.Status.Phase == corev1.PodRunning {
+			klog.Warningf("Pod %s/%s is running but not ready", pod.Namespace, pod.Name)
+			return nil, fmt.Errorf("pod %s/%s is running but not ready", pod.Namespace, pod.Name)
 		}
 	}
 
 	klog.Info("health checks passed for upgrade")
+
+	return newExecutionRes(true, nil), nil
+}
+
+type downloadSpaceCheck struct {
+	commands.Operation
+}
+
+var _ commands.Interface = &downloadSpaceCheck{}
+
+func NewDownloadSpaceCheck() commands.Interface {
+	return &downloadSpaceCheck{
+		Operation: commands.Operation{
+			Name: commands.DownloadSpaceCheck,
+		},
+	}
+}
+
+func (i *downloadSpaceCheck) Execute(ctx context.Context, p any) (res any, err error) {
+	target, ok := p.(state.UpgradeTarget)
+	if !ok {
+		return nil, errors.New("invalid param")
+	}
+	klog.Info("Starting download space check")
+	arch := "amd64"
+	if runtime.GOARCH == "arm" {
+		arch = "arm64"
+	}
+	componentManifestFilePath := filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+target.Version.Original(), "images", "installation.manifest."+arch)
+	components, err := unmarshalComponentManifestFile(componentManifestFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing component manifest file %s: %v", componentManifestFilePath, err)
+	}
+	var requiredSpace uint64
+	for name, component := range components {
+		path := filepath.Join(commands.TERMINUS_BASE_DIR, component.Path, name)
+		_, err := os.Stat(path)
+		if err == nil {
+			continue
+		}
+		if os.IsNotExist(err) {
+			requiredSpace += component.Size
+			continue
+		}
+		return nil, fmt.Errorf("failed to check existence of file %s: %v", path, err)
+	}
+	klog.Infof("Required space for download: %s", humanize.Bytes(requiredSpace))
+	availableSpace, err := utils.GetDiskAvailableSpace(commands.TERMINUS_BASE_DIR)
+	if err != nil {
+		return nil, fmt.Errorf("error checking disk space: %s", err)
+	}
+	klog.Infof("Available space of %s: %s", commands.TERMINUS_BASE_DIR, humanize.Bytes(availableSpace))
+	if availableSpace < requiredSpace {
+		return nil, fmt.Errorf("insufficient disk space in: %s, required: %s, available: %s",
+			commands.TERMINUS_BASE_DIR, humanize.Bytes(requiredSpace), humanize.Bytes(availableSpace))
+	}
+
+	klog.Info("Space check passed for download")
 
 	return newExecutionRes(true, nil), nil
 }

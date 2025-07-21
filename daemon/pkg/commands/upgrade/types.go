@@ -1,6 +1,7 @@
 package upgrade
 
 import (
+	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"math"
 	"regexp"
 	"strconv"
@@ -58,4 +59,12 @@ func parseProgressFromItemProgress(line string) int {
 		return 0
 	}
 	return int(math.Round((index / total) * 90.0))
+}
+
+type manifestComponent struct {
+	Type     string             `json:"type"`
+	Path     string             `json:"path"`
+	FileID   string             `json:"fileid"`
+	Size     uint64             `json:"size"`
+	Manifest ocischema.Manifest `json:"manifest,omitempty"`
 }

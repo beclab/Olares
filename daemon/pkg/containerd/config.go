@@ -15,6 +15,7 @@ import (
 
 const (
 	DefaultContainerdConfigPath = "/etc/containerd/config.toml"
+	DefaultContainerdRootPath   = "/var/lib/containerd"
 )
 
 func getConfig() (*serverconfig.Config, error) {

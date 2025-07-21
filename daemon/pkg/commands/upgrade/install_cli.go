@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"k8s.io/klog/v2"
 	"os"
@@ -27,26 +27,12 @@ func NewInstallCLI() commands.Interface {
 }
 
 func (i *installCLI) Execute(ctx context.Context, p any) (res any, err error) {
-	version, ok := p.(string)
+	target, ok := p.(state.UpgradeTarget)
 	if !ok {
 		return nil, errors.New("invalid param")
 	}
 
-	targetVersion, err := semver.NewVersion(version)
-	if err != nil {
-		return nil, fmt.Errorf("invalid target version %s: %v", version, err)
-	}
-
-	currentVersion, err := getCurrentCliVersion()
-	if err != nil {
-		klog.Warningf("Failed to get current olares-cli version: %v, proceeding with installation", err)
-	} else {
-		if !currentVersion.LessThan(targetVersion) {
-			return newExecutionRes(true, nil), nil
-		}
-	}
-
-	preDownloadedPath := filepath.Join(commands.TERMINUS_BASE_DIR, "pkg", "components", fmt.Sprintf("olares-cli-v%s", version))
+	preDownloadedPath := filepath.Join(commands.TERMINUS_BASE_DIR, "pkg", "components", fmt.Sprintf("olares-cli-v%s", target.Version.Original()))
 	if _, err := os.Stat(preDownloadedPath); err != nil {
 		klog.Warningf("Failed to find pre-downloaded binary path %s: %v", preDownloadedPath, err)
 		return newExecutionRes(false, nil), err

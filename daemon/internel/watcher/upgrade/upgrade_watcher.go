@@ -25,6 +25,8 @@ type upgradeWatcher struct {
 	// Internal retry state
 	retryCount    int
 	nextRetryTime *time.Time
+	target        *state.UpgradeTarget
+	cancel        context.CancelFunc
 }
 
 func NewUpgradeWatcher() watcher.Watcher {
@@ -33,13 +35,18 @@ func NewUpgradeWatcher() watcher.Watcher {
 }
 
 func (w *upgradeWatcher) Watch(ctx context.Context) {
-	targetVersion, err := state.GetOlaresUpgradeTarget()
+	var err error
+	w.target, err = state.GetOlaresUpgradeTarget()
 	if err != nil {
 		klog.Errorf("failed to check upgrade target: %v", err)
 		return
 	}
 
-	if targetVersion == nil {
+	if w.target == nil {
+		if w.cancel != nil {
+			w.cancel()
+			w.cancel = nil
+		}
 		w.resetRetryState()
 
 		state.TerminusStateMu.Lock()
@@ -77,10 +84,11 @@ func (w *upgradeWatcher) Watch(ctx context.Context) {
 		return
 	}
 	currentVersion, err := semver.NewVersion(*currentVersionStr)
-	if err != nil || currentVersion.LessThan(targetVersion) {
-		state.CurrentState.UpgradingTarget = targetVersion.Original()
+	if err != nil || currentVersion.LessThan(&w.target.Version) {
+		state.CurrentState.UpgradingTarget = w.target.Version.Original()
 	} else {
-		err = upgrade.RemoveUpgradeFiles()
+		w.target = nil
+		_, err = upgrade.NewRemoveUpgradeTarget().Execute(ctx, nil)
 		if err != nil {
 			klog.Error("failed to remove upgrade files: ", err)
 		}
@@ -92,10 +100,13 @@ func (w *upgradeWatcher) Watch(ctx context.Context) {
 			return
 		}
 
+		exeCtx, cancel := context.WithCancel(ctx)
+		w.cancel = cancel
+
 		go func() {
 			w.startUpgrading()
 			defer w.stopUpgrading()
-			if err := w.doUpgradeWithRetry(ctx); err != nil {
+			if err := w.doUpgradeWithRetry(exeCtx); err != nil {
 				klog.Errorf("upgrading error: %v", err)
 			}
 		}()
@@ -161,7 +172,7 @@ func (w *upgradeWatcher) getRetryCount() int {
 }
 
 func (w *upgradeWatcher) doUpgradeWithRetry(ctx context.Context) error {
-	err := doUpgrade(ctx)
+	err := w.doUpgrade(ctx)
 	if err != nil {
 		w.incrementRetry()
 
@@ -170,15 +181,6 @@ func (w *upgradeWatcher) doUpgradeWithRetry(ctx context.Context) error {
 
 		klog.Errorf("upgrade attempt %d failed: %v. Next retry scheduled for %v",
 			w.getRetryCount(), err, *w.nextRetryTime)
-
-		targetVersionDir := filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+state.CurrentState.UpgradingTarget)
-		prepareLogFile := filepath.Join(targetVersionDir, "install.log")
-		upgradeLogFile := filepath.Join(targetVersionDir, "upgrade.log")
-		for _, logFile := range []string{prepareLogFile, upgradeLogFile} {
-			if err := os.Remove(logFile); err != nil && !os.IsNotExist(err) {
-				klog.Errorf("failed to clear log file %s: %v", logFile, err)
-			}
-		}
 	}
 	return err
 }
@@ -192,7 +194,8 @@ type upgradePhase struct {
 var downloadPhases = []upgradePhase{
 	{upgrade.NewDownloadCLI, 0, 10},
 	{upgrade.NewDownloadWizard, 10, 20},
-	{upgrade.NewDownloadComponent, 30, 40},
+	{upgrade.NewDownloadSpaceCheck, 30, 10},
+	{upgrade.NewDownloadComponent, 40, 60},
 }
 
 var upgradePhases = []upgradePhase{
@@ -205,40 +208,45 @@ var upgradePhases = []upgradePhase{
 	{upgrade.NewRemoveTarget, 95, 5},
 }
 
-func doUpgrade(ctx context.Context) (err error) {
-	downloadCompleted, err := state.IsUpgradeDownloadCompleted()
-	if err != nil {
-		return fmt.Errorf("failed to check download status: %v", err)
+func (w *upgradeWatcher) doUpgrade(ctx context.Context) (err error) {
+	target := w.target
+	if target == nil {
+		return nil
 	}
-
-	if !downloadCompleted {
-		// Execute download phases
-		if err := doDownloadPhases(ctx); err != nil {
-			return err
+	targetVersionLogsDir := filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+target.Version.Original(), "logs")
+	prepareLogFile := filepath.Join(targetVersionLogsDir, "install.log")
+	upgradeLogFile := filepath.Join(targetVersionLogsDir, "upgrade.log")
+	for _, logFile := range []string{prepareLogFile, upgradeLogFile} {
+		if err := os.Remove(logFile); err != nil && !os.IsNotExist(err) {
+			klog.Errorf("failed to clear log file %s: %v", logFile, err)
 		}
-	} else {
-		klog.Info("download already completed, skipping download phases")
-		state.CurrentState.UpgradingDownloadState = state.Completed
-		state.CurrentState.UpgradingDownloadProgress = "100%"
-		state.CurrentState.UpgradingDownloadProgressNum = 100
+	}
+	if !target.Downloaded {
+		// Execute download phases
+		return doDownloadPhases(ctx, *target)
 	}
 
-	downloadOnly, err := state.IsUpgradeDownloadOnly()
-	if err != nil {
-		return fmt.Errorf("failed to check download-only status: %v", err)
-	}
+	klog.Info("download already completed, skipping download phases")
+	state.CurrentState.UpgradingDownloadState = state.Completed
+	state.CurrentState.UpgradingDownloadProgress = "100%"
+	state.CurrentState.UpgradingDownloadProgressNum = 100
 
-	if downloadOnly {
+	if target.DownloadOnly {
 		state.CurrentState.UpgradingState = "WaitingForUserConfirm"
 		klog.Info("download completed, waiting for user request to remove upgrade.downloadonly file to proceed with upgrade")
 		return nil
 	}
 
-	return doUpgradePhases(ctx)
+	return doUpgradePhases(ctx, *target)
 }
 
-func doDownloadPhases(ctx context.Context) (err error) {
+func doDownloadPhases(ctx context.Context, target state.UpgradeTarget) (err error) {
 	defer func() {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 		if err != nil {
 			state.CurrentState.UpgradingDownloadState = state.Failed
 			state.CurrentState.UpgradingDownloadError = err.Error()
@@ -246,9 +254,6 @@ func doDownloadPhases(ctx context.Context) (err error) {
 		} else {
 			state.CurrentState.UpgradingDownloadState = state.Completed
 			state.CurrentState.UpgradingDownloadError = ""
-			if err := createUpgradeDownloadedFile(); err != nil {
-				klog.Errorf("failed to create upgrade.downloaded file: %v", err)
-			}
 			klog.Info("download phases completed successfully")
 		}
 	}()
@@ -260,7 +265,7 @@ func doDownloadPhases(ctx context.Context) (err error) {
 		phaseCMD := phase.newCMD()
 		state.CurrentState.UpgradingDownloadStep = string(phaseCMD.OperationName())
 
-		res, err := phaseCMD.Execute(ctx, state.CurrentState.UpgradingTarget)
+		res, err := phaseCMD.Execute(ctx, target)
 		if err != nil {
 			return fmt.Errorf("error: download phase %s: %v", phaseCMD.OperationName(), err)
 		}
@@ -289,11 +294,16 @@ func doDownloadPhases(ctx context.Context) (err error) {
 			refreshDownloadProgressFromPhase(phase, phaseProgress)
 		}
 	}
-	return nil
+	return markDownloaded()
 }
 
-func doUpgradePhases(ctx context.Context) (err error) {
+func doUpgradePhases(ctx context.Context, target state.UpgradeTarget) (err error) {
 	defer func() {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 		if err != nil {
 			state.CurrentState.UpgradingState = state.Failed
 			state.CurrentState.UpgradingError = err.Error()
@@ -309,7 +319,7 @@ func doUpgradePhases(ctx context.Context) (err error) {
 		phaseCMD := phase.newCMD()
 		state.CurrentState.UpgradingStep = string(phaseCMD.OperationName())
 
-		res, err := phaseCMD.Execute(ctx, state.CurrentState.UpgradingTarget)
+		res, err := phaseCMD.Execute(ctx, target)
 		if err != nil {
 			return fmt.Errorf("error: upgrade phase %s: %v", phaseCMD.OperationName(), err)
 		}
@@ -341,6 +351,21 @@ func doUpgradePhases(ctx context.Context) (err error) {
 	return nil
 }
 
+func markDownloaded() error {
+	target, err := state.GetOlaresUpgradeTarget()
+	if err != nil {
+		return err
+	}
+	if target == nil {
+		return fmt.Errorf("no target found to mark downloaded, possibly upgrade cancelled")
+	}
+	if !target.Downloaded {
+		target.Downloaded = true
+		return target.Save()
+	}
+	return nil
+}
+
 func refreshUpgradeProgressFromPhase(phase upgradePhase, phaseProgress int) {
 	spanProgress := math.Min(float64(phaseProgress)*float64(phase.progressSpan)/float64(commands.ProgressNumFinished), float64(phase.progressSpan))
 	newProgress := phase.progressOffset + int(math.Round(spanProgress))
@@ -359,8 +384,4 @@ func refreshDownloadProgressFromPhase(phase upgradePhase, phaseProgress int) {
 	}
 	state.CurrentState.UpgradingDownloadProgressNum = newProgress
 	state.CurrentState.UpgradingDownloadProgress = fmt.Sprintf("%d%%", state.CurrentState.UpgradingDownloadProgressNum)
-}
-
-func createUpgradeDownloadedFile() error {
-	return os.WriteFile(commands.UPGRADE_DOWNLOADED_FILE, []byte(""), 0644)
 }

@@ -1,7 +1,9 @@
 package upgrade
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/beclab/Olares/daemon/cmd/terminusd/version"
 	"io"
 	"net/http"
 	"os"
@@ -34,25 +36,12 @@ func getCurrentCliVersion() (*semver.Version, error) {
 }
 
 func getCurrentDaemonVersion() (*semver.Version, error) {
-	cmd := exec.Command("olaresd", "--version")
-	output, err := cmd.Output()
+	v, err := semver.NewVersion(*version.RawVersion())
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute olaresd --version: %v", err)
+		return nil, fmt.Errorf("invalid version of olaresd: %v", err)
 	}
 
-	// parse version from output
-	// expected format: "olaresd version: v${VERSION}"
-	parts := strings.Split(string(output), " ")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("unexpected version output format: %s", string(output))
-	}
-
-	version, err := semver.NewVersion(strings.TrimPrefix(strings.TrimSpace(parts[2]), "v"))
-	if err != nil {
-		return nil, fmt.Errorf("invalid version format: %v", err)
-	}
-
-	return version, nil
+	return v, nil
 }
 
 func downloadFile(url, filepath string) error {
@@ -96,4 +85,17 @@ func copyFile(src, dst string) error {
 
 	_, err = io.Copy(destFile, sourceFile)
 	return err
+}
+
+func unmarshalComponentManifestFile(path string) (map[string]manifestComponent, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	decoder := json.NewDecoder(f)
+	ret := make(map[string]manifestComponent)
+	if err := decoder.Decode(&ret); err != nil {
+		return nil, err
+	}
+	return ret, nil
 }

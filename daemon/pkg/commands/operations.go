@@ -23,6 +23,7 @@ const (
 	DownloadWizard            Operations = "downloadWizard"
 	VersionCompatibilityCheck Operations = "versionCompatibilityCheck"
 	UpgradeHealthCheck        Operations = "upgradeHealthCheck"
+	DownloadSpaceCheck        Operations = "downloadSpaceCheck"
 	DownloadComponent         Operations = "downloadComponent"
 	ImportImages              Operations = "importImages"
 	InstallOlaresd            Operations = "installOlaresd"

@@ -120,7 +120,9 @@ func CheckCurrentStatus(ctx context.Context) error {
 	utils.ForceMountHdd(ctx)
 
 	// set default value
-	CurrentState.TerminusVersion = &commands.INSTALLED_VERSION
+	if CurrentState.TerminusVersion == nil {
+		CurrentState.TerminusVersion = &commands.INSTALLED_VERSION
+	}
 	CurrentState.DefaultFRPServer = os.Getenv("FRP_SERVER")
 	CurrentState.FRPEnable = os.Getenv("FRP_ENABLE")
 	container := os.Getenv("CONTAINER_MODE")
@@ -353,15 +355,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error getting Olares upgrade target: %v", err.Error())
 	}
-	upgradeDownloadCompleted, err := IsUpgradeDownloadCompleted()
-	if err != nil {
-		return fmt.Errorf("error checking if upgrade download completed: %v", err.Error())
-	}
-	upgradeDownloadOnly, err := IsUpgradeDownloadOnly()
-	if err != nil {
-		return fmt.Errorf("error checking if upgrade download only: %v", err.Error())
-	}
-	if upgradeTarget != nil && upgradeDownloadCompleted && !upgradeDownloadOnly {
+	if upgradeTarget != nil && upgradeTarget.Downloaded && !upgradeTarget.DownloadOnly {
 		currentTerminusState = Upgrading
 		return nil
 	}

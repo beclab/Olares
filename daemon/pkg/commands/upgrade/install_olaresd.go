@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	semver "github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/daemon/pkg/cli"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/nxadm/tail"
@@ -49,25 +49,21 @@ func NewInstallOlaresd() commands.Interface {
 }
 
 func (i *prepareOlaresd) Execute(ctx context.Context, p any) (res any, err error) {
-	version, ok := p.(string)
+	target, ok := p.(state.UpgradeTarget)
 	if !ok {
 		return nil, errors.New("invalid param")
-	}
-	targetVersion, err := semver.NewVersion(version)
-	if err != nil {
-		return nil, fmt.Errorf("invalid target version %s: %v", version, err)
 	}
 
 	currentVersion, err := getCurrentDaemonVersion()
 	if err != nil {
 		klog.Warningf("Failed to get current olaresd version: %v, proceeding with installation", err)
 	} else {
-		if !currentVersion.LessThan(targetVersion) {
+		if !currentVersion.LessThan(&target.Version) {
 			return newExecutionRes(true, nil), nil
 		}
 	}
 
-	i.logFile = filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+version, "logs", "install.log")
+	i.logFile = filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+target.Version.Original(), "logs", "install.log")
 	if err := i.refreshProgress(); err != nil {
 		return nil, fmt.Errorf("could not determine whether olaresd prepare is finished: %v", err)
 	}
@@ -83,7 +79,7 @@ func (i *prepareOlaresd) Execute(ctx context.Context, p any) (res any, err error
 
 	params := []string{
 		"prepare", "olaresd",
-		"--version", version,
+		"--version", target.Version.Original(),
 		"--base-dir", commands.TERMINUS_BASE_DIR,
 	}
 	if err = cmd.RunAsync_(ctx, cli.TERMINUS_CLI, params...); err != nil {

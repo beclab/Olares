@@ -2,9 +2,10 @@ package upgrade
 
 import (
 	"context"
+	"fmt"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"os"
 
-	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 )
 
@@ -23,35 +24,22 @@ func NewRemoveUpgradeTarget() commands.Interface {
 }
 
 func (i *removeUpgradeTarget) Execute(ctx context.Context, p any) (res any, err error) {
-	err = RemoveUpgradeFiles()
+	err = removeUpgradeTargetFile()
 	if err != nil {
 		return nil, err
 	}
 
-	state.CurrentState.UpgradingDownloadState = ""
-	state.CurrentState.UpgradingDownloadStep = ""
-	state.CurrentState.UpgradingDownloadProgress = ""
-	state.CurrentState.UpgradingDownloadProgressNum = 0
-	state.CurrentState.UpgradingDownloadError = ""
-
-	state.StateTrigger <- struct{}{}
+	err = state.CheckCurrentStatus(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to refresh system state: %v", err)
+	}
 
 	return NewExecutionRes(true, nil), nil
 }
 
-func RemoveUpgradeFiles() error {
-	// attempt to remove all files whether they exist or not (idempotent)
-	files := []string{
-		commands.UPGRADE_TARGET_FILE,
-		commands.UPGRADE_DOWNLOADONLY_FILE,
-		commands.UPGRADE_DOWNLOADED_FILE,
+func removeUpgradeTargetFile() error {
+	if err := os.Remove(commands.UPGRADE_TARGET_FILE); err != nil && !os.IsNotExist(err) {
+		return err
 	}
-
-	for _, file := range files {
-		if err := os.Remove(file); err != nil && !os.IsNotExist(err) {
-			return err
-		}
-	}
-
 	return nil
 }

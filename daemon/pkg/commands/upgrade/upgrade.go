@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"io"
 	"os"
 	"path/filepath"
@@ -45,12 +46,12 @@ func NewUpgrade() commands.Interface {
 }
 
 func (i *upgrade) Execute(ctx context.Context, p any) (res any, err error) {
-	version, ok := p.(string)
+	target, ok := p.(state.UpgradeTarget)
 	if !ok {
 		return nil, errors.New("invalid param")
 	}
 
-	i.logFile = filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+version, "logs", "upgrade.log")
+	i.logFile = filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+target.Version.Original(), "logs", "upgrade.log")
 	if err := i.refreshProgress(); err != nil {
 		return nil, fmt.Errorf("could not determine whether upgrade is finished: %v", err)
 	}
@@ -66,7 +67,7 @@ func (i *upgrade) Execute(ctx context.Context, p any) (res any, err error) {
 
 	params := []string{
 		"upgrade",
-		"--version", version,
+		"--version", target.Version.Original(),
 		"--base-dir", commands.TERMINUS_BASE_DIR,
 	}
 	if err = cmd.RunAsync_(ctx, cli.TERMINUS_CLI, params...); err != nil {
