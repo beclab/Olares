@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.40" }}
+{{ $backupVersion := "0.3.41" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 {{- $backup_nats_secret := (lookup "v1" "Secret" .Release.Namespace "backup-nats-secret") -}}
@@ -44,6 +44,13 @@ spec:
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
       volumes:
       - name: dbdata
         hostPath:
