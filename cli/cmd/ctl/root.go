@@ -10,12 +10,22 @@ import (
 )
 
 func NewDefaultCommand() *cobra.Command {
+	var showVendor bool
 	cmds := &cobra.Command{
 		Use:               "olares-cli",
 		Short:             "Olares Installer",
 		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
 		Version:           version.VERSION,
+		Run: func(cmd *cobra.Command, args []string) {
+			if showVendor {
+				println(version.VENDOR)
+			} else {
+				cmd.Usage()
+			}
+			return
+		},
 	}
+	cmds.Flags().BoolVar(&showVendor, "vendor", false, "show the vendor type of olares-cli")
 
 	cmds.AddCommand(osinfo.NewCmdInfo())
 	cmds.AddCommand(os.NewOSCommands()...)

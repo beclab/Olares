@@ -32,6 +32,10 @@ builds:
     - -w
     - -s
     - -X 'github.com/beclab/Olares/daemon/cmd/terminusd/version.version=v{{ .Version }}'
+    - >-
+      {{- if index .Env "OLARES_VENDOR_TYPE" }}
+      -X github.com/beclab/Olares/daemon/cmd/terminusd/version.VENDOR={{ .Env.OLARES_VENDOR_TYPE }}
+      {{- end }}
 dist: output
 archives:
 - name_template: "olaresd-v{{ .Version }}-{{ .Os }}-{{ .Arch }}"

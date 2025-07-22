@@ -33,15 +33,22 @@ func main() {
 
 	port := 18088
 	var showVersion bool
+	var showVendor bool
 
 	klog.InitFlags(nil)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.CommandLine.BoolVar(&showVersion, "version", false, "show olaresd version")
+	pflag.CommandLine.BoolVar(&showVendor, "vendor", false, "show the vendor type of olaresd")
 
 	pflag.Parse()
 
 	if showVersion {
 		fmt.Println(version.Version())
+		return
+	}
+
+	if showVendor {
+		fmt.Println(version.VENDOR)
 		return
 	}
 
