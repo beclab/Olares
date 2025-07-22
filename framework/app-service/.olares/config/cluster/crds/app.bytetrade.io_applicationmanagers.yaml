@@ -65,6 +65,9 @@ spec:
                 type: string
               config:
                 type: string
+              opType:
+                description: OpType represents the type of operation being performed.
+                type: string
               source:
                 type: string
               type:
@@ -72,6 +75,7 @@ spec:
                 type: string
             required:
             - appName
+            - opType
             - source
             - type
             type: object
@@ -145,13 +149,9 @@ spec:
                 format: date-time
                 type: string
             required:
-            - opGeneration
             - opType
-            - statusTime
-            - updateTime
             type: object
         type: object
     served: true
     storage: true
-    subresources:
-      status: {}
+    subresources: {}

@@ -101,10 +101,6 @@ spec:
                 type: object
               message:
                 type: string
-              nodeDownloadStatus:
-                additionalProperties:
-                  type: string
-                type: object
               state:
                 type: string
               statusTime:
