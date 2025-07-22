@@ -227,9 +227,6 @@ func (w *upgradeWatcher) doUpgrade(ctx context.Context) (err error) {
 	}
 
 	klog.Info("download already completed, skipping download phases")
-	state.CurrentState.UpgradingDownloadState = state.Completed
-	state.CurrentState.UpgradingDownloadProgress = "100%"
-	state.CurrentState.UpgradingDownloadProgressNum = 100
 
 	if target.DownloadOnly {
 		state.CurrentState.UpgradingState = "WaitingForUserConfirm"
@@ -253,6 +250,8 @@ func doDownloadPhases(ctx context.Context, target state.UpgradeTarget) (err erro
 			klog.Errorf("download phases failed: %v", err)
 		} else {
 			state.CurrentState.UpgradingDownloadState = state.Completed
+			state.CurrentState.UpgradingDownloadProgress = "100%"
+			state.CurrentState.UpgradingDownloadProgressNum = 100
 			state.CurrentState.UpgradingDownloadError = ""
 			klog.Info("download phases completed successfully")
 		}
