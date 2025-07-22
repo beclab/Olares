@@ -86,7 +86,7 @@ func (w *upgradeWatcher) Watch(ctx context.Context) {
 	currentVersion, err := semver.NewVersion(*currentVersionStr)
 	if err != nil || currentVersion.LessThan(&w.target.Version) {
 		state.CurrentState.UpgradingTarget = w.target.Version.Original()
-	} else {
+	} else if !w.isUpgrading() {
 		w.target = nil
 		_, err = upgrade.NewRemoveUpgradeTarget().Execute(ctx, nil)
 		if err != nil {
