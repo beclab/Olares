@@ -141,7 +141,7 @@ spec:
             value: os_framework_notifications
       containers:
       - name: notifications-api
-        image: beclab/notifications-api:v1.12.18
+        image: beclab/notifications-api:v1.12.21
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
@@ -171,7 +171,7 @@ spec:
         - name: NATS_SUBJECT
           value: "os.notification"
         - name: NATS_SUBJECT_SYSTEM_USERS
-          value: "os.users.*"
+          value: "os.users"
         - name: NATS_SUBJECT_SYSTEM_GROUPS
           value: "os.groups.*"
         - name: NATS_SUBJECT_SYSTEM_APPLICATION
