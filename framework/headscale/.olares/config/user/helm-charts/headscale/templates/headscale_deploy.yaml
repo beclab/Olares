@@ -260,13 +260,11 @@ spec:
     spec:
       affinity:
         podAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app: headscale
-              topologyKey: kubernetes.io/hostname
-            weight: 100
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: headscale
+            topologyKey: kubernetes.io/hostname
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
