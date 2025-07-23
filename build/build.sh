@@ -43,6 +43,18 @@ else
     VERSION="debug"
 fi
 
+# vendor replace
+if [[ "${REPO_PATH}" != "" && "$REPO_PATH" != "/" ]]; then
+    path="vendor${REPO_PATH}"
+    echo "replace vendor path: ${path}"
+    find ${BASE_DIR}/$path -type f | while read l; 
+    do 
+        file=$(awk -F "$path" '{print $1$2}' <<< "$l")  
+        if [[ "$file" != ".gitkeep" ]]; then
+            cp -f "$l" "$file"
+        fi
+    done
+fi
 
 $TAR --exclude=wizard/tools --exclude=.git -zcvf ${BASE_DIR}/../install-wizard-${VERSION}.tar.gz .
 
