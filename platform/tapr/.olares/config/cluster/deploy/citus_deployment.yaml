@@ -48,3 +48,17 @@ spec:
   backupStorage: '{{ $citus_backuppath }}/pg_backup'
   citusImage: beclab/citus:13.0.3-vchord
   
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: citus-master-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ExternalName
+  externalName: citus-0.citus-headless.{{ .Release.Namespace }}.svc.cluster.local
+  ports:
+    - protocol: TCP
+      name: citus
+      port: 5432
+      targetPort: 5432  
