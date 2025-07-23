@@ -148,8 +148,6 @@ spec:
               updateTime:
                 format: date-time
                 type: string
-            required:
-            - opType
             type: object
         type: object
     served: true

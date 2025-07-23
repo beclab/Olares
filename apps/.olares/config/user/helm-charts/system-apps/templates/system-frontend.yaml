@@ -1,4 +1,5 @@
 {{- $namespace := printf "%s%s" "user-system-" .Values.bfl.username -}}
+{{- $userspacenamespace := printf "%s%s" "user-space-" .Values.bfl.username -}}
 {{- $zinc_files_secret := (lookup "v1" "Secret" $namespace "zinc-files-secrets") -}}
 {{- $user_service_secret := (lookup "v1" "Secret" $namespace "user-service-secrets") -}}
 
@@ -50,7 +51,7 @@
 {{ $user_service_redis_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
-{{- $user_service_nats_secret := (lookup "v1" "Secret" $namespace "user-service-nats-secret") -}}
+{{- $user_service_nats_secret := (lookup "v1" "Secret" $userspacenamespace "user-service-nats-secret") -}}
 {{- $nats_password := "" -}}
 {{ if $user_service_nats_secret -}}
 {{ $nats_password = (index $user_service_nats_secret "data" "nats_password") }}

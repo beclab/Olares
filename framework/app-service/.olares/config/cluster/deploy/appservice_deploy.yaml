@@ -158,12 +158,19 @@ spec:
       labels:
         tier: app-service
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       serviceAccountName: os-internal
       serviceAccount: os-internal
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.3.58
+        image: beclab/app-service:0.3.59
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -409,7 +416,7 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
             - name: SYS_APPS
-              value: "market,auth,citus,desktop,did,docs,files,fsnotify,headscale,infisical,intentprovider,ksserver,message,mongo,monitoring,notifications,profile,redis,wise,recommend,seafile,search,nitro,search-admin,settings,systemserver,tapr,vault,video,zinc,accounts,control-hub,dashboard"
+              value: "market,auth,citus,desktop,did,docs,files,fsnotify,headscale,infisical,intentprovider,ksserver,message,mongo,monitoring,notifications,profile,redis,recommend,seafile,search,nitro,search-admin,settings,systemserver,tapr,vault,video,zinc,accounts,control-hub,dashboard"
           volumeMounts:
             - mountPath: /var/run/containerd
               mountPropagation: Bidirectional
