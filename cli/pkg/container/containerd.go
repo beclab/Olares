@@ -404,3 +404,14 @@ func (t *KillContainerdProcess) Execute(runtime connector.Runtime) error {
 
 	return nil
 }
+
+type RestartContainerd struct {
+	common.KubeAction
+}
+
+func (t *RestartContainerd) Execute(runtime connector.Runtime) error {
+	if _, err := runtime.GetRunner().SudoCmd("systemctl restart containerd", false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "Failed to restart containerd")
+	}
+	return nil
+}

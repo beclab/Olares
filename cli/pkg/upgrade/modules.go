@@ -2,6 +2,7 @@ package upgrade
 
 import (
 	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
+	"github.com/beclab/Olares/cli/pkg/manifest"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -10,6 +11,7 @@ import (
 
 type Module struct {
 	common.KubeModule
+	manifest.ManifestModule
 	TargetVersion *semver.Version
 }
 

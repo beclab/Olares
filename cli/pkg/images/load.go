@@ -2,13 +2,11 @@ package images
 
 import (
 	"fmt"
+	"github.com/distribution/reference"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/containerd/containerd/pkg/cri/labels"
-	"github.com/containerd/containerd/reference/docker"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/cache"
@@ -16,6 +14,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/utils"
+	"github.com/containerd/containerd/pkg/cri/labels"
 )
 
 const MAX_IMPORT_RETRY int = 5
@@ -120,8 +119,13 @@ func (t *LoadImages) Execute(runtime connector.Runtime) (reserr error) {
 			case "crio":
 				loadCmd = "ctr" // not implement
 			case "containerd":
+				parsedRef, err := reference.ParseNormalizedNamed(imageRepoTag)
+				if err != nil {
+					logger.Warnf("parse image name %s error: %v, skip importing", imageRepoTag, err)
+					continue
+				}
 				if HasSuffixI(imgFileName, ".tar.gz", ".tgz") {
-					loadCmd = fmt.Sprintf("gunzip -c %s | ctr -n k8s.io images import %s -", imageFileName, loadParm)
+					loadCmd = fmt.Sprintf("gunzip -c %s | ctr -n k8s.io images import --index-name %s %s -", imageFileName, parsedRef, loadParm)
 				} else {
 					loadCmd = fmt.Sprintf("ctr -n k8s.io images import %s %s", imageFileName, loadParm)
 				}
@@ -157,12 +161,15 @@ func (a *PinImages) Execute(runtime connector.Runtime) error {
 		return nil
 	}
 	for _, ref := range manifests {
-		parsedRef, err := docker.ParseNormalizedNamed(ref)
+		parsedRef, err := reference.ParseNormalizedNamed(ref)
 		if err != nil {
 			logger.Warnf("parse image name %s error: %v, skip pinning", ref, err)
 			continue
 		}
 		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("ctr -n k8s.io i label %s %s=%s", parsedRef.String(), labels.PinnedImageLabelKey, labels.PinnedImageLabelValue), false, false); err != nil {
+			if strings.Contains(err.Error(), "DEPRECATION") {
+				continue
+			}
 			// tolerate cases where some images are not found
 			// e.g., like in the cloud environment and some images are not in the ami
 			logger.Warnf("pin image %s error: %v", parsedRef.String(), err)

@@ -290,21 +290,10 @@ type ConfigureContainerdRuntime struct {
 }
 
 func (t *ConfigureContainerdRuntime) Execute(runtime connector.Runtime) error {
-	if _, err := runtime.GetRunner().SudoCmd("nvidia-ctk runtime configure --runtime=containerd --set-as-default --config-source=command", false, true); err != nil {
+	if _, err := runtime.GetRunner().SudoCmd("nvidia-ctk runtime configure --runtime=containerd --set-as-default --config-source=file", false, true); err != nil {
 		return errors.Wrap(errors.WithStack(err), "Failed to nvidia-ctk runtime configure")
 	}
 
-	return nil
-}
-
-type RestartContainerd struct {
-	common.KubeAction
-}
-
-func (t *RestartContainerd) Execute(runtime connector.Runtime) error {
-	if _, err := runtime.GetRunner().SudoCmd("systemctl restart containerd", false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "Failed to restart containerd")
-	}
 	return nil
 }
 

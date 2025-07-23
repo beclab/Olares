@@ -16,6 +16,7 @@ var (
 
 	dailyUpgraders = []breakingUpgrader{
 		upgrader_1_12_0_20250702{},
+		upgrader_1_12_0_20250723{},
 	}
 	mainUpgraders = []breakingUpgrader{}
 )

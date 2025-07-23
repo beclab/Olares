@@ -22,6 +22,7 @@ require (
 	github.com/containerd/containerd v1.7.27
 	github.com/decentralized-identity/web5-go v0.25.0
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0
+	github.com/distribution/reference v0.6.0
 	github.com/dominodatalab/os-release v0.0.0-20190522011736-bcdb4a3e3c2f
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/google/uuid v1.6.0
@@ -93,7 +94,6 @@ require (
 	github.com/containerd/typeurl/v2 v2.1.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/ebitengine/purego v0.8.4 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect

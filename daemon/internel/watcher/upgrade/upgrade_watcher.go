@@ -202,8 +202,8 @@ var upgradePhases = []upgradePhase{
 	{upgrade.NewVersionCompatibilityCheck, 0, 5},
 	{upgrade.NewHealthCheck, 5, 5},
 	{upgrade.NewInstallCLI, 10, 10},
-	{upgrade.NewImportImages, 20, 30},
-	{upgrade.NewInstallOlaresd, 50, 10},
+	{upgrade.NewInstallOlaresd, 20, 10},
+	{upgrade.NewImportImages, 30, 30},
 	{upgrade.NewUpgrade, 60, 35},
 	{upgrade.NewRemoveTarget, 95, 5},
 }

@@ -1,6 +1,7 @@
 package gpu
 
 import (
+	"github.com/beclab/Olares/cli/pkg/container"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -174,7 +175,7 @@ func (m *RestartContainerdModule) Init() {
 		Prepare: &prepare.PrepareCollection{
 			new(ContainerdInstalled),
 		},
-		Action:   new(RestartContainerd),
+		Action:   new(container.RestartContainerd),
 		Parallel: false,
 		Retry:    1,
 	}
