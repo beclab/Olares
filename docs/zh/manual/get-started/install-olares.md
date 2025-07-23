@@ -33,10 +33,10 @@ description: 在 Linux 系统上通过一键脚本，快速上手 Olares。
 
 在 Linux 命令行中，执行以下命令：
 
-<!--@include: ./reusables.md{4,28}-->
+<!--@include: ./reusables.md{4,32}-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{30,34}-->
+<!--@include: ./reusables.md{34,38}-->

@@ -38,10 +38,10 @@ While these specific versions are confirmed to work, the process may still work 
 
 In your terminal, run the following command:
 
-<!--@include: ./reusables.md{4,33}-->
+<!--@include: ./reusables.md{4,36}-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{35,39}-->
+<!--@include: ./reusables.md{38,42}-->

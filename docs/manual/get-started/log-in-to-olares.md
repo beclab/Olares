@@ -3,7 +3,7 @@ search: false
 ---
 ## Log in to Olares
 
-1. Enter the Olares desktop address in your browser, and press any key to continue.
+1. Enter the Olares desktop address (`https://desktop.{olares-id}.olares.com`) in your browser, and press any key to continue.
 2. On the login page, enter your Olares login password.
 
    ![Log in](/images/manual/get-started/log-in.png#bordered)
