@@ -1,0 +1,194 @@
+{{- $chartrepo_secret := (lookup "v1" "Secret" .Release.Namespace "chartrepo-secrets") -}}
+
+{{- $redis_password := "" -}}
+{{ if $chartrepo_secret -}}
+{{ $redis_password = (index $chartrepo_secret "data" "redis-passwords") }}
+{{ else -}}
+{{ $redis_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+{{- $chartrepo_nats_secret := (lookup "v1" "Secret" .Release.Namespace "chartrepo-nats-secret") -}}
+{{- $nats_password := "" -}}
+{{ if $chartrepo_nats_secret -}}
+{{ $nats_password = (index $chartrepo_nats_secret "data" "nats_password") }}
+{{ else -}}
+{{ $nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: chartrepo-secrets
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  redis-passwords: {{ $redis_password }}
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: chartrepo-redis
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: chartrepo
+  appNamespace: {{ .Release.Namespace }}
+  middleware: redis
+  redis:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: redis-passwords
+          name: chartrepo-secrets
+    namespace: chartrepo
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: chartrepo-nats-secret
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  nats_password: {{ $nats_password }}
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: chartrepo-nats
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: chartrepo
+  appNamespace: os
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: nats_password
+          name: chartrepo-nats-secret
+    subjects:
+      - name: "users.*"
+        permission:
+          pub: allow
+          sub: allow
+      - name: users
+        permission:
+          pub: allow
+          sub: allow        
+
+    user: os-chartrepo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chartrepo-deployment
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: chartrepo
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chartrepo
+  template:
+    metadata:
+      labels:
+        app: chartrepo
+        io.bytetrade.app: "true"
+      annotations:
+{{ if .Values.telemetry }}
+        instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
+        instrumentation.opentelemetry.io/go-container-names: "chartrepo"    
+        instrumentation.opentelemetry.io/otel-go-auto-target-exe: "/opt/app/chartrepo"
+{{ end }}
+    spec:
+      priorityClassName: "system-cluster-critical"
+      initContainers:
+        - args:
+          - -it
+          - authelia-backend.os-framework:9091
+          image: owncloudci/wait-for:latest
+          imagePullPolicy: IfNotPresent
+          name: check-auth
+        - args:
+          - -it
+          - app-service.os-framework:6755
+          image: owncloudci/wait-for:latest
+          imagePullPolicy: IfNotPresent
+          name: check-appservice
+      containers:
+      - name: chartrepo
+        image: beclab/dynamic-chart-repository:v0.1.3
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 81
+        env:
+          {{- range $key, $val := .Values.terminusGlobalEnvs }}
+          - name: {{ $key }}
+            value: {{ $val | quote }}
+          {{- end }}                               
+          - name: APP_SERVICE_SERVICE_HOST                                         
+            value: app-service
+          - name: APP_SERVICE_SERVICE_PORT                                         
+            value: "6755"            
+          - name: NATS_HOST                                                        
+            value: nats.os-platform                                                            
+          - name: NATS_PORT                                                        
+            value: "4222"                                                          
+          - name: NATS_USERNAME                                                    
+            value: os-chartrepo                                   
+          - name: NATS_PASSWORD                                                    
+            valueFrom:                                                             
+              secretKeyRef:                                                        
+                key: nats_password                                                 
+                name: chartrepo-nats-secret
+          - name: REDIS_HOST                                                       
+            value: redis-cluster-proxy.os-platform                                   
+          - name: REDIS_PORT                                                       
+            value: "6379"
+          - name: REDIS_PASSWORD                                                   
+            valueFrom:                                                             
+              secretKeyRef:                                                        
+                key: redis-passwords                                               
+                name: chartrepo-secrets                                               
+          - name: REDIS_DB_NUMBER                                                  
+            value: "0"                                                             
+          - name: API_CHART_PATH
+            value: /api/v1/applications/{chart_name}/chart
+          - name: CHART_ROOT
+            value: /opt/app/data/v2                                                                                      
+          - name: NATS_SUBJECT_SYSTEM_USER_STATE                         
+            value: os.users.*
+          - name: GO_ENV                                                 
+            value: prod
+        volumeMounts:
+          - name: opt-data
+            mountPath: /opt/app/data
+      volumes:
+      - name: opt-data
+        hostPath:
+          path: '{{ .Values.rootPath }}/userdata/Cache/chartrepo'
+          type: DirectoryOrCreate
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chart-repo-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: chartrepo
+  ports:
+    - name: "chartrepo"
+      protocol: TCP
+      port: 82
+      targetPort: 82

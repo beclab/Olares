@@ -93,7 +93,7 @@ spec:
           name: check-appservice
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.4.10
+        image: beclab/market-backend:v0.4.13
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -111,12 +111,9 @@ spec:
           - name: APP_SERVICE_SERVICE_PORT                                         
             value: "6755"
           - name: REPO_URL_PORT
-            value: "82/"                                                         
+            value: "82"                                                         
           - name: REPO_URL_HOST                                                    
-            valueFrom:                                                             
-              fieldRef:                                                            
-                apiVersion: v1                                                     
-                fieldPath: status.podIP                                            
+            value: chart-repo-service                                           
           - name: NATS_HOST                                                        
             value: nats.os-platform                                                            
           - name: NATS_PORT                                                        
@@ -170,19 +167,8 @@ spec:
             value: os.users.*
           - name: GO_ENV                                                 
             value: prod
-        volumeMounts:
-          - name: opt-data
-            mountPath: /opt/app/data
-      volumes:
-      - name: opt-data
-        hostPath:
-          path: '{{ .Values.rootPath }}/userdata/Cache/market'
-          type: DirectoryOrCreate
-      - name: app
-        emptyDir: {}
-      - name: nginx-confd
-        emptyDir: {}
-
+          - name: CHART_REPO_SERVICE_HOST
+            value: chart-repo-service:82
 ---
 apiVersion: v1
 kind: Service
@@ -282,5 +268,13 @@ spec:
         permission:
           pub: allow
           sub: allow
+      - name: "users.*"
+        permission:
+          pub: allow
+          sub: allow
+      - name: users
+        permission:
+          pub: allow
+          sub: allow        
 
     user: os-market-backend
