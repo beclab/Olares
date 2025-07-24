@@ -5,6 +5,21 @@ rm -rf ${BASE_DIR}/../.dist
 DIST_PATH="${BASE_DIR}/../.dist/install-wizard" 
 export VERSION=$1
 
+
+# vendor replace
+if [[ "${REPO_PATH}" != "" && "$REPO_PATH" != "/" ]]; then
+    path="vendor${REPO_PATH}"
+    echo "replace vendor path: ${path}"
+    find ${BASE_DIR}/../$path -type f | while read l; 
+    do 
+        file=$(awk -F "$path" '{print $1$2}' <<< "$l")  
+        if [[ "$file" != ".gitkeep" ]]; then
+            cp -f "$l" "$file"
+        fi
+    done
+fi
+
+
 DIST_PATH=${DIST_PATH} bash ${BASE_DIR}/package.sh
 
 bash ${BASE_DIR}/image-manifest.sh
@@ -41,19 +56,6 @@ if [ ! -z $VERSION ]; then
     VERSION="v${VERSION}"
 else
     VERSION="debug"
-fi
-
-# vendor replace
-if [[ "${REPO_PATH}" != "" && "$REPO_PATH" != "/" ]]; then
-    path="vendor${REPO_PATH}"
-    echo "replace vendor path: ${path}"
-    find ${BASE_DIR}/$path -type f | while read l; 
-    do 
-        file=$(awk -F "$path" '{print $1$2}' <<< "$l")  
-        if [[ "$file" != ".gitkeep" ]]; then
-            cp -f "$l" "$file"
-        fi
-    done
 fi
 
 $TAR --exclude=wizard/tools --exclude=.git -zcvf ${BASE_DIR}/../install-wizard-${VERSION}.tar.gz .
