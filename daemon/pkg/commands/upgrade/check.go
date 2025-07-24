@@ -146,14 +146,8 @@ func (i *healthCheck) Execute(ctx context.Context, p any) (res any, err error) {
 		}
 	}
 	klog.Infof("Required space for image import: %s", humanize.Bytes(requiredSpace))
-	availableSpace, err := utils.GetDiskAvailableSpace(containerd.DefaultContainerdRootPath)
-	if err != nil {
-		return nil, fmt.Errorf("error checking disk space: %s", err)
-	}
-	klog.Infof("Available space of %s: %s", containerd.DefaultContainerdRootPath, humanize.Bytes(availableSpace))
-	if availableSpace < requiredSpace {
-		return nil, fmt.Errorf("insufficient disk space in: %s, required: %s, available: %s",
-			commands.TERMINUS_BASE_DIR, humanize.Bytes(requiredSpace), humanize.Bytes(availableSpace))
+	if err := tryToUseDiskSpace(containerd.DefaultContainerdRootPath, requiredSpace); err != nil {
+		return nil, err
 	}
 
 	client, err := utils.GetKubeClient()
@@ -181,19 +175,25 @@ func (i *healthCheck) Execute(ctx context.Context, p any) (res any, err error) {
 		//	continue
 		//}
 		if node.Spec.Unschedulable {
-			return nil, fmt.Errorf("node %s is unschedulable", node.Name)
+			return nil, fmt.Errorf("node %s: unschedulable", node.Name)
 		}
 		var readyConditionExists bool
 		for _, condition := range node.Status.Conditions {
-			if condition.Type == corev1.NodeReady {
+			switch condition.Type {
+			case corev1.NodeReady:
 				readyConditionExists = true
 				if condition.Status != corev1.ConditionTrue {
-					return nil, fmt.Errorf("node %s is not ready", node.Name)
+					return nil, fmt.Errorf("node %s: not ready", node.Name)
+				}
+			case corev1.NodeMemoryPressure, corev1.NodeDiskPressure,
+				corev1.NodePIDPressure, corev1.NodeNetworkUnavailable:
+				if condition.Status == corev1.ConditionTrue {
+					return nil, fmt.Errorf("node %s: %s", node.Name, condition.Type)
 				}
 			}
 		}
 		if !readyConditionExists {
-			return nil, fmt.Errorf("node %s's condition is unknown", node.Name)
+			return nil, fmt.Errorf("node %s: condition unknown", node.Name)
 		}
 	}
 
@@ -271,14 +271,9 @@ func (i *downloadSpaceCheck) Execute(ctx context.Context, p any) (res any, err e
 		return nil, fmt.Errorf("failed to check existence of file %s: %v", path, err)
 	}
 	klog.Infof("Required space for download: %s", humanize.Bytes(requiredSpace))
-	availableSpace, err := utils.GetDiskAvailableSpace(commands.TERMINUS_BASE_DIR)
-	if err != nil {
-		return nil, fmt.Errorf("error checking disk space: %s", err)
-	}
-	klog.Infof("Available space of %s: %s", commands.TERMINUS_BASE_DIR, humanize.Bytes(availableSpace))
-	if availableSpace < requiredSpace {
-		return nil, fmt.Errorf("insufficient disk space in: %s, required: %s, available: %s",
-			commands.TERMINUS_BASE_DIR, humanize.Bytes(requiredSpace), humanize.Bytes(availableSpace))
+
+	if err := tryToUseDiskSpace(commands.TERMINUS_BASE_DIR, requiredSpace); err != nil {
+		return nil, err
 	}
 
 	klog.Info("Space check passed for download")

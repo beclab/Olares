@@ -2,13 +2,16 @@ package upgrade
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/beclab/Olares/daemon/cmd/terminusd/version"
+	"github.com/dustin/go-humanize"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/Masterminds/semver/v3"
 )
@@ -98,4 +101,41 @@ func unmarshalComponentManifestFile(path string) (map[string]manifestComponent, 
 		return nil, err
 	}
 	return ret, nil
+}
+
+// checks:
+// 1. whether available space is enough
+// 2. if the path is at the same partition with K8s root, whether disk space remains more than 10% after use
+func tryToUseDiskSpace(path string, size uint64) error {
+	fs := syscall.Statfs_t{}
+	err := syscall.Statfs(path, &fs)
+	if err != nil {
+		return fmt.Errorf("failed to statfs path %s: %v", path, err)
+	}
+
+	kfs := syscall.Statfs_t{}
+	err = syscall.Statfs("/var/lib", &fs)
+	if err != nil {
+		return fmt.Errorf("failed to statfs K8s root path %s: %v", path, err)
+	}
+
+	total := fs.Blocks * uint64(fs.Bsize)
+	available := fs.Bavail * uint64(fs.Bsize)
+
+	var ksize uint64
+	if fs.Fsid == kfs.Fsid {
+		ksize = uint64(float64(total) * 0.11)
+	}
+
+	if available > size+ksize {
+		return nil
+	}
+
+	errStr := fmt.Sprintf("insufficient disk space, available: %s, required: %s", humanize.Bytes(available), humanize.Bytes(size))
+	if ksize > 0 {
+		errStr += fmt.Sprintf(", reserved for K8s: %s", humanize.Bytes(ksize))
+	}
+
+	return errors.New(errStr)
+
 }
