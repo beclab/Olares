@@ -33,3 +33,28 @@ func (h *Handlers) CancelOlaresUpgrade(ctx *fiber.Ctx, cmd commands.Interface) e
 
 	return h.OkJSON(ctx, "successfully cancelled upgrade/download")
 }
+
+func (h *Handlers) ConfirmOlaresUpgrade(ctx *fiber.Ctx) error {
+	target, err := state.GetOlaresUpgradeTarget()
+	if err != nil {
+		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
+	}
+	if target == nil {
+		return h.ErrJSON(ctx, http.StatusNotFound, "upgrade target not found")
+	}
+	if target.DownloadOnly {
+		target.DownloadOnly = false
+		err = target.Save()
+		if err != nil {
+			return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
+		}
+		if target.Downloaded {
+			err = state.CheckCurrentStatus(ctx.Context())
+			if err != nil {
+				klog.Warning("failed to refresh current status immediately after confirmation, ", err)
+			}
+		}
+	}
+
+	return h.OkJSON(ctx, "successfully confirmed upgrade")
+}

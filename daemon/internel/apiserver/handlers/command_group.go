@@ -37,6 +37,9 @@ func init() {
 		handlers.RequireOwner(
 			handlers.RunCommand(handlers.CancelOlaresUpgrade, upgrade.NewRemoveUpgradeTarget))))
 
+	cmd.Post("/upgrade/confirm", handlers.RequireSignature(
+		handlers.RequireOwner(handlers.ConfirmOlaresUpgrade)))
+
 	cmd.Post("/reboot", handlers.RequireSignature(
 		handlers.RequireOwner(
 			handlers.WaitServerRunning(
