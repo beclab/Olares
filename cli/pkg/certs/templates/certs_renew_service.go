@@ -40,6 +40,7 @@ Description=Timer to renew K8S control plane certificates
 [Timer]
 OnCalendar=Mon *-*-* 03:00:00
 Unit=k8s-certs-renew.service
+Persistent=true
 [Install]
 WantedBy=multi-user.target
     `)))
