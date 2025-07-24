@@ -1,3 +1,3 @@
 package version
 
-var VENDOR = "community"
+var VENDOR = "main"

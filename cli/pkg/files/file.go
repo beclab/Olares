@@ -21,9 +21,11 @@ import (
 	_ "compress/bzip2"
 	"context"
 	"fmt"
+	cliversion "github.com/beclab/Olares/cli/version"
 	"io"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -330,7 +332,7 @@ func NewKubeBinary(name, arch, osType, osVersion, osPlatformFamily, version, pre
 	case installwizard:
 		component.Type = WIZARD
 		component.FileName = fmt.Sprintf("install-wizard-v%s.tar.gz", version)
-		component.Url = fmt.Sprintf("%s/install-wizard-v%s.tar.gz", component.getDownloadMirrors(downloadMirrors), version)
+		component.Url, _ = url.JoinPath(component.getDownloadMirrors(downloadMirrors), cliversion.VENDOR_REPO_PATH, fmt.Sprintf("install-wizard-v%s.tar.gz", version))
 		component.CheckSum = false
 		component.BaseDir = filepath.Join(prePath, fmt.Sprintf("v%s", version))
 	case cudakeyring: // + gpu

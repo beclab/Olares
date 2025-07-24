@@ -1,3 +1,4 @@
 package version
 
-var VENDOR = "community"
+var VENDOR = "main"
+var VENDOR_REPO_PATH = ""

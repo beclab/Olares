@@ -31,6 +31,10 @@ builds:
         {{- if index .Env "OLARES_VENDOR_TYPE" }}
         -X github.com/beclab/Olares/cli/version.VENDOR={{ .Env.OLARES_VENDOR_TYPE }}
         {{- end }}
+      - >-
+        {{- if index .Env "OLARES_VENDOR_REPO_PATH" }}
+        -X github.com/beclab/Olares/cli/version.VENDOR_REPO_PATH={{ .Env.OLARES_VENDOR_REPO_PATH }}
+        {{- end }}
 dist: ./output
 archives:
   - id: olares-cli

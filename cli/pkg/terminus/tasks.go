@@ -5,10 +5,12 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/beclab/Olares/cli/version"
 	"io/fs"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -171,7 +173,8 @@ func (t *Download) Execute(runtime connector.Runtime) error {
 	var wizard = files.NewKubeBinary("install-wizard", osArch, osType, osVersion, osPlatformFamily, t.Version, prePath, t.DownloadCdnUrl)
 
 	if t.UrlOverride == "" {
-		var fetchMd5 = fmt.Sprintf("curl -sSfL %s/install-wizard-v%s.md5sum.txt |awk '{print $1}'", t.DownloadCdnUrl, t.Version)
+		md5URL, _ := url.JoinPath(t.DownloadCdnUrl, version.VENDOR_REPO_PATH, fmt.Sprintf("install-wizard-v%s.md5sum.txt", t.Version))
+		var fetchMd5 = fmt.Sprintf("curl -sSfL %s |awk '{print $1}'", md5URL)
 		md5sum, err := runtime.GetRunner().Cmd(fetchMd5, false, false)
 		if err != nil {
 			return errors.New("get md5sum failed")
