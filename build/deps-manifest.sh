@@ -20,6 +20,21 @@ function get_key(){
     fi
 }
 
+# vendor replace
+if [[ "${REPO_PATH}" != "" && "$REPO_PATH" != "/" ]]; then
+    path="vendor${REPO_PATH}"
+    echo "replace vendor path: ${path}"
+    find ${BASE_DIR}/../$path -type f | while read l; 
+    do 
+        file=$(awk -F "$path" '{print $1$2}' <<< "$l")  
+        if [[ "$file" != ".gitkeep" ]]; then
+            echo "replace [$file] with [$l]"
+            cp -f "$l" "$file"
+        fi
+    done
+fi
+
+
 find $BASE_DIR/../ -type f -name Olares.yaml | while read f; do
   echo "Processing $f"
   declare -a bins
