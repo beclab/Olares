@@ -172,12 +172,12 @@ spec:
           args:
             - |
               openssl genrsa -out /etc/certs/ca.key 2048
-              openssl req -new -x509 -days 3650 -key /etc/certs/ca.key -out /etc/certs/ca.crt \
+              openssl req -new -x509 -days 36500 -key /etc/certs/ca.key -out /etc/certs/ca.crt \
                 -subj "/CN=bytetrade CA/O=bytetrade/C=CN"
               openssl req -new -newkey rsa:2048 -nodes \
                 -keyout /etc/certs/server.key -out /etc/certs/server.csr \
                 -config /etc/san/san.cnf
-              openssl x509 -req -days 3650 -in /etc/certs/server.csr \
+              openssl x509 -req -days 36500 -in /etc/certs/server.csr \
                 -CA /etc/certs/ca.crt -CAkey /etc/certs/ca.key \
                 -CAcreateserial -out /etc/certs/server.crt \
                 -extensions v3_req -extfile /etc/san/san.cnf
