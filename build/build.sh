@@ -14,6 +14,7 @@ if [[ "${REPO_PATH}" != "" && "$REPO_PATH" != "/" ]]; then
     do 
         file=$(awk -F "$path" '{print $1$2}' <<< "$l")  
         if [[ "$file" != ".gitkeep" ]]; then
+            echo "replace [$file] with [$l]"
             cp -f "$l" "$file"
         fi
     done
