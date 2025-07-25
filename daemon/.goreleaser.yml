@@ -14,6 +14,7 @@ builds:
   overrides:
     - goarch: amd64
       goos: linux
+      goamd64: v1
       env:
         - CGO_ENABLED=1
   tags:
