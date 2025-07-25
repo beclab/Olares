@@ -42,7 +42,7 @@ spec:
         - --collector.netdev.address-info
         - --collector.filesystem.ignored-mount-points=^/(dev|proc|sys|var/lib/docker/.+)($|/)
         - --collector.filesystem.ignored-fs-types=^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs)$
-        image: beclab/node-exporter:0.0.3
+        image: beclab/node-exporter:0.0.4
         name: node-exporter
         securityContext:
           privileged: true
