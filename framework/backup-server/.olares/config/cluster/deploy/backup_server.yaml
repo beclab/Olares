@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.42" }}
+{{ $backupVersion := "0.3.43" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 {{- $backup_nats_secret := (lookup "v1" "Secret" .Release.Namespace "backup-nats-secret") -}}
@@ -63,6 +63,13 @@ spec:
         hostPath:
           path: '{{ .Values.rootPath }}/share'
       serviceAccountName: os-internal
+      initContainers:
+        - args:
+          - -it
+          - nats.os-platform:4222
+          image: owncloudci/wait-for:latest
+          imagePullPolicy: IfNotPresent
+          name: check-nats
       containers:
       - name: api
         image: beclab/backup-server:v{{ $backupVersion }}
