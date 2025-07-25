@@ -269,3 +269,14 @@ func getManagedMinIOAccessFlags(localIp string) (string, error) {
 	return fmt.Sprintf(" --storage minio --bucket http://%s:9000/%s --access-key %s --secret-key %s",
 		localIp, cc.OlaresDir, MinioRootUser, minioPassword), nil
 }
+
+func GetRootFSType() string {
+	if util.IsExist(JuiceFsServiceFile) {
+		return "jfs"
+	}
+	return "fs"
+}
+
+func init() {
+	common.TerminusGlobalEnvs["OLARES_FS_TYPE"] = GetRootFSType()
+}

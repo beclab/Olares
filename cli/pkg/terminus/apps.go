@@ -96,7 +96,7 @@ func (u *PrepareAppValues) Execute(runtime connector.Runtime) error {
 	if err != nil {
 		return err
 	}
-	fsType := getRootFSType()
+	fsType := storage.GetRootFSType()
 	gpuType := getGpuType(u.KubeConf.Arg.GPU.Enable)
 	appValues := getAppSecrets(getAppPatches())
 
