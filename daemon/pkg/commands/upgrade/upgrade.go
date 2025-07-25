@@ -40,6 +40,7 @@ func NewUpgrade() commands.Interface {
 			{"UpgradeUserComponents success", 25},
 			{"UpdateReleaseFile success", 30},
 			{"UpgradeSystemComponents success", 35},
+			{"EnsurePodsUpAndRunningAgain", 70},
 			{"[Job] UpgradeOlares execute successfully", commands.ProgressNumFinished},
 		},
 	}
@@ -111,7 +112,7 @@ func (i *upgrade) refreshProgress() error {
 	}
 
 	filesize := info.Size()
-	tailsize := min(filesize, 4096)
+	tailsize := min(filesize, 8192)
 
 	t, err := tail.TailFile(i.logFile,
 		tail.Config{Follow: false, Location: &tail.SeekInfo{Offset: -tailsize, Whence: io.SeekEnd}})

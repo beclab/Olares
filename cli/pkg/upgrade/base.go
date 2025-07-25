@@ -31,7 +31,7 @@ type upgraderBase struct{}
 func (u upgraderBase) PrepareForUpgrade() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
-			Name:   "prepareUserInfoForUpgrade",
+			Name:   "PrepareUserInfoForUpgrade",
 			Action: new(prepareUserInfoForUpgrade),
 			Retry:  5,
 		},
@@ -69,7 +69,7 @@ func (u upgraderBase) UpdateChartsInAppService() []task.Interface {
 func (u upgraderBase) UpgradeUserComponents() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
-			Name:   "upgradeUserComponents",
+			Name:   "UpgradeUserComponents",
 			Action: new(upgradeUserComponents),
 			Retry:  5,
 			Delay:  15 * time.Second,
@@ -92,7 +92,7 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 	// reentrant
 	return []task.Interface{
 		&task.LocalTask{
-			Name:   "upgradeSystemComponents",
+			Name:   "UpgradeSystemComponents",
 			Action: new(upgradeSystemComponents),
 			Retry:  10,
 			Delay:  15 * time.Second,

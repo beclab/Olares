@@ -44,21 +44,28 @@ type progressKeyword struct {
 // matches against "(x/y)"
 var itemProcessProgressRE = regexp.MustCompile(`\((\d+)/(\d+)\)`)
 
-func parseProgressFromItemProgress(line string) int {
+func parseProgressFromItemProgress(line string) (int, int) {
 	matches := itemProcessProgressRE.FindAllStringSubmatch(line, 2)
 	if len(matches) != 1 || len(matches[0]) != 3 {
-		return 0
+		return 0, 0
 	}
 	indexStr, totalStr := matches[0][1], matches[0][2]
 	index, err := strconv.ParseFloat(indexStr, 64)
 	if index == 0 || err != nil {
-		return 0
+		return 0, 0
 	}
 	total, err := strconv.ParseFloat(totalStr, 64)
 	if total == 0 || err != nil {
-		return 0
+		return 0, 0
 	}
-	return int(math.Round((index / total) * 90.0))
+	cur := int(math.Round(index / total * 90))
+	var next int
+	if index < total {
+		next = int(math.Round((index + 1) / total * 90))
+	} else {
+		next = 99
+	}
+	return cur, next
 }
 
 type manifestComponent struct {

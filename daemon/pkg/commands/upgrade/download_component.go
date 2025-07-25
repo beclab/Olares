@@ -76,7 +76,7 @@ func (i *downloadComponent) Execute(ctx context.Context, p any) (res any, err er
 func (i *downloadComponent) watch(ctx context.Context) {
 	go func() {
 		defer close(i.progressChan)
-		ticker := time.NewTicker(2 * time.Second)
+		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 		for {
 			select {
@@ -119,14 +119,17 @@ func (i *downloadComponent) refreshProgress() error {
 	updated := false
 	for line := range t.Lines {
 		for _, p := range i.progressKeywords {
-			var lineProgress int
+			var lineProgress, nextProgress int
 			if strings.Contains(line.Text, p.KeyWord) {
 				lineProgress = p.ProgressNum
 			} else {
-				lineProgress = parseComponentDownloadProgressByItemProgress(line.Text)
+				lineProgress, nextProgress = parseComponentDownloadProgressByItemProgress(line.Text)
 			}
 			if i.progress < lineProgress {
 				i.progress = lineProgress
+				updated = true
+			} else if i.progress+1 < nextProgress {
+				i.progress += 1
 				updated = true
 			}
 		}
@@ -139,10 +142,10 @@ func (i *downloadComponent) refreshProgress() error {
 	return nil
 }
 
-func parseComponentDownloadProgressByItemProgress(line string) int {
+func parseComponentDownloadProgressByItemProgress(line string) (int, int) {
 	// filter out other item progress lines to avoid confusion
 	if !strings.Contains(line, "file") || !strings.Contains(line, "downloading") {
-		return 0
+		return 0, 0
 	}
 	return parseProgressFromItemProgress(line)
 }

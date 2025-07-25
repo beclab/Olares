@@ -116,14 +116,17 @@ func (i *prepareImages) refreshProgress() error {
 	updated := false
 	for line := range t.Lines {
 		for _, p := range i.progressKeywords {
-			var lineProgress int
+			var lineProgress, nextProgress int
 			if strings.Contains(line.Text, p.KeyWord) {
 				lineProgress = p.ProgressNum
 			} else {
-				lineProgress = parseImagePrepareProgressByItemProgress(line.Text)
+				lineProgress, nextProgress = parseImagePrepareProgressByItemProgress(line.Text)
 			}
 			if i.progress < lineProgress {
 				i.progress = lineProgress
+				updated = true
+			} else if i.progress+1 < nextProgress {
+				i.progress += 1
 				updated = true
 			}
 		}
@@ -136,10 +139,10 @@ func (i *prepareImages) refreshProgress() error {
 	return nil
 }
 
-func parseImagePrepareProgressByItemProgress(line string) int {
+func parseImagePrepareProgressByItemProgress(line string) (int, int) {
 	// filter out other item progress lines to avoid confusion
 	if !strings.Contains(line, "imported image") {
-		return 0
+		return 0, 0
 	}
 	return parseProgressFromItemProgress(line)
 }
