@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	DefaultK8sVersion          = "v1.32.2"
-	DefaultK3sVersion          = "v1.32.2-k3s"
+	DefaultK8sVersion          = "v1.33.3"
+	DefaultK3sVersion          = "v1.33.3-k3s"
 	DefaultKubernetesVersion   = ""
 	DefaultKubeSphereVersion   = "v3.3.0"
 	DefaultTokenMaxAge         = 31536000

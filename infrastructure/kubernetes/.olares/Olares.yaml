@@ -4,19 +4,19 @@ output:
   binaries:
     - 
       id: kubeadm
-      name: kubeadm-v1.32.2,pkg/kube/v1.32.2
-      amd64: https://dl.k8s.io/release/v1.32.2/bin/linux/amd64/kubeadm
-      arm64: https://dl.k8s.io/release/v1.32.2/bin/linux/arm64/kubeadm
+      name: kubeadm-v1.33.3,pkg/kube/v1.33.3
+      amd64: https://dl.k8s.io/release/v1.33.3/bin/linux/amd64/kubeadm
+      arm64: https://dl.k8s.io/release/v1.33.3/bin/linux/arm64/kubeadm
     - 
       id: kubelet
-      name: kubelet-v1.32.2,pkg/kube/v1.32.2
-      amd64: https://dl.k8s.io/release/v1.32.2/bin/linux/amd64/kubelet
-      arm64: https://dl.k8s.io/release/v1.32.2/bin/linux/arm64/kubelet
+      name: kubelet-v1.33.3,pkg/kube/v1.33.3
+      amd64: https://dl.k8s.io/release/v1.33.3/bin/linux/amd64/kubelet
+      arm64: https://dl.k8s.io/release/v1.33.3/bin/linux/arm64/kubelet
     - 
       id: kubectl
-      name: kubectl-v1.32.2,pkg/kube/v1.32.2
-      amd64: https://dl.k8s.io/release/v1.32.2/bin/linux/amd64/kubectl
-      arm64: https://dl.k8s.io/release/v1.32.2/bin/linux/arm64/kubectl
+      name: kubectl-v1.33.3,pkg/kube/v1.33.3
+      amd64: https://dl.k8s.io/release/v1.33.3/bin/linux/amd64/kubectl
+      arm64: https://dl.k8s.io/release/v1.33.3/bin/linux/arm64/kubectl
   containers:
     -
       name: owncloudci/wait-for:latest
@@ -29,13 +29,13 @@ output:
     - 
       name: bitnami/kube-rbac-proxy:0.19.0
     - 
-      name: registry.k8s.io/kube-apiserver:v1.32.2
+      name: registry.k8s.io/kube-apiserver:v1.33.3
     - 
-      name: registry.k8s.io/kube-scheduler:v1.32.2
+      name: registry.k8s.io/kube-scheduler:v1.33.3
     - 
-      name: registry.k8s.io/kube-proxy:v1.32.2
+      name: registry.k8s.io/kube-proxy:v1.33.3
     - 
-      name: registry.k8s.io/kube-controller-manager:v1.32.2
+      name: registry.k8s.io/kube-controller-manager:v1.33.3
     - 
       name: registry.k8s.io/pause:3.10
 
