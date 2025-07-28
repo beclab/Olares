@@ -7,40 +7,30 @@ Olares supports multi-user operations, allowing multiple users to access the sys
 
 ## Role types
 Olares has two default user roles:
-- **Admin**: Automatically assigned to the first user who activates and logs into Olares
-- **Member**: Standard user role with limited permissions
 
-<table>
-    <tr>
-        <td><b>Role</b></td>
-        <td><b>Permissions</b></td>
-    </tr>
-    <tr>
-        <td>Member</td>
-        <td>
-            <ul>
-                <li>Use system apps: Files, Vault, Wise, Profile, Dashboard, and Control Hub</li>
-                <li>Enable VPN for private entrances</li>
-                <li>Connect to Olares Space</li>
-                <li>Customize app entrances</li>
-                <li>Install regular apps in Market</li>
-                <li>Access shared vaults with assigned read/write permissions</li>
-                <li>View basic system status in Control Hub</li>
-            </ul>
-        </td>
-    </tr>
-    <tr>
-        <td>Admin</td>
-        <td>
-        All Member permissions, plus:
-            <ul>
-                <li>Create and manage user accounts</li>
-                <li>Manage vault teams, create shared vaults, and assign read/write permissions for shared vaults</li>
-                <li>Install and manage shared applications</li>
-                <li>Monitor and manage system resources</li>
-                <li>Set GPU usage mode</li>
-                <li>Update Olares</li>
-            </ul>
-        </td>
-    </tr>
-</table>
+- **Super Admin**: The first user to activate and log into Olares. Has full, unrestricted control of the system and can create other Admin and Member accounts.
+- **Admin**: Created by the Super Admin. Has nearly the same system management permissions as the Super Admin. **Can only create and manage Members**, not other Admin accounts.
+- **Member**: Standard users created by Super Admin or Admin, with limited system resources and access permissions.
+
+This structure ensures organizations can scale Olares management securely, with multiple Admins sharing responsibility while the Super Admin retains ultimate authority.
+
+## Role permissions
+
+| Permission Area | Member | Admin | Super Admin |
+|-----------------|--------|-------|-------------|
+| Use system apps (Files, Vault, Wise, Profile, Dashboard, Control Hub) | ✅ | ✅ | ✅ |
+| Enable VPN for private entrances | ✅ | ✅ | ✅ |
+| Connect to Olares Space | ✅ | ✅ | ✅ |
+| Customize app entrances | ✅ | ✅ | ✅ |
+| Install regular apps from Market | ✅ | ✅ | ✅ |
+| Access shared vaults with assigned permissions | ✅ | ✅ | ✅ |
+| View basic system status in Control Hub | ✅ | ✅ | ✅ |
+| Manage Vault teams & shared vaults | ❌ | ✅ | ✅ |
+| Install and manage shared apps | ❌ | ✅ | ✅ |
+| Monitor and manage system resources | ❌ | ✅ | ✅ |
+| Set GPU usage modes | ❌ | ✅ | ✅ |
+| Update Olares versions | ❌ | ✅ | ✅ |
+| Create, edit, and delete Members | ❌ | ✅ | ✅ |
+| Create, edit, and delete Admins | ❌ |❌| ✅ |
+
+

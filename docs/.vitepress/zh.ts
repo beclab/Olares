@@ -205,7 +205,7 @@ const side = {
               ],
             },
             {
-              "text": "管理账户",
+              "text": "管理用户",
               "collapsed": true,
               "items": [
                 {
@@ -213,7 +213,7 @@ const side = {
                   "link": "/zh/manual/olares/settings/roles-permissions",
                 },
                 {
-                  "text": "创建成员账户",
+                  "text": "创建管理用户",
                   "link": "/zh/manual/olares/settings/manage-team",
                 }
               ],

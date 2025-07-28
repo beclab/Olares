@@ -204,7 +204,7 @@ const side = {
               ],
             },
             {
-              text: "Manage accounts",
+              text: "Manage users",
               collapsed: true,
               items: [
                 {
@@ -212,7 +212,7 @@ const side = {
                   link: "/manual/olares/settings/roles-permissions",
                 },
                 {
-                  text: "Create member accounts",
+                  text: "Create and manage users",
                   link: "/manual/olares/settings/manage-team",
                 }
               ],
