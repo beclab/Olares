@@ -167,19 +167,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: studio-svc
-  namespace: {{ .Release.Namespace }}
-spec:
-  selector:
-    app: system-frontend
-  ports:
-    - protocol: TCP
-      port: 8080
-      targetPort: 87
----
-apiVersion: v1
-kind: Service
-metadata:
   name: files-fe-service
   namespace: user-space-{{ .Values.bfl.username }}
 spec:
@@ -247,11 +234,11 @@ metadata:
     applications.app.bytetrade.io/group: 'true'
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
-    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","headscale": "https://file.bttcdn.com/appstore/headscale/icon.png","settings": "https://file.bttcdn.com/appstore/settings/icon.png","studio":"https://file.bttcdn.com/appstore/devbox/icon.png","files":"https://file.bttcdn.com/appstore/files/icon.png","vault":"https://file.bttcdn.com/appstore/vault/icon.png","market":"https://file.bttcdn.com/appstore/appstore/icon.png"}'
-    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","headscale":"Headscale","settings":"Settings","studio":"Studio","files":"Files","vault":"Vault","market":"Market"}'
-    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","headscale":"0.0.1","settings":"0.0.1","studio":"0.0.1","files":"0.0.1","vault":"0.0.1","market":"0.0.1"}'
+    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","headscale": "https://file.bttcdn.com/appstore/headscale/icon.png","settings": "https://file.bttcdn.com/appstore/settings/icon.png","files":"https://file.bttcdn.com/appstore/files/icon.png","vault":"https://file.bttcdn.com/appstore/vault/icon.png","market":"https://file.bttcdn.com/appstore/appstore/icon.png"}'
+    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","headscale":"Headscale","settings":"Settings","files":"Files","vault":"Vault","market":"Market"}'
+    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","headscale":"0.0.1","settings":"0.0.1","files":"0.0.1","vault":"0.0.1","market":"0.0.1"}'
     applications.app.bytetrade.io/policies: '{"dashboard":{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}}'
-    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"headscale":[{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true}],"settings":[{"name":"settings", "host":"settings-service", "port":80,"title":"Settings"}],"studio":[{"name":"studio","host":"studio-svc","port":8080,"title":"Studio","openMethod":"window"}],"files":[{"name":"files", "host":"files-fe-service", "port":80,"title":"Files","windowPushState":true}],"vault":[{"name":"vault", "host":"vault-service", "port":80,"title":"Vault","windowPushState":true}],"market":[{"name":"appstore", "host":"appstore-fe-service", "port":80,"title":"Market","windowPushState":true}]}'
+    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"headscale":[{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true}],"settings":[{"name":"settings", "host":"settings-service", "port":80,"title":"Settings"}],"files":[{"name":"files", "host":"files-fe-service", "port":80,"title":"Files","windowPushState":true}],"vault":[{"name":"vault", "host":"vault-service", "port":80,"title":"Vault","windowPushState":true}],"market":[{"name":"appstore", "host":"appstore-fe-service", "port":80,"title":"Market","windowPushState":true}]}'
 spec:
   replicas: 1
   selector:
@@ -346,7 +333,7 @@ spec:
             - name: PGDB
               value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
         - name: system-frontend-init
-          image: beclab/system-frontend:v1.3.114
+          image: beclab/system-frontend:v1.3.115
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -468,7 +455,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.39
+          image: beclab/user-service:v0.0.40
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -1026,31 +1013,6 @@ spec:
       ops:
         - getNFTAddress
       version: v1
-status:
-  state: active
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ApplicationPermission
-metadata:
-  name: studio
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: studio
-  appid: studio
-  key: {{ .Values.os.studio.appKey }}
-  secret: {{ .Values.os.studio.appSecret }}
-  permissions:
-    - dataType: app
-      group: service.appstore
-      ops:
-        - InstallDevApp
-        - UninstallDevApp
-      version: v1
-    - dataType: legacy_api
-      group: api.intent
-      ops:
-        - POST
-      version: v2
 status:
   state: active
 ---
