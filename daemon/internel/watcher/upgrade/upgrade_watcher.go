@@ -200,7 +200,7 @@ var downloadPhases = []upgradePhase{
 
 var upgradePhases = []upgradePhase{
 	{upgrade.NewVersionCompatibilityCheck, 0, 5},
-	{upgrade.NewHealthCheck, 5, 5},
+	{upgrade.NewPreCheck, 5, 5},
 	{upgrade.NewInstallCLI, 10, 10},
 	{upgrade.NewInstallOlaresd, 20, 10},
 	{upgrade.NewImportImages, 30, 30},

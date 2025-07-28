@@ -245,7 +245,7 @@ func (u *upgradeUserComponents) Execute(runtime connector.Runtime) error {
 		}
 
 		var wizardNeedUpgrade bool
-		if wizardStatus, ok := user.Annotations["bytetrade.io/wizard-status"]; ok && wizardStatus == "completed" {
+		if wizardStatus, ok := user.Annotations["bytetrade.io/wizard-status"]; !ok || wizardStatus != "completed" {
 			wizardNeedUpgrade = true
 		}
 

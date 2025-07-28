@@ -8,6 +8,7 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/containerd"
 	"github.com/dustin/go-humanize"
 	v1 "k8s.io/cri-api/pkg/apis/runtime/v1"
+	"k8s.io/utils/strings/slices"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -81,22 +82,22 @@ func (i *versionCompatibilityCheck) Execute(ctx context.Context, p any) (res any
 	return newExecutionRes(true, nil), nil
 }
 
-type healthCheck struct {
+type preCheck struct {
 	commands.Operation
 }
 
-var _ commands.Interface = &healthCheck{}
+var _ commands.Interface = &preCheck{}
 
-func NewHealthCheck() commands.Interface {
-	return &healthCheck{
+func NewPreCheck() commands.Interface {
+	return &preCheck{
 		Operation: commands.Operation{
-			Name: commands.UpgradeHealthCheck,
+			Name: commands.UpgradePreCheck,
 		},
 	}
 }
 
-func (i *healthCheck) Execute(ctx context.Context, p any) (res any, err error) {
-	klog.Info("Starting upgrade health check")
+func (i *preCheck) Execute(ctx context.Context, p any) (res any, err error) {
+	klog.Info("Starting upgrade pre check")
 
 	target, ok := p.(state.UpgradeTarget)
 	if !ok {
@@ -223,7 +224,35 @@ func (i *healthCheck) Execute(ctx context.Context, p any) (res any, err error) {
 		}
 	}
 
-	klog.Info("health checks passed for upgrade")
+	// if any user is in the progress of activation
+	// upgrade cannot start
+	dynamicClient, err := utils.GetDynamicClient()
+	if err != nil {
+		err = fmt.Errorf("failed to get dynamic client: %v", err)
+		klog.Error(err.Error())
+		return nil, err
+	}
+
+	users, err := utils.ListUsers(ctx, dynamicClient)
+	if err != nil {
+		err = fmt.Errorf("failed to list users: %v", err)
+		klog.Error(err.Error())
+		return nil, err
+	}
+
+	var activatingUsers []string
+	for _, user := range users {
+		status, ok := user.GetAnnotations()["bytetrade.io/wizard-status"]
+		if !ok || slices.Contains([]string{"", "wait_activate_vault", "completed"}, status) {
+			continue
+		}
+		activatingUsers = append(activatingUsers, user.GetName())
+	}
+	if len(activatingUsers) > 0 {
+		return nil, fmt.Errorf("waiting for user to finish activation: %s", strings.Join(activatingUsers, ", "))
+	}
+
+	klog.Info("pre checks passed for upgrade")
 
 	return newExecutionRes(true, nil), nil
 }

@@ -22,7 +22,7 @@ const (
 	DownloadCLI               Operations = "downloadCLI"
 	DownloadWizard            Operations = "downloadWizard"
 	VersionCompatibilityCheck Operations = "versionCompatibilityCheck"
-	UpgradeHealthCheck        Operations = "upgradeHealthCheck"
+	UpgradePreCheck           Operations = "PreCheck"
 	DownloadSpaceCheck        Operations = "downloadSpaceCheck"
 	DownloadComponent         Operations = "downloadComponent"
 	ImportImages              Operations = "importImages"
