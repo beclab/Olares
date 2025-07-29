@@ -256,13 +256,14 @@ type Frp struct {
 }
 
 func NewArgument() *Argument {
+	si := connector.GetSystemInfo()
 	arg := &Argument{
 		KsEnable:         true,
 		KsVersion:        DefaultKubeSphereVersion,
 		InstallPackages:  false,
 		SKipPushImages:   false,
 		ContainerManager: Containerd,
-		SystemInfo:       connector.GetSystemInfo(),
+		SystemInfo:       si,
 		Storage: &Storage{
 			StorageType: ManagedMinIO,
 		},
@@ -286,6 +287,7 @@ func NewArgument() *Argument {
 	arg.IsCloudInstance, _ = strconv.ParseBool(os.Getenv(ENV_TERMINUS_IS_CLOUD_VERSION))
 	arg.PublicNetworkInfo.PubliclyAccessible, _ = strconv.ParseBool(os.Getenv(ENV_PUBLICLY_ACCESSIBLE))
 	arg.IsOlaresInContainer = os.Getenv("CONTAINER_MODE") == "oic"
+	si.IsOIC = arg.IsOlaresInContainer
 
 	if err := arg.LoadReleaseInfo(); err != nil {
 		fmt.Printf("error loading release info: %v", err)

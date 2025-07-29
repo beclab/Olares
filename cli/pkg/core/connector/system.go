@@ -114,6 +114,7 @@ type SystemInfo struct {
 	LocalIp    string          `json:"local_ip"`
 	NatGateway string          `json:"nat_gateway"`
 	PkgManager string          `json:"pkg_manager"`
+	IsOIC      bool            `json:"is_oic,omitempty"`
 }
 
 func (s *SystemInfo) IsSupport() error {
@@ -217,7 +218,7 @@ func (s *SystemInfo) IsPveOrPveLxc() bool {
 }
 
 func (s *SystemInfo) IsWsl() bool {
-	return s.HostInfo.OsPlatform == common.WSL
+	return s.HostInfo.OsPlatform == common.WSL && !s.IsOIC
 }
 
 func (s *SystemInfo) IsRaspbian() bool {
