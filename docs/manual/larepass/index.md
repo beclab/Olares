@@ -1,4 +1,5 @@
 ---
+description: User documentation for LarePass. Learn how to access and manage Olares through the LarePass client, including account management, file synchronization, device management, system upgrade, password management, and content collection.
 outline: [2, 3]
 ---
 
@@ -26,6 +27,7 @@ Access and sync your Olares files across devices.
 ### Device & network management
 Activate and manage Olares devices, and securely connect to Olares via LarePass VPN.
 - [Activate your Olares device](activate-olares.md)
+- [Upgrade Olares](manage-olares.md#upgrade-olares)
 - [Log in to Olares with 2FA](activate-olares.md#two-factor-verification-with-larepass)
 - [Manage Olares](manage-olares.md)
 - [Switch networks](manage-olares.md#switch-from-wired-to-wireless-network)

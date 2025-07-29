@@ -1,6 +1,6 @@
 # Manage Olares with LarePass
 
-The LarePass app allows you to easily manage your Olares device. You can monitor system status, manage network connections, perform remote controls, and access key device information from your phone.
+The LarePass app allows you to easily manage your Olares device. You can upgrade Olares，monitor system status, manage network connections, perform remote controls, and access key device information from your phone.
 
 This guide walks you through the core management features available in LarePass.
 
@@ -19,6 +19,24 @@ To access the Olares management page:
 
 1. Open LarePass app, and go to **Settings**.
 2. Tap your Olares ID to enter the Olares management interface.
+
+## Upgrade Olares
+
+:::warning Olares admin required
+Only Olares admin can perform system updates. Updates will apply to all members within the same Olares cluster.
+:::
+
+When a new version of Olares is available, you’ll see a `Found new version` prompt on the **Olares management** page.
+
+![Upgrade Olares](/images/manual/larepass/olares-upgrade.png#bordered)
+
+1. Tap on the version prompt, for example, `Found new version 1.12.0-20250728`.
+2. Select an upgrade method:
+    - **Download and upgrade**: Olares will download the update package and install it immediately. The system is temporarily unavailable during the upgrade process.
+    - **Download only**: Only downloads the update package. You can trigger the upgrade later when convenient, and Olares remains available during the download.
+
+3. Confirm the option. A progress indicator on LarePass will show the operation status. If you selected **Download only**, you need to tap **Upgrade now** to start upgrade after download completes.
+4. Wait for the upgrade to complete. Olares will resume normal operation when the upgrade finishes. You can verify the update by checking the **System version** shown in the device card at the top of the **Olares management** page.
 
 ## Remote device control
 

@@ -7,6 +7,8 @@ description: 了解如何利用“我的 Olares”页面管理账户、设备、
 
 你可以通过设置中的**我的 Olares** 功能管理 Olares 账户、连接设备和安全策略。点击**设置**页面左上角的个人头像即可进入**我的 Olares**。
 
+![My Olares](/images/zh/manual/olares/my-olares.png#bordered)
+
 ## Olares Space
 在 Olares Space 中查看你的订阅计划详情和使用情况，包括反向代理方案、
 备份、流量消耗等。首次使用时需按提示登录 Olares Space。
@@ -29,6 +31,10 @@ description: 了解如何利用“我的 Olares”页面管理账户、设备、
 - **登录安全要求**：设置登录 Olares 的身份验证方式。
   * **双因素**（推荐）：需要你的登录密码和 LarePass 生成的两步验证码，安全性更高。
   * **单因素**：仅需要你的登录密码（安全性较低）。
+
+## 当前版本
+
+查看当前 Olares 系统的版本。如果提示有可用的新版本，请转至 LarePass 手机客户端**设置** > **Olares 管理**页面下完成系统升级。详细步骤请参考[升级 Olares](../../larepass/manage-olares.md#升级-olares)
 
 ## 查看登录历史
 

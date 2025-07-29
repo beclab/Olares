@@ -196,14 +196,7 @@ const side = {
           "collapsed": true,
           "link": "/zh/manual/olares/settings/",
           "items": [
-            {
-              "text": "我的 Olares",
-              "collapsed": true,
-              "items": [
-                {text: "账户与设备", link: "/zh/manual/olares/settings/my-olares"},
-                {text: "更新系统", link: "/zh/manual/olares/settings/update"},
-              ],
-            },
+            {"text": "我的 Olares", link: "/zh/manual/olares/settings/my-olares"},
             {
               "text": "管理用户",
               "collapsed": true,
@@ -233,16 +226,16 @@ const side = {
               ],
               },
             {
-              "text": "管理集成", 
+              "text": "管理集成",
               "link":"/zh/manual/olares/settings/integrations",
              },
              {
-              "text": "自定义外观", 
+              "text": "自定义外观",
               "link":"/zh/manual/olares/settings/language-appearance",
              },
             {text: "管理 VPN", link: "/zh/manual/olares/settings/remote-access",},
             {
-              "text": "配置网络", 
+              "text": "配置网络",
               "collapsed": true,
               "items": [
                 {
@@ -250,7 +243,7 @@ const side = {
                   "link": "/zh/manual/olares/settings/change-frp",
                 },
                 {
-                  "text": "设置 hosts 文件", 
+                  "text": "设置 hosts 文件",
                   "link":"/zh/manual/olares/settings/set-up-hosts",
                 },
               ],

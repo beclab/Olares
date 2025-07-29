@@ -197,11 +197,7 @@ const side = {
           items: [
             {
               text: "My Olares",
-              collapsed: true,
-              items: [
-                {text: "Account and device", link: "/manual/olares/settings/my-olares"},
-                {text: "Update system", link: "/manual/olares/settings/update"},
-              ],
+              link: "/manual/olares/settings/my-olares"
             },
             {
               text: "Manage users",
@@ -232,16 +228,16 @@ const side = {
               ],
               },
             {
-              text: "Manage integrations", 
+              text: "Manage integrations",
               link:"/manual/olares/settings/integrations",
              },
              {
-              text: "Customize appearance", 
+              text: "Customize appearance",
               link:"/manual/olares/settings/language-appearance",
              },
             {text: "Manage VPN", link: "/manual/olares/settings/remote-access",},
             {
-              text: "Configure network", 
+              text: "Configure network",
               collapsed: true,
               items: [
                 {
@@ -249,7 +245,7 @@ const side = {
                   link: "/manual/olares/settings/change-frp",
                 },
                 {
-                  text: "Set up hosts file", 
+                  text: "Set up hosts file",
                   link:"/manual/olares/settings/set-up-hosts",
                 },
               ],

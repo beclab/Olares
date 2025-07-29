@@ -9,6 +9,8 @@ The **My Olares** page in **Settings** serves as your central hub for managing y
 
 To access My Olares, open **Settings** and click your avatar in the top-left corner.
 
+![My Olares](/images/manual/olares/my-olares.png#bordered)
+
 ## Olares Space
 
 Check your subscribed plan details and usage in Olares Space, including reverse proxy solution, backup storage, and traffic consumption. Log in to Olares Space as prompted to use this feature.
@@ -36,6 +38,11 @@ Define system-level access and authentication policies to control how users conn
 ## View login history
 
 Review a detailed record of all login attempts to your Olares account. Each entry displays the **Time**, **Status**, **Source IP Address**, and the **Reason for the attempt**.
+
+## Current Version
+
+Check the current version of your Olares. If a new version is available, go to the **Settings > Olares management** page in the LarePass mobile client to complete the system upgrade.  
+For detailed steps, see [Upgrade Olares](../../larepass/manage-olares.md#upgrade-olares).
 
 ## Device management
 
