@@ -129,7 +129,7 @@ jobs:
 
 
   release:
-    needs: [upload-package, release-cli]
+    needs: [daily-version, upload-package, release-cli]
     runs-on: ubuntu-latest
 
     steps:
