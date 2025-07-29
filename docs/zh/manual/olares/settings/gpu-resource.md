@@ -63,13 +63,16 @@ Olares 提供三种分配方式，可按场景灵活选择。
   1. 在 GPU 模式下拉菜单中选择该模式。
   2. 在**选择独占应用**下拉框中选择目标应用。
   3. 点击**确认**。
-         ![独占](/images/zh/manual/olares/gpu-app-exclusive.png#bordered)
-- **显存切片**：
+  ![独占](/images/zh/manual/olares/gpu-app-exclusive.png#bordered)
+- **显存分片**：
     1. 在下拉菜单中选择该模式。
     2. 在**分配显存**窗口，点击 **+ 添加应用**。
     3. 选择目标应用，并指定分配给该应用的显存大小（以 GB 为单位）。
     4. 如需为其他应用分配显存，可重复以上操作，然后点击**确认**。
        ![显存分片](/images/zh/manual/olares/gpu-memory-slicing.png#bordered)
+    ::: tip 注意
+    分配的显存必须小于显卡总显存。
+    :::
 
 ## 了解更多
 - [监控 Olares 中的显卡使用情况](../resources-usage.md)
