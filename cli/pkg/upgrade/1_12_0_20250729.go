@@ -18,15 +18,15 @@ import (
 	"strings"
 )
 
-type upgrader_1_12_0_20250728 struct {
+type upgrader_1_12_0_20250729 struct {
 	upgraderBase
 }
 
-func (u upgrader_1_12_0_20250728) Version() *semver.Version {
-	return semver.MustParse("1.12.0-20250728")
+func (u upgrader_1_12_0_20250729) Version() *semver.Version {
+	return semver.MustParse("1.12.0-20250729")
 }
 
-func (u upgrader_1_12_0_20250728) PrepareForUpgrade() []task.Interface {
+func (u upgrader_1_12_0_20250729) PrepareForUpgrade() []task.Interface {
 	var preTasks []task.Interface
 	if util.IsExist(filepath.Join("/etc/systemd/system/", k3stemplates.K3sService.Name())) {
 		preTasks = append(preTasks,
@@ -56,7 +56,7 @@ func (u upgrader_1_12_0_20250728) PrepareForUpgrade() []task.Interface {
 	return append(preTasks, u.upgraderBase.PrepareForUpgrade()...)
 }
 
-func (u upgrader_1_12_0_20250728) UpgradeSystemComponents() []task.Interface {
+func (u upgrader_1_12_0_20250729) UpgradeSystemComponents() []task.Interface {
 	preTasks := []task.Interface{
 		&task.LocalTask{
 			Name:   "UpgradeGPUPlugin",
