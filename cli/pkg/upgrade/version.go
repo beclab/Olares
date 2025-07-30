@@ -90,7 +90,17 @@ func GetUpgradePathFor(base *semver.Version, target *semver.Version) ([]*semver.
 	var path []*semver.Version
 	var releaseLineUpgraders []breakingUpgrader
 	var versionFilter func(v *semver.Version) bool
-	switch getReleaseLineOfVersion(base) {
+	line := getReleaseLineOfVersion(base)
+	if target == nil {
+		cliVersion, err := utils.ParseOlaresVersionString(version.VERSION)
+		if err != nil {
+			return path, fmt.Errorf("invalid olares-cli version :\"%s\"", version.VERSION)
+		}
+		if getReleaseLineOfVersion(cliVersion) == line && cliVersion.GreaterThan(base) {
+			target = cliVersion
+		}
+	}
+	switch line {
 	case mainLine:
 		releaseLineUpgraders = mainUpgraders
 		versionFilter = func(v *semver.Version) bool {
@@ -106,15 +116,6 @@ func GetUpgradePathFor(base *semver.Version, target *semver.Version) ([]*semver.
 			return true
 		}
 	case dailyLine:
-		if target == nil {
-			cliVersion, err := utils.ParseOlaresVersionString(version.VERSION)
-			if err != nil {
-				return path, fmt.Errorf("invalid olares-cli version :\"%s\"", version.VERSION)
-			}
-			if getReleaseLineOfVersion(cliVersion) == dailyLine && samePatchLevelVersion(cliVersion, base) && cliVersion.GreaterThan(base) {
-				target = cliVersion
-			}
-		}
 		releaseLineUpgraders = dailyUpgraders
 		versionFilter = func(v *semver.Version) bool {
 			if !v.GreaterThan(base) {
