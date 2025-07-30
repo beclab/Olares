@@ -99,7 +99,7 @@ spec:
           name: check-chart-repo
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.4.14
+        image: beclab/market-backend:v0.4.15
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -170,7 +170,7 @@ spec:
           - name: CHART_ROOT
             value: /opt/app/data/v2                                                                                         
           - name: NATS_SUBJECT_SYSTEM_USER_STATE                         
-            value: os.users.*
+            value: os.users
           - name: GO_ENV                                                 
             value: prod
           - name: CHART_REPO_SERVICE_HOST
