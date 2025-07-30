@@ -4,30 +4,136 @@ description: Monitor your Olares system and application performance with compreh
 ---
 
 # Monitor system and application status
-The Dashboard app in Olares works similarly to Windows Explorer, providing a centralized view of your system's status without requiring technical expertise. From the main dashboard, you can view resource usage patterns and detailed metrics.
-:::info
-When applications in your Olares are exposed to the public internet, they generate FRP traffic costs from external access. To monitor these costs and traffic, see [VIew system status](../../space/manage-olares#view-system-status).
-:::
+The Dashboard app in Olares provides a centralized and intuitive view of your system's status, offering deep insights without requiring extensive technical expertise. From the dashboard, you can monitor key resource usage patterns and access detailed real-time metrics across your cluster.
 
 ## Access monitoring dashboards
+
 View your system's status through these specialized dashboards:
 - **Overview**: Shows current resource usage and system health.
 - **Applications**: Displays running applications and their status.
 
 ## Overview
 
+The Overview page provides a comprehensive, at-a-glance view of your Olares system's health and resource utilization. It is divided into key sections to help you monitor performance effectively:
+
+- Cluster's physical resources
+- User resource usage
+- Usage ranking
+
 ### View physical resources
 
-Monitor four fundamental metrics directly from **Overview**:
+Monitor the fundamental resource metrics directly from the **Cluster's physical resource** dashboard:
+
 - CPU utilization
 - Memory consumption
 - Disk usage
 - Pod status
+- GPU usage
+- Network status
 
 ![Dashboard overview](/images/manual/olares/dashboard-overview.png#bordered)
-### Access detailed metrics
 
-For deeper analysis, click **More details** to view comprehensive monitoring data for the past 7 days.
+### Access detailed resource panels
+
+For a deeper analysis of any resource, simply click on its card on the **Cluster's physical resources** dashboard. This navigates you to a dedicated detail panel with comprehensive monitoring data and metrics.
+
+#### CPU panel
+
+The CPU panel provides an in-depth view of your Olares cluster's CPU performance and health.
+
+To access it, click on the **CPU** card on the **Cluster's physical resources** dashboard.
+
+![CPU panel](/images/manual/olares/dashboard-cpu.png#bordered)
+
+This panel displays:
+- A real-time CPU utilization graph.
+- Node-specific CPU specifications (model, cores, threads).
+- Breakdown of utilization rate (User, System, I/O wait).
+- Current CPU temperature.
+- Average load over 1, 5, and 15 minutes.
+
+#### Memory panel
+
+The Memory panel offers a clear, in-depth view of your Olares cluster's memory usage and allocation. To access it, click on the **Memory** card on the **Cluster's physical resources** dashboard.
+
+This panel allows you to switch between **Physical memory** and **Swap** views using the dropdown menu.
+![Memory panel](/images/manual/olares/dashboard-memory.png#bordered)
+
+- When **Physical memory** is selected, it displays:
+  - A real-time memory utilization graph.
+  - A memory usage breakdown showing reserved, used, buffer, cache, and available memory, along with total memory and utilization rate.
+
+- When **Swap** is selected, it displays:
+
+  - A real-time swap usage graph.
+  - Numerical swap in/out rates.
+  - Swap space summary (Total, Used, and Utilization rate).
+
+#### Disk panel 
+
+The Disk panel offers a comprehensive view of your storage devices. Use this panel to monitor disk health, track storage consumption, and analyze space allocation in your Olares cluster.
+
+To access it, click on the **Disk** card on the **Cluster's physical resources** dashboard.
+![Disk panel](/images/manual/olares/dashboard-disk.png#bordered)
+
+This panel displays:
+
+- Overall storage status: Disk name, storage status, and a usage bar showing used, and available space.
+
+- Detailed information: Key device specifications like total capacity, model, serial number, interface protocol, temperature, power-on time, and write volume.
+
+For a detailed usage breakdown for a specific storage device, click **Occupancy analysis** in the top right corner.
+
+The storage usage popup displays:
+![Disk analysis](/images/manual/olares/dashboard-disk-analysis.png#bordered)
+
+- A list of file systems (partitions) on the disk.
+- For each file system, you can view storage metrics like total capacity, used space, available space, usage rate, and mount point.
+
+#### Pods panel
+The Pods panel offers a dynamic view of your application's deployment status.
+
+To access it, click the **Pods** card on the **Cluster's physical resources** dashboard.
+
+![Pods panel](/images/manual/olares/dashboard-pods.png#bordered)
+
+This panel displays real-time graphs showing the number of running pods over time for different nodes in the cluster. (e.g., "Olares" and "Olares2").
+
+#### GPU panel
+
+The **GPU** panel provides in-depth information about your GPUs within the cluster. Use this panel to effectively monitor GPU health, resource allocation, and performance across your cluster. 
+
+To access it, click the GPU card on the **Cluster's physical resources** dashboard.
+
+![GPU panel](/images/manual/olares/dashboard-gpu-overview.png#bordered)
+
+This panel includes two tabs: 
+
+- **Graphics management tab**: View a list of all detected GPUs, including their GPU ID, model, GPU mode (e.g., Memory Slicing), host node, health status, computing power usage, VRAM usage rate, and power draw.
+  
+  For a more granular view of a specific GPU, click **View details** next to its entry.
+
+- **Task management tab**: Monitor tasks currently using your GPUs. It provides insights into the task name, status, GPU Mode, host node, computing power usage, and VRAM used, along with available operations.
+
+#### Network panel
+
+The Network panel provides comprehensive insights into your network interfaces. Use this panel to monitor network connectivity, traffic flow, and configuration for optimal system performance.
+
+To access it, click the **Network** card on the **Overview** dashboard.
+
+![Network panel](/images/manual/olares/dashboard-network.png#bordered)
+
+The Network panel displays:
+
+- Network port information: Details for each network port (e.g., wlo1), including its usage status, real-time upload and download speeds, and connection status.
+
+- IP configuration: Information on IP acquisition method (e.g., DHCP), host node, and network configuration.
+
+- IPv4 and IPv6 details: Comprehensive details for both IPv4 and IPv6, including address, subnet mask, gateway address, DNS, and network status.
+
+#### Access detailed resource metrics 
+
+Click **More details** on the top right of the **Overview** dashboard to view dynamic monitoring data over a specific period of time.
 
 Use the dropdown menu in the top right to change the time range, or click <i class="material-symbols-outlined">refresh</i> to update monitoring data.
 
@@ -46,7 +152,8 @@ The following metrics help you maintain optimal system performance:
 | Pod status       | Count of pods by state             | Reflects application health                   |
 
 ![Physical resource monitoring](/images/manual/olares/physical-resource-monitoring.png#bordered)
-### Check resource quota
+
+### Check user resource quota
 You can view your resource quota allocated by the Olares admin.
 
 ![Resource quota](/images/manual/olares/resource-quota.png#bordered)

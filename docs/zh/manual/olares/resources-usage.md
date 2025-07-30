@@ -5,11 +5,7 @@ description: 通过 Olares 的仪表盘应用监控系统和应用状态。查�
 
 # 监控系统和应用状态
 
-Olares 的**仪表盘**应用类似于 Windows 资源管理器，为你提供系统状态的集中视图，无需技术背景。从主面板中，你可以查看资源使用模式和详细的指标数据。
-
-:::info
-当你的 Olares 应用暴露在公网时，它们会因外部访问产生 FRP 流量成本。要监控这些成本和流量，请参阅[查看系统状态](../../space/manage-olares.md#查看系统状态)。
-:::
+Olares 的**仪表盘**应用为系统状态提供集中且直观的视图，无需复杂的技术背景即可获取系统实时状态信息。通过仪表盘，你可以监控关键资源使用情况，并查看集群的实时详细指标。
 
 ## 访问监控仪表板
 
@@ -20,19 +16,120 @@ Olares 的**仪表盘**应用类似于 Windows 资源管理器，为你提供系
 
 ## 概览
 
-### 查看物理资源
+概览页面提供了一个全面、一目了然的视图，用于查看 Olares 系统健康状况和资源利用率。它分为以下几个关键部分：
 
-在**概览**中直接监控以下四个核心指标：
-- CPU 使用率
-- 内存使用量
-- 磁盘使用量
-- Pod 状态
+* 集群物理资源
+* 用户资源使用情况
+* 使用率排名
 
-![Dashboard overview](/images/manual/olares/dashboard-overview.png#bordered)
+### 查看集群物理资源
 
-### 查看详细指标
+你可以直接从**集群物理资源**仪表盘监控以下基本资源的当前状态：
 
-点击**详情**，查看过去 7 天的综合监控数据。
+* CPU 利用率
+* 内存消耗
+* 磁盘使用率
+* Pod 状态
+* GPU 使用率
+* 网络状态
+
+![集群物理资源](/images/zh/manual/olares/dashboard-overview.png#bordered)
+
+### 访问详细资源面板
+
+要对任何资源进行更深入的分析，只需点击**集群物理资源**仪表板上的相应卡片以进入对应的详细面板，获取全面的监控数据和指标。
+
+#### CPU 面板
+
+CPU 面板提供了 Olares 集群 CPU 性能和健康状况的细节视图。要访问它，请点击**集群物理资源**仪表盘上的 **CPU**卡片。
+
+![CPU 面板](/images/zh/manual/olares/dashboard-cpu.png#bordered)
+
+此面板显示：
+* 实时 CPU 利用率图。
+* 节点 CPU 规格（型号、核心数、线程数）。
+* 利用率明细（用户、系统、I/O 等待）。
+* 当前 CPU 温度。
+* 1、5 和 15 分钟的平均负载。
+
+#### 内存面板
+
+内存面板提供了 Olares 集群内存使用和分配的清晰视图。要访问它，请点击**集群物理资源**仪表盘上的**内存**卡片。
+
+![内存面板](/images/zh/manual/olares/dashboard-memory.png#bordered)
+
+你可以使用下拉菜单在**物理内存**和**交换空间**视图之间切换。
+
+* 选择**物理内存**时，它显示：
+    * 实时内存利用率图。
+    * 内存使用明细，包括预留、已用、缓冲、缓存和可用内存，以及总内存和利用率。
+
+* 选择**交换空间**时，它显示：
+    * 实时交换空间使用图。
+    * 交换空间进/出速率。
+    * 交换空间概要（总计、已用和利用率）。
+
+#### 磁盘面板
+
+磁盘面板提供了 Olares 存储设备的全面视图，可监控 Olares 集群中的磁盘健康状况、追踪存储消耗并分析空间分配。
+
+要访问它，请点击**集群物理资源**仪表盘上的**磁盘**卡片。
+
+此面板显示：
+
+* 整体存储状态：磁盘名称、存储状态以及显示已用和可用空间的用量条。
+* 详细信息：关键设备规格，如总容量、型号、序列号、接口协议、温度、通电时长和写入量。
+
+点击右上角的**占用分析**，可获得特定存储设备的用量明细：
+
+![占用分析](/images/zh/manual/olares/dashboard-disk-analysis.png#bordered)
+
+* 磁盘上的文件系统（分区）列表。
+* 对于每个文件系统，你可以查看存储指标，如总容量、已用空间、可用空间、用量和挂载点。
+
+#### Pods 面板
+
+Pods 面板提供了应用程序部署状态的动态视图。Pod 数量实时图表，可显示集群中不同节点上随时间变化的活跃 Pod 数量。
+
+![Pods 面板](/images/zh/manual/olares/dashboard-pods.png#bordered)
+
+要访问它，请点击**集群物理资源**仪表盘上的 **Pods** 卡片。
+
+#### GPU 面板
+
+**GPU** 面板提供了集群中所有 GPU 设备的信息。使用此面板可有效监控集群中的 GPU 健康状况、资源分配和性能。
+
+要访问它，请点击**集群物理资源**仪表盘上的 **GPU** 卡片。
+
+![GPU 面板](/images/zh/manual/olares/dashboard-gpu-overview.png#bordered)
+
+此面板包含两个选项卡：
+
+* **GPU 管理**：查看所有检测到的 GPU 列表，包括其 GPU ID、型号、GPU 模式（如显存切片）、主机节点、健康状态、计算功耗、显存使用率和功耗。
+
+  要查看某块 GPU 的详细信息，请点击其条目右侧的**查看详情**。
+
+* **任务管理**：监控当前正在使用 GPU 的任务。它提供对任务名称、状态、GPU 模式、主机节点、计算功耗和已用显存的洞察，以及可用的操作。
+
+#### 网络面板
+
+网络面板提供了 Olares 所连接的网络接口信息，可用于监控网络连接、流量和配置，确保网络性能稳定。
+
+![网络面板](/images/zh/manual/olares/dashboard-network.png#bordered)
+
+要访问它，请点击**集群物理资源**仪表盘上的网络卡片。
+
+该面板显示：
+
+* 网络端口信息：每个网络端口的详细信息（例如，wlo1），包括其使用状态、实时上传和下载速度以及连接状态。
+
+* IP 配置：IP 获取方法（例如，DHCP）、所属节点和网络配置的信息。
+
+* IPv4 和 IPv6 详细信息：IPv4 和 IPv6 的全面详细信息，包括地址、子网掩码、网关地址、DNS 和网络状态。
+
+#### 查看详细资源指标
+
+点击**详情**，可查看特定时间段的动态监控数据。
 
 使用右上角的下拉菜单更改时间范围，或点击 <i class="material-symbols-outlined">refresh</i> 更新监控数据。
 
@@ -50,13 +147,13 @@ Olares 的**仪表盘**应用类似于 Windows 资源管理器，为你提供系
 | 网络流量     | 网络使用情况（Mbps）  | 反映网络速度和质量          |
 | 容器组状态    | 按状态划分的 Pod 数量 | 反映应用的健康状态          |
 
-![Physical resource monitoring](/images/manual/olares/physical-resource-monitoring.png#bordered)
+![Physical resource monitoring](/images/zh/manual/olares/physical-resource-monitoring.png#bordered)
 
-### 查看资源配额
+### 查看用户资源配额
 
 你可以查看 Olares 管理员分配的资源配额。
 
-![Resource quota](/images/manual/olares/resource-quota.png#bordered)
+![Resource quota](/images/zh/manual/olares/resource-quota.png#bordered)
 
 :::warning 警告
 当资源配额不足时，可能会出现以下问题：
@@ -70,7 +167,7 @@ Olares 的**仪表盘**应用类似于 Windows 资源管理器，为你提供系
 
 **使用排名**面板显示 CPU 和内存资源消耗最高的前 5 个应用。要查看完整的应用资源使用列表，点击**更多**。
 
-![Usage ranking](/images/manual/olares/usage-ranking.png#bordered)
+![Usage ranking](/images/zh/manual/olares/usage-ranking.png#bordered)
 
 ## 应用
 
@@ -82,12 +179,11 @@ Olares 的**仪表盘**应用类似于 Windows 资源管理器，为你提供系
 - 入站流量
 - 出站流量
 
-![Applications](/images/manual/olares/applications.png#bordered)
+![Applications](/images/zh/manual/olares/applications.png#bordered)
 
 在升序和降序之间切换，找出资源消耗最高或最低的应用。
 
 对于支持多入口的应用（如 WordPress），你可以点击图标切换不同入口类型，并查看其对应的资源指标。
-![Multiple entrances](/images/manual/olares/multiple-entrances.png){width=40%}
 
 :::tip 提示
 * 当应用列表较长时，可通过页面顶部的搜索框快速定位特定应用。
