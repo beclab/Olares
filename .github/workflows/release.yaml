@@ -59,8 +59,46 @@ jobs:
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
           bash build/image-manifest.sh && bash build/upload-images.sh .manifest/images.mf linux/arm64
 
+  push-deps:
+    needs: [release-daemon]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout source code"
+        uses: actions/checkout@v3
+
+      # test
+      - env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: "us-east-1"
+          VERSION: ${{ github.event.inputs.tags }}
+          REPO_PATH: '${{ secrets.REPO_PATH }}'
+        run: |
+          bash build/deps-manifest.sh && bash build/upload-deps.sh
+
+  push-deps-arm64:
+    needs: [release-daemon]
+    runs-on: [self-hosted, linux, ARM64]
+
+    steps:
+      - name: "Checkout source code"
+        uses: actions/checkout@v3
+
+      # test
+      - env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: "us-east-1"
+          VERSION: ${{ github.event.inputs.tags }}
+          REPO_PATH: '${{ secrets.REPO_PATH }}'
+        run: |
+          export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
+          bash build/deps-manifest.sh linux/arm64 && bash build/upload-deps.sh linux/arm64
+
+
   upload-package:
-    needs: [push, push-arm64, release-daemon]
+    needs: [push, push-arm64, push-deps, push-deps-arm64, release-daemon]
     runs-on: ubuntu-latest
 
     steps:
