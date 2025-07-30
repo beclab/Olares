@@ -23,9 +23,10 @@ func (m *Module) Init() {
 	m.Tasks = append(m.Tasks, u.ClearAppChartValues()...)
 	m.Tasks = append(m.Tasks, u.ClearBFLChartValues()...)
 	m.Tasks = append(m.Tasks, u.UpdateChartsInAppService()...)
+	m.Tasks = append(m.Tasks, u.UpgradeSystemComponents()...)
 	m.Tasks = append(m.Tasks, u.UpgradeUserComponents()...)
 	m.Tasks = append(m.Tasks, u.UpdateReleaseFile()...)
-	m.Tasks = append(m.Tasks, u.UpgradeSystemComponents()...)
+	m.Tasks = append(m.Tasks, u.UpdateOlaresVersion()...)
 	m.Tasks = append(m.Tasks, u.PostUpgrade()...)
 }
 

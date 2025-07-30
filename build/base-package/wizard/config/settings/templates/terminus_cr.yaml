@@ -1,12 +1,14 @@
 # chart-testing: ignore-file
 
 {{ $cluster_id := randAlphaNum 16 }}
+{{ $version := "#__VERSION__" }}
 {{ if .Values.cluster_id }}
 {{ $cluster_id = .Values.cluster_id }}
 {{ end }}
-{{ $cr := (lookup "sys.bytetrade.io/v1alpha1" "terminus.sys.bytetrade.io" "" "terminus") }}
+{{ $cr := (lookup "sys.bytetrade.io/v1alpha1" "Terminus" "" "terminus") }}
 {{ if $cr }}
 {{ $cluster_id = (index $cr "metadata" "labels" "bytetrade.io/cluster-id") }}
+{{ $version = (index $cr "spec" "version") }}
 {{ end }}
 
 ---
@@ -22,7 +24,7 @@ metadata:
     bytetrade.io/s3-sk: '{{ .Values.s3_sk }}'
 spec:
   name: terminus-1
-  version: #__VERSION__
+  version: {{ .Values.version | default $version }}
   display: Terminus One
   releaseServer:
     serverType: github

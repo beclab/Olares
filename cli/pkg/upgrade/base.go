@@ -100,6 +100,15 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 	}
 }
 
+func (u upgraderBase) UpdateOlaresVersion() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "UpdateOlaresVersion",
+			Action: new(updateOlaresVersion),
+		},
+	}
+}
+
 func (u upgraderBase) PostUpgrade() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
@@ -309,6 +318,30 @@ func (u *upgradeSystemComponents) Execute(runtime connector.Runtime) error {
 	settingsChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "settings")
 
 	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameSettings, settingsChartPath, "", common.NamespaceDefault, nil, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+type updateOlaresVersion struct {
+	common.KubeAction
+}
+
+func (u *updateOlaresVersion) Execute(runtime connector.Runtime) error {
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get rest config: %s", err)
+	}
+	actionConfig, settings, err := utils.InitConfig(config, common.NamespaceDefault)
+	if err != nil {
+		return err
+	}
+	ctx, cancelSettings := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancelSettings()
+	settingsChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "settings")
+
+	vals := map[string]interface{}{"version": u.KubeConf.Arg.OlaresVersion}
+	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameSettings, settingsChartPath, "", common.NamespaceDefault, vals, true); err != nil {
 		return err
 	}
 	return nil
