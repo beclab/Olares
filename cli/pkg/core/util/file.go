@@ -344,7 +344,7 @@ func Untar(src, dst string) error {
 				}
 			}
 
-			file, err := os.OpenFile(dstPath, os.O_CREATE|os.O_RDWR, os.FileMode(hdr.Mode))
+			file, err := os.OpenFile(dstPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.FileMode(hdr.Mode))
 			if err != nil {
 				return err
 			}
