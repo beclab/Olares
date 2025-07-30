@@ -55,7 +55,7 @@ description: 使用 LarePass 移动端远程管理 Olares，包括监控状态�
 
 若 Olares 通过有线网络激活，可用 LarePass 切换至同一网络的 Wi-Fi：
 
-![Wi-Fi 切换](/images/zh/manual/larepass/switch-wifi.png#bordered))
+![Wi-Fi 切换](/images/zh/manual/larepass/switch-wifi.png#bordered)
 
 1. 在 Olares 管理页面，点击**Wi-Fi 配置**选项，进入**选择连接方式**页面。 
 2. 点击列表里的 Wi-Fi 网络以连接。 若 Wi-Fi 有密码，在弹出窗口里输入密码并确认。  
@@ -82,11 +82,11 @@ description: 使用 LarePass 移动端远程管理 Olares，包括监控状态�
 
 ![蓝牙配网](/images/zh/manual/larepass/bluetooth-network.png#bordered))
 
-1. 在**未发现 Olares**提示页面底部，点击**蓝牙配网**选项。LarePass 将使用手机蓝牙扫描与当前登录账号匹配的 Olares 设备。
+1. 在**未发现 Olares**提示页面底部，点击**蓝牙配网**选项。LarePass 将使用手机蓝牙扫描附近的 Olares 设备。
 
-2. 找到设备后，点击**配置网络**。
+2. 设备显示后，点击**配置网络**。
 
-3. 从 Olares 可用的无线网络列表中，点击你手机当前连接的 Wi-Fi 网络。如果该网络有密码保护，请输入密码并点击**确认**。
+3. 选择手机当前连接的 Wi-Fi 网络。如果该网络有密码保护，请输入密码并点击**确认**。
 
     ::: tip 注意
     如果你选择的 Wi-Fi 网络与手机不同，连接后 LarePass 仍将无法识别你的 Olares 设备。
@@ -97,7 +97,7 @@ description: 使用 LarePass 移动端远程管理 Olares，包括监控状态�
    如果你的 Olares 之前已激活，此过程将耗时更长，因为网络切换会影响更多服务。
    :::
 
-5. 返回到设备扫描页面，现在应该可以找到你的 Olares 设备了。你可以继续[激活设备](activate-olares.md)或执行本文档里的设备管理操作。
+5. 返回到设备扫描页面，并点击**发现附近的 Olares**，即可顺利发现你的设备。你可以继续[激活设备](activate-olares.md)或执行本文档里的设备管理操作。
 
 ## 查看设备信息
 

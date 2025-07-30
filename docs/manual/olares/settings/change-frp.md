@@ -13,6 +13,10 @@ A reverse proxy acts as a secure gateway between your Olares and the open web, e
 
 ## Change your reverse proxy option
 
+To change your reverse proxy option:
+
+ ![Change reverse proxy](/images/manual/olares/set-reverse-proxy.png#bordered)
+
 1. Open Settings, then navigate to **Network** > **Reverse Proxy**.
 2. Choose your preferred reverse proxy option. If you select Self-built FRP, you’ll need to provide the server address, port, and authentication method.
 

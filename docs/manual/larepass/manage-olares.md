@@ -78,22 +78,22 @@ If your Olares device moves to a different network:
 
 ### Set Wi-Fi via Bluetooth
 
-If you can't connect your Olares to a wired network during activation, or if Olares is on a different wired network than your phone, LarePass won't be able to find it. This can prevent you from completing activation or device management. In such cases, use the **Bluetooth network configuration** feature to connect your Olares to your phone's Wi-Fi network.
+If you can't connect your Olares to a wired network during activation, or if Olares is on a different wired network than your phone, LarePass won't be able to find it. This can prevent you from completing activation or device management. In such cases, use the **Bluetooth network setup** feature to connect your Olares to your phone's Wi-Fi network.
  ![Bluetooth network](/images/manual/larepass/bluetooth-network.png)
 
-1. On the **Olares not found** page, tap the **Bluetooth network configuration** option. LarePass will use your phone's Bluetooth to scan for the nearby Olares device that match your current Olares ID.
-2. When your device is found, tap **Network configuration**.
-3. From the list of wireless networks available to your Olares, tap the Wi-Fi network your phone is connected to. If it's password-protected, enter the password and tap **Confirm**.
+1. On the **Olares not found** page, tap the **Bluetooth network setup** option. LarePass will use your phone's Bluetooth to scan for the nearby Olares device.
+2. When your device appears in the list, tap **Network setup**.
+3. Select the Wi-Fi network your phone is currently connected to. If it's password-protected, enter the password and tap **Confirm**.
 
     ::: tip Note
-    If you select a Wi-Fi network different from your phone's, LarePass will still be unable to recognize your Olares device after it connects.
+    If you select a Wi-Fi network different from the one your phone is on, LarePass won't be able to detect your Olares device after it connects.
     :::
 
-4. Olares will begin the network switching process. You'll see a success message when it's complete. If you return to the Bluetooth network setup page, you'll see that Olares' IP address has changed to your phone's Wi-Fi subnet. 
+4. Olares will start switching the network.Once the process is complete, a success message will appear. If you return to the Bluetooth network setup page, you'll see that Olares' IP address has changed to your phone's Wi-Fi subnet. 
    ::: tip Note
    The process takes longer if your Olares was activated earlier as the network switch affects more services.
    :::
-5. Go back to the device scan page, and you will now be able to discover your Olares device. You can now proceed with [device activation](activate-olares.md) or device management as instructed in this document.
+5. Go back to the device scan page and tap **Discover nearby Olares** to find your device. You can now proceed with [device activation](activate-olares.md) or device management as instructed in this document.
 
 ## Uninstall Olares
 

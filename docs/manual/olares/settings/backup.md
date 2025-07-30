@@ -9,7 +9,7 @@ Olares' backup feature lets you create full and incremental backups for specifie
 
 To add a backup task:
 
-1. Go to **Settings › Backup**, and click **Add backup task**.
+1. Go to **Settings** › **Backup**, and click **Add backup**.
 2. Choose **Backup files** or **Backup applications**.
 3. On the **Add backup task** page, configure the following options:
 

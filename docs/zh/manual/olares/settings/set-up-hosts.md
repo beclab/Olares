@@ -6,13 +6,12 @@ description: 在 Olares 中修改 Hosts 配置，解决网络访问限制问题�
 运行应用时，可能需要访问特定网站（例如 GitHub）来下载资源或获取数据。然而，由于网络环境的限制，这些网站可能无法正常访问。为了解决这一问题，Olares 支持通过系统设置更新系统 Hosts 文件（例如添加 GitHub 的 IP 映射），以支持 Olares 在运行时访问特定网站。
 
 ## 如何修改 Hosts 配置
-
-1. 打开**设置**，进入**系统** > **Hosts**。
-2. 右上角点击**添加 Hosts**，输入域名和对应的 IP 地址：
+要修改 Hosts 文件：
+![Hosts](/images/zh/manual/olares/add-host.png#bordered)
+1. 打开**设置**，进入**网络** > **Hosts**。
+2. 右上角点击**添加 Host**，输入域名和对应的 IP 地址：
     - **Host 名称**：输入目标网站的域名，例如 `github.com`。
     - **IP 地址**：输入对应的 IP 地址，例如 `20.205.243.166`。
-
-      ![添加 Host](/images/zh/manual/tasks/add-host.png#bordered)
 
 3. 点击**确认**保存变更。
 

@@ -28,7 +28,7 @@ Olares comprises the following core components:
 
 - [**Olares OS**](https://github.com/beclab/Olares): An open-source, self-hosted operating system that transforms edge devices into robust personal cloud.
 
-- [**LarePass**](./larepass): A secure, cross-platform client that bridges you and your Olares system. It provides seamless access, unified identity management, fast file synchronization, and comprehensive device management across all your devices.
+- [**LarePass**](./larepass/): A secure, cross-platform client that bridges you and your Olares system. It provides seamless access, unified identity management, fast file synchronization, and comprehensive device management across all your devices.
 
 ## Highlighted features
 

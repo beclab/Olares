@@ -3,7 +3,7 @@ outline: [2, 3]
 description: Learn how to manage your Olares account, devices, security settings, and network access policies in My Olares.
 ---
 
-# Account and device management
+# My Olares overview
 
 The **My Olares** page in **Settings** serves as your central hub for managing your Olares account, connected devices, security settings, and access policies.
 

@@ -3,7 +3,7 @@ outline: [2, 3]
 description: 了解如何利用“我的 Olares”页面管理账户、设备、安全设置及网络访问策略。 
 ---
 
-# 账户与设备管理
+# 我的 Olares
 
 你可以通过设置中的**我的 Olares** 功能管理 Olares 账户、连接设备和安全策略。点击**设置**页面左上角的个人头像即可进入**我的 Olares**。
 
@@ -34,7 +34,7 @@ description: 了解如何利用“我的 Olares”页面管理账户、设备、
 
 ## 当前版本
 
-查看当前 Olares 系统的版本。如果提示有可用的新版本，请转至 LarePass 手机客户端**设置** > **Olares 管理**页面下完成系统升级。详细步骤请参考[升级 Olares](../../larepass/manage-olares.md#升级-olares)
+查看当前 Olares 系统的版本。如果提示有可用的新版本，请转至 LarePass 手机客户端**设置** > **Olares 管理**页面下完成系统升级。详细步骤请参考[升级 Olares](../../larepass/manage-olares.md#升级-olares)。
 
 ## 查看登录历史
 
