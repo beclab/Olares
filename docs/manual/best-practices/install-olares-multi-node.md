@@ -150,7 +150,7 @@ Once your cluster is set up, changes in network configurations can disrupt the m
 
 ## Learn more
 
-- [Olares system architecture](../system-architecture.md#distributed-file-system): Understand the distributed file system that underpins Olares, ensuring scalability, high availability, and seamless data management.
+- [Olares system architecture](../concepts/system-architecture.md#distributed-file-system): Understand the distributed file system that underpins Olares, ensuring scalability, high availability, and seamless data management.
 - [The system daemon: olaresd](../../developer/install/installation-overview.md#system-daemon-olaresd): Learn about the central system process that orchestrates and manages core Olares functions.
 - [Data](../concepts/data.md#juicefs): Dive into how Olares leverages JuiceFS to provide a unified file system for efficient data storage and retrieval.
 - [Olares CLI](../../developer/install/cli/olares-cli.md): Explore the command-line interface for managing Olares installation.

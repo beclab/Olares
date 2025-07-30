@@ -3,30 +3,26 @@ import { defineConfig, type DefaultTheme } from "vitepress";
 const side = {
   "/zh/manual/": [
     {
-      text: "文档站",
-      link: "/zh/manual/docs-home",
+      text: "Olares 是什么？",
+      link: "/zh/manual/overview",
       items: [
         // { text: "应用场景", link: "/zh/manual/why-olares" },
         //{ text: "功能对比", link: "/zh/manual/feature-overview" },
-        { text: "系统架构", link: "/zh/manual/system-architecture" },
         { text: "比较 Olares 和 NAS", link: "/zh/manual/olares-vs-nas" },
-        {
-          text: "帮助与支持",
-          collapsed: true,
-          items: [
-            { text: "常见问题", link: "/zh/manual/help/faqs" },
-            {
-              text: "技术支持",
-              link: "/zh/manual/help/request-technical-support",
-            },
+        {text: "帮助与支持", link: "/zh/manual/help/request-technical-support",}
+        //      collapsed: true,
+        //      items: [
+        //     { text: "常见问题", link: "/zh/manual/help/faqs" },
+        //     {
+        //       text: "技术支持",
+      //      link: "/zh/manual/help/request-technical-support",
+        //       },
             //     {
             //       text: "Troubleshooting Guide",
             //       link: "/zh/manual/help/troubleshooting-guide",
             //     },
           ],
         },
-      ],
-    },
     {
       text: "快速开始",
       collapsed: false,
@@ -292,7 +288,7 @@ const side = {
       collapsed: true,
       link: "/zh/manual/concepts/",
       items: [
-        { text: "架构", link: "/zh/manual/concepts/architecture" },
+        { text: "系统架构", link: "/zh/manual/concepts/system-architecture" },
         { text: "Olares ID",
           link: "/zh/manual/concepts/olares-id",
           collapsed: true,
@@ -619,52 +615,52 @@ const side = {
             },
           ],
         },
-        {
-          text: "进阶",
-          collapsed: true,
-          items: [
-            {
-              text: "terminus-info",
-              link: "/zh/developer/develop/advanced/terminus-info",
-            },
-            {
-              text: "Service Provider",
-              link: "/zh/developer/develop/advanced/provider",
-            },
-            {
-              text: "AI",
-              link: "/zh/developer/develop/advanced/ai",
-            },
-            { text: "Cookie", link: "/zh/developer/develop/advanced/cookie" },
-            { text: "数据库", link: "/zh/developer/develop/advanced/database" },
-            {
-              text: "账户",
-              link: "/zh/developer/develop/advanced/account",
-            },
-            {
-              text: "应用市场",
-              link: "/zh/developer/develop/advanced/market",
-            },
+      //  {
+        //      text: "进阶",
+        //     collapsed: true,
+        //    items: [
+        //      {
+        //        text: "terminus-info",
+      //       link: "/zh/developer/develop/advanced/terminus-info",
+        //      },
+        //      {
+        //       text: "Service Provider",
+      //       link: "/zh/developer/develop/advanced/provider",
+        //      },
+        //     {
+        //       text: "AI",
+      //       link: "/zh/developer/develop/advanced/ai",
+        //     },
+        //      { text: "Cookie", link: "/zh/developer/develop/advanced/cookie" },
+        //      { text: "数据库", link: "/zh/developer/develop/advanced/database" },
+        //     {
+        //       text: "账户",
+      //       link: "/zh/developer/develop/advanced/account",
+        //      },
+        //      {
+        //       text: "应用市场",
+      //       link: "/zh/developer/develop/advanced/market",
+        //      },
             // {
             //   text: "Analytic",
             //   link: "/zh/developer/develop/advanced/analytic",
             // },
-            {
-              text: "Websocket",
-              link: "/zh/developer/develop/advanced/websocket",
-            },
-            {
-              text: "文件上传",
-              link: "/zh/developer/develop/advanced/file-upload",
-            },
+        //       {
+        //        text: "Websocket",
+      //        link: "/zh/developer/develop/advanced/websocket",
+        //      },
+        //      {
+        //        text: "文件上传",
+      //       link: "/zh/developer/develop/advanced/file-upload",
+      //      },
             // {
             //   text: "Rss",
             //   link: "/zh/developer/develop/advanced/rss",
             // },
-            {
-              text: "密钥",
-              link: "/zh/developer/develop/advanced/secret",
-            },
+    //      {
+    //         text: "密钥",
+      //         link: "/zh/developer/develop/advanced/secret",
+        //      },
             // {
             //   text: "Notification",
             //   link: "/zh/developer/develop/advanced/notification",
@@ -673,13 +669,12 @@ const side = {
             //   text: "Frontend",
             //   link: "/zh/developer/develop/advanced/frontend",
             // },
-            {
-              text: "Kubesphere",
-              link: "/zh/developer/develop/advanced/kubesphere",
-            },
-          ],
-        },
-
+    //        {
+    //          text: "Kubesphere",
+    //          link: "/zh/developer/develop/advanced/kubesphere",
+    //         },
+    //       ],
+    //      },
         {
           text: "提交应用",
           collapsed: true,
@@ -808,7 +803,7 @@ export const zh = defineConfig({
     socialLinks: [{ icon: "github", link: "https://github.com/beclab/olares" }],
 
     nav: [
-      { text: "Olares", link: "zh/manual/docs-home" },
+      { text: "Olares", link: "zh/manual/overview" },
       { text: "Olares Space", link: "/zh/space/" },
       { text: "应用示例", link: "/zh/use-cases/" },
       { text: "开发者文档", link: "/zh/developer/install/" },

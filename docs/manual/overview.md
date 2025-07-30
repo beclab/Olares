@@ -10,10 +10,6 @@ This documentation provides a preview of features for an upcoming Olares version
 
 Olares is an open-source personal cloud operating system designed to empower you to own and manage your digital assets locally. Instead of relying on public cloud services, you can deploy powerful open-source alternatives locally on Olares, such as Ollama for hosting LLMs, SD WebUI for image generation, and Mastodon for building censor free social space. Imagine the power of the cloud, but with you in complete command.
 
-With Olares, self-hosting is no longer a daunting task. It simplifies complex processes like network setup, domain management, and service orchestration, enabling both beginners or experienced users to focus on what truly matters.
-
-Privacy and independence are at the core of Olares. It is perfect for individuals or teams who want to avoid relying on centralized platforms. Your data stays on your hardware, and all tasks are processed locally, so your sensitive information never leaves your control. Olares gives you complete ownership of your data and infrastructure without sacrificing performance or simplicity.
-
 <div class="cta">
   <a href="./get-started/">
     <div class="content">
@@ -23,6 +19,16 @@ Privacy and independence are at the core of Olares. It is perfect for individual
     <div class="arrow">→</div>
   </a>
 </div>
+
+## Core components
+
+Olares comprises the following core components:
+
+- [**Olares ID**](./concepts/olares-id.md): A decentralized identity and credit system that facilitates secure, trustless exchanges of information and value. It serves as your digital identity across the Olares ecosystem.
+
+- [**Olares OS**](https://github.com/beclab/Olares): An open-source, self-hosted operating system that transforms edge devices into robust personal cloud.
+
+- [**LarePass**](./larepass): A secure, cross-platform client that bridges you and your Olares system. It provides seamless access, unified identity management, fast file synchronization, and comprehensive device management across all your devices.
 
 ## Highlighted features
 
