@@ -174,7 +174,7 @@ jobs:
             build/base-package/publicInstaller.latest.ps1
             build/base-package/install.ps1
             build/base-package/publicAddnode.sh
-            build/instbase-packagealler/joincluster.sh
+            build/base-package/joincluster.sh
             build/base-package/version.hint
             build/base-package/publicRestoreInstaller.sh
           prerelease: true
