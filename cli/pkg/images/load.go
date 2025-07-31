@@ -108,22 +108,24 @@ func (t *LoadImages) Execute(runtime connector.Runtime) (reserr error) {
 			loadParm = "--no-unpack"
 		}
 
+		parsedRef, err := reference.ParseNormalizedNamed(imageRepoTag)
+		if err != nil {
+			logger.Warnf("parse image name %s error: %v, skip importing", imageRepoTag, err)
+			continue
+		}
+
 		if runtime.RemoteHost().GetOs() == common.Darwin {
+			loadCmd = fmt.Sprintf("%s -p %s ssh --native-ssh=false 'sudo ctr -n k8s.io i import --index-name %s -'", minikubepath, minikubeprofile, parsedRef)
 			if HasSuffixI(imgFileName, ".tar.gz", ".tgz") {
-				loadCmd = fmt.Sprintf("gunzip -c %s | %s -p %s image load -", imageFileName, minikubepath, minikubeprofile)
+				loadCmd = fmt.Sprintf("gunzip -c %s | ", imageFileName) + loadCmd
 			} else {
-				loadCmd = fmt.Sprintf("%s -p %s image load %s", minikubepath, minikubeprofile, imageFileName)
+				loadCmd = fmt.Sprintf("cat %s | ", imageFileName) + loadCmd
 			}
 		} else {
 			switch containerManager {
 			case "crio":
 				loadCmd = "ctr" // not implement
 			case "containerd":
-				parsedRef, err := reference.ParseNormalizedNamed(imageRepoTag)
-				if err != nil {
-					logger.Warnf("parse image name %s error: %v, skip importing", imageRepoTag, err)
-					continue
-				}
 				if HasSuffixI(imgFileName, ".tar.gz", ".tgz") {
 					loadCmd = fmt.Sprintf("gunzip -c %s | ctr -n k8s.io images import --index-name %s %s -", imageFileName, parsedRef, loadParm)
 				} else {

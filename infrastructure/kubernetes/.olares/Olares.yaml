@@ -25,8 +25,6 @@ output:
     - 
       name: alpine:3.14
     -
-      name: mirrorgooglecontainers/defaultbackend-amd64:1.4
-    - 
       name: bitnami/kube-rbac-proxy:0.19.0
     - 
       name: registry.k8s.io/kube-apiserver:v1.33.3

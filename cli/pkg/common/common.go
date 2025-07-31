@@ -333,8 +333,10 @@ var TerminusGlobalEnvs = map[string]interface{}{
 	"FRP_LIST_URL":               "https://terminus-frp.snowinning.com",
 	"TAILSCALE_CONTROLPLANE_URL": "https://controlplane.snowinning.com",
 	"OLARES_ROOT_DIR":            "/olares",
-	ENV_DOWNLOAD_CDN_URL:         cc.DownloadUrl,
-	ENV_MARKET_PROVIDER:          "appstore-server-prod.bttcdn.com",
+	// the default value used by kubeadm
+	"COREDNS_SVC":        "10.96.0.10",
+	ENV_DOWNLOAD_CDN_URL: cc.DownloadUrl,
+	ENV_MARKET_PROVIDER:  "appstore-server-prod.bttcdn.com",
 }
 
 const (
