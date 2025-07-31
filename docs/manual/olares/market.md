@@ -21,7 +21,12 @@ Before you start, it is recommended to familiarize yourself with a few concepts 
 | [Dependencies](../concepts/application.md#dependencies)                                 | Prerequisite applications that must already be<br/> installed before a user can access an application <br/>that requires them.                                                                              |
 
 ## Find applications
-The Olares Market offers various ways to discover and browse applications:
+The Olares Market offers various ways to discover and browse applications.
+
+![Market](/images/manual/olares/market-discover.png#bordered)
+
+
+### Browse by categories
 
 On **Discover** page:
 * **Featured Applications**: Curated by the editorial team, showcasing trending and seasonally relevant apps.
@@ -30,17 +35,23 @@ On **Discover** page:
 * **Latest apps**: Recently added applications to the market.
 
 You can also browse applications based on their functionality:
-* **Productivity**: Apps for work scenarios and improving efficiency.
-* **Utilities**: Tools for solving specific problems or completing tasks.
-* **Entertainment**: Apps for leisure and enjoyment.
-* **Social network**: Platforms for connecting with others.
-* **Blockchain**: Applications related to blockchain technology.
-* **Recommendation**: Decentralized content recommendation algorithms for Wise.
-    :::info
-    For information on using the recommendation feature in Wise, refer to [discover themed content](./wise/recommend).
-    :::
+* **Creativity**: Apps for creating and publishing digital content, from AI-generated art and 3D models to blogs and design projects.
+* **Productivity**: Apps for team collaboration, project management, data organization, and building custom AI-powered agents.
+* **Lifestyle**: Self-hosted applications for managing your smart home, personal photo libraries, and AI identity.
+* **Fun**: Selfhosted applications for entertainment and fun such as gaming, video streaming, and connecting with people. 
+* **Utilities**: Tools for system management, file sharing, data backup, and running local AI models.
+* **Developer Tools** Toolchain for the software development lifecycle, including code hosting, CI/CD, observability, and database management.
 
-   ![Market](/images/manual/olares/market-discover.png#bordered)
+### Search using keywords 
+
+To search an app in the market:
+
+1. Open the Market app from the Dock or Launchpad.
+2. In the **Manage** sub-memu on the left, click **Search**.
+2. Enter the keywords. The relevant results will appear as you type.
+
+![Search app](/images/manual/olares/search-app.png#bordered)
+
 ## Install applications
 
 1. Open the Market app from the Dock or Launchpad.
@@ -77,21 +88,19 @@ To ensure a shared service is running and accessible within the cluster, follow 
 
 1. Prepare an Olares Application Chart file (in `.zip`, `.tgz`, `.tar`, or `.gz` format).
 2. Open the Market app from the Dock or Launchpad.
-3. Click **My Olares** > **Custom** to see all custom applications.
-4. Click **Upload custom chart** and select chart files.
+3. Click **My Olares** > **Local** to see all custom applications.
+4. Click **Upload custom chart** in the top right corner and select the chart file to install.
 
 ## Update applications
 1. Open the Market app from the Dock or Launchpad.
-2. Click for update notifications besides **My Olares** from the left sidebar.
-    If there is an available update, you should see a label marked with number.
-3. Click **My Olares** > **Available updates** to see all updatable applications.
-4. Click **Update all** to update all applications at once, or update each application individually.
+2. In the left sidebar, click **Updates** under the **Manage** section. If there are available updates, a notification badge will display.
+3. The **Available updates** panel will display the applications with available updates.Click **Update all** to update all applications at once, or update each application individually.
 
 ## Uninstall applications
 
 ### Uninstall from Market
 1. Open the Market app from the Dock or Launchpad.
-2. Click **My Olares** from the left sidebar to view all installed apps.
+2. In the left sidebar, navigate to the **My Olares** section. Use the **Olares** or **Local** tabs to filter and fined your installed applications.
 3. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the application's operation button, and select **Uninstall**.
 
 ### Uninstall from Launchpad
@@ -99,6 +108,15 @@ To ensure a shared service is running and accessible within the cluster, follow 
 2. Click and hold the app icon until all the apps begin to jiggle.
 3. Click <i class="material-symbols-outlined">cancel</i> on the app icon to uninstall it.
 
+## View app operation logs
+
+The application operation log details the processes and statuses of app operations within Market, such as installation, download, update, and uninstallation. To access these logs:
+ 
+1. Open the Market app from the Dock or Launchpad.
+2. In the left sidebar, navigate to **My Olares**.
+3. Click **Logs** in the top right corner. 
+
+You can also click the <i class="material-symbols-outlined">download</i> button to download the logs.
 
 ## FAQ
 
