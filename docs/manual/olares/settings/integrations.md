@@ -30,8 +30,6 @@ Olares supports manual configuration of AWS S3 and Tencent Cloud COS using API c
    - Bucket name
 4. Click **Next**. You will see a success message if the credentials are valid.
 
-Your connected cloud storage will now appear under the **Cloud storage** section in Files.
-
 Alternatively, you can configure this direction directly within [LarePass](../../larepass/integrations.md#add-a-cloud-storage-using-api-keys).
 
 

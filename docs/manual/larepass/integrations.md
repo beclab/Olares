@@ -56,7 +56,7 @@ OAuth-based integrations like Google Drive and Dropbox require initial setup via
 
 4. Follow the login prompts to authorize your account.
 
-Once authorized, you'll see the connected account in the integration list. You can now access the storage in Files.
+Once authorized, you'll see the connected account in the integration list. You can select the storage for [Olares backup](../olares/settings/backup.md)
 
 ## Add a cloud storage using API-keys
 
@@ -67,10 +67,9 @@ Services like AWS S3 and Tencent Cloud COS require setup using API keys (Access 
 3. Select AWS S3 or Tencent COS.
 4. Enter your Access Key, Secret Key, and other required credentials, then tap **Confirm**.
 
-Once configured, you'll see the connected service in the integration list. And you can access the cloud storage through Files.
-
 Alternatively, you can configure these integrations directly within [Olares Settings](/manual/olares/settings/integrations.md). 
 
+Once authorized, you'll see the connected account in the integration list. You can select the storage for [Olares backup](../olares/settings/backup.md)
 
 ## Disconnect integrations
 ::: warning

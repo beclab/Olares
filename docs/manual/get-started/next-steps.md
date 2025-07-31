@@ -52,7 +52,7 @@ Here are some suggested next steps:
       { text: 'Manage accounts', href: '../larepass/create-account' },
       { text: 'Enable VPN',  href: '../larepass/private-network' },
       { text: 'Manage device',   href: '../larepass/manage-device' },
-      { text: 'Sync file',   href: '../larepass/sync-share' },
+     // { text: 'Sync file',   href: '../larepass/sync-share' },
       { text: 'Collect content',    href: '../larepass/manage-knowledge'},
     ]"
     buttonText="Learn more"

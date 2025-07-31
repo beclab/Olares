@@ -70,14 +70,13 @@ const side = {
             {text: "管理 Olares", link:"/zh/manual/larepass/manage-olares"},
           ],
         },
-        {
-          text: "管理文件",
-          collapsed: true,
-          items: [
-            {text: "常用文件操作", link:"/zh/manual/larepass/manage-files"},
-            {text: "同步与共享", link:"/zh/manual/larepass/sync-share"}
-          ]
-        },
+        {text: "管理文件", link:"/zh/manual/larepass/manage-files"},
+      //    collapsed: true,
+        //    items: [
+        //    {text: "常用文件操作", link:"/zh/manual/larepass/manage-files"},
+        //    {text: "同步与共享", link:"/zh/manual/larepass/sync-share"}
+      //  ]
+        // },
         {
           text: "管理密码",
           collapsed: true,
@@ -108,18 +107,18 @@ const side = {
               "text": "基本文件操作",
               "link": "/zh/manual/olares/files/add-edit-download"
             },
-            {
-              "text": "同步与共享",
-              "link": "/zh/manual/larepass/sync-share"
-            },
+            //{
+            //   "text": "同步与共享",
+          //  "link": "/zh/manual/larepass/sync-share"
+            //  },
             {
               "text": "挂载 SMB",
               "link": "/zh/manual/olares/files/mount-SMB"
             },
-            {
-              "text": "挂载云存储",
-              "link": "/zh/manual/olares/files/mount-cloud-storage"
-            }
+            //  {
+            //  "text": "挂载云存储",
+          //  "link": "/zh/manual/olares/files/mount-cloud-storage"
+            //   }
           ]
         },
         {

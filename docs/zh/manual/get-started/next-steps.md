@@ -46,7 +46,7 @@ description: Olares 新手上路指南，包括系统初始配置、基础功能
       { text: '管理帐户', href: '../larepass/create-account' },
       { text: '启用专用网络',  href: '../larepass/private-network' },
       { text: '管理设备',   href: '../larepass/manage-device' },
-      { text: '同步文件',   href: '../larepass/sync-share' },
+    //  { text: '同步文件',   href: '../larepass/sync-share' },
       { text: '收集内容',    href: '../larepass/manage-knowledge'},
     ]"
     buttonText="了解更多"

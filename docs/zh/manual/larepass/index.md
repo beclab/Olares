@@ -32,9 +32,7 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
 - [切换有线/无线网络](manage-olares.md#有线切换至无线)
 
 ### 安全文件访问与同步
-跨设备访问并同步 Olares 文件。
 - [使用 LarePass 管理文件](manage-files.md)
-- [同步与共享文件](sync-share.md)
 
 ### 密码与密钥管理
 使用 Vault 自动填充凭证、存储密码并生成 2FA 代码。

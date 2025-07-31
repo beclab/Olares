@@ -14,12 +14,10 @@ Olares 内置的文件应用为用户提供了安全高效的文件存储与同�
 文件管理器的界面类似于 Windows 资源管理器或 macOS 的访达，允许你整理和访问文档、图片、视频或其他文件。主要由以下三个部分组成：
 
 
-![Files](/images/zh/manual/olares/files.png#bordered)
+![Files](/images/zh/manual/olares/files-1.png#bordered)
 
 * **存储盘**（Drive）：用于存储不需要频繁同步或修改的文件。
-* **同步盘**（Sync）：用于在设备间同步文件和目录。
 * **应用盘**（Application）：存储应用与缓存数据，仅用于开发和调试目的。
-* **云存储** （Cloud Drive）：用于加载、访问第三方云存储服务包括 Google Drive、Drop Box、 AWS S3、腾讯云对象存储服务（COS）。
 
 ---
 <div>
@@ -28,18 +26,8 @@ Olares 内置的文件应用为用户提供了安全高效的文件存储与同�
 </div>
 
 <div>
-<h4><a href="../../larepass/sync-share">同步和共享文件</a></h4>
-了解如何在设备间保持文件更新，以及如何与其他 Olares 成员共享文件。
-</div>
-
-<div>
   <h4><a href="./mount-SMB">挂载 SMB</a></h4>
   了解如何在 Olares 中挂载并访问 NAS 设备或网络服务器上的 SMB 共享文件夹。
-</div>
-
-<div>
-  <h4><a href="./mount-cloud-storage">挂载云存储</a></h4>
-  了解如何在 Olares 中挂载并访问第三方云存储服务。
 </div>
 
 

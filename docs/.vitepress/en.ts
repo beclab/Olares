@@ -68,14 +68,13 @@ const side = {
             {text: "Manage Olares", link:"/manual/larepass/manage-olares"},
           ],
         },
-        {
-          text: "Manage files",
-          collapsed: true,
-          items: [
-            {text: "Common file operations", link:"/manual/larepass/manage-files"},
-            {text: "Sync and share", link:"/manual/larepass/sync-share"}
-          ]
-        },
+        {text: "Manage files", link:"/manual/larepass/manage-files"},
+         // collapsed: true,
+          //items: [
+          //  {text: "Common file operations", link:"/manual/larepass/manage-files"},
+           // {text: "Sync and share", link:"/manual/larepass/sync-share"}
+         // ]
+       // },
         {
           text: "Manage passwords",
           collapsed: true,
@@ -106,17 +105,17 @@ const side = {
               text: "Basic file operations",
               link: "/manual/olares/files/add-edit-download",
             },
-            {
-              text: "Sync and share",
-              link: "/manual/larepass/sync-share",
-            },
+         //   {
+        //      text: "Sync and share",
+         //     link: "/manual/larepass/sync-share",
+         //   },
             {
               text: "Mount SMB",
               link: "/manual/olares/files/mount-SMB",
             },
-            {text: "Mount cloud storage",
-              link: "/manual/olares/files/mount-cloud-storage",
-            },
+      //      {text: "Mount cloud storage",
+      //        link: "/manual/olares/files/mount-cloud-storage",
+      //      },
           ],
         },
         {

@@ -20,9 +20,7 @@ Create and manage your Olares ID, connect integrations with other services, and 
 - [Manage integrations](integrations.md)
 
 ### Secure file access & sync
-Access and sync your Olares files across devices.
 - [Manage files with LarePass](manage-files.md)
-- [Sync and share files](sync-share.md)
 
 ### Device & network management
 Activate and manage Olares devices, and securely connect to Olares via LarePass VPN.
