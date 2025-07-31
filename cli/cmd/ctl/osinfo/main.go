@@ -3,6 +3,7 @@ package osinfo
 import (
 	"fmt"
 
+	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/spf13/cobra"
 )
@@ -14,6 +15,7 @@ func NewCmdInfo() *cobra.Command {
 		Long:  "help for printing info",
 	}
 	infoCmd.AddCommand(showInfoCommand())
+	infoCmd.AddCommand(showAllCommand())
 
 	return infoCmd
 }
@@ -33,6 +35,20 @@ OS_VERSION=%s
 OS_KERNEL=%s
 OS_INFO=%s
 `, host.OsType, host.OsPlatformFamily, host.OsArch, host.OsVersion, host.OsKernel, host.OsInfo)
+		},
+	}
+	return cmd
+}
+
+func showAllCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "showall",
+		Short: "Print full os information",
+		Long:  "help for printing os info",
+		Run: func(cmd *cobra.Command, args []string) {
+			arg := common.NewArgument()
+
+			arg.SystemInfo.Print()
 		},
 	}
 	return cmd
