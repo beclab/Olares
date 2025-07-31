@@ -107,9 +107,6 @@ func GetUpgradePathFor(base *semver.Version, target *semver.Version) ([]*semver.
 			if !v.GreaterThan(base) {
 				return false
 			}
-			if !sameMajorLevelVersion(v, base) {
-				return false
-			}
 			if target != nil && !v.LessThan(target) {
 				return false
 			}
@@ -119,9 +116,6 @@ func GetUpgradePathFor(base *semver.Version, target *semver.Version) ([]*semver.
 		releaseLineUpgraders = dailyUpgraders
 		versionFilter = func(v *semver.Version) bool {
 			if !v.GreaterThan(base) {
-				return false
-			}
-			if !samePatchLevelVersion(v, base) {
 				return false
 			}
 			if target != nil && !v.LessThan(target) {

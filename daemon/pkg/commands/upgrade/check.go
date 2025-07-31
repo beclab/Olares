@@ -14,73 +14,12 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/klog/v2"
 )
-
-type versionCompatibilityCheck struct {
-	commands.Operation
-}
-
-var _ commands.Interface = &versionCompatibilityCheck{}
-
-func NewVersionCompatibilityCheck() commands.Interface {
-	return &versionCompatibilityCheck{
-		Operation: commands.Operation{
-			Name: commands.VersionCompatibilityCheck,
-		},
-	}
-}
-
-func (i *versionCompatibilityCheck) Execute(ctx context.Context, p any) (res any, err error) {
-	target, ok := p.(state.UpgradeTarget)
-	if !ok {
-		err = errors.New("invalid param")
-		return
-	}
-	dynamicClient, err := utils.GetDynamicClient()
-	if err != nil {
-		return nil, fmt.Errorf("error getting kubernetes client: %v", err)
-	}
-	olaresVersion, err := utils.GetTerminusVersion(ctx, dynamicClient)
-	if err != nil {
-		return nil, fmt.Errorf("error getting olares version: %v", err)
-	}
-	currentVersion, err := semver.NewVersion(*olaresVersion)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing current olares version %s: %v", *olaresVersion, err)
-	}
-	versionHintFile := filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+target.Version.Original(), "version.hint")
-	content, err := os.ReadFile(versionHintFile)
-	if err != nil {
-		return nil, fmt.Errorf("error reading version hint file %s: %v", versionHintFile, err)
-	}
-	versionHint := make(map[string]map[string]string)
-	if err := yaml.Unmarshal(content, &versionHint); err != nil {
-		return nil, fmt.Errorf("error parsing version hint file %s: %v", versionHintFile, err)
-	}
-	upgradeField, ok := versionHint["upgrade"]
-	if !ok {
-		return nil, fmt.Errorf("no upgrade field found in version hint file %s, content: %s", versionHintFile, content)
-	}
-	minVersionStr, ok := upgradeField["minVersion"]
-	if !ok || minVersionStr == "" {
-		return nil, fmt.Errorf("no minVersion field found in version hint file %s, content: %s", versionHintFile, content)
-	}
-	minVersion, err := semver.NewVersion(minVersionStr)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing minVersion: %s in version hint file %s: %v", minVersionStr, versionHintFile, err)
-	}
-	if currentVersion.LessThan(minVersion) {
-		return nil, fmt.Errorf("minVersion %s is greater than current version %s", minVersionStr, *olaresVersion)
-	}
-	return newExecutionRes(true, nil), nil
-}
 
 type preCheck struct {
 	commands.Operation
