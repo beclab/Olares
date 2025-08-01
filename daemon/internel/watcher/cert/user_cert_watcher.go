@@ -67,7 +67,7 @@ func (u *userCertWatcher) Watch(ctx context.Context) {
 			}
 
 			// Check if the certificate will expire within 10 days
-			if expiredTime.Before(time.Now().Add(10 * 24 * time.Hour)) {
+			if expiredTime.Before(time.Now().Add(5 * 24 * time.Hour)) {
 				klog.Info("user cert expired, ", user.GetName())
 				err = createOrUpdateJob(ctx, kubeClient, namespace)
 				if err != nil {
@@ -90,14 +90,16 @@ func createOrUpdateJob(ctx context.Context, kubeClient kubernetes.Interface, nam
 		}
 	} else {
 		// check the existing job
-		if currentJob.Status.Succeeded == 0 || currentJob.Status.Failed > 0 {
+		if currentJob.Status.Active > 0 {
 			klog.Info("job is still running, skip creating a new one")
 			return nil
 		}
 
 		// If the job exists and has completed, delete it before creating a new one
 		klog.Info("delete existing job: ", currentJob.Name)
-		err = kubeClient.BatchV1().Jobs(namespace).Delete(ctx, currentJob.Name, metav1.DeleteOptions{})
+		err = kubeClient.BatchV1().Jobs(namespace).
+			Delete(ctx, currentJob.Name,
+				metav1.DeleteOptions{PropagationPolicy: ptr.To(metav1.DeletePropagationBackground)})
 		if err != nil {
 			return fmt.Errorf("failed to delete job: %w", err)
 		}
@@ -131,7 +133,7 @@ var jobDownloadUserCert = batchv1.Job{
 							"--header",
 							"X-FROM-CRONJOB: true",
 							"-qSO -",
-							"http://bfl.user-space-pengpeng9/bfl/backend/v1/re-download-cert",
+							"http://bfl/bfl/backend/v1/re-download-cert",
 						},
 					},
 				},

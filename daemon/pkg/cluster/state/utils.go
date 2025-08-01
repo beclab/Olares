@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
 
 	"github.com/beclab/Olares/daemon/pkg/cli"
 	"github.com/beclab/Olares/daemon/pkg/commands"
@@ -182,7 +183,7 @@ func (t *UpgradeTarget) IsValidRequest() error {
 	if CurrentState.TerminusVersion != nil {
 		current, err := semver.NewVersion(*CurrentState.TerminusVersion)
 		if err != nil {
-			return fmt.Errorf("invalid current version %s: %v", CurrentState.TerminusVersion, err)
+			return fmt.Errorf("invalid current version %s: %v", *CurrentState.TerminusVersion, err)
 		}
 		if !current.LessThan(&t.Version) {
 			return fmt.Errorf("target version should be greater than current version: %s", current)
