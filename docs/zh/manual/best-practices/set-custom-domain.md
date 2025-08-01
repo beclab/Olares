@@ -91,7 +91,9 @@ DID（Decentralized Identifier，去中心化标识符）是在获得最终的 O
    ![域名状态更新](/images/manual/tutorials/domain-added.png#bordered)
 
 :::tip 注意
-TXT 验证通常在 30 分钟内完成。NS 记录验证可能需要长达 2 小时。如果整个过程超过 3 小时，请联系你的 DNS 服务商进行排查。
+- TXT 验证通常在 30 分钟内完成。NS 记录验证可能需要长达 2 小时。如果整个过程超过 3 小时，请联系你的 DNS 服务商进行排查。
+- 验证通过后不要修改 NS 记录，否则会引起自定义域名解析失效，无法访问。
+
 :::
 
 完成 TXT 和 NS 记录的验证后，你的域名将成功添加至 Olares Space。

@@ -87,8 +87,10 @@ Add and verify your own domain in Olares Space before binding it.
 
    ![domain added](/images/manual/tutorials/domain-added.png#bordered)
 
-:::info
-TXT verification typically completes within 30 minutes. NS record verification may take up to 2 hours. If the whole process exceeds 3 hours, check with your DNS provider.
+:::tip 
+- TXT verification typically completes within 30 minutes. NS record verification may take up to 2 hours. If the whole process exceeds 3 hours, check with your DNS provider.
+
+- Once verification is successful, do not modify the NS record. Doing so will cause the custom domain resolution to fail, making it inaccessible.
 :::
 
 Once TXT and NS records are verified, your domain is successfully added to Olares Space.

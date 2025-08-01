@@ -42,6 +42,9 @@ When you have everything ready, take the steps below to add your domain in Olare
     ![alt text](/images/how-to/space/ns.jpg#bordered)
 
    The system will verify your configuration. Once verified, the domain status will update to **Awaiting the application for the domain's Verifiable Credential**.
+   :::tip Note
+   Once verification is successful, do not modify the NS record. Doing so will cause the custom domain resolution to fail, making it inaccessible.
+   :::
 
    ![alt text](/images/how-to/space/awaiting_domain.jpg)
 

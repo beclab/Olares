@@ -41,7 +41,11 @@ description: 介绍在 Olares Space 中添加自定义域名的步骤，包含�
 
    ![alt text](/images/how-to/space/ns.jpg#bordered)
 
-   系统会验证你的配置。验证通过后，域名状态会更新为**等待申请域名可验证凭证**。
+   系统会验证你的配置。验证通过后，域名状态会更新为**等待申请域名可验证凭证**。、
+
+   ::: tip 注意
+   验证通过后不要修改 NS 记录，否则会引起自定义域名解析失效，无法访问。
+   :::
 
    ![alt text](/images/how-to/space/awaiting_domain.jpg)
 
