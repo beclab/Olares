@@ -66,7 +66,7 @@ func check(base *semver.Version, target *semver.Version) error {
 				return fmt.Errorf("upgrade on %s rlease line can only be performed across same major level version", baseReleaseLine)
 			}
 		case dailyLine:
-			if !samePatchLevelVersion(base, target) {
+			if !sameMinorLevelVersion(base, target) {
 				return fmt.Errorf("upgrade on %s rlease line can only be performed across same patch version", baseReleaseLine)
 			}
 		}
@@ -156,6 +156,10 @@ func getUpgraderByVersion(target *semver.Version) upgrader {
 
 func samePatchLevelVersion(a, b *semver.Version) bool {
 	return a.Major() == b.Major() && a.Minor() == b.Minor() && a.Patch() == b.Patch()
+}
+
+func sameMinorLevelVersion(a, b *semver.Version) bool {
+	return a.Major() == b.Major() && a.Minor() == b.Minor()
 }
 
 func sameMajorLevelVersion(a, b *semver.Version) bool {
