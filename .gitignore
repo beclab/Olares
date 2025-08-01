@@ -37,3 +37,5 @@ docs/.vitepress/dist/
 docs/.vitepress/cache/
 node_modules
 .idea/
+cli/olares-cli
+cli/olares-cli-arm
