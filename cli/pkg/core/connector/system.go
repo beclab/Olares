@@ -131,8 +131,19 @@ func (s *SystemInfo) IsSupport() error {
 	//}
 
 	if s.IsUbuntu() {
-		if !s.IsUbuntuVersionEqual(Ubuntu20) && !s.IsUbuntuVersionEqual(Ubuntu22) && !s.IsUbuntuVersionEqual(Ubuntu24) {
-			return fmt.Errorf("unsupported ubuntu os version '%s'", s.GetOsVersion())
+		if !s.IsUbuntuVersionEqual(Ubuntu20) &&
+			!s.IsUbuntuVersionEqual(Ubuntu22) &&
+			!s.IsUbuntuVersionEqual(Ubuntu24) {
+			// Interactive warning instead of outright failure
+			fmt.Printf(
+				"[System] unsupported ubuntu os version '%s' we will not provide support for use at your own risk would you like to continue? (y/N): ",
+				s.GetOsVersion(),
+			)
+			input, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+			input = strings.TrimSpace(input)
+			if input != "y" && input != "Y" {
+				return fmt.Errorf("unsupported ubuntu os version '%s'", s.GetOsVersion())
+			}
 		}
 	}
 
