@@ -140,6 +140,11 @@ func IsIpChanged(ctx context.Context, installed bool) (bool, error) {
 		return false, err
 	}
 
+	masterIpFromETCD, err := MasterNodeIp(installed)
+	if err != nil {
+		return false, err
+	}
+
 	for _, ip := range ips {
 		hostIps, err := nets.LookupHostIps()
 		if err != nil {
@@ -148,10 +153,19 @@ func IsIpChanged(ctx context.Context, installed bool) (bool, error) {
 
 		for _, hostIp := range hostIps {
 			if hostIp == ip.IP {
+				klog.V(8).Info("host ip is the same as internal ip of interface, ", hostIp, ", ", ip.IP)
 
 				if !installed {
 					// terminus not installed
-					return false, nil
+					if masterIpFromETCD == "" {
+						return false, nil
+					}
+
+					if masterIpFromETCD == ip.IP {
+						return false, nil
+					}
+
+					return true, nil
 				}
 
 				kubeClient, err := GetKubeClient()
@@ -162,8 +176,18 @@ func IsIpChanged(ctx context.Context, installed bool) (bool, error) {
 
 				_, nodeIp, nodeRole, err := GetThisNodeName(ctx, kubeClient)
 				if err != nil {
-					klog.Error("get this node name error, ", err)
-					return false, nil
+					klog.Warning("get this node name error, ", err, ", try to compare with etcd ip")
+					if masterIpFromETCD == "" {
+						klog.Info("master node ip not found, mybe it's a worker node")
+						return false, nil
+					}
+
+					if masterIpFromETCD == ip.IP {
+						return false, nil
+					}
+
+					klog.Info("master node ip from etcd is not the same as internal ip of interface, ", masterIpFromETCD, ", ", hostIp, ", ", ip.IP)
+					return true, nil
 
 				}
 
@@ -176,12 +200,13 @@ func IsIpChanged(ctx context.Context, installed bool) (bool, error) {
 					return false, nil
 				}
 
-				klog.Info("get node ip, ", nodeIp, ", ", hostIp, ", ", ip.IP)
-
+				klog.Info("node is master and node ip is not the same as internal ip of interface, ", nodeIp, ", ", hostIp, ", ", ip.IP)
+				return true, nil
 			}
-		}
-	}
+		} // end for host ips
+	} // end for interface ips
 
+	klog.Info("no host ip is the same as internal ip of interface, ", ips)
 	return true, nil
 }
 
