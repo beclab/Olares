@@ -157,7 +157,7 @@ jobs:
           cp .dist/install-wizard/install.sh build/base-package
           cp build/base-package/install.sh build/base-package/publicInstaller.sh
           cp build/base-package/install.sh build/base-package/publicInstaller.latest
-          cp .dist/install-wizard/install.ps1 build/insbase-packagetaller
+          cp .dist/install-wizard/install.ps1 build/base-package
           cp build/base-package/install.ps1 build/base-package/publicInstaller.latest.ps1
           cp .dist/install-wizard/joincluster.sh build/base-package
 
