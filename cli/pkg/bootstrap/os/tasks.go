@@ -371,6 +371,35 @@ func (n *NodeExecScript) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
+type SymLinkSysconf struct {
+	common.KubeAction
+}
+
+func (a *SymLinkSysconf) Execute(runtime connector.Runtime) error {
+	sysconfPath := "/etc/sysctl.conf"
+	sysconfSymLinkPath := "/etc/sysctl.d/99-sysctl.conf"
+	linkExists, err := runtime.GetRunner().FileExist(sysconfSymLinkPath)
+	if err != nil {
+		return fmt.Errorf("failed to check if %s exists", sysconfSymLinkPath)
+	}
+	if linkExists {
+		return nil
+	}
+	sysconfDir := filepath.Dir(sysconfSymLinkPath)
+	dirExists, err := runtime.GetRunner().DirExist(sysconfDir)
+	if err != nil {
+		return fmt.Errorf("failed to check if %s exists", sysconfDir)
+	}
+	if !dirExists {
+		err = runtime.GetRunner().MkDir(sysconfDir)
+		if err != nil {
+			return err
+		}
+	}
+	_, err = runtime.GetRunner().SudoCmd(fmt.Sprintf("ln -s %s %s", sysconfPath, sysconfSymLinkPath), true, false)
+	return err
+}
+
 var (
 	etcdFiles = []string{
 		"/usr/local/bin/etcd",

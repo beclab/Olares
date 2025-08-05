@@ -166,6 +166,15 @@ func (c *ConfigureOSModule) Init() {
 		Parallel: true,
 	}
 
+	symlinkSysconf := &task.RemoteTask{
+		Name:     "SymlinkSysconf",
+		Desc:     "Create symbolic link to sysconf if non-existing",
+		Hosts:    c.Runtime.GetAllHosts(),
+		Prepare:  &kubernetes.NodeInCluster{Not: true},
+		Action:   new(SymLinkSysconf),
+		Parallel: true,
+	}
+
 	ConfigureNtpServer := &task.RemoteTask{
 		Name:  "ConfigureNtpServer",
 		Desc:  "configure the ntp server for each node",
@@ -191,6 +200,7 @@ func (c *ConfigureOSModule) Init() {
 		initOS,
 		GenerateScript,
 		ExecScript,
+		symlinkSysconf,
 		ConfigureNtpServer,
 		configureSwap,
 	}
