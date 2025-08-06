@@ -127,8 +127,46 @@ spec:
             mountPropagation: Bidirectional
 {{ end }}
 
+        - command:
+          - /rclone
+          - rcd
+          - --rc-addr
+          - :5572
+          - --rc-no-auth
+          - --log-level
+          - DEBUG
+          - --no-check-certificate
+          - --fast-list
+          - --config
+          - /dev/null
+          image: beclab/rclone:v1.73.0
+          imagePullPolicy: IfNotPresent
+          name: rclone
+          ports:
+            - containerPort: 5572
+              protocol: TCP
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: true
+            privileged: true
+            runAsUser: 0
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /data/appcache/
+              name: upload-appdata
+            - mountPath: /appdata
+              name: fb-data
+            - mountPath: /data
+              name: userspace-dir
+            - mountPath: /appcache/
+              name: upload-appdata
+            - mountPath: /data/External
+              mountPropagation: Bidirectional
+              name: shared-lib
+
         - name: files
-          image: beclab/files-server:v0.2.85
+          image: beclab/files-server:v0.2.86
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -143,6 +181,8 @@ spec:
               mountPath: /data
             - name: upload-appdata
               mountPath: /appcache/
+            - name: seafile-data
+              mountPath: /root/dev/seafile-data
 {{ if .Values.sharedlib }}        
             - name: shared-lib
               mountPath: /data/External
@@ -254,6 +294,8 @@ spec:
               value: {{ $files_postgres_password | b64dec }}
             - name: PGDB1
               value: os_framework_files
+            - name: FB_SEAFILE_RPC_PATH
+              value: /root/dev/seafile-data
             - name: UPLOAD_FILE_TYPE
               value: '*'
             - name: UPLOAD_LIMITED_SIZE
@@ -350,6 +392,11 @@ spec:
           hostPath:
             path: '{{ .Values.rootPath }}/userdata/Cache'
             type: Directory
+
+        - name: seafile-data
+          hostPath:
+            path: '{{ .Values.rootPath }}/rootfs/Application/seafile/data'
+            type: DirectoryOrCreate
         
 {{ if .Values.sharedlib }}        
         - name: shared-lib
