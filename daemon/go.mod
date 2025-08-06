@@ -26,7 +26,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/eball/zeroconf v0.2.1
 	github.com/godbus/dbus/v5 v5.1.0
-	github.com/gofiber/fiber/v2 v2.52.5
+	github.com/gofiber/fiber/v2 v2.52.9
 	github.com/hirochachacha/go-smb2 v1.1.0
 	github.com/jaypipes/ghw v0.13.0
 	github.com/jochenvg/go-udev v0.0.0-20171110120927-d6b62d56d37b
@@ -67,7 +67,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.11.7 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
-	github.com/andybalholm/brotli v1.0.5 // indirect
+	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
