@@ -253,88 +253,28 @@ spec:
         tier: seafile
     spec:
       initContainers:
-        - name: init-container
-          image: 'postgres:16.0-alpine3.18'
-          command:
-            - sh
-            - '-c'
-            - >-
-              echo -e "Checking for the availability of PostgreSQL Server deployment";
-              until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB1 -c "SELECT 1";
-              do sleep 1; printf "-"; done; sleep 15;
-              echo -e " >> $PGDB1 exists";
-              until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB2 -c "SELECT 1";
-              do sleep 1; printf "-"; done; sleep 15;
-              echo -e " >> $PGDB2 exists";
-              until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB3 -c "SELECT 1";
-              do sleep 1; printf "-"; done; sleep 15;
-              echo -e " >> $PGDB3 exists";
-              until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB1 -c "SELECT 1";
-              do sleep 1; printf "-"; done; sleep 15;
-              echo -e " >> PostgreSQL DB Server has started";
-          env:
-            - name: PGHOST
-              value: citus-headless.os-platform
-            - name: PGPORT
-              value: "5432"
-            - name: PGUSER
-              value: seafile_os_framework
-            - name: PGPASSWORD
-              value: {{ $pg_password | b64dec }}
-            - name: PGDB1
-              value: os_framework_ccnet
-            - name: PGDB2
-              value: os_framework_seafile
-            - name: PGDB3
-              value: os_framework_seahub
-
-      containers:
-      - name: seahub
-        image: beclab/pg_seahub:v0.0.15
-        imagePullPolicy: IfNotPresent
-        ports:
-          - containerPort: 8000
-            protocol: TCP
+      - name: seahub-init
+        image: beclab/seahub-init:v0.0.2
         env:
           - name: DB_HOST
             value: citus-headless.os-platform
           - name: DB_PORT
             value: '5432'
+          - name: DB_USER
+            value: seafile_os_framework
+          - name: DB_PASSWORD
+            value: {{ $pg_password | b64dec }}
           - name: DB_NAME1
             value: os_framework_ccnet
           - name: DB_NAME2
             value: os_framework_seafile
           - name: DB_NAME3
             value: os_framework_seahub
-          - name: DB_USER
-            value: seafile_os_framework
-          - name: DB_PASSWORD
-            value: {{ $pg_password | b64dec }}
-          - name: CCNET_CONF_DIR
-            value: /root/dev/conf
-          - name: SEAFILE_CONF_DIR
-            value: /root/dev/seafile-data
-          - name: SEAFILE_CENTRAL_CONF_DIR
-            value: /root/dev/conf
-          - name: PYTHONPATH
-            value: >-
-              /usr/local/lib/python3.8/site-packages/:/root/dev/source-code/seahub/thirdpart
-          - name: SEAFILE_ADMIN_EMAIL
-            value: admin@bytetrade.io
-          - name: SEAFILE_ADMIN_PASSWORD
-            value: admin
-        volumeMounts:
-          - name: sync-data
-            mountPath: /shared
-          - name: seafile-data
-            mountPath: /root/dev/seafile-data
-          - name: seafile-nginx-conf
-            mountPath: /root/dev/seafile-data/seafile.conf
-            subPath: seafile.conf
-          - name: seafile-nginx-conf
-            mountPath: /root/dev/conf/seahub_settings.py
-            subPath: seahub_settings.py
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        imagePullPolicy: IfNotPresent
 
+      containers:
       - name: seafile-server
         image: beclab/pg_seafile_server:v0.0.15
         imagePullPolicy: IfNotPresent
@@ -453,7 +393,7 @@ metadata:
 spec:
   type: subscriber
   event: user.create
-  callback: http://seafile.{{ .Release.Namespace }}:8000/callback/create
+  callback: http://files-service.os-framework/callback/create
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
@@ -464,7 +404,7 @@ metadata:
 spec:
   type: subscriber
   event: user.delete
-  callback: http://seafile.{{ .Release.Namespace }}:8000/callback/delete
+  callback: http://files-service.os-framework/callback/delete
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest

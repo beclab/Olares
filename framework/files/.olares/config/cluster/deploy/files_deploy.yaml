@@ -166,7 +166,7 @@ spec:
               name: shared-lib
 
         - name: files
-          image: beclab/files-server:v0.2.86
+          image: beclab/files-server:v0.2.87
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -214,24 +214,12 @@ spec:
               value: 'False'
             - name: PHOTOS_ENABLED
               value: 'True'
-#            - name: BFL_NAME
-#              value: 'os-system'
             - name: FB_DATABASE
               value: /appdata/database/filebrowser.db
             - name: FB_CONFIG
               value: /appdata/config/settings.json
             - name: FB_ROOT
               value: /data
-#            - name: ZINC_USER
-#              value: zincuser-files-os-system
-#            - name: ZINC_PASSWORD
-#              value: {{ $files_postgres_password | b64dec }}
-#            - name: ZINC_HOST
-#              value: zinc-server-svc.os-system
-#            - name: ZINC_PORT
-#              value: "80"
-#            - name: ZINC_INDEX
-#              value: os-system_zinc-files
             - name: WATCH_DIR
               value: '/Home'
             - name: FS_TYPE
@@ -317,35 +305,6 @@ spec:
             - --noauth
             - -p
             - "8080"
-        - name: uploader
-          image: beclab/upload:v1.0.14
-          env:
-            - name: UPLOAD_FILE_TYPE
-              value: '*'
-            - name: UPLOAD_LIMITED_SIZE
-              value: '118111600640'
-            - name: RESERVED_SPACE
-              value: '1000'
-          volumeMounts:
-            - name: fb-data
-              mountPath: /appdata
-            - name: userspace-dir
-              mountPath: /data
-            - name: upload-appdata
-              mountPath: /appcache/
-{{ if .Values.sharedlib }}
-            - name: shared-lib
-              mountPath: /data/External
-              mountPropagation: Bidirectional
-{{ end }}
-          resources: { }
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
-          imagePullPolicy: IfNotPresent
-          securityContext:
-            allowPrivilegeEscalation: true
-            runAsUser: 0
-            privileged: true
         - name: nginx
           image: 'beclab/docker-nginx-headers-more:ubuntu-v0.1.0'
           securityContext:
@@ -732,6 +691,25 @@ data:
             }
 
     	location /api {
+            proxy_pass http://127.0.0.1:8080;
+            # rewrite ^/server(.*)$ $1 break;
+
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+
+            add_header Accept-Ranges bytes;
+
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+
+        location /callback {
             proxy_pass http://127.0.0.1:8080;
             # rewrite ^/server(.*)$ $1 break;
 
