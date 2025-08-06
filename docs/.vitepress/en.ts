@@ -511,47 +511,47 @@ const side = {
             text: "Olares versioning",
             link: "/developer/install/versioning",
           },
-        ],
-      },
-       //  {
-         //  text: "Additional installations",
-         //  link: "/developer/install/additional-installations",
-         //  collapsed: true,
-         //  items: [
-         //    { text: "Linux (via Docker)", link: "/developer/install/linux-via-docker-compose"},
-         //    {
-         //      text: "macOS",
-          //     collapsed: true,
-          //     items: [
-          //       {
-          //         text: "Using the script (recommended)",
-           //        link: "/developer/install/mac",
-          //       },
-          //      {
-          //         text: "Using Docker image",
-          //         link: "/developer/install/mac-via-docker-image",
-          //       },
-           //    ],
-          //   },
-          //   {
-          //     text: "Windows (WSL 2)",
-         //      collapsed: true,
-         //      items: [
-         //        {
-          //         text: "Using the script (recommended)",
-          //         link: "/developer/install/windows",
-          //       },
-          //       {
-          //         text: "Using Docker image",
-          //        link: "/developer/install/windows-via-docker-image",
-          //       },
-          //     ],
-          //   },
-          //   { text: "PVE", link: "/developer/install/pve" },
-          //   { text: "LXC", link: "/developer/install/lxc" },
-          //   { text: "Raspberry Pi", link: "/developer/install/raspberry-pi" },
-         //  ],
-       //  },
+       {
+         text: "Additional installations",
+         link: "/developer/install/additional-installations",
+         collapsed: true,
+         items: [
+           { text: "Linux (via Docker)", link: "/developer/install/linux-via-docker-compose"},
+           {
+             text: "macOS",
+             collapsed: true,
+             items: [
+               {
+                 text: "Using the script (recommended)",
+                 link: "/developer/install/mac",
+               },
+              {
+                 text: "Using Docker image",
+                 link: "/developer/install/mac-via-docker-image",
+               },
+             ],
+           },
+           {
+             text: "Windows (WSL 2)",
+             collapsed: true,
+             items: [
+               {
+                 text: "Using the script (recommended)",
+                 link: "/developer/install/windows",
+               },
+               {
+                 text: "Using Docker image",
+                link: "/developer/install/windows-via-docker-image",
+               },
+             ],
+           },
+           { text: "PVE", link: "/developer/install/pve" },
+           { text: "LXC", link: "/developer/install/lxc" },
+           { text: "Raspberry Pi", link: "/developer/install/raspberry-pi" },
+         ],
+       },
+    ],
+  },
     {
       text: "Develop Olares app",
       link: "/developer/develop/",

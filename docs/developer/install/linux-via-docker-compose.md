@@ -53,6 +53,70 @@ cd ~/olares-config
    :::
 3. Save the `docker-compose.yaml` file.
 
+Here is the updated and properly formatted Markdown content for installing GPU drivers and the NVIDIA Container Toolkit, ready to be included in your installation guide:
+
+
+## Install GPU dependencies (for GPU-enabled machines)
+
+1. Install GPU drivers for your system:
+
+    ```bash
+    curl -o /tmp/keyring.deb -L https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb && \
+    sudo dpkg -i --force-all /tmp/keyring.deb
+    
+    sudo apt update
+    sudo apt install nvidia-kernel-open-570
+    sudo apt install nvidia-driver-570
+    ````
+
+2. Install the NVIDIA Container Toolkit to enable Docker to access your GPU. 
+     
+     a. Configure the repository:
+
+    ```bash
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+      sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+    
+    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+      sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+      sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    
+    sudo sed -i -e '/experimental/ s/^#//g' /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    
+    sudo apt-get update
+    ```
+
+      b. Install the toolkit and restart docker:
+
+   ```bash
+   sudo apt-get install -y nvidia-container-toolkit
+   sudo nvidia-ctk runtime configure --runtime=docker
+   sudo systemctl restart docker
+   ```
+
+      c. Verify the installation:
+
+   ```bash
+   sudo docker run --rm --runtime=nvidia --gpus all ubuntu nvidia-smi
+   ```
+
+    If successful, you should see output similar to the following:
+
+    ```
+    +-----------------------------------------------------------------------------------------+
+    | NVIDIA-SMI 570.169                Driver Version: 570.169        CUDA Version: 12.8     |
+    |-----------------------------------------+------------------------+----------------------+
+    | GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+    | Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+    |                                         |                        |               MIG M. |
+    |=========================================+========================+======================|
+    |   0  NVIDIA GeForce RTX 4070 ...    Off |   00000000:01:00.0 Off |                  N/A |
+    | N/A   41C    P8              1W /   80W |      32MiB /   8188MiB |      0%      Default |
+    |                                         |                        |                  N/A |
+    +-----------------------------------------+------------------------+----------------------+
+    ```
+
+
 ## Set up environment variables and start container
 
 1. In the `olares-config` directory, use the following command to set the environment variables and start the Olares services:
@@ -122,7 +186,7 @@ To uninstall the container:
 docker compose down
 ```
 
-<!--@include: ./reusables.md{35,39}-->
+<!--@include: ./reusables.md{39,43}-->
    
    
 

@@ -11,3 +11,4 @@ This section provides in-depth information, command references, and instructions
 - [Olares environment variables reference](environment-variables.md): Find the right environment variables for you to customize the installation.
 - [Olares CLI reference](./index.md): Uses the Olares CLI for advanced customization and troubleshooting during installation.
 - [Olares versioning](versioning.md): Learn versioning rules, release types, branch management practices, and upgrade guidelines of Olares.
+- [Additional installations](additional-installations.md): Try Olares on Docker, macOS, Windows, and PVE, and Raspberry Pi.

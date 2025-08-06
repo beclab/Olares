@@ -13,7 +13,7 @@ Windows 版 Olares 目前存在以下限制：
 建议仅用于开发或测试环境。
 :::
 
-<!--@include: ./reusables.md{36,41}-->
+<!--@include: ./reusables.md{39,45}-->
 
 ## 系统要求
 Windows 设备需满足以下条件：
@@ -53,7 +53,15 @@ Windows 设备需满足以下条件：
    DXCore 版本： 10.0.26100.1-240331-1435.ge-release
    Windows 版本： 10.0.26100.3475
    ```
-2. 下载与 WSL 内核版本相匹配的文件：`https://cdn.joinolares.cn/bzImage-<内核版本号>`。
+2. 执行 `docker info` 以查看 `Cgroup` 版本信息，确保其版本为 2。
+
+    ```powershell
+   ...
+   Cgroup Driver: cgroupfs
+   Cgroup version: 2
+   ```
+
+3. 下载与 WSL 内核版本相匹配的文件：`https://cdn.joinolares.cn/bzImage-<内核版本号>`。
   例如，`5.15.167.4-1` 版本对应的链接是 [https://cdn.joinolares.cn/bzImage-5.15.167.4](https://cdn.joinolares.cn/bzImage-5.15.167.4)。
 
    目前支持以下内核版本（`5.15.146.1` 及以上）：
@@ -163,4 +171,4 @@ docker run --gpus all -d --privileged -v oic-data:/var \
 
 <!--@include: ./manage-olares-container.md-->
 
-<!--@include: ./reusables.md{30,34}-->
+<!--@include: ./reusables.md{33,37}-->

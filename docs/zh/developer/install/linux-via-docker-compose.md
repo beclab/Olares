@@ -9,7 +9,7 @@ description: 了解如何使用 Docker Compose 在 Linux 服务器上部署 Olar
 该部署方式仅适用于开发或测试环境。我们推荐[通过脚本方式在 Linux 上安装 Olares](/zh/manual/get-started/install-olares.md)，以获得最佳的性能与稳定性。
 :::
 
-<!--@include: ./reusables.md{36,41}-->
+<!--@include: ./reusables.md{39,45}-->
 
 ## 系统要求
 
@@ -50,6 +50,67 @@ cd ~/olares-config
    <<< @/code-snippets/docker-compose-GPU.yaml
    :::
 3. 保存 `docker-compose.yaml` 文件。
+
+## 安装 GPU 依赖（适用于启用 GPU 的设备）
+
+1. 为系统安装 GPU 驱动：
+
+    ```bash
+    curl -o /tmp/keyring.deb -L https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb && \
+    sudo dpkg -i --force-all /tmp/keyring.deb
+    
+    sudo apt update
+    sudo apt install nvidia-kernel-open-570
+    sudo apt install nvidia-driver-570
+    ````
+
+2. 安装 NVIDIA Container Toolkit，确保 Docker 能访问 GPU。 
+     
+     a. 配置软件源：
+
+    ```bash
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+      sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+    
+    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+      sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+      sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    
+    sudo sed -i -e '/experimental/ s/^#//g' /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    
+    sudo apt-get update
+    ```
+
+     b. 安装 Toolkit 并重启 Docker：
+
+   ```bash
+   sudo apt-get install -y nvidia-container-toolkit
+   sudo nvidia-ctk runtime configure --runtime=docker
+   sudo systemctl restart docker
+   ```
+ 
+    c. 验证安装：
+ 
+
+    ```bash
+    sudo docker run --rm --runtime=nvidia --gpus all ubuntu nvidia-smi
+    ```
+    
+   如果安装成功，你将看到如下类似的输出：
+
+    ```
+    +-----------------------------------------------------------------------------------------+
+    | NVIDIA-SMI 570.169                Driver Version: 570.169        CUDA Version: 12.8     |
+    |-----------------------------------------+------------------------+----------------------+
+    | GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+    | Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+    |                                         |                        |               MIG M. |
+    |=========================================+========================+======================|
+    |   0  NVIDIA GeForce RTX 4070 ...    Off |   00000000:01:00.0 Off |                  N/A |
+    | N/A   41C    P8              1W /   80W |      32MiB /   8188MiB |      0%      Default |
+    |                                         |                        |                  N/A |
+    +-----------------------------------------+------------------------+----------------------+
+    ```
 
 ## 更新 Docker 的镜像源
 添加 Olares 的镜像源，提高镜像拉取速度：
@@ -139,7 +200,7 @@ docker compose start
 docker compose down
 ```
 
-<!--@include: ./reusables.md{30,34}-->
+<!--@include: ./reusables.md{33,37}-->
    
    
 

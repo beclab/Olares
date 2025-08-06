@@ -12,7 +12,8 @@ Currently, Olares on Windows has certain limitations including:
 
 We recommend using it only for development or testing purposes.
 :::
-<!--@include: ./reusables.md{41,47}-->
+<!--@include: ./reusables.md{45,47}-->
+:::
 
 ## System requirements
 Make sure your Windows meets the following requirements.
@@ -52,7 +53,14 @@ Before you begin, ensure the following:
    DXCore version: 10.0.26100.1-240331-1435.ge-release
    Windows version: 10.0.26100.3475
    ```
-2. Use the link provided to download the appropriate kernel file matching your version: `https://dc3p1870nn3cj.cloudfront.net/bzImage-<kernel-version>`.
+2. Run `docker info` and look for the `Cgroup` version section as shown below. Make sure it is v2.
+    ```powershell
+   ...
+   Cgroup Driver: cgroupfs
+   Cgroup version: 2
+   ```
+
+3. Use the link provided to download the appropriate kernel file matching your version: `https://dc3p1870nn3cj.cloudfront.net/bzImage-<kernel-version>`.
    For example, For kernel version `5.15.167.4`, download the file from `https://dc3p1870nn3cj.cloudfront.net/bzImage-5.15.167.4`.
 
    Supported kernel versions (above `5.15.146.1`) are:
@@ -63,11 +71,11 @@ Before you begin, ensure the following:
    -  `linux-msft-wsl-6.6.75.1`
    -  `linux-msft-wsl-6.6.36.6`
    -  `linux-msft-wsl-6.6.36.3`
-3. Set the default version of WSL to version 2:
+4. Set the default version of WSL to version 2:
   ```bash
   wsl --set-default-version 2
   ```
-4. In the directory `C:\Users\<YourUsername>\`, create a file named `.wslconfig` with the following content:
+5. In the directory `C:\Users\<YourUsername>\`, create a file named `.wslconfig` with the following content:
    ```txt
    [wsl2]
    kernel=c:\\path\\to\\your\\kernel\\bzImage-<version> # Note: Use double backslashes (\\) as path separators
@@ -81,7 +89,7 @@ Before you begin, ensure the following:
    wsl --unregister docker-desktop-data # If this version exists
    ```
    :::
-5. Restart your computer to apply the changes.
+6. Restart your computer to apply the changes.
 
 ## Prepare Docker
 If you have installed Docker Desktop before modifying `.wslconfig`, remove docker desktop then restart Windows.
@@ -146,4 +154,4 @@ The `--rm` flag automatically deletes the container after it stops. If this happ
 
 <!--@include: ./manage-olares-container.md-->
 
-<!--@include: ./reusables.md{35,39}-->
+<!--@include: ./reusables.md{39,43}-->

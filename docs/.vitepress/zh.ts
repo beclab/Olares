@@ -517,45 +517,45 @@ const side = {
           text: "版本说明",
           link: "/zh/developer/install/versioning",
         },
-       // {
-       //   text: "其他安装方式",
-       //    link: "/zh/developer/install/additional-installations",
-       //   collapsed: true,
-       //   items: [
-       //     { text: "Linux（Docker 镜像）", link: "/zh/developer/install/linux-via-docker-compose" },
-       //     {
-       //       text: "macOS",
-       //       collapsed: true,
-       //       items: [
-       //         {
-       //           text: "使用脚本（推荐）",
-       //           link: "/zh/developer/install/mac",
-       //         },
-       //         {
-       //           text: "使用 Docker 镜像",
-       //           link: "/zh/developer/install/mac-via-docker-image",
-       //         },
-       //       ],
-       //     },
-       //     {
-       //       text: "Windows (WSL 2)",
-       //       collapsed: true,
-       //       items: [
-       //         {
-        //          text: "使用脚本（推荐）",
-        //          link: "/zh/developer/install/windows",
-        //        },
-        //        {
-        //          text: "使用 Docker 镜像",
-        //          link: "/zh/developer/install/windows-via-docker-image",
-        //        },
-        //      ],
-        //    },
-        //    { text: "PVE", link: "/zh/developer/install/pve" },
-         //   { text: "LXC", link: "/zh/developer/install/lxc" },
-         //   { text: "树莓派", link: "/zh/developer/install/raspberry-pi" },
-        //  ],
-       // },
+          {
+            text: "其他安装方式",
+             link: "/zh/developer/install/additional-installations",
+            collapsed: true,
+            items: [
+              { text: "Linux（Docker 镜像）", link: "/zh/developer/install/linux-via-docker-compose" },
+              {
+                text: "macOS",
+                collapsed: true,
+                items: [
+                  {
+                    text: "使用脚本（推荐）",
+                    link: "/zh/developer/install/mac",
+                  },
+                  {
+                    text: "使用 Docker 镜像",
+                    link: "/zh/developer/install/mac-via-docker-image",
+                  },
+                ],
+              },
+              {
+                text: "Windows (WSL 2)",
+                collapsed: true,
+                items: [
+                  {
+                    text: "使用脚本（推荐）",
+                    link: "/zh/developer/install/windows",
+                  },
+                  {
+                    text: "使用 Docker 镜像",
+                    link: "/zh/developer/install/windows-via-docker-image",
+                  },
+                ],
+              },
+              { text: "PVE", link: "/zh/developer/install/pve" },
+              { text: "LXC", link: "/zh/developer/install/lxc" },
+              { text: "树莓派", link: "/zh/developer/install/raspberry-pi" },
+            ],
+          },
       ],
     },
     {

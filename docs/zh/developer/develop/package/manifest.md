@@ -119,10 +119,10 @@ olaresManifest.type: app
 
 开发者可以使用 1-3 位的版本号来标识该应用遵循的配置版本。以下是有效版本的一些示例：
 ```Yaml
-OlaresManifest.yaml.version: 1
-OlaresManifest.yaml.version: 1.1.0
-OlaresManifest.yaml.version: '2.2'
-OlaresManifest.yaml.version: "3.0.122"
+olaresManifest.yaml.version: 1
+olaresManifest.yaml.version: 1.1.0
+olaresManifest.yaml.version: '2.2'
+olaresManifest.yaml.version: "3.0.122"
 ```
 
 ## Metadata

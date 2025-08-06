@@ -42,4 +42,4 @@ olares-cli uninstall --all
 - 使用的平台或环境（如 Ubuntu、Docker、WSL 等）。
 - 安装方式（脚本安装或 Docker 镜像）。
 - 详细的错误信息（包括日志、错误提示或截图）。
-  :::
+:::
