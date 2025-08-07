@@ -49,10 +49,6 @@ spec:
         {{- if .Values.apiserver.extraVolumeMounts }}
           {{- toYaml .Values.apiserver.extraVolumeMounts | nindent 8 }}
         {{- end }}
-        env:
-        {{- if .Values.env }}
-        {{- toYaml .Values.env | nindent 8 }}
-        {{- end }}
         livenessProbe:
           failureThreshold: 8
           httpGet:

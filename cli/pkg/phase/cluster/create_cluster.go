@@ -39,7 +39,7 @@ func NewDarwinClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.Ins
 		&kubesphere.DeployMiniKubeModule{},
 		&kubesphere.DeployModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
 		&ksplugins.DeployKsPluginsModule{},
-		&ksplugins.DeployRedisModule{},
+		//&ksplugins.DeployRedisModule{},
 		&ksplugins.CreateKubeSphereSecretModule{},
 		&ksplugins.DeployKsCoreConfigModule{}, // ks-core-config
 		&ksplugins.CreateMonitorDashboardModule{},
@@ -98,7 +98,7 @@ func NewK3sCreateClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.
 		&storage.DeployLocalVolumeModule{Skip: skipLocalStorage},
 		&kubesphere.DeployModule{Skip: !runtime.Cluster.KubeSphere.Enabled}, //
 		&ksplugins.DeployKsPluginsModule{},
-		&ksplugins.DeployRedisModule{},
+		//&ksplugins.DeployRedisModule{},
 		&ksplugins.CreateKubeSphereSecretModule{},
 		&ksplugins.DeployKsCoreConfigModule{}, // ks-core-config
 		&ksplugins.CreateMonitorDashboardModule{},
@@ -161,7 +161,7 @@ func NewCreateClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.Ins
 		&storage.DeployLocalVolumeModule{Skip: skipLocalStorage},
 		&kubesphere.DeployModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
 		&ksplugins.DeployKsPluginsModule{},
-		&ksplugins.DeployRedisModule{},
+		//&ksplugins.DeployRedisModule{},
 		&ksplugins.CreateKubeSphereSecretModule{},
 		&ksplugins.DeployKsCoreConfigModule{}, // ! ks-core-config
 		&ksplugins.CreateMonitorDashboardModule{},

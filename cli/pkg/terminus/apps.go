@@ -82,10 +82,10 @@ func (u *PrepareAppValues) Execute(runtime connector.Runtime) error {
 	defer cancel()
 
 	ns := fmt.Sprintf("user-space-%s", u.KubeConf.Arg.User.UserName)
-	redisPassword, err := getRedisPassword(client, runtime)
-	if err != nil {
-		return err
-	}
+	//redisPassword, err := getRedisPassword(client, runtime)
+	//if err != nil {
+	//	return err
+	//}
 
 	bfDocUrl, _ := getDocUrl(ctx, runtime)
 	bflNodeName, err := getBflPod(ctx, ns, client, runtime)
@@ -131,9 +131,9 @@ func (u *PrepareAppValues) Execute(runtime connector.Runtime) error {
 		"gpu":          gpuType,
 		"fs_type":      fsType,
 		"os":           appValues,
-		"kubesphere": map[string]interface{}{
-			"redis_password": redisPassword,
-		},
+		//"kubesphere": map[string]interface{}{
+		//	"redis_password": redisPassword,
+		//},
 		common.HelmValuesKeyTerminusGlobalEnvs: common.TerminusGlobalEnvs,
 		common.HelmValuesKeyOlaresRootFSPath:   storage.OlaresRootDir,
 	}
