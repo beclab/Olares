@@ -1,10 +1,7 @@
 ---
 description: Learn about Olares, an open-source sovereign cloud OS for local AI. Discover how to self-host services, run AI applications, manage files, and collaborate securely with enterprise-grade features.
 ---
-# Olares documentation<Badge type="warning">Dev</Badge>
-::: warning Note on Dev version
-This documentation provides a preview of features for an upcoming Olares version. As this is not a stable release, the features and user interface described here may be unstable, incomplete, and are subject to change.
-:::
+# Olares documentation
 
 ## What is Olares?
 

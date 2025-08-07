@@ -9,7 +9,7 @@ hero:
   actions:
   - theme: brand
     text: 什么是 Olares？
-    link: /zh/manual/docs-home
+    link: /zh/manual/overview
   - theme: alt
     text: 在 GitHub 上关注我们
     link: https://github.com/beclab/olares

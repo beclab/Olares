@@ -9,7 +9,7 @@ hero:
   actions:
   - theme: brand
     text: What is Olares?
-    link: /manual/docs-home
+    link: /manual/overview
   - theme: alt
     text: Star us on GitHub
     link: https://github.com/beclab/olares

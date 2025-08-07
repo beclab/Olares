@@ -119,10 +119,10 @@ As Olares evolves, the configuration specification of `OlaresManifest.yaml` may 
 
 Developers can use 1-3 digit version numbers to indicate the application's configuration version. Here are some examples of valid versions:
 ```Yaml
-olaresManifest.yaml.version: 1
-olaresManifest.yaml.version: 1.1.0
-olaresManifest.yaml.version: '2.2'
-olaresManifest.yaml.version: "3.0.122"
+olaresManifest.version: 1
+olaresManifest.version: 1.1.0
+olaresManifest.version: '2.2'
+olaresManifest.version: "3.0.122"
 ```
 
 ## Metadata
