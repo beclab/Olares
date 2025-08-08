@@ -5,6 +5,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/node"
 	"github.com/beclab/Olares/cli/cmd/ctl/os"
 	"github.com/beclab/Olares/cli/cmd/ctl/osinfo"
+	"github.com/beclab/Olares/cli/cmd/ctl/user"
 	"github.com/beclab/Olares/cli/version"
 	"github.com/spf13/cobra"
 )
@@ -31,6 +32,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(os.NewOSCommands()...)
 	cmds.AddCommand(node.NewNodeCommand())
 	cmds.AddCommand(gpu.NewCmdGpu())
+	cmds.AddCommand(user.NewUserCommand())
 
 	return cmds
 }
