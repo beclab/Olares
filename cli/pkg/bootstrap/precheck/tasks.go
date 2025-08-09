@@ -75,7 +75,22 @@ func (t *SystemSupportCheck) Name() string {
 }
 
 func (t *SystemSupportCheck) Check(runtime connector.Runtime) error {
-	return runtime.GetSystemInfo().IsSupport()
+	err := runtime.GetSystemInfo().IsSupport()
+	if err == nil {
+		return nil
+	}
+	// Interactive warning instead of outright failure
+	fmt.Printf("%v Use at your own risk, would you like to continue? (Y/N): ", err)
+	reader, err := utils.GetBufIOReaderOfTerminalInput()
+	if err != nil {
+		return fmt.Errorf("could not read terminal input: %v", err)
+	}
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+	if !strings.HasPrefix("yes", strings.ToLower(input)) {
+		return err
+	}
+	return nil
 }
 
 type RequiredPortsCheck struct{}
