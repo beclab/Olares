@@ -166,7 +166,7 @@ spec:
               name: shared-lib
 
         - name: files
-          image: beclab/files-server:v0.2.87
+          image: beclab/files-server:v0.2.88
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
