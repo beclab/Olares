@@ -27,25 +27,10 @@ type InstallOsSystem struct {
 }
 
 func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
-	kubectl, err := util.GetCommand(common.CommandKubectl)
-	if err != nil {
-		return errors.Wrap(errors.WithStack(err), "kubectl not found")
-	}
-
 	if !runtime.GetSystemInfo().IsDarwin() {
 		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("mkdir -p %s && chown 1000:1000 %s", storage.OlaresSharedLibDir, storage.OlaresSharedLibDir), false, false); err != nil {
 			return errors.Wrap(errors.WithStack(err), "failed to create shared lib dir")
 		}
-	}
-
-	var cmd = fmt.Sprintf("%s get secret -n kubesphere-system redis-secret -o jsonpath='{.data.auth}' |base64 -d", kubectl)
-	redisPwd, err := runtime.GetRunner().SudoCmd(cmd, false, false)
-	if err != nil {
-		return errors.Wrap(errors.WithStack(err), "get redis secret error")
-	}
-
-	if redisPwd == "" {
-		return fmt.Errorf("redis secret not found")
 	}
 
 	config, err := ctrl.GetConfig()
@@ -61,7 +46,6 @@ func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
 	defer cancel()
 
 	vals := map[string]interface{}{
-		"kubesphere": map[string]interface{}{"redis_password": redisPwd},
 		"backup": map[string]interface{}{
 			"bucket":           t.KubeConf.Arg.Storage.BackupClusterBucket,
 			"key_prefix":       t.KubeConf.Arg.Storage.StoragePrefix,

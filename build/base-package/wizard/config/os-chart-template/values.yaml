@@ -1,5 +1,3 @@
-kubesphere:
-  redis_password: ""
 backup:
   bucket: "${BACKUP_CLUSTER_BUCKET}"
   key_prefix: "${BACKUP_KEY_PREFIX}"
