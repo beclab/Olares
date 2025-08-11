@@ -38,5 +38,3 @@ os:
   search2:
     appKey: '${ks[0]}'
     appSecret: test
-kubesphere:
-  redis_password: ""
