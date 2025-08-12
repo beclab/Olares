@@ -200,7 +200,7 @@ spec:
             - name: NATS_SUBJECT_SYSTEM_GROUPS
               value: "os.groups"
 
-          image: beclab/lldap:0.0.10
+          image: beclab/lldap:0.0.11
           imagePullPolicy: IfNotPresent
           name: lldap
           ports:
