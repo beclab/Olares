@@ -456,6 +456,8 @@ spec:
           value: "os.notification"
         - name: NATS_SUBJECT_FOR_USERS
           value: "os.users"
+        - name: NATS_SUBJECT_FOR_GROUPS
+          value: "os.groups"
 
         volumeMounts:
         - name: config
