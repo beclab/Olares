@@ -38,34 +38,38 @@ For community applications, you can quickly obtain a simple and memorable URL by
 4. Next to **Set custom Route ID**, click <i class="material-symbols-outlined">add</i>.
 5. Enter a route ID that is more memorable and recognizable. For example, `jellyfin`.
 
-   ![Custom route ID](/images/manual/olares/custom-route-id.png#bordered)
+   ![Custom route ID](/images/manual/olares/custom-route-id.jpeg#bordered)
 6. Click **Confirm**.
 
 Now, you will be able to access Jellyfin from your new URL: `https://jellyfin.local.bob.olares.com`.
 
 ### Custom domain name
-Instead of using the default Olares domain, you can use your own domain name to access your applications, making them more professional and easier to remember. To use Affine as an example:
+Instead of using the default Olares domain, you can use your own domain name to access your applications, making them more professional and easier to remember. To configure a custom domain name for an app:
+
 :::info
 Only applications with the authentication level set to **Internal** or **Public** support custom third-party domains.
 :::
 1. Open the Settings app, and select **Application** from the left sidebar.
-2. Click Affine on the right to view application details.
-3. Go to **Entrances** > **Set up endpoint**.
-4. Next to **Set custom domain**, click <i class="material-symbols-outlined">add</i>.
-
-   ![Set third-party domain](/images/manual/olares/set-custom-domain.png#bordered)
-5. Enter your custom domain, for example, `hello.coffee`, and click **Confirm**.
-6. Click **Activation**, and follow the instructions to add a CNAME record on your domain hosting site. Then click **Confirm**.
-
-   ![Activate third-party domain](/images/manual/olares/activate-custom-domain.png#bordered)
-   At this stage, the custom domain status will display as "Waiting for CNAME Activation". This means you need to wait for the DNS changes to propagate. The propagation time typically ranges from a few minutes to 48 hours, depending on your domain provider.
-
-   Olares will periodically check if the DNS record is correctly configured. Once the CNAME record is verified, the custom domain status will automatically update to "Activated". After activation, you can access Affine using the new URL: `hello.coffee`.
-:::tip
-To allow public access to your custom domain without login, update the access policies as below:
-1. Navigate to **Settings** > **Application**, and click the target application.
-2. Click **Entrance**, then under **Create access policies**, set **Authentication level** to **Public**.
-3. Click **Submit** to apply changes.
+2. Click the application you want to configure to enter its details page.
+3. Go to **Entrances** > **Set up endpoint**, and click <i class="material-symbols-outlined">add</i> next to **Set custom domain**.
+4. In the **Third-party domain** pop-up, enter your custom domain, and click **Confirm** to submit. 
+![Submit third-party domain](/images/manual/olares/add-custom-domain.jpeg#bordered)
+   ::: tip Note
+   If you are using Olares Tunnel or Self-built FRP for reverse proxy, you must also upload a valid HTTPS certificate and its private key for your custom domain.
+   :::
    
-   ![Set auth level to public](/images/manual/olares/set-auth-level-to-public.png){width=50%}
-:::
+5. Click the **Activation** button to open the activation instruction pop-up. 
+   
+   ![Activate third-party domain](/images/manual/olares/activate-custom-domain.jpeg#bordered)
+6. Follow the instructions in the pop-up to create a CNAME record with your domain hosting provider.
+   ![Add CNAME](/images/manual/olares/add-cname.jpeg#bordered)
+
+   :::tip Disable Proxy status for Cloudflare Tunnel
+   If you are using Cloudflare Tunnel, disable the **Proxy status** option next to your DNS record. This allows Olares to receive in-time updates on your domain's resolution status.
+   :::
+
+7. Click **Confirm** on the activation popup window to finish the activation.
+ 
+At this stage, the custom domain status will display as "Waiting for CNAME Activation". You will need to wait for it to take effect. DNS propagation typically takes a few minutes or hours, depending on your domain provider.
+
+Once the CNAME record is verified, the custom domain status will automatically update to "Activated".

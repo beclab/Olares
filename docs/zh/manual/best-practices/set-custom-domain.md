@@ -180,8 +180,8 @@ DID（Decentralized Identifier，去中心化标识符）是在获得最终的 O
 1. 在终端中，通过带有指定环境变量的安装脚本来启动安装：
 
     ```bash {1,2}
-    export TERMINUS_OS_DOMAINNAME=xxxx.cloud \
-      && export TERMINUS_OS_USERNAME=justtest1953 \ 
+    export TERMINUS_OS_DOMAINNAME="xxxx.cloud" \
+      && export TERMINUS_OS_USERNAME="justtest1953" \ 
       && curl -sSfL https://cn.olares.sh | bash -
     ```
     - `export TERMINUS_OS_DOMAINNAME=xxxx.cloud`: 指定你的自定义域名，请将 `xxxx.cloud` 替换为实际的域名。

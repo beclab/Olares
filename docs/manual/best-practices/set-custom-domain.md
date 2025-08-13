@@ -177,8 +177,8 @@ For detailed instructions on all supported platforms, refer to [platform-specifi
 1. In the terminal, run the installation script with specified environment variables to start the installation:
 
     ```bash {1,2}
-    export TERMINUS_OS_DOMAINNAME=xxxx.cloud \
-      && export TERMINUS_OS_USERNAME=justtest1953 \ 
+    export TERMINUS_OS_DOMAINNAME="xxxx.cloud" \
+      && export TERMINUS_OS_USERNAME="justtest1953" \ 
       && curl -sSfL https://olares.sh | bash -
     ```
    - `export TERMINUS_OS_DOMAINNAME=xxxx.cloud`: Specify your custom domain. Replace `xxxx.cloud` with the actual one.
