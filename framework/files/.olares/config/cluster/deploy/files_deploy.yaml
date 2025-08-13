@@ -161,9 +161,11 @@ spec:
               name: userspace-dir
             - mountPath: /appcache/
               name: upload-appdata
+{{ if .Values.sharedlib }}
             - mountPath: /data/External
               mountPropagation: Bidirectional
               name: shared-lib
+{{ end }}
 
         - name: files
           image: beclab/files-server:v0.2.90
