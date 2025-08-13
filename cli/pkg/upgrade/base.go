@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/terminus"
+	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"path"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -15,9 +18,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
-	metadataclient "k8s.io/client-go/metadata"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -129,29 +130,37 @@ func (p *prepareUserInfoForUpgrade) Execute(runtime connector.Runtime) error {
 	if err != nil {
 		return fmt.Errorf("failed to get rest config: %s", err)
 	}
-	// we only need user's metadata, this avoids the dependency on kubesphere's module
-	metadataClient, err := metadataclient.NewForConfig(config)
+	scheme := kruntime.NewScheme()
+	err = iamv1alpha2.AddToScheme(scheme)
 	if err != nil {
-		return fmt.Errorf("failed to get metadata client: %s", err)
+		return fmt.Errorf("failed to add user scheme: %s", err)
 	}
-	userGVR := schema.GroupVersionResource{
-		Group:    "iam.kubesphere.io",
-		Version:  "v1alpha2",
-		Resource: "users",
+	userClient, err := ctrlclient.New(config, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		return fmt.Errorf("failed to create client: %s", err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
-	users, err := metadataClient.Resource(userGVR).List(ctx, metav1.ListOptions{})
+	var userList iamv1alpha2.UserList
+	err = userClient.List(ctx, &userList)
 	if err != nil {
 		return fmt.Errorf("failed to list users: %s", err)
 	}
-	var usersToUpgrade []metav1.PartialObjectMetadata
+	var usersToUpgrade []iamv1alpha2.User
 	var adminUser string
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to create kubernetes client: %s", err)
 	}
-	for _, user := range users.Items {
+	for _, user := range userList.Items {
+		if user.Status.State == "Failed" {
+			logger.Infof("skipping user %s that failed to be created", user.Name)
+			continue
+		}
+		if user.Status.State == "Deleting" || user.DeletionTimestamp != nil {
+			logger.Infof("skipping user %s that's being deleted", user.Name)
+			continue
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 		defer cancel()
 		_, err := client.CoreV1().Namespaces().Get(ctx, fmt.Sprintf("user-space-%s", user.Name), metav1.GetOptions{})
@@ -197,7 +206,7 @@ func (u *upgradeUserComponents) Execute(runtime connector.Runtime) error {
 	if !ok {
 		return fmt.Errorf("no users to upgrade found in cache")
 	}
-	users := usersCache.([]metav1.PartialObjectMetadata)
+	users := usersCache.([]iamv1alpha2.User)
 	adminUserCache, ok := u.PipelineCache.Get(common.CacheUpgradeAdminUser)
 	if !ok {
 		return fmt.Errorf("no admin user to upgrade found in cache")
