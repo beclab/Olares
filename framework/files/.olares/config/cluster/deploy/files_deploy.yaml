@@ -136,7 +136,8 @@ spec:
           - --log-level
           - DEBUG
           - --no-check-certificate
-          - --fast-list
+          - --s3-list-version
+          - "2"
           - --config
           - /dev/null
           image: beclab/rclone:v1.73.0
@@ -168,7 +169,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.91
+          image: beclab/files-server:v0.2.92
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
