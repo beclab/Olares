@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/beclab/Olares/cli/pkg/upgrade"
 	"github.com/beclab/Olares/cli/pkg/utils"
-	"os"
+	"github.com/beclab/Olares/cli/version"
 	"path"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/options"
@@ -29,33 +29,18 @@ func UpgradeOlaresPipeline(opts *options.UpgradeOptions) error {
 		return fmt.Errorf("error parsing current Olares version: %v", err)
 	}
 
-	// validate the expected version is non-empty before the NewArgument() call
-	// as it will fall back to load the current olares release
+	// should only be and defaults to the current cli version
+	// this argument is for backwards-compatibility with older olaresd
 	if opts.Version == "" {
-		return errors.New("target version is required")
+		opts.Version = version.VERSION
 	}
 	targetVersion, err := utils.ParseOlaresVersionString(opts.Version)
 	if err != nil {
 		return fmt.Errorf("error parsing target Olares version: %v", err)
 	}
 
-	upgradePath, err := upgrade.GetUpgradePathFor(currentVersion, targetVersion)
-	if err != nil {
+	if err := upgrade.Check(currentVersion, targetVersion); err != nil {
 		return err
-	}
-	if len(upgradePath) > 1 {
-		fmt.Printf("unable to upgrade from %s to %s directly,\n", currentVersion, targetVersion)
-		if len(upgradePath) == 2 {
-			fmt.Printf("please upgrade to %s first!\n", upgradePath[0])
-		} else {
-			line := "please upgrade sequentially to:"
-			for _, u := range upgradePath[:len(upgradePath)-1] {
-				line += fmt.Sprintf(" %s", u)
-			}
-			line += " first!"
-			fmt.Println(line)
-		}
-		os.Exit(1)
 	}
 
 	arg := common.NewArgument()
