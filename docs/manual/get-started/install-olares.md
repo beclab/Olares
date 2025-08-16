@@ -25,7 +25,7 @@ Make sure your device meets the following requirements.
 
 - CPU: At least 4 cores
 - RAM: At least 8GB of available memory
-- Storage: At least 64GB of available space (SSD recommended)
+- Storage: At least 150GB of available SSD storage. (The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.)
 - Supported systems:
     - Ubuntu 20.04 LTS or later
     - Debian 11 or later

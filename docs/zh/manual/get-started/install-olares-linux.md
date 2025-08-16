@@ -10,7 +10,7 @@ description: 在 Linux 系统 Ubuntu 和 Debian 上安装配置 Olares 的完整
 
 - CPU：4 核及以上
 - 内存：不少于 8GB 可用内存
-- 存储：建议使用 SSD，且可用磁盘空间不少于 64GB
+- 存储：不少于 150GB 的可用磁盘空间，需要使用SSD硬盘安装，使用HDD（机械硬盘）将会导致安装失败
 - 支持的系统版本：
     - Ubuntu 24.04 LTS 及以上
     - Debian 11 及以上

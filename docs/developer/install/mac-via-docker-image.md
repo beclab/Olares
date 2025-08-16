@@ -21,7 +21,7 @@ Make sure your device meets the following requirements.
 - Architecture: AMD64 or ARM64
 - CPU: At least 4 cores
 - RAM: At least 8GB of available memory
-- Storage: At least 64GB of available space (SSD recommended)
+- Storage: At least 150GB of available SSD storage. (The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.)
 
 ## Before you begin
 Before you begin, ensure the following:

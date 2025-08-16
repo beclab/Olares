@@ -19,7 +19,7 @@ We recommend using it only for development or testing purposes.
 Make sure your Windows meets the following requirements.
 - CPU: At least 4 cores
 - RAM: At least 16GB of available memory
-- Storage: At least 64GB of available space (SSD recommended)
+- Storage: At least 150GB of available SSD storage. (The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.)
 - Supported systems:
     - Windows 10 or 11
     - Linux (on WSL 2): Ubuntu 20.04 LTS or later; Debian 11 or later
