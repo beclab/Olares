@@ -13,7 +13,7 @@ Currently, Olares on Raspberry Pi has certain limitations. We recommend using it
 Make sure your Raspbian device meets the following requirements.
 - Hardware: Raspberry Pi 4B or Raspberry Pi 5 with 8GB memory
 - Operating system: Raspbian 12
-- Storage: 64GB (SSD recommended)
+- Storage: At least 150GB of available SSD storage. (The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.)
 
 ## Set up system environment
 1. Configure the Raspbian environment to enable necessary features:
