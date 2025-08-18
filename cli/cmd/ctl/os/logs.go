@@ -5,16 +5,19 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/util"
-
 	"github.com/spf13/cobra"
 )
 
@@ -30,14 +33,57 @@ type LogCollectOptions struct {
 	Components []string
 	// Whether to ignore errors from kubectl commands
 	IgnoreKubeErrors bool
+	// Skip retrieving logs from kube-apiserver
+	SkipKubeAPISserver bool
 }
 
 var servicesToCollectLogs = []string{"k3s", "containerd", "olaresd", "kubelet", "juicefs", "redis", "minio", "etcd", "NetworkManager"}
+
+// setSkipIfK8sNotReachable checks if the Kubernetes API server port is reachable
+// and automatically sets skip-kube-apiserver to true if not reachable
+func setSkipIfK8sNotReachable(options *LogCollectOptions) {
+	// if the env is not set explicitly by user
+	// fallback to k3s config path as it's a non-standard path
+	if os.Getenv(clientcmd.RecommendedConfigPathEnvVar) == "" {
+		os.Setenv(clientcmd.RecommendedConfigPathEnvVar, "/etc/rancher/k3s/k3s.yaml")
+	}
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		fmt.Printf("Warning: failed to get kubeconfig: %v\n", err)
+		fmt.Println("Automatically setting skip-kube-apiserver option")
+		options.SkipKubeAPISserver = true
+		return
+	}
+	url, _, err := rest.DefaultServerUrlFor(config)
+	if err != nil {
+		fmt.Printf("Warning: failed to parse server url in kubeconfig: %v\n", err)
+		fmt.Println("Automatically setting skip-kube-apiserver option")
+		options.SkipKubeAPISserver = true
+		return
+	}
+	timeout := config.Timeout
+	if timeout == 0 {
+		timeout = 5 * time.Second
+	}
+	conn, err := net.DialTimeout("tcp", url.Host, timeout)
+	if err != nil {
+		fmt.Printf("Warning: Kubernetes API server at %s is not reachable: %v\n", config.Host, err)
+		fmt.Println("Automatically setting skip-kube-apiserver option")
+		options.SkipKubeAPISserver = true
+		return
+	}
+	conn.Close()
+}
 
 func collectLogs(options *LogCollectOptions) error {
 	if os.Getuid() != 0 {
 		return fmt.Errorf("os: please run as root")
 	}
+
+	if !options.SkipKubeAPISserver {
+		setSkipIfK8sNotReachable(options)
+	}
+
 	if err := os.MkdirAll(options.OutputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %v", err)
 	}
@@ -296,13 +342,21 @@ func collectKubernetesLogs(tw *tar.Writer, options *LogCollectOptions) error {
 		}
 	}
 
+	if options.SkipKubeAPISserver {
+		return nil
+	}
+
 	if _, err := util.GetCommand("kubectl"); err != nil {
 		fmt.Printf("warning: kubectl not found, skipping collecting cluster info from kube-apiserver\n")
 		return nil
 	}
 
-	cmd := exec.Command("kubectl", "get", "pods", "--all-namespaces", "-o", "wide")
-	output, err := tryKubectlCommand(cmd, "get pods", options)
+	var cmd *exec.Cmd
+	var output []byte
+	var err error
+
+	cmd = exec.Command("kubectl", "get", "pods", "--all-namespaces", "-o", "wide")
+	output, err = tryKubectlCommand(cmd, "get pods", options)
 	if err != nil && !options.IgnoreKubeErrors {
 		return err
 	}
@@ -517,7 +571,8 @@ func NewCmdLogs() *cobra.Command {
 	cmd.Flags().IntVar(&options.MaxLines, "max-lines", options.MaxLines, "Maximum number of lines to collect per log source, to limit the log file size")
 	cmd.Flags().StringVar(&options.OutputDir, "output-dir", options.OutputDir, "Directory to store collected logs, will be created if not existing")
 	cmd.Flags().StringSliceVar(&options.Components, "components", nil, "Specific components (systemd service) to collect logs from (comma-separated). If empty, collects from all Olares-related components that can be found")
-	cmd.Flags().BoolVar(&options.IgnoreKubeErrors, "ignore-kube-errors", options.IgnoreKubeErrors, "Continue collecting logs even if kubectl commands fail, e.g., when kube-apiserver is not reachable")
+	cmd.Flags().BoolVar(&options.IgnoreKubeErrors, "ignore-kube-errors", options.IgnoreKubeErrors, "Continue collecting logs even if kubectl commands fail")
+	cmd.Flags().BoolVar(&options.SkipKubeAPISserver, "skip-kube-apiserver", options.SkipKubeAPISserver, "Skip retrieving logs from kube-apiserver, it's automatically set if apiserver is not reachable. To tolerate other cases, set the ignore-kube-errors")
 
 	return cmd
 }
