@@ -12,16 +12,19 @@ Currently, Olares on Windows has certain limitations including:
 
 We recommend using it only for development or testing purposes.
 :::
-<!--@include: ./reusables.md{41,47}-->
+<!--@include: ./reusables.md{45,51}-->
 
 ## System compatibility
 Make sure your Windows meets the following requirements.
 - CPU: At least 4 cores
 - RAM: At least 16GB of available memory
-- Storage: At least 150GB of available SSD storage. (The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.)
+- Storage: At least 150GB of available SSD storage. 
 - Supported systems:
     - Windows 10 or 11
     - Linux (on WSL 2): Ubuntu 20.04 LTS or later; Debian 11 or later
+::: warning SSD required
+The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
+:::
 ## Set up system environment
 1. Enable the required Windows features for virtualization.
 
@@ -105,7 +108,7 @@ Make sure your Windows meets the following requirements.
    You can get the IPv4 address in advance by running `ipconfig` in the Windows command line.
    :::
 
-<!--@include: ./reusables.md{7,9}-->
+<!--@include: ./reusables.md{9,11}-->
 
 :::info Errors during installation?
 If an error occurs during installation, use the following command to uninstall first:
@@ -114,13 +117,14 @@ wsl --unregister ubuntu
 ```
 After uninstalling, retry the installation by running the original installation command.
 :::
-<!--@include: ./reusables.md{20,33}-->
+
+<!--@include: ./reusables.md{24,37}-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{35,39}-->
+<!--@include: ./reusables.md{39,43}-->
 
 ## FAQ
 

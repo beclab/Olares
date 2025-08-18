@@ -11,18 +11,22 @@ Currently, Olares on Windows has certain limitations including:
 - Inability to add local nodes.
 
 We recommend using it only for development or testing purposes.
+
 :::
-<!--@include: ./reusables.md{45,47}-->
-:::
+<!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
 Make sure your Windows meets the following requirements.
 - CPU: At least 4 cores
 - RAM: At least 16GB of available memory
-- Storage: At least 150GB of available SSD storage. (The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.)
+- Storage: At least 150GB of available SSD storage.  
 - Supported systems:
     - Windows 10 or 11
     - Linux (on WSL 2): Ubuntu 20.04 LTS or later; Debian 11 or later
+
+::: warning SSD required
+The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
+:::
 
 ## Before you begin
 Before you begin, ensure the following:

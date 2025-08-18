@@ -161,30 +161,22 @@ To use the domain, apply for an Olares ID under the organization.
  After successful authorization, an Olares ID with the custom domain, `justtest1953@xxxx.cloud`, is successfully created.
 
 ## Step 6: Install and activate Olares
-Almost there! Now you are all set to install and activate Olares with your Olares ID. 
-
-::: tip Install with environment variables
-In the following examples, the domain name and username are preset with environment variables.
-
-For Linux environment, you can also install with the one-line script without these variables, and enter the domain and the prefix of Olares ID manually.
-
-For detailed instructions on all supported platforms, refer to [platform-specific installation guides](../get-started/install-olares.md).
-:::
+Almost there! Now you are all set to install and activate Olares with your Olares ID.
 
 <tabs>
 <template #Linux-and-macOS>
 
-1. In the terminal, run the installation script with specified environment variables to start the installation:
+1. In the terminal, run the following script to start the installation:
 
-    ```bash {1,2}
-    export TERMINUS_OS_DOMAINNAME="xxxx.cloud" \
-      && export TERMINUS_OS_USERNAME="justtest1953" \ 
-      && curl -sSfL https://olares.sh | bash -
-    ```
-   - `export TERMINUS_OS_DOMAINNAME=xxxx.cloud`: Specify your custom domain. Replace `xxxx.cloud` with the actual one.
-   - `export TERMINUS_OS_USERNAME=justtest1953`: Specify the prefix of your Olares ID. Replace `justtest1953` with the actual one.
+   ```bash {1,2}
+   curl -sSfL https://olares.sh | bash -
+   ```
 
-2. Wait for the installation to finish. Depending on your network, the process can take 20–30 minutes. When the installation completes, you will see the wizard URL and login credentials:
+2. At the end of the installation, enter your custom domain and Olares ID when prompted. In our case, it's `xxxx.cloud` for the domain, and `justtest1953` for Olares ID.
+
+   ![Enter the domain](/images/manual/get-started/enter-olares-id.png)
+
+3. Wait for the installation to finish. Depending on your network, the process can take 10–30 minutes. When the installation completes, you will see the wizard URL and login credentials:
 
     ```bash
     2024-12-17T21:00:58.086+0800        Olares is running at:
@@ -199,13 +191,15 @@ For detailed instructions on all supported platforms, refer to [platform-specifi
 
 3. Open the Olares activation wizard in your browser using the given URL, and follow the on-screen instructions to complete the activation.
 
+See [Install Olares](../get-started/install-olares.md) for more detailed steps.
+
 </template>
 <template #Windows>
 
 :::warning System environment setup required
 Before proceeding with the following steps, ensure that your Windows environment is properly set up.
 
-If the setup is incomplete, the installation script will not work as expected. For detailed instructions, refer to the dedicated [installation guide for Windows](../get-started/install-olares.md).
+If the setup is incomplete, the installation script will not work as expected. For detailed instructions, refer to the dedicated [installation guide for Windows](../../developer/install/windows.md).
 :::
 
 1. Click https://windows.olares.sh to download the installation script `publicInstall.latest.ps1`.

@@ -12,7 +12,7 @@ Mac 版 Olares 目前存在以下限制：
 建议仅用于开发或测试环境。
 :::
 
-<!--@include: ./reusables.md{36,41}-->
+<!--@include: ./reusables.md{39,45}-->
 
 ## 系统要求
 Mac 设备需满足以下条件：
@@ -40,7 +40,7 @@ Mac 设备需满足以下条件：
 ## 安装 Olares
 在终端中运行以下命令：
 
-<!--@include: ./reusables.md{4,18}-->
+<!--@include: ./reusables.md{4,21}-->
 ## 配置 Wizard
 在安装过程结束时，你需要提供下列信息：
 1. 检查 Mac 的 IP 地址（例如，`192.168.x.x`）。
@@ -52,14 +52,10 @@ Mac 设备需满足以下条件：
    - 使用命令行：打开终端窗口，Wi-Fi 网络输入 `ipconfig getifaddr en0`，有线网络输入 `ipconfig getifaddr en1`。
    :::
 
-2. 如果你的 Olares ID 为 `alice123@olares.cn`，输入 `alice123` 即可。
-
-   ![输入 Olares ID](/images/zh/manual/get-started/enter-olares-id.png)
-
-<!--@include: ./reusables.md{26,28}-->
+2. <!--@include: ./reusables.md{25,31}-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{30,34}-->
+<!--@include: ./reusables.md{33,37}-->

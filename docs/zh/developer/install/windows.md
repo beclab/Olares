@@ -13,16 +13,21 @@ Windows 版 Olares 目前存在以下限制：
 建议仅用于开发或测试环境。
 :::
 
-<!--@include: ./reusables.md{36,41}-->
+<!--@include: ./reusables.md{39,45}-->
 
 ## 系统要求
 Windows 设备需满足以下条件：
 - CPU：4 核及以上
 - 内存：不少于 16GB 可用内存
-- 存储：不少于 150GB 的可用磁盘空间，需要使用SSD硬盘安装，使用HDD（机械硬盘）将会导致安装失败
+- 存储：不少于 150GB 的可用磁盘空间，需使用 SSD 硬盘安装。
 - 支持的系统：
     - Windows 10 或 11
     - Linux（WSL 2 环境）：Ubuntu 20.04 LTS 及以上；Debian 11 及以上
+
+:::warning 注意
+使用 HDD（机械硬盘）可能会导致安装失败。
+:::
+
 ## 配置系统环境
 1. 启用虚拟化所需的 Windows 功能。
 
@@ -104,7 +109,7 @@ Windows 设备需满足以下条件：
    你可以提前通过在 Windows 命令行里执行 `ipconfig` 获取 Windows 的 IPv4 地址。
    :::
 
-<!--@include: ./reusables.md{7,9}-->
+<!--@include: ./reusables.md{9,11}-->
 
 :::info 安装遇到报错？
 如果安装过程中出现错误，请先执行以下命令卸载：
@@ -113,13 +118,14 @@ wsl --unregister ubuntu
 ```
 卸载完成后，重新运行安装命令进行安装。
 :::
-<!--@include: ./reusables.md{20,28}-->
+
+<!--@include: ./reusables.md{23,31}-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{30,34}-->
+<!--@include: ./reusables.md{33,37}-->
 
 ## 常见问题
 

@@ -12,14 +12,17 @@ Olares on Mac has certain limitations including:
 We recommend using it only for development or testing purposes.
 :::
 
-<!--@include: ./reusables.md{41,47}-->
+<!--@include: ./reusables.md{45,51}-->
 
 ## System compatibility
 Make sure your Mac meets the following requirements.
 - Architecture: X86-64 or ARM64
 - RAM: 8 GB or above (available memory)
-- Storage: 90 GB or above (available disk space)
+- Storage: 150 GB or above of available space on SSD
 - MacOS: Monterey (12) or later
+::: warning SSD required
+The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
+:::
 
 ## Before you begin
 Ensure you have the following installed:
@@ -40,10 +43,10 @@ Ensure you have the following installed:
 ## Install Olares
 In terminal, run the following command:
 
-<!--@include: ./reusables.md{4,33}-->
+<!--@include: ./reusables.md{4,37}-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{35,39}-->
+<!--@include: ./reusables.md{39,43}-->

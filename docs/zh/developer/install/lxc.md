@@ -8,17 +8,21 @@ LXC 是一种轻量级的虚拟化技术，可以在隔离的容器中运行应�
 该部署方式当前仍有功能限制，建议仅用于开发或测试环境。
 :::
 
-<!--@include: ./reusables.md{36,41}-->
+<!--@include: ./reusables.md{39,45}-->
 
 ## 系统要求
 请确保设备满足以下配置要求：
 
 - CPU：4 核及以上
 - 内存：不少于 8GB 可用内存
-- 存储：不少于 150GB 的可用磁盘空间，需要使用SSD硬盘安装，使用HDD（机械硬盘）将会导致安装失败
+- 存储：不少于 150GB 的可用磁盘空间，需使用 SSD 硬盘安装。
 - 支持的系统版本：
   - PVE: 8.2.2
   - LXC 容器系统：Debian 12（既有 LXC 环境）
+
+:::warning 注意
+使用 HDD（机械硬盘）可能会导致安装失败。
+:::
 
 :::info 版本兼容性
 虽然以上版本已经过验证，但其他版本也可能正常运行 Olares。根据你的环境可能需要进行调整。如果你在这些平台上安装时遇到任何问题，欢迎在 [GitHub](https://github.com/beclab/Olares/issues/new) 上提问。
@@ -143,10 +147,10 @@ LXC 是一种轻量级的虚拟化技术，可以在隔离的容器中运行应�
 
 在 LXC 容器中运行以下安装命令：
 
-<!--@include: ./reusables.md{4,28}-->
+<!--@include: ./reusables.md{4,31}-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{30,34}-->
+<!--@include: ./reusables.md{33,37}-->

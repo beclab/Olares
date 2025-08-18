@@ -7,13 +7,17 @@ This guide explains how to install Olares on a Raspberry Pi.
 :::warning Not recommended for production use
 Currently, Olares on Raspberry Pi has certain limitations. We recommend using it only for development or testing purposes.
 :::
-<!--@include: ./reusables.md{41,47}-->
+<!--@include: ./reusables.md{45,51}-->
 
 ## System requirements
 Make sure your Raspbian device meets the following requirements.
 - Hardware: Raspberry Pi 4B or Raspberry Pi 5 with 8GB memory
 - Operating system: Raspbian 12
-- Storage: At least 150GB of available SSD storage. (The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.)
+- Storage: At least 150GB of available SSD storage. 
+
+::: warning SSD required
+The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
+:::
 
 ## Set up system environment
 1. Configure the Raspbian environment to enable necessary features:
@@ -38,4 +42,4 @@ Run the following command:
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{35,39}-->
+<!--@include: ./reusables.md{39,43}-->

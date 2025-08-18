@@ -8,17 +8,20 @@ LXC (Linux Containers) is a lightweight virtualization method that runs applicat
 Currently, Olares on LXC has certain limitations. We recommend using it only for development or testing purposes.
 :::
 
-<!--@include: ./reusables.md{41,47}-->
+<!--@include: ./reusables.md{45,51}-->
 
 ## System requirements
 Make sure your device meets the following requirements.
 
 - CPU: At least 4 cores
 - RAM: At least 8GB of available memory
-- Storage: At least 150GB of available SSD storage. (The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.)
+- Storage: At least 150GB of available SSD storage.
 - Supported systems:
     - PVE 8.2.2
     - Linux container: Debian 12 (for existing LXC containers on PVE)
+::: warning SSD required
+The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
+:::
 
 :::info Version compatibility
 While the specific versions are confirmed to work, the process may still work on other versions. Adjustments may be necessary depending on your environment. If you meet any issues with these platforms, feel free to raise an issue on [GitHub](https://github.com/beclab/Olares/issues/new).
@@ -144,10 +147,10 @@ To install Olares on an existing LXC container, skip to step 2 directly. Make su
 
 Run the following installation command inside the LXC container:
 
-<!--@include: ./reusables.md{4,33}-->
+<!--@include: ./reusables.md{5,37}-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{35,39}-->
+<!--@include: ./reusables.md{39,43}-->

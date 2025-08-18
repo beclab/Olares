@@ -166,28 +166,23 @@ DID（Decentralized Identifier，去中心化标识符）是在获得最终的 O
 ## 第 6 步：安装并激活 Olares
 最后，你只需安装并激活 Olares，即可通过自定义域名进行访问。
 
-::: tip 使用添加环境变量的脚本安装
-以下示例展示了如何在安装脚本中通过环境变量预先设置域名和用户名。
-
-对于 Linux 环境，你也可以不配置环境变量，直接使用单行脚本进行安装。这种情况下，你需要在安装过程中手动输入域名和 Olares ID 前缀。
-
 关于支持平台的详细安装说明，请参阅[安装指南](../get-started/install-olares.md)。
 :::
 
 <tabs>
 <template #Linux-and-macOS>
 
-1. 在终端中，通过带有指定环境变量的安装脚本来启动安装：
+1. 在终端中执行安装脚本来启动安装：
 
     ```bash {1,2}
-    export TERMINUS_OS_DOMAINNAME="xxxx.cloud" \
-      && export TERMINUS_OS_USERNAME="justtest1953" \ 
-      && curl -sSfL https://cn.olares.sh | bash -
+    -sSfL https://cn.olares.sh | bash -
     ```
-    - `export TERMINUS_OS_DOMAINNAME=xxxx.cloud`: 指定你的自定义域名，请将 `xxxx.cloud` 替换为实际的域名。
-    - `export TERMINUS_OS_USERNAME=justtest1953`: 指定你的 Olares ID 前缀，请将 `justtest1953` 替换为实际的前缀。
+   
+2. 根据提示，输入你的自定义域名和 Olares ID。此教程中，我们的自定义域名为 `xxxx.cloud`，Olares ID 为 `justtest1953`。
+   
+   ![Enter the domain](/images/manual/get-started/enter-olares-id.png)
 
-2. 等待安装完成。根据你的网络情况，安装可能需要 20–30 分钟。安装完成后，终端会显示向导地址和登录凭证，例如：
+3. 等待安装完成。根据你的网络情况，安装可能需要 20–30 分钟。安装完成后，终端会显示向导地址和登录凭证，例如：
 
     ```bash
     2024-12-17T21:00:58.086+0800        Olares is running at:
@@ -208,7 +203,7 @@ DID（Decentralized Identifier，去中心化标识符）是在获得最终的 O
 :::warning 需配置系统环境
 在进行以下操作之前，请确保已正确完成 Windows 环境的配置。
 
-如果环境未正确设置，安装脚本可能无法正常运行。有关详细说明，请参阅 [Windows 安装指南](../get-started/install-olares.md)。
+如果环境未正确设置，安装脚本可能无法正常运行。有关详细说明，请参阅 [Windows 安装指南](../../developer/install/windows.md)。
 :::
 
 1. 点击 https://cn.windows.olares.sh 下载安装脚本 `publicInstall.latest.ps1`。

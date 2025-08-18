@@ -13,7 +13,7 @@ Currently, Olares on Mac has certain limitations including:
 We recommend using it only for development or testing purposes.
 :::
 
-<!--@include: ./reusables.md{41,47}-->
+<!--@include: ./reusables.md{45,51}-->
 
 ## System requirements
 Make sure your device meets the following requirements.
@@ -21,7 +21,10 @@ Make sure your device meets the following requirements.
 - Architecture: AMD64 or ARM64
 - CPU: At least 4 cores
 - RAM: At least 8GB of available memory
-- Storage: At least 150GB of available SSD storage. (The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.)
+- Storage: At least 150GB of available SSD storage. 
+::: warning SSD required
+The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.
+:::
 
 ## Before you begin
 Before you begin, ensure the following:
@@ -97,4 +100,4 @@ The `--rm` flag automatically deletes the container after it stops. If this happ
 
 <!--@include: ./manage-olares-container.md-->
 
-<!--@include: ./reusables.md{35,39}-->
+<!--@include: ./reusables.md{39,43}-->
