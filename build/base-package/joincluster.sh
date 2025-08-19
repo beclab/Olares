@@ -165,7 +165,13 @@ fi
 
 set_master_host_ssh_options
 
-CLI_FILE="olares-cli-v${VERSION}_linux_${ARCH}.tar.gz"
+RELEASE_ID="#__RELEASE_ID__"
+if [[ $RELEASE_ID == "" || "${RELEASE_ID:3}" == "RELEASE_ID__" ]]; then
+  RELEASE_ID_SUFFIX=""
+else
+  RELEASE_ID_SUFFIX=".$RELEASE_ID"
+fi
+CLI_FILE="olares-cli-v${VERSION}_linux_${ARCH}${RELEASE_ID_SUFFIX}.tar.gz"
 
 if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$VERSION" ]]; then
     INSTALL_OLARES_CLI=$(which olares-cli)
@@ -225,7 +231,10 @@ else
 
     echo "downloading installation wizard..."
     echo ""
-    $sh_c "$INSTALL_OLARES_CLI download wizard $PARAMS $CDN"
+    if [[ ! -z "$RELEASE_ID_SUFFIX" ]]; then
+        DOWNLOAD_WIZARD_RELEASE_ID_PARAM="--release-id $RELEASE_ID"
+    fi
+    $sh_c "$INSTALL_OLARES_CLI download wizard $PARAMS $KUBE_PARAM $CDN $DOWNLOAD_WIZARD_RELEASE_ID_PARAM"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to download installation wizard"
         exit 1

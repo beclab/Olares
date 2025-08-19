@@ -74,9 +74,15 @@ if [ -z ${cdn_url} ]; then
     cdn_url="https://dc3p1870nn3cj.cloudfront.net"
 fi
 
-CLI_FILE="olares-cli-v${VERSION}_linux_${ARCH}.tar.gz"
+RELEASE_ID="#__RELEASE_ID__"
+if [[ $RELEASE_ID == "" || "${RELEASE_ID:3}" == "RELEASE_ID__" ]]; then
+  RELEASE_ID_SUFFIX=""
+else
+  RELEASE_ID_SUFFIX=".$RELEASE_ID"
+fi
+CLI_FILE="olares-cli-v${VERSION}_linux_${ARCH}${RELEASE_ID_SUFFIX}.tar.gz"
 if [[ x"$os_type" == x"Darwin" ]]; then
-    CLI_FILE="olares-cli-v${VERSION}_darwin_${ARCH}.tar.gz"
+    CLI_FILE="olares-cli-v${VERSION}_darwin_${ARCH}${RELEASE_ID_SUFFIX}.tar.gz"
 fi
 
 if [[ "$LOCAL_RELEASE" == "1" ]]; then
@@ -159,7 +165,10 @@ else
         fi
         echo "downloading installation wizard..."
         echo ""
-        $sh_c "$INSTALL_OLARES_CLI download wizard $PARAMS $KUBE_PARAM $CDN"
+        if [[ ! -z "$RELEASE_ID_SUFFIX" ]]; then
+            DOWNLOAD_WIZARD_RELEASE_ID_PARAM="--release-id $RELEASE_ID"
+        fi
+        $sh_c "$INSTALL_OLARES_CLI download wizard $PARAMS $KUBE_PARAM $CDN $DOWNLOAD_WIZARD_RELEASE_ID_PARAM"
         if [[ $? -ne 0 ]]; then
             echo "error: failed to download installation wizard"
             exit 1

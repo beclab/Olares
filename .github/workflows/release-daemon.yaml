@@ -10,6 +10,8 @@ on:
         type: string
       repository:
         type: string
+      release-id:
+        type: string
   workflow_dispatch:
     inputs:
       version:
@@ -18,6 +20,8 @@ on:
       ref:
         type: string
       repository:
+        type: string
+      release-id:
         type: string
 
 jobs:
@@ -52,6 +56,8 @@ jobs:
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v3.1.0
+        env:
+          OLARES_RELEASE_ID: ${{ inputs.release-id }}
         with:
           distribution: goreleaser
           workdir: './daemon'
@@ -64,6 +70,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: 'us-east-1'
         run: |
-          cd daemon/output && for file in *.tar.gz; do
+          cd daemon/output && for file in $(ls *.tar.gz | grep -v no-release-id); do
             aws s3 cp "$file" s3://terminus-os-install${{ secrets.REPO_PATH }}${file} --acl=public-read
           done

@@ -21,11 +21,9 @@ import (
 	_ "compress/bzip2"
 	"context"
 	"fmt"
-	cliversion "github.com/beclab/Olares/cli/version"
 	"io"
 	"math"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -329,12 +327,6 @@ func NewKubeBinary(name, arch, osType, osVersion, osPlatformFamily, version, pre
 		component.Url = fmt.Sprintf("https://github.com/fqrouter/conntrack-tools/archive/refs/tags/conntrack-tools-%s.tar.gz", version)
 		component.CheckSum = false
 		component.BaseDir = filepath.Join(prePath, component.Type)
-	case installwizard:
-		component.Type = WIZARD
-		component.FileName = fmt.Sprintf("install-wizard-v%s.tar.gz", version)
-		component.Url, _ = url.JoinPath(component.getDownloadMirrors(downloadMirrors), cliversion.VENDOR_REPO_PATH, fmt.Sprintf("install-wizard-v%s.tar.gz", version))
-		component.CheckSum = false
-		component.BaseDir = filepath.Join(prePath, fmt.Sprintf("v%s", version))
 	case cudakeyring: // + gpu
 		if strings.Contains(osVersion, "24.") {
 			version = "1.1"
@@ -387,7 +379,7 @@ func NewKubeBinary(name, arch, osType, osVersion, osPlatformFamily, version, pre
 	return component
 }
 
-func (b *KubeBinary) getDownloadMirrors(downloadMirrors string) string {
+func (b *KubeBinary) GetDownloadMirrors(downloadMirrors string) string {
 	if downloadMirrors == "" {
 		return common.DownloadUrl
 	}

@@ -54,6 +54,7 @@ def main():
 
     manifest_file = args.manifest_file
     version = os.environ.get("VERSION", "")
+    release_id = os.environ.get("RELEASE_ID", "")
     repo_path = os.environ.get("REPO_PATH", "/")
     manifest_amd64_data = {}
     manifest_arm64_data = {}
@@ -69,6 +70,9 @@ def main():
                 # Replace version
                 if version:
                     line = line.replace("#__VERSION__", version)
+
+                if release_id:
+                    line = line.replace("#__RELEASE_ID_SUFFIX__", "."+release_id)
 
                 # Replace repo path
                 if repo_path:

@@ -2,6 +2,7 @@ $currentPath = Get-Location
 $architecture = $env:PROCESSOR_ARCHITECTURE
 $downloadCdnUrlFromEnv = $env:DOWNLOAD_CDN_URL
 $version = "#__VERSION__"
+$releaseID = "#__RELEASE_ID__"
 $downloadUrl = "https://dc3p1870nn3cj.cloudfront.net"
 
 function Test-Wait {
@@ -49,7 +50,11 @@ if (-Not (Test-Path $CLI_PROGRAM_PATH)) {
 }
 
 $CLI_VERSION = "$version"
-$CLI_FILE = "olares-cli-v{0}_windows_{1}.tar.gz" -f $CLI_VERSION, $arch
+if (-not [string]::IsNullOrEmpty($releaseID) -and $releaseID.Substring(0,3) -ne "#__") {
+  $CLI_FILE = "olares-cli-v{0}_windows_{1}.{2}.tar.gz" -f $CLI_VERSION, $arch, $releaseID
+} else {
+  $CLI_FILE = "olares-cli-v{0}_windows_{1}.tar.gz" -f $CLI_VERSION, $arch
+}
 $CLI_URL = "{0}/{1}" -f $downloadUrl, $CLI_FILE
 $CLI_PATH = "{0}{1}" -f $CLI_PROGRAM_PATH, $CLI_FILE
 
