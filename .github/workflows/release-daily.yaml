@@ -120,8 +120,6 @@ jobs:
   upload-package:
     needs: [daily-version, release-id, push-images, push-images-arm64, push-deps, push-deps-arm64]
     runs-on: ubuntu-latest
-    outputs:
-      md5sum: ${{ steps.upload.outputs.md5sum }}
 
     steps:
       - name: 'Checkout source code'
@@ -141,10 +139,9 @@ jobs:
           md5sum install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz > install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt && \
           aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt --acl=public-read && \
           aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz --acl=public-read && \
-          echo "md5sum=$(awk '{print $1}' install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt)" >> "$GITHUB_OUTPUT"
 
           aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.md5sum.txt --acl=public-read && \
-          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.tar.gz --acl=public-read && \
+          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.tar.gz --acl=public-read
 
 
   release:
@@ -155,13 +152,6 @@ jobs:
       - name: 'Checkout source code'
         uses: actions/checkout@v3
 
-      - name: Update checksum
-        uses: eball/write-tag-to-version-file@latest
-        with:
-          filename: 'build/base-package/install.sh'
-          placeholder: '#__MD5SUM__'
-          tag: ${{ needs.upload-package.outputs.md5sum }}
-      
       - name: Package installer
         run: |
           bash build/build.sh ${{ needs.daily-version.outputs.version }} ${{ needs.release-id.outputs.id }}
