@@ -20,19 +20,33 @@ jobs:
           v=1.12.1-$(date +"%Y%m%d")
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
+  release-id:
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.generate.outputs.id }}
+    steps:
+      - name: 'Checkout source code'
+        uses: actions/checkout@v3
+      - id: generate
+        run: |
+          hash=$(git rev-parse --short HEAD)
+          echo "id=$hash" >> "$GITHUB_OUTPUT"
+
   release-cli:
-    needs: daily-version
+    needs: [daily-version, release-id]
     uses: ./.github/workflows/release-cli.yaml
     secrets: inherit
     with:
       version: ${{ needs.daily-version.outputs.version }}
+      release-id: ${{ needs.release-id.outputs.id }}
 
   release-daemon:
-    needs: daily-version
+    needs: [daily-version, release-id]
     uses: ./.github/workflows/release-daemon.yaml
     secrets: inherit
     with:
       version: ${{ needs.daily-version.outputs.version }}
+      release-id: ${{ needs.release-id.outputs.id }}
 
   push-images:
     runs-on: ubuntu-22.04
@@ -64,7 +78,7 @@ jobs:
           bash build/image-manifest.sh && bash build/upload-images.sh .manifest/images.mf linux/arm64
 
   push-deps:
-    needs: [daily-version, release-daemon]
+    needs: [daily-version, release-id, release-daemon]
     runs-on: ubuntu-latest
 
     steps:
@@ -77,12 +91,13 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
           VERSION: ${{ needs.daily-version.outputs.version }}
+          RELEASE_ID: ${{ needs.release-id.outputs.id }}
           REPO_PATH: '${{ secrets.REPO_PATH }}'
         run: |
           bash build/deps-manifest.sh && bash build/upload-deps.sh
 
   push-deps-arm64:
-    needs: [daily-version, release-daemon]
+    needs: [daily-version, release-id, release-daemon]
     runs-on: [self-hosted, linux, ARM64]
 
     steps:
@@ -95,6 +110,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
           VERSION: ${{ needs.daily-version.outputs.version }}
+          RELEASE_ID: ${{ needs.release-id.outputs.id }}
           REPO_PATH: '${{ secrets.REPO_PATH }}'
         run: |
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
@@ -102,7 +118,7 @@ jobs:
 
 
   upload-package:
-    needs: [daily-version, push-images, push-images-arm64, push-deps, push-deps-arm64]
+    needs: [daily-version, release-id, push-images, push-images-arm64, push-deps, push-deps-arm64]
     runs-on: ubuntu-latest
     outputs:
       md5sum: ${{ steps.upload.outputs.md5sum }}
@@ -127,9 +143,12 @@ jobs:
           aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz --acl=public-read && \
           echo "md5sum=$(awk '{print $1}' install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt)" >> "$GITHUB_OUTPUT"
 
+          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.md5sum.txt --acl=public-read && \
+          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.tar.gz --acl=public-read && \
+
 
   release:
-    needs: [daily-version, upload-package, release-cli]
+    needs: [daily-version, upload-package, release-cli, release-id]
     runs-on: ubuntu-latest
 
     steps:
@@ -145,7 +164,7 @@ jobs:
       
       - name: Package installer
         run: |
-          bash build/build.sh ${{ needs.daily-version.outputs.version }}
+          bash build/build.sh ${{ needs.daily-version.outputs.version }} ${{ needs.release-id.outputs.id }}
 
       - name: 'Archives'
         run: |

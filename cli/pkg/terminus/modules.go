@@ -34,6 +34,7 @@ type InstallWizardDownloadModule struct {
 	Version        string
 	DownloadCdnUrl string
 	UrlOverride    string
+	ReleaseID      string
 }
 
 func (m *InstallWizardDownloadModule) Init() {
@@ -44,6 +45,7 @@ func (m *InstallWizardDownloadModule) Init() {
 			Version:        m.Version,
 			DownloadCdnUrl: m.DownloadCdnUrl,
 			UrlOverride:    m.UrlOverride,
+			ReleaseID:      m.ReleaseID,
 		},
 		Retry: 1,
 	}

@@ -10,18 +10,36 @@ on:
 
 jobs:
 
+  release-id:
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.generate.outputs.id }}
+    steps:
+      - name: 'Checkout source code'
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.tags }}
+      - id: generate
+        run: |
+          hash=$(git rev-parse --short HEAD)
+          echo "id=$hash" >> "$GITHUB_OUTPUT"
+
   release-cli:
+    needs: [release-id]
     uses: ./.github/workflows/release-cli.yaml
     secrets: inherit
     with:
       version: ${{ github.event.inputs.tags }}
+      release-id: ${{ needs.release-id.outputs.id }}
       ref: ${{ github.event.inputs.tags }}
 
   release-daemon:
+    needs: [release-id]
     uses: ./.github/workflows/release-daemon.yaml
     secrets: inherit
     with:
       version: ${{ github.event.inputs.tags }}
+      release-id: ${{ needs.release-id.outputs.id }}
       ref: ${{ github.event.inputs.tags }}
 
   push:
@@ -60,7 +78,7 @@ jobs:
           bash build/image-manifest.sh && bash build/upload-images.sh .manifest/images.mf linux/arm64
 
   push-deps:
-    needs: [release-daemon]
+    needs: [release-daemon, release-id]
     runs-on: ubuntu-latest
 
     steps:
@@ -73,12 +91,13 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
           VERSION: ${{ github.event.inputs.tags }}
+          RELEASE_ID: ${{ needs.release-id.outputs.id }}
           REPO_PATH: '${{ secrets.REPO_PATH }}'
         run: |
           bash build/deps-manifest.sh && bash build/upload-deps.sh
 
   push-deps-arm64:
-    needs: [release-daemon]
+    needs: [release-daemon, release-id]
     runs-on: [self-hosted, linux, ARM64]
 
     steps:
@@ -91,6 +110,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
           VERSION: ${{ github.event.inputs.tags }}
+          RELEASE_ID: ${{ needs.release-id.outputs.id }}
           REPO_PATH: '${{ secrets.REPO_PATH }}'
         run: |
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
@@ -98,7 +118,7 @@ jobs:
 
 
   upload-package:
-    needs: [push, push-arm64, push-deps, push-deps-arm64, release-daemon]
+    needs: [push, push-arm64, push-deps, push-deps-arm64, release-daemon, release-id]
     runs-on: ubuntu-latest
 
     steps:
@@ -121,9 +141,12 @@ jobs:
           aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt --acl=public-read && \
           aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.tar.gz --acl=public-read
 
+          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.md5sum.txt --acl=public-read && \
+          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.tar.gz --acl=public-read && \
+
   release:
     runs-on: ubuntu-latest
-    needs: [upload-package, release-cli]
+    needs: [upload-package, release-cli, release-id]
 
     steps:
       - name: 'Checkout source code'
@@ -139,7 +162,7 @@ jobs:
       - name: Get checksum
         id: vars
         run: |
-          echo "version_md5sum=$(curl -sSfL https://dc3p1870nn3cj.cloudfront.net${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt|awk '{print $1}')" >> $GITHUB_OUTPUT
+          echo "version_md5sum=$(curl -sSfL https://dc3p1870nn3cj.cloudfront.net${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.md5sum.txt|awk '{print $1}')" >> $GITHUB_OUTPUT
 
       - name: Update checksum
         uses: eball/write-tag-to-version-file@latest
@@ -150,7 +173,7 @@ jobs:
 
       - name: Package installer
         run: |
-          bash build/build.sh ${{ github.event.inputs.tags }}
+          bash build/build.sh ${{ github.event.inputs.tags }} ${{ needs.release-id.outputs.id }}
           
       - name: 'Archives'
         run: |

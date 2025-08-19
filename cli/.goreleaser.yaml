@@ -37,8 +37,15 @@ builds:
         {{- end }}
 dist: ./output
 archives:
-  - id: olares-cli
+  - id: without-release-id
     name_template: "{{ .ProjectName }}-v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - id: with-release-id
+    name_template: >-
+                   {{- if index .Env "OLARES_RELEASE_ID" }}
+                   {{- .ProjectName }}-v{{ .Version }}_{{ .Os }}_{{ .Arch }}.{{ .Env.OLARES_RELEASE_ID }}
+                   {{- else }}
+                   {{- .ProjectName }}-v{{ .Version }}_{{ .Os }}_{{ .Arch }}.no-release-id
+                   {{- end }}
 checksum:
   name_template: "checksums.txt"
 release:

@@ -29,7 +29,15 @@ builds:
       {{- end }}
 dist: output
 archives:
-- name_template: "olaresd-v{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+- id: without-release-id
+  name_template: "{{ .ProjectName }}-v{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+- id: with-release-id
+  name_template: >-
+                 {{- if index .Env "OLARES_RELEASE_ID" }}
+                 {{- .ProjectName }}-v{{ .Version }}-{{ .Os }}-{{ .Arch }}.{{ .Env.OLARES_RELEASE_ID }}
+                 {{- else }}
+                 {{- .ProjectName }}-v{{ .Version }}-{{ .Os }}-{{ .Arch }}.no-release-id
+                 {{- end }}
   files:
     - none*
 checksum:

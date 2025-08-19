@@ -8,11 +8,11 @@ import (
 	"github.com/beclab/Olares/cli/pkg/terminus"
 )
 
-func NewDownloadWizard(runtime *common.KubeRuntime, urlOverride string) *pipeline.Pipeline {
+func NewDownloadWizard(runtime *common.KubeRuntime, urlOverride, releaseID string) *pipeline.Pipeline {
 
 	m := []module.Module{
 		&precheck.GreetingsModule{},
-		&terminus.InstallWizardDownloadModule{Version: runtime.Arg.OlaresVersion, DownloadCdnUrl: runtime.Arg.DownloadCdnUrl, UrlOverride: urlOverride},
+		&terminus.InstallWizardDownloadModule{Version: runtime.Arg.OlaresVersion, DownloadCdnUrl: runtime.Arg.DownloadCdnUrl, UrlOverride: urlOverride, ReleaseID: releaseID},
 	}
 
 	return &pipeline.Pipeline{

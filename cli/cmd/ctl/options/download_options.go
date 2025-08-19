@@ -10,6 +10,7 @@ type CliDownloadWizardOptions struct {
 	KubeType       string
 	BaseDir        string
 	DownloadCdnUrl string
+	ReleaseID      string
 	UrlOverride    string
 }
 
@@ -23,6 +24,7 @@ func (o *CliDownloadWizardOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.KubeType, "kube", "k3s", "Set kube type, e.g., k3s or k8s")
 	cmd.Flags().StringVar(&o.DownloadCdnUrl, "download-cdn-url", "", "Set the CDN accelerated download address in the format https://example.cdn.com. If not set, the default download address will be used")
 	cmd.Flags().StringVar(&o.UrlOverride, "url-override", "", "Set another URL for wizard download explicitly")
+	cmd.Flags().StringVar(&o.ReleaseID, "release-id", "", "Set the specific release id of the release version")
 }
 
 type CliDownloadOptions struct {

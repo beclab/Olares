@@ -4,6 +4,7 @@ BASE_DIR=$(dirname $(realpath -s $0))
 rm -rf ${BASE_DIR}/../.dist
 DIST_PATH="${BASE_DIR}/../.dist/install-wizard" 
 export VERSION=$1
+export RELEASE_ID=$2
 
 
 # vendor replace
@@ -57,6 +58,12 @@ if [ ! -z $VERSION ]; then
     VERSION="v${VERSION}"
 else
     VERSION="debug"
+fi
+
+if [ ! -z $RELEASE_ID ]; then
+    sh -c "$SED 's/#__RELEASE_ID__/${RELEASE_ID}/' install.sh"
+    sh -c "$SED 's/#__RELEASE_ID__/${RELEASE_ID}/' install.ps1"
+    sh -c "$SED 's/#__RELEASE_ID__/${RELEASE_ID}/' joincluster.sh"
 fi
 
 $TAR --exclude=wizard/tools --exclude=.git -zcvf ${BASE_DIR}/../install-wizard-${VERSION}.tar.gz .

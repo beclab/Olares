@@ -158,6 +158,7 @@ type Download struct {
 	BaseDir        string
 	DownloadCdnUrl string
 	UrlOverride    string
+	ReleaseID      string
 }
 
 func (t *Download) Execute(runtime connector.Runtime) error {
@@ -165,21 +166,27 @@ func (t *Download) Execute(runtime connector.Runtime) error {
 		return errors.New("unknown version to download")
 	}
 
-	var osArch = runtime.GetSystemInfo().GetOsArch()
-	var osType = runtime.GetSystemInfo().GetOsType()
-	var osVersion = runtime.GetSystemInfo().GetOsVersion()
-	var osPlatformFamily = runtime.GetSystemInfo().GetOsPlatformFamily()
-	var baseDir = runtime.GetBaseDir()
-	var prePath = path.Join(baseDir, "versions")
-	var wizard = files.NewKubeBinary("install-wizard", osArch, osType, osVersion, osPlatformFamily, t.Version, prePath, t.DownloadCdnUrl)
+	var stem string
+	if t.ReleaseID != "" {
+		stem = fmt.Sprintf("install-wizard-v%s.%s", t.Version, t.ReleaseID)
+	} else {
+		stem = fmt.Sprintf("install-wizard-v%s", t.Version)
+	}
+	wizard := &files.KubeBinary{
+		ID:       "install-wizard",
+		Type:     files.WIZARD,
+		BaseDir:  filepath.Join(runtime.GetBaseDir(), "versions", fmt.Sprintf("v%s", t.Version)),
+		FileName: fmt.Sprintf("%s.tar.gz", stem),
+	}
 
 	if t.UrlOverride == "" {
-		md5URL, _ := url.JoinPath(t.DownloadCdnUrl, version.VENDOR_REPO_PATH, fmt.Sprintf("install-wizard-v%s.md5sum.txt", t.Version))
+		md5URL, _ := url.JoinPath(wizard.GetDownloadMirrors(t.DownloadCdnUrl), version.VENDOR_REPO_PATH, fmt.Sprintf("%s.md5sum.txt", stem))
 		var fetchMd5 = fmt.Sprintf("curl -sSfL %s |awk '{print $1}'", md5URL)
 		md5sum, err := runtime.GetRunner().Cmd(fetchMd5, false, false)
 		if err != nil {
 			return errors.New("get md5sum failed")
 		}
+		wizard.Url, _ = url.JoinPath(wizard.GetDownloadMirrors(t.DownloadCdnUrl), version.VENDOR_REPO_PATH, fmt.Sprintf("%s.tar.gz", stem))
 		wizard.CheckMd5Sum = true
 		wizard.Md5sum = md5sum
 	} else {

@@ -46,6 +46,13 @@ while read line; do
 done < components
 sed -i "s/#__VERSION__/${VERSION}/g" $manifest_file
 
+if [[ ! -z "$RELEASE_ID" ]]; then
+    RELEASE_ID_SUFFIX=".$RELEASE_ID"
+else
+    RELEASE_ID_SUFFIX=""
+fi
+sed -i "s/#__RELEASE_ID_SUFFIX__/${RELEASE_ID_SUFFIX}/g" $manifest_file
+
 path="${REPO_PATH:-/}"
 sed -i "s|#__REPO_PATH__|${path}|g" $manifest_file
 
