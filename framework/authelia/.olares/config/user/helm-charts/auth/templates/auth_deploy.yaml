@@ -19,6 +19,7 @@ spec:
       labels:
         app: authelia
     spec:
+      priorityClassName: "system-cluster-critical"
       initContainers:
       - args:
         - -it
