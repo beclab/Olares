@@ -119,7 +119,7 @@ spec:
           name: check-appservice
       containers:
       - name: chartrepo
-        image: beclab/dynamic-chart-repository:v0.1.7
+        image: beclab/dynamic-chart-repository:v0.1.8
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -131,7 +131,9 @@ spec:
           - name: APP_SERVICE_SERVICE_HOST                                         
             value: app-service
           - name: APP_SERVICE_SERVICE_PORT                                         
-            value: "6755"            
+            value: "6755"
+          - name: IMAGE_INFOS
+            value: /opt/app/data/v2/images-info
           - name: NATS_HOST                                                        
             value: nats.os-platform                                                            
           - name: NATS_PORT                                                        
