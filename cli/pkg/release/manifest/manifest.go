@@ -276,17 +276,17 @@ func (m *Manager) scan() error {
 
 	return nil
 }
-func (m *Manager) getLatestDailyBuildTag() (string, error) {
+func (m *Manager) getLatestDailyBuildTagAndCommit() (string, string, error) {
 	cmd := exec.Command("git", "tag", "-l")
 	cmd.Dir = m.olaresRepoRoot
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to get git tags: %v", err)
+		return "", "", fmt.Errorf("failed to get git tags: %v", err)
 	}
 
 	tags := strings.Split(strings.TrimSpace(string(output)), "\n")
 	if len(tags) == 0 || (len(tags) == 1 && tags[0] == "") {
-		return "", fmt.Errorf("no git tags found")
+		return "", "", fmt.Errorf("no git tags found")
 	}
 
 	var dailyTags []string
@@ -300,7 +300,7 @@ func (m *Manager) getLatestDailyBuildTag() (string, error) {
 	}
 
 	if len(dailyTags) == 0 {
-		return "", fmt.Errorf("no daily build tags found")
+		return "", "", fmt.Errorf("no daily build tags found")
 	}
 
 	sort.Slice(dailyTags, func(i, j int) bool {
@@ -314,7 +314,13 @@ func (m *Manager) getLatestDailyBuildTag() (string, error) {
 		}
 		return iv.LessThan(jv)
 	})
-	return dailyTags[len(dailyTags)-1], nil
+	tag := dailyTags[len(dailyTags)-1]
+	parseCommitCMD := exec.Command("git", "rev-parse", "--short=7", tag)
+	commitSHA, err := parseCommitCMD.CombinedOutput()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to parse git commit: %v", err)
+	}
+	return tag, strings.TrimSpace(string(commitSHA)), nil
 }
 
 // Helper function to patch extracted image name
@@ -350,7 +356,7 @@ func (m *Manager) patchComponent(component BinaryOutput) (BinaryOutput, error) {
 		return component, nil
 	}
 
-	latestDailyBuildTag, err := m.getLatestDailyBuildTag()
+	latestDailyBuildTag, latestDailyBuildCommit, err := m.getLatestDailyBuildTagAndCommit()
 	if err != nil {
 		return BinaryOutput{}, fmt.Errorf("failed to get latest daily build tag (required to replace olaresd version): %v", err)
 	}
@@ -360,6 +366,11 @@ func (m *Manager) patchComponent(component BinaryOutput) (BinaryOutput, error) {
 	component.Name = strings.ReplaceAll(component.Name, "#__VERSION__", latestDailyBuildTag)
 	component.AMD64 = strings.ReplaceAll(component.AMD64, "#__VERSION__", latestDailyBuildTag)
 	component.ARM64 = strings.ReplaceAll(component.ARM64, "#__VERSION__", latestDailyBuildTag)
+
+	releaseIDSuffix := fmt.Sprintf(".%s", latestDailyBuildCommit)
+	component.Name = strings.ReplaceAll(component.Name, "#__RELEASE_ID_SUFFIX__", releaseIDSuffix)
+	component.AMD64 = strings.ReplaceAll(component.AMD64, "#__RELEASE_ID_SUFFIX__", releaseIDSuffix)
+	component.ARM64 = strings.ReplaceAll(component.ARM64, "#__RELEASE_ID_SUFFIX__", releaseIDSuffix)
 	return component, nil
 
 }
