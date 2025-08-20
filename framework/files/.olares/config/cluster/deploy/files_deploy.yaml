@@ -108,7 +108,7 @@ spec:
             value: /appdata
           - name: SEAFILE_SERVICE
             value: seafile
-          image: beclab/media-server:v0.1.12
+          image: beclab/media-server:v0.1.13
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
