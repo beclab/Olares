@@ -141,8 +141,8 @@ jobs:
           aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt --acl=public-read && \
           aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.tar.gz --acl=public-read
 
-          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.md5sum.txt --acl=public-read && \
-          aws s3 cp install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.tar.gz --acl=public-read
+          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.md5sum.txt --acl=public-read && \
+          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.tar.gz --acl=public-read
 
   release:
     runs-on: ubuntu-latest
