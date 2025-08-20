@@ -21,7 +21,7 @@ jobs:
           ref: ${{ github.event.inputs.tags }}
       - id: generate
         run: |
-          hash=$(git rev-parse --short HEAD)
+          hash=$(git rev-parse --short=7 HEAD)
           echo "id=$hash" >> "$GITHUB_OUTPUT"
 
   release-cli:
