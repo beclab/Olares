@@ -127,7 +127,7 @@ jobs:
 
       - name: Package installer
         run: |
-          bash build/build.sh ${{ needs.daily-version.outputs.version }}
+          bash build/build.sh ${{ needs.daily-version.outputs.version }} ${{ needs.release-id.outputs.id }}
 
       - name: Upload to S3
         id: upload

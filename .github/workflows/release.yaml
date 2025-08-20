@@ -129,7 +129,7 @@ jobs:
 
       - name: Package installer
         run: |
-          bash build/build.sh ${{ github.event.inputs.tags }}
+          bash build/build.sh ${{ github.event.inputs.tags }} ${{ needs.release-id.outputs.id }}
 
       - name: Upload to S3
         env: 
