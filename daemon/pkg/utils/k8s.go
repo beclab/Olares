@@ -516,3 +516,22 @@ func GetUserspacePvcHostPath(ctx context.Context, user string, client kubernetes
 
 	return hostpath, nil
 }
+
+func GetNodesPressure(ctx context.Context, client kubernetes.Interface) (map[string][]NodePressure, error) {
+	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.Error("list nodes error, ", err)
+		return nil, err
+	}
+
+	status := make(map[string][]NodePressure)
+	for _, node := range nodes.Items {
+		for _, condition := range node.Status.Conditions {
+			if condition.Type != corev1.NodeReady && condition.Status == corev1.ConditionTrue {
+				status[node.Name] = append(status[node.Name], NodePressure{Type: condition.Type, Message: condition.Message})
+			}
+		}
+	}
+
+	return status, nil
+}

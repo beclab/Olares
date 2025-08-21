@@ -5,6 +5,8 @@ package utils
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"strings"
 
 	"github.com/jaypipes/ghw"
@@ -13,7 +15,7 @@ import (
 )
 
 func GetGpuInfo() (*string, error) {
-	gpu, err := ghw.GPU()
+	gpu, err := ghw.GPU(ghw.WithAlerter(log.New(io.Discard, "", 0))) // discard warnings
 	if err != nil {
 		klog.Errorf("Error getting GPU info: %v", err)
 		return nil, err

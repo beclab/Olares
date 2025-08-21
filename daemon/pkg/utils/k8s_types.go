@@ -1,6 +1,9 @@
 package utils
 
-import "k8s.io/apimachinery/pkg/runtime/schema"
+import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+)
 
 var (
 	UserSchemeGroupVersion = schema.GroupVersion{Group: "iam.kubesphere.io", Version: "v1alpha2"}
@@ -11,3 +14,8 @@ var (
 		Resource: "users",
 	}
 )
+
+type NodePressure struct {
+	Type    corev1.NodeConditionType `json:"type"`
+	Message string                   `json:"message"`
+}
