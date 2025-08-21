@@ -19,7 +19,7 @@ import (
 )
 
 type upgrader_1_12_0_20250730 struct {
-	upgraderBase
+	breakingUpgraderBase
 }
 
 func (u upgrader_1_12_0_20250730) Version() *semver.Version {

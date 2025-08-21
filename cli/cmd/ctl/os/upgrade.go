@@ -8,11 +8,10 @@ import (
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/pipelines"
 	"github.com/beclab/Olares/cli/pkg/upgrade"
-	"github.com/pkg/errors"
+	"github.com/beclab/Olares/cli/version"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
-	"slices"
 )
 
 type UpgradeOsOptions struct {
@@ -37,50 +36,61 @@ func NewCmdUpgradeOs() *cobra.Command {
 		},
 	}
 	o.UpgradeOptions.AddFlags(cmd)
+	cmd.AddCommand(NewCmdCurrentVersionUpgradeSpec())
+	cmd.AddCommand(NewCmdUpgradeViable())
 	cmd.AddCommand(NewCmdUpgradePrecheck())
-	cmd.AddCommand(NewCmdGetUpgradePath())
 	return cmd
 }
 
-func NewCmdGetUpgradePath() *cobra.Command {
-	var baseVersionStr string
-	var latestFirst bool
+func NewCmdCurrentVersionUpgradeSpec() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "path",
-		Short: "Get the upgrade path (required intermediate versions) from base version to the latest upgradable version (as known to this release of olares-cli)",
+		Use:     "spec",
+		Aliases: []string{"current-spec"},
+		Short:   fmt.Sprintf("Get the upgrade spec of the current olares-cli version (%s)", version.VERSION),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var baseVersion *semver.Version
-			var err error
+			spec, err := upgrade.CurrentVersionSpec()
+			if err != nil {
+				return err
+			}
+			jsonOutput, _ := json.MarshalIndent(spec, "", "  ")
+			fmt.Println(string(jsonOutput))
+			return nil
+		},
+	}
+	return cmd
+}
+
+func NewCmdUpgradeViable() *cobra.Command {
+	var baseVersionStr string
+	cmd := &cobra.Command{
+		Use:   "viable",
+		Short: fmt.Sprintf("Determine whether upgrade can be directly performed upon the base version (to %s)", version.VERSION),
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if baseVersionStr == "" {
+				var err error
 				baseVersionStr, err = phase.GetOlaresVersion()
 				if err != nil {
-					return errors.New("failed to get current Olares version, please specify the base version explicitly")
+					return err
 				}
 			}
-			baseVersion, err = semver.NewVersion(baseVersionStr)
+			baseVersion, err := semver.NewVersion(baseVersionStr)
 			if err != nil {
-				return fmt.Errorf("invalid base version: %v", err)
+				return fmt.Errorf("invalid base version '%s': %v", baseVersionStr, err)
 			}
-
-			path, err := upgrade.GetUpgradePathFor(baseVersion, nil)
+			cliVersion, err := semver.NewVersion(version.VERSION)
+			if err != nil {
+				return fmt.Errorf("invalid cli version '%s': %v", version.VERSION, err)
+			}
+			err = upgrade.Check(baseVersion, cliVersion)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
-
-			if latestFirst {
-				slices.Reverse(path)
-			}
-
-			encoder := json.NewEncoder(cmd.OutOrStdout())
-			encoder.SetIndent("", "  ")
-			return encoder.Encode(path)
+			fmt.Printf("upgrade from %s to %s is viable\n", baseVersion, cliVersion)
+			return nil
 		},
 	}
-
-	cmd.Flags().StringVarP(&baseVersionStr, "base-version", "b", baseVersionStr, "base version to be upgraded, defaults to the current Olares version if inside Olares cluster")
-	cmd.Flags().BoolVar(&latestFirst, "latest-first", true, "sort versions to put recent ones in the front")
-
+	cmd.Flags().StringVarP(&baseVersionStr, "base", "b", "", "base version, defaults to the current Olares system's version")
 	return cmd
 }
 

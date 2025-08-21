@@ -22,12 +22,24 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+type breakingUpgraderBase struct {
+	upgraderBase
+}
+
+func (u breakingUpgraderBase) AddedBreakingChange() bool {
+	return true
+}
+
 // upgraderBase is the general-purpose upgrader implementation
 // for upgrading across versions without any breaking changes.
 // Other implementations of breakingUpgrader,
 // targeted for versions with breaking changes,
 // should use this as a base for injecting and/or rewriting specific tasks as needed
 type upgraderBase struct{}
+
+func (u upgraderBase) AddedBreakingChange() bool {
+	return false
+}
 
 func (u upgraderBase) PrepareForUpgrade() []task.Interface {
 	return []task.Interface{
