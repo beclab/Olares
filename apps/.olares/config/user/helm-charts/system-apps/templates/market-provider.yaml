@@ -1,0 +1,49 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:market
+  annotations:
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/market
+    provider-service-ref: appstore-svc.os-framework:81
+rules:
+- nonResourceURLs: ["*"]
+  verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:market-frontend
+  annotations:
+    provider-registry-ref: {{ .Values.bfl.username }}/market
+    provider-service-ref: appstore-svc.os-framework:81
+rules:
+- nonResourceURLs: ["*"]
+  verbs: ["*"]
+
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user:{{ .Values.bfl.username }}:market
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:market
+subjects:
+- kind: User
+  name: {{ .Values.bfl.username }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user:{{ .Values.bfl.username }}:market-frontend
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:market-frontend
+subjects:
+- kind: User
+  name: {{ .Values.bfl.username }}  
