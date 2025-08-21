@@ -136,6 +136,9 @@ spec:
           - --log-level
           - DEBUG
           - --no-check-certificate
+          - --s3-directory-markers
+          - --fs-cache-expire-duration
+          - "0"
           - --s3-list-version
           - "2"
           - --config
@@ -169,7 +172,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.95
+          image: beclab/files-server:v0.2.97
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
