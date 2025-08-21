@@ -1,10 +1,10 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ .Values.bfl.username }}:market-frontend-svc
+  name: {{ .Values.bfl.username }}:files-frontend-svc
   annotations:
-    provider-registry-ref: user-system-{{ .Values.bfl.username }}/market
-    provider-service-ref: appstore-svc.os-framework:81
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/files
+    provider-service-ref: files-service.os-framework:80
 rules:
 - nonResourceURLs: ["*"]
   verbs: ["*"]
@@ -13,10 +13,10 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ .Values.bfl.username }}:market-frontend-domain
+  name: {{ .Values.bfl.username }}:files-frontend-domain
   annotations:
-    provider-registry-ref: {{ .Values.bfl.username }}/market
-    provider-service-ref: appstore-svc.os-framework:81
+    provider-registry-ref: {{ .Values.bfl.username }}/files
+    provider-service-ref: files-service.os-framework:80
 rules:
 - nonResourceURLs: ["*"]
   verbs: ["*"]
@@ -25,12 +25,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ .Values.bfl.username }}:market-provider-svc
+  name: {{ .Values.bfl.username }}:files-provider-svc
   annotations:
-    provider-registry-ref: user-system-{{ .Values.bfl.username }}/market
-    provider-service-ref: appstore-svc.os-framework:81
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/files
+    provider-service-ref: files-service.os-framework:80
 rules:
-- nonResourceURLs: ["/app-store/*"]
+- nonResourceURLs: ["/api/resources/*"]
   verbs: ["*"]
 
 
@@ -38,11 +38,11 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: user:{{ .Values.bfl.username }}:market
+  name: user:{{ .Values.bfl.username }}:files
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ .Values.bfl.username }}:market-frontend-svc
+  name: {{ .Values.bfl.username }}:files-frontend-svc
 subjects:
 - kind: User
   name: {{ .Values.bfl.username }}
@@ -51,11 +51,11 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: user:{{ .Values.bfl.username }}:market-frontend
+  name: user:{{ .Values.bfl.username }}:files-frontend
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ .Values.bfl.username }}:market-frontend-domain
+  name: {{ .Values.bfl.username }}:files-frontend-domain
 subjects:
 - kind: User
   name: {{ .Values.bfl.username }}  
