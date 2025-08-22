@@ -45,7 +45,7 @@ roleRef:
   name: {{ .Values.bfl.username }}:market-frontend-svc
 subjects:
 - kind: User
-  name: {{ .Values.bfl.username }}
+  name: '{{ .Values.bfl.username }}'
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -58,4 +58,4 @@ roleRef:
   name: {{ .Values.bfl.username }}:market-frontend-domain
 subjects:
 - kind: User
-  name: {{ .Values.bfl.username }}  
+  name: '{{ .Values.bfl.username }}'
