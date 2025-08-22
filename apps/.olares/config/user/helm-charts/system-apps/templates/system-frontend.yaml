@@ -333,7 +333,7 @@ spec:
             - name: PGDB
               value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
         - name: system-frontend-init
-          image: beclab/system-frontend:v1.4.11
+          image: beclab/system-frontend:v1.4.12
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -455,7 +455,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.44
+          image: beclab/user-service:v0.0.45
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
