@@ -78,7 +78,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: ui
+    app: olares-app
   type: ClusterIP
   ports:
     - protocol: TCP
@@ -93,7 +93,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: ui
+    app: olares-app
   type: ClusterIP
   ports:
     - protocol: TCP
@@ -110,7 +110,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: ui
+    app: olares-app
   ports:
     - name: "profile-editor"
       protocol: TCP
@@ -128,7 +128,7 @@ metadata:
   namespace: user-space-{{ .Values.bfl.username }}
 spec:
   selector:
-    app: ui
+    app: olares-app
   type: ClusterIP
   ports:
     - protocol: TCP
@@ -143,7 +143,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: ui
+    app: olares-app
   type: ClusterIP
   ports:
     - protocol: TCP
@@ -171,7 +171,7 @@ metadata:
   namespace: user-space-{{ .Values.bfl.username }}
 spec:
   selector:
-    app: ui
+    app: olares-app
   type: ClusterIP
   ports:
     - protocol: TCP
@@ -187,7 +187,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: ui
+    app: olares-app
   ports:
     - protocol: TCP
       port: 80
@@ -200,7 +200,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: ui
+    app: olares-app
   type: ClusterIP
   ports:
     - protocol: TCP
@@ -216,7 +216,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: ui
+    app: olares-app
   ports:
     - protocol: TCP
       port: 80
@@ -225,17 +225,17 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ui-deployment
+  name: olares-app-deployment
   namespace: {{ .Release.Namespace }}
   labels:
-    app: ui
-    applications.app.bytetrade.io/name: ui
+    app: olares-app
+    applications.app.bytetrade.io/name: olares-app
     applications.app.bytetrade.io/owner: '{{ .Values.bfl.username }}'
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
-    applications.app.bytetrade.io/default-thirdlevel-domains: '[{"appName": "ui","entranceName":"dashboard","thirdLevelDomain":"dashboard"},{"appName":"ui","entranceName":"control-hub","thirdLevelDomain":"control-hub"},{"appName":"ui","entranceName":"files","thirdLevelDomain":"files"},{"appName": "ui","entranceName":"vault","thirdLevelDomain":"vault"},{"appName":"ui","entranceName":"headscale","thirdLevelDomain":"headscale"},{"appName":"ui","entranceName":"settings","thirdLevelDomain":"settings"},{"appName": "ui","entranceName":"market","thirdLevelDomain":"market"},{"appName":"ui","entranceName":"profile","thirdLevelDomain":"profile"}]'
+    applications.app.bytetrade.io/default-thirdlevel-domains: '[{"appName": "olares-app","entranceName":"dashboard","thirdLevelDomain":"dashboard"},{"appName":"olares-app","entranceName":"control-hub","thirdLevelDomain":"control-hub"},{"appName":"olares-app","entranceName":"files","thirdLevelDomain":"files"},{"appName": "olares-app","entranceName":"vault","thirdLevelDomain":"vault"},{"appName":"olares-app","entranceName":"headscale","thirdLevelDomain":"headscale"},{"appName":"olares-app","entranceName":"settings","thirdLevelDomain":"settings"},{"appName": "olares-app","entranceName":"market","thirdLevelDomain":"market"},{"appName":"olares-app","entranceName":"profile","thirdLevelDomain":"profile"}]'
     applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/dashboard/icon.png
-    applications.app.bytetrade.io/title: UI
+    applications.app.bytetrade.io/title: 'Olares Apps'
     applications.app.bytetrade.io/version: '0.0.1'
     applications.app.bytetrade.io/policies: '{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}'
     applications.app.bytetrade.io/entrances: '[{"name":"files", "host":"files-fe-service", "port":80,"title":"Files","windowPushState":true,"icon":"https://file.bttcdn.com/appstore/files/icon.png"},{"name":"vault", "host":"vault-service", "port":80,"title":"Vault","windowPushState":true,"icon":"https://file.bttcdn.com/appstore/vault/icon.png"},{"name":"market", "host":"appstore-fe-service", "port":80,"title":"Market","windowPushState":true,"icon":"https://file.bttcdn.com/appstore/appstore/icon.png"},{"name":"settings", "host":"settings-service", "port":80,"title":"Settings","icon":"https://file.bttcdn.com/appstore/settings/icon.png"},{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true,"icon":"https://file.bttcdn.com/appstore/profile/icon.png"},{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true,"icon":"https://file.bttcdn.com/appstore/dashboard/icon.png"},{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true,"icon":"https://file.bttcdn.com/appstore/control-hub/icon.png"},{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true,"icon":"https://file.bttcdn.com/appstore/headscale/icon.png"}]'
@@ -243,18 +243,18 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ui
+      app: olares-app
   template:
     metadata:
       labels:
-        app: ui
+        app: olares-app
         io.bytetrade.app: "true"
       annotations:
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-nodejs: "olares-instrumentation"
         instrumentation.opentelemetry.io/nodejs-container-names: "user-service"    
         instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
-        instrumentation.opentelemetry.io/inject-nginx-container-names: "ui"
+        instrumentation.opentelemetry.io/inject-nginx-container-names: "olares-app"
 {{ end }}        
     spec:
       priorityClassName: "system-cluster-critical"
@@ -332,7 +332,7 @@ spec:
               value: "{{ $pg_password | b64dec }}"
             - name: PGDB
               value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
-        - name: ui-init
+        - name: olares-app-init
           image: beclab/system-frontend:v1.4.11
           imagePullPolicy: IfNotPresent
           command:
@@ -369,7 +369,7 @@ spec:
             - debug
             - -c
             - /etc/envoy/envoy.yaml
-        - name: ui
+        - name: olares-app
           image: beclab/docker-nginx-headers-more:ubuntu-v0.1.0
           imagePullPolicy: IfNotPresent
           ports:
@@ -400,10 +400,10 @@ spec:
               mountPath: /www
             - name: wise-download-dir
               mountPath: /data/Home
-            - name: ui-nginx-config
+            - name: olares-app-nginx-config
               mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
-            - name: ui-nginx-config
+            - name: olares-app-nginx-config
               mountPath: /etc/nginx/conf.d/headscale.conf
               subPath: headscale.conf
           env:
@@ -624,9 +624,9 @@ spec:
           hostPath:
             type: Directory
             path: '{{ .Values.userspace.appCache}}'
-        - name: ui-nginx-config
+        - name: olares-app-nginx-config
           configMap:
-            name: ui-nginx-config
+            name: olares-app-nginx-config
             items:
               - key: nginx.conf
                 path: nginx.conf
@@ -1998,7 +1998,7 @@ metadata:
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: ui-nginx-config
+  name: olares-app-nginx-config
   namespace: {{ .Release.Namespace }}
   annotations:
     kubesphere.io/creator: bytetrade.io
