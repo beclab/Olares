@@ -258,6 +258,7 @@ spec:
 {{ end }}        
     spec:
       priorityClassName: "system-cluster-critical"
+      serviceAccountName: system-frontend
       initContainers:
         - args:
             - -it
@@ -466,12 +467,8 @@ spec:
         {{- end }}
             - name: DEV_MODE
               value: ''
-            - name: OS_SYSTEM_SERVER
-              value: system-server.user-system-{{ .Values.bfl.username }}
-            - name: OS_APP_SECRET
-              value: '{{ .Values.os.settings.appSecret }}'
-            - name: OS_APP_KEY
-              value: {{ .Values.os.settings.appKey }}
+            - name: MY_NAME
+              value: '{{ .Values.bfl.username }}'
             - name: NODE_IP
               valueFrom:
                 fieldRef:
@@ -682,34 +679,7 @@ data:
   appData: "{{ .Values.userspace.appData }}"
   appCache: "{{ .Values.userspace.appCache }}"
   username: "{{ .Values.bfl.username }}"
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: files-provider
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  dataType: files
-  deployment: files
-  description: files provider
-  endpoint: files-service.{{ .Release.Namespace }}
-  group: service.files
-  kind: provider
-  namespace: {{ .Release.Namespace }}
-  opApis:
-    - name: Query
-      uri: /provider/query_file
-    - name: GetSearchFolderStatus
-      uri: /provider/get_search_folder_status
-    - name: UpdateSearchFolderPaths
-      uri: /provider/update_search_folder_paths
-    - name: GetDatasetFolderStatus
-      uri: /provider/get_dataset_folder_status
-    - name: UpdateDatasetFolderPaths
-      uri: /provider/update_dataset_folder_paths
-  version: v1
-status:
-  state: active
+
 ---
 apiVersion: v1
 kind: Secret
@@ -847,6 +817,7 @@ data:
                                   - exact: x-bfl-user
                                   - exact: x-real-ip
                                   - exact: terminus-nonce
+                                  - exact: x-provider-proxy
                               headers_to_add:
                                 - key: X-Forwarded-Method
                                   value: '%REQ(:METHOD)%'
@@ -1492,6 +1463,7 @@ data:
                               - exact: x-bfl-user
                               - exact: x-real-ip
                               - exact: terminus-nonce
+                              - exact: x-provider-proxy
                           headers_to_add:
                             - key: X-Forwarded-Method
                               value: '%REQ(:METHOD)%'
@@ -1667,6 +1639,7 @@ data:
                               - exact: x-bfl-user
                               - exact: x-real-ip
                               - exact: terminus-nonce
+                              - exact: x-provider-proxy
                           headers_to_add:
                             - key: X-Forwarded-Method
                               value: '%REQ(:METHOD)%'
@@ -1856,6 +1829,7 @@ data:
                               - exact: x-bfl-user
                               - exact: x-real-ip
                               - exact: terminus-nonce
+                              - exact: x-provider-proxy
                           headers_to_add:
                             - key: X-Forwarded-Method
                               value: '%REQ(:METHOD)%'
@@ -2134,3 +2108,11 @@ spec:
           pub: allow
 
     user: user-service-{{ .Values.bfl.username }}
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: system-frontend
+

@@ -21,6 +21,35 @@ rules:
 - nonResourceURLs: ["*"]
   verbs: ["*"]
 
+
+# ---
+# apiVersion: sys.bytetrade.io/v1alpha1
+# kind: ProviderRegistry
+# metadata:
+#   name: files-provider
+#   namespace: user-system-{{ .Values.bfl.username }}
+# spec:
+#   dataType: files
+#   deployment: files
+#   description: files provider
+#   endpoint: files-service.{{ .Release.Namespace }}
+#   group: service.files
+#   kind: provider
+#   namespace: {{ .Release.Namespace }}
+#   opApis:
+#     - name: Query
+#       uri: /provider/query_file
+#     - name: GetSearchFolderStatus
+#       uri: /provider/get_search_folder_status
+#     - name: UpdateSearchFolderPaths
+#       uri: /provider/update_search_folder_paths
+#     - name: GetDatasetFolderStatus
+#       uri: /provider/get_dataset_folder_status
+#     - name: UpdateDatasetFolderPaths
+#       uri: /provider/update_dataset_folder_paths
+#   version: v1
+# status:
+#   state: active
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -30,7 +59,12 @@ metadata:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/files
     provider-service-ref: files-service.os-framework:80
 rules:
-- nonResourceURLs: ["/api/resources/*"]
+- nonResourceURLs: 
+  - "/provider/query_file"
+  - "/provider/get_search_folder_status"
+  - "/provider/update_search_folder_paths"
+  - "/provider/get_dataset_folder_status"
+  - "/provider/update_dataset_folder_paths"
   verbs: ["*"]
 
 
@@ -38,7 +72,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: user:{{ .Values.bfl.username }}:files
+  name: user:{{ .Values.bfl.username }}:files-frontend-svc
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -51,7 +85,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: user:{{ .Values.bfl.username }}:files-frontend
+  name: user:{{ .Values.bfl.username }}:files-frontend-domain
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

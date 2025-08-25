@@ -1,0 +1,64 @@
+# ---
+# apiVersion: sys.bytetrade.io/v1alpha1
+# kind: ProviderRegistry
+# metadata:
+#   name: secret-provider
+#   namespace: user-system-{{ .Values.bfl.username }}
+# spec:
+#   dataType: secret
+#   deployment: infisical
+#   description: infisical secret provider
+#   endpoint: infisical-service.{{ .Release.Namespace }}:8080
+#   group: secret.infisical
+#   kind: provider
+#   namespace: {{ .Release.Namespace }}
+#   opApis:
+#   - name: CreateSecret
+#     uri: /secret/create
+#   - name: RetrieveSecret
+#     uri: /secret/retrieve
+#   - name: ListSecret
+#     uri: /secret/list
+#   - name: DeleteSecret
+#     uri: /secret/delete
+#   - name: UpdateSecret
+#     uri: /secret/update
+#   version: v1
+# status:
+#   state: active
+
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:secret-settings-provider-svc
+  annotations:
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/secret
+    provider-service-ref: infisical-service.{{ .Release.Namespace }}:8080
+rules:
+- nonResourceURLs: 
+  - /RetrieveSecret?workspace=settings
+  - /CreateSecret?workspace=settings
+  - /DeleteSecret?workspace=settings
+  - /UpdateSecret?workspace=settings
+  - /ListSecret?workspace=settings
+  verbs: ["*"]
+
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:secret-dashboard-provider-svc
+  annotations:
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/secret
+    provider-service-ref: infisical-service.{{ .Release.Namespace }}:8080
+rules:
+- nonResourceURLs: 
+  - /RetrieveSecret?workspace=dashboard
+  - /CreateSecret?workspace=dashboard
+  - /DeleteSecret?workspace=dashboard
+  - /UpdateSecret?workspace=dashboard
+  - /ListSecret?workspace=dashboard
+  verbs: ["*"]

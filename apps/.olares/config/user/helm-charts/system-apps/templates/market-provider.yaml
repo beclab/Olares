@@ -38,7 +38,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: user:{{ .Values.bfl.username }}:market
+  name: user:{{ .Values.bfl.username }}:market-frontend-svc
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -51,7 +51,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: user:{{ .Values.bfl.username }}:market-frontend
+  name: user:{{ .Values.bfl.username }}:market-frontend-domain
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

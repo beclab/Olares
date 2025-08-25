@@ -1,0 +1,36 @@
+# ---
+# apiVersion: sys.bytetrade.io/v1alpha1
+# kind: ProviderRegistry
+# metadata:
+#   name: bfl-app-provider
+#   namespace: user-system-{{ .Values.bfl.username }}
+# spec:
+#   dataType: app
+#   deployment: bfl
+#   description: app store provider
+#   endpoint: bfl.{{ .Release.Namespace }}
+#   group: service.bfl
+#   kind: provider
+#   namespace: {{ .Release.Namespace }}
+#   opApis:
+#   - name: InstallDevApp
+#     uri: /bfl/app_store/v1alpha1/applications/installdev
+#   - name: UserApps
+#     uri: /bfl/backend/v1/myapps
+#   version: v1
+# status:
+#   state: active
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:bfl-svc
+  annotations:
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/bfl
+    provider-service-ref: bfl.{{ .Release.Namespace }}
+rules:
+- nonResourceURLs: 
+  - "/bfl/app_store/v1alpha1/applications/installdev"
+  - "/bfl/backend/v1/myapps"
+  verbs: ["*"]
