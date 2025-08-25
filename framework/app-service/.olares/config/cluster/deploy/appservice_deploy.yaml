@@ -170,7 +170,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.3.78
+        image: beclab/app-service:0.3.79
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -186,7 +186,7 @@ spec:
         - name: REQUIRE_PERMISSION_APPS
           value: "vault,desktop,message,search,appstore,notification,dashboard,settings,profile"
         - name: SYS_APPS
-          value: "market,auth,citus,desktop,did,docs,files,fsnotify,headscale,infisical,intentprovider,ksserver,message,mongo,monitoring,notifications,profile,redis,recommend,seafile,search,search-admin,settings,systemserver,tapr,vault,video,zinc,accounts,control-hub,dashboard,nitro,system-frontend"
+          value: "market,auth,citus,desktop,did,docs,files,fsnotify,headscale,infisical,intentprovider,ksserver,message,mongo,monitoring,notifications,profile,redis,recommend,seafile,search,search-admin,settings,systemserver,tapr,vault,video,zinc,accounts,control-hub,dashboard,nitro,olares-app"
         - name: GENERATED_APPS
           value: "citus,mongo-cluster-cfg,mongo-cluster-mongos,mongo-cluster-rs0,frp-agent,l4-bfl-proxy,drc-redis-cluster,appdata-backend,argoworkflows,argoworkflow-workflow-controller,velero,kvrocks"
         - name: WS_CONTAINER_IMAGE
@@ -469,6 +469,10 @@ spec:
           pub: allow
           sub: allow
       - name: groups
+        permission:
+          pub: allow
+          sub: allow
+      - name: notification
         permission:
           pub: allow
           sub: allow
