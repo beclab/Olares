@@ -2112,43 +2112,43 @@ spec:
           key: nats_password
           name: user-service-nats-secret
     subjects:
-      - name: "files.*"
+      - name: files.{{ .Values.bfl.username }}
         permission:
           pub: allow
           sub: allow
-      - name: "notification.*"
+      - name: notification.{{ .Values.bfl.username }}
         permission:
           pub: allow
           sub: allow
-      - name: "search.*"
+      - name: search.{{ .Values.bfl.username }}
         permission:
           pub: allow
           sub: allow
-      - name: "seahub.*"
+      - name: seahub.{{ .Values.bfl.username }}
         permission:
           sub: allow
           pub: allow
-      - name: "vault.*"
+      - name: vault.{{ .Values.bfl.username }}
         permission:
           sub: allow
           pub: allow
-      - name: "application.*"
+      - name: application.{{ .Values.bfl.username }}
         permission:
           sub: allow
           pub: allow
-      - name: "knowledge.*"
+      - name: knowledge.{{ .Values.bfl.username }}
         permission:
           sub: allow
           pub: allow
-      - name: "market.*"
+      - name: market.{{ .Values.bfl.username }}
         permission:
           sub: allow
           pub: allow
-      - name: "backup.*"
+      - name: backup.{{ .Values.bfl.username }}
         permission:
           sub: allow
           pub: allow
-      - name: "intent.*"
+      - name: intent.{{ .Values.bfl.username }}
         permission:
           sub: allow
           pub: allow
