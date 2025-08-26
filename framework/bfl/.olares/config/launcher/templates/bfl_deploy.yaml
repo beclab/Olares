@@ -266,7 +266,7 @@ spec:
 
       containers:
       - name: api
-        image: beclab/bfl:v0.4.21
+        image: beclab/bfl:v0.4.23
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000
@@ -321,7 +321,7 @@ spec:
               apiVersion: v1
               fieldPath: spec.nodeName
       - name: ingress
-        image: beclab/bfl-ingress:v0.3.15
+        image: beclab/bfl-ingress:v0.3.16
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: ngxlog

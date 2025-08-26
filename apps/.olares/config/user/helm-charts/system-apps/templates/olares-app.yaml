@@ -78,7 +78,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: system-frontend
+    app: olares-app
   type: ClusterIP
   ports:
     - protocol: TCP
@@ -93,7 +93,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: system-frontend
+    app: olares-app
   type: ClusterIP
   ports:
     - protocol: TCP
@@ -110,7 +110,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: system-frontend
+    app: olares-app
   ports:
     - name: "profile-editor"
       protocol: TCP
@@ -128,7 +128,7 @@ metadata:
   namespace: user-space-{{ .Values.bfl.username }}
 spec:
   selector:
-    app: system-frontend
+    app: olares-app
   type: ClusterIP
   ports:
     - protocol: TCP
@@ -143,7 +143,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: system-frontend
+    app: olares-app
   type: ClusterIP
   ports:
     - protocol: TCP
@@ -171,7 +171,7 @@ metadata:
   namespace: user-space-{{ .Values.bfl.username }}
 spec:
   selector:
-    app: system-frontend
+    app: olares-app
   type: ClusterIP
   ports:
     - protocol: TCP
@@ -187,7 +187,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: system-frontend
+    app: olares-app
   ports:
     - protocol: TCP
       port: 80
@@ -200,7 +200,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: system-frontend
+    app: olares-app
   type: ClusterIP
   ports:
     - protocol: TCP
@@ -216,7 +216,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: system-frontend
+    app: olares-app
   ports:
     - protocol: TCP
       port: 80
@@ -225,36 +225,36 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: system-frontend-deployment
+  name: olares-app-deployment
   namespace: {{ .Release.Namespace }}
   labels:
-    app: system-frontend
-    applications.app.bytetrade.io/name: system-frontend
+    app: olares-app
+    applications.app.bytetrade.io/name: olares-app
     applications.app.bytetrade.io/owner: '{{ .Values.bfl.username }}'
-    applications.app.bytetrade.io/group: 'true'
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
-    applications.app.bytetrade.io/icon: '{"dashboard":"https://file.bttcdn.com/appstore/dashboard/icon.png","control-hub":"https://file.bttcdn.com/appstore/control-hub/icon.png","profile":"https://file.bttcdn.com/appstore/profile/icon.png","headscale": "https://file.bttcdn.com/appstore/headscale/icon.png","settings": "https://file.bttcdn.com/appstore/settings/icon.png","files":"https://file.bttcdn.com/appstore/files/icon.png","vault":"https://file.bttcdn.com/appstore/vault/icon.png","market":"https://file.bttcdn.com/appstore/appstore/icon.png"}'
-    applications.app.bytetrade.io/title: '{"dashboard": "Dashboard","control-hub":"Control Hub","profile":"Profile","headscale":"Headscale","settings":"Settings","files":"Files","vault":"Vault","market":"Market"}'
-    applications.app.bytetrade.io/version: '{"dashboard": "0.0.1","control-hub":"0.0.1","profile":"0.0.1","headscale":"0.0.1","settings":"0.0.1","files":"0.0.1","vault":"0.0.1","market":"0.0.1"}'
-    applications.app.bytetrade.io/policies: '{"dashboard":{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}}'
-    applications.app.bytetrade.io/entrances: '{"dashboard":[{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true}],"control-hub":[{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true}],"profile":[{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true}],"headscale":[{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true}],"settings":[{"name":"settings", "host":"settings-service", "port":80,"title":"Settings"}],"files":[{"name":"files", "host":"files-fe-service", "port":80,"title":"Files","windowPushState":true}],"vault":[{"name":"vault", "host":"vault-service", "port":80,"title":"Vault","windowPushState":true}],"market":[{"name":"appstore", "host":"appstore-fe-service", "port":80,"title":"Market","windowPushState":true}]}'
+    applications.app.bytetrade.io/default-thirdlevel-domains: '[{"appName": "olares-app","entranceName":"dashboard","thirdLevelDomain":"dashboard"},{"appName":"olares-app","entranceName":"control-hub","thirdLevelDomain":"control-hub"},{"appName":"olares-app","entranceName":"files","thirdLevelDomain":"files"},{"appName": "olares-app","entranceName":"vault","thirdLevelDomain":"vault"},{"appName":"olares-app","entranceName":"headscale","thirdLevelDomain":"headscale"},{"appName":"olares-app","entranceName":"settings","thirdLevelDomain":"settings"},{"appName": "olares-app","entranceName":"market","thirdLevelDomain":"market"},{"appName":"olares-app","entranceName":"profile","thirdLevelDomain":"profile"}]'
+    applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/dashboard/icon.png
+    applications.app.bytetrade.io/title: 'Olares Apps'
+    applications.app.bytetrade.io/version: '0.0.1'
+    applications.app.bytetrade.io/policies: '{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}'
+    applications.app.bytetrade.io/entrances: '[{"name":"files", "host":"files-fe-service", "port":80,"title":"Files","windowPushState":true,"icon":"https://file.bttcdn.com/appstore/files/icon.png"},{"name":"vault", "host":"vault-service", "port":80,"title":"Vault","windowPushState":true,"icon":"https://file.bttcdn.com/appstore/vault/icon.png"},{"name":"market", "host":"appstore-fe-service", "port":80,"title":"Market","windowPushState":true,"icon":"https://file.bttcdn.com/appstore/appstore/icon.png"},{"name":"settings", "host":"settings-service", "port":80,"title":"Settings","icon":"https://file.bttcdn.com/appstore/settings/icon.png"},{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true,"icon":"https://file.bttcdn.com/appstore/profile/icon.png"},{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true,"icon":"https://file.bttcdn.com/appstore/dashboard/icon.png"},{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true,"icon":"https://file.bttcdn.com/appstore/control-hub/icon.png"},{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true,"icon":"https://file.bttcdn.com/appstore/headscale/icon.png"}]'
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: system-frontend
+      app: olares-app
   template:
     metadata:
       labels:
-        app: system-frontend
+        app: olares-app
         io.bytetrade.app: "true"
       annotations:
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-nodejs: "olares-instrumentation"
         instrumentation.opentelemetry.io/nodejs-container-names: "user-service"    
         instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
-        instrumentation.opentelemetry.io/inject-nginx-container-names: "system-frontend"    
+        instrumentation.opentelemetry.io/inject-nginx-container-names: "olares-app"
 {{ end }}        
     spec:
       priorityClassName: "system-cluster-critical"
@@ -333,8 +333,8 @@ spec:
               value: "{{ $pg_password | b64dec }}"
             - name: PGDB
               value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
-        - name: system-frontend-init
-          image: beclab/system-frontend:v1.4.10
+        - name: olares-app-init
+          image: beclab/system-frontend:v1.4.13
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -370,7 +370,7 @@ spec:
             - debug
             - -c
             - /etc/envoy/envoy.yaml
-        - name: system-frontend
+        - name: olares-app
           image: beclab/docker-nginx-headers-more:ubuntu-v0.1.0
           imagePullPolicy: IfNotPresent
           ports:
@@ -401,10 +401,10 @@ spec:
               mountPath: /www
             - name: wise-download-dir
               mountPath: /data/Home
-            - name: system-frontend-nginx-config
+            - name: olares-app-nginx-config
               mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
-            - name: system-frontend-nginx-config
+            - name: olares-app-nginx-config
               mountPath: /etc/nginx/conf.d/headscale.conf
               subPath: headscale.conf
           env:
@@ -456,7 +456,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.44
+          image: beclab/user-service:v0.0.45
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -621,9 +621,9 @@ spec:
           hostPath:
             type: Directory
             path: '{{ .Values.userspace.appCache}}'
-        - name: system-frontend-nginx-config
+        - name: olares-app-nginx-config
           configMap:
-            name: system-frontend-nginx-config
+            name: olares-app-nginx-config
             items:
               - key: nginx.conf
                 path: nginx.conf
@@ -1628,7 +1628,7 @@ metadata:
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: system-frontend-nginx-config
+  name: olares-app-nginx-config
   namespace: {{ .Release.Namespace }}
   annotations:
     kubesphere.io/creator: bytetrade.io

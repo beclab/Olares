@@ -15,6 +15,7 @@ type upgrader interface {
 	UpgradeSystemComponents() []task.Interface
 	UpdateOlaresVersion() []task.Interface
 	PostUpgrade() []task.Interface
+	AddedBreakingChange() bool
 }
 
 type breakingUpgrader interface {

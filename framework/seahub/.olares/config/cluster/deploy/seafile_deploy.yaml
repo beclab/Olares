@@ -181,30 +181,6 @@ data:
 
     [General]
     SERVICE_URL = /
-  seahub_settings.py: |-
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'os_framework_seahub',
-            'USER': 'seafile_os_framework',
-            'PASSWORD': '{{ $pg_password | b64dec }}',
-            'HOST': 'citus-headless.os-platform',
-            'PORT': '5432',
-        }
-    }
-    FILE_SERVER_ROOT = '/seafhttp'
-
-    import os
-    PROJECT_ROOT = '/root/dev/source-code/seahub'
-    WEBPACK_LOADER = {
-        'DEFAULT': {
-            'BUNDLE_DIR_NAME': 'frontend/',
-            'STATS_FILE': os.path.join(PROJECT_ROOT,
-                                       'frontend/webpack-stats.pro.json'),
-        }
-    }
-    DEBUG = True
-    FILESERVER_TOKEN_ONCE_ONLY = False
 
 ---
 apiVersion: v1
@@ -215,10 +191,6 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - name: seahub
-      protocol: TCP
-      port: 8000
-      targetPort: 8000
     - name: server
       protocol: TCP
       port: 8082
@@ -334,7 +306,7 @@ spec:
             subPath: ccnet.conf
 
       - name: nginx
-        image: 'beclab/nginx-lua:n0.0.4'
+        image: nginx:stable-alpine3.17-slim
         ports:
           - name: nginx-port
             containerPort: 80
@@ -380,8 +352,6 @@ spec:
               path: seafile.conf
             - key: ccnet.conf
               path: ccnet.conf
-            - key: seahub_settings.py
-              path: seahub_settings.py
           defaultMode: 420
 
 ---
