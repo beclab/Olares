@@ -290,9 +290,9 @@ spec:
             port: 8080
         env:
         - name: APP_SERVICE_SERVICE_HOST
-          value: app-service.os-framework
+          value: app-service.user-system-{{ .Values.bfl.username }}
         - name: APP_SERVICE_SERVICE_PORT
-          value: '6755'
+          value: '28080'
         - name: USER_DEFAULT_MEMORY_LIMIT
           value: '3G'
         - name: USER_DEFAULT_CPU_LIMIT
