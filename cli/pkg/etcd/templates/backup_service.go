@@ -30,6 +30,7 @@ var (
 		dedent.Dedent(`[Unit]
 Description=Backup ETCD
 [Service]
+Environment=LANG=C
 Type=oneshot
 ExecStart={{ .ScriptPath }}
     `)))
