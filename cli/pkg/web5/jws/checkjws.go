@@ -77,7 +77,7 @@ type CheckJWSResult struct {
 }
 
 // resolveDID resolves a DID either from cache or from the DID gate
-func resolveDID(olares_id string) (*didcore.ResolutionResult, error) {
+func ResolveOlaresName(olares_id string) (*didcore.ResolutionResult, error) {
 	name := strings.Replace(olares_id, "@", ".", -1)
 	// Try to get from cache first
 	cached, err := db.Get([]byte(name), nil)
@@ -184,18 +184,18 @@ func CheckJWS(jws string, duration int64) (*CheckJWSResult, error) {
 	}
 
 	// Resolve DID
-	resolutionResult, err := resolveDID(name)
+	resolutionResult, err := ResolveOlaresName(name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve DID: %w", err)
 	}
 
 	// Verify DID matches
 	if resolutionResult.Document.ID != kid {
-        	sid := resolutionResult.Document.ID + resolutionResult.Document.VerificationMethod[0].ID
-        	if sid != kid {
-            		return nil, fmt.Errorf("DID does not match: expected %s, got %  s", sid, kid)
-        	}
-    	}
+		sid := resolutionResult.Document.ID + resolutionResult.Document.VerificationMethod[0].ID
+		if sid != kid {
+			return nil, fmt.Errorf("DID does not match: expected %s, got %  s", sid, kid)
+		}
+	}
 	// Get verification method
 	if len(resolutionResult.Document.VerificationMethod) == 0 || resolutionResult.Document.VerificationMethod[0].PublicKeyJwk == nil {
 		return nil, fmt.Errorf("invalid DID document: missing verification method")
