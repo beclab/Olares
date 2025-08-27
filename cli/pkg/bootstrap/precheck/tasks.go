@@ -81,9 +81,9 @@ func (t *SystemSupportCheck) Check(runtime connector.Runtime) error {
 	}
 	// Interactive warning instead of outright failure
 	fmt.Printf("%v Use at your own risk, would you like to continue? (Y/N): ", err)
-	reader, err := utils.GetBufIOReaderOfTerminalInput()
-	if err != nil {
-		return fmt.Errorf("could not read terminal input: %v", err)
+	reader, rerr := utils.GetBufIOReaderOfTerminalInput()
+	if rerr != nil {
+		return fmt.Errorf("could not read terminal input: %v", rerr)
 	}
 	input, _ := reader.ReadString('\n')
 	input = strings.TrimSpace(input)
