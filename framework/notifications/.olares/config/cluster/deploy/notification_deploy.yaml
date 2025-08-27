@@ -69,6 +69,10 @@ spec:
         permission:
           pub: allow
           sub: allow
+      - name: "notification"
+        permission:
+          pub: allow
+          sub: allow
       - name: users
         permission:
           pub: allow
@@ -141,7 +145,7 @@ spec:
             value: os_framework_notifications
       containers:
       - name: notifications-api
-        image: beclab/notifications-api:v1.12.25
+        image: beclab/notifications-api:v1.12.30
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
