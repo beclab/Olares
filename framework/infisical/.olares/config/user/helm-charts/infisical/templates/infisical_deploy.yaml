@@ -13,31 +13,3 @@ spec:
       protocol: TCP
       targetPort: 8080
 
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: secret-provider
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  dataType: secret
-  deployment: infisical
-  description: infisical secret provider
-  endpoint: infisical-service.{{ .Release.Namespace }}:8080
-  group: secret.infisical
-  kind: provider
-  namespace: {{ .Release.Namespace }}
-  opApis:
-  - name: CreateSecret
-    uri: /secret/create
-  - name: RetrieveSecret
-    uri: /secret/retrieve
-  - name: ListSecret
-    uri: /secret/list
-  - name: DeleteSecret
-    uri: /secret/delete
-  - name: UpdateSecret
-    uri: /secret/update
-  version: v1
-status:
-  state: active

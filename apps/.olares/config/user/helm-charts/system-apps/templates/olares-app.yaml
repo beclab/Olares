@@ -154,19 +154,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: vault-admin-server
-  namespace: {{ .Release.Namespace }}
-spec:
-  type: ExternalName
-  externalName: vault-server.os-framework.svc.cluster.local
-  ports:
-    - protocol: TCP
-      port: 3010
-      targetPort: 3010
----
-apiVersion: v1
-kind: Service
-metadata:
   name: files-fe-service
   namespace: user-space-{{ .Values.bfl.username }}
 spec:
@@ -258,6 +245,7 @@ spec:
 {{ end }}        
     spec:
       priorityClassName: "system-cluster-critical"
+      serviceAccountName: system-frontend
       initContainers:
         - args:
             - -it
@@ -333,7 +321,7 @@ spec:
             - name: PGDB
               value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
         - name: olares-app-init
-          image: beclab/system-frontend:v1.4.13
+          image: beclab/system-frontend:v1.4.15
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -455,7 +443,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.45
+          image: beclab/user-service:v0.0.46
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -466,12 +454,8 @@ spec:
         {{- end }}
             - name: DEV_MODE
               value: ''
-            - name: OS_SYSTEM_SERVER
-              value: system-server.user-system-{{ .Values.bfl.username }}
-            - name: OS_APP_SECRET
-              value: '{{ .Values.os.settings.appSecret }}'
-            - name: OS_APP_KEY
-              value: {{ .Values.os.settings.appKey }}
+            - name: MY_NAME
+              value: '{{ .Values.bfl.username }}'
             - name: NODE_IP
               valueFrom:
                 fieldRef:
@@ -682,34 +666,7 @@ data:
   appData: "{{ .Values.userspace.appData }}"
   appCache: "{{ .Values.userspace.appCache }}"
   username: "{{ .Values.bfl.username }}"
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: files-provider
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  dataType: files
-  deployment: files
-  description: files provider
-  endpoint: files-service.{{ .Release.Namespace }}
-  group: service.files
-  kind: provider
-  namespace: {{ .Release.Namespace }}
-  opApis:
-    - name: Query
-      uri: /provider/query_file
-    - name: GetSearchFolderStatus
-      uri: /provider/get_search_folder_status
-    - name: UpdateSearchFolderPaths
-      uri: /provider/update_search_folder_paths
-    - name: GetDatasetFolderStatus
-      uri: /provider/get_dataset_folder_status
-    - name: UpdateDatasetFolderPaths
-      uri: /provider/update_dataset_folder_paths
-  version: v1
-status:
-  state: active
+
 ---
 apiVersion: v1
 kind: Secret
@@ -847,6 +804,7 @@ data:
                                   - exact: x-bfl-user
                                   - exact: x-real-ip
                                   - exact: terminus-nonce
+                                  - exact: x-provider-proxy
                               headers_to_add:
                                 - key: X-Forwarded-Method
                                   value: '%REQ(:METHOD)%'
@@ -965,256 +923,7 @@ kind: ConfigMap
 metadata:
   name: sidecar-upload-configs
   namespace: {{ .Release.Namespace }}
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ApplicationPermission
-metadata:
-  name: dashboard-vault
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: dashboard
-  appid: dashboard
-  key: {{ .Values.os.dashboard.appKey }}
-  secret: {{ .Values.os.dashboard.appSecret }}
-  permissions:
-    - dataType: secret
-      group: secret.infisical
-      ops:
-        - RetrieveSecret?workspace=dashboard
-        - CreateSecret?workspace=dashboard
-        - DeleteSecret?workspace=dashboard
-        - UpdateSecret?workspace=dashboard
-        - ListSecret?workspace=dashboard
-      version: v1
-status:
-  state: active
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ApplicationPermission
-metadata:
-  name: profile
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: profile
-  appid: profile
-  key: {{ .Values.os.profile.appKey }}
-  secret: {{ .Values.os.profile.appSecret }}
-  permissions:
-    - dataType: datastore
-      group: service.bfl
-      ops:
-        - GetKey
-        - GetKeyPrefix
-        - SetKey
-        - DeleteKey
-      version: v1
-    - dataType: nft
-      group: service.settings
-      ops:
-        - getNFTAddress
-      version: v1
-status:
-  state: active
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ApplicationPermission
-metadata:
-  name: settings
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: settings
-  appid: settings
-  key: {{ .Values.os.settings.appKey }}
-  secret: {{ .Values.os.settings.appSecret }}
-  permissions:
-    - dataType: config
-      group: service.desktop
-      ops:
-        - Update
-      version: v1
-    - dataType: secret
-      group: secret.infisical
-      ops:
-        - RetrieveSecret?workspace=settings
-        - CreateSecret?workspace=settings
-        - DeleteSecret?workspace=settings
-        - UpdateSecret?workspace=settings
-        - ListSecret?workspace=settings
-      version: v1
-    - dataType: headscale
-      group: service.headscale
-      ops:
-        - GetMachine
-        - RenameMachine
-        - DeleteMachine
-        - GetRoute
-        - EnableRoute
-        - DisableRoute
-        - SetTags
-      version: v1
-    - dataType: files
-      group: service.files
-      ops:
-        - Query
-        - GetSearchFolderStatus
-        - UpdateSearchFolderPaths
-        - GetDatasetFolderStatus
-        - UpdateDatasetFolderPaths
-      version: v1
-    - dataType: datastore
-      group: service.bfl
-      ops:
-        - GetKey
-        - GetKeyPrefix
-        - SetKey
-        - DeleteKey
-      version: v1
-    - dataType: app
-      group: service.bfl
-      ops:
-        - UserApps
-      version: v1
-status:
-  state: active
-
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: settings-nft
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  dataType: nft
-  deployment: settings
-  description: Get Cloud Bind NFT List
-  endpoint: settings-service.{{ .Release.Namespace }}
-  group: service.settings
-  kind: provider
-  namespace: {{ .Release.Namespace }}
-  opApis:
-    - name: getNFTAddress
-      uri: /api/cloud/getNFTAddress
-  version: v1
-status:
-  state: active
-
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: settings-account
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  dataType: account
-  deployment: settings
-  description: Get Acccount saved in Settings
-  endpoint: settings-service.{{ .Release.Namespace }}
-  group: service.settings
-  kind: provider
-  namespace: {{ .Release.Namespace }}
-  opApis:
-    - name: getAccount
-      uri: /api/account
-  version: v1
-status:
-  state: active
-
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: settings-backup-password
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  dataType: backupPassword
-  deployment: settings
-  description: Get Backup Plan's Password
-  endpoint: settings-service.{{ .Release.Namespace }}
-  group: service.settings
-  kind: provider
-  namespace: {{ .Release.Namespace }}
-  opApis:
-    - name: getAccount
-      uri: /api/backup/password
-  version: v1
-status:
-  state: active
-
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: settings-event-watcher
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  callbacks:
-    - filters:
-        type:
-          - backup-state-event
-      op: Create
-      uri: /api/event/backup_state_event
-    - filters:
-        type:
-          - restore-state-event
-      op: Create
-      uri: /api/event/restore_state_event
-    - filters:
-        type:
-          - app-installation-event
-      op: Create
-      uri: /api/event/app_installation_event
-    - filters:
-        type:
-          - settings-event
-      op: Create
-      uri: /api/event/app_installation_event
-    - filters:
-        type:
-          - entrance-state-event
-      op: Create
-      uri: /api/event/entrance_state_event
-    - filters:
-        type:
-          - system-upgrade-event
-      op: Create
-      uri: /api/event/system_upgrade_event
-  dataType: event
-  deployment: settings
-  description: desktop event watcher
-  endpoint: settings-service.{{ .Release.Namespace }}
-  group: message-disptahcer.system-server
-  kind: watcher
-  namespace: {{ .Release.Namespace }}
-  version: v1
-status:
-  state: active
-
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: settings-account-retrieve
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  dataType: legacy_api
-  deployment: settings
-  description: settings account retrieve legacy api
-  endpoint: settings-service.{{ .Release.Namespace }}
-  group: service.settings
-  kind: provider
-  namespace: {{ .Release.Namespace }}
-  version: v1
-  opApis:
-    - name: POST
-      uri: /api/account/retrieve
-    - name: GET
-      uri: /api/account/all
-    - name: POST
-      uri: /api/cookie/retrieve
-    - name: POST
-      uri: /api/cookie
-status:
-  state: active
+  
 ---
 apiVersion: v1
 kind: Secret
@@ -1284,166 +993,6 @@ spec:
     - protocol: TCP
       port: 3000
       targetPort: 3000
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  namespace: {{ .Release.Namespace }}
-  name: internal-kubectl
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: {{ .Release.Namespace }}:edge-desktop-rb
-subjects:
-  - kind: ServiceAccount
-    namespace: {{ .Release.Namespace }}
-    name: internal-kubectl
-roleRef:
-  # kind: Role
-  kind: ClusterRole
-  name: cluster-admin
-  apiGroup: rbac.authorization.k8s.io
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: app-event-watcher
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  callbacks:
-  - filters:
-      type:
-      - app-installation-event
-    op: Create
-    uri: /server/app_installation_event
-  - filters:
-      type:
-        - entrance-state-event
-    op: Create
-    uri: /server/entrance_state_event
-  - filters:
-      type:
-      - settings-event
-    op: Create
-    uri: /server/app_installation_event
-  - filters:
-      type:
-      - system-upgrade-event
-    op: Create
-    uri: /server/system_upgrade_event
-  dataType: event
-  deployment: edge-desktop
-  description: desktop event watcher
-  endpoint: edge-desktop.{{ .Release.Namespace }}
-  group: message-disptahcer.system-server
-  kind: watcher
-  namespace: {{ .Release.Namespace }}
-  version: v1
-status:
-  state: active
-
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: intent-api
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  dataType: legacy_api
-  deployment: edge-desktop
-  description: edge-desktop legacy api
-  endpoint: edge-desktop.{{ .Release.Namespace }}
-  group: api.intent
-  kind: provider
-  namespace: {{ .Release.Namespace }}
-  version: v1
-  opApis:
-  - name: POST
-    uri: /server/intent/send
-status:
-  state: active
-
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: intent-api-v2
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  dataType: legacy_api
-  deployment: edge-desktop
-  description: edge-desktop legacy api
-  endpoint: edge-desktop.{{ .Release.Namespace }}
-  group: api.intent
-  kind: provider
-  namespace: {{ .Release.Namespace }}
-  version: v2
-  opApis:
-    - name: POST
-      uri: /server/intent/send
-status:
-  state: active
-
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ProviderRegistry
-metadata:
-  name: destktop-ai-provider
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  dataType: ai_message
-  deployment: edge-desktop
-  description: search ai callback
-  endpoint: edge-desktop.{{ .Release.Namespace }}
-  group: service.desktop
-  kind: provider
-  namespace: {{ .Release.Namespace }}
-  opApis:
-  - name: AIMessage
-    uri: /server/ai_message
-  version: v1
-status:
-  state: active
-
----
-apiVersion: sys.bytetrade.io/v1alpha1
-kind: ApplicationPermission
-metadata:
-  name: desktop
-  namespace: user-system-{{ .Values.bfl.username }}
-spec:
-  app: desktop
-  appid: desktop
-  key: {{ .Values.os.desktop.appKey }}
-  secret: {{ .Values.os.desktop.appSecret }}
-  permissions:
-  - dataType: files
-    group: service.files
-    ops:
-    - Query
-    version: v1
-  - dataType: datastore
-    group: service.bfl
-    ops:
-    - GetKey
-    - GetKeyPrefix
-    - SetKey
-    - DeleteKey
-    version: v1
-  - dataType: app
-    group: service.bfl
-    ops:
-    - UserApps
-    version: v1
-  - dataType: app
-    group: service.appstore
-    ops:
-    - UninstallDevApp
-    version: v1
-status:
-  state: active
 
 ---
 apiVersion: v1
@@ -1512,6 +1061,7 @@ data:
                               - exact: x-bfl-user
                               - exact: x-real-ip
                               - exact: terminus-nonce
+                              - exact: x-provider-proxy
                           headers_to_add:
                             - key: X-Forwarded-Method
                               value: '%REQ(:METHOD)%'
@@ -1687,6 +1237,7 @@ data:
                               - exact: x-bfl-user
                               - exact: x-real-ip
                               - exact: terminus-nonce
+                              - exact: x-provider-proxy
                           headers_to_add:
                             - key: X-Forwarded-Method
                               value: '%REQ(:METHOD)%'
@@ -1876,6 +1427,7 @@ data:
                               - exact: x-bfl-user
                               - exact: x-real-ip
                               - exact: terminus-nonce
+                              - exact: x-provider-proxy
                           headers_to_add:
                             - key: X-Forwarded-Method
                               value: '%REQ(:METHOD)%'
@@ -2154,3 +1706,11 @@ spec:
           pub: allow
 
     user: user-service-{{ .Values.bfl.username }}
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: system-frontend
+

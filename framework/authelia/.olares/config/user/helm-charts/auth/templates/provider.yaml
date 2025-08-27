@@ -1,0 +1,48 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:authelia-frontend-svc
+  annotations:
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/authelia-backend-provider
+    provider-service-ref: authelia-backend.os-framework:9091
+rules:
+- nonResourceURLs: ["*"]
+  verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:authelia-frontend-domain
+  annotations:
+    provider-registry-ref: {{ .Values.bfl.username }}/auth
+    provider-service-ref: authelia-backend.os-framework:9091
+rules:
+- nonResourceURLs: ["*"]
+  verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user:{{ .Values.bfl.username }}:authelia-frontend-svc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:authelia-frontend-svc
+subjects:
+- kind: User
+  name: '{{ .Values.bfl.username }}'
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user:{{ .Values.bfl.username }}:authelia-frontend-domain
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:authelia-frontend-domain
+subjects:
+- kind: User
+  name: '{{ .Values.bfl.username }}'

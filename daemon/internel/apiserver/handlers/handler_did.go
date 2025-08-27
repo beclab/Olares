@@ -10,19 +10,15 @@ func (h *Handlers) ResolveOlaresName(c *fiber.Ctx) error {
 	olaresName := c.Params("olaresName")
 	if olaresName == "" {
 		klog.Error("olaresName parameter is missing")
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "olaresName parameter is required",
-		})
+		return h.ErrJSON(c, fiber.StatusBadRequest, "olaresName parameter is required")
 	}
 	klog.Infof("Received olaresName: %s", olaresName)
 	result, err := jws.ResolveOlaresName(olaresName)
 	if err != nil {
 		klog.Errorf("Failed to resolve DID for %s: %v", olaresName, err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to resolve DID",
-		})
+		return h.ErrJSON(c, fiber.StatusInternalServerError, "Failed to resolve DID")
 	}
-	return c.Status(fiber.StatusOK).JSON(result)
+	return h.OkJSON(c, "success", result)
 }
 
 func (h *Handlers) CheckJWS(c *fiber.Ctx) error {
@@ -35,16 +31,12 @@ func (h *Handlers) CheckJWS(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&body); err != nil {
 		klog.Errorf("Failed to parse request body: %v", err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body format",
-		})
+		return h.ErrJSON(c, fiber.StatusBadRequest, "Invalid request body format")
 	}
 
 	if body.JWS == "" {
 		klog.Error("JWS is missing in request body")
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "JWS is required in request body",
-		})
+		return h.ErrJSON(c, fiber.StatusBadRequest, "JWS is required in request body")
 	}
 
 	if body.Duration == 0 {
@@ -54,10 +46,8 @@ func (h *Handlers) CheckJWS(c *fiber.Ctx) error {
 	result, err := jws.CheckJWS(body.JWS, body.Duration)
 	if err != nil {
 		klog.Errorf("Failed to check JWS: %v", err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid JWS",
-		})
+		return h.ErrJSON(c, fiber.StatusBadRequest, "Invalid JWS")
 	}
 
-	return c.Status(fiber.StatusOK).JSON(result)
+	return h.OkJSON(c, "success", result)
 }
