@@ -51,6 +51,20 @@ spec:
       targetPort: 80
     
 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authelia-backend-svc
+  namespace: user-space-{{ .Values.bfl.username }}
+spec:
+  type: ExternalName
+  externalName: authelia-backend.os-framework.svc.cluster.local
+  ports:
+    - protocol: TCP
+      name: authelia-bakcend
+      port: 9091
+      targetPort: 9091
 
 ---
 apiVersion: v1
