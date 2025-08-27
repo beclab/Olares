@@ -1,0 +1,64 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:infisical-frontend-svc
+  annotations:
+    provider-registry-ref: user-space-{{ .Values.bfl.username }}/infisical
+    provider-service-ref: infisical-service.os-framework:8080
+rules:
+- nonResourceURLs: ["/admin/*"]
+  verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:infisical-frontend-domain
+  annotations:
+    provider-registry-ref: {{ .Values.bfl.username }}/settings
+    provider-service-ref: infisical-service.os-framework:8080
+rules:
+- nonResourceURLs: ["/admin/*"]
+  verbs: ["*"]
+
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user:{{ .Values.bfl.username }}:infisical-frontend-svc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:infisical-frontend-svc
+subjects:
+- kind: User
+  name: '{{ .Values.bfl.username }}'
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user:{{ .Values.bfl.username }}:infisical-frontend-domain
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:infisical-frontend-domain
+subjects:
+- kind: User
+  name: '{{ .Values.bfl.username }}'
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infisical
+  namespace: user-space-{{ .Values.bfl.username }}
+spec:
+  type: ExternalName
+  externalName: system-server.user-system-{{ .Values.bfl.username }}.svc.cluster.local
+  ports:
+    - protocol: TCP
+      port: 28080
+      targetPort: 28080

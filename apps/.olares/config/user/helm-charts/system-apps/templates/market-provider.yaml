@@ -3,7 +3,7 @@ kind: ClusterRole
 metadata:
   name: {{ .Values.bfl.username }}:market-frontend-svc
   annotations:
-    provider-registry-ref: user-system-{{ .Values.bfl.username }}/market
+    provider-registry-ref: user-space-{{ .Values.bfl.username }}/market
     provider-service-ref: appstore-svc.os-framework:81
 rules:
 - nonResourceURLs: ["*"]
@@ -59,3 +59,18 @@ roleRef:
 subjects:
 - kind: User
   name: '{{ .Values.bfl.username }}'
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: market
+  namespace: user-space-{{ .Values.bfl.username }}
+spec:
+  type: ExternalName
+  externalName: system-server.user-system-{{ .Values.bfl.username }}.svc.cluster.local
+  ports:
+    - protocol: TCP
+      port: 28080
+      targetPort: 28080

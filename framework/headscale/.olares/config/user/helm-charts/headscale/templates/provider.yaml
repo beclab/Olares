@@ -1,0 +1,51 @@
+# ---
+# apiVersion: sys.bytetrade.io/v1alpha1
+# kind: ProviderRegistry
+# metadata:
+#   name: headscale-provider
+#   namespace: user-system-{{ .Values.bfl.username }}
+# spec:
+#   dataType: headscale
+#   deployment: headscale
+#   description: headscale provider
+#   endpoint: headscale-server-svc.{{ .Release.Namespace }}:8000
+#   group: service.headscale
+#   kind: provider
+#   namespace: {{ .Release.Namespace }}
+#   opApis:
+#   - name: GetMachine
+#     uri: /headscale/machine
+#   - name: RenameMachine
+#     uri: /headscale/machine/rename
+#   - name: DeleteMachine
+#     uri: /headscale/machine
+#   - name: GetRoute
+#     uri: /headscale/machine/routes
+#   - name: EnableRoute
+#     uri: /headscale/routes/enable
+#   - name: DisableRoute
+#     uri: /headscale/routes/disable
+#   - name: SetTags
+#     uri: /headscale/machine/tags
+#   version: v1
+# status:
+#   state: active
+
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:headscale-svc
+  annotations:
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/headscale
+    provider-service-ref: headscale-server-svc.{{ .Release.Namespace }}:8000
+rules:
+- nonResourceURLs: 
+  - "/headscale/machine"
+  - "/headscale/machine/rename"
+  - "/headscale/machine/routes"
+  - "/headscale/routes/enable"
+  - "/headscale/routes/disable"
+  - "/headscale/machine/tags"
+  verbs: ["*"]

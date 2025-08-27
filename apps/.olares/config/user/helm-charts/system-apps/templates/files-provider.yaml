@@ -3,7 +3,7 @@ kind: ClusterRole
 metadata:
   name: {{ .Values.bfl.username }}:files-frontend-svc
   annotations:
-    provider-registry-ref: user-system-{{ .Values.bfl.username }}/files
+    provider-registry-ref: user-space-{{ .Values.bfl.username }}/files
     provider-service-ref: files-service.os-framework:80
 rules:
 - nonResourceURLs: ["*"]
@@ -21,6 +21,19 @@ rules:
 - nonResourceURLs: ["*"]
   verbs: ["*"]
 
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:files-frontend-domain-settings
+  annotations:
+    provider-registry-ref: {{ .Values.bfl.username }}/settings
+    provider-service-ref: files-service.os-framework:80
+rules:
+- nonResourceURLs: 
+  - "/api/resources/*"
+  - "/api/nodes/*"
+  verbs: ["*"]
 
 # ---
 # apiVersion: sys.bytetrade.io/v1alpha1
@@ -93,3 +106,31 @@ roleRef:
 subjects:
 - kind: User
   name: '{{ .Values.bfl.username }}'
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user:{{ .Values.bfl.username }}:files-frontend-domain-settings
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:files-frontend-domain-settings
+subjects:
+- kind: User
+  name: '{{ .Values.bfl.username }}'
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: files
+  namespace: user-space-{{ .Values.bfl.username }}
+spec:
+  type: ExternalName
+  externalName: system-server.user-system-{{ .Values.bfl.username }}.svc.cluster.local
+  ports:
+    - protocol: TCP
+      port: 28080
+      targetPort: 28080
