@@ -321,7 +321,7 @@ spec:
             - name: PGDB
               value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
         - name: olares-app-init
-          image: beclab/system-frontend:v1.4.15
+          image: beclab/system-frontend:v1.4.17
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -443,7 +443,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.46
+          image: beclab/user-service:v0.0.47
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
