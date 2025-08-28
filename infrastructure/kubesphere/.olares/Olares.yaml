@@ -3,7 +3,7 @@ target: prebuilt
 output:
   containers:
     - 
-      name: beclab/ks-apiserver:0.0.22
+      name: beclab/ks-apiserver:0.0.23
     -
       name: kubesphere/kubectl:v1.22.0
 

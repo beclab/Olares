@@ -65,6 +65,7 @@ var (
 		upgrader_1_12_0_20250723{},
 		upgrader_1_12_0_20250730{},
 		upgrader_1_12_1_20250826{},
+		upgrader_1_12_1_20250827{},
 	}
 	mainUpgraders = []breakingUpgrader{
 		upgrader_1_12_1{},
