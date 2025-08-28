@@ -175,6 +175,8 @@ spec:
             value: prod
           - name: CHART_REPO_SERVICE_HOST
             value: chart-repo-service:82
+          - name: IS_ACCOUNT_FROM_HEADER
+            value: 'true'            
 ---
 apiVersion: v1
 kind: Service

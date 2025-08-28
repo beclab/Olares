@@ -29,7 +29,7 @@ metadata:
   name: {{ .Values.bfl.username }}:vault-frontend-domain
   annotations:
     provider-registry-ref: {{ .Values.bfl.username }}/vault
-    provider-service-ref: vault-server.os-framework:3010
+    provider-service-ref: vault-server.os-framework:3000
 rules:
 - nonResourceURLs: ["/server*"]
   verbs: ["*"]
