@@ -2,7 +2,20 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  namespace: {{ .Release.Namespace }}
+  namespace: user-system-{{ .Values.bfl.username }}
   name: user-backend
 
 
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backend:{{ .Values.bfl.username }}:user-backend:settings-provider-svc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:settings-provider-svc
+subjects:
+- kind: ServiceAccount
+  name: user-backend
+  namespace: user-system-{{ .Values.bfl.username }}
