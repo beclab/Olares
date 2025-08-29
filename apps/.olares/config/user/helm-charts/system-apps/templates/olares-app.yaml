@@ -221,7 +221,7 @@ metadata:
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
     applications.app.bytetrade.io/default-thirdlevel-domains: '[{"appName": "olares-app","entranceName":"dashboard","thirdLevelDomain":"dashboard"},{"appName":"olares-app","entranceName":"control-hub","thirdLevelDomain":"control-hub"},{"appName":"olares-app","entranceName":"files","thirdLevelDomain":"files"},{"appName": "olares-app","entranceName":"vault","thirdLevelDomain":"vault"},{"appName":"olares-app","entranceName":"headscale","thirdLevelDomain":"headscale"},{"appName":"olares-app","entranceName":"settings","thirdLevelDomain":"settings"},{"appName": "olares-app","entranceName":"market","thirdLevelDomain":"market"},{"appName":"olares-app","entranceName":"profile","thirdLevelDomain":"profile"}]'
-    applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/dashboard/icon.png
+    applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/olaresapps/icon.png
     applications.app.bytetrade.io/title: 'Olares Apps'
     applications.app.bytetrade.io/version: '0.0.1'
     applications.app.bytetrade.io/policies: '{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}'
