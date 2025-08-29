@@ -121,6 +121,36 @@ LarePass 浏览器扩展目前仅支持 Google Chrome。请访问 [LarePass 页�
 </template>
 </tabs>
 
+### 导入
+
+你也可以从其他主流密码应用如 1Password 和 BitWarden 里导入密码项目，支持导入格式为 `text/plain`,`.csv`,`.pls`,`.set`,`.pbes2`,`.1pux`,`.json`。导入需在 LarePass 桌面版客户端完成。
+
+![Vault import](/images/zh/manual/olares/vault-import.png)
+
+1. 打开 LarePass，点击主界面左上角头像区域。
+2. 导航至**设置** > **导入**。
+3. 选择待导入文件，如 `bitwarden_export.json`。
+4. 设置导入位置。默认为我的 Vault，也可以选择你创建的团队共享 Vault。
+5. 点击确认完成导入。导入项目会带有导入文件名的标签。
+
+此时你可以去目标导入 Vault 空间里查看导入到项目。
+![Bitwarden imported](/images/zh/manual/olares/vault-bitwarden-items.png)
+
+### 导入密码
+
+您也可以从 1Password 和 BitWarden 等主流密码应用中导入密码。导入过程必须在 LarePass 桌面客户端完成，支持的格式包括 `text/plain`, `.csv`, `.pls`, `.set`, `.pbes2`, `.1pux` 和 `.json`。
+
+![Vault 导入](/images/zh/manual/olares/vault-import.png)
+
+1.  打开 LarePass，点击主界面左上角的头像。
+2.  导航至**设置** > **导入**。
+3.  选择要导入的文件，例如 `bitwarden_export.json`。
+4.  选择导入位置。默认为**我的 Vault**，您也可以选择已创建的团队共享 Vault。
+5.  点击**确认**开始导入。
+
+导入完成后，您可以在目标 Vault 中查看导入的项目。这些项目会自动带上导入文件名的标签，方便您查找和管理。
+![Bitwarden imported](/images/zh/manual/olares/vault-bitwarden-items.png)
+
 ### 编辑
 
 :::info 提示
