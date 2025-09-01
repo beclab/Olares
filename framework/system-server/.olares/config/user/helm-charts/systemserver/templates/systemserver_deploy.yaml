@@ -10,6 +10,21 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  name: user-system-{{ .Values.bfl.username }}:bytetrade-sys-ops:nonresourceurl
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nonresourceurl-admin
+subjects:
+- kind: ServiceAccount
+  name: bytetrade-sys-ops
+  namespace: user-system-{{ .Values.bfl.username }}
+
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
   name: user-system-{{ .Values.bfl.username }}:bytetrade-sys-ops
 roleRef:
   apiGroup: rbac.authorization.k8s.io
