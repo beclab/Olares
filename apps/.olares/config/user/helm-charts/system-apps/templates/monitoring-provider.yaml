@@ -20,7 +20,7 @@ metadata:
 rules:
 - nonResourceURLs: 
   - "/kapis/*"
-  - "/api/*"
+  - "/api*"
   - "/capi/*"
   - "/apis/apps/*"
   verbs: ["*"]
