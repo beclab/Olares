@@ -5,7 +5,7 @@
     "preview": "vitepress preview"
   },
   "devDependencies": {
-    "mermaid": "11.9.0",
+    "mermaid": "11.10.1",
     "terser": "^5.14.2",
     "vitepress": "1.6.3",
     "vitepress-plugin-mermaid": "2.0.17"
