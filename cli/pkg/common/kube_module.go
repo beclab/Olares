@@ -18,7 +18,6 @@ package common
 
 import (
 	kubekeyapiv1alpha2 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
-	kubekeyclientset "github.com/beclab/Olares/cli/clients/clientset/versioned"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 )
 
@@ -27,7 +26,6 @@ type KubeConf struct {
 	ClusterName  string
 	Cluster      *kubekeyapiv1alpha2.ClusterSpec
 	Kubeconfig   string
-	ClientSet    *kubekeyclientset.Clientset
 	Arg          *Argument
 }
 
@@ -46,7 +44,6 @@ func (k *KubeModule) AutoAssert() {
 		ClusterName: kubeRuntime.ClusterName,
 		Cluster:     kubeRuntime.Cluster,
 		Kubeconfig:  kubeRuntime.Kubeconfig,
-		ClientSet:   kubeRuntime.ClientSet,
 		Arg:         kubeRuntime.Arg,
 	}
 
@@ -64,7 +61,6 @@ func (k *KubeCustomModule) AutoAssert() {
 		ClusterName: kubeRuntime.ClusterName,
 		Cluster:     kubeRuntime.Cluster,
 		Kubeconfig:  kubeRuntime.Kubeconfig,
-		ClientSet:   kubeRuntime.ClientSet,
 		Arg:         kubeRuntime.Arg,
 	}
 

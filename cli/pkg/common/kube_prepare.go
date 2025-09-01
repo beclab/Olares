@@ -31,7 +31,6 @@ func (k *KubePrepare) AutoAssert(runtime connector.Runtime) {
 	conf := &KubeConf{
 		Cluster:    kubeRuntime.Cluster,
 		Kubeconfig: kubeRuntime.Kubeconfig,
-		ClientSet:  kubeRuntime.ClientSet,
 		Arg:        kubeRuntime.Arg,
 	}
 

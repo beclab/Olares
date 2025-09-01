@@ -28,7 +28,6 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
-	"github.com/beclab/Olares/cli/pkg/core/storage"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 )
 
@@ -36,7 +35,6 @@ type BaseRuntime struct {
 	ObjName         string
 	connector       Connector
 	runner          *Runner
-	storage         storage.Provider
 	homeDir         string
 	baseDir         string
 	installerDir    string
@@ -52,11 +50,10 @@ type BaseRuntime struct {
 	k8sClient       *kubernetes.Clientset
 }
 
-func NewBaseRuntime(name string, connector Connector, verbose bool, ignoreErr bool, sqlProvider storage.Provider, baseDir string, olaresVersion string, consoleLogFileName string, consoleLogTruncate bool, systemInfo Systems) BaseRuntime {
+func NewBaseRuntime(name string, connector Connector, verbose bool, ignoreErr bool, baseDir string, olaresVersion string, consoleLogFileName string, consoleLogTruncate bool, systemInfo Systems) BaseRuntime {
 	base := BaseRuntime{
 		ObjName:         name,
 		connector:       connector,
-		storage:         sqlProvider,
 		verbose:         verbose,
 		ignoreErr:       ignoreErr,
 		allHosts:        make([]Host, 0, 0),
@@ -104,14 +101,6 @@ func (b *BaseRuntime) GetRunner() *Runner {
 
 func (b *BaseRuntime) SetRunner(r *Runner) {
 	b.runner = r
-}
-
-func (b *BaseRuntime) GetStorage() storage.Provider {
-	return b.storage
-}
-
-func (b *BaseRuntime) SetStorage(s storage.Provider) {
-	b.storage = s
 }
 
 func (b *BaseRuntime) GetConnector() Connector {

@@ -31,11 +31,9 @@ import (
 	"github.com/spf13/pflag"
 
 	kubekeyapiv1alpha2 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
-	kubekeyclientset "github.com/beclab/Olares/cli/clients/clientset/versioned"
 	"github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
-	"github.com/beclab/Olares/cli/pkg/core/storage"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	kresource "k8s.io/apimachinery/pkg/api/resource"
 )
@@ -45,7 +43,6 @@ type KubeRuntime struct {
 	ClusterName string
 	Cluster     *kubekeyapiv1alpha2.ClusterSpec
 	Kubeconfig  string
-	ClientSet   *kubekeyclientset.Clientset
 	Arg         *Argument
 }
 
@@ -93,8 +90,6 @@ type Argument struct {
 
 	SkipMasterPullImages bool `json:"skip_master_pull_images"`
 
-	// db
-	Provider storage.Provider `json:"-"`
 	// User
 	User *User `json:"user"`
 	// if juicefs is opted off, the local storage is used directly
@@ -586,7 +581,7 @@ func NewKubeRuntime(flag string, arg Argument) (*KubeRuntime, error) {
 	}
 
 	base := connector.NewBaseRuntime(cluster.Name, connector.NewDialer(),
-		arg.Debug, arg.IgnoreErr, arg.Provider, arg.BaseDir, arg.OlaresVersion, arg.ConsoleLogFileName, arg.ConsoleLogTruncate, arg.SystemInfo)
+		arg.Debug, arg.IgnoreErr, arg.BaseDir, arg.OlaresVersion, arg.ConsoleLogFileName, arg.ConsoleLogTruncate, arg.SystemInfo)
 
 	clusterSpec := &cluster.Spec
 	defaultCluster, roleGroups := clusterSpec.SetDefaultClusterSpec(arg.InCluster, arg.SystemInfo.IsDarwin())

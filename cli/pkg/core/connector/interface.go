@@ -22,7 +22,6 @@ import (
 	"os"
 
 	"github.com/beclab/Olares/cli/pkg/core/cache"
-	"github.com/beclab/Olares/cli/pkg/core/storage"
 )
 
 type Connection interface {
@@ -68,8 +67,6 @@ type Runtime interface {
 	SetRunner(r *Runner)
 	GetConnector() Connector
 	SetConnector(c Connector)
-	SetStorage(s storage.Provider)
-	GetStorage() storage.Provider
 	RemoteHost() Host
 	Copy() Runtime
 	GetSystemInfo() Systems
