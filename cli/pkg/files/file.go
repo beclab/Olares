@@ -22,7 +22,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -37,7 +36,6 @@ import (
 	cm "github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
-	"github.com/beclab/Olares/cli/pkg/core/storage"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/cavaliergopher/grab/v3"
@@ -103,23 +101,21 @@ const (
 )
 
 type KubeBinary struct {
-	Type                string
-	ID                  string
-	FileName            string
-	FileNameHash        string
-	Os                  string
-	Arch                string
-	Version             string
-	Url                 string
-	BaseDir             string
-	Zone                string
-	CheckSum            bool
-	PrintOutput         bool
-	OverWrite           bool
-	WriteDownloadingLog bool
-	Provider            storage.Provider
-	Md5sum              string
-	CheckMd5Sum         bool
+	Type         string
+	ID           string
+	FileName     string
+	FileNameHash string
+	Os           string
+	Arch         string
+	Version      string
+	Url          string
+	BaseDir      string
+	Zone         string
+	CheckSum     bool
+	PrintOutput  bool
+	OverWrite    bool
+	Md5sum       string
+	CheckMd5Sum  bool
 }
 
 func NewKubeBinary(name, arch, osType, osVersion, osPlatformFamily, version, prePath, downloadMirrors string) *KubeBinary {
@@ -520,32 +516,6 @@ func (b *KubeBinary) GetFileSize() (int64, error) {
 }
 
 func (b *KubeBinary) Download() error {
-	var line = make(chan []interface{}, 50)
-	defer close(line)
-
-	go func() {
-		for {
-			select {
-			case r, ok := <-line:
-				if !ok {
-					return
-				}
-
-				if r == nil || len(r) < 3 {
-					continue
-				}
-				var msg = r[0].(string)
-				var state = r[1].(string)
-				var percent = r[2].(float64)
-				if b.WriteDownloadingLog {
-					if err := b.Provider.SaveInstallLog(msg, state, int64(percent)); err != nil {
-						logger.Errorf("save download log failed %v", err)
-					}
-				}
-			}
-		}
-	}()
-
 	for i := 5; i > 0; i-- {
 
 		client := grab.NewClient()
@@ -578,7 +548,6 @@ func (b *KubeBinary) Download() error {
 		if err := resp.Err(); err != nil {
 			logger.Errorf("Download failed: %v", err)
 			if i == 1 {
-				line <- []interface{}{"All download attempts failed", common.StateFail, float64(0)}
 				logger.Error("All download attempts failed")
 				return err
 			}
@@ -601,7 +570,6 @@ func (b *KubeBinary) Download() error {
 		if err := b.SHA256Check(); err != nil { // ~ checksum
 			logger.Errorf("SHA256 check failed: %v", err)
 			if i == 1 {
-				line <- []interface{}{fmt.Sprintf("SHA256 check failed: %v", err), common.StateFail, float64(0)}
 				return err
 			}
 			path := b.Path()
@@ -613,7 +581,6 @@ func (b *KubeBinary) Download() error {
 		if err := b.Md5Check(); err != nil { // ~ checksum
 			logger.Errorf("MD5 check failed: %v", err)
 			if i == 1 {
-				line <- []interface{}{fmt.Sprintf("MD5 check failed: %v", err), common.StateFail, float64(0)}
 				return err
 			}
 			path := b.Path()
@@ -623,7 +590,6 @@ func (b *KubeBinary) Download() error {
 		}
 
 		logger.Debugf("%s download succeeded", b.FileName)
-		line <- []interface{}{fmt.Sprintf("%s download succeeded", b.FileName), common.StateDownload, math.Round(1 * 10000 / float64(common.DefaultInstallSteps))}
 		break
 	}
 

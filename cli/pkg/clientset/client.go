@@ -1,17 +1,10 @@
 package clientset
 
 import (
-	"sync"
-
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
-
-var KubeClient Client
-
-var syncOnce sync.Once
 
 type Client interface {
 	Kubernetes() kubernetes.Interface
@@ -26,24 +19,6 @@ type kubeClient struct {
 	master string
 
 	config *rest.Config
-}
-
-func NewKubeClientOrDie(kubeconfig string, config *rest.Config) Client {
-	var err error
-
-	if kubeconfig != "" {
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	k := kubeClient{
-		k8s:    kubernetes.NewForConfigOrDie(config),
-		master: config.Host,
-		config: config,
-	}
-	return &k
 }
 
 // NewKubeClient creates a Kubernetes and kubesphere client
