@@ -5,24 +5,33 @@ description: Understand Control Hub UI to manage applications, monitor resources
 
 # Manage Olares with Control Hub
 
-Control Hub is the console for Olares, providing developers and users with precise control over system operations and the underlying environment. This guide helps you understand Control Hub's interface and efficiently monitor your resources.
+**Control Hub** is Olares' visual console, providing developers and operators with precise control over the cluster and its underlying Kubernetes environment. With multi-dimensional views, you can quickly browse application workloads, view resource status, and perform maintenance operations on key objects.
 
-## Features and components
- 
-Control Hub organizes your system resources and usages into three different groups:
+Use the modular entries in the side navigation bar to access the appropriate management page for your needs.
 
-### Olares 
+![Control Hub UI](/images/manual/olares/controlhub-ui.jpeg#bordered)
 
-Monitor the status of applications in three different views:
+## Module overview
 
-- **Browse** (Application-centric view): Navigate through resource usage related to specific applications using a three-column layout for efficient resource location.
-- **Namespace** (User-centric view): Access detailed insights into per-user application resource consumption, with sorting and filtering capabilities.
-- **Pods**: Monitor pod status and resource consumption at the finest granularity.
+Control Hub modules give you clear entry points to monitor workloads, manage resources, and access the terminal for advanced maintenance operations in Olares.
 
-### Resource
-View and manage Kubernetes system resources.
-- **Networks**: Monitor network security policies implemented in the system and the network connectivity of each namespace.
-- **CRDs**: Manages various custom resource declarations in the system.
+### Olares
+
+* **Browse**: A three-column workload resource navigator. Use the left column to select the namespace for applications and services, the center to expand workloads and configurations, and the right to view real-time details and monitoring charts.
+* **Namespaces**: Lists all resources by Kubernetes namespace. You can sort and filter by metrics like CPU and memory to easily troubleshoot resource hotspots.
+* **Pods**: Monitors the number of pods, their status, node distribution, and resource consumption in real-time through a dual-view of a pod list and resource charts.
+
+### Resources
+
+* **Storage**: View persistent volume claims (PVCs), PVs, and StorageClass usage and capacity trends.
+* **Network**: Monitor network security policies implemented in the system and the network connectivity of each namespace.
+* **Jobs**: Manage the execution status and logs of jobs and cron jobs.
+* **CRDs**: Browse and manage custom resources (CRD) and their instances.
 
 ### Middleware
-View the usage of various middleware services in Olares.
+
+Quickly view a list of integrated database and caching components (such as **Postgres**, **MongoDB**, **Redis**), including their instance information, connection details, and runtime metrics.
+
+### Terminal
+
+Gain one-click access to the Olares host terminal to perform debugging, view logs, and modify configurations. 

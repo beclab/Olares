@@ -173,16 +173,24 @@ const side = {
           "link": "/zh/manual/olares/controlhub/",
           "items": [
             {
-              "text": "熟悉控制面板",
-              "link": "/zh/manual/olares/controlhub/navigate-control-hub"
+              "text": "管理工作负载",
+              "link": "/zh/manual/olares/controlhub/manage-workload"
             },
             {
-              "text": "编辑系统资源",
-              "link": "/zh/manual/olares/controlhub/edit-resource"
+              "text": "管理容器",
+              "link": "/zh/manual/olares/controlhub/manage-container"
             },
             {
-              "text": "查看容器状态",
-              "link": "/zh/manual/olares/controlhub/view-container"
+              "text": "管理资源配置",
+              "link": "/zh/manual/olares/controlhub/manage-resource"
+            },
+            {
+              "text": "管理中间件",
+              "link": "/zh/manual/olares/controlhub/manage-middleware"
+            },
+            {
+              text: "访问终端",
+              link: "/zh/manual/olares/controlhub/terminal",
             },
           ],
         },

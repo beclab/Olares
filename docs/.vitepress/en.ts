@@ -170,16 +170,24 @@ const side = {
           link: "/manual/olares/controlhub/",
           items: [
             {
-              text: "Navigate Control Hub",
-              link: "/manual/olares/controlhub/navigate-control-hub",
+              text: "Manage workloads",
+              link: "/manual/olares/controlhub/manage-workload",
             },
             {
-              text: "Edit system resource",
-              link: "/manual/olares/controlhub/edit-resource",
+              text: "Manage containers",
+              link: "/manual/olares/controlhub/manage-container",
             },
             {
-              text: "View container status",
-              link: "/manual/olares/controlhub/view-container",
+              text: "Manage resource config",
+              link: "/manual/olares/controlhub/manage-resource",
+            },
+            {
+              text: "Manage middleware",
+              link: "/manual/olares/controlhub/manage-middleware",
+            },
+            {
+              text: "Access Terminal",
+              link: "/manual/olares/controlhub/terminal",
             },
           ],
         },
