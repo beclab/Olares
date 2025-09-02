@@ -42,13 +42,16 @@ func (u upgraderBase) AddedBreakingChange() bool {
 }
 
 func (u upgraderBase) PrepareForUpgrade() []task.Interface {
-	return []task.Interface{
+	var tasks []task.Interface
+	tasks = append(tasks, upgradeKSCore()...)
+	tasks = append(tasks,
 		&task.LocalTask{
 			Name:   "PrepareUserInfoForUpgrade",
 			Action: new(prepareUserInfoForUpgrade),
 			Retry:  5,
 		},
-	}
+	)
+	return tasks
 }
 
 func (u upgraderBase) ClearAppChartValues() []task.Interface {
