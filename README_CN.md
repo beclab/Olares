@@ -44,7 +44,7 @@ Olares 是一款开源个人云操作系统，旨在让您能够轻松在本地�
 
   ![技术栈](https://file.bttcdn.com/github/olares/olares-architecture.jpg)
 
-详细描述请参考 [Olares 架构](https://docs.olares.cn/zh/manual/system-architecture.html)文档。
+详细描述请参考 [Olares 架构](https://docs.olares.cn/zh/manual/concepts/system-architecture.html)文档。
 
 >🔍**Olares 和 NAS 有什么不同？**
 >
