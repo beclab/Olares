@@ -43,7 +43,7 @@ Just as Public clouds offer IaaS, PaaS, and SaaS layers, Olares provides open-so
 
   ![Tech Stacks](https://file.bttcdn.com/github/olares/olares-architecture.jpg)
 
- For detailed description of each component, refer to [Olares architecture](https://docs.olares.com/manual/system-architecture.html).
+ For detailed description of each component, refer to [Olares architecture](https://docs.olares.com/manual/concepts/architecture.html).
 
 > 🔍 **How is Olares different from traditional NAS?**
 >
