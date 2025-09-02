@@ -53,8 +53,20 @@ export JUICEFS=1 \
 :::
 
 ## 第二步：向集群添加子节点
+1. 在子节点上，使用以下方式下载 `joincluster.sh`：
+::: code-group
 
-1. 在子节点上，从 https://joincluster.joinolares.cn 下载 `joincluster.sh`。
+```bash [curl]
+# 使用 Curl 方式下载
+curl -fsSL https://raw.githubusercontent.com/beclab/Olares/refs/heads/main/build/base-package/joincluster.sh -o joincluster.sh
+```
+
+```bash [wget]
+# 使用 wget 方式下载
+wget https://raw.githubusercontent.com/beclab/Olares/refs/heads/main/build/base-package/joincluster.sh
+```
+:::
+
 2. 使用必要的环境变量运行 `joincluster.sh` 脚本。这些变量用于告诉子节点如何连接到主节点。必须要设置 `MASTER_HOST` 变量，该变量指定主节点的 IP 地址：
    ```bash
    export MASTER_HOST=192.168.1.15
