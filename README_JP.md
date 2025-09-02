@@ -44,7 +44,7 @@ Olaresは、あなたが自身のデジタル資産をローカルで容易に�
 
   ![Olaresのアーキテクチ](https://file.bttcdn.com/github/olares/olares-architecture.jpg)
 
-各コンポーネントの詳細については、[Olares アーキテクチャ](https://docs.olares.com/manual/system-architecture.html)（英語版）をご参照ください。
+各コンポーネントの詳細については、[Olares アーキテクチャ](https://docs.olares.com/manual/concepts/system-architecture.html)（英語版）をご参照ください。
 
 > 🔍**OlaresとNASの違いは何ですか？**
 >
