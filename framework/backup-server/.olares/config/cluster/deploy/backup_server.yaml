@@ -42,7 +42,6 @@ spec:
       labels:
         tier: backup
     spec:
-      hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       affinity:
         nodeAffinity:
