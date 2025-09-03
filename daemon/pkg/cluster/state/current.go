@@ -161,7 +161,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 	CurrentState.DeviceName = utils.GetDeviceName()
 	CurrentState.CpuInfo = cpu.CPU.BrandName
 	CurrentState.Memory = bToGb(memory.TotalMemory())
-	CurrentState.Disk = bToGb(diskSize)
+	CurrentState.Disk = diskSize
 	CurrentState.GpuInfo = gpu
 	CurrentState.HostName = &hostname
 
