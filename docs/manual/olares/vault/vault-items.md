@@ -107,6 +107,23 @@ To easily access LarePass, you can pin the extension to your toolbar.
 </template>
 </tabs>
 
+### Import
+
+You can import passwords from other popular password applications like 1Password and BitWarden. Supported formats include `text/plain`, `.csv`, `.pls`, `.set`, `.pbes2`, `.1pux`, and `.json`.
+
+:::tip LarePass Desktop only
+The import process must be completed using the LarePass desktop client.
+:::
+
+![Vault import](/images/manual/olares/vault-import.png)
+1.  Open LarePass and click your avatar in the top-left corner.
+2.  Navigate to **Settings** > **Import**, and click the <i class="material-symbols-outlined">upload_file</i> button.
+3.  Select the file you want to import, such as `bitwarden_export.json`.
+4.  Choose the destination Vault. The default is **My Vault**, but you can also select a team Vault you have created.
+5.  Click **Confirm** to complete the import.
+
+The imported items will be automatically tagged with the import file's name, making them easy to find and manage in your Vault.
+
 ### Edit
 :::info
 The LarePass browser extension does not support editing vault items. For full editing capabilities, please use the Vault app in Olares, the mobile, or desktop versions of LarePass.

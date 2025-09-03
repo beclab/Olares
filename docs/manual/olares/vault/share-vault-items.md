@@ -1,69 +1,63 @@
 ---
-outline: [2, 3]
-description: Learn how to share vault items securely in Olares, manage team access permissions, create shared vaults, and efficiently collaborate while maintaining data security.
+outline: [2, 3] 
+description: Learn how to securely share Vault items in Olares. Understand team roles and permissions, manage shared Vault access, and enable secure collaboration among team members.
 ---
 
-# Share vault items
-A shared vault is an effective method for organizing, managing, and securely sharing data among users within the same Olares cluster. Whether you're managing family accounts or enterprise-level data, Team Vault provides the perfect balance of security and collaboration.
+# Manage shared Vaults
+
+A shared Vault is an effective way to organize, manage, and securely share sensitive data within the Olares cluster. Whether you're managing family accounts or enterprise-level data, a team Vault allows you to balance security with seamless collaboration.
 
 ## Understand team roles
-:::info
-The Olares admin automatically becomes the shared vault owner.
-:::
-| Role                             | Owner | Administrator | Member |
-|----------------------------------|-------|---------------|--------|
-| Add, suspend, reactivate members	 | ✅     | ✖️            | ✖️     |
-| Appoint administrators           | ✅     | ✖️            | ✖️     |
-| Create shared Vault items        | ✅     | ✅️            | ✖️     |
-| Assign read/write permissions    | ✅     | ✅             | ✖️     |
 
-## Get started with team access
-### Confirm membership
-All administrators and users of an Olares cluster are automatically included in one vault team. However, for security reasons, each new member must be verified before accessing team vault items.
+All Olares administrators and members are automatically added to the **My Team** group in Vault. The Super Admin is the default owner of the Vault team, while other users become team members.
 
-1. In Vault, navigate to the page **My Team** > **Invites**.
-2. Click on the member's account name to view the invitation code.
+The owner can navigate to **Teams** > **Members** to view all team members and their permissions.
 
-   ![Invite members](/images/manual/olares/invite-members.png#bordered)
-3. Send the invitation code to the corresponding member.
-   :::tip
-   For members, navigate to the page **Invites** > **My team** in Vault to accept invitation.
-   :::
-4. After the member confirms the invitation, return to the invitation page and click **Add member**.
+![Vault team](/images/manual/olares/vault-team.png#bordered)
 
-### Set administrator
-1. In Vault, navigate to the page **My team** > **Members**.
-2. Select a member from the member list. 
-3. Click <i class="material-symbols-outlined">more_horiz</i> in the top right corner, and select **Make admin**.
-4. To remove administrator privileges, select **Remove member**.
+| Role | Owner                                                                                       | Member |
+|---|---------------------------------------------------------------------------------------------|---|
+| Permissions | - Create, remove, and edit shared Vaults; <br/>- Assign read & write permissions to members | Access or edit shared Vault items based on assigned permissions |
 
-### Suspend members
-1. In Vault, navigate to the page **My team** > **Members**.
-2. Select a member from the member list.
-3. Click <i class="material-symbols-outlined">more_horiz</i> in the top right corner, and select **Suspend**.
-4. To reactivate a member, select **Unsuspend**.
+## Set team access
 
-:::info
-Suspended members retain their role but won't receive updates or make changes. Reactivation requires reverification for security.
-:::
+To set team access in Vault, you first need to create a shared Vault, add items to it, and then share the Vault with specific members.
 
-## Work with shared vaults
-Shared vaults are designed for sharing data among multiple Olares users. By default, they must be created by Olares admin.
-### Create a shared vault
-1. In Vault, navigate to the page **My team** > **Vaults**.
-2. Click <i class="material-symbols-outlined">add</i> in the top right corner, and enter vault name.
-3. Click **Save**.
+### Create a shared Vault
 
-### Edit shared vault permissions
-1. In Vault, navigate to the page **My team** > **Vaults**. 
-2. Select the shared vault to edit permissions. You can add or remove members and set read/write permissions.
-3. Click **Save**.
+A shared Vault can only be created by the owner.
+
+![Create team vault](/images/manual/olares/create-team-vault.png#bordered)
+
+1. Navigate to the **Teams** > **Vaults**. 
+2. In the team Vault page, click the <i class="material-symbols-outlined">add</i> button in the top-right corner.
+3. Enter a name for the Vault and click **Save**.
+
+At this point, this new team Vault is empty. You can [add new items](vault-items.md#add) for it or [import items from an external source](vault-items.md#import).
+
+### Share a Vault with members
+
+By default, the owner has automatic access and management permissions to a newly created team Vault. Team members require the owner to grant them access.
+
+![Vault share](/images/manual/olares/vault-share.png#bordered)
+
+1.  Navigate to **Team** > **Vaults**.
+2.  In the team Vault list, click the Vault you want to share.
+3.  In the details page on the right, click the **+** button to add the target member.
+4.  In the permissions dropdown menu, set **Editable** (Read & Write) or **Read-only** permissions for the member.
+5.  Click **Save**.
+
+The member can now view or edit the shared Vault under the **Team Vault** category. To remove a member's access, the owner can click the <i class="material-symbols-outlined">delete</i> button next to the permission dropdown.
 
 ### Delete a shared vault
-:::warning
-Deleting a shared vault permanently removes all associated data. Always double-check before confirming deletion.
+
+The owner can delete a shared Vault as needed.
+
+:::warning Warning
+Deleting a shared Vault will permanently remove all related data. Please check carefully before deletion.
 :::
-1. In Vault, navigate to the page **My team** > **Vaults**.
-2. Select the shared vault to view vault details.
-3. Click <i class="material-symbols-outlined">more_horiz</i> in the top right corner, and select **Delete**.
-4. In the popup dialog, enter `DELETE` to confirm deletion.
+
+1.  Navigate to **Team** > **Vaults**.
+2.  In the team Vault list, click the Vault you want to delete.
+3.  In the top-right corner of the details page, click the <i class="material-symbols-outlined">more_horiz</i> menu, then select **Delete**.
+4.  In the pop-up dialog, type `DELETE` to confirm the deletion.

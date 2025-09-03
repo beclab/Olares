@@ -9,75 +9,55 @@ description: 在 Olares 中安全共享 Vault 项目。了解团队角色权限�
 
 ## 了解团队角色
 
-:::info 提示
-Olares 管理员会自动成为共享 Vault 的所有者。
-:::
+所有 Olares 集群的管理员和成员都会自动加入 Vault 的 **My Team** 团队。Olares 超级管理员会默认成为团队所有者，其他用户则为团队成员。
 
-| 角色                              | 所有者 | 管理员       | 成员   |
-|-----------------------------------|-------|-------------|--------|
-| 添加、暂停、重新激活成员           | ✅     | ✖️          | ✖️     |
-| 指定管理员                       | ✅     | ✖️          | ✖️     |
-| 创建共享 Vault 条目               | ✅     | ✅️         | ✖️     |
-| 分配读/写权限                    | ✅     | ✅          | ✖️     |
+所有者可导航至**团队** > **成员**页面查看所有成员：
+
+![Vault 团队](/images/zh/manual/olares/vault-team.png#bordered)
+
+| 角色     | 所有者                                 | 成员       |
+|----------|-------------------------------------|------------|
+| 权限     | - 创建、删除、编辑共享 Vault<br/>- 分配成员的读/写权限 | 根据所分配的权限访问或编辑共享 Vault 项目 |
 
 ## 设置团队访问
 
-### 确认成员资格
-
-所有 Olares 集群的管理员和用户会自动加入一个 Vault 团队。但出于安全原因，每位新成员在访问团队 Vault 条目前必须完成验证。
-
-1. 在 Vault 中，导航到**我的团队** > **邀请**页面。
-2. 点击成员账户名称查看邀请码。
-
-   ![Invite members](/images/manual/olares/invite-members.png#bordered)
-
-3. 将邀请码发送给相应的成员。
-   :::tip 提示
-   对于成员，在 Vault 中的**邀请** > **我的团队**页面接受邀请。
-   :::
-4. 在成员确认邀请后，返回邀请页面并点击**添加成员**。
-
-### 设置管理员
-
-1. 在 Vault 中，导航到**我的团队** > **成员**页面。
-2. 从成员列表中选择一个成员。
-3. 点击右上角的 <i class="material-symbols-outlined">more_horiz</i>，选择**设为管理员**。
-4. 若需移除管理员权限，选择**移除成员**。
-
-### 暂停成员
-
-1. 在 Vault 中，导航到**我的团队** > **成员**页面。
-2. 从成员列表中选择一个成员。
-3. 点击右上角的 <i class="material-symbols-outlined">more_horiz</i>，选择**暂停**。
-4. 若需重新激活成员，选择**取消暂停**。
-
-:::tip 提示
-暂停的成员保留其角色，但无法接收更新或进行更改。重新激活需再次验证以确保安全。
-:::
-
-## 使用共享 Vault
-
-共享 Vault 专为在多个 Olares 用户间共享数据设计。默认情况下，必须由 Olares 管理员创建。
+要设置团队访问，你需要首先创建共享 Vault，在其中添加项目，然后将 Vault 共享给指定成员。
 
 ### 创建共享 Vault
 
-1. 在 Vault 中，导航到**我的团队** > **Vaults** 页面。
-2. 点击右上角的 <i class="material-symbols-outlined">add</i>，输入 Vault 名称。
-3. 点击**保存**。
+共享 Vault 仅可由所有者创建。
 
-### 编辑共享 Vault 权限
+![创建 team vault](/images/zh/manual/olares/create-team-vault.png#bordered)
 
-1. 在 Vault 中，导航到**我的团队** > **Vaults** 页面。
-2. 选择要编辑权限的共享 Vault，可以添加或移除成员并设置读/写权限。
-3. 点击**保存**。
+1.  导航到**团队** > **Vaults** 页面。
+2.  点击右上角的 <i class="material-symbols-outlined">add</i> 按钮，并输入 Vault 名称。
+3.  点击**保存**。
+
+新创建的团队 Vault 初始为空，你可以继续为此 Vault [添加新项目](vault-items.md#添加)，或直接从[外部导入](vault-items.md#导入)。
+
+### 共享 Vault 给成员
+
+默认情况下，所有者会自动获得新创建共享 Vault 的访问和管理权限。团队成员则需要所有者授予访问权限：
+
+1.  导航到**团队** > **Vaults** 页面。
+2.  在团队 Vault 列表里点击要共享的 Vault。
+3.  在右侧详情页右上角，点击 **+** 按钮以添加你想共享的成员。
+4.  在权限设置下拉框里，为该成员设置**读/写**（Editable）或**只读**（ReadOnly）权限。
+5.  点击**保存**完成设置。
+
+![Vault 共享](/images/zh/manual/olares/vault-share.png#bordered)
+
+该成员现在可以在 **Team Vault** 类别下查看共享的 Vault。如需移除特定成员的共享权限，所有者可以点击权限下拉框旁的 <i class="material-symbols-outlined">delete</i> 按钮。
 
 ### 删除共享 Vault
+
+所有者可以根据需要删除共享 Vault：
 
 :::warning 警告
 删除共享 Vault 将永久移除所有相关数据。请务必在确认删除前仔细检查。
 :::
 
-1. 在 Vault 中，导航到**我的团队** > **Vaults** 页面。
-2. 选择共享 Vault 查看其详情。
-3. 点击右上角的 <i class="material-symbols-outlined">more_horiz</i>，选择**删除**。
-4. 在弹出对话框中输入 `DELETE` 以确认删除。
+1.  导航到**团队** > **Vault** 页面。
+2.  在团队 Vault 列表里点击要删除的项目。
+3.  在右侧详情页右上角的 <i class="material-symbols-outlined">more_horiz</i> 菜单中，点击**删除**。
+4.  在弹出对话框中输入 `DELETE` 以确认删除。
