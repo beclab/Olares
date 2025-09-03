@@ -462,9 +462,9 @@ spec:
             - name: TERMINUSD_HOST
               value: $(NODE_IP):18088
             - name: APP_SERVICE_SERVICE_HOST
-              value: app-service.os-framework
+              value: app-service.user-system-{{ .Values.bfl.username }}
             - name: APP_SERVICE_SERVICE_PORT
-              value: '6755'
+              value: '28080'
             - name: APP_SERVICE_CHAIN_ID
               value: '10'
             - name: APP_SERVICE_VERIFYING_CONTRACT
