@@ -316,10 +316,10 @@ const side = {
               text: "自治声誉",
               link: "/zh/manual//concepts/reputation",
             },
-            {
-              text: "主权网络",
-              link: "/zh/manual//concepts/self-sovereign-network",
-            },
+            //      {
+            //     text: "主权网络",
+          //   link: "/zh/manual//concepts/self-sovereign-network",
+            //  },
             {
               text: "身份钱包",
               link: "/zh/manual/concepts/wallet",

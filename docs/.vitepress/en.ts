@@ -312,10 +312,10 @@ const side = {
               text: "Autonomous Reputation",
               link: "/manual/concepts/reputation",
             },
-            {
-              text: "Self-Sovereign Network",
-              link: "/manual/concepts/self-sovereign-network",
-            },
+          //  {
+           //   text: "Self-Sovereign Network",
+          //    link: "/manual/concepts/self-sovereign-network",
+            //   },
             {
               text: "Identity Wallet",
               link: "/manual/concepts/wallet",
