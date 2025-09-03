@@ -317,6 +317,8 @@ const (
 
 	ENV_CONTAINER      = "container"
 	ENV_CONTAINER_MODE = "CONTAINER_MODE" // running in docker container
+
+	OLARES_ENV_CONFIG_FILENAME = "olares-env-config.yaml"
 )
 
 // TerminusGlobalEnvs holds a group of general environment variables

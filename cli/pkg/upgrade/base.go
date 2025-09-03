@@ -113,6 +113,12 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 			Retry:  10,
 			Delay:  15 * time.Second,
 		},
+		&task.LocalTask{
+			Name:   "UpgradeSystemEnvs",
+			Action: new(terminus.ApplySystemEnv),
+			Retry:  5,
+			Delay:  15 * time.Second,
+		},
 	}
 }
 
@@ -308,10 +314,22 @@ type upgradeSystemComponents struct {
 
 func (u *upgradeSystemComponents) Execute(runtime connector.Runtime) error {
 	config, err := ctrl.GetConfig()
+
+	actionConfig, settings, err := utils.InitConfig(config, common.NamespaceDefault)
+	if err != nil {
+		return err
+	}
+	ctx, cancelSettings := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancelSettings()
+	settingsChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "settings")
+
+	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameSettings, settingsChartPath, "", common.NamespaceDefault, nil, true); err != nil {
+		return err
+	}
 	if err != nil {
 		return fmt.Errorf("failed to get rest config: %s", err)
 	}
-	actionConfig, settings, err := utils.InitConfig(config, common.NamespaceOsPlatform)
+	actionConfig, settings, err = utils.InitConfig(config, common.NamespaceOsPlatform)
 	if err != nil {
 		return err
 	}
@@ -333,17 +351,6 @@ func (u *upgradeSystemComponents) Execute(runtime connector.Runtime) error {
 		return err
 	}
 
-	actionConfig, settings, err = utils.InitConfig(config, common.NamespaceDefault)
-	if err != nil {
-		return err
-	}
-	ctx, cancelSettings := context.WithTimeout(context.Background(), 3*time.Minute)
-	defer cancelSettings()
-	settingsChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "settings")
-
-	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameSettings, settingsChartPath, "", common.NamespaceDefault, nil, true); err != nil {
-		return err
-	}
 	return nil
 }
 

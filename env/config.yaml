@@ -1,0 +1,78 @@
+apiVersion: v1
+systemEnvs:
+  # 改成 OLARES_DID_GATE_SERVICE?
+  # 相关的系统组件的代码也需要统一修改，下面别的环境变量也一样
+  # 系统组件不是app，在取消当前以helm chart template直接渲染的前提下，应用内部如何获取值？
+  - name: DID_GATE_URL
+    default: "https://did-gate-v3.bttcdn.com/"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # 改成 OLARES_CLOUD_SERVICE?
+  - name: OLARES_SPACE_URL
+    default: "https://cloud-api.bttcdn.com/"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # 改成 OLARES_PUSH_SERVICE?
+  - name: FIREBASE_PUSH_URL
+    default: "https://firebase-push-test.bttcdn.com/v1/api/push"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # 改成 OLARES_FRP_INDEX_SERVICE?
+  - name: FRP_LIST_URL
+    default: "https://terminus-frp.snowinning.com"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # 改成 OLARES_VPN_CONTROL_SERVICE?
+  - name: TAILSCALE_CONTROLPLANE_URL
+    default: "https://controlplane.snowinning.com"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # 这个还需要吗
+  # 改成 OLARES_MARKET_SERVICE?
+  - name: MARKET_PROVIDER
+    default: appstore-server-prod.bttcdn.com
+    type: domain
+    editable: true
+    required: true
+    description: ""
+  # 改成 OLARES_CERT_SERVICE?
+  - name: TERMINUS_CERT_SERVICE_API
+    default: "https://terminus-cert.snowinning.com"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # 改成 OLARES_DNS_SERVICE?
+  - name: TERMINUS_DNS_SERVICE_API
+    default: "https://terminus-dnsop.snowinning.com"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # 改成 OLARES_ROOT_PATH?
+  # 路径相关的统一以PATH作为后缀
+  # api相关的统一以SERVICE作为后缀
+  - name: OLARES_ROOT_DIR
+    value: /olares
+    editable: false
+    required: true
+    description: ""
+  # 改成 OLARES_COREDNS_SERVICE / OLARES_CLUSTER_DNS_SERVICE / KUBERNETES_DNS_SERVICE?
+  # 考虑统一命名的话，可能类似别的组件以 OLARES_${COMPONENT}_${SUB_COMPONENT}_SERVICE 作为命名规则，那就是 OLARES_CLUSTER_DNS_SERVICE
+  # 不过这个变量也可以考虑去掉，实际意义不大且有矛盾，所有集群内的组件都应该能自行获取才对?
+  - name: COREDNS_SVC
+    value: "10.96.0.10"
+    editable: false
+    type: ip
+    required: true
+    description: ""

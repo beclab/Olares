@@ -76,4 +76,7 @@ run_cmd "cp -rf framework/bfl/.olares/config/launcher ${DIST}/wizard/config/"
 echo "packaging gpu ..."
 run_cmd "cp -rf infrastructure/gpu/.olares/config/gpu ${DIST}/wizard/config/"
 
+echo "packaging env config ..."
+run_cmd "cp -rf env/config.yaml ${DIST}/olares-env-config.yaml"
+
 echo "packaging completed"
