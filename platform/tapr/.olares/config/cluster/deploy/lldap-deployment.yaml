@@ -121,6 +121,7 @@ spec:
       labels:
         app: lldap
     spec:
+      priorityClassName: "system-cluster-critical"
       initContainers:
         - name: init-container-check-citus
           image: 'postgres:16.0-alpine3.18'
