@@ -172,6 +172,7 @@ spec:
         app.kubernetes.io/name: nats
         app.kubernetes.io/instance: nats
     spec:
+      priorityClassName: "system-cluster-critical"
       initContainers:
         - name: generate-config
           image: busybox:1.28
