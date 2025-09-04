@@ -145,7 +145,7 @@ spec:
             value: os_framework_notifications
       containers:
       - name: notifications-api
-        image: beclab/notifications-api:v1.12.30
+        image: beclab/notifications-api:v1.12.31
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
