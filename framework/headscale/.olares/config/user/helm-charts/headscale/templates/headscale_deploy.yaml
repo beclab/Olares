@@ -85,6 +85,7 @@ spec:
       labels:
         app: headscale
     spec:
+      priorityClassName: "system-cluster-critical"
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -258,6 +259,7 @@ spec:
       labels:
         app: tailscale
     spec:
+      priorityClassName: "system-cluster-critical"
       affinity:
         podAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
