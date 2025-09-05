@@ -121,6 +121,7 @@ spec:
       labels:
         app: notifications-server
     spec:
+      priorityClassName: "system-cluster-critical"
       initContainers:
       - name: init-container
         image: 'postgres:16.0-alpine3.18'
