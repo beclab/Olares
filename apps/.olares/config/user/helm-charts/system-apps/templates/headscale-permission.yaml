@@ -1,0 +1,13 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backend:{{ .Values.bfl.username }}:system-frontend:headscale-provider-svc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:headscale-svc
+subjects:
+- kind: ServiceAccount
+  name: system-frontend
+  namespace: {{ .Release.Namespace }}
