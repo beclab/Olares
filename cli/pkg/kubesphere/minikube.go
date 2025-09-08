@@ -3,6 +3,7 @@ package kubesphere
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/beclab/Olares/cli/pkg/storage"
 	"os"
 	"os/exec"
 	"path"
@@ -221,6 +222,28 @@ func (t *ReloadMinikubeContainerdConfig) Execute(runtime connector.Runtime) erro
 	return nil
 }
 
+type CreateSharedPathInMiniKubeContainer struct {
+	common.KubeAction
+}
+
+func (t *CreateSharedPathInMiniKubeContainer) Execute(runtime connector.Runtime) error {
+	minikube, err := util.GetCommand(common.CommandMinikube)
+	if err != nil {
+		return fmt.Errorf("failed to get minikube command: %w", err)
+	}
+	createCMD := fmt.Sprintf("%s ssh 'sudo mkdir -p %s' -p %s", minikube, storage.OlaresSharedLibDir, t.KubeConf.Arg.MinikubeProfile)
+	_, err = runtime.GetRunner().Cmd(createCMD, false, false)
+	if err != nil {
+		return fmt.Errorf("failed to create shared path in minikube container: %w", err)
+	}
+	chownCMD := fmt.Sprintf("%s ssh 'sudo chown 1000:1000 %s' -p %s", minikube, storage.OlaresSharedLibDir, t.KubeConf.Arg.MinikubeProfile)
+	_, err = runtime.GetRunner().Cmd(chownCMD, false, false)
+	if err != nil {
+		return fmt.Errorf("failed to change ownership of shared path in minikube container: %w", err)
+	}
+	return nil
+}
+
 type CreateMinikubeClusterModule struct {
 	common.KubeModule
 }
@@ -253,12 +276,18 @@ func (m *CreateMinikubeClusterModule) Init() {
 		Action: new(ReloadMinikubeContainerdConfig),
 	}
 
+	createSharedPathInMiniKubeContainer := &task.LocalTask{
+		Name:   "CreateSharedPathInMiniKubeContainer",
+		Action: new(CreateSharedPathInMiniKubeContainer),
+	}
+
 	m.Tasks = []task.Interface{
 		createCluster,
 		retagMinikubeKubeImages,
 		getMiniKubeContainerdConfig,
 		setMirrorsToMinikubeContainerdConfig,
 		reloadMinikubeContainerdConfig,
+		createSharedPathInMiniKubeContainer,
 	}
 }
 

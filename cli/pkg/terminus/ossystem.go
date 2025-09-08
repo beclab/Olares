@@ -57,10 +57,7 @@ func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
 		"fs_type":                              storage.GetRootFSType(),
 		common.HelmValuesKeyTerminusGlobalEnvs: common.TerminusGlobalEnvs,
 		common.HelmValuesKeyOlaresRootFSPath:   storage.OlaresRootDir,
-	}
-
-	if !runtime.GetSystemInfo().IsDarwin() {
-		vals["sharedlib"] = storage.OlaresSharedLibDir
+		"sharedlib":                            storage.OlaresSharedLibDir,
 	}
 
 	var platformPath = path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-platform")
