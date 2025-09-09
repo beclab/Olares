@@ -51,7 +51,7 @@ In the upper-right corner of the Olares management page, tap the <i class="mater
 
  ![Device control](/images/manual/larepass/device-control.png)
 
-- **Restart device** – Your Olares will restart. If your phone is on the same network as Olares, its status will show `Restarting` `and will return to `Olares running` in approximately 5–8 minutes.
+- **Restart device** – Your Olares will restart. If your phone is on the same network as Olares, its status will show `Restarting` and will return to `Olares running` in approximately 5–8 minutes.
 - **Remote shutdown** – Your Olares will power off. If your phone is on the same network as Olares, its status will show `Powered off`.  Remote operations are not possible after shutdown, and the device must be turned on manually.
 
 ::: tip Note
