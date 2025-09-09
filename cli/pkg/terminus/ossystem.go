@@ -3,8 +3,15 @@ package terminus
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
 	"time"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
+	"bytetrade.io/web3os/app-service/api/sys.bytetrade.io/v1alpha1"
+	apputils "bytetrade.io/web3os/app-service/pkg/utils"
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/storage"
@@ -18,8 +25,12 @@ import (
 	configmaptemplates "github.com/beclab/Olares/cli/pkg/terminus/templates"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type InstallOsSystem struct {
@@ -211,6 +222,101 @@ func (p *Patch) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
+type ApplySystemEnv struct {
+	common.KubeAction
+}
+
+// SystemEnvConfig represents the structure of the config.yaml file
+type SystemEnvConfig struct {
+	APIVersion string                `yaml:"apiVersion"`
+	SystemEnvs []v1alpha1.EnvVarSpec `yaml:"systemEnvs"`
+}
+
+func (a *ApplySystemEnv) Execute(runtime connector.Runtime) error {
+	configPath := filepath.Join(runtime.GetInstallerDir(), common.OLARES_ENV_CONFIG_FILENAME)
+	if !util.IsExist(configPath) {
+		logger.Info("system env config file not found, skipping system env apply")
+		return nil
+	}
+
+	configData, err := os.ReadFile(configPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to read system env config file")
+	}
+
+	var config SystemEnvConfig
+	if err := yaml.Unmarshal(configData, &config); err != nil {
+		return errors.Wrap(err, "failed to parse system env config file")
+	}
+
+	logger.Debugf("parsed system env config file %s: %#v", configPath, config.SystemEnvs)
+
+	configK8s, err := ctrl.GetConfig()
+	if err != nil {
+		return errors.Wrap(err, "failed to get kubernetes config")
+	}
+
+	scheme := kruntime.NewScheme()
+	if err := v1alpha1.AddToScheme(scheme); err != nil {
+		return errors.Wrap(err, "failed to add system scheme")
+	}
+
+	ctrlclient, err := client.New(configK8s, client.Options{Scheme: scheme})
+	if err != nil {
+		return errors.Wrap(err, "failed to create kubernetes client")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	for _, envItem := range config.SystemEnvs {
+		resourceName, err := apputils.EnvNameToResourceName(envItem.EnvName)
+		if err != nil {
+			return fmt.Errorf("invalid system env name: %s", envItem.EnvName)
+		}
+
+		var existingSystemEnv v1alpha1.SystemEnv
+		err = ctrlclient.Get(ctx, types.NamespacedName{Name: resourceName}, &existingSystemEnv)
+
+		if err == nil {
+			logger.Debugf("SystemEnv %s already exists, skipping", resourceName)
+			continue
+		}
+
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to get system env")
+		}
+
+		if osEnv := os.Getenv(envItem.EnvName); osEnv != "" {
+			envItem.Value = osEnv
+		}
+
+		err = apputils.CheckEnvValueByType(envItem.Value, envItem.Type)
+		if err != nil {
+			return fmt.Errorf("invalid system env value: %s", envItem.Value)
+		}
+		err = apputils.CheckEnvValueByType(envItem.Default, envItem.Type)
+		if err != nil {
+			return fmt.Errorf("invalid system env default value: %s", envItem.Value)
+		}
+
+		systemEnv := &v1alpha1.SystemEnv{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: resourceName,
+			},
+			EnvVarSpec: envItem,
+		}
+
+		if err := ctrlclient.Create(ctx, systemEnv); err != nil && !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create system env %s: %v", resourceName, err)
+		}
+
+		logger.Infof("Created SystemEnv: %s", systemEnv.EnvName)
+	}
+
+	return nil
+}
+
 type InstallOsSystemModule struct {
 	common.KubeModule
 }
@@ -218,6 +324,11 @@ type InstallOsSystemModule struct {
 func (m *InstallOsSystemModule) Init() {
 	logger.InfoInstallationProgress("Installing appservice ...")
 	m.Name = "InstallOsSystemModule"
+
+	applySystemEnv := &task.LocalTask{
+		Name:   "ApplySystemEnv",
+		Action: new(ApplySystemEnv),
+	}
 
 	installOsSystem := &task.LocalTask{
 		Name:   "InstallOsSystem",
@@ -254,6 +365,7 @@ func (m *InstallOsSystemModule) Init() {
 	}
 
 	m.Tasks = []task.Interface{
+		applySystemEnv,
 		installOsSystem,
 		createBackupConfigMap,
 		createReverseProxyConfigMap,
