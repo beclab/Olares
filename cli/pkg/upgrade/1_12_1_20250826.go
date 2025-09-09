@@ -19,8 +19,8 @@ func (u upgrader_1_12_1_20250826) Version() *semver.Version {
 	return semver.MustParse("1.12.1-20250826")
 }
 
-func (u upgrader_1_12_1_20250826) PrepareForUpgrade() []task.Interface {
-	preTasks := []task.Interface{
+func (u upgrader_1_12_1_20250826) preToPrepareForUpgrade() []task.Interface {
+	return []task.Interface{
 		&task.LocalTask{
 			Name: "UpdateBackupETCDService",
 			Action: &action.Template{
@@ -39,5 +39,9 @@ func (u upgrader_1_12_1_20250826) PrepareForUpgrade() []task.Interface {
 			},
 		},
 	}
+}
+
+func (u upgrader_1_12_1_20250826) PrepareForUpgrade() []task.Interface {
+	preTasks := u.preToPrepareForUpgrade()
 	return append(preTasks, u.upgraderBase.PrepareForUpgrade()...)
 }

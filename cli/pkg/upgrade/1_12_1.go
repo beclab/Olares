@@ -2,6 +2,7 @@ package upgrade
 
 import (
 	"github.com/Masterminds/semver/v3"
+	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/version"
 )
 
@@ -28,10 +29,11 @@ func (u upgrader_1_12_1) AddedBreakingChange() bool {
 		// if this version introduced breaking change
 		return true
 	}
-	if u.Version().Equal(semver.MustParse("1.12.1-alpha.2")) {
-		// if this alpha version introduced more breaking change
-		// halfway through release
-		return true
-	}
 	return false
+}
+
+func (u upgrader_1_12_1) PrepareForUpgrade() []task.Interface {
+	var preTasks []task.Interface
+	preTasks = append(preTasks, upgrader_1_12_1_20250826{}.preToPrepareForUpgrade()...)
+	return append(preTasks, u.upgraderBase.PrepareForUpgrade()...)
 }
