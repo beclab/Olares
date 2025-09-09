@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/gpu"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -107,6 +108,10 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 	// so put this at last to make the whole pipeline
 	// reentrant
 	return []task.Interface{
+		&task.LocalTask{
+			Name:   "UpgradeGPUPlugin",
+			Action: new(gpu.InstallPlugin),
+		},
 		&task.LocalTask{
 			Name:   "UpgradeSystemComponents",
 			Action: new(upgradeSystemComponents),
