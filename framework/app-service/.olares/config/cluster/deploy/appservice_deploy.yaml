@@ -198,13 +198,13 @@ spec:
         - name: SHARED_LIB_PATH
           value: {{ .Values.sharedlib }}
         - name: CLUSTER_CPU_THRESHOLD
-          value: "90"
+          value: "0"
         - name: CLUSTER_MEMORY_THRESHOLD
-          value: "90"
+          value: "0"
         - name: USER_CPU_THRESHOLD
-          value: "90"
+          value: "0"
         - name: USER_MEMORY_THRESHOLD
-          value: "90"
+          value: "0"
         - name: NATS_HOST
           value: nats.os-platform
         - name: NATS_PORT
