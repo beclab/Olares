@@ -25,19 +25,19 @@ Olares Space is a cloud hosting service for Olares that shares the same account 
 
 ### Step 2. Authorize Olares Space
 
-1. In the LarePass app, go to **Settings** > **Integration**.
+1. In the LarePass app, go to **Settings** > **LarePass settings** > **Integration**.
 2. Tap <i class="material-symbols-outlined">add</i> in the top-right corner and select **Space** to add your Olares Space account.
 
 ### Step 3. Associate Olares ID
 Associating your Olares ID allows you to import a blockchain wallet, which is necessary for using NFT images as unique avatars in your profile.
 
-1. Open the Settings app from the Dock or Launchpad.
+1. In Olares, open the Settings app from the Dock or Launchpad.
 2. Select **Integration** from the left sidebar.
 3. Click on the Olares Space card on the right to view details.
 4. Click **Bind**. This will trigger a confirmation prompt in LarePass app.
 5. Open the LarePass app. You should see a confirmation prompt. If not:
 
-   a. Go to **Settings** > **Integration**.
+   a. Go to **Settings** > **LarePass settings** > **Integration**.
 
    b. Tap the Olares Space card.
 
@@ -50,7 +50,7 @@ OAuth-based integrations like Google Drive and Dropbox require initial setup via
 
 1. Open LarePass on your mobile device.
 
-2. Tap **Settings** > **Integration**, then tap <i class="material-symbols-outlined">add</i> in the top-right corner.
+2. Tap **Settings** > **LarePass settings** > **Integration**, then tap <i class="material-symbols-outlined">add</i> in the top-right corner.
 
 3. Select either Google Drive or Dropbox.
 
@@ -63,7 +63,7 @@ Once authorized, you'll see the connected account in the integration list. You c
 Services like AWS S3 and Tencent Cloud COS require setup using API keys (Access Key & Secret Key). You can do this directly from the LarePass app or from the **Integration** settings within Olares:
 
 1. Open LarePass on your mobile device.
-2. Tap **Settings** > **Integration**, then tap <i class="material-symbols-outlined">add</i> in the top-right corner.
+2. Tap **Settings** > **LarePass settings** > **Integration**, then tap <i class="material-symbols-outlined">add</i> in the top-right corner.
 3. Select AWS S3 or Tencent COS.
 4. Enter your Access Key, Secret Key, and other required credentials, then tap **Confirm**.
 
@@ -79,6 +79,6 @@ You can always reconnect later if needed.
 
 To disconnect an integration from LarePass:
 
-1. Open LarePass app, and go to **Settings** > **Integration**.
+1. Open LarePass app, and go to **Settings** > **LarePass settings** > **Integration**.
 2. Tap on the integration you wish to remove.
 3. Tap <i class="material-symbols-outlined">more_horiz</i> in the top-right corner, and tap **Delete**.
