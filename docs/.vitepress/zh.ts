@@ -612,10 +612,10 @@ const side = {
               text: "OlaresManifest",
               link: "/zh/developer/develop/package/manifest",
             },
-            {
+            /*/{
               text: "推荐算法",
               link: "/zh/developer/develop/package/recommend",
-            },
+            },*/
             {
               text: "Helm 扩展",
               link: "/zh/developer/develop/package/extension",

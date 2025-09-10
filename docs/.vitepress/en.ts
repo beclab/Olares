@@ -606,10 +606,10 @@ const side = {
               text: "OlaresManifest",
               link: "/developer/develop/package/manifest",
             },
-            {
+            /*{
               text: "Recommendation",
               link: "/developer/develop/package/recommend",
-            },
+            },*/
             {
               text: "Helm extension",
               link: "/developer/develop/package/extension",

@@ -122,7 +122,7 @@ The application framework layer provides common functionality and interfaces for
 
 ### Authentication and authorization
 
-Olares uses [LLDAP](https://lldap.example.com/) to manage user accounts and provide LDAP (Lightweight Directory Access Protocol) services for applications.
+Olares uses [LLDAP](https://github.com/lldap/lldap) to manage user accounts and provide LDAP (Lightweight Directory Access Protocol) services for applications.
 
 Additionally, [Authelia](https://www.authelia.com/) adds authentication and authorization support, including multi-factor authentication and single sign-on (SSO).
 
@@ -165,8 +165,8 @@ Olares empowers AI capabilities with:
 
 System services include:
 - Notification: Delivers system-wide notifications.
-- Backup*: Supports backups for directories, applications, and clusters. *(In development)*
-- Upgrade*: Supports automated system upgrades. *(In development)*
+- Backup: Supports backups for directories, applications, and clusters.
+- Upgrade: Supports automated system upgrades.
 
 ## System applications
 
