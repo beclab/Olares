@@ -12,7 +12,7 @@ The Concepts section helps you learn about the parts of the Olares system and ob
 
 Understand Olares with the following concepts:
 
-- [Architectural components](architecture.md)
+- [Architectural components](system-architecture.md)
 - [Olares ID](./olares-id.md)
 - [Account](./account.md)
 - [Application](./application.md)
