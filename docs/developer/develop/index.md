@@ -9,7 +9,7 @@ Developing applications on Olares is not much different from regular website dev
   - [Extensions field to Helm in Olares](./package/extension.md)
 
 - [Exploring Our Tutorials](./tutorial/)
-  - [Learn about Devbox, an Olares Development Tool](./tutorial/studio)
+  - [Learn about Studio, an Olares Development Tool](./tutorial/studio)
   - [Creating your first application](./tutorial/note/)
 - [Exploring Advanced Concepts](./advanced/)
 - [Submitting Applications to the Olares Market](./submit/)

@@ -2,15 +2,15 @@
 # Develop System Application for Olares
 
 ::: tip Prerequisites Knowledge
-- Debugging third-party applications with **DevBox**
-- Developing applications with **DevBox**
+- Debugging third-party applications with **Studio**
+- Developing applications with **Studio**
 - Understanding the architecture and mechanisms of **Olares**
 :::
 
-After a year and a half of work, the Olares team now uses **DevBox** for developing system applications.
+After a year and a half of work, the Olares team now uses **Studio** for developing system applications.
 
-We will show you how to debug issues in the frontend code of **Desktop** using **DevBox**.
-1. Create an application in DevBox
+We will show you how to debug issues in the frontend code of **Desktop** using **Studio**.
+1. Create an application in Studio
 2. Configure [deployment.yaml](./deployment)
 3. Configure [OlaresManifest.yaml](./olares-manifest)
 4. Install the application

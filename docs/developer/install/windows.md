@@ -21,7 +21,7 @@ Make sure your Windows meets the following requirements.
 - Storage: At least 150GB of available SSD storage. 
 - Supported systems:
     - Windows 10 or 11
-    - Linux (on WSL 2): Ubuntu 20.04 LTS or later; Debian 11 or later
+    - Linux (on WSL 2): Ubuntu 22.04 LTS or later; Debian 12 or later
 ::: warning SSD required
 The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
 :::

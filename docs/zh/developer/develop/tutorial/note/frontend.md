@@ -1,7 +1,7 @@
 # 开始前端程序开发
 
 ## 预览应用
-应用安装完成后，可以通过 DevBox 的**预览**按钮，预览应用的前端效果。
+应用安装完成后，可以通过 Studio 的**预览**按钮，预览应用的前端效果。
 
 ![preview](/images/developer/develop/tutorial/frontend/preview.jpg)
 

@@ -27,8 +27,8 @@ Make sure your device meets the following requirements.
 - RAM: At least 8GB of available memory
 - Storage: At least 150GB of available SSD storage.
 - Supported systems:
-    - Ubuntu 20.04 LTS or later
-    - Debian 11 or later
+    - Ubuntu 22.04 LTS or later
+    - Debian 12 or later
 ::: warning SSD required
 The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
 :::

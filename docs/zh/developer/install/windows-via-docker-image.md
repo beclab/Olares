@@ -22,7 +22,7 @@ Windows 设备需满足以下条件：
 - 存储：不少于 150GB 的可用磁盘空间，需使用 SSD 硬盘安装。使用 HDD（机械硬盘）可能会导致安装失败。
 - 支持的系统：
     - Windows 10 或 11
-    - Linux（WSL 2 环境）：Ubuntu 20.04 LTS 及以上；Debian 11 及以上
+    - Linux（WSL 2 环境）：Ubuntu 22.04 LTS 及以上；Debian 12 及以上
 
 :::warning 注意
 使用 HDD（机械硬盘）可能会导致安装失败。

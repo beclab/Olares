@@ -4,10 +4,10 @@ outline: [2, 3]
 
 # 如何开始开发一个应用
 
-## 下载并安装 DevBox
+## 下载并安装 Studio
 
-1. 从 Olares 应用市场安装 [DevBox](https://market.olares.com/app/devbox)。
-2. 在 Olares 桌面的 LaunchPad 中找到 DevBox 图标。
+1. 从 Olares 应用市场安装 [Studio](https://market.olares.com/app/studio)。
+2. 在 Olares 桌面的 LaunchPad 中找到 Studio 图标。
 3. 点击图标启动应用程序。
 
   ![main screen](/images/developer/develop/tutorial/create/home.jpg)
@@ -24,7 +24,7 @@ outline: [2, 3]
 
 ## 设置应用配置
 
-创建应用程序后，你可以在 **Files** 选项卡下看到 DevBox 生成的 Olares Application Chart 文件。你可以根据需要添加、删除或重命名各种配置文件。
+创建应用程序后，你可以在 **Files** 选项卡下看到 Studio 生成的 Olares Application Chart 文件。你可以根据需要添加、删除或重命名各种配置文件。
 
 ![upload icon](/images/developer/develop/tutorial/create/add-file.jpg)
 
@@ -107,7 +107,7 @@ volumes:
 
 `templates` 文件夹中的 `deployment.yaml` 详细描述了应用的部署配置。
 
-如果你的应用分为前后端两个不同的容器。你可以在 templates 的部署文件中，添加多个容器。DevBox 将识别这些不同的容器并将它们分别绑定到不同的开发容器。例如，
+如果你的应用分为前后端两个不同的容器。你可以在 templates 的部署文件中，添加多个容器。Studio 将识别这些不同的容器并将它们分别绑定到不同的开发容器。例如，
 ```yaml
 containers:
   # 前端容器
@@ -174,7 +174,7 @@ containers:
 
 ![containers](/images/developer/develop/tutorial/create/bind.jpg)
 
-你可以为绑定的开发容器设置一个指定的开发环境，目前 DevBox 支持 NodeJS、Golang、python 三种开发容器。让我们给 demo 前端容器绑定一个 NodeJS 开发容器，给 Server 容器绑定一个 Golang 的开发容器。
+你可以为绑定的开发容器设置一个指定的开发环境，目前 Studio 支持 NodeJS、Golang、python 三种开发容器。让我们给 demo 前端容器绑定一个 NodeJS 开发容器，给 Server 容器绑定一个 Golang 的开发容器。
 
 这里选择了创建一个新的开发容器。如果之前已经创建过未绑定的开发容器，这里也可以选择一个已有的容器进行绑定。
 

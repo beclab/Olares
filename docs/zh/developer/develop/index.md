@@ -9,7 +9,7 @@
   - [Olares 对 Helm 进行的字段扩展](./package/extension.md)
 
 - [探索我们的教程](./tutorial/)
-  - [了解 Olares 的开发工具 Devbox](./tutorial/studio)
+  - [了解 Olares 的开发工具 Studio](./tutorial/studio)
   - [创建首个应用](./tutorial/note/)
 - [了解一些进阶的技巧](./advanced/)
 - [提交应用到应用市场](./submit/)
