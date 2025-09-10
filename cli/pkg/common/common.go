@@ -209,6 +209,7 @@ const (
 	CommandSocat        = "socat"
 	CommandConntrack    = "conntrack"
 	CommandNtpdate      = "ntpdate"
+	CommandTimeCtl      = "timedatectl"
 	CommandHwclock      = "hwclock"
 	CommandKubectl      = "kubectl"
 	CommandDocker       = "docker"

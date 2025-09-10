@@ -59,22 +59,43 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 		pre_reqs = pre_reqs + " network-manager "
 	}
 
+	pre_reqs += " conntrack socat apache2-utils net-tools make gcc bison flex tree unzip "
+
 	var systemInfo = runtime.GetSystemInfo()
 	var platformFamily = systemInfo.GetOsPlatformFamily()
 	var pkgManager = systemInfo.GetPkgManager()
 	switch platformFamily {
 	case common.Debian:
-		if _, err := util.GetCommand("add-apt-repository"); err != nil {
-			if _, err := runtime.GetRunner().SudoCmd("apt install -y software-properties-common", false, true); err != nil {
-				logger.Errorf("install add-apt-repository error %v", err)
+		sourceType := "deb"
+		repoURL := "https://deb.debian.org/debian"
+		suite := systemInfo.GetDebianVersionCode()
+		components := []string{"contrib", "non-free"}
+		var aptToolAvailable bool
+		if _, err := util.GetCommand("add-apt-repository"); err == nil {
+			aptToolAvailable = true
+		} else {
+			if _, err := runtime.GetRunner().SudoCmd("apt install -y software-properties-common", false, true); err == nil {
+				aptToolAvailable = true
+			} else {
+				logger.Infof("software-properties-common not available, try to update apt sources ourself")
+			}
+		}
+		if aptToolAvailable {
+			cmd := fmt.Sprintf("add-apt-repository '%s %s %s %s' -y", sourceType, repoURL, suite, strings.Join(components, " "))
+			if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
+				return err
+			}
+		} else {
+			err := utils.AddAptSource(sourceType, repoURL, suite, components)
+			if err != nil {
 				return err
 			}
 		}
 
-		var cmd = fmt.Sprintf("add-apt-repository 'deb http://deb.debian.org/debian %s contrib non-free' -y", systemInfo.GetDebianVersionCode())
-		if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
-			logger.Errorf("add os repo error %v", err)
-			return err
+		if systemInfo.IsDebianVersionEqual(connector.Debian13) {
+			pre_reqs += " systemd-timesyncd "
+		} else {
+			pre_reqs += " ntpdate "
 		}
 
 		fallthrough
@@ -91,6 +112,7 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 					return err
 				}
 			}
+			pre_reqs += " ntpdate "
 		}
 
 		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s update -qq", pkgManager), false, true); err != nil {
@@ -105,7 +127,6 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 			return err
 		}
 
-		var cmd = "conntrack socat apache2-utils ntpdate net-tools make gcc bison flex tree unzip"
 		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s %s install -y %s", debianFrontend, pkgManager, cmd), false, true); err != nil {
 			logger.Errorf("install deps %s error %v", cmd, err)
 			return err

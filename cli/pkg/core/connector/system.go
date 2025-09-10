@@ -44,6 +44,8 @@ func (d DebianVersion) String() string {
 		return "11"
 	case Debian12:
 		return "12"
+	case Debian13:
+		return "13"
 	}
 	return ""
 }
@@ -57,6 +59,7 @@ const (
 	Debian10 DebianVersion = "10"
 	Debian11 DebianVersion = "11"
 	Debian12 DebianVersion = "12"
+	Debian13 DebianVersion = "13"
 )
 
 type Systems interface {
@@ -131,13 +134,13 @@ func (s *SystemInfo) IsSupport() error {
 	//}
 
 	if s.IsUbuntu() {
-		if !s.IsUbuntuVersionEqual(Ubuntu20) && !s.IsUbuntuVersionEqual(Ubuntu22) && !s.IsUbuntuVersionEqual(Ubuntu24) {
+		if !s.IsUbuntuVersionEqual(Ubuntu22) && !s.IsUbuntuVersionEqual(Ubuntu24) {
 			return fmt.Errorf("unsupported ubuntu os version '%s'", s.GetOsVersion())
 		}
 	}
 
 	if s.IsDebian() {
-		if !s.IsDebianVersionEqual(Debian11) && !s.IsDebianVersionEqual(Debian12) {
+		if !s.IsDebianVersionEqual(Debian12) && !s.IsDebianVersionEqual(Debian13) {
 			return fmt.Errorf("unsupported debian os version '%s'", s.GetOsVersion())
 		}
 	}
@@ -250,7 +253,9 @@ func (s *SystemInfo) GetDebianVersionCode() string {
 		return ""
 	}
 
-	if strings.Contains(s.HostInfo.OsVersion, string(Debian12)) {
+	if strings.Contains(s.HostInfo.OsVersion, string(Debian13)) {
+		return "trixie"
+	} else if strings.Contains(s.HostInfo.OsVersion, string(Debian12)) {
 		return "bookworm"
 	} else if strings.Contains(s.HostInfo.OsVersion, string(Debian11)) {
 		return "bullseye"
