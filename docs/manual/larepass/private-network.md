@@ -37,7 +37,7 @@ For different LarePass download options, visit [the official page](https://olare
 
 ### On LarePass mobile client
 1. Open LarePass, and go to **Settings**.
-2. In the **My Olares** card, Toggle on the VPN switch.
+2. In the **My Olares** card, toggle on the VPN switch.
 
 ### On LarePass desktop client
 1. Open LarePass, click on the avatar area in the top left corner of the main interface.

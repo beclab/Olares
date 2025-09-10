@@ -35,7 +35,7 @@ Associating your Olares ID allows you to import a blockchain wallet, which is ne
 2. Select **Integration** from the left sidebar.
 3. Click on the Olares Space card on the right to view details.
 4. Click **Bind**. This will trigger a confirmation prompt in LarePass app.
-5. Open the LarePass app. You should see a confirmation prompt. If not:
+5. Open the LarePass app. A confirmation prompt should appear. If not:
 
    a. Go to **Settings** > **LarePass settings** > **Integration**.
 
@@ -80,5 +80,5 @@ You can always reconnect later if needed.
 To disconnect an integration from LarePass:
 
 1. Open LarePass app, and go to **Settings** > **LarePass settings** > **Integration**.
-2. Tap on the integration you wish to remove.
+2. Tap the integration you want to remove.
 3. Tap <i class="material-symbols-outlined">more_horiz</i> in the top-right corner, and tap **Delete**.

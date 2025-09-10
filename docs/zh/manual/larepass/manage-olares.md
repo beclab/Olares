@@ -4,23 +4,23 @@ description: 使用 LarePass 移动端远程管理 Olares，包括监控状态�
 
 # 使用 LarePass 管理 Olares
 
-**LarePass** 应用让你在手机端即可远程管理 Olares 设备：如升级 Olares，监控系统状态、配置网络、远程控制设备、查看设备信息等。
+**LarePass** 应用支持你在手机上远程管理 Olares 设备，包括 Olares 升级、系统状态监控、网络配置、远程控制和设备信息查看等功能。
 
 ## 前提条件
 
 开始前，请确认：
 
 - 已拥有有效的 **Olares ID**，且 Olares 设备已激活。  
-- Olares 设备已通电并连接网络。
+- Olares 设备已通电并连接至网络。
 - 当前账户具备管理员权限。  
 
 ## 进入 Olares 管理界面
 
-**Olares 管理**页面是使用 LarePass 管理 Olares 设备的集中入口。
+在**Olares 管理**页面，你可以通过 LarePass 统一管理 Olares 设备。
 ![Olares 管理](/images/zh/manual/larepass/olares-management.png#bordered)
 
 1. 打开 LarePass，进入**设置**。 
-2. 在**我的 Olares** 卡片里，点击**系统**以进入 **Olares 管理**页面。
+2. 在**我的 Olares** 卡片里，点击**系统**，进入 **Olares 管理**页面。
 
 ## 升级 Olares
 
@@ -28,7 +28,7 @@ description: 使用 LarePass 移动端远程管理 Olares，包括监控状态�
 只有 Olares 管理员可以执行系统更新。更新将应用于同一 Olares 集群内的所有用户。
 :::
 
-当有新的 Olares 版本可用时，你将在 **Olares 管理** > **系统更新**选项看到`发现新版本`提示。要安装系统更新：
+当有新的 Olares 版本可用时，你会在 **Olares 管理** > **系统更新**选项看到`发现新版本`提示。安装更新的方法如下：
 
 ![升级设备](/images/zh/manual/larepass/olares-upgrade.png#bordered)
 
@@ -87,7 +87,7 @@ description: 使用 LarePass 移动端远程管理 Olares，包括监控状态�
 
 ### 蓝牙配网
 
-如果在激活 Olares 时设备无法连接有线网络，或者 Olares 连接到的有线网络与你的手机网络不同，可能会导致 LarePass 无法顺利完成激活或执行需要同一网络的设备管理操作（如无线网络配置或恢复出厂设置）。在这种情况下，你可以使用蓝牙配网功能将 Olares 连接到你手机的 Wi-Fi 网络。
+激活 Olares 时，如果设备无法接入有线网络，或 Olares 所连有线网络与你的手机网络不同， LarePass 可能无法完成激活，也无法执行需在同一网络下的设备管理操作（如无线网络配置或恢复出厂设置）。此时，你可以通过蓝牙配网，将 Olares 连接到手机的 Wi-Fi 网络。
 
 ![蓝牙配网](/images/zh/manual/larepass/bluetooth-network.png#bordered)
 
@@ -107,7 +107,7 @@ description: 使用 LarePass 移动端远程管理 Olares，包括监控状态�
 
 ## 查看设备信息
 
-在 Olares 管理页面，点击顶部的设备信息区域，可进入设备详情，包含以下信息：
+在 Olares 管理页面，点击顶部的设备信息区域，可进入设备详情页面并查看以下信息：
 
 - 硬件详情  
 - 系统版本

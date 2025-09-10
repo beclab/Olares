@@ -39,7 +39,7 @@ When a new Olares version is available, you will see a "New version found" promp
 
 3. In the pop-up dialog, choose your upgrade method and tap **Confirm**:
 
-   - **Download only**: Olares will only download the update package. Once complete, you must manually click **Upgrade** on the **System update** page to begin the installation. During download, you can continue using Olares.
+   - **Download only**: Olares will only download the update package. After the download completes, click **Upgrade** on the **System update** page to start the installation. You can continue using Olares during the download process. 
 
     - **Download and upgrade**: Olares will immediately download and install the update package. The system will be temporarily unavailable during the upgrade process.
 
@@ -52,10 +52,10 @@ In the upper-right corner of the Olares management page, tap the <i class="mater
  ![Device control](/images/manual/larepass/device-control.png)
 
 - **Restart device** – Your Olares will restart. If your phone is on the same network as Olares, its status will show `Restarting` and will return to `Olares running` in approximately 5–8 minutes.
-- **Remote shutdown** – Your Olares will power off. If your phone is on the same network as Olares, its status will show `Powered off`.  Remote operations are not possible after shutdown, and the device must be turned on manually.
+- **Remote shutdown** – Your Olares will power off. If your phone is on the same network as Olares, its status shows `Powered off`.  Remote operations are unavailable after shutdown, and you must turn the device back on manually.
 
 ::: tip Note
-If you perform a restart from a network outside of Olares, the **My Olares** card will be inaccessible during the restart and will return to normal after startup is complete.
+If you restart from a network outside Olares, the **My Olares** card will be inaccessible during the restart and will return to normal after startup is complete.
 :::
 
 ## Configure network
@@ -63,12 +63,12 @@ If you perform a restart from a network outside of Olares, the **My Olares** car
 Tap **Wi-Fi configuration** to view or modify the current network settings of your Olares device.
 
 :::tip Same network required
-Make sure your phone and Olares are on the same network.
+Make sure your phone and Olares are connected to the same network.
 :::
 
 ### Switch from wired to wireless network
 
-If Olares was activated over wired Ethernet, you can switch to the Wi-Fi on the same network:
+If Olares was activated over wired Ethernet, you can switch it to the Wi-Fi on the same network:
 
 ![Wi-Fi switch](/images/manual/larepass/switch-wifi.jpg)
 
@@ -93,7 +93,7 @@ If your Olares device moves to a different network:
 
 ### Set Wi-Fi via Bluetooth
 
-If your Olares cannot connect to a wired network during activation, or if it's connected to a wired network that's different from your phone, you may be unable to complete activation with LarePass or perform device management tasks that require the same network (such as Wi-Fi configuration or a factory reset). In this situation, you can use the Bluetooth network setup feature to connect Olares to your phone's Wi-Fi network.
+If your Olares cannot connect to a wired network during activation, or if it's connected to a wired network different from your phone, activation with LarePass may fail, and you cannot perform device management tasks that require the same network (such as Wi-Fi configuration or a factory reset). In this case, use the Bluetooth network setup feature to connect Olares to your phone's Wi-Fi network.
  ![Bluetooth network](/images/manual/larepass/bluetooth-network.png)
 
 1. On the **Olares not found** page, tap the **Bluetooth network setup** option. LarePass will use your phone's Bluetooth to scan for the nearby Olares device.
@@ -108,7 +108,7 @@ If your Olares cannot connect to a wired network during activation, or if it's c
 
 ## View device information
 
-On the **Olares management** page, tap the device information area at the top to access device details, which includes the following information:
+On the **Olares management** page, tap the device information area at the top to access device details, including:
 
 - Hardware details 
 - System version 
@@ -117,7 +117,7 @@ On the **Olares management** page, tap the device information area at the top to
 ## Uninstall Olares
 
 :::tip Same network required
-Make sure your phone and Olares are on the same network.
+Make sure your phone and Olares are connected to the same network.
 :::
 
 This will reset your device to the prepared installation phase, where you can scan the LAN to re-install and activate Olares. 

@@ -49,7 +49,7 @@ Losing your mnemonic phrase will result in serious consequences:
 To prevent this, we strongly recommend taking these precautions:
 
 * **Offline backup**: Write down the 12-word mnemonic phrase and store it securely, such as in a safe.
-* **Multi-device backup**: Use LarePass's Vault to encrypt and save your mnemonic phrase on multiple devices. You only risk losing your mnemonic phrase if all these devices are lost.
+* **Multi-device backup**: Use LarePass's Vault to encrypt and save your mnemonic phrase on multiple devices. You will lose your mnemonic phrase only if all these devices are lost.
 
 ### I've activated Olares, why do I get a password error when trying to view my mnemonic phrase in LarePass?
 If you encounter a password error, it may be because you haven't set a local password. Open the LarePass app, go to **Settings** > **LarePass settings** > **Security**, and set a local password. Then try the backup process again.

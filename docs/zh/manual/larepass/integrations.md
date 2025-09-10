@@ -25,7 +25,7 @@ description: 将 Olares Space 与第三方服务连接，扩展系统功能。�
 
 ### 步骤 2：授权 Olares Space
 
-1. 于 LarePass 中进入**设置** > **LarePass 设置** >  **集成**。  
+1. 在 LarePass 中，进入**设置** > **LarePass 设置** >  **集成**。  
 2. 点击右上角 <i class="material-symbols-outlined">add</i>，选择 **Space** 以添加 Olares Space 账户。  
 
 ### 步骤 3：关联 Olares ID
@@ -46,7 +46,7 @@ description: 将 Olares Space 与第三方服务连接，扩展系统功能。�
 Google Drive、Dropbox 等通过 OAuth 登录的服务集成需在 LarePass 移动端完成授权：
 
 1. 在手机上打开 LarePass。  
-2. 依次点击**设置** >  **LarePass 设置** > **集成**，再点右上角 <i class="material-symbols-outlined">add</i>。  
+2. 进入**设置** >  **LarePass 设置** > **集成**，点击右上角 <i class="material-symbols-outlined">add</i>。  
 3. 选择 **Google Drive** 或 **Dropbox**。  
 4. 按提示登录并授权。  
 

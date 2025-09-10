@@ -7,7 +7,7 @@ search: false
 2. On the login page, enter your Olares login password.
 
    ![Log in](/images/manual/get-started/log-in.png#bordered)
-3. You will be prompted to complete the two-factor verification. You can confirm login on LarePass, or manually enter the 6-digit verification code.
+3. You will be prompted to complete two-factor verification. You can confirm the login on LarePass, or manually enter the 6-digit verification code.
 
    ![Confirm login](/images/manual/larepass/confirm-login.png#bordered)
    ::: info
