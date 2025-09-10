@@ -25,20 +25,20 @@ description: 将 Olares Space 与第三方服务连接，扩展系统功能。�
 
 ### 步骤 2：授权 Olares Space
 
-1. 于 LarePass 中进入**设置** > **集成**。  
+1. 在 LarePass 中，进入**设置** > **LarePass 设置** >  **集成**。  
 2. 点击右上角 <i class="material-symbols-outlined">add</i>，选择 **Space** 以添加 Olares Space 账户。  
 
 ### 步骤 3：关联 Olares ID
 
 关联 Olares ID 后，可导入区块链钱包，在个人资料中使用 NFT 头像。
 
-1. 打开 Dock / 启动台中的**设置**应用。  
+1. 打开 Dock /启动台中的**设置**应用。  
 2. 选择左侧**集成**。  
 3. 在右侧点击 Olares Space 卡片查看详情。  
 4. 点击**绑定**，LarePass 会弹出确认提示。  
 5. 在手机端打开 LarePass：  
    - 若已弹出提示，点击**确认**；  
-   - 如未出现提示，可手动进入**设置** > **集成**，再点击 Olares Space 卡片并确认。  
+   - 如未出现提示，可手动进入**设置** > **LarePass 设置** >  **集成**，再点击 Olares Space 卡片并确认。  
 6. 返回 Olares，点击**确认**完成关联。  
 
 ## 通过 OAuth 添加云盘
@@ -46,7 +46,7 @@ description: 将 Olares Space 与第三方服务连接，扩展系统功能。�
 Google Drive、Dropbox 等通过 OAuth 登录的服务集成需在 LarePass 移动端完成授权：
 
 1. 在手机上打开 LarePass。  
-2. 依次点击**设置** > **集成**，再点右上角 <i class="material-symbols-outlined">add</i>。  
+2. 进入**设置** >  **LarePass 设置** > **集成**，点击右上角 <i class="material-symbols-outlined">add</i>。  
 3. 选择 **Google Drive** 或 **Dropbox**。  
 4. 按提示登录并授权。  
 
@@ -57,7 +57,7 @@ Google Drive、Dropbox 等通过 OAuth 登录的服务集成需在 LarePass 移�
 AWS S3、腾讯云 COS 等服务需使用 Access Key & Secret Key 手动配置，可在 LarePass 手机端或 Olares **设置**中完成：
 
 1. 在手机上打开 LarePass。  
-2. 进入**设置** > **集成**，点击右上角 <i class="material-symbols-outlined">add</i>。  
+2. 进入**设置** >  **LarePass 设置** > **集成**，点击右上角 <i class="material-symbols-outlined">add</i>。  
 3. 选择 **AWS S3** 或 **Tencent COS**。  
 4. 输入 Access Key、Secret Key 及其他必要信息，点击**确认**。  
 

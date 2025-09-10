@@ -11,7 +11,7 @@ search: false
    验证码有时效限制，请在过期前完成输入。如果验证码过期，需要重新生成。
    :::
 
-   ![确认登录](/images/manual/get-started/confirm-login.png#bordered)
+   ![确认登录](/images/manual/larepass/confirm-login.png#bordered)
 
 登录后你就会看到 Olares 桌面。🎉
 

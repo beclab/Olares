@@ -24,9 +24,9 @@ After setting up, you can choose to enable biometric unlock for more secure and 
 :::
 
 ## Reveal and back up your mnemonic phrase
-1. Open the LarePass app, and go to **Settings** > **Account** page. 
-2. Click **Backup now**.
-3. Read the risk warning about losing your mnemonic phrase and click **Start**. 
+1. Open the LarePass app, and go to **Settings** > **LarePass settings** > **Safety** page.
+2. Tap **Mnemonic phase**.
+3. Read the risk warning and click **Start**. 
 4. Click to view the 12-word mnemonic phrase, and enter your local password for identity verification.
 5. Securely record the mnemonic phrase and store it in a safe place.
 6. Click **Next**.
@@ -49,7 +49,7 @@ Losing your mnemonic phrase will result in serious consequences:
 To prevent this, we strongly recommend taking these precautions:
 
 * **Offline backup**: Write down the 12-word mnemonic phrase and store it securely, such as in a safe.
-* **Multi-device backup**: Use LarePass's Vault to encrypt and save your mnemonic phrase on multiple devices. You only risk losing your mnemonic phrase if all these devices are lost.
+* **Multi-device backup**: Use LarePass's Vault to encrypt and save your mnemonic phrase on multiple devices. You will lose your mnemonic phrase only if all these devices are lost.
 
 ### I've activated Olares, why do I get a password error when trying to view my mnemonic phrase in LarePass?
-If you encounter a password error, it may be because you haven't set a local password. Open the LarePass app, go to **Settings** > **Security**, and set a local password. Then try the backup process again.
+If you encounter a password error, it may be because you haven't set a local password. Open the LarePass app, go to **Settings** > **LarePass settings** > **Security**, and set a local password. Then try the backup process again.

@@ -17,7 +17,7 @@ Use the Wizard URL and initial one-time password to activate. This process conne
 4. Activate Olares using LarePass app.
 
    a. Open LarePass app, and tap **Scan QR code** to scan the QR code on the Wizard page and complete the activation.
-   :::warning Same network required
+   :::warning Same network required for admin users
    To avoid activation failures, ensure that both your phone and the Olares device are connected to the same network.
    :::
 
@@ -25,14 +25,8 @@ Use the Wizard URL and initial one-time password to activate. This process conne
 
    b. Reset the login password for Olares by following the on-screen instructions on LarePass.
 
-   ::: tip Reactivate Olares with the same Olares ID
-
-   If you have reinstalled Olares, the original instance becomes unavailable. To reactivate Olares with the same Olares ID:
-      
-   1.	Open LarePass on your phone, and you can see a red prompt: "No active Olares found".
-   2.	Tap **Learn more**, then **Reactivate** to enter the QR scan page.
-   3.	Tap **Scan QR code** to scan the QR code on the wizard page and activate Olares.
+   ::: tip 
+   If you reinstall Olares, the original instance becomes unavailable. To continue using the same Olares ID, you need to [reactivate Olares](../larepass/activate-olares.md#reactivate-olares-with-the-same-olares-id).
    :::
 
-
-After successful setup, the LarePass app will automatically go to the home screen, and the Wizard will redirect you to the login page.
+After setup is complete, the LarePass app returns to the home screen, and the Wizard redirects you to the Olares login page.

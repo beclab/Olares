@@ -50,8 +50,8 @@ When you log in to Olares, you will be promoted to complete the two-factor verif
 
   1. On the Wizard page, select **Verify using one time password from LarePass**.
   2. Open LarePass on your phone and go to **Settings**.
-  3. Tap the authenticator on the top to generate the one time verification code.
-  4. Return to your Wizard page and enter the cod e to complete the login.
+  3. In the **My Olares** card, tap the authenticator to generate a one time verification code.
+  4. Return to your Wizard page and enter the code to complete the login.
 
 ::: tip Note
 The verification code is time-sensitive. Ensure you enter it before it expires. If it does, you will need to generate a new code.

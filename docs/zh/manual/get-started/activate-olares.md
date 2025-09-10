@@ -17,21 +17,16 @@ search: false
 4. 使用 LarePass 应用激活 Olares。
 
    a. 打开 LarePass 应用，点击**扫描二维码**，扫描向导页面上的二维码完成激活。
-   :::warning 检查网络连接
-   为避免激活失败，请确保你的手机和 Olares 设备连接到同一网络。
+   :::warning 网络要求
+   为避免激活失败，管理员用户需确保手机和 Olares 设备连接到同一网络。
    :::
 
    ![激活 Olares](/images/manual/get-started/activate-olares.png#bordered)
 
    b. 按照 LarePass 上的提示重置 Olares 的登录密码。
 
-   ::: tip 使用相同的 ID 重新激活 Olares
-
-   如果你重新安装了 Olares，原有实例将不可用。要使用同一个 ID 重新激活 Olares：
-   1.	在手机上打开 LarePass，你将看到红色提示：“未发现运行中的的 Olares”。
-   2.	点击**了解更多** > **重新激活**，进入二维码扫描页面。
-   3.	点击**扫描二维码**，扫描向导页面上的二维码以完成激活。
+   ::: tip 提示
+   如果你重新安装了 Olares，原有实例将不可用。你可以使用同一个 ID [重新激活 Olares](../larepass/activate-olares.md#使用同一-olares-id-重新激活)：
    :::
-
 
 设置成功后，LarePass 应用会自动返回主界面，向导页面则会跳转到登录界面。
