@@ -29,4 +29,4 @@ Use the Wizard URL and initial one-time password to activate. This process conne
    If you reinstall Olares, the original instance becomes unavailable. To continue using the same Olares ID, you need to [reactivate Olares](../larepass/activate-olares.md#reactivate-olares-with-the-same-olares-id).
    :::
 
-After successful setup, the LarePass app will automatically go to the home screen, and the Wizard will redirect you to the login page.
+After setup is complete, the LarePass app returns to the home screen, and the Wizard redirects you to the Olares login page.
