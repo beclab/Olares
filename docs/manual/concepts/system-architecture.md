@@ -210,7 +210,7 @@ An app for monitoring system resource usage.
 
 The console for Olares, providing precise and autonomous control over the system and its environment.
 
-### DevBox
+### Studio
 
 A development tool for building and deploying Olares applications.
 

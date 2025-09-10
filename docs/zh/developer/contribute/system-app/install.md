@@ -2,7 +2,7 @@
 
 ## 安装
 
-在 DevBox 中安装系统应用。由于目前的安装方式可能无法正确通知桌面，所以需要手动刷新页面才能看到图标。
+在 Studio 中安装系统应用。由于目前的安装方式可能无法正确通知桌面，所以需要手动刷新页面才能看到图标。
 
 ![image](/images/developer/develop/contribute/system-app/install/install.jpg)
 

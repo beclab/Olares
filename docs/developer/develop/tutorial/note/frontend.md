@@ -1,7 +1,7 @@
 # Develop Frontend Program
 
 ## Preview App
-After installing the app, you can preview the frontend of your application using the **Preview** button in **DevBox**.
+After installing the app, you can preview the frontend of your application using the **Preview** button in **Studio**.
 
 ![preview](/images/developer/develop/tutorial/frontend/preview.jpg)
 
