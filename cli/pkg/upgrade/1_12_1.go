@@ -1,8 +1,12 @@
 package upgrade
 
 import (
+	"fmt"
 	"github.com/Masterminds/semver/v3"
+	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/version"
 )
 
@@ -34,6 +38,27 @@ func (u upgrader_1_12_1) AddedBreakingChange() bool {
 
 func (u upgrader_1_12_1) PrepareForUpgrade() []task.Interface {
 	var preTasks []task.Interface
+	preTasks = append(preTasks,
+		&task.LocalTask{
+			Name:   "RemoveLegacySystemFrontendManifest",
+			Action: new(removeLegacySystemFrontendManifest),
+			Retry:  5,
+			Delay:  10,
+		})
 	preTasks = append(preTasks, upgrader_1_12_1_20250826{}.preToPrepareForUpgrade()...)
 	return append(preTasks, u.upgraderBase.PrepareForUpgrade()...)
+}
+
+type removeLegacySystemFrontendManifest struct {
+	common.KubeAction
+}
+
+func (c *removeLegacySystemFrontendManifest) Execute(runtime connector.Runtime) error {
+	kubeclt, _ := util.GetCommand(common.CommandKubectl)
+	var cmd = fmt.Sprintf("%s -n os-framework exec -it -c app-service app-service-0 -- rm -f /userapps/apps/system-apps/templates/system-frontend.yaml", kubeclt)
+	if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
+		return fmt.Errorf("failed to remove legacy system frontend manifest from app-service")
+	}
+
+	return nil
 }
