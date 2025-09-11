@@ -45,7 +45,7 @@ Use LarePass to collect web content and follow RSS feeds.
 
 ## Download and install LarePass
 
-Get the latest version for your device at the [LarePass website](https://www.olares.com/larepass).
+Get the latest version for your device at the [LarePass website](https://larepass.olares.com).
 
 ### Install the LarePass browser extension
 
