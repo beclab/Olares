@@ -30,7 +30,7 @@ Starting with Olares 1.12, you no longer need a separate `.local` address (e.g.,
 ## Enable VPN on LarePass
 
 :::tip
-For different LarePass download options, visit [the official page](https://olares.com/larepass).
+For different LarePass download options, visit [the official page](https://larepass.olares.com).
 :::
 
 ![VPN](/images/manual/larepass/vpn.jpg)

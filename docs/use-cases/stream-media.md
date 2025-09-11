@@ -15,7 +15,7 @@ In this tutorial, you will learn how to:
 ## Enable Olares VPN connection
 To achieve smooth streaming across networks, [enable VPN connection](../manual/larepass/private-network.md) in LarePass for your streaming device. Devices with activated VPN will use the VPN connection to access Olares, whether through the LarePass client or a browser.
 :::tip
-For different LarePass download options, visit [the official page](https://olares.com/larepass).
+For different LarePass download options, visit [the official page](https://larepass.olares.com).
 :::
 
 <!--@include: ./remote.reusables.md{4,22}-->

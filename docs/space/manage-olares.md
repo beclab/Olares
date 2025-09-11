@@ -49,4 +49,4 @@ Currently, we do not offer cloud instances that include GPUs. However, for users
 For Large Language Models (LLMs), the shared GPU solution is still under development and may require further enhancements.
 :::
 
-If you need GPU support, please reach us on [Discord](https://discord.com/invite/BzfqrgQPDK).
+If you need GPU support, please reach us on [Discord](https://discord.gg/olares).

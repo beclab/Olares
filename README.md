@@ -7,7 +7,7 @@
 ![Build Status](https://github.com/beclab/olares/actions/workflows/release-daily.yaml/badge.svg)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/beclab/olares)](https://github.com/beclab/olares/releases)
 [![GitHub Repo stars](https://img.shields.io/github/stars/beclab/olares?style=social)](https://github.com/beclab/olares/stargazers)
-[![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.com/invite/BzfqrgQPDK)
+[![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.gg/olares)
 [![License](https://img.shields.io/badge/License-Olares-darkblue)](https://github.com/beclab/olares/blob/main/LICENSE.md)
 
 <p>
@@ -21,7 +21,7 @@
 <p align="center">
   <a href="https://olares.com">Website</a> ·
   <a href="https://docs.olares.com">Documentation</a> ·
-  <a href="https://olares.com/larepass">Download LarePass</a> ·
+  <a href="https://larepass.olares.com">Download LarePass</a> ·
   <a href="https://github.com/beclab/apps">Olares Apps</a> ·
   <a href="https://space.olares.com">Olares Space</a>
 </p>
@@ -134,7 +134,7 @@ https://docs.olares.com/developer/contribute/olares.html
 
 * [**GitHub Discussion**](https://github.com/beclab/olares/discussions). Best for sharing feedback and asking questions.
 * [**GitHub Issues**](https://github.com/beclab/olares/issues). Best for filing bugs you encounter using Olares and submitting feature proposals. 
-* [**Discord**](https://discord.com/invite/BzfqrgQPDK). Best for sharing anything Olares.
+* [**Discord**](https://discord.gg/olares). Best for sharing anything Olares.
 
 ## Special thanks
 
