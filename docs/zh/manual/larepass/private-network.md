@@ -29,7 +29,7 @@ description: 使用 LarePass 专用网络从任何地点安全访问 Olares。�
 ## 在 LarePass 中启用专用网络
 
 ::: tip
-查看各平台安装包，请访问[官方下载页面](https://olares.com/larepass)。
+查看各平台安装包，请访问[官方下载页面](https://olares.cn/larepass)。
 :::
 
 ![VPN](/images/manual/larepass/vpn.jpg)

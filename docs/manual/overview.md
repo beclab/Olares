@@ -82,5 +82,5 @@ Before you roll up your sleeves and get your hands dirty with Olares, feel free 
 ## Other resources
 
 - [Develop Olares apps](../developer/develop/)
-- [Join our community on Discord](https://discord.com/invite/BzfqrgQPDK)
+- [Join our community on Discord](https://discord.gg/olares)
 - [Check out Olares blogs](https://blog.olares.com/)

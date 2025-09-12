@@ -19,7 +19,7 @@ This page will mainly cover:
 
 ## Before you begin
 
-Make sure you have installed the LarePass desktop client from the [official website](https://olares.com/larepass), and logged in using your Olares ID.
+Make sure you have installed the LarePass desktop client from the [official website](https://larepass.olares.com), and logged in using your Olares ID.
 
 
 ## Manage your libraries

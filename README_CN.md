@@ -7,7 +7,7 @@
 ![Build Status](https://github.com/beclab/olares/actions/workflows/release-daily.yaml/badge.svg)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/beclab/terminus)](https://github.com/beclab/olares/releases)
 [![GitHub Repo stars](https://img.shields.io/github/stars/beclab/terminus?style=social)](https://github.com/beclab/olares/stargazers)
-[![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.com/invite/BzfqrgQPDK)
+[![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.gg/olares)
 [![License](https://img.shields.io/badge/License-Olares-darkblue)](https://github.com/beclab/olares/blob/main/LICENSE.md)
 
 <p>
@@ -21,7 +21,7 @@
 <p align="center">
   <a href="https://olares.com">网站</a> ·
   <a href="https://docs.olares.com">文档</a> ·
-  <a href="https://olares.com/larepass">下载 LarePass</a> ·
+  <a href="https://larepass.olares.com">下载 LarePass</a> ·
   <a href="https://github.com/beclab/apps">Olares 应用</a> ·
   <a href="https://space.olares.com">Olares Space</a>
 </p>
@@ -136,7 +136,7 @@ https://docs.olares.com/developer/contribute/olares.html
 
 * [**GitHub Discussion**](https://github.com/beclab/olares/discussions) - 讨论 Olares 使用过程中的疑问。
 * [**GitHub Issues**](https://github.com/beclab/olares/issues) - 报告 Olares 的遇到的问题或提出功能改进建议。
-* [**Discord**](https://discord.com/invite/BzfqrgQPDK) - 日常交流，分享经验，或讨论与 Olares 相关的任何主题。
+* [**Discord**](https://discord.gg/olares) - 日常交流，分享经验，或讨论与 Olares 相关的任何主题。
 
 ## 特别感谢
 
