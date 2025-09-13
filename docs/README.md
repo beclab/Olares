@@ -7,7 +7,7 @@ This directory includes the source files for the Olares documentation website, i
 ## Quick links
 
 * **Published documentation site**: https://docs.olares.com
-* **Olares official website**: https://one.olares.com
+* **Olares official website**: https://www.olares.com
 * **Olares project on GitHub**: https://github.com/beclab/Olares
 
 ## Getting started with Olares documentation
