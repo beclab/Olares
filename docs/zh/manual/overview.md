@@ -85,5 +85,5 @@ Olares 提供了丰富的功能，旨在提升安全性、易用性和开发灵�
 ## 其他资源
 
 - [开发 Olares 应用](../developer/develop/)
-- [加入 Discord 社区](https://discord.com/invite/BzfqrgQPDK)
+- [加入 Discord 社区](https://discord.gg/olares)
 - [查看 Olares 博客](https://blog.olares.com/)

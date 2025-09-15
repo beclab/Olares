@@ -66,7 +66,7 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
 
 <template #离线安装>
 
-1. 访问 [olares.com/larepass](https://olares.com/larepass) 下载扩展 ZIP 包。
+1. 访问 [LarePass 网站](https://olares.cn/olares) 下载扩展 ZIP 包。
 2. 在浏览器地址栏输入 `chrome://extensions/`。
 3. 打开右上角 **开发者模式**。
 4. 点击 **加载已解压的扩展程序**，选择解压后的 LarePass 文件夹。

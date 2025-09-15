@@ -108,7 +108,7 @@ spec:
             value: /appdata
           - name: SEAFILE_SERVICE
             value: seafile
-          image: beclab/media-server:v0.2.1
+          image: beclab/media-server:v0.2.2
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -172,7 +172,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.114
+          image: beclab/files-server:v0.2.115
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true

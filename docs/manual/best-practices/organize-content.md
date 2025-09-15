@@ -52,7 +52,7 @@ The LarePass extension is currently only available for Chrome.
 </template>
 <template #Install-offline>
 
-1. Visit https://olares.com/larepass to manually download the installation file of the LarePass extension and unzip it.
+1. Visit https://larepass.olares.com to manually download the installation file of the LarePass extension and unzip it.
 
 2. In the URL bar, enter `chrome://extensions/` to access the extension management page.
 

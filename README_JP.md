@@ -7,7 +7,7 @@
 ![Build Status](https://github.com/beclab/olares/actions/workflows/release-daily.yaml/badge.svg)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/beclab/olares)](https://github.com/beclab/olares/releases)
 [![GitHub Repo stars](https://img.shields.io/github/stars/beclab/olares?style=social)](https://github.com/beclab/olares/stargazers)
-[![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.com/invite/BzfqrgQPDK)
+[![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.gg/olares)
 [![License](https://img.shields.io/badge/License-Olares-darkblue)](https://github.com/beclab/olares/blob/main/LICENSE.md)
 
 <p>
@@ -21,7 +21,7 @@
 <p align="center">
   <a href="https://olares.com">ウェブサイト</a> ·
   <a href="https://docs.olares.com">ドキュメント</a> ·
-  <a href="https://olares.com/larepass">LarePassをダウンロード</a> ·
+  <a href="https://larepass.olares.com">LarePassをダウンロード</a> ·
   <a href="https://github.com/beclab/apps">Olaresアプリ</a> ·
   <a href="https://space.olares.com">Olares Space</a>
 </p>
@@ -135,7 +135,7 @@ https://docs.olares.com/developer/contribute/olares.html
 
 * [**GitHub Discussion**](https://github.com/beclab/olares/discussions). フィードバックの共有や質問に最適です。
 * [**GitHub Issues**](https://github.com/beclab/olares/issues). Olaresの使用中に遭遇したバグの報告や機能提案の提出に最適です。 
-* [**Discord**](https://discord.com/invite/BzfqrgQPDK). Olaresに関するあらゆることを共有するのに最適です。
+* [**Discord**](https://discord.gg/olares). Olaresに関するあらゆることを共有するのに最適です。
 
 ## 特別な感謝
 

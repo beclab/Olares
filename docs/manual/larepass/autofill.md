@@ -10,7 +10,7 @@ Password autofill eliminates the hassle of manually typing credentials while mai
 Make sure you have LarePass mobile clients or Chrome extension installed on your device, and logged in using your Olares ID.
 
 :::tip
-For different download options of LarePass, visit the [official website](https://olares.com/larepass).
+For different download options of LarePass, visit the [official website](https://larepass.olares.com).
 :::
 
 ## Enable autofill service

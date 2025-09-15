@@ -49,4 +49,4 @@ description: 介绍云端 Olares 实例的管理功能，包含系统监控面�
 对于大语言模型（LLM），共享 GPU 方案仍在开发中，可能需要进一步优化。
 :::
 
-如果你需要 GPU 支持，请通过 [Discord](https://discord.com/invite/BzfqrgQPDK) 联系我们。
+如果你需要 GPU 支持，请通过 [Discord](https://discord.gg/olares) 联系我们。
