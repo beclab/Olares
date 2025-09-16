@@ -99,7 +99,7 @@ spec:
           name: check-chart-repo
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.4.26
+        image: beclab/market-backend:v0.4.27
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -154,6 +154,8 @@ spec:
             value: market_os_system
           - name: HYDRATOR_WORKER_COUNT
             value: '5'
+          - name: HYDRATOR_QUEUE_SIZE
+            value: '10000'
           - name: POSTGRES_PASSWORD                                                
             valueFrom:                                                             
               secretKeyRef:                                                        
