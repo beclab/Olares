@@ -172,7 +172,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.115
+          image: beclab/files-server:v0.2.116
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -512,75 +512,80 @@ data:
   nginx.conf: |-
     user  nginx;
     worker_processes  auto;
+    worker_rlimit_nofile 65535;
 
     error_log  /var/log/nginx/error.log notice;
     pid        /var/run/nginx.pid;
 
     events {
-        worker_connections  1024;
+      worker_connections  1024;
+      use epoll;
+      multi_accept on;
     }
 
     http {
-        include       /etc/nginx/mime.types;
-        default_type  application/octet-stream;
+      tcp_nodelay on;
+      tcp_nopush on;
 
-        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-                          '$status $body_bytes_sent "$http_referer" '
-                          '"$http_user_agent" "$http_x_forwarded_for"';
+      include       /etc/nginx/mime.types;
+      default_type  application/octet-stream;
 
-        access_log  /var/log/nginx/access.log  main;
+      log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
 
-        sendfile        on;
-        #tcp_nopush     on;
+      access_log  /var/log/nginx/access.log  main;
 
-        keepalive_timeout  2700;
+      sendfile        on;
+      keepalive_timeout  2700;
+      client_max_body_size 4000M;
 
-        #gzip  on;
-        client_max_body_size 4000M;
+      client_body_buffer_size 64m;
+      proxy_buffers 32 256k;
+      proxy_buffer_size 512k;
+      client_header_buffer_size 16k;
+      large_client_header_buffers 8 32k;
 
-        include /etc/nginx/conf.d/*.conf;
+      proxy_request_buffering off;
+
+      client_body_timeout 120s;
+      client_header_timeout 60s;
+      send_timeout 120s;
+      keepalive_requests 1000;
+
+      gzip on;
+      gzip_types text/plain application/javascript text/css;
+      gzip_comp_level 2;
+
+      include /etc/nginx/conf.d/*.conf;
     }
-  default.conf: |-
-    server {
-    	listen 80 default_server;
 
-
-        # 	gzip on;
-        # 	gzip_min_length 1000;
-        # 	gzip_types text/plain text/xml application/javascript text/css;
+    default.conf: |-
+      server {
+        listen 80 default_server;
 
         # Gzip Settings
         gzip on;
-    	gzip_disable "msie6";
-    	gzip_min_length 1k;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
         gzip_buffers 16 64k;
         gzip_http_version 1.1;
         gzip_comp_level 6;
         gzip_types *;
         client_max_body_size 2000M;
-    	root /app;
+        root /app;
 
-    	# normal routes
-    	# serve given url and default to index.html if not found
-    	# e.g. /, /user and /foo/bar will return index.html
-    	location / {
-    		try_files $uri $uri/index.html /index.html;
-    		add_header Cache-Control "private,no-cache";
-    		add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+        # normal routes
+        # serve given url and default to index.html if not found
+        # e.g. /, /user and /foo/bar will return index.html
+        location / {
+            try_files $uri $uri/index.html /index.html;
+            add_header Cache-Control "private,no-cache";
+            add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
             expires 0;
-    	}
+        }
 
-        # location /bfl/ {
-        #     add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
-        #     proxy_pass http://bfl;
-        #     proxy_set_header            Host $host;
-        #     proxy_set_header            X-real-ip $remote_addr;
-        #     proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
-
-        #     add_header X-Frame-Options SAMEORIGIN;
-        # }
-
-    	location /api/resources/AppData {
+        location /api/resources/AppData {
             proxy_pass http://127.0.0.1:8080;
             # rewrite ^/server(.*)$ $1 break;
 
@@ -680,23 +685,23 @@ data:
         }
 
         location /provider {
-                proxy_pass http://127.0.0.1:8080;
-                # rewrite ^/server(.*)$ $1 break;
+            proxy_pass http://127.0.0.1:8080;
+            # rewrite ^/server(.*)$ $1 break;
 
-                # Add original-request-related headers
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Host $host;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
 
-                client_body_timeout 60s;
-                client_max_body_size 2000M;
-                proxy_request_buffering off;
-                keepalive_timeout 75s;
-                proxy_read_timeout 60s;
-                proxy_send_timeout 60s;
-            }
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
 
-    	location /api {
+        location /api {
             proxy_pass http://127.0.0.1:8080;
             # rewrite ^/server(.*)$ $1 break;
 
@@ -736,21 +741,28 @@ data:
 
         location /upload {
             proxy_pass http://127.0.0.1:8080;
-            # rewrite ^/server(.*)$ $1 break;
+            proxy_http_version 1.1;
+            proxy_set_header Connection keep-alive;
 
-            # Add original-request-related headers
+            proxy_request_buffering off;
+            proxy_buffering off;
+
+            proxy_connect_timeout 15s;
+            proxy_send_timeout 90s;
+            proxy_read_timeout 90s;
+            send_timeout 90s;
+            proxy_max_temp_file_size 0;
+
+            client_body_buffer_size 64m;
+            proxy_buffers 8 64k;
+            proxy_buffer_size 128k;
+            proxy_busy_buffers_size 128k;
+
+            proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $host;
 
             add_header Accept-Ranges bytes;
-
-            client_body_timeout 600s;
-            client_max_body_size 4000M;
-            proxy_request_buffering on;
-            keepalive_timeout 750s;
-            proxy_read_timeout 600s;
-            proxy_send_timeout 600s;
         }
 
         location /videos {
@@ -809,24 +821,17 @@ data:
             proxy_read_timeout 600s;
             proxy_send_timeout 600s;
         }
-    	# files
-    	# for all routes matching a dot, check for files and return 404 if not found
-    	# e.g. /file.js returns a 404 if not found
-        # 	location ~ \.(?!html) {
-        # 		add_header Cache-Control "public, max-age=2678400";
-        # 		try_files $uri =404;
-        # 	}
 
         # Set cache for static resources
-         location ~ ^/(assets|js|css|fonts|img)/.*.(js|css|png|jpg|svg|woff|woff2)$
+        location ~ ^/(assets|js|css|fonts|img)/.*.(js|css|png|jpg|svg|woff|woff2)$
         {
-          	add_header Cache-Control "public, max-age=2678400";
+            add_header Cache-Control "public, max-age=2678400";
         }
 
         location ~ ^/resources/Home/Pictures/(.*.(png|jpg|svg|gif|jpeg))$
         {
-          	alias /data/Pictures/$1;
-    	    autoindex off; 
+            alias /data/Pictures/$1;
+            autoindex off;
         }
 
-    }
+      }
