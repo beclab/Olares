@@ -172,7 +172,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.116
+          image: beclab/files-server:v0.2.117
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -560,278 +560,278 @@ data:
       include /etc/nginx/conf.d/*.conf;
     }
 
-    default.conf: |-
-      server {
-        listen 80 default_server;
+  default.conf: |-
+    server {
+      listen 80 default_server;
 
-        # Gzip Settings
-        gzip on;
-        gzip_disable "msie6";
-        gzip_min_length 1k;
-        gzip_buffers 16 64k;
-        gzip_http_version 1.1;
-        gzip_comp_level 6;
-        gzip_types *;
-        client_max_body_size 2000M;
-        root /app;
+      # Gzip Settings
+      gzip on;
+      gzip_disable "msie6";
+      gzip_min_length 1k;
+      gzip_buffers 16 64k;
+      gzip_http_version 1.1;
+      gzip_comp_level 6;
+      gzip_types *;
+      client_max_body_size 2000M;
+      root /app;
 
-        # normal routes
-        # serve given url and default to index.html if not found
-        # e.g. /, /user and /foo/bar will return index.html
-        location / {
-            try_files $uri $uri/index.html /index.html;
-            add_header Cache-Control "private,no-cache";
-            add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
-            expires 0;
-        }
-
-        location /api/resources/AppData {
-            proxy_pass http://127.0.0.1:8080;
-            # rewrite ^/server(.*)$ $1 break;
-
-            # Add original-request-related headers
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $host;
-
-            client_body_timeout 600s;
-            client_max_body_size 2000M;
-            proxy_request_buffering off;
-            keepalive_timeout 750s;
-            proxy_read_timeout 600s;
-            proxy_send_timeout 600s;
-        }
-
-        location /api/raw/AppData {
-            proxy_pass http://127.0.0.1:8080;
-            # rewrite ^/server(.*)$ $1 break;
-
-            # Add original-request-related headers
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $host;
-
-            client_body_timeout 1800s;
-            client_max_body_size 4000M;
-            proxy_request_buffering off;
-            keepalive_timeout 2700s;
-            proxy_read_timeout 1800s;
-            proxy_send_timeout 1800s;
-        }
-
-        location /api/raw {
-            proxy_pass http://127.0.0.1:8080;
-            # rewrite ^/server(.*)$ $1 break;
-
-            # Add original-request-related headers
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $host;
-
-            client_body_timeout 1800s;
-            client_max_body_size 4000M;
-            proxy_request_buffering off;
-            keepalive_timeout 2700s;
-            proxy_read_timeout 1800s;
-            proxy_send_timeout 1800s;
-        }
-
-        location /api/md5 {
-            proxy_pass http://127.0.0.1:8080;
-            # rewrite ^/server(.*)$ $1 break;
-            # Add original-request-related headers
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $host;
-            add_header Accept-Ranges bytes;
-            client_body_timeout 1800s;
-            client_max_body_size 4000M;
-            proxy_request_buffering off;
-            keepalive_timeout 2700s;
-            proxy_read_timeout 1800s;
-            proxy_send_timeout 1800s;
-        }
-
-        location /api/paste {
-            proxy_pass http://127.0.0.1:8080;
-            # rewrite ^/server(.*)$ $1 break;
-            # Add original-request-related headers
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $host;
-            add_header Accept-Ranges bytes;
-            client_body_timeout 1800s;
-            client_max_body_size 4000M;
-            proxy_request_buffering off;
-            keepalive_timeout 2700s;
-            proxy_read_timeout 1800s;
-            proxy_send_timeout 1800s;
-        }
-
-        location /api/cache {
-            proxy_pass http://127.0.0.1:8080;
-            # rewrite ^/server(.*)$ $1 break;
-            # Add original-request-related headers
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $host;
-            add_header Accept-Ranges bytes;
-            client_body_timeout 1800s;
-            client_max_body_size 4000M;
-            proxy_request_buffering off;
-            keepalive_timeout 2700s;
-            proxy_read_timeout 1800s;
-            proxy_send_timeout 1800s;
-        }
-
-        location /provider {
-            proxy_pass http://127.0.0.1:8080;
-            # rewrite ^/server(.*)$ $1 break;
-
-            # Add original-request-related headers
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $host;
-
-            client_body_timeout 60s;
-            client_max_body_size 2000M;
-            proxy_request_buffering off;
-            keepalive_timeout 75s;
-            proxy_read_timeout 60s;
-            proxy_send_timeout 60s;
-        }
-
-        location /api {
-            proxy_pass http://127.0.0.1:8080;
-            # rewrite ^/server(.*)$ $1 break;
-
-            # Add original-request-related headers
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $host;
-
-            add_header Accept-Ranges bytes;
-
-            client_body_timeout 600s;
-            client_max_body_size 4000M;
-            proxy_request_buffering off;
-            keepalive_timeout 750s;
-            proxy_read_timeout 600s;
-            proxy_send_timeout 600s;
-        }
-
-        location /callback {
-            proxy_pass http://127.0.0.1:8080;
-            # rewrite ^/server(.*)$ $1 break;
-
-            # Add original-request-related headers
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $host;
-
-            add_header Accept-Ranges bytes;
-
-            client_body_timeout 600s;
-            client_max_body_size 4000M;
-            proxy_request_buffering off;
-            keepalive_timeout 750s;
-            proxy_read_timeout 600s;
-            proxy_send_timeout 600s;
-        }
-
-        location /upload {
-            proxy_pass http://127.0.0.1:8080;
-            proxy_http_version 1.1;
-            proxy_set_header Connection keep-alive;
-
-            proxy_request_buffering off;
-            proxy_buffering off;
-
-            proxy_connect_timeout 15s;
-            proxy_send_timeout 90s;
-            proxy_read_timeout 90s;
-            send_timeout 90s;
-            proxy_max_temp_file_size 0;
-
-            client_body_buffer_size 64m;
-            proxy_buffers 8 64k;
-            proxy_buffer_size 128k;
-            proxy_busy_buffers_size 128k;
-
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-            add_header Accept-Ranges bytes;
-        }
-
-        location /videos {
-            proxy_pass http://127.0.0.1:9090;
-            # rewrite ^/server(.*)$ $1 break;
-
-            # Add original-request-related headers
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $host;
-
-            add_header Accept-Ranges bytes;
-
-            client_body_timeout 600s;
-            client_max_body_size 4000M;
-            proxy_request_buffering off;
-            keepalive_timeout 750s;
-            proxy_read_timeout 600s;
-            proxy_send_timeout 600s;
-        }
-
-        location /seahub/ {
-            proxy_pass http://seafile/;
-            # rewrite ^/server(.*)$ $1 break;
-
-            # Add original-request-related headers
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $host;
-
-            add_header Accept-Ranges bytes;
-
-            client_body_timeout 600s;
-            client_max_body_size 2000M;
-            proxy_request_buffering off;
-            keepalive_timeout 750s;
-            proxy_read_timeout 600s;
-            proxy_send_timeout 600s;
-        }
-
-        location /seafhttp/ {
-            proxy_pass http://seafile:8082/;
-            # rewrite ^/server(.*)$ $1 break;
-
-            # Add original-request-related headers
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $host;
-
-            add_header Accept-Ranges bytes;
-
-            client_body_timeout 600s;
-            client_max_body_size 2000M;
-            proxy_request_buffering off;
-            keepalive_timeout 750s;
-            proxy_read_timeout 600s;
-            proxy_send_timeout 600s;
-        }
-
-        # Set cache for static resources
-        location ~ ^/(assets|js|css|fonts|img)/.*.(js|css|png|jpg|svg|woff|woff2)$
-        {
-            add_header Cache-Control "public, max-age=2678400";
-        }
-
-        location ~ ^/resources/Home/Pictures/(.*.(png|jpg|svg|gif|jpeg))$
-        {
-            alias /data/Pictures/$1;
-            autoindex off;
-        }
-
+      # normal routes
+      # serve given url and default to index.html if not found
+      # e.g. /, /user and /foo/bar will return index.html
+      location / {
+          try_files $uri $uri/index.html /index.html;
+          add_header Cache-Control "private,no-cache";
+          add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+          expires 0;
       }
+
+      location /api/resources/AppData {
+          proxy_pass http://127.0.0.1:8080;
+          # rewrite ^/server(.*)$ $1 break;
+
+          # Add original-request-related headers
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $host;
+
+          client_body_timeout 600s;
+          client_max_body_size 2000M;
+          proxy_request_buffering off;
+          keepalive_timeout 750s;
+          proxy_read_timeout 600s;
+          proxy_send_timeout 600s;
+      }
+
+      location /api/raw/AppData {
+          proxy_pass http://127.0.0.1:8080;
+          # rewrite ^/server(.*)$ $1 break;
+
+          # Add original-request-related headers
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $host;
+
+          client_body_timeout 1800s;
+          client_max_body_size 4000M;
+          proxy_request_buffering off;
+          keepalive_timeout 2700s;
+          proxy_read_timeout 1800s;
+          proxy_send_timeout 1800s;
+      }
+
+      location /api/raw {
+          proxy_pass http://127.0.0.1:8080;
+          # rewrite ^/server(.*)$ $1 break;
+
+          # Add original-request-related headers
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $host;
+
+          client_body_timeout 1800s;
+          client_max_body_size 4000M;
+          proxy_request_buffering off;
+          keepalive_timeout 2700s;
+          proxy_read_timeout 1800s;
+          proxy_send_timeout 1800s;
+      }
+
+      location /api/md5 {
+          proxy_pass http://127.0.0.1:8080;
+          # rewrite ^/server(.*)$ $1 break;
+          # Add original-request-related headers
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $host;
+          add_header Accept-Ranges bytes;
+          client_body_timeout 1800s;
+          client_max_body_size 4000M;
+          proxy_request_buffering off;
+          keepalive_timeout 2700s;
+          proxy_read_timeout 1800s;
+          proxy_send_timeout 1800s;
+      }
+
+      location /api/paste {
+          proxy_pass http://127.0.0.1:8080;
+          # rewrite ^/server(.*)$ $1 break;
+          # Add original-request-related headers
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $host;
+          add_header Accept-Ranges bytes;
+          client_body_timeout 1800s;
+          client_max_body_size 4000M;
+          proxy_request_buffering off;
+          keepalive_timeout 2700s;
+          proxy_read_timeout 1800s;
+          proxy_send_timeout 1800s;
+      }
+
+      location /api/cache {
+          proxy_pass http://127.0.0.1:8080;
+          # rewrite ^/server(.*)$ $1 break;
+          # Add original-request-related headers
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $host;
+          add_header Accept-Ranges bytes;
+          client_body_timeout 1800s;
+          client_max_body_size 4000M;
+          proxy_request_buffering off;
+          keepalive_timeout 2700s;
+          proxy_read_timeout 1800s;
+          proxy_send_timeout 1800s;
+      }
+
+      location /provider {
+          proxy_pass http://127.0.0.1:8080;
+          # rewrite ^/server(.*)$ $1 break;
+
+          # Add original-request-related headers
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $host;
+
+          client_body_timeout 60s;
+          client_max_body_size 2000M;
+          proxy_request_buffering off;
+          keepalive_timeout 75s;
+          proxy_read_timeout 60s;
+          proxy_send_timeout 60s;
+      }
+
+      location /api {
+          proxy_pass http://127.0.0.1:8080;
+          # rewrite ^/server(.*)$ $1 break;
+
+          # Add original-request-related headers
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $host;
+
+          add_header Accept-Ranges bytes;
+
+          client_body_timeout 600s;
+          client_max_body_size 4000M;
+          proxy_request_buffering off;
+          keepalive_timeout 750s;
+          proxy_read_timeout 600s;
+          proxy_send_timeout 600s;
+      }
+
+      location /callback {
+          proxy_pass http://127.0.0.1:8080;
+          # rewrite ^/server(.*)$ $1 break;
+
+          # Add original-request-related headers
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $host;
+
+          add_header Accept-Ranges bytes;
+
+          client_body_timeout 600s;
+          client_max_body_size 4000M;
+          proxy_request_buffering off;
+          keepalive_timeout 750s;
+          proxy_read_timeout 600s;
+          proxy_send_timeout 600s;
+      }
+
+      location /upload {
+          proxy_pass http://127.0.0.1:8080;
+          proxy_http_version 1.1;
+          proxy_set_header Connection keep-alive;
+
+          proxy_request_buffering off;
+          proxy_buffering off;
+
+          proxy_connect_timeout 15s;
+          proxy_send_timeout 90s;
+          proxy_read_timeout 90s;
+          send_timeout 90s;
+          proxy_max_temp_file_size 0;
+
+          client_body_buffer_size 64m;
+          proxy_buffers 8 64k;
+          proxy_buffer_size 128k;
+          proxy_busy_buffers_size 128k;
+
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+          add_header Accept-Ranges bytes;
+      }
+
+      location /videos {
+          proxy_pass http://127.0.0.1:9090;
+          # rewrite ^/server(.*)$ $1 break;
+
+          # Add original-request-related headers
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $host;
+
+          add_header Accept-Ranges bytes;
+
+          client_body_timeout 600s;
+          client_max_body_size 4000M;
+          proxy_request_buffering off;
+          keepalive_timeout 750s;
+          proxy_read_timeout 600s;
+          proxy_send_timeout 600s;
+      }
+
+      location /seahub/ {
+          proxy_pass http://seafile/;
+          # rewrite ^/server(.*)$ $1 break;
+
+          # Add original-request-related headers
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $host;
+
+          add_header Accept-Ranges bytes;
+
+          client_body_timeout 600s;
+          client_max_body_size 2000M;
+          proxy_request_buffering off;
+          keepalive_timeout 750s;
+          proxy_read_timeout 600s;
+          proxy_send_timeout 600s;
+      }
+
+      location /seafhttp/ {
+          proxy_pass http://seafile:8082/;
+          # rewrite ^/server(.*)$ $1 break;
+
+          # Add original-request-related headers
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $host;
+
+          add_header Accept-Ranges bytes;
+
+          client_body_timeout 600s;
+          client_max_body_size 2000M;
+          proxy_request_buffering off;
+          keepalive_timeout 750s;
+          proxy_read_timeout 600s;
+          proxy_send_timeout 600s;
+      }
+
+      # Set cache for static resources
+      location ~ ^/(assets|js|css|fonts|img)/.*.(js|css|png|jpg|svg|woff|woff2)$
+      {
+          add_header Cache-Control "public, max-age=2678400";
+      }
+
+      location ~ ^/resources/Home/Pictures/(.*.(png|jpg|svg|gif|jpeg))$
+      {
+          alias /data/Pictures/$1;
+          autoindex off;
+      }
+
+    }
