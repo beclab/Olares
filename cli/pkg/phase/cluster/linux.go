@@ -66,6 +66,7 @@ func (l *linuxInstallPhaseBuilder) installTerminus() phase {
 	return []module.Module{
 		&terminus.GetNATGatewayIPModule{},
 		&terminus.InstallAccountModule{},
+		&terminus.InstallKubeblocksModule{},
 		&terminus.InstallSettingsModule{},
 		&terminus.InstallOsSystemModule{},
 		&terminus.InstallLauncherModule{},
