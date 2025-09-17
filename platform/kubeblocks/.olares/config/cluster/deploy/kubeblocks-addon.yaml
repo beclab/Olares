@@ -1,0 +1,96 @@
+apiVersion: extensions.kubeblocks.io/v1alpha1
+kind: Addon
+metadata:
+  name: minio
+spec:
+  defaultInstallValues:
+    - enabled: true
+      resources: {}
+  description: etcd is a strongly consistent, distributed key-value store that provides
+    a reliable way to store data that needs to be accessed by a distributed system
+    or cluster of machines.
+  helm:
+    chartLocationURL: file:///minio-1.0.0.tgz
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.0
+    chartsPathInImage: /charts
+    installValues: {}
+    valuesMapping:
+      jsonMap: {}
+      valueMap: {}
+  install:
+    enabled: true
+    resources: {}
+  installable:
+    autoInstall: true
+  provider: community
+  type: Helm
+  version: 1.0.0
+---
+apiVersion: extensions.kubeblocks.io/v1alpha1
+kind: Addon
+metadata:
+  annotations:
+    addon.kubeblocks.io/kubeblocks-version: '>=0.9.0'
+  labels:
+    addon.kubeblocks.io/model: document
+    addon.kubeblocks.io/name: mongodb
+    addon.kubeblocks.io/provider: community
+    addon.kubeblocks.io/version: 1.0.0
+  name: mongodb
+spec:
+  defaultInstallValues:
+    - enabled: true
+  description: MongoDB is a document database designed for ease of application development
+    and scaling.
+  helm:
+    chartLocationURL: file:///mongodb-1.0.0.tgz
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.0
+  installable:
+    autoInstall: true
+  type: Helm
+
+---
+apiVersion: extensions.kubeblocks.io/v1alpha1
+kind: Addon
+metadata:
+  annotations:
+    addon.kubeblocks.io/kubeblocks-version: '>=1.0.0'
+  labels:
+    addon.kubeblocks.io/model: search-engine
+    addon.kubeblocks.io/name: elasticsearch
+    addon.kubeblocks.io/provider: community
+    addon.kubeblocks.io/version: 1.0.0
+  name: elasticsearch
+spec:
+  defaultInstallValues:
+    - enabled: true
+  description: Elasticsearch is a distributed, RESTful search engine optimized for
+    speed and relevance on production-scale workloads.
+  helm:
+    chartLocationURL: file:///elasticsearch-1.0.0-alpha.0.tgz
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.0
+  installable:
+    autoInstall: true
+  type: Helm
+---
+apiVersion: extensions.kubeblocks.io/v1alpha1
+kind: Addon
+metadata:
+  annotations:
+    addon.kubeblocks.io/kubeblocks-version: '>=1.0.0'
+  labels:
+    addon.kubeblocks.io/model: message
+    addon.kubeblocks.io/name: rabbitmq
+    addon.kubeblocks.io/provider: community
+    addon.kubeblocks.io/version: 1.0.0
+  name: rabbitmq
+spec:
+  defaultInstallValues:
+    - enabled: true
+  description: RabbitMQ is a reliable and mature messaging and streaming broker.
+  helm:
+    chartLocationURL: rabbitmq-1.0.0-alpha.0.tgz
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.0
+  installable:
+    autoInstall: true
+  type: Helm
