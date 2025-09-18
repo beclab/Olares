@@ -198,6 +198,7 @@ spec:
     spec:
       serviceAccount: os-internal
       serviceAccountName: os-internal
+      priorityClassName: "system-cluster-critical"
       volumes:
         - name: userspace-dir
           hostPath:
@@ -288,6 +289,7 @@ spec:
         app: search3monitor
     spec:
       serviceAccountName: os-internal
+      priorityClassName: "system-cluster-critical"
       containers:
       - name: search3monitor
         image: beclab/search3monitor:v0.0.69
