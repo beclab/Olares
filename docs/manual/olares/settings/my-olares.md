@@ -18,7 +18,7 @@ View and manage your Olares hardware. You can see details such as **Model**, **D
 Available actions are:
 
 * **Shutdown**: Click to shut down the Olares device. You will be directed to your LarePass app to finish the operation. After shutdown, Olares device status will show `Powered Off` on LarePass. Remote operations are unavailable until the device is manually turned on.
-* **Restart**: Click **Restart**. Use LarePass to scan the QR code on the page and follow the instructions. Olares device status will show `Restarting` and return to `Olares running` in about 5–8 minutes.
+* **Restart**: Click to restart Olares. You will be directed to your LarePass app to finish the operation. Olares device status will show `Restarting` on LarePass and return to `Olares running` in about 5–8 minutes.
 
 ## Olares Space
 
