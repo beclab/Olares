@@ -13,7 +13,7 @@ To access My Olares, open **Settings** and click your avatar in the top-left cor
 
 ## My hardware
 
-View and manage your Olares hardware.
+View and manage your Olares hardware. You can see details such as **Model**, **Device status**, **Device Identifier**, **CPU**, and **GPU**.
 
 Available actions are:
 
