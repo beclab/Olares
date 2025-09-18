@@ -402,6 +402,7 @@ spec:
     spec:
       serviceAccount: os-internal
       serviceAccountName: os-internal
+      priorityClassName: "system-cluster-critical"
       hostNetwork: true
       containers:
         - name: image-service

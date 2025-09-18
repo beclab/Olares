@@ -52,6 +52,7 @@ spec:
     spec:
       serviceAccount: os-internal
       serviceAccountName: os-internal
+      priorityClassName: "system-cluster-critical"
       securityContext:
         runAsUser: 0
         runAsNonRoot: false
