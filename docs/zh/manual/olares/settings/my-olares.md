@@ -16,7 +16,7 @@ description: 了解如何利用“我的 Olares”页面管理账户、设备、
 可执行的操作包括：
 
 * **关机**：点击以关闭 Olares 设备。请使用 LarePass 完成后续操作。关机后 Olares 状态将在 LarePass 上显示为 `Olares 已关机`。无法远程操作，需手动开机。
-* **重启**：点击**重启**后，请使用 LarePass 扫描页面上的二维码并按提示完成操作。重启过程中 Olares 状态显示为 `正在重启`，约 5–8 分钟后恢复为 `Olares 运行中`。重启后远程连接将断开，需重新登录才能访问 Olares。
+* **重启**：点击以重启 Olares 设备，请使用 LarePass 完成后续操作。重启过程中 Olares 状态将在 LarePass 上显示为 `正在重启`，约 5–8 分钟后恢复为 `Olares 运行中`。
 
 ## Olares Space
 在 Olares Space 中查看你的订阅计划详情和使用情况，包括反向代理方案、
