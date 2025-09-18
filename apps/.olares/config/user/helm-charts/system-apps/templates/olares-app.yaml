@@ -321,7 +321,7 @@ spec:
             - name: PGDB
               value: user_space_{{ .Values.bfl.username }}_cloud_drive_integration
         - name: olares-app-init
-          image: beclab/system-frontend:v1.4.31
+          image: beclab/system-frontend:v1.4.33
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
