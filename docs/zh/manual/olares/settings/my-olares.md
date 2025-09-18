@@ -9,6 +9,15 @@ description: 了解如何利用“我的 Olares”页面管理账户、设备、
 
 ![My Olares](/images/zh/manual/olares/my-olares.png#bordered)
 
+## 我的硬件
+
+查看和管理 Olares 硬件。
+
+可执行的操作包括：
+
+* **关机**：点击**关机**后，请使用 LarePass 扫描页面上的二维码并按提示完成操作。关机后 Olares 状态显示为 `Olares 已关机`，无法远程操作，需手动开机。
+* **重启**：点击**重启**后，请使用 LarePass 扫描页面上的二维码并按提示完成操作。重启过程中 Olares 状态显示为 `正在重启`，约 5–8 分钟后恢复为 `Olares 运行中`。重启后远程连接将断开，需重新登录才能访问 Olares。
+
 ## Olares Space
 在 Olares Space 中查看你的订阅计划详情和使用情况，包括反向代理方案、
 备份、流量消耗等。首次使用时需按提示登录 Olares Space。
