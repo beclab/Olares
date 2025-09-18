@@ -18,6 +18,14 @@
 {{ $nats_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+{{- $app_service_app_key := (lookup "v1" "Secret" $namespace "app-key") -}}
+{{- $app_key_random := "" -}}
+{{ if $app_service_app_key -}}
+{{ $app_key_random = (index $app_service_app_key "data" "random-key") }}
+{{ else -}}
+{{ $app_key_random = randAlphaNum 32 | b64enc }}
+{{- end -}}
+
 ---
 apiVersion: v1
 kind: Secret
@@ -314,7 +322,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 type: Opaque
 data:
-  random-key: {{ randAlphaNum 32 | b64enc }}
+  random-key: {{ $app_key_random }}
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
