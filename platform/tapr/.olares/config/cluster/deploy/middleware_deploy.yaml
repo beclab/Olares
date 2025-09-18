@@ -41,6 +41,7 @@ spec:
       # terminationGracePeriodSeconds: 0
       serviceAccountName: os-internal
       serviceAccount: os-internal
+      priorityClassName: "system-cluster-critical"
       volumes:
       - name: dbdata-dir
         hostPath:
