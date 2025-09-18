@@ -103,8 +103,11 @@ func (t *CheckKeyPodsRunning) Execute(runtime connector.Runtime) error {
 			return fmt.Errorf("pod %s/%s has not started all containers yet", pod.Namespace, pod.Name)
 		}
 		for _, cStatus := range pod.Status.ContainerStatuses {
-			if cStatus.State.Terminated != nil && cStatus.State.Terminated.ExitCode != 0 {
-				return fmt.Errorf("container %s in pod %s/%s is terminated", cStatus.Name, pod.Namespace, pod.Name)
+			if cStatus.State.Terminated != nil {
+				if cStatus.State.Terminated.ExitCode != 0 {
+					return fmt.Errorf("container %s in pod %s/%s is terminated", cStatus.Name, pod.Namespace, pod.Name)
+				}
+				continue
 			}
 			if cStatus.State.Running == nil {
 				return fmt.Errorf("container %s in pod %s/%s is not running", cStatus.Name, pod.Namespace, pod.Name)
