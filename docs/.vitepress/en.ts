@@ -113,9 +113,10 @@ const side = {
               text: "Mount SMB",
               link: "/manual/olares/files/mount-SMB",
             },
-      //      {text: "Mount cloud storage",
-      //        link: "/manual/olares/files/mount-cloud-storage",
-      //      },
+           {
+             text: "Mount cloud storage",
+             link: "/manual/olares/files/mount-cloud-storage",
+           },
           ],
         },
         {

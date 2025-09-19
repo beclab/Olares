@@ -50,7 +50,7 @@ Google Drive、Dropbox 等通过 OAuth 登录的服务集成需在 LarePass 移�
 3. 选择 **Google Drive** 或 **Dropbox**。  
 4. 按提示登录并授权。  
 
-配置成功后，服务将显示在集成列表，可用于 [Olares 备份](../olares/settings/backup.md)。
+配置成功后，服务将显示在集成列表，可用于 [Olares 备份](../olares/settings/backup.md)。你可以在 Olares 的**文件管理器** > **云存储**中访问添加的云盘。
 
 ## 通过 API 密钥添加云盘
 
@@ -61,16 +61,16 @@ AWS S3、腾讯云 COS 等服务需使用 Access Key & Secret Key 手动配置�
 3. 选择 **AWS S3** 或 **Tencent COS**。  
 4. 输入 Access Key、Secret Key 及其他必要信息，点击**确认**。  
 
-配置成功后，服务将显示在集成列表，可用于 [Olares 备份](../olares/settings/backup.md)。  
+配置成功后，服务将显示在集成列表，可用于 [Olares 备份](../olares/settings/backup.md)。你可以在 Olares 的**文件管理器** > **云存储**中访问添加的云盘。
 
-你也可以在 [Olares 设置](/zh/manual/olares/settings/integrations.md) 中直接配置。
+你也可以在 [Olares 设置](/zh/manual/olares/settings/integrations.md) 的集成管理页面添加此类服务。
 
 ## 断开集成
 
 :::warning
-断开 Olares Space 可能影响设备管理及云备份访问，你可在需要时重新连接。
+断开集成的服务可能影响设备管理及云备份访问，你可在需要时重新连接。
 :::
 
-1. 打开 LarePass，进入**设置** > **集成**。  
+1. 打开 LarePass 应用，进入**设置** > **LarePass 设置** > **集成**。  
 2. 点击要移除的集成。  
 3. 点击右上角 <i class="material-symbols-outlined">more_horiz</i>，选择**删除**。
