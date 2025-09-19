@@ -57,6 +57,10 @@ func (m *Manager) Package() error {
 		return err
 	}
 
+	if err := m.packageKubeBlocks(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -119,5 +123,13 @@ func (m *Manager) packageGPU() error {
 	return util.CopyDirectory(
 		filepath.Join(m.olaresRepoRoot, "infrastructure/gpu/.olares/config/gpu"),
 		filepath.Join(m.distPath, "wizard/config/gpu"),
+	)
+}
+
+func (m *Manager) packageKubeBlocks() error {
+	fmt.Println("package kubeblocks ...")
+	return util.CopyDirectory(
+		filepath.Join(m.olaresRepoRoot, "infrastructure/kubeblocks/.olares/config/kubeblocks"),
+		filepath.Join(m.distPath, "wizard/config/kubeblocks"),
 	)
 }
