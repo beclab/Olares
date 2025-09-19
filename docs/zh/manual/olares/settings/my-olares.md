@@ -9,6 +9,15 @@ description: 了解如何利用“我的 Olares”页面管理账户、设备、
 
 ![My Olares](/images/zh/manual/olares/my-olares.png#bordered)
 
+## 我的硬件
+
+查看和管理 Olares 硬件。你可以查看**型号**、**设备状态**、**设备标识符**、 **CPU** 和 **GPU** 信息。
+
+可执行的操作包括：
+
+* **关机**：点击以关闭 Olares 设备。请使用 LarePass 完成后续操作。关机后 Olares 状态将在 LarePass 上显示为 `Olares 已关机`。无法远程操作，需手动开机。
+* **重启**：点击以重启 Olares 设备，请使用 LarePass 完成后续操作。重启过程中 Olares 状态将在 LarePass 上显示为 `正在重启`，约 5–8 分钟后恢复为 `Olares 运行中`。
+
 ## Olares Space
 在 Olares Space 中查看你的订阅计划详情和使用情况，包括反向代理方案、
 备份、流量消耗等。首次使用时需按提示登录 Olares Space。
