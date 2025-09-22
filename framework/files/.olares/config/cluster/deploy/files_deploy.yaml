@@ -173,7 +173,7 @@ spec:
 {{ end }}
 
         - name: files
-          image: beclab/files-server:v0.2.118
+          image: beclab/files-server:v0.2.119
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
