@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.46" }}
+{{ $backupVersion := "0.3.47" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 {{- $backup_nats_secret := (lookup "v1" "Secret" .Release.Namespace "backup-nats-secret") -}}
@@ -58,6 +58,9 @@ spec:
       - name: rootfs
         hostPath:
           path: '{{ .Values.rootPath }}/rootfs'
+      - name: appcache
+        hostPath:
+          path: '{{ .Values.rootPath }}/userdata'
       - name: shares
         hostPath:
           path: '{{ .Values.rootPath }}/share'
@@ -123,6 +126,8 @@ spec:
         volumeMounts:
         - mountPath: /rootfs
           name: rootfs
+        - mountPath: /appcache
+          name: appcache
         - mountPath: /shares
           mountPropagation: Bidirectional
           name: shares
@@ -177,6 +182,8 @@ spec:
         volumeMounts:
         - mountPath: /rootfs
           name: rootfs
+        - mountPath: /appcache
+          name: appcache
         - mountPath: /shares
           mountPropagation: Bidirectional
           name: shares
