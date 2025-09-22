@@ -408,9 +408,9 @@ spec:
       - name: users
         permission:
           pub: allow
-          sub: deny
+          sub: allow
       - name: groups
         permission:
           pub: allow
-          sub: deny
+          sub: allow
     user: os-search-server
