@@ -4,7 +4,7 @@ nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: ""
 imagePullSecrets: []
-version: "v2.5.10"
+version: "v2.5.11"
 
 # Nvidia GPU Parameters
 resourceName: "nvidia.com/gpu"
