@@ -62,6 +62,8 @@ metadata:
     applications.app.bytetrade.io/author: bytetrade.io
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: appstore
@@ -99,7 +101,7 @@ spec:
           name: check-chart-repo
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.4.30
+        image: beclab/market-backend:v0.4.31
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81

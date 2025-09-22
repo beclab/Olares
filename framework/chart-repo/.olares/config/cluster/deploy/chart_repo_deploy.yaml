@@ -88,6 +88,8 @@ metadata:
     applications.app.bytetrade.io/author: bytetrade.io
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: chartrepo
@@ -119,7 +121,7 @@ spec:
           name: check-appservice
       containers:
       - name: chartrepo
-        image: beclab/dynamic-chart-repository:v0.1.15
+        image: beclab/dynamic-chart-repository:v0.1.16
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -166,6 +168,8 @@ spec:
             value: prod
           - name: IMAGE_ANALYZER_WORKERS
             value: '5'
+          - name: APP_VERSION
+            value: 0.2.0
         volumeMounts:
           - name: opt-data
             mountPath: /opt/app/data
