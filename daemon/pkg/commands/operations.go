@@ -36,6 +36,7 @@ const (
 	CollectLogs         Operations = "collectLogs"
 	MountSmb            Operations = "mountSmb"
 	UmountSmb           Operations = "umountSmb"
+	SetSSHPassword      Operations = "setSSHPassword"
 )
 
 func (p Operations) Stirng() string {

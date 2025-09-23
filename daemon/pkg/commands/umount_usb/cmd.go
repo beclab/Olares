@@ -2,7 +2,6 @@ package umountusb
 
 import (
 	"context"
-	"errors"
 
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/utils"
@@ -25,7 +24,7 @@ func New() commands.Interface {
 func (i *umountUsb) Execute(ctx context.Context, p any) (res any, err error) {
 	param, ok := p.(*Param)
 	if !ok {
-		err = errors.New("invalid param")
+		err = commands.ErrInvalidParam
 		return
 	}
 

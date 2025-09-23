@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -32,6 +33,10 @@ var (
 	EXPORT_POD_LOGS_DIR    = "Home/pod_logs"
 
 	ProgressNumFinished = 100
+)
+
+var (
+	ErrInvalidParam = errors.New("invalid param")
 )
 
 func Init() {

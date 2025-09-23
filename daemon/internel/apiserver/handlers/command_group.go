@@ -9,6 +9,7 @@ import (
 	mountsmb "github.com/beclab/Olares/daemon/pkg/commands/mount_smb"
 	"github.com/beclab/Olares/daemon/pkg/commands/reboot"
 	"github.com/beclab/Olares/daemon/pkg/commands/shutdown"
+	sshpassword "github.com/beclab/Olares/daemon/pkg/commands/ssh_password"
 	umountsmb "github.com/beclab/Olares/daemon/pkg/commands/umount_smb"
 	umountusb "github.com/beclab/Olares/daemon/pkg/commands/umount_usb"
 	"github.com/beclab/Olares/daemon/pkg/commands/uninstall"
@@ -81,6 +82,11 @@ func init() {
 	cmd.Post("/umount-samba-incluster", handlers.RequireLocal(
 		handlers.WaitServerRunning(
 			handlers.RunCommand(handlers.PostUmountSmbInCluster, umountsmb.New))))
+
+	cmd.Post("/ssh-password", handlers.RequireSignature(
+		handlers.RequireOwner(
+			handlers.WaitServerRunning(
+				handlers.RunCommand(handlers.PostSSHPassword, sshpassword.New)))))
 
 	cmdv2 := cmd.Group("v2")
 	cmdv2.Post("/mount-samba", handlers.RequireLocal(
