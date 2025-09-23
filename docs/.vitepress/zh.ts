@@ -560,7 +560,20 @@ const side = {
                   },
                 ],
               },
-              { text: "PVE", link: "/zh/developer/install/pve" },
+              {
+                text: "PVE",
+                collapsed: true,
+                items: [
+                  {
+                    text: "使用脚本（推荐）",
+                    link: "/zh/developer/install/pve",
+                  },
+                  {
+                    text: "使用 ISO 镜像",
+                    link: "/zh/developer/install/pve-via-iso-image",
+                  },
+                ],
+              },
               { text: "LXC", link: "/zh/developer/install/lxc" },
               { text: "树莓派", link: "/zh/developer/install/raspberry-pi" },
             ],

@@ -555,7 +555,20 @@ const side = {
                },
              ],
            },
-           { text: "PVE", link: "/developer/install/pve" },
+           {
+             text: "PVE",
+             collapsed: true,
+             items: [
+               {
+                 text: "Using the script (recommended)",
+                 link: "/developer/install/pve",
+               },
+               {
+                 text: "Using ISO image",
+                link: "/developer/install/pve-via-iso-image",
+               },
+             ],
+           },
            { text: "LXC", link: "/developer/install/lxc" },
            { text: "Raspberry Pi", link: "/developer/install/raspberry-pi" },
          ],
