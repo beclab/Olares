@@ -32,6 +32,6 @@ func (s *setSSHPassword) Execute(ctx context.Context, p any) (res any, err error
 		param.Username = "olares"
 	}
 
-	err = utils.SetSSHPassword(param.Password)
+	err = utils.SetSSHPassword(param.Username, param.Password)
 	return
 }

@@ -7,6 +7,6 @@ func IsDefaultSSHPassword() bool {
 	return false
 }
 
-func SetSSHPassword(password string) error {
+func SetSSHPassword(user, password string) error {
 	return nil
 }
