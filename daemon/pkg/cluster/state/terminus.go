@@ -104,7 +104,7 @@ func (n NotInstalledValidator) ValidateOp(op commands.Interface) error {
 	switch op.OperationName() {
 	case commands.Install, commands.ChangeIp, commands.Shutdown,
 		commands.Reboot, commands.ConnectWifi, commands.ChangeHost,
-		commands.MountSmb, commands.UmountSmb:
+		commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword:
 		return nil
 	}
 
@@ -119,7 +119,7 @@ func (u UninitializedValidator) ValidateOp(op commands.Interface) error {
 	case commands.Initialize, commands.ChangeIp, commands.Reboot,
 		commands.Shutdown, commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
 		commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.CreateUpgradeTarget:
+		commands.CreateUpgradeTarget, commands.SetSSHPassword:
 		return nil
 	}
 
@@ -134,7 +134,7 @@ func (u InitializingValidator) ValidateOp(op commands.Interface) error {
 	case commands.ChangeIp, commands.Reboot,
 		commands.Shutdown, commands.Uninstall,
 		commands.ConnectWifi, commands.ChangeHost,
-		commands.CollectLogs, commands.MountSmb, commands.UmountSmb:
+		commands.CollectLogs, commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword:
 		return nil
 	}
 
@@ -149,7 +149,7 @@ func (u UpgradingValidator) ValidateOp(op commands.Interface) error {
 		commands.Shutdown, commands.Uninstall,
 		commands.ConnectWifi, commands.ChangeHost,
 		commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget:
+		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword:
 		return nil
 	}
 
@@ -164,7 +164,7 @@ func (u InitializeFailedValidator) ValidateOp(op commands.Interface) error {
 	case commands.ChangeIp, commands.Reboot,
 		commands.Shutdown, commands.Uninstall,
 		commands.ConnectWifi, commands.ChangeHost,
-		commands.CollectLogs, commands.MountSmb, commands.UmountSmb:
+		commands.CollectLogs, commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword:
 		return nil
 	}
 
@@ -176,7 +176,7 @@ type InstallingValidator struct{}
 
 func (i InstallingValidator) ValidateOp(op commands.Interface) error {
 	switch op.OperationName() {
-	case commands.ChangeIp, commands.Reboot, commands.Shutdown:
+	case commands.ChangeIp, commands.Reboot, commands.Shutdown, commands.SetSSHPassword:
 		return nil
 	}
 
@@ -189,7 +189,7 @@ type InstallFailedValidator struct{}
 func (i InstallFailedValidator) ValidateOp(op commands.Interface) error {
 	switch op.OperationName() {
 	case commands.Reboot, commands.Shutdown, commands.Uninstall,
-		commands.CollectLogs, commands.MountSmb, commands.UmountSmb:
+		commands.CollectLogs, commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword:
 		return nil
 	}
 
@@ -204,7 +204,7 @@ func (r RunningValidator) ValidateOp(op commands.Interface) error {
 	case commands.ChangeIp, commands.Reboot, commands.Shutdown,
 		commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
 		commands.UmountUsb, commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget:
+		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword:
 		return nil
 	}
 
@@ -218,7 +218,7 @@ func (i InvalidIpValidator) ValidateOp(op commands.Interface) error {
 	switch op.OperationName() {
 	case commands.ChangeIp, commands.Reboot, commands.Shutdown,
 		commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
-		commands.MountSmb, commands.UmountSmb:
+		commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword:
 		return nil
 	}
 
@@ -233,7 +233,7 @@ func (s SystemErrorValidator) ValidateOp(op commands.Interface) error {
 	case commands.ChangeIp, commands.Reboot, commands.Shutdown,
 		commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
 		commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget:
+		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword:
 		return nil
 	}
 
@@ -246,7 +246,7 @@ type SelfRepairingValidator struct{}
 func (s SelfRepairingValidator) ValidateOp(op commands.Interface) error {
 	switch op.OperationName() {
 	case commands.Reboot, commands.Shutdown, commands.Uninstall,
-		commands.ConnectWifi, commands.ChangeHost:
+		commands.ConnectWifi, commands.ChangeHost, commands.SetSSHPassword:
 		return nil
 	}
 
@@ -258,7 +258,7 @@ type IpChangingValidator struct{}
 
 func (i IpChangingValidator) ValidateOp(op commands.Interface) error {
 	switch op.OperationName() {
-	case commands.Reboot, commands.Shutdown, commands.Uninstall:
+	case commands.Reboot, commands.Shutdown, commands.Uninstall, commands.SetSSHPassword:
 		return nil
 	}
 
@@ -270,7 +270,7 @@ type IpChangeFailedValidator struct{}
 
 func (i IpChangeFailedValidator) ValidateOp(op commands.Interface) error {
 	switch op.OperationName() {
-	case commands.Reboot, commands.Shutdown, commands.Uninstall:
+	case commands.Reboot, commands.Shutdown, commands.Uninstall, commands.SetSSHPassword:
 		return nil
 	}
 
