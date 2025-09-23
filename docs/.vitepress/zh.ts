@@ -251,7 +251,8 @@ const side = {
                 },
               ],
              },
-            {text: "管理 GPU", link: "/zh/manual/olares/settings/gpu-resource",},
+            {text: "管理 GPU", link: "/zh/manual/olares/settings/gpu-resource"},
+            {text: "视频设置", link: "/zh/manual/olares/settings/video"},
             {
               "text": "备份与恢复",
               "collapsed": true,

@@ -252,7 +252,8 @@ const side = {
                 },
               ],
              },
-            {text: "Manage GPU", link: "/manual/olares/settings/gpu-resource",},
+            {text: "Manage GPU", link: "/manual/olares/settings/gpu-resource"},
+            {text: "Set video playback", link: "/manual/olares/settings/video"},
             {
               text: "Backup and restore",
               collapsed: true,
