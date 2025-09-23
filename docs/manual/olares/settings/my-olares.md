@@ -11,6 +11,15 @@ To access My Olares, open **Settings** and click your avatar in the top-left cor
 
 ![My Olares](/images/manual/olares/my-olares.png#bordered)
 
+## My hardware
+
+View and manage your Olares hardware. You can see details such as **Model**, **Device status**, **Device Identifier**, **CPU**, and **GPU**.
+
+Available actions are:
+
+* **Shutdown**: Click to shut down the Olares device. You will be directed to your LarePass app to finish the operation. After shutdown, Olares device status will show `Powered Off` on LarePass. Remote operations are unavailable until the device is manually turned on.
+* **Restart**: Click to restart Olares. You will be directed to your LarePass app to finish the operation. Olares device status will show `Restarting` on LarePass and return to `Olares running` in about 5–8 minutes.
+
 ## Olares Space
 
 Check your subscribed plan details and usage in Olares Space, including reverse proxy solution, backup storage, and traffic consumption. Log in to Olares Space as prompted to use this feature.
