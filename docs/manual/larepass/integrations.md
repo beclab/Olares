@@ -56,7 +56,7 @@ OAuth-based integrations like Google Drive and Dropbox require initial setup via
 
 4. Follow the login prompts to authorize your account.
 
-Once authorized, you'll see the connected account in the integration list. You can select the storage for [Olares backup](../olares/settings/backup.md)
+Once authorized, you'll see the connected account in the integration list. You can select the storage for [Olares backup](../olares/settings/backup.md) or access the storage in **Files** > **Cloud Storage** in Olares. 
 
 ## Add a cloud storage using API-keys
 
@@ -69,12 +69,11 @@ Services like AWS S3 and Tencent Cloud COS require setup using API keys (Access 
 
 Alternatively, you can configure these integrations directly within [Olares Settings](/manual/olares/settings/integrations.md). 
 
-Once authorized, you'll see the connected account in the integration list. You can select the storage for [Olares backup](../olares/settings/backup.md)
+Once authorized, you'll see the connected account in the integration list. You can select the storage for [Olares backup](../olares/settings/backup.md) or access the storage in **Files** > **Cloud Storage** in Olares.
 
 ## Disconnect integrations
 ::: warning
-Disconnecting Olares Space may affect your ability to manage devices, and access cloud backups through the Olares Space interface.
-You can always reconnect later if needed.
+Disconnecting an integration may affect the ability to manage devices and cloud backups. You can always reconnect later if needed.
 :::
 
 To disconnect an integration from LarePass:

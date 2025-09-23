@@ -115,11 +115,11 @@ const side = {
               "text": "挂载 SMB",
               "link": "/zh/manual/olares/files/mount-SMB"
             },
-            //  {
-            //  "text": "挂载云存储",
-          //  "link": "/zh/manual/olares/files/mount-cloud-storage"
-            //   }
-          ]
+            {
+              "text": "挂载云存储",
+              "link": "/zh/manual/olares/files/mount-cloud-storage"
+            },
+          ],
         },
         {
           "text": "Vault",
