@@ -20,7 +20,8 @@ The Overview page provides a comprehensive, at-a-glance view of your Olares syst
 - User resource usage
 - Usage ranking
 
-### View physical resources
+
+### View physical resources usage
 
 Monitor the fundamental resource metrics directly from the **Cluster's physical resource** dashboard:
 
@@ -32,6 +33,11 @@ Monitor the fundamental resource metrics directly from the **Cluster's physical 
 - Network status
 
 ![Dashboard overview](/images/manual/olares/dashboard-overview.png#bordered)
+:::info Multi-node cluster display
+When your cluster consists of multiple nodes:
+- Overview panels: Display aggregate results across all nodes (e.g., CPU/memory usage, disk utilization, network traffic, overall GPU usage).
+- Resource detail pages: Show metrics broken down per node, allowing you to analyze each node individually.
+  :::
 
 ### Access detailed resource panels
 
