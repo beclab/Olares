@@ -71,7 +71,7 @@ During installation, log messages appear on the screen. If the graphics driver i
     ```
 If they appear, press **Enter** to ignore them.
 
-5. Once the installation completes, you’ll see the message:
+4. Once the installation completes, you’ll see the message:
 
     ```
     Installation completed successfully!
