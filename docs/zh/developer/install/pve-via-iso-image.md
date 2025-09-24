@@ -10,9 +10,6 @@ description: 在 PVE 虚拟化平台上使用 ISO 镜像安装配置 Olares 的�
 
 <!--@include: ./reusables.md{39,45}-->
 
-## 下载 Olares ISO 镜像
-前往官方网站获取 Olares ISO 镜像文件。
-
 ## 系统要求
 请确保设备满足以下配置要求：
 
