@@ -103,7 +103,7 @@ After the VM restarts, it will boot into the Ubuntu system.
 
 ## Activate Olares
 
-If you installed Olares via ISO on PVE or are using an Olares hardware device with ISO pre-installed:
+To activate Olares:
 
 ![ISO Activate](/images/manual/larepass/iso-activate.png#bordered)
 
