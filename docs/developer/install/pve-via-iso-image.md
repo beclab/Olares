@@ -28,7 +28,7 @@ To run Olares on PVE, make sure the VM is configured with the following settings
 ### Required VM settings
 
 - OS:
-  - `ISO image`: Select the official Olares ISO image 
+  - `ISO image`: Select the official Olares ISO image you just downloaded.
 - System:
   - `BIOS`: Select OVMF (UEFI).
   - `EFI Storage`: Choose a storage location (for example, a local LVM or directory) to store UEFI firmware variables.
