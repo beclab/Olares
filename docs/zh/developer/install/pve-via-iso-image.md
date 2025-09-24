@@ -36,7 +36,7 @@ description: 在 PVE 虚拟化平台上使用 ISO 镜像安装配置 Olares 的�
 - CPU:
   - `核心`：4核及以上
 
-下图是 PVE 中虚拟机硬件的示例配置。配置后硬件各字段信息如下。
+下图为 PVE 中虚拟机硬件的示例配置。
 
 ![PVE Hardware](/images/developer/install/pve-hardware.png#bordered)
 
