@@ -89,7 +89,7 @@ spec:
     - enabled: true
   description: RabbitMQ is a reliable and mature messaging and streaming broker.
   helm:
-    chartLocationURL: rabbitmq-1.0.0-alpha.0.tgz
+    chartLocationURL: file:///rabbitmq-1.0.0-alpha.0.tgz
     chartsImage: beclab/kubeblock-addon-charts:v1.0.0
   installable:
     autoInstall: true
