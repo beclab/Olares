@@ -88,14 +88,6 @@ After the VM restarts, it will boot into the Ubuntu system.
  
 
 
-```yaml
-Ubuntu login:
-```
-
-Log in using:
-
-- Username: `olares`
-- Password: `olares`
 
 To confirm that Olares has been installed successfully, run the following command: `sudo olares-check`.
 
