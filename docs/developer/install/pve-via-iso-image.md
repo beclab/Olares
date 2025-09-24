@@ -58,7 +58,7 @@ While the specific version is confirmed to work, the process may still work on o
 
     - A warning will appear:
 
-    ```text
+    ```bash
     WARNING: This will DESTROY all data on <your target disk>
     ```
 
