@@ -81,18 +81,14 @@ description: 在 PVE 虚拟化平台上使用 ISO 镜像安装配置 Olares 的�
 
 ## 验证安装
 
-虚拟机重启后，就会进入系统。你会看到以下提示：
+虚拟机重启后，将进入 Ubuntu 系统。
 
-```yaml
-Ubuntu login:
-```
-
-使用以下信息登录：
+1. 使用默认账号登陆 Ubuntu：
 
 - 用户名：`olares`
 - 密码：`olares`
 
-为了确认 Olares 是否已成功安装，请运行以下命令：`sudo olares-check`。
+2. 运行以下命令确认 Olares 是否安装成功：`sudo olares-check`
 
 如果运行结果如下，则说明安装成功：
 
