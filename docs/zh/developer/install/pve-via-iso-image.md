@@ -62,17 +62,14 @@ description: 在 PVE 虚拟化平台上使用 ISO 镜像安装配置 Olares 的�
 
     出现 `Continue? (yes/no):` 提示时，输入 `yes` 以继续。
 
-4. 安装将开始。安装过程中，你会看到安装日志和显卡驱动的安装进度，可能会出现如下警告提示：
+:::tip 
+安装过程中会显示安装日志。如果需要安装显卡驱动，会出现安装进度条，并可能显示相关警告，例如：
 
-    ```text
-    WARNING:
-    nvidia-installer was forced to guess the X Iibrary path 'usr/lib'and X module path
-    /usr/lib/xorg/modules'; these paths were not queryable from the system. If X fails to
-    find the NVIDIA X driver module, please install the `pkg-config` utility and the X.Org
-    SDK/development package for your distribution and reinstall the driver.
+    ```bash
+   WARNING: nvidia-installer was forced to guess the X Iibrary path 'usr/lib'and X module path ...
     ```
 
-    可以忽略这些警告。在出现提示时，按回车键选择 **OK** 即可。
+按**回车键**忽略警告即可。
 
 5. 安装完成后，你会看到以下信息：
 
