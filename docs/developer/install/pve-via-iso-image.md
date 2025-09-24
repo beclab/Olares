@@ -89,7 +89,10 @@ After the VM restarts, it will boot into the Ubuntu system.
 
 
 
-To confirm that Olares has been installed successfully, run the following command: `sudo olares-check`.
+2. Confirm that Olares has been installed successfully using the following command: 
+     ```bash
+     `sudo olares-check`
+     ```
 
 A successful installation will display results like:
 
