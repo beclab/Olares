@@ -54,6 +54,7 @@ const (
 	Ubuntu20 UbuntuVersion = "20."
 	Ubuntu22 UbuntuVersion = "22."
 	Ubuntu24 UbuntuVersion = "24."
+	Ubuntu25 UbuntuVersion = "25."
 
 	Debian9  DebianVersion = "9"
 	Debian10 DebianVersion = "10"
@@ -134,7 +135,7 @@ func (s *SystemInfo) IsSupport() error {
 	//}
 
 	if s.IsUbuntu() {
-		if !s.IsUbuntuVersionEqual(Ubuntu22) && !s.IsUbuntuVersionEqual(Ubuntu24) {
+		if !s.IsUbuntuVersionEqual(Ubuntu22) && !s.IsUbuntuVersionEqual(Ubuntu24) && !s.IsUbuntuVersionEqual(Ubuntu25) {
 			return fmt.Errorf("unsupported ubuntu os version '%s'", s.GetOsVersion())
 		}
 	}
