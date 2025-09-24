@@ -104,7 +104,7 @@ check Containerd:  success
 
 ## 激活 Olares
 
-通过 ISO 在 PVE 上安装 Olares，或使用预装了 ISO 的 Olares 硬件，请按以下步骤激活：
+请按以下步骤激活 Olares：
 ![ISO 激活](/images/manual/larepass/iso-activate.png#bordered)
 
 
