@@ -18,6 +18,8 @@ Make sure your device meets the following requirements.
 - RAM: At least 8GB of available memory
 - Storage: At least 200GB of available SSD storage
 - Supported Systems: PVE 8.2.2
+## Download Olares ISO image
+Download the official Olares ISO image.
 
 ## Configure VM in PVE
 
