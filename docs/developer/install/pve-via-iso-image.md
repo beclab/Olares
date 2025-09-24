@@ -38,7 +38,7 @@ To run Olares on PVE, make sure the VM is configured with the following settings
 - CPU:
   - `Cores`: At least 4 cores
 
-Below is a sample configuration for the VM hardware settings in PVE. The screenshot illustrates how the fields should appear after applying the recommended values.
+Below is a sample configuration for the VM hardware settings in PVE. 
 
 ![PVE Hardware](/images/developer/install/pve-hardware.png#bordered)
 
