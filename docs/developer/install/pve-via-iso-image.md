@@ -127,8 +127,8 @@ If you installed Olares via ISO on PVE or are using an Olares hardware device wi
 
 Once complete, you can access Olares via the provided URL and your credentials.
 
-:::tip Device not discovered?
-If your phone cannot connect to the same network as the Olares device, LarePass will not be able to discover your Olares. In this case, use the [Bluetooth network configuration](manage-olares.md#set-wi-fi-via-bluetooth) feature to connect Olares to the same Wi-Fi as your phone, then repeat the activation process.
+:::tip Same network required
+Make sure your phone and the PVE host are on the same network.
 :::
 
 ## Log in to Olares
