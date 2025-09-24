@@ -10,8 +10,6 @@ Currently, Olares on PVE has certain limitations. We recommend using it only for
 
 <!--@include: ./reusables.md{45,51}-->
 
-## Download Olares ISO image
-Download the official Olares ISO image at our website.
 
 ## System requirements
 Make sure your device meets the following requirements.
