@@ -81,7 +81,12 @@ If they appear, press **Enter** to ignore them.
 
 ## Verify installation
 
-After the VM restarts, it will boot into the system. You should see the following prompt:
+After the VM restarts, it will boot into the Ubuntu system. 
+1. Log in to the Ubuntu using the default credentials:
+    - Username: `olares`
+    - Password: `olares`
+ 
+
 
 ```yaml
 Ubuntu login:
