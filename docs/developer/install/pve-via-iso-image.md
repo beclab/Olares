@@ -94,7 +94,7 @@ After the VM restarts, it will boot into the Ubuntu system.
      `sudo olares-check`
      ```
 
-A successful installation will display results like:
+    The installation is successful if you see results like:
 
 ```
 ...
