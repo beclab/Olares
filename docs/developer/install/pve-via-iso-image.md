@@ -64,17 +64,12 @@ While the specific version is confirmed to work, the process may still work on o
 
     Type `yes` when prompted with `Continue? (yes/no):` to proceed.
 
-4. The installation will begin. You will see log messages and the graphics driver installation process. Some warnings may appear as the following example: 
-
+：：tip Note
+During installation, log messages appear on the screen. If the graphics driver is being installed, the installer displays a progress bar. Occasionally, warnings related to the graphics driver may appear, for example:
     ```bash
-    WARNING:
-    nvidia-installer was forced to guess the X Iibrary path 'usr/lib'and X module path
-    /usr/lib/xorg/modules'; these paths were not queryable from the system. If X fails to
-    find the NVIDIA X driver module, please install the `pkg-config` utility and the X.Org
-    SDK/development package for your distribution and reinstall the driver.
+    WARNING: nvidia-installer was forced to guess the X Iibrary path 'usr/lib'and X module path ...
     ```
-
-    These can be safely ignored. Press **Enter** to confirm OK when prompted.
+If they appear, press **Enter** to ignore them.
 
 5. Once the installation completes, you’ll see the message:
 
