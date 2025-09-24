@@ -96,11 +96,10 @@ After the VM restarts, it will boot into the Ubuntu system.
 
     The installation is successful if you see results like:
 
-```
-...
-check Olaresd:  success
-check Containerd:  success
-```
+    ```bash
+    ...
+    check Olaresd:  success
+    check Containerd:  success
 
 ## Activate Olares
 
