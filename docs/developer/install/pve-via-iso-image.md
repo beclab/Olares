@@ -66,7 +66,7 @@ While the specific version is confirmed to work, the process may still work on o
 
 4. The installation will begin. You will see log messages and the graphics driver installation process. Some warnings may appear as the following example: 
 
-    ```text
+    ```bash
     WARNING:
     nvidia-installer was forced to guess the X Iibrary path 'usr/lib'and X module path
     /usr/lib/xorg/modules'; these paths were not queryable from the system. If X fails to
