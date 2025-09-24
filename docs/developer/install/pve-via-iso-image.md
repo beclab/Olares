@@ -10,7 +10,6 @@ Currently, Olares on PVE has certain limitations. We recommend using it only for
 
 <!--@include: ./reusables.md{45,51}-->
 
-
 ## System requirements
 Make sure your device meets the following requirements.
 
@@ -18,6 +17,7 @@ Make sure your device meets the following requirements.
 - RAM: At least 8GB of available memory
 - Storage: At least 200GB of available SSD storage
 - Supported Systems: PVE 8.2.2
+
 ## Download Olares ISO image
 Download the official Olares ISO image.
 
@@ -64,13 +64,13 @@ While the specific version is confirmed to work, the process may still work on o
 
     Type `yes` when prompted with `Continue? (yes/no):` to proceed.
 
-:::tip Note
-During installation, log messages appear on the screen. If the graphics driver is being installed, the installer displays a progress bar. Occasionally, warnings related to the graphics driver may appear, for example:
-    ```bash
-    WARNING: nvidia-installer was forced to guess the X Iibrary path 'usr/lib'and X module path ...
-    ```
-If they appear, press **Enter** to ignore them.
-:::
+   :::tip Note
+   If the GPU passthrough is configured in PVE, the system will automatically install the graphics driver, and related warnings may appear, for example:
+   ```bash
+   WARNING: nvidia-installer was forced to guess the X Iibrary path 'usr/lib'and X module path ...
+   ```
+   If they appear, press **Enter** to ignore them.
+   :::
 
 4. Once the installation completes, you’ll see the message:
 
@@ -86,13 +86,10 @@ After the VM restarts, it will boot into the Ubuntu system.
 1. Log in to the Ubuntu using the default credentials:
     - Username: `olares`
     - Password: `olares`
- 
-
-
 
 2. Confirm that Olares has been installed successfully using the following command: 
      ```bash
-     `sudo olares-check`
+     sudo olares-check
      ```
 
     The installation is successful if you see results like:
@@ -101,6 +98,7 @@ After the VM restarts, it will boot into the Ubuntu system.
     ...
     check Olaresd:  success
     check Containerd:  success
+    ```
 
 ## Activate Olares
 
