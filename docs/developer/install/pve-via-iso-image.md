@@ -64,12 +64,13 @@ While the specific version is confirmed to work, the process may still work on o
 
     Type `yes` when prompted with `Continue? (yes/no):` to proceed.
 
-：：tip Note
+:::tip Note
 During installation, log messages appear on the screen. If the graphics driver is being installed, the installer displays a progress bar. Occasionally, warnings related to the graphics driver may appear, for example:
     ```bash
     WARNING: nvidia-installer was forced to guess the X Iibrary path 'usr/lib'and X module path ...
     ```
 If they appear, press **Enter** to ignore them.
+:::
 
 4. Once the installation completes, you’ll see the message:
 
