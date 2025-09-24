@@ -121,8 +121,8 @@ check Containerd:  success
 
 完成后，你即可通过个人 URL 和凭证访问 Olares。
 
-:::tip 无法发现设备？
-如果手机无法连接到 Olares 的现有网络，LarePass 将无法发现待激活设备。此时，可通过[蓝牙配网](manage-olares.md#蓝牙配网)功能，将 Olares 连接至手机所在 Wi-Fi 网络，再重复此激活流程。
+:::tip 注意
+此操作需要你的手机和 PVE 主机处于同一网络。
 :::
 
 ## 登录 Olares
