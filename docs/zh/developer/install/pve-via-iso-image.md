@@ -71,7 +71,7 @@ description: 在 PVE 虚拟化平台上使用 ISO 镜像安装配置 Olares 的�
 
 按**回车键**忽略警告即可。
 
-5. 安装完成后，你会看到以下信息：
+4. 安装完成后，你会看到以下信息：
 
     ```
     Installation completed successfully!
