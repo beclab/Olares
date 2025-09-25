@@ -1,0 +1,2370 @@
+# kubeblocks deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubeblocks
+  labels:
+    helm.sh/chart: "kubeblocks-1.0.0"
+    app.kubernetes.io/version: 1.0.0
+    app.kubernetes.io/component: "apps"
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/instance: kubeblocks
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "apps"
+      app.kubernetes.io/name: kubeblocks
+      app.kubernetes.io/instance: kubeblocks
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: "apps"
+        app.kubernetes.io/name: kubeblocks
+        app.kubernetes.io/instance: kubeblocks
+    spec:
+      serviceAccountName: kubeblocks
+      securityContext:
+        runAsNonRoot: true
+      initContainers: # only download tools image to local
+        - name: tools
+          image: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/true
+      containers:
+        - name: manager
+          args:
+            - "--health-probe-bind-address=:8081"
+            - "--metrics-bind-address=:8080"
+            - "--leader-elect"
+            - "--leader-elect-id=001c317f"
+            - "--zap-devel=false"
+            - "--zap-time-encoding=iso8601"
+            - "--zap-encoder=console"
+            - "--apps=true"
+            - "--workloads=true"
+            - "--operations=true"
+            - "--extensions=true"
+            - "--experimental=false"
+            - "--trace=false"
+            - "--user-agent=kubeblocks"
+          env:
+            - name: CM_NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: CM_AFFINITY
+              value: '{"nodeAffinity":{"preferredDuringSchedulingIgnoredDuringExecution":[{"preference":{"matchExpressions":[{"key":"kb-controller","operator":"In","values":["true"]}]},"weight":100}]}}'
+            - name: CM_TOLERATIONS
+              value: '[{"effect":"NoSchedule","key":"kb-controller","operator":"Equal","value":"true"}]'
+
+            - name: KUBEBLOCKS_IMAGE_PULL_POLICY
+              value: IfNotPresent
+            - name: KUBEBLOCKS_TOOLS_IMAGE
+              value: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+            - name: KUBEBLOCKS_SERVICEACCOUNT_NAME
+              value: kubeblocks
+            - name: VOLUMESNAPSHOT_API_BETA
+              value: "false"
+            - name: ENABLE_RBAC_MANAGER
+              value: "true"
+            - name: ADDON_JOB_TTL
+              value: 5m
+            - name: ADDON_JOB_IMAGE_PULL_POLICY
+              value: IfNotPresent
+            - name: KUBEBLOCKS_ADDON_SA_NAME
+              value: kubeblocks-addon-installer
+            - name: KUBEBLOCKS_ADDON_HELM_INSTALL_OPTIONS
+              value: "--atomic --cleanup-on-fail --wait --insecure-skip-tls-verify"
+            - name: KUBEBLOCKS_ADDON_CHARTS_IMAGE_PULL_POLICY
+              value: IfNotPresent
+            - name: DP_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: dataProtectionEncryptionKey
+                  name: kubeblocks-secret
+            - name: HOST_PORT_INCLUDE_RANGES
+              value: '1025-65536'
+            - name: HOST_PORT_EXCLUDE_RANGES
+              value: '6443,10250,10257,10259,2379-2380,30000-32767'
+            - name: HOST_PORT_CM_NAME
+              value: kubeblocks-host-ports
+            - name: COMPONENT_REPLICAS_ANNOTATION
+              value: "true"
+            - name: IN_PLACE_POD_VERTICAL_SCALING
+              value: "false"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          image: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: webhook-server
+              containerPort: 9443
+              protocol: TCP
+            - name: health
+              containerPort: 8081
+              protocol: TCP
+            - name: metrics
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - mountPath: /etc/kubeblocks
+              name: manager-config
+      dnsPolicy: ClusterFirst
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - preference:
+                matchExpressions:
+                  - key: kb-controller
+                    operator: In
+                    values:
+                      - "true"
+              weight: 100
+      tolerations:
+        - key: kb-controller
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: manager-config
+          configMap:
+            name: kubeblocks-manager-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubeblocks-manager-config
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+data:
+  config.yaml: |
+    # data plane tolerations
+    DATA_PLANE_TOLERATIONS: '[{"effect":"NoSchedule","key":"kb-data","operator":"Equal","value":"true"}]'
+
+    # data plane affinity
+    DATA_PLANE_AFFINITY: '{"nodeAffinity":{"preferredDuringSchedulingIgnoredDuringExecution":[{"preference":{"matchExpressions":[{"key":"kb-data","operator":"In","values":["true"]}]},"weight":100}]}}'
+
+    # the default storage class name.
+    DEFAULT_STORAGE_CLASS: ""
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubeblocks-host-ports
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+data: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubeblocks-i18n-resources
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+data:
+  en: |
+    v1/ConfigMap/Creation=configuration file %s/%s is created.
+    v1/Pod/Creation=Pod %s/%s is created.
+    v1/Pod/Update=Pod %s/%s is updated.
+  zh_CN: |
+    v1/ConfigMap/Creation=配置文件 %s/%s 创建成功。
+    v1/Pod/Creation=Pod %s/%s 创建成功。
+    v1/Pod/Update=Pod %s/%s 更新成功。
+---
+
+{{- if .Release.IsUpgrade }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kubeblocks-upgrade-hook-job
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      name: kubeblocks-upgrade
+      labels:
+        app.kubernetes.io/instance: kubeblocks
+        app.kubernetes.io/name: kubeblocks
+        app.kubernetes.io/version: 1.0.0
+        helm.sh/chart: kubeblocks-1.0.0
+    spec:
+      serviceAccountName: kubeblocks
+      securityContext:
+        runAsNonRoot: true
+      restartPolicy: Never
+      containers:
+        - name: pre-upgrade-job
+          image: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              kb_json=$(kubectl get deployments.apps -n {{ .Release.Namespace }} {{ .Release.Name }} -ojson )
+              version=$(echo $kb_json | jq '.metadata.labels["app.kubernetes.io/version"]' | tr -d '"')
+              echo "Current KubeBlocks Version: $version"
+              if echo "$version" | grep -q '^0\.'; then
+                 echo "ERROR: can not upgrade KubeBlocks from $version to {{ .Chart.AppVersion }}"
+                 exit 1
+              fi
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kb-controller
+                    operator: In
+                    values:
+                      - "true"
+      tolerations:
+        - key: kb-controller
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubeblocks
+  namespace: {{ .Release.Namespace }}
+  labels:
+    control-plane: controller-manager
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+spec:
+  ports:
+    - port: 9443
+      targetPort: webhook-server
+      protocol: TCP
+      name: webhook-server
+  selector:
+    app.kubernetes.io/component: "apps"
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/instance: kubeblocks
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubeblocks-secret
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+type: Opaque
+stringData:
+  dataProtectionEncryptionKey: "kubeblocks-dp-aes256"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubeblocks
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubeblocks-addon-installer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+---
+
+
+# permissions for end users to edit clusters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-cluster-editor-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - clusters
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - clusters/status
+    verbs:
+      - get
+      - patch
+      - update
+---
+# permissions for end users to edit clusterdefinitions.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-clusterdefinition-editor-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - clusterdefinitions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - clusterdefinitions/status
+    verbs:
+      - get
+      - patch
+      - update
+---
+# permissions for end users to edit configconstraints.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-configconstraint-editor-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - configconstraints
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - configconstraints/status
+    verbs:
+      - get
+      - patch
+      - update
+---
+# permissions for end users to edit sidecardefinitions.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-sidecardefinition-editor-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - sidecardefinitions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - sidecardefinitions/status
+    verbs:
+      - get
+      - patch
+      - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-metrics-reader
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - nonResourceURLs:
+      - "/metrics"
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-proxy-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
+    verbs:
+      - create
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeblocks-proxy
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubeblocks-proxy-role
+subjects:
+  - kind: ServiceAccount
+    name: kubeblocks
+    namespace: {{ .Release.Namespace }}
+---
+# permissions for end users to edit clusters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-cluster-pod-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        app.kubernetes.io/instance: kubeblocks
+        app.kubernetes.io/name: kubeblocks
+        app.kubernetes.io/required-by: pod
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-kbagent-pod-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/required-by: pod
+rules:
+  # this is needed to create role probe events
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - get
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        app.kubernetes.io/instance: kubeblocks
+        app.kubernetes.io/name: kubeblocks
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-manager-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets/status
+    verbs:
+      - get
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - clusterdefinitions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - clusterdefinitions/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - clusterdefinitions/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - clusters
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - clusters/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - clusters/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - componentdefinitions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - componentdefinitions/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - componentdefinitions/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - components
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - components/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - components/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - componentversions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - componentversions/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - componentversions/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - servicedescriptors
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - servicedescriptors/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - servicedescriptors/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - shardingdefinitions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - shardingdefinitions/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - shardingdefinitions/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - sidecardefinitions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - sidecardefinitions/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - sidecardefinitions/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - batch
+    resources:
+      - cronjobs
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - cronjobs/finalizers
+    verbs:
+      - patch
+      - update
+  - apiGroups:
+      - batch
+    resources:
+      - cronjobs/status
+    verbs:
+      - get
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - jobs/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - batch
+    resources:
+      - jobs/status
+    verbs:
+      - get
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmap
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmap/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumeclaims
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumeclaims/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumeclaims/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumes
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods/exec
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - pods/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - pods/log
+    verbs:
+      - get
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - pods/status
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - secrets/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts/status
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - services/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - services/status
+    verbs:
+      - get
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - actionsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - actionsets/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - actionsets/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backuppolicies
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backuppolicies/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backuppolicies/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backuppolicytemplates
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backuppolicytemplates/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backuppolicytemplates/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backuprepos
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backuprepos/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backuprepos/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backups
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backups/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backups/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backupschedules
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backupschedules/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backupschedules/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - restores
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - restores/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - restores/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - storageproviders
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - storageproviders/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - storageproviders/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - experimental.kubeblocks.io
+    resources:
+      - nodecountscalers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - experimental.kubeblocks.io
+    resources:
+      - nodecountscalers/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - experimental.kubeblocks.io
+    resources:
+      - nodecountscalers/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - extensions.kubeblocks.io
+    resources:
+      - addons
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - extensions.kubeblocks.io
+    resources:
+      - addons/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - extensions.kubeblocks.io
+    resources:
+      - addons/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - operations.kubeblocks.io
+    resources:
+      - opsdefinitions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - operations.kubeblocks.io
+    resources:
+      - opsdefinitions/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - operations.kubeblocks.io
+    resources:
+      - opsdefinitions/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - operations.kubeblocks.io
+    resources:
+      - opsrequests
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - operations.kubeblocks.io
+    resources:
+      - opsrequests/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - operations.kubeblocks.io
+    resources:
+      - opsrequests/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - componentparameters
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - componentparameters/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - componentparameters/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - paramconfigrenderers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - paramconfigrenderers/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - paramconfigrenderers/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - parameters
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - parameters/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - parameters/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - parametersdefinitions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - parametersdefinitions/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - parametersdefinitions/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - rolebindings
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - rolebindings/status
+    verbs:
+      - get
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - roles
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - roles/status
+    verbs:
+      - get
+  - apiGroups:
+      - snapshot.storage.k8s.io
+    resources:
+      - volumesnapshotclasses
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - snapshot.storage.k8s.io
+    resources:
+      - volumesnapshotclasses/finalizers
+    verbs:
+      - patch
+      - update
+  - apiGroups:
+      - snapshot.storage.k8s.io
+    resources:
+      - volumesnapshots
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - snapshot.storage.k8s.io
+    resources:
+      - volumesnapshots/finalizers
+    verbs:
+      - patch
+      - update
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - csidrivers
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - storageclasses
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - trace.kubeblocks.io
+    resources:
+      - reconciliationtraces
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - trace.kubeblocks.io
+    resources:
+      - reconciliationtraces/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - trace.kubeblocks.io
+    resources:
+      - reconciliationtraces/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - workloads.kubeblocks.io
+    resources:
+      - instancesets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - workloads.kubeblocks.io
+    resources:
+      - instancesets/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - workloads.kubeblocks.io
+    resources:
+      - instancesets/status
+    verbs:
+      - get
+      - patch
+      - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeblocks-rolebinding
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubeblocks
+subjects:
+  - kind: ServiceAccount
+    name: kubeblocks
+    namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeblocks-cluster-admin-rolebinding
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: kubeblocks-addon-installer
+    namespace: {{ .Release.Namespace }}
+---
+# permissions for end users to edit backups.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-backup-editor-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backups
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backups/status
+    verbs:
+      - get
+---
+# permissions for end users to edit backuppolicies.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-backuppolicy-editor-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backuppolicies
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backuppolicies/status
+    verbs:
+      - get
+---
+# permissions for end users to edit backuppolicytemplates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-backuppolicytemplate-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backuppolicytemplates
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - backuppolicytemplates/status
+    verbs:
+      - get
+      - patch
+      - update
+---
+# permissions for dataprotection workers to run "kubectl exec".
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-dataprotection-exec-worker-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - pods/exec
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeblocks-dataprotection-exec-worker
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubeblocks-dataprotection-exec-worker-role
+subjects:
+  - kind: ServiceAccount
+    name: kubeblocks-dataprotection-exec-worker
+    namespace: {{ .Release.Namespace }}
+---
+# permissions for end users to edit restores.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-restore-editor-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - restores
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - dataprotection.kubeblocks.io
+    resources:
+      - restores/status
+    verbs:
+      - get
+---
+# permissions for end users to edit nodecountscalers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+  name: kubeblocks-nodecountscaler-editor-role
+rules:
+  - apiGroups:
+      - experimental.kubeblocks.io
+    resources:
+      - nodecountscalers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - experimental.kubeblocks.io
+    resources:
+      - nodecountscalers/status
+    verbs:
+      - get
+---
+# permissions for end users to edit addons.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-editor-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - extensions.kubeblocks.io
+    resources:
+      - addons
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - extensions.kubeblocks.io
+    resources:
+      - addons/status
+    verbs:
+      - get
+---
+# permissions to do leader election.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kubeblocks-leader-election-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kubeblocks-leader-election-rolebinding
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kubeblocks-leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name: kubeblocks-controller-manager
+    namespace: {{ .Release.Namespace }}
+---
+# permissions for end users to edit opsdefinitions.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-opsdefinition-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - operations.kubeblocks.io
+    resources:
+      - opsdefinitions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - operations.kubeblocks.io
+    resources:
+      - opsdefinitions/status
+    verbs:
+      - get
+      - patch
+      - update
+---
+# permissions for end users to edit opsrequests.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-opsrequest-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - operations.kubeblocks.io
+    resources:
+      - opsrequests
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - operations.kubeblocks.io
+    resources:
+      - opsrequests/status
+    verbs:
+      - get
+      - patch
+      - update
+---
+# permissions for end users to edit componentparameters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-componentparameter-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - componentparameters
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - componentparameters/status
+    verbs:
+      - get
+      - patch
+      - update
+---
+# permissions for end users to edit paramconfigrenderers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-paramconfigrenderer-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - paramconfigrenderers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - paramconfigrenderers/status
+    verbs:
+      - get
+      - patch
+      - update
+---
+# permissions for end users to edit parameters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-parameter-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - parameters
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - parameters/status
+    verbs:
+      - get
+      - patch
+      - update
+
+---
+# permissions for end users to edit parametersdefinitions.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-parametersdefinition-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - parametersdefinitions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - parameters.kubeblocks.io
+    resources:
+      - parametersdefinitions/status
+    verbs:
+      - get
+      - patch
+      - update
+
+---
+
+# Additional role that is required for addons. Can be defined by user.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-rbac-manager-additional-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  # rabbitmq/patroni needs this
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+    verbs:
+      - get
+      - patch
+      - update
+      - create
+      - list
+      - watch
+      - delete
+# user defined rules
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-rbac-manager-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - rolebindings
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - roles
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - roles/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - rolebindings/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - rolebindings/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - clusterrolebindings
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - clusterrolebindings/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - clusterrolebindings/status
+    verbs:
+      - get
+      - patch
+      - update
+---
+# permissions for end users to edit paramconfigrenderers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-rbac-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - roles
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - roles/status
+    verbs:
+      - get
+      - patch
+      - update
+
+---
+# permissions for end users to edit shardingdefinitions.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeblocks-shardingdefinition-editor-role
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+rules:
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - shardingdefinitions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kubeblocks.io
+    resources:
+      - shardingdefinitions/status
+    verbs:
+      - get
+      - patch
+      - update
+
+---
+# permissions for end users to edit instancesets.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: kubeblocks-1.0.0
+  name: kubeblocks-instanceset-editor-role
+rules:
+  - apiGroups:
+      - workloads.kubeblocks.io
+    resources:
+      - instancesets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - workloads.kubeblocks.io
+    resources:
+      - instancesets/status
+    verbs:
+      - get
+      - patch
+      - update
+---
