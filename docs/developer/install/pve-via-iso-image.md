@@ -1,5 +1,5 @@
 ---
-Guide to installing Olares on Proxmox VE (PVE) using ISO image with system requirements, VM configuration, installation, and step-by-step activation instructions.
+description: Guide to installing Olares on Proxmox VE (PVE) using ISO image with system requirements, VM configuration, installation, and step-by-step activation instructions.
 ---
 # Install Olares on PVE with ISO image
 You can install Olares directly on Proxmox Virtual Environment (PVE) using an ISO image. This guide walks you through downloading the Olares ISO, configuring PVE environment, completing the installation, and getting your Olares up and running.
@@ -8,24 +8,28 @@ You can install Olares directly on Proxmox Virtual Environment (PVE) using an IS
 Currently, Olares on PVE has certain limitations. We recommend using it only for development or testing purposes.
 :::
 
-<!--@include: ./reusables.md{45,51}-->
+::: info Having trouble with installation?  
+If you encounter issues during the installation process, feel free to [submit a GitHub Issue](https://github.com/beclab/Olares/issues/new). Please include the following information when submitting:
+
+- The platform or environment you're using (e.g., Ubuntu, PVE, etc.).
+- The installation method (script installation or ISO image).
+- Detailed error information (including logs, error messages, or screenshots).  
+:::
 
 ## System requirements
 Make sure your device meets the following requirements.
 
 - CPU: At least 4 cores
 - RAM: At least 8GB of available memory
-- Storage: At least 200GB of available SSD storage
+- Storage: At least 200GB of available SSD storage. The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
 - Supported Systems: PVE 8.2.2
 
 ## Download Olares ISO image
-Download the official Olares ISO image.
+Click [here](https://dc3p1870nn3cj.cloudfront.net/olares-v1.12.1-amd64.iso) to download the official Olares ISO image.
 
 ## Configure VM in PVE
 
 To run Olares on PVE, make sure the VM is configured with the following settings. You can either apply them when **creating a new VM** or adjust an **existing VM** to match these requirements.
-
-### Required VM settings
 
 - OS:
   - `ISO image`: Select the official Olares ISO image you just downloaded.
@@ -37,14 +41,12 @@ To run Olares on PVE, make sure the VM is configured with the following settings
   - `Disk size (GiB)`: At least 200GB.
 - CPU:
   - `Cores`: At least 4 cores
+- Memory:
+  - `Memory (MiB)`: At least 8GB
 
 Below is a sample configuration for the VM hardware settings in PVE. 
 
 ![PVE Hardware](/images/developer/install/pve-hardware.png#bordered)
-
-::: warning SSD required
-The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
-:::
 
 :::info Version compatibility
 While the specific version is confirmed to work, the process may still work on other versions. Adjustments may be necessary depending on your environment. If you meet any issues with these platforms, feel free to raise an issue on [GitHub](https://github.com/beclab/Olares/issues/new).
@@ -52,24 +54,14 @@ While the specific version is confirmed to work, the process may still work on o
 
 ## Install on PVE
 
+Once the VM is set up, follow these steps to install the ISO on PVE.
+
 1. Start the virtual machine (VM).
 2. From the boot menu, select **Install Olares to Hard Disk**.
-3. In the Olares System Installer, available disks will be listed. Enter the drive letter of the first disk as your target disk.
-
-    - A warning will appear:
-
-    ```bash
-    WARNING: This will DESTROY all data on <your target disk>
-    ```
-
-    Type `yes` when prompted with `Continue? (yes/no):` to proceed.
+3. In the Olares System Installer, a list of available disks will appear (for example, `sda 200G QEMU HARDDISK`). Select the first disk by typing `/dev/` plus its name (for example, `/dev/sda`). When the on-screen warning appears, just type `yes` to continue.
 
    :::tip Note
-   If the GPU passthrough is configured in PVE, the system will automatically install the graphics driver, and related warnings may appear, for example:
-   ```bash
-   WARNING: nvidia-installer was forced to guess the X Iibrary path 'usr/lib'and X module path ...
-   ```
-   If they appear, press **Enter** to ignore them.
+   During installation, warnings related to the NVIDIA graphics driver may appear. If they do, press **Enter** to ignore them.
    :::
 
 4. Once the installation completes, you’ll see the message:
@@ -77,15 +69,16 @@ While the specific version is confirmed to work, the process may still work on o
     ```
     Installation completed successfully!
     ```
+    
+    Press **Enter**, then click **Reboot** in the Proxmox web interface to restart the VM.
 
-    Press **Enter** and then use **CTRL + ALT + DEL** to reboot the VM.
 
 ## Verify installation
 
 After the VM restarts, it will boot into the Ubuntu system. 
 1. Log in to the Ubuntu using the default credentials:
-    - Username: `olares`
-    - Password: `olares`
+     - Username: `olares`
+     - Password: `olares`
 
 2. Confirm that Olares has been installed successfully using the following command: 
      ```bash
