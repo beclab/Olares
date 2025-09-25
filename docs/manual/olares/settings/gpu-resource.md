@@ -11,8 +11,17 @@ Olares allows you to harness the full power of your GPUs to accelerate demanding
 
 This guide helps you understand and configure GPU allocation modes to maximize hardware performance.
 
-::: tip Nvidia GPU only
-Currently, only Nvidia GPU is supported.
+::: tip GPU support
+Olares supports **only Nvidia GPUs** of **Turing architecture or later** (Turing, Ampere, Ada Lovelace, and Blackwell). 
+
+- Quick check: GTX/RTX **16 series and newer** consumer cards are supported.
+- For other models, cross-check with the [compatible GPU table](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus).
+- Other models: Cross-check with the [compatible GPU table](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus).
+- Unknown model: Run `lspci | grep -i nvidia` to query the GPU architecture code and determine compatibility.  
+:::
+
+:::warning AI Performance
+Even if your GPU architecture is supported, **low VRAM capacity may cause AI applications to fail**. Ensure your GPU has enough memory for your workloads.
 :::
 
 ## Understand GPU allocation modes

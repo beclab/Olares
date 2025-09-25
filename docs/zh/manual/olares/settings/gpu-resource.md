@@ -13,8 +13,15 @@ Olares 为你提供了强大、灵活的显卡管理功能，让你充分释放 
 
 本文档帮你了解并配置显卡分配模式，发挥硬件最大效能。
 
-::: tip 注意
-当前仅支持英伟达显卡。
+:::tip 支持的显卡
+Olares 仅支持 **NVIDIA 显卡**，且要求架构为 **Turing 或更新**（Turing、Ampere、Ada Lovelace、Blackwell）。
+- 快速判断：消费级显卡支持 GTX/RTX **16 系列及以上**。
+- 其他型号：对照 [兼容显卡表](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus)。
+- 型号未知：可运行 `lspci | grep -i nvidia` 查询显卡架构代码。 
+:::
+
+:::warning 性能提醒
+即使显卡架构受支持，**显存过小也可能导致部分 AI 应用无法运行**。请确认显卡拥有足够的显存以满足需求。
 :::
 
 ## 显卡分配模式
