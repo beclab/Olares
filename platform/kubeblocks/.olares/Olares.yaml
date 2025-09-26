@@ -3,6 +3,6 @@ target: prebuilt
 output:
   containers:
     - 
-      name: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+      name: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.1
     -
-      name: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks:1.0.0
+      name: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks:1.0.1

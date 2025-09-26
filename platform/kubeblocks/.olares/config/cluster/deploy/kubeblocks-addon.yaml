@@ -10,8 +10,8 @@ spec:
     a reliable way to store data that needs to be accessed by a distributed system
     or cluster of machines.
   helm:
-    chartLocationURL: file:///minio-1.0.0.tgz
-    chartsImage: beclab/kubeblock-addon-charts:v1.0.0
+    chartLocationURL: file:///minio-1.0.1.tgz
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.1
     chartsPathInImage: /charts
     installValues: {}
     valuesMapping:
@@ -24,7 +24,7 @@ spec:
     autoInstall: true
   provider: community
   type: Helm
-  version: 1.0.0
+  version: 1.0.1
 ---
 apiVersion: extensions.kubeblocks.io/v1alpha1
 kind: Addon
@@ -35,7 +35,7 @@ metadata:
     addon.kubeblocks.io/model: document
     addon.kubeblocks.io/name: mongodb
     addon.kubeblocks.io/provider: community
-    addon.kubeblocks.io/version: 1.0.0
+    addon.kubeblocks.io/version: 1.0.1
   name: mongodb
 spec:
   defaultInstallValues:
@@ -43,8 +43,8 @@ spec:
   description: MongoDB is a document database designed for ease of application development
     and scaling.
   helm:
-    chartLocationURL: file:///mongodb-1.0.0.tgz
-    chartsImage: beclab/kubeblock-addon-charts:v1.0.0
+    chartLocationURL: file:///mongodb-1.0.1.tgz
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.1
   installable:
     autoInstall: true
   type: Helm
@@ -59,7 +59,7 @@ metadata:
     addon.kubeblocks.io/model: search-engine
     addon.kubeblocks.io/name: elasticsearch
     addon.kubeblocks.io/provider: community
-    addon.kubeblocks.io/version: 1.0.0
+    addon.kubeblocks.io/version: 1.0.1
   name: elasticsearch
 spec:
   defaultInstallValues:
@@ -67,8 +67,8 @@ spec:
   description: Elasticsearch is a distributed, RESTful search engine optimized for
     speed and relevance on production-scale workloads.
   helm:
-    chartLocationURL: file:///elasticsearch-1.0.0-alpha.0.tgz
-    chartsImage: beclab/kubeblock-addon-charts:v1.0.0
+    chartLocationURL: file:///elasticsearch-1.0.1.tgz
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.1
   installable:
     autoInstall: true
   type: Helm
@@ -82,15 +82,15 @@ metadata:
     addon.kubeblocks.io/model: message
     addon.kubeblocks.io/name: rabbitmq
     addon.kubeblocks.io/provider: community
-    addon.kubeblocks.io/version: 1.0.0
+    addon.kubeblocks.io/version: 1.0.1
   name: rabbitmq
 spec:
   defaultInstallValues:
     - enabled: true
   description: RabbitMQ is a reliable and mature messaging and streaming broker.
   helm:
-    chartLocationURL: file:///rabbitmq-1.0.0-alpha.0.tgz
-    chartsImage: beclab/kubeblock-addon-charts:v1.0.0
+    chartLocationURL: file:///rabbitmq-1.0.1.tgz
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.1
   installable:
     autoInstall: true
   type: Helm
