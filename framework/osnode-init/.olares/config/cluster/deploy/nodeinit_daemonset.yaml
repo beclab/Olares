@@ -41,11 +41,6 @@ spec:
               fieldPath: "status.hostIP"
         - name: S3_BUCKET
           value: {{ .Values.s3_bucket }}
-        - name: APP_RANDOM_KEY
-          valueFrom:
-            secretKeyRef:
-              name: app-key
-              key: random-key
         resources:
           requests:
             cpu: 20m

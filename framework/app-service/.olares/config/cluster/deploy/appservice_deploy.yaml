@@ -18,14 +18,6 @@
 {{ $nats_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
-{{- $app_service_app_key := (lookup "v1" "Secret" $namespace "app-key") -}}
-{{- $app_key_random := "" -}}
-{{ if $app_service_app_key -}}
-{{ $app_key_random = (index $app_service_app_key "data" "random-key") }}
-{{ else -}}
-{{ $app_key_random = randAlphaNum 32 | b64enc }}
-{{- end -}}
-
 ---
 apiVersion: v1
 kind: Secret
@@ -178,7 +170,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.4.7
+        image: beclab/app-service:0.4.8
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -232,11 +224,6 @@ spec:
           value: os.groups
         - name: NATS_SUBJECT_SYSTEM_APPLICATION
           value: os.application
-        - name: APP_RANDOM_KEY
-          valueFrom:
-            secretKeyRef:
-              name: app-key
-              key: random-key
         - name: HOSTIP
           valueFrom:
             fieldRef:
@@ -316,15 +303,6 @@ spec:
   selector:
     tier: app-service
   type: ClusterIP
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: app-key
-  namespace: {{ .Release.Namespace }}
-type: Opaque
-data:
-  random-key: {{ $app_key_random }}
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
