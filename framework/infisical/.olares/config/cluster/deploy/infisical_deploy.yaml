@@ -1,9 +1,9 @@
 
+{{- $namespace := "os-protected" -}}
 {{- $postgres_secret := (lookup "v1" "Secret" $namespace "infisical-postgres") -}}
 {{- $backend_secret := (lookup "v1" "Secret" $namespace "infisical-backend") -}}
 {{- $postgres_password := randAlphaNum 16 | b64enc -}}
 {{- $redis_password := randAlphaNum 16 | b64enc -}}
-{{- $namespace := "os-protected" -}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
