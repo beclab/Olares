@@ -1,9 +1,0 @@
-apiVersion: v1
-target: prebuilt
-output:
-  containers:
-    - 
-      name: beclab/percona-server-mongodb-operator:1.15.2
-
-
-      
