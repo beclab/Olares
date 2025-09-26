@@ -3,15 +3,16 @@ package upgrade
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"time"
+
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/gpu"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"os"
-	"path"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
@@ -108,6 +109,12 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 	// so put this at last to make the whole pipeline
 	// reentrant
 	return []task.Interface{
+		&task.LocalTask{
+			Name:   "UpgradeKubeblocks",
+			Action: new(terminus.InstallKubeblocks),
+			Retry:  3,
+			Delay:  10 * time.Second,
+		},
 		&task.LocalTask{
 			Name:   "UpgradeGPUPlugin",
 			Action: new(gpu.InstallPlugin),
