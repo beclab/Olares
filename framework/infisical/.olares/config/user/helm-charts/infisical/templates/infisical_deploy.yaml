@@ -3,10 +3,11 @@ apiVersion: v1
 kind: Service
 metadata:
   name: infisical-service
-  namespace: {{ .Release.Namespace }}
+  namespace: user-system-{{ .Values.bfl.username }}
 spec:
-  type: ExternalName
-  externalName: infisical-service.os-framework.svc.cluster.local
+  type: ClusterIP
+  selector:
+    app: systemserver
   ports:
     - name: http
       port: 8080

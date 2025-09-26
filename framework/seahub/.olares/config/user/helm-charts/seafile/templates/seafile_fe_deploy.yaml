@@ -1,239 +1,173 @@
 
 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: seafile
-  namespace: {{ .Release.Namespace }}
-spec:
-  type: ExternalName
-  externalName: seafile.os-framework.svc.cluster.local
-  ports:
-    - name: seahub
-      protocol: TCP
-      port: 8000
-      targetPort: 8000
-    - name: server
-      protocol: TCP
-      port: 8082
-      targetPort: 8082
-    - name: nginx-port
-      protocol: TCP
-      port: 80
-      targetPort: 80
-
-#---
-#apiVersion: v1
-#kind: Service
-#metadata:
-#  name: seafile-ui
-#  namespace: {{ .Release.Namespace }}
-#spec:
-#  ports:
-#  - port: 80
-#    protocol: TCP
-#    targetPort: 8080
-#  selector:
-#    app: seafile
-#  type: ClusterIP
-#
-#---
-#apiVersion: apps/v1
-#kind: Deployment
-#metadata:
-#  name: seafile
-#  namespace: {{ .Release.Namespace }}
-#  labels:
-#    app: seafile
-#    applications.app.bytetrade.io/author: bytetrade.io
-#
-#    applications.app.bytetrade.io/name: seafile
-#    applications.app.bytetrade.io/owner: '{{ .Values.bfl.username }}'
-#  annotations:
-#    applications.app.bytetrade.io/icon: https://file.bttcdn.com/appstore/seafiles/icon.png
-#    applications.app.bytetrade.io/title: Seafile
-#    applications.app.bytetrade.io/version: '0.0.1'
-#    applications.app.bytetrade.io/entrances: '[{"name":"seafile-ui", "host":"seafile-ui", "port":80,"title":"Seafile","invisible": true}]'
-#
-#spec:
-#  replicas: 1
-#  strategy:
-#    type: Recreate
-#  selector:
-#    matchLabels:
-#      app: seafile
-#  template:
-#    metadata:
-#      labels:
-#        app: seafile
-#    spec:
-#      containers:
-#      - name: seafile-proxy
-#        image: nginx:stable-alpine3.17-slim
-#        imagePullPolicy: IfNotPresent
-#        ports:
-#        - name: proxy
-#          containerPort: 8080
-#        volumeMounts:
-#        - name: nginx-config
-#          readOnly: true
-#          mountPath: /etc/nginx/nginx.conf
-#          subPath: nginx.conf
-#      volumes:
-#      - name: nginx-config
-#        configMap:
-#          name: seafile-nginx-configs
-#          items:
-#          - key: nginx.conf
-#            path: nginx.conf
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: seafile
+#   namespace: {{ .Release.Namespace }}
+# spec:
+#   type: ExternalName
+#   externalName: seafile.os-framework.svc.cluster.local
+#   ports:
+#     - name: seahub
+#       protocol: TCP
+#       port: 8000
+#       targetPort: 8000
+#     - name: server
+#       protocol: TCP
+#       port: 8082
+#       targetPort: 8082
+#     - name: nginx-port
+#       protocol: TCP
+#       port: 80
+#       targetPort: 80
 
 
+# ---
+# apiVersion: v1
+# data:
+#   nginx.conf: |
+#     # Configuration checksum:
 
----
-apiVersion: v1
-data:
-  nginx.conf: |
-    # Configuration checksum:
+#     pid /var/run/nginx.pid;
 
-    pid /var/run/nginx.pid;
+#     worker_processes 2;
 
-    worker_processes 2;
+#     worker_rlimit_nofile 65535;
 
-    worker_rlimit_nofile 65535;
+#     worker_shutdown_timeout 240s ;
 
-    worker_shutdown_timeout 240s ;
+#     events {
+#       multi_accept        on;
+#       worker_connections  16384;
+#       use                 epoll;
+#     }
 
-    events {
-      multi_accept        on;
-      worker_connections  16384;
-      use                 epoll;
-    }
+#     http {
+#       aio                 threads;
+#       aio_write           on;
 
-    http {
-      aio                 threads;
-      aio_write           on;
+#       tcp_nopush          on;
+#       tcp_nodelay         on;
 
-      tcp_nopush          on;
-      tcp_nodelay         on;
+#       log_subrequest      on;
 
-      log_subrequest      on;
+#       reset_timedout_connection on;
 
-      reset_timedout_connection on;
+#       keepalive_timeout  75s;
+#       keepalive_requests 100;
 
-      keepalive_timeout  75s;
-      keepalive_requests 100;
+#       client_body_temp_path           /tmp/client-body;
+#       fastcgi_temp_path               /tmp/fastcgi-temp;
+#       proxy_temp_path                 /tmp/proxy-temp;
+#       client_max_body_size            1g;
 
-      client_body_temp_path           /tmp/client-body;
-      fastcgi_temp_path               /tmp/fastcgi-temp;
-      proxy_temp_path                 /tmp/proxy-temp;
-      client_max_body_size            1g;
+#       client_header_buffer_size       1k;
+#       client_header_timeout           60s;
+#       large_client_header_buffers     4 8k;
+#       client_body_buffer_size         8k;
+#       client_body_timeout             60s;
 
-      client_header_buffer_size       1k;
-      client_header_timeout           60s;
-      large_client_header_buffers     4 8k;
-      client_body_buffer_size         8k;
-      client_body_timeout             60s;
+#       types_hash_max_size             2048;
+#       server_names_hash_max_size      4096;
+#       server_names_hash_bucket_size   1024;
+#       map_hash_bucket_size            64;
 
-      types_hash_max_size             2048;
-      server_names_hash_max_size      4096;
-      server_names_hash_bucket_size   1024;
-      map_hash_bucket_size            64;
+#       proxy_headers_hash_max_size     512;
+#       proxy_headers_hash_bucket_size  64;
 
-      proxy_headers_hash_max_size     512;
-      proxy_headers_hash_bucket_size  64;
+#       variables_hash_bucket_size      256;
+#       variables_hash_max_size         2048;
 
-      variables_hash_bucket_size      256;
-      variables_hash_max_size         2048;
+#       underscores_in_headers          off;
+#       ignore_invalid_headers          on;
 
-      underscores_in_headers          off;
-      ignore_invalid_headers          on;
+#       include /etc/nginx/mime.types;
+#       default_type text/html;
 
-      include /etc/nginx/mime.types;
-      default_type text/html;
+#       gzip on;
+#       gzip_comp_level 1;
+#       gzip_http_version 1.1;
+#       gzip_min_length 256;
+#       gzip_types application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/javascript text/plain text/x-component;
+#       gzip_proxied any;
+#       gzip_vary on;
 
-      gzip on;
-      gzip_comp_level 1;
-      gzip_http_version 1.1;
-      gzip_min_length 256;
-      gzip_types application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/javascript text/plain text/x-component;
-      gzip_proxied any;
-      gzip_vary on;
+#       # Custom headers for response
 
-      # Custom headers for response
+#       server_tokens off;
 
-      server_tokens off;
+#       server_name_in_redirect off;
+#       port_in_redirect        off;
 
-      server_name_in_redirect off;
-      port_in_redirect        off;
+#       # global log
+#       log_format main $remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" $request_length $request_time "$http_x_forwarded_for";
 
-      # global log
-      log_format main $remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" $request_length $request_time "$http_x_forwarded_for";
+#       access_log /var/log/nginx/access.log main;
+#       error_log /var/log/nginx/error.log error;
 
-      access_log /var/log/nginx/access.log main;
-      error_log /var/log/nginx/error.log error;
+#       proxy_ssl_session_reuse on;
 
-      proxy_ssl_session_reuse on;
+#       # Global filters
 
-      # Global filters
+#       # timeout
+#       resolver_timeout        30s;
+#       send_timeout            60s;
 
-      # timeout
-      resolver_timeout        30s;
-      send_timeout            60s;
+#       ## start server 80
+#       server {
 
-      ## start server 80
-      server {
+#         server_name _;
+#         listen 8080;
 
-        server_name _;
-        listen 8080;
+#         location / {
+#           add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+#           add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+#           proxy_hide_header Access-Control-Allow-Origin;
+#           add_header Access-Control-Allow-Origin $http_origin;
+#           add_header Access-Control-Allow-Credentials true;			
+#           proxy_connect_timeout                          30s;
+#           proxy_send_timeout                             60s;
+#           proxy_read_timeout                             300s;
+#           proxy_set_header Host                      $host;
+#           proxy_set_header X-Forwarded-Host          $http_host;
+#           proxy_set_header X-Real-IP                 $remote_addr;
+#           proxy_set_header X-Forwarded-For            $remote_addr;
+#           proxy_set_header X-Original-Forwarded-For  $http_x_forwarded_for;
 
-        location / {
-          add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
-          add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
-          proxy_hide_header Access-Control-Allow-Origin;
-          add_header Access-Control-Allow-Origin $http_origin;
-          add_header Access-Control-Allow-Credentials true;			
-          proxy_connect_timeout                          30s;
-          proxy_send_timeout                             60s;
-          proxy_read_timeout                             300s;
-          proxy_set_header Host                      $host;
-          proxy_set_header X-Forwarded-Host          $http_host;
-          proxy_set_header X-Real-IP                 $remote_addr;
-          proxy_set_header X-Forwarded-For            $remote_addr;
-          proxy_set_header X-Original-Forwarded-For  $http_x_forwarded_for;
+#           if ($request_method = 'OPTIONS') {
+#             return 204;
+#           }
 
-          if ($request_method = 'OPTIONS') {
-            return 204;
-          }
+#           proxy_pass http://seafile;
+#         }
 
-          proxy_pass http://seafile;
-        }
+#       }
 
-      }
+#       # default server, used for NGINX healthcheck and access to nginx stats
+#       server {
+#         listen 127.0.0.1:10246;
 
-      # default server, used for NGINX healthcheck and access to nginx stats
-      server {
-        listen 127.0.0.1:10246;
+#         keepalive_timeout 0;
+#         gzip off;
+#         access_log off;
 
-        keepalive_timeout 0;
-        gzip off;
-        access_log off;
+#         location /healthz {
+#           return 200;
+#         }
 
-        location /healthz {
-          return 200;
-        }
+#         location /nginx_status {
+#           stub_status on;
+#         }
 
-        location /nginx_status {
-          stub_status on;
-        }
-
-        location / {
-          return 404;
-        }
-      }
-    }
-kind: ConfigMap
-metadata:
-  name: seafile-nginx-configs
-  namespace: {{ .Release.Namespace }}
+#         location / {
+#           return 404;
+#         }
+#       }
+#     }
+# kind: ConfigMap
+# metadata:
+#   name: seafile-nginx-configs
+#   namespace: {{ .Release.Namespace }}
 
