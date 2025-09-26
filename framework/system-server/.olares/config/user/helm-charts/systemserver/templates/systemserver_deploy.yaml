@@ -369,7 +369,7 @@ data:
                   - endpoint:
                       address:
                         socket_address:
-                          address: infisical-service.os-framework.svc.cluster.local
+                          address: infisical-service.os-protected.svc.cluster.local
                           port_value: 8080
         - name: cluster_vault_proxy
           connect_timeout: 30s

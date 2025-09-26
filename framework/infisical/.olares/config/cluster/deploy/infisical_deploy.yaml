@@ -1,8 +1,9 @@
 
-{{- $postgres_secret := (lookup "v1" "Secret" .Release.Namespace "infisical-postgres") -}}
-{{- $backend_secret := (lookup "v1" "Secret" .Release.Namespace "infisical-backend") -}}
+{{- $postgres_secret := (lookup "v1" "Secret" $namespace "infisical-postgres") -}}
+{{- $backend_secret := (lookup "v1" "Secret" $namespace "infisical-backend") -}}
 {{- $postgres_password := randAlphaNum 16 | b64enc -}}
 {{- $redis_password := randAlphaNum 16 | b64enc -}}
+{{- $namespace := "os-protected" -}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -16,37 +17,37 @@ rules:
   - get
   - list
 metadata:
-  name: {{ .Release.Namespace }}:vault-role
+  name: {{ $namespace }}:vault-role
 
 ---
 kind: ServiceAccount
 apiVersion: v1
 metadata:
   name: infisical-sa
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $namespace }}
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ .Release.Namespace }}:vault-rb
+  name: {{ $namespace }}:vault-rb
 subjects:
   - kind: ServiceAccount
-    namespace: {{ .Release.Namespace }} 
+    namespace: {{ $namespace }} 
     name: infisical-sa
 roleRef:
   kind: ClusterRole
-  name: {{ .Release.Namespace }}:vault-role
+  name: {{ $namespace }}:vault-role
   apiGroup: rbac.authorization.k8s.io
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ .Release.Namespace }}:vault-ro-user-rb
+  name: {{ $namespace }}:vault-ro-user-rb
 subjects:
   - kind: ServiceAccount
-    namespace: {{ .Release.Namespace }} 
+    namespace: {{ $namespace }} 
     name: infisical-sa
 roleRef:
   kind: ClusterRole
@@ -58,7 +59,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: infisical-postgres
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $namespace }}
 type: Opaque
 
 {{ if $postgres_secret -}}
@@ -76,10 +77,10 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: infisical-postgres
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $namespace }}
 spec:
   app: infisical
-  appNamespace: {{ .Release.Namespace }}
+  appNamespace: {{ $namespace }}
   middleware: postgres
   postgreSQL:
     user: infisical_os_framework
@@ -96,10 +97,10 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
   name: infisical-redis
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $namespace }}
 spec:
   app: infisical
-  appNamespace: {{ .Release.Namespace }}
+  appNamespace: {{ $namespace }}
   middleware: redis
   redis:
     password:
@@ -114,7 +115,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: infisical-deployment
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $namespace }}
   labels:
     app: infisical
     applications.app.bytetrade.io/author: bytetrade.io
@@ -148,14 +149,14 @@ spec:
           - name: PGPORT
             value: "5432"
           - name: PGUSER
-            value: infisical_os_framework
+            value: infisical_os_protected
           - name: PGPASSWORD
             valueFrom:
               secretKeyRef:
                 name: infisical-postgres
                 key: postgres-passwords
           - name: PGDB
-            value: os_framework_infisical
+            value: os_protected_infisical
       - name: "migration-init"
         image: "beclab/infisical:0.1.1"
         imagePullPolicy: IfNotPresent
@@ -171,10 +172,10 @@ spec:
               key: postgres-passwords
         
         - name: POSTGRES_USER
-          value: infisical_os_framework
+          value: infisical_os_protected
 
         - name: POSTGRES_DB
-          value: os_framework_infisical
+          value: os_protected_infisical
 
         - name: DB_CONNECTION_URI
           value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-0.citus-headless.os-platform/$(POSTGRES_DB)?sslmode=disable"
@@ -201,12 +202,11 @@ spec:
               key: postgres-passwords
         
         - name: POSTGRES_USER
-          value: infisical_os_framework
+          value: infisical_os_protected
 
         - name: POSTGRES_DB
-          value: os_framework_infisical
+          value: os_protected_infisical
 
-        
         - name: DB_CONNECTION_URI
           value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-0.citus-headless.os-platform/$(POSTGRES_DB)?sslmode=disable"
 
@@ -240,9 +240,9 @@ spec:
         - name: INFISICAL_URL
           value: http://localhost:4000
         - name: PG_USER
-          value: infisical_os_framework
+          value: infisical_os_protected
         - name: PG_DB
-          value: os_framework_infisical
+          value: os_protected_infisical
         - name: PG_ADDR
           value: citus-0.citus-headless.os-platform
         - name: PASSWORD
@@ -265,7 +265,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: infisical-service
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $namespace }}
 spec:
   selector:
     app: infisical
@@ -288,7 +288,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: infisical-backend
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $namespace }}
 type: Opaque
 {{ if $backend_secret -}}
 data:
@@ -334,7 +334,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: infisical-frontend
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $namespace }}
 type: Opaque
 stringData:
   SITE_URL: "infisical.local"
@@ -344,7 +344,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: infisical-nginx-conf
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $namespace }}
 data:
   nginx.conf: |
     worker_processes 2;
@@ -393,19 +393,19 @@ apiVersion: apr.bytetrade.io/v1alpha1
 kind: SysEventRegistry
 metadata:
   name: infisical-user-create-cb
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $namespace }}
 spec:
   type: subscriber
   event: user.create
-  callback: http://infisical-service.{{ .Release.Namespace }}:8080/user/create
+  callback: http://infisical-service.{{ $namespace }}:8080/user/create
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: SysEventRegistry
 metadata:
   name: infisical-user-delete-cb
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $namespace }}
 spec:
   type: subscriber
   event: user.delete
-  callback: http://infisical-service.{{ .Release.Namespace }}:8080/user/delete
+  callback: http://infisical-service.{{ $namespace }}:8080/user/delete
