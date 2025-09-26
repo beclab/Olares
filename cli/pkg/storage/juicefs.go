@@ -9,7 +9,6 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	cc "github.com/beclab/Olares/cli/pkg/core/common"
-	corecommon "github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/manifest"
@@ -145,7 +144,7 @@ func (t *EnableJuiceFsService) Execute(runtime connector.Runtime) error {
 		if err != nil {
 			return errors.Wrap(errors.WithStack(err), "render juicefs service template failed")
 		}
-		if err := util.WriteFile(JuiceFsServiceFile, []byte(juiceFsServiceStr), corecommon.FileMode0644); err != nil {
+		if err := util.WriteFile(JuiceFsServiceFile, []byte(juiceFsServiceStr), cc.FileMode0644); err != nil {
 			return errors.Wrap(errors.WithStack(err), fmt.Sprintf("write juicefs service %s failed", JuiceFsServiceFile))
 		}
 	}
@@ -278,5 +277,5 @@ func GetRootFSType() string {
 }
 
 func init() {
-	common.TerminusGlobalEnvs["OLARES_FS_TYPE"] = GetRootFSType()
+	common.SetTerminusGlobalEnv("OLARES_FS_TYPE", GetRootFSType(), true)
 }
