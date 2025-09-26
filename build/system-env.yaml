@@ -1,0 +1,89 @@
+apiVersion: v1
+systemEnvs:
+  # the legacy DID_GATE_URL
+  - envName: OLARES_SYSTEM_DID_SERVICE
+    default: "https://did-gate-v3.bttcdn.com/"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # the legacy OLARES_SYSTEM_SPACE_URL
+  - envName: OLARES_SYSTEM_CLOUD_SERVICE
+    default: "https://cloud-api.bttcdn.com/"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # the legacy FIREBASE_PUSH_URL
+  - envName: OLARES_SYSTEM_PUSH_SERVICE
+    default: "https://firebase-push-test.bttcdn.com/v1/api/push"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # the legacy FRP_LIST_URL
+  - envName: OLARES_SYSTEM_FRP_INDEX_SERVICE
+    default: "https://terminus-frp.snowinning.com"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # the legacy TAILSCALE_CONTROLPLANE_URL
+  - envName: OLARES_SYSTEM_VPN_CONTROL_SERVICE
+    default: "https://controlplane.snowinning.com"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # the legacy MARKET_PROVIDER
+  - envName: OLARES_SYSTEM_MARKET_SERVICE
+    default: "https://appstore-server-prod.bttcdn.com"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # the legacy TERMINUS_CERT_SERVICE_API
+  - envName: OLARES_SYSTEM_CERT_SERVICE
+    default: "https://terminus-cert.snowinning.com"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # the legacy TERMINUS_DNS_SERVICE_API
+  - envName: OLARES_SYSTEM_DNS_SERVICE
+    default: "https://terminus-dnsop.snowinning.com"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # the legacy DOWNLOAD_CDN_URL
+  - envName: OLARES_SYSTEM_CDN_SERVICE
+    default: "https://dc3p1870nn3cj.cloudfront.net"
+    type: url
+    editable: true
+    required: true
+    description: ""
+  # the legacy OLARES_ROOT_DIR
+  - envName: OLARES_SYSTEM_ROOT_PATH
+    default: /olares
+    editable: false
+    required: true
+    description: ""
+  # the legacy OLARES_FS_TYPE
+  - envName: OLARES_SYSTEM_ROOTFS_TYPE
+    default: fs
+    editable: false
+    required: true
+    description: ""
+  # the legacy CUDA_VERSION
+  - envName: OLARES_SYSTEM_CUDA_VERSION
+    editable: false
+    required: true
+    description: ""
+  # the legacy COREDNS_SVC
+  - envName: OLARES_SYSTEM_CLUSTER_DNS_SERVICE
+    default: "10.233.0.3"
+    editable: false
+    type: ip
+    required: true
+    description: ""
