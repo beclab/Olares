@@ -83,7 +83,7 @@ spec:
   appNamespace: {{ $namespace }}
   middleware: postgres
   postgreSQL:
-    user: infisical_os_framework
+    user: infisical_os_protected
     password: 
       valueFrom:
         secretKeyRef:
