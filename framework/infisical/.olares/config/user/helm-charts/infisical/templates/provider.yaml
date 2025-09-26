@@ -35,7 +35,7 @@ metadata:
   name: {{ .Values.bfl.username }}:secret-settings-provider-svc
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/secret
-    provider-service-ref: infisical-service.{{ .Release.Namespace }}:8080
+    provider-service-ref: infisical-service.os-framework:8080
 rules:
 - nonResourceURLs: 
   - /RetrieveSecret?workspace=settings
@@ -53,7 +53,7 @@ metadata:
   name: {{ .Values.bfl.username }}:secret-dashboard-provider-svc
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/secret
-    provider-service-ref: infisical-service.{{ .Release.Namespace }}:8080
+    provider-service-ref: infisical-service.os-framework:8080
 rules:
 - nonResourceURLs: 
   - /RetrieveSecret?workspace=dashboard
