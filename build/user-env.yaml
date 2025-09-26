@@ -1,0 +1,107 @@
+apiVersion: v1
+userEnvs:
+  - envName: OLARES_USER_EMAIL
+    type: string
+    editable: true
+  - envName: OLARES_USER_USERNAME
+    type: string
+    editable: true
+  - envName: OLARES_USER_PASSWORD
+    type: password
+    editable: true
+  - envName: OLARES_USER_SMTP_ENABLED
+    type: bool
+    editable: true
+  - envName: OLARES_USER_SMTP_SERVER
+    type: url
+    editable: true
+  - envName: OLARES_USER_SMTP_PORT
+    type: number
+    editable: true
+  - envName: OLARES_USER_SMTP_USERNAME
+    type: string
+    editable: true
+  - envName: OLARES_USER_SMTP_PASSWORD
+    type: password
+    editable: true
+  - envName: OLARES_USER_SMTP_FROM
+    type: string
+    editable: true
+  - envName: OLARES_USER_SMTP_DOMAIN
+    type: string
+    editable: true
+  - envName: OLARES_USER_SMTP_DELIVERY_METHOD
+    type: string
+    editable: true
+  - envName: OLARES_USER_SMTP_AUTH_METHOD
+    type: string
+    editable: true
+  - envName: OLARES_USER_SMTP_CA_FILE
+    type: path
+    editable: true
+  - envName: OLARES_USER_SMTP_OPENSSL_VERIFY_MODE
+    type: string
+    editable: true
+  - envName: OLARES_USER_SMTP_SECURE
+    type: string
+    editable: true
+  - envName: OLARES_USER_SMTP_USE_CUSTOM_CONFIGS
+    type: bool
+    editable: true
+  - envName: OLARES_USER_OPENAI_APIKEY
+    type: password
+    editable: true
+  - envName: OLARES_USER_OPENAI_SERVICE
+    type: url
+    editable: true
+  - envName: OLARES_USER_HUGGINGFACE_SERVICE
+    type: url
+    editable: true
+  - envName: OLARES_USER_GROQ_APIKEY
+    type: password
+    editable: true
+  - envName: OLARES_USER_ANTHROPIC_APIKEY
+    type: password
+    editable: true
+  - envName: OLARES_USER_GEMINI_APIKEY
+    type: password
+    editable: true
+  - envName: OLARES_APP_MIDJOURNEY_SERVER
+    type: url
+    editable: true
+  - envName: OLARES_APP_MIDJOURNEY_SECRET
+    type: password
+    editable: true
+  - envName: OLARES_APP_LUMA_SERVER
+    type: url
+    editable: true
+  - envName: OLARES_APP_LUMA_KEY
+    type: password
+    editable: true
+  - envName: OLARES_APP_SUNO_SERVER
+    type: url
+    editable: true
+  - envName: OLARES_APP_SUNO_KEY
+    type: password
+    editable: true
+  - envName: OLARES_USER_OSS_BUCKET
+    type: string
+    editable: true
+  - envName: OLARES_USER_OSS_ENDPOINT
+    type: url
+    editable: true
+  - envName: OLARES_USER_OSS_PATH
+    type: path
+    editable: true
+  - envName: OLARES_USER_OSS_REGION
+    type: string
+    editable: true
+  - envName: OLARES_USER_OSS_PROVIDER
+    type: string
+    editable: true
+  - envName: OLARES_USER_PYPI_SERVICE
+    type: url
+    editable: true
+  - envName: OLARES_USER_GITHUB_SERVICE
+    type: url
+    editable: true

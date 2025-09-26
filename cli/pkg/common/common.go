@@ -318,6 +318,9 @@ const (
 
 	ENV_CONTAINER      = "container"
 	ENV_CONTAINER_MODE = "CONTAINER_MODE" // running in docker container
+
+	OLARES_SYSTEM_ENV_FILENAME = "system-env.yaml"
+	OLARES_USER_ENV_FILENAME   = "user-env.yaml"
 )
 
 // TerminusGlobalEnvs holds a group of general environment variables
@@ -337,7 +340,47 @@ var TerminusGlobalEnvs = map[string]interface{}{
 	// the default value used by kubeadm
 	"COREDNS_SVC":        "10.96.0.10",
 	ENV_DOWNLOAD_CDN_URL: cc.DownloadUrl,
-	ENV_MARKET_PROVIDER:  "appstore-server-prod.bttcdn.com",
+	ENV_MARKET_PROVIDER:  "https://appstore-server-prod.bttcdn.com",
+}
+
+// LegacyToNewSystemEnv maps legacy env keys to new SystemEnv EnvName
+var LegacyToNewSystemEnv = map[string]string{
+	"DID_GATE_URL":               "OLARES_SYSTEM_DID_SERVICE",
+	"OLARES_SPACE_URL":           "OLARES_SYSTEM_CLOUD_SERVICE",
+	"FIREBASE_PUSH_URL":          "OLARES_SYSTEM_PUSH_SERVICE",
+	"FRP_LIST_URL":               "OLARES_SYSTEM_FRP_INDEX_SERVICE",
+	"TAILSCALE_CONTROLPLANE_URL": "OLARES_SYSTEM_VPN_CONTROL_SERVICE",
+	"MARKET_PROVIDER":            "OLARES_SYSTEM_MARKET_SERVICE",
+	"TERMINUS_CERT_SERVICE_API":  "OLARES_SYSTEM_CERT_SERVICE",
+	"TERMINUS_DNS_SERVICE_API":   "OLARES_SYSTEM_DNS_SERVICE",
+	"DOWNLOAD_CDN_URL":           "OLARES_SYSTEM_CDN_SERVICE",
+	"OLARES_ROOT_DIR":            "OLARES_SYSTEM_ROOT_PATH",
+	"COREDNS_SVC":                "OLARES_SYSTEM_CLUSTER_DNS_SERVICE",
+	"CUDA_VERSION":               "OLARES_SYSTEM_CUDA_VERSION",
+	"OLARES_FS_TYPE":             "OLARES_SYSTEM_ROOTFS_TYPE",
+}
+
+// SetTerminusGlobalEnv updates TerminusGlobalEnvs and sets the corresponding
+// new SystemEnv EnvName in the process environment
+// if force is true, always set the process env new name to value
+// if force is false, set only when the process env new name is not set or empty
+func SetTerminusGlobalEnv(legacyKey string, value string, force bool) {
+	if value != "" {
+		// for now, just set the legacy envs only
+		// as some envs' formats are not consistent between legacy and new
+		// app-service will handle the specific migration
+		// TODO: remove this after all other components are also migrated
+		// if newName, ok := LegacyToNewSystemEnv[legacyKey]; ok && newName != "" {
+		// 	if force {
+		// 		_ = os.Setenv(newName, value)
+		// 	} else {
+		// 		if v, ok := os.LookupEnv(newName); !ok || v == "" {
+		// 			_ = os.Setenv(newName, value)
+		// 		}
+		// 	}
+		// }
+		TerminusGlobalEnvs[legacyKey] = value
+	}
 }
 
 const (
@@ -346,9 +389,9 @@ const (
 )
 
 func init() {
-	for envKey, _ := range TerminusGlobalEnvs {
+	for envKey := range TerminusGlobalEnvs {
 		if val := os.Getenv(envKey); val != "" {
-			TerminusGlobalEnvs[envKey] = val
+			SetTerminusGlobalEnv(envKey, val, false)
 		}
 	}
 }

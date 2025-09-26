@@ -3,15 +3,16 @@ package upgrade
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"time"
+
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/gpu"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"os"
-	"path"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
@@ -116,6 +117,18 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 			Name:   "UpgradeSystemComponents",
 			Action: new(upgradeSystemComponents),
 			Retry:  10,
+			Delay:  15 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "UpgradeSystemEnvs",
+			Action: new(terminus.ApplySystemEnv),
+			Retry:  5,
+			Delay:  15 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "UpgradeUserEnvs",
+			Action: new(terminus.CreateUserEnvConfigMap),
+			Retry:  5,
 			Delay:  15 * time.Second,
 		},
 	}
@@ -313,32 +326,8 @@ type upgradeSystemComponents struct {
 
 func (u *upgradeSystemComponents) Execute(runtime connector.Runtime) error {
 	config, err := ctrl.GetConfig()
-	if err != nil {
-		return fmt.Errorf("failed to get rest config: %s", err)
-	}
-	actionConfig, settings, err := utils.InitConfig(config, common.NamespaceOsPlatform)
-	if err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-	defer cancel()
-	platformChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-platform")
-	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSPlatform, platformChartPath, "", common.NamespaceOsPlatform, nil, true); err != nil {
-		return err
-	}
 
-	actionConfig, settings, err = utils.InitConfig(config, common.NamespaceOsFramework)
-	if err != nil {
-		return err
-	}
-	ctx, cancel = context.WithTimeout(context.Background(), 3*time.Minute)
-	defer cancel()
-	frameworkChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-framework")
-	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSFramework, frameworkChartPath, "", common.NamespaceOsFramework, nil, true); err != nil {
-		return err
-	}
-
-	actionConfig, settings, err = utils.InitConfig(config, common.NamespaceDefault)
+	actionConfig, settings, err := utils.InitConfig(config, common.NamespaceDefault)
 	if err != nil {
 		return err
 	}
@@ -349,6 +338,28 @@ func (u *upgradeSystemComponents) Execute(runtime connector.Runtime) error {
 	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameSettings, settingsChartPath, "", common.NamespaceDefault, nil, true); err != nil {
 		return err
 	}
+	actionConfig, settings, err = utils.InitConfig(config, common.NamespaceOsPlatform)
+	if err != nil {
+		return err
+	}
+	ctx, cancelPlatform := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancelPlatform()
+	platformChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-platform")
+	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSPlatform, platformChartPath, "", common.NamespaceOsPlatform, nil, true); err != nil {
+		return err
+	}
+
+	actionConfig, settings, err = utils.InitConfig(config, common.NamespaceOsFramework)
+	if err != nil {
+		return err
+	}
+	ctx, cancelFramework := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancelFramework()
+	frameworkChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-framework")
+	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSFramework, frameworkChartPath, "", common.NamespaceOsFramework, nil, true); err != nil {
+		return err
+	}
+
 	return nil
 }
 
