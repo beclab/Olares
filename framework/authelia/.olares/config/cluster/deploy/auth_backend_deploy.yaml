@@ -429,18 +429,13 @@ spec:
           privileged: true
       containers:      
       - name: authelia
-        image: beclab/auth:0.2.32
+        image: beclab/auth:0.2.33
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9091
         env:
         - name: TZ
           value: UTC
-        - name: APP_RANDOM_KEY
-          valueFrom:
-            secretKeyRef:
-              name: app-key
-              key: random-key
         - name: NATS_HOST
           value: nats.os-platform
         - name: NATS_PORT

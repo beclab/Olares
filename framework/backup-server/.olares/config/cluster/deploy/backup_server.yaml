@@ -99,11 +99,6 @@ spec:
           value: {{ default "false" .Values.backup.is_cloud_version | quote }}
         - name: ENABLE_MIDDLEWARE_BACKUP
           value: "true"
-        - name: APP_RANDOM_KEY
-          valueFrom:
-            secretKeyRef:
-              name: app-key
-              key: random-key
         - name: NATS_HOST
           value: nats.os-platform
         - name: NATS_PORT
@@ -153,11 +148,6 @@ spec:
         - name: {{ $key }}
           value: {{ $val | quote }}
         {{- end }}
-        - name: APP_RANDOM_KEY
-          valueFrom:
-            secretKeyRef:
-              name: app-key
-              key: random-key
         - name: NATS_HOST
           value: nats.os-platform
         - name: NATS_PORT
