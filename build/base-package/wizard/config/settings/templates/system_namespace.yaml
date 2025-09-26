@@ -29,4 +29,15 @@ metadata:
     kubesphere.io/workspace: system-workspace
   name: os-framework
 
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kubesphere.io/creator: '{{ .Values.user.name }}'
+  labels:
+    kubesphere.io/workspace: system-workspace
+  name: os-protected
+
+
 
