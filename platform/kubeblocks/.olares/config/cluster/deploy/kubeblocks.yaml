@@ -4,8 +4,8 @@ kind: Deployment
 metadata:
   name: kubeblocks
   labels:
-    helm.sh/chart: "kubeblocks-1.0.0"
-    app.kubernetes.io/version: 1.0.0
+    helm.sh/chart: "kubeblocks-1.0.1"
+    app.kubernetes.io/version: 1.0.1
     app.kubernetes.io/component: "apps"
     app.kubernetes.io/name: kubeblocks
     app.kubernetes.io/instance: kubeblocks
@@ -28,7 +28,7 @@ spec:
         runAsNonRoot: true
       initContainers: # only download tools image to local
         - name: tools
-          image: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+          image: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.1
           imagePullPolicy: IfNotPresent
           command:
             - /bin/true
@@ -60,7 +60,7 @@ spec:
             - name: KUBEBLOCKS_IMAGE_PULL_POLICY
               value: IfNotPresent
             - name: KUBEBLOCKS_TOOLS_IMAGE
-              value: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+              value: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.1
             - name: KUBEBLOCKS_SERVICEACCOUNT_NAME
               value: kubeblocks
             - name: VOLUMESNAPSHOT_API_BETA
@@ -97,7 +97,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-          image: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks:1.0.0
+          image: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks:1.0.1
           imagePullPolicy: IfNotPresent
           ports:
             - name: webhook-server
@@ -153,8 +153,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 data:
   config.yaml: |
     # data plane tolerations
@@ -175,8 +175,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 data: {}
 ---
 apiVersion: v1
@@ -186,8 +186,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 data:
   en: |
     v1/ConfigMap/Creation=configuration file %s/%s is created.
@@ -207,8 +207,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
   annotations:
     "helm.sh/hook": pre-upgrade
     "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
@@ -221,8 +221,8 @@ spec:
       labels:
         app.kubernetes.io/instance: kubeblocks
         app.kubernetes.io/name: kubeblocks
-        app.kubernetes.io/version: 1.0.0
-        helm.sh/chart: kubeblocks-1.0.0
+        app.kubernetes.io/version: 1.0.1
+        helm.sh/chart: kubeblocks-1.0.1
     spec:
       serviceAccountName: kubeblocks
       securityContext:
@@ -230,7 +230,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: pre-upgrade-job
-          image: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+          image: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.1
           imagePullPolicy: IfNotPresent
           command:
             - sh
@@ -270,8 +270,8 @@ metadata:
     control-plane: controller-manager
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 spec:
   ports:
     - port: 9443
@@ -291,8 +291,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 type: Opaque
 stringData:
   dataProtectionEncryptionKey: "kubeblocks-dp-aes256"
@@ -305,8 +305,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 
 ---
 apiVersion: v1
@@ -317,8 +317,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 ---
 
 
@@ -330,8 +330,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - apps.kubeblocks.io
@@ -362,8 +362,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - apps.kubeblocks.io
@@ -394,8 +394,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - apps.kubeblocks.io
@@ -426,8 +426,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - apps.kubeblocks.io
@@ -458,8 +458,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - nonResourceURLs:
       - "/metrics"
@@ -473,8 +473,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - authentication.k8s.io
@@ -496,8 +496,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -515,8 +515,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
@@ -531,8 +531,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
     app.kubernetes.io/required-by: pod
 rules:
   # this is needed to create role probe events
@@ -552,8 +552,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
@@ -567,8 +567,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - ""
@@ -1629,8 +1629,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -1648,8 +1648,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -1667,8 +1667,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - dataprotection.kubeblocks.io
@@ -1697,8 +1697,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - dataprotection.kubeblocks.io
@@ -1727,8 +1727,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - dataprotection.kubeblocks.io
@@ -1759,8 +1759,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - ""
@@ -1782,8 +1782,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -1801,8 +1801,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - dataprotection.kubeblocks.io
@@ -1830,8 +1830,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
   name: kubeblocks-nodecountscaler-editor-role
 rules:
   - apiGroups:
@@ -1861,8 +1861,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - extensions.kubeblocks.io
@@ -1891,8 +1891,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - ""
@@ -1933,8 +1933,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -1952,8 +1952,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - operations.kubeblocks.io
@@ -1984,8 +1984,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - operations.kubeblocks.io
@@ -2016,8 +2016,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - parameters.kubeblocks.io
@@ -2048,8 +2048,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - parameters.kubeblocks.io
@@ -2080,8 +2080,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - parameters.kubeblocks.io
@@ -2113,8 +2113,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - parameters.kubeblocks.io
@@ -2147,8 +2147,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   # rabbitmq/patroni needs this
   - apiGroups:
@@ -2173,8 +2173,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - ""
@@ -2279,8 +2279,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - rbac.authorization.k8s.io
@@ -2311,8 +2311,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
 rules:
   - apiGroups:
       - apps.kubeblocks.io
@@ -2343,8 +2343,8 @@ metadata:
   labels:
     app.kubernetes.io/instance: kubeblocks
     app.kubernetes.io/name: kubeblocks
-    app.kubernetes.io/version: 1.0.0
-    helm.sh/chart: kubeblocks-1.0.0
+    app.kubernetes.io/version: 1.0.1
+    helm.sh/chart: kubeblocks-1.0.1
   name: kubeblocks-instanceset-editor-role
 rules:
   - apiGroups:
