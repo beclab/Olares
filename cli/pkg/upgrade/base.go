@@ -113,6 +113,10 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 			Action: new(gpu.InstallPlugin),
 		},
 		&task.LocalTask{
+			Name:   "UpgradeKubeblocksCRD",
+			Action: new(upgradeKubeblocksComponents),
+		},
+		&task.LocalTask{
 			Name:   "UpgradeSystemComponents",
 			Action: new(upgradeSystemComponents),
 			Retry:  10,
