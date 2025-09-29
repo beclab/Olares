@@ -110,12 +110,6 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 	// reentrant
 	return []task.Interface{
 		&task.LocalTask{
-			Name:   "UpgradeKubeblocks",
-			Action: new(terminus.InstallKubeblocks),
-			Retry:  3,
-			Delay:  10 * time.Second,
-		},
-		&task.LocalTask{
 			Name:   "UpgradeGPUPlugin",
 			Action: new(gpu.InstallPlugin),
 		},

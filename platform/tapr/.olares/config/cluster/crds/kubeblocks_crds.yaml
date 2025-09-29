@@ -1,0 +1,1828 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: clusterdefinitions.apps.kubeblocks.io
+spec:
+  group: apps.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: ClusterDefinition
+    listKind: ClusterDefinitionList
+    plural: clusterdefinitions
+    shortNames:
+    - cd
+    singular: clusterdefinition
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.topologies
+      name: Topologies
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .status.topologies
+      name: Topologies
+      type: string
+    - jsonPath: .status.serviceRefs
+      name: ServiceRefs
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: clusters.apps.kubeblocks.io
+spec:
+  group: apps.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    - all
+    kind: Cluster
+    listKind: ClusterList
+    plural: clusters
+    singular: cluster
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.clusterDef
+      name: CLUSTER-DEFINITION
+      type: string
+    - jsonPath: .spec.terminationPolicy
+      name: TERMINATION-POLICY
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .spec.clusterDefinitionRef
+      name: CLUSTER-DEFINITION
+      type: string
+    - jsonPath: .spec.clusterVersionRef
+      name: VERSION
+      type: string
+    - jsonPath: .spec.terminationPolicy
+      name: TERMINATION-POLICY
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: componentdefinitions.apps.kubeblocks.io
+spec:
+  group: apps.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: ComponentDefinition
+    listKind: ComponentDefinitionList
+    plural: componentdefinitions
+    shortNames:
+    - cmpd
+    singular: componentdefinition
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.serviceKind
+      name: SERVICE
+      type: string
+    - jsonPath: .spec.serviceVersion
+      name: SERVICE-VERSION
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .spec.serviceKind
+      name: SERVICE
+      type: string
+    - jsonPath: .spec.serviceVersion
+      name: SERVICE-VERSION
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: components.apps.kubeblocks.io
+spec:
+  group: apps.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: Component
+    listKind: ComponentList
+    plural: components
+    shortNames:
+    - cmp
+    singular: component
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.compDef
+      name: DEFINITION
+      type: string
+    - jsonPath: .spec.serviceVersion
+      name: SERVICE-VERSION
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .spec.compDef
+      name: DEFINITION
+      type: string
+    - jsonPath: .spec.serviceVersion
+      name: SERVICE-VERSION
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: componentversions.apps.kubeblocks.io
+spec:
+  group: apps.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: ComponentVersion
+    listKind: ComponentVersionList
+    plural: componentversions
+    shortNames:
+    - cmpv
+    singular: componentversion
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.serviceVersions
+      name: Versions
+      type: string
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .status.serviceVersions
+      name: Versions
+      type: string
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: configconstraints.apps.kubeblocks.io
+spec:
+  group: apps.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: ConfigConstraint
+    listKind: ConfigConstraintList
+    plural: configconstraints
+    shortNames:
+    - cc
+    singular: configconstraint
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: PHASE
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: PHASE
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: configurations.apps.kubeblocks.io
+spec:
+  group: apps.kubeblocks.io
+  names:
+    kind: Configuration
+    listKind: ConfigurationList
+    plural: configurations
+    singular: configuration
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: servicedescriptors.apps.kubeblocks.io
+spec:
+  group: apps.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: ServiceDescriptor
+    listKind: ServiceDescriptorList
+    plural: servicedescriptors
+    shortNames:
+    - sd
+    singular: servicedescriptor
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.serviceKind
+      name: SERVICE_KIND
+      type: string
+    - jsonPath: .spec.serviceVersion
+      name: SERVICE_VERSION
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .spec.serviceKind
+      name: SERVICE_KIND
+      type: string
+    - jsonPath: .spec.serviceVersion
+      name: SERVICE_VERSION
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: shardingdefinitions.apps.kubeblocks.io
+spec:
+  group: apps.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: ShardingDefinition
+    listKind: ShardingDefinitionList
+    plural: shardingdefinitions
+    shortNames:
+    - sdd
+    singular: shardingdefinition
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.template.compDef
+      name: TEMPLATE
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: sidecardefinitions.apps.kubeblocks.io
+spec:
+  group: apps.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: SidecarDefinition
+    listKind: SidecarDefinitionList
+    plural: sidecardefinitions
+    shortNames:
+    - sdcd
+    singular: sidecardefinition
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.owners
+      name: Owner
+      type: string
+    - jsonPath: .status.selectors
+      name: Selector
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: actionsets.dataprotection.kubeblocks.io
+spec:
+  group: dataprotection.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: ActionSet
+    listKind: ActionSetList
+    plural: actionsets
+    shortNames:
+    - as
+    singular: actionset
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.backupType
+      name: BACKUP-TYPE
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: backuppolicies.dataprotection.kubeblocks.io
+spec:
+  group: dataprotection.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: BackupPolicy
+    listKind: BackupPolicyList
+    plural: backuppolicies
+    shortNames:
+    - bp
+    singular: backuppolicy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.backupRepoName
+      name: BACKUP-REPO
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: backuppolicytemplates.dataprotection.kubeblocks.io
+spec:
+  group: dataprotection.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: BackupPolicyTemplate
+    listKind: BackupPolicyTemplateList
+    plural: backuppolicytemplates
+    shortNames:
+    - bpt
+    singular: backuppolicytemplate
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.serviceKind
+      name: SERVICE-KIND
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: backuprepos.dataprotection.kubeblocks.io
+spec:
+  group: dataprotection.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: BackupRepo
+    listKind: BackupRepoList
+    plural: backuprepos
+    singular: backuprepo
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .spec.storageProviderRef
+      name: STORAGEPROVIDER
+      type: string
+    - jsonPath: .spec.accessMethod
+      name: ACCESSMETHOD
+      type: string
+    - jsonPath: .status.isDefault
+      name: DEFAULT
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: backups.dataprotection.kubeblocks.io
+spec:
+  group: dataprotection.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: Backup
+    listKind: BackupList
+    plural: backups
+    singular: backup
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.backupPolicyName
+      name: POLICY
+      type: string
+    - jsonPath: .spec.backupMethod
+      name: METHOD
+      type: string
+    - jsonPath: .status.backupRepoName
+      name: REPO
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .status.totalSize
+      name: TOTAL-SIZE
+      type: string
+    - jsonPath: .status.duration
+      name: DURATION
+      type: string
+    - jsonPath: .spec.deletionPolicy
+      name: DELETION-POLICY
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: CREATION-TIME
+      type: string
+    - jsonPath: .status.completionTimestamp
+      name: COMPLETION-TIME
+      type: string
+    - jsonPath: .status.expiration
+      name: EXPIRATION-TIME
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: backupschedules.dataprotection.kubeblocks.io
+spec:
+  group: dataprotection.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: BackupSchedule
+    listKind: BackupScheduleList
+    plural: backupschedules
+    shortNames:
+    - bs
+    singular: backupschedule
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: restores.dataprotection.kubeblocks.io
+spec:
+  group: dataprotection.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: Restore
+    listKind: RestoreList
+    plural: restores
+    singular: restore
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.backup.name
+      name: BACKUP
+      type: string
+    - jsonPath: .spec.restoreTime
+      name: RESTORE-TIME
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .status.duration
+      name: DURATION
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: CREATION-TIME
+      type: string
+    - jsonPath: .status.completionTimestamp
+      name: COMPLETION-TIME
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: storageproviders.dataprotection.kubeblocks.io
+spec:
+  group: dataprotection.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: StorageProvider
+    listKind: StorageProviderList
+    plural: storageproviders
+    singular: storageprovider
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .spec.csiDriverName
+      name: CSIDRIVER
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: nodecountscalers.experimental.kubeblocks.io
+spec:
+  group: experimental.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: NodeCountScaler
+    listKind: NodeCountScalerList
+    plural: nodecountscalers
+    shortNames:
+    - ncs
+    singular: nodecountscaler
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.targetClusterName
+      name: TARGET-CLUSTER-NAME
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="ScaleReady")].status
+      name: READY
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="ScaleReady")].reason
+      name: REASON
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="ScaleReady")].message
+      name: MESSAGE
+      type: string
+    - jsonPath: .status.lastScaleTime
+      name: LAST-SCALE-TIME
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: addons.extensions.kubeblocks.io
+spec:
+  group: extensions.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: Addon
+    listKind: AddonList
+    plural: addons
+    singular: addon
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.type
+      name: TYPE
+      type: string
+    - jsonPath: .spec.version
+      name: VERSION
+      type: string
+    - jsonPath: .spec.provider
+      name: PROVIDER
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: opsdefinitions.operations.kubeblocks.io
+spec:
+  group: operations.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: OpsDefinition
+    listKind: OpsDefinitionList
+    plural: opsdefinitions
+    shortNames:
+    - od
+    singular: opsdefinition
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: opsrequests.operations.kubeblocks.io
+spec:
+  group: operations.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: OpsRequest
+    listKind: OpsRequestList
+    plural: opsrequests
+    shortNames:
+    - ops
+    singular: opsrequest
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.type
+      name: TYPE
+      type: string
+    - jsonPath: .spec.clusterName
+      name: CLUSTER
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .status.progress
+      name: PROGRESS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: componentparameters.parameters.kubeblocks.io
+spec:
+  group: parameters.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: ComponentParameter
+    listKind: ComponentParameterList
+    plural: componentparameters
+    singular: componentparameter
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.clusterName
+      name: CLUSTER
+      type: string
+    - jsonPath: .spec.componentName
+      name: COMPONENT
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: paramconfigrenderers.parameters.kubeblocks.io
+spec:
+  group: parameters.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: ParamConfigRenderer
+    listKind: ParamConfigRendererList
+    plural: paramconfigrenderers
+    shortNames:
+    - pcr
+    singular: paramconfigrenderer
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.componentDef
+      name: COMPD
+      type: string
+    - jsonPath: .status.phase
+      name: PHASE
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: parameters.parameters.kubeblocks.io
+spec:
+  group: parameters.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: Parameter
+    listKind: ParameterList
+    plural: parameters
+    singular: parameter
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.clusterName
+      name: CLUSTER
+      type: string
+    - jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: parametersdefinitions.parameters.kubeblocks.io
+spec:
+  group: parameters.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: ParametersDefinition
+    listKind: ParametersDefinitionList
+    plural: parametersdefinitions
+    shortNames:
+    - paramsdef
+    - pd
+    singular: parametersdefinition
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.fileName
+      name: FILE
+      type: string
+    - jsonPath: .status.phase
+      name: PHASE
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: reconciliationtraces.trace.kubeblocks.io
+spec:
+  group: trace.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    - all
+    kind: ReconciliationTrace
+    listKind: ReconciliationTraceList
+    plural: reconciliationtraces
+    shortNames:
+    - trace
+    singular: reconciliationtrace
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    - jsonPath: .spec.targetObject.namespace
+      name: TARGET_NS
+      type: string
+    - jsonPath: .spec.targetObject.name
+      name: TARGET_NAME
+      type: string
+    - jsonPath: .status.currentState.changes[-1].objectReference.apiVersion
+      name: API_VERSION
+      type: string
+    - jsonPath: .status.currentState.changes[-1].objectReference.kind
+      name: KIND
+      type: string
+    - jsonPath: .status.currentState.changes[-1].objectReference.namespace
+      name: NAMESPACE
+      type: string
+    - jsonPath: .status.currentState.changes[-1].objectReference.name
+      name: NAME
+      type: string
+    - jsonPath: .status.currentState.changes[-1].description
+      name: CHANGE
+      type: string
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: kubeblocks
+  name: instancesets.workloads.kubeblocks.io
+spec:
+  group: workloads.kubeblocks.io
+  names:
+    categories:
+    - kubeblocks
+    kind: InstanceSet
+    listKind: InstanceSetList
+    plural: instancesets
+    shortNames:
+    - its
+    singular: instanceset
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.readyReplicas
+      name: READY
+      type: string
+    - jsonPath: .spec.replicas
+      name: DESIRED
+      type: string
+    - jsonPath: .status.updatedReplicas
+      name: UP-TO-DATE
+      type: string
+    - jsonPath: .status.availableReplicas
+      name: AVAILABLE
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      scale:
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.replicas
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .status.membersStatus[?(@.role.isLeader==true)].podName
+      name: LEADER
+      type: string
+    - jsonPath: .status.readyReplicas
+      name: READY
+      type: string
+    - jsonPath: .status.replicas
+      name: REPLICAS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-map-type: atomic
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: false
+    subresources:
+      scale:
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.replicas
+      status: {}
