@@ -435,6 +435,8 @@ func (m *InstallOsSystemModule) Init() {
 	applySystemEnv := &task.LocalTask{
 		Name:   "ApplySystemEnv",
 		Action: new(ApplySystemEnv),
+		Retry:  5,
+		Delay:  15 * time.Second,
 	}
 
 	createUserEnvConfigMap := &task.LocalTask{

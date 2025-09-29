@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/containerd"
 	"github.com/dustin/go-humanize"
 	v1 "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"k8s.io/utils/strings/slices"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
 
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/utils"
@@ -152,7 +153,7 @@ func (i *preCheck) Execute(ctx context.Context, p any) (res any, err error) {
 
 		podStatus := utils.GetPodStatus(&pod)
 
-		if podStatus != "Running" && podStatus != "Completed" {
+		if podStatus != "Running" && podStatus != "Completed" && podStatus != "Succeeded" {
 			klog.Errorf("Pod %s/%s is not healthy: %s", pod.Namespace, pod.Name, podStatus)
 			return nil, fmt.Errorf("pod %s/%s is not healthy: %s", pod.Namespace, pod.Name, podStatus)
 		}
