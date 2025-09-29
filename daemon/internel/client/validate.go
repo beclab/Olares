@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/beclab/Olares/daemon/pkg/utils"
@@ -12,13 +13,13 @@ import (
 func (c *termipass) validateJWS(_ context.Context) (error, string) {
 	if strings.TrimSpace(c.jws) == "" {
 		klog.Error("jws is empty")
-		return errors.New("invalid jws"), ""
+		return errors.New("invalid jws, jws is empty"), ""
 	}
 
-	if ok, olaresID := utils.ValidateJWS(c.jws); ok {
+	if ok, olaresID, err := utils.ValidateJWS(c.jws); ok {
 		return nil, olaresID
 	} else {
-		klog.Error("jws validation failed")
-		return errors.New("invalid jws"), ""
+		klog.Error("jws validation failed", err)
+		return fmt.Errorf("invalid jws, %v", err), ""
 	}
 }
