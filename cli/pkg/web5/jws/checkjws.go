@@ -17,7 +17,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-const (
+var (
 	DIDGateURL     = "https://did-gate-v3.bttcdn.com/1.0/name/"
 	DIDGateTimeout = 10 * time.Second
 )
