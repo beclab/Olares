@@ -76,8 +76,6 @@ run_cmd "cp -rf framework/bfl/.olares/config/launcher ${DIST}/wizard/config/"
 echo "packaging gpu ..."
 run_cmd "cp -rf infrastructure/gpu/.olares/config/gpu ${DIST}/wizard/config/"
 
-echo "packaging kubeblocks ..."
-run_cmd "cp -rf infrastructure/kubeblocks/.olares/config/kubeblocks ${DIST}/wizard/config/"
 
 echo "packaging env config ..."
 run_cmd "cp -rf build/system-env.yaml ${DIST}/system-env.yaml"
