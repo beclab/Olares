@@ -75,7 +75,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
-        image: bitnami/kube-rbac-proxy:0.19.0
+        image: beclab/kube-rbac-proxy:0.19.0
         imagePullPolicy: IfNotPresent
         name: kube-rbac-proxy
         ports:
