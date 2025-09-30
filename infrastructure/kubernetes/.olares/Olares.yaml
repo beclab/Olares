@@ -25,7 +25,7 @@ output:
     - 
       name: alpine:3.14
     -
-      name: bitnami/kube-rbac-proxy:0.19.0
+      name: beclab/kube-rbac-proxy:0.19.0
     - 
       name: registry.k8s.io/kube-apiserver:v1.33.3
     - 
