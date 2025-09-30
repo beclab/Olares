@@ -13,10 +13,10 @@ import (
 func ValidateJWS(token string) (bool, string, error) {
 	didGateDomain := os.Getenv("DID_GATE_URL")
 	if didGateDomain != "" {
-		newUrl := fmt.Sprintf("%s/1.0/name/", didGateDomain)
+		newUrl := fmt.Sprintf("%s1.0/name/", didGateDomain)
 		_, err := url.Parse(newUrl)
 		if err != nil {
-			klog.Warning("failed to parse DID gate URL in environment variable: %v", err)
+			klog.Warningf("failed to parse DID gate URL in environment variable: %v", err)
 		} else {
 			jws.DIDGateURL = newUrl
 		}
@@ -25,7 +25,7 @@ func ValidateJWS(token string) (bool, string, error) {
 	// Validate the JWS token with a 20-minute expiration time
 	checkJWS, err := jws.CheckJWS(token, 20*60*1000)
 	if err != nil {
-		klog.Errorf("failed to check JWS: %v", err)
+		klog.Errorf("failed to check JWS: %v, on %s", err, jws.DIDGateURL)
 		return false, "", err
 	}
 

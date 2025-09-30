@@ -19,7 +19,7 @@ func (c *termipass) validateJWS(_ context.Context) (error, string) {
 	if ok, olaresID, err := utils.ValidateJWS(c.jws); ok {
 		return nil, olaresID
 	} else {
-		klog.Error("jws validation failed", err)
+		klog.Error("jws validation failed, ", err)
 		return fmt.Errorf("invalid jws, %v", err), ""
 	}
 }
