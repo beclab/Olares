@@ -94,3 +94,26 @@ spec:
   installable:
     autoInstall: true
   type: Helm
+---
+apiVersion: extensions.kubeblocks.io/v1alpha1
+kind: Addon
+metadata:
+  annotations:
+    addon.kubeblocks.io/kubeblocks-version: '>=0.9.0'
+  labels:
+    addon.kubeblocks.io/model: RDBMS
+    addon.kubeblocks.io/name: mariadb
+    addon.kubeblocks.io/provider: community
+    addon.kubeblocks.io/version: 1.0.1
+  name: mariadb
+spec:
+  defaultInstallValues:
+    - enabled: true
+  description: MariaDB is a high performance open source relational database management
+    system that is widely used for web and application servers
+  helm:
+    chartLocationURL: file:///mariadb-1.0.1.tgz
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.1
+  installable:
+    autoInstall: true
+  type: Helm
