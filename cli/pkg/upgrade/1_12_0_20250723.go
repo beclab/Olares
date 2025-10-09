@@ -18,3 +18,7 @@ func (u upgrader_1_12_0_20250723) PrepareForUpgrade() []task.Interface {
 	preTasks = append(preTasks, upgradeContainerd()...)
 	return append(preTasks, u.upgraderBase.PrepareForUpgrade()...)
 }
+
+func init() {
+	registerDailyUpgrader(upgrader_1_12_0_20250723{})
+}
