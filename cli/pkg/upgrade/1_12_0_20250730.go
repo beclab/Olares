@@ -2,6 +2,10 @@ package upgrade
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -13,9 +17,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/pkg/errors"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 type upgrader_1_12_0_20250730 struct {
@@ -109,4 +110,8 @@ func (u *injectK3sCertExpireTime) Execute(runtime connector.Runtime) error {
 	newContent := string(content) + fmt.Sprintf("\n%s=36500\n", expireTimeEnv)
 	err = os.WriteFile(envFile, []byte(newContent), 0644)
 	return err
+}
+
+func init() {
+	registerDailyUpgrader(upgrader_1_12_0_20250730{})
 }

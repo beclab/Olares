@@ -96,3 +96,7 @@ func (c *takeOverKbCRDByHelm) Execute(runtime connector.Runtime) error {
 
 	return nil
 }
+
+func init() {
+	registerDailyUpgrader(upgrader_1_12_2_20250929{})
+}

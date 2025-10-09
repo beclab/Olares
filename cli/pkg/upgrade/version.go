@@ -2,12 +2,13 @@ package upgrade
 
 import (
 	"fmt"
-	"github.com/Masterminds/semver/v3"
-	"github.com/beclab/Olares/cli/pkg/utils"
-	"github.com/beclab/Olares/cli/version"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
+	"github.com/beclab/Olares/cli/pkg/utils"
+	"github.com/beclab/Olares/cli/version"
 )
 
 type VersionSpec struct {
@@ -60,16 +61,8 @@ var (
 	releaseTypeAlpha  = "alpha"
 	prereleaseSep     = "."
 
-	dailyUpgraders = []breakingUpgrader{
-		upgrader_1_12_0_20250702{},
-		upgrader_1_12_0_20250723{},
-		upgrader_1_12_0_20250730{},
-		upgrader_1_12_1_20250826{},
-		upgrader_1_12_2_20250929{},
-	}
-	mainUpgraders = []breakingUpgrader{
-		upgrader_1_12_1{},
-	}
+	dailyUpgraders []breakingUpgrader
+	mainUpgraders  []breakingUpgrader
 )
 
 func getReleaseLineOfVersion(v *semver.Version) releaseLine {
@@ -243,4 +236,18 @@ func sameMinorLevelVersion(a, b *semver.Version) bool {
 
 func sameMajorLevelVersion(a, b *semver.Version) bool {
 	return a.Major() == b.Major()
+}
+
+func registerDailyUpgrader(upgrader breakingUpgrader) {
+	dailyUpgraders = append(dailyUpgraders, upgrader)
+	sort.Slice(dailyUpgraders, func(i, j int) bool {
+		return dailyUpgraders[i].Version().LessThan(dailyUpgraders[j].Version())
+	})
+}
+
+func registerMainUpgrader(upgrader breakingUpgrader) {
+	mainUpgraders = append(mainUpgraders, upgrader)
+	sort.Slice(mainUpgraders, func(i, j int) bool {
+		return mainUpgraders[i].Version().LessThan(mainUpgraders[j].Version())
+	})
 }

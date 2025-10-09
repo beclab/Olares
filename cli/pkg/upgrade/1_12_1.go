@@ -2,6 +2,7 @@ package upgrade
 
 import (
 	"fmt"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
@@ -61,4 +62,8 @@ func (c *removeLegacySystemFrontendManifest) Execute(runtime connector.Runtime) 
 	}
 
 	return nil
+}
+
+func init() {
+	registerMainUpgrader(upgrader_1_12_1{})
 }

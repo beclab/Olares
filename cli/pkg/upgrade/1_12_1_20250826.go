@@ -1,6 +1,8 @@
 package upgrade
 
 import (
+	"path/filepath"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
 	"github.com/beclab/Olares/cli/pkg/core/action"
@@ -8,7 +10,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/pkg/etcd/templates"
 	"github.com/beclab/Olares/cli/pkg/terminus"
-	"path/filepath"
 )
 
 type upgrader_1_12_1_20250826 struct {
@@ -44,4 +45,8 @@ func (u upgrader_1_12_1_20250826) preToPrepareForUpgrade() []task.Interface {
 func (u upgrader_1_12_1_20250826) PrepareForUpgrade() []task.Interface {
 	preTasks := u.preToPrepareForUpgrade()
 	return append(preTasks, u.upgraderBase.PrepareForUpgrade()...)
+}
+
+func init() {
+	registerDailyUpgrader(upgrader_1_12_1_20250826{})
 }
