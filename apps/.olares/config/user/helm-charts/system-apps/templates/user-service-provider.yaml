@@ -30,3 +30,30 @@ rules:
   - "/server/intent/send"
   - "/server/ai_message"
   verbs: ["*"]  
+
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:desktop
+  annotations:
+    provider-registry-ref: {{ .Values.bfl.username }}/desktop
+    provider-service-ref: edge-desktop.{{ .Release.Namespace }}
+rules:
+- nonResourceURLs: 
+  - "/server/intent/send"
+  verbs: ["*"]  
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Namespace }}:desktop
+  annotations:
+    provider-registry-ref: {{ .Release.Namespace }}/desktop
+    provider-service-ref: edge-desktop.{{ .Release.Namespace }}
+rules:
+- nonResourceURLs: 
+  - "/server/intent/send"
+  verbs: ["*"]  
