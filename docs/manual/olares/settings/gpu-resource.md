@@ -29,17 +29,21 @@ Olares supports three GPU allocation modes. Choosing the right mode helps optimi
 
 ### Time Slicing 
 
-In this mode, the GPU rotates across applications in time slices; at any instant only one app runs on the GPU. Other GPU workloads are paused, with their VRAM evicted to system memory and restored on their slice.
-
-Time Slicing mode provides a shared VRAM pool. Applications without an exclusive GPU or dedicated VRAM automatically join the time-sliced queue and use this pool when the GPU is available.
+In this mode, the GPU rotates across applications in time slices.
+- At any instant, only one application uses the GPU’s compute and VRAM.
+- Other applications’ VRAM contents are temporarily swapped out to system memory.
+- Applications not assigned an exclusive GPU or dedicated VRAM are placed in the time-slicing queue by default.
 
 ### App Exclusive
 
-In this mode, the GPU’s full compute capacity and VRAM are allocated to a single application, eliminating cross-application contention and interference.  
+In this mode, the GPU’s full compute capacity and VRAM are allocated to a single application to ensure the maximized performance.
 
 ### Memory Slicing
 
-In this mode, VRAM is statically partitioned into fixed quotas and bound to designated applications. The sum of quotas must not exceed the total physical VRAM. Each assigned app can access only its own partition with no cross-app interference.
+In this mode, GPU VRAM is allocated to multiple applications by specified quotas:
+
+- Applications with a quota can run concurrently on the GPU.
+- The sum of all quotas must not exceed the GPU’s physical VRAM.
 
 ## View GPU status
 
