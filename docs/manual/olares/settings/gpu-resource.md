@@ -15,7 +15,6 @@ This guide helps you understand and configure GPU allocation modes to maximize h
 Olares supports **only Nvidia GPUs** of **Turing architecture or later** (Turing, Ampere, Ada Lovelace, and Blackwell). 
 
 - Quick check: GTX/RTX **16 series and newer** consumer cards are supported.
-- For other models, cross-check with the [compatible GPU table](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus).
 - Other models: Cross-check with the [compatible GPU table](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus).
 - Unknown model: Run `lspci | grep -i nvidia` to query the GPU architecture code and determine compatibility.  
 :::
@@ -28,26 +27,23 @@ Even if your GPU architecture is supported, **low VRAM capacity may cause AI app
 
 Olares supports three GPU allocation modes. Choosing the right mode helps optimize performance based on your needs.
 
-### Time Slicing 
-
-In this mode, the GPU's processing power is shared among multiple applications.  
-
-* Acts as a default resource pool. Any application not explicitly assigned to a specific GPU will automatically use a time-slicing GPU if available.
-
-* Suitable for General-purpose use and running multiple lightweight applications.
-
 ### App Exclusive
 
-In this mode, the entire GPU processing power and memory is dedicated to a single application. 
-
-* Best for intensive, performance-critical applications like AI-generated imagery or high-performance gaming servers.
-* Large memory demands may limit availability for other tasks.
+In this mode, the GPU’s full compute capacity and VRAM are allocated to a single application to ensure the maximized performance.
 
 ### Memory Slicing
-In this mode, GPU memory (VRAM) is partitioned into fixed, dedicated amounts for specific applications.
 
-* Ideal for running multiple GPU-intensive applications simultaneously, each with guaranteed VRAM allocation.
-* Prevents memory conflicts between applications running on the same GPU.
+In this mode, GPU VRAM is allocated to multiple applications by specified VRAM quotas:
+
+- Applications with assigned VRAM can run concurrently on the GPU.
+- The sum of all assigned VRAMs must not exceed the GPU’s physical VRAM.
+
+### Time Slicing
+
+In this mode, any number of applications can be bound to the same GPU:
+
+- At any instant, only one application fully occupies the GPU’s compute and VRAM.
+- VRAM contents of other applications are temporarily swapped out to system memory.
 
 ## View GPU status
 
