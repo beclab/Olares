@@ -7,21 +7,20 @@ import (
 	"path"
 	"time"
 
-	"github.com/beclab/Olares/cli/pkg/core/task"
-	"github.com/beclab/Olares/cli/pkg/gpu"
-	"github.com/beclab/Olares/cli/pkg/terminus"
-	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/pkg/utils"
+	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type breakingUpgraderBase struct {
@@ -114,8 +113,8 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 			Action: new(gpu.InstallPlugin),
 		},
 		&task.LocalTask{
-			Name:   "UpgradeSystemComponents",
-			Action: new(upgradeSystemComponents),
+			Name:   "UpgradeSettings",
+			Action: new(upgradeSettings),
 			Retry:  10,
 			Delay:  15 * time.Second,
 		},
@@ -123,6 +122,12 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 			Name:   "UpgradeSystemEnvs",
 			Action: new(terminus.ApplySystemEnv),
 			Retry:  5,
+			Delay:  15 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "UpgradeSystemComponents",
+			Action: new(upgradeSystemComponents),
+			Retry:  10,
 			Delay:  15 * time.Second,
 		},
 		&task.LocalTask{
@@ -320,13 +325,15 @@ func (u *upgradeUserComponents) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-type upgradeSystemComponents struct {
+type upgradeSettings struct {
 	common.KubeAction
 }
 
-func (u *upgradeSystemComponents) Execute(runtime connector.Runtime) error {
+func (u *upgradeSettings) Execute(runtime connector.Runtime) error {
 	config, err := ctrl.GetConfig()
-
+	if err != nil {
+		return fmt.Errorf("failed to get rest config: %s", err)
+	}
 	actionConfig, settings, err := utils.InitConfig(config, common.NamespaceDefault)
 	if err != nil {
 		return err
@@ -334,11 +341,23 @@ func (u *upgradeSystemComponents) Execute(runtime connector.Runtime) error {
 	ctx, cancelSettings := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancelSettings()
 	settingsChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "settings")
-
 	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameSettings, settingsChartPath, "", common.NamespaceDefault, nil, true); err != nil {
 		return err
 	}
-	actionConfig, settings, err = utils.InitConfig(config, common.NamespaceOsPlatform)
+	return nil
+}
+
+type upgradeSystemComponents struct {
+	common.KubeAction
+}
+
+func (u *upgradeSystemComponents) Execute(runtime connector.Runtime) error {
+	config, configErr := ctrl.GetConfig()
+	if configErr != nil {
+		return fmt.Errorf("failed to get rest config: %s", configErr)
+	}
+
+	actionConfig, settings, err := utils.InitConfig(config, common.NamespaceOsPlatform)
 	if err != nil {
 		return err
 	}

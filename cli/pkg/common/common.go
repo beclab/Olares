@@ -345,19 +345,11 @@ var TerminusGlobalEnvs = map[string]interface{}{
 
 // LegacyToNewSystemEnv maps legacy env keys to new SystemEnv EnvName
 var LegacyToNewSystemEnv = map[string]string{
-	"DID_GATE_URL":               "OLARES_SYSTEM_DID_SERVICE",
-	"OLARES_SPACE_URL":           "OLARES_SYSTEM_CLOUD_SERVICE",
-	"FIREBASE_PUSH_URL":          "OLARES_SYSTEM_PUSH_SERVICE",
-	"FRP_LIST_URL":               "OLARES_SYSTEM_FRP_INDEX_SERVICE",
-	"TAILSCALE_CONTROLPLANE_URL": "OLARES_SYSTEM_VPN_CONTROL_SERVICE",
-	"MARKET_PROVIDER":            "OLARES_SYSTEM_MARKET_SERVICE",
-	"TERMINUS_CERT_SERVICE_API":  "OLARES_SYSTEM_CERT_SERVICE",
-	"TERMINUS_DNS_SERVICE_API":   "OLARES_SYSTEM_DNS_SERVICE",
-	"DOWNLOAD_CDN_URL":           "OLARES_SYSTEM_CDN_SERVICE",
-	"OLARES_ROOT_DIR":            "OLARES_SYSTEM_ROOT_PATH",
-	"COREDNS_SVC":                "OLARES_SYSTEM_CLUSTER_DNS_SERVICE",
-	"CUDA_VERSION":               "OLARES_SYSTEM_CUDA_VERSION",
-	"OLARES_FS_TYPE":             "OLARES_SYSTEM_ROOTFS_TYPE",
+	"DOWNLOAD_CDN_URL": "OLARES_SYSTEM_CDN_SERVICE",
+	"OLARES_ROOT_DIR":  "OLARES_SYSTEM_ROOT_PATH",
+	"COREDNS_SVC":      "OLARES_SYSTEM_CLUSTER_DNS_SERVICE",
+	"CUDA_VERSION":     "OLARES_SYSTEM_CUDA_VERSION",
+	"OLARES_FS_TYPE":   "OLARES_SYSTEM_ROOTFS_TYPE",
 }
 
 // SetTerminusGlobalEnv updates TerminusGlobalEnvs and sets the corresponding
@@ -366,19 +358,15 @@ var LegacyToNewSystemEnv = map[string]string{
 // if force is false, set only when the process env new name is not set or empty
 func SetTerminusGlobalEnv(legacyKey string, value string, force bool) {
 	if value != "" {
-		// for now, just set the legacy envs only
-		// as some envs' formats are not consistent between legacy and new
-		// app-service will handle the specific migration
-		// TODO: remove this after all other components are also migrated
-		// if newName, ok := LegacyToNewSystemEnv[legacyKey]; ok && newName != "" {
-		// 	if force {
-		// 		_ = os.Setenv(newName, value)
-		// 	} else {
-		// 		if v, ok := os.LookupEnv(newName); !ok || v == "" {
-		// 			_ = os.Setenv(newName, value)
-		// 		}
-		// 	}
-		// }
+		if newName, ok := LegacyToNewSystemEnv[legacyKey]; ok && newName != "" {
+			if force {
+				_ = os.Setenv(newName, value)
+			} else {
+				if v, ok := os.LookupEnv(newName); !ok || v == "" {
+					_ = os.Setenv(newName, value)
+				}
+			}
+		}
 		TerminusGlobalEnvs[legacyKey] = value
 	}
 }
