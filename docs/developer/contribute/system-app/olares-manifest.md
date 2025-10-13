@@ -34,7 +34,7 @@ olaresManifest.version: 1
 olaresManifest.type: app
 metadata:
   name: desktop
-  icon: https://file.bttcdn.com/appstore/default/defaulticon.webp
+  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
   description: app desktop
   appid: desktop
   title: desktop
@@ -45,7 +45,7 @@ entrances:
 - name: desktop-frontend-dev
   host: desktop-svc-dev
   port: 80
-  icon: https://file.bttcdn.com/appstore/default/defaulticon.webp
+  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
   title: Desktop-dev
   authLevel: private
   openMethod: default

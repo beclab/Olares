@@ -30,7 +30,7 @@
 >
 >*It's time for a change.* 
 
-![Personal Cloud](https://file.bttcdn.com/github/olares/public-cloud-to-personal-cloud.jpg)
+![Personal Cloud](https://app.cdn.olares.com/github/olares/public-cloud-to-personal-cloud.jpg)
 We believe you have a fundamental right to control your digital life. The most effective way to uphold this right is by hosting your data locally, on your own hardware.
 
 Olares is an **open-source personal cloud operating system** designed to empower you to own and manage your digital assets locally. Instead of relying on public cloud services, you can deploy powerful open-source alternatives locally on Olares, such as Ollama for hosting LLMs, SD WebUI for image generation, and Mastodon for building censor free social space. Imagine the power of the cloud, but with you in complete command.
@@ -41,7 +41,7 @@ Olares is an **open-source personal cloud operating system** designed to empower
 
 Just as Public clouds offer IaaS, PaaS, and SaaS layers, Olares provides open-source alternatives to each of these layers.
 
-  ![Tech Stacks](https://file.bttcdn.com/github/olares/olares-architecture.jpg)
+  ![Tech Stacks](https://app.cdn.olares.com/github/olares/olares-architecture.jpg)
 
  For detailed description of each component, refer to [Olares architecture](https://docs.olares.com/manual/concepts/system-architecture.html).
 
@@ -66,15 +66,15 @@ Here are some screenshots from the UI for a sneak peek:
 
 | **Desktop–Streamlined and familiar portal**     |  **Files–A secure home to your data**
 | :--------: | :-------: |
-| ![Desktop](https://file.bttcdn.com/github/terminus/v2/desktop.jpg) | ![Files](https://file.bttcdn.com/github/terminus/v2/files.jpg) |
+| ![Desktop](https://app.cdn.olares.com/github/terminus/v2/desktop.jpg) | ![Files](https://app.cdn.olares.com/github/terminus/v2/files.jpg) |
 | **Vault–1Password alternative**|**Market–App ecosystem in your control** |
-| ![vault](https://file.bttcdn.com/github/terminus/v2/vault.jpg) | ![market](https://file.bttcdn.com/github/terminus/v2/market.jpg) |
+| ![vault](https://app.cdn.olares.com/github/terminus/v2/vault.jpg) | ![market](https://app.cdn.olares.com/github/terminus/v2/market.jpg) |
 |**Wise–Your digital secret garden** | **Settings–Manage Olares efficiently** |
-| ![settings](https://file.bttcdn.com/github/terminus/v2/wise.jpg) | ![](https://file.bttcdn.com/github/terminus/v2/settings.jpg) |
+| ![settings](https://app.cdn.olares.com/github/terminus/v2/wise.jpg) | ![](https://app.cdn.olares.com/github/terminus/v2/settings.jpg) |
 |**Dashboard–Constant system monitoring**  | **Profile–Your unique homepage** |
-| ![dashboard](https://file.bttcdn.com/github/terminus/v2/dashboard.jpg) | ![profile](https://file.bttcdn.com/github/terminus/v2/profile.jpg) |
+| ![dashboard](https://app.cdn.olares.com/github/terminus/v2/dashboard.jpg) | ![profile](https://app.cdn.olares.com/github/terminus/v2/profile.jpg) |
 | **Studio–Develop, debug, and deploy**|**Control Hub–Manage Kubernetes clusters easily**  |
-| ![Studio](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![Controlhub](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
+| ![Studio](https://app.cdn.olares.com/github/terminus/v2/devbox.jpg) | ![Controlhub](https://app.cdn.olares.com/github/terminus/v2/controlhub.jpg)|
 
 
 ## Key use cases

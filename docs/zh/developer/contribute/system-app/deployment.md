@@ -61,7 +61,7 @@ outline: [2, 3]
     - name: desktop-frontend-dev # 与 deployment 上的 annotation 一致
       host: desktop-svc-dev # 与上面的 service 名字一致
       port: 80
-      icon: https://file.bttcdn.com/appstore/default/defaulticon.webp
+      icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
       title: Desktop-dev
       authLevel: private
       openMethod: default

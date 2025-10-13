@@ -62,7 +62,7 @@ The system application need to be installed under the `user-space` namespace. Th
    - name: desktop-frontend-dev # Same with annotation in deployment
      host: desktop-svc-dev # Same with the name in service
      port: 80
-     icon: https://file.bttcdn.com/appstore/default/defaulticon.webp
+     icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
      title: Desktop-dev
      authLevel: private
      openMethod: default

@@ -3,7 +3,7 @@ name: tapr
 description: A Helm chart for Kubernetes
 maintainers:
 - name: bytetrade
-icon: https://file.bttcdn.com/appstore/calendar/icon.png
+icon: https://app.cdn.olares.com/appstore/calendar/icon.png
 
 # A chart can be either an 'application' or a 'library' chart.
 #
