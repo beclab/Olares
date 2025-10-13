@@ -154,13 +154,13 @@ func (i *preCheck) Execute(ctx context.Context, p any) (res any, err error) {
 		podStatus := utils.GetPodStatus(&pod)
 
 		if podStatus != "Running" && podStatus != "Completed" && podStatus != "Succeeded" {
-			klog.Errorf("Pod %s/%s is not healthy: %s", pod.Namespace, pod.Name, podStatus)
-			return nil, fmt.Errorf("pod %s/%s is not healthy: %s", pod.Namespace, pod.Name, podStatus)
+			klog.Warningf("Pod %s/%s is not healthy before upgrade: %s", pod.Namespace, pod.Name, podStatus)
+			continue
 		}
 
 		if !utils.IsPodReady(&pod) && pod.Status.Phase == corev1.PodRunning {
-			klog.Warningf("Pod %s/%s is running but not ready", pod.Namespace, pod.Name)
-			return nil, fmt.Errorf("pod %s/%s is running but not ready", pod.Namespace, pod.Name)
+			klog.Warningf("Pod %s/%s is running but not ready before upgrade", pod.Namespace, pod.Name)
+			continue
 		}
 	}
 
