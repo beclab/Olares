@@ -30,7 +30,7 @@
 >
 > *是时候做出改变了。*
 
-![个人云](https://file.bttcdn.com/github/olares/public-cloud-to-personal-cloud.jpg)
+![个人云](https://app.cdn.olares.com/github/olares/public-cloud-to-personal-cloud.jpg)
 
 我们坚信，**您拥有掌控自己数字生活的基本权利**。维护这一权利最有效的方式，就是将您的数据托管在本地，在您自己的硬件上。
 
@@ -42,7 +42,7 @@ Olares 是一款开源个人云操作系统，旨在让您能够轻松在本地�
 
 公有云具有基础设施即服务（IaaS）、平台即服务（PaaS）和软件即服务（SaaS）等层级。Olares 为这些层级提供了开源替代方案。
 
-  ![技术栈](https://file.bttcdn.com/github/olares/olares-architecture.jpg)
+  ![技术栈](https://app.cdn.olares.com/github/olares/olares-architecture.jpg)
 
 详细描述请参考 [Olares 架构](https://docs.olares.cn/zh/manual/concepts/system-architecture.html)文档。
 
@@ -68,15 +68,15 @@ Olares 提供了一系列功能，旨在提升安全性、使用便捷性以及�
 
 | **桌面：熟悉高效的访问入口**     |  **文件管理器：安全存储数据**
 | :--------: | :-------: |
-| ![桌面](https://file.bttcdn.com/github/terminus/v2/desktop.jpg) | ![文件](https://file.bttcdn.com/github/terminus/v2/files.jpg) |
+| ![桌面](https://app.cdn.olares.com/github/terminus/v2/desktop.jpg) | ![文件](https://app.cdn.olares.com/github/terminus/v2/files.jpg) |
 | **Vault：密码无忧管理**|**市场：可控的应用生态系统** |
-| ![vault](https://file.bttcdn.com/github/terminus/v2/vault.jpg) | ![市场](https://file.bttcdn.com/github/terminus/v2/market.jpg) |
+| ![vault](https://app.cdn.olares.com/github/terminus/v2/vault.jpg) | ![市场](https://app.cdn.olares.com/github/terminus/v2/market.jpg) |
 |**Wise：数字后花园** | **设置：高效管理 Olares** |
-| ![设置](https://file.bttcdn.com/github/terminus/v2/wise.jpg) | ![](https://file.bttcdn.com/github/terminus/v2/settings.jpg) |
+| ![设置](https://app.cdn.olares.com/github/terminus/v2/wise.jpg) | ![](https://app.cdn.olares.com/github/terminus/v2/settings.jpg) |
 |**仪表盘：持续监控 Olares**  | **Profile：独特的个人主页** |
-| ![面板](https://file.bttcdn.com/github/terminus/v2/dashboard.jpg) | ![profile](https://file.bttcdn.com/github/terminus/v2/profile.jpg) |
+| ![面板](https://app.cdn.olares.com/github/terminus/v2/dashboard.jpg) | ![profile](https://app.cdn.olares.com/github/terminus/v2/profile.jpg) |
 | **Studio：一站式开发、调试和部署**|**控制面板：轻松管理 Kubernetes 集群**  |
-| ![Devbox](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![控制中心](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
+| ![Devbox](https://app.cdn.olares.com/github/terminus/v2/devbox.jpg) | ![控制中心](https://app.cdn.olares.com/github/terminus/v2/controlhub.jpg)|
 
 ## 使用场景
 

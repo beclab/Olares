@@ -30,7 +30,7 @@
 >
 >*今こそ、変革の時です。*
 
-![自身のデジタル](https://file.bttcdn.com/github/olares/public-cloud-to-personal-cloud.jpg)
+![自身のデジタル](https://app.cdn.olares.com/github/olares/public-cloud-to-personal-cloud.jpg)
 
 私たちは、あなたが自身のデジタルライフをコントロールする基本的な権利を有すると確信しています。この権利を守る最も効果的な方法は、あなたのデータをローカルの、あなた自身のハードウェア上でホストすることです。
 
@@ -42,7 +42,7 @@ Olaresは、あなたが自身のデジタル資産をローカルで容易に�
 
 パブリッククラウドは、IaaS (Infrastructure as a Service)、PaaS (Platform as a Service)、SaaS (Software as a Service) といったサービスレイヤーで構成されています。Olaresは、これら各レイヤーに対するオープンソースの代替ソリューションを提供しています。
 
-  ![Olaresのアーキテクチ](https://file.bttcdn.com/github/olares/olares-architecture.jpg)
+  ![Olaresのアーキテクチ](https://app.cdn.olares.com/github/olares/olares-architecture.jpg)
 
 各コンポーネントの詳細については、[Olares アーキテクチャ](https://docs.olares.com/manual/concepts/system-architecture.html)（英語版）をご参照ください。
 
@@ -67,15 +67,15 @@ Olaresは、セキュリティ、使いやすさ、開発の柔軟性を向上�
 
 | **デスクトップ：馴染みやすく効率的なアクセスポイント** |  **ファイルマネージャー：データを安全に保管** |
 | :--------: | :-------: |
-| ![桌面](https://file.bttcdn.com/github/terminus/v2/desktop.jpg) | ![文件](https://file.bttcdn.com/github/terminus/v2/files.jpg) |
+| ![桌面](https://app.cdn.olares.com/github/terminus/v2/desktop.jpg) | ![文件](https://app.cdn.olares.com/github/terminus/v2/files.jpg) |
 | **Vault：安心のパスワード管理**|**マーケット：コントロール可能なアプリエコシステム** |
-| ![vault](https://file.bttcdn.com/github/terminus/v2/vault.jpg) | ![市场](https://file.bttcdn.com/github/terminus/v2/market.jpg) |
+| ![vault](https://app.cdn.olares.com/github/terminus/v2/vault.jpg) | ![市场](https://app.cdn.olares.com/github/terminus/v2/market.jpg) |
 | **Wise：あなただけのデジタルガーデン** | **設定：Olaresを効率的に管理** |
-| ![设置](https://file.bttcdn.com/github/terminus/v2/wise.jpg) | ![](https://file.bttcdn.com/github/terminus/v2/settings.jpg) |
+| ![设置](https://app.cdn.olares.com/github/terminus/v2/wise.jpg) | ![](https://app.cdn.olares.com/github/terminus/v2/settings.jpg) |
 | **ダッシュボード：Olaresを継続的に監視** | **プロフィール：ユニークなパーソナルページ** |
-| ![面板](https://file.bttcdn.com/github/terminus/v2/dashboard.jpg) | ![profile](https://file.bttcdn.com/github/terminus/v2/profile.jpg) |
+| ![面板](https://app.cdn.olares.com/github/terminus/v2/dashboard.jpg) | ![profile](https://app.cdn.olares.com/github/terminus/v2/profile.jpg) |
 | **Studio：開発、デバッグ、デプロイをワンストップで**|**コントロールパネル：Kubernetesクラスターを簡単に管理** |
-| ![Devbox](https://file.bttcdn.com/github/terminus/v2/devbox.jpg) | ![控制中心](https://file.bttcdn.com/github/terminus/v2/controlhub.jpg)|
+| ![Devbox](https://app.cdn.olares.com/github/terminus/v2/devbox.jpg) | ![控制中心](https://app.cdn.olares.com/github/terminus/v2/controlhub.jpg)|
 
 ## なぜOlaresなのか？
 
