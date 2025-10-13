@@ -20,6 +20,7 @@ import (
 var (
 	DIDGateURL     = "https://did-gate-v3.bttcdn.com/1.0/name/"
 	DIDGateTimeout = 10 * time.Second
+	DIDCachePath   = "/var/lib/olares"
 )
 
 var (
@@ -31,10 +32,10 @@ func init() {
 		err  error
 		info os.FileInfo
 	)
-	info, err = os.Stat("/var/lib/olares")
+	info, err = os.Stat(DIDCachePath)
 	if os.IsNotExist(err) {
 		// Create the directory if it doesn't exist
-		if err := os.MkdirAll("/var/lib/olares", 0755); err != nil {
+		if err := os.MkdirAll(DIDCachePath, 0755); err != nil {
 			panic(fmt.Sprintf("failed to create directory: %v", err))
 		}
 	}
@@ -43,26 +44,30 @@ func init() {
 		panic(fmt.Sprintf("failed to check directory: %v", err))
 	}
 
-	if info.IsDir() == false {
-		err = os.Remove("/var/lib/olares")
+	if !info.IsDir() {
+		err = os.RemoveAll(DIDCachePath)
 		if err != nil {
 			panic(fmt.Sprintf("failed to remove file: %v", err))
 		}
 
-		err = os.MkdirAll("/var/lib/olares", 0755)
+		err = os.MkdirAll(DIDCachePath, 0755)
 		if err != nil {
 			panic(fmt.Sprintf("failed to create directory: %v", err))
 		}
 	}
 
-	db, err = leveldb.OpenFile("/var/lib/olares/did_cache.db", nil)
+	dbPath := DIDCachePath + "/did_cache.db"
+	db, err = leveldb.OpenFile(dbPath, nil)
 	if err != nil {
 		// If file exists but can't be opened, try to remove it
 		if os.IsExist(err) {
-			os.Remove("did_cache.db")
+			err := os.RemoveAll(dbPath)
+			if err != nil {
+				panic(fmt.Sprintf("failed to remove existing db: %v", err))
+			}
 		}
 		// Try to create a new database
-		db, err = leveldb.OpenFile("did_cache.db", nil)
+		db, err = leveldb.OpenFile(dbPath, nil)
 		if err != nil {
 			panic(fmt.Sprintf("failed to create leveldb: %v", err))
 		}
