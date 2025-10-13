@@ -6,12 +6,8 @@ import (
 	"path"
 	"time"
 
-	cc "github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
-	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/pkg/storage"
-	"github.com/beclab/Olares/cli/pkg/terminus/templates"
-	"github.com/pkg/errors"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
@@ -19,28 +15,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/utils"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
-
-type GenerateBFLDefaultValues struct {
-	common.KubeAction
-}
-
-func (t *GenerateBFLDefaultValues) Execute(runtime connector.Runtime) error {
-	bflValuesFilePath := path.Join(runtime.GetInstallerDir(), "wizard/config/launcher/values.yaml")
-	data := util.Data{
-		"TerminusCertServiceAPI": t.KubeConf.Arg.TerminusCertServiceAPI,
-		"TerminusDNSServiceAPI":  t.KubeConf.Arg.TerminusDNSServiceAPI,
-	}
-	bflValuesFileContent, err := util.Render(templates.BFLValues, data)
-	if err != nil {
-		return errors.Wrap(errors.WithStack(err), "render BFL default values.yaml failed")
-	}
-
-	if err := util.WriteFile(bflValuesFilePath, []byte(bflValuesFileContent), cc.FileMode0644); err != nil {
-		return errors.Wrap(errors.WithStack(err), fmt.Sprintf("write account %s failed", bflValuesFilePath))
-	}
-
-	return nil
-}
 
 type ClearBFLValues struct {
 	common.KubeAction
@@ -104,12 +78,6 @@ func (m *InstallLauncherModule) Init() {
 	logger.InfoInstallationProgress("Installing launcher ...")
 	m.Name = "InstallLauncher"
 
-	generateBFLDefaultValues := &task.LocalTask{
-		Name:   "GenerateBFLDefaultValues",
-		Action: new(GenerateBFLDefaultValues),
-		Retry:  1,
-	}
-
 	installBFL := &task.LocalTask{
 		Name:   "InstallLauncher",
 		Desc:   "InstallLauncher",
@@ -130,7 +98,6 @@ func (m *InstallLauncherModule) Init() {
 	}
 
 	m.Tasks = []task.Interface{
-		generateBFLDefaultValues,
 		installBFL,
 		checkBFLRunning,
 	}

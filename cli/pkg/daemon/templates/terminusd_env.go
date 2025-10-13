@@ -23,8 +23,6 @@ FRP_AUTH_METHOD={{ .FrpAuthMethod }}
 FRP_AUTH_TOKEN=
 TOKEN_MAX_AGE={{ .TokenMaxAge }}
 MARKET_PROVIDER={{ .MarketProvider }}
-TERMINUS_CERT_SERVICE_API={{ .TerminusCertServiceAPI }}
-TERMINUS_DNS_SERVICE_API={{ .TerminusDNSServiceAPI }}
 {{- range $key, $val := .TerminusGlobalEnvs }}
 {{ $key }}={{ $val }}
 {{- end }}
