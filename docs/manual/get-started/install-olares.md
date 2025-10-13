@@ -1,50 +1,25 @@
 ---
-description: Get started with Olares on Linux using the one-line script
+description: Install Olares on Linux systems such as Ubuntu or Debian for optimal performance and stability in production environments. Supports deployment via ISO image or one-line script.
 ---
-:::warning Note for Mainland China users
-The steps in this guide differ for users in Mainland China due to regional differences. For a version tailored to your region, please read the Simplified Chinese documentation.
-:::
-
 # Install Olares on Linux
 
-This document introduces how to install and activate Olares on Linux. **Linux** (Ubuntu or Debian) is the recommended platform for running Olares, as it offers the best performance and stability in production environments.
+This guide explains how to install Olares on a Linux system.  
+We recommend deploying Olares on **Linux systems** (such as Ubuntu or Debian) to achieve the best performance and stability in production environments.
 
-Before installing, make sure to [create an Olares ID](create-olares-id.md) and verify that your operating system and hardware meet the minimum requirements.
+Before starting, please [create your Olares ID](create-olares-id.md) and make sure your operating system and hardware meet the minimum requirements for your chosen installation method.
 
-:::info Having trouble with installation?  
-If you encounter issues during the installation process, feel free to [submit a GitHub Issue](https://github.com/beclab/Olares/issues/new). Please include the following information when submitting: 
+## Installation methods
 
-- The platform or environment you're using (e.g., Ubuntu, Docker, WSL, etc.).  
-- The installation method (script installation or Docker image).  
-- Detailed error information (including logs, error messages, or screenshots).  
-:::
+Depending on your hardware and usage scenario, Olares provides two installation methods:
 
-## System requirements
+| Installation Method                 | Description                                                                                                                                                                   | Recommended for |
+|-------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------|
+| [ISO image](install-iso)            | Installs Olares from the official ISO <br/> boot image, automatically configuring <br/> the host (Linux) environment, container<br/> runtime, drivers, and core dependencies. | Ideal for deploying Olares on physical machines or virtualized environments (e.g., PVE). |
+| [One-line command](install-command) | Installs Olares by running a one-line <br/>command on an existing Linux system.                                                                                               | Suitable for users who prefer manual deployment in an existing Linux environment. |
 
-Make sure your device meets the following requirements.
-
-- CPU: At least 4 cores
-- RAM: At least 8GB of available memory
-- Storage: At least 150GB of available SSD storage.
-- Supported systems:
-    - Ubuntu 22.04 LTS or later
-    - Debian 12 or later
-::: warning SSD required
-The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
-:::
-
-:::info Version compatibility
-While these specific versions are confirmed to work, the process may still work on other versions. Adjustments may be necessary depending on your environment. If you meet any issues with these platforms, feel free to raise an issue on [GitHub](https://github.com/beclab/Olares/issues/new).
-:::
-
-## Install Olares
-
-In your terminal, run the following command:
-
-<!--@include: ./reusables.md{4,36}-->
-
-<!--@include: ./activate-olares.md-->
-
-<!--@include: ./log-in-to-olares.md-->
-
-<!--@include: ./reusables.md{38,42}-->
+:::info Having installation issues?
+If you encounter any issues during installation, [submit a GitHub Issue](https://github.com/beclab/Olares/issues/new). Please include:
+- The platform or environment used (e.g., Ubuntu, Docker, WSL).
+- Installation method (script or Docker image).
+- Detailed error messages, logs, or screenshots.
+  :::

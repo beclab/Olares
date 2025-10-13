@@ -34,6 +34,16 @@ const side = {
         {
           text: "Install Olares",
           link: "/manual/get-started/install-olares",
+          items: [
+            {
+              text: "Install via ISO",
+              link: "/manual/get-started/install-iso",
+            },
+            {
+              text: "Install via command",
+              link: "/manual/get-started/install-command",
+            },
+          ],
         },
         {
           text: "Back up mnemonics",

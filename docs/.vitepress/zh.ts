@@ -36,6 +36,17 @@ const side = {
         {
           text: "安装激活",
           link: "/zh/manual/get-started/install-olares",
+          collapsed: true,
+          items: [
+            {
+              text: "ISO 安装",
+              link: "/zh/manual/get-started/install-iso",
+            },
+            {
+              text: "命令行 安装",
+              link: "/zh/manual/get-started/install-command",
+            },
+          ],
         },
         {
           text: "备份助记词",
