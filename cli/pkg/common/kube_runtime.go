@@ -98,15 +98,13 @@ type Argument struct {
 	// to avoid wrong information given by user
 	WithJuiceFS bool `json:"with_juicefs"`
 	// the object storage service used as backend for JuiceFS
-	Storage                *Storage           `json:"storage"`
-	PublicNetworkInfo      *PublicNetworkInfo `json:"public_network_info"`
-	GPU                    *GPU               `json:"gpu"`
-	Cloudflare             *Cloudflare        `json:"cloudflare"`
-	Frp                    *Frp               `json:"frp"`
-	TokenMaxAge            int64              `json:"token_max_age"` // nanosecond
-	MarketProvider         string             `json:"market_provider"`
-	TerminusCertServiceAPI string             `json:"terminus_cert_service_api"`
-	TerminusDNSServiceAPI  string             `json:"terminus_dns_service_api"`
+	Storage           *Storage           `json:"storage"`
+	PublicNetworkInfo *PublicNetworkInfo `json:"public_network_info"`
+	GPU               *GPU               `json:"gpu"`
+	Cloudflare        *Cloudflare        `json:"cloudflare"`
+	Frp               *Frp               `json:"frp"`
+	TokenMaxAge       int64              `json:"token_max_age"` // nanosecond
+	MarketProvider    string             `json:"market_provider"`
 
 	Request any `json:"-"`
 
@@ -265,19 +263,17 @@ func NewArgument() *Argument {
 		GPU: &GPU{
 			Enable: !strings.EqualFold(os.Getenv(ENV_LOCAL_GPU_ENABLE), "0"), // default enable GPU, not set or 1 means enable
 		},
-		Cloudflare:             &Cloudflare{},
-		Frp:                    &Frp{},
-		User:                   &User{},
-		PublicNetworkInfo:      &PublicNetworkInfo{},
-		RegistryMirrors:        os.Getenv(ENV_REGISTRY_MIRRORS),
-		DownloadCdnUrl:         os.Getenv(ENV_DOWNLOAD_CDN_URL),
-		MarketProvider:         os.Getenv(ENV_MARKET_PROVIDER),
-		TerminusCertServiceAPI: os.Getenv(ENV_TERMINUS_CERT_SERVICE_API),
-		TerminusDNSServiceAPI:  os.Getenv(ENV_TERMINUS_DNS_SERVICE_API),
-		HostIP:                 os.Getenv(ENV_HOST_IP),
-		Environment:            os.Environ(),
-		MasterHostConfig:       &MasterHostConfig{},
-		SwapConfig:             &SwapConfig{},
+		Cloudflare:        &Cloudflare{},
+		Frp:               &Frp{},
+		User:              &User{},
+		PublicNetworkInfo: &PublicNetworkInfo{},
+		RegistryMirrors:   os.Getenv(ENV_REGISTRY_MIRRORS),
+		DownloadCdnUrl:    os.Getenv(ENV_DOWNLOAD_CDN_URL),
+		MarketProvider:    os.Getenv(ENV_MARKET_PROVIDER),
+		HostIP:            os.Getenv(ENV_HOST_IP),
+		Environment:       os.Environ(),
+		MasterHostConfig:  &MasterHostConfig{},
+		SwapConfig:        &SwapConfig{},
 	}
 	arg.IsCloudInstance, _ = strconv.ParseBool(os.Getenv(ENV_TERMINUS_IS_CLOUD_VERSION))
 	arg.PublicNetworkInfo.PubliclyAccessible, _ = strconv.ParseBool(os.Getenv(ENV_PUBLICLY_ACCESSIBLE))
