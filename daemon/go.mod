@@ -20,7 +20,7 @@ require (
 	bytetrade.io/web3os/bfl v0.0.0-00010101000000-000000000000
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/beclab/Olares/cli v0.0.0-20250929120332-6af571b6d493
+	github.com/beclab/Olares/cli v0.0.0-20251013092543-ace4363e51bd
 	github.com/containerd/containerd v1.7.28
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/dustin/go-humanize v1.0.1
