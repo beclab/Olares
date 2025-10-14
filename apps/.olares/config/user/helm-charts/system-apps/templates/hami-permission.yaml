@@ -2,11 +2,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: backend:{{ .Values.bfl.username }}:system-frontend:files-provider-svc
+  name: backend:{{ .Values.bfl.username }}:system-frontend:hami-scheduler-svc
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ .Values.bfl.username }}:files-provider-svc
+  name: {{ .Values.bfl.username }}:hami-scheduler-svc
 subjects:
 - kind: ServiceAccount
   name: system-frontend
@@ -16,11 +16,11 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: backend:{{ .Values.bfl.username }}:system-frontend:media-server-svc
+  name: backend:{{ .Values.bfl.username }}:system-frontend:hami-webui-svc
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ .Values.bfl.username }}:media-server-svc
+  name: {{ .Values.bfl.username }}:hami-webui-svc
 subjects:
 - kind: ServiceAccount
   name: system-frontend

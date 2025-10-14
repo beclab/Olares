@@ -319,6 +319,9 @@ spec:
       - name: ingress
         image: beclab/bfl-ingress:v0.3.22
         imagePullPolicy: IfNotPresent
+        env:
+        - name: AUTHELIA_AUTH_URL
+          value: 'http://authelia-backend-provider.user-system-{{ .Values.bfl.username }}:28080/api/authz/auth-request'
         volumeMounts:
         - name: ngxlog
           mountPath: /var/log/nginx

@@ -1,0 +1,12 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:search-provider-svc
+  annotations:
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/search3
+    provider-service-ref: search3.os-framework:80
+rules:
+- nonResourceURLs: 
+  - "/document/search"
+  verbs: ["*"]

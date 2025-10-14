@@ -50,8 +50,21 @@ rules:
   - "/provider/update_search_folder_paths"
   - "/provider/get_dataset_folder_status"
   - "/provider/update_dataset_folder_paths"
+  - "/seahub/api/*"
   verbs: ["*"]
 
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:media-server-svc
+  annotations:
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/media-server-service
+    provider-service-ref: media-server-service.os-framework:9090
+rules:
+- nonResourceURLs: 
+  - "/System/Configuration/encoding"
+  verbs: ["*"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
