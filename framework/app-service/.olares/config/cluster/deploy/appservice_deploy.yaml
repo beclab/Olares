@@ -170,15 +170,11 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.4.17
+        image: beclab/app-service:0.4.18
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
         env:
-        {{- range $key, $val := .Values.terminusGlobalEnvs }}
-        - name: {{ $key }}
-          value: {{ $val | quote }}
-        {{- end }}
         - name: KS_APISERVER_SERVICE_HOST
           value: 'ks-apiserver.kubesphere-system'
         - name: KS_APISERVER_SERVICE_PORT
