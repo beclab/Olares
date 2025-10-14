@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 
 	"github.com/beclab/Olares/daemon/pkg/commands"
 )
@@ -44,7 +45,7 @@ func (i *downloadCLI) Execute(ctx context.Context, p any) (res any, err error) {
 
 	downloadURL := target.CliURL
 	if downloadURL == "" {
-		downloadURL = fmt.Sprintf("%s/olares-cli-v%s_linux_%s.tar.gz", commands.CDN_URL, target.Version.Original(), arch)
+		downloadURL = fmt.Sprintf("%s/olares-cli-v%s_linux_%s.tar.gz", commands.OLARES_CDN_SERVICE, target.Version.Original(), arch)
 	}
 	tarFile := filepath.Join(destDir, fmt.Sprintf("olares-cli-v%s.tar.gz", target.Version.Original()))
 

@@ -12,10 +12,11 @@ import (
 )
 
 var (
-	INSTALLED_VERSION = ""
-	KUBE_TYPE         = "k3s"
-	COMMAND_BASE_DIR  = "" // deprecated shell command base dir
-	CDN_URL           = "https://dc3p1870nn3cj.cloudfront.net"
+	INSTALLED_VERSION     = ""
+	KUBE_TYPE             = "k3s"
+	COMMAND_BASE_DIR      = "" // deprecated shell command base dir
+	OLARES_CDN_SERVICE    = "https://cdn.olares.com"
+	OLARES_REMOTE_SERVICE = "https://api.olares.com"
 
 	OS_ROOT_DIR            = "/olares"
 	INSTALLING_PID_FILE    = "installing.pid"
@@ -43,7 +44,6 @@ func Init() {
 	baseDir := mustEnv("BASE_DIR")
 	INSTALLED_VERSION = mustEnv("INSTALLED_VERSION")
 	KUBE_TYPE = os.Getenv("KUBE_TYPE")
-	CDN_URL = os.Getenv("DOWNLOAD_CDN_URL")
 
 	TERMINUS_BASE_DIR = baseDir
 	INSTALLING_PID_FILE = filepath.Join(baseDir, INSTALLING_PID_FILE)
