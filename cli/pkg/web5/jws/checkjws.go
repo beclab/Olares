@@ -60,12 +60,11 @@ func init() {
 	db, err = leveldb.OpenFile(dbPath, nil)
 	if err != nil {
 		// If file exists but can't be opened, try to remove it
-		if os.IsExist(err) {
-			err := os.RemoveAll(dbPath)
-			if err != nil {
-				panic(fmt.Sprintf("failed to remove existing db: %v", err))
-			}
+		err := os.RemoveAll(dbPath)
+		if err != nil {
+			panic(fmt.Sprintf("failed to remove existing db: %v", err))
 		}
+		
 		// Try to create a new database
 		db, err = leveldb.OpenFile(dbPath, nil)
 		if err != nil {
