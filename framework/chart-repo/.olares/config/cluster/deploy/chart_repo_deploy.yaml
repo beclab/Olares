@@ -121,7 +121,7 @@ spec:
           name: check-appservice
       containers:
       - name: chartrepo
-        image: beclab/dynamic-chart-repository:v0.2.2
+        image: beclab/dynamic-chart-repository:v0.2.3
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
