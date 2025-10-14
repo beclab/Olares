@@ -23,7 +23,4 @@ FRP_AUTH_METHOD={{ .FrpAuthMethod }}
 FRP_AUTH_TOKEN=
 TOKEN_MAX_AGE={{ .TokenMaxAge }}
 MARKET_PROVIDER={{ .MarketProvider }}
-{{- range $key, $val := .TerminusGlobalEnvs }}
-{{ $key }}={{ $val }}
-{{- end }}
     `)))

@@ -20,9 +20,9 @@ import (
 func init() {
 	s := server.API
 	cmd := s.App.Group("command")
-	cmd.Post("/install", handlers.RequireSignature(
+	cmd.Post("/install",
 		handlers.WaitServerRunning(
-			handlers.RunCommand(handlers.PostTerminusInit, install.New))))
+			handlers.RunCommand(handlers.PostTerminusInit, install.New)))
 
 	cmd.Post("/uninstall", handlers.RequireSignature(
 		handlers.RequireOwner(

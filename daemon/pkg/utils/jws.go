@@ -4,23 +4,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
 
 	"github.com/beclab/Olares/cli/pkg/web5/jws"
+	"github.com/beclab/Olares/daemon/pkg/commands"
 	"k8s.io/klog/v2"
 )
 
 func ValidateJWS(token string) (bool, string, error) {
-	didGateDomain := os.Getenv("DID_GATE_URL")
-	if didGateDomain != "" {
-		newUrl := fmt.Sprintf("%s1.0/name/", didGateDomain)
-		_, err := url.Parse(newUrl)
-		if err != nil {
-			klog.Warningf("failed to parse DID gate URL in environment variable: %v", err)
-		} else {
-			jws.DIDGateURL = newUrl
-		}
+	didServiceURL, err := url.JoinPath(commands.OLARES_REMOTE_SERVICE, "/did/1.0/name/")
+	if err != nil {
+		klog.Errorf("failed to parse DID gate service URL: %v, Olares remote service: %s", err, commands.OLARES_REMOTE_SERVICE)
+		return false, "", err
 	}
+	jws.DIDGateURL = didServiceURL
 
 	// Validate the JWS token with a 20-minute expiration time
 	checkJWS, err := jws.CheckJWS(token, 20*60*1000)

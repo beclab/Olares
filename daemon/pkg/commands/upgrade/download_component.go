@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 
 	"github.com/beclab/Olares/daemon/pkg/cli"
 	"github.com/beclab/Olares/daemon/pkg/commands"
@@ -63,8 +64,8 @@ func (i *downloadComponent) Execute(ctx context.Context, p any) (res any, err er
 		"--version", target.Version.Original(),
 		"--base-dir", commands.TERMINUS_BASE_DIR,
 	}
-	if commands.CDN_URL != "" {
-		params = append(params, "--download-cdn-url", commands.CDN_URL)
+	if commands.OLARES_CDN_SERVICE != "" {
+		params = append(params, "--download-cdn-url", commands.OLARES_CDN_SERVICE)
 	}
 	if err = cmd.RunAsync_(ctx, cli.TERMINUS_CLI, params...); err != nil {
 		return nil, err

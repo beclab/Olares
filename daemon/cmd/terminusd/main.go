@@ -16,6 +16,7 @@ import (
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/internel/watcher/cert"
 	"github.com/beclab/Olares/daemon/internel/watcher/system"
+	"github.com/beclab/Olares/daemon/internel/watcher/systemenv"
 	"github.com/beclab/Olares/daemon/internel/watcher/upgrade"
 	"github.com/beclab/Olares/daemon/internel/watcher/usb"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
@@ -102,6 +103,7 @@ func main() {
 		usb.NewUmountWatcher(),
 		upgrade.NewUpgradeWatcher(),
 		cert.NewCertWatcher(),
+		systemenv.NewSystemEnvWatcher(),
 	}, func() {
 		if s != nil {
 			if err := s.Restart(); err != nil {
