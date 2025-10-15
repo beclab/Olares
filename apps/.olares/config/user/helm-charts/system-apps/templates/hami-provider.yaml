@@ -5,10 +5,10 @@ metadata:
   name: {{ .Values.bfl.username }}:hami-scheduler-svc
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/hami-scheduler
-    provider-service-ref: hami-scheduler.kube-system:80
+    provider-service-ref: https://hami-scheduler.kube-system
 rules:
 - nonResourceURLs: 
-  - "/gpus"
+  - "/gpus*"
   verbs: ["*"]
 
 

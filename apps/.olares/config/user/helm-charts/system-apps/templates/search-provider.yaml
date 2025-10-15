@@ -8,5 +8,5 @@ metadata:
     provider-service-ref: search3.os-framework:80
 rules:
 - nonResourceURLs: 
-  - "/document/search"
+  - "/document/search*"
   verbs: ["*"]
