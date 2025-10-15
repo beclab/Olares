@@ -139,6 +139,13 @@ spec:
               name: vault-server-nats-secret
         - name: NATS_SUBJECT_SYSTEM_VAULT
           value: "os.vault"
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.hostIP
+        - name: TERMINUSD_HOST
+          value: $(NODE_IP):18088
         volumeMounts:
         - name: vault-data
           mountPath: /padloc/packages/server/data
