@@ -45,7 +45,7 @@ const side = {
                   link: "/manual/get-started/install-linux-iso",
                 },
                 {
-                  text: "Using the script",
+                  text: "Using script",
                   link: "/manual/get-started/install-linux-script",
                 },
                 {
@@ -59,7 +59,7 @@ const side = {
               collapsed: true,
               items: [
                 {
-                  text: "Using the script",
+                  text: "Using script",
                   link: "/manual/get-started/install-mac-script",
                 },
                 {
@@ -73,7 +73,7 @@ const side = {
               collapsed: true,
               items: [
                 {
-                  text: "Using the script",
+                  text: "Using script",
                   link: "/manual/get-started/install-windows-script",
                 },
                 {
@@ -87,7 +87,7 @@ const side = {
               collapsed: true,
               items: [
                 {
-                  text: "Using the script",
+                  text: "Using script",
                   link: "/manual/get-started/install-pve-script",
                 },
                 {

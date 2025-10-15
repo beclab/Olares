@@ -19,10 +19,10 @@ Olares supports multiple platforms and deployment methods. Choose the installati
 
 Linux (Ubuntu or Debian) is the recommended platform for running Olares, as it offers the best performance and stability in production environments.
 
-| Method                                                | Description |
-|-------------------------------------------------------|--------------|
-| [**Using ISO image**](install-linux-iso.md)           | Fresh ISO install on a physical machine, <br/>automatically configuring the host (Linux) <br/>environment, container runtime, drivers, <br/>and core dependencies. |
-| [**Using one-line script**](linux-install-command.md) | Quick installation on existing Linux systems. |
+| Method                                               | Description |
+|------------------------------------------------------|--------------|
+| [**Using ISO image**](install-linux-iso.md)          | Fresh ISO install on a physical machine, <br/>automatically configuring the host (Linux) <br/>environment, container runtime, drivers, <br/>and core dependencies. |
+| [**Using one-line script**](install-linux-script.md) | Quick installation on existing Linux systems. |
 
 :::tip Recommendation
 The ISO installation method ensures maximum compatibility, performance, and system-level optimization.
@@ -34,7 +34,7 @@ These methods are suitable for **development**, **testing**, or **lightweight en
 
 #### Linux
 
-- [**Using Docker image**](install-linux-docker.md): Runs Olares in a containerized environment using Docker Compose in Linux.
+- [**Using Docker Compose**](install-linux-docker.md): Runs Olares in a containerized environment using Docker Compose in Linux.
 
 
 #### Windows
