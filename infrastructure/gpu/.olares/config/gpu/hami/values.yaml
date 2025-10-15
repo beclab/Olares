@@ -290,7 +290,8 @@ dcgmExporter:
   podLabels: {}
 
   # Annotations to be added to dcgm-exporter pods
-  podAnnotations: {}
+  podAnnotations:
+    gpu.bytetrade.io/restart-for-metric: "DCGM_FI_DEV_ENFORCED_POWER_LIMIT"
     # Using this annotation which is required for prometheus scraping
     # prometheus.io/scrape: "true"
   # prometheus.io/port: "9400"
@@ -432,11 +433,11 @@ webui:
       repository: beclab/hami-webui-fe-oss
       pullPolicy: IfNotPresent
       # Overrides the image tag whose default is the chart appVersion.
-      tag: "v1.0.7"
+      tag: "v1.0.8"
     backend:
       repository: beclab/hami-webui-be-oss
       pullPolicy: IfNotPresent
-      tag: "v1.0.7"
+      tag: "v1.0.8"
 
   imagePullSecrets: []
   nameOverride: "webui"

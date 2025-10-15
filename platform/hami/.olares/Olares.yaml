@@ -5,9 +5,9 @@ output:
     - 
       name: beclab/hami:v2.6.1
     - 
-      name: beclab/hami-webui-fe-oss:v1.0.7
+      name: beclab/hami-webui-fe-oss:v1.0.8
     - 
-      name: beclab/hami-webui-be-oss:v1.0.7
+      name: beclab/hami-webui-be-oss:v1.0.8
     - 
       name: beclab/dcgm-exporter:4.2.3-4.1.3-ubuntu22.04
       
