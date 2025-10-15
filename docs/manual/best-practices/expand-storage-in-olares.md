@@ -4,13 +4,11 @@ description: Complete guide to expanding storage in Olares. Learn how to connect
 ---
 # Expand storage in Olares
 
-This document describes how to expand storage in Olares, including connecting to an SMB server, using automatically mounted USB storage devices, and manually mounting HDDs or SSDs in a Linux environment.
+This document describes how to expand storage in Olares, including connecting to an SMB server, using automatically mounted USB storage devices, and manually mounting HDDs or SSDs from the Linux hosting environment.
 
 ## Connect to an SMB server
 
-Olares supports accessing local or remote file servers through the **SMB protocol**.
-
-This method is ideal for **data sharing** and **team collaboration**.
+You can easily mount Server Message Block (SMB) shares in Olares to access and manage shared files.
 
 1. On the Olares web interface, navigate to **Files** > **External** > **Connect to server**.
 
@@ -22,19 +20,17 @@ For details, please refer to [Mount SMB shares](../olares/files/mount-SMB.md).
 
 ## Expand storage via USB devices
 
-The **Olares daemon** automatically detects and mounts inserted USB storage devices.
+**Olares** automatically detects and mounts inserted USB storage devices.
 
-This method is ideal for **temporary data exchange** or **portable storage** use cases.
+- Once you insert a USB device, it will be mounted automatically — no command-line operations are required.
 
-- Once a USB device is inserted, it will be mounted automatically — no command-line operations are required.
-
-- You can access it from the Olares web interface or Larepass, via **Files** > **External**.
+- You can access it in **Files** > **External** from both Olares and Larepass.
 
 - When the USB device is unplugged, the system automatically unmounts it.
 
 ## Manually mount an HDD or SSD
 
-You can manually mount internal or other types of non-USB drives to Olares from your **Linux** system.
+You can manually mount an HDD or SSD to Olares from your **Linux** hosting system.
 
 This approach is recommended for **large data storage** (e.g., AI models) or **long-term storage expansion**.
 
@@ -50,11 +46,10 @@ Please ensure the following:
 
 :::tip  Mount path restriction
 
-Currently, only mounts under the directory `/olares/share` are supported.
+Currently, only mounts under the `/olares/share` directory are supported.
 
-Mounting flexibility will be improved in upcoming versions.
+Mounting flexibility will be improved in future versions.
 :::
-
 
 ### Identify the drive
 
@@ -81,7 +76,7 @@ Mounting flexibility will be improved in upcoming versions.
 
 Temporary mounting is suitable for **one-time** or **short-term** use (e.g., file transfer).
 
-The mount configuration will be lost after a system or Olares reboot.
+The mount configuration will be lost after a Linux or Olares reboot.
 
 1. Create a mount directory:
 
@@ -113,9 +108,7 @@ The mount configuration will be lost after a system or Olares reboot.
 
 If you want the mount configuration to remain after reboot, configure **automatic mounting** in `/etc/fstab`.
 
-1. Identify the target partition (refer to the steps in [Identify the drive](expand-storage-in-olares.md#identify-the-drive)).
-
-2. Retrieve the partition's file system type and UUID:
+1. Run the following command to list all drives and find the target partition:
 
     ```
     lsblk -f
@@ -127,7 +120,7 @@ If you want the mount configuration to remain after reboot, configure **automati
 
     ![Check mount result](/images/manual/tutorials/expand-storage-fstype.png#bordered)
 
-3. Create a mount directory:
+2. Create a mount directory:
     
     ```
     sudo mkdir -p /olares/share/<directory_name>
@@ -135,13 +128,13 @@ If you want the mount configuration to remain after reboot, configure **automati
 
     Replace `<directory_name>` with a custom name.
 
-4. Edit the mount configuration file:
+3. Edit the mount configuration file:
     
     ```
     sudo vi /etc/fstab
     ```
 
-5. Add a mount entry using **UUID** (recommended to prevent issues if device names change):
+4. Add a mount entry using **UUID** (recommended to prevent issues if device names change):
 
     ```
     UUID=<UUID> /olares/share/<directory_name> <FSTYPE> defaults,nofail 0 0
@@ -153,9 +146,9 @@ If you want the mount configuration to remain after reboot, configure **automati
     UUID=1234-ABCD /olares/share/my_disk ext4 defaults,nofail 0 0
     ```
 
-6. Save and exit the editor.
+5. Save and exit the editor.
 
-7. Verify the configuration (recommended):
+6. Verify the configuration (recommended):
 
     ```
     mount -a
@@ -163,7 +156,7 @@ If you want the mount configuration to remain after reboot, configure **automati
     
     If no errors appear, the setup is successful.
 
-8. After reboot, confirm the drive is automatically mounted via **Files** > **External**.
+7. After reboot, confirm the drive is automatically mounted via **Files** > **External**.
 
     :::warning
     An incorrect /etc/fstab configuration may prevent your system from booting.
@@ -181,7 +174,7 @@ You can unmount partitions mounted using either temporary or permanent methods.
     ```
 
     :::tip NOTE
-    Make sure no programs or terminals are accessing the directory before unmounting, or the operation will fail.
+    Make sure no programs or terminals are accessing the directory before unmounting.
     :::
 
 2. Remove the empty directory (optional):
@@ -194,4 +187,4 @@ You can unmount partitions mounted using either temporary or permanent methods.
     Ensure the directory is empty and fully unmounted before deleting, or data loss may occur.
     :::
 
-You can also view and remove this directory from **Files** in the Olares web interface.
+    You can also view and remove this directory from **Files** in Olares.
