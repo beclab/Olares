@@ -30,7 +30,7 @@ While the specific version is confirmed to work, the process may still work on o
 
 In PVE CLI, run the following command:
 
-<!--@include: ./reusables.md{5,37}-->
+<!--@include: ./reusables.md{4,37}-->
 
 <!--@include: ./activate-olares.md-->
 

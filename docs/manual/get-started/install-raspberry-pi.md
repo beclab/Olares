@@ -36,7 +36,7 @@ The installation will likely fail if an HDD (mechanical hard drive) is used inst
 ## Install Olares
 Run the following command:
 
-<!--@include: ./reusables.md{4,33}-->
+<!--@include: ./reusables.md{4,37}-->
 
 <!--@include: ./activate-olares.md-->
 

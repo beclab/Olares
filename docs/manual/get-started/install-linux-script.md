@@ -12,7 +12,7 @@ This guide explains how to install Olares on Linux using the provided installati
 
 In your terminal, run the following command:
 
-<!--@include: ./reusables.md{4,33}-->
+<!--@include: ./reusables.md{4,36}-->
 
 <!--@include: ./activate-olares.md-->
 
