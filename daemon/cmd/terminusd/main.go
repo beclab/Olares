@@ -12,6 +12,7 @@ import (
 	"github.com/beclab/Olares/daemon/cmd/terminusd/version"
 	"github.com/beclab/Olares/daemon/internel/apiserver"
 	"github.com/beclab/Olares/daemon/internel/ble"
+	"github.com/beclab/Olares/daemon/internel/intranet"
 	"github.com/beclab/Olares/daemon/internel/mdns"
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/internel/watcher/cert"
@@ -158,6 +159,12 @@ func main() {
 			panic(err)
 		}
 	}()
+
+	// start intranet server
+	intranet, _ := intranet.NewServer()
+	defer intranet.Close()
+	intranet.Start()
+
 	quit := make(chan os.Signal, 1)
 
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

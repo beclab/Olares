@@ -33,15 +33,15 @@ func init() {
 		info os.FileInfo
 	)
 	info, err = os.Stat(DIDCachePath)
-	if os.IsNotExist(err) {
-		// Create the directory if it doesn't exist
-		if err := os.MkdirAll(DIDCachePath, 0755); err != nil {
-			panic(fmt.Sprintf("failed to create directory: %v", err))
-		}
-	}
-
 	if err != nil {
-		panic(fmt.Sprintf("failed to check directory: %v", err))
+		if os.IsNotExist(err) {
+			// Create the directory if it doesn't exist
+			if err := os.MkdirAll(DIDCachePath, 0755); err != nil {
+				panic(fmt.Sprintf("failed to create directory: %v", err))
+			}
+		} else {
+			panic(fmt.Sprintf("failed to check directory: %v", err))
+		}
 	}
 
 	if !info.IsDir() {
@@ -64,7 +64,7 @@ func init() {
 		if err != nil {
 			panic(fmt.Sprintf("failed to remove existing db: %v", err))
 		}
-		
+
 		// Try to create a new database
 		db, err = leveldb.OpenFile(dbPath, nil)
 		if err != nil {
