@@ -6,6 +6,8 @@ description: Install Olares on a physical machine using the official ISO image, 
 
 This guide explains how to install Olares on a physical machine using the official ISO image.
 
+<!--@include: ./reusables.md{44,51}-->
+
 ## Prerequisites
 
 - **Host requirements**:
@@ -76,28 +78,7 @@ After rebooting, the system will enter Ubuntu.
    check Containerd: success
    ```
 
-## Activate Olares
-
-:::warning Same network required for admin users
-To avoid activation failures, ensure that both your phone and Olares are connected to the **same network** when activating as an **admin user**.  
-For **member users**, the same network requirement does **not** apply.  
-:::
-
-![ISO Activate](/images/manual/larepass/iso-activate.png#bordered)
-
-1. Open LarePass app.
-
-2. Tap **Discover nearby Olares**. Your Olares device should appear.
-
-3. Tap **Install now** to finish the installation process.
-
-4. Tap **Activate now** to activate Olares and complete initialization.
-
-5. Follow the prompt to set the login password for Olares.
-
-   ![ISO Activate](/images/manual/larepass/iso-activate-2.png#bordered)
-
-Once complete, you can access Olares via the provided URL and your credentials.
+<!--@include: ./install-and-activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 

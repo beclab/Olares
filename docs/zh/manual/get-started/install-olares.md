@@ -1,29 +1,61 @@
 ---
-description: 在 Linux 系统（如 Ubuntu 或 Debian）上安装 Olares，以在生产环境中获得最佳的性能与稳定性。支持通过 ISO 镜像或一行命令完成部署
+description: 概览 Olares 支持的安装方式。推荐在 Linux 环境下通过 ISO 镜像或一行命令安装。其他平台（如 macOS、Windows、PVE、Raspberry Pi）适用于测试和开发。
+outline: [2,4]
 ---
+
 # 安装 Olares
 
-本文介绍如何在 Linux 系统上安装 Olares。我们推荐在 **Linux 系统**（如 Ubuntu 或 Debian）上部署 Olares，以在生产环境中获得最佳的性能与稳定性。
+本文介绍 Olares 支持的安装方式。 在开始安装前，请确保已完成以下准备工作：
+- 已创建 [Olares ID](create-olares-id.md)。
+- 确认操作系统和硬件满足最低安装要求。
 
-开始安装前，请先[创建 Olares ID](create-olares-id.md)，并确认操作系统或硬件已满足所选方式的最低要求。
+## 选择合适的安装方式
 
-## 安装方式
+Olares 支持多平台、多部署方式。请根据你的使用场景选择最合适的安装方式。
 
-根据你的硬件和使用场景，Olares 提供以下两种安装方式：
+### 生产环境推荐方式
 
-| 安装方式                   | 说明                                                                      | 适用场景                              |
-|------------------------|-------------------------------------------------------------------------|-----------------------------------|
-| [通过 ISO 镜像安装](.iso.md) | 从官方 ISO 启动镜像安装 Olares, <br/>自动配置宿主机环境（Linux），容器<br/>运行环境、必要驱动及核心依赖。 | 适合在物理机或虚拟化环境（如 PVE） 中部署使用 Olares。 |
-| [通过一行命令安装](.script.md) | 在现有的 Linux 系统中执行一条命令<br/>安装 Olares。                                          | 适合在已有 Linux 环境上手动部署。              |
+推荐在 **Linux（Ubuntu 或 Debian）** 系统上运行 Olares，以获得最佳性能和稳定性。
 
+| 安装方式 | 说明 |
+|----------|------|
+| [**通过 ISO 镜像安装**](install-linux-iso.md) | 通过官方 ISO 镜像在物理机上全新安装 Olares，<br/>自动配置宿主（Linux）环境、容器运行时、驱动及<br/>核心依赖。 |
+| [**通过一行命令安装**](linux-install-command.md) | 在现有 Linux 系统中快速安装 Olares。 |
 
-:::info 安装遇到问题？
-如果安装过程中遇到问题，[可以提交 GitHub Issue](https://github.com/beclab/Olares/issues/new)。提交时请提供以下信息：
-- 使用的平台或环境（如 Ubuntu、Docker、WSL 等）。
-- 安装方式（脚本安装或 Docker 镜像）。
-- 详细的错误信息（包括日志、错误提示或截图）。
-  :::
-
-:::tip 版本兼容性
-虽然以上版本已经过验证，但其他版本也可能正常运行 Olares。根据你的环境可能需要进行调整。如果你在这些平台上安装时遇到任何问题，欢迎在 [GitHub](https://github.com/beclab/Olares/issues/new) 上提问。
+:::tip 推荐
+在主机上使用 ISO 安装方式可确保最佳的兼容性、性能与系统级优化，是运行 Olares 的首选方案。
 :::
+
+### 其他安装方式
+
+以下方式仅适用于**开发测试**或**轻量级环境**。
+
+#### Linux
+
+- [**通过 Docker 镜像安装**](install-linux-docker.md)：在 Linux 上通过 Docker Compose 以容器化方式运行 Olares。
+
+#### Windows
+
+| 安装方式 | 说明                                                     |
+|----------|--------------------------------------------------------|
+| [**通过一行命令安装**](install-windows-script.md) | 在 Windows Subsystem for Linux 2（WSL 2）虚拟化环境中安装 Olares。 |
+| [**通过 Docker 镜像安装**](install-windows-docker.md) | 在 WSL2 下的 Docker 容器中运行 Olares。                         |
+
+#### macOS
+
+| 安装方式 | 说明                            |
+|----------|-------------------------------|
+| [**通过一行命令安装**](install-mac-script.md) | 使用 MiniKube 在容器化环境中安装 Olares。 |
+| [**通过 Docker 镜像安装**](install-mac-docker.md) | 在 macOS 上通过 Docker 部署 Olares。 |
+
+#### PVE
+
+| 安装方式 | 说明                                      |
+|----------|-----------------------------------------|
+| [**通过 ISO 镜像安装**](install-pve-iso.md) | 在 Proxmox VE 中通过 ISO 镜像以虚拟机方式部署 Olares。 |
+| [**通过一行命令安装**](install-pve-script.md) | 直接在 PVE 节点上安装 Olares。  |
+
+#### Raspberry Pi（ARM）
+
+- [**通过一行命令安装**](install-raspberry-pi.md)：在基于 ARM 架构的 Raspberry Pi 设备上安装 Olares。
+

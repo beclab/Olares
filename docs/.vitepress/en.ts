@@ -34,14 +34,72 @@ const side = {
         {
           text: "Install Olares",
           link: "/manual/get-started/install-olares",
+          collapsed: true,
           items: [
             {
-              text: "Install via ISO",
-              link: "/manual/get-started/install-iso",
+              text: "Linux",
+              collapsed: true,
+              items: [
+                {
+                  text: "Using ISO image (Recommended)",
+                  link: "/manual/get-started/install-linux-iso",
+                },
+                {
+                  text: "Using the script",
+                  link: "/manual/get-started/install-linux-script",
+                },
+                {
+                  text: "Using Docker Compose",
+                  link: "/manual/get-started/install-linux-docker",
+                },
+              ],
             },
             {
-              text: "Install via command",
-              link: "/manual/get-started/install-command",
+              text: "macOS",
+              collapsed: true,
+              items: [
+                {
+                  text: "Using the script",
+                  link: "/manual/get-started/install-mac-script",
+                },
+                {
+                  text: "Using Docker image",
+                  link: "/manual/get-started/install-mac-docker",
+                },
+              ],
+            },
+            {
+              text: "Windows (WSL 2)",
+              collapsed: true,
+              items: [
+                {
+                  text: "Using the script",
+                  link: "/manual/get-started/install-windows-script",
+                },
+                {
+                  text: "Using Docker image",
+                  link: "/manual/get-started/install-windows-docker",
+                },
+              ],
+            },
+            {
+              text: "PVE",
+              collapsed: true,
+              items: [
+                {
+                  text: "Using the script",
+                  link: "/manual/get-started/install-pve-script",
+                },
+                {
+                  text: "Using ISO image",
+                  link: "/manual/get-started/install-pve-iso",
+                },
+              ],
+            },
+            { text: "LXC", link: "/manual/get-started/install-lxc" },
+            {
+              text: "Raspberry Pi",
+              link: "/manual/get-started/install-raspberry-pi",
             },
           ],
         },

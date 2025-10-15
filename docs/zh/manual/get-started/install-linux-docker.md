@@ -1,68 +1,48 @@
 ---
 outline: [2, 3]
-description: Learn how to deploy Olares on a Linux server using Docker Compose. This step-by-step guide covers system requirements, configuration, installation, activation, and container management.
+description: 了解如何使用 Docker Compose 在 Linux 服务器上部署 Olares。本安装指南涵盖系统要求、配置、安装、激活以及容器管理的相关内容。
 ---
-# Install Olares on Linux using Docker Compose
-You can use Docker to install and run Olares in a containerized environment. This guide walks you through setting up Olares with Docker, preparing the installation environment, completing the activation process, and managing the container lifecycle.
+# 使用 Docker Compose 在 Linux 上安装 Olares
+通过 Docker 可以在容器化环境中安装和运行 Olares。本文将介绍如何使用 Docker 设置 Olares、准备安装环境、完成激活过程以及管理容器生命周期。
 
-:::tip Recommendation for production use
-For best performance and stability, we recommend [installing Olares on Linux via script](/manual/get-started/install-olares.md).
+::: warning 不适用于生产环境
+该部署方式仅适用于开发或测试环境。我们推荐[通过脚本方式在 Linux 上安装 Olares](/zh/manual/get-started/install-olares.md)，以获得最佳的性能与稳定性。
 :::
 
-## System requirements
+<!--@include: ./reusables.md{40,53}-->
 
-Make sure your device meets the following requirements.
-
-- CPU: At least 4 cores
-- RAM: At least 8GB of available memory
-- Storage: At least 150GB of available SSD storage. 
-- Supported systems:
-    - Ubuntu 22.04 LTS or later
-    - Debian 12 or later
-
-::: warning SSD required
-The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
-:::
-
-:::info Version compatibility
-While these specific versions are confirmed to work, the process may still work on other versions. Adjustments may be necessary depending on your environment. If you meet any issues with these platforms, feel free to raise an issue on [GitHub](https://github.com/beclab/Olares/issues/new).
-:::
-
-## Before you begin
-Before you begin, ensure the following:
-- [Docker](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/) are installed and running on your system.
-- You know the IP address of the current device.
-  :::tip Verify host IP
-  To verify your host IP, run the following command in the terminal:
+## 开始之前
+开始安装前，请确保：
+- 系统中已安装并运行 [Docker](https://docs.docker.com/engine/install/) 和 [Docker Compose](https://docs.docker.com/compose/install/)。
+- 已知当前设备的 IP 地址。
+  :::tip 查看 IP 地址
+  如需确认 IP 地址，在终端中运行以下命令：
   ```bash
   ip r
   ```
-  Look for the line starting with `default via`. It will show the default gateway and the network interface being used.
+  找到以 `default via` 开头的行，对应默认网关和正在使用的网络接口。
   :::
-- You have [created an Olares ID via LarePass](/manual/get-started/create-olares-id.md).
+- 已通过 LarePass [创建 Olares ID](/zh/manual/get-started/create-olares-id.md) 且使用默认的 `olares.cn` 域名。
 
-## Create a new directory
-Create a directory to store the Olares configuration files. For example, you could make a new directory called `olares-config` with the following command:
+## 创建文件夹
+创建文件夹存储 Olares 的配置文件。例如，用如下命令创建名为 `olares-config` 的文件夹：
 
 ```bash
 mkdir ~/olares-config
 cd ~/olares-config
 ```
-## Prepare `docker-compose.yaml`
-1. Create a `docker-compose.yaml` file in the `olares-config` directory.
-2. Add the appropriate content to the file based on whether GPU support is required:
+## 准备 `docker-compose.yaml`
+1. 在 `olares-config` 目录中创建 `docker-compose.yaml` 文件。
+2. 根据是否启用 GPU，填入对应的内容：
    :::code-group
    <<< @/code-snippets/docker-compose.yaml
    <<< @/code-snippets/docker-compose-GPU.yaml
    :::
-3. Save the `docker-compose.yaml` file.
+3. 保存 `docker-compose.yaml` 文件。
 
-Here is the updated and properly formatted Markdown content for installing GPU drivers and the NVIDIA Container Toolkit, ready to be included in your installation guide:
+## 安装 GPU 依赖（适用于启用 GPU 的设备）
 
-
-## Install GPU dependencies (for GPU-enabled machines)
-
-1. Install GPU drivers for your system:
+1. 为系统安装 GPU 驱动：
 
     ```bash
     curl -o /tmp/keyring.deb -L https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb && \
@@ -73,9 +53,9 @@ Here is the updated and properly formatted Markdown content for installing GPU d
     sudo apt install nvidia-driver-570
     ````
 
-2. Install the NVIDIA Container Toolkit to enable Docker to access your GPU. 
+2. 安装 NVIDIA Container Toolkit，确保 Docker 能访问 GPU。 
      
-     a. Configure the repository:
+     a. 配置软件源：
 
     ```bash
     curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
@@ -90,21 +70,22 @@ Here is the updated and properly formatted Markdown content for installing GPU d
     sudo apt-get update
     ```
 
-      b. Install the toolkit and restart docker:
+     b. 安装 Toolkit 并重启 Docker：
 
    ```bash
    sudo apt-get install -y nvidia-container-toolkit
    sudo nvidia-ctk runtime configure --runtime=docker
    sudo systemctl restart docker
    ```
+ 
+    c. 验证安装：
+ 
 
-      c. Verify the installation:
-
-   ```bash
-   sudo docker run --rm --runtime=nvidia --gpus all ubuntu nvidia-smi
-   ```
-
-    If successful, you should see output similar to the following:
+    ```bash
+    sudo docker run --rm --runtime=nvidia --gpus all ubuntu nvidia-smi
+    ```
+    
+   如果安装成功，你将看到如下类似的输出：
 
     ```
     +-----------------------------------------------------------------------------------------+
@@ -120,19 +101,37 @@ Here is the updated and properly formatted Markdown content for installing GPU d
     +-----------------------------------------+------------------------+----------------------+
     ```
 
+## 更新 Docker 的镜像源
+添加 Olares 的镜像源，提高镜像拉取速度：
+1. 打开 `/etc/docker/daemon.json` 文件。
+2. 编辑文件，加上以下内容：
 
-## Set up environment variables and start container
-
-1. In the `olares-config` directory, use the following command to set the environment variables and start the Olares services:
-
-   ```bash [With Docker Compose Plugin]
-   VERSION=<olares version> HOST_IP=<host ip> docker compose up -d
+   <<< @/code-snippets/docker-daemon.json
+3. 重启 Docker 服务以应用更改。
+   ```bash
+   sudo systemctl restart docker
    ```
-   - `VERSION=<olares version>`: Specifies the Olares version. Replace `<olares version>` with the actual one. For example: `1.11.5`.
-   - `HOST_IP=<host ip>`: Specifies the Linux machine's IP address. Replace `<host ip>` with the actual one.
-   
-   After executing the command, you should see output similar to the following, showing the status and port mappings of all containers:
-    ```bash
+4. 验证配置文件是否修改成功：
+   ```bash
+   docker info
+   ```
+   在输出的结果中，如输出结果包含如下内容，表示修改成功：
+
+   ```bash
+   Registry Mirrors:
+   https://mirrors.joinolares.cn/
+   ```
+## 设置环境变量并启动容器
+
+1. 在 `olares-config` 目录，运行以下命令设置环境变量并启动容器：
+   ```bash
+   VERSION=<olares version>-cn HOST_IP=<host ip> docker compose up -d
+   ```
+   - `VERSION=<olares version>-cn`：指定 Olares 镜像的版本。将 `<olares version>-cn` 替换为实际版本，如 `1.11.5-cn`。
+   - `HOST_IP=<host ip>`：指定当前主机设备的 IP 地址。将 `<host ip>` 替换为实际地址。
+
+   运行完成后，输出结果如下：
+   ```bash
    [+] Running 20/20
    ✔ olaresd-proxy Pulled                                                                           67.8s
    ✔ 688513194d7a Pull complete                                                                    6.8s
@@ -156,41 +155,41 @@ Here is the updated and properly formatted Markdown content for installing GPU d
    ✔ 5a9b10c3302f Pull complete                                                                 5831.7s
     ```
 
-2. Verify if the container is running successfully:
+2. 确认容器是否正常运行：
    ```bash
    docker ps
    ```
-   You should see an output like this:
+   输出结果如下：
    ```bash
    CONTAINER ID   IMAGE                         COMMAND                  CREATED              STATUS              PORTS                   NAMES
    28e86c473750   beclab/olaresd:proxy-v0.1.0   "/mdns-agent"            About a minute ago   Up About a minute                           olares-olaresd-proxy-1
-   5fd68a8709ad   beclab/olares:1.11.5       "/usr/local/bin/entr…"   2 minutes ago        Up About a minute   0.0.0.0:80->80/tcp...   olares-olares-1
+   5fd68a8709ad   beclab/olares:1.11.5-cn       "/usr/local/bin/entr…"   2 minutes ago        Up About a minute   0.0.0.0:80->80/tcp...   olares-olares-1
    ```
 
 <!--@include: ./install-and-activate-olares.md-->
 
-## Manage the Olares container
-Ensure that you are in the directory containing the `docker-compose.yaml` file before proceeding with any commands.
-### Stop the container
-To stop the running container:
+## 管理 Olares 容器
+在运行任何命令之前，请确保你位于包含 `docker-compose.yaml` 文件的目录中。
+### 停止容器
+要停止当前正在运行的容器：
 ```bash
 docker compose stop
 ```
 
-### Restart the container
-To restart the container after it has been stopped:
+### 重启容器
+容器停止后，使用以下命令重启：
 ```bash
 docker compose start
 ```
-It may take 6 to 7 minutes for all services to fully initialize after restarting.
+容器重启后，所有服务可能需要 6–7 分钟才能完全初始化。在此时间内请耐心等待。
 
-### Uninstall the container
-To uninstall the container:
+### 卸载容器
+要完全删除容器：
 ```bash
 docker compose down
 ```
 
-<!--@include: ./reusables.md{39,43}-->
+<!--@include: ./reusables.md{33,37}-->
    
    
 

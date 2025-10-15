@@ -12,7 +12,8 @@ Currently, Olares on Windows has certain limitations including:
 
 We recommend using it only for development or testing purposes.
 :::
-<!--@include: ./reusables.md{45,51}-->
+
+<!--@include: ./reusables.md{44,51}-->
 
 ## System compatibility
 Make sure your Windows meets the following requirements.

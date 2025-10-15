@@ -13,7 +13,7 @@ Olares is optimized for Linux systems (Ubuntu or Debian). We recommend [installi
 To run Olares, you must [create an Olares ID](../../manual/get-started/create-olares-id.md), and ensure that both the operating system and hardware meet the minimum requirements.
 
 Choose your preferred option to get started:
-- [Install on Linx using Docker](linux-via-docker-compose.md)
+- [Install on Linx using Docker](../../manual/get-started/install-linux-docker.md)
 - [Install on macOS](/developer/install/mac)
 - [Install on Windows (WSL 2)](/developer/install/windows)
 - [Install on PVE](/developer/install/pve)

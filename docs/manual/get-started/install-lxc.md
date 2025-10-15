@@ -8,7 +8,7 @@ LXC (Linux Containers) is a lightweight virtualization method that runs applicat
 Currently, Olares on LXC has certain limitations. We recommend using it only for development or testing purposes.
 :::
 
-<!--@include: ./reusables.md{45,51}-->
+<!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
 Make sure your device meets the following requirements.

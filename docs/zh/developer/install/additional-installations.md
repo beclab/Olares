@@ -13,9 +13,9 @@ Olares 已针对 Linux 系统（Ubuntu 或 Debian）进行了优化。我们推�
 在安装之前，请先[创建 Olares ID](../../manual/get-started/create-olares-id.md)，并确保操作系统与硬件满足最低要求。
 
 请选择你的平台开始安装：
-- [在 Linux 上安装（通过 Docker 镜像）](linux-via-docker-compose.md)
-- [在 macOS 上安装](mac.md)
-- [在 Windows（WSL 2）上安装](windows.md)
-- [在 PVE 上安装](pve.md)
-- [在 LXC 上安装](lxc.md)
-- [在树莓派上安装](raspberry-pi.md)
+- [在 Linux 上安装（通过 Docker 镜像）](../../manual/get-started/install-linux-docker.md)
+- [在 macOS 上安装](../../manual/get-started/install-mac-script.md)
+- [在 Windows（WSL 2）上安装](../../manual/get-started/install-windows-script.md)
+- [在 PVE 上安装](../../manual/get-started/install-pve-script.md)
+- [在 LXC 上安装](../../manual/get-started/install-lxc.md)
+- [在树莓派上安装](../../manual/get-started/install-raspberry-pi.md)

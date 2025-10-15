@@ -39,12 +39,68 @@ const side = {
           collapsed: true,
           items: [
             {
-              text: "ISO 安装",
-              link: "/zh/manual/get-started/install-iso",
+              text: "Linux",
+              collapsed: true,
+              items: [
+                {
+                  text: "使用 ISO 镜像（推荐）",
+                  link: "/zh/manual/get-started/install-linux-iso",
+                },
+                {
+                  text: "使用脚本",
+                  link: "/zh/manual/get-started/install-linux-script",
+                },
+                {
+                  text: "使用 Docker Compose",
+                  link: "/zh/manual/get-started/install-linux-docker",
+                },
+              ],
             },
             {
-              text: "命令行 安装",
-              link: "/zh/manual/get-started/install-command",
+              text: "macOS",
+              collapsed: true,
+              items: [
+                {
+                  text: "使用脚本",
+                  link: "/zh/manual/get-started/install-mac-script",
+                },
+                {
+                  text: "使用 Docker 镜像",
+                  link: "/zh/manual/get-started/install-mac-docker",
+                },
+              ],
+            },
+            {
+              text: "Windows (WSL 2)",
+              collapsed: true,
+              items: [
+                {
+                  text: "使用脚本",
+                  link: "/zh/manual/get-started/install-windows-script",
+                },
+                {
+                  text: "使用 Docker 镜像",
+                  link: "/zh/manual/get-started/install-windows-docker",
+                },
+              ],
+            },
+            {
+              text: "PVE",
+              collapsed: true,
+              items: [
+                {
+                  text: "使用脚本",
+                  link: "/zh/manual/get-started/install-pve-script",
+                },
+                {
+                  text: "使用 ISO 镜像",
+                  link: "/zh/manual/get-started/install-pve-iso",
+                },
+              ],
+            },{ text: "LXC", link: "/zh/manual/get-started/install-lxc" },
+            {
+              text: "树莓派",
+              link: "/zh/manual/get-started/install-raspberry-pi",
             },
           ],
         },

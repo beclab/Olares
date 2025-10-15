@@ -66,23 +66,7 @@ description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括
    check Olaresd: success
    check Containerd: success
    ```
-
-## 激活 Olares
-
-:::warning 管理员需同一网络
-请确保手机和 Olares 设备在同一网络中。
-:::
-请按以下步骤激活：
-![ISO 激活](/images/manual/larepass/iso-activate.png#bordered)
-
-1. 打开 LarePass 应用。
-2. 点击**发现附近的 Olares**，LarePass 将显示待安装的 Olares 设备。
-3. 点击**立即安装**，完成剩余安装过程。
-4. 点击**立即激活**以激活设备并初始化系统。
-5. 按提示设置 Olares 登录密码。
-   ![ISO 激活-2](/images/manual/larepass/iso-activate-2.png#bordered)
-
-完成后，你即可通过个人 URL 访问 Olares。
+<!--@include: ./install-and-activate-olares.md{4,16}-->
 
 <!--@include: ./log-in-to-olares.md-->
 

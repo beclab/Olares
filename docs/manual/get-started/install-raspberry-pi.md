@@ -7,7 +7,7 @@ This guide explains how to install Olares on a Raspberry Pi.
 :::warning Not recommended for production use
 Currently, Olares on Raspberry Pi has certain limitations. We recommend using it only for development or testing purposes.
 :::
-<!--@include: ./reusables.md{45,51}-->
+<!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
 Make sure your Raspbian device meets the following requirements.

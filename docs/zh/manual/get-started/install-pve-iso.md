@@ -91,40 +91,8 @@ description: 在 PVE 虚拟化平台上使用 ISO 镜像安装配置 Olares 的�
     check Containerd:  success
     ```
 
-## 激活 Olares
+<!--@include: ./install-and-activate-olares.md{4,16}-->
 
-请按以下步骤激活 Olares：
-![ISO 激活](/images/manual/larepass/iso-activate.png#bordered)
-
-
-1. 打开 LarePass 应用。
-2. 点击**发现附近的 Olares**，应用将显示你的 Olares 设备。
-3. 点击**立即安装**，完成剩余安装过程。
-4. 点击**立即激活**以激活设备并初始化系统。
-5. 按提示设置 Olares 登录密码。
-   ![ISO 激活-2](/images/manual/larepass/iso-activate-2.png#bordered)
-
-完成后，你即可通过个人 URL 和凭证访问 Olares。
-
-:::tip 注意
-此操作需要你的手机和 PVE 主机处于同一网络。
-:::
-
-## 登录 Olares
-
-1. 在浏览器输入个人 URL，（如`https://desktop.{olares-id}.olares.cn`），按任意键继续。
-
-2. 在登录界面，输入 Olares 密码。
-
-   ![Log in](/images/manual/get-started/log-in.png#bordered)
-3. 系统会要求完成双重验证。你可以选择在 LarePass 上确认登录，或手动输入 6 位验证码。
-   
-   ![确认登录](/images/manual/larepass/confirm-login.png#bordered)
-
-   ::: info
-   验证码有时效限制，请在过期前完成输入。如果验证码过期，需要重新生成。
-   :::
-
-登录后你就会看到 Olares 桌面。🎉
+<!--@include: ./log-in-to-olares.md-->
 
 <!--@include: ./reusables.md{33,37}-->
