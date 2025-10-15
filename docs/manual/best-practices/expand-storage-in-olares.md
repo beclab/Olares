@@ -184,7 +184,7 @@ You can unmount partitions mounted using either temporary or permanent methods.
     ```
 
     :::warning
-    Ensure the directory is empty and fully unmounted before deleting, or data loss may occur.
+    Ensure the directory is empty and fully unmounted before deleting.
     :::
 
     You can also view and remove this directory from **Files** in Olares.
