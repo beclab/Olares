@@ -1,40 +1,61 @@
 package intranet
 
-type server struct {
+import "k8s.io/klog/v2"
+
+type Server struct {
 	dnsServer   *mDNSServer
 	proxyServer *proxyServer
 }
 
-func (s *server) Close() {
+func (s *Server) Close() {
 	if s.dnsServer != nil {
 		s.dnsServer.Close()
-		s.dnsServer = nil
 	}
 
 	if s.proxyServer != nil {
+		s.proxyServer.Close()
 	}
 }
 
-func NewServer() (*server, error) {
+func NewServer() (*Server, error) {
 	dnsServer, err := NewMDNSServer()
 	if err != nil {
 		return nil, err
 	}
 
-	return &server{
-		dnsServer: dnsServer,
+	proxyServer, err := NewProxyServer()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Server{
+		dnsServer:   dnsServer,
+		proxyServer: proxyServer,
 	}, nil
 }
 
-func (s *server) Start() error {
+func (s *Server) Start() error {
 	if s.dnsServer != nil {
 		// test
 		s.dnsServer.SetHosts([]*DNSConfig{
-			{Domain: "myapp.liuyu.olares"},
+			{Domain: "desktop.guotest334.olares"},
 			{Domain: "liuyu.olares"},
 		})
 		// end test
-		return s.dnsServer.Restart()
+		err := s.dnsServer.Restart()
+		if err != nil {
+			klog.Error("start intranet dns server error, ", err)
+			return err
+		}
 	}
+
+	if s.proxyServer != nil {
+		err := s.proxyServer.Start()
+		if err != nil {
+			klog.Error("start intranet proxy server error, ", err)
+			return err
+		}
+	}
+
 	return nil
 }
