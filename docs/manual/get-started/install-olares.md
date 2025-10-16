@@ -9,7 +9,7 @@ This page provides an overview of supported installation methods for Olares.
 
 Before installation, make sure you have:
 - Created your [Olares ID](create-olares-id.md).
-- Verified your operating system and hardware meet the minimum requirements.
+- Verified your operating system and hardware meet the minimum requirements as described in the specific guide.
 
 ## Choosing the right method
 
