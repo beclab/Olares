@@ -99,7 +99,7 @@ Linux 或 Olares 重启后，挂载配置将失效。
 
 3. 验证挂载结果：
 
-    挂载成功后，可在 Olares **文件管理器** > **外部设备** 目录下访问该分区内容。
+    挂载成功后，可在 Olares **文件管理器** > **外部设备**目录下访问该分区内容。
 
     ![验证挂载结果](/images/zh/manual/tutorials/expand-storage-mount-result-cn.png#bordered)
 
