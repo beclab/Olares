@@ -18,7 +18,7 @@ description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括
 
 ## 制作启动盘
 
-1. 在电脑上下载最新的 **Olares 安装镜像 ISO** 文件。
+1. 点击[此处](https://cdn.olares.cn)下载最新官方 Olares ISO 镜像。
 2. 下载并安装 [**Balena Etcher**](https://etcher.balena.io/) 工具。
 3. 将 U 盘插入电脑。
 4. 打开 Etcher，依次选择：
