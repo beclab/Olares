@@ -66,9 +66,8 @@ description: Olares 存储扩展指南，涵盖 SMB 服务器连接、USB 自动
     - **NVMe 固态硬盘**：设备名称通常为`/dev/nvme0n1`，`/dev/nvme1n1`。
     - **SATA/机械硬盘**：设备名称通常为`/dev/sda`，`/dev/sdb`。
 
-    :::info
     每个硬盘下方会列出其分区，如`/dev/nvme1n1p1`，`/dev/nvme1n1p2`或`/dev/sdb1`等。
-    :::
+    ![分区列表](/images/zh/manual/tutorials/expand-storage-partition.png#bordered)
 
 4. 确定你要挂载的目标分区，如`/dev/nvme1n1p1`。
 
@@ -163,7 +162,7 @@ Linux 或 Olares 重启后，挂载配置将失效。
     建议先执行`mount -a`，验证无误后再重启。
     :::
 
-## 卸载已挂载的分区
+### 卸载已挂载的分区
 
 无论是临时挂载还是持久挂载的分区，都可以通过以下方式卸载。
 

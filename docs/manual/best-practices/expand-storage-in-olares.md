@@ -66,9 +66,9 @@ Mounting flexibility will be improved in future versions.
     - **NVMe SSD**: typically appear as `/dev/nvme0n1`, `/dev/nvme1n1`, etc.
     - **SATA** or **HDD**: typically appear as `/dev/sda`, `/dev/sdb`, etc.
 
-    :::info
-    Each drive lists its partitions below, such as `/dev/nvme1n1p1`, `/dev/nvme1n1p2`, or `/dev/sdb1`.
-    :::
+    Each drive lists its partitions under the Device column, such as `/dev/nvme1n1p1`, `/dev/nvme1n1p2`, or `/dev/sdb1`.
+    ![Partition list](/images/manual/tutorials/expand-storage-partition.png#bordered)
+   
 
 4. Confirm the target partition to mount (e.g., `/dev/nvme1n1p1`).
 
@@ -163,7 +163,7 @@ If you want the mount configuration to remain after reboot, configure **automati
     It is strongly recommended to run `mount -a` first to validate the configuration before rebooting.
     :::
 
-## Unmount a partition
+### Unmount a partition
 
 You can unmount partitions mounted using either temporary or permanent methods.
 
