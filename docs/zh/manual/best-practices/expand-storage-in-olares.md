@@ -57,7 +57,7 @@ description: Olares 存储扩展指南，涵盖 SMB 服务器连接、USB 自动
 
 2. 执行以下命令，查看系统识别到的硬盘信息：
 
-   ```
+   ```bash
    fdisk -l
    ```
 
@@ -79,7 +79,7 @@ Linux 或 Olares 重启后，挂载配置将失效。
 
 1. 创建挂载目录：
 
-    ```
+    ```bash
     sudo mkdir -p /olares/share/<目录名>
     ```
 
@@ -87,13 +87,13 @@ Linux 或 Olares 重启后，挂载配置将失效。
 
 2. 挂载分区：
 
-    ```
+    ```bash
     sudo mount /dev/<待挂载分区> /olares/share/<目录名>  
     ```
 
     **示例**：
 
-    ```
+    ```bash
     sudo mount /dev/nvme1n1p1 /olares/share/hdd0
     ```
 
@@ -109,7 +109,7 @@ Linux 或 Olares 重启后，挂载配置将失效。
 
 1. 执行以下命令获取所有磁盘，并找到目标分区：
 
-    ```
+    ```bash
     lsblk -f
     ```
 
@@ -121,7 +121,7 @@ Linux 或 Olares 重启后，挂载配置将失效。
 
 2. 创建挂载目录
 
-    ```
+    ```bash
     sudo mkdir -p /olares/share/<目录名>
     ```
 
@@ -129,7 +129,7 @@ Linux 或 Olares 重启后，挂载配置将失效。
 
 3. 编辑挂载配置文件：
 
-    ```
+    ```bash
     sudo vi /etc/fstab
     ```
 
@@ -149,7 +149,7 @@ Linux 或 Olares 重启后，挂载配置将失效。
 
 6. 验证配置是否正确（推荐执行）：
 
-    ```
+    ```bash
     mount -a
     ```
     
@@ -168,7 +168,7 @@ Linux 或 Olares 重启后，挂载配置将失效。
 
 1. 卸载分区：
 
-    ```
+    ```bash
     sudo umount /olares/share/<目录名>
     ```
 
@@ -178,7 +178,7 @@ Linux 或 Olares 重启后，挂载配置将失效。
 
 2. 删除空目录（可选）：
 
-    ```
+    ```bash
     rm -rf /olares/share/<目录名>
     ```
 

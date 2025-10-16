@@ -57,7 +57,7 @@ Mounting flexibility will be improved in future versions.
 
 2. Run the following command to view detected drives:
 
-   ```
+   ```bash
    fdisk -l
    ```
 
@@ -80,7 +80,7 @@ The mount configuration will be lost after a Linux or Olares reboot.
 
 1. Create a mount directory:
 
-    ```
+    ```bash
     sudo mkdir -p /olares/share/<directory_name>
     ```
 
@@ -88,7 +88,7 @@ The mount configuration will be lost after a Linux or Olares reboot.
 
 2. Mount the partition:
 
-    ```
+    ```bash
     sudo mount /dev/<partition> /olares/share/<directory_name>    
     ```
 
@@ -110,7 +110,7 @@ If you want the mount configuration to remain after reboot, configure **automati
 
 1. Run the following command to list all drives and find the target partition:
 
-    ```
+    ```bash
     lsblk -f
     ```
 
@@ -122,7 +122,7 @@ If you want the mount configuration to remain after reboot, configure **automati
 
 2. Create a mount directory:
     
-    ```
+    ```bash
     sudo mkdir -p /olares/share/<directory_name>
     ```
 
@@ -130,7 +130,7 @@ If you want the mount configuration to remain after reboot, configure **automati
 
 3. Edit the mount configuration file:
     
-    ```
+    ```bash
     sudo vi /etc/fstab
     ```
 
@@ -150,7 +150,7 @@ If you want the mount configuration to remain after reboot, configure **automati
 
 6. Verify the configuration (recommended):
 
-    ```
+    ```bash
     mount -a
     ```
     
@@ -169,7 +169,7 @@ You can unmount partitions mounted using either temporary or permanent methods.
 
 1. Unmount the partition:
 
-    ```
+    ```bash
     sudo umount /olares/share/<directory_name>
     ```
 
@@ -179,7 +179,7 @@ You can unmount partitions mounted using either temporary or permanent methods.
 
 2. Remove the empty directory (optional):
 
-    ```
+    ```bash
     rm -rf /olares/share/<directory_name>
     ```
 
