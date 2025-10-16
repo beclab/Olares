@@ -44,7 +44,7 @@ func init() {
 		}
 	}
 
-	if !info.IsDir() {
+	if info == nil || !info.IsDir() {
 		err = os.RemoveAll(DIDCachePath)
 		if err != nil {
 			panic(fmt.Sprintf("failed to remove file: %v", err))
