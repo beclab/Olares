@@ -13,7 +13,7 @@ userEnvs:
     type: bool
     editable: true
   - envName: OLARES_USER_SMTP_SERVER
-    type: url
+    type: domain
     editable: true
   - envName: OLARES_USER_SMTP_PORT
     type: number
