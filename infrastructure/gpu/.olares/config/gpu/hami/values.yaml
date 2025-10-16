@@ -330,7 +330,7 @@ dcgmExporter:
   serviceMonitor:
     apiVersion: "monitoring.coreos.com/v1"
     enabled: true
-    interval: 15s
+    interval: 3s
     honorLabels: false
     additionalLabels: {}
     # monitoring: prometheus
@@ -522,7 +522,7 @@ webui:
 
   serviceMonitor:
     enabled: true
-    interval: 15s
+    interval: 3s
     honorLabels: false
     additionalLabels:
       jobRelease: hami-webui-prometheus
@@ -530,7 +530,7 @@ webui:
 
   hamiServiceMonitor:
     enabled: true
-    interval: 15s
+    interval: 3s
     honorLabels: false
     additionalLabels:
       jobRelease: hami-webui-prometheus
