@@ -31,7 +31,7 @@ func (s *server) Start() error {
 		// test
 		s.dnsServer.SetHosts([]*DNSConfig{
 			{Domain: "myapp.liuyu.olares"},
-			{Domain: "desktop.liuyu.olares"},
+			{Domain: "liuyu.olares"},
 		})
 		// end test
 		return s.dnsServer.Restart()

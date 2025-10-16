@@ -3,7 +3,6 @@ package intranet
 import (
 	"errors"
 	"net"
-	"os"
 
 	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/eball/zeroconf"
@@ -14,29 +13,40 @@ type DNSConfig struct {
 	Domain string
 }
 
+type instanceServer struct {
+	queryServer *zeroconf.Server
+	host        *DNSConfig
+}
+
 type mDNSServer struct {
-	server *zeroconf.Server
-	hosts  []*DNSConfig
+	servers map[string]*instanceServer
 }
 
 func NewMDNSServer() (*mDNSServer, error) {
-	s := &mDNSServer{}
+	s := &mDNSServer{
+		servers: make(map[string]*instanceServer),
+	}
 	return s, nil
 }
 
 func (s *mDNSServer) Close() {
-	if s.server != nil {
-		s.server.Shutdown()
-		klog.Info("Intranet mDNS server closed")
-		s.server = nil
+	if s.servers != nil {
+		for host, server := range s.servers {
+			if server == nil {
+				continue
+			}
+
+			// Shutdown the mDNS server
+			server.queryServer.Shutdown()
+			s.servers[host] = nil
+			klog.Info("Intranet mDNS server closed, ", host)
+		}
 	}
 }
 
 func (s *mDNSServer) Restart() error {
-	if s.server != nil {
-		klog.Info("Intranet mDNS server restarting")
-		s.Close()
-	}
+	klog.Info("Intranet mDNS server restarting")
+	s.Close()
 
 	iface, err := s.findIntranetInterface()
 	if err != nil {
@@ -44,20 +54,19 @@ func (s *mDNSServer) Restart() error {
 		return err
 	}
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		klog.Error("get hostname error, ", err)
-		return err
-	}
-
-	for _, host := range s.hosts {
-		klog.Infof("Registering mDNS service for domain: %s", host.Domain)
+	for domain := range s.servers {
+		klog.Infof("Registering mDNS service for domain: %s", domain)
 		// Register the mDNS service
 		var err error
-		s.server, err = zeroconf.Register(host.Domain, "_http._tcp", "local.", hostname, 80, []string{"txtv=0", "lo=1", "la=0", "path=/"}, []net.Interface{*iface})
+		server, err := zeroconf.Register("olares", "_http._tcp", "local.", domain, 80, []string{"txtv=0", "lo=1", "la=0", "path=/"}, []net.Interface{*iface})
 		if err != nil {
-			klog.Errorf("Failed to register mDNS service for domain %s: %v", host.Domain, err)
+			klog.Errorf("Failed to register mDNS service for domain %s: %v", domain, err)
 			return err
+		}
+
+		s.servers[domain] = &instanceServer{
+			queryServer: server,
+			host:        &DNSConfig{Domain: domain},
 		}
 	}
 	klog.Info("Intranet mDNS server started")
@@ -65,7 +74,15 @@ func (s *mDNSServer) Restart() error {
 }
 
 func (s *mDNSServer) SetHosts(hosts []*DNSConfig) {
-	s.hosts = hosts
+	for _, host := range hosts {
+		if host.Domain == "" {
+			continue
+		}
+
+		if _, exists := s.servers[host.Domain]; !exists {
+			s.servers[host.Domain] = nil
+		}
+	}
 }
 
 func (s *mDNSServer) findIntranetInterface() (*net.Interface, error) {
