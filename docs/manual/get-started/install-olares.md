@@ -21,7 +21,7 @@ Linux (Ubuntu or Debian) is the recommended platform for running Olares, as it o
 
 | Method                                               | Description |
 |------------------------------------------------------|--------------|
-| [**Using ISO image**](install-linux-iso.md)          | Fresh ISO install on a physical machine, <br/>automatically configuring the host (Linux) <br/>environment, container runtime, drivers, <br/>and core dependencies. |
+| [**Using ISO image**](install-linux-iso.md)          | Fresh ISO install on a physical machine, automatically configuring the <br/>host (Linux) environment, container runtime, drivers, and core <br/>dependencies. |
 | [**Using one-line script**](install-linux-script.md) | Quick installation on existing Linux systems. |
 
 :::tip Recommendation
