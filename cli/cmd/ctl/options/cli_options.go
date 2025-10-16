@@ -5,6 +5,7 @@ import (
 	cc "github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/phase/cluster"
 	"github.com/spf13/cobra"
+	"k8s.io/utils/pointer"
 )
 
 type CliTerminusUninstallOptions struct {
@@ -28,19 +29,23 @@ func (o *CliTerminusUninstallOptions) AddFlags(cmd *cobra.Command) {
 }
 
 type CliTerminusInstallOptions struct {
-	Version         string
-	KubeType        string
-	WithJuiceFS     bool
-	MiniKubeProfile string
-	BaseDir         string
+	Version            string
+	KubeType           string
+	WithJuiceFS        bool
+	MiniKubeProfile    string
+	BaseDir            string
+	EnableReverseProxy *bool
 	common.SwapConfig
 }
 
 func NewCliTerminusInstallOptions() *CliTerminusInstallOptions {
-	return &CliTerminusInstallOptions{}
+	return &CliTerminusInstallOptions{
+		EnableReverseProxy: pointer.Bool(false),
+	}
 }
 
 func (o *CliTerminusInstallOptions) AddFlags(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(o.EnableReverseProxy, "enable-reverse-proxy", false, "Enable reverse proxy, if not set, will be dynamically enabled if public IP is not detected, and disabled otherwise")
 	cmd.Flags().StringVarP(&o.Version, "version", "v", "", "Set Olares version, e.g., 1.10.0, 1.10.0-20241109")
 	cmd.Flags().StringVar(&o.KubeType, "kube", "k3s", "Set kube type, e.g., k3s or k8s")
 	cmd.Flags().BoolVar(&o.WithJuiceFS, "with-juicefs", false, "Use JuiceFS as the rootfs for Olares workloads, rather than the local disk.")

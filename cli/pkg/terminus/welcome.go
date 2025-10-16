@@ -22,10 +22,10 @@ func (t *WelcomeMessage) Execute(runtime connector.Runtime) error {
 		localIP = si.GetNATGateway()
 	}
 	var publicIPs []net.IP
-	publicNetworkInfo := t.KubeConf.Arg.PublicNetworkInfo
-	publicIPs = append(publicIPs, publicNetworkInfo.OSPublicIPs...)
-	if publicNetworkInfo.AWSPublicIP != nil {
-		publicIPs = append(publicIPs, publicNetworkInfo.AWSPublicIP)
+	networkSettings := t.KubeConf.Arg.NetworkSettings
+	publicIPs = append(publicIPs, networkSettings.OSPublicIPs...)
+	if networkSettings.CloudProviderPublicIP != nil {
+		publicIPs = append(publicIPs, networkSettings.CloudProviderPublicIP)
 	}
 	var filteredPublicIPs []net.IP
 	for _, publicIP := range publicIPs {
@@ -54,12 +54,12 @@ func (t *WelcomeMessage) Execute(runtime connector.Runtime) error {
 		for _, publicIP := range filteredPublicIPs {
 			logger.Infof("http://%s:%d", publicIP, port)
 		}
-	} else if publicNetworkInfo.PubliclyAccessible && publicNetworkInfo.ExternalPublicIP != nil {
+	} else if networkSettings.EnableReverseProxy != nil && !*networkSettings.EnableReverseProxy && networkSettings.ExternalPublicIP != nil {
 		fmt.Println()
-		logger.Info("this machine is explicitly specified as publicly accessible")
+		logger.Info("this installation is explicitly configured to disable reverse proxy")
 		logger.Info("but no public IP address can be found from the system")
-		logger.Info("a reflected public IP as seen by others on the internet is determined on a best effort basis:")
-		logger.Infof("http://%s:%d", publicNetworkInfo.ExternalPublicIP, port)
+		logger.Info("a reflected public IP as seen by internet peers is determined on a best effort basis:")
+		logger.Infof("http://%s:%d", networkSettings.ExternalPublicIP, port)
 	}
 	fmt.Println()
 	logger.Info("Open your browser and visit the above address")

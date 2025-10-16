@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/beclab/Olares/cli/version"
 	"io/fs"
 	"io/ioutil"
 	"net"
@@ -18,6 +17,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/beclab/Olares/cli/version"
 
 	"github.com/beclab/Olares/cli/pkg/storage"
 	corev1 "k8s.io/api/core/v1"
@@ -706,18 +707,11 @@ func (a *CheckTerminusStateInHost) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-type GetPublicNetworkInfo struct {
+type DetectPublicIPAddress struct {
 	common.KubeAction
 }
 
-func (p *GetPublicNetworkInfo) Execute(runtime connector.Runtime) error {
-	if runtime.GetSystemInfo().IsWsl() || runtime.GetSystemInfo().IsDarwin() {
-		if p.KubeConf.Arg.PublicNetworkInfo.PubliclyAccessible {
-			logger.Warnf("environment variable %s is set explicitly but unsupported on this platform, ignoring", common.ENV_PUBLICLY_ACCESSIBLE)
-			p.KubeConf.Arg.PublicNetworkInfo.PubliclyAccessible = false
-		}
-		return nil
-	}
+func (p *DetectPublicIPAddress) Execute(runtime connector.Runtime) error {
 	if util.IsOnAWSEC2() {
 		logger.Info("on AWS EC2 instance, will try to check if a public IP address is bound")
 		awsPublicIP, err := util.GetPublicIPFromAWSIMDS()
@@ -726,7 +720,20 @@ func (p *GetPublicNetworkInfo) Execute(runtime connector.Runtime) error {
 		}
 		if awsPublicIP != nil {
 			logger.Info("retrieved public IP addresses from IMDS")
-			p.KubeConf.Arg.PublicNetworkInfo.AWSPublicIP = awsPublicIP
+			p.KubeConf.Arg.NetworkSettings.CloudProviderPublicIP = awsPublicIP
+			return nil
+		}
+	}
+
+	if util.IsOnTencentCVM() {
+		logger.Info("on Tencent CVM instance, will try to check if a public IP address is bound")
+		tencentPublicIP, err := util.GetPublicIPFromTencentIMDS()
+		if err != nil {
+			return errors.Wrap(err, "failed to get public IP from Tencent")
+		}
+		if tencentPublicIP != nil {
+			logger.Info("retrieved public IP addresses from IMDS")
+			p.KubeConf.Arg.NetworkSettings.CloudProviderPublicIP = tencentPublicIP
 			return nil
 		}
 	}
@@ -737,19 +744,21 @@ func (p *GetPublicNetworkInfo) Execute(runtime connector.Runtime) error {
 	}
 	if len(osPublicIPs) > 0 {
 		logger.Info("detected public IP addresses on local network interface")
-		p.KubeConf.Arg.PublicNetworkInfo.OSPublicIPs = osPublicIPs
+		p.KubeConf.Arg.NetworkSettings.OSPublicIPs = osPublicIPs
 		return nil
 	}
 
-	if !p.KubeConf.Arg.PublicNetworkInfo.PubliclyAccessible {
-		return nil
+	if p.KubeConf.Arg.NetworkSettings.EnableReverseProxy != nil {
+		if !*p.KubeConf.Arg.NetworkSettings.EnableReverseProxy {
+			return nil
+		}
+		externalIP := getMyExternalIPAddr()
+		if externalIP == nil {
+			return errors.New("this installation is explicitly specified to disable reverse proxy but no valid public IP can be found")
+		}
+		p.KubeConf.Arg.NetworkSettings.ExternalPublicIP = externalIP
 	}
 
-	externalIP := getMyExternalIPAddr()
-	if externalIP == nil {
-		return errors.New("this machine is explicitly specified as publicly accessible but no valid public IP can be found")
-	}
-	p.KubeConf.Arg.PublicNetworkInfo.ExternalPublicIP = externalIP
 	return nil
 
 }
