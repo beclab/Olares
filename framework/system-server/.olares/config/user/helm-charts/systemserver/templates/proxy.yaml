@@ -169,3 +169,18 @@ spec:
     - protocol: TCP
       port: 28080
       targetPort: 28080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name:  notifications-server
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  type: ClusterIP
+  selector:
+    app: systemserver
+  ports:
+    - protocol: TCP
+      port: 28080
+      targetPort: 28080

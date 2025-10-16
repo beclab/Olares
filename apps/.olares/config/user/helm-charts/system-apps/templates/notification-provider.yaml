@@ -1,0 +1,12 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:notification-provider-svc
+  annotations:
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/notifications-server
+    provider-service-ref: notifications-server.os-framework:80
+rules:
+- nonResourceURLs: 
+  - "/notification/*"
+  verbs: ["*"]
