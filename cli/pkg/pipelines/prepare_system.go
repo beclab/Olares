@@ -36,7 +36,6 @@ func PrepareSystemPipeline(opts *options.CliPrepareSystemOptions, components []s
 	arg.SetRegistryMirrors(opts.RegistryMirrors)
 	arg.SetStorage(getStorageValueFromEnv())
 	arg.SetTokenMaxAge()
-	arg.SetReverseProxy()
 
 	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
 	if err != nil {

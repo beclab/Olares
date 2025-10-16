@@ -266,7 +266,7 @@ spec:
 
       containers:
       - name: api
-        image: beclab/bfl:v0.4.29
+        image: beclab/bfl:v0.4.30
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000

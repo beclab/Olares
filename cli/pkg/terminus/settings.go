@@ -39,13 +39,12 @@ func (p *SetSettingsValues) Execute(runtime connector.Runtime) error {
 	}
 
 	selfhosted := true
-	if p.KubeConf.Arg.PublicNetworkInfo.PubliclyAccessible {
-		selfhosted = false
-	}
-
-	publicNetworkInfo := p.KubeConf.Arg.PublicNetworkInfo
-	if publicNetworkInfo.AWSPublicIP != nil {
-		selfhosted = false
+	if p.KubeConf.Arg.NetworkSettings.EnableReverseProxy != nil {
+		selfhosted = *p.KubeConf.Arg.NetworkSettings.EnableReverseProxy
+	} else {
+		if p.KubeConf.Arg.NetworkSettings.CloudProviderPublicIP != nil {
+			selfhosted = false
+		}
 	}
 
 	terminusdInstalled := "0"
@@ -115,9 +114,9 @@ func (m *InstallSettingsModule) Init() {
 	logger.InfoInstallationProgress("Installing settings ...")
 	m.Name = "InstallSettings"
 
-	getPublicNetworkInfo := &task.LocalTask{
-		Name:   "GetPublicNetworkInfo",
-		Action: new(GetPublicNetworkInfo),
+	detectPublicIPAddress := &task.LocalTask{
+		Name:   "DetectPublicIPAddress",
+		Action: new(DetectPublicIPAddress),
 		Retry:  3,
 	}
 
@@ -134,7 +133,7 @@ func (m *InstallSettingsModule) Init() {
 	}
 
 	m.Tasks = []task.Interface{
-		getPublicNetworkInfo,
+		detectPublicIPAddress,
 		setSettingsValues,
 		installSettings,
 	}
