@@ -716,7 +716,7 @@ EOF
                     local filename=$(echo -n "$img"|md5sum|awk '{print $1}')
                     filename="$filename.tar.gz"
                     echo "downloading ${filename} ..."
-                    curl -fsSL https://dc3p1870nn3cj.cloudfront.net/${filename} -o $BASE_DIR/images/$filename
+                    curl -fsSL https://cdn.olares.com/${filename} -o $BASE_DIR/images/$filename
                 done < $BASE_DIR/images/images.node.mf
             fi
         fi

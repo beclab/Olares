@@ -162,7 +162,7 @@ jobs:
       - name: Get checksum
         id: vars
         run: |
-          echo "version_md5sum=$(curl -sSfL https://dc3p1870nn3cj.cloudfront.net${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.md5sum.txt|awk '{print $1}')" >> $GITHUB_OUTPUT
+          echo "version_md5sum=$(curl -sSfL https://cdn.olares.com${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.md5sum.txt|awk '{print $1}')" >> $GITHUB_OUTPUT
 
       - name: Update checksum
         uses: eball/write-tag-to-version-file@latest
