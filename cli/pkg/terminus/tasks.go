@@ -158,11 +158,11 @@ func (c *CheckPodsRunning) Execute(runtime connector.Runtime) error {
 
 type Download struct {
 	common.KubeAction
-	Version        string
-	BaseDir        string
-	DownloadCdnUrl string
-	UrlOverride    string
-	ReleaseID      string
+	Version     string
+	BaseDir     string
+	CDNService  string
+	UrlOverride string
+	ReleaseID   string
 }
 
 func (t *Download) Execute(runtime connector.Runtime) error {
@@ -184,13 +184,13 @@ func (t *Download) Execute(runtime connector.Runtime) error {
 	}
 
 	if t.UrlOverride == "" {
-		md5URL, _ := url.JoinPath(wizard.GetDownloadMirrors(t.DownloadCdnUrl), version.VENDOR_REPO_PATH, fmt.Sprintf("%s.md5sum.txt", stem))
+		md5URL, _ := url.JoinPath(wizard.GetDownloadMirrors(t.CDNService), version.VENDOR_REPO_PATH, fmt.Sprintf("%s.md5sum.txt", stem))
 		var fetchMd5 = fmt.Sprintf("curl -sSfL %s |awk '{print $1}'", md5URL)
 		md5sum, err := runtime.GetRunner().Cmd(fetchMd5, false, false)
 		if err != nil {
 			return errors.New("get md5sum failed")
 		}
-		wizard.Url, _ = url.JoinPath(wizard.GetDownloadMirrors(t.DownloadCdnUrl), version.VENDOR_REPO_PATH, fmt.Sprintf("%s.tar.gz", stem))
+		wizard.Url, _ = url.JoinPath(wizard.GetDownloadMirrors(t.CDNService), version.VENDOR_REPO_PATH, fmt.Sprintf("%s.tar.gz", stem))
 		wizard.CheckMd5Sum = true
 		wizard.Md5sum = md5sum
 	} else {

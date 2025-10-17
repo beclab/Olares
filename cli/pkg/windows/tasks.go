@@ -36,9 +36,9 @@ type DownloadAppxPackage struct {
 
 func (d *DownloadAppxPackage) Execute(runtime connector.Runtime) error {
 	var systemInfo = runtime.GetSystemInfo()
-	var downloadCdnUrl = getDownloadCdnUrl(d.KubeConf.Arg.DownloadCdnUrl)
+	var cdnService = getCDNService(d.KubeConf.Arg.OlaresCDNService)
 
-	appx := files.NewKubeBinary("wsl", systemInfo.GetOsArch(), systemInfo.GetOsType(), systemInfo.GetOsVersion(), systemInfo.GetOsPlatformFamily(), "2204", fmt.Sprintf("%s\\%s\\%s\\%s", systemInfo.GetHomeDir(), cc.DefaultBaseDir, "pkg", "components"), downloadCdnUrl)
+	appx := files.NewKubeBinary("wsl", systemInfo.GetOsArch(), systemInfo.GetOsType(), systemInfo.GetOsVersion(), systemInfo.GetOsPlatformFamily(), "2204", fmt.Sprintf("%s\\%s\\%s\\%s", systemInfo.GetHomeDir(), cc.DefaultBaseDir, "pkg", "components"), cdnService)
 
 	if err := appx.CreateBaseDir(); err != nil {
 		return errors.Wrapf(errors.WithStack(err), "create file %s base dir failed", appx.FileName)
@@ -94,12 +94,12 @@ type DownloadWSLInstallPackage struct {
 
 func (d *DownloadWSLInstallPackage) Execute(runtime connector.Runtime) error {
 	var systemInfo = runtime.GetSystemInfo()
-	var downloadCdnUrl = getDownloadCdnUrl(d.KubeConf.Arg.DownloadCdnUrl)
+	var cdnService = getCDNService(d.KubeConf.Arg.OlaresCDNService)
 	var osArch = systemInfo.GetOsArch()
 	var osType = systemInfo.GetOsType()
 	var osVersion = systemInfo.GetOsVersion()
 	var osPlatformFamily = systemInfo.GetOsPlatformFamily()
-	wslInstallationPackage := files.NewKubeBinary("wslpackage", osArch, osType, osVersion, osPlatformFamily, kubekeyapiv1alpha2.DefaultWSLInstallPackageVersion, fmt.Sprintf("%s\\%s\\%s\\%s", systemInfo.GetHomeDir(), cc.DefaultBaseDir, "pkg", "components"), downloadCdnUrl)
+	wslInstallationPackage := files.NewKubeBinary("wslpackage", osArch, osType, osVersion, osPlatformFamily, kubekeyapiv1alpha2.DefaultWSLInstallPackageVersion, fmt.Sprintf("%s\\%s\\%s\\%s", systemInfo.GetHomeDir(), cc.DefaultBaseDir, "pkg", "components"), cdnService)
 
 	if err := wslInstallationPackage.CreateBaseDir(); err != nil {
 		return errors.Wrapf(errors.WithStack(err), "create file %s base dir failed", wslInstallationPackage.FileName)
@@ -492,7 +492,7 @@ func (i *InstallTerminus) Execute(runtime connector.Runtime) error {
 		fmt.Sprintf("export %s=%s", common.ENV_PREINSTALL, os.Getenv(common.ENV_PREINSTALL)),
 		fmt.Sprintf("export %s=%s", common.ENV_HOST_IP, systemInfo.GetLocalIp()),
 		fmt.Sprintf("export %s=%s", common.ENV_DISABLE_HOST_IP_PROMPT, os.Getenv(common.ENV_DISABLE_HOST_IP_PROMPT)),
-		fmt.Sprintf("export %s=%s", common.ENV_DOWNLOAD_CDN_URL, i.KubeConf.Arg.DownloadCdnUrl),
+		fmt.Sprintf("export %s=%s", common.ENV_OLARES_CDN_SERVICE, i.KubeConf.Arg.OlaresCDNService),
 		fmt.Sprintf("export %s=%s", common.ENV_NVIDIA_CONTAINER_REPO_MIRROR, os.Getenv(common.ENV_NVIDIA_CONTAINER_REPO_MIRROR)),
 	}
 
@@ -506,15 +506,15 @@ func (i *InstallTerminus) Execute(runtime connector.Runtime) error {
 		bashUrl = fmt.Sprintf("https://%s", defaultDomainName)
 	}
 
-	var downloadUrl = i.KubeConf.Arg.DownloadCdnUrl
-	if downloadUrl == "" {
-		downloadUrl = cc.DownloadUrl
+	var cdnService = i.KubeConf.Arg.OlaresCDNService
+	if cdnService == "" {
+		cdnService = cc.DefaultOlaresCDNService
 	}
 	var installScript = fmt.Sprintf("curl -fsSL %s | bash -", bashUrl)
 	if i.KubeConf.Arg.OlaresVersion != "" {
 		var installFile = fmt.Sprintf("install-wizard-v%s.tar.gz", i.KubeConf.Arg.OlaresVersion)
 		installScript = fmt.Sprintf("curl -fsSLO %s/%s && tar -xf %s -C ./ ./install.sh && rm -rf %s && bash ./install.sh",
-			downloadUrl, installFile, installFile, installFile)
+			cdnService, installFile, installFile, installFile)
 	}
 
 	var params = strings.Join(envs, " && ")
@@ -656,12 +656,12 @@ func (g *GetDiskPartition) checkEnter(enterPath string, partitions []string) boo
 	return res
 }
 
-func getDownloadCdnUrl(downloadCdnUrlFromEnv string) string {
-	downloadCdnUrl := strings.TrimSuffix(downloadCdnUrlFromEnv, "/")
-	if downloadCdnUrl == "" {
-		downloadCdnUrl = cc.DownloadUrl
+func getCDNService(cdnServiceFromEnv string) string {
+	cdnService := strings.TrimSuffix(cdnServiceFromEnv, "/")
+	if cdnService == "" {
+		cdnService = cc.DefaultOlaresCDNService
 	}
-	return downloadCdnUrl
+	return cdnService
 }
 
 func showUbuntuErrorMsg(msg string, err error) error {

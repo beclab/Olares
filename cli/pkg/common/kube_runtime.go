@@ -76,9 +76,9 @@ type Argument struct {
 	SystemInfo       connector.Systems
 
 	// Extra args
-	ExtraAddon      string `json:"extra_addon"` // addon yaml config
-	RegistryMirrors string `json:"registry_mirrors"`
-	DownloadCdnUrl  string `json:"download_cdn_url"`
+	ExtraAddon       string `json:"extra_addon"` // addon yaml config
+	RegistryMirrors  string `json:"registry_mirrors"`
+	OlaresCDNService string `json:"olares_cdn_service"`
 
 	// Swap config
 	*SwapConfig
@@ -251,7 +251,7 @@ func NewArgument() *Argument {
 		User:             &User{},
 		NetworkSettings:  &NetworkSettings{},
 		RegistryMirrors:  os.Getenv(ENV_REGISTRY_MIRRORS),
-		DownloadCdnUrl:   os.Getenv(ENV_DOWNLOAD_CDN_URL),
+		OlaresCDNService: os.Getenv(ENV_OLARES_CDN_SERVICE),
 		HostIP:           os.Getenv(ENV_HOST_IP),
 		Environment:      os.Environ(),
 		MasterHostConfig: &MasterHostConfig{},
@@ -345,12 +345,12 @@ func (a *Argument) GetWslUserPath() string {
 	return res
 }
 
-func (a *Argument) SetDownloadCdnUrl(downloadCdnUrl string) {
-	u := strings.TrimSuffix(downloadCdnUrl, "/")
+func (a *Argument) SetOlaresCDNService(url string) {
+	u := strings.TrimSuffix(url, "/")
 	if u == "" {
-		u = common.DownloadUrl
+		u = common.DefaultOlaresCDNService
 	}
-	a.DownloadCdnUrl = u
+	a.OlaresCDNService = u
 }
 
 func (a *Argument) SetTokenMaxAge() {

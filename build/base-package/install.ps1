@@ -1,9 +1,9 @@
 $currentPath = Get-Location
 $architecture = $env:PROCESSOR_ARCHITECTURE
-$downloadCdnUrlFromEnv = $env:DOWNLOAD_CDN_URL
+$cdnServiceFromEnv = $env:OLARES_CDN_SERVICE
 $version = "#__VERSION__"
 $releaseID = "#__RELEASE_ID__"
-$downloadUrl = "https://dc3p1870nn3cj.cloudfront.net"
+$cdnService = "https://cdn.olares.com"
 
 function Test-Wait {
   while ($true) {
@@ -40,8 +40,8 @@ if ($architecture -like "ARM") {
   $arch = "arm64"
 }
 
-if (-Not $downloadCdnUrlFromEnv -eq "") {
-  $downloadUrl = $downloadCdnUrlFromEnv
+if (-Not $cdnServiceFromEnv -eq "") {
+  $cdnService = $cdnServiceFromEnv
 }
 
 $CLI_PROGRAM_PATH = "{0}\" -f $currentPath
@@ -55,7 +55,7 @@ if (-not [string]::IsNullOrEmpty($releaseID) -and $releaseID.Substring(0,3) -ne 
 } else {
   $CLI_FILE = "olares-cli-v{0}_windows_{1}.tar.gz" -f $CLI_VERSION, $arch
 }
-$CLI_URL = "{0}/{1}" -f $downloadUrl, $CLI_FILE
+$CLI_URL = "{0}/{1}" -f $cdnService, $CLI_FILE
 $CLI_PATH = "{0}{1}" -f $CLI_PROGRAM_PATH, $CLI_FILE
 
 $download = 0
