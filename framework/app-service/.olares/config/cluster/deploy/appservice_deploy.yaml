@@ -175,6 +175,10 @@ spec:
         securityContext:
           runAsUser: 0
         env:
+        {{- range $key, $val := .Values.terminusGlobalEnvs }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
+        {{- end }}
         - name: KS_APISERVER_SERVICE_HOST
           value: 'ks-apiserver.kubesphere-system'
         - name: KS_APISERVER_SERVICE_PORT
