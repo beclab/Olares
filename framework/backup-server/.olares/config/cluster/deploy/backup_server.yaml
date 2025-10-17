@@ -91,10 +91,6 @@ spec:
             cpu: 500m
             memory: 512Mi
         env:
-        {{- range $key, $val := .Values.terminusGlobalEnvs }}
-        - name: {{ $key }}
-          value: {{ $val | quote }}
-        {{- end }}
         - name: TERMINUS_IS_CLOUD_VERSION
           value: {{ default "false" .Values.backup.is_cloud_version | quote }}
         - name: ENABLE_MIDDLEWARE_BACKUP
@@ -144,10 +140,6 @@ spec:
             cpu: 2
             memory: 1500Mi
         env:
-        {{- range $key, $val := .Values.terminusGlobalEnvs }}
-        - name: {{ $key }}
-          value: {{ $val | quote }}
-        {{- end }}
         - name: NATS_HOST
           value: nats.os-platform
         - name: NATS_PORT
