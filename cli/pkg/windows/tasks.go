@@ -507,10 +507,6 @@ func (i *InstallTerminus) Execute(runtime connector.Runtime) error {
 		bashUrl = fmt.Sprintf("https://%s", defaultDomainName)
 	}
 
-	for key, val := range common.TerminusGlobalEnvs {
-		envs = append(envs, fmt.Sprintf("export %s=%s", key, val))
-	}
-
 	var downloadUrl = i.KubeConf.Arg.DownloadCdnUrl
 	if downloadUrl == "" {
 		downloadUrl = cc.DownloadUrl

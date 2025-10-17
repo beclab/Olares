@@ -18,8 +18,6 @@ package common
 
 import (
 	"os"
-
-	cc "github.com/beclab/Olares/cli/pkg/core/common"
 )
 
 const (
@@ -314,60 +312,10 @@ const (
 	OLARES_USER_ENV_FILENAME   = "user-env.yaml"
 )
 
-// TerminusGlobalEnvs holds a group of general environment variables
-// which are used for many components
-// along with their default values
-// if they are set in the execution environment
-// the default values are override
-// note that we declare the key type as interface{} on purpose
-// to avoid Helm bug when merging values
-var TerminusGlobalEnvs = map[string]interface{}{
-	"DID_GATE_URL":               "https://did-gate-v3.bttcdn.com/",
-	"OLARES_SPACE_URL":           "https://cloud-api.bttcdn.com/",
-	"FIREBASE_PUSH_URL":          "https://firebase-push-test.bttcdn.com/v1/api/push",
-	"FRP_LIST_URL":               "https://terminus-frp.snowinning.com",
-	"TAILSCALE_CONTROLPLANE_URL": "https://controlplane.snowinning.com",
-	"OLARES_ROOT_DIR":            "/olares",
-	ENV_DOWNLOAD_CDN_URL:         cc.DownloadUrl,
-	ENV_MARKET_PROVIDER:          "https://appstore-server-prod.bttcdn.com",
-}
-
-// LegacyToNewSystemEnv maps legacy env keys to new SystemEnv EnvName
-var LegacyToNewSystemEnv = map[string]string{
-	"DOWNLOAD_CDN_URL": "OLARES_SYSTEM_CDN_SERVICE",
-	"OLARES_ROOT_DIR":  "OLARES_SYSTEM_ROOT_PATH",
-	"CUDA_VERSION":     "OLARES_SYSTEM_CUDA_VERSION",
-	"OLARES_FS_TYPE":   "OLARES_SYSTEM_ROOTFS_TYPE",
-}
-
-// SetTerminusGlobalEnv updates TerminusGlobalEnvs and sets the corresponding
-// new SystemEnv EnvName in the process environment
-// if force is true, always set the process env new name to value
-// if force is false, set only when the process env new name is not set or empty
-func SetTerminusGlobalEnv(legacyKey string, value string, force bool) {
-	if value != "" {
-		if newName, ok := LegacyToNewSystemEnv[legacyKey]; ok && newName != "" {
-			if force {
-				_ = os.Setenv(newName, value)
-			} else {
-				if v, ok := os.LookupEnv(newName); !ok || v == "" {
-					_ = os.Setenv(newName, value)
-				}
-			}
-		}
-		TerminusGlobalEnvs[legacyKey] = value
-	}
+func SetSystemEnv(key, value string) {
+	os.Setenv(key, value)
 }
 
 const (
-	HelmValuesKeyTerminusGlobalEnvs = "terminusGlobalEnvs"
-	HelmValuesKeyOlaresRootFSPath   = "rootPath"
+	HelmValuesKeyOlaresRootFSPath = "rootPath"
 )
-
-func init() {
-	for envKey := range TerminusGlobalEnvs {
-		if val := os.Getenv(envKey); val != "" {
-			SetTerminusGlobalEnv(envKey, val, false)
-		}
-	}
-}

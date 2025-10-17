@@ -134,8 +134,7 @@ func (u *PrepareAppValues) Execute(runtime connector.Runtime) error {
 		//"kubesphere": map[string]interface{}{
 		//	"redis_password": redisPassword,
 		//},
-		common.HelmValuesKeyTerminusGlobalEnvs: common.TerminusGlobalEnvs,
-		common.HelmValuesKeyOlaresRootFSPath:   storage.OlaresRootDir,
+		common.HelmValuesKeyOlaresRootFSPath: storage.OlaresRootDir,
 	}
 
 	u.ModuleCache.Set(common.CacheAppValues, values)
