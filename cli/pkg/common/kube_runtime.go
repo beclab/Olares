@@ -102,7 +102,6 @@ type Argument struct {
 	NetworkSettings *NetworkSettings `json:"network_settings"`
 	GPU             *GPU             `json:"gpu"`
 	TokenMaxAge     int64            `json:"token_max_age"` // nanosecond
-	MarketProvider  string           `json:"market_provider"`
 
 	Request any `json:"-"`
 
@@ -253,7 +252,6 @@ func NewArgument() *Argument {
 		NetworkSettings:  &NetworkSettings{},
 		RegistryMirrors:  os.Getenv(ENV_REGISTRY_MIRRORS),
 		DownloadCdnUrl:   os.Getenv(ENV_DOWNLOAD_CDN_URL),
-		MarketProvider:   os.Getenv(ENV_MARKET_PROVIDER),
 		HostIP:           os.Getenv(ENV_HOST_IP),
 		Environment:      os.Environ(),
 		MasterHostConfig: &MasterHostConfig{},
