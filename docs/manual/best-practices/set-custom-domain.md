@@ -199,7 +199,7 @@ See [Install Olares](../get-started/install-olares.md) for more detailed steps.
 :::warning System environment setup required
 Before proceeding with the following steps, ensure that your Windows environment is properly set up.
 
-If the setup is incomplete, the installation script will not work as expected. For detailed instructions, refer to the dedicated [installation guide for Windows](../../developer/install/windows.md).
+If the setup is incomplete, the installation script will not work as expected. For detailed instructions, refer to the dedicated [installation guide for Windows](../get-started/install-windows-script.md).
 :::
 
 1. Click https://windows.olares.sh to download the installation script `publicInstall.latest.ps1`.

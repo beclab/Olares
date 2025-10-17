@@ -8,7 +8,7 @@ Proxmox Virtual Environment (PVE) is an open-source virtualization platform base
 Currently, Olares on PVE has certain limitations. We recommend using it only for development or testing purposes.
 :::
 
-<!--@include: ./reusables.md{45,51}-->
+<!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
 Make sure your device meets the following requirements.
@@ -30,10 +30,10 @@ While the specific version is confirmed to work, the process may still work on o
 
 In PVE CLI, run the following command:
 
-<!--@include: ./reusables.md{5,37}-->
+<!--@include: ./reusables.md{4,37}-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{39,43}-->
+<!--@include: ./reusables.md{38,42}-->

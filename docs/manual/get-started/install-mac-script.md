@@ -12,7 +12,7 @@ Olares on Mac has certain limitations including:
 We recommend using it only for development or testing purposes.
 :::
 
-<!--@include: ./reusables.md{45,51}-->
+<!--@include: ./reusables.md{44,51}-->
 
 ## System compatibility
 Make sure your Mac meets the following requirements.
@@ -49,4 +49,4 @@ In terminal, run the following command:
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{39,43}-->
+<!--@include: ./reusables.md{38,42}-->

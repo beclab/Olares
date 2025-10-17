@@ -8,13 +8,7 @@ You can install Olares directly on Proxmox Virtual Environment (PVE) using an IS
 Currently, Olares on PVE has certain limitations. We recommend using it only for development or testing purposes.
 :::
 
-::: info Having trouble with installation?  
-If you encounter issues during the installation process, feel free to [submit a GitHub Issue](https://github.com/beclab/Olares/issues/new). Please include the following information when submitting:
-
-- The platform or environment you're using (e.g., Ubuntu, PVE, etc.).
-- The installation method (script installation or ISO image).
-- Detailed error information (including logs, error messages, or screenshots).  
-:::
+<!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
 Make sure your device meets the following requirements.
@@ -25,7 +19,7 @@ Make sure your device meets the following requirements.
 - Supported Systems: PVE 8.2.2
 
 ## Download Olares ISO image
-Click [here](https://dc3p1870nn3cj.cloudfront.net/olares-v1.12.1-amd64.iso) to download the official Olares ISO image.
+Click [here](https://cdn.olares.com/) to download the official Olares ISO image.
 
 ## Configure VM in PVE
 
@@ -70,7 +64,7 @@ Once the VM is set up, follow these steps to install the ISO on PVE.
     Installation completed successfully!
     ```
     
-    Press **Enter**, then click **Reboot** in the Proxmox web interface to restart the VM.
+    Click **Reboot** in the Proxmox web interface to restart the VM.
 
 
 ## Verify installation
@@ -93,43 +87,8 @@ After the VM restarts, it will boot into the Ubuntu system.
     check Containerd:  success
     ```
 
-## Activate Olares
+<!--@include: ./install-and-activate-olares.md-->
 
-To activate Olares:
+<!--@include: ./log-in-to-olares.md-->
 
-![ISO Activate](/images/manual/larepass/iso-activate.png#bordered)
-
-1. Open LarePass app.
-
-2. Tap **Discover nearby Olares**. Your Olares device should appear.
-
-3. Tap **Install now** to finish the installation process.
-
-4. Tap **Activate now** to activate Olares and complete initialization.
-
-5. Follow the prompt to set the login password for Olares.
-
-   ![ISO Activate](/images/manual/larepass/iso-activate-2.png#bordered)
-
-Once complete, you can access Olares via the provided URL and your credentials.
-
-:::tip Same network required
-Make sure your phone and the PVE host are on the same network.
-:::
-
-## Log in to Olares
-
-1. Enter your URL (`https://desktop.{olares-id}.olares.com`) in your browser, and press any key to continue.
-2. On the login page, enter your Olares login password.
-
-   ![Log in](/images/manual/get-started/log-in.png#bordered)
-3. You will be prompted to complete two-factor verification. You can confirm the login on LarePass, or manually enter the 6-digit verification code.
-
-   ![Confirm login](/images/manual/larepass/confirm-login.png#bordered)
-   ::: info
-   The verification code is time-sensitive. Ensure you enter it before it expires. If it does, you will need to generate a new code.
-   :::
-
-Once you've logged in, you'll be directed to the Olares desktop.🎉
-
-<!--@include: ./reusables.md{39,43}-->
+<!--@include: ./reusables.md{38,43}-->

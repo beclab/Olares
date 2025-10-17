@@ -13,7 +13,7 @@ Currently, Olares on Mac has certain limitations including:
 We recommend using it only for development or testing purposes.
 :::
 
-<!--@include: ./reusables.md{45,51}-->
+<!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
 Make sure your device meets the following requirements.
@@ -100,4 +100,4 @@ The `--rm` flag automatically deletes the container after it stops. If this happ
 
 <!--@include: ./manage-olares-container.md-->
 
-<!--@include: ./reusables.md{39,43}-->
+<!--@include: ./reusables.md{38,42}-->
