@@ -172,6 +172,64 @@ spec:
               name: shared-lib
 {{ end }}
 
+        - name: samba-server
+          image: beclab/samba-server:v0.0.1
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: true
+            runAsUser: 0
+            privileged: true
+          volumeMounts:
+            - mountPath: /data/appcache/
+              name: upload-appdata
+            - name: fb-data
+              mountPath: /appdata
+            - name: userspace-dir
+              mountPath: /data
+            - name: upload-appdata
+              mountPath: /appcache/
+{{ if .Values.sharedlib }}        
+            - name: shared-lib
+              mountPath: /data/External
+              mountPropagation: Bidirectional
+{{ end }}
+          ports:
+            - containerPort: 445
+          env:
+            - name: EXTERNAL_PREFIX
+              value: '/External/'
+            - name: FS_TYPE
+              value: {{ .Values.fs_type }}
+            - name: ROOT_PREFIX
+              value: /data
+            - name: REDIS_HOST
+              value: redis-cluster-proxy.os-platform
+            - name: REDIS_PORT
+              value: '6379'
+            - name: REDIS_USERNAME
+              value: ''
+            - name: REDIS_PASSWORD
+              value: {{ $files_redis_password | b64dec }}
+            - name: REDIS_USE_SSL
+              value: 'false'
+              # use redis db 0 for redis cache
+            - name: REDIS_DB
+              value: '0'
+            - name: FILE_CACHE_DIR
+              value: '/data/file_cache'
+            - name: PGHOST
+              value: citus-headless.os-platform
+            - name: PGPORT
+              value: '5432'
+            - name: PGUSER
+              value: files_os_framework
+            - name: PGPASSWORD
+              value: {{ $files_postgres_password | b64dec }}
+            - name: PGDB1
+              value: os_framework_files
+          command:
+            - /samba_share
+
         - name: files
           image: beclab/files-server:v0.2.119
           imagePullPolicy: IfNotPresent
@@ -402,6 +460,23 @@ spec:
       name: media-server
       port: 9090
       targetPort: 9090
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: file-samba
+  namespace: os-framework
+spec:
+  ports:
+    - name: smb
+      protocol: TCP
+      port: 445
+      targetPort: 445
+  selector:
+    app: files
+  type: NodePort
+  externalTrafficPolicy: Local
 
 ---
 apiVersion: v1
