@@ -15,5 +15,4 @@ REGISTRY_MIRRORS={{ .RegistryMirrors }}
 BASE_DIR={{ .BaseDir }}
 LOCAL_GPU_ENABLE={{ .GpuEnable }}
 TOKEN_MAX_AGE={{ .TokenMaxAge }}
-MARKET_PROVIDER={{ .MarketProvider }}
     `)))

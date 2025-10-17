@@ -7,7 +7,7 @@ import requests
 import sys
 import json
 
-CDN_URL = "https://dc3p1870nn3cj.cloudfront.net"
+CDN_URL = "https://cdn.olares.com"
 
 def get_file_size(objectid, fileid):
     url = f"{CDN_URL}/{objectid}"

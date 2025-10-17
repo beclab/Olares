@@ -64,12 +64,11 @@ func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
 			"is_cloud_version": cloudValue(t.KubeConf.Arg.IsCloudInstance),
 			"sync_secret":      t.KubeConf.Arg.Storage.StorageSyncSecret,
 		},
-		"gpu":                                  getGpuType(t.KubeConf.Arg.GPU.Enable),
-		"s3_bucket":                            t.KubeConf.Arg.Storage.StorageBucket,
-		"fs_type":                              storage.GetRootFSType(),
-		common.HelmValuesKeyTerminusGlobalEnvs: common.TerminusGlobalEnvs,
-		common.HelmValuesKeyOlaresRootFSPath:   storage.OlaresRootDir,
-		"sharedlib":                            storage.OlaresSharedLibDir,
+		"gpu":                                getGpuType(t.KubeConf.Arg.GPU.Enable),
+		"s3_bucket":                          t.KubeConf.Arg.Storage.StorageBucket,
+		"fs_type":                            storage.GetRootFSType(),
+		common.HelmValuesKeyOlaresRootFSPath: storage.OlaresRootDir,
+		"sharedlib":                          storage.OlaresSharedLibDir,
 	}
 
 	var platformPath = path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-platform")

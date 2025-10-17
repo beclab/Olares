@@ -395,7 +395,7 @@ func (g *GetCudaVersion) Execute(runtime connector.Runtime) error {
 		}
 	}
 	if cudaVersion != "" {
-		common.SetTerminusGlobalEnv("CUDA_VERSION", cudaVersion, true)
+		common.SetSystemEnv("OLARES_SYSTEM_CUDA_VERSION", cudaVersion)
 	}
 
 	return nil

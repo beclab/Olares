@@ -211,7 +211,7 @@ jobs:
           url: 'https://cloud-dev-api.bttcdn.com/v1/resource/installTest'
           method: 'POST'
           customHeaders: '{"Authorization": "${{ secrets.INSTALL_SECRET }}"}'
-          data: 'versions=${{ needs.test-version.outputs.version }}&downloadUrl=https://dc3p1870nn3cj.cloudfront.net/install-wizard-v${{ needs.test-version.outputs.version }}.tar.gz'
+          data: 'versions=${{ needs.test-version.outputs.version }}&downloadUrl=https://cdn.olares.com/install-wizard-v${{ needs.test-version.outputs.version }}.tar.gz'
           contentType: "application/x-www-form-urlencoded"
 
       - name: Check Result

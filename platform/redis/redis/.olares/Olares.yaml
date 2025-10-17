@@ -5,13 +5,13 @@ output:
     - 
       id: redis
       name: redis-5.0.14.tar.gz 
-      amd64: https://dc3p1870nn3cj.cloudfront.net/redis-5.0.14_linux_amd64.tar.gz
-      arm64: https://dc3p1870nn3cj.cloudfront.net/redis-5.0.14_linux_arm64.tar.gz
+      amd64: https://cdn.olares.com/redis-5.0.14_linux_amd64.tar.gz
+      arm64: https://cdn.olares.com/redis-5.0.14_linux_arm64.tar.gz
     - 
       id: redis-231
       name: redis-5.0.14-glibc-231.tar.gz
-      amd64: https://dc3p1870nn3cj.cloudfront.net/redis-5.0.14_linux_amd64-glibc-231.tar.gz
-      arm64: https://dc3p1870nn3cj.cloudfront.net/redis-5.0.14_linux_arm64.tar.gz
+      amd64: https://cdn.olares.com/redis-5.0.14_linux_amd64-glibc-231.tar.gz
+      arm64: https://cdn.olares.com/redis-5.0.14_linux_arm64.tar.gz
   containers:
     - 
       name: redis:5.0.14-alpine

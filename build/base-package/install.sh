@@ -69,9 +69,9 @@ if [ ! -d $BASE_DIR ]; then
     mkdir -p $BASE_DIR
 fi
 
-cdn_url=${DOWNLOAD_CDN_URL}
+cdn_url=${OLARES_CDN_SERVICE}
 if [ -z ${cdn_url} ]; then
-    cdn_url="https://dc3p1870nn3cj.cloudfront.net"
+    cdn_url="https://cdn.olares.com"
 fi
 
 RELEASE_ID="#__RELEASE_ID__"
@@ -138,7 +138,7 @@ fi
 
 PARAMS="--version $VERSION --base-dir $BASE_DIR"
 KUBE_PARAM="--kube $KUBE_TYPE"
-CDN="--download-cdn-url ${cdn_url}"
+CDN="--cdn-service ${cdn_url}"
 
 if [[ -f $BASE_DIR/.prepared ]]; then
     echo "file $BASE_DIR/.prepared detected, skip preparing phase"
