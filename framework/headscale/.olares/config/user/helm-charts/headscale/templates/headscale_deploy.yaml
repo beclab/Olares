@@ -14,6 +14,12 @@
 {{ $role = (index $user "metadata" "annotations" "bytetrade.io/owner-role") }}
 {{- end -}}
 
+{{- $corednsIP := "10.233.0.3" -}}
+{{ $corednsService := (lookup "v1" "Service" "kube-system" "coredns") }}
+{{- if $corednsService -}}
+{{ $corednsIP = (index $corednsService "spec" "clusterIP") }}
+{{- end -}}
+
 ---
 apiVersion: v1
 kind: Secret
@@ -127,10 +133,8 @@ spec:
         securityContext:
           privileged: true
         env:
-        {{- range $key, $val := .Values.terminusGlobalEnvs }}
-        - name: {{ $key }}
-          value: {{ $val | quote }}
-        {{- end }}
+        - name: COREDNS_SVC
+          value: {{ $corednsIP }}
         - name: NAMESPACE
           value: bfl.user-space-{{ .Values.bfl.username }}
         - name: PG_HOST
@@ -175,11 +179,6 @@ spec:
         securityContext:
           runAsNonRoot: false
           runAsUser: 0
-        env:
-        {{- range $key, $val := .Values.terminusGlobalEnvs }}
-          - name: {{ $key }}
-            value: {{ $val | quote }}
-        {{- end }}
         command:
         - headscale
         - serve
@@ -291,10 +290,8 @@ spec:
         - name: tailscale-data
           mountPath: /var/lib/tailscale
         env:
-        {{- range $key, $val := .Values.terminusGlobalEnvs }}
-        - name: {{ $key }}
-          value: {{ $val | quote }}
-        {{- end }}
+        - name: COREDNS_SVC
+          value: {{ $corednsIP }}
         - name: TS_DISABLE_TAILDROP
           value: "true"
         - name: NODE_IP

@@ -35,9 +35,3 @@ systemEnvs:
   - envName: OLARES_SYSTEM_CUDA_VERSION
     editable: false
     required: false
-  # the legacy COREDNS_SVC
-  - envName: OLARES_SYSTEM_CLUSTER_DNS_SERVICE
-    default: "10.233.0.3"
-    editable: false
-    type: ip
-    required: true
