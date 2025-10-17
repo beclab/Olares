@@ -328,17 +328,14 @@ var TerminusGlobalEnvs = map[string]interface{}{
 	"FRP_LIST_URL":               "https://terminus-frp.snowinning.com",
 	"TAILSCALE_CONTROLPLANE_URL": "https://controlplane.snowinning.com",
 	"OLARES_ROOT_DIR":            "/olares",
-	// the default value used by kubeadm
-	"COREDNS_SVC":        "10.96.0.10",
-	ENV_DOWNLOAD_CDN_URL: cc.DownloadUrl,
-	ENV_MARKET_PROVIDER:  "https://appstore-server-prod.bttcdn.com",
+	ENV_DOWNLOAD_CDN_URL:         cc.DownloadUrl,
+	ENV_MARKET_PROVIDER:          "https://appstore-server-prod.bttcdn.com",
 }
 
 // LegacyToNewSystemEnv maps legacy env keys to new SystemEnv EnvName
 var LegacyToNewSystemEnv = map[string]string{
 	"DOWNLOAD_CDN_URL": "OLARES_SYSTEM_CDN_SERVICE",
 	"OLARES_ROOT_DIR":  "OLARES_SYSTEM_ROOT_PATH",
-	"COREDNS_SVC":      "OLARES_SYSTEM_CLUSTER_DNS_SERVICE",
 	"CUDA_VERSION":     "OLARES_SYSTEM_CUDA_VERSION",
 	"OLARES_FS_TYPE":   "OLARES_SYSTEM_ROOTFS_TYPE",
 }
