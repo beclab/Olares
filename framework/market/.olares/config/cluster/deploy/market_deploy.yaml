@@ -106,10 +106,6 @@ spec:
         ports:
           - containerPort: 81
         env:
-          {{- range $key, $val := .Values.terminusGlobalEnvs }}
-          - name: {{ $key }}
-            value: {{ $val | quote }}
-          {{- end }}
           - name: APP_SOTRE_SERVICE_SERVICE_PORT                                   
             value: "443"                                                           
           - name: APP_SERVICE_SERVICE_HOST                                         
