@@ -286,6 +286,10 @@ const side = {
             text: "Install a multi-node Olares cluster",
             link: "/manual/best-practices/install-olares-multi-node",
           },
+          {
+          text: "Expand storage in Olares",
+          link: "/manual/best-practices/expand-storage-in-olares",
+        },
         ],
       },
     {

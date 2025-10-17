@@ -289,6 +289,10 @@ const side = {
           text: "设置 SMTP",
           link: "/zh/manual/best-practices/set-up-SMTP-service",
         },
+        {
+          text: "在 Olares 中扩展存储空间",
+          link: "/zh/manual/best-practices/expand-storage-in-olares",
+        },
       ],
     },
     {
