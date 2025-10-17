@@ -184,7 +184,7 @@ spec:
         - name: PG_PASSWORD
           value: {{ $password | b64dec }}
         - name: PG_HOST
-          value: {{ .Values.postgres.host }}
+          value: citus-0.citus-headless.os-platform
         - name: PG_PORT
           value: "5432"
         - name: PG_DATABASE
@@ -246,3 +246,16 @@ spec:
       port: 6800
       targetPort: 6800
     
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backend:{{ .Release.Namespace }}:download-server:integration-provider-svc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backend:integration-provider-svc-cookie
+subjects:
+  - kind: ServiceAccount
+    name: download-cluster-view
+    namespace: {{ .Release.Namespace }}
