@@ -1,0 +1,261 @@
+{{- $download_secret := (lookup "v1" "Secret" .Release.Namespace "download-secrets") -}}
+{{- $password := "" -}}
+{{ if $download_secret -}}
+{{- $password = (index $download_secret "data" "password") -}}
+
+{{ else -}}
+{{ $password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: download-secrets
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  password: {{ $password }}
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: download-pg
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: download
+  appNamespace: {{ .Release.Namespace }}
+  middleware: postgres
+  postgreSQL:
+    user: download_os_framework
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: download-secrets
+    databases:
+    - name: download
+
+---
+
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: download-nats
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: download
+  appNamespace: os
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: download-secrets
+    user: "{{ .Release.Namespace }}-download"
+    subjects:
+      - name: download_status
+        permission:
+          pub: allow
+          sub: allow
+      
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: download-cluster-view
+  namespace:  {{ .Release.Namespace }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: download-namespace-viewer
+rules:
+- apiGroups: 
+    - '*'            
+  resources: 
+    - statefulsets
+    - daemonsets
+    - namespaces   
+    - serviceaccounts/token
+  verbs: 
+    - '*'
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: namespace-download-binding
+subjects:
+- kind: ServiceAccount
+  name: download-cluster-view
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: download-namespace-viewer
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: download
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: download
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  selector:
+    matchLabels:
+      app: download
+  template:
+    metadata:
+      labels:
+        app: download
+    spec:
+      serviceAccountName: download-cluster-view
+      serviceAccount: download-cluster-view
+      securityContext:
+        runAsUser: 0
+        runAsNonRoot: false
+
+      initContainers:
+      - name: init-data
+        image: busybox:1.28
+        securityContext:
+          privileged: true
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - name: config-dir
+          mountPath: /config
+        - name: download-dir
+          mountPath: /downloads
+        command:
+        - sh
+        - -c
+        - |
+          chown -R 1000:1000 /config && \
+          chown -R 1000:1000 /downloads
+      containers:
+      - name: aria2
+        image: "beclab/aria2:v0.0.4"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+        ports:
+        - containerPort: 6800
+        - containerPort: 6888
+        env:
+        - name: RPC_SECRET
+          value: kubespider
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        volumeMounts:
+        - name: download-dir
+          mountPath: /downloads
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+          limits:
+            cpu: "1"
+            memory: 300Mi
+            
+      - name: download-server
+        image: "beclab/download-server:v0.1.6"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+          runAsNonRoot: false
+
+        env:
+        - name: DEBUG
+          value: "false"
+        - name: PG_USERNAME
+          value: download_os_framework
+        - name: PG_PASSWORD
+          value: {{ $password | b64dec }}
+        - name: PG_HOST
+          value: citus-0.citus-headless.os-platform
+        - name: PG_PORT
+          value: "5432"
+        - name: PG_DATABASE
+          value: os_framework_download
+        - name: NATS_HOST
+          value: nats.os-platform
+        - name: NATS_PORT
+          value: "4222"
+        - name: NATS_USERNAME
+          value: {{ .Release.Namespace }}-download
+        - name: NATS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: download-secrets
+        - name: NATS_PROGRESS_PUBLISH_SUB
+          value: os.download_status
+        volumeMounts:
+        - name: download-dir
+          mountPath: /app/downloads
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 20m
+            memory: 80Mi
+          limits:
+            cpu: "1"
+            memory: 2000Mi
+
+      volumes:
+      - name: config-dir
+        hostPath: 
+          type: DirectoryOrCreate
+          path: '{{ .Values.rootPath }}/userdata/Cache/download'
+      - name: download-dir
+        hostPath:
+          type: DirectoryOrCreate
+          path: '{{ .Values.rootPath }}/rootfs/userspace'
+          
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: download-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: download
+  ports:
+    - name: "download-server"
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+    - name: "aria2-server"
+      protocol: TCP
+      port: 6800
+      targetPort: 6800
+    
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backend:{{ .Release.Namespace }}:download-server:integration-provider-svc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backend:integration-provider-svc-cookie
+subjects:
+  - kind: ServiceAccount
+    name: download-cluster-view
+    namespace: {{ .Release.Namespace }}
