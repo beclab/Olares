@@ -69,7 +69,7 @@ if [ ! -d $BASE_DIR ]; then
     mkdir -p $BASE_DIR
 fi
 
-cdn_url=${OLARES_CDN_SERVICE}
+cdn_url=${OLARES_SYSTEM_CDN_SERVICE}
 if [ -z ${cdn_url} ]; then
     cdn_url="https://cdn.olares.com"
 fi
