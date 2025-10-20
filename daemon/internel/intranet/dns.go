@@ -3,6 +3,7 @@ package intranet
 import (
 	"errors"
 	"net"
+	"slices"
 
 	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/eball/zeroconf"
@@ -44,8 +45,8 @@ func (s *mDNSServer) Close() {
 	}
 }
 
-func (s *mDNSServer) Restart() error {
-	klog.Info("Intranet mDNS server restarting")
+func (s *mDNSServer) StartAll() error {
+	klog.Info("Intranet mDNS server starting")
 	s.Close()
 
 	iface, err := s.findIntranetInterface()
@@ -55,6 +56,10 @@ func (s *mDNSServer) Restart() error {
 	}
 
 	for domain := range s.servers {
+		if s.servers[domain] != nil {
+			continue
+		}
+
 		klog.Infof("Registering mDNS service for domain: %s", domain)
 		// Register the mDNS service
 		var err error
@@ -73,15 +78,35 @@ func (s *mDNSServer) Restart() error {
 	return nil
 }
 
-func (s *mDNSServer) SetHosts(hosts []*DNSConfig) {
+// SetHosts sets the hosts for the mDNS server
+// if reset is true, it will remove all existing hosts before adding new ones
+func (s *mDNSServer) SetHosts(hosts []DNSConfig, reset bool) {
 	for _, host := range hosts {
 		if host.Domain == "" {
 			continue
 		}
 
-		if _, exists := s.servers[host.Domain]; !exists {
+		if server, exists := s.servers[host.Domain]; !exists {
 			s.servers[host.Domain] = nil
+		} else {
+
+			if reset {
+				server.queryServer.Shutdown()
+				s.servers[host.Domain] = nil
+			}
 		}
+	}
+
+	// remove not exist hosts
+	for domain := range s.servers {
+		if slices.ContainsFunc(hosts, func(a DNSConfig) bool {
+			return a.Domain == domain
+		}) {
+			continue
+		}
+
+		s.servers[domain].queryServer.Shutdown()
+		delete(s.servers, domain)
 	}
 }
 

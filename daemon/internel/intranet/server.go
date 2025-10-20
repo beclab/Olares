@@ -7,6 +7,10 @@ type Server struct {
 	proxyServer *proxyServer
 }
 
+type ServerOptions struct {
+	Hosts []DNSConfig
+}
+
 func (s *Server) Close() {
 	if s.dnsServer != nil {
 		s.dnsServer.Close()
@@ -34,15 +38,10 @@ func NewServer() (*Server, error) {
 	}, nil
 }
 
-func (s *Server) Start() error {
+func (s *Server) Start(o *ServerOptions) error {
 	if s.dnsServer != nil {
-		// test
-		s.dnsServer.SetHosts([]*DNSConfig{
-			{Domain: "desktop.guotest334.olares"},
-			{Domain: "liuyu.olares"},
-		})
-		// end test
-		err := s.dnsServer.Restart()
+		s.dnsServer.SetHosts(o.Hosts, true)
+		err := s.dnsServer.StartAll()
 		if err != nil {
 			klog.Error("start intranet dns server error, ", err)
 			return err
@@ -57,5 +56,19 @@ func (s *Server) Start() error {
 		}
 	}
 
+	return nil
+}
+
+func (s *Server) Reload(o *ServerOptions) error {
+	if s.dnsServer != nil {
+		s.dnsServer.SetHosts(o.Hosts, false)
+		err := s.dnsServer.StartAll()
+		if err != nil {
+			klog.Error("reload intranet dns server error, ", err)
+			return err
+		}
+	}
+
+	klog.Info("Intranet server reloaded")
 	return nil
 }

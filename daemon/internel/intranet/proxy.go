@@ -35,9 +35,24 @@ func (p *proxyServer) Start() error {
 	config.Balancer = p
 	config.Transport = p.initTransport()
 
+	p.proxy.Use(middleware.Logger())
+	p.proxy.Use(middleware.Recover())
+	p.proxy.Use(
+		func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(c echo.Context) error {
+				if strings.HasSuffix(c.Request().Host, ".olares.local") {
+					return next(c)
+				}
+
+				// not a intranet request, redirect to https
+				redirect := middleware.HTTPSRedirect()
+				return redirect(next)(c)
+			}
+		},
+	)
 	p.proxy.Use(middleware.ProxyWithConfig(config))
 
-	return p.proxy.Start(":81")
+	return p.proxy.Start(":80")
 }
 
 func (p *proxyServer) Close() error {
@@ -54,12 +69,7 @@ func (p *proxyServer) AddTarget(*middleware.ProxyTarget) bool {
 
 // Next implements middleware.ProxyBalancer.
 func (p *proxyServer) Next(c echo.Context) *middleware.ProxyTarget {
-	requestHost := c.Request().Host
-	hostToken := strings.Split(requestHost, ".")
-	hostToken[len(hostToken)-1] = "cn"
-	host := strings.Join(hostToken, ".")
-
-	proxyPass, err := url.Parse("https://" + host)
+	proxyPass, err := url.Parse("https://localhost")
 	if err != nil {
 		klog.Error("parse proxy target error, ", err)
 		return nil
