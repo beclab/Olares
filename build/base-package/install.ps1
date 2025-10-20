@@ -1,6 +1,6 @@
 $currentPath = Get-Location
 $architecture = $env:PROCESSOR_ARCHITECTURE
-$cdnServiceFromEnv = $env:OLARES_CDN_SERVICE
+$cdnServiceFromEnv = $env:OLARES_SYSTEM_CDN_SERVICE
 $version = "#__VERSION__"
 $releaseID = "#__RELEASE_ID__"
 $cdnService = "https://cdn.olares.com"
