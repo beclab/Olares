@@ -48,3 +48,18 @@ If you encounter issues during the installation process, feel free to [submit a 
 - The installation method (script installation or Docker image).
 - Detailed error information (including logs, error messages, or screenshots).  
   :::
+
+## System requirements
+
+Make sure your device meets the following requirements.
+
+- CPU: At least 4 cores
+- RAM: At least 8GB of available memory
+- Storage: At least 150GB of available SSD storage. (The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.)
+- Supported systems:
+  - Ubuntu 22.04-25.04 LTS
+  - Debian 12 or 13
+
+:::info Version compatibility
+While these specific versions are confirmed to work, the process may still work on other versions. Adjustments may be necessary depending on your environment. If you meet any issues with these platforms, feel free to raise an issue on [GitHub](https://github.com/beclab/Olares/issues/new).
+:::

@@ -1,0 +1,24 @@
+{{- $namespace := "os-protected" -}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backend:integration-provider-svc-account
+  annotations:
+    provider-registry-ref: {{ $namespace }}/integration-provider-svc
+    provider-service-ref: integration-provider-svc.{{ $namespace }}:28080
+rules:
+  - nonResourceURLs: ["/api/account/*"]
+    verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backend:integration-provider-svc-cookie
+  annotations:
+    provider-registry-ref: {{ $namespace }}/integration-provider-svc
+    provider-service-ref: integration-provider-svc.{{ $namespace }}:28080
+rules:
+  - nonResourceURLs: ["/api/cookie/*"]
+    verbs: ["*"]

@@ -12,7 +12,7 @@ func NewDownloadWizard(runtime *common.KubeRuntime, urlOverride, releaseID strin
 
 	m := []module.Module{
 		&precheck.GreetingsModule{},
-		&terminus.InstallWizardDownloadModule{Version: runtime.Arg.OlaresVersion, DownloadCdnUrl: runtime.Arg.DownloadCdnUrl, UrlOverride: urlOverride, ReleaseID: releaseID},
+		&terminus.InstallWizardDownloadModule{Version: runtime.Arg.OlaresVersion, CDNService: runtime.Arg.OlaresCDNService, UrlOverride: urlOverride, ReleaseID: releaseID},
 	}
 
 	return &pipeline.Pipeline{

@@ -34,6 +34,74 @@ const side = {
         {
           text: "Install Olares",
           link: "/manual/get-started/install-olares",
+          collapsed: true,
+          items: [
+            {
+              text: "Linux",
+              collapsed: true,
+              items: [
+                {
+                  text: "Using ISO image (Recommended)",
+                  link: "/manual/get-started/install-linux-iso",
+                },
+                {
+                  text: "Using script",
+                  link: "/manual/get-started/install-linux-script",
+                },
+                {
+                  text: "Using Docker Compose",
+                  link: "/manual/get-started/install-linux-docker",
+                },
+              ],
+            },
+            {
+              text: "macOS",
+              collapsed: true,
+              items: [
+                {
+                  text: "Using script",
+                  link: "/manual/get-started/install-mac-script",
+                },
+                {
+                  text: "Using Docker image",
+                  link: "/manual/get-started/install-mac-docker",
+                },
+              ],
+            },
+            {
+              text: "Windows (WSL 2)",
+              collapsed: true,
+              items: [
+                {
+                  text: "Using script",
+                  link: "/manual/get-started/install-windows-script",
+                },
+                {
+                  text: "Using Docker image",
+                  link: "/manual/get-started/install-windows-docker",
+                },
+              ],
+            },
+            {
+              text: "PVE",
+              collapsed: true,
+              items: [
+                {
+                  text: "Using script",
+                  link: "/manual/get-started/install-pve-script",
+                },
+                {
+                  text: "Using ISO image",
+                  link: "/manual/get-started/install-pve-iso",
+                },
+              ],
+            },
+            { text: "LXC", link: "/manual/get-started/install-lxc" },
+            {
+              text: "Raspberry Pi",
+              link: "/manual/get-started/install-raspberry-pi",
+            },
+          ],
         },
         {
           text: "Back up mnemonics",
@@ -286,6 +354,10 @@ const side = {
             text: "Install a multi-node Olares cluster",
             link: "/manual/best-practices/install-olares-multi-node",
           },
+          {
+          text: "Expand storage in Olares",
+          link: "/manual/best-practices/expand-storage-in-olares",
+        },
         ],
       },
     {

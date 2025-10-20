@@ -21,11 +21,11 @@ import (
 
 type PackageDownload struct {
 	common.KubeAction
-	Manifest       string
-	BaseDir        string
-	DownloadCdnUrl string
-	existingItems  []*manifest.ManifestItem
-	missingItems   []*manifest.ManifestItem
+	Manifest      string
+	BaseDir       string
+	CDNService    string
+	existingItems []*manifest.ManifestItem
+	missingItems  []*manifest.ManifestItem
 }
 
 type CheckDownload struct {
@@ -138,7 +138,7 @@ func (d *PackageDownload) downloadItem(runtime connector.Runtime, baseDir string
 	component.ID = item.Filename
 	component.Arch = runtime.GetSystemInfo().GetOsArch()
 	component.BaseDir = getDownloadTargetBasePath(item, baseDir)
-	component.Url = fmt.Sprintf("%s/%s", d.DownloadCdnUrl, strings.TrimPrefix(url.Url, "/"))
+	component.Url = fmt.Sprintf("%s/%s", d.CDNService, strings.TrimPrefix(url.Url, "/"))
 	component.FileName = item.Filename
 	component.CheckMd5Sum = true
 	component.Md5sum = url.Checksum

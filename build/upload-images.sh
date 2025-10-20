@@ -12,9 +12,9 @@ cat $1|while read image; do
     checksum="$name.checksum.txt"
     manifest="$name.manifest.json"
 
-    curl -fsSLI https://dc3p1870nn3cj.cloudfront.net/$path$name.tar.gz > /dev/null
+    curl -fsSLI https://cdn.olares.com/$path$name.tar.gz > /dev/null
     if [ $? -ne 0 ]; then
-        code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://dc3p1870nn3cj.cloudfront.net/$path$name.tar.gz)
+        code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://cdn.olares.com/$path$name.tar.gz)
         if [ $code -eq 403 ]; then
             set -ex
             skopeo copy --insecure-policy docker://$image oci-archive:$name.tar
@@ -45,9 +45,9 @@ cat $1|while read image; do
     
 
     # re-upload checksum.txt
-    curl -fsSLI https://dc3p1870nn3cj.cloudfront.net/$path$checksum > /dev/null
+    curl -fsSLI https://cdn.olares.com/$path$checksum > /dev/null
     if [ $? -ne 0 ]; then
-        code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://dc3p1870nn3cj.cloudfront.net/$path$checksum)
+        code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://cdn.olares.com/$path$checksum)
         if [ $code -eq 403 ]; then
             set -ex
             skopeo copy --insecure-policy docker://$image oci-archive:$name.tar
@@ -74,9 +74,9 @@ cat $1|while read image; do
     fi
 
     # upload manifest.json
-    curl -fsSLI https://dc3p1870nn3cj.cloudfront.net/$path$manifest > /dev/null
+    curl -fsSLI https://cdn.olares.com/$path$manifest > /dev/null
     if [ $? -ne 0 ]; then   
-        code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://dc3p1870nn3cj.cloudfront.net/$path$manifest)
+        code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://cdn.olares.com/$path$manifest)
         if [ $code -eq 403 ]; then
             set -ex
             BASE_DIR=$(dirname $(realpath -s $0))

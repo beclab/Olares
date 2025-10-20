@@ -2,7 +2,7 @@
 
 
 set -e
-cdn_url="https://dc3p1870nn3cj.cloudfront.net"
+cdn_url="https://cdn.olares.com"
 
 download_checksum(){
     local name=$1

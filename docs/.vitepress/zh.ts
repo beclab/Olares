@@ -36,6 +36,73 @@ const side = {
         {
           text: "安装激活",
           link: "/zh/manual/get-started/install-olares",
+          collapsed: true,
+          items: [
+            {
+              text: "Linux",
+              collapsed: true,
+              items: [
+                {
+                  text: "使用 ISO 镜像（推荐）",
+                  link: "/zh/manual/get-started/install-linux-iso",
+                },
+                {
+                  text: "使用脚本",
+                  link: "/zh/manual/get-started/install-linux-script",
+                },
+                {
+                  text: "使用 Docker Compose",
+                  link: "/zh/manual/get-started/install-linux-docker",
+                },
+              ],
+            },
+            {
+              text: "macOS",
+              collapsed: true,
+              items: [
+                {
+                  text: "使用脚本",
+                  link: "/zh/manual/get-started/install-mac-script",
+                },
+                {
+                  text: "使用 Docker 镜像",
+                  link: "/zh/manual/get-started/install-mac-docker",
+                },
+              ],
+            },
+            {
+              text: "Windows (WSL 2)",
+              collapsed: true,
+              items: [
+                {
+                  text: "使用脚本",
+                  link: "/zh/manual/get-started/install-windows-script",
+                },
+                {
+                  text: "使用 Docker 镜像",
+                  link: "/zh/manual/get-started/install-windows-docker",
+                },
+              ],
+            },
+            {
+              text: "PVE",
+              collapsed: true,
+              items: [
+                {
+                  text: "使用脚本",
+                  link: "/zh/manual/get-started/install-pve-script",
+                },
+                {
+                  text: "使用 ISO 镜像",
+                  link: "/zh/manual/get-started/install-pve-iso",
+                },
+              ],
+            },{ text: "LXC", link: "/zh/manual/get-started/install-lxc" },
+            {
+              text: "树莓派",
+              link: "/zh/manual/get-started/install-raspberry-pi",
+            },
+          ],
         },
         {
           text: "备份助记词",
@@ -288,6 +355,10 @@ const side = {
         {
           text: "设置 SMTP",
           link: "/zh/manual/best-practices/set-up-SMTP-service",
+        },
+        {
+          text: "在 Olares 中扩展存储空间",
+          link: "/zh/manual/best-practices/expand-storage-in-olares",
         },
       ],
     },

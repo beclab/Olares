@@ -9,6 +9,7 @@ description: 通过最佳实践与进阶指南，深入挖掘 Olares 的性能�
 - [安装多节点 Olares 集群](install-olares-multi-node.md)
 - [使用 Wise 构建知识中心](organize-content.md)
 - [设置 SMTP](set-up-SMTP-service.md)
+- [扩展 Olares 存储空间](expand-storage-in-olares.md)
 
 
 

@@ -28,9 +28,9 @@ while read line; do
     checksum="$name.checksum.txt"
 
     echo "if exists $filename ... "
-    curl -fsSLI https://dc3p1870nn3cj.cloudfront.net/$path$name > /dev/null
+    curl -fsSLI https://cdn.olares.com/$path$name > /dev/null
     if [ $? -ne 0 ]; then
-        code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://dc3p1870nn3cj.cloudfront.net/$path$name)
+        code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://cdn.olares.com/$path$name)
         if [ $code -eq 403 ]; then
 
             bash ${BASE_DIR}/download-deps.sh $PLATFORM $line

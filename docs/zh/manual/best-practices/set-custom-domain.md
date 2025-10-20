@@ -203,7 +203,7 @@ DID（Decentralized Identifier，去中心化标识符）是在获得最终的 O
 :::warning 需配置系统环境
 在进行以下操作之前，请确保已正确完成 Windows 环境的配置。
 
-如果环境未正确设置，安装脚本可能无法正常运行。有关详细说明，请参阅 [Windows 安装指南](../../developer/install/windows.md)。
+如果环境未正确设置，安装脚本可能无法正常运行。有关详细说明，请参阅 [Windows 安装指南](../get-started/install-windows-script.md)。
 :::
 
 1. 点击 https://cn.windows.olares.sh 下载安装脚本 `publicInstall.latest.ps1`。

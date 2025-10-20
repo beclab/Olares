@@ -24,6 +24,9 @@ func NewCmdInstallOs() *cobra.Command {
 		Use:   "install",
 		Short: "Install Olares",
 		Run: func(cmd *cobra.Command, args []string) {
+			if !cmd.Flags().Changed("enable-reverse-proxy") {
+				o.InstallOptions.EnableReverseProxy = nil
+			}
 			if err := pipelines.CliInstallTerminusPipeline(o.InstallOptions); err != nil {
 				log.Fatalf("error: %v", err)
 			}

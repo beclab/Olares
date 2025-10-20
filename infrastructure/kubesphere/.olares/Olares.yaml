@@ -4,7 +4,5 @@ output:
   containers:
     - 
       name: beclab/ks-apiserver:0.0.24
-    -
-      name: kubesphere/kubectl:v1.22.0
 
 # must have blank new line
