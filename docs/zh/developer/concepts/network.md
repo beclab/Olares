@@ -57,7 +57,7 @@ Olares 为用户提供无障碍且安全灵活的网络解决方案。本文档�
 ::: tip 注意
 
 - 应用地址包含 Olares ID
-- 入口索引指的是入口在 [`OlaresManifest.yaml`](../../developer/develop/package/manifest.md) 中定义的多个入口中的位置。
+- 入口索引指的是入口在 [`OlaresManifest.yaml`](../develop/package/manifest.md) 中定义的多个入口中的位置。
   :::
 
 ## Olares 内部网络
@@ -90,5 +90,5 @@ Olares 在网关架构中采用多层代理路由设计。流量经过多个层�
 
 ## 了解更多
 
-- [为应用设置自定义域名](../olares/settings/custom-app-domain.md#自定义域名)
-- [通过专用网络访问 Olares 应用](../larepass/private-network.md)
+- [为应用设置自定义域名](../../manual/olares/settings/custom-app-domain.md#自定义域名)
+- [通过专用网络访问 Olares 应用](../../manual/larepass/private-network.md)

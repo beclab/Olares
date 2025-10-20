@@ -360,49 +360,6 @@ const side = {
         },
         ],
       },
-    {
-      text: "Concepts",
-      collapsed: true,
-      link: "/manual/concepts/",
-      items: [
-        { text: "Olares architecture", link: "/manual/concepts/system-architecture" },
-        { text: "Olares ID",
-          link: "/manual/concepts/olares-id",
-          collapsed: true,
-          items: [
-            {
-              text: "Decentralized ID",
-              link: "/manual/concepts/did",
-            },
-            {
-              text: "Blockchain Registry",
-              link: "/manual/concepts/registry",
-            },
-            {
-              text: "Verifiable Credential",
-              link: "/manual/concepts/vc",
-            },
-            {
-              text: "Autonomous Reputation",
-              link: "/manual/concepts/reputation",
-            },
-          //  {
-           //   text: "Self-Sovereign Network",
-          //    link: "/manual/concepts/self-sovereign-network",
-            //   },
-            {
-              text: "Identity Wallet",
-              link: "/manual/concepts/wallet",
-            },
-          ],
-        },
-        { text: "Account", link: "/manual/concepts/account" },
-        { text: "Application", link: "/manual/concepts/application" },
-        { text: "Network", link: "/manual/concepts/network" },
-        { text: "Data", link: "/manual/concepts/data" },
-        { text: "Secrets", link: "/manual/concepts/secrets" },
-      ],
-    },
     { text: "Glossary", link: "/manual/glossary" },
   ],
   "/space/": [
@@ -507,7 +464,49 @@ const side = {
  ],
   "/developer/": [
     {
-      text: "Installation deep-dives",
+      text: "Concepts",
+      link: "/developer/concepts/",
+      items: [
+        { text: "Olares architecture", link: "/developer/concepts/system-architecture" },
+        { text: "Olares ID",
+          link: "/developer/concepts/olares-id",
+          collapsed: true,
+          items: [
+            {
+              text: "Decentralized ID",
+              link: "/developer/concepts/did",
+            },
+            {
+              text: "Blockchain Registry",
+              link: "/developer/concepts/registry",
+            },
+            {
+              text: "Verifiable Credential",
+              link: "/developer/concepts/vc",
+            },
+            {
+              text: "Autonomous Reputation",
+              link: "/developer/concepts/reputation",
+            },
+            //  {
+            //   text: "Self-Sovereign Network",
+            //    link: "/developer/concepts/self-sovereign-network",
+            //   },
+            {
+              text: "Identity Wallet",
+              link: "/developer/concepts/wallet",
+            },
+          ],
+        },
+        { text: "Account", link: "/developer/concepts/account" },
+        { text: "Application", link: "/developer/concepts/application" },
+        { text: "Network", link: "/developer/concepts/network" },
+        { text: "Data", link: "/developer/concepts/data" },
+        { text: "Secrets", link: "/developer/concepts/secrets" },
+      ],
+    },
+      {
+      text: "Installation deep-dive",
       link: "/developer/install/",
       items: [
         {
@@ -593,58 +592,6 @@ const side = {
             text: "Olares versioning",
             link: "/developer/install/versioning",
           },
-       {
-         text: "Additional installations",
-         link: "/developer/install/additional-installations",
-         collapsed: true,
-         items: [
-           { text: "Linux (via Docker)", link: "/developer/install/linux-via-docker-compose"},
-           {
-             text: "macOS",
-             collapsed: true,
-             items: [
-               {
-                 text: "Using the script (recommended)",
-                 link: "/developer/install/mac",
-               },
-              {
-                 text: "Using Docker image",
-                 link: "/developer/install/mac-via-docker-image",
-               },
-             ],
-           },
-           {
-             text: "Windows (WSL 2)",
-             collapsed: true,
-             items: [
-               {
-                 text: "Using the script (recommended)",
-                 link: "/developer/install/windows",
-               },
-               {
-                 text: "Using Docker image",
-                link: "/developer/install/windows-via-docker-image",
-               },
-             ],
-           },
-           {
-             text: "PVE",
-             collapsed: true,
-             items: [
-               {
-                 text: "Using the script (recommended)",
-                 link: "/developer/install/pve",
-               },
-               {
-                 text: "Using ISO image",
-                link: "/developer/install/pve-via-iso-image",
-               },
-             ],
-           },
-           { text: "LXC", link: "/developer/install/lxc" },
-           { text: "Raspberry Pi", link: "/developer/install/raspberry-pi" },
-         ],
-       },
     ],
   },
     {
@@ -878,7 +825,7 @@ export const en = defineConfig({
       { text: "Olares", link: "/manual/overview" },
       { text: "Olares Space", link: "/space/" },
       { text: "Use Cases", link: "/use-cases/" },
-      { text: "Developer Guide", link: "/developer/install/" },
+      { text: "Developer Guide", link: "/developer/concepts/" },
     ],
 
     sidebar: side,

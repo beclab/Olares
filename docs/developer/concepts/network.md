@@ -60,7 +60,7 @@ A route ID is a unique identifier used to identify specific applications or appl
 ::: tip Note
 
 - The URL of the application is derived from Olares ID.
-- Entrance index refers to the position of entrance in multiple entrances defined in [`OlaresManifest.yaml`](../../developer/develop/package/manifest.md).
+- Entrance index refers to the position of entrance in multiple entrances defined in [`OlaresManifest.yaml`](../develop/package/manifest.md).
   :::
 
 ## Olares internal network
@@ -93,5 +93,5 @@ Inside the application, Olares has multiple layers of security.
 
 ## Learn more
 
-- [Set up custom domain name for application](../olares/settings/custom-app-domain.md#custom-domain-name)
+- [Set up custom domain name for application](../../manual/olares/settings/custom-app-domain.md#custom-domain-name)
 - [Access Olares via VPN](/manual/larepass/private-network.md)

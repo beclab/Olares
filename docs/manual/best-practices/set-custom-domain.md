@@ -263,6 +263,6 @@ After completing these steps, your Olares installation will be accessible via yo
 
 ## Learn more
 
-- [Olares account](../concepts/account.md)
+- [Olares account](../../developer/concepts/account.md)
 - [Install Olares](../get-started/install-olares.md)
 - [Configure domain rules](../../space/manage-domain.md)

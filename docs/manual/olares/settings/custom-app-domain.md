@@ -11,8 +11,8 @@ You can access Olares applications anytime, anywhere, whether you're accessing f
 ## Before you begin
 Before you start, it is recommended to familiarize yourself with a few concepts for Olares applications:
 
-- [Endpoints](../../concepts/network.md#endpoints)
-- [Route ID](../../concepts/network.md#route-id)
+- [Endpoints](../../../developer/concepts/network.md#endpoints)
+- [Route ID](../../../developer/concepts/network.md#route-id)
 
 ## Customize domain name for application
 
