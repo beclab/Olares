@@ -2,11 +2,12 @@ package containerd
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/containerd/containerd/reference"
 	"github.com/gofiber/fiber/v2"
 	criruntimev1 "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"k8s.io/klog/v2"
-	"strings"
 )
 
 var (
@@ -154,7 +155,7 @@ func ListRegistries(ctx *fiber.Ctx) ([]*Registry, error) {
 				nameToRegistries[host] = &Registry{Name: host}
 			}
 			nameToRegistries[host].ImageCount += 1
-			nameToRegistries[host].ImageSize += image.Size_
+			nameToRegistries[host].ImageSize += image.Size
 		}
 	}
 	var registries []*Registry
@@ -245,7 +246,7 @@ func PruneImages(ctx *fiber.Ctx) (*PruneImageResult, error) {
 		}
 		res.Images = append(res.Images, image)
 		res.Count += 1
-		res.Size += image.Size_
+		res.Size += image.Size
 	}
 	return res, nil
 }

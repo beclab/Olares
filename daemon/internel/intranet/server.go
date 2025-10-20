@@ -5,6 +5,7 @@ import "k8s.io/klog/v2"
 type Server struct {
 	dnsServer   *mDNSServer
 	proxyServer *proxyServer
+	started     bool
 }
 
 type ServerOptions struct {
@@ -12,6 +13,10 @@ type ServerOptions struct {
 }
 
 func (s *Server) Close() {
+	if !s.started {
+		return
+	}
+
 	if s.dnsServer != nil {
 		s.dnsServer.Close()
 	}
@@ -19,6 +24,9 @@ func (s *Server) Close() {
 	if s.proxyServer != nil {
 		s.proxyServer.Close()
 	}
+
+	s.started = false
+	klog.Info("Intranet server closed")
 }
 
 func NewServer() (*Server, error) {
@@ -38,7 +46,15 @@ func NewServer() (*Server, error) {
 	}, nil
 }
 
+func (s *Server) IsStarted() bool {
+	return s.started
+}
+
 func (s *Server) Start(o *ServerOptions) error {
+	if s.started {
+		return nil
+	}
+
 	if s.dnsServer != nil {
 		s.dnsServer.SetHosts(o.Hosts, true)
 		err := s.dnsServer.StartAll()
@@ -56,6 +72,8 @@ func (s *Server) Start(o *ServerOptions) error {
 		}
 	}
 
+	s.started = true
+	klog.Info("Intranet server started")
 	return nil
 }
 

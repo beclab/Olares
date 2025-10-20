@@ -69,7 +69,7 @@ func (p *proxyServer) AddTarget(*middleware.ProxyTarget) bool {
 
 // Next implements middleware.ProxyBalancer.
 func (p *proxyServer) Next(c echo.Context) *middleware.ProxyTarget {
-	proxyPass, err := url.Parse("https://localhost")
+	proxyPass, err := url.Parse("https://" + c.Request().Host)
 	if err != nil {
 		klog.Error("parse proxy target error, ", err)
 		return nil

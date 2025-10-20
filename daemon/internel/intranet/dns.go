@@ -46,9 +46,6 @@ func (s *mDNSServer) Close() {
 }
 
 func (s *mDNSServer) StartAll() error {
-	klog.Info("Intranet mDNS server starting")
-	s.Close()
-
 	iface, err := s.findIntranetInterface()
 	if err != nil {
 		klog.Error("find intranet interface error, ", err)
@@ -105,6 +102,7 @@ func (s *mDNSServer) SetHosts(hosts []DNSConfig, reset bool) {
 			continue
 		}
 
+		klog.Info("removing domain ", domain)
 		s.servers[domain].queryServer.Shutdown()
 		delete(s.servers, domain)
 	}
@@ -125,7 +123,7 @@ func (s *mDNSServer) findIntranetInterface() (*net.Interface, error) {
 		klog.Error("get host ip error, ", err)
 	}
 
-	// host ip in priority, next is the ethernet ip
+	// host ip in priority, next is the ethernet ip-
 	var (
 		iface *net.Interface
 	)
