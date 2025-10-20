@@ -9,16 +9,20 @@ description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括
 ## 准备条件
 
 - **宿主机要求**:
-  - **CPU**：4 核及以上。
+  - **CPU**：4 核及以上，X86-64 架构（AMD 或 Intel）。ARM 芯片目前不支持 ISO 镜像安装。
   - **内存**：至少 8 GB 可用内存。
   - **存储**：至少 150 GB SSD（若使用机械硬盘 HDD，将导致安装失败）。
   - **网络**：需连接至有线局域网。
 
 - **其他**：不小于 **8 GB** 的 U 盘。
 
+::: tip 激活遇到问题？
+当前 ISO 镜像使用了国际版网络配置（使用 `olares.com` 域名）。如遇激活问题，请暂时切换至[一键安装脚本](install-linux-script.md)方式安装激活。
+:::
+
 ## 制作启动盘
 
-1. 点击[此处](https://cdn.olares.cn)下载最新官方 Olares ISO 镜像。
+1. 点击[此处](https://cdn.olares.cn/olares-latest-amd64-cn.iso)下载最新官方 Olares ISO 镜像。
 2. 下载并安装 [**Balena Etcher**](https://etcher.balena.io/) 工具。
 3. 将 U 盘插入电脑。
 4. 打开 Etcher，依次选择：

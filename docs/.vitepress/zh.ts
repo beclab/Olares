@@ -96,8 +96,9 @@ const side = {
                   text: "使用 ISO 镜像",
                   link: "/zh/manual/get-started/install-pve-iso",
                 },
+                { text: "LXC", link: "/zh/manual/get-started/install-lxc" },
               ],
-            },{ text: "LXC", link: "/zh/manual/get-started/install-lxc" },
+            },
             {
               text: "树莓派",
               link: "/zh/manual/get-started/install-raspberry-pi",

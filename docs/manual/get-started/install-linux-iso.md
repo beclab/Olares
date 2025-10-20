@@ -11,7 +11,7 @@ This guide explains how to install Olares on a physical machine using the offici
 ## Prerequisites
 
 - **Host requirements**:
-  - **CPU**: 4 cores or more.
+  - **CPU**: Minimum 4 cores with **x86-64 architecture** (Intel or AMD). ARM-based processors are not currently supported for this method.
   - **Memory**: At least 8 GB of available RAM.
   - **Storage**: Minimum 150 GB SSD.
   - **Network**: The device must be connected to a wired LAN.
@@ -23,7 +23,7 @@ This guide explains how to install Olares on a physical machine using the offici
 
 ## Create a bootable USB drive
 
-1. Click [here](https://cdn.olares.com/) to download the official Olares ISO image.
+1. Click [here](https://cdn.olares.com/olares-latest-amd64.iso) to download the official Olares ISO image.
 2. Download and install [**Balena Etcher**](https://etcher.balena.io/).
 3. Insert the USB flash drive into your computer.
 4. Launch Etcher and follow these steps:

@@ -13,13 +13,13 @@ Currently, Olares on PVE has certain limitations. We recommend using it only for
 ## System requirements
 Make sure your device meets the following requirements.
 
-- CPU: At least 4 cores
+ **CPU**: Minimum 4 cores with **x86-64 architecture** (Intel or AMD). ARM-based processors are not currently supported for this method.
 - RAM: At least 8GB of available memory
 - Storage: At least 200GB of available SSD storage. The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
 - Supported Systems: PVE 8.2.2
 
 ## Download Olares ISO image
-Click [here](https://cdn.olares.com/) to download the official Olares ISO image.
+Click [here](https://cdn.olares.com/olares-latest-amd64.iso) to download the official Olares ISO image.
 
 ## Configure VM in PVE
 

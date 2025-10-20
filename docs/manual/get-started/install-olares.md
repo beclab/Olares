@@ -19,10 +19,8 @@ Olares supports multiple platforms and deployment methods. Choose the installati
 
 Linux (Ubuntu or Debian) is the recommended platform for running Olares, as it offers the best performance and stability in production environments.
 
-| Method                                               | Description |
-|------------------------------------------------------|--------------|
-| [**Using ISO image**](install-linux-iso.md)          | Fresh ISO install on a physical machine, automatically configuring the <br/>host (Linux) environment, container runtime, drivers, and core <br/>dependencies. |
-| [**Using one-line script**](install-linux-script.md) | Quick install on existing Linux systems. |
+- [**ISO image**](install-linux-iso.md): Perform a fresh installation on a physical machine, auto<br/> configuring the Linux host environment, container runtime,<br/> drivers, and core dependencies. |
+- [**One-line script**](install-linux-script.md): Quick install on existing Linux systems.                                   
 
 :::tip Recommendation
 The ISO installation method ensures maximum compatibility, performance, and system-level optimization.
@@ -32,34 +30,18 @@ The ISO installation method ensures maximum compatibility, performance, and syst
 
 These methods are suitable for **development**, **testing**, or **lightweight environments**. 
 
-#### Linux
-
-- [**Using Docker Compose**](install-linux-docker.md): Runs Olares in a containerized environment using Docker Compose in Linux.
-
-
 #### Windows
-
-| Method                                                 | Description                                              |  
-|--------------------------------------------------------|----------------------------------------------------------| 
-| [**Using one-line script**](install-windows-script.md) | Installs Olares in Windows Subsystem for Linux 2 (WSL 2). |
-| [**Using Docker image**](install-windows-docker.md)           | Runs Olares in Docker container with WSL 2 integration.  |
+- [**One-line script**](install-windows-script.md): Install Olares in Windows Subsystem for Linux 2 (WSL 2).
+- [**Docker image**](install-windows-docker.md): Run Olares in Docker with WSL 2 integration.
 
 #### macOS
-
-| Method                                         | Description                                                     |  
-|------------------------------------------------|-----------------------------------------------------------------| 
-| [**Using one-line script**](install-mac-script.md) | Installs Olares within a containerized environment via MiniKube. |  
-| [**Using Docker image**](install-mac-docker.md) | Runs Olares in Docker on macOS.                          |  
----
+- [**One-line script**](install-mac-script.md): Install Olares in a containerized environment via MiniKube.
+- [**Docker image**](install-mac-docker.md): Run Olares in Docker on macOS.
 
 #### PVE
+- [**ISO image (recommended)**](install-pve-iso.md): Deploy Olares as a full VM in Proxmox VE using the ISO installer.
+- [**One-line script**](install-pve-script.md): Install Olares directly on a PVE node.
+- [**LXC container**](install-lxc.md): Deploy Olares in Proxmox VE using Linux containers (LXC).
 
-| Method                                          | Description | 
-|-------------------------------------------------|--------------| 
-| [**Using ISO image**](install-pve-iso.md)             | Deploys Olares as a full VM in Proxmox using the ISO installer. | 
-| [**Using one-line script**](install-pve-script.md) | Installs Olares directly on a PVE node. | 
-
- #### Raspberry Pi (ARM)
-
-- [**Using one-line script**](install-raspberry-pi.md): Installs Olares on ARM-based Raspberry Pi boards. 
-
+#### Raspberry Pi (ARM)
+- [**One-line script**](install-raspberry-pi.md): Install Olares on ARM-based Raspberry Pi devices.

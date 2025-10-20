@@ -19,13 +19,17 @@ description: 在 PVE 虚拟化平台上使用 ISO 镜像安装配置 Olares 的�
 ## 系统要求
 请确保设备满足以下配置要求：
 
-- CPU：4 核及以上
+- CPU：4 核及以上，X86-64 架构（AMD 或 Intel）。ARM 芯片目前不支持 ISO 镜像安装。
 - 内存：不少于 8GB 可用内存
 - 存储：不少于 200GB 的可用磁盘空间，需使用 SSD 硬盘安装。使用 HDD（机械硬盘）可能会导致安装失败。
 - 支持的系统版本：PVE 8.2.2
 
+::: tip 激活遇到问题？
+当前 ISO 镜像使用了国际版网络配置（使用 `olares.com` 域名）。如遇激活问题，请暂时切换至[一键安装脚本](install-pve-script.md)方式安装激活。
+:::
+
 ## 下载 Olares ISO 镜像
-点击[此处](https://cdn.olares.cn)下载官方 Olares ISO 镜像。
+点击[此处](https://cdn.olares.cn/olares-latest-amd64-cn.iso)下载最新官方 Olares ISO 镜像。
 
 ## 配置 PVE 虚拟机
 在 PVE 运行 Olares 时，请确保虚拟机满足以下配置要求。你可以在**创建新虚拟机**时应用这些设置，也可以**调整已有虚拟机**以符合要求。
