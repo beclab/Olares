@@ -11,6 +11,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apixclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,6 +41,12 @@ func (u upgrader_1_12_2_20251020) UpgradeSystemComponents() []task.Interface {
 		&task.LocalTask{
 			Name:   "DeleteOldUserEnvsIfExists",
 			Action: new(deleteUserEnvsIfExists),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "UpgradeL4BflProxy",
+			Action: new(upgradeL4),
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},
@@ -137,6 +144,20 @@ func (d *deleteUserEnvsIfExists) Execute(runtime connector.Runtime) error {
 		}
 		logger.Debugf("deleted UserEnv %s", ue.Name)
 	}
+	return nil
+}
+
+type upgradeL4 struct {
+	common.KubeAction
+}
+
+func (u *upgradeL4) Execute(runtime connector.Runtime) error {
+	if _, err := runtime.GetRunner().SudoCmd(
+		"/usr/local/bin/kubectl set image deployment/l4-bfl-proxy proxy=beclab/l4-bfl-proxy:v0.3.5 -n os-network", false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to upgrade L4 network proxy")
+	}
+
+	logger.Infof("L4 upgrade to version v0.3.5 completed successfully")
 	return nil
 }
 

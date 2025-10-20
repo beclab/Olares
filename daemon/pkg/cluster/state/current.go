@@ -476,6 +476,11 @@ func WatchStatus(ctx context.Context, watchers []watcher.Watcher, postWatch func
 			}
 
 			for _, w := range watchers {
+				if w == nil {
+					klog.Warning("watcher is nil")
+					continue
+				}
+
 				w.Watch(ctx)
 			}
 
