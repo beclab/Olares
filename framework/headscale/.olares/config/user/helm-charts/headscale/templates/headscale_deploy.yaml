@@ -71,6 +71,29 @@ roleRef:
   name: admin
   apiGroup: rbac.authorization.k8s.io
 
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:sysenv-reader
+rules:
+- apiGroups: ["sys.bytetrade.io"]
+  resources: ["systemenvs"]
+  verbs: ["get","list","watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user:{{ .Values.bfl.username }}:sysenv-reader
+subjects:
+- kind: ServiceAccount
+  name: tailscale
+  namespace: user-space-{{ .Values.bfl.username }}
+roleRef:
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:sysenv-reader
+  apiGroup: rbac.authorization.k8s.io
 
 ---
 apiVersion: apps/v1
@@ -128,7 +151,7 @@ spec:
         - |
           chown -R 1000:1000 /headscale 
       - name: init
-        image: beclab/headscale-init:v0.1.12
+        image: beclab/headscale-init:v0.1.13
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
