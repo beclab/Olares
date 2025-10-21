@@ -52,7 +52,14 @@ func (p *proxyServer) Start() error {
 	)
 	p.proxy.Use(middleware.ProxyWithConfig(config))
 
-	return p.proxy.Start(":80")
+	go func(){
+		err := p.proxy.Start(":80")
+		if err != nil {
+			klog.Error(err)
+		}
+	}()
+
+	return nil
 }
 
 func (p *proxyServer) Close() error {
