@@ -12,8 +12,11 @@ userEnvs:
   - envName: OLARES_USER_TIMEZONE
     type: string
     editable: true
+  - envName: OLARES_USER_SMTP_ENABLED
+    type: bool
+    editable: true
   - envName: OLARES_USER_SMTP_SERVER
-    type: url
+    type: domain
     editable: true
   - envName: OLARES_USER_SMTP_PORT
     type: number
@@ -36,7 +39,7 @@ userEnvs:
   - envName: OLARES_USER_SMTP_USE_SSL
     type: bool
     editable: true
-  - envName: OLARES_USER_SMTP_SMTP_SECURITY_PROTOCOLS
+  - envName: OLARES_USER_SMTP_SECURITY_PROTOCOLS
     type: string
     editable: true        
   - envName: OLARES_USER_OPENAI_APIKEY
