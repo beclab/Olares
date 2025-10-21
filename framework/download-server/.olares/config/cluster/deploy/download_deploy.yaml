@@ -170,7 +170,7 @@ spec:
             memory: 300Mi
             
       - name: download-server
-        image: "beclab/download-server:v0.1.6"
+        image: "beclab/download-server:v0.1.8"
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -179,6 +179,8 @@ spec:
         env:
         - name: DEBUG
           value: "false"
+        - name: YTDLP_SERVER_URL
+          value: http://ytdlp-svc.ytserver-shared:3082
         - name: PG_USERNAME
           value: download_os_framework
         - name: PG_PASSWORD
