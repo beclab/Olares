@@ -253,7 +253,7 @@ spec:
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-auth
-        - name: terminus-sidecar-init
+        - name: olares-sidecar-init
           image: openservicemesh/init:v1.2.3
           imagePullPolicy: IfNotPresent
           securityContext:
@@ -315,7 +315,7 @@ spec:
               name: www-dir
        
       containers:
-        - name: terminus-envoy-sidecar
+        - name: olares-envoy-sidecar
           image: bytetrade/envoy:v1.25.11
           imagePullPolicy: IfNotPresent
           securityContext:
@@ -329,7 +329,7 @@ spec:
             - name: tapr
               containerPort: 15080
           volumeMounts:
-            - name: terminus-sidecar-config
+            - name: olares-sidecar-config
               readOnly: true
               mountPath: /etc/envoy/envoy.yaml
               subPath: envoy.yaml
@@ -361,7 +361,7 @@ spec:
               cp -r /www/nginxs/* /etc/nginx/conf.d/
               nginx -g 'daemon off;'
           volumeMounts:
-            - name: terminus-sidecar-config
+            - name: olares-sidecar-config
               readOnly: true
               mountPath: /etc/envoy/envoy.yaml
               subPath: envoy.yaml
@@ -500,7 +500,7 @@ spec:
           hostPath:
             type: Directory
             path: '{{ .Values.userspace.userData }}'
-        - name: terminus-sidecar-config
+        - name: olares-sidecar-config
           configMap:
             name: user-service-sidecar-ws-configs
             items:
