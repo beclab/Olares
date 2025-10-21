@@ -179,6 +179,8 @@ spec:
         env:
         - name: DEBUG
           value: "false"
+        - name: YTDLP_SERVER_URL
+          value: http://ytdlp-svc.ytserver-shared:3082
         - name: PG_USERNAME
           value: download_os_framework
         - name: PG_PASSWORD
