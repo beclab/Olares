@@ -317,7 +317,7 @@ spec:
               apiVersion: v1
               fieldPath: spec.nodeName
       - name: ingress
-        image: beclab/bfl-ingress:v0.3.23
+        image: beclab/bfl-ingress:v0.3.24
         imagePullPolicy: IfNotPresent
         env:
         - name: AUTHELIA_AUTH_URL

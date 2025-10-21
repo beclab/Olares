@@ -32,6 +32,23 @@ func (w *applicationWatcher) Watch(ctx context.Context) {
 			klog.Info("Intranet server stopped due to cluster state: ", state.CurrentState.TerminusState)
 		}
 	default:
+		client, err := utils.GetKubeClient()
+		if err != nil {
+			klog.Error("failed to get kube client: ", err)
+			return
+		}
+
+		_, _, role, err := utils.GetThisNodeName(ctx, client)
+		if err != nil {
+			klog.Error("failed to get this node role: ", err)
+			return
+		}
+
+		if role != "master" {
+			// Only master nodes run the intranet server
+			return
+		}
+
 		if w.intranetServer == nil {
 			var err error
 			w.intranetServer, err = intranet.NewServer()
