@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.51" }}
+{{ $backupVersion := "0.3.52" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 {{- $backup_nats_secret := (lookup "v1" "Secret" .Release.Namespace "backup-nats-secret") -}}
@@ -20,6 +20,79 @@ metadata:
 type: Opaque
 data:
   nats_password: {{ $nats_password }}
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backup-cluster-view
+  namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backend:{{ .Release.Namespace }}:backup:integration-provider-svc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backend:integration-provider-svc-account
+subjects:
+  - kind: ServiceAccount
+    name: backup-cluster-view
+    namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backend:framework:backup-provider
+rules:
+  - apiGroups:
+      - "*"
+    resources:
+      - statefulsets
+      - terminus
+      - users
+      - applications
+    verbs:
+      - get
+  - apiGroups:
+      - "*"
+    resources:
+      - systemenvs
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - "*"
+    resources:
+      - serviceaccounts/token
+    verbs:
+      - create
+  - apiGroups:
+      - "*"
+    resources:
+      - backups
+      - snapshots
+      - restores
+    verbs:
+      - "*"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backend:{{ .Release.Namespace }}:backup:integration-provider
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backend:framework:backup-provider
+subjects:
+  - kind: ServiceAccount
+    name: backup-cluster-view
+    namespace: {{ .Release.Namespace }}
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -64,7 +137,8 @@ spec:
       - name: shares
         hostPath:
           path: '{{ .Values.rootPath }}/share'
-      serviceAccountName: os-internal
+      serviceAccount: backup-cluster-view
+      serviceAccountName: backup-cluster-view
       initContainers:
         - args:
           - -it
