@@ -304,7 +304,7 @@ spec:
         - name: BACKUP_SERVER
           value: backup-server.os-framework:8082
         - name: L4_PROXY_IMAGE_VERSION
-          value: v0.3.5
+          value: v0.3.6
         - name: L4_PROXY_SERVICE_ACCOUNT
           value: os-network-internal
         - name: L4_PROXY_NAMESPACE

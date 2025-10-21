@@ -153,7 +153,7 @@ type upgradeL4 struct {
 
 func (u *upgradeL4) Execute(runtime connector.Runtime) error {
 	if _, err := runtime.GetRunner().SudoCmd(
-		"/usr/local/bin/kubectl set image deployment/l4-bfl-proxy proxy=beclab/l4-bfl-proxy:v0.3.5 -n os-network", false, true); err != nil {
+		"/usr/local/bin/kubectl set image deployment/l4-bfl-proxy proxy=beclab/l4-bfl-proxy:v0.3.6 -n os-network", false, true); err != nil {
 		return errors.Wrap(errors.WithStack(err), "failed to upgrade L4 network proxy")
 	}
 
