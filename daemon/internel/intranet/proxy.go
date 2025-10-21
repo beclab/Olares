@@ -64,7 +64,7 @@ func (p *proxyServer) Start() error {
 	)
 	p.proxy.Use(middleware.ProxyWithConfig(config))
 
-	go func(){
+	go func() {
 		err := p.proxy.Start(":80")
 		if err != nil {
 			klog.Error(err)
@@ -88,7 +88,11 @@ func (p *proxyServer) AddTarget(*middleware.ProxyTarget) bool {
 
 // Next implements middleware.ProxyBalancer.
 func (p *proxyServer) Next(c echo.Context) *middleware.ProxyTarget {
-	proxyPass, err := url.Parse("https://" + c.Request().Host)
+	scheme := "https://"
+	if c.IsWebSocket() {
+		scheme = "wss://"
+	}
+	proxyPass, err := url.Parse(scheme + c.Request().Host + ":443")
 	if err != nil {
 		klog.Error("parse proxy target error, ", err)
 		return nil
@@ -122,6 +126,10 @@ func (p *proxyServer) customDialContext(d *net.Dialer) func(ctx context.Context,
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
 		_, port, _ := net.SplitHostPort(addr)
 		// Force proxying to localhost
+		klog.Info("addr: ", addr, "port: ", port)
+		if port == "" {
+			port = "443"
+		}
 		addr = net.JoinHostPort("127.0.0.1", port)
 		return d.DialContext(ctx, network, addr)
 	}
