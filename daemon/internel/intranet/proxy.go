@@ -37,6 +37,18 @@ func (p *proxyServer) Start() error {
 
 	p.proxy.Use(middleware.Logger())
 	p.proxy.Use(middleware.Recover())
+
+	// add x-forwarded-proto header
+	p.proxy.Use(
+		func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(c echo.Context) error {
+				c.Request().Header.Set("X-Forwarded-Proto", "http")
+				return next(c)
+			}
+		},
+	)
+
+	// Handle HTTP to HTTPS redirection for non-intranet requests
 	p.proxy.Use(
 		func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(c echo.Context) error {
