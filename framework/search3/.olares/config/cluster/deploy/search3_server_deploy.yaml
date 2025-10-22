@@ -294,6 +294,8 @@ spec:
       - name: search3monitor
         image: beclab/search3monitor:v0.0.70
         imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8081
         env:
         - name: NODE_IP
           valueFrom:
@@ -379,6 +381,41 @@ spec:
       name: search3
       port: 80
       targetPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search3monitor-headless
+  namespace: {{ .Release.Namespace }}
+spec:
+  clusterIP: None
+  selector:
+    app: search3monitor
+  ports:
+  - port: 8081
+    targetPort: 8081
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: search3monitor-network-policy
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: search3monitor
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: search3
+    ports:
+    - protocol: TCP
+      port: 8081
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
