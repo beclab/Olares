@@ -8,11 +8,13 @@ replace (
 	bytetrade.io/web3os/app-service => github.com/beclab/app-service v0.4.23
 	bytetrade.io/web3os/backups-sdk => github.com/Above-Os/backups-sdk v0.1.17
 	bytetrade.io/web3os/bfl => github.com/beclab/bfl v0.3.36
+	github.com/labstack/echo/v4 => github.com/eball/echo/v4 v4.13.4-patch
 	k8s.io/api => k8s.io/api v0.34.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.34.0
 	k8s.io/client-go => k8s.io/client-go v0.34.0
 	kubesphere.io/api => ../../kubesphere-ext/staging/src/kubesphere.io/api/
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.19.6
+
 )
 
 require (
@@ -32,7 +34,7 @@ require (
 	github.com/jochenvg/go-udev v0.0.0-20171110120927-d6b62d56d37b
 	github.com/joho/godotenv v1.5.1
 	github.com/klauspost/cpuid/v2 v2.2.8
-	github.com/labstack/echo/v4 v4.13.4
+	github.com/labstack/echo/v4 v4.0.0-00010101000000-000000000000
 	github.com/libp2p/go-netroute v0.2.2
 	github.com/mackerelio/go-osstat v0.2.5
 	github.com/muka/network_manager v0.0.0-20200903202308-ae5ede816e07

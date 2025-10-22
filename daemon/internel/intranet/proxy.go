@@ -3,6 +3,7 @@ package intranet
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -15,6 +16,10 @@ import (
 )
 
 var _ middleware.ProxyBalancer = (*proxyServer)(nil)
+
+type key struct{}
+
+var WSKey = key{}
 
 type proxyServer struct {
 	proxy     *echo.Echo
@@ -53,6 +58,12 @@ func (p *proxyServer) Start() error {
 		func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(c echo.Context) error {
 				if strings.HasSuffix(c.Request().Host, ".olares.local") {
+					if c.IsWebSocket() {
+						ctx := c.Request().Context()
+						ctx = context.WithValue(ctx, WSKey, true)
+						r := c.Request().WithContext(ctx)
+						c.SetRequest(r)
+					}
 					return next(c)
 				}
 
@@ -126,11 +137,76 @@ func (p *proxyServer) customDialContext(d *net.Dialer) func(ctx context.Context,
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
 		_, port, _ := net.SplitHostPort(addr)
 		// Force proxying to localhost
-		klog.Info("addr: ", addr, "port: ", port)
+		klog.Info("addr: ", addr, " port: ", port, " network: ", network)
 		if port == "" {
 			port = "443"
 		}
-		addr = net.JoinHostPort("127.0.0.1", port)
-		return d.DialContext(ctx, network, addr)
+		newAddr := net.JoinHostPort("127.0.0.1", port)
+
+		isWs := false
+		if v := ctx.Value(WSKey); v != nil {
+			isWs = v.(bool)
+		}
+		if isWs {
+			klog.Info("WebSocket connection detected, using upgraded dialer")
+			return tlsDial(ctx, d, func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return d.DialContext(ctx, network, newAddr)
+			}, network, addr, &tls.Config{InsecureSkipVerify: true})
+		}
+
+		return d.DialContext(ctx, network, newAddr)
 	}
+}
+
+func tlsDial(ctx context.Context, netDialer *net.Dialer, dialFunc func(ctx context.Context, network, addr string) (net.Conn, error), network, addr string, config *tls.Config) (*tls.Conn, error) {
+	if netDialer.Timeout != 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, netDialer.Timeout)
+		defer cancel()
+	}
+
+	if !netDialer.Deadline.IsZero() {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(ctx, netDialer.Deadline)
+		defer cancel()
+	}
+
+	var (
+		rawConn net.Conn
+		err     error
+	)
+
+	if dialFunc != nil {
+		rawConn, err = dialFunc(ctx, network, addr)
+	} else {
+		rawConn, err = netDialer.DialContext(ctx, network, addr)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	colonPos := strings.LastIndex(addr, ":")
+	if colonPos == -1 {
+		colonPos = len(addr)
+	}
+	hostname := addr[:colonPos]
+
+	if config == nil {
+		return nil, fmt.Errorf("tls: config is nil")
+	}
+	// If no ServerName is set, infer the ServerName
+	// from the hostname we're connecting to.
+	if config.ServerName == "" {
+		// Make a copy to avoid polluting argument or default.
+		c := config.Clone()
+		c.ServerName = hostname
+		config = c
+	}
+
+	conn := tls.Client(rawConn, config)
+	if err := conn.HandshakeContext(ctx); err != nil {
+		rawConn.Close()
+		return nil, err
+	}
+	return conn, nil
 }
