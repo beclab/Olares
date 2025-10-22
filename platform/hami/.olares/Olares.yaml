@@ -3,7 +3,7 @@ target: prebuilt
 output:
   containers:
     - 
-      name: beclab/hami:v2.6.1
+      name: beclab/hami:v2.6.2
     - 
       name: beclab/hami-webui-fe-oss:v1.0.8
     - 
