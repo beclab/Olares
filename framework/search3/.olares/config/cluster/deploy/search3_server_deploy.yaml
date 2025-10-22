@@ -397,27 +397,6 @@ spec:
     targetPort: 8081
 
 ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: search3monitor-network-policy
-  namespace: {{ .Release.Namespace }}
-spec:
-  podSelector:
-    matchLabels:
-      app: search3monitor
-  policyTypes:
-  - Ingress
-  ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: search3
-    ports:
-    - protocol: TCP
-      port: 8081
-
----
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest
 metadata:
