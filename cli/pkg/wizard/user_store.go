@@ -205,9 +205,9 @@ func (u *UserStore) GetAuthURL() string {
 	localURL := u.getLocalURL()
 
 	if len(array) == 2 {
-		return fmt.Sprintf("https://auth.%s%s.%s/", localURL, array[0], array[1])
+		return fmt.Sprintf("https://auth.%s%s.%s", localURL, array[0], array[1])
 	} else {
-		return fmt.Sprintf("https://auth.%s%s.%s/", localURL, array[0], TerminusDefaultDomain)
+		return fmt.Sprintf("https://auth.%s%s.%s", localURL, array[0], TerminusDefaultDomain)
 	}
 }
 

@@ -88,7 +88,7 @@ func (c *activateUserOptions) Run() error {
 		return fmt.Errorf("failed to initialize global stores: %v", err)
 	}
 
-	err = wizard.UserBindTerminus(c.Mnemonic, c.BflUrl, c.VaultUrl, c.Password, c.OlaresId, localName)
+	accessToken, err := wizard.UserBindTerminus(c.Mnemonic, c.BflUrl, c.VaultUrl, c.Password, c.OlaresId, localName)
 	if err != nil {
 		return fmt.Errorf("user bind failed: %v", err)
 	}
@@ -107,7 +107,7 @@ func (c *activateUserOptions) Run() error {
 		log.Printf("  FRP JWS: %s", wizardConfig.System.FRP.Jws)
 	}
 
-	err = wizard.RunActivationWizard(c.BflUrl, "", wizardConfig)
+	err = wizard.RunActivationWizard(c.BflUrl, accessToken, wizardConfig)
 	if err != nil {
 		return fmt.Errorf("activation wizard failed: %v", err)
 	}
