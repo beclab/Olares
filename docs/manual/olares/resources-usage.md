@@ -137,7 +137,7 @@ The Network panel displays:
 
 - IPv4 and IPv6 details: Comprehensive details for both IPv4 and IPv6, including address, subnet mask, gateway address, DNS, and network status.
 
-#### Fan panel
+#### Fan panel<Badge type="tip" text="Olares One Only" />
 The Fan panel is exclusive to the **Olares One** hardware. It displays real-time **fan speed**, **temperature** for both the CPU and GPU, and **power draw** for the GPU.  
 Use this panel to quickly assess cooling performance and overall hardware health.
 

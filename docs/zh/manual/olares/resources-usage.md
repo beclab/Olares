@@ -134,7 +134,7 @@ Pods 面板提供了应用程序部署状态的动态视图。Pod 数量实时�
 
 * IPv4 和 IPv6 详细信息：IPv4 和 IPv6 的全面详细信息，包括地址、子网掩码、网关地址、DNS 和网络状态。
 
-#### 风扇面板 
+#### 风扇面板 <Badge type="tip" text="Olares One 专有" />
 风扇面板是 **Olares One** 硬件专属功能，用于实时显示 CPU 与 GPU 的 **风扇转速**、**温度**和**功耗**。通过此面板，你可以快速了解设备散热与性能状态，便于监控硬件运行情况。
 
 ![风扇面板](/images/zh/manual/olares/dashboard-fans.png#bordered)
