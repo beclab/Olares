@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/web5/crypto/dsa"
@@ -24,10 +25,18 @@ var (
 )
 
 var (
-	db *leveldb.DB
+	db     *leveldb.DB
+	dbOnce sync.Once
 )
 
-func init() {
+func getDB() *leveldb.DB {
+	dbOnce.Do(func() {
+		initDB()
+	})
+	return db
+}
+
+func initDB() {
 	var (
 		err  error
 		info os.FileInfo
@@ -84,7 +93,7 @@ type CheckJWSResult struct {
 func ResolveOlaresName(olares_id string) (*didcore.ResolutionResult, error) {
 	name := strings.Replace(olares_id, "@", ".", -1)
 	// Try to get from cache first
-	cached, err := db.Get([]byte(name), nil)
+	cached, err := getDB().Get([]byte(name), nil)
 	if err == nil {
 		var result didcore.ResolutionResult
 		if err := json.Unmarshal(cached, &result); err == nil {
@@ -117,7 +126,7 @@ func ResolveOlaresName(olares_id string) (*didcore.ResolutionResult, error) {
 	}
 
 	// Cache the result
-	if err := db.Put([]byte(name), body, nil); err != nil {
+	if err := getDB().Put([]byte(name), body, nil); err != nil {
 		// Log error but don't fail
 		fmt.Printf("failed to cache DID document: %v\n", err)
 	}
