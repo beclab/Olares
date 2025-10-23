@@ -189,17 +189,6 @@ func (u *UserStore) SignJWS(payload map[string]any) (string, error) {
 
 const TerminusDefaultDomain = "olares.cn"
 
-func (u *UserStore) GetTerminusURL() string {
-	array := strings.Split(u.terminusName, "@")
-	localURL := u.getLocalURL()
-
-	if len(array) == 2 {
-		return fmt.Sprintf("https://%s%s.%s", localURL, array[0], array[1])
-	} else {
-		return fmt.Sprintf("https://%s%s.%s", localURL, array[0], TerminusDefaultDomain)
-	}
-}
-
 func (u *UserStore) GetAuthURL() string {
 	array := strings.Split(u.terminusName, "@")
 	localURL := u.getLocalURL()

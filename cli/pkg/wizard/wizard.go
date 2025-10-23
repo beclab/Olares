@@ -107,12 +107,18 @@ func (w *ActivationWizard) RunWizard() error {
 
 			case "wait_reset_password":
 				log.Println("🔐 Resetting password...")
-
-				// Directly perform password reset, no need for complex DNS waiting logic
-				if err := w.performPasswordReset(); err != nil {
-					return fmt.Errorf("password reset failed: %v", err)
+				status, err := w.authRequestTerminusInfo()
+				if err != nil {
+					return fmt.Errorf("failed to get terminus info by authurl: %v", err)
 				}
-				log.Println("✅ Password reset completed")
+
+				if status == "wait_reset_password" {
+					// Directly perform password reset, no need for complex DNS waiting logic
+					if err := w.performPasswordReset(); err != nil {
+						return fmt.Errorf("password reset failed: %v", err)
+					}
+					log.Println("✅ Password reset completed")
+				}
 
 			default:
 				log.Printf("⏳ Unknown status: %s, waiting...", status)
@@ -196,12 +202,8 @@ func (w *ActivationWizard) updateTerminusInfo() (string, error) {
 // authRequestTerminusInfo backup Terminus information request
 func (w *ActivationWizard) authRequestTerminusInfo() (string, error) {
 	// Use globalUserStore to generate correct terminus_url
-	var terminusURL string
-	if globalUserStore != nil {
-		terminusURL = globalUserStore.GetTerminusURL()
-	} else {
-		terminusURL = w.BaseURL
-	}
+
+	var terminusURL = globalUserStore.GetAuthURL()
 
 	// Build backup URL (usually terminus_url + '/api/olares-info')
 	url := fmt.Sprintf("%s/api/olares-info?t=%d", terminusURL, time.Now().UnixMilli())
