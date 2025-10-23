@@ -204,7 +204,7 @@ func (w *ActivationWizard) authRequestTerminusInfo() (string, error) {
 	}
 
 	// Build backup URL (usually terminus_url + '/api/olares-info')
-	url := fmt.Sprintf("%s/bfl/info/v1/olares-info?t=%d", terminusURL, time.Now().UnixMilli())
+	url := fmt.Sprintf("%s/api/olares-info?t=%d", terminusURL, time.Now().UnixMilli())
 
 	client := &http.Client{
 		Timeout: 5 * time.Second,
@@ -232,15 +232,12 @@ func (w *ActivationWizard) authRequestTerminusInfo() (string, error) {
 		return "", fmt.Errorf("HTTP error %d: %s", resp.StatusCode, string(body))
 	}
 
-	var response struct {
-		Data TerminusInfo `json:"data"`
-	}
-
-	if err := json.Unmarshal(body, &response); err != nil {
+	var terminusInfo TerminusInfo
+	if err := json.Unmarshal(body, &terminusInfo); err != nil {
 		return "", fmt.Errorf("failed to parse response: %v", err)
 	}
 
-	return response.Data.WizardStatus, nil
+	return terminusInfo.WizardStatus, nil
 }
 
 // performPasswordReset performs password reset - simplified version
