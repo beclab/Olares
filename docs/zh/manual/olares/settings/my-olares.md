@@ -13,10 +13,21 @@ description: 了解如何利用“我的 Olares”页面管理账户、设备、
 
 查看和管理 Olares 硬件。你可以查看**型号**、**设备状态**、**设备标识符**、 **CPU** 和 **GPU** 信息。
 
+![我的硬件](/images/zh/manual/olares/my-hardware.png#bordered)
+
 可执行的操作包括：
 
 * **关机**：点击以关闭 Olares 设备。请使用 LarePass 完成后续操作。关机后 Olares 状态将在 LarePass 上显示为 `Olares 已关机`。无法远程操作，需手动开机。
 * **重启**：点击以重启 Olares 设备，请使用 LarePass 完成后续操作。重启过程中 Olares 状态将在 LarePass 上显示为 `正在重启`，约 5–8 分钟后恢复为 `Olares 运行中`。
+* **重置 SSH 密码**: 重置 Olares 宿主机默认账号的 SSH 密码。
+* **工作模式**（**Olares One** 专有）：  
+  切换 Olares One 的性能档位：
+  - **静音模式**：限制 CPU/GPU 功耗，满足日常负载并保持安静。
+  - **性能模式**：释放 CPU/GPU 最大性能，适合 AI 推理、游戏等高负载场景。
+
+:::tip
+本页还会显示 Olares One 的专属硬件图标。
+:::
 
 ## Olares Space
 在 Olares Space 中查看你的订阅计划详情和使用情况，包括反向代理方案、
