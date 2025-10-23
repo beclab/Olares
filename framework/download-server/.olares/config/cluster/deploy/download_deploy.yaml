@@ -75,15 +75,24 @@ kind: ClusterRole
 metadata:
   name: download-namespace-viewer
 rules:
-- apiGroups: 
-    - '*'            
-  resources: 
-    - statefulsets
-    - daemonsets
-    - namespaces   
-    - serviceaccounts/token
-  verbs: 
-    - '*'
+- apiGroups:
+  - "*"
+  resources:
+  - statefulsets
+  - daemonsets
+  - namespaces
+  - nodes
+  - users
+  verbs:
+  - watch
+  - list
+  - get
+- apiGroups:
+  - "*"
+  resources:
+  - serviceaccounts/token
+  verbs:
+  - create
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -170,7 +179,7 @@ spec:
             memory: 300Mi
             
       - name: download-server
-        image: "beclab/download-server:v0.1.8"
+        image: "beclab/download-server:v0.1.10"
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -181,6 +190,8 @@ spec:
           value: "false"
         - name: YTDLP_SERVER_URL
           value: http://ytdlp-svc.ytserver-shared:3082
+        - name: ARIA2_RPC_URL
+          value: http://download-svc:6800/jsonrpc
         - name: PG_USERNAME
           value: download_os_framework
         - name: PG_PASSWORD
