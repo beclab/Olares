@@ -109,15 +109,15 @@ func (w *ActivationWizard) RunWizard() error {
 				log.Println("🔐 Resetting password...")
 				status, err := w.authRequestTerminusInfo()
 				if err != nil {
-					return fmt.Errorf("failed to get terminus info by authurl: %v", err)
-				}
-
-				if status == "wait_reset_password" {
-					// Directly perform password reset, no need for complex DNS waiting logic
-					if err := w.performPasswordReset(); err != nil {
-						return fmt.Errorf("password reset failed: %v", err)
+					log.Printf("failed to get terminus info by authurl: %v retry ...\n", err)
+				} else {
+					if status == "wait_reset_password" {
+						// Directly perform password reset, no need for complex DNS waiting logic
+						if err := w.performPasswordReset(); err != nil {
+							return fmt.Errorf("password reset failed: %v", err)
+						}
+						log.Println("✅ Password reset completed")
 					}
-					log.Println("✅ Password reset completed")
 				}
 
 			default:
