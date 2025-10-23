@@ -170,7 +170,7 @@ func Authenticate(req AuthenticateRequest) (*AuthenticateResponse, error) {
 }
 
 // UserBindTerminus main user binding function (ref: TypeScript version)
-func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName string) (string, error) {
+func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName string) error {
 	log.Printf("Starting userBindTerminus for user: %s", terminusName)
 
 	// 1. Initialize global storage
@@ -178,7 +178,7 @@ func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName
 		log.Printf("Initializing global stores...")
 		err := InitializeGlobalStores(mnemonic, terminusName)
 		if err != nil {
-			return "", fmt.Errorf("failed to initialize global stores: %w", err)
+			return fmt.Errorf("failed to initialize global stores: %w", err)
 		}
 		log.Printf("Global stores initialized successfully")
 	}
@@ -206,7 +206,7 @@ func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName
 	// 3. Call onFirstFactor to get token (ref: TypeScript implementation)
 	token, err := OnFirstFactor(bflUrl, terminusName, localName, osPwd, false, false)
 	if err != nil {
-		return "", fmt.Errorf("onFirstFactor failed: %v", err)
+		return fmt.Errorf("onFirstFactor failed: %v", err)
 	}
 
 	log.Printf("First factor authentication successful, session_id: %s", token.SessionID)
@@ -220,7 +220,7 @@ func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName
 		Caller:             "E001",
 	})
 	if err != nil {
-		return "", fmt.Errorf("authentication failed: %v", err)
+		return fmt.Errorf("authentication failed: %v", err)
 	}
 
 	log.Printf("Authentication successful for DID: %s", authRes.DID)
@@ -244,7 +244,7 @@ func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName
 		"time":   fmt.Sprintf("%d", time.Now().UnixMilli()),
 	})
 	if err != nil {
-		return "", fmt.Errorf("JWS signing failed: %v", err)
+		return fmt.Errorf("JWS signing failed: %v", err)
 	}
 
 	log.Printf("JWS created successfully: %s...", jws[:50])
@@ -267,7 +267,7 @@ func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName
 	// Call real app.Signup function
 	signupResponse, err := app.Signup(signupParams)
 	if err != nil {
-		return "", fmt.Errorf("signup failed: %v", err)
+		return fmt.Errorf("signup failed: %v", err)
 	}
 
 	log.Printf("Signup successful! MFA: %s", signupResponse.MFA)
@@ -282,6 +282,6 @@ func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName
 	}
 
 	log.Printf("User bind to Terminus completed successfully!")
-
-	return token.AccessToken, nil
+	
+	return nil
 }

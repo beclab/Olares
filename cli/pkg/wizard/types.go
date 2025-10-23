@@ -192,19 +192,43 @@ type AccountSettings struct {
 	// Simplified version, can be extended as needed
 }
 
+// EncryptionParams represents AES encryption parameters
+type EncryptionParams struct {
+	Algorithm      string `json:"algorithm"`      // "AES-GCM"
+	TagSize        int    `json:"tagSize"`        // 128
+	KeySize        int    `json:"keySize"`        // 256
+	IV             string `json:"iv"`             // Base64 encoded initialization vector
+	AdditionalData string `json:"additionalData"` // Base64 encoded additional data
+	Version        string `json:"version"`        // "3.0.14"
+}
+
+// KeyParams represents PBKDF2 key derivation parameters
+type KeyParams struct {
+	Algorithm  string `json:"algorithm"`  // "PBKDF2"
+	Hash       string `json:"hash"`       // "SHA-256"
+	KeySize    int    `json:"keySize"`    // 256
+	Iterations int    `json:"iterations"` // 100000
+	Salt       string `json:"salt"`       // Base64 encoded salt
+	Version    string `json:"version"`    // "3.0.14"
+}
+
 type Account struct {
-	ID          string           `json:"id"`
-	DID         string           `json:"did"`
-	Name        string           `json:"name"`
-	Local       bool             `json:"local,omitempty"`
-	Created     string           `json:"created,omitempty"`     // ISO 8601 format
-	Updated     string           `json:"updated,omitempty"`     // ISO 8601 format
-	PublicKey   []byte           `json:"publicKey,omitempty"`   // RSA public key
-	MainVault   MainVault        `json:"mainVault"`             // Main vault information
-	Orgs        []OrgInfo        `json:"orgs"`                  // Organization list (important: prevent undefined)
-	Revision    string           `json:"revision,omitempty"`    // Version control
-	Kid         string           `json:"kid,omitempty"`         // Key ID
-	Settings    AccountSettings  `json:"settings,omitempty"`    // Account settings
+	ID               string            `json:"id"`
+	DID              string            `json:"did"`
+	Name             string            `json:"name"`
+	Local            bool              `json:"local,omitempty"`
+	Created          string            `json:"created,omitempty"`          // ISO 8601 format
+	Updated          string            `json:"updated,omitempty"`          // ISO 8601 format
+	PublicKey        string            `json:"publicKey,omitempty"`        // Base64 encoded RSA public key
+	EncryptedData    string            `json:"encryptedData,omitempty"`    // Base64 encoded encrypted data
+	EncryptionParams EncryptionParams  `json:"encryptionParams,omitempty"` // AES encryption parameters
+	KeyParams        KeyParams         `json:"keyParams,omitempty"`        // PBKDF2 key derivation parameters
+	MainVault        MainVault         `json:"mainVault"`                  // Main vault information
+	Orgs             []OrgInfo         `json:"orgs"`                       // Organization list (important: prevent undefined)
+	Revision         string            `json:"revision,omitempty"`         // Version control
+	Kid              string            `json:"kid,omitempty"`              // Key ID
+	Settings         AccountSettings   `json:"settings,omitempty"`         // Account settings
+	Version          string            `json:"version,omitempty"`          // Version
 }
 
 type DeviceInfo struct {
@@ -311,6 +335,99 @@ func (b Base64Bytes) MarshalJSON() ([]byte, error) {
 // Bytes returns the underlying byte array
 func (b Base64Bytes) Bytes() []byte {
 	return []byte(b)
+}
+
+// ============================================================================
+// Vault and VaultItem Structures
+// ============================================================================
+
+// VaultType represents the type of vault item
+type VaultType int
+
+const (
+	VaultTypeDefault     VaultType = 0
+	VaultTypeLogin       VaultType = 1
+	VaultTypeCard        VaultType = 2
+	VaultTypeTerminusTotp VaultType = 3
+	VaultTypeOlaresSSHPassword VaultType = 4
+)
+
+// FieldType represents the type of field in a vault item
+type FieldType string
+
+const (
+	FieldTypeUsername  FieldType = "username"
+	FieldTypePassword  FieldType = "password"
+	FieldTypeApiSecret FieldType = "apiSecret"
+	FieldTypeMnemonic  FieldType = "mnemonic"
+	FieldTypeUrl       FieldType = "url"
+	FieldTypeEmail     FieldType = "email"
+	FieldTypeDate      FieldType = "date"
+	FieldTypeMonth     FieldType = "month"
+	FieldTypeCredit    FieldType = "credit"
+	FieldTypePhone     FieldType = "phone"
+	FieldTypePin       FieldType = "pin"
+	FieldTypeTotp      FieldType = "totp"
+	FieldTypeNote      FieldType = "note"
+	FieldTypeText      FieldType = "text"
+)
+
+// Field represents a field in a vault item
+type Field struct {
+	Name  string    `json:"name"`
+	Type  FieldType `json:"type"`
+	Value string    `json:"value"`
+}
+
+// VaultItem represents an item in a vault
+type VaultItem struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Type      VaultType `json:"type"`
+	Icon      string    `json:"icon,omitempty"`
+	Fields    []Field   `json:"fields"`
+	Tags      []string  `json:"tags"`
+	Updated   string    `json:"updated"`   // ISO 8601 format
+	UpdatedBy string    `json:"updatedBy"`
+}
+
+// Vault represents a vault containing items
+type Vault struct {
+	ID           string      `json:"id"`
+	Name         string      `json:"name"`
+	Owner        string      `json:"owner"`
+	Created      string      `json:"created"`  // ISO 8601 format
+	Updated      string      `json:"updated"`  // ISO 8601 format
+	Revision     string      `json:"revision,omitempty"`
+	Items        []VaultItem `json:"items,omitempty"`
+	KeyParams    interface{} `json:"keyParams,omitempty"`
+	EncryptionParams interface{} `json:"encryptionParams,omitempty"`
+	Accessors    interface{} `json:"accessors,omitempty"`
+	EncryptedData interface{} `json:"encryptedData,omitempty"`
+}
+
+// ItemTemplate represents a template for creating vault items
+type ItemTemplate struct {
+	ID     string  `json:"id"`
+	Name   string  `json:"name"`
+	Icon   string  `json:"icon"`
+	Fields []Field `json:"fields"`
+}
+
+// GetAuthenticatorTemplate returns the authenticator template for TOTP items
+func GetAuthenticatorTemplate() *ItemTemplate {
+	return &ItemTemplate{
+		ID:   "authenticator",
+		Name: "Authenticator",
+		Icon: "authenticator",
+		Fields: []Field{
+			{
+				Name: "One-Time Password",
+				Type: FieldTypeTotp,
+				Value: "", // Will be set with MFA token
+			},
+		},
+	}
 }
 
 // JWS-related data structures removed, using Web5 library's jwt.Sign() method directly
