@@ -28,21 +28,7 @@ After successful activation, the LarePass app will automatically return to the h
 
 If you installed Olares via ISO on PVE or are using an Olares hardware device with ISO pre-installed:
 
-![ISO Activate](/images/manual/larepass/iso-activate.png#bordered)
-
-1. Open LarePass app.
-
-2. Tap **Discover nearby Olares**. Your Olares device should appear.
-
-3. Tap **Install now** to finish the installation process.
-
-4. Tap **Activate now** to activate Olares and complete initialization.
-
-5. Follow the prompt to set the login password for Olares.
-
-   ![ISO Activate](/images/manual/larepass/iso-activate-2.png#bordered)
-
-Once complete, you can access Olares via the provided URL and your credentials.
+<!--@include: ../get-started/install-and-activate-olares.md{9,25}-->
 
 :::tip Device not discovered?
 If your phone cannot connect to the same network as the Olares device, LarePass will not be able to discover your Olares. In this case, use the [Bluetooth network configuration](manage-olares.md#set-wi-fi-via-bluetooth) feature to connect Olares to the same Wi-Fi as your phone, then repeat the activation process.
