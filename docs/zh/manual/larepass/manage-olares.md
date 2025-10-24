@@ -139,6 +139,6 @@ description: 使用 LarePass 移动端远程管理 Olares，包括监控状态�
 2. 点击**确认**。
 
 :::warning 必需操作
-在你完成密码重置之前，该对话框会反复弹出。虽然你也可以之后在 Olares 的[**我的硬件**](../olares/settings/my-olares.md#我的硬件)里操作，我们强烈建议在 LarePass 里看到弹窗时立即完成重置。
+在你完成密码重置之前，该对话框会反复弹出。虽然你也可以之后在 Olares 的[**我的硬件**](../olares/settings/my-olares.md#reset-ssh)里操作，我们强烈建议在 LarePass 里看到弹窗时立即完成重置。
 :::
 

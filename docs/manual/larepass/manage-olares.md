@@ -142,7 +142,7 @@ After you activate **Olares One** with LarePass, a **Reset SSH Password** dialog
 2. Click **Confirm**.
 
 :::warning Required action
-This dialog will continue to appear until you reset the password. While you can reset later from the [My hardware](../olares/settings/my-olares.md#my-hardware) settings page, we strongly recommend doing it immediately. 
+This dialog will continue to appear until you reset the password. While you can reset later from the [My hardware](../olares/settings/my-olares.md#reset-ssh) settings page, we strongly recommend doing it immediately. 
 :::
 
 

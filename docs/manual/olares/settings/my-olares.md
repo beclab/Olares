@@ -29,7 +29,7 @@ Available actions are:
   Reboots the device with confirmation in **LarePass**.  
   The status changes to **Restarting** and returns to **Olares running** in about **5–8 minutes**.
 
-
+<a id="reset-ssh"></a>
 - **Reset SSH Password** <Badge type="tip" text="Olares One Only" />  
   
   Take the following steps to change the default SSH password:
