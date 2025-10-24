@@ -25,6 +25,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	sysv1 "bytetrade.io/web3os/app-service/api/sys.bytetrade.io/v1alpha1"
+	"bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned"
 )
 
 const (
@@ -61,6 +62,22 @@ func GetDynamicClient() (dynamic.Interface, error) {
 	}
 
 	return client, nil
+}
+
+func GetAppClientSet() (versioned.Clientset, error) {
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		klog.Error("get k8s config error, ", err)
+		return versioned.Clientset{}, err
+	}
+
+	client, err := versioned.NewForConfig(config)
+	if err != nil {
+		klog.Error("get app clientset error, ", err)
+		return versioned.Clientset{}, err
+	}
+
+	return *client, nil
 }
 
 func IsTerminusInitialized(ctx context.Context, client dynamic.Interface) (initialized bool, failed bool, err error) {
@@ -534,4 +551,34 @@ func GetNodesPressure(ctx context.Context, client kubernetes.Interface) (map[str
 	}
 
 	return status, nil
+}
+
+func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
+	var urls []string
+
+	clientset, err := GetAppClientSet()
+	if err != nil {
+		klog.Error("get app clientset error, ", err)
+		return nil, err
+	}
+
+	apps, err := clientset.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.Error("list applications error, ", err)
+		return nil, err
+	}
+
+	for _, app := range apps.Items {
+		entrances, err := app.GenEntranceURL(ctx)
+		if err != nil {
+			klog.Error("generate application entrance url error, ", err, ", ", app.Name)
+			continue
+		}
+
+		for _, entrance := range entrances {
+			urls = append(urls, entrance.URL)
+		}
+	}
+
+	return urls, nil
 }

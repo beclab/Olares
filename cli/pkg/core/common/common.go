@@ -92,8 +92,8 @@ const (
 )
 
 const (
-	DownloadUrl    = "https://dc3p1870nn3cj.cloudfront.net"
-	DefaultBashUrl = "olares.sh"
+	DefaultOlaresCDNService = "https://cdn.olares.com"
+	DefaultBashUrl          = "olares.sh"
 )
 
 const (

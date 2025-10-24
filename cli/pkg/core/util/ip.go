@@ -312,3 +312,22 @@ func GetTokenFROMAWSIMDS() (string, error) {
 	}
 	return strings.TrimSpace(string(body)), nil
 }
+
+func GetPublicIPFromTencentIMDS() (net.IP, error) {
+	url := "http://metadata.tencentyun.com/latest/meta-data/public-ipv4"
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build http request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to reach Tencent metadata service")
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read response from Tencent metadata service")
+	}
+	logger.Debugf("retrieved public IP info from Tencent metadata service: %s", string(body))
+	return net.ParseIP(strings.TrimSpace(string(body))), nil
+}

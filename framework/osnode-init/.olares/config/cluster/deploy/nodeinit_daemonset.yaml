@@ -23,7 +23,7 @@ spec:
       hostNetwork: true
       containers:
       - name: daemon
-        image: beclab/osnode-init:v0.0.10
+        image: beclab/osnode-init:v0.0.11
         imagePullPolicy: IfNotPresent
         args:
         - --metrics-bind-address
@@ -31,10 +31,6 @@ spec:
         - --health-probe-bind-address
         - :18881
         env:
-        {{- range $key, $val := .Values.terminusGlobalEnvs }}
-        - name: {{ $key }}
-          value: {{ $val | quote }}
-        {{- end }}
         - name: NODE_IP
           valueFrom:
             fieldRef:

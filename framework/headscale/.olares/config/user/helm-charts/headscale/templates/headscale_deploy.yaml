@@ -14,6 +14,12 @@
 {{ $role = (index $user "metadata" "annotations" "bytetrade.io/owner-role") }}
 {{- end -}}
 
+{{- $corednsIP := "10.233.0.3" -}}
+{{ $corednsService := (lookup "v1" "Service" "kube-system" "coredns") }}
+{{- if $corednsService -}}
+{{ $corednsIP = (index $corednsService "spec" "clusterIP") }}
+{{- end -}}
+
 ---
 apiVersion: v1
 kind: Secret
@@ -65,6 +71,29 @@ roleRef:
   name: admin
   apiGroup: rbac.authorization.k8s.io
 
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:sysenv-reader
+rules:
+- apiGroups: ["sys.bytetrade.io"]
+  resources: ["systemenvs"]
+  verbs: ["get","list","watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user:{{ .Values.bfl.username }}:sysenv-reader
+subjects:
+- kind: ServiceAccount
+  name: tailscale
+  namespace: user-space-{{ .Values.bfl.username }}
+roleRef:
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:sysenv-reader
+  apiGroup: rbac.authorization.k8s.io
 
 ---
 apiVersion: apps/v1
@@ -122,15 +151,13 @@ spec:
         - |
           chown -R 1000:1000 /headscale 
       - name: init
-        image: beclab/headscale-init:v0.1.11
+        image: beclab/headscale-init:v0.1.13
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
         env:
-        {{- range $key, $val := .Values.terminusGlobalEnvs }}
-        - name: {{ $key }}
-          value: {{ $val | quote }}
-        {{- end }}
+        - name: COREDNS_SVC
+          value: {{ $corednsIP }}
         - name: NAMESPACE
           value: bfl.user-space-{{ .Values.bfl.username }}
         - name: PG_HOST
@@ -175,11 +202,6 @@ spec:
         securityContext:
           runAsNonRoot: false
           runAsUser: 0
-        env:
-        {{- range $key, $val := .Values.terminusGlobalEnvs }}
-          - name: {{ $key }}
-            value: {{ $val | quote }}
-        {{- end }}
         command:
         - headscale
         - serve
@@ -291,10 +313,8 @@ spec:
         - name: tailscale-data
           mountPath: /var/lib/tailscale
         env:
-        {{- range $key, $val := .Values.terminusGlobalEnvs }}
-        - name: {{ $key }}
-          value: {{ $val | quote }}
-        {{- end }}
+        - name: COREDNS_SVC
+          value: {{ $corednsIP }}
         - name: TS_DISABLE_TAILDROP
           value: "true"
         - name: NODE_IP

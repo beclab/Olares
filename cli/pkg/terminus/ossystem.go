@@ -64,12 +64,11 @@ func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
 			"is_cloud_version": cloudValue(t.KubeConf.Arg.IsCloudInstance),
 			"sync_secret":      t.KubeConf.Arg.Storage.StorageSyncSecret,
 		},
-		"gpu":                                  getGpuType(t.KubeConf.Arg.GPU.Enable),
-		"s3_bucket":                            t.KubeConf.Arg.Storage.StorageBucket,
-		"fs_type":                              storage.GetRootFSType(),
-		common.HelmValuesKeyTerminusGlobalEnvs: common.TerminusGlobalEnvs,
-		common.HelmValuesKeyOlaresRootFSPath:   storage.OlaresRootDir,
-		"sharedlib":                            storage.OlaresSharedLibDir,
+		"gpu":                                getGpuType(t.KubeConf.Arg.GPU.Enable),
+		"s3_bucket":                          t.KubeConf.Arg.Storage.StorageBucket,
+		"fs_type":                            storage.GetRootFSType(),
+		common.HelmValuesKeyOlaresRootFSPath: storage.OlaresRootDir,
+		"sharedlib":                          storage.OlaresSharedLibDir,
 	}
 
 	var platformPath = path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-platform")
@@ -116,37 +115,6 @@ func (t *CreateBackupConfigMap) Execute(runtime connector.Runtime) error {
 
 	var kubectl, _ = util.GetCommand(common.CommandKubectl)
 	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectl, backupConfigMapFile), false, true); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-type CreateReverseProxyConfigMap struct {
-	common.KubeAction
-}
-
-func (c *CreateReverseProxyConfigMap) Execute(runtime connector.Runtime) error {
-	var defaultReverseProxyConfigMapFile = path.Join(runtime.GetInstallerDir(), "deploy", configmaptemplates.ReverseProxyConfigMap.Name())
-	var data = util.Data{
-		"EnableCloudflare": c.KubeConf.Arg.Cloudflare.Enable,
-		"EnableFrp":        c.KubeConf.Arg.Frp.Enable,
-		"FrpServer":        c.KubeConf.Arg.Frp.Server,
-		"FrpPort":          c.KubeConf.Arg.Frp.Port,
-		"FrpAuthMethod":    c.KubeConf.Arg.Frp.AuthMethod,
-		"FrpAuthToken":     c.KubeConf.Arg.Frp.AuthToken,
-	}
-
-	reverseProxyConfigStr, err := util.Render(configmaptemplates.ReverseProxyConfigMap, data)
-	if err != nil {
-		return errors.Wrap(errors.WithStack(err), "render default reverse proxy configmap template failed")
-	}
-	if err := util.WriteFile(defaultReverseProxyConfigMapFile, []byte(reverseProxyConfigStr), cc.FileMode0644); err != nil {
-		return errors.Wrap(errors.WithStack(err), fmt.Sprintf("write default reverse proxy configmap %s failed", defaultReverseProxyConfigMapFile))
-	}
-
-	var kubectl, _ = util.GetCommand(common.CommandKubectl)
-	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectl, defaultReverseProxyConfigMapFile), false, true); err != nil {
 		return err
 	}
 
@@ -455,11 +423,6 @@ func (m *InstallOsSystemModule) Init() {
 		Action: &CreateBackupConfigMap{},
 	}
 
-	createReverseProxyConfigMap := &task.LocalTask{
-		Name:   "CreateReverseProxyConfigMap",
-		Action: &CreateReverseProxyConfigMap{},
-	}
-
 	checkSystemService := &task.LocalTask{
 		Name: "CheckSystemServiceStatus",
 		Action: &CheckPodsRunning{
@@ -483,7 +446,6 @@ func (m *InstallOsSystemModule) Init() {
 		createUserEnvConfigMap,
 		installOsSystem,
 		createBackupConfigMap,
-		createReverseProxyConfigMap,
 		checkSystemService,
 		patchOs,
 	}

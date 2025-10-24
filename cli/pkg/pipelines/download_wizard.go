@@ -15,15 +15,15 @@ func DownloadInstallationWizard(opts *options.CliDownloadWizardOptions) error {
 	arg.SetKubeVersion(opts.KubeType)
 	arg.SetOlaresVersion(opts.Version)
 	arg.SetBaseDir(opts.BaseDir)
-	arg.SetDownloadCdnUrl(opts.DownloadCdnUrl)
+	arg.SetOlaresCDNService(opts.CDNService)
 
 	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
 	if err != nil {
 		return err
 	}
 
-	if ok := utils.CheckUrl(arg.DownloadCdnUrl); !ok {
-		return fmt.Errorf("--download-cdn-url invalid")
+	if ok := utils.CheckUrl(arg.OlaresCDNService); !ok {
+		return fmt.Errorf("--cdn-service invalid")
 	}
 
 	p := download.NewDownloadWizard(runtime, opts.UrlOverride, opts.ReleaseID)

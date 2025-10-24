@@ -16,15 +16,15 @@ func DownloadInstallationPackage(opts *options.CliDownloadOptions) error {
 	arg.SetBaseDir(opts.BaseDir)
 	arg.SetKubeVersion(opts.KubeType)
 	arg.SetOlaresVersion(opts.Version)
-	arg.SetDownloadCdnUrl(opts.DownloadCdnUrl)
+	arg.SetOlaresCDNService(opts.CDNService)
 
 	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
 	if err != nil {
 		return err
 	}
 
-	if ok := utils.CheckUrl(arg.DownloadCdnUrl); !ok {
-		return fmt.Errorf("--download-cdn-url invalid")
+	if ok := utils.CheckUrl(arg.OlaresCDNService); !ok {
+		return fmt.Errorf("--cdn-service invalid")
 	}
 
 	manifest := opts.Manifest

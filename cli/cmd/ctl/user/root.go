@@ -11,6 +11,7 @@ func NewUserCommand() *cobra.Command {
 	cmd.AddCommand(NewCmdDeleteUser())
 	cmd.AddCommand(NewCmdListUsers())
 	cmd.AddCommand(NewCmdGetUser())
+	cmd.AddCommand(NewCmdActivateUser())
 	// cmd.AddCommand(NewCmdUpdateUserLimits())
 	return cmd
 }

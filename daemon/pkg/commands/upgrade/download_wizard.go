@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/beclab/Olares/daemon/pkg/cli"
-	"github.com/beclab/Olares/daemon/pkg/cluster/state"
-	"github.com/beclab/Olares/daemon/pkg/commands"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/daemon/pkg/cli"
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
+	"github.com/beclab/Olares/daemon/pkg/commands"
 
 	"github.com/nxadm/tail"
 	"k8s.io/klog/v2"
@@ -66,8 +67,8 @@ func (i *downloadWizard) Execute(ctx context.Context, p any) (res any, err error
 		"--version", version,
 		"--base-dir", commands.TERMINUS_BASE_DIR,
 	}
-	if commands.CDN_URL != "" {
-		params = append(params, "--download-cdn-url", commands.CDN_URL)
+	if commands.OLARES_CDN_SERVICE != "" {
+		params = append(params, "--cdn-service", commands.OLARES_CDN_SERVICE)
 	}
 	if target.WizardURL != "" {
 		params = append(params, "--url-override", target.WizardURL)

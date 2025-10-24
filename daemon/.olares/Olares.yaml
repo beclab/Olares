@@ -5,5 +5,5 @@ output:
     - 
       id: olaresd
       name: olaresd-v#__VERSION__#__RELEASE_ID_SUFFIX__.tar.gz
-      amd64: https://dc3p1870nn3cj.cloudfront.net#__REPO_PATH__olaresd-v#__VERSION__-linux-amd64#__RELEASE_ID_SUFFIX__.tar.gz
-      arm64: https://dc3p1870nn3cj.cloudfront.net#__REPO_PATH__olaresd-v#__VERSION__-linux-arm64#__RELEASE_ID_SUFFIX__.tar.gz
+      amd64: https://cdn.olares.com#__REPO_PATH__olaresd-v#__VERSION__-linux-amd64#__RELEASE_ID_SUFFIX__.tar.gz
+      arm64: https://cdn.olares.com#__REPO_PATH__olaresd-v#__VERSION__-linux-arm64#__RELEASE_ID_SUFFIX__.tar.gz

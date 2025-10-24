@@ -1,46 +1,50 @@
 ---
-description: 在 Linux 系统上通过一键脚本，快速上手 Olares。
+description: 概览 Olares 支持的安装方式。推荐在 Linux 环境下通过 ISO 镜像或一行命令安装。其他平台（如 macOS、Windows、PVE、Raspberry Pi）适用于测试和开发。
+outline: [2,4]
 ---
+
 # 安装 Olares
 
-本文介绍如何在 Linux 系统上安装 Olares。我们推荐在 **Linux 系统**（如 Ubuntu 或 Debian）上部署 Olares，以在生产环境中获得最佳的性能与稳定性。
+本文介绍 Olares 支持的安装方式。 在开始安装前，请确保已完成以下准备工作：
+- 已创建 [Olares ID](create-olares-id.md)。
+- 确认操作系统和硬件满足具体安装文档里列出的最低要求。
 
-开始安装前，请先[创建 Olares ID](create-olares-id.md)，并确认操作系统与硬件已满足最低要求。
+## 选择合适的安装方式
 
-:::info 安装遇到问题？
-如果安装过程中遇到问题，[可以提交 GitHub Issue](https://github.com/beclab/Olares/issues/new)。提交时请提供以下信息：
-- 使用的平台或环境（如 Ubuntu、Docker、WSL 等）。
-- 安装方式（脚本安装或 Docker 镜像）。
-- 详细的错误信息（包括日志、错误提示或截图）。
+Olares 支持多平台、多部署方式。请根据你的使用场景选择最合适的安装方式。
+
+### 生产环境推荐方式
+
+推荐在 **Linux（Ubuntu 或 Debian）** 系统上运行 Olares，以获得最佳性能和稳定性。
+
+- [**ISO 镜像**](install-linux-iso.md) —  通过官方 ISO 镜像在物理机上全新安装 Olares，自动配置宿主（Linux）<br/>环境、容器运行时、驱动及核心依赖。
+- [**一行命令**](install-linux-script.md) —  在现有 Linux 系统中快速安装 Olares。
+
+:::tip 推荐
+在主机上使用 ISO 安装方式可确保最佳的兼容性、性能与系统级优化，是运行 Olares 的首选方案。
 :::
 
-## 系统要求
+### 其他安装方式
 
-请确保设备满足以下配置要求：
+以下方式仅适用于**开发测试**或**轻量级环境**。
 
-- CPU：4 核及以上
-- 内存：不少于 8GB 可用内存
-- 存储：不少于 150GB 的可用磁盘空间，需使用 SSD 硬盘安装。
-- 支持的系统版本：
-    - Ubuntu 22.04 LTS 及以上
-    - Debian 12 及以上
+#### Linux
+- [**Docker 镜像**](install-linux-docker.md) — 在 Linux 上通过 Docker Compose 以容器化方式运行 Olares。
 
-:::warning 注意
-使用 HDD（机械硬盘）可能会导致安装失败。
-:::
+#### Windows
+- [**一行命令**](install-windows-script.md) — 在 WSL2 虚拟化环境中安装 Olares。
+- [**Docker 镜像**](install-windows-docker.md) — 在 WSL2 的 Docker 容器中运行 Olares。
 
-:::info 版本兼容性
-虽然以上版本已经过验证，但其他版本也可能正常运行 Olares。根据你的环境可能需要进行调整。如果你在这些平台上安装时遇到任何问题，欢迎在 [GitHub](https://github.com/beclab/Olares/issues/new) 上提问。
-:::
+#### macOS
+- [**一行命令**](install-mac-script.md) — 使用 MiniKube 在容器化环境中安装 Olares。
+- [**Docker 镜像**](install-mac-docker.md) — 在 macOS 上通过 Docker 部署 Olares。
 
-## 安装 Olares
+#### PVE
+- [**ISO 镜像**](install-pve-iso.md) — 在 Proxmox VE 中通过 ISO 镜像以虚拟机方式部署 Olares。
+- [**一行命令**](install-pve-script.md) — 直接在 PVE 节点上安装 Olares。
+- [LXC](install-lxc.md) - 在 PVE 环境下使用 Linux 容器 （LXC）部署 Olares。
 
-在 Linux 命令行中，执行以下命令：
+#### Raspberry Pi（ARM）
 
-<!--@include: ./reusables.md{4,32}-->
+- [**一行命令**](install-raspberry-pi.md)：在基于 ARM 架构的 Raspberry Pi 设备上安装 Olares。
 
-<!--@include: ./activate-olares.md-->
-
-<!--@include: ./log-in-to-olares.md-->
-
-<!--@include: ./reusables.md{34,38}-->
