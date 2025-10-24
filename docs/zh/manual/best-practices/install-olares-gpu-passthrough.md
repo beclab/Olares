@@ -283,5 +283,5 @@ description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加�
 Olares 现已安装完成，并在 GPU 加速模式下正常运行。
 接下来你可以激活设备并登录账户。
 有关详细步骤，请参阅我们的官方指南：
-- [激活 Olares](../get-started/install-pve-iso.md#finish-installation-and-activate-olares)
-- [登录 Olares](../get-started/install-pve-iso.md#log-in-to-olares)
+- [激活 Olares](../get-started/install-and-activate-olares.md)
+- [登录 Olares](../get-started/log-in-to-olares.md)
