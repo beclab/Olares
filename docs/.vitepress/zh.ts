@@ -358,6 +358,10 @@ const side = {
           link: "/zh/manual/best-practices/set-up-SMTP-service",
         },
         {
+          text: "PVE 上安装 Olares 及配置显卡直通",
+          link: "/zh/manual/best-practices/install-olares-gpu-passthrough",
+        },        
+        {  
           text: "在 Olares 中扩展存储空间",
           link: "/zh/manual/best-practices/expand-storage-in-olares",
         },
@@ -398,7 +402,6 @@ const side = {
               link: "/zh/manual/concepts/wallet",
             },
           ],
-
         },
         { text: "账户", link: "/zh/manual/concepts/account" },
         { text: "应用", link: "/zh/manual/concepts/application" },
