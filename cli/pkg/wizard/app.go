@@ -1,6 +1,8 @@
 package wizard
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -24,10 +26,10 @@ type App struct {
 func NewApp(sender Sender) *App {
 	// Create simplified client state (backend CLI doesn't need complex state management)
 	state := &SimpleClientState{}
-	
+
 	// Initialize Client (corresponds to original TypeScript's new Client(this.state, sender, hook))
 	client := NewClient(state, sender)
-	
+
 	return &App{
 		Version: "3.0",
 		API:     client,
@@ -38,7 +40,7 @@ func NewApp(sender Sender) *App {
 func NewAppWithBaseURL(baseURL string) *App {
 	// Create HTTP Sender
 	sender := NewHTTPSender(baseURL)
-	
+
 	// Create App with HTTP Sender
 	return NewApp(sender)
 }
@@ -79,7 +81,7 @@ func (s *SimpleClientState) GetDevice() *DeviceInfo {
 // Signup function - based on original TypeScript signup method (ref: app.ts)
 func (a *App) Signup(params SignupParams) (*CreateAccountResponse, error) {
 	log.Printf("Starting signup process for DID: %s", params.DID)
-	
+
 	// 1. Initialize account object (ref: app.ts line 954-959)
 	account := &Account{
 		ID:      generateUUID(),
@@ -95,32 +97,32 @@ func (a *App) Signup(params SignupParams) (*CreateAccountResponse, error) {
 		Settings: AccountSettings{},
 		Version:  "3.0.14",
 	}
-	
+
 	// Initialize account with master password (ref: account.ts line 182-190)
 	err := a.initializeAccount(account, params.MasterPassword)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize account: %v", err)
 	}
-	
+
 	log.Printf("Account initialized: ID=%s, DID=%s, Name=%s", account.ID, account.DID, account.Name)
-	
+
 	// 2. Initialize auth object (ref: app.ts line 964-970)
 	auth := NewAuth(params.DID)
 	authKey, err := auth.GetAuthKey(params.MasterPassword)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get auth key: %v", err)
 	}
-	
+
 	// Calculate verifier (ref: app.ts line 968-970)
 	srpClient := NewSRPClient(SRPGroup4096)
 	err = srpClient.Initialize(authKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize SRP client: %v", err)
 	}
-	
+
 	auth.Verifier = srpClient.GetV()
 	log.Printf("SRP verifier generated: %x...", auth.Verifier[:8])
-	
+
 	// 3. Send create account request to server (ref: app.ts line 973-987)
 	createParams := CreateAccountParams{
 		Account:   *account,
@@ -131,28 +133,28 @@ func (a *App) Signup(params SignupParams) (*CreateAccountResponse, error) {
 		BFLUser:   params.BFLUser,
 		JWS:       params.JWS,
 	}
-	
+
 	response, err := a.API.CreateAccount(createParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create account on server: %v", err)
 	}
-	
+
 	log.Printf("Account created on server successfully")
 	log.Printf("MFA token received: %s", response.MFA)
-	
+
 	// 4. Login to newly created account (ref: app.ts line 991)
 	loginParams := LoginParams{
 		DID:      params.DID,
 		Password: params.MasterPassword,
 	}
-	
+
 	err = a.Login(loginParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to login after signup: %v", err)
 	}
-	
+
 	log.Printf("Login after signup successful")
-	
+
 	// 5. Initialize main vault and create TOTP item (ref: app.ts line 1003-1038)
 	err = a.initializeMainVaultWithTOTP(response.MFA)
 	if err != nil {
@@ -161,7 +163,7 @@ func (a *App) Signup(params SignupParams) (*CreateAccountResponse, error) {
 	} else {
 		log.Printf("Main vault initialized with TOTP item successfully")
 	}
-	
+
 	// 6. Activate account (ref: app.ts line 1039-1046)
 	activeParams := ActiveAccountParams{
 		ID:       a.API.State.GetAccount().ID, // Use logged-in account ID
@@ -169,7 +171,7 @@ func (a *App) Signup(params SignupParams) (*CreateAccountResponse, error) {
 		BFLUser:  params.BFLUser,
 		JWS:      params.JWS,
 	}
-	
+
 	err = a.API.ActiveAccount(activeParams)
 	if err != nil {
 		log.Printf("Warning: Failed to activate account: %v", err)
@@ -177,7 +179,7 @@ func (a *App) Signup(params SignupParams) (*CreateAccountResponse, error) {
 	} else {
 		log.Printf("Account activated successfully")
 	}
-	
+
 	log.Printf("Signup completed successfully for DID: %s", params.DID)
 	return response, nil
 }
@@ -185,21 +187,21 @@ func (a *App) Signup(params SignupParams) (*CreateAccountResponse, error) {
 // Login function - simplified version
 func (a *App) Login(params LoginParams) error {
 	log.Printf("Starting login process for DID: %s", params.DID)
-	
+
 	// 1. Start creating session
 	startParams := StartCreateSessionParams{
 		DID:       params.DID,
 		AuthToken: params.AuthToken,
 		AsAdmin:   params.AsAdmin,
 	}
-	
+
 	startResponse, err := a.API.StartCreateSession(startParams)
 	if err != nil {
 		return fmt.Errorf("failed to start create session: %v", err)
 	}
-	
+
 	log.Printf("Session creation started for Account ID: %s", startResponse.AccountID)
-	
+
 	// 2. Use SRP for authentication
 	authKey, err := deriveKeyPBKDF2(
 		[]byte(params.Password),
@@ -210,56 +212,56 @@ func (a *App) Login(params LoginParams) error {
 	if err != nil {
 		return fmt.Errorf("failed to derive auth key: %v", err)
 	}
-	
+
 	// 3. SRP client negotiation
 	srpClient := NewSRPClient(SRPGroup4096)
 	err = srpClient.Initialize(authKey)
 	if err != nil {
 		return fmt.Errorf("failed to initialize SRP client: %v", err)
 	}
-	
+
 	err = srpClient.SetB(startResponse.B.Bytes())
 	if err != nil {
 		return fmt.Errorf("failed to set B value: %v", err)
 	}
-	
+
 	log.Printf("SRP negotiation completed")
-	
+
 	// 4. Complete session creation
 	completeParams := CompleteCreateSessionParams{
 		SRPId:            startResponse.SRPId,
 		AccountID:        startResponse.AccountID,
 		A:                Base64Bytes(srpClient.GetA()),
 		M:                Base64Bytes(srpClient.GetM1()),
-		AddTrustedDevice: false,           // Don't add trusted device by default
-		Kind:             "oe",            // Based on server logs, kind should be "oe"
-		Version:          "4.0.0",         // Based on server logs, version should be "4.0.0"
+		AddTrustedDevice: false,   // Don't add trusted device by default
+		Kind:             "oe",    // Based on server logs, kind should be "oe"
+		Version:          "4.0.0", // Based on server logs, version should be "4.0.0"
 	}
-	
+
 	session, err := a.API.CompleteCreateSession(completeParams)
 	if err != nil {
 		return fmt.Errorf("failed to complete create session: %v", err)
 	}
-	
+
 	// 5. Set session key
 	sessionKey := srpClient.GetK()
 	session.Key = sessionKey
 	a.API.State.SetSession(session)
-	
+
 	log.Printf("Session created: %s", session.ID)
 	log.Printf("Session key length: %d bytes", len(sessionKey))
 	log.Printf("Session key (hex): %x", sessionKey)
-	
+
 	// 6. Temporarily skip GetAccount call due to signature verification issues
 	// Create a simplified account object for subsequent operations
 	account := &Account{
-		ID:  startResponse.AccountID,
-		DID: params.DID,
+		ID:   startResponse.AccountID,
+		DID:  params.DID,
 		Name: params.DID,
 	}
-	
+
 	a.API.State.SetAccount(account)
-	
+
 	log.Printf("Login completed successfully for DID: %s (skipped GetAccount due to signature issue)", params.DID)
 	return nil
 }
@@ -290,12 +292,12 @@ func (c *Client) CreateAccount(params CreateAccountParams) (*CreateAccountRespon
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result CreateAccountResponse
 	if err := c.parseResponse(response.Result, &result); err != nil {
 		return nil, fmt.Errorf("failed to parse CreateAccount response: %v", err)
 	}
-	
+
 	return &result, nil
 }
 
@@ -311,17 +313,17 @@ func (c *Client) StartCreateSession(params StartCreateSessionParams) (*StartCrea
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Add debug info: print raw response
 	if responseBytes, err := json.Marshal(response.Result); err == nil {
 		log.Printf("StartCreateSession raw response: %s", string(responseBytes))
 	}
-	
+
 	var result StartCreateSessionResponse
 	if err := c.parseResponse(response.Result, &result); err != nil {
 		return nil, fmt.Errorf("failed to parse StartCreateSession response: %v", err)
 	}
-	
+
 	return &result, nil
 }
 
@@ -331,12 +333,12 @@ func (c *Client) CompleteCreateSession(params CompleteCreateSessionParams) (*Ses
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result Session
 	if err := c.parseResponse(response.Result, &result); err != nil {
 		return nil, fmt.Errorf("failed to parse CompleteCreateSession response: %v", err)
 	}
-	
+
 	return &result, nil
 }
 
@@ -346,12 +348,12 @@ func (c *Client) GetAccount() (*Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result Account
 	if err := c.parseResponse(response.Result, &result); err != nil {
 		return nil, fmt.Errorf("failed to parse GetAccount response: %v", err)
 	}
-	
+
 	return &result, nil
 }
 
@@ -361,12 +363,12 @@ func (c *Client) UpdateVault(vault Vault) (*Vault, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result Vault
 	if err := c.parseResponse(response.Result, &result); err != nil {
 		return nil, fmt.Errorf("failed to parse UpdateVault response: %v", err)
 	}
-	
+
 	return &result, nil
 }
 
@@ -393,7 +395,7 @@ type ActiveAccountParams struct {
 }
 
 type StartCreateSessionParams struct {
-	DID       string `json:"did"`
+	DID       string  `json:"did"`
 	AuthToken *string `json:"authToken,omitempty"`
 	AsAdmin   *bool   `json:"asAdmin,omitempty"`
 }
@@ -452,7 +454,7 @@ func (a *Auth) GetAuthKey(password string) ([]byte, error) {
 	if len(a.KeyParams.Salt) == 0 {
 		a.KeyParams.Salt = Base64Bytes(generateRandomBytes(16))
 	}
-	
+
 	// Use PBKDF2 to derive key (ref: auth.ts line 284 and crypto.ts line 78-101)
 	return deriveKeyPBKDF2(
 		[]byte(password),
@@ -645,7 +647,7 @@ func (a *App) initializeAccount(account *Account, masterPassword string) error {
 	// 6. Create account secrets (private key + signing key)
 	privateKeyDER := x509.MarshalPKCS1PrivateKey(privateKey)
 	signingKey := generateRandomBytes(32) // HMAC key
-	
+
 	// Combine private key and signing key into account secrets
 	accountSecrets := append(privateKeyDER, signingKey...)
 
@@ -665,22 +667,22 @@ func (a *App) initializeAccount(account *Account, masterPassword string) error {
 
 // encryptAESGCM encrypts data using AES-GCM
 func (a *App) encryptAESGCM(key, plaintext, iv, additionalData []byte) ([]byte, error) {
-	// This is a simplified implementation. In production, you should use a proper crypto library
-	// For now, we'll return a mock encrypted data that looks realistic
-	
-	// Create a realistic-looking encrypted data by combining IV + encrypted content + tag
-	// In real implementation, this would use crypto/cipher.NewGCM()
-	
-	// Mock encrypted data (in real implementation, this would be actual AES-GCM encryption)
-	encryptedContent := make([]byte, len(plaintext))
-	for i, b := range plaintext {
-		encryptedContent[i] = b ^ key[i%len(key)] // Simple XOR for demo (NOT secure!)
+	// Import crypto/aes and crypto/cipher packages are needed at the top of the file
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cipher: %v", err)
 	}
-	
-	// Combine IV + encrypted content + mock tag (16 bytes for GCM tag)
-	tag := generateRandomBytes(16)
-	result := append(iv, encryptedContent...)
-	result = append(result, tag...)
-	
+
+	gcm, err := cipher.NewGCMWithNonceSize(block, 16)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GCM: %v", err)
+	}
+
+	// Encrypt the plaintext using AES-GCM
+	ciphertext := gcm.Seal(nil, iv, plaintext, additionalData)
+
+	// Combine IV + ciphertext (which already includes the authentication tag)
+	result := append(iv, ciphertext...)
+
 	return result, nil
 }
