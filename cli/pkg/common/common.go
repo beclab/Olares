@@ -18,8 +18,6 @@ package common
 
 import (
 	"os"
-
-	cc "github.com/beclab/Olares/cli/pkg/core/common"
 )
 
 const (
@@ -284,20 +282,13 @@ const (
 	ENV_OLARES_BASE_DIR              = "OLARES_BASE_DIR"
 	ENV_OLARES_VERSION               = "OLARES_VERSION"
 	ENV_TERMINUS_IS_CLOUD_VERSION    = "TERMINUS_IS_CLOUD_VERSION"
-	ENV_PUBLICLY_ACCESSIBLE          = "PUBLICLY_ACCESSIBLE"
 	ENV_KUBE_TYPE                    = "KUBE_TYPE"
 	ENV_REGISTRY_MIRRORS             = "REGISTRY_MIRRORS"
 	ENV_NVIDIA_CONTAINER_REPO_MIRROR = "NVIDIA_CONTAINER_REPO_MIRROR"
-	ENV_DOWNLOAD_CDN_URL             = "DOWNLOAD_CDN_URL"
+	ENV_OLARES_CDN_SERVICE           = "OLARES_SYSTEM_CDN_SERVICE"
 	ENV_STORAGE                      = "STORAGE"
 	ENV_S3_BUCKET                    = "S3_BUCKET"
 	ENV_LOCAL_GPU_ENABLE             = "LOCAL_GPU_ENABLE"
-	ENV_CLOUDFLARE_ENABLE            = "CLOUDFLARE_ENABLE"
-	ENV_FRP_ENABLE                   = "FRP_ENABLE"
-	ENV_FRP_SERVER                   = "FRP_SERVER"
-	ENV_FRP_PORT                     = "FRP_PORT"
-	ENV_FRP_AUTH_METHOD              = "FRP_AUTH_METHOD"
-	ENV_FRP_AUTH_TOKEN               = "FRP_AUTH_TOKEN"
 	ENV_AWS_ACCESS_KEY_ID_SETUP      = "AWS_ACCESS_KEY_ID_SETUP"
 	ENV_AWS_SECRET_ACCESS_KEY_SETUP  = "AWS_SECRET_ACCESS_KEY_SETUP"
 	ENV_AWS_SESSION_TOKEN_SETUP      = "AWS_SESSION_TOKEN_SETUP"
@@ -306,7 +297,6 @@ const (
 	ENV_CLUSTER_ID                   = "CLUSTER_ID"
 	ENV_BACKUP_CLUSTER_BUCKET        = "BACKUP_CLUSTER_BUCKET"
 	ENV_TOKEN_MAX_AGE                = "TOKEN_MAX_AGE"
-	ENV_MARKET_PROVIDER              = "MARKET_PROVIDER"
 	ENV_HOST_IP                      = "HOST_IP"
 	ENV_PREINSTALL                   = "PREINSTALL"
 	ENV_DISABLE_HOST_IP_PROMPT       = "DISABLE_HOST_IP_PROMPT"
@@ -321,63 +311,10 @@ const (
 	OLARES_USER_ENV_FILENAME   = "user-env.yaml"
 )
 
-// TerminusGlobalEnvs holds a group of general environment variables
-// which are used for many components
-// along with their default values
-// if they are set in the execution environment
-// the default values are override
-// note that we declare the key type as interface{} on purpose
-// to avoid Helm bug when merging values
-var TerminusGlobalEnvs = map[string]interface{}{
-	"DID_GATE_URL":               "https://did-gate-v3.bttcdn.com/",
-	"OLARES_SPACE_URL":           "https://cloud-api.bttcdn.com/",
-	"FIREBASE_PUSH_URL":          "https://firebase-push-test.bttcdn.com/v1/api/push",
-	"FRP_LIST_URL":               "https://terminus-frp.snowinning.com",
-	"TAILSCALE_CONTROLPLANE_URL": "https://controlplane.snowinning.com",
-	"OLARES_ROOT_DIR":            "/olares",
-	// the default value used by kubeadm
-	"COREDNS_SVC":        "10.96.0.10",
-	ENV_DOWNLOAD_CDN_URL: cc.DownloadUrl,
-	ENV_MARKET_PROVIDER:  "https://appstore-server-prod.bttcdn.com",
-}
-
-// LegacyToNewSystemEnv maps legacy env keys to new SystemEnv EnvName
-var LegacyToNewSystemEnv = map[string]string{
-	"DOWNLOAD_CDN_URL": "OLARES_SYSTEM_CDN_SERVICE",
-	"OLARES_ROOT_DIR":  "OLARES_SYSTEM_ROOT_PATH",
-	"COREDNS_SVC":      "OLARES_SYSTEM_CLUSTER_DNS_SERVICE",
-	"CUDA_VERSION":     "OLARES_SYSTEM_CUDA_VERSION",
-	"OLARES_FS_TYPE":   "OLARES_SYSTEM_ROOTFS_TYPE",
-}
-
-// SetTerminusGlobalEnv updates TerminusGlobalEnvs and sets the corresponding
-// new SystemEnv EnvName in the process environment
-// if force is true, always set the process env new name to value
-// if force is false, set only when the process env new name is not set or empty
-func SetTerminusGlobalEnv(legacyKey string, value string, force bool) {
-	if value != "" {
-		if newName, ok := LegacyToNewSystemEnv[legacyKey]; ok && newName != "" {
-			if force {
-				_ = os.Setenv(newName, value)
-			} else {
-				if v, ok := os.LookupEnv(newName); !ok || v == "" {
-					_ = os.Setenv(newName, value)
-				}
-			}
-		}
-		TerminusGlobalEnvs[legacyKey] = value
-	}
+func SetSystemEnv(key, value string) {
+	os.Setenv(key, value)
 }
 
 const (
-	HelmValuesKeyTerminusGlobalEnvs = "terminusGlobalEnvs"
-	HelmValuesKeyOlaresRootFSPath   = "rootPath"
+	HelmValuesKeyOlaresRootFSPath = "rootPath"
 )
-
-func init() {
-	for envKey := range TerminusGlobalEnvs {
-		if val := os.Getenv(envKey); val != "" {
-			SetTerminusGlobalEnv(envKey, val, false)
-		}
-	}
-}

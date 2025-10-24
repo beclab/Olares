@@ -12,7 +12,7 @@ func NewDownloadPackage(mainifest string, runtime *common.KubeRuntime) *pipeline
 
 	m := []module.Module{
 		&precheck.GreetingsModule{},
-		&download.PackageDownloadModule{Manifest: mainifest, BaseDir: runtime.GetBaseDir(), DownloadCdnUrl: runtime.Arg.DownloadCdnUrl},
+		&download.PackageDownloadModule{Manifest: mainifest, BaseDir: runtime.GetBaseDir(), CDNService: runtime.Arg.OlaresCDNService},
 	}
 
 	return &pipeline.Pipeline{

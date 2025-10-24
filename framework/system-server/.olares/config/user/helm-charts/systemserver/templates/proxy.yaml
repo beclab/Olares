@@ -109,3 +109,78 @@ spec:
       port: 28080
       targetPort: 28080
 
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hami-webui
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  type: ClusterIP
+  selector:
+    app: systemserver
+  ports:
+    - protocol: TCP
+      port: 28080
+      targetPort: 28080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hami-scheduler
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  type: ClusterIP
+  selector:
+    app: systemserver
+  ports:
+    - protocol: TCP
+      port: 28080
+      targetPort: 28080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name:  media-server-service
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  type: ClusterIP
+  selector:
+    app: systemserver
+  ports:
+    - protocol: TCP
+      port: 28080
+      targetPort: 28080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name:  search3
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  type: ClusterIP
+  selector:
+    app: systemserver
+  ports:
+    - protocol: TCP
+      port: 28080
+      targetPort: 28080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name:  notifications-server
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  type: ClusterIP
+  selector:
+    app: systemserver
+  ports:
+    - protocol: TCP
+      port: 28080
+      targetPort: 28080

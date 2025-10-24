@@ -15,7 +15,9 @@ import (
 	"github.com/beclab/Olares/daemon/internel/mdns"
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/internel/watcher/cert"
+	intranetwatcher "github.com/beclab/Olares/daemon/internel/watcher/intranet"
 	"github.com/beclab/Olares/daemon/internel/watcher/system"
+	"github.com/beclab/Olares/daemon/internel/watcher/systemenv"
 	"github.com/beclab/Olares/daemon/internel/watcher/upgrade"
 	"github.com/beclab/Olares/daemon/internel/watcher/usb"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
@@ -102,6 +104,8 @@ func main() {
 		usb.NewUmountWatcher(),
 		upgrade.NewUpgradeWatcher(),
 		cert.NewCertWatcher(),
+		systemenv.NewSystemEnvWatcher(),
+		intranetwatcher.NewApplicationWatcher(),
 	}, func() {
 		if s != nil {
 			if err := s.Restart(); err != nil {
@@ -156,6 +160,7 @@ func main() {
 			panic(err)
 		}
 	}()
+
 	quit := make(chan os.Signal, 1)
 
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

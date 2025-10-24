@@ -76,9 +76,9 @@ type Argument struct {
 	SystemInfo       connector.Systems
 
 	// Extra args
-	ExtraAddon      string `json:"extra_addon"` // addon yaml config
-	RegistryMirrors string `json:"registry_mirrors"`
-	DownloadCdnUrl  string `json:"download_cdn_url"`
+	ExtraAddon       string `json:"extra_addon"` // addon yaml config
+	RegistryMirrors  string `json:"registry_mirrors"`
+	OlaresCDNService string `json:"olares_cdn_service"`
 
 	// Swap config
 	*SwapConfig
@@ -98,13 +98,10 @@ type Argument struct {
 	// to avoid wrong information given by user
 	WithJuiceFS bool `json:"with_juicefs"`
 	// the object storage service used as backend for JuiceFS
-	Storage           *Storage           `json:"storage"`
-	PublicNetworkInfo *PublicNetworkInfo `json:"public_network_info"`
-	GPU               *GPU               `json:"gpu"`
-	Cloudflare        *Cloudflare        `json:"cloudflare"`
-	Frp               *Frp               `json:"frp"`
-	TokenMaxAge       int64              `json:"token_max_age"` // nanosecond
-	MarketProvider    string             `json:"market_provider"`
+	Storage         *Storage         `json:"storage"`
+	NetworkSettings *NetworkSettings `json:"network_settings"`
+	GPU             *GPU             `json:"gpu"`
+	TokenMaxAge     int64            `json:"token_max_age"` // nanosecond
 
 	Request any `json:"-"`
 
@@ -187,15 +184,15 @@ func (cfg *MasterHostConfig) Validate() error {
 	return nil
 }
 
-type PublicNetworkInfo struct {
+type NetworkSettings struct {
 	// OSPublicIPs contains a list of public ip(s)
 	// by looking at local network interfaces
 	// if any
 	OSPublicIPs []net.IP `json:"os_public_ips"`
 
-	// AWS contains the info retrieved from the AWS instance metadata service
+	// CloudProviderPublicIP contains the info retrieved from the cloud provider instance metadata service
 	// if any
-	AWSPublicIP net.IP `json:"aws"`
+	CloudProviderPublicIP net.IP `json:"cloud_provider_public_ip"`
 
 	// ExternalPublicIP is the IP address seen by others on the internet
 	// it may not be an IP address
@@ -207,7 +204,7 @@ type PublicNetworkInfo struct {
 	// but the user explicitly specifies that the machine is publicly accessible
 	ExternalPublicIP net.IP `json:"external_public_ip"`
 
-	PubliclyAccessible bool `json:"publicly_accessible"`
+	EnableReverseProxy *bool `json:"enable_reverse_proxy"`
 }
 
 type User struct {
@@ -236,18 +233,6 @@ type GPU struct {
 	Enable bool `json:"gpu_enable"`
 }
 
-type Cloudflare struct {
-	Enable string `json:"cloudflare_enable"`
-}
-
-type Frp struct {
-	Enable     string `json:"frp_enable"`
-	Server     string `json:"frp_server"`
-	Port       string `json:"frp_port"`
-	AuthMethod string `json:"frp_auth_method"`
-	AuthToken  string `json:"frp_auth_token"`
-}
-
 func NewArgument() *Argument {
 	si := connector.GetSystemInfo()
 	arg := &Argument{
@@ -263,20 +248,16 @@ func NewArgument() *Argument {
 		GPU: &GPU{
 			Enable: !strings.EqualFold(os.Getenv(ENV_LOCAL_GPU_ENABLE), "0"), // default enable GPU, not set or 1 means enable
 		},
-		Cloudflare:        &Cloudflare{},
-		Frp:               &Frp{},
-		User:              &User{},
-		PublicNetworkInfo: &PublicNetworkInfo{},
-		RegistryMirrors:   os.Getenv(ENV_REGISTRY_MIRRORS),
-		DownloadCdnUrl:    os.Getenv(ENV_DOWNLOAD_CDN_URL),
-		MarketProvider:    os.Getenv(ENV_MARKET_PROVIDER),
-		HostIP:            os.Getenv(ENV_HOST_IP),
-		Environment:       os.Environ(),
-		MasterHostConfig:  &MasterHostConfig{},
-		SwapConfig:        &SwapConfig{},
+		User:             &User{},
+		NetworkSettings:  &NetworkSettings{},
+		RegistryMirrors:  os.Getenv(ENV_REGISTRY_MIRRORS),
+		OlaresCDNService: os.Getenv(ENV_OLARES_CDN_SERVICE),
+		HostIP:           os.Getenv(ENV_HOST_IP),
+		Environment:      os.Environ(),
+		MasterHostConfig: &MasterHostConfig{},
+		SwapConfig:       &SwapConfig{},
 	}
 	arg.IsCloudInstance, _ = strconv.ParseBool(os.Getenv(ENV_TERMINUS_IS_CLOUD_VERSION))
-	arg.PublicNetworkInfo.PubliclyAccessible, _ = strconv.ParseBool(os.Getenv(ENV_PUBLICLY_ACCESSIBLE))
 	arg.IsOlaresInContainer = os.Getenv("CONTAINER_MODE") == "oic"
 	si.IsOIC = arg.IsOlaresInContainer
 
@@ -364,12 +345,12 @@ func (a *Argument) GetWslUserPath() string {
 	return res
 }
 
-func (a *Argument) SetDownloadCdnUrl(downloadCdnUrl string) {
-	u := strings.TrimSuffix(downloadCdnUrl, "/")
+func (a *Argument) SetOlaresCDNService(url string) {
+	u := strings.TrimSuffix(url, "/")
 	if u == "" {
-		u = common.DownloadUrl
+		u = common.DefaultOlaresCDNService
 	}
-	a.DownloadCdnUrl = u
+	a.OlaresCDNService = u
 }
 
 func (a *Argument) SetTokenMaxAge() {
@@ -427,36 +408,6 @@ func (a *Argument) SetWSLDistribution(distribution string) {
 		fmt.Println("if this is not expected, please specify it explicitly by setting the --distribution/-d option\n")
 		a.WSLDistribution = WSLDefaultDistribution
 	}
-}
-
-func (a *Argument) SetReverseProxy() {
-	var enableCloudflare = os.Getenv("CLOUDFLARE_ENABLE")
-	var enableFrp = "0"
-	var frpServer = ""
-	var frpPort = "0"
-	var frpAuthMethod = ""
-	var frpAuthToken = ""
-
-	if enableCloudflare == "" {
-		enableCloudflare = "1"
-	}
-	if a.PublicNetworkInfo.PubliclyAccessible {
-		enableCloudflare = "0"
-	} else if os.Getenv("FRP_ENABLE") == "1" {
-		enableCloudflare = "0"
-		enableFrp = "1"
-		frpServer = os.Getenv("FRP_SERVER")
-		frpPort = os.Getenv("FRP_PORT")
-		frpAuthMethod = os.Getenv("FRP_AUTH_METHOD")
-		frpAuthToken = os.Getenv("FRP_AUTH_TOKEN")
-	}
-
-	a.Cloudflare.Enable = enableCloudflare
-	a.Frp.Enable = enableFrp
-	a.Frp.Server = util.RemoveHTTPPrefix(frpServer)
-	a.Frp.Port = frpPort
-	a.Frp.AuthMethod = frpAuthMethod
-	a.Frp.AuthToken = frpAuthToken
 }
 
 func (a *Argument) SetKubeVersion(kubeType string) {

@@ -5,14 +5,16 @@ go 1.24.2
 toolchain go1.24.4
 
 replace (
-	bytetrade.io/web3os/app-service => github.com/beclab/app-service v0.2.33
+	bytetrade.io/web3os/app-service => github.com/beclab/app-service v0.4.23
 	bytetrade.io/web3os/backups-sdk => github.com/Above-Os/backups-sdk v0.1.17
 	bytetrade.io/web3os/bfl => github.com/beclab/bfl v0.3.36
+	github.com/labstack/echo/v4 => github.com/eball/echo/v4 v4.13.4-patch
 	k8s.io/api => k8s.io/api v0.34.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.34.0
 	k8s.io/client-go => k8s.io/client-go v0.34.0
 	kubesphere.io/api => ../../kubesphere-ext/staging/src/kubesphere.io/api/
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.19.6
+
 )
 
 require (
@@ -20,7 +22,7 @@ require (
 	bytetrade.io/web3os/bfl v0.0.0-00010101000000-000000000000
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/beclab/Olares/cli v0.0.0-20251014053315-360e7e0f71c2
+	github.com/beclab/Olares/cli v0.0.0-20251016092744-6241cceceb89
 	github.com/containerd/containerd v1.7.28
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/dustin/go-humanize v1.0.1
@@ -32,6 +34,7 @@ require (
 	github.com/jochenvg/go-udev v0.0.0-20171110120927-d6b62d56d37b
 	github.com/joho/godotenv v1.5.1
 	github.com/klauspost/cpuid/v2 v2.2.8
+	github.com/labstack/echo/v4 v4.0.0-00010101000000-000000000000
 	github.com/libp2p/go-netroute v0.2.2
 	github.com/mackerelio/go-osstat v0.2.5
 	github.com/muka/network_manager v0.0.0-20200903202308-ae5ede816e07
@@ -47,13 +50,13 @@ require (
 	github.com/txn2/txeh v1.5.5
 	go.opentelemetry.io/otel/trace v1.36.0
 	golang.org/x/crypto v0.41.0
-	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
+	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
 	golang.org/x/sys v0.35.0
-	k8s.io/api v0.34.0
-	k8s.io/apimachinery v0.34.0
+	k8s.io/api v0.34.1
+	k8s.io/apimachinery v0.34.1
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/cri-api v0.31.0
-	k8s.io/cri-client v0.31.0
+	k8s.io/cri-api v0.34.1
+	k8s.io/cri-client v0.34.1
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/mount-utils v0.31.0
 	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
@@ -86,6 +89,7 @@ require (
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/ebitengine/purego v0.8.4 // indirect
@@ -115,6 +119,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
@@ -155,12 +160,13 @@ require (
 	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.51.0 // indirect
+	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect
 	go.opentelemetry.io/otel v1.36.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.34.0 // indirect
@@ -170,17 +176,17 @@ require (
 	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/term v0.34.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.35.0 // indirect
+	golang.org/x/tools v0.36.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20250603155806-513f23925822 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250528174236-200df99c418a // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250603155806-513f23925822 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250603155806-513f23925822 // indirect
 	google.golang.org/grpc v1.72.2 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
@@ -191,7 +197,7 @@ require (
 	howett.net/plist v1.0.0 // indirect
 	k8s.io/apiextensions-apiserver v0.34.0 // indirect
 	k8s.io/apiserver v0.34.0 // indirect
-	k8s.io/component-base v0.34.0 // indirect
+	k8s.io/component-base v0.34.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect

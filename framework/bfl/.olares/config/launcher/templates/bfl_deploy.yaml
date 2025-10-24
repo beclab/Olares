@@ -266,7 +266,7 @@ spec:
 
       containers:
       - name: api
-        image: beclab/bfl:v0.4.29
+        image: beclab/bfl:v0.4.31
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000
@@ -304,7 +304,7 @@ spec:
         - name: BACKUP_SERVER
           value: backup-server.os-framework:8082
         - name: L4_PROXY_IMAGE_VERSION
-          value: v0.3.4
+          value: v0.3.6
         - name: L4_PROXY_SERVICE_ACCOUNT
           value: os-network-internal
         - name: L4_PROXY_NAMESPACE
@@ -317,8 +317,11 @@ spec:
               apiVersion: v1
               fieldPath: spec.nodeName
       - name: ingress
-        image: beclab/bfl-ingress:v0.3.22
+        image: beclab/bfl-ingress:v0.3.24
         imagePullPolicy: IfNotPresent
+        env:
+        - name: AUTHELIA_AUTH_URL
+          value: 'http://authelia-backend-provider.user-system-{{ .Values.bfl.username }}:28080/api/authz/auth-request'
         volumeMounts:
         - name: ngxlog
           mountPath: /var/log/nginx

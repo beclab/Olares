@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"net/http"
+
 	"github.com/beclab/Olares/cli/pkg/web5/jws"
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/klog/v2"
@@ -18,7 +20,8 @@ func (h *Handlers) ResolveOlaresName(c *fiber.Ctx) error {
 		klog.Errorf("Failed to resolve DID for %s: %v", olaresName, err)
 		return h.ErrJSON(c, fiber.StatusInternalServerError, "Failed to resolve DID")
 	}
-	return h.OkJSON(c, "success", result)
+	// return DID protocol resolution result
+	return c.Status(http.StatusOK).JSON(result)
 }
 
 func (h *Handlers) CheckJWS(c *fiber.Ctx) error {

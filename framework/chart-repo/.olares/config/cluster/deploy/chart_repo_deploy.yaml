@@ -121,15 +121,11 @@ spec:
           name: check-appservice
       containers:
       - name: chartrepo
-        image: beclab/dynamic-chart-repository:v0.2.2
+        image: beclab/dynamic-chart-repository:v0.2.4
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
         env:
-          {{- range $key, $val := .Values.terminusGlobalEnvs }}
-          - name: {{ $key }}
-            value: {{ $val | quote }}
-          {{- end }}                               
           - name: APP_SERVICE_SERVICE_HOST                                         
             value: app-service
           - name: APP_SERVICE_SERVICE_PORT                                         

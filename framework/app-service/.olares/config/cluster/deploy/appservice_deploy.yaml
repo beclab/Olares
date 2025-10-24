@@ -170,7 +170,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.4.17
+        image: beclab/app-service:0.4.28
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -391,10 +391,9 @@ spec:
       serviceAccount: os-internal
       serviceAccountName: os-internal
       priorityClassName: "system-cluster-critical"
-      hostNetwork: true
       containers:
         - name: image-service
-          image: beclab/image-service:0.4.7
+          image: beclab/image-service:0.4.29
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
@@ -410,12 +409,12 @@ spec:
             - mountPath: /var/run/containerd
               mountPropagation: Bidirectional
               name: containerd-socket
-            - mountPath: /etc/containerd/config.toml
-              name: configtoml
+            - mountPath: /etc/containerd
+              name: containerd-config
       volumes:
-        - name: configtoml
+        - name: containerd-config
           hostPath:
-            path: /etc/containerd/config.toml
+            path: /etc/containerd
         - name: containerd-socket
           hostPath:
             path: /var/run/containerd

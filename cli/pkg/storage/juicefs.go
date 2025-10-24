@@ -277,5 +277,5 @@ func GetRootFSType() string {
 }
 
 func init() {
-	common.SetTerminusGlobalEnv("OLARES_FS_TYPE", GetRootFSType(), true)
+	common.SetSystemEnv("OLARES_SYSTEM_ROOTFS_TYPE", GetRootFSType())
 }

@@ -36,3 +36,18 @@ olares-cli uninstall --all
 你已经准备好开始使用 Olares！在此之前，请务必确保 Olares ID 已安全备份。如果不备份，你将无法在需要时恢复 Olares ID。
 
 - [备份助记词](../larepass/back-up-mnemonics.md)
+
+## 系统要求
+
+请确保设备满足以下配置要求：
+
+- CPU：4 核及以上
+- 内存：不少于 8GB 可用内存
+- 存储：不少于 150GB 的可用磁盘空间，需要使用SSD硬盘安装，使用HDD（机械硬盘）将会导致安装失败
+- 支持的系统版本：
+    - Ubuntu 22.04-25.04 LTS
+    - Debian 12, 13
+
+:::info 版本兼容性
+虽然以上版本已经过验证，但其他版本也可能正常运行 Olares。根据你的环境可能需要进行调整。如果你在这些平台上安装时遇到任何问题，欢迎在 [GitHub](https://github.com/beclab/Olares/issues/new) 上提问。
+:::

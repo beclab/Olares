@@ -15,6 +15,7 @@ rules:
   - "/api/account/all"
   - "/api/cookie/retrieve"
   - "/api/cookie"
+  - "/api/abilities"
   verbs: ["*"]
 
 ---

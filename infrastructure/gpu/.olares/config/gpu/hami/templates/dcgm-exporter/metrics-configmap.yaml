@@ -28,8 +28,9 @@ data:
       DCGM_FI_DEV_GPU_TEMP,    gauge, GPU temperature (in C).
       
       # Power
-      DCGM_FI_DEV_POWER_USAGE,              gauge, Power draw (in W).
-      DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION, counter, Total energy consumption since boot (in mJ).
+      DCGM_FI_DEV_POWER_USAGE,               gauge,   Power draw (in W).
+      DCGM_FI_DEV_ENFORCED_POWER_LIMIT,      gauge,   Power enforced limit (in W).
+      DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION,  counter, Total energy consumption since boot (in mJ).
       
       # PCIE
       # DCGM_FI_PROF_PCIE_TX_BYTES,  counter, Total number of bytes transmitted through PCIe TX via NVML.

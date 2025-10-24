@@ -234,7 +234,7 @@ type InstallNvidiaContainerToolkit struct {
 
 func (t *InstallNvidiaContainerToolkit) Execute(runtime connector.Runtime) error {
 	logger.Debugf("install nvidia-container-toolkit")
-	if _, err := runtime.GetRunner().SudoCmd("apt-get update && sudo apt-get install -y nvidia-container-toolkit jq", false, true); err != nil {
+	if _, err := runtime.GetRunner().SudoCmd("apt-get update && sudo apt-get install -y nvidia-container-toolkit=1.17.9-1 nvidia-container-toolkit-base=1.17.9-1 jq", false, true); err != nil {
 		return errors.Wrap(errors.WithStack(err), "Failed to apt-get install nvidia-container-toolkit")
 	}
 	return nil
@@ -395,7 +395,7 @@ func (g *GetCudaVersion) Execute(runtime connector.Runtime) error {
 		}
 	}
 	if cudaVersion != "" {
-		common.SetTerminusGlobalEnv("CUDA_VERSION", cudaVersion, true)
+		common.SetSystemEnv("OLARES_SYSTEM_CUDA_VERSION", cudaVersion)
 	}
 
 	return nil

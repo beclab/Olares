@@ -2,8 +2,9 @@ package pipelines
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"path"
+
+	"github.com/pkg/errors"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/options"
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -24,7 +25,6 @@ func CliInstallTerminusPipeline(opts *options.CliTerminusInstallOptions) error {
 	arg.SetOlaresVersion(opts.Version)
 	arg.SetMinikubeProfile(opts.MiniKubeProfile)
 	arg.SetStorage(getStorageValueFromEnv())
-	arg.SetReverseProxy()
 	arg.SetTokenMaxAge()
 	arg.SetSwapConfig(opts.SwapConfig)
 	if err := arg.SwapConfig.Validate(); err != nil {
@@ -32,6 +32,9 @@ func CliInstallTerminusPipeline(opts *options.CliTerminusInstallOptions) error {
 	}
 	if opts.WithJuiceFS {
 		arg.WithJuiceFS = true
+	}
+	if opts.EnableReverseProxy != nil {
+		arg.NetworkSettings.EnableReverseProxy = opts.EnableReverseProxy
 	}
 	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
 	if err != nil {

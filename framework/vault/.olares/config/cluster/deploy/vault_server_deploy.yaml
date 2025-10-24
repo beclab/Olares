@@ -101,15 +101,11 @@ spec:
             value: os_framework_vault
       containers:
       - name: vault-server
-        image: beclab/vault-server:v1.4.29
+        image: beclab/vault-server:v1.5.11
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
         env:
-        {{- range $key, $val := .Values.terminusGlobalEnvs }}
-        - name: {{ $key }}
-          value: {{ $val | quote }}
-        {{- end }}
         - name: AUTH_URL
           value: http://authelia-backend:9091
         - name: PL_DATA_BACKEND
@@ -139,6 +135,13 @@ spec:
               name: vault-server-nats-secret
         - name: NATS_SUBJECT_SYSTEM_VAULT
           value: "os.vault"
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.hostIP
+        - name: TERMINUSD_HOST
+          value: $(NODE_IP):18088
         volumeMounts:
         - name: vault-data
           mountPath: /padloc/packages/server/data

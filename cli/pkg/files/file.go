@@ -274,7 +274,7 @@ func NewKubeBinary(name, arch, osType, osVersion, osPlatformFamily, version, pre
 		component.Type = COMPONENT
 		component.FileName = fmt.Sprintf("redis-%s.tar.gz", version)
 		component.FileNameHash = utils.MD5(component.FileName)
-		component.Url = fmt.Sprintf(RedisUrl, common.DownloadUrl, component.FileNameHash)
+		component.Url = fmt.Sprintf(RedisUrl, common.DefaultOlaresCDNService, component.FileNameHash)
 		component.CheckSum = false
 		component.BaseDir = filepath.Join(prePath, component.Type)
 	case juicefs:
@@ -330,21 +330,21 @@ func NewKubeBinary(name, arch, osType, osVersion, osPlatformFamily, version, pre
 		component.Type = GPU
 		component.FileName = fmt.Sprintf("%s_%s_cuda-keyring_%s-1_all.deb", osPlatformFamily, osVersion, version)
 		component.FileNameHash = utils.MD5(component.FileName)
-		component.Url = fmt.Sprintf(CudaKeyringCNDUrl, common.DownloadUrl, getGpuCDNPrefix(arch, component.FileNameHash)) //getCudaKeyringUrl(arch, constants.OsVersion, version)
+		component.Url = fmt.Sprintf(CudaKeyringCNDUrl, common.DefaultOlaresCDNService, getGpuCDNPrefix(arch, component.FileNameHash)) //getCudaKeyringUrl(arch, constants.OsVersion, version)
 		component.CheckSum = false
 		component.BaseDir = filepath.Join(prePath, component.Type)
 	case gpgkey:
 		component.Type = GPU
 		component.FileName = "gpgkey"
 		component.FileNameHash = utils.MD5(component.FileName)
-		component.Url = fmt.Sprintf(CudaKeyringCNDUrl, common.DownloadUrl, getGpuCDNPrefix(arch, component.FileNameHash))
+		component.Url = fmt.Sprintf(CudaKeyringCNDUrl, common.DefaultOlaresCDNService, getGpuCDNPrefix(arch, component.FileNameHash))
 		component.CheckSum = false
 		component.BaseDir = filepath.Join(prePath, component.Type)
 	case libnvidia:
 		component.Type = GPU
 		component.FileName = fmt.Sprintf("%s_%s_libnvidia-container.list", osPlatformFamily, osVersion)
 		component.FileNameHash = utils.MD5(component.FileName)
-		component.Url = fmt.Sprintf(CudaKeyringCNDUrl, common.DownloadUrl, getGpuCDNPrefix(arch, component.FileNameHash))
+		component.Url = fmt.Sprintf(CudaKeyringCNDUrl, common.DefaultOlaresCDNService, getGpuCDNPrefix(arch, component.FileNameHash))
 		component.CheckSum = false
 		component.BaseDir = filepath.Join(prePath, component.Type)
 	case wsl: // + wsl
@@ -377,7 +377,7 @@ func NewKubeBinary(name, arch, osType, osVersion, osPlatformFamily, version, pre
 
 func (b *KubeBinary) GetDownloadMirrors(downloadMirrors string) string {
 	if downloadMirrors == "" {
-		return common.DownloadUrl
+		return common.DefaultOlaresCDNService
 	}
 	return downloadMirrors
 }

@@ -77,7 +77,7 @@ func NewCmdRelease() *cobra.Command {
 
 	cmd.Flags().StringVarP(&baseDir, "base-dir", "b", "", "base directory of Olares, where this release will be extracted to as a new version if --extract/-e is not disabled, defaults to $HOME/"+common.DefaultBaseDir)
 	cmd.Flags().StringVarP(&version, "version", "v", "", "version of this release, defaults to 0.0.0-local-dev-{yyyymmddhhmmss}")
-	cmd.Flags().StringVar(&cdn, "download-cdn-url", common.DownloadUrl, "CDN used for downloading checksums of dependencies and images")
+	cmd.Flags().StringVar(&cdn, "cdn-service", common.DefaultOlaresCDNService, "CDN used for downloading checksums of dependencies and images")
 	cmd.Flags().BoolVar(&ignoreMissingImages, "ignore-missing-images", true, "ignore missing images when downloading cheksums from CDN, only disable this if no new image is added, or the build may fail because the image is not uploaded to the CDN yet")
 	cmd.Flags().BoolVarP(&extract, "extract", "e", true, "extract this release to --base-dir after build, this can be disabled if only the release file itself is needed")
 
