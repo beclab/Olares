@@ -286,6 +286,10 @@ const side = {
             text: "Install a multi-node Olares cluster",
             link: "/manual/best-practices/install-olares-multi-node",
           },
+          {
+            text: "Install Olares on PVE (GPU Passthrough)",
+            link: "/manual/best-practices/install-olares-gpu-passthrough",
+          },
         ],
       },
     {

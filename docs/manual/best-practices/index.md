@@ -9,4 +9,4 @@ This section offers in-depth guides and proven best practices to help you get th
 - [Install a multi-node Olares cluster](install-olares-multi-node.md)
 - [Build your knowledge hub with Wise](organize-content.md)
 
-
+- [Install Olares on PVE via ISO with GPU Passthrough](install-olares-gpu-passthrough.md)
