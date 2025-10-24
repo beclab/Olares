@@ -252,13 +252,17 @@ func (a *App) Login(params LoginParams) error {
 	log.Printf("Session key length: %d bytes", len(sessionKey))
 	log.Printf("Session key (hex): %x", sessionKey)
 
-	// 6. Temporarily skip GetAccount call due to signature verification issues
 	// Create a simplified account object for subsequent operations
-	account := &Account{
-		ID:   startResponse.AccountID,
-		DID:  params.DID,
-		Name: params.DID,
+	account, err := a.API.GetAccount()
+	if err != nil {
+		return fmt.Errorf("failed to get account: %v", err)
 	}
+
+	// account := &Account{
+	// 	ID:   startResponse.AccountID,
+	// 	DID:  params.DID,
+	// 	Name: params.DID,
+	// }
 
 	a.API.State.SetAccount(account)
 
@@ -649,10 +653,21 @@ func (a *App) initializeAccount(account *Account, masterPassword string) error {
 	signingKey := generateRandomBytes(32) // HMAC key
 
 	// Combine private key and signing key into account secrets
-	accountSecrets := append(privateKeyDER, signingKey...)
+	accountSecrets := struct {
+		SigningKey []byte `json:"signingKey"`
+		PrivateKey []byte `json:"privateKey"`
+	}{
+		SigningKey: signingKey,
+		PrivateKey: privateKeyDER,
+	}
+
+	accountSecretsBytes, err := json.Marshal(accountSecrets)
+	if err != nil {
+		return fmt.Errorf("failed to marshal account secrets: %v", err)
+	}
 
 	// 7. Encrypt account secrets (ref: container.ts line 59-63)
-	encryptedData, err := a.encryptAESGCM(encryptionKey, accountSecrets, iv, additionalData)
+	encryptedData, err := a.encryptAESGCM(encryptionKey, accountSecretsBytes, iv, additionalData)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt account secrets: %v", err)
 	}
@@ -681,8 +696,5 @@ func (a *App) encryptAESGCM(key, plaintext, iv, additionalData []byte) ([]byte, 
 	// Encrypt the plaintext using AES-GCM
 	ciphertext := gcm.Seal(nil, iv, plaintext, additionalData)
 
-	// Combine IV + ciphertext (which already includes the authentication tag)
-	result := append(iv, ciphertext...)
-
-	return result, nil
+	return ciphertext, nil
 }

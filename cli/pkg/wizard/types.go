@@ -83,27 +83,27 @@ type ErrorCode string
 
 const (
 	ErrorCodeAuthenticationFailed ErrorCode = "email_verification_failed"
-	ErrorCodeNotFound            ErrorCode = "not_found"
-	ErrorCodeServerError         ErrorCode = "server_error"
+	ErrorCodeNotFound             ErrorCode = "not_found"
+	ErrorCodeServerError          ErrorCode = "server_error"
 )
 
 // AccountProvisioning represents account provisioning information
 type AccountProvisioning struct {
-	ID            string            `json:"id"`
-	DID           string            `json:"did"`
-	Name          *string           `json:"name,omitempty"`
-	AccountID     *string           `json:"accountId,omitempty"`
-	Status        string            `json:"status"`
-	StatusLabel   string            `json:"statusLabel"`
-	StatusMessage string            `json:"statusMessage"`
-	ActionURL     *string           `json:"actionUrl,omitempty"`
-	ActionLabel   *string           `json:"actionLabel,omitempty"`
-	MetaData      map[string]any    `json:"metaData,omitempty"`
-	SkipTos       bool              `json:"skipTos"`
-	BillingPage   any               `json:"billingPage,omitempty"`
-	Quota         map[string]any    `json:"quota"`
-	Features      map[string]any    `json:"features"`
-	Orgs          []string          `json:"orgs"`
+	ID            string         `json:"id"`
+	DID           string         `json:"did"`
+	Name          *string        `json:"name,omitempty"`
+	AccountID     *string        `json:"accountId,omitempty"`
+	Status        string         `json:"status"`
+	StatusLabel   string         `json:"statusLabel"`
+	StatusMessage string         `json:"statusMessage"`
+	ActionURL     *string        `json:"actionUrl,omitempty"`
+	ActionLabel   *string        `json:"actionLabel,omitempty"`
+	MetaData      map[string]any `json:"metaData,omitempty"`
+	SkipTos       bool           `json:"skipTos"`
+	BillingPage   any            `json:"billingPage,omitempty"`
+	Quota         map[string]any `json:"quota"`
+	Features      map[string]any `json:"features"`
+	Orgs          []string       `json:"orgs"`
 }
 
 type StartAuthRequestResponse struct {
@@ -130,11 +130,11 @@ type AuthenticateRequest struct {
 }
 
 type AuthenticateResponse struct {
-	DID           string               `json:"did"`
-	Token         string               `json:"token"`
-	AccountStatus AccountStatus        `json:"accountStatus"`
-	Provisioning  AccountProvisioning  `json:"provisioning"`
-	DeviceTrusted bool                 `json:"deviceTrusted"`
+	DID           string              `json:"did"`
+	Token         string              `json:"token"`
+	AccountStatus AccountStatus       `json:"accountStatus"`
+	Provisioning  AccountProvisioning `json:"provisioning"`
+	DeviceTrusted bool                `json:"deviceTrusted"`
 }
 
 type StartAuthRequestOptions struct {
@@ -161,9 +161,9 @@ type CompleteAuthRequestParams struct {
 }
 
 type CompleteAuthRequestResponse struct {
-	AccountStatus AccountStatus        `json:"accountStatus"`
-	DeviceTrusted bool                 `json:"deviceTrusted"`
-	Provisioning  AccountProvisioning  `json:"provisioning"`
+	AccountStatus AccountStatus       `json:"accountStatus"`
+	DeviceTrusted bool                `json:"deviceTrusted"`
+	Provisioning  AccountProvisioning `json:"provisioning"`
 }
 
 // Session represents a user session
@@ -213,22 +213,22 @@ type KeyParams struct {
 }
 
 type Account struct {
-	ID               string            `json:"id"`
-	DID              string            `json:"did"`
-	Name             string            `json:"name"`
-	Local            bool              `json:"local,omitempty"`
-	Created          string            `json:"created,omitempty"`          // ISO 8601 format
-	Updated          string            `json:"updated,omitempty"`          // ISO 8601 format
-	PublicKey        string            `json:"publicKey,omitempty"`        // Base64 encoded RSA public key
-	EncryptedData    string            `json:"encryptedData,omitempty"`    // Base64 encoded encrypted data
-	EncryptionParams EncryptionParams  `json:"encryptionParams,omitempty"` // AES encryption parameters
-	KeyParams        KeyParams         `json:"keyParams,omitempty"`        // PBKDF2 key derivation parameters
-	MainVault        MainVault         `json:"mainVault"`                  // Main vault information
-	Orgs             []OrgInfo         `json:"orgs"`                       // Organization list (important: prevent undefined)
-	Revision         string            `json:"revision,omitempty"`         // Version control
-	Kid              string            `json:"kid,omitempty"`              // Key ID
-	Settings         AccountSettings   `json:"settings,omitempty"`         // Account settings
-	Version          string            `json:"version,omitempty"`          // Version
+	ID               string           `json:"id"`
+	DID              string           `json:"did"`
+	Name             string           `json:"name"`
+	Local            bool             `json:"local,omitempty"`
+	Created          string           `json:"created,omitempty"`          // ISO 8601 format
+	Updated          string           `json:"updated,omitempty"`          // ISO 8601 format
+	PublicKey        string           `json:"publicKey,omitempty"`        // Base64 encoded RSA public key
+	EncryptedData    string           `json:"encryptedData,omitempty"`    // Base64 encoded encrypted data
+	EncryptionParams EncryptionParams `json:"encryptionParams,omitempty"` // AES encryption parameters
+	KeyParams        KeyParams        `json:"keyParams,omitempty"`        // PBKDF2 key derivation parameters
+	MainVault        MainVault        `json:"mainVault"`                  // Main vault information
+	Orgs             []OrgInfo        `json:"orgs"`                       // Organization list (important: prevent undefined)
+	Revision         string           `json:"revision,omitempty"`         // Version control
+	Kid              string           `json:"kid,omitempty"`              // Key ID
+	Settings         AccountSettings  `json:"settings,omitempty"`         // Account settings
+	Version          string           `json:"version,omitempty"`          // Version
 }
 
 type DeviceInfo struct {
@@ -239,10 +239,10 @@ type DeviceInfo struct {
 
 // Request represents an RPC request
 type Request struct {
-	Method string         `json:"method"`
-	Params []interface{}  `json:"params,omitempty"`
-	Device *DeviceInfo    `json:"device,omitempty"`
-	Auth   *RequestAuth   `json:"auth,omitempty"`
+	Method string        `json:"method"`
+	Params []interface{} `json:"params,omitempty"`
+	Device *DeviceInfo   `json:"device,omitempty"`
+	Auth   *RequestAuth  `json:"auth,omitempty"`
 }
 
 type Response struct {
@@ -271,12 +271,12 @@ func (t *ISOTime) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &str); err != nil {
 		return err
 	}
-	
+
 	parsed, err := time.Parse("2006-01-02T15:04:05.000Z", str)
 	if err != nil {
 		return err
 	}
-	
+
 	*t = ISOTime(parsed)
 	return nil
 }
@@ -306,7 +306,7 @@ func (b *Base64Bytes) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &str); err != nil {
 		return err
 	}
-	
+
 	// Server uses URL-safe base64 encoding by default (ref: encoding.ts line 366: urlSafe = true)
 	// Try base64url decoding first
 	decoded, err := base64.URLEncoding.DecodeString(str)
@@ -321,7 +321,7 @@ func (b *Base64Bytes) UnmarshalJSON(data []byte) error {
 			}
 		}
 	}
-	
+
 	*b = Base64Bytes(decoded)
 	return nil
 }
@@ -345,10 +345,10 @@ func (b Base64Bytes) Bytes() []byte {
 type VaultType int
 
 const (
-	VaultTypeDefault     VaultType = 0
-	VaultTypeLogin       VaultType = 1
-	VaultTypeCard        VaultType = 2
-	VaultTypeTerminusTotp VaultType = 3
+	VaultTypeDefault           VaultType = 0
+	VaultTypeLogin             VaultType = 1
+	VaultTypeCard              VaultType = 2
+	VaultTypeTerminusTotp      VaultType = 3
 	VaultTypeOlaresSSHPassword VaultType = 4
 )
 
@@ -387,23 +387,23 @@ type VaultItem struct {
 	Icon      string    `json:"icon,omitempty"`
 	Fields    []Field   `json:"fields"`
 	Tags      []string  `json:"tags"`
-	Updated   string    `json:"updated"`   // ISO 8601 format
+	Updated   string    `json:"updated"` // ISO 8601 format
 	UpdatedBy string    `json:"updatedBy"`
 }
 
 // Vault represents a vault containing items
 type Vault struct {
-	ID           string      `json:"id"`
-	Name         string      `json:"name"`
-	Owner        string      `json:"owner"`
-	Created      string      `json:"created"`  // ISO 8601 format
-	Updated      string      `json:"updated"`  // ISO 8601 format
-	Revision     string      `json:"revision,omitempty"`
-	Items        []VaultItem `json:"items,omitempty"`
-	KeyParams    interface{} `json:"keyParams,omitempty"`
+	ID               string      `json:"id"`
+	Name             string      `json:"name"`
+	Owner            string      `json:"owner"`
+	Created          string      `json:"created"` // ISO 8601 format
+	Updated          string      `json:"updated"` // ISO 8601 format
+	Revision         string      `json:"revision,omitempty"`
+	Items            []VaultItem `json:"items,omitempty"`
+	KeyParams        interface{} `json:"keyParams,omitempty"`
 	EncryptionParams interface{} `json:"encryptionParams,omitempty"`
-	Accessors    interface{} `json:"accessors,omitempty"`
-	EncryptedData interface{} `json:"encryptedData,omitempty"`
+	Accessors        interface{} `json:"accessors,omitempty"`
+	EncryptedData    interface{} `json:"encryptedData,omitempty"`
 }
 
 // ItemTemplate represents a template for creating vault items
@@ -422,8 +422,8 @@ func GetAuthenticatorTemplate() *ItemTemplate {
 		Icon: "authenticator",
 		Fields: []Field{
 			{
-				Name: "One-Time Password",
-				Type: FieldTypeTotp,
+				Name:  "One-Time Password",
+				Type:  FieldTypeTotp,
 				Value: "", // Will be set with MFA token
 			},
 		},
