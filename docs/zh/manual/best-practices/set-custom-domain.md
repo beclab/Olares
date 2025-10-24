@@ -275,6 +275,6 @@ DID（Decentralized Identifier，去中心化标识符）是在获得最终的 O
 
 ## 了解更多
 
-- [Olares 账户](../concepts/account.md)
+- [Olares 账户](../../developer/concepts/account.md)
 - [安装 Olares](../get-started/install-olares.md)
 - [设置域名规则](../../space/manage-domain.md)

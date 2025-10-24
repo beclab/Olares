@@ -45,7 +45,7 @@ Olares supports unified authentication for a multi-user system.
 2. Each user request first goes through the Authelia service for authentication.
 3. If authentication fails, the application redirects the user to the login page to re-authenticate.
 4. If authentication succeeds, the [Backend for Launcher (BFL)](https://github.com/beclab/bfl) attaches the user's basic information and forwards the request to the application service. This relieves the application from handling the authentication itself.
-5. For [shared applications](./application.md#shared-applications), developers need to build an additional `Auth Server` to connect the application's account with the BFL account.
+5. For [shared applications](application.md#shared-applications), developers need to build an additional `Auth Server` to connect the application's account with the BFL account.
 
 ## Multi-factor authentication (MFA)
 
@@ -63,9 +63,9 @@ When users perform sensitive operations such as login, Olares requires users to 
 
 ### Users
 
-- [Create Olares ID](../get-started/create-olares-id)
-- [User roles and permissions](../olares/settings/roles-permissions.md)
+- [Create Olares ID](../../manual/get-started/create-olares-id.md)
+- [User roles and permissions](../../manual/olares/settings/roles-permissions.md)
 
 ### Developers
 
-- [Account system callback](../../developer/develop/advanced/account.md)
+- [Account system callback](../develop/advanced/account.md)

@@ -3,7 +3,7 @@
 欢迎阅读 Olares 应用开发指南。这些详细的教程将逐步指导你从零开始构建 Olares 应用。
 
 在开始前，你可以先了解一些 Olares 的基本概念，如：
-- [Olares 的组成](../../../manual/concepts/architecture.md)
+- [Olares 的组成](../../concepts/architecture.md)
 - [Olares 应用 Chart](../../develop/package/chart.md)
 - [Olares 在 Helm 上的扩展](../package/extension.md)。
 

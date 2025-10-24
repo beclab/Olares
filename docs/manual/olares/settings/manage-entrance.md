@@ -5,7 +5,7 @@ description: Learn how to manage application entrances in Olares, including sett
 
 # Manage application entrances
 
-**Entrances** define how users access your applications on Olares. For a deeper understanding, refer to the [Entrance concept](../../concepts/network.md#entrance) section.
+**Entrances** define how users access your applications on Olares. For a deeper understanding, refer to the [Entrance concept](../../../developer/concepts/network.md#entrance) section.
 
 Entrance management in Olares includes two main components:
 

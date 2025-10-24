@@ -5,7 +5,7 @@ description: 了解如何在 Olares 中管理应用入口，包括设置断点�
 
 # 管理应用入口
 
-**入口**定义了用户如何访问 Olares 上的应用。要深入了解，请参阅[入口定义](../../concepts/network.md#入口)。
+**入口**定义了用户如何访问 Olares 上的应用。要深入了解，请参阅[入口定义](../../../developer/concepts/network.md#入口)。
 
 入口设置包括两个部分：
 

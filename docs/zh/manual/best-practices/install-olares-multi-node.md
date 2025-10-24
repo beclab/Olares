@@ -162,9 +162,9 @@ olares-cli olares uninstall
 
 ## 了解更多
 
-- [Olares 系统架构](../concepts/system-architecture.md#分布式存储)：了解支持 Olares 的分布式文件系统，确保可扩展性、高可用性以及无缝的数据管理。
+- [Olares 系统架构](../../developer/concepts/system-architecture.md#分布式存储)：了解支持 Olares 的分布式文件系统，确保可扩展性、高可用性以及无缝的数据管理。
 - [系统守护进程](../../developer/install/installation-overview.md#系统守护进程olaresd)：olaresd：了解 orchestrates 和管理 Olares 核心功能的中央系统进程。
-- [数据](../concepts/data.md#juicefs)：探索 Olares 如何利用 JuiceFS 提供统一文件系统，实现高效的数据存储和检索。
+- [数据](../../developer/concepts/data.md#juicefs)：探索 Olares 如何利用 JuiceFS 提供统一文件系统，实现高效的数据存储和检索。
 - [Olares CLI](../../developer/install/cli/olares-cli.md)：深入了解用于管理 Olares 安装的命令行工具。
 - [Olares 环境变量](../../developer/install/environment-variables.md)：了解支持 Olares 高级配置的环境变量。
 - [安装 Olares](../get-started/install-olares.md)：了解安装与激活 Olares 的过程。

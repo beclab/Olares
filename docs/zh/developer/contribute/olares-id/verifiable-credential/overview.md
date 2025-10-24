@@ -10,7 +10,7 @@
 
 ## 简介
 
-我们已经了解了 [VC](/zh/manual/concepts/vc.md) 的概念以及申请 VC 的基本流程。
+我们已经了解了 [VC](/zh/developer/concepts/vc.md) 的概念以及申请 VC 的基本流程。
 
 在深入实现细节之前，我们可以先熟悉一下在钱包 (Wallet)、验证方 (Verifier) 和发行方 (Issuer) 的实际通信过程中会遇到的术语。
 | 术语                      | 定义                                                                                                                                                                                                                                                                                                       |

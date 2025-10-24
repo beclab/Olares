@@ -59,14 +59,14 @@ Currently, Olares GPU support is restricted to deployments with one GPU per node
 Starting with Olares v1.11, [CUDA](https://developer.nvidia.com/cuda-toolkit) (12.4 and above) is supported. Changes in the host environment's CUDA configuration can be synchronized with the Olares cluster using `olares-cli`.
 
 ### Container management
-Olares uses [containerd](../../developer/install/installation-overview.md#container-runtime-containerd), a lightweight container runtime, for containerized deployments.
+Olares uses [containerd](../install/installation-overview.md#container-runtime-containerd), a lightweight container runtime, for containerized deployments.
 
 ### Olares Controller Panel
 
 The management of Olares is implemented through the following:
 
-- [olares-cli](../../developer/install/cli/olares-cli.md): A command-line tool for managing Olares clusters, applications, and hardware nodes.
-- [olaresd](../../developer/install/installation-overview.md#container-runtime-containerd): A daemon process that monitors hardware and network changes, while also managing cluster upgrades, restarts, and other maintenance operations.
+- [olares-cli](../install/cli/olares-cli.md): A command-line tool for managing Olares clusters, applications, and hardware nodes.
+- [olaresd](../install/installation-overview.md#container-runtime-containerd): A daemon process that monitors hardware and network changes, while also managing cluster upgrades, restarts, and other maintenance operations.
 
 These tools streamline installation, maintenance, and scaling for Olares.
 
@@ -215,6 +215,6 @@ The console for Olares, providing precise and autonomous control over the system
 A development tool for building and deploying Olares applications.
 
 ## Learn more
-- To get started with Olares, see the [Getting Started guide](../get-started/index.md).
+- To get started with Olares, see the [Getting Started guide](../../manual/get-started/index.md).
 - To learn more about the internals of Olares, see the topics in [Concept](index.md).
-- For in-depth details about how each component of Olares is orchestrated, see [Olares installation overview](../../developer/install/index.md).
+- For in-depth details about how each component of Olares is orchestrated, see [Olares installation overview](../install/index.md).

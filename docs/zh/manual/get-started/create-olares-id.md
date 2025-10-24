@@ -10,7 +10,7 @@ Olares ID 由本地名称和域名两部分组成。以 `alice123@olares.cn` 为
 - `olares.cn`：域名
 
 :::tip
-要了解为什么需要 Olares ID，请参阅 [Olares ID](../concepts/olares-id.md)。
+要了解为什么需要 Olares ID，请参阅 [Olares ID](../../developer/concepts/olares-id.md)。
 :::
 
 ## 下载并安装 LarePass 应用

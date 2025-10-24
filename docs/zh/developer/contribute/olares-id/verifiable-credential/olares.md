@@ -11,7 +11,7 @@ Olares ID 注册中的**先到先得**系统可能会带来一些公平性问题
 
 ## Olares ID 的 VC 流程
 
-为了解决潜在的公平性问题，我们采纳了 Web5 团队提出的**自主身份 (Self-Sovereign Identity, SSI)** 服务原则，并结合了 Olares ID 的 [VC 流程](/zh/manual/concepts/vc.md#六步验证流程)。这引导我们设计了一个**发行方 (Issuer) 和验证方 (Verifier)** 流程，以协助用户申请 **Olares ID**。
+为了解决潜在的公平性问题，我们采纳了 Web5 团队提出的**自主身份 (Self-Sovereign Identity, SSI)** 服务原则，并结合了 Olares ID 的 [VC 流程](/zh/developer/concepts/vc.md#六步验证流程)。这引导我们设计了一个**发行方 (Issuer) 和验证方 (Verifier)** 流程，以协助用户申请 **Olares ID**。
 
 ![alt text](/images/developer/contribute/vc-process.jpeg)
 

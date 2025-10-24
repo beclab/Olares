@@ -58,11 +58,11 @@ description: Olares 新手上路指南，包括系统初始配置、基础功能
     title="了解 Olares"
     description="加深你对 Olares 的理解。"
     :links="[
-      { text: 'Olares ID',  href: '../../manual/concepts/olares-id' },
-      { text: '帐户',    href: '../../manual/concepts/account'   },
-      { text: '应用',href: '../../manual/concepts/application' },
-      { text: '网络',href: '../../manual/concepts/network' },
-      { text: '数据',href: '../../manual/concepts/data' },
+      { text: 'Olares ID',  href: '../../developer/concepts/olares-id' },
+      { text: '帐户',    href: '../../developer/concepts/account'   },
+      { text: '应用',href: '../../developer/concepts/application' },
+      { text: '网络',href: '../../developer/concepts/network' },
+      { text: '数据',href: '../../developer/concepts/data' },
     ]"
     buttonText="了解更多"
     buttonLink="../concepts/"

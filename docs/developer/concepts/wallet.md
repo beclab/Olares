@@ -16,7 +16,7 @@ When users creates a Olares account, a DID is automatically generated in the beg
 - Backup/Import Olares IDs with a mnemonic phrase for quick setup and account recovery
 - Manage multiple DIDs/Olares IDs 
 
-See [Manage Accounts with LarePass](https://docs.olares.com/how-to/LarePass/account/) for more detailed information.
+See [Manage Accounts with LarePass](../../manual/larepass/create-account.md) for more detailed information.
 
 ## Manage VCs
 
@@ -25,4 +25,4 @@ LarePass allows users to manage their VCs that are bound to Olares IDs, enabling
 ![VC management](/images/manual/concepts/vc-management.png)
 
 ::: tip NOTE
-These are just the core implementations of LarePass that are closely related to the identity wallet. For more details on LarePass and its usages, refer to the [LarePass documentation](https://docs.olares.com/how-to/LarePass/overview.html).
+These are just the core implementations of LarePass that are closely related to the identity wallet. For more details on LarePass and its usages, refer to the [LarePass documentation](../../manual/larepass/).

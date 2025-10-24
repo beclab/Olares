@@ -59,14 +59,14 @@ Olares 目前的 GPU 管理功能仅支持单节点单 GPU 的部署场景。
 从 Olares v1.11 开始，支持 [CUDA](https://developer.nvidia.com/cuda-toolkit)（12.4 及以上版本）。当宿主机环境的 CUDA 配置变更时，可以通过 `olares-cli` 通知 Olares 集群进行配置。
 
 ### 容器管理
-Olares 使用轻量级容器运行时 [containerd](../../developer/install/installation-overview.md#容器运行时containerd) 进行容器化部署。
+Olares 使用轻量级容器运行时 [containerd](../install/installation-overview.md#容器运行时containerd) 进行容器化部署。
 
 ### Olares Controller Panel
 
 Olares 的集群管理通过以下工具实现：
 
-- [olares-cli](../../developer/install/cli/olares-cli.md)：命令行工具，用于管理 Olares 集群、应用和硬件节点等。
-- [olaresd](../../developer/install/installation-overview.md#系统守护进程olaresd)：Olares 的守护进程，用于监控硬件和网络变更、处理集群升级和重启等。
+- [olares-cli](../install/cli/olares-cli.md)：命令行工具，用于管理 Olares 集群、应用和硬件节点等。
+- [olaresd](../install/installation-overview.md#系统守护进程olaresd)：Olares 的守护进程，用于监控硬件和网络变更、处理集群升级和重启等。
 
 这些工具简化了 Olares 的安装、维护和扩展过程。
 
@@ -215,6 +215,6 @@ Olares 的控制台，提供对系统及其环境的精确和自主控制。
 用于构建和部署 Olares 应用的开发工具。
 
 ## 了解更多
-- 要开始使用 Olares，请参阅[快速开始](../get-started/index.md)。
+- 要开始使用 Olares，请参阅[快速开始](../../manual/get-started/index.md)。
 - 要深入了解 Olares 的内部原理，请参阅[概念](index.md)中的主题。
-- 要详细了解 Olares 中各组件如何被编排，请参阅 [Olares 安装概述](../../developer/install/index.md)。
+- 要详细了解 Olares 中各组件如何被编排，请参阅 [Olares 安装概述](../install/index.md)。

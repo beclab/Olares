@@ -2,7 +2,7 @@
 
 Developing applications on Olares is not much different from regular website development. Once you learn a few basic Olares concepts, you can start creating applications on his platform.
 
-- [Core Concepts of Olares](../../manual/concepts/index.md)
+- [Core Concepts of Olares](../concepts/index.md)
 - [Understanding the Format of Olares Application Chart](./package/chart.md)
   - [The structure of the Olares Application Chart](./package/chart.md)
   - [Configuration guide and field descriptions of `OlaresManifest.yaml`](./package/manifest.md)

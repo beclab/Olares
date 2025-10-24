@@ -26,7 +26,7 @@ Olares 的模式类似于 **Android**：
 
 Olares 由以下核心组件组成：
 
-- [Olares ID](./concepts/olares-id.md)：一种去中心化的身份与信用系统，支持信息和价值的安全、无信任交换。Olares ID 是你在整个 Olares 生态中的数字身份。
+- [Olares ID](../developer/concepts/olares-id.md)：一种去中心化的身份与信用系统，支持信息和价值的安全、无信任交换。Olares ID 是你在整个 Olares 生态中的数字身份。
 
 - [**Olares OS**](https://github.com/beclab/Olares)：一个开源自主托管操作系统，可将边缘设备转化为强大的个人云。
 
@@ -76,7 +76,7 @@ Olares 提供了丰富的功能，旨在提升安全性、易用性和开发灵�
     <p class="cta-title">阅读操作指南</p>
     <p class="cta-description">全面了解 Olares 的各个应用。</p>
   </a>
-  <a href="./concepts/" class="cta-link">
+  <a href="../developer/concepts/" class="cta-link">
     <p class="cta-title">了解 Olares</p>
     <p class="cta-description">掌握 Olares 的基本原理和架构。</p>
   </a>

@@ -6,14 +6,14 @@ outline: [1, 5]
 
 Snowinning Protocol's smart contract has two parts.
 
-- [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) contract plays a crucial role as the [DID Registry](/manual/concepts/registry.md). Learn more in [the contract](https://optimistic.etherscan.io/address/0x5da4fa8e567d86e52ef8da860de1be8f54cae97d).
+- [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) contract plays a crucial role as the [DID Registry](/developer/concepts/registry.md). Learn more in [the contract](https://optimistic.etherscan.io/address/0x5da4fa8e567d86e52ef8da860de1be8f54cae97d).
 - Third-party protocols that extend the reputation system based on [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol). Currently, the following reputation protocols are in place:
   - [Otmoic Trader Reputation](https://github.com/otmoic/reputation-contract-evm/blob/main/contracts/Reputation.sol). Learn more in [the contract](https://optimistic.etherscan.io/address/0x3179CE5fAB68C0286Da85f3d61BcE7116815e799).
   - [Application Reputation](https://github.com/beclab/terminusdid-contract-system/blob/main/src/taggers/TerminusAppMarketReputation.sol). Learn more in [the contract](https://optimistic.etherscan.io/address/0x08065353D266121938B93D4B1071Bb52CD0C0EE4).
 
 ![alt text](/images/developer/contribute/smart-contract.jpg)
 
-- The [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) contract plays a crucial role, and it serves as the [DID Registry](/manual/concepts/registry.md). View [the contract](https://optimistic.etherscan.io/address/0x5da4fa8e567d86e52ef8da860de1be8f54cae97d).
+- The [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) contract plays a crucial role, and it serves as the [DID Registry](/developer/concepts/registry.md). View [the contract](https://optimistic.etherscan.io/address/0x5da4fa8e567d86e52ef8da860de1be8f54cae97d).
 - Third-party protocols can extend the reputation based on [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol). Currently, the following reputation protocols are in place:
   - [Otmoic Trader Reputation](https://github.com/otmoic/reputation-contract-evm/blob/main/contracts/Reputation.sol). View [the contract](https://optimistic.etherscan.io/address/0xE924F7f68D1dcd004720e107F62c6303aF271ed3).
   - [Application Reputation](https://github.com/beclab/terminusdid-contract-system/blob/main/src/taggers/TerminusAppMarketReputation.sol). View [the contract](https://optimistic.etherscan.io/address/0x08065353D266121938B93D4B1071Bb52CD0C0EE4).
@@ -22,7 +22,7 @@ Snowinning Protocol's smart contract has two parts.
 
 # TerminusDID
 
-The TerminusDID contract manages a hierarchical structure derived from [Domain](/manual/concepts/olares-id.md#domain-types.
+The TerminusDID contract manages a hierarchical structure derived from [Domain](/developer/concepts/olares-id.md#domain-types.
 
 ![alt text](/images/developer/contribute/smart-contract-tree.jpg)
 
@@ -32,9 +32,9 @@ Each node possesses several default attributes.
 
 | Attribute      | Description                                                                                                                                                                                                                                                                                                                                                                                                            |
 | -------------- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| name           | Specifies the [Domain Name](/manual/concepts/olares-id.md#domain-types). Certain Domain Names can interchange with Terminus Names                                                                                                                                                                                                                                                                                      |
+| name           | Specifies the [Domain Name](/developer/concepts/olares-id.md#domain-types). Certain Domain Names can interchange with Terminus Names                                                                                                                                                                                                                                                                                      |
 | id             | Each node is also a NFT, adhering to the **ERC-721** standard. Its id serves as the unique identifier for this NFT, computed through `keccak256(name)`                                                                                                                                                                                                                                                                 |
-| did,owner      | The `owner` and `did` of the node, derived from the same mnemonic words. Further details on this can be found [here](/manual/concepts/did.md).<br>. Additionally, storing owner is advantageous because it complies with the **BIP44** specification, facilitating gas-efficient signature verification within EVM contracts. Each node is affiliated with an `owner`, who holds the authority to modify node details. |
+| did,owner      | The `owner` and `did` of the node, derived from the same mnemonic words. Further details on this can be found [here](/developer/concepts/did.md).<br>. Additionally, storing owner is advantageous because it complies with the **BIP44** specification, facilitating gas-efficient signature verification within EVM contracts. Each node is affiliated with an `owner`, who holds the authority to modify node details. |
 | note           | Currently, there are three types: Individual, Organization, and Entity                                                                                                                                                                                                                                                                                                                                                 |
 | allowSubdomain | Indicates whether it is a leaf node. If False, the node cannot spawn further nodes.                                                                                                                                                                                                                                                                                                                                    |
 
@@ -59,15 +59,15 @@ Ownership of different nodes is as follows:
   Abstract nodes such as `root`, `com`, `io` belong to the Terminus team.
 
 - **Individual** <br> 
-  `myterminus.com` belongs to the [Individual Domain](/manual/concepts/olares-id.md#domain-types), owned by the Terminus team.  
+  `myterminus.com` belongs to the [Individual Domain](/developer/concepts/olares-id.md#domain-types), owned by the Terminus team.  
   `alice.myterminus.com` and `bob.myterminus.com` belong to individual Terminus Names, and are owned by the respective users.
 
 - **Organization** <br> 
-  `org1.com` and `org.io` belong to the [Organization Domain](/manual/concepts/olares-id.md#domain-types), owned by the domain admin.  
+  `org1.com` and `org.io` belong to the [Organization Domain](/developer/concepts/olares-id.md#domain-types), owned by the domain admin.  
   `alice.org1.com` and `bob.org2.io` belong to Organization Terminus Names, and are owned by the respective users.
 
 - **Entity**  <br>
-  The `Application Score` belongs to the [Entity Domain](/manual/concepts/olares-id.md#domain-types), and is owned by the applicant of the entity. Organization admins and users can refer to [Domain Management](../contract/manage/contract.md#register-did) to manage their own nodes and sub-nodes.
+  The `Application Score` belongs to the [Entity Domain](/developer/concepts/olares-id.md#domain-types), and is owned by the applicant of the entity. Organization admins and users can refer to [Domain Management](../contract/manage/contract.md#register-did) to manage their own nodes and sub-nodes.
 
 :::info
 After the project stabilizes, ownership will be transferred to the multisig address of the DAO organization by the Terminus team.
@@ -149,7 +149,7 @@ Use the declared address and DID owner to sign the following information in comp
 
 # Reputation
 
-We can create highly flexible [reputation](/manual/concepts/reputation.md) protocols based on Taggers.
+We can create highly flexible [reputation](/developer/concepts/reputation.md) protocols based on Taggers.
 
 In implementing an on-chain Reputation system, the most crucial elements are:
 

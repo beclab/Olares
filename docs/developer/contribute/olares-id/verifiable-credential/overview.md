@@ -10,7 +10,7 @@ If you want to engage in lower-level development, read the [protocol standard](#
 
 ## Introduction
 
-We have learned about [VC](/manual/concepts/vc.md) and the basic process for applying VCs.
+We have learned about [VC](/developer/concepts/vc.md) and the basic process for applying VCs.
 
 Before we get into the implementation details, we can familiarize ourselves with the terms that we will encounter in the real communication process of Wallet, Verifier and Issuer.
 | Term                    | Definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
