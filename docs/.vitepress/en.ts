@@ -359,7 +359,8 @@ const side = {
             text: "Install Olares on PVE (GPU Passthrough)",
             link: "/manual/best-practices/install-olares-gpu-passthrough",
           },
-          text: "Expand storage in Olares",
+          {
+            text: "Expand storage in Olares",
           link: "/manual/best-practices/expand-storage-in-olares",
         },
         ],

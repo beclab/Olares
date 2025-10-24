@@ -283,5 +283,5 @@ After the VM restarts, it will boot into the Ubuntu system.
 Olares is now installed and running with full GPU acceleration. 
 To start using Olares, activate the device and log in with your account.
 For detailed steps, see our official guides:
-- [Finish installation and activate Olares](../get-started/install-pve-iso.md#finish-installation-and-activate-olares)
-- [Log in to Olares](../get-started/install-pve-iso.md#log-in-to-olares)
+- [Finish installation and activate Olares](../get-started/install-and-activate-olares.md)
+- [Log in to Olares](../get-started/log-in-to-olares.md)
