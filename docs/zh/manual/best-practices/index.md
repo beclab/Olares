@@ -10,7 +10,7 @@ description: 通过最佳实践与进阶指南，深入挖掘 Olares 的性能�
 - [使用 Wise 构建知识中心](organize-content.md)
 - [设置 SMTP](set-up-SMTP-service.md)
 
-
+- [安装 Olares 镜像及配置显卡直通](install-olares-gpu-passthrough.md)
 
 
 
