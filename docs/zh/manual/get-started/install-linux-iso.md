@@ -70,7 +70,7 @@ description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括
    check Olaresd: success
    check Containerd: success
    ```
-<!--@include: ./install-and-activate-olares.md{4,16}-->
+<!--@include: ./install-and-activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
