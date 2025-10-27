@@ -565,6 +565,10 @@ const side = {
             link: "/zh/developer/install/cli/install",
           },
           {
+            text: "user activate",
+            link: "/zh/developer/install/cli/user-activate",
+          },
+          {
             text: "logs",
             link: "/zh/developer/install/cli/logs",
           },
