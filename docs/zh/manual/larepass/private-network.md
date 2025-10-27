@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description:本文介绍如何在任意环境安全访问 Olares：区分公有/私有入口、何时启用 LarePass VPN、本地直连的使用场景，以及在 LarePass 中开启 VPN。
+description:本文介绍如何在任意环境安全访问 Olares——区分公有/私有入口、何时启用 LarePass VPN、本地直连的使用场景，以及在 LarePass 中开启 VPN。
 ---
 
 # 随时随地访问 Olares
