@@ -501,7 +501,7 @@ func (a *App) initializeMainVaultWithTOTP(mfaToken string) error {
 
 	// 1. Initialize main vault (ref: server.ts line 1573-1579)
 	vault := &Vault{
-		ID:      account.MainVault.ID, // Use existing vault ID from account
+		ID:      generateUUID(), // Generate new UUID for vault
 		Name:    "My Vault",
 		Owner:   account.ID,
 		Created: getCurrentTimeISO(),
