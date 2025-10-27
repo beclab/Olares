@@ -156,13 +156,13 @@ func (a *App) Signup(params SignupParams) (*CreateAccountResponse, error) {
 	log.Printf("Login after signup successful")
 
 	// 5. Initialize main vault and create TOTP item (ref: app.ts line 1003-1038)
-	err = a.initializeMainVaultWithTOTP(response.MFA)
-	if err != nil {
-		log.Printf("Warning: Failed to initialize main vault with TOTP: %v", err)
-		// Don't return error as account creation was successful
-	} else {
-		log.Printf("Main vault initialized with TOTP item successfully")
-	}
+	// err = a.initializeMainVaultWithTOTP(response.MFA)
+	// if err != nil {
+	// 	log.Printf("Warning: Failed to initialize main vault with TOTP: %v", err)
+	// 	// Don't return error as account creation was successful
+	// } else {
+	// 	log.Printf("Main vault initialized with TOTP item successfully")
+	// }
 
 	// 6. Activate account (ref: app.ts line 1039-1046)
 	activeParams := ActiveAccountParams{
@@ -253,16 +253,16 @@ func (a *App) Login(params LoginParams) error {
 	log.Printf("Session key (hex): %x", sessionKey)
 
 	// Create a simplified account object for subsequent operations
-	account, err := a.API.GetAccount()
-	if err != nil {
-		return fmt.Errorf("failed to get account: %v", err)
-	}
-
-	// account := &Account{
-	// 	ID:   startResponse.AccountID,
-	// 	DID:  params.DID,
-	// 	Name: params.DID,
+	// account, err := a.API.GetAccount()
+	// if err != nil {
+	// 	return fmt.Errorf("failed to get account: %v", err)
 	// }
+
+	account := &Account{
+		ID:   startResponse.AccountID,
+		DID:  params.DID,
+		Name: params.DID,
+	}
 
 	a.API.State.SetAccount(account)
 
@@ -501,7 +501,7 @@ func (a *App) initializeMainVaultWithTOTP(mfaToken string) error {
 
 	// 1. Initialize main vault (ref: server.ts line 1573-1579)
 	vault := &Vault{
-		Kind:    "vault",       // Serializable.kind getter (ref: vault.ts line 18-20)
+		Kind:    "vault", // Serializable.kind getter (ref: vault.ts line 18-20)
 		ID:      generateUUID(),
 		Name:    "My Vault",
 		Owner:   account.ID,
@@ -514,14 +514,14 @@ func (a *App) initializeMainVaultWithTOTP(mfaToken string) error {
 	// 2. Initialize parent class fields (SharedContainer extends BaseContainer)
 	// BaseContainer has: encryptionParams: AESEncryptionParams = new AESEncryptionParams()
 	vault.EncryptionParams = EncryptionParams{
-		Algorithm: "AES-GCM",
-		TagSize:   128,
-		KeySize:   256,
-		IV:        "", // Empty, will be set when data is encrypted
+		Algorithm:      "AES-GCM",
+		TagSize:        128,
+		KeySize:        256,
+		IV:             "", // Empty, will be set when data is encrypted
 		AdditionalData: "", // Empty, will be set when data is encrypted
-		Version:   "4.0.0",
+		Version:        "4.0.0",
 	}
-	
+
 	// SharedContainer has: keyParams: RSAEncryptionParams = new RSAEncryptionParams()
 	vault.KeyParams = map[string]any{
 		"algorithm": "RSA-OAEP",
@@ -529,7 +529,7 @@ func (a *App) initializeMainVaultWithTOTP(mfaToken string) error {
 		"kind":      "c",
 		"version":   "4.0.0",
 	}
-	
+
 	// SharedContainer has: accessors: Accessor[] = []
 	vault.Accessors = []map[string]any{} // Empty array, will be populated via updateAccessors()
 
