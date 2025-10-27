@@ -393,17 +393,19 @@ type VaultItem struct {
 
 // Vault represents a vault containing items
 type Vault struct {
-	ID               string      `json:"id"`
-	Name             string      `json:"name"`
-	Owner            string      `json:"owner"`
-	Created          string      `json:"created"` // ISO 8601 format
-	Updated          string      `json:"updated"` // ISO 8601 format
-	Revision         string      `json:"revision,omitempty"`
-	Items            []VaultItem `json:"items,omitempty"`
-	KeyParams        interface{} `json:"keyParams,omitempty"`
+	Kind         string      `json:"kind"`                    // Always "vault" for Vault objects
+	ID           string      `json:"id"`
+	Name         string      `json:"name"`
+	Owner        string      `json:"owner"`
+	Created      string      `json:"created"`                 // ISO 8601 format
+	Updated      string      `json:"updated"`                 // ISO 8601 format
+	Revision     string      `json:"revision,omitempty"`
+	Items        []VaultItem `json:"items,omitempty"`
+	KeyParams    interface{} `json:"keyParams,omitempty"`
 	EncryptionParams interface{} `json:"encryptionParams,omitempty"`
-	Accessors        interface{} `json:"accessors,omitempty"`
-	EncryptedData    interface{} `json:"encryptedData,omitempty"`
+	Accessors    interface{} `json:"accessors,omitempty"`
+	EncryptedData interface{} `json:"encryptedData,omitempty"`
+	Version      string      `json:"version,omitempty"`       // Serialization version
 }
 
 // ItemTemplate represents a template for creating vault items

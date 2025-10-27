@@ -501,13 +501,37 @@ func (a *App) initializeMainVaultWithTOTP(mfaToken string) error {
 
 	// 1. Initialize main vault (ref: server.ts line 1573-1579)
 	vault := &Vault{
-		ID:      generateUUID(), // Generate new UUID for vault
+		Kind:    "vault",       // Serializable.kind getter (ref: vault.ts line 18-20)
+		ID:      generateUUID(),
 		Name:    "My Vault",
 		Owner:   account.ID,
 		Created: getCurrentTimeISO(),
 		Updated: getCurrentTimeISO(),
 		Items:   []VaultItem{}, // Initialize empty items array
+		Version: "4.0.0",       // Serialization version (ref: encoding.ts toRaw)
 	}
+
+	// 2. Initialize parent class fields (SharedContainer extends BaseContainer)
+	// BaseContainer has: encryptionParams: AESEncryptionParams = new AESEncryptionParams()
+	vault.EncryptionParams = EncryptionParams{
+		Algorithm: "AES-GCM",
+		TagSize:   128,
+		KeySize:   256,
+		IV:        "", // Empty, will be set when data is encrypted
+		AdditionalData: "", // Empty, will be set when data is encrypted
+		Version:   "4.0.0",
+	}
+	
+	// SharedContainer has: keyParams: RSAEncryptionParams = new RSAEncryptionParams()
+	vault.KeyParams = map[string]any{
+		"algorithm": "RSA-OAEP",
+		"hash":      "SHA-256",
+		"kind":      "c",
+		"version":   "4.0.0",
+	}
+	
+	// SharedContainer has: accessors: Accessor[] = []
+	vault.Accessors = []map[string]any{} // Empty array, will be populated via updateAccessors()
 
 	log.Printf("Main vault initialized: ID=%s, Name=%s, Owner=%s", vault.ID, vault.Name, vault.Owner)
 
@@ -541,6 +565,8 @@ func (a *App) initializeMainVaultWithTOTP(mfaToken string) error {
 	vault.Items = append(vault.Items, *item)
 
 	// 6. Update vault on server (ref: app.ts line 2138: await this.addItems([item], vault))
+	// Note: The vault is created empty without encryption. Items will be encrypted when
+	// the user unlocks the vault for the first time via vault.unlock() -> vault.updateAccessors()
 	err = a.updateVault(vault)
 	if err != nil {
 		return fmt.Errorf("failed to update vault on server: %v", err)
