@@ -26,6 +26,43 @@
 
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: market-sa
+  namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: market-role
+rules:
+  # Access to systemenvs resources
+  - apiGroups:
+      - sys.bytetrade.io
+    resources:
+      - systemenvs
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: market-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: market-role
+subjects:
+  - kind: ServiceAccount
+    name: market-sa
+    namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: v1
 kind: Secret
 metadata:
   name: market-backend-nats-secret
@@ -79,6 +116,8 @@ spec:
         instrumentation.opentelemetry.io/otel-go-auto-target-exe: "/opt/app/market"
 {{ end }}
     spec:
+      serviceAccountName: market-sa
+      serviceAccount: market-sa
       priorityClassName: "system-cluster-critical"
       initContainers:
         - args:
@@ -101,7 +140,7 @@ spec:
           name: check-chart-repo
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.5.3
+        image: beclab/market-backend:v0.5.4
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
