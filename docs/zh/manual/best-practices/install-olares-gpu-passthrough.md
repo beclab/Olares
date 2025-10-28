@@ -3,11 +3,15 @@ outline: [2, 3]
 description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加速的虚拟机中安装 Olares 的详细教程。
 ---
 
-# PVE 上安装 Olares 镜像及配置显卡直通
+# 在启用显卡直通的 PVE 上安装 Olares
 
 **Proxmox 虚拟环境（PVE）** 中的 GPU 直通允许虚拟机（VM）直接访问物理 GPU ，从而启用 AI 模型推理、图形渲染等需要硬件加速的计算任务。
 
-本教程将完整介绍如何在 PVE 主机中配置 GPU 直通，并通过官方 ISO 镜像安装 Olares ，从而在虚拟机中充分利用独立 GPU 的算力。
+本教程将完整介绍如何在 PVE 主机中：
+- 配置 GPU 直通；
+- 通过官方 ISO 镜像安装 Olares。
+
+这样，你可以在虚拟机中充分利用独立 GPU 的算力。
 
 :::warning 不适用于生产环境
 该部署方式当前仍有功能限制，建议仅用于开发或测试环境。
@@ -60,7 +64,7 @@ description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加�
     update-grub
     reboot
     ```
-4.  重启后，检查 IOMMU 是否已启用（仍在 PVE 主机上）：
+4.  重启后，在 PVE 主机上检查 IOMMU 是否已启用：
 
     ```bash
     dmesg | grep -e DMAR -e IOMMU
@@ -103,7 +107,7 @@ description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加�
 
 为避免 PVE 主机占用你计划直通的 GPU，建议屏蔽其默认驱动，让 GPU 专用于`vfio-pci`。
 
-1. 在 PVE 主机上运行以下命令来创建黑名单文件：
+1. 在 PVE 主机上运行以下命令来创建黑名单配置：
 
     ```bash
     nano /etc/modprobe.d/blacklist.conf
@@ -158,7 +162,7 @@ description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加�
     echo "options vfio-pci ids=10de:2803,10de:22bd" > /etc/modprobe.d/vfio.conf
     ```
 
-4. 更新 initramfs 以应用所有模块和驱动程序的更改，然后重启系统：
+4. 更新`initramfs`（根文件系统）以应用所有模块和驱动程序的更改，然后重启系统：
 
     ```bash
     update-initramfs -u
@@ -184,15 +188,23 @@ description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加�
 
 ## 设置虚拟机并安装 Olares
 
+启用 GPU 直通后，你现在可以在 PVE 中安装 Olares 了。
+
 ### 创建和配置虚拟机
 
 本节为你介绍如何使用 Olares ISO 镜像来创建和配置虚拟机：
 
-1. 将你下载的 Olares 官方 ISO 上传到你的 PVE 存储（例如，`local`）。在 PVE 界面中，选择存储 > **ISO 镜像** > **上传**。
+1. 将下载的 Olares 官方 ISO 上传到你的 PVE 存储（例如，`local`）。
+
+    1. 在 PVE Web 界面中，选择目标存储（例如，`local`）。
+    
+    2. 点击**ISO 镜像** > **上传**。
+
+    3. 点击**选择文件**，选择下载的 Olares ISO 文件，然后点击**上传**。
 
 2. 点击**创建虚拟机**.
 
-3. 配置以下参数：
+3. 配置以下虚拟机参数：
 
     - 操作系统：
         - `ISO 镜像`：选择下载的 Olares 官方镜像。
@@ -234,7 +246,13 @@ description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加�
 
 2. 从启动菜单中，选择 **Install Olares to Hard Disk**，并按回车确认。
 
-3. 在 Olares System Installer 界面，会显示可用磁盘列表（例如，`sda 200G QEMU HARDDISK`）。输入`/dev/`加上第一个磁盘的名称（例如，`/dev/sda`）来选择目标磁盘。当屏幕上出现警告时，输入`yes`继续即可。
+3. 在 Olares System Installer 界面，选择安装磁盘。
+
+    1. 查看可用磁盘列表（例如，`sda 200G QEMU HARDDISK`）。
+    
+    2. 输入`/dev/`加上第一个磁盘的名称来选择目标磁盘（例如，`/dev/sda`）。
+    
+    3. 当屏幕上出现警告时，输入`yes`继续即可。
 
     ::: tip 注意
     安装过程中，可能会出现与 NVIDIA 显卡驱动相关的警告。如果出现此类警告，按**回车键**忽略即可。

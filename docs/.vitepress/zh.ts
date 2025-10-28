@@ -358,7 +358,7 @@ const side = {
           link: "/zh/manual/best-practices/set-up-SMTP-service",
         },
         {
-          text: "PVE 上安装 Olares 及配置显卡直通",
+          text: "在启用显卡直通的 PVE 上安装 Olares",
           link: "/zh/manual/best-practices/install-olares-gpu-passthrough",
         },        
         {  
