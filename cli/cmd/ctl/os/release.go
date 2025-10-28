@@ -49,7 +49,7 @@ func NewCmdRelease() *cobra.Command {
 			}
 
 			if version == "" {
-				version = fmt.Sprintf("1.12.2-%s", time.Now().Format("20060102150405"))
+				version = fmt.Sprintf("1.12.3-%s", time.Now().Format("20060102150405"))
 				fmt.Printf("--version unspecified, using: %s\n", version)
 				time.Sleep(1 * time.Second)
 			}
