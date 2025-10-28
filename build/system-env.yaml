@@ -21,6 +21,11 @@ systemEnvs:
     type: url
     editable: true
     required: true
+  # docker hub mirror endpoint for docker.io registry
+  - envName: OLARES_SYSTEM_DOCKERHUB_SERVICE
+    type: url
+    editable: true
+    required: false
   # the legacy OLARES_ROOT_DIR
   - envName: OLARES_SYSTEM_ROOT_PATH
     default: /olares

@@ -1,7 +1,9 @@
 package containerd
 
 import (
+	"context"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/containerd/containerd/reference"
@@ -46,6 +48,60 @@ func GetRegistryMirror(ctx *fiber.Ctx) (*Mirror, error) {
 
 	mirror := criPluginConfig.Registry.Mirrors[registry]
 	return &mirror, nil
+}
+
+// EnsureRegistryMirror ensures the given endpoint exists for a registry mirror.
+// Returns updated=true if a change was made and persisted (containerd restarted),
+// or updated=false if the endpoint already existed. Returns error on failure.
+func EnsureRegistryMirror(ctx context.Context, registry string, endpoint string) (bool, error) {
+	if registry == "" {
+		registry = DefaultRegistryName
+	}
+	endpoint = strings.TrimSpace(endpoint)
+	if endpoint == "" {
+		return false, fmt.Errorf("endpoint is required")
+	}
+
+	u, err := url.ParseRequestURI(endpoint)
+	if err != nil || u == nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+		return false, fmt.Errorf("invalid mirror endpoint: %s", endpoint)
+	}
+	endpoint = u.String()
+
+	config, err := getConfig()
+	if err != nil {
+		return false, err
+	}
+	criPluginConfig, err := getCRIPluginConfig(config)
+	if err != nil {
+		return false, err
+	}
+
+	if criPluginConfig.Registry.Mirrors == nil {
+		criPluginConfig.Registry.Mirrors = make(map[string]Mirror)
+	}
+
+	mirror := criPluginConfig.Registry.Mirrors[registry]
+	exists := false
+	for _, ep := range mirror.Endpoints {
+		if ep == endpoint {
+			exists = true
+			break
+		}
+	}
+	if !exists {
+		mirror.Endpoints = append(mirror.Endpoints, endpoint)
+		criPluginConfig.Registry.Mirrors[registry] = mirror
+		if err := updateCRIPluginConfig(config, criPluginConfig); err != nil {
+			return false, err
+		}
+		if err := restartContainerd(ctx); err != nil {
+			klog.Errorf("failed to restart containerd: %v", err)
+			return false, err
+		}
+		return true, nil
+	}
+	return false, nil
 }
 
 func UpdateRegistryMirror(ctx *fiber.Ctx) (*Mirror, error) {
