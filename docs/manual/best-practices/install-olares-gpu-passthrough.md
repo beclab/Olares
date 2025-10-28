@@ -7,7 +7,9 @@ description: Step-by-step tutorial on how to set up GPU passthrough in Proxmox V
 
 GPU passthrough in **Proxmox Virtual Environment (PVE)** allows virtual machines (VMs) to directly access the physical GPU, enabling hardware-accelerated computing for workloads like AI model inference and graphics processing.
 
-This tutorial provides a comprehensive, end-to-end process for configuring a PVE host for GPU passthrough and then installing Olares from its official ISO image into a new VM that fully leverage the dedicated GPU.
+This tutorial provides a comprehensive process for:
+- Configuring a PVE host for GPU passthrough. 
+- Installing Olares from its official ISO image into a new VM that fully leverage the dedicated GPU.
 
 ::: warning Not recommended for production use
 Currently, Olares on PVE has certain limitations. We recommend using it only for development or testing purposes.
@@ -26,7 +28,7 @@ Before proceeding, ensure that your setup meets the following requirements:
 - PVE Version: 8.3.2
 - Olares ISO Image: Download the [official Olares ISO image](https://dc3p1870nn3cj.cloudfront.net/olares-v1.12.1-amd64.iso) before you start.
 
-## Configure GPU Passthrough in PVE
+## Configure GPU passthrough in PVE
 
 To use GPU-accelerated workloads in Olares, you must first enable GPU passthrough for the PVE host.
 
@@ -60,7 +62,7 @@ The **Input-Output Memory Management Unit (IOMMU)** is a hardware feature that a
     reboot
     ```
 
-4.  After restarting, check whether IOMMU is enabled (still in the PVE host):
+4.  After restarting, check whether IOMMU is enabled on the PVE host:
     
     ```bash
     dmesg | grep -e DMAR -e IOMMU
@@ -99,11 +101,11 @@ The **Input-Output Memory Management Unit (IOMMU)** is a hardware feature that a
 
 3. Save and close the file.
 
-### Blacklist Host GPU Drivers
+### Blacklist host GPU drivers
 
 To prevent the Proxmox host from using the GPU you plan to pass through, it's best to blacklist its default drivers. This ensures the GPU is available for `vfio-pci`.
 
-1. Run the following command on the PVE host to create the blacklist file:
+1. Run the following command on the PVE host to create the blacklist configuration:
 
     ```bash
     nano /etc/modprobe.d/blacklist.conf
@@ -158,7 +160,7 @@ To prevent the Proxmox host from using the GPU you plan to pass through, it's be
     echo "options vfio-pci ids=10de:2803,10de:22bd" > /etc/modprobe.d/vfio.conf
     ```
 
-4. Apply all module and driver changes by updating the initramfs, then reboot:
+4. Apply all module and driver changes by updating the `initramfs` (the root file system), then reboot:
 
     ```bash
     update-initramfs -u
@@ -184,15 +186,23 @@ To prevent the Proxmox host from using the GPU you plan to pass through, it's be
 
 ## Set up VM and install Olares
 
+With the GPU passthrough enabled, you can now install Olares in PVE. 
+
 ### Create and configure the VM
 
 This section creates and configures a VM using the Olares ISO image:
 
-1. Upload the official Olares ISO you downloaded to your PVE storage (e.g., `local`). You can do this by selecting the storage, clicking **ISO Images**, and then *Upload**. 
+1. Upload the official Olares ISO you downloaded to your PVE storage (e.g., `local`). 
+    
+    1. In the PVE web interface, select your target storage (e.g., `local`).
+
+    2. Click **ISO Images** > **Upload**.
+
+    3. Click **Select File**, choose the Olares ISO file you downloaded, and then click **Upload**. 
 
 2. Click **Create VM**.
 
-3. Configure the settings as follows:
+3. Configure the VM settings as follows:
 
     - OS:
         - `ISO image`: Select the official Olares ISO image you just downloaded.
@@ -228,13 +238,19 @@ Now your VM is ready to use GPU passthrough.
 
 ### Install Olares
 
-Once the VM is set up, follow these steps to install the ISO on PVE.
+Once the VM is set up, follow these steps to install Olares using the installer ISO image.
 
 1. Select and start the VM you just created.
 
 2. From the boot menu, select **Install Olares to Hard Disk** and press **Enter**.
 
-3. In the Olares System Installer, a list of available disks will display (for example, `sda 200G QEMU HARDDISK`). Select the first disk by typing `/dev/` plus its name (for example, `/dev/sda`). When the on-screen warning appears, just type `yes` to continue.
+3. In the Olares System Installer, select the installation disk.
+
+    1. Review the list of available disks (for example, `sda 200G QEMU HARDDISK`).
+
+    2. Select the first disk by typing `/dev/` plus its name (for example, `/dev/sda`). 
+    
+    3. When the on-screen warning appears, just type `yes` to continue.
 
     ::: tip Note
     During installation, warnings related to the NVIDIA graphics driver may appear. If they do, press **Enter** to ignore them.
