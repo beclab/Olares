@@ -30,7 +30,7 @@ description:"本文介绍如何在任意环境安全访问 Olares: 区分公有/
 
 - **本地访问** (在同一局域网中)
 
-  使用本地 URL (`http://app.yourname.olares.local`) 进行直接的本地连接，该连接会绕过 VPN 和互联网隧道。
+  使用本地 URL (`http://app.yourname.olares.local`) 直连 Olares，无需通过 VPN 和互联网隧道。
 
 :::warning 远程访问时请启用 VPN
 当你不在自己的本地网络中时，为获得最佳的私有应用访问体验，请启用 **LarePass VPN**。它能确保你与 Olares 之间可始终保持加密、私有且高速的通道。 
