@@ -233,8 +233,20 @@ type InstallNvidiaContainerToolkit struct {
 }
 
 func (t *InstallNvidiaContainerToolkit) Execute(runtime connector.Runtime) error {
+	containerdDropInDir := "/etc/containerd/config.d"
+	containerdConfigFile := "/etc/containerd/config.toml"
+	if util.IsExist(containerdDropInDir) {
+		if err := os.RemoveAll(containerdDropInDir); err != nil {
+			return errors.Wrap(errors.WithStack(err), "Failed to remove containerd drop-in directory")
+		}
+	}
+	if util.IsExist(containerdConfigFile) {
+		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("sed -i '/^import/d' %s", containerdConfigFile), false, false); err != nil {
+			return errors.Wrap(errors.WithStack(err), "Failed to remove import section from containerd config file")
+		}
+	}
 	logger.Debugf("install nvidia-container-toolkit")
-	if _, err := runtime.GetRunner().SudoCmd("apt-get update && sudo apt-get install -y nvidia-container-toolkit=1.17.9-1 nvidia-container-toolkit-base=1.17.9-1 jq", false, true); err != nil {
+	if _, err := runtime.GetRunner().SudoCmd("apt-get update && sudo apt-get install -y --allow-downgrades nvidia-container-toolkit=1.17.9-1 nvidia-container-toolkit-base=1.17.9-1 jq", false, true); err != nil {
 		return errors.Wrap(errors.WithStack(err), "Failed to apt-get install nvidia-container-toolkit")
 	}
 	return nil
