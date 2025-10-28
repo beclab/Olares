@@ -27,7 +27,7 @@ Olares follows a model similar to **Android**:
 
 Olares comprises the following core components:
 
-- [**Olares ID**](./concepts/olares-id.md): A decentralized identity and credit system that facilitates secure, trustless exchanges of information and value. It serves as your digital identity across the Olares ecosystem.
+- [**Olares ID**](../developer/concepts/olares-id.md): A decentralized identity and credit system that facilitates secure, trustless exchanges of information and value. It serves as your digital identity across the Olares ecosystem.
 
 - [**Olares OS**](https://github.com/beclab/Olares): An open-source, self-hosted operating system that transforms edge devices into robust personal cloud.
 
@@ -73,7 +73,7 @@ Before you roll up your sleeves and get your hands dirty with Olares, feel free 
     <p class="cta-title">Learn how-tos</p>
     <p class="cta-description">Comprehensive system app guides covering daily tasks of using Olares.</p>
   </a>
-  <a href="./concepts/" class="cta-link">
+  <a href="../developer/concepts/" class="cta-link">
     <p class="cta-title">Understand Olares</p>
     <p class="cta-description">Grasp the fundamental principles and architecture behind Olares.</p>
   </a>
