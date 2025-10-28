@@ -2,106 +2,31 @@
 
 ## 命令说明
 
-`user activate`命令用于使用指定的 Olares ID、助记词和密码来激活 Olares 账户。
+`user activate`命令用于激活 Olares 账户。
 
 ```bash
-olares-cli user activate {Olares ID} [选项]
+olares-cli user activate <Olares ID> [选项]
 ```
+## 参数
+
+| 参数 | 描述 | 是否必需 |
+|--|--|--|
+| `<Olares ID>` | Olares 生态系统中的唯一标识符，<br>格式类似电子邮件地址（例如：`alice123@olares.com`）| **是** |
 
 ## 选项
 
-<table style="width:100%; table-layout:fixed; border-collapse:collapse;">
-  <colgroup>
-    <col style="width: 16%;" />  
-    <col style="width: 8%;" />   
-    <col style="width: 35%;" />   
-    <col style="width: 10%;" />   
-    <col style="width: 30%;" />  
-  </colgroup>
-  <thead>
-    <tr>
-      <th>选项</th>
-      <th>简写</th>
-      <th>用途</th>
-      <th>是否必需</th>
-      <th>默认值</th>
-    </tr>
-  </thead>
-    <tbody>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--bfl</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">指定 Bfl （聚合后端接口）服务 URL。<br>例如：<code>https://example.com</code></td>
-      <td style="text-align:left; word-break:break-word;">否</td>
-      <td style="text-align:left; word-break:break-word;"><code>http://127.0.0.1:30180</code></td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--enable-tunnel</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">启用隧道模式进行激活</td>
-      <td style="text-align:left; word-break:break-word;">否</td>
-      <td style="text-align:left; word-break:break-word;"><code>false</code></td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--help</code></td>
-      <td style="text-align:left; word-break:break-word;"><code>-h</code></td>
-      <td style="text-align:left; word-break:break-word;">显示帮助信息。</td>
-      <td style="text-align:left; word-break:break-word;">否</td>
-      <td style="text-align:left; word-break:break-word;">无</td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--host</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">指定 FRP（Fast Reverse Proxy，快速反向代理）的主机地址。<br>
-仅在启用隧道模式时使用。</td>
-      <td style="text-align:left; word-break:break-word;">否</td>
-      <td style="text-align:left; word-break:break-word;">无</td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--jws</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">指定 FRP 的 JWS（JSON Web Signature）令牌。
-<br>仅在启用隧道模式时使用。</td>
-      <td style="text-align:left; word-break:break-word;">否</td>
-      <td style="text-align:left; word-break:break-word;">无</td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--language</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">设置系统语言。</td>
-      <td style="text-align:left; word-break:break-word;">否</td>
-      <td style="text-align:left; word-break:break-word;"><code>en-US</code></td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--location</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">设置系统时区位置。</td>
-      <td style="text-align:left; word-break:break-word;">否</td>
-      <td style="text-align:left; word-break:break-word;"><code>Asia/Shanghai</code></td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--mnemonic</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">指定用于激活的 12 个助记词。</td>
-      <td style="text-align:left; word-break:break-word;">是</td>
-      <td style="text-align:left; word-break:break-word;">无</td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--password</code></td>
-      <td style="text-align:left; word-break:break-word;"><code>-p</code></td>
-      <td style="text-align:left; word-break:break-word;">指定用于激活的 Olares 登录密码。</td>
-      <td style="text-align:left; word-break:break-word;">是</td>
-      <td style="text-align:left; word-break:break-word;">无</td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--vault</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">指定 Vault 服务的 URL。<br>例如：<code>https://example.com</code></td>
-      <td style="text-align:left; word-break:break-word;">否</td>
-      <td style="text-align:left; word-break:break-word;"><code>http://127.0.0.1:30181</code></td>
-    </tr>
-  </tbody>
-</table>
+| 选项 | 简写 | 用途 | 是否必需 | 默认值 |
+|--|--|--|--|--|
+| `--bfl` | | 指定聚合后端接口（BFL）服务地址。<br>例如：`https://example.com` | 否 | `http://127.0.0.1:30180` |
+| `--enable-tunnel` | | 启用隧道模式进行激活。 | 否 | `false` |
+| `--help` | `-h` | 显示帮助信息。 | 否 | 无 |
+| `--host` | | 指定快速反向代理（FRP）主机地址。<br>仅当`--enable-tunnel`设置为`true`时使用。 | 否 | 无 |
+| `--jws` | | 指定指定 FRP 的 JWS（JSON Web Signature）令牌。<br>仅当`--enable-tunnel`设置为`true`时使用。| 否 | 无 |
+| `--language` | | 设置系统语言。| 否 | `en-US` |
+| `--location` | | 设置系统时区位置。 | 否 | `Asia/Shanghai` |
+| `--mnemonic` | | 指定用于激活的 12 个助记词。 | **是** | 无 |
+| `--password` | `-p` | 指定用于激活的 Olares 登录密码。 | **是** | 无 |
+| `--vault` | | 指定 Vault 服务的 URL。<br>例如：`https://example.com` | 否 | `http://127.0.0.1:30181` |
 
 ## 使用示例
 

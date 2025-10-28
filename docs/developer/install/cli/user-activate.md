@@ -2,104 +2,31 @@
 
 ## Synopsis
 
-The `user activate` command is used to activate an existing Olares user account using the specified Olares ID, mnemonic phrase, and password.
+The `user activate` command is used to activate an existing Olares user account.
 
 ```bash
-olares-cli user activate {Olares ID} [options]
+olares-cli user activate <Olares ID> [options]
 ```
 
-## Options
+## Arguments
 
-<table style="width:100%; table-layout:fixed; border-collapse:collapse;">
-  <colgroup>
-    <col style="width: 16%;" />  
-    <col style="width: 8%;" />   
-    <col style="width: 35%;" />   
-    <col style="width: 10%;" />   
-    <col style="width: 30%;" />  
-  </colgroup>
-  <thead>
-    <tr>
-      <th>Option</th>
-      <th>Shorthand</th>
-      <th>Usage</th>
-      <th>Required</th>
-      <th>Default</th>
-    </tr>
-  </thead>
-    <tbody>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--bfl</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">Specifies the Bfl (Backend For Launcher) service URL (e.g., <code>https://example.com</code>).</td>
-      <td style="text-align:left; word-break:break-word;">No</td>
-      <td style="text-align:left; word-break:break-word;"><code>http://127.0.0.1:30180</code></td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--enable-tunnel</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">Enables tunnel mode for activation.</td>
-      <td style="text-align:left; word-break:break-word;">No</td>
-      <td style="text-align:left; word-break:break-word;"><code>false</code></td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--help</code></td>
-      <td style="text-align:left; word-break:break-word;"><code>-h</code></td>
-      <td style="text-align:left; word-break:break-word;">Displays help information.</td>
-      <td style="text-align:left; word-break:break-word;">No</td>
-      <td style="text-align:left; word-break:break-word;">N/A</td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--host</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">Specifies the FRP (Fast Reverse Proxy) host. <br>Only used when tunnel mode is enabled.</td>
-      <td style="text-align:left; word-break:break-word;">No</td>
-      <td style="text-align:left; word-break:break-word;">N/A</td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--jws</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">Specifies the FRP JWS token. <br>Only used when tunnel mode is enabled.</td>
-      <td style="text-align:left; word-break:break-word;">No</td>
-      <td style="text-align:left; word-break:break-word;">N/A</td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--language</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">Sets the system language.</td>
-      <td style="text-align:left; word-break:break-word;">No</td>
-      <td style="text-align:left; word-break:break-word;"><code>en-US</code></td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--location</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">Sets the timezone location.</td>
-      <td style="text-align:left; word-break:break-word;">No</td>
-      <td style="text-align:left; word-break:break-word;"><code>Asia/Shanghai</code></td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--mnemonic</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">Specifies the 12-word mnemonic phrase required for activation.</td>
-      <td style="text-align:left; word-break:break-word;">Yes</td>
-      <td style="text-align:left; word-break:break-word;">N/A</td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--password</code></td>
-      <td style="text-align:left; word-break:break-word;"><code>-p</code></td>
-      <td style="text-align:left; word-break:break-word;">Specifies the Olares login password for authentication.</td>
-      <td style="text-align:left; word-break:break-word;">Yes</td>
-      <td style="text-align:left; word-break:break-word;">N/A</td>
-    </tr>
-    <tr>
-      <td style="text-align:left; word-break:break-word;"><code>--vault</code></td>
-      <td style="text-align:left; word-break:break-word;"></td>
-      <td style="text-align:left; word-break:break-word;">Specifies the Vault service URL (e.g., <code>https://example.com</code>).</td>
-      <td style="text-align:left; word-break:break-word;">No</td>
-      <td style="text-align:left; word-break:break-word;"><code>http://127.0.0.1:30181</code></td>
-    </tr>
-  </tbody>
-</table>
+| Argument | Description | Required|
+|--|--|--|
+| `<Olares ID>` | The unique user identifier within the Olares ecosystem, <br>similar to an email address(e.g., `alice123@olares.com`).| **Yes** |
+
+## Options
+| Option | Shorthand | Usage | Required | Default |
+|--|--|--|--|--|
+| `--bfl` | | Specifies the Backend For Launcher (BFL) service URL (e.g., `https://example.com`). | No | `http://127.0.0.1:30180` |
+| `--enable-tunnel` | | Enables tunnel mode for activation. | No | `false` |
+| `--help` | `-h` | Displays help information. | No | N/A |
+| `--host` | | Specifies the Fast Reverse Proxy (FRP) host. <br>Only used when the `--enable-tunnel` option is set to `true`. | No | N/A |
+| `--jws` | | Specifies the FRP JWS token.<br>Only used when the `--enable-tunnel` option is set to `true`.| No | N/A |
+| `--language` | | Sets the system language. | No | `en-US` |
+| `--location` | | Sets the timezone location. | No | `Asia/Shanghai` |
+| `--mnemonic` | | Specifies the 12-word mnemonic phrase required for activation. | **Yes** | N/A |
+| `--password` | `-p` | Specifies the Olares login password for authentication.	 | **Yes** | N/A |
+| `--vault` | | Specifies the Vault service URL (e.g., `https://example.com`). | No | `http://127.0.0.1:30181` |
 
 ## Example
 
