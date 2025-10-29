@@ -63,7 +63,7 @@ spec:
       serviceAccount: bytetrade-sys-ops
       containers:
       - name: proxy
-        image: beclab/fsnotify-proxy:0.1.10
+        image: beclab/fsnotify-proxy:0.1.11
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5079
