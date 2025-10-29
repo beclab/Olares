@@ -33,6 +33,7 @@ userEnvs:
   - envName: OLARES_USER_SMTP_SECURE
     type: bool
     editable: true
+    default: "true"
   - envName: OLARES_USER_SMTP_USE_TLS
     type: bool
     editable: true
@@ -54,15 +55,18 @@ userEnvs:
   - envName: OLARES_USER_HUGGINGFACE_SERVICE
     type: url
     editable: true
+    default: "https://huggingface.co/"
   - envName: OLARES_USER_HUGGINGFACE_TOKEN
     type: password
     editable: true
   - envName: OLARES_USER_PYPI_SERVICE
     type: url
     editable: true
+    default: "https://pypi.org/simple/"
   - envName: OLARES_USER_GITHUB_SERVICE
     type: url
     editable: true
+    default: "https://github.com/"
   - envName: OLARES_USER_GITHUB_TOKEN
     type: password
     editable: true
