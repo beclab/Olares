@@ -9,6 +9,7 @@ The **Developer** page in Olares **Settings** is designed for developers and adv
 * **Repository Management**
 * **Image Management**
 * **Export System Logs**
+* **Set System Environment Variables**
 
 ## Repository management
 
@@ -64,26 +65,42 @@ Once downloaded, you can attach the log file to a GitHub feedback post and share
 
 ## Set system environment variables
 
-System environment variables control key Olares functions. During activation, the system automatically configures several environment variables based on your Olares ID. For example:
+System environment variables, prefixed with `OLARES_SYSTEM_`, let you centrally manage important Olares configurations such as SMTP and API keys, making setup and maintenance simpler.
 
-- If your ID ends in `.cn` (like `user@olares.cn`), the variables will be set to use `.cn` service URLs.
+You can view and adjust these variables at any time to optimize network access and improve overall system performance.
 
-- If your ID ends in `.com` (like `user@olares.com`), the variables will be set to use `.com` service URLs.
+:::tip Note
 
-This optimizes performance by ensuring that component interface calls and downloads are routed to the fastest, most geographically appropriate network servers.
+- System environment variables are predefined. You can edit their values, but you **cannot** add or delete variables or change their types.
 
-The following variables are automatically set:
+- If a variable is marked as `required: true` and has no value, the system will prompt you to configure it before installing any application that depends on it.
+::: 
 
-- `OLARES_SYSTEM_REMOTE_SERVICE` – Used for calling component interfaces.
-- `OLARES_SYSTEM_CDN_SERVICE` – Used for downloading and content delivery.
+### Automatic configuration
 
-These values are set automatically and cannot be configured during Olares installation. To manually change these or other system variables:
+When you activate Olares, the system automatically configures certain environment variables based on your Olares ID. This helps Olares connect to the network region closest to you for faster downloads and smoother performance.
+
+- If your Olares ID ends with `.cn` (for example, `user@olares.cn`), the variables will use `.cn` service URLs.
+
+- If your Olares ID ends with `.com` (for example, `user@olares.com`), the variables will use `.com` service URLs.
+
+Olares automatically sets the following variables to ensure optimal network access:
+
+- `OLARES_SYSTEM_REMOTE_SERVICE` – Handles component interface calls.
+
+- `OLARES_SYSTEM_CDN_SERVICE` – Manages downloads and content delivery.
+
+These variables take effect automatically after activation, ensuring Olares always uses the fastest and most suitable network connections.
+
+### Modify variables
+
+To manually change system environment variables:
 
 1.  Navigate to **Settings** > **Developer** > **System Environment Variables**.
 
-2.  Locate the variable you wish to modify (e.g., `OLARES_SYSTEM_CDN_SERVICE`).
+2.  Locate the variable you want to modify.
 
-3.  Click the <i class="material-symbols-outlined">edit_square</i> icon to change its value.
+3.  Click the <i class="material-symbols-outlined">edit_square</i> icon to change its value. You cannot edit grayed-out variables.
 
 4.  Enter the new value and click **Confirm** to apply the changes.
     ![Set Sys Env Var](/images/manual/olares/sys-env-var.png#bordered)

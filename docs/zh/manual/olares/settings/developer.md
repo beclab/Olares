@@ -8,6 +8,7 @@ description: 了解如何利用开发者页面管理仓库、查看系统镜像�
 * **仓库管理**
 * **镜像管理**
 * **日志导出**
+* **系统环境变量管理**
 
 ## 仓库管理
 
@@ -60,26 +61,40 @@ description: 了解如何利用开发者页面管理仓库、查看系统镜像�
 
 ## 设置系统环境变量
 
-系统环境变量控制着 Olares 的关键功能。在激活过程中，系统会根据你的 Olares ID 自动配置多个环境变量。例如：
+系统环境变量以`OLARES_SYSTEM_`开头，用于**集中管理** Olares 的核心功能配置，例如 SMTP、API Key 等通用设置。
 
-- 如果你的 Olares ID 以`.cn`结尾（如`user@olares.cn`），系统会将环境变量值设置为使用`.cn`的服务地址。
+你可以在此页面查看和修改这些变量，以优化网络访问和系统性能。
 
-- 如果你的 Olares ID 以`.com`结尾（如`user@olares.com`），系统会将环境变量值设置为使用`.com`的服务地址。
+:::tip 说明
 
-这种配置方式可确保系统调用组件接口或下载文件时，连接到最快、最合适的网络服务器，从而优化性能。
+- 你无法在此处新增或删除系统环境变量，也无法修改它们的类型或其他属性。
+
+- 如果某个环境变量的属性为`required: true`且尚未设置值，系统会在安装依赖该变量的应用时，提示你先完成配置。
+::: 
+
+### 自动配置
+
+激活 Olares 时，系统会根据你的 Olares ID 自动设置部分环境变量，以确保连接到最适合的网络区域，从而提高下载与访问速度。
+
+- 如果 Olares ID 以`.cn`结尾（如`user@olares.cn`），系统会将环境变量值设置为使用`.cn`的服务地址。
+- 如果 Olares ID 以`.com`结尾（如`user@olares.com`），系统会将环境变量值设置为使用`.com`的服务地址。
 
 系统会自动设置以下环境变量：
 
 - `OLARES_SYSTEM_REMOTE_SERVICE`：用于调用组件接口。
 - `OLARES_SYSTEM_CDN_SERVICE`：用于下载和内容分发。
 
-上述变量在安装过程中无法修改。如需手动更改这些或其他系统环境变量，请按照以下步骤操作：
+这些变量会在系统激活时自动生效，确保 Olares 使用最快、最合适的网络服务。
 
-1.  在 Olares 桌面启动**设置** > **开发者** > **系统环境变量**。
+### 修改变量
 
-2.  找到你想修改的变量（如`OLARES_SYSTEM_CDN_SERVICE`）。
+如果你需要手动调整系统环境变量，请按以下步骤操作：
 
-3.  点击<i class="material-symbols-outlined">edit_square</i>图标修改变量值。
+1.  从 Olares 桌面进入**设置 > 开发者 > 系统环境变量**。
 
-4.  输入新的值后，点击**确认**应用修改。
-    ![设置系统环境变量](/images/zh/manual/olares/sys-env-var-cn.png#bordered)
+2.  在列表中找到你要修改的变量。
+
+3.  点击<i class="material-symbols-outlined">edit_square</i>图标。置灰的变量不可修改。
+
+4.  输入新值后，点击**确认**保存更改。
+   ![设置系统环境变量](/images/zh/manual/olares/sys-env-var-cn.png#bordered)
