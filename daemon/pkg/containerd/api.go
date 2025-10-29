@@ -50,9 +50,9 @@ func GetRegistryMirror(ctx *fiber.Ctx) (*Mirror, error) {
 	return &mirror, nil
 }
 
-// EnsureRegistryMirror ensures the given endpoint exists for a registry mirror.
-// Returns updated=true if a change was made and persisted (containerd restarted),
-// or updated=false if the endpoint already existed. Returns error on failure.
+// EnsureRegistryMirror ensures the given endpoint is the first entry for the registry mirror.
+// Returns updated=true if configuration changed and was persisted (containerd restarted),
+// or updated=false if it was already first. Returns error on failure.
 func EnsureRegistryMirror(ctx context.Context, registry string, endpoint string) (bool, error) {
 	if registry == "" {
 		registry = DefaultRegistryName
@@ -82,26 +82,43 @@ func EnsureRegistryMirror(ctx context.Context, registry string, endpoint string)
 	}
 
 	mirror := criPluginConfig.Registry.Mirrors[registry]
-	exists := false
-	for _, ep := range mirror.Endpoints {
-		if ep == endpoint {
-			exists = true
-			break
+	// Build a new endpoints list with the ensured endpoint at the front
+	// and without duplicates (preserving the order of the remaining items).
+	original := mirror.Endpoints
+	var others []string
+	for _, ep := range original {
+		if ep != endpoint {
+			others = append(others, ep)
 		}
 	}
-	if !exists {
-		mirror.Endpoints = append(mirror.Endpoints, endpoint)
-		criPluginConfig.Registry.Mirrors[registry] = mirror
-		if err := updateCRIPluginConfig(config, criPluginConfig); err != nil {
-			return false, err
+	newEndpoints := make([]string, 0, 1+len(others))
+	newEndpoints = append(newEndpoints, endpoint)
+	newEndpoints = append(newEndpoints, others...)
+
+	// If nothing changes (already first and unique), no update needed.
+	equal := len(original) == len(newEndpoints)
+	if equal {
+		for i := range original {
+			if original[i] != newEndpoints[i] {
+				equal = false
+				break
+			}
 		}
-		if err := restartContainerd(ctx); err != nil {
-			klog.Errorf("failed to restart containerd: %v", err)
-			return false, err
-		}
-		return true, nil
 	}
-	return false, nil
+	if equal {
+		return false, nil
+	}
+
+	mirror.Endpoints = newEndpoints
+	criPluginConfig.Registry.Mirrors[registry] = mirror
+	if err := updateCRIPluginConfig(config, criPluginConfig); err != nil {
+		return false, err
+	}
+	if err := restartContainerd(ctx); err != nil {
+		klog.Errorf("failed to restart containerd: %v", err)
+		return false, err
+	}
+	return true, nil
 }
 
 func UpdateRegistryMirror(ctx *fiber.Ctx) (*Mirror, error) {
