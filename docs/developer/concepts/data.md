@@ -30,7 +30,7 @@ Olares OS uses [JuiceFS](https://juicefs.com) as the underlying multi-physical n
 
 As for the back-end object storage solution of JuiceFS, we also provide two solutions: S3 and MinIO.
 
-By default, Olares uses the local file system (FS) when installed locally. However, if the `--with-juicefs=true` option is specified when running the [`olares-cli prepare`](../../developer/install/cli/prepare.md) command, JuiceFS will be installed and used. Additionally, a MinIO instance will be set up as the backend storage.
+By default, Olares uses the local file system (FS) when installed locally. However, if the `--with-juicefs=true` option is specified when running the [`olares-cli prepare`](../install/cli/prepare.md) command, JuiceFS will be installed and used. Additionally, a MinIO instance will be set up as the backend storage.
 
 ### Local disk
 
@@ -46,33 +46,33 @@ For applications, there are 3 different storage paths to deal with different usa
 
 The `UserData` storage path stores files that change infrequently but require cross-application access, such as documents, photos, and videos.
 
-Applications can obtain access permissions to a directory under the Home directory by applying for [UserData](../../developer/develop/package/manifest.md#userdata) permissions in `OlaresManifest.yaml`. For example, you can request permissions to the Picture directory for PhotoPrism, and permissions to the Downloads directory for qBittorrent and Jellyfin.
+Applications can obtain access permissions to a directory under the Home directory by applying for [UserData](../develop/package/manifest.md#userdata) permissions in `OlaresManifest.yaml`. For example, you can request permissions to the Picture directory for PhotoPrism, and permissions to the Downloads directory for qBittorrent and Jellyfin.
 
 ### AppData
 
 The `AppData` storage path stores data that does not change frequently but needs to span across nodes. For example, configuration files.
 
-Applications can apply for [AppData](../../developer/develop/package/manifest.md#appdata) permissions in `OlaresManifest.yaml`.
+Applications can apply for [AppData](../develop/package/manifest.md#appdata) permissions in `OlaresManifest.yaml`.
 
 ### AppCache
 
 The `AppCache` storage path is allocated for applications that directly operate the disk with good performance. The disadvantage is that it cannot be accessed across nodes. For example, the system database, application log, and cache.
 
-Applications can apply for [AppCache](../../developer/develop/package/manifest.md#appcache) permissions in `OlaresManifest.yaml`.
+Applications can apply for [AppCache](../develop/package/manifest.md#appcache) permissions in `OlaresManifest.yaml`.
 
-## [PostgreSQL](../../developer/develop/advanced/database.md#rds)
+## [PostgreSQL](../develop/advanced/database.md#rds)
 
 As one of the most popular open-source relational databases, PostgreSQL has excellent performance and rich plug-in functions. Olares OS deploys PostgreSQL on the system along with the popular Citus distributed database plug-in. At the same time, its cluster is managed through the PG Operator in the TAPR component. Users can easily expand the number of PostgreSQL nodes, and back up or restore data along with the entire Olares system.
 
 If the PostgreSQL database application declared by the developer in the application is Distributed, then Olares will build its database on Citus, allowing the application to fully utilize the capabilities of the distributed PG database.
 
-## [MongoDB](../../developer/develop/advanced/database.md#nosql)
+## [MongoDB](../develop/advanced/database.md#nosql)
 
 MongoDB, as a representative of NoSQL, has a wide range of application scenarios in the Internet of Things field. By deploying [Percona Operator for MongoDB](https://github.com/percona/percona-server-mongodb-operator), developers have a cloud-native version of MongoDB cluster in Olares.
 
 Like PostgreSQL, Olares also manages MongoDB backup and restore in a unified manner. Users do not need to have any DBA technical capabilities to easily implement functions such as scheduled backup, incremental backup, and fixed-point restore.
 
-## [Redis](../../developer/develop/advanced/database.md#cache)
+## [Redis](../develop/advanced/database.md#cache)
 
 There is no doubt that Redis can be regarded as the most popular memory cache software currently. It has rich instructions and derives a variety of data types based on Key-Value data. Many systems even use it as KV data storage. Olares OS also deploys a customized [Redis Cluster Operator](https://github.com/beclab/redis-cluster-operator) in the system, providing a cloud-native version of Redis Cluster.
 
@@ -104,7 +104,7 @@ The Backup component also has data restoration capabilities. You can download a 
 
 - User
 
-  [Manage files](../olares/files/index.md)<br>
+  [Manage files](../../manual/olares/files/index.md)<br>
   [Back up and restore](../../space/backup-restore.md) 
 
 - Developer

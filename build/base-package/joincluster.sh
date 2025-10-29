@@ -149,7 +149,7 @@ export VERSION="#__VERSION__"
 
 if [[ "x${VERSION}" == "x" || "x${VERSION:3}" == "xVERSION__" ]]; then
     echo "error: Olares version is unspecified, please set the VERSION env var and rerun this script."
-    echo "for example: VERSION=1.12.2-20241124 bash $0"
+    echo "for example: VERSION=1.12.3-20241124 bash $0"
     exit 1
 fi
 
