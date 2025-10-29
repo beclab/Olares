@@ -8,11 +8,11 @@ import (
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/containerd"
 	"github.com/beclab/Olares/daemon/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
 )
 
@@ -52,12 +52,6 @@ func (w *systemEnvWatcher) Watch(ctx context.Context) {
 		return
 	}
 
-	dc, err := utils.GetDynamicClient()
-	if err != nil {
-		klog.V(4).Infof("systemenv watcher: dynamic client not ready: %v", err)
-		return
-	}
-
 	execCtx, cancel := context.WithCancel(ctx)
 	w.cancel = cancel
 	w.running = true
@@ -69,7 +63,7 @@ func (w *systemEnvWatcher) Watch(ctx context.Context) {
 			klog.V(4).Info("systemenv watcher exited")
 		}()
 
-		startSystemEnvWatch(execCtx, dc, func(eventType watch.EventType, obj map[string]any) {
+		startSystemEnvWatch(execCtx, func(eventType watch.EventType, obj map[string]any) {
 			klog.V(5).Infof("systemenv event: %s", eventType)
 
 			if eventType != watch.Added && eventType != watch.Modified {
@@ -77,7 +71,7 @@ func (w *systemEnvWatcher) Watch(ctx context.Context) {
 			}
 
 			envName, _ := obj["envName"].(string)
-			if envName != "OLARES_SYSTEM_CDN_SERVICE" && envName != "OLARES_SYSTEM_REMOTE_SERVICE" {
+			if envName != "OLARES_SYSTEM_CDN_SERVICE" && envName != "OLARES_SYSTEM_REMOTE_SERVICE" && envName != "OLARES_SYSTEM_DOCKERHUB_SERVICE" {
 				return
 			}
 
@@ -104,6 +98,19 @@ func (w *systemEnvWatcher) Watch(ctx context.Context) {
 					commands.OLARES_REMOTE_SERVICE = val
 					klog.Infof("updated OLARES_REMOTE_SERVICE: %s -> %s", old, val)
 				}
+			case "OLARES_SYSTEM_DOCKERHUB_SERVICE":
+				if val != "" {
+					go func(endpoint string) {
+						if updated, err := containerd.EnsureRegistryMirror(execCtx, containerd.DefaultRegistryName, endpoint); err != nil {
+							klog.Errorf("failed to ensure docker.io mirror endpoint %s: %v", endpoint, err)
+							return
+						} else if updated {
+							klog.Infof("ensured docker.io mirror endpoint: %s", endpoint)
+						} else {
+							klog.V(5).Infof("docker.io mirror endpoint already present: %s", endpoint)
+						}
+					}(val)
+				}
 			}
 		})
 	}()
@@ -115,9 +122,14 @@ var systemEnvGVR = schema.GroupVersionResource{
 	Resource: "systemenvs",
 }
 
-func startSystemEnvWatch(ctx context.Context, dc dynamic.Interface, handle func(watch.EventType, map[string]any)) {
+func startSystemEnvWatch(ctx context.Context, handle func(watch.EventType, map[string]any)) {
 	for {
-		// 1) List existing resources to establish initial state
+		dc, err := utils.GetDynamicClient()
+		if err != nil {
+			klog.V(4).Infof("systemenv watcher: dynamic client not ready: %v", err)
+			return
+		}
+
 		list, err := dc.Resource(systemEnvGVR).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			select {

@@ -11,7 +11,7 @@ The **first-come, first-served** system in Olares ID registration may present so
 
 ## VC process for Olares ID 
 
-To address the potential faireness concerns, we adopted principles from **Self-Sovereign Identity (SSI)** services proposed by the Web5 team, along with the [VC process](/manual/concepts/vc.md#verification-process) of Olares ID. This led us to design an **Issuer and Verifier** process to assist users in applying for a **Olares ID**.
+To address the potential faireness concerns, we adopted principles from **Self-Sovereign Identity (SSI)** services proposed by the Web5 team, along with the [VC process](/developer/concepts/vc.md#verification-process) of Olares ID. This led us to design an **Issuer and Verifier** process to assist users in applying for a **Olares ID**.
 
 ![alt text](/images/developer/contribute/vc-process.jpeg)
 

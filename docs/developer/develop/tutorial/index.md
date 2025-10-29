@@ -3,7 +3,7 @@
 Welcome to the Olares developer guides. These detailed tutorials offer a step-by-step guide on building an Olares Application from scratch.
 
 To get started, you can learn some basic concepts of Olares, such as:
-- [Olares architectural components](../../../manual/concepts/architecture.md)
+- [Olares architectural components](../../concepts/architecture.md)
 - [Olares Application Chart](../../develop/package/chart.md)
 - [Olares Extension on Helm](../package/extension.md)
 
