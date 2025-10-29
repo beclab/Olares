@@ -107,7 +107,7 @@ Use LarePass to collect web content and follow RSS feeds.
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
     </tr>
     <tr>
-      <td rowspan="7" style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle; font-weight: bold;">Knowledge & File management</td>
+      <td rowspan="7" style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle; font-weight: bold;">Knowledge & file management</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Sync files across devices</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
