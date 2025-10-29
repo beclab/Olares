@@ -10,11 +10,12 @@ import (
 )
 
 type activateUserOptions struct {
-	Mnemonic string
-	BflUrl   string
-	VaultUrl string
-	Password string
-	OlaresId string
+	Mnemonic      string
+	BflUrl        string
+	VaultUrl      string
+	Password      string
+	OlaresId      string
+	ResetPassword string
 
 	Location     string
 	Language     string
@@ -53,6 +54,7 @@ func (o *activateUserOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.EnableTunnel, "enable-tunnel", false, "Enable tunnel mode (default: false)")
 	cmd.Flags().StringVar(&o.Host, "host", "", "FRP host (only used when tunnel is enabled)")
 	cmd.Flags().StringVar(&o.Jws, "jws", "", "FRP JWS token (only used when tunnel is enabled)")
+	cmd.Flags().StringVar(&o.ResetPassword, "reset-password", "", "New password for resetting (required for password reset)")
 }
 
 func (o *activateUserOptions) Validate() error {
@@ -64,6 +66,9 @@ func (o *activateUserOptions) Validate() error {
 	}
 	if o.Mnemonic == "" {
 		return fmt.Errorf("Mnemonic is required")
+	}
+	if o.ResetPassword == "" {
+		return fmt.Errorf("Reset password is required")
 	}
 	return nil
 }
@@ -88,7 +93,7 @@ func (c *activateUserOptions) Run() error {
 		return fmt.Errorf("failed to initialize global stores: %v", err)
 	}
 
-	err = wizard.UserBindTerminus(c.Mnemonic, c.BflUrl, c.VaultUrl, c.Password, c.OlaresId, localName)
+	accessToken, err := wizard.UserBindTerminus(c.Mnemonic, c.BflUrl, c.VaultUrl, c.Password, c.OlaresId, localName)
 	if err != nil {
 		return fmt.Errorf("user bind failed: %v", err)
 	}
@@ -96,7 +101,7 @@ func (c *activateUserOptions) Run() error {
 	log.Printf("✅ Vault activation completed successfully!")
 	log.Printf("🚀 Starting system activation wizard...")
 
-	wizardConfig := wizard.CustomWizardConfig(c.Location, c.Language, c.EnableTunnel, c.Host, c.Jws, c.Password, c.Password)
+	wizardConfig := wizard.CustomWizardConfig(c.Location, c.Language, c.EnableTunnel, c.Host, c.Jws, c.Password, c.ResetPassword)
 
 	log.Printf("Wizard configuration:")
 	log.Printf("  Location: %s", wizardConfig.System.Location)
@@ -107,7 +112,7 @@ func (c *activateUserOptions) Run() error {
 		log.Printf("  FRP JWS: %s", wizardConfig.System.FRP.Jws)
 	}
 
-	err = wizard.RunActivationWizard(c.BflUrl, "", wizardConfig)
+	err = wizard.RunActivationWizard(c.BflUrl, accessToken, wizardConfig)
 	if err != nil {
 		return fmt.Errorf("activation wizard failed: %v", err)
 	}

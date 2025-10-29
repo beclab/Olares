@@ -514,145 +514,135 @@ const side = {
     },
   ],
   "/zh/developer/": [
-  {
-    text: "Olares 安装详解",
-    link: "/zh/developer/install/",
-    items: [
-      {
-        text: "安装概述",
-        link: "/zh/developer/install/installation-overview",
-      },
-      {
-        text: "安装流程",
-        link: "/zh/developer/install/installation-process",
-      },
-      {
-        text: "Olares Home",
-        link: "/zh/developer/install/olares-home",
-      },
-      {
-        text: "环境变量",
-        link: "/zh/developer/install/environment-variables",
-      },
-      {
-        text: "Olares CLI",
-        collapsed: true,
-        link: "/zh/developer/install/cli/olares-cli",
-        items: [
-          { text: "gpu", link: "/zh/developer/install/cli/gpu" },
-          { text: "osinfo", link: "/zh/developer/install/cli/osinfo" },
-          { text: "node", link: "/zh/developer/install/cli/node" },
-          {
-            text: "backups",
-            link: "/zh/developer/install/cli/backups",
-            collapsed: true,
-            items: [
+    {
+      text: "概念",
+      link: "/zh/developer/concepts/",
+      items: [
+        { text: "系统架构", link: "/zh/developer/concepts/system-architecture" },
+        { text: "Olares ID",
+          link: "/zh/developer/concepts/olares-id",
+          collapsed: true,
+          items: [
+            {
+              text: "去中心化标识符",
+              link: "/zh/developer/concepts/did",
+            },
+            {
+              text: "DID Registry",
+              link: "/zh/developer/concepts/registry",
+            },
+            {
+              text: "可验证凭证",
+              link: "/zh/developer/concepts/vc",
+            },
+            {
+              text: "自治声誉",
+              link: "/zh/developer/concepts/reputation",
+            },
+            //      {
+            //     text: "主权网络",
+            //   link: "/zh/developer/concepts/self-sovereign-network",
+            //  },
+            {
+              text: "身份钱包",
+              link: "/zh/developer/concepts/wallet",
+            },
+          ],
+        },
+        { text: "账户", link: "/zh/developer/concepts/account" },
+        { text: "应用", link: "/zh/developer/concepts/application" },
+        { text: "网络", link: "/zh/developer/concepts/network" },
+        { text: "数据", link: "/zh/developer/concepts/data" },
+        { text: "密钥", link: "/zh/developer/concepts/secrets" },
+      ],
+    },
+    {
+      text: "Olares 安装详解",
+      link: "/zh/developer/install/",
+      items: [
+        {
+          text: "安装概述",
+          link: "/zh/developer/install/installation-overview",
+        },
+        {
+          text: "安装流程",
+          link: "/zh/developer/install/installation-process",
+        },
+        {
+          text: "Olares Home",
+          link: "/zh/developer/install/olares-home",
+        },
+        {
+          text: "环境变量",
+          link: "/zh/developer/install/environment-variables",
+        },
+        {
+          text: "Olares CLI",
+          collapsed: true,
+          link: "/zh/developer/install/cli/olares-cli",
+          items: [
+            {text: "gpu", link: "/zh/developer/install/cli/gpu"},
+            {text: "osinfo", link: "/zh/developer/install/cli/osinfo"},
+            {text: "node", link: "/zh/developer/install/cli/node"},
+            {
+              text: "backups",
+              link: "/zh/developer/install/cli/backups",
+              collapsed: true,
+              items: [
                 {text: "download", link: "/zh/developer/install/cli/backups-download"},
                 {text: "region", link: "/zh/developer/install/cli/backups-region"},
                 {text: "backup", link: "/zh/developer/install/cli/backups-backup"},
                 {text: "restore", link: "/zh/developer/install/cli/backups-restore"},
                 {text: "snapshots", link: "/zh/developer/install/cli/backups-snapshots"},
-                ],
-          },
-          {
-            text: "change-ip",
-            link: "/zh/developer/install/cli/change-ip",
-          },
-          {
-            text: "download",
-            link: "/zh/developer/install/cli/download",
-          },
-          { text: "info", link: "/zh/developer/install/cli/info" },
-          {
-            text: "install",
-            link: "/zh/developer/install/cli/install",
-          },
-          {
-            text: "logs",
-            link: "/zh/developer/install/cli/logs",
-          },
-          {
-            text: "precheck",
-            link: "/zh/developer/install/cli/precheck",
-          },
-          {
-            text: "prepare",
-            link: "/zh/developer/install/cli/prepare",
-          },
-          {
-            text: "release",
-            link: "/zh/developer/install/cli/release",
-          },
-          {
-            text: "start",
-            link: "/zh/developer/install/cli/start",
-          },
-          {
-            text: "stop",
-            link: "/zh/developer/install/cli/stop",
-          },
-          {
-            text: "uninstall",
-            link: "/zh/developer/install/cli/uninstall",
-          },
-        ],
-      },
+              ],
+            },
+            {
+              text: "change-ip",
+              link: "/zh/developer/install/cli/change-ip",
+            },
+            {
+              text: "download",
+              link: "/zh/developer/install/cli/download",
+            },
+            {text: "info", link: "/zh/developer/install/cli/info"},
+            {
+              text: "install",
+              link: "/zh/developer/install/cli/install",
+            },
+            {
+              text: "logs",
+              link: "/zh/developer/install/cli/logs",
+            },
+            {
+              text: "precheck",
+              link: "/zh/developer/install/cli/precheck",
+            },
+            {
+              text: "prepare",
+              link: "/zh/developer/install/cli/prepare",
+            },
+            {
+              text: "release",
+              link: "/zh/developer/install/cli/release",
+            },
+            {
+              text: "start",
+              link: "/zh/developer/install/cli/start",
+            },
+            {
+              text: "stop",
+              link: "/zh/developer/install/cli/stop",
+            },
+            {
+              text: "uninstall",
+              link: "/zh/developer/install/cli/uninstall",
+            },
+          ],
+        },
         {
           text: "版本说明",
           link: "/zh/developer/install/versioning",
         },
-          {
-            text: "其他安装方式",
-             link: "/zh/developer/install/additional-installations",
-            collapsed: true,
-            items: [
-              { text: "Linux（Docker 镜像）", link: "/zh/developer/install/linux-via-docker-compose" },
-              {
-                text: "macOS",
-                collapsed: true,
-                items: [
-                  {
-                    text: "使用脚本（推荐）",
-                    link: "/zh/developer/install/mac",
-                  },
-                  {
-                    text: "使用 Docker 镜像",
-                    link: "/zh/developer/install/mac-via-docker-image",
-                  },
-                ],
-              },
-              {
-                text: "Windows (WSL 2)",
-                collapsed: true,
-                items: [
-                  {
-                    text: "使用脚本（推荐）",
-                    link: "/zh/developer/install/windows",
-                  },
-                  {
-                    text: "使用 Docker 镜像",
-                    link: "/zh/developer/install/windows-via-docker-image",
-                  },
-                ],
-              },
-              {
-                text: "PVE",
-                collapsed: true,
-                items: [
-                  {
-                    text: "使用脚本（推荐）",
-                    link: "/zh/developer/install/pve",
-                  },
-                  {
-                    text: "使用 ISO 镜像",
-                    link: "/zh/developer/install/pve-via-iso-image",
-                  },
-                ],
-              },
-              { text: "LXC", link: "/zh/developer/install/lxc" },
-              { text: "树莓派", link: "/zh/developer/install/raspberry-pi" },
-            ],
-          },
       ],
     },
     {
@@ -889,8 +879,8 @@ const side = {
         },
       ],
     },
-  ],
-};
+    ],
+  };
 
 export const zh = defineConfig({
   lang: "zh",
@@ -902,7 +892,7 @@ export const zh = defineConfig({
       { text: "Olares", link: "zh/manual/overview" },
       { text: "Olares Space", link: "/zh/space/" },
       { text: "应用示例", link: "/zh/use-cases/" },
-      { text: "开发者文档", link: "/zh/developer/install/" },
+      { text: "开发者文档", link: "/zh/developer/concepts/" },
     ],
 
     sidebar: side,

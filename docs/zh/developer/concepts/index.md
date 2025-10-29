@@ -13,11 +13,11 @@ description: Olares 系统核心概念说明文档，阐述架构设计、身份
 通过以下概念来理解 Olares：
 
 - [架构](system-architecture.md)
-- [Olares ID](./olares-id.md)
-- [账户](./account.md)
-- [应用](./application.md)
-- [网络](./network.md)
-- [数据](./data.md)
-- [密钥](./secrets.md)
+- [Olares ID](olares-id.md)
+- [账户](account.md)
+- [应用](application.md)
+- [网络](network.md)
+- [数据](data.md)
+- [密钥](secrets.md)
 
 

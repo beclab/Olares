@@ -70,6 +70,6 @@ Each Olares ID is bound to a DID. When a user creates an account using Olares, a
 
 ## Learn more
 
-* [Create an Olares ID](../get-started/create-olares-id)
+* [Create an Olares ID](../../manual/get-started/create-olares-id)
 * [Decentralized identifier (DID)](did.md)
 * [Gmail issuer service](/developer/contribute/olares-id/verifiable-credential/olares.md#gmail-issuer-service)

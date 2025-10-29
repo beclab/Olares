@@ -13,7 +13,7 @@ An Olares ID consists of a local name and a domain. For example, in `alice123@ol
 - `olares.com`: Domain name
 
 :::tip Olares ID
-To learn more about what is Olares ID and why you need one, see [Olares ID](../concepts/olares-id.md).
+To learn more about what is Olares ID and why you need one, see [Olares ID](../../developer/concepts/olares-id.md).
 :::
 ## Download and install LarePass app
 
