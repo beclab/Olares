@@ -34,7 +34,10 @@ In this mode, a GPU can be bound to multiple applications and rotates execution 
 
 * At any instant, only one application uses all available compute and VRAM of the GPU.
 * Other apps enter a wait queue; Their VRAM contents (e.g., CUDA context, etc.) may be temporarily swapped out to system memory.
-* By default, GPUs run in time-slicing mode. Applications not assigned an exclusive GPU or dedicated VRAM will join the time-slicing queue when a time-slicing GPU is available.
+
+:::info Default GPU allocation
+By default, GPUs run in time-slicing mode. Applications without allocated GPU resources automatically join the time-sliced GPU queue. If no time-sliced GPU is available, the application pauses after a startup timeout. In this case, you need to allocate a GPU (for example, set a GPU to time-slicing mode, or assign a VRAM quota to the application), then manually resume the application.
+:::
 
 ### App Exclusive
 
@@ -96,8 +99,10 @@ On the **GPU details** page, select your desired mode from the **GPU mode** drop
   4. Repeat for other applications and click **Confirm**.
      ![VRAM slicing](/images/manual/olares/gpu-memory-slicing.png#bordered)
 
-:::tip Unbinding GPU allocation
-After binding GPUs to an application, you can release GPU resources by performing an unbind operation under the corresponding GPU mode.
+:::tip Unbinding
+- After binding an GPU or its VRAM to an application, you can manually unbind it under the corresponding GPU mode to release GPU resources.
+
+- When you switch a GPU’s allocation mode, all applications allocated under that mode are unbound, and the application containers will restart.
 :::
 
 
