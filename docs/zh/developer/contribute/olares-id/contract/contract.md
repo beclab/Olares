@@ -2,26 +2,26 @@
 
 Olares ID 的智能合约包含两个部分。
 
-- [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) 合约扮演着关键角色，并作为 [DID Registry (DID 注册表)](https://www.google.com/search?q=/manual/concepts/registry.md)。查看[合约](https://optimistic.etherscan.io/address/0x5da4fa8e567d86e52ef8da860de1be8f54cae97d)。
+- [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) 合约扮演着关键角色，并作为 [DID Registry (DID 注册表)](/developer/concepts/registry.md)。查看[合约](https://optimistic.etherscan.io/address/0x5da4fa8e567d86e52ef8da860de1be8f54cae97d)。
 - 第三方协议可以基于 [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) 扩展信誉系统。目前，已部署以下信誉协议：
     - [Otmoic Trader Reputation](https://github.com/otmoic/reputation-contract-evm/blob/main/contracts/Reputation.sol)。查看[合约](https://optimistic.etherscan.io/address/0xE924F7f68D1dcd004720e107F62c6303aF271ed3)。
     - [Application Reputation](https://github.com/beclab/terminusdid-contract-system/blob/main/src/taggers/TerminusAppMarketReputation.sol)。查看[合约](https://optimistic.etherscan.io/address/0x08065353D266121938B93D4B1071Bb52CD0C0EE4)。
 
 # TerminusDID
 
-TerminusDID 合约管理着一个源自 [Domain (域)](https://docs.jointerminus.com/overview/terminus/terminus-name.html#domain) 的层级结构。
+TerminusDID 合约管理着一个源自 [Domain (域)](/zh/developer/concepts/olares-id.md#domain) 的层级结构。
 
 ## 节点 (Node)
 
 每个节点都拥有几个默认属性。
 
-| 属性             | 描述                                                                                                                                                                                                          |
-| ---------------- |-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| name             | 指定[域名 (Domain Name)](/zh/manual/concepts/olares-id#域名类型)。某些域名可与 Olares ID 互换。                                                                                                                               |
-| id               | 每个节点也是一个遵循 **ERC-721** 标准的 NFT。其 id 是该 NFT 的唯一标识符，通过 `keccak256(name)` 计算得出。                                                                                                                                |
-| did,owner        | 节点的 `owner` 和 `did`，由相同的助记词派生而来。更多详情请见[此处](https://www.google.com/search?q=/manual/concepts/did.md)。\<br\>此外，存储 owner 的好处在于它遵循 **BIP44** 规范，有助于在 EVM 合约内进行节省 Gas 的签名验证。每个节点都隶属于一个 `owner`，该 `owner` 有权修改节点详情。 |
-| note             | 目前有三种类型：个人 (Individual)、组织 (Organization) 和实体 (Entity)。                                                                                                                                                     |
-| allowSubdomain   | 指示其是否为叶子节点。如果为 False，该节点无法派生更多子节点。                                                                                                                                                                          |
+| 属性             | 描述                                                                                                                                                                               |
+| ---------------- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| name             | 指定[域名 (Domain Name)](/zh/developer/concepts/olares-id#域名类型)。某些域名可与 Olares ID 互换。                                                                                                 |
+| id               | 每个节点也是一个遵循 **ERC-721** 标准的 NFT。其 id 是该 NFT 的唯一标识符，通过 `keccak256(name)` 计算得出。                                                                                                     |
+| did,owner        | 节点的 `owner` 和 `did`，由相同的助记词派生而来。更多详情请见[此处](/zh/developer/concepts/did.md)。\<br\>此外，存储 owner 的好处在于它遵循 **BIP44** 规范，有助于在 EVM 合约内进行节省 Gas 的签名验证。每个节点都隶属于一个 `owner`，该 `owner` 有权修改节点详情。 |
+| note             | 目前有三种类型：个人 (Individual)、组织 (Organization) 和实体 (Entity)。                                                                                                                          |
+| allowSubdomain   | 指示其是否为叶子节点。如果为 False，该节点无法派生更多子节点。                                                                                                                                               |
 
 以下是一个指定节点默认属性的示例：
 
@@ -44,15 +44,15 @@ TerminusDID 合约管理着一个源自 [Domain (域)](https://docs.jointerminus
   诸如 `root`、`com`、`io` 等抽象节点属于 Terminus 团队。
 
 - **个人 (Individual)** \<br\>
-  `myterminus.com` 属于[个人域 (Individual Domain)](/zh/manual/concepts/olares-id.md#域名类型)，由 Terminus 团队所有。
+  `myterminus.com` 属于[个人域 (Individual Domain)](/zh/developer/concepts/olares-id.md#域名类型)，由 Terminus 团队所有。
   `alice.myterminus.com` 和 `bob.myterminus.com` 属于个人 Terminus 名称，由各自的用户所有。
 
 - **组织 (Organization)** \<br\>
-  `org1.com` 和 `org.io` 属于[组织域 (Organization Domain)](/zh/manual/concepts/olares-id.md#域名类型)，由域管理员所有。
+  `org1.com` 和 `org.io` 属于[组织域 (Organization Domain)](/zh/developer/concepts/olares-id.md#域名类型)，由域管理员所有。
   `alice.org1.com` 和 `bob.org2.io` 属于组织 Terminus 名称，由各自的用户所有。
 
 - **实体 (Entity)** \<br\>
-  `Application Score` 属于[实体域 (Entity Domain)](/zh/manual/concepts/olares-id.md#域名类型)，由该实体的申请人所有。组织管理员和用户可以参考[域管理](https://www.google.com/search?q=../contract/manage/contract.md%23register-did)来管理他们自己的节点和子节点。
+  `Application Score` 属于[实体域 (Entity Domain)](/zh/developer/concepts/olares-id.md#域名类型)，由该实体的申请人所有。组织管理员和用户可以参考[域管理](https://www.google.com/search?q=../contract/manage/contract.md%23register-did)来管理他们自己的节点和子节点。
 
 :::info
 项目稳定后，Terminus 团队会将所有权转移给 DAO 组织的多签地址。
@@ -132,7 +132,7 @@ Tagger 是每个标签内部的必要信息之一。它代表有权修改标签�
 
 # 信誉 (Reputation)
 
-我们可以基于 Tagger 创建高度灵活的[信誉](https://www.google.com/search?q=/manual/concepts/reputation.md)协议。
+我们可以基于 Tagger 创建高度灵活的[信誉](/developer/concepts/reputation.md)协议。
 
 在实现链上信誉系统时，最关键的要素是：
 

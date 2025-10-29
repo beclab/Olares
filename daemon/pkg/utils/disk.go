@@ -67,6 +67,22 @@ func deviceForPath(path string) (string, error) {
 // Given a device path (e.g. /dev/sda1), find the top-level block device name (e.g. sda)
 func topBlockDeviceName(devPath string) (string, error) {
 	name := filepath.Base(devPath) // e.g. sda1, nvme0n1p1, dm-0, mapper/xxx -> basename
+
+	// Handle LVM devices specially - they may not exist in /sys/class/block
+	if strings.HasPrefix(devPath, "/dev/mapper/") {
+		// For LVM devices, try to find the underlying physical device
+		// Check if it's a symlink to a dm-* device
+		if realPath, err := filepath.EvalSymlinks(devPath); err == nil {
+			if strings.HasPrefix(realPath, "/dev/dm-") {
+				// Use the dm-* device name directly
+				return filepath.Base(realPath), nil
+			}
+		}
+		// If we can't resolve the LVM device, return the original name
+		// This will cause diskSizeBySysfs to fail gracefully
+		return name, nil
+	}
+
 	sysPath := filepath.Join("/sys/class/block", name)
 	real, err := filepath.EvalSymlinks(sysPath)
 	if err != nil {
@@ -85,6 +101,13 @@ func topBlockDeviceName(devPath string) (string, error) {
 // Read /sys/class/block/<dev>/size (in sectors), multiply by 512 to get bytes
 func diskSizeBySysfs(topDev string) (uint64, error) {
 	sizePath := filepath.Join("/sys/class/block", topDev, "size")
+
+	// Check if the device exists before trying to read it
+	if _, err := os.Stat(filepath.Join("/sys/class/block", topDev)); err != nil {
+		klog.V(4).Infof("Block device %s not found in /sys/class/block, skipping size calculation", topDev)
+		return 0, fmt.Errorf("block device %s not accessible: %w", topDev, err)
+	}
+
 	b, err := ioutil.ReadFile(sizePath)
 	if err != nil {
 		return 0, err
@@ -114,7 +137,19 @@ func GetDiskTotalBytesForPath(path string) (uint64, error) {
 	}
 	size, err := diskSizeBySysfs(topDev)
 	if err != nil {
-		return 0, err
+		// If sysfs method fails (e.g., for LVM devices), try alternative method
+		klog.V(4).Infof("Failed to get disk size via sysfs for %s, trying alternative method: %v", topDev, err)
+
+		// Try using statfs as fallback for the mount point
+		fs := syscall.Statfs_t{}
+		if statErr := syscall.Statfs(abs, &fs); statErr == nil {
+			total := fs.Blocks * uint64(fs.Bsize)
+			klog.V(4).Infof("Using statfs fallback for %s: %d bytes", abs, total)
+			return total, nil
+		}
+
+		// If both methods fail, return the original error
+		return 0, fmt.Errorf("failed to get disk size for device %s: %w", device, err)
 	}
 	return size, nil
 }
