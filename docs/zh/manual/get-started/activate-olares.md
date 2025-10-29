@@ -14,7 +14,7 @@ search: false
 3. 选择系统语言。
 
    ![选择语言](/images/manual/get-started/select-language.png#bordered)
-4. 选择一个距你所在位置最近的反向代理节点。你也可以在 Olares 的在[更改反向代理](../olares/settings/change-frp.md)页面进行调整。
+4. 选择一个距你所在位置最近的反向代理节点。你也可以之后在 Olares 的[更改反向代理](../olares/settings/change-frp.md)页面进行调整。
    ![选择 FRP](/images/zh/manual/get-started/wizard-frp.png#bordered)
    :::tip 提示
    如果你的 Olares 设备连接的是公网 IP 网络，此步骤会自动跳过。
