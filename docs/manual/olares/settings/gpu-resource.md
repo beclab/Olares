@@ -33,7 +33,8 @@ Olares supports three GPU allocation modes. Choosing the right mode helps optimi
 In this mode, a GPU can be bound to multiple applications and rotates execution in time slices.
 
 * At any instant, only one application uses all available compute and VRAM of the GPU.
-* Other apps enter a wait queue; their CUDA and VRAM content will be swapped to the system memory.
+* Other apps enter a wait queue; Their VRAM contents (e.g., CUDA context, etc.) may be temporarily swapped out to system memory.
+* By default, GPUs run in time-slicing mode. Applications not assigned an exclusive GPU or dedicated VRAM will join the time-slicing queue when a time-slicing GPU is available.
 
 ### App Exclusive
 
@@ -49,8 +50,10 @@ In this mode, VRAM of the GPU is partitioned into fixed quotas for multiple desi
 * The sum of quotas must not exceed physical VRAM of the bound GPU. Oversubscription is not supported.
 * Apps with quota assigned can run concurrently, each limited to its own quota.
 
-:::tip Multi-GPU aggregation
-You can bind multiple GPUs to one application within the same cluster to gain bigger VRAM. In such scenarios, only **App Exclusive** or **Memory Slicing** modes are supported.
+:::tip Multi-GPU allocation
+- All three allcation modes support assigning multiple GPUs to the same application. Olares only assigns multiple GPUs to the application’s container without fusing VRAM or compute in any way. Whether multi-GPU is utilized depends on the application/framework itself.
+
+- In multi-node environments, you can't assign multiple GPUs across nodes to the same application simultaneously.
 :::
 
 ## View GPU status
@@ -76,9 +79,9 @@ On the **GPU details** page, select your desired mode from the **GPU mode** drop
 
   ![Time slicing](/images/manual/olares/gpu-time-slicing.png#bordered)
 
-:::tip Note
-No manual pinning is required if you only have one GPU in your cluster.
-:::
+  :::tip Note
+  No manual binding is required if you only have one GPU in your cluster.
+  :::
 
 * **App Exclusive**
   1. Select this mode from the GPU mode dropdown.
@@ -92,6 +95,11 @@ No manual pinning is required if you only have one GPU in your cluster.
   3. Select your target application and assign it a specific amount of VRAM in GB.
   4. Repeat for other applications and click **Confirm**.
      ![VRAM slicing](/images/manual/olares/gpu-memory-slicing.png#bordered)
+
+:::tip Unbinding GPU allocation
+After binding GPUs to an application, you can release GPU resources by performing an unbind operation under the corresponding GPU mode.
+:::
+
 
 ## Learn more
 - [Monitor GPU usage in Olares](../resources-usage.md)
