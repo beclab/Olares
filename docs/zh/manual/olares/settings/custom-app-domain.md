@@ -9,8 +9,8 @@ description: 自定义 Olares 应用的访问地址，通过设置路由 ID 和�
 ## 开始之前
 在开始之前，建议你先熟悉一些与 Olares 应用相关的概念：
 
-- [端点 (Endpoints)](../../concepts/network.md#端点)
-- [路由 ID (Route ID)](../../concepts/network.md#路由-id)
+- [端点 (Endpoints)](../../../developer/concepts/network.md#端点)
+- [路由 ID (Route ID)](../../../developer/concepts/network.md#路由-id)
 
 ## 为应用自定义域名
 

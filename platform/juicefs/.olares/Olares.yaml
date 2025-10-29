@@ -4,9 +4,9 @@ output:
   binaries:
     - 
       id: juicefs
-      name:  juicefs-v11.1.1.tar.gz
-      amd64: https://github.com/beclab/juicefs-ext/releases/download/v11.1.1/juicefs-v11.1.1-linux-amd64.tar.gz
-      arm64: https://github.com/beclab/juicefs-ext/releases/download/v11.1.1/juicefs-v11.1.1-linux-arm64.tar.gz
+      name:  juicefs-v1.3.0.tar.gz
+      amd64: https://github.com/juicedata/juicefs/releases/download/v1.3.0/juicefs-1.3.0-linux-amd64.tar.gz
+      arm64: https://github.com/juicedata/juicefs/releases/download/v1.3.0/juicefs-1.3.0-linux-arm64.tar.gz
     
 
 

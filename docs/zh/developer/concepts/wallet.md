@@ -22,7 +22,7 @@ description: 了解数字身份钱包 LarePass 的核心功能，包括 Olares I
 - **多身份管理**  
   同时管理多个 DID / Olares ID  
 
-详细说明参见 [使用 LarePass 管理账户](https://docs.olares.com/how-to/LarePass/account/)。
+详细说明参见 [使用 LarePass 管理账户](../../manual/larepass/create-account.md)。
 
 ## 管理可验证凭证（VC）
 
@@ -35,5 +35,5 @@ LarePass 支持绑定至 Olares ID 的 VC 全流程操作，包括签名、验�
 - **发现与检索**：便捷查看各身份对应的 VC 列表  
 
 ::: tip 说明
-以上为 LarePass 与身份钱包相关的核心功能。更多使用方法请参阅 [LarePass 文档](https://docs.olares.com/how-to/LarePass/overview.html)。
+以上为 LarePass 与身份钱包相关的核心功能。更多使用方法请参阅 [LarePass 文档](../../manual/larepass/)。
 :::
