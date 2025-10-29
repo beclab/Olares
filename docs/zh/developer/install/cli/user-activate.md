@@ -2,7 +2,7 @@
 
 ## 命令说明
 
-`user activate`命令用于激活现有的 Olares 账户。你需要提供 Olares ID、密码 和 12 个助记词短语才能完成激活。该命令通常需要使用管理员权限（`sudo`）执行。
+`user activate`命令用于激活已有的 Olares 账户，你需要至少提供 Olares ID、登录密码和助记词短语才能完成激活。该命令通常需要使用管理员权限（`sudo`）执行。
 
 ```bash
 olares-cli user activate <Olares ID> [选项]
@@ -11,7 +11,7 @@ olares-cli user activate <Olares ID> [选项]
 
 | 参数 | 描述 | 是否必需 |
 |--|--|--|
-| `<Olares ID>` | 指定 Olares 生态系统中的唯一标识符。<br>格式类似电子邮件地址（例如：`alice123@olares.com`）| **是** |
+| `<Olares ID>` | 指定待激活的 Olares 用户账户的唯一标识符。<br>格式类似电子邮件地址（例如：`alice123@olares.com`）| **是** |
 
 ## 选项
 
@@ -24,8 +24,8 @@ olares-cli user activate <Olares ID> [选项]
 | `--jws` | | 指定指定 FRP 的 JWS（JSON Web Signature）令牌。<br>仅当`--enable-tunnel`设置为`true`时使用。| 否 | 无 |
 | `--language` | | 设置系统语言。| 否 | `en-US` |
 | `--location` | | 设置系统时区位置。 | 否 | `Asia/Shanghai` |
-| `--mnemonic` | | 指定用于激活的 12 个助记词。 | **是** | 无 |
-| `--password` | `-p` | 指定用于激活的 Olares 登录密码。 | **是** | 无 |
+| `--mnemonic` | | 指定用于激活的 12 词助记词短语。 | **是** | 无 |
+| `--password` | `-p` | 指定待激活 Olares 账户的登录密码。 | **是** | 无 |
 | `--vault` | | 指定 Vault 服务的 URL。<br>例如：`https://example.com` | 否 | `http://127.0.0.1:30181` |
 
 ## 使用示例
