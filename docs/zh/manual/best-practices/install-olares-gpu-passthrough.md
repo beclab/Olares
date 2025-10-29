@@ -17,7 +17,6 @@ description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加�
 该部署方式当前仍有功能限制，建议仅用于开发或测试环境。
 :::
 
-
 ## 前提条件
 
 在开始前，请确保你的设置满足以下要求：
@@ -84,7 +83,7 @@ description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加�
 
 ### 添加 VFIO 模块
 
-<b>VFIO（Virtual Function I/O）</b>使虚拟机能够直接访问 PCI 设备（如 GPU）。
+<b>Virtual Function I/O (VFIO)</b>使虚拟机能够直接访问 PCI 设备（如 GPU）。
 
 1. 在 PVE 主机上，运行以下命令打开`modules`文件：
 
@@ -142,7 +141,7 @@ description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加�
 
     本例中，GPU 的 PCI 地址为`01:00`，并列出了两个功能。
 
-2. 获取你的 GPU 的 ID 信息（在本例中为`01:00`）：
+2. 获取你的 GPU 的 PCI 标识符：
    
     ```bash
     lspci -n -s 01:00
@@ -226,6 +225,8 @@ description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加�
 
 ### 将 GPU 绑定到虚拟机
 
+按照以下步骤将 GPU 绑定到虚拟机：
+
 1. 在 PVE 界面中，选择你的虚拟机，然后转到**硬件** > **添加** > **PCI 设备**。
 ![Add PCI](/images/zh/manual/tutorials/pve-add-pci-cn.png#bordered)
 
@@ -255,7 +256,7 @@ description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加�
     3. 当屏幕上出现警告时，输入`yes`继续即可。
 
     ::: tip 注意
-    安装过程中，可能会出现与 NVIDIA 显卡驱动相关的警告。如果出现此类警告，按**回车键**忽略即可。
+    安装过程中会出现与 NVIDIA 显卡驱动相关的警告。按**回车键**忽略即可。
     :::
 
 4. 安装完成后，你会看到以下信息：

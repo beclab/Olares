@@ -82,7 +82,7 @@ The **Input-Output Memory Management Unit (IOMMU)** is a hardware feature that a
 
 ### Add VFIO modules
 
-**VFIO (Virtual Function I/O)** enables a VM to directly access PCI devices such as GPUs.
+**Virtual Function I/O (VFIO)** enables a VM to directly access PCI devices such as GPUs.
 
 1. On the PVE host, run the following command to open the `modules` file:
 
@@ -140,7 +140,7 @@ To prevent the Proxmox host from using the GPU you plan to pass through, it's be
 
     Here, the GPU's PCI address is `01:00`, with two functions listed.
 
-2. Get the IDs of your GPU (`01:00` in this example):
+2. Get the PCI idenfiers of your GPU:
    
     ```bash
     lspci -n -s 01:00
@@ -224,6 +224,8 @@ This section creates and configures a VM using the Olares ISO image:
 
 ### Bind GPU to the VM
 
+Follow these steps to bind the GPU to your VM:
+
 1. In the PVE interface, select your VM and go to **Hardware** > **Add** > **PCI Device**.
 ![Add PCI](/images/manual/tutorials/pve-add-pci.png#bordered)
 
@@ -244,7 +246,7 @@ Once the VM is set up, follow these steps to install Olares using the installer 
 
 2. From the boot menu, select **Install Olares to Hard Disk** and press **Enter**.
 
-3. In the Olares System Installer, select the installation disk.
+3. In the Olares System Installer interface, select the installation disk.
 
     1. Review the list of available disks (for example, `sda 200G QEMU HARDDISK`).
 
@@ -253,7 +255,7 @@ Once the VM is set up, follow these steps to install Olares using the installer 
     3. When the on-screen warning appears, just type `yes` to continue.
 
     ::: tip Note
-    During installation, warnings related to the NVIDIA graphics driver may appear. If they do, press **Enter** to ignore them.
+    During installation, warnings related to the NVIDIA graphics driver will appear. Press **Enter** to ignore them.
     :::
 
 4. Once the installation completes, you'll see the message:
