@@ -597,55 +597,11 @@ const side = {
           },
         ],
       },
-              ],
-            },
+            
             {
-              text: "change-ip",
-              link: "/zh/developer/install/cli/change-ip",
+              text: "版本说明",
+              link: "/zh/developer/install/versioning",
             },
-            {
-              text: "download",
-              link: "/zh/developer/install/cli/download",
-            },
-            {text: "info", link: "/zh/developer/install/cli/info"},
-            {
-              text: "install",
-              link: "/zh/developer/install/cli/install",
-            },
-            {
-              text: "logs",
-              link: "/zh/developer/install/cli/logs",
-            },
-            {
-              text: "precheck",
-              link: "/zh/developer/install/cli/precheck",
-            },
-            {
-              text: "prepare",
-              link: "/zh/developer/install/cli/prepare",
-            },
-            {
-              text: "release",
-              link: "/zh/developer/install/cli/release",
-            },
-            {
-              text: "start",
-              link: "/zh/developer/install/cli/start",
-            },
-            {
-              text: "stop",
-              link: "/zh/developer/install/cli/stop",
-            },
-            {
-              text: "uninstall",
-              link: "/zh/developer/install/cli/uninstall",
-            },
-          ],
-        },
-        {
-          text: "版本说明",
-          link: "/zh/developer/install/versioning",
-        },
       ],
     },
     {
