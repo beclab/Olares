@@ -139,7 +139,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 		return err
 	}
 
-	diskSize, err := utils.GetDiskSize()
+	diskSize, err := utils.GetNodeFilesystemTotalSize()
 	if err != nil {
 		return err
 	}
