@@ -94,7 +94,7 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">查看资源消耗</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
+      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
     </tr>
     <tr>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">远程设备控制</td>

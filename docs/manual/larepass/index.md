@@ -92,7 +92,7 @@ Use LarePass to collect web content and follow RSS feeds.
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">View resource consumption</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
+      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
     </tr>
     <tr>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Remote device control</td>
