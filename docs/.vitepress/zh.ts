@@ -294,6 +294,10 @@ const side = {
                   "text": "自定义应用域名",
                   "link": "/zh/manual/olares/settings/custom-app-domain",
                 },
+                {
+                  text: "管理应用环境变量",
+                  link: "/zh/manual/olares/settings/manage-app-env",
+                },
               ],
               },
             {
