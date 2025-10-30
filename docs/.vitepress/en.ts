@@ -296,6 +296,10 @@ const side = {
                   text: "Customize app domains",
                   link: "/manual/olares/settings/custom-app-domain",
                 },
+                {
+                  text: "Manage app variables",
+                  link: "/manual/olares/settings/manage-app-env",
+                },
               ],
               },
             {
