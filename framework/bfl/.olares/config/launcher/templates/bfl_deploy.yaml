@@ -321,7 +321,7 @@ spec:
         imagePullPolicy: IfNotPresent
         env:
         - name: AUTHELIA_AUTH_URL
-          value: 'http://authelia-backend-provider.user-system-{{ .Values.bfl.username }}:28080/api/authz/auth-request'
+          value: 'http://authelia-backend.user-system-{{ .Values.bfl.username }}:9091/api/authz/auth-request'
         volumeMounts:
         - name: ngxlog
           mountPath: /var/log/nginx
