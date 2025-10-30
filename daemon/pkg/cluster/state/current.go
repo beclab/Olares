@@ -136,22 +136,21 @@ func CheckCurrentStatus(ctx context.Context) error {
 	osType, osInfo, osArch, osVersion, _, err := GetMachineInfo(ctx)
 	if err != nil {
 		klog.Error("get machine info from terminus cli error, ", err)
-		return err
 	}
 
 	diskSize, err := utils.GetNodeFilesystemTotalSize()
 	if err != nil {
-		return err
+		klog.Error("get node filesystem total size error, ", err)
 	}
 
 	gpu, err := utils.GetGpuInfo()
 	if err != nil {
-		return err
+		klog.Error("get gpu info error, ", err)
 	}
 
 	hostname, err := os.Hostname()
 	if err != nil {
-		return err
+		klog.Error("get hostname error, ", err)
 	}
 
 	CurrentState.OsArch = osArch
