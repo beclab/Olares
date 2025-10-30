@@ -9,92 +9,98 @@ spec:
   group: sys.bytetrade.io
   names:
     categories:
-      - all
+    - all
     kind: AppEnv
     listKind: AppEnvList
     plural: appenvs
     shortNames:
-      - appenv
+    - appenv
     singular: appenv
   scope: Namespaced
   versions:
-    - additionalPrinterColumns:
-        - jsonPath: .appName
-          name: app name
-          type: string
-        - jsonPath: .appOwner
-          name: owner
-          type: string
-        - jsonPath: .metadata.creationTimestamp
-          name: age
-          type: date
-      name: v1alpha1
-      schema:
-        openAPIV3Schema:
-          description: AppEnv is the Schema for the application environment variables
-            API
-          properties:
-            apiVersion:
-              description: |-
-                APIVersion defines the versioned schema of this representation of an object.
-                Servers should convert recognized schemas to the latest internal value, and
-                may reject unrecognized values.
-                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-              type: string
-            appName:
-              type: string
-            appOwner:
-              type: string
-            envs:
-              items:
-                properties:
-                  applyOnChange:
-                    type: boolean
-                  default:
+  - additionalPrinterColumns:
+    - jsonPath: .appName
+      name: app name
+      type: string
+    - jsonPath: .appOwner
+      name: owner
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AppEnv is the Schema for the application environment variables
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          appName:
+            type: string
+          appOwner:
+            type: string
+          envs:
+            items:
+              properties:
+                applyOnChange:
+                  type: boolean
+                default:
+                  type: string
+                description:
+                  additionalProperties:
                     type: string
-                  description:
-                    type: string
-                  editable:
-                    type: boolean
-                  envName:
-                    type: string
-                  required:
-                    type: boolean
-                  type:
-                    type: string
-                  value:
-                    type: string
-                  valueFrom:
-                    description: ValueFrom defines a reference to an environment variable
-                      (UserEnv or SystemEnv)
-                    properties:
-                      envName:
-                        type: string
-                      status:
-                        type: string
-                    required:
-                      - envName
-                    type: object
+                  type: object
+                editable:
+                  type: boolean
+                envName:
+                  type: string
                 required:
+                  type: boolean
+                title:
+                  additionalProperties:
+                    type: string
+                  type: object
+                type:
+                  type: string
+                value:
+                  type: string
+                valueFrom:
+                  description: ValueFrom defines a reference to an environment variable
+                    (UserEnv or SystemEnv)
+                  properties:
+                    envName:
+                      type: string
+                    status:
+                      type: string
+                  required:
                   - envName
-                type: object
-              type: array
-            kind:
-              description: |-
-                Kind is a string value representing the REST resource this object represents.
-                Servers may infer this from the endpoint the client submits requests to.
-                Cannot be updated.
-                In CamelCase.
-                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-              type: string
-            metadata:
+                  type: object
+              required:
+              - envName
               type: object
-            needApply:
-              type: boolean
-          required:
-            - appName
-            - appOwner
-          type: object
-      served: true
-      storage: true
-      subresources: {}
+            type: array
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          needApply:
+            type: boolean
+        required:
+        - appName
+        - appOwner
+        type: object
+    served: true
+    storage: true
+    subresources: {}
