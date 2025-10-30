@@ -45,8 +45,8 @@ github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3d
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
 github.com/beclab/api v0.0.2 h1:aD5RcMie2uqa/FZI7aQBa1F4yVEib8/x3IIZSLiHkBM=
 github.com/beclab/api v0.0.2/go.mod h1:ESZLe8cf4934QFkU6cqbskKfiTyNk67i1qbv/ctS6js=
-github.com/beclab/app-service v0.4.10 h1:0CT8sl5K+qwQsrKO6FYxbUFNXcRJVkkErw3sB7V7OQw=
-github.com/beclab/app-service v0.4.10/go.mod h1:0vEg3rv/DbR7dYznvTlXNXyYNn+TXNMaxz03GQYRWUQ=
+github.com/beclab/app-service v0.4.33 h1:H3fAeH6hHeGNxJGrf4V5zq+2Ztu+S+tOmuMqjNRnFsU=
+github.com/beclab/app-service v0.4.33/go.mod h1:0vEg3rv/DbR7dYznvTlXNXyYNn+TXNMaxz03GQYRWUQ=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
