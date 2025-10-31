@@ -1,14 +1,24 @@
 ---
 outline: [2, 3]
-description: Connect Olares Space and third-party services to enhance functionality. Learn how to integrate, authorize, and manage connected services for seamless data synchronization.
+description: Connect Olares with different services and manage cookies for web access and subscriptions — all from Integrations in Settings.
 ---
 
 # Manage integrations in Settings
 
-The Integration section in **Settings** provides a centralized view of all third-party services connected to your Olares system. It also allows you to manually configure cloud object storage using API credentials.
+The **Integrations** section in **Settings** centralizes all services and authentication credentials connected to Olares. You can perform two main types of operations here:
 
-OAuth-based integrations and Olares Space must be connected via the LarePass app. See the [Integration guide of LarePass](../../larepass/integrations.md) for details.
+- **Connect services** – Link cloud storage services such as **Olares Space**, **AWS S3**, and **Tencent Cloud COS** to extend Olares’ storage capabilities.
+- **Manage cookies** – Store, import, and delete website cookies to support Olares’ access to subscription-based or restricted content.
 
+## View and manage connected services
+
+Follow these steps to view or manage your integrations:
+
+1. Open **Settings** from the Dock or Launcher.
+2. From the left sidebar, select **Integrations > Link your accounts and data**.
+3. Manage the existing integrations:
+   - View the list of authorized services and click a card to check its status or manage settings.
+   - On the **Account settings** page, click **Delete** to remove an integration.
 
 ## Add cloud object storage via API keys
 
@@ -27,12 +37,37 @@ Your connected cloud storage will now appear under the **Cloud storage** section
 
 Alternatively, you can configure this direction directly within [LarePass](../../larepass/integrations.md#add-a-cloud-storage-using-api-keys).
 
-## View and manage existing integrations
+:::tip Integrations that require LarePass
+OAuth-based integrations and **Olares Space** connections must be completed through the **LarePass** app.  
+See the [LarePass integrations guide](../../larepass/integrations.md) for details.
+:::
 
-1. Open **Settings** from the Dock or Launchpad.
-2. Go to **Integration** from the left-hand menu. You’ll see a list of currently authorized services. 
-3. Click an integration card to show its connection status and available actions.
-4. In the **Account settings** page, click **Delete** to remove the integration.
+## Manage Cookies
+
+Manage cookies under **Settings > Integrations > Cookie Management**.
+
+The Cookie Management page displays all saved cookies, grouped by domain.  
+Each entry shows the cookie name, value, expiration date, and associated domain.
+
+![Cookie Management](/images/manual/olares/cookie-management.png#bordered)
+
+You can perform the following actions:
+
+- **Upload cookie** – Paste cookie content into the import dialog. Supported formats include **Netscape**, **JSON**, and **Header String**.  
+   :::tip Note  
+   (First-time users can only import cookies manually. You can also use the [LarePass extension](../../larepass/manage-knowledge.md#collect-content-via-larepass-extension) to upload cookies from the browser.)
+   :::
+- **Edit cookie** – Click a specific cookie entry to modify its value in the editor below.
+- **Delete cookie** – Remove invalid or expired cookies. You can delete cookies individually or in bulk.
+
+:::warning Keep cookies up to date
+When a cookie expires, the system will highlight it in red.  
+Expired or missing cookies may cause some subscription or web automation tasks to fail. It’s recommended to check and update cookies periodically.
+:::
+
+
+
+
 
 
 
