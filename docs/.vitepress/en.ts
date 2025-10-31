@@ -356,7 +356,11 @@ const side = {
             link: "/manual/best-practices/install-olares-multi-node",
           },
           {
-          text: "Expand storage in Olares",
+            text: "Install Olares on PVE with GPU Passthrough",
+            link: "/manual/best-practices/install-olares-gpu-passthrough",
+          },
+          {
+            text: "Expand storage in Olares",
           link: "/manual/best-practices/expand-storage-in-olares",
         },
         ],
