@@ -8,7 +8,7 @@ description: 了解如何在 Olares 中管理应用环境变量
 应用环境变量是为应用容器配置运行时行为和设置的关键参数，决定了应用程序如何运行、连接到哪些服务，以及使用哪些用户凭证等。 
 
 你可以在**设置** > **应用** 下选取具体应用，并进入**管理环境变量**页面查看或修改环境变量。
-![应用环境变量](/images/manual/olares/manage-app-env.png#bordered)
+![应用环境变量](/images/manual/olares/manage-app-env.jpeg#bordered)
 
 ## 应用环境变量类型
 
