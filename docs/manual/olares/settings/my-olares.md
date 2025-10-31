@@ -15,10 +15,35 @@ To access My Olares, open **Settings** and click your avatar in the top-left cor
 
 View and manage your Olares hardware. You can see details such as **Model**, **Device status**, **Device Identifier**, **CPU**, and **GPU**.
 
+![My Hardware](/images/manual/olares/my-hardware.png#bordered)
+
 Available actions are:
 
-* **Shutdown**: Click to shut down the Olares device. You will be directed to your LarePass app to finish the operation. After shutdown, Olares device status will show `Powered Off` on LarePass. Remote operations are unavailable until the device is manually turned on.
-* **Restart**: Click to restart Olares. You will be directed to your LarePass app to finish the operation. Olares device status will show `Restarting` on LarePass and return to `Olares running` in about 5–8 minutes.
+- **Shutdown**
+
+  Powers off the Olares device. You’ll be handed off to the **LarePass** app to confirm.  
+  After shutdown, the device status in LarePass shows **Powered off**.  
+  Remote operations are unavailable until you manually turn the device back on.
+
+- **Restart**  
+  Reboots the device with confirmation in **LarePass**.  
+  The status changes to **Restarting** and returns to **Olares running** in about **5–8 minutes**.
+
+<a id="reset-ssh"></a>
+- **Reset SSH Password** <Badge type="tip" text="Olares One Only" />  
+  
+  Take the following steps to change the default SSH password:
+  1. On the **My hardware** page, click the **Reset SSH Password** button.
+  2. In the dialog, enter a new SSH password that meets all strength requirements, then click **OK**.
+  3. Open the LarePass app and scan the QR code shown on the screen.
+  4. Click **Confirm** on LarePass to finish.
+- **Power mode** <Badge type="tip" text="Olares One Only" />
+   
+  Toggles Olares One’s performance profile.
+
+    - **Silent mode** – Limits CPU and GPU power for quiet operation, suitable for everyday workloads.
+    - **Performance mode** – Enables maximum CPU and GPU performance for demanding tasks such as AI inference or gaming.
+  
 
 ## Olares Space
 

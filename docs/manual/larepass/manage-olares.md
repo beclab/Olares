@@ -31,8 +31,6 @@ When a new Olares version is available, you will see a "New version found" promp
 
 ![Upgrade Olares](/images/manual/larepass/olares-upgrade.png#bordered)
 
-
-
 1. On the **Olares management** page, tap **System update**.
 
 2. On the **System update** page, confirm the available version in the **New version** field, then click **Upgrade**.
@@ -133,3 +131,21 @@ This will permanently delete all your accounts info and data. Proceed with cauti
 2. Review the risk prompt and enter your local LarePass lock screen password. If not set, you will be prompted to set one first.
 
 3. Wait for the uninstallation to complete. You will return to the Olares login screen when it's done.
+
+## Reset SSH Password <Badge type="tip" text="Olares One Only" />
+
+After you activate **Olares One** with LarePass, a **Reset SSH Password** dialog will appear automatically. Use it to change the default SSH password and prevent unintended SSH access.
+
+![Reset SSH Password](/images/manual/larepass/change-ssh-pw.png)
+
+1. In the **Reset SSH Password** dialog, enter a new password. Make sure it meets all strength requirements.
+2. Click **Confirm**.
+
+:::warning Required action
+This dialog will continue to appear until you reset the password. While you can reset later from the [My hardware](../olares/settings/my-olares.md#reset-ssh) settings page, we strongly recommend doing it immediately. 
+:::
+
+
+ 
+
+

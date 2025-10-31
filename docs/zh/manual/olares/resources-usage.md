@@ -25,6 +25,7 @@ Olares 的**仪表盘**应用为系统状态提供集中且直观的视图，无
 ### 查看集群物理资源
 
 你可以直接从**集群物理资源**仪表盘监控以下基本资源的当前状态：
+![物理资源概览](/images/zh/manual/olares/dashboard-overview.png#bordered)
 
 * CPU 利用率
 * 内存消耗
@@ -32,8 +33,7 @@ Olares 的**仪表盘**应用为系统状态提供集中且直观的视图，无
 * Pod 状态
 * GPU 使用率
 * 网络状态
-
-![集群物理资源](/images/zh/manual/olares/dashboard-overview.png#bordered)
+* 风扇状态（Olares One 专有）
 
 :::info 多节点集群资源展示
 当你的集群包含多个节点时：
@@ -134,6 +134,15 @@ Pods 面板提供了应用程序部署状态的动态视图。Pod 数量实时�
 
 * IPv4 和 IPv6 详细信息：IPv4 和 IPv6 的全面详细信息，包括地址、子网掩码、网关地址、DNS 和网络状态。
 
+#### 风扇面板 <Badge type="tip" text="Olares One 专有" />
+风扇面板是 **Olares One** 硬件专属功能，用于实时显示 CPU 与 GPU 的 **风扇转速**、**温度**和**功耗**。通过此面板，你可以快速了解设备散热与性能状态，便于监控硬件运行情况。
+
+![风扇面板](/images/zh/manual/olares/dashboard-fans.png#bordered)
+
+::: tip 调整风扇配速策略
+你可以在**设置** > **我的 Olares** > **我的硬件** > **工作模式**下切换安静模式或性能模式来调整风扇配速策略。
+:::
+
 #### 查看详细资源指标
 
 点击**详情**，可查看特定时间段的动态监控数据。
@@ -172,7 +181,7 @@ Pods 面板提供了应用程序部署状态的动态视图。Pod 数量实时�
 
 ### 追踪应用性能
 
-**使用排名**面板显示 CPU 和内存资源消耗最高的前 5 个应用。要查看完整的应用资源使用列表，点击**更多**。
+使用排名面板显示 CPU 和内存资源消耗最高的前 5 个应用。要查看完整的应用资源使用列表，点击**更多**。
 
 ![Usage ranking](/images/zh/manual/olares/usage-ranking.png#bordered)
 
