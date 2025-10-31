@@ -1,30 +1,39 @@
 ---
 outline: [2, 3]
-description: Access Olares applications securely from anywhere using LarePass VPN. Learn about VPN setup and troubleshooting in LarePass.
+description: Learn how to securely access your Olares from anywhere. This guide explains public vs. private entrances, when to use LarePass VPN, how to enable VPN on mobile and desktop.
 ---
 
-# Access Olares anywhere via LarePass VPN
+# Access Olares anywhere
 
-Enabling the LarePass VPN creates a secure, private connection to your Olares. It's the simplest and most reliable way to access your private applications and services from anywhere, guaranteeing both security and speed.
+This guide explains **how to reach your Olares from anywhere**. You will learn:
 
-This document walks you through how to enable LarePass VPN.
+1) The access paths for public vs. private entrances.
+2) How to enable LarePass VPN on your mobile and desktop.
+3) Interpret connection status and know when to troubleshoot.
 
 ## How access works in Olares
 
-In Olares, you access applications & services via their dedicated URLs (e.g., `app.yourname.olares.com`). Depending on the intended accessibility, there are two types of entrances:
+In Olares, you access each app or service via its own URL (`https://app.olares-id.olares.com`, for example, `https://desktop.nicholas.olares.com/`). Depending on who should reach it, there are two entrance types.
 
-- **Public entrance**: Accessible to anyone with no authentication. For example, a blog page that you host on WordPress. Traffic is routed through Cloudflare Tunnel or FRP before reaching Olares.
-- **Private entrance**: Intended only for you, such as Desktop, Vault, the management console of WordPress. There are two scenarios when accessing private entrances:
+### Public entrance
 
-  - LarePass VPN enabled: Traffic is routed through VPN (TailScale) wherever you are.
-  - LarePass VPN not enabled: Traffic routing is the same way as public entrances.   
+  * Accessible to anyone on the internet without authentication. For example, a public blog hosted on WordPress.
+  * Traffic is securely routed from the internet to Olares via Cloudflare Tunnel or FRP.
 
-::: warning Always enable VPN for private access
-For the best experience with private entrances, we strongly recommend enabling the LarePass VPN. It ensures your connection is always encrypted, direct, and fast. 
-:::
+### Private entrance
 
-::: tip Note
-Starting with Olares 1.12, you no longer need a separate `.local` address (e.g., `app.local.yourname.olares.cn`) for local access to private applications. The single address (e.g., `app.yourname.olares.cn`) now automatically provides a fast, direct connection to Olares when the LarePass VPN is active.
+Application entrances intended only for you, such as Desktop, Vault, and the management console of WordPress. Depending on where you are, there are two scenarios when accessing private entrances:
+
+- **Remote access** (Outside your local network)
+  - **With LarePass VPN (Recommended):** Traffic is routed directly and securely through the VPN (Tailscale), no matter where you are.
+  - **Without LarePass VPN:** Traffic is routed through the same internet tunnel as public access (Cloudflare/FRP).
+
+ - **Local access** (On the same network)
+  
+    Use the local URL (`http://app.yourname.olares.local`) for a direct, local connection that bypasses the VPN and internet tunnels.
+
+:::warning Always enable VPN for remote access
+For the best experience with private apps when you’re away from your network, enable **LarePass VPN**. It keeps your connection to Olares encrypted, direct, and fast.
 :::
 
 ## Enable VPN on LarePass
