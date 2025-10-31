@@ -14,7 +14,14 @@ Use the Wizard URL and initial one-time password to activate. This process conne
 3. Select the system language.
 
    ![Select language](/images/manual/get-started/select-language.png#bordered)
-4. Activate Olares using LarePass app.
+4. Select a reverse proxy node that is geographically closest to your location. You can adjust this later on the [Change reverse proxy](../olares/settings/change-frp.md) page.
+      
+   ![Select FRP](/images/manual/get-started/wizard-frp.png#bordered)
+   :::tip Note
+   If your Olares device is connected to a public IP network, this step will be skipped automatically.
+   :::
+
+5. Activate Olares using LarePass app.
 
    a. Open LarePass app, and tap **Scan QR code** to scan the QR code on the Wizard page and complete the activation.
    :::warning Same network required for admin users
