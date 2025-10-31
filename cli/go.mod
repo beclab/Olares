@@ -5,7 +5,7 @@ go 1.24.2
 toolchain go1.24.6
 
 replace (
-	bytetrade.io/web3os/app-service => github.com/beclab/app-service v0.4.33
+	bytetrade.io/web3os/app-service => github.com/beclab/app-service v0.4.37
 	bytetrade.io/web3os/backups-sdk => github.com/Above-Os/backups-sdk v0.1.17
 	github.com/containers/image/v5 => github.com/containers/image/v5 v5.21.1
 	github.com/containers/storage => github.com/containers/storage v1.40.0
