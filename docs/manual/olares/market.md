@@ -115,7 +115,7 @@ You can view all installed custom applications under the **My Olares** > **Uploa
 
 During app installation, if an environment variable is required for the app but it either has no default value or its referenced system variable is unset, Market will display a settings pop-up:
 
-![Set environment variables](/images/manual/olares/set-app-env-var.png#bordered)
+![Set environment variables](/images/manual/olares/set-app-env-var.jpeg#bordered)
 
 * **Custom variables**: Enter the value directly in the installation pop-up.
 * **Referenced system variables**: You must first go to the **Settings > Developer > System Environment Variables** page to set the value for the corresponding variable.
