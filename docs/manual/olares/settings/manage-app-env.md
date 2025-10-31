@@ -13,7 +13,7 @@ To view or modify an application's environment variables:
 2. Select the target application.
 3. Enter the **Manage environment variables** page.
 
-![Application environment variables](/images/manual/olares/manage-app-env.png#bordered)
+![Application environment variables](/images/manual/olares/manage-app-env.jpeg#bordered)
 
 ## Application environment variable types
 
