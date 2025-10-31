@@ -8,6 +8,7 @@ description: 了解如何利用开发者页面管理仓库、查看系统镜像�
 * **仓库管理**
 * **镜像管理**
 * **日志导出**
+* **系统环境变量管理**
 
 ## 仓库管理
 
@@ -57,3 +58,28 @@ description: 了解如何利用开发者页面管理仓库、查看系统镜像�
 
    ![下载日志](/images/zh/manual/olares/download-log.png#bordered){width=70%}
 下载后，可在 GitHub 反馈帖中附加日志文件，与 Olares 团队共享以加速问题定位。
+
+## 设置系统环境变量
+
+从 Olares 1.12.2 版本开始，Olares 支持应用程序声明使用系统环境变量。这允许用户为应用配置通用设置，而无需单独修改每个应用。典型系统环境变量类别包括：
+
+- 用户信息，例如 `OLARES_USER_USERNAME`。
+- SMTP 服务，例如 `OLARES_USER_SMTP_PORT`。
+- 镜像/代理设置，例如 `OLARES_SYSTEM_CDN_SERVICE`。
+- 第三方服务 API-KEY，例如 `OLARES_USER_CUSTOM_OPENAI_APIKEY` 和 `OLARES_USER_HUGGINGFACE_TOKEN`。
+
+:::tip 说明
+- 系统环境变量不支持新增或删除，也无法修改其属性。
+- 安装和激活 Olares 时，系统会根据您的 Olares ID 自动设置部分环境变量，以确保最优的性能和连接体验。
+:::
+
+要手动调整系统环境变量，请按以下步骤操作：
+
+1. 从 Olares 桌面进入**设置 > 开发者 > 系统环境变量**。
+
+2. 在列表中找到你要修改的变量。
+
+3. 点击<i class="material-symbols-outlined">edit_square</i>图标，在弹出对话框中输入变量值。置灰的变量不可修改。
+
+4. 点击**确认**保存更改。
+   ![设置系统环境变量](/images/zh/manual/olares/sys-env-var-cn.png#bordered)
