@@ -128,5 +128,17 @@ description: 使用 LarePass 移动端远程管理 Olares，包括监控状态�
 
 1. 在**Olares 管理**页面点击**恢复出厂设置**。  
 2. 阅读风险提示，并输入 LarePass 本地锁屏密码；若未设置，将提示先创建。  
-3. 等待卸载完成，系统将返回 Olares ID 登录界面。  
+3. 等待卸载完成，系统将返回 Olares ID 登录界面。
+
+## 重置 SSH 密码 <Badge type="tip" text="Olares One 专有" />
+
+使用 LarePass 激活 **Olares One** 后，会自动弹出**重置 SSH 密码**对话框。请立即修改默认 SSH 密码，以防止非授权的 SSH 访问。
+![Reset SSH Password](/images/zh/manual/larepass/change-ssh-pw.png)
+
+1. 在**重置 SSH 密码**对话框中输入你的新密码（确保满足强度要求）。
+2. 点击**确认**。
+
+:::warning 必需操作
+在你完成密码重置之前，该对话框会反复弹出。虽然你也可以之后在 Olares 的[**我的硬件**](../olares/settings/my-olares.md#reset-ssh)里操作，我们强烈建议在 LarePass 里看到弹窗时立即完成重置。
+:::
 

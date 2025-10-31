@@ -24,15 +24,15 @@ The Overview page provides a comprehensive, at-a-glance view of your Olares syst
 ### View physical resources usage
 
 Monitor the fundamental resource metrics directly from the **Cluster's physical resource** dashboard:
-
+![Dashboard overview](/images/manual/olares/dashboard-overview.png#bordered)
 - CPU utilization
 - Memory consumption
 - Disk usage
 - Pod status
 - GPU usage
 - Network status
+- Fan status (Olares One only)
 
-![Dashboard overview](/images/manual/olares/dashboard-overview.png#bordered)
 :::info Multi-node cluster display
 When your cluster consists of multiple nodes:
 - Overview panels: Display aggregate results across all nodes (e.g., CPU/memory usage, disk utilization, network traffic, overall GPU usage).
@@ -136,6 +136,16 @@ The Network panel displays:
 - IP configuration: Information on IP acquisition method (e.g., DHCP), host node, and network configuration.
 
 - IPv4 and IPv6 details: Comprehensive details for both IPv4 and IPv6, including address, subnet mask, gateway address, DNS, and network status.
+
+#### Fan panel<Badge type="tip" text="Olares One Only" />
+The Fan panel is exclusive to the **Olares One** hardware. It displays real-time **fan speed**, **temperature** for both the CPU and GPU, and **power draw** for the GPU.  
+Use this panel to quickly assess cooling performance and overall hardware health.
+
+![Fan panel](/images/manual/olares/dashboard-fans.png#bordered)
+
+::: tip Change fan speed profile
+You can adjust the fan speed profile by toggling between silent mode or performance mode in **Settings** > **My Olares** > **My hardware** >  **Power mode**. 
+:::
 
 #### Access detailed resource metrics 
 
