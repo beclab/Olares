@@ -258,7 +258,7 @@ type IpChangingValidator struct{}
 
 func (i IpChangingValidator) ValidateOp(op commands.Interface) error {
 	switch op.OperationName() {
-	case commands.Reboot, commands.Shutdown, commands.Uninstall, commands.SetSSHPassword:
+	case commands.Reboot, commands.Shutdown, commands.SetSSHPassword:
 		return nil
 	}
 
