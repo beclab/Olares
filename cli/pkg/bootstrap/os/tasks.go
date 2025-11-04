@@ -447,6 +447,7 @@ var (
 		"/etc/kubekey",
 		"/etc/kke/version",
 		"/etc/systemd/system/olares-swap.service",
+		"/tmp/vgpulock",
 	}
 
 	networkResetCmds = []string{
