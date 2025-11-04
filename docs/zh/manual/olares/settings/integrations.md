@@ -57,7 +57,7 @@ Cookie 管理页会按网站域名分组展示所有已保存的 Cookie。每个
 - **编辑 Cookie**：点击具体的 Cookie 条目，可在下方输入框中编辑对应的值。
 - **删除 Cookie**：移除无效或过期条目。支持对单个域名或全部 Cookie 进行删除。
 
-:::tip 定期维护 Cookie
+:::warning 定期维护 Cookie
 当 Cookie 过期时，系统会以红色标识提醒。若 Cookie 已过期或缺失，部分订阅或网页访问任务可能失败。建议定期检查 Cookie 有效期并及时更新。
 :::
 
