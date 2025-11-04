@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 	"slices"
+	"strings"
 
 	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/eball/zeroconf"
@@ -17,6 +18,7 @@ type DNSConfig struct {
 type instanceServer struct {
 	queryServer *zeroconf.Server
 	host        *DNSConfig
+	aliases     []string
 }
 
 type mDNSServer struct {
@@ -65,6 +67,14 @@ func (s *mDNSServer) StartAll() error {
 			klog.Errorf("Failed to register mDNS service for domain %s: %v", domain, err)
 			return err
 		}
+
+		// add host alias
+		domainTokens := strings.Split(domain, ".")
+		alias := []string{strings.Join(domainTokens, "-") + ".local."}
+
+		// TODO: add more alias if needed
+		klog.Info("add host alias, ", alias[0])
+		server.AddHostAlias(alias[0])
 
 		s.servers[domain] = &instanceServer{
 			queryServer: server,
