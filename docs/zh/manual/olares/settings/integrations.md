@@ -42,11 +42,11 @@ OAuth 类型的集成以及 Olares Space 需在**LarePass**应用中完成连接
 
 ## 管理 Cookie 
 
-你可以在 **设置 > 集成 > Cookie 管理** 中打开 Cookie 管理页面。
+你可以在 **设置** > **集成** > **Cookie 管理** 中打开 Cookie 管理页面。
 
 Cookie 管理页会按网站域名分组展示所有已保存的 Cookie。每个条目显示 Cookie 名称、值、到期时间及所属域名。
 
-![时间分片](/images/zh/manual/olares/cookie-management.png#bordered)
+![Cookie 管理](/images/zh/manual/olares/cookie-management.png#bordered)
 
 可执行的操作包括：
 
@@ -60,3 +60,5 @@ Cookie 管理页会按网站域名分组展示所有已保存的 Cookie。每个
 :::tip 定期维护 Cookie
 当 Cookie 过期时，系统会以红色标识提醒。若 Cookie 已过期或缺失，部分订阅或网页访问任务可能失败。建议定期检查 Cookie 有效期并及时更新。
 :::
+
+
