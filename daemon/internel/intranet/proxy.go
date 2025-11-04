@@ -57,7 +57,8 @@ func (p *proxyServer) Start() error {
 	p.proxy.Use(
 		func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(c echo.Context) error {
-				if strings.HasSuffix(c.Request().Host, ".olares.local") {
+				if strings.HasSuffix(c.Request().Host, ".olares.local") ||
+					strings.HasSuffix(c.Request().Host, "-olares.local") {
 					if c.IsWebSocket() {
 						ctx := c.Request().Context()
 						ctx = context.WithValue(ctx, WSKey, true)
@@ -103,7 +104,25 @@ func (p *proxyServer) Next(c echo.Context) *middleware.ProxyTarget {
 	if c.IsWebSocket() {
 		scheme = "wss://"
 	}
-	proxyPass, err := url.Parse(scheme + c.Request().Host + ":443")
+
+	var (
+		proxyPass *url.URL
+		err       error
+	)
+	requestHost := c.Request().Host
+	if strings.HasSuffix(requestHost, "-olares.local") {
+		// intranet request, and host parttern is appid-<username>-olares.local for windows and linux client
+		tokens := strings.Split(requestHost, "-")
+		if len(tokens) < 3 {
+			klog.Error("invalid intranet request host, ", requestHost)
+			return nil
+		}
+		requestHost = strings.Join(tokens, ".")
+		c.Request().Host = requestHost
+		proxyPass, err = url.Parse(scheme + requestHost + ":443")
+	} else {
+		proxyPass, err = url.Parse(scheme + c.Request().Host + ":443")
+	}
 	if err != nil {
 		klog.Error("parse proxy target error, ", err)
 		return nil
