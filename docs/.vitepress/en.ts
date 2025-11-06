@@ -76,10 +76,10 @@ const side = {
                   text: "Using script",
                   link: "/manual/get-started/install-windows-script",
                 },
-                {
+                /* {
                   text: "Using Docker image",
                   link: "/manual/get-started/install-windows-docker",
-                },
+                },*/
               ],
             },
             {

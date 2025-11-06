@@ -63,8 +63,8 @@ Windows 设备需满足以下条件：
    Cgroup version: 2
    ```
 
-3. 下载与 WSL 内核版本相匹配的文件：`https://cdn.joinolares.cn/bzImage-<内核版本号>`。
-  例如，`5.15.167.4-1` 版本对应的链接是 [https://cdn.joinolares.cn/bzImage-5.15.167.4](https://cdn.joinolares.cn/bzImage-5.15.167.4)。
+3. 下载与 WSL 内核版本相匹配的文件：`https://cdn.olares.cn/bzImage-<内核版本号>`。
+  例如，`5.15.167.4-1` 版本对应的链接是 [https://cdn.olares.cn/bzImage-5.15.167.4](https://cdn.olares.cn/bzImage-5.15.167.4)。
 
    目前支持以下内核版本（`5.15.146.1` 及以上）：
    -  `linux-msft-wsl-5.15.146.1`
@@ -107,14 +107,14 @@ Windows 设备需满足以下条件：
      },
      "experimental": false,
      "registry-mirrors": [
-       "https://mirrors.joinolares.cn"
+       "https://mirrors.olares.cn"
      ]
    }
    ```
 3. 点击 **Apply & restart** 使变更生效。
 
 ## 运行 `olaresd-proxy`
-1. 下载 `olaresd-proxy`：[https://cdn.joinolares.cn/olaresd-proxy-v0.1.0-windows-amd64.tar.gz](https://cdn.joinolares.cn/olaresd-proxy-v0.1.0-windows-amd64.tar.gz)。
+1. 下载 `olaresd-proxy`：[https://cdn.olares.cn/olaresd-proxy-v0.1.0-windows-amd64.tar.gz](https://cdn.olares.cn/olaresd-proxy-v0.1.0-windows-amd64.tar.gz)。
 2. 解压文件，打开 `olaresd-proxy`。
    :::info 保持 `olaresd-proxy` 在后台运行
    在安装和激活 Olares 的整个过程中，确保 `olaresd-proxy` 在后台运行。
