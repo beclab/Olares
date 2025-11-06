@@ -32,7 +32,7 @@ These methods are suitable for **development**, **testing**, or **lightweight en
 
 #### Windows
 - [**One-line script**](install-windows-script.md): Install Olares in Windows Subsystem for Linux 2 (WSL 2).
-- [**Docker image**](install-windows-docker.md): Run Olares in Docker with WSL 2 integration.
+<!--  [**Docker image**](install-windows-docker.md): Run Olares in Docker with WSL 2 integration. -->
 
 #### macOS
 - [**One-line script**](install-mac-script.md): Install Olares in a containerized environment via MiniKube.
