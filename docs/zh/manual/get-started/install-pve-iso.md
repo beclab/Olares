@@ -29,7 +29,7 @@ description: 在 PVE 虚拟化平台上使用 ISO 镜像安装配置 Olares 的�
 :::
 
 ## 下载 Olares ISO 镜像
-点击[此处](https://cdn.olares.cn/olares-latest-amd64-cn.iso)下载最新官方 Olares ISO 镜像。
+点击[此处](https://cdn.olares.cn/olares-latest-amd64.iso)下载最新官方 Olares ISO 镜像。
 
 ## 配置 PVE 虚拟机
 在 PVE 运行 Olares 时，请确保虚拟机满足以下配置要求。你可以在**创建新虚拟机**时应用这些设置，也可以**调整已有虚拟机**以符合要求。

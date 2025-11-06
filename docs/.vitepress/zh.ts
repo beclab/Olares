@@ -371,49 +371,6 @@ const side = {
         },
       ],
     },
-    {
-      text: "概念",
-      collapsed: true,
-      link: "/zh/manual/concepts/",
-      items: [
-        { text: "系统架构", link: "/zh/manual/concepts/system-architecture" },
-        { text: "Olares ID",
-          link: "/zh/manual/concepts/olares-id",
-          collapsed: true,
-          items: [
-            {
-              text: "去中心化标识符",
-              link: "/zh/manual//concepts/did",
-            },
-            {
-              text: "DID Registry",
-              link: "/zh/manual//concepts/registry",
-            },
-            {
-              text: "可验证凭证",
-              link: "/zh/manual//concepts/vc",
-            },
-            {
-              text: "自治声誉",
-              link: "/zh/manual//concepts/reputation",
-            },
-            //      {
-            //     text: "主权网络",
-          //   link: "/zh/manual//concepts/self-sovereign-network",
-            //  },
-            {
-              text: "身份钱包",
-              link: "/zh/manual/concepts/wallet",
-            },
-          ],
-        },
-        { text: "账户", link: "/zh/manual/concepts/account" },
-        { text: "应用", link: "/zh/manual/concepts/application" },
-        { text: "网络", link: "/zh/manual/concepts/network" },
-        { text: "数据", link: "/zh/manual/concepts/data" },
-        { text: "密钥", link: "/zh/manual/concepts/secrets" },
-      ],
-    },
     { text: "术语", link: "/zh/manual/glossary" },
   ],
   "/zh/space/": [
