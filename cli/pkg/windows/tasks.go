@@ -314,7 +314,7 @@ func (c *ConfigWslConf) Execute(runtime connector.Runtime) error {
 	}
 
 	cmd = &utils.DefaultCommandExecutor{
-		Commands: []string{"--shutdown", distro},
+		Commands: []string{"-t", distro},
 	}
 	if _, err := cmd.RunCmd("wsl", utils.DEFAULT); err != nil {
 		return errors.Wrap(errors.WithStack(err), fmt.Sprintf("shutdown wsl %s failed", distro))
