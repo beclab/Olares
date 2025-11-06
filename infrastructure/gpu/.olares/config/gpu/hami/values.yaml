@@ -147,7 +147,7 @@ devicePlugin:
   monitorimage: "beclab/hami"
   monitorctrPath: /usr/local/vgpu/containers
   imagePullPolicy: IfNotPresent
-  deviceSplitCount: 10
+  deviceSplitCount: 30
   deviceMemoryScaling: 1
   deviceCoreScaling: 1
   # The runtime class name to be used by the device plugin, and added to the pod.spec.runtimeClassName of applications utilizing NVIDIA GPUs
