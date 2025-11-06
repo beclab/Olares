@@ -28,7 +28,7 @@ description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加�
 - RAM：推荐 16 GB 及以上
 - 存储：不少于 200 GB的可用磁盘空间，需使用 SSD 硬盘安装。使用 HDD（机械硬盘）可能会导致安装失败。
 - 支持的系统版本：PVE 8.3.2
-- Olares ISO 镜像：点击[此处](https://cdn.olares.cn/olares-v1.12.1-amd64-cn.iso)下载 Olares 官方镜像。
+- Olares ISO 镜像：点击[此处](https://cdn.olares.cn/olares-v1.12.1-amd64.iso)下载 Olares 官方镜像。
 
 ## 在 PVE 中配置 GPU 直通
 
