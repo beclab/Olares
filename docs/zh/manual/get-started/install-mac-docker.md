@@ -39,7 +39,7 @@ Mac 设备需满足以下条件：
 <tabs>
 <template #M-系列芯片>
 
-1. 下载`olaresd-proxy`：https://cdn.joinolares.cn/olaresd-proxy-v0.1.0-darwin-arm64.tar.gz 。
+1. 下载`olaresd-proxy`：https://cdn.olares.cn/olaresd-proxy-v0.1.0-darwin-arm64.tar.gz 。
 2. 解压文件，启动 `olaresd-proxy`。
    :::info 保持 `olaresd-proxy` 在后台运行
    在 Olares 安装和激活期间，保证 `olaresd-proxy` 在后台运行。
@@ -48,7 +48,7 @@ Mac 设备需满足以下条件：
 
 <template #Intel-芯片>
 
-1. 下载`olaresd-proxy`：https://cdn.joinolares.cn/olaresd-proxy-v0.1.0-darwin-amd64.tar.gz 。
+1. 下载`olaresd-proxy`：https://cdn.olares.cn/olaresd-proxy-v0.1.0-darwin-amd64.tar.gz 。
 2. 解压文件，启动 `olaresd-proxy`。
    :::info 保持 `olaresd-proxy` 在后台运行
    在 Olares 安装和激活期间，保证 `olaresd-proxy` 在后台运行。
@@ -70,7 +70,7 @@ Mac 设备需满足以下条件：
      },
      "experimental": false,
      "registry-mirrors": [
-       "https://mirrors.joinolares.cn"
+       "https://mirrors.olares.cn"
      ]
    }
    ```

@@ -35,8 +35,8 @@ export FRP_ENABLE=1 \
     FRP_PORT=0 \
     JUICEFS=0 \
     FRP_AUTH_METHOD="jws" \
-    REGISTRY_MIRRORS="https://mirrors.joinolares.cn" \
-    DOWNLOAD_CDN_URL="https://cdn.joinolares.cn" \
+    REGISTRY_MIRRORS="https://mirrors.olares.cn" \
+    DOWNLOAD_CDN_URL="https://cdn.olares.cn" \
     MARKET_PROVIDER="appstore-china-server-prod.api.jointerminus.cn" \
     TERMINUS_CERT_SERVICE_API="https://terminus-cert.api.jointerminus.cn" \
     TERMINUS_DNS_SERVICE_API="https://terminus-dnsop.api.jointerminus.cn" \
@@ -167,7 +167,7 @@ curl -sSfL https://olares.sh | bash
 
 ### `REGISTRY_MIRRORS`
 设置 Docker 镜像加速地址。
-- **可选值**：`https://mirrors.joinolares.cn` 或其他镜像源地址  
+- **可选值**：`https://mirrors.olares.cn` 或其他镜像源地址  
 - **默认值**：`https://registry-1.docker.io`
 
 ### `TAILSCALE_CONTROLPLANE_URL`
