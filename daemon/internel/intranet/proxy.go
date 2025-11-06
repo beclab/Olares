@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -59,12 +60,26 @@ func (p *proxyServer) Start() error {
 			return func(c echo.Context) error {
 				if strings.HasSuffix(c.Request().Host, ".olares.local") ||
 					strings.HasSuffix(c.Request().Host, "-olares.local") {
-					if c.IsWebSocket() {
-						ctx := c.Request().Context()
-						ctx = context.WithValue(ctx, WSKey, true)
-						r := c.Request().WithContext(ctx)
-						c.SetRequest(r)
+					ctx := c.Request().Context()
+					clientIp := ""
+					if ra := c.Request().RemoteAddr; ra != "" {
+						if h, p, err := net.SplitHostPort(ra); err == nil {
+							klog.Info("Intranet request from ", h, ":", p)
+							ctx = context.WithValue(ctx, proxyInfoCtxKey, proxyInfo{
+								SrcIP:   h,
+								SrcPort: p,
+							})
+							clientIp = h
+						}
 					}
+					if c.IsWebSocket() {
+						ctx = context.WithValue(ctx, WSKey, true)
+					}
+					r := c.Request().WithContext(ctx)
+					if clientIp != "" {
+						r.Header.Set("X-Forwarded-For", clientIp)
+					}
+					c.SetRequest(r)
 					return next(c)
 				}
 
@@ -77,7 +92,8 @@ func (p *proxyServer) Start() error {
 	p.proxy.Use(middleware.ProxyWithConfig(config))
 
 	go func() {
-		err := p.proxy.Start(":80")
+		p.proxy.ListenerNetwork = "tcp4"
+		err := p.proxy.Start("0.0.0.0:80")
 		if err != nil {
 			klog.Error(err)
 		}
@@ -119,9 +135,9 @@ func (p *proxyServer) Next(c echo.Context) *middleware.ProxyTarget {
 		}
 		requestHost = strings.Join(tokens, ".")
 		c.Request().Host = requestHost
-		proxyPass, err = url.Parse(scheme + requestHost + ":443")
+		proxyPass, err = url.Parse(scheme + requestHost + ":444")
 	} else {
-		proxyPass, err = url.Parse(scheme + c.Request().Host + ":443")
+		proxyPass, err = url.Parse(scheme + c.Request().Host + ":444")
 	}
 	if err != nil {
 		klog.Error("parse proxy target error, ", err)
@@ -152,28 +168,67 @@ func (p *proxyServer) initTransport() http.RoundTripper {
 	return transport
 }
 
+type ctxKey string
+
+const proxyInfoCtxKey ctxKey = "proxy-info"
+
+type proxyInfo struct {
+	SrcIP   string
+	SrcPort string
+}
+
 func (p *proxyServer) customDialContext(d *net.Dialer) func(ctx context.Context, network, addr string) (net.Conn, error) {
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
 		_, port, _ := net.SplitHostPort(addr)
 		// Force proxying to localhost
 		klog.Info("addr: ", addr, " port: ", port, " network: ", network)
 		if port == "" {
-			port = "443"
+			port = "444"
 		}
-		newAddr := net.JoinHostPort("127.0.0.1", port)
+		hostname, err := os.Hostname()
+		if err != nil {
+			klog.Error("get hostname error, ", err)
+			hostname = "localhost"
+		} else {
+			hostname = hostname + ".cluster.local"
+		}
+		newAddr := net.JoinHostPort(hostname, port)
 
 		isWs := false
 		if v := ctx.Value(WSKey); v != nil {
 			isWs = v.(bool)
 		}
+
+		proxyDial := func(ctx context.Context, netDialer *net.Dialer, network, addr string) (net.Conn, error) {
+			conn, err := netDialer.DialContext(ctx, network, addr)
+			if err != nil {
+				return nil, err
+			}
+
+			if v := ctx.Value(proxyInfoCtxKey); v != nil {
+				if pi, ok := v.(proxyInfo); ok {
+					dstIP, dstPort := addrToIPPort(conn.RemoteAddr())
+					family := ipFamily(pi.SrcIP, dstIP) // TCP4 or TCP6
+					hdr := fmt.Sprintf("PROXY %s %s %s %s %s\r\n", family, pi.SrcIP, dstIP, pi.SrcPort, dstPort)
+					if _, werr := conn.Write([]byte(hdr)); werr != nil {
+						klog.Error("failed to write PROXY header: ", werr)
+						conn.Close()
+						return nil, werr
+					}
+				}
+			}
+
+			return conn, nil
+		}
+
 		if isWs {
 			klog.Info("WebSocket connection detected, using upgraded dialer")
 			return tlsDial(ctx, d, func(ctx context.Context, network, addr string) (net.Conn, error) {
-				return d.DialContext(ctx, network, newAddr)
+				return proxyDial(ctx, d, network, newAddr)
 			}, network, addr, &tls.Config{InsecureSkipVerify: true})
 		}
 
-		return d.DialContext(ctx, network, newAddr)
+		return proxyDial(ctx, d, network, newAddr)
 	}
 }
 
@@ -228,4 +283,32 @@ func tlsDial(ctx context.Context, netDialer *net.Dialer, dialFunc func(ctx conte
 		return nil, err
 	}
 	return conn, nil
+}
+
+// addrToIPPort extracts ip and port strings from net.Addr (like "ip:port").
+// Returns "0.0.0.0","0" on failure.
+func addrToIPPort(a net.Addr) (string, string) {
+	if a == nil {
+		return "0.0.0.0", "0"
+	}
+	s := a.String()
+	if h, p, err := net.SplitHostPort(s); err == nil {
+		return h, p
+	}
+	// fallback: maybe already an IP
+	return s, "0"
+}
+
+// ipFamily returns "TCP4" if either IP is IPv4, else "TCP6".
+// If parsing fails, default to TCP4 to maximize compatibility.
+func ipFamily(a, b string) string {
+	ipa := net.ParseIP(strings.TrimSpace(a))
+	ipb := net.ParseIP(strings.TrimSpace(b))
+	if ipa != nil && ipa.To4() == nil {
+		return "TCP6"
+	}
+	if ipb != nil && ipb.To4() == nil {
+		return "TCP6"
+	}
+	return "TCP4"
 }
