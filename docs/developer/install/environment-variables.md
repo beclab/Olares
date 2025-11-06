@@ -142,7 +142,7 @@ Explicitly specifies that this machine is accessible publicly on the internet, a
 
 ### `REGISTRY_MIRRORS`
 Specifies a custom Docker registry mirror for faster image pulls.
-- **Valid values**: `https://mirrors.joinolares.cn` or any other valid URL
+- **Valid values**: `https://mirrors.olares.com` or any other valid URL
 - **Default**: `https://registry-1.docker.io`
 
 ### `TAILSCALE_CONTROLPLANE_URL`

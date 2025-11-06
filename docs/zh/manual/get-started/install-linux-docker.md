@@ -119,7 +119,7 @@ cd ~/olares-config
 
    ```bash
    Registry Mirrors:
-   https://mirrors.joinolares.cn/
+   https://mirrors.olares.cn/
    ```
 ## 设置环境变量并启动容器
 

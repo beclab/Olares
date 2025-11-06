@@ -33,7 +33,8 @@ Olares 支持多平台、多部署方式。请根据你的使用场景选择最�
 
 #### Windows
 - [**一行命令**](install-windows-script.md) — 在 WSL2 虚拟化环境中安装 Olares。
-- [**Docker 镜像**](install-windows-docker.md) — 在 WSL2 的 Docker 容器中运行 Olares。
+<!-- [**Docker 镜像**](install-windows-docker.md) — 在 WSL2 的 Docker 容器中运行 Olares。 -->
+
 
 #### macOS
 - [**一行命令**](install-mac-script.md) — 使用 MiniKube 在容器化环境中安装 Olares。
