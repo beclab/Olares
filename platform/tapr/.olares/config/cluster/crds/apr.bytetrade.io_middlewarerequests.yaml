@@ -56,6 +56,10 @@ spec:
                 type: string
               elasticsearch:
                 properties:
+                  allowNamespaceIndexes:
+                    description: AllowNamespaceIndexes indicates user can create and
+                      manage indices with AppNamespace prefix
+                    type: boolean
                   indexes:
                     items:
                       properties:
@@ -100,7 +104,6 @@ spec:
                   user:
                     type: string
                 required:
-                - indexes
                 - user
                 type: object
               mariadb:
@@ -156,6 +159,10 @@ spec:
                 type: string
               minio:
                 properties:
+                  allowNamespaceBuckets:
+                    description: AllowNamespaceBuckets indicates user can create and
+                      manage buckets with AppNamespace prefix
+                    type: boolean
                   buckets:
                     items:
                       properties:
