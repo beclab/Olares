@@ -1,20 +1,20 @@
 ---
-title: Activate and log in to Olares
+outline: [2, 3]
 description: Learn how to activate Olares for the first time, reactivate it after reinstallation, and complete secure two-factor login using the LarePass mobile app.
 ---
 
-# Activate Olares
+# Activate and log in to Olares
 
-Olares uses your **Olares ID** and the **LarePass mobile app** to provide a secure and seamless authentication experience. This document guides you on how to activate Olares and complete two-factor verification during login using LarePass.
+Olares uses your Olares ID and the LarePass mobile app to provide a secure and seamless authentication experience. This document guides you on how to activate Olares and complete two-factor verification during login using LarePass.
 
 :::warning Same network required for admin users
-To avoid activation failures, ensure that both your phone and the Olares device are connected to the **same network** when activating as an **admin user**.  
-For **member users**, the same network requirement does **not** apply.  
+To avoid activation failures, ensure that both your phone and the Olares device are connected to the **same network** when activating as an admin user.  
+For member users, the same network requirement does **not** apply.  
 :::
 
 ## Activate after one-line script installation
 
-If you [installed Olares via the one-line script](../get-started/install-olares.md#install-olares) and completed the initial setup in the wizard:
+If you [installed Olares via the one-line script](../get-started/install-olares.md) and completed the initial setup in the wizard:
 
 ![Activate Olares](/images/manual/larepass/activate-olares.png#bordered)
 
@@ -30,9 +30,17 @@ If you installed Olares via ISO on PVE or are using an Olares hardware device wi
 
 <!--@include: ../get-started/install-and-activate-olares.md{9,25}-->
 
-:::tip Device not discovered?
-If your phone cannot connect to the same network as the Olares device, LarePass will not be able to discover your Olares. In this case, use the [Bluetooth network configuration](manage-olares.md#set-wi-fi-via-bluetooth) feature to connect Olares to the same Wi-Fi as your phone, then repeat the activation process.
-:::
+## Activate Olares using Bluetooth
+
+Use this method if LarePass cannot find your Olares device. This can happen if Olares is not on a wired network or if your phone is on a different network.
+With Bluetooth, you can connect Olares directly to your phone's current Wi-Fi network so you can proceed.
+![Bluetooth network](/images/manual/larepass/bluetooth-network.png)
+
+1. On the **Olares not found** page, tap **Bluetooth network setup**. LarePass will use your phone's Bluetooth to scan for the nearby Olares device.
+2. When your device appears in the list, tap **Network setup**.
+3. Select the Wi-Fi network your phone is currently connected to. If it's password-protected, enter the password and tap **Confirm**.
+4. Olares will begin connecting to the Wi-Fi network. Once the process is complete, a success message will appear. If you return to the Bluetooth network setup page, you'll see that Olares' IP address has changed to your phone's Wi-Fi subnet.
+5. Go back to the device scan page and tap **Discover nearby Olares** to find your device and proceed with activation.
 
 ## Reactivate Olares with the same Olares ID
 

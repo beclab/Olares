@@ -1,8 +1,10 @@
+---
+outline: [2, 3]
+description: Learn how to use the LarePass app to manage your Olares device.
+---
 # Manage Olares with LarePass
 
-The LarePass app allows you to easily manage your Olares device. You can upgrade Olares，monitor system status, manage network connections, perform remote controls, and check device information from your phone.
-
-This guide walks you through the core management features available on LarePass.
+The LarePass app allows you to easily manage your Olares device. You can upgrade Olares, monitor system status, manage network connections, perform remote controls, and check device information from your phone.
 
 ## Prerequisites
 
@@ -16,136 +18,125 @@ Before you begin, ensure the following:
 
 The **Olares management** page is the central hub for using LarePass to manage your Olares device. To access **Olares management**:
 
-![Olares management](/images/manual/larepass/olares-management.png#bordered)
-
 1. Open LarePass app and go to **Settings**.
 2. In the **My Olares** card, tap **System** to enter the **Olares management** page.
 
-## Upgrade Olares
+![Access Olares management](/images/manual/larepass/system.png#bordered)
 
+On this page, you can:
+- View device information
+- Upgrade Olares
+- Restart or shut down Olares remotely
+- Modify network settings
+- Restore Olares to factory settings
+- Reset SSH password <Badge type="tip" text="Olares One Only" />
+
+![Olares management](/images/manual/larepass/olares-management1.png#bordered)
+
+### View device information
+
+Tap the device information area at the top to access device details, including:
+- Hardware details
+- System version
+- Current network connection status, including internal and external IP addresses.
+
+![View device information](/images/manual/larepass/view-device-information.png#bordered)
+
+### Upgrade Olares
 :::warning Olares admin required
 Only Olares admin can perform system updates. Updates will apply to all members within the same Olares cluster.
 :::
 
-When a new Olares version is available, you will see a "New version found" prompt under **Olares management** > **System update**. To install a system update:
-
-![Upgrade Olares](/images/manual/larepass/olares-upgrade.png#bordered)
+To install a system update:
 
 1. On the **Olares management** page, tap **System update**.
 
 2. On the **System update** page, confirm the available version in the **New version** field, then click **Upgrade**.
+   ![Check for available version](/images/manual/larepass/check-version.png#bordered)
 
 3. In the pop-up dialog, choose your upgrade method and tap **Confirm**:
-
-   - **Download only**: Olares will only download the update package. After the download completes, click **Upgrade** on the **System update** page to start the installation. You can continue using Olares during the download process. 
-
+    - **Download only**: Olares will only download the update package. After the download completes, click **Upgrade** on the **System update** page to start the installation. You can continue using Olares during the download process.
     - **Download and upgrade**: Olares will immediately download and install the update package. The system will be temporarily unavailable during the upgrade process.
+    ![Upgrade method](/images/manual/larepass/olares-upgrade1.png#bordered)
 
 4. Wait for the upgrade to finish. You will see a success message, and Olares will automatically resume normal operation.
 
-## Remote device control
+### Restart or shut down Olares remotely
 
-In the upper-right corner of the Olares management page, tap the <i class="material-symbols-outlined">power_settings_new</i> icon to access remote control options:
+In the upper-right corner of the **Olares management** page, tap the <i class="material-symbols-outlined">power_settings_new</i> icon to access remote control options:
+- **Remote shutdown**: Your Olares will power off. If your phone is on the same network as Olares, its status shows `Powered off`. Remote operations are unavailable after shutdown, and you must turn the device back on manually.
+- **Restart device**: Your Olares will restart. If your phone is on the same network as Olares, its status will show `Restarting` and will return to `Olares running` in approximately 5–8 minutes.
+  ::: tip Note
+  If you restart from a network outside Olares, the **My Olares** card will be inaccessible during the restart and will return to normal after startup is complete.
+  :::
 
- ![Device control](/images/manual/larepass/device-control.png)
+![Restart or shut down Olares remotely](/images/manual/larepass/device-control1.png#bordered)
 
-- **Restart device** – Your Olares will restart. If your phone is on the same network as Olares, its status will show `Restarting` and will return to `Olares running` in approximately 5–8 minutes.
-- **Remote shutdown** – Your Olares will power off. If your phone is on the same network as Olares, its status shows `Powered off`.  Remote operations are unavailable after shutdown, and you must turn the device back on manually.
-
-::: tip Note
-If you restart from a network outside Olares, the **My Olares** card will be inaccessible during the restart and will return to normal after startup is complete.
-:::
-
-## Configure network
-
-Tap **Wi-Fi configuration** to view or modify the current network settings of your Olares device.
-
+### Modify network settings
 :::tip Same network required
 Make sure your phone and Olares are connected to the same network.
 :::
-
-### Switch from wired to wireless network
-
-If Olares was activated over wired Ethernet, you can switch it to the Wi-Fi on the same network:
-
-![Wi-Fi switch](/images/manual/larepass/switch-wifi.jpg)
-
-1. Tap the **Wi-Fi configuration** option to enter the network selection page.
-2. Tap the Wi-Fi network from the list. If the network is password-protected, enter the password and tap **Confirm**.
-3. Once connected, the network switches to Wi-Fi automatically. The transition takes approximately 5 minutes. The Olares status will change to `IP changing` before it reverts to `Olares Running`.
-
-You can switch back to the wired network following the same steps.
-
-::: tip Wired network recommended
+:::tip Wired network recommended
 To ensure an optimal and stable connection, we recommend using a wired network whenever possible.
 :::
 
-### Update IP address
+You can switch your Olares device's connection between its wired and Wi-Fi network options.
 
-If your Olares device moves to a different network:
+1. On the **Olares management** page, tap **Wi-Fi configuration**.
 
-1. Connect the Olares device to your wired network via Ethernet and power it on. Ensure your phone is connected to the Wi-Fi for that same network.
-2. Open LarePass on your phone and go to **Settings** > **My Olares** > **System** > **Olares management** page.
-3. LarePass will automatically scan Olares device within the network. When found, Olares will appear as `IP changing` in LarePass.
-4. Once IP update finishes, the status will revert to `Olares running`. This process may take 5–10 minutes.
+2. A list of available networks will appear. Tap the network you want to switch to:
+   - To switch to Wi-Fi, tap the desired Wi-Fi network.
+   - To switch to wired, tap the wired network option.
+   ![Modify network settings](/images/manual/larepass/switch-wifi1.png#bordered)
 
-### Set Wi-Fi via Bluetooth
+3. If you selected a password-protected Wi-Fi network, enter the password and tap **Confirm**.
 
-If your Olares cannot connect to a wired network during activation, or if it's connected to a wired network different from your phone, activation with LarePass may fail, and you cannot perform device management tasks that require the same network (such as Wi-Fi configuration or a factory reset). In this case, use the Bluetooth network setup feature to connect Olares to your phone's Wi-Fi network.
- ![Bluetooth network](/images/manual/larepass/bluetooth-network.png)
+4. The network will begin to switch. The transition takes approximately 5 minutes. The Olares status will change to `IP changing` before it reverts to `Olares Running`.
 
-1. On the **Olares not found** page, tap the **Bluetooth network setup** option. LarePass will use your phone's Bluetooth to scan for the nearby Olares device.
-2. When your device appears in the list, tap **Network setup**.
-3. Select the Wi-Fi network your phone is currently connected to. If it's password-protected, enter the password and tap **Confirm**.
-
-4. Olares will start switching the network.Once the process is complete, a success message will appear. If you return to the Bluetooth network setup page, you'll see that Olares' IP address has changed to your phone's Wi-Fi subnet. 
-   ::: tip Note
-   The process takes longer if your Olares was activated earlier as the network switch affects more services.
-   :::
-5. Go back to the device scan page and tap **Discover nearby Olares** to find your device. You can now proceed with [device activation](activate-olares.md) or device management as instructed in this document.
-
-## View device information
-
-On the **Olares management** page, tap the device information area at the top to access device details, including:
-
-- Hardware details 
-- System version 
-- Current network connection status, including internal and external IP addresses.
-
-## Uninstall Olares
-
+### Restore Olares to factory settings
+:::warning Proceed with caution
+This will permanently delete all your accounts info and data. Proceed with caution.
+:::
 :::tip Same network required
 Make sure your phone and Olares are connected to the same network.
 :::
 
-This will reset your device to the prepared installation phase, where you can scan the LAN to re-install and activate Olares. 
-
-![Uninstall Olares](/images/manual/larepass/restore-to-factory.png)
-
-::: warning Proceed with caution
-This will permanently delete all your accounts info and data. Proceed with caution.
-:::
+This will reset your device to the prepared installation phase, where you can scan the LAN to re-install and activate Olares.
 
 1. On the **Olares management** page, tap **Restore to factory settings**.
 
-2. Review the risk prompt and enter your local LarePass lock screen password. If not set, you will be prompted to set one first.
+2. Review the risk prompt, and tap **Restore to factory settings**.
+   ![Review risk prompt](/images/manual/larepass/review-risk-prompt.png#bordered)
 
-3. Wait for the uninstallation to complete. You will return to the Olares login screen when it's done.
+3. Enter your local LarePass lock screen password, and tap **Confirm**. If you haven't set a local password, you will be prompted to set one first.
+   ![Enter local unlock password](/images/manual/larepass/enter-password-to-uninstall.png#bordered)
 
-## Reset SSH Password <Badge type="tip" text="Olares One Only" />
+4. Wait for the reset to complete. You will return to the account activation page when it's done.
 
+### Reset SSH password <Badge type="tip" text="Olares One Only" />
+:::warning Required action
+This dialog will continue to appear until you reset the password. While you can reset later from the [My hardware](../olares/settings/my-olares.md#reset-ssh) settings page, we strongly recommend doing it immediately.
+:::
 After you activate **Olares One** with LarePass, a **Reset SSH Password** dialog will appear automatically. Use it to change the default SSH password and prevent unintended SSH access.
 
-![Reset SSH Password](/images/manual/larepass/change-ssh-pw.png)
+![Reset SSH Password](/images/manual/larepass/change-ssh-pw.png#bordered)
 
 1. In the **Reset SSH Password** dialog, enter a new password. Make sure it meets all strength requirements.
 2. Click **Confirm**.
 
-:::warning Required action
-This dialog will continue to appear until you reset the password. While you can reset later from the [My hardware](../olares/settings/my-olares.md#reset-ssh) settings page, we strongly recommend doing it immediately. 
-:::
+## FAQ
+### How do I reconnect Olares after moving it to a new network?
+If your Olares device moves to a different network, it will become temporarily unavailable. To reconnect it:
 
+1.  Connect the Olares device to your new wired network and power it on.
+2.  Ensure your phone is connected to the Wi-Fi for that same network.
+3.  Open LarePass on your phone and go to **Settings** > **My Olares** > **System** > **Olares management** page.
+4.  LarePass will automatically scan for the Olares device within the network. When found, Olares will appear as `IP changing` in LarePass.
+5.  Once the IP update finishes, the status will revert to `Olares running`. This process may take 5–10 minutes.
 
- 
+### I moved the Olares device to a new network that has no wired connection. How do I connect it to Wi-Fi?
+If your already-activated Olares device is moved to a new location without a wired connection, it will show as offline.
 
+To reconnect it, look for the **Bluetooth network setup** option. This feature allows you to use your phone's Bluetooth to find the Olares and connect it to the new Wi-Fi network.
 
+This process may take longer than the initial activation as the network switch needs to update all existing services on the device.

@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: 了解如何首次激活 Olares、在重新安装后重新激活，以及使用 LarePass 移动端完成安全的双因素登录。
 ---
 
@@ -13,7 +14,7 @@ Olares 通过 **Olares ID** 与 **LarePass 移动应用**提供安全且流畅�
 
 ## 通过一键脚本安装后激活
 
-如果你通过一键安装脚本完成[Olares 安装和初始配置](../get-started/install-olares.md#安装-olares-1)后，可使用以下步骤激活 Olares 实例：
+如果你通过一键安装脚本完成[Olares 安装和初始配置](../get-started/install-olares.md)后，可使用以下步骤激活 Olares 实例：
 
 ![激活](/images/manual/larepass/activate-olares.png#bordered)
 
@@ -29,9 +30,17 @@ Olares 通过 **Olares ID** 与 **LarePass 移动应用**提供安全且流畅�
 
 <!--@include: ../get-started/install-and-activate-olares.md{9,23}-->
 
-:::tip 无法发现设备？
-如果手机无法连接到 Olares 的现有网络，LarePass 将无法发现待激活设备。此时，可通过[蓝牙配网](manage-olares.md#蓝牙配网)功能，将 Olares 连接至手机所在 Wi-Fi 网络，再重复此激活流程。
-:::
+### 通过蓝牙激活
+
+如果 LarePass 找不到你的 Olares 设备，可以使用蓝牙激活。这通常发生在 Olares 没有连接有线网络，或者你的手机和 Olares 处于不同网络的情况下。
+通过蓝牙，你可以将 Olares 直接连接到你手机当前的 Wi-Fi 网络，以便继续操作。
+![蓝牙配网](/images/zh/manual/larepass/bluetooth-network.png#bordered)
+
+1. 在**未发现 Olares** 提示页面底部，点击**蓝牙配网**选项。LarePass 将使用手机蓝牙扫描附近的 Olares 设备。
+2. 设备显示后，点击**配置网络**。
+3. 选择手机当前连接的 Wi-Fi 网络。如果该网络有密码保护，请输入密码并点击**确认**。
+4. Olares 将开始网络切换过程。完成后您会看到成功消息。此时，如返回到**蓝牙配网**页面，你将看到 Olares 的 IP 地址已更改为你手机 Wi-Fi 一样的网络。
+5. 返回到设备扫描页面，点击**发现附近的 Olares**，找到你的设备并继续激活。
 
 ## 使用同一 Olares ID 重新激活
 
@@ -44,7 +53,6 @@ Olares 通过 **Olares ID** 与 **LarePass 移动应用**提供安全且流畅�
 ## 使用 LarePass 进行双因素验证
 
 登录 Olares 时，需要完成双因素验证。你可以在 LarePass 中直接确认，或手动输入 6 位验证码。
-
 
 ### 在 LarePass 中确认登录
 ![2FA](/images/manual/larepass/second-confirmation.png#bordered)
