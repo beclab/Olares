@@ -38,7 +38,7 @@ LarePass 应用可以让你轻松管理你的 Olares 设备。你可以通过手
 点击顶部的设备信息区域，可以查看设备详情，包括：
 - 硬件详情
 - 系统版本
-- 当前的网络连接状态，包括内网和外网 IP 地址。
+- 当前的网络连接状态，包括内网和外网 IP 地址
 
 ![查看设备信息](/images/zh/manual/larepass/view-device-information.png#bordered)
 
@@ -73,7 +73,7 @@ LarePass 应用可以让你轻松管理你的 Olares 设备。你可以通过手
 ![远程重启或关闭 Olares](/images/zh/manual/larepass/device-control1.png#bordered)
 
 ## 修改网络设置
-:::tip 注意
+:::tip 需要同一网络
 此操作需要你的手机和 Olares 处于同一网络。
 :::
 :::tip 建议
