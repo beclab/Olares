@@ -101,7 +101,7 @@ This will permanently delete all your accounts info and data. Proceed with cauti
 Make sure your phone and Olares are connected to the same network.
 :::
 
-This will reset your device to the prepared installation phase, where you can scan the LAN to re-install and activate Olares.
+This action will reset your device to the prepare phase, where you can scan the LAN to re-install and activate Olares.
 
 1. On the **Olares management** page, tap **Restore to factory settings**.
 

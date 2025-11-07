@@ -14,7 +14,7 @@ Olares 通过 **Olares ID** 与 **LarePass 移动应用**提供安全且流畅�
 
 ## 通过脚本安装后激活
 
-如果你通过一键安装脚本完成[Olares 安装和初始配置](../get-started/install-olares.md)后，可使用以下步骤激活 Olares 实例：
+如果你通过脚本安装完成[Olares 安装和初始配置](../get-started/install-olares.md)后，可使用以下步骤激活 Olares 实例：
 
 ![激活](/images/manual/larepass/activate-olares.png#bordered)
 
