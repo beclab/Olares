@@ -366,11 +366,11 @@ func (a *ApplySystemEnv) Execute(runtime connector.Runtime) error {
 			envItem.Default = procVal
 		}
 
-		err = apputils.CheckEnvValueByType(envItem.Value, envItem.Type)
+		err = envItem.ValidateValue(envItem.Value)
 		if err != nil {
 			return fmt.Errorf("invalid system env value: %s", envItem.Value)
 		}
-		err = apputils.CheckEnvValueByType(envItem.Default, envItem.Type)
+		err = envItem.ValidateValue(envItem.Default)
 		if err != nil {
 			return fmt.Errorf("invalid system env default value: %s", envItem.Value)
 		}
