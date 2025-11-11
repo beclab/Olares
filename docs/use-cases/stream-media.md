@@ -35,8 +35,8 @@ If your media is on a NAS or other network server, you can connect it to Olares.
 :::tip Naming conventions
 Correct file naming is the key to accurate metadata and beautiful posters in Jellyfin. 
 Follow Jellyfin's official guidelines for accurate metadata:
-- Movies: [Movie naming conventions](https://jellyfin.org/docs/general/server/media/movies/#naming)
-- TV Shows: [TV shows naming conventions](https://jellyfin.org/docs/general/server/media/shows/#naming)
+- [Movie naming conventions](https://jellyfin.org/docs/general/server/media/movies/#naming)
+- [TV shows naming conventions](https://jellyfin.org/docs/general/server/media/shows/#naming)
 :::
 :::tip Folder organization
 Keep movies and TV shows in **separate folders** for easier management and correct metadata retrieval.
