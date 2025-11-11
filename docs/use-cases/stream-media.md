@@ -146,7 +146,7 @@ Assume you've already installed the official [Jellyfin client app](https://jelly
 ![Connect to server](../public/images/manual/use-cases/jellyfin-connect.png#bordered)
 6. Sign in with your Jellyfin admin account.
 
-You should now see your media libraries displayed in the app — ready to stream.
+You should now see your media libraries displayed in the app.
 
 :::tip 
 For the best experience, keep your Olares VPN connection active when accessing Jellyfin remotely. This ensures you can always connect to your Jellyfin server securely. 
