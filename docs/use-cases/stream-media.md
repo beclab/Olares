@@ -129,8 +129,7 @@ If you haven’t done this yet, see [Enable VPN on LarePass](../manual/larepass/
 2. Find and click **Jellyfin**. 
 3. Go to the **Entrances** tab.
 ![Entrances](../public/images/manual/use-cases/jellyfin-entrances.png#bordered)
-4. Set the **Authentication level** to **Internal**. 
-  - This is a required step to enable the private endpoint to accept login credentials.
+4. Set the **Authentication level** to **Internal**. This is a required step to enable the private endpoint to accept login credentials.
 ![Authentication level](../public/images/manual/use-cases/jellyfin-auth-level.png#bordered)
 
 ### Connect your Jellyfin client
