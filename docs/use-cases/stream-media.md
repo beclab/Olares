@@ -25,11 +25,12 @@ Before you begin, make sure:
 ## Add media to Olares
 
 Before setting up Jellyfin, you need to make sure your media is already available on Olares. You can add it in several ways:
-- **Upload files directly**: 
-  - Use the **LarePass desktop client** to upload your large media files — it provides better speed and progress visibility than the mobile app. For detailed instructions, see [Upload via LarePass desktop](../manual/olares/files/add-edit-download.md#upload-via-larepass-desktop).
-  - Upload your media to folders that correspond to each media type (e.g., upload movies to `/home/Movies/`).
-- **Mount an external drive**: After you insert a USB device, it will be automatically mounted and accessible. Files in it are under the /external/ directory.
-- **Mount a network share**: If your media is on a NAS or other network server, you can connect it to Olares. For detailed instructions, see [Mount SMB shares](../manual/olares/files/mount-SMB.md).
+- **Upload files directly**<br>
+Upload your media to the `/home/Movies/` folder in Files. For better speed and progress visibility, [use the LarePass desktop client to upload](../manual/olares/files/add-edit-download.md#upload-via-larepass-desktop).
+- **Mount an external drive**<br>
+After you insert a USB drive to your Olares device, it will be automatically mounted and accessible. Files in it are under the `/external/` directory.
+- **Mount a network share**<br> 
+If your media is on a NAS or other network server, you can connect it to Olares. For detailed instructions, see [Mount SMB shares](../manual/olares/files/mount-SMB.md).
 
 :::tip Naming conventions
 Correct file naming is the key to accurate metadata and beautiful posters in Jellyfin. 
