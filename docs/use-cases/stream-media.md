@@ -57,11 +57,11 @@ With your media ready, install Jellyfin and complete its setup wizard.
 ### Complete the initial setup
 
 Follow the wizard prompts to finish configuring Jellyfin.
-1. **Language**: Select your preferred display language and click **Next**.
-2. **Admin account**: Create a username and password for your Jellyfin admin account, and click **Next**.
-3. **Set up your media libraries**: This step can be skipped for now.
-4. **Metadata language**: Select your preferred language and country and click **Next**.
-5. **Remote access**: Keep the default settings (unchecked) and click **Next**. Olares VPN will handle secure remote access.
+1. Select your preferred display language and click **Next**.
+2. Create a username and password for your Jellyfin admin account, and click **Next**.
+3. When prompted to set up your media libraries, you can skip this step for now.
+4. For metadata, select your preferred language and country and click **Next**.
+5. For remote access, keep the default settings (unchecked) and click **Next**. Olares VPN will handle secure remote access.
 6. Click **Finish** to complete the setup wizard.
 7. You will be taken to the login page. Sign in with the admin credentials you just created.
 ![Sign in to Jellyfin](../public/images/manual/use-cases/jellyfin-sign-in.png#bordered)
