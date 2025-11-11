@@ -89,7 +89,7 @@ To ensure smooth playback for high-resolution videos, enable hardware accelerati
 2. Under **Hardware acceleration**, choose your preferred method based on your Olares device's hardware.
 ![Enable transcoding](../public/images/manual/use-cases/jellyfin-transcoding.png#bordered)
 
-## Enhance metadata with plugins
+## Enhance experience with community plugins
 
 You can install plugins to improve metadata, fetch better artwork, and add new features.
 
