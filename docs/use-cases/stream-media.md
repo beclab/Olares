@@ -93,7 +93,6 @@ To ensure smooth playback for high-resolution videos, enable hardware accelerati
 
 You can install plugins to improve metadata, fetch better artwork, and add new features.
 
-### Add plugin repositories
 
 The process for installing plugins is the same for all. Here's an example using **Skin Manager**:
 1. In the Dashboard, go to **Plugins** > **Catalog**.
