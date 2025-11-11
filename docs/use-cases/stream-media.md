@@ -120,7 +120,7 @@ With Jellyfin set up and your libraries ready, the final step is connecting from
 
 ### Configure Jellyfin authentication in Olares
 
-To ensure secure connections between Jellyfin and your devices, configure authentication through Olares. 
+To ensure secure connections between Jellyfin and your devices, configure the authentication level through Olares. 
 
 Make sure LarePass VPN (or local network access) is enabled before starting the steps below.
 If you haven’t done this yet, see [Enable VPN on LarePass](../manual/larepass/private-network.md#enable-vpn-on-larepass) for details.
