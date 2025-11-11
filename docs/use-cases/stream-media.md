@@ -118,7 +118,7 @@ Since each plugin behaves differently, check the plugin's **GitHub repository** 
 
 With Jellyfin set up and your libraries ready, the final step is connecting from your client devices so you can start streaming your media.
 
-### Configure Jellyfin authentication in Olares
+### Configure Jellyfin authentication level in Olares
 
 To ensure secure connections between Jellyfin and your devices, configure the authentication level through Olares. 
 
