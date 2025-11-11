@@ -150,6 +150,10 @@ spec:
                   - port
                   type: object
                 type: array
+              rawAppName:
+                description: RawAppName the name of application for cloned app, if
+                  RawAppName is not empty means this app is cloned
+                type: string
               settings:
                 additionalProperties:
                   type: string

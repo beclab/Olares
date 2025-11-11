@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.19.0
   name: applicationmanagers.app.bytetrade.io
 spec:
   group: app.bytetrade.io
@@ -67,6 +67,8 @@ spec:
                 type: string
               opType:
                 description: OpType represents the type of operation being performed.
+                type: string
+              rawAppName:
                 type: string
               source:
                 type: string
