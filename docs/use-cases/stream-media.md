@@ -110,7 +110,6 @@ The process for installing plugins is the same for all. Here's an example using 
 7. After it restarts, return to **Dashboard** > **Plugins** > **My Plugins** to confirm the plugin you installed is listed and has an **Active** status.
 ![Plugin status](../public/images/manual/use-cases/jellyfin-plug-status.png#bordered)
 
-### Apply plugins
 
 After installing plugins, you may need to enable or configure them before they take effect.
 Since each plugin behaves differently, check the plugin's **GitHub repository** or **README** for setup details.
