@@ -76,7 +76,7 @@ With Jellyfin installed and running, the next step is to tell it where your medi
    - **Content type**: Choose the type of media (e.g., Movies, Shows, Music). For folders containing both movies and TV shows, choose **Mixed Movies and Shows**.
    - **Display name**: Enter the name to display for the library.<br>
    - **Folders**: Click + to add the path to your media.<br>
-      - **Olares Files**: `/home/<YourMediaFolder>`
+      - **Olares Files**: `/home/movies/<YourMediaFolder>`
       - **External storage**: `/external/<YourMediaFolder>`
 4. Click **Ok** to save, and repeat for other media types (e.g., one for "Movies", one for "TV Shows").
 
