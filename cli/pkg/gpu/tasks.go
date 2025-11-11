@@ -131,8 +131,8 @@ func (t *InstallCudaDriver) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(err, "failed to apt-get install nvidia-open")
 	}
 
-	if _, err := runtime.GetRunner().SudoCmd("apt-get -y install nvidia-kernel-open-575", false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "Failed to apt-get install nvidia-kernel-open-575")
+	if _, err := runtime.GetRunner().SudoCmd("apt-get -y install nvidia-open-575", false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "Failed to apt-get install nvidia-open-575")
 	}
 
 	if t.SkipNVMLCheckAfterInstall {
