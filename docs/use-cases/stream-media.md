@@ -149,5 +149,5 @@ Assume you've already installed the official [Jellyfin client app](https://jelly
 You should now see your media libraries displayed in the app.
 
 :::tip 
-For the best experience, keep your Olares VPN connection active when accessing Jellyfin remotely. This ensures you can always connect to your Jellyfin server securely. 
+For the best experience, keep your LarePass VPN connection active when accessing Jellyfin remotely. This ensures you can always connect to your Jellyfin server securely. 
 :::
