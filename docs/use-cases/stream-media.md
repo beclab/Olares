@@ -12,8 +12,8 @@ Jellyfin is a powerful, open-source software media server that puts you in full 
 In this guide, you will learn how to:
 - Install and set up Jellyfin on your Olares device.
 - Add and organize your media libraries.
-- Enhance metadata with plugins like Skin Manager.
 - Optimize playback using hardware acceleration.
+- Install community plugins.
 - Access and stream your media securely from client devices.
 
 ## Prerequisites
