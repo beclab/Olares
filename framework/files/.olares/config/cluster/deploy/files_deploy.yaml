@@ -75,8 +75,7 @@ spec:
           command:
           - sh
           - -c
-          - |
-            chown -R 1000:1000 /appdata; chown -R 1000:1000 /appcache; chown -R 1000:1000 /data
+          - env
         - name: init-container
           image: 'postgres:16.0-alpine3.18'
           command:
@@ -172,8 +171,74 @@ spec:
               name: shared-lib
 {{ end }}
 
+        - name: samba-server
+          image: beclab/samba-server:0.0.3
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: true
+            runAsUser: 0
+            privileged: true
+          volumeMounts:
+            - mountPath: /data/appcache/
+              name: upload-appdata
+            - name: fb-data
+              mountPath: /appdata
+            - name: userspace-dir
+              mountPath: /data
+            - name: upload-appdata
+              mountPath: /appcache/
+{{ if .Values.sharedlib }}        
+            - name: shared-lib
+              mountPath: /data/External
+              mountPropagation: Bidirectional
+{{ end }}
+          ports:
+            - containerPort: 445
+          env:
+{{ if .Values.sharedlib }}        
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: TERMINUSD_HOST
+              value: $(NODE_IP):18088  
+{{ end }}
+            - name: EXTERNAL_PREFIX
+              value: '/External/'
+            - name: ROOT_PREFIX
+              value: /data
+            - name: REDIS_HOST
+              value: redis-cluster-proxy.os-platform
+            - name: REDIS_PORT
+              value: '6379'
+            - name: REDIS_USERNAME
+              value: ''
+            - name: REDIS_PASSWORD
+              value: {{ $files_redis_password | b64dec }}
+            - name: REDIS_USE_SSL
+              value: 'false'
+              # use redis db 0 for redis cache
+            - name: REDIS_DB
+              value: '0'
+            - name: PGHOST
+              value: citus-headless.os-platform
+            - name: PGPORT
+              value: '5432'
+            - name: PGUSER
+              value: files_os_framework
+            - name: PGPASSWORD
+              value: {{ $files_postgres_password | b64dec }}
+            - name: PGDB1
+              value: os_framework_files
+          command:
+            - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.124
+          image: beclab/files-server:v0.2.125
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -370,6 +435,24 @@ spec:
             path: "{{ .Values.sharedlib }}"
             type: Directory
 {{ end }}            
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: files-samba
+  namespace: os-framework
+spec:
+  ports:
+    - name: smb
+      protocol: TCP
+      port: 445
+      targetPort: 445
+      nodePort: 30445
+  selector:
+    app: files
+  type: NodePort
+  externalTrafficPolicy: Local
 
 ---
 apiVersion: v1
