@@ -64,6 +64,27 @@ spec:
             type: string
           metadata:
             type: object
+          options:
+            description: Options defines a finite set of allowed values for this env
+              var
+            items:
+              properties:
+                title:
+                  type: string
+                value:
+                  type: string
+              required:
+              - title
+              - value
+              type: object
+            type: array
+          regex:
+            type: string
+          remoteOptions:
+            description: RemoteOptions provides a URL (http/https) returning a JSON-encoded
+              string array of allowed values
+            pattern: ^https?://
+            type: string
           required:
             type: boolean
           title:
