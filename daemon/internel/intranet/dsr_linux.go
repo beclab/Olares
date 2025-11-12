@@ -15,15 +15,18 @@ import (
 func (d *DSRProxy) regonfigure() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if !d.closed {
-		d.Close()
-	}
-
 	if !d.configChanged {
 		return nil
 	}
 
+	if !d.closed {
+		d.Close()
+	}
+
 	klog.Info("reconfigure DSR proxy")
+	klog.Infof("VIP: %s on interface %s", d.vip.String(), d.vipInterface.Name)
+	klog.Infof("Backend: %s with MAC %s", d.backendIP.String(), d.backendMAC.String())
+	klog.Infof("Calico interface: %s", d.calicoInterface.Name)
 
 	var err error
 	d.pcapHandle, err = pcap.OpenLive(d.vipInterface.Name, 65536, true, pcap.BlockForever)

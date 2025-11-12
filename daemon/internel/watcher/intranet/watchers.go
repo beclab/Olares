@@ -188,16 +188,17 @@ func (w *applicationWatcher) loadDnsPodConfig(ctx context.Context, o *intranet.S
 		return err
 	}
 
-	adguardPods, err := k8sClient.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	dnsPods, err := k8sClient.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		klog.Error("list pods error, ", err)
 		return err
 	}
 
 	var dnsPodIp, dnsPodMac, calicoRouteIface string
-	for _, pod := range adguardPods.Items {
+	const adguardDnsAppLabel = "applications.app.bytetrade.io/name"
+	for _, pod := range dnsPods.Items {
 		switch {
-		case pod.Labels["app"] == "adguard-home", pod.Labels["k8s-app"] == "kube-dns":
+		case pod.Labels[adguardDnsAppLabel] == "adguardhome", pod.Labels["k8s-app"] == "kube-dns":
 			dnsPodIp = pod.Status.PodIP
 			dnsPodMac, calicoRouteIface, err = getPodNeighborInfo(dnsPodIp)
 			if err != nil {
@@ -206,7 +207,7 @@ func (w *applicationWatcher) loadDnsPodConfig(ctx context.Context, o *intranet.S
 			}
 		}
 
-		if pod.Labels["app"] == "adguard-home" {
+		if pod.Labels[adguardDnsAppLabel] == "adguardhome" {
 			o.DnsPodIp = dnsPodIp
 			o.DnsPodMac = dnsPodMac
 			o.DnsPodCalicoIface = calicoRouteIface

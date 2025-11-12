@@ -5,7 +5,7 @@ FROM golang:1.23 as builder
 
 WORKDIR /workspace
 COPY go.mod go.sum ./
-RUN apt update && apt install -y libudev-dev
+RUN apt update && apt install -y libudev-dev libpcap-dev
 RUN \
 	echo ">> Downloading go modules..." && \
 	go mod download
