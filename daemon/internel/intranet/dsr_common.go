@@ -1,5 +1,5 @@
-//go:build !linux
-// +build !linux
+//go:build !(linux && amd64)
+// +build !linux !amd64
 
 package intranet
 
