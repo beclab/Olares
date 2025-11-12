@@ -207,7 +207,11 @@ func (g *GenerateK3sService) Execute(runtime connector.Runtime) error {
 		"proxy-mode": "ipvs",
 	}
 
-	kubeApiserverArgs, _ := util.GetArgs(map[string]string{}, g.KubeConf.Cluster.Kubernetes.ApiServerArgs)
+	defaultKubeApiServerArgs := map[string]string{
+		"service-node-port-range": "445-32767",
+	}
+
+	kubeApiserverArgs, _ := util.GetArgs(defaultKubeApiServerArgs, g.KubeConf.Cluster.Kubernetes.ApiServerArgs)
 	kubeControllerManager, _ := util.GetArgs(map[string]string{
 		"terminated-pod-gc-threshold": "1",
 	}, g.KubeConf.Cluster.Kubernetes.ControllerManagerArgs)

@@ -675,7 +675,7 @@ func (m *ChangeIPModule) addKubernetesTasks() {
 			},
 			&task.LocalTask{
 				Name:   "RegenerateK8sFilesWithKubeadm",
-				Action: new(RegenerateFilesForK8sIPChange),
+				Action: new(RegenerateFilesForK8s),
 			},
 			&task.LocalTask{
 				Name:   "CopyNewKubeConfig",
