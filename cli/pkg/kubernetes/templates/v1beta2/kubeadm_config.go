@@ -162,17 +162,19 @@ var (
 	}
 
 	ApiServerArgs = map[string]string{
-		"bind-address":        "0.0.0.0",
-		"audit-log-maxage":    "30",
-		"audit-log-maxbackup": "10",
-		"audit-log-maxsize":   "100",
+		"bind-address":            "0.0.0.0",
+		"audit-log-maxage":        "30",
+		"audit-log-maxbackup":     "10",
+		"audit-log-maxsize":       "100",
+		"service-node-port-range": "445-32767",
 	}
 	ApiServerSecurityArgs = map[string]string{
-		"bind-address":        "0.0.0.0",
-		"audit-log-maxage":    "30",
-		"audit-log-maxbackup": "10",
-		"audit-log-maxsize":   "100",
-		"authorization-mode":  "Node,RBAC",
+		"bind-address":            "0.0.0.0",
+		"audit-log-maxage":        "30",
+		"audit-log-maxbackup":     "10",
+		"audit-log-maxsize":       "100",
+		"service-node-port-range": "445-32767",
+		"authorization-mode":      "Node,RBAC",
 		// --enable-admission-plugins=EventRateLimit must have a configuration file
 		"enable-admission-plugins": "AlwaysPullImages,ServiceAccount,NamespaceLifecycle,NodeRestriction,LimitRanger,ResourceQuota,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,PodNodeSelector,PodSecurity",
 		// "audit-log-path":      "/var/log/apiserver/audit.log", // need audit policy
