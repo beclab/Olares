@@ -16,6 +16,8 @@ rules:
   - applicationpermissions
   - namespaces
   - cronworkflows
+  - pods
+  - nodes
   verbs:
   - get
   - list
@@ -76,7 +78,7 @@ spec:
         runAsUser: 0
       containers:
       - name: tapr-sysevent
-        image: beclab/sys-event:0.2.10
+        image: beclab/sys-event:0.2.12
         imagePullPolicy: IfNotPresent
 
 ---

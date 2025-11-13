@@ -25,6 +25,7 @@ var WSKey = key{}
 type proxyServer struct {
 	proxy     *echo.Echo
 	dnsServer string
+	stopped   bool
 }
 
 func NewProxyServer() (*proxyServer, error) {
@@ -92,10 +93,14 @@ func (p *proxyServer) Start() error {
 	p.proxy.Use(middleware.ProxyWithConfig(config))
 
 	go func() {
-		p.proxy.ListenerNetwork = "tcp4"
-		err := p.proxy.Start("0.0.0.0:80")
-		if err != nil {
-			klog.Error(err)
+		for !p.stopped {
+			p.proxy.ListenerNetwork = "tcp4"
+			err := p.proxy.Start("0.0.0.0:80")
+			if err != nil {
+				klog.Error(err)
+			}
+
+			time.Sleep(10 * time.Second)
 		}
 	}()
 
@@ -106,6 +111,7 @@ func (p *proxyServer) Close() error {
 	if p.proxy != nil {
 		return p.proxy.Close()
 	}
+	p.stopped = true
 	return nil
 }
 

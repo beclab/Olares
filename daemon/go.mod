@@ -29,6 +29,7 @@ require (
 	github.com/eball/zeroconf v0.2.2
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gofiber/fiber/v2 v2.52.9
+	github.com/google/gopacket v1.1.19
 	github.com/hirochachacha/go-smb2 v1.1.0
 	github.com/jaypipes/ghw v0.13.0
 	github.com/jochenvg/go-udev v0.0.0-20171110120927-d6b62d56d37b
@@ -37,6 +38,7 @@ require (
 	github.com/labstack/echo/v4 v4.0.0-00010101000000-000000000000
 	github.com/libp2p/go-netroute v0.2.2
 	github.com/mackerelio/go-osstat v0.2.5
+	github.com/mdlayher/raw v0.1.0
 	github.com/muka/network_manager v0.0.0-20200903202308-ae5ede816e07
 	github.com/nxadm/tail v1.4.11
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
@@ -48,6 +50,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.7
 	github.com/txn2/txeh v1.5.5
+	github.com/vishvananda/netlink v1.3.0
 	go.opentelemetry.io/otel/trace v1.36.0
 	golang.org/x/crypto v0.41.0
 	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
@@ -110,7 +113,6 @@ require (
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 // indirect
@@ -125,6 +127,8 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
+	github.com/mdlayher/packet v0.0.0-20220221164757-67998ac0ff93 // indirect
+	github.com/mdlayher/socket v0.2.1 // indirect
 	github.com/miekg/dns v1.1.55 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/moby/locker v1.0.1 // indirect
@@ -162,6 +166,7 @@ require (
 	github.com/valyala/fasthttp v1.51.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
+	github.com/vishvananda/netns v0.0.4 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
