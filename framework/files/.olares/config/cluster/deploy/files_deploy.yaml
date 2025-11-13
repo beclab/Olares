@@ -172,7 +172,7 @@ spec:
 {{ end }}
 
         - name: samba-server
-          image: beclab/samba-server:0.0.3
+          image: beclab/samba-server:0.0.4
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -448,7 +448,7 @@ spec:
       protocol: TCP
       port: 445
       targetPort: 445
-      nodePort: 30445
+      nodePort: 445
   selector:
     app: files
   type: NodePort
