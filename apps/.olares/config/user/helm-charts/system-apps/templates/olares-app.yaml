@@ -367,6 +367,7 @@ spec:
             - containerPort: 89
             - containerPort: 90
             - containerPort: 91
+            - containerPort: 92
             - containerPort: 8090
           command:
             - /bin/sh
