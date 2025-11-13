@@ -10,6 +10,8 @@
 [![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.gg/olares)
 [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](https://github.com/beclab/olares/blob/main/LICENSE)
 
+<a href="https://trendshift.io/repositories/15376" target="_blank"><img src="https://trendshift.io/api/badge/repositories/15376" alt="beclab%2FOlares | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+
 <p>
   <a href="./README.md"><img alt="Readme in English" src="https://img.shields.io/badge/English-FFFFFF"></a>
   <a href="./README_CN.md"><img alt="Readme in Chinese" src="https://img.shields.io/badge/简体中文-FFFFFF"></a>
@@ -34,7 +36,7 @@
 
 我们坚信，**您拥有掌控自己数字生活的基本权利**。维护这一权利最有效的方式，就是将您的数据托管在本地，在您自己的硬件上。
 
-Olares 是一款开源个人云操作系统，旨在让您能够轻松在本地拥有并管理自己的数字资产。您无需再依赖公有云服务，而可以在 Olares 上本地部署强大的开源平替服务或应用，例如可以使用 Ollama 托管大语言模型，使用 SD WebUI 用于图像生成，以及使用 Mastodon 构建不受审查的社交空间。Olares 让你坐拥云计算的强大威力，又能完全将其置于自己掌控之下。
+Olares 是一款开源个人云操作系统，旨在让您能够轻松在本地拥有并管理自己的数字资产。您无需再依赖公有云服务，而可以在 Olares 上本地部署强大的开源平替服务或应用，例如可以使用 Ollama 托管大语言模型，使用 ComfyUI 生成图像，以及使用 Perplexica 打造本地化、注重隐私的 AI 搜索与问答体验。Olares 让您坐拥云计算的强大威力，又能完全将其置于自己掌控之下。
 
 > 为 Olares 点亮 🌟 以及时获取新版本和更新的通知。
 

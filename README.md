@@ -10,6 +10,8 @@
 [![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.gg/olares)
 [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](https://github.com/beclab/olares/blob/main/LICENSE)
 
+<a href="https://trendshift.io/repositories/15376" target="_blank"><img src="https://trendshift.io/api/badge/repositories/15376" alt="beclab%2FOlares | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+
 <p>
   <a href="./README.md"><img alt="Readme in English" src="https://img.shields.io/badge/English-FFFFFF"></a>
   <a href="./README_CN.md"><img alt="Readme in Chinese" src="https://img.shields.io/badge/简体中文-FFFFFF"></a>
@@ -33,7 +35,7 @@
 ![Personal Cloud](https://app.cdn.olares.com/github/olares/public-cloud-to-personal-cloud.jpg)
 We believe you have a fundamental right to control your digital life. The most effective way to uphold this right is by hosting your data locally, on your own hardware.
 
-Olares is an **open-source personal cloud operating system** designed to empower you to own and manage your digital assets locally. Instead of relying on public cloud services, you can deploy powerful open-source alternatives locally on Olares, such as Ollama for hosting LLMs, SD WebUI for image generation, and Mastodon for building censor free social space. Imagine the power of the cloud, but with you in complete command.
+Olares is an **open-source personal cloud operating system** designed to empower you to own and manage your digital assets locally. Instead of relying on public cloud services, you can deploy powerful open-source alternatives locally on Olares, such as Ollama for hosting LLMs, ComfyUI for image generation, and Perplexica for private, AI-driven search and reasoning. Imagine the power of the cloud, but with you in complete command.
 
 > 🌟 *Star us to receive instant notifications about new releases and updates.* 
 
