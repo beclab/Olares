@@ -12,4 +12,4 @@ data:
       endpoint: http://notification-manager-svc.kubesphere-monitoring-system.svc:19093
     terminal:
       image: alpine:3.14
-      timeout: 600
+      timeout: 7200
