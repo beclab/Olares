@@ -202,6 +202,7 @@ func (g *GenerateK3sService) Execute(runtime connector.Runtime) error {
 		"runtime-request-timeout": "5m",
 		"image-gc-high-threshold": "91",
 		"image-gc-low-threshold":  "90",
+		"housekeeping_interval":   "5s",
 	}
 	defaultKubeProxyArgs := map[string]string{
 		"proxy-mode": "ipvs",
