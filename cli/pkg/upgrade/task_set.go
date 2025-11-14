@@ -1,12 +1,14 @@
 package upgrade
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/container"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	k3stemplates "github.com/beclab/Olares/cli/pkg/k3s/templates"
@@ -16,6 +18,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/terminus"
+	"github.com/pkg/errors"
 )
 
 type upgradeContainerdAction struct {
@@ -113,4 +116,19 @@ func regenerateKubeFiles() []task.Interface {
 		},
 	)
 	return tasks
+}
+
+type upgradeL4BFLProxy struct {
+	common.KubeAction
+	Tag string
+}
+
+func (u *upgradeL4BFLProxy) Execute(runtime connector.Runtime) error {
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf(
+		"/usr/local/bin/kubectl set image deployment/l4-bfl-proxy proxy=beclab/l4-bfl-proxy:%s -n os-network", u.Tag), false, true); err != nil {
+		return errors.Wrapf(errors.WithStack(err), "failed to upgrade L4 network proxy to version %s", u.Tag)
+	}
+
+	logger.Infof("L4 upgrade to version %s completed successfully", u.Tag)
+	return nil
 }
