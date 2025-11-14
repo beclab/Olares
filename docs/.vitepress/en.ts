@@ -340,6 +340,29 @@ const side = {
           },
           {text: "Dashboard", link: "/manual/olares/resources-usage"},
           {text: "Profile", link: "/manual/olares/profile"},
+        {
+          text: "Studio",
+          collapsed: true,
+          link: "/manual/olares/studio/",
+          items: [
+            {
+              text: "Deploy an app",
+              link: "/manual/olares/studio/deploy",
+            },
+//             {
+//               text: "Develop a new app",
+//               link: "/manual/olares/studio/develop",
+//             },
+            {
+              text: "Package and upload",
+              link: "/manual/olares/studio/package-upload",
+            },
+            {
+              text: "Add app assets",
+              link: "/manual/olares/studio/assets",
+            },
+          ],
+        },
         ],
     },
       {
