@@ -3,151 +3,209 @@ outline: [2, 3]
 description: Comprehensive tutorial on streaming Steam games with Olares. Learn to install Steam Headless, configure the streaming service, and stream games on Moonlight from both local and remote networks.
 ---
 
-# Stream your favorite games with Steam Headless
+# Stream your games with Steam Headless
 
-Want to enjoy some gaming with the power of Olares? You are all set. With the Steam Headless app, Olares easily transforms into a steam streaming server. You can now play your favorite games on any compatible device via Moonlight or Steam Link.
+Want to enjoy gaming powered by Olares? You're all set. With the Steam Headless app, Olares easily transforms into a powerful game streaming server. You can now play your favorite games on any compatible device via Moonlight.
 
-This guide walks you through installing Steam Headless on Olares, configuring the streaming service, and using the Moonlight client to stream your games.
+This guide walks you through installing Steam Headless on Olares, configuring the Steam client, pairing the streaming service, and connecting with the Moonlight client to play.
 
 
-## Objectives
+## Learning objectives
 
 By the end of this tutorial, you will learn how to:
+- Install and set up Steam Headless on your Olares device.
+- Set up the Sunshine streaming service and pair it with the Moonlight client.
+- Stream your Steam games from both local and remote networks.
 
-- Install Steam Headless on Olares and configure compatibility for Windows games on the Steam client.
-- Configure the streaming service, which involves pairing the Sunshine streaming server with the host on the Moonlight client.
-- Stream games on the Moonlight client from both local and remote networks.
+## Prerequisites
 
-## Before you begin 
+Before you begin, make sure:
+- Olares running on a machine equipped with an NVIDIA GPU.
+- Moonlight installed on your streaming device. Visit the [Moonlight website](https://moonlight-stream.org/) to download and install the appropriate version.
+- A valid Steam account to access your games.
+- [LarePass VPN enabled](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your client devices (desktop or mobile) if you plan to stream remotely (outside your home network).
+> For local streaming, LarePass VPN is not required.
 
-Before you begin, ensure the following:
+## Install and configure Steam Headless
 
-- Olares is up and running on a machine equipped with an NVIDIA GPU.
-- Your streaming device has Moonlight installed. Visit the [Moonlight website](https://moonlight-stream.org/) to download and install the appropriate version.
-- [Enable LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your streaming device.
-- You have a valid Steam account to access your games.
+Install the app from the Olares Market and then complete the initial setup within the Steam client itself.
 
-## Install Steam Headless
+### Install Steam Headless
 
-1. In Olares Market, find Steam Headless under the **Entertainment** category, and click **Get**.  
-2. Open Steam Headless, and then click **Connect** to access the Steam Headless console.
-3. In the Steam Headless console, click the **Install** button to install and update the Steam client. Once completed, the Steam login page should appear.
-   ![Install Steam client](/images/manual/tutorials/install-steam-client.png#bordered)
+Follow these steps to install and configure Steam Headless:
 
-4. Log into your Steam account and complete the initial setup.
+1. Open the **Market** app in your Olares web interface.
+2. Find **Steam Headless** in the **Fun** category or use the search bar.
+3. Click **Get**, and then click **Install**.
+![Install Steam Headless](../public/images/manual/use-cases/steam-install-steam-headless.png#bordered)
+4. A prompt will appear asking you to configure environment variables. This creates your login credentials for the Sunshine streaming dashboard:
+  - `SUNSHINE_USER`: Create a username for Sunshine access.
+  - `SUNSHINE_PASS`: Set the corresponding password.
+:::tip Remember your login credentials 
+These are your initial login credentials for Sunshine. You must use them to log in the first time. 
+:::
+5. Wait a few minutes for the installation and initialization to complete.
 
-   ![Steam login interface](/images/manual/tutorials/steam-login.png#bordered)
+### Complete the initial Steam setup
 
-::: tip Retry installation upon failures
-Due to network issues, Steam installation or update may fail. If this happens, go to the top-left menu in Steam console and navigate to **Applications** > **Internet** > **Steam** to reinstall.
+Sign in to Steam to complete setup and access your game library.
+1. Once installed, open Steam Headless and click **Connect**.
+   ![Connect to Steam](../public/images/manual/use-cases/steam-connect-to-steam.png#bordered)
+2. The Steam client will automatically install and update. This process may take several minutes.
+   ![Install Steam](../public/images/manual/use-cases/steam-install-steam.png#bordered)
+   ![Update Steam](../public/images/manual/use-cases/steam-update-steam.png#bordered)
+3. When the installation completes, the Steam login screen appears. Sign in with your Steam account and complete the initial setup.
+   ![Sign in to Steam](../public/images/manual/use-cases/steam-sign-in-to-steam.png#bordered)
+
+::: tip Retry installation upon failures 
+If Steam installation or update fails due to network issues, go to the top-left menu in the Steam Headless console and navigate to Applications > Internet > Steam to restart the installation. 
+:::
+Once Steam is ready, you can connect it to Moonlight through Sunshine.
+
+## Pair Sunshine with Moonlight
+
+Steam Headless integrates Sunshine, an open-source streaming server. To stream games, you must pair it with your Moonlight client.
+
+### Access the Sunshine console
+
+Access the Sunshine console to pair your Moonlight client with Olares. The connection method varies depending on your network.
+
+1. From your Steam Headless browser tab, copy its URL.
+2. In your browser, enter the address that matches your connection:
+   - **Same network**: Replace the domain suffix with `.local`, and append `:47990`. For example:
+    
+   ```
+   https://139ebc4f0.<your Olares ID>.olares.local:47990
+   ```
+
+   - **Different network (via VPN)**: [Enable LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your device, then use the `.com` address and append `:47990`. For example: 
+   
+   ```
+   https://139ebc4f0.<your Olares ID>.olares.com:47990
+   ```
+
+3. Press **Enter** to open the Sunshine console page. 
+4. Sign in using the `SUNSHINE_USER` and `SUNSHINE_PASS` credentials you created earlier.
+   ![Sign in to Sunshine](../public/images/manual/use-cases/steam-sign-in-to-sunshine.png#bordered)
+5. Click the **PIN** tab. The page will now wait for a pairing PIN.
+   ![PIN on Sunshine](../public/images/manual/use-cases/steam-pin-on-sunshine.png#bordered)
+
+### Add the host in Moonlight
+
+Moonlight usually detects your Olares host automatically when it is on the same local network as your Olares device.
+
+If it doesn't appear, or if you are connecting over different networks, follow these steps to add the host manually. The process shown below uses the macOS Moonlight client.
+
+:::info Connecting from a different network? 
+If your Moonlight client and Olares device are on different networks, you must first [enable LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) on the device running Moonlight. 
 :::
 
-## Configure game compatibility
+1. Open Moonlight on your streaming device.
+2. Click the **Add Host** button (looks like a computer with a plus icon).
+3. Enter your Olares domain without the `https://` prefix. For example: 
 
-Olares runs on a Linux environment. You'll need to enable [Proton](https://github.com/ValveSoftware/Proton), a compatibility layer, to support Windows games.
+   ```
+   139ebc4f0.<your Olares ID>.olares.com
+   ```
+4. Click **OK**. A new locked host icon appears.
+5. Click the locked icon. Moonlight will display a 4-digit pairing PIN.
+   ![Get pairing PIN](../public/images/manual/use-cases/steam-get-pairing-pin.png#bordered)
 
-1. In the Steam client page, navigate to **Steam** > **Settings** in the top left corner.
-2. Go to the **Compatibility** tab and check **Enable Steam Play for all other titles**.  
-   ![Steam Settings](/images/manual/tutorials/steam-setting.png#bordered)
-3. Restart the Steam client to view your complete game library.  
+### Complete pairing
 
-## Configure the streaming service
+1. Return to the **Sunshine PIN** page in your browser.
+2. Enter the PIN displayed in Moonlight and give your device a name.
+   ![Enter pairing PIN](../public/images/manual/use-cases/steam-enter-pairing-pin.png#bordered)
+3. Click **Send**. When pairing succeeds, you'll see:
+   ```text
+   Success! Please check Moonlight to continue
+   ```
+   ![Pairing succeeds](../public/images/manual/use-cases/steam-pairing-succeeds.png#bordered)
+4. Back in Moonlight, your host icon should now appear unlocked and active.
+   ![Host in Moonlight](../public/images/manual/use-cases/steam-host-in-moonlight.png#bordered)
 
-Steam Headless also integrates Sunshine, the streaming server. To stream games using Moonlight, you need to pair the host PC on moonlight with Sunshine. 
+Once paired, you're ready to start streaming.
 
-### Prepare for paring
+## Stream your games
 
-1. From your Steam client in the browser, get the URL and append `:47990`, for example, `https://139ebc4f0.<your Olares ID>.olares.com:47990`. Open this URL to access the Sunshine console page.
-
-   ![Sunshine console page](/images/manual/tutorials/access-sunshine.png#bordered)
-
-2. On your first visit, log in using the default credentials:  
-   - Username: `sam`  
-   - Password: `password` 
-
-3. Click the **Pin** tab to open the pairing page, where you will be prompted to enter the pairing code.
-   
-   ![Sunshine's paring page](/images/manual/tutorials/pin-sunshine.png#bordered)
-
-
-### Add host in Moonlight
-
-1. Open the Moonlight client on your streaming device and click the <i class="material-symbols-outlined">add_to_queue</i> button in the top-right corner.
-
-2. When promoted to enter the IP address of your host PC, enter the URL of Steam, for example, `139ebc4f0.<your Olares ID>.olares.com`.
-
-   ::: tip Note
-   Do not include `https://`.
-   ::: 
-
-3. Click **OK**, and a host icon appears in locked status.
-4. Click the host icon to receive a pairing code.
-
-   ![Get pin code](/images/manual/tutorials/get-pin-code.png#bordered)
-
-### Complete paring
-
-1. In Sunshine's paring page, enter the pairing code.
-2. Enter a name for the device and click **Send** to finish pairing. If successful, you will see the message: "Success! Please check Moonlight to continue".
-3. Check the host status in Moonlight. The icon should be active now. 
-   ![Paring successfully](/images/manual/tutorials/active-host-moonlight.png#bordered)  
-
-## Stream your game
-
-Now you are done with configuring and ready for gaming. 
+You can stream locally or remotely depending on your usage scenario.
 
 ### Stream locally 
 
-If you are streaming locally from the same network of Olares:
+If your streaming device and Olares are on the same network:
 
-1. Open Moonlight on your streaming device.
-2. Click your steam host, and then click the Steam icon to enter the Steam Big Screen mode and play. 
+1. Open Moonlight.
+2. Select your unlocked host and click the Steam icon.
+  ![Steam in Moonlight](../public/images/manual/use-cases/steam-in-moonlight.png#bordered)
 
-   ![Stream game](/images/manual/tutorials/stream-success.png#bordered)
+Steam Big Picture mode opens. You can now start playing your games.
 
 ### Stream remotely 
 
-With Olares's VPN feature, you can enjoy a smooth streaming experience even across different networks.
+To play from outside your home network, you can connect securely to Olares using LarePass VPN.
 
-To enable the VPN:
+1. Follow the instructions to [enable LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass).
+2. Once connected, open Moonlight.
+3. Select your unlocked host and click the Steam icon.
+Steam Big Picture mode opens. 
 
-<!--@include: ./remote.reusables.md{4,22}-->
-
-Once VPN is enabled on your device, simply follow the same instructions as local streaming.
+You can now start playing your games.
 
 ## FAQs
 
 ### Why isn't the game displaying in full screen?
 
-This could be due to your resolution settings. Try adjusting the resolution:
-- In Moonlight: adjust in **Settings** > **Basic Settings** > **Resolution and FPS**.
-- On the Steam console page: adjust in **Applications** > **Settings** > **Display**.  
-  
-  ![Set display](/images/manual/tutorials/set-steam-display.png#bordered)
+This may be caused by resolution settings. Try adjusting the resolution:
+
+- **In Moonlight**: Go to **Settings** > **Basic Settings** > **Resolution and FPS**.
+![Display in Moonlight](../public/images/manual/use-cases/steam-display-in-moonlight.png#bordered)
+- **On the Steam console page**: Go to **Applications** > **Settings** > **Display**.  
+![Display in Steam Headless](../public/images/manual/use-cases/steam-display-in-steam-hd.png#bordered)
 
 ### How do I exit full-screen streaming?
 
-To exit streaming in the full-screen mode:
-- **On Windows**: Use the shortcut combo **Ctrl + Alt + Shift + Q**.  
-- **On Mac**: Use the shortcut combo **Control (^) + Option (⌥) + Shift + Q**. 
-- **On mobile devices**: use the controller button combo **Start + Select + L1 + R1**.  
+Use the following shortcuts:
+- **Windows**: `Ctrl + Alt + Shift + Q`  
+- **Mac**: `Control (^) + Option (⌥) + Shift + Q` 
+- **Mobile**: `Start + Select + L1 + R1`
 
-After finishing your streaming session, exit the Steam Big Picture mode to release system resources on Olares.
+After finishing, exit Steam Big Picture mode to release system resources on Olares.
+   ![Exit Steam Big Picture Mode](../public/images/manual/use-cases/steam-exit-big-pic.png#bordered)
 
 ### Where are my downloaded games stored?
 
-By default, games are stored at: 
+By default, games are saved in: 
 
-`/Cache/olares/steam-headless/c0/.steam/debian-installation/steamapps/common`
+```
+/Cache/olares/steam-headless/c0/.steam/steam/steamapps/common
+```
 
 We recommend not changing this default directory.
 
+### Why do I get an error when re-pairing the host in Moonlight?
 
+If you delete your Olares host in Moonlight and try to pair again, you may encounter the following errors:
 
+- **The PIN from the PC didn't match. Please try again.**
+- **Request timed out (Error 4)**
+- **Connection closed (Error 2)**
 
+This usually happens when the Sunshine service is not responding.
+To fix it, simply restart Steam Headless in Olares and try pairing again:
 
+1. Go to **Launchpad** > **Control Hub**.
+2. Navigate to **Browser** > **steamheadless** > **Deployments** > **steamheadless** > **Restart**. 
+   ![Restart Steam Headless](../public/images/manual/use-cases/steam-restart.png#bordered)
+3. In the confirmation prompt, enter `steamheadless` and click **Confirm**.
+   ![Confirm restart](../public/images/manual/use-cases/steam-confirm-restart.png#bordered)
+4. Once restarted, pair with Sunshine again in Moonlight.
 
- 
+### How do I change my Sunshine username or password?
 
+You can change your Sunshine credentials directly from the Sunshine web console.
 
-
+1. Open Sunshine in your browser using your local address, for example: `https://139ebc4f0.<your Olares ID>.olares.local:47990`. 
+2. Log in with your current username and password.
+3. Go to the **Change Password** tab.
+   ![Change Sunshine password](../public/images/manual/use-cases/steam-change-sunshine-pw.png#bordered)
+4. Enter a new password (and username if desired), then click **Save**.
