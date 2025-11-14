@@ -98,7 +98,7 @@ func (u upgrader_1_12_2) UpgradeSystemComponents() []task.Interface {
 	preTasks = append(preTasks,
 		&task.LocalTask{
 			Name:   "UpgradeL4",
-			Action: new(upgradeL4),
+			Action: new(upgradeL4BFLProxy),
 			Retry:  5,
 			Delay:  10 * time.Second,
 		})
