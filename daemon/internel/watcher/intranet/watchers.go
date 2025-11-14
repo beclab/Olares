@@ -248,5 +248,7 @@ func getPodNeighborInfo(podIp string) (mac, iface string, err error) {
 		}
 	}
 
+	// try to
+
 	return "", "", fmt.Errorf("not found pod neighbor info for ip %s", podIp)
 }
