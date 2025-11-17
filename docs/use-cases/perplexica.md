@@ -10,7 +10,7 @@ This guide will use Ollama as the model provider and SearXNG as the search provi
 ## Prerequisites
 Before you begin, make sure:
 - Ollama installed and running in your Olares environment.
-- You have downloaded at least one model using Ollama.
+- At least one model installed using Ollama.
 
 ## Install SearXNG
 SearXNG serves as the privacy-focused meta-search engine backend for Perplexica. It:
@@ -38,7 +38,7 @@ With the search backend now running, you can install the main Perplexica app.
 3. Select your preferred model for the **Chat Model** and **Embedding Model**.
    ![Perplexica configurations](/images/manual/use-cases/perplexica-configurations1.png#bordered)
 
-4. Make any other changes as needed.
+4. Adjust any other settings as needed.
 
 The changes will be automatically applied.
 
