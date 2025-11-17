@@ -70,7 +70,7 @@ Steam Headless integrates Sunshine, an open-source streaming server. To stream g
 
 ### Access the Sunshine console
 
-Access the Sunshine console to pair your Moonlight client with Olares. The connection method varies depending on your network.
+Access the Sunshine console to pair your Moonlight client with Olares.
 
 1. From your Steam Headless browser tab, copy its URL.
 2. In your browser, enter the address to access Sunshine. The address varies depending on your network.
