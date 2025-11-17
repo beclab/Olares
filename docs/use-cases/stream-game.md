@@ -60,7 +60,7 @@ Sign in to Steam to complete setup and access your game library.
    ![Sign in to Steam](../public/images/manual/use-cases/steam-sign-in-to-steam.png#bordered)
 
 ::: tip Retry installation upon failures 
-If Steam installation or update fails due to network issues, go to the top-left menu in the Steam Headless console and navigate to Applications > Internet > Steam to restart the installation. 
+If Steam installation or update fails due to network issues, go to the top-left menu in the Steam Headless console and navigate to **Applications** > **Internet** > **Steam** to restart the installation. 
 :::
 Once Steam is ready, you can connect it to Moonlight through Sunshine.
 
