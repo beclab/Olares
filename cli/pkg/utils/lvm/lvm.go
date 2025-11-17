@@ -24,18 +24,21 @@ const (
 	}
 */
 type LvItem struct {
-	LvName          string `json:"lv_name"`
-	VgName          string `json:"vg_name"`
-	LvAttr          string `json:"lv_attr"`
-	LvSize          string `json:"lv_size"`
-	PoolLv          string `json:"pool_lv"`
-	Origin          string `json:"origin"`
-	DataPercent     string `json:"data_percent"`
-	MetadataPercent string `json:"metadata_percent"`
-	MovePv          string `json:"move_pv"`
-	MirrorLog       string `json:"mirror_log"`
-	CopyPercent     string `json:"copy_percent"`
-	ConvertLv       string `json:"convert_lv"`
+	LvName          string   `json:"lv_name"`
+	VgName          string   `json:"vg_name"`
+	LvAttr          string   `json:"lv_attr"`
+	LvSize          string   `json:"lv_size"`
+	PoolLv          string   `json:"pool_lv"`
+	Origin          string   `json:"origin"`
+	DataPercent     string   `json:"data_percent"`
+	MetadataPercent string   `json:"metadata_percent"`
+	MovePv          string   `json:"move_pv"`
+	MirrorLog       string   `json:"mirror_log"`
+	CopyPercent     string   `json:"copy_percent"`
+	ConvertLv       string   `json:"convert_lv"`
+	LvPath          string   `json:"lv_path"`
+	LvDmPath        string   `json:"lv_dm_path"`
+	Mountpoints     []string `json:"mountpoints"`
 }
 
 type LvsResult struct {
@@ -78,6 +81,7 @@ type VgItem struct {
 	VgAttr    string `json:"vg_attr"`
 	VgSize    string `json:"vg_size"`
 	VgFree    string `json:"vg_free"`
+	PvName    string `json:"pv_name"`
 }
 
 type VgsResult struct {

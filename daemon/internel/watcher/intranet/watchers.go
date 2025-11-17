@@ -3,6 +3,7 @@ package intranet
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"strings"
 
 	"github.com/beclab/Olares/daemon/internel/intranet"
@@ -248,7 +249,15 @@ func getPodNeighborInfo(podIp string) (mac, iface string, err error) {
 		}
 	}
 
-	// try to
+	// try to refresh neighbor table
+	go func() {
+		cmd := exec.Command("ping", "-c", "3", podIp)
+		err := cmd.Run()
+		if err != nil {
+			klog.Error("ping pod ip to refresh neighbor table error, ", err)
+			return
+		}
+	}()
 
 	return "", "", fmt.Errorf("not found pod neighbor info for ip %s", podIp)
 }
