@@ -77,7 +77,7 @@ Access the Sunshine console to pair your Moonlight client with Olares. The conne
    - **Same network**: Replace the domain suffix with `.local`, and append `:47990`. For example:
     
    ```
-   https://139ebc4f0.<your Olares ID>.olares.local:47990
+   http://139ebc4f0.<your Olares ID>.olares.local:47990
    ```
 
    - **Different network (via VPN)**: [Enable LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your device, then append `:47990`. For example: 
@@ -130,17 +130,19 @@ Once paired, you're ready to start streaming.
 
 ## Stream your games
 
-You can stream locally or remotely depending on your network setup.
+You can stream your games through Moonlight either locally or remotely, depending on your network setup.
+
+The following steps demonstrate local streaming.
 
 1. Open **Moonlight** on your client device.
-2. If you’re streaming remotely, [enable **LarePass VPN**](../manual/larepass/private-network.md#enable-vpn-on-larepass) first.
-3. Select your unlocked host and click the **Steam** icon. 
-   ![Steam in Moonlight](../public/images/manual/use-cases/steam-in-moonlight.png#bordered)  
+2. Select your unlocked host and click the **Steam** icon.  
+   ![Steam in Moonlight](../public/images/manual/use-cases/steam-in-moonlight.png#bordered)
 
-Steam Big Picture mode opens. You can now start playing your games.
+Steam Big Picture mode opens — you’re ready to start playing your games.
 
 :::tip Remote streaming
-When playing from outside your home network, you must connect your device to **LarePass VPN** to reach your Olares host securely.
+To play from outside your home network, [enable **LarePass VPN**](../manual/larepass/private-network.md#enable-vpn-on-larepass) before opening Moonlight.  
+Once connected, follow the same steps above to stream your games remotely.
 :::
 
 ## FAQs
