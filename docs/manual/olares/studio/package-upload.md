@@ -8,7 +8,7 @@ Apps created in Studio are ideal for development and testing. For stable, long-t
 
 ## Download the App package from Studio
 
-Once you have confirmed that all functions work as expected, you can download the app's complete installation package.
+After confirming that your app works as expected, you can download its complete installation package.
 
 1.  Open your app project in **Studio**.
 2.  Click <span class="material-symbols-outlined">more_vert</span> in the top-right corner.

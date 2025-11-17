@@ -33,7 +33,7 @@ The following examples show how to map common Docker settings (image, ports, env
 
 Use this if the app does not require environment variables, volumes, databases, or GPUs.
 
-The following will use [LibreSpeed](https://hub.docker.com/r/linuxserver/librespeed), a lightweight speed test app, as an example.
+This example uses [LibreSpeed](https://hub.docker.com/r/linuxserver/librespeed), a lightweight speed test app.
 
 The corresponding `docker run` command and the `docker compose` file are as follows:
 ::: code-group
@@ -68,7 +68,7 @@ services:
 ### Option 2: Deploy an app with environment variables and storage
 Use this if the app requires environment variables or persistent storage.
 
-The following will use [Wallos](https://hub.docker.com/r/bellamy/wallos), a personal subscription and expense tracker, as an example.
+This example uses [Wallos](https://hub.docker.com/r/bellamy/wallos), a personal subscription and expense tracker.
 
 The corresponding `docker run` command and the `docker compose` file are as follows:
 ::: code-group
@@ -132,7 +132,7 @@ services:
    2. Click **Add** next to **Storage Volume**.
    3. Configure the database volume. This data is for high-frequency I/O and does not need to be saved permanently. Map it to `/app/cache` so it will be automatically deleted when the app is uninstalled.
       - **Host path**: Select `/app/cache`, then enter `/db`.
-      - **Mount path**: Enter `/var/www/html/db`
+      - **Mount path**: Enter `/var/www/html/db`.
    4. Click **Submit**.
    5. Click **Add** again to add the logo volume. This is user-uploaded data that should be persistent and reusable, even if the app is reinstalled. Map it to `/app/data`.
       - **Host path**: Select `/app/data`, then enter `/logos`.
@@ -189,7 +189,7 @@ For example, to change the app's display name:
 4. Click <span class="material-symbols-outlined">save</span> in the top-right to save changes.
 
 ## Step 4: Deploy and test the app
-Once you made changes, you can reinstall the app to test it.
+After making changes, you can reinstall the app to test it.
 
 1. Click **Apply** in the top-right corner to install the app. You can check the status at the bottom, and click in the bottom-right corner to view the details.
    ![Check app status](/images/manual/olares/studio-check-app-status.png#bordered)
