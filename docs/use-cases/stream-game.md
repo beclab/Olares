@@ -56,7 +56,7 @@ Sign in to Steam to complete setup and access your game library.
 2. The Steam client will automatically install and update. This process may take several minutes.
    ![Install Steam](../public/images/manual/use-cases/steam-install-steam.png#bordered)
    ![Update Steam](../public/images/manual/use-cases/steam-update-steam.png#bordered)
-3. When the installation completes, the Steam login screen appears. Sign in with your Steam account and complete the initial setup.
+3. When the installation completes, the Steam login screen appears. Sign in with your Steam account.
    ![Sign in to Steam](../public/images/manual/use-cases/steam-sign-in-to-steam.png#bordered)
 
 ::: tip Retry installation upon failures 
