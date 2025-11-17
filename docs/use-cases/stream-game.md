@@ -130,28 +130,18 @@ Once paired, you're ready to start streaming.
 
 ## Stream your games
 
-You can stream locally or remotely depending on your usage scenario.
+You can stream locally or remotely depending on your network setup.
 
-### Stream locally 
-
-If your streaming device and Olares are on the same network:
-
-1. Open Moonlight.
-2. Select your unlocked host and click the Steam icon.
-  ![Steam in Moonlight](../public/images/manual/use-cases/steam-in-moonlight.png#bordered)
+1. Open **Moonlight** on your client device.
+2. If you’re streaming remotely, [enable **LarePass VPN**](../manual/larepass/private-network.md#enable-vpn-on-larepass) first.
+3. Select your unlocked host and click the **Steam** icon. 
+   ![Steam in Moonlight](../public/images/manual/use-cases/steam-in-moonlight.png#bordered)  
 
 Steam Big Picture mode opens. You can now start playing your games.
 
-### Stream remotely 
-
-To play from outside your home network, you can connect securely to Olares using LarePass VPN.
-
-1. Follow the instructions to [enable LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass).
-2. Once connected, open Moonlight.
-3. Select your unlocked host and click the Steam icon.
-Steam Big Picture mode opens. 
-
-You can now start playing your games.
+:::tip Remote streaming
+When playing from outside your home network, you must connect your device to **LarePass VPN** to reach your Olares host securely.
+:::
 
 ## FAQs
 
