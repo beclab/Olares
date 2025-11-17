@@ -477,7 +477,7 @@ func (d *DSRProxy) regonfigure() error {
 	klog.Infof("Calico interface: %s", d.calicoInterface.Name)
 
 	var err error
-	d.pcapHandle, err = pcap.OpenLive(d.vipInterface.Name, 65536, true, pcap.BlockForever)
+	d.pcapHandle, err = pcap.OpenLive(d.vipInterface.Name, 65536, false, pcap.BlockForever)
 	if err != nil {
 		klog.Error("pcap openlive failed:", err)
 		return err
