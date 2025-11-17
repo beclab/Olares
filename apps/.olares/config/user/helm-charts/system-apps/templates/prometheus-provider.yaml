@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:prometheus-k8s
+  annotations:
+    provider-registry-ref: {{ .Values.bfl.username }}/4ae9f19e
+    provider-service-ref: http://prometheus-k8s.kubesphere-monitoring-system:9090
+rules:
+- nonResourceURLs: 
+  - "*"
+  verbs: ["*"]
