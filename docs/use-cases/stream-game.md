@@ -176,7 +176,7 @@ After finishing, exit Steam Big Picture mode to release system resources on Olar
 
 ### Where are my downloaded games stored?
 
-By default, games are saved in: 
+You can check the downloaded games in the Files app. By default, games are saved in: 
 
 ```
 /Cache/olares/steam-headless/c0/.steam/steam/steamapps/common
