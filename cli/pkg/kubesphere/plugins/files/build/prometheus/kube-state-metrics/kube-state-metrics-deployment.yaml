@@ -35,6 +35,7 @@ spec:
         hostPath:
           path: /etc/localtime
           type: ""
+      priorityClassName: "system-cluster-critical"
       containers:
       - args:
         - --host=127.0.0.1
