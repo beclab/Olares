@@ -23,7 +23,7 @@ Before you begin, make sure:
 - Olares running on a machine equipped with an NVIDIA GPU.
 - Moonlight installed on your streaming device. Visit the [Moonlight website](https://moonlight-stream.org/) to download and install the appropriate version.
 - A valid Steam account to access your games.
-- [LarePass VPN enabled](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your client devices (desktop or mobile) if you plan to stream remotely (outside your home network).
+- [LarePass VPN enabled](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your client devices (desktop or mobile) if you plan to stream outside your home network.
 :::tip
 For local streaming, LarePass VPN is not required.
 :::
