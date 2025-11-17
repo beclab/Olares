@@ -80,7 +80,7 @@ Access the Sunshine console to pair your Moonlight client with Olares. The conne
    https://139ebc4f0.<your Olares ID>.olares.local:47990
    ```
 
-   - **Different network (via VPN)**: [Enable LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your device, then use the `.com` address and append `:47990`. For example: 
+   - **Different network (via VPN)**: [Enable LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your device, then append `:47990`. For example: 
    
    ```
    https://139ebc4f0.<your Olares ID>.olares.com:47990
