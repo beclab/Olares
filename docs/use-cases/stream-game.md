@@ -41,8 +41,8 @@ Follow these steps to install and configure Steam Headless:
 3. Click **Get**, and then click **Install**.
 ![Install Steam Headless](../public/images/manual/use-cases/steam-install-steam-headless.png#bordered)
 4. A prompt will appear asking you to configure environment variables. This creates your login credentials for the Sunshine streaming dashboard:
-  - `SUNSHINE_USER`: Create a username for Sunshine access.
-  - `SUNSHINE_PASS`: Set the corresponding password.
+    - `SUNSHINE_USER`: Create a username for Sunshine access.
+    - `SUNSHINE_PASS`: Set the corresponding password.
 :::tip Remember your login credentials 
 These are your initial login credentials for Sunshine. You must use them to log in the first time. 
 :::
