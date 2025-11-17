@@ -204,7 +204,7 @@ To fix it, simply restart Steam Headless in Olares and try pairing again:
 
 You can change your Sunshine credentials directly from the Sunshine web console.
 
-1. Open Sunshine in your browser using your local address, for example: `https://139ebc4f0.<your Olares ID>.olares.local:47990`. 
+1. Open Sunshine in your browser using your local address, for example: `http://139ebc4f0.<your Olares ID>.olares.local:47990`. 
 2. Log in with your current username and password.
 3. Go to the **Change Password** tab.
    ![Change Sunshine password](../public/images/manual/use-cases/steam-change-sunshine-pw.png#bordered)
