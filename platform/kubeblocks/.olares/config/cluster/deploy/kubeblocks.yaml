@@ -23,6 +23,7 @@ spec:
         app.kubernetes.io/name: kubeblocks
         app.kubernetes.io/instance: kubeblocks
     spec:
+      priorityClassName: "system-cluster-critical"
       serviceAccountName: kubeblocks
       securityContext:
         runAsNonRoot: true

@@ -126,6 +126,7 @@ spec:
       labels:
         app: download
     spec:
+      priorityClassName: "system-cluster-critical"
       serviceAccountName: download-cluster-view
       serviceAccount: download-cluster-view
       securityContext:
