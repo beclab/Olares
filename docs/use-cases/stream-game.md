@@ -193,7 +193,7 @@ If you delete your Olares host in Moonlight and try to pair again, you may encou
 This usually happens when the Sunshine service is not responding.
 To fix it, simply restart Steam Headless in Olares and try pairing again:
 
-1. Go to **Launchpad** > **Control Hub**.
+1. Open Control Hub from Launchpad.
 2. Navigate to **Browser** > **steamheadless** > **Deployments** > **steamheadless** > **Restart**. 
    ![Restart Steam Headless](../public/images/manual/use-cases/steam-restart.png#bordered)
 3. In the confirmation prompt, enter `steamheadless` and click **Confirm**.
