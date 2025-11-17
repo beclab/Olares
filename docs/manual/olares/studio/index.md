@@ -4,9 +4,9 @@ description: Get started with Studio to deploy Docker-based apps, develop new ap
 # Deploy and develop apps in Olares
 
 Studio provides a real Olares environment for building, porting, and testing apps when cloud features and the sandbox system are hard to simulate locally. With Studio you can:
-- Create a new Olares app in an online development container
-- Port an existing app, adjust its configurations, and test installs
-- Generate and download the chart when your app is ready
+- Create a new Olares app in an online development container.
+- Port an existing app, adjust its configurations, and test the installation flow.
+-Package your app into a chart and download it when your app is ready.
 
 ## Access Studio
 Studio is available in Olares Market and must be installed manually.
