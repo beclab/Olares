@@ -491,6 +491,10 @@ const side = {
         text: "Redroid",
         link: "/use-cases/host-cloud-android",
       },
+      {
+        text: "DeerFlow",
+        link: "/use-cases/deerflow",
+      },
     ],
   },
  ],
