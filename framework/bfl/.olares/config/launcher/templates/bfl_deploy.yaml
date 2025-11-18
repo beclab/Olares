@@ -304,7 +304,7 @@ spec:
         - name: BACKUP_SERVER
           value: backup-server.os-framework:8082
         - name: L4_PROXY_IMAGE_VERSION
-          value: v0.3.8
+          value: v0.3.9
         - name: L4_PROXY_SERVICE_ACCOUNT
           value: os-network-internal
         - name: L4_PROXY_NAMESPACE
@@ -317,7 +317,7 @@ spec:
               apiVersion: v1
               fieldPath: spec.nodeName
       - name: ingress
-        image: beclab/bfl-ingress:v0.3.25
+        image: beclab/bfl-ingress:v0.3.26
         imagePullPolicy: IfNotPresent
         env:
         - name: AUTHELIA_AUTH_URL
@@ -384,6 +384,10 @@ spec:
   - name: ingress-https
     port: 443
     targetPort: 443
+    protocol: TCP
+  - name: ingress-https-proxy
+    port: 444
+    targetPort: 444
     protocol: TCP
   selector:
     tier: bfl
