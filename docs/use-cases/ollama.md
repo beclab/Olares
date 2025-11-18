@@ -100,8 +100,8 @@ If the application forces you to enter an API Key, you can usually enter any str
 
 ### Ensure network connectivity
 Because you set the authentication to "Internal", your application must be on the same local network as Olares to connect.
-* **Local Network**: If your device (or the app running on Olares) is on the same Wi-Fi or LAN, you can connect directly using the frontend address.
-* **Remote Access**: If you are accessing Olares remotely, you must enable [LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your client device. This creates a secure tunnel that effectively places your device on the same network as Olares.
+* **Local network**: If your device (or the app running on Olares) is on the same Wi-Fi or LAN, you can connect directly using the frontend address.
+* **Remote access**: If you are accessing Olares remotely, you must enable [LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your client device. This creates a secure tunnel that effectively places your device on the same network as Olares.
 
 
 ## Learn more
