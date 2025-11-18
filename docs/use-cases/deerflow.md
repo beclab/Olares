@@ -143,11 +143,11 @@ To audit the sources and steps taken, click the **Activities** tab.
 ![Review research activities](/images/manual/use-cases/deerflow-review-research-activities.png#bordered)
 ### Edit and save the report
 :::info Verify citations
-AI models may occasionally generate inaccurate citations or "hallucinated" links. Manually verify important sources in the citations section.
+AI models may occasionally generate inaccurate citations or "hallucinated" links. Be sure to manually verify important sources in the citations section.
 :::
 
 1. Click <span class="material-symbols-outlined">edit</span> in the top-right corner to enter editing mode.
-2. You can adjust formatting using Markdown or select a section and ask the AI to improve or expand on it.
+2. You can adjust formatting using Markdown or select a section and ask the AI to improve or expand it.
    ![Ask AI to edit the report](/images/manual/use-cases/deerflow-ask-ai-to-edit.png#bordered)
 3. Click <span class="material-symbols-outlined">undo</span> in the top-right corner to exit editing mode.
 4. Click <span class="material-symbols-outlined">download</span> to save the report to your local machine as a Markdown file.
