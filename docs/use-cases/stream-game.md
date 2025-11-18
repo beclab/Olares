@@ -74,7 +74,7 @@ Access the Sunshine console to pair your Moonlight client with Olares.
 
 1. From your Steam Headless browser tab, copy its URL.
 2. In your browser, enter the address to access Sunshine. The address varies depending on your network.
-   - **Same network**: Replace the domain suffix with `.local`, and append `:47990`. For example:
+   - **Same network**: Replace the protocol `https` with `http`, change the domain suffix to `.local`, and append `:47990`. For example:
     
    ```
    http://139ebc4f0.<your Olares ID>.olares.local:47990
