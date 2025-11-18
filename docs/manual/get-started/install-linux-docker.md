@@ -40,9 +40,6 @@ cd ~/olares-config
    :::
 3. Save the `docker-compose.yaml` file.
 
-Here is the updated and properly formatted Markdown content for installing GPU drivers and the NVIDIA Container Toolkit, ready to be included in your installation guide:
-
-
 ## Install GPU dependencies (for GPU-enabled machines)
 
 1. Install GPU drivers for your system:
