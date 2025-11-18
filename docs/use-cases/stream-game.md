@@ -138,7 +138,7 @@ The following steps demonstrate local streaming.
 2. Select your unlocked host and click the **Steam** icon.  
    ![Steam in Moonlight](../public/images/manual/use-cases/steam-in-moonlight.png#bordered)
 
-Steam Big Picture mode opens — you’re ready to start playing your games.
+Steam now enters Big Picture mode and you can start playing your games.
 
 :::tip Remote streaming
 To play from outside your home network, [enable **LarePass VPN**](../manual/larepass/private-network.md#enable-vpn-on-larepass) before opening Moonlight.  
