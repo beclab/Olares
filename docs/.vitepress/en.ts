@@ -468,6 +468,10 @@ const side = {
         text: "Redroid",
         link: "/use-cases/host-cloud-android",
       },
+      {
+        text: "Windows",
+        link: "/use-cases/windows-vm",
+      },      
     ],
   },
  ],
