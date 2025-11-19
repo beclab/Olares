@@ -161,5 +161,4 @@ To end your RDP session, simply close the RDP window.
 
 The Windows VM continues running on your Olares device and is always ready for you to reconnect.
 
----
 Your Olares device is now a fully functional Windows machine you can access securely from anywhere using the LarePass private network.
