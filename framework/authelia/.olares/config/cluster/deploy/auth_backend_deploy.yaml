@@ -9,6 +9,7 @@
 {{- $redis_password := "" -}}
 {{- $pg_password := "" -}}
 {{- $nats_password := "" -}}
+{{- $probe_secret := "" -}}
 {{ if $auth_secret -}}
 {{- $jwt_secret = (index $auth_secret "data" "jwt_secret") -}}
 {{- $session_secret = (index $auth_secret "data" "session_secret") -}}
@@ -17,6 +18,7 @@
 {{- $redis_password = (index $auth_secret "data" "redis_password") -}}
 {{- $pg_password = (index $auth_secret "data" "pg_password") -}}
 {{- $nats_password = (index $auth_secret "data" "nats_password") -}}
+{{- $probe_secret = (index $auth_secret "data" "probe_secret") -}}
 
 {{ else -}}
 {{ $jwt_secret = randAlphaNum 16 | b64enc }}
@@ -26,6 +28,7 @@
 {{ $redis_password = randAlphaNum 16 | b64enc }}
 {{ $pg_password = randAlphaNum 16 | b64enc }}
 {{ $nats_password = randAlphaNum 16 | b64enc }}
+{{ $probe_secret = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
 ---
@@ -43,7 +46,7 @@ data:
   redis_password: {{ $redis_password }}
   pg_password: {{ $pg_password }}
   nats_password: {{ $nats_password }}
-
+  probe_secret: {{ $probe_secret }}
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
@@ -109,6 +112,7 @@ apiVersion: v1
 data:
   configuration.yaml: |
     jwt_secret: {{ $jwt_secret | b64dec }}
+    probe_secret: {{ $probe_secret | b64dec }}
     default_redirection_url: /
 
     server:
@@ -429,7 +433,7 @@ spec:
           privileged: true
       containers:      
       - name: authelia
-        image: beclab/auth:0.2.40
+        image: beclab/auth:0.2.41
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9091
