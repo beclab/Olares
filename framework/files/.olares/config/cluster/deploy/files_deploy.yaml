@@ -99,34 +99,6 @@ spec:
               value: os_framework_files
 
       containers:
-
-        - name: media-server
-          env:
-          - name: MEDIA_SERVER_DATA_DIR
-            value: /data
-          - name: MEDIA_SERVER_CACHE_DIR
-            value: /appdata
-          - name: SEAFILE_SERVICE
-            value: seafile
-          image: beclab/media-server:v0.2.4
-          imagePullPolicy: IfNotPresent
-          securityContext:
-            allowPrivilegeEscalation: true
-            runAsUser: 0
-            privileged: true
-          ports:
-          - containerPort: 9090
-          volumeMounts:
-          - name: userspace-dir
-            mountPath: /data
-          - name: user-appdata-dir
-            mountPath: /appcache
-{{ if .Values.sharedlib }}
-          - name: shared-lib
-            mountPath: /data/External
-            mountPropagation: Bidirectional
-{{ end }}
-
         - command:
           - /rclone
           - rcd
