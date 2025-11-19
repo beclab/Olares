@@ -470,7 +470,7 @@ const side = {
       },
       {
         text: "Windows",
-        link: "/use-cases/windows-vm",
+        link: "/use-cases/windows",
       },      
     ],
   },
