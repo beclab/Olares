@@ -140,6 +140,8 @@ spec:
                 type: object
               progress:
                 type: string
+              reason:
+                type: string
               state:
                 description: ApplicationManagerState is the state of an applicationmanager
                   at current time
