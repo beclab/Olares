@@ -81,7 +81,7 @@ This guide demonstrates connecting from macOS, but the process is the same on Wi
 No installation needed since the Remote Desktop client is built in.
 
 **On other platforms**:
-- Install the official Windows App from your platform’s app store:
+- Install the official Windows App from your platform's app store:
     - **macOS**: Mac App Store  
     - **iOS**: App Store  
     - **Android**: Google Play Store  
