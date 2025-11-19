@@ -172,7 +172,7 @@ spec:
 {{ end }}
 
         - name: samba-server
-          image: beclab/samba-server:0.0.5
+          image: beclab/samba-server:0.0.6
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -238,7 +238,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.126
+          image: beclab/files-server:v0.2.127
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -292,6 +292,10 @@ spec:
               value: /appdata/config/settings.json
             - name: FB_ROOT
               value: /data
+            - name: MEDIA_SERVER_DATA_DIR
+              value: /data
+            - name: SEAFILE_SERVICE
+              value: seafile
             - name: WATCH_DIR
               value: '/Home'
             - name: FS_TYPE
@@ -850,7 +854,7 @@ data:
       }
 
       location /videos {
-          proxy_pass http://127.0.0.1:9090;
+          proxy_pass http://127.0.0.1:8080;
           # rewrite ^/server(.*)$ $1 break;
 
           # Add original-request-related headers
@@ -887,8 +891,8 @@ data:
           proxy_send_timeout 600s;
       }
 
-      location /seafhttp/ {
-          proxy_pass http://seafile:8082/;
+      location /seafhttp {
+          proxy_pass http://127.0.0.1:8080;
           # rewrite ^/server(.*)$ $1 break;
 
           # Add original-request-related headers
