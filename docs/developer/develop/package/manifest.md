@@ -9,10 +9,10 @@ Every **Olares Application Chart** should include an `OlaresManifest.yaml` file 
 :::info NOTE
 Latest Olares Manifest version: `0.10.0`
 - Modified the `categories` field
-- Added `provider` field in the Permission section
-- Added  Provider section, to allow apps to expose specific service interfaces within the cluster
-- Removed some deprecated field from the Spec section
-- Removed some deprecated field from the Option section
+- Added the `provider` field in the Permission section
+- Added the Provider section, to allow apps to expose specific service interfaces within the cluster
+- Removed some deprecated fields from the Spec section
+- Removed some deprecated fields from the Option section
 - Added the `allowMultipleInstall` field, allowing the app to be installed as multiple independent instances
 - Added Envs section, to define environment variables required by the application
 :::
