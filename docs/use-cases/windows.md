@@ -57,20 +57,10 @@ You can access your VM in two ways:
 
 ### Access from the browser (VNC)
 
-Open Windows 11 from Launchpad. 
-
-The Windows VM opens in your browser using VNC.
-
-**VNC is best used for**:
-- First-time setup
-- Troubleshooting or emergency access
-
-**Limitation**:
-- Limited performance
-- Less responsive than RDP
-
-For smooth daily use we strongly recommend using RDP.
-
+Open the Windows app from Launchpad to launch the VM directly in your browser using VNC.
+::: info
+VNC (Virtual Network Computing) provides immediate, clientless access without requiring any additional software. It is ideal for initial setup, troubleshooting, or emergency access when you cannot use RDP. However, it can feel less responsive and lacks advanced features like audio redirection and high-performance graphics.
+:::
 ### Access using a Remote Desktop Client (RDP)
 
 To connect via RDP, you must:
