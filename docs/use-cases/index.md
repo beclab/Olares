@@ -17,6 +17,6 @@ From running AI models to building seamless workflows across your self-hosted se
   { title: 'Jellyfin', link: './stream-media.html', tags: ['Entertainment']},
   { title: 'Steam', link: './stream-game.html', tags: ['Entertainment']},
   { title: 'Redroid', link: './host-cloud-android.html', tags: ['Virtual Machine']},
-  { title: 'Windows', link: './windows-vm.html', tags: ['Virtual Machine']},
+  { title: 'Windows', link: './windows.html', tags: ['Virtual Machine']},
 ]" 
 />
