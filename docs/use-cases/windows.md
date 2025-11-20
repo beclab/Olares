@@ -112,7 +112,7 @@ To connect via RDP:
 You are now connected to your Windows VM via RDP.
 ![Windows VM](../public/images/manual/use-cases/win-vm-interface.png#bordered)
 
-## Change your Windows VM password (optional)
+## Optional: Change your Windows login password
 
 You can update your Windows login password directly from inside the VM:
 1. Click the search bar in the Windows taskbar and type "password".  
