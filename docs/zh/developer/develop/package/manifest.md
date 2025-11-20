@@ -848,7 +848,7 @@ envs:
     - title: Windows10
       value: "10"
     # 允许值列表，此环境变量的值只允许从该列表中选择
-    # title表示展示给用户的描述，value是实际提供给系统的值
+    # title为展示给用户的名称，value为实际注入系统的值
 
     remoteOptions: https://xxx.xxx/xx
     # 提供允许值列表的一个url，response的body格式为JSON编码的options列表
