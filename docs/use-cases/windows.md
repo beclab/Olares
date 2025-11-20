@@ -72,9 +72,9 @@ To connect via RDP:
 2. Install the Remote Desktop client.
    - **Windows:** No installation needed.
    - **macOS / iOS:** Download [Windows App from the App Store](https://apps.apple.com/us/app/windows-app/id1295203466).
-   - **Android:** Download [Remote Desktop from Google Play](https://play.google.com/store/apps/details?id=com.microsoft.rdc.androidx).
+   - **Android:** Download [Windows App from Google Play](https://play.google.com/store/apps/details?id=com.microsoft.rdc.androidx).
 
-3. Find your Windows VM address
+3. Find your Windows VM address.
 
     a. Open Windows from Launchpad in the brower view.
 
