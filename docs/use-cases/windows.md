@@ -62,12 +62,7 @@ Open the Windows app from Launchpad to launch the VM directly in your browser us
 VNC (Virtual Network Computing) provides immediate, clientless access without requiring any additional software. It is ideal for initial setup, troubleshooting, or emergency access when you cannot use RDP. However, it can feel less responsive and lacks advanced features like audio redirection and high-performance graphics.
 :::
 ### Access using a Remote Desktop Client (RDP)
-
-To connect via RDP, you must:
-
-- Have the LarePass desktop client installed.
-- Have your Olares ID imported into LarePass.
-
+RDP (Remote Desktop Protocol) provides a much smoother, native-like experience with better performance, audio support, and seamless file transfer.
 To connect via RDP:
 1. [Enable VPN on LarePass](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your device.
 
