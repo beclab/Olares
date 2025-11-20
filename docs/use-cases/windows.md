@@ -68,6 +68,7 @@ To connect via RDP, you must:
 - Have the LarePass desktop client installed.
 - Have your Olares ID imported into LarePass.
 
+To connect via RDP:
 1. [Enable VPN on LarePass](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your device.
 
     When the VPN connection status shows `DERP`, `P2P`, or `Intranet`, the secure network is active and ready for remote access.
