@@ -493,7 +493,6 @@ func (i *InstallTerminus) Execute(runtime connector.Runtime) error {
 		fmt.Sprintf("export %s=%s", common.ENV_HOST_IP, systemInfo.GetLocalIp()),
 		fmt.Sprintf("export %s=%s", common.ENV_DISABLE_HOST_IP_PROMPT, os.Getenv(common.ENV_DISABLE_HOST_IP_PROMPT)),
 		fmt.Sprintf("export %s=%s", common.ENV_OLARES_CDN_SERVICE, i.KubeConf.Arg.OlaresCDNService),
-		fmt.Sprintf("export %s=%s", common.ENV_NVIDIA_CONTAINER_REPO_MIRROR, os.Getenv(common.ENV_NVIDIA_CONTAINER_REPO_MIRROR)),
 	}
 
 	var bashUrl = fmt.Sprintf("https://%s", cc.DefaultBashUrl)

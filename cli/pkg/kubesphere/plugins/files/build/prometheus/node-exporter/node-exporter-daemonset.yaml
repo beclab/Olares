@@ -31,6 +31,7 @@ spec:
             - matchExpressions:
               - key: node-role.kubernetes.io/edge
                 operator: DoesNotExist
+      priorityClassName: "system-cluster-critical"
       containers:
       - args:
         - --web.listen-address=127.0.0.1:9100

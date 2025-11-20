@@ -1,29 +1,26 @@
 ---
 outline: [2, 3]
-description: Learn how to download and manage AI models locally using Ollama CLI within the Olares environment.
+description: Learn how to install Ollama on Olares, manage models using the CLI, and configure it as a central AI service for other applications.
 ---
 
-# Download and run AI models locally via Ollama
-Ollama is a lightweight platform that allows you to run open-source AI models like `deepseek-r1` and `gemma3` directly on your machine. Within Olares, you can integrate Ollama with graphical interfaces like Open WebUI to add more features and simplify interactions.
+# Download and run local AI models via Ollama
+Ollama is a lightweight platform that allows you to run open-source AI models like `gemma3` and `deepseek-r1` directly on your machine. Within Olares, you can integrate Ollama with graphical interfaces like Open WebUI or other agents to add more features and simplify interactions.
 
-This guide will show you how to set up and use Ollama CLI on Olares.
-
+## Learning objectives
+In this guide, you will learn how to:
+- Use the Ollama CLI on Olares to manage local LLMs. 
+- Configure Ollama as an API service for internal and external apps.
 ## Before you begin
-Before you start, ensure that:
-- You have Olares admin privileges.
-- Install LarePass and [enable LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your device.
+Before you start, ensure that you have Olares admin privileges.
 
 ## Install Ollama
+1. Open **Market**, and search for "Ollama".
+2. Click **Get**, then **Install**, and wait for installation to complete.
+   ![Install Ollama](/images/manual/use-cases/ollama.png#bordered)
 
-Directly install Ollama from the Market.
-
-Once installation is complete, you can access Ollama terminal from the Launchpad.
-
-![Ollama](/images/manual/use-cases/ollama.png#bordered)
-## Ollama CLI
-Ollama CLI allows you to manage and interact with AI models directly. Below are the key commands and their usage:
-
-### Download model
+## Manage models with the Ollama CLI
+Ollama CLI allows you to manage and interact with AI models directly from the Olares terminal. Below are the key commands.
+### Download a model
 :::tip Check Ollama library
 If you are unsure which model to download, check the [Ollama Library](https://ollama.com/library) to explore available models.
 :::
@@ -32,7 +29,7 @@ To download a model, use the following command:
 ollama pull [model]
 ```
 
-### Run model
+### Run a model
 :::tip
 If the specified model has not been downloaded yet, the `ollama run` command will automatically download it before running.
 :::
@@ -57,7 +54,7 @@ ollama stop [model]
 ```
 
 ### List models
-To view all models installed on your system, use:
+To view all models you have downloaded, use:
 ```bash
 ollama list
 ```
@@ -78,6 +75,35 @@ To see all currently running models, use:
 ```bash
 ollama ps
 ```
+## Configure Ollama API Access
+To use Ollama as the backend for other applications (such as DeerFlow inside Olares, or Obsidian on your laptop), you must configure the API to allow access from the local network.
+
+### Verify authentication level
+By default, the API's authentication level is set to **Internal**, allowing applications on the same local network to access the API without a login check.
+1. Open Settings, then navigate to **Applications** > **Ollama** > **Ollama API**.
+2. Confirm that **Authentication level** is set to **Internal**.
+3. Click **Submit** if you made changes.
+   ![Verify authentication level](/images/manual/use-cases/ollama-authentication-level.png#bordered)
+
+### Get the endpoint
+1. On the same settings page, click **Set up endpoint**.
+2. Copy the frontend address displayed in the dialog. Use this address as the Base URL or Host in your application's settings.
+   ![Get Ollama endpoint](/images/manual/use-cases/ollama-endpoint.png#bordered)
+
+:::tip For OpenAI-compatible endpoint
+Some apps expect an OpenAI-compatible API. If the standard endpoint fails, try appending `/v1` to your address. For example:
+```
+https://39975b9a1.{YOURUSERNAME}.olares.com/v1
+```
+:::
+If the application forces you to enter an API Key, you can usually enter any string (e.g., `ollama`).
+
+### Ensure network connectivity
+Because you set the authentication to "Internal", your application must be on the same local network as Olares to connect.
+* **Local network**: If your device (or the app running on Olares) is on the same Wi-Fi or LAN, you can connect directly using the frontend address.
+* **Remote access**: If you are accessing Olares remotely, you must enable [LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your client device. This creates a secure tunnel that effectively places your device on the same network as Olares.
+
 
 ## Learn more
-- [Learn how to run Ollama models with Open WebUI](openwebui.md)
+- [Run Ollama models with Open WebUI](./openwebui.md)
+- [Integrate Ollama with DeerFlow](./deerflow.md)

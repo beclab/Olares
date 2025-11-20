@@ -209,19 +209,30 @@ func (t *UpdateNvidiaContainerToolkitSource) Execute(runtime connector.Runtime) 
 		return err
 	}
 
-	mirrorRepo := os.Getenv(common.ENV_NVIDIA_CONTAINER_REPO_MIRROR)
-	if mirrorRepo == "" {
+	// decide mirror based on OLARES_SYSTEM_CDN_SERVICE
+	var mirrorHost string
+	cdnService := os.Getenv(common.ENV_OLARES_CDN_SERVICE)
+	if cdnService != "" {
+		cdnRaw := cdnService
+		if !strings.HasPrefix(cdnRaw, "http") {
+			cdnRaw = "https://" + cdnRaw
+		}
+		if cdnURL, err := url.Parse(cdnRaw); err == nil {
+			host := cdnURL.Host
+			if host == "" {
+				host = cdnService
+			}
+			if strings.HasSuffix(host, "olares.cn") {
+				mirrorHost = "mirrors.ustc.edu.cn"
+			}
+		} else if strings.HasSuffix(cdnService, "olares.cn") {
+			mirrorHost = "mirrors.ustc.edu.cn"
+		}
+	}
+	if mirrorHost == "" {
 		return nil
 	}
-	mirrorRepoRawURL := mirrorRepo
-	if !strings.HasPrefix(mirrorRepoRawURL, "http") {
-		mirrorRepoRawURL = "https://" + mirrorRepoRawURL
-	}
-	mirrorRepoURL, err := url.Parse(mirrorRepoRawURL)
-	if err != nil || mirrorRepoURL.Host == "" {
-		return fmt.Errorf("invalid mirror for nvidia container: %s", mirrorRepo)
-	}
-	cmd = fmt.Sprintf("sed -i 's#nvidia.github.io#%s#g' %s", mirrorRepoURL.Host, dstPath)
+	cmd = fmt.Sprintf("sed -i 's#nvidia.github.io#%s#g' %s", mirrorHost, dstPath)
 	if _, err := runtime.GetRunner().SudoCmd(cmd, false, false); err != nil {
 		return errors.Wrap(errors.WithStack(err), "failed to switch nvidia container repo to mirror site")
 	}
