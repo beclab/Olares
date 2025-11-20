@@ -833,7 +833,7 @@ This configuration requires Olares OS version 1.12.2 or later to take effect.
 ```yaml
 envs:
   - envName: ENV_NAME
-    # This is the key that will be injected as .Values.olaresEnv.ENV_NAME during deployment.
+    # This key will be injected as .Values.olaresEnv.ENV_NAME during deployment.
 
     required: true
     # Specifies whether a value is required for installation. If set to true and no default is provided, users must input a value, and the value cannot be deleted.
