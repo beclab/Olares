@@ -863,7 +863,7 @@ envs:
 
     valueFrom:
       envName: OLARES_SYSTEM_CLUSTER_DNS_SERVICE
-    # Reference the value from a system environment variable. when referenced, manual input is disallowed.
+    # Reference the value from a system environment variable. When this is used, manual input is not allowed.
     # Any fields (type, editable, etc.) in this env will be overrided by referenced variable's attributes; default/value fields are ignored.
     
     applyOnChange: true
