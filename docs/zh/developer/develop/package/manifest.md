@@ -43,7 +43,7 @@ outline: [2, 3]
 
 ::: details `OlaresManifest.yaml` 示例
 
-```Yaml
+```yaml
 olaresManifest.version: '0.10.0'
 olaresManifest.type: app
 metadata:
@@ -124,7 +124,7 @@ Olares Market 目前不展示 `recommend` 类型的应用，但你可以上传�
 - 第 3 位数字的改变，不影响应用分发和安装。
 
 开发者可以使用 1-3 位的版本号来标识该应用遵循的配置版本。以下是有效版本的一些示例：
-```Yaml
+```yaml
 olaresManifest.version: 1
 olaresManifest.version: 1.1.0
 olaresManifest.version: '2.2'
@@ -136,7 +136,7 @@ olaresManifest.version: "3.0.122"
 应用的基本信息，用于在 Olares 系统和应用市场中展示应用。
 
 :::info 示例
-```Yaml
+```yaml
 metadata:
   name: nextcloud
   title: Nextcloud
@@ -211,7 +211,7 @@ Olares OS 1.12.0 版本对应用商店的应用分类进行了调整，因此如
 指定此应用访问入口的数量。每个应用允许最少 1 个，最多 10 个入口 。
 
 :::info 示例
-```Yaml
+```yaml
 entrances:
 - name: a
   host: firefox
@@ -327,7 +327,7 @@ entrances:
 定义暴露的端口
 
 :::info 示例
-```Yaml
+```yaml
 ports:
 - name: rdp-tcp             # 提供服务的入口名称
   host: windows-svc         # 提供服务的 Ingress 主机名称
@@ -349,7 +349,7 @@ Olares 会为你的应用暴露指定的端口，这些端口可通过应用域�
 ## Permission
 
 :::info 示例
-```Yaml
+```yaml
 permission:
   appCache: true
   appData: true
@@ -391,7 +391,7 @@ permission:
 :::
 
 :::info 示例
-```Yaml
+```yaml
   sysData:
   - group: service.bfl
     dataType: app
@@ -434,7 +434,7 @@ permission:
 此处 `appName` 应填写目标应用的 `name`，`providerName` 填写目标应用 `provider` 配置中的 `name` 字段。`podSelectors` 字段用于指定本应用中哪些 pod 需要访问目标应用。如果未声明此字段，则默认为本应用的所有 pod 注入 `outbound envoy sidecar`。
 
 :::info 调用应用示例
-```Yaml
+```yaml
 # 需要调用其他应用的应用，如 sonarr
 permission:  
   provider:
@@ -446,7 +446,7 @@ permission:
 ```
 :::
 :::info 被调用应用示例
-```Yaml
+```yaml
 # 被调用方应用，如 bazarr
 provider:
 - name: bazarr-svc
@@ -464,7 +464,7 @@ provider:
 允许应用在 Tailscale 的ACL(Access Control Lists)中开放指定端口。
 
 :::info 示例
-```Yaml
+```yaml
 tailscale:
   acls:
   - proto: tcp
@@ -480,7 +480,7 @@ tailscale:
 记录额外的应用信息，主要用于应用商店的展示。
 
 :::info 示例
-```Yaml
+```yaml
 spec:
   versionName: '10.8.11' 
   # 此 Chart 包含的应用程序的版本。建议将版本号括在引号中。该值对应于 Chart.yaml 文件中的 appVersion 字段。请注意，它与 version 字段无关。
@@ -557,7 +557,7 @@ Olares 应用市场将根据用户的区域设置自动显示相应的 `OlaresMa
 ```
 :::
 目前，你可以为以下字段添加 i18n 内容：
-```Yaml
+```yaml
 metadata:
   description:
   title:
@@ -611,8 +611,9 @@ Olares 目前不支持混合架构的集群。
 MongoDB，MySQL，MariaDB，MinIO，RabbitMQ 需要管理员从 Market 安装后才能被其他应用使用
 :::
 
+### PostgreSQL
 :::info 示例
-```Yaml
+```yaml
 middleware:
   postgres:
     username: immich
@@ -627,9 +628,44 @@ middleware:
       - ALTER SCHEMA vectors OWNER TO $dbusername;
       - COMMIT;
       # 操作系统提供了两个变量 $databasename 和 $dbusername，命令执行时会被 Olares 应用运行时替换。
+```
+:::
+使用 deployment YAML 中的中间件信息：
+```yaml
+# 对于 PostgreSQL，对应值如下
+- env:
+  - name: DB_POSTGRESDB_DATABASE # 你在 OlaresManifest 中配置的数据库名称，在 middleware.postgres.databases[i].name 中指定
+    value: {{ .Values.postgres.databases.<dbname> }}
+  - name: DB_POSTGRESDB_HOST
+    value: {{ .Values.postgres.host }}
+  - name: DB_POSTGRESDB_PORT
+    value: "{{ .Values.postgres.port }}"
+  - name: DB_POSTGRESDB_USER
+    value: {{ .Values.postgres.username }}
+  - name: DB_POSTGRESDB_PASSWORD
+    value: {{ .Values.postgres.password }}
+```
+
+### Redis
+:::info 示例
+```yaml
+middleware:
   redis:
     password: password
     namespace: db0
+```
+:::
+使用 deployment YAML 中的中间件信息：
+```yaml
+# 对于 Redis，对应的值如下
+host --> {{ .Values.redis.host }}For Redis, the corresponding value is as follow
+port --> "{{ .Values.redis.port }}"
+password --> "{{ .Values.redis.password }}"
+```
+### MongoDB
+:::info 示例
+```yaml
+middleware:    
   mongodb:
     username: chromium
     databases:
@@ -639,35 +675,122 @@ middleware:
       # 请确保每一行都是完整的查询。
 ```
 :::
-
 使用 deployment YAML 中的中间件信息：
-
 ```yaml
-- name: DB_POSTGRESDB_DATABASE # 你在 OlaresManifest 中配置的数据库名称，在 middleware.postgres.databases[i].name 中指定
-  value: {{ .Values.postgres.databases.<dbname> }}
-- name: DB_POSTGRESDB_HOST
-  value: {{ .Values.postgres.host }}
-- name: DB_POSTGRESDB_PORT
-  value: "{{ .Values.postgres.port }}"
-- name: DB_POSTGRESDB_USER
-  value: {{ .Values.postgres.username }}
-- name: DB_POSTGRESDB_PASSWORD
-  value: {{ .Values.postgres.password }}
-
-
-# 对于mongodb来说，对应的值如下
+# 对于 MongoDB，对应的值如下
 host --> {{ .Values.mongodb.host }}
 port --> "{{ .Values.mongodb.port }}"  # yaml 文件中的端口和密码需要用双引号括起来。
 username --> {{ .Values.mongodb.username }}
 password --> "{{ .Values.mongodb.password }}" # yaml 文件中的端口和密码需要用双引号括起来。
 databases --> "{{ .Values.mongodb.databases }}" # 数据库的值类型是 map。你可以使用 {{ .Values.mongodb.databases.<dbname> }} 获取数据库。 <dbname> 是你在 OlaresManifest 中配置的名称，在 middleware.mongodb.databases[i].name 中指定
+```
+### MinIO
+:::info 示例
+```yaml
+middleware: 
+  minio:
+    username: miniouser
+    buckets:
+    - name: mybucket
+```
+:::
+使用 deployment YAML 中的中间件信息：
+```yaml
+# 对于 MinIO，对应的值如下
+- env:
+  - name: MINIO_ENDPOINT
+    value: '{{ .Values.minio.host }}:{{ .Values.minio.port }}'
+  - name: MINIO_PORT
+    value: "{{ .Values.minio.port }}"
+  - name: MINIO_ACCESS_KEY
+    value: {{ .Values.minio.username }}
+  - name: MINIO_SECRET_KEY
+    value: {{ .Values.minio.password }}
+  - name: MINIO_BUCKET
+    value: {{ .Values.minio.buckets.mybucket }}
+```
+### RabbitMQ
+:::info 示例
+```yaml
+middleware: 
+  rabbitmq:
+    username: rabbitmquser
+    vhosts:
+    - name: aaa
+```
+:::
+使用 deployment YAML 中的中间件信息：
+```yaml
+# 对于 RabbitMQ，对应的值如下
+- env:
+  - name: RABBITMQ_HOST
+    value: '{{ .Values.rabbitmq.host }}'
+  - name: RABBITMQ_PORT
+    value: "{{ .Values.rabbitmq.port }}"
+  - name: RABBITMQ_USER
+    value: "{{ .Values.rabbitmq.username }}"
+  - name: RABBITMQ_PASSWORD
+    value: "{{ .Values.rabbitmq.password }}"
+  - name: RABBITMQ_VHOST
+    value: "{{ .Values.rabbitmq.vhosts.aaa }}"    
 
+user := os.Getenv("RABBITMQ_USER")
+password := os.Getenv("RABBITMQ_PASSWORD")
+vhost := os.Getenv("RABBITMQ_VHOST")
+host := os.Getenv("RABBITMQ_HOST")
+portMQ := os.Getenv("RABBITMQ_PORT")
+url := fmt.Sprintf("amqp://%s:%s@%s:%s/%s", user, password, host, portMQ, vhost)
+```
+### MariaDB
+:::info 示例
+```yaml
+middleware:               
+  mariadb:
+    username: mariadbclient
+    databases:
+    - name: aaa
+```
+:::
+使用 deployment YAML 中的中间件信息：
+```yaml
+# 对于 MariaDB，对应的值如下
+- env:
+  - name: MDB_HOST
+    value: '{{ .Values.mariadb.host }}'
+  - name: MDB_PORT
+    value: "{{ .Values.mariadb.port }}"
+  - name: MDB_USER
+    value: "{{ .Values.mariadb.username }}"
+  - name: MDB_PASSWORD
+    value: "{{ .Values.mariadb.password }}"
+  - name: MDB_DB
+    value: "{{ .Values.mariadb.databases.aaa }}"
+```
+### MySQL
+:::info 示例
+```yaml
+middleware:   
+  mysql:
+    username: mysqlclient
+    databases:
+    - name: aaa        
+```
+:::
+使用 deployment YAML 中的中间件信息：
 
-# 对于Redis来说，对应的值如下
-host --> {{ .Values.redis.host }}For Redis, the corresponding value is as follow
-port --> "{{ .Values.redis.port }}"
-password --> "{{ .Values.redis.password }}"
-
+```yaml
+# 对于 MySQL，对应的值如下
+- env:
+  - name: MDB_HOST
+    value: '{{ .Values.mysql.host }}'
+  - name: MDB_PORT
+    value: "{{ .Values.mysql.port }}"
+  - name: MDB_USER
+    value: "{{ .Values.mysql.username }}"
+  - name: MDB_PASSWORD
+    value: "{{ .Values.mysql.password }}"
+  - name: MDB_DB
+    value: "{{ .Values.mysql.databases.aaa }}"    
 ```
 
 ## Options
@@ -699,7 +822,7 @@ options:
 是否为 Olares 集群中的所有用户安装此应用程序。
 
 :::info 服务端示例
-```Yaml
+```yaml
 metadata:
   name: gitlab
 options:
@@ -712,7 +835,7 @@ options:
 :::
 
 :::info 客户端示例
-```Yaml
+```yaml
 metadata:
   name: gitlabclienta
 options:
@@ -735,7 +858,7 @@ options:
 如果此应用程序需要依赖其他应用程序才能正确安装，则应将 `mandatory` 字段设置为 `true`。
 
 :::info 示例
-```Yaml
+```yaml
 options:
   dependencies:
     - name: olares
@@ -756,7 +879,7 @@ options:
 确定应用是否与移动网络浏览器兼容并且可以在移动版本的 Olares 桌面上显示。如果应用程序针对移动网络浏览器进行了优化，请启用此选项。这将使该应用程序在移动版 Olares 桌面上可见并可访问。
 
 :::info 示例
-```Yaml
+```yaml
 mobileSupported: true
 ```
 :::
@@ -766,7 +889,7 @@ mobileSupported: true
 - 可选
 
 Olares 包含内置的 OpenID Connect 身份验证组件，以简化用户的身份验证。启用此选项可在你的应用中使用 OpenID。
-```Yaml
+```yaml
 # yaml 中 OpenID 相关变量
 {{ .Values.oidc.client.id }}
 {{ .Values.oidc.client.secret }}
@@ -774,7 +897,7 @@ Olares 包含内置的 OpenID Connect 身份验证组件，以简化用户的身
 ```
 
 :::info 示例
-```Yaml
+```yaml
 oidc:
   enabled: true
   redirectUri: /path/to/uri
@@ -789,7 +912,7 @@ oidc:
 指定 API 提供程序的超时限制（以秒为单位）。默认值为 `15`。使用 `0` 允许无限制的 API 连接。
 
 :::info 示例
-```Yaml
+```yaml
 apiTimeout: 0
 ```
 :::
@@ -801,7 +924,7 @@ apiTimeout: 0
 要求开通以下端口进行非 HTTP 协议的对外访问，例如 SMTP 服务等。
 
 :::info 示例
-```Yaml
+```yaml
 allowedOutboundPorts:
   - 465
   - 587
@@ -824,7 +947,7 @@ allowedOutboundPorts:
 :::    
 
 :::info 示例
-```Yaml
+```yaml
 envs:
   - envName: ENV_NAME
     # 在部署应用时，该键会被注入为.Values.olaresEnv.ENV_NAME
@@ -873,7 +996,7 @@ envs:
 如需在部署 YAML 文件中使用环境变量的值，只需在相应位置使用 `.Values.olaresEnv.ENV_NAME` 即可。系统会在应用部署时自动将对应的 olaresEnv 变量注入到 values 中。例如
 
 :::info 示例
-```Yaml
+```yaml
 BACKEND_MAIL_HOST: "{{ .Values.olaresEnv.MAIL_HOST }}"
 BACKEND_MAIL_PORT: "{{ .Values.olaresEnv.MAIL_PORT }}"
 BACKEND_MAIL_AUTH_USER: "{{ .Values.olaresEnv.MAIL_AUTH_USER }}"
@@ -888,7 +1011,7 @@ BACKEND_MAIL_SENDER: "{{ .Values.olaresEnv.MAIL_SENDER }}"
 在此声明本应用向其他应用开放的接口。系统会自动为这些接口生成 Service，让集群内其他应用能够通过内部网络访问。如果其他应用要调用这些接口，需要在 permission 部分申请访问该 provider 的权限。
 
 :::info 示例
-```Yaml
+```yaml
 provider:
 - name: bazarr
   entrance: bazarr-svc   # 该服务的入口名称
