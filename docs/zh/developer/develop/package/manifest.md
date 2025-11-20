@@ -608,7 +608,7 @@ Olares 目前不支持混合架构的集群。
 使用 `scripts` 字段指定创建数据库后应执行的脚本。此外，使用 `extension` 字段在数据库中添加相应的扩展名。
 
 :::info 提示
-MongoDB，MySQL，MariaDB，MinIO，RabbitMQ需要管理员从 Market 安装后才能被其他应用使用
+MongoDB，MySQL，MariaDB，MinIO，RabbitMQ 需要管理员从 Market 安装后才能被其他应用使用
 :::
 
 :::info 示例
