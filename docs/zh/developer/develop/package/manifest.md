@@ -854,7 +854,7 @@ envs:
     # 提供允许值列表的一个url，response的body格式为JSON编码的options列表
 
     regex: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    # 该环境变量的值必须符合此正则表达式
+    # 该环境变量的值必须匹配此正则表达式
 
     valueFrom:
       envName: OLARES_SYSTEM_CLUSTER_DNS_SERVICE
