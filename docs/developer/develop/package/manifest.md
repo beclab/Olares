@@ -864,7 +864,7 @@ envs:
     valueFrom:
       envName: OLARES_SYSTEM_CLUSTER_DNS_SERVICE
     # Reference the value from a system environment variable. When this is used, manual input is not allowed.
-    # Any fields (type, editable, etc.) in this env will be overrided by referenced variable's attributes; default/value fields are ignored.
+    # All declarable fields  (type, editable, etc.) will be overridden by the referenced variable's attributes; default/value fields are also ignored.
     
     applyOnChange: true
     # Whether to automatically redeploy the app when this variable changes. If false, changes take effect only on upgrade/reinstallation, not on restart.
