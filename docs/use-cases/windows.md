@@ -89,9 +89,7 @@ To connect via RDP:
     7e89d2a1.laresprime.olares.com:46879
     ```
 
-4. Add your Windows VM as an RDP connection.
-
-    This guide demonstrates connecting from macOS, but the process is the same on Windows.
+4. Add your Windows VM as an RDP connection. The following steps show the macOS interface, but the workflow is nearly identical on Windows and other platforms.
 
     a. Open the **Windows App** / **Microsoft Remote Desktop** on your device.
 
