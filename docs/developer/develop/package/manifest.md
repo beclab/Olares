@@ -826,7 +826,7 @@ This application supports deploying multiple independent instances within the sa
 Declare the environment variables required for your application to run here. You can allow users to manually enter these values or reference existing system environment variables directly.
 
 :::info NOTE
-This configuration requires Olares OS version 1.12.2 or higher to take effect.
+This configuration requires Olares OS version 1.12.2 or later to take effect.
 :::
 
 :::info Example
