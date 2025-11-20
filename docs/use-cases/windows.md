@@ -166,4 +166,4 @@ If the Windows system image fails to download during setup:
 ### Can I install other Windows versions or languages?
 
 - Currently, only the default Windows 11 (English) installation image is supported. You cannot choose other Windows versions or language editions during installation.
-- However, after Windows 11 is installed, you may **change the display language** within Windows itself using the standard Windows language settings.
+- After Windows 11 is installed, you can change the display language using the standard Windows language settings.
