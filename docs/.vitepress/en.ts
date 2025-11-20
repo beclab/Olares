@@ -418,7 +418,7 @@ const side = {
   ],
   "/use-cases/": [
   {
-    text: "Tutorials & use cases",
+    text: "Use cases",
     link: "/use-cases/",
     items: [
       {
@@ -467,6 +467,10 @@ const side = {
       {
         text: "Redroid",
         link: "/use-cases/host-cloud-android",
+      },
+      {
+        text: "Duix.Avatar",
+        link: "/use-cases/duix-avatar",
       },
     ],
   },
