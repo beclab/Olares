@@ -43,7 +43,7 @@ Here's an example of what a `OlaresManifest.yaml` file might look like:
 
 ::: details OlaresManifest.yaml Example
 
-```Yaml
+```yaml
 olaresManifest.version: '0.10.0'
 olaresManifest.type: app
 metadata:
@@ -124,7 +124,7 @@ As Olares evolves, the configuration specification of `OlaresManifest.yaml` may 
 - A change in the **third digit** does not affect the application's distribution and installation.
 
 Developers can use 1-3 digit version numbers to indicate the application's configuration version. Here are some examples of valid versions:
-```Yaml
+```yaml
 olaresManifest.version: 1
 olaresManifest.version: 1.1.0
 olaresManifest.version: '2.2'
@@ -136,7 +136,7 @@ olaresManifest.version: "3.0.122"
 Basic information about the app shown in the system and Olares Market.
 
 :::info Example
-```Yaml
+```yaml
 metadata:
   name: nextcloud
   title: Nextcloud
@@ -211,7 +211,7 @@ Olares Market categories were updated in OS 1.12.0. To ensure your app is compat
 The number of entrances through which to access the app.  You must specify at least 1 access method, with a maximum of 10 allowed.
 
 :::info Example
-```Yaml
+```yaml
 entrances:
 - name: a
   host: firefox
@@ -327,7 +327,7 @@ To ensure a seamless user experience, you can enable this option by setting it t
 Specify exposed ports
 
 :::info Example
-```Yaml
+```yaml
 ports:
 - name: rdp-tcp             # Name of the entrance that provides service
   host: windows-svc         # Ingress name of the entrance that provides service
@@ -349,7 +349,7 @@ The exposed ports can only be accessed on the local network or through a VPN.
 ## Permission
 
 :::info Example
-```Yaml
+```yaml
 permission:
   appCache: true
   appData: true
@@ -391,7 +391,7 @@ This configuration has been deprecated since version 1.12.0.
 :::
 
 :::info Example
-```Yaml
+```yaml
   sysData:
   - group: service.bfl
     dataType: app
@@ -438,7 +438,7 @@ To configure access:
 You can optionally use the `podSelectors` field to specify which pods in your app should have access. If this field is omitted, all pods in your app will be injected with the `outbound envoy sidecar` to enable access.
 
 :::info Example for calling app
-```Yaml
+```yaml
 # App requiring provider, e.g. sonarr
 permission:  
   provider:
@@ -450,7 +450,7 @@ permission:
 ```
 :::
 :::info Example for provider app
-```Yaml
+```yaml
 #  Provider app, e.g. bazarr
 provider:
 - name: bazarr-svc
@@ -467,7 +467,7 @@ provider:
 Allow applications to add Access Control Lists (ACL) in Tailscale to open specified ports.
 
 :::info Example
-```Yaml
+```yaml
 tailscale:
   acls:
   - proto: tcp
@@ -483,7 +483,7 @@ tailscale:
 Additional information about the application, primarily used for display in the Olares Market.
 
 :::info Example
-```Yaml
+```yaml
 spec:
   versionName: '10.8.11' 
   # The version of the application that this chart contains. It is recommended to enclose the version number in quotes. This value corresponds to the appVersion field in the `Chart.yaml` file. Note that it is not related to the `version` field.
@@ -560,7 +560,7 @@ Olares Market will automatically display the content of the corresponding "Olare
 ```
 :::
 Currently, you can add i18n content for the following fields:
-```Yaml
+```yaml
 metadata:
   description:
   title:
@@ -614,8 +614,10 @@ Use the `scripts` field to specify scripts that should be executed after the dat
 MongoDB, MySQL, MariaDB, MinIO, and RabbitMQ must first be installed by an admin from the Market before they can be used by other applications.
 :::
 
+### PostgreSQL
+
 :::info Example
-```Yaml
+```yaml
 middleware:
   postgres:
     username: immich
@@ -630,22 +632,11 @@ middleware:
       - ALTER SCHEMA vectors OWNER TO $dbusername;
       - COMMIT;
       # The OS provides two variables, $databasename and $dbusername, which will be replaced by Olares Application Runtime when the command is executed.
-  redis:
-    password: password
-    namespace: db0
-  mongodb:
-    username: chromium
-    databases:
-    - name: chromium
-      script:
-      - 'db.getSiblingDB("$databasename").myCollection.insertOne({ x: 111 });'
-      # Please make sure each line is a complete query.
 ```
 :::
-
 Use the middleware information in deployment YAML
-
 ```yaml
+# For PostgreSQL, the corresponding value is as follows
 - name: DB_POSTGRESDB_DATABASE # The database name you configured in OlaresManifest, specified in middleware.postgres.databases[i].name
   value: {{ .Values.postgres.databases.<dbname> }}
 - name: DB_POSTGRESDB_HOST
@@ -656,21 +647,157 @@ Use the middleware information in deployment YAML
   value: {{ .Values.postgres.username }}
 - name: DB_POSTGRESDB_PASSWORD
   value: {{ .Values.postgres.password }}
+```
 
+### Redis
+:::info Example
+```yaml
+middleware:
+  redis:
+    password: password
+    namespace: db0
+```
+:::
+Use the middleware information in deployment YAML
+```yaml
+# For Redis, the corresponding value is as follows
+host --> {{ .Values.redis.host }}
+port --> "{{ .Values.redis.port }}"
+password --> "{{ .Values.redis.password }}"
+```
 
-# For mongodb, the corresponding value is as follows
+### MongoDB
+:::info Example
+```yaml
+middleware:
+  mongodb:
+    username: chromium
+    databases:
+    - name: chromium
+      script:
+      - 'db.getSiblingDB("$databasename").myCollection.insertOne({ x: 111 });'
+      # Please make sure each line is a complete query.
+```
+:::
+Use the middleware information in deployment YAML
+```yaml
+# For MongoDB, the corresponding value is as follows
 host --> {{ .Values.mongodb.host }}
 port --> "{{ .Values.mongodb.port }}"  # The port and password in the yaml file need to be enclosed in double quotes.
 username --> {{ .Values.mongodb.username }}
 password --> "{{ .Values.mongodb.password }}" # The port and password in the yaml file need to be enclosed in double quotes.
 databases --> "{{ .Values.mongodb.databases }}" # The value type of database is a map. You can get the database using {{ .Values.mongodb.databases.<dbname> }}. The <dbname> is the name you configured in OlaresManifest, specified in middleware.mongodb.databases[i].name
+```
 
 
-# For Redis, the corresponding value is as follows
-host --> {{ .Values.redis.host }}
-port --> "{{ .Values.redis.port }}"
-password --> "{{ .Values.redis.password }}"
+### MinIO
+:::info Example
+```yaml
+middleware:
+  minio:
+    username: miniouser
+    buckets:
+    - name: mybucket
+```
+:::
+Use the middleware information in deployment YAML
+```yaml
+# For MinIO, the corresponding value is as follows
+- env:
+  - name: MINIO_ENDPOINT
+    value: '{{ .Values.minio.host }}:{{ .Values.minio.port }}'
+  - name: MINIO_PORT
+    value: "{{ .Values.minio.port }}"
+  - name: MINIO_ACCESS_KEY
+    value: {{ .Values.minio.username }}
+  - name: MINIO_SECRET_KEY
+    value: {{ .Values.minio.password }}
+  - name: MINIO_BUCKET
+    value: {{ .Values.minio.buckets.mybucket }}
+```
 
+### RabbitMQ
+:::info Example
+```yaml
+middleware:  
+  rabbitmq:
+    username: rabbitmquser
+    vhosts:
+    - name: aaa  
+```
+:::
+Use the middleware information in deployment YAML
+```yaml
+# For RabbitMQ, the corresponding value is as follows
+- env:
+  - name: RABBITMQ_HOST
+    value: '{{ .Values.rabbitmq.host }}'
+  - name: RABBITMQ_PORT
+    value: "{{ .Values.rabbitmq.port }}"
+  - name: RABBITMQ_USER
+    value: "{{ .Values.rabbitmq.username }}"
+  - name: RABBITMQ_PASSWORD
+    value: "{{ .Values.rabbitmq.password }}"
+  - name: RABBITMQ_VHOST
+    value: "{{ .Values.rabbitmq.vhosts.aaa }}"    
+
+user := os.Getenv("RABBITMQ_USER")
+password := os.Getenv("RABBITMQ_PASSWORD")
+vhost := os.Getenv("RABBITMQ_VHOST")
+host := os.Getenv("RABBITMQ_HOST")
+portMQ := os.Getenv("RABBITMQ_PORT")
+url := fmt.Sprintf("amqp://%s:%s@%s:%s/%s", user, password, host, portMQ, vhost)
+```
+### MariaDB
+:::info Example
+```yaml
+middleware:  
+  mariadb:
+    username: mariadbclient
+    databases:
+    - name: aaa
+```
+:::
+Use the middleware information in deployment YAML
+```yaml
+# For MariaDB, the corresponding value is as follows
+- env:
+  - name: MDB_HOST
+    value: '{{ .Values.mariadb.host }}'
+  - name: MDB_PORT
+    value: "{{ .Values.mariadb.port }}"
+  - name: MDB_USER
+    value: "{{ .Values.mariadb.username }}"
+  - name: MDB_PASSWORD
+    value: "{{ .Values.mariadb.password }}"
+  - name: MDB_DB
+    value: "{{ .Values.mariadb.databases.aaa }}"
+```
+
+### MySQL
+:::info Example
+```yaml
+middleware:  
+  mysql:
+    username: mysqlclient
+    databases:
+    - name: aaa      
+```
+:::
+Use the middleware information in deployment YAML
+```yaml
+# For MySQL, the corresponding value is as follows
+- env:
+  - name: MDB_HOST
+    value: '{{ .Values.mysql.host }}'
+  - name: MDB_PORT
+    value: "{{ .Values.mysql.port }}"
+  - name: MDB_USER
+    value: "{{ .Values.mysql.username }}"
+  - name: MDB_PASSWORD
+    value: "{{ .Values.mysql.password }}"
+  - name: MDB_DB
+    value: "{{ .Values.mysql.databases.aaa }}"    
 ```
 
 ## Options
