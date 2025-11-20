@@ -1,6 +1,7 @@
 package ctl
 
 import (
+	"github.com/beclab/Olares/cli/cmd/ctl/disk"
 	"github.com/beclab/Olares/cli/cmd/ctl/gpu"
 	"github.com/beclab/Olares/cli/cmd/ctl/node"
 	"github.com/beclab/Olares/cli/cmd/ctl/os"
@@ -33,6 +34,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(node.NewNodeCommand())
 	cmds.AddCommand(gpu.NewCmdGpu())
 	cmds.AddCommand(user.NewUserCommand())
+	cmds.AddCommand(disk.NewDiskCommand())
 
 	return cmds
 }

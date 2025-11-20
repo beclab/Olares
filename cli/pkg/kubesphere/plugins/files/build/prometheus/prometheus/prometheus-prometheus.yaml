@@ -10,6 +10,7 @@ metadata:
   name: k8s
   namespace: kubesphere-monitoring-system
 spec:
+  priorityClassName: "system-cluster-critical"
   affinity:
     nodeAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
