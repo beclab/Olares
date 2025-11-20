@@ -431,7 +431,11 @@ All system API [providers](../advanced/provider.md) are list below:
 
 Use this field to declare APIs from other applications that your app needs to access. The target application must have exposed a `providerName` in its own `provider` section (refer to the Provider section below).
 
-Set the `appName` field to the `name` of the target application, and the `providerName` field to match the `name` specified in the target app’s provider configuration. You can optionally use the `podSelectors` field to specify which pods in your app should have access. If this field is omitted, all pods in your app will be injected with the `outbound envoy sidecar` to enable access.
+To configure access:
+1. Set the `appName` field to the `name` of the target application.
+2. Set the `providerName` field to match the `name` specified in the target app’s provider configuration. 
+
+You can optionally use the `podSelectors` field to specify which pods in your app should have access. If this field is omitted, all pods in your app will be injected with the `outbound envoy sidecar` to enable access.
 
 :::info Example for calling app
 ```Yaml
