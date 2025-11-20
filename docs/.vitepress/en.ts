@@ -494,7 +494,8 @@ const side = {
       {
         text: "Windows",
         link: "/use-cases/windows",
-      },      
+      }, 
+      {
         text: "DeerFlow",
         link: "/use-cases/deerflow",
       },
