@@ -194,7 +194,7 @@ Accepted Value for OS 1.11:
 
 Accepted Value for OS 1.12: 
 - `Creativity`
-- `Productivity_v112` displayed as Productivity
+- `Productivity_v112` (displayed as Productivity)
 - `Developer Tools`
 - `Fun`
 - `Lifestyle`
