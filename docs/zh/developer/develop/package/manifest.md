@@ -827,7 +827,7 @@ allowedOutboundPorts:
 ```Yaml
 envs:
   - envName: ENV_NAME
-    # 在部署应用时，注入的value的key，最终注入为.Values.olaresEnv.ENV_NAME
+    # 在部署应用时，该键会被注入为.Values.olaresEnv.ENV_NAME
 
     required: true
     # 是否安装必须有值，若必填，则：若开发者未设置default，用户安装应用时必须提供，且修改value时不允许清空
