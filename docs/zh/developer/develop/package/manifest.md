@@ -859,7 +859,7 @@ envs:
     valueFrom:
       envName: OLARES_SYSTEM_CLUSTER_DNS_SERVICE
     # 引用系统环境变量的值。如果采用该方式，将不允许用户手动指定/修改其value
-    # 引用包含了带引用的环境变量的所有可声明字段(type,editable)，应用环境变量里的同名属性会失效，default/value字段也会失效
+    # 引用后，此环境变量的可声明字段(type,editable)将被系统环境变量的对应属性覆盖，default/value字段也会失效
     
     applyOnChange: true
     # 是否在此环境变量的值变化时自动重新部署应用，使变化生效
