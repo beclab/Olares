@@ -893,7 +893,7 @@ provider:
 - name: bazarr
   entrance: bazarr-svc   # 该服务的入口名称
   paths: ["/api*"]       # 开放的接口路径，不能只包含通配符 *
-  verbs: ["*"]           # 支持post,get,put,delete,patch，"*"允许所有方法
+  verbs: ["*"]           # 支持post,get,put,delete,patch；"*"表示允许所有方法
 
 ```
 :::
