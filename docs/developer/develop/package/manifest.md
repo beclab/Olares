@@ -14,7 +14,7 @@ Latest Olares Manifest version: `0.10.0`
 - Removed some deprecated fields from the Spec section
 - Removed some deprecated fields from the Option section
 - Added the `allowMultipleInstall` field, allowing the app to be installed as multiple independent instances
-- Added Envs section, to define environment variables required by the application
+- Added the Envs section, to define environment variables required by the application
 :::
 :::details Changelog
 `0.9.0`
