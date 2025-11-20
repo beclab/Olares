@@ -7,13 +7,13 @@ SMB (Server Message Block) is a protocol used to share files, printers, and othe
 ## Before you begin
 - Your Olares and the SMB server (e.g. a NAS device) must be on the same local network.
 - You have the following SMB share details:
-  - **SMB share path**: This will typically look like `\\<IP-address>\<Shared-folder-name>`.
+  - **SMB share path**: This will typically look like `//<IP-address>/<Shared-folder-name>`.
   - **Username and password**: Credentials for accessing the SMB share.
 
 ## Mount SMB share to Olares
 1. Open Files, and navigate to **Drive** > **External**.
 2. Click **Connect to server** in the top-right corner.
-3. Enter the SMB share path (e.g., `\\192.168.1.100\Documents`) in the **Server Address** field and click **Submit**.
+3. Enter the SMB share path (e.g., `//192.168.1.100/Documents`) in the **Server Address** field and click **Submit**.
    :::tip Save frequently used server addresses
    - To add a server address to **Favourite Servers**, click <i class="material-symbols-outlined">add</i> after entering the share path.
    - To remove a saved server, click the server path under **Favourite Servers**, then click <i class="material-symbols-outlined">remove</i>.
