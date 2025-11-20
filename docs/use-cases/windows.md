@@ -68,14 +68,10 @@ To connect via RDP:
 
     When the VPN connection status shows `DERP`, `P2P`, or `Intranet`, the secure network is active and ready for remote access.
 
-2. Install the Remote Desktop client
-
-    **On Windows**:
-    No installation needed since the Remote Desktop client is built in.
-
-    **On other platforms**:
-    Install the official Windows App from your platform's app store, or find the download link on the Windows app page inside Olares Market.
-        ![Install Windows](../public/images/manual/use-cases/win-app-on-mac.png#bordered)
+2. Install the Remote Desktop client.
+   - **Windows:** No installation needed.
+   - **macOS / iOS:** Download [Windows App from the App Store](https://apps.apple.com/us/app/windows-app/id1295203466).
+   - **Android:** Download [Remote Desktop from Google Play](https://play.google.com/store/apps/details?id=com.microsoft.rdc.androidx).
 
 3. Find your Windows VM address
 
