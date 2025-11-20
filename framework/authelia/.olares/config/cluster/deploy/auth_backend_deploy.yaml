@@ -19,17 +19,15 @@
 {{- $pg_password = (index $auth_secret "data" "pg_password") -}}
 {{- $nats_password = (index $auth_secret "data" "nats_password") -}}
 {{- $probe_secret = (index $auth_secret "data" "probe_secret") -}}
-
-{{ else -}}
-{{ $jwt_secret = randAlphaNum 16 | b64enc }}
-{{ $session_secret = randAlphaNum 16 | b64enc }}
-{{ $hmac_secret = randAlphaNum 16 | b64enc }}
-{{ $encryption_key = randAlphaNum 32 | b64enc }}
-{{ $redis_password = randAlphaNum 16 | b64enc }}
-{{ $pg_password = randAlphaNum 16 | b64enc }}
-{{ $nats_password = randAlphaNum 16 | b64enc }}
-{{ $probe_secret = randAlphaNum 16 | b64enc }}
 {{- end -}}
+{{- $jwt_secret = (default (randAlphaNum 16 | b64enc) $jwt_secret) -}}
+{{- $session_secret = (default (randAlphaNum 16 | b64enc) $session_secret) -}}
+{{- $hmac_secret = (default (randAlphaNum 16 | b64enc) $hmac_secret) -}}
+{{- $encryption_key = (default (randAlphaNum 32 | b64enc) $encryption_key) -}}
+{{- $redis_password = (default (randAlphaNum 16 | b64enc) $redis_password) -}}
+{{- $pg_password = (default (randAlphaNum 16 | b64enc) $pg_password) -}}
+{{- $nats_password = (default (randAlphaNum 16 | b64enc) $nats_password) -}}
+{{- $probe_secret = (default (randAlphaNum 16 | b64enc) $probe_secret) -}}
 
 ---
 apiVersion: v1
