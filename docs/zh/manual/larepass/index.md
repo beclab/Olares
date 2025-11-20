@@ -44,7 +44,6 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
 - [通过 LarePass 扩展收集内容](manage-knowledge.md#通过-larepass-扩展收集内容)
 - [订阅 RSS 源](manage-knowledge.md#订阅-rss-源)
 
----
 ## 功能对比
 
 <table style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif;">

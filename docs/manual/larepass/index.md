@@ -41,8 +41,6 @@ Use LarePass to collect web content and follow RSS feeds.
 - [Collect content via LarePass extension](manage-knowledge.md#collect-content-via-the-larepass-extension)
 - [Subscribe to RSS feeds](manage-knowledge.md#subscribe-to-rss-feeds)
 
----
-
 ## Feature comparison
 
 <table style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif;">
