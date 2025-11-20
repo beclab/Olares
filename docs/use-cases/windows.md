@@ -63,6 +63,7 @@ VNC (Virtual Network Computing) provides immediate, clientless access without re
 :::
 ### Access using a Remote Desktop Client (RDP)
 RDP (Remote Desktop Protocol) provides a much smoother, native-like experience with better performance, audio support, and seamless file transfer.
+
 To connect via RDP:
 1. [Enable VPN on LarePass](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your device.
 
