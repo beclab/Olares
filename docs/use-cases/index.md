@@ -1,7 +1,7 @@
 ---
 description: Explore practical use cases of Olares, showcasing how to leverage its features for AI workflows, creative tools, and self-hosted applications. Unlock the full potential of Olares in your environment.
 ---
-# Use cases and tutorials
+# Use cases
 While other guides tell you "what" and "how" with Olares, this section dives into the real-world use cases that reveal the full potential of Olares. 
 
 From running AI models to building seamless workflows across your self-hosted services, these hands-on guides help you accomplish specific tasks and implement complete, practical solutions using your installed applications.
@@ -19,5 +19,6 @@ From running AI models to building seamless workflows across your self-hosted se
   { title: 'Redroid', link: './host-cloud-android.html', tags: ['Virtual Machine']},
   { title: 'Windows', link: './windows.html', tags: ['Virtual Machine']},
   { title: 'DeerFlow', link: './host-cloud-android.html', tags: ['AI']},
+  { title: 'Duix.Avatar', link: './duix-avatar.html', tags: ['AI']},
 ]" 
 />
