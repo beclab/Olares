@@ -7,15 +7,23 @@ outline: [2, 3]
 Every **Olares Application Chart** should include a `OlaresManifest.yaml` file in the root directory. `OlaresManifest.yaml` provides all the essential information about an Olares App. Both the **Olares Market protocol** and the Olares depend on this information to distribute and install applications.
 
 :::info NOTE
-Latest Olares Manifest version: `0.9.0`
+Latest Olares Manifest version: `0.10.0`
+- Modified the `categories` field
+- Added `provider` field in the Permission section
+- Added  Provider section, to allow apps to expose specific service interfaces within the cluster
+- Removed some deprecated field from the Spec section
+- Removed some deprecated field from the Option section
+- Added the `allowMultipleInstall` field, allowing the app to be installed as multiple independent instances
+- Added Envs section, to define environment variables required by the application
+:::
+:::details Changelog
+`0.9.0`
 - Added a `conflict` field in `options` to declare incompatible applications
 - Removed `analytics` field in `options`
 - Modified the format of the `tailscale` section
 - Added a `allowedOutboundPorts` field to allow non-http protocol external access through the specified port
 - Modified the format of the `ports` section
 
-:::
-:::details Changelog
 `0.8.3`
 - Add a `mandatory` field in the `dependencies` section for dependent applications required for the installation
 - Add `tailscaleAcls` section to permit applications to open specified ports via Tailscale
@@ -36,7 +44,7 @@ Here's an example of what a `OlaresManifest.yaml` file might look like:
 ::: details OlaresManifest.yaml Example
 
 ```Yaml
-olaresManifest.version: '0.8.0'
+olaresManifest.version: '0.10.0'
 olaresManifest.type: app
 metadata:
   name: helloworld
@@ -101,10 +109,8 @@ options:
 Olares currently supports 3 types of applications, each requiring different fields. This document uses `app` as an example to explain each field. For information on other types, please refer to the corresponding configuration guide.
 - [Recommend Configuration Guide](recommend.md)
 
-:::info Example
-```Yaml
-olaresManifest.type: app
-```
+:::info NOTE
+`recommend` apps will not be listed in the Olares Market, but you can install recommendation algorithms for Wise by uploading a custom Chart.
 :::
 
 ## olaresManifest.version
@@ -179,9 +185,26 @@ The **Chart Version** of the application. It should be incremented each time the
 ### categories
 
 - Type: `list<string>`
-- Accepted Value: `Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity`
 
 Used to display your app on different category page in Olares Market.
+
+Accepted Value for OS 1.11:
+
+`Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity`
+
+Accepted Value for OS 1.12: 
+- `Creativity`
+- `Productivity_v112` displayed as Productivity
+- `Developer Tools`
+- `Fun`
+- `Lifestyle`
+- `Utilities_v112` displayed as Utilities
+- `AI`
+
+
+:::info NOTE
+Olares Market categories were updated in OS 1.12.0. To ensure your app is compatible with both versions 1.11 and 1.12, include category values for both versions in your configuration.
+:::
 
 ## Entrances
 
@@ -316,7 +339,8 @@ ports:
 
 Olares will expose the ports you specify for an application, which are accessible via the application domain name in the local network, for example: `84864c1f.your_olares_id.olares.com:46879`. For each port you expose, Olares configures both TCP and UDP with the same port number.
 
-When the `addToTailscaleAcl` field is set to `true`, the port will be automatically added to the Tailscale's ACL, and there is no need to configure in the tailscale section.
+When the `addToTailscaleAcl` field is set to `true`, the system will automatically assign a random port and add it to the Tailscale ACLs.
+
 
 :::info NOTE
 The exposed ports can only be accessed on the local network or through a VPN.
@@ -330,15 +354,7 @@ permission:
   appCache: true
   appData: true
   userData:
-  - /Home/  
-  sysData:
-  - dataType: legacy_prowlarr
-    appName: prowlarr
-    port: 9696
-    group: api.prowlarr
-    version: v2
-    ops:
-    - All
+  - /Home/ 
 ```
 :::
 
@@ -369,6 +385,10 @@ Whether the app requires read and write permission to user's `Home` folder. List
 - Optional
 
 Declare the list of APIs that this app needs to access.
+
+:::info NOTE
+This configuration has been deprecated since version 1.12.0.
+:::
 
 :::info Example
 ```Yaml
@@ -404,6 +424,38 @@ All system API [providers](../advanced/provider.md) are list below:
 | secret.infisical | v1 | secret | CreateSecret, RetrieveSecret
 | secret.vault | v1 | key | List, Info, Sign
 
+### provider
+
+- Type: `list<map>`
+- Optional
+
+Use this field to declare APIs from other applications that your app needs to access. The target application must have exposed a `providerName` in its own `provider` section (refer to the Provider section below).
+
+Set the `appName` field to the `name` of the target application, and the `providerName` field to match the `name` specified in the target app’s provider configuration. You can optionally use the `podSelectors` field to specify which pods in your app should have access. If this field is omitted, all pods in your app will be injected with the `outbound envoy sidecar` to enable access.
+
+:::info Example for calling app
+```Yaml
+# App requiring provider, e.g. sonarr
+permission:  
+  provider:
+  - appName: bazarr
+    providerName: bazarr-svc
+    podSelectors:
+      - matchLabels:
+          io.kompose.service: api
+```
+:::
+:::info Example for provider app
+```Yaml
+#  Provider app, e.g. bazarr
+provider:
+- name: bazarr-svc
+  entrance: bazarr-svc
+  paths: ["/*"]
+  verbs: ["*"]
+```
+:::
+
 ## Tailscale
 - Type: `map`
 - Optional
@@ -429,9 +481,6 @@ Additional information about the application, primarily used for display in the 
 :::info Example
 ```Yaml
 spec:
-  namespace: os-system 
-  # optional. Install the app to a specified namespace, e.g. os-system, user-space, user-system
-  
   versionName: '10.8.11' 
   # The version of the application that this chart contains. It is recommended to enclose the version number in quotes. This value corresponds to the appVersion field in the `Chart.yaml` file. Note that it is not related to the `version` field.
 
@@ -556,6 +605,10 @@ When set to `true`, Olares forces the application to run under user ID `1000` (a
 The Olares provides highly available middleware services. Developers do not need to install middleware repeatedly. Just simply add required middleware here, You can then directly use the corresponding middleware information in the application's deployment YAML file.
 
 Use the `scripts` field to specify scripts that should be executed after the database is created. Additionally, use the `extension` field to add the corresponding extension in the  database.
+
+:::info NOTE
+MongoDB, MySQL, MariaDB, MinIO, and RabbitMQ must first be installed by an admin from the Market before they can be used by other applications.
+:::
 
 :::info Example
 ```Yaml
@@ -695,54 +748,6 @@ options:
 ```
 :::
 
-### websocket
-- Type: `map`
-- Optional
-
-Enable websocket for the app. Refer to [websocket](../advanced/websocket.md) for more information.
-
-:::info Example
-```yaml
-options:
-  websocket:
-    url: /ws/message
-    port: 8888
-```
-:::
-
-### resetCookie
-- Type: `map`
-- Optional
-
-If the app requires cookies, please enable this feature. Refer to [cookie](../advanced/cookie.md) for more information.
-
-:::info Example
-```yaml
-options:
-  resetCookie:
-    enabled: true
-```
-:::
-
-### upload
-- Type: `map`
-- Optional
-
-The Olares Application Runtime includes a built-in file upload component designed to simplify the file upload process in your application. Refer to [upload](../advanced/file-upload.md) for more information.
-
-:::info Example
-```yaml
-upload:
-  # The types of files that are allowed to be uploaded, * stands for any type, The type of the uploaded file must be in the list.
-  fileType:
-    - pdf
-  # The path of 'dest' must be a mountPath
-  dest: /appdata
-  # The maximum size of file, in bytes
-  limitedSize: 3729747942
-```
-:::
-
 ### mobileSupported
 - Type: `boolean`
 - Default: `false`
@@ -803,4 +808,90 @@ allowedOutboundPorts:
   - 465
   - 587
 ```
-:::   
+:::
+
+### allowMultipleInstall
+- Type: `boolean`
+- Default: `false`
+- Optional
+
+This application supports deploying multiple independent instances within the same Olares cluster. This setting does not apply to paid applications or clients of shared applications.
+
+## Envs
+
+Declare the environment variables required for your application to run here. You can allow users to manually enter these values or reference existing system environment variables directly.
+
+:::info NOTE
+This configuration requires Olares OS version 1.12.2 or higher to take effect.
+:::
+
+:::info Example
+```yaml
+envs:
+  - envName: ENV_NAME
+    # This is the key that will be injected as .Values.olaresEnv.ENV_NAME during deployment.
+
+    required: true
+    # Specifies whether a value is required for installation. If set to true and no default is provided, users must input a value, and the value cannot be deleted.
+
+    default: "DEFAULT"
+    # The default value of the environment variable; set by the developer and not editable by users
+
+    type: string
+    # The data type of the environment variable. Supported types: int, bool, url, ip, domain, email, string, password. If specified, system will validate user input accordingly.
+
+    editable: true
+    # Specifies whether the environment variable can be edited after the application is deployed.
+
+    options:
+    - title: Windows11
+      value: "11"
+    - title: Windows10
+      value: "10"
+    # List of allowed values. Users can only select value from these options.
+    # "title" is a user-friendly label, while "value" is what's actually set in the system.
+
+    remoteOptions: https://xxx.xxx/xx
+    # URL providing a list of accepted options. The response body should be a JSON-encoded options list.
+
+    regex: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    # The value must match this regular expression.
+
+    valueFrom:
+      envName: OLARES_SYSTEM_CLUSTER_DNS_SERVICE
+    # Reference the value from a system environment variable. when referenced, manual input is disallowed.
+    # Any fields (type, editable, etc.) in this env will be overrided by referenced variable's attributes; default/value fields are ignored.
+    
+    applyOnChange: true
+    # Whether to automatically redeploy the app when this variable changes. If false, changes take effect only on upgrade/reinstallation, not on restart.
+
+    description: "DESCRIPTION"
+    # Description of this environment variable.
+```
+:::
+
+To use the values of environment variables in your deployment YAML file, simply use `.Values.olaresEnv.ENV_NAME` in the appropriate place. The system will automatically inject the olaresEnv variables into the Values.yaml during deployment. For example:
+:::info deployment.yaml
+```yaml
+  BACKEND_MAIL_HOST: "{{ .Values.olaresEnv.MAIL_HOST }}"
+  BACKEND_MAIL_PORT: "{{ .Values.olaresEnv.MAIL_PORT }}"
+  BACKEND_MAIL_AUTH_USER: "{{ .Values.olaresEnv.MAIL_AUTH_USER }}"
+  BACKEND_MAIL_AUTH_PASS: "{{ .Values.olaresEnv.MAIL_AUTH_PASS }}"
+  BACKEND_MAIL_SECURE: "{{ .Values.olaresEnv.MAIL_SECURE }}"
+  BACKEND_MAIL_SENDER: "{{ .Values.olaresEnv.MAIL_SENDER }}"
+```
+:::
+
+## Provider
+
+Declare the interfaces that this application exposes to other applications here. The system will automatically generate a Service for each declared interface, enabling other applications within the cluster to access them through the internal network. If another application needs to access these interfaces, it must first request permission for the specific provider in the permissions section.
+
+:::info Example
+```yaml
+provider:
+- name: bazarr
+  entrance: bazarr-svc   # The entry name of the service
+  paths: ["/api*"]       # API paths to expose; cannot consist of * only
+  verbs: ["*"]           # Supported: post, get, put, delete, patch; "*" allows all methods
+```
+:::
