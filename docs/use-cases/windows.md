@@ -79,10 +79,10 @@ To connect via RDP:
 
     b. In the browser URL bar, copy the main domain part and add `:46879` to the end.
     
-    **Example**:
+    **Example**
     - Browser URL:
     ```
-    https://7e89d2a1.laresprime.olares.com/?resize=scale&reconnect=true&autoconnect=true
+    https://7e89d2a1.laresprime.olares.com
     ``` 
     - RDP address: 
     ```
