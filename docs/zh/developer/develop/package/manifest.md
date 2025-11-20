@@ -851,7 +851,7 @@ envs:
     # title为展示给用户的名称，value为实际注入系统的值
 
     remoteOptions: https://xxx.xxx/xx
-    # 提供允许值列表的一个url，response的body格式为JSON编码的options列表
+    # 提供允许值列表的一个url，response body需为JSON编码的options列表
 
     regex: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     # 该环境变量的值必须匹配此正则表达式
