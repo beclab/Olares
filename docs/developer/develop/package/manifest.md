@@ -198,7 +198,7 @@ Accepted Value for OS 1.12:
 - `Developer Tools`
 - `Fun`
 - `Lifestyle`
-- `Utilities_v112` displayed as Utilities
+- `Utilities_v112` (displayed as Utilities)
 - `AI`
 
 
