@@ -830,7 +830,8 @@ envs:
     # 在部署应用时，该键会被注入为.Values.olaresEnv.ENV_NAME
 
     required: true
-    # 是否安装必须有值，若必填，则：若开发者未设置default，用户安装应用时必须提供，且修改value时不允许清空
+    # 是否为必填项
+    # 若为true且未设置default，则用户安装应用时必须填写此值，且修改value时不允许清空
 
     default: "DEFAULT"
     # 环境变量的默认值，开发者可在编写时提供，用户不可修改。
