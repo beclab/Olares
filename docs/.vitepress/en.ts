@@ -492,6 +492,10 @@ const side = {
         link: "/use-cases/host-cloud-android",
       },
       {
+        text: "Windows",
+        link: "/use-cases/windows",
+      }, 
+      {
         text: "DeerFlow",
         link: "/use-cases/deerflow",
       },
