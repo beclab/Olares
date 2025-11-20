@@ -867,7 +867,8 @@ envs:
     # All declarable fields  (type, editable, etc.) will be overridden by the referenced variable's attributes; default/value fields are also ignored.
     
     applyOnChange: true
-    # Whether to automatically redeploy the app when this variable changes. If false, changes take effect only on upgrade/reinstallation, not on restart.
+    # Whether to automatically redeploy the app when this variable changes. 
+    # If set to false, changes take effect only on upgrade/reinstallation, not on restart.
 
     description: "DESCRIPTION"
     # Description of this environment variable.
