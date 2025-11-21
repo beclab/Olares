@@ -54,13 +54,13 @@ To follow this guide using the `ffmpeg` command, ensure it is installed on your 
    ```plain
    /Data/heygem/voice/data/ 
    ```
-<!--   ![Upload source audio](/images/manual/use-cases/hoppscotch.png#bordered) -->
+   ![Upload source audio](/images/manual/use-cases/duix-avatar-upload-source-audio.png#bordered)
 
    2. Upload `output_video.mp4` to:
    ```plain
    /Data/heygem/face2face-data/temp/
    ```
-<!--   ![Upload source video](/images/manual/use-cases/hoppscotch.png#bordered) -->
+   ![Upload source video](/images/manual/use-cases/duix-avatar-upload-source-video.png#bordered)
 ## Import the API collection to Hoppscotch
 A pre-configured Hoppscotch collection is available to simplify the API calls.
 1. Run the following command in your terminal to download the API collection file:
@@ -90,7 +90,7 @@ This step preprocesses your uploaded audio, extracting features to prepare for v
    :::
 3. Click **Send** to begin pre-training.
    A successful request returns a JSON response. Copy the values for `reference_audio_text` and `asr_format_audio_url` for later use.
-<!--   ![Pretrain](/images/manual/use-cases/duix-avatar.png#bordered)  -->
+   ![Pretrain](/images/manual/use-cases/duix-avatar-pretrain.png#bordered)
 
 ### Step 2: Audio synthesis
 This step uses the voice model you trained in Step 1 to synthesize new audio from a text prompt.
@@ -101,12 +101,12 @@ This step uses the voice model you trained in Step 1 to synthesize new audio fro
    * `reference_audio`: Paste the `asr_format_audio_url` value from Step 1.
    * `reference_text`: Paste the `reference_audio_text` value from Step 1.
    * Other parameters can be left as their defaults.
-<!--   ![Edit audio parameters](/images/manual/use-cases/duix-avatar.png#bordered) -->
+   ![Edit audio parameters](/images/manual/use-cases/duix-avatar-edit-audio-parameters.png#bordered)
 
 4. Click **Send** to synthesize the audio. A successful request will return an audio file.
 
-5. In the response area, click the "More" icon to download the audio (**.mp3**).
-<!--   ![Generate audio file](/images/manual/use-cases/duix-avatar.png#bordered) -->
+5. In the response area, click <span class="material-symbols-outlined">more_vert</span> to download the audio in MP3 format.
+   ![Generate audio file](/images/manual/use-cases/duix-avatar-generate-audio-file.png#bordered)
 
 6. Rename the downloaded file to `new.mp3`. In the same folder, convert it to `.wav` with `ffmpeg`:
     ```bashß
@@ -115,7 +115,9 @@ This step uses the voice model you trained in Step 1 to synthesize new audio fro
 7. Upload the new `new.wav` file to:
    ```plain
    /Data/heygem/face2face-data/temp/
-    ```
+    ``` 
+   ![Upload audio](/images/manual/use-cases/duix-avatar-upload-audio.png#bordered)
+
 ### Step 3: Video synthesis
 Now you will merge your new synthesized audio (`new.wav`) with your original silent video (`output_video.mp4`) to create the final avatar.
 
@@ -126,15 +128,16 @@ Now you will merge your new synthesized audio (`new.wav`) with your original sil
    The `audio_url` and `video_url` in the request body are pre-set to `new.wav` and `output_video.mp4`, which match the files you uploaded. They do not need to be changed.
    :::
 4. Confirm the settings and click **Send**. A successful response will return `"success": true`, indicating the task has been submitted.
-<!--   ![Edit video parameters](/images/manual/use-cases/duix-avatar.png#bordered) -->
+   ![Submit task](/images/manual/use-cases/duix-avatar-submit-task.png#bordered)
 
 ### Step 4: Query video synthesis progress
 Video synthesis is a time-consuming task. Use this to query its processing status.
 1. Click **4. Video Query Request**.
 2. Modify the Olares ID in the request URL.
-3. In the **Params** section, change the `code` value to the unique identifier you set in Step 3.
+3. In the **Params** section, change the `code` value to the unique identifier you set in Step 3. 
 4. Click **Send** to check the current progress.
 5. Repeat this query until the `progress` field in the response reaches `100`, which indicates the video synthesis is complete.
+   ![Task completed](/images/manual/use-cases/duix-avatar-task-completed.png#bordered)
    :::tip
    The time required for video synthesis depends on your GPU performance and video length. It may take several minutes or longer.
    :::
@@ -142,7 +145,7 @@ Video synthesis is a time-consuming task. Use this to query its processing statu
     ```plain
    /Data/heygem/face2face-data/temp/
     ```
-<!--   ![Check video in Files](/images/manual/use-cases/duix-avatar.png#bordered)  -->
+   ![Check video in Files](/images/manual/use-cases/duix-avatar-check-video-in-files.png#bordered)
 
 ## FAQ
 ### Progress is stuck or synthesis fails
