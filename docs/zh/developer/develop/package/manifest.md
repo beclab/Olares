@@ -7,15 +7,23 @@ outline: [2, 3]
 每一个 Olares 应用的 Chart 根目录下都必须有一个名为 `OlaresManifest.yaml` 的文件。`OlaresManifest.yaml` 描述了一个 Olares 应用的所有基本信息。Olares 应用市场协议和 Olares 系统依赖这些关键信息来正确分发和安装应用。
 
 :::info 提示
-最新的 Olares 系统使用的 Manifest 版本为: `0.9.0`
+最新的 Olares 系统使用的 Manifest 版本为: `0.10.0`
+- 修改 `categories` 分类
+- 增加 Permission 部分中 `provider` 权限的申请
+- 增加 Provider 部分，用于让应用对集群内暴露指定服务接口
+- 移除 Spec 部分已不支持的一些配置项
+- 移除 Option 部分已不支持的一些配置项
+- 增加 `allowMultipleInstall` 配置，允许应用克隆出多个独立的实例
+- 增加 Envs 部分，支持应用声明需要的环境变量
+:::
+:::details Changelog
+`0.9.0`
 - 在 `options` 中增加 `conflict` 字段, 用于声明不兼容的应用
 - 移除 `options` 中 `analytics` 配置项
 - 修改 `tailscale` 字段的配置格式
 - 增加 `allowedOutboundPorts` 配置，允许通过指定端口进行非 HTTP 协议的对外访问
 - 修改 `ports` 部分的配置
 
-:::
-:::details Changelog
 `0.8.3`
 - 在 `dependencies` 配置项里增加 `mandatory` 字段以表示该依赖应用必须安装。
 - 增加 `tailscaleAcls` 配置项，允许 Tailscale 为应用开放指定端口
@@ -35,8 +43,8 @@ outline: [2, 3]
 
 ::: details `OlaresManifest.yaml` 示例
 
-```Yaml
-olaresManifest.version: '0.8.0'
+```yaml
+olaresManifest.version: '0.10.0'
 olaresManifest.type: app
 metadata:
   name: helloworld
@@ -101,10 +109,8 @@ options:
 Olares 市场目前支持 3 种类型的应用，各自对应不同场景。本文档以 “app” 为例来解释各个字段。其他类型请参考相应的配置指南。
 - [推荐算法配置指南](recommend.md)
 
-:::info 示例
-```Yaml
-olaresManifest.type: app
-```
+:::info 提示
+Olares Market 目前不展示 `recommend` 类型的应用，但你可以上传自定义 Chart 来给 Wise 安装推荐算法
 :::
 
 ## olaresManifest.version
@@ -118,7 +124,7 @@ olaresManifest.type: app
 - 第 3 位数字的改变，不影响应用分发和安装。
 
 开发者可以使用 1-3 位的版本号来标识该应用遵循的配置版本。以下是有效版本的一些示例：
-```Yaml
+```yaml
 olaresManifest.version: 1
 olaresManifest.version: 1.1.0
 olaresManifest.version: '2.2'
@@ -130,7 +136,7 @@ olaresManifest.version: "3.0.122"
 应用的基本信息，用于在 Olares 系统和应用市场中展示应用。
 
 :::info 示例
-```Yaml
+```yaml
 metadata:
   name: nextcloud
   title: Nextcloud
@@ -179,16 +185,33 @@ Olares 应用市场中的应用名称下方显示的简短说明。
 ### categories
 
 - 类型： `list<string>`
-- 有效值： `Blockchain`、`Utilities`、`Social Network`、`Entertainment`、`Productivity`
 
-在应用市场的哪个类别下展示应用。
+描述在应用市场的哪个类别下展示应用。
+
+OS 1.11 有效值：
+- `Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity`
+
+OS 1.12 有效值：
+- `Creativity`：设计创作
+- `Productivity_v112`：工作效率
+- `Developer Tools`：开发工具
+- `Fun`：休闲娱乐
+- `Lifestyle`：生活方式
+- `Utilities_v112`：实用工具
+- `AI`：AI
+
+
+
+:::info 提示
+Olares OS 1.12.0 版本对应用商店的应用分类进行了调整，因此如果应用需要同时兼容 1.11 和 1.12 版本，请同时填写两个版本所需的分类。
+:::
 
 ## Entrances
 
 指定此应用访问入口的数量。每个应用允许最少 1 个，最多 10 个入口 。
 
 :::info 示例
-```Yaml
+```yaml
 entrances:
 - name: a
   host: firefox
@@ -304,7 +327,7 @@ entrances:
 定义暴露的端口
 
 :::info 示例
-```Yaml
+```yaml
 ports:
 - name: rdp-tcp             # 提供服务的入口名称
   host: windows-svc         # 提供服务的 Ingress 主机名称
@@ -316,8 +339,7 @@ ports:
 
 Olares 会为你的应用暴露指定的端口，这些端口可通过应用域名在本地网络下访问，如`84864c1f.your_olares_id.olares.com:46879`。对于每个公开的端口，Olares 会自动配置相同端口号的 TCP 和 UDP。
 
-当设置 `addToTailscaleAcl` 字段为 `true`时，该端口会自动增加tailscale acl中，无需再去tailscale部分配置
-
+当将 `addToTailscaleAcl` 字段设置为 `true` 时，系统会为该端口分配一个随机端口，并自动将其加入到 Tailscale 的 ACL 中。
 
 :::info 提示
 暴露的端口只能通过本地网络或 Olares 专用网络访问。
@@ -327,20 +349,12 @@ Olares 会为你的应用暴露指定的端口，这些端口可通过应用域�
 ## Permission
 
 :::info 示例
-```Yaml
+```yaml
 permission:
   appCache: true
   appData: true
   userData:
     - /Home/
-  sysData:
-    - dataType: legacy_prowlarr
-      appName: prowlarr
-      port: 9696
-      group: api.prowlarr
-      version: v2
-      ops:
-        - All
 ```
 :::
 
@@ -372,8 +386,12 @@ permission:
 
 声明该应用程序需要访问的 API 列表。
 
+:::info 提示
+从 1.12.0 版本开始，该权限配置已经被废弃。
+:::
+
 :::info 示例
-```Yaml
+```yaml
   sysData:
   - group: service.bfl
     dataType: app
@@ -406,6 +424,39 @@ permission:
 | secret.infisical | v1 | secret | CreateSecret, RetrieveSecret
 | secret.vault | v1 | key | List, Info, Sign
 
+### provider
+
+- 类型：`list<map>`
+- 可选
+
+用于声明本应用需访问的其他应用接口。被访问的应用需在其 `provider` 部分声明对外开放的 `providerName`，详见下方 Provider 章节。
+
+此处 `appName` 应填写目标应用的 `name`，`providerName` 填写目标应用 `provider` 配置中的 `name` 字段。`podSelectors` 字段用于指定本应用中哪些 pod 需要访问目标应用。如果未声明此字段，则默认为本应用的所有 pod 注入 `outbound envoy sidecar`。
+
+:::info 调用应用示例
+```yaml
+# 需要调用其他应用的应用，如 sonarr
+permission:  
+  provider:
+  - appName: bazarr
+    providerName: bazarr-svc
+    podSelectors:
+      - matchLabels:
+          io.kompose.service: api
+```
+:::
+:::info 被调用应用示例
+```yaml
+# 被调用方应用，如 bazarr
+provider:
+- name: bazarr-svc
+  entrance: bazarr-svc
+  paths: ["/*"]
+  verbs: ["*"]
+```
+:::
+
+
 ## Tailscale
 - 类型：`map`
 - 可选
@@ -413,7 +464,7 @@ permission:
 允许应用在 Tailscale 的ACL(Access Control Lists)中开放指定端口。
 
 :::info 示例
-```Yaml
+```yaml
 tailscale:
   acls:
   - proto: tcp
@@ -429,13 +480,10 @@ tailscale:
 记录额外的应用信息，主要用于应用商店的展示。
 
 :::info 示例
-```Yaml
+```yaml
 spec:
-  namespace: os-system 
-  # 可选。将应用安装到指定的命名空间，如 os-system、user-space 和 user-system
-
   versionName: '10.8.11' 
-  ## 此 Chart 包含的应用程序的版本。建议将版本号括在引号中。该值对应于 Chart.yaml 文件中的 appVersion 字段。请注意，它与 version 字段无关。
+  # 此 Chart 包含的应用程序的版本。建议将版本号括在引号中。该值对应于 Chart.yaml 文件中的 appVersion 字段。请注意，它与 version 字段无关。
 
   featuredImage: https://app.cdn.olares.com/appstore/jellyfin/promote_image_1.jpg
   # 当应用在应用市场上推荐时，会显示特色图像。
@@ -509,7 +557,7 @@ Olares 应用市场将根据用户的区域设置自动显示相应的 `OlaresMa
 ```
 :::
 目前，你可以为以下字段添加 i18n 内容：
-```Yaml
+```yaml
 metadata:
   description:
   title:
@@ -559,8 +607,13 @@ Olares 目前不支持混合架构的集群。
 
 使用 `scripts` 字段指定创建数据库后应执行的脚本。此外，使用 `extension` 字段在数据库中添加相应的扩展名。
 
+:::info 提示
+MongoDB，MySQL，MariaDB，MinIO，RabbitMQ 需要管理员从 Market 安装后才能被其他应用使用
+:::
+
+### PostgreSQL
 :::info 示例
-```Yaml
+```yaml
 middleware:
   postgres:
     username: immich
@@ -575,9 +628,44 @@ middleware:
       - ALTER SCHEMA vectors OWNER TO $dbusername;
       - COMMIT;
       # 操作系统提供了两个变量 $databasename 和 $dbusername，命令执行时会被 Olares 应用运行时替换。
+```
+:::
+使用 deployment YAML 中的中间件信息：
+```yaml
+# 对于 PostgreSQL，对应值如下
+- env:
+  - name: DB_POSTGRESDB_DATABASE # 你在 OlaresManifest 中配置的数据库名称，在 middleware.postgres.databases[i].name 中指定
+    value: {{ .Values.postgres.databases.<dbname> }}
+  - name: DB_POSTGRESDB_HOST
+    value: {{ .Values.postgres.host }}
+  - name: DB_POSTGRESDB_PORT
+    value: "{{ .Values.postgres.port }}"
+  - name: DB_POSTGRESDB_USER
+    value: {{ .Values.postgres.username }}
+  - name: DB_POSTGRESDB_PASSWORD
+    value: {{ .Values.postgres.password }}
+```
+
+### Redis
+:::info 示例
+```yaml
+middleware:
   redis:
     password: password
     namespace: db0
+```
+:::
+使用 deployment YAML 中的中间件信息：
+```yaml
+# 对于 Redis，对应的值如下
+host --> {{ .Values.redis.host }}For Redis, the corresponding value is as follow
+port --> "{{ .Values.redis.port }}"
+password --> "{{ .Values.redis.password }}"
+```
+### MongoDB
+:::info 示例
+```yaml
+middleware:    
   mongodb:
     username: chromium
     databases:
@@ -587,35 +675,122 @@ middleware:
       # 请确保每一行都是完整的查询。
 ```
 :::
-
 使用 deployment YAML 中的中间件信息：
-
 ```yaml
-- name: DB_POSTGRESDB_DATABASE # 你在 OlaresManifest 中配置的数据库名称，在 middleware.postgres.databases[i].name 中指定
-  value: {{ .Values.postgres.databases.<dbname> }}
-- name: DB_POSTGRESDB_HOST
-  value: {{ .Values.postgres.host }}
-- name: DB_POSTGRESDB_PORT
-  value: "{{ .Values.postgres.port }}"
-- name: DB_POSTGRESDB_USER
-  value: {{ .Values.postgres.username }}
-- name: DB_POSTGRESDB_PASSWORD
-  value: {{ .Values.postgres.password }}
-
-
-# 对于mongodb来说，对应的值如下
+# 对于 MongoDB，对应的值如下
 host --> {{ .Values.mongodb.host }}
 port --> "{{ .Values.mongodb.port }}"  # yaml 文件中的端口和密码需要用双引号括起来。
 username --> {{ .Values.mongodb.username }}
 password --> "{{ .Values.mongodb.password }}" # yaml 文件中的端口和密码需要用双引号括起来。
 databases --> "{{ .Values.mongodb.databases }}" # 数据库的值类型是 map。你可以使用 {{ .Values.mongodb.databases.<dbname> }} 获取数据库。 <dbname> 是你在 OlaresManifest 中配置的名称，在 middleware.mongodb.databases[i].name 中指定
+```
+### MinIO
+:::info 示例
+```yaml
+middleware: 
+  minio:
+    username: miniouser
+    buckets:
+    - name: mybucket
+```
+:::
+使用 deployment YAML 中的中间件信息：
+```yaml
+# 对于 MinIO，对应的值如下
+- env:
+  - name: MINIO_ENDPOINT
+    value: '{{ .Values.minio.host }}:{{ .Values.minio.port }}'
+  - name: MINIO_PORT
+    value: "{{ .Values.minio.port }}"
+  - name: MINIO_ACCESS_KEY
+    value: {{ .Values.minio.username }}
+  - name: MINIO_SECRET_KEY
+    value: {{ .Values.minio.password }}
+  - name: MINIO_BUCKET
+    value: {{ .Values.minio.buckets.mybucket }}
+```
+### RabbitMQ
+:::info 示例
+```yaml
+middleware: 
+  rabbitmq:
+    username: rabbitmquser
+    vhosts:
+    - name: aaa
+```
+:::
+使用 deployment YAML 中的中间件信息：
+```yaml
+# 对于 RabbitMQ，对应的值如下
+- env:
+  - name: RABBITMQ_HOST
+    value: '{{ .Values.rabbitmq.host }}'
+  - name: RABBITMQ_PORT
+    value: "{{ .Values.rabbitmq.port }}"
+  - name: RABBITMQ_USER
+    value: "{{ .Values.rabbitmq.username }}"
+  - name: RABBITMQ_PASSWORD
+    value: "{{ .Values.rabbitmq.password }}"
+  - name: RABBITMQ_VHOST
+    value: "{{ .Values.rabbitmq.vhosts.aaa }}"    
 
+user := os.Getenv("RABBITMQ_USER")
+password := os.Getenv("RABBITMQ_PASSWORD")
+vhost := os.Getenv("RABBITMQ_VHOST")
+host := os.Getenv("RABBITMQ_HOST")
+portMQ := os.Getenv("RABBITMQ_PORT")
+url := fmt.Sprintf("amqp://%s:%s@%s:%s/%s", user, password, host, portMQ, vhost)
+```
+### MariaDB
+:::info 示例
+```yaml
+middleware:               
+  mariadb:
+    username: mariadbclient
+    databases:
+    - name: aaa
+```
+:::
+使用 deployment YAML 中的中间件信息：
+```yaml
+# 对于 MariaDB，对应的值如下
+- env:
+  - name: MDB_HOST
+    value: '{{ .Values.mariadb.host }}'
+  - name: MDB_PORT
+    value: "{{ .Values.mariadb.port }}"
+  - name: MDB_USER
+    value: "{{ .Values.mariadb.username }}"
+  - name: MDB_PASSWORD
+    value: "{{ .Values.mariadb.password }}"
+  - name: MDB_DB
+    value: "{{ .Values.mariadb.databases.aaa }}"
+```
+### MySQL
+:::info 示例
+```yaml
+middleware:   
+  mysql:
+    username: mysqlclient
+    databases:
+    - name: aaa        
+```
+:::
+使用 deployment YAML 中的中间件信息：
 
-# 对于Redis来说，对应的值如下
-host --> {{ .Values.redis.host }}For Redis, the corresponding value is as follow
-port --> "{{ .Values.redis.port }}"
-password --> "{{ .Values.redis.password }}"
-
+```yaml
+# 对于 MySQL，对应的值如下
+- env:
+  - name: MDB_HOST
+    value: '{{ .Values.mysql.host }}'
+  - name: MDB_PORT
+    value: "{{ .Values.mysql.port }}"
+  - name: MDB_USER
+    value: "{{ .Values.mysql.username }}"
+  - name: MDB_PASSWORD
+    value: "{{ .Values.mysql.password }}"
+  - name: MDB_DB
+    value: "{{ .Values.mysql.databases.aaa }}"    
 ```
 
 ## Options
@@ -696,54 +871,6 @@ options:
 ```
 :::
 
-### websocket
-- 类型：`map`
-- 可选
-
-为应用启用 websocket。请参阅 [websocket](../advanced/websocket.md) 了解更多信息。
-
-:::info 示例
-```yaml
-options:
-  websocket:
-    url: /ws/message
-    port: 8888
-```
-:::
-
-### resetCookie
-- 类型：`map`
-- 可选
-
-如果应用需要 cookie，请启用此功能。更多信息请参考 [cookie](../advanced/cookie.md)。
-
-:::info 示例
-```yaml
-options:
-  resetCookie:
-    enabled: true
-```
-:::
-
-### upload
-- 类型： `map`
-- 可选
-
-Olares 应用运行时包含一个内置文件上传组件，旨在简化应用程序中的文件上传过程。请参阅 [上传](../advanced/file-upload.md) 了解更多信息。
-
-:::info Example
-```yaml
-upload:
-  # 允许上传的文件类型，*为任意类型， 上传时会指定 file_type，必须在允许的文件类型中
-  fileType:
-    - pdf
-  # dest 的路径必须为某一个 mountPath
-  dest: /appdata
-  # 文件上传的最大大小，单位为字节
-  limitedSize: 3729747942
-```
-:::
-
 ### mobileSupported
 - 类型： `boolean`
 - 默认值： `false`
@@ -803,3 +930,93 @@ allowedOutboundPorts:
   - 587
 ```
 :::    
+
+### allowMultipleInstall
+- 类型： `boolean`
+- 默认值： `false`
+- 可选
+
+该应用支持在同一 Olares 集群中部署多个独立实例。此设置对付费应用和共享应用客户端无效。
+
+## Envs
+
+在此声明应用运行所需的环境变量，既支持用户手动输入，也可以直接引用已有的系统环境变量值。
+
+:::info 提示
+该配置需要 Olares OS 版本在 1.12.2 及以上才生效
+:::    
+
+:::info 示例
+```yaml
+envs:
+  - envName: ENV_NAME
+    # 在部署应用时，该键会被注入为.Values.olaresEnv.ENV_NAME
+
+    required: true
+    # 是否为必填项
+    # 若为true且未设置default，则用户安装应用时必须填写此值，且修改value时不允许清空
+
+    default: "DEFAULT"
+    # 环境变量的默认值，开发者可在编写时提供，用户不可修改。
+
+    type: string
+    # 环境变量的类型，目前有int/bool/url/ip/domain/email/string/password。如果声明，会对value进行类型校验
+
+    editable: true    
+    # 是否可在应用部署后编辑
+
+    options:
+    - title: Windows11
+      value: "11"
+    - title: Windows10
+      value: "10"
+    # 允许值列表，此环境变量的值只允许从该列表中选择
+    # title为展示给用户的名称，value为实际注入系统的值
+
+    remoteOptions: https://xxx.xxx/xx
+    # 提供允许值列表的一个url，response body需为JSON编码的options列表
+
+    regex: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    # 该环境变量的值必须匹配此正则表达式
+
+    valueFrom:
+      envName: OLARES_SYSTEM_CLUSTER_DNS_SERVICE
+    # 引用系统环境变量的值。如果采用该方式，将不允许用户手动指定/修改其value
+    # 引用后，此环境变量的可声明字段(type,editable)将被系统环境变量的对应属性覆盖，default/value字段也会失效
+    
+    applyOnChange: true
+    # 是否在此环境变量的值变化时自动重新部署应用，使变化生效
+    # 若该字段为false，在环境变量变化时，即使停止/启动应用，也不会生效，只有升级/重装会生效
+    
+    description: "DESCRIPTION"
+    # 对环境变量的描述
+```
+:::
+
+如需在部署 YAML 文件中使用环境变量的值，只需在相应位置使用 `.Values.olaresEnv.ENV_NAME` 即可。系统会在应用部署时自动将对应的 olaresEnv 变量注入到 values 中。例如
+
+:::info 示例
+```yaml
+BACKEND_MAIL_HOST: "{{ .Values.olaresEnv.MAIL_HOST }}"
+BACKEND_MAIL_PORT: "{{ .Values.olaresEnv.MAIL_PORT }}"
+BACKEND_MAIL_AUTH_USER: "{{ .Values.olaresEnv.MAIL_AUTH_USER }}"
+BACKEND_MAIL_AUTH_PASS: "{{ .Values.olaresEnv.MAIL_AUTH_PASS }}"
+BACKEND_MAIL_SECURE: "{{ .Values.olaresEnv.MAIL_SECURE }}"
+BACKEND_MAIL_SENDER: "{{ .Values.olaresEnv.MAIL_SENDER }}"
+```
+:::
+
+## Provider
+
+在此声明本应用向其他应用开放的接口。系统会自动为这些接口生成 Service，让集群内其他应用能够通过内部网络访问。如果其他应用要调用这些接口，需要在 permission 部分申请访问该 provider 的权限。
+
+:::info 示例
+```yaml
+provider:
+- name: bazarr
+  entrance: bazarr-svc   # 该服务的入口名称
+  paths: ["/api*"]       # 开放的接口路径，不能只包含通配符 *
+  verbs: ["*"]           # 支持post,get,put,delete,patch；"*"表示允许所有方法
+
+```
+:::
