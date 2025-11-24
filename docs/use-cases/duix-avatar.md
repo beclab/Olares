@@ -65,7 +65,7 @@ To follow this guide using the `ffmpeg` command, ensure it is installed on your 
 A pre-configured Hoppscotch collection is available to simplify the API calls.
 1. Run the following command in your terminal to download the API collection file:
     ```bash
-    curl -o duix.json https://cdn.olares.cn/app/demos/duix/duix.json
+    curl -o duix.avatar.json https://cdn.olares.com/app/demos/en/duix/duix.avatar.json
     ```
 2. Open the Hoppscotch app in Olares.
 3. In the collections panel on the right, click **Import** > **Import from Hoppscotch**, and select the `duix.avatar.json` file you just downloaded.
