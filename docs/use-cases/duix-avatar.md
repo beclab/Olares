@@ -42,7 +42,7 @@ You must then separate this source video into two files: a silent video and an a
 To follow this guide using the `ffmpeg` command, ensure it is installed on your local computer. See https://www.ffmpeg.org/download.html.
 :::
 1. Open your terminal, `cd` into the folder containing your video, and run the following command:
-   ```
+   ```bash
    # Replace input.mp4 with your actual filename
     ffmpeg -i input.mp4 -c:v copy -an output_video.mp4 -c:a pcm_s16le -f wav output_audio.wav
    ```
@@ -83,7 +83,7 @@ The Duix.Avatar API address is tied to your Olares ID. In all of the following A
 ### Step 1: Model training
 This step preprocesses your uploaded audio, extracting features to prepare for voice cloning.
 
-1. In Hoppscotch, expand the `duix.avatar` collection and select `1. Model Training Request`.
+1. In Hoppscotch, expand the `duix.avatar` collection and select **1. Model training**.
 2. Modify the request URL, replacing `<OLARES_ID_PREFIX>` with your Olares ID's prefix.
    :::info
    The request body is pre-set to point to the `output_audio.wav` file you uploaded, so you don't need to change it.
@@ -94,7 +94,7 @@ This step preprocesses your uploaded audio, extracting features to prepare for v
 
 ### Step 2: Audio synthesis
 This step uses the voice model you trained in Step 1 to synthesize new audio from a text prompt.
-1. Click **2. Audio Synthesis Request**. 
+1. Click **2. Audio synthesis**. 
 2. Modify the Olares ID in the request URL. 
 3. In the request body, modify the following fields:
    * `text`: Enter the text you want the digital avatar to speak.
@@ -119,9 +119,9 @@ This step uses the voice model you trained in Step 1 to synthesize new audio fro
    ![Upload audio](/images/manual/use-cases/duix-avatar-upload-audio.png#bordered)
 
 ### Step 3: Video synthesis
-Now you will merge your new synthesized audio (`new.wav`) with your original silent video (`output_video.mp4`) to create the final avatar.
+Now you will use your synthesized audio (`new.wav`) together with your original silent video (`output_video.mp4`) to synthesize the final avatar.
 
-1. Click **3. Video Synthesis Request**.
+1. Click **3. Video synthesis**.
 2. Modify the Olares ID in the request URL.
 3. In the request body, change the `code` field to a new, unique task identifier. You will use this ID to check the synthesis progress.
    :::info
@@ -132,7 +132,7 @@ Now you will merge your new synthesized audio (`new.wav`) with your original sil
 
 ### Step 4: Query video synthesis progress
 Video synthesis is a time-consuming task. Use this to query its processing status.
-1. Click **4. Video Query Request**.
+1. Click **4. Query progress**.
 2. Modify the Olares ID in the request URL.
 3. In the **Params** section, change the `code` value to the unique identifier you set in Step 3. 
 4. Click **Send** to check the current progress.
