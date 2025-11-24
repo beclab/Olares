@@ -38,12 +38,12 @@ Application entrances intended only for you, such as Desktop, Vault, and the man
     1. Open Apple menu and go to **System Settings**.
     2. Go to **Privacy & Security** > **Local Network**.
     3. Find Google Chrome and Google Chrome Helper in the list and enable the toggles.
-    ![Enable local network](/public/images/manual/larepass/mac-chrome-local-access.png#bordered)
-    
+    ![Enable local network](/public/images/manual/larepass/mac-chrome-local-access.png#bordered){width=400}
+
     Restart Chrome and try accessing the local URL again.
     :::
 
-    :::info
+    :::info For Windows users
     Currently, local access via `.local` domains is not supported on Windows.
     :::
 
