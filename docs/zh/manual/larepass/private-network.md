@@ -32,6 +32,21 @@ description:"本文介绍如何在任意环境安全访问 Olares: 区分公有/
 
   使用本地 URL (`http://app.yourname.olares.local`) 直连 Olares，无需通过 VPN 和互联网隧道。
 
+  :::tip macOS 用户注意
+  如在 macOS 上使用 Chrome 无法访问本地 URL，可能是因系统未授予 Chrome 本地网络访问权限。
+  请按以下步骤启用权限：
+  1. 打开苹果菜单 > **系统设置**。
+  2. 点击边栏的**隐私与安全性**，然后点击**本地网络**。
+  3. 找到列表中的 Google Chrome 和 Google Chrome Helper 并开启旁边的开关。
+  ![启用本地网络](/public/images/manual/larepass/mac-chrome-local-access.png#bordered){width=400}
+  
+  完成后重新启动 Chrome，再次尝试访问本地 URL。  
+  :::
+
+  :::info Windows 用户注意
+  Windows 系统暂不支持通过`.local`结尾的域名访问本地服务。
+  :::
+
 :::warning 远程访问时请启用 VPN
 当你不在自己的本地网络中时，为获得最佳的私有应用访问体验，请启用 **LarePass VPN**。它能确保你与 Olares 之间可始终保持加密、私有且高速的通道。 
 :::
