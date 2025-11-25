@@ -210,7 +210,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.129
+          image: beclab/files-server:v0.2.130
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -825,7 +825,7 @@ data:
           add_header Accept-Ranges bytes;
       }
 
-      location /System {
+      location /system {
           proxy_pass http://127.0.0.1:8080;
 
           # Add original-request-related headers
