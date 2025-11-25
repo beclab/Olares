@@ -48,7 +48,7 @@ Application entrances intended only for you, such as Desktop, Vault, and the man
     :::
 
 :::warning Always enable VPN for remote access
-For the best experience with private apps when you’re away from your network, enable **LarePass VPN**. It keeps your connection to Olares encrypted, direct, and fast.
+For the best experience with private apps when you're away from your network, enable **LarePass VPN**. It keeps your connection to Olares encrypted, direct, and fast.
 :::
 
 ## Enable VPN on LarePass
