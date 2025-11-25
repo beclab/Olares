@@ -32,8 +32,23 @@ Application entrances intended only for you, such as Desktop, Vault, and the man
   
     Use the local URL (`http://app.yourname.olares.local`) for a direct, local connection that bypasses the VPN and internet tunnels.
 
+    :::tip For macOS users
+    Chrome may fail to access local URLs if macOS blocks local network permissions.
+    To enable access:
+    1. Open Apple menu and go to **System Settings**.
+    2. Go to **Privacy & Security** > **Local Network**.
+    3. Find Google Chrome and Google Chrome Helper in the list and enable the toggles.
+    ![Enable local network](/public/images/manual/larepass/mac-chrome-local-access.png#bordered){width=400}
+
+    Restart Chrome and try accessing the local URL again.
+    :::
+
+    :::info For Windows users
+    Currently, local access via `.local` domains is not supported on Windows.
+    :::
+
 :::warning Always enable VPN for remote access
-For the best experience with private apps when you’re away from your network, enable **LarePass VPN**. It keeps your connection to Olares encrypted, direct, and fast.
+For the best experience with private apps when you're away from your network, enable **LarePass VPN**. It keeps your connection to Olares encrypted, direct, and fast.
 :::
 
 ## Enable VPN on LarePass
