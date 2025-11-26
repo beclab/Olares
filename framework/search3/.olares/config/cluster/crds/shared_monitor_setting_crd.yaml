@@ -1,0 +1,52 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: sharedmonitorsettings.sys.bytetrade.search3
+spec:
+  group: sys.bytetrade.search3
+  names:
+    categories: []
+    kind: SharedMonitorSetting
+    plural: sharedmonitorsettings
+    shortNames: [shms]
+    singular: sharedmonitorsetting
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns: []
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Auto-generated derived type for SharedMonitorSettingSpec via `CustomResource`
+        properties:
+          spec:
+            description: SharedMonitorSetting Custom Resource (CRD) Spec Using CustomResource macro will generate a CRD type named SharedMonitorSetting
+            properties:
+              excludeFilePathPattern:
+                description: File path pattern to exclude in filename search, it's a regular expression
+                items:
+                  type: string
+                type: array
+            required:
+            - excludeFilePathPattern
+            type: object
+          status:
+            description: SharedMonitorSetting's Status struct, used for CRD status
+            nullable: true
+            properties:
+              last_updated:
+                description: Last updated time
+                nullable: true
+                type: string
+              message:
+                description: Status message
+                nullable: true
+                type: string
+            type: object
+        required:
+        - spec
+        title: SharedMonitorSetting
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
