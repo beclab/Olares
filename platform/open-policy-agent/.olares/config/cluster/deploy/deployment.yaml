@@ -81,7 +81,6 @@ spec:
             - "--tls-cert-file=/etc/certs/tls.crt"
             - "--tls-private-key-file=/etc/certs/tls.key"
             - "--addr=0.0.0.0:443"
-            - "--insecure-addr=127.0.0.1:8181"
           volumeMounts:
             - readOnly: true
               mountPath: /etc/certs
