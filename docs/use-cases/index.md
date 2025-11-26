@@ -19,5 +19,6 @@ From running AI models to building seamless workflows across your self-hosted se
   { title: 'Redroid', link: './host-cloud-android.html', tags: ['Virtual Machine']},
   { title: 'Windows', link: './windows.html', tags: ['Virtual Machine']},
   { title: 'DeerFlow', link: './host-cloud-android.html', tags: ['AI']},
+  { title: 'ACE-Step', link: './ace-step.html', tags: ['AI']},
 ]" 
 />
