@@ -49,7 +49,7 @@ spec:
   - name: https
     protocol: TCP
     port: 443
-    targetPort: 443
+    targetPort: 8443
 
 ---
 apiVersion: apps/v1
@@ -74,13 +74,13 @@ spec:
       serviceAccountName: opa-sa
       containers:
         - name: opa
-          image: openpolicyagent/opa:1.10.0
+          image: openpolicyagent/opa:1.11.0
           args:
             - "run"
             - "--server"
             - "--tls-cert-file=/etc/certs/tls.crt"
             - "--tls-private-key-file=/etc/certs/tls.key"
-            - "--addr=0.0.0.0:443"
+            - "--addr=0.0.0.0:8443"
           volumeMounts:
             - readOnly: true
               mountPath: /etc/certs
