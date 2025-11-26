@@ -159,6 +159,46 @@ spec:
                   type: string
                 description: the extend settings of the application
                 type: object
+              sharedEntrances:
+                description: SharedEntrances contains entrances shared with other
+                  applications
+                items:
+                  description: Entrance contains details for application entrance
+                  properties:
+                    authLevel:
+                      type: string
+                    host:
+                      type: string
+                    icon:
+                      description: Optional. if invisible=true.
+                      type: string
+                    invisible:
+                      type: boolean
+                    name:
+                      type: string
+                    openMethod:
+                      description: |-
+                        openMethod has three choices default, iframe, window
+                        Optional. if invisible=true.
+                      type: string
+                    port:
+                      format: int32
+                      type: integer
+                    skip:
+                      type: boolean
+                    title:
+                      description: Optional. if invisible=true.
+                      type: string
+                    url:
+                      type: string
+                    windowPushState:
+                      type: boolean
+                  required:
+                  - host
+                  - name
+                  - port
+                  type: object
+                type: array
               tailscale:
                 properties:
                   acls:

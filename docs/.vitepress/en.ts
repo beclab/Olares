@@ -441,7 +441,7 @@ const side = {
   ],
   "/use-cases/": [
   {
-    text: "Tutorials & use cases",
+    text: "Use cases",
     link: "/use-cases/",
     items: [
       {
@@ -498,6 +498,10 @@ const side = {
       {
         text: "DeerFlow",
         link: "/use-cases/deerflow",
+      }, 
+      {
+        text: "Duix.Avatar",
+        link: "/use-cases/duix-avatar",
       },
       {
         text: "ACE-Step",
