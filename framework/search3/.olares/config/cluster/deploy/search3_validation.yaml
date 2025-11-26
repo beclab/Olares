@@ -1,12 +1,5 @@
 {{- $certs := include "search3-validation.certs" . | fromYaml }}
 ---
-# Namespace (shared with search3, only create if it doesn't exist)
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: {{ .Release.Namespace }}
-
----
 # TLS Secret for search3-validation webhook
 apiVersion: v1
 kind: Secret
