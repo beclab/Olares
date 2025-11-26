@@ -499,6 +499,10 @@ const side = {
         text: "DeerFlow",
         link: "/use-cases/deerflow",
       },
+      {
+        text: "ACE-Step",
+        link: "/use-cases/ace-step",
+      },      
     ],
   },
  ],
