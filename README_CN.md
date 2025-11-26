@@ -23,7 +23,7 @@
 <p align="center">
   <a href="https://olares.com">网站</a> ·
   <a href="https://docs.olares.com">文档</a> ·
-  <a href="https://www.olares.com/larepass">下载 LarePass</a> ·
+  <a href="https://www.olares.cn/larepass">下载 LarePass</a> ·
   <a href="https://github.com/beclab/apps">Olares 应用</a> ·
   <a href="https://space.olares.com">Olares Space</a>
 </p>
