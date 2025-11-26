@@ -1,0 +1,167 @@
+{{- $certs := include "search3-validation.certs" . | fromYaml }}
+---
+# Namespace (shared with search3, only create if it doesn't exist)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Release.Namespace }}
+
+---
+# TLS Secret for search3-validation webhook
+apiVersion: v1
+kind: Secret
+metadata:
+  name: search3-validation-tls
+  namespace: {{ .Release.Namespace }}
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ $certs.tlsCert }}
+  tls.key: {{ $certs.tlsKey }}
+
+---
+# Search3 Validation Server Deployment
+# This deployment runs the Kubernetes validation server for MonitorSetting CRD admission webhooks
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search3-validation
+  namespace: {{ .Release.Namespace }}
+  labels:
+    applications.app.bytetrade.io/author: bytetrade.io
+  annotations:
+    applications.app.bytetrade.io/version: '0.0.1'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: search3-validation
+  template:
+    metadata:
+      labels:
+        app: search3-validation
+    spec:
+      serviceAccountName: os-internal
+      priorityClassName: "system-cluster-critical"
+      containers:
+      - name: search3-validation
+        image: beclab/search3validation:v0.0.72
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8443
+          name: https
+        # command: ["/search3validation/k8svalidationserver"]
+        env:
+        - name: K8S_ENV_TEST
+          value: "true"
+        - name: SEARCH3_VALIDATION_PORT
+          value: "8443"
+        # TLS/HTTPS configuration (recommended for production)
+        - name: SEARCH3_VALIDATION_TLS_CERT
+          value: "/etc/tls/tls.crt"
+        - name: SEARCH3_VALIDATION_TLS_KEY
+          value: "/etc/tls/tls.key"
+        volumeMounts:
+        - name: tls-certs
+          mountPath: /etc/tls
+          readOnly: true
+        - name: fb-data
+          mountPath: /appdata
+        - name: userspace-dir
+          mountPath: /data
+        - name: upload-appdata
+          mountPath: /appcache/
+        - name: shared-lib
+          mountPath: /data/External
+          mountPropagation: Bidirectional
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          allowPrivilegeEscalation: true
+        # No database or other dependencies needed for validation server
+      volumes:
+      - name: tls-certs
+        secret:
+          secretName: search3-validation-tls
+      - name: userspace-dir
+        hostPath:
+          path: /olares/rootfs/userspace
+          type: DirectoryOrCreate
+      - name: fb-data
+        hostPath:
+          path: /olares/userdata/Cache/files
+          type: DirectoryOrCreate
+      - name: upload-appdata
+        hostPath:
+          path: /olares/userdata/Cache
+          type: DirectoryOrCreate
+      - name: shared-lib
+        hostPath:
+          path: /olares/share
+          type: DirectoryOrCreate
+
+---
+# Search3 Validation Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: search3-validation
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: search3-validation
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: https
+      port: 443
+      targetPort: 8443
+
+---
+# ValidatingWebhookConfiguration for SpecializedMonitorSetting and SharedMonitorSetting
+# Note: RBAC permissions (ServiceAccount, ClusterRole, ClusterRoleBinding) are defined in monitor_setting_rbac.yaml
+# Note: Kubernetes requires HTTPS for admission webhooks.
+# For local minikube development, you have two options:
+# 1. Configure TLS/HTTPS (recommended for production-like testing)
+#    - Generate self-signed certificates using generate-webhook-certs.sh
+#    - Create Kubernetes Secret: kubectl create secret tls search3-validation-tls --cert=certs/tls.crt --key=certs/tls.key --namespace=os-framework
+#    - Uncomment TLS configuration in the Deployment above
+#    - Add caBundle field below with the base64-encoded CA certificate
+# 2. Modify minikube API server to allow insecure webhooks (development only)
+#    - Run: minikube start --extra-config=apiserver.runtime-config=admissionregistration.k8s.io/v1beta1
+#    - And: --enable-admission-plugins=ValidatingAdmissionWebhook,MutatingAdmissionWebhook
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: monitorsetting-validating-webhook
+webhooks:
+  - name: monitorsetting.validation.sys.bytetrade.search3
+    clientConfig:
+      service:
+        name: search3-validation
+        namespace: {{ .Release.Namespace }}
+        path: "/validate"
+        port: 443
+      # CA certificate for HTTPS validation (using tls.crt as caBundle for self-signed cert)
+      caBundle: {{ $certs.tlsCert }}
+    rules:
+      - apiGroups:
+          - "sys.bytetrade.search3"
+        apiVersions:
+          - "v1alpha1"
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - specializedmonitorsettings
+          - sharedmonitorsettings
+    admissionReviewVersions:
+      - "v1"
+      - "v1beta1"
+    sideEffects: None
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+      # namespaceSelector can be used to limit which namespaces trigger this webhook
+      # namespaceSelector:
+      #   matchLabels:
+      #     name: os-framework
+
