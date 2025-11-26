@@ -17,7 +17,7 @@ Key features of Vault include:
 Vault's server component runs on Olares, synchronizing data across multiple client devices of a single user. Data is encrypted with a private key during transmission and storage to ensure security.
 You can access Vault in Olares, or through LarePass on mobile, desktop, and browser extensions for a consistent user experience across platforms.
 
-Visit the [official page](https://larepass.olares.com) for LarePass details and download options.
+Visit the [official page](https://www.olares.com/larepass) for LarePass details and download options.
 
 ---
 <div>

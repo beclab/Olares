@@ -54,7 +54,7 @@ For the best experience with private apps when you're away from your network, en
 ## Enable VPN on LarePass
 
 :::tip
-For different LarePass download options, visit [the official page](https://larepass.olares.com).
+For different LarePass download options, visit [the official page](https://www.olares.com/larepass).
 :::
 
 ![VPN](/images/manual/larepass/vpn.jpg)
