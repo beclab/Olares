@@ -52,11 +52,12 @@ spec:
     targetPort: 443
 
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
     app: opa
+    applications.app.bytetrade.io/author: bytetrade.io
   name: opa
   namespace: {{ .Release.Namespace }}
 spec:
