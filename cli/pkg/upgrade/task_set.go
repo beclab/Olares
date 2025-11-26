@@ -92,6 +92,10 @@ func upgradePrometheusServiceMonitorKubelet() []task.Interface {
 func upgradeKsConfig() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
+			Name:   "CopyEmbeddedKSManifests",
+			Action: new(plugins.CopyEmbedFiles),
+		},
+		&task.LocalTask{
 			Name:   "ApplyKsConfigManifests",
 			Action: new(plugins.ApplyKsConfigManifests),
 			Retry:  5,
