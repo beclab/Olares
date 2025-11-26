@@ -196,7 +196,6 @@ spec:
       labels:
         app: search3
     spec:
-      serviceAccount: os-internal
       serviceAccountName: os-internal
       priorityClassName: "system-cluster-critical"
       volumes:

@@ -1,0 +1,60 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: specializedmonitorsettings.sys.bytetrade.search3
+spec:
+  group: sys.bytetrade.search3
+  names:
+    categories: []
+    kind: SpecializedMonitorSetting
+    plural: specializedmonitorsettings
+    shortNames: [spms]
+    singular: specializedmonitorsetting
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns: []
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Auto-generated derived type for SpecializedMonitorSettingSpec via `CustomResource`
+        properties:
+          spec:
+            description: SpecializedMonitorSetting Custom Resource (CRD) Spec Using CustomResource macro will generate a CRD type named SpecializedMonitorSetting
+            properties:
+              includeDirectory:
+                description: File path pattern to exclude in filename search, it's a regular expression Include directory configuration, filename task does not need to fill this field
+                items:
+                  type: string
+                type: array
+              manualStop:
+                default: false
+                description: Whether the task is manually stopped by the user. If true, the task will not be started when Pod restarts
+                type: boolean
+              taskId:
+                description: Task ID
+                type: string
+            required:
+            - includeDirectory
+            - taskId
+            type: object
+          status:
+            description: SpecializedMonitorSetting's Status struct, used for CRD status
+            nullable: true
+            properties:
+              last_updated:
+                description: Last updated time
+                nullable: true
+                type: string
+              message:
+                description: Status message
+                nullable: true
+                type: string
+            type: object
+        required:
+        - spec
+        title: SpecializedMonitorSetting
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
