@@ -23,7 +23,7 @@
 <p align="center">
   <a href="https://olares.com">Website</a> ·
   <a href="https://docs.olares.com">Documentation</a> ·
-  <a href="https://larepass.olares.com">Download LarePass</a> ·
+  <a href="https://www.olares.com/larepass">Download LarePass</a> ·
   <a href="https://github.com/beclab/apps">Olares Apps</a> ·
   <a href="https://space.olares.com">Olares Space</a>
 </p>

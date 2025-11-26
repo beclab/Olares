@@ -39,7 +39,7 @@ Permission levels:
 - **Read-write**: Users can add, delete, and modify Library contents.
 
 ## Before you begin
-Make sure you have installed the LarePass desktop client from the [official website](https://larepass.olares.com), and logged in using your Olares ID.
+Make sure you have installed the LarePass desktop client from the [official website](https://www.olares.com/larepass), and logged in using your Olares ID.
 
 :::info
 Currently, local file sync is available for Windows and Mac users. We'll use the Mac version for our examples.

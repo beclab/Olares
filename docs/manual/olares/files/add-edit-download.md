@@ -64,7 +64,7 @@ When downloading multiple files, the behavior differs between the Files in Olare
 * **LarePass desktop**: Downloads are queued in LarePass, allowing you to pause, resume, or cancel tasks, and easily locate downloaded files.
 :::tip Notes
 - Folder download is only supported in LarePass desktop. 
-- For large files or multiple downloads, it's recommended to use the LarePass desktop application for more powerful download management and a better user experience. Visit the [official page](https://larepass.olares.com) for details and download options.
+- For large files or multiple downloads, it's recommended to use the LarePass desktop application for more powerful download management and a better user experience. Visit the [official page](https://www.olares.com/larepass) for details and download options.
 :::
 
 1. Open the Files app from the Dock or Launchpad on Olares.
