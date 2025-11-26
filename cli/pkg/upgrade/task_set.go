@@ -2,14 +2,17 @@ package upgrade
 
 import (
 	"fmt"
+	"path"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/container"
+	cc "github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	k3stemplates "github.com/beclab/Olares/cli/pkg/k3s/templates"
 	"github.com/beclab/Olares/cli/pkg/kubernetes"
@@ -72,6 +75,46 @@ func upgradeKSCore() []task.Interface {
 			Delay:  10 * time.Second,
 		},
 	}
+}
+
+func upgradePrometheusServiceMonitorKubelet() []task.Interface {
+	return []task.Interface{
+		// prometheus kubelet ServiceMonitor
+		&task.LocalTask{
+			Name:   "ApplyKubeletServiceMonitor",
+			Action: new(applyKubeletServiceMonitorAction),
+			Retry:  5,
+			Delay:  5 * time.Second,
+		},
+	}
+}
+
+func upgradeKsConfig() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "ApplyKsConfigManifests",
+			Action: new(plugins.ApplyKsConfigManifests),
+			Retry:  5,
+			Delay:  5 * time.Second,
+		},
+	}
+}
+
+// applyKubeletServiceMonitorAction applies embedded prometheus kubelet ServiceMonitor
+type applyKubeletServiceMonitorAction struct {
+	common.KubeAction
+}
+
+func (a *applyKubeletServiceMonitorAction) Execute(runtime connector.Runtime) error {
+	kubectlpath, err := util.GetCommand(common.CommandKubectl)
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "kubectl not found")
+	}
+	manifest := path.Join(runtime.GetInstallerDir(), cc.BuildFilesCacheDir, cc.BuildDir, "prometheus", "kubernetes", "kubernetes-serviceMonitorKubelet.yaml")
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectlpath, manifest), false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "apply kubelet ServiceMonitor failed")
+	}
+	return nil
 }
 
 func regenerateKubeFiles() []task.Interface {
