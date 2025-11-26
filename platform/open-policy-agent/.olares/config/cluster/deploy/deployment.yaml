@@ -1,0 +1,122 @@
+{{- $caCertEnc := "" }}
+{{- $certCrtEnc := "" }}
+{{- $certKeyEnc := "" }}
+{{- $prevSecret := (lookup "v1" "Secret" .Release.Namespace "opa-cert" ) }}
+{{- if $prevSecret }}
+{{- $certCrtEnc = index $prevSecret "data" "tls.crt" }}
+{{- $certKeyEnc = index $prevSecret "data" "tls.key" }}
+{{- $caCertEnc = index $prevSecret "data" "ca.crt" }}
+{{- else }}
+{{- $altNames := list ( printf "opa.%s" .Release.Namespace ) ( printf "opa.%s.svc" .Release.Namespace ) -}}
+{{- $tmpperioddays := 36500 }}
+{{- $ca := genCA "opa-ca" $tmpperioddays }}
+{{- $cert := genSignedCert "opa" nil $altNames $tmpperioddays $ca }}
+{{- $certCrtEnc = b64enc $cert.Cert }}
+{{- $certKeyEnc = b64enc $cert.Key }}
+{{- $caCertEnc = b64enc $ca.Cert }}
+{{- end }}
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: opa-sa
+  namespace: {{ .Release.Namespace }}
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: opa-rolebinding
+subjects:
+- kind: ServiceAccount
+  name: opa-sa
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: opa
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: opa
+  ports:
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: 443
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: opa
+  name: opa
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: opa
+      name: opa
+    spec:
+      serviceAccountName: opa-sa
+      containers:
+        - name: opa
+          image: openpolicyagent/opa:1.10.0
+          args:
+            - "run"
+            - "--server"
+            - "--tls-cert-file=/etc/certs/tls.crt"
+            - "--tls-private-key-file=/etc/certs/tls.key"
+            - "--addr=0.0.0.0:443"
+            - "--insecure-addr=127.0.0.1:8181"
+          volumeMounts:
+            - readOnly: true
+              mountPath: /etc/certs
+              name: certs
+        - name: kube-mgmt
+          image: openpolicyagent/kube-mgmt:9.3.0
+      volumes:
+        - name: certs
+          secret:
+            defaultMode: 420
+            secretName: opa-cert
+---
+kind: ValidatingWebhookConfiguration
+apiVersion: admissionregistration.k8s.io/v1
+metadata:
+  name: opa-validating-webhook
+webhooks:
+  - name: validating-webhook.openpolicyagent.org
+    admissionReviewVersions: ["v1beta1"]
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+    clientConfig:
+      caBundle: {{ $caCertEnc }}
+      service:
+        namespace: {{ .Release.Namespace }}
+        name: opa
+    sideEffects: None
+
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: opa-cert
+  namespace: {{ .Release.Namespace }}
+data:
+  tls.crt: {{ $certCrtEnc }}
+  tls.key: {{ $certKeyEnc }}
+  ca.crt: {{ $caCertEnc }}
