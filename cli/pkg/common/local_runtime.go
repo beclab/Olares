@@ -58,7 +58,7 @@ func NewLocalRuntime(debug, ingoreErr bool) (LocalRuntime, error) {
 	host.Address = ""
 	host.InternalAddress = ""
 	host.Port = 22
-	host.User = u.Name
+	host.User = u.Username
 	host.Password = ""
 	host.PrivateKeyPath = fmt.Sprintf("%s/.ssh/id_rsa", u.HomeDir)
 	host.Arch = ""

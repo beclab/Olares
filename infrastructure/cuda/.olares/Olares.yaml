@@ -3,40 +3,10 @@ target: prebuilt
 output:
   binaries:
     - 
-      id: ubuntu-24.04_cuda-keyring_1.1-1
-      name: ubuntu2404_cuda-keyring_1.1-1_all.deb
-      amd64: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
-      arm64: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/arm64/cuda-keyring_1.1-1_all.deb
-    - 
-      id: ubuntu-22.04_cuda-keyring_1.1-1
-      name: ubuntu2204_cuda-keyring_1.1-1_all.deb
-      amd64: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
-      arm64: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/arm64/cuda-keyring_1.1-1_all.deb
-    - 
-      id: ubuntu-22.04_cuda-keyring_1.0-1
-      name: ubuntu2204_cuda-keyring_1.0-1_all.deb
-      amd64: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb
-      arm64: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/arm64/cuda-keyring_1.0-1_all.deb
-    - 
-      id: ubuntu-20.04_cuda-keyring_1.1-1 
-      name: ubuntu2004_cuda-keyring_1.1-1_all.deb
-      amd64: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb
-      arm64: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/arm64/cuda-keyring_1.1-1_all.deb
-    - 
-      id: ubuntu-20.04_cuda-keyring_1.0-1
-      name: ubuntu2004_cuda-keyring_1.0-1_all.deb
-      amd64: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb
-      arm64: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/arm64/cuda-keyring_1.0-1_all.deb
-    - 
-      id: debian-12_cuda-keyring_1.1-1
-      name: debian12_cuda-keyring_1.1-1_all.deb
-      amd64: https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb
-      arm64: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/arm64/cuda-keyring_1.1-1_all.deb
-    - 
-      id: debian-11_cuda-keyring_1.1-1
-      name: debian11_cuda-keyring_1.1-1_all.deb 
-      amd64: https://developer.download.nvidia.com/compute/cuda/repos/debian11/x86_64/cuda-keyring_1.1-1_all.deb
-      arm64: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/arm64/cuda-keyring_1.1-1_all.deb
+      id: cuda-driver
+      name: cuda-driver-580.95.05.run
+      amd64: https://us.download.nvidia.com/XFree86/Linux-x86_64/580.95.05/NVIDIA-Linux-x86_64-580.95.05.run
+      arm64: https://us.download.nvidia.com/XFree86/aarch64/580.95.05/NVIDIA-Linux-aarch64-580.95.05.run
     - 
       id: libnvidia-gpgkey 
       name: libnvidia-gpgkey

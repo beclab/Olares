@@ -3,13 +3,27 @@ package utils
 import (
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 
 	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/util"
 	"k8s.io/klog/v2"
+)
+
+const (
+	// NVIDIA driver install method constants
+	GPUDriverInstallMethodUnknown = "unknown"
+	GPUDriverInstallMethodApt     = "apt"
+	GPUDriverInstallMethodRunfile = "runfile"
+
+	// GPU status/message constants parsed from nvidia-smi outputs
+	GPUStatusDriverLibraryMismatch     = "Driver/library version mismatch"
+	GPUStatusCouldntCommunicateWithDrv = "couldn't communicate with the NVIDIA driver"
+	GPUStatusNvmlLibraryVersionPrefix  = "NVML library version:"
 )
 
 type GPU struct {
@@ -165,7 +179,19 @@ type NvidiaGpuInfo struct {
 	GPUS          []GPU  `xml:"gpu" json:"gpus"`
 }
 
-func ExecNvidiaSmi(execRuntime connector.Runtime) (gpuInfo *NvidiaGpuInfo, installed bool, err error) {
+// NvidiaStatus is the unified GPU/driver status, combining nvidia-smi XML info and driver health.
+type NvidiaStatus struct {
+	Installed      bool
+	Running        bool // whether kernel driver module is loaded
+	Info           *NvidiaGpuInfo
+	DriverVersion  string
+	CudaVersion    string
+	LibraryVersion string // NVML library version when mismatch occurs
+	Mismatch       bool   // whether nvidia-smi reports Driver/library version mismatch
+	InstallMethod  string // apt | runfile | unknown
+}
+
+func findNvidiaSmiPath() (string, error) {
 	cmd := "nvidia-smi"
 	if runtime.GOOS == "windows" {
 		cmd += ".exe"
@@ -179,32 +205,149 @@ func ExecNvidiaSmi(execRuntime connector.Runtime) (gpuInfo *NvidiaGpuInfo, insta
 			_, e := os.Stat(nvidiaSmiFile)
 			if e != nil {
 				if os.IsNotExist(e) {
-					return nil, false, nil
+					return "", exec.ErrNotFound
 				}
-				return nil, false, err
+				return "", e
 			}
 
 			cmdPath = nvidiaSmiFile
 		} else {
-			return nil, false, err
+			return "", err
+		}
+	}
+	return cmdPath, nil
+}
+
+func GetNvidiaStatus(execRuntime connector.Runtime) (*NvidiaStatus, error) {
+	status := &NvidiaStatus{InstallMethod: GPUDriverInstallMethodUnknown}
+
+	if out, _ := execRuntime.GetRunner().SudoCmd("dpkg -l | awk '/^(ii|i[UuFHWt]|rc|..R)/ {print $2}' | grep -i nvidia-driver", false, false); strings.TrimSpace(out) != "" {
+		status.InstallMethod = GPUDriverInstallMethodApt
+	} else {
+		if util.IsExist("/usr/bin/nvidia-uninstall") || util.IsExist("/usr/bin/nvidia-installer") {
+			status.InstallMethod = GPUDriverInstallMethodRunfile
 		}
 	}
 
-	out, err := execRuntime.GetRunner().SudoCmd(cmdPath+" -q -x", false, false)
-	if err != nil {
-		// when nvidia-smi command is installed but cuda is not installed
-		if strings.Contains(out, "couldn't communicate with the NVIDIA driver") {
-			return nil, false, nil
+	// detect whether any NVIDIA kernel module is loaded (driver running)
+	// this is a seperate status besides the installed status
+	if out, _ := execRuntime.GetRunner().SudoCmd("lsmod | grep -i nvidia 2>/dev/null", false, false); strings.TrimSpace(out) != "" {
+		status.Running = true
+	}
+	// read running kernel driver version from sysfs if available
+	var kernelDriverVersion string
+	if status.Running {
+		if v, _ := execRuntime.GetRunner().SudoCmd("cat /sys/module/nvidia/version 2>/dev/null", false, false); strings.TrimSpace(v) != "" {
+			kernelDriverVersion = strings.TrimSpace(v)
 		}
-		klog.Error("Error running nvidia-smi:", err)
-		return nil, false, err
 	}
 
-	var data NvidiaGpuInfo
-	if err := xml.Unmarshal([]byte(out), &data); nil != err {
-		klog.Error("Error unmarshalling from XML:", err)
-		return nil, false, err
+	cmdPath, pathErr := findNvidiaSmiPath()
+	if pathErr == nil {
+		out, err := execRuntime.GetRunner().SudoCmd(cmdPath+" -q -x", false, false)
+		if err == nil {
+			var data NvidiaGpuInfo
+			uerr := xml.Unmarshal([]byte(out), &data)
+			if uerr == nil {
+				status.Installed = true
+				// nvidia-smi works => kernel driver is active
+				status.Running = true
+				status.Info = &data
+				status.DriverVersion = data.DriverVersion
+				status.CudaVersion = data.CudaVersion
+				return status, nil
+			}
+			return status, fmt.Errorf("failed to unmarshal nvidia-smi XML: %v", uerr)
+		}
+		if strings.Contains(out, GPUStatusDriverLibraryMismatch) {
+			status.Installed = true
+			status.Mismatch = true
+			status.LibraryVersion = parseNvmlLibraryVersion(out)
+			// kernel may still be running; prefer kernel driver version if available
+			if kernelDriverVersion != "" {
+				status.DriverVersion = kernelDriverVersion
+			}
+			return status, nil
+		}
+		// for now, consider as not installed
+		if strings.Contains(out, GPUStatusCouldntCommunicateWithDrv) {
+			// even if userland not communicating, kernel may be running
+			if kernelDriverVersion != "" {
+				status.DriverVersion = kernelDriverVersion
+			}
+			return status, nil
+		}
+		return status, fmt.Errorf("failed to get NVIDIA driver status: %v", out)
 	}
+	// consider as not installed
+	// if kernel is running after uninstall (without reboot), reflect the running version
+	if kernelDriverVersion != "" {
+		status.DriverVersion = kernelDriverVersion
+	}
+	return status, nil
+}
 
-	return &data, true, nil
+func parseNvmlLibraryVersion(out string) string {
+	lines := strings.Split(out, "\n")
+	for _, l := range lines {
+		l = strings.TrimSpace(l)
+		// handle token like "NVML library version:575.57"
+		if idx := strings.Index(l, GPUStatusNvmlLibraryVersionPrefix); idx >= 0 {
+			v := strings.TrimSpace(strings.TrimPrefix(l, GPUStatusNvmlLibraryVersionPrefix))
+			// in case there are trailing characters
+			v = strings.FieldsFunc(v, func(r rune) bool { return r == ' ' || r == '\t' || r == '\r' || r == ')' || r == '(' })[0]
+			return v
+		}
+	}
+	return ""
+}
+
+func DetectNvidiaModelAndArch(execRuntime connector.Runtime) (model string, architecture string, err error) {
+	if execRuntime.GetSystemInfo().IsDarwin() {
+		return "", "", nil
+	}
+	out, e := execRuntime.GetRunner().SudoCmd("lspci | grep -i -e vga -e 3d | grep -i nvidia || true", false, false)
+	if e != nil {
+		klog.Error("Error running lspci:", e)
+		return "", "", e
+	}
+	out = strings.TrimSpace(out)
+	if out == "" {
+		return "", "", nil
+	}
+	// try to extract codename in square brackets e.g. "AD106 [GeForce RTX 4060 Ti]"
+	// examples: "NVIDIA Corporation AD106 [GeForce RTX 4060 Ti]"
+	model = out
+	architecture = "Unknown"
+	upper := strings.ToUpper(out)
+	// codename appears as two letters followed by digits, within the line, often right before '['
+	// detect common prefixes: AD(Ada), GB(Blackwell), GH(Hopper), GA(Ampere), TU(Turing), GV(Volta), GP(Pascal), GM(Maxwell), GK(Kepler), GF(Fermi)
+	codePrefixes := []struct {
+		Prefix string
+		Arch   string
+	}{
+		{"AD", "Ada Lovelace"},
+		{"GB", "Blackwell"},
+		{"GH", "Hopper"},
+		{"GA", "Ampere"},
+		{"TU", "Turing"},
+		{"GV", "Volta"},
+		{"GP", "Pascal"},
+		{"GM", "Maxwell"},
+		{"GK", "Kepler"},
+		{"GF", "Fermi"},
+	}
+	for _, p := range codePrefixes {
+		if strings.Contains(upper, p.Prefix) {
+			architecture = p.Arch
+			break
+		}
+	}
+	// get bracket part as model if present
+	if i := strings.Index(out, "["); i >= 0 {
+		if j := strings.Index(out[i:], "]"); j > 0 {
+			model = strings.TrimSpace(out[i+1 : i+j])
+		}
+	}
+	return model, architecture, nil
 }

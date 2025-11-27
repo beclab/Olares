@@ -1,8 +1,9 @@
 package gpu
 
 import (
-	"github.com/beclab/Olares/cli/pkg/container"
 	"time"
+
+	"github.com/beclab/Olares/cli/pkg/container"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/prepare"
@@ -20,11 +21,6 @@ type InstallDriversModule struct {
 	// 1. no card is found (which skips the driver installation)
 	// 2. no driver is found (which skips the container toolkit installation)
 	FailOnNoInstallation bool
-
-	// currently, this is only used to skip the nvidia-smi check after driver upgrade
-	// because the nvidia-smi will not work after upgrade (Failed to initialize NVML: Driver/library version mismatch)
-	// otherwise, always check the driver is running properly after installation to fail early and avoid other issues
-	SkipNVMLCheckAfterInstall bool
 }
 
 func (m *InstallDriversModule) IsSkip() bool {
@@ -34,14 +30,14 @@ func (m *InstallDriversModule) IsSkip() bool {
 func (m *InstallDriversModule) Init() {
 	m.Name = "InstallGPUDriver"
 
-	installCudaDeps := &task.RemoteTask{
-		Name:  "InstallCudaKeyRing",
+	installCudaDriver := &task.RemoteTask{ // not for WSL
+		Name:  "InstallNvidiaDriver",
 		Hosts: m.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
 			new(CudaNotInstalled),
 			&NvidiaGraphicsCard{ExitOnNotFound: m.FailOnNoInstallation},
 		},
-		Action: &InstallCudaDeps{
+		Action: &InstallCudaDriver{
 			ManifestAction: manifest.ManifestAction{
 				Manifest: m.Manifest,
 				BaseDir:  m.BaseDir,
@@ -51,20 +47,7 @@ func (m *InstallDriversModule) Init() {
 		Retry:    1,
 	}
 
-	installCudaDriver := &task.RemoteTask{ // not for WSL
-		Name:  "InstallNvidiaDriver",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(CudaNotInstalled),
-			&NvidiaGraphicsCard{ExitOnNotFound: m.FailOnNoInstallation},
-		},
-		Action:   &InstallCudaDriver{SkipNVMLCheckAfterInstall: m.SkipNVMLCheckAfterInstall},
-		Parallel: false,
-		Retry:    1,
-	}
-
 	m.Tasks = []task.Interface{
-		installCudaDeps,
 		installCudaDriver,
 	}
 }
@@ -361,16 +344,5 @@ func (l *UninstallCudaModule) Init() {
 		uninstallCuda,
 		removeRuntime,
 	}
-
-}
-
-type ExitIfNoDriverUpgradeNeededModule struct {
-	common.KubeModule
-}
-
-func (l *ExitIfNoDriverUpgradeNeededModule) Init() {
-	l.Tasks = append(l.Tasks, &task.LocalTask{
-		Action: new(ExitIfNoDriverUpgradeNeeded),
-	})
 
 }

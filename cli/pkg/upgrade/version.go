@@ -20,6 +20,7 @@ type VersionSpec struct {
 	ReleaseNum                int                       `json:"releaseNum"`
 	PreRelease                bool                      `json:"prerelease"`
 	AddedBreakingChange       bool                      `json:"addedBreakingChange"`
+	NeedRestart               bool                      `json:"needRestart"`
 	MinimumUpgradableVersions MinimumVersionConstraints `json:"minimumUpgradableVersions"`
 }
 
@@ -178,6 +179,7 @@ func CurrentVersionSpec() (spec *VersionSpec, err error) {
 	}
 	u := getUpgraderByVersion(v)
 	spec.AddedBreakingChange = u.AddedBreakingChange()
+	spec.NeedRestart = u.NeedRestart()
 	if spec.ReleaseType == releaseTypeDaily {
 		lastBreakingVersion := getLastBreakingVersion(dailyUpgraders, v)
 		if lastBreakingVersion == nil {

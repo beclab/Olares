@@ -10,11 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
-	"github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
 	"github.com/beclab/Olares/cli/pkg/clientset"
 	"github.com/beclab/Olares/cli/pkg/common"
 	cc "github.com/beclab/Olares/cli/pkg/core/common"
@@ -39,10 +36,7 @@ type CheckWslGPU struct {
 
 func (t *CheckWslGPU) CheckNvidiaSmiFileExists() bool {
 	var nvidiaSmiFile = "/usr/lib/wsl/lib/nvidia-smi"
-	if !util.IsExist(nvidiaSmiFile) {
-		return false
-	}
-	return true
+	return util.IsExist(nvidiaSmiFile)
 }
 
 func (t *CheckWslGPU) Execute(runtime *common.KubeRuntime) {
@@ -66,88 +60,41 @@ func (t *CheckWslGPU) Execute(runtime *common.KubeRuntime) {
 	runtime.Arg.SetGPU(true)
 }
 
-type InstallCudaDeps struct {
+type InstallCudaDriver struct {
 	common.KubeAction
 	manifest.ManifestAction
 }
 
-func (t *InstallCudaDeps) Execute(runtime connector.Runtime) error {
-	var systemInfo = runtime.GetSystemInfo()
-	var cudaKeyringVersion string
-	var osVersion string
-	switch {
-	case systemInfo.IsUbuntu():
-		cudaKeyringVersion = v1alpha2.CudaKeyringVersion1_0
-		if systemInfo.IsUbuntuVersionEqual(connector.Ubuntu24) || systemInfo.IsUbuntuVersionEqual(connector.Ubuntu25) {
-			cudaKeyringVersion = v1alpha2.CudaKeyringVersion1_1
-			osVersion = "24.04"
-		} else if systemInfo.IsUbuntuVersionEqual(connector.Ubuntu22) {
-			osVersion = "22.04"
-		} else {
-			osVersion = "20.04"
-		}
-	case systemInfo.IsDebian():
-		cudaKeyringVersion = v1alpha2.CudaKeyringVersion1_1
-		if systemInfo.IsDebianVersionEqual(connector.Debian12) {
-			osVersion = connector.Debian12.String()
-		} else {
-			osVersion = connector.Debian11.String()
-		}
+func (t *InstallCudaDriver) Execute(runtime connector.Runtime) error {
+	_, _ = runtime.GetRunner().SudoCmd("apt-get update", false, true)
+	// install build deps for dkms
+	if _, err := runtime.GetRunner().SudoCmd("DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dkms build-essential linux-headers-$(uname -r)", false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to install kernel build dependencies for nvidia runfile")
 	}
-	var fileId = fmt.Sprintf("%s-%s_cuda-keyring_%s-1",
-		strings.ToLower(systemInfo.GetOsPlatformFamily()), osVersion, cudaKeyringVersion)
 
-	cudakeyring, err := t.Manifest.Get(fileId)
+	// fetch runfile from manifest
+	item, err := t.Manifest.Get("cuda-driver")
 	if err != nil {
 		return err
 	}
-
-	path := cudakeyring.FilePath(t.BaseDir)
-	var exists = util.IsExist(path)
-	if !exists {
-		return fmt.Errorf("Failed to find %s binary in %s", cudakeyring.Filename, path)
+	runfile := item.FilePath(t.BaseDir)
+	if !util.IsExist(runfile) {
+		return fmt.Errorf("failed to find %s binary in %s", item.Filename, runfile)
 	}
-
-	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("dpkg -i --force all %s", path), false, true); err != nil {
-		return err
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("chmod +x %s", runfile), false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to chmod +x runfile")
 	}
-
-	return nil
-}
-
-type InstallCudaDriver struct {
-	common.KubeAction
-
-	SkipNVMLCheckAfterInstall bool
-}
-
-func (t *InstallCudaDriver) Execute(runtime connector.Runtime) error {
-	if _, err := runtime.GetRunner().SudoCmd("apt-get update", false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "Failed to apt-get update")
-	}
-
-	if runtime.GetSystemInfo().IsDebian() {
-		_, err := runtime.GetRunner().SudoCmd("apt-get -y install nvidia-open", false, true)
-		return errors.Wrap(err, "failed to apt-get install nvidia-open")
-	}
-
-	if _, err := runtime.GetRunner().SudoCmd("apt-get -y install nvidia-open-575", false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "Failed to apt-get install nvidia-open-575")
-	}
-
-	if t.SkipNVMLCheckAfterInstall {
-		return nil
+	// execute runfile with required flags
+	cmd := fmt.Sprintf("sh %s -z --no-x-check --allow-installation-with-running-driver --no-check-for-alternate-installs --dkms --rebuild-initramfs -s", runfile)
+	if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to install nvidia driver via runfile")
 	}
 
 	// now that the nvidia driver is installed,
 	// the nvidia-smi should work correctly,
 	// if not, a manual reboot is needed by the user
-	_, installed, err := utils.ExecNvidiaSmi(runtime)
-	if err != nil {
-		return fmt.Errorf("failed to check nvidia driver status by executing nvidia-smi: %v", err)
-	}
-
-	if !installed {
+	st, err := utils.GetNvidiaStatus(runtime)
+	if err != nil || st == nil || !st.Installed || st.Mismatch {
 		logger.Error("ERROR: nvidia driver has been installed, but is not running properly, please reboot the machine and try again")
 		os.Exit(1)
 	}
@@ -170,7 +117,7 @@ func (t *UpdateNvidiaContainerToolkitSource) Execute(runtime connector.Runtime) 
 	keyPath := gpgkey.FilePath(t.BaseDir)
 
 	if !util.IsExist(keyPath) {
-		return fmt.Errorf("Failed to find %s binary in %s", gpgkey.Filename, keyPath)
+		return fmt.Errorf("failed to find %s binary in %s", gpgkey.Filename, keyPath)
 	}
 
 	if _, err := runtime.GetRunner().SudoCmd("install -d -m 0755 /usr/share/keyrings", false, true); err != nil {
@@ -190,7 +137,7 @@ func (t *UpdateNvidiaContainerToolkitSource) Execute(runtime connector.Runtime) 
 	libPath := libnvidia.FilePath(t.BaseDir)
 
 	if !util.IsExist(libPath) {
-		return fmt.Errorf("Failed to find %s binary in %s", libnvidia.Filename, libPath)
+		return fmt.Errorf("failed to find %s binary in %s", libnvidia.Filename, libPath)
 	}
 
 	// remove any conflicting libnvidia-container.list
@@ -258,7 +205,7 @@ func (t *InstallNvidiaContainerToolkit) Execute(runtime connector.Runtime) error
 	}
 	logger.Debugf("install nvidia-container-toolkit")
 	if _, err := runtime.GetRunner().SudoCmd("apt-get update && sudo apt-get install -y --allow-downgrades nvidia-container-toolkit=1.17.9-1 nvidia-container-toolkit-base=1.17.9-1 jq", false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "Failed to apt-get install nvidia-container-toolkit")
+		return errors.Wrap(errors.WithStack(err), "failed to apt-get install nvidia-container-toolkit")
 	}
 	return nil
 }
@@ -405,7 +352,7 @@ func (g *GetCudaVersion) Execute(runtime connector.Runtime) error {
 
 	lines := strings.Split(res, "\n")
 
-	if lines == nil || len(lines) == 0 {
+	if len(lines) == 0 {
 		return nil
 	}
 	for _, line := range lines {
@@ -426,7 +373,6 @@ func (g *GetCudaVersion) Execute(runtime connector.Runtime) error {
 
 type UpdateNodeLabels struct {
 	common.KubeAction
-	precheck.CudaCheckTask
 }
 
 func (u *UpdateNodeLabels) Execute(runtime connector.Runtime) error {
@@ -435,32 +381,26 @@ func (u *UpdateNodeLabels) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 	}
 
-	gpuInfo, installed, err := utils.ExecNvidiaSmi(runtime)
+	st, err := utils.GetNvidiaStatus(runtime)
 	if err != nil {
 		return err
 	}
-
-	if !installed {
-		logger.Info("nvidia-smi not exists")
+	if st == nil || !st.Installed {
+		logger.Info("NVIDIA driver is not installed")
 		return nil
 	}
 
 	supported := "false"
-
-	err = u.CudaCheckTask.Execute(runtime)
-	switch {
-	case err == precheck.ErrCudaInstalled:
+	if st.Installed {
 		supported = "true"
-	case err == precheck.ErrUnsupportedCudaVersion:
-		// bypass
-	case err != nil:
-		return err
-	case err == nil:
-		// impossible
-		logger.Warn("check impossible")
 	}
 
-	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &gpuInfo.DriverVersion, &gpuInfo.CudaVersion, &supported)
+	driverVersion := st.DriverVersion
+	if st.Mismatch && st.LibraryVersion != "" {
+		driverVersion = st.LibraryVersion
+	}
+
+	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &driverVersion, &st.CudaVersion, &supported)
 }
 
 type RemoveNodeLabels struct {
@@ -609,16 +549,44 @@ type UninstallNvidiaDrivers struct {
 }
 
 func (t *UninstallNvidiaDrivers) Execute(runtime connector.Runtime) error {
-
-	if _, err := runtime.GetRunner().SudoCmd("apt-get -y remove nvidia*", false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "Failed to apt-get remove nvidia*")
+	_, _ = runtime.GetRunner().SudoCmd("DEBIAN_FRONTEND=noninteractive apt-get -y autoremove --purge", false, true)
+	_, _ = runtime.GetRunner().SudoCmd("dpkg --configure -a || true", false, true)
+	listCmd := "dpkg -l | awk '/^(ii|i[UuFHWt]|rc|..R)/ {print $2}' | grep nvidia | grep -v container"
+	pkgs, _ := runtime.GetRunner().SudoCmd(listCmd, false, false)
+	pkgs = strings.ReplaceAll(pkgs, "\n", " ")
+	pkgs = strings.TrimSpace(pkgs)
+	if pkgs != "" {
+		removeCmd := fmt.Sprintf("DEBIAN_FRONTEND=noninteractive apt-get -y --auto-remove --purge remove %s", pkgs)
+		if _, err := runtime.GetRunner().SudoCmd(removeCmd, false, true); err != nil {
+			return errors.Wrap(errors.WithStack(err), "failed to remove nvidia packages via apt-get")
+		}
+		_, _ = runtime.GetRunner().SudoCmd("DEBIAN_FRONTEND=noninteractive apt-get -y autoremove --purge", false, true)
 	}
 
-	if _, err := runtime.GetRunner().SudoCmd("apt-get -y remove libnvidia*", false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "Failed to apt-get remove libnvidia*")
+	// also try to uninstall runfile-installed drivers if present
+	if out, _ := runtime.GetRunner().SudoCmd("test -x /usr/bin/nvidia-uninstall && echo yes || true", false, false); strings.TrimSpace(out) == "yes" {
+		if _, err := runtime.GetRunner().SudoCmd("/usr/bin/nvidia-uninstall -s", false, true); err != nil {
+			return errors.Wrap(errors.WithStack(err), "failed to uninstall NVIDIA driver via nvidia-uninstall")
+		}
+	} else if out2, _ := runtime.GetRunner().SudoCmd("test -x /usr/bin/nvidia-installer && echo yes || true", false, false); strings.TrimSpace(out2) == "yes" {
+		if _, err := runtime.GetRunner().SudoCmd("/usr/bin/nvidia-installer --uninstall -s", false, true); err != nil {
+			return errors.Wrap(errors.WithStack(err), "failed to uninstall NVIDIA driver via nvidia-installer --uninstall")
+		}
 	}
 
-	logger.Infof("uninstall nvidia drivers success, please reboot the system to take effect if you reinstall the new nvidia drivers")
+	// clean up any leftover dkms-installed kernel modules for nvidia if present
+	// only remove .ko files under updates/dkms to avoid removing other modules
+	checkLeftoverCmd := "sh -c 'test -d /lib/modules/$(uname -r)/updates/dkms && find /lib/modules/$(uname -r)/updates/dkms -maxdepth 1 -type f -name \"nvidia*.ko\" -print -quit | grep -q . && echo yes || true'"
+	if out, _ := runtime.GetRunner().SudoCmd(checkLeftoverCmd, false, false); strings.TrimSpace(out) == "yes" {
+		if _, err := runtime.GetRunner().SudoCmd("find /lib/modules/$(uname -r)/updates/dkms -maxdepth 1 -type f -name 'nvidia*.ko' -print -delete", false, true); err != nil {
+			return errors.Wrap(errors.WithStack(err), "Failed to remove leftover nvidia dkms kernel modules")
+		}
+		// refresh module dependency maps
+		if _, err := runtime.GetRunner().SudoCmd("depmod -a $(uname -r)", false, true); err != nil {
+			logger.Error("Failed to refresh module dependency maps: ", err)
+		}
+	}
+
 	return nil
 }
 
@@ -627,19 +595,43 @@ type PrintGpuStatus struct {
 }
 
 func (t *PrintGpuStatus) Execute(runtime connector.Runtime) error {
-	gpuInfo, installed, err := utils.ExecNvidiaSmi(runtime)
+	st, err := utils.GetNvidiaStatus(runtime)
 	if err != nil {
 		return err
 	}
-
-	if !installed {
-		logger.Info("cuda not exists")
+	if st == nil {
+		logger.Info("no NVIDIA GPU status available")
 		return nil
 	}
-
-	logger.Infof("GPU Driver Version: %s", gpuInfo.DriverVersion)
-	logger.Infof("CUDA Version: %s", gpuInfo.CudaVersion)
-
+	// basic status
+	logger.Infof("Installed: %t", st.Installed)
+	if st.Installed {
+		logger.Infof("Install method: %s", st.InstallMethod)
+	}
+	logger.Infof("Running: %t", st.Running)
+	// running (kernel) driver version
+	if st.Running && strings.TrimSpace(st.DriverVersion) != "" {
+		logger.Infof("Running driver version (kernel): %s", st.DriverVersion)
+	}
+	// userland info from nvidia-smi (when available)
+	if st.Installed {
+		if st.Info != nil && strings.TrimSpace(st.Info.DriverVersion) != "" {
+			logger.Infof("Installed driver version (nvidia-smi): %s", st.Info.DriverVersion)
+		}
+		if strings.TrimSpace(st.CudaVersion) != "" {
+			logger.Infof("CUDA version (nvidia-smi): %s", st.CudaVersion)
+		}
+		if st.Mismatch {
+			if strings.TrimSpace(st.LibraryVersion) != "" {
+				logger.Warnf("Driver/library version mismatch, NVML library version: %s", st.LibraryVersion)
+			} else {
+				logger.Warn("Driver/library version mismatch detected")
+			}
+		}
+	}
+	if !st.Installed && !st.Running {
+		logger.Info("no NVIDIA driver detected (neither installed nor running)")
+	}
 	return nil
 }
 
@@ -708,35 +700,5 @@ func (t *RestartPlugin) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "Failed to restart hami-scheduler")
 	}
 
-	return nil
-}
-
-type ExitIfNoDriverUpgradeNeeded struct {
-	common.KubeAction
-}
-
-func (t *ExitIfNoDriverUpgradeNeeded) Execute(runtime connector.Runtime) error {
-	gpuInfo, installed, err := utils.ExecNvidiaSmi(runtime)
-	if err != nil {
-		logger.Warn("error checking whether the GPU need upgrade:")
-		logger.Warn(err.Error())
-		logger.Warn("assuming an upgrade is needed and continue upgrading")
-		return nil
-	}
-	if !installed {
-		logger.Info("GPU driver not installed, will just install it")
-		return nil
-	}
-	installedVersion, err := semver.NewVersion(gpuInfo.CudaVersion)
-	if err != nil {
-		logger.Warn("error parsing the current CUDA version of GPU driver \"%s\": %v", gpuInfo.CudaVersion, err)
-		logger.Warn("assuming an upgrade is needed and continue installing")
-		return nil
-	}
-	targetVersion, _ := semver.NewVersion(common.CurrentVerifiedCudaVersion)
-	if !targetVersion.GreaterThan(installedVersion) {
-		logger.Info("current GPU driver version is up to date, no need to upgrade")
-		os.Exit(0)
-	}
 	return nil
 }

@@ -3,12 +3,14 @@ package gpu
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
 	"github.com/beclab/Olares/cli/pkg/clientset"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,35 +34,33 @@ func (p *GPUEnablePrepare) PreCheck(runtime connector.Runtime) (bool, error) {
 
 type CudaInstalled struct {
 	common.KubePrepare
-	precheck.CudaCheckTask
-	FailOnNoInstallation bool
 }
 
 func (p *CudaInstalled) PreCheck(runtime connector.Runtime) (bool, error) {
-	err := p.CudaCheckTask.Execute(runtime)
+	st, err := utils.GetNvidiaStatus(runtime)
 	if err != nil {
-		if err == precheck.ErrCudaInstalled {
-			return true, nil
-		}
 		return false, err
 	}
-	return false, nil
+	if st == nil || !st.Installed {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 type CudaNotInstalled struct {
 	common.KubePrepare
-	precheck.CudaCheckTask
 }
 
 func (p *CudaNotInstalled) PreCheck(runtime connector.Runtime) (bool, error) {
-	err := p.CudaCheckTask.Execute(runtime)
+	st, err := utils.GetNvidiaStatus(runtime)
 	if err != nil {
-		if err == precheck.ErrCudaInstalled {
-			return false, nil
-		}
 		return false, err
 	}
-	return true, nil
+	if st == nil || !st.Installed {
+		return true, nil
+	}
+	return false, nil
 }
 
 type K8sNodeInstalled struct {
@@ -97,9 +97,6 @@ type NvidiaGraphicsCard struct {
 }
 
 func (p *NvidiaGraphicsCard) PreCheck(runtime connector.Runtime) (found bool, err error) {
-	if runtime.RemoteHost().GetOs() == common.Darwin {
-		return false, nil
-	}
 	defer func() {
 		if !p.ExitOnNotFound {
 			return
@@ -109,20 +106,15 @@ func (p *NvidiaGraphicsCard) PreCheck(runtime connector.Runtime) (found bool, er
 			os.Exit(1)
 		}
 	}()
-	output, err := runtime.GetRunner().SudoCmd(
-		"lspci | grep -i -e vga -e 3d | grep -i nvidia", false, false)
-	// an empty grep also results in the exit code to be 1
-	// and thus a non-nil err
+	model, _, err := utils.DetectNvidiaModelAndArch(runtime)
 	if err != nil {
-		logger.Debug("try to find nvidia graphics card error ", err)
-		logger.Debug("ignore card driver installation")
+		logger.Debugf("detect NVIDIA GPU error: %v", err)
+	}
+	if strings.TrimSpace(model) == "" {
 		return false, nil
 	}
-
-	if output != "" {
-		logger.Info("found nvidia graphics card: ", output)
-	}
-	return output != "", nil
+	logger.Infof("found NVIDIA GPU: %s", model)
+	return true, nil
 }
 
 type ContainerdInstalled struct {
