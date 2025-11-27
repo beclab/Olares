@@ -78,7 +78,7 @@ func (i *InstallAppxPackage) Execute(runtime connector.Runtime) error {
 	wslAppxPackage := wslAppxPackageObj.(*files.KubeBinary)
 
 	var ps = &utils.PowerShellCommandExecutor{
-		Commands: []string{fmt.Sprintf("Add-AppxPackage %s -ForceUpdateFromAnyVersion", wslAppxPackage.Path())},
+		Commands: []string{fmt.Sprintf("Add-AppxPackage \"%s\" -ForceUpdateFromAnyVersion", wslAppxPackage.Path())},
 	}
 
 	if _, err := ps.Run(); err != nil {
@@ -216,7 +216,7 @@ func (i *InstallWSLDistro) Execute(runtime connector.Runtime) error {
 	logger.Infof("%s path: %s", ubuntuTool, installerPath)
 
 	var checkInstallerPs = &utils.PowerShellCommandExecutor{
-		Commands: []string{fmt.Sprintf("Test-Path %s", installerPath)},
+		Commands: []string{fmt.Sprintf("Test-Path \"%s\"", installerPath)},
 	}
 	installerExists, err := checkInstallerPs.Run()
 	if err != nil {
