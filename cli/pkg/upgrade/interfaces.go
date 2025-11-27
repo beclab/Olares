@@ -16,6 +16,7 @@ type upgrader interface {
 	UpdateOlaresVersion() []task.Interface
 	PostUpgrade() []task.Interface
 	AddedBreakingChange() bool
+	NeedRestart() bool
 }
 
 type breakingUpgrader interface {
