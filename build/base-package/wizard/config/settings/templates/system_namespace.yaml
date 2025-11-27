@@ -17,6 +17,7 @@ metadata:
     kubesphere.io/creator: '{{ .Values.user.name }}'
   labels:
     kubesphere.io/workspace: system-workspace
+    openpolicyagent.org/webhook: ignore
   name: os-platform
 
 ---

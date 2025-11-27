@@ -106,7 +106,10 @@ metadata:
   name: opa-validating-webhook
 webhooks:
   - name: validating-webhook.openpolicyagent.org
-    admissionReviewVersions: ["v1beta1"]
+    admissionReviewVersions: ["v1", "v1beta1"]
+    namespaceSelector: 
+      matchExpressions:
+        - {key: openpolicyagent.org/webhook, operator: NotIn, values: [ignore]}
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["*"]
