@@ -145,6 +145,10 @@ metadata:
 data:
   main: |
     package system
+    
+    default uid := ""
+    uid := input.request.uid
+
     main = {
-      "response": {"allowed": true},
+      "response": {"allowed": true, "uid": uid},
     }
