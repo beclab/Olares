@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -269,20 +270,66 @@ func (t *ValidResolvConfCheck) Check(runtime connector.Runtime) error {
 	return nil
 }
 
-type CudaChecker struct {
-	CudaCheckTask
+type NvidiaCardArchChecker struct{}
+
+func (t *NvidiaCardArchChecker) Name() string {
+	return "NvidiaCardArch"
+}
+
+func (t *NvidiaCardArchChecker) Check(runtime connector.Runtime) error {
+	supportedArchs := []string{"Ada Lovelace", "Blackwell", "Hopper", "Ampere", "Turing"}
+	model, arch, err := utils.DetectNvidiaModelAndArch(runtime)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(model) == "" {
+		return nil
+	}
+	if !slices.Contains(supportedArchs, arch) {
+		return fmt.Errorf("unsupported NVIDIA card %s of architecture: %s", model, arch)
+	}
+	return nil
+}
+
+type CudaChecker struct{}
+
+func (c *CudaChecker) Name() string {
+	return "CUDA"
 }
 
 func (c *CudaChecker) Check(runtime connector.Runtime) error {
-	err := c.CudaCheckTask.Execute(runtime)
-
-	// the command `precheck` will check the cuda version,
-	// only if the cuda is installed and the current version is not supported, it will return an error
-	if err == ErrCudaInstalled {
+	if !runtime.GetSystemInfo().IsLinux() {
 		return nil
 	}
 
-	return err
+	st, err := utils.GetNvidiaStatus(runtime)
+	if err != nil {
+		return err
+	}
+	if st == nil || !st.Installed {
+		if st != nil && st.Running {
+			return ErrKernelDriverUninstalledButRunning
+		}
+		logger.Info("NVIDIA driver is not installed")
+		return nil
+	}
+	if st.Mismatch {
+		return ErrDriverLibraryVersionMismatch
+	}
+	if st.InstallMethod != utils.GPUDriverInstallMethodRunfile && !runtime.GetSystemInfo().IsWsl() {
+		return ErrNotInstalledByRunfile
+	}
+	logger.Infof("NVIDIA driver is installed, version: %s, cuda version: %s", st.DriverVersion, st.CudaVersion)
+	oldestVer := semver.MustParse(supportedCudaVersions[0])
+	newestVer := semver.MustParse(supportedCudaVersions[len(supportedCudaVersions)-1])
+	currentVer := semver.MustParse(st.CudaVersion)
+	if oldestVer.GreaterThan(currentVer) {
+		return ErrUnsupportedCudaVersion
+	}
+	if newestVer.LessThan(currentVer) {
+		logger.Info("CUDA version is too new, there might be compatibility issues with some applications, use at your own risk")
+	}
+	return nil
 }
 
 //////////////////////////////////////////////
@@ -475,43 +522,7 @@ func (t *RemoveWSLChattr) Execute(runtime connector.Runtime) error {
 }
 
 var ErrUnsupportedCudaVersion = errors.New("unsupported cuda version, please uninstall it, REBOOT your machine, and try again")
-var ErrCudaInstalled = errors.New("cuda is installed")
-var supportedCudaVersions = []string{"12.8", common.CurrentVerifiedCudaVersion}
-
-// CudaCheckTask checks the cuda version, if the current version is not supported, it will return an error
-// before executing the command `olares-cli gpu install`, we need to check the cuda version
-// if the cuda if not installed, it will return nil and the command can be executed.
-// if the cuda is installed and the version is unsupported, the command can not be executed,
-// or the cuda version is supported, executing the command is unnecessary.
-type CudaCheckTask struct{}
-
-func (t *CudaCheckTask) Name() string {
-	return "Cuda"
-}
-
-func (t *CudaCheckTask) Execute(runtime connector.Runtime) error {
-	if !runtime.GetSystemInfo().IsLinux() {
-		return nil
-	}
-
-	info, installed, err := utils.ExecNvidiaSmi(runtime)
-	switch {
-	case err != nil:
-		return err
-	case !installed:
-		logger.Info("NVIDIA driver is not installed")
-		return nil
-	default:
-		logger.Infof("NVIDIA driver is installed, version: %s, cuda version: %s", info.DriverVersion, info.CudaVersion)
-		oldestVer := semver.MustParse(supportedCudaVersions[0])
-		newestVer := semver.MustParse(supportedCudaVersions[len(supportedCudaVersions)-1])
-		currentVer := semver.MustParse(info.CudaVersion)
-		if oldestVer.GreaterThan(currentVer) {
-			return ErrUnsupportedCudaVersion
-		}
-		if newestVer.LessThan(currentVer) {
-			logger.Info("CUDA version is too new, there might be compatibility issues with some applications, use at your own risk")
-		}
-		return ErrCudaInstalled
-	}
-}
+var ErrKernelDriverUninstalledButRunning = errors.New("NVIDIA driver is uninstalled, but the kernel driver is still running, please REBOOT your machine, and try again")
+var ErrNotInstalledByRunfile = errors.New("NVIDIA driver is installed, but not installed by runfile, please uninstall it using the command `olares-cli gpu uninstall`, REBOOT your machine, and try again")
+var ErrDriverLibraryVersionMismatch = errors.New("NVIDIA driver is installed, but the library version is mismatched, please REBOOT your machine, and try again")
+var supportedCudaVersions = []string{common.CurrentVerifiedCudaVersion}
