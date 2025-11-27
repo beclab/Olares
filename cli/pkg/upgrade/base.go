@@ -42,6 +42,10 @@ func (u upgraderBase) AddedBreakingChange() bool {
 	return false
 }
 
+func (u upgraderBase) NeedRestart() bool {
+	return false
+}
+
 func (u upgraderBase) PrepareForUpgrade() []task.Interface {
 	var tasks []task.Interface
 	tasks = append(tasks, upgradeKSCore()...)
