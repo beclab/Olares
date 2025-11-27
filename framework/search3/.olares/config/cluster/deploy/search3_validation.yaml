@@ -44,8 +44,6 @@ spec:
           name: https
         # command: ["/search3validation/k8svalidationserver"]
         env:
-        - name: K8S_ENV_TEST
-          value: "true"
         - name: SEARCH3_VALIDATION_PORT
           value: "8443"
         # TLS/HTTPS configuration (recommended for production)
@@ -53,6 +51,16 @@ spec:
           value: "/etc/tls/tls.crt"
         - name: SEARCH3_VALIDATION_TLS_KEY
           value: "/etc/tls/tls.key"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
         volumeMounts:
         - name: tls-certs
           mountPath: /etc/tls
