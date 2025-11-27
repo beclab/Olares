@@ -334,7 +334,7 @@ ports:
   port: 3389                # Port of the entrance that provides service
   protocol: udp             # Protocol used by the exposed port
   exposePort: 46879         # The port to be exposed can only be assigned to one application at a time within the cluster.
-  addToTailscaleAcl: true   # Automatically added to Tailscle's ACL
+  addToTailscaleAcl: true   # Automatically added to Tailscale's ACL
 ```
 :::
 
