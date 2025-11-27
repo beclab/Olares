@@ -333,7 +333,7 @@ ports:
   host: windows-svc         # 提供服务的 Ingress 主机名称
   port: 3389                # 提供服务的端口号
   protocol: udp             # 暴露端口使用的协议 
-  exposePort: 46879         # 暴露的接口，在集群内一次只能分配给一个应用程序
+  exposePort: 46879         # 暴露的端口，在集群内一次只能分配给一个应用程序
   addToTailscaleAcl: true   # 自动添加到 Tailscle 的 ACL 列表中
 ```
 :::
