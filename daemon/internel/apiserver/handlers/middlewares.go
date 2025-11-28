@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/beclab/Olares/daemon/internel/client"
@@ -59,7 +60,18 @@ func (h *Handlers) RequireOwner(next func(ctx *fiber.Ctx) error) func(ctx *fiber
 		// get owner from release file
 		envOlaresID, err := utils.GetOlaresNameFromReleaseFile()
 		if err != nil {
-			return h.ErrJSON(ctx, http.StatusInternalServerError, "failed to get Olares ID from release file")
+			return h.ErrJSON(ctx, http.StatusInternalServerError, fmt.Sprintf("failed to get Olares ID from release file: %v", err))
+		}
+
+		if envOlaresID == "" {
+			if isInstalled, err := state.IsTerminusInstalled(); err != nil {
+				return h.ErrJSON(ctx, http.StatusInternalServerError, fmt.Sprintf("failed to check if Olares is installed: %v", err))
+			} else {
+				// not installed, skip owner check
+				if !isInstalled {
+					return next(ctx)
+				}
+			}
 		}
 
 		if c.OlaresID() != envOlaresID {
