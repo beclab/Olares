@@ -41,7 +41,7 @@ After import, you can view and manage your RSS feeds under <i class="material-sy
 :::
 ### Use LarePass for web subscriptions
 :::tip
-LarePass extension is currently available for Chrome browsers only. Download it from the [official page](https://larepass.olares.com).
+LarePass extension is currently available for Chrome browsers only. Download it from the [official page](https://www.olares.com/larepass).
 :::
 1. Open the LarePass browser extension, and click **Collect**.
 2. For the current webpage, check available subscriptions in the **RSS** section.

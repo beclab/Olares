@@ -12,7 +12,7 @@ Olares ID creation is only available on LarePass mobile.
 
 ## Create an Olares ID
 
-Before you start, ensure you have downloaded the [LarePass](https://larepass.olares.com) app on your phone. Depending on your personal preference, you can use one of the following options to create your Olares ID:
+Before you start, ensure you have downloaded the [LarePass](https://www.olares.com/larepass) app on your phone. Depending on your personal preference, you can use one of the following options to create your Olares ID:
 
 - **Quick creation**: Create an Olares ID by entering an available name that meets the requirements. This is the default mode.
 - **Advanced creation**: Link an existing trusted identity (such as social accounts) with Olares ID using Verification Credentials (VC). This is for individual or organizational users who require enhanced security and more distinctive IDs or domains.

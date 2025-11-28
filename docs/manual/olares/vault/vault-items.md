@@ -93,7 +93,7 @@ To add a vault item:
 <template #LarePass-browser-extension>
 
 :::info
-The LarePass browser extension is currently only available for Google Chrome. Visit the [official page](https://larepass.olares.com) to download the extension.
+The LarePass browser extension is currently only available for Google Chrome. Visit the [official page](https://www.olares.com/larepass) to download the extension.
 :::
 :::tip
 To easily access LarePass, you can pin the extension to your toolbar.
