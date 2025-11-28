@@ -15,7 +15,7 @@ By the end of this tutorial, you will learn how to:
 - Install ACE-Step on your Olares device.
 - Generate songs with lyrics, tags, and stylistic controls.
 - Locate and download your generated audio files.
-- Refine tracks using Retake, Repainting, Edit, Extend, and Audio2Audio.
+- Refine tracks using **Retake**, **Repainting**, **Edit**, **Extend**, and **Audio2Audio**.
 
 ## Install and set up ACE-Step
 
