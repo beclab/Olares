@@ -183,6 +183,7 @@ data:
     }
     else := {"allowed": true, "uid": uid}
 
+---
 kind: ConfigMap
 apiVersion: v1
 metadata:
