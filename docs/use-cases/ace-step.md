@@ -90,7 +90,7 @@ ACE-Step offers powerful tools to refine and modify specific parts of your gener
 
 ### Regenerate the entire segment
 
-Use Retake to generate a new version of the entire track.
+Use **Retake** to generate a new version of the entire track.
 
 1. Click the **retake** tab.
 2. Adjust the **variance** slider to control how different the new version will be. 
