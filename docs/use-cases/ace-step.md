@@ -52,7 +52,7 @@ Follow these steps to set your parameters and begin music generation.
     It's recommended to change the default output format to MP3. This will result in much smaller file sizes, faster loading, and a better user experience.
     :::
 - **Lora Name or Path**: Select a LoRA model if available. Currently, only a Chinese rap LoRA is supported.
-- **Tags**: Enter musical style and timbre descriptors, separated by commas. (e.g., `Chinese Rap, J-Pop, Anime, kawaii future bass, Female vocals, EDM, Super Fast`).
+- **Tags**: Enter musical style and timbre descriptors, separated by commas. You can use tags to control melody, harmony, and rhythm.(e.g., `Chinese Rap, J-Pop, Anime, kawaii future bass, Female vocals, EDM, Super Fast`).
 - **Lyrics**: Enter your lyrics, ensuring you use structural tags for optimal organization and flow:
     - `[verse]` for the main verse part
     - `[chorus]` for the chorus part
