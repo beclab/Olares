@@ -46,7 +46,7 @@ Follow these steps to set your parameters and begin music generation.
 
 ### Set basic parameters
 
-- **Audio Duration**: Drag the slider to choose the track length (up to **240 seconds/4 minutes**).
+- **Audio Duration**: Drag the slider to choose the track length (up to **240 seconds**).
 - **Format**: Select the audio format from `MP3`, `ogg`, `wav`, and `flac`.
 - **Lora Name or Path**: Select a LoRA model if available.
 - **Tags**: Enter musical style and timbre descriptors, separated by commas. (e.g., `Chinese Rap, J-Pop, Anime, kawaii future bass, Female vocals, EDM, Super Fast`).
