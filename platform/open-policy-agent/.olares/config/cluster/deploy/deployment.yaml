@@ -199,8 +199,6 @@ data:
         some container
         input_containers[container]
         not startswith(container.image, "beclab/")
-        not startswith(container.image, "bytetrade/")
-        not startswith(container.image, "aboveos/")
 
         is_root_user(container.securityContext)
     
