@@ -5,7 +5,7 @@ description: Step-by-step guide to installing ACE-Step AI on Olares, generating 
 
 # Create your own AI-generated music with ACE-Step
 
-Curious about AI-generated music? ACE-Step lets you create songs, vocals, and instrumentals from simple text inputs. Developed by ACE Studio and StepFun, it is an open-source model that generates music from the lyrics and style tags you provide. With its built-in tools, you can also refine your tracks by adjusting or regenerating specific parts without starting over.
+ACE-Step, developed by ACE Studio and StepFun, is an open-source model that generates music from the lyrics and style tags you provide, allowing you to create songs, vocals, and instrumentals from simple text inputs. With its built-in tools, you can also refine your tracks by adjusting or regenerating specific parts without starting over.
 
 This guide shows you how to install ACE-Step on Olares, generate your first track, explore different musical styles, and enhance your audio using the editing features built into the app.
 
