@@ -61,7 +61,7 @@ Follow these steps to set your parameters and begin music generation.
     :::tip Generate an **instrumental-only** track
     Enter the tag `[instrumental]` or `[inst]` in the Lyrics area.
     :::
-    :::tip Need ideas for genre or lyrics?
+    :::tip Inspirations for genre or lyrics
     Use an AI assistant to help generate style prompts or lyrical content.
     :::
 
