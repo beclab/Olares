@@ -93,7 +93,7 @@ ACE-Step offers powerful tools to refine and modify specific parts of your gener
 Use **Retake** to generate a new version of the entire track.
 
 1. Click the **retake** tab.
-2. Adjust the **variance** slider to control how different the new version will be. 
+2. Adjust the **variance** slider to control how different the new version will be. The higher the value, the more different the song will be.
 3. Click **Retake** and wait for the generation.
 4. Click the **Play** button below to preview the style change.
     ![Preview the retake](../public/images/manual/use-cases/ace-step-retake.png#bordered)
