@@ -80,7 +80,7 @@ You can retrieve your generated music via two methods:
     
 - **From Olares Files**:
     1. Open **Files**.
-    2. Go to the following path: `/Home/AI/output/acestepv2`
+    2. Go to the following path: `/Home/AI/output/acestepv2`.
     
     Here you will find the generated audio files and their corresponding JSON metadata files.
 
