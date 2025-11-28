@@ -37,7 +37,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: search3-validation
-        image: beclab/search3validation:v0.0.73
+        image: beclab/search3validation:v0.0.77
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8443
