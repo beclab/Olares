@@ -57,4 +57,16 @@ metadata:
 rules:
 - nonResourceURLs: 
   - "/server/intent/send"
-  verbs: ["*"]  
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:dashboard
+  annotations:
+    provider-registry-ref: {{ .Values.bfl.username }}/dashboard
+    provider-service-ref: prometheus-k8s.kubesphere-monitoring-system:9090
+rules:
+  - nonResourceURLs:
+      - "*"
+    verbs: ["*"]
