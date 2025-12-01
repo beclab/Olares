@@ -169,6 +169,3 @@ You can create a new track based on a **reference audio** clip you upload. It an
 5. Set other parameters as needed.
 6. Click **Generate** to create new music with an atmosphere similar to the reference audio.
     ![Audio2Audio](../public/images/manual/use-cases/ace-step-audio2audio.png#bordered)
-
-
-You now have the complete user guide for ACE-Step. Start exploring the tool to quickly create your personalized AI music!
