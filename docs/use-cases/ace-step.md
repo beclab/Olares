@@ -57,7 +57,11 @@ Follow these steps to set your parameters and begin music generation.
     It's recommended to change the default output format to MP3. This will result in much smaller file sizes, faster loading, and a better user experience.
     :::
 - **Lora Name or Path**: Select a LoRA model if available. Currently, only a Chinese rap LoRA is supported.
-- **Tags**: Enter musical style and timbre descriptors, separated by commas. You can use tags to control melody, harmony, and rhythm.(e.g., `Chinese Rap, J-Pop, Anime, kawaii future bass, Female vocals, EDM, Super Fast`).
+- **Tags**: Enter descriptors for style, mood, rhythm, or instruments, separated by commas. For example:
+- 
+    ```plain
+    Chinese Rap, J-Pop, Anime, kawaii future bass, Female vocals, EDM, Super Fast`
+    ```
 - **Lyrics**: Enter your lyrics, ensuring you use structural tags for optimal organization and flow:
     - `[verse]` for the main verse part
     - `[chorus]` for the chorus part
@@ -78,16 +82,15 @@ Follow these steps to set your parameters and begin music generation.
 
 ### Retrieve generated files
 
-You can retrieve your generated music via two methods:
+You can save your generated music via two methods:
 
-- **Direct download**: Click the <i class="material-symbols-outlined">download</i>
-  button in the upper right corner to save the file directly to your local device.
+- **Direct download**: Click the <i class="material-symbols-outlined">download</i> button in the upper right corner to save the audio file directly to your local device.
     
 - **From Olares Files**:
     1. Open **Files**.
     2. Go to the following path: `/Home/AI/output/acestepv2`.
-    
-    Here you will find the generated audio files and their corresponding JSON metadata files.
+    3. Right-click the generated audio file and save it to your local device.
+
 
 ## Optimize your audio
 
@@ -95,7 +98,7 @@ ACE-Step offers powerful tools to refine and modify specific parts of your gener
 
 ### Regenerate the entire segment
 
-Use **Retake** to generate a new version of the entire track.
+You can generate a new version of the entire track.
 
 1. Click the **retake** tab.
 2. Adjust the **variance** slider to control how different the new version will be. The higher the value, the more different the song will be.
@@ -105,10 +108,10 @@ Use **Retake** to generate a new version of the entire track.
 
 ### Regenerate a specific section
 
-Use Repainting to update only a selected time range while keeping the rest of the track unchanged.
+You can update only a selected time range while keeping the rest of the track unchanged.
 
 1. Click the **repainting** tab.
-2. Adjust the **Variance** slider to control the degree of change in the new generation.
+2. Adjust the **Variance** slider to control the degree of change in the new generation. The higher the value, the more different the song will be.
 3. Adjust the slider under **Repaint Start Time** and **Repaint End Time** to set the period for the section you want to regenerate.
 4. Select the source for repainting:
     - `text2music`: The original song generated via Text2Music.
@@ -120,7 +123,7 @@ Use Repainting to update only a selected time range while keeping the rest of th
 
 ### Edit lyrics
 
-Edit lyrics to modify specific lines without affecting the rest of the track.
+You can edit lyrics to modify specific lines without affecting the rest of the track.
 
 1. Click the **edit** tab.
 2. Copy the original lyrics and paste them into the **Edit Lyrics** area.
@@ -132,7 +135,7 @@ Edit lyrics to modify specific lines without affecting the rest of the track.
 
 ### Edit tags
 
-Edit tags to reset the style or timbre of the track.
+You can edit tags to reset the style or timbre of the track.
 
 1. Click the **edit** tab.
 2. Enter the new style or timbre tags (e.g., `hard rock` or `male tenor vocals`) in the **Edit Tags** area.
@@ -143,7 +146,7 @@ Edit tags to reset the style or timbre of the track.
 
 ### Extend the audio
 
-Use Extend to add new audio before or after the existing track.
+You can extend the length of the original track by adding new audio before or after it.
 
 1. Click the **extend** tab.
 2. Adjust the slider under **Left Extend Length** to add new generation *before* the original audio.
@@ -158,7 +161,7 @@ Use Extend to add new audio before or after the existing track.
 
 ## Audio2Audio
 
-The Audio2Audio feature generates a new track based on a **reference audio** clip. It analyzes characteristics such as timbre, rhythm, and style to produce a track with a similar feel.
+You can create a new track based on a **reference audio** clip you upload. It analyzes characteristics such as timbre, rhythm, and style to produce a track with a similar feel.
 1. Check the box to **Enable Audio2Audio**.
 2. Upload an existing music clip to serve as the reference.
 3. Adjust the **Refer audio strength** slider. A higher value results in music more similar to the reference track.
