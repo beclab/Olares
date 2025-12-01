@@ -80,7 +80,7 @@ Follow these steps to set your parameters and begin music generation.
 2.  Once generation is complete, click the **Play** button to preview your track.
    ![Generate the audio](../public/images/manual/use-cases/ace-step-generate.png#bordered)
 
-### Retrieve generated files
+### Save the generated music
 
 You can save your generated music via two methods:
 
