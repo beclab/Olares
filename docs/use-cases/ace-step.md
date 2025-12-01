@@ -51,7 +51,7 @@ Follow these steps to set your parameters and begin music generation.
 
 ### Set basic parameters
 
-- **Audio Duration**: Drag the slider to choose the track length (up to **240 seconds**).
+- **Audio Duration**: Drag the slider to choose the track length (up to 240 seconds). If left at the default (`-1`), the audio length will be random.
 - **Format**: Select the audio format from `MP3`, `ogg`, `wav`, and `flac`.
     :::tip MP3 recommended
     It's recommended to change the default output format to MP3. This will result in much smaller file sizes, faster loading, and a better user experience.
@@ -69,9 +69,6 @@ Follow these steps to set your parameters and begin music generation.
     
     :::tip Generate an **instrumental-only** track
     Enter the tag `[instrumental]` or `[inst]` in the Lyrics area.
-    :::
-    :::tip Inspirations for genre or lyrics
-    Use an AI assistant to help generate style prompts or lyrical content.
     :::
 
 ### Start generation
