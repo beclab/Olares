@@ -68,7 +68,7 @@ Follow these steps to set your parameters and begin music generation.
     - `[bridge]` for the bridge
     
     :::tip Generate an **instrumental-only** track
-    Enter the tag `[instrumental]` or `[inst]` in the Lyrics area.
+    Enter the tag `[instrumental]` or `[inst]` in the **Lyrics** area.
     :::
 
 ### Start generation
