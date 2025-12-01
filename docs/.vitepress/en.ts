@@ -503,6 +503,10 @@ const side = {
         text: "Duix.Avatar",
         link: "/use-cases/duix-avatar",
       },
+      {
+        text: "ACE-Step",
+        link: "/use-cases/ace-step",
+      },      
     ],
   },
  ],
