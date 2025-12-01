@@ -72,6 +72,14 @@ spec:
       name: opa
     spec:
       serviceAccountName: opa-sa
+      priorityClassName: "system-cluster-critical"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       containers:
         - name: opa
           image: openpolicyagent/opa:1.11.0
