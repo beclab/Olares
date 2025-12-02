@@ -55,10 +55,6 @@ services:
 
 1. Open Studio and select **Create a new application**.
 2. Enter an **App name**, for example: `wallos`, and click **Confirm**.
-   :::info
-   Use only lowercase letters and numbers.
-   :::
-
 3. Select **Port your own container to Olares**.
    ![Port your own container to Olares](/images/manual/olares/studio-port-your-own-container-to-olares.png#bordered)
 
@@ -154,7 +150,7 @@ Apps deployed from Studio include a `-dev` suffix in the title to distinguish th
 
 You can click on files like `OlaresManifest.yaml` to review and make changes. For example, to change the app's display name and logo.
 
-1. Click <span class="material-symbols-outlined">box_edit</span> in the top-right to open the editor.
+1. Click **<span class="material-symbols-outlined">box_edit</span>Edit** in the top-right to open the editor.
 2. Click `OlaresManifest.yaml` to view the content.
 3. Change the `title` field under `entrance` and `metadata`. For example, change `wallos` to `Wallos`.
 4. Replace the default icon image address under `entrance` and `metadata`.
