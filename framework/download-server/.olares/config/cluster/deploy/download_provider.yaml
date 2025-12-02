@@ -1,0 +1,128 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: download-provider
+    applications.app.bytetrade.io/author: bytetrade.io
+  name: download-provider
+  namespace: {{ .Release.Namespace }}
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: download-provider
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: download-provider
+        io.bytetrade.app: "true"
+        provider: "true"
+    spec:
+      containers:
+        - name: provider-proxy
+          image: beclab/provider-proxy:0.1.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - --logtostderr
+            - --insecure-listen-address=:28080
+            - --upstream=http://download-svc:8090/
+          ports:
+            - containerPort: 28080
+          resources:
+            requests:
+              cpu: 10m
+              memory: 200Mi
+            limits:
+              cpu: "500m"
+              memory: 350Mi
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      priorityClassName: system-cluster-critical
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: provider-sa
+      serviceAccountName: provider-sa
+      terminationGracePeriodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: download-provider-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: download-provider
+  ports:
+    - name: server
+      protocol: TCP
+      port: 28080
+      targetPort: 28080
+
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: provider-sa
+  namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backend:{{ .Release.Namespace }}:provider
+rules:
+  - apiGroups:
+      - "*"
+    resources:
+      - clusterrolebindings
+      - clusterroles
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "*"
+    resources:
+      - tokenreviews
+      - subjectaccessreviews
+    verbs:
+      - create
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backend:{{ .Release.Namespace }}:provider
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backend:{{ .Release.Namespace }}:provider
+subjects:
+  - kind: ServiceAccount
+    name: provider-sa
+    namespace: {{ .Release.Namespace }}
+
+---
+# provider role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backend:download-provider
+  annotations:
+    provider-registry-ref: {{ .Release.Namespace }}/download-provider-svc
+    provider-service-ref: download-provider-svc.{{ .Release.Namespace }}:28080
+rules:
+  - nonResourceURLs: ["/api/download/*"]
+    verbs: ["*"]
