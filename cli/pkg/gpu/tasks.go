@@ -702,3 +702,37 @@ func (t *RestartPlugin) Execute(runtime connector.Runtime) error {
 
 	return nil
 }
+
+type WriteNouveauBlacklist struct {
+	common.KubeAction
+}
+
+func (t *WriteNouveauBlacklist) Execute(runtime connector.Runtime) error {
+	if !runtime.GetSystemInfo().IsLinux() {
+		return nil
+	}
+	const dir = "/usr/lib/modprobe.d"
+	const dst = "/usr/lib/modprobe.d/olares-disable-nouveau.conf"
+	const content = "blacklist nouveau\nblacklist lbm-nouveau\nalias nouveau off\nalias lbm-nouveau off\n"
+
+	if _, err := runtime.GetRunner().SudoCmd("install -d -m 0755 "+dir, false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to ensure /usr/lib/modprobe.d exists")
+	}
+
+	tmpPath := path.Join(runtime.GetBaseDir(), cc.PackageCacheDir, "gpu", "olares-disable-nouveau.conf")
+	if err := os.MkdirAll(path.Dir(tmpPath), 0755); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to create temp dir for nouveau blacklist")
+	}
+	if err := util.WriteFile(tmpPath, []byte(content), 0644); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to write temp nouveau blacklist file")
+	}
+	if err := runtime.GetRunner().SudoScp(tmpPath, dst); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to install nouveau blacklist file")
+	}
+
+	if out, _ := runtime.GetRunner().SudoCmd("test -d /sys/module/nouveau && echo loaded || true", false, false); strings.TrimSpace(out) == "loaded" {
+		logger.Infof("the disable file for nouveau kernel module has been written, but the nouveau kernel module is currently loaded. Please REBOOT your machine to make the disabling effective.")
+		os.Exit(0)
+	}
+	return nil
+}

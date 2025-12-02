@@ -79,6 +79,7 @@ func (m *RunPrechecksModule) Init() {
 		new(RequiredPortsCheck),
 		new(ConflictingContainerdCheck),
 		new(NvidiaCardArchChecker),
+		new(NouveauChecker),
 		new(CudaChecker),
 	}
 	runPreChecks := &task.LocalTask{

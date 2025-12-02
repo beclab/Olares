@@ -346,3 +346,21 @@ func (l *UninstallCudaModule) Init() {
 	}
 
 }
+
+type DisableNouveauModule struct {
+	common.KubeModule
+}
+
+func (m *DisableNouveauModule) Init() {
+	m.Name = "DisableNouveau"
+
+	writeBlacklist := &task.LocalTask{
+		Name:   "WriteNouveauBlacklist",
+		Action: new(WriteNouveauBlacklist),
+		Retry:  1,
+	}
+
+	m.Tasks = []task.Interface{
+		writeBlacklist,
+	}
+}
