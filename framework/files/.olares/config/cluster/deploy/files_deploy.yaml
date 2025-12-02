@@ -144,7 +144,7 @@ spec:
 {{ end }}
 
         - name: samba-server
-          image: beclab/samba-server:0.0.7
+          image: beclab/samba-server:0.0.8
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -210,7 +210,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.131
+          image: beclab/files-server:v0.2.132
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
