@@ -293,6 +293,44 @@ func (t *NvidiaCardArchChecker) Check(runtime connector.Runtime) error {
 	return nil
 }
 
+// NouveauChecker checks whether nouveau is loaded and has modeset=1 or -1.
+// This check only runs when an NVIDIA GPU is present.
+type NouveauChecker struct{}
+
+func (n *NouveauChecker) Name() string {
+	return "NouveauKernelModule"
+}
+
+func (n *NouveauChecker) Check(runtime connector.Runtime) error {
+	if !runtime.GetSystemInfo().IsLinux() {
+		return nil
+	}
+	model, _, err := utils.DetectNvidiaModelAndArch(runtime)
+	if err != nil {
+		fmt.Println("Error detecting NVIDIA card:", err)
+		os.Exit(1)
+	}
+	if strings.TrimSpace(model) == "" {
+		return nil
+	}
+
+	if !util.IsExist("/sys/module/nouveau") {
+		return nil
+	}
+
+	const modesetPath = "/sys/module/nouveau/parameters/modeset"
+	data, err := os.ReadFile(modesetPath)
+	if err != nil {
+		fmt.Printf("Error reading modeset parameter of nouveau kernel module by reading file %s: %v", modesetPath, err)
+		os.Exit(1)
+	}
+	val := strings.TrimSpace(string(data))
+	if val == "1" || val == "-1" {
+		return fmt.Errorf("detected nouveau kernel module loaded with modeset=%s; this conflicts with the NVIDIA driver that Olares will install, please disable it by running `sudo olares-cli gpu disable-nouveau`, REBOOT your machine, and try again", val)
+	}
+	return nil
+}
+
 type CudaChecker struct{}
 
 func (c *CudaChecker) Name() string {
