@@ -52,6 +52,7 @@ rules:
   - "/provider/update_dataset_folder_paths"
   - "/seahub/api/*"
   - "/system/configuration/encoding"
+  - "/api/search/get_directory/"
   verbs: ["*"]
 
 ---

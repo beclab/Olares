@@ -9,4 +9,7 @@ metadata:
 rules:
 - nonResourceURLs: 
   - "/document/search*"
+  - "/task/stats/merged"
+  - "/search/*"
+  - "/monitorsetting/*"
   verbs: ["*"]
