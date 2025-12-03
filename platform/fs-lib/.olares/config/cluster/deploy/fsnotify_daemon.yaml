@@ -78,7 +78,8 @@ spec:
       terminationGracePeriodSeconds: 30
       volumes:
       - name: node-data
-        hostPath: /olares
+        hostPath:
+          path: /olares
           
 
 {{- end }}  # End of fs type condition    
