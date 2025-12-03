@@ -7,7 +7,7 @@ output:
     - 
       name: kubesphere/prometheus-operator:v0.55.1
     - 
-      name: beclab/node-exporter:0.0.4
+      name: beclab/node-exporter:0.0.5
     - 
       name: prom/prometheus:v2.34.0
 
