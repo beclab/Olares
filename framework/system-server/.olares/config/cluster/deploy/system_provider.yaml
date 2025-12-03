@@ -65,6 +65,9 @@ spec:
             - name: search3-provider-nginx-config
               mountPath: /etc/nginx/conf.d/search3.conf
               subPath: search3.conf
+            - name: auth-provider-nginx-config
+              mountPath: /etc/nginx/conf.d/auth.conf
+              subPath: auth.conf
       volumes:
         - name: system-app-nginx-config
           configMap:
