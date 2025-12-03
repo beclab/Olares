@@ -111,7 +111,7 @@ func FindMountpointsByLvDmPath(lvDmPath string) ([]string, error) {
 		return nil, err
 	}
 
-	if len(result.Filesystems) == 0 {
+	if result == nil || len(result.Filesystems) == 0 {
 		return nil, nil
 	}
 
@@ -148,7 +148,7 @@ sudo parted /dev/sdX mklabel gpt
 sudo parted -a optimal /dev/sdX mkpart primary 1MiB 100%
 */
 func MakePartOnDevice(devicePath string) error {
-	c, err := exec.Command("parted", devicePath, "mklabel", "gpt").CombinedOutput()
+	c, err := exec.Command("parted", "-s", devicePath, "mklabel", "gpt").CombinedOutput()
 	if err != nil {
 		log.Printf("failed to make partition table on device %s: %s\n", devicePath, c)
 		return err
@@ -169,7 +169,7 @@ sudo vgextend target_vg /dev/sdX1
 */
 func AddNewPV(devicePath string, vg string) error {
 	partition := devicePath + "p1"
-	c, err := exec.Command("pvcreate", partition).CombinedOutput()
+	c, err := exec.Command("pvcreate", "-f", partition).CombinedOutput()
 	if err != nil {
 		log.Printf("failed to create physical volume on device %s: %s\n", partition, c)
 		return err
