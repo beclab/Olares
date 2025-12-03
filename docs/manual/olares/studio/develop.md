@@ -3,7 +3,7 @@ outline: [2, 3]
 description: Learn how to use Studio to set up a dev container, access it via VS Code, and configure port forwarding.
 ---
 # Develop in a dev container
-Olares Studio allows you to spin up a pre-configured dev container to write and debug code (such as Node.js scripts or Cuda programs) without managing local infrastructure. This provides an isolated environment identical to the production runtime.
+Olares Studio allows you to spin up a pre-configured dev container to write and debug code (such as Node.js scripts or CUDA programs) without managing local infrastructure. This provides an isolated environment identical to the production runtime.
 
 The following guide shows the setup workflow using a Node.js project as an example.
 :::info
@@ -34,7 +34,7 @@ To start coding, you must provision the container resources and select your runt
    :::
    ![Configure Dev Env](/images/manual/olares/studio-configure-dev-env.png#bordered)
 
-6. Click **Create**. Wait for the status in the bottom-left corner to change to **Running**.
+6. Click **Create**. Wait for the status in the bottom-left corner to change to `Running`.
 
 ## 2. Access the workspace
 You can access your dev container via the browser or your local IDE.
@@ -64,7 +64,7 @@ If you prefer your local settings and extensions, you can tunnel into the contai
    ![Connect remote tunnel](/images/manual/olares/studio-connect-remote-tunnel.png#bordered)
 
 8. Log in with the same account used in the previous step.
-9. Select your tunnel name you defined (e.g., `myapp-demo`). It may take a few minutes for VS Code to establish the connection. Once successful, the remote indicator in the bottom-left will display your tunnel name.
+9. Select the tunnel name you defined (e.g., `myapp-demo`). It may take a few minutes for VS Code to establish the connection. Once successful, the remote indicator in the bottom-left will display your tunnel name.
    ![Select tunnel name](/images/manual/olares/studio-select-tunnel-name.png#bordered)
    ![Remote tunnel connected](/images/manual/olares/studio-remote-tunnel-connected.png#bordered){width=30%}
 
@@ -187,8 +187,8 @@ You can follow the same steps to modify `OlaresManifest.yaml` and `deployment.ya
      - name: myweb-dev-8081 # Must match entrance name
        port: 8081
        targetPort: 8081
-       selector:
-         io.kompose.service: myweb
+     selector:
+       io.kompose.service: myweb
      ```
    
    d. Click <span class="material-symbols-outlined">save</span> in the top-right to save changes.
