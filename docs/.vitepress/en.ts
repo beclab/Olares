@@ -349,10 +349,10 @@ const side = {
               text: "Deploy an app",
               link: "/manual/olares/studio/deploy",
             },
-//             {
-//               text: "Develop a new app",
-//               link: "/manual/olares/studio/develop",
-//             },
+            {
+              text: "Develop in a dev container",
+              link: "/manual/olares/studio/develop",
+            },
             {
               text: "Package and upload",
               link: "/manual/olares/studio/package-upload",

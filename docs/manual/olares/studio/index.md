@@ -32,12 +32,12 @@ The sidebar and **Home** page organize your main tasks in Studio:
 Deploy an app from an existing Docker image, configure it, and test it in Studio.
 </div>
 
-<!--
+
 <div>
-<h4><a href="./develop">Develop a new app</a></h4>
+<h4><a href="./develop">Develop in a dev container</a></h4>
 Build and debug a new app using the Studio development environment.
 </div>
--->
+
 <div>
 <h4><a href="./package-upload">Package and upload the app to Market</a></h4>
 Download an installable package and upload it to Market for local use.
