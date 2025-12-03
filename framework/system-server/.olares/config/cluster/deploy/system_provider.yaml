@@ -84,6 +84,12 @@ spec:
             items:
               - key: search3.conf
                 path: search3.conf
+        - name: auth-provider-nginx-config
+          configMap:
+            name: auth-provider-nginx-config
+            items:
+              - key: auth.conf
+                path: auth.conf
 
       dnsPolicy: ClusterFirst
       priorityClassName: system-cluster-critical
