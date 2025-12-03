@@ -76,7 +76,8 @@ The **Model** directory shown under **File Type** maps to the following path in 
 When uploading external models manually or selecting a destination in **Custom Download**, it is important to place files into the correct subfolder. The same structure is shared across ComfyUI and SD Web UI:
 
 | Directory in Files | Standard ComfyUI directory | Model type |
-| `main/` | `checkpoints/` | Base checkpoints (SD1.5, SDXL, Flux) |
+|-- |-- |-- |
+| `main/` | `checkpoints/` | Base checkpoints (SD 1.5, SDXL, Flux) |
 | `lora/` | `loras/` | LoRA weights |
 | `vae/` | `vae/` | VAE models |
 | `controlnet/` | `controlnet/` | ControlNet models |
@@ -92,6 +93,7 @@ When uploading external models manually or selecting a destination in **Custom D
 | `inpaint/` | `inpaint/` | Inpainting-specific models |
 | `style_models/` | `style_models/` | Style or effect models |
 | `diffusion_models/` | `diffusion_models/` | Other diffusion models |
+
 Make sure the model type matches the target folder so that ComfyUI can detect and use the files correctly.
 
 ## Manage models
@@ -115,7 +117,7 @@ Essential models are basic resources required for ComfyUI to run, including SD l
 
 In addition to the essential models, ComfyUI Launcher supports installing additional models from the built-in library, via a Hugging Face link, or by uploading files manually.
 
-**Download from built-in library**
+#### Download from built-in library
 
 Follow these steps to download a model from the built-in Hugging Face library:
 
@@ -125,7 +127,7 @@ Follow these steps to download a model from the built-in Hugging Face library:
 
     ![Library download](/images/manual/use-cases/comfyui-model-built-in.png#bordered)
 
-**Download via link**
+#### Download via link
 
 If you can't find a specific model in the built-in library, you can install it via the model URL on Hugging Face:
 
@@ -135,7 +137,7 @@ If you can't find a specific model in the built-in library, you can install it v
 
     ![Custom download](/images/manual/use-cases/comfyui-model-link.png#bordered)
 
-**Upload external models**
+#### Upload external models
 
 If you can't find the desired model on Hugging Face, you can upload external models via **Files**.
 
