@@ -130,6 +130,36 @@ func (a *applyKubeletServiceMonitorAction) Execute(runtime connector.Runtime) er
 	return nil
 }
 
+// applyNodeExporterAction applies embedded node-exporter
+type applyNodeExporterAction struct {
+	common.KubeAction
+}
+
+func (a *applyNodeExporterAction) Execute(runtime connector.Runtime) error {
+	kubectlpath, err := util.GetCommand(common.CommandKubectl)
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "kubectl not found")
+	}
+	manifest := path.Join(runtime.GetInstallerDir(), cc.BuildFilesCacheDir, cc.BuildDir, "prometheus", "node-exporter", "node-exporter-daemonset.yaml")
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectlpath, manifest), false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "apply node-exporter failed")
+	}
+	return nil
+}
+
+func upgradeNodeExporter() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "CopyEmbeddedKSManifests",
+			Action: new(plugins.CopyEmbedFiles),
+		},
+		&task.LocalTask{
+			Name:   "applyNodeExporterManifests",
+			Action: new(applyNodeExporterAction),
+		},
+	}
+}
+
 func regenerateKubeFiles() []task.Interface {
 	var tasks []task.Interface
 	kubeType := phase.GetKubeType()
