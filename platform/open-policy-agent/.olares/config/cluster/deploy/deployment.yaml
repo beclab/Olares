@@ -109,7 +109,22 @@ webhooks:
     admissionReviewVersions: ["v1", "v1beta1"]
     namespaceSelector: 
       matchExpressions:
-        - {key: openpolicyagent.org/webhook, operator: NotIn, values: [ignore]}
+        - key: kubernetes.io/metadata.name 
+          operator: NotIn
+          values: 
+          - kube-system
+          - kubesphere-monitoring-system
+          - kubesphere-system
+          - os-framework
+          - os-gpu
+          - os-network
+          - os-platform
+          - os-protected
+        - key: bytetrade.io/ns-type
+          operator: NotIn
+          values:
+          - user-space
+          - user-internal
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["*"]
