@@ -171,6 +171,7 @@ spec:
         app.kubernetes.io/component: nats
         app.kubernetes.io/name: nats
         app.kubernetes.io/instance: nats
+        app.bytetrade.io/middleware: "true"
     spec:
       priorityClassName: "system-cluster-critical"
       initContainers:
