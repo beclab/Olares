@@ -23,7 +23,7 @@
 <p align="center">
   <a href="https://olares.com">ウェブサイト</a> ·
   <a href="https://docs.olares.com">ドキュメント</a> ·
-  <a href="https://larepass.olares.com">LarePassをダウンロード</a> ·
+  <a href="https://www.olares.com/larepass">LarePassをダウンロード</a> ·
   <a href="https://github.com/beclab/apps">Olaresアプリ</a> ·
   <a href="https://space.olares.com">Olares Space</a>
 </p>

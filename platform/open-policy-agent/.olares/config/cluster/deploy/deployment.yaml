@@ -227,6 +227,10 @@ data:
       container := input.request.object.spec.containers[_]
     }    
         
+    input_containers contains container if {
+      container := input.request.object.spec.initContainers[_]
+    }    
+        
     is_root_user(ctx) if {
         ctx.runAsNonRoot == false
     }

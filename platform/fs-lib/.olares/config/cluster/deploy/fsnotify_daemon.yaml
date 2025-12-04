@@ -73,12 +73,13 @@ spec:
             cpu: 20m
             memory: 200Mi
         volumeMounts:
-        - name: jfs-sock
-          mountPath: /tmp
+        - name: node-data
+          mountPath: /olares
       terminationGracePeriodSeconds: 30
       volumes:
-      - name: jfs-sock
+      - name: node-data
         hostPath:
-          path: /tmp
+          path: /olares
+          
 
 {{- end }}  # End of fs type condition    

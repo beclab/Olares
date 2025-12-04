@@ -266,7 +266,7 @@ spec:
 
       containers:
       - name: api
-        image: beclab/bfl:v0.4.33
+        image: beclab/bfl:v0.4.34
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000
@@ -317,7 +317,7 @@ spec:
               apiVersion: v1
               fieldPath: spec.nodeName
       - name: ingress
-        image: beclab/bfl-ingress:v0.3.27
+        image: beclab/bfl-ingress:v0.3.28
         imagePullPolicy: IfNotPresent
         env:
         - name: AUTHELIA_AUTH_URL

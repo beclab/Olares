@@ -7,6 +7,14 @@ function command_exists() {
 	  command -v "$@" > /dev/null 2>&1
 }
 
+if [[ x"$REPO_PATH" == x"" ]]; then
+    export REPO_PATH="#__REPO_PATH__"
+fi
+
+if [[ "x${REPO_PATH:3}" == "xREPO_PATH__" ]]; then
+    export REPO_PATH="/"
+fi
+
 if [[ x"$VERSION" == x"" ]]; then
     if [[ "$LOCAL_RELEASE" == "1" ]]; then
         ts=$(date +%Y%m%d%H%M%S)
@@ -92,13 +100,17 @@ if [[ "$LOCAL_RELEASE" == "1" ]]; then
     fi
     INSTALL_OLARES_CLI=$(which olares-cli)
 else
-    if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$VERSION" ]]; then
+    expected_vendor="main"
+    if [[ "$(basename "$REPO_PATH")" == "olares-one" ]]; then
+        expected_vendor="OlaresOne"
+    fi
+    if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$VERSION" ]] && [[ "$(olares-cli --vendor)" == "$expected_vendor" ]]; then
         INSTALL_OLARES_CLI=$(which olares-cli)
         echo "olares-cli already installed and is the expected version"
         echo ""
     else
         if [[ ! -f ${CLI_FILE} ]]; then
-            CLI_URL="${cdn_url}/${CLI_FILE}"
+            CLI_URL="${cdn_url}${REPO_PATH}${CLI_FILE}"
 
             echo "downloading Olares installer from ${CLI_URL} ..."
             echo ""

@@ -115,7 +115,7 @@ func (t *RequiredPortsCheck) Check(runtime connector.Runtime) error {
 		defer l.Close()
 	}
 	if len(unbindablePorts) > 0 {
-		return fmt.Errorf("port %v required by Olares cannot be bound", unbindablePorts)
+		return fmt.Errorf("port %v required by Olares cannot be bound, you can check which process using the command `sudo netstat -tlnp`", unbindablePorts)
 	}
 	return nil
 }
@@ -134,13 +134,15 @@ func (t *ConflictingContainerdCheck) Check(runtime connector.Runtime) error {
 	if kubeRuntime.Arg.IsCloudInstance {
 		return nil
 	}
+	fixMSG := "\nIf it is installed as a component of Docker, it should be uninstalled per the official doc https://docs.docker.com/engine/install/ubuntu/#uninstall-old-versions"
+	fixMSG += "\nIf it is left over from a previous installation of Olares, clean it up using the command `sudo olares-cli uninstall --all`"
 	containerdBin, err := util.GetCommand("containerd")
 	if err == nil && containerdBin != "" {
-		return fmt.Errorf("found existing containerd binary: %s, a containerd managed by Olares is required to ensure normal function", containerdBin)
+		return fmt.Errorf("found existing containerd binary: %s, a containerd managed by Olares is required to ensure normal function%s", containerdBin, fixMSG)
 	}
 	containerdSocket := "/run/containerd/containerd.sock"
 	if util.IsExist(containerdSocket) {
-		return fmt.Errorf("found existing containerd socket: %s, a containerd managed by Olares is required to ensure normal function", containerdSocket)
+		return fmt.Errorf("found existing containerd socket: %s, a containerd managed by Olares is required to ensure normal function%s", containerdSocket, fixMSG)
 	}
 	return nil
 }
@@ -277,7 +279,7 @@ func (t *NvidiaCardArchChecker) Name() string {
 }
 
 func (t *NvidiaCardArchChecker) Check(runtime connector.Runtime) error {
-	supportedArchs := []string{"Ada Lovelace", "Blackwell", "Hopper", "Ampere", "Turing"}
+	supportedArchs := []string{"Blackwell", "Hopper", "Ada Lovelace", "Ampere", "Turing"}
 	model, arch, err := utils.DetectNvidiaModelAndArch(runtime)
 	if err != nil {
 		return err
@@ -286,7 +288,45 @@ func (t *NvidiaCardArchChecker) Check(runtime connector.Runtime) error {
 		return nil
 	}
 	if !slices.Contains(supportedArchs, arch) {
-		return fmt.Errorf("unsupported NVIDIA card %s of architecture: %s", model, arch)
+		return fmt.Errorf("unsupported NVIDIA card %s of architecture: %s, Olares only supports the following architectures: %s", model, arch, strings.Join(supportedArchs, ", "))
+	}
+	return nil
+}
+
+// NouveauChecker checks whether nouveau is loaded and has modeset=1 or -1.
+// This check only runs when an NVIDIA GPU is present.
+type NouveauChecker struct{}
+
+func (n *NouveauChecker) Name() string {
+	return "NouveauKernelModule"
+}
+
+func (n *NouveauChecker) Check(runtime connector.Runtime) error {
+	if !runtime.GetSystemInfo().IsLinux() {
+		return nil
+	}
+	model, _, err := utils.DetectNvidiaModelAndArch(runtime)
+	if err != nil {
+		fmt.Println("Error detecting NVIDIA card:", err)
+		os.Exit(1)
+	}
+	if strings.TrimSpace(model) == "" {
+		return nil
+	}
+
+	if !util.IsExist("/sys/module/nouveau") {
+		return nil
+	}
+
+	const modesetPath = "/sys/module/nouveau/parameters/modeset"
+	data, err := os.ReadFile(modesetPath)
+	if err != nil {
+		fmt.Printf("Error reading modeset parameter of nouveau kernel module by reading file %s: %v", modesetPath, err)
+		os.Exit(1)
+	}
+	val := strings.TrimSpace(string(data))
+	if val == "1" || val == "-1" {
+		return fmt.Errorf("detected nouveau kernel module loaded with modeset=%s; this conflicts with the NVIDIA driver that Olares will install, please disable it by running `sudo olares-cli gpu disable-nouveau`, REBOOT your machine, and try again", val)
 	}
 	return nil
 }
@@ -521,8 +561,8 @@ func (t *RemoveWSLChattr) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-var ErrUnsupportedCudaVersion = errors.New("unsupported cuda version, please uninstall it, REBOOT your machine, and try again")
+var ErrUnsupportedCudaVersion = errors.New("unsupported cuda version, please uninstall it using the command `sudo olares-cli gpu uninstall`, REBOOT your machine, and try again")
 var ErrKernelDriverUninstalledButRunning = errors.New("NVIDIA driver is uninstalled, but the kernel driver is still running, please REBOOT your machine, and try again")
-var ErrNotInstalledByRunfile = errors.New("NVIDIA driver is installed, but not installed by runfile, please uninstall it using the command `olares-cli gpu uninstall`, REBOOT your machine, and try again")
-var ErrDriverLibraryVersionMismatch = errors.New("NVIDIA driver is installed, but the library version is mismatched, please REBOOT your machine, and try again")
+var ErrNotInstalledByRunfile = errors.New("NVIDIA driver is installed, but not installed by runfile, please uninstall it using the command `sudo olares-cli gpu uninstall`, REBOOT your machine, and try again")
+var ErrDriverLibraryVersionMismatch = errors.New("NVIDIA driver is installed, but the library version with the running version is mismatched, please REBOOT your machine, and try again")
 var supportedCudaVersions = []string{common.CurrentVerifiedCudaVersion}
