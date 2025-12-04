@@ -131,7 +131,7 @@ To clone an application:
 1. Confirm that the target application supports cloning:    
     a. Open **Market** from Dock or Launchpad, and click the application to open the details page.
     b. Check the **Required permissions** section. Only applications with the **Multi-Instance** property support cloning.
-2. Click **My Olares** from the left navigation pane. The list of installed applications will appear on the right.
+2. Click **My Olares** from the left sidebar. The list of installed applications will appear on the right.
 3. Locate the target application, click the drop-down arrow next to the **Open** button, and then click **Clone**.
 4. In the **Clone App** window, configure the following information, and then click **Confirm**:
     
