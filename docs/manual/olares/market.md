@@ -138,7 +138,7 @@ To clone an application:
     a. Enter a unique name for the new instance to avoid confusion with existing applications.
 
     b. Set a unique name for the desktop shortcut for easy identification.
-5. In the **Configure Environment Variables** window, complete the setup based on the application type, and then click **Confirm**. In the installed applications list, the newly created application will appear with a **Clone** tag next to it.
+5. In the **Configure Environment Variables** window, complete the setup based on the application type, and then click **Confirm**. In the installed applications list, the newly created application will appear with a "Clone" tag next to it.
 6. To view the detailed attributes of the newly cloned application, click the application.
 7. To run the newly cloned application, click **Open**.
 
