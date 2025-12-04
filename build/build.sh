@@ -68,8 +68,8 @@ fi
 
 # replace repo path placeholder in scripts if provided
 if [ ! -z "$REPO_PATH" ]; then
-    sh -c "$SED 's/#__REPO_PATH__/${REPO_PATH}/' install.sh"
-    sh -c "$SED 's/#__REPO_PATH__/${REPO_PATH}/' joincluster.sh"
+    sh -c "$SED 's|#__REPO_PATH__|${REPO_PATH}|g' install.sh"
+    sh -c "$SED 's|#__REPO_PATH__|${REPO_PATH}|g' joincluster.sh"
 fi
 
 $TAR --exclude=wizard/tools --exclude=.git -zcvf ${BASE_DIR}/../install-wizard-${VERSION}.tar.gz .
