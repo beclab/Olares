@@ -1,0 +1,159 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: applicationmanagers.app.bytetrade.io
+spec:
+  group: app.bytetrade.io
+  names:
+    categories:
+    - all
+    kind: ApplicationManager
+    listKind: ApplicationManagerList
+    plural: applicationmanagers
+    shortNames:
+    - appmgr
+    singular: applicationmanager
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.appName
+      name: application name
+      type: string
+    - jsonPath: .spec.appNamespace
+      name: namespace
+      type: string
+    - jsonPath: .status.state
+      name: state
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ApplicationManager is the Schema for the application managers
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ApplicationManagerSpec defines the desired state of ApplicationManager
+            properties:
+              appName:
+                type: string
+              appNamespace:
+                type: string
+              appOwner:
+                type: string
+              config:
+                type: string
+              opType:
+                description: OpType represents the type of operation being performed.
+                type: string
+              rawAppName:
+                type: string
+              source:
+                type: string
+              type:
+                description: Type means the entity that system support.
+                type: string
+            required:
+            - appName
+            - opType
+            - source
+            - type
+            type: object
+          status:
+            description: ApplicationManagerStatus defines the observed state of ApplicationManager
+            properties:
+              completed:
+                type: boolean
+              lastState:
+                description: ApplicationManagerState is the state of an applicationmanager
+                  at current time
+                type: string
+              message:
+                type: string
+              opGeneration:
+                format: int64
+                type: integer
+              opId:
+                type: string
+              opRecords:
+                items:
+                  description: OpRecord contains details of an operation.
+                  properties:
+                    message:
+                      type: string
+                    opId:
+                      type: string
+                    opType:
+                      description: OpType represents the type of operation being performed.
+                      type: string
+                    source:
+                      type: string
+                    status:
+                      description: ApplicationManagerState is the state of an applicationmanager
+                        at current time
+                      type: string
+                    statusTime:
+                      format: date-time
+                      type: string
+                    version:
+                      type: string
+                  required:
+                  - message
+                  - opType
+                  - source
+                  - status
+                  - statusTime
+                  - version
+                  type: object
+                type: array
+              opTime:
+                format: date-time
+                type: string
+              opType:
+                description: OpType represents the type of operation being performed.
+                type: string
+              payload:
+                additionalProperties:
+                  type: string
+                type: object
+              progress:
+                type: string
+              reason:
+                type: string
+              state:
+                description: ApplicationManagerState is the state of an applicationmanager
+                  at current time
+                type: string
+              statusTime:
+                format: date-time
+                type: string
+              updateTime:
+                format: date-time
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources: {}

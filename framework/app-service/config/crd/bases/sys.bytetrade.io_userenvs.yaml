@@ -1,0 +1,101 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: userenvs.sys.bytetrade.io
+spec:
+  group: sys.bytetrade.io
+  names:
+    categories:
+    - all
+    kind: UserEnv
+    listKind: UserEnvList
+    plural: userenvs
+    shortNames:
+    - userenv
+    singular: userenv
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .envName
+      name: env name
+      type: string
+    - jsonPath: .value
+      name: value
+      type: string
+    - jsonPath: .editable
+      name: editable
+      type: boolean
+    - jsonPath: .required
+      name: required
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: UserEnv is the Schema for the user environment variables API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          default:
+            type: string
+          description:
+            type: string
+          editable:
+            type: boolean
+          envName:
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          options:
+            description: Options defines a finite set of allowed values for this env
+              var
+            items:
+              properties:
+                title:
+                  type: string
+                value:
+                  type: string
+              required:
+              - title
+              - value
+              type: object
+            type: array
+          regex:
+            type: string
+          remoteOptions:
+            description: RemoteOptions provides a URL (http/https) returning a JSON-encoded
+              string array of allowed values
+            pattern: ^https?://
+            type: string
+          required:
+            type: boolean
+          title:
+            type: string
+          type:
+            type: string
+          value:
+            type: string
+        required:
+        - envName
+        type: object
+    served: true
+    storage: true
+    subresources: {}

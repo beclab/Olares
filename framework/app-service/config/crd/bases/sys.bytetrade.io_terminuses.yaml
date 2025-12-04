@@ -1,0 +1,122 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: terminuses.sys.bytetrade.io
+spec:
+  group: sys.bytetrade.io
+  names:
+    categories:
+    - all
+    kind: Terminus
+    listKind: TerminusList
+    plural: terminuses
+    shortNames:
+    - term
+    singular: terminus
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.name
+      name: version name
+      type: string
+    - jsonPath: .spec.version
+      name: version
+      type: string
+    - jsonPath: .status.state
+      name: state
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Terminus is the Schema for the terminuses API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TerminusSpec defines the desired state of Terminus
+            properties:
+              description:
+                description: description from terminus
+                type: string
+              display:
+                description: the DisplayName of the terminus
+                type: string
+              name:
+                description: the version name of the terminus os
+                type: string
+              releaseServer:
+                description: the release server of the terminus
+                properties:
+                  github:
+                    description: github defines github repo where the terminus released
+                    properties:
+                      owner:
+                        description: github repository owner
+                        type: string
+                      repo:
+                        description: github repository name
+                        type: string
+                    required:
+                    - owner
+                    - repo
+                    type: object
+                  serverType:
+                    description: 'serverType: github or others'
+                    type: string
+                required:
+                - serverType
+                type: object
+              settings:
+                additionalProperties:
+                  type: string
+                description: the extend settings of the terminus
+                type: object
+              version:
+                description: the version of the terminus
+                type: string
+            required:
+            - name
+            - releaseServer
+            - version
+            type: object
+          status:
+            description: TerminusStatus defines the observed state of Terminus
+            properties:
+              state:
+                description: 'the state of the terminus: draft, submitted, passed,
+                  rejected, suspended, active'
+                type: string
+              statusTime:
+                format: date-time
+                type: string
+              updateTime:
+                format: date-time
+                type: string
+            required:
+            - state
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources: {}
