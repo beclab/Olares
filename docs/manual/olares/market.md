@@ -126,10 +126,10 @@ After completing the environment variable setup, you can continue the installati
 
 You can install multiple instances of the same application (also known as "clone"). This is useful for scenarios requiring different configurations or versions, such as running multiple Windows virtual machines.
 
-1. Before cloning, ensure that the target application supports this function:
-    
-    a. Open Market from Dock or Launchpad, and click the application to open the details page.
-    
+To clone an application:
+
+1. Confirm that the target application supports cloning:    
+    a. Open **Market** from Dock or Launchpad, and click the application to open the details page.
     b. Check the **Required permissions** section. Only applications with the **Multi-Instance** property support cloning.
 2. Click **My Olares** from the left navigation pane. The list of installed applications will appear on the right.
 3. Locate the target application, click the drop-down arrow next to the **Open** button, and then click **Clone**.
