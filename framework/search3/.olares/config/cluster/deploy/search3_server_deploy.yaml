@@ -327,7 +327,7 @@ spec:
               apiVersion: v1
               fieldPath: metadata.namespace
         - name: LOG_FILE
-          value: true
+          value: "true"
         - name: NATS_HOST
           value: nats.os-platform
         - name: NATS_PORT
