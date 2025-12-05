@@ -44,7 +44,7 @@ spec:
                     operator: Exists
       containers:
       - name: search3-validation
-        image: beclab/search3validation:v0.0.80
+        image: beclab/search3validation:v0.0.81
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8443
