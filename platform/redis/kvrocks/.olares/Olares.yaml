@@ -3,7 +3,7 @@ target: prebuilt
 output:
   containers:
     - 
-      name: beclab/kvrocks:0.1.0
+      name: beclab/kvrocks:0.1.1
 
 
 
