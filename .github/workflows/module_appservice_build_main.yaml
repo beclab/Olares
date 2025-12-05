@@ -1,11 +1,19 @@
 name: Build the main branch
 on: 
   push:
-    branches:
-      - "module-appservice"
+    branches: [ "main", "release-*" ]
+    paths:
+      - 'framework/app-service/**'
+      - '!framework/app-service/.olares/**'
+      - '!framework/app-service/README.md'
+      - '!framework/app-service/PROJECT'
   pull_request:
-    branches:
-      - "module-appservice"
+    branches: [ "main", "release-*" ]
+    paths:
+      - 'framework/app-service/**'
+      - '!framework/app-service/.olares/**'
+      - '!framework/app-service/README.md'
+      - '!framework/app-service/PROJECT'
 defaults:
   run:
     working-directory: framework/app-service
