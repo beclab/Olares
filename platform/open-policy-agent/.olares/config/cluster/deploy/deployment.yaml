@@ -72,6 +72,14 @@ spec:
       name: opa
     spec:
       serviceAccountName: opa-sa
+      priorityClassName: "system-cluster-critical"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       containers:
         - name: opa
           image: openpolicyagent/opa:1.11.0
@@ -160,12 +168,78 @@ metadata:
 data:
   main: |
     package system
-    
-    default uid := ""
-    uid := input.request.uid
 
-    main = {
+    import data.kubernetes.admission
+
+    main := {
       "apiVersion": "admission.k8s.io/v1",
       "kind": "AdmissionReview",
-      "response": {"allowed": true, "uid": uid},
+      "response": response,
     }
+
+    default uid := ""
+
+    uid := input.request.uid
+
+    response := {
+      "allowed": false,
+      "uid": uid,
+      "status": {"message": reason},
+    } if {
+      reason := concat(", ", admission.deny)
+      reason != ""
+    }
+    else := {"allowed": true, "uid": uid}
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: untrusted-pod-check
+  namespace: {{ .Release.Namespace }}
+  labels:
+    openpolicyagent.org/policy: rego
+data:
+  main: |
+    package kubernetes.admission
+    
+    deny contains msg if {
+        some container
+        input_containers[container]
+        not startswith(container.image, "beclab/")
+
+        is_root_user(container.securityContext)
+    
+        msg := sprintf("Container '%s' uses an untrusted image registry and is configured to run as root user (UID 0) or privileged. This is not allowed.", [container.name])
+    }
+
+    deny contains msg if {
+        some container
+        input_containers[container]
+        not startswith(container.image, "beclab/")
+
+        is_root_user(input.request.object.spec.securityContext)
+    
+        msg := sprintf("Pod '%s' uses an untrusted image registry and is configured to run as root user (UID 0) or privileged. This is not allowed.", [input.request.object.metadata.name])
+    }
+
+    input_containers contains container if {
+      container := input.request.object.spec.containers[_]
+    }    
+        
+    input_containers contains container if {
+      container := input.request.object.spec.initContainers[_]
+    }    
+        
+    is_root_user(ctx) if {
+        ctx.runAsNonRoot == false
+    }
+    
+    is_root_user(ctx) if {
+        ctx.runAsUser == 0
+    }    
+
+    is_root_user(ctx) if {
+        ctx.privileged == true
+    }    
+
