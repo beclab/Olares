@@ -1,14 +1,21 @@
-name: Build the main branch
+name: App-Service Build test
 on: 
   push:
     branches:
       - "module-appservice"
+    paths:
+      - 'framework/app-service/**'
+      - '!framework/app-service/.olares/**'
+      - '!framework/app-service/README.md'
+      - '!framework/app-service/PROJECT'
   pull_request:
     branches:
       - "module-appservice"
-defaults:
-  run:
-    working-directory: framework/app-service
+    paths:
+      - 'framework/app-service/**'
+      - '!framework/app-service/.olares/**'
+      - '!framework/app-service/README.md'
+      - '!framework/app-service/PROJECT'
 jobs:
   build0-main:
     runs-on: ubuntu-latest
@@ -22,3 +29,4 @@ jobs:
         with:
           go-version: '1.24.6'
       - run: make build
+        working-directory: framework/app-service

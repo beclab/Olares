@@ -3,12 +3,28 @@ name: Lint and Test Charts
 on:
   push:
     branches: [ "main", "release-*" ]
-    paths-ignore:
-      - 'docs/**'    
+    paths:
+      - '!docs/**'    
+      - 'apps/.olares/**'
+      - 'build/**'
+      - 'cli/**'
+      - 'daemon/**'
+      - 'framework/**/.olares/**'
+      - 'infrastructure/**/.olares/**'
+      - 'platform/**/.olares/**'
+      - 'vendor/**'
   pull_request_target:
     branches: [ "main", "release-*" ]
-    paths-ignore:
-      - 'docs/**'    
+    paths:
+      - '!docs/**'    
+      - 'apps/.olares/**'
+      - 'build/**'
+      - 'cli/**'
+      - 'daemon/**'
+      - 'framework/**/.olares/**'
+      - 'infrastructure/**/.olares/**'
+      - 'platform/**/.olares/**'
+      - 'vendor/**'
 
   workflow_dispatch:
 
