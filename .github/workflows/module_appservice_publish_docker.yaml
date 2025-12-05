@@ -6,10 +6,6 @@ on:
         tags:
           description: 'Release Tags'
 
-defaults:
-  run:
-    working-directory: framework/app-service
-
 jobs:
   publish_dockerhub_amd64:
     runs-on: ubuntu-latest
@@ -26,7 +22,8 @@ jobs:
         with:
           push: true
           tags: beclab/app-service:${{ github.event.inputs.tags }}-amd64
-          file: Dockerfile
+          context: framework/app-service
+          file: framework/app-service/Dockerfile
           platforms: linux/amd64
   publish_dockerhub_arm64:
     runs-on: self-hosted
@@ -43,7 +40,8 @@ jobs:
         with:
           push: true
           tags: beclab/app-service:${{ github.event.inputs.tags }}-arm64
-          file: Dockerfile
+          context: framework/app-service
+          file: framework/app-service/Dockerfile
           platforms: linux/arm64
 
   publish_manifest:
