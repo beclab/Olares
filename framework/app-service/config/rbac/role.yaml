@@ -1,0 +1,84 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - app.bytetrade.io
+  resources:
+  - applicationmanagers
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - app.bytetrade.io
+  resources:
+  - applicationmanagers/status
+  - applications/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - app.bytetrade.io
+  resources:
+  - applications
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - app.bytetrade.io
+  resources:
+  - applications/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - iam.kubesphere.io
+  resources:
+  - users
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - sys.bytetrade.io
+  resources:
+  - appenvs
+  - systemenvs
+  - userenvs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sys.bytetrade.io
+  resources:
+  - appenvs/status
+  - systemenvs/status
+  - userenvs/status
+  verbs:
+  - get
+  - patch
+  - update
