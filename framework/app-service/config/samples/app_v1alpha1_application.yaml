@@ -1,0 +1,12 @@
+apiVersion: app.bytetrade.io/v1alpha1
+kind: Application
+metadata:
+  name: bfl
+  labels: 
+    app.bytetrade.io/name: bfl
+spec:
+  # TODO(user): Add fields here
+  name: bfl
+  namespace: default
+  owner: admin
+

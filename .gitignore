@@ -38,3 +38,5 @@ docs/.vitepress/cache/
 node_modules
 .idea/
 cli/olares-cli*
+
+framework/app-service/bin
