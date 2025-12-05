@@ -57,7 +57,7 @@ spec:
           path: '{{ $dbbackup_rootpath }}/pg_backup'
       containers:
       - name: operator-api
-        image: beclab/middleware-operator:0.2.22
+        image: beclab/middleware-operator:0.2.25
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9080
