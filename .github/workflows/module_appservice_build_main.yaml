@@ -1,4 +1,4 @@
-name: Build the main branch
+name: App-Service Build test
 on: 
   push:
     branches: [ "main", "release-*" ]
