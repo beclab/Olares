@@ -14,9 +14,10 @@ The interface is similar to Windows Explorer or macOS Finder, allowing you to or
 
 ![Files](/images/manual/olares/files.png#bordered)
 
-It consists of three main components:
+It mainly consists of the following components:
 
 * **Drive**: Stores personal files that don’t require constant synchronization or frequent edits. Each user has a Home directory with default folders such as Documents, Pictures, Videos, and Downloads. External storage (e.g., USB drives or SMB shares) appears under External.
+* **Sync**: A library-based high-efficiency storage area providing file synchronization services. You can create multiple independent libraries, each serving as a separate file entry point (similar to an independent cloud drive). Ideal for storing files and data requiring frequent modifications, real-time cross-device synchronization, or team collaboration.
 * **Application**: Reserved for application-specific data. Primarily for development and debugging, not general file storage.
 * **Cloud storage**: Connected through [Integrations](../../larepass/integrations.md), including Google Drive, AWS S3, and Tencent Cloud Object Storage (COS). These allow you to link, access, and manage remote files directly from Olares.
 
