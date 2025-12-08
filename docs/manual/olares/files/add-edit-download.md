@@ -2,7 +2,7 @@
 description: Learn essential file operations in Olares including adding new files, editing existing content, and downloading files across different devices.
 ---
 # Basic file operations
-Operations in Fileare essentially the same as in other file managers. This page will introduce some common tasks in Files to get you started.
+Operations in Files are essentially the same as in other file managers. This page will introduce some common tasks in Files to get you started.
 
 ## Upload files
 
@@ -82,6 +82,27 @@ Double-click a file to open its preview. The Files app supports previewing the f
 The Files app also supports editing the following text formats: TXT, JS, CSS, XML, YAML, HTML.
 
 ![Preview](/images/manual/olares/files-preview.png#bordered)
+
+## Sync files to local computer
+With LarePass desktop, you can sync cloud files (organized by libraries or folders) to your local computer, creating a corresponding sync folder on your machine. Once set up, files will automatically stay in sync bi-directionally in real time.
+
+1. Open LarePass desktop and locate the **Sync** directory.
+2. If you want to enable sync for a library or folder: 
+
+    a. Hover your mouse over the target library or folder, click the **Operate** icon that appears on the right, and then click **Sync to local**. 
+
+    ![Sync files to local](/images/manual/olares/sync-files-local.png#bordered)
+    
+    b. In the **Sync library** popup window, set the file download location, and then click **Confirm**. 
+    
+      Syncing will begin immediately. Once completed, a green checkmark will appear on the bottom-left corner of the folder icon, indicating that the sync is finished.
+
+3. If you want to quickly locate the sync directory on your local drive, hover your mouse over the target library or folder, click the **Operate** icon that appears on the right, and then click **Open local sync folder**. The system will directly open the folder's location on your computer.
+
+4. If you no longer need to sync a folder, hover your mouse over it, click the **Operate** icon that appears on the right, and then click **Unsychronize**.
+
+5. If you want to temporarily stop data transfer, click the **Pause sync** icon to the right of the **Sync** directory. All sync tasks will be paused.
+
 ## Search files
 You can easily find files in the Files app using desktop search.
 :::tip
