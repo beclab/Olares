@@ -218,6 +218,7 @@ data:
         some container
         input_containers[container]
         not startswith(container.image, "beclab/")
+        not startswith(container.image, "docker.io/beclab/")
 
         is_root_user(input.request.object.spec.securityContext)
     
