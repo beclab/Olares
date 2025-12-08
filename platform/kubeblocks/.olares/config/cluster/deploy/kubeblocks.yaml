@@ -29,7 +29,7 @@ spec:
         runAsNonRoot: true
       initContainers: # only download tools image to local
         - name: tools
-          image: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.1
+          image: beclab/apecloud-kubeblocks-tools:1.0.1
           imagePullPolicy: IfNotPresent
           command:
             - /bin/true
@@ -61,7 +61,7 @@ spec:
             - name: KUBEBLOCKS_IMAGE_PULL_POLICY
               value: IfNotPresent
             - name: KUBEBLOCKS_TOOLS_IMAGE
-              value: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.1
+              value: beclab/apecloud-kubeblocks-tools:1.0.1
             - name: KUBEBLOCKS_SERVICEACCOUNT_NAME
               value: kubeblocks
             - name: VOLUMESNAPSHOT_API_BETA
@@ -98,7 +98,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-          image: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks:1.0.1
+          image: beclab/apecloud-kubeblocks:1.0.1
           imagePullPolicy: IfNotPresent
           ports:
             - name: webhook-server
@@ -231,7 +231,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: pre-upgrade-job
-          image: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.1
+          image: beclab/apecloud-kubeblocks-tools:1.0.1
           imagePullPolicy: IfNotPresent
           command:
             - sh

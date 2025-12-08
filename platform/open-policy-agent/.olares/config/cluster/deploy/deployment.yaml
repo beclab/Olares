@@ -128,6 +128,7 @@ webhooks:
           - os-network
           - os-platform
           - os-protected
+          - kubesphere-controls-system
         - key: bytetrade.io/ns-type
           operator: NotIn
           values:
