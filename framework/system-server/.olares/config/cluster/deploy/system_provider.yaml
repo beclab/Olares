@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: provider-proxy
-          image: beclab/provider-proxy:0.1.0
+          image: beclab/provider-proxy:0.1.1
           imagePullPolicy: IfNotPresent
           args:
             - --logtostderr
