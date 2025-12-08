@@ -82,6 +82,117 @@ Double-click a file to open its preview. The Files app supports previewing the f
 The Files app also supports editing the following text formats: TXT, JS, CSS, XML, YAML, HTML.
 
 ![Preview](/images/manual/olares/files-preview.png#bordered)
+
+## Share files
+
+This feature supports sharing folders with internal members or external users through different methods. You can flexibly set access permissions, passwords, and expiration dates, and manage or cancel these shares at any time.
+
+### Share types and support scope
+
+Currently, file sharing is only supported at the **folder** level. Supported sharing types vary depending on the directory location of the folder. Refer to the following table for details:
+
+| Directory type | Public share | Internal share | SMB share |
+| :--- | :---: | :---: | :---: |
+| **Home** | Supported | Supported | Supported |
+| **External** | - | Supported | Supported |
+| **Sync** | - | Supported | - |
+| **Data** | Supported | Supported | Supported |
+| **Cache** | - | Supported | Supported |
+
+Where,
+- **Public share**: Generates an access link, suitable for external sharing (password protection supported).
+- **Internal share**: Restricted to registered users or user groups within the system, suitable for internal team collaboration.
+- **SMB share**: Shared via the SMB protocol within the Local Area Network (LAN).
+
+### Create share
+
+#### Step 1: Select folder
+
+1. Open the Files app from the Dock or Launchpad on Olares.
+2. Enter the share menu based on the directory type:
+    * The **Sync** directory: Hover your mouse over the target folder, click the **Operate** icon that appears on the right, and then click **Share with**.
+    * Other directories: Right-click the target folder you want to share, and then select a share type.
+   
+   ![Share file type](/images/manual/olares/share-files.png#bordered)
+
+3. Complete the settings for your selected share type by referring to the procedure in the following step.
+
+#### Step 2: Configure settings
+
+##### Internal share
+
+If you selected **Internal share**, complete the following steps to configure the settings:
+1. In the **Invite users** field, click the **+** (Plus) icon, search for and select the target user or group, and then click **Invite**.
+2. In the **Set user permissions** list, click the arrow to the right of the user avatar to assign specific read or write permissions for each invited user, and then click **Submit**.
+3. Click **Confirm**.
+
+##### Public share
+
+If you selected **Public share**, complete the following steps to configure the settings:
+1. In the **Set password** field, enter an access password, or click **Regenerate** to use a system-generated secure password.
+2. In the **Set expiration** region, select the specific expiration time for the share link.
+3. Select the following restrictions as needed:
+    - **Limit file size**: To limit the size of files uploaded by visitors, select this option, enter a value, and then select the unit (eMi/Gi/Ti).
+    - **Allow uploads only**: If you selet this check box, visitors can only upload files and cannot view or download existing content.
+4. Click **Confirm** to generate the link.
+5. Copy or note down the link address, and then click **Confirm**.
+
+##### SMB share
+
+If you selected **SMB share**, complete the following steps to configure the settings:
+
+1. Select whether to make it **Public**.
+2. If you selected **Yes**, click **Confirm**, and then it will be accessible to anyone on the LAN.
+3. If you selected **No**, authentication is required: 
+    
+    a. In the **Invite users** field, click the **+** (Plus) icon to select an existing user or group, or click **Add user accounts** to manually add and invite new users.
+
+    b. Click **Confirm**.
+    
+    c. In the **Set user permissions** list, configure specific permissions for each invited user, and then click **Confirm**.
+
+### View and manage shares
+
+You can view and manage all shared folders in the **Share** list.
+
+#### View share list and attributes
+
+1. Open the Files application from the Dock or Launchpad on Olares.
+2. Click **Share** in the left sidebar.
+2. You can view the list of all currently shared folders on the right.
+3. If you want to view the details of a specific folder, right-click the target folder and click **Attributes**. 
+
+    You will see the sharer, current path, original path, share scope, owner, current permissions, expiration date, and link details.
+
+### Modify password or permissions
+
+For shared folders, you can change their password and permission settings at any time:
+
+1. Open the Files application from the Dock or Launchpad on Olares.
+2. Click **Share** in the left sidebar to view the **Share** list on the right.
+3. To reset password (**Public share** only):
+    
+    a. Right-click the folder and select **Reset Password**.
+    
+    b. Enter a new password or click **Regenerate**.
+    
+    c. Click **Confirm**.
+4. To edit permissions (**Internal share** and **SMB share** only):
+    
+    a. Right-click the folder and select **Edit permissions**.
+
+    b. Add or remove users, or modify permissions for existing users.
+
+    c. Click **Confirm**.
+
+### Cancel share
+
+If you no longer need to share a folder, you can cancel the share at any time:
+1. Open the Files application from the Dock or Launchpad on Olares.
+2. Click **Share** in the left sidebar to view the **Share** list on the right.
+3. Right-click the target folder and click **Revoke sharing**.
+4. Click **Confirm**.
+
 ## Search files
 You can easily find files in the Files app using desktop search.
 :::tip
