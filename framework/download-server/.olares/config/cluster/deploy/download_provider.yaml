@@ -25,7 +25,7 @@ metadata:
     provider-registry-ref: {{ .Release.Namespace }}/download-provider-svc
     provider-service-ref: download-provider-svc.{{ .Release.Namespace }}:28080
 rules:
-  - nonResourceURLs: ["/api/download/*"]
+  - nonResourceURLs: ["/api/download*"]
     verbs: ["*"]
 
 ---
