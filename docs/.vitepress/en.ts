@@ -224,13 +224,17 @@ const side = {
               text: "Basic operations",
               link: "/manual/olares/wise/basics",
             },
-            {
+            /*{
               text: "Get recommendation engine",
               link: "/manual/olares/wise/recommend",
-            },
+            },*/
             {
               text: "Manage your feeds",
               link: "/manual/olares/wise/subscribe",
+            },
+            {
+              text: "Manage cookies",
+              link: "/manual/olares/wise/manage-cookies",
             },
             {
               text: "Organize your knowledge",
