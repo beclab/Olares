@@ -3,7 +3,7 @@ target: prebuilt
 output:
   containers:
     - 
-      name: ghcr.io/open-telemetry/opentelemetry-go-instrumentation/autoinstrumentation-go:v0.20.0
+      name: ghcr.io/open-telemetry/opentelemetry-go-instrumentation/autoinstrumentation-go:v0.23.0
     - 
       name: bytetrade/autoinstrumentation-apache-httpd:1.0.4-fix3
     - 
