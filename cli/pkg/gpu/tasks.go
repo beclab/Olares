@@ -730,6 +730,10 @@ func (t *WriteNouveauBlacklist) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "failed to install nouveau blacklist file")
 	}
 
+	if _, err := runtime.GetRunner().SudoCmd("update-initramfs -u", false, false); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to update initramfs")
+	}
+
 	if out, _ := runtime.GetRunner().SudoCmd("test -d /sys/module/nouveau && echo loaded || true", false, false); strings.TrimSpace(out) == "loaded" {
 		logger.Infof("the disable file for nouveau kernel module has been written, but the nouveau kernel module is currently loaded. Please REBOOT your machine to make the disabling effective.")
 		os.Exit(0)
