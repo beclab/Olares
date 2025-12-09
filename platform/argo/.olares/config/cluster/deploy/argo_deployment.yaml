@@ -63,7 +63,7 @@ data:
       postgresql:
         host: citus-master-svc.{{ .Release.Namespace }}
         port: 5432
-        database: argo_middleware_argo
+        database: os_platform_argo
         tableName: argo_workflows
         userNameSecret:
           name: argopg-secrets
