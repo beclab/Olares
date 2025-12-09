@@ -387,7 +387,13 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 			networkPolicy.SetNamespace(ns.Name)
 			npFix = nil
 		} else if security.IsOSSystemNamespace(ns.Name) {
-			networkPolicy = security.NetworkPolicies{security.NPOSSystem.DeepCopy(), security.NSFilesPolicy.DeepCopy(), security.NPSystemProvider.DeepCopy(), security.NPSystemMiddleware.DeepCopy()}
+			networkPolicy = security.NetworkPolicies{
+				security.NPOSSystem.DeepCopy(),
+				security.NSFilesPolicy.DeepCopy(),
+				security.NPSystemProvider.DeepCopy(),
+				security.NPSystemMiddleware.DeepCopy(),
+				security.NPOpenTelemetryCollector.DeepCopy(),
+			}
 			networkPolicy.SetName("os-system-np")
 			networkPolicy.SetNamespace(ns.Name)
 			npFix = nil
