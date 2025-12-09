@@ -347,6 +347,9 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 
 	appCopy.Spec.Config = config
 	appCopy.Spec.OpType = appv1alpha1.UpgradeOp
+	if appCopy.Annotations == nil {
+		appCopy.Annotations = make(map[string]string)
+	}
 	appCopy.Annotations[api.AppRepoURLKey] = request.RepoURL
 	appCopy.Annotations[api.AppVersionKey] = request.Version
 	appCopy.Annotations[api.AppTokenKey] = token

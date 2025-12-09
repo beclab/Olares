@@ -3,7 +3,10 @@ package security
 import (
 	"bytetrade.io/web3os/app-service/pkg/constants"
 	"bytetrade.io/web3os/app-service/pkg/utils"
-
+	
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -467,6 +470,45 @@ var (
 			},
 		},
 	} // end NPSystemMiddleware
+
+	NPOpenTelemetryCollector = netv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "opentelemetry-collector-np",
+		},
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app.kubernetes.io/component": "opentelemetry-collector",
+					"app.kubernetes.io/instance":  "os-platform.jaeger-storage-instance",
+				},
+			},
+			Ingress: []netv1.NetworkPolicyIngressRule{
+				{
+					From: []netv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{},
+							},
+						},
+					},
+					Ports: []netv1.NetworkPolicyPort{
+						{
+							Protocol: (*corev1.Protocol)(pointer.String(string(corev1.ProtocolTCP))),
+							Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 16686},
+						},
+						{
+							Protocol: (*corev1.Protocol)(pointer.String(string(corev1.ProtocolTCP))),
+							Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 4317},
+						},
+						{
+							Protocol: (*corev1.Protocol)(pointer.String(string(corev1.ProtocolTCP))),
+							Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 4318},
+						},
+					},
+				},
+			},
+		},
+	}
 
 	NPSharedEntrance = netv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
