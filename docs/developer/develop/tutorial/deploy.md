@@ -6,7 +6,7 @@ description: Deploy a single-container Docker app to Olares using Studio.
 This guide explains how to deploy a single-container Docker app to Olares using Studio.
 
 :::info For single-container apps
-This method supports apps that run from a single container image. For multi-container apps (for example, a web service plus a separate database), use the workflow in the [developer documentation](../../../developer/develop/tutorial/index.md) instead.
+This method supports apps that run from a single container image. For multi-container apps (for example, a web service plus a separate database), use the workflow in the [developer documentation](index.md) instead.
 :::
 :::tip Recommended for testing
 Studio-created deployments are best suited for development, testing, or temporary use. Upgrades and long-term data persistence can be limited compared to installing a packaged app from the Market. For production use, consider [packaging and uploading the app](package-upload.md) and installing it via the Market.
@@ -182,5 +182,5 @@ If installation fails, review the error at the bottom of the page and click **Vi
 Once running, you can manage the app from its deployment details page in Studio. The interface of this page is similar to Control Hub. If details don't appear, refresh the page.
 You can:
 - Use the **Stop** and **Restart** controls to retry. This action can often resolve runtime issues like a frozen process.
-- Check events or logs to investigate runtime errors. See [Export container logs for troubleshooting](../controlhub/manage-container.md#export-container-logs-for-troubleshooting) for details.
+- Check events or logs to investigate runtime errors. See [Export container logs for troubleshooting](../../../manual/olares/controlhub/manage-container.md#export-container-logs-for-troubleshooting) for details.
   ![App deployment details](/images/manual/olares/studio-app-deployment-details.png#bordered)

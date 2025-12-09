@@ -1,15 +1,29 @@
-# Develop Olares application
+# Develop Olares applications
 
-Developing applications on Olares is not much different from regular website development. Once you learn a few basic Olares concepts, you can start creating applications on his platform.
+Developing applications on Olares leverages standard web technologies and containerization. If you are familiar with building web applications or Docker containers, you already have the skills needed to build for Olares.
 
-- [Core Concepts of Olares](../concepts/index.md)
-- [Understanding the Format of Olares Application Chart](./package/chart.md)
-  - [The structure of the Olares Application Chart](./package/chart.md)
-  - [Configuration guide and field descriptions of `OlaresManifest.yaml`](./package/manifest.md)
-  - [Extensions field to Helm in Olares](./package/extension.md)
+This guide takes you through the complete lifecycle of an Olares application, from your first line of code in Studio to publishing on the Market.
 
-- [Exploring Our Tutorials](./tutorial/)
-  - [Learn about Studio, an Olares Development Tool](./tutorial/studio)
-  - [Creating your first application](./tutorial/note/)
-- [Exploring Advanced Concepts](./advanced/)
-- [Submitting Applications to the Olares Market](./submit/)
+## Before you begin
+Before getting started, it's helpful to review some concepts:
+
+
+## Step 1: Develop with Studio
+Olares Studio is a development tool designed to streamline the application development workflow. It provides a pre-configured workspace to build, debug, and test your applications directly on the platform.
+
+* **[Deploy an app](./tutorial/deploy.md):** Learn how to quickly deploy an app from an existing Docker image, configure it, and test it in Studio.
+* **[Develop in a dev container](./tutorial/develop.md):** Spin up a remote development environment (Dev Container) and connect it to VS Code for a seamless coding experience.
+* **[Package and upload](./tutorial/package-upload.md):** Convert your running application into an Olares-compatible package and upload it for testing.
+* **[Add app assets](./tutorial/assets.md):** Configure icons, screenshots, and descriptions to make your application store-ready.
+
+## Step 2: Package your application
+To publish your application to the Olares Market, you must structure it according to the Olares Application Chart (OAC) specification. This format extends Helm Charts to support Olares-specific features like permission management and sandboxing.
+
+* **[The Olares Application Chart](./package/chart.md):** Understand the file structure and requirements of an application package.
+* **[`OlaresManifest.yaml` reference](./package/manifest.md):** A comprehensive guide to the `OlaresManifest.yaml` file, which defines your app's metadata, permissions, and system integration points.
+* **[Helm extensions](./package/extension.md):** Learn about the custom fields and capabilities Olares adds to standard Helm deployments.
+
+## Step 3: Submit your application
+Once your application is built and packaged, the final step is to share it with the Olares community.
+
+* **[Submit to Market](./submit/index.md):** Learn how to submit your application to the Olares Market for review and distribution.
