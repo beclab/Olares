@@ -7,7 +7,7 @@ Olares Studio allows you to spin up a pre-configured dev container to write and 
 
 The following guide shows the setup workflow using a Node.js project as an example.
 :::info
-This workflow is optimized for iterative coding and testing. If you intend to publish the application to the Olares Market, you must create your own image and follow the [developer documentation](../../../developer/develop/submit/index.md) for final configuration.
+This workflow is optimized for iterative coding and testing. If you intend to publish the application to the Olares Market, you must create your own image and follow the [developer documentation](../submit/index.md) for final configuration.
 :::
 
 ## Prerequisite
