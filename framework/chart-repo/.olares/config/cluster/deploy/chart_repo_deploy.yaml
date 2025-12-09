@@ -102,7 +102,7 @@ spec:
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
         instrumentation.opentelemetry.io/go-container-names: "chartrepo"    
-        instrumentation.opentelemetry.io/otel-go-auto-target-exe: "/opt/app/chartrepo"
+        instrumentation.opentelemetry.io/otel-go-auto-target-exe: "/root/app"
 {{ end }}
     spec:
       priorityClassName: "system-cluster-critical"
