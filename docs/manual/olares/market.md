@@ -133,11 +133,11 @@ To clone an application:
     b. Check the **Required permissions** section. Only applications with the **Multi-Instance** property support cloning.
 2. Click **My Olares** from the left sidebar. The list of installed applications will appear on the right.
 3. Locate the target application, click the drop-down arrow next to the **Open** button, and then click **Clone**.
-4. In the **Clone App** window, configure the following information, and then click **Confirm**:
+4. In the **Clone app** window, configure the following information, and then click **Confirm**:
     
-    a. Enter a unique name for the new instance to avoid confusion with existing applications.
+    a. Enter a unique name for the new instance to avoid confusion with existing applications. This name will serve as the app identifier and appear in the **Market** and the **My Olares** list.
 
-    b. Set a unique name for the desktop shortcut for easy identification.
+    b. Set the display name for the shortcut icon generated on the desktop, or individually set the name for each component's icon if the application contains multiple entry points.
 5. In the **Configure Environment Variables** window, complete the setup based on the application type, and then click **Confirm**. In the installed applications list, the newly created application will appear with a "Clone" tag next to it.
 6. To view the detailed attributes of the newly cloned application, click the application.
 7. To run the newly cloned application, click **Open**.
