@@ -102,6 +102,9 @@ spec:
                 size:
                   format: int64
                   type: integer
+                restoreSize:
+                  format: int64
+                  type: integer
               required:
                 - backupType
                 - createAt
