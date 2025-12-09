@@ -1,0 +1,631 @@
+{{- $namespace := printf "%s" .Release.Namespace -}}
+{{- $argopg_secret := (lookup "v1" "Secret" $namespace "argopg-secrets") -}}
+{{- $password := "" -}}
+{{ if $argopg_secret -}}
+{{ $password = (index $argopg_secret "data" "pg_password") }}
+{{ else -}}
+{{ $password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+{{- $redis_password := "" -}}
+{{ if $argopg_secret -}}
+{{ $redis_password = (index $argopg_secret "data" "redis_password") }}
+{{ else -}}
+{{ $redis_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+{{- $redis_password_data := "" -}}
+{{ $redis_password_data = $redis_password | b64dec }}
+{{- $pg_password_data := "" -}}
+{{ $pg_password_data = $password | b64dec }}
+
+{{- $pg_user :=  printf "%s" "argo_workflow" -}}
+{{- $pg_user = $pg_user | b64enc -}}
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argo-workflow-log-fakes3
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: S3RVER
+  AWS_SECRET_ACCESS_KEY: S3RVER
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workflow-controller-configmap
+  namespace: {{ .Release.Namespace }}
+data:
+  config: |
+    instanceID: argo-middleware
+    artifactRepository:
+      archiveLogs: true
+      s3:
+        accessKeySecret:
+          key: AWS_ACCESS_KEY_ID
+          name: argo-workflow-log-fakes3
+        secretKeySecret:
+          key: AWS_SECRET_ACCESS_KEY
+          name: argo-workflow-log-fakes3
+        bucket: mongo-backup
+        endpoint: tapr-s3-svc.os-platform:4568
+        insecure: true
+    persistence:
+      connectionPool:
+        maxIdleConns: 5
+        maxOpenConns: 0
+      archive: true
+      archiveTTL: 5d
+      postgresql:
+        host: citus-master-svc.{{ .Release.Namespace }}
+        port: 5432
+        database: argo_middleware_argo
+        tableName: argo_workflows
+        userNameSecret:
+          name: argopg-secrets
+          key: pg_user
+        passwordSecret:
+          name: argopg-secrets
+          key: pg_password
+    nodeEvents:
+      enabled: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: argo-server
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: web
+      port: 2746
+      targetPort: 2746
+  selector:
+    app: argo-server
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: workflow-controller
+value: 1000000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argo
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: argo-server
+  template:
+    metadata:
+      labels:
+        app: argo-server
+    spec:
+      containers:
+        - args:
+            - server
+            - --configmap=workflow-controller-configmap
+            - --auth-mode=client
+            - --secure=false
+            - --x-frame-options=
+            - --loglevel
+            - debug
+            - --gloglevel
+            - "0"
+            - --log-format
+            - text
+          env:
+            - name: IN_CLUSTER
+              value: "true"
+            - name: ARGO_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+                  apiVersion: v1
+            - name: BASE_HREF
+              value: /
+          image: quay.io/argoproj/argocli:v3.7.2
+          name: argo-server
+          ports:
+            - containerPort: 2746
+              name: web
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 2746
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp
+      nodeSelector:
+        kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: argo-server
+      serviceAccount: argo-server
+      volumes:
+        - emptyDir: {}
+          name: tmp
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argopg-secrets
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  pg_user: {{ $pg_user }}
+  pg_password: {{ $password }}
+  redis_password: {{ $redis_password }}
+
+---
+
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: argo-pg
+  # namespace: knowledge-shared
+  namespace: {{ .Release.Namespace }}
+spec:
+  app: argo
+  appNamespace: {{ .Release.Namespace }}
+  middleware: postgres
+  postgreSQL:
+    user: argo_workflow
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: pg_password
+          name: argopg-secrets
+    databases:
+      - name: argo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflow-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: workflow-controller
+    app.kubernetes.io/version: v3.7.2
+    app.kubernetes.io/name: workflow-controller
+    app.kubernetes.io/part-of: argo-workflows
+spec:
+  selector:
+    matchLabels:
+      app: workflow-controller
+  template:
+    metadata:
+      labels:
+        app: workflow-controller
+    spec:
+      containers:
+        - args:
+            - --configmap
+            - workflow-controller-configmap
+            - --executor-image
+            - quay.io/argoproj/argoexec:v3.7.2
+            - --loglevel
+            - debug
+            - --gloglevel
+            - "0"
+            - --log-format
+            - text
+          command:
+            - workflow-controller
+          env:
+            - name: LEADER_ELECTION_IDENTITY
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+          image: quay.io/argoproj/workflow-controller:v3.7.2
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 6060
+            initialDelaySeconds: 90
+            periodSeconds: 60
+            timeoutSeconds: 30
+          name: workflow-controller
+          ports:
+            - containerPort: 9090
+              name: metrics
+            - containerPort: 6060
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: workflow-controller
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: argo
+      serviceAccount: argo
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: argo-workflow-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - port: 6060
+      name: http
+      protocol: TCP
+      targetPort: 6060
+  selector:
+    app: workflow-controller
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+  name: argo-aggregate-to-admin
+rules:
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - workflows
+      - workflows/finalizers
+      - workfloweventbindings
+      - workfloweventbindings/finalizers
+      - workflowtemplates
+      - workflowtemplates/finalizers
+      - cronworkflows
+      - cronworkflows/finalizers
+      - clusterworkflowtemplates
+      - clusterworkflowtemplates/finalizers
+      - workflowtasksets
+      - workflowtasksets/finalizers
+      - workflowtaskresults
+      - workflowtaskresults/finalizers
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - get
+      - list
+      - patch
+      - update
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+  name: argo-aggregate-to-edit
+rules:
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - workflows
+      - workflows/finalizers
+      - workfloweventbindings
+      - workfloweventbindings/finalizers
+      - workflowtemplates
+      - workflowtemplates/finalizers
+      - cronworkflows
+      - cronworkflows/finalizers
+      - clusterworkflowtemplates
+      - clusterworkflowtemplates/finalizers
+      - workflowtaskresults
+      - workflowtaskresults/finalizers
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - get
+      - list
+      - patch
+      - update
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+  name: argo-aggregate-to-view
+rules:
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - workflows
+      - workflows/finalizers
+      - workfloweventbindings
+      - workfloweventbindings/finalizers
+      - workflowtemplates
+      - workflowtemplates/finalizers
+      - cronworkflows
+      - cronworkflows/finalizers
+      - clusterworkflowtemplates
+      - clusterworkflowtemplates/finalizers
+      - workflowtaskresults
+      - workflowtaskresults/finalizers
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argo-cluster-role
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - pods/exec
+    verbs:
+      - create
+      - get
+      - list
+      - watch
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - namespaces
+    verbs:
+      - get
+      - watch
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumeclaims
+      - persistentvolumeclaims/finalizers
+    verbs:
+      - create
+      - update
+      - delete
+      - get
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - workflows
+      - workflows/finalizers
+      - workflowtasksets
+      - workflowtasksets/finalizers
+      - workflowartifactgctasks
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - patch
+      - delete
+      - create
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - workflowtemplates
+      - workflowtemplates/finalizers
+      - clusterworkflowtemplates
+      - clusterworkflowtemplates/finalizers
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - workflowtaskresults
+    verbs:
+      - list
+      - watch
+      - deletecollection
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - get
+      - list
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - cronworkflows
+      - cronworkflows/finalizers
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - create
+      - get
+      - delete
+  - apiGroups:
+      - ""
+    resourceNames:
+      - argo-workflows-agent-ca-certificates
+    resources:
+      - secrets
+    verbs:
+      - get
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argo-server-cluster-role
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - watch
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - pods/exec
+      - pods/log
+    verbs:
+      - get
+      - list
+      - watch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - watch
+      - create
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - eventsources
+      - sensors
+      - workflows
+      - workfloweventbindings
+      - workflowtemplates
+      - cronworkflows
+      - clusterworkflowtemplates
+    verbs:
+      - create
+      - get
+      - list
+      - watch
+      - update
+      - patch
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argo-role
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+      - get
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argo-binding
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argo-role
+subjects:
+  - kind: ServiceAccount
+    name: argo
+    namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argo-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argo-cluster-role
+subjects:
+  - kind: ServiceAccount
+    name: argo
+    namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argo-server-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argo-server-cluster-role
+subjects:
+  - kind: ServiceAccount
+    name: argo-server
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo-server
+  namespace: {{ .Release.Namespace }}
