@@ -1,6 +1,7 @@
 {{- $certs := include "search3-validation.certs" . | fromYaml }}
 ---
 # TLS Secret for search3-validation webhook
+# Stores CA cert, server cert, and server key together to ensure consistency
 apiVersion: v1
 kind: Secret
 metadata:
@@ -8,6 +9,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 type: kubernetes.io/tls
 data:
+  ca.crt: {{ $certs.caCert }}
   tls.crt: {{ $certs.tlsCert }}
   tls.key: {{ $certs.tlsKey }}
 
