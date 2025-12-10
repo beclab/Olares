@@ -29,7 +29,7 @@ func NewApplicationWatcher() *applicationWatcher {
 
 func (w *applicationWatcher) Watch(ctx context.Context) {
 	switch state.CurrentState.TerminusState {
-	case state.NotInstalled, state.Uninitialized, state.InitializeFailed:
+	case state.NotInstalled, state.Uninitialized, state.InitializeFailed, state.IPChanging:
 		// Stop the intranet server if it's running
 		if w.intranetServer != nil {
 			w.intranetServer.Close()
