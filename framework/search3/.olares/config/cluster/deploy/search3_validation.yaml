@@ -149,8 +149,8 @@ webhooks:
         namespace: {{ .Release.Namespace }}
         path: "/validate"
         port: 443
-      # CA certificate for HTTPS validation (using tls.crt as caBundle for self-signed cert)
-      caBundle: {{ $certs.tlsCert }}
+      # CA certificate for HTTPS validation (CA cert that signed the server's TLS certificate)
+      caBundle: {{ $certs.caCert }}
     rules:
       - apiGroups:
           - "sys.bytetrade.search3"
