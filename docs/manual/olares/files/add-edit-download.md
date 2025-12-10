@@ -84,7 +84,7 @@ The Files app also supports editing the following text formats: TXT, JS, CSS, XM
 ![Preview](/images/manual/olares/files-preview.png#bordered)
 
 ## Sync files to local computer
-With LarePass desktop, you can sync cloud files (organized by libraries or folders) to your local computer, creating a corresponding sync folder on your machine. Once set up, files will automatically stay in sync bi-directionally in real time.
+With LarePass desktop, you can sync cloud files (organized by libraries or folders) to your local computer. This creates a corresponding folder on your machine that stays updated bi-directionally in real time.
 
 1. Open LarePass desktop and locate the **Sync** directory.
 2. If you want to enable sync for a library or folder: 
