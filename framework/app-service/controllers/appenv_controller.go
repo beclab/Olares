@@ -229,7 +229,7 @@ func (r *AppEnvController) triggerApplyEnv(ctx context.Context, appEnv *sysv1alp
 		OpID:       opID,
 		State:      appv1alpha1.ApplyingEnv.String(),
 		RawAppName: am.Spec.RawAppName,
-		Type:       "app",
+		Type:       am.Spec.Type.String(),
 		Title:      apputils.AppTitle(am.Spec.Config),
 	})
 

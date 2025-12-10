@@ -87,7 +87,7 @@ func PublishAppEventToQueue(p utils.EventParams) {
 		EventID:    fmt.Sprintf("%s-%s-%d", p.Owner, p.Name, now.UnixMilli()),
 		CreateTime: now,
 		Name:       p.Name,
-		Type:       "app",
+		Type:       p.Type,
 		OpType:     p.OpType,
 		OpID:       p.OpID,
 		State:      p.State,
@@ -99,9 +99,10 @@ func PublishAppEventToQueue(p utils.EventParams) {
 			}
 			return p.RawAppName
 		}(),
-		Title:   p.Title,
-		Reason:  p.Reason,
-		Message: p.Message,
+		Title:           p.Title,
+		Reason:          p.Reason,
+		Message:         p.Message,
+		SharedEntrances: p.SharedEntrances,
 	}
 	if len(p.EntranceStatuses) > 0 {
 		data.EntranceStatuses = p.EntranceStatuses

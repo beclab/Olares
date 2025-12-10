@@ -84,7 +84,7 @@ func (b *baseStatefulApp) updateStatus(ctx context.Context, am *appsv1.Applicati
 		OpID:       b.manager.Status.OpID,
 		State:      state.String(),
 		RawAppName: b.manager.Spec.RawAppName,
-		Type:       "app",
+		Type:       b.manager.Spec.Type.String(),
 		Title:      apputils.AppTitle(b.manager.Spec.Config),
 		Reason:     reason,
 		Message:    message,

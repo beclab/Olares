@@ -1144,7 +1144,7 @@ func (h *Handler) applicationManagerMutate(req *restful.Request, resp *restful.R
 			OpID:       pam.Status.OpID,
 			State:      pam.Status.State.String(),
 			RawAppName: pam.Spec.RawAppName,
-			Type:       "app",
+			Type:       pam.Spec.Type.String(),
 			Title:      apputils.AppTitle(pam.Spec.Config),
 		})
 	}

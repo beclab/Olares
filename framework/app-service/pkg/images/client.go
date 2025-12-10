@@ -198,7 +198,7 @@ func (imc *ImageManagerClient) PollDownloadProgress(ctx context.Context, am *app
 				}
 
 			}
-			err = imc.updateProgress(ctx, am, &lastProgress, ret*100)
+			err = imc.updateProgress(ctx, am, &lastProgress, ret*100, am.Spec.OpType == appv1alpha1.UpgradeOp)
 			if err == nil {
 				return nil
 			}
@@ -209,7 +209,7 @@ func (imc *ImageManagerClient) PollDownloadProgress(ctx context.Context, am *app
 	}
 }
 
-func (imc *ImageManagerClient) updateProgress(ctx context.Context, am *appv1alpha1.ApplicationManager, lastProgress *float64, progress float64) error {
+func (imc *ImageManagerClient) updateProgress(ctx context.Context, am *appv1alpha1.ApplicationManager, lastProgress *float64, progress float64, isUpgrade bool) error {
 	if *lastProgress > progress {
 		return errors.New("no need to update progress")
 	}
@@ -219,14 +219,19 @@ func (imc *ImageManagerClient) updateProgress(ctx context.Context, am *appv1alph
 		*lastProgress = progress
 
 		appevent.PublishAppEventToQueue(utils.EventParams{
-			Owner:      am.Spec.AppOwner,
-			Name:       am.Spec.AppName,
-			OpType:     string(am.Status.OpType),
-			OpID:       am.Status.OpID,
-			State:      appv1alpha1.Downloading.String(),
+			Owner:  am.Spec.AppOwner,
+			Name:   am.Spec.AppName,
+			OpType: string(am.Status.OpType),
+			OpID:   am.Status.OpID,
+			State: func() string {
+				if isUpgrade {
+					return appv1alpha1.Upgrading.String()
+				}
+				return appv1alpha1.Downloading.String()
+			}(),
 			Progress:   progressStr,
 			RawAppName: am.Spec.RawAppName,
-			Type:       "app",
+			Type:       am.Spec.Type.String(),
 			Title:      apputils.AppTitle(am.Spec.Config),
 		})
 	}

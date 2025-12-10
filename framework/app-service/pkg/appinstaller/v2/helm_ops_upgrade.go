@@ -75,6 +75,10 @@ func (h *HelmOpsV2) Upgrade() error {
 			return err
 		}
 
+		if h.App().Type == appv1alpha1.Middleware.String() {
+			return nil
+		}
+
 		err = h.UpdatePolicy()
 		if err != nil {
 			klog.Errorf("Failed to update policy for app %s err=%v", h.App().AppName, err)
@@ -84,10 +88,6 @@ func (h *HelmOpsV2) Upgrade() error {
 		if err = h.RegisterOrUnregisterAppProvider(v1.Register); err != nil {
 			klog.Errorf("Failed to register app provider err=%v", err)
 			return err
-		}
-
-		if h.App().Type == appv1alpha1.Middleware.String() {
-			return nil
 		}
 
 		ok, err := h.WaitForStartUp()

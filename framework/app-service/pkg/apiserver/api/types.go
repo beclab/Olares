@@ -13,6 +13,8 @@ const (
 	AppMarketSourceKey  = constants.AppMarketSourceKey
 	AppInstallSourceKey = "bytetrade.io/install-source"
 	AppUninstallAllKey  = "bytetrade.io/uninstall-all"
+	AppStopAllKey       = "bytetrade.io/stop-all"
+	AppResumeAllKey     = "bytetrade.io/resume-all"
 	AppImagesKey        = "bytetrade.io/images"
 )
 
@@ -141,6 +143,11 @@ type Image struct {
 
 // UninstallRequest represents a request to uninstall an application.
 type UninstallRequest struct {
+	All bool `json:"all"`
+}
+
+// StopRequest represents a request to stop an application.
+type StopRequest struct {
 	All bool `json:"all"`
 }
 

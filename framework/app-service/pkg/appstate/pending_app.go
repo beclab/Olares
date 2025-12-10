@@ -104,7 +104,7 @@ func (p *PendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 				OpID:       p.manager.Status.OpID,
 				State:      appsv1.Downloading.String(),
 				RawAppName: p.manager.Spec.RawAppName,
-				Type:       "app",
+				Type:       p.manager.Spec.Type.String(),
 				Title:      apputils.AppTitle(p.manager.Spec.Config),
 			})
 

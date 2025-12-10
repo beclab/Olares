@@ -103,7 +103,7 @@ func (h *Handler) uninstall(req *restful.Request, resp *restful.Response) {
 		OpID:       opID,
 		State:      v1alpha1.Uninstalling.String(),
 		RawAppName: a.Spec.RawAppName,
-		Type:       "app",
+		Type:       a.Spec.Type.String(),
 		Title:      apputils.AppTitle(a.Spec.Config),
 	})
 

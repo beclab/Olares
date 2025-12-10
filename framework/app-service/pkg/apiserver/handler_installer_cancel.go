@@ -94,7 +94,7 @@ func (h *Handler) cancel(req *restful.Request, resp *restful.Response) {
 		OpID:       opID,
 		State:      cancelState.String(),
 		RawAppName: a.Spec.RawAppName,
-		Type:       "app",
+		Type:       a.Spec.Type.String(),
 		Title:      apputils.AppTitle(a.Spec.Config),
 	})
 
