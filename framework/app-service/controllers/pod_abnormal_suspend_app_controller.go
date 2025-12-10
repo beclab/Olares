@@ -245,7 +245,7 @@ func (r *PodAbnormalSuspendAppController) trySuspendApp(ctx context.Context, own
 		State:      appv1alpha1.Stopping.String(),
 		Progress:   message,
 		RawAppName: am.Spec.RawAppName,
-		Type:       "app",
+		Type:       am.Spec.Type.String(),
 		Title:      apputils.AppTitle(am.Spec.Config),
 		Reason:     reason,
 		Message:    message,

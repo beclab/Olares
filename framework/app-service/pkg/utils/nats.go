@@ -27,6 +27,7 @@ type Event struct {
 	Title            string                    `json:"title,omitempty"`
 	Reason           string                    `json:"reason,omitempty"`
 	Message          string                    `json:"message,omitempty"`
+	SharedEntrances  []v1alpha1.Entrance       `json:"sharedEntrances,omitempty"`
 }
 
 // EventParams defines parameters to publish an app-related event
@@ -43,6 +44,7 @@ type EventParams struct {
 	Title            string
 	Reason           string
 	Message          string
+	SharedEntrances  []v1alpha1.Entrance
 }
 
 type UserEvent struct {

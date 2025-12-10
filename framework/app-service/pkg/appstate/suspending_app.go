@@ -2,10 +2,13 @@ package appstate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	appsv1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
+	"bytetrade.io/web3os/app-service/pkg/apiserver/api"
+	"bytetrade.io/web3os/app-service/pkg/appcfg"
 	"bytetrade.io/web3os/app-service/pkg/constants"
 	"bytetrade.io/web3os/app-service/pkg/kubeblocks"
 	"bytetrade.io/web3os/app-service/pkg/users/userspace"
@@ -75,13 +78,42 @@ func (p *SuspendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 }
 
 func (p *SuspendingApp) exec(ctx context.Context) error {
-	err := suspendOrResumeApp(ctx, p.client, p.manager, int32(0))
-	if err != nil {
-		klog.Errorf("suspend %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
-		return fmt.Errorf("suspend app %s failed %w", p.manager.Spec.AppName, err)
+	// If stop-all is requested, also stop v2 server-side shared charts by scaling them down
+	if p.manager.Annotations[api.AppStopAllKey] == "true" {
+		var appCfg *appcfg.ApplicationConfig
+		if err := json.Unmarshal([]byte(p.manager.Spec.Config), &appCfg); err != nil {
+			klog.Errorf("unmarshal to appConfig failed %v", err)
+			return err
+		}
+		if appCfg != nil && appCfg.IsV2() && appCfg.HasClusterSharedCharts() {
+			for _, chart := range appCfg.SubCharts {
+				if !chart.Shared {
+					continue
+				}
+				ns := chart.Namespace(appCfg.OwnerName)
+				// create a shallow copy with target namespace/name for scaling logic
+				amCopy := p.manager.DeepCopy()
+				amCopy.Spec.AppNamespace = ns
+				amCopy.Spec.AppName = chart.Name
+				klog.Infof("amCopy.Spec.AppNamespace: %s", ns)
+				klog.Infof("amCopy.Spec.AppName: %s", chart.Name)
+
+				if err := suspendOrResumeApp(ctx, p.client, amCopy, int32(0)); err != nil {
+					klog.Errorf("failed to stop shared chart %s in namespace %s: %v", chart.Name, ns, err)
+					return err
+				}
+			}
+		}
+	} else {
+		err := suspendOrResumeApp(ctx, p.client, p.manager, int32(0))
+		if err != nil {
+			klog.Errorf("suspend %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
+			return fmt.Errorf("suspend app %s failed %w", p.manager.Spec.AppName, err)
+		}
 	}
+
 	if p.manager.Spec.Type == appsv1.Middleware && userspace.IsKbMiddlewares(p.manager.Spec.AppName) {
-		err = p.execMiddleware(ctx)
+		err := p.execMiddleware(ctx)
 		if err != nil {
 			klog.Errorf("suspend middleware %s failed %v", p.manager.Spec.AppName, err)
 			return err
