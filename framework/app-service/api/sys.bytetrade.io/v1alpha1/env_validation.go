@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"net/mail"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/dlclark/regexp2"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -158,11 +158,15 @@ func (e *EnvVarSpec) validateRegex(value string) error {
 	if e.Regex == "" {
 		return nil
 	}
-	re, err := regexp.Compile(e.Regex)
+	re, err := regexp2.Compile(e.Regex, regexp2.None)
 	if err != nil {
 		return fmt.Errorf("invalid regex: %w", err)
 	}
-	if !re.MatchString(value) {
+	matched, matchErr := re.MatchString(value)
+	if matchErr != nil {
+		return fmt.Errorf("regex match error: %w", matchErr)
+	}
+	if !matched {
 		return fmt.Errorf("value '%s' does not match regex '%s'", value, e.Regex)
 	}
 	return nil
