@@ -53,8 +53,7 @@ ComfyUI relies heavily on external resources such as GitHub (plugins), PyPI (Pyt
 
 ## Manage files and directories
 
-ComfyUI Launcher provides quick access to key directories and uses a shared `model` folder so models can be reused across Olares AI applications (such as ComfyUI and SD Web UI).
-
+ComfyUI Launcher provides quick access to key directories and uses a shared `model` folder so models can be reused across ComfyUI and SD Web UI.
 ### Access file locations
 
 On the **Home** tab, the **File Type** section provides direct access to the main directories used by ComfyUI:
@@ -69,7 +68,7 @@ On the **Home** tab, the **File Type** section provides direct access to the mai
 
 Clicking any of these entries opens the Files app directly in the corresponding directory.
 
-### Understand the model directory structure
+### Understand the `model` directory structure
 
 ComfyUI in Olares uses a file structure that differs from the standard installation. This change allows models to be shared between ComfyUI and SD Web UI.
 
