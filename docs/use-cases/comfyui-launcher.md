@@ -1,188 +1,248 @@
 ---
-description: Administrators' guide on how to manage ComfyUI on Olares using ComfyUI Launcher, covering controling the service, managing models, plugins, and python environments, troubleshooting and maintenance.
+outline: [2, 3]
+description: Administrators' guide for managing ComfyUI on Olares with ComfyUI Launcher—covering a quick preflight network check, service control, network configuration, model storage and installation, plugin management, Python dependencies, and maintenance.
 ---
 
 # Manage ComfyUI using ComfyUI Launcher
 
 ComfyUI Launcher is the core management tool of ComfyUI for **administrator users**. You can use it to control the running status of the ComfyUI service within the cluster, while easily managing models, plugins, runtime environment, and network configurations.
 
-This document guides you on how to use ComfyUI Launcher for ComfyUI service management and routine maintenance.
+This guide walks you through using ComfyUI Launcher for service management and routine maintenance.
 
-## Start and stop the ComfyUI service
+## Learning objectives
 
-As the administrator, you must start the ComfyUI service before you and other members can access it using the client interface.
+By the end of this tutorial, you will learn how to:
 
-![Start/Stop ComfyUI service](/images/manual/use-cases/comfyui-start.png#bordered)
+- Start and stop the ComfyUI service for all users in the cluster.
+- Verify and adjust network settings so GitHub, PyPI, and Hugging Face are accessible.
+- Install essential models and additional models, and understand where models are stored in **Files**.
+- Manage plugins registered in ComfyUI Launcher as well as from GitHub.
+- Manage Python dependencies by installing, updating, removing packages, and analyzing missing dependencies for plugins.
+- Troubleshoot common issues using logs and safely reset ComfyUI to its initial state when necessary.
 
-* **Start the ComfyUI Service**: Click the **START** button in the upper-right corner to start the ComfyUI service.
+## Start and stop the service
+
+As the administrator, you must start the ComfyUI service before you or other members can access it via the client interface.
+
+- **Start ComfyUI service**
+
+    Go to **Home** and click the **START** button in the upper-right corner.
+    ![Start ComfyUI service](/images/manual/use-cases/comfyui-start-service.png#bordered)    
     
     ::: tip Notes on first run
-    * Initial startup of ComfyUI Launcher typically takes 10-20 seconds for environment initialization.
-    * If the system prompts that essential models are missing, you can click the **START ANYWAY** button to launch the service. However, note that workflows may not run correctly if basic models are missing. It is recommended to download the essential model package before starting the service.
+    - Initial startup of ComfyUI Launcher typically takes 10-20 seconds for environment initialization.
+    - If the system prompts that essential models are missing, you can click **START ANYWAY**. However, workflows may fail without these base models. We recommend downloading the essential model package before starting the service.
     :::
 
-* **Stop the ComfyUI Service**: If you are not using ComfyUI for the moment, click the **STOP** button to stop the service. This releases the VRAM and memory resources occupied by ComfyUI.
+- **Stop ComfyUI service**
+
+    Go to **Home** and click the **STOP** button when ComfyUI is not in use. This releases VRAM and memory resources for other applications.
+    ![Stop ComfyUI service](/images/manual/use-cases/comfyui-stop-service.png#bordered)   
+
+## Configure network
+
+ComfyUI relies heavily on external resources such as GitHub (plugins), PyPI (Python packages), and Hugging Face (models). Before installing components, verify the connection status in **Network Config**.
+
+1. Go to **Network Config**.
+2. Check the connectivity to GitHub, PyPI, and Hugging Face.
+3. If any service shows `Inaccessible`, fix your network or proxy settings, and then click **SAVE & CHECK** to test again.
+    ![Configure network](/images/manual/use-cases/comfyui-network-config.png#bordered)   
+4. Repeat until the status of each service becomes `Accessible`.
+
+![Network recheck](/images/manual/use-cases/comfyui-network-accessible.png#bordered){width=300}   
+
+## Manage files and directories
+
+ComfyUI Launcher provides quick access to key directories and uses a shared `model` folder so models can be reused across ComfyUI and SD Web UI.
+
+### Access file locations
+
+On the **Home** tab, the **File Type** section provides direct access to the main directories used by ComfyUI:
+
+| Entry | Location in Files | Description |
+ -- | -- | -- |
+| **Root** | `/Files/External/olares/ai/`<br /> `comfyui/ComfyUI` | Root directory of the ComfyUI installation. |
+| **Plugin** | `/Files/External/olares/ai/`<br /> `comfyui/ComfyUI/custom_nodes` | Stores installed plugins (custom nodes and extensions).                    |
+| **Model**  | `/Files/External/olares/ai/model` | Centralized storage for AI models shared by ComfyUI and other AI apps.    |
+| **Output** | `/Files/External/olares/ai/`<br /> `output/comfyui` | Default destination for images and other assets generated by ComfyUI.     |
+| **Input**  | `/Files/External/olares/ai/`<br /> `comfyui/ComfyUI/input`  | Folder for source images used in image-to-image or in-painting workflows. |
+
+Clicking any of these entries opens the Files app directly in the corresponding directory.
+
+### Understand the `model` directory structure
+
+ComfyUI in Olares uses a file structure that differs from the standard installation. This change allows models to be shared between ComfyUI and SD Web UI.
+
+When uploading external models manually or selecting a destination in **Custom Download**, it is important to place files into the correct subfolder.
+
+::: tip
+Make sure the model type matches the target folder so that ComfyUI can detect and use the files correctly.
+:::
+
+| Directory in Files | Standard ComfyUI directory | Model type |
+|-- |-- |-- |
+| `main/` | `checkpoints/` | Base checkpoints (SD 1.5, SDXL, Flux) |
+| `lora/` | `loras/` | LoRA weights |
+| `vae/` | `vae/` | VAE models |
+| `controlnet/` | `controlnet/` | ControlNet models |
+| `ipadapter/` | `ipadapter/` | IP-Adapter models |
+| `upscale_models/` | `upscale_models/` | Upscalers (ESRGAN, SwinIR) |
+| `clip_vision/` | `clip_vision/` | CLIP Vision models (used for IP-Adapter) |
+| `unet/` | `unet/` | Standalone UNet weights |
+| `text_encoders/` | `text_encoders/` | Text encoder models (T5, CLIP-L/G) |
+| `clip/` | `clip/` | CLIP models |
+| `embeddings/` | `embeddings/` | Textual Inversion embeddings |
+| `hypernetworks/` | `hypernetworks/` | Hypernetwork weights |
+| `facerestore_models/` | `facerestore_models/` | Face restoration (GFPGAN, CodeFormer) |
+| `inpaint/` | `inpaint/` | Inpainting-specific models |
+| `style_models/` | `style_models/` | Style or effect models |
+| `diffusion_models/` | `diffusion_models/` | Other diffusion models |
+
 
 ## Manage models
 
-:::tip Note
-Before installing models, ensure your host can access GitHub and HuggingFace. For details, refer to [Configure network](#configure-network).
-:::
-
-ComfyUI Launcher provides flexible ways to install models. You can install the essential models with one click, manually install from Hugging Face, or copy from external sources.
+ComfyUI Launcher provides flexible ways to manage models: install the essential package with one click, download from the built-in library or a Hugging Face link, upload directly to **Files**, and delete models when needed.
 
 ### Install essential models
 
-Essential models are basic models required for ComfyUI to run, including SD large models, VAE, preview decoders, and auxiliary tools models. It is recommended to install the essential package when running ComfyUI for the first time.
+Essential models are basic resources required for ComfyUI to run, including SD large models, VAE, preview decoders, and auxiliary tool models. We recommend installing them on the first run.
 
-1. Access the essential model package page in either of the following methods:
-    - In the **Missing essential models** prompt window that appears when starting the service for the first time, click **INSTALL MODELS**.
-    * In the **Package installation** section on the homepage, find **Essential model package**, and click **VIEW**.
+1. Open the package page in either of the following ways:
+    - In the **Missing essential models** prompt window that appears on first start, click **INSTALL MODELS**.
+    - Go to **Home**, scroll to the **Package installation** section, find **Stable Diffusion base package**, and click **VIEW**. This package provides the necessary foundation for ComfyUI, including VAEs, utility models, and preview decoders.
+    ![Install basic package](/images/manual/use-cases/comfyui-base-package.png#bordered)
 
-2. On the essential model installation page, click **GET ALL RESOURCES** to start the automatic installation. You can view the installation status via the progress bar below.
+2. On the **Package Details** page, click **GET ALL** to start the automatic installation. You can track the progress in the status bar.
     
-    ![Install resource package](/images/manual/use-cases/comfyui-install-essential.png#bordered)
+    ![Download progress](/images/manual/use-cases/comfyui-download-progress.png#bordered)
 
-### Manually download models
+### Install additional models
 
-In addition to the essential models, ComfyUI Launcher also supports downloading models from the HuggingFace model library, allowing you to easily get the models you need.
+In addition to the essential models, ComfyUI Launcher supports installing additional models from the built-in library, via a Hugging Face link, or by uploading files manually.
 
-<Tabs>
-<template #Download-from-builtin-library>
-Follow these steps to download a model the built-in HuggingFace library:
+#### Download from built-in library
 
-1. Navigate to **Model management**.
+Follow these steps to download a model from the built-in Hugging Face library:
+
+1. Go to **Model management**.
 2. Scroll down to the **Available models** section, and find the desired model by category or keyword.
-3. Click the <i class="material-symbols-outlined">download</i> button to download the model.
+3. Click the <i class="material-symbols-outlined">download</i> button to install the model.
 
-    ![Library download](/images/manual/use-cases/comfyui-model-library-download.png#bordered)
+    ![Library download](/images/manual/use-cases/comfyui-model-built-in.png#bordered)
 
-</template>
-<template #Custom-download-via-link>
-If you can't find a specific model in the built-in library, you can still download it via the model URL on Hugging Face:
+#### Download via link
 
-1. Navigate to **Model management** > **Custom Download**.
-2. Fill in the model URL and select the destination path.
+If you can't find a specific model in the built-in library, you can install it via the model URL on Hugging Face:
+
+1. Go to **Model management** > **Custom Download**.
+2. Fill in the model URL and select the destination path based on the model type.
 3. Click **DOWNLOAD MODEL**.
 
-    ![Custom download](/images/manual/use-cases/comfyui-custom-model-download.png#bordered)
-</template>
-</Tabs>
+    ![Custom download](/images/manual/use-cases/comfyui-model-link.png#bordered)
 
-:::tip Upload external models
-If you can't find the desired model on Hugging Face, you can use **Files** to upload external models to the following directory:
+#### Upload external models
 
- `External Devices/ai/model`
-:::
+If you can't find the desired model on Hugging Face, you can upload external models via **Files**.
 
-### Delete a model
+1. Open **Files** from the launchpad.
+2. Go to **External** > **olares** > **ai** > **model**.
+3. Find the folder that your downloaded model belongs to and upload the file directly inside the target folder. See [Understand the model directory structure](#understand-the-model-directory-structure) for reference.
+
+### Delete models
 
 To delete a model:
 
-1. Navigate to **Model management** > **Model library**.
-2. Under the **Installed models** section, find the model you want to delete, and click the <i class="material-symbols-outlined">delete</i> button on the right to delete it permanently.
+1. Go to **Model management** > **Model library**.
+2. Under the **Installed models** section, find the model you want to delete, and click the <i class="material-symbols-outlined">delete</i> button on the right to delete it.
+![Delete a model](/images/manual/use-cases/comfyui-delete-model.png#bordered)
 
 ## Manage plugins
 
-You can manage plugins through ComfyUI's built-in ComfyUI-Manager or use **Plugin management** in the Launcher.
+ComfyUI Launcher provides flexible ways to manage plugins in **Plugin management**.
 
-![Manage plugins](/images/manual/use-cases/comfyui-manage-plugin.png#bordered)
+![Plugin status](/images/manual/use-cases/comfyui-plugin-status.png#bordered)
 
 ### Manage available plugins
 
-To manage available plugins registered in ComfyUI Manager:
+To manage available plugins registered in ComfyUI Launcher:
 
-1. Navigate to **Plugin management** > **Plugin Library**.
-2. Under **Available plugins**, select the target plugin:
-    * Click the <i class="material-symbols-outlined">pause</i> button to disable the currently running plugin, and click the <i class="material-symbols-outlined">play_circle</i> button to resume running.
-    * Click the <i class="material-symbols-outlined">delete</i> button to delete the plugin.
-    * Click the <i class="material-symbols-outlined">download</i> button to download the plugin.
-    * Click the <i class="material-symbols-outlined">visibility</i> button to view plugin details.
-    * Click the **UPDATE ALL PLUGINS** button to update all installed plugins.
-    * Click the **REFRESH** button to refresh the plugin status.
+1. Go to **Plugin management** > **Plugin library**.
+2. Under **Available Plugins**, find the target plugin. 
 
-### Download plugin from GitHub
+For any plugin, you can:
+- Click the <i class="material-symbols-outlined">visibility</i> button to view plugin details.
+- Visit the GitHub repository if it is available.
+
+Depending on the plugin status, different actions are available:
+
+- **Not installed**: Click **Install** to get the latest version, or **Switch version** to choose a specific one.
+- **Installed**: You can **Disable**, **Uninstall**, or **Switch version**.
+- **Disabled**: Click **Enable** to reactivate it, or **Uninstall** to remove it.
+
+At the top of the section, you can also:
+   - Click **UPDATE ALL PLUGINS** to update all installed plugins.
+   - Click **REFRESH** to refresh the plugin list.
+
+### Install plugins from GitHub
 
 To install plugins directly from GitHub repositories:
 
-1. Navigate to **Plugin management** > **Custom Install**.
-2. Enter the URL of the repository. 
-3. Specify the branch (optional). Use the default (usually 'main' or 'master') if not specified.
+1. Go to **Plugin management** > **Custom Install**.
+2. Enter the GitHub repository URL of the plugin.
+3. (Optional) Specify the branch. If you are not sure, keep the default value.
 4. Click **INSTALL PLUGIN**.
+![Download plugin](/images/manual/use-cases/comfyui-plugin-install.png#bordered)
 
 ## Manage Python environment
 
-ComfyUI's operation relies on a set of complex Python dependency libraries. You can manage these libraries easily on the **Python dependency management** page.
+ComfyUI's operation relies on a set of Python dependency libraries. You can manage these libraries easily on the **Python dependency management** page.
 
-![Manage Python libraries](/images/manual/use-cases/comfyui-manage-python.png#bordered)
+### Install dependency libraries
 
-### Install new dependency libraries
-
-To install a new dependency library:
-
-1. Navigate to **Python dependencies**.
-2. click **INSTALL NEW PACKAGE**.
-3. In the pop-up window, enter the library name and version number (optional), and then click **INSTALL**.
+1. Go to **Python dependencies** > **INSTALL NEW PACKAGE**.
+2. In the pop-up window, enter the library name and version number (optional), and then click **INSTALL**.
+![Install new package](/images/manual/use-cases/comfyui-python-install.png#bordered)
 
 ### Manage installed dependency libraries
 
-1. Under **Installed Python packages**, find the Python library you want to manage.
-2. Click the <i class="material-symbols-outlined">arrow_upward</i> button on the right to update the library, or the <i class="material-symbols-outlined">delete</i> button to remove it.
+1. Go to **Python dependencies**.
+2. Under the **Installed Python packages** tab, find the Python library you want to manage.
+3. Click the <i class="material-symbols-outlined">arrow_upward</i> button on the right to update the library, or the <i class="material-symbols-outlined">delete</i> button to remove it.
+![Manage installed packages](/images/manual/use-cases/comfyui-python-manage.png#bordered)
 
 ### Analyze dependency installation status
 
-1. Under the **Dependency analysis** tab, click **ANALYZE NOW** to start analyzing.
-2. From the plugins list on the left, find the problematic plugin highlighted in red, and click on it.
-3. From **Dependency list**, find the missing library for the plugin, and click the **Install** button on the right. You can also click **FIX ALL** to automatically install all missing libraries.
-    ![Analyze dependencies](/images/manual/use-cases/comfyui-analyze-dependency.png#bordered)
+1. Go to **Python dependencies** > **Dependency analysis**. 
+2. Click **ANALYZE NOW** to start analyzing.
+3. From the plugins list on the left, find the problematic plugin highlighted in red, and click on it.
+4. From **Dependency list**, find the missing library for the plugin, and click the **Install** button on the right. You can also click **FIX ALL** to automatically install all missing libraries.
+![Analyze dependencies](/images/manual/use-cases/comfyui-dependency-analy.png#bordered)
 
-## Troubleshooting and maintenance
+## Troubleshoot and maintain ComfyUI
 
 ComfyUI Launcher provides tools to help diagnose and maintain the ComfyUI service.
-
-### Configure network
-
-Network connection issues can affect the download of models and plugins. Before using ComfyUI, it's recommended to check the connection status to GitHub, PyPI, and HuggingFace on the Launcher homepage.
-
-![Check network status](/images/manual/use-cases/comfyui-check-network.png#bordered)
-
-For example, if GitHub is inaccessible:
-
-1. Navigate to the **Network configuration**.
-2. Switch the provided URLs for GitHub.
-3. Click the **CHECK** button on the right to refresh the connection status. 
-
-Repeat steps 2 and 3 until the network becomes "Accessible".
-
-![Switch network](/images/manual/use-cases/comfyui-change-network.png#bordered)
 
 ### Export ComfyUI logs
 
 You can export logs to diagnose the current running status of ComfyUI:
 
-![Export Logs](/images/manual/use-cases/comfyui-log.png#bordered)
-
-1. In the upper-right corner of the Launcher homepage, click <i class="material-symbols-outlined">more_vert</i>, then click **View logs** to view the current running log.
+1. Go to **Home** and click <i class="material-symbols-outlined">more_vert</i> in the upper-right corner, then click **View logs** to view the current running log.
+![View Logs](/images/manual/use-cases/comfyui-view-logs.png#bordered)
 2. Click the <i class="material-symbols-outlined">refresh</i> button to refresh the log, and the <i class="material-symbols-outlined">download</i> button to download the log.
+![Export Logs](/images/manual/use-cases/comfyui-export-logs.png#bordered){width=450}
 
 ### Reset ComfyUI configuration
 
-To reset ComfyUI to its initial state:
-
-![Reset ComfyUI](/images/manual/use-cases/comfyui-reset.png#bordered)
-
-1. In the upper-right corner of the Launcher's homepage, click <i class="material-symbols-outlined">more_vert</i>, and select **Wipe and restore**. After a second confirmation, the Launcher will begin the wiping and restoration process.
-
-2. After the restoration operation is complete, restart ComfyUI for the changes to take effect.
-
-:::warning Exercise caution
+:::warning Perform with caution
 Restoring ComfyUI is an irreversible operation. Please operate carefully.
 :::
 
-## Discover inspirations
+To reset ComfyUI to its initial state:
 
-Enter the **Discover** page from the left sidebar to view the latest and most trending ComfyUI models and workflows on [civit.ai](civit.ai).
+1. Go to **Home** and click <i class="material-symbols-outlined">more_vert</i> in the upper-right corner, then click **Wipe and restore**. 
+2. In the prompt window, click **WIPE AND RESTORE**.
+![Wipe and restore](/images/manual/use-cases/comfyui-wipe-and-restore.png#bordered){width=350}
+3. Enter `CONFIRM`, then click **CONFIRM**.
+![Second confirmation](/images/manual/use-cases/comfyui-second-confirm.png#bordered){width=350}
 
-::: tip Note
-Please ensure your network can properly access [civit.ai](civit.ai).
-:::
+After the restoration operation is complete, restart ComfyUI for the changes to take effect.
