@@ -623,7 +623,7 @@ func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opI
 		OpID:       opID,
 		State:      v1alpha1.Pending.String(),
 		RawAppName: a.Spec.RawAppName,
-		Type:       "app",
+		Type:       a.Spec.Type.String(),
 		Title:      apputils.AppTitle(a.Spec.Config),
 	})
 	return

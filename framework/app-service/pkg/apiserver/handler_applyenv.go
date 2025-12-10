@@ -50,6 +50,11 @@ func (h *Handler) appApplyEnv(req *restful.Request, resp *restful.Response) {
 
 	appCopy := appMgr.DeepCopy()
 	appCopy.Spec.OpType = appv1alpha1.ApplyEnvOp
+	if appCopy.Annotations == nil {
+		klog.Errorf("not support operation %s,name:%s", appv1alpha1.ApplyEnvOp, appCopy.Spec.AppName)
+		api.HandleError(resp, req, fmt.Errorf("not support operation %s", appv1alpha1.ApplyEnvOp))
+		return
+	}
 	appCopy.Annotations[api.AppTokenKey] = token
 
 	err = h.ctrlClient.Patch(req.Request.Context(), appCopy, client.MergeFrom(&appMgr))
@@ -81,7 +86,7 @@ func (h *Handler) appApplyEnv(req *restful.Request, resp *restful.Response) {
 		OpID:       opID,
 		State:      appv1alpha1.ApplyingEnv.String(),
 		RawAppName: am.Spec.RawAppName,
-		Type:       "app",
+		Type:       am.Spec.Type.String(),
 		Title:      apputils.AppTitle(am.Spec.Config),
 	})
 

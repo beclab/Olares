@@ -348,7 +348,9 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	appCopy.Spec.Config = config
 	appCopy.Spec.OpType = appv1alpha1.UpgradeOp
 	if appCopy.Annotations == nil {
-		appCopy.Annotations = make(map[string]string)
+		klog.Errorf("not support operation %s,name: %s", appv1alpha1.UpgradeOp, appCopy.Spec.AppName)
+		api.HandleError(resp, req, fmt.Errorf("not support operation %s", appv1alpha1.UpgradeOp))
+		return
 	}
 	appCopy.Annotations[api.AppRepoURLKey] = request.RepoURL
 	appCopy.Annotations[api.AppVersionKey] = request.Version
@@ -384,7 +386,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		OpID:       opID,
 		State:      appv1alpha1.Upgrading.String(),
 		RawAppName: am.Spec.RawAppName,
-		Type:       "app",
+		Type:       am.Spec.Type.String(),
 		Title:      apputils.AppTitle(am.Spec.Config),
 	})
 

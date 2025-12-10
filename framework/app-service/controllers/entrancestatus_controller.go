@@ -250,8 +250,9 @@ func (r *EntranceStatusManagerController) updateEntranceStatus(ctx context.Conte
 				State:            am.Status.State.String(),
 				EntranceStatuses: appCopy.Status.EntranceStatuses,
 				RawAppName:       appCopy.Spec.RawAppName,
-				Type:             "app",
+				Type:             am.Spec.Type.String(),
 				Title:            app.AppTitle(am.Spec.Config),
+				SharedEntrances:  appCopy.Spec.SharedEntrances,
 			})
 		}
 	}

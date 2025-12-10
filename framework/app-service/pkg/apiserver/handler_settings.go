@@ -276,7 +276,7 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 			OpID:       opID,
 			State:      v1alpha1.Upgrading.String(),
 			RawAppName: am.Spec.RawAppName,
-			Type:       "app",
+			Type:       am.Spec.Type.String(),
 			Title:      apputils.AppTitle(am.Spec.Config),
 			Message:    fmt.Sprintf("app %s was upgrade via setup domain by user %s", am.Spec.AppName, am.Spec.AppOwner),
 		})
