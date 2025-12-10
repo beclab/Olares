@@ -2,10 +2,13 @@ package appstate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	appsv1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
+	"bytetrade.io/web3os/app-service/pkg/apiserver/api"
+	"bytetrade.io/web3os/app-service/pkg/appcfg"
 	"bytetrade.io/web3os/app-service/pkg/constants"
 	"bytetrade.io/web3os/app-service/pkg/kubeblocks"
 	"bytetrade.io/web3os/app-service/pkg/users/userspace"
@@ -62,6 +65,34 @@ func (p *ResumingApp) exec(ctx context.Context) error {
 		klog.Errorf("resume %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
 		return fmt.Errorf("resume app %s failed %w", p.manager.Spec.AppName, err)
 	}
+
+	// If resume-all is requested, also resume v2 server-side shared charts by scaling them up
+	if p.manager.Annotations[api.AppResumeAllKey] == "true" {
+		var appCfg *appcfg.ApplicationConfig
+		if err := json.Unmarshal([]byte(p.manager.Spec.Config), &appCfg); err != nil {
+			klog.Errorf("unmarshal to appConfig failed %v", err)
+			return err
+		}
+		if appCfg != nil && appCfg.IsV2() && appCfg.HasClusterSharedCharts() {
+			for _, chart := range appCfg.SubCharts {
+				if !chart.Shared {
+					continue
+				}
+				ns := chart.Namespace(appCfg.OwnerName)
+				// create a shallow copy with target namespace/name for scaling logic
+				amCopy := p.manager.DeepCopy()
+				amCopy.Spec.AppNamespace = ns
+				amCopy.Spec.AppName = chart.Name
+				klog.Infof("resume-amCopy.Spec.AppNamespace: %s", ns)
+				klog.Infof("resume-amCopy.Spec.AppName: %s", chart.Name)
+				if err := suspendOrResumeApp(ctx, p.client, amCopy, int32(1)); err != nil {
+					klog.Errorf("failed to resume shared chart %s in namespace %s: %v", chart.Name, ns, err)
+					return err
+				}
+			}
+		}
+	}
+
 	if p.manager.Spec.Type == "middleware" && userspace.IsKbMiddlewares(p.manager.Spec.AppName) {
 		err = p.execMiddleware(ctx)
 		if err != nil {

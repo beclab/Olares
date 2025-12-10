@@ -10,6 +10,7 @@ import (
 	"bytetrade.io/web3os/app-service/pkg/apiserver/api"
 	"bytetrade.io/web3os/app-service/pkg/appstate"
 	"bytetrade.io/web3os/app-service/pkg/constants"
+	"bytetrade.io/web3os/app-service/pkg/kubesphere"
 	"bytetrade.io/web3os/app-service/pkg/users/userspace"
 	"bytetrade.io/web3os/app-service/pkg/utils"
 	apputils "bytetrade.io/web3os/app-service/pkg/utils/app"
@@ -22,6 +23,15 @@ import (
 func (h *Handler) suspend(req *restful.Request, resp *restful.Response) {
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
+
+	// read optional body to support all=true
+	request := &api.StopRequest{}
+	if req.Request.ContentLength > 0 {
+		if err := req.ReadEntity(request); err != nil {
+			api.HandleBadRequest(resp, req, err)
+			return
+		}
+	}
 	if userspace.IsSysApp(app) {
 		api.HandleBadRequest(resp, req, errors.New("sys app can not be suspend"))
 		return
@@ -42,6 +52,8 @@ func (h *Handler) suspend(req *restful.Request, resp *restful.Response) {
 		return
 	}
 	am.Spec.OpType = v1alpha1.StopOp
+	am.Annotations[api.AppStopAllKey] = fmt.Sprintf("%t", request.All)
+
 	err = h.ctrlClient.Update(req.Request.Context(), &am)
 	if err != nil {
 		api.HandleError(resp, req, err)
@@ -72,7 +84,7 @@ func (h *Handler) suspend(req *restful.Request, resp *restful.Response) {
 		OpID:       opID,
 		State:      v1alpha1.Stopping.String(),
 		RawAppName: a.Spec.RawAppName,
-		Type:       "app",
+		Type:       a.Spec.Type.String(),
 		Title:      apputils.AppTitle(a.Spec.Config),
 		Reason:     constants.AppStopByUser,
 		Message:    fmt.Sprintf("app %s was stop by user %s", a.Spec.AppName, a.Spec.AppOwner),
@@ -106,6 +118,16 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 	}
 
 	am.Spec.OpType = v1alpha1.ResumeOp
+	// if current user is admin, also resume server side
+	isAdmin, err := kubesphere.IsAdmin(req.Request.Context(), h.kubeConfig, owner)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+	am.Annotations[api.AppResumeAllKey] = fmt.Sprintf("%t", false)
+	if isAdmin {
+		am.Annotations[api.AppResumeAllKey] = fmt.Sprintf("%t", true)
+	}
 	err = h.ctrlClient.Update(req.Request.Context(), &am)
 	if err != nil {
 		api.HandleError(resp, req, err)
@@ -134,7 +156,7 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 		OpID:       opID,
 		State:      v1alpha1.Resuming.String(),
 		RawAppName: a.Spec.RawAppName,
-		Type:       "app",
+		Type:       a.Spec.Type.String(),
 		Title:      apputils.AppTitle(a.Spec.Config),
 		Message:    fmt.Sprintf("app %s was resume by user %s", a.Spec.AppName, a.Spec.AppOwner),
 	})
