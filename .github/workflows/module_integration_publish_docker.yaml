@@ -1,0 +1,58 @@
+name: Publish Integration Server to Dockerhub
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: "Release Tags"
+
+jobs:
+  publish_dockerhub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: PR Conventional Commit Validation
+        uses: ytanikin/PRConventionalCommits@1.1.0
+        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+        with:
+          task_types: '["feat","fix","docs","test","ci","refactor","perf","chore","revert","style"]'
+          add_label: "true"
+
+      - name: Check out the repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          image: tonistiigi/binfmt:qemu-v8.1.5
+          cache-image: false
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.23.3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASS }}
+
+      - name: get latest tag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+        id: get-latest-tag
+        with:
+          fallback: latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          file: framework/integration/Dockerfile
+          push: true
+          tags: beclab/integration-server:${{ github.event.inputs.tags }}
+          platforms: linux/amd64,linux/arm64
+          context: framework/integration
