@@ -199,13 +199,13 @@ func (h *HelmOps) AddApplicationLabelsToDeployment() error {
 	patch = string(patchByte)
 
 	// TODO: add ownerReferences of user
-	deployment, err := k8s.AppsV1().Deployments(h.app.Namespace).Get(h.ctx, h.app.AppName, metav1.GetOptions{})
+	deployment, err := k8s.AppsV1().Deployments(h.app.Namespace).Get(h.ctx, h.app.RawAppName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return h.tryToAddApplicationLabelsToStatefulSet(k8s, patch)
 		}
 
-		klog.Errorf("Failed to get deployment %s in namespace %s: %v", h.app.AppName, h.app.Namespace, err)
+		klog.Errorf("Failed to get deployment %s in namespace %s: %v", h.app.RawAppName, h.app.Namespace, err)
 		return err
 	}
 
@@ -216,7 +216,7 @@ func (h *HelmOps) AddApplicationLabelsToDeployment() error {
 		metav1.PatchOptions{})
 
 	if err != nil {
-		klog.Errorf("Failed to patch deployment %s in namespace %s: %v", h.app.AppName, h.app.Namespace, err)
+		klog.Errorf("Failed to patch deployment %s in namespace %s: %v", h.app.RawAppName, h.app.Namespace, err)
 		return err
 	}
 	return nil
@@ -278,13 +278,13 @@ func (h *HelmOps) tryToAddApplicationLabelsToCluster() error {
 }
 
 func (h *HelmOps) tryToAddApplicationLabelsToStatefulSet(k8s *kubernetes.Clientset, patch string) error {
-	statefulSet, err := k8s.AppsV1().StatefulSets(h.app.Namespace).Get(h.ctx, h.app.AppName, metav1.GetOptions{})
+	statefulSet, err := k8s.AppsV1().StatefulSets(h.app.Namespace).Get(h.ctx, h.app.RawAppName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
 
-		klog.Errorf("Failed to get statefulset %s in namespace %s: %v", h.app.AppName, h.app.Namespace, err)
+		klog.Errorf("Failed to get statefulset %s in namespace %s: %v", h.app.RawAppName, h.app.Namespace, err)
 		return err
 	}
 
@@ -585,7 +585,7 @@ func (h *HelmOps) isStartUp() (bool, error) {
 func (h *HelmOps) findAppSelectedPods() (*corev1.PodList, error) {
 	var labelSelector string
 	deployment, err := h.client.KubeClient.Kubernetes().AppsV1().Deployments(h.app.Namespace).
-		Get(h.ctx, h.app.AppName, metav1.GetOptions{})
+		Get(h.ctx, h.app.RawAppName, metav1.GetOptions{})
 
 	if err == nil {
 		labelSelector = metav1.FormatLabelSelector(deployment.Spec.Selector)
@@ -593,7 +593,7 @@ func (h *HelmOps) findAppSelectedPods() (*corev1.PodList, error) {
 
 	if apierrors.IsNotFound(err) {
 		sts, err := h.client.KubeClient.Kubernetes().AppsV1().StatefulSets(h.app.Namespace).
-			Get(h.ctx, h.app.AppName, metav1.GetOptions{})
+			Get(h.ctx, h.app.RawAppName, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -603,7 +603,7 @@ func (h *HelmOps) findAppSelectedPods() (*corev1.PodList, error) {
 		List(h.ctx, metav1.ListOptions{LabelSelector: labelSelector})
 
 	if err != nil {
-		klog.Errorf("app %s get pods err %v", h.app.AppName, err)
+		klog.Errorf("app %s get pods err %v", h.app.RawAppName, err)
 		return nil, err
 	}
 	return pods, nil
