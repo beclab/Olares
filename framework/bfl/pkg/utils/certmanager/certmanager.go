@@ -280,7 +280,7 @@ func (c *certManager) GetCustomDomainOnCloudflare(customDomain string) (*Respons
 func (c *certManager) DeleteCustomDomainOnCloudflare(customDomain string) (*Response, error) {
 	payload := CustomDomainPayload{Name: string(c.terminusName), CustomDomain: customDomain}
 	var r Response
-	err := c.request(context.Background(), "DELETE", constants.APIDNSSetCloudFlareTunnel, payload, &r)
+	err := c.request(context.Background(), "DELETE", constants.APIDNSAddCustomDomain, payload, &r)
 	if err != nil && !strings.Contains(err.Error(), "The custom hostname was not found") {
 		return nil, err
 	}
