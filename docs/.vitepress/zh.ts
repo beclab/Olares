@@ -110,6 +110,10 @@ const side = {
           link: "/zh/manual/larepass/back-up-mnemonics",
         },
         {
+          text: "内网访问 Olares",
+          link: "zh/manual/get-started/local-access",
+        },
+        {
           text: "探索",
           link: "/zh/manual/get-started/next-steps",
         },
