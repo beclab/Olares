@@ -3,11 +3,11 @@
 {{- $certKeyEnc := "" }}
 {{- $prevSecret := (lookup "v1" "Secret" .Release.Namespace "search3-validation-tls") }}
 {{- if $prevSecret }}
-{{- $certCrtEnc = index $prevSecret "data" "tls.crt" }}
-{{- $certKeyEnc = index $prevSecret "data" "tls.key" }}
-{{- $caCertEnc = index $prevSecret "data" "ca.crt" }}
+{{- $certCrtEnc = index $prevSecret "data" "tls.crt" | default "" }}
+{{- $certKeyEnc = index $prevSecret "data" "tls.key" | default "" }}
+{{- $caCertEnc = index $prevSecret "data" "ca.crt" | default "" }}
 {{- end }}
-{{- if or (eq $caCertEnc "") (eq $certCrtEnc "") (eq $certKeyEnc "") }}
+{{- if or (not $caCertEnc) (not $certCrtEnc) (not $certKeyEnc) }}
 {{- $altNames := list "search3-validation" (printf "search3-validation.%s" .Release.Namespace) (printf "search3-validation.%s.svc" .Release.Namespace) (printf "search3-validation.%s.svc.cluster.local" .Release.Namespace) }}
 {{- $tmpperioddays := 36500 }}
 {{- $ca := genCA "search3-validation" $tmpperioddays }}
