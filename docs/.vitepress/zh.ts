@@ -225,9 +225,13 @@ const side = {
               "text": "基本操作",
               "link": "/zh/manual/olares/wise/basics"
             },
-            {
+            /*{
               "text": "获取推荐引擎",
               "link": "/zh/manual/olares/wise/recommend"
+            },*/
+            {
+              text: "管理 Cookie",
+              link: "/zh/manual/olares/wise/manage-cookies",
             },
             {
               "text": "管理订阅",
