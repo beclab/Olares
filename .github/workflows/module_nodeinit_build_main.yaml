@@ -1,0 +1,29 @@
+name: OSNode-Init Build test
+
+on:
+  push:
+    branches: [ "module-nodeinit" ]
+    paths:
+      - 'framework/osnode-init/**'
+      - '!framework/osnode-init/.olares/**'
+      - '!framework/osnode-init/README.md'
+  pull_request:
+    branches: [ "module-nodeinit" ]
+    paths:
+      - 'framework/osnode-init/**'
+      - '!framework/osnode-init/.olares/**'
+      - '!framework/osnode-init/README.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v3
+      with:
+        go-version: '1.24.6'
+    - name: Run Build
+      working-directory: framework/osnode-init
+      run: |
+        make all
