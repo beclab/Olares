@@ -6,14 +6,15 @@ description: Get started with Wise in Olares. Learn to collect content, organize
 
 Wise helps you build a focused reading workflow on top of your personal information hub. This page walks you through the core actions you'll use every day: collecting content, organizing what to read next, and capturing your own insights.
 
-:::tip Install companion apps
-Some advanced features in Wise rely on companion apps in Olares:
+## Before you begin
 
-- **[Rss Subscribe](https://market.laresprime.olares.com/app/market.olares/rssubscribe)**: Use it to subscribe to RSS feeds directly while browsing web pages.
-- **[YT-DLP](https://market.laresprime.olares.com/app/market.olares/ytdlp)**: Use it to download audio and video from supported web pages into Wise.
+To unlock the full potential of Wise, it is recommended to search in Olares Market and install the following companion apps:
+
+- **Rss Subscribe**: Use it to subscribe to RSS feeds directly while browsing web pages.
+- **YT-DLP**: Use it to download audio and video from supported web pages into Wise.
 
 Wise works without these apps, but in-browser subscription and media download will be unavailable until you install them.
-:::
+
 
 ## Build your library
 
@@ -30,13 +31,15 @@ You can save individual items to Wise in three ways: by uploading files, adding 
 
 #### Upload files
 
+Import files directly from your computer, including PDFs, EPUBs, audio, video, and other document types. Wise automatically places each supported format into the right content folder in your library (for example, PDFs under **PDFs**, EPUBs under **Books**, and media under **Videos** or **Audios**).
+
 1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar.  
 2. Choose **Upload**.
 3. Select one or more files from your local computer.
 
-Wise supports various kinds of local files, including PDFs, EPUBs, audio, video, and other document types. Supported formats are organized into the appropriate content type in your library (for example, PDFs under **PDFs**, EPUBs under **Books**, media under **Videos** or **Audios**).
+#### Add items via link
 
-#### Add links
+Paste a URL to save articles, videos, or subscribe to feeds.
 
 ::: tip Handle restricted content
 If a link requires login or other access control, Wise may need cookies to fetch it correctly. To configure cookies for protected sites, see **[Manage cookies for Wise](./manage-cookies)**.
@@ -46,12 +49,12 @@ If a link requires login or other access control, Wise may need cookies to fetch
 2. Choose **Add Link**.
 3. Paste or type a URL.
 
-Wise analyzes the link and lists all actions available:
-- **Save to library**: The content will be saved as an item in your library and added to **Inbox**.
-- **Subscribe to RSS feed**: If Wise detects one or more RSS feeds for the site, they will be listed here. Select the feed you want to follow, and new items from that feed will be automatically added to **Feeds**(see [Subscribe and manage feeds](./subscribe)).
-![Subscribe to RSS feed](/images/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
-- **Download file**: If Wise detects videos or other downloadable files on the page, this option will appear. Select the file you want to download to save it for offline access (requires **[YT-DLP](https://market.laresprime.olares.com/app/market.olares/ytdlp)**).
-![Download files](/images/manual/olares/wise-add-link-download.png#bordered){width=300}
+    Wise analyzes the link and lists all actions available:
+    - **Save to library**: The content will be saved as an item in your library and added to **Inbox**.
+    - **Subscribe to RSS feed**: If Wise detects one or more RSS feeds for the site, they will be listed here. Select the feed you want to follow, and new items from that feed will be automatically added to **Feeds**(see [Subscribe and manage feeds](./subscribe)).
+    ![Subscribe to RSS feed](/images/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
+    - **Download file**: If Wise detects videos or other downloadable files on the page, this option will appear. Select the file you want to download to save it for offline access (requires **[YT-DLP](https://market.laresprime.olares.com/app/market.olares/ytdlp)**).
+    ![Download files](/images/manual/olares/wise-add-link-download.png#bordered){width=300}
 
 Newly saved items will appear under their content type. You can then decide whether their status should be **Inbox** or **Read Later**.
 
@@ -65,26 +68,14 @@ LarePass extension is currently available for Chrome browsers only. You can down
 
 To save content from a web page into Wise:
 
-1. Open the **LarePass** browser extension and select **<i class="material-symbols-outlined">inventory_2</i>**.
+1. Open the LarePass browser extension and select **<i class="material-symbols-outlined">inventory_2</i>**.
 2. Under **Save to library**, review the content detected on the current page.
 3. Click <i class="material-symbols-outlined">box_add</i> next to the item you want to save.
 ![Save content via LarePass extension](/images/manual/olares/wise-larepass-add-to-lib.png#bordered)
 
-Items saved via LarePass are added to your Wise library and appear in the main **Inbox** folder and under the appropriate content type.
+    Items saved via LarePass are added to your Wise library and appear in the main **Inbox** folder and under the appropriate content type.
 
-### Follow sources with feeds
-
-If you want ongoing updates instead of saving one page at a time, subscribe to a feed:
-
-- Paste a feed URL into **Add Link**.
-- Use the **LarePass** browser extension while browsing to detect feeds on the current page and subscribe with one click.
-- Import RSS feeds from OPML files.
-
-Once subscribed, new entries appear under **Feeds**. From there, you can open items and save the ones you care about into your library, namely the folder **Inbox**.
-
-For full details on managing subscriptions, importing OPML files, and using LarePass browser extension, see [Subscribe and manage feeds](./subscribe).
-
-### Download audio and video
+### Monitor and manage media downloads
 
 When you add new audio or video content, Wise automatically creates download tasks and save media files to Olares. This:
 
@@ -92,28 +83,27 @@ When you add new audio or video content, Wise automatically creates download tas
 - Protects your library if the original source is removed. 
 - Makes it faster to open and play items.
 
-To view all download tasks:
+To manage all download tasks:
 
-1. Go to **<i class="material-symbols-outlined">settings</i> Settings > Transmission > Download**.
+1. Go to **<i class="material-symbols-outlined">settings</i> Settings** > **Transmission** > **Download**.
 2. Review the list of media downloads and their status.
 3. You can:
 
-    - Click <i class="material-symbols-outlined">folder_open</i> to locate a downloaded file in **Files**.
+    - Click <i class="material-symbols-outlined">folder_open</i> to locate a downloaded file in Files.
     - Click <i class="material-symbols-outlined">do_not_disturb_on</i> to remove it from the list.
 
 ## Manage item status
 
-Every item in Wise has a status that can be either **Inbox** or **Read Later**. You can change an item's status using the icons in the list view or the reader view:
-
-- **<i class="material-symbols-outlined">inbox</i> Inbox**: Indicates the item is active or "to do."
-- **<i class="material-symbols-outlined">schedule</i> Read Later**: Indicates the item is saved for future reading.
+You can organize your content by categorizing items as either **`Inbox`** or **`Read Later`**. Change the status using the icons found in the list view or reader view.
 
 ![Wise content status](/images/manual/olares/wise-item-status.png#bordered)
 ![Wise content status in list](/images/manual/olares/wise-list-status.png#bordered)
 
-**When you click <i class="material-symbols-outlined">inbox</i>**: The item appears in the main **Inbox** folder and the **Inbox** tab of its specific content type (e.g., **Articles** > **Inbox**). The **Read Later** icon will be greyed out.
+- **To keep an item on your to-do list**  
+  Click **<i class="material-symbols-outlined">inbox</i>**: The item is treated as active content and appears in the **`Inbox`** tab in both the main **Inbox** folder and its content-type folder (e.g., **Articles** > **`Inbox`**).
 
-**When you click <i class="material-symbols-outlined">schedule</i>**: The item is removed from the main **Inbox** folder and moves to the **Read Later** tab of its specific content type (e.g., **Articles** > **Read Later**).
+- **To archive an item for later**  
+  Click **<i class="material-symbols-outlined">schedule</i>**: The item is moved from the **`Inbox`** tab to the **`Read Later`** tab in both the main **Inbox** folder and its content-type folder (e.g., **Articles** > **`Read Later`**).
 
 ::: tip 
 Changing an item's status instantly updates its location across all folders. You can switch between **Inbox** and **Read Later** at any time. 
@@ -151,7 +141,7 @@ Tags allow you to add flexible labels to your content for easy retrieval later.
 
 ![Tags](/images/manual/olares/wise-tags.png#bordered){width=600}
 
-You can manage all your tags in **<i class="material-symbols-outlined">settings</i> Settings > Tags**.
+You can manage all your tags in **<i class="material-symbols-outlined">settings</i> Settings** > **Tags**.
 
 ::: tip
 Tags become even more powerful when combined with filtered views. See [Organize your knowledge with filters](./filter) to build tag-based views such as "AI articles" or "Design inspiration".
@@ -161,7 +151,7 @@ Tags become even more powerful when combined with filtered views. See [Organize 
 
 Once you've collected your content in Wise, you can search for particular content themes or entries using aggregated search in Olares.
 
-1. Click <i class="material-symbols-outlined">search</i>in the Dock to open the search window.
+1. Click <i class="material-symbols-outlined">search</i> in the Dock to open the search window.
 2. Specify the search scope to Wise, and enter the keywords to search.
 ![Search in Wise](/images/manual/tutorials/wise-search.png#bordered)
 

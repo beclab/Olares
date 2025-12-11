@@ -9,11 +9,12 @@ Wise offers flexible subscription options to help you follow your favorite conte
 
 ## Understand feeds
 
-When you subscribe to a feed in Wise:
+Subscribing to a feed creates a direct link to a content source. New entries will appear in the **Feeds** list automatically as they are published.
 
-- The feed appears in the **Feeds** section of the sidebar.
-- New entries from that source are continuously fetched.
-- You can open entries directly from the feed, or save individual items into your library.
+Please note the difference between viewing and keeping:
+
+- **Feeds are for discovery**: You can open and read any entry from the feed list, but these items are temporary. If the feed changes or you unsubscribe, they may no longer be available.
+- **Your library is for ownership**: If you find an entry you want to keep or read later, you must **Save to library**. Only saved items become part of your library and can be managed with status, tags, notes, and filters.
 
 ## Add subscriptions
 
@@ -23,7 +24,7 @@ You can subscribe to feeds from within Wise or directly from your browser.
 If a link requires login or other access control, Wise may need cookies to fetch it correctly. To configure cookies for protected sites, see **[Manage cookies for Wise](./manage-cookies)**.
 :::
 
-### Add feeds with Add Link
+### Add feeds via link
 
 If you have a website or feed URL, you can subscribe using **Add Link**.
 
@@ -59,28 +60,24 @@ The LarePass browser extension lets you subscribe to feeds while you browse, wit
 LarePass extension is currently available for Chrome browsers only. You can download it from the [official page](https://www.olares.com/larepass).
 :::
 
-To subscribe to feeds while browsing:
-
 1. Open the LarePass browser extension and select **<i class="material-symbols-outlined">inventory_2</i>**.
 2. Check the **RSS** section:
    - If feeds are detected on the current page, they will be listed there.
 3. Click <i class="material-symbols-outlined">bookmark_add</i> next to the feed you want to subscribe to.
 ![Subscribe to RSS feed via LarePass](/images/manual/olares/wise-larepass-collect.png#bordered)
 
-## View subscription list
+## Manage subscriptions
 
-You can view and manage all your feeds from the RSS feeds settings page:
+You can view, rename, or organize your subscriptions via the central management page.
 
 1. Click <i class="material-symbols-outlined">settings</i> in the bottom left corner.
 2. Select **RSS feeds**.
-
-From this page you can:
-
-- View feed details and descriptions.
-- Search for specific feeds.
-- Copy RSS links.
-- Edit feed names and descriptions.
-- Remove RSS links.
+3. Perform the following operations as needed:
+    - View feed details and descriptions.
+    - Search for specific feeds.
+    - Copy RSS links.
+    - Edit feed names and descriptions.
+    - Remove RSS links.
 
 Changes here are reflected in the **Feeds** section of the Wise sidebar.
 
