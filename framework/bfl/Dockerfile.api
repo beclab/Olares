@@ -1,0 +1,30 @@
+FROM golang:1.23.1-bullseye as builder
+
+WORKDIR /workspace
+
+
+# Copy the Go Modules manifests
+COPY go.mod bytetrade.io/web3os/bfl/go.mod
+COPY go.sum bytetrade.io/web3os/bfl/go.sum
+
+
+RUN cd bytetrade.io/web3os/bfl && \
+    go mod download
+
+# Copy the go source
+COPY cmd/ bytetrade.io/web3os/bfl/cmd/
+COPY pkg/ bytetrade.io/web3os/bfl/pkg/
+COPY internal/ bytetrade.io/web3os/bfl/internal/
+
+RUN cd bytetrade.io/web3os/bfl/ && \
+    CGO_ENABLED=0 go build -ldflags="-s -w" -a -o bfl-api cmd/apiserver/main.go
+
+
+# Use distroless as minimal base image to package the manager binary
+# Refer to https://github.com/GoogleContainerTools/distroless for more details
+FROM gcr.io/distroless/static:debug
+WORKDIR /
+COPY --from=builder /workspace/bytetrade.io/web3os/bfl/bfl-api .
+USER 65532:65532
+
+ENTRYPOINT ["/bfl-api"]

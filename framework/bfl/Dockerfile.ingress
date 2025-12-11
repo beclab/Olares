@@ -1,0 +1,34 @@
+FROM golang:1.23.1-bullseye as builder
+
+WORKDIR /workspace
+
+
+# Copy the Go Modules manifests
+COPY go.mod bytetrade.io/web3os/bfl-ingress/go.mod
+COPY go.sum bytetrade.io/web3os/bfl-ingress/go.sum
+
+
+RUN cd bytetrade.io/web3os/bfl-ingress && \
+  go mod download
+
+
+# Copy the go project
+COPY . bytetrade.io/web3os/bfl-ingress/
+
+RUN cd bytetrade.io/web3os/bfl-ingress/ && \
+  CGO_ENABLED=0 go build -ldflags="-s -w" -a -o bfl-ingress cmd/ingress/main.go
+
+FROM bytetrade/openresty:1.25.3-otel
+
+RUN apt update && \
+  apt install -y --no-install-recommends gcc lua5.1 coreutils luarocks
+RUN luarocks-5.1 install lua-resty-cookie 
+
+WORKDIR /
+COPY --from=builder /workspace/bytetrade.io/web3os/bfl-ingress/bfl-ingress .
+COPY --from=builder /workspace/bytetrade.io/web3os/bfl-ingress/config/ingress/nginx.tmpl /etc/nginx/template/
+COPY --from=builder /workspace/bytetrade.io/web3os/bfl-ingress/config/ingress/lua /etc/nginx/lua
+COPY fake-nginx /usr/local/bin/nginx
+RUN chmod 755 /usr/local/bin/nginx
+
+ENTRYPOINT ["/bfl-ingress"]

@@ -1,0 +1,6 @@
+#!/bin/bash
+if [[ "$1" == "-version" || "$1" == "-v" ]]; then
+  echo "nginx version: openresty/1.25.3"
+else
+  /usr/local/openresty/nginx/sbin/nginx $@
+fi

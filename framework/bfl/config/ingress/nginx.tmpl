@@ -1,0 +1,527 @@
+{{ $all := . }}
+{{ $servers := .Servers }}
+{{ $customDomainServers := .CustomDomainServers }}
+{{ $cfg := .Cfg }}
+{{ $healthzURI := .HealthzURI }}
+{{ $statusPath := .StatusPath }}
+{{ $realIpFrom := .RealIpFrom }}
+{{ $userName := .UserName }}
+{{ $userZone := .UserZone }}
+
+{{ $windowPushStateScript := `<script>
+                                (function () {
+                                  if (window.top == window) {
+                                      return;
+                                  }
+                                  const originalPushState = history.pushState;
+                                  const pushStateEvent = new Event("pushstate");
+                                  history.pushState = function (...args) {
+                                    originalPushState.apply(this, args);
+                                    window.dispatchEvent(pushStateEvent);
+                                  };
+                                  window.addEventListener("pushstate", () => {
+                                    window.parent.postMessage(
+                                      {type: "locationHref", message: location.href},
+                                      "*"
+                                    );
+                                  });
+                                })();
+                              </script>` }}
+
+# Configuration checksum: {{ $cfg.Checksum }}
+
+{{ if $cfg.EnableOtel }}
+env OTEL_RESOURCE_ATTRIBUTES;
+load_module /opt/opentelemetry-webserver/agent/WebServerModule/Nginx/1.25.3/ngx_http_opentelemetry_module.so;
+{{ end }}
+
+pid {{ .PID }};
+
+daemon on;
+
+worker_processes {{ $cfg.WorkerProcesses }};
+{{ if gt (len $cfg.WorkerCPUAffinity) 0 }}
+worker_cpu_affinity {{ $cfg.WorkerCPUAffinity }};
+{{ end }}
+
+worker_rlimit_nofile {{ $cfg.MaxWorkerOpenFiles }};
+
+{{/* http://nginx.org/en/docs/ngx_core_module.html#worker_shutdown_timeout */}}
+{{/* avoid waiting too long during a reload */}}
+worker_shutdown_timeout {{ $cfg.WorkerShutdownTimeout }} ;
+
+events {
+    multi_accept        {{ if $cfg.EnableMultiAccept }}on{{ else }}off{{ end }};
+    worker_connections  {{ $cfg.MaxWorkerConnections }};
+    use                 epoll;
+}
+
+http {
+    lua_package_path "/etc/nginx/lua/?.lua;;";
+
+    aio                 threads;
+    aio_write           on;
+
+    tcp_nopush          on;
+    tcp_nodelay         on;
+
+    log_subrequest      on;
+
+    reset_timedout_connection on;
+
+    keepalive_timeout  {{ $cfg.KeepAlive }}s;
+    keepalive_requests {{ $cfg.KeepAliveRequests }};
+
+    client_body_temp_path           /tmp/client-body;
+    fastcgi_temp_path               /tmp/fastcgi-temp;
+    proxy_temp_path                 /tmp/proxy-temp;
+	  client_max_body_size            10g;
+
+    client_header_buffer_size       {{ $cfg.ClientHeaderBufferSize }};
+    client_header_timeout           {{ $cfg.ClientHeaderTimeout }}s;
+    large_client_header_buffers     {{ $cfg.LargeClientHeaderBuffers }};
+    client_body_buffer_size         {{ $cfg.ClientBodyBufferSize }};
+    client_body_timeout             {{ $cfg.ClientBodyTimeout }}s;
+
+    types_hash_max_size             2048;
+    server_names_hash_max_size      {{ $cfg.ServerNameHashMaxSize }};
+    server_names_hash_bucket_size   {{ $cfg.ServerNameHashBucketSize }};
+    map_hash_bucket_size            {{ $cfg.MapHashBucketSize }};
+
+    proxy_headers_hash_max_size     {{ $cfg.ProxyHeadersHashMaxSize }};
+    proxy_headers_hash_bucket_size  {{ $cfg.ProxyHeadersHashBucketSize }};
+
+    variables_hash_bucket_size      {{ $cfg.VariablesHashBucketSize }};
+    variables_hash_max_size         {{ $cfg.VariablesHashMaxSize }};
+
+    underscores_in_headers          {{ if $cfg.EnableUnderscoresInHeaders }}on{{ else }}off{{ end }};
+    ignore_invalid_headers          {{ if $cfg.IgnoreInvalidHeaders }}on{{ else }}off{{ end }};
+
+    include /etc/nginx/mime.types;
+    default_type {{ $cfg.DefaultType }};
+
+    {{ if $cfg.UseGzip }}
+    gzip on;
+    gzip_comp_level {{ $cfg.GzipLevel }};
+    gzip_http_version 1.1;
+    gzip_min_length {{ $cfg.GzipMinLength}};
+    gzip_types {{ $cfg.GzipTypes }};
+    gzip_proxied any;
+    gzip_vary on;
+    {{ end }}
+
+    server_tokens {{ if $cfg.ShowServerTokens }}on{{ else }}off{{ end }};
+
+    # We can't use $proxy_add_x_forwarded_for because the realip module
+    # replaces the remote_addr too soon
+    map $http_x_forwarded_for $full_x_forwarded_for {
+        {{ if $cfg.UseProxyProtocol -}}
+        default          "$http_x_forwarded_for, $proxy_protocol_addr";
+        ''               "$proxy_protocol_addr";
+        {{ else -}}
+        default          "$http_x_forwarded_for, $realip_remote_addr";
+        ''               "$realip_remote_addr";
+        {{ end -}}
+    }
+
+    map $http_x_forwarded_proto $x_forwarded_proto {
+        ""      $scheme;
+        default $http_x_forwarded_proto;
+    }
+
+    server_name_in_redirect off;
+    port_in_redirect        off;
+
+    # global log
+    {{- if and $cfg.UseForwardedHeaders $cfg.ComputeFullForwardedFor }}
+	log_format proxy '$full_x_forwarded_for - $remote_user [$time_local] "$http_host" "$request" ' '$status $body_bytes_sent "$http_referer" ' '"$http_user_agent" $request_length $request_time "$http_x_forwarded_for" ' '$upstream_addr $upstream_status $upstream_bytes_sent $upstream_response_time';
+    {{ else -}}
+	log_format proxy '$remote_addr - $remote_user [$time_local] "$http_host" "$request" ' '$status $body_bytes_sent "$http_referer" ' '"$http_user_agent" $request_length $request_time "$http_x_forwarded_for" ' '$upstream_addr $upstream_status $upstream_bytes_sent $upstream_response_time';
+    {{ end -}}
+
+    access_log {{ $cfg.AccessLogPath }} proxy;
+    error_log {{ $cfg.ErrorLogPath }} error;
+
+    proxy_ssl_session_reuse on;
+
+    {{ range $header := $cfg.HideHeaders }}proxy_hide_header {{ $header }};
+    {{ end }}
+
+    # Global filters
+    {{ range $ip := $cfg.BlockCIDRs }}deny {{ trimSpace $ip }};
+    {{ end }}
+
+    {{ if gt (len $cfg.BlockUserAgents) 0 }}
+    map $http_user_agent $block_ua {
+        default 0;
+
+        {{ range $ua := $cfg.BlockUserAgents }}{{ trimSpace $ua }} 1;
+        {{ end }}
+    }
+    {{ end }}
+
+    {{ if gt (len $cfg.BlockReferers) 0 }}
+    map $http_referer $block_ref {
+        default 0;
+
+        {{ range $ref := $cfg.BlockReferers }}{{ trimSpace $ref }} 1;
+        {{ end }}
+    }
+    {{ end }}
+
+    {{ if gt (len $realIpFrom) 0 }}
+    {{- range $real := $realIpFrom }}
+    set_real_ip_from {{ $real -}};
+    {{ end }}
+    {{ end }}
+
+    # timeout
+    resolver_timeout        30s;
+    send_timeout            60s;
+
+    # load lua modules
+    init_by_lua_block {
+        -- init modules
+        local ok, res
+
+        ok, res = pcall(require, "lua_ingress")
+        if not ok then
+          error("require failed: " .. tostring(res))
+        else
+          lua_ingress = res
+        end
+
+        ok, res = pcall(require, "token_auth")
+        if not ok then
+          error("require failed: " .. tostring(res))
+        else
+          token_auth = res
+        end
+    }
+
+    init_worker_by_lua_block {
+        bfl_user = {}
+        lua_ingress.init_worker()
+    }
+
+    {{ range $server := $servers }}
+
+    ## start server {{ $server.Port }} {{ $server.Hostname }}
+    server {
+        {{/* +++ start server_name, listen and ssl +++ */}}
+        {{- if eq $server.Port 0 -}}
+        {{/* +++++ start domain server +++++ */}}
+        server_name {{ buildServerName $server.Hostname }} {{ range $server.Aliases }}{{ . }} {{ end }};
+        {{ buildHTTPListener $all $server.Hostname }};
+
+        {{ if $server.EnableSSL }}
+        {{ buildHTTPSListener 443 $all $server.Hostname }};
+        {{ buildHTTPSListener 444 $all $server.Hostname }} proxy_protocol;
+        ssl_certificate     {{ $all.SSLCertificatePath -}};
+        ssl_certificate_key {{ $all.SSLCertificateKeyPath -}};
+        ssl_protocols {{ $cfg.SSLProtocols }};
+
+        {{ if not (empty $cfg.SSLCiphers) }}
+        ssl_ciphers {{ $cfg.SSLCiphers }};
+        ssl_prefer_server_ciphers on;
+        {{ end }}
+
+        # turn on session caching to drastically improve performance
+        {{ if $cfg.SSLSessionCache -}}
+        ssl_session_cache builtin:1000 shared:SSL:{{ $cfg.SSLSessionCacheSize }};
+        ssl_session_timeout {{ $cfg.SSLSessionTimeout }};
+        {{ end }}
+        ssl_session_tickets {{ if $cfg.SSLSessionTickets }}on{{ else }}off{{ end }};
+        {{ if not (empty $cfg.SSLSessionTicketKey ) }}
+        ssl_session_ticket_key /etc/nginx/tickets.key;
+        {{ end }}
+        ssl_buffer_size {{ $cfg.SSLBufferSize }};
+        {{ end }}
+
+        {{/* +++++ end domain server +++++ */}}
+
+        {{ else }}
+        server_name _;
+        listen {{ $server.Port }};
+        {{ end }}
+
+        {{/* +++ end server_name, listen and ssl +++ */}}
+
+        {{ if gt (len $cfg.BlockUserAgents) 0 }}
+        if ($block_ua) {
+           return 403;
+        }
+        {{ end }}
+
+        {{ if gt (len $cfg.BlockReferers) 0 }}
+        if ($block_ref) {
+           return 403;
+        }
+        {{ end }}
+
+        proxy_connect_timeout                          {{ $cfg.ProxyConnectTimeout }};
+        proxy_send_timeout                             {{ $cfg.ProxySendTimeout }};
+        proxy_read_timeout                             {{ $cfg.ProxyReadTimeout }};
+        proxy_set_header      Host                      $host;
+        proxy_set_header      X-Forwarded-Host          $http_host;
+        proxy_set_header      X-Forwarded-Proto         $x_forwarded_proto;
+        proxy_set_header      X-Real-IP                 $remote_addr;
+        proxy_set_header      X-BFL-USER                {{ $userName }};
+        {{- if and $cfg.UseForwardedHeaders $cfg.ComputeFullForwardedFor }}
+        proxy_set_header      X-Forwarded-For           $full_x_forwarded_for;
+        {{ else -}}
+        proxy_set_header      X-Forwarded-For           $remote_addr;
+        {{ end -}}
+        proxy_set_header      X-Original-Forwarded-For  {{ buildForwardedFor $cfg.ForwardedForHeader -}};
+
+        proxy_http_version 1.1;
+
+        set_by_lua_block $conn {
+            local http_upgrade = ngx.var.http_upgrade
+            if http_upgrade ~= nil and (http_upgrade == "websocket" or http_upgrade == "tailscale-control-protocol") then
+                return "upgrade"
+            end
+            return ""
+        }
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $conn;
+
+        {{ if and $server.Hostname $server.EnableAuth }}
+        # rewrite_by_lua_block {
+        #    lua_ingress.force_to_https()
+        # }
+        access_by_lua_block {
+            token_auth.validate()
+        }
+        header_filter_by_lua_block {
+            lua_ingress.add_response_headers()
+            lua_ingress.overwrite_response_to_https()
+        }
+        {{ end }}
+
+        {{ range $location := $server.Locations }}
+        location {{ $location.Prefix }} {
+            {{ if $location.DirectProxy }}
+            proxy_pass {{ $location.ProxyPass }};
+            {{ else }}
+            resolver coredns.kube-system.svc.cluster.local;
+            set $h {{ $location.ProxyPass }};
+            proxy_pass $h;
+            {{ end }}
+
+            {{ if $server.EnableWindowPushState }}
+            sub_filter '</html>' '{{ $windowPushStateScript }}\n</html>';
+            {{ end }}
+
+            {{ if gt (len $server.Language) 0 }}
+            sub_filter '</head>' '<meta name="terminus-language" content="{{ $server.Language }}"/>\n</head>';
+            {{ end }}
+
+            {{ if $server.EnableWindowPushState }}
+            sub_filter_once off;
+            {{ end }}
+
+            {{ if $server.EnableOIDC }}
+            add_header Set-Cookie "prev-host=$http_host;Domain=.{{ $userZone }};Path=/;";
+            {{ end }}
+
+            {{ range $additional := $location.Additionals }}
+            {{ $additional }}
+            {{ end }}
+        }
+        {{ end }}
+    }
+    ## end server {{ $server.Port }} {{ $server.Hostname }}
+    {{ end }}
+
+    {{ range $server := $customDomainServers }}
+
+    ## start server {{ $server.Port }} {{ $server.Hostname }}
+    server {
+        {{/* +++ start server_name, listen and ssl +++ */}}
+        {{/* +++++ start domain server +++++ */}}
+        server_name {{ buildServerName $server.Hostname }} {{ range $server.Aliases }}{{ . }} {{ end }} ;
+        {{ buildHTTPListener $all $server.Hostname }};
+
+        {{ if $server.EnableSSL }}
+        {{ buildHTTPSListener 443 $all $server.Hostname }};
+        {{ buildHTTPSListener 444 $all $server.Hostname }} proxy_protocol;
+        ssl_certificate     {{ $server.SslCertPath -}};
+        ssl_certificate_key {{ $server.SslKeyPath -}};
+        ssl_protocols {{ $cfg.SSLProtocols }};
+
+        {{ if not (empty $cfg.SSLCiphers) }}
+        ssl_ciphers {{ $cfg.SSLCiphers }};
+        ssl_prefer_server_ciphers on;
+        {{ end }}
+
+        # turn on session caching to drastically improve performance
+        {{ if $cfg.SSLSessionCache -}}
+        ssl_session_cache builtin:1000 shared:SSL:{{ $cfg.SSLSessionCacheSize }};
+        ssl_session_timeout {{ $cfg.SSLSessionTimeout }};
+        {{ end }}
+        ssl_session_tickets {{ if $cfg.SSLSessionTickets }}on{{ else }}off{{ end }};
+        {{ if not (empty $cfg.SSLSessionTicketKey ) }}
+        ssl_session_ticket_key /etc/nginx/tickets.key;
+        {{ end }}
+        ssl_buffer_size {{ $cfg.SSLBufferSize }};
+        {{ end }}
+
+        {{/* +++++ end domain server +++++ */}}
+        {{/* +++ end server_name, listen and ssl +++ */}}
+
+        {{ if gt (len $cfg.BlockUserAgents) 0 }}
+        if ($block_ua) {
+           return 403;
+        }
+        {{ end }}
+
+        {{ if gt (len $cfg.BlockReferers) 0 }}
+        if ($block_ref) {
+           return 403;
+        }
+        {{ end }}
+
+        proxy_connect_timeout                          {{ $cfg.ProxyConnectTimeout }};
+        proxy_send_timeout                             {{ $cfg.ProxySendTimeout }};
+        proxy_read_timeout                             {{ $cfg.ProxyReadTimeout }};
+        proxy_set_header      Host                      $host;
+        proxy_set_header      X-Forwarded-Host          $http_host;
+        proxy_set_header      X-Forwarded-Proto         $x_forwarded_proto;
+        proxy_set_header      X-Real-IP                 $remote_addr;
+        proxy_set_header      X-BFL-USER                {{ $userName }};
+        {{- if and $cfg.UseForwardedHeaders $cfg.ComputeFullForwardedFor }}
+        proxy_set_header      X-Forwarded-For           $full_x_forwarded_for;
+        {{ else -}}
+        proxy_set_header      X-Forwarded-For           $remote_addr;
+        {{ end -}}
+        proxy_set_header      X-Original-Forwarded-For  {{ buildForwardedFor $cfg.ForwardedForHeader -}};
+
+        proxy_http_version 1.1;
+
+        set_by_lua_block $ws_connection {
+            local http_upgrade = ngx.var.http_upgrade
+            if http_upgrade ~= nil and http_upgrade == "websocket" then
+                return "upgrade"
+            end
+            return ""
+        }
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $ws_connection;
+
+        {{ if and $server.Hostname $server.EnableAuth }}
+        # rewrite_by_lua_block {
+        #    lua_ingress.force_to_https()
+        # }
+        access_by_lua_block {
+            token_auth.validate()
+        }
+        header_filter_by_lua_block {
+            lua_ingress.add_response_headers()
+            lua_ingress.overwrite_response_to_https()
+        }
+        {{ end }}
+
+        {{ range $location := $server.Locations }}
+        location {{ $location.Prefix }} {
+            proxy_pass {{ $location.ProxyPass }};
+
+            {{ if $server.EnableWindowPushState }}
+            sub_filter '</html>' '{{ $windowPushStateScript }}\n</html>';
+            {{ end }}
+
+            {{ if gt (len $server.Language) 0 }}
+            sub_filter '</head>' '<meta name="terminus-language" content="{{ $server.Language }}"/>\n</head>';
+            {{ end }}
+
+
+            {{ if or $server.EnableWindowPushState }}
+            sub_filter_once off;
+            {{ end }}
+        }
+        {{ end }}
+    }
+    ## end server {{ $server.Port }} {{ $server.Hostname }}
+    {{ end }}
+
+    {{ if $all.SSLCertificatePath }}
+    ## default https server
+    server {
+        listen 444  ssl proxy_protocol default_server;
+
+        ssl_certificate     {{ $all.SSLCertificatePath -}};
+        ssl_certificate_key {{ $all.SSLCertificateKeyPath -}};
+        ssl_protocols {{ $cfg.SSLProtocols }};
+        {{ if not (empty $cfg.SSLCiphers) }}
+        ssl_ciphers {{ $cfg.SSLCiphers }};
+        ssl_prefer_server_ciphers on;
+        {{ end }}
+
+        add_header Access-Control-Allow-Headers "Accept, Content-Type, Accept-Encoding";
+        add_header Access-Control-Allow-Methods "GET, OPTIONS";
+        add_header Access-Control-Allow-Origin "*";
+
+        proxy_set_header      Host                      $host;
+        proxy_set_header      X-Forwarded-Host          $http_host;
+        proxy_set_header      X-Forwarded-Proto         $x_forwarded_proto;
+        proxy_set_header      X-Real-IP                 $remote_addr;
+        {{- if and $cfg.UseForwardedHeaders $cfg.ComputeFullForwardedFor }}
+        proxy_set_header      X-Forwarded-For           $full_x_forwarded_for;
+        {{ else -}}
+        proxy_set_header      X-Forwarded-For           $remote_addr;
+        {{ end }}
+
+        proxy_http_version 1.1;
+
+        location / {
+            default_type text/html;
+            return 421 "<h1><a href='https://www.olares.com/'>Olares</a></h1>";
+        }
+
+        location /ping {
+            default_type text/plain;
+            return 200 "pong";
+        }
+    }
+    {{ end }}
+
+    # status server, used for NGINX healthcheck and access to nginx stats
+    server {
+        listen 127.0.0.1:{{ .StatusPort }};
+
+        keepalive_timeout 0;
+        gzip off;
+        access_log off;
+
+        location {{ $healthzURI }} {
+            return 200;
+        }
+
+        location {{ $statusPath }} {
+            stub_status on;
+        }
+
+        location / {
+            return 404;
+        }
+    }
+
+    include /etc/nginx/conf.d/*.conf;
+}
+
+{{ if gt (len .StreamServers) 0 }}
+stream {
+    {{ range $server := .StreamServers }}
+    server {
+        {{ if eq $server.Protocol "udp" }}
+        listen {{ $server.Port }} udp;
+        {{ else }}
+        listen {{ $server.Port }};
+        {{ end }}
+        resolver coredns.kube-system.svc.cluster.local;
+        set $h {{ $server.ProxyPass }};
+        proxy_pass $h;
+    }
+    {{ end }}
+}
+{{ end }}
