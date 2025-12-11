@@ -116,7 +116,7 @@ Where,
    
    ![Share file type](/images/manual/olares/share-files.png#bordered)
 
-3. Complete the settings for your selected share type by referring to the procedure in the following step.
+3. Follow the instructions below to configure the selected share type.
 
 #### Step 2: Configure settings
 
