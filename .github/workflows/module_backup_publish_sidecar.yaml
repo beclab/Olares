@@ -1,0 +1,36 @@
+name: Publish Sidecar Backup Sync to Dockerhub
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Release Tags'
+
+jobs:
+  publish_dockerhub:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out the repo
+      uses: actions/checkout@v3
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASS }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v3
+      with:
+        push: true
+        tags: beclab/sidecar-backup-sync:v${{ github.event.inputs.tags }}
+        file: framework/backup-server/Dockerfile.sidecar
+        context: framework/backup-server
+        platforms: linux/amd64,linux/arm64
+
