@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: Learn essential file operations in Olares including adding new files, editing existing content, and downloading files across different devices.
 ---
 # Basic file operations
