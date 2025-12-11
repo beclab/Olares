@@ -152,10 +152,10 @@ const side = {
             {text: "Generate 2FA codes", link: "/manual/larepass/two-factor-verification"},
           ],
         },
-        {
+        /*{
           text: "Manage knowledge",
           link: "/manual/larepass/manage-knowledge",
-        },
+        },*/
       ],
     },
     {
