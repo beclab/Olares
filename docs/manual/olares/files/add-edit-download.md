@@ -2,7 +2,7 @@
 description: Learn essential file operations in Olares including adding new files, editing existing content, and downloading files across different devices.
 ---
 # Basic file operations
-Operations in Fileare essentially the same as in other file managers. This page will introduce some common tasks in Files to get you started.
+Operations in Files are essentially the same as in other file managers. This page will introduce some common tasks in Files to get you started.
 
 ## Upload files
 
@@ -104,54 +104,46 @@ Where,
 - **Internal share**: Restricted to registered users or user groups within the system, suitable for internal team collaboration.
 - **SMB share**: Shared via the SMB protocol within the Local Area Network (LAN).
 
+![Share file type](/images/manual/olares/share-files.png#bordered)
+
 ### Create share
 
-#### Step 1: Select folder
+#### Create Internal share
 
 1. Open the Files app from the Dock or Launchpad on Olares.
-2. Enter the share menu based on the directory type:
-    * The **Sync** directory: Hover your mouse over the target folder, click the **Operate** icon that appears on the right, and then click **Share with**.
-    * Other directories: Right-click the target folder you want to share, and then select a share type.
-   
-   ![Share file type](/images/manual/olares/share-files.png#bordered)
+2. Locate the target folder and enter the share menu based on the directory type:
+    * The **Sync** directory: Hover your mouse over the folder, click <i class="material-symbols-outlined">more_horiz</i> that appears on the right, and then click **Share with**.
+    * Other directories: Right-click the folder, and then click **Internal share**.
+3.  In the **Invite users** section, click <i class="material-symbols-outlined">add</i>, search for and select the target user or group, and then click **Invite**.
+4.  In the **Set user permissions** list, click <i class="material-symbols-outlined">chevron_forward</i> to the right of the user avatar to assign specific read or write permissions, and then click **Submit**.
+5.  Click **Confirm**.
 
-3. Follow the instructions below to configure the selected share type.
+#### Create SMB share
 
-#### Step 2: Configure settings
-
-##### Internal share
-
-If you selected **Internal share**, complete the following steps to configure the settings:
-1. In the **Invite users** field, click the **+** (Plus) icon, search for and select the target user or group, and then click **Invite**.
-2. In the **Set user permissions** list, click the arrow to the right of the user avatar to assign specific read or write permissions for each invited user, and then click **Submit**.
-3. Click **Confirm**.
-
-##### Public share
-
-If you selected **Public share**, complete the following steps to configure the settings:
-1. In the **Set password** field, enter an access password, or click **Regenerate** to use a system-generated secure password.
-2. In the **Set expiration** region, select the specific expiration time for the share link.
-3. Select the following restrictions as needed:
-    - **Limit file size**: To limit the size of files uploaded by visitors, select this option, enter a value, and then select the unit (eMi/Gi/Ti).
-    - **Allow uploads only**: If you selet this check box, visitors can only upload files and cannot view or download existing content.
-4. Click **Confirm** to generate the link.
-5. Copy or note down the link address, and then click **Confirm**.
-
-##### SMB share
-
-If you selected **SMB share**, complete the following steps to configure the settings:
-
-1. Select whether to make it **Public**.
-2. If you selected **Yes**, click **Confirm**, and then it will be accessible to anyone on the LAN.
-3. If you selected **No**, authentication is required: 
+1. Open the Files app from the Dock or Launchpad on Olares.
+2. Right-click the target folder, and then click **SMB share**.
+3. Select whether to make it **Public**.
+4. If you selected **Yes**, click **Confirm**, and then it will be accessible to anyone on the LAN.
+5. If you selected **No**, authentication is required: 
     
-    a. In the **Invite users** field, click the **+** (Plus) icon to select an existing user or group, or click **Add user accounts** to manually add and invite new users.
+    a. In the **Invite users** field, click click <i class="material-symbols-outlined">add</i> to select an existing user or group, or click **Add user accounts** to manually add and invite new users.
 
-    b. Click **Confirm**.
-    
-    c. In the **Set user permissions** list, configure specific permissions for each invited user, and then click **Confirm**.
+    b. In the **Set user permissions** list, click <i class="material-symbols-outlined">chevron_forward</i> to the right of the user avatar to assign specific read or write permissions, and then click **Submit**.
+6. Click **Confirm**.
 
-### View and manage shares
+#### Create Public share
+
+1. Open the Files app from the Dock or Launchpad on Olares.
+2. Right-click the target folder, and then click **Public share**.
+3. In the **Set password** field, enter an access password, or click **Regenerate** to use a system-generated secure password.
+4. In the **Set expiration** region, select the specific expiration time for the share link.
+5. Select the following restrictions as needed:
+     - **Limit file size**: To limit the size of files uploaded by visitors, select this option, enter a value, and then select the unit (Mi/Gi/Ti).
+    - **Allow uploads only**: If you select this check box, visitors can only upload files and cannot view or download existing content.
+6. Click **Confirm** to generate the link.
+7. Copy or note down the link address, and then click **Confirm**.
+
+### Manage shares
 
 You can view and manage all shared folders in the **Share** list.
 
@@ -164,9 +156,9 @@ You can view and manage all shared folders in the **Share** list.
 
     You will see the sharer, current path, original path, share scope, owner, current permissions, expiration date, and link details.
 
-### Modify password or permissions
+#### Modify password or permissions
 
-For shared folders, you can change their password and permission settings at any time:
+For shared folders, you can change their password and permission settings at any time.
 
 1. Open the Files application from the Dock or Launchpad on Olares.
 2. Click **Share** in the left sidebar to view the **Share** list on the right.
@@ -185,11 +177,12 @@ For shared folders, you can change their password and permission settings at any
 
     c. Click **Confirm**.
 
-### Cancel share
+#### Cancel share
 
-If you no longer need to share a folder, you can cancel the share at any time:
+If you no longer need to share a folder, you can cancel the share at any time.
+
 1. Open the Files application from the Dock or Launchpad on Olares.
-2. Click **Share** in the left sidebar to view the **Share** list on the right.
+2. Click **Share** in the left sidebar, and then to the **Share** list is displayed on the right.
 3. Right-click the target folder and click **Revoke sharing**.
 4. Click **Confirm**.
 
