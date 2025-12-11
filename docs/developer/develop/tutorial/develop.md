@@ -6,9 +6,6 @@ description: Learn how to use Studio to set up a dev container, access it via VS
 Olares Studio allows you to spin up a pre-configured dev container to write and debug code (such as Node.js scripts or CUDA programs) without managing local infrastructure. This provides an isolated environment identical to the production runtime.
 
 The following guide shows the setup workflow using a Node.js project as an example.
-:::info
-This workflow is optimized for iterative coding and testing. If you intend to publish the application to the Olares Market, you must create your own image and follow the [developer documentation](../submit/index.md) for final configuration.
-:::
 
 ## Prerequisite
 - Olares version 1.12.2 or later.
@@ -56,7 +53,7 @@ If you prefer your local settings and extensions, you can tunnel into the contai
    code tunnel
    ```
 5. Follow the terminal prompts to authenticate using a Microsoft or GitHub account via the provided URL.
-6. Assign a name to the tunnel when prompted (e.g., `myapp-demo`). This will output a vscode.dev URL tied to this remote workspace.
+6. Assign a name to the tunnel when prompted (e.g., `myapp-demo`). This will output a `vscode.dev` URL tied to this remote workspace.
    ![Create a secure tunnel](/images/manual/olares/studio-create-a-secure-tunnel.png#bordered)
 
 7. Open VS Code on your local machine, click the **><** icon in the bottom-left, and select **Tunnel**.
@@ -183,6 +180,9 @@ You can follow the same steps to modify `OlaresManifest.yaml` and `deployment.ya
      - name: "80"
        port: 80
        targetPort: 80
+     - name: myweb-dev-8080
+       port: 8080
+       targetPort: 8080
        # Add the following
      - name: myweb-dev-8081 # Must match entrance name
        port: 8081
@@ -195,10 +195,10 @@ You can follow the same steps to modify `OlaresManifest.yaml` and `deployment.ya
 
 4. Click **Apply** to redeploy the container.
 
-You can verify the active ports in **Services** > **Ports**.
+Once deployed, go to **Services** > **Ports**. You can see your new port listed here.
 ![Verify active ports](/images/manual/olares/studio-verify-active-ports.png#bordered)
 
-### Verify the new port
+### Test the connection
 1. Update `index.js` to listen on the new port:
    ```js
    const express = require('express');

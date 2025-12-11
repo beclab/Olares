@@ -9,7 +9,7 @@ Studio provides a real Olares environment for building, porting, and testing app
   -Package your app into a chart and download it when your app is ready.
 
 ## Access Studio
-Studio is available in Olares Market and must be installed manually.
+You must manually install Studio:
 1.  Open **Market**, and search for "Studio".
     ![Studio](/images/manual/olares/studio.png#bordered)
 
