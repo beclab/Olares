@@ -1,0 +1,47 @@
+name: L4-BFL-Proxy Build test
+
+on:
+  push:
+    branches: [ "module-l4" ]
+    paths:
+      - 'framework/l4-bfl-proxy/**'
+      - '!framework/l4-bfl-proxy/.olares/**'
+      - '!framework/l4-bfl-proxy/README.md'
+  pull_request:
+    branches: [ "module-l4" ]
+    paths:
+      - 'framework/l4-bfl-proxy/**'
+      - '!framework/l4-bfl-proxy/.olares/**'
+      - '!framework/l4-bfl-proxy/README.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+#    runs-on: self-hosted
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v3
+      with:
+        go-version: '1.18.2'
+    - name: Run Build
+      working-directory: framework/l4-bfl-proxy
+      run: |
+        ksDir="../../kubesphere"
+        tag="v3.3.0"
+        
+        if [ -d "$ksDir" ]; then
+          pushd "${ksDir}/"
+          branch=$(git rev-parse --abbrev-ref HEAD|awk -F / '{print $2}')
+          if [ x"$branch" != x"$tag" ]; then
+            git checkout -b $tag
+          fi
+          popd &>/dev/null
+        else
+          git clone https://github.com/kubesphere/kubesphere.git "${ksDir}"
+          pushd "${ksDir}/"
+          git checkout -b $tag
+          popd &>/dev/null
+        fi
+        
+        make all
