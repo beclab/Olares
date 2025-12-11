@@ -109,6 +109,10 @@ const side = {
           link: "/manual/larepass/back-up-mnemonics"
         },
         {
+          text: "Access Olares locally",
+          link: "/manual/get-started/local-access",
+        },
+        {
           text: "What's next",
           link: "/manual/get-started/next-steps",
         },
