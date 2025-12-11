@@ -6,7 +6,7 @@ description: Deploy a single-container Docker app to Olares using Studio.
 This guide explains how to deploy a single-container Docker app to Olares using Studio.
 
 :::info For single-container apps
-This method supports apps that run from a single container image. For multi-container apps (for example, a web service plus a separate database), use the workflow in the [developer documentation](index.md) instead.
+This method supports apps that run from a single container image.
 :::
 :::tip Recommended for testing
 Studio-created deployments are best suited for development, testing, or temporary use. Upgrades and long-term data persistence can be limited compared to installing a packaged app from the Market. For production use, consider [packaging and uploading the app](package-upload.md) and installing it via the Market.
@@ -44,7 +44,6 @@ services:
       - "8282:80/tcp"
     environment:
       TZ: 'America/Toronto'
-    # Volumes store your data between container upgrades
     volumes:
       - './db:/var/www/html/db'
       - './logos:/var/www/html/images/uploads/logos'
@@ -67,7 +66,7 @@ These fields define the app's core components. You can find this information as 
    :::
 3. For **Instance Specifications**, enter the minimum CPU and memory requirements. For example:
    - **CPU**: 2 core
-   - **Memory**: 1 G
+   - **Memory**: 1 Gi
      ![Deploy Wallos](/images/manual/olares/studio-deploy-wallos.png#bordered)
 
 ### Add environment variables
@@ -83,7 +82,7 @@ Environment variables are used to pass configuration settings to your app. In th
 Volumes connect storage on your Olares device to a path inside the app's container, which is essential for saving data permanently. These are defined using the `-v` flag or in the `volumes:` section.
 
 :::info Host path options
-The host path is where Olares stores the data, and the mount path is the path inside the container. Olares provides three managed host path prefixes:
+The host path is where Olares stores the data, and the mount path is the path inside the container. Studio provides three managed host path prefixes:
 
 - `/app/data`: App data directory. Data can be accessed across nodes and is not deleted when the app is uninstalled. Appears under `/Data/studio` in Files.
 - `/app/cache`: App cache directory. Data is stored in the node's local disk and is deleted when the app is uninstalled. Appears under `/Cache/<device-name>/studio` in Files.
@@ -96,15 +95,23 @@ The host path is where Olares stores the data, and the mount path is the path in
 
 This app requires two volumes. You will add them one by one.
 1. Add the database volume. This data is for high-frequency I/O and does not need to be saved permanently. Map it to `/app/cache` so it will be automatically deleted when the app is uninstalled.
-   1. Click **Add** next to **Storage Volume**.
-   2. For **Host path**, select `/app/cache`, then enter `/db`.
-   3. For **Mount path**, enter `/var/www/html/db`.
-   4. Click **Submit**.
-2. Add the logo volume. This is user-uploaded data that should be persistent and reusable, even if the app is reinstalled. Map it to `/app/data`.
-   1. Click **Add** next to **Storage Volume**.
-   2. For **Host path**, select `/app/data`, then enter `/logos`.
-   3. For **Mount path**, enter `/var/www/html/images/uploads/logos` 
-   4. Click **Submit**.
+
+   a. Click **Add** next to **Storage Volume**. 
+
+   b. For **Host path**, select `/app/cache`, then enter `/db`.
+
+   c. For **Mount path**, enter `/var/www/html/db`. 
+
+   d. Click **Submit**.
+2. Add the logo volume. This is user-uploaded data that should be persistent and reusable, even if the app is reinstalled. Map it to `/app/data`. 
+
+   a. Click **Add** next to **Storage Volume**. 
+
+   b. For **Host path**, select `/app/data`, then enter `/logos`. 
+
+   c. For **Mount path**, enter `/var/www/html/images/uploads/logos`.
+
+   d. Click **Submit**.
 ![Add volumes](/images/manual/olares/studio-add-storage-volumes.png#bordered)
 
 You can check Files later to verify the mounted paths.
@@ -118,37 +125,36 @@ If your app needs Postgres or Redis, enable it under **Instance Specifications**
 ![Enable databases](/images/manual/olares/studio-enable-databases.png#bordered)
 
 When enabled, Studio provides dynamic variables. You must use these variables in the **Environment Variables** section for your app to connect to the database.
-- **Postgres variables:**
+- **Postgres variables**
 
-| Variables    | Description           |
-|--------------|-----------------------|
-| $(PG_USER)   | PostgreSQL username   |
-| $(PG_DBNAME) | Database name         |
-| $(PG_PASS)   | Postgres Password     |
-| $(PG_HOST)   | Postgres service host |
-| $(PG_PORT)   | Postgres service port |
+| Variables      | Description           |
+|----------------|-----------------------|
+| `$(PG_USER)`   | PostgreSQL username   |
+| `$(PG_DBNAME)` | Database name         |
+| `$(PG_PASS)`   | Postgres Password     |
+| `$(PG_HOST)`   | Postgres service host |
+| `$(PG_PORT)`   | Postgres service port |
 
-- **Redis variables:**
+- **Redis variables**
 
-| Variables     | Description        |
-|---------------|--------------------|
-| $(REDIS_HOST) | Redis service host |
-| $(REDIS_PORT) | Redis service port |
-| $(REDIS_USER) | Redis username     |
-| $(REDIS_PASS) | Redis password     |
+| Variables       | Description        |
+|-----------------|--------------------|
+| `$(REDIS_HOST)` | Redis service host |
+| `$(REDIS_PORT)` | Redis service port |
+| `$(REDIS_USER)` | Redis username     |
+| `$(REDIS_PASS)` | Redis password     |
 
 ### Generate the app project
 1. Once all your configurations are set, click **Create**. This generates the app's project files.
 2. After creation, Studio generates the package files for your app, and then automatically deploys the app. You can check the status in the bottom bar.
 3. When the app is successfully deployed, click **Preview** in the top-right corner to launch it.
-   ![Preveiw wallos](/images/manual/olares/studio-preview-wallos.png#bordered)
-
+   ![Preveiw Wallos](/images/manual/olares/studio-preview-wallos.png#bordered)
 
 ## Review the package files and test the app
 Apps deployed from Studio include a `-dev` suffix in the title to distinguish them from Market installations.
 ![Check deployed app](/images/manual/olares/studio-app-with-dev-suffix.png#bordered)
 
-You can click on files like `OlaresManifest.yaml` to review and make changes. For example, to change the app's display name and logo.
+You can click on files like `OlaresManifest.yaml` to review and make changes. For example, to change the app's display name and logo:
 
 1. Click **<span class="material-symbols-outlined">box_edit</span>Edit** in the top-right to open the editor.
 2. Click `OlaresManifest.yaml` to view the content.
@@ -164,7 +170,6 @@ You can click on files like `OlaresManifest.yaml` to review and make changes. Fo
    :::
    ![Change app icon](/images/manual/olares/studio-change-app-icon1.png#bordered)
 
-
 ## Uninstall or delete the app
 If you no longer need the app, you can remove it.
 1. Click <span class="material-symbols-outlined">more_vert</span> in the top-right corner.
@@ -175,12 +180,11 @@ If you no longer need the app, you can remove it.
 ## Troubleshoot a deployment
 
 ### Cannot install the app
-If installation fails, review the error at the bottom of the page and click **View** to expand details.
-![Check app status](/images/manual/olares/studio-check-app-status.png#bordered)
+If installation fails, review the error at the bottom of the page and click **View** to check details.
 
 ### Run into issues when the app is running
 Once running, you can manage the app from its deployment details page in Studio. The interface of this page is similar to Control Hub. If details don't appear, refresh the page.
 You can:
-- Use the **Stop** and **Restart** controls to retry. This action can often resolve runtime issues like a frozen process.
+- Use the **Stop** or **Restart** controls to retry. This action can often resolve runtime issues like a frozen process.
 - Check events or logs to investigate runtime errors. See [Export container logs for troubleshooting](../../../manual/olares/controlhub/manage-container.md#export-container-logs-for-troubleshooting) for details.
   ![App deployment details](/images/manual/olares/studio-app-deployment-details.png#bordered)
