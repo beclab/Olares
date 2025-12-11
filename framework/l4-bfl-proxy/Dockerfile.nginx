@@ -1,0 +1,10 @@
+FROM bytetrade/openresty:base-1.25.3-realip
+RUN mkdir -p /etc/nginx/lua && cat /dev/null > /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/nginx.conf
+RUN rm -f /usr/local/openresty/nginx/conf/nginx.conf && \
+	ln -s /etc/nginx/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf && \
+	ln -s /usr/local/openresty/nginx/logs /var/log/nginx  && \
+	cp /usr/local/openresty/nginx/conf/mime.types /etc/nginx/mime.types
+
+RUN mkdir -p /opt/opentelemetry-webserver/agent/WebServerModule/Nginx && \
+	ln -s /opt/opentelemetry-webserver/agent/WebServerModule/Nginx/1.25.3 /opt/opentelemetry-webserver/agent/WebServerModule/Nginx/1.25.3.1

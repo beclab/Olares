@@ -1,0 +1,121 @@
+{{- $cfg := .Cfg -}}
+{{- $users := .Users -}}
+
+pcre_jit on;
+
+# setup custom paths that do not require root access
+pid /run/nginx.pid;
+
+daemon on;
+
+worker_processes {{ $cfg.WorkerProcesses }};
+
+worker_rlimit_nofile 65535;
+
+worker_shutdown_timeout 240s;
+
+events {
+    multi_accept        on;
+    worker_connections  65535;
+    use                 epoll;
+}
+
+http {
+    server_tokens off;
+
+    server {
+        listen 81 default_server;
+        server_name ~^(.+)$;
+
+        return 301 https://$http_host$request_uri;
+    }
+}
+
+stream {
+    lua_package_path "/etc/nginx/lua/?.lua;;";
+
+    lua_shared_dict tcp_udp_configuration_data 2M;
+
+    init_by_lua_block {
+        -- init modules
+        local ok, res
+
+        ok, res = pcall(require, "server")
+        if not ok then
+            error("require failed: " .. tostring(res))
+        else
+            server = res
+        end
+    }
+
+    lua_add_variable $bfl_username;
+    lua_add_variable $bfl_ingress_host;
+    lua_add_variable $bfl_ingress_port;
+
+    access_log off;
+    error_log /var/log/nginx/error.log error;
+
+    upstream upstream_balancer {
+        server 0.0.0.1:1; # placeholder
+
+        balancer_by_lua_block {
+            local ngx_balancer = require "ngx.balancer"
+
+            local host = ngx.var.bfl_ingress_host
+            local port = ngx.var.bfl_ingress_port
+
+            local ok, err = ngx_balancer.set_current_peer(host, port)
+            if not ok then
+                ngx.log(ngx.ERR, "failed to set the current peer: ", err)
+                return ngx.exit(500)
+            end
+        }
+    }
+
+    server {
+        listen {{ $cfg.StreamAPIAddress }};
+
+        content_by_lua_block {
+            server.run()
+        }
+    }
+
+    server {
+        listen {{ $cfg.SSLProxyServerPort }} proxy_protocol;
+        ssl_preread on;
+
+        preread_by_lua_block {
+            server.preread()
+        }
+        set_real_ip_from 10.233.0.0/16;
+        proxy_protocol on;
+        proxy_pass  upstream_balancer;
+    }
+
+    server {
+        listen {{ $cfg.SSLServerPort }};
+        ssl_preread on;
+
+        preread_by_lua_block {
+            server.preread()
+        }
+        proxy_protocol on;
+        proxy_pass  upstream_balancer;
+    }
+
+    {{ range $server := $cfg.StreamServers }}
+    server {
+        {{ if eq $server.Protocol "udp" }}
+        listen {{ $server.Port }} udp;
+        {{ else }}
+        listen {{ $server.Port }};
+        {{ end }}
+
+        preread_by_lua_block {
+            ngx.var.bfl_ingress_host = "{{ $server.BflHost }}"
+            ngx.var.bfl_ingress_port = ngx.var.server_port
+        }
+        proxy_pass upstream_balancer;
+    }
+    {{ end }}
+}

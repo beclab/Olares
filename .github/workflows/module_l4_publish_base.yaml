@@ -1,0 +1,67 @@
+name: Publish L4 openresty-base to Dockerhub
+
+on:
+    workflow_dispatch:
+      inputs:
+        tags:
+          description: 'Release Tags'
+
+jobs:
+    publish_dockerhub_amd64:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out the repo
+              uses: actions/checkout@v3
+
+            - name: Log in to Docker Hub
+              uses: docker/login-action@v2
+              with:
+                  username: ${{ secrets.DOCKERHUB_USERNAME }}
+                  password: ${{ secrets.DOCKERHUB_PASS }}
+
+            - name: Build openresty and push Docker image
+              uses: docker/build-push-action@v3
+              with:
+                push: true
+                tags: bytetrade/openresty:base-${{ github.event.inputs.tags }}-amd64
+                file: framework/l4-bfl-proxy/Dockerfile.openresty
+                platforms: linux/amd64
+                context: framework/l4-bfl-proxy
+
+    publish_dockerhub_arm64:
+        runs-on: self-hosted
+        steps:
+            - name: Check out the repo
+              uses: actions/checkout@v3
+
+            - name: Log in to Docker Hub
+              uses: docker/login-action@v2
+              with:
+                  username: ${{ secrets.DOCKERHUB_USERNAME }}
+                  password: ${{ secrets.DOCKERHUB_PASS }}
+
+            - name: Build nginx-lua and push Docker image
+              uses: docker/build-push-action@v3
+              with:
+                push: true
+                tags: bytetrade/openresty:base-${{ github.event.inputs.tags }}-arm64
+                file: framework/l4-bfl-proxy/Dockerfile.openresty
+                platforms: linux/arm64
+                context: framework/l4-bfl-proxy
+
+    publish_manifest:
+        needs:
+        - publish_dockerhub_amd64
+        - publish_dockerhub_arm64
+        runs-on: ubuntu-latest
+        steps:
+          - name: Log in to Docker Hub
+            uses: docker/login-action@v2
+            with:
+              username: ${{ secrets.DOCKERHUB_USERNAME }}
+              password: ${{ secrets.DOCKERHUB_PASS }}
+              
+          - name: Push manifest
+            run: |
+              docker manifest create bytetrade/openresty:base-${{ github.event.inputs.tags }} --amend bytetrade/openresty:base-${{ github.event.inputs.tags }}-amd64 --amend bytetrade/openresty:base-${{ github.event.inputs.tags }}-arm64
+              docker manifest push bytetrade/openresty:base-${{ github.event.inputs.tags }}

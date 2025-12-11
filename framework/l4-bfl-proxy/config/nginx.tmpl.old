@@ -1,0 +1,66 @@
+{{- $cfg := .Cfg -}}
+{{- $users := .Users -}}
+
+# setup custom paths that do not require root access
+pid /var/run/nginx.pid;
+
+daemon on;
+
+worker_processes {{ $cfg.WorkerProcesses }};
+
+worker_rlimit_nofile 65535;
+
+worker_shutdown_timeout 240s;
+
+events {
+    multi_accept        on;
+    worker_connections  65535;
+    use                 epoll;
+}
+
+http {
+    server_tokens off;
+
+    server {
+        listen 80 default_server;
+        server_name ~^(.+)$;
+
+        return 301 https://$http_host$request_uri;
+    }
+}
+
+stream {
+  log_format proxy '$remote_addr [$time_local] '
+                   '$ssl_preread_protocol $ssl_preread_server_name $ssl_preread_alpn_protocols '
+                   '$protocol $status $bytes_sent $bytes_received '
+                   '$session_time "$upstream_addr" '
+                   '"$upstream_bytes_sent" "$upstream_bytes_received" "$upstream_connect_time"';
+
+  access_log /var/log/nginx/tcp-access.log proxy;
+  open_log_file_cache off;
+
+  ## upstreams
+  {{- range $user := $users }}
+  upstream {{ $user.UpstreamName }} {
+    server bfl.{{- $user.Namespace -}}:{{- $cfg.BFLServerPort -}};
+  }
+  {{ end }}
+
+  ## rules
+  map $ssl_preread_server_name $backend {
+  {{- range $user := $users -}}
+  {{- if $user.IsEphemeralDomain }}
+    ~([\w-]+)-{{- $user.Name -}}.{{- $user.Zone -}}$   {{ $user.UpstreamName }};
+  {{- else }}
+    ~([\w.]*){{- $user.Zone -}}$   {{ $user.UpstreamName }};
+  {{- end -}}
+  {{ end }}
+  }
+
+  server {
+    listen {{ $cfg.SSLServerPort -}};
+    ssl_preread on;
+
+    proxy_pass $backend;
+  }
+}
