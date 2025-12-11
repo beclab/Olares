@@ -71,6 +71,7 @@ var (
 						"app":                         "citus",
 						"app.kubernetes.io/name":      "citus",
 						"app.bytetrade.io/middleware": "true",
+						"pod-template-version":        "v1.1",
 					},
 				},
 				Spec: corev1.PodSpec{

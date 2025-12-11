@@ -75,8 +75,53 @@ func (c *controller) handler(action Action, obj interface{}) error {
 		}
 	}
 
+	// current template version upgrade
+	oldTemplateVersion := currentSts.Spec.Template.Labels["pod-template-version"]
+	newTemplateVersion := citus.CitusStatefulset.Spec.Template.Labels["pod-template-version"]
+	mustUpdatePodTemplate := oldTemplateVersion != newTemplateVersion
+
+	if mustUpdatePodTemplate {
+		klog.Info("upgrading pg cluster pod template from ", oldTemplateVersion, " to ", newTemplateVersion)
+		// upgrade pod template
+		var currentPodEnv []corev1.EnvVar
+		for i, c := range currentSts.Spec.Template.Spec.Containers {
+			if c.Name == "postgres" {
+				currentPodEnv = currentSts.Spec.Template.Spec.Containers[i].Env
+				break
+			}
+		}
+		// reset template
+		// keep original envs
+		updateSts, err := citus.GetPGClusterDefineByUser(c.ctx, c.k8sClientSet, currentCluster.Spec.Owner, currentCluster.Namespace, currentCluster)
+		if err != nil {
+			return err
+		}
+
+		currentSts.Spec.Template = updateSts.Spec.Template
+		for i, c := range currentSts.Spec.Template.Spec.Containers {
+			if c.Name == "postgres" {
+				currentSts.Spec.Template.Spec.Containers[i].Env = currentPodEnv
+				break
+			}
+		}
+	}
+
+	// citus image upgrade
+	newImage := currentCluster.Spec.CitusImage
+	for i, c := range currentSts.Spec.Template.Spec.Containers {
+		if c.Name == "postgres" {
+			mustUpdateImage := newImage != "" && c.Image != newImage
+			if mustUpdateImage {
+				klog.Info("upgrading pg cluster image from ", c.Image, " to ", newImage)
+				currentSts.Spec.Template.Spec.Containers[i].Image = newImage
+				mustUpdatePodTemplate = true
+			}
+			break
+		}
+	}
+
 	// update db admin user if necessary
-	must, olduser, oldpwd, err := citus.MustUpdateClusterAdminUser(c.ctx,
+	mustUpdateAdmin, olduser, oldpwd, err := citus.MustUpdateClusterAdminUser(c.ctx,
 		c.k8sClientSet,
 		currentSts.Namespace,
 		currentSts,
@@ -85,41 +130,47 @@ func (c *controller) handler(action Action, obj interface{}) error {
 		return err
 	}
 
-	if must {
-		klog.Info("update pg cluster admin user")
+	if mustUpdateAdmin || mustUpdatePodTemplate {
 		if err = func() error {
-			newpwd, err := citus.GetPGClusterDefinedPassword(c.ctx, c.k8sClientSet, currentSts.Namespace, currentCluster)
-			if err != nil {
-				return err
-			}
-
-			if !newCluster {
-				// patch sts
-				for i, c := range currentSts.Spec.Template.Spec.Containers {
-					if c.Name == "postgres" {
-						for n, env := range c.Env {
-							switch env.Name {
-							case "POSTGRES_USER":
-								currentSts.Spec.Template.Spec.Containers[i].Env[n].Value = currentCluster.Spec.AdminUser
-							case "POSTGRES_PASSWORD":
-								if currentCluster.Spec.Password.ValueFrom != nil {
-									currentSts.Spec.Template.Spec.Containers[i].Env[n].ValueFrom = &corev1.EnvVarSource{
-										SecretKeyRef: currentCluster.Spec.Password.ValueFrom.SecretKeyRef.DeepCopy(),
-									}
-								} else if currentCluster.Spec.Password.Value != "" {
-									currentSts.Spec.Template.Spec.Containers[i].Env[n].Value = currentCluster.Spec.Password.Value
-								}
-							}
-						} // end envs
-					} // end container found
-				} // end container loop
-
-				_, err = c.k8sClientSet.AppsV1().StatefulSets(currentSts.Namespace).Update(c.ctx, currentSts, metav1.UpdateOptions{})
+			var newpwd string
+			var err error
+			if mustUpdateAdmin {
+				klog.Info("update pg cluster admin user")
+				newpwd, err = citus.GetPGClusterDefinedPassword(c.ctx, c.k8sClientSet, currentSts.Namespace, currentCluster)
 				if err != nil {
-					klog.Error("update sts password env error, ", err)
 					return err
 				}
 
+				if !newCluster {
+					// patch sts
+					for i, c := range currentSts.Spec.Template.Spec.Containers {
+						if c.Name == "postgres" {
+							for n, env := range c.Env {
+								switch env.Name {
+								case "POSTGRES_USER":
+									currentSts.Spec.Template.Spec.Containers[i].Env[n].Value = currentCluster.Spec.AdminUser
+								case "POSTGRES_PASSWORD":
+									if currentCluster.Spec.Password.ValueFrom != nil {
+										currentSts.Spec.Template.Spec.Containers[i].Env[n].ValueFrom = &corev1.EnvVarSource{
+											SecretKeyRef: currentCluster.Spec.Password.ValueFrom.SecretKeyRef.DeepCopy(),
+										}
+									} else if currentCluster.Spec.Password.Value != "" {
+										currentSts.Spec.Template.Spec.Containers[i].Env[n].Value = currentCluster.Spec.Password.Value
+									}
+								}
+							} // end envs
+						} // end container found
+					} // end container loop
+				} // end must update admin not new cluster
+
+			} // end must update admin
+
+			// update sts
+			klog.Info("updating pg cluster sts")
+			_, err = c.k8sClientSet.AppsV1().StatefulSets(currentSts.Namespace).Update(c.ctx, currentSts, metav1.UpdateOptions{})
+			if err != nil {
+				klog.Error("update sts password env error, ", err)
+				return err
 			}
 
 			// update db admin password on all nodes of current replicas
@@ -133,21 +184,23 @@ func (c *controller) handler(action Action, obj interface{}) error {
 					return err
 				}
 
-				pgclient, err := postgres.NewClientBuidler(olduser, oldpwd,
-					ip, postgres.PG_PORT).Build()
-				if err != nil {
-					klog.Error("connect to pg master error, ", err, ", ", olduser, ", ", oldpwd)
-					return err
-				}
+				if mustUpdateAdmin {
+					pgclient, err := postgres.NewClientBuidler(olduser, oldpwd,
+						ip, postgres.PG_PORT).Build()
+					if err != nil {
+						klog.Error("connect to pg master error, ", err, ", ", olduser, ", ", oldpwd)
+						return err
+					}
 
-				err = pgclient.ChangeAdminUser(c.ctx, olduser, currentCluster.Spec.AdminUser, newpwd)
-				if err != nil {
+					err = pgclient.ChangeAdminUser(c.ctx, olduser, currentCluster.Spec.AdminUser, newpwd)
+					if err != nil {
+						pgclient.Close()
+						klog.Error("change admin user error, ", err, ", ", olduser, ", ", currentCluster.Spec.AdminUser, ", ", newpwd)
+						return err
+					}
+
 					pgclient.Close()
-					klog.Error("change admin user error, ", err, ", ", olduser, ", ", currentCluster.Spec.AdminUser, ", ", newpwd)
-					return err
 				}
-
-				pgclient.Close()
 				nodeIndex += 1
 			}
 
