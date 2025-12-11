@@ -1,0 +1,9 @@
+
+
+FROM dockette/nodejs:v18
+
+RUN npm install -g s3rver@3.7.1
+
+EXPOSE 4568
+
+ENTRYPOINT [ "s3rver" ]

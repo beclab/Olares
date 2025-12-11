@@ -1,0 +1,71 @@
+
+
+---
+apiVersion: v1
+data:
+  mappings: |
+    {
+        "properties": {
+            "title": {
+                "type": "text",
+                "index": true,
+                "store": true,
+                "highlightable": true
+            },
+            "content": {
+                "type": "text",
+                "index": true,
+                "store": true,
+                "highlightable": true
+            },
+            "status": {
+                "type": "keyword",
+                "index": true,
+                "sortable": true,
+                "aggregatable": true
+            },
+            "publish_date": {
+                "type": "date",
+                "format": "2006-01-02T15:04:05Z07:00",
+                "index": true,
+                "sortable": true,
+                "aggregatable": true
+            }
+        }
+    }
+kind: ConfigMap
+metadata:
+  name: test-index
+  namespace: user-system-liuyu
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: zinc-test-secrets
+  namespace: user-system-liuyu
+type: Opaque
+stringData:
+  password: test123
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: test-zinc
+  namespace: user-system-liuyu
+spec:
+  app: test
+  appNamespace: user-space-liuyu
+  middleware: zinc
+  zinc:
+    user: zincuser
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: zinc-test-secrets
+    indexes:
+    - name: test-index
+      namespace: user-system-liuyu
+      key: mappings
