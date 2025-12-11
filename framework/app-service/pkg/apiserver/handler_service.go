@@ -212,7 +212,7 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 				Appid:           appv1alpha1.AppName(am.Spec.AppName).GetAppID(),
 				IsSysApp:        appv1alpha1.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
-				Owner:           owner,
+				Owner:           am.Spec.AppOwner,
 				Entrances:       appconfig.Entrances,
 				SharedEntrances: appconfig.SharedEntrances,
 				Icon:            appconfig.Icon,

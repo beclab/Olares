@@ -148,7 +148,7 @@ func suspendOrResumeApp(ctx context.Context, cli client.Client, am *appv1alpha1.
 			workloadName := ""
 			switch workload := w.(type) {
 			case *appsv1.Deployment:
-				if check(am.Spec.AppName, workload.Name) {
+				if check(am.Spec.RawAppName, workload.Name) {
 					if workload.Annotations == nil {
 						workload.Annotations = make(map[string]string)
 					}
@@ -158,7 +158,7 @@ func suspendOrResumeApp(ctx context.Context, cli client.Client, am *appv1alpha1.
 					workloadName = workload.Namespace + "/" + workload.Name
 				}
 			case *appsv1.StatefulSet:
-				if check(am.Spec.AppName, workload.Name) {
+				if check(am.Spec.RawAppName, workload.Name) {
 					if workload.Annotations == nil {
 						workload.Annotations = make(map[string]string)
 					}
@@ -201,7 +201,7 @@ func isStartUp(am *appv1alpha1.ApplicationManager, cli client.Client) (bool, err
 	var labelSelector string
 	var deployment appsv1.Deployment
 
-	err := cli.Get(context.TODO(), types.NamespacedName{Name: am.Spec.AppName, Namespace: am.Spec.AppNamespace}, &deployment)
+	err := cli.Get(context.TODO(), types.NamespacedName{Name: am.Spec.RawAppName, Namespace: am.Spec.AppNamespace}, &deployment)
 
 	if err == nil {
 		labelSelector = metav1.FormatLabelSelector(deployment.Spec.Selector)
@@ -209,7 +209,7 @@ func isStartUp(am *appv1alpha1.ApplicationManager, cli client.Client) (bool, err
 
 	if apierrors.IsNotFound(err) {
 		var sts appsv1.StatefulSet
-		err = cli.Get(context.TODO(), types.NamespacedName{Name: am.Spec.AppName, Namespace: am.Spec.AppNamespace}, &sts)
+		err = cli.Get(context.TODO(), types.NamespacedName{Name: am.Spec.RawAppName, Namespace: am.Spec.AppNamespace}, &sts)
 		if err != nil {
 			return false, err
 
