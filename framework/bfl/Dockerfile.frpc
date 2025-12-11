@@ -1,0 +1,26 @@
+FROM golang:1.22.1 as builder
+
+WORKDIR /workspace
+
+
+# Copy the Go Modules manifests
+COPY go.mod bytetrade.io/web3os/bfl-frpc/go.mod
+COPY go.sum bytetrade.io/web3os/bfl-frpc/go.sum
+
+
+RUN cd bytetrade.io/web3os/bfl-frpc && \
+  go mod download
+
+
+# Copy the go project
+COPY . bytetrade.io/web3os/bfl-frpc/
+
+RUN cd bytetrade.io/web3os/bfl-frpc/ && \
+  CGO_ENABLED=0 go build -ldflags="-s -w" -a -o frpc-agent cmd/frpc/main.go
+
+FROM beclab/frpc-base:v0.56.2
+WORKDIR /
+COPY --from=builder /workspace/bytetrade.io/web3os/bfl-frpc/frpc-agent .
+RUN ln -s /usr/bin/frpc
+
+ENTRYPOINT ["/frpc-agent"]
