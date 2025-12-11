@@ -1,4 +1,22 @@
-{{- $certs := include "search3-validation.certs" . | fromYaml }}
+{{- $caCertEnc := "" }}
+{{- $certCrtEnc := "" }}
+{{- $certKeyEnc := "" }}
+{{- $prevSecret := (lookup "v1" "Secret" .Release.Namespace "search3-validation-tls") }}
+{{- if $prevSecret }}
+{{- $certCrtEnc = index $prevSecret "data" "tls.crt" }}
+{{- $certKeyEnc = index $prevSecret "data" "tls.key" }}
+{{- $caCertEnc = index $prevSecret "data" "ca.crt" }}
+{{- end }}
+{{- if or (eq $caCertEnc "") (eq $certCrtEnc "") (eq $certKeyEnc "") }}
+{{- $altNames := list "search3-validation" (printf "search3-validation.%s" .Release.Namespace) (printf "search3-validation.%s.svc" .Release.Namespace) (printf "search3-validation.%s.svc.cluster.local" .Release.Namespace) }}
+{{- $tmpperioddays := 36500 }}
+{{- $ca := genCA "search3-validation" $tmpperioddays }}
+{{- $cert := genSignedCert "search3-validation" nil $altNames $tmpperioddays $ca }}
+{{- $certCrtEnc = b64enc $cert.Cert }}
+{{- $certKeyEnc = b64enc $cert.Key }}
+{{- $caCertEnc = b64enc $ca.Cert }}
+{{- end }}
+
 ---
 # TLS Secret for search3-validation webhook
 # Stores CA cert, server cert, and server key together to ensure consistency
@@ -9,9 +27,9 @@ metadata:
   namespace: {{ .Release.Namespace }}
 type: kubernetes.io/tls
 data:
-  ca.crt: {{ $certs.caCert }}
-  tls.crt: {{ $certs.tlsCert }}
-  tls.key: {{ $certs.tlsKey }}
+  ca.crt: {{ $caCertEnc }}
+  tls.crt: {{ $certCrtEnc }}
+  tls.key: {{ $certKeyEnc }}
 
 ---
 # Search3 Validation Server Deployment
@@ -152,7 +170,7 @@ webhooks:
         path: "/validate"
         port: 443
       # CA certificate for HTTPS validation (CA cert that signed the server's TLS certificate)
-      caBundle: {{ $certs.caCert }}
+      caBundle: {{ $caCertEnc }}
     rules:
       - apiGroups:
           - "sys.bytetrade.search3"
