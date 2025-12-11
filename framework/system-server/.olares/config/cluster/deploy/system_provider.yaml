@@ -32,6 +32,8 @@ spec:
             - --logtostderr
             - --insecure-listen-address=:28080
             - --upstream=http://127.0.0.1:8080/
+            - -v
+            - '6'
           ports:
             - containerPort: 28080
           resources:
