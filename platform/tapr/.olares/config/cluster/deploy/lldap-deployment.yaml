@@ -122,6 +122,7 @@ spec:
         app: lldap
     spec:
       priorityClassName: "system-cluster-critical"
+      serviceAccountName: os-internal
       initContainers:
         - name: init-container-check-citus
           image: 'postgres:16.0-alpine3.18'
@@ -201,7 +202,7 @@ spec:
             - name: NATS_SUBJECT_SYSTEM_GROUPS
               value: "os.groups"
 
-          image: beclab/lldap:0.0.14
+          image: beclab/lldap:0.0.16
           imagePullPolicy: IfNotPresent
           name: lldap
           ports:
