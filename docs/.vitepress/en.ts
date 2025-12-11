@@ -174,10 +174,10 @@ const side = {
               text: "Basic file operations",
               link: "/manual/olares/files/add-edit-download",
             },
-         //   {
-        //      text: "Sync and share",
-         //     link: "/manual/larepass/sync-share",
-         //   },
+            {
+              text: "Sync and share",
+              link: "/manual/olares/files/sync-share",
+            },
             {
               text: "Mount SMB",
               link: "/manual/olares/files/mount-SMB",
