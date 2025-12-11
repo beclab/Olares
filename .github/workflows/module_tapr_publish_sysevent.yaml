@@ -1,0 +1,62 @@
+name: Publish TAPR sys-event to Dockerhub
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Release Tags'
+
+jobs:
+  publish_dockerhub_amd64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASS }}
+      - name: Build and push amd64 Docker image
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: beclab/sys-event:${{ github.event.inputs.tags }}-amd64
+          file: platform/tapr/docker/sys-event/Dockerfile
+          context: platform/tapr
+          platforms: linux/amd64
+  publish_dockerhub_arm64:
+    runs-on: self-hosted
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASS }}
+      - name: Build and push arm64 Docker image
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: beclab/sys-event:${{ github.event.inputs.tags }}-arm64
+          file: platform/tapr/docker/sys-event/Dockerfile
+          context: platform/tapr
+          platforms: linux/arm64
+
+  publish_manifest:
+    needs:
+      - publish_dockerhub_amd64
+      - publish_dockerhub_arm64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASS }}
+
+      - name: Push manifest
+        run: |
+          docker manifest create beclab/sys-event:${{ github.event.inputs.tags }} --amend beclab/sys-event:${{ github.event.inputs.tags }}-amd64 --amend beclab/sys-event:${{ github.event.inputs.tags }}-arm64
+          docker manifest push beclab/sys-event:${{ github.event.inputs.tags }}

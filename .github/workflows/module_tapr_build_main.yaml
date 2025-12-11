@@ -1,0 +1,28 @@
+name: TAPR Build test
+on:
+  push:
+    branches:
+      - "module-tapr"
+    paths:
+      - 'platform/tapr/**'
+      - '!platform/tapr/.olares/**'
+      - '!platform/tapr/README.md'
+  pull_request:
+    branches:
+      - "module-tapr"
+    paths:
+      - 'platform/tapr/**'
+      - '!platform/tapr/.olares/**'
+      - '!platform/tapr/README.md'
+jobs:
+  build0-main:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v3
+      with:
+        go-version: '1.23.3'
+    - run: |
+        make build-uploader build-vault build-middleware
+        working-directory: platform/tapr
+
