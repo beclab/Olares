@@ -199,8 +199,25 @@ func ListRegistries(ctx *fiber.Ctx) ([]*Registry, error) {
 	if err != nil {
 		return nil, err
 	}
+	mirrorEndpointHosts := make(map[string]struct{})
 	for registryName, mirror := range mirrors {
 		nameToRegistries[registryName] = &Registry{Name: registryName, Endpoints: mirror.Endpoints}
+		for _, ep := range mirror.Endpoints {
+			u, perr := url.Parse(ep)
+			if perr != nil || u == nil {
+				klog.Errorf("failed to parse mirror endpoint %q for registry %q: %v", ep, registryName, perr)
+				continue
+			}
+			if hn := u.Hostname(); hn != "" {
+				mirrorEndpointHosts[hn] = struct{}{}
+			}
+			if h := u.Host; h != "" {
+				mirrorEndpointHosts[h] = struct{}{}
+			}
+		}
+	}
+	for host := range mirrorEndpointHosts {
+		delete(nameToRegistries, host)
 	}
 	images, err := ListImages(ctx, "")
 	if err != nil {
@@ -220,6 +237,10 @@ func ListRegistries(ctx *fiber.Ctx) ([]*Registry, error) {
 				continue
 			}
 			host := refspec.Hostname()
+			// skip any images that belong to a registry which is itself a mirror endpoint
+			if _, isMirrorEndpoint := mirrorEndpointHosts[host]; isMirrorEndpoint {
+				continue
+			}
 			if host == "" {
 				klog.Errorf("failed to parse image tag %s: empty host", tag)
 				continue
