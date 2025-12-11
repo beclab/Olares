@@ -2,9 +2,15 @@
 outline: [2, 3]
 description: Learn how to use Wise powerful filtering system to organize your library. Create tag-based views, add custom filtered views, and utilize advanced query parameters to manage your content effectively.
 ---
-# Organize your knowledge with filters
+# Organize your knowledge with filtered views
 
-As your Wise library grows, finding specific content by browsing folders can become difficult. Filtered views allow you to group related content into dynamic "smart folders" based on tags, feeds, dates, and more.
+As your Wise library grows, finding specific content by browsing folders can become difficult. Filtered views allow you to group related content into dynamic "smart folders" based on rules you define, such as specific tags, content types, or dates.
+
+Unlike standard folders, these views update automatically. Once created, any new item that matches your criteria will instantly appear in the view without you having to move it manually.
+
+:::info
+Only entries from feeds or entries saved to **<i class="material-symbols-outlined">inbox</i> Inbox** or **<i class="material-symbols-outlined">schedule</i> Read Later** can be queried.
+:::
 
 This guide explains how to:
 - Build filtered views from existing tags and feeds.
@@ -12,23 +18,9 @@ This guide explains how to:
 - Pin your favorite views to the sidebar.
 - Discover advanced filter options.
 
-:::info
-Only entries from feeds or entries saved to **<i class="material-symbols-outlined">inbox</i> Inbox** or **<i class="material-symbols-outlined">schedule</i> Read Later** can be queried.
-:::
+## Create quick views from tags or feeds
 
-## Understand filtered views
-
-A filtered view is a saved filter that:
-
-- Uses one or more conditions (for example, tag, feed, content type, date).
-- Automatically updates as new matching entries appear.
-- Can be pinned to the sidebar for quick access.
-
-You can build views quickly from **Tags** and **RSS feeds**, or define complex views manually using query language.
-
-## Create views from tags or feeds
-
-Use this method when you want a view based on an existing tag or a specific content source.
+The quickest way to create a view is to base it on a tag or feed you already use.
 
 1. In Wise, click <i class="material-symbols-outlined">settings</i> in the bottom left corner.
 2. Select either **Tags** (for topics) or **RSS feeds** (for sources).
@@ -42,7 +34,7 @@ Use this method when you want a view based on an existing tag or a specific cont
       
       b. Click **Confirm** to save the view.
 
-## Add custom filtered view
+## Create custom filtered views
 
 For more flexibility, you can create views using query language. This lets you define precise conditions for grouping content.
 
@@ -73,7 +65,7 @@ You can pin your filtered views to the sidebar so they are always one click away
 
 Pinned views appear in the sidebar alongside your other navigation items.
 
-## Available filters
+## Common filters and syntax
 To explore all available filtering options and learn how to use them, refer to the following:
 
 - [Filtered view examples](filter-examples)
