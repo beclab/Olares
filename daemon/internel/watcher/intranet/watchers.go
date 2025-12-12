@@ -208,7 +208,7 @@ func (w *applicationWatcher) loadDnsPodConfig(ctx context.Context, o *intranet.S
 			dnsPodIp = pod.Status.PodIP
 
 			// try to connect adguard dns pod port 53 to verify it's running
-			if adguardDnsPodIp == dnsPodIp && adguardHealth {
+			if adguardDnsPodIp != dnsPodIp || !adguardHealth {
 				adguardDnsPodIp = dnsPodIp
 				err := checkHealth(dnsPodIp)
 				if err != nil {
