@@ -133,6 +133,7 @@ To clone an application:
     b. Check the **Required permissions** section. Only applications with the **Multi-Instance** property support cloning.
 2. Click **My Olares** from the left sidebar. The list of installed applications will appear on the right.
 3. Locate the target application, click the drop-down arrow next to the **Open** button, and then click **Clone**.
+    ![Clone applications menu](/images/manual/olares/clone-apps.png#bordered)
 4. In the **Clone App** window, configure the following information, and then click **Confirm**:
     
     a. Enter a unique name for the new instance to avoid confusion with existing applications.
