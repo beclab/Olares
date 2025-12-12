@@ -47,7 +47,7 @@ Application entrances intended only for you, such as Desktop, Vault, and the man
     Currently, local access via `.local` domains is not supported on Windows.
     :::
 
-:::warning Always enable VPN for remote access
+:::tip Always enable VPN for remote access
 For the best experience with private apps when you're away from your network, enable **LarePass VPN**. It keeps your connection to Olares encrypted, direct, and fast.
 :::
 
