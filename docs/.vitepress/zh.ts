@@ -153,10 +153,10 @@ const side = {
             {text: "双重验证", link: "/zh/manual/larepass/two-factor-verification"},
           ],
         },
-        {
+        /*{
           text: "管理内容",
           link: "/zh/manual/larepass/manage-knowledge",
-        },
+        },*/
       ],
     },
     {
