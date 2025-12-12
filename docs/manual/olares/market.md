@@ -38,7 +38,7 @@ You can also browse applications based on their functionality:
 * **Creativity**: Apps for creating and publishing digital content, from AI-generated art and 3D models to blogs and design projects.
 * **Productivity**: Apps for team collaboration, project management, data organization, and building custom AI-powered agents.
 * **Lifestyle**: Self-hosted applications for managing your smart home, personal photo libraries, and AI identity.
-* **Fun**: Selfhosted applications for entertainment and fun such as gaming, video streaming, and connecting with people. 
+* **Fun**: Self-hosted applications for entertainment and fun such as gaming, video streaming, and connecting with people. 
 * **Utilities**: Tools for system management, file sharing, data backup, and running local AI models.
 * **Developer Tools** Toolchain for the software development lifecycle, including code hosting, CI/CD, observability, and database management.
 
@@ -47,7 +47,7 @@ You can also browse applications based on their functionality:
 To search an app in the market:
 
 1. Open the Market app from the Dock or Launchpad.
-2. In the **Manage** sub-memu on the left, click **Search**.
+2. In the **Manage** submenu on the left, click **Search**.
 2. Enter the keywords. The relevant results will appear as you type.
 
 ![Search app](/images/manual/olares/search-app.png#bordered)
@@ -66,6 +66,44 @@ You can switch market sources to speed up browsing, searching, and downloading, 
 ::: tip Note
 Applications from different installation sources will generate corresponding tabs in **My Olares** for easier application management.
 :::
+
+## Purchase paid applications
+
+You can purchase paid applications directly from the Olares Market. The payment process requires coordination between your computer, the LarePass mobile app, and a cryptocurrency wallet (such as MetaMask).
+
+### Prerequisites
+
+Before you begin, ensure that you have completed the following tasks:
+- **Cryptocurrency wallet**: You have installed a browser wallet extension (for example, MetaMask) and the wallet has sufficient balance to cover the app cost and gas fees. This guide uses MetaMask as an example, but you may use other supported wallets.
+- **LarePass mobile app**: You have installed the LarePass app on your phone and logged into the same account as your computer.
+
+### Step 1: Initiate purchase and identity verification
+
+1.  Open the Olares Market.
+2.  Search for the target paid app, click **Get**, and then click **Buy**.
+3.  In the **Verify payment access** popup window, click **Verify now**.
+4.  Open your LarePass mobile app:
+    
+    a. Review the request popup titled **Authorize payment access**.
+    
+    b. Click **Confirm** .
+
+### Step 2: Confirm order
+
+1.  After successful verification, return to the app page on your computer and click **Buy** again.
+2.  The **Verify purchase request** prompt will appear on your computer. Click **Verify now**.
+3.  Check your LarePass mobile app again:
+    
+    a. Review the request popup titled **Authorize purchase**.
+    
+    b. Click **Confirm**.
+
+### Step 3: Complete payment via wallet
+
+1.  Return to the app page on your computer and click **Pay**.
+2.  The browser will automatically open **MetaMask** (or your connected wallet extension).
+3.  Review the amount in the wallet popup, and then confirm and approve the transaction.
+4.  Wait for the blockchain to confirm the transaction. Once the payment is successfully completed, you can proceed to install the application by clicking **Install**.
 
 ## Install applications
 
