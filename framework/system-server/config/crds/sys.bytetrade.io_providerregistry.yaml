@@ -1,0 +1,160 @@
+
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  name: providerregistries.sys.bytetrade.io
+spec:
+  group: sys.bytetrade.io
+  names:
+    categories:
+    - all
+    kind: ProviderRegistry
+    listKind: ProviderRegistryList
+    plural: providerregistries
+    shortNames:
+    - pr
+    singular: providerregistry
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.group
+      name: the content provider group
+      type: string
+    - jsonPath: .spec.kind
+      name: the content provider kind
+      type: string
+    - jsonPath: .spec.dataType
+      name: the content data tyoe
+      type: string
+    - jsonPath: .status.state
+      name: state
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ProviderRegistry is the Schema for the ProviderRegistries API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ProviderRegistrySpec defines the desired state of ProviderRegistry
+            properties:
+              description:
+                description: description from ProviderRegistry's description or frontend
+                type: string
+              group:
+                description: The group of the provider
+                type: string
+              kind:
+                description: the content kind of the provider
+                type: string
+              dataType:
+                description: the content data type of the provider
+                type: string
+              version:
+                description: the version of content data type 
+                type: string
+              deployment:
+                description: the deployment of content provider
+                type: string
+              namespace:
+                description: the namespace of content provider's deployment
+                type: string
+              endpoint:
+                description: the endpoint (<service name>.<namespace>:<service port>) of provider
+                type: string                
+              opApis:
+                description: the content data operation apis
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      description: the operation name, one of Get and List
+                      enum:
+                      - Get
+                      - List
+                      - Create
+                      - Update
+                      type: string
+                    uri:
+                      description: the operation uri 
+                      type: string
+              callbacks:
+                description: the callback apis if the kind is watcher
+                type: array
+                items:
+                  type: object
+                  properties:
+                    op:
+                      description: the operation name of data to watch
+                      type: string
+                    uri:
+                      description: the callback uri
+                      type: string
+                    filters:
+                      description: the collection of the field filters. 
+                      type: object
+                      additionalProperties:
+                        items:
+                          type: string
+                        type: array
+              permission:
+                description: the provider access permission
+                type: object
+                properties:
+                  acl:
+                    description: the access control list of the app name
+                    type: array
+                    items:
+                      type: string
+                  with2FA:
+                    description: the 2fa required
+                    type: object
+                    properties:
+                      uri:
+                        description: the 2fa request uri
+                        type: string
+            required:
+            - group
+            - kind
+            - dataType
+            type: object
+          status:
+            description: ProviderRegistryStatus defines the observed state of ProviderRegistry
+            properties:
+              state:
+                description: 'the state of the ProviderRegistry: draft, submitted, passed,
+                  rejected, suspended, active'
+                default: active
+                type: string
+              statusTime:
+                format: date-time
+                type: string
+              updateTime:
+                format: date-time
+                type: string
+            required:
+            - state
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources: {}
+      

@@ -30,7 +30,6 @@ type proxyServer struct {
 
 func NewProxyServer() (*proxyServer, error) {
 	p := &proxyServer{
-		proxy:     echo.New(),
 		dnsServer: "10.233.0.3:53", // default k8s dns service
 	}
 	return p, nil
@@ -38,6 +37,18 @@ func NewProxyServer() (*proxyServer, error) {
 
 func (p *proxyServer) Start() error {
 	klog.Info("Starting intranet proxy server...")
+	if p.proxy != nil {
+		err := p.proxy.Close()
+		if err != nil {
+			klog.Error("close intranet proxy server error, ", err)
+			return err
+		}
+
+		p.proxy = nil
+	}
+
+	// closed echo proxy server cannot be restarted, so create a new one
+	p.proxy = echo.New()
 	config := middleware.DefaultProxyConfig
 	config.Balancer = p
 	config.Transport = p.initTransport()
@@ -109,8 +120,12 @@ func (p *proxyServer) Start() error {
 
 func (p *proxyServer) Close() error {
 	if p.proxy != nil {
-		return p.proxy.Close()
+		err := p.proxy.Close()
+		if err != nil {
+			klog.Error("close intranet proxy server error, ", err)
+		}
 	}
+	p.proxy = nil
 	p.stopped = true
 	return nil
 }
