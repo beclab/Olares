@@ -175,10 +175,10 @@ const side = {
               "text": "基本文件操作",
               "link": "/zh/manual/olares/files/add-edit-download"
             },
-            //{
-            //   "text": "同步与共享",
-          //  "link": "/zh/manual/larepass/sync-share"
-            //  },
+            {
+               "text": "同步与共享",
+               "link": "/zh/manual/olares/files/sync-share"
+            },
             {
               "text": "挂载 SMB",
               "link": "/zh/manual/olares/files/mount-SMB"
