@@ -32,8 +32,7 @@ for mod in "${PACKAGE_MODULE[@]}";do
         fi
     done
 done
-
-awk '{print $3}' ${TMP_MANIFEST} | sort | uniq | grep -v nitro | grep -v orion >> ${IMAGE_MANIFEST}
+awk '{print $3}' ${TMP_MANIFEST} | sort | uniq | grep -v nitro | grep -v orion | grep -v '^nonexisting$' >> ${IMAGE_MANIFEST}
 
 # patch
 # fix backup server version

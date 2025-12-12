@@ -4,17 +4,18 @@ import (
 	"bufio"
 	"crypto/md5"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
-	dockerref "github.com/containerd/containerd/reference/docker"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"sigs.k8s.io/kustomize/kyaml/yaml"
 	"sort"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
+	dockerref "github.com/containerd/containerd/reference/docker"
+	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 type OlaresManifest struct {
@@ -232,6 +233,10 @@ func (m *Manager) scan() error {
 				image := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "image:"))
 				image = strings.Trim(image, "'")
 				image = strings.Trim(image, "\"")
+				// filter out dummy placeholder image names
+				if strings.EqualFold(strings.TrimSpace(image), "nonexisting") {
+					continue
+				}
 				images = append(images, image)
 			}
 		}
