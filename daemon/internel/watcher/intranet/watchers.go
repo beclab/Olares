@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/beclab/Olares/daemon/internel/intranet"
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/beclab/Olares/daemon/pkg/utils"
+	"github.com/miekg/dns"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -181,6 +183,9 @@ func (w *applicationWatcher) loadServerConfig(ctx context.Context, nodeIp string
 	return options, nil
 }
 
+var adguardDnsPodIp string
+var adguardHealth bool
+
 func (w *applicationWatcher) loadDnsPodConfig(ctx context.Context, o *intranet.ServerOptions) error {
 	// try to find adguard dns pod ip and mac
 	k8sClient, err := utils.GetKubeClient()
@@ -199,7 +204,36 @@ func (w *applicationWatcher) loadDnsPodConfig(ctx context.Context, o *intranet.S
 	const adguardDnsAppLabel = "applications.app.bytetrade.io/name"
 	for _, pod := range dnsPods.Items {
 		switch {
-		case pod.Labels[adguardDnsAppLabel] == "adguardhome", pod.Labels["k8s-app"] == "kube-dns":
+		case pod.Labels[adguardDnsAppLabel] == "adguardhome":
+			dnsPodIp = pod.Status.PodIP
+
+			// try to connect adguard dns pod port 53 to verify it's running
+			if adguardDnsPodIp == dnsPodIp && adguardHealth {
+				adguardDnsPodIp = dnsPodIp
+				err := checkHealth(dnsPodIp)
+				if err != nil {
+					klog.Warning("dial adguard dns pod tcp 53 error, ", err)
+					adguardHealth = false
+				} else {
+					adguardHealth = true
+				}
+			}
+
+			if adguardHealth {
+				dnsPodMac, calicoRouteIface, err = getPodNeighborInfo(dnsPodIp)
+				if err != nil {
+					klog.Error("get adguard dns pod mac by ip error, ", err)
+					return err
+				}
+
+				// found adguard dns pod
+				o.DnsPodIp = dnsPodIp
+				o.DnsPodMac = dnsPodMac
+				o.DnsPodCalicoIface = calicoRouteIface
+				return nil
+			}
+
+		case pod.Labels["k8s-app"] == "kube-dns":
 			dnsPodIp = pod.Status.PodIP
 			dnsPodMac, calicoRouteIface, err = getPodNeighborInfo(dnsPodIp)
 			if err != nil {
@@ -208,13 +242,7 @@ func (w *applicationWatcher) loadDnsPodConfig(ctx context.Context, o *intranet.S
 			}
 		}
 
-		if pod.Labels[adguardDnsAppLabel] == "adguardhome" {
-			o.DnsPodIp = dnsPodIp
-			o.DnsPodMac = dnsPodMac
-			o.DnsPodCalicoIface = calicoRouteIface
-			return nil
-		}
-	}
+	} // end for pods
 
 	// not found adguard dns pod, but core dns pod exists
 	if dnsPodIp != "" {
@@ -260,4 +288,16 @@ func getPodNeighborInfo(podIp string) (mac, iface string, err error) {
 	}()
 
 	return "", "", fmt.Errorf("not found pod neighbor info for ip %s", podIp)
+}
+
+func checkHealth(server string) error {
+	c := new(dns.Client)
+	c.Timeout = time.Second
+
+	msg := new(dns.Msg)
+	msg.SetQuestion(dns.Fqdn("coredns.kube-system.svc.cluster.local."), dns.TypeA)
+	msg.RecursionDesired = true
+
+	_, _, err := c.Exchange(msg, server+":53")
+	return err
 }
