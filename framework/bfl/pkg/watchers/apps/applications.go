@@ -26,8 +26,10 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 )
 
@@ -116,8 +118,29 @@ func (s *Subscriber) Do(ctx context.Context, obj interface{}, action watchers.Ac
 			return fmt.Errorf("%s, app: %s-%s", err.Error(), request.Spec.Name, request.Spec.Namespace)
 		}
 	case watchers.DELETE:
-		return s.removeCustomDomainCnameData(request)
+		return s.removeCustomDomainRetry(request)
 	}
+	return nil
+}
+
+func (s *Subscriber) removeCustomDomainRetry(request *appv1.Application) error {
+	backoff := wait.Backoff{
+		Duration: 2 * time.Second,
+		Factor:   2,
+		Jitter:   0.1,
+		Steps:    5,
+	}
+
+	var err = retry.OnError(backoff, func(err error) bool {
+		return true
+	}, func() error {
+		return s.removeCustomDomainCnameData(request)
+	})
+
+	if err != nil {
+		klog.Errorf("remove custom domain error: %v", err)
+	}
+
 	return nil
 }
 
@@ -390,7 +413,13 @@ func (s *Subscriber) removeCustomDomainCnameData(app *appv1.Application) error {
 		if !ok || customDomainName == nil {
 			continue
 		}
-		_, err = cm.DeleteCustomDomainOnCloudflare(customDomainName.(string))
+
+		var domainName = customDomainName.(string)
+		if domainName == "" {
+			continue
+		}
+
+		_, err = cm.DeleteCustomDomainOnCloudflare(domainName)
 		if err != nil {
 			break
 		}
