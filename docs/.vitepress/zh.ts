@@ -616,32 +616,25 @@ const side = {
       link: "/zh/developer/develop/",
       items: [
         {
-          text: "教程",
+          text: "使用 Studio 开发",
           collapsed: true,
           link: "/zh/developer/develop/tutorial/",
           items: [
             {
-              text: "了解 Studio",
-              link: "/zh/developer/develop/tutorial/studio",
+              text: "部署应用",
+              link: "/zh/developer/develop/tutorial/deploy",
             },
             {
-              text: "创建首个应用",
-              collapsed: true,
-              link: "/zh/developer/develop/tutorial/note/",
-              items: [
-                {
-                  text: "1. 创建应用",
-                  link: "/zh/developer/develop/tutorial/note/create",
-                },
-                {
-                  text: "2. 开发后端",
-                  link: "/zh/developer/develop/tutorial/note/backend",
-                },
-                {
-                  text: "3. 开发前端",
-                  link: "/zh/developer/develop/tutorial/note/frontend",
-                },
-              ],
+              text: "使用开发容器",
+              link: "/zh/developer/develop/tutorial/develop",
+            },
+            {
+              text: "打包与上传",
+              link: "/zh/developer/develop/tutorial/package-upload",
+            },
+            {
+              text: "添加应用素材",
+              link: "/zh/developer/develop/tutorial/assets",
             },
           ],
         },

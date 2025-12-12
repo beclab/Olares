@@ -8,7 +8,7 @@ Apps created in Studio are ideal for development and testing. For stable, long-t
 
 ## Download the App package from Studio
 
-After confirming that your app works as expected, you can download its complete installation package.
+After confirming that your app works as expected, you can download its complete installation package:
 
 1.  Open your app project in **Studio**.
 2.  Click <span class="material-symbols-outlined">more_vert</span> in the top-right corner.
@@ -25,5 +25,3 @@ After confirming that your app works as expected, you can download its complete 
 Once finished, you can click **Open** to launch it.
 
 All custom-installed apps will appear under the **My Olares** > **Upload** tab.
-  
-  

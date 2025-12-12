@@ -13,6 +13,7 @@ import mediumZoom from "medium-zoom";
 import OSTabs from "./components/OStabs.vue";
 import VersionSwitcher from "./components/VersionSwitcher.vue";
 import _ from "lodash";
+import { redirects } from './redirects';
 
 const LANGUAGE_LOCAL_KEY = "language";
 let isMenuChange = false;
@@ -20,13 +21,26 @@ let isMenuChange = false;
 export default {
   extends: DefaultTheme,
   Layout,
-  enhanceApp({ app }: { app: App }) {
+enhanceApp({ app, router }: { app: App; router: Router }) {
     app.component("Tabs", Tabs);
     app.component("LaunchCard", LaunchCard);
     app.component("FilterableList", FilterableList);
     app.component("OSTabs", OSTabs);
     app.component("VersionSwitcher", VersionSwitcher);
+
+      router.onBeforeRouteChange = (to: string) => {
+          const path = to.replace(/\.html$/i, ''),
+              toPath = redirects[path];
+
+          if (toPath) {
+              setTimeout(() => { router.go(toPath); })
+              return false;
+          } else {
+              return true;
+          }
+      }
   },
+
 
   setup() {
     const route = useRoute();
