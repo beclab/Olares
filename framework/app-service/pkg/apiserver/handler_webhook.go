@@ -570,36 +570,9 @@ func (h *Handler) validateArgoResources(ctx context.Context, req *admissionv1.Ad
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 
-	labels := object.GetLabels()
-	if labels != nil && labels[constants.ApplicationAuthorLabel] == constants.ByteTradeAuthor {
-		return resp
-	}
-
 	appNamespace := req.Namespace
-	if strings.HasSuffix(req.Namespace, "-shared") {
-		var ns corev1.Namespace
-		err := h.ctrlClient.Get(ctx, types.NamespacedName{Name: req.Namespace}, &ns)
-		if err != nil {
-			klog.Errorf("failed to get ns %s %v", req.Namespace, err)
-			return h.sidecarWebhook.AdmissionError(req.UID, err)
-		}
-		if ns.Labels != nil {
-			installUser := ns.Labels[constants.ApplicationInstallUserLabel]
-			appName := ns.Labels[constants.ApplicationNameLabel]
-			appNamespace = fmt.Sprintf("%s-%s", appName, installUser)
-		}
-	}
-
-	// Ensure the namespace matches some ApplicationManager.Spec.AppNamespace
-	var amList v1alpha1.ApplicationManagerList
-	if err := h.ctrlClient.List(ctx, &amList, &client.ListOptions{}); err != nil {
-		klog.Errorf("Failed to list application managers for argo resources validation err=%v", err)
-		return h.sidecarWebhook.AdmissionError(req.UID, err)
-	}
-	for _, am := range amList.Items {
-		if am.Spec.AppNamespace == appNamespace {
-			return resp
-		}
+	if !apputils.IsProtectedNamespace(appNamespace) {
+		return resp
 	}
 
 	resp.Allowed = false
