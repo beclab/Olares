@@ -84,7 +84,7 @@ The Files app also supports editing the following text formats: TXT, JS, CSS, XM
 
 ![Preview](/images/manual/olares/files-preview.png#bordered)
 
-<!--@include: ../../get-started/reusables.md{67,92}-->
+<!--@include: ../../get-started/reusables.md{67,96}-->
 
 ## Share files
 
