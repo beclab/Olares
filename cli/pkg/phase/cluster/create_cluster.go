@@ -37,12 +37,7 @@ func NewDarwinClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.Ins
 		},
 		&kubesphere.DeployMiniKubeModule{},
 		&kubesphere.DeployModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
-		&ksplugins.DeployKsPluginsModule{},
-		//&ksplugins.DeployRedisModule{},
-		&ksplugins.CreateKubeSphereSecretModule{},
 		&ksplugins.DeployKsCoreConfigModule{}, // ks-core-config
-		&ksplugins.CreateMonitorDashboardModule{},
-		//&ksplugins.CreateNotificationModule{},
 		&ksplugins.DeployPrometheusModule{},
 		&ksplugins.DeployKsCoreModule{},
 		&kubesphere.CheckResultModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
@@ -94,13 +89,8 @@ func NewK3sCreateClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.
 		&certs.AutoRenewCertsModule{Skip: !runtime.Cluster.Kubernetes.EnableAutoRenewCerts()},
 		&k3s.SaveKubeConfigModule{},
 		&storage.DeployLocalVolumeModule{Skip: skipLocalStorage},
-		&kubesphere.DeployModule{Skip: !runtime.Cluster.KubeSphere.Enabled}, //
-		&ksplugins.DeployKsPluginsModule{},
-		//&ksplugins.DeployRedisModule{},
-		&ksplugins.CreateKubeSphereSecretModule{},
-		&ksplugins.DeployKsCoreConfigModule{}, // ks-core-config
-		&ksplugins.CreateMonitorDashboardModule{},
-		//&ksplugins.CreateNotificationModule{},
+		&kubesphere.DeployModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
+		&ksplugins.DeployKsCoreConfigModule{},
 		&ksplugins.DeployPrometheusModule{},
 		&ksplugins.DeployKsCoreModule{},
 		&kubesphere.CheckResultModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
@@ -157,12 +147,7 @@ func NewCreateClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.Ins
 		&kubernetes.SaveKubeConfigModule{},
 		&storage.DeployLocalVolumeModule{Skip: skipLocalStorage},
 		&kubesphere.DeployModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
-		&ksplugins.DeployKsPluginsModule{},
-		//&ksplugins.DeployRedisModule{},
-		&ksplugins.CreateKubeSphereSecretModule{},
 		&ksplugins.DeployKsCoreConfigModule{}, // ! ks-core-config
-		&ksplugins.CreateMonitorDashboardModule{},
-		//&ksplugins.CreateNotificationModule{},
 		&ksplugins.DeployPrometheusModule{},
 		&ksplugins.DeployKsCoreModule{},
 		&kubesphere.CheckResultModule{Skip: !runtime.Cluster.KubeSphere.Enabled}, // check ks-apiserver phase

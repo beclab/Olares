@@ -17,14 +17,8 @@
 package plugins
 
 import (
-	"fmt"
-	"path"
-	"strings"
-
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
-	"github.com/beclab/Olares/cli/pkg/utils"
-	"github.com/pkg/errors"
 )
 
 type IsCloudInstance struct {
@@ -42,73 +36,4 @@ func (p *IsCloudInstance) PreCheck(runtime connector.Runtime) (bool, error) {
 		return !p.Not, nil
 	}
 	return p.Not, nil
-}
-
-type CheckStorageClass struct {
-	common.KubePrepare
-}
-
-func (p *CheckStorageClass) PreCheck(runtime connector.Runtime) (bool, error) {
-	var kubectlpath, _ = p.PipelineCache.GetMustString(common.CacheCommandKubectlPath)
-	if kubectlpath == "" {
-		kubectlpath = path.Join(common.BinDir, common.CommandKubectl)
-	}
-
-	var cmd = fmt.Sprintf("%s get sc | awk '{if(NR>1){print $1}}'", kubectlpath)
-	stdout, err := runtime.GetRunner().SudoCmd(cmd, false, true)
-	if err != nil {
-		return false, errors.Wrap(errors.WithStack(err), "get storageclass failed")
-	}
-	if stdout == "" {
-		return false, fmt.Errorf("no storageclass found")
-	}
-
-	cmd = fmt.Sprintf("%s get sc --no-headers", kubectlpath)
-	stdout, err = runtime.GetRunner().SudoCmd(cmd, false, true)
-	if err != nil {
-		return false, errors.Wrap(errors.WithStack(err), "get storageclass failed")
-	}
-
-	if stdout == "" {
-		return false, fmt.Errorf("no storageclass found")
-	}
-
-	if !strings.Contains(stdout, "(default)") {
-		return false, fmt.Errorf("default storageclass was not found")
-	}
-
-	return true, nil
-}
-
-type GenerateRedisPassword struct {
-	common.KubePrepare
-}
-
-func (p *GenerateRedisPassword) PreCheck(runtime connector.Runtime) (bool, error) {
-	pass, err := utils.GeneratePassword(15)
-	if err != nil {
-		return false, err
-	}
-	if pass == "" {
-		return false, fmt.Errorf("failed to generate redis password")
-	}
-
-	p.PipelineCache.Set(common.CacheRedisPassword, pass)
-	return true, nil
-}
-
-type NotEqualDesiredVersion struct {
-	common.KubePrepare
-}
-
-func (n *NotEqualDesiredVersion) PreCheck(runtime connector.Runtime) (bool, error) {
-	ksVersion, ok := n.PipelineCache.GetMustString(common.KubeSphereVersion)
-	if !ok {
-		ksVersion = ""
-	}
-
-	if n.KubeConf.Cluster.KubeSphere.Version == ksVersion {
-		return false, nil
-	}
-	return true, nil
 }

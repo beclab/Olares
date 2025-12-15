@@ -6,9 +6,9 @@ const (
 	NamespaceKubePublic                 = "kube-public"
 	NamespaceKubeSystem                 = "kube-system"
 	NamespaceKubekeySystem              = "kubekey-system"
-	NamespaceKubesphereControlsSystem   = "kubesphere-controls-system"
 	NamespaceKubesphereMonitoringSystem = "kubesphere-monitoring-system"
 	NamespaceKubesphereSystem           = "kubesphere-system"
+	NamespaceKubesphereControlsSystem   = "kubesphere-controls-system"
 	NamespaceOsFramework                = "os-framework"
 	NamespaceOsPlatform                 = "os-platform"
 

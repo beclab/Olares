@@ -71,11 +71,10 @@ func upgradeKSCore() []task.Interface {
 			Action: new(plugins.CopyEmbedFiles),
 		},
 		&task.LocalTask{
-			Name:    "UpgradeKSCore",
-			Prepare: new(common.GetMasterNum),
-			Action:  new(plugins.CreateKsCore),
-			Retry:   10,
-			Delay:   10 * time.Second,
+			Name:   "UpgradeKSCore",
+			Action: new(plugins.CreateKsCore),
+			Retry:  10,
+			Delay:  10 * time.Second,
 		},
 		&task.LocalTask{
 			Name:   "CheckKSCoreRunning",

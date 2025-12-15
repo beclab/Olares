@@ -25,7 +25,6 @@ func CliInstallTerminusPipeline(opts *options.CliTerminusInstallOptions) error {
 	arg.SetOlaresVersion(opts.Version)
 	arg.SetMinikubeProfile(opts.MiniKubeProfile)
 	arg.SetStorage(getStorageValueFromEnv())
-	arg.SetTokenMaxAge()
 	arg.SetSwapConfig(opts.SwapConfig)
 	if err := arg.SwapConfig.Validate(); err != nil {
 		return err

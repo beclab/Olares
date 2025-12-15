@@ -74,7 +74,6 @@ func (g *GenerateTerminusdServiceEnv) Execute(runtime connector.Runtime) error {
 			"RegistryMirrors": g.KubeConf.Arg.RegistryMirrors,
 			"BaseDir":         baseDir,
 			"GpuEnable":       utils.FormatBoolToInt(g.KubeConf.Arg.GPU.Enable),
-			"TokenMaxAge":     g.KubeConf.Arg.TokenMaxAge,
 		},
 		PrintContent: true,
 	}

@@ -35,7 +35,6 @@ func PrepareSystemPipeline(opts *options.CliPrepareSystemOptions, components []s
 	arg.SetOlaresVersion(opts.Version)
 	arg.SetRegistryMirrors(opts.RegistryMirrors)
 	arg.SetStorage(getStorageValueFromEnv())
-	arg.SetTokenMaxAge()
 
 	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
 	if err != nil {

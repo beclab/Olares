@@ -101,7 +101,6 @@ type Argument struct {
 	Storage         *Storage         `json:"storage"`
 	NetworkSettings *NetworkSettings `json:"network_settings"`
 	GPU             *GPU             `json:"gpu"`
-	TokenMaxAge     int64            `json:"token_max_age"` // nanosecond
 
 	Request any `json:"-"`
 
@@ -351,15 +350,6 @@ func (a *Argument) SetOlaresCDNService(url string) {
 		u = common.DefaultOlaresCDNService
 	}
 	a.OlaresCDNService = u
-}
-
-func (a *Argument) SetTokenMaxAge() {
-	s := os.Getenv(ENV_TOKEN_MAX_AGE)
-	age, err := strconv.ParseInt(s, 10, 64)
-	if err != nil || age == 0 {
-		age = DefaultTokenMaxAge
-	}
-	a.TokenMaxAge = age
 }
 
 func (a *Argument) SetGPU(enable bool) {
