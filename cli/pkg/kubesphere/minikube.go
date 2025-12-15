@@ -3,12 +3,13 @@ package kubesphere
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/beclab/Olares/cli/pkg/storage"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/beclab/Olares/cli/pkg/storage"
 
 	"github.com/containerd/containerd/plugin"
 	"github.com/pelletier/go-toml"
@@ -470,6 +471,7 @@ func (t *InitMinikubeNs) Execute(runtime connector.Runtime) error {
 		common.NamespaceKubekeySystem,
 		common.NamespaceKubesphereSystem,
 		common.NamespaceKubesphereMonitoringSystem,
+		common.NamespaceKubesphereControlsSystem,
 	}
 
 	for _, ns := range allNs {
