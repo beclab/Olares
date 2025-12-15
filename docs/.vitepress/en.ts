@@ -132,7 +132,7 @@ const side = {
             {text: "Manage integrations", link:"/manual/larepass/integrations"},
           ],
         },
-        {text: "Manage VPN", link:"/manual/larepass/private-network"},
+        {text: "Use VPN", link:"/manual/larepass/private-network"},
         {
           text: "Manage device",
           collapsed: true,
