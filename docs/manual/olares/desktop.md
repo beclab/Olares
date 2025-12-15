@@ -55,18 +55,26 @@ Some applications only support opening in a tabbed view.
 
 You can quickly call out global search using one of the following methods:
 
-* Press the keyboard shortcut: `Shift + Space`
-* Click the "Search" icon in the Dock.
+- Press the keyboard shortcut: `Shift + Space`
+- Click the <i class="material-symbols-outlined">search</i> icon in the Dock.
 
+Global search can find applications, files, and content from supported apps.
 
-| Search target                               | Supported actions                                         |
-|:--------------------------------------------|:----------------------------------------------------------|
-| Installed Applications                      | Open the application directly.                            |
-| Documents directory in File Manager Storage | Search by filename or full-text content.                  |
-| Other directories in File Manager Storage   | Search by filename only.                                  |
-| File Manager Synced Drive                   | Search by filename only.                                  |
-| Wise Reader Content                         | Search full-text content of RSS feeds, web pages, & PDFs. |
-| **More**                                    |                                                           |
-| Settings                                    | Adjust Olares appearance.                                 |
-| Applications                                | Install, uninstall, or update applications.               |
+| Search target | Supported actions |
+|:--|:--|
+| Installed applications  | Open the application directly. ｜
+| Directories enabled for full-text search | Search and access files by filename or full-text content.|
+| Other directories in File manager storage  | Search and access files by filename.  |
+| Team shared files   | Search and access files shared with you by filename. |
+| File manager synced drive |Search and access files by filename. |
+| Wise reader content | Search and acess RSS feeds, web pages, & PDFs by name. |
+| **More** |  |
+| Settings  | Adjust Olares appearance. |
 
+### Configure file search rules
+
+By default, all files are searchable by filename only in global search.  
+
+To improve search efficiency or enable searching file contents, go to  **Settings** > **Search** > **File Search** to configure full-text search and exclusion rules.
+
+For details, see [Configure file search](/manual/olares/settings/search.md).
