@@ -3,7 +3,7 @@ outline: [2, 3]
 description: 了解如何使用 Studio 设置开发容器，通过 VS Code 访问，并配置端口转发。
 ---
 # 使用开发容器开发应用
-Olares Studio 允许你启动预配置的开发容器来编写和调试代码（如 Node.js 脚本或 CUDA 程序），无需管理本地基础设施。这提供了与生产运行时完全隔离且一致的环境。
+Olares Studio 允许你启动预配置的开发容器来编写和调试代码（如 Node.js 脚本或 CUDA 程序），无需管理本地基础设施。它提供了一个与生产运行时一致的、完全隔离的环境。
 
 本文档以 Node.js 项目为例介绍开发和配置流程。
 
@@ -53,7 +53,7 @@ Olares Studio 允许你启动预配置的开发容器来编写和调试代码（
    code tunnel
    ```
 5. 按照终端提示，通过提供的 URL 使用 Microsoft 或 GitHub 帐户进行身份验证。
-6. 出现提示时为隧道命，例如 `myapp-demo`。终端将输出绑定到此远程工作区的 `vscode.dev` URL。
+6. 出现提示时为隧道命名，例如 `myapp-demo`。终端将输出绑定到此远程工作区的 `vscode.dev` URL。
    ![创建安全隧道](/images/manual/olares/studio-create-a-secure-tunnel.png#bordered)
 
 7. 在本地机器上打开 VS Code，点击左下角的 **><** 图标，选择 **Tunnel**。
@@ -195,8 +195,8 @@ Olares Studio 允许你启动预配置的开发容器来编写和调试代码（
 
 4. 点击**应用**重新部署容器。
 
-部署成功后，你可以在 **服务** > **端口** 中看到列出的新端口。
-![验证活动端口](/images/manual/olares/studio-verify-active-ports.png#bordered)
+部署成功后，你可以在**服务** > **端口**中看到列出的新端口。
+![验证活动端口](/images/zh/manual/olares/studio-verify-active-ports.png#bordered)
 
 ### 测试连接
 1. 更新 `index.js` 以监听新端口：
