@@ -133,7 +133,7 @@ const side = {
             {text: "管理集成", link:"/zh/manual/larepass/integrations"},
           ],
         },
-        {text: "管理专用网络", link:"/zh/manual/larepass/private-network"},
+        {text: "使用专用网络", link:"/zh/manual/larepass/private-network"},
         {
           text: "管理设备",
           collapsed: true,

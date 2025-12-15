@@ -1,77 +1,38 @@
 ---
 outline: [2, 3]
-description: Learn how to securely access your Olares from anywhere. This guide explains public vs. private entrances, when to use LarePass VPN, how to enable VPN on mobile and desktop.
+description: Learn how to securely access your Olares from anywhere.
 ---
+# Access Olares services remotely via LarePass VPN
+Your Olares device hosts critical applications intended for personal or internal use, such as Vault and Ollama. To ensure security, these applications are accessed via [private or internal entrances](../../developer/concepts/network.md#private-entrance).
 
-# Access Olares anywhere
+To ensure the best connection to these apps, it's recommended to enable LarePass VPN. Once enabled, LarePass uses Tailscale to establish a secure network and automatically selects the fastest route based on location:
 
-This guide explains **how to reach your Olares from anywhere**. You will learn:
+- **At home**: The app connects directly via the local network for maximum speed.
+- **Remote**: The app creates a direct, encrypted P2P tunnel to the device.
 
-1) The access paths for public vs. private entrances.
-2) How to enable LarePass VPN on your mobile and desktop.
-3) Interpret connection status and know when to troubleshoot.
-
-## How access works in Olares
-
-In Olares, you access each app or service via its own URL (`https://app.olares-id.olares.com`, for example, `https://desktop.nicholas.olares.com/`). Depending on who should reach it, there are two entrance types.
-
-### Public entrance
-
-  * Accessible to anyone on the internet without authentication. For example, a public blog hosted on WordPress.
-  * Traffic is securely routed from the internet to Olares via Cloudflare Tunnel or FRP.
-
-### Private entrance
-
-Application entrances intended only for you, such as Desktop, Vault, and the management console of WordPress. Depending on where you are, there are two scenarios when accessing private entrances:
-
-- **Remote access** (Outside your local network)
-  - **With LarePass VPN (Recommended):** Traffic is routed directly and securely through the VPN (Tailscale), no matter where you are.
-  - **Without LarePass VPN:** Traffic is routed through the same internet tunnel as public access (Cloudflare/FRP).
-
- - **Local access** (On the same network)
-  
-    Use the local URL (`http://app.yourname.olares.local`) for a direct, local connection that bypasses the VPN and internet tunnels.
-
-    :::tip For macOS users
-    Chrome may fail to access local URLs if macOS blocks local network permissions.
-    To enable access:
-    1. Open Apple menu and go to **System Settings**.
-    2. Go to **Privacy & Security** > **Local Network**.
-    3. Find Google Chrome and Google Chrome Helper in the list and enable the toggles.
-    ![Enable local network](/public/images/manual/larepass/mac-chrome-local-access.png#bordered){width=400}
-
-    Restart Chrome and try accessing the local URL again.
-    :::
-
-    :::info For Windows users
-    Currently, local access via `.local` domains is not supported on Windows.
-    :::
-
-:::tip Always enable VPN for remote access
-For the best experience with private apps when you're away from your network, enable **LarePass VPN**. It keeps your connection to Olares encrypted, direct, and fast.
-:::
+If the VPN is disabled, traffic routes through standard public internet tunnels using Cloudflare or FRP.
 
 ## Enable VPN on LarePass
-
-:::tip
-For different LarePass download options, visit [the official page](https://www.olares.com/larepass).
+:::info iOS and macOS setup
+On iOS or macOS, you may be prompted to add a VPN Configuration to your system settings the first time you enable the feature. Allow this to complete the setup.
 :::
 
-![VPN](/images/manual/larepass/vpn.jpg)
+<tabs>
+<template #On-LarePass-mobile-client>
 
-### On LarePass mobile client
-1. Open LarePass, and go to **Settings**.
+1. Open the LarePass app, and go to **Settings**.
 2. In the **My Olares** card, toggle on the VPN switch.
 
-### On LarePass desktop client
-1. Open LarePass, click on the avatar area in the top left corner of the main interface.
-2. Toggle on the switch for **VPN connection** in the pop-up panel.
+   ![Enable LarePass VPN on mobile](/images/manual/get-started/larepass-vpn-mobile.png#bordered)
+</template>
+<template #On-LarePass-desktop-client>
 
-Devices with activated VPN will use the VPN connection to access Olares, whether through the LarePass client or a browser.
+1. Open the LarePass app, and click your avatar in the top-left corner to open the user menu.
+2. Toggle on the switch for **VPN connection**.
 
-:::info
-iOS or macOS versions of LarePass will require adding a VPN configuration file to the system when turning on the VPN. Follow the prompts to complete the setup.
-:::
+   ![Enable LarePass VPN on desktop](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
+</template>
+</tabs>
 
 ## Understand connection status
 LarePass displays the connection status between your device and Olares, helping you understand or diagnose your current network connection.

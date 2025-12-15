@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: Olares network architecture principles, covering application entrance types, local access mechanisms, endpoint configurations and internal network security policies.
 ---
 # Network
@@ -9,29 +10,21 @@ Olares provides users with a barrier-free but secure and versatile network solut
 
 Each Olares application can have one or more entrances that serve as access points. There are three types of entrances:
 
-- **Public entrance**
+### Public entrance
 
-  - Provides external services such as blogs, social media, etc.
-  - Accessible without authentication
-  - Basic security through Cloudflare
+- Provides external services such as blogs, social media, etc.
+- Accessible without authentication
+- Basic security through Cloudflare
 
-- **Private entrance**
+### Private entrance
 
-  - Provides services exclusively for individual users, families, or teams
-  - Suitable for readers, entertainment, productivity tools, desktop applications, etc.
-  - Requires [authentication](account.md#multi-factor-authentication-mfa) for access
+- Provides services exclusively for individual users, families, or teams
+- Suitable for readers, entertainment, productivity tools, desktop applications, etc.
+- Requires [authentication](account.md#multi-factor-authentication-mfa) for access
 
-- **Internal entrance**
-  - Functions similarly to private entrance
-  - No authentication required when accessing applications through LarePass VPN
-
-## Acccess to private entrances via VPN
-
-Simply enable [LarePass VPN](/manual/larepass/private-network.md) on your device to securely and quickly access your private applications via their dedicated URLs (e.g., `https://vault.alice123.olares.com`).
-
-::: tip Note
-If LarePass VPN is not enabled, requests to your private entrances will be routed through your reverse proxy tunnel to Olares, which may cause network latency and incur charges.
-:::
+### Internal entrance
+- Functions similarly to private entrance
+- No authentication required when accessing applications through LarePass VPN
 
 ## Endpoints
 
