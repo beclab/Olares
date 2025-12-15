@@ -88,6 +88,8 @@ Before you begin, ensure that you have completed the following tasks:
     
     b. Click **Confirm** .
 
+    ![Authorize payment access](/images/manual/olares/authorize-pay.png#bordered){width=250}
+
 ### Step 2: Confirm order
 
 1.  After successful verification, return to the app page on your computer and click **Buy** again.
@@ -98,12 +100,19 @@ Before you begin, ensure that you have completed the following tasks:
     
     b. Click **Confirm**.
 
+    ![Authorize purchase](/images/manual/olares/authorize-purchase.png#bordered){width=250}
+
 ### Step 3: Complete payment via wallet
 
-1.  Return to the app page on your computer and click **Pay**.
-2.  The browser will automatically open **MetaMask** (or your connected wallet extension).
-3.  Review the amount in the wallet popup, and then confirm and approve the transaction.
-4.  Wait for the blockchain to confirm the transaction. Once the payment is successfully completed, you can proceed to install the application by clicking **Install**.
+1. Return to the app page on your computer and click **Pay**.
+2. The browser will automatically open **MetaMask** (or your connected wallet extension).
+3. Review the amount in the wallet popup, and then confirm and approve the transaction.
+4. Wait for the blockchain to confirm the transaction.
+5. Once the payment is successfully completed, you can proceed to install the application by clicking **Install**.
+6. After the payment is completed, you can verify your purchase credential from your LarePass mobile app by navigating to **Settings** > **Safety** > **VC cards**.
+
+![Authorize purchase](/images/manual/olares/vc.png#bordered){width=250}
+
 
 ## Install applications
 
