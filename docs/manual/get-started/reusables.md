@@ -68,6 +68,10 @@ While these specific versions are confirmed to work, the process may still work 
 
 With LarePass desktop, you can sync cloud files (organized by libraries or folders) to your local computer. This creates a corresponding folder on your machine. After set up, your files will stay updated bi-directionally in real time.
 
+:::tip Note
+The **Sync to local** feature is only available for libraries or folders within the **Sync** directory.
+:::
+
 ### Enable synchronization
 
 To enable sync for a library or folder: 

@@ -83,7 +83,7 @@ LarePass 支持通过手机的分享选项快速上传文件或媒体内容。
 
 ![预览](/images/manual/olares/files-preview.png#bordered)
 
-<!--@include: ../../get-started/reusables.md{55,80}-->
+<!--@include: ../../get-started/reusables.md{55,85}-->
 
 ## 分享文件
 
