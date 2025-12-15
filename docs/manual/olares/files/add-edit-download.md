@@ -84,6 +84,8 @@ The Files app also supports editing the following text formats: TXT, JS, CSS, XM
 
 ![Preview](/images/manual/olares/files-preview.png#bordered)
 
+<!--@include: ../../get-started/reusables.md{67,92}-->
+
 ## Share files
 
 This feature supports sharing folders with internal members or external users through different methods. You can flexibly set access permissions, passwords, and expiration dates, and manage or cancel these shares at any time.

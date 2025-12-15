@@ -63,3 +63,30 @@ Make sure your device meets the following requirements.
 :::info Version compatibility
 While these specific versions are confirmed to work, the process may still work on other versions. Adjustments may be necessary depending on your environment. If you meet any issues with these platforms, feel free to raise an issue on [GitHub](https://github.com/beclab/Olares/issues/new).
 :::
+
+## Sync files to local computer
+
+With LarePass desktop, you can sync cloud files (organized by libraries or folders) to your local computer. This creates a corresponding folder on your machine. After set up, your files will stay updated bi-directionally in real time.
+
+### Enable synchronization
+
+To enable sync for a library or folder: 
+
+1. Open LarePass desktop and locate the **Sync** directory.
+2. Hover your mouse over the target library or folder, click <i class="material-symbols-outlined">more_horiz</i>  that appears on the right, and then click **Sync to local**. 
+
+    ![Sync files to local](/images/manual/olares/sync-files-local.png#bordered)
+    
+3. In the **Sync library** popup window, set the file download location, and then click **Confirm**. 
+    
+Syncing will begin immediately. Once completed, a green checkmark will appear on the bottom-left corner of the folder icon, indicating that the sync is finished.
+
+### Manage synchronization
+
+After setting up synchronization, you can manage your files and control the sync status with the following operations:
+
+- If you want to quickly locate the sync directory on your local drive, hover your mouse over the target library or folder, click <i class="material-symbols-outlined">more_horiz</i> that appears on the right, and then click **Open local sync folder**. The system will directly open the folder's location on your computer.
+
+- If you no longer need to sync a folder, hover your mouse over it, click <i class="material-symbols-outlined">more_horiz</i> that appears on the right, and then click **Unsychronize**.
+
+- If you want to temporarily stop data transfer, click <i class="material-symbols-outlined">pause_circle</i> to the right of the **Sync** directory. All sync tasks will be paused.
