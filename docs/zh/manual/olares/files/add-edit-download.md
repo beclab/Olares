@@ -83,6 +83,8 @@ LarePass 支持通过手机的分享选项快速上传文件或媒体内容。
 
 ![预览](/images/manual/olares/files-preview.png#bordered)
 
+<!--@include: ../../get-started/reusables.md{55,80}-->
+
 ## 分享文件
 
 本功能支持将文件夹通过不同方式分享给内部成员或外部人员。你可以灵活设置访问权限、密码及有效期，并随时管理或撤销这些分享。
