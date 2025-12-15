@@ -118,7 +118,6 @@ func (m *DeployPrometheusModule) Init() {
 		Hosts: m.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
 		},
 		Action:   new(CreateOperator),
 		Parallel: false,
@@ -130,7 +129,6 @@ func (m *DeployPrometheusModule) Init() {
 		Hosts: m.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
 		},
 		Action: &CreatePrometheusComponent{
 			Component: "node-exporter",
@@ -145,7 +143,6 @@ func (m *DeployPrometheusModule) Init() {
 		Hosts: m.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
 		},
 		Action: &CreatePrometheusComponent{
 			Component: "kube-state-metrics",
@@ -160,7 +157,6 @@ func (m *DeployPrometheusModule) Init() {
 		Hosts: m.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
 		},
 		Action: &CreatePrometheusComponent{
 			Component: "prometheus",
@@ -173,7 +169,6 @@ func (m *DeployPrometheusModule) Init() {
 		Hosts: m.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
 		},
 		Action: &CreatePrometheusComponent{
 			Component: "kubernetes",
@@ -182,26 +177,12 @@ func (m *DeployPrometheusModule) Init() {
 		Parallel: false,
 	}
 
-	//createAlertManager := &task.RemoteTask{
-	//	Name:  "CreateAlertManager",
-	//	Hosts: m.Runtime.GetHostsByRole(common.Master),
-	//	Prepare: &prepare.PrepareCollection{
-	//		new(common.OnlyFirstMaster),
-	//		new(NotEqualDesiredVersion),
-	//	},
-	//	Action: &CreatePrometheusComponent{
-	//		Component: "alertmanager",
-	//	},
-	//	Parallel: false,
-	//}
-
 	m.Tasks = []task.Interface{
 		createOperator,
 		createNodeExporter,
 		createKubeStateMetrics,
 		createPrometheus,
 		createKubeMonitor,
-		//createAlertManager,
 	}
 
 }

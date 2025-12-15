@@ -25,7 +25,6 @@ const (
 	DefaultK3sVersion          = "v1.33.3-k3s"
 	DefaultKubernetesVersion   = ""
 	DefaultKubeSphereVersion   = "v3.3.0"
-	DefaultTokenMaxAge         = 31536000
 	CurrentVerifiedCudaVersion = "13.0"
 )
 
@@ -236,7 +235,6 @@ const (
 	CacheNodeNum       = "node_num"
 	CacheRedisPassword = "redis_password"
 	CacheSecretsNum    = "secrets_num"
-	CacheJwtSecret     = "jwt_secret"
 	CacheCrdsNUm       = "users_iam_num"
 
 	CacheMinioPath     = "minio_binary_path"
@@ -295,7 +293,6 @@ const (
 	ENV_BACKUP_SECRET               = "BACKUP_SECRET"
 	ENV_CLUSTER_ID                  = "CLUSTER_ID"
 	ENV_BACKUP_CLUSTER_BUCKET       = "BACKUP_CLUSTER_BUCKET"
-	ENV_TOKEN_MAX_AGE               = "TOKEN_MAX_AGE"
 	ENV_HOST_IP                     = "HOST_IP"
 	ENV_PREINSTALL                  = "PREINSTALL"
 	ENV_DISABLE_HOST_IP_PROMPT      = "DISABLE_HOST_IP_PROMPT"

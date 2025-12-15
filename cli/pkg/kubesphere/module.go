@@ -17,12 +17,9 @@
 package kubesphere
 
 import (
-	"path/filepath"
 	"time"
 
-	"github.com/beclab/Olares/cli/pkg/core/action"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
-	"github.com/beclab/Olares/cli/pkg/version/kubesphere/templates"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/prepare"
@@ -61,81 +58,19 @@ func (d *DeployModule) Init() {
 	d.Name = "DeployKubeSphereModule"
 	d.Desc = "Deploy KubeSphere"
 
-	generateManifests := &task.RemoteTask{
-		Name:  "GenerateKsInstallerCRD",
-		Desc:  "Generate KubeSphere ks-installer crd manifests",
-		Hosts: d.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
-		},
-		Action: &action.Template{
-			Name:     "GenerateKsInstallerCRD",
-			Template: templates.KsInstaller,
-			Dst:      filepath.Join(common.KubeAddonsDir, templates.KsInstaller.Name()),
-		},
-		Parallel: false,
-	}
-
-	addConfig := &task.RemoteTask{
-		Name:  "AddKsInstallerConfig",
-		Desc:  "Add config to ks-installer manifests",
-		Hosts: d.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
-		},
-		Action:   new(AddInstallerConfig),
-		Parallel: false,
-	}
-
 	createNamespace := &task.RemoteTask{
 		Name:  "CreateKubeSphereNamespace",
 		Desc:  "Create the kubesphere namespace",
 		Hosts: d.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
 		},
 		Action:   new(CreateNamespace),
 		Parallel: false,
 	}
 
-	setup := &task.RemoteTask{
-		Name:  "SetupKsInstallerConfig",
-		Desc:  "Setup ks-installer config",
-		Hosts: d.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
-		},
-		Action:   new(Setup), // todo
-		Parallel: false,
-		Retry:    1,
-	}
-
-	apply := &task.RemoteTask{
-		Name:  "ApplyKsInstaller",
-		Desc:  "Apply ks-installer",
-		Hosts: d.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
-		},
-		Action:   new(Apply),
-		Parallel: false,
-		Retry:    10,
-		Delay:    5 * time.Second,
-	}
-
 	d.Tasks = []task.Interface{
-		generateManifests,
-		// apply crd installer.kubesphere.io/v1alpha1
-		// apply,
-		addConfig,
 		createNamespace,
-		setup,
-		apply,
 	}
 }
 
@@ -157,7 +92,6 @@ func (c *CheckResultModule) Init() {
 		Hosts: c.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
 		},
 		Action:   new(Check),
 		Parallel: false,
@@ -170,7 +104,6 @@ func (c *CheckResultModule) Init() {
 		Hosts: c.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
 		},
 		Action:   new(GetKubeCommand),
 		Parallel: false,
