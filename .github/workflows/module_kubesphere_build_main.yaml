@@ -1,0 +1,29 @@
+name: Kubesphere Build Test
+
+on:
+  push:
+    branches:
+      - "module-kubesphere"
+    paths:
+      - 'infrastructure/kubesphere/**'
+      - '!infrastructure/kubesphere/.olares/**'
+      - '!infrastructure/kubesphere/README.md'
+  pull_request:
+    branches:
+      - "module-kubesphere"
+    paths:
+      - 'infrastructure/kubesphere/**'
+      - '!infrastructure/kubesphere/.olares/**'
+      - '!infrastructure/kubesphere/README.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '1.24'
+      - run: make binary
+        working-directory: infrastructure/kubesphere
