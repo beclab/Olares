@@ -192,8 +192,8 @@ func CheckJWS(jws string, duration int64) (*CheckJWSResult, error) {
 
 	// Check timestamp
 	now := time.Now().UnixMilli()
-	diff := now-timestamp
-	if  diff < 0 || diff > duration {
+	diff := now - timestamp
+	if max(diff, -diff) > duration {
 		return nil, fmt.Errorf("timestamp is out of range")
 	}
 
