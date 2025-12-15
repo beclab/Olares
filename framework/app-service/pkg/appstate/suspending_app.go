@@ -78,6 +78,11 @@ func (p *SuspendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 }
 
 func (p *SuspendingApp) exec(ctx context.Context) error {
+	err := suspendOrResumeApp(ctx, p.client, p.manager, int32(0))
+	if err != nil {
+		klog.Errorf("suspend %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
+		return fmt.Errorf("suspend app %s failed %w", p.manager.Spec.AppName, err)
+	}
 	// If stop-all is requested, also stop v2 server-side shared charts by scaling them down
 	if p.manager.Annotations[api.AppStopAllKey] == "true" {
 		var appCfg *appcfg.ApplicationConfig
@@ -103,12 +108,6 @@ func (p *SuspendingApp) exec(ctx context.Context) error {
 					return err
 				}
 			}
-		}
-	} else {
-		err := suspendOrResumeApp(ctx, p.client, p.manager, int32(0))
-		if err != nil {
-			klog.Errorf("suspend %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
-			return fmt.Errorf("suspend app %s failed %w", p.manager.Spec.AppName, err)
 		}
 	}
 
