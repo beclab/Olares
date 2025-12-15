@@ -11,7 +11,7 @@ description: 学习如何使用 Studio 在 Olares 设备上部署 Docker 应用�
 ## 获取 Studio
 你需要手动安装 Studio：
 1.  打开**应用市场**，搜索 "Studio"。
-    ![Studio](/images/manual/olares/studio.png#bordered)
+    ![Studio](/images/zh/manual/olares/studio.png#bordered)
 
 2. 点击**获取**，随后点击**安装**，等待安装完成。
 
@@ -23,4 +23,4 @@ Studio 的核心功能都集中在侧边栏和**主页**：
 - **应用**：展示你用 Studio 创建和部署的应用列表。
 - **开始**：在此开始部署或开发应用，也可上传本地 Chart 文件。
 
-  ![Understand Studio user interface](/images/manual/olares/studio-ui.png#bordered)
+  ![Understand Studio user interface](/images/zh/manual/olares/studio-ui.png#bordered)

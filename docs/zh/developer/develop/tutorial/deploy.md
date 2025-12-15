@@ -55,19 +55,19 @@ services:
 1. 打开 Studio，选择**创建新应用**。
 2. 输入**应用名称**，例如 `wallos`，然后点击**确认**。
 3. 选择**将自己的容器部署到 Olares 上**。
-   ![将自己的容器部署到 Olares 上](/images/manual/olares/studio-port-your-own-container-to-olares.png#bordered)
+   ![将自己的容器部署到 Olares 上](/images/zh/manual/olares/studio-port-your-own-container-to-olares.png#bordered)
 
 ### 配置镜像、端口和实例规格
 这些字段定义了应用的核心组件。参考 `docker run` 命令中的镜像名和 `-p` 参数，或 `docker-compose.yaml` 文件中的 `image:` 和 `ports:` 字段进行填写。
 1.  在**容器镜像**字段中，粘贴镜像名称，例如 `bellamy/wallos:latest`。
 2.  在**容器端口**字段中，参考 `主机端口:容器端口` 格式的映射（如 `8282:80`），填写冒号后的 `80`。
    :::tip 仅需填写容器端口
-    端口映射的标准格式为 `主机端口:容器端口`。冒号后的是应用在内部监听的“容器端口”，冒号前的是供外部访问的“主机端口”。由于 Studio 会自动管理外部路由，你只需填写容器端口即可。
+   端口映射的标准格式为 `主机端口:容器端口`。冒号后的是应用在内部监听的“容器端口”，冒号前的是供外部访问的“主机端口”。由于 Studio 会自动管理外部路由，你只需填写容器端口即可。
    :::
 3.  在**实例规格**区域，设置应用所需的最低 CPU 和内存要求。例如：
    * **CPU**: 2 core
    * **Memory**: 1 Gi
-     ![部署 Wallos](/images/manual/olares/studio-deploy-wallos.png#bordered)
+     ![部署 Wallos](/images/zh/manual/olares/studio-deploy-wallos.png#bordered)
 
 ### 添加环境变量
 环境变量主要用于向应用传递配置信息，对应 Docker 示例中的 `-e` 参数或 `environment` 字段。
@@ -76,7 +76,7 @@ services:
    - **键**： `TZ`
    - **值**：`America/Toronto`
 3. 点击**提交**。如需添加更多变量，重复此过程。
-   ![添加环境变量](/images/manual/olares/studio-add-environment-variables.png#bordered)
+   ![添加环境变量](/images/zh/manual/olares/studio-add-environment-variables.png#bordered)
 
 ### 添加存储卷
 存储卷用于将 Olares 设备的物理存储映射到容器内部，这是确保数据持久化的关键步骤，对应 Docker 示例中的 `-v` 参数或 `volumes` 字段。
@@ -112,17 +112,17 @@ services:
    c. **容器路径**输入 `/var/www/html/images/uploads/logos`。
    
    d. 点击**提交**。
-![添加存储卷](/images/manual/olares/studio-add-storage-volumes.png#bordered)
+![添加存储卷](/images/zh/manual/olares/studio-add-storage-volumes.png#bordered)
 
 添加完成后，可在文件管理器中确认挂载路径。
 ![在文件管理器中确认挂载路径](/images/manual/olares/studio-check-mounted-path-in-files.png#bordered)
 
 ### 可选：配置 GPU 或数据库中间件
 如果应用依赖 GPU，需要在**实例规格**下启用 **GPU** 选项并选择 GPU 厂商。
-![启用 GPU](/images/manual/olares/studio-enable-GPU.png#bordered)
+![启用 GPU](/images/zh/manual/olares/studio-enable-GPU.png#bordered)
 
 如果应用需要 Postgres 或 Redis 数据库，在**实例规格**下启用相应选项。
-![启用数据库](/images/manual/olares/studio-enable-databases.png#bordered)
+![启用数据库](/images/zh/manual/olares/studio-enable-databases.png#bordered)
 
 启用数据库后，Studio 会提供一组动态变量。你必须在应用的**环境变量**中添加这些变量，应用才能连接到数据库。
 - **Postgres 变量**
@@ -152,7 +152,7 @@ services:
 
 ## 检查包文件与测试应用
 通过 Studio 部署的应用标题会自动添加 `-dev` 后缀，以便与从应用市场安装的正式版区分。
-![检查部署的应用](/images/manual/olares/studio-app-with-dev-suffix.png#bordered)
+![检查部署的应用](/images/zh/manual/olares/studio-app-with-dev-suffix.png#bordered)
 
 你可以查看或编辑 `OlaresManifest.yaml` 等配置文件。例如，修改应用的显示名称和图标：
 
@@ -160,7 +160,7 @@ services:
 2. 点击 `OlaresManifest.yaml` 查看内容。
 3. 修改 `entrance` 和 `metadata` 部分的 `title` 字段。例如，将 `wallos` 改为 `Wallos`。
 4. 替换 `entrance` 和 `metadata` 部分的图标地址。
-   ![编辑 `OlaresManifest.yaml`](/images/manual/olares/studio-edit-olaresmanifest1.png#bordered)
+   ![编辑 `OlaresManifest.yaml`](/images/zh/manual/olares/studio-edit-olaresmanifest1.png#bordered)
 
 5. 在右上角点击 <span class="material-symbols-outlined">save</span> 保存更改。 
 6. 点击**应用**，系统将使用更新后的配置重新安装应用。
@@ -168,7 +168,7 @@ services:
    :::info
    如果自上次部署后未检测到任何更改，点击**应用**将直接返回应用状态页，不会触发重装。
    :::
-   ![修改应用图标](/images/manual/olares/studio-change-app-icon1.png#bordered)
+   ![修改应用图标](/images/zh/manual/olares/studio-change-app-icon1.png#bordered)
 
 ## 卸载或删除应用
 如果不再需要该应用，可执行以下操作：
@@ -187,4 +187,4 @@ services:
 常见操作包括：
 - 点击**停止**按钮或**重启**按钮后重试。这通常能解决进程卡死等临时性故障。
 - 查看事件或日志以排查错误。具体方法请参考[导出问题容器日志](../../../manual/olares/controlhub/manage-container.md#导出问题容器日志)。
-  ![应用部署详情](/images/manual/olares/studio-app-deployment-details.png#bordered)
+  ![应用部署详情](/images/zh/manual/olares/studio-app-deployment-details.png#bordered)

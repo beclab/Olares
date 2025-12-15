@@ -148,7 +148,7 @@ When enabled, Studio provides dynamic variables. You must use these variables in
 1. Once all your configurations are set, click **Create**. This generates the app's project files.
 2. After creation, Studio generates the package files for your app, and then automatically deploys the app. You can check the status in the bottom bar.
 3. When the app is successfully deployed, click **Preview** in the top-right corner to launch it.
-   ![Preveiw Wallos](/images/manual/olares/studio-preview-wallos.png#bordered)
+   ![Preview Wallos](/images/manual/olares/studio-preview-wallos.png#bordered)
 
 ## Review the package files and test the app
 Apps deployed from Studio include a `-dev` suffix in the title to distinguish them from Market installations.

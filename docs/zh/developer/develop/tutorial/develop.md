@@ -5,7 +5,7 @@ description: 了解如何使用 Studio 设置开发容器，通过 VS Code 访�
 # 使用开发容器开发应用
 Olares Studio 允许你启动预配置的开发容器来编写和调试代码（如 Node.js 脚本或 CUDA 程序），无需管理本地基础设施。这提供了与生产运行时完全隔离且一致的环境。
 
-本文档以 Node.js 项目为例介绍设置流程。
+本文档以 Node.js 项目为例介绍开发和配置流程。
 
 ## 前提条件
 - Olares 1.12.2 及以上版本。
@@ -15,7 +15,7 @@ Olares Studio 允许你启动预配置的开发容器来编写和调试代码（
 1. 打开 Studio 并选择**创建新应用**。
 2. 输入**应用名称**（例如 `My Web`），然后点击**确认**。
 3. 选择**在 Olares 上写程序**作为创建方式。
-   ![在 Olares 上写程序](/images/manual/olares/studio-coding-on-olares.png#bordered)
+   ![在 Olares 上写程序](/images/zh/manual/olares/studio-coding-on-olares.png#bordered)
 
 4. 配置**开发环境**：
 
@@ -29,7 +29,7 @@ Olares Studio 允许你启动预配置的开发容器来编写和调试代码（
    :::tip 暴露多个端口
    端口 `80` 默认为暴露状态。如需暴露多个额外端口，请用逗号分隔。
    :::
-   ![配置开发环境](/images/manual/olares/studio-configure-dev-env.png#bordered)
+   ![配置开发环境](/images/zh/manual/olares/studio-configure-dev-env.png#bordered)
 
 6. 点击**创建**。等待左下角的状态变为`运行中`。
 
@@ -43,7 +43,7 @@ Olares Studio 允许你启动预配置的开发容器来编写和调试代码（
 ### 选项 B：本地 VS Code 远程隧道
 如果更习惯使用本地设置和插件，可以通过隧道连接到容器。
 1. 点击 Studio 中的**在线编辑器**以打开基于浏览器的 VS Code。
-2. 点击左上角的 <span class="material-symbols-outlined">menu</span>，选择**Terminal** > **New Terminal**打开终端。
+2. 点击左上角的 <span class="material-symbols-outlined">menu</span>，选择 **Terminal** > **New Terminal** 打开终端。
 3. 安装 VS Code Tunnel CLI：
    ```bash
    curl -SsfL https://vscode.download.prss.microsoft.com/dbazure/download/stable/17baf841131aa23349f217ca7c570c76ee87b957/vscode_cli_alpine_x64_cli.tar.gz | tar zxv -C /usr/local/bin
@@ -127,8 +127,8 @@ Olares Studio 允许你启动预配置的开发容器来编写和调试代码（
 :::tip
 如果需要更改端口号，可参照相同步骤修改 `OlaresManifest.yaml` 和 `deployment.yaml` 文件。
 :::
-### 修改配置清单
-1. 在 Studio 中，点击右上角的**<span class="material-symbols-outlined">box_edit</span>Edit**打开编辑器。
+### 修改配置
+1. 在 Studio 中，点击右上角的 **<span class="material-symbols-outlined">box_edit</span>编辑**打开编辑器。
 2. 编辑 `OlaresManifest.yaml`。
 
    a. 将新端口追加到 `entrances` 列表：
