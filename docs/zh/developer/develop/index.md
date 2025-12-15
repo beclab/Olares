@@ -6,7 +6,8 @@ Olares 应用开发依托于通用的 Web 技术与容器化方案。如果你�
 
 ## 准备工作
 正式开始前，建议先了解以下核心概念：
-
+- [Application](../concepts/application.md)
+- [Network](../concepts/network.md)
 
 ## 第一步：使用 Studio 开发
 Olares Studio 是专为加速应用开发周期而设计的开发平台。它提供了预配置的工作区，支持直接在平台上构建、调试和测试应用。

@@ -6,7 +6,8 @@ This guide takes you through the complete lifecycle of an Olares application, fr
 
 ## Before you begin
 Before getting started, it's helpful to review some concepts:
-
+- [Application](../concepts/application.md)
+- [Network](../concepts/network.md)
 
 ## Step 1: Develop with Studio
 Olares Studio is a development platform that accelerates your build cycle. It provides a pre-configured workspace to build, debug, and test your applications directly on the platform.

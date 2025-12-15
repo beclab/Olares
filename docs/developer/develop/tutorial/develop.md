@@ -5,7 +5,7 @@ description: Learn how to use Studio to set up a dev container, access it via VS
 # Develop in a dev container
 Olares Studio allows you to spin up a pre-configured dev container to write and debug code (such as Node.js scripts or CUDA programs) without managing local infrastructure. This provides an isolated environment identical to the production runtime.
 
-The following guide shows the setup workflow using a Node.js project as an example.
+The following guide shows the development and setup workflow using a Node.js project as an example.
 
 ## Prerequisite
 - Olares version 1.12.2 or later.
