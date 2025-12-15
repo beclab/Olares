@@ -340,29 +340,6 @@ const side = {
           },
           {text: "Dashboard", link: "/manual/olares/resources-usage"},
           {text: "Profile", link: "/manual/olares/profile"},
-        {
-          text: "Studio",
-          collapsed: true,
-          link: "/manual/olares/studio/",
-          items: [
-            {
-              text: "Deploy an app",
-              link: "/manual/olares/studio/deploy",
-            },
-            {
-              text: "Develop in a dev container",
-              link: "/manual/olares/studio/develop",
-            },
-            {
-              text: "Package and upload",
-              link: "/manual/olares/studio/package-upload",
-            },
-            {
-              text: "Add app assets",
-              link: "/manual/olares/studio/assets",
-            },
-          ],
-        },
         ],
     },
       {
@@ -647,36 +624,29 @@ const side = {
     ],
   },
     {
-      text: "Develop Olares app",
+      text: "Develop Olares apps",
       link: "/developer/develop/",
       items: [
         {
-          text: "Tutorial",
+          text: "Develop with Studio",
           collapsed: true,
           link: "/developer/develop/tutorial/",
           items: [
             {
-              text: "Learn Studio",
-              link: "/developer/develop/tutorial/studio",
+              text: "Deploy an app",
+              link: "/developer/develop/tutorial/deploy",
             },
             {
-              text: "Create your first app",
-              collapsed: true,
-              link: "/developer/develop/tutorial/note/",
-              items: [
-                {
-                  text: "1. Create app",
-                  link: "/developer/develop/tutorial/note/create",
-                },
-                {
-                  text: "2. Develop backend",
-                  link: "/developer/develop/tutorial/note/backend",
-                },
-                {
-                  text: "3. Develop frontend",
-                  link: "/developer/develop/tutorial/note/frontend",
-                },
-              ],
+              text: "Develop in a dev container",
+              link: "/developer/develop/tutorial/develop",
+            },
+            {
+              text: "Package and upload",
+              link: "/developer/develop/tutorial/package-upload",
+            },
+            {
+              text: "Add app assets",
+              link: "/developer/develop/tutorial/assets",
             },
           ],
         },

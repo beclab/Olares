@@ -1,15 +1,26 @@
-# Tutorial
+---
+description: Get started with Studio to deploy Docker-based apps, develop new apps, package and upload locally, and manage assets on your Olares device.
+---
+# Deploy and develop apps in Olares
 
-Welcome to the Olares developer guides. These detailed tutorials offer a step-by-step guide on building an Olares Application from scratch.
+Studio provides a real Olares environment for building, porting, and testing apps when cloud features and the sandbox system are hard to simulate locally. With Studio you can:
+- Create a new Olares app in an online development container.
+- Port an existing app, adjust its configurations, and test the installation flow.
+- Package your app into a chart and download it when your app is ready.
 
-To get started, you can learn some basic concepts of Olares, such as:
-- [Olares architectural components](../../concepts/architecture.md)
-- [Olares Application Chart](../../develop/package/chart.md)
-- [Olares Extension on Helm](../package/extension.md)
+## Access Studio
+You must manually install Studio:
+1.  Open **Market**, and search for "Studio".
+    ![Studio](/images/manual/olares/studio.png#bordered)
 
-These fundamentals will help you grasp our development process more effectively.
+2. Click **Get**, then **Install**, and wait for installation to complete.
 
-You can also [learn about DevBox](studio.md), a built-in app that Olares provides for developers to build Olares applications.
+After installation, launch Studio from Market or from Launchpad.
 
-If you're brand new to Olares development and want to jump straight into coding, start with the [**Create your first Olares app**](./note/index.md). This tutorial will step you through the process of building a small note application.
+## Understand the Studio UI
+The sidebar and **Home** page organize your main tasks in Studio:
+- **Home**: A welcome page with shortcuts to common actions and documentation.
+- **Applications**: A list of apps you have created and deployed with Studio.
+- **Start**: You can start deploying or developing apps, or uploading an app from a local chart file.
 
+  ![Understand Studio user interface](/images/manual/olares/studio-ui.png#bordered)
