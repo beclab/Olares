@@ -174,18 +174,18 @@ func (p *DownloadingApp) exec(ctx context.Context) error {
 		return err
 	}
 	values["sysVersion"] = terminus.Spec.Version
-
-	refs, err := p.getRefsForImageManager(appConfig, values)
-	if err != nil {
-		klog.Errorf("get image refs from resources failed %v", err)
-		return err
-	}
 	nodeInfo, err := utils.GetNodeInfo(ctx)
 	if err != nil {
 		klog.Errorf("failed to get node info %v", err)
 		return err
 	}
 	values["nodes"] = nodeInfo
+
+	refs, err := p.getRefsForImageManager(appConfig, values)
+	if err != nil {
+		klog.Errorf("get image refs from resources failed %v", err)
+		return err
+	}
 
 	err = p.imageClient.Create(ctx, p.manager, refs)
 
