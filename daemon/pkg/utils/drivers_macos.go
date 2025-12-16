@@ -44,7 +44,7 @@ func UmountUsbDevice(ctx context.Context, path string) error {
 	return nil
 }
 
-func UmountBrokenUsbMount(ctx context.Context, baseDir string) error {
+func UmountBrokenMount(ctx context.Context, baseDir string) error {
 	klog.Warning("not implement")
 	return nil
 }
