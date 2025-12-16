@@ -100,18 +100,9 @@ func (c *ConfigSystemModule) Init() {
 		Retry:    0,
 	}
 
-	configProxyTask := &task.RemoteTask{
-		Name:     "ConfigProxy",
-		Hosts:    c.Runtime.GetAllHosts(),
-		Action:   new(ConfigProxyTask),
-		Parallel: false,
-		Retry:    0,
-	}
-
 	c.Tasks = []task.Interface{
 		updateNtpDateTask,
 		timeSyncTask,
-		configProxyTask,
 	}
 }
 
