@@ -2,8 +2,6 @@ package v1
 
 import (
 	"fmt"
-	"math"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -11,17 +9,12 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/api"
 	"bytetrade.io/web3os/bfl/pkg/api/response"
 	"bytetrade.io/web3os/bfl/pkg/apis"
-	"bytetrade.io/web3os/bfl/pkg/apis/backend/v1/metrics"
-	iamV1alpha1 "bytetrade.io/web3os/bfl/pkg/apis/iam/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/apis/iam/v1alpha1/operator"
-	monitov1alpha1 "bytetrade.io/web3os/bfl/pkg/apis/monitor/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/apiserver/runtime"
 	"bytetrade.io/web3os/bfl/pkg/app_service/v1"
 	"bytetrade.io/web3os/bfl/pkg/client/clientset/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
-	"bytetrade.io/web3os/bfl/pkg/utils"
 	"bytetrade.io/web3os/bfl/pkg/utils/certmanager"
-	"bytetrade.io/web3os/bfl/pkg/utils/k8sutil"
 
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/emicklei/go-restful/v3"
@@ -40,53 +33,6 @@ func New() *Handler {
 	return &Handler{
 		appService: as,
 	}
-}
-
-func (h *Handler) handleGetIPAddress(req *restful.Request, resp *restful.Response) {
-	ctx := req.Request.Context()
-	master := req.QueryParameter("master")
-
-	var masterInternalIP string
-
-	if master == "true" {
-		ip, err := k8sutil.GetL4ProxyNodeIP(ctx, 10*time.Second)
-		if err != nil {
-			log.Warnf("no master hostIP: %v", err)
-		}
-
-		if ip != nil && *ip != "" {
-			masterInternalIP = *ip
-		}
-
-		resp.Write([]byte(masterInternalIP))
-		return
-	}
-
-	ipAddr := IPAddress{
-		IsNatted: constants.IsNatted,
-		Internal: utils.RemoteIp(req.Request),
-	}
-
-	if masterInternalIP != "" {
-		ipAddr.MasterInternalIP = masterInternalIP
-	}
-
-	// master external ip
-	masterExternalIP := k8sutil.GetMasterExternalIP(ctx)
-	if masterExternalIP == nil {
-		response.HandleError(resp, errors.New("no master external ip"))
-		return
-	}
-	ipAddr.MasterExternalIP = *masterExternalIP
-
-	external := utils.GetMyExternalIPAddr()
-	if external == "" {
-		response.HandleInternalError(resp, errors.New("no external ip address"))
-		return
-	}
-	ipAddr.External = external
-
-	response.Success(resp, ipAddr)
 }
 
 func (h *Handler) handleUserInfo(req *restful.Request, resp *restful.Response) {
@@ -152,50 +98,6 @@ func (h *Handler) handleUserInfo(req *restful.Request, resp *restful.Response) {
 		uInfo.AccessLevel = accessLevel
 	}
 	response.Success(resp, uInfo)
-}
-
-func (h *Handler) handleVerifyUserPassword(req *restful.Request, resp *restful.Response) {
-	var u iamV1alpha1.UserPassword
-	err := req.ReadEntity(&u)
-	if err != nil {
-		response.HandleBadRequest(resp, errors.Errorf("verify password: %v", err))
-		return
-	}
-
-	log.Info("verify user password")
-
-	if u.UserName == "" {
-		u.UserName = constants.Username
-	}
-
-	// the user's password must be provided
-	if u.Password == "" {
-		response.HandleBadRequest(resp, errors.New("verify password: no password provided"))
-		return
-	}
-
-	data := map[string]string{
-		"username":      u.UserName,
-		"password":      u.Password,
-		"client_id":     constants.KubeSphereClientID,
-		"client_secret": constants.KubeSphereClientSecret,
-		"grant_type":    "password",
-	}
-
-	token, code, err := iamV1alpha1.RequestToken("", data)
-	if err != nil {
-		resp.WriteHeaderAndEntity(http.StatusOK, response.Header{
-			Code:    code,
-			Message: err.Error(),
-		})
-		return
-	}
-
-	if token.AccessToken != "" {
-		response.SuccessNoData(resp)
-		return
-	}
-	response.HandleUnauthorized(resp, errors.New(response.UnexpectedError))
 }
 
 func (h *Handler) handleReDownloadCert(req *restful.Request, resp *restful.Response) {
@@ -468,69 +370,4 @@ func (h *Handler) myapps(req *restful.Request, resp *restful.Response) {
 	}
 	response.Success(resp, api.NewListResult(list))
 
-}
-
-func (h *Handler) getClusterMetric(req *restful.Request, resp *restful.Response) {
-	prome, err := metrics.NewPrometheus(metrics.PrometheusEndpoint)
-	if err != nil {
-		response.HandleError(resp, err)
-		return
-	}
-
-	opts := metrics.QueryOptions{
-		Level: metrics.LevelCluster,
-	}
-
-	metricsResult := prome.GetNamedMetrics(req.Request.Context(), []string{
-		"cluster_cpu_usage",
-		"cluster_cpu_total",
-		"cluster_disk_size_usage",
-		"cluster_disk_size_capacity",
-		"cluster_memory_total",
-		"cluster_memory_usage_wo_cache",
-		"cluster_net_bytes_transmitted",
-		"cluster_net_bytes_received",
-	}, time.Now(), opts)
-
-	var clusterMetrics monitov1alpha1.ClusterMetrics
-	for _, m := range metricsResult {
-		switch m.MetricName {
-		case "cluster_cpu_usage":
-			clusterMetrics.CPU.Usage = metrics.GetValue(&m)
-		case "cluster_cpu_total":
-			clusterMetrics.CPU.Total = metrics.GetValue(&m)
-
-		case "cluster_disk_size_usage":
-			clusterMetrics.Disk.Usage = metrics.GetValue(&m)
-		case "cluster_disk_size_capacity":
-			clusterMetrics.Disk.Total = metrics.GetValue(&m)
-
-		case "cluster_memory_total":
-			clusterMetrics.Memory.Total = metrics.GetValue(&m)
-		case "cluster_memory_usage_wo_cache":
-			clusterMetrics.Memory.Usage = metrics.GetValue(&m)
-
-		case "cluster_net_bytes_transmitted":
-			clusterMetrics.Net.Transmitted = metrics.GetValue(&m)
-
-		case "cluster_net_bytes_received":
-			clusterMetrics.Net.Received = metrics.GetValue(&m)
-		}
-	}
-
-	roundToGB := func(v float64) float64 { return math.Round((v/1000000000.00)*100.00) / 100.00 }
-	fmtMetricsValue(&clusterMetrics.CPU, "Cores", func(v float64) float64 { return v })
-	fmtMetricsValue(&clusterMetrics.Memory, "GB", roundToGB)
-	fmtMetricsValue(&clusterMetrics.Disk, "GB", roundToGB)
-
-	response.Success(resp, clusterMetrics)
-
-}
-
-func fmtMetricsValue(v *monitov1alpha1.MetricV, unit string, unitFunc func(float64) float64) {
-	v.Unit = unit
-
-	v.Usage = unitFunc(v.Usage)
-	v.Total = unitFunc(v.Total)
-	v.Ratio = math.Round((v.Usage / v.Total) * 100)
 }

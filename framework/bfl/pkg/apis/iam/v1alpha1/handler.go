@@ -55,41 +55,6 @@ func New(ctrlClient client.Client) *Handler {
 	}
 }
 
-func (h *Handler) handleUserLogin(req *restful.Request, resp *restful.Response) {
-	var u UserPassword
-	err := req.ReadEntity(&u)
-	if err != nil {
-		response.HandleBadRequest(resp, errors.Errorf("login user, read entity: %v", err))
-		return
-	}
-
-	log.Infow("read user entity", "userPassword", u)
-
-	if u.UserName != constants.Username {
-		response.HandleBadRequest(resp, errors.New("login user: mismatch input username and userspace"))
-		return
-	}
-
-	data := map[string]string{
-		"username":      u.UserName,
-		"password":      u.Password,
-		"client_id":     constants.KubeSphereClientID,
-		"client_secret": constants.KubeSphereClientSecret,
-		"grant_type":    "password",
-	}
-
-	token, code, err := RequestToken("", data)
-	if err != nil {
-		// response.HandleError(resp, errors.Errorf("login user, request token: %v", err))
-		resp.WriteHeaderAndEntity(http.StatusOK, response.Header{
-			Code:    code,
-			Message: err.Error(),
-		})
-		return
-	}
-	response.Success(resp, token)
-}
-
 func (h *Handler) getRolesByUserName(ctx context.Context, name string) ([]string, error) {
 	var globalRoleBindings iamV1alpha2.GlobalRoleBindingList
 	err := h.ctrlClient.List(ctx, &globalRoleBindings)
@@ -372,18 +337,6 @@ func RequestToken(token string, data map[string]string) (*TokenResponse, int, er
 		return &t, 200, nil
 	}
 	return nil, -1, err
-}
-
-func (h *Handler) isUserCreating() bool {
-	return h.userCreatingCount.Load() > 0
-}
-
-func (h *Handler) lockUserCreating() {
-	h.userCreatingCount.Store(-1)
-}
-
-func (h *Handler) unlockUserCreating() {
-	h.userCreatingCount.Store(0)
 }
 
 func (h *Handler) handleGetUserMetrics(req *restful.Request, resp *restful.Response) {
