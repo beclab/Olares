@@ -3,10 +3,13 @@ outline: [2,3]
 description: Learn how to access Olares apps and services directly via your local network (LAN) for maximum speed, privacy, and offline reliability.
 ---
 # Access Olares services locally
-While remote access is convenient, accessing your device directly over your Local Area Network (LAN) offers significant advantages:
-- **Maximum performance:** Transfer files at full speeds without routing through the internet.
-- **Enhanced privacy:** Keep your traffic strictly within your home network.
-- **Offline independence:** Access your data and apps even when your internet service provider is down.
+
+Typically, you access Olares services through a browser using a URL like `https://desktop.<username>.olares.com`. This way, you can reach your services from any device at any time.
+
+However, accessing your devices directly over your Local Area Network (LAN) provides several advantages:
+- **Maximum performance**: Transfer files at full speed without the latency and potential bottlenecks of the internet.
+- **Enhanced privacy**: Keep your traffic contained within your home network for added security.
+- **Offline independence**: Access your data and apps even when your internet service is unavailable.
 
 This guide covers several methods to establish a local connection:
 - [Enable LarePass VPN (Recommended)](#method-1-enable-larepass-vpn)<br/>This method is the easiest solution, as it automatically establishes the fastest connection without manual configuration.
@@ -43,7 +46,7 @@ Enable the LarePass VPN directly on the device you are currently using to access
 </template>
 </tabs>
 
-Once enabled, you can check the status indicator in LarePass to confirm you are using a local connection:
+Once enabled, check the status indicator in LarePass to verify the connection type:
 
 | Status       | Description                                              |
 |:-------------|:---------------------------------------------------------|
@@ -167,7 +170,7 @@ If you cannot change router settings and need immediate offline access on a spec
 2.  Open the file with a text editor, which requires Administrator privileges.
 3.  Add the mapping lines:
     ```plain
-    # Replace the internal IP and the username
+    # Replace with the actual internal IP and the username
     # Olares apps
     192.168.31.208  desktop.<username>.olares.com
     192.168.31.208  auth.<username>.olares.com
@@ -181,9 +184,16 @@ If you cannot change router settings and need immediate offline access on a spec
     # Add other community apps as needed
     192.168.31.208  <entrance_id>.<username>.olares.com
     ```
-This allows you to access Olares locally without requiring internet connectivity.
+4. Save the file to apply changes and ensure local access without an internet connection.
+
+Verify the changes by checking the URL for quick loading or using the terminal:
+```bash
+ping desktop.laresprime.olares.com
+```
+If the IP address starts with `192.168`, it indicates successful configuration.
+
 ## FAQs
-### Why enabling LarePass VPN on Mac does not work anymore?
+### Why doesn't LarePass VPN work on my Mac anymore?
 If you successfully enabled the VPN previously, but it has stopped working, you might need to reset the system extension.
 :::info
 Depending on your macOS version, the UI might look slightly different.
@@ -218,5 +228,4 @@ To enable access:
 Chrome might default to HTTPS when using local domains, and you might see a "connection not secure" warning.
 ![Incorrect local address](/images/manual/get-started/incorrect-local-address.png#bordered)
 
-To address this, explicitly add the HTTP protocol (`http://`) to the beginning of the URL.
-
+To address this, explicitly add the HTTP protocol (`http://`) to the beginning of the URL. This tells Chrome it's a local, non-encrypted connection, which is expected on your home network.
