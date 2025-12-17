@@ -275,9 +275,17 @@ func (t *DisableLocalDNSTask) configResolvConf(runtime connector.Runtime) error 
 	overrideOp := ">"
 	appendOp := ">>"
 
-	if common.CloudVendor == common.CloudVendorAliYun {
+	var internalDNS string
+	if util.IsOnAliyunECS() {
+		internalDNS = "100.100.10.12"
+	} else if util.IsOnAWSEC2() {
+		internalDNS = "169.254.169.253"
+	} else if util.IsOnTencentCVM() {
+		internalDNS = "183.60.83.19"
+	}
+	if internalDNS != "" {
 		secondNameserverOp = appendOp
-		cmd = `echo 'nameserver 100.100.2.136' > /etc/resolv.conf`
+		cmd = fmt.Sprintf("echo 'nameserver %s' > /etc/resolv.conf", internalDNS)
 		if _, err = runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
 			logger.Errorf("exec %s error %v", cmd, err)
 			return err

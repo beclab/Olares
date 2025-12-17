@@ -169,19 +169,9 @@ const (
 	ManagedMinIO = "managed-minio"
 )
 
-var (
-	CloudVendor = os.Getenv("CLOUD_VENDOR")
-	ResolvProxy = os.Getenv("PROXY")
-)
-
 const (
 	OlaresRegistryMirrorHost       = "mirrors.joinolares.cn"
 	OlaresRegistryMirrorHostLegacy = "mirrors.jointerminus.cn"
-)
-
-const (
-	CloudVendorAliYun = "aliyun"
-	CloudVendorAWS    = "aws"
 )
 
 const (
