@@ -67,9 +67,12 @@ func (p *PendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 	if success, err := appFactory.addLimitedStatefulApp(ctx,
 		// limit
 		func() (bool, error) {
-
-			var apps appsv1.ApplicationManagerList
-			err := p.client.List(ctx, &apps)
+			clientset, err := utils.GetClient()
+			if err != nil {
+				klog.Errorf("failed to get clientset %v", err)
+				return false, err
+			}
+			apps, err := clientset.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
 			if err != nil {
 				klog.Errorf("list application managers error: %v", err)
 				return false, err

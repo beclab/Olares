@@ -72,6 +72,9 @@ func (h *Handler) uninstall(req *restful.Request, resp *restful.Response) {
 		return
 	}
 	am.Spec.OpType = v1alpha1.UninstallOp
+	if am.Annotations == nil {
+		am.Annotations = make(map[string]string)
+	}
 	am.Annotations[api.AppTokenKey] = token
 	am.Annotations[api.AppUninstallAllKey] = fmt.Sprintf("%t", request.All)
 	err = h.ctrlClient.Update(req.Request.Context(), &am)

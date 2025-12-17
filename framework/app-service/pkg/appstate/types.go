@@ -12,11 +12,15 @@ import (
 	"bytetrade.io/web3os/app-service/pkg/appinstaller"
 	"bytetrade.io/web3os/app-service/pkg/appinstaller/versioned"
 	appevent "bytetrade.io/web3os/app-service/pkg/event"
+	"bytetrade.io/web3os/app-service/pkg/middlewareinstaller"
 	"bytetrade.io/web3os/app-service/pkg/utils"
 	apputils "bytetrade.io/web3os/app-service/pkg/utils/app"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -118,6 +122,10 @@ func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
 		klog.Errorf("get kube config failed %v", err)
 		return err
 	}
+	if appCfg.MiddlewareName == "mongodb" && appCfg.Namespace == "os-platform" {
+		return p.oldMongodbUninstall(ctx, kubeConfig)
+	}
+
 	ops, err := versioned.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: p.manager.GetMarketSource()})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)
@@ -243,4 +251,32 @@ func (p *basePollableStatefulInProgressApp) CreatePollContext() context.Context 
 	p.ctxPoll = pollCtx
 
 	return pollCtx
+}
+
+func (b *baseStatefulApp) oldMongodbUninstall(ctx context.Context, kubeConfig *rest.Config) error {
+	mc := &middlewareinstaller.MiddlewareConfig{
+		MiddlewareName: b.manager.Spec.AppName,
+		Namespace:      b.manager.Spec.AppNamespace,
+		OwnerName:      b.manager.Spec.AppOwner,
+	}
+	err := middlewareinstaller.Uninstall(ctx, kubeConfig, mc)
+	if err != nil && err.Error() != "failed to delete release: mongodb" {
+		klog.Errorf("failed to uninstall old mongodb %v", err)
+		return err
+	}
+	var secret corev1.Secret
+
+	err = b.client.Get(ctx, types.NamespacedName{Name: "sh.helm.release.v1.mongodb.v1", Namespace: mc.Namespace}, &secret)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err = b.client.Delete(ctx, &secret); err != nil && !apierrors.IsNotFound(err) {
+		klog.Errorf("failed to delete mongodb release secret: %s", secret.Name)
+		return err
+	}
+
+	return nil
 }
