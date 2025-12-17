@@ -7,7 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ OperationApp = &UpgradeFailedApp{}
+var _ OperationApp = &InstallingCancelFailedApp{}
 
 type InstallingCancelFailedApp struct {
 	UninstallFailedApp

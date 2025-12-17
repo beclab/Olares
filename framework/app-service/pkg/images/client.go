@@ -199,7 +199,7 @@ func (imc *ImageManagerClient) PollDownloadProgress(ctx context.Context, am *app
 
 			}
 			err = imc.updateProgress(ctx, am, &lastProgress, ret*100, am.Spec.OpType == appv1alpha1.UpgradeOp)
-			if err == nil {
+			if err == nil && im.Status.State == "completed" {
 				return nil
 			}
 
