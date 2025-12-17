@@ -193,7 +193,7 @@ When you try to resume an application in Olares and receive an error message abo
 #### Why was my application stopped?
 
 An application is usually stopped due to one of the following reasons:
-* **System auto stop**: To ensure Olares's stability, the Olares system monitors resource usage. If an application consumes excessive resources (such as CPU and memory) causing a high system load, the system might automatically pause it to prevent the entire device from freezing or crashing.
+* **System auto stop**: To ensure Olares's stability, the Olares system monitors resource usage. If an application consumes excessive resources (such as CPU or memory) causing a high system load, the system might automatically pause it to prevent the entire device from freezing or crashing.
 * **Manual stop**: You or an administrator might have manually stopped the application previously, and the application has not been resumed yet.
 
 #### Why can't I resume my application now?
