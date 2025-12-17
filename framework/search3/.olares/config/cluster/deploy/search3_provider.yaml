@@ -26,6 +26,8 @@ metadata:
 rules:
   - nonResourceURLs: 
       - "/document/*"
+      - "/document?*"
+      - "/document"
     verbs: ["*"]
 
 ---
