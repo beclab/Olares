@@ -188,17 +188,17 @@ If you can't install an application, it might be due to:
 
 ### Why can't I resume my application?
 
-When you try to resume an application in Olares, if you receive an error message regarding insufficient CPU, memory, or disk, it means the system's current available resources cannot support running the application, and you need to close other applications to free up space.
+When you try to resume an application in Olares and receive an error message about insufficient CPU, memory, or disk, it means the system's current available resources cannot support running the application. You need to close other applications to free up resources.
 
 #### Why was my application stopped?
 
 An application is usually stopped due to one of the following reasons:
-* **System auto stop**: To ensure Olares's stability, the Olares system monitors resource usage. If an application consumes excessive resources (such as CPU and memory) causing a high system load, the system might automatically pause it to prevent the entire device from freezing or crashing.
+* **System auto stop**: To ensure Olares's stability, the Olares system monitors resource usage. If an application consumes excessive resources (such as CPU or memory) causing a high system load, the system might automatically pause it to prevent the entire device from freezing or crashing.
 * **Manual stop**: You or an administrator might have manually stopped the application previously, and the application has not been resumed yet.
 
 #### Why can't I resume my application now?
 
-Starting an application requires reserving a specific amount of computing resources. If other running applications are already occupying most of the resources, the remaining "free space" is not enough for the application you want to start.
+Starting an application requires reserving a specific amount of computing resources. If other running applications are already occupying most of the resources, the remaining free resources are not enough for the application you want to start.
 
 Therefore, when you try to resume the application, you might encounter the following messages:
 
@@ -214,5 +214,5 @@ To resume your application, you need to free up some occupied resources:
 
 1. Go to **Settings** > **Application** to view the applications that are currently **Running**.
 2. Find applications that you do not need to use right now.
-3. Stop each of the applications by clicking the app and clicking <i class="material-symbols-outlined">toggle_on</i> to toggle off **Running**.
+3. Stop each application by clicking the app and clicking <i class="material-symbols-outlined">toggle_on</i> to toggle off **Running**.
 4. After resources are freed, go back to your target application and click **Resume** again.
