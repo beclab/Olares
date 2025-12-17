@@ -188,7 +188,7 @@ If you cannot change router settings and need immediate offline access on a spec
 
 Verify the changes by checking the URL for quick loading or using the terminal:
 ```bash
-ping desktop.laresprime.olares.com
+ping desktop.<username>.olares.com
 ```
 If the IP address starts with `192.168`, it indicates successful configuration.
 
