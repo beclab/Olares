@@ -83,7 +83,7 @@ Before you begin, ensure that you have completed the following tasks:
 
 1.  Open the Olares Market.
 2.  Search for the target paid app, click **Get**, and then click **Buy**.
-3.  In the **Verify payment access** popup window, click **Verify now**.
+3.  In the **Verify payment access** popup, click **Verify now**.
 4.  Open your LarePass mobile app:
     
     a. Review the request popup titled **Authorize payment access**.
