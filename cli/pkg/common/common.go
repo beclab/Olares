@@ -25,7 +25,7 @@ const (
 	DefaultK3sVersion          = "v1.33.3-k3s"
 	DefaultKubernetesVersion   = ""
 	DefaultKubeSphereVersion   = "v3.3.0"
-	CurrentVerifiedCudaVersion = "13.0"
+	CurrentVerifiedCudaVersion = "13.1"
 )
 
 const (

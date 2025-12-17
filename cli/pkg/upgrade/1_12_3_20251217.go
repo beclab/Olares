@@ -38,6 +38,28 @@ func (u upgrader_1_12_3_20251217) PrepareForUpgrade() []task.Interface {
 	return tasks
 }
 
+func (u upgrader_1_12_3_20251217) NeedRestart() bool {
+	return true
+}
+
+func (u upgrader_1_12_3_20251217) UpdateOlaresVersion() []task.Interface {
+	var tasks []task.Interface
+	tasks = append(tasks,
+		&task.LocalTask{
+			Name:   "UpgradeGPUDriver",
+			Action: new(upgradeGPUDriverIfNeeded),
+		},
+	)
+	tasks = append(tasks, u.upgraderBase.UpdateOlaresVersion()...)
+	tasks = append(tasks,
+		&task.LocalTask{
+			Name:   "RebootIfNeeded",
+			Action: new(rebootIfNeeded),
+		},
+	)
+	return tasks
+}
+
 func init() {
 	registerDailyUpgrader(upgrader_1_12_3_20251217{})
 }
