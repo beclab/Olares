@@ -102,7 +102,7 @@ Before you begin, ensure that you have completed the following tasks:
     
     a. Review the request popup titled **Authorize purchase**.
     
-    b. Click **Confirm**.
+    b. Tap **Confirm**.
 
     ![Authorize purchase](/images/manual/olares/authorize-purchase.png#bordered){width=250}
 
