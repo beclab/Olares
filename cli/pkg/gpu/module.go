@@ -251,7 +251,7 @@ func (l *NodeLabelingModule) Init() {
 		Name: "UpdateNode",
 		Prepare: &prepare.PrepareCollection{
 			new(CudaInstalled),
-			new(K8sNodeInstalled),
+			new(CurrentNodeInK8s),
 		},
 		Action: new(UpdateNodeLabels),
 		Retry:  1,
@@ -262,7 +262,7 @@ func (l *NodeLabelingModule) Init() {
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
 			new(CudaInstalled),
-			new(K8sNodeInstalled),
+			new(CurrentNodeInK8s),
 		},
 		Action: new(RestartPlugin),
 		Retry:  1,
@@ -286,7 +286,7 @@ func (l *NodeUnlabelingModule) Init() {
 		Hosts: l.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
-			new(K8sNodeInstalled),
+			new(CurrentNodeInK8s),
 		},
 		Action:   new(RemoveNodeLabels),
 		Parallel: false,
@@ -298,7 +298,7 @@ func (l *NodeUnlabelingModule) Init() {
 		Hosts: l.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
-			new(K8sNodeInstalled),
+			new(CurrentNodeInK8s),
 			new(GpuDevicePluginInstalled),
 		},
 		Action:   new(RestartPlugin),
