@@ -188,7 +188,7 @@ If you can't install an application, it might be due to:
 
 ### Why can't I resume my application?
 
-When you try to resume an application in Olares, if you receive an error message regarding insufficient CPU, memory, or disk, it means the system's current available resources cannot support running the application, and you need to close other applications to free up space.
+When you try to resume an application in Olares and receive an error message about insufficient CPU, memory, or disk, it means the system's current available resources cannot support running the application. You need to close other applications to free up resources.
 
 #### Why was my application stopped?
 
