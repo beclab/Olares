@@ -383,17 +383,7 @@ func UmountUsbDevice(ctx context.Context, path string) error {
 	return errors.New("not a mounted usb path")
 }
 
-func UmountBrokenUsbMount(ctx context.Context, baseDir string) error {
-	usbdevs, err := DetectdUsbDevices(ctx)
-	if err != nil {
-		return err
-	}
-
-	hdddevs, err := DetectdHddDevices(ctx)
-	if err != nil {
-		return err
-	}
-
+func UmountBrokenMount(ctx context.Context, baseDir string) error {
 	mounter := mountutils.New("")
 	list, err := mounter.List()
 	if err != nil {
@@ -403,16 +393,9 @@ func UmountBrokenUsbMount(ctx context.Context, baseDir string) error {
 
 	for _, m := range list {
 		if strings.HasPrefix(m.Path, baseDir) && !strings.HasPrefix(m.Path, path.Join(baseDir, "ai")) {
-			if !slices.ContainsFunc(usbdevs, func(u storageDevice) bool { return u.DevPath == m.Device }) &&
-				!slices.ContainsFunc(hdddevs, func(u storageDevice) bool { return u.DevPath == m.Device }) {
+			if r := checkMount(m.Path, time.Second); r.Broken {
 
-				if m.Type == "cifs" {
-					if broken, _ := cifsBroken(&m); !broken {
-						continue
-					}
-				}
-
-				klog.Infof("broken mountpoint: %v, %v, %v", m.Path, m.Device, usbdevs)
+				klog.Infof("broken mountpoint: %v, %v, %v", m.Path, m.Device, r.Reason)
 
 				if err = umountAndRemovePath(ctx, m.Path); err != nil {
 					return err
@@ -607,4 +590,72 @@ func MountedPath(ctx context.Context) ([]mountedPath, error) {
 	}
 
 	return paths, nil
+}
+
+type result struct {
+	Mount   string `json:"mount"`
+	Broken  bool   `json:"broken"`
+	Reason  string `json:"reason,omitempty"`
+	Elapsed string `json:"elapsed,omitempty"`
+}
+
+func checkMount(mountPoint string, timeout time.Duration) result {
+	start := time.Now()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	// Use /usr/bin/stat if exists, else fallback to ls -ld
+	statPath := "/usr/bin/stat"
+	if _, err := os.Stat(statPath); os.IsNotExist(err) {
+		statPath = "/bin/ls"
+	}
+
+	var cmd *exec.Cmd
+	// if stat exists, call stat <mountpoint>, else ls -ld <mountpoint>
+	if strings.HasSuffix(statPath, "stat") {
+		cmd = exec.CommandContext(ctx, statPath, mountPoint)
+	} else {
+		cmd = exec.CommandContext(ctx, statPath, "-ld", mountPoint)
+	}
+
+	out, err := cmd.CombinedOutput()
+	elapsed := time.Since(start)
+
+	res := result{
+		Mount:   mountPoint,
+		Broken:  false,
+		Reason:  "",
+		Elapsed: elapsed.String(),
+	}
+
+	if ctx.Err() == context.DeadlineExceeded {
+		res.Broken = true
+		res.Reason = "timeout"
+		return res
+	}
+
+	if err != nil {
+		// check output or error for common broken indicators
+		outStr := strings.ToLower(string(out) + " " + err.Error())
+		switch {
+		case strings.Contains(outStr, "stale"):
+			res.Broken = true
+			res.Reason = "stale file handle"
+		case strings.Contains(outStr, "input/output error") || strings.Contains(outStr, "i/o error"):
+			res.Broken = true
+			res.Reason = "input/output error"
+		case strings.Contains(outStr, "transport endpoint is not connected"):
+			res.Broken = true
+			res.Reason = "transport endpoint not connected"
+		case strings.Contains(outStr, "permission denied"):
+			// permission denied doesn't mean broken; mark as not broken but note reason
+			res.Broken = false
+			res.Reason = "permission denied"
+		default:
+			// Unknown error - mark as broken (conservative), include text
+			res.Broken = true
+			res.Reason = "error: " + strings.TrimSpace(outStr)
+		}
+	}
+	return res
 }
