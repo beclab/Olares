@@ -188,7 +188,7 @@ Apple 设备支持通过 [Bonjour](https://developer.apple.com/bonjour/)（零�
 
 你可以通过检查 URL 加载速度或使用终端来验证更改。例如：
 ```bash
-ping desktop.<username>.olares.com
+ping desktop.<username>.olares.cn
 ```
 如果返回的 IP 地址以 `192.168` 开头，即表示配置成功。
 
@@ -198,7 +198,7 @@ ping desktop.<username>.olares.com
 :::info
 根据 macOS 版本不同，界面可能略有差异。
 :::
-1. 打开**系统设置**，搜索 "Extension"（扩展），选择**登录项与扩展**。
+1. 打开**系统设置**，搜索 “扩展"，选择**登录项与扩展**。
 2. 滚动到**网络扩展** 部分，点击信息图标 (ⓘ) 查看已加载的扩展。
 3. 找到 LarePass，点击三个点 (...)，选择**删除扩展**。
 4. 确认卸载。
@@ -218,7 +218,7 @@ ping desktop.<username>.olares.com
 如果 macOS 未授予局域网访问权限，Chrome 可能会无法访问本地 URL。
 要启用访问权限：
 1. 打开 Apple 菜单，进入**系统设置**。
-2. 进入 **隐私与安全性** > **局域网**。
+2. 进入**隐私与安全性** > **局域网**。
 3. 在列表中找到 Google Chrome 和 Google Chrome Helper，并开启开关。
    ![启用局域网权限](/images/manual/larepass/mac-chrome-local-access.png#bordered){width=400}
 
