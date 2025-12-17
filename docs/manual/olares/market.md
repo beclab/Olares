@@ -218,6 +218,43 @@ You can also uninstall an application from LaunchPad:
 2. Click and hold the app icon until all the apps begin to jiggle.
 3. Click <i class="material-symbols-outlined">cancel</i> on the app icon to uninstall it.
 
+## Restore purchased applications
+
+If you have previously purchased a paid application, you can restore and re-install it without additional payment, whether you simply uninstalled the app, reset your system, or migrated to a new Olares host.
+
+### Re-install after uninstallation
+
+If you are re-installing a paid app that was uninstalled from your current Olares system, the system preserves your license locally. 
+
+You can find the app in the Market, click **Get**, and then click **Install** to re-install it.
+
+### Restore after system reset or migration
+
+If you have reset Olares OS or switched to new hardware, your local license data is cleared. You must verify your on-chain identity to retrieve your purchase rights, which will allow you to re-install the application.
+
+1. Ensure that the current Olares OS is activated with the same **Olares ID** used for the original purchase.
+2. Open the Olares Market.
+3. Search for the target paid app, click **Get**, and then click **Buy**.
+
+    :::tipNote
+    The system will detect your on-chain purchase record and will not charge you again.
+    :::
+
+4. In the **Authorize payment access** popup on your computer, click **Verify now**.
+    
+    :::tipNote
+    This step verifies your identity ownership and does not initiate a new transaction.
+    :::
+
+5. Once verified, the button will change to **Install**. Click it to start installation.
+
+:::tipImportant
+- **Identity binding**: Your purchase history is bound to your **Olares ID (DID)**, not to specific hardware.
+- **Identity recovery**: If you still have access to LarePass or have a backup of your mnemonic phrase, you can activate the new system with the same Olares ID and restore your purchased apps through identity verification.
+- **Risk of loss**: If you have uninstalled LarePass and lost your mnemonic phrase, you will permanently lose your digital identity and all associated assets, including paid apps. In this case, you must create a new account and re-purchase the application.
+- **Developer availability**: Restoring a license requires issuance via the developer's Merchant service. If the developer's Merchant service is offline or unavailable, you might be unable to restore the application.
+:::
+
 ## View app operation logs
 
 The application operation log details the processes and statuses of app operations within Market, such as installation, download, update, and uninstallation. To access these logs:
