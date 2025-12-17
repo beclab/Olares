@@ -204,24 +204,6 @@ exit 0`, setNTPCommand, hwclockCmd)
 	return nil
 }
 
-type ConfigProxyTask struct {
-	common.KubeAction
-}
-
-func (t *ConfigProxyTask) Execute(runtime connector.Runtime) error {
-	if common.ResolvProxy == "" {
-		return nil
-	}
-
-	var cmd = fmt.Sprintf("echo nameserver %s > /etc/resolv.conf", common.ResolvProxy)
-	if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
-		logger.Errorf("failed to execute %s: %v", cmd, err)
-		return err
-	}
-
-	return nil
-}
-
 type NodeConfigureOS struct {
 	common.KubeAction
 }

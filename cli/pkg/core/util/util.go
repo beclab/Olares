@@ -264,3 +264,41 @@ func IsOnTencentCVM() bool {
 	defer resp.Body.Close()
 	return resp.StatusCode == http.StatusOK
 }
+
+func IsOnAliyunECS() bool {
+	vendorFiles := []string{
+		"/sys/class/dmi/id/sys_vendor",
+		"/sys/class/dmi/id/board_vendor",
+		"/sys/class/dmi/id/bios_vendor",
+		"/sys/class/dmi/id/product_name",
+	}
+	for _, p := range vendorFiles {
+		if b, err := os.ReadFile(p); err == nil {
+			s := strings.ToLower(strings.TrimSpace(string(b)))
+			if strings.Contains(s, "alibaba") || strings.Contains(s, "aliyun") {
+				return true
+			}
+		}
+	}
+
+	if IsExist("/etc/aliyun-release") {
+		return true
+	}
+
+	reqCtx, cancel := context.WithTimeout(context.Background(), 400*time.Millisecond)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(reqCtx, http.MethodGet, "http://100.100.100.200/latest/meta-data/instance-id", nil)
+
+	tr := &http.Transport{
+		Proxy: nil,
+		DialContext: (&net.Dialer{
+			Timeout: 250 * time.Millisecond,
+		}).DialContext,
+	}
+	resp, err := (&http.Client{Transport: tr}).Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode == http.StatusOK
+}
