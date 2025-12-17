@@ -76,7 +76,7 @@ You can purchase paid applications directly from the Olares Market. The payment 
 Before you begin, ensure that you have completed the following tasks:
 - **Cryptocurrency wallet**: You have installed and logged into a browser wallet extension (for example, MetaMask). To successfully complete the transaction, please ensure your wallet holds both of the following funds:
     - **Application fee**: Used to pay for the software license. The specific token required is determined by the app's `price.yaml` configuration (typically USDC or USDT).
-    - **Network Gas fee**: Used to pay for blockchain transaction costs. Note that Gas fees must be paid in ETH.
+    - **Network gas fee**: Used to pay for blockchain transaction costs. Note that gas fees must be paid in ETH.
 - **LarePass mobile app**: You have installed the LarePass app on your phone and logged into the same account as your computer.
 
 ### Step 1: Initiate purchase and identity verification
