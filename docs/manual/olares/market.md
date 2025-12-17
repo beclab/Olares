@@ -92,7 +92,7 @@ Before you begin, ensure that you have completed the following tasks:
 
     c. If the popup does not appear, return to the Market on your computer and click **Buy** again to re-initiate the request.
 
-    ![Authorize payment access](/images/manual/olares/authorize-pay.png#bordered){width=250}
+    ![Authorize payment access](/images/manual/olares/authorize-pay.png#bordered)
 
 ### Step 2: Confirm order
 
@@ -104,7 +104,7 @@ Before you begin, ensure that you have completed the following tasks:
     
     b. Tap **Confirm**.
 
-    ![Authorize purchase](/images/manual/olares/authorize-purchase.png#bordered){width=250}
+    ![Authorize purchase](/images/manual/olares/authorize-purchase.png#bordered)
 
 ### Step 3: Complete payment via wallet
 
@@ -115,7 +115,7 @@ Before you begin, ensure that you have completed the following tasks:
 5. Once the payment is successfully completed, you can proceed to install the application by clicking **Install**.
 6. After the payment is completed, you can verify your purchase credential from your LarePass mobile app by navigating to **Settings** > **Safety** > **VC cards**.
 
-![Authorize purchase](/images/manual/olares/vc.png#bordered){width=250}
+![Authorize purchase](/images/manual/olares/vc.png#bordered)
 
 
 ## Install applications
