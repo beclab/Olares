@@ -53,6 +53,7 @@ rules:
   - "/seahub/api/*"
   - "/system/configuration/encoding"
   - "/api/search/get_directory/"
+  - "/api/search/sync_search/"
   verbs: ["*"]
 
 ---
