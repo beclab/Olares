@@ -83,6 +83,8 @@ LarePass 支持通过手机的分享选项快速上传文件或媒体内容。
 
 ![预览](/images/manual/olares/files-preview.png#bordered)
 
+<!--@include: ../../get-started/reusables.md{55,85}-->
+
 ## 分享文件
 
 本功能支持将文件夹通过不同方式分享给内部成员或外部人员。你可以灵活设置访问权限、密码及有效期，并随时管理或撤销这些分享。
@@ -196,6 +198,7 @@ LarePass 支持通过手机的分享选项快速上传文件或媒体内容。
 3. 使用方向键<i class="material-symbols-outlined">arrow_upward</i><i class="material-symbols-outlined">arrow_downward</i>选择搜索范围：**存储盘**或**同步盘**，按 **Enter** 查看搜索结果。
 
 ![搜索](/images/manual/olares/files-search.png#bordered){width="90%""}
+
 ## 删除文件
 :::warning 警告
 删除的文件无法恢复。

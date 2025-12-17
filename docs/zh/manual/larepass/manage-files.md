@@ -82,6 +82,8 @@ LarePass 桌面端提供与文件管理器应用相同的上传体验，并自�
 </template>
 </Tabs>
 
+<!--@include: ../get-started/reusables.md{55,85}-->
+
 ## 删除文件
 
 :::warning

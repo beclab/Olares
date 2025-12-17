@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: Learn essential file operations in Olares including adding new files, editing existing content, and downloading files across different devices.
 ---
 # Basic file operations
@@ -82,6 +83,8 @@ Double-click a file to open its preview. The Files app supports previewing the f
 The Files app also supports editing the following text formats: TXT, JS, CSS, XML, YAML, HTML.
 
 ![Preview](/images/manual/olares/files-preview.png#bordered)
+
+<!--@include: ../../get-started/reusables.md{67,96}-->
 
 ## Share files
 
