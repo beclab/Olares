@@ -65,7 +65,7 @@ func (p *UninstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 				err := p.exec(c)
 				if err != nil {
 					p.finally = func() {
-						klog.Infof("uninstalling app %s failed,", p.manager.Spec.AppName)
+						klog.Infof("uninstalling app %s failed %v", p.manager.Spec.AppName, err)
 						opRecord := makeRecord(p.manager, appsv1.UninstallFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
 						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.UninstallFailed, opRecord, err.Error(), "")
 						if updateErr != nil {
@@ -177,6 +177,10 @@ func (p *UninstallingApp) exec(ctx context.Context) error {
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
+	}
+	if appCfg.MiddlewareName == "mongodb" && appCfg.Namespace == "os-platform" {
+		klog.Infof("delete old mongodb ..........")
+		return p.oldMongodbUninstall(ctx, kubeConfig)
 	}
 	ops, err := versioned.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: p.manager.GetMarketSource()})
 	if err != nil {

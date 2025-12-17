@@ -56,6 +56,7 @@ type ApplicationConfig struct {
 	APIVersion           APIVersion
 	CfgFileVersion       string
 	Namespace            string
+	MiddlewareName       string
 	ChartsName           string
 	RepoURL              string
 	Title                string
