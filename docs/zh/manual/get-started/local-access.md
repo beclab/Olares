@@ -192,6 +192,10 @@ ping desktop.<username>.olares.cn
 ```
 如果返回的 IP 地址以 `192.168` 开头，即表示配置成功。
 
+## 了解更多
+- [通过 LarePass VPN 随时随地访问 Olares](../../../zh/manual/larepass/private-network.md): 了解如何使用 LarePass VPN。
+- [网络](../../../zh/developer/concepts/network.md): 了解 Olares 中的应用的各类入口。
+
 ## 常见问题
 ### 为什么在 Mac 上无法再启用 LarePass VPN？
 如果之前成功启用过 VPN，但现在停止工作，可能需要重置系统扩展。
