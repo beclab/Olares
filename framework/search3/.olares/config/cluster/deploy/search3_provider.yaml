@@ -25,10 +25,7 @@ metadata:
     provider-service-ref: search3-provider-svc.{{ .Release.Namespace }}:28080
 rules:
   - nonResourceURLs: 
-      - "/document/get_by_resource_uri"
-      - "/document/add"
-      - "/document/delete/*"
-      - "/document/update/*"
+      - "/document/*"
     verbs: ["*"]
 
 ---
