@@ -41,11 +41,6 @@ type LoginRecord struct {
 	LoginTime *int64 `json:"login_time"`
 }
 
-type UserPassword struct {
-	UserName string `json:"username,omitempty"`
-	Password string `json:"password"`
-}
-
 type KubesphereError struct {
 	Error            string `json:"error"`
 	ErrorDescription string `json:"error_description"`

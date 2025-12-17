@@ -1,7 +1,6 @@
 package v1alpha1
 
 import (
-	"errors"
 	"net/http"
 
 	"bytetrade.io/web3os/bfl/pkg/api/response"
@@ -32,7 +31,7 @@ var (
 	userTags = []string{"users"}
 )
 
-func AddToContainer(c *restful.Container, addCallback func(func() error, func() error)) error {
+func AddToContainer(c *restful.Container) error {
 	ws := runtime.NewWebService(ModuleVersion)
 	config, err := ctrl.GetConfig()
 	if err != nil {
@@ -85,22 +84,5 @@ func AddToContainer(c *restful.Container, addCallback func(func() error, func() 
 		Returns(http.StatusOK, "", response.Response{}))
 
 	c.Add(ws)
-
-	// add user creating event to backup callback
-	addCallback(
-		func() error { // phase backup-new
-			if handler.isUserCreating() {
-				return errors.New("user createing")
-			}
-
-			handler.lockUserCreating()
-			return nil
-		},
-
-		func() error { // phase backup-finished
-			handler.unlockUserCreating()
-			return nil
-		},
-	)
 	return nil
 }
