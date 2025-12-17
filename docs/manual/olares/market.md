@@ -287,7 +287,7 @@ An application is usually stopped due to one of the following reasons:
 
 #### Why can't I resume my application now?
 
-Starting an application requires reserving a specific amount of computing resources. If other running applications are already occupying most of the resources, the remaining "free space" is not enough for the application you want to start.
+Starting an application requires reserving a specific amount of computing resources. If other running applications are already occupying most of the resources, the remaining free resources are not enough for the application you want to start.
 
 Therefore, when you try to resume the application, you might encounter the following messages:
 
