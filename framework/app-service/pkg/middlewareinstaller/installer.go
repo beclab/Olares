@@ -49,11 +49,14 @@ func Uninstall(ctx context.Context, kubeConfig *rest.Config, middleware *Middlew
 		return err
 	}
 
-	if installed, err := helmClient.IsInstalled(middleware.MiddlewareName); err != nil {
+	installed, err := helmClient.IsInstalled(middleware.MiddlewareName)
+	if err != nil {
 		klog.Errorf("Failed to get install history middlewareName=%s err=%v", middleware.MiddlewareName, err)
 		return err
-	} else if !installed {
-		return errors.New("middleware not installed")
+	}
+	if !installed {
+		klog.Infof("middleware %s is not installed", middleware.MiddlewareName)
+		return nil
 	}
 
 	err = helmClient.Uninstall(middleware.MiddlewareName)
