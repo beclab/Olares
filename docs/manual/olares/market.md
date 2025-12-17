@@ -214,5 +214,5 @@ To resume your application, you need to free up some occupied resources:
 
 1. Go to **Settings** > **Application** to view the applications that are currently **Running**.
 2. Find applications that you do not need to use right now.
-3. Stop each of the applications by clicking the app and clicking <i class="material-symbols-outlined">toggle_on</i> to toggle off **Running**.
+3. Stop each application by clicking the app and clicking <i class="material-symbols-outlined">toggle_on</i> to toggle off **Running**.
 4. After resources are freed, go back to your target application and click **Resume** again.
