@@ -236,19 +236,19 @@ If you have reset Olares OS or switched to new hardware, your local license data
 2. Open the Olares Market.
 3. Search for the target paid app, click **Get**, and then click **Buy**.
 
-    :::tipNote
+    :::tip Note
     The system will detect your on-chain purchase record and will not charge you again.
     :::
 
 4. In the **Authorize payment access** popup on your computer, click **Verify now**.
     
-    :::tipNote
+    :::tip Note
     This step verifies your identity ownership and does not initiate a new transaction.
     :::
 
 5. Once verified, the button will change to **Install**. Click it to start installation.
 
-:::tipImportant
+:::tip Important
 - **Identity binding**: Your purchase history is bound to your **Olares ID (DID)**, not to specific hardware.
 - **Identity recovery**: If you still have access to LarePass or have a backup of your mnemonic phrase, you can activate the new system with the same Olares ID and restore your purchased apps through identity verification.
 - **Risk of loss**: If you have uninstalled LarePass and lost your mnemonic phrase, you will permanently lose your digital identity and all associated assets, including paid apps. In this case, you must create a new account and re-purchase the application.
