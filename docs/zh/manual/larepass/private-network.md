@@ -3,7 +3,7 @@ outline: [2, 3]
 description: 本文介绍如何在任意环境安全访问 Olares。
 ---
 # 通过 LarePass VPN 随时随地访问 Olares
-Olares 设备上运行着 Vault 和 Ollama 等供个人或内部使用的关键应用。出于安全考量，这些应用只能通过[私有或内部入口](../../developer/concepts/network.md#内部入口) 访问。
+Olares 设备上运行着 Vault 和 Ollama 等供个人或内部使用的关键应用。出于安全考量，这些应用只能通过[私有或内部入口](../../developer/concepts/network.md#私有入口)访问。
 
 为了获得最流畅的连接体验，建议你始终开启 LarePass VPN。开启后，LarePass 会利用 Tailscale 建立安全连接，并根据你所处的位置智能选择最快线路：
 

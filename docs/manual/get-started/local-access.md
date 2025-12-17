@@ -192,6 +192,10 @@ ping desktop.<username>.olares.com
 ```
 If the IP address starts with `192.168`, it indicates successful configuration.
 
+## Learn more
+- [Access Olares services remotely via LarePass VPN](../../manual/larepass/private-network.md): Understand how to use LarePass VPN.
+- [Network](../../developer/concepts/network.md): Learn about the different entry points in Olares.
+
 ## FAQs
 ### Why doesn't LarePass VPN work on my Mac anymore?
 If you successfully enabled the VPN previously, but it has stopped working, you might need to reset the system extension.
