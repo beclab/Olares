@@ -57,15 +57,16 @@ To install a system update:
 3. In the pop-up dialog, choose your upgrade method and tap **Confirm**:
 
    - **Download only**  
-     Olares will download the update package in the background. You can continue using Olares during the download.  
-     When the download completes, go to the System update page and click **Upgrade** to prepare the installation.
+     Olares will download the update package in the background. You can continue using Olares during the download.<br>
+     When the download completes, go to the System update page and click **Upgrade**. A restart confirmation dialog will appear before the installation begins (see the next step).
 
    - **Download and upgrade**  
-     Olares will immediately start downloading the update package and get it ready to install. The actual installation will only begin after you confirm the restart in the next step.
+     Olares will immediately start downloading the update package and get it ready to install.<br>
+     When the download completes, a restart confirmation dialog will appear automatically before the installation begins (see the next step).
+   
    ![Choose upgrade method](/images/manual/larepass/olares-upgrade1.png#bordered)
 
 4. When the update is ready to install, a restart confirmation dialog appears.  
-   The prompt is the same for both methods, though the background screen looks different depending on your choice:
 
    - **If you chose Download only** 
       ![Restart for download only](/images/manual/larepass/download-first-restart.png#bordered)
@@ -73,9 +74,9 @@ To install a system update:
    - **If you chose Download and upgrade**  
       ![Restart for download and upgrade](/images/manual/larepass/download-and-upgrade-restart.png#bordered)
 
-   Tap **Continue** to start the installation and restart.
+   Tap **Continue** to start installing the update and then restart Olares.
    
-5. Wait for the upgrade to finish. You will see a success message, and Olares will automatically resume normal operation.
+5. Wait for the upgrade and restart to finish. When Olares starts up again, you'll see a success message and can continue using it.
 
 ### Restart or shut down Olares remotely
 
