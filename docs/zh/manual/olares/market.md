@@ -88,7 +88,7 @@ Olares **应用市场**提供多种方式发现和浏览应用：
 
     c. 若未收到弹窗，请返回电脑端的应用市场界面，再次点击**购买**以重新发起请求。
 
-    ![授权支付访问](/images/manual/olares/authorize-pay-1.png#bordered){width=250}
+    ![授权支付访问](/images/manual/olares/authorize-pay-1.png#bordered)
 
 ### 第二步：确认订单
 
@@ -100,7 +100,7 @@ Olares **应用市场**提供多种方式发现和浏览应用：
     
     b. 点击**确认**。
 
-     ![授权购买](/images/manual/olares/authorize-purchase-1.png#bordered){width=250}
+     ![授权购买](/images/manual/olares/authorize-purchase-1.png#bordered)
 
 ### 第三步：完成钱包支付
 
@@ -111,7 +111,7 @@ Olares **应用市场**提供多种方式发现和浏览应用：
 5. 支付成功后，你即可点击**安装**来安装使用该应用。
 6. 支付完成后，你可以在 LarePass 手机端应用中的**设置** > **安全** > **VC 卡片**中看到购买凭证。
 
-![Authorize purchase](/images/manual/olares/vc-1.png#bordered){width=250}
+![Authorize purchase](/images/manual/olares/vc-1.png#bordered)
 
 ## 安装应用
 
