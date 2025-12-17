@@ -206,7 +206,7 @@ Therefore, when you try to resume the application, you might encounter the follo
 | :--- | :--- |
 | Insufficient system CPU/memory | The physical resources of the entire system are nearly exhausted. |
 | Insufficient disk space | The hard drive is full, and new data cannot be written. |
-| Available CPU/memory insufficient | While there are some resources left, they are less than the minimum amount (minimum request) required by this specific application. |
+| Available CPU/memory insufficient | While there are some resources left, they are less than the minimum<br> amount (minimum request) required by this specific application. |
 
 #### How to resume my application?
 
