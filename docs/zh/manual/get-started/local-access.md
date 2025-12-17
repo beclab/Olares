@@ -3,10 +3,13 @@ outline: [2,3]
 description: 了解如何通过局域网 (LAN) 直接访问 Olares 应用和服务，以获得最快速度、隐私保护和离线可靠性。
 ---
 # 内网访问 Olares 服务
-虽然远程访问非常方便，但通过内网直接访问设备具有显著优势：
-- **极致性能：** 无需经过互联网路由，即可高速传输文件。
-- **增强隐私：** 将流量严格限制在家庭网络内。
-- **离线独立性：** 即使互联网服务提供商断网，也能访问数据和应用。
+
+通常你可以通过浏览器使用 URL（例如 `https://desktop.<username>.olares.com`）来访问 Olares 服务。这种方式让你可以随时随地通过任何设备访问服务。
+
+然而，通过内网直接访问设备具有显著优势：
+- **极致性能**：在本地网络上传输文件时不受互联网延迟和瓶颈的影响。
+- **隐私保护**：将流量严格限制在家庭网络内以增加安全性。
+- **离线可用**：即使互联网服务不可用，也可以访问数据和应用。
 
 本文档介绍了建立本地连接的几种方法：
 - [启用 LarePass VPN（推荐）](#方法-1-启用-larepass-vpn)<br/>这是最简单的方案，自动建立最快连接，无需手动配置。
@@ -43,7 +46,7 @@ description: 了解如何通过局域网 (LAN) 直接访问 Olares 应用和服�
 </template>
 </tabs>
 
-启用后，可以查看 LarePass 中的网络状态以确认是否正在使用本地连接：
+启用后，可以查看 LarePass 中的网络状态以确认连接类型：
 
 | 状态         | 描述                         |
 |:-----------|:---------------------------|
@@ -167,7 +170,7 @@ Apple 设备支持通过 [Bonjour](https://developer.apple.com/bonjour/)（零�
 2.  使用文本编辑器打开文件（需要管理员权限）。
 3.  添加映射行：
     ```plain
-    # 替换为内网 IP 和用户名
+    # 替换为实际内网 IP 和用户名
     # Olares 应用
     192.168.31.208  desktop.<username>.olares.cn
     192.168.31.208  auth.<username>.olares.cn
@@ -181,8 +184,15 @@ Apple 设备支持通过 [Bonjour](https://developer.apple.com/bonjour/)（零�
     # 根据需要添加其他社区应用
     192.168.31.208  <entrance_id>.<username>.olares.cn
     ```
-这允许你在无需互联网连接的情况下本地访问 Olares。
-## 常见问题 (FAQs)
+4. 保存文件以应用更改。这能确保即使在断网情况下，你也能进行本地访问。
+
+你可以通过检查 URL 加载速度或使用终端来验证更改。例如：
+```bash
+ping desktop.<username>.olares.com
+```
+如果返回的 IP 地址以 `192.168` 开头，即表示配置成功。
+
+## 常见问题
 ### 为什么在 Mac 上无法再启用 LarePass VPN？
 如果之前成功启用过 VPN，但现在停止工作，可能需要重置系统扩展。
 :::info
@@ -204,7 +214,7 @@ Apple 设备支持通过 [Bonjour](https://developer.apple.com/bonjour/)（零�
 2. 将 LarePass 主程序添加到杀毒软件的白名单或排除项中。
 3. 重启 LarePass 并启用 VPN。
 
-### 为什么 `.local` 域名在 Chrome 中无法使用 (macOS) ？
+### 为什么在 macOS 上，Chrome 无法访问 `.local` 域名？
 如果 macOS 未授予局域网访问权限，Chrome 可能会无法访问本地 URL。
 要启用访问权限：
 1. 打开 Apple 菜单，进入**系统设置**。
@@ -218,5 +228,4 @@ Apple 设备支持通过 [Bonjour](https://developer.apple.com/bonjour/)（零�
 使用本地域名时，Chrome 可能会默认使用 HTTPS，你可能会看到“连接不安全”的警告。
 ![本地地址错误](/images/manual/get-started/incorrect-local-address.png#bordered)
 
-要解决此问题，在 URL 开头显式添加 HTTP 协议头 (`http://`)。
-
+要解决此问题，在 URL 开头显式添加 HTTP 协议头 (`http://`)，告诉浏览器这是一个仅在本地网络中使用的链接。
