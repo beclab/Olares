@@ -1,82 +1,40 @@
 ---
 outline: [2, 3]
-description:"本文介绍如何在任意环境安全访问 Olares: 区分公有/私有入口、何时启用 LarePass VPN、本地直连的使用场景，以及在 LarePass 中开启 VPN。"
+description: 本文介绍如何在任意环境安全访问 Olares。
 ---
+# 通过 LarePass VPN 随时随地访问 Olares
+Olares 设备上运行着 Vault 和 Ollama 等供个人或内部使用的关键应用。出于安全考量，这些应用只能通过[私有或内部入口](../../developer/concepts/network.md#私有入口)访问。
 
-# 随时随地访问 Olares
+为了获得最流畅的连接体验，建议你始终开启 LarePass VPN。开启后，LarePass 会利用 Tailscale 建立安全连接，并根据你所处的位置智能选择最快线路：
 
-本文档介绍如何从任何地点访问你的 Olares 应用。你将学到：
-1)公有/私有入口的访问路径与适用场景
-2) 在移动端与桌面端**开启 LarePass VPN**的方法
-3) 如何**解读连接状态**并据此诊断网络质量。
+- **居家**： 通过局域网 (LAN) 直连，传输速度最快。
+- **外出**： 与设备建立点对点 (P2P) 加密隧道直连。
 
-
-## 了解 Olares 上的应用访问
-
-在 Olares 中，你通过每个应用或服务的专有 URL (例如 `https://app.olares-id.olares.cn`，如 `https://desktop.nicholas.olares.com/`) 来访问它们。根据访问对象的不同，有两种入口类型。
-
-### 公共入口 
-
-* 互联网上的任何人都可以访问，无需身份验证。例如，一个托管在 WordPress 上的公共博客。
-* 流量通过 Cloudflare Tunnel 或 FRP 从互联网安全路由到 Olares。
-
-### 私有入口
-
-仅供你个人使用的应用程序入口，例如桌面 (Desktop)、Vault 以及 WordPress 的管理控制台。根据你所在的位置，访问私有入口时有两种情况：
-
-- **远程访问** (在你的本地网络之外)
-  - **使用 LarePass VPN (推荐)：** 无论你身在何处，流量都可以通过 VPN (Tailscale) 进行直接且安全的路由。
-  - **不使用 LarePass VPN：** 流量将通过与公共访问相同的互联网隧道 (Cloudflare/FRP) 进行路由。
-
-- **本地访问** (在同一局域网中)
-
-  使用本地 URL (`http://app.yourname.olares.local`) 直连 Olares，无需通过 VPN 和互联网隧道。
-
-  :::tip macOS 用户注意
-  如在 macOS 上使用 Chrome 无法访问本地 URL，可能是因系统未授予 Chrome 本地网络访问权限。
-  请按以下步骤启用权限：
-  1. 打开苹果菜单 > **系统设置**。
-  2. 点击边栏的**隐私与安全性**，然后点击**本地网络**。
-  3. 找到列表中的 Google Chrome 和 Google Chrome Helper 并开启旁边的开关。
-  ![启用本地网络](/public/images/manual/larepass/mac-chrome-local-access.png#bordered){width=400}
-  
-  完成后重新启动 Chrome，再次尝试访问本地 URL。  
-  :::
-
-  :::info Windows 用户注意
-  Windows 系统暂不支持通过`.local`结尾的域名访问本地服务。
-  :::
-
-:::warning 远程访问时请启用 VPN
-当你不在自己的本地网络中时，为获得最佳的私有应用访问体验，请启用 **LarePass VPN**。它能确保你与 Olares 之间可始终保持加密、私有且高速的通道。 
-:::
+若未开启 VPN，流量将经由 Cloudflare 或 FRP 等公网进行转发，速度可能会受到影响。
 
 ## 在 LarePass 中启用专用网络
-
-::: tip
-查看各平台安装包，请访问[官方下载页面](https://olares.cn/larepass)。
+:::info iOS 和 macOS 设置
+在 iOS 或 macOS 上首次启用该功能时，系统可能会提示你添加 VPN 配置文件。允许此操作以完成设置。
 :::
 
-![VPN](/images/manual/larepass/vpn.jpg)
+<tabs>
+<template #使用-LarePass-移动端>
 
-### LarePass 移动端
+1. 打开 LarePass 应用，进入**设置**。
+2. 在**我的 Olares** 卡片中，打开 VPN 开关。
 
-1. 打开 LarePass，依次进入**设置** > **我的 Olares**。  
-2. 打开 **VPN** 开关。
+   ![移动端开启 LarePass VPN](/images/zh/manual/get-started/larepass-vpn-mobile.png#bordered)
+</template>
+<template #使用-LarePass-桌面端>
 
-### LarePass 桌面端
+1. 打开 LarePass 应用，点击左上角的头像打开用户菜单。
+2. 打开**专用网络连接**开关。
 
-1. 打开 LarePass，点击主界面左上角头像区域。  
-2. 在弹出面板中打开**专用网络连接**开关。
-
-启用专用网络后，无论使用 LarePass 客户端还是浏览器，设备都会通过专用网络访问 Olares。
-
-::: info
-在 iOS 或 macOS 上首次开启专用网络时，系统会提示添加专用网络配置文件，请按指引完成。
-:::
+   ![桌面端开启 LarePass VPN](/images/zh/manual/get-started/larepass-vpn-desktop.png#bordered)
+</template>
+</tabs>
 
 ## 了解连接状态
-
 LarePass 会展示设备到 Olares 的连接状态，帮助你判断或诊断网络情况。
 
 ![连接状态](/images/manual/larepass/connection-status.jpg)
@@ -91,11 +49,10 @@ LarePass 会展示设备到 Olares 的连接状态，帮助你判断或诊断网
 | Offline mode | 当前离线，无法连接到 Olares                             |
 
 ::: info
-若在外网环境使用专用网络访问私有入口时，连接状态显示 **DERP**，说明专用网络无法直接通过 P2P 连接 Olares，需要借助 Tailscale 中继服务器，这可能影响连接质量。如长期如此，请联系 Olares 支持。
+若在外网环境使用专用网络访问私有入口时，连接状态显示 "DERP"，说明专用网络无法直接通过 P2P 连接 Olares，需要借助 Tailscale 中继服务器，这可能影响连接质量。如长期如此，请联系 Olares 支持。
 :::
 
 ## 故障排查
-
 出现连接问题时，LarePass 会显示诊断信息。常见提示及处理办法如下：
 
 ![异常消息](/images/zh/manual/larepass/abnormal-state.jpg)

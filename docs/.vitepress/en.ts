@@ -109,6 +109,10 @@ const side = {
           link: "/manual/larepass/back-up-mnemonics"
         },
         {
+          text: "Access Olares locally",
+          link: "/manual/get-started/local-access",
+        },
+        {
           text: "What's next",
           link: "/manual/get-started/next-steps",
         },
@@ -128,7 +132,7 @@ const side = {
             {text: "Manage integrations", link:"/manual/larepass/integrations"},
           ],
         },
-        {text: "Manage VPN", link:"/manual/larepass/private-network"},
+        {text: "Use VPN", link:"/manual/larepass/private-network"},
         {
           text: "Manage device",
           collapsed: true,

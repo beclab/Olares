@@ -15,7 +15,6 @@ Keep your mnemonic phrase safe and secret, and never share it with anyone. It is
 When exporting or backing up your mnemonic phrase for the first time, you may be prompted to set a local password for LarePass. This password is only used to unlock LarePass services on the current device.
 
 After setting up, you can choose to enable biometric unlock for more secure and convenient access using face recognition or fingerprint.
-
 ![Set up local password](/images/manual/get-started/set-up-local-password.png)
 
 :::info
