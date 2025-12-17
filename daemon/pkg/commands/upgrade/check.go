@@ -12,6 +12,9 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/containerd"
 	"github.com/dustin/go-humanize"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	v1 "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"k8s.io/utils/strings/slices"
 
@@ -192,6 +195,55 @@ func (i *preCheck) Execute(ctx context.Context, p any) (res any, err error) {
 		return nil, fmt.Errorf("waiting for user to finish activation: %s", strings.Join(activatingUsers, ", "))
 	}
 
+	// the new MongoDB version has a different implementation from the old version.
+	// if an old MongoDB instance exists, it must be uninstalled before upgrading.
+	{
+		gvr := schema.GroupVersionResource{Group: "app.bytetrade.io", Version: "v1alpha1", Resource: "applicationmanagers"}
+		am, err := dynamicClient.Resource(gvr).Get(ctx, "os-platform-mongodb", metav1.GetOptions{})
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("failed to check mongodb application manager: %v", err)
+			}
+		} else if am != nil {
+			state, _, _ := unstructured.NestedString(am.Object, "status", "state")
+			switch strings.ToLower(state) {
+			case "installing", "running":
+				return nil, fmt.Errorf("mongodb is %s, please remove it before upgrade. if mongodb is installing, you can cancel it in market. if running, execute 'kubectl delete appmgr os-platform-mongodb' in control-hub -> olares shell", state)
+			}
+		}
+	}
+
+	// in v1.12.3, argo has been moved to os-platform.
+	// to avoid CRD resource conflicts, if wise is installed and includes argo crd, you must uninstall wise first, including sharedserver.
+	{
+		isKnowledgeSharedNsExist := false
+		if _, err := client.CoreV1().Namespaces().Get(ctx, "knowledge-shared", metav1.GetOptions{}); err == nil {
+			isKnowledgeSharedNsExist = true
+		} else if !apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("failed to check namespace 'knowledge-shared': %v", err)
+		}
+		xclient, err := utils.GetApixClient()
+		if err != nil {
+			err = fmt.Errorf("failed to get apix client: %v", err)
+			klog.Error(err.Error())
+			return nil, err
+		}
+		isKnowledgeArgoCRDExist := false
+		crds, err := xclient.ApiextensionsV1().CustomResourceDefinitions().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			klog.Errorf("failed to list crds %v", err)
+			return nil, err
+		}
+		for _, crd := range crds.Items {
+			if crd.Spec.Group == "argoproj.io" && crd.Annotations["meta.helm.sh/release-name"] == "knowledge" {
+				isKnowledgeArgoCRDExist = true
+				break
+			}
+		}
+		if isKnowledgeSharedNsExist && isKnowledgeArgoCRDExist {
+			return nil, fmt.Errorf("namespace 'knowledge-shared' exists (wise); please uninstall Wise and Shared Server before upgrade")
+		}
+	}
 	klog.Info("pre checks passed for upgrade")
 
 	return newExecutionRes(true, nil), nil
