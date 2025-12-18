@@ -28,11 +28,10 @@ description: 了解如何使用 Wise 强大的过滤系统来整理你的内容�
 4. 选择操作：
    - 添加到已有视图：将此标签/订阅源加入已有视图。
    - 创建新视图：以此标签/订阅源为基础，新建一个独立视图，将所有相关内容集中展示。
-      
       a. 输入视图名称。  
       b. 点击**确认** 保存视图。
-      ![添加过滤视图](/images/zh/manual/olares/wise-add-filtered-view.png#bordered){width=60%}
-      
+
+![添加过滤视图](/images/zh/manual/olares/wise-add-filtered-view.png#bordered) 
 
 ## 创建自定义过滤视图
 

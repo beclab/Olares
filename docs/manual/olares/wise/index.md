@@ -34,7 +34,7 @@ The sidebar navigation is divided into three logical areas:
 
 - **Content types**
 
-    Wise automatically categorizes your content by format (**Articles**, **Videos**, **Audios**, **Books**, **PDFs**).Each content-type folder has two tabs that reflect the item's status:
+    Wise automatically categorizes your content by format (**Articles**, **Videos**, **Audios**, **Books**, **PDFs**). Each content-type folder has two tabs that reflect the item's status:
     - **`Inbox`**: Items of this type that you intend to read or process soon.
     - **`Read Later`**: Items of this type that you saved for later reading.
     ![Item status](/images/manual/olares/wise-tabs-in-folder.png#bordered)
