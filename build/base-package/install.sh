@@ -18,7 +18,7 @@ fi
 if [[ x"$VERSION" == x"" ]]; then
     if [[ "$LOCAL_RELEASE" == "1" ]]; then
         ts=$(date +%Y%m%d%H%M%S)
-        export VERSION="1.12.3-$ts"
+        export VERSION="1.12.4-$ts"
         echo "will build and use a local release of Olares with version: $VERSION"
         echo ""
     else
@@ -28,7 +28,7 @@ fi
 
 if [[ "x${VERSION}" == "x" || "x${VERSION:3}" == "xVERSION__" ]]; then
     echo "error: Olares version is unspecified, please set the VERSION env var and rerun this script."
-    echo "for example: VERSION=1.12.3-20241124 bash $0"
+    echo "for example: VERSION=1.12.4-20241124 bash $0"
     exit 1
 fi
 
