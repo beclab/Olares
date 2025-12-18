@@ -114,6 +114,17 @@ func CheckCurrentStatus(ctx context.Context) error {
 
 	var currentTerminusState TerminusState = CurrentState.TerminusState
 	defer func() {
+		if currentTerminusState == SystemError {
+			restarting, err := utils.SystemStartLessThan(10 * time.Minute) // uptime less then 10 minutes
+			if err != nil {
+				klog.Error(err)
+			}
+
+			if restarting {
+				currentTerminusState = Restarting
+			}
+		}
+
 		CurrentState.TerminusState = currentTerminusState
 		TerminusStateMu.Unlock()
 		klog.Info("current state: ", CurrentState.TerminusState)
@@ -444,16 +455,6 @@ func CheckCurrentStatus(ctx context.Context) error {
 		// some key pods are abnormal
 		if CurrentState.InstallFinishedTime != nil && time.Since(*CurrentState.InstallFinishedTime) < 5*time.Minute {
 			currentTerminusState = Installing
-			return nil
-		}
-
-		restarting, err := utils.SystemStartLessThan(10 * time.Minute) // uptime less then 10 minutes
-		if err != nil {
-			return err
-		}
-
-		if restarting {
-			currentTerminusState = Restarting
 			return nil
 		}
 
