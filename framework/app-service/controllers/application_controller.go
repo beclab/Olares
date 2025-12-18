@@ -377,6 +377,8 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.Request,
 	deployment client.Object, app *appv1alpha1.Application, name string) error {
 	appCopy := app.DeepCopy()
+	appNames := getAppName(deployment)
+	isMultiApp := len(appNames) > 1
 
 	tailScale, err := r.getAppTailScale(deployment)
 	if err != nil {
@@ -390,11 +392,31 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 
 	icon = icons[name]
 
+	entrancesMap, err := r.getEntranceServiceAddress(ctx, deployment, isMultiApp)
+	if err != nil {
+		ctrl.Log.Error(err, "get entrance error")
+	}
+	servicePortsMap, err := r.getAppPorts(ctx, deployment, isMultiApp)
+	if err != nil {
+		klog.Warningf("get app ports err=%v", err)
+	}
+	var appid string
+	if userspace.IsSysApp(name) {
+		appid = name
+	} else {
+		appid = appv1alpha1.AppName(name).GetAppID()
+	}
+	_, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
+
 	appCopy.Spec.Name = name
 	appCopy.Spec.Namespace = deployment.GetNamespace()
 	appCopy.Spec.Owner = owner
 	appCopy.Spec.DeploymentName = deployment.GetName()
 	appCopy.Spec.Icon = icon
+	appCopy.Spec.SharedEntrances = sharedEntrances
+	appCopy.Spec.Ports = servicePortsMap[name]
+	appCopy.Spec.Entrances = entrancesMap[name]
+
 	if tailScale != nil {
 		appCopy.Spec.TailScale = *tailScale
 	}
