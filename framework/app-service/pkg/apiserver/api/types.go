@@ -93,6 +93,7 @@ type RequirementResp struct {
 	Response
 	Resource string `json:"resource"`
 	Message  string `json:"message"`
+	Reason   string `json:"reason"`
 }
 
 // AppSource describe the source of an application, recommend,model,agent

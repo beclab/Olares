@@ -343,23 +343,25 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 	}
 
 	//resourceType, err := CheckAppRequirement(h.h.kubeConfig, h.token, h.appConfig)
-	resourceType, err := apputils.CheckAppRequirement(h.token, h.appConfig)
+	resourceType, resourceConditionType, err := apputils.CheckAppRequirement(h.token, h.appConfig, v1alpha1.InstallOp)
 	if err != nil {
 		klog.Errorf("Failed to check app requirement err=%v", err)
 		h.resp.WriteHeaderAndEntity(http.StatusBadRequest, api.RequirementResp{
 			Response: api.Response{Code: 400},
-			Resource: resourceType,
+			Resource: resourceType.String(),
 			Message:  err.Error(),
+			Reason:   resourceConditionType.String(),
 		})
 		return
 	}
 
-	resourceType, err = apputils.CheckUserResRequirement(h.req.Request.Context(), h.appConfig, h.owner)
+	resourceType, resourceConditionType, err = apputils.CheckUserResRequirement(h.req.Request.Context(), h.appConfig, v1alpha1.InstallOp)
 	if err != nil {
 		h.resp.WriteHeaderAndEntity(http.StatusBadRequest, api.RequirementResp{
 			Response: api.Response{Code: 400},
-			Resource: resourceType,
+			Resource: resourceType.String(),
 			Message:  err.Error(),
+			Reason:   resourceConditionType.String(),
 		})
 		return
 	}
