@@ -1382,12 +1382,12 @@ func (h *Handler) installOpValidate(ctx context.Context, appConfig *appcfg.Appli
 	if err != nil {
 		return err
 	}
-	_, err = apputils.CheckAppRequirement("", appConfig)
+	_, _, err = apputils.CheckAppRequirement("", appConfig, v1alpha1.InstallOp)
 	if err != nil {
 		return err
 	}
 
-	_, err = apputils.CheckUserResRequirement(ctx, appConfig, appConfig.OwnerName)
+	_, _, err = apputils.CheckUserResRequirement(ctx, appConfig, v1alpha1.InstallOp)
 	if err != nil {
 		return err
 	}
