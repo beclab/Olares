@@ -6,6 +6,5 @@ const (
 )
 
 var (
-	FreeLimit     float64 = 85.00
-	ConnectErrors         = []string{"dial tcp", "connect:"}
+	ConnectErrors = []string{"dial tcp", "connect:"}
 )

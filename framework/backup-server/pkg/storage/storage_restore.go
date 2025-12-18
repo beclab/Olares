@@ -22,6 +22,7 @@ import (
 	"olares.com/backup-server/pkg/util/pointer"
 	"olares.com/backup-server/pkg/watchers/notification"
 	backupssdk "olares.com/backups-sdk"
+	backupssdkconstants "olares.com/backups-sdk/pkg/constants"
 
 	backupssdkoptions "olares.com/backups-sdk/pkg/options"
 	backupssdkrestic "olares.com/backups-sdk/pkg/restic"
@@ -292,15 +293,10 @@ func (s *StorageRestore) checkDiskSize() error {
 		return err
 	}
 
-	log.Infof("Restore %s, check disk free space: %s, path: %s", s.RestoreId, usage.String(), s.Params.RootPath)
+	log.Infof("Restore %s, check disk free space: %s, path: %s, limit: %d", s.RestoreId, usage.String(), s.Params.RootPath, backupssdkconstants.FreeSpaceLimit)
 
-	if usage.UsedPercent > FreeLimit {
-		log.Errorf("Restore %s, disk usage has reached %.2f%%", s.RestoreId, FreeLimit)
-		return fmt.Errorf("Disk usage has reached %.2f%%. Please clean up disk space first.", FreeLimit)
-	}
-
-	requiredSpace := uint64(float64(s.RestoreType.TotalBytesProcessed) * 1.05)
-	if usage.Free < requiredSpace {
+	requiredSpace := uint64(s.RestoreType.TotalBytesProcessed)
+	if usage.Free < (requiredSpace + backupssdkconstants.FreeSpaceLimit) {
 		log.Errorf("not enough free space on target disk, required: %s, available: %s, location: %s", util.FormatBytes(requiredSpace), util.FormatBytes(usage.Free), s.Params.RootPath)
 		return fmt.Errorf("Insufficient space on the target disk.")
 	}

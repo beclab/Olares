@@ -28,4 +28,4 @@ jobs:
     - name: Run Build
       working-directory: framework/backup-server
       run: |
-        make all
+        make build
