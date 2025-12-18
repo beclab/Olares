@@ -13,7 +13,7 @@ Olares 让你充分发挥 GPU 的算力，加速大模型推理、图像/视频�
 
 本文档帮你了解并配置 GPU 分配模式，发挥硬件最大效能。
 
-## GPU 兼容性
+## 硬件要求
 
 Olares 仅支持 **Nvidia Turing 架构及之后**的显卡（Turing, Ampere, Ada Lovelace, 和 Blackwell）。
 
