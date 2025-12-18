@@ -130,9 +130,6 @@ const (
 
 var (
 	empty = sets.Empty{}
-	// States represents the state for whole application lifecycle.
-	States = sets.String{"pending": empty, "downloading": empty, "installing": empty, "initializing": empty, "running": empty,
-		"uninstalling": empty, "upgrading": empty, "suspend": empty, "resuming": empty}
 	// Sources represents the source of the application.
 	Sources = sets.String{"market": empty, "custom": empty, "devbox": empty, "system": empty, "unknown": empty}
 	// ResourceTypes represents the type of application system supported.
@@ -151,6 +148,47 @@ var (
 
 	OLARES_APP_NAME = "olares-app"
 )
+
+type ResourceConditionType string
+
+const (
+	DiskPressure             ResourceConditionType = "DiskPressure"
+	SystemCPUPressure        ResourceConditionType = "SystemCPUPressure"
+	SystemMemoryPressure     ResourceConditionType = "SystemMemoryPressure"
+	SystemGPUNotAvailable    ResourceConditionType = "SystemGPUNotAvailable"
+	SystemGPUPressure        ResourceConditionType = "SystemGPUPressure"
+	K8sRequestCPUPressure    ResourceConditionType = "K8sReqeustCPUPressure"
+	K8sRequestMemoryPressure ResourceConditionType = "K8sRequestMemoryPressure"
+	UserCPUPressure          ResourceConditionType = "UserCPUPressure"
+	UserMemoryPressure       ResourceConditionType = "UserMemoryPressure"
+
+	DiskPressureMessage             string = "Insufficient disk space. Unable to %s the application. Please stop other running applications to free up storage."
+	SystemCPUPressureMessage        string = "Insufficient system CPU. Unable to %s the application. Please stop other running applications to free up resources."
+	SystemMemoryPressureMessage     string = "Insufficient system memory. Unable to %s the application. Please stop other running applications to free up memory."
+	SystemGPUNotAvailableMessage    string = "No available GPU found. Unable to %s the application."
+	SystemGPUPressureMessage        string = "Available GPU is insufficient to %s this application. The requested GPU memory cannot exceed the maximum GPU memory of the node."
+	K8sRequestCPUPressureMessage    string = "Available CPU is insufficient to %s this application. Please stop other applications to free up resources."
+	K8sRequestMemoryPressureMessage string = "Available memory is insufficient to %s this application. Please stop other applications to free up resources."
+	UserCPUPressureMessage          string = "Insufficient user CPU. Unable to %s the application. Please stop other running applications to free up resources."
+	UserMemoryPressureMessage       string = "Insufficient user memory. Unable to %s the application. Please stop other running applications to free up memory."
+)
+
+func (rct ResourceConditionType) String() string {
+	return string(rct)
+}
+
+type ResourceType string
+
+const (
+	Disk   ResourceType = "disk"
+	CPU    ResourceType = "cpu"
+	Memory ResourceType = "memory"
+	GPU    ResourceType = "gpu"
+)
+
+func (rt ResourceType) String() string {
+	return string(rt)
+}
 
 func init() {
 	flag.StringVar(&APIServerListenAddress, "listen", ":6755",
