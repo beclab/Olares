@@ -152,10 +152,10 @@ const side = {
             {text: "Generate 2FA codes", link: "/manual/larepass/two-factor-verification"},
           ],
         },
-        {
+        /*{
           text: "Manage knowledge",
           link: "/manual/larepass/manage-knowledge",
-        },
+        },*/
       ],
     },
     {
@@ -327,6 +327,7 @@ const side = {
              },
             {text: "Manage GPU", link: "/manual/olares/settings/gpu-resource"},
             {text: "Set video playback", link: "/manual/olares/settings/video"},
+            {text: "Search", link: "/manual/olares/settings/search"},
             {
               text: "Backup and restore",
               collapsed: true,
