@@ -140,7 +140,7 @@ spec:
           name: check-chart-repo
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.8
+        image: beclab/market-backend:v0.6.9
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
