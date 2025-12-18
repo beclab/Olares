@@ -72,6 +72,8 @@ You can view, pause, or cancel the download tasks in **Transfer** > **Download**
 </template>
 </Tabs>
 
+<!--@include: ../get-started/reusables.md{67,96}-->
+
 ## Delete files
 :::warning
 Deleted files cannot be recovered.
