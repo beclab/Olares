@@ -28,11 +28,12 @@ The quickest way to create a view is to base it on a tag or feed you already use
 4. Choose an action:
    - Add to an existing view: Group this tag/feed into a view you already created.
    - Create a new view: Create a standalone view that groups all related entries.
-   ![Filter entries by tags](/images/manual/olares/wise-create-views.png#bordered)
       
       a. Enter a name for the view.
       
       b. Click **Confirm** to save the view.
+
+![Filter entries by tags](/images/manual/olares/wise-create-views.png#bordered)
 
 ## Create custom filtered views
 
