@@ -26,6 +26,6 @@ jobs:
       with:
         go-version: '1.21.10'
     - name: Run Build
+      working-directory: framework/backup-server
       run: |
         make all
-        working-directory: framework/backup-server
