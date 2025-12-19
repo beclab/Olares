@@ -250,7 +250,7 @@ data:
         not startswith(container.image, "docker:dind")
         not startswith(container.image, "redis:")
         not startswith(container.image, "ghcr.io/coder/coder:v2.19.0")
-        not startswith(container.image, "mongodb/")
+        not startswith(container.image, "apecloud/")
     }
         
     is_root_user(ctx) if {
