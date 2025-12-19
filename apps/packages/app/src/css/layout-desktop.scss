@@ -1,0 +1,67 @@
+.q-drawer {
+	border-radius: 12px;
+	overflow: hidden;
+	background-color: $background-1;
+	border: 1px solid $separator !important;
+}
+
+.files-content {
+	width: calc(100% - 4px) !important;
+	border-radius: 12px;
+	margin-left: 4px;
+	border-left: 1px solid $separator;
+	border-right: 1px solid $separator;
+	border-bottom: 1px solid $separator;
+	background-color: $background-1;
+	overflow: hidden;
+}
+
+.transfer-table {
+	border-radius: 0 0 12px 12px;
+	margin-left: 4px;
+	border-left: 1px solid $separator;
+	border-right: 1px solid $separator;
+	border-bottom: 1px solid $separator;
+	overflow: hidden;
+}
+
+.transer-header {
+	margin-left: 4px;
+	border-radius: 12px 12px 0 0;
+	border-top: 1px solid $separator !important;
+	border-left: 1px solid $separator !important;
+	border-right: 1px solid $separator !important;
+	// overflow: hidden;
+	// height: 108px;
+	padding: 0 20px;
+	background: $background-1;
+}
+
+.layoutHeader {
+	// margin-left: 4px;
+	border-radius: 12px 12px 0 0;
+	border-top: 1px solid $separator !important;
+	// border-left: 1px solid $separator  !important;
+	// border-right: 1px solid $separator  !important;
+	overflow: hidden;
+}
+
+.menu-active {
+	/* height: 600px !important; */
+	padding-bottom: 42px !important;
+}
+
+.separator-class {
+	width: 4px !important;
+}
+
+.before-class,
+.after-class {
+	border-radius: 12px;
+	overflow: hidden;
+	border: 1px solid $separator;
+}
+
+.dash-itemlist {
+	border-radius: 20px;
+}

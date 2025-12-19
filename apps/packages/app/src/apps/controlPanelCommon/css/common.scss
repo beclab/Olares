@@ -1,0 +1,14 @@
+@mixin platform-height-scroll-area-conf($height) {
+	width: 100%;
+	height: $height;
+	max-height: $height;
+}
+
+.full-height-scroll-area-conf {
+	// width: 100%;
+	@include platform-height-scroll-area-conf((calc(100%)));
+}
+
+.nav-height-scroll-area-conf {
+	@include platform-height-scroll-area-conf((calc(100%)));
+}

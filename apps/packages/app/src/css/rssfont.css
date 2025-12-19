@@ -1,0 +1,189 @@
+/* File loads dynamically when using a custom font*/
+
+/* Literata Variable */
+
+@font-face {
+	font-family: 'Literata VF';
+	font-weight: 400 700;
+	font-display: swap;
+	font-style: normal;
+	size-adjust: 107%;
+	font-named-instance: 'Regular';
+	src: url('/assets/Literata[opsz,wght].80221b9d.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'Literata VF';
+	font-weight: 400 700;
+	font-display: swap;
+	font-style: italic;
+	size-adjust: 107%;
+	font-named-instance: 'Italic';
+	src: url('/assets/Literata-Italic[opsz,wght].5d0577bf.woff2') format('woff2');
+}
+
+/* Source Sans Variable */
+
+@font-face {
+	font-family: 'Source Sans VF';
+	font-weight: 400 900;
+	font-display: swap;
+	font-style: normal;
+	size-adjust: 112%;
+	font-named-instance: 'Regular';
+	src: url('/assets/SourceSans3VF-Roman.ttf.0a6aa0ea.woff2') format('woff2');
+}
+@font-face {
+	font-family: 'Source Sans VF';
+	font-weight: 400 900;
+	font-display: swap;
+	font-style: italic;
+	size-adjust: 112%;
+	font-named-instance: 'Italic';
+	src: url('/assets/SourceSans3VF-Italic.ttf.0789c02c.woff2') format('woff2');
+}
+
+/* IBM Plex Sans Variable */
+
+@font-face {
+	font-family: 'IBM Plex Sans VF';
+	font-weight: 400 900;
+	font-display: swap;
+	font-style: normal;
+	size-adjust: 106%;
+	font-named-instance: 'Regular';
+	src: url('/assets/IBMPlexSansVar-Roman.4d4dc7e3.woff2') format('woff2');
+}
+@font-face {
+	font-family: 'IBM Plex Sans VF';
+	font-weight: 400 900;
+	font-display: swap;
+	font-style: italic;
+	size-adjust: 106%;
+	font-named-instance: 'Italic';
+	src: url('/assets/IBMPlexSansVar-Italic.56c26376.woff2') format('woff2');
+}
+
+/* Piazzolla Variable */
+
+@font-face {
+	font-family: 'Piazzolla VF';
+	font-weight: 450 900;
+	font-display: swap;
+	font-style: normal;
+	size-adjust: 113%;
+	font-named-instance: 'Regular';
+	src: url('/assets/Piazzolla-Variable.f1b3d687.woff2') format('woff2');
+}
+@font-face {
+	font-family: 'Piazzolla VF';
+	font-weight: 450 900;
+	font-display: swap;
+	font-style: italic;
+	size-adjust: 113%;
+	font-named-instance: 'Italic';
+	src: url('/assets/Piazzolla-Italic-Variable.644660f6.woff2') format('woff2');
+}
+
+/* Public Sans Variable */
+
+@font-face {
+	font-family: 'Public Sans VF';
+	font-weight: 400 900;
+	font-display: swap;
+	font-style: normal;
+	size-adjust: 103%;
+	font-named-instance: 'Regular';
+	src: url('/assets/PublicSans-Regular[wght].82d45c7f.woff2') format('woff2');
+}
+@font-face {
+	font-family: 'Public Sans VF';
+	font-weight: 400 900;
+	font-display: swap;
+	font-style: italic;
+	size-adjust: 103%;
+	font-named-instance: 'Italic';
+	src: url('/assets/PublicSans-Italic[wght].ed8e17fd.woff2') format('woff2');
+}
+
+/* Open Dyslexic Static */
+
+@font-face {
+	font-family: 'OpenDyslexic';
+	font-style: normal;
+	font-weight: 400;
+	src: local(''),
+		url('/assets/OpenDyslexic-Regular.2b8baf12.woff2') format('woff2');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'OpenDyslexic';
+	font-style: italic;
+	font-weight: 400;
+	src: local(''),
+		url('/assets/OpenDyslexic-Italic.b3d54ae7.woff2') format('woff2');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'OpenDyslexic';
+	font-style: normal;
+	font-weight: 700;
+	src: local(''),
+		url('/assets/OpenDyslexic-Bold.d99507e1.woff2') format('woff2');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'OpenDyslexic';
+	font-style: italic;
+	font-weight: 700;
+	src: local(''),
+		url('/assets/OpenDyslexic-Bold-Italic.03862e14.woff2') format('woff2');
+	font-display: swap;
+}
+
+/* Atkinson Static */
+
+@font-face {
+	font-family: 'Atkinson Hyperlegible';
+	font-weight: 400;
+	font-display: swap;
+	font-style: normal;
+	size-adjust: 109%;
+	font-named-instance: 'Regular';
+	src: url('/assets/Atkinson-Hyperlegible-Regular-102a.efe52c57.woff2')
+		format('woff2');
+}
+@font-face {
+	font-family: 'Atkinson Hyperlegible';
+	font-weight: 400;
+	font-display: swap;
+	font-style: italic;
+	size-adjust: 109%;
+	font-named-instance: 'Italic';
+	src: url('/assets/Atkinson-Hyperlegible-Italic-102a.a62205ae.woff2')
+		format('woff2');
+}
+
+@font-face {
+	font-family: 'Atkinson Hyperlegible';
+	font-weight: 700;
+	font-display: swap;
+	font-style: normal;
+	size-adjust: 109%;
+	font-named-instance: 'Regular';
+	src: url('/assets/Atkinson-Hyperlegible-Bold-102a.f0189dcb.woff2')
+		format('woff2');
+}
+@font-face {
+	font-family: 'Atkinson Hyperlegible';
+	font-weight: 700;
+	font-display: swap;
+	font-style: italic;
+	size-adjust: 109%;
+	font-named-instance: 'Italic';
+	src: url('/assets/Atkinson-Hyperlegible-BoldItalic-102a.ca273b75.woff2')
+		format('woff2');
+}
