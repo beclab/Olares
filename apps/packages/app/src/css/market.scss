@@ -1,0 +1,431 @@
+// app global css in SCSS form
+
+@import 'common/variables';
+@import 'common/card';
+
+.text-color-B2C8FF {
+	color: #b2c8ff;
+}
+
+.text-color-B2B0AF {
+	color: #b2b0af;
+}
+
+.text-color-847C77 {
+	color: #847c77;
+}
+
+.text-color-1A130F {
+	color: #1a130f;
+}
+
+.text-color-505050 {
+	color: #505050;
+}
+
+.color-primary {
+	color: #2f6cff;
+	background-color: #2f6cff;
+}
+
+.text-color-error {
+	color: #ff4d4d;
+}
+
+.bg-color-error {
+	background-color: #ff4d4d;
+}
+
+.color-transparent {
+	color: transparent;
+	background-color: transparent;
+}
+
+.color-drawer {
+	color: #f6f6f6e5;
+	background-color: #f6f6f6e5;
+}
+
+.background-primary {
+	background-color: #2f6cff;
+}
+
+.background-color-FAE7E6 {
+	background-color: #fae7e6;
+}
+
+.background-color-E6EDFF {
+	background-color: #e6edff;
+}
+
+.background-color-B2C8FF {
+	background-color: #b2c8ff;
+}
+
+.background-color-E0DEDD {
+	background-color: #e0dedd;
+}
+
+.app-store-application {
+	width: 100%;
+	display: grid;
+	align-items: center;
+	justify-items: center;
+	justify-content: center;
+	padding-bottom: 20px;
+	grid-column-gap: 32px;
+	position: relative;
+
+	@media (max-width: 800px), (min-width: 800px) and (max-width: 1024px) {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	@media (min-width: 1024px) and (max-width: 1600px) {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	@media (min-width: 1600px) and (max-width: 1920px), (min-width: 1920px) {
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+	}
+}
+
+.app-store-application-mobile {
+	width: 100%;
+	display: grid;
+	align-items: center;
+	justify-items: center;
+	justify-content: center;
+	grid-column-gap: 32px;
+	position: relative;
+	grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.app-store-workflow {
+	width: 100%;
+	display: grid;
+	align-items: center;
+	justify-items: center;
+	justify-content: center;
+	grid-column-gap: 32px;
+	grid-row-gap: 32px;
+	padding-bottom: 20px;
+	position: relative;
+
+	@media (max-width: 800px), (min-width: 800px) and (max-width: 1024px) {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	@media (min-width: 1024px) and (max-width: 1600px) {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	@media (min-width: 1600px) and (max-width: 1920px), (min-width: 1920px) {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+}
+
+.app-store-workflow-mobile {
+	width: 100%;
+	display: grid;
+	align-items: center;
+	justify-items: center;
+	justify-content: center;
+	grid-row-gap: 12px;
+	position: relative;
+	grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.app-store-topic {
+	width: 100%;
+	display: grid;
+	padding-left: 44px;
+	padding-right: 44px;
+	column-gap: 20px;
+
+	@media (max-width: 800px), (min-width: 800px) and (max-width: 1024px) {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	@media (min-width: 1024px) and (max-width: 1600px) {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	@media (min-width: 1600px) and (max-width: 1920px), (min-width: 1920px) {
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+	}
+}
+
+// fade styles!
+.fade-enter-active,
+.fade-leave-active {
+	transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+	opacity: 0;
+}
+
+.slide-left-enter-active,
+.slide-left-leave-active,
+.slide-right-enter-active,
+.slide-right-leave-active {
+	will-change: transform;
+	transition: transform 0.3s;
+	height: 100%;
+	width: 100%;
+	top: 0;
+	position: absolute;
+	backface-visibility: hidden;
+	perspective: 1000;
+}
+
+// 向左离开：从当前位置 (0%) 平移到屏幕的左侧 (-100%)
+.slide-left-leave-to {
+	transform: translateX(-100%);
+}
+// 向左进入：从屏幕的右侧 (100%) 平移到当前位置 (0%)
+.slide-left-enter-from {
+	transform: translateX(100%);
+}
+
+// 向右离开：从当前位置(0%) 平移到屏幕的右侧 (100%)
+.slide-right-leave-to {
+	transform: translateX(100%);
+}
+
+// 向右进入：从屏幕的左侧 (-100%) 平移到当前位置 (0%)
+.slide-right-enter-from {
+	transform: translateX(-100%);
+}
+
+.material-symbols-rounded {
+	font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+	transition: opacity 0.5s;
+}
+.fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+	opacity: 0;
+}
+
+.q-tab__content {
+	padding: 0;
+}
+
+.q-drawer--left.q-drawer--bordered {
+	border-right: 1px solid $separator;
+}
+
+body.body--dark .q-drawer {
+	border-color: $separator;
+}
+
+@keyframes animate {
+	0% {
+		transform: rotate(0deg);
+		-webkit-transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+		-webkit-transform: rotate(360deg);
+	}
+}
+@-webkit-keyframes animate {
+	0% {
+		transform: rotate(0deg);
+		-webkit-transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+		-webkit-transform: rotate(360deg);
+	}
+}
+
+.q-btn--dense {
+	padding: 0 !important;
+}
+
+#discover-html b {
+	color: $ink-1 !important;
+}
+#discover-html p {
+	color: $ink-2 !important;
+}
+
+#readMe {
+	font-size: map-get($body2, size) !important;
+	line-height: map-get($body2, line-height) !important;
+	font-weight: map-get($body2, weight) !important;
+	letter-spacing: map-get($body2, letter-spacing) !important;
+	color: $ink-2;
+}
+
+#readMe img {
+	width: 100%;
+}
+
+#readMe h1 {
+	font-size: map-get($h3, size) !important;
+	line-height: map-get($h3, line-height) !important;
+	font-weight: map-get($h3, weight) !important;
+	letter-spacing: map-get($h3, letter-spacing) !important;
+	color: $ink-2;
+	margin-top: 20px;
+	margin-bottom: 20px;
+}
+
+#readMe h2 {
+	font-size: map-get($h4, size) !important;
+	line-height: map-get($h4, line-height) !important;
+	font-weight: map-get($h4, weight) !important;
+	letter-spacing: map-get($h4, letter-spacing) !important;
+	color: $ink-2;
+	margin-top: 20px;
+	margin-bottom: 12px;
+}
+
+#readMe h3 {
+	font-size: map-get($h5, size) !important;
+	line-height: map-get($h5, line-height) !important;
+	font-weight: map-get($h5, weight) !important;
+	letter-spacing: map-get($h5, letter-spacing) !important;
+	color: $ink-2;
+	margin-top: 20px;
+	margin-bottom: 12px;
+}
+
+#readMe h4 {
+	font-size: map-get($h6, size) !important;
+	line-height: map-get($h6, line-height) !important;
+	font-weight: map-get($h6, weight) !important;
+	letter-spacing: map-get($h6, letter-spacing) !important;
+	color: $ink-2;
+	margin-top: 20px;
+	margin-bottom: 12px;
+}
+
+#readMe h5 {
+	font-size: map-get($subtitle1, size) !important;
+	line-height: map-get($subtitle1, line-height) !important;
+	font-weight: map-get($subtitle1, weight) !important;
+	letter-spacing: map-get($subtitle1, letter-spacing) !important;
+	color: $ink-2;
+	margin-top: 12px;
+	margin-bottom: 8px;
+}
+
+#readMe h6 {
+	font-size: map-get($subtitle2, size) !important;
+	line-height: map-get($subtitle2, line-height) !important;
+	font-weight: map-get($subtitle2, weight) !important;
+	letter-spacing: map-get($subtitle2, letter-spacing) !important;
+	color: $ink-2;
+	margin-top: 12px;
+	margin-bottom: 8px;
+}
+
+#readMe p {
+	margin-top: 0;
+	margin-bottom: 8px;
+}
+
+#readMe ul {
+	padding-left: 20px;
+	margin-bottom: 8px;
+	margin-top: 8px;
+}
+
+#readMe blockquote {
+	color: $ink-2;
+	padding: 10px 20px;
+	background-color: $background-3;
+	border-left: 3px solid $background-2;
+	word-break: break-word;
+	margin: 0 0 20px;
+
+	p {
+		margin: 0;
+	}
+}
+#readMe a {
+	color: $info;
+}
+#readMe table {
+	border-collapse: collapse;
+	width: 100%;
+}
+#readMe th,
+td {
+	border: 1px solid $separator;
+	padding: 8px;
+	text-align: left;
+}
+#readMe th {
+	background-color: $ink-3;
+}
+
+#readMe pre code.hljs {
+	color: $ink-2;
+	background-color: $background-3;
+	border-radius: 6px;
+}
+
+#readMe .code-container {
+	position: relative;
+}
+
+#readMe .copy-button {
+	position: absolute;
+	top: 5px;
+	right: 5px;
+	background-color: #f0f0f0;
+	border: 1px solid $separator;
+	border-radius: 3px;
+	cursor: pointer;
+}
+
+#readMe .copy-button:hover {
+	background-color: #e0e0e0;
+}
+
+.q-table th,
+.q-table td {
+	padding: 0 !important;
+}
+
+.custom-icon-div {
+	position: relative;
+	width: 24px;
+	height: 24px;
+	overflow: hidden;
+}
+
+.active-icon {
+	position: absolute;
+	left: -24px;
+	filter: drop-shadow(24px 0 $blue-default);
+}
+
+.dropdown-menu {
+	overflow: hidden;
+	width: 108px;
+	border-radius: 8px;
+	padding: 8px;
+	box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+// The container horizontal gap, which acts as the offset for breakpoints
+$gap: 32px !default;
+// 960, 1152, and 1344 have been chosen because they are divisible by both 12 and 16
+$tablet: 769px !default;
+// 960px container + 4rem
+$desktop: 960px+ (2 * $gap) !default;
+// 1152px container + 4rem
+$widescreen: 1152px+ (2 * $gap) !default;
+// 1344px container + 4rem;
+$fullhd: 1344px+ (2 * $gap) !default;
+
+$breakpoint-md: 1599px !default;
