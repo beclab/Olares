@@ -1,0 +1,107 @@
+export default {
+	'Authentication type not supported!': 'Authentication type not supported!',
+	'Setup Canceled': 'Setup Canceled',
+	'{browser} on {platform}': '{browser} on {platform}',
+	'{platform} device': '{platform} device',
+	'The request was canceled.': 'The request was canceled.',
+	'One-Time Password': 'One-Time Password',
+	Username: 'Username',
+	Password: 'Password',
+	Mnemonic: 'Mnemonic',
+	'Email Address': 'Email Address',
+	URL: 'URL',
+	Date: 'Date',
+	Month: 'Month',
+	'Credit Card': 'Credit Card',
+	'Credit Card Number': 'Credit Card Number',
+	'Phone Number': 'Phone Number',
+	PIN: 'PIN',
+	'Plain Text': 'Plain Text',
+	'Card Number': 'Card Number',
+	'Card Owner': 'Card Owner',
+	'Valid Until': 'Valid Until',
+	CVC: 'CVC',
+	'Column {column}': 'Column {column}',
+	Notes: 'Notes',
+	'Other Username': 'Other Username',
+	'Cardholder Name': 'Cardholder Name',
+	'Expiry Date': 'Expiry Date',
+	'Zip Code': 'Zip Code',
+	'Full Name': 'Full Name',
+	Email: 'Email',
+	'Address 1': 'Address 1',
+	'Address 2': 'Address 2',
+	City: 'City',
+	Country: 'Country',
+	State: 'State',
+	'API Scriet': 'API Secret',
+	Open: 'Open',
+	'Richtext / Markdown': 'Richtext / Markdown',
+	Name: 'Name',
+	Manifest: 'Manifest',
+	Credential: 'Credential',
+	VC: 'VC',
+	Exchange: 'Exchange',
+	Key: 'Key',
+	Secret: 'Secret',
+	Passphrase: 'Passphrase',
+	Subaccount: 'Subaccount',
+	'Crypto Wallet': 'Crypto Wallet',
+	'Private Key': 'Private Key',
+	'Website / App': 'Website / App',
+	Computer: 'Computer',
+	'Bank Account': 'Bank Account',
+	'Account Owner': 'Account Owner',
+	IBAN: 'IBAN',
+	BIC: 'BIC',
+	'Card PIN': 'Card PIN',
+	'WIFI Password': 'WIFI Password',
+	Passport: 'Passport',
+	'Passport Number': 'Passport Number',
+	Birthdate: 'Birthdate',
+	Birthplace: 'Birthplace',
+	'Issued On': 'Issued On',
+	Expires: 'Expires',
+	Authenticator: 'Authenticator',
+	Document: 'Document',
+	Custom: 'Custom',
+	'You have been granted access to this vault, but before you can see its contents somebody else with access to it has to log into their account first. Once you have full access, this warning will disappear automatically.':
+		'You have been granted access to this vault, but before you can see its contents somebody else with access to it has to log into their account first. Once you have full access, this warning will disappear automatically.',
+	'This vault could not be synchronized because you no longer have access to it.':
+		'This vault could not be synchronized because you no longer have access to it.',
+	"Local changes to this vault could not be synchronized because there was a problem retrieving information for this vault's organization. If this problem persists please contact customer support!":
+		"Local changes to this vault could not be synchronized because there was a problem retrieving information for this vault's organization. If this problem persists please contact customer support!",
+	'Syncing local changes failed because the organization this vault belongs to is frozen.':
+		'Syncing local changes failed because the organization this vault belongs to is frozen.',
+	"Syncing local changes failed because you don't have write permissions for this vault.":
+		"Syncing local changes failed because you don't have write permissions for this vault.",
+	'This group name is not available!': 'This group name is not available!',
+	'A group with this name already exists!':
+		'A group with this name already exists!',
+	'Group not found!': 'Group not found!',
+	'Another group with this name already exists!':
+		'Another group with this name already exists!',
+	'App needs to be logged in and unlocked to update an organization member!':
+		'App needs to be logged in and unlocked to update an organization member!',
+	'App needs to be logged in and unlocked to remove a organization member!':
+		'App needs to be logged in and unlocked to remove a organization member!',
+	'App needs to be logged in and unlocked to transfer an organizations ownership!':
+		'App needs to be logged in and unlocked to transfer an organizations ownership!',
+	'App needs to be logged in and unlocked to create an invite!':
+		'App needs to be logged in and unlocked to create an invite!',
+	'App needs to be logged in and unlocked to confirm an invite!':
+		'App needs to be logged in and unlocked to confirm an invite!',
+	'Failed to verify invitee information!':
+		'Failed to verify invitee information!',
+	'need to be logged in to update vault!':
+		'need to be logged in to update vault!',
+	'Account needs to be unlocked to update vault!':
+		'Account needs to be unlocked to update vault!',
+	'Items with attachments cannot be moved!':
+		'Items with attachments cannot be moved!',
+	"'minMemberUpdated' property may not decrease!":
+		"'minMemberUpdated' property may not decrease!",
+	None: 'None',
+	'Field Name': 'Field Name',
+	'Field type': 'Field type'
+};

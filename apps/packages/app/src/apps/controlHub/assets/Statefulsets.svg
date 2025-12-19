@@ -1,0 +1,14 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Statefulsets" clip-path="url(#clip0_391_694)">
+<circle id="Ellipse 55" cx="32" cy="32" r="32" fill="#D5E9FC"/>
+<g id="Group 40004">
+<path id="Subtract" fill-rule="evenodd" clip-rule="evenodd" d="M24 22V18C24 16.8954 24.8954 16 26 16L46 16C47.1046 16 48 16.8954 48 18V38C48 39.1046 47.1046 40 46 40H42V24C42 22.8954 41.1046 22 40 22L24 22Z" fill="#8DCFF4"/>
+<path id="Subtract_2" fill-rule="evenodd" clip-rule="evenodd" d="M18 24C16.8954 24 16 24.8954 16 26V46C16 47.1046 16.8954 48 18 48H38C39.1046 48 40 47.1046 40 46V26C40 24.8954 39.1046 24 38 24H18ZM33.4853 36.3962C33.7453 36.1961 33.7453 35.8039 33.4853 35.6038L25.805 29.6915C25.4762 29.4384 25 29.6728 25 30.0877V41.9123C25 42.3272 25.4762 42.5616 25.805 42.3085L33.4853 36.3962Z" fill="#3BA3EE"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_391_694">
+<rect width="64" height="64" fill="white"/>
+</clipPath>
+</defs>
+</svg>

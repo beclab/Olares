@@ -1,0 +1,156 @@
+// app global css in SCSS form
+.text-color-major {
+	color: #242424;
+}
+
+.bg-color-major {
+	background-color: #242424;
+}
+
+.text-color-minor {
+	color: #777676;
+}
+
+.bg-color-minor {
+	background-color: #777676;
+}
+
+.rounded-borders-sm {
+	border-radius: 8px;
+	-webkit-border-radius: 8px;
+	-moz-border-radius: 8px;
+	-ms-border-radius: 8px;
+	-o-border-radix: 8px;
+	-o-border-radius: 8px;
+}
+
+.rounded-borders-md {
+	border-radius: 12px;
+	-webkit-border-radius: 12px;
+	-moz-border-radius: 12px;
+	-ms-border-radius: 12px;
+	-o-border-radius: 12px;
+}
+
+.rounded-borders-lg {
+	border-radius: 20px;
+	-webkit-border-radius: 20px;
+	-moz-border-radius: 20px;
+	-ms-border-radius: 20px;
+	-o-border-radius: 20px;
+}
+
+.rounded-borders-xl {
+	border-radius: 32px;
+	-webkit-border-radius: 32px;
+	-moz-border-radius: 32px;
+	-ms-border-radius: 32px;
+	-o-border-radius: 32px;
+}
+
+.q-btn--outline:before {
+	border-color: $btn-stroke;
+}
+
+// .q-btn {
+// 	color: $ink-on-brand;
+// }
+.q-btn .q-icon {
+	color: $ink-2;
+}
+
+.q-menu {
+	padding: 8px;
+	border-radius: 8px;
+	background: $background-2;
+
+	box-shadow: 0px 4px 10px 0px rgba(0, 0, 0, 0.2);
+}
+
+body.desktop .q-focus-helper ～ .q-btn--rounded {
+	border-radius: 4px;
+}
+
+.q-menu .q-item {
+	padding: 8px;
+	padding-left: 12px;
+	font-size: 12px;
+	font-style: normal;
+	font-weight: 500;
+	line-height: 16px;
+	color: $ink-2;
+	min-height: 32px;
+	border-radius: 4px;
+}
+
+.q-card--dark {
+	border-color: $separator;
+}
+
+.q-inner-loading--dark {
+	background: $background-1;
+}
+
+body.body--dark .q-dialog__backdrop {
+	background: $background-6;
+}
+
+.q-btn--outline:before {
+	border-color: $btn-stroke;
+}
+
+// .q-btn {
+// 	color: $ink-on-brand;
+// }
+.q-btn .q-icon {
+	color: $ink-2;
+}
+
+.q-menu {
+	padding: 8px;
+	border-radius: 8px;
+	background: $background-2;
+
+	box-shadow: 0px 4px 10px 0px rgba(0, 0, 0, 0.2);
+}
+
+body.desktop .q-focus-helper ～ .q-btn--rounded {
+	border-radius: 4px;
+}
+
+.q-menu .q-item {
+	padding: 8px;
+	padding-left: 12px;
+	font-size: 12px;
+	font-style: normal;
+	font-weight: 500;
+	line-height: 16px;
+	color: $ink-2;
+	min-height: 32px;
+	border-radius: 4px;
+}
+
+.q-card--dark {
+	border-color: $separator;
+}
+
+.q-inner-loading--dark {
+	background: $background-1;
+}
+
+body.body--dark .q-dialog__backdrop {
+	background: rgba(0, 0, 0, 0.7);
+}
+
+.ace_editor {
+	border-radius: 4px;
+}
+
+.dashboard-global-ok-button {
+	background: $primary;
+	color: #fff;
+}
+
+.q-btn .q-icon {
+	font-size: 1.666666em;
+}

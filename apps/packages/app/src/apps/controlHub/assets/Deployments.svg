@@ -1,0 +1,14 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Deployments" clip-path="url(#clip0_391_686)">
+<circle id="Ellipse 55" cx="32" cy="32" r="32" fill="#E9E6FD"/>
+<g id="Group 40004">
+<path id="Subtract" fill-rule="evenodd" clip-rule="evenodd" d="M24 22V18C24 16.8954 24.8954 16 26 16L46 16C47.1046 16 48 16.8954 48 18V38C48 39.1046 47.1046 40 46 40H42V24C42 22.8954 41.1046 22 40 22L24 22Z" fill="#DA79CF"/>
+<rect id="Rectangle 821" x="16" y="24" width="24" height="24" rx="2" fill="#5F42E3"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_391_686">
+<rect width="64" height="64" fill="white"/>
+</clipPath>
+</defs>
+</svg>

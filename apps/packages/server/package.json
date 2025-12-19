@@ -1,0 +1,55 @@
+{
+    "name": "@didvault/server",
+    "version": "0.1.0",
+    "description": "DidVault server component",
+    "private": true,
+    "files": [
+        "src",
+        "tsconfig.json"
+    ],
+    "main": "index.js",
+    "author": "Pengpeng <pengpeng@bytetrade.io>",
+    "license": "GPLv3",
+    "devDependencies": {
+        "@types/fs-extra": "9.0.11",
+        "@types/mixpanel": "2.14.3",
+        "@types/node": "15.6.1",
+        "@types/stripe": "8.0.416",
+        "add-asset-webpack-plugin": "2.0.1",
+        "ts-loader": "9.5.4",
+        "ts-node": "10.9.2",
+        "ts-node-dev": "2.0.0",
+        "typescript": "4.9.5",
+        "webpack": "5.101.3",
+        "webpack-cli": "5.1.4"
+    },
+    "dependencies": {
+        "@didvault/sdk": "../sdk",
+        "bcrypt": "6.0.0",
+        "ansi-colors": "4.1.1",
+        "axios": "1.12.0",
+        "date-fns": "2.22.1",
+        "dotenv": "16.0.0",
+        "fs-extra": "10.0.0",
+        "level": "7.0.0",
+        "maxmind": "4.3.2",
+        "mixpanel": "0.13.0",
+        "pg": "8.7.1",
+        "stripe": "8.212.0"
+    },
+    "scripts": {
+        "start": "ts-node src/init.ts",
+        "start-dry": "ts-node src/init.ts --dryrun",
+        "repl": "ts-node src/init-repl-client.ts",
+        "dev": "BFL=http://localhost:5010 SIGN_SEVER_URL=http://localhost:5020 AUTH_URL=http://localhost:5010 ts-node-dev src/init.ts",
+        "dev:desktop": "BFL=http://localhost:5010 SIGN_SEVER_URL=http://localhost:5020 AUTH_URL=http://localhost:5010 ts-node-dev src/init.ts",
+        "dev-inspect": "node -r ts-node/register --inspect-brk --stack-trace-limit=1000 src/init.ts",
+        "test": "tsc --noEmit && cd test && mocha -r ts-node/register *.ts --timeout 5000",
+        "clean": "rm -rf ./data; rm -rf ./attachments",
+        "build": "webpack --mode=production --node-env=production"
+    },
+    "engines": {
+        "node": "16.13.1",
+        "npm": "8.2.0"
+    }
+}

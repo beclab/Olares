@@ -1,0 +1,54 @@
+FROM node:16.13.1-alpine as server_dist
+
+WORKDIR /server_dist
+
+# Only copy over the packages files of all required packages.
+# This will ensure that we don't have to install all dependencies
+# again if any source files change.
+COPY package*.json lerna.json tsconfig.json ./
+COPY packages/server/package*.json ./packages/server/
+COPY packages/sdk/package*.json ./packages/sdk/
+# COPY packages/locale/package*.json ./packages/locale/
+# Install dependencies and bootstrap packages
+RUN npm ci --unsafe-perm
+
+# Now copy over source files and assets
+COPY packages/server/src ./packages/server/src
+COPY packages/sdk/src ./packages/sdk/src
+# COPY packages/locale/src ./packages/locale/src
+# COPY packages/locale/res ./packages/locale/res
+COPY packages/server/tsconfig.json ./packages/server/
+COPY packages/sdk/tsconfig.json ./packages/sdk/
+# COPY packages/locale/tsconfig.json ./packages/locale/
+COPY packages/server/webpack.config.js ./packages/server/webpack.config.js
+
+RUN npm run server:build
+
+
+
+FROM node:16.13.1 as server_dist2
+
+WORKDIR /server_dist2/packages/server
+
+COPY --from=server_dist /server_dist/packages/server/dist/package*.json .
+
+RUN npm install
+
+COPY --from=server_dist /server_dist/packages/server/dist/ .
+
+
+
+FROM node:16.13.1-buster-slim
+
+EXPOSE 3000
+ENV PL_ASSETS_DIR=/assets
+#ENV PL_ATTACHMENTS_DIR=/attachments
+ENV PL_SERVER_CLIENT_URL=http://localhost
+
+WORKDIR /padloc/packages/server
+
+COPY --from=server_dist2 /server_dist2/packages/server/ .
+
+ENTRYPOINT ["npm", "run"]
+
+CMD [ "server"]

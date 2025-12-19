@@ -1,0 +1,66 @@
+.wizard-content {
+	padding-top: 200px;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding-left: 0px;
+
+	&__title {
+		font-size: map-get($map: $h5, $key: size);
+		font-weight: map-get($map: $h5, $key: weight);
+		line-height: map-get($map: $h5, $key: line-height);
+		letter-spacing: map-get($map: $h5, $key: letter-spacing);
+
+		text-align: center;
+
+		margin-top: 20px;
+		letter-spacing: 0.02em;
+		color: $ink-1;
+		margin-top: 20px;
+	}
+
+	&__detail {
+		font-size: map-get($map: $body3, $key: size);
+		font-weight: map-get($map: $body3, $key: weight);
+		line-height: map-get($map: $body3, $key: line-height);
+		letter-spacing: map-get($map: $body3, $key: letter-spacing);
+
+		text-align: center;
+		color: $ink-2;
+		margin-top: 8px;
+		// max-width: 300px;
+		max-width: calc(100% - 40px);
+
+		a {
+			color: $blue;
+			text-decoration: underline;
+			cursor: pointer;
+		}
+	}
+
+	&__image {
+		width: 124px;
+		height: 124px;
+	}
+
+	&__retry {
+		height: 32px;
+		width: 96px;
+		margin-top: 32px;
+
+		&__btn {
+			width: 100%;
+			height: 100%;
+			border-radius: 8px;
+			text-align: center;
+			text-transform: capitalize;
+			background-color: $yellow;
+
+			font-size: map-get($map: $body3, $key: size);
+			font-weight: map-get($map: $body3, $key: weight);
+			line-height: map-get($map: $body3, $key: line-height);
+			letter-spacing: map-get($map: $body3, $key: letter-spacing);
+		}
+	}
+}

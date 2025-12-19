@@ -1,0 +1,175 @@
+.material-symbols-rounded {
+	font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+}
+
+.text-color-B2B0AF {
+	color: #b2b0af;
+}
+
+.bg-color-B2B0AF {
+	background: #b2b0af;
+}
+
+.text-color-5C5551 {
+	color: #5c5551;
+}
+
+.bg-color-5C5551 {
+	background: #5c5551;
+}
+
+.page-container-root {
+	width: 100%;
+	height: 100vh;
+	overflow: hidden;
+	position: relative;
+}
+
+.font-icon {
+	font-weight: 300;
+	opacity: 20;
+}
+
+.btn-confirm {
+	font-family: Roboto;
+	height: 32px;
+	padding-left: 20px;
+	padding-right: 20px;
+	width: auto;
+	font-size: 12px;
+	font-weight: 400;
+	line-height: 16px;
+	letter-spacing: 0em;
+	text-align: left;
+	border-radius: 8px;
+	background-color: #ff7733;
+	color: #ffffff;
+	text-transform: capitalize;
+}
+
+.recommend-header-field {
+	padding: 0;
+}
+
+.q-table th,
+.q-table td {
+	padding: 0;
+}
+
+.recommend-body-field {
+	height: 64px !important;
+	padding-left: 0 !important;
+	text-align: left;
+}
+
+.q-gutter-x-sm > *,
+.q-gutter-sm > * {
+	margin-left: 8px;
+}
+
+.q-gutter-x-sm,
+.q-gutter-sm {
+	margin-left: 8px;
+}
+
+.q-pb-lg {
+	padding-bottom: 0;
+}
+
+//anim
+
+.slide-fade-enter-active {
+	transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+	transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+	transform: translateX(20px);
+	opacity: 0;
+}
+
+.q-tab {
+	padding: 0 !important;
+}
+
+.q-tab__content {
+	padding: 0 !important;
+}
+
+.q-table thead,
+.q-table tr,
+.q-table th,
+.q-table td {
+	border-color: $separator;
+}
+
+.q-table__bottom {
+	border-top: 1px solid $separator;
+}
+
+.q-table--dark .q-table__bottom,
+.q-table--dark thead,
+.q-table--dark tr,
+.q-table--dark th,
+.q-table--dark td {
+	border-color: $separator;
+}
+
+.q-drawer--left.q-drawer--bordered {
+	border-right: 1px solid $separator;
+}
+
+.q-drawer--right.q-drawer--bordered {
+	border-left: 1px solid $separator;
+}
+
+body.body--dark .q-header,
+body.body--dark .q-footer,
+body.body--dark .q-drawer {
+	border-color: $separator;
+}
+
+.tooltip-normal {
+	@extend .text-body3 !optional;
+	text-align: center;
+	background: $tooltip-bg;
+	color: $ink-tooltip;
+	padding: 4px 8px !important;
+}
+
+.wise-page-root {
+	height: 100vh;
+	width: 100vw;
+
+	.wise-page-tabs {
+		height: 56px;
+	}
+
+	.wise-page-tab {
+		text-transform: capitalize;
+		padding: 0;
+		width: auto;
+	}
+
+	.wise-page-content {
+		height: calc(100% - 56px);
+		width: 100%;
+		overflow: auto;
+
+		.wise-page-tab-panels {
+			height: 100%;
+			width: 100%;
+			padding: 0;
+
+			.wise-page-tab-panel {
+				height: 100%;
+				width: 100%;
+				padding: 0;
+			}
+		}
+	}
+}

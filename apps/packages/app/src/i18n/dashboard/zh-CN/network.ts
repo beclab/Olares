@@ -1,0 +1,29 @@
+const options = {
+	NETWORK_PORT: '网口{ name }',
+	IS_CONNECTED: '已连接',
+	NOT_CONNECTED: '未连接',
+	NETWORK_CONFIGURATION: '网络配置',
+	UNKNOWN: '未知',
+	FULL_DUPLEX: '全双工',
+	IP_ACQUISITION_METHOD: 'IP 获取方式',
+	IPV4_ADDRESS: 'IPv4 地址',
+	IPV4_SUBNET_MASK: 'IPv4 子网掩码',
+	IPV4_GATEWAY_ADDRESS: 'IPv4 网关地址',
+	IPV4_DNS: 'IPv4 DNS',
+	IPV4_NETWORK_STATUS: 'IPv4 网络状态',
+	IPV6_ADDRESS: 'IPV6 地址',
+	IPV6_SUBNET_MASK: 'IPV6 子网掩码',
+	IPV6_GATEWAY_ADDRESS: 'IPV6 网关地址',
+	IPV6_DNS: 'IPV6 DNS',
+	IPV6_NETWORK_STATUS: 'IPV6 网络状态',
+	NET_USED: '使用中',
+	IP_METHOD_AUTO: 'DHCP',
+	IP_METHOD_MANUAL: '静态IP',
+	IP_METHOD_NONE: '无IP',
+	USE_STATUS: '使用状态',
+	CONN: '连接',
+	DISCONNECT: '断开',
+	NETWORK: '网络'
+};
+
+export default options;

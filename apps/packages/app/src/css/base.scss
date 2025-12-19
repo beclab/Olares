@@ -1,0 +1,17 @@
+.tooltip-normal {
+	@extend .text-body3 !optional;
+	text-align: center;
+	background: $tooltip-bg;
+	color: $ink-tooltip;
+	padding: 4px 8px !important;
+}
+
+.edit-label {
+	@extend .text-subtitle1 !optional;
+	color: $ink-1;
+}
+
+.block-desc {
+	@extend .text-body2 !optional;
+	color: $ink-3;
+}

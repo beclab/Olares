@@ -1,0 +1,231 @@
+// app global css in SCSS form
+
+/************************************************************************ 颜色 ********************************************************************/
+
+// Light Mode
+@import './layout.scss';
+
+.itemlist {
+	.vaultCard {
+		border-radius: 12px;
+		margin: 16px;
+
+		&:hover {
+			background: $background-hover;
+		}
+	}
+
+	.vaultCardActive {
+		background: $background-3;
+	}
+}
+
+.itemView {
+	.hearder-input {
+		.text {
+			color: #212322;
+		}
+	}
+
+	.tagSelect {
+		.tagChip {
+			border: 1px solid #212322;
+		}
+	}
+
+	.listRow {
+		border-bottom: 1px solid $separator;
+	}
+
+	.footer {
+		.reset {
+			background: #ffffff;
+			color: #4d4742;
+		}
+	}
+}
+
+.d-creatVault {
+	.item {
+		border: 1px solid #ececec;
+	}
+
+	.activeItem {
+		border: 1px solid $blue;
+		background-color: rgba(255, 235, 59, 0.1);
+	}
+
+	.but-cancel {
+		color: #7a7a7a;
+	}
+}
+
+.filedMenu {
+	.menuItem {
+		height: 32px;
+		padding: 0 4px;
+		border-radius: 4px;
+		margin: 2px 0;
+	}
+}
+
+.border-color-yellow {
+	border-color: $yellow !important;
+}
+
+.text-color-title {
+	color: $ink-1;
+}
+
+.text-color-sub-title {
+	color: $ink-2;
+}
+
+.bg-color-white {
+	background-color: #ffffff;
+}
+
+.bg-grey-11-hover {
+	&:hover {
+		background-color: #f5f5f5;
+	}
+}
+
+.titleBg {
+	background: $grey-11;
+}
+
+.avatar-circle {
+	border-radius: 50%;
+	overflow: hidden;
+}
+
+.card-mobile {
+	width: 80%;
+}
+
+.card-others {
+	width: 450px;
+}
+
+.bg-blue-1-hover {
+	border-left: 2px solid $blue-1;
+
+	&:hover {
+		border-left: 2px solid $blue-1;
+		background-color: $blue-1;
+		opacity: 1;
+	}
+}
+
+body.qrscanner {
+	background-color: transparent !important;
+}
+
+.text-underline {
+	text-decoration-line: underline;
+}
+
+.text-line-through {
+	text-decoration: line-through;
+}
+
+//settings
+.text-color-knob-red {
+	color: $red;
+}
+
+.bg-color-knob-red {
+	background-color: $red;
+}
+
+.text-color-knob-blue {
+	color: $blue;
+}
+
+.bg-color-knob-blue {
+	background-color: $blue;
+}
+
+.text-color-knob-green {
+	color: $green;
+}
+
+.bg-color-knob-green {
+	background-color: $green;
+}
+
+.text-color-knob-yellow {
+	color: $warning;
+}
+
+.bg-color-knob-yellow {
+	background-color: $warning;
+}
+
+.q-table td {
+	padding: 7px 0 !important;
+}
+
+.q-table th,
+.q-table td {
+	padding: 7px 0 !important;
+}
+
+/*****/
+.text-text1 {
+	color: $ink-1;
+}
+
+.text-text2 {
+	color: $ink-2;
+}
+
+.q-menu {
+	box-shadow: 0px 4px 10px 0px rgba(0, 0, 0, 0.2) !important;
+}
+
+.backup-status-img {
+	height: 16px;
+	width: 16px;
+}
+
+.single-line {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 1;
+	-webkit-box-orient: vertical;
+}
+
+
+.shake {
+	animation: shake 800ms ease-in-out;
+}
+
+@keyframes shake {
+
+	10%,
+	90% {
+		transform: translate3d(-1px, 0, 0);
+	}
+
+	20%,
+	80% {
+		transform: translate3d(+2px, 0, 0);
+	}
+
+	30%,
+	70% {
+		transform: translate3d(-4px, 0, 0);
+	}
+
+	40%,
+	60% {
+		transform: translate3d(+4px, 0, 0);
+	}
+
+	50% {
+		transform: translate3d(-4px, 0, 0);
+	}
+}

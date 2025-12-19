@@ -1,0 +1,679 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap');
+
+@function multiple($px, $mlte) {
+	@return $px * $mlte;
+}
+
+@mixin installation-boot-whole($multiple-num) {
+	.dialog_box_stepper {
+		height: 100%;
+		overflow: hidden;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		.q-stepper {
+			box-shadow: none;
+			overflow: hidden;
+			background: transparent;
+		}
+
+		.q-field__control:before,
+		.q-field__control:after {
+			display: none;
+		}
+	}
+
+	.stepper_step_itme {
+		width: 80%;
+		position: relative;
+		margin-bottom: 10vh;
+	}
+
+	.boot_dialog {
+		width: 100vw;
+		height: 100vh;
+		position: absolute;
+		top: 0px;
+		left: 0;
+		z-index: 1;
+	}
+
+	.boujee-text {
+		animation: move-bg 8s linear infinite;
+	}
+
+	@keyframes move-bg {
+		to {
+			background-position: var(--bg-size) 0;
+		}
+	}
+
+	.fade-out {
+		-webkit-animation: fade-out 0.6s ease-out 1s both;
+		animation: fade-out 0.6s ease-out 1s both;
+	}
+
+	@-webkit-keyframes fade-out {
+		0% {
+			opacity: 1;
+		}
+
+		100% {
+			opacity: 0;
+		}
+	}
+
+	@keyframes fade-out {
+		0% {
+			opacity: 1;
+		}
+
+		100% {
+			opacity: 0;
+		}
+	}
+
+	.fade-in {
+		-webkit-animation: fade-in 0.4s cubic-bezier(0.39, 0.575, 0.565, 1) both;
+		animation: fade-in 0.4s cubic-bezier(0.39, 0.575, 0.565, 1) both;
+	}
+
+	@-webkit-keyframes fade-in {
+		0% {
+			opacity: 0;
+		}
+
+		100% {
+			opacity: 1;
+		}
+	}
+
+	@keyframes fade-in {
+		0% {
+			opacity: 0;
+		}
+
+		100% {
+			opacity: 1;
+		}
+	}
+
+	.text_bold_header {
+		display: none;
+	}
+
+	.step_height {
+		height: 100%;
+	}
+
+	body.desktop .q-checkbox:not(.disabled) .q-checkbox__inner:before {
+		background: transparent !important;
+	}
+
+	.options_selected_Account {
+		padding: multiple(4px, $multiple-num) multiple(4px, $multiple-num);
+		width: multiple(348px, $multiple-num);
+		border: 1px solid #e6e6e6;
+		border-radius: multiple(4px, $multiple-num);
+		box-shadow: none;
+		min-width: multiple(348px, $multiple-num) !important;
+		font-family: 'Roboto';
+		font-style: normal;
+		font-weight: 400;
+		font-size: multiple(12px, $multiple-num);
+		color: #2f2f2f;
+
+		.q-focus-helper {
+			border-radius: multiple(4px, $multiple-num) !important;
+		}
+
+		.q-manual-focusable--focused>.q-focus-helper {
+			background: #15161a !important;
+		}
+
+		.q-item {
+			min-height: multiple(36px, $multiple-num);
+			padding: 0px;
+			padding-left: multiple(6px, $multiple-num);
+			height: multiple(36px, $multiple-num);
+
+			.q-checkbox__bg {
+				display: none;
+			}
+		}
+
+		.q-item--active {
+			color: #2f2f2f;
+		}
+
+		.q-checkbox__inner--truthy {
+			color: #00e190;
+		}
+	}
+
+	.welcome-wrap {
+		height: 100%;
+		width: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-direction: column;
+		position: relative;
+		overflow: hidden;
+
+		.welcome {
+			height: 100%;
+			width: 100%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-direction: column;
+			cursor: pointer;
+			position: relative;
+
+			.boujee-text {
+				--bg-size: 400%;
+				--color-one: hsla(48, 100%, 76%, 1);
+				--color-two: hsla(350, 100%, 70%, 1);
+				font-family: 'Poppins', sans-serif;
+				font-style: normal;
+				font-size: multiple(56px, $multiple-num);
+				background: linear-gradient(90deg,
+						var(--color-one),
+						var(--color-two),
+						var(--color-one)) 0 0 / var(--bg-size) 100%;
+				// color: #1f1814;
+				font-weight: 700;
+				line-height: 84px;
+				letter-spacing: 0.02em;
+				background-clip: text;
+				margin-bottom: 100px;
+			}
+
+			.boujee-desc {
+				color: var(--grey-06, #535252);
+				text-align: center;
+				font-family: Roboto;
+				font-size: 16px;
+				font-style: normal;
+				font-weight: 400;
+				line-height: 24px;
+				position: absolute;
+				bottom: 15vh;
+				left: 0;
+				right: 0;
+				margin: auto;
+			}
+		}
+	}
+
+	.account_box {
+		min-height: multiple(400px, $multiple-num);
+
+		p {
+			margin: 0px;
+		}
+
+		.account_center {
+			display: flex;
+			justify-content: flex-start;
+			align-items: center;
+			flex-direction: column;
+
+			.boot_justify {
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				width: 124px;
+				height: 124px;
+				border-radius: 62px;
+			}
+
+			.boot_justify1 {
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				width: 124px;
+				height: 124px;
+				border-radius: 62px;
+				overflow: hidden;
+			}
+
+			.Account_input_from {
+				width: multiple(360px, $multiple-num);
+				margin-top: multiple(32px, $multiple-num);
+				z-index: 1;
+
+				.q-field {
+					font-size: multiple(12px, $multiple-num);
+				}
+
+				p {
+					font-family: 'Roboto';
+					font-style: normal;
+					font-weight: 400;
+					font-size: multiple(12px, $multiple-num);
+					color: #888888;
+					margin-left: multiple(4px, $multiple-num);
+				}
+
+				.Account_input {
+					height: multiple(40px, $multiple-num);
+					border: 1px solid #e6e6e6;
+					border-radius: multiple(8px, $multiple-num);
+					padding-left: 6px;
+
+					.q-field__control {
+						height: multiple(40px, $multiple-num);
+						padding-left: multiple(6px, $multiple-num);
+					}
+				}
+
+				.Account_input_text {
+					font-size: multiple(14px, $multiple-num);
+
+					.q-field__native {
+						font-family: 'Roboto';
+						font-style: normal;
+						font-weight: 400;
+						line-height: multiple(0px, $multiple-num);
+						color: #2f2f2f;
+						padding: 0px 0px;
+						padding-bottom: 4px;
+					}
+				}
+
+				.Account_Password_text {
+					border-radius: 12px;
+					overflow: hidden;
+
+					.q-field__native {
+						font-style: normal;
+						font-weight: 400;
+						font-size: 12px;
+						color: #2f2f2f;
+						font-family: 'Aria';
+
+						&::placeholder {
+							color: #adadad;
+						}
+					}
+				}
+
+				.checkbox_from {
+					margin-left: -6px;
+
+					.q-checkbox__label {
+						font-family: 'Roboto';
+						font-style: normal;
+						font-weight: 400;
+						font-size: 12px;
+						color: #2f2f2f;
+					}
+				}
+
+				.Password_top {
+					// margin-top: multiple(16px, $multiple-num);
+				}
+
+				.failFlag {
+					color: #ff4d4d;
+					margin-top: 8px;
+					font-size: 12px;
+
+					a {
+						color: #3377ff;
+						cursor: pointer;
+						text-decoration: none;
+					}
+				}
+
+				p {
+					margin-bottom: multiple(4px, $multiple-num);
+				}
+
+				.q-field--auto-height .q-field__control {
+					min-height: 0px;
+				}
+
+				.q-field--auto-height .q-field__native {
+					min-height: 0px;
+				}
+
+				.q-field__marginal {
+					height: multiple(40px, $multiple-num);
+				}
+
+				.q-field__marginal {
+					padding-right: multiple(15px, $multiple-num);
+
+					.q-icon {
+						font-size: multiple(14px, $multiple-num);
+					}
+				}
+			}
+
+			.get-text {
+				font-family: 'Poppins', sans-serif;
+				font-style: normal;
+				font-weight: 800;
+				font-size: multiple(20px, $multiple-num);
+				text-align: center;
+				color: #1f1814;
+				margin-top: 20px;
+				letter-spacing: 0.02em;
+			}
+
+			.account_please_text {
+				font-family: 'Roboto';
+				font-style: normal;
+				font-weight: 400;
+				font-size: multiple(12px, $multiple-num);
+				text-align: center;
+				color: #5c5551;
+				margin-top: 8px;
+
+				a {
+					color: #3377ff;
+					text-decoration: underline;
+					cursor: pointer;
+				}
+
+				span {
+					color: #3377ff;
+					cursor: pointer;
+				}
+			}
+
+			.active-tip {
+				border-radius: 8px;
+				background: #F6F6F6;
+				font-size: 10px;
+			}
+
+			.State_text {
+				font-family: 'Roboto';
+				font-style: normal;
+				font-weight: 400;
+				font-size: multiple(14px, $multiple-num);
+				color: #2f2f2f;
+				text-align: center;
+				margin-top: 36px;
+			}
+
+			.please_text {
+				width: multiple(596px, $multiple-num);
+				text-align: center;
+
+				.user_text {
+					font-family: Roboto-Bold, Roboto;
+					font-weight: bold;
+				}
+			}
+
+			.please_text_left {
+				text-align: left;
+			}
+
+			.qrcode_scanning {
+				display: flex;
+				justify-content: center;
+				margin-top: multiple(20px, $multiple-num);
+
+				.qrcode_image_itme {
+					padding: multiple(0px, $multiple-num) multiple(0px, $multiple-num) !important;
+				}
+
+				.qrcode_scanning_itme {
+					width: multiple(184px, $multiple-num);
+					border: 1px solid #e6e6e6;
+					border-radius: multiple(4px, $multiple-num);
+					padding: multiple(12px, $multiple-num) multiple(12px, $multiple-num);
+					overflow: hidden;
+					display: flex;
+					flex-wrap: wrap;
+					align-items: center;
+					justify-content: center;
+
+					.qrcode_img {
+						width: multiple(160px, $multiple-num) !important;
+						height: multiple(160px, $multiple-num) !important;
+					}
+
+					.scanning_img {
+						width: 100%;
+						height: multiple(34px, $multiple-num);
+						display: flex;
+						align-items: center;
+						justify-content: center;
+
+						.img {
+							width: multiple(64px, $multiple-num);
+						}
+					}
+				}
+
+				.qrcode_scanning_left {
+					margin-left: multiple(32px, $multiple-num);
+				}
+			}
+		}
+	}
+
+	.refush {
+		width: 32px;
+		height: 32px;
+		border-radius: 16px;
+		background: rgba(31, 24, 20, 0.3);
+		margin: 0 auto;
+		animation: rotateRefush 1s linear infinite;
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: -60px;
+		margin: auto;
+		overflow: hidden;
+	}
+
+	@keyframes rotateRefush {
+		0% {
+			transform: rotate(0deg);
+		}
+
+		100% {
+			transform: rotate(360deg);
+		}
+	}
+
+	.dialog_box_stepper {
+		position: relative;
+
+		.float-wrap {
+			width: 50vw;
+			height: 400px;
+			position: absolute;
+			top: 0px;
+
+			>.float:nth-child(1) {
+				width: 100%;
+				height: 100%;
+				position: absolute;
+				top: -300px;
+				border-radius: 50%;
+				filter: blur(125px);
+			}
+
+			>.float:nth-child(2) {
+				width: 80%;
+				height: 80%;
+				position: absolute;
+				top: -260px;
+				left: 0;
+				right: 0;
+				margin: auto;
+				border-radius: 50%;
+				filter: blur(125px);
+			}
+		}
+
+		.navigation_Continue {
+			width: 100%;
+			display: flex;
+			justify-content: center;
+		}
+
+		.Continue_bottom {
+			width: multiple(640px, $multiple-num);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			position: relative;
+
+			.q-btn:before {
+				box-shadow: none;
+			}
+
+			.Continue_btn_text {
+				font-family: 'Roboto';
+				font-style: normal;
+				font-weight: 400;
+				font-size: multiple(12px, $multiple-num);
+				color: #2f2f2f;
+				height: multiple(37px, $multiple-num);
+				line-height: multiple(53px, $multiple-num);
+
+				span {
+					color: #888888;
+				}
+			}
+
+			.stepper_btn {
+				background: linear-gradient(90deg, #ffa337 0%, #ef438b 100%) !important;
+				color: #ffffff !important;
+			}
+
+			.stepper_btn_disable {
+				background: #f7f7f7 !important;
+				color: #888888;
+				border: 1px solid #e6e6e6;
+			}
+
+			.stepper_btn_left {
+				width: multiple(72px, $multiple-num);
+				height: multiple(24px, $multiple-num);
+				border-radius: multiple(4px, $multiple-num);
+				font-family: 'Roboto';
+				font-style: normal;
+				font-weight: 400;
+				font-size: multiple(12px, $multiple-num);
+				text-align: center;
+				line-height: multiple(24px, $multiple-num);
+				padding: 0px 0px;
+				// margin-left: multiple(12px, $multiple-num);
+			}
+
+			.stepper_btn_auto {
+				// margin-left: auto;
+			}
+
+			.stepper_btn_restart {
+				width: multiple(104px, $multiple-num);
+			}
+
+			.previous_btn {
+				width: multiple(24px, $multiple-num);
+				height: multiple(24px, $multiple-num);
+				min-width: multiple(24px, $multiple-num);
+				min-height: multiple(24px, $multiple-num);
+				border: 1px solid #e6e6e6;
+				border-radius: 4px;
+				margin-right: 12px;
+
+				.q-icon {
+					font-size: multiple(12px, $multiple-num);
+				}
+			}
+		}
+
+		.failed_Retry {
+			width: 100%;
+			display: flex;
+			justify-content: center;
+			margin-top: multiple(24px, $multiple-num);
+
+			.q-btn:before {
+				box-shadow: none;
+			}
+
+			.failed_Retry_btn {
+				width: multiple(104px, $multiple-num);
+				height: multiple(36px, $multiple-num);
+				background: linear-gradient(90deg, #ffa337 0%, #ef438b 100%) !important;
+				font-family: 'Roboto';
+				font-style: normal;
+				font-weight: 600;
+				font-size: multiple(14px, $multiple-num);
+				color: #ffffff;
+			}
+		}
+	}
+
+	.negative_class {
+		width: multiple(368px, $multiple-num);
+		height: multiple(40px, $multiple-num);
+		background: rgba(255, 77, 66, 0.1) !important;
+		border-radius: multiple(4px, $multiple-num);
+		font-family: 'Roboto';
+		font-style: normal;
+		font-weight: 400;
+		font-size: multiple(14px, $multiple-num);
+		color: #ff4d42 !important;
+	}
+}
+
+@keyframes slide {
+	0% {
+		width: 0%;
+	}
+
+	20% {
+		width: 100%;
+	}
+
+	100% {
+		width: 100%;
+	}
+}
+
+.outer {
+	display: inline-block;
+	position: relative;
+	color: transparent;
+}
+
+.inner {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	color: #1f1814;
+}
+
+.inner {
+	overflow: hidden;
+	white-space: nowrap;
+	animation: slide 6s ease-in-out infinite;
+}
+
+@media screen and (min-width: 1680px) {
+	@include installation-boot-whole(1.3);
+}
+
+@media screen and (max-width: 1279px) {
+	@include installation-boot-whole(0.7);
+}
+
+@media screen and (min-width: 980px) and (max-width: 1679px) {
+	@include installation-boot-whole(1);
+}

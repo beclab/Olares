@@ -1,0 +1,1 @@
+export const COLLECT_THEME = 'COLLECT_THEME';

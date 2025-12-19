@@ -1,0 +1,27 @@
+body.rtl {
+	direction: rtl;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+*,
+*:hover,
+*:active,
+*:focus {
+	outline: 0;
+}
+
+a {
+	text-decoration: none;
+}
+
+img {
+	max-width: 100%;
+}
+
+audio,
+video {
+	width: 100%;
+}

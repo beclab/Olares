@@ -1,0 +1,182 @@
+.scroll-area-conf-open {
+	width: 100%;
+	height: calc(100% - 48px - 10px);
+	padding-bottom: 10px;
+}
+
+.scroll-area-conf-header-open {
+	width: 100%;
+	height: calc(100% - 48px - 10px - 44px);
+	padding-bottom: 10px;
+}
+
+.scroll-area-conf-close {
+	width: 100%;
+	height: calc(100% - 48px - 48px);
+}
+
+.scroll-area-conf-header-close {
+	width: 100%;
+	height: calc(100% - 48px - 48px - 44px);
+}
+
+.login-sub-title {
+	font-size: map-get($map: $body2, $key: size);
+	font-weight: map-get($map: $body2, $key: weight);
+	line-height: map-get($map: $body2, $key: line-height);
+	letter-spacing: map-get($map: $body2, $key: letter-spacing);
+	margin-top: 20px;
+	word-break: break-word;
+	text-align: left;
+	color: $ink-2;
+}
+
+.login-label {
+	font-size: map-get($map: $body3, $key: size);
+	font-weight: map-get($map: $body3, $key: weight);
+	line-height: map-get($map: $body3, $key: line-height);
+	letter-spacing: map-get($map: $body3, $key: letter-spacing);
+
+	word-break: break-word;
+	text-align: left;
+	color: $label;
+}
+
+.otp-input {
+	width: 40px;
+	height: 48px;
+	margin: 0 16px 0 0;
+	font-size: map-get($map: $body3, $key: size);
+	text-align: center;
+	border-radius: 8px;
+	background: radial-gradient(98.41% 165.02% at 1.59% 10.91%,
+			rgba(255, 255, 255, 0.12) 0%,
+			rgba(255, 255, 255, 0) 100%);
+	box-shadow: 0px 2px 12px 0px rgba(0, 0, 0, 0.2),
+		inset 0px 0px 6px 0px rgba(255, 255, 255, 0.7);
+	opacity: 1;
+
+	&:focus-visible {
+		border: none;
+		padding: 0 !important;
+	}
+}
+
+.otp-input.is-complete {
+	background: radial-gradient(98.41% 165.02% at 1.59% 10.91%,
+			rgba(255, 255, 255, 0.12) 0%,
+			rgba(255, 255, 255, 0) 100%);
+}
+
+.otp-input::-webkit-inner-spin-button,
+.otp-input::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+.terminus-dialog {
+	width: 400px;
+	border-radius: 12px;
+	padding: 20px;
+
+	&__title {
+		font-family: Roboto;
+		font-size: map-get($map: $h5, $key: size);
+		font-weight: map-get($map: $h5, $key: weight);
+		line-height: map-get($map: $h5, $key: line-height);
+		letter-spacing: map-get($map: $h5, $key: letter-spacing);
+		text-align: center;
+		color: $ink-1;
+	}
+
+	&__desc {
+		margin-top: 12px;
+		text-align: center;
+		color: $ink-2;
+	}
+
+	&__edit {
+		margin-top: 12px;
+		width: 100% !important;
+	}
+
+	&__group {
+		margin-top: 20px;
+		width: 100%;
+
+		&__btn {
+			width: calc(50% - 6px) !important;
+		}
+	}
+}
+
+.float-wrap {
+	width: 100%;
+	height: 400px;
+	position: absolute;
+	top: 0px;
+
+	>.float:nth-child(1) {
+		width: 100%;
+		height: 100%;
+		position: absolute;
+		top: -300px;
+		border-radius: 50%;
+		filter: blur(125px);
+	}
+
+	>.float:nth-child(2) {
+		width: 80%;
+		height: 80%;
+		position: absolute;
+		top: -260px;
+		left: 0;
+		right: 0;
+		margin: auto;
+		border-radius: 50%;
+		filter: blur(125px);
+	}
+}
+
+.jump-subline-item {
+	color: $info;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.home-module-title {
+	color: $ink-1;
+	font-size: map-get($map: $h6, $key: size);
+	font-weight: map-get($map: $h6, $key: weight);
+	line-height: map-get($map: $h6, $key: line-height);
+	letter-spacing: map-get($map: $h6, $key: letter-spacing);
+}
+
+.drag-content-header {
+	-webkit-app-region: drag;
+	-webkit-user-select: none;
+
+	.items-no-drag {
+		-webkit-app-region: no-drag;
+	}
+}
+
+.item-common-border {
+	border: 1px solid $separator;
+	border-radius: 8px;
+}
+
+.custom-placeholder::placeholder {
+	color: $ink-3;
+	opacity: 1;
+}
+
+.terminus-text-ellipsis {
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+.terminus-item-title-part {
+	max-width: calc(100% - 40px);
+}

@@ -1,0 +1,25 @@
+{
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "rootDir": ".",
+        "outDir": "lib",
+        "module": "esnext"
+    },
+    "include": [
+        "src/**/*.ts",
+        "../server/src/core/transport.ts",
+        "../server/src/core/transport.ts",
+        "../server/src/core/server.ts",
+        "../server/src/core/server.ts",
+        "../server/src/core/logging.ts",
+        "../server/src/core/logging.ts",
+        "../server/src/core/v3-compat.ts",
+        "../server/src/core/v3-compat.ts"
+    ],
+    "exclude": ["node_modules/**/*.ts"],
+    "sourceMap": true,
+    "ts-node": {
+        "transpileOnly": true
+    }
+}

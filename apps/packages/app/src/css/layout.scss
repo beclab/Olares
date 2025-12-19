@@ -1,0 +1,22 @@
+$gap-sizes: (
+	'xs': $flex-gutter-xs,
+	'sm': $flex-gutter-sm,
+	'md': $flex-gutter-md,
+	'lg': $flex-gutter-lg,
+	'xl': $flex-gutter-xl,
+	'xxl': $flex-gutter-xxl,
+	'xxxl': $flex-gutter-xxxl,
+	'xxxxl': $flex-gutter-xxxxl
+);
+
+@mixin generate-gaps($prefix, $property) {
+	@each $size, $value in $gap-sizes {
+		.#{$prefix}-#{$size} {
+			#{$property}: $value;
+		}
+	}
+}
+
+@include generate-gaps('flex-gap', 'gap');
+@include generate-gaps('flex-gap-x', 'column-gap');
+@include generate-gaps('flex-gap-y', 'row-gap');

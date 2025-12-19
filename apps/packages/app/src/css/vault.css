@@ -1,0 +1,41 @@
+.options_selected_Account {
+	padding: 3px 6px;
+	border-radius: 8px;
+	overflow: hidden;
+	font-family: 'Roboto';
+	font-style: normal;
+	font-weight: 400;
+	font-size: 12px;
+	color: #2f2f2f;
+	box-shadow: 0px 4px 10px 0px #00000033;
+
+	.q-focus-helper {
+		border-radius: 4px !important;
+	}
+
+	.q-manual-focusable--focused > .q-focus-helper {
+		background: rgba(0, 0, 0, 0.3) !important;
+	}
+
+	.q-item {
+		min-height: 36px;
+		padding: 0px;
+		height: 36px;
+		padding: 0 8px;
+
+		.q-checkbox__bg {
+			display: none;
+		}
+	}
+
+	.q-item--active {
+		color: #51aeff;
+	}
+	&.tags .q-item--active {
+		color: #c5c5c5;
+	}
+
+	.q-checkbox__inner--truthy {
+		color: #51aeff;
+	}
+}

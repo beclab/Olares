@@ -1,0 +1,14 @@
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="os-system" clip-path="url(#clip0_121_859)">
+<circle id="Ellipse 55" cx="10" cy="10" r="10" fill="#DFF6FF"/>
+<path id="Rectangle 798" d="M4.375 5C4.375 4.82741 4.51491 4.6875 4.6875 4.6875H15.3125C15.4851 4.6875 15.625 4.82741 15.625 5V12.1875C15.625 12.3601 15.4851 12.5 15.3125 12.5H4.6875C4.51491 12.5 4.375 12.3601 4.375 12.1875V5Z" fill="#61D1FF"/>
+<path id="Rectangle 799" d="M9.375 12.5H10.625V15.3125H9.375V12.5Z" fill="#0A85E2"/>
+<path id="Rectangle 800" d="M7.1875 15.3125V14.0625H12.8125V15.3125H7.1875Z" fill="#0A85E2"/>
+<path id="Rectangle 801" d="M8.4375 11.875V10.9375H11.5625V11.875H8.4375Z" fill="#0A85E2"/>
+</g>
+<defs>
+<clipPath id="clip0_121_859">
+<rect width="20" height="20" fill="white"/>
+</clipPath>
+</defs>
+</svg>

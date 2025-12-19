@@ -1,0 +1,135 @@
+// app global css in SCSS form
+//:root {
+//	font-size: calc(100vw / 967 * 10);
+//}
+.q-btn .q-icon,
+.q-btn .q-spinner {
+	font-size: 12.67px !important;
+}
+
+.q-btn .on-left {
+	margin-right: 6.8px;
+}
+
+.q-field__control {
+	color: $light-green-default;
+	height: 100% !important;
+	max-width: 100%;
+	outline: none;
+}
+
+.q-tab {
+	padding: 0 16px;
+	min-height: 56px !important;
+	transition: color 0.3s, background-color 0.3s;
+	white-space: nowrap;
+	text-decoration: none;
+	text-transform: capitalize;
+}
+
+.cropper-wrap {
+	z-index: 500;
+}
+.cropper-dialog {
+	width: 500px;
+	height: auto !important;
+}
+.sortable-chosen {
+	cursor: pointer !important;
+}
+.sortable-ghost {
+	background-color: #f7f7f7;
+	cursor: pointer !important;
+}
+.q-field__marginal {
+	height: 100% !important;
+	color: #ffffff;
+}
+
+.q-field__after,
+.q-field__append {
+	padding-top: 4px;
+	padding-left: 4px;
+}
+
+.q-field--dark .q-field__native,
+.q-field--dark .q-field__prefix,
+.q-field--dark .q-field__suffix,
+.q-field--dark .q-field__input {
+	color: $ink-2 !important;
+}
+
+.q-tab__content {
+	padding: 0;
+}
+
+.q-tab-panel {
+	padding: 0 !important;
+}
+
+.material-symbols-rounded {
+	font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+
+//fade
+.fade-enter-active,
+.fade-leave-active {
+	transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+	opacity: 0;
+}
+
+//slide-fade
+.slide-fade-enter-active {
+	transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+	transition: all 0.8s cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+	transform: translateX(20px);
+	opacity: 0;
+}
+
+//list
+/* 对移动中的元素应用的过渡 */
+.list-move {
+	transition: none;
+}
+
+.list-enter-active,
+.list-leave-active {
+	transition: all 0.5s ease;
+}
+
+.list-enter-from,
+.list-leave-to {
+	opacity: 0;
+	transform: translateX(30px);
+}
+
+/* 确保将离开的元素从布局流中删除
+  以便能够正确地计算移动的动画。 */
+.list-leave-active {
+	position: absolute;
+}
+
+.bio-clickable {
+	cursor: pointer;
+	text-decoration: none;
+}
+
+.cropper-crop-box,
+.cropper-view-box {
+	border-radius: 50%;
+}
+
+.cropper-view-box {
+	outline: none !important;
+}

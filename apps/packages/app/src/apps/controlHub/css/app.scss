@@ -1,0 +1,74 @@
+// app global css in SCSS form
+.text-color-major {
+	color: #242424;
+}
+
+.bg-color-major {
+	background-color: #242424;
+}
+
+.text-color-minor {
+	color: #777676;
+}
+
+.bg-color-minor {
+	background-color: #777676;
+}
+
+$marginBase: 6px;
+$margin2: $marginBase * 2;
+$margin3: $marginBase * 3;
+
+.dialog-margin-1 {
+	margin: $marginBase (
+		-$marginBase) (-$marginBase) $marginBase;
+}
+
+.dialog-margin-2 {
+	margin: 16px -16px -16px 16px;
+	margin: $margin2 (
+		-$margin2) (-$margin2) $margin2;
+}
+
+.dialog-margin-3 {
+	margin: $margin3 (
+		-$margin3) (-$margin3) $margin3;
+}
+
+.rounded-borders-sm {
+	border-radius: 8px;
+	-webkit-border-radius: 8px;
+	-moz-border-radius: 8px;
+	-ms-border-radius: 8px;
+	-o-border-radix: 8px;
+	-o-border-radius: 8px;
+}
+
+.rounded-borders-md {
+	border-radius: 12px;
+	-webkit-border-radius: 12px;
+	-moz-border-radius: 12px;
+	-ms-border-radius: 12px;
+	-o-border-radius: 12px;
+}
+
+.rounded-borders-lg {
+	border-radius: 20px;
+	-webkit-border-radius: 20px;
+	-moz-border-radius: 20px;
+	-ms-border-radius: 20px;
+	-o-border-radius: 20px;
+}
+
+.rounded-borders-xl {
+	border-radius: 32px;
+	-webkit-border-radius: 32px;
+	-moz-border-radius: 32px;
+	-ms-border-radius: 32px;
+	-o-border-radius: 32px;
+}
+
+.controlhub-global-ok-button {
+	background: $primary;
+	color: #fff;
+}
