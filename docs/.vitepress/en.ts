@@ -7,18 +7,18 @@ const side = {
       link: "/manual/overview",
       items: [
         { text: "Compare Olares and NAS", link: "/manual/olares-vs-nas" },
-        { text: "Help and support", link: "/manual/help/request-technical-support"}
-          //  collapsed: true,
-          //   items: [
-            // { text: "FAQs", link: "/manual/help/faqs" },
-            //    {
-            //     text: "Request support",
-          //     link: "/manual/help/request-technical-support",
-          //  },
-            //{
-            //  text: "Troubleshooting Guide",
-            //  link: "/manual/help/troubleshooting-guide",
-            // },
+        { text: "Help and support", link: "/manual/help/request-technical-support" }
+        //  collapsed: true,
+        //   items: [
+        // { text: "FAQs", link: "/manual/help/faqs" },
+        //    {
+        //     text: "Request support",
+        //     link: "/manual/help/request-technical-support",
+        //  },
+        //{
+        //  text: "Troubleshooting Guide",
+        //  link: "/manual/help/troubleshooting-guide",
+        // },
       ],
     },
     {
@@ -123,33 +123,33 @@ const side = {
           text: "Manage accounts",
           collapsed: true,
           items: [
-            {text: "Create accounts", link:"/manual/larepass/create-account"},
-            {text: "Back up mnemonics", link: "/manual/larepass/back-up-mnemonics"},
-            {text: "Manage integrations", link:"/manual/larepass/integrations"},
+            { text: "Create accounts", link: "/manual/larepass/create-account" },
+            { text: "Back up mnemonics", link: "/manual/larepass/back-up-mnemonics" },
+            { text: "Manage integrations", link: "/manual/larepass/integrations" },
           ],
         },
-        {text: "Manage VPN", link:"/manual/larepass/private-network"},
+        { text: "Manage VPN", link: "/manual/larepass/private-network" },
         {
           text: "Manage device",
           collapsed: true,
           items: [
-            {text: "Activate Olares", link:"/manual/larepass/activate-olares"},
-            {text: "Manage Olares", link:"/manual/larepass/manage-olares"},
+            { text: "Activate Olares", link: "/manual/larepass/activate-olares" },
+            { text: "Manage Olares", link: "/manual/larepass/manage-olares" },
           ],
         },
-        {text: "Manage files", link:"/manual/larepass/manage-files"},
-         // collapsed: true,
-          //items: [
-          //  {text: "Common file operations", link:"/manual/larepass/manage-files"},
-           // {text: "Sync and share", link:"/manual/larepass/sync-share"}
-         // ]
-       // },
+        { text: "Manage files", link: "/manual/larepass/manage-files" },
+        // collapsed: true,
+        //items: [
+        //  {text: "Common file operations", link:"/manual/larepass/manage-files"},
+        // {text: "Sync and share", link:"/manual/larepass/sync-share"}
+        // ]
+        // },
         {
           text: "Manage passwords",
           collapsed: true,
           items: [
-            {text: "Autofill passwords", link: "/manual/larepass/autofill"},
-            {text: "Generate 2FA codes", link: "/manual/larepass/two-factor-verification"},
+            { text: "Autofill passwords", link: "/manual/larepass/autofill" },
+            { text: "Generate 2FA codes", link: "/manual/larepass/two-factor-verification" },
           ],
         },
         /*{
@@ -174,18 +174,18 @@ const side = {
               text: "Basic file operations",
               link: "/manual/olares/files/add-edit-download",
             },
-         //   {
-        //      text: "Sync and share",
-         //     link: "/manual/larepass/sync-share",
-         //   },
+            //   {
+            //      text: "Sync and share",
+            //     link: "/manual/larepass/sync-share",
+            //   },
             {
               text: "Mount SMB",
               link: "/manual/olares/files/mount-SMB",
             },
-           {
-             text: "Mount cloud storage",
-             link: "/manual/olares/files/mount-cloud-storage",
-           },
+            {
+              text: "Mount cloud storage",
+              link: "/manual/olares/files/mount-cloud-storage",
+            },
           ],
         },
         {
@@ -305,16 +305,16 @@ const side = {
                   link: "/manual/olares/settings/manage-app-env",
                 },
               ],
-              },
+            },
             {
               text: "Manage integrations",
-              link:"/manual/olares/settings/integrations",
-             },
-             {
+              link: "/manual/olares/settings/integrations",
+            },
+            {
               text: "Customize appearance",
-              link:"/manual/olares/settings/language-appearance",
-             },
-            {text: "Manage VPN", link: "/manual/olares/settings/remote-access",},
+              link: "/manual/olares/settings/language-appearance",
+            },
+            { text: "Manage VPN", link: "/manual/olares/settings/remote-access", },
             {
               text: "Configure network",
               collapsed: true,
@@ -325,7 +325,7 @@ const side = {
                 },
                 {
                   text: "Set up hosts file",
-                  link:"/manual/olares/settings/set-up-hosts",
+                  link: "/manual/olares/settings/set-up-hosts",
                 },
               ],
              },
@@ -336,67 +336,45 @@ const side = {
               text: "Backup and restore",
               collapsed: true,
               items: [
-                {text: "Backup", link: "/manual/olares/settings/backup"},
-                {text: "Restore", link: "/manual/olares/settings/restore"},
+                { text: "Backup", link: "/manual/olares/settings/backup" },
+                { text: "Restore", link: "/manual/olares/settings/restore" },
               ],
             },
-            {text: "Developer resources", link: "/manual/olares/settings/developer"},
-            ]
-          },
-          {text: "Dashboard", link: "/manual/olares/resources-usage"},
-          {text: "Profile", link: "/manual/olares/profile"},
-        {
-          text: "Studio",
-          collapsed: true,
-          link: "/manual/olares/studio/",
-          items: [
-            {
-              text: "Deploy an app",
-              link: "/manual/olares/studio/deploy",
-            },
-            {
-              text: "Develop in a dev container",
-              link: "/manual/olares/studio/develop",
-            },
-            {
-              text: "Package and upload",
-              link: "/manual/olares/studio/package-upload",
-            },
-            {
-              text: "Add app assets",
-              link: "/manual/olares/studio/assets",
-            },
-          ],
+            { text: "Developer resources", link: "/manual/olares/settings/developer" },
+          ]
         },
-        ],
+        { text: "Dashboard", link: "/manual/olares/resources-usage" },
+        { text: "Profile", link: "/manual/olares/profile" },
+      ],
+>>>>>>> 9130a9af (docs: add play games directly on olares device)
     },
-      {
-        text: "Best practices",
-        link: "/manual/best-practices/",
-        collapsed: true,
-        items: [
-          {
-            text: "Set up custom domain",
-            link: "/manual/best-practices/set-custom-domain",
-          },
-          {
-            text: "Manage knowledge with Wise",
-            link: "/manual/best-practices/organize-content",
-          },
-          {
-            text: "Install a multi-node Olares cluster",
-            link: "/manual/best-practices/install-olares-multi-node",
-          },
-          {
-            text: "Install Olares on PVE with GPU Passthrough",
-            link: "/manual/best-practices/install-olares-gpu-passthrough",
-          },
-          {
-            text: "Expand storage in Olares",
+    {
+      text: "Best practices",
+      link: "/manual/best-practices/",
+      collapsed: true,
+      items: [
+        {
+          text: "Set up custom domain",
+          link: "/manual/best-practices/set-custom-domain",
+        },
+        {
+          text: "Manage knowledge with Wise",
+          link: "/manual/best-practices/organize-content",
+        },
+        {
+          text: "Install a multi-node Olares cluster",
+          link: "/manual/best-practices/install-olares-multi-node",
+        },
+        {
+          text: "Install Olares on PVE with GPU Passthrough",
+          link: "/manual/best-practices/install-olares-gpu-passthrough",
+        },
+        {
+          text: "Expand storage in Olares",
           link: "/manual/best-practices/expand-storage-in-olares",
         },
-        ],
-      },
+      ],
+    },
     { text: "Glossary", link: "/manual/glossary" },
   ],
   "/space/": [
@@ -445,83 +423,94 @@ const side = {
     },
   ],
   "/use-cases/": [
-  {
-    text: "Use cases",
-    link: "/use-cases/",
-    items: [
-      {
-        text: "Stable Diffusion",
-        link: "/use-cases/stable-diffusion",
-      },
-      {
-        text: "ComfyUI",
-        link: "/use-cases/comfyui",
-        collapsed: true,
-        items: [
-          {
-            text: "Manage ComfyUI",
-            link: "/use-cases/comfyui-launcher",
-          },
-          {
-            text: "Use ComfyUI for Krita",
-            link: "/use-cases/comfyui-for-krita",
-          },
-        ]
-      },
-      {
-        text: "Ollama",
-        link: "/use-cases/ollama",
-      },
-      {
-        text: "Open WebUI",
-        link: "/use-cases/openwebui",
-      },
-      {
-        text: "Perplexica",
-        link: "/use-cases/perplexica",
-      },
-      {
-        text: "Dify",
-        link: "/use-cases/dify",
-      },
-      {
-        text: "Jellyfin",
-        link: "/use-cases/stream-media",
-      },
-      {
-        text: "Steam",
-        link: "/use-cases/stream-game",
-      },
-      {
-        text: "Redroid",
-        link: "/use-cases/host-cloud-android",
-      },
-      {
-        text: "Windows",
-        link: "/use-cases/windows",
-      }, 
-      {
-        text: "DeerFlow",
-        link: "/use-cases/deerflow",
-      }, 
-      {
-        text: "Duix.Avatar",
-        link: "/use-cases/duix-avatar",
-      },
-      {
-        text: "ACE-Step",
-        link: "/use-cases/ace-step",
-      },      
-    ],
-  },
- ],
+    {
+      text: "Use cases",
+      link: "/use-cases/",
+      items: [
+        {
+          text: "Stable Diffusion",
+          link: "/use-cases/stable-diffusion",
+        },
+        {
+          text: "ComfyUI",
+          link: "/use-cases/comfyui",
+          collapsed: true,
+          items: [
+            {
+              text: "Manage ComfyUI",
+              link: "/use-cases/comfyui-launcher",
+            },
+            {
+              text: "Use ComfyUI for Krita",
+              link: "/use-cases/comfyui-for-krita",
+            },
+          ]
+        },
+        {
+          text: "Ollama",
+          link: "/use-cases/ollama",
+        },
+        {
+          text: "Open WebUI",
+          link: "/use-cases/openwebui",
+        },
+        {
+          text: "Perplexica",
+          link: "/use-cases/perplexica",
+        },
+        {
+          text: "Dify",
+          link: "/use-cases/dify",
+        },
+        {
+          text: "Jellyfin",
+          link: "/use-cases/stream-media",
+        },
+        {
+          text: "Steam",
+          collapsed: true,
+          items: [
+            {
+              text: "Play directly on Olares",
+              link: "/use-cases/play-games-directly",
+            },
+            {
+              text: "Stream to other devices",
+              link: "/use-cases/stream-game",
+            }
+          ]
+        },
+        {
+          text: "Redroid",
+          link: "/use-cases/host-cloud-android",
+        },
+        {
+          text: "Windows",
+          link: "/use-cases/windows",
+        },
+        {
+          text: "DeerFlow",
+          link: "/use-cases/deerflow",
+        },
+        {
+          text: "Duix.Avatar",
+          link: "/use-cases/duix-avatar",
+        },
+        {
+          text: "ACE-Step",
+          link: "/use-cases/ace-step",
+        },
+      ],
+    },
+  ],
   "/developer/": [
     {
       text: "Concepts",
       link: "/developer/concepts/",
       items: [
         { text: "Olares architecture", link: "/developer/concepts/system-architecture" },
-        { text: "Olares ID",
+        {
+          text: "Olares ID",
           link: "/developer/concepts/olares-id",
           collapsed: true,
           items: [
@@ -558,7 +547,7 @@ const side = {
         { text: "Secrets", link: "/developer/concepts/secrets" },
       ],
     },
-      {
+    {
       text: "Installation deep-dive",
       link: "/developer/install/",
       items: [
@@ -591,12 +580,12 @@ const side = {
               link: "/developer/install/cli/backups",
               collapsed: true,
               items: [
-                  {text: "download", link: "/developer/install/cli/backups-download"},
-                  {text: "region", link: "/developer/install/cli/backups-region"},
-                  {text: "backup", link: "/developer/install/cli/backups-backup"},
-                  {text: "restore", link: "/developer/install/cli/backups-restore"},
-                  {text: "snapshots", link: "/developer/install/cli/backups-snapshots"},
-                  ],
+                { text: "download", link: "/developer/install/cli/backups-download" },
+                { text: "region", link: "/developer/install/cli/backups-region" },
+                { text: "backup", link: "/developer/install/cli/backups-backup" },
+                { text: "restore", link: "/developer/install/cli/backups-restore" },
+                { text: "snapshots", link: "/developer/install/cli/backups-snapshots" },
+              ],
             },
             {
               text: "change-ip",
@@ -645,12 +634,12 @@ const side = {
             },
           ],
         },
-            {
-            text: "Olares versioning",
-            link: "/developer/install/versioning",
-          },
-    ],
-  },
+        {
+          text: "Olares versioning",
+          link: "/developer/install/versioning",
+        },
+      ],
+    },
     {
       text: "Develop Olares app",
       link: "/developer/develop/",
@@ -713,43 +702,43 @@ const side = {
         //  items: [
         //    {
         //       text: "terminus-info",
-      //      link: "/developer/develop/advanced/terminus-info",
+        //      link: "/developer/develop/advanced/terminus-info",
         //     },
         //     {
         //       text: "Service provider",
-      //      link: "/developer/develop/advanced/provider",
+        //      link: "/developer/develop/advanced/provider",
         //      },
         //     {
         //        text: "AI",
-      //        link: "/developer/develop/advanced/ai",
+        //        link: "/developer/develop/advanced/ai",
         //       },
         //      { text: "Cookie", link: "/developer/develop/advanced/cookie" },
         //     { text: "Database", link: "/developer/develop/advanced/database" },
         //     {
         //       text: "Account",
-      //       link: "/developer/develop/advanced/account",
+        //       link: "/developer/develop/advanced/account",
         //      },
         //     {
         //       text: "Market",
-      //       link: "/developer/develop/advanced/market",
+        //       link: "/developer/develop/advanced/market",
         //      },
         //       {
         //       text: "Websocket",
-      //       link: "/developer/develop/advanced/websocket",
+        //       link: "/developer/develop/advanced/websocket",
         //     },
         //      {
         //       text: "File upload",
-      //       link: "/developer/develop/advanced/file-upload",
+        //       link: "/developer/develop/advanced/file-upload",
         //      },
         //     {
         //       text: "Secret",
-      //       link: "/developer/develop/advanced/secret",
+        //       link: "/developer/develop/advanced/secret",
         //      },
         //      {
         //        text: "Kubesphere",
-      //      link: "/developer/develop/advanced/kubesphere",
+        //      link: "/developer/develop/advanced/kubesphere",
         //      },
-      //   ],
+        //   ],
         //   },
         {
           text: "Submit application",
@@ -787,86 +776,86 @@ const side = {
             },
           ],
         },
-      {
-        text: "Develop protocols",
-        collapsed: true,
-        items: [
-          {
-            text: "Contract",
-            link: "/developer/contribute/olares-id/contract/contract",
-            collapsed: true,
-            items: [
-              {
-                text: "Architecture",
-                link: "/developer/contribute/olares-id/contract/architecture",
-              },
-              {
-                text: "DID",
-                collapsed: true,
-                items: [
-                  {
-                    text: "Design",
-                    link: "/developer/contribute/olares-id/contract/did/design",
-                  },
-                  {
-                    text: "Official Taggers",
-                    link: "/developer/contribute/olares-id/contract/did/official-taggers",
-                  },
-                  {
-                    text: "Release History",
-                    link: "/developer/contribute/olares-id/contract/did/release-history",
-                  },
-                  {
-                    text: "FAQ",
-                    link: "/developer/contribute/olares-id/contract/did/faq",
-                  },
-                ],
-              },
-              {
-                text: "Reputation",
-                link: "/developer/contribute/olares-id/contract/contract-reputation",
-              },
-              {
-                text: "Manage",
-                collapsed: true,
-                items: [
-                  {
-                    text: "Contract",
-                    link: "/developer/contribute/olares-id/contract/manage/contract",
-                  },
-                  {
-                    text: "SDK",
-                    link: "/developer/contribute/olares-id/contract/manage/sdk",
-                  },
-                  {
-                    text: "Environment",
-                    link: "/developer/contribute/olares-id/contract/manage/environment",
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            text: "Verifiable Credential",
-            link: "/developer/contribute/olares-id/verifiable-credential/overview",
-            collapsed: true,
-            items: [
-              {
-                text: "Issuer",
-                link: "/developer/contribute/olares-id/verifiable-credential/issuer",
-              },
-              {
-                text: "Verifer",
-                link: "/developer/contribute/olares-id/verifiable-credential/verifer",
-              },
-              {
-                text: "Olares",
-                link: "/developer/contribute/olares-id/verifiable-credential/olares",
-              },
-            ],
-          },
-        ],
-       },
+        {
+          text: "Develop protocols",
+          collapsed: true,
+          items: [
+            {
+              text: "Contract",
+              link: "/developer/contribute/olares-id/contract/contract",
+              collapsed: true,
+              items: [
+                {
+                  text: "Architecture",
+                  link: "/developer/contribute/olares-id/contract/architecture",
+                },
+                {
+                  text: "DID",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Design",
+                      link: "/developer/contribute/olares-id/contract/did/design",
+                    },
+                    {
+                      text: "Official Taggers",
+                      link: "/developer/contribute/olares-id/contract/did/official-taggers",
+                    },
+                    {
+                      text: "Release History",
+                      link: "/developer/contribute/olares-id/contract/did/release-history",
+                    },
+                    {
+                      text: "FAQ",
+                      link: "/developer/contribute/olares-id/contract/did/faq",
+                    },
+                  ],
+                },
+                {
+                  text: "Reputation",
+                  link: "/developer/contribute/olares-id/contract/contract-reputation",
+                },
+                {
+                  text: "Manage",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Contract",
+                      link: "/developer/contribute/olares-id/contract/manage/contract",
+                    },
+                    {
+                      text: "SDK",
+                      link: "/developer/contribute/olares-id/contract/manage/sdk",
+                    },
+                    {
+                      text: "Environment",
+                      link: "/developer/contribute/olares-id/contract/manage/environment",
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              text: "Verifiable Credential",
+              link: "/developer/contribute/olares-id/verifiable-credential/overview",
+              collapsed: true,
+              items: [
+                {
+                  text: "Issuer",
+                  link: "/developer/contribute/olares-id/verifiable-credential/issuer",
+                },
+                {
+                  text: "Verifer",
+                  link: "/developer/contribute/olares-id/verifiable-credential/verifer",
+                },
+                {
+                  text: "Olares",
+                  link: "/developer/contribute/olares-id/verifiable-credential/olares",
+                },
+              ],
+            },
+          ],
+        },
       ],
     },
   ],
