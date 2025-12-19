@@ -11,7 +11,7 @@ spec:
     or cluster of machines.
   helm:
     chartLocationURL: file:///minio-1.0.1.tgz
-    chartsImage: beclab/kubeblock-addon-charts:v1.0.1
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.1-ext
     chartsPathInImage: /charts
     installValues: {}
     valuesMapping:
@@ -44,7 +44,7 @@ spec:
     and scaling.
   helm:
     chartLocationURL: file:///mongodb-1.0.1.tgz
-    chartsImage: beclab/kubeblock-addon-charts:v1.0.1
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.1-ext
   installable:
     autoInstall: true
   type: Helm
@@ -68,7 +68,7 @@ spec:
     speed and relevance on production-scale workloads.
   helm:
     chartLocationURL: file:///elasticsearch-1.0.1.tgz
-    chartsImage: beclab/kubeblock-addon-charts:v1.0.1
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.1-ext
   installable:
     autoInstall: true
   type: Helm
@@ -90,7 +90,7 @@ spec:
   description: RabbitMQ is a reliable and mature messaging and streaming broker.
   helm:
     chartLocationURL: file:///rabbitmq-1.0.1.tgz
-    chartsImage: beclab/kubeblock-addon-charts:v1.0.1
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.1-ext
   installable:
     autoInstall: true
   type: Helm
@@ -113,7 +113,7 @@ spec:
     system that is widely used for web and application servers
   helm:
     chartLocationURL: file:///mariadb-1.0.1.tgz
-    chartsImage: beclab/kubeblock-addon-charts:v1.0.1
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.1-ext
   installable:
     autoInstall: true
   type: Helm
@@ -136,7 +136,7 @@ spec:
     system (RDBMS)
   helm:
     chartLocationURL: file:///mysql-1.0.1.tgz
-    chartsImage: beclab/kubeblock-addon-charts:v1.0.1
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.1-ext
   installable:
     autoInstall: true
   type: Helm
