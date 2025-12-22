@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"net"
+	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -398,4 +401,70 @@ func GetNodeInfo(ctx context.Context) (ret []api.NodeInfo, err error) {
 		})
 	}
 	return
+}
+
+type SystemStatusResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    struct {
+		TerminusdState            string `json:"terminusdState"`
+		TerminusState             string `json:"terminusState"`
+		TerminusName              string `json:"terminusName"`
+		TerminusVersion           string `json:"terminusVersion"`
+		InstalledTime             int64  `json:"installedTime"`
+		InitializedTime           int64  `json:"initializedTime"`
+		OlaresdVersion            string `json:"olaresdVersion"`
+		DeviceName                string `json:"device_name"`
+		HostName                  string `json:"host_name"`
+		OsType                    string `json:"os_type"`
+		OsArch                    string `json:"os_arch"`
+		OsInfo                    string `json:"os_info"`
+		OsVersion                 string `json:"os_version"`
+		CpuInfo                   string `json:"cpu_info"`
+		GpuInfo                   string `json:"gpu_info"`
+		Memory                    string `json:"memory"`
+		Disk                      string `json:"disk"`
+		WifiConnected             bool   `json:"wifiConnected"`
+		WiredConnected            bool   `json:"wiredConnected"`
+		HostIp                    string `json:"hostIp"`
+		ExternalIp                string `json:"externalIp"`
+		InstallingState           string `json:"installingState"`
+		InstallingProgress        string `json:"installingProgress"`
+		UninstallingState         string `json:"uninstallingState"`
+		UninstallingProgress      string `json:"uninstallingProgress"`
+		UpgradingTarget           string `json:"upgradingTarget"`
+		UpgradingRetryNum         int    `json:"upgradingRetryNum"`
+		UpgradingState            string `json:"upgradingState"`
+		UpgradingStep             string `json:"upgradingStep"`
+		UpgradingProgress         string `json:"upgradingProgress"`
+		UpgradingError            string `json:"upgradingError"`
+		UpgradingDownloadState    string `json:"upgradingDownloadState"`
+		UpgradingDownloadStep     string `json:"upgradingDownloadStep"`
+		UpgradingDownloadProgress string `json:"upgradingDownloadProgress"`
+		UpgradingDownloadError    string `json:"upgradingDownloadError"`
+		CollectingLogsState       string `json:"collectingLogsState"`
+		CollectingLogsError       string `json:"collectingLogsError"`
+		DefaultFrpServer          string `json:"defaultFrpServer"`
+		FrpEnable                 string `json:"frpEnable"`
+	} `json:"data"`
+}
+
+func GetDeviceName() (string, error) {
+	url := fmt.Sprintf("http://%s/system/status", os.Getenv("OLARESD_HOST"))
+	var result SystemStatusResponse
+	client := resty.New()
+	resp, err := client.R().SetResult(&result).Get(url)
+	if err != nil {
+		klog.Errorf("failed to send request to olaresd %v", err)
+		return "", err
+	}
+	if resp.StatusCode() != http.StatusOK {
+		klog.Errorf("failed to get system status from olaresd %v", err)
+		return "", errors.New(string(resp.Body()))
+	}
+	if result.Code != http.StatusOK {
+		return "", fmt.Errorf("not exepcted result code: %v,message: %v", result.Code, result.Message)
+	}
+	klog.Infof("getDeviceName: %#v", result.Data)
+	return result.Data.DeviceName, nil
 }
