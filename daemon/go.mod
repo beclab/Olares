@@ -22,7 +22,7 @@ require (
 	bytetrade.io/web3os/bfl v0.0.0-00010101000000-000000000000
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/beclab/Olares/cli v0.0.0-20251016092744-6241cceceb89
+	github.com/beclab/Olares/cli v0.0.0-20251219153848-63d422037cf9
 	github.com/containerd/containerd v1.7.28
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/dustin/go-humanize v1.0.1
@@ -39,6 +39,7 @@ require (
 	github.com/libp2p/go-netroute v0.2.2
 	github.com/mackerelio/go-osstat v0.2.5
 	github.com/mdlayher/raw v0.1.0
+	github.com/miekg/dns v1.1.55
 	github.com/muka/network_manager v0.0.0-20200903202308-ae5ede816e07
 	github.com/nxadm/tail v1.4.11
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
@@ -56,6 +57,7 @@ require (
 	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
 	golang.org/x/sys v0.35.0
 	k8s.io/api v0.34.1
+	k8s.io/apiextensions-apiserver v0.34.0
 	k8s.io/apimachinery v0.34.1
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/cri-api v0.34.1
@@ -129,7 +131,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mdlayher/packet v0.0.0-20220221164757-67998ac0ff93 // indirect
 	github.com/mdlayher/socket v0.2.1 // indirect
-	github.com/miekg/dns v1.1.55 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/spdystream v0.5.0 // indirect
@@ -200,7 +201,6 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	howett.net/plist v1.0.0 // indirect
-	k8s.io/apiextensions-apiserver v0.34.0 // indirect
 	k8s.io/apiserver v0.34.0 // indirect
 	k8s.io/component-base v0.34.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
