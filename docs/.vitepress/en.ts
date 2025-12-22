@@ -132,11 +132,7 @@ const side = {
             { text: "Manage integrations", link: "/manual/larepass/integrations" },
           ],
         },
-<<<<<<< HEAD
         {text: "Use VPN", link:"/manual/larepass/private-network"},
-=======
-        { text: "Manage VPN", link: "/manual/larepass/private-network" },
->>>>>>> a6b2b50a (docs: add play games directly on olares device)
         {
           text: "Manage device",
           collapsed: true,
@@ -362,8 +358,11 @@ const side = {
         { text: "Dashboard", link: "/manual/olares/resources-usage" },
         { text: "Profile", link: "/manual/olares/profile" },
       ],
+<<<<<<< HEAD
 >>>>>>> 9130a9af (docs: add play games directly on olares device)
 >>>>>>> a6b2b50a (docs: add play games directly on olares device)
+=======
+>>>>>>> 7af0da74 (fix lint)
     },
     {
       text: "Best practices",
