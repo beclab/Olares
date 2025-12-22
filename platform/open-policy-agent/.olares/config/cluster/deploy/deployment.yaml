@@ -207,8 +207,7 @@ data:
     deny contains msg if {
         some container
         input_containers[container]
-        not startswith(container.image, "beclab/")
-        not startswith(container.image, "docker.io/beclab/")
+        is_untrusted_image(container)
 
         is_root_user(container.securityContext)
     
@@ -218,8 +217,7 @@ data:
     deny contains msg if {
         some container
         input_containers[container]
-        not startswith(container.image, "beclab/")
-        not startswith(container.image, "docker.io/beclab/")
+        is_untrusted_image(container)
 
         is_root_user(input.request.object.spec.securityContext)
     
@@ -233,6 +231,28 @@ data:
     input_containers contains container if {
       container := input.request.object.spec.initContainers[_]
     }    
+
+    is_untrusted_image(container) if {
+        not startswith(container.image, "beclab/")
+        not startswith(container.image, "docker.io/beclab/")
+        not startswith(container.image, "aboveos/")
+        not startswith(container.image, "harveyff/")
+        not startswith(container.image, "dataelement/")
+        not startswith(container.image, "milvusdb/")
+        not startswith(container.image, "minio/")
+        not startswith(container.image, "mintplexlabs/")
+        not startswith(container.image, "onlyoffice/")
+        not startswith(container.image, "netdata/")
+        not startswith(container.image, "openservicemesh/")
+        not startswith(container.image, "owncloudci/")
+        not startswith(container.image, "redroid/")
+        not startswith(container.image, "busybox:")
+        not startswith(container.image, "docker:dind")
+        not startswith(container.image, "redis:")
+        not startswith(container.image, "ghcr.io/coder/coder:v2.19.0")
+        not startswith(container.image, "apecloud/")
+        not startswith(container.image, "docker.io/apecloud/")
+    }
         
     is_root_user(ctx) if {
         ctx.runAsNonRoot == false
