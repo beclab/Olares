@@ -406,7 +406,7 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	} else {
 		appid = appv1alpha1.AppName(name).GetAppID()
 	}
-	_, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
+	settings, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
 
 	appCopy.Spec.Name = name
 	appCopy.Spec.Namespace = deployment.GetNamespace()
@@ -416,6 +416,12 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	appCopy.Spec.SharedEntrances = sharedEntrances
 	appCopy.Spec.Ports = servicePortsMap[name]
 	appCopy.Spec.Entrances = entrancesMap[name]
+	if settings["defaultThirdLevelDomainConfig"] != "" {
+		if appCopy.Spec.Settings == nil {
+			appCopy.Spec.Settings = make(map[string]string)
+		}
+		appCopy.Spec.Settings["defaultThirdLevelDomainConfig"] = settings["defaultThirdLevelDomainConfig"]
+	}
 
 	if tailScale != nil {
 		appCopy.Spec.TailScale = *tailScale
