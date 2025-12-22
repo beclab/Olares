@@ -346,7 +346,6 @@ const side = {
         { text: "Dashboard", link: "/manual/olares/resources-usage" },
         { text: "Profile", link: "/manual/olares/profile" },
       ],
->>>>>>> 9130a9af (docs: add play games directly on olares device)
     },
     {
       text: "Best practices",
