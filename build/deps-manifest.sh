@@ -36,6 +36,10 @@ fi
 
 
 find $BASE_DIR/../ -type f -name Olares.yaml | while read f; do
+  if [[ "$f" == *"/vendor/"* ]]; then
+      echo "skip vendor file $f"
+      continue
+  fi
   echo "Processing $f"
   declare -a bins
   IFS=
