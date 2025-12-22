@@ -58,7 +58,6 @@ func (l *linuxInstallPhaseBuilder) installGpuPlugin() phase {
 	return []module.Module{
 		&gpu.RestartK3sServiceModule{Skip: !(l.runtime.Arg.Kubetype == common.K3s)},
 		&gpu.InstallPluginModule{Skip: skipGpuPlugin},
-		&gpu.GetCudaVersionModule{},
 	}
 }
 
