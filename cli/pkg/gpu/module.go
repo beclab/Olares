@@ -187,7 +187,7 @@ func (m *InstallPluginModule) Init() {
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
 		},
-		Action:   new(UpdateNodeLabels),
+		Action:   new(UpdateNodeGPUInfo),
 		Parallel: false,
 		Retry:    1,
 	}
@@ -223,23 +223,6 @@ func (m *InstallPluginModule) Init() {
 	}
 }
 
-type GetCudaVersionModule struct {
-	common.KubeModule
-}
-
-func (g *GetCudaVersionModule) Init() {
-	g.Name = "GetCudaVersion"
-
-	getCudaVersion := &task.LocalTask{
-		Name:   "GetCudaVersion",
-		Action: new(GetCudaVersion),
-	}
-
-	g.Tasks = []task.Interface{
-		getCudaVersion,
-	}
-}
-
 type NodeLabelingModule struct {
 	common.KubeModule
 }
@@ -253,7 +236,7 @@ func (l *NodeLabelingModule) Init() {
 			new(CudaInstalled),
 			new(CurrentNodeInK8s),
 		},
-		Action: new(UpdateNodeLabels),
+		Action: new(UpdateNodeGPUInfo),
 		Retry:  1,
 	}
 
