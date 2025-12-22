@@ -7,10 +7,12 @@ description: Learn how to turn your Olares device into a gaming console by conne
 
 While Olares is typically used as a headless system, you can connect a monitor, keyboard, and mouse to play games directly on the device.
 
+However, simply plugging in a monitor is not enough. Because Steam Headless is optimized for remote streaming by default, you must manually configure the audio settings to output audio locally.
+
 ## Learning objectives
 
 By the end of this tutorial, you will learn how to:
-- Configure system permissions to allow the container to access your physical hardware.
+- Grant the application permission to access the host sound card.
 - Modify display and audio settings for local gameplay.
 
 ## Prerequisites
@@ -29,7 +31,7 @@ Follow these steps to install and configure Steam Headless:
 
 1. Open the Market, and search for "Steam".
 2. Click **Get**, then **Install**.
-   ![Install Steam Headless](../public/images/manual/use-cases/steam-install-steam-headless.png#bordered)
+   ![Install Steam Headless](../public/images/manual/use-cases/steam-install-steam-headless1.png#bordered)
 3. A prompt will appear asking you to configure environment variables. This creates your login credentials for the Sunshine Web UI:
     - `SUNSHINE_USER`: Set the username for Sunshine access.
     - `SUNSHINE_PASS`: Set the corresponding password.
@@ -54,29 +56,38 @@ If Steam installation or update fails due to network issues, go to the top-left 
 ## 2. Grant sound card permissions
 To output audio to your monitor, the Steam container needs direct access to your sound card. You must edit the deployment configuration to "pass through" these hardware components.
 
+:::warning Edit with caution
+Incorrect YAML syntax or indentation may prevent the application from starting.
+- **Verify changes:** Double-check that your indentation matches the existing lines.
+- **Revert when necessary:** If the app fails to start after applying changes, check **Revision records** and simply delete the lines you added to restore the previous configuration.
+  ![Check revision records](../public/images/manual/use-cases/steam-yaml-revision-records.png#bordered)
+:::
+
 1. Open Control Hub, then select the Steam project from the sidebar.
-2. Navigate to **Deployments** > **steamheadless**, and click <span class="material-symbols-outlined">box_edit</span> to open the editor.
+2. Navigate to **Deployments** > **steamheadless**, and click <span class="material-symbols-outlined">edit_square</span> to open the editor.
    ![Open Yaml editor](../public/images/manual/use-cases/steam-open-yaml-editor.png#bordered)
    
 3. Locate the `volumes` section and append the following entry to the list.
    ```yaml
     spec:
       volumes:    
-    # ... (Keep existing volumes like steam-headless-claim0) ...
-    
-    # Add the following entry at the end of the list:
+    # Keep existing volumes like steam-headless-claim0
+    # ...
+    # Add the following entry at the end:
         - name: snd
           hostPath:
             path: /dev/snd
             type: ''
+   ```
 4. Locate the `volumeMounts` section and append the following mounting point:
    ```yaml
        volumeMounts:
-       # ... (Keep existing mounts like steam-headless-claim0) ...
-       
+       # Keep existing mounts like steam-headless-claim0
+       # ... 
        # Add the following entry at the end:
          - name: snd
            mountPath: /dev/snd
+   ```
 5. Click **Confirm** to apply the changes. The container will restart with the new permissions.
 
 ## 3. Configure display and input
@@ -96,10 +107,16 @@ By default, the system is configured for streaming. You need to modify the X11 c
 
    a. Delete the `Section "InputDevice"` blocks to stop using virtual inputs.
 
-   b. Update the `Display` subsection to match your monitor's resolution.
+   b. Update the `Display` subsection to match your monitor's resolution. For example:
+   ```bash
+   SubSection     "Display"
+   Virtual     1920 1080
+   Depth       24
+   Modes      "1920x1080R" "1920x1080" "1280x800" "1024x768" "1920x1080" "1600x900" "1440x900"
+   ```
 
    :::details Reference `xorg.conf` configuration
-   ```conf
+   ```bash
    Section "ServerLayout"
    Identifier     "Default Layout"
    Screen      0  "Default Screen"
