@@ -235,7 +235,7 @@ Audio now plays directly from your monitor or speakers. You are ready to play.
 
 ## Optional: Enable audio for remote streaming
 :::info
-For detailed streaming and paring instructions, refer to [Stream your games with Steam Headless](stream-game.md).
+For detailed streaming and pairing instructions, refer to [Stream your games with Steam Headless](stream-game.md).
 :::
 Local play and remote streaming use exclusive audio modes.
 - **Local play** requires the `module-alsa-sink` module loaded.
