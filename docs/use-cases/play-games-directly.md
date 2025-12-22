@@ -23,7 +23,7 @@ Before you begin, ensure you have:
 ## 1. Install and configure Steam Headless
 Install the app from the Olares Market and then complete the initial setup within the Steam client itself.
 
-### Install and Steam Headless
+### Install Steam Headless
 
 Follow these steps to install and configure Steam Headless:
 
@@ -61,45 +61,22 @@ To output audio to your monitor, the Steam container needs direct access to your
 3. Locate the `volumes` section and append the following entry to the list.
    ```yaml
     spec:
-      volumes:
-        - name: steam-headless-claim0
-          hostPath:
-            path: >-
-              /olares/userdata/Cache/pvc-appcache-onetest02-x2kjhiuu1cgftrzb/steamheadless/steamheadless/c0
-            type: DirectoryOrCreate
-        - name: steam-headless-claim1
-          hostPath:
-            path: >-
-              /olares/userdata/Cache/pvc-appcache-onetest02-x2kjhiuu1cgftrzb/steamheadless/steamheadless/c1
-            type: DirectoryOrCreate
-        - name: input-devices
-          hostPath:
-            path: /dev/input/
-            type: ''
-        - name: dshm
-          emptyDir:
-            medium: Memory
-        # Add the following
+      volumes:    
+    # ... (Keep existing volumes like steam-headless-claim0) ...
+    
+    # Add the following entry at the end of the list:
         - name: snd
           hostPath:
             path: /dev/snd
             type: ''
-   ```
 4. Locate the `volumeMounts` section and append the following mounting point:
    ```yaml
        volumeMounts:
-         - name: steam-headless-claim0
-           mountPath: /home/default
-         - name: steam-headless-claim1
-           mountPath: /mnt/games
-         - name: input-devices
-           mountPath: /dev/input/
-         - name: dshm
-           mountPath: /dev/shm
-         # Add the following
+       # ... (Keep existing mounts like steam-headless-claim0) ...
+       
+       # Add the following entry at the end:
          - name: snd
            mountPath: /dev/snd
-   ```
 5. Click **Confirm** to apply the changes. The container will restart with the new permissions.
 
 ## 3. Configure display and input
@@ -122,7 +99,7 @@ By default, the system is configured for streaming. You need to modify the X11 c
    b. Update the `Display` subsection to match your monitor's resolution.
 
    :::details Reference `xorg.conf` configuration
-   ```bash
+   ```conf
    Section "ServerLayout"
    Identifier     "Default Layout"
    Screen      0  "Default Screen"
@@ -214,7 +191,7 @@ Finally, you must manually select the correct audio output channel.
    pactl load-module module-alsa-sink device=plughw:0,3 sink_name=nvhdmi
    ```
 
-3. Check the audio channel status.
+3. Check the audio channel status (use the same card number you selected above):
    ```bash
    amixer -c 0 scontents
    ```
