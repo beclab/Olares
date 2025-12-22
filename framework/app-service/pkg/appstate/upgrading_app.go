@@ -235,6 +235,14 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 	}
 	values["nodes"] = nodeInfo
 
+	deviceName, err := utils.GetDeviceName()
+	if err != nil {
+		klog.Errorf("failed to get deviceName %v", err)
+		return err
+	}
+
+	values["deviceName"] = deviceName
+
 	refs, err := p.getRefsForImageManager(appConfig, values)
 	if err != nil {
 		klog.Errorf("get image refs from resources failed %v", err)
