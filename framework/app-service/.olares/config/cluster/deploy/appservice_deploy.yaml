@@ -228,6 +228,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        - name: OLARESD_HOST
+          value: $(HOSTIP):18088
         volumeMounts:
         - mountPath: /charts
           name: charts-store
