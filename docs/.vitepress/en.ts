@@ -174,7 +174,7 @@ const side = {
           items: [
             {
               text: "Basic operations",
-              link: "/manual/olares/market",
+              link: "/manual/olares/market/market",
             },
             {
               text: "Purchase paid applications",
