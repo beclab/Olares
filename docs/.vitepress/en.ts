@@ -233,7 +233,7 @@ const side = {
               link: "/manual/olares/wise/manage-cookies",
             },
             {
-              text: "Organize your knowledge",
+              text: "Filter your knowledge",
               link: "/manual/olares/wise/filter",
             },
           ],

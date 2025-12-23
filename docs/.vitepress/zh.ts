@@ -234,7 +234,7 @@ const side = {
               "link": "/zh/manual/olares/wise/subscribe"
             },
             {
-              "text": "整理知识",
+              "text": "使用过滤视图",
               "link": "/zh/manual/olares/wise/filter"
             }
           ]
