@@ -30,7 +30,7 @@ Wise 通过以下两种方式将内容收集到库中：
 
 #### 上传文件
 
-直接从你的电脑导入文件，包括 PDF、EPUB、音频、视频和其他文件类型。Wise 会根据文件格式，自动将其放入库中对应的内容文件夹（例如，PDF 放入 **PDF**，EPUB 放入**图书**，媒体文件放入**视频**或**音频**）。
+直接从你的电脑导入文件，包括 PDF、EPUB、音频、视频和其他文件类型。Wise 会根据文件格式，自动将其放入库中对应的内容文件夹。例如，PDF 放入 **PDF**，EPUB 放入**图书**，媒体文件放入**视频**或**音频**。
 
 1. 点击左下角菜单栏的 <i class="material-symbols-outlined">add_circle</i>。  
 2. 选择**上传**。
@@ -50,9 +50,9 @@ Wise 通过以下两种方式将内容收集到库中：
 
    Wise 会解析链接，并列出所有可行操作：
     - **保存到库**：将内容保存为库中的一个文件，并添加至**收件箱**。
-    - **订阅 RSS 源**：如果 Wise 检测到站点有一或多个 RSS 源，会在此列出。选择你想要订阅的源，之后该订阅源下的更新会自动出现在**订阅源**中（详情请查看[订阅和管理订阅源](./subscribe)）。
+    - **订阅 RSS 源**：如果 Wise 检测到站点有一或多个 RSS 源，会在此列出。选择你想要订阅的源，之后该订阅源下的更新会自动出现在[**订阅源**](./subscribe)中。
     ![订阅 RSS 源](/images/zh/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
-    - **下载文件**：如果 Wise 检测到页面上有视频或其他可下载文件，会出现此选项。选择你要下载的文件，将其保存以便离线访问。(需安装**YT-DLP**).
+    - **下载文件**：如果 Wise 检测到页面上有视频或其他可下载文件，会出现此选项。选择你要下载的文件，将其保存以便离线访问。使用此功能需安装[YT-DLP](https://market.olares.com/app/market.olares/ytdlp)。
 
     ![Download files](/images/zh/manual/olares/wise-add-link-download.png#bordered){width=300}
 
@@ -63,7 +63,7 @@ Wise 通过以下两种方式将内容收集到库中：
 你也可以在浏览器中通过 LarePass 扩展直接将内容保存到 Wise，无需打开 Wise 应用。
 
 :::tip 安装 LarePass 浏览器扩展
-LarePass 扩展目前仅支持 Chrome 浏览器。你可以从[官网](https://olares.cn/larepass)下载。
+LarePass 扩展目前仅支持 Chrome 浏览器。你可以从[官网](https://www.olares.cn/larepass)下载。
 :::
 
 将网页内容保存到 Wise：

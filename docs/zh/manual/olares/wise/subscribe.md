@@ -56,10 +56,10 @@ Wise 仅导入新的订阅源，历史内容不会同步迁移。
 LarePass 浏览器扩展可以让你在浏览网页时直接订阅，无需切回 Wise。
 
 :::tip 安装 LarePass 浏览器扩展
-LarePass 扩展目前仅支持 Chrome 浏览器。你可以从[官网](https://olares.cn/larepass)下载。
+LarePass 扩展目前仅支持 Chrome 浏览器。你可以从[官网](https://www.olares.cn/larepass)下载。
 :::
 
-1. 打开 LarePass 浏览器扩展，选择 **<i class="material-symbols-outlined">inventory_2</i>**。
+1. 打开 LarePass 浏览器扩展，选择 **<i class="material-symbols-outlined">hard_drive</i>**。
 2. 查看**订阅 RSS 源**区域：
    - 如果在当前页面检测到订阅源，会在此列出。
 3. 点击目标订阅源旁边的 <i class="material-symbols-outlined">bookmark_add</i> 即可订阅。

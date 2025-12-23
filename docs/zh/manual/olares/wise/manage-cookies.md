@@ -23,18 +23,13 @@ Olares 提供多种方式，让你可以灵活上传 Cookie，你可选择在浏
 
 ### 使用 LarePass 浏览器扩展上传
 
-这是处理 Cookie 最简单的方式。当你浏览一个需要登录的网站时，LarePass 扩展可以一次性捕获并上传当前页面所需的 Cookie。
-
-
-:::tip 安装 LarePass 浏览器扩展
-LarePass 扩展目前仅支持 Chrome 浏览器。你可以从[官网](https://olares.cn/larepass)下载。
-:::
+这是处理 Cookie 最简单的方式。当你浏览一个需要登录的网站时，[LarePass 扩展](https://www.olares.cn/larepass)可以一次性捕获并上传当前页面所需的 Cookie。
 
 1. 打开目标网站，并确认你已经登录。
-2. 打开 LarePass 浏览器扩展，选择 **<i class="material-symbols-outlined">inventory_2</i>**。
+2. 打开 LarePass 浏览器扩展，选择 **<i class="material-symbols-outlined">hard_drive</i>**。
 3. 点击**上传**来上传当前页面的 Cookie。
 
-![使用 LarePass 扩展上传 Cookie](/images/zh/manual/olares/wise-upload-cookie-larepass.png#bordered){width=70%}
+![使用 LarePass 扩展上传 Cookie](/images/zh/manual/olares/wise-upload-cookie-larepass.png#bordered){width=45%}
 
 上传完成后，当你在该页面执行**保存到库**或**订阅 RSS 源** 时，Wise 会自动使用这些 Cookie。
 
