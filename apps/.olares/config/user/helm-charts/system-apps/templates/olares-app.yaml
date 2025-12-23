@@ -317,7 +317,7 @@ spec:
             chown -R 1000:1000 /uploadstemp && \
             chown -R 1000:1000 /appdata 
         - name: olares-app-init
-          image: beclab/system-frontend:v1.6.28
+          image: beclab/system-frontend:v1.6.29
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -1355,6 +1355,17 @@ data:
           proxy_set_header Upgrade 'tailscale-control-protocol';
           proxy_set_header Connection '$connection_upgrade';
           more_set_headers 'Upgrade: $http_upgrade';
+        }
+        location /api/refresh {
+          add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+          add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+          add_header Access-Control-Allow-Origin $http_origin;
+          add_header Access-Control-Allow-Credentials true;
+          proxy_pass http://authelia-backend-svc:9091;
+          proxy_set_header            Host $host;
+          proxy_set_header            X-real-ip $remote_addr;
+          proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+          add_header X-Frame-Options SAMEORIGIN;
         }
         location / {
           proxy_pass http://headscale-server-svc:8080;
