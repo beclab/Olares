@@ -252,6 +252,7 @@ data:
         not startswith(container.image, "ghcr.io/coder/coder:v2.19.0")
         not startswith(container.image, "apecloud/")
         not startswith(container.image, "docker.io/apecloud/")
+        not startswith(container.image, "kldtks/")
     }
         
     is_root_user(ctx) if {
