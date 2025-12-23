@@ -415,12 +415,20 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	appCopy.Spec.Icon = icon
 	appCopy.Spec.SharedEntrances = sharedEntrances
 	appCopy.Spec.Ports = servicePortsMap[name]
-	appCopy.Spec.Entrances = entrancesMap[name]
+
+	// Merge entrances: preserve authLevel from existing, update other fields
+	appCopy.Spec.Entrances = mergeEntrances(app.Spec.Entrances, entrancesMap[name])
+
+	if appCopy.Spec.Settings == nil {
+		appCopy.Spec.Settings = make(map[string]string)
+	}
 	if settings["defaultThirdLevelDomainConfig"] != "" {
-		if appCopy.Spec.Settings == nil {
-			appCopy.Spec.Settings = make(map[string]string)
-		}
 		appCopy.Spec.Settings["defaultThirdLevelDomainConfig"] = settings["defaultThirdLevelDomainConfig"]
+	}
+	
+	if incomingPolicy := settings[applicationSettingsPolicyKey]; incomingPolicy != "" {
+		existingPolicy := appCopy.Spec.Settings[applicationSettingsPolicyKey]
+		appCopy.Spec.Settings[applicationSettingsPolicyKey] = mergePolicySettings(existingPolicy, incomingPolicy)
 	}
 
 	if tailScale != nil {
