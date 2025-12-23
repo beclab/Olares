@@ -171,15 +171,15 @@ const side = {
           "items": [
             {
               "text": "基本操作",
-              "link": "/zh/manual/olares/market"
+              "link": "/zh/manual/olares/market/market"
             },
             {
               "text": "购买付费应用",
-              "link": "/zh/manual/olares/files/purchase-paid-apps"
+              "link": "/zh/manual/olares/market/purchase-paid-apps"
             },
             {
               "text": "克隆应用",
-              "link": "/zh/manual/olares/files/clone-apps"
+              "link": "/zh/manual/olares/market/clone-apps"
             },
           ],
         },
