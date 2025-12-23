@@ -4,7 +4,7 @@ description: Transform your Olares into a powerful information hub with Wise, fe
 ---
 # Curate your information hub with Wise
 
-Wise is a local-first, AI-driven modern reader designed to turn scattered information into a personal knowledge base. As a core application within the Olares ecosystem, it serves as your central repository for managing digital content securely and efficiently.
+Wise is a local-first modern reader designed to turn scattered information into a personal information hub. As a core application within the Olares ecosystem, it serves as your central repository for managing digital content securely and efficiently.
 
 Wise empowers you to build this hub through two main capabilities:
 
@@ -19,9 +19,12 @@ The Wise interface is designed to help you organize and consume content efficien
 
 ### Sidebar navigation
 
-The sidebar navigation is divided into three logical areas:
+The sidebar organizes your content into the following sections:
 
-- **Feeds**
+
+- **Feeds:** Contains your subscribed sources, including websites, blogs, and video channels.
+- **Inbox:** Your central workspace for active content. It aggregates items from all sources, including saved web pages, uploaded files like PDFs or EPUBs, and feed items added to your library.
+- **Content types:** Automatically categorizes your content by format, such as **Articles**, **Videos**, and **Books**.
 
     Your collection of subscribed sources. You can add any subscribable content here, including websites, blogs, and video channels. Clicking a specific feed allows you to toggle between **Unread** and **Read** items to track your consumption.
 

@@ -8,7 +8,7 @@ Wise helps you build a focused reading workflow on top of your personal informat
 
 ## Before you begin
 
-To unlock the full potential of Wise, it is recommended to search in Olares Market and install the following companion apps:
+To unlock the full potential of Wise, it is recommended to install the following apps from Olares Market:
 
 - **Rss Subscribe**: Use it to subscribe to RSS feeds directly while browsing web pages.
 - **YT-DLP**: Use it to download audio and video from supported web pages into Wise.
@@ -21,13 +21,17 @@ Wise works without these apps, but in-browser subscription and media download wi
 Wise pulls content into your library in two ways:
 
 - **Saved items**: Individual pages, files, audio, or video you capture. These show up under main **Inbox** folder and content types (**Articles**, **Videos**, **Audios**, **Books**, **PDFs**), and can be marked as **Inbox** or **Read Later**.
-- **Feeds**: Subscriptions to websites, blogs, podcasts, or channels. New entries appear under **Feeds**, and you can choose which ones to save into your library.
+- **Saved items:** Individual web pages, files, audio, and video that you capture manually. These items appear in your main **Inbox** and are automatically sorted into categories such as **Articles**.
+- **Feeds:** Subscriptions to dynamic sources like websites, blogs, and podcasts. New updates appear under **Feeds**, where you can select specific entries to save to your library.
 
 This page focuses on saving and working with individual items. For a deeper look at feeds and subscriptions, see [Subscribe and manage feeds](./subscribe).
 
 ### Save items
 
-You can save individual items to Wise in three ways: by uploading files, adding links from within Wise, or saving directly from your browser with the LarePass extension.
+You can save individual items to Wise in three ways: 
+- Upload files
+- Add items via link
+- Save from browser with LarePass extension
 
 #### Upload files
 
@@ -35,7 +39,8 @@ Import files directly from your computer, including PDFs, EPUBs, audio, video, a
 
 1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar.  
 2. Choose **Upload**.
-3. Select one or more files from your local computer.
+1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar, and select **Upload**.
+2. Select one or more files from your local computer.
 
 #### Add items via link
 
@@ -47,7 +52,8 @@ If a link requires login or other access control, Wise may need cookies to fetch
 
 1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar.  
 2. Choose **Add Link**.
-3. Paste or type a URL.
+1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar, and select **Add Link**.
+2. Paste or type a URL.
 
     Wise analyzes the link and lists all actions available:
     - **Save to library**: The content will be saved as an item in your library and added to **Inbox**.
@@ -56,7 +62,7 @@ If a link requires login or other access control, Wise may need cookies to fetch
     - **Download file**: If Wise detects videos or other downloadable files on the page, this option will appear. Select the file you want to download to save it for offline access. **[YT-DLP](https://market.olares.com/app/market.olares/ytdlp)** is required.
     ![Download files](/images/manual/olares/wise-add-link-download.png#bordered){width=300}
 
-Newly saved items will appear under their content type. You can then decide whether their status should be **Inbox** or **Read Later**.
+Newly saved items will appear under their content type.
 
 #### Save from browser with LarePass extension
 
@@ -65,7 +71,11 @@ You can also save content to Wise directly from your browser using the LarePass 
 :::tip Install LarePass browser extension
 LarePass extension is currently available for Chrome browsers only. You can download it from the [official page](https://www.olares.com/larepass).
 :::
+:::tip Install LarePass browser extension
+LarePass extension is currently available for Chrome browsers only. You can download it from the [official page](https://www.olares.com/larepass).
+:::
 
+You can also save content to Wise directly from your browser using the LarePass extension, without opening Wise first.
 To save content from a web page into Wise:
 
 1. Open the LarePass browser extension and select **<i class="material-symbols-outlined">inventory_2</i>**.
@@ -73,7 +83,7 @@ To save content from a web page into Wise:
 3. Click <i class="material-symbols-outlined">box_add</i> next to the item you want to save.
 ![Save content via LarePass extension](/images/manual/olares/wise-larepass-add-to-lib.png#bordered)
 
-    Items saved via LarePass are added to your Wise library and appear in the main **Inbox** folder and under the appropriate content type.
+Items saved via LarePass are added to your Wise library and appear in the main **Inbox** folder and under the appropriate content type.
 
 ### Monitor and manage media downloads
 
