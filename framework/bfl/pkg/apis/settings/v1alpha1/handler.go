@@ -243,11 +243,34 @@ func (h *Handler) handleActivate(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	// for owner user, use the reverse proxy config from the payload
+	// for non-owner user, reuse the owner's reverse proxy config
+	isOwner := userOp.GetUserAnnotation(user, constants.UserAnnotationOwnerRole) == constants.RoleOwner
+
 	reverseProxyConf := &ReverseProxyConfig{}
-	if payload.FRP.Host != "" {
-		reverseProxyConf.EnableFRP = true
-		reverseProxyConf.FRPServer = payload.FRP.Host
-		reverseProxyConf.FRPAuthMethod = FRPAuthMethodJWS
+	if isOwner {
+		if payload.FRP.Host != "" {
+			reverseProxyConf.EnableFRP = true
+			reverseProxyConf.FRPServer = payload.FRP.Host
+			reverseProxyConf.FRPAuthMethod = FRPAuthMethodJWS
+		}
+	} else {
+		ownerUser, ownerErr := userOp.GetOwnerUser()
+		if ownerErr != nil {
+			err = fmt.Errorf("activate system: failed to get owner user for reverse proxy config: %v", ownerErr)
+			klog.Error(err)
+			response.HandleError(resp, err)
+			return
+		}
+		ownerNamespace := fmt.Sprintf(constants.UserspaceNameFormat, ownerUser.Name)
+		ownerConf, ownerConfErr := GetReverseProxyConfigFromNamespace(ctx, ownerNamespace)
+		if ownerConfErr != nil {
+			err = fmt.Errorf("activate system: failed to get owner's reverse proxy config: %v", ownerConfErr)
+			klog.Error(err)
+			response.HandleError(resp, err)
+			return
+		}
+		reverseProxyConf = ownerConf
 	}
 	// no matter whether the reverse proxy is enabled, we need to persist the configuration
 	// so that the configuration can be fetched by the frontend
