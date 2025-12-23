@@ -8,6 +8,8 @@ File search settings allow you to customize how Olares indexes and searches your
 
 This guide helps you understand and configure indexing rules to optimize your search experience.
 
+See also [Search within Olares](/manual/olares/desktop.md#search-within-olares) for how to use global search.
+
 :::tip Search scope 
 These settings apply only to your own files in Olares.
 
@@ -18,23 +20,18 @@ Files or folders shared with you by other team members are searchable globally b
 
 Olares file search consists of three key components. Understanding how they interact helps you manage your system's indexing behavior.
 
+![File search](/images/manual/olares/file-search.png#bordered)
 ### Search index
 
-The **Search Index** section shows the current indexing status.
+The **Search Index** section shows the current indexing status and lets you manually rebuild the index when needed.
 
-**Status meanings**
-- `In Progress`: Olares is updating the index, so search results may be temporarily incomplete.
-- `Completed`: Indexing is finished, and search results should be up to date.
+After files change or you update search rules, Olares automatically refreshes the index within about 30 seconds. Most of the time, you can rely on this automatic update. Use **Rebuild** only when you need search results to reflect changes immediately.
 
-**What can trigger `In Progress`**
-- **File changes**: Files or folders are added, deleted, or updated in Olares.
-- **Rule changes**: Excluded Files patterns change, or the Full-Text Search Directories list changes.
+The status indicator shows the current progress:
 
-**How changes are applied**
-- **Auto-update**: After file changes or rule changes, Olares updates the index automatically within about 30 seconds.
-- **Rebuild**: If you want changes to take effect immediately (instead of waiting), click **Rebuild**.
+- **In Progress**: The index is being updated. Search results may be temporarily incomplete during this time.
 
-In most cases, you can simply wait for the automatic update. **Rebuild** is mainly useful when you need results to reflect changes right away.
+- **Completed**: The index is up to date and search results should reflect the latest files and rules.
 
 ### Excluded files
 
@@ -104,7 +101,3 @@ By adding a **folder** to the full-text directory list, full-text search is enab
 :::tip Supported formats 
 Full-text search is supported for the following file types:<br> `.pdf`, `.doc`, `.docx`, `.csv`, `.rtf`, `.txt`, `.md`, `.json`, `.xml`.
 :::
-
-#### [Search within Olares](/manual/olares/desktop.md#search-within-olares)
-
-Learn how to search within Olares.
