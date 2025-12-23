@@ -165,7 +165,24 @@ const side = {
       "link": "/zh/manual/olares/",
       "items": [
         { "text": "桌面", "link": "/zh/manual/olares/desktop" },
-        { "text": "应用市场", "link": "/zh/manual/olares/market" },
+        {
+          "text": "应用市场",
+          "collapsed": true,
+          "items": [
+            {
+              "text": "基本操作",
+              "link": "/zh/manual/olares/market"
+            },
+            {
+              "text": "购买付费应用",
+              "link": "/zh/manual/olares/files/purchase-paid-apps"
+            },
+            {
+              "text": "克隆应用",
+              "link": "/zh/manual/olares/files/clone-apps"
+            },
+          ],
+        },
         {
           "text": "文件管理器",
           "collapsed": true,
