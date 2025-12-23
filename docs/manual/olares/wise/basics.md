@@ -6,6 +6,9 @@ description: Get started with Wise in Olares. Learn to collect content, organize
 
 Wise helps you build a focused reading workflow on top of your personal information hub. This page walks you through the core actions you'll use every day: collecting content, organizing what to read next, and capturing your own insights.
 
+This page focuses on saving and working with individual items. For a deeper look at feeds and subscriptions, see [Subscribe and manage feeds](./subscribe).
+
+
 ## Before you begin
 
 To unlock the full potential of Wise, it is recommended to install the following apps from Olares Market:
@@ -15,7 +18,6 @@ To unlock the full potential of Wise, it is recommended to install the following
 
 Wise works without these apps, but in-browser subscription and media download will be unavailable until you install them.
 
-
 ## Build your library
 
 Wise pulls content into your library in two ways:
@@ -23,8 +25,6 @@ Wise pulls content into your library in two ways:
 - **Saved items**: Individual pages, files, audio, or video you capture. These show up under main **Inbox** folder and content types (**Articles**, **Videos**, **Audios**, **Books**, **PDFs**), and can be marked as **Inbox** or **Read Later**.
 - **Saved items:** Individual web pages, files, audio, and video that you capture manually. These items appear in your main **Inbox** and are automatically sorted into categories such as **Articles**.
 - **Feeds:** Subscriptions to dynamic sources like websites, blogs, and podcasts. New updates appear under **Feeds**, where you can select specific entries to save to your library.
-
-This page focuses on saving and working with individual items. For a deeper look at feeds and subscriptions, see [Subscribe and manage feeds](./subscribe).
 
 ### Save items
 
@@ -35,7 +35,7 @@ You can save individual items to Wise in three ways:
 
 #### Upload files
 
-Import files directly from your computer, including PDFs, EPUBs, audio, video, and other document types. Wise automatically places each supported format into the right content folder in your library. For example, PDFs under **PDFs**, EPUBs under **Books**, and media under **Videos** or **Audios**.
+Import files directly from your computer, including PDFs, EPUBs, audio, video, and other document types. Wise automatically places each supported format into the right content folder in your library. 
 
 1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar.  
 2. Choose **Upload**.
@@ -78,7 +78,7 @@ LarePass extension is currently available for Chrome browsers only. You can down
 You can also save content to Wise directly from your browser using the LarePass extension, without opening Wise first.
 To save content from a web page into Wise:
 
-1. Open the LarePass browser extension and select **<i class="material-symbols-outlined">inventory_2</i>**.
+1. Open the LarePass browser extension and select the "Collect" icon.
 2. Under **Save to library**, review the content detected on the current page.
 3. Click <i class="material-symbols-outlined">box_add</i> next to the item you want to save.
 ![Save content via LarePass extension](/images/manual/olares/wise-larepass-add-to-lib.png#bordered)
@@ -101,23 +101,6 @@ To manage all download tasks:
 
     - Click <i class="material-symbols-outlined">folder_open</i> to locate a downloaded file in Files.
     - Click <i class="material-symbols-outlined">do_not_disturb_on</i> to remove it from the list.
-
-## Manage item status
-
-You can organize your content by categorizing items as either **`Inbox`** or **`Read Later`**. Change the status using the icons found in the list view or reader view.
-
-![Wise content status](/images/manual/olares/wise-item-status.png#bordered)
-![Wise content status in list](/images/manual/olares/wise-list-status.png#bordered)
-
-- **To keep an item on your to-do list**  
-  Click **<i class="material-symbols-outlined">inbox</i>**: The item is treated as active content and appears in the **`Inbox`** tab in both the main **Inbox** folder and its content-type folder (e.g., **Articles** > **`Inbox`**).
-
-- **To archive an item for later**  
-  Click **<i class="material-symbols-outlined">schedule</i>**: The item is moved from the **`Inbox`** tab to the **`Read Later`** tab in both the main **Inbox** folder and its content-type folder (e.g., **Articles** > **`Read Later`**).
-
-::: tip 
-Changing an item's status instantly updates its location across all folders. You can switch between **Inbox** and **Read Later** at any time. 
-:::
 
 ## Use reading tools
 
@@ -142,7 +125,7 @@ You can add private notes to any content in your library:
 
 You can edit or delete notes from the same panel at any time.
 
-### Use tags
+## Use tags
 
 Tags allow you to add flexible labels to your content for easy retrieval later.
 
