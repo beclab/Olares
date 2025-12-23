@@ -183,6 +183,14 @@ const side = {
             //     link: "/manual/larepass/sync-share",
             //   },
             {
+              text: "Share files",
+              link: "/manual/olares/files/share-files",
+            },
+            {
+              text: "Sync files to local",
+              link: "/manual/olares/files/sync-files",
+            },
+            {
               text: "Mount SMB",
               link: "/manual/olares/files/mount-SMB",
             },
