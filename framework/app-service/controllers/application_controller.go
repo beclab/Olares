@@ -376,6 +376,14 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 
 func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.Request,
 	deployment client.Object, app *appv1alpha1.Application, name string) error {
+	// Skip update if triggered by app modification (not deployment change)
+	if app.Annotations != nil {
+		if lastVersion := app.Annotations[deploymentResourceVersionAnnotation]; lastVersion == deployment.GetResourceVersion() {
+			klog.Infof("skip updateApplication: deployment %s not changed, triggered by app modification", deployment.GetName())
+			return nil
+		}
+	}
+
 	appCopy := app.DeepCopy()
 	appNames := getAppName(deployment)
 	isMultiApp := len(appNames) > 1
@@ -415,12 +423,20 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	appCopy.Spec.Icon = icon
 	appCopy.Spec.SharedEntrances = sharedEntrances
 	appCopy.Spec.Ports = servicePortsMap[name]
-	appCopy.Spec.Entrances = entrancesMap[name]
+
+	// Merge entrances: preserve authLevel from existing, update other fields
+	appCopy.Spec.Entrances = mergeEntrances(app.Spec.Entrances, entrancesMap[name])
+
+	if appCopy.Spec.Settings == nil {
+		appCopy.Spec.Settings = make(map[string]string)
+	}
 	if settings["defaultThirdLevelDomainConfig"] != "" {
-		if appCopy.Spec.Settings == nil {
-			appCopy.Spec.Settings = make(map[string]string)
-		}
 		appCopy.Spec.Settings["defaultThirdLevelDomainConfig"] = settings["defaultThirdLevelDomainConfig"]
+	}
+	
+	if incomingPolicy := settings[applicationSettingsPolicyKey]; incomingPolicy != "" {
+		existingPolicy := appCopy.Spec.Settings[applicationSettingsPolicyKey]
+		appCopy.Spec.Settings[applicationSettingsPolicyKey] = mergePolicySettings(existingPolicy, incomingPolicy)
 	}
 
 	if tailScale != nil {
@@ -441,6 +457,13 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 			appCopy.Spec.Settings["version"] = version
 		}
 	}
+
+	// Record deployment resourceVersion to detect app-only modifications
+	if appCopy.Annotations == nil {
+		appCopy.Annotations = make(map[string]string)
+	}
+	klog.Infof("deploymentname: %s, version: %v", deployment.GetName(), deployment.GetResourceVersion())
+	appCopy.Annotations[deploymentResourceVersionAnnotation] = deployment.GetResourceVersion()
 
 	err = r.Patch(ctx, appCopy, client.MergeFrom(app))
 	if err != nil {
