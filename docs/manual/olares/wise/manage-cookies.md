@@ -23,17 +23,13 @@ Olares provides flexible options for uploading cookies, depending on whether you
 
 ### Upload via LarePass browser extension
 
-This is the easiest way to handle cookies. When you are browsing a site that requires a login, LarePass can capture and upload the cookies for the current page in one flow.
-
-:::tip Install LarePass browser extension
-LarePass extension is currently available for Chrome browsers only. You can download it from the [official page](https://www.olares.com/larepass).
-:::
+This is the easiest way to handle cookies. When you are browsing a site that requires a login, [LarePass browser extension](https://www.olares.com/larepass) can capture and upload the cookies for the current page in one flow.
 
 1. Navigate to the target website and make sure you are logged in.
-2. Open the **LarePass** browser extension and select **<i class="material-symbols-outlined">inventory_2</i>**.
+2. Open the **LarePass** browser extension and select **<i class="material-symbols-outlined">hard_drive</i>**.
 3. Click **Upload** to upload the cookies for the current page.
 
-![Upload cookies via LarePass extension](/images/manual/olares/wise-upload-cookie-larepass.png#bordered){width=70%}
+![Upload cookies via LarePass extension](/images/manual/olares/wise-upload-cookie-larepass.png#bordered){width=50%}
 
 After upload, Wise will use these cookies when you **Save to library** or **Subscribe to RSS feed** for that site.
 

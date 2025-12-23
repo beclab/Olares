@@ -60,7 +60,7 @@ The LarePass browser extension lets you subscribe to feeds while you browse, wit
 LarePass extension is currently available for Chrome browsers only. You can download it from the [official page](https://www.olares.com/larepass).
 :::
 
-1. Open the LarePass browser extension and select **<i class="material-symbols-outlined">inventory_2</i>**.
+1. Open the LarePass browser extension and select **<i class="material-symbols-outlined">hard_drive</i>**.
 2. Check the **RSS** section:
    - If feeds are detected on the current page, they will be listed there.
 3. Click <i class="material-symbols-outlined">bookmark_add</i> next to the feed you want to subscribe to.

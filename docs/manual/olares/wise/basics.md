@@ -31,7 +31,7 @@ You can save individual items to Wise in three ways: by uploading files, adding 
 
 #### Upload files
 
-Import files directly from your computer, including PDFs, EPUBs, audio, video, and other document types. Wise automatically places each supported format into the right content folder in your library (for example, PDFs under **PDFs**, EPUBs under **Books**, and media under **Videos** or **Audios**).
+Import files directly from your computer, including PDFs, EPUBs, audio, video, and other document types. Wise automatically places each supported format into the right content folder in your library. For example, PDFs under **PDFs**, EPUBs under **Books**, and media under **Videos** or **Audios**.
 
 1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar.  
 2. Choose **Upload**.
@@ -51,9 +51,9 @@ If a link requires login or other access control, Wise may need cookies to fetch
 
     Wise analyzes the link and lists all actions available:
     - **Save to library**: The content will be saved as an item in your library and added to **Inbox**.
-    - **Subscribe to RSS feed**: If Wise detects one or more RSS feeds for the site, they will be listed here. Select the feed you want to follow, and new items from that feed will be automatically added to **Feeds**(see [Subscribe and manage feeds](./subscribe)).
+    - **Subscribe to RSS feed**: If Wise detects one or more RSS feeds for the site, they will be listed here. Select the feed you want to follow, and new items from that feed will be automatically [added to **Feeds**](./subscribe).
     ![Subscribe to RSS feed](/images/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
-    - **Download file**: If Wise detects videos or other downloadable files on the page, this option will appear. Select the file you want to download to save it for offline access (requires **[YT-DLP](https://market.laresprime.olares.com/app/market.olares/ytdlp)**).
+    - **Download file**: If Wise detects videos or other downloadable files on the page, this option will appear. Select the file you want to download to save it for offline access. **[YT-DLP](https://market.olares.com/app/market.olares/ytdlp)** is required.
     ![Download files](/images/manual/olares/wise-add-link-download.png#bordered){width=300}
 
 Newly saved items will appear under their content type. You can then decide whether their status should be **Inbox** or **Read Later**.
