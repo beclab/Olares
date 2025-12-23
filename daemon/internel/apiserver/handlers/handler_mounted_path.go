@@ -43,16 +43,18 @@ func (h *Handlers) getMountedPath(ctx *fiber.Ctx, mutate func(*disk.UsageStat) *
 			u = mutate(u)
 		}
 
-		res = append(res, &mountedPath{
-			*u,
-			string(p.Type),
-			p.Invalid,
-			p.IDSerial,
-			p.IDSerialShort,
-			p.PartitionUUID,
-			p.Device,
-			p.ReadOnly,
-		})
+		if u != nil {
+			res = append(res, &mountedPath{
+				*u,
+				string(p.Type),
+				p.Invalid,
+				p.IDSerial,
+				p.IDSerialShort,
+				p.PartitionUUID,
+				p.Device,
+				p.ReadOnly,
+			})
+		}
 	}
 
 	return h.OkJSON(ctx, "success", res)
@@ -64,7 +66,14 @@ func (h *Handlers) GetMountedPath(ctx *fiber.Ctx) error {
 
 func (h *Handlers) GetMountedPathInCluster(ctx *fiber.Ctx) error {
 	return h.getMountedPath(ctx, func(us *disk.UsageStat) *disk.UsageStat {
-		us.Path = nodePathToClusterPath(us.Path)
+		path := nodePathToClusterPath(us.Path)
+		if path == us.Path {
+			// not in cluster path
+			return nil
+		}
+
+		us.Path = path
+
 		return us
 	})
 }
