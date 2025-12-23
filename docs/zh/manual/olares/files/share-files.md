@@ -41,10 +41,9 @@ description: Olares 文件分享操作指南，详解内部成员协作、公开
 ### 创建内部分享
 
 1. 打开**文件管理器**。
-2. 找到目标文件夹，根据目录类型，进入分享菜单：
-    * **同步**目录：将鼠标悬停在文件夹上，点击右侧出现的 <i class="material-symbols-outlined">more_horiz</i>，然后点击**共享**。
-    * 其他目录：右键点击文件夹，然后选择 **内部分享**。
+2. 右键点击目标文件夹，然后点击**内部分享**。
 3. 在**邀请用户**中，点击 <i class="material-symbols-outlined">add</i>，搜索并勾选目标用户或组，点击**邀请**。
+  ![内部分享配置中邀请用户](/images/zh/manual/olares/internal-share-invite-1.png#bordered){width=60%}
 4. 在**用户权限设置**列表中，点击用户头像右侧的 <i class="material-symbols-outlined">chevron_forward</i>，为每一位邀请用户分配具体的读写权限，设置完成后，点击**提交**。
 5. 点击 **确认**。
 
@@ -60,6 +59,8 @@ SMB 分享使用一套专用的本地 Linux 账户体系。在此体系内生成
     
     a. 在**邀请用户**栏中，点击 <i class="material-symbols-outlined">add</i>。
     
+    ![SMB分享配置中选择已有SMB账户](/images/zh/manual/olares/smb-share-invite-1.png#bordered){width=60%}
+    
     b. 搜索 SMB 账户，勾选该账户，然后点击**邀请**。
     
     c. 在**设置用户权限**列表中，点击用户头像右侧的 <i class="material-symbols-outlined">chevron_forward</i> 分配具体权限，然后点击**提交**。
@@ -69,6 +70,8 @@ SMB 分享使用一套专用的本地 Linux 账户体系。在此体系内生成
 4. 创建新的 SMB 账户进行授权。
     
     a. 点击**邀请用户**右侧的**添加用户账户**。
+
+    ![SMB分享配置中创建新SMB账户](/images/zh/manual/olares/smb-share-new-usr-1.png#bordered){width=60%}
     
     b. 设置唯一的用户名。
     
@@ -88,6 +91,9 @@ SMB 分享使用一套专用的本地 Linux 账户体系。在此体系内生成
 
 1. 打开**文件管理器**。
 2. 右键点击目标文件夹，然后选择 **公开分享**。
+
+![公开分享设置](/images/zh/manual/olares/public-share-settings-1.png#bordered){width=58%}
+
 3. 在**设置密码**中，手动输入访问密码，或点击**重新生成**使用系统随机生成的安全密码。
 4. 在**设置有效期**中，选择分享链接过期的具体时间。
 5. 其他限制（按需选择）：

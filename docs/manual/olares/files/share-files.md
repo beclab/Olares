@@ -42,6 +42,9 @@ You can assign specific permissions to members in **Internal share** and **SMB s
 
 1. Right-click the target folder，and then click **Internal share**.
 2. In the **Invite users** section, click <i class="material-symbols-outlined">add</i>, search for and select the target user or group, and then click **Invite**.
+
+![Invite users for Internal Share](/images/manual/olares/internal-share-invite.png#bordered){width=60%}
+
 3. In the **Set user permissions** list, click <i class="material-symbols-outlined">chevron_forward</i> to the right of the user avatar to assign specific permissions, and then click **Submit**.
 4. Click **Confirm**.
 
@@ -56,6 +59,8 @@ SMB sharing utilizes a dedicated local Linux account system. The SMB accounts ge
 3. Select an existing SMB account to authorize.
     
     a. In the **Invite users** field, click <i class="material-symbols-outlined">add</i>.
+
+    ![Invite existing users for SMB Share](/images/manual/olares/smb-share-invite.png#bordered){width=60%}
     
     b. Search for the SMB account, select it, and then click **Invite**.
 
@@ -66,6 +71,8 @@ SMB sharing utilizes a dedicated local Linux account system. The SMB accounts ge
 4. Create a new SMB account to authorize.
     
     a. To the right of **Invite users**, click **Add user accounts**.
+
+    ![Create new users for SMB Share](/images/manual/olares/smb-share-new-usr.png#bordered){width=60%}
     
     b. Enter a unique user name.
     
@@ -84,6 +91,9 @@ SMB sharing utilizes a dedicated local Linux account system. The SMB accounts ge
 ### Create Public share
 
 1. Right-click the target folder, and then click **Public share**.
+
+![Public share settings](/images/manual/olares/public-share-settings.png#bordered){width=56%}
+
 2. In the **Set password** field, a secure system-generated password is provided by default. You can also manually enter a new password or click **Regenerate** to create a new random one.
 3. In the **Set expiration** region, select the specific expiration time for the share link.
 4. Select the following restrictions as needed:
