@@ -7,10 +7,11 @@ import (
 )
 
 const (
-	applicationSettingsPolicyKey = "policy"
-	namespaceFinalizer           = "finalizers.bytetrade.io/namespaces"
-	userFinalizer                = "finalizers.bytetrade.io/users"
-	creator                      = "bytetrade.io/creator"
+	applicationSettingsPolicyKey        = "policy"
+	namespaceFinalizer                  = "finalizers.bytetrade.io/namespaces"
+	userFinalizer                       = "finalizers.bytetrade.io/users"
+	creator                             = "bytetrade.io/creator"
+	deploymentResourceVersionAnnotation = "bytetrade.io/deployment-resource-version"
 )
 
 type applicationSettingsSubPolicy struct {
@@ -49,7 +50,6 @@ func mergeEntrances(existing, incoming []appv1alpha1.Entrance) []appv1alpha1.Ent
 
 	return merged
 }
-
 
 func mergePolicySettings(existingPolicy, incomingPolicy string) string {
 	if incomingPolicy == "" {

@@ -376,6 +376,14 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 
 func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.Request,
 	deployment client.Object, app *appv1alpha1.Application, name string) error {
+	// Skip update if triggered by app modification (not deployment change)
+	if app.Annotations != nil {
+		if lastVersion := app.Annotations[deploymentResourceVersionAnnotation]; lastVersion == deployment.GetResourceVersion() {
+			klog.Infof("skip updateApplication: deployment %s not changed, triggered by app modification", deployment.GetName())
+			return nil
+		}
+	}
+
 	appCopy := app.DeepCopy()
 	appNames := getAppName(deployment)
 	isMultiApp := len(appNames) > 1
@@ -449,6 +457,13 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 			appCopy.Spec.Settings["version"] = version
 		}
 	}
+
+	// Record deployment resourceVersion to detect app-only modifications
+	if appCopy.Annotations == nil {
+		appCopy.Annotations = make(map[string]string)
+	}
+	klog.Infof("deploymentname: %s, version: %v", deployment.GetName(), deployment.GetResourceVersion())
+	appCopy.Annotations[deploymentResourceVersionAnnotation] = deployment.GetResourceVersion()
 
 	err = r.Patch(ctx, appCopy, client.MergeFrom(app))
 	if err != nil {
