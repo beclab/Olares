@@ -68,7 +68,7 @@ LarePass 扩展目前仅支持 Chrome 浏览器。你可以从[官网](https://w
 
 将网页内容保存到 Wise：
 
-1. 打开 LarePass 浏览器扩展并选择 <i class="material-symbols-outlined">inventory_2</i>。
+1. 打开 LarePass 浏览器扩展并点击“收集”。
 2. 在**保存到库**区域查看当前页面检测到的内容。
 3. 点击目标内容右侧的<i class="material-symbols-outlined">box_add</i>。
 ![Save content via LarePass extension](/images/zh/manual/olares/wise-larepass-add-to-lib.png#bordered)

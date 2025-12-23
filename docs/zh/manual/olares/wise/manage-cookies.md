@@ -26,7 +26,7 @@ Olares 提供多种方式，让你可以灵活上传 Cookie，你可选择在浏
 这是处理 Cookie 最简单的方式。当你浏览一个需要登录的网站时，[LarePass 扩展](https://www.olares.cn/larepass)可以一次性捕获并上传当前页面所需的 Cookie。
 
 1. 打开目标网站，并确认你已经登录。
-2. 打开 LarePass 浏览器扩展，选择 **<i class="material-symbols-outlined">hard_drive</i>**。
+2. 打开 LarePass 浏览器扩展，点击“收集”按钮。
 3. 点击**上传**来上传当前页面的 Cookie。
 
 ![使用 LarePass 扩展上传 Cookie](/images/zh/manual/olares/wise-upload-cookie-larepass.png#bordered){width=45%}
@@ -35,45 +35,31 @@ Olares 提供多种方式，让你可以灵活上传 Cookie，你可选择在浏
 
 ### 手动批量上传
 
-当你拥有一个或多个网站的 Cookie 字符串（Netscape、JSON 或 Header String 格式），并希望手动上传时，可以使用此方法。
+你可以手动粘贴 **Netscape**、**JSON** 或 **Header String** 格式的 Cookie 字符串。使用诸如 [Cookie-Editor](https://chromewebstore.google.com/detail/cookie-editor/iphcomljdfghbkdcfndaijbokpgddeno?utm_source=ext_app_menu)
+等浏览器扩展从特定网站导出凭据时，可以使用此方法。
 
-#### 步骤 1：获取用于批量上传的 Cookie
-
-要想手动上传，首先需要可粘贴的 Cookie 字符串。最简单的方式是使用 Cookie 管理类扩展（例如 `cookie-editor`），并以 Wise 支持的格式导出当前站点的 Cookie。
-
-基本步骤如下：
-
-1. 从 Chrome 网上应用店安装 Cookie 管理扩展。
-2. 在浏览器中登录目标网站。
-3. 在该页面打开 Cookie 扩展。
-4. 按照以下格式之一导出该站点的 Cookie：
-   - **Netscape**
-   - **JSON**
-   - **Header String**
-
-你可以在下一步中使用导出的 Cookie 文本，也可以直接使用已有的、符合支持格式的 Cookie 字符串。
-
-#### 步骤 2：选择上传位置
-
-你可以将 Cookie 字符串上传到 Wise 或**集成**，具体取决于你希望它们仅用于 Wise，还是在系统层面复用。
+你可以通过 Wise 应用界面上传 Cookie 字符串，或直接在系统**设置**中上传。
 
 <Tabs>
 <template #上传至-Wise>
 
-**适用于仅在 Wise 中使用的 Cookie**
+使用此方法，你无需离开 Wise 应用即可直接上传 Cookie。
 
+:::info
+Wise 仅支持上传 Cookie。如需查看、管理或删除 Cookie，需导航至 **设置** > **集成** > **管理您的 Cookie**。
+:::
 
 1. 在 Wise 中，点击左下角的 <i class="material-symbols-outlined">settings</i>**设置**。
 2. 选择**偏好设置**。
 3. 勾选**开启批量上传 Cookie**。
 4. 点击左下角菜单栏中的<i class="material-symbols-outlined">add_circle</i>。
 5. 选择**上传 Cookie**。
-6. 将 Cookie 文本（Netscape、JSON 或 Header String）粘贴到输入框中。
+6. 选择 Cookie 文件的格式，并将对应的原始文本粘贴到输入框中。
 7. 点击**确认**。
 
 ![在 Wise 批量上传 Cookie](/images/zh/manual/olares/wise-upload-cookie-in-pre.png#bordered)
 
-以这种方式上传的 Cookie 仅存储在 Wise 中，在 Wise 访问匹配域名时会自动使用。
+以这种方式上传的 Cookie 仅存储在 Wise 中，在 Wise 访问匹配域名时自动使用。
 
 </template>
 
@@ -83,10 +69,10 @@ Olares 提供多种方式，让你可以灵活上传 Cookie，你可选择在浏
 
 1. 从启动台打开**设置**。
 2. 前往 **集成** > **管理您的 Cookie**。
-3. 点击 **导入 Cookie**（首次使用时），或在已有 Cookies 的情况下点击右上角的 <i class="material-symbols-outlined">add_circle</i> 图标。
-4. 粘贴你的 Cookie 文本（Netscape、JSON 或 Header String），然后点击**确认**。
+3. 点击 **导入 Cookie**或右上角的 <i class="material-symbols-outlined">add_circle</i> 图标打开**上传 Cookie**对话框。
+4. 选择 Cookie 文件的格式，并将对应的原始文本粘贴到输入框中，点击**确认**。
 
-存储在这里的 Cookie 将在系统层面生效，Wise 在访问对应站点时也会自动使用这些 Cookie。
+Wise 会在访问匹配的域名时自动检测并使用这些 Cookie。
 </template>
 </Tabs>
 
