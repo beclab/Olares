@@ -86,6 +86,14 @@ func IsDir(path string) bool {
 	return s.IsDir()
 }
 
+func IsExecutable(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return info.Mode().Perm()&0111 != 0
+}
+
 func CountDirFiles(dirName string) int {
 	if !IsDir(dirName) {
 		return 0
