@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	v1alpha1client "bytetrade.io/web3os/app-service/pkg/client/clientset/v1alpha1"
+	v1alpha1client "github.com/beclab/Olares/framework/app-service/pkg/client/clientset/v1alpha1"
 
 	"github.com/dgrijalva/jwt-go"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

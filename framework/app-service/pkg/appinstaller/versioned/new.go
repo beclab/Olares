@@ -3,9 +3,9 @@ package versioned
 import (
 	"context"
 
-	"bytetrade.io/web3os/app-service/pkg/appcfg"
-	"bytetrade.io/web3os/app-service/pkg/appinstaller"
-	v2 "bytetrade.io/web3os/app-service/pkg/appinstaller/v2"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
+	v2 "github.com/beclab/Olares/framework/app-service/pkg/appinstaller/v2"
 	"k8s.io/client-go/rest"
 )
 
