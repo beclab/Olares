@@ -73,16 +73,27 @@ When downloading multiple files, the behavior differs between the Files in Olare
 3. Select the save location in the popup window.
 
 ## Preview and edit files
-Double-click a file to open its preview. The Files app supports previewing the following file formats:
 
-* **Images**: JPG, JPEG, PNG, BMP, WEBP, SVG
-* **Videos**: MP4, MKV, AVI, MOV, MPEG, MTS, TS, WMV, WEBM, RM, 3GP
-* **Audio**: MP3, WMA, WAV, OGG, AAC, M4A, APE, FLAC
-* **Text**: PDF, TXT, JS, CSS, XML, YAML, HTML
+### Supported formats
 
-The Files app also supports editing the following text formats: TXT, JS, CSS, XML, YAML, HTML.
+The Files app supports the following file formats for previewing and editing:
+- Preview:
+   * Images: JPG, JPEG, PNG, BMP, WEBP, SVG
+   * Videos: MP4, MKV, MOV, MPEG, MTS, WMV, WEBM, RM, 3GP
+   * Audio: MP3, WMA, WAV, OGG, AAC, M4A, APE, FLAC
+   * Text: PDF, TXT, JS, CSS, XML, YAML, HTML
+- Edit: 
+   * TXT, JS, CSS, XML, YAML, HTML
 
-![Preview](/images/manual/olares/files-preview.png#bordered)
+### Procedure
+
+- To preview a file, double-click the target file.
+- To edit a file:
+   1. Double-click a supported text file.
+   2. Click <i class="material-symbols-outlined">edit_square</i> in the top-right corner.
+   3. Modify the content, and then save your changes by clicking <i class="material-symbols-outlined">save</i>.
+
+      ![Preview](/images/manual/olares/files-preview.png#bordered)
 
 ## Search files
 You can easily find files in the Files app using desktop search.
