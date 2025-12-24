@@ -22,11 +22,10 @@ export async function facebookLogin(
 	}
 	const manifest = stringToBase64(JSON.stringify(schema?.manifest));
 
-	// await FacebookLogin.initialize({ appId: '549140590110570' });
 	await LarePassSocialLogin.initialize({
 		facebook: {
-			appId: '549140590110570',
-			clientToken: '82fca90b3fa47e9083aa7dba75744ee0'
+			appId: 'xxx',
+			clientToken: 'xxx'
 		}
 	});
 

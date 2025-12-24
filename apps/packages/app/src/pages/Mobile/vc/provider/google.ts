@@ -22,10 +22,10 @@ export async function googleLogin(
 	await LarePassSocialLogin.initialize({
 		google: {
 			webClientId:
-				'343424174381-cprm1j3a6da1bbprra97oc34lap3j0mp.apps.googleusercontent.com', // Use Web Client ID for all platforms
+				'xxxx',
 			iOSClientId:
-				'343424174381-vrtlie7g85jcso7c98c4vavo17qoied7.apps.googleusercontent.com', // for iOS
-			mode: 'online' // replaces grantOfflineAccess
+				'xxxxx',
+			mode: 'online'
 		}
 	});
 	await LarePassSocialLogin.logout({ provider: 'google' });
