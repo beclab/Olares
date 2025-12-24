@@ -180,6 +180,14 @@ const side = {
           //  "link": "/zh/manual/larepass/sync-share"
             //  },
             {
+              "text": "分享文件",
+              "link": "/zh/manual/olares/files/share-files"
+            },
+            {
+              "text": "同步文件至本地",
+              "link": "/zh/manual/olares/files/sync-files"
+            },
+            {
               "text": "挂载 SMB",
               "link": "/zh/manual/olares/files/mount-SMB"
             },

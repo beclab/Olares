@@ -51,7 +51,7 @@ olares-cli uninstall --all
 :::info 版本兼容性
 虽然以上版本已经过验证，但其他版本也可能正常运行 Olares。根据你的环境可能需要进行调整。如果你在这些平台上安装时遇到任何问题，欢迎在 [GitHub](https://github.com/beclab/Olares/issues/new) 上提问。
 :::
-
+<!--同步这部分内容，reuse在了LarePass部分的“管理文件”里-->
 ## 同步文件至本地
 
 通过LarePass桌面端，你可以将云端的文件（以资料库或文件夹为单位）直接同步到本地电脑。系统将在你的本地电脑上创建一个对应的同步文件夹。设置完成后，文件将自动实时保持双向同步。
@@ -60,6 +60,17 @@ olares-cli uninstall --all
 **同步至本地** 功能仅适用于 **同步** 目录下的资料库或文件夹。
 :::
 
+### 创建库
+
+库是组织、同步和共享数字内容的基本单元。它是一个多功能的文件容器，可满足各种数据同步和共享的需求。每位用户都会自动获得一个个人库（My Library）作为起点。
+
+若要创建新库：
+
+1. 在**同步**目录右侧，点击 <i class="material-symbols-outlined">add_circle</i> 打开**新建库**对话框。
+
+    ![创建新库](/images/zh/manual/olares/sync-new-library-1.png#bordered){width=56%}
+
+2. 输入库名称并点击**创建**。
 
 ### 开启同步
 
@@ -68,7 +79,7 @@ olares-cli uninstall --all
 1. 打开LarePass桌面端，找到**同步**目录。
 2. 将鼠标悬停在您想要同步的资料库或文件夹上，点击右侧出现的 <i class="material-symbols-outlined">more_horiz</i>，点击**同步至本地**。
 
-   ![同步文件至本地](/images/manual/olares/sync-files-local-1.png#bordered)
+   ![同步文件至本地](/images/manual/olares/sync-files-local-1.png#bordered){width=58%}
 
 3. 在**同步库**弹窗中，设置文件的下载位置，然后点击**确认**，同步随即开始。
     
