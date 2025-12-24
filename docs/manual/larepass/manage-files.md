@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: Learn essential file operations in Larepass including adding new files, editing existing content, and downloading files across different devices.
 ---
 # Common file operations on LarePass
@@ -72,7 +73,7 @@ You can view, pause, or cancel the download tasks in **Transfer** > **Download**
 </template>
 </Tabs>
 
-<!--@include: ../get-started/reusables.md{67,105}-->
+<!--@include: ../get-started/reusables.md{67,108}-->
 
 ## Delete files
 :::warning

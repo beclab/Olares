@@ -9,12 +9,12 @@ description: Guide to synchronizing files between your local devices and Olares.
 
 ## Create a library
 
-<!--@include: ../../get-started/reusables.md{77,82}-->
+<!--@include: ../../get-started/reusables.md{77,85}-->
 
 ## Enable synchronization
 
-<!--@include: ../../get-started/reusables.md{86,95}-->
+<!--@include: ../../get-started/reusables.md{89,98}-->
 
 ## Manage synchronization
 
-<!--@include: ../../get-started/reusables.md{99,105}-->
+<!--@include: ../../get-started/reusables.md{102,108}-->

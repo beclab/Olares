@@ -67,6 +67,9 @@ olares-cli uninstall --all
 若要创建新库：
 
 1. 在**同步**目录右侧，点击 <i class="material-symbols-outlined">add_circle</i> 打开**新建库**对话框。
+
+    ![创建新库](/images/zh/manual/olares/sync-new-library-1.png#bordered){width=56%}
+
 2. 输入库名称并点击**创建**。
 
 ### 开启同步
