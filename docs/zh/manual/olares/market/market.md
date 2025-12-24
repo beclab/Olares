@@ -13,11 +13,11 @@ description: 通过 Olares 应用市场发现和管理应用，掌握安装更�
 
 | 术语                                      | 描述                                                           |
 |-----------------------------------------|--------------------------------------------------------------|
-| [系统应用](../../developer/concepts/application.md#系统应用) | Olares 内置的预安装应用，例如 Profile、文件管理器和 Vault。                     |
-| [社区应用](../../developer/concepts/application.md#社区应用) | 由第三方开发者创建和维护的应用。                                             |
-| [共享应用](../../developer/concepts/application.md#共享应用) | 一种特殊类型的社区应用，向集群范围的授权应用共享服务和资源。 |
-| [授权应用](../../developer/concepts/application.md#授权应用) | 被授权访问共享应用的一类应用。                                                |
-| [依赖项](../../developer/concepts/application.md#依赖项)   | 应用需要先安装的前置应用。                                                |
+| [系统应用](../../../developer/concepts/application.md#系统应用) | Olares 内置的预安装应用，例如 Profile、文件管理器和 Vault。                     |
+| [社区应用](../../../developer/concepts/application.md#社区应用) | 由第三方开发者创建和维护的应用。                                             |
+| [共享应用](../../../developer/concepts/application.md#共享应用) | 一种特殊类型的社区应用，向集群范围的授权应用共享服务和资源。 |
+| [授权应用](../../../developer/concepts/application.md#授权应用) | 被授权访问共享应用的一类应用。                                                |
+| [依赖项](../../../developer/concepts/application.md#依赖项)   | 应用需要先安装的前置应用。                                                |
 
 ## 查找应用
 
