@@ -8,6 +8,8 @@ File search settings allow you to customize how Olares indexes and searches your
 
 This guide helps you understand and configure indexing rules to optimize your search experience.
 
+See also [Search within Olares](/manual/olares/desktop.md#search-within-olares) for how to use global search.
+
 :::tip Search scope 
 These settings apply only to your own files in Olares.
 
@@ -16,25 +18,29 @@ Files or folders shared with you by other team members are searchable globally b
 
 ## Understand search settings
 
-Olares file search consists of three key components. Understanding how they interact helps you manage your system's indexing behavior.
+Olares file search is configured in **File search**, which contains three main sections:
+
+- **Search index** – Shows the current indexing status and lets you manually rebuild the index when needed.
+- **Excluded files** – Acts as a global ignore list for the search engine, defining which files are excluded from the index.
+- **Full-text search directories** – Lists the folders where content search is enabled, so files are searchable by both filename and text content.
+
+![File search](/images/manual/olares/file-search.png#bordered)
 
 ### Search index
 
-The **Search Index** section shows the current indexing status.
+To view and manage the search index:
+1. Open **Settings** from the Launchpad.
+2. Go to **Search** > **File search**.
+3. Locate the **Search index** section at the top of the panel.
 
-**Status meanings**
-- `In Progress`: Olares is updating the index, so search results may be temporarily incomplete.
-- `Completed`: Indexing is finished, and search results should be up to date.
+The **Search index** section shows the current indexing status and provides a **Rebuild** button.
 
-**What can trigger `In Progress`**
-- **File changes**: Files or folders are added, deleted, or updated in Olares.
-- **Rule changes**: Excluded Files patterns change, or the Full-Text Search Directories list changes.
+After files change or you update search rules, Olares automatically refreshes the index within about 30 seconds. In most cases, you can rely on this automatic update. Use **Rebuild** only when you need search results to reflect changes immediately.
 
-**How changes are applied**
-- **Auto-update**: After file changes or rule changes, Olares updates the index automatically within about 30 seconds.
-- **Rebuild**: If you want changes to take effect immediately (instead of waiting), click **Rebuild**.
+The status indicator shows:
 
-In most cases, you can simply wait for the automatic update. **Rebuild** is mainly useful when you need results to reflect changes right away.
+- **In Progress** – The index is being updated. Search results may be temporarily incomplete during this time.
+- **Completed** – The index is up to date and search results should reflect the latest files and rules.
 
 ### Excluded files
 
@@ -56,7 +62,7 @@ By default, Olares indexes files by filename only. This setting allows you to en
 To view the current search indexing status:
 
 1. Open Settings from the Launchpad.
-2. Go to **Search** > **File Search**.
+2. Go to **Search** > **File search**.
 3. Locate the Search Index section at the top of the panel.
 
 If you need changes reflected immediately, click **Rebuild**.
@@ -87,24 +93,20 @@ If you are not familiar with regular expressions, start with simple patterns and
 
 ### Search inside file content
 
-Use the Full-Text Search Directories section when you want to search inside documents, not just by filename.
+Use the Full-text search directories section when you want to search inside documents, not just by filename.
 
 By adding a **folder** to the full-text directory list, full-text search is enabled. Once added, supported files in that folder become searchable by both filename and content.
 
 **To add a rule:**
-1. Under Full-Text Search Directories, click **Add directory**.
+1. Under Full-text search directories, click **Add directory**.
 2. Select the target folder from the file picker.
 3. Click **Confirm** to add it to the list.
 
 **To remove a rule:**
-1. Under Full-Text Search Directories, locate the target directory.
+1. Under Full-text search directories, locate the target directory.
 2. Click the <i class="material-symbols-outlined">delete</i> icon next to the directory.
 3. In the prompt window, click **Confirm**.
 
 :::tip Supported formats 
 Full-text search is supported for the following file types:<br> `.pdf`, `.doc`, `.docx`, `.csv`, `.rtf`, `.txt`, `.md`, `.json`, `.xml`.
 :::
-
-#### [Search within Olares](/manual/olares/desktop.md#search-within-olares)
-
-Learn how to search within Olares.
