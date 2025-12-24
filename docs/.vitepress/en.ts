@@ -173,7 +173,7 @@ const side = {
               link: "/manual/olares/market/market",
             },
             {
-              text: "Purchase paid applications",
+              text: "Manage paid applications",
               link: "/manual/olares/market/purchase-paid-apps",
             },
             {

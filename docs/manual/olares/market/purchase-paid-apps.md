@@ -1,13 +1,17 @@
 ---
 outline: [2, 3]
-description: Learn how to purchase paid applications on Olares. This guide details the complete process, from configuring your crypto wallet to verifying identity and confirming payments via the LarePass mobile app.
+description: Learn how to purchase paid applications on Olares Market and restore previously purchased applications.
 ---
 
-# Purchase paid applications
+# Manage paid applications
+
+You can purchase paid applications directly from the Olares Market, or restore your previously purchased apps without additional payment.
+
+## Purchase paid applications
 
 You can purchase paid applications directly from the Olares Market. The payment process requires coordination between the Olares system, the LarePass mobile app, and a digital wallet such as MetaMask.
 
-## Prerequisites
+### Prerequisites
 
 Before you begin, ensure that you have completed the following tasks:
 - You have installed and logged into a browser wallet extension, such as MetaMask. To successfully complete the transaction, ensure that your wallet holds both of the following funds:
@@ -15,7 +19,7 @@ Before you begin, ensure that you have completed the following tasks:
     - Network gas fee: Used to pay for blockchain transaction costs. Note that gas fees must be paid in ETH.
 - You have installed the LarePass app on your phone and logged into the same account as your Olares system.
 
-## Step 1: Initiate purchase and identity verification
+### Step 1: Initiate purchase and identity verification
 
 1.  Open the Olares Market.
 2.  Search for the target paid app, click **Get**, and then click **Buy**.
@@ -30,7 +34,7 @@ Before you begin, ensure that you have completed the following tasks:
 
     ![Authorize payment access](/images/manual/olares/authorize-pay.png#bordered)
 
-## Step 2: Confirm order
+### Step 2: Confirm order
 
 1.  After successful verification, return to the app page in Olares Market and click **Buy** again.
 2.  In the **Verify purchase request** popup, click **Verify now**.
@@ -42,7 +46,7 @@ Before you begin, ensure that you have completed the following tasks:
 
     ![Authorize purchase](/images/manual/olares/authorize-purchase.png#bordered)
 
-## Step 3: Complete payment via wallet
+### Step 3: Complete payment via wallet
 
 1. Return to the app page in Olares Market and click **Pay**.
 2. The browser will automatically open **MetaMask** or your connected wallet extension.
@@ -52,3 +56,40 @@ Before you begin, ensure that you have completed the following tasks:
 6. After the payment is completed, you can verify your purchase credential from your LarePass mobile app by navigating to **Settings** > **Safety** > **VC cards**.
 
 ![Authorize purchase](/images/manual/olares/vc.png#bordered)
+
+## Restore purchased applications
+
+If you have previously purchased a paid application, you can restore and re-install it without additional payment, whether you simply uninstalled the app, reset your system, or migrated to a new Olares host.
+
+### Re-install after uninstallation
+
+If you are re-installing a paid app that was uninstalled from your current Olares system, the system preserves your license locally. 
+
+You can find the app in the Market, click **Get**, and then click **Install** to re-install it.
+
+### Restore after system reset or migration
+
+If you have reset Olares OS or switched to new hardware, your local license data is cleared. You must verify your on-chain identity to retrieve your purchase rights, which will allow you to re-install the application.
+
+1. Ensure that the current Olares OS is activated with the same **Olares ID** used for the original purchase.
+2. Open the Olares Market.
+3. Search for the target paid app, click **Get**, and then click **Buy**.
+
+    :::tip Note
+    The system will detect your on-chain purchase record and will not charge you again.
+    :::
+
+4. In the **Authorize payment access** popup, click **Verify now**.
+    
+    :::tip Note
+    This step verifies your identity ownership and does not initiate a new transaction.
+    :::
+
+5. Once verified, the button will change to **Install**. Click it to start installation.
+
+:::tip Important
+- **Identity binding**: Your purchase history is bound to your **Olares ID (DID)**, not to specific hardware.
+- **Identity recovery**: If you still have access to LarePass or have a backup of your mnemonic phrase, you can activate the new system with the same Olares ID and restore your purchased apps through identity verification.
+- **Risk of loss**: If you have uninstalled LarePass and lost your mnemonic phrase, you will permanently lose your digital identity and all associated assets, including paid apps. In this case, you must create a new account and re-purchase the application.
+- **Developer availability**: Restoring a license requires issuance via the developer's Merchant service. If the developer's Merchant service is offline or unavailable, you might be unable to restore the application.
+:::

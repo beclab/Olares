@@ -174,7 +174,7 @@ const side = {
               "link": "/zh/manual/olares/market/market"
             },
             {
-              "text": "购买付费应用",
+              "text": "管理付费应用",
               "link": "/zh/manual/olares/market/purchase-paid-apps"
             },
             {
