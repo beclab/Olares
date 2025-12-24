@@ -5,8 +5,8 @@ import (
 	"errors"
 	"path/filepath"
 
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	v1 "bytetrade.io/web3os/app-service/pkg/workflowinstaller/v1"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	v1 "github.com/beclab/Olares/framework/app-service/pkg/workflowinstaller/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"

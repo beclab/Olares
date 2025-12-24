@@ -12,7 +12,7 @@ import (
 	"time"
 	"unicode"
 
-	"bytetrade.io/web3os/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/go-crypt/crypt/algorithm/pbkdf2"
 
 	"k8s.io/klog/v2"
