@@ -92,7 +92,7 @@ LarePass 支持通过手机的分享选项快速上传文件或媒体内容。
    2. 点击右上角的 <i class="material-symbols-outlined">edit_square</i> 编辑。
    3. 修改内容，然后点击 <i class="material-symbols-outlined">save</i> 保存更改。
 
-      ![预览](/images/manual/olares/files-preview.png#bordered)
+      ![预览](/images/zh/manual/olares/files-preview-1.png#bordered)
 
 ## 搜索文件
 通过桌面搜索功能，可以轻松找到**文件管理器**中的文件。
