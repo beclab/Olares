@@ -79,6 +79,9 @@ Library is the fundamental unit for organizing, syncing, and sharing your digita
 To create a new library:
 
 1. To the right of **Sync**, click <i class="material-symbols-outlined">add_circle</i> to open the **New library** dialog.
+
+  ![Create a new library for sync](/images/manual/olares/sync-new-library.png#bordered){width=55%}
+
 2. Enter a name for the library and click **Create**.
 
 ### Enable synchronization
