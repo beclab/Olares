@@ -207,7 +207,7 @@ data:
     deny contains msg if {
         some container
         input_containers[container]
-        is_untrusted_image(trimed_image(container))
+        is_untrusted_image(trimmed_image(container))
 
         is_root_user(container.securityContext)
     
@@ -217,7 +217,7 @@ data:
     deny contains msg if {
         some container
         input_containers[container]
-        is_untrusted_image(trimed_image(container))
+        is_untrusted_image(trimmed_image(container))
 
         is_root_user(input.request.object.spec.securityContext)
     
@@ -265,7 +265,7 @@ data:
         ctx.privileged == true
     }    
 
-    trimed_image(container) := image if {
+    trimmed_image(container) := image if {
         startswith(container.image, "docker.io/")
         image := split(container.image, "docker.io/")[1]
     } else := container.image
