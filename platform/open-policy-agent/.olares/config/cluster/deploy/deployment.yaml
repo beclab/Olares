@@ -207,7 +207,7 @@ data:
     deny contains msg if {
         some container
         input_containers[container]
-        is_untrusted_image(container)
+        is_untrusted_image(trimed_image(container))
 
         is_root_user(container.securityContext)
     
@@ -217,7 +217,7 @@ data:
     deny contains msg if {
         some container
         input_containers[container]
-        is_untrusted_image(container)
+        is_untrusted_image(trimed_image(container))
 
         is_root_user(input.request.object.spec.securityContext)
     
@@ -232,27 +232,25 @@ data:
       container := input.request.object.spec.initContainers[_]
     }    
 
-    is_untrusted_image(container) if {
-        not startswith(container.image, "beclab/")
-        not startswith(container.image, "docker.io/beclab/")
-        not startswith(container.image, "aboveos/")
-        not startswith(container.image, "harveyff/")
-        not startswith(container.image, "dataelement/")
-        not startswith(container.image, "milvusdb/")
-        not startswith(container.image, "minio/")
-        not startswith(container.image, "mintplexlabs/")
-        not startswith(container.image, "onlyoffice/")
-        not startswith(container.image, "netdata/")
-        not startswith(container.image, "openservicemesh/")
-        not startswith(container.image, "owncloudci/")
-        not startswith(container.image, "redroid/")
-        not startswith(container.image, "busybox:")
-        not startswith(container.image, "docker:dind")
-        not startswith(container.image, "redis:")
-        not startswith(container.image, "ghcr.io/coder/coder:v2.19.0")
-        not startswith(container.image, "apecloud/")
-        not startswith(container.image, "docker.io/apecloud/")
-        not startswith(container.image, "kldtks/")
+    is_untrusted_image(image) if {
+        not startswith(image, "beclab/")
+        not startswith(image, "aboveos/")
+        not startswith(image, "harveyff/")
+        not startswith(image, "dataelement/")
+        not startswith(image, "milvusdb/")
+        not startswith(image, "minio/")
+        not startswith(image, "mintplexlabs/")
+        not startswith(image, "onlyoffice/")
+        not startswith(image, "netdata/")
+        not startswith(image, "openservicemesh/")
+        not startswith(image, "owncloudci/")
+        not startswith(image, "redroid/")
+        not startswith(image, "busybox:")
+        not startswith(image, "docker:dind")
+        not startswith(image, "redis:")
+        not startswith(image, "ghcr.io/coder/coder:v2.19.0")
+        not startswith(image, "apecloud/")
+        not startswith(image, "kldtks/")
     }
         
     is_root_user(ctx) if {
@@ -267,3 +265,9 @@ data:
         ctx.privileged == true
     }    
 
+    trimed_image(container) := image if {
+        startswith(container.image, "docker.io/")
+        image := split(container.image, "docker.io/")[1]
+    } else := container.image
+
+  
