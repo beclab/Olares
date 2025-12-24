@@ -7,7 +7,7 @@ description: Learn how to use the Clone feature in Olares to run multiple instan
 
 You can install multiple instances of the same application, which is also known as "clone". This is useful for scenarios requiring different configurations or versions, such as running multiple Windows virtual machines.
 
-## Procedure
+## Clone an application
 
 1. Confirm that the target application supports cloning:    
     
@@ -29,6 +29,3 @@ You can install multiple instances of the same application, which is also known 
     In the installed applications list, the newly created application will appear with a "Clone" tag next to it.
 
     ![Clone applications result](/images/manual/olares/clone-apps-result.png#bordered)
-
-6. To view the detailed attributes of the newly cloned application, click the application.
-7. To run the newly cloned application, click **Open**.
