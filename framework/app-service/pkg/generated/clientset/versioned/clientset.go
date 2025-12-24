@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	appv1alpha1 "bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned/typed/app.bytetrade.io/v1alpha1"
-	sysv1alpha1 "bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned/typed/sys.bytetrade.io/v1alpha1"
+	appv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned/typed/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned/typed/sys.bytetrade.io/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

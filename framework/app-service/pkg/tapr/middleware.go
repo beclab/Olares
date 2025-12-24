@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"bytetrade.io/web3os/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/emicklei/go-restful/v3"
 	"github.com/go-resty/resty/v2"
 	"k8s.io/client-go/rest"

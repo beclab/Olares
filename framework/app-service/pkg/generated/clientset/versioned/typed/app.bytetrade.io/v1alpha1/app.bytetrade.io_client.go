@@ -5,8 +5,8 @@ package v1alpha1
 import (
 	"net/http"
 
-	v1alpha1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned/scheme"
+	v1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

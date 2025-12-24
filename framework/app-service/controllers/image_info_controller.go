@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	appv1alpha1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/apiserver/api"
-	"bytetrade.io/web3os/app-service/pkg/utils"
-	"bytetrade.io/web3os/app-service/pkg/utils/registry"
+	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils/registry"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/errdefs"

@@ -1,4 +1,4 @@
-module bytetrade.io/web3os/app-service
+module github.com/beclab/Olares/framework/app-service
 
 go 1.24.2
 

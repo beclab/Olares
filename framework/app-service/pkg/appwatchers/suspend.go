@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/kubesphere"
-	"bytetrade.io/web3os/app-service/pkg/prometheus"
+	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
 
 	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"

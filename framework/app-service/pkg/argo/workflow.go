@@ -3,7 +3,7 @@ package argo
 import (
 	"context"
 
-	"bytetrade.io/web3os/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 
 	"github.com/argoproj/argo-workflows/v3/pkg/apis/workflow"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

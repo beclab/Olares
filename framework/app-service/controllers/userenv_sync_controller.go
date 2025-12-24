@@ -1,11 +1,12 @@
 package controllers
 
 import (
-	apputils "bytetrade.io/web3os/app-service/pkg/utils"
 	"context"
 	"fmt"
 
-	sysv1alpha1 "bytetrade.io/web3os/app-service/api/sys.bytetrade.io/v1alpha1"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils"
+
+	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
