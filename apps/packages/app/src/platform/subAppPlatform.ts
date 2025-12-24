@@ -70,4 +70,16 @@ export class SubAppPlatform extends WebPlatform implements AppPlatform {
 	}
 
 	userAgent = navigator.userAgent;
+
+	socialKeys = {
+		facebook: {
+			appId: '',
+			clientToken: ''
+		},
+		google: {
+			webClientId: '',
+			iOSClientId: '',
+			androidClientId: ''
+		}
+	};
 }

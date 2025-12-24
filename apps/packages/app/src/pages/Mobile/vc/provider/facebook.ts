@@ -9,6 +9,7 @@ import { ClientSchema } from '../../../../globals';
 import { i18n } from '../../../../boot/i18n';
 import { VCCardInfo, getSubmitApplicationJWS } from 'src/utils/vc';
 import { LarePassSocialLogin } from 'src/platform/interface/capacitor/plugins/social';
+import { getAppPlatform } from 'src/application/platform';
 
 export async function facebookLogin(
 	did: string,
@@ -22,12 +23,8 @@ export async function facebookLogin(
 	}
 	const manifest = stringToBase64(JSON.stringify(schema?.manifest));
 
-	// await FacebookLogin.initialize({ appId: '549140590110570' });
 	await LarePassSocialLogin.initialize({
-		facebook: {
-			appId: '549140590110570',
-			clientToken: '82fca90b3fa47e9083aa7dba75744ee0'
-		}
+		facebook: getAppPlatform().socialKeys.facebook
 	});
 
 	const FACEBOOK_PERMISSIONS = ['email'];

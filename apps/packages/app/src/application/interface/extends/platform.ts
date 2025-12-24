@@ -107,4 +107,6 @@ export interface NativeAppPlatform extends AppPlatform {
 	getQuasar(): QVueGlobals | undefined;
 
 	getRouter(): Router | undefined;
+
+	
 }

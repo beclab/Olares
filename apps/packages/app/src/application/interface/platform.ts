@@ -78,4 +78,16 @@ export interface AppPlatform extends Platform, PlatformExtension {
 	isTabbarDisplay(): boolean;
 
 	userAgent: string;
+
+	socialKeys: {
+		facebook: {
+			appId: string;
+			clientToken: string;
+		},
+		google: {
+			webClientId: string;
+			iOSClientId: string;
+			androidClientId: string;
+		}
+	}
 }

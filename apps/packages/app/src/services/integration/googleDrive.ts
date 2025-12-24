@@ -19,10 +19,9 @@ export class GoogleAuthService extends OperateIntegrationAuth<GoogleIntegrationA
 		];
 		await LarePassSocialLogin.initialize({
 			google: {
-				webClientId:
-					'343424174381-cprm1j3a6da1bbprra97oc34lap3j0mp.apps.googleusercontent.com', // Use Web Client ID for all platforms
+				webClientId: getAppPlatform().socialKeys.google.webClientId,
 				iOSClientId:
-					'343424174381-vrtlie7g85jcso7c98c4vavo17qoied7.apps.googleusercontent.com', // for iOS
+					getAppPlatform().socialKeys.google.iOSClientId,
 				mode: getAppPlatform().getQuasar()?.platform.is?.android
 					? 'offline'
 					: 'online' // replaces grantOfflineAccess
@@ -45,8 +44,7 @@ export class GoogleAuthService extends OperateIntegrationAuth<GoogleIntegrationA
 		let clientId = '';
 
 		if (getAppPlatform().getQuasar()?.platform.is?.android) {
-			clientId =
-				'343424174381-cprm1j3a6da1bbprra97oc34lap3j0mp.apps.googleusercontent.com';
+			clientId = getAppPlatform().socialKeys.google.androidClientId;
 			response = await axiosInstanceProxy(
 				{
 					baseURL: 'https://cloud-api.jointerminus.com/',
@@ -68,8 +66,7 @@ export class GoogleAuthService extends OperateIntegrationAuth<GoogleIntegrationA
 				);
 			}
 		} else {
-			clientId =
-				'343424174381-vrtlie7g85jcso7c98c4vavo17qoied7.apps.googleusercontent.com';
+			clientId = getAppPlatform().socialKeys.google.iOSClientId;
 		}
 
 		const result = {
