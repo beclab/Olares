@@ -18,7 +18,7 @@ outline: [2, 3]
 
 Before submitting an application, please ensure that it has been thoroughly tested on your Olares.
 - Use DevBox's dev-container to test and debug your application in a real online environment. [Learn more about DevBox](../tutorial/studio).
-- Use the [custom installation](/manual/olares/market.md#install-custom-applications) in the Market app for user testing.
+- Use the [custom installation](/manual/olares/market/market.md#install-custom-applications) in the Market app for user testing.
 
 ### 2. Submit an application
 The submission of the application needs to be completed through a **Pull Request**. Here's how:

@@ -13,7 +13,7 @@ Explore the following guides to get the most out of Olares’s built-in apps:
 
 [**Navigate and customize your Desktop**](./desktop.md): Launch apps, organize your workspace, and search across Olares.
 
-[**Install and manage apps with Market**](./market.md): Discover, install, update, or remove apps and recommendation algorithms from an open permisionless application store.
+[**Install and manage apps with Market**](./market/market.md): Discover, install, update, or remove apps and recommendation algorithms from an open permisionless application store.
 
 [**Store, sync, and access Files**](./files/): Upload, download, organize, and share files securely across devices with centralized storage and real-time synchronization.
 

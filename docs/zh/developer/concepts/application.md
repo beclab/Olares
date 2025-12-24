@@ -120,7 +120,7 @@ Service Provider 机制使社区应用能够与系统应用、其他社区应用
 
 - 用户
 
-  [管理应用](../../manual/olares/market.md)<br>
+  [管理应用](../../manual/olares/market/market.md)<br>
 
 - 开发者
 
