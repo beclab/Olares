@@ -5,6 +5,7 @@ import { ClientSchema } from '../../../../globals';
 import { i18n } from '../../../../boot/i18n';
 import { VCCardInfo, getSubmitApplicationJWS } from 'src/utils/vc';
 import { LarePassSocialLogin } from 'src/platform/interface/capacitor/plugins/social';
+import { getAppPlatform } from 'src/application/platform';
 
 export async function googleLogin(
 	did: string,
@@ -22,9 +23,9 @@ export async function googleLogin(
 	await LarePassSocialLogin.initialize({
 		google: {
 			webClientId:
-				'xxxx',
+				getAppPlatform().socialKeys.google.webClientId,
 			iOSClientId:
-				'xxxxx',
+				getAppPlatform().socialKeys.google.iOSClientId,
 			mode: 'online'
 		}
 	});
