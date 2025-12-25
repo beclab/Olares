@@ -62,6 +62,8 @@ module.exports = configure(function (ctx) {
 
 			env: {
 				PL_SERVER_URL: process.env.PL_SERVER_URL,
+				VAULT_MOCK_BFL_TOKEN: process.env.VAULT_MOCK_BFL_TOKEN,
+				VAULT_MOCK_PASSWORD: process.env.VAULT_MOCK_PASSWORD,
 				PLATFORM: process.env.PLATFORM,
 				DEV_PLATFORM: process.env.DEV_PLATFORM,
 				APPLICATION_SUB: process.env.APPLICATION_SUB,
