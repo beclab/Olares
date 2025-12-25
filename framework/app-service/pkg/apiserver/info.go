@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"bytetrade.io/web3os/app-service/pkg/appcfg"
-	"bytetrade.io/web3os/app-service/pkg/utils/config"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
 
 	"gopkg.in/yaml.v2"
 )

@@ -7,11 +7,11 @@ import (
 	"net/http/httputil"
 	"time"
 
-	"bytetrade.io/web3os/app-service/pkg/appcfg"
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	"bytetrade.io/web3os/app-service/pkg/helm"
-	"bytetrade.io/web3os/app-service/pkg/tapr"
-	apputils "bytetrade.io/web3os/app-service/pkg/utils/app"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/helm"
+	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/go-resty/resty/v2"

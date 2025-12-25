@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	"bytetrade.io/web3os/app-service/pkg/kubesphere"
-	"bytetrade.io/web3os/app-service/pkg/users/userspace"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"k8s.io/klog/v2"
 )
 

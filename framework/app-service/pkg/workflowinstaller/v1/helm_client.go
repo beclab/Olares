@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"bytetrade.io/web3os/app-service/pkg/helm"
+	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/release"

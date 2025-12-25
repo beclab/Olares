@@ -7,12 +7,12 @@ import (
 	"os"
 	"time"
 
-	appsv1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/appcfg"
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	"bytetrade.io/web3os/app-service/pkg/images"
-	"bytetrade.io/web3os/app-service/pkg/kubesphere"
-	"bytetrade.io/web3os/app-service/pkg/utils"
+	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/images"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"

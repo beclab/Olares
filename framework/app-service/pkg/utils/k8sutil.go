@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/go-resty/resty/v2"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,12 +12,14 @@ import (
 	"strings"
 	"time"
 
-	sysv1alpha1 "bytetrade.io/web3os/app-service/api/sys.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/apiserver/api"
-	"bytetrade.io/web3os/app-service/pkg/client/clientset"
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	"bytetrade.io/web3os/app-service/pkg/prometheus"
-	"bytetrade.io/web3os/app-service/pkg/users"
+	"github.com/go-resty/resty/v2"
+
+	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
+	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 
 	srvconfig "github.com/containerd/containerd/services/server/config"

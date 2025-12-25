@@ -3,7 +3,7 @@
 package fake
 
 import (
-	v1alpha1 "bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned/typed/sys.bytetrade.io/v1alpha1"
+	v1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned/typed/sys.bytetrade.io/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
