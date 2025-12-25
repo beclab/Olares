@@ -4,149 +4,185 @@ description: Manage and optimize GPU resources in Olares with centralized contro
 ---
 # Manage GPU usage
 :::info
-Only Olares admin can configure GPU usage mode. This ensures optimal resource management across the system and prevents conflicts between users' resource needs.
+Only Olares admins can change GPU modes. This helps avoid conflicts and keeps GPU performance predictable for everyone.
 :::
 
-Olares allows you to harness the full power of your GPUs to accelerate demanding tasks such as large language models, image and video generation, and gaming. Whether your GPUs are on a single node or spread across multiple nodes, you can manage them conveniently from one centralized interface.
+Olares helps you manage your graphics cards, or GPUs, to speed up tasks like AI, image and video generation, and gaming. You can control how your applications use these resources from Olares Settings page.
 
-This guide helps you understand and configure GPU allocation modes to maximize hardware performance.
+This guide explains:
+- How to choose the right GPU mode.
+- The basic rules you need to know before assigning GPUs.
+- How to configure GPU modes step by step.
 
-## Hardware prerequisites
+## Choose the right GPU mode
 
-Olares supports **only Nvidia GPUs** of **Turing architecture or later** (Turing, Ampere, Ada Lovelace, and Blackwell).
+If you are not sure which mode to use, start with this section.
 
-- **Quick check:** GTX/RTX **16 series and newer** consumer cards are supported.
-- **For other models:** Cross-check with the [compatible GPU table](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus).
-- **Unknown model:** Run `lspci | grep -i nvidia` to query the GPU architecture code and determine compatibility.
+### Time slicing
+**Best for**: Sharing one GPU among several applications.
+
+- Default mode for GPU assignment in Olares.
+- Multiple apps can share the same GPU by taking turns.
+- At any moment, one app uses the GPU's compute and VRAM.
+- Suitable for general workloads and experimentation with many lightweight apps.
+- Apps without a specific GPU binding are automatically scheduled onto GPUs that are in Time slicing mode.
+
+### App exclusive
+**Best for**: Giving one demanding app maximum and stable performance.
+
+- One app gets full access to the compute and VRAM of a single GPU.
+- No other app can use that GPU while the exclusive binding is active.
+- Ideal for heavy workloads such as large language models or high-end gaming.
+
+### Memory slicing
+**Best for**: Running specific apps at the same time while limiting how much GPU memory each one can use.
+
+- The GPU's VRAM is divided into fixed quotas.
+- Each app is restricted to its assigned VRAM quota.
+- Apps run concurrently instead of taking turns.
+- The sum of all quotas cannot be more than the GPU's physical VRAM.
+
+## Understand GPU assignment rules
+
+Before assigning GPUs, understand these rules first.
+
+### GPU and nodes
+
+In Olares, each GPU belongs to a specific node managed by Olares. You can see which node a GPU belongs to in **Settings** > **GPU**.
+
+Follow these two rules to avoid errors:
+
+- **Same node only**: An application can use multiple GPUs only if they are on the same node.
+- **No mixing nodes**: You cannot combine GPUs from different nodes for a single application.
+
+### Switch GPU
+
+Switching an app to another GPU always restarts the app.  
+The result depends on where the target GPU is located:
+
+| Target GPU location | Result after restart |
+| --- | --- |
+| Same node | The app may end up bound to both GPUs. |
+| Different node | The app is moved and is bound only to the target GPU. |
+
+## Hardware requirements
+
+Olares supports NVIDIA GPUs only. The GPU must be Turing or newer. This includes Turing, Ampere, Ada Lovelace, and Blackwell.
+
+### Check your GPU type
+
+Check your GPU with one of these options:
+
+| What you know | What to do |
+| --- | --- |
+| GTX or RTX 16 series or newer | Your card is likely supported. |
+| Other NVIDIA model | Check the [compatible GPU table](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus). |
+| Unknown model | Run `lspci \| grep -i nvidia` and then check<br> the compatible GPU table. |
 
 :::warning AI performance
-Even if your GPU architecture is supported, **low VRAM capacity may cause AI applications to fail**. Ensure your GPU has enough memory for your workloads.
-:::
-
-## Understand Olares GPU allocation mechanisms
-
-Before configuring your GPUs, it is critical to understand how Olares handles applications across different physical nodes.
-
-### Nodes and restrictions
-
-Olares schedules and binds GPUs at the physical node level.
-
-- **Same node:** You **can** assign multiple GPUs to a single application if all those GPUs are located on the **same physical node**.
-- **Cross-node:** You **cannot** assign GPUs on **different nodes** to a single application. Always verify which node a GPU belongs to in **Settings** > **GPU** before assigning it.
-
-:::tip Switch vs. bind across nodes
-- When you **switch** an app from one GPU to another on the **same node**, the app can end up bound to **both GPUs** (multi-GPU on a single node).
-- When you **switch** an app to a GPU on a **different node**, the app is **moved** so it remains bound **only** to the target GPU (no cross-node multi-GPU).
-:::
-
-### Allocation modes
-
-Olares provides three GPU allocation modes to balance performance and concurrency.
-
-#### Time Slicing
-
-In this mode, a GPU can be shared by multiple applications. Olares rotates execution among apps in time slices.
-
-- **Shared access**: At any instant, only one application uses all available compute and VRAM of the GPU.
-- **Auto-scheduling:** Applications without allocated GPU resources automatically join the time-sliced GPU queue.
-- **Queuing:** Other apps enter a wait queue; their VRAM contents (e.g., CUDA context, etc.) may be temporarily swapped out to system memory.
-
-:::info Default GPU allocation
-By default, GPUs run in **Time Slicing** mode. Applications without explicitly allocated GPU resources are automatically scheduled onto GPUs in Time Slicing mode and will be automatically bound to them.
-:::
-
-#### App Exclusive
-
-In this mode, the entire GPU is allocated to a single application.
-
-- **Dedicated access:** The bound application has exclusive access to all compute and VRAM of the bound GPU.
-- **Performance:** Eliminates cross-app contention and scheduling overhead, providing the best possible performance for heavy workloads.
-
-#### Memory Slicing
-
-In this mode, VRAM of the GPU is partitioned into fixed quotas for multiple designated applications.
-
-- **Concurrent access:** Apps run concurrently, each restricted to its assigned quota.
-- **Fixed quotas:** You manually set a VRAM limit (in GB) for each app.
-- **Limit:** The total allocated quota cannot exceed the physical VRAM of the GPU (no oversubscription).
-
-:::tip Multi-GPU allocation
-All three modes support assigning multiple GPUs to the same application, **provided they are on the same node**. Olares assigns these GPUs to the application container; whether the application actually utilizes multiple GPUs depends on the application's own framework support.
+Even if your GPU is supported, some AI apps can fail if VRAM is too small. Always check the VRAM requirements of your workloads.
 :::
 
 ## View GPU status
 
-To view your GPU inventory and status:
+To see your GPUs and their current configuration:
 
-1. Navigate to **Settings** > **GPU**. The GPU list shows each GPU's model, associated node, total VRAM, and current GPU mode.
-2. Click a GPU to open its details page.
-  ![GPU overview](/images/manual/olares/gpu-overview.png#bordered)
+1. Go to **Settings** > **GPU**.
+2. Review the list to see each GPU's model, node, total VRAM, and current mode.
+   ![GPU overview](/images/manual/olares/gpu-overview.png#bordered)
+3. Click a GPU to open its details page.  
 
-::: tip Note
-If your Olares only has one GPU, navigating to the GPU section will take you directly to the GPU details page.
+:::tip
+If you have only one GPU, Olares may open the GPU details page directly.
 :::
 
 ## Configure GPU mode
 
-To change the configuration of a GPU:
+Follow these steps to change how a GPU is used:
 
-1. Navigate to **Settings** > **GPU**.
-2. Click the GPU you want to configure to open its details page.
-3. Select a mode from the **GPU Mode** dropdown.
+1. Go to **Settings** > **GPU**.
+2. Click the GPU you want to configure.
+3. Choose a mode from the **GPU Mode** dropdown.
 
-### Configure Time Slicing
+:::warning Restart notice 
+Changing a GPU's mode will unbind apps from that GPU and restart their containers.
+
+After restart, if any GPU is in **Time slicing** mode, unbound apps may be automatically scheduled and bound to it.
+:::
+
+### Time slicing
 
 ![Time slicing](/images/manual/olares/gpu-time-slicing.png#bordered)
 
-1. Select **Time Slicing** from the dropdown.
-2. In the **Pin application** section, you can bind applications and manage existing bindings.
-   - **Bind an app**: 
+In **Time slicing** mode, you can perform the following actions.
 
-     Click **Bind App** to manually pin an application to this GPU in Time Slicing mode.  
-     If you don't bind anything manually, the scheduler can still assign apps automatically to this GPU because Time Slicing is the default mode.
+<Tabs>
+<template #Bind-app>
 
-   - **Switch GPU**:  
-     Click <i class="material-symbols-outlined">repeat</i> beside an app to switch it to another GPU. Behavior depends on the target GPU's node:
+1. In **Pin application** section, click **Bind App**.
+2. Choose your target application and click **Confirm**.
+</template>
+<template #Switch-GPU>
 
-     - **Same-node target:**  
-       The application container restarts, and after restart the app is bound to **both** the original GPU and the new target GPU (multi-GPU on one node).
+1. In **Pin application** section, find the app you want to move.
+2. Click <i class="material-symbols-outlined">repeat</i>, then choose the target GPU and confirm.
 
-     - **Different-node target:**  
-       The application container restarts, and the app is **moved** so that it is now bound **only** to the target GPU. It no longer appears under the original GPU.
-   - **Unbind app**:  
-     Click <i class="material-symbols-outlined">link_off</i> to unbind the app from the current GPU.
+| Target GPU location | Result |
+| --- | --- |
+| Same node | The app may use multiple GPUs after restart. |
+| Different node | The app is moved and bound only to the target GPU. |
+</template>
+<template #Unbind-app>
 
-     - Since Time Slicing is the default mode, an app with no bound GPU may be automatically scheduled back onto **any** GPU that is in Time Slicing mode and automatically bound to it (including this GPU).
+1. In **Pin application** section, find the app you want to remove.
+2. Click <i class="material-symbols-outlined">link_off</i>, then **Confirm**.
+</template>
+</Tabs>
 
-### Configure App Exclusive
+### App exclusive
 
 ![App exclusive](/images/manual/olares/gpu-app-exclusive.png#bordered)
-1. Select **App Exclusive** from the dropdown.
-2. In the Select exclusive app section, click **Bind App** to add your target application and click **Confirm**.  
-   This binds the selected app to this GPU with exclusive access.
-3. Once bound, you can perform the following in the Select exclusive app
- section:
 
-   - **Switch App**:
-     Click **Switch App** to replace the current exclusive app with a different one. The old app is unbound from this GPU; the new one becomes the exclusive one.
-   - **Switch GPU**:
-     Click <i class="material-symbols-outlined">repeat</i> to move this exclusive binding to another GPU.  
-   - **Unbind**:  
-     Click <i class="material-symbols-outlined">link_off</i> to unbind the app and release the GPU completely.
+In **App exclusive** mode, you can perform the following actions.
 
-### Configure Memory Slicing
+<Tabs>
+<template #Bind-app>
 
-![VRAM slicing](/images/manual/olares/gpu-memory-slicing.png#bordered)
-1. Select **Memory Slicing** from the dropdown.
-2. In the Allocate VRAM section, click **Bind App**.
-3. Select your target application, assign it a specific amount of VRAM in GB, and click **Confirm**.
-4. Repeat **Bind App** for other applications if needed, as long as the total quota does not exceed the GPU's physical VRAM.
+1. In **Select exclusive app** section, click **Bind App**.
+2. Select your target application and click **Confirm**.
 
-:::info Mode switching
-Changing a GPU's mode (for example, from **Time Slicing** to **App Exclusive**) will unbind apps from that GPU and restart their containers. 
+The app now has exclusive access to this GPU.
+</template>
+<template #Switch-app>
 
-After restart, apps follow the normal scheduling rules: if there is any GPU running in **Time Slicing** mode, unbound apps may be automatically scheduled and bound to a Time Slicing GPU.
-:::
+1. In **Select exclusive app** section, click **Switch App**.
+2. Choose the new application and confirm.
+
+The old app is unbound from this GPU. The new app becomes the exclusive app.
+</template>
+<template #Switch-GPU>
+
+1. In **Select exclusive app** section, click <i class="material-symbols-outlined">repeat</i>.
+2. Choose the target GPU and confirm.
+</template>
+<template #Unbind-app>
+
+1. In **Select exclusive app** section, click <i class="material-symbols-outlined">link_off</i>.
+2. Click **Confirm**.
+</template>
+</Tabs>
+
+### Memory slicing
+
+![Memory slicing](/images/manual/olares/gpu-memory-slicing.png#bordered)
+
+In **Memory slicing** mode, you can bind apps and set VRAM limits:
+
+1. In **Allocate VRAM** section, click **Bind App**.
+2. Select your target application, assign it a specific amount of VRAM in GB, and click **Confirm**.
+3. Repeat for other apps as needed.
+
+The total of all VRAM limits must not exceed the GPU total VRAM.
 
 ## Learn more
 - [Monitor GPU usage in Olares](../resources-usage.md)
