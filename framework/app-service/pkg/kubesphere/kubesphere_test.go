@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"bytetrade.io/web3os/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"k8s.io/klog/v2"
 )
 

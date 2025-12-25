@@ -2,7 +2,7 @@ domain: bytetrade.io
 layout:
 - go.kubebuilder.io/v3
 projectName: app-service
-repo: bytetrade.io/web3os/app-service
+repo: github.com/beclab/Olares/framework/app-service
 resources:
 - api:
     crdVersion: v1
@@ -11,6 +11,6 @@ resources:
   domain: bytetrade.io
   group: app
   kind: Application
-  path: bytetrade.io/web3os/app-service/api/v1alpha1
+  path: github.com/beclab/Olares/framework/app-service/api/v1alpha1
   version: v1alpha1
 version: "3"

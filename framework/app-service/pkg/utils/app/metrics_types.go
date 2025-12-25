@@ -1,7 +1,7 @@
 package app
 
 import (
-	"bytetrade.io/web3os/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 )
 
 type Metrics struct {

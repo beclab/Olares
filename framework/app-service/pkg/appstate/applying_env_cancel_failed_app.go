@@ -3,7 +3,7 @@ package appstate
 import (
 	"context"
 
-	appsv1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
+	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

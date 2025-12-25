@@ -15,16 +15,16 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	sysv1alpha1 "bytetrade.io/web3os/app-service/api/sys.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/appcfg"
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	"bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned"
-	"bytetrade.io/web3os/app-service/pkg/users/userspace"
-	"bytetrade.io/web3os/app-service/pkg/utils"
-	"bytetrade.io/web3os/app-service/pkg/utils/files"
+	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
+	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils/files"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-resty/resty/v2"

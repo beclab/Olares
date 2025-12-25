@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	appevent "bytetrade.io/web3os/app-service/pkg/event"
-	"bytetrade.io/web3os/app-service/pkg/utils"
-	"bytetrade.io/web3os/app-service/pkg/utils/app"
+	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

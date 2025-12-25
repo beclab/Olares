@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	"bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned"
-	"bytetrade.io/web3os/app-service/pkg/generated/informers/externalversions"
-	lister_v1alpha1 "bytetrade.io/web3os/app-service/pkg/generated/listers/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
+	"github.com/beclab/Olares/framework/app-service/pkg/generated/informers/externalversions"
+	lister_v1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/generated/listers/app.bytetrade.io/v1alpha1"
 
 	// upgrade removed from direct usage in handlers
-	"bytetrade.io/web3os/app-service/pkg/users/userspace/v1"
-	"bytetrade.io/web3os/app-service/pkg/utils"
-	"bytetrade.io/web3os/app-service/pkg/webhook"
+	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"

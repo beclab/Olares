@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	appsv1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/images"
-	apputils "bytetrade.io/web3os/app-service/pkg/utils/app"
+	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/images"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

@@ -1,6 +1,6 @@
 package middlewareinstaller
 
-import "bytetrade.io/web3os/app-service/pkg/appcfg"
+import "github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 
 // MiddlewareConfig contains details of a workflow.
 type MiddlewareConfig struct {

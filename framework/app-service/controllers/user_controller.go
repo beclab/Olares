@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"time"
 
-	"bytetrade.io/web3os/app-service/pkg/users"
-	"bytetrade.io/web3os/app-service/pkg/users/userspace/v1"
-	"bytetrade.io/web3os/app-service/pkg/utils"
-	apputils "bytetrade.io/web3os/app-service/pkg/utils/app"
-	"bytetrade.io/web3os/app-service/pkg/utils/sliceutil"
+	"github.com/beclab/Olares/framework/app-service/pkg/users"
+	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils/sliceutil"
 
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/lldap-client/pkg/cache/memory"

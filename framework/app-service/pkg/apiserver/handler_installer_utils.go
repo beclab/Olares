@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"time"
 
-	"bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/apiserver/api"
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	apputils "bytetrade.io/web3os/app-service/pkg/utils/app"
-	"bytetrade.io/web3os/app-service/pkg/workflowinstaller"
+	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	"github.com/beclab/Olares/framework/app-service/pkg/workflowinstaller"
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/go-resty/resty/v2"

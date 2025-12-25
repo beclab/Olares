@@ -3,9 +3,12 @@ package kubeblocks
 import (
 	"context"
 	"fmt"
+
 	"k8s.io/klog/v2"
 
-	appv1alpha1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
+	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+
+	"strings"
 
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	kbopv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
@@ -13,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 type OperationOptions struct {

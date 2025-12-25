@@ -3,11 +3,11 @@
 package fake
 
 import (
-	clientset "bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned"
-	appv1alpha1 "bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned/typed/app.bytetrade.io/v1alpha1"
-	fakeappv1alpha1 "bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned/typed/app.bytetrade.io/v1alpha1/fake"
-	sysv1alpha1 "bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned/typed/sys.bytetrade.io/v1alpha1"
-	fakesysv1alpha1 "bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned/typed/sys.bytetrade.io/v1alpha1/fake"
+	clientset "github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
+	appv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned/typed/app.bytetrade.io/v1alpha1"
+	fakeappv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned/typed/app.bytetrade.io/v1alpha1/fake"
+	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned/typed/sys.bytetrade.io/v1alpha1"
+	fakesysv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned/typed/sys.bytetrade.io/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

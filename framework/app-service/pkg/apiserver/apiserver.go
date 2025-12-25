@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"bytetrade.io/web3os/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/emicklei/go-restful/v3"

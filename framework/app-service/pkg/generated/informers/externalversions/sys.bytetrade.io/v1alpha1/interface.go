@@ -3,7 +3,7 @@
 package v1alpha1
 
 import (
-	internalinterfaces "bytetrade.io/web3os/app-service/pkg/generated/informers/externalversions/internalinterfaces"
+	internalinterfaces "github.com/beclab/Olares/framework/app-service/pkg/generated/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.

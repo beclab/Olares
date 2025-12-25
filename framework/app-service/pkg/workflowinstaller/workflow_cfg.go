@@ -1,6 +1,6 @@
 package workflowinstaller
 
-import "bytetrade.io/web3os/app-service/pkg/appcfg"
+import "github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 
 // WorkflowConfig contains details of a workflow.
 type WorkflowConfig struct {

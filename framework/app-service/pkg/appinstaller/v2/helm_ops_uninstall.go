@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"bytetrade.io/web3os/app-service/pkg/helm"
-	"bytetrade.io/web3os/app-service/pkg/utils/app"
+	"github.com/beclab/Olares/framework/app-service/pkg/helm"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"

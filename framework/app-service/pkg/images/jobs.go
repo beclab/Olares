@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"bytetrade.io/web3os/app-service/pkg/utils"
-	apputils "bytetrade.io/web3os/app-service/pkg/utils/app"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/content"
