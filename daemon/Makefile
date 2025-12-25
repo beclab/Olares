@@ -25,5 +25,5 @@ build-linux-in-docker:
 		-v $(current_dir):/olaresd \
 		-w /olaresd \
 		-e DEBIAN_FRONTEND=noninteractive \
-		golang:1.24 \
+		golang:1.24.11 \
 		sh -c "apt-get -y update; apt-get -y install libudev-dev libpcap-dev; make build-linux"
