@@ -1044,16 +1044,6 @@ export class Controller extends API {
 	// 	}
 	// }
 
-	// {
-	// 	@didvault/server:   status: 'OK',
-	// 	@didvault/server:   data: {
-	// 	@didvault/server:     redirect: '',
-	// 	@didvault/server:     access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Nzg4ODAyNTYsImlhdCI6MTY3ODg3MzA1NiwiaXNzIjoia3ViZXNwaGVyZSIsInN1YiI6ImxpdXl1IiwidG9rZW5fdHlwZSI6ImFjY2Vzc190b2tlbiIsInVzZXJuYW1lIjoibGl1eXUifQ.XkgDarLaKOGoeTd-GPKlQgYveq8dhXLt23Npk25s3NE',
-	// 	@didvault/server:     refresh_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Nzg4ODc0NTYsImlhdCI6MTY3ODg3MzA1NiwiaXNzIjoia3ViZXNwaGVyZSIsInN1YiI6ImxpdXl1IiwidG9rZW5fdHlwZSI6InJlZnJlc2hfdG9rZW4iLCJ1c2VybmFtZSI6ImxpdXl1In0.H2RTrWAsQDsPNhJZ9ymhIKuff-chvXS3GfYNB9iATxg',
-	// 	@didvault/server:     fa2: true,
-	// 	@didvault/server:     session_id: 'c_V0aaZ1mxmBl*In$^k^d^oOITFepIkU'
-	// 	@didvault/server:   }
-	// 	@didvault/server: }
 	// async cert_firstfactor(
 	// 	username: string,
 	// 	password: string,
