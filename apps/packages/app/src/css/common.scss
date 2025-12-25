@@ -1,0 +1,284 @@
+.common-dialog {
+	width: 408px;
+	max-width: 100vw;
+	height: auto;
+	overflow: hidden;
+	background-color: $background-1;
+}
+
+.dialog-content-root {
+	padding: 16px 24px;
+}
+
+.scroll-common-thumb-style {
+	background-color: '#fff';
+}
+
+.scroll-common-bar-style {
+	background-color: '#fff';
+}
+
+.separator-background {
+	margin-top: 0.2px;
+	margin-bottom: 0.2px;
+	background: $separator;
+}
+
+@mixin platform-height-scroll-area-conf($height) {
+	width: 100%;
+	height: $height;
+	max-height: $height;
+}
+
+.full-height-scroll-area-conf {
+	// width: 100%;
+	@include platform-height-scroll-area-conf((calc(100%)));
+}
+
+.nav-height-scroll-area-conf {
+	@include platform-height-scroll-area-conf((calc(100% - 56px)));
+	padding-left: 20px;
+	padding-right: 20px;
+}
+
+.q-list-class {
+	border-radius: 12px;
+	border: 1px solid $separator;
+	overflow: hidden;
+
+	.item-margin-left {
+		margin-left: 20px;
+	}
+
+	.item-margin-right {
+		margin-right: 16px;
+	}
+}
+
+.q-list-class .item:hover {
+	background: $background-hover;
+}
+
+.q-list-sep-line {
+	margin-left: 12px;
+	margin-right: 12px;
+}
+
+.error_banner {
+	color: $red;
+	border-radius: 8px;
+	width: 320px;
+	padding: 12px;
+	background-color: #ffffff;
+
+	.banner_message {
+		height: auto;
+		font-size: map-get($map: $body3, $key: size);
+		font-weight: map-get($map: $body3, $key: weight);
+		line-height: map-get($map: $body3, $key: line-height);
+		letter-spacing: map-get($map: $body3, $key: letter-spacing);
+		max-width: 320px;
+		white-space: pre-line;
+	}
+}
+
+.reminder_banner {
+	color: $ink-2;
+	border-radius: 8px;
+	width: 320px;
+	padding: 12px;
+	background-color: #ffffff;
+
+	.banner_message {
+		height: auto;
+		font-size: map-get($map: $body3, $key: size);
+		font-weight: map-get($map: $body3, $key: weight);
+		line-height: map-get($map: $body3, $key: line-height);
+		letter-spacing: map-get($map: $body3, $key: letter-spacing);
+		max-width: 320px;
+		white-space: pre-line;
+	}
+}
+
+.time-clock {
+	border-radius: 4px;
+	margin-left: 8px;
+}
+
+.submit-btn {
+	margin-top: 20px;
+	font-size: map-get($map: $subtitle3, $key: size);
+	font-weight: map-get($map: $subtitle3, $key: weight);
+	line-height: map-get($map: $subtitle3, $key: line-height);
+	letter-spacing: map-get($map: $subtitle3, $key: letter-spacing);
+	text-align: center;
+	height: 24px;
+	width: 63px;
+	border-radius: 8px;
+	text-transform: capitalize;
+}
+
+//fade
+.fade-enter-active,
+.fade-leave-active {
+	transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+	opacity: 0;
+}
+
+.clickable-view {
+	cursor: pointer;
+	text-decoration: none;
+}
+
+.mode-title-class {
+	font-size: map-get($map: $subtitle2, $key: size);
+	font-weight: map-get($map: $subtitle2, $key: weight);
+	line-height: map-get($map: $subtitle2, $key: line-height);
+	letter-spacing: map-get($map: $subtitle2, $key: letter-spacing);
+	color: $ink-1;
+}
+
+@media (min-width: 768px) {
+	.confirm-btn {
+		font-size: map-get($map: $body3, $key: size) !important;
+		font-weight: map-get($map: $body3, $key: weight) !important;
+		line-height: map-get($map: $body3, $key: line-height) !important;
+		letter-spacing: map-get($map: $body3, $key: letter-spacing) !important;
+		text-align: center !important;
+		border-radius: 8px !important;
+		text-transform: capitalize !important;
+		padding-left: 12px;
+		padding-right: 12px;
+		background-color: $blue-default !important;
+		color: #fff !important;
+		height: 32px;
+	}
+}
+
+@media (max-width: 768px) {
+	.confirm-btn {
+		font-size: map-get($map: $body1, $key: size) !important;
+		font-weight: map-get($map: $body1, $key: weight) !important;
+		line-height: map-get($map: $body1, $key: line-height) !important;
+		letter-spacing: map-get($map: $body1, $key: letter-spacing) !important;
+		text-align: center !important;
+		border-radius: 8px !important;
+		text-transform: capitalize !important;
+		background-color: $blue-default !important;
+		padding-left: 20px;
+		padding-right: 20px;
+		color: #fff !important;
+		height: 40px;
+	}
+}
+
+.confirm-btn-mobile {
+	@extend .confirm-btn;
+	font-size: map-get($map: $subtitle2, $key: size) !important;
+	font-weight: map-get($map: $subtitle2, $key: weight) !important;
+	line-height: map-get($map: $subtitle2, $key: line-height) !important;
+	letter-spacing: map-get($map: $subtitle2, $key: letter-spacing) !important;
+}
+
+.reminder-btn {
+	font-size: map-get($map: $body3, $key: size) !important;
+	font-weight: map-get($map: $body3, $key: weight) !important;
+	line-height: map-get($map: $body3, $key: line-height) !important;
+	letter-spacing: map-get($map: $body3, $key: letter-spacing) !important;
+	text-align: center !important;
+	border-radius: 8px !important;
+	text-transform: capitalize !important;
+	color: #fff !important;
+	background-color: $red;
+}
+
+.confirm-btn[disabled] {
+	background-color: $blue-disabled;
+}
+
+@media (min-width: 768px) {
+	.cancel-btn {
+		font-size: map-get($map: $body3, $key: size) !important;
+		font-weight: map-get($map: $body3, $key: weight) !important;
+		line-height: map-get($map: $body3, $key: line-height) !important;
+		letter-spacing: map-get($map: $body3, $key: letter-spacing) !important;
+		text-align: center !important;
+		border-radius: 8px !important;
+		text-transform: capitalize !important;
+		color: $ink-2 !important;
+		border: solid 1px $separator !important;
+		background-color: $background-1 !important;
+		height: 32px;
+	}
+}
+
+@media (max-width: 768px) {
+	.cancel-btn {
+		font-size: map-get($map: $body1, $key: size) !important;
+		font-weight: map-get($map: $body1, $key: weight) !important;
+		line-height: map-get($map: $body1, $key: line-height) !important;
+		letter-spacing: map-get($map: $body1, $key: letter-spacing) !important;
+		text-align: center !important;
+		border-radius: 8px !important;
+		text-transform: capitalize !important;
+		color: $ink-2 !important;
+		border: solid 1px $separator !important;
+		background-color: $background-1 !important;
+		height: 40px;
+		padding-left: 20px;
+		padding-right: 20px;
+	}
+}
+
+.cancel-btn-mobile {
+	@extend .cancel-btn;
+	font-size: map-get($map: $subtitle2, $key: size) !important;
+	font-weight: map-get($map: $subtitle2, $key: weight) !important;
+	line-height: map-get($map: $subtitle2, $key: line-height) !important;
+	letter-spacing: map-get($map: $subtitle2, $key: letter-spacing) !important;
+}
+
+.cancel-btn[disabled] {
+	background-color: $background-1;
+}
+
+.header_extension {
+	background-color: $background-2;
+	padding: 12px 20px;
+}
+
+.custom-placeholder::placeholder {
+	color: $ink-3;
+	opacity: 1;
+}
+
+.custom-input-padding {
+	margin-top: 8px;
+	margin-bottom: 8px;
+	height: calc(100% - 16px);
+}
+
+.settings-global-ok-button {
+	background: $blue-default !important;
+	color: white !important;
+}
+
+.bt-switch-margin-right {
+	margin-right: 5px;
+}
+
+.terminus_input_border_edit_normal {
+	border: 1px solid $separator;
+}
+
+.terminus_input_border_editing {
+	border: 1px solid $blue-default;
+}
+
+.terminus_input_border_edit_error {
+	border: 1px solid $red;
+}

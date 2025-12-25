@@ -1,0 +1,8 @@
+FROM nginx:stable-alpine
+
+COPY packages/app/dist/apps/ /apps/
+COPY docker/system-frontend/nginx/*.conf /apps/nginxs/
+
+EXPOSE 80
+
+CMD ["nginx"]

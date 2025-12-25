@@ -1,0 +1,12 @@
+<svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="SpinnerLoaders">
+<circle id="Ellipse 124" opacity="0.1" cx="22" cy="22" r="18" stroke="#2EE58A" stroke-width="8"/>
+<path id="Ellipse 125" d="M34.7279 9.56497L37.6317 6.81399L34.7279 9.56497ZM44 23C44 25.2091 42.2091 27 40 27C37.7909 27 36 25.2091 36 23H44ZM0 23C0 16.9677 2.26818 11.1419 6.36827 6.81399L12.1759 12.3159C9.52467 15.1145 8 18.9541 8 23H0ZM6.36827 6.81399C10.4753 2.47878 16.0933 0 22 0V8C18.3589 8 14.8202 9.52478 12.1759 12.3159L6.36827 6.81399ZM22 0C27.9067 0 33.5247 2.47877 37.6317 6.81399L31.8241 12.3159C29.1798 9.52478 25.6411 8 22 8V0ZM37.6317 6.81399C41.7318 11.1419 44 16.9677 44 23H36C36 18.9541 34.4753 15.1145 31.8241 12.3159L37.6317 6.81399Z" fill="url(#paint0_linear_1735_20845)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_1735_20845" x1="40" y1="23" x2="7.6" y2="23" gradientUnits="userSpaceOnUse">
+<stop stop-color="#2EE58A"/>
+<stop offset="1" stop-color="#2EE58A" stop-opacity="0"/>
+</linearGradient>
+</defs>
+</svg>

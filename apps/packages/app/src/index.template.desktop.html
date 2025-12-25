@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>
+		<%= productName %>
+	</title>
+
+	<meta charset="utf-8" />
+	<meta name="description" content="<%= productDescription %>" />
+	<meta name="format-detection" content="telephone=no" />
+	<meta name="msapplication-tap-highlight" content="no" />
+	<meta name="viewport"
+		content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width<% if (ctx.mode.cordova || ctx.mode.capacitor) { %>, viewport-fit=cover<% } %>" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta http-equiv="Cache-Control" content="<%= process.env.CACHE_CONTROL %>" />
+	<meta http-equiv="Expires" content="<%= process.env.EXPIRES %>" />
+
+	<link rel="icon" type="image/png" sizes="128x128" href="desktop/app-icon/os.svg" />
+
+</head>
+
+<body>
+	<!-- DO NOT touch the following DIV -->
+	<div id="q-app"></div>
+</body>
+
+</html>
+
+<!-- <script>
+	function inMobile() {
+		document.getElementsByTagName('html')[0].style.fontSize =
+			(document.documentElement.clientWidth / 375) * 100 + 'px';
+	}
+	document.addEventListener('DOMContentLoaded', inMobile);
+	window.onresize = inMobile;
+</script> -->
+
+<style>
+	body {
+		overflow: hidden;
+		touch-action: none;
+	}
+
+	:root {
+		font-size: calc(100vw / 375 * 100);
+	}
+</style>
