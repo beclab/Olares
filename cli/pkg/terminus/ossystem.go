@@ -10,8 +10,8 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	"bytetrade.io/web3os/app-service/api/sys.bytetrade.io/v1alpha1"
-	apputils "bytetrade.io/web3os/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/storage"

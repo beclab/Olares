@@ -1,15 +1,16 @@
 package user
 
 import (
-	"bytetrade.io/web3os/app-service/api/sys.bytetrade.io/v1alpha1"
 	"context"
 	"fmt"
+	"log"
+	"strings"
+
 	"github.com/beclab/Olares/cli/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
-	"log"
-	"strings"
 
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/spf13/cobra"
