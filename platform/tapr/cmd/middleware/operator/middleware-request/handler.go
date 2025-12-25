@@ -144,6 +144,20 @@ func (c *controller) handler(action Action, obj interface{}) error {
 				return err
 			}
 		}
+	case aprv1.TypeClickHouse:
+		switch action {
+		case ADD, UPDATE:
+			klog.Infof("create clickhouse user name: %s", request.Name)
+			if err := c.createOrUpdateClickHouseRequest(request); err != nil {
+				klog.Errorf("failed to process clickhouse create or update request %v", err)
+				return err
+			}
+		case DELETE:
+			if err := c.deleteClickHouseRequest(request); err != nil {
+				klog.Errorf("failed to process clickhouse delete request %v", err)
+				return err
+			}
+		}
 	}
 
 	return nil

@@ -5,6 +5,7 @@ import (
 
 	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 	"bytetrade.io/web3os/tapr/pkg/workload/citus"
+	"bytetrade.io/web3os/tapr/pkg/workload/clickhouse"
 	"bytetrade.io/web3os/tapr/pkg/workload/elasticsearch"
 	"bytetrade.io/web3os/tapr/pkg/workload/mariadb"
 	"bytetrade.io/web3os/tapr/pkg/workload/minio"
@@ -234,6 +235,20 @@ func (s *Server) getMiddlewareInfo(ctx *fiber.Ctx, mwReq *MiddlewareReq, m *aprv
 			resp.Databases[v.Name] = mariadb.GetDatabaseName(m.Spec.AppNamespace, v.Name)
 		}
 
+		return resp, nil
+	case aprv1.TypeClickHouse:
+		resp.UserName = m.Spec.ClickHouse.User
+		resp.Password, err = m.Spec.ClickHouse.Password.GetVarValue(ctx.UserContext(), s.k8sClientSet, mwReq.Namespace)
+		if err != nil {
+			klog.Error("get middleware clickhouse password error, ", err)
+			return nil, err
+		}
+		resp.Port = 9000
+		resp.Host = "clickhouse-svc.clickhouse-middleware"
+		resp.Databases = make(map[string]string)
+		for _, v := range m.Spec.ClickHouse.Databases {
+			resp.Databases[v.Name] = clickhouse.GetDatabaseName(m.Spec.AppNamespace, v.Name)
+		}
 		return resp, nil
 
 	} // end of middleware type
