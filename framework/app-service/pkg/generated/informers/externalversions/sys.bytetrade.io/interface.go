@@ -3,8 +3,8 @@
 package sys
 
 import (
-	internalinterfaces "bytetrade.io/web3os/app-service/pkg/generated/informers/externalversions/internalinterfaces"
-	v1alpha1 "bytetrade.io/web3os/app-service/pkg/generated/informers/externalversions/sys.bytetrade.io/v1alpha1"
+	internalinterfaces "github.com/beclab/Olares/framework/app-service/pkg/generated/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/generated/informers/externalversions/sys.bytetrade.io/v1alpha1"
 )
 
 // Interface provides access to each of this group's versions.

@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"bytetrade.io/web3os/app-service/pkg/utils/sliceutil"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils/sliceutil"
 
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	corev1 "k8s.io/api/core/v1"

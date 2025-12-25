@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"bytetrade.io/web3os/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
