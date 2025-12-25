@@ -5,6 +5,16 @@ import level from 'level';
 
 const TERMINUS_NAME = process.env.TERMINUS_NAME || 'did';
 
+const REFRESH_TOKEN = process.env.REFRESH_TOKEN || '';
+
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN || '';
+
+const SESSION_ID = process.env.SESSION_ID || '';
+
+const BASE32_SECRET = process.env.BASE32_SECRET || ''
+
+const OTP_AUTH_URL = process.env.OPT_AUTH_URL || '';
+
 export interface UserInfo {
 	olaresId: string;
 	wizardStatus: string;
@@ -259,9 +269,8 @@ export class ApiControllers {
 		const result = {
 			status: 'OK',
 			data: {
-				base32_secret: 'Z6JJH64KWRFXPBHTHVPF2XZT6INZEKVTMSLWPIFNKXXS2FSZ3QUQ',
-				otpauth_url:
-					'otpauth://totp/authelia.com:liuyu?algorithm=SHA1&digits=6&issuer=authelia.com&period=30&secret=Z6JJH64KWRFXPBHTHVPF2XZT6INZEKVTMSLWPIFNKXXS2FSZ3QUQ'
+				base32_secret: BASE32_SECRET,
+				otpauth_url: OTP_AUTH_URL
 			}
 		};
 
@@ -294,14 +303,6 @@ export class ApiControllers {
 		const username = request.body['username'];
 		const password = request.body['password'];
 
-		// if (password !== '123456') {
-		// 	response.set('Content-Type', 'application/json');
-		// 	response.status(401).send({
-		// 		status: 'Failed'
-		// 	});
-		// 	return;
-		// }
-
 		if (username != TERMINUS_NAME.split('@')[0]) {
 			response.set('Content-Type', 'application/json');
 
@@ -314,13 +315,11 @@ export class ApiControllers {
 		const result = {
 			status: 'OK',
 			data: {
-				access_token:
-					'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Nzg4ODAyNTYsImlhdCI6MTY3ODg3MzA1NiwiaXNzIjoia3ViZXNwaGVyZSIsInN1YiI6ImxpdXl1IiwidG9rZW5fdHlwZSI6ImFjY2Vzc190b2tlbiIsInVzZXJuYW1lIjoibGl1eXUifQ.XkgDarLaKOGoeTd-GPKlQgYveq8dhXLt23Npk25s3NE',
-				refresh_token:
-					'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Nzg4ODc0NTYsImlhdCI6MTY3ODg3MzA1NiwiaXNzIjoia3ViZXNwaGVyZSIsInN1YiI6ImxpdXl1IiwidG9rZW5fdHlwZSI6InJlZnJlc2hfdG9rZW4iLCJ1c2VybmFtZSI6ImxpdXl1In0.H2RTrWAsQDsPNhJZ9ymhIKuff-chvXS3GfYNB9iATxg',
+				access_token: ACCESS_TOKEN,
+				refresh_token: REFRESH_TOKEN,
 				fa2: true,
 				redirect: '',
-				session_id: 'c_V0aaZ1mxmBl*In$^k^d^oOITFepIkU'
+				session_id: SESSION_ID
 			}
 		};
 
@@ -334,20 +333,13 @@ export class ApiControllers {
 		const result: any = {
 			status: 'OK',
 			data: {
-				access_token:
-					'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Nzg4ODAyNTYsImlhdCI6MTY3ODg3MzA1NiwiaXNzIjoia3ViZXNwaGVyZSIsInN1YiI6ImxpdXl1IiwidG9rZW5fdHlwZSI6ImFjY2Vzc190b2tlbiIsInVzZXJuYW1lIjoibGl1eXUifQ.XkgDarLaKOGoeTd-GPKlQgYveq8dhXLt23Npk25s3NE',
-				refresh_token:
-					'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Nzg4ODc0NTYsImlhdCI6MTY3ODg3MzA1NiwiaXNzIjoia3ViZXNwaGVyZSIsInN1YiI6ImxpdXl1IiwidG9rZW5fdHlwZSI6InJlZnJlc2hfdG9rZW4iLCJ1c2VybmFtZSI6ImxpdXl1In0.H2RTrWAsQDsPNhJZ9ymhIKuff-chvXS3GfYNB9iATxg',
+				access_token: ACCESS_TOKEN,
+				refresh_token: REFRESH_TOKEN,
 				fa2: true,
 				redirect: '/abcd',
-				session_id: 'c_V0aaZ1mxmBl*In$^k^d^oOITFepIkU'
+				session_id: SESSION_ID
 			}
 		};
-		// if (request.body.token !== '123456') {
-		// 	result = {
-		// 		status: 'Failed'
-		// 	};
-		// }
 
 		response.set('Content-Type', 'application/json');
 		response.send(result);

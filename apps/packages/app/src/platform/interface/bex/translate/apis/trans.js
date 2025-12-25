@@ -112,7 +112,6 @@ const genOlares = async ({ text, from, to }) => {
 	const init = {
 		headers: {
 			'Content-type': 'application/json'
-			// 'X-Authorization': 'eyJhbGciOiJIUzUxMiJ9.eyJleHAiOjE3NzMzMjE1MjUsImlhdCI6MTc0MTc4NTUyNSwidXNlcm5hbWUiOiJ5YW5neW9uZ2hlbmciLCJncm91cHMiOlsibGxkYXBfcmVndWxhciJdfQ.V3CHWllD4GETOklamEg-hwhT5DR4lKZGLEgpOULpW_ZXuZ-MTYvOFoZatWVWs6wQjT8IrLHF6leyUI09qsgZuw'
 		},
 		method: 'POST',
 		body: JSON.stringify(params)

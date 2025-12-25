@@ -45,15 +45,14 @@ export default defineComponent({
 		const bfl_token = ref<string>('');
 
 		if (process.env.PL_SERVER_URL) {
-			bfl_token.value =
-				'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Nzg3NzU0OTQsImlhdCI6MTY3ODc2ODI5NCwiaXNzIjoia3ViZXNwaGVyZSIsInN1YiI6ImxpdXl1IiwidG9rZW5fdHlwZSI6ImFjY2Vzc190b2tlbiIsInVzZXJuYW1lIjoibGl1eXUifQ.Yr7OhrQ39OXmesVJldORZ34UsFZpiiCWpssKlRxEOR4';
+			bfl_token.value = process.env.VAULT_MOCK_BFL_TOKEN;
 		}
 
 		const url = ref<string>(
 			base_url +
 				'?bfl_token=' +
 				bfl_token.value +
-				'&username=liuyu&password=Test123456'
+				`&username=liuyu&password=${process.env.VAULT_MOCK_PASSWORD}`
 		);
 
 		const { t } = useI18n();
