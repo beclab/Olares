@@ -4,7 +4,7 @@ require (
 	github.com/brancz/gojsontoyaml v0.1.0
 	github.com/campoy/embedmd v1.0.0
 	github.com/dgryski/go-jump v0.0.0-20211018200510-ba001c3ffce0
-	github.com/google/go-cmp v0.5.6
+	github.com/google/go-cmp v0.6.0
 	github.com/google/go-jsonnet v0.17.0
 	github.com/jsonnet-bundler/jsonnet-bundler v0.4.1-0.20200708074244-ada055a225fa
 	github.com/oklog/run v1.1.0
@@ -13,9 +13,8 @@ require (
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.32.1
 	github.com/prometheus/exporter-toolkit v0.7.1
-	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/tools v0.1.8
+	golang.org/x/tools v0.38.0
 	k8s.io/api v0.23.0
 	k8s.io/apimachinery v0.23.0
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.9.2
@@ -58,12 +57,12 @@ require (
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
-	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
-	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654 // indirect
-	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/term v0.37.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
@@ -78,4 +77,4 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-go 1.17
+go 1.24.0
