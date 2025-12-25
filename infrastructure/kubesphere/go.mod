@@ -16,7 +16,7 @@ require (
 	github.com/coreos/go-oidc v2.3.0+incompatible
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/docker v20.10.7+incompatible
-	github.com/emicklei/go-restful v2.14.3+incompatible
+	github.com/emicklei/go-restful v2.16.0+incompatible
 	github.com/emicklei/go-restful-openapi v1.4.1
 	github.com/form3tech-oss/jwt-go v3.2.2+incompatible
 	github.com/fsnotify/fsnotify v1.9.0
