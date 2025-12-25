@@ -226,7 +226,7 @@ spec:
     spec:
       initContainers:
       - name: seahub-init
-        image: beclab/seahub-init:v0.0.4
+        image: beclab/seahub-init:v0.0.5
         env:
           - name: DB_HOST
             value: citus-headless.os-platform
