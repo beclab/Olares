@@ -6,9 +6,6 @@ import (
 
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
-	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
-
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -17,103 +14,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const suspendAnnotation = "bytetrade.io/suspend-by"
 const suspendCauseAnnotation = "bytetrade.io/suspend-cause"
-
-type portKey struct {
-	port     int32
-	protocol string
-}
-
-func setExposePorts(ctx context.Context, appConfig *appcfg.ApplicationConfig) error {
-	existPorts := make(map[portKey]struct{})
-	client, err := utils.GetClient()
-	if err != nil {
-		return err
-	}
-	apps, err := client.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	for _, app := range apps.Items {
-		for _, p := range app.Spec.Ports {
-			protos := []string{p.Protocol}
-			if p.Protocol == "" {
-				protos = []string{"tcp", "udp"}
-			}
-			for _, proto := range protos {
-				key := portKey{
-					port:     p.ExposePort,
-					protocol: proto,
-				}
-				existPorts[key] = struct{}{}
-			}
-		}
-	}
-	klog.Infof("existPorts: %v", existPorts)
-
-	for i := range appConfig.Ports {
-		port := &appConfig.Ports[i]
-		if port.ExposePort == 0 {
-			var exposePort int32
-			protos := []string{port.Protocol}
-			if port.Protocol == "" {
-				protos = []string{"tcp", "udp"}
-			}
-
-			for i := 0; i < 5; i++ {
-				exposePort, err = genPort(protos)
-				if err != nil {
-					continue
-				}
-				for _, proto := range protos {
-					key := portKey{port: exposePort, protocol: proto}
-					if _, ok := existPorts[key]; !ok && err == nil {
-						break
-					}
-				}
-			}
-			for _, proto := range protos {
-				key := portKey{port: exposePort, protocol: proto}
-				if _, ok := existPorts[key]; ok || err != nil {
-					return fmt.Errorf("%d port is not available", key.port)
-				}
-				existPorts[key] = struct{}{}
-				port.ExposePort = exposePort
-			}
-		}
-	}
-
-	// add exposePort to tailscale acls
-	for i := range appConfig.Ports {
-		if appConfig.Ports[i].AddToTailscaleAcl {
-			appConfig.TailScale.ACLs = append(appConfig.TailScale.ACLs, appv1alpha1.ACL{
-				Action: "accept",
-				Src:    []string{"*"},
-				Proto:  appConfig.Ports[i].Protocol,
-				Dst:    []string{fmt.Sprintf("*:%d", appConfig.Ports[i].ExposePort)},
-			})
-		}
-	}
-	klog.Infof("appConfig.TailScale: %v", appConfig.TailScale)
-	return nil
-}
-
-func genPort(protos []string) (int32, error) {
-	exposePort := int32(rand.IntnRange(46800, 50000))
-	for _, proto := range protos {
-		if !utils.IsPortAvailable(proto, int(exposePort)) {
-			return 0, fmt.Errorf("failed to allocate an available port after 5 attempts")
-		}
-	}
-	return exposePort, nil
-}
 
 func suspendOrResumeApp(ctx context.Context, cli client.Client, am *appv1alpha1.ApplicationManager, replicas int32) error {
 	suspend := func(list client.ObjectList) error {
