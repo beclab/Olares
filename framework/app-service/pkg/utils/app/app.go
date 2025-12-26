@@ -35,6 +35,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
@@ -1093,4 +1094,119 @@ func GetRawAppName(AppName, rawAppName string) string {
 	}
 	return rawAppName
 
+}
+
+type portKey struct {
+	port     int32
+	protocol string
+}
+
+func genPort(protos []string) (int32, error) {
+	exposePort := int32(rand.IntnRange(46800, 50000))
+	for _, proto := range protos {
+		if !utils.IsPortAvailable(proto, int(exposePort)) {
+			return 0, fmt.Errorf("failed to allocate an available port after 5 attempts")
+		}
+	}
+	return exposePort, nil
+}
+
+// SetExposePorts sets expose ports for app config.
+func SetExposePorts(ctx context.Context, appConfig *appcfg.ApplicationConfig, prevPortsMap map[string]int32) error {
+	existPorts := make(map[portKey]struct{})
+	client, err := utils.GetClient()
+	if err != nil {
+		return err
+	}
+	apps, err := client.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, app := range apps.Items {
+		for _, p := range app.Spec.Ports {
+			protos := []string{p.Protocol}
+			if p.Protocol == "" {
+				protos = []string{"tcp", "udp"}
+			}
+			for _, proto := range protos {
+				key := portKey{
+					port:     p.ExposePort,
+					protocol: proto,
+				}
+				existPorts[key] = struct{}{}
+			}
+		}
+	}
+	klog.Infof("existPorts: %v", existPorts)
+
+	for i := range appConfig.Ports {
+		port := &appConfig.Ports[i]
+
+		// For upgrade: if port with same name exists in prevPortsMap, preserve its ExposePort
+		if prevPortsMap != nil && port.Name != "" {
+			if prevExposePort, exists := prevPortsMap[port.Name]; exists && prevExposePort != 0 {
+				klog.Infof("preserving ExposePort %d for port %s from previous config", prevExposePort, port.Name)
+				port.ExposePort = prevExposePort
+				continue
+			}
+		}
+
+		if port.ExposePort == 0 {
+			var exposePort int32
+			protos := []string{port.Protocol}
+			if port.Protocol == "" {
+				protos = []string{"tcp", "udp"}
+			}
+
+			for i := 0; i < 5; i++ {
+				exposePort, err = genPort(protos)
+				if err != nil {
+					continue
+				}
+				for _, proto := range protos {
+					key := portKey{port: exposePort, protocol: proto}
+					if _, ok := existPorts[key]; !ok && err == nil {
+						break
+					}
+				}
+			}
+			for _, proto := range protos {
+				key := portKey{port: exposePort, protocol: proto}
+				if _, ok := existPorts[key]; ok || err != nil {
+					return fmt.Errorf("%d port is not available", key.port)
+				}
+				existPorts[key] = struct{}{}
+				port.ExposePort = exposePort
+			}
+		}
+	}
+
+	// add exposePort to tailscale acls
+	for i := range appConfig.Ports {
+		if appConfig.Ports[i].AddToTailscaleAcl {
+			appConfig.TailScale.ACLs = append(appConfig.TailScale.ACLs, v1alpha1.ACL{
+				Action: "accept",
+				Src:    []string{"*"},
+				Proto:  appConfig.Ports[i].Protocol,
+				Dst:    []string{fmt.Sprintf("*:%d", appConfig.Ports[i].ExposePort)},
+			})
+		}
+	}
+	klog.Infof("appConfig.TailScale: %v", appConfig.TailScale)
+	return nil
+}
+
+// BuildPrevPortsMap builds a map of port name -> expose port from previous config.
+func BuildPrevPortsMap(prevConfig *appcfg.ApplicationConfig) map[string]int32 {
+	if prevConfig == nil {
+		return nil
+	}
+	m := make(map[string]int32)
+	for _, p := range prevConfig.Ports {
+		if p.Name != "" && p.ExposePort != 0 {
+			m[p.Name] = p.ExposePort
+		}
+	}
+	return m
 }
