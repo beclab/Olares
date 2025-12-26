@@ -13,6 +13,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2"
@@ -59,9 +60,22 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 		klog.Errorf("get kube config failed %v", err)
 		return nil, err
 	}
-	err = setExposePorts(ctx, appCfg)
+	err = apputils.SetExposePorts(ctx, appCfg, nil)
 	if err != nil {
 		klog.Errorf("set expose ports failed %v", err)
+		return nil, err
+	}
+
+	updatedConfig, err := json.Marshal(appCfg)
+	if err != nil {
+		klog.Errorf("marshal appConfig failed %v", err)
+		return nil, err
+	}
+	managerCopy := p.manager.DeepCopy()
+	managerCopy.Spec.Config = string(updatedConfig)
+	err = p.client.Patch(ctx, managerCopy, client.MergeFrom(p.manager))
+	if err != nil {
+		klog.Errorf("update ApplicationManager config failed %v", err)
 		return nil, err
 	}
 

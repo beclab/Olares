@@ -146,6 +146,16 @@ func (h *upgradeHandlerHelper) setAndEncodingAppCofnig(prevCfg *appcfg.Applicati
 			}
 		}
 	}
+
+	prevPortsMap := apputils.BuildPrevPortsMap(prevCfg)
+
+	// Set expose ports for upgrade, preserving existing ports with same name
+	err := apputils.SetExposePorts(context.TODO(), h.appConfig, prevPortsMap)
+	if err != nil {
+		klog.Errorf("set expose ports failed %v", err)
+		return "", err
+	}
+
 	encoding, err := json.Marshal(h.appConfig)
 	if err != nil {
 		klog.Errorf("Failed to marshal app config err=%v", err)
