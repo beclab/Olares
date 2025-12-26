@@ -12,7 +12,7 @@ import (
 
 const (
 	DefaultKVRocksName      = "kvrocks"
-	DefaultKVRocksImage     = "beclab/kvrocks:0.1.1"
+	DefaultKVRocksImage     = "beclab/kvrocks:0.1.2"
 	KVRocksVolumeName       = "kvrdata"
 	KVRocksBackupVolumeName = "kvrbackup"
 	KVRocksBackupDir        = "/backup"
