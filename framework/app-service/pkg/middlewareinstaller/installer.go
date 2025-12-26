@@ -5,8 +5,8 @@ import (
 	"errors"
 	"path/filepath"
 
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	v1 "bytetrade.io/web3os/app-service/pkg/workflowinstaller/v1"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	v1 "github.com/beclab/Olares/framework/app-service/pkg/workflowinstaller/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -49,11 +49,14 @@ func Uninstall(ctx context.Context, kubeConfig *rest.Config, middleware *Middlew
 		return err
 	}
 
-	if installed, err := helmClient.IsInstalled(middleware.MiddlewareName); err != nil {
+	installed, err := helmClient.IsInstalled(middleware.MiddlewareName)
+	if err != nil {
 		klog.Errorf("Failed to get install history middlewareName=%s err=%v", middleware.MiddlewareName, err)
 		return err
-	} else if !installed {
-		return errors.New("middleware not installed")
+	}
+	if !installed {
+		klog.Infof("middleware %s is not installed", middleware.MiddlewareName)
+		return nil
 	}
 
 	err = helmClient.Uninstall(middleware.MiddlewareName)

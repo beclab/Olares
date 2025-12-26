@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/apiserver/api"
-	"bytetrade.io/web3os/app-service/pkg/appcfg"
-	"bytetrade.io/web3os/app-service/pkg/appinstaller"
-	"bytetrade.io/web3os/app-service/pkg/appinstaller/versioned"
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	apputils "bytetrade.io/web3os/app-service/pkg/utils/app"
+	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
+	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -65,7 +65,7 @@ func (p *UninstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 				err := p.exec(c)
 				if err != nil {
 					p.finally = func() {
-						klog.Infof("uninstalling app %s failed,", p.manager.Spec.AppName)
+						klog.Infof("uninstalling app %s failed %v", p.manager.Spec.AppName, err)
 						opRecord := makeRecord(p.manager, appsv1.UninstallFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
 						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.UninstallFailed, opRecord, err.Error(), "")
 						if updateErr != nil {
@@ -177,6 +177,10 @@ func (p *UninstallingApp) exec(ctx context.Context) error {
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
+	}
+	if appCfg.MiddlewareName == "mongodb" && appCfg.Namespace == "os-platform" {
+		klog.Infof("delete old mongodb ..........")
+		return p.oldMongodbUninstall(ctx, kubeConfig)
 	}
 	ops, err := versioned.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: p.manager.GetMarketSource()})
 	if err != nil {

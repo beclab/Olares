@@ -6,17 +6,17 @@ import (
 	"os"
 	"path/filepath"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	"bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/appcfg"
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	"bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned"
-	"bytetrade.io/web3os/app-service/pkg/kubesphere"
-	"bytetrade.io/web3os/app-service/pkg/tapr"
-	userspacev1 "bytetrade.io/web3os/app-service/pkg/users/userspace/v1"
-	"bytetrade.io/web3os/app-service/pkg/utils"
-	apputils "bytetrade.io/web3os/app-service/pkg/utils/app"
+	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
+	userspacev1 "github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
@@ -258,6 +258,13 @@ func (h *HelmOps) SetValues() (values map[string]interface{}, err error) {
 
 	klog.Infof("values[node]: %#v", values["nodes"])
 
+	deviceName, err := utils.GetDeviceName()
+	if err != nil {
+		klog.Errorf("failed to get deviceName %v", err)
+		return values, err
+	}
+
+	values["deviceName"] = deviceName
 	return values, err
 }
 
@@ -296,7 +303,7 @@ func (h *HelmOps) getInstalledApps(ctx context.Context) (installed bool, app []*
 func (h *HelmOps) AddEnvironmentVariables(values map[string]interface{}) error {
 	values[constants.OlaresEnvHelmValuesKey] = make(map[string]interface{})
 	appEnv, err := h.client.AppClient.SysV1alpha1().AppEnvs(h.app.Namespace).Get(h.ctx, apputils.FormatAppEnvName(h.app.AppName, h.app.OwnerName), metav1.GetOptions{})
-	if errors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) {
 		return nil
 	}
 	if err != nil {

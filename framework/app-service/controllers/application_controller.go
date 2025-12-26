@@ -10,16 +10,16 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
-	appv1alpha1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/apiserver/api"
-	"bytetrade.io/web3os/app-service/pkg/appcfg"
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	"bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned"
-	"bytetrade.io/web3os/app-service/pkg/helm"
-	"bytetrade.io/web3os/app-service/pkg/kubesphere"
-	"bytetrade.io/web3os/app-service/pkg/users/userspace"
-	"bytetrade.io/web3os/app-service/pkg/utils"
-	apputils "bytetrade.io/web3os/app-service/pkg/utils/app"
+	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
+	"github.com/beclab/Olares/framework/app-service/pkg/helm"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	"github.com/thoas/go-funk"
 	"helm.sh/helm/v3/pkg/action"
@@ -376,7 +376,17 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 
 func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.Request,
 	deployment client.Object, app *appv1alpha1.Application, name string) error {
+	// Skip update if triggered by app modification (not deployment change)
+	if app.Annotations != nil {
+		if lastVersion := app.Annotations[deploymentResourceVersionAnnotation]; lastVersion == deployment.GetResourceVersion() {
+			klog.Infof("skip updateApplication: deployment %s not changed, triggered by app modification", deployment.GetName())
+			return nil
+		}
+	}
+
 	appCopy := app.DeepCopy()
+	appNames := getAppName(deployment)
+	isMultiApp := len(appNames) > 1
 
 	tailScale, err := r.getAppTailScale(deployment)
 	if err != nil {
@@ -390,11 +400,45 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 
 	icon = icons[name]
 
+	entrancesMap, err := r.getEntranceServiceAddress(ctx, deployment, isMultiApp)
+	if err != nil {
+		ctrl.Log.Error(err, "get entrance error")
+	}
+	servicePortsMap, err := r.getAppPorts(ctx, deployment, isMultiApp)
+	if err != nil {
+		klog.Warningf("get app ports err=%v", err)
+	}
+	var appid string
+	if userspace.IsSysApp(name) {
+		appid = name
+	} else {
+		appid = appv1alpha1.AppName(name).GetAppID()
+	}
+	settings, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
+
 	appCopy.Spec.Name = name
 	appCopy.Spec.Namespace = deployment.GetNamespace()
 	appCopy.Spec.Owner = owner
 	appCopy.Spec.DeploymentName = deployment.GetName()
 	appCopy.Spec.Icon = icon
+	appCopy.Spec.SharedEntrances = sharedEntrances
+	appCopy.Spec.Ports = servicePortsMap[name]
+
+	// Merge entrances: preserve authLevel from existing, update other fields
+	appCopy.Spec.Entrances = mergeEntrances(app.Spec.Entrances, entrancesMap[name])
+
+	if appCopy.Spec.Settings == nil {
+		appCopy.Spec.Settings = make(map[string]string)
+	}
+	if settings["defaultThirdLevelDomainConfig"] != "" {
+		appCopy.Spec.Settings["defaultThirdLevelDomainConfig"] = settings["defaultThirdLevelDomainConfig"]
+	}
+
+	if incomingPolicy := settings[applicationSettingsPolicyKey]; incomingPolicy != "" {
+		existingPolicy := appCopy.Spec.Settings[applicationSettingsPolicyKey]
+		appCopy.Spec.Settings[applicationSettingsPolicyKey] = mergePolicySettings(existingPolicy, incomingPolicy)
+	}
+
 	if tailScale != nil {
 		appCopy.Spec.TailScale = *tailScale
 	}
@@ -413,6 +457,13 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 			appCopy.Spec.Settings["version"] = version
 		}
 	}
+
+	// Record deployment resourceVersion to detect app-only modifications
+	if appCopy.Annotations == nil {
+		appCopy.Annotations = make(map[string]string)
+	}
+	klog.Infof("deploymentname: %s, version: %v", deployment.GetName(), deployment.GetResourceVersion())
+	appCopy.Annotations[deploymentResourceVersionAnnotation] = deployment.GetResourceVersion()
 
 	err = r.Patch(ctx, appCopy, client.MergeFrom(app))
 	if err != nil {

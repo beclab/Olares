@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/apiserver/api"
-	"bytetrade.io/web3os/app-service/pkg/appcfg"
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	"bytetrade.io/web3os/app-service/pkg/kubeblocks"
-	"bytetrade.io/web3os/app-service/pkg/users/userspace"
-	"bytetrade.io/web3os/app-service/pkg/utils"
+	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubeblocks"
+	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	kbopv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,6 +78,11 @@ func (p *SuspendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 }
 
 func (p *SuspendingApp) exec(ctx context.Context) error {
+	err := suspendOrResumeApp(ctx, p.client, p.manager, int32(0))
+	if err != nil {
+		klog.Errorf("suspend %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
+		return fmt.Errorf("suspend app %s failed %w", p.manager.Spec.AppName, err)
+	}
 	// If stop-all is requested, also stop v2 server-side shared charts by scaling them down
 	if p.manager.Annotations[api.AppStopAllKey] == "true" {
 		var appCfg *appcfg.ApplicationConfig
@@ -103,12 +108,6 @@ func (p *SuspendingApp) exec(ctx context.Context) error {
 					return err
 				}
 			}
-		}
-	} else {
-		err := suspendOrResumeApp(ctx, p.client, p.manager, int32(0))
-		if err != nil {
-			klog.Errorf("suspend %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
-			return fmt.Errorf("suspend app %s failed %w", p.manager.Spec.AppName, err)
 		}
 	}
 

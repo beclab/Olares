@@ -1,8 +1,8 @@
 package api
 
 import (
-	sysv1alpha1 "bytetrade.io/web3os/app-service/api/sys.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/constants"
+	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	imagetypes "github.com/containers/image/v5/types"
 )
 
@@ -93,6 +93,7 @@ type RequirementResp struct {
 	Response
 	Resource string `json:"resource"`
 	Message  string `json:"message"`
+	Reason   string `json:"reason"`
 }
 
 // AppSource describe the source of an application, recommend,model,agent

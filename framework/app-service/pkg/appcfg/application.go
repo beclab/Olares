@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	sysv1alpha1 "bytetrade.io/web3os/app-service/api/sys.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/tapr"
-	"bytetrade.io/web3os/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,6 +56,7 @@ type ApplicationConfig struct {
 	APIVersion           APIVersion
 	CfgFileVersion       string
 	Namespace            string
+	MiddlewareName       string
 	ChartsName           string
 	RepoURL              string
 	Title                string

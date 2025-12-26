@@ -14,6 +14,7 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/joho/godotenv"
 	corev1 "k8s.io/api/core/v1"
+	apixclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -24,8 +25,8 @@ import (
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	sysv1 "bytetrade.io/web3os/app-service/api/sys.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned"
+	sysv1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 )
 
 const (
@@ -581,4 +582,20 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	}
 
 	return urls, nil
+}
+
+func GetApixClient() (apixclientset.Interface, error) {
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		klog.Error("get k8s config error, ", err)
+		return nil, err
+	}
+
+	client, err := apixclientset.NewForConfig(config)
+	if err != nil {
+		klog.Error("get k8s apix client error, ", err)
+		return nil, err
+	}
+
+	return client, nil
 }

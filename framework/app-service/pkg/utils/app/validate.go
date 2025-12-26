@@ -10,19 +10,19 @@ import (
 	"sync"
 	"time"
 
-	"bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	sysv1alpha1 "bytetrade.io/web3os/app-service/api/sys.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/apiserver/api"
-	"bytetrade.io/web3os/app-service/pkg/appcfg"
-	v1alpha1client "bytetrade.io/web3os/app-service/pkg/client/clientset/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	"bytetrade.io/web3os/app-service/pkg/generated/clientset/versioned/scheme"
-	"bytetrade.io/web3os/app-service/pkg/kubesphere"
-	"bytetrade.io/web3os/app-service/pkg/prometheus"
-	"bytetrade.io/web3os/app-service/pkg/tapr"
-	"bytetrade.io/web3os/app-service/pkg/users/userspace"
+	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	v1alpha1client "github.com/beclab/Olares/framework/app-service/pkg/client/clientset/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned/scheme"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
+	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
+	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 
-	"bytetrade.io/web3os/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -207,39 +207,41 @@ func CheckUserRole(appConfig *appcfg.ApplicationConfig, owner string) error {
 }
 
 // CheckAppRequirement check if the cluster has enough resources for application install/upgrade.
-func CheckAppRequirement(token string, appConfig *appcfg.ApplicationConfig) (string, error) {
+func CheckAppRequirement(token string, appConfig *appcfg.ApplicationConfig, op v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
 	metrics, _, err := GetClusterResource(token)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
+	klog.Infof("start to %s app %s", op, appConfig.AppName)
 	klog.Infof("Current resource=%s", utils.PrettyJSON(metrics))
 	klog.Infof("App required resource=%s", utils.PrettyJSON(appConfig.Requirement))
 
 	if appConfig.Requirement.Disk != nil &&
 		appConfig.Requirement.Disk.CmpInt64(int64(metrics.Disk.Total*0.9-metrics.Disk.Usage)) > 0 ||
 		int64(metrics.Disk.Total*0.9-metrics.Disk.Usage) < 5*1024*1024*1024 {
-		return "disk", errors.New("The app's DISK requirement cannot be satisfied")
+		return constants.Disk, constants.DiskPressure, fmt.Errorf(constants.DiskPressureMessage, op)
 	}
 
 	if appConfig.Requirement.Memory != nil &&
 		appConfig.Requirement.Memory.CmpInt64(int64(metrics.Memory.Total*0.9-metrics.Memory.Usage)) > 0 {
-		return "memory", errors.New("The app's MEMORY requirement cannot be satisfied")
+		return constants.Memory, constants.SystemMemoryPressure, fmt.Errorf(constants.SystemMemoryPressureMessage, op)
 	}
 	if appConfig.Requirement.CPU != nil {
 		availableCPU, _ := resource.ParseQuantity(strconv.FormatFloat(metrics.CPU.Total*0.9-metrics.CPU.Usage, 'f', -1, 64))
 		if appConfig.Requirement.CPU.Cmp(availableCPU) > 0 {
-			return "cpu", errors.New("The app's CPU requirement cannot be satisfied")
+			return constants.CPU, constants.SystemCPUPressure, fmt.Errorf(constants.SystemCPUPressureMessage, op)
 		}
 	}
 	if appConfig.Requirement.GPU != nil {
 		if !appConfig.Requirement.GPU.IsZero() && metrics.GPU.Total <= 0 {
-			return "gpu", errors.New("The app's GPU requirement cannot be satisfied")
+			return constants.GPU, constants.SystemGPUNotAvailable, fmt.Errorf(constants.SystemGPUNotAvailableMessage, op)
+
 		}
 		nodes, err := utils.GetNodeInfo(context.TODO())
 		if err != nil {
 			klog.Errorf("failed to get node info %v", err)
-			return "", err
+			return "", "", err
 		}
 		klog.Infof("nodes info: %#v", nodes)
 		var maxNodeGPUMem int64
@@ -254,13 +256,13 @@ func CheckAppRequirement(token string, appConfig *appcfg.ApplicationConfig) (str
 		}
 
 		if appConfig.Requirement.GPU.CmpInt64(maxNodeGPUMem) > 0 {
-			return "gpu", errors.New("The app's GPU requirement cannot found satisfied node")
+			return constants.GPU, constants.SystemGPUPressure, fmt.Errorf(constants.SystemGPUPressureMessage, op)
 		}
 	}
 
 	allocatedResources, err := getRequestResources()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if len(allocatedResources) == 1 {
 		sufficientCPU, sufficientMemory := false, false
@@ -283,14 +285,14 @@ func CheckAppRequirement(token string, appConfig *appcfg.ApplicationConfig) (str
 			}
 		}
 		if !sufficientCPU {
-			return "cpu", errors.New("The app's CPU requirement specified in the kubernetes requests cannot be satisfied")
+			return constants.CPU, constants.K8sRequestCPUPressure, fmt.Errorf(constants.K8sRequestCPUPressureMessage, op)
 		}
 		if !sufficientMemory {
-			return "memory", errors.New("The app's MEMORY requirement specified in the kubernetes requests cannot be satisfied")
+			return constants.Memory, constants.K8sRequestMemoryPressure, fmt.Errorf(constants.K8sRequestMemoryPressureMessage, op)
 		}
 	}
 
-	return "", nil
+	return "", "", nil
 }
 
 func getRequestResources() (map[string]resources, error) {
@@ -450,22 +452,22 @@ func getValue(m *kubesphere.Metric) float64 {
 }
 
 // CheckUserResRequirement check if the user has enough resources for application install/upgrade.
-func CheckUserResRequirement(ctx context.Context, appConfig *appcfg.ApplicationConfig, username string) (string, error) {
-	metrics, err := prometheus.GetCurUserResource(ctx, username)
+func CheckUserResRequirement(ctx context.Context, appConfig *appcfg.ApplicationConfig, op v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+	metrics, err := prometheus.GetCurUserResource(ctx, appConfig.OwnerName)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	switch {
 	case appConfig.Requirement.Memory != nil && metrics.Memory.Total != 0 &&
 		appConfig.Requirement.Memory.CmpInt64(int64(metrics.Memory.Total*0.9-metrics.Memory.Usage)) > 0:
-		return "memory", errors.New("The user's app MEMORY requirement cannot be satisfied")
+		return constants.Memory, constants.UserMemoryPressure, fmt.Errorf(constants.UserMemoryPressureMessage, op)
 	case appConfig.Requirement.CPU != nil && metrics.CPU.Total != 0:
 		availableCPU, _ := resource.ParseQuantity(strconv.FormatFloat(metrics.CPU.Total*0.9-metrics.CPU.Usage, 'f', -1, 64))
 		if appConfig.Requirement.CPU.Cmp(availableCPU) > 0 {
-			return "cpu", errors.New("The user's app CPU requirement cannot be satisfied")
+			return constants.CPU, constants.UserCPUPressure, fmt.Errorf(constants.UserCPUPressureMessage, op)
 		}
 	}
-	return "", nil
+	return "", "", nil
 }
 
 func CheckMiddlewareRequirement(ctx context.Context, ctrlClient client.Client, middleware *tapr.Middleware) (bool, error) {

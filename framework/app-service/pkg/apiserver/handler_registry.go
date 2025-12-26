@@ -6,8 +6,8 @@ import (
 	"os"
 	"sort"
 
-	"bytetrade.io/web3os/app-service/pkg/apiserver/api"
-	"bytetrade.io/web3os/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 
 	"github.com/emicklei/go-restful/v3"
 	"k8s.io/klog/v2"

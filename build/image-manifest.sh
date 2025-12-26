@@ -17,7 +17,7 @@ for mod in "${PACKAGE_MODULE[@]}";do
         chart_path="${mod}/${app}"
 
         if [ -d $chart_path ]; then
-            find $chart_path -type f -name *.yaml | while read p; do
+            find $chart_path -type f -path '*/.olares/*.yaml' | while read p; do
                 bash ${BASE_DIR}/yaml2prop.sh -f $p | while read l;do 
                     if [[ "$l" == *".image = "* || "$l" == "output.containers."*".name"* ]]; then 
                         echo "$l"
@@ -32,8 +32,7 @@ for mod in "${PACKAGE_MODULE[@]}";do
         fi
     done
 done
-
-awk '{print $3}' ${TMP_MANIFEST} | sort | uniq | grep -v nitro | grep -v orion >> ${IMAGE_MANIFEST}
+awk '{print $3}' ${TMP_MANIFEST} | sort | uniq | grep -v nitro | grep -v orion | grep -v '^nonexisting$' >> ${IMAGE_MANIFEST}
 
 # patch
 # fix backup server version

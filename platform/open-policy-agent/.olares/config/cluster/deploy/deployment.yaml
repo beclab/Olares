@@ -207,8 +207,7 @@ data:
     deny contains msg if {
         some container
         input_containers[container]
-        not startswith(container.image, "beclab/")
-        not startswith(container.image, "docker.io/beclab/")
+        is_untrusted_image(trimmed_image(container))
 
         is_root_user(container.securityContext)
     
@@ -218,8 +217,7 @@ data:
     deny contains msg if {
         some container
         input_containers[container]
-        not startswith(container.image, "beclab/")
-        not startswith(container.image, "docker.io/beclab/")
+        is_untrusted_image(trimmed_image(container))
 
         is_root_user(input.request.object.spec.securityContext)
     
@@ -233,6 +231,27 @@ data:
     input_containers contains container if {
       container := input.request.object.spec.initContainers[_]
     }    
+
+    is_untrusted_image(image) if {
+        not startswith(image, "beclab/")
+        not startswith(image, "aboveos/")
+        not startswith(image, "harveyff/")
+        not startswith(image, "dataelement/")
+        not startswith(image, "milvusdb/")
+        not startswith(image, "minio/")
+        not startswith(image, "mintplexlabs/")
+        not startswith(image, "onlyoffice/")
+        not startswith(image, "netdata/")
+        not startswith(image, "openservicemesh/")
+        not startswith(image, "owncloudci/")
+        not startswith(image, "redroid/")
+        not startswith(image, "busybox:")
+        not startswith(image, "docker:dind")
+        not startswith(image, "redis:")
+        not startswith(image, "ghcr.io/coder/coder:v2.19.0")
+        not startswith(image, "apecloud/")
+        not startswith(image, "kldtks/")
+    }
         
     is_root_user(ctx) if {
         ctx.runAsNonRoot == false
@@ -246,3 +265,9 @@ data:
         ctx.privileged == true
     }    
 
+    trimmed_image(container) := image if {
+        startswith(container.image, "docker.io/")
+        image := split(container.image, "docker.io/")[1]
+    } else := container.image
+
+  

@@ -226,7 +226,7 @@ spec:
     spec:
       initContainers:
       - name: seahub-init
-        image: beclab/seahub-init:v0.0.3
+        image: beclab/seahub-init:v0.0.5
         env:
           - name: DB_HOST
             value: citus-headless.os-platform
@@ -248,7 +248,7 @@ spec:
 
       containers:
       - name: seafile-server
-        image: beclab/pg_seafile_server:v0.0.15
+        image: beclab/pg_seafile_server:v0.0.16
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 8082

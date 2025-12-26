@@ -331,3 +331,46 @@ func GetPublicIPFromTencentIMDS() (net.IP, error) {
 	logger.Debugf("retrieved public IP info from Tencent metadata service: %s", string(body))
 	return net.ParseIP(strings.TrimSpace(string(body))), nil
 }
+
+func GetPublicIPFromAliyunIMDS() (net.IP, error) {
+	token, err := GetTokenFromAliyunIMDS()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Aliyun ECS IMDS token: %v", err)
+	}
+	url := "http://100.100.100.200/latest/meta-data/public-ipv4"
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build http request: %v", err)
+	}
+	req.Header.Set("X-aliyun-ecs-metadata-token", token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to reach Aliyun metadata service")
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read response from Aliyun metadata service")
+	}
+	logger.Debugf("retrieved public IP info from Aliyun metadata service: %s", string(body))
+	return net.ParseIP(strings.TrimSpace(string(body))), nil
+}
+
+func GetTokenFromAliyunIMDS() (string, error) {
+	url := "http://100.100.100.200/latest/api/token"
+	req, err := http.NewRequest(http.MethodPut, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to build http request: %v", err)
+	}
+	req.Header.Set("X-aliyun-ecs-metadata-token-ttl-seconds", "600")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to reach Aliyun metadata service")
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to read response from Aliyun metadata service")
+	}
+	return strings.TrimSpace(string(body)), nil
+}

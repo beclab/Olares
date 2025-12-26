@@ -1,0 +1,43 @@
+name: BFL Build test
+
+on:
+  push:
+    branches: [ "module-bfl" ]
+    paths:
+      - 'framework/bfl/**'
+      - '!framework/bfl/.olares/**'
+      - '!framework/bfl/README.md'
+  pull_request:
+    branches: [ "module-bfl" ]
+    paths:
+      - 'framework/bfl/**'
+      - '!framework/bfl/.olares/**'
+      - '!framework/bfl/README.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v3
+      with:
+        go-version: '1.22.1'
+    - name: Run Build
+      working-directory: framework/bfl
+      run: |
+        ksDir="../../kubesphere-ext"
+        version="v3.3.0-ext"
+        
+        if [ -d "$ksDir" ]; then
+          pushd "${ksDir}/"
+          branch=$(git rev-parse --abbrev-ref HEAD|awk -F / '{print $2}')
+          if [ x"$branch" != x"$version" ]; then
+            git checkout $version
+          fi
+          popd &>/dev/null
+        else
+          git clone https://github.com/beclab/kubesphere-ext.git "${ksDir}"
+        fi
+        
+        make all

@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	appsv1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	appevent "bytetrade.io/web3os/app-service/pkg/event"
-	"bytetrade.io/web3os/app-service/pkg/helm"
-	"bytetrade.io/web3os/app-service/pkg/utils"
-	apputils "bytetrade.io/web3os/app-service/pkg/utils/app"
+	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
+	"github.com/beclab/Olares/framework/app-service/pkg/helm"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -67,9 +67,12 @@ func (p *PendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 	if success, err := appFactory.addLimitedStatefulApp(ctx,
 		// limit
 		func() (bool, error) {
-
-			var apps appsv1.ApplicationManagerList
-			err := p.client.List(ctx, &apps)
+			clientset, err := utils.GetClient()
+			if err != nil {
+				klog.Errorf("failed to get clientset %v", err)
+				return false, err
+			}
+			apps, err := clientset.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
 			if err != nil {
 				klog.Errorf("list application managers error: %v", err)
 				return false, err

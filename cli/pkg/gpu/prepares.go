@@ -63,11 +63,11 @@ func (p *CudaNotInstalled) PreCheck(runtime connector.Runtime) (bool, error) {
 	return false, nil
 }
 
-type K8sNodeInstalled struct {
+type CurrentNodeInK8s struct {
 	common.KubePrepare
 }
 
-func (p *K8sNodeInstalled) PreCheck(runtime connector.Runtime) (bool, error) {
+func (p *CurrentNodeInK8s) PreCheck(runtime connector.Runtime) (bool, error) {
 	client, err := clientset.NewKubeClient()
 	if err != nil {
 		logger.Debug(errors.Wrap(errors.WithStack(err), "kubeclient create error"))
@@ -84,11 +84,13 @@ func (p *K8sNodeInstalled) PreCheck(runtime connector.Runtime) (bool, error) {
 		return false, nil
 	}
 
-	if len(node.Items) == 0 {
-		return false, nil
+	for _, node := range node.Items {
+		if node.Name == runtime.GetSystemInfo().GetHostname() {
+			return true, nil
+		}
 	}
 
-	return true, nil
+	return false, nil
 }
 
 type NvidiaGraphicsCard struct {

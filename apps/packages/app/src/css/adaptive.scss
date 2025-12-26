@@ -1,0 +1,15 @@
+//pc
+@media (min-width: 768px) {
+	.integration-account-item {
+		height: 72px;
+		border: 1px solid $input-stroke !important;
+	}
+}
+
+//mobile
+@media (max-width: 768px) {
+	.integration-account-item {
+		height: 72px;
+		border: 1px solid $input-stroke !important;
+	}
+}

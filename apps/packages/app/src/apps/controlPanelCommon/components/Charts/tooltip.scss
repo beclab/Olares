@@ -1,0 +1,49 @@
+.echart-tooltip-container {
+	border-radius: 12px !important;
+	box-shadow: 0px 4px 10px 0px rgba(0, 0, 0, 0.2) !important;
+	min-width: 160px;
+	.chart-tooltip-unit {
+		color: $ink-1 !important;
+
+		font-size: 12px !important;
+		font-style: normal !important;
+		font-weight: 500 !important;
+		line-height: 16px !important;
+		margin-left: 8px !important;
+	}
+
+	.chart-tooltip-item-container {
+		display: flex !important;
+		flex-direction: column !important;
+		flex-wrap: nowrap;
+		gap: 8px;
+	}
+
+	.chart-tooltip-item-name {
+		display: flex;
+		flex-wrap: nowrap;
+		gap: 20px;
+		align-items: center;
+		justify-content: space-between;
+
+		color: $ink-2 !important;
+		font-family: Roboto !important;
+		font-size: 14px !important;
+		font-style: normal !important;
+		font-weight: 400 !important;
+		line-height: 20px !important;
+		.chart-tooltip-item-title {
+			margin-left: 4px;
+		}
+	}
+
+	.chart-tooltip-title {
+		color: $ink-3 !important;
+		font-family: Roboto !important;
+		font-size: 12px !important;
+		font-style: normal !important;
+		font-weight: 500 !important;
+		line-height: 16px !important;
+		margin-bottom: 8px !important;
+	}
+}

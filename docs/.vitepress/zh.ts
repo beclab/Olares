@@ -110,6 +110,10 @@ const side = {
           link: "/zh/manual/larepass/back-up-mnemonics",
         },
         {
+          text: "内网访问 Olares",
+          link: "zh/manual/get-started/local-access",
+        },
+        {
           text: "探索",
           link: "/zh/manual/get-started/next-steps",
         },
@@ -129,7 +133,7 @@ const side = {
             {text: "管理集成", link:"/zh/manual/larepass/integrations"},
           ],
         },
-        {text: "管理专用网络", link:"/zh/manual/larepass/private-network"},
+        {text: "使用专用网络", link:"/zh/manual/larepass/private-network"},
         {
           text: "管理设备",
           collapsed: true,
@@ -616,32 +620,25 @@ const side = {
       link: "/zh/developer/develop/",
       items: [
         {
-          text: "教程",
+          text: "使用 Studio 开发",
           collapsed: true,
           link: "/zh/developer/develop/tutorial/",
           items: [
             {
-              text: "了解 Studio",
-              link: "/zh/developer/develop/tutorial/studio",
+              text: "部署应用",
+              link: "/zh/developer/develop/tutorial/deploy",
             },
             {
-              text: "创建首个应用",
-              collapsed: true,
-              link: "/zh/developer/develop/tutorial/note/",
-              items: [
-                {
-                  text: "1. 创建应用",
-                  link: "/zh/developer/develop/tutorial/note/create",
-                },
-                {
-                  text: "2. 开发后端",
-                  link: "/zh/developer/develop/tutorial/note/backend",
-                },
-                {
-                  text: "3. 开发前端",
-                  link: "/zh/developer/develop/tutorial/note/frontend",
-                },
-              ],
+              text: "使用开发容器",
+              link: "/zh/developer/develop/tutorial/develop",
+            },
+            {
+              text: "打包与上传",
+              link: "/zh/developer/develop/tutorial/package-upload",
+            },
+            {
+              text: "添加应用素材",
+              link: "/zh/developer/develop/tutorial/assets",
             },
           ],
         },

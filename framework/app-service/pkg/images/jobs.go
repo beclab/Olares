@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"bytetrade.io/web3os/app-service/pkg/utils"
-	apputils "bytetrade.io/web3os/app-service/pkg/utils/app"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/content"
@@ -242,6 +242,11 @@ func updateProgress(statuses []StatusInfo, ongoing *jobs, seen map[string]int64,
 	}
 	for _, status := range statuses {
 		klog.Infof("status: %s,ref: %v, offset: %v, Total: %v", status.Status, status.Ref, status.Offset, status.Total)
+		if !isLayerType(status.Ref) {
+			statusesLen--
+			continue
+		}
+
 		if status.Status == "exists" {
 			key := strings.Split(status.Ref, "-")[1]
 			offset += seen[key]
@@ -249,10 +254,6 @@ func updateProgress(statuses []StatusInfo, ongoing *jobs, seen map[string]int64,
 			continue
 		}
 
-		if !isLayerType(status.Ref) {
-			statusesLen--
-			continue
-		}
 		if status.Status == "done" {
 			offset += status.Total
 			doneLayer++
@@ -261,7 +262,7 @@ func updateProgress(statuses []StatusInfo, ongoing *jobs, seen map[string]int64,
 
 		offset += status.Offset
 	}
-	if doneLayer == statusesLen && doneLayer != 0 {
+	if doneLayer == statusesLen && statusesLen > 0 {
 		offset = imageSize
 	}
 	if imageSize != 0 {

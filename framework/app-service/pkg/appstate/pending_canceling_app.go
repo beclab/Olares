@@ -2,9 +2,15 @@ package appstate
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	appsv1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
+	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -41,6 +47,21 @@ func (p *PendingCancelingApp) Exec(ctx context.Context) (StatefulInProgressApp, 
 		klog.Errorf("app %s operation is not ", p.manager.Name)
 	}
 
+	if !apputils.IsProtectedNamespace(p.manager.Spec.AppNamespace) {
+		var ns corev1.Namespace
+		err := p.client.Get(ctx, types.NamespacedName{Name: p.manager.Spec.AppNamespace}, &ns)
+		if err != nil && !apierrors.IsNotFound(err) {
+			klog.Errorf("failed to get namespace %s, %v", p.manager.Spec.AppNamespace, err)
+			return nil, err
+		}
+		if err == nil {
+			if delErr := p.client.Delete(ctx, &ns); delErr != nil && !apierrors.IsNotFound(delErr) {
+				klog.Errorf("failed to delete namespace %s, %v", p.manager.Spec.AppNamespace, delErr)
+				return nil, delErr
+			}
+		}
+	}
+
 	err := p.updateStatus(ctx, p.manager, appsv1.PendingCanceled, nil, appsv1.PendingCanceled.String(), "")
 	if err != nil {
 		klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.PendingCanceled, err)
@@ -58,4 +79,59 @@ func (p *PendingCancelingApp) Cancel(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+var _ PollableStatefulInProgressApp = &pendingCancelInProgressApp{}
+
+type pendingCancelInProgressApp struct {
+	*PendingCancelingApp
+	*basePollableStatefulInProgressApp
+}
+
+func (p *pendingCancelInProgressApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
+	return nil, nil
+}
+
+func (p *pendingCancelInProgressApp) poll(ctx context.Context) error {
+	if apputils.IsProtectedNamespace(p.manager.Spec.AppNamespace) {
+		return nil
+	}
+
+	timer := time.NewTicker(time.Second)
+	defer timer.Stop()
+	for {
+		select {
+		case <-timer.C:
+			var ns corev1.Namespace
+			err := p.client.Get(ctx, types.NamespacedName{Name: p.manager.Spec.AppNamespace}, &ns)
+			klog.Infof("pending cancel poll namespace %s err %v", p.manager.Spec.AppNamespace, err)
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+
+		case <-ctx.Done():
+			return fmt.Errorf("app %s execute cancel operation failed %w", p.manager.Spec.AppName, ctx.Err())
+		}
+	}
+}
+
+func (p *pendingCancelInProgressApp) WaitAsync(ctx context.Context) {
+	appFactory.waitForPolling(ctx, p, func(err error) {
+		if err != nil {
+			updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.PendingCancelFailed, nil, appsv1.PendingCancelFailed.String(), "")
+			if updateErr != nil {
+				klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.PendingCancelFailed.String(), updateErr)
+				return
+			}
+
+			return
+		}
+
+		updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.PendingCanceled, nil, appsv1.PendingCanceled.String(), "")
+		if updateErr != nil {
+			klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.PendingCanceled.String(), updateErr)
+			return
+		}
+
+	})
 }

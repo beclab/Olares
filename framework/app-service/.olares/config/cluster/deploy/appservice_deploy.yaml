@@ -170,7 +170,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.4.59
+        image: beclab/app-service:0.4.69
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0
@@ -228,6 +228,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        - name: OLARESD_HOST
+          value: $(HOSTIP):18088
         volumeMounts:
         - mountPath: /charts
           name: charts-store
@@ -393,7 +395,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
         - name: image-service
-          image: beclab/image-service:0.4.48
+          image: beclab/image-service:0.4.65
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0

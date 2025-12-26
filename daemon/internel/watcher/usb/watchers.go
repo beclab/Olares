@@ -74,7 +74,7 @@ func NewUmountWatcher() *umountWatcher {
 }
 
 func (w *umountWatcher) Watch(ctx context.Context) {
-	if err := utils.UmountBrokenUsbMount(ctx, commands.MOUNT_BASE_DIR); err != nil {
+	if err := utils.UmountBrokenMount(ctx, commands.MOUNT_BASE_DIR); err != nil {
 		klog.Error("umount broken mount point error, ", err)
 	}
 }

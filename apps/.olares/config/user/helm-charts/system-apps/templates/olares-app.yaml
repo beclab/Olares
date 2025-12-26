@@ -239,7 +239,6 @@ metadata:
     applications.app.bytetrade.io/icon: https://app.cdn.olares.com/appstore/olaresapps/icon.png
     applications.app.bytetrade.io/title: 'Olares Apps'
     applications.app.bytetrade.io/version: '0.0.1'
-    applications.app.bytetrade.io/policies: '{"policies":[{"entranceName":"dashboard","uriRegex":"/js/script.js", "level":"public"},{"entranceName":"dashboard","uriRegex":"/js/api/send", "level":"public"}]}'
     applications.app.bytetrade.io/entrances: '[{"name":"files", "host":"files-fe-service", "port":80,"title":"Files","windowPushState":true,"icon":"https://app.cdn.olares.com/appstore/files/icon.png"},{"name":"share","authLevel":"public", "host":"share-fe-service", "port":80,"title":"Share","windowPushState":true,"icon":"https://app.cdn.olares.com/appstore/files/icon.png","invisible":true},{"name":"vault", "host":"vault-service", "port":80,"title":"Vault","windowPushState":true,"icon":"https://app.cdn.olares.com/appstore/vault/icon.png"},{"name":"market", "host":"appstore-fe-service", "port":80,"title":"Market","windowPushState":true,"icon":"https://app.cdn.olares.com/appstore/appstore/icon.png"},{"name":"settings", "host":"settings-service", "port":80,"title":"Settings","icon":"https://app.cdn.olares.com/appstore/settings/icon.png"},{"name":"profile", "host":"profile-service", "port":80,"title":"Profile","windowPushState":true,"icon":"https://app.cdn.olares.com/appstore/profile/icon.png"},{"name":"dashboard","host":"dashboard-service","port":80,"title":"Dashboard","windowPushState":true,"icon":"https://app.cdn.olares.com/appstore/dashboard/icon.png"},{"name":"control-hub","host":"control-hub-service","port":80,"title":"Control Hub","windowPushState":true,"icon":"https://app.cdn.olares.com/appstore/control-hub/icon.png"},{"name":"headscale", "host":"headscale-svc", "port":80,"title":"Headscale","invisible": true,"icon":"https://app.cdn.olares.com/appstore/headscale/icon.png"}]'
 spec:
   replicas: 1
@@ -318,7 +317,7 @@ spec:
             chown -R 1000:1000 /uploadstemp && \
             chown -R 1000:1000 /appdata 
         - name: olares-app-init
-          image: beclab/system-frontend:v1.6.20
+          image: beclab/system-frontend:v1.6.32
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -440,7 +439,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.75
+          image: beclab/user-service:v0.0.81
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -1356,6 +1355,17 @@ data:
           proxy_set_header Upgrade 'tailscale-control-protocol';
           proxy_set_header Connection '$connection_upgrade';
           more_set_headers 'Upgrade: $http_upgrade';
+        }
+        location /api/refresh {
+          add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+          add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+          add_header Access-Control-Allow-Origin $http_origin;
+          add_header Access-Control-Allow-Credentials true;
+          proxy_pass http://authelia-backend-svc:9091;
+          proxy_set_header            Host $host;
+          proxy_set_header            X-real-ip $remote_addr;
+          proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+          add_header X-Frame-Options SAMEORIGIN;
         }
         location / {
           proxy_pass http://headscale-server-svc:8080;

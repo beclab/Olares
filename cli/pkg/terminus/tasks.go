@@ -738,6 +738,19 @@ func (p *DetectPublicIPAddress) Execute(runtime connector.Runtime) error {
 		}
 	}
 
+	if util.IsOnAliyunECS() {
+		logger.Info("on Aliyun ECS instance, will try to check if a public IP address is bound")
+		aliyunPublicIP, err := util.GetPublicIPFromAliyunIMDS()
+		if err != nil {
+			return errors.Wrap(err, "failed to get public IP from Aliyun")
+		}
+		if aliyunPublicIP != nil {
+			logger.Info("retrieved public IP addresses from IMDS")
+			p.KubeConf.Arg.NetworkSettings.CloudProviderPublicIP = aliyunPublicIP
+			return nil
+		}
+	}
+
 	osPublicIPs, err := util.GetPublicIPsFromOS()
 	if err != nil {
 		return errors.Wrap(err, "failed to get public IPs from OS")

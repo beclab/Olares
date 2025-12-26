@@ -3,7 +3,10 @@ package upgrade
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -71,11 +74,10 @@ func upgradeKSCore() []task.Interface {
 			Action: new(plugins.CopyEmbedFiles),
 		},
 		&task.LocalTask{
-			Name:    "UpgradeKSCore",
-			Prepare: new(common.GetMasterNum),
-			Action:  new(plugins.CreateKsCore),
-			Retry:   10,
-			Delay:   10 * time.Second,
+			Name:   "UpgradeKSCore",
+			Action: new(plugins.CreateKsCore),
+			Retry:  10,
+			Delay:  10 * time.Second,
 		},
 		&task.LocalTask{
 			Name:   "CheckKSCoreRunning",
@@ -223,6 +225,71 @@ type upgradeGPUDriverIfNeeded struct {
 	common.KubeAction
 }
 
+// fixProcModprobePath fixes the /proc/sys/kernel/modprobe path issue that can cause
+// nvidia-installer to fail with error:
+// "The path to the `modprobe` utility reported by '/proc/sys/kernel/modprobe', ”, differs from
+// the path determined by `nvidia-installer`, `/bin/kmod`, and does not appear to point to a
+// valid `modprobe` binary."
+//
+// This function checks if /proc/sys/kernel/modprobe is empty or invalid, and if so,
+// writes a valid modprobe path to it.
+func fixProcModprobePath() {
+	const procModprobePath = "/proc/sys/kernel/modprobe"
+
+	modprobePaths := []string{
+		"/sbin/modprobe",
+		"/usr/sbin/modprobe",
+		"/bin/modprobe",
+		"/usr/bin/modprobe",
+	}
+
+	data, err := os.ReadFile(procModprobePath)
+	if err != nil {
+		logger.Warnf("failed to read %s: %v", procModprobePath, err)
+	}
+	currentPath := strings.TrimSpace(string(data))
+
+	// Check if current path is valid (non-empty and executable)
+	if currentPath != "" {
+		if util.IsExecutable(currentPath) {
+			logger.Debugf("%s already contains valid path: %s", procModprobePath, currentPath)
+			return
+		}
+		// in case it's a symlink that resolves to a valid executable
+		if resolved, err := filepath.EvalSymlinks(currentPath); err == nil && resolved != "" {
+			if util.IsExecutable(resolved) {
+				logger.Debugf("%s contains symlink %s -> %s which is valid", procModprobePath, currentPath, resolved)
+				return
+			}
+		}
+		logger.Warnf("%s contains invalid path: '%s', attempting to fix", procModprobePath, currentPath)
+	} else {
+		logger.Warnf("%s is empty, attempting to fix", procModprobePath)
+	}
+
+	if lookPath, err := exec.LookPath("modprobe"); err == nil && lookPath != "" {
+		modprobePaths = append([]string{lookPath}, modprobePaths...)
+	}
+
+	for _, modprobePath := range modprobePaths {
+		if !util.IsExecutable(modprobePath) {
+			continue
+		}
+
+		if err := os.WriteFile(procModprobePath, []byte(modprobePath), 0644); err != nil {
+			logger.Warnf("failed to write %s to %s: %v", modprobePath, procModprobePath, err)
+			continue
+		}
+
+		logger.Infof("successfully fixed %s: set to %s", procModprobePath, modprobePath)
+		return
+	}
+
+	// If we get here, we couldn't fix it, but we log a warning and continue
+	// The nvidia-installer might still work, or it might fail, but we don't want to block the upgrade
+	logger.Warnf("could not fix %s, nvidia-installer may fail; continuing anyway", procModprobePath)
+}
+
 func (a *upgradeGPUDriverIfNeeded) Execute(runtime connector.Runtime) error {
 	sys := runtime.GetSystemInfo()
 	if sys.IsWsl() {
@@ -297,6 +364,9 @@ func (a *upgradeGPUDriverIfNeeded) Execute(runtime connector.Runtime) error {
 		if _, err := runtime.GetRunner().SudoCmd("DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dkms build-essential linux-headers-$(uname -r)", false, true); err != nil {
 			return errors.Wrap(errors.WithStack(err), "failed to install kernel build dependencies for NVIDIA runfile")
 		}
+
+		fixProcModprobePath()
+
 		// install runfile
 		runfile := item.FilePath(runtime.GetBaseDir())
 		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("chmod +x %s", runfile), false, true); err != nil {

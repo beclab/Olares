@@ -1,0 +1,25 @@
+.mobile-items-list {
+	background-color: $background-2;
+	border-radius: 12px;
+	overflow: hidden;
+
+	.item-padding-zero {
+		padding: 0;
+	}
+
+	.item-padding-x {
+		padding: 0 20px;
+	}
+
+	.item-margin-left {
+		margin-left: 15px;
+	}
+
+	.item-margin-right {
+		margin-right: 16px;
+	}
+}
+
+body {
+	background-color: $background-3;
+}

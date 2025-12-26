@@ -21,24 +21,6 @@ type CreateKsCore struct {
 }
 
 func (t *CreateKsCore) Execute(runtime connector.Runtime) error {
-	//var kubectlpath, err = util.GetCommand(common.CommandKubectl)
-	//if err != nil {
-	//	return fmt.Errorf("kubectl not found")
-	//}
-
-	//var cmd = fmt.Sprintf("%s get pod -n %s -l 'app=redis,tier=database,version=redis-4.0' -o jsonpath='{.items[0].status.phase}'", kubectlpath,
-	//	common.NamespaceKubesphereSystem)
-	//rphase, err := runtime.GetRunner().Host.SudoCmd(cmd, false, false)
-	//if rphase != "Running" {
-	//	return fmt.Errorf("Redis State %s", rphase)
-	//}
-
-	masterNumIf, ok := t.PipelineCache.Get(common.CacheMasterNum)
-	if !ok || masterNumIf == nil {
-		return fmt.Errorf("failed to get master num")
-	}
-	masterNum := masterNumIf.(int64)
-
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		return err
@@ -55,7 +37,7 @@ func (t *CreateKsCore) Execute(runtime connector.Runtime) error {
 	var values = make(map[string]interface{})
 	values["Release"] = map[string]string{
 		"Namespace":    common.NamespaceKubesphereSystem,
-		"ReplicaCount": fmt.Sprintf("%d", masterNum),
+		"ReplicaCount": fmt.Sprintf("%d", 1),
 	}
 	if err := utils.UpgradeCharts(context.Background(), actionConfig, settings, appKsCoreName,
 		appPath, "", common.NamespaceKubesphereSystem, values, false); err != nil {
@@ -78,7 +60,6 @@ func (m *DeployKsCoreModule) Init() {
 		Hosts: m.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
-			new(NotEqualDesiredVersion),
 		},
 		Action:   new(CreateKsCore),
 		Parallel: false,

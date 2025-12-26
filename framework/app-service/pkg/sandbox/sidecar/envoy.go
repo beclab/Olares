@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"bytetrade.io/web3os/app-service/pkg/appcfg"
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	"bytetrade.io/web3os/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	envoy_bootstrap "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -329,6 +329,7 @@ func generateIptablesCommands(appCfg *appcfg.ApplicationConfig) string {
 -A OUTPUT -p tcp -j PROXY_OUTBOUND
 -A PROXY_INBOUND -p tcp --dport %d -j RETURN
 -A PROXY_INBOUND -s 20.20.20.21 -j RETURN
+-A PROXY_INBOUND -s 172.30.0.0/16 -j RETURN
 `, constants.EnvoyAdminPort)
 	if appCfg != nil {
 		for _, port := range appCfg.Ports {

@@ -6,15 +6,15 @@ import (
 	"strconv"
 	"strings"
 
-	appv1alpha1 "bytetrade.io/web3os/app-service/api/app.bytetrade.io/v1alpha1"
-	"bytetrade.io/web3os/app-service/pkg/apiserver/api"
-	"bytetrade.io/web3os/app-service/pkg/appcfg"
-	"bytetrade.io/web3os/app-service/pkg/appstate"
-	"bytetrade.io/web3os/app-service/pkg/client/clientset"
-	"bytetrade.io/web3os/app-service/pkg/constants"
-	"bytetrade.io/web3os/app-service/pkg/users/userspace"
-	"bytetrade.io/web3os/app-service/pkg/utils"
-	apputils "bytetrade.io/web3os/app-service/pkg/utils/app"
+	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	"github.com/emicklei/go-restful/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -212,7 +212,7 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 				Appid:           appv1alpha1.AppName(am.Spec.AppName).GetAppID(),
 				IsSysApp:        appv1alpha1.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
-				Owner:           owner,
+				Owner:           am.Spec.AppOwner,
 				Entrances:       appconfig.Entrances,
 				SharedEntrances: appconfig.SharedEntrances,
 				Icon:            appconfig.Icon,

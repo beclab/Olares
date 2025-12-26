@@ -1,0 +1,49 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-space-xuejingjie091:ingress
+  annotations:
+    provider-registry-ref: user-system-xuejingjie091/bfl
+    provider-service-ref: localhost:10246
+rules:
+- nonResourceURLs: ["/healthz"]
+  verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user:xuejingjie091
+  annotations:
+    provider-registry-ref: user-system-xuejingjie091/bfl
+    provider-service-ref: localhost:10246
+rules:
+- nonResourceURLs: ["*"]
+  verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user:xuejingjie091:ingress
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: user:xuejingjie091
+subjects:
+- kind: User
+  name: xuejingjie091
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user-space-xuejingjie091:bfl
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: user-space-xuejingjie091:ingress
+subjects:
+- kind: ServiceAccount
+  name: bytetrade-controller
+  namespace: user-space-xuejingjie091

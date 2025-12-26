@@ -10,13 +10,12 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	"bytetrade.io/web3os/app-service/api/sys.bytetrade.io/v1alpha1"
-	apputils "bytetrade.io/web3os/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/storage"
 
-	"github.com/beclab/Olares/cli/pkg/clientset"
 	"github.com/beclab/Olares/cli/pkg/common"
 	cc "github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
@@ -235,50 +234,6 @@ func (p *Patch) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "patch globalrole workspace manager failed")
 	}
 
-	//var notificationManager = path.Join(runtime.GetInstallerDir(), "deploy", "patch-notification-manager.yaml")
-	//if _, err = runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectl, notificationManager), false, true); err != nil {
-	//	return errors.Wrap(errors.WithStack(err), "patch notification manager failed")
-	//}
-	//var notificationManager = path.Join(runtime.GetInstallerDir(), "deploy", "patch-notification-manager.yaml")
-	//if _, err = runtime.GetRunner().Host.SudoCmd(fmt.Sprintf("%s apply -f %s", kubectl, notificationManager), false, true); err != nil {
-	//	return errors.Wrap(errors.WithStack(err), "patch notification manager failed")
-	//}
-	//
-	//patchAdminContent := `{"metadata":{"finalizers":["finalizers.kubesphere.io/users"]}}`
-	//patchAdminCMD := fmt.Sprintf(
-	//	"%s patch user admin -p '%s' --type='merge' ",
-	//	kubectl,
-	//	patchAdminContent)
-	//_, err = runtime.GetRunner().SudoCmd(patchAdminCMD, false, true)
-	//if err != nil {
-	//	return errors.Wrap(errors.WithStack(err), "patch user admin failed")
-	//}
-	//patchAdminContent := "{\\\"metadata\\\":{\\\"finalizers\\\":[\\\"finalizers.kubesphere.io/users\\\"]}}"
-	//patchAdminCMD := fmt.Sprintf(
-	//	"%s patch user admin -p '%s' --type='merge' ",
-	//	kubectl,
-	//	patchAdminContent)
-	//_, err = runtime.GetRunner().Host.SudoCmd(patchAdminCMD, false, true)
-	//if err != nil {
-	//	return errors.Wrap(errors.WithStack(err), "patch user admin failed")
-	//}
-
-	//deleteAdminCMD := fmt.Sprintf("%s delete user admin --ignore-not-found", kubectl)
-	//_, err = runtime.GetRunner().SudoCmd(deleteAdminCMD, false, true)
-	//if err != nil {
-	//	return errors.Wrap(errors.WithStack(err), "failed to delete ks admin user")
-	//}
-	deleteKubectlAdminCMD := fmt.Sprintf("%s -n kubesphere-controls-system delete deploy kubectl-admin --ignore-not-found", kubectl)
-	_, err = runtime.GetRunner().SudoCmd(deleteKubectlAdminCMD, false, true)
-	if err != nil {
-		return errors.Wrap(errors.WithStack(err), "failed to delete ks kubectl admin deployment")
-	}
-	deleteHTTPBackendCMD := fmt.Sprintf("%s -n kubesphere-controls-system delete deploy default-http-backend --ignore-not-found", kubectl)
-	_, err = runtime.GetRunner().SudoCmd(deleteHTTPBackendCMD, false, true)
-	if err != nil {
-		return errors.Wrap(errors.WithStack(err), "failed to delete ks default http backend")
-	}
-
 	patchFelixConfigContent := `{"spec":{"featureDetectOverride": "SNATFullyRandom=false,MASQFullyRandom=false"}}`
 	patchFelixConfigCMD := fmt.Sprintf(
 		"%s patch felixconfiguration default -p '%s'  --type='merge'",
@@ -464,19 +419,6 @@ func cloudValue(cloudInstance bool) string {
 	}
 
 	return ""
-}
-
-func getRedisPassword(client clientset.Client, runtime connector.Runtime) (string, error) {
-	secret, err := client.Kubernetes().CoreV1().Secrets(common.NamespaceKubesphereSystem).Get(context.Background(), "redis-secret", metav1.GetOptions{})
-	if err != nil {
-		return "", errors.Wrap(errors.WithStack(err), "get redis secret failed")
-	}
-	if secret == nil || secret.Data == nil || secret.Data["auth"] == nil {
-		return "", fmt.Errorf("redis secret not found")
-	}
-
-	return string(secret.Data["auth"]), nil
-
 }
 
 type UserEnvConfig struct {

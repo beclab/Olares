@@ -1,0 +1,31 @@
+name: SystemServer Build test
+on: 
+  push:
+    branches:
+      - "module-systemserver"
+    paths:
+      - 'framework/systemserver/**'
+      - '!framework/systemserver/.olares/**'
+      - '!framework/systemserver/README.md'
+  pull_request:
+    branches:
+      - "module-systemserver"
+    paths:
+      - 'framework/systemserver/**'
+      - '!framework/systemserver/.olares/**'
+      - '!framework/systemserver/README.md'
+jobs:
+  build0-main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '1.22.6'
+      - run: |
+          git clone https://github.com/kubernetes/code-generator.git  ../code-generator
+          cd ../code-generator
+          git checkout -b release-1.27
+          cd -
+          make system-server
+        working-directory: framework/system-server
