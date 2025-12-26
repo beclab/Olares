@@ -64,6 +64,19 @@ func GetKVRocksDefineByUser(ctx context.Context, client *kubernetes.Clientset,
 	sts.Namespace = namespace
 	sts.Name = kvrocksDef.Name
 
+	for i, c := range sts.Spec.Template.Spec.InitContainers {
+		if c.Name == "init-kvrocks-cfg" {
+			ptrC := &sts.Spec.Template.Spec.InitContainers[i]
+			if kvrocksDef.Spec.KVRocks.Image != "" {
+				ptrC.Image = kvrocksDef.Spec.KVRocks.Image
+			}
+
+			if kvrocksDef.Spec.KVRocks.ImagePullPolicy != "" {
+				ptrC.ImagePullPolicy = kvrocksDef.Spec.KVRocks.ImagePullPolicy
+			}
+		}
+	}
+
 	for i, c := range sts.Spec.Template.Spec.Containers {
 		if c.Name == "kvrocks" {
 			ptrC := &sts.Spec.Template.Spec.Containers[i]

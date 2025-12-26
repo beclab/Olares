@@ -64,7 +64,7 @@ spec:
   kvrocks:
     owner: system
     backupStorage: '{{ $redix_backuppath }}/kvrocks_backup'
-    image: beclab/kvrocks:0.1.1
+    image: beclab/kvrocks:0.1.2
     imagePullPolicy: IfNotPresent
     password: 
       valueFrom:
