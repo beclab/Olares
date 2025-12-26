@@ -5,16 +5,17 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"log"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
 	"time"
+
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/util"
@@ -242,7 +243,6 @@ func collectSystemdLogs(tw *tar.Writer, options *LogCollectOptions) error {
 		if err := cmd.Run(); err != nil {
 			logFile.Close()
 			return fmt.Errorf("failed to collect logs for %s: %v", service, err)
-			continue
 		}
 		logFile.Close()
 
@@ -375,43 +375,27 @@ func collectKubernetesLogs(tw *tar.Writer, options *LogCollectOptions) error {
 		}
 	}
 
-	cmd = exec.Command("kubectl", "describe", "pods", "--all-namespaces")
-	output, err = tryKubectlCommand(cmd, "describe pods", options)
-	if err != nil && !options.IgnoreKubeErrors {
-		return err
-	}
-	if err == nil {
-		header := &tar.Header{
-			Name:    "pods-describe.txt",
-			Mode:    0644,
-			Size:    int64(len(output)),
-			ModTime: time.Now(),
-		}
-		if err := tw.WriteHeader(header); err != nil {
-			return fmt.Errorf("failed to write pods description header: %v", err)
-		}
-		if _, err := tw.Write(output); err != nil {
-			return fmt.Errorf("failed to write pods description data: %v", err)
-		}
-	}
+	resourceTypes := []string{"node", "pod", "statefulset", "deployment", "replicaset", "service", "configmap"}
 
-	cmd = exec.Command("kubectl", "describe", "node")
-	output, err = tryKubectlCommand(cmd, "describe node", options)
-	if err != nil && !options.IgnoreKubeErrors {
-		return err
-	}
-	if err == nil {
-		header := &tar.Header{
-			Name:    "node-describe.txt",
-			Mode:    0644,
-			Size:    int64(len(output)),
-			ModTime: time.Now(),
+	for _, res := range resourceTypes {
+		cmd = exec.Command("kubectl", "describe", res, "--all-namespaces")
+		output, err = tryKubectlCommand(cmd, fmt.Sprintf("describe %s", res), options)
+		if err != nil && !options.IgnoreKubeErrors {
+			return err
 		}
-		if err := tw.WriteHeader(header); err != nil {
-			return fmt.Errorf("failed to write node description header: %v", err)
-		}
-		if _, err := tw.Write(output); err != nil {
-			return fmt.Errorf("failed to write node description data: %v", err)
+		if err == nil {
+			header := &tar.Header{
+				Name:    fmt.Sprintf("%s-describe.txt", res),
+				Mode:    0644,
+				Size:    int64(len(output)),
+				ModTime: time.Now(),
+			}
+			if err := tw.WriteHeader(header); err != nil {
+				return fmt.Errorf("failed to write %s description header: %v", res, err)
+			}
+			if _, err := tw.Write(output); err != nil {
+				return fmt.Errorf("failed to write %s description data: %v", res, err)
+			}
 		}
 	}
 
