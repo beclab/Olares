@@ -169,6 +169,14 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 			klog.Errorf("get app config failed %v", err)
 			return err
 		}
+		var cfg *appcfg.ApplicationConfig
+		err = json.Unmarshal([]byte(p.manager.Spec.Config), &cfg)
+		if err != nil {
+			klog.Errorf("unmarshal to appConfig failed %v", err)
+			return err
+		}
+		appConfig.Ports = cfg.Ports
+
 	} else {
 		_, err = apputils.GetIndexAndDownloadChart(ctx, &apputils.ConfigOptions{
 			App:          p.manager.Spec.AppName,
