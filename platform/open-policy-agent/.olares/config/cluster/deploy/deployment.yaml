@@ -251,6 +251,8 @@ data:
         not startswith(image, "ghcr.io/coder/coder:v2.19.0")
         not startswith(image, "apecloud/")
         not startswith(image, "kldtks/")
+        not startswith(image, "alpine:")
+        not startswith(image, "mariadb:")
     }
         
     is_root_user(ctx) if {
