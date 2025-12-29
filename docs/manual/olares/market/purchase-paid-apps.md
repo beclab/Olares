@@ -53,7 +53,7 @@ Before you begin, ensure that you have completed the following tasks:
 3. Review the amount in the wallet popup, and then confirm and approve the transaction.
 4. Wait for the blockchain to confirm the transaction.
 5. Once the payment is successfully completed, click **Install** to install the application.
-6. After the payment is completed, you can verify your purchase credential from your LarePass mobile app by navigating to **Settings** > **Safety** > **VC cards**.
+6. After the payment is completed, navigate to **Settings** > **Safety** > **VC cards** to verify your purchase credential from your LarePass mobile app.
 
 ![Authorize purchase](/images/manual/olares/vc.png#bordered)
 
