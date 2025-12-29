@@ -255,16 +255,24 @@ const side = {
               "link": "/zh/manual/olares/wise/recommend"
             },*/
             {
-              text: "管理 Cookie",
-              link: "/zh/manual/olares/wise/manage-cookies",
-            },
-            {
               "text": "管理订阅",
               "link": "/zh/manual/olares/wise/subscribe"
             },
             {
+              text: "管理 Cookie",
+              link: "/zh/manual/olares/wise/manage-cookies",
+            },
+            {
               "text": "使用过滤视图",
               "link": "/zh/manual/olares/wise/filter"
+            },
+            {
+              "text": "过滤语法参考",
+              "link": "/zh/manual/olares/wise/filter-syntax-guide"
+            },
+            {
+              "text": "过滤视图示例",
+              "link": "/zh/manual/olares/wise/filter-examples"
             }
           ]
         },

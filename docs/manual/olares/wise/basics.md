@@ -16,13 +16,14 @@ To unlock the full potential of Wise, it is recommended to install the following
 - **Rss Subscribe**: Use it to subscribe to RSS feeds directly while browsing web pages.
 - **YT-DLP**: Use it to download audio and video from supported web pages into Wise.
 
+:::tip 
 Wise works without these apps, but in-browser subscription and media download will be unavailable until you install them.
+:::
 
 ## Build your library
 
 Wise pulls content into your library in two ways:
 
-- **Saved items**: Individual pages, files, audio, or video you capture. These show up under main **Inbox** folder and content types (**Articles**, **Videos**, **Audios**, **Books**, **PDFs**), and can be marked as **Inbox** or **Read Later**.
 - **Saved items:** Individual web pages, files, audio, and video that you capture manually. These items appear in your main **Inbox** and are automatically sorted into categories such as **Articles**.
 - **Feeds:** Subscriptions to dynamic sources like websites, blogs, and podcasts. New updates appear under **Feeds**, where you can select specific entries to save to your library.
 
@@ -37,8 +38,6 @@ You can save individual items to Wise in three ways:
 
 Import files directly from your computer, including PDFs, EPUBs, audio, video, and other document types. Wise automatically places each supported format into the right content folder in your library. 
 
-1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar.  
-2. Choose **Upload**.
 1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar, and select **Upload**.
 2. Select one or more files from your local computer.
 
@@ -50,8 +49,6 @@ Paste a URL to save articles, videos, or subscribe to feeds.
 If a link requires login or other access control, Wise may need cookies to fetch it correctly. To configure cookies for protected sites, see **[Manage cookies for Wise](./manage-cookies)**.
 :::
 
-1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar.  
-2. Choose **Add Link**.
 1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar, and select **Add Link**.
 2. Paste or type a URL.
 
@@ -66,17 +63,7 @@ Newly saved items will appear under their content type.
 
 #### Save from browser with LarePass extension
 
-You can also save content to Wise directly from your browser using the LarePass extension, without opening Wise first.
-
-:::tip Install LarePass browser extension
-LarePass extension is currently available for Chrome browsers only. You can download it from the [official page](https://www.olares.com/larepass).
-:::
-:::tip Install LarePass browser extension
-LarePass extension is currently available for Chrome browsers only. You can download it from the [official page](https://www.olares.com/larepass).
-:::
-
-You can also save content to Wise directly from your browser using the LarePass extension, without opening Wise first.
-To save content from a web page into Wise:
+You can also save content to Wise directly from your browser using the [LarePass extension](https://www.olares.com/larepass), without opening Wise first.
 
 1. Open the LarePass browser extension and select the "Collect" icon.
 2. Under **Save to library**, review the content detected on the current page.
