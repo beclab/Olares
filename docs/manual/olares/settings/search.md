@@ -26,37 +26,6 @@ Olares file search is configured in **File search**, which contains three main s
 
 ![File search](/images/manual/olares/file-search.png#bordered)
 
-### Search index
-
-To view and manage the search index:
-1. Open **Settings** from the Launchpad.
-2. Go to **Search** > **File search**.
-3. Locate the **Search index** section at the top of the panel.
-
-The **Search index** section shows the current indexing status and provides a **Rebuild** button.
-
-After files change or you update search rules, Olares automatically refreshes the index within about 30 seconds. In most cases, you can rely on this automatic update. Use **Rebuild** only when you need search results to reflect changes immediately.
-
-The status indicator shows:
-
-- **In Progress** – The index is being updated. Search results may be temporarily incomplete during this time.
-- **Completed** – The index is up to date and search results should reflect the latest files and rules.
-
-### Excluded files
-
-This setting acts as a global ignore list for the search engine.
-
-- Files matching these patterns are completely excluded from the index.
-- Excluded files do not appear in search results, either by filename or by content.
-- Rules are defined using regular expressions (regex).
-
-### Full-text search directories
-
-By default, Olares indexes files by filename only. This setting allows you to enable content search for specific folders.
-
-- Files in listed directories are searchable by both filename and their text content.
-- Files in unlisted directories remain searchable only by their filename.
-
 ## View search index status
 
 To view the current search indexing status:
@@ -67,22 +36,18 @@ To view the current search indexing status:
 
 If you need changes reflected immediately, click **Rebuild**.
 
-## Configure search rules
-
-On the File Search page, you can optimize results by excluding irrelevant files from indexing and by enabling full-text search for specific folders.
-
-### Exclude files from search
+## Exclude files from search
 
 Use the Excluded Files section if certain files (such as logs or temporary files) clutter your search results.
 
 You exclude them by adding exclusion rules. Each rule uses a **regex pattern** to specify the file paths you want Olares to ignore.
 
-**To add a rule:**
+### Add a rule
 1. Under Excluded Files, click **Add pattern**.
 2. Enter a valid regular expression (regex) to match the files you wish to ignore.
 3. Click **Confirm**.
 
-**To remove a rule:**
+### Remove a rule
 1. Under Excluded Files, locate the target rule.
 2. Click the <i class="material-symbols-outlined">delete</i> icon next to the pattern.
 3. In the prompt window, click **Confirm**.
@@ -91,18 +56,18 @@ You exclude them by adding exclusion rules. Each rule uses a **regex pattern** t
 If you are not familiar with regular expressions, start with simple patterns and test them carefully. Incorrect patterns may cause important files to disappear from search results
 :::
 
-### Search inside file content
+## Search inside file content
 
 Use the Full-text search directories section when you want to search inside documents, not just by filename.
 
 By adding a **folder** to the full-text directory list, full-text search is enabled. Once added, supported files in that folder become searchable by both filename and content.
 
-**To add a rule:**
+### Add a rule
 1. Under Full-text search directories, click **Add directory**.
 2. Select the target folder from the file picker.
 3. Click **Confirm** to add it to the list.
 
-**To remove a rule:**
+### Remove a rule
 1. Under Full-text search directories, locate the target directory.
 2. Click the <i class="material-symbols-outlined">delete</i> icon next to the directory.
 3. In the prompt window, click **Confirm**.
