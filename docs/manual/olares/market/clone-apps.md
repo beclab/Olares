@@ -19,11 +19,11 @@ You can install multiple instances of the same application, which is also known 
 
     ![Clone applications](/images/manual/olares/clone-apps.png#bordered)
 
-4. In the **Clone app** window, configure the following information, and then click **Confirm**:
+4. In the **Clone app** window, configure the instance details:
     
-    a. Enter a unique name for the new instance to avoid confusion with existing applications. This name will serve as the app identifier and appear in the **Market** and the **My Olares** list.
-
-    b. Set the display name for the shortcut icon generated on the desktop, or individually set the name for each component's icon if the application contains multiple entry points.
+   - **App Name**: Enter a unique name to identify the application in the **Market** and **My Olares** list.
+   - **Display Name**: Set the name for the desktop shortcut. You can name each icon individually if the application has multiple entry points.
+5. Click **Confirm** to proceed.
 6. In the **Configure Environment Variables** window, complete the corresponding setup, and then click **Confirm**. 
 
     In the installed applications list, the newly created application will appear with a "Clone" tag next to it.
