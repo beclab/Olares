@@ -8,7 +8,8 @@ description: Learn how to use the Clone feature in Olares to run multiple instan
 You can install multiple instances of the same application, which is also known as "clone". This is useful for scenarios requiring different configurations or versions, such as running multiple Windows virtual machines.
 
 ## Clone an application
-For example, to create a new Windows instance:
+
+The following steps demonstrate the cloning workflow by using the Windows application as an example.
 
 ### Step 1. Verify cloning support
 
@@ -19,11 +20,18 @@ Confirm that the target application supports cloning:
 
     ![Clone applications support](/images/manual/olares/clone-apps-support.png#bordered)
 
-### Step 2. Clone and configure the instance
+### Step 2. Prepare the primary instance
 
-Once confirmed, create a new instance:
+To create a clone instance, a primary instance must exist on your system. Based on your current status, take the corresponding action:
 
-1. Click **My Olares** from the left sidebar. The list of installed applications will appear on the right.
+- If you have not installed the application, return to the **Market**, click **Get** and then **Install** to deploy the primary instance first.
+- If you have installed the application, proceed directly to **Step 3**.
+
+### Step 3. Clone and configure the instance
+
+Once the primary instance is ready, create a new instance:
+
+1. Click **My Olares** from the left sidebar of **Market**. The list of installed applications will appear on the right.
 2. Locate the target application, click the drop-down arrow next to the **Open** button, and then click **Clone**.
 
     ![Clone applications](/images/manual/olares/clone-apps.png#bordered)
