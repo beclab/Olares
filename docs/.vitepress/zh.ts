@@ -8,7 +8,7 @@ const side = {
       items: [
         // { text: "应用场景", link: "/zh/manual/why-olares" },
         //{ text: "功能对比", link: "/zh/manual/feature-overview" },
-        { text: "比较 Olares 和 NAS", link: "/zh/manual/olares-vs-nas" },
+        // { text: "比较 Olares 和 NAS", link: "/zh/manual/olares-vs-nas" },
         {text: "帮助与支持", link: "/zh/manual/help/request-technical-support",}
         //      collapsed: true,
         //      items: [
@@ -425,7 +425,7 @@ const side = {
   ],
   "/zh/use-cases/": [
     {
-      text: "Tutorials & use cases",
+      text: "应用示例",
       link: "/zh/use-cases/",
       items: [
         {
@@ -471,10 +471,10 @@ const side = {
           text: "Steam",
           link: "/zh/use-cases/stream-game",
         },
-        {
-          text: "Redroid",
-          link: "/zh/use-cases/host-cloud-android",
-        },
+        // {
+        //   text: "Redroid",
+        //   link: "/zh/use-cases/host-cloud-android",
+        // },
       ],
     },
   ],
