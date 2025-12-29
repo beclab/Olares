@@ -28,7 +28,7 @@ Before you begin, ensure that you have completed the following tasks:
     
     a. Review the request popup titled **Authorize payment access**.
     
-    b. Tap **Confirm** .
+    b. Tap **Confirm**.
 
     c. If the popup does not appear, return to the app page in Olares Market and click **Buy** again to re-initiate the request.
 
