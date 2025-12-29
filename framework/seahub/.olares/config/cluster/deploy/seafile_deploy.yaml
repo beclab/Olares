@@ -248,7 +248,7 @@ spec:
 
       containers:
       - name: seafile-server
-        image: beclab/pg_seafile_server:v0.0.16
+        image: beclab/pg_seafile_server:v0.0.17
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 8082
