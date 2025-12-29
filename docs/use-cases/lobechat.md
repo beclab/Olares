@@ -51,7 +51,7 @@ After the installation is completed, you must connect LobeChat to Ollama to make
    Replace *UserID* with the Olares Admin's local name. For example, `https://39975b9a1.alexmiles.olares.com`.
    :::
 
-![Interface proxy address connection](/images/manual/use-cases/lobechat-connection.png#bordered)
+![Interface proxy address connection](/images/manual/use-cases/lobechat-connection-setting.png#bordered)
 
 5. Click **Check** to verify the connection. A **Check Passed** message indicates that the proxy address is correct.
 
