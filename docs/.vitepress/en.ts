@@ -172,13 +172,13 @@ const side = {
               text: "Basic operations",
               link: "/manual/olares/market/market",
             },
+             {
+              text: "Clone applications",
+              link: "/manual/olares/market/clone-apps",
+            },
             {
               text: "Manage paid applications",
               link: "/manual/olares/market/purchase-paid-apps",
-            },
-            {
-              text: "Clone applications",
-              link: "/manual/olares/market/clone-apps",
             },
           ],
         },
