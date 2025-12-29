@@ -69,6 +69,15 @@ You can find the app in the Market, click **Get**, and then click **Install** to
 
 ### Restore after system reset or migration
 
+:::info Identity binding
+Your purchase history binds to your Olares ID rather than specific hardware. If you have access to LarePass or a backup of your mnemonic phrase, you can activate the new system with the same Olares ID and restore your apps.
+:::
+
+:::warning Risk of data loss
+If you lose your mnemonic phrase, you permanently lose your digital identity and all paid apps. In this case, you must create a new account and repurchase the application.
+Note that license restoration also requires the developer's service to be online. If their service is unavailable, you might be unable to restore the application.
+:::
+
 If you have reset Olares OS or switched to new hardware, your local license data is cleared. You must verify your on-chain identity to retrieve your purchase rights, which will allow you to re-install the application.
 
 1. Ensure that the current Olares OS is activated with the same **Olares ID** used for the original purchase.
