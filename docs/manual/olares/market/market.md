@@ -65,7 +65,7 @@ You can switch market sources to speed up browsing, searching, and downloading, 
 3.  Fill in the source name, URL, and description as required, then click **Confirm** to finish adding.
 4.  In the source list, select the target source to activate it. Wait for about 10 minutes for the store page to switch.
 
-::: tip Note
+:::info
 Applications from different installation sources will generate corresponding tabs in **My Olares** for easier application management.
 :::
 
