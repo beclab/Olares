@@ -1,11 +1,15 @@
 ---
-outline: [2, 3]
+outline: [2, 4]
 description: Learn how to install LobeChat on Olares and integrate it with Ollama to build and enhance your local custom AI assistants.
 ---
 
 # Build your local AI assistant with LobeChat
 
-LobeChat is an open-source, modern AI chat framework that supports file uploads, knowledge bases, and multi-modal interactions, ensuring a secure local chat experience. Ollama is a lightweight platform for running open-source AI large language models (LLMs) locally, including Quen 2.5, LIama 3.1, DeepSeek V2, and more. LobeChat supports integration with Ollama, which allows you to use the LLMs provided by Ollama to enhance your chat applications within LobeChat easily.
+LobeChat is an open-source, modern AI chat framework that supports file uploads, knowledge bases, and multi-modal interactions, ensuring a secure local chat experience. 
+
+Ollama is a lightweight platform for running open-source AI large language models (LLMs) locally, including Quen 2.5, LIama 3.1, DeepSeek V2, and more. 
+
+LobeChat supports integration with Ollama, which allows you to use the LLMs provided by Ollama to enhance your chat applications within LobeChat easily.
 
 This guide covers the installation, configuration, and practical usage of these tools to create your personalized AI assistant.
 
@@ -51,7 +55,7 @@ After the installation is completed, you must connect LobeChat to Ollama to make
    Replace *UserID* with the Olares Admin's local name. For example, `https://39975b9a1.alexmiles.olares.com`.
    :::
 
-![Interface proxy address connection](/images/manual/use-cases/lobechat-connection-setting.png#bordered)
+   ![Interface proxy address connection](../public/images/manual/use-cases/lobechat-connection-setting.png#bordered)
 
 5. Click **Check** to verify the connection. A **Check Passed** message indicates that the proxy address is correct.
 
@@ -65,7 +69,7 @@ You can install language models directly through the LobeChat user interface (UI
 2. Type and send a message in the chat.
 3. If the language model is not installed, you are prompted right in the chat to download and install it.
 
-    ![Install language model via LobeChat UI](/images/manual/use-cases/download-in-lobechat.png#bordered)
+    ![Install language model via LobeChat UI](../public/images/manual/use-cases/download-in-lobechat.png#bordered)
 
 4. When the installation is completed, you can chat with the newly installed language model.
 
@@ -103,7 +107,7 @@ To help you get started, this guide demonstrates typical configurations in LobeC
 
 1. Click **Open Chat Settings**.
 
-   ![Open Chat Settings](/images/manual/use-cases/open-chat-settings.png#bordered)
+   ![Open Chat Settings](../public/images/manual/use-cases/open-chat-settings.png#bordered)
 
 2. Customize assitant identity:
 
@@ -136,14 +140,14 @@ To help you get started, this guide demonstrates typical configurations in LobeC
 
    For example, install the **Pollinate drawing** plugin for image creation.
 
-   ![Install LobeChat plugin](/images/manual/use-cases/lobechat-plugin-install.png#bordered)
+   ![Install LobeChat plugin](../public/images/manual/use-cases/lobechat-plugin-install.png#bordered)
 
 #### 4.Interact with the assistant
 
 1. Enter and send your draft content to get a refined version.
 2. Ensure that the **Pollinate drawing** plugin is enabled, and then ask the assistant to create a cover image for the content. It will use the enabled plugin to generate an image.
 
-   ![LobeChat plugin enabled](/images/manual/use-cases/lobechat-plugin-enable.png#bordered)
+   ![LobeChat plugin enabled](../public/images/manual/use-cases/lobechat-plugin-enable-2.png#bordered)
 
 3. Iterate to get your ideal content textually and visually.
 
@@ -151,7 +155,7 @@ To help you get started, this guide demonstrates typical configurations in LobeC
 
 Once satisfied with the assistant's performance, click **Pin** to keep it at the top of your assitant list for easy access.
 
-![Pin LobeChat assistant](/images/manual/use-cases/lobechat-pin.png#bordered)
+![Pin LobeChat assistant](../public/images/manual/use-cases/lobechat-pin.png#bordered)
 <!--this senario pending the text to speech plugin work
 ### Scenario 2: Training and eduction
 
@@ -183,7 +187,7 @@ To help you get started, this guide demonstrates typical configurations in LobeC
 
 1. Click **Open Chat Settings**.
 
-   ![Open Chat Settings](/images/manual/use-cases/open-chat-settings.png#bordered)
+   ![Open Chat Settings](../public/images/manual/use-cases/open-chat-settings.png#bordered)
 
 2. Customize assitant identity:
 
@@ -206,15 +210,15 @@ To help you get started, this guide demonstrates typical configurations in LobeC
 
 3. Install a web-access plugin to allow the assistant to access live web pages and analyze real-time content from any URLs you provide. For example, **Website Crawler**. 
 
-   ：：：info
+   :::info
    Standard local AI models are offline and rely on pre-trained data from the past. The website crawler plugin acts as a bridge to the live internet. When you provide a URL, the plugin instantly accesses the web page in real time via an API, fetches the current content, and feeds it to the AI. This ensures that the AI model is accessing the live web content rather than using the old memory. 
    :::
 
-#### 4.Interact with the assistant
+#### 4. Interact with the assistant
 
 1. Ensure that the **Website Crawler** plugin is enabled.
 
-   ![LobeChat crawler plugin enabled](/images/manual/use-cases/lobechat-plugin-enable-2.png#bordered)
+   ![LobeChat crawler plugin enabled](../public/images/manual/use-cases/lobe-chat-plugin-enable-2.png#bordered)
 
 
 2. Paste a URL to a technical documentation page and ask the assistant to analyze this page and summarize the API endpoints. For example,
