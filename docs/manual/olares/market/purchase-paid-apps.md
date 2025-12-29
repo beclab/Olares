@@ -87,9 +87,11 @@ If you have reset Olares OS or switched to new hardware, your local license data
 
 5. Once verified, the button will change to **Install**. Click it to start installation.
 
-:::info
-- **Identity binding**: Your purchase history is bound to your **Olares ID (DID)**, not to specific hardware.
-- **Identity recovery**: If you still have access to LarePass or have a backup of your mnemonic phrase, you can activate the new system with the same Olares ID and restore your purchased apps through identity verification.
-- **Risk of loss**: If you have uninstalled LarePass and lost your mnemonic phrase, you will permanently lose your digital identity and all associated assets, including paid apps. In this case, you must create a new account and re-purchase the application.
-- **Developer availability**: Restoring a license requires issuance via the developer's Merchant service. If the developer's Merchant service is offline or unavailable, you might be unable to restore the application.
+:::info Identity binding
+Your purchase history binds to your Olares ID rather than specific hardware. If you have access to LarePass or a backup of your mnemonic phrase, you can activate the new system with the same Olares ID and restore your apps.
+:::
+
+:::warning Risk of data loss
+If you lose your mnemonic phrase, you permanently lose your digital identity and all paid apps. In this case, you must create a new account and repurchase the application.
+Note that license restoration also requires the developer's service to be online. If their service is unavailable, you might be unable to restore the application.
 :::
