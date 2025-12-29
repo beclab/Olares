@@ -84,7 +84,7 @@ Changes here are reflected in the **Feeds** section of the Wise sidebar.
 If you no longer want to follow a source, you can unsubscribe from its feed.
 
 :::warning
-When you unsubscribe from a feed, all entries from that feed are removed from Wise **unless** they have been explicitly saved to your library (for example, by keeping their status as **Inbox** or **Read Later**). This action cannot be undone.
+When you unsubscribe from a feed, all entries from that feed are removed from Wise **unless** they have been explicitly saved to your library. This action cannot be undone.
 :::
 
 You can remove a feed subscription in several places:

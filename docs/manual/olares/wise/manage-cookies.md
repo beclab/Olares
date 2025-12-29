@@ -29,7 +29,7 @@ This is the easiest way to handle cookies. When you are browsing a site that req
 2. Open the LarePass browser extension and select the "Collect" icon.
 3. Click **Upload** to upload the cookies for the current page.
 
-![Upload cookies via LarePass extension](/images/manual/olares/wise-upload-cookie-larepass.png#bordered){width=50%}
+![Upload cookies via LarePass extension](/images/manual/olares/wise-upload-cookie-larepass.png#bordered){width=40%}
 
 After upload, Wise will use these cookies when you **Save to library** or **Subscribe to RSS feed** for that site.
 
@@ -64,7 +64,7 @@ Cookies uploaded this way are stored for Wise and will be used whenever Wise acc
 
 <template #Upload-to-Integration>
 
-**Best for managing cookies centrally so multiple Olares apps can reuse them.**
+This method allows you to upload, view, and manage your cookies in the same interface.
 
 1. Open **Settings** from the Launchpad.
 2. Go to **Integration** > **Manage Your Cookies**.

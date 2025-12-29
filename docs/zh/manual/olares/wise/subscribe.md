@@ -60,7 +60,6 @@ Wise 提供灵活的订阅方式，帮助你跟踪喜爱的内容来源，包括
 1. 打开 LarePass 浏览器扩展，点击“收集”按钮。
 2. 如果检测到可用的订阅源，它们会显示在**订阅 RSS 源**区域。
 3. 点击目标订阅源旁边的 <i class="material-symbols-outlined">bookmark_add</i> 即可订阅。
-
 ![使用 LarePass 订阅](/images/zh/manual/olares/wise-larepass-collect.png#bordered)
 
 ## 管理订阅
