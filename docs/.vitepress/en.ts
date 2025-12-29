@@ -265,6 +265,14 @@ const side = {
               text: "Filter your knowledge",
               link: "/manual/olares/wise/filter",
             },
+            {
+              text: "Filter syntax",
+              link: "/manual/olares/wise/filter-syntax-guide",
+            },
+            {
+              text: "Filter example",
+              link: "/manual/olares/wise/filter-examples",
+            },
           ],
         },
         {

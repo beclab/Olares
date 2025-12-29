@@ -6,6 +6,8 @@ description: 了解 Olares 系统应用 Wise 的基本操作。学习收集、�
 
 Wise 助你搭建专注、高效的阅读环境。本文将带你了解日常核心操作，帮你轻松收集内容，安排阅读计划，并记录自己的想法。
 
+本文重点介绍如何保存和阅读单条内容。如需了解订阅源和订阅管理，请查看[订阅和管理订阅源](./subscribe)。
+
 ## 开始之前
 
 为充分体验 Wise 的能力，建议在 Olares 应用市场搜索并安装以下配套应用：
@@ -13,28 +15,30 @@ Wise 助你搭建专注、高效的阅读环境。本文将带你了解日常核
 - **Rss Subscribe**：用于在浏览网页时直接订阅 RSS 源。
 - **YT-DLP**：用于将网页上的音频和视频下载到 Wise 中。
 
+:::tip
 即使不安装这些应用，你也可以正常使用 Wise，但无法使用浏览器内订阅和媒体下载功能。
+:::
 
 ## 打造你的内容库
 
 Wise 通过以下两种方式将内容收集到库中：
 
-- **保存内容**：包括你主动保存的页面、文件、音频或视频。这些文件会出现在主界面的**收件箱**以及文件类型对应文件夹中（**文章**、**视频**、**音频**、**图书**、**PDF**），其状态为**收件箱**或**稍后阅读**。
+- **保存内容**：包括你手动保存的网页、文件、音频或视频。这些内容会出现在主界面的**收件箱**，并会被自动分类整理到**文章**等类别文件夹中。
 - **订阅源**：包括你订阅的网站、博客、播客或频道。新的内容会出现在**订阅源**里，你可以从中挑选感兴趣的内容保存到自己的库里。
-
-本文重点介绍如何保存和阅读单条内容。如需了解订阅源和订阅管理，请查看[订阅和管理订阅源](./subscribe)。
 
 ### 保存内容
 
-你可以通过以下三种方式将内容保存到 Wise：上传文件、在 Wise 内部添加链接，或使用 LarePass 浏览器扩展直接保存。
+你可以通过以下三种方式将内容保存到 Wise：
+- 上传文件
+- 在 Wise 内部添加链接
+- 使用 LarePass 浏览器扩展直接保存
 
 #### 上传文件
 
-直接从你的电脑导入文件，包括 PDF、EPUB、音频、视频和其他文件类型。Wise 会根据文件格式，自动将其放入库中对应的内容文件夹。例如，PDF 放入 **PDF**，EPUB 放入**图书**，媒体文件放入**视频**或**音频**。
+直接从你的电脑导入文件，包括 PDF、EPUB、音频、视频和其他文件类型。Wise 会根据文件格式，自动将其放入库中对应的内容文件夹。
 
-1. 点击左下角菜单栏的 <i class="material-symbols-outlined">add_circle</i>。  
-2. 选择**上传**。
-3. 从本地电脑选择一个或多个文件。
+1. 点击左下角菜单栏的 <i class="material-symbols-outlined">add_circle</i>，选择**上传**。
+2. 从本地电脑选择一个或多个文件。
 
 #### 通过链接添加
 
@@ -44,9 +48,8 @@ Wise 通过以下两种方式将内容收集到库中：
 如果链接指向的内容需要登录或其他访问控制，Wise 可能需要 Cookie 才能正确获取内容。若要配置 Cookie，请查看[管理 Cookie](./manage-cookies)。
 :::
 
-1. 点击左下角菜单栏的 <i class="material-symbols-outlined">add_circle</i>。
-2. 选择**添加链接**。
-3. 粘贴或输入 URL。
+1. 点击左下角菜单栏的 <i class="material-symbols-outlined">add_circle</i>，选择**添加链接**。
+2. 粘贴或输入 URL。
 
    Wise 会解析链接，并列出所有可行操作：
     - **保存到库**：将内容保存为库中的一个文件，并添加至**收件箱**。
@@ -56,17 +59,11 @@ Wise 通过以下两种方式将内容收集到库中：
 
     ![Download files](/images/zh/manual/olares/wise-add-link-download.png#bordered){width=300}
 
-新保存的内容会出现在对应类型文件夹下。之后你可以将其状态设定为**收件箱**或**稍后阅读**。
+新保存的内容会出现在对应类型文件夹下。
 
 #### 使用 LarePass 扩展
 
-你也可以在浏览器中通过 LarePass 扩展直接将内容保存到 Wise，无需打开 Wise 应用。
-
-:::tip 安装 LarePass 浏览器扩展
-LarePass 扩展目前仅支持 Chrome 浏览器。你可以从[官网](https://www.olares.cn/larepass)下载。
-:::
-
-将网页内容保存到 Wise：
+你也可以在浏览器中通过 [LarePass 扩展](https://www.olares.cn/larepass)直接将内容保存到 Wise，无需打开 Wise 应用。
 
 1. 打开 LarePass 浏览器扩展并点击“收集”。
 2. 在**保存到库**区域查看当前页面检测到的内容。
@@ -91,23 +88,6 @@ LarePass 扩展目前仅支持 Chrome 浏览器。你可以从[官网](https://w
 
     - 点击<i class="material-symbols-outlined">folder_open</i>在 Olares 文件管理器中定位文件。
     - 点击<i class="material-symbols-outlined">do_not_disturb_on</i>从列表中移除文件。
-
-## 管理内容状态
-
-你可以将内容标记为<b>`收件箱`</b>或<b>`稍后阅读`</b>来组织内容。在列表视图或阅读视图中，可以通过相应图标更改其状态。
-
-![Wise content status](/images/zh/manual/olares/wise-item-status.png#bordered)
-![Wise content status in list](/images/zh/manual/olares/wise-list-status.png#bordered)
-
-- **保留在待办列表**  
-  点击<i class="material-symbols-outlined">inbox</i>：该内容将被视为活跃内容，出现在主界面**收件箱**以及文件类型对应文件夹的<b>`收件箱`</b>页签（例如**文章** > **`收件箱`**）。
-
-- **归档到稍后阅读**  
-  点击<i class="material-symbols-outlined">schedule</i>：该内容将从主界面**收件箱**和文件类型对应文件夹的<b>`收件箱`</b>页签移出，出现在各自的<b>`稍后阅读`</b>页签（例如**文章** > **`稍后阅读`**）。
-
-::: tip 
-内容状态更改后，其所在位置会立即更新。你可以随时在**收件箱**和**稍后阅读**之间切换。 
-:::
 
 ## 使用阅读工具
 
