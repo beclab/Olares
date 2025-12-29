@@ -6,7 +6,7 @@ const side = {
       text: "What is Olares",
       link: "/manual/overview",
       items: [
-        { text: "Compare Olares and NAS", link: "/manual/olares-vs-nas" },
+        // { text: "Compare Olares and NAS", link: "/manual/olares-vs-nas" },
         { text: "Help and support", link: "/manual/help/request-technical-support"}
           //  collapsed: true,
           //   items: [
@@ -468,10 +468,10 @@ const side = {
         text: "Steam",
         link: "/use-cases/stream-game",
       },
-      {
-        text: "Redroid",
-        link: "/use-cases/host-cloud-android",
-      },
+      // {
+      //   text: "Redroid",
+      //   link: "/use-cases/host-cloud-android",
+      // },
       {
         text: "Windows",
         link: "/use-cases/windows",
