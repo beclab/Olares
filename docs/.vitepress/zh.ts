@@ -234,9 +234,9 @@ const side = {
               link: "/zh/manual/olares/wise/manage-cookies",
             },
             {
-              "text": "使用过滤视图",
-              "link": "/zh/manual/olares/wise/filter"
-            },
+              "text": "管理知识",
+              "link": "/zh/manual/olares/wise/filter",
+              items:[
             {
               "text": "过滤语法参考",
               "link": "/zh/manual/olares/wise/filter-syntax-guide"
@@ -245,7 +245,9 @@ const side = {
               "text": "过滤视图示例",
               "link": "/zh/manual/olares/wise/filter-examples"
             }
-          ]
+            ],
+          },
+          ],
         },
         {
           "text": "控制面板",

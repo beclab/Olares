@@ -9,12 +9,6 @@ description: 为 Wise 管理 Cookies，让它可以访问受保护的网站和�
 
 通过这种方法，Wise 得到授权，能够通过登录检查，确保**保存到库**或**订阅 RSS 源**在受限网站上顺利运行。
 
-Wise 支持以下 Cookie 格式：
-
-- **Netscape**
-- **JSON**
-- **Header String**
-
 本文将介绍如何在 Olares 中为 Wise 管理 Cookie。
 
 ## 上传 Cookie
@@ -35,7 +29,7 @@ Olares 提供多种方式，让你可以灵活上传 Cookie，你可选择在浏
 
 ### 手动批量上传
 
-你可以手动粘贴 **Netscape**、**JSON** 或 **Header String** 格式的 Cookie 字符串。使用诸如 [Cookie-Editor](https://chromewebstore.google.com/detail/cookie-editor/iphcomljdfghbkdcfndaijbokpgddeno?utm_source=ext_app_menu)
+你可以手动粘贴 Netscape、JSON 或 Header String 格式的 Cookie 字符串。使用诸如 [Cookie-Editor](https://chromewebstore.google.com/detail/cookie-editor/iphcomljdfghbkdcfndaijbokpgddeno?utm_source=ext_app_menu)
 等浏览器扩展从特定网站导出凭据时，可以使用此方法。
 
 你可以通过 Wise 应用界面上传 Cookie 字符串，或直接在系统**设置**中上传。

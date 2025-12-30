@@ -9,12 +9,6 @@ Some websites require a login to access their content. To allow Wise to fetch co
 
 This grants Wise permission to pass login checks, ensuring that features like **Save to library** or **Subscribe to RSS feed** work securely on restricted sites.
 
-Wise supports the following cookie formats:
-
-- **Netscape**
-- **JSON**
-- **Header String**
-
 This guide explains how to manage cookies in Olares for Wise.
 
 ## Upload cookies
@@ -35,7 +29,7 @@ After upload, Wise will use these cookies when you **Save to library** or **Subs
 
 ### Upload manually in batch
 
-You can manually paste cookie strings in **Netscape**, **JSON**, or **Header String** formats. This is useful if you use browser extensions like [Cookie-Editor](https://chromewebstore.google.com/detail/cookie-editor/iphcomljdfghbkdcfndaijbokpgddeno?utm_source=ext_app_menu) to export credentials from specific websites.
+You can manually paste cookie strings in Netscape, JSON, or Header String formats. This is useful if you use browser extensions like [Cookie-Editor](https://chromewebstore.google.com/detail/cookie-editor/iphcomljdfghbkdcfndaijbokpgddeno?utm_source=ext_app_menu) to export credentials from specific websites.
 
 You can upload cookie strings via the Wise app interface or directly through the system Settings.
 

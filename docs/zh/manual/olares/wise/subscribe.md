@@ -29,9 +29,8 @@ Wise 提供灵活的订阅方式，帮助你跟踪喜爱的内容来源，包括
 如果你已经有网站地址或订阅源地址，可以通过**添加链接**订阅。
 
 1. 点击左下角菜单栏中的 <i class="material-symbols-outlined">add_circle</i>，选择**添加链接**。
-2. 粘贴网站或订阅源的 URL。
-3. 如果 Wise 检测到一或多个订阅源，会显示在**订阅 RSS 源**区域。
-4. 点击目标订阅源旁边的 <i class="material-symbols-outlined">bookmark_add</i> 按钮。
+2. 粘贴网站或订阅源的 URL。如果 Wise 检测到一或多个订阅源，会显示在**订阅 RSS 源**区域。
+3. 点击目标订阅源旁边的 <i class="material-symbols-outlined">bookmark_add</i> 按钮。
 
 ![订阅 RSS 源](/images/zh/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
 

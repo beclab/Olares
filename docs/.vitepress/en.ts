@@ -233,9 +233,9 @@ const side = {
               link: "/manual/olares/wise/manage-cookies",
             },
             {
-              text: "Filter your knowledge",
+              text: "Organize with filters",
               link: "/manual/olares/wise/filter",
-            },
+              items:[
             {
               text: "Filter syntax",
               link: "/manual/olares/wise/filter-syntax-guide",
@@ -243,6 +243,8 @@ const side = {
             {
               text: "Filter example",
               link: "/manual/olares/wise/filter-examples",
+            },
+            ],
             },
           ],
         },
