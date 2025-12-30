@@ -296,8 +296,10 @@ func GetKubeletConfiguration(runtime connector.Runtime, kubeConf *common.KubeCon
 			"memory": "250Mi",
 		},
 		"evictionHard": map[string]string{
-			"memory.available": "5%",
-			"pid.available":    "10%",
+			"memory.available":  "5%",
+			"pid.available":     "10%",
+			"nodefs.available":  "5%",
+			"imagefs.available": "5%",
 		},
 		"evictionSoft": map[string]string{
 			"memory.available": "10%",
@@ -309,8 +311,8 @@ func GetKubeletConfiguration(runtime connector.Runtime, kubeConf *common.KubeCon
 		"evictionPressureTransitionPeriod": "30s",
 		"featureGates":                     FeatureGatesDefaultConfiguration,
 		"runtimeRequestTimeout":            "5m",
-		"imageGCHighThresholdPercent":      91,
-		"imageGCLowThresholdPercent":       90,
+		"imageGCHighThresholdPercent":      96,
+		"imageGCLowThresholdPercent":       95,
 	}
 
 	if securityEnhancement {
