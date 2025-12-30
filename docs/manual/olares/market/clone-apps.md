@@ -20,16 +20,9 @@ Confirm that the target application supports cloning:
 
     ![Clone applications support](/images/manual/olares/clone-apps-support.png#bordered)
 
-### Step 2. Prepare the primary instance
+### Step 2. Clone and configure the instance
 
-To create a clone instance, a primary instance must exist on your system. Based on your current status, take the corresponding action:
-
-- If you have not installed the application, return to the **Market**, click **Get** and then **Install** to deploy the primary instance first.
-- If you have installed the application, proceed directly to **Step 3**.
-
-### Step 3. Clone and configure the instance
-
-Once the primary instance is ready, create a new instance:
+To create a clone, a primary instance must exist on your system. Ensure that the application is installed, and then complete the following steps:
 
 1. Click **My Olares** from the left sidebar of **Market**. The list of installed applications will appear on the right.
 2. Locate the target application, click the drop-down arrow next to the **Open** button, and then click **Clone**.
