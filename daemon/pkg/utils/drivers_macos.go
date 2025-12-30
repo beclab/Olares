@@ -72,3 +72,9 @@ func MountedPath(ctx context.Context) ([]mountedPath, error) {
 	klog.Warning("not implement")
 	return nil, nil
 }
+
+func FilterBySerial(serial string) func(dev storageDevice) bool {
+	return func(dev storageDevice) bool {
+		return dev.IDSerial == serial || dev.IDSerialShort == serial
+	}
+}
