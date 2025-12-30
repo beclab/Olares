@@ -19,7 +19,6 @@ import (
 )
 
 var (
-	DIDGateURL     = "https://did-gate-v3.bttcdn.com/1.0/name/"
 	DIDGateTimeout = 10 * time.Second
 	DIDCachePath   = "/var/lib/olares"
 )
@@ -90,7 +89,7 @@ type CheckJWSResult struct {
 }
 
 // resolveDID resolves a DID either from cache or from the DID gate
-func ResolveOlaresName(olares_id string) (*didcore.ResolutionResult, error) {
+func ResolveOlaresName(gateUrl, olares_id string) (*didcore.ResolutionResult, error) {
 	name := strings.Replace(olares_id, "@", ".", -1)
 	// Try to get from cache first
 	cached, err := getDB().Get([]byte(name), nil)
@@ -105,7 +104,7 @@ func ResolveOlaresName(olares_id string) (*didcore.ResolutionResult, error) {
 	client := &http.Client{
 		Timeout: DIDGateTimeout,
 	}
-	resp, err := client.Get(DIDGateURL + name)
+	resp, err := client.Get(gateUrl + name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch DID from gate: %w", err)
 	}
@@ -135,7 +134,7 @@ func ResolveOlaresName(olares_id string) (*didcore.ResolutionResult, error) {
 }
 
 // CheckJWS verifies a JWS and returns the terminus name, body and kid
-func CheckJWS(jws string, duration int64) (*CheckJWSResult, error) {
+func CheckJWS(gateUrl, jws string, duration int64) (*CheckJWSResult, error) {
 	var kid string
 	var name string
 	var timestamp int64
@@ -198,7 +197,7 @@ func CheckJWS(jws string, duration int64) (*CheckJWSResult, error) {
 	}
 
 	// Resolve DID
-	resolutionResult, err := ResolveOlaresName(name)
+	resolutionResult, err := ResolveOlaresName(gateUrl, name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve DID: %w", err)
 	}
