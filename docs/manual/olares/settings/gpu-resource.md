@@ -47,14 +47,14 @@ Follow these steps to change how a GPU is used:
 :::warning Restart notice 
 Changing a GPU's mode will unbind apps from that GPU and restart their containers.
 
-After restart, if any GPU is in **Time slicing** mode, unbound apps may be automatically scheduled and bound to it.
+After restart, apps without specific GPU bindings are automatically scheduled to any available GPU in Time slicing mode.
 :::
 
 ### Time slicing
 
 **Time slicing** is the default mode in Olares. Use this mode to allow multiple applications to share resources.
 
-Apps without a specific GPU binding may be automatically scheduled onto GPUs in **Time slicing** mode.
+Apps without a specific GPU binding are automatically scheduled onto GPUs in **Time slicing** mode.
 
 ![Time slicing](/images/manual/olares/gpu-time-slicing.png#bordered)
 
@@ -64,12 +64,15 @@ To assign an app to this GPU:
 2. Choose your target application and click **Confirm**.
 
 #### Switch GPU
-If your system has more than one GPU, you can move an assigned app to a different GPU:
-1. In **Pin application** section, find the app you want to move.
-2. Click <i class="material-symbols-outlined">repeat</i>, then choose the target GPU and click **Confirm**.
+
 :::info Same-node limitation
 An application can use multiple GPUs only if they are located on the same node. If you switch an app to a GPU on a different node, the app is moved and bound only to the target GPU.
 :::
+
+If your system has more than one GPU, you can move an assigned app to a different GPU:
+1. In **Pin application** section, find the app you want to move.
+2. Click <i class="material-symbols-outlined">repeat</i>, then choose the target GPU and click **Confirm**.
+
 
 #### Unbind app
 To remove an app from this GPU:
@@ -118,9 +121,10 @@ Use **Memory slicing** to run apps concurrently with strict VRAM limits.
 
 1. In **Allocate VRAM** section, click **Bind App**.
 2. Select your target application, assign it a specific amount of VRAM in GB, and click **Confirm**.
+   :::warning
+   The total of all VRAM limits must not exceed the GPU total VRAM.
+   :::
 3. Repeat for other apps as needed.
-
-The total of all VRAM limits must not exceed the GPU total VRAM.
 
 ## Learn more
 - [Monitor GPU usage in Olares](../resources-usage.md)
