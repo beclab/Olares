@@ -19,9 +19,9 @@ Use the table below to pick a mode based on your workload.
 
 | GPU mode | Definition | Use scenario |
 | :--- | :--- | :--- |
-| **Time slicing** | Multiple apps share one GPU<br> by taking turns using compute<br> and VRAM. | General workloads and experimentation with multiple lightweight apps. |
-| **App exclusive** | One app gets full, uninterrupted<br> access to the compute and VRAM<br> of a single GPU. | Heavy workloads (e.g., LLMs, high-end gaming) requiring maximum stability. |
-| **Memory slicing** | The GPU's VRAM is divided into<br> fixed quotas; apps run concurrently<br> within their limits. | Running specific apps simultaneously while strictly limiting their memory usage. |
+| **Time slicing** (Default) | Multiple apps share one GPU<br> by taking turns using compute<br> and VRAM. | General workloads that run several lightweight apps. |
+| **App exclusive** | One app gets full, uninterrupted<br> access to the compute and VRAM<br> of a single GPU. | Heavy workloads that require maximum stability, such as LLMs and high‑end gaming. |
+| **Memory slicing** | The GPU's VRAM is divided into<br> fixed quotas, and apps run concurrently<br> within their limits. | Running specific apps simultaneously while strictly limiting their memory usage. |
 
 ## View GPU status
 
