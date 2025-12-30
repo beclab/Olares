@@ -195,13 +195,13 @@ func (g *GenerateK3sService) Execute(runtime connector.Runtime) error {
 	defaultKubeletArs := map[string]string{
 		"kube-reserved":           "cpu=200m,memory=250Mi,ephemeral-storage=1Gi",
 		"system-reserved":         "cpu=200m,memory=250Mi,ephemeral-storage=1Gi",
-		"eviction-hard":           "memory.available<5%,nodefs.available<10%,imagefs.available<10%",
+		"eviction-hard":           "memory.available<5%,nodefs.available<5%,imagefs.available<5%",
 		"config":                  "/etc/rancher/k3s/kubelet.config",
 		"containerd":              container.DefaultContainerdCRISocket,
 		"cgroup-driver":           "systemd",
 		"runtime-request-timeout": "5m",
-		"image-gc-high-threshold": "91",
-		"image-gc-low-threshold":  "90",
+		"image-gc-high-threshold": "96",
+		"image-gc-low-threshold":  "95",
 		"housekeeping_interval":   "5s",
 	}
 	defaultKubeProxyArgs := map[string]string{
