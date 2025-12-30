@@ -20,6 +20,12 @@ func NewUsbWatcher() *usbWatcher {
 	return w
 }
 
+var UsbSerialKey = struct{}{}
+
+func WithSerial(ctx context.Context, serial string) context.Context {
+	return context.WithValue(ctx, UsbSerialKey, serial)
+}
+
 func (w *usbWatcher) Watch(ctx context.Context) {
 	retry := 1
 	devs, err := utils.DetectdUsbDevices(ctx)
@@ -55,6 +61,12 @@ func (w *usbWatcher) Watch(ctx context.Context) {
 		return
 	}
 
+	serial := ctx.Value(UsbSerialKey).(string)
+	if serial != "" {
+		klog.Info("mount usb device with serial, ", serial)
+		devs = utils.FilterArray(devs, utils.FilterBySerial(serial))
+	}
+
 	mountedPath, err := utils.MountUsbDevice(ctx, commands.MOUNT_BASE_DIR, devs)
 	if err != nil {
 		klog.Error("mount usb error, ", err)
@@ -80,13 +92,13 @@ func (w *umountWatcher) Watch(ctx context.Context) {
 }
 
 func NewUsbMonitor(ctx context.Context) error {
-	return utils.MonitorUsbDevice(ctx, func(action string) error {
+	return utils.MonitorUsbDevice(ctx, func(action, serial string) error {
 		switch action {
 		case "add":
 			delay := time.NewTimer(2 * time.Second)
 			go func() {
 				<-delay.C
-				NewUsbWatcher().Watch(ctx)
+				NewUsbWatcher().Watch(WithSerial(ctx, serial))
 			}()
 		case "remove":
 			NewUmountWatcher().Watch(ctx)

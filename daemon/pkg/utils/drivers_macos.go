@@ -19,7 +19,7 @@ func DetectdHddDevices(ctx context.Context) (usbDevs []storageDevice, err error)
 	return
 }
 
-func MonitorUsbDevice(ctx context.Context, cb func(action string) error) error {
+func MonitorUsbDevice(ctx context.Context, cb func(action, id string) error) error {
 	klog.Warning("not implement")
 	return nil
 }
