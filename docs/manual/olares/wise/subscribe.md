@@ -29,16 +29,20 @@ If a link requires login or other access control, Wise may need cookies to fetch
 If you have a website or feed URL, you can subscribe using **Add Link**.
 
 1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar and choose **Add Link**.
-2. Paste a website or feed URL.
-3. After Wise analyzes the link, look for the **Subscribe to RSS feed** section in the actions list:
-   - If one or more feeds are detected, they are listed there.
-   - Select the feed you want to follow.
+2. Paste a website or feed URL. If one or more feeds are detected, they will be listed under the **Subscribe to RSS feed** section.
+3. Click <i class="material-symbols-outlined">bookmark_add</i> next to the feed you want to subscribe to.
 
 ![Subscribe to RSS feed](/images/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
 
 The selected feed will be added to **Feeds**, and new entries from it will be fetched automatically.
 
 ### Import feeds from OPML files
+
+:::info
+The OPML file imports your subscription list only, not the articles themselves. 
+
+Wise will fetch the latest available content from these sources immediately after import, but it cannot transfer your reading history or archived articles from your previous reader.
+:::
 
 If you already use another RSS reader, or someone shares a curated feed list, you can import those subscriptions using an OPML file.
 
@@ -48,27 +52,20 @@ If you already use another RSS reader, or someone shares a curated feed list, yo
 
 After import, the feeds will appear under <i class="material-symbols-outlined">settings</i> > **RSS feeds**.
 
-:::info
-Only new feed subscriptions are imported. Historical content from your previous reader is **not** transferred.
-:::
-
 ### Use LarePass browser extension
 
-The LarePass browser extension lets you subscribe to feeds while you browse, without switching back to Wise.
+The [LarePass browser extension](https://www.olares.com/larepass) lets you subscribe to feeds while you browse, without switching back to Wise.
 
-:::tip Install LarePass browser extension
-LarePass extension is currently available for Chrome browsers only. You can download it from the [official page](https://www.olares.com/larepass).
-:::
-
-1. Open the LarePass browser extension and select **<i class="material-symbols-outlined">inventory_2</i>**.
-2. Check the **RSS** section:
-   - If feeds are detected on the current page, they will be listed there.
+1. Open the LarePass browser extension and click the "Collect" icon.
+2. If one or more feeds are detected, they will be listed under the **Subscribe to RSS feed** section.
 3. Click <i class="material-symbols-outlined">bookmark_add</i> next to the feed you want to subscribe to.
 ![Subscribe to RSS feed via LarePass](/images/manual/olares/wise-larepass-collect.png#bordered)
 
 ## Manage subscriptions
 
-You can view, rename, or organize your subscriptions via the central management page.
+You can view, rename, organize, or remove feeds from the central management page or directly within the reader interface.
+
+### View and edit details
 
 1. Click <i class="material-symbols-outlined">settings</i> in the bottom left corner.
 2. Select **RSS feeds**.
@@ -81,12 +78,12 @@ You can view, rename, or organize your subscriptions via the central management 
 
 Changes here are reflected in the **Feeds** section of the Wise sidebar.
 
-## Unsubscribe
+### Unsubscribe
 
-If you no longer want to follow a source, you can unsubscribe from content sources.
+If you no longer want to follow a source, you can unsubscribe from its feed.
 
 :::warning
-When you unsubscribe from a feed, all entries from that feed are removed from Wise **unless** they have been explicitly saved to your library (for example, by keeping their status as **Inbox** or **Read Later**). This action cannot be undone.
+When you unsubscribe from a feed, all entries from that feed are removed from Wise unless they have been explicitly saved to your library. This action cannot be undone.
 :::
 
 You can remove a feed subscription in several places:

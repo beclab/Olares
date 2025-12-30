@@ -9,12 +9,6 @@ Some websites require a login to access their content. To allow Wise to fetch co
 
 This grants Wise permission to pass login checks, ensuring that features like **Save to library** or **Subscribe to RSS feed** work securely on restricted sites.
 
-Wise supports the following cookie formats:
-
-- **Netscape**
-- **JSON**
-- **Header String**
-
 This guide explains how to manage cookies in Olares for Wise.
 
 ## Upload cookies
@@ -23,55 +17,37 @@ Olares provides flexible options for uploading cookies, depending on whether you
 
 ### Upload via LarePass browser extension
 
-This is the easiest way to handle cookies. When you are browsing a site that requires a login, LarePass can capture and upload the cookies for the current page in one flow.
-
-:::tip Install LarePass browser extension
-LarePass extension is currently available for Chrome browsers only. You can download it from the [official page](https://www.olares.com/larepass).
-:::
+This is the easiest way to handle cookies. When you are browsing a site that requires a login, [LarePass browser extension](https://www.olares.com/larepass) can capture and upload the cookies for the current page in one flow.
 
 1. Navigate to the target website and make sure you are logged in.
-2. Open the **LarePass** browser extension and select **<i class="material-symbols-outlined">inventory_2</i>**.
+2. Open the LarePass browser extension and select the "Collect" icon.
 3. Click **Upload** to upload the cookies for the current page.
 
-![Upload cookies via LarePass extension](/images/manual/olares/wise-upload-cookie-larepass.png#bordered){width=70%}
+![Upload cookies via LarePass extension](/images/manual/olares/wise-upload-cookie-larepass.png#bordered){width=40%}
 
 After upload, Wise will use these cookies when you **Save to library** or **Subscribe to RSS feed** for that site.
 
 ### Upload manually in batch
 
-Use this method when you already have cookie strings (Netscape, JSON, or Header String) for one or more sites and want to upload them manually.
+You can manually paste cookie strings in Netscape, JSON, or Header String formats. This is useful if you use browser extensions like [Cookie-Editor](https://chromewebstore.google.com/detail/cookie-editor/iphcomljdfghbkdcfndaijbokpgddeno?utm_source=ext_app_menu) to export credentials from specific websites.
 
-#### Step 1: Get cookies for batch upload
-
-To upload cookies manually, you first need cookie strings that you can paste. The simplest way to obtain them is to use a cookie management extension (for example, `cookie-editor`) and export cookies for the current site in formats Wise understands.
-
-Typical steps:
-
-1. Install a cookie management extension from the Chrome Web Store.
-2. Log in to the target website in your browser.
-3. Open the cookie extension on that page.
-4. Export cookies for the site in one of the following formats:
-   - **Netscape**
-   - **JSON**
-   - **Header String**
-
-You can use the exported cookie text in the next step, or reuse any existing cookie strings you already have in one of the supported formats.
-
-#### Step 2: Choose an upload location
-
-You can upload cookie strings either directly to Wise or to Integration, depending on whether you want them to be app-specific or system-wide.
+You can upload cookie strings via the Wise app interface or directly through the system Settings.
 
 <Tabs>
 <template #Upload-to-Wise>
 
-**Best for cookies that are only needed within the Wise app.**
+This method allows you to upload cookies directly without leaving the Wise application.
+
+:::info
+Wise supports uploading only. To view, manage, or delete these cookies later, you must navigate to the **Settings** > **Integration** > **Manage Your Cookies** page.
+:::
 
 1. In Wise, click <i class="material-symbols-outlined">settings</i> **Settings** in the bottom left corner.
 2. Select **Preferences**.
 3. Enable **Batch cookie upload**.
 4. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar.
 5. Select **Upload Cookie**.
-6. Paste the cookie text (Netscape, JSON, or Header String) into the input box.
+6. Select the format for your cookie file, and paste the corresponding raw text into the input box.
 7. Click **Confirm**.
 
 ![Upload cookies to Wise in batch](/images/manual/olares/wise-upload-cookie-in-pre.png#bordered)
@@ -82,14 +58,14 @@ Cookies uploaded this way are stored for Wise and will be used whenever Wise acc
 
 <template #Upload-to-Integration>
 
-**Best for managing cookies centrally so multiple Olares apps can reuse them.**
+This method allows you to upload, view, and manage your cookies in the same interface.
 
 1. Open **Settings** from the Launchpad.
 2. Go to **Integration** > **Manage Your Cookies**.
-3. Click **Import Cookie** (for first-time use) or the <i class="material-symbols-outlined">add_circle</i> icon in the top-right corner (if cookies already exist).
-4. Paste your cookie text (Netscape, JSON, or Header String) and click **Confirm**.
+3. Click **Import Cookie** or the <i class="material-symbols-outlined">add_circle</i> icon in the top-right corner to open the **Upload Cookie** dialog.
+4. Select the format for your cookie file, paste the corresponding raw text into the input box, and click **Confirm**.
 
-Cookies stored here are available at the system level, and Wise will automatically use them when accessing matching domains.
+Wise automatically detects and uses these cookies when accessing matching domains.
 </template>
 </Tabs>
 

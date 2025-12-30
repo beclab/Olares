@@ -6,36 +6,40 @@ description: Get started with Wise in Olares. Learn to collect content, organize
 
 Wise helps you build a focused reading workflow on top of your personal information hub. This page walks you through the core actions you'll use every day: collecting content, organizing what to read next, and capturing your own insights.
 
+This page focuses on saving and working with individual items. For a deeper look at feeds and subscriptions, see [Subscribe and manage feeds](./subscribe).
+
+
 ## Before you begin
 
-To unlock the full potential of Wise, it is recommended to search in Olares Market and install the following companion apps:
+To unlock the full potential of Wise, it is recommended to install the following apps from Olares Market:
 
 - **Rss Subscribe**: Use it to subscribe to RSS feeds directly while browsing web pages.
 - **YT-DLP**: Use it to download audio and video from supported web pages into Wise.
 
+:::tip 
 Wise works without these apps, but in-browser subscription and media download will be unavailable until you install them.
-
+:::
 
 ## Build your library
 
 Wise pulls content into your library in two ways:
 
-- **Saved items**: Individual pages, files, audio, or video you capture. These show up under main **Inbox** folder and content types (**Articles**, **Videos**, **Audios**, **Books**, **PDFs**), and can be marked as **Inbox** or **Read Later**.
-- **Feeds**: Subscriptions to websites, blogs, podcasts, or channels. New entries appear under **Feeds**, and you can choose which ones to save into your library.
-
-This page focuses on saving and working with individual items. For a deeper look at feeds and subscriptions, see [Subscribe and manage feeds](./subscribe).
+- **Saved items:** Individual web pages, files, audio, and video that you capture manually. These items appear in your main **Inbox** and are automatically sorted into categories such as **Articles**.
+- **Feeds:** Subscriptions to dynamic sources like websites, blogs, and podcasts. New updates appear under **Feeds**, where you can select specific entries to save to your library.
 
 ### Save items
 
-You can save individual items to Wise in three ways: by uploading files, adding links from within Wise, or saving directly from your browser with the LarePass extension.
+You can save individual items to Wise in three ways: 
+- Upload files
+- Add items via link
+- Save from browser with LarePass extension
 
 #### Upload files
 
-Import files directly from your computer, including PDFs, EPUBs, audio, video, and other document types. Wise automatically places each supported format into the right content folder in your library (for example, PDFs under **PDFs**, EPUBs under **Books**, and media under **Videos** or **Audios**).
+Import files directly from your computer, including PDFs, EPUBs, audio, video, and other document types. Wise automatically places each supported format into the right content folder in your library. 
 
-1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar.  
-2. Choose **Upload**.
-3. Select one or more files from your local computer.
+1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar, and select **Upload**.
+2. Select one or more files from your local computer.
 
 #### Add items via link
 
@@ -45,35 +49,28 @@ Paste a URL to save articles, videos, or subscribe to feeds.
 If a link requires login or other access control, Wise may need cookies to fetch it correctly. To configure cookies for protected sites, see **[Manage cookies for Wise](./manage-cookies)**.
 :::
 
-1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar.  
-2. Choose **Add Link**.
-3. Paste or type a URL.
+1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar, and select **Add Link**.
+2. Paste or type a URL.
 
     Wise analyzes the link and lists all actions available:
     - **Save to library**: The content will be saved as an item in your library and added to **Inbox**.
-    - **Subscribe to RSS feed**: If Wise detects one or more RSS feeds for the site, they will be listed here. Select the feed you want to follow, and new items from that feed will be automatically added to **Feeds**(see [Subscribe and manage feeds](./subscribe)).
+    - **Subscribe to RSS feed**: If Wise detects one or more RSS feeds for the site, they will be listed here. Select the feed you want to follow, and new items from that feed will be automatically [added to **Feeds**](./subscribe).
     ![Subscribe to RSS feed](/images/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
-    - **Download file**: If Wise detects videos or other downloadable files on the page, this option will appear. Select the file you want to download to save it for offline access (requires **[YT-DLP](https://market.laresprime.olares.com/app/market.olares/ytdlp)**).
+    - **Download file**: If Wise detects videos or other downloadable files on the page, this option will appear. Select the file you want to download to save it for offline access. **[YT-DLP](https://market.olares.com/app/market.olares/ytdlp)** is required.
     ![Download files](/images/manual/olares/wise-add-link-download.png#bordered){width=300}
 
-Newly saved items will appear under their content type. You can then decide whether their status should be **Inbox** or **Read Later**.
+Newly saved items will appear under their content type.
 
 #### Save from browser with LarePass extension
 
-You can also save content to Wise directly from your browser using the LarePass extension, without opening Wise first.
+You can also save content to Wise directly from your browser using the [LarePass extension](https://www.olares.com/larepass), without opening Wise first.
 
-:::tip Install LarePass browser extension
-LarePass extension is currently available for Chrome browsers only. You can download it from the [official page](https://www.olares.com/larepass).
-:::
-
-To save content from a web page into Wise:
-
-1. Open the LarePass browser extension and select **<i class="material-symbols-outlined">inventory_2</i>**.
+1. Open the LarePass browser extension and select the "Collect" icon.
 2. Under **Save to library**, review the content detected on the current page.
 3. Click <i class="material-symbols-outlined">box_add</i> next to the item you want to save.
 ![Save content via LarePass extension](/images/manual/olares/wise-larepass-add-to-lib.png#bordered)
 
-    Items saved via LarePass are added to your Wise library and appear in the main **Inbox** folder and under the appropriate content type.
+Items saved via LarePass are added to your Wise library and appear in the main **Inbox** folder and under the appropriate content type.
 
 ### Monitor and manage media downloads
 
@@ -91,23 +88,6 @@ To manage all download tasks:
 
     - Click <i class="material-symbols-outlined">folder_open</i> to locate a downloaded file in Files.
     - Click <i class="material-symbols-outlined">do_not_disturb_on</i> to remove it from the list.
-
-## Manage item status
-
-You can organize your content by categorizing items as either **`Inbox`** or **`Read Later`**. Change the status using the icons found in the list view or reader view.
-
-![Wise content status](/images/manual/olares/wise-item-status.png#bordered)
-![Wise content status in list](/images/manual/olares/wise-list-status.png#bordered)
-
-- **To keep an item on your to-do list**  
-  Click **<i class="material-symbols-outlined">inbox</i>**: The item is treated as active content and appears in the **`Inbox`** tab in both the main **Inbox** folder and its content-type folder (e.g., **Articles** > **`Inbox`**).
-
-- **To archive an item for later**  
-  Click **<i class="material-symbols-outlined">schedule</i>**: The item is moved from the **`Inbox`** tab to the **`Read Later`** tab in both the main **Inbox** folder and its content-type folder (e.g., **Articles** > **`Read Later`**).
-
-::: tip 
-Changing an item's status instantly updates its location across all folders. You can switch between **Inbox** and **Read Later** at any time. 
-:::
 
 ## Use reading tools
 
@@ -132,7 +112,7 @@ You can add private notes to any content in your library:
 
 You can edit or delete notes from the same panel at any time.
 
-### Use tags
+## Use tags
 
 Tags allow you to add flexible labels to your content for easy retrieval later.
 

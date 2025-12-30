@@ -251,18 +251,29 @@ const side = {
               "link": "/zh/manual/olares/wise/recommend"
             },*/
             {
-              text: "管理 Cookie",
-              link: "/zh/manual/olares/wise/manage-cookies",
-            },
-            {
               "text": "管理订阅",
               "link": "/zh/manual/olares/wise/subscribe"
             },
             {
-              "text": "整理知识",
-              "link": "/zh/manual/olares/wise/filter"
+              text: "管理 Cookie",
+              link: "/zh/manual/olares/wise/manage-cookies",
+            },
+            {
+              "text": "管理知识",
+              "link": "/zh/manual/olares/wise/filter",
+              collapsed: true,
+              items:[
+            {
+              "text": "过滤语法参考",
+              "link": "/zh/manual/olares/wise/filter-syntax-guide"
+            },
+            {
+              "text": "过滤视图示例",
+              "link": "/zh/manual/olares/wise/filter-examples"
             }
-          ]
+            ],
+          },
+          ],
         },
         {
           "text": "控制面板",

@@ -29,15 +29,20 @@ Wise 提供灵活的订阅方式，帮助你跟踪喜爱的内容来源，包括
 如果你已经有网站地址或订阅源地址，可以通过**添加链接**订阅。
 
 1. 点击左下角菜单栏中的 <i class="material-symbols-outlined">add_circle</i>，选择**添加链接**。
-2. 粘贴网站或订阅源的 URL。
-3. Wise 分析链接后，在操作列表中查看**订阅 RSS 源** 区域：
-   - 如果检测到一个或多个订阅源，会在此列出。
-   - 选择你想要订阅的订阅源。
+2. 粘贴网站或订阅源的 URL。如果 Wise 检测到一或多个订阅源，会显示在**订阅 RSS 源**区域。
+3. 点击目标订阅源旁边的 <i class="material-symbols-outlined">bookmark_add</i> 按钮。
+
 ![订阅 RSS 源](/images/zh/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
 
 选中的订阅源会被添加到**订阅源** 中，之后 Wise 会自动拉取该源的更新。
 
 ### 从 OPML 文件导入订阅源
+
+:::info
+使用 OPML 文件只会导入你的订阅列表，不会导入文章内容。
+
+导入完成后，Wise 会立即从这些来源获取最新内容，但不会同步你在之前阅读器中的阅读记录或已归档的文章。
+:::
 
 如果你正在使用其他 RSS 阅读器，或者他人分享了订阅列表，你可以通过 OPML 文件导入这些订阅。
 
@@ -47,28 +52,20 @@ Wise 提供灵活的订阅方式，帮助你跟踪喜爱的内容来源，包括
 
 导入完成后，这些订阅源会出现在 <i class="material-symbols-outlined">settings</i> >**订阅源**中。
 
-:::info
-Wise 仅导入新的订阅源，历史内容不会同步迁移。
-:::
-
 ### 使用 LarePass 浏览器扩展订阅
 
-LarePass 浏览器扩展可以让你在浏览网页时直接订阅，无需切回 Wise。
+[LarePass 浏览器扩展](https://www.olares.cn/larepass)可以让你在浏览网页时直接订阅，无需切回 Wise。
 
-:::tip 安装 LarePass 浏览器扩展
-LarePass 扩展目前仅支持 Chrome 浏览器。你可以从[官网](https://olares.cn/larepass)下载。
-:::
-
-1. 打开 LarePass 浏览器扩展，选择 **<i class="material-symbols-outlined">inventory_2</i>**。
-2. 查看**订阅 RSS 源**区域：
-   - 如果在当前页面检测到订阅源，会在此列出。
+1. 打开 LarePass 浏览器扩展，点击“收集”按钮。
+2. 如果检测到可用的订阅源，它们会显示在**订阅 RSS 源**区域。
 3. 点击目标订阅源旁边的 <i class="material-symbols-outlined">bookmark_add</i> 即可订阅。
-
 ![使用 LarePass 订阅](/images/zh/manual/olares/wise-larepass-collect.png#bordered)
 
 ## 管理订阅
 
-你可以通过集中管理页面查看、重命名或整理所有订阅。
+你可以通过中心管理页面或在阅读界面中查看、重命名、整理或移除订阅。
+
+### 查看与编辑
 
 1. 点击左下角的 <i class="material-symbols-outlined">settings</i>。
 2. 选择**RSS 订阅源**。
@@ -81,7 +78,7 @@ LarePass 扩展目前仅支持 Chrome 浏览器。你可以从[官网](https://o
 
 此处的更改会同步到 Wise 侧边栏的**订阅源**。
 
-## 取消订阅
+### 取消订阅
 
 如果你不想继续关注某个来源，可以取消订阅。
 

@@ -4,12 +4,18 @@ description: Transform your Olares into a powerful information hub with Wise, fe
 ---
 # Curate your information hub with Wise
 
-Wise is a local-first, AI-driven modern reader designed to turn scattered information into a personal knowledge base. As a core application within the Olares ecosystem, it serves as your central repository for managing digital content securely and efficiently.
+Wise is a local-first modern reader designed to turn scattered information into a personal information hub. As a core application within the Olares ecosystem, it serves as your central repository for managing digital content securely and efficiently.
 
 Wise empowers you to build this hub through two main capabilities:
 
 - **Cross-platform content aggregation**: Centralize your reading by integrating articles, videos, audio, and feeds from various sources into a single, distraction-free interface.
 - **One-click bookmarking**: Save web pages directly to Olares using the LarePass browser extension, ensuring your content is always accessible and owned by you.
+
+## Install and open Wise
+
+1. Open the Market, and search for "Wise".
+2. Click **Get**, then **Install**.
+3. Once installed, open Wise from the Launchpad.
 
 ## Understand the interface
 
@@ -19,40 +25,24 @@ The Wise interface is designed to help you organize and consume content efficien
 
 ### Sidebar navigation
 
-The sidebar navigation is divided into three logical areas:
+The sidebar organizes your content into the following sections:
 
-- **Feeds**
-
-    Your collection of subscribed sources. You can add any subscribable content here (including websites, blogs, and video channels). Clicking a specific feed allows you to toggle between **Unread** and **Read** items to track your consumption.
-
-- **Inbox**
-
-    Your central workspace for active content. This folder aggregates all items currently marked as **Inbox** status, regardless of their format. Items appear here from three sources:
-    - Saved web pages (via LarePass browser extension or manual entry)
-    - Uploaded files (PDFs, EPUBs, etc.)
-    - Feed items added to your library
-
-- **Content types**
-
-    Wise automatically categorizes your content by format (**Articles**, **Videos**, **Audios**, **Books**, **PDFs**). Each content-type folder has two tabs that reflect the item's status:
-    - **`Inbox`**: Items of this type that you intend to read or process soon.
-    - **`Read Later`**: Items of this type that you saved for later reading.
-    ![Item status](/images/manual/olares/wise-tabs-in-folder.png#bordered)
+- **Feeds:** Contains your subscribed sources, including websites, blogs, and video channels.
+- **Inbox:** Your central workspace for active content. It aggregates items from all sources, including saved web pages, uploaded files like PDFs or EPUBs, and feed items added to your library.
+- **Content types:** Automatically categorizes your content by format, such as **Articles**, **Videos**, and **Books**.
 
 ### Item status
 
-Every item in Wise has a status that can be either **Inbox** or **Read Later**. You can change an item's status using the icons in the list view or the reader view:
+Every item in Wise has a status that can be either **Inbox** or **Read Later**. You can change an item's status using the icons in the list view or the reader view.
 
-- **<i class="material-symbols-outlined">inbox</i> `Inbox`**: Indicates the item is active or "to do."
-- **<i class="material-symbols-outlined">schedule</i> `Read Later`**: Indicates the item is archived or saved for future reading.
-
-Changing the status controls where the item appears in the sidebar (top-level **Inbox** and the `Inbox` / `Read Later` tabs of its content type), and updates instantly when you switch between them.
+- **<i class="material-symbols-outlined">inbox</i> Inbox**: Your primary collection for content you want to read soon.
+- **<i class="material-symbols-outlined">schedule</i> Read Later**: Your backlog for content to revisit in the future.
 
 ## Next steps
 
 Explore the following guides to master your Wise workflow:
 <div>
-<h4><a href="./wise-basics">Wise basics</a></h4>
+<h4><a href="./basics">Wise basics</a></h4>
 Learn essential tasks for collecting, reading, and managing your content library.
 </div>
 
