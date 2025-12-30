@@ -14,9 +14,11 @@ Make sure your Raspbian device meets the following requirements.
 - Hardware: Raspberry Pi 4B or Raspberry Pi 5 with 8GB memory
 - Operating system: Raspbian 12
 - Storage: At least 150GB of available SSD storage. 
-
 ::: warning SSD required
 The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
+:::
+::: info GPU limitation
+Olares GPU acceleration currently supports NVIDIA GPUs only. Consequently, GPU resources cannot be managed or utilized for AI workloads on macOS devices.
 :::
 
 ## Set up system environment

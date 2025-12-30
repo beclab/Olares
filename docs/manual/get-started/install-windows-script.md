@@ -17,15 +17,27 @@ We recommend using it only for development or testing purposes.
 
 ## System compatibility
 Make sure your Windows meets the following requirements.
+### Required specifications
 - CPU: At least 4 cores
-- RAM: At least 16GB of available memory
-- Storage: At least 150GB of available SSD storage. 
+- RAM: At least 16 GB of available memory
+- Storage: At least 150 GB of available SSD storage. 
+   ::: warning SSD required
+   The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
+   :::
 - Supported systems:
     - Windows 10 or 11
     - Linux (on WSL 2): Ubuntu 22.04 LTS or later; Debian 12 or later
-::: warning SSD required
-The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
-:::
+
+### Optional hardware
+
+A GPU is not required to install Olares, but is necessary for AI applications.
+
+- **GPU (NVIDIA only)**:
+   - Architecture: Turing or newer (e.g., GTX 16 series, RTX 20 series, and later).
+   - Verification:
+      1. Open **Task Manager > Performance** to confirm your GPU model (must be NVIDIA).
+      2. Run `nvidia-smi` inside your WSL terminal to confirm the driver is accessible.
+
 ## Set up system environment
 1. Enable the required Windows features for virtualization.
 

@@ -11,14 +11,26 @@ Mac 版 Olares 目前存在以下限制：
 
 建议仅用于开发或测试环境。
 :::
+:::info 安装遇到问题？
+如果你在安装过程中遇到问题，欢迎[提交 GitHub Issue](https://github.com/beclab/Olares/issues/new)。提交时请尽量附上以下信息：
+
+- 你使用的平台或环境（例如 Ubuntu、Docker、WSL 等）。
+- 安装方式（脚本安装或 Docker 镜像）。
+- 详细的错误信息（包括日志、报错信息或截图）。
+:::
 
 ## 系统要求
 Mac 设备需满足以下条件：
-- 处理器架构：X86-64 或 ARM64
-- 内存：可用内存 8 GB 及以上
-- 存储空间：可用磁盘空间 90 GB 及以上
-- MacOS 版本：Monterey（12）及以上
-
+- 处理器架构：X86-64 或 ARM64。
+- 内存：至少 8 GB 可用内存。
+- 存储空间：至少 150 GB 可用磁盘空间。
+   ::: warning 必须使用 SSD
+   请勿使用机械硬盘 (HDD)。如果未检测到 SSD，安装将失败。
+   :::
+- MacOS 版本：Monterey（12）及以上。
+::: info GPU 限制
+Olares 的 GPU 加速功能目前仅支持 NVIDIA GPU。因此，在 macOS 设备上无法为 AI 工作负载管理或使用 GPU 资源。
+:::
 ## 前置准备
 请确保已安装以下软件：
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)

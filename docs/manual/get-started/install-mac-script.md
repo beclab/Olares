@@ -16,12 +16,16 @@ We recommend using it only for development or testing purposes.
 
 ## System compatibility
 Make sure your Mac meets the following requirements.
-- Architecture: X86-64 or ARM64
-- RAM: 8 GB or above (available memory)
-- Storage: 150 GB or above of available space on SSD
-- MacOS: Monterey (12) or later
-::: warning SSD required
-The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
+- Architecture: X86-64 or ARM64.
+- RAM: At least 8 GB of available memory.
+- Storage: At least 150 GB of available SSD storage.
+    ::: warning SSD required
+    The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
+    :::
+- MacOS: Monterey (12) or later.
+
+::: info GPU limitation
+Olares GPU acceleration currently supports NVIDIA GPUs only. Consequently, GPU resources cannot be managed or utilized for AI workloads on macOS devices.
 :::
 
 ## Before you begin

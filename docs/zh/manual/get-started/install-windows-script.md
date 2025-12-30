@@ -12,19 +12,33 @@ Windows 版 Olares 目前存在以下限制：
 
 建议仅用于开发或测试环境。
 :::
+:::info 安装遇到问题？
+如果你在安装过程中遇到问题，欢迎[提交 GitHub Issue](https://github.com/beclab/Olares/issues/new)。提交时请尽量附上以下信息：
 
+- 你使用的平台或环境（例如 Ubuntu、Docker、WSL 等）。
+- 安装方式（脚本安装或 Docker 镜像）。
+- 详细的错误信息（包括日志、报错信息或截图）。
+:::
 ## 系统要求
 Windows 设备需满足以下条件：
+### 必要配置
 - CPU：4 核及以上
-- 内存：不少于 16GB 可用内存
-- 存储：不少于 150GB 的可用磁盘空间，需使用 SSD 硬盘安装。
+- 内存：不少于 16 GB 可用内存
+- 存储：不少于 150 GB 的可用磁盘空间，需使用 SSD 硬盘安装。
+   ::: warning 必须使用 SSD
+   请勿使用机械硬盘 (HDD)。如果未检测到 SSD，安装将失败。
+   :::
 - 支持的系统：
     - Windows 10 或 11
     - Linux（WSL 2 环境）：Ubuntu 22.04-25.04 LTS；Debian 12, 13
 
-:::warning 注意
-使用 HDD（机械硬盘）可能会导致安装失败。
-:::
+### 可选硬件
+安装 Olares 不需要 GPU，但运行 AI 应用需要 GPU支持。
+- GPU (仅支持 NVIDIA)：
+  - 架构：Turing 架构或更新版本 (例如 GTX 16 系列、RTX 20 系列)。
+  - 验证方法：
+   1. 打开**任务管理器** > **性能**来确认 GPU 型号 (必须为 NVIDIA)。
+   2. 在 WSL 终端中运行 `nvidia-smi` 以确认驱动程序可被访问。
 
 ## 配置系统环境
 1. 启用虚拟化所需的 Windows 功能。
