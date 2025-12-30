@@ -236,6 +236,7 @@ const side = {
             {
               "text": "管理知识",
               "link": "/zh/manual/olares/wise/filter",
+              collapsed: true,
               items:[
             {
               "text": "过滤语法参考",
