@@ -52,7 +52,7 @@ Wise 中的每个文件都只有一个状态，分别为**收件箱**或**稍后
 </div>
 
 <div>
-<h4><a href="./manage-cookies”>管理 Cookie</a></h4>
+<h4><a href="./manage-cookies">管理 Cookie</a></h4>
 了解如何上传 Cookies，让 Wise 能访问登录或付费墙后的受限内容。
 </div>
 
