@@ -29,9 +29,8 @@ If a link requires login or other access control, Wise may need cookies to fetch
 If you have a website or feed URL, you can subscribe using **Add Link**.
 
 1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar and choose **Add Link**.
-2. Paste a website or feed URL.
-3. If one or more feeds are detected, they will be listed under the **Subscribe to RSS feed** section.
-4. Click <i class="material-symbols-outlined">bookmark_add</i> next to the feed you want to subscribe to.
+2. Paste a website or feed URL. If one or more feeds are detected, they will be listed under the **Subscribe to RSS feed** section.
+3. Click <i class="material-symbols-outlined">bookmark_add</i> next to the feed you want to subscribe to.
 
 ![Subscribe to RSS feed](/images/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
 
@@ -84,7 +83,7 @@ Changes here are reflected in the **Feeds** section of the Wise sidebar.
 If you no longer want to follow a source, you can unsubscribe from its feed.
 
 :::warning
-When you unsubscribe from a feed, all entries from that feed are removed from Wise **unless** they have been explicitly saved to your library. This action cannot be undone.
+When you unsubscribe from a feed, all entries from that feed are removed from Wise unless they have been explicitly saved to your library. This action cannot be undone.
 :::
 
 You can remove a feed subscription in several places:

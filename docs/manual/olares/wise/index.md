@@ -33,7 +33,7 @@ The sidebar organizes your content into the following sections:
 
 ### Item status
 
-Every item in Wise has a status that can be either **Inbox** or **Read Later**. You can change an item's status using the icons in the list view or the reader view:
+Every item in Wise has a status that can be either **Inbox** or **Read Later**. You can change an item's status using the icons in the list view or the reader view.
 
 - **<i class="material-symbols-outlined">inbox</i> Inbox**: Your primary collection for content you want to read soon.
 - **<i class="material-symbols-outlined">schedule</i> Read Later**: Your backlog for content to revisit in the future.
