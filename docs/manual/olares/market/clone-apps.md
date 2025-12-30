@@ -31,8 +31,10 @@ To create a clone, a primary instance must exist on your system. Ensure that the
 
 3. In the **Clone app** window, configure the instance details:
     
-   - **New app title**: Enter a unique name to identify the application in the **Market** and **My Olares** list.
-   - **Desktop shortcut name**: Set the name for the desktop shortcut. You can name each icon individually if the application has multiple entry points.
+   a. **New app title**: Enter a unique name to identify the application in the **Market** and **My Olares** list.
+
+   b. **Desktop shortcut name**: Set the name for the desktop shortcut. You can name each icon individually if the application has multiple entry points.
+   
 4. Click **Confirm** to proceed.
 5. In the **Configure Environment Variables** window, complete the corresponding setup, and then click **Confirm**. 
 
