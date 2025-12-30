@@ -264,6 +264,7 @@ const side = {
             {
               text: "Organize with filters",
               link: "/manual/olares/wise/filter",
+              collapsed: true,
               items:[
             {
               text: "Filter syntax",
