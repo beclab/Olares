@@ -164,7 +164,24 @@ const side = {
       link: "/manual/olares/",
       items: [
         { text: "Desktop", link: "/manual/olares/desktop", },
-        { text: "Market", link: "/manual/olares/market", },
+        {
+          text: "Market",
+          collapsed: true,
+          items: [
+            {
+              text: "Basic operations",
+              link: "/manual/olares/market/market",
+            },
+             {
+              text: "Clone applications",
+              link: "/manual/olares/market/clone-apps",
+            },
+            {
+              text: "Manage paid applications",
+              link: "/manual/olares/market/purchase-paid-apps",
+            },
+          ],
+        },
         {
           text: "Files",
           collapsed: true,
