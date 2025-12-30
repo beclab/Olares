@@ -29,7 +29,7 @@ Olares 提供多种方式，让你可以灵活上传 Cookie，你可选择在浏
 
 ### 手动批量上传
 
-你可以手动粘贴 Netscape、JSON 或 Header String 格式的 Cookie 字符串。使用诸如 [Cookie-Editor](https://chromewebstore.google.com/detail/cookie-editor/iphcomljdfghbkdcfndaijbokpgddeno?utm_source=ext_app_menu)
+你可以手动粘贴 Netscape、JSON 或 Header String 格式的 Cookie 字符串。使用诸如 Cookie-Editor
 等浏览器扩展从特定网站导出凭据时，可以使用此方法。
 
 你可以通过 Wise 应用界面上传 Cookie 字符串，或直接在系统**设置**中上传。

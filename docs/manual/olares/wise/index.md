@@ -42,7 +42,7 @@ Every item in Wise has a status that can be either **Inbox** or **Read Later**. 
 
 Explore the following guides to master your Wise workflow:
 <div>
-<h4><a href="./wise-basics">Wise basics</a></h4>
+<h4><a href="./basics">Wise basics</a></h4>
 Learn essential tasks for collecting, reading, and managing your content library.
 </div>
 
