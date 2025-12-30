@@ -25,7 +25,7 @@ Each Olares application can have one or more entrances that serve as access poin
   - Functions similarly to private entrance
   - No authentication required when accessing applications through LarePass VPN
 
-## Acccess to private entrances via VPN
+## Access to private entrances via VPN
 
 Simply enable [LarePass VPN](/manual/larepass/private-network.md) on your device to securely and quickly access your private applications via their dedicated URLs (e.g., `https://vault.alice123.olares.com`).
 
