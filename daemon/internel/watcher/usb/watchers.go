@@ -65,6 +65,10 @@ func (w *usbWatcher) Watch(ctx context.Context) {
 	if serial != "" {
 		klog.Info("mount usb device with serial, ", serial)
 		devs = utils.FilterArray(devs, utils.FilterBySerial(serial))
+		if len(devs) == 0 {
+			klog.Info("no usb device found with serial, ", serial)
+			return
+		}
 	}
 
 	mountedPath, err := utils.MountUsbDevice(ctx, commands.MOUNT_BASE_DIR, devs)
