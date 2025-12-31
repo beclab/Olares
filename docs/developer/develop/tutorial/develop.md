@@ -92,13 +92,13 @@ This example demonstrates creating a basic web page manually.
    ```
 5. Create a file named `index.js` in `/root/` with the following content:
    ```js
-    // Ensure the port matches what you defined
-    const express = require('express');
-    const app = express();
-    app.use(express.static('public/'));
-    app.listen(8080), function() {
-        console.log('Server is running on port 8080');
-    };
+   // Ensure the port matches what you defined
+   const express = require('express');
+   const app = express();
+   app.use(express.static('public/'));
+   app.listen(8080, function() {
+       console.log('Server is running on port 8080');
+   });
    ```
 6. Create a `public` directory in `/root/` and add an `index.html` file:
    ```html
@@ -204,15 +204,15 @@ Once deployed, go to **Services** > **Ports**. You can see your new port listed 
    const express = require('express');
    const app = express();
    app.use(express.static('public/'));
-   app.listen(8080), function() {
-   console.log('Server is running on port 8080');
-   };
+   app.listen(8080, function() {
+       console.log('Server is running on port 8080');
+   });
    // Add the following
    const app_new = express();
    app_new.use(express.static('new/'));
-   app_new.listen(8081), function() {
-   console.log('Server is running on port 8081');
-   };
+   app_new.listen(8081, function() {
+       console.log('Server is running on port 8081');
+   });
    ```
 2. Create a `new` directory in `/root/` and add an `index.html` file:
    ```html
