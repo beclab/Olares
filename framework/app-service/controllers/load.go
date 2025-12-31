@@ -146,7 +146,7 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 		case appv1alpha1.ApplyingEnvCanceling:
 			return appstate.NewApplyingEnvCancelingApp(appmgr, &am)
 		case appv1alpha1.Uninstalling:
-			return appstate.NewUninstallingApp(appmgr, &am, 15*time.Minute)
+			return appstate.NewUninstallingApp(appmgr, &am, 30*time.Minute)
 		case appv1alpha1.StopFailed:
 			return appstate.NewSuspendFailedApp(appmgr, &am)
 		case appv1alpha1.UninstallFailed:
