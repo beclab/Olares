@@ -176,6 +176,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 			return err
 		}
 		appConfig.Ports = cfg.Ports
+		appConfig.TailScale = cfg.TailScale
 
 	} else {
 		_, err = apputils.GetIndexAndDownloadChart(ctx, &apputils.ConfigOptions{
