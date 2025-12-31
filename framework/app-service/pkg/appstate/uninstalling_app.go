@@ -100,7 +100,7 @@ func (p *UninstallingApp) waitForDeleteNamespace(ctx context.Context) error {
 	if apputils.IsProtectedNamespace(p.manager.Spec.AppNamespace) {
 		return nil
 	}
-	err := utilwait.PollImmediate(time.Second, 15*time.Minute, func() (done bool, err error) {
+	err := utilwait.PollImmediate(time.Second, 30*time.Minute, func() (done bool, err error) {
 		klog.Infof("waiting for namespace %s to be deleted", p.manager.Spec.AppNamespace)
 		nsName := p.manager.Spec.AppNamespace
 		var ns corev1.Namespace
