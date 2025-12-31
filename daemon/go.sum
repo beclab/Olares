@@ -24,8 +24,8 @@ github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPd
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3dyBCFEj5IhUbnKptjxatkF07cF2ak3yi77so=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
-github.com/beclab/Olares/cli v0.0.0-20251219153848-63d422037cf9 h1:YNHfPra2FqsKJ5mAxSWNVIK6VyWygRyZiNwfPqiFxlg=
-github.com/beclab/Olares/cli v0.0.0-20251219153848-63d422037cf9/go.mod h1:cYPcuju2yRSp9BQjIN/CC495dDOOvVoL42r/gvFlutk=
+github.com/beclab/Olares/cli v0.0.0-20251230161135-5264df60cc33 h1:WYuUPOT/p26aCDJGJEDai1v7YM6QHiaFDusBVynnbBY=
+github.com/beclab/Olares/cli v0.0.0-20251230161135-5264df60cc33/go.mod h1:ixhzBK5XIovsRB5djk44TChsOK4wum2q4y/hZxJKlNw=
 github.com/beclab/Olares/framework/app-service v0.0.0-20251225061130-909b7656fd70 h1:U3z6m0hokD1gzl788BrUdxCbDyAjdOBBXA8ilYgn6VQ=
 github.com/beclab/Olares/framework/app-service v0.0.0-20251225061130-909b7656fd70/go.mod h1:D9wl7y3obLqXMqfubMROMgdxWAwInnKNrFC//d0nyIA=
 github.com/beclab/bfl v0.3.36 h1:PgeSPGc+XoONiwFsKq9xX8rqcL4kVM1G/ut0lYYj/js=
