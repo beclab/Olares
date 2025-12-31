@@ -83,7 +83,7 @@ You can install language models directly through the LobeChat user interface (UI
 
 For more information, see [Download and run local AI models via Ollama](ollama.md).
 
-## How to use
+## Use scenarios
 
 LobeChat allows you to create specialized assistants to handle specific tasks by combining various language models with functional plugins.
 
@@ -94,7 +94,7 @@ LobeChat allows you to create specialized assistants to handle specific tasks by
    To install plugins, ensure that you select a model compatible with Function Calling. Look for <i class="material-symbols-outlined">brick</i> next to the model name, which indicates the model supports function calls.
    :::
 
-### Scenario 1: Polish content and visualize ideas
+### Polish content and visualize ideas
 
 Create a specialized assistant to help you refine text and generate images based on descriptions.
 
@@ -186,7 +186,7 @@ LIAMA (Language Intelligence Model for AI Applications) is a large language mode
    d. Go back to the chat and engage in the conversation to practice French syntax and vocabulary without language barriers.
 -->
 
-### Scenario 2: Coding assistant
+### Coding assistant
 
 Create a specialized assistant to help you write efficient code and act as a dedicated pair programmer.
 
@@ -281,7 +281,7 @@ To help you get started, this guide demonstrates only some typical configuration
 
 Once you are satisfied with the assistant's performance, right-click it in the sidebar and select Pin to keep it accessible at the top of your list.
 
-### Scenario 3: Real-time news analyst
+### Real-time news analyst
 
 Build an assistant that keeps you updated with the latest technology trends. By using the Website Crawler plugin, this assistant can read live news sites and provide instant summaries of what's happening right now.
 
