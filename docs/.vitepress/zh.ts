@@ -506,7 +506,17 @@ const side = {
         },
         {
           text: "Steam",
-          link: "/zh/use-cases/stream-game",
+          collapsed: true,
+          items: [
+            {
+              text: "在 Olares 本机游玩",
+              link: "/zh/use-cases/play-games-directly",
+            },
+            {
+              text: "串流到其他设备",
+              link: "/zh/use-cases/stream-game",
+            }
+          ]
         },
         {
           text: "Redroid",
