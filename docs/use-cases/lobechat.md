@@ -5,13 +5,9 @@ description: Learn how to install LobeChat on Olares and integrate it with Ollam
 
 # Build your local AI assistant with LobeChat
 
-LobeChat is an open-source, modern AI chat framework that supports file uploads, knowledge bases, and multi-modal interactions, ensuring a secure local chat experience. 
+LobeChat is an open-source, modern AI chat framework that supports file uploads, knowledge bases, and multi-modal interactions, ensuring a secure local chat experience. It also supports integration with Ollama, which allows you to use the large language models (LLMs) provided by Ollama to enhance your chat applications within LobeChat easily.
 
-Ollama is a lightweight platform for running open-source AI large language models (LLMs) locally, including Quen 2.5, LIama 3.1, DeepSeek V2, and more. 
-
-LobeChat supports integration with Ollama, which allows you to use the LLMs provided by Ollama to enhance your chat applications within LobeChat easily.
-
-This guide covers the installation, configuration, and practical usage of these tools to create your personalized AI assistant.
+This guide covers the installation, configuration, and practical usage of these tools to create your personalized AI assistants.
 
 ## Learning objectives
 
@@ -34,13 +30,16 @@ By the end of this guide, you will be able to:
 By combining LobeChat's intuitive frontend interface with Ollama's backend capabilities, you can turn your Olares device into a powerful, private AI workstation. 
 
 - LobeChat: The frontend user interface that allows you to interact with various language models via a chat window.
-- Ollama: The backend engine that runs the language models locally, providing computation power and API interfaces.
+- Ollama: The backend engine that runs the language models locally, providing computation power and API interfaces. For more information see [Ollama](Ollama.md).
 - Olares: The operating system (OS) that streamlines and simplifies the deployment of both, allowing you to skip complex manual environment configurations.
 
 ## Install LobeChat
 
 Install LobeChat and related dependencies:
-1. From the Olares Market, find **LobeChat**.
+1. From the Olares Market, search for `LobeChat`.
+
+   ![Search for LobeChat from Market](../public/images/manual/use-cases/find-lobechat.png#bordered)
+
 2. Click **Get**, and then click **Install**.
 3. The system automatically detects and prompts you to install necessary dependencies if they are not already installed, such as Ollama. Allow these to install, and then wait for the installation to finish.
 
@@ -111,9 +110,9 @@ To help you get started, this guide demonstrates only some typical configuration
 
    ![Open Chat Settings](../public/images/manual/use-cases/open-chat-settings.png#bordered)
 
-2. Customize assitant identity:
+2. Customize assistant identity:
 
-   a. On the **Assistant Info** tab, set the avatar, name, and description. For example, name it **Writing bot**.
+   a. On the **Assistant Info** tab, set the avatar, name, and description. For example, name it **Writing Bot**.
    
    b. Click **Update Assistant Information**.
 
@@ -135,33 +134,39 @@ To help you get started, this guide demonstrates only some typical configuration
 
    d. Click **OK**.
 
+   e. Close the **Session Settings** page. You return to the chat window.
+
 #### 3. Select the language model and plugin
 
-1. Return to the chat window.
-   
-2. In the basic interaction area, click <i class="material-symbols-outlined">neurology</i> to select a language model. For example, select **Qwen 2.5 7B** , because:
+1. In the basic interaction area, click <i class="material-symbols-outlined">neurology</i> to select a language model. For example, select **Qwen 2.5 7B**, because:
 
    - It excels at various NLP tasks such as contextual understanding and content writing.
-   - It is compatible with functional calling, so I can install LobeChat plugin for enhanced capabilities.
+   - It is compatible with functional calling, so you can install LobeChat plugins for enhanced capabilities.
 
-3. Install LobeChat plugins as needed to enhance your assistant's abilities. For example, install the **Pollinate drawing** plugin for image creation.
+2. Install LobeChat plugins as needed to enhance your assistant's abilities. For example, install a plugin for image creation.
 
-   ![Install LobeChat plugin](../public/images/manual/use-cases/lobechat-plugin-install.png#bordered)
+   a. Hover over the plugin icon and click **Plugin Store**.
 
-#### 4.Interact with the assistant
+      ![Install LobeChat plugin](../public/images/manual/use-cases/lobechat-plugin-install.png#bordered)
+
+   b. On the **LobeHub Plugins** tab, search for `image`, select **Pollinate drawing** for example, and then click **Install**.
+
+      ![Install LobeChat plugin Pollinate Drawing](../public/images/manual/use-cases/install-pollinate-drawing.png#bordered)
+
+#### 4. Interact with the assistant
 
 1. Enter and send your draft content to get a refined version.
-2. Ensure that the **Pollinate drawing** plugin is enabled, and then ask the assistant to create a cover image for the content. It will use the enabled plugin to generate an image.
+2. Hover over the plugin icon to ensure that **Pollinate drawing** is enabled, and then ask the assistant to create a cover image for the content. It will use the enabled plugin to generate an image.
 
-   ![LobeChat plugin enabled](../public/images/manual/use-cases/lobechat-plugin-enable-2.png#bordered)
+   ![LobeChat plugin enabled](../public/images/manual/use-cases/lobechat-plugin-enable.png#bordered)
 
-3. Iterate to get your ideal content textually and visually.
+3. Brainstorm and iterate with the language model to get your ideal content textually and visually.
 
 #### 5. Pin the assistant
 
 If you are satisfied with the performance of the assistant and want to access it quickly later on, click **Pin** to keep it at the top of your assistant list.
 
-![Pin LobeChat assistant](../public/images/manual/use-cases/lobechat-pin.png#bordered)
+![Pin LobeChat assistant](../public/images/manual/use-cases/pin-writing-bot.png#bordered)
 <!--this senario pending the text to speech plugin work
 ### Scenario 2: Training and eduction
 
@@ -181,9 +186,9 @@ LIAMA (Language Intelligence Model for AI Applications) is a large language mode
    d. Go back to the chat and engage in the conversation to practice French syntax and vocabulary without language barriers.
 -->
 
-### Scenario 2: Research technical documentations and generate code in one workflow
+### Scenario 2: Coding assistant
 
-Boost your programming efficiency by turning your assistant into a research-capable pair programmer. 
+Create a specialized assistant to help you write efficient code and act as a dedicated pair programmer.
 
 #### 1. Add a new assistant
 
@@ -197,9 +202,9 @@ To help you get started, this guide demonstrates only some typical configuration
 
    ![Open Chat Settings](../public/images/manual/use-cases/open-chat-settings.png#bordered)
 
-2. Customize assitant identity:
+2. Customize assistant identity:
 
-   a. On the **Assistant Info** tab, set the avatar, name, and description. For example, name it **Dev bot**.
+   a. On the **Assistant Info** tab, set the avatar, name, and description. For example, name it **Dev Bot**.
    
    b. Click **Update Assistant Information**.
 
@@ -214,57 +219,69 @@ To help you get started, this guide demonstrates only some typical configuration
    c. Enter your prompt for this specific role to define its behavior. For example,
 
       ```
-      You are a senior developer. When I send a URL, use the crawler to read it. 
-      Summarize technical details and generate code based on my requests.
+      You are an expert developer. When I describe a task or requirement, 
+      generate clean, efficient, and well-commented code to solve it.
       ``` 
-   d. Click **OK**.
+   d. Click **OK**. You return to the chat window.
 
-#### 3. Select the language model and plugin
+#### 3. Interact with the assistant
 
-1. Return to the chat window.
-   
-2. In the basic interaction area, click <i class="material-symbols-outlined">neurology</i> to select a language model. 
+1. In the basic interaction area, select a language model. 
 
-   For example, select **CodeQwen 1.5 7B** which excels at coding use cases such as code generation and long text understanding.
-
-3. Install a web-access plugin to allow the assistant to access live web pages and analyze real-time content from any URLs you provide. For example, **Website Crawler**. 
-
-   :::info
-   Standard local AI models are offline and rely on pre-trained data from the past. The website crawler plugin acts as a bridge to the live internet. When you provide a URL, the plugin instantly accesses the web page in real time via an API, fetches the current content, and feeds it to the AI. This ensures that the AI model is accessing the live web content rather than using the old memory. 
-   :::
-
-#### 4. Interact with the assistant
-
-1. Ensure that the **Website Crawler** plugin is enabled.
-
-   ![LobeChat crawler plugin enabled](../public/images/manual/use-cases/lobe-chat-plugin-enable-2.png#bordered)
-
-
-2. Paste a URL to a technical documentation page and ask the assistant to analyze this page and summarize the API endpoints. For example,
+   For example, select **deepseek-coder-v2** which excels at coding use cases such as code generation and long text understanding.
+2. Describe a data generation task and send to the chat. For example,
    
    ```
-   Analyze this page and summarize the API endpoints:
-   https://jsonplaceholder.typicode.com/guide/.
+   Write a Python script to generate a CSV file named employees.csv with
+   20 rows of mock data. Columns should include: ID, Name, Department, 
+   and Salary. Use the random library to generate varied data.
    ```
-
-3. Based on the summary, ask the assistant to complete your requirement. For example,
+3. The assistant processes your request and generates a standalone Python script with explanation.
 
    ```
-   Write a Python script to fetch data from the /users endpoint and 
-   save it as a CSV.
+   import csv
+   import random
+
+   def generate_mock_data():
+      departments = ['HR', 'Engineering', 'Marketing', 'Sales', 'Finance']
+      filename = "employees.csv"
+
+      print(f"Generating {filename}...")
+
+      with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+         fieldnames = ['ID', 'Name', 'Department', 'Salary']
+         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+         writer.writeheader()
+
+         for i in range(1, 21):
+               writer.writerow({
+                  'ID': f'EMP{i:03d}',
+                  'Name': f'Employee {i}',
+                  'Department': random.choice(departments),
+                  'Salary': random.randint(50000, 120000)
+               })
+
+      print(f"Successfully created {filename} with 20 records.")
+
+   if __name__ == "__main__":
+      generate_mock_data()
    ```
+4. Run the generated code to verify.
 
-   The assistant reads the live documentation and generates accurate, copy-paste-ready code.
+   a. Copy the generated Python code block and save it as `generate_data.py`.
 
-4. Run the generated code.
+   b. Open the Terminal, navigate to the folder, and run
+`python3 generate_data.py`.
 
-   a. Copy the Python code block from LobeChat and save it as a `fetch_data.py` file.
+   c. Check your current folder. You should see a new file named `employees.csv`. Open it to verify the generated mock data.
 
-   b. Open the terminal and run the script `python3 fetch_users.py`.
+      ![Dev bot result verification](../public/images/manual/use-cases/dev-bot-result.png#bordered)  
 
-   c. Check your current folder to confirm that a new .csv file containing the data has been created.
+#### 4. Pin the assistant
 
-### Scenario 3: Tech news analyst
+Once you are satisfied with the assistant's performance, right-click it in the sidebar and select Pin to keep it accessible at the top of your list.
+
+### Scenario 3: Real-time news analyst
 
 Build an assistant that keeps you updated with the latest technology trends. By using the Website Crawler plugin, this assistant can read live news sites and provide instant summaries of what's happening right now.
 
@@ -304,29 +321,42 @@ To help you get started, this guide demonstrates only some typical configuration
 
    d. Click **OK**.
 
+   e. Close the **Session Settings** page. You return to the chat window.
+
 #### 3. Select the language model and plugin
 
-1. Return to the chat window.
-   
-2. In the basic interaction area, click <i class="material-symbols-outlined">neurology</i> to select a language model. For example, select **Qwen 2.5 7B** , because:
+1. In the basic interaction area, select a language model. For example, **Qwen 2.5 7B** , because:
 
    - It excels at various NLP tasks such as contextual understanding and content writing.
-   - It is compatible with functional calling, so I can install LobeChat plugin for enhanced capabilities.
+   - It is compatible with functional calling, so you can install LobeChat plugins for enhanced capabilities.
+
+   ![Select language model](../public/images/manual/use-cases/select-qwen.png#bordered) 
 
 3. Install a web-access plugin to allow the assistant to access live web pages and analyze real-time content from any URLs you provide. For example, **Website Crawler**. 
 
-   :::noteHow Website Crawler works (Real-time vs. Offline):
+   :::tip How Website Crawler works (Real-time vs. Offline)
    Standard local AI models are offline and rely on pre-trained data from the past. The Website Crawler plugin, specifically the getWebsiteContent function, acts as a bridge to the live internet. When you provide a URL, the plugin instantly accesses the web page in real time via an API, fetches the current content, and feeds it to the AI. This ensures that the AI model is accessing the latest live web content rather than using the old memory.
    :::
 
-   ![Install LobeChat plugin](../public/images/manual/use-cases/lobechat-plugin-install.png#bordered)
+   a. Hover over the plugin icon and click **Plugin Store**.
+
+   ![Install LobeChat plugin](../public/images/manual/use-cases/select-plugin.png#bordered)
+
+   b. On the **LobeHub Plugins** tab, search for `website`, select **Website Crawler** for example, and then click **Install**.
+
+   ![Install LobeChat plugin Website Crawler](../public/images/manual/use-cases/install-website-crawler.png#bordered)
 
 #### 4. Interact with the assistant
 
-1. In the basic interaction area, check that the **Website Crawler** plugin is enabled.
-2. Send the URL address to the chat. 
-3. Paste and send the URL to the chat. The assistant will list five specific news stories with summaries.
+1. In the basic interaction area, hover over the plugin icon to ensure that the **Website Crawler** plugin is enabled.
+
+   ![LobeChat crawler plugin enabled](../public/images/manual/use-cases/website-crawler-enabled.png#bordered)
+
+2. Send the URL address to the chat. For example, `https://github.com/trending`.
+3. Paste and send the URL to the chat. The assistant will list specific news stories with summaries.
 
 #### 5. Pin the assistant
 
 If you find this useful for daily updates, Pin it to your sidebar for quick access later.
+
+![Pin chat assistant to list for easy access](../public/images/manual/use-cases/pin-daily-tech-digest.png#bordered)
