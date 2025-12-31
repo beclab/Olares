@@ -185,7 +185,7 @@ Steam Headless 集成了开源串流服务器 Sunshine。要串流游戏，你�
 1. 从启动台打开控制面板。
 2. 导航至**浏览** > **steamheadless** > **部署** > **steamheadless** > **重启**。
    ![重启 Steam Headless](/images/zh/manual/use-cases/steam-restart.png)
-3. 在确认提示框中，输入`steamheadless`，点击**Confirm**。
+3. 在确认提示框中，输入`steamheadless`，点击 **Confirm**。
    ![确认重启](/images/zh/manual/use-cases/steam-confirm-restart.png#bordered){width=70%}
 4. 重启完成后，在 Moonlight 与 Sunshine 重新配对。
 
