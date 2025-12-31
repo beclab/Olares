@@ -18,7 +18,7 @@ require (
 	bytetrade.io/web3os/bfl v0.0.0-00010101000000-000000000000
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/beclab/Olares/cli v0.0.0-20251219153848-63d422037cf9
+	github.com/beclab/Olares/cli v0.0.0-20251230161135-5264df60cc33
 	github.com/beclab/Olares/framework/app-service v0.0.0-20251225061130-909b7656fd70
 	github.com/containerd/containerd v1.7.29
 	github.com/distribution/distribution/v3 v3.0.0
