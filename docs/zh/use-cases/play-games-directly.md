@@ -37,7 +37,7 @@ Olares 通常作为无头系统使用，但你也可以把显示器、键盘和�
     - `SUNSHINE_USER`：设置 Sunshine 访问用户名。
     - `SUNSHINE_PASS`：设置相应的密码。
       :::tip 记住你的登录凭据
-      这是你登录 Sunshine 的初始凭据。稍后访问 Sunshine 控制台时会用到它们。
+      这是 Sunshine 的初始登录凭据，如果你之后访问 Sunshine 控制台，将用到它们。
       :::
 4. 等待安装完成。
 
@@ -62,7 +62,7 @@ Olares 通常作为无头系统使用，但你也可以把显示器、键盘和�
 YAML 语法或缩进错误可能会导致应用程序无法启动。
 - <b>验证更改：</b>确认你的缩进与现有行保持一致。
 - <b>必要时恢复：</b>如果 YAML 更改后应用无法启动，请检查**修改记录**，删除你新增的行即可恢复之前的配置。
-  ![检查修订记录](/images/zh/manual/use-cases/steam-yaml-revision-records.png#bordered)
+  ![检查修订记录](/images/zh/manual/use-cases/steam-yaml-revision-records.png#bordered){width=95%}
 :::
 
 1. 打开 Olares 控制面板，从侧边栏选择 Steam 项目。
@@ -90,7 +90,7 @@ YAML 语法或缩进错误可能会导致应用程序无法启动。
          - name: snd
            mountPath: /dev/snd
    ```
-5. 点击 **Confirm** 应用更改。容器将重启，并应用新的权限。
+5. 点击**确认**应用更改。容器将重启，并应用新的权限。
 
 ## 3. 配置显示和输入
 默认情况下，系统配置为串流模式。你需要修改 X11 配置来使用物理显示器和外设输入。
