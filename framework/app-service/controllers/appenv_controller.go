@@ -6,13 +6,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
-
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/event"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+
 	coordinationv1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -222,7 +223,7 @@ func (r *AppEnvController) triggerApplyEnv(ctx context.Context, appEnv *sysv1alp
 	if err != nil {
 		return fmt.Errorf("failed to update ApplicationManager Status: %v", err)
 	}
-	utils.PublishAppEvent(utils.EventParams{
+	event.PublishAppEventToQueue(utils.EventParams{
 		Owner:      am.Spec.AppOwner,
 		Name:       am.Spec.AppName,
 		OpType:     string(am.Status.OpType),

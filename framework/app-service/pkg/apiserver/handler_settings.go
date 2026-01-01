@@ -16,6 +16,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
@@ -269,7 +270,7 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 			api.HandleError(resp, req, err)
 			return
 		}
-		utils.PublishAppEvent(utils.EventParams{
+		event.PublishAppEventToQueue(utils.EventParams{
 			Owner:      am.Spec.AppOwner,
 			Name:       am.Spec.AppName,
 			OpType:     string(am.Status.OpType),

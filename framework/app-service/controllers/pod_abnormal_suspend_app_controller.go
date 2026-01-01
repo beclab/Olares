@@ -9,6 +9,7 @@ import (
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	natsevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
@@ -237,7 +238,7 @@ func (r *PodAbnormalSuspendAppController) trySuspendApp(ctx context.Context, own
 		return false, err
 	}
 
-	utils.PublishAppEvent(utils.EventParams{
+	natsevent.PublishAppEventToQueue(utils.EventParams{
 		Owner:      am.Spec.AppOwner,
 		Name:       am.Spec.AppName,
 		OpType:     string(status.OpType),

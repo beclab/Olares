@@ -13,9 +13,9 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
-
 	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -1110,7 +1110,7 @@ func (h *Handler) applicationManagerMutate(req *restful.Request, resp *restful.R
 		return
 	}
 	if pam != nil {
-		utils.PublishAppEvent(utils.EventParams{
+		event.PublishAppEventToQueue(utils.EventParams{
 			Owner:      pam.Spec.AppOwner,
 			Name:       pam.Spec.AppName,
 			OpType:     string(pam.Spec.OpType),

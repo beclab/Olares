@@ -11,6 +11,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/middlewareinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
@@ -150,7 +151,15 @@ func (h *Handler) installMiddleware(req *restful.Request, resp *restful.Response
 				if err != nil {
 					klog.Errorf("Failed to uninstall middleware err=%v", err)
 				}
-				utils.PublishMiddlewareEvent(owner, app, string(v1alpha1.InstallOp), opID, v1alpha1.InstallFailed.String(), "", nil, "")
+				event.PublishAppEventToQueue(utils.EventParams{
+					Owner:      owner,
+					Name:       app,
+					Type:       "middleware",
+					OpType:     string(v1alpha1.InstallOp),
+					OpID:       opID,
+					State:      v1alpha1.InstallFailed.String(),
+					RawAppName: app,
+				})
 			}
 		}
 	}()
@@ -172,7 +181,15 @@ func (h *Handler) installMiddleware(req *restful.Request, resp *restful.Response
 		api.HandleError(resp, req, err)
 		return
 	}
-	utils.PublishMiddlewareEvent(owner, app, string(v1alpha1.InstallOp), opID, v1alpha1.Installing.String(), "", nil, "")
+	event.PublishAppEventToQueue(utils.EventParams{
+		Owner:      owner,
+		Name:       app,
+		Type:       "middleware",
+		OpType:     string(v1alpha1.InstallOp),
+		OpID:       opID,
+		State:      v1alpha1.Installing.String(),
+		RawAppName: app,
+	})
 
 	klog.Infof("Start to install middleware name=%v", middlewareConfig.MiddlewareName)
 	err = middlewareinstaller.Install(req.Request.Context(), h.kubeConfig, middlewareConfig)
@@ -226,7 +243,16 @@ func (h *Handler) installMiddleware(req *restful.Request, resp *restful.Response
 						klog.Infof("Failed to update status err=%v", err)
 						return
 					}
-					utils.PublishMiddlewareEvent(owner, app, string(v1alpha1.CancelOp), opID, v1alpha1.InstallingCanceled.String(), "", nil, "")
+					event.PublishAppEventToQueue(utils.EventParams{
+						Owner:      owner,
+						Name:       app,
+						Type:       "middleware",
+						OpType:     string(v1alpha1.CancelOp),
+						OpID:       opID,
+						State:      v1alpha1.InstallingCanceled.String(),
+						RawAppName: app,
+					})
+
 					return
 				}
 				klog.Infof("ticker get middleware status")
@@ -246,7 +272,15 @@ func (h *Handler) installMiddleware(req *restful.Request, resp *restful.Response
 					if e != nil {
 						klog.Error(e)
 					} else {
-						utils.PublishMiddlewareEvent(owner, app, string(v1alpha1.InstallOp), opID, opRecord.Status.String(), "", nil, "")
+						event.PublishAppEventToQueue(utils.EventParams{
+							Owner:      owner,
+							Name:       app,
+							Type:       "middleware",
+							OpType:     string(v1alpha1.InstallOp),
+							OpID:       opID,
+							State:      opRecord.Status.String(),
+							RawAppName: app,
+						})
 					}
 					delete(middlewareManager, name)
 					return
@@ -309,7 +343,15 @@ func (h *Handler) uninstallMiddleware(req *restful.Request, resp *restful.Respon
 		api.HandleError(resp, req, err)
 		return
 	}
-	utils.PublishMiddlewareEvent(owner, app, string(v1alpha1.UninstallOp), opID, v1alpha1.Uninstalling.String(), "", nil, "")
+	event.PublishAppEventToQueue(utils.EventParams{
+		Owner:      owner,
+		Name:       app,
+		Type:       "middleware",
+		OpType:     string(v1alpha1.UninstallOp),
+		OpID:       opID,
+		State:      v1alpha1.Uninstalling.String(),
+		RawAppName: app,
+	})
 
 	now = metav1.Now()
 	opRecord := v1alpha1.OpRecord{
@@ -328,7 +370,15 @@ func (h *Handler) uninstallMiddleware(req *restful.Request, resp *restful.Respon
 			if e != nil {
 				klog.Errorf("Failed to update applicationmanager status in uninstall middleware name=%s err=%v", mgr.Name, e)
 			} else {
-				utils.PublishMiddlewareEvent(owner, app, string(v1alpha1.UninstallOp), opID, v1alpha1.UninstallFailed.String(), "", nil, "")
+				event.PublishAppEventToQueue(utils.EventParams{
+					Owner:      owner,
+					Name:       app,
+					Type:       "middleware",
+					OpType:     string(v1alpha1.UninstallOp),
+					OpID:       opID,
+					State:      v1alpha1.UninstallFailed.String(),
+					RawAppName: app,
+				})
 			}
 		}
 	}()
@@ -344,7 +394,15 @@ func (h *Handler) uninstallMiddleware(req *restful.Request, resp *restful.Respon
 		api.HandleError(resp, req, err)
 		return
 	}
-	utils.PublishMiddlewareEvent(owner, app, string(v1alpha1.Uninstalled), opID, v1alpha1.Uninstalled.String(), "", nil, "")
+	event.PublishAppEventToQueue(utils.EventParams{
+		Owner:      owner,
+		Name:       app,
+		Type:       "middleware",
+		OpType:     string(v1alpha1.UninstallOp),
+		OpID:       opID,
+		State:      v1alpha1.Uninstalled.String(),
+		RawAppName: app,
+	})
 
 	resp.WriteEntity(api.InstallationResponse{
 		Response: api.Response{Code: 200},
@@ -390,7 +448,15 @@ func (h *Handler) cancelMiddleware(req *restful.Request, resp *restful.Response)
 		api.HandleError(resp, req, err)
 		return
 	}
-	utils.PublishMiddlewareEvent(owner, app, string(v1alpha1.CancelOp), opID, v1alpha1.InstallingCanceling.String(), "", nil, "")
+	event.PublishAppEventToQueue(utils.EventParams{
+		Owner:      owner,
+		Name:       app,
+		Type:       "middleware",
+		OpType:     string(v1alpha1.CancelOp),
+		OpID:       opID,
+		State:      v1alpha1.InstallingCanceling.String(),
+		RawAppName: app,
+	})
 
 	resp.WriteAsJson(api.InstallationResponse{
 		Response: api.Response{Code: 200},

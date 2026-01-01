@@ -9,6 +9,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
@@ -79,7 +80,7 @@ func (h *Handler) appApplyEnv(req *restful.Request, resp *restful.Response) {
 		api.HandleError(resp, req, err)
 		return
 	}
-	utils.PublishAppEvent(utils.EventParams{
+	event.PublishAppEventToQueue(utils.EventParams{
 		Owner:      am.Spec.AppOwner,
 		Name:       am.Spec.AppName,
 		OpType:     string(am.Status.OpType),
