@@ -11,7 +11,7 @@ This guide covers the installation, configuration, and practical usage of these 
 
 ## Learning objectives
 
-By the end of this guide, you will be able to:
+By the end of this guide, you are able to:
 - Understand the relationship between LobeChat and Ollama.
 - Install LobeChat and Ollama directly from the Olares Market.
 - Configure LobeChat to communicate with your local Ollama instance.
@@ -35,7 +35,8 @@ By combining LobeChat's intuitive frontend interface with Ollama's backend capab
 
 ## Install LobeChat
 
-Install LobeChat and related dependencies:
+Install LobeChat and related dependencies.
+
 1. From the Olares Market, search for `LobeChat`.
 
    ![Search for LobeChat from Market](../public/images/manual/use-cases/find-lobechat.png#bordered)
@@ -45,7 +46,8 @@ Install LobeChat and related dependencies:
 
 ## Configure the connection
 
-After the installation is completed, you must connect LobeChat to Ollama to make the chat interface work:
+After the installation is completed, you must connect LobeChat to Ollama to make the chat interface work.
+
 1. From the Olares launchpad, click **LobeChat** to open the application.
 2. In LobeChat, go to **Settings** > **Language Model**.
 3. In the **Ollama** section, find the **Interface proxy address** field, and then enter your local Ollama address https://39975b9a1.*UserID*.olares.com. 
@@ -56,11 +58,13 @@ After the installation is completed, you must connect LobeChat to Ollama to make
 
    ![Interface proxy address connection](../public/images/manual/use-cases/lobechat-connection-setting.png#bordered)
 
-5. Click **Check** to verify the connection. A **Check Passed** message indicates that the proxy address is correct.
+4. Click **Check** to verify the connection. A **Check Passed** message indicates that the proxy address is correct.
 
 ## Install language models
 
-You can install language models directly through the LobeChat user interface (UI) or via the Ollama command line (CLI).
+After connecting to Ollama, LobeChat displays a preset list of supported models. This list acts as a catalog of compatible models, not a list of what is currently installed on your device. When you select a model from this list, LobeChat checks your local storage. If the model is not installed, you are prompted to download it. After the download finishes, the model is successfully installed and ready for use.
+
+You can install these models directly through the LobeChat user interface (UI) or via the Ollama command line (CLI).
 
 ### Method A: Install via LobeChat UI
 
@@ -74,7 +78,7 @@ You can install language models directly through the LobeChat user interface (UI
 
 ### Method B: Install via Ollama CLI
 
-1. Visit the Ollama Library to find the target model. For example, gemma2.
+1. Visit the Ollama library to find the target model. For example, gemma2.
 2. Select the parameters suitable for your hardware specifications.
 3. Copy the run command. For example, `ollama run gemma2`.
 4. Open the Ollama terminal from the Olares launchpad.
@@ -85,13 +89,13 @@ For more information, see [Download and run local AI models via Ollama](ollama.m
 
 ## Use scenarios
 
-LobeChat allows you to create specialized assistants to handle specific tasks by combining various language models with functional plugins.
+LobeChat allows you to create specialized assistants to handle specific tasks by leveraging various language models and combining them with functional plug-ins.
 
 - Flexible model switching: You can switch language models instantly within the same chat to achieve the best results. For example, if you are not satisfied with a response, you can select a different model from the list to leverage their unique strengths.
-- Plugin extensions: You can also install plugins to extend and enhance the capabilities of your assistant.
+- Plug-in extensions: You can also install plug-ins to extend and enhance the capabilities of your assistant.
 
    :::info
-   To install plugins, ensure that you select a model compatible with Function Calling. Look for <i class="material-symbols-outlined">brick</i> next to the model name, which indicates the model supports function calls.
+   To install plug-ins, ensure that you select a model compatible with Function Calling. Look for <i class="material-symbols-outlined">brick</i> next to the model name, which indicates the model supports function calls.
    :::
 
 ### Polish content and visualize ideas
@@ -110,7 +114,7 @@ To help you get started, this guide demonstrates only some typical configuration
 
    ![Open Chat Settings](../public/images/manual/use-cases/open-chat-settings.png#bordered)
 
-2. Customize assistant identity:
+2. Customize assistant identity.
 
    a. On the **Assistant Info** tab, set the avatar, name, and description. For example, name it **Writing Bot**.
    
@@ -118,7 +122,7 @@ To help you get started, this guide demonstrates only some typical configuration
 
    ![LobeChat session settings](../public/images/manual/use-cases/lobechat-session-settings.png#bordered)   
 
-3. Define assistant role:
+3. Define assistant role.
 
    a. Click the **Role Configuration** tab.
    
@@ -128,7 +132,7 @@ To help you get started, this guide demonstrates only some typical configuration
 
       ```
       You are a creative editor. When I provide text, review it for clarity 
-      and tone. When I describe a scene, use the drawing plugin to generate 
+      and tone. When I describe a scene, use the drawing plug-in to generate 
       an image based on my description.
       ``` 
 
@@ -136,38 +140,38 @@ To help you get started, this guide demonstrates only some typical configuration
 
    e. Close the **Session Settings** page. You return to the chat window.
 
-#### 3. Select the language model and plugin
+#### 3. Select the language model and plug-in
 
 1. In the basic interaction area, click <i class="material-symbols-outlined">neurology</i> to select a language model. For example, select **Qwen 2.5 7B**, because:
 
    - It excels at various NLP tasks such as contextual understanding and content writing.
-   - It is compatible with functional calling, so you can install LobeChat plugins for enhanced capabilities.
+   - It is compatible with functional calling, so you can install LobeChat plug-ins for enhanced capabilities.
 
-2. Install LobeChat plugins as needed to enhance your assistant's abilities. For example, install a plugin for image creation.
+2. Install LobeChat plug-ins as needed to enhance your assistant's abilities. For example, install a plug-in for image creation.
 
-   a. Hover over the plugin icon and click **Plugin Store**.
+   a. Hover over the plug-in icon and click **Plugin Store**.
 
-      ![Install LobeChat plugin](../public/images/manual/use-cases/lobechat-plugin-install.png#bordered)
+      ![Install LobeChat plug-in](../public/images/manual/use-cases/lobechat-plugin-install.png#bordered)
 
    b. On the **LobeHub Plugins** tab, search for `image`, select **Pollinate drawing** for example, and then click **Install**.
 
-      ![Install LobeChat plugin Pollinate Drawing](../public/images/manual/use-cases/install-pollinate-drawing.png#bordered)
+      ![Install LobeChat plug-in Pollinate Drawing](../public/images/manual/use-cases/install-pollinate-drawing.png#bordered)
 
 #### 4. Interact with the assistant
 
 1. Enter and send your draft content to get a refined version.
-2. Hover over the plugin icon to ensure that **Pollinate drawing** is enabled, and then ask the assistant to create a cover image for the content. It will use the enabled plugin to generate an image.
+2. Hover over the plug-in icon to ensure that **Pollinate drawing** is enabled, and then ask the assistant to create a cover image for the content. It uses the enabled plug-in to generate an image.
 
-   ![LobeChat plugin enabled](../public/images/manual/use-cases/lobechat-plugin-enable.png#bordered)
+   ![LobeChat plug-in enabled](../public/images/manual/use-cases/lobechat-plugin-enable.png#bordered)
 
 3. Brainstorm and iterate with the language model to get your ideal content textually and visually.
 
 #### 5. Pin the assistant
 
-If you are satisfied with the performance of the assistant and want to access it quickly later on, click **Pin** to keep it at the top of your assistant list.
+If you are satisfied with the performance of the assistant and want to access it quickly later on, hover over it in the sidebar, click <i class="material-symbols-outlined">more_vert</i>, and then click **Pin** to keep it accessible at the top of your list.
 
 ![Pin LobeChat assistant](../public/images/manual/use-cases/pin-writing-bot.png#bordered)
-<!--this senario pending the text to speech plugin work
+<!--this senario pending the text to speech plug-in work
 ### Scenario 2: Training and eduction
 
 #### Task: Language learning
@@ -202,7 +206,7 @@ To help you get started, this guide demonstrates only some typical configuration
 
    ![Open Chat Settings](../public/images/manual/use-cases/open-chat-settings.png#bordered)
 
-2. Customize assistant identity:
+2. Customize assistant identity.
 
    a. On the **Assistant Info** tab, set the avatar, name, and description. For example, name it **Dev Bot**.
    
@@ -210,7 +214,7 @@ To help you get started, this guide demonstrates only some typical configuration
 
    ![LobeChat session settings](../public/images/manual/use-cases/lobechat-session-settings.png#bordered)    
 
-3. Define assistant role:
+3. Define assistant role.
 
    a. Click the **Role Configuration** tab.
    
@@ -226,9 +230,7 @@ To help you get started, this guide demonstrates only some typical configuration
 
 #### 3. Interact with the assistant
 
-1. In the basic interaction area, select a language model. 
-
-   For example, select **deepseek-coder-v2** which excels at coding use cases such as code generation and long text understanding.
+1. In the basic interaction area, select a language model. For example, select **deepseek-coder-v2** which excels at coding use cases such as code generation and long text understanding.
 2. Describe a data generation task and send to the chat. For example,
    
    ```
@@ -279,11 +281,13 @@ To help you get started, this guide demonstrates only some typical configuration
 
 #### 4. Pin the assistant
 
-Once you are satisfied with the assistant's performance, right-click it in the sidebar and select Pin to keep it accessible at the top of your list.
+If you are satisfied with the assistant's performance, hover over it in the sidebar, click <i class="material-symbols-outlined">more_vert</i>, and then click **Pin** to keep it accessible at the top of your list.
+
+![Pin dev bot](../public/images/manual/use-cases/pin-dev-bot.png#bordered)
 
 ### Real-time news analyst
 
-Build an assistant that keeps you updated with the latest technology trends. By using the Website Crawler plugin, this assistant can read live news sites and provide instant summaries of what's happening right now.
+Build an assistant that keeps you updated with the latest technology trends. By using the Website Crawler plug-in, this assistant can read live news sites and provide instant summaries of what's happening right now.
 
 #### 1. Add a new assistant
 
@@ -297,7 +301,7 @@ To help you get started, this guide demonstrates only some typical configuration
 
    ![Open Chat Settings](../public/images/manual/use-cases/open-chat-settings.png#bordered)
 
-2. Customize assitant identity:
+2. Customize assistant identity.
 
    a. On the **Assistant Info** tab, set the avatar, name, and description. For example, name it **Daily Tech Digest**.
    
@@ -305,7 +309,7 @@ To help you get started, this guide demonstrates only some typical configuration
 
    ![LobeChat session settings](../public/images/manual/use-cases/lobechat-session-settings.png#bordered)   
 
-3. Define assistant role:
+3. Define assistant role.
 
    a. Click the **Role Configuration** tab.
    
@@ -323,40 +327,40 @@ To help you get started, this guide demonstrates only some typical configuration
 
    e. Close the **Session Settings** page. You return to the chat window.
 
-#### 3. Select the language model and plugin
+#### 3. Select the language model and plug-in
 
 1. In the basic interaction area, select a language model. For example, **Qwen 2.5 7B** , because:
 
    - It excels at various NLP tasks such as contextual understanding and content writing.
-   - It is compatible with functional calling, so you can install LobeChat plugins for enhanced capabilities.
+   - It is compatible with functional calling, so you can install LobeChat plug-ins for enhanced capabilities.
 
    ![Select language model](../public/images/manual/use-cases/select-qwen.png#bordered) 
 
-3. Install a web-access plugin to allow the assistant to access live web pages and analyze real-time content from any URLs you provide. For example, **Website Crawler**. 
+3. Install a web-access plug-in to allow the assistant to access live web pages and analyze real-time content from any URLs you provide. For example, **Website Crawler**. 
 
    :::tip How Website Crawler works (Real-time vs. Offline)
-   Standard local AI models are offline and rely on pre-trained data from the past. The Website Crawler plugin, specifically the getWebsiteContent function, acts as a bridge to the live internet. When you provide a URL, the plugin instantly accesses the web page in real time via an API, fetches the current content, and feeds it to the AI. This ensures that the AI model is accessing the latest live web content rather than using the old memory.
+   Standard local AI models are offline and rely on pre-trained data from the past. The Website Crawler plug-in, specifically the getWebsiteContent function, acts as a bridge to the live internet. When you provide a URL, the plug-in instantly accesses the web page in real time via an API, fetches the current content, and feeds it to the AI. This ensures that the AI model is accessing the latest live web content rather than using the old memory.
    :::
 
-   a. Hover over the plugin icon and click **Plugin Store**.
+   a. Hover over the plug-in icon and click **Plugin Store**.
 
-   ![Install LobeChat plugin](../public/images/manual/use-cases/select-plugin.png#bordered)
+   ![Install LobeChat plug-in](../public/images/manual/use-cases/select-plugin.png#bordered)
 
    b. On the **LobeHub Plugins** tab, search for `website`, select **Website Crawler** for example, and then click **Install**.
 
-   ![Install LobeChat plugin Website Crawler](../public/images/manual/use-cases/install-website-crawler.png#bordered)
+   ![Install LobeChat plug-in Website Crawler](../public/images/manual/use-cases/install-website-crawler.png#bordered)
 
 #### 4. Interact with the assistant
 
-1. In the basic interaction area, hover over the plugin icon to ensure that the **Website Crawler** plugin is enabled.
+1. In the basic interaction area, hover over the plug-in icon to ensure that the **Website Crawler** plug-in is enabled.
 
-   ![LobeChat crawler plugin enabled](../public/images/manual/use-cases/website-crawler-enabled.png#bordered)
+   ![LobeChat crawler plug-in enabled](../public/images/manual/use-cases/website-crawler-enabled.png#bordered)
 
 2. Send the URL address to the chat. For example, `https://github.com/trending`.
-3. Paste and send the URL to the chat. The assistant will list specific news stories with summaries.
+3. Paste and send the URL to the chat. The assistant lists specific news stories with summaries.
 
 #### 5. Pin the assistant
 
-If you find this useful for daily updates, Pin it to your sidebar for quick access later.
+If you find this useful for daily updates, hover over it in the sidebar, click <i class="material-symbols-outlined">more_vert</i>, and then click **Pin** to keep it accessible at the top of your list.
 
 ![Pin chat assistant to list for easy access](../public/images/manual/use-cases/pin-daily-tech-digest.png#bordered)
