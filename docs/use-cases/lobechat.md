@@ -30,7 +30,7 @@ By the end of this guide, you are able to:
 By combining LobeChat's intuitive frontend interface with Ollama's backend capabilities, you can turn your Olares device into a powerful, private AI workstation. 
 
 - LobeChat: The frontend user interface that allows you to interact with various language models via a chat window.
-- Ollama: The backend engine that runs the language models locally, providing computation power and API interfaces. For more information see [Ollama](Ollama.md).
+- Ollama: The backend engine that runs the language models locally, providing computation power and API interfaces. For more information see [Ollama](ollama.md).
 - Olares: The operating system (OS) that streamlines and simplifies the deployment of both, allowing you to skip complex manual environment configurations.
 
 ## Install LobeChat
