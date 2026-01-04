@@ -20,6 +20,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -138,12 +139,45 @@ func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
 			return err
 		}
 	}
+
+	// Wait for namespace to be fully deleted before updating status
+	if err = p.waitForNamespaceDeleted(ctx); err != nil {
+		klog.Errorf("wait for namespace %s deleted failed %v", p.manager.Spec.AppNamespace, err)
+		return err
+	}
+
 	err = p.updateStatus(ctx, p.manager, appsv1.Uninstalled, nil, appsv1.Uninstalled.String(), "")
 	if err != nil {
 		klog.Errorf("update app manager %s to state %s failed", p.manager.Name, appsv1.Uninstalled)
 		return err
 	}
 	return nil
+}
+
+// waitForNamespaceDeleted waits for the namespace to be completely deleted
+func (p *baseStatefulApp) waitForNamespaceDeleted(ctx context.Context) error {
+	namespace := p.manager.Spec.AppNamespace
+	if apputils.IsProtectedNamespace(namespace) {
+		return nil
+	}
+
+	klog.Infof("waiting for namespace %s to be fully deleted", namespace)
+	err := utilwait.PollImmediate(time.Second, 30*time.Minute, func() (done bool, err error) {
+		var ns corev1.Namespace
+		err = p.client.Get(ctx, types.NamespacedName{Name: namespace}, &ns)
+		if err != nil && !apierrors.IsNotFound(err) {
+			klog.Errorf("failed to get namespace %s: %v", namespace, err)
+			return false, err
+		}
+		if apierrors.IsNotFound(err) {
+			klog.Infof("namespace %s has been fully deleted", namespace)
+			return true, nil
+		}
+		klog.Infof("namespace %s still exists, waiting...", namespace)
+		return false, nil
+	})
+
+	return err
 }
 
 type OperationApp interface {
