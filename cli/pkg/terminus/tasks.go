@@ -250,13 +250,14 @@ func (t *PrepareFinished) Execute(runtime connector.Runtime) error {
 
 type WriteReleaseFile struct {
 	common.KubeAction
+	WithoutName bool
 }
 
 func (t *WriteReleaseFile) Execute(runtime connector.Runtime) error {
 	if util.IsExist(common.OlaresReleaseFile) {
 		logger.Debugf("found existing release file: %s, overriding ...", common.OlaresReleaseFile)
 	}
-	return t.KubeConf.Arg.SaveReleaseInfo()
+	return t.KubeConf.Arg.SaveReleaseInfo(t.WithoutName)
 }
 
 type RemoveReleaseFile struct {
