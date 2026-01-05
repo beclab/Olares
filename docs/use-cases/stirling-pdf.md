@@ -162,7 +162,6 @@ Stirling-PDF supports conversion for over 50 file types, which allows you to tur
 
     ![convert format](../public/images/manual/use-cases/select-conversion.png#bordered)
 
-
 2. Upload your source file.
 3. Configure the available settings, such as color mode or layout preferences. The settings might vary by file type.
 4. Click **Convert**. 
@@ -178,31 +177,75 @@ Use this feature to review documents and add notes or highlights.
     ![view and edit pdf](../public/images/manual/use-cases/view-edit-pdf.png#bordered)
 
 2. Click the **Open File** icon (<i class="material-symbols-outlined">open_in_new</i>) in the top right corner to load your document.
-3. Use the toolbar to select the **Text**, **Draw**, **Add or edit images**.
-4. Apply your markups to the document.
-5. Save your changes via the menu options.
 
-## Build a pipeline
+    ![open pdf](../public/images/manual/use-cases/open-file.png#bordered)
 
-The **Pipeline** feature functions like a "Macro" for PDFs. It allows you to chain multiple operations (e.g., Merge  Watermark  Compress) into a single automated sequence.
+3. To add text annotations:
 
-### Configure a new pipeline
+    a. Click the **Text** icon and select your preferred font color and size.
 
-1. Click **Automate** (or "Pipeline") in the Advanced Tools section.
-2. Click **Configure Pipeline**.
-3. Enter a unique name for your workflow (e.g., "Monthly Invoice Process") in the name field.
-4. Select an action from the dropdown menu (e.g., `merge-pdfs`) and click **Add Operation**.
-5. Repeat step 4 to add subsequent steps (e.g., `add-password`).
+     ![add text annotations](../public/images/manual/use-cases/text-annotation.png#bordered)  
+    
+    b. Click on the document where you want the note to appear, and then type your comment. 
+    
+    c. To delete a note, click the text box and click <i class="material-symbols-outlined">delete</i>.
 
-### Customize operation settings
+4. To highlight or draw freehand:
 
-1. Locate the added operations in your list.
-2. **Crucial Step:** Click the yellow **Settings (Gear)** icon next to *each* operation.
-3. Define the specific parameters for that step (e.g., setting the specific password or watermark text) and save the settings.
+    a. Click Draw and adjust the brush color, thickness, and opacity.
 
-### Validate and run
+     ![draw lines to highlight](../public/images/manual/use-cases/draw-line.png#bordered) 
+    
+    b. Click and drag on the document to apply your markings.
 
-1. Click **Validate** to ensure the logic is correct (look for the green indicator).
-2. Click **Save Operation Settings**.
-3. Close the configuration menu.
-4. Upload your target files and click **Submit** to run the entire sequence instantly.
+5. To finalize your edits, click the **Save** icon. The document containing your annotations is automatically downloaded.
+
+     ![draw lines to highlight](../public/images/manual/use-cases/save-edits.png#bordered) 
+
+## Automate multi-step workflows
+
+The **Pipeline** feature functions like a batch processing workflow for PDFs.
+Instead of performing tasks one by one, you can create a custom pipeline to execute multiple actions in a single sequence. This scenario demonstrates the feature by merging documents and adding a password.
+
+:::info
+The Pipeline feature is currently in Beta. You might encounter occasional instability or interface changes. It is recommended to verify the final output when processing critical documents.
+:::
+
+### Create a pipeline
+
+1. In the **Advanced** section, click **Pipeline**.
+
+    ![Pipeline](../public/images/manual/use-cases/pipeline.png#bordered) 
+
+2. Click **Configure**.
+
+    ![Pipeline](../public/images/manual/use-cases/pipeline-menu.png#bordered) 
+
+### Configure the pipeline
+
+1. In the **Pipeline Name** box, enter a unique name for your workflow. For example, `Monthly invoice combination`.
+2. Add and configure the merge operation:
+
+    a. From the **Select Operation** list, select **merge-pdfs**, and then click **Add operation**. The operation is added in the Pipeline and related settings are displayed under it.
+
+    b. Define the specific parameters for the **merge-pdfs** operation, and then click **Save Operation Settings**.
+
+    ![Pipeline](../public/images/manual/use-cases/merge-pdf.png#bordered) 
+
+3. Add and configure the adding password operation:
+
+    a. From the **Select Operation** list, select **add-password**, and then click **Add operation**.
+
+    b. Define the specific parameters for the **add-password** operation, and then click **Save Operation Settings**.
+
+4. Click **Save to Browser** to save your pipeline.
+5. Close the **Pipeline Configuration** window, and then refresh the **Pipeline Menu** page.
+
+### Run the pipeline
+
+1. On the **Pipeline Menu** page, select the newly created "Monthly invoice combination" workflow.
+   
+    ![Pipeline](../public/images/manual/use-cases/select-pipeline.png#bordered) 
+
+2. Upload your PDF files, and then click **Submit**. Stirling-PDF automatically merges the files and secure the final document in one step. When the batch processing is completed, the file is downloaded automatically.
+3. Open the file and enter the password you specified during the pipeline configuration to verify that the files are merged and secured as expected.
