@@ -199,7 +199,7 @@ func MountedHddPath(ctx context.Context) ([]string, error) {
 
 func FilterBySerial(serial string) func(dev storageDevice) bool {
 	return func(dev storageDevice) bool {
-		return dev.IDSerial == serial || dev.IDSerialShort == serial
+		return strings.HasSuffix(serial, dev.IDSerial) || strings.HasSuffix(serial, dev.IDSerialShort)
 	}
 }
 
