@@ -7,18 +7,33 @@ const side = {
       link: "/manual/overview",
       items: [
         // { text: "Compare Olares and NAS", link: "/manual/olares-vs-nas" },
-        { text: "Help and support", link: "/manual/help/request-technical-support"}
-          //  collapsed: true,
-          //   items: [
-            // { text: "FAQs", link: "/manual/help/faqs" },
-            //    {
-            //     text: "Request support",
-          //     link: "/manual/help/request-technical-support",
-          //  },
-            //{
-            //  text: "Troubleshooting Guide",
-            //  link: "/manual/help/troubleshooting-guide",
-            // },
+        {
+          text: "FAQs",
+//           link: "/manual/help/faqs",
+          collapsed: true,
+          items: [
+            {
+              text: "Olares FAQs",
+              link: "/manual/help/olares",
+            },
+            {
+                text: "Installation & activation FAQs",
+            link: "/manual/help/installation",
+            },
+            {
+                text: "Usage FAQs",
+            link: "/manual/help/usage",
+            },
+//             {
+//               text: "Request support",
+//               link: "/manual/help/request-technical-support",
+//             },
+//             {
+//              text: "Troubleshooting",
+//              link: "/manual/help/troubleshooting",
+//             },
+          ],
+        },
       ],
     },
     {
@@ -132,7 +147,7 @@ const side = {
             { text: "Manage integrations", link: "/manual/larepass/integrations" },
           ],
         },
-        {text: "Use VPN", link:"/manual/larepass/private-network"},
+        { text: "Use VPN", link: "/manual/larepass/private-network" },
         {
           text: "Manage device",
           collapsed: true,
@@ -380,12 +395,12 @@ const side = {
                 { text: "Restore", link: "/manual/olares/settings/restore" },
               ],
             },
-            {text: "Developer resources", link: "/manual/olares/settings/developer"},
-            ]
-          },
-          {text: "Dashboard", link: "/manual/olares/resources-usage"},
-          {text: "Profile", link: "/manual/olares/profile"},
-        ],
+            { text: "Developer resources", link: "/manual/olares/settings/developer" },
+          ]
+        },
+        { text: "Dashboard", link: "/manual/olares/resources-usage" },
+        { text: "Profile", link: "/manual/olares/profile" },
+      ],
     },
     {
       text: "Best practices",
@@ -507,6 +522,7 @@ const side = {
         },
         {
           text: "Steam",
+          link: "/use-cases/stream-game",
           collapsed: true,
           items: [
             {
