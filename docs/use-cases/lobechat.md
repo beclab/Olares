@@ -72,7 +72,7 @@ You can install these models directly through the LobeChat user interface (UI) o
 ### Method A: Install via LobeChat UI
 
 1. In the Chat window, click <i class="material-symbols-outlined">neurology</i> to select the target language model.
-2. Type and send a message in the chat.
+2. Send a message to start a chat with that model.
 3. If the language model is not installed, you are prompted right in the chat to download and install it.
 
     ![Install language model via LobeChat UI](../public/images/manual/use-cases/download-in-lobechat.png#bordered)
