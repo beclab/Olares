@@ -37,7 +37,7 @@ By combining LobeChat's intuitive frontend interface with Ollama's backend capab
 
 Install LobeChat and related dependencies.
 
-1. From the Olares Market, search for `LobeChat`.
+1. From the Olares Market, search for "LobeChat".
 
    ![Search for LobeChat from Market](../public/images/manual/use-cases/find-lobechat.png#bordered)
 
