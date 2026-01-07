@@ -20,10 +20,13 @@ Make sure your device meets the following requirements.
 
 - Architecture: AMD64 or ARM64
 - CPU: At least 4 cores
-- RAM: At least 8GB of available memory
-- Storage: At least 150GB of available SSD storage. 
+- RAM: At least 8 GB of available memory
+- Storage: At least 150 GB of available SSD storage. 
 ::: warning SSD required
 The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.
+:::
+::: info GPU limitation
+Olares GPU acceleration currently supports NVIDIA GPUs only. Consequently, GPU resources cannot be managed or utilized for AI workloads on macOS devices.
 :::
 
 ## Before you begin

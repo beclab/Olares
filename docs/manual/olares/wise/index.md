@@ -1,33 +1,62 @@
 ---
-description: Transform your Olares into a powerful information hub with Wise - featuring AI-driven content curation, cross-platform aggregation, and seamless bookmarking capabilities.
+outline: [2, 3]
+description: Transform your Olares into a powerful information hub with Wise, featuring cross-platform aggregation, and seamless bookmarking capabilities.
 ---
-# Curate information hub with Wise
+# Curate your information hub with Wise
 
-Wise is a local-first, AI-driven modern reader and a core application within the Olares ecosystem. Working together with the LarePass Chrome extension, Wise assists you in collecting, consuming, and managing content from various platforms, thereby creating and maintaining a personal information hub.
+Wise is a local-first modern reader designed to turn scattered information into a personal information hub. As a core application within the Olares ecosystem, it serves as your central repository for managing digital content securely and efficiently.
 
-Key features include:
+Wise empowers you to build this hub through two main capabilities:
 
-* **Self-hosted recommendation algorithms**: You can run personalized algorithms to filter and sort online content, breaking through the information bubble and receiving diverse and personalized content recommendations.
-* **Cross-platform content aggregation**: Wise integrates articles, videos, audio, and feeds from different sources, offering you a comprehensive experience.
-* **Seamless bookmarking**: With the LarePass browser extension, you can save web pages to Olares with a single click, making it easy to access and manage content anytime.
+- **Cross-platform content aggregation**: Centralize your reading by integrating articles, videos, audio, and feeds from various sources into a single, distraction-free interface.
+- **One-click bookmarking**: Save web pages directly to Olares using the LarePass browser extension, ensuring your content is always accessible and owned by you.
 
----
+## Install and open Wise
+
+1. Open the Market, and search for "Wise".
+2. Click **Get**, then **Install**.
+3. Once installed, open Wise from the Launchpad.
+
+## Understand the interface
+
+The Wise interface is designed to help you organize and consume content efficiently.
+
+![Wise interface](/images/manual/olares/wise-interface.png#bordered)
+
+### Sidebar navigation
+
+The sidebar organizes your content into the following sections:
+
+- **Feeds:** Contains your subscribed sources, including websites, blogs, and video channels.
+- **Inbox:** Your central workspace for active content. It aggregates items from all sources, including saved web pages, uploaded files like PDFs or EPUBs, and feed items added to your library.
+- **Content types:** Automatically categorizes your content by format, such as **Articles**, **Videos**, and **Books**.
+
+### Item status
+
+Every item in Wise has a status that can be either **Inbox** or **Read Later**. You can change an item's status using the icons in the list view or the reader view.
+
+- **<i class="material-symbols-outlined">inbox</i> Inbox**: Your primary collection for content you want to read soon.
+- **<i class="material-symbols-outlined">schedule</i> Read Later**: Your backlog for content to revisit in the future.
+
+## Next steps
+
+Explore the following guides to master your Wise workflow:
 <div>
-<h4><a href="./wise-basics">Wise basics</a></h4>
-Learn the essential tasks for collecting, reading, and managing your content library in Wise.
-</div>
-
-<div>
-<h4><a href="./recommend">Discover themed content</a></h4>
-Learn how self-hosted recommendation algorithms work in Wise.
+<h4><a href="./basics">Wise basics</a></h4>
+Learn essential tasks for collecting, reading, and managing your content library.
 </div>
 
 <div>
 <h4><a href="./subscribe">Subscribe and manage feeds</a></h4>
-Set up and organize your content sources through RSS feeds, manual subscriptions, and the LarePass browser extension.
+Set up and organize content sources via RSS, manual subscriptions, and LarePass browser extension.
+</div>
+
+<div>
+<h4><a href="./manage-cookies">Manage cookies for Wise</a></h4>
+Learn how to upload cookies to grant Wise access to content behind logins or paywalls.
 </div>
 
 <div>
 <h4><a href="./filter">Add filtered view</a></h4>
-Learn how to use advanced filters to organize and display content based on specific criteria like tags, authors, or publication dates.
+Use advanced filters to organize content by tags, authors, or publication dates.
 </div>

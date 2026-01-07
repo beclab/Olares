@@ -36,17 +36,16 @@ Install the app from the Olares Market and then complete the initial setup withi
 
 Follow these steps to install and configure Steam Headless:
 
-1. Open the **Market** app in your Olares web interface.
-2. Find **Steam Headless** in the **Fun** category or use the search bar.
-3. Click **Get**, and then click **Install**.
-![Install Steam Headless](../public/images/manual/use-cases/steam-install-steam-headless.png#bordered)
-4. A prompt will appear asking you to configure environment variables. This creates your login credentials for the Sunshine Web UI:
-    - `SUNSHINE_USER`: Set the username for Sunshine access.
-    - `SUNSHINE_PASS`: Set the corresponding password.
-:::tip Remember your login credentials 
-These are your initial login credentials for Sunshine. You must use them to log in the first time. 
-:::
-5. Wait a few minutes for the installation and initialization to complete.
+1. Open the Market, and search for "Steam".
+2. Click **Get**, then **Install**.
+   ![Install Steam Headless](../public/images/manual/use-cases/steam-install-steam-headless1.png#bordered)
+3. A prompt will appear asking you to configure environment variables. This creates your login credentials for the Sunshine Web UI:
+   - `SUNSHINE_USER`: Set the username for Sunshine access.
+   - `SUNSHINE_PASS`: Set the corresponding password.
+     :::tip Remember your login credentials
+     These are your initial login credentials for Sunshine. You must use them to log in to Sunshine the first time. 
+     :::
+4. Wait for the installation to complete.
 
 ### Complete the initial Steam setup
 
