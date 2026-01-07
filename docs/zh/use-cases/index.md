@@ -14,5 +14,7 @@ description: 了解 Olares 在 AI 流程、创意工具和自托管应用中的�
   { title: 'Dify', link: './dify.html', tags: ['AI'] },
   { title: 'Ollama', link: './ollama.html', tags: ['AI'] },
   { title: 'Jellyfin', link: './stream-media.html', tags: ['娱乐'] },
-  { title: 'Steam', link: './stream-game.html', tags: ['娱乐'] },
+  { title: 'Steam（在 Olares 本机游玩）', link: './play-games-directly.html', tags: ['娱乐'] },
+  { title: 'Steam（串流到其他设备）', link: './stream-game.html', tags: ['娱乐'] },
+  { title: 'Redroid', link: './host-cloud-android.html', tags: ['虚拟机'] },
 ]" />
