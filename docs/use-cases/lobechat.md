@@ -74,7 +74,7 @@ You can install these models directly through the LobeChat user interface (UI) o
 
     ![Install language model via LobeChat UI](../public/images/manual/use-cases/download-in-lobechat.png#bordered)
 
-4. When the installation is completed, you can chat with the newly installed language model.
+4. When the installation is completed, the model is ready to use.
 
 ### Method B: Install via Ollama CLI
 
