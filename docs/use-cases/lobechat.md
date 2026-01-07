@@ -62,7 +62,10 @@ After the installation is completed, you must connect LobeChat to Ollama to make
 
 ## Install language models
 
-After connecting to Ollama, LobeChat displays a preset list of supported models. This list acts as a catalog of compatible models, not a list of what is currently installed on your device. When you select a model from this list, LobeChat checks your local storage. If the model is not installed, you are prompted to download it. After the download finishes, the model is successfully installed and ready for use.
+After connecting to Ollama, LobeChat lists supported models, including models that are not installed yet. 
+
+When you choose a model, LobeChat checks local storage. If the model is not installed, LobeChat prompts you to download it. Once the download completes, the model is ready to use.
+
 
 You can install these models directly through the LobeChat user interface (UI) or via the Ollama command line (CLI).
 
