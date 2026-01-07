@@ -121,46 +121,46 @@ spec:
           name: check-appservice
       containers:
       - name: chartrepo
-        image: beclab/dynamic-chart-repository:v0.3.6
+        image: beclab/dynamic-chart-repository:v0.3.7
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
         env:
-          - name: APP_SERVICE_SERVICE_HOST                                         
+          - name: APP_SERVICE_SERVICE_HOST
             value: app-service
-          - name: APP_SERVICE_SERVICE_PORT                                         
+          - name: APP_SERVICE_SERVICE_PORT
             value: "6755"
           - name: IMAGE_INFOS
             value: /opt/app/data/v2/images-info
-          - name: NATS_HOST                                                        
-            value: nats.os-platform                                                            
-          - name: NATS_PORT                                                        
-            value: "4222"                                                          
-          - name: NATS_USERNAME                                                    
-            value: os-chartrepo                                   
-          - name: NATS_PASSWORD                                                    
-            valueFrom:                                                             
-              secretKeyRef:                                                        
-                key: nats_password                                                 
+          - name: NATS_HOST
+            value: nats.os-platform
+          - name: NATS_PORT
+            value: "4222"
+          - name: NATS_USERNAME
+            value: os-chartrepo
+          - name: NATS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: nats_password
                 name: chartrepo-nats-secret
-          - name: REDIS_HOST                                                       
-            value: redis-cluster-proxy.os-platform                                   
-          - name: REDIS_PORT                                                       
+          - name: REDIS_HOST
+            value: redis-cluster-proxy.os-platform
+          - name: REDIS_PORT
             value: "6379"
-          - name: REDIS_PASSWORD                                                   
-            valueFrom:                                                             
-              secretKeyRef:                                                        
-                key: redis-passwords                                               
-                name: chartrepo-secrets                                               
-          - name: REDIS_DB_NUMBER                                                  
-            value: "0"                                                             
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: redis-passwords
+                name: chartrepo-secrets
+          - name: REDIS_DB_NUMBER
+            value: "0"
           - name: API_CHART_PATH
             value: /api/v1/applications/{chart_name}/chart
           - name: CHART_ROOT
-            value: /opt/app/data/v2                                                                                      
-          - name: NATS_SUBJECT_SYSTEM_USER_STATE                         
+            value: /opt/app/data/v2
+          - name: NATS_SUBJECT_SYSTEM_USER_STATE
             value: os.users
-          - name: GO_ENV                                                 
+          - name: GO_ENV
             value: prod
           - name: IMAGE_ANALYZER_WORKERS
             value: '5'
