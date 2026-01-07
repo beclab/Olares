@@ -46,20 +46,21 @@ In the **File** area, select your input **Type**:
 
     The **Preview** pane remains blank during this step. The document content only appears in this area after the translation is completed.
 
-### Configure the translation model
+### Configure the translation service
 
-You must select an engine to perform the translation. You have two options:
+Select the service you want to use for the translation. You can choose between an external cloud provider or a private local AI service.
 
 #### Cloud services
 
-* From the **Service** list, select **Google** or **Bing**. These services are free to use but require an Internet connection and process data externally. Because this tutorial focuses on the privacy-preserving local AI capabilities and the configuration steps required to set up the Local AI option, cloud service options are not covered in further detail.
+* From the **Service** list, select **Google** or **Bing**. These services are free to use but require an Internet connection and process data externally. Because this tutorial focuses on the privacy-preserving local AI capabilities and the configuration steps required to set up the local AI option, cloud service options are not covered in further detail.
 
-#### Local AI
+#### Local AI services
 
-To use your local hardware via Ollama, configure the following settings for it:
+To use the local Ollama service, configure the following settings:
 
 1. From the **Service** list, select **Ollama**.
-2. Enter the Ollama host URL. To obtain the host address:
+2. Enter the Ollama host address. 
+3. (Optional) To obtain the Ollama host address:
 
     a. Go to Olares **Settings** > **Application** > **Ollama**.
     
@@ -67,7 +68,7 @@ To use your local hardware via Ollama, configure the following settings for it:
 
     c. Click **Set up endpoint**, and then copy the endpoint address by clicking <i class="material-symbols-outlined">content_copy</i>.
 
-    ![Obtain Ollama host address](/images/manual/use-cases/copy-localhost-address.png#bordered){width=60%}   
+    ![Obtain Ollama host address](/images/manual/use-cases/copy-localhost-address.png#bordered){width=60%}
 
 3. Enter the name of the model you have downloaded, and you must specify the version tag if required. For example, "gemma3:4b".
 
