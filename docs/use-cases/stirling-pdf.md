@@ -19,7 +19,7 @@ By the end of this tutorial, you are able to:
 
 ## Install Stirling PDF
 
-1. Open the Olares market and search for `Stirling-PDF`.
+1. Open the Olares Market and search for "Stirling-PDF".
 
     ![Search for Stirling PDF from Market](../public/images/manual/use-cases/install-stirling-pdf.png#bordered)
 
