@@ -4,108 +4,145 @@ description: 了解 Olares 系统应用 Wise 的基本操作。学习收集、�
 ---
 # Wise 基本操作
 
-Wise 为你提供内容管理提供灵活丰富的选项，帮你轻松收集、阅读、管理内容。你可以通过本页面学习 Wise 的基本操作。
+Wise 助你搭建专注、高效的阅读环境。本文将带你了解日常核心操作，帮你轻松收集内容，安排阅读计划，并记录自己的想法。
 
-## 将内容添加到你的库
-通过以下方法保存感兴趣的内容。
+本文重点介绍如何保存和阅读单条内容。如需了解订阅源和订阅管理，请查看[订阅和管理订阅源](./subscribe)。
 
-### 添加到收件箱或稍后阅读
-你可以使用以下两个内容集组织你的阅读流程：
+## 开始之前
 
-* **收件箱**：你计划近期阅读的主要内容集合。
-* **稍后阅读**：你计划稍后查看的内容。
+为充分体验 Wise 的能力，建议在 Olares 应用市场搜索并安装以下配套应用：
 
-在浏览标题或阅读内容时，点击 **<i class="material-symbols-outlined">inbox</i> 收件箱** 或 **<i class="material-symbols-outlined">schedule</i> 稍后阅读**，将内容保存到相应的集合。
+- **Rss Subscribe**：用于在浏览网页时直接订阅 RSS 源。
+- **YT-DLP**：用于将网页上的音频和视频下载到 Wise 中。
 
-![Inbox or Read later](/images/manual/olares/inbox-read-later.png)
-
-### 通过 LarePass 收藏网页
-
-<tabs>
-<template #LarePass-浏览器扩展>
-
-:::tip 提示
-LarePass 扩展目前仅支持 Chrome 浏览器。请从 [LarePass 页面](https://olares.cn/larepass)下载。
+:::tip
+即使不安装这些应用，你也可以正常使用 Wise，但无法使用浏览器内订阅和媒体下载功能。
 :::
 
-1. 打开 LarePass 浏览器扩展，点击**收集**。
-2. 在**页面**部分，点击 <i class="material-symbols-outlined">add_box</i> 将当前页面保存到你的 Wise 库。
+## 打造你的内容库
 
-保存后，你可以在 Wise 的**库** > **文章**页面找到该网页。
-</template>
+Wise 通过以下两种方式将内容收集到库中：
 
-<template #LarePass-移动端>
+- **保存内容**：包括你手动保存的网页、文件、音频或视频。这些内容会出现在主界面的**收件箱**，并会被自动分类整理到**文章**等类别文件夹中。
+- **订阅源**：包括你订阅的网站、博客、播客或频道。新的内容会出现在**订阅源**里，你可以从中挑选感兴趣的内容保存到自己的库里。
 
-<!--@include: ../tutorials/wise.reusables.md{15,32}-->
-</template>
-</tabs>
+### 保存内容
 
+你可以通过以下三种方式将内容保存到 Wise：
+- 上传文件
+- 在 Wise 内部添加链接
+- 使用 LarePass 浏览器扩展直接保存
 
-### 手动添加内容
-Wise 支持包括视频、音频、PDF 和电子书在内的多种内容类型：
+#### 上传文件
 
-1. 在菜单栏中点击 <i class="material-symbols-outlined">add_circle</i>。
-2. 添加网页时，选择**网页**。
-3. 添加下载链接时，选择**下载链接**。
-4. 添加本地的 PDF 或电子书（EPUB 格式）时，选择**上传**。
-5. 添加 RSS 订阅源时，选择 **RSS**。
-   :::tip 提示
-   要了解如何通过 Wise 订阅 RSS，请参阅 [订阅 RSS 订阅源](subscribe.md)。
-   :::
+直接从你的电脑导入文件，包括 PDF、EPUB、音频、视频和其他文件类型。Wise 会根据文件格式，自动将其放入库中对应的内容文件夹。
 
-## 自动下载
-Wise 会自动为新的音频或视频内容创建下载任务，将媒体文件保存到 Olares 以便离线访问。
+1. 点击左下角菜单栏的 <i class="material-symbols-outlined">add_circle</i>，选择**上传**。
+2. 从本地电脑选择一个或多个文件。
 
-此功能可以：
+#### 通过链接添加
 
-* 确保内容始终可离线访问
-* 防止原始来源不可用时内容丢失
-* 提供对媒体文件的快速访问
+粘贴 URL 来保存文章、视频或订阅源。
 
-要查看所有下载的媒体文件，前往 <i class="material-symbols-outlined">settings</i> > **传输** > **下载**。该页面会显示你的下载内容及其详细信息。
-![已下载的媒体文件](/images/manual/olares/downloaded-media-files.png#bordered)
+::: tip 上传 Cookie
+如果链接指向的内容需要登录或其他访问控制，Wise 可能需要 Cookie 才能正确获取内容。若要配置 Cookie，请查看[管理 Cookie](./manage-cookies)。
+:::
 
-点击 <i class="material-symbols-outlined">folder_open</i> 图标可以在**文件管理器**中找到对应的文件。
+1. 点击左下角菜单栏的 <i class="material-symbols-outlined">add_circle</i>，选择**添加链接**。
+2. 粘贴或输入 URL。
 
-## 组织你的阅读
+   Wise 会解析链接，并列出所有可行操作：
+    - **保存到库**：将内容保存为库中的一个文件，并添加至**收件箱**。
+    - **订阅 RSS 源**：如果 Wise 检测到站点有一或多个 RSS 源，会在此列出。选择你想要订阅的源，之后该订阅源下的更新会自动出现在[**订阅源**](./subscribe)中。
+    ![订阅 RSS 源](/images/zh/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
+    - **下载文件**：如果 Wise 检测到页面上有视频或其他可下载文件，会出现此选项。选择你要下载的文件，将其保存以便离线访问。使用此功能需安装[YT-DLP](https://market.olares.com/app/market.olares/ytdlp)。
 
-### 使用标签进行组织
+    ![Download files](/images/zh/manual/olares/wise-add-link-download.png#bordered){width=300}
 
-你可以通过标签创建结构化的内容集合：
+新保存的内容会出现在对应类型文件夹下。
 
-1. 在列表页面中，点击内容卡片上的 <i class="material-symbols-outlined" style="font-variation-settings: 'wght' 200;">sell</i>。
-2. 在标签输入框中，选择或创建与当前内容相关的标签。
+#### 使用 LarePass 扩展
 
-![标签](/images/manual/olares/tags.png#bordered)
+你也可以在浏览器中通过 [LarePass 扩展](https://www.olares.cn/larepass)直接将内容保存到 Wise，无需打开 Wise 应用。
 
-你可以在<i class="material-symbols-outlined">settings</i> > **标签**页面找到并管理你的标签。
+1. 打开 LarePass 浏览器扩展并点击“收集”。
+2. 在**保存到库**区域查看当前页面检测到的内容。
+3. 点击目标内容右侧的<i class="material-symbols-outlined">box_add</i>。
+![Save content via LarePass extension](/images/zh/manual/olares/wise-larepass-add-to-lib.png#bordered)
 
-### 用笔记捕捉灵感
+   通过 LarePass 扩展保存的内容会添加到内容库中，同时出现在主界面**收件箱**以及对应的内容类型文件夹中。
 
-1. 在阅读时，点击 <i class="material-symbols-outlined" style="font-variation-settings: 'wght' 200;">right_panel_open</i> 打开 **信息** 面板。
-2. 在**笔记**部分输入你的想法。
-3. 点击**保存**存储笔记。
+### 监控和管理媒体下载
 
-你可以稍后编辑或删除笔记。
+当你添加新的音频或视频内容时，Wise 会自动创建下载任务并将媒体文件保存到 Olares。这可以：
 
-![笔记](/images/manual/olares/notes.png#bordered)
+- 确保你能离线访问媒体。
+- 在库中保留副本，即使原始来源被删除也不受影响。
+- 加快打开和播放内容的速度。
 
-### 跟踪你的阅读进度
+要管理所有下载任务：
 
-Wise 使用文章封面上的绿色点标识未读内容。当你打开一篇文章时，它会自动标记为已读。
+1. 进入 **<i class="material-symbols-outlined">settings</i> 设置** > **传输** > **下载**.
+2. 查看媒体列表及其状态。
+3. 你可以：
 
-在阅读时，你可以通过工具栏手动在 **<i class="material-symbols-outlined">playlist_add_check</i> 已看** 和 **<i class="material-symbols-outlined">playlist_remove</i> 未看** 状态之间切换，以维护你的阅读进度。
+    - 点击<i class="material-symbols-outlined">folder_open</i>在 Olares 文件管理器中定位文件。
+    - 点击<i class="material-symbols-outlined">do_not_disturb_on</i>从列表中移除文件。
 
-### 搜索 Wise 中的内容
-<!--@include: ../tutorials/wise.reusables.md{4,13}-->
+## 使用阅读工具
 
-## 更改主题
-默认情况下，Wise 会跟随系统的浅色/深色主题设置。你可以根据个人喜好更改：
+Wise 提供多种阅读辅助工具，帮助你专注阅读并记录重要内容。
 
-1. 左下角点击 <i class="material-symbols-outlined">settings</i>，选择**偏好设置**。
-2. 在**主题**选项下，选择你喜欢的显示模式：
+![Wise reading toolbar](/images/zh/manual/olares/wise-reading-toolbar.png#bordered)
+
+### 追踪阅读进度
+
+Wise 会在文章封面上用绿色圆点标记未读内容。当你打开文章，Wise 会自动将其标记为已读。
+
+![Wise unseen content](/images/zh/manual/olares/wise-unseen-content.png#bordered){width=600}
+
+在阅读器工具栏中，你也可以手动切换 <i class="material-symbols-outlined">playlist_add_check</i>（已读）或 <i class="material-symbols-outlined">playlist_remove</i>（未读），维护你的阅读进度。
+
+### 记录笔记
+
+你可以为库中的所有内容添加私人笔记：
+
+1. 浏览时，点击 <i class="material-symbols-outlined" style="font-variation-settings: 'wght' 200;">right_panel_open</i> 打开**信息**面板。
+2. 在**笔记**区域输入你的想法。
+3. 点击**保存**。
+
+你可以随时打开该面板，编辑或删除笔记。
+
+### 使用标签
+
+你可以使用标签，灵活标记内容，以便日后轻松检索。
+
+1. 在列表页，点击内容卡片上的<i class="material-symbols-outlined" style="font-variation-settings: 'wght' 200;">sell</i> 为其添加标签。
+2. 选择现有标签，或输入新名称创建标签
+
+![Tags](/images/zh/manual/olares/wise-tags.png#bordered){width=600}
+
+你可以在<b><i class="material-symbols-outlined">settings</i>设置</b> > **标签**下统一管理所有标签。
+
+::: tip
+标签与过滤视图结合使用，效果更佳。详情请见[使用过滤视图管理内容](./filter)。
+:::
+
+## 搜索内容库
+
+当你在 Wise 中收集了大量内容后，可以借助 Olares 的聚合搜索功能，在 Wise 中按主题或具体内容进行搜索。
+
+1. 点击应用坞的<i class="material-symbols-outlined">search</i>打开搜索窗口。
+2. 将搜索范围限定为 Wise，然后输入关键词开始搜索。
+![Search in Wise](/images/manual/tutorials/wise-search.png#bordered)
+
+## 自定义外观
+
+默认情况下，Wise 会跟随系统的明暗主题设置。你也可以单独为 Wise 指定显示风格：
+
+1. 点击左下角的<i class="material-symbols-outlined">settings</i>，选择**偏好设置**。
+2. 在**主题**下，选择你偏好的主题模式：
    - 浅色
    - 暗黑
 
-## 了解更多
-- [使用 Wise 打造知识中枢](../../best-practices/organize-content.md)
+你的选择会应用到 Wise 界面和阅读器中。  

@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括系统要求、安装命令和激活流程。
 ---
 
@@ -6,19 +7,37 @@ description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括
 
 本文介绍如何通过官方 ISO 镜像在物理机上安装 Olares 系统。
 
+::: tip 激活遇到问题？
+当前 ISO 镜像使用了国际版网络配置（使用 `olares.com` 域名）。如遇激活问题，请暂时切换至[一键安装脚本](install-linux-script.md)方式安装激活。
+:::
+:::info 安装遇到问题？
+如果你在安装过程中遇到问题，欢迎[提交 GitHub Issue](https://github.com/beclab/Olares/issues/new)。提交时请尽量附上以下信息：
+
+- 你使用的平台或环境（例如 Ubuntu、Docker、WSL 等）。
+- 安装方式（脚本安装或 Docker 镜像）。
+- 详细的错误信息（包括日志、报错信息或截图）。
+:::
+
 ## 准备条件
 
+### 必要条件
 - **宿主机要求**:
   - **CPU**：4 核及以上，X86-64 架构（AMD 或 Intel）。ARM 芯片目前不支持 ISO 镜像安装。
   - **内存**：至少 8 GB 可用内存。
   - **存储**：至少 150 GB SSD（若使用机械硬盘 HDD，将导致安装失败）。
   - **网络**：需连接至有线局域网。
+   ::: warning 必须使用 SSD
+   请勿使用机械硬盘 (HDD)。如果未检测到 SSD，安装将失败。
+   :::
+- **U 盘**：容量 **8 GB** 及以上。
 
-- **其他**：不小于 **8 GB** 的 U 盘。
+### 可选条件
 
-::: tip 激活遇到问题？
-当前 ISO 镜像使用了国际版网络配置（使用 `olares.com` 域名）。如遇激活问题，请暂时切换至[一键安装脚本](install-linux-script.md)方式安装激活。
-:::
+安装 Olares 不需要 GPU，但运行 AI 应用需要 GPU支持。
+
+- **GPU (仅支持 NVIDIA)**：
+  - **架构**：Turing 架构或更新版本 (例如 GTX 16 系列、RTX 20 系列)。
+  - **验证方法**：运行 `lspci | grep -i nvidia` 并查看 [兼容 GPU 列表](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus)。
 
 ## 制作启动盘
 
