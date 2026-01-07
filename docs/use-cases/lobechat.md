@@ -5,33 +5,20 @@ description: Learn how to install LobeChat on Olares and integrate it with Ollam
 
 # Build your local AI assistant with LobeChat
 
-LobeChat is an open-source, modern AI chat framework that supports file uploads, knowledge bases, and multi-modal interactions, ensuring a secure local chat experience. It also supports integration with Ollama, which allows you to use the large language models (LLMs) provided by Ollama to enhance your chat applications within LobeChat easily.
+LobeChat is an open-source, modern AI chat framework that supports file uploads, knowledge bases, and multi-modal interactions, ensuring a secure local chat experience. It also supports integration with Ollama, which allows you to use the large language models (LLMs) provided by Ollama to enhance your chat applications within LobeChat easily. Olares streamlines and simplifies the deployment of both, allowing you to skip complex manual environment configurations.
 
 This guide covers the installation, configuration, and practical usage of these tools to create your personalized AI assistants.
 
 ## Learning objectives
 
 By the end of this guide, you are able to:
-- Understand the relationship between LobeChat and Ollama.
-- Install LobeChat and Ollama directly from the Olares Market.
+- Install LobeChat directly from the Olares Market.
 - Configure LobeChat to communicate with your local Ollama instance.
 - Use LobeChat for specific scenarios such as content writing and coding.
 
 ## Before you begin
 
-### Prerequisites
-
-- Hardware: An Olares-compatible device with sufficient RAM and storage to run local models.
-- System: Olares OS is installed and running.
-- Network: An active internet connection required for installation and operation.
-
-### Concept note
-
-By combining LobeChat's intuitive frontend interface with Ollama's backend capabilities, you can turn your Olares device into a powerful, private AI workstation. 
-
-- LobeChat: The frontend user interface that allows you to interact with various language models via a chat window.
-- Ollama: The backend engine that runs the language models locally, providing computation power and API interfaces. For more information see [Ollama](ollama.md).
-- Olares: The operating system (OS) that streamlines and simplifies the deployment of both, allowing you to skip complex manual environment configurations.
+Ensure that Ollama is installed and running. For more information, see [Download and run local AI models via Ollama](ollama.md).
 
 ## Install LobeChat
 
@@ -39,7 +26,7 @@ Install LobeChat and related dependencies.
 
 1. From the Olares Market, search for "LobeChat".
 
-   ![Search for LobeChat from Market](../public/images/manual/use-cases/find-lobechat.png#bordered)
+   ![Search for LobeChat from Market](/images/manual/use-cases/find-lobechat.png#bordered)
 
 2. Click **Get**, and then click **Install**.
 3. The system automatically detects and prompts you to install necessary dependencies if they are not already installed, such as Ollama. Allow these to install, and then wait for the installation to finish.
@@ -48,46 +35,42 @@ Install LobeChat and related dependencies.
 
 After the installation is completed, you must connect LobeChat to Ollama to make the chat interface work.
 
-1. From the Olares launchpad, click **LobeChat** to open the application.
-2. In LobeChat, go to **Settings** > **Language Model**.
-3. In the **Ollama** section, find the **Interface proxy address** field, and then enter your local Ollama address https://39975b9a1.*UserID*.olares.com. 
+1. Open **LobeChat** from Launchpad.
+2. Click the LobeChat icon in the upper-left corner, and then go to **Settings** > **Language Model**.
 
-   :::info
-   Replace *UserID* with the Olares Admin's local name. For example, `https://39975b9a1.alexmiles.olares.com`.
-   :::
+   ![LobeChat settings menu](/images/manual/use-cases/lobechat-settings-menu.png#bordered)
 
-   ![Interface proxy address connection](../public/images/manual/use-cases/lobechat-connection-setting.png#bordered)
+3. In the **Ollama** section, find the **Interface proxy address** field, and then enter your local Ollama address. 
 
-4. Click **Check** to verify the connection. A **Check Passed** message indicates that the proxy address is correct.
+   ![Interface proxy address connection](/images/manual/use-cases/lobechat-connection-setting.png#bordered)
+
+4. (Optional) To obtain your local Ollama host address, go to Olares **Settings** > **Application** > **Ollama** > **Ollama API** > **Set up endpoint**, and then copy the endpoint address.
+
+   ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl.png#bordered){width=60%} 
+
+5. Click **Check** under the Ollama model list to verify the connection. A **Check Passed** message indicates that the proxy address is correct.
+
+   ![Ollama connection successful](/images/manual/use-cases/ollama-model-checkpass.png#bordered)
 
 ## Install language models
 
-After connecting to Ollama, LobeChat lists supported models, including models that are not installed yet. 
-
-When you choose a model, LobeChat checks local storage. If the model is not installed, LobeChat prompts you to download it. Once the download completes, the model is ready to use.
-
+After connecting to Ollama, LobeChat lists supported models, including models that are not installed yet. When you choose a model, LobeChat checks local storage. If the model is not installed, LobeChat prompts you to download it. After the download finishes, the model is ready to use.
 
 You can install these models directly through the LobeChat user interface (UI) or via the Ollama command line (CLI).
 
-### Method A: Install via LobeChat UI
+### Install via LobeChat UI
 
-1. In the Chat window, click <i class="material-symbols-outlined">neurology</i> to select the target language model.
-2. Send a message to start a chat with that model.
-3. If the language model is not installed, you are prompted right in the chat to download and install it.
+When you are chatting with a selected language model, if the language model is not installed, you are prompted right in the chat to download and install it.
 
-    ![Install language model via LobeChat UI](../public/images/manual/use-cases/download-in-lobechat.png#bordered)
+![Install language model via LobeChat UI](/images/manual/use-cases/download-in-lobechat.png#bordered)
 
-4. When the installation is completed, the model is ready to use.
+### Install via Ollama CLI
 
-### Method B: Install via Ollama CLI
-
-1. Visit the Ollama library to find the target model. For example, gemma2.
-2. Select the parameters suitable for your hardware specifications.
-3. Copy the run command. For example, `ollama run gemma2`.
-4. Open the Ollama terminal from the Olares launchpad.
-5. Paste the command and press Enter.
-6. To verify the installation, run the `ollama list` command.
-
+1. Check the [Ollama Library](https://ollama.com/library) to explore available models.
+2. To download a model, use the following command:
+```bash
+ollama pull [model]
+```
 For more information, see [Download and run local AI models via Ollama](ollama.md).
 
 ## Use scenarios
@@ -115,7 +98,7 @@ To help you get started, this guide demonstrates only some typical configuration
 
 1. Click **Open Chat Settings**.
 
-   ![Open Chat Settings](../public/images/manual/use-cases/open-chat-settings.png#bordered)
+   ![Open Chat Settings](/images/manual/use-cases/open-chat-settings.png#bordered)
 
 2. Customize assistant identity.
 
@@ -123,7 +106,7 @@ To help you get started, this guide demonstrates only some typical configuration
    
    b. Click **Update Assistant Information**.
 
-   ![LobeChat session settings](../public/images/manual/use-cases/lobechat-session-settings.png#bordered)   
+   ![LobeChat session settings](/images/manual/use-cases/lobechat-session-settings.png#bordered)   
 
 3. Define assistant role.
 
@@ -154,18 +137,18 @@ To help you get started, this guide demonstrates only some typical configuration
 
    a. Hover over the plug-in icon and click **Plugin Store**.
 
-      ![Install LobeChat plug-in](../public/images/manual/use-cases/lobechat-plugin-install.png#bordered)
+      ![Install LobeChat plug-in](/images/manual/use-cases/lobechat-plugin-install.png#bordered)
 
    b. On the **LobeHub Plugins** tab, search for `image`, select **Pollinate drawing** for example, and then click **Install**.
 
-      ![Install LobeChat plug-in Pollinate Drawing](../public/images/manual/use-cases/install-pollinate-drawing.png#bordered)
+      ![Install LobeChat plug-in Pollinate Drawing](/images/manual/use-cases/install-pollinate-drawing.png#bordered)
 
 #### 4. Interact with the assistant
 
 1. Enter and send your draft content to get a refined version.
 2. Hover over the plug-in icon to ensure that **Pollinate drawing** is enabled, and then ask the assistant to create a cover image for the content. It uses the enabled plug-in to generate an image.
 
-   ![LobeChat plug-in enabled](../public/images/manual/use-cases/lobechat-plugin-enable.png#bordered)
+   ![LobeChat plug-in enabled](/images/manual/use-cases/lobechat-plugin-enable.png#bordered)
 
 3. Brainstorm and iterate with the language model to get your ideal content textually and visually.
 
@@ -174,24 +157,6 @@ To help you get started, this guide demonstrates only some typical configuration
 If you are satisfied with the performance of the assistant and want to access it quickly later on, hover over it in the sidebar, click <i class="material-symbols-outlined">more_vert</i>, and then click **Pin** to keep it accessible at the top of your list.
 
 ![Pin LobeChat assistant](../public/images/manual/use-cases/pin-writing-bot.png#bordered)
-<!--this senario pending the text to speech plug-in work
-### Scenario 2: Training and eduction
-
-#### Task: Language learning
-
-#### Selected model: Llama 3.1
-
-LIAMA (Language Intelligence Model for AI Applications) is a large language model that specializes in multilingual support, natural language understanding, domain-specific knowledge, content creation, summarization, and translation.
-
-#### Procedure
-
-1. From the left navigation pane, click **New Assistant**.
-2. From the top language model list, switch the active model to **Llama 3.1**.
-2. In the **Role Setting** area, click <i class="material-symbols-outlined">edit_square</i> to enter your prompt for this specific role. For example, 
-
-   c. Customize your own opening message or question displayed when the conversation starts by going to **Settings > Default Assistant > Opening Settings**. You can introduce this chat assistant's features or facilitate your conversations by providing guiding questions. 
-   d. Go back to the chat and engage in the conversation to practice French syntax and vocabulary without language barriers.
--->
 
 ### Coding assistant
 
@@ -207,7 +172,7 @@ To help you get started, this guide demonstrates only some typical configuration
 
 1. Click **Open Chat Settings**.
 
-   ![Open Chat Settings](../public/images/manual/use-cases/open-chat-settings.png#bordered)
+   ![Open Chat Settings](/images/manual/use-cases/open-chat-settings.png#bordered)
 
 2. Customize assistant identity.
 
@@ -215,7 +180,7 @@ To help you get started, this guide demonstrates only some typical configuration
    
    b. Click **Update Assistant Information**.
 
-   ![LobeChat session settings](../public/images/manual/use-cases/lobechat-session-settings.png#bordered)    
+   ![LobeChat session settings](/images/manual/use-cases/lobechat-session-settings.png#bordered)    
 
 3. Define assistant role.
 
@@ -280,13 +245,13 @@ To help you get started, this guide demonstrates only some typical configuration
 
    c. Check your current folder. You should see a new file named `employees.csv`. Open it to verify the generated mock data.
 
-      ![Dev bot result verification](../public/images/manual/use-cases/dev-bot-result.png#bordered)  
+      ![Dev bot result verification](/images/manual/use-cases/dev-bot-result.png#bordered)  
 
 #### 4. Pin the assistant
 
 If you are satisfied with the assistant's performance, hover over it in the sidebar, click <i class="material-symbols-outlined">more_vert</i>, and then click **Pin** to keep it accessible at the top of your list.
 
-![Pin dev bot](../public/images/manual/use-cases/pin-dev-bot.png#bordered)
+![Pin dev bot](/images/manual/use-cases/pin-dev-bot.png#bordered)
 
 ### Real-time news analyst
 
@@ -302,7 +267,7 @@ To help you get started, this guide demonstrates only some typical configuration
 
 1. Click **Open Chat Settings**.
 
-   ![Open Chat Settings](../public/images/manual/use-cases/open-chat-settings.png#bordered)
+   ![Open Chat Settings](/images/manual/use-cases/open-chat-settings.png#bordered)
 
 2. Customize assistant identity.
 
@@ -310,7 +275,7 @@ To help you get started, this guide demonstrates only some typical configuration
    
    b. Click **Update Assistant Information**.
 
-   ![LobeChat session settings](../public/images/manual/use-cases/lobechat-session-settings.png#bordered)   
+   ![LobeChat session settings](/images/manual/use-cases/lobechat-session-settings.png#bordered)   
 
 3. Define assistant role.
 
@@ -337,7 +302,7 @@ To help you get started, this guide demonstrates only some typical configuration
    - It excels at various NLP tasks such as contextual understanding and content writing.
    - It is compatible with functional calling, so you can install LobeChat plug-ins for enhanced capabilities.
 
-   ![Select language model](../public/images/manual/use-cases/select-qwen.png#bordered) 
+   ![Select language model](/images/manual/use-cases/select-qwen.png#bordered) 
 
 3. Install a web-access plug-in to allow the assistant to access live web pages and analyze real-time content from any URLs you provide. For example, **Website Crawler**. 
 
@@ -347,17 +312,17 @@ To help you get started, this guide demonstrates only some typical configuration
 
    a. Hover over the plug-in icon and click **Plugin Store**.
 
-   ![Install LobeChat plug-in](../public/images/manual/use-cases/select-plugin.png#bordered)
+   ![Install LobeChat plug-in](/images/manual/use-cases/select-plugin.png#bordered)
 
    b. On the **LobeHub Plugins** tab, search for `website`, select **Website Crawler** for example, and then click **Install**.
 
-   ![Install LobeChat plug-in Website Crawler](../public/images/manual/use-cases/install-website-crawler.png#bordered)
+   ![Install LobeChat plug-in Website Crawler](/images/manual/use-cases/install-website-crawler.png#bordered)
 
 #### 4. Interact with the assistant
 
 1. In the basic interaction area, hover over the plug-in icon to ensure that the **Website Crawler** plug-in is enabled.
 
-   ![LobeChat crawler plug-in enabled](../public/images/manual/use-cases/website-crawler-enabled.png#bordered)
+   ![LobeChat crawler plug-in enabled](/images/manual/use-cases/website-crawler-enabled.png#bordered)
 
 2. Send the URL address to the chat. For example, `https://github.com/trending`.
 3. Paste and send the URL to the chat. The assistant lists specific news stories with summaries.
@@ -366,4 +331,4 @@ To help you get started, this guide demonstrates only some typical configuration
 
 If you find this useful for daily updates, hover over it in the sidebar, click <i class="material-symbols-outlined">more_vert</i>, and then click **Pin** to keep it accessible at the top of your list.
 
-![Pin chat assistant to list for easy access](../public/images/manual/use-cases/pin-daily-tech-digest.png#bordered)
+![Pin chat assistant to list for easy access](/images/manual/use-cases/pin-daily-tech-digest.png#bordered)
