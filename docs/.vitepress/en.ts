@@ -487,7 +487,11 @@ const side = {
       {
         text: "ACE-Step",
         link: "/use-cases/ace-step",
-      },      
+      },   
+      {
+        text: "LobeChat",
+        link: "/use-cases/lobechat",
+      },   
     ],
   },
  ],
