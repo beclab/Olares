@@ -9,7 +9,6 @@ import (
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	corev1 "k8s.io/api/core/v1"
@@ -236,20 +235,6 @@ func (r *PodAbnormalSuspendAppController) trySuspendApp(ctx context.Context, own
 	if _, err := apputils.UpdateAppMgrStatus(name, status); err != nil {
 		return false, err
 	}
-
-	utils.PublishAppEvent(utils.EventParams{
-		Owner:      am.Spec.AppOwner,
-		Name:       am.Spec.AppName,
-		OpType:     string(status.OpType),
-		OpID:       opID,
-		State:      appv1alpha1.Stopping.String(),
-		Progress:   message,
-		RawAppName: am.Spec.RawAppName,
-		Type:       am.Spec.Type.String(),
-		Title:      apputils.AppTitle(am.Spec.Config),
-		Reason:     reason,
-		Message:    message,
-	})
 	klog.Infof("suspend requested for app=%s owner=%s, reason=%s", am.Spec.AppName, am.Spec.AppOwner, message)
 	return true, nil
 }
