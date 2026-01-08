@@ -7,6 +7,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
+	"github.com/nats-io/nats.go"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
@@ -18,11 +19,23 @@ var AppEventQueue *QueuedEventController
 type QueuedEventController struct {
 	wq  workqueue.RateLimitingInterface
 	ctx context.Context
+	nc  *nats.Conn
 }
 
 type QueueEvent struct {
 	Subject string
 	Data    interface{}
+}
+
+type UserEvent struct {
+	Topic   string  `json:"topic"`
+	Payload Payload `json:"payload"`
+}
+
+type Payload struct {
+	User      string    `json:"user"`
+	Operator  string    `json:"operator"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 func (qe *QueuedEventController) processNextWorkItem() bool {
@@ -41,11 +54,19 @@ func (qe *QueuedEventController) process(obj interface{}) {
 	if !ok {
 		return
 	}
-	err := utils.PublishToNats(eobj.Subject, eobj.Data)
-	if err != nil {
-		klog.Errorf("async publish subject %s,data %v, failed %v", eobj.Subject, eobj.Data, err)
-	} else {
-		klog.Infof("publish event success data: %#v", eobj.Data)
+	for {
+		err := qe.publish(eobj.Subject, eobj.Data)
+		if err == nil {
+			klog.Infof("publish event success data: %#v", eobj.Data)
+			return
+		}
+		klog.Errorf("publish subject %s, data %v failed: %v", eobj.Subject, eobj.Data, err)
+		select {
+		case <-qe.ctx.Done():
+			return
+		case <-time.After(time.Second):
+
+		}
 	}
 }
 
@@ -68,9 +89,14 @@ func (qe *QueuedEventController) enqueue(obj interface{}) {
 	qe.wq.Add(obj)
 }
 
-func NewAppEventQueue(ctx context.Context) *QueuedEventController {
+func (qe *QueuedEventController) publish(subject string, data interface{}) error {
+	return utils.PublishEvent(qe.nc, subject, data)
+}
+
+func NewAppEventQueue(ctx context.Context, nc *nats.Conn) *QueuedEventController {
 	return &QueuedEventController{
 		ctx: ctx,
+		nc:  nc,
 		wq:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "app-event-queue"),
 	}
 }
@@ -108,5 +134,18 @@ func PublishAppEventToQueue(p utils.EventParams) {
 		data.EntranceStatuses = p.EntranceStatuses
 	}
 
+	AppEventQueue.enqueue(&QueueEvent{Subject: subject, Data: data})
+}
+
+func PublishUserEventToQueue(topic, user, operator string) {
+	subject := "os.users"
+	data := UserEvent{
+		Topic: topic,
+		Payload: Payload{
+			User:      user,
+			Operator:  operator,
+			Timestamp: time.Now(),
+		},
+	}
 	AppEventQueue.enqueue(&QueueEvent{Subject: subject, Data: data})
 }

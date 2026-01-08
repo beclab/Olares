@@ -19,7 +19,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	"github.com/emicklei/go-restful/v3"
@@ -264,22 +263,11 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 			UpdateTime: &now,
 		}
 
-		am, err := apputils.UpdateAppMgrStatus(appMgr.Name, status)
+		_, err = apputils.UpdateAppMgrStatus(appMgr.Name, status)
 		if err != nil {
 			api.HandleError(resp, req, err)
 			return
 		}
-		utils.PublishAppEvent(utils.EventParams{
-			Owner:      am.Spec.AppOwner,
-			Name:       am.Spec.AppName,
-			OpType:     string(am.Status.OpType),
-			OpID:       opID,
-			State:      v1alpha1.Upgrading.String(),
-			RawAppName: am.Spec.RawAppName,
-			Type:       am.Spec.Type.String(),
-			Title:      apputils.AppTitle(am.Spec.Config),
-			Message:    fmt.Sprintf("app %s was upgrade via setup domain by user %s", am.Spec.AppName, am.Spec.AppOwner),
-		})
 	}
 	resp.WriteAsJson(appUpdated.Spec.Settings)
 }

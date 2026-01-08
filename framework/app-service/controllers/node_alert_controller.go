@@ -8,6 +8,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
+	"github.com/nats-io/nats.go"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -54,6 +55,7 @@ type NodeAlertController struct {
 	// lastPressureState tracks the last known pressure state for each node and pressure type
 	lastPressureState map[string]bool
 	mutex             sync.RWMutex
+	NatsConn          *nats.Conn
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -245,5 +247,5 @@ func (r *NodeAlertController) sendNodeAlert(nodeName string, pressureType NodePr
 
 // publishToNats publishes a message to the specified NATS subject
 func (r *NodeAlertController) publishToNats(subject string, data interface{}) error {
-	return utils.PublishToNats(subject, data)
+	return utils.PublishEvent(r.NatsConn, subject, data)
 }

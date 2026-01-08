@@ -130,15 +130,6 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 					return
 				} // end of err != nil
 
-				p.finally = func() {
-					klog.Infof("app %s install successfully, update app state to initializing", p.manager.Spec.AppName)
-					updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Initializing, nil, appsv1.Initializing.String(), "")
-					if updateErr != nil {
-						klog.Errorf("update status failed %v", updateErr)
-						return
-					}
-
-				}
 				if p.manager.Spec.Type == appsv1.Middleware {
 					ok, err := ops.WaitForLaunch()
 					if !ok {
@@ -164,6 +155,16 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 							klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.Running, updateErr)
 							return
 						}
+					}
+				} else {
+					p.finally = func() {
+						klog.Infof("app %s install successfully, update app state to initializing", p.manager.Spec.AppName)
+						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Initializing, nil, appsv1.Initializing.String(), "")
+						if updateErr != nil {
+							klog.Errorf("update status failed %v", updateErr)
+							return
+						}
+
 					}
 				}
 			}()

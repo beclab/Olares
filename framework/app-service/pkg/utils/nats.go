@@ -47,96 +47,13 @@ type EventParams struct {
 	SharedEntrances  []v1alpha1.Entrance
 }
 
-type UserEvent struct {
-	Topic   string  `json:"topic"`
-	Payload Payload `json:"payload"`
+func PublishEvent(nc *nats.Conn, subject string, data interface{}) error {
+	return publish(nc, subject, data)
 }
 
-type Payload struct {
-	User      string    `json:"user"`
-	Operator  string    `json:"operator"`
-	Timestamp time.Time `json:"timestamp"`
-}
-
-func PublishUserEvent(topic, user, operator string) {
-	subject := "os.users"
-	data := UserEvent{
-		Topic: topic,
-		Payload: Payload{
-			User:      user,
-			Operator:  operator,
-			Timestamp: time.Now(),
-		},
-	}
-	if err := publish(subject, data); err != nil {
-		klog.Errorf("async publish subject %s,data %v, failed %v", subject, data, err)
-	} else {
-		t, _ := json.Marshal(data)
-		klog.Infof("publish user event success. data: %v", string(t))
-	}
-}
-
-func PublishAppEvent(p EventParams) {
-	subject := fmt.Sprintf("os.application.%s", p.Owner)
-
-	now := time.Now()
-	data := Event{
-		EventID:    fmt.Sprintf("%s-%s-%d", p.Owner, p.Name, now.UnixMilli()),
-		CreateTime: now,
-		Name:       p.Name,
-		Type: func() string {
-			if p.Type == "" {
-				return "app"
-			}
-			return p.Type
-		}(),
-		OpType:   p.OpType,
-		OpID:     p.OpID,
-		State:    p.State,
-		Progress: p.Progress,
-		User:     p.Owner,
-		RawAppName: func() string {
-			if p.RawAppName == "" {
-				return p.Name
-			}
-			return p.RawAppName
-		}(),
-		Title:   p.Title,
-		Reason:  p.Reason,
-		Message: p.Message,
-	}
-	if len(p.EntranceStatuses) > 0 {
-		data.EntranceStatuses = p.EntranceStatuses
-	}
-
-	if err := publish(subject, data); err != nil {
-		klog.Errorf("async publish subject %s,data %v, failed %v", subject, data, err)
-	} else {
-		klog.Infof("publish event success data: %#v", data)
-	}
-}
-
-func PublishToNats(subject string, data interface{}) error {
-	return publish(subject, data)
-}
-
-func publish(subject string, data interface{}) error {
-	natsHost := os.Getenv("NATS_HOST")
-	natsPort := os.Getenv("NATS_PORT")
-
-	username := os.Getenv("NATS_USERNAME")
-	password := os.Getenv("NATS_PASSWORD")
-
-	natsURL := fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
-	nc, err := nats.Connect(natsURL, nats.UserInfo(username, password))
-	if err != nil {
-		klog.Infof("connect error: err=%v", err)
-		return err
-	}
-	defer nc.Drain()
+func publish(nc *nats.Conn, subject string, data interface{}) error {
 	d, err := json.Marshal(data)
 	if err != nil {
-		klog.Errorf("marshal failed: %v", err)
 		return err
 	}
 	err = nc.Publish(subject, d)
@@ -147,34 +64,38 @@ func publish(subject string, data interface{}) error {
 	return nil
 }
 
-func PublishMiddlewareEvent(owner, name, opType, opID, state, progress string, entranceStatuses []v1alpha1.EntranceStatus, rawAppName string) {
-	subject := fmt.Sprintf("os.application.%s", owner)
+func NewNatsConn() (*nats.Conn, error) {
+	natsHost := os.Getenv("NATS_HOST")
+	natsPort := os.Getenv("NATS_PORT")
+	username := os.Getenv("NATS_USERNAME")
+	password := os.Getenv("NATS_PASSWORD")
 
-	now := time.Now()
-	data := Event{
-		EventID:    fmt.Sprintf("%s-%s-%d", owner, name, now.UnixMilli()),
-		CreateTime: now,
-		Name:       name,
-		Type:       "middleware",
-		OpType:     opType,
-		OpID:       opID,
-		State:      state,
-		Progress:   progress,
-		User:       owner,
-		RawAppName: func() string {
-			if rawAppName == "" {
-				return name
+	natsURL := fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
+
+	opts := []nats.Option{
+		nats.UserInfo(username, password),
+		nats.MaxReconnects(-1),
+		nats.ReconnectWait(2 * time.Second),
+		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
+			if err != nil {
+				klog.Warningf("NATS disconnected: %v, will attempt to reconnect", err)
+			} else {
+				klog.Infof("NATS disconnected, will attempt to reconnect")
 			}
-			return rawAppName
-		}(),
-	}
-	if len(entranceStatuses) > 0 {
-		data.EntranceStatuses = entranceStatuses
+		}),
+		nats.ReconnectHandler(func(nc *nats.Conn) {
+			klog.Infof("NATS reconnected to %s", nc.ConnectedUrl())
+		}),
+		nats.ClosedHandler(func(nc *nats.Conn) {
+			klog.Errorf("NATS connection closed permanently: %v", nc.LastError())
+		}),
 	}
 
-	if err := publish(subject, data); err != nil {
-		klog.Errorf("async publish subject %s,data %v, failed %v", subject, data, err)
-	} else {
-		klog.Infof("publish event success data: %#v", data)
+	nc, err := nats.Connect(natsURL, opts...)
+	if err != nil {
+		klog.Errorf("failed to connect to NATS: %v", err)
+		return nil, err
 	}
+	klog.Infof("connected to NATS at %s", natsURL)
+	return nc, nil
 }

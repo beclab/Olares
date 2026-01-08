@@ -6,7 +6,6 @@ import (
 
 	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -100,17 +99,6 @@ func (p *PendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 				klog.Error("update app manager status error, ", err, ", ", p.manager.Name)
 				return err
 			}
-			appevent.PublishAppEventToQueue(utils.EventParams{
-				Owner:      p.manager.Spec.AppOwner,
-				Name:       p.manager.Spec.AppName,
-				OpType:     string(p.manager.Spec.OpType),
-				OpID:       p.manager.Status.OpID,
-				State:      appsv1.Downloading.String(),
-				RawAppName: p.manager.Spec.RawAppName,
-				Type:       p.manager.Spec.Type.String(),
-				Title:      apputils.AppTitle(p.manager.Spec.Config),
-			})
-
 			return nil
 		},
 	); err != nil {
