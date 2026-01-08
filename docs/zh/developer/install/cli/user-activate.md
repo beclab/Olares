@@ -1,8 +1,12 @@
-# `user activate`
+# `activate`
 
 ## 命令说明
 
-`user activate`命令用于激活已有的 Olares 账户，你需要至少提供 Olares ID、登录密码和助记词短语才能完成激活。该命令通常需要使用管理员权限（`sudo`）执行。
+:::info 执行权限
+该命令通常需要使用管理员权限（`sudo`）执行。
+:::
+
+`activate`子命令用于激活已有的 Olares 账户，你需要至少提供 Olares ID、登录密码和助记词短语才能完成激活。
 
 ```bash
 olares-cli user activate <Olares ID> [选项]
@@ -26,6 +30,7 @@ olares-cli user activate <Olares ID> [选项]
 | `--location` | | 设置系统时区位置。 | 否 | `Asia/Shanghai` |
 | `--mnemonic` | | 指定用于激活的 12 词助记词短语。 | **是** | 无 |
 | `--password` | `-p` | 指定待激活 Olares 账户的登录密码。 | **是** | 无 |
+| `--reset-password` | | 指定用于密码重置的新密码。<br>仅在执行密码重置时需要。| 否 | 无 |
 | `--vault` | | 指定 Vault 服务的 URL。<br>例如：`https://example.com` | 否 | `http://127.0.0.1:30181` |
 
 ## 使用示例

@@ -614,7 +614,7 @@ const side = {
             { text: "gpu", link: "/developer/install/cli/gpu" },
             { text: "osinfo", link: "/developer/install/cli/osinfo" },
             { text: "node", link: "/developer/install/cli/node" },
-            {
+            { text: "disk", link: "/developer/install/cli/disk" },            {
               text: "backups",
               link: "/developer/install/cli/backups",
               collapsed: true,
@@ -640,8 +640,17 @@ const side = {
               link: "/developer/install/cli/install",
             },
             {
-              text: "user activate",
-              link: "/developer/install/cli/user-activate",
+              text: "user",
+              link: "/developer/install/cli/user",
+              collapsed: true,
+              items: [
+                { text: "activate", link: "/developer/install/cli/user-activate" },
+                { text: "create", link: "/developer/install/cli/user-create" },
+                { text: "delete", link: "/developer/install/cli/user-delete" },
+                { text: "get", link: "/developer/install/cli/user-get" },
+                { text: "list", link: "/developer/install/cli/user-list" },
+                { text: "reset-password", link: "/developer/install/cli/user-reset-password" },
+              ],
             },
             {
               text: "logs",
@@ -666,6 +675,10 @@ const side = {
             {
               text: "stop",
               link: "/developer/install/cli/stop",
+            },
+            {
+              text: "upgrade",
+              link: "/developer/install/cli/upgrade",
             },
             {
               text: "uninstall",

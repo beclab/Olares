@@ -1,8 +1,13 @@
-# `user activate`
+# `activate`
 
 ## Synopsis
 
-The `user activate` command activates an existing Olares account. It requires the user's Olares ID, password, and 12-word mnemonic phrase to complete the activation. This command typically requires administrator privileges (`sudo`).
+:::info
+This command typically requires `sudo`.
+:::
+
+The `activate` subcommand activates an existing Olares account. It requires the user's Olares ID, password, and 12-word mnemonic phrase to complete the activation. 
+
 
 ```bash
 olares-cli user activate <Olares ID> [options]
@@ -26,6 +31,7 @@ olares-cli user activate <Olares ID> [options]
 | `--location` | | Sets the timezone location. | No | `Asia/Shanghai` |
 | `--mnemonic` | | Specifies the 12-word mnemonic phrase required for activation. | **Yes** | N/A |
 | `--password` | `-p` | Specifies the Olares login password for authentication.	 | **Yes** | N/A |
+| `--reset-password` | | Specifies the new password to set during password reset.<br>This option is required only when performing a password reset. | No | N/A |
 | `--vault` | | Specifies the Vault service URL (e.g., `https://example.com`). | No | `http://127.0.0.1:30181` |
 
 ## Example
