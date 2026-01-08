@@ -52,6 +52,12 @@ func AddContainer(c *restful.Container) error {
 		Metadata(restfulspec.KeyOpenAPITags, tags).
 		Returns(http.StatusOK, "", response.Response{}))
 
+	ws.Route(ws.GET("/cluster").
+		To(handler.getClusterMetric).
+		Doc("get the cluster current metrics ( cpu, memory, disk ).").
+		Metadata(restfulspec.KeyOpenAPITags, tags).
+		Returns(http.StatusOK, "", response.Response{}))
+
 	ws.Route(ws.GET("/config-system").
 		To(handler.HandleGetSysConfig).
 		Doc("get user locale.").

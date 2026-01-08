@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -9,7 +10,9 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/api"
 	"bytetrade.io/web3os/bfl/pkg/api/response"
 	"bytetrade.io/web3os/bfl/pkg/apis"
+	"bytetrade.io/web3os/bfl/pkg/apis/backend/v1/metrics"
 	"bytetrade.io/web3os/bfl/pkg/apis/iam/v1alpha1/operator"
+	monitov1alpha1 "bytetrade.io/web3os/bfl/pkg/apis/monitor/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/apiserver/runtime"
 	"bytetrade.io/web3os/bfl/pkg/app_service/v1"
 	"bytetrade.io/web3os/bfl/pkg/client/clientset/v1alpha1"
@@ -370,4 +373,69 @@ func (h *Handler) myapps(req *restful.Request, resp *restful.Response) {
 	}
 	response.Success(resp, api.NewListResult(list))
 
+}
+
+func (h *Handler) getClusterMetric(req *restful.Request, resp *restful.Response) {
+	prome, err := metrics.NewPrometheus(metrics.PrometheusEndpoint)
+	if err != nil {
+		response.HandleError(resp, err)
+		return
+	}
+
+	opts := metrics.QueryOptions{
+		Level: metrics.LevelCluster,
+	}
+
+	metricsResult := prome.GetNamedMetrics(req.Request.Context(), []string{
+		"cluster_cpu_usage",
+		"cluster_cpu_total",
+		"cluster_disk_size_usage",
+		"cluster_disk_size_capacity",
+		"cluster_memory_total",
+		"cluster_memory_usage_wo_cache",
+		"cluster_net_bytes_transmitted",
+		"cluster_net_bytes_received",
+	}, time.Now(), opts)
+
+	var clusterMetrics monitov1alpha1.ClusterMetrics
+	for _, m := range metricsResult {
+		switch m.MetricName {
+		case "cluster_cpu_usage":
+			clusterMetrics.CPU.Usage = metrics.GetValue(&m)
+		case "cluster_cpu_total":
+			clusterMetrics.CPU.Total = metrics.GetValue(&m)
+
+		case "cluster_disk_size_usage":
+			clusterMetrics.Disk.Usage = metrics.GetValue(&m)
+		case "cluster_disk_size_capacity":
+			clusterMetrics.Disk.Total = metrics.GetValue(&m)
+
+		case "cluster_memory_total":
+			clusterMetrics.Memory.Total = metrics.GetValue(&m)
+		case "cluster_memory_usage_wo_cache":
+			clusterMetrics.Memory.Usage = metrics.GetValue(&m)
+
+		case "cluster_net_bytes_transmitted":
+			clusterMetrics.Net.Transmitted = metrics.GetValue(&m)
+
+		case "cluster_net_bytes_received":
+			clusterMetrics.Net.Received = metrics.GetValue(&m)
+		}
+	}
+
+	roundToGB := func(v float64) float64 { return math.Round((v/1000000000.00)*100.00) / 100.00 }
+	fmtMetricsValue(&clusterMetrics.CPU, "Cores", func(v float64) float64 { return v })
+	fmtMetricsValue(&clusterMetrics.Memory, "GB", roundToGB)
+	fmtMetricsValue(&clusterMetrics.Disk, "GB", roundToGB)
+
+	response.Success(resp, clusterMetrics)
+
+}
+
+func fmtMetricsValue(v *monitov1alpha1.MetricV, unit string, unitFunc func(float64) float64) {
+	v.Unit = unit
+
+	v.Usage = unitFunc(v.Usage)
+	v.Total = unitFunc(v.Total)
+	v.Ratio = math.Round((v.Usage / v.Total) * 100)
 }
