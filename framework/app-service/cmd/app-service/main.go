@@ -18,7 +18,6 @@ import (
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	kbopv1alphav1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
@@ -139,15 +138,15 @@ func main() {
 		setupLog.Error(err, "Unable to create controller", "controller", "Security")
 		os.Exit(1)
 	}
-	natsConn, err := utils.NewNatsConn()
-	if err != nil {
-		setupLog.Error(err, "Failed to connect to NATS")
-		os.Exit(1)
-	}
-	defer natsConn.Drain()
-	appEventQueue := appevent.NewAppEventQueue(ictx, natsConn)
+	appEventQueue := appevent.NewAppEventQueue(ictx, nil)
 	appevent.SetAppEventQueue(appEventQueue)
 	go appEventQueue.Run()
+
+	defer func() {
+		if nc := appEventQueue.GetNatsConn(); nc != nil {
+			nc.Drain()
+		}
+	}()
 
 	if err = (&controllers.ApplicationManagerController{
 		Client:      mgr.GetClient(),
@@ -205,7 +204,7 @@ func main() {
 	if err = (&controllers.NodeAlertController{
 		Client:     mgr.GetClient(),
 		KubeConfig: config,
-		NatsConn:   natsConn,
+		NatsConn:   nil,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "NodeAlert")
 		os.Exit(1)
