@@ -56,6 +56,7 @@ type NodeAlertController struct {
 	lastPressureState map[string]bool
 	mutex             sync.RWMutex
 	NatsConn          *nats.Conn
+	natsConnMux       sync.Mutex
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -247,5 +248,31 @@ func (r *NodeAlertController) sendNodeAlert(nodeName string, pressureType NodePr
 
 // publishToNats publishes a message to the specified NATS subject
 func (r *NodeAlertController) publishToNats(subject string, data interface{}) error {
+	if err := r.ensureNatsConnected(); err != nil {
+		return fmt.Errorf("failed to ensure NATS connection: %w", err)
+	}
 	return utils.PublishEvent(r.NatsConn, subject, data)
+}
+
+func (r *NodeAlertController) ensureNatsConnected() error {
+	r.natsConnMux.Lock()
+	defer r.natsConnMux.Unlock()
+
+	if r.NatsConn != nil && r.NatsConn.IsConnected() {
+		return nil
+	}
+	if r.NatsConn != nil {
+		r.NatsConn.Close()
+	}
+
+	klog.Info("NATS connection not established in NodeAlertController, attempting to connect...")
+	nc, err := utils.NewNatsConn()
+	if err != nil {
+		klog.Errorf("NodeAlertController failed to connect to NATS: %v", err)
+		return err
+	}
+
+	r.NatsConn = nc
+	klog.Info("NodeAlertController successfully connected to NATS")
+	return nil
 }
