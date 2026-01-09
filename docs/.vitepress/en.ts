@@ -539,6 +539,10 @@ const side = {
           text: "ACE-Step",
           link: "/use-cases/ace-step",
         },
+        {
+          text: "PDFMathTranslate",
+          link: "/use-cases/pdfmathtranslate",
+        },
       ],
     },
   ],
