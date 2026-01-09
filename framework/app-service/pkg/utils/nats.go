@@ -25,6 +25,7 @@ type Event struct {
 	User             string                    `json:"user"`
 	EntranceStatuses []v1alpha1.EntranceStatus `json:"entranceStatuses,omitempty"`
 	Title            string                    `json:"title,omitempty"`
+	Icon             string                    `json:"icon,omitempty"`
 	Reason           string                    `json:"reason,omitempty"`
 	Message          string                    `json:"message,omitempty"`
 	SharedEntrances  []v1alpha1.Entrance       `json:"sharedEntrances,omitempty"`
@@ -45,6 +46,7 @@ type EventParams struct {
 	Reason           string
 	Message          string
 	SharedEntrances  []v1alpha1.Entrance
+	Icon             string
 }
 
 func PublishEvent(nc *nats.Conn, subject string, data interface{}) error {
