@@ -2,10 +2,6 @@
 
 ## Synopsis
 
-:::info
-This command typically requires `sudo`.
-:::
-
 The `list` subcommand displays a list of all registered users in the Olares system. You can sort, filter, and format the output to suit your needs. 
 
 **Aliases**: `list`, `ls`, `l`

@@ -1,9 +1,6 @@
 # `get`
 
 ## Synopsis
-:::info
-This command typically requires `sudo`.
-:::
 
 The `get` subcommand retrieves detailed information about a specific Olares user account. The output can be formatted as a table or JSON. 
 
@@ -15,7 +12,7 @@ olares-cli user get <name> [options]
 
 | Argument | Description | Required|
 |--|--|--|
-| `<name>` | Specifies the username of the account to retrieve. <br>It is typically the part before the `@` symbol in an Olares ID. <br>For example, `alice123` for `alice123@olares.com`.| **Yes** |
+| `<name>` | Specifies the username of the account to retrieve. <br>It is typically the part before the `@` symbol in an Olares ID. <br>For example, `alice123` for `alice123@olares.com`.| Yes |
 
 ## Options
 | Option | Shorthand | Usage | Required | Default |
@@ -28,9 +25,9 @@ olares-cli user get <name> [options]
 ## Example
 
 ```bash
-# Get details for user named alice in default table format
-sudo olares-cli user get alice
+# Get details for user named alice123 in default table format
+sudo olares-cli user get alice123
 
-# Get details for user named bob in JSON format
-sudo olares-cli user get bob -o json
+# Get details for user named blake123 in JSON format
+sudo olares-cli user get blake123 -o json
 ```

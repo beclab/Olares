@@ -2,10 +2,6 @@
 
 ## Synopsis
 
-:::info
-This command typically requires `sudo`.
-:::
-
 The `create` subcommand creates a new user account in the Olares system. It allows administrators to define initial settings such as the username, password, role permissions, and resource limits. 
 
 **Aliases**: `create`, `add`, `new`
@@ -18,7 +14,7 @@ olares-cli user create <name> [options]
 
 | Argument | Description | Required|
 |--|--|--|
-| `<name>` | Specifies the username for the new account. <br>It is typically the part before the `@` symbol in an Olares ID. <br>For example, `alice123` for `alice123@olares.com`.| **Yes** |
+| `<name>` | Specifies the username for the new account. <br>It is typically the part before the `@` symbol in an Olares ID. <br>For example, `alice123` for `alice123@olares.com`.| Yes |
 
 ## Options
 | Option | Shorthand | Usage | Required | Default |
@@ -37,14 +33,14 @@ olares-cli user create <name> [options]
 
 ```bash
 # Create a basic user with default settings
-sudo olares-cli user create alice
+sudo olares-cli user create alice123
 
 # Create a user with a specified password and role
-sudo olares-cli user create bob -p "StrongPassword123" -r admin
+sudo olares-cli user create blake123 -p "StrongPassword123" -r admin
 
 # Create a user with custom resource limits (2 CPU cores, 4 GB memory)
-sudo olares-cli user create carol --cpu-limit 2 --memory-limit 4G
+sudo olares-cli user create carol123 --cpu-limit 2 --memory-limit 4G
 
 # Create a user with display name and description
-sudo olares-cli user create david --display-name "David Smith" --description "Data platform administrator"
+sudo olares-cli user create david123 --display-name "David Smith" --description "Data platform administrator"
 ```

@@ -1,9 +1,6 @@
 # `disk`
 
 ## 命令说明
-:::info 执行权限
-该命令通常需要使用管理员权限（`sudo`）执行。
-:::
 
 `disk`命令提供了一组用于管理 Olares 系统存储资源的工具，主要用于基于 LVM 的存储配置管理。
 
@@ -23,3 +20,13 @@ olares-cli disk <subcommand>
 | 名称 | 简写 | 说明 | 
 |--|--|--|
 | `--help` | `-h` | 显示帮助信息。 |
+
+## 使用示例
+
+```bash
+# 列出未挂载的磁盘
+sudo olares-cli disk list-unmounted
+
+# 添加新检测到的未挂载磁盘来扩展 Olares 存储
+sudo olares-cli disk extend
+```

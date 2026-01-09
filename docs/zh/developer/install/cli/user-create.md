@@ -2,10 +2,6 @@
 
 ## 命令说明
 
-:::info 执行权限
-该命令通常需要使用管理员权限（`sudo`）执行。
-:::
-
 `create`子命令用于在 Olares 中创建一个新的用户。管理员可以在创建时设置用户名、初始密码、角色权限以及资源限制等初始配置。
 
 **别名**：`create`、`add`、`new`
@@ -18,7 +14,7 @@ olares-cli user create <用户名> [选项]
 
 | 参数 | 说明 | 是否必需|
 |--|--|--|
-| `<用户名>` | 指定新用户的用户名。通常为 Olares ID 中`@`符号之前的部分。<br>例如`alice123@olares.com`中的`alice123`。| **是** |
+| `<用户名>` | 指定新用户的用户名。通常为 Olares ID 中`@`符号之前的部分。<br>例如`alice123@olares.com`中的`alice123`。| 是 |
 
 ## 选项
 | 选项 | 简写 | 用途 | 是否必需 | 默认值 |
@@ -37,14 +33,14 @@ olares-cli user create <用户名> [选项]
 
 ```bash
 # 使用默认设置创建用户
-sudo olares-cli user create alice
+sudo olares-cli user create alice123
 
 # 创建用户并指定密码和角色
-sudo olares-cli user create bob -p "StrongPassword123" -r admin
+sudo olares-cli user create blake123 -p "StrongPassword123" -r admin
 
 # 创建用户并设置资源限制（2 个 CPU 核心，4 GB 内存）
-sudo olares-cli user create carol --cpu-limit 2 --memory-limit 4G
+sudo olares-cli user create carol123 --cpu-limit 2 --memory-limit 4G
 
 # 创建用户并设置显示名称和描述
-sudo olares-cli user create david --display-name "David Smith" --description "Data platform administrator"
+sudo olares-cli user create david123 --display-name "David Smith" --description "Data platform administrator"
 ```
