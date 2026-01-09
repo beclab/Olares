@@ -22,12 +22,12 @@ olares-cli user get <name> [options]
 | `--no-headers` | | Disables the header row in the output. | No | N/A |
 | `--output` | `-o` | Specifies the output format. Valid values: `table`, `json`. | No | `table` |
 
-## Example
+## Examples
 
 ```bash
 # Get details for user named alice123 in default table format
-sudo olares-cli user get alice123
+olares-cli user get alice123
 
 # Get details for user named blake123 in JSON format
-sudo olares-cli user get blake123 -o json
+olares-cli user get blake123 -o json
 ```

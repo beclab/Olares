@@ -21,9 +21,9 @@ olares-cli user reset-password <username> [options]
 | `--kubeconfig` | | Specifies the path to a kubeconfig file. | No | N/A |
 | `--password` | `-p` | Specifies the new password for the user. | Yes | N/A |
 
-## Example
+## Examples
 
 ```bash
 # Reset password for user named alice123
-sudo olares-cli user reset-password alice123 -p "NewSecurePassword456!"
+olares-cli user reset-password alice123 -p "NewSecurePassword456!"
 ```

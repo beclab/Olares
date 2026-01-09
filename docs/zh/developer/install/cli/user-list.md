@@ -24,11 +24,11 @@ olares-cli user list [选项]
 
 ```bash
 # 以表格格式列出所有用户
-sudo olares-cli user list
+olares-cli user list
 
 # 以 JSON 格式列出所有用户
-sudo olares-cli user list -o json
+olares-cli user list -o json
 
 # 按角色排序列出用户
-sudo olares-cli user list --sort role
+olares-cli user list --sort role
 ```

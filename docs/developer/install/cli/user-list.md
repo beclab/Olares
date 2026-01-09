@@ -20,15 +20,15 @@ olares-cli user list [options]
 | `--reverse` | `-r` | Reverses the sort order of the output. | No | N/A |
 | `--sort` | | Sorts the output by a specific field.<br> Valid values: `name`, `role`, `create-time`, `memory`, `cpu` | No | N/A |
 
-## Example
+## Examples
 
 ```bash
 # List all users in a table format
-sudo olares-cli user list
+olares-cli user list
 
 # List all users in JSON format
-sudo olares-cli user list -o json
+olares-cli user list -o json
 
 # List users sorted by role
-sudo olares-cli user list --sort role
+olares-cli user list --sort role
 ```

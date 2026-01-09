@@ -30,15 +30,15 @@ olares-cli user activate <Olares ID> [options]
 | `--reset-password` | | Specifies the new password to set during password reset. This option is required only when performing a password reset. | No | N/A |
 | `--vault` | | Specifies the Vault service URL, such as `https://example.com`. | No | `http://127.0.0.1:30180` |
 
-## Example
+## Examples
 
 ```bash
 # Activate an Olares user account
-sudo olares-cli user activate alic123e@olares.com -p "HerPassWord"  --mnemonic "apple banana cherry door eagle forest grape house island jacket kite lemon"
+olares-cli user activate alic123e@olares.com -p "HerPassWord"  --mnemonic "apple banana cherry door eagle forest grape house island jacket kite lemon"
 
 # Activate an Olares user account with tunnel mode enabled
-sudo olares-cli user activate david456@olares.com -p "HisPassWord"  --enable-tunnel --host "frp-gateway.olares.com"  --jws "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo.signature"  --bfl http://127.0.0.1:30180 --vault http://127.0.0.1:30180/server  --mnemonic "apple banana cherry door eagle forest grape house island jacket kite lemon"
+olares-cli user activate david456@olares.com -p "HisPassWord"  --enable-tunnel --host "frp-gateway.olares.com"  --jws "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo.signature"  --bfl http://127.0.0.1:30180 --vault http://127.0.0.1:30180/server  --mnemonic "apple banana cherry door eagle forest grape house island jacket kite lemon"
 
 # Activate an Olares user account with specific language and timezone settings
-sudo olares-cli user activate carol789@olares.com -p "AnotherPassWord"  --mnemonic "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu"  --language "en-US" --location "America/New_York"
+olares-cli user activate carol789@olares.com -p "AnotherPassWord"  --mnemonic "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu"  --language "en-US" --location "America/New_York"
 ```

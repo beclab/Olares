@@ -25,5 +25,5 @@ olares-cli user reset-password <用户名> [选项]
 
 ```bash
 # 重置用户 alice123 的密码
-sudo olares-cli user reset-password alice123 -p "NewSecurePassword456!"
+olares-cli user reset-password alice123 -p "NewSecurePassword456!"
 ```

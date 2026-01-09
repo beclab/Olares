@@ -22,9 +22,9 @@ olares-cli user delete <name> [options]
 | `--help` | `-h` | Displays help information. | No | N/A |
 | `--kubeconfig` | | Specifies the path to a kubeconfig file. | No | N/A |
 
-## Example
+## Examples
 
 ```bash
 # Delete a user named alice123
-sudo olares-cli user delete alice123
+olares-cli user delete alice123
 ```

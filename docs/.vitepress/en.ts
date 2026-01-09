@@ -611,34 +611,34 @@ const side = {
           link: "/developer/install/cli/olares-cli",
           collapsed: true,
           items: [
-            { text: "gpu", link: "/developer/install/cli/gpu" },
-            { text: "osinfo", link: "/developer/install/cli/osinfo" },
-            { text: "node", link: "/developer/install/cli/node" },
-            { text: "disk", link: "/developer/install/cli/disk" },            {
+            {
               text: "backups",
               link: "/developer/install/cli/backups",
               collapsed: true,
               items: [
+                { text: "backup", link: "/developer/install/cli/backups-backup" },
                 { text: "download", link: "/developer/install/cli/backups-download" },
                 { text: "region", link: "/developer/install/cli/backups-region" },
-                { text: "backup", link: "/developer/install/cli/backups-backup" },
                 { text: "restore", link: "/developer/install/cli/backups-restore" },
                 { text: "snapshots", link: "/developer/install/cli/backups-snapshots" },
               ],
-            },
-            {
-              text: "change-ip",
-              link: "/developer/install/cli/change-ip",
-            },
-            {
-              text: "download",
-              link: "/developer/install/cli/download",
-            },
-            { text: "info", link: "/developer/install/cli/info" },
-            {
-              text: "install",
-              link: "/developer/install/cli/install",
-            },
+            }, 
+            { text: "change-ip", link: "/developer/install/cli/change-ip" },
+            { text: "disk", link: "/developer/install/cli/disk" },   
+            { text: "download", link: "/developer/install/cli/download" },
+            { text: "gpu", link: "/developer/install/cli/gpu" },
+            { text: "info", link: "/developer/install/cli/info" },         
+            { text: "install", link: "/developer/install/cli/install" },
+            { text: "logs", link: "/developer/install/cli/logs" },
+            { text: "node", link: "/developer/install/cli/node" },
+            { text: "osinfo", link: "/developer/install/cli/osinfo" },
+            { text: "precheck", link: "/developer/install/cli/precheck" },
+            { text: "prepare", link: "/developer/install/cli/prepare" },
+            { text: "release", link: "/developer/install/cli/release" },
+            { text: "start", link: "/developer/install/cli/start" },
+            { text: "stop", link: "/developer/install/cli/stop" },
+            { text: "uninstall", link: "/developer/install/cli/uninstall" },
+            { text: "upgrade", link: "/developer/install/cli/upgrade" },
             {
               text: "user",
               link: "/developer/install/cli/user",
@@ -651,38 +651,6 @@ const side = {
                 { text: "list", link: "/developer/install/cli/user-list" },
                 { text: "reset-password", link: "/developer/install/cli/user-reset-password" },
               ],
-            },
-            {
-              text: "logs",
-              link: "/developer/install/cli/logs",
-            },
-            {
-              text: "precheck",
-              link: "/developer/install/cli/precheck",
-            },
-            {
-              text: "prepare",
-              link: "/developer/install/cli/prepare",
-            },
-            {
-              text: "release",
-              link: "/developer/install/cli/release",
-            },
-            {
-              text: "start",
-              link: "/developer/install/cli/start",
-            },
-            {
-              text: "stop",
-              link: "/developer/install/cli/stop",
-            },
-            {
-              text: "upgrade",
-              link: "/developer/install/cli/upgrade",
-            },
-            {
-              text: "uninstall",
-              link: "/developer/install/cli/uninstall",
             },
           ],
         },

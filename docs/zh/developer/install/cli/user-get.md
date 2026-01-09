@@ -26,8 +26,8 @@ olares-cli user get <用户名> [选项]
 
 ```bash
 # 以默认表格格式查看用户 alice123 的信息
-sudo olares-cli user get alice123
+olares-cli user get alice123
 
 # 以 JSON 格式查看用户 blake123 的信息
-sudo olares-cli user get blake123 -o json
+olares-cli user get blake123 -o json
 ```

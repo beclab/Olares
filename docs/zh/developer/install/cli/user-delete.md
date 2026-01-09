@@ -26,5 +26,5 @@ olares-cli user delete <用户名> [选项]
 
 ```bash
 # 删除名为 alice123 的用户
-sudo olares-cli user delete alice123
+olares-cli user delete alice123
 ```

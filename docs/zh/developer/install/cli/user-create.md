@@ -33,14 +33,14 @@ olares-cli user create <用户名> [选项]
 
 ```bash
 # 使用默认设置创建用户
-sudo olares-cli user create alice123
+olares-cli user create alice123
 
 # 创建用户并指定密码和角色
-sudo olares-cli user create blake123 -p "StrongPassword123" -r admin
+olares-cli user create blake123 -p "StrongPassword123" -r admin
 
 # 创建用户并设置资源限制（2 个 CPU 核心，4 GB 内存）
-sudo olares-cli user create carol123 --cpu-limit 2 --memory-limit 4G
+olares-cli user create carol123 --cpu-limit 2 --memory-limit 4G
 
 # 创建用户并设置显示名称和描述
-sudo olares-cli user create david123 --display-name "David Smith" --description "Data platform administrator"
+olares-cli user create david123 --display-name "David Smith" --description "Data platform administrator"
 ```

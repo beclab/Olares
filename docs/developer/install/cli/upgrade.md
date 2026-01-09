@@ -26,7 +26,7 @@ These options apply to the main `upgrade` command and are inherited by its subco
 | `--help` | `-h` | Displays help information. | No | N/A |
 | `--version` | `-v` | Sets the target Olares version to upgrade to. For example, `1.10.0`, `1.10.0-20241109`. | No | N/A |
 
-## Option for `viable`
+## Options for `viable`
 
 | Option | Shorthand | Usage | Required | Default |
 |--|--|--|--|--|
@@ -36,18 +36,18 @@ These options apply to the main `upgrade` command and are inherited by its subco
 The `-b` shorthand is used by the parent command for `--base-dir`. However, when running `upgrade viable`, `-b` specifically refers to `--base`. 
 :::
 
-## Example
+## Examples
 
 ```bash
 # Check whether the current system can be upgraded directly
-sudo olares-cli upgrade viable
+olares-cli upgrade viable
 
 # Check upgrade viability from a specific base version
-sudo olares-cli upgrade viable --base 1.9.0
+olares-cli upgrade viable --base 1.9.0
 
 # Run pre-upgrade checks
-sudo olares-cli upgrade precheck
+olares-cli upgrade precheck
 
 # View the upgrade spec of the current CLI
-sudo olares-cli upgrade spec
+olares-cli upgrade spec
 ```

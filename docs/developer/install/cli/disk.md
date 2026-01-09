@@ -16,18 +16,18 @@ olares-cli disk <subcommand>
 | `extend` | Extends Olares storage capacity on LVM-based installations. |
 | `list-unmounted` | Lists unmounted disks. |
 
-## Flag
+## Options
 
 | Name | Shorthand | Usage | 
 |--|--|--|
 | `--help` | `-h` | Displays help information.|
 
-## Example
+## Examples
 
 ```bash
 # List all disks that are connected but not mounted
-sudo olares-cli disk list-unmounted
+olares-cli disk list-unmounted
 
 # Extend Olares storage by adding newly detected unmounted disks
-sudo olares-cli disk extend
+olares-cli disk extend
 ```

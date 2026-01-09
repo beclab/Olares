@@ -25,8 +25,8 @@ olares-cli disk <subcommand>
 
 ```bash
 # 列出未挂载的磁盘
-sudo olares-cli disk list-unmounted
+olares-cli disk list-unmounted
 
 # 添加新检测到的未挂载磁盘来扩展 Olares 存储
-sudo olares-cli disk extend
+olares-cli disk extend
 ```

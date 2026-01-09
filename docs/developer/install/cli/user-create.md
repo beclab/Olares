@@ -29,18 +29,18 @@ olares-cli user create <name> [options]
 | `--password` | `-p` | Sets the initial login password for the user. | No | N/A |
 | `--role` | `-r` | Sets the user role.<br>Valid values: `owner`, `admin`, `normal`. | No | `normal` |
 
-## Example
+## Examples
 
 ```bash
 # Create a basic user with default settings
-sudo olares-cli user create alice123
+olares-cli user create alice123
 
 # Create a user with a specified password and role
-sudo olares-cli user create blake123 -p "StrongPassword123" -r admin
+olares-cli user create blake123 -p "StrongPassword123" -r admin
 
 # Create a user with custom resource limits (2 CPU cores, 4 GB memory)
-sudo olares-cli user create carol123 --cpu-limit 2 --memory-limit 4G
+olares-cli user create carol123 --cpu-limit 2 --memory-limit 4G
 
 # Create a user with display name and description
-sudo olares-cli user create david123 --display-name "David Smith" --description "Data platform administrator"
+olares-cli user create david123 --display-name "David Smith" --description "Data platform administrator"
 ```

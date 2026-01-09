@@ -33,11 +33,11 @@ olares-cli user activate <Olares ID> [选项]
 
 ```bash
 # 激活 Olares 账户
-sudo olares-cli user activate alice123@olares.cn -p "HerPassWord"  --mnemonic "apple banana cherry door eagle forest grape house island jacket kite lemon"
+olares-cli user activate alice123@olares.cn -p "HerPassWord"  --mnemonic "apple banana cherry door eagle forest grape house island jacket kite lemon"
 
 # 启用隧道模式激活 Olares 账户
-sudo olares-cli user activate david456@olares.cn -p "HisPassWord"  --enable-tunnel --host "frp-gateway.olares.com"  --jws "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo.signature"  --bfl http://127.0.0.1:30180 --vault http://127.0.0.1:30180/server  --mnemonic "apple banana cherry door eagle forest grape house island jacket kite lemon"
+olares-cli user activate david456@olares.cn -p "HisPassWord"  --enable-tunnel --host "frp-gateway.olares.com"  --jws "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo.signature"  --bfl http://127.0.0.1:30180 --vault http://127.0.0.1:30180/server  --mnemonic "apple banana cherry door eagle forest grape house island jacket kite lemon"
 
 # 使用指定的语言和时区设置，激活 Olares 账户
-sudo olares-cli user activate carol789@olares.cn -p "AnotherPassWord"  --mnemonic "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu"  --language "cn-ZH" --location "Asia/Shanghai"
+olares-cli user activate carol789@olares.cn -p "AnotherPassWord"  --mnemonic "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu"  --language "cn-ZH" --location "Asia/Shanghai"
 ```
