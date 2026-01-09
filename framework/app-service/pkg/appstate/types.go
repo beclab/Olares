@@ -11,9 +11,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
-	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/middlewareinstaller"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	corev1 "k8s.io/api/core/v1"
@@ -82,19 +80,6 @@ func (b *baseStatefulApp) updateStatus(ctx context.Context, am *appsv1.Applicati
 		klog.Errorf("patch appmgr's  %s status failed %v", am.Name, err)
 		return err
 	}
-	appevent.PublishAppEventToQueue(utils.EventParams{
-		Owner:      b.manager.Spec.AppOwner,
-		Name:       b.manager.Spec.AppName,
-		OpType:     string(b.manager.Spec.OpType),
-		OpID:       b.manager.Status.OpID,
-		State:      state.String(),
-		RawAppName: b.manager.Spec.RawAppName,
-		Type:       b.manager.Spec.Type.String(),
-		Title:      apputils.AppTitle(b.manager.Spec.Config),
-		Reason:     reason,
-		Message:    message,
-	})
-
 	return nil
 }
 
