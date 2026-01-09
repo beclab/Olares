@@ -36,7 +36,7 @@ These options apply to the main `upgrade` command and are inherited by its subco
 The `-b` shorthand is used by the parent command for `--base-dir`. However, when running `upgrade viable`, `-b` specifically refers to `--base`. 
 :::
 
-## Examples
+## Example
 
 ```bash
 # Check whether the current system can be upgraded directly
