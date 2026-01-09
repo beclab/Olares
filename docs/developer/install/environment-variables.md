@@ -34,20 +34,6 @@ Specifies whether to enable the Cloudflare proxy.
   - `1` (enable)
 - **Default**: `0`
 
-### `DID_GATE_URL`
-Specifies the endpoint for the DID gateway.
-- **Valid values**:
-  - `https://did-gate-v3.bttcdn.com`
-  - `https://did-gate-v3.api.jointerminus.cn/` (recommended for better connectivity in mainland China)
-- **Default**: `https://did-gate-v3.bttcdn.com`
-
-### `FIREBASE_PUSH_URL`
-Specifies the endpoint for Firebase push services.
-- **Valid values**:
-  - `https://firebase-push-test.bttcdn.com/v1/api/push`
-  - `https://firebase-push-test.api.jointerminus.cn/v1/api/push` (recommended for better connectivity in mainland China)
-- **Default**: `https://firebase-push-test.bttcdn.com/v1/api/push`
-
 ### `FRP_AUTH_METHOD`
 Sets the FRP authentication method.
 - **Valid values**:
@@ -67,13 +53,6 @@ Specifies whether to enable FRP for internal network tunneling. Requires additio
   - `0` (disable)
   - `1` (enable)
 - **Default**: `0`
-
-### `FRP_LIST_URL`
-Specifies the endpoint for the Olares FRP information service.
-- **Valid values**:
-  - `https://terminus-frp.snowinning.com`
-  - `https://terminus-frp.api.jointerminus.cn` (recommended for better connectivity in mainland China)
-- **Default**: `https://terminus-frp.snowinning.com`
 
 ### `FRP_PORT`
 Specifies the FRP server's listening port.
@@ -106,26 +85,12 @@ Specifies whether to enable GPU sharing. Applies only if GPU is enabled.
   - `1` (enable)
 - **Default**: `0`
 
-### `MARKET_PROVIDER`
-Specifies the backend domain used by the application marketplace (Market).
-- **Valid values**:
-  - `appstore-server-prod.bttcdn.com`
-  - `appstore-china-server-prod.api.jointerminus.cn` (recommended for better connectivity in mainland China)
-- **Default**: `appstore-server-prod.bttcdn.com`
-
 ### `NVIDIA_CONTAINER_REPO_MIRROR`
 Specifies the APT repository mirror for installing NVIDIA Container Toolkit.
 - **Valid values**:
   - `nvidia.github.io`
   - `mirrors.ustc.edu.cn` (recommended for better connectivity in mainland China)
 - **Default**: `nvidia.github.io`
-
-### `OLARES_SPACE_URL`
-Specifies the endpoint for the Olares Space service.
-- **Valid values**:
-  - `https://cloud-api.bttcdn.com/`
-  - `https://cloud-api.api.jointerminus.cn/` (recommended for better connectivity in mainland China)
-- **Default**: `https://cloud-api.bttcdn.com/`
 
 ### `PREINSTALL`
 Runs only the pre-installation phase (system dependency setup) without proceeding to the full Olares installation.
@@ -144,27 +109,6 @@ Explicitly specifies that this machine is accessible publicly on the internet, a
 Specifies a custom Docker registry mirror for faster image pulls.
 - **Valid values**: `https://mirrors.olares.com` or any other valid URL
 - **Default**: `https://registry-1.docker.io`
-
-### `TAILSCALE_CONTROLPLANE_URL`
-Specifies the endpoint for the Olares Tailscale control-plane service.
-- **Valid values**:
-  - `https://controlplane.snowinning.com`
-  - `https://controlplane.api.jointerminus.cn` (recommended for better connectivity in mainland China)
-- **Default**: `https://controlplane.snowinning.com`
-
-### `TERMINUS_CERT_SERVICE_API`
-Specifies the endpoint for the Olares HTTPS certificate service.
-- **Valid values**:
-  - `https://terminus-cert.snowinning.com`
-  - `https://terminus-cert.api.jointerminus.cn` (recommended for better connectivity in mainland China)
-- **Default**: `https://terminus-cert.snowinning.com`
-
-### `TERMINUS_DNS_SERVICE_API`
-Specifies the endpoint for the Olares DNS service.
-- **Valid values**:
-  - `https://terminus-dnsop.snowinning.com`
-  - `https://terminus-dnsop.api.jointerminus.cn` (recommended for better connectivity in mainland China)
-- **Default**: `https://terminus-dnsop.snowinning.com`
 
 ### `TERMINUS_IS_CLOUD_VERSION`
 Marks the machine explicitly as a cloud instance.
