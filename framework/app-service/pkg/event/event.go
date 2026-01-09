@@ -3,6 +3,7 @@ package event
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -17,9 +18,10 @@ import (
 var AppEventQueue *QueuedEventController
 
 type QueuedEventController struct {
-	wq  workqueue.RateLimitingInterface
-	ctx context.Context
-	nc  *nats.Conn
+	wq    workqueue.RateLimitingInterface
+	ctx   context.Context
+	nc    *nats.Conn
+	ncMux sync.Mutex
 }
 
 type QueueEvent struct {
@@ -90,7 +92,39 @@ func (qe *QueuedEventController) enqueue(obj interface{}) {
 }
 
 func (qe *QueuedEventController) publish(subject string, data interface{}) error {
+	if err := qe.ensureNatsConnected(); err != nil {
+		return fmt.Errorf("failed to ensure NATS connection: %w", err)
+	}
 	return utils.PublishEvent(qe.nc, subject, data)
+}
+
+func (qe *QueuedEventController) ensureNatsConnected() error {
+	qe.ncMux.Lock()
+	defer qe.ncMux.Unlock()
+
+	if qe.nc != nil && qe.nc.IsConnected() {
+		return nil
+	}
+	if qe.nc != nil {
+		qe.nc.Close()
+	}
+
+	klog.Info("NATS connection not established, attempting to connect...")
+	nc, err := utils.NewNatsConn()
+	if err != nil {
+		klog.Errorf("Failed to connect to NATS: %v", err)
+		return err
+	}
+
+	qe.nc = nc
+	klog.Info("Successfully connected to NATS")
+	return nil
+}
+
+func (qe *QueuedEventController) GetNatsConn() *nats.Conn {
+	qe.ncMux.Lock()
+	defer qe.ncMux.Unlock()
+	return qe.nc
 }
 
 func NewAppEventQueue(ctx context.Context, nc *nats.Conn) *QueuedEventController {
