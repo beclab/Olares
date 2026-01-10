@@ -9,7 +9,7 @@ const side = {
         // { text: "Compare Olares and NAS", link: "/manual/olares-vs-nas" },
         {
           text: "FAQs",
-//           link: "/manual/help/faqs",
+          //           link: "/manual/help/faqs",
           collapsed: true,
           items: [
             {
@@ -17,21 +17,21 @@ const side = {
               link: "/manual/help/olares",
             },
             {
-                text: "Installation & activation FAQs",
-            link: "/manual/help/installation",
+              text: "Installation FAQs",
+              link: "/manual/help/installation",
             },
             {
-                text: "Usage FAQs",
-            link: "/manual/help/usage",
+              text: "Usage FAQs",
+              link: "/manual/help/usage",
             },
-//             {
-//               text: "Request support",
-//               link: "/manual/help/request-technical-support",
-//             },
-//             {
-//              text: "Troubleshooting",
-//              link: "/manual/help/troubleshooting",
-//             },
+            //             {
+            //               text: "Request support",
+            //               link: "/manual/help/request-technical-support",
+            //             },
+            //             {
+            //              text: "Troubleshooting",
+            //              link: "/manual/help/troubleshooting",
+            //             },
           ],
         },
       ],
@@ -191,7 +191,7 @@ const side = {
               text: "Basic operations",
               link: "/manual/olares/market/market",
             },
-             {
+            {
               text: "Clone applications",
               link: "/manual/olares/market/clone-apps",
             },
@@ -280,16 +280,16 @@ const side = {
               text: "Organize with filters",
               link: "/manual/olares/wise/filter",
               collapsed: true,
-              items:[
-            {
-              text: "Filter syntax",
-              link: "/manual/olares/wise/filter-syntax-guide",
-            },
-            {
-              text: "Filter example",
-              link: "/manual/olares/wise/filter-examples",
-            },
-            ],
+              items: [
+                {
+                  text: "Filter syntax",
+                  link: "/manual/olares/wise/filter-syntax-guide",
+                },
+                {
+                  text: "Filter example",
+                  link: "/manual/olares/wise/filter-examples",
+                },
+              ],
             },
           ],
         },
@@ -383,10 +383,10 @@ const side = {
                   link: "/manual/olares/settings/set-up-hosts",
                 },
               ],
-             },
-            {text: "Manage GPU", link: "/manual/olares/settings/gpu-resource"},
-            {text: "Set video playback", link: "/manual/olares/settings/video"},
-            {text: "Manage search rules", link: "/manual/olares/settings/search"},
+            },
+            { text: "Manage GPU", link: "/manual/olares/settings/gpu-resource" },
+            { text: "Set video playback", link: "/manual/olares/settings/video" },
+            { text: "Manage search rules", link: "/manual/olares/settings/search" },
             {
               text: "Backup and restore",
               collapsed: true,
@@ -522,7 +522,6 @@ const side = {
         },
         {
           text: "Steam",
-          link: "/use-cases/stream-game",
           collapsed: true,
           items: [
             {
@@ -535,10 +534,10 @@ const side = {
             }
           ]
         },
-//         {
-//           text: "Redroid",
-//           link: "/use-cases/host-cloud-android",
-//         },
+        //         {
+        //           text: "Redroid",
+        //           link: "/use-cases/host-cloud-android",
+        //         },
         {
           text: "Windows",
           link: "/use-cases/windows",
