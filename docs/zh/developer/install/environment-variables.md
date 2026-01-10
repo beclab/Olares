@@ -36,15 +36,7 @@ export FRP_ENABLE=1 \
     JUICEFS=0 \
     FRP_AUTH_METHOD="jws" \
     REGISTRY_MIRRORS="https://mirrors.olares.cn" \
-    DOWNLOAD_CDN_URL="https://cdn.olares.cn" \
-    MARKET_PROVIDER="appstore-china-server-prod.api.jointerminus.cn" \
-    TERMINUS_CERT_SERVICE_API="https://terminus-cert.api.jointerminus.cn" \
-    TERMINUS_DNS_SERVICE_API="https://terminus-dnsop.api.jointerminus.cn" \
-    DID_GATE_URL="https://did-gate-v3.api.jointerminus.cn/" \
-    OLARES_SPACE_URL="https://cloud-api.api.jointerminus.cn/" \
-    FIREBASE_PUSH_URL="https://firebase-push-test.api.jointerminus.cn/v1/api/push" \
-    FRP_LIST_URL="https://terminus-frp.api.jointerminus.cn/" \
-    TAILSCALE_CONTROLPLANE_URL="https://controlplane.api.jointerminus.cn"
+    DOWNLOAD_CDN_URL="https://cdn.olares.cn" 
 
 curl -sSfL https://olares.sh | bash
 ```
@@ -59,20 +51,6 @@ curl -sSfL https://olares.sh | bash
   - `0`（禁用）
   - `1`（启用）
 - **默认值**：`0`（禁用）
-
-### `DID_GATE_URL`
-指定 DID 网关服务的地址。
-- **可选值**： 
-  - `https://did-gate-v3.bttcdn.com` 
-  - `https://did-gate-v3.api.jointerminus.cn/`（推荐中国大陆用户使用，连接性更好）
-- **默认值**：`https://did-gate-v3.bttcdn.com/`
-
-### `FIREBASE_PUSH_URL`
-指定 Firebase 推送服务的地址。
-- **可选值**： 
-  - `https://firebase-push-test.bttcdn.com/v1/api/push`  
-  - `https://firebase-push-test.api.jointerminus.cn/v1/api/push`（推荐中国大陆用户使用，连接性更好）
-- **默认值**：`https://firebase-push-test.bttcdn.com/v1/api/push`
 
 ### `FRP_AUTH_METHOD`
 设置 FRP 的认证方式。
@@ -93,13 +71,6 @@ curl -sSfL https://olares.sh | bash
   - `0`（禁用）
   - `1`（启用） 
 - **默认值**：`0`（禁用）
-
-### `FRP_LIST_URL`
-指定 Olares FRP 信息服务的地址。 
-- **可选值**： 
-  - `https://terminus-frp.snowinning.com`  
-  - `https://terminus-frp.api.jointerminus.cn`（推荐中国大陆用户使用，连接性更好）
-- **默认值**：`https://terminus-frp.snowinning.com`
 
 ### `FRP_PORT`
 设置 FRP 服务端监听端口。
@@ -132,26 +103,12 @@ curl -sSfL https://olares.sh | bash
   - `1`（启用）
 - **默认值**：`0`（禁用）
 
-### `MARKET_PROVIDER`
-指定应用市场（Market）后端服务所使用的域名，可根据网络环境选择合适的域名以优化访问速度。  
-- **可选值**： 
-  - `appstore-server-prod.bttcdn.com`  
-  - `appstore-china-server-prod.api.jointerminus.cn`（推荐中国大陆用户使用，连接性更好）
-- **默认值**：`appstore-server-prod.bttcdn.com`
-
 ### `NVIDIA_CONTAINER_REPO_MIRROR`
 配置 `nvidia-container-toolkit` 的 APT 安装镜像源。
 - **可选值**：
   - `nvidia.github.io`
   - `mirrors.ustc.edu.cn`（推荐中国大陆用户使用，连接性更好）
 - **默认值**：`nvidia.github.io`
-
-### `OLARES_SPACE_URL`
-指定 Olares Space 服务的地址。
-- **可选值**： 
-  - `https://cloud-api.bttcdn.com/`  
-  - `https://cloud-api.api.jointerminus.cn/`（推荐中国大陆用户使用，连接性更好）
-- **默认值**：`https://cloud-api.bttcdn.com/`
 
 ### `PREINSTALL`
 仅执行预安装阶段（系统依赖配置），不进行完整的 Olares 安装。
@@ -169,27 +126,6 @@ curl -sSfL https://olares.sh | bash
 设置 Docker 镜像加速地址。
 - **可选值**：`https://mirrors.olares.cn` 或其他镜像源地址  
 - **默认值**：`https://registry-1.docker.io`
-
-### `TAILSCALE_CONTROLPLANE_URL`
-指定 Olares Tailscale 控制平面（control-plane）服务的地址。
-- **可选值**： 
-  - `https://controlplane.snowinning.com`  
-  - `https://controlplane.api.jointerminus.cn`（推荐中国大陆用户使用，连接性更好）
-- **默认值**：`https://controlplane.snowinning.com`
-
-### `TERMINUS_CERT_SERVICE_API`
-指定 Olares HTTPS 证书服务的地址。
-- **可选值**： 
-  - `https://terminus-cert.snowinning.com`  
-  - `https://terminus-cert.api.jointerminus.cn`（推荐中国大陆用户使用，连接性更好）
-- **默认值**：`https://terminus-cert.snowinning.com`
-
-### `TERMINUS_DNS_SERVICE_API`
-指定 Olares DNS 服务的地址。
-- **可选值**： 
-  - `https://terminus-dnsop.snowinning.com`  
-  - `https://terminus-dnsop.api.jointerminus.cn`（推荐中国大陆用户使用，连接性更好）
-- **默认值**：`https://terminus-dnsop.snowinning.com`
 
 ### `TERMINUS_IS_CLOUD_VERSION`
 明确将此机器标记为云端实例（cloud instance）。  
