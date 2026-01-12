@@ -74,6 +74,7 @@ func (m *PreparedModule) Init() {
 
 type WriteReleaseFileModule struct {
 	common.KubeModule
+	WithoutName bool
 }
 
 func (m *WriteReleaseFileModule) Init() {
@@ -82,7 +83,7 @@ func (m *WriteReleaseFileModule) Init() {
 	m.Tasks = []task.Interface{
 		&task.LocalTask{
 			Name:   "WriteReleaseFile",
-			Action: new(WriteReleaseFile),
+			Action: &WriteReleaseFile{WithoutName: m.WithoutName},
 		},
 	}
 }

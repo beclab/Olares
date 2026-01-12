@@ -9,8 +9,6 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
-
 	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
@@ -19,6 +17,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
@@ -611,23 +610,12 @@ func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opI
 		UpdateTime: &now,
 		OpTime:     &now,
 	}
-	a, err = apputils.UpdateAppMgrStatus(name, status)
 
+	_, err = apputils.UpdateAppMgrStatus(name, status)
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
 		return
 	}
-
-	utils.PublishAppEvent(utils.EventParams{
-		Owner:      a.Spec.AppOwner,
-		Name:       a.Spec.AppName,
-		OpType:     string(a.Status.OpType),
-		OpID:       opID,
-		State:      v1alpha1.Pending.String(),
-		RawAppName: a.Spec.RawAppName,
-		Type:       a.Spec.Type.String(),
-		Title:      apputils.AppTitle(a.Spec.Config),
-	})
 	return
 }
 

@@ -287,7 +287,7 @@ func (a *Argument) LoadReleaseInfo() error {
 	return nil
 }
 
-func (a *Argument) SaveReleaseInfo() error {
+func (a *Argument) SaveReleaseInfo(withoutName bool) error {
 	if a.BaseDir == "" {
 		return errors.New("invalid: empty base directory")
 	}
@@ -300,15 +300,17 @@ func (a *Argument) SaveReleaseInfo() error {
 		ENV_OLARES_VERSION:  a.OlaresVersion,
 	}
 
-	if a.User != nil && a.User.UserName != "" && a.User.DomainName != "" {
-		releaseInfoMap["OLARES_NAME"] = fmt.Sprintf("%s@%s", a.User.UserName, a.User.DomainName)
-	} else {
-		if util.IsExist(OlaresReleaseFile) {
-			// if the user is not set, try to load the user name from the release file
-			envs, err := godotenv.Read(OlaresReleaseFile)
-			if err == nil {
-				if userName, ok := envs["OLARES_NAME"]; ok {
-					releaseInfoMap["OLARES_NAME"] = userName
+	if !withoutName {
+		if a.User != nil && a.User.UserName != "" && a.User.DomainName != "" {
+			releaseInfoMap["OLARES_NAME"] = fmt.Sprintf("%s@%s", a.User.UserName, a.User.DomainName)
+		} else {
+			if util.IsExist(OlaresReleaseFile) {
+				// if the user is not set, try to load the user name from the release file
+				envs, err := godotenv.Read(OlaresReleaseFile)
+				if err == nil {
+					if userName, ok := envs["OLARES_NAME"]; ok {
+						releaseInfoMap["OLARES_NAME"] = userName
+					}
 				}
 			}
 		}

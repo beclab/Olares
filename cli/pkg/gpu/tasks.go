@@ -263,6 +263,10 @@ func (t *PatchK3sDriver) Execute(runtime connector.Runtime) error {
 		return err
 	}
 
+	if _, err := runtime.GetRunner().SudoCmd("apt install -y strace", false, false); err != nil {
+		return err
+	}
+
 	if _, err := runtime.GetRunner().SudoCmd(dstName, false, false); err != nil {
 		return errors.Wrap(err, "failed to apply CUDA patch for WSL")
 	}

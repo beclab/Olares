@@ -384,21 +384,11 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		UpdateTime: &now,
 	}
 
-	am, err := apputils.UpdateAppMgrStatus(appMgrName, status)
+	_, err = apputils.UpdateAppMgrStatus(appMgrName, status)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
-	utils.PublishAppEvent(utils.EventParams{
-		Owner:      am.Spec.AppOwner,
-		Name:       am.Spec.AppName,
-		OpType:     string(am.Status.OpType),
-		OpID:       opID,
-		State:      appv1alpha1.Upgrading.String(),
-		RawAppName: am.Spec.RawAppName,
-		Type:       am.Spec.Type.String(),
-		Title:      apputils.AppTitle(am.Spec.Config),
-	})
 
 	resp.WriteEntity(api.InstallationResponse{
 		Response: api.Response{Code: 200},

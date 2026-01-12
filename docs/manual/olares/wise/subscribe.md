@@ -4,79 +4,93 @@ description: Learn how to manage content subscriptions in Olares, including addi
 ---
 
 # Subscribe and manage feeds
+
 Wise offers flexible subscription options to help you follow your favorite content sources, including articles, blogs, podcasts, and video channels. This guide explains how to add and manage your subscriptions.
 
-## Subscribe methods
-:::tip
-When you subscribe to podcast or video channels in Wise, new episodes automatically download to your Olares storage. This ensures your media content is always available—even offline—and protected from source deletion or unavailability.
+## Understand feeds
+
+Subscribing to a feed creates a direct link to a content source. New entries will appear in the **Feeds** list automatically as they are published.
+
+Please note the difference between viewing and keeping:
+
+- **Feeds are for discovery**: You can open and read any entry from the feed list, but these items are temporary. If the feed changes or you unsubscribe, they may no longer be available.
+- **Your library is for ownership**: If you find an entry you want to keep or read later, you must **Save to library**. Only saved items become part of your library and can be managed with status, tags, notes, and filters.
+
+## Add subscriptions
+
+You can subscribe to feeds from within Wise or directly from your browser.
+
+::: tip Handle restricted content
+If a link requires login or other access control, Wise may need cookies to fetch it correctly. To configure cookies for protected sites, see **[Manage cookies for Wise](./manage-cookies)**.
 :::
 
-### Add subscriptions from For you
-When browsing recommended content on the **For you** page, you can subscribe to content sources using the following options:
+### Add feeds via link
 
-* Click **Subscribe this Feed** in the **Info** column
-* Click <i class="material-symbols-outlined">bookmark_add</i> in the toolbar
+If you have a website or feed URL, you can subscribe using **Add Link**.
 
-### Add RSS feeds manually
-1. Open the RSS feed dialog with either option:
-    * Click <i class="material-symbols-outlined">add_circle</i> on the bottom left, and select **RSS feed**.
-    * Click <i class="material-symbols-outlined">settings</i> on the bottom left, select **RSS feeds**, then click **Add feed** in the top right corner.
-2. In the dialog, enter the feed information using any of these formats:
-    * Feed name. For example, `techcrunch`.
-    * Website URL for RSS feed search.
-    * Direct RSS link.
-3. Click **Add** to complete the subscription.
+1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar and choose **Add Link**.
+2. Paste a website or feed URL. If one or more feeds are detected, they will be listed under the **Subscribe to RSS feed** section.
+3. Click <i class="material-symbols-outlined">bookmark_add</i> next to the feed you want to subscribe to.
 
-### Import RSS feeds from OPML
-OPML files allow you to easily import RSS feed collections from other users or RSS readers. This is a convenient way to migrate your existing feed subscriptions or add curated feed collections.
+![Subscribe to RSS feed](/images/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
 
-1. Click <i class="material-symbols-outlined">settings</i> in the bottom left corner and select **Preferences**.
-2. Under **Import/Export**, click **Import feeds from OPML file**.
-3. Select your OPML file and open it.
+The selected feed will be added to **Feeds**, and new entries from it will be fetched automatically.
 
-After import, you can view and manage your RSS feeds under <i class="material-symbols-outlined">settings</i> > **RSS feeds**.
+### Import feeds from OPML files
 
 :::info
- Only new feed subscriptions will be imported. Historical feed content from your previous reader won't be transferred.
+The OPML file imports your subscription list only, not the articles themselves. 
+
+Wise will fetch the latest available content from these sources immediately after import, but it cannot transfer your reading history or archived articles from your previous reader.
 :::
-### Use LarePass for web subscriptions
-:::tip
-LarePass extension is currently available for Chrome browsers only. Download it from the [official page](https://www.olares.com/larepass).
-:::
-1. Open the LarePass browser extension, and click **Collect**.
-2. For the current webpage, check available subscriptions in the **RSS** section.
-   :::info
-   The **RSS** option appears only when feeds are detected on the current page.
-   :::
-3. Click <i class="material-symbols-outlined">bookmark_add</i> to add the feed to Wise.
 
-:::tip Upload cookie
+If you already use another RSS reader, or someone shares a curated feed list, you can import those subscriptions using an OPML file.
 
-Some websites require cookies for accessing content:
-1. Log in to the target website.
-2. Open the LarePass browser extension, and click **Collect** > **Cookie**.
-3. Click **Upload** to apply changes or enable **Auto Sync**.
+1. Click <i class="material-symbols-outlined">settings</i> in the bottom left corner and select **Preferences**.
+2. Under **Import/Export**, click **Import feeds from OPML**.
+3. Select your OPML file and open it.
 
-You can hover over cookies to view details.
-:::
-## View subscription list
-Access all your RSS feed subscriptions from <i class="material-symbols-outlined">settings</i> > **RSS feeds**.
+After import, the feeds will appear under <i class="material-symbols-outlined">settings</i> > **RSS feeds**.
 
-You can:
+### Use LarePass browser extension
 
-* View feed details and descriptions
-* Search for specific feeds
-* Copy RSS links
-* Edit feed names and descriptions
+The [LarePass browser extension](https://www.olares.com/larepass) lets you subscribe to feeds while you browse, without switching back to Wise.
 
-## Unsubscribe
+1. Open the LarePass browser extension and click the "Collect" icon.
+2. If one or more feeds are detected, they will be listed under the **Subscribe to RSS feed** section.
+3. Click <i class="material-symbols-outlined">bookmark_add</i> next to the feed you want to subscribe to.
+![Subscribe to RSS feed via LarePass](/images/manual/olares/wise-larepass-collect.png#bordered)
+
+## Manage subscriptions
+
+You can view, rename, organize, or remove feeds from the central management page or directly within the reader interface.
+
+### View and edit details
+
+1. Click <i class="material-symbols-outlined">settings</i> in the bottom left corner.
+2. Select **RSS feeds**.
+3. Perform the following operations as needed:
+    - View feed details and descriptions.
+    - Search for specific feeds.
+    - Copy RSS links.
+    - Edit feed names and descriptions.
+    - Remove RSS links.
+
+Changes here are reflected in the **Feeds** section of the Wise sidebar.
+
+### Unsubscribe
+
+If you no longer want to follow a source, you can unsubscribe from its feed.
+
 :::warning
-Unsubscribing removes all articles from this feed unless they're saved to your Library. This action cannot be undone.
+When you unsubscribe from a feed, all entries from that feed are removed from Wise unless they have been explicitly saved to your library. This action cannot be undone.
 :::
 
-You can unsubscribe from content sources in several ways:
+You can remove a feed subscription in several places:
 
-* From the **Info** column
-* Through the reading page toolbar
-* Via the LarePass browser extension
-* On the **RSS Feeds management** page
+- From the **Info** panel of an entry belonging to that feed.
+    ![Unsubscribe via Info panel](/images/manual/olares/wise-info-unsub.png#bordered){width=500}
+- From the reader toolbar while viewing an entry.
+    ![Unsubscribe via toolbar](/images/manual/olares/wise-toolbar-unsub.png#bordered){width=500}
+- From <i class="material-symbols-outlined">settings</i> > **RSS feeds** in Wise.
+    ![Unsubscribe in RSS feeds](/images/manual/olares/wise-unsub-rss-feeds.png#bordered){width=500}

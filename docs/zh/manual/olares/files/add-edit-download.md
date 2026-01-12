@@ -72,16 +72,28 @@ LarePass 支持通过手机的分享选项快速上传文件或媒体内容。
 3. 在弹窗中选择保存位置。
 
 ## 预览和编辑文件
-双击文件即可打开预览。**文件管理器**支持预览以下格式：
 
-* **图片**：JPG、JPEG、PNG、BMP、WEBP、SVG
-* **视频**：MP4、MKV、AVI、MOV、MPEG、MTS、TS、WMV、WEBM、RM、3GP
-* **音频**：MP3、WMA、WAV、OGG、AAC、M4A、APE、FLAC
-* **文本**：PDF、TXT、JS、CSS、XML、YAML、HTML
+### 支持的格式
 
-**文件管理器**还支持编辑以下文本格式：TXT、JS、CSS、XML、YAML、HTML。
+文件管理器支持预览和编辑以下格式：
+- 预览：
+   * 图片：JPG, JPEG, PNG, BMP, WEBP, SVG
+   * 视频：MP4, MKV, MOV, MPEG, MTS, WMV, WEBM, RM, 3GP
+   * 音频：MP3, WMA, WAV, OGG, AAC, M4A, APE, FLAC
+   * 文本：PDF, TXT, JS, CSS, XML, YAML, HTML
+- 编辑：
+   * TXT, JS, CSS, XML, YAML, HTML
 
-![预览](/images/manual/olares/files-preview.png#bordered)
+### 操作步骤
+
+- 若要预览文件，双击目标文件。
+- 若要编辑文件，完成下列步骤：
+   1. 双击支持的目标文本文件。
+   2. 点击右上角的 <i class="material-symbols-outlined">edit_square</i> 编辑。
+   3. 修改内容，然后点击 <i class="material-symbols-outlined">save</i> 保存更改。
+
+      ![预览](/images/zh/manual/olares/files-preview-1.png#bordered)
+
 ## 搜索文件
 通过桌面搜索功能，可以轻松找到**文件管理器**中的文件。
 :::tip 提示
@@ -92,6 +104,7 @@ LarePass 支持通过手机的分享选项快速上传文件或媒体内容。
 3. 使用方向键<i class="material-symbols-outlined">arrow_upward</i><i class="material-symbols-outlined">arrow_downward</i>选择搜索范围：**存储盘**或**同步盘**，按 **Enter** 查看搜索结果。
 
 ![搜索](/images/manual/olares/files-search.png#bordered){width="90%""}
+
 ## 删除文件
 :::warning 警告
 删除的文件无法恢复。

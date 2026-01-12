@@ -35,8 +35,7 @@ From the Launchpad, you can:
 Built-in system applications such as Files, Market, and Profile cannot be uninstalled.
 :::
 
-
-### Controll application windows
+### Control application windows
 
 You can access applications via two modes.
 
@@ -53,20 +52,26 @@ Some applications only support opening in a tabbed view.
 
 ## Search within Olares
 
-You can quickly call out global search using one of the following methods:
+You can quickly open global search using one of the following methods:
 
-* Press the keyboard shortcut: `Shift + Space`
-* Click the "Search" icon in the Dock.
+- Press the keyboard shortcut: `Shift + Space`
+- Click the <i class="material-symbols-outlined">search</i> icon in the Dock.
 
+Global search can find applications, files, and other supported search targets.
 
-| Search target                               | Supported actions                                         |
-|:--------------------------------------------|:----------------------------------------------------------|
-| Installed Applications                      | Open the application directly.                            |
-| Documents directory in File Manager Storage | Search by filename or full-text content.                  |
-| Other directories in File Manager Storage   | Search by filename only.                                  |
-| File Manager Synced Drive                   | Search by filename only.                                  |
-| Wise Reader Content                         | Search full-text content of RSS feeds, web pages, & PDFs. |
-| **More**                                    |                                                           |
-| Settings                                    | Adjust Olares appearance.                                 |
-| Applications                                | Install, uninstall, or update applications.               |
+| Supported search target | Supported search capability |
+|:--|:--|
+| Applications (built-in and installed) | Search by application name and open the app directly.| 
+| Directories enabled for full-text search | Search files by filename and by text content inside <br>supported documents. |
+| Other directories in File manager storage  | Search files by filename only.  |
+| Team shared files | Search shared files by filename only. |
+| File manager synced drive | Search synced files by filename only. |
+| Wise reader content | Search RSS feeds, web pages, and PDFs by name. |
 
+### Configure file search rules
+
+By default, global search searches files by filename only.
+
+To improve search efficiency or enable searching file contents, go to  **Settings** > **Search** > **File Search** to configure full-text search and exclusion rules.
+
+For details, see [Configure file search](/manual/olares/settings/search.md).

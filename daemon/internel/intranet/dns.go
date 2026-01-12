@@ -81,7 +81,7 @@ func (s *mDNSServer) StartAll() error {
 			host:        &DNSConfig{Domain: domain},
 		}
 	}
-	klog.Info("Intranet mDNS server started")
+	klog.V(8).Info("Intranet mDNS server started")
 	return nil
 }
 

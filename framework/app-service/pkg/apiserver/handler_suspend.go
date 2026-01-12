@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"k8s.io/klog/v2"
-
 	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -17,12 +15,12 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	"github.com/emicklei/go-restful/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 )
 
 func (h *Handler) suspend(req *restful.Request, resp *restful.Response) {
@@ -77,23 +75,11 @@ func (h *Handler) suspend(req *restful.Request, resp *restful.Response) {
 		StatusTime: &now,
 		UpdateTime: &now,
 	}
-	a, err := apputils.UpdateAppMgrStatus(name, status)
+	_, err = apputils.UpdateAppMgrStatus(name, status)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
-	utils.PublishAppEvent(utils.EventParams{
-		Owner:      a.Spec.AppOwner,
-		Name:       a.Spec.AppName,
-		OpType:     string(a.Status.OpType),
-		OpID:       opID,
-		State:      v1alpha1.Stopping.String(),
-		RawAppName: a.Spec.RawAppName,
-		Type:       a.Spec.Type.String(),
-		Title:      apputils.AppTitle(a.Spec.Config),
-		Reason:     constants.AppStopByUser,
-		Message:    fmt.Sprintf("app %s was stop by user %s", a.Spec.AppName, a.Spec.AppOwner),
-	})
 
 	resp.WriteEntity(api.InstallationResponse{
 		Response: api.Response{Code: 200},
@@ -185,22 +171,11 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 		StatusTime: &now,
 		UpdateTime: &now,
 	}
-	a, err := apputils.UpdateAppMgrStatus(name, status)
+	_, err = apputils.UpdateAppMgrStatus(name, status)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
-	utils.PublishAppEvent(utils.EventParams{
-		Owner:      a.Spec.AppOwner,
-		Name:       a.Spec.AppName,
-		OpType:     string(a.Status.OpType),
-		OpID:       opID,
-		State:      v1alpha1.Resuming.String(),
-		RawAppName: a.Spec.RawAppName,
-		Type:       a.Spec.Type.String(),
-		Title:      apputils.AppTitle(a.Spec.Config),
-		Message:    fmt.Sprintf("app %s was resume by user %s", a.Spec.AppName, a.Spec.AppOwner),
-	})
 
 	resp.WriteEntity(api.InstallationResponse{
 		Response: api.Response{Code: 200},

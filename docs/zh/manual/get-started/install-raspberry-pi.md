@@ -13,10 +13,12 @@ description: 使用树莓派安装配置 Olares 的完整步骤，包括硬件�
 - 硬件：树莓派 4B 或树莓派 5（8GB 内存版本）
 - 操作系统：Raspbian 12
 - 存储：不少于 150GB 的可用磁盘空间，需使用 SSD 硬盘安装。
-:::warning 注意
-使用 HDD（机械硬盘）可能会导致安装失败。
+::: warning 必须使用 SSD
+请勿使用机械硬盘 (HDD)。如果未检测到 SSD，安装将失败。
 :::
-
+::: info GPU 限制
+Olares 的 GPU 加速功能目前仅支持 NVIDIA GPU。因此，在 macOS 设备上无法为 AI 工作负载管理或使用 GPU 资源。
+:::
 ## 配置环境
 1. 配置 Raspbian 环境，启用必要功能：
 

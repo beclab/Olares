@@ -147,6 +147,6 @@ func (s *Server) Reload(o *ServerOptions) error {
 		return fmt.Errorf("reload intranet server with %d errors", len(errs))
 	}
 
-	klog.Info("Intranet server reloaded")
+	klog.V(8).Info("Intranet server reloaded")
 	return nil
 }

@@ -9,7 +9,28 @@ description: 了解如何使用 Docker Compose 在 Linux 服务器上部署 Olar
 该部署方式仅适用于开发或测试环境。我们推荐[通过脚本方式在 Linux 上安装 Olares](/zh/manual/get-started/install-olares.md)，以获得最佳的性能与稳定性。
 :::
 
-<!--@include: ./reusables.md{40,53}-->
+## 系统要求
+### 必要配置
+- **宿主机要求**:
+  - **CPU**：4 核及以上。
+  - **内存**：至少 8 GB 可用内存。
+  - **存储**：至少 150 GB 可用磁盘空间。
+   ::: warning 必须使用 SSD
+   请勿使用机械硬盘 (HDD)。如果未检测到 SSD，安装将失败。
+   :::
+  - **支持的系统**：
+    - Ubuntu 22.04-25.04 LTS
+    - Debian 12 或 13
+:::info 版本兼容性
+上述版本已通过验证，但安装流程可能也适用于其他版本。具体是否需要调整取决于你的环境。如果遇到任何问题，欢迎在 [GitHub](https://github.com/beclab/Olares/issues/new) 上提交 Issue。
+:::
+### 可选硬件
+
+安装 Olares 不需要 GPU，但运行 AI 应用需要 GPU支持。
+
+- **GPU (仅支持 NVIDIA)**：
+  - **架构**：Turing 架构或更新版本 (例如 GTX 16 系列、RTX 20 系列)。
+  - **验证方法**：运行 `lspci | grep -i nvidia` 并查看 [兼容 GPU 列表](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus)。
 
 ## 开始之前
 开始安装前，请确保：

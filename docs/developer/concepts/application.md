@@ -122,7 +122,7 @@ The mechanism consists of three procedures：
 
 - User
 
-  [Manage apps in Market](../../manual/olares/market.md)<br>
+  [Manage apps in Market](../../manual/olares/market/market.md)<br>
 
 - Developer
 

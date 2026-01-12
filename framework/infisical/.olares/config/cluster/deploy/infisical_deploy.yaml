@@ -181,7 +181,7 @@ spec:
           value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@citus-0.citus-headless.os-platform/$(POSTGRES_DB)?sslmode=disable"
       containers:
       - name: infisical
-        image: "beclab/infisical:0.1.1"
+        image: "beclab/infisical:0.1.2"
         imagePullPolicy: IfNotPresent
         readinessProbe:
           httpGet:
