@@ -88,7 +88,7 @@ To use the local Ollama service, configure the following settings:
 2. Specify which pages to translate:
     * **All**: Translates the entire document.
     * **First**: Translates only the first page.
-    * **First 5 pages:**: Translates the first five pages.
+    * **First 5 pages**: Translates the first five pages.
     * **Others**: Translates a custom range of pages.
 
     ![Set translation scope in PDFMathTranslate](/images/manual/use-cases/set-translation-scope.png#bordered)
