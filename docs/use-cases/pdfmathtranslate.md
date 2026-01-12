@@ -10,8 +10,7 @@ Reading academic papers in foreign languages often relies on translation tools, 
 ## Learning objectives
 
 By the end of this tutorial, you are able to:
-- Install PDFMathTranslate from the Olares Market.
-- Configure the local AI model for private translation.
+- Configure the local AI model for PDF translation.
 - Translate a scientific PDF and manage the output files.
 
 ## Before you begin
