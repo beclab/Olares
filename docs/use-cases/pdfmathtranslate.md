@@ -126,22 +126,24 @@ b. Double-click a file, and then click the download icon in the upper-right corn
 
 ![Download files translated from Olares Files](/images/manual/use-cases/download-in-files.png#bordered)
 
-## Troubleshooting
+## FAQ
 
-#### Translation progress bar not shown
+### Why did the translation progress bar disappear?
 
-If you refresh the page while a translation is running, the progress bar might disappear from the screen. This is a display issue only, and the translation is still processing in the background. Please wait for the task to complete or check your output folder for the new file.
+If you refresh the page while a translation is running, the progress bar might disappear from the screen. This is a display issue only, and the translation is still processing in the background. 
 
-#### File overwriting
+Wait for it to finish or check the output folder.
+
+### Will the app keep multiple versions of the same file?
 
 If you translate the same file name multiple times, the system replaces the previous version with the new one. It does not create numbered copies such as `file_1.pdf`. To keep multiple versions, rename your source file before translating it again.
 
-#### Application unresponsive
+### What should I do if the app becomes unresponsive or takes unusually long?
 
 If the translation takes significantly longer than usual or the application stops responding, the background process might have stalled. To resolve this issue, uninstall and then reinstall pdfmathtranslate.
 
-#### Uninstall PDFMathTranslate
+### How do I perform a clean reinstall of PDFMathTranslate?
 
-Using the standard **Uninstall** button removes the PDFMathTranslate application but keeps your settings. To completely remove the application and its data:
-1. Uninstall the app from My Olares. For more information, see [Uninstall applications](../../docs/manual/olares/market/market.md).
+To completely remove the application and its data:
+1. Uninstall the app from My Olares. See [Uninstall applications](../../docs/manual/olares/market/market.md).
 2. Open the Files app, go to **Application** > **Data**, and then delete the **pdfmathtranslate** folder.
