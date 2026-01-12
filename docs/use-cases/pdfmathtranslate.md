@@ -69,7 +69,7 @@ To use the local Ollama service, configure the following settings:
 
     ![Obtain Ollama host address](/images/manual/use-cases/copy-localhost-address.png#bordered){width=60%}
 
-3. Enter the name of the model you have downloaded, and you must specify the version tag if required. For example, "gemma3:4b".
+3. Enter the name of the model you have downloaded, and you must specify the version tag if required. For example, `gemma3:4b`.
 
     ![Open PDFMathTranslate](/images/manual/use-cases/local-model-setup.png#bordered)
 
