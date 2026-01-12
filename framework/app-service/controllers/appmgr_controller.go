@@ -7,7 +7,10 @@ import (
 
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 
@@ -167,11 +170,32 @@ func (r *ApplicationManagerController) preEnqueueCheckForUpdate(old, new client.
 	if curAppMgr.Spec.Type != appv1alpha1.App && curAppMgr.Spec.Type != appv1alpha1.Middleware {
 		return false
 	}
+
+	if oldAppMgr.Status.State != curAppMgr.Status.State {
+		r.publishStateChangeEvent(curAppMgr)
+	}
+
 	if curAppMgr.Status.OpGeneration <= oldAppMgr.Status.OpGeneration {
 		return false
 	}
 
 	return true
+}
+
+func (r *ApplicationManagerController) publishStateChangeEvent(am *appv1alpha1.ApplicationManager) {
+	appevent.PublishAppEventToQueue(utils.EventParams{
+		Owner:      am.Spec.AppOwner,
+		Name:       am.Spec.AppName,
+		OpType:     string(am.Status.OpType),
+		OpID:       am.Status.OpID,
+		State:      am.Status.State.String(),
+		Progress:   am.Status.Progress,
+		RawAppName: am.Spec.RawAppName,
+		Type:       am.Spec.Type.String(),
+		Title:      apputils.AppTitle(am.Spec.Config),
+		Reason:     am.Status.Reason,
+		Message:    am.Status.Message,
+	})
 }
 
 func (r *ApplicationManagerController) loadStatefulAppAndReconcile(ctx context.Context, name string) (appstate.StatefulApp, error) {

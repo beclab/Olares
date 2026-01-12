@@ -30,7 +30,7 @@ Olares 通过 **Olares ID** 与 **LarePass 移动应用**提供安全且流畅�
 
 <!--@include: ../get-started/install-and-activate-olares.md{9,23}-->
 
-### 通过蓝牙激活
+## 通过蓝牙激活
 
 如果 LarePass 找不到你的 Olares 设备，可以使用蓝牙激活。这通常发生在 Olares 没有连接有线网络，或者你的手机和 Olares 处于不同网络的情况下。
 通过蓝牙，你可以将 Olares 直接连接到你手机当前的 Wi-Fi 网络，以便继续操作。
