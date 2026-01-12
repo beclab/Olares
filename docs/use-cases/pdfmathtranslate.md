@@ -101,7 +101,14 @@ To use the local Ollama service, configure the following settings:
 
 ### Download your files
 
-When the translation is completed, the translated file is displayed in the **Preview** pane, and the application generates three files: the original source file, the translated file, and a bilingual version. Download the files in two ways.
+When the translation is completed, the translated file is displayed in the **Preview** pane, and the application generates three files:
+
+- Original source file
+- Translated file
+- Bilingual version
+
+
+Download the files in two ways.
 
 ![Access files translated by PDFMathTranslate](/images/manual/use-cases/access-translated-files.png#bordered)
 
