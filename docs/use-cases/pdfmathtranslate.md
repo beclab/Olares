@@ -65,7 +65,7 @@ To use the local Ollama service, configure the following settings:
     
     b. In the **Entrances** section, click **Ollama API**.
 
-    c. Click **Set up endpoint**, and then copy the endpoint address by clicking <i class="material-symbols-outlined">content_copy</i>.
+    c. Click **Set up endpoint**, and then click <i class="material-symbols-outlined">content_copy</i> to copy the endpoint address.
 
     ![Obtain Ollama host address](/images/manual/use-cases/copy-localhost-address.png#bordered){width=60%}
 
