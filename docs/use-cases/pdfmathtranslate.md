@@ -101,7 +101,7 @@ When the translation is completed, the translated file is displayed in the **Pre
 - Translated file
 - Bilingual version
 
-Download the files in two ways.
+You can find these files in the Files app. To download them to your local computer, download them directly from the PDFMathTranslate workspace, or use the Files app.
 
 #### In PDFMathTranslate workspace
 
