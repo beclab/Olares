@@ -5,7 +5,9 @@ description: Learn how to install and configure PDFMathTranslate on Olares. This
 
 # Translate scientific PDFs while preserving layout
 
-PDFMathTranslate is an application designed to translate scientific PDF documents while retaining the original layout and mathematical formulas. This tutorial provides instructions on how to install and use PDFMathTranslate on Olares, using the local AI model Ollama for translation.
+PDFMathTranslate is an application designed to translate scientific PDF documents while retaining the original layout and mathematical formulas.
+
+This tutorial provides instructions on how to install and use PDFMathTranslate on Olares, using the local AI model Ollama for translation.
 
 ## Learning objectives
 
