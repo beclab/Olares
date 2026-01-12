@@ -50,8 +50,7 @@ In the **File** area, select your input **Type**:
 To use the local AI service Ollama for translation, configure the following settings:
 
 1. From the **Service** list, select **Ollama**.
-2. Enter the Ollama host address. 
-3. (Optional) To obtain the Ollama host address:
+2. (Optional) To obtain the Ollama host address:
 
     a. Go to Olares **Settings** > **Application** > **Ollama**.
     
@@ -61,6 +60,7 @@ To use the local AI service Ollama for translation, configure the following sett
 
     ![Obtain Ollama host address](/images/manual/use-cases/copy-localhost-address.png#bordered){width=60%}
 
+3. Enter the Ollama host address. 
 4. Enter the name of the model you have downloaded, and you must specify the version tag if required. For example, `gemma3:4b`.
 
     ![Open PDFMathTranslate](/images/manual/use-cases/local-model-setup.png#bordered)
@@ -131,9 +131,9 @@ If you translate the same file name multiple times, the system replaces the prev
 
 ### What should I do if the app becomes unresponsive or takes unusually long?
 
-If the translation takes significantly longer than usual or the application stops responding, the background process might have stalled. To resolve this issue, uninstall and then reinstall pdfmathtranslate.
+If the translation takes significantly longer than usual or the application stops responding, the background process might have stalled. To resolve this issue, uninstall and then re-install pdfmathtranslate.
 
-### How do I perform a clean reinstall of PDFMathTranslate?
+### How do I perform a clean uninstallation of PDFMathTranslate?
 
 To completely remove the application and its data:
 1. Uninstall the app from My Olares. For more information, see [Uninstall applications](../../docs/manual/olares/market/market.md).
