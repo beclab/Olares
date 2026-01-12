@@ -120,7 +120,7 @@ On the left side of the pdfmathtranslate workspace, in the **Translated** sectio
 
 #### From Olares Files app
 
-a. Go to Olares **Files** > **Data** > **pdfmathtranslate** > **pdfmathtranslate**.
+a. Open Files, then navigate to **Data** > **pdfmathtranslate** > **pdfmathtranslate**.
 
 b. Double-click a file, and then click the download icon in the upper-right corner.
 
