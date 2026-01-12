@@ -31,66 +31,66 @@ By the end of this tutorial, you are able to:
 
 The **Manual Redaction** tool allows you to hide or black out sensitive information from your documents. You can scrub specific text, visual areas, or entire pages.
 
-### Access the tool
-
 1. From the homepage, click **Manual Redaction**.
 
     ![Manual Redaction in Stirling PDF](/images/manual/use-cases/manual-redaction.png#bordered)    
 
 2. Upload your PDF file.
+3. To redact specific text:
 
-### Redact content
-
-#### Redact specific text
-
-1. Click the **Text-based Redaction** icon on the toolbar.
+    a. Click the **Text-based Redaction** icon on the toolbar.
 
     ![Text-based redaction icon](/images/manual/use-cases/text-based-redaction-icon.png#bordered){width=65%}    
 
-2. Select the text you want to hide.
-3. (Optional) Click the **Colour Picker** icon to change the redaction color. By default, it is black.
+    b. Select the text you want to hide.
+
+    c. (Optional) Click the **Colour Picker** icon to change the redaction color. By default, it is black.
 
     ![Color picker icon](/images/manual/use-cases/color-picker-icon.png#bordered){width=65%}  
 
-4. Click the **Apply changes** icon to confirm your selection.
+    d. Click the **Apply changes** icon to confirm your selection.
 
     ![Checkmark confirm icon](/images/manual/use-cases/green-check-icon.png#bordered){width=65%}   
 
-#### Redact images or areas
-
-1. Click the **Box draw redaction** icon on the toolbar.
-
+4. To redact images or areas:
+    
+    a. Click the **Box draw redaction** icon on the toolbar.
+    
     ![Box draw redaction icon](/images/manual/use-cases/box-draw-redaction.png#bordered){width=65%}  
 
-2. Drag to draw a box around the sensitive area. When you release your mouse, the box turns from red to green, which indicates the area is selected successfully.
+    b. Drag to draw a box around the sensitive area. When you release your mouse, the box turns from red to green, which indicates the area is selected successfully.
 
-3. (Optional) Click the **Colour Picker** icon to change the redaction color. By default, it is black.
+    c. (Optional) Click the **Colour Picker** icon to change the redaction color. By default, it is black.
 
     ![Color picker icon](/images/manual/use-cases/color-picker-icon.png#bordered){width=65%}   
 
-#### Redact entire pages
+5. To redact entire pages:
 
-1. Click the **Page-based Redaction** icon on the toolbar.
+    a. Click the **Page-based Redaction** icon on the toolbar.
 
     ![Page based redaction](/images/manual/use-cases/page-based-redaction.png#bordered){width=25%}  
 
-2. Enter the specific page numbers or ranges.
-3. Select the redaction color.
-4. Click **Apply**. 
+    b. Enter the specific page numbers or ranges.
+    
+    c. Select the redaction color.
+    
+    d. Click **Apply**. 
 
-### Export the redacted file
+6. Export the redacted file.
 
-1. Click the **Export** icon to download the sanitized PDF.
+    a. Click the **Export** icon to download the sanitized PDF.
 
     ![Color picker icon](/images/manual/use-cases/export-pdf.png#bordered){width=25%}   
 
-2. Review your file to ensure that the redaction is correctly implemented.
+    b. Review your file to ensure that the redaction is correctly implemented. 
+
+    The following image shows an example of a paragraph redacted in orange:
+
+    ![Example of text redacted in orange](/images/manual/use-cases/text-redact-example.png#bordered){width=55%} 
 
 ## Organize pages
 
 The **Multi Tool** allows you to adjust the structure of the PDF documents, including merging, splitting, rotating, and re-ordering pages.
-
-### Access the tool
 
 1. From the homepage, click **PDF Multi Tool**.
 
@@ -100,49 +100,44 @@ The **Multi Tool** allows you to adjust the structure of the PDF documents, incl
 
     ![Multi tool add files](/images/manual/use-cases/add-pdf.png#bordered){width=65%}  
 
-### Manage pages
+3. To rotate pages:
 
-#### Rotate pages
-
-- To rotate a single page, hover over the specific page thumbnail and click the **Rotate Left** icon or the **Rotate Right** icon.
+    - To rotate a single page, hover over the specific page thumbnail and click the **Rotate Left** icon or the **Rotate Right** icon.
 
     ![Rotate a single page](/images/manual/use-cases/rotate-single-page.png#bordered){width=65%}   
 
-- To rotate all pages at once, click the **Rotate Left** icon or the **Rotate Right** icon in the **File Name** area.
+    - To rotate all pages at once, click the **Rotate Left** icon or the **Rotate Right** icon in the **File Name** area.
 
     ![Batch rotate](/images/manual/use-cases/batch-rotate.png#bordered){width=65%}
 
-#### Re-order pages
+4. To re-order pages, drag the page to its new position in the grid.
+5. To delete pages:
 
-Drag the page to its new position in the grid.
-
-#### Delete pages
-
-- To delete a single page, hover over the page, and then click the **Delete** icon on the thumbnail.
+    - To delete a single page, hover over the page, and then click the **Delete** icon on the thumbnail.
 
     ![Delete a single page](/images/manual/use-cases/delete-single-page.png#bordered){width=65%}
 
-- To delete multiple pages, click the **Page Select** icon in the **File Name** area, select the checkboxes for all target pages, and then click **Delete Selected**.
+    - To delete multiple pages, click the **Page Select** icon in the **File Name** area, select the checkboxes for all target pages, and then click **Delete Selected**.
 
     ![Batch delete](/images/manual/use-cases/page-select.png#bordered){width=65%}
 
-#### Split pages
+6. To split pages:
 
-- To split a specific page into a new file, click the **Scissors** icon on the left of that page's thumbnail.
+    - To split a specific page into a new file, click the **Scissors** icon on the left of that page's thumbnail.
 
     ![Split a single page](/images/manual/use-cases/split-single-page.png#bordered){width=65%}
 
-- To split every page into its own separate file, click the **Scissors** icon in the **File Name** area.
+    - To split every page into its own separate file, click the **Scissors** icon in the **File Name** area.
 
     ![Split all pages](/images/manual/use-cases/split-all-page.png#bordered){width=65%}
 
-### Export pages
+7. To export pages:
 
-- To download the re-organized file as a single PDF, click **Export**.
+    - To download the re-organized file as a single PDF, click **Export**.
 
     ![Export all pages](/images/manual/use-cases/export-all-page.png#bordered){width=65%}
 
-- To export specific pages, select the pages, and then click **Export Selected**.
+    - To export specific pages, select the pages, and then click **Export Selected**.
 
     ![Export specific page](/images/manual/use-cases/export-selected-page.png#bordered){width=65%}
 
@@ -211,7 +206,7 @@ The Pipeline feature is currently in Beta. You might encounter occasional instab
 
     ![Pipeline](/images/manual/use-cases/pipeline-menu.png#bordered){width=65%} 
 
-3. In the **Pipeline Name** box, enter a unique name for your workflow. For example, "Monthly invoice combination".
+3. In the **Pipeline Name** box, enter a unique name for your workflow. For example, `Monthly invoice combination`.
 4. Add and configure the merge operation:
 
     a. From the **Select Operation** list, select **merge-pdfs**, and then click **Add operation**. The operation is added in the **Pipeline** area and related settings are displayed under it.
