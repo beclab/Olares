@@ -20,7 +20,7 @@ To ensure privacy by using a local AI model for translation, you must have an AI
 
 ## Install PDFMathTranslate
 
-1. Open the Olares Market and search for “PDFMathTranslate”.
+1. Open the Olares Market and search for "PDFMathTranslate".
 2. Click **Get**, and then click **Install**.
    
     ![Install PDFMathTranslate](/images/manual/use-cases/install-pdfmathtranslate.png#bordered)
