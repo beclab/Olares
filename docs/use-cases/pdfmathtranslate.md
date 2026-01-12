@@ -5,7 +5,7 @@ description: Learn how to install and configure PDFMathTranslate on Olares. This
 
 # Translate scientific PDFs while preserving layout
 
-Reading academic papers in foreign languages often relies on translation tools, but standard options frequently break complex layouts or scramble mathematical formulas. PDFMathTranslate solves this pain point by using AI to translate full scientific documents while keeping the original formatting, charts, and equations intact. When running on Olares, you can choose to process these translations using local AI models. This transforms your device into a private translation server, ensuring your research data never leaves your hardware.
+PDFMathTranslate is an application designed to translate scientific PDF documents while retaining the original layout and mathematical formulas. This tutorial provides instructions on how to install and use PDFMathTranslate on Olares, using the local AI model Ollama for translation.
 
 ## Learning objectives
 
@@ -109,8 +109,6 @@ When the translation is completed, the translated file is displayed in the **Pre
 
 Download the files in two ways.
 
-![Access files translated by PDFMathTranslate](/images/manual/use-cases/access-translated-files.png#bordered)
-
 #### In PDFMathTranslate workspace
 
 On the left side of the pdfmathtranslate workspace, in the **Translated** section, click the download button next to the file.
@@ -119,11 +117,13 @@ On the left side of the pdfmathtranslate workspace, in the **Translated** sectio
 
 #### From Olares Files app
 
-a. Open Files, then navigate to **Data** > **pdfmathtranslate** > **pdfmathtranslate**.
+1. Open the Files app, and then go to **Data** > **pdfmathtranslate** > **pdfmathtranslate**.
 
-b. Double-click a file, and then click the download icon in the upper-right corner.
+    ![Access files translated by PDFMathTranslate](/images/manual/use-cases/access-translated-files.png#bordered)
 
-![Download files translated from Olares Files](/images/manual/use-cases/download-in-files.png#bordered)
+2. Double-click a file, and then click the download icon in the upper-right corner.
+
+    ![Download files translated from Olares Files](/images/manual/use-cases/download-in-files.png#bordered)
 
 ## FAQ
 
@@ -144,5 +144,5 @@ If the translation takes significantly longer than usual or the application stop
 ### How do I perform a clean reinstall of PDFMathTranslate?
 
 To completely remove the application and its data:
-1. Uninstall the app from My Olares. See [Uninstall applications](../../docs/manual/olares/market/market.md).
+1. Uninstall the app from My Olares. For more information, see [Uninstall applications](../../docs/manual/olares/market/market.md).
 2. Open the Files app, go to **Application** > **Data**, and then delete the **pdfmathtranslate** folder.
