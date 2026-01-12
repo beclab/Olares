@@ -1,6 +1,6 @@
 ---
 outline: [2, 5]
-description: A step-by-step guide to installing and using Stirling PDF on Olares. Learn how to securely manage PDF documents within your local network, covering essential tasks such as merging, editing, format conversion, and creating automated workflow pipelines.
+description: A step-by-step guide to installing and using Stirling PDF on Olares. Learn how to securely manage PDF documents, covering essential tasks such as merging, editing, format conversion, and creating automated workflow pipelines.
 ---
 
 # Manage PDF documents with Stirling PDF
