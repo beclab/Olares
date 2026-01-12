@@ -1,6 +1,6 @@
 ---
 outline: [2, 4]
-description: Learn how to install and configure PDFMathTranslate on Olares. This tutorial guides you through using the local AI model Ollama to translate scientific PDFs, preserving original layouts and mathematical formulas while ensuring total data privacy.
+description: Learn how to install and configure PDFMathTranslate on Olares. This tutorial guides you through using the local AI model Ollama to translate scientific PDFs, preserving original layouts and mathematical formulas.
 ---
 
 # Translate scientific PDFs while preserving layout
