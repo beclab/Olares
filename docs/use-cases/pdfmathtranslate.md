@@ -62,7 +62,7 @@ To use the local AI service Ollama for translation, configure the following sett
 
     ![Obtain Ollama host address](/images/manual/use-cases/copy-localhost-address.png#bordered){width=60%}
 
-3. Enter the Ollama host address. 
+3. In the **OLLAMA_HOST** field, paste the Ollama host address. 
 4. In the **OLLAMA_MODEL** field, enter the exact identifier of the Ollama model you have downloaded. For example, `gemma3:4b`.
 
     ![Open PDFMathTranslate](/images/manual/use-cases/local-model-setup.png#bordered)
