@@ -33,8 +33,8 @@ To ensure privacy by using a local AI model for translation, you must have an AI
 
 ### Upload your PDF document
 
-:::tip Important
-Ensure that the PDF file is a standard PDF document that is not password-protected or corrupted.
+:::warning PDF format requirements
+Ensure that the PDF file is a standard PDF document that is not password-protected or corrupted. Invalid PDFs will fail.
 :::
 
 In the **File** area, select your input **Type**:
