@@ -33,7 +33,7 @@ To ensure privacy by using a local AI model for translation, you must have an AI
 ### Upload your PDF document
 
 :::warning PDF format requirements
-Ensure that the PDF file is a standard PDF document that is not password-protected or corrupted. Invalid PDFs will fail.
+Ensure that the PDF file is a standard PDF document that is not password-protected or corrupted. The application cannot process invalid PDF files.
 :::
 
 In the **File** area, select your input **Type**:
@@ -47,15 +47,7 @@ In the **File** area, select your input **Type**:
 
 ### Configure the translation service
 
-Select the service you want to use for the translation. You can choose between an external cloud provider or a private local AI service.
-
-#### Cloud services
-
-* From the **Service** list, select **Google** or **Bing**. These services are free to use but require an Internet connection and process data externally. Because this tutorial focuses on the privacy-preserving local AI capabilities and the configuration steps required to set up the local AI option, cloud service options are not covered in further detail.
-
-#### Local AI services
-
-To use the local Ollama service, configure the following settings:
+To use the local AI service Ollama for translation, configure the following settings:
 
 1. From the **Service** list, select **Ollama**.
 2. Enter the Ollama host address. 
@@ -69,7 +61,7 @@ To use the local Ollama service, configure the following settings:
 
     ![Obtain Ollama host address](/images/manual/use-cases/copy-localhost-address.png#bordered){width=60%}
 
-3. Enter the name of the model you have downloaded, and you must specify the version tag if required. For example, `gemma3:4b`.
+4. Enter the name of the model you have downloaded, and you must specify the version tag if required. For example, `gemma3:4b`.
 
     ![Open PDFMathTranslate](/images/manual/use-cases/local-model-setup.png#bordered)
 
@@ -96,8 +88,9 @@ To use the local Ollama service, configure the following settings:
 3. Click **Translate**. The translation starts immediately. 
 
     :::warning
-During translation, the **Cancel** button is unavailable. Do not click it, as this may trigger a progress error.
-:::
+    During translation, the **Cancel** button is unavailable. Do not click it; otherwise, the process might report an error.
+    :::
+
 ### Download your files
 
 When the translation is completed, the translated file is displayed in the **Preview** pane, and the application generates three files:
@@ -105,7 +98,6 @@ When the translation is completed, the translated file is displayed in the **Pre
 - Original source file
 - Translated file
 - Bilingual version
-
 
 Download the files in two ways.
 
