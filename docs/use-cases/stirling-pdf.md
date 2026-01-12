@@ -11,7 +11,6 @@ Stirling PDF is a robust, locally hosted tool designed to manage PDF documents s
 
 By the end of this tutorial, you are able to:
 
-* Install Stirling PDF directly from the Olares Market.
 * Redact (black out) sensitive information securely.
 * Organize documents by merging, rotating, splitting, and re-ordering pages.
 * Convert documents between PDF and other formats.
