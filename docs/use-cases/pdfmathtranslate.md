@@ -137,4 +137,4 @@ If the translation takes significantly longer than usual or the application stop
 
 To completely remove the application and its data:
 1. Uninstall the app from My Olares. For more information, see [Uninstall applications](../../docs/manual/olares/market/market.md).
-2. Open the Files app, go to **Application** > **Data**, and then delete the **pdfmathtranslate** folder.
+2. Open the Files app, go to **Application** > **Data**, and then delete the `pdfmathtranslate` folder.
