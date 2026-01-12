@@ -95,9 +95,9 @@ To use the local Ollama service, configure the following settings:
 
 3. Click **Translate**. The translation starts immediately. 
 
-    :::info
-    The **Cancel** function is currently unavailable during active translation processing. According to best practices, do not click this button; otherwise, the translation progress might report an error.
-
+    :::warning
+During translation, the **Cancel** button is unavailable. Do not click it, as this may trigger a progress error.
+:::
 ### Download your files
 
 When the translation is completed, the translated file is displayed in the **Preview** pane, and the application generates three files:
