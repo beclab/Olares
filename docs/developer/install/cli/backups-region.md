@@ -17,7 +17,7 @@ olares-cli backups region space [options]
 
 1. To retrieve the access token and Olares DID, inspect the payload of the network requests made by the Olares Space web interface after logging in. The `token` field corresponds to the access token, and the `userid` field corresponds to the Olares DID.
 
-## Example
+## Examples
 ```bash
 # Query cloud name and region ID
 olares-cli backups region space \

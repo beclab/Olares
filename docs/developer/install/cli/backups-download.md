@@ -12,7 +12,7 @@ olares-cli backups download [options]
 |--------------------|-----------|--------------------------------------------------------|-------------------------|--------------------|
 | `--download-cdn-url`|           | Specifies the CDN URL for downloading the Restic tool. | No                   | System default URL |
 | `--help`           | `-h`      | Displays help information.                             | No                   | N/A                |
-## Example
+## Examples
 ```bash d
 # Download Restic using a custom CDN URL
 olares-cli backups download --download-cdn-url https://custom-cdn.example.com/restic

@@ -12,7 +12,7 @@ olares-cli start [option]
 After executing this command, allow 5-8 minutes for all Olares components to restart. You can verify the status of all pods by running `kubectl get pods -A` or by simply trying to access your Olares desktop.
 :::
 
-## Option
+## Options
 
 | Name             | Shorthand | Usage                                                                                                                                                                                                                                                     |
 |------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
