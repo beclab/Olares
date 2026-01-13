@@ -97,25 +97,8 @@ func (t *CheckKeyPodsRunning) Execute(runtime connector.Runtime) error {
 		if !strings.HasPrefix(pod.Namespace, "user-") && !strings.HasPrefix(pod.Namespace, "os-") {
 			continue
 		}
-		if pod.Status.Phase != corev1.PodRunning {
-			return fmt.Errorf("pod %s/%s is not running", pod.Namespace, pod.Name)
-		}
-		if len(pod.Status.ContainerStatuses) != len(pod.Spec.Containers) {
-			return fmt.Errorf("pod %s/%s has not started all containers yet", pod.Namespace, pod.Name)
-		}
-		for _, cStatus := range pod.Status.ContainerStatuses {
-			if cStatus.State.Terminated != nil {
-				if cStatus.State.Terminated.ExitCode != 0 {
-					return fmt.Errorf("container %s in pod %s/%s is terminated", cStatus.Name, pod.Namespace, pod.Name)
-				}
-				continue
-			}
-			if cStatus.State.Running == nil {
-				return fmt.Errorf("container %s in pod %s/%s is not running", cStatus.Name, pod.Namespace, pod.Name)
-			}
-			if !cStatus.Ready {
-				return fmt.Errorf("container %s in pod %s/%s is not ready", cStatus.Name, pod.Namespace, pod.Name)
-			}
+		if err := utils.AssertPodReady(&pod); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -126,29 +109,39 @@ type CheckPodsRunning struct {
 	labels map[string][]string
 }
 
-func (c *CheckPodsRunning) Execute(runtime connector.Runtime) error {
+func (c *CheckPodsRunning) Execute(_ connector.Runtime) error {
 	if c.labels == nil {
 		return nil
 	}
 
-	kubectl, err := util.GetCommand(common.CommandKubectl)
-	if err != nil {
-		return errors.Wrap(errors.WithStack(err), "kubectl not found")
-	}
-
 	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
+
+	kubeConfig, err := ctrl.GetConfig()
+	if err != nil {
+		return errors.Wrap(err, "failed to load kubeconfig")
+	}
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return errors.Wrap(err, "failed to create kube client")
+	}
+
 	for ns, labels := range c.labels {
 		for _, label := range labels {
-			var cmd = fmt.Sprintf("%s get pod -n %s -l '%s' -o jsonpath='{.items[*].status.phase}'", kubectl, ns, label)
-			phase, err := runtime.GetRunner().SudoCmdContext(ctx, cmd, false, false)
+			podList, err := kubeClient.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: label})
 			if err != nil {
 				return fmt.Errorf("pod status invalid, namespace: %s, label: %s, waiting ...", ns, label)
 			}
 
-			if phase != "Running" {
-				logger.Infof("pod in namespace: %s, label: %s, current phase: %s, waiting ...", ns, label, phase)
-				return fmt.Errorf("pod is %s, namespace: %s, label: %s, waiting ...", phase, ns, label)
+			if podList == nil || len(podList.Items) == 0 {
+				return fmt.Errorf("no pod found, namespace: %s, label: %s, waiting ...", ns, label)
+			}
+
+			for i := range podList.Items {
+				pod := &podList.Items[i]
+				if err := utils.AssertPodReady(pod); err != nil {
+					return err
+				}
 			}
 		}
 	}

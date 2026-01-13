@@ -15,7 +15,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
-
 	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -1088,14 +1087,13 @@ func (h *Handler) applicationManagerMutate(req *restful.Request, resp *restful.R
 	if !ok {
 		return
 	}
-	var pam *v1alpha1.ApplicationManager
 	var admissionReq, admissionResp admissionv1.AdmissionReview
 	proxyUUID := uuid.New()
 	if _, _, err := webhook.Deserializer.Decode(admissionRequestBody, nil, &admissionReq); err != nil {
 		klog.Errorf("Failed to decode admission request body err=%v", err)
 		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
 	} else {
-		admissionResp.Response, pam = h.applicationManagerInject(req.Request.Context(), admissionReq.Request, proxyUUID)
+		admissionResp.Response, _ = h.applicationManagerInject(req.Request.Context(), admissionReq.Request, proxyUUID)
 	}
 	admissionResp.TypeMeta = admissionReq.TypeMeta
 	admissionResp.Kind = admissionReq.Kind
@@ -1108,18 +1106,6 @@ func (h *Handler) applicationManagerMutate(req *restful.Request, resp *restful.R
 	if err != nil {
 		klog.Errorf("Failed to write response[application-manager inject] admin review in namespace=%s err=%v", requestForNamespace, err)
 		return
-	}
-	if pam != nil {
-		utils.PublishAppEvent(utils.EventParams{
-			Owner:      pam.Spec.AppOwner,
-			Name:       pam.Spec.AppName,
-			OpType:     string(pam.Spec.OpType),
-			OpID:       pam.Status.OpID,
-			State:      pam.Status.State.String(),
-			RawAppName: pam.Spec.RawAppName,
-			Type:       pam.Spec.Type.String(),
-			Title:      apputils.AppTitle(pam.Spec.Config),
-		})
 	}
 
 	klog.Infof("Done[application-manager inject] with uuid=%s in namespace=%s", proxyUUID, requestForNamespace)

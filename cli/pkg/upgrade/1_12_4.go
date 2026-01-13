@@ -8,36 +8,36 @@ import (
 	"github.com/beclab/Olares/cli/version"
 )
 
-var version_1_12_3 = semver.MustParse("1.12.3")
+var version_1_12_4 = semver.MustParse("1.12.4")
 
-type upgrader_1_12_3 struct {
+type upgrader_1_12_4 struct {
 	breakingUpgraderBase
 }
 
-func (u upgrader_1_12_3) Version() *semver.Version {
+func (u upgrader_1_12_4) Version() *semver.Version {
 	cliVersion, err := semver.NewVersion(version.VERSION)
 	// tolerate local dev version
 	if err != nil {
-		return version_1_12_3
+		return version_1_12_4
 	}
-	if samePatchLevelVersion(version_1_12_3, cliVersion) && getReleaseLineOfVersion(cliVersion) == mainLine {
+	if samePatchLevelVersion(version_1_12_4, cliVersion) && getReleaseLineOfVersion(cliVersion) == mainLine {
 		return cliVersion
 	}
-	return version_1_12_3
+	return version_1_12_4
 }
 
-func (u upgrader_1_12_3) AddedBreakingChange() bool {
-	if u.Version().Equal(version_1_12_3) {
+func (u upgrader_1_12_4) AddedBreakingChange() bool {
+	if u.Version().Equal(version_1_12_4) {
 		return true
 	}
 	return false
 }
 
-func (u upgrader_1_12_3) NeedRestart() bool {
+func (u upgrader_1_12_4) NeedRestart() bool {
 	return true
 }
 
-func (u upgrader_1_12_3) PrepareForUpgrade() []task.Interface {
+func (u upgrader_1_12_4) PrepareForUpgrade() []task.Interface {
 	tasks := make([]task.Interface, 0)
 
 	tasks = append(tasks, upgradeKsConfig()...)
@@ -57,7 +57,7 @@ func (u upgrader_1_12_3) PrepareForUpgrade() []task.Interface {
 	return tasks
 }
 
-func (u upgrader_1_12_3) UpgradeSystemComponents() []task.Interface {
+func (u upgrader_1_12_4) UpgradeSystemComponents() []task.Interface {
 	pre := []task.Interface{
 		&task.LocalTask{
 			Name:   "UpgradeL4BFLProxy",
@@ -69,7 +69,7 @@ func (u upgrader_1_12_3) UpgradeSystemComponents() []task.Interface {
 	return append(pre, u.upgraderBase.UpgradeSystemComponents()...)
 }
 
-func (u upgrader_1_12_3) UpdateOlaresVersion() []task.Interface {
+func (u upgrader_1_12_4) UpdateOlaresVersion() []task.Interface {
 	var tasks []task.Interface
 	tasks = append(tasks,
 		&task.LocalTask{
@@ -88,5 +88,5 @@ func (u upgrader_1_12_3) UpdateOlaresVersion() []task.Interface {
 }
 
 func init() {
-	registerMainUpgrader(upgrader_1_12_3{})
+	registerMainUpgrader(upgrader_1_12_4{})
 }

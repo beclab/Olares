@@ -140,64 +140,64 @@ spec:
           name: check-chart-repo
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.15
+        image: beclab/market-backend:v0.6.17
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
         env:
-          - name: APP_SOTRE_SERVICE_SERVICE_PORT                                   
-            value: "443"                                                           
-          - name: APP_SERVICE_SERVICE_HOST                                         
+          - name: APP_SOTRE_SERVICE_SERVICE_PORT
+            value: "443"
+          - name: APP_SERVICE_SERVICE_HOST
             value: app-service
           - name: MODULE_ENABLE_STATUS_CORRECTION_CHECKER
             value: 'true'
-          - name: APP_SERVICE_SERVICE_PORT                                         
+          - name: APP_SERVICE_SERVICE_PORT
             value: "6755"
           - name: REPO_URL_PORT
-            value: "82"                                                         
-          - name: REPO_URL_HOST                                                    
-            value: chart-repo-service                                           
-          - name: NATS_HOST                                                        
-            value: nats.os-platform                                                            
-          - name: NATS_PORT                                                        
-            value: "4222"                                                          
-          - name: NATS_USERNAME                                                    
-            value: os-market-backend                                       
-          - name: NATS_PASSWORD                                                    
-            valueFrom:                                                             
-              secretKeyRef:                                                        
-                key: nats_password                                                 
-                name: market-backend-nats-secret                                   
-          - name: SYNCER_REMOTE                                                    
-            value: https://appstore-china-server-prod.api.jointerminus.cn        
-          - name: REDIS_HOST                                                       
-            value: redis-cluster-proxy.os-platform                                   
-          - name: REDIS_PORT                                                       
+            value: "82"
+          - name: REPO_URL_HOST
+            value: chart-repo-service
+          - name: NATS_HOST
+            value: nats.os-platform
+          - name: NATS_PORT
+            value: "4222"
+          - name: NATS_USERNAME
+            value: os-market-backend
+          - name: NATS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: nats_password
+                name: market-backend-nats-secret
+          - name: SYNCER_REMOTE
+            value: https://appstore-china-server-prod.api.jointerminus.cn
+          - name: REDIS_HOST
+            value: redis-cluster-proxy.os-platform
+          - name: REDIS_PORT
             value: "6379"
-          - name: REDIS_PASSWORD                                                   
-            valueFrom:                                                             
-              secretKeyRef:                                                        
-                key: redis-passwords                                               
-                name: market-secrets                                               
-          - name: REDIS_DB_NUMBER                                                  
-            value: "0"                                                             
-          - name: POSTGRES_HOST                                                    
-            value: citus-headless.os-platform                                        
-          - name: POSTGRES_PORT                                                    
-            value: "5432"                                                          
-          - name: POSTGRES_DB                                                      
-            value: os_framework_market                                                
-          - name: POSTGRES_USER                                                    
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: redis-passwords
+                name: market-secrets
+          - name: REDIS_DB_NUMBER
+            value: "0"
+          - name: POSTGRES_HOST
+            value: citus-headless.os-platform
+          - name: POSTGRES_PORT
+            value: "5432"
+          - name: POSTGRES_DB
+            value: os_framework_market
+          - name: POSTGRES_USER
             value: market_os_system
           - name: HYDRATOR_WORKER_COUNT
             value: '5'
           - name: HYDRATOR_QUEUE_SIZE
             value: '10000'
-          - name: POSTGRES_PASSWORD                                                
-            valueFrom:                                                             
-              secretKeyRef:                                                        
-                key: pg-passwords                                                  
-                name: market-pg-secrets                                            
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: pg-passwords
+                name: market-pg-secrets
           - name: API_HASH_PATH
             value: /api/v1/appstore/hash
           - name: API_DATA_PATH
@@ -207,15 +207,15 @@ spec:
           - name: API_DETAIL_PATH
             value: /api/v1/applications/info
           - name: CHART_ROOT
-            value: /opt/app/data/v2                                                                                         
-          - name: NATS_SUBJECT_SYSTEM_USER_STATE                         
+            value: /opt/app/data/v2
+          - name: NATS_SUBJECT_SYSTEM_USER_STATE
             value: os.users
-          - name: GO_ENV                                                 
+          - name: GO_ENV
             value: prod
           - name: CHART_REPO_SERVICE_HOST
             value: chart-repo-service:82
           - name: IS_ACCOUNT_FROM_HEADER
-            value: 'true'            
+            value: 'true'
 ---
 apiVersion: v1
 kind: Service
@@ -322,11 +322,11 @@ spec:
       - name: users
         permission:
           pub: allow
-          sub: allow        
+          sub: allow
       - name: "notification.*"
         permission:
           pub: allow
-          sub: allow       
+          sub: allow
       - name: "notification"
         permission:
           pub: allow
