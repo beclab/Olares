@@ -138,5 +138,5 @@ If the translation takes significantly longer than usual or the application stop
 ### How do I perform a clean uninstallation of PDFMathTranslate?
 
 To completely remove the application and its data:
-1. Uninstall the app from My Olares. For more information, see [Uninstall applications](../../docs/manual/olares/market/market.md).
+1. Uninstall the app from Market or Desktop. For more information, see [Uninstall applications](../manual/olares/market/market.md#uninstall-applications).
 2. Open the Files app, go to **Application** > **Data**, and then delete the `pdfmathtranslate` folder.
