@@ -90,7 +90,7 @@ To use the local AI service Ollama for translation, configure the following sett
 3. Click **Translate**. The translation starts immediately. 
 
     :::warning
-    During translation, do not click the **Cancel** button; otherwise, the process might report an error.
+    Do not click the **Cancel** button during translation. This might cause the process to report an error.
     :::
 
 ### Download your files
