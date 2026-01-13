@@ -36,6 +36,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/k3s/templates"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/registry"
+	"github.com/beclab/Olares/cli/pkg/storage"
 )
 
 type InstallContainerModule struct {
@@ -470,6 +471,18 @@ func (j *JoinNodesModule) Init() {
 		Parallel: true,
 	}
 
+	createSharedLibDirForWorker := &task.RemoteTask{
+		Name:  "CreateSharedLibDir(k3s)",
+		Desc:  "Create shared lib directory on worker",
+		Hosts: j.Runtime.GetHostsByRole(common.Worker),
+		Prepare: &prepare.PrepareCollection{
+			&kubernetes.NodeInCluster{Not: true},
+			new(common.OnlyWorker),
+		},
+		Action:   new(storage.CreateSharedLibDir),
+		Parallel: true,
+	}
+
 	enableK3s := &task.RemoteTask{
 		Name:  "EnableK3sService",
 		Desc:  "Enable k3s service",
@@ -536,6 +549,7 @@ func (j *JoinNodesModule) Init() {
 		k3sService,
 		k3sEnv,
 		k3sRegistryConfig,
+		createSharedLibDirForWorker,
 		enableK3s,
 		copyKubeConfigForMaster,
 		syncKubeConfigToWorker,

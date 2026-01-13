@@ -38,12 +38,6 @@ type InstallOsSystem struct {
 }
 
 func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
-	if !runtime.GetSystemInfo().IsDarwin() {
-		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("mkdir -p %s && chown 1000:1000 %s", storage.OlaresSharedLibDir, storage.OlaresSharedLibDir), false, false); err != nil {
-			return errors.Wrap(errors.WithStack(err), "failed to create shared lib dir")
-		}
-	}
-
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		return err
@@ -367,6 +361,11 @@ func (m *InstallOsSystemModule) Init() {
 		Action: &CreateUserEnvConfigMap{},
 	}
 
+	createSharedLibDir := &task.LocalTask{
+		Name:   "CreateSharedLibDir",
+		Action: &storage.CreateSharedLibDir{},
+	}
+
 	installOsSystem := &task.LocalTask{
 		Name:   "InstallOsSystem",
 		Action: &InstallOsSystem{},
@@ -399,6 +398,7 @@ func (m *InstallOsSystemModule) Init() {
 	m.Tasks = []task.Interface{
 		applySystemEnv,
 		createUserEnvConfigMap,
+		createSharedLibDir,
 		installOsSystem,
 		createBackupConfigMap,
 		checkSystemService,
