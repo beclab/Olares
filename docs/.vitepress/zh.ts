@@ -654,51 +654,6 @@ const side = {
             },
           ],
         },
-            
-            {
-              text: "版本说明",
-              link: "/zh/developer/install/versioning",
-            },
-            { text: "info", link: "/zh/developer/install/cli/info" },
-            {
-              text: "install",
-              link: "/zh/developer/install/cli/install",
-            },
-            {
-              text: "user activate",
-              link: "/zh/developer/install/cli/user-activate",
-            },
-            {
-              text: "logs",
-              link: "/zh/developer/install/cli/logs",
-            },
-            {
-              text: "precheck",
-              link: "/zh/developer/install/cli/precheck",
-            },
-            {
-              text: "prepare",
-              link: "/zh/developer/install/cli/prepare",
-            },
-            {
-              text: "release",
-              link: "/zh/developer/install/cli/release",
-            },
-            {
-              text: "start",
-              link: "/zh/developer/install/cli/start",
-            },
-            {
-              text: "stop",
-              link: "/zh/developer/install/cli/stop",
-            },
-            {
-              text: "uninstall",
-              link: "/zh/developer/install/cli/uninstall",
-            },
-          ],
-        },
-
         {
           text: "版本说明",
           link: "/zh/developer/install/versioning",
@@ -744,7 +699,7 @@ const side = {
               text: "OlaresManifest",
               link: "/zh/developer/develop/package/manifest",
             },
-            /*/{
+            /*{
               text: "推荐算法",
               link: "/zh/developer/develop/package/recommend",
             },*/
