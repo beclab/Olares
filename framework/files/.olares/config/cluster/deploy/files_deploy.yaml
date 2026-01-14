@@ -210,7 +210,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.146
+          image: beclab/files-server:v0.2.148
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -314,8 +314,8 @@ spec:
               value: os.users
             - name: NATS_SUBJECT_SYSTEM_GROUPS
               value: os.groups
-            - name: RESERVED_SPACE
-              value: '1000'
+            - name: RESERVED_SPACE_PERCENT
+              value: '1.00'
             - name: OLARES_VERSION
               value: '1.12'
             - name: FILE_CACHE_DIR
