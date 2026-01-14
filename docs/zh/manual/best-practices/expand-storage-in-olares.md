@@ -187,3 +187,27 @@ Linux 或 Olares 重启后，挂载配置将失效。
     :::
 
     你也可以在 Olares 的**文件管理器**里查看并删除该目录。
+
+## 通过 Olares CLI 扩展系统存储
+
+如果你的 Olares 系统使用基于 LVM 的存储方式，可以使用 `disk` 命令扩展系统存储容量。
+
+手动挂载会将磁盘作为外部存储挂载到 `/olares/share` 目录下。相比之下，`disk extend` 命令用于扩展 Olares 的系统存储空间。扩展完成后，新增磁盘不再显示为独立挂载点。
+
+### 列出未挂载的磁盘
+
+运行以下命令列出已连接但尚未挂载的磁盘：
+
+```bash
+olares-cli disk list-unmounted
+```
+
+### 扩展系统存储
+
+运行以下命令将检测到的未挂载磁盘纳入系统存储：
+
+```bash
+olares-cli disk extend
+```
+
+如需查看完整用法与选项，请参考 [`disk`](/zh/developer/install/cli/disk.md)。

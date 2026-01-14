@@ -188,3 +188,26 @@ You can unmount partitions mounted using either temporary or permanent methods.
     :::
 
     You can also view and remove this directory from **Files** in Olares.
+
+## Expand system storage via Olares CLI
+
+If your Olares system uses LVM-based storage, you can expand its system storage capacity using the `disk` command.
+
+Manual mounting adds an external drive under `/olares/share`. In contrast, `disk extend` expands Olares system storage. After extension, the added drive is no longer shown as an independent mount point.
+
+### List unmounted disks
+
+Run the following command to list disks that are connected but not mounted:
+
+```bash
+olares-cli disk list-unmounted
+```
+
+### Extend system storage
+
+Run the following command to extend system storage using newly detected unmounted disks:
+
+```bash
+olares-cli disk extend
+```
+For full command usage and options, please refer to [`disk`](/developer/install/cli/disk.md).
