@@ -23,6 +23,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/prepare"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/manifest"
+	"github.com/beclab/Olares/cli/pkg/storage"
 )
 
 type StatusModule struct {
@@ -243,6 +244,18 @@ func (j *JoinNodesModule) Init() {
 		Retry:    5,
 	}
 
+	createSharedLibDirForWorker := &task.RemoteTask{
+		Name:  "CreateSharedLibDir(k8s)",
+		Desc:  "Create shared lib directory on worker",
+		Hosts: j.Runtime.GetHostsByRole(common.Worker),
+		Prepare: &prepare.PrepareCollection{
+			&NodeInCluster{Not: true},
+			new(common.OnlyWorker),
+		},
+		Action:   new(storage.CreateSharedLibDir),
+		Parallel: true,
+	}
+
 	joinWorkerNode := &task.RemoteTask{
 		Name:  "JoinWorkerNode(k8s)",
 		Desc:  "Join worker node",
@@ -323,6 +336,7 @@ func (j *JoinNodesModule) Init() {
 	j.Tasks = []task.Interface{
 		generateKubeadmConfig,
 		joinMasterNode,
+		createSharedLibDirForWorker,
 		joinWorkerNode,
 		copyKubeConfig,
 		removeMasterTaint,

@@ -397,52 +397,22 @@ type CopyK3sKubeConfig struct {
 }
 
 func (c *CopyK3sKubeConfig) Execute(runtime connector.Runtime) error {
-	createConfigDirCmd := "mkdir -p /root/.kube && mkdir -p $HOME/.kube"
-	getKubeConfigCmd := "cp -f /etc/rancher/k3s/k3s.yaml /root/.kube/config"
-	chmodKubeConfigCmd := "chmod 0600 /root/.kube/config"
+	targetHome, targetUID, targetGID, err := utils.ResolveSudoUserHomeAndIDs(runtime)
+	if err != nil {
+		return err
+	}
 
-	cmd := strings.Join([]string{createConfigDirCmd, getKubeConfigCmd, chmodKubeConfigCmd}, " && ")
-	if _, err := runtime.GetRunner().SudoCmd(cmd, false, false); err != nil {
+	cmds := []string{
+		"mkdir -p /root/.kube",
+		"cp -f /etc/rancher/k3s/k3s.yaml /root/.kube/config",
+		"chmod 0600 /root/.kube/config",
+		fmt.Sprintf("mkdir -p %s", filepath.Join(targetHome, ".kube")),
+		fmt.Sprintf("cp -f /etc/rancher/k3s/k3s.yaml %s", filepath.Join(targetHome, ".kube", "config")),
+		fmt.Sprintf("chmod 0600 %s", filepath.Join(targetHome, ".kube", "config")),
+		fmt.Sprintf("chown -R %s:%s %s", targetUID, targetGID, filepath.Join(targetHome, ".kube")),
+	}
+	if _, err := runtime.GetRunner().SudoCmd(strings.Join(cmds, " && "), false, false); err != nil {
 		return errors.Wrap(errors.WithStack(err), "copy k3s kube config failed")
-	}
-
-	userMkdir := "mkdir -p $HOME/.kube"
-	if _, err := runtime.GetRunner().Cmd(userMkdir, false, false); err != nil {
-		return errors.Wrap(errors.WithStack(err), "user mkdir $HOME/.kube failed")
-	}
-
-	userCopyKubeConfig := "cp -f /etc/rancher/k3s/k3s.yaml $HOME/.kube/config"
-	if _, err := runtime.GetRunner().SudoCmd(userCopyKubeConfig, false, false); err != nil {
-		return errors.Wrap(errors.WithStack(err), "user copy /etc/rancher/k3s/k3s.yaml to $HOME/.kube/config failed")
-	}
-
-	if _, err := runtime.GetRunner().SudoCmd("chmod 0600 $HOME/.kube/config", false, false); err != nil {
-		return errors.Wrap(errors.WithStack(err), "chmod k3s $HOME/.kube/config 0600 failed")
-	}
-
-	// userId, err := runtime.GetRunner().Cmd("echo $(id -u)", false, false)
-	// if err != nil {
-	// 	return errors.Wrap(errors.WithStack(err), "get user id failed")
-	// }
-
-	// userGroupId, err := runtime.GetRunner().Cmd("echo $(id -g)", false, false)
-	// if err != nil {
-	// 	return errors.Wrap(errors.WithStack(err), "get user group id failed")
-	// }
-
-	userId, err := runtime.GetRunner().Cmd("echo $SUDO_UID", false, false)
-	if err != nil {
-		return errors.Wrap(errors.WithStack(err), "get user id failed")
-	}
-
-	userGroupId, err := runtime.GetRunner().Cmd("echo $SUDO_GID", false, false)
-	if err != nil {
-		return errors.Wrap(errors.WithStack(err), "get user group id failed")
-	}
-
-	chownKubeConfig := fmt.Sprintf("chown -R %s:%s $HOME/.kube", userId, userGroupId)
-	if _, err := runtime.GetRunner().SudoCmd(chownKubeConfig, false, false); err != nil {
-		return errors.Wrap(errors.WithStack(err), "chown user kube config failed")
 	}
 	return nil
 }
@@ -493,59 +463,29 @@ func (s *SyncKubeConfigToWorker) Execute(runtime connector.Runtime) error {
 	if v, ok := s.PipelineCache.Get(common.ClusterStatus); ok {
 		cluster := v.(*K3sStatus)
 
-		createConfigDirCmd := "mkdir -p /root/.kube"
-		if _, err := runtime.GetRunner().SudoCmd(createConfigDirCmd, false, false); err != nil {
-			return errors.Wrap(errors.WithStack(err), "create .kube dir failed")
-		}
-
 		oldServer := "server: https://127.0.0.1:6443"
 		newServer := fmt.Sprintf("server: https://%s:%d",
 			s.KubeConf.Cluster.ControlPlaneEndpoint.Domain,
 			s.KubeConf.Cluster.ControlPlaneEndpoint.Port)
 		newKubeConfig := strings.Replace(cluster.KubeConfig, oldServer, newServer, -1)
 
-		syncKubeConfigForRootCmd := fmt.Sprintf("echo '%s' > %s", newKubeConfig, "/root/.kube/config")
-		if _, err := runtime.GetRunner().SudoCmd(syncKubeConfigForRootCmd, false, false); err != nil {
-			return errors.Wrap(errors.WithStack(err), "sync kube config for root failed")
-		}
-
-		if _, err := runtime.GetRunner().SudoCmd("chmod 0600 /root/.kube/config", false, false); err != nil {
-			return errors.Wrap(errors.WithStack(err), "chmod k3s $HOME/.kube/config failed")
-		}
-
-		userConfigDirCmd := "mkdir -p $HOME/.kube"
-		if _, err := runtime.GetRunner().Cmd(userConfigDirCmd, false, false); err != nil {
-			return errors.Wrap(errors.WithStack(err), "user mkdir $HOME/.kube failed")
-		}
-
-		syncKubeConfigForUserCmd := fmt.Sprintf("echo '%s' > %s", newKubeConfig, "$HOME/.kube/config")
-		if _, err := runtime.GetRunner().Cmd(syncKubeConfigForUserCmd, false, false); err != nil {
-			return errors.Wrap(errors.WithStack(err), "sync kube config for normal user failed")
-		}
-
-		// userId, err := runtime.GetRunner().Cmd("echo $(id -u)", false, false)
-		// if err != nil {
-		// 	return errors.Wrap(errors.WithStack(err), "get user id failed")
-		// }
-
-		// userGroupId, err := runtime.GetRunner().Cmd("echo $(id -g)", false, false)
-		// if err != nil {
-		// 	return errors.Wrap(errors.WithStack(err), "get user group id failed")
-		// }
-
-		userId, err := runtime.GetRunner().Cmd("echo $SUDO_UID", false, false)
+		targetHome, targetUID, targetGID, err := utils.ResolveSudoUserHomeAndIDs(runtime)
 		if err != nil {
-			return errors.Wrap(errors.WithStack(err), "get user id failed")
+			return err
 		}
+		targetKubeConfigPath := filepath.Join(targetHome, ".kube", "config")
 
-		userGroupId, err := runtime.GetRunner().Cmd("echo $SUDO_GID", false, false)
-		if err != nil {
-			return errors.Wrap(errors.WithStack(err), "get user group id failed")
+		cmds := []string{
+			"mkdir -p /root/.kube",
+			fmt.Sprintf("echo '%s' > %s", newKubeConfig, "/root/.kube/config"),
+			"chmod 0600 /root/.kube/config",
+			fmt.Sprintf("mkdir -p %s", filepath.Join(targetHome, ".kube")),
+			fmt.Sprintf("echo '%s' > %s", newKubeConfig, targetKubeConfigPath),
+			fmt.Sprintf("chmod 0600 %s", targetKubeConfigPath),
+			fmt.Sprintf("chown -R %s:%s %s", targetUID, targetGID, filepath.Join(targetHome, ".kube")),
 		}
-
-		chownKubeConfig := fmt.Sprintf("chown -R %s:%s -R $HOME/.kube", userId, userGroupId)
-		if _, err := runtime.GetRunner().SudoCmd(chownKubeConfig, false, false); err != nil {
-			return errors.Wrap(errors.WithStack(err), "chown user kube config failed")
+		if _, err := runtime.GetRunner().SudoCmd(strings.Join(cmds, " && "), false, false); err != nil {
+			return errors.Wrap(errors.WithStack(err), "sync kube config failed")
 		}
 	}
 	return nil

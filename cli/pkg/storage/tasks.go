@@ -396,3 +396,17 @@ func (t *DeleteTerminusData) Execute(runtime connector.Runtime) error {
 
 	return nil
 }
+
+type CreateSharedLibDir struct {
+	common.KubeAction
+}
+
+func (t *CreateSharedLibDir) Execute(runtime connector.Runtime) error {
+	if runtime.GetSystemInfo().IsDarwin() {
+		return nil
+	}
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("mkdir -p %s && chown 1000:1000 %s", OlaresSharedLibDir, OlaresSharedLibDir), false, false); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to create shared lib dir")
+	}
+	return nil
+}
