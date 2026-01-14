@@ -5,20 +5,25 @@ description: Learn how to install LobeChat on Olares and integrate it with Ollam
 
 # Build your local AI assistant with LobeChat
 
-LobeChat is an open-source, modern AI chat framework that supports file uploads, knowledge bases, and multi-modal interactions, ensuring a secure local chat experience. It also supports integration with Ollama, which allows you to use the large language models (LLMs) provided by Ollama to enhance your chat applications within LobeChat easily. Olares streamlines and simplifies the deployment of both, allowing you to skip complex manual environment configurations.
+LobeChat is an open‑source framework for building secure, local AI chat experiences. It supports file handling, knowledge bases, and multimodal inputs, and it supports Ollama to run and switch local LLMs.
+
+ Olares streamlines and simplifies the deployment of both, allowing you to skip complex manual environment configurations.
 
 This guide covers the installation, configuration, and practical usage of these tools to create your personalized AI assistants.
 
 ## Learning objectives
 
 By the end of this guide, you are able to:
-- Install LobeChat directly from the Olares Market.
 - Configure LobeChat to communicate with your local Ollama instance.
 - Use LobeChat for specific scenarios such as content writing and coding.
 
 ## Before you begin
 
-Ensure that Ollama is installed and running. For more information, see [Download and run local AI models via Ollama](ollama.md).
+Before you begin, make sure:
+
+- Ollama installed and running in your Olares environment.
+- At least one model installed using [Ollama](ollama.md).
+
 
 ## Install LobeChat
 
@@ -54,9 +59,11 @@ After the installation is completed, you must connect LobeChat to Ollama to make
 
 ## Install language models
 
-After connecting to Ollama, LobeChat lists supported models, including models that are not installed yet. When you choose a model, LobeChat checks local storage. If the model is not installed, LobeChat prompts you to download it. After the download finishes, the model is ready to use.
+After connecting to Ollama, LobeChat lists supported models, including models that are not installed yet. 
 
-You can install these models directly through the LobeChat user interface (UI) or via the Ollama command line (CLI).
+When you choose a model, LobeChat checks whether it is installed.
+
+If you need to download additional models, you can use [Ollama CLI](ollama.md#download-a-model) or download them directly through LobeChat.
 
 ### Install via LobeChat UI
 
@@ -77,8 +84,8 @@ For more information, see [Download and run local AI models via Ollama](ollama.m
 
 LobeChat allows you to create specialized assistants to handle specific tasks by leveraging various language models and combining them with functional plug-ins.
 
-- Flexible model switching: You can switch language models instantly within the same chat to achieve the best results. For example, if you are not satisfied with a response, you can select a different model from the list to leverage their unique strengths.
-- Plug-in extensions: You can also install plug-ins to extend and enhance the capabilities of your assistant.
+- **Flexible model switching**: You can switch language models instantly within the same chat to achieve the best results. For example, if you are not satisfied with a response, you can select a different model from the list to leverage their unique strengths.
+- **Plug-in extensions**: You can also install plug-ins to extend and enhance the capabilities of your assistant.
 
    :::info
    To install plug-ins, ensure that you select a model compatible with Function Calling. Look for <i class="material-symbols-outlined">brick</i> next to the model name, which indicates the model supports function calls.
@@ -208,7 +215,7 @@ To help you get started, this guide demonstrates only some typical configuration
    ```
 3. The assistant processes your request and generates a standalone Python script with explanation.
 
-   ```
+   ```python
    import csv
    import random
 
@@ -240,9 +247,9 @@ To help you get started, this guide demonstrates only some typical configuration
 
    a. Copy the generated Python code block and save it as `generate_data.py`.
 
-   b. Open the Terminal, navigate to the folder, and run
-`python3 generate_data.py`.
-
+   b. Open the Terminal, navigate to the folder, and run the following command:
+```python
+python3 generate_data.py
    c. Check your current folder. You should see a new file named `employees.csv`. Open it to verify the generated mock data.
 
       ![Dev bot result verification](/images/manual/use-cases/dev-bot-result.png#bordered)  
@@ -297,7 +304,7 @@ To help you get started, this guide demonstrates only some typical configuration
 
 #### 3. Select the language model and plug-in
 
-1. In the basic interaction area, select a language model. For example, **Qwen 2.5 7B** , because:
+1. In the basic interaction area, select a language model. For example, **Qwen 2.5 7B**, because:
 
    - It excels at various NLP tasks such as contextual understanding and content writing.
    - It is compatible with functional calling, so you can install LobeChat plug-ins for enhanced capabilities.
@@ -306,8 +313,10 @@ To help you get started, this guide demonstrates only some typical configuration
 
 3. Install a web-access plug-in to allow the assistant to access live web pages and analyze real-time content from any URLs you provide. For example, **Website Crawler**. 
 
-   :::tip How Website Crawler works (Real-time vs. Offline)
-   Standard local AI models are offline and rely on pre-trained data from the past. The Website Crawler plug-in, specifically the getWebsiteContent function, acts as a bridge to the live internet. When you provide a URL, the plug-in instantly accesses the web page in real time via an API, fetches the current content, and feeds it to the AI. This ensures that the AI model is accessing the latest live web content rather than using the old memory.
+   :::info How Website Crawler works (Real-time vs. Offline)
+   Standard local AI models are offline and rely on pre-trained data from the past. The Website Crawler plug-in, specifically the getWebsiteContent function, acts as a bridge to the live internet.
+   
+   When you provide a URL, the plug-in instantly accesses the web page in real time via an API, fetches the current content, and feeds it to the AI. This ensures that the AI model is accessing the latest live web content rather than using the old memory.
    :::
 
    a. Hover over the plug-in icon and click **Plugin Store**.
