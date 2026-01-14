@@ -18,6 +18,10 @@ By the end of this tutorial, you are able to:
 ## Before you begin
 
 To ensure privacy by using a local AI model for translation, you must have an AI model engine installed and ready. This tutorial uses Ollama as the example. For installation instructions, see [Download and run local AI models via Ollama](ollama.md).
+## Prerequisites
+Before you begin, make sure:
+- Ollama is installed and running in your Olares environment.
+- At least one model installed using Ollama. See [Ollama](ollama.md) for details.
 
 ## Install PDFMathTranslate
 
