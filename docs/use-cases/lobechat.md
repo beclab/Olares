@@ -254,3 +254,19 @@ Build an assistant that keeps you updated with the latest technology trends. By 
 1. In the basic interaction area, hover over the plug-in icon to ensure that the **Website Crawler** plug-in is enabled.
 2. Send the URL address to the chat. For example, `https://github.com/trending`.
 3. Paste and send the URL to the chat. The assistant lists specific news stories with summaries.
+
+## FAQ
+
+### Why did the connection check fail when I connected to Ollama?
+
+This usually happens due to network or authentication settings. Follow these steps to resolve it:
+
+1.  Open Settings, and ensure that the **Authentication level** for Ollama is set to **Internal**.
+2.  Turn on the VPN in the LarePass desktop client, and confirm that the status changes to **Intranet** or **P2P**.
+3.  Run the connection check again.
+
+:::tip
+If you are on the same local network as your device and the **Authentication level** for Ollama is set to **None**, you do not need to enable the LarePass VPN.
+:::
+
+For more information, see [Ensure network connectivity](ollama.md#ensure-network-connectivity).
