@@ -608,72 +608,52 @@ const side = {
         },
         {
           text: "Olares CLI",
-          collapsed: true,
           link: "/zh/developer/install/cli/olares-cli",
+          collapsed: true,
           items: [
-            { text: "gpu", link: "/zh/developer/install/cli/gpu" },
-            { text: "osinfo", link: "/zh/developer/install/cli/osinfo" },
-            { text: "node", link: "/zh/developer/install/cli/node" },
             {
               text: "backups",
               link: "/zh/developer/install/cli/backups",
               collapsed: true,
               items: [
+                { text: "backup", link: "/zh/developer/install/cli/backups-backup" },
                 { text: "download", link: "/zh/developer/install/cli/backups-download" },
                 { text: "region", link: "/zh/developer/install/cli/backups-region" },
-                { text: "backup", link: "/zh/developer/install/cli/backups-backup" },
                 { text: "restore", link: "/zh/developer/install/cli/backups-restore" },
                 { text: "snapshots", link: "/zh/developer/install/cli/backups-snapshots" },
               ],
-            },
+            }, 
+            { text: "change-ip", link: "/zh/developer/install/cli/change-ip" },
+            { text: "disk", link: "/zh/developer/install/cli/disk" },   
+            { text: "download", link: "/zh/developer/install/cli/download" },
+            { text: "gpu", link: "/zh/developer/install/cli/gpu" },
+            { text: "info", link: "/zh/developer/install/cli/info" },         
+            { text: "install", link: "/zh/developer/install/cli/install" },
+            { text: "logs", link: "/zh/developer/install/cli/logs" },
+            { text: "node", link: "/zh/developer/install/cli/node" },
+            { text: "osinfo", link: "/zh/developer/install/cli/osinfo" },
+            { text: "precheck", link: "/zh/developer/install/cli/precheck" },
+            { text: "prepare", link: "/zh/developer/install/cli/prepare" },
+            { text: "release", link: "/zh/developer/install/cli/release" },
+            { text: "start", link: "/zh/developer/install/cli/start" },
+            { text: "stop", link: "/zh/developer/install/cli/stop" },
+            { text: "uninstall", link: "/zh/developer/install/cli/uninstall" },
+            { text: "upgrade", link: "/zh/developer/install/cli/upgrade" },
             {
-              text: "change-ip",
-              link: "/zh/developer/install/cli/change-ip",
-            },
-            {
-              text: "download",
-              link: "/zh/developer/install/cli/download",
-            },
-            { text: "info", link: "/zh/developer/install/cli/info" },
-            {
-              text: "install",
-              link: "/zh/developer/install/cli/install",
-            },
-            {
-              text: "user activate",
-              link: "/zh/developer/install/cli/user-activate",
-            },
-            {
-              text: "logs",
-              link: "/zh/developer/install/cli/logs",
-            },
-            {
-              text: "precheck",
-              link: "/zh/developer/install/cli/precheck",
-            },
-            {
-              text: "prepare",
-              link: "/zh/developer/install/cli/prepare",
-            },
-            {
-              text: "release",
-              link: "/zh/developer/install/cli/release",
-            },
-            {
-              text: "start",
-              link: "/zh/developer/install/cli/start",
-            },
-            {
-              text: "stop",
-              link: "/zh/developer/install/cli/stop",
-            },
-            {
-              text: "uninstall",
-              link: "/zh/developer/install/cli/uninstall",
+              text: "user",
+              link: "/zh/developer/install/cli/user",
+              collapsed: true,
+              items: [
+                { text: "activate", link: "/zh/developer/install/cli/user-activate" },
+                { text: "create", link: "/zh/developer/install/cli/user-create" },
+                { text: "delete", link: "/zh/developer/install/cli/user-delete" },
+                { text: "get", link: "/zh/developer/install/cli/user-get" },
+                { text: "list", link: "/zh/developer/install/cli/user-list" },
+                { text: "reset-password", link: "/zh/developer/install/cli/user-reset-password" },
+              ],
             },
           ],
         },
-
         {
           text: "版本说明",
           link: "/zh/developer/install/versioning",
@@ -719,7 +699,7 @@ const side = {
               text: "OlaresManifest",
               link: "/zh/developer/develop/package/manifest",
             },
-            /*/{
+            /*{
               text: "推荐算法",
               link: "/zh/developer/develop/package/recommend",
             },*/

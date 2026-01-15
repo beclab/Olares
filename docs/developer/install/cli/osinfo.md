@@ -8,13 +8,13 @@ The `osinfo` command provides detailed information about the operating system of
 olares-cli osinfo <subcommand> [options]
 ```
 
-## Subcommand
+## Subcommands
 
 | Subcommand | Description                                                          |
 |------------|----------------------------------------------------------------------|
 | `show`     | Prints information about the operating system of the current device. |
 
-## Flag
+## Options
 
 | Name         | Short | Description                                                                                                                                                                                                                                                                              |
 |--------------|-------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

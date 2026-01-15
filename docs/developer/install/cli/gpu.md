@@ -32,7 +32,7 @@ olares-cli gpu <subcommand> [options]
 | `--version`| `-v`      | Specifies the Olares version for GPU drivers and components. <br>Version values follow the format `x.y.z` (e.g., `1.10.0`) or include a build date (e.g., `1.10.0-20241109`).<br> Refer to the [GitHub Releases page](https://github.com/beclab/Olares/releases) for available versions. | No                   | Current version    |
 | `--help`   | `-h`      | Displays help information.                                                                                                                                                                                                                                                         | No                   | N/A                            |
 
-## Example
+## Examples
 
 ```bash
 # Install GPU drivers and dependencies to a specific directory

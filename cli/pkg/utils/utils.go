@@ -321,3 +321,54 @@ func GetBufIOReaderOfTerminalInput() (*bufio.Reader, error) {
 	}
 	return bufio.NewReader(tty), nil
 }
+
+// ResolveSudoUserHomeAndIDs resolves the home directory, uid, and gid for the user
+// who invoked sudo. If not running under sudo, it falls back to the current user.
+// This is useful for commands that need to operate on the invoking user's home
+// directory rather than /root when running with sudo.
+func ResolveSudoUserHomeAndIDs(runtime connector.Runtime) (home, uid, gid string, err error) {
+	uid, err = runtime.GetRunner().Cmd("echo ${SUDO_UID:-}", false, false)
+	if err != nil {
+		return "", "", "", errors.Wrap(errors.WithStack(err), "get SUDO_UID failed")
+	}
+	gid, err = runtime.GetRunner().Cmd("echo ${SUDO_GID:-}", false, false)
+	if err != nil {
+		return "", "", "", errors.Wrap(errors.WithStack(err), "get SUDO_GID failed")
+	}
+	uid = strings.TrimSpace(uid)
+	gid = strings.TrimSpace(gid)
+
+	if uid == "" {
+		uid, err = runtime.GetRunner().Cmd("id -u", false, false)
+		if err != nil {
+			return "", "", "", errors.Wrap(errors.WithStack(err), "get current uid failed")
+		}
+		gid, err = runtime.GetRunner().Cmd("id -g", false, false)
+		if err != nil {
+			return "", "", "", errors.Wrap(errors.WithStack(err), "get current gid failed")
+		}
+		uid = strings.TrimSpace(uid)
+		gid = strings.TrimSpace(gid)
+	}
+
+	home, err = runtime.GetRunner().Cmd(fmt.Sprintf(`getent passwd %s | awk -F: 'NR==1{print $6; exit}'`, uid), false, false)
+	if err != nil {
+		home = ""
+	}
+	home = strings.TrimSpace(home)
+	if home == "" {
+		home, _ = runtime.GetRunner().Cmd(fmt.Sprintf(`awk -F: -v uid=%s '$3==uid {print $6; exit}' /etc/passwd 2>/dev/null`, uid), false, false)
+		home = strings.TrimSpace(home)
+	}
+	if home == "" {
+		home, err = runtime.GetRunner().Cmd("echo $HOME", false, false)
+		if err != nil {
+			return "", "", "", errors.Wrap(errors.WithStack(err), "get HOME failed")
+		}
+		home = strings.TrimSpace(home)
+	}
+	if home == "" {
+		return "", "", "", errors.New("resolve user home failed")
+	}
+	return home, uid, gid, nil
+}
