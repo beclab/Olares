@@ -96,20 +96,20 @@ The following steps outline the standard workflow for creating and configuring a
 
    d. Close the **Session Settings** page to return to the chat window.
 
-3. Select the language model and plug-in:
-
-   a. In the basic interaction area, select a language model. 
-
-      ![Select language model](/images/manual/use-cases/select-qwen.png#bordered) 
+3. Select the language model from the basic interaction area.
    
-   b. Hover over the plug-in icon and click **Plugin Store**.
+   ![Select language model](/images/manual/use-cases/select-qwen.png#bordered) 
+   
+4. (Optional) Install LobeChat plug-ins to enhance the assistant's capabilities:
+
+   a. In the basic interaction area, hover over the plug-in icon and click **Plugin Store**.
 
       ![Install LobeChat plug-in](/images/manual/use-cases/lobechat-plugin-install.png#bordered)
 
-   c. On the **LobeHub Plugins** tab, search for the target plug-in, and then click **Install**.
+   b. On the **LobeHub Plugins** tab, search for the target plug-in, and then click **Install**.
 
-4. Interact with the assistant.
-5. Pin for quick access:
+5. Interact with the assistant.
+6. (Optional) Pin for quick access:
 
    If you are satisfied with the assistant's performance, hover over the assistant in the sidebar, click <i class="material-symbols-outlined">more_vert</i>, and then click **Pin** to keep it accessible at the top of your list.
 
