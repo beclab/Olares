@@ -55,16 +55,18 @@ After the installation is completed, you must connect LobeChat to Ollama to make
 
 ## Install language models
 
-After connecting to Ollama, LobeChat lists supported models, including models that are not installed yet. 
+By default, LobeChat lists supported models, including models that are not installed yet. 
 
-To download the models, use one of the following options:
+You can click **Get Model List** to fetch available models from Ollama.
+
+To download additional models, use one of the following options:
    - Download via LobeChat UI
 
       When you are chatting with a selected language model, if the language model is not installed, you are prompted right in the chat to download and install it.
 
       ![Install language model via LobeChat UI](/images/manual/use-cases/download-in-lobechat.png#bordered)
 
-   - Download using the Ollama command line (CLI). For more information, see [Download a model](ollama.md#download-a-model).
+   - Download using the Ollama CLI. For more information, see [Download a model](ollama.md#download-a-model).
 
 ## Create an assistant
 
@@ -132,10 +134,10 @@ Create a specialized assistant to help you refine text and generate images based
    an image based on my description.
    ``` 
 
-- **Language model**: "Qwen 2.5 7B"
+- **Language model**: `qwen2.5:7b`
 
    :::info
-   Qwen 2.5 7B excels at various NLP tasks such as contextual understanding and content writing. It is also compatible with functional calling, so you can install LobeChat plug-ins for enhanced capabilities.
+   `qwen2.5:7b` excels at various NLP tasks such as contextual understanding and content writing. It is also compatible with functional calling, so you can install LobeChat plug-ins for enhanced capabilities.
    :::
 
 - **LobeChat plug-in**: "Pollinate drawing", which is used to create images based on description
@@ -160,10 +162,10 @@ Create a specialized assistant to help you write efficient code and act as a ded
    You are an expert developer. When I describe a task or requirement, 
    generate clean, efficient, and well-commented code to solve it.
    ``` 
-- **Language model**: "deepseek-coder-v2"
+- **Language model**: `deepseek-coder-v2`
 
    :::info
-   deepseek-coder-v2 is good at coding use cases such as code generation and long text understanding.
+   `deepseek-coder-v2` is good at coding use cases such as code generation and long text understanding.
    :::
 
 #### Interaction
@@ -232,10 +234,10 @@ Build an assistant that keeps you updated with the latest technology trends. By 
    read the headlines and summarize the latest top five stories for me.
    Limit the list to five.
    ``` 
-- **Language model**: Qwen 2.5 7B
+- **Language model**: `qwen2.5:7b`
 
    :::info
-   Qwen 2.5 7B excels at various NLP tasks such as contextual understanding and content writing. It is also compatible with functional calling, so you can install LobeChat plug-ins for enhanced capabilities.
+   `qwen2.5:7b` excels at various NLP tasks such as contextual understanding and content writing. It is also compatible with functional calling, so you can install LobeChat plug-ins for enhanced capabilities.
    :::
 - **LobeChat plug-in**: "Website Crawler", which is used to access live web pages and analyze real-time content from provided URLs
 
