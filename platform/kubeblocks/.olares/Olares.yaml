@@ -5,6 +5,6 @@ output:
     - 
       name: beclab/apecloud-kubeblocks-tools:1.0.1
     -
-      name: beclab/apecloud-kubeblocks:1.0.1
+      name: beclab/kubeblocks:1.0.1-ext1
     -
       name: beclab/kubeblock-addon-charts:v1.0.1-ext2
