@@ -39,7 +39,7 @@ After the installation is completed, you must connect LobeChat to Ollama to make
 1. Open **LobeChat** from Launchpad.
 2. Click the LobeChat icon in the upper-left corner, and then go to **Settings** > **Language Model**.
 
-   ![LobeChat settings menu](/images/manual/use-cases/lobechat-settings-menu.png#bordered)
+   ![LobeChat settings menu](/images/manual/use-cases/lobechat-settings-menu.png#bordered){width=75%} 
 
 3. (Optional) To obtain your local Ollama host address, go to Olares **Settings** > **Application** > **Ollama** > **Ollama API** > **Set up endpoint**, and then copy the endpoint address.
 
