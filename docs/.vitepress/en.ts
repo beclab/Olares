@@ -557,6 +557,8 @@ const side = {
         {
           text: "Stirling PDF",
           link: "/use-cases/stirling-pdf",
+        },
+        {
           text: "PDFMathTranslate",
           link: "/use-cases/pdfmathtranslate",
         },
