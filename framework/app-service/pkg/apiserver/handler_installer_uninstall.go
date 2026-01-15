@@ -11,8 +11,8 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+
 	"github.com/emicklei/go-restful/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -94,21 +94,11 @@ func (h *Handler) uninstall(req *restful.Request, resp *restful.Response) {
 		UpdateTime: &now,
 	}
 
-	a, err := apputils.UpdateAppMgrStatus(name, status)
+	_, err = apputils.UpdateAppMgrStatus(name, status)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
-	utils.PublishAppEvent(utils.EventParams{
-		Owner:      a.Spec.AppOwner,
-		Name:       a.Spec.AppName,
-		OpType:     string(a.Status.OpType),
-		OpID:       opID,
-		State:      v1alpha1.Uninstalling.String(),
-		RawAppName: a.Spec.RawAppName,
-		Type:       a.Spec.Type.String(),
-		Title:      apputils.AppTitle(a.Spec.Config),
-	})
 
 	resp.WriteEntity(api.InstallationResponse{
 		Response: api.Response{Code: 200},

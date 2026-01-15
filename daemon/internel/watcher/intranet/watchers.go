@@ -79,7 +79,7 @@ func (w *applicationWatcher) Watch(ctx context.Context) {
 				klog.Error("reload intranet server config error, ", err)
 				return
 			}
-			klog.Info("Intranet server config reloaded")
+			klog.V(8).Info("Intranet server config reloaded")
 		} else {
 			// Start the intranet server
 			err = w.intranetServer.Start(o)

@@ -98,7 +98,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-          image: beclab/apecloud-kubeblocks:1.0.1
+          image: beclab/kubeblocks:1.0.1-ext1
           imagePullPolicy: IfNotPresent
           ports:
             - name: webhook-server

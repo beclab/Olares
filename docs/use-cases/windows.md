@@ -1,5 +1,5 @@
 ---
-outline: [2, 3]
+outline: [2, 4]
 description: A comprehensive guide to installing and running a Windows virtual machine on Olares. Learn how to configure initial credentials, connect via browser-based VNC or Microsoft Remote Desktop (RDP), and transfer files between your computer and the VM.
 ---
 
@@ -28,87 +28,92 @@ By the end of this tutorial, you will learn how to:
 Windows is available as an app in the Olares Market.
 
 ### Install Windows
-1. Open the **Market** app in your Olares web interface.
-2. Use the search bar and type "Windows".
-3. Click **Get**, then click **Install**.
-    ![Install Windows](../public/images/manual/use-cases/win-install.png#bordered)
-4. When prompted, set your Windows login credentials:
-    - `WINDOWS_USERNAME`: Create a username for Windows access.
-    - `WINDOWS_PASSWORD`: Set the corresponding password.
-    ![Set environment variables](../public/images/manual/use-cases/win-set-env-var.png#bordered)
+1. Open the Market, and search for "Windows".
+2. Click **Get**, then click **Install**.
+   ![Install Windows](../public/images/manual/use-cases/win-install1.png#bordered)
 
-  These credentials are required for your first login.  
-  You can change them later inside Windows.
+3. When prompted, set environment variables:
+    - **USERNAME:** Create a username for accessing Windows.
+    - **PASSWORD:** Set the corresponding password.
+    - **VERSION:** Select your preferred Windows version from the dropdown list.
+    - **DISK_SIZE:** Allocate disk space for Windows.
 
-5. Wait a few minutes for the installation and initialization to complete.
+    ![Set environment variables](../public/images/manual/use-cases/win-set-env-var1.png#bordered){width=70%}
+
+4. Wait a few minutes for the installation and initialization to complete.
 
 ### Set up Windows
 
-Once installation finishes, open Windows from Launchpad to start the VM for the first time.
+Once the installation is finished, open Windows from Launchpad to start the VM for the first time.
 
-Olares will automatically download and install the Windows 11 system image (about 5.5 GB). This may take several minutes depending on your network speed.
-    ![Download Windows 11](../public/images/manual/use-cases/win-downloading-win11.png#bordered)
+Olares will automatically download and install the system image of the corresponding Windows version. This may take several minutes depending on your network speed.
 
+![Download Windows 11](../public/images/manual/use-cases/win-downloading-win11.png#bordered)
 ## Access the Windows VM
 
 You can access your VM in two ways: 
-- **Browser (VNC)**: for setup and quick tasks
-- **Remote Desktop (RDP)**: for the best daily experience
+- [**Browser:**](#method-1-access-from-the-browser-vnc) for setup and quick tasks
+- [**Remote Desktop:**](#method-2-access-using-a-remote-desktop-client-rdp) for the best daily experience
 
-### Access from the browser (VNC)
+### Method 1: Access from the browser (VNC)
 
 Open the Windows app from Launchpad to launch the VM directly in your browser using VNC.
 ::: info
 VNC (Virtual Network Computing) provides immediate, clientless access without requiring any additional software. It is ideal for initial setup, troubleshooting, or emergency access when you cannot use RDP. However, it can feel less responsive and lacks advanced features like audio redirection and high-performance graphics.
 :::
-### Access using a Remote Desktop Client (RDP)
+### Method 2: Access using a Remote Desktop Client (RDP)
 RDP (Remote Desktop Protocol) provides a much smoother, native-like experience with better performance, audio support, and seamless file transfer.
 
-To connect via RDP:
+#### Locate port number for Windows
+:::warning Multiple Windows instances
+Each Windows instance uses a unique port. If you have cloned the Windows app, ensure you check the **ACLs** section for the specific instance you want to access.
+:::
+1. Open Settings, and navigate to **Application** > **Windows**.
+2. Under **Permissions**, click **ACLs**.
+3. Note the port number listed in the **Dst** column. You will need this for the connection step.
+   ![Locate port number](../public/images/manual/use-cases/win-port-number.png#bordered)
+
+#### Connect to Windows via RDP
+:::info
+The following steps show the macOS interface, but the workflow is similar on all platforms.
+:::
 1. [Enable VPN on LarePass](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your device.
 
-    When the VPN connection status shows `DERP`, `P2P`, or `Intranet`, the secure network is active and ready for remote access.
+    When the VPN connection status shows **P2P**, or **Intranet**, the secure network is active and ready for remote access.
 
 2. Install the Remote Desktop client.
    - **Windows:** No installation needed.
    - **macOS / iOS:** Download [Windows App from the App Store](https://apps.apple.com/us/app/windows-app/id1295203466).
    - **Android:** Download [Windows App from Google Play](https://play.google.com/store/apps/details?id=com.microsoft.rdc.androidx).
 
-3. Find your Windows VM address.
+3. Open Windows from the Launchpad in your browser. Copy the domain from the address bar (exclude `https://` and any text after the domain).
+4. Add your Windows VM as an RDP connection. 
 
-    a. Open Windows from Launchpad in the brower view.
-
-    b. In the browser URL bar, copy the main domain part and add `:46879` to the end.
-    
-    **Example**
-    - Browser URL:
-    ```
-    https://7e89d2a1.laresprime.olares.com
-    ``` 
-    - RDP address: 
-    ```
-    7e89d2a1.laresprime.olares.com:46879
-    ```
-
-4. Add your Windows VM as an RDP connection. The following steps show the macOS interface, but the workflow is nearly identical on Windows and other platforms.
-
-    a. Open the **Windows App** / **Microsoft Remote Desktop** on your device.
+    a. Open the Windows App on your device.
 
     b. Click the **＋** icon and select **Add PC**.
 
-    c. In **PC name**, enter your Windows VM address you get from the previous step.
-        ![Add PC](../public/images/manual/use-cases/win-add-pc.png#bordered)
+    c. In **PC name**, enter the domain you get from the previous step, followed by a colon and the port number.
+
+      For example, if your URL is `https://7e89d2a1.<username>.olares.com`, and the port is `49268`, enter:
+      ```
+      7e89d2a1.<username>.olares.com:49268
+      ```
+
+   ![Add PC](../public/images/manual/use-cases/win-add-pc1.png#bordered)
 
     d. Click **Add**.
 
-    e. Double click your saved PC entry, or click **⋯** and choose **Connect**.
-        ![Connect to PC](../public/images/manual/use-cases/win-connect-device.png#bordered)
-        
-    f. When prompted, enter the `WINDOWS_USERNAME` and `WINDOWS_PASSWORD` you created earlier.
-        ![Log in to PC](../public/images/manual/use-cases/win-log-in.png#bordered)
+5. Connect to the Windows VM.
 
-    g. If a security warning appears, click **Continue**.
-        ![Continue to log in](../public/images/manual/use-cases/win-confirm-connect.png#bordered)
+   a. Double-click your saved PC entry, or click **⋯** and choose **Connect**.
+   ![Connect to PC](../public/images/manual/use-cases/win-connect-device1.png#bordered)
+        
+   b. When prompted, enter the **Username** and **Password** you created earlier.
+   ![Log in to PC](../public/images/manual/use-cases/win-log-in1.png#bordered)
+
+   c. If a security warning appears, click **Continue**.
+   ![Continue to log in](../public/images/manual/use-cases/win-confirm-connect1.png#bordered)
 
 You are now connected to your Windows VM via RDP.
 ![Windows VM](../public/images/manual/use-cases/win-vm-interface.png#bordered)
@@ -165,5 +170,23 @@ If the Windows system image fails to download during setup:
 
 ### Can I install other Windows versions or languages?
 
-- Currently, only the default Windows 11 (English) installation image is supported. You cannot choose other Windows versions or language editions during installation.
-- After Windows 11 is installed, you can change the display language using the standard Windows language settings.
+Currently, the following Windows version are supported:
+- Windows 11 Pro
+- Windows 11 LTSC
+- Windows 11 Enterprise
+- Windows 10 Pro
+- Windows 10 LTSC
+- Windows 10 Enterprise
+- Windows 8.1 Enterprise
+- Windows 7 Ultimate
+- Windows Vista Ultimate
+- Windows 2000 Professional
+- Windows Server 2025
+- Windows Server 2022
+- Windows Server 2019
+- Windows Server 2016
+- Windows Server 2012
+- Windows Server 2008
+- Windows Server 2003
+
+After Windows installation, you can change the display language using the standard Windows language settings.

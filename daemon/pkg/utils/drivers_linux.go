@@ -119,7 +119,7 @@ func DetectdHddDevices(ctx context.Context) (usbDevs []storageDevice, err error)
 	return detectdStorageDevices(ctx, "ata")
 }
 
-func MonitorUsbDevice(ctx context.Context, cb func(action string) error) error {
+func MonitorUsbDevice(ctx context.Context, cb func(action, serial string) error) error {
 	filter := &usbmon.ActionFilter{Action: usbmon.ActionAll}
 	devs, err := usbmon.ListenFiltered(ctx, filter)
 	if err != nil {
@@ -137,8 +137,8 @@ func MonitorUsbDevice(ctx context.Context, cb func(action string) error) error {
 				fmt.Println("Path: " + dev.Path())
 				fmt.Println("Vendor: " + dev.Vendor())
 
-				if cb != nil {
-					err = cb(dev.Action())
+				if cb != nil && dev.Serial() != "" {
+					err = cb(dev.Action(), dev.Serial())
 					if err != nil {
 						klog.Error("usb action callback error, ", err, ", ", dev.Action())
 					}
@@ -195,6 +195,12 @@ func MountedHddPath(ctx context.Context) ([]string, error) {
 	}
 
 	return getMountedPath(hdds)
+}
+
+func FilterBySerial(serial string) func(dev storageDevice) bool {
+	return func(dev storageDevice) bool {
+		return strings.HasSuffix(serial, dev.IDSerial) || strings.HasSuffix(serial, dev.IDSerialShort)
+	}
 }
 
 func MountUsbDevice(ctx context.Context, mountBaseDir string, dev []storageDevice) (mountedPath []string, err error) {

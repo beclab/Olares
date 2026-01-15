@@ -19,7 +19,7 @@ func DetectdHddDevices(ctx context.Context) (usbDevs []storageDevice, err error)
 	return
 }
 
-func MonitorUsbDevice(ctx context.Context, cb func(action string) error) error {
+func MonitorUsbDevice(ctx context.Context, cb func(action, id string) error) error {
 	klog.Warning("not implement")
 	return nil
 }
@@ -71,4 +71,10 @@ func ForceMountHdd(ctx context.Context) {
 func MountedPath(ctx context.Context) ([]mountedPath, error) {
 	klog.Warning("not implement")
 	return nil, nil
+}
+
+func FilterBySerial(serial string) func(dev storageDevice) bool {
+	return func(dev storageDevice) bool {
+		return dev.IDSerial == serial || dev.IDSerialShort == serial
+	}
 }
