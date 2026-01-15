@@ -555,6 +555,10 @@ const side = {
           link: "/use-cases/ace-step",
         },
         {
+          text: "Stirling PDF",
+          link: "/use-cases/stirling-pdf",
+        },
+        {
           text: "PDFMathTranslate",
           link: "/use-cases/pdfmathtranslate",
         },
