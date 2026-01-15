@@ -22,6 +22,7 @@ From running AI models to building seamless workflows across your self-hosted se
   { title: 'DeerFlow', link: './host-cloud-android.html', tags: ['AI']},
   { title: 'ACE-Step', link: './ace-step.html', tags: ['AI']},
   { title: 'Duix.Avatar', link: './duix-avatar.html', tags: ['AI']},
+  { title: 'LobeChat', link: './lobechat.html', tags: ['AI']},
   { title: 'Stirling PDF', link: './stirling-pdf.html', tags: ['Productivity']},
   { title: 'PDFMathTranslate', link: './pdfmathtranslate.html', tags: ['AI']},
 ]" 

@@ -562,6 +562,10 @@ const side = {
           text: "PDFMathTranslate",
           link: "/use-cases/pdfmathtranslate",
         },
+        {
+          text: "LobeChat",
+          link: "/use-cases/lobechat",
+        },
       ],
     },
   ],
