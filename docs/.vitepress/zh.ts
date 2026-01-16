@@ -611,6 +611,7 @@ const side = {
           link: "/zh/developer/install/cli/olares-cli",
           collapsed: true,
           items: [
+            { text: "访问 Olares 终端", link: "/zh/developer/install/cli/access-olares-terminal" },
             {
               text: "backups",
               link: "/zh/developer/install/cli/backups",

@@ -638,6 +638,7 @@ const side = {
           link: "/developer/install/cli/olares-cli",
           collapsed: true,
           items: [
+            { text: "Access Olares terminal", link: "/developer/install/cli/access-olares-terminal" },
             {
               text: "backups",
               link: "/developer/install/cli/backups",
