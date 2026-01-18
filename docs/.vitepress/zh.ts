@@ -123,7 +123,7 @@ const side = {
           link: "/zh/manual/larepass/back-up-mnemonics",
         },
         {
-          text: "内网访问 Olares",
+          text: "安全访问 Olares",
           link: "zh/manual/get-started/local-access",
         },
         {
@@ -399,7 +399,7 @@ const side = {
       ]
     },
     {
-      text: "Olares 进阶",
+      text: "教程",
       collapsed: true,
       link: "/zh/manual/best-practices/",
       items: [
@@ -426,6 +426,10 @@ const side = {
         {
           text: "在 Olares 中扩展存储空间",
           link: "/zh/manual/best-practices/expand-storage-in-olares",
+        },
+        {
+          text: "本地访问 Olares",
+          link: "/manual/best-practices/local-access",
         },
       ],
     },
