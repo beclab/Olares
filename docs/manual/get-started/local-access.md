@@ -8,7 +8,7 @@ Typically, you access Olares services through a browser using a URL like `https:
 
 While this address works from anywhere, it's recommended to enable the LarePass VPN to ensure your connection is always secure and efficient. The client automatically detects your network environment and selects the best connection method:
 - **At home**: It establishes a direct **Intranet** connection to allow faster file transfers on your local network.
-- **Remote**: It switches to a secure encrypted tunnel to ensure you remain connected safely when accessing remotely.
+- **From remote**: It switches to a secure encrypted tunnel to ensure you remain connected safely when accessing remotely.
 
 ## Download LarePass
 To use the secure VPN connection, the LarePass client must be installed on the device you are using.

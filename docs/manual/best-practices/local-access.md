@@ -71,6 +71,10 @@ Once enabled, check the status indicator in LarePass to verify the connection ty
 ## Method 2: Use `.local` domain
 If you prefer not to install additional apps, you can access services using the `.local` domain. There are two domain formats available depending on your operating system.
 
+:::info Use HTTP protocol
+The `.local` domain does not support HTTPS. You must explicitly use `http://` at the beginning of the URL.
+:::
+
 ### Single-level domain (All operating systems)
 :::warning Supported for community apps only
 Olares system apps such as Desktop and Files do not support this URL format and will not load correctly.
