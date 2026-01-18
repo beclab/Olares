@@ -66,14 +66,14 @@ Depending on your macOS version, the UI might look slightly different.
 4. Confirm the uninstallation.
 5. Restart your Mac and re-enable the VPN in the LarePass desktop client.
 
-### Why I cannot enable LarePass VPN on Windows?
+### Why can't I enable LarePass VPN on Windows?
 Third-party antivirus software might mistakenly flag the LarePass desktop client as suspicious, preventing it from launching the VPN service.
 
 If prompted by your antivirus when opening LarePass for the first time, allow the application to continue.
 
 If the VPN still fails to enable:
 1. Open your security software and check if LarePass was blocked.
-2. Add the main LarePass executable to the allowlist** or exclusions of your antivirus. 
+2. Add the main LarePass executable to the allowlist or exclusions of your antivirus. 
 3. Restart LarePass and enable the VPN.
 
 ## Learn more

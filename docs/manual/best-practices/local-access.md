@@ -5,7 +5,7 @@ description: Learn the different methods to access Olares services locally for i
 # Access Olares services locally
 Olares is designed to provide seamless access to your self-hosted services anytime, anywhere.
 
-However, access your devices locally provides several advantages:
+However, accessing your devices locally provides several advantages:
 - **Maximum performance**: Transfer files at full speed without the latency and potential bottlenecks of the internet.
 - **Enhanced privacy**: Keep your traffic contained within your home network for added security.
 - **Offline independence**: Access your data and apps even when your internet service is unavailable.
@@ -17,7 +17,7 @@ By the end of this tutorial, you will learn how to:
 - Establish a secure, high-speed local connection using the LarePass VPN.
 - Access Olares services using `.local` domains.
 - Configure local DNS to allow standard URLs to resolve locally across your entire network.
-- Manually map host files to ensure access on specific machines without internet.
+- Manually map hosts files to ensure access on specific machines without internet.
 
 ## Choose a connection method
 There are four ways to establish a local connection:
@@ -28,7 +28,7 @@ There are four ways to establish a local connection:
   Access the device via a specific local URL format. No installation required.
 * **[Method 3: Configure local DNS](#method-3-configure-local-dns)**<br/>
   Updates your router or computer's DNS settings to map the standard Olares URL to the local IP address.
-* **[Method 4: Modify host files](#method-4-modify-host-files)**<br/>
+* **[Method 4: Modify hosts files](#method-4-modify-hosts-files)**<br/>
   Manually maps the standard Olares URL to the local IP on a single computer.
 
 ## Method 1: Enable LarePass VPN
@@ -120,7 +120,7 @@ If your phone and Olares device are on the same network:
 <template #Check-via-Olares-Terminal>
 
 Control Hub provides a built-in terminal that allows you to run system commands directly from the browser, without needing an external SSH client.
-1. Open the Control Hub app, and under **Terminal**, select **Olares**in the left navigation bar.
+1. Open the Control Hub app, and under **Terminal**, select **Olares** in the left navigation bar.
    ![Find internal IP from Control Hub](/images/manual/get-started/find-internal-ip-from-controlhub.png#bordered)
 
 2. Type `ifconfig` in the terminal and press **Enter**.
@@ -175,7 +175,7 @@ Once configured, you can access Olares using both your standard public address a
 :::tip
 You can install AdGuard Home from the Olares Market to monitor traffic and manage DNS mappings graphically.
 :::
-## Method 4: Modify host files
+## Method 4: Modify hosts files
 If you cannot change router settings and need immediate offline access on a specific computer, you can manually map the domains in your hosts file.
 
 1. Locate your hosts file:
@@ -219,14 +219,14 @@ Depending on your macOS version, the UI might look slightly different.
 4. Confirm the uninstallation.
 5. Restart your Mac and re-enable the VPN in the LarePass desktop client.
 
-### Why I cannot enable LarePass VPN on Windows?
+### Why can't I enable LarePass VPN on Windows?
 Third-party antivirus software might mistakenly flag the LarePass desktop client as suspicious, preventing it from launching the VPN service.
 
 If prompted by your antivirus when opening LarePass for the first time, allow the application to continue.
 
 If the VPN still fails to enable:
 1. Open your security software and check if LarePass was blocked.
-2. Add the main LarePass executable to the allowlist** or exclusions of your antivirus.
+2. Add the main LarePass executable to the allowlist or exclusions of your antivirus.
 3. Restart LarePass and enable the VPN.
 
 ### Why the `.local` domain does not work in Chrome (macOS)?
