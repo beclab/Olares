@@ -138,9 +138,15 @@ func main() {
 		setupLog.Error(err, "Unable to create controller", "controller", "Security")
 		os.Exit(1)
 	}
-	appEventQueue := appevent.NewAppEventQueue(ictx)
+	appEventQueue := appevent.NewAppEventQueue(ictx, nil)
 	appevent.SetAppEventQueue(appEventQueue)
 	go appEventQueue.Run()
+
+	defer func() {
+		if nc := appEventQueue.GetNatsConn(); nc != nil {
+			nc.Drain()
+		}
+	}()
 
 	if err = (&controllers.ApplicationManagerController{
 		Client:      mgr.GetClient(),
@@ -198,6 +204,7 @@ func main() {
 	if err = (&controllers.NodeAlertController{
 		Client:     mgr.GetClient(),
 		KubeConfig: config,
+		NatsConn:   nil,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "NodeAlert")
 		os.Exit(1)

@@ -170,8 +170,16 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.4.69
+        image: beclab/app-service:0.4.75
         imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6755
+        readinessProbe:
+          failureThreshold: 5
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          tcpSocket:
+            port: 6755
         securityContext:
           runAsUser: 0
         env:

@@ -69,7 +69,7 @@ These options apply to all backends:
   kubectl get terminus -o jsonpath='{.items[*].metadata.labels.bytetrade\.io/cluster-id}'
   ```
 
-## Example
+## Examples
 ```bash
 # Restore the data from Tencent COS
 olares-cli backups restore cos --path /data_restore --repo-name my_repo \

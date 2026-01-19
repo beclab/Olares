@@ -93,12 +93,12 @@ Olares Studio 允许你启动预配置的开发容器来编写和调试代码（
 5. 在 `/root/` 中创建文件 `index.js`，内容如下：
    ```js
     // 确保端口与定义的一致
-    const express = require('express');
-    const app = express();
-    app.use(express.static('public/'));
-    app.listen(8080), function() {
-        console.log('Server is running on port 8080');
-    };
+   const express = require('express');
+   const app = express();
+   app.use(express.static('public/'));
+   app.listen(8080, function() {
+       console.log('Server is running on port 8080');
+   });
    ```
 6. 在 `/root/` 中创建 `public` 目录并添加 `index.html` 文件：
    ```html
@@ -204,15 +204,15 @@ Olares Studio 允许你启动预配置的开发容器来编写和调试代码（
    const express = require('express');
    const app = express();
    app.use(express.static('public/'));
-   app.listen(8080), function() {
-   console.log('Server is running on port 8080');
-   };
+   app.listen(8080, function() {
+       console.log('Server is running on port 8080');
+   });
    // 添加以下内容
    const app_new = express();
    app_new.use(express.static('new/'));
-   app_new.listen(8081), function() {
-   console.log('Server is running on port 8081');
-   };
+   app_new.listen(8081, function() {
+       console.log('Server is running on port 8081');
+   });
    ```
 2. 在 `/root/` 中创建 `new` 目录并添加 `index.html` 文件：
    ```html

@@ -18,15 +18,14 @@ func ValidateJWS(token string) (bool, string, error) {
 		klog.Errorf("failed to parse DID gate service URL: %v, Olares remote service: %s", err, commands.OLARES_REMOTE_SERVICE)
 		return false, "", err
 	}
-	jws.DIDGateURL = didServiceURL
 
 	// Validate the JWS token with a 20-minute expiration time
-	checkJWS, err := jws.CheckJWS(token, 20*60*1000)
+	checkJWS, err := jws.CheckJWS(didServiceURL, token, 20*60*1000)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "timestamp") {
 			err = fmt.Errorf("%v, server time: %s", err, time.Now().UTC().Format(time.RFC3339))
 		}
-		klog.Errorf("failed to check JWS: %v, on %s", err, jws.DIDGateURL)
+		klog.Errorf("failed to check JWS: %v, on %s", err, didServiceURL)
 		return false, "", err
 	}
 

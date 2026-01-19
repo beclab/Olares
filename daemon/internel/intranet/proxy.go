@@ -84,8 +84,15 @@ func (p *proxyServer) Start() error {
 							clientIp = h
 						}
 					}
+
 					if c.IsWebSocket() {
 						ctx = context.WithValue(ctx, WSKey, true)
+						swp := c.Request().Header.Get("Sec-WebSocket-Protocol")
+						authToken := c.Request().Header.Get("X-Authorization")
+						if len(authToken) == 0 && len(swp) > 0 {
+							// handle missing auth token for websocket
+							c.Request().Header.Set("X-Authorization", swp)
+						}
 					}
 					r := c.Request().WithContext(ctx)
 					if clientIp != "" {
@@ -243,7 +250,7 @@ func (p *proxyServer) customDialContext(d *net.Dialer) func(ctx context.Context,
 		}
 
 		if isWs {
-			klog.Info("WebSocket connection detected, using upgraded dialer")
+			klog.Info("WebSocket connection detected, using upgraded dialer, ", addr)
 			return tlsDial(ctx, d, func(ctx context.Context, network, addr string) (net.Conn, error) {
 				return proxyDial(ctx, d, network, newAddr)
 			}, network, addr, &tls.Config{InsecureSkipVerify: true})

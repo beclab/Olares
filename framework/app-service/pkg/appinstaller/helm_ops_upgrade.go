@@ -2,7 +2,6 @@ package appinstaller
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
@@ -12,7 +11,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
-	helmrelease "helm.sh/helm/v3/pkg/release"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,15 +21,7 @@ import (
 
 // Upgrade do a upgrade operation for release.
 func (h *HelmOps) Upgrade() error {
-	status, err := h.status()
-	if err != nil {
-		klog.Errorf("get release status failed %v", err)
-		return err
-	}
-	if status.Info.Status == helmrelease.StatusDeployed {
-		return h.upgrade()
-	}
-	return fmt.Errorf("cannot upgrade release %s/%s, current state is %s", h.app.Namespace, h.app.AppName, status.Info.Status)
+	return h.upgrade()
 }
 
 func (h *HelmOps) upgrade() error {
