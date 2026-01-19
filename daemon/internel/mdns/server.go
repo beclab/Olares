@@ -99,7 +99,7 @@ func (s *server) Restart() error {
 			instanceName = hostname
 		}
 
-		s.server, err = zeroconf.Register(instanceName, s.serviceName, "local.", hostname, s.port, []string{""}, []net.Interface{*iface})
+		s.server, err = zeroconf.RegisterAll(instanceName, s.serviceName, "local.", hostname, s.port, []string{""}, []net.Interface{*iface}, false, false, false)
 		if err != nil {
 			klog.Error("create mdns server error, ", err)
 			return err

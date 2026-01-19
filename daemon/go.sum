@@ -87,8 +87,8 @@ github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkp
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
 github.com/eball/echo/v4 v4.13.4-patch h1:5w83KQrEqrxhc1BO0BpRBHssC37vFrWualUM27Rt2sg=
 github.com/eball/echo/v4 v4.13.4-patch/go.mod h1:ORgy8LWTq8knpwgaz538rAJMri7WgpoAD6H3zYccn84=
-github.com/eball/zeroconf v0.2.4 h1:S5nUHLu2zhpA8YuR/Ue/vXPiY6ynPECkpDXjYV+Ckj4=
-github.com/eball/zeroconf v0.2.4/go.mod h1:eIbIjGYo9sSMaKWLcveHEPRWdyblz7q9ih2R1HnNw5M=
+github.com/eball/zeroconf v0.2.5 h1:RNINVvj8kbm/r4YoqYu/jWD57l5NJmvRUCfbjlIsbJg=
+github.com/eball/zeroconf v0.2.5/go.mod h1:eIbIjGYo9sSMaKWLcveHEPRWdyblz7q9ih2R1HnNw5M=
 github.com/ebitengine/purego v0.8.4 h1:CF7LEKg5FFOsASUj0+QwaXf8Ht6TlFxg09+S9wz0omw=
 github.com/ebitengine/purego v0.8.4/go.mod h1:iIjxzd6CiRiOG0UyXP+V1+jWqUXVjPKLAI0mRfJZTmQ=
 github.com/emicklei/go-restful/v3 v3.13.0 h1:C4Bl2xDndpU6nJ4bc1jXd+uTmYPVUwkD6bFY/oTyCes=

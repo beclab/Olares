@@ -23,7 +23,7 @@ require (
 	github.com/containerd/containerd v1.7.29
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/dustin/go-humanize v1.0.1
-	github.com/eball/zeroconf v0.2.4
+	github.com/eball/zeroconf v0.2.5
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gofiber/fiber/v2 v2.52.9
 	github.com/google/gopacket v1.1.19
