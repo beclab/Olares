@@ -37,8 +37,8 @@ func RequireHeader() func(c *fiber.Ctx) error {
 		klog.Infof("ws-client conn: %s, accessPublic: %v, token: %s, user: %s , header: %+v", connId, accessPublic, token, userName, headers)
 
 		var secWebsocketProtocol, ok = headers[constants.WsHeaderSecWebsocketProtocol]
-		if ok {
-			c.Set(constants.WsHeaderSecWebsocketProtocol, secWebsocketProtocol)
+		if ok && len(secWebsocketProtocol) > 0 {
+			c.Set(constants.WsHeaderSecWebsocketProtocol, secWebsocketProtocol[0])
 		}
 
 		c.Locals(constants.WsLocalAccessPublic, accessPublic)
