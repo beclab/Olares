@@ -198,6 +198,9 @@ func (c *controller) processNextWorkItem() bool {
 			return nil
 		}
 
+		deleteRetryCount := 0
+		const maxDeleteRetries = 10
+
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
 		for e := c.syncHandler(eobj); e != nil; e = c.syncHandler(eobj) {
@@ -208,6 +211,12 @@ func (c *controller) processNextWorkItem() bool {
 				return fmt.Errorf("error syncing '%v': %s, requeuing", eobj, e.Error())
 			}
 
+			deleteRetryCount++
+			if deleteRetryCount >= maxDeleteRetries {
+				klog.Errorf("error syncing '%v': %s, reached max delete retries, skipping", eobj, e.Error())
+				break
+			}
+
 			// cause delete action cannot be requeued at the end,
 			klog.Errorf("error syncing '%v': %s, retry after 1 second", eobj, e.Error())
 			time.Sleep(time.Second)
@@ -216,6 +225,12 @@ func (c *controller) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
+
+		if deleteRetryCount >= maxDeleteRetries {
+			klog.Warningf("Skipped syncing '%v' after %d delete retries", eobj, deleteRetryCount)
+			return nil
+		}
+
 		klog.Infof("Successfully synced '%v'", eobj)
 		return nil
 	}(obj)
