@@ -124,7 +124,7 @@ const side = {
           link: "/manual/larepass/back-up-mnemonics"
         },
         {
-          text: "Access Olares locally",
+          text: "Access Olares securely",
           link: "/manual/get-started/local-access",
         },
         {
@@ -403,7 +403,7 @@ const side = {
       ],
     },
     {
-      text: "Best practices",
+      text: "Tutorials",
       link: "/manual/best-practices/",
       collapsed: true,
       items: [
@@ -426,6 +426,10 @@ const side = {
         {
           text: "Expand storage in Olares",
           link: "/manual/best-practices/expand-storage-in-olares",
+        },
+        {
+          text: "Access Olares locally",
+          link: "/manual/best-practices/local-access",
         },
       ],
     },

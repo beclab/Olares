@@ -14,6 +14,9 @@ import OSTabs from "./components/OStabs.vue";
 import VersionSwitcher from "./components/VersionSwitcher.vue";
 import _ from "lodash";
 import { redirects } from './redirects';
+import AppLinkGlobal from './components/AppLinkGlobal.vue'
+import AppLinkCN from './components/AppLinkCN.vue'
+
 
 const LANGUAGE_LOCAL_KEY = "language";
 let isMenuChange = false;
@@ -27,6 +30,8 @@ enhanceApp({ app, router }: { app: App; router: Router }) {
     app.component("FilterableList", FilterableList);
     app.component("OSTabs", OSTabs);
     app.component("VersionSwitcher", VersionSwitcher);
+    app.component('AppLinkGlobal', AppLinkGlobal)
+    app.component('AppLinkCN', AppLinkCN)
 
       router.onBeforeRouteChange = (to: string) => {
           const path = to.replace(/\.html$/i, ''),
