@@ -51,10 +51,12 @@ func (d DebianVersion) String() string {
 }
 
 const (
-	Ubuntu20 UbuntuVersion = "20."
-	Ubuntu22 UbuntuVersion = "22."
-	Ubuntu24 UbuntuVersion = "24."
-	Ubuntu25 UbuntuVersion = "25."
+	Ubuntu20   UbuntuVersion = "20."
+	Ubuntu22   UbuntuVersion = "22."
+	Ubuntu24   UbuntuVersion = "24."
+	Ubuntu25   UbuntuVersion = "25."
+	Ubuntu2204 UbuntuVersion = "22.04"
+	Ubuntu2404 UbuntuVersion = "24.04"
 
 	Debian9  DebianVersion = "9"
 	Debian10 DebianVersion = "10"
