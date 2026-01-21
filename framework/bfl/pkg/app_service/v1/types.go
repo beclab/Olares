@@ -11,6 +11,7 @@ import (
 type AppInfo struct {
 	ID                            string        `json:"id"`
 	Name                          string        `json:"name"`
+	RawAppName                    string        `json:"rawAppName"`
 	Namespace                     string        `json:"namespace"`
 	DeploymentName                string        `json:"deployment"`
 	Owner                         string        `json:"owner"`
