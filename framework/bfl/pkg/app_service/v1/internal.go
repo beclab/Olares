@@ -240,6 +240,7 @@ func (c *Client) getAppListFromData(apps []map[string]interface{}) ([]*AppInfo, 
 		res = append(res, &AppInfo{
 			ID:                            genAppID(appSpec),
 			Name:                          stringOrEmpty(appSpec["name"]),
+			RawAppName:                    stringOrEmpty(appSpec["rawAppName"]),
 			Namespace:                     stringOrEmpty(appSpec["namespace"]),
 			DeploymentName:                stringOrEmpty(appSpec["deployment"]),
 			Owner:                         stringOrEmpty(appSpec["owner"]),
