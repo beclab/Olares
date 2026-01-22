@@ -210,6 +210,7 @@ func NewArgument() *Argument {
 	arg.IsCloudInstance, _ = strconv.ParseBool(os.Getenv(ENV_TERMINUS_IS_CLOUD_VERSION))
 	arg.IsOlaresInContainer = os.Getenv(ENV_CONTAINER_MODE) == "oic"
 	si.IsOIC = arg.IsOlaresInContainer
+	si.ProductName = arg.GetProductName()
 
 	arg.loadMasterHostConfig()
 	return arg
@@ -452,4 +453,14 @@ func NewKubeRuntime(arg Argument) (*KubeRuntime, error) {
 func (k *KubeRuntime) Copy() connector.Runtime {
 	runtime := *k
 	return &runtime
+}
+
+func (a *Argument) GetProductName() string {
+	data, err := os.ReadFile("/sys/class/dmi/id/product_name")
+	if err != nil {
+		fmt.Printf("\nCannot get product name on this device, %s\n", err)
+		return ""
+	}
+
+	return strings.TrimSpace(string(data))
 }

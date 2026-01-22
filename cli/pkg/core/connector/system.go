@@ -76,6 +76,7 @@ type Systems interface {
 	IsPveOrPveLxc() bool
 	IsRaspbian() bool
 	IsLinux() bool
+	IsDgxSpark() bool
 
 	IsUbuntu() bool
 	IsDebian() bool
@@ -111,16 +112,17 @@ type Systems interface {
 }
 
 type SystemInfo struct {
-	HostInfo   *HostInfo       `json:"host"`
-	CpuInfo    *CpuInfo        `json:"cpu"`
-	DiskInfo   *DiskInfo       `json:"disk"`
-	MemoryInfo *MemoryInfo     `json:"memory"`
-	FsInfo     *FileSystemInfo `json:"filesystem"`
-	CgroupInfo *CgroupInfo     `json:"cgroup,omitempty"`
-	LocalIp    string          `json:"local_ip"`
-	NatGateway string          `json:"nat_gateway"`
-	PkgManager string          `json:"pkg_manager"`
-	IsOIC      bool            `json:"is_oic,omitempty"`
+	HostInfo    *HostInfo       `json:"host"`
+	CpuInfo     *CpuInfo        `json:"cpu"`
+	DiskInfo    *DiskInfo       `json:"disk"`
+	MemoryInfo  *MemoryInfo     `json:"memory"`
+	FsInfo      *FileSystemInfo `json:"filesystem"`
+	CgroupInfo  *CgroupInfo     `json:"cgroup,omitempty"`
+	LocalIp     string          `json:"local_ip"`
+	NatGateway  string          `json:"nat_gateway"`
+	PkgManager  string          `json:"pkg_manager"`
+	IsOIC       bool            `json:"is_oic,omitempty"`
+	ProductName string          `json:"product_name,omitempty"`
 }
 
 func (s *SystemInfo) IsSupport() error {
@@ -233,6 +235,10 @@ func (s *SystemInfo) IsRaspbian() bool {
 
 func (s *SystemInfo) IsLinux() bool {
 	return s.HostInfo.OsType == common.Linux
+}
+
+func (s *SystemInfo) IsDgxSpark() bool {
+	return s.ProductName == "NVIDIA_DGX_Spark"
 }
 
 func (s *SystemInfo) IsUbuntu() bool {
