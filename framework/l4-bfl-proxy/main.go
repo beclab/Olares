@@ -906,6 +906,9 @@ func (s *Server) generateStreamServers() ([]StreamServer, error) {
 			if bflHost == "" {
 				return nil, fmt.Errorf("can not find bfl service for user=%s", app.Spec.Owner)
 			}
+			if p.ExposePort < 1 || p.ExposePort > 65535 {
+				continue
+			}
 			server := StreamServer{
 				Protocol: p.Protocol,
 				Port:     p.ExposePort,
