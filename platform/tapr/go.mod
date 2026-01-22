@@ -6,7 +6,6 @@ require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.42.0
 	github.com/apecloud/kubeblocks v1.0.0
 	github.com/coredns/corefile-migration/migration v1.0.1
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/elastic/go-elasticsearch/v8 v8.15.0
 	github.com/emicklei/go-restful v2.16.0+incompatible
 	github.com/go-redis/redis/v8 v8.11.5
@@ -14,7 +13,7 @@ require (
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gofiber/contrib/websocket v1.2.2
 	github.com/gofiber/fiber/v2 v2.52.9
-	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/json-iterator/go v1.1.12
@@ -23,7 +22,7 @@ require (
 	github.com/minio/madmin-go v1.7.5
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/mitchellh/mapstructure v1.5.1-0.20220423185008-bf980b35cac4
-	github.com/nats-io/nats-server v1.4.1
+	github.com/nats-io/nats-server/v2 v2.2.0
 	github.com/nats-io/nats.go v1.36.0
 	github.com/percona/percona-backup-mongodb v0.0.0-20221024072933-3ec38a5fc670
 	github.com/percona/percona-server-mongodb-operator v1.14.0
@@ -144,7 +143,7 @@ require (
 	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a // indirect
 	golang.org/x/mod v0.30.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
-	golang.org/x/oauth2 v0.19.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/term v0.38.0 // indirect
