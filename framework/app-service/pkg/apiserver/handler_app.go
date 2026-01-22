@@ -984,6 +984,9 @@ func (h *Handler) oamValues(req *restful.Request, resp *restful.Response) {
 	values["mongodb"] = map[string]interface{}{
 		"databases": map[string]interface{}{},
 	}
+	values["clickhouse"] = map[string]interface{}{
+		"databases": map[string]interface{}{},
+	}
 	values["svcs"] = map[string]interface{}{}
 	values["nats"] = map[string]interface{}{
 		"subjects": map[string]interface{}{},
