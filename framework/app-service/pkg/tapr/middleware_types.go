@@ -12,6 +12,7 @@ type Middleware struct {
 	MariaDB       *MariaDBConfig       `yaml:"mariadb,omitempty"`
 	MySQL         *MySQLConfig         `yaml:"mysql,omitempty"`
 	Argo          *ArgoConfig          `yaml:"argo,omitempty"`
+	ClickHouse    *ClickHouseConfig    `yaml:"clickHouse,omitempty"`
 }
 
 // Database specify database name and if distributed.
@@ -87,6 +88,13 @@ type MariaDBConfig struct {
 
 // MySQLConfig contains fields for mysql config.
 type MySQLConfig struct {
+	Username  string     `yaml:"username" json:"username"`
+	Password  string     `yaml:"password,omitempty" json:"password"`
+	Databases []Database `yaml:"databases" json:"databases"`
+}
+
+// ClickHouseConfig contains fields for clickhouse config.
+type ClickHouseConfig struct {
 	Username  string     `yaml:"username" json:"username"`
 	Password  string     `yaml:"password,omitempty" json:"password"`
 	Databases []Database `yaml:"databases" json:"databases"`

@@ -42,6 +42,9 @@ const (
 
 	// TypeMySQL indicates the middleware is mysql
 	TypeMySQL MiddlewareType = "mysql"
+
+	// TypeClickHouse indicates the middleware is ClickHouse
+	TypeClickHouse MiddlewareType = "clickhouse"
 )
 
 func (mr MiddlewareType) String() string {
@@ -323,6 +326,27 @@ func Apply(middleware *Middleware, kubeConfig *rest.Config, appName, appNamespac
 		}
 		klog.Infof("values.mysql: %v", vals["mysql"])
 	}
+	if middleware.ClickHouse != nil {
+		username := fmt.Sprintf("%s-%s-%s", middleware.ClickHouse.Username, ownerName, appName)
+		err := process(kubeConfig, appName, appNamespace, namespace, username, TypeClickHouse, ownerName, middleware)
+		if err != nil {
+			return err
+		}
+		resp, err := getMiddlewareRequest(TypeClickHouse)
+		if err != nil {
+			klog.Errorf("failed to get clickHouse middleware request info %v", err)
+			return err
+		}
+		vals["clickhouse"] = map[string]interface{}{
+			"host":      resp.Host,
+			"port":      resp.Port,
+			"username":  resp.UserName,
+			"password":  resp.Password,
+			"databases": resp.Databases,
+		}
+		klog.Infof("values.clickhouse: %v", vals["clickhouse"])
+	}
+
 	return nil
 }
 
@@ -383,6 +407,8 @@ func getPassword(middleware *Middleware, middlewareType MiddlewareType) (string,
 		return middleware.MariaDB.Password, nil
 	case TypeMySQL:
 		return middleware.MySQL.Password, nil
+	case TypeClickHouse:
+		return middleware.ClickHouse.Password, nil
 	}
 	return "", fmt.Errorf("unsupported middleware type %v", middlewareType)
 }
