@@ -338,7 +338,9 @@ func (c *CudaChecker) Name() string {
 }
 
 func (c *CudaChecker) Check(runtime connector.Runtime) error {
-	if !runtime.GetSystemInfo().IsLinux() {
+	if !runtime.GetSystemInfo().IsLinux() ||
+		// Skip check on NVIDIA DGX Spark systems, which have their own GPU management
+		runtime.GetSystemInfo().IsDgxSpark() {
 		return nil
 	}
 

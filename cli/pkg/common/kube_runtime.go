@@ -259,6 +259,7 @@ func NewArgument() *Argument {
 	arg.IsCloudInstance, _ = strconv.ParseBool(os.Getenv(ENV_TERMINUS_IS_CLOUD_VERSION))
 	arg.IsOlaresInContainer = os.Getenv("CONTAINER_MODE") == "oic"
 	si.IsOIC = arg.IsOlaresInContainer
+	si.ProductName = arg.GetProductName()
 
 	if err := arg.LoadReleaseInfo(); err != nil {
 		fmt.Printf("error loading release info: %v", err)
@@ -506,6 +507,16 @@ func (a *Argument) LoadMasterHostConfigIfAny() error {
 		return err
 	}
 	return json.Unmarshal(content, a.MasterHostConfig)
+}
+
+func (a *Argument) GetProductName() string {
+	data, err := os.ReadFile("/sys/class/dmi/id/product_name")
+	if err != nil {
+		fmt.Printf("\nCannot get product name on this device, %s\n", err)
+		return ""
+	}
+
+	return strings.TrimSpace(string(data))
 }
 
 func NewKubeRuntime(flag string, arg Argument) (*KubeRuntime, error) {

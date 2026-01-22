@@ -363,7 +363,15 @@ func (u *UpdateNodeGPUInfo) Execute(runtime connector.Runtime) error {
 		driverVersion = st.LibraryVersion
 	}
 
-	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &driverVersion, &st.CudaVersion, &supported)
+	// TODO:
+	gpuType := NvidiaCardType
+	switch {
+	case runtime.GetSystemInfo().IsDgxSpark():
+		gpuType = DgxSparkType
+		// TODO: amd gpu
+	}
+
+	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &driverVersion, &st.CudaVersion, &supported, &gpuType)
 }
 
 type RemoveNodeLabels struct {
@@ -376,12 +384,12 @@ func (u *RemoveNodeLabels) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 	}
 
-	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), nil, nil, nil)
+	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), nil, nil, nil, nil)
 }
 
 // update k8s node labels gpu.bytetrade.io/driver and gpu.bytetrade.io/cuda.
 // if labels are not exists, create it.
-func UpdateNodeGpuLabel(ctx context.Context, client kubernetes.Interface, driver, cuda *string, supported *string) error {
+func UpdateNodeGpuLabel(ctx context.Context, client kubernetes.Interface, driver, cuda *string, supported *string, gpuType *string) error {
 	// get node name from hostname
 	nodeName, err := os.Hostname()
 	if err != nil {
@@ -408,6 +416,7 @@ func UpdateNodeGpuLabel(ctx context.Context, client kubernetes.Interface, driver
 		{GpuDriverLabel, driver},
 		{GpuCudaLabel, cuda},
 		{GpuCudaSupportedLabel, supported},
+		{GpuType, gpuType},
 	} {
 		old, ok := labels[label.key]
 		switch {
