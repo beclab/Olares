@@ -7,7 +7,7 @@ import (
 	"text/template"
 
 	"github.com/mitchellh/mapstructure"
-	load "github.com/nats-io/nats-server/conf"
+	load "github.com/nats-io/nats-server/v2/conf"
 	"k8s.io/klog/v2"
 )
 

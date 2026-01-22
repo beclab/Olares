@@ -135,6 +135,9 @@ type MiddlewareSpec struct {
 
 	// +optional
 	Mysql Mysql `json:"mysql,omitempty"`
+
+	// +optional
+	ClickHouse ClickHouse `json:"clickhouse,omitempty"`
 }
 
 type Redis struct {
@@ -223,6 +226,16 @@ type MariaDatabase struct {
 	Name string `json:"name"`
 }
 
+type ClickHouse struct {
+	User      string               `json:"user"`
+	Password  PasswordVar          `json:"password,omitempty"`
+	Databases []ClickHouseDatabase `json:"databases"`
+}
+
+type ClickHouseDatabase struct {
+	Name string `json:"name"`
+}
+
 type Subject struct {
 	Name string `json:"name"`
 	//// default allow for appName equals spec.App, others is deny
@@ -283,6 +296,7 @@ const (
 	TypeElasticsearch MiddlewareType = "elasticsearch"
 	TypeMariaDB       MiddlewareType = "mariadb"
 	TypeMysql         MiddlewareType = "mysql"
+	TypeClickHouse    MiddlewareType = "clickhouse"
 )
 
 func (c *CitusDatabase) IsDistributed() bool { return c.Distributed != nil && *c.Distributed }

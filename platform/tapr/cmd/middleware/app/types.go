@@ -30,6 +30,9 @@ const (
 
 	// TypeMySQL indicates the middleware is mysql
 	TypeMySQL MiddlewareType = "mysql"
+
+	// TypeClickHouse indicates the middleware is clickhouse
+	TypeClickHouse MiddlewareType = "clickhouse"
 )
 
 type MiddlewareReq struct {

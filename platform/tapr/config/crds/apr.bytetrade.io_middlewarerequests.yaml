@@ -54,6 +54,55 @@ spec:
                 type: string
               appNamespace:
                 type: string
+              clickhouse:
+                properties:
+                  databases:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  password:
+                    properties:
+                      value:
+                        description: Defaults to "".
+                        type: string
+                      valueFrom:
+                        description: Source for the environment variable's value.
+                          Cannot be used if value is not empty.
+                        properties:
+                          secretKeyRef:
+                            description: Selects a key of a secret in the pod's namespace
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must
+                                  be a valid secret key.
+                                type: string
+                              name:
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key
+                                  must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                        type: object
+                    type: object
+                  user:
+                    type: string
+                required:
+                - databases
+                - user
+                type: object
               elasticsearch:
                 properties:
                   allowNamespaceIndexes:
