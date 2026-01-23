@@ -789,6 +789,62 @@ const side = {
           collapsed: true,
           link: "/developer/develop/submit/",
         },
+        {
+          text: "Middleware",
+          collapsed: true,
+          items: [
+            {
+              text: "MariaDB",
+              link :"/developer/develop/middleware/view-mariadb-data",
+            },
+            {
+              text: "MinIO",
+              link :"/developer/develop/middleware/view-minio-data",
+            },
+            {
+              text: "MongoDB",
+              link :"/developer/develop/middleware/view-mongodb-data",
+            },
+            {
+              text: "MySQL",
+              link :"/developer/develop/middleware/view-mysql-data",
+            },
+            {
+              text: "NATS",
+              link :"/developer/develop/middleware/view-nats-data",
+            },
+            {
+              text: "PostgreSQL",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with PostgreSQL",
+                  link: "/developer/develop/middleware/integrate-with-pg",                },
+                {
+                  text: "View PostgreSQL data",
+                  link: "/developer/develop/middleware/view-pg-data",
+                }
+              ]
+            },
+            {
+              text: "RabbitMQ",
+              link :"/developer/develop/middleware/view-rabbitmq-data",
+            },
+            {
+              text: "Redis",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with Redis",
+                  link: "/developer/develop/middleware/integrate-with-redis",                },
+                {
+                  text: "View Redis data",
+                  link: "/developer/develop/middleware/view-redis-data",
+                }
+              ]
+            },
+          ]
+        },
       ],
     },
     {

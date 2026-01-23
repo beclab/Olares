@@ -778,6 +778,62 @@ const side = {
           collapsed: true,
           link: "/zh/developer/develop/submit/",
         },
+        {
+          text: "中间件",
+          collapsed: true,
+          items: [
+            {
+              text: "MariaDB",
+              link: "zh/developer/develop/middleware/view-mariadb-data",
+            },
+            {
+              text: "MinIO",
+              link: "zh/developer/develop/middleware/view-minio-data",
+            },
+            {
+              text: "MongoDB",
+              link: "zh/developer/develop/middleware/view-mongodb-data",
+            },
+            {
+              text: "MySQL",
+              link: "zh/developer/develop/middleware/view-mysql-data",
+            },
+            {
+              text: "NATS",
+              link :"zh/developer/develop/middleware/view-nats-data",
+            },
+            {
+              text: "PostgreSQL",
+              collapsed: true,
+              items :[
+                {
+                  text: "集成 PostgreSQL",
+                  link: "zh/developer/develop/middleware/integrate-with-pg",                },
+                {
+                  text: "查看 PostgreSQL 数据",
+                  link: "zh/developer/develop/middleware/view-pg-data",
+                }
+              ]
+            },
+            {
+              text: "RabbitMQ",
+              link: "zh/developer/develop/middleware/view-rabbitmq-data",
+            },
+            {
+              text: "Redis",
+              collapsed: true,
+              items :[
+                {
+                  text: "集成 Redis",
+                  link: "zh/developer/develop/middleware/integrate-with-redis",                },
+                {
+                  text: "查看 Redis 数据",
+                  link: "zh/developer/develop/middleware/view-redis-data",
+                },
+              ]
+            },
+          ]
+        },
       ],
     },
     {

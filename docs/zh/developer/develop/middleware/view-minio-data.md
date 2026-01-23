@@ -1,0 +1,44 @@
+---
+outline: [2, 3]
+description: 了解如何在 Olares 中安装 MinIO，并通过 MinIO 控制台管理对象存储。
+---
+# 查看 MinIO 数据
+
+本文介绍如何在 Olares 中安装 MinIO，并通过 MinIO 控制台管理对象存储。
+
+## 安装 MinIO 服务
+
+在使用对象存储之前，需要先通过 Olares 应用市场安装 MinIO 服务。
+
+1. 从启动台打开 Olares 应用市场，搜索“MinIO”。
+2. 点击**获取**，然后点击**安装**，并等待安装完成。
+
+安装完成后，MinIO 服务及其连接信息将显示在控制面板的中间件列表中。
+
+## 安装 MinIO 控制台
+
+MinIO 控制台依赖 MinIO 服务，只有在 MinIO 服务就绪后才能安装。
+
+1. 在 Olares Market 中搜索 “MinIO Dashboard”。
+2. 点击 **获取**，然后点击 **安装**，并等待安装完成。
+
+## 获取连接信息
+
+在建立连接之前，需要从控制面板获取 MinIO 的连接信息。
+
+1. 从启动台打开控制面板。
+2. 在左侧导航栏中找到中间件，并选择 **Minio**。
+3. 记录信息面板中的以下信息：
+    - **用户**：用于在 MinIO 控制台建立连接。
+    - **密码**：用于在 MinIO 控制台建立连接。
+
+    ![连接信息](/images/zh/manual/developer/mw-minio-details.png#bordered){width=60% style="margin-left:0"}
+
+## MinIO 控制台可视化管理
+
+MinIO 控制台提供图形化界面，用于创建 Bucket、浏览文件和管理访问权限。
+
+1. 从启动台打开 MinIO 控制台。
+2. 在登录界面，输入从控制面板获取的用户和密码。
+
+登录成功后，即可进入管理界面，直接查看并管理 Bucket 与对象文件。
