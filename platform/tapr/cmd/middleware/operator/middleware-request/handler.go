@@ -1,10 +1,9 @@
 package middlewarerequest
 
 import (
+	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 	"errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
-	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 
 	"k8s.io/klog/v2"
 )

@@ -12,6 +12,7 @@ import (
 	"bytetrade.io/web3os/tapr/pkg/generated/listers/apr/v1alpha1"
 
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -103,13 +104,21 @@ func NewController(kubeConfig *rest.Config, mainCtx context.Context) (*controlle
 	}
 
 	_, err = informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: ctrlr.handleAddObject,
+		AddFunc: func(obj interface{}) {
+			req := obj.(*aprv1.MiddlewareRequest)
+			if !req.ObjectMeta.DeletionTimestamp.IsZero() {
+				klog.Infof("addfunc resource %s/%s marked for deletion, finalizers: %v", req.Namespace, req.Name, req.ObjectMeta.Finalizers)
+				ctrlr.handleDeleteObject(obj)
+				return
+			}
+			ctrlr.handleAddObject(req)
+		},
 		UpdateFunc: func(old, new interface{}) {
 			newReq := new.(*aprv1.MiddlewareRequest)
 
 			// If DeletionTimestamp is set, treat as deletion
 			if !newReq.ObjectMeta.DeletionTimestamp.IsZero() {
-				klog.Infof("resource %s/%s marked for deletion", newReq.Namespace, newReq.Name)
+				klog.Infof("resource %s/%s marked for deletion, finalizers: %v", newReq.Namespace, newReq.Name, newReq.ObjectMeta.Finalizers)
 				ctrlr.handleDeleteObject(new)
 				return
 			}
@@ -117,7 +126,16 @@ func NewController(kubeConfig *rest.Config, mainCtx context.Context) (*controlle
 			ctrlr.handleUpdateObject(new)
 
 		},
-		DeleteFunc: ctrlr.handleDeleteObject,
+		DeleteFunc: func(obj interface{}) {
+			// With finalizers, DeleteFunc is only called after the resource is fully deleted.
+			// All cleanup should have been done in UpdateFunc when DeletionTimestamp was set.
+			// We can safely ignore this event as it's just a notification that the resource is gone.
+
+			req := obj.(*aprv1.MiddlewareRequest)
+			klog.Infof("resource %s/%s fully deleted from K8s, cleanup was handled in UpdateFunc", req.Namespace, req.Name)
+
+			// No action needed - deletion was already handled when DeletionTimestamp was detected in UpdateFunc
+		},
 	})
 
 	if err != nil {
@@ -285,6 +303,11 @@ func (c *controller) addFinalizer(req *aprv1.MiddlewareRequest) error {
 		patchBytes,
 		metav1.PatchOptions{},
 	)
+	if err != nil && apierrors.IsNotFound(err) {
+		// Resource already deleted, finalizer addition not needed
+		klog.Infof("resource %s/%s not found, skipping finalizer addition", req.Namespace, req.Name)
+		return nil
+	}
 	return err
 }
 
@@ -327,6 +350,11 @@ func (c *controller) removeFinalizer(req *aprv1.MiddlewareRequest) error {
 		patchBytes,
 		metav1.PatchOptions{},
 	)
+	if err != nil && apierrors.IsNotFound(err) {
+		// Resource already deleted, finalizer removal succeeded
+		klog.Infof("resource %s/%s not found, finalizer already removed or resource deleted", req.Namespace, req.Name)
+		return nil
+	}
 	return err
 }
 
