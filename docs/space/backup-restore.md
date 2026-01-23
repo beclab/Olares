@@ -5,10 +5,6 @@ description: Protect your Olares instances with cloud backup and restore feature
 
 Olares Space is the official solution to back up snapshots for your Olares instances. You can restore an Olares to its most recent state whenever needed. This section provides instructions for managing backups and restores in Olares Space. 
 
-:::tip
-Each Olares is provided with 10 GB of free backup space. Any usage beyond this will be charged according to the cloud provider's pricing.
-:::
-
 ## View backup list
 
 The backup task list shows information for each backup task, including:
@@ -17,7 +13,7 @@ The backup task list shows information for each backup task, including:
 - Most recent snapshot time
 - Overall storage usage 
 
-![alt text](/images/how-to/space/backup_list.jpg#bordered)
+![Backup task list in Olares Space](/images/how-to/space/backup_list.jpg#bordered)
 
 Click **View Details** on a task to see its detail page. The detail page shows the storage usage since the task was created and a list of all successful snapshots.
 
@@ -27,7 +23,7 @@ Currently, only restoring from the most recent snapshot is supported.
 
 ## Restore backup to the Olares Space
 
-![alt text](/images/how-to/space/restore_backup_to_the_olares_space.jpg#bordered)
+![Snapshots in Olares Space](/images/how-to/space/restore_backup_to_the_olares_space.jpg#bordered)
 
 Restoring a snapshot to the cloud is similar to setting up a new cloud-based Olares.
 
@@ -39,7 +35,7 @@ Restoring a snapshot to the cloud is similar to setting up a new cloud-based Ola
 
    c. Confirm the snapshot details and enter the backup password.
 
-2. Understand charges for storage and bandwidth. <br>Each instance includes a certain amount of free storage and traffic. Any usage exceeding these quotas will incur charges.
+2. Understand charges for storage and bandwidth. <br>Each instance includes a certain amount of free traffic. Any usage exceeding the quota will incur charges. For more information, see [Billing](billing.md).
 
 3. Confirm the order and complete the payment. After that, the Olares begins to install.
 
