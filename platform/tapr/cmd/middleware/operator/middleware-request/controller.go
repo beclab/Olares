@@ -2,15 +2,19 @@ package middlewarerequest
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 	aprclientset "bytetrade.io/web3os/tapr/pkg/generated/clientset/versioned"
 	informers "bytetrade.io/web3os/tapr/pkg/generated/informers/externalversions"
 	"bytetrade.io/web3os/tapr/pkg/generated/listers/apr/v1alpha1"
 
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
@@ -23,7 +27,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const controllerAgentName = "middlewarerequest-controller"
+const (
+	controllerAgentName        = "middlewarerequest-controller"
+	middlewareRequestFinalizer = "middleware.apr.bytetrade.io/finalizer"
+)
 
 type Action int
 
@@ -98,7 +105,17 @@ func NewController(kubeConfig *rest.Config, mainCtx context.Context) (*controlle
 	_, err = informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: ctrlr.handleAddObject,
 		UpdateFunc: func(old, new interface{}) {
+			newReq := new.(*aprv1.MiddlewareRequest)
+
+			// If DeletionTimestamp is set, treat as deletion
+			if !newReq.ObjectMeta.DeletionTimestamp.IsZero() {
+				klog.Infof("resource %s/%s marked for deletion", newReq.Namespace, newReq.Name)
+				ctrlr.handleDeleteObject(new)
+				return
+			}
+
 			ctrlr.handleUpdateObject(new)
+
 		},
 		DeleteFunc: ctrlr.handleDeleteObject,
 	})
@@ -198,38 +215,16 @@ func (c *controller) processNextWorkItem() bool {
 			return nil
 		}
 
-		deleteRetryCount := 0
-		const maxDeleteRetries = 10
-
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
-		for e := c.syncHandler(eobj); e != nil; e = c.syncHandler(eobj) {
-			if eobj.action != DELETE {
-				// Put the item back on the workqueue to handle any transient errors.
-				//c.workqueue.AddRateLimited(eobj)
-				c.workqueue.AddAfter(eobj, 5*time.Second)
-				return fmt.Errorf("error syncing '%v': %s, requeuing", eobj, e.Error())
-			}
-
-			deleteRetryCount++
-			if deleteRetryCount >= maxDeleteRetries {
-				klog.Errorf("error syncing '%v': %s, reached max delete retries, skipping", eobj, e.Error())
-				break
-			}
-
-			// cause delete action cannot be requeued at the end,
-			klog.Errorf("error syncing '%v': %s, retry after 1 second", eobj, e.Error())
-			time.Sleep(time.Second)
+		if err := c.syncHandler(eobj); err != nil {
+			c.workqueue.AddAfter(eobj, 5*time.Second)
+			return fmt.Errorf("error syncing '%v': %s, requeuing", eobj, err.Error())
 		}
 
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-
-		if deleteRetryCount >= maxDeleteRetries {
-			klog.Warningf("Skipped syncing '%v' after %d delete retries", eobj, deleteRetryCount)
-			return nil
-		}
 
 		klog.Infof("Successfully synced '%v'", eobj)
 		return nil
@@ -250,4 +245,108 @@ func (c *controller) syncHandler(obj enqueueObj) error {
 
 func (c *controller) Cancel() {
 	c.cancel()
+}
+
+// addFinalizer adds the finalizer to MiddlewareRequest if not present using patch
+func (c *controller) addFinalizer(req *aprv1.MiddlewareRequest) error {
+	if containsString(req.ObjectMeta.Finalizers, middlewareRequestFinalizer) {
+		return nil
+	}
+
+	// Use JSON Patch to add finalizer
+	patch := []map[string]interface{}{
+		{
+			"op":    "add",
+			"path":  "/metadata/finalizers/-",
+			"value": middlewareRequestFinalizer,
+		},
+	}
+
+	// Handle the case where finalizers array doesn't exist
+	if len(req.ObjectMeta.Finalizers) == 0 {
+		patch = []map[string]interface{}{
+			{
+				"op":    "add",
+				"path":  "/metadata/finalizers",
+				"value": []string{middlewareRequestFinalizer},
+			},
+		}
+	}
+
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.aprClientSet.AprV1alpha1().MiddlewareRequests(req.Namespace).Patch(
+		c.ctx,
+		req.Name,
+		types.JSONPatchType,
+		patchBytes,
+		metav1.PatchOptions{},
+	)
+	return err
+}
+
+// removeFinalizer removes the finalizer from MiddlewareRequest using patch
+func (c *controller) removeFinalizer(req *aprv1.MiddlewareRequest) error {
+	if !containsString(req.ObjectMeta.Finalizers, middlewareRequestFinalizer) {
+		return nil
+	}
+
+	// Find the index of the finalizer
+	index := -1
+	for i, f := range req.ObjectMeta.Finalizers {
+		if f == middlewareRequestFinalizer {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
+		return nil
+	}
+
+	// Use JSON Patch to remove finalizer
+	patch := []map[string]interface{}{
+		{
+			"op":   "remove",
+			"path": fmt.Sprintf("/metadata/finalizers/%d", index),
+		},
+	}
+
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.aprClientSet.AprV1alpha1().MiddlewareRequests(req.Namespace).Patch(
+		c.ctx,
+		req.Name,
+		types.JSONPatchType,
+		patchBytes,
+		metav1.PatchOptions{},
+	)
+	return err
+}
+
+// containsString checks if a string exists in a slice
+func containsString(slice []string, s string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
+}
+
+// removeString removes a string from a slice
+func removeString(slice []string, s string) []string {
+	result := []string{}
+	for _, item := range slice {
+		if item != s {
+			result = append(result, item)
+		}
+	}
+	return result
 }
