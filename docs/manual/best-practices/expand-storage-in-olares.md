@@ -1,10 +1,15 @@
 ---
 outline: [2, 3]
-description: Complete guide to expanding storage in Olares. Learn how to connect to SMB servers, use USB auto-mount, and manually mount HDDs or SSDs to increase local storage capacity and manage large AI model files efficiently.
+description: Complete guide to expanding storage in Olares. Learn how to connect to SMB servers, use USB auto-mount, use CLI commands, and manually mount HDDs or SSDs to increase local storage capacity and manage large AI model files efficiently.
 ---
 # Expand storage in Olares
 
-This document describes how to expand storage in Olares, including connecting to an SMB server, using automatically mounted USB storage devices, and manually mounting HDDs or SSDs from the Linux hosting environment.
+This document describes how to expand storage in Olares using different approaches. Choose the method that best matches your scenario:
+
+- **Connect to an SMB server** to access shared files on a NAS or another computer over the network.
+- **Use USB auto-mount** for plug-and-play external storage. No Linux commands required.
+- **Manually mount an HDD or SSD** under `/olares/share` to keep a disk as independent external storage for large files.
+- **Expand system storage via Olares CLI** (`disk extend`) to increase system capacity on LVM-based setups by merging new disk(s) into the system volume.
 
 ## Connect to an SMB server
 
@@ -26,7 +31,9 @@ For details, please refer to [Mount SMB shares](../olares/files/mount-SMB.md).
 
 - You can access it in **Files** > **External** from both Olares and Larepass.
 
-- When the USB device is unplugged, the system automatically unmounts it.
+- The system automatically unmounts the device when you unplug it.
+
+- You can manually eject the device via the Olares web interface. Right-click the USB drive in Files and select **Unmount**.
 
 ## Manually mount an HDD or SSD
 
@@ -188,3 +195,123 @@ You can unmount partitions mounted using either temporary or permanent methods.
     :::
 
     You can also view and remove this directory from **Files** in Olares.
+
+## Expand system storage via Olares CLI
+
+If your Olares system uses LVM-based storage, you can expand its system storage capacity using the `disk` command.
+
+Manual mounting adds an external drive under `/olares/share`. In contrast, `disk extend` expands Olares system storage. After extension, the added drive is no longer shown as an independent mount point.
+
+:::warning Data loss
+`disk extend` will destroy all data on the selected disk.  
+Make sure the disk does not contain important data, or back up the data before continuing.
+:::
+
+### Before you begin
+
+- Connect the external drive to the Olares host machine.
+- [SSH](/developer/reference/access-olares-terminal.md) into the Olares terminal.
+
+### Identify the unmounted disk
+
+List block devices on the host:
+
+```bash
+lsblk | grep -v loop
+```
+
+Identify the newly added disk by checking its size and confirming it has no mount points. Do not select the disk that contains `/` or `/boot`.
+
+**Example output**:
+
+```text
+NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+sda           8:0    0 931.5G  0 disk
+├─sda1        8:1    0   512M  0 part /boot
+└─sda2        8:2    0   931G  0 part /
+nvme1n1     259:3    0 931.5G  0 disk
+```
+In this example, `sda` is the system drive which is mounted at `/` and `/boot`, while `nvme1n1` is the newly connected disk.
+
+### Extend system storage
+
+1. Verify that Olares recognizes the unmounted disk:
+
+    ```bash
+    olares-cli disk list-unmounted
+    ```
+
+2. Add the disk to the system volume:
+
+    ```bash
+    olares-cli disk extend
+    ```
+
+3. Type `YES` to proceed when the command prompts for confirmation.
+    ```text
+    WARNING: This will DESTROY all data on /dev/<device>
+    Type 'YES' to continue, CTRL+C to abort:
+    ```
+
+    **Example output**:
+    ```text
+    Selected volume group to extend: olares-vg
+    Selected logical volume to extend: data
+    Selected unmounted device to use: /dev/nvme0n1
+    Extending logical volume data in volume group olares-vg using device /dev/nvme0n1
+    WARNING: This will DESTROY all data on /dev/nvme0n1
+    Type 'YES' to continue, CTRL+C to abort: YES
+    Selected device /dev/nvme0n1 has existing partitions. Cleaning up...
+    Deleting existing partitions on device /dev/nvme0n1...
+    Creating partition on device /dev/nvme0n1...
+    Creating physical volume on device /dev/nvme0n1...
+    Extending volume group olares-vg with logic volume data on device /dev/nvme0n1...
+    Disk extension completed successfully.
+
+    id  LV    VG         LSize    Mountpoints
+    1   data  olares-vg  <3.63t   /var,/olares
+    2   root  olares-vg  100.00g  /
+    3   swap  olares-vg  1.00g
+    ...
+    ```
+### Verify the extension
+
+You can verify the storage increase in both terminal and UI.
+
+#### In terminal
+
+- Check the size of the `/olares` directory where data is stored to confirm expansion:
+
+    ```bash
+    df -h /olares
+    ```
+
+    **Example output**:
+    ```text
+    Filesystem                  Size   Used  Avail Use% Mounted on
+    /dev/mapper/olares--vg-root 1.8T   285G   1.4T  17% /olares
+    ```
+
+- Confirm if the new disk is now part of the `olares--vg-data` volume:
+    ```bash
+    lsblk | grep -v loop
+    ```
+    **Example output**:
+    ```text
+    NAME                MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+    nvme0n1             259:0    0  1.9T  0 disk
+    └─nvme0n1p1         259:2    0  1.9T  0 part
+      └─olares--vg-data 252:2    0  3.6T  0 lvm  /olares /var
+    nvme1n1             259:3    0  1.9T  0 disk
+    ├─nvme1n1p1         259:4    0  512M  0 part /boot/efi
+    └─nvme1n1p2         259:5    0  1.9T  0 part
+      ├─olares--vg-root 252:1    0  100G  0 lvm  /
+      └─olares--vg-swap 252:0    0    1G  0 lvm  [SWAP]
+    ```
+
+#### In UI
+Open Dashboard from Launchpad and confirm that total system storage capacity has increased.
+
+![Check disk volume in Dashboard](/public/images/manual/tutorials/expand-dashboard-disk.png#bordered)
+
+For full command usage and options, please refer to [`disk`](/developer/install/cli/disk.md).
