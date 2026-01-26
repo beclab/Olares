@@ -187,6 +187,11 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			api.HandleError(resp, req, err)
 			return
 		}
+		for i := range appconfig.Entrances {
+			if appconfig.Entrances[i].AuthLevel == "" {
+				appconfig.Entrances[i].AuthLevel = "private"
+			}
+		}
 
 		appconfig.SharedEntrances, err = appconfig.GenSharedEntranceURL(req.Request.Context())
 		if err != nil {
@@ -274,6 +279,7 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			}
 			if v, ok := appsMap[a.Name]; ok {
 				v.Spec.Settings = a.Spec.Settings
+				v.Spec.Entrances = a.Spec.Entrances
 			}
 		}
 	}
