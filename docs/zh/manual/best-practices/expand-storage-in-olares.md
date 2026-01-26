@@ -212,7 +212,7 @@ Linux 或 Olares 重启后，挂载配置将失效。
 ### 开始之前
 
 - 将外部硬盘连接到 Olares 主机。
-- [SSH](/zh/developer/install/cli/access-olares-terminal.md) 登录到 Olares 主机终端。
+- [SSH](/zh/developer/reference/access-olares-terminal.md) 登录到 Olares 主机终端。
 
 ### 识别未挂载的磁盘
 

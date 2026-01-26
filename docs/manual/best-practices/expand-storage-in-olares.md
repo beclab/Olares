@@ -210,7 +210,7 @@ Make sure the disk does not contain important data, or back up the data before c
 ### Before you begin
 
 - Connect the external drive to the Olares host machine.
-- [SSH](/developer/install/cli/access-olares-terminal.md) into the Olares terminal.
+- [SSH](/developer/reference/access-olares-terminal.md) into the Olares terminal.
 
 ### Identify the unmounted disk
 
