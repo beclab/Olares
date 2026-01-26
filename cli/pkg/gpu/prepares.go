@@ -37,8 +37,8 @@ type CudaInstalled struct {
 }
 
 func (p *CudaInstalled) PreCheck(runtime connector.Runtime) (bool, error) {
-	if runtime.GetSystemInfo().IsDgxSpark() {
-		logger.Debug("Assume DGX Spark system has CUDA installed")
+	if runtime.GetSystemInfo().IsGB10Chip() {
+		logger.Debug("Assume DGX Spark or GB10 OEM system has CUDA installed")
 		return true, nil
 	}
 

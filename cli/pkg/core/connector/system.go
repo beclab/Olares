@@ -76,7 +76,8 @@ type Systems interface {
 	IsPveOrPveLxc() bool
 	IsRaspbian() bool
 	IsLinux() bool
-	IsDgxSpark() bool
+	IsGB10Chip() bool
+	IsAmdApu() bool
 
 	IsUbuntu() bool
 	IsDebian() bool
@@ -237,8 +238,12 @@ func (s *SystemInfo) IsLinux() bool {
 	return s.HostInfo.OsType == common.Linux
 }
 
-func (s *SystemInfo) IsDgxSpark() bool {
-	return s.ProductName == "NVIDIA_DGX_Spark"
+func (s *SystemInfo) IsGB10Chip() bool {
+	return s.CpuInfo.IsGB10Chip
+}
+
+func (s *SystemInfo) IsAmdApu() bool {
+	return s.CpuInfo.HasAmdiGpu
 }
 
 func (s *SystemInfo) IsUbuntu() bool {
@@ -443,6 +448,8 @@ type CpuInfo struct {
 	CpuModel         string `json:"cpu_model"`
 	CpuLogicalCount  int    `json:"cpu_logical_count"`
 	CpuPhysicalCount int    `json:"cpu_physical_count"`
+	IsGB10Chip       bool   `json:"is_gb10_chip,omitempty"`
+	HasAmdiGpu       bool   `json:"has_amd_igpu,omitempty"`
 }
 
 func getCpu() *CpuInfo {
@@ -458,10 +465,29 @@ func getCpu() *CpuInfo {
 		cpuModel = cpuInfo[0].ModelName
 	}
 
+	// check if is GB10 chip
+	isGB10Chip := false
+	cmd := exec.Command("sh", "-c", "lspci | grep -i vga | grep GB10")
+	output, err := cmd.Output()
+	if err == nil && strings.TrimSpace(string(output)) != "" {
+		isGB10Chip = true
+	} else {
+		fmt.Printf("Error checking GB10 chip: %v\n", err)
+	}
+
+	// check if has amd igpu
+	hasAmdiGpu, err := HasAmdIGPULocal()
+	if err != nil {
+		fmt.Printf("Error checking AMD iGPU: %v\n", err)
+		hasAmdiGpu = false
+	}
+
 	return &CpuInfo{
 		CpuModel:         cpuModel,
 		CpuLogicalCount:  cpuLogicalCount,
 		CpuPhysicalCount: cpuPhysicalCount,
+		IsGB10Chip:       isGB10Chip,
+		HasAmdiGpu:       hasAmdiGpu,
 	}
 }
 

@@ -11,7 +11,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/task"
-	"github.com/beclab/Olares/cli/pkg/utils"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/pkg/errors"
@@ -26,8 +25,8 @@ func (m *InstallAmdRocmModule) Init() {
 	m.Name = "InstallAMDGPU"
 
 	installAmd := &task.RemoteTask{
-		Name:  "InstallAmdRocm",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
+		Name:   "InstallAmdRocm",
+		Hosts:  m.Runtime.GetHostsByRole(common.Master),
 		Action: &InstallAmdRocm{
 			// no manifest needed
 		},
@@ -51,7 +50,7 @@ func (t *InstallAmdRocm) Execute(runtime connector.Runtime) error {
 		return nil
 	}
 
-	amdGPUExists, err := utils.HasAmdIGPU(runtime)
+	amdGPUExists, err := connector.HasAmdIGPU(runtime)
 	if err != nil {
 		return err
 	}
@@ -59,7 +58,7 @@ func (t *InstallAmdRocm) Execute(runtime connector.Runtime) error {
 	if !amdGPUExists {
 		return nil
 	}
-	rocmV, _ := utils.RocmVersion()
+	rocmV, _ := connector.RocmVersion()
 	min := semver.MustParse("7.1.1")
 	if rocmV != nil && rocmV.LessThan(min) {
 		return fmt.Errorf("detected ROCm version %s, which is lower than required %s; please uninstall existing ROCm/AMDGPU components before installation with command: olares-cli amdgpu uninstall", rocmV.Original(), min.Original())

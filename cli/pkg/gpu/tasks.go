@@ -366,9 +366,10 @@ func (u *UpdateNodeGPUInfo) Execute(runtime connector.Runtime) error {
 	// TODO:
 	gpuType := NvidiaCardType
 	switch {
-	case runtime.GetSystemInfo().IsDgxSpark():
-		gpuType = DgxSparkType
-		// TODO: amd gpu
+	case runtime.GetSystemInfo().IsGB10Chip():
+		gpuType = GB10ChipType
+	case runtime.GetSystemInfo().IsAmdApu():
+		gpuType = AmdApuCardType
 	}
 
 	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &driverVersion, &st.CudaVersion, &supported, &gpuType)
