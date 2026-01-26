@@ -281,7 +281,10 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			if v, ok := appsMap[a.Name]; ok {
 				v.Spec.Settings = a.Spec.Settings
 				v.Spec.Entrances = a.Spec.Entrances
+<<<<<<< HEAD
 				v.Spec.Ports = a.Spec.Ports
+=======
+>>>>>>> b27854b8 (fix: v2 app stop)
 			}
 		}
 	}
