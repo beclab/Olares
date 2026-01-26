@@ -330,6 +330,7 @@ func generateIptablesCommands(appCfg *appcfg.ApplicationConfig) string {
 -A PROXY_INBOUND -p tcp --dport %d -j RETURN
 -A PROXY_INBOUND -s 20.20.20.21 -j RETURN
 -A PROXY_INBOUND -s 172.30.0.0/16 -j RETURN
+-A PROXY_INBOUND -p tcp --dport 5900 -j RETURN
 `, constants.EnvoyAdminPort)
 	if appCfg != nil {
 		for _, port := range appCfg.Ports {
