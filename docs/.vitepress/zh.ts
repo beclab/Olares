@@ -783,6 +783,10 @@ const side = {
           collapsed: true,
           items: [
             {
+              text: "Grafana",
+              link: "zh/developer/develop/middleware/view-grafana-data",
+            },
+            {
               text: "MariaDB",
               link: "zh/developer/develop/middleware/view-mariadb-data",
             },
