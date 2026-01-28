@@ -12,4 +12,5 @@ rules:
   - "/task/*"
   - "/search/*"
   - "/monitorsetting/*"
+  - "/file/*"
   verbs: ["*"]
