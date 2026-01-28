@@ -2,9 +2,9 @@
 outline: [2, 3]
 description: Learn how to manually mount an external SSD to Olares One for temporary or permanent storage expansion.
 head:
-   - - meta
-     - name: keywords
-       content: Olares One, external SSD, expand storage
+  - - meta
+    - name: keywords
+      content: Olares One, external SSD, expand storage
 ---
 
 # Expand storage via external SSD <Badge type="tip" text="30 min" />

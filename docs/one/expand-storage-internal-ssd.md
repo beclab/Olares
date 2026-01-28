@@ -2,9 +2,9 @@
 outline: [2, 3]
 description: Learn how to expand storage on Olares One using an NVMe M.2 SSD.
 head:
-- - meta
-- name: keywords
-  content: Olares One, NVMe SSD, expand storage, LVM, olares-cli
+  - - meta
+    - name: keywords
+      content: Olares One, NVMe SSD, expand storage, LVM, olares-cli
 ---
 
 # Expand storage with an NVMe M.2 SSD <Badge type="tip" text="15 min" />
