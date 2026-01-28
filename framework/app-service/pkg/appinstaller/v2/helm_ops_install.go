@@ -119,7 +119,7 @@ func (h *HelmOpsV2) Install() error {
 		return nil
 	}
 	ok, err := h.WaitForStartUp()
-	if err != nil && errors.Is(err, errcode.ErrPodPending) {
+	if err != nil && (errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending)) {
 		klog.Errorf("App %s is pending, err=%v", h.App().AppName, err)
 		return err
 	}
