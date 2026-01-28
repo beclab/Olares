@@ -17,7 +17,7 @@ COPY pkg/ github.com/beclab/Olares/framework/app-service/pkg/
 
 # Build
 RUN cd github.com/beclab/Olares/framework/app-service && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -a -o app-service cmd/app-service/main.go
+    CGO_ENABLED=0 go build -ldflags="-s -w" -a -o app-service cmd/app-service/main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
