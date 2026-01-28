@@ -429,6 +429,11 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			api.HandleError(resp, req, err)
 			return
 		}
+		for i := range appconfig.Entrances {
+			if appconfig.Entrances[i].AuthLevel == "" {
+				appconfig.Entrances[i].AuthLevel = "private"
+			}
+		}
 		now := metav1.Now()
 		name, _ := apputils.FmtAppMgrName(am.Spec.AppName, owner, appconfig.Namespace)
 		app := &v1alpha1.Application{
@@ -446,6 +451,7 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 				Owner:           owner,
 				Entrances:       appconfig.Entrances,
 				SharedEntrances: appconfig.SharedEntrances,
+				Ports:           appconfig.Ports,
 				Icon:            appconfig.Icon,
 				Settings: map[string]string{
 					"title": am.Annotations[constants.ApplicationTitleLabel],
@@ -480,6 +486,8 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			}
 			if v, ok := appsMap[a.Name]; ok {
 				v.Spec.Settings = a.Spec.Settings
+				v.Spec.Entrances = a.Spec.Entrances
+				v.Spec.Ports = a.Spec.Ports
 			}
 		}
 	}
@@ -741,6 +749,11 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			api.HandleError(resp, req, err)
 			return
 		}
+		for i := range appconfig.Entrances {
+			if appconfig.Entrances[i].AuthLevel == "" {
+				appconfig.Entrances[i].AuthLevel = "private"
+			}
+		}
 
 		now := metav1.Now()
 		app := v1alpha1.Application{
@@ -757,6 +770,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
 				Entrances:       appconfig.Entrances,
+				Ports:           appconfig.Ports,
 				SharedEntrances: appconfig.SharedEntrances,
 				Icon:            appconfig.Icon,
 				Settings: map[string]string{
@@ -791,6 +805,8 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		}
 		if v, ok := appsMap[a.Name]; ok {
 			v.Spec.Settings = a.Spec.Settings
+			v.Spec.Entrances = a.Spec.Entrances
+			v.Spec.Ports = a.Spec.Ports
 		}
 	}
 
