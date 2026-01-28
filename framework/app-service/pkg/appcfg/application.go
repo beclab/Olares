@@ -100,6 +100,7 @@ type ApplicationConfig struct {
 	PodsSelectors        []metav1.LabelSelector
 	HardwareRequirement  Hardware
 	SharedEntrances      []v1alpha1.Entrance
+	SelectedGpuType      string
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {

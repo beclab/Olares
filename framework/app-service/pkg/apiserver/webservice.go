@@ -272,6 +272,12 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to get ", &ResultResponse{}))
 
+	ws.Route(ws.GET("/gpu/types").
+		To(handler.getGpuTypes).
+		Doc("get all gpu types in the cluster").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "Success to get ", &ResultResponse{}))
+
 	// handler_webhook
 	ws.Route(ws.POST("/sandbox/inject").
 		To(handler.sandboxInject).
