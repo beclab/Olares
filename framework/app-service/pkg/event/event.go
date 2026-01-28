@@ -160,6 +160,7 @@ func PublishAppEventToQueue(p utils.EventParams) {
 			return p.RawAppName
 		}(),
 		Title:           p.Title,
+		Icon:            p.Icon,
 		Reason:          p.Reason,
 		Message:         p.Message,
 		SharedEntrances: p.SharedEntrances,

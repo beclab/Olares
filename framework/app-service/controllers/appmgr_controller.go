@@ -193,6 +193,7 @@ func (r *ApplicationManagerController) publishStateChangeEvent(am *appv1alpha1.A
 		RawAppName: am.Spec.RawAppName,
 		Type:       am.Spec.Type.String(),
 		Title:      apputils.AppTitle(am.Spec.Config),
+		Icon:       apputils.AppIcon(am.Spec.Config),
 		Reason:     am.Status.Reason,
 		Message:    am.Status.Message,
 	})

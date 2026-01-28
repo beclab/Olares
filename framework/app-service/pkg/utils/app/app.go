@@ -1080,12 +1080,27 @@ func IsClonedApp(appName, rawAppName string) bool {
 }
 
 func AppTitle(config string) string {
-	var cfg appcfg.ApplicationConfig
-	err := json.Unmarshal([]byte(config), &cfg)
-	if err != nil {
+	cfg := unmarshalApplicationConfig(config)
+	if cfg == nil {
 		return ""
 	}
 	return cfg.Title
+}
+func AppIcon(config string) string {
+	cfg := unmarshalApplicationConfig(config)
+	if cfg == nil {
+		return ""
+	}
+	return cfg.Icon
+}
+
+func unmarshalApplicationConfig(config string) *appcfg.ApplicationConfig {
+	var cfg appcfg.ApplicationConfig
+	err := json.Unmarshal([]byte(config), &cfg)
+	if err != nil {
+		return nil
+	}
+	return &cfg
 }
 
 func GetRawAppName(AppName, rawAppName string) string {

@@ -564,7 +564,7 @@ func (h *HelmOps) WaitForStartUp() (bool, error) {
 				}
 				return true, nil
 			}
-			if errors.Is(err, errcode.ErrPodPending) {
+			if errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending) {
 				return false, err
 			}
 
@@ -576,11 +576,41 @@ func (h *HelmOps) WaitForStartUp() (bool, error) {
 }
 
 func (h *HelmOps) isStartUp() (bool, error) {
-	pods, err := h.findAppSelectedPods()
+	if h.app.IsV2() && h.app.IsMultiCharts() {
+		serverPods, err := h.findServerPods()
+		if err != nil {
+			return false, err
+		}
+		podNames := make([]string, 0)
+		for _, p := range serverPods {
+			podNames = append(podNames, p.Name)
+		}
+		klog.Infof("podSErvers: %v", podNames)
+
+		serverStarted, err := checkIfStartup(serverPods, true)
+		if err != nil {
+			klog.Errorf("v2 app %s server pods not ready: %v", h.app.AppName, err)
+			return false, err
+		}
+
+		if !serverStarted {
+			klog.Infof("v2 app %s server pods not started yet, waiting...", h.app.AppName)
+			return false, nil
+		}
+
+		klog.Infof("v2 app %s server pods started, checking client pods", h.app.AppName)
+	}
+
+	clientPods, err := h.findV1OrClientPods()
 	if err != nil {
 		return false, err
 	}
-	return checkIfStartup(pods)
+
+	clientStarted, err := checkIfStartup(clientPods, false)
+	if err != nil {
+		return false, err
+	}
+	return clientStarted, nil
 }
 
 func (h *HelmOps) findAppSelectedPods() (*corev1.PodList, error) {
@@ -610,15 +640,49 @@ func (h *HelmOps) findAppSelectedPods() (*corev1.PodList, error) {
 	return pods, nil
 }
 
-func checkIfStartup(pods *corev1.PodList) (bool, error) {
-	if len(pods.Items) == 0 {
+func (h *HelmOps) findV1OrClientPods() ([]corev1.Pod, error) {
+	podList, err := h.client.KubeClient.Kubernetes().CoreV1().Pods(h.app.Namespace).List(h.ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.Errorf("app %s get pods err %v", h.app.AppName, err)
+		return nil, err
+	}
+	return podList.Items, nil
+
+}
+
+func (h *HelmOps) findServerPods() ([]corev1.Pod, error) {
+	pods := make([]corev1.Pod, 0)
+
+	for _, c := range h.app.SubCharts {
+		if !c.Shared {
+			continue
+		}
+		ns := c.Namespace(h.app.OwnerName)
+		podList, err := h.client.KubeClient.Kubernetes().CoreV1().Pods(ns).List(h.ctx, metav1.ListOptions{})
+		if err != nil {
+			klog.Errorf("app %s get pods err %v", h.app.AppName, err)
+			return nil, err
+		}
+		pods = append(pods, podList.Items...)
+	}
+
+	return pods, nil
+}
+
+func checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, error) {
+	if len(pods) == 0 {
 		return false, errors.New("no pod found")
 	}
-	for _, pod := range pods.Items {
+	startedPods := 0
+	totalPods := len(pods)
+	for _, pod := range pods {
 		creationTime := pod.GetCreationTimestamp()
 		pendingDuration := time.Since(creationTime.Time)
 
 		if pod.Status.Phase == corev1.PodPending && pendingDuration > time.Minute*10 {
+			if isServerSide {
+				return false, errcode.ErrServerSidePodPending
+			}
 			return false, errcode.ErrPodPending
 		}
 		totalContainers := len(pod.Spec.Containers)
@@ -630,8 +694,11 @@ func checkIfStartup(pods *corev1.PodList) (bool, error) {
 			}
 		}
 		if startedContainers == totalContainers {
-			return true, nil
+			startedPods++
 		}
+	}
+	if totalPods == startedPods {
+		return true, nil
 	}
 	return false, nil
 }
@@ -796,7 +863,7 @@ func (h *HelmOps) Install() error {
 		return nil
 	}
 	ok, err := h.WaitForStartUp()
-	if err != nil && errors.Is(err, errcode.ErrPodPending) {
+	if err != nil && (errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending)) {
 		return err
 	}
 	if !ok {

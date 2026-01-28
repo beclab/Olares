@@ -16,6 +16,7 @@ import (
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -104,8 +105,37 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 				err = ops.Install()
 				if err != nil {
 					klog.Errorf("install app %s failed %v", p.manager.Spec.AppName, err)
-					if errors.Is(err, errcode.ErrPodPending) {
+					if errors.Is(err, errcode.ErrServerSidePodPending) {
+						p.finally = func() {
+							klog.Infof("app %s server side pods is pending, set stop-all annotation and update app state to stopping", p.manager.Spec.AppName)
 
+							var am appsv1.ApplicationManager
+							if err := p.client.Get(context.TODO(), types.NamespacedName{Name: p.manager.Name}, &am); err != nil {
+								klog.Errorf("failed to get application manager: %v", err)
+								return
+							}
+
+							if am.Annotations == nil {
+								am.Annotations = make(map[string]string)
+							}
+							am.Annotations[api.AppStopAllKey] = "true"
+
+							if err := p.client.Update(ctx, &am); err != nil {
+								klog.Errorf("failed to set stop-all annotation: %v", err)
+								return
+							}
+
+							updateErr := p.updateStatus(ctx, &am, appsv1.Stopping, nil, err.Error(), constants.AppUnschedulable)
+							if updateErr != nil {
+								klog.Errorf("update status failed %v", updateErr)
+								return
+							}
+						}
+
+						return
+					}
+
+					if errors.Is(err, errcode.ErrPodPending) {
 						p.finally = func() {
 							klog.Infof("app %s pods is still pending, update app state to stopping", p.manager.Spec.AppName)
 							updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Stopping, nil, err.Error(), constants.AppUnschedulable)
