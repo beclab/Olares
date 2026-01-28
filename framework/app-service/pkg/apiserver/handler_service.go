@@ -219,6 +219,7 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
 				Entrances:       appconfig.Entrances,
+				Ports:           appconfig.Ports,
 				SharedEntrances: appconfig.SharedEntrances,
 				Icon:            appconfig.Icon,
 				Settings: map[string]string{
@@ -280,6 +281,7 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			if v, ok := appsMap[a.Name]; ok {
 				v.Spec.Settings = a.Spec.Settings
 				v.Spec.Entrances = a.Spec.Entrances
+				v.Spec.Ports = a.Spec.Ports
 			}
 		}
 	}
