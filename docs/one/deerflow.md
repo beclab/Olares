@@ -2,9 +2,9 @@
 outline: [2, 3]
 description: Learn how to set up DeerFlow on your Olares device, complete with Ollama integration and Tavily for web research.
 head:
-   - - meta
-     - name: keywords
-       content: Deerflow, Ollama, Deep research
+  - - meta
+    - name: keywords
+      content: Deerflow, Ollama, Deep research
 ---
 
 # Deep research with DeerFlow  <Badge type="tip" text="20 min" />
