@@ -3,22 +3,21 @@ package pipelines
 import (
 	"path"
 
-	"github.com/beclab/Olares/cli/cmd/ctl/options"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/core/pipeline"
 	"github.com/beclab/Olares/cli/pkg/gpu"
 	"github.com/beclab/Olares/cli/pkg/manifest"
+	"github.com/spf13/viper"
 )
 
-func InstallGpuDrivers(opt *options.InstallGpuOptions) error {
+func InstallGpuDrivers() error {
 	arg := common.NewArgument()
-	arg.SetOlaresVersion(opt.Version)
-	arg.SetCudaVersion(opt.Cuda)
-	arg.SetBaseDir(opt.BaseDir)
+	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
+	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetConsoleLog("gpuinstall.log", true)
-	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
+	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
 		return err
 	}

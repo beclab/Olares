@@ -3,39 +3,33 @@ package os
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
+
 	"github.com/Masterminds/semver/v3"
-	"github.com/beclab/Olares/cli/cmd/ctl/options"
+	"github.com/beclab/Olares/cli/cmd/config"
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/pipelines"
 	"github.com/beclab/Olares/cli/pkg/upgrade"
 	"github.com/beclab/Olares/cli/version"
 	"github.com/spf13/cobra"
-	"log"
-	"os"
 )
 
-type UpgradeOsOptions struct {
-	UpgradeOptions *options.UpgradeOptions
-}
-
-func NewUpgradeOsOptions() *UpgradeOsOptions {
-	return &UpgradeOsOptions{
-		UpgradeOptions: options.NewUpgradeOptions(),
-	}
-}
-
 func NewCmdUpgradeOs() *cobra.Command {
-	o := NewUpgradeOsOptions()
 	cmd := &cobra.Command{
 		Use:   "upgrade",
 		Short: "Upgrade Olares to a newer version",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := pipelines.UpgradeOlaresPipeline(o.UpgradeOptions); err != nil {
+			if err := pipelines.UpgradeOlaresPipeline(); err != nil {
 				log.Fatalf("error: %v", err)
 			}
 		},
 	}
-	o.UpgradeOptions.AddFlags(cmd)
+
+	flagSetter := config.NewFlagSetterFor(cmd)
+	config.AddVersionFlagBy(flagSetter)
+	config.AddBaseDirFlagBy(flagSetter)
+
 	cmd.AddCommand(NewCmdCurrentVersionUpgradeSpec())
 	cmd.AddCommand(NewCmdUpgradeViable())
 	cmd.AddCommand(NewCmdUpgradePrecheck())
