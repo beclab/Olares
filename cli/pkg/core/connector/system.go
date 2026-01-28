@@ -467,12 +467,19 @@ func getCpu() *CpuInfo {
 
 	// check if is GB10 chip
 	isGB10Chip := false
-	cmd := exec.Command("sh", "-c", "lspci | grep -i vga | grep GB10")
+
+	// In Linux systems, it is recognized via lspci as "NVIDIA Corporation Device 2e12 (rev a1)
+	// or NVIDIA Corporation GB20B [GB10] (rev a1)
+	cmd := exec.Command("sh", "-c", "lspci | grep -i vga | egrep 'GB10|2e12'")
 	output, err := cmd.Output()
 	if err == nil && strings.TrimSpace(string(output)) != "" {
 		isGB10Chip = true
 	} else {
 		fmt.Printf("Error checking GB10 chip: %v\n", err)
+		gb10env := os.Getenv(common.ENV_GB10_CHIP)
+		if gb10env == "1" || strings.EqualFold(gb10env, "true") {
+			isGB10Chip = true
+		}
 	}
 
 	// check if has amd igpu
