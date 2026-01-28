@@ -90,6 +90,6 @@ If the VPN still fails to enable:
 3. Restart LarePass and try enabling the VPN again.
 
 ## Learn more
-- [Access Olares locally](../best-practices/local-access.md): Explore detailed instructions for all available local network connection methods.
+- [Access Olares locally](../manual/best-practices/local-access.md): Explore detailed instructions for all available local network connection methods.
 - [Access Olares terminal](access-terminal-ssh.md): Learn how to connect to the host shell using SSH or the Control Hub web terminal.
-- [Network](../../developer/concepts/network.md): Learn about the different entry points in Olares.
+- [Network](../developer/concepts/network.md): Learn about the different entry points in Olares.
