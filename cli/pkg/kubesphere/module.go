@@ -46,11 +46,6 @@ func (m *DeleteKubeSphereCachesModule) Init() {
 
 type DeployModule struct {
 	common.KubeModule
-	Skip bool
-}
-
-func (d *DeployModule) IsSkip() bool {
-	return d.Skip
 }
 
 func (d *DeployModule) Init() {
@@ -76,11 +71,6 @@ func (d *DeployModule) Init() {
 
 type CheckResultModule struct {
 	common.KubeModule
-	Skip bool
-}
-
-func (c *CheckResultModule) IsSkip() bool {
-	return c.Skip
 }
 
 func (c *CheckResultModule) Init() {

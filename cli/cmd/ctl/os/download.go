@@ -3,7 +3,8 @@ package os
 import (
 	"log"
 
-	"github.com/beclab/Olares/cli/cmd/ctl/options"
+	"github.com/beclab/Olares/cli/cmd/config"
+	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/pipelines"
 	"github.com/spf13/cobra"
 )
@@ -22,52 +23,61 @@ func NewCmdRootDownload() *cobra.Command {
 }
 
 func NewCmdDownload() *cobra.Command {
-	o := options.NewCliDownloadOptions()
 	cmd := &cobra.Command{
 		Use:   "component",
 		Short: "Download the packages and components needed to install Olares",
 		Run: func(cmd *cobra.Command, args []string) {
 
-			if err := pipelines.DownloadInstallationPackage(o); err != nil {
+			if err := pipelines.DownloadInstallationPackage(); err != nil {
 				log.Fatalf("error: %v", err)
 			}
 		},
 	}
+	flagSetter := config.NewFlagSetterFor(cmd)
+	config.AddVersionFlagBy(flagSetter)
+	config.AddBaseDirFlagBy(flagSetter)
+	config.AddCDNServiceFlagBy(flagSetter)
+	config.AddManifestFlagBy(flagSetter)
 
-	o.AddFlags(cmd)
 	return cmd
 }
 
 func NewCmdDownloadWizard() *cobra.Command {
-	o := options.NewCliDownloadWizardOptions()
 	cmd := &cobra.Command{
 		Use:   "wizard",
 		Short: "Download the Olares installation wizard",
 		Run: func(cmd *cobra.Command, args []string) {
 
-			if err := pipelines.DownloadInstallationWizard(o); err != nil {
+			if err := pipelines.DownloadInstallationWizard(); err != nil {
 				log.Fatalf("error: %v", err)
 			}
 		},
 	}
+	flagSetter := config.NewFlagSetterFor(cmd)
 
-	o.AddFlags(cmd)
+	flagSetter.Add(common.FlagReleaseID, "", "", "Set the specific release id of the release version")
+	flagSetter.Add(common.FlagURLOverride, "", "", "Set another URL for wizard download explicitly")
+
+	config.AddVersionFlagBy(flagSetter)
+	config.AddBaseDirFlagBy(flagSetter)
+	config.AddCDNServiceFlagBy(flagSetter)
 	return cmd
 }
 
 func NewCmdCheckDownload() *cobra.Command {
-	o := options.NewCliDownloadOptions()
 	cmd := &cobra.Command{
 		Use:   "check",
 		Short: "Check Downloaded Olares Installation Package",
 		Run: func(cmd *cobra.Command, args []string) {
 
-			if err := pipelines.CheckDownloadInstallationPackage(o); err != nil {
+			if err := pipelines.CheckDownloadInstallationPackage(); err != nil {
 				log.Fatalf("error: %v", err)
 			}
 		},
 	}
-
-	o.AddFlags(cmd)
+	flagSetter := config.NewFlagSetterFor(cmd)
+	config.AddVersionFlagBy(flagSetter)
+	config.AddBaseDirFlagBy(flagSetter)
+	config.AddManifestFlagBy(flagSetter)
 	return cmd
 }

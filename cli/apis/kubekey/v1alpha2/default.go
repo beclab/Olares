@@ -133,7 +133,6 @@ func (cfg *ClusterSpec) SetDefaultClusterSpec(incluster bool, macos bool) (*Clus
 	clusterCfg.Kubernetes = SetDefaultClusterCfg(cfg)
 	clusterCfg.Registry = cfg.Registry
 	clusterCfg.Addons = cfg.Addons
-	clusterCfg.KubeSphere = cfg.KubeSphere
 
 	if cfg.Kubernetes.ClusterName == "" {
 		clusterCfg.Kubernetes.ClusterName = DefaultClusterName

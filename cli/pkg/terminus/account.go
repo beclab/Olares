@@ -30,20 +30,16 @@ type GetUserInfo struct {
 
 func (s *GetUserInfo) Execute(runtime connector.Runtime) error {
 	var err error
-	if len(s.KubeConf.Arg.User.DomainName) == 0 {
-		s.KubeConf.Arg.User.DomainName, err = s.getDomainName()
-		if err != nil {
-			return err
-		}
-		logger.Infof("using Domain Name: %s", s.KubeConf.Arg.User.DomainName)
+	s.KubeConf.Arg.User.DomainName, err = s.getDomainName()
+	if err != nil {
+		return err
 	}
-	if len(s.KubeConf.Arg.User.UserName) == 0 {
-		s.KubeConf.Arg.User.UserName, err = s.getUserName()
-		if err != nil {
-			return err
-		}
-		logger.Infof("using Olares Local Name: %s", s.KubeConf.Arg.User.UserName)
+	logger.Infof("using Domain Name: %s", s.KubeConf.Arg.User.DomainName)
+	s.KubeConf.Arg.User.UserName, err = s.getUserName()
+	if err != nil {
+		return err
 	}
+	logger.Infof("using Olares Local Name: %s", s.KubeConf.Arg.User.UserName)
 	s.KubeConf.Arg.User.Email, err = s.getUserEmail()
 	if err != nil {
 		return err
@@ -53,16 +49,20 @@ func (s *GetUserInfo) Execute(runtime connector.Runtime) error {
 	if err != nil {
 		return err
 	}
-	logger.Infof("using password: %s", s.KubeConf.Arg.User.Password)
+	if s.KubeConf.Arg.User.Password != "" {
+		logger.Infof("using password: %s", s.KubeConf.Arg.User.Password)
+	} else {
+		logger.Infof("using already encrypted password")
+	}
 
 	return nil
 }
 
 func (s *GetUserInfo) getDomainName() (string, error) {
-	domainName := strings.TrimSpace(os.Getenv("TERMINUS_OS_DOMAINNAME"))
+	domainName := s.KubeConf.Arg.User.DomainName
 	if len(domainName) > 0 {
 		if !utils.IsValidDomain(domainName) {
-			return "", errors.New(fmt.Sprintf("invalid domain name \"%s\" set in env, please reset", domainName))
+			return "", errors.New(fmt.Sprintf("invalid domain name \"%s\", please reset", domainName))
 		}
 		return domainName, nil
 	}
@@ -90,14 +90,14 @@ LOOP:
 }
 
 func (s *GetUserInfo) getUserName() (string, error) {
-	userName := os.Getenv("TERMINUS_OS_USERNAME")
+	userName := s.KubeConf.Arg.User.UserName
 	if strings.Contains(userName, "@") {
 		userName = strings.Split(userName, "@")[0]
 	}
 	userName = strings.TrimSpace(userName)
 	if len(userName) > 0 {
 		if err := utils.ValidateUserName(userName); err != nil {
-			return "", fmt.Errorf("invalid username \"%s\" set in env: %s, please reset", userName, err.Error())
+			return "", fmt.Errorf("invalid username \"%s\": %s, please reset", userName, err.Error())
 		}
 		return userName, nil
 	}
@@ -135,15 +135,23 @@ func (s *GetUserInfo) getUserEmail() (string, error) {
 }
 
 func (s *GetUserInfo) getUserPassword() (string, string, error) {
-	userPassword := strings.TrimSpace(os.Getenv("TERMINUS_OS_PASSWORD"))
-	if len(userPassword) != 32 && len(userPassword) != 0 {
-		return "", "", fmt.Errorf("invalid password \"%s\" set in env: length should be equal 32, please reset", userPassword)
+	// currently only used in the installation flow by LarePass -> Olaresd,
+	// when this env var is passed in, it is already encrypted
+	// make this one priority over the password set in the arg specailly
+	// to ensure the larepass installation flow works as expected
+	encryptedPassword := strings.TrimSpace(os.Getenv(common.EnvLegacyEncryptedOSPassword))
+	if len(encryptedPassword) != 32 && len(encryptedPassword) != 0 {
+		return "", "", fmt.Errorf("invalid password \"%s\" set in env: length should be equal 32, please reset", encryptedPassword)
 
 	}
-	if len(userPassword) == 0 {
-		return utils.GenerateEncryptedPassword(8)
+	if len(encryptedPassword) == 0 {
+		if s.KubeConf.Arg.User.Password != "" {
+			return s.KubeConf.Arg.User.Password, utils.EncryptPassword(s.KubeConf.Arg.User.Password), nil
+		} else {
+			return utils.GenerateEncryptedPassword(8)
+		}
 	}
-	return userPassword, userPassword, nil
+	return "", encryptedPassword, nil
 }
 
 type SetAccountValues struct {

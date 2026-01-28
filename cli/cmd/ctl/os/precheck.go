@@ -3,22 +3,23 @@ package os
 import (
 	"log"
 
-	"github.com/beclab/Olares/cli/cmd/ctl/options"
+	"github.com/beclab/Olares/cli/cmd/config"
 	"github.com/beclab/Olares/cli/pkg/pipelines"
 	"github.com/spf13/cobra"
 )
 
 func NewCmdPrecheck() *cobra.Command {
-	o := options.NewPreCheckOptions()
 	cmd := &cobra.Command{
 		Use:   "precheck",
 		Short: "precheck the installation compatibility of the system",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := pipelines.StartPreCheckPipeline(o); err != nil {
+			if err := pipelines.StartPreCheckPipeline(); err != nil {
 				log.Fatalf("error: %v", err)
 			}
 		},
 	}
-	o.AddFlags(cmd)
+	flagSetter := config.NewFlagSetterFor(cmd)
+	config.AddVersionFlagBy(flagSetter)
+	config.AddBaseDirFlagBy(flagSetter)
 	return cmd
 }

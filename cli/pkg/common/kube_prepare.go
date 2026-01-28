@@ -29,9 +29,8 @@ type KubePrepare struct {
 func (k *KubePrepare) AutoAssert(runtime connector.Runtime) {
 	kubeRuntime := runtime.(*KubeRuntime)
 	conf := &KubeConf{
-		Cluster:    kubeRuntime.Cluster,
-		Kubeconfig: kubeRuntime.Kubeconfig,
-		Arg:        kubeRuntime.Arg,
+		Cluster: kubeRuntime.Cluster,
+		Arg:     kubeRuntime.Arg,
 	}
 
 	k.KubeConf = conf

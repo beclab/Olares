@@ -30,11 +30,6 @@ import (
 
 type DeployLocalVolumeModule struct {
 	common.KubeModule
-	Skip bool
-}
-
-func (d *DeployLocalVolumeModule) IsSkip() bool {
-	return d.Skip
 }
 
 func (d *DeployLocalVolumeModule) Init() {

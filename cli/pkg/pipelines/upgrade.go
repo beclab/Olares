@@ -2,12 +2,13 @@ package pipelines
 
 import (
 	"fmt"
+	"path"
+
 	"github.com/beclab/Olares/cli/pkg/upgrade"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/beclab/Olares/cli/version"
-	"path"
+	"github.com/spf13/viper"
 
-	"github.com/beclab/Olares/cli/cmd/ctl/options"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/module"
@@ -16,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func UpgradeOlaresPipeline(opts *options.UpgradeOptions) error {
+func UpgradeOlaresPipeline() error {
 	currentVersionString, err := phase.GetOlaresVersion()
 	if err != nil {
 		return errors.Wrap(err, "failed to get current Olares version")
@@ -31,10 +32,11 @@ func UpgradeOlaresPipeline(opts *options.UpgradeOptions) error {
 
 	// should only be and defaults to the current cli version
 	// this argument is for backwards-compatibility with older olaresd
-	if opts.Version == "" {
-		opts.Version = version.VERSION
+	targetVersionStr := viper.GetString(common.FlagVersion)
+	if targetVersionStr == "" {
+		targetVersionStr = version.VERSION
 	}
-	targetVersion, err := utils.ParseOlaresVersionString(opts.Version)
+	targetVersion, err := utils.ParseOlaresVersionString(targetVersionStr)
 	if err != nil {
 		return fmt.Errorf("error parsing target Olares version: %v", err)
 	}
@@ -44,12 +46,12 @@ func UpgradeOlaresPipeline(opts *options.UpgradeOptions) error {
 	}
 
 	arg := common.NewArgument()
-	arg.SetBaseDir(opts.BaseDir)
-	arg.SetOlaresVersion(opts.Version)
+	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
+	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
 	arg.SetConsoleLog("upgrade.log", true)
 	arg.SetKubeVersion(phase.GetKubeType())
 
-	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
+	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
 		return fmt.Errorf("error creating runtime: %v", err)
 	}
@@ -67,7 +69,7 @@ func UpgradeOlaresPipeline(opts *options.UpgradeOptions) error {
 		Runtime: runtime,
 	}
 
-	logger.Infof("Starting Olares upgrade from %s to %s...", currentVersion, opts.Version)
+	logger.Infof("Starting Olares upgrade from %s to %s...", currentVersion, targetVersion)
 	if err := p.Start(); err != nil {
 		return errors.Wrap(err, "upgrade failed")
 	}
@@ -80,7 +82,7 @@ func UpgradePreCheckPipeline() error {
 	var arg = common.NewArgument()
 	arg.SetConsoleLog("upgrade-precheck.log", true)
 
-	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
+	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
 		return err
 	}

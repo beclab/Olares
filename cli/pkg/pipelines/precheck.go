@@ -1,22 +1,20 @@
 package pipelines
 
 import (
-	"github.com/beclab/Olares/cli/cmd/ctl/options"
 	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/core/pipeline"
+	"github.com/spf13/viper"
 )
 
-func StartPreCheckPipeline(opt *options.PreCheckOptions) error {
-	terminusVersion := opt.Version
-
+func StartPreCheckPipeline() error {
 	var arg = common.NewArgument()
-	arg.SetOlaresVersion(terminusVersion)
-	arg.SetBaseDir(opt.BaseDir)
+	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
+	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetConsoleLog("precheck.log", true)
 
-	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
+	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
 		return err
 	}

@@ -165,7 +165,7 @@ func (t *UpdateNvidiaContainerToolkitSource) Execute(runtime connector.Runtime) 
 
 	// decide mirror based on OLARES_SYSTEM_CDN_SERVICE
 	var mirrorHost string
-	cdnService := os.Getenv(common.ENV_OLARES_CDN_SERVICE)
+	cdnService := t.KubeConf.Arg.OlaresCDNService
 	if cdnService != "" {
 		cdnRaw := cdnService
 		if !strings.HasPrefix(cdnRaw, "http") {
