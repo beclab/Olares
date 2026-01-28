@@ -2,13 +2,11 @@ package appstate
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
 	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
-	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubeblocks"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -60,41 +58,24 @@ func (p *ResumingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 }
 
 func (p *ResumingApp) exec(ctx context.Context) error {
-	err := suspendOrResumeApp(ctx, p.client, p.manager, int32(1))
-	if err != nil {
-		klog.Errorf("resume %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
-		return fmt.Errorf("resume app %s failed %w", p.manager.Spec.AppName, err)
-	}
-
-	// If resume-all is requested, also resume v2 server-side shared charts by scaling them up
-	if p.manager.Annotations[api.AppResumeAllKey] == "true" {
-		var appCfg *appcfg.ApplicationConfig
-		if err := json.Unmarshal([]byte(p.manager.Spec.Config), &appCfg); err != nil {
-			klog.Errorf("unmarshal to appConfig failed %v", err)
-			return err
+	// Check if resume-all is requested for V2 apps to also resume server-side shared charts
+	resumeServer := p.manager.Annotations[api.AppResumeAllKey] == "true"
+	if resumeServer {
+		err := resumeV2AppAll(ctx, p.client, p.manager)
+		if err != nil {
+			klog.Errorf("resume v2 app %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
+			return fmt.Errorf("resume v2 app %s failed %w", p.manager.Spec.AppName, err)
 		}
-		if appCfg != nil && appCfg.IsV2() && appCfg.HasClusterSharedCharts() {
-			for _, chart := range appCfg.SubCharts {
-				if !chart.Shared {
-					continue
-				}
-				ns := chart.Namespace(appCfg.OwnerName)
-				// create a shallow copy with target namespace/name for scaling logic
-				amCopy := p.manager.DeepCopy()
-				amCopy.Spec.AppNamespace = ns
-				amCopy.Spec.AppName = chart.Name
-				klog.Infof("resume-amCopy.Spec.AppNamespace: %s", ns)
-				klog.Infof("resume-amCopy.Spec.AppName: %s", chart.Name)
-				if err := suspendOrResumeApp(ctx, p.client, amCopy, int32(1)); err != nil {
-					klog.Errorf("failed to resume shared chart %s in namespace %s: %v", chart.Name, ns, err)
-					return err
-				}
-			}
+	} else {
+		err := resumeV1AppOrV2AppClient(ctx, p.client, p.manager)
+		if err != nil {
+			klog.Errorf("resume v2 app %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
+			return fmt.Errorf("resume v2 app %s failed %w", p.manager.Spec.AppName, err)
 		}
 	}
 
 	if p.manager.Spec.Type == "middleware" && userspace.IsKbMiddlewares(p.manager.Spec.AppName) {
-		err = p.execMiddleware(ctx)
+		err := p.execMiddleware(ctx)
 		if err != nil {
 			klog.Errorf("failed to resume middleware %s,err=%v", p.manager.Spec.AppName, err)
 			return err
