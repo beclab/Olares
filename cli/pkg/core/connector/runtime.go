@@ -39,8 +39,6 @@ type BaseRuntime struct {
 	baseDir         string
 	installerDir    string
 	workDir         string
-	verbose         bool
-	ignoreErr       bool
 	allHosts        []Host
 	roleHosts       map[string][]Host
 	deprecatedHosts map[string]string
@@ -50,12 +48,10 @@ type BaseRuntime struct {
 	k8sClient       *kubernetes.Clientset
 }
 
-func NewBaseRuntime(name string, connector Connector, verbose bool, ignoreErr bool, baseDir string, olaresVersion string, consoleLogFileName string, consoleLogTruncate bool, systemInfo Systems) BaseRuntime {
+func NewBaseRuntime(name string, connector Connector, baseDir string, olaresVersion string, consoleLogFileName string, consoleLogTruncate bool, systemInfo Systems) BaseRuntime {
 	base := BaseRuntime{
 		ObjName:         name,
 		connector:       connector,
-		verbose:         verbose,
-		ignoreErr:       ignoreErr,
 		allHosts:        make([]Host, 0, 0),
 		roleHosts:       make(map[string][]Host),
 		deprecatedHosts: make(map[string]string),
@@ -167,10 +163,6 @@ func (b *BaseRuntime) GetInstallerDir() string {
 
 func (b *BaseRuntime) GetWorkDir() string {
 	return b.workDir
-}
-
-func (b *BaseRuntime) GetIgnoreErr() bool {
-	return b.ignoreErr
 }
 
 func (b *BaseRuntime) GetAllHosts() []Host {

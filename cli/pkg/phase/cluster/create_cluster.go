@@ -7,7 +7,6 @@ import (
 
 	kubekeyapiv1alpha2 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
 
-	"github.com/beclab/Olares/cli/pkg/bootstrap/confirm"
 	"github.com/beclab/Olares/cli/pkg/bootstrap/os"
 	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
 	"github.com/beclab/Olares/cli/pkg/certs"
@@ -36,11 +35,11 @@ func NewDarwinClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.Ins
 			},
 		},
 		&kubesphere.DeployMiniKubeModule{},
-		&kubesphere.DeployModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
+		&kubesphere.DeployModule{},
 		&ksplugins.DeployKsCoreConfigModule{}, // ks-core-config
 		&ksplugins.DeployPrometheusModule{},
 		&ksplugins.DeployKsCoreModule{},
-		&kubesphere.CheckResultModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
+		&kubesphere.CheckResultModule{},
 	}
 
 	return m
@@ -51,13 +50,6 @@ func NewK3sCreateClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.
 	baseDir := runtime.GetBaseDir()
 	if systemInfo.IsWsl() {
 		baseDir = path.Join(runtime.Arg.GetWslUserPath(), cc.DefaultBaseDir)
-	}
-
-	skipLocalStorage := true
-	if runtime.Arg.DeployLocalStorage != nil {
-		skipLocalStorage = !*runtime.Arg.DeployLocalStorage
-	} else if runtime.Cluster.KubeSphere.Enabled {
-		skipLocalStorage = false
 	}
 
 	m := []module.Module{
@@ -87,13 +79,12 @@ func NewK3sCreateClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.
 		&kubernetes.ConfigureKubernetesModule{},
 		&filesystem.ChownModule{},
 		&certs.AutoRenewCertsModule{Skip: !runtime.Cluster.Kubernetes.EnableAutoRenewCerts()},
-		&k3s.SaveKubeConfigModule{},
-		&storage.DeployLocalVolumeModule{Skip: skipLocalStorage},
-		&kubesphere.DeployModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
+		&storage.DeployLocalVolumeModule{},
+		&kubesphere.DeployModule{},
 		&ksplugins.DeployKsCoreConfigModule{},
 		&ksplugins.DeployPrometheusModule{},
 		&ksplugins.DeployKsCoreModule{},
-		&kubesphere.CheckResultModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
+		&kubesphere.CheckResultModule{},
 	}
 
 	return m
@@ -106,16 +97,8 @@ func NewCreateClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.Ins
 		baseDir = path.Join(runtime.Arg.GetWslUserPath(), cc.DefaultBaseDir)
 	}
 
-	skipLocalStorage := true
-	if runtime.Arg.DeployLocalStorage != nil {
-		skipLocalStorage = !*runtime.Arg.DeployLocalStorage
-	} else if runtime.Cluster.KubeSphere.Enabled {
-		skipLocalStorage = false
-	}
-
 	m := []module.Module{
 		&precheck.NodePreCheckModule{},
-		&confirm.InstallConfirmModule{Skip: runtime.Arg.SkipConfirmCheck},
 		&kubernetes.StatusModule{},
 		&os.ConfigureOSModule{},
 		&etcd.PreCheckModule{Skip: runtime.Cluster.Etcd.Type != kubekeyapiv1alpha2.KubeKey},
@@ -144,13 +127,12 @@ func NewCreateClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.Ins
 		&filesystem.ChownModule{},
 		&certs.AutoRenewCertsModule{Skip: !runtime.Cluster.Kubernetes.EnableAutoRenewCerts()},
 		&kubernetes.SecurityEnhancementModule{Skip: !runtime.Arg.SecurityEnhancement},
-		&kubernetes.SaveKubeConfigModule{},
-		&storage.DeployLocalVolumeModule{Skip: skipLocalStorage},
-		&kubesphere.DeployModule{Skip: !runtime.Cluster.KubeSphere.Enabled},
+		&storage.DeployLocalVolumeModule{},
+		&kubesphere.DeployModule{},
 		&ksplugins.DeployKsCoreConfigModule{}, // ! ks-core-config
 		&ksplugins.DeployPrometheusModule{},
 		&ksplugins.DeployKsCoreModule{},
-		&kubesphere.CheckResultModule{Skip: !runtime.Cluster.KubeSphere.Enabled}, // check ks-apiserver phase
+		&kubesphere.CheckResultModule{}, // check ks-apiserver phase
 	}
 
 	return m

@@ -2,50 +2,46 @@ package pipelines
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/beclab/Olares/cli/cmd/ctl/options"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/phase/cluster"
+	"github.com/spf13/viper"
 )
 
-func UninstallTerminusPipeline(opt *options.CliTerminusUninstallOptions) error {
-	terminusVersion := opt.Version
+func UninstallTerminusPipeline() error {
+	version := viper.GetString(common.FlagVersion)
 	kubeType := phase.GetKubeType()
 
-	if terminusVersion == "" {
-		terminusVersion, _ = phase.GetOlaresVersion()
+	if version == "" {
+		version, _ = phase.GetOlaresVersion()
 	}
 
 	var arg = common.NewArgument()
-	arg.SetOlaresVersion(terminusVersion)
-	arg.SetBaseDir(opt.BaseDir)
+	arg.SetOlaresVersion(version)
+	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetConsoleLog("uninstall.log", true)
 	arg.SetKubeVersion(kubeType)
-	arg.SetDeleteCRI(opt.All || (opt.Phase == cluster.PhasePrepare.String() || opt.Phase == cluster.PhaseDownload.String()))
-	arg.SetStorage(&common.Storage{
-		StorageVendor: os.Getenv(common.ENV_TERMINUS_IS_CLOUD_VERSION),
-		StorageType:   os.Getenv(common.ENV_STORAGE),
-		StorageBucket: os.Getenv(common.ENV_S3_BUCKET),
-	})
+	arg.SetStorage(getStorageConfig())
 
-	if err := checkPhase(opt.Phase, opt.All, arg.SystemInfo.GetOsType()); err != nil {
+	phase := viper.GetString(common.FlagUninstallPhase)
+	all := viper.GetBool(common.FlagUninstallAll)
+
+	if err := checkPhase(phase, all, arg.SystemInfo.GetOsType()); err != nil {
 		return err
 	}
 
-	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
+	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
 		return err
 	}
 
-	phaseName := opt.Phase
-	if opt.All {
-		phaseName = cluster.PhaseDownload.String()
+	if all {
+		phase = cluster.PhaseDownload.String()
 	}
 
-	var p = cluster.UninstallTerminus(phaseName, runtime)
+	var p = cluster.UninstallTerminus(phase, runtime)
 	if err := p.Start(); err != nil {
 		logger.Errorf("uninstall Olares failed: %v", err)
 		return err

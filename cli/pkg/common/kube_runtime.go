@@ -28,7 +28,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/pkg/errors"
-	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 
 	kubekeyapiv1alpha2 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
 	"github.com/beclab/Olares/cli/pkg/core/common"
@@ -40,43 +40,19 @@ import (
 
 type KubeRuntime struct {
 	connector.BaseRuntime
-	ClusterName string
-	Cluster     *kubekeyapiv1alpha2.ClusterSpec
-	Kubeconfig  string
-	Arg         *Argument
+	Cluster *kubekeyapiv1alpha2.ClusterSpec
+	Arg     *Argument
 }
 
 type Argument struct {
-	NodeName            string `json:"node_name"`
-	FilePath            string `json:"file_path"`
 	KubernetesVersion   string `json:"kubernetes_version"`
-	KsEnable            bool   `json:"ks_enable"`
-	KsVersion           string `json:"ks_version"`
 	OlaresVersion       string `json:"olares_version"`
-	Debug               bool   `json:"debug"`
-	IgnoreErr           bool   `json:"ignore_err"`
-	SkipPullImages      bool   `json:"skip_pull_images"`
-	SKipPushImages      bool   `json:"skip_push_images"`
 	SecurityEnhancement bool   `json:"security_enhancement"`
-	DeployLocalStorage  *bool  `json:"deploy_local_storage"`
-	// DownloadCommand     func(path, url string) string
-	SkipConfirmCheck bool   `json:"skip_confirm_check"`
-	InCluster        bool   `json:"in_cluster"`
-	ContainerManager string `json:"container_manager"`
-	FromCluster      bool   `json:"from_cluster"`
-	KubeConfig       string `json:"kube_config"`
-	Artifact         string `json:"artifact"`
-	InstallPackages  bool   `json:"install_packages"`
-	ImagesDir        string `json:"images_dir"`
-	Namespace        string `json:"namespace"`
-	DeleteCRI        bool   `json:"delete_cri"`
-	Role             string `json:"role"`
-	Type             string `json:"type"`
-	Kubetype         string `json:"kube_type"`
-	SystemInfo       connector.Systems
+	InCluster           bool   `json:"in_cluster"`
+	ContainerManager    string `json:"container_manager"`
+	Kubetype            string `json:"kube_type"`
+	SystemInfo          connector.Systems
 
-	// Extra args
-	ExtraAddon       string `json:"extra_addon"` // addon yaml config
 	RegistryMirrors  string `json:"registry_mirrors"`
 	OlaresCDNService string `json:"olares_cdn_service"`
 
@@ -85,10 +61,6 @@ type Argument struct {
 
 	// master node ssh config
 	*MasterHostConfig
-
-	LocalSSHPort int `json:"-"`
-
-	SkipMasterPullImages bool `json:"skip_master_pull_images"`
 
 	// User
 	User *User `json:"user"`
@@ -102,8 +74,6 @@ type Argument struct {
 	NetworkSettings *NetworkSettings `json:"network_settings"`
 	GPU             *GPU             `json:"gpu"`
 
-	Request any `json:"-"`
-
 	IsCloudInstance    bool     `json:"is_cloud_instance"`
 	MinikubeProfile    string   `json:"minikube_profile"`
 	WSLDistribution    string   `json:"wsl_distribution"`
@@ -114,8 +84,6 @@ type Argument struct {
 	ConsoleLogTruncate bool     `json:"console_log_truncate"`
 	HostIP             string   `json:"host_ip"`
 
-	CudaVersion string `json:"cuda_version"`
-
 	IsOlaresInContainer bool `json:"is_olares_in_container"`
 }
 
@@ -125,14 +93,6 @@ type SwapConfig struct {
 	EnableZRAM       bool   `json:"enable_zram"`
 	ZRAMSize         string `json:"zram_size"`
 	ZRAMSwapPriority int    `json:"zram_swap_priority"`
-}
-
-func (cfg *SwapConfig) AddFlags(fs *pflag.FlagSet) {
-	fs.BoolVar(&cfg.EnablePodSwap, "enable-pod-swap", false, "Enable pods on Kubernetes cluster to use swap, setting --enable-zram, --zram-size or --zram-swap-priority implicitly enables this option, regardless of the command line args, note that only pods of the BestEffort QOS group can use swap due to K8s design")
-	fs.IntVar(&cfg.Swappiness, "swappiness", 0, "Configure the Linux swappiness value, if not set, the current configuration is remained")
-	fs.BoolVar(&cfg.EnableZRAM, "enable-zram", false, "Set up a ZRAM device to be used for swap, setting --zram-size or --zram-swap-priority implicitly enables this option, regardless of the command line args")
-	fs.StringVar(&cfg.ZRAMSize, "zram-size", "", "Set the size of the ZRAM device, takes a format of https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity, defaults to half of the total RAM")
-	fs.IntVar(&cfg.ZRAMSwapPriority, "zram-swap-priority", 0, "Set the swap priority of the ZRAM device, between -1 and 32767, defaults to 100")
 }
 
 func (cfg *SwapConfig) Validate() error {
@@ -164,21 +124,12 @@ type MasterHostConfig struct {
 	MasterSSHPort           int    `json:"master_ssh_port"`
 }
 
-func (cfg *MasterHostConfig) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&cfg.MasterHost, "master-host", "", "IP address of the master node")
-	fs.StringVar(&cfg.MasterNodeName, "master-node-name", "", "Name of the master node")
-	fs.StringVar(&cfg.MasterSSHUser, "master-ssh-user", "", "Username of the master node, defaults to root")
-	fs.StringVar(&cfg.MasterSSHPassword, "master-ssh-password", "", "Password of the master node")
-	fs.StringVar(&cfg.MasterSSHPrivateKeyPath, "master-ssh-private-key-path", "", "Path to the SSH key to access the master node, defaults to ~/.ssh/id_rsa")
-	fs.IntVar(&cfg.MasterSSHPort, "master-ssh-port", 0, "SSH Port of the master node, defaults to 22")
-}
-
 func (cfg *MasterHostConfig) Validate() error {
 	if cfg.MasterHost == "" {
-		return errors.New("--master-host is not provided")
+		return errors.New("master host is not provided")
 	}
 	if cfg.MasterSSHUser != "" && cfg.MasterSSHUser != "root" && cfg.MasterSSHPassword == "" {
-		return errors.New("--master-ssh-password must be provided for non-root user in order to execute sudo command")
+		return errors.New("master ssh password must be provided for non-root user in order to execute sudo command")
 	}
 	return nil
 }
@@ -222,9 +173,9 @@ type Storage struct {
 	StorageAccessKey string `json:"storage_access_key"`
 	StorageSecretKey string `json:"storage_secret_key"`
 
-	StorageToken        string `json:"storage_token"`       // juicefs  --> from env
-	StorageClusterId    string `json:"storage_cluster_id"`  // use only on the Terminus cloud, juicefs  --> from env
-	StorageSyncSecret   string `json:"storage_sync_secret"` // use only on the Terminus cloud  --> from env
+	StorageToken        string `json:"storage_token"`       // juicefs
+	StorageClusterId    string `json:"storage_cluster_id"`  // use only on the Terminus cloud, juicefs
+	StorageSyncSecret   string `json:"storage_sync_secret"` // use only on the Terminus cloud
 	BackupClusterBucket string `json:"backup_cluster_bucket"`
 }
 
@@ -235,56 +186,33 @@ type GPU struct {
 func NewArgument() *Argument {
 	si := connector.GetSystemInfo()
 	arg := &Argument{
-		KsEnable:         true,
-		KsVersion:        DefaultKubeSphereVersion,
-		InstallPackages:  false,
-		SKipPushImages:   false,
 		ContainerManager: Containerd,
 		SystemInfo:       si,
 		Storage: &Storage{
 			StorageType: ManagedMinIO,
 		},
-		GPU: &GPU{
-			Enable: !strings.EqualFold(os.Getenv(ENV_LOCAL_GPU_ENABLE), "0"), // default enable GPU, not set or 1 means enable
+		GPU: &GPU{},
+		User: &User{
+			UserName:   strings.TrimSpace(viper.GetString(FlagOSUserName)),
+			DomainName: strings.TrimSpace(viper.GetString(FlagOSDomainName)),
+			Password:   strings.TrimSpace(viper.GetString(FlagOSPassword)),
 		},
-		User:             &User{},
 		NetworkSettings:  &NetworkSettings{},
-		RegistryMirrors:  os.Getenv(ENV_REGISTRY_MIRRORS),
-		OlaresCDNService: os.Getenv(ENV_OLARES_CDN_SERVICE),
-		HostIP:           os.Getenv(ENV_HOST_IP),
+		RegistryMirrors:  viper.GetString(FlagRegistryMirrors),
+		OlaresCDNService: viper.GetString(FlagCDNService),
+		HostIP:           viper.GetString(ENV_HOST_IP),
 		Environment:      os.Environ(),
 		MasterHostConfig: &MasterHostConfig{},
 		SwapConfig:       &SwapConfig{},
 	}
+	// default enable GPU unless explicitly set to "0"
+	arg.GPU.Enable = !strings.EqualFold(os.Getenv(ENV_LOCAL_GPU_ENABLE), "0")
 	arg.IsCloudInstance, _ = strconv.ParseBool(os.Getenv(ENV_TERMINUS_IS_CLOUD_VERSION))
-	arg.IsOlaresInContainer = os.Getenv("CONTAINER_MODE") == "oic"
+	arg.IsOlaresInContainer = os.Getenv(ENV_CONTAINER_MODE) == "oic"
 	si.IsOIC = arg.IsOlaresInContainer
 
-	if err := arg.LoadReleaseInfo(); err != nil {
-		fmt.Printf("error loading release info: %v", err)
-		os.Exit(1)
-	}
+	arg.loadMasterHostConfig()
 	return arg
-}
-
-// LoadReleaseInfo loads base directory and version settings
-// from /etc/olares/release and environment variables,
-// with the latter takes precedence.
-// Note that the command line options --base-dir and --version
-// still have the highest priority and will override any values loaded here
-func (a *Argument) LoadReleaseInfo() error {
-	// load envs from the release file
-	// already existing envs are not overridden so
-	err := godotenv.Load(OlaresReleaseFile)
-
-	// silently ignore the non-existence of a release file
-	// otherwise, return the error
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	a.BaseDir = os.Getenv(ENV_OLARES_BASE_DIR)
-	a.OlaresVersion = os.Getenv(ENV_OLARES_VERSION)
-	return nil
 }
 
 func (a *Argument) SaveReleaseInfo(withoutName bool) error {
@@ -372,14 +300,6 @@ func (a *Argument) SetOlaresVersion(version string) {
 	a.OlaresVersion = version
 }
 
-func (a *Argument) SetRegistryMirrors(registryMirrors string) {
-	a.RegistryMirrors = registryMirrors
-}
-
-func (a *Argument) SetDeleteCRI(deleteCRI bool) {
-	a.DeleteCRI = deleteCRI
-}
-
 func (a *Argument) SetStorage(storage *Storage) {
 	a.Storage = storage
 }
@@ -411,11 +331,6 @@ func (a *Argument) SetKubeVersion(kubeType string) {
 	a.Kubetype = kubeType
 }
 
-func (a *Argument) SetKubernetesVersion(kubeType string, kubeVersion string) {
-	a.KubernetesVersion = kubeVersion
-	a.Kubetype = kubeType
-}
-
 func (a *Argument) SetBaseDir(dir string) {
 	if dir != "" {
 		a.BaseDir = dir
@@ -434,10 +349,36 @@ func (a *Argument) SetBaseDir(dir string) {
 	}
 }
 
-func (a *Argument) SetCudaVersion(cudaVersion string) {
-	a.CudaVersion = CurrentVerifiedCudaVersion
-	if cudaVersion != "" {
-		a.CudaVersion = cudaVersion
+// loadMasterHostConfig loads master host configuration from master.conf file (if exists)
+// and then overrides with any values set via command line flags or environment variables.
+func (a *Argument) loadMasterHostConfig() {
+	// First, try to load from master.conf file
+	configPath := filepath.Join(a.BaseDir, MasterHostConfigFile)
+	if content, err := os.ReadFile(configPath); err == nil {
+		json.Unmarshal(content, a.MasterHostConfig)
+	}
+	// Then override with viper values (from flags or env)
+	if v := viper.GetString(FlagMasterHost); v != "" {
+		a.MasterHost = v
+	}
+	if v := viper.GetString(FlagMasterNodeName); v != "" {
+		a.MasterNodeName = v
+	}
+	if v := viper.GetString(FlagMasterSSHUser); v != "" {
+		a.MasterSSHUser = v
+	}
+	if v := viper.GetString(FlagMasterSSHPassword); v != "" {
+		a.MasterSSHPassword = v
+	}
+	if v := viper.GetString(FlagMasterSSHPrivateKeyPath); v != "" {
+		a.MasterSSHPrivateKeyPath = v
+	}
+	if v := viper.GetInt(FlagMasterSSHPort); v != 0 {
+		a.MasterSSHPort = v
+	}
+	// Set a dummy name to bypass validity checks if master host is set but node name is not
+	if a.MasterHost != "" && a.MasterNodeName == "" {
+		a.MasterNodeName = "master"
 	}
 }
 
@@ -467,60 +408,15 @@ func (a *Argument) SetSwapConfig(config SwapConfig) {
 	a.Swappiness = config.Swappiness
 }
 
-func (a *Argument) SetMasterHostOverride(config MasterHostConfig) {
-	if config.MasterHost != "" {
-		a.MasterHost = config.MasterHost
-	}
-	if config.MasterNodeName != "" {
-		a.MasterNodeName = config.MasterNodeName
-	}
-
-	// set a dummy name to bypass validity checks
-	// as it will be overridden later when the node name is fetched
-	if a.MasterNodeName == "" {
-		a.MasterNodeName = "master"
-	}
-	if config.MasterSSHPassword != "" {
-		a.MasterSSHPassword = config.MasterSSHPassword
-	}
-	if config.MasterSSHUser != "" {
-		a.MasterSSHUser = config.MasterSSHUser
-	}
-	if config.MasterSSHPort != 0 {
-		a.MasterSSHPort = config.MasterSSHPort
-	}
-	if config.MasterSSHPrivateKeyPath != "" {
-		a.MasterSSHPrivateKeyPath = config.MasterSSHPrivateKeyPath
-	}
-}
-
-func (a *Argument) LoadMasterHostConfigIfAny() error {
-	if a.BaseDir == "" {
-		return errors.New("basedir unset")
-	}
-	content, err := os.ReadFile(filepath.Join(a.BaseDir, MasterHostConfigFile))
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(content, a.MasterHostConfig)
-}
-
-func NewKubeRuntime(flag string, arg Argument) (*KubeRuntime, error) {
-	loader := NewLoader(flag, arg)
+func NewKubeRuntime(arg Argument) (*KubeRuntime, error) {
+	loader := NewLoader(arg)
 	cluster, err := loader.Load()
 	if err != nil {
 		return nil, err
 	}
 
-	if err = loadExtraAddons(cluster, arg.ExtraAddon); err != nil {
-		return nil, err
-	}
-
 	base := connector.NewBaseRuntime(cluster.Name, connector.NewDialer(),
-		arg.Debug, arg.IgnoreErr, arg.BaseDir, arg.OlaresVersion, arg.ConsoleLogFileName, arg.ConsoleLogTruncate, arg.SystemInfo)
+		arg.BaseDir, arg.OlaresVersion, arg.ConsoleLogFileName, arg.ConsoleLogTruncate, arg.SystemInfo)
 
 	clusterSpec := &cluster.Spec
 	defaultCluster, roleGroups := clusterSpec.SetDefaultClusterSpec(arg.InCluster, arg.SystemInfo.IsDarwin())
@@ -529,9 +425,6 @@ func NewKubeRuntime(flag string, arg Argument) (*KubeRuntime, error) {
 		for _, host := range role {
 			if host.IsRole(Master) || host.IsRole(Worker) {
 				host.SetRole(K8s)
-			}
-			if host.IsRole(Master) && arg.SkipMasterPullImages {
-				host.GetCache().Set(SkipMasterNodePullImages, true)
 			}
 			if _, ok := hostSet[host.GetName()]; !ok {
 				hostSet[host.GetName()] = struct{}{}
@@ -546,12 +439,9 @@ func NewKubeRuntime(flag string, arg Argument) (*KubeRuntime, error) {
 	args, _ := json.Marshal(arg)
 	logger.Debugf("[runtime] arg: %s", string(args))
 
-	arg.KsEnable = defaultCluster.KubeSphere.Enabled
-	arg.KsVersion = defaultCluster.KubeSphere.Version
 	r := &KubeRuntime{
-		Cluster:     defaultCluster,
-		ClusterName: cluster.Name,
-		Arg:         &arg,
+		Cluster: defaultCluster,
+		Arg:     &arg,
 	}
 	r.BaseRuntime = base
 
