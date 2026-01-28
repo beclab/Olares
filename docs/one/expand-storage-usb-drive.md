@@ -34,4 +34,4 @@ It is recommended to manually eject the device first:
 ## Resources
 - [Manage files in Olares](../manual/olares/files/index.md)
 - [Expand storage using external SSD](expand-storage-external-ssd)
-- [Expand storage using internal SSD](extend-storage-internal-ssd.md)
+- [Expand storage using internal SSD](expand-storage-internal-ssd.md)
