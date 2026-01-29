@@ -52,7 +52,7 @@ func (t *CreateMiniKubeCluster) Execute(runtime connector.Runtime) error {
 		}
 	}
 	logger.Infof("creating minikube cluster %s ...", t.KubeConf.Arg.MinikubeProfile)
-	cmd = fmt.Sprintf("%s start -p '%s' --kubernetes-version=v1.33.3 --container-runtime=containerd --network-plugin=cni --cni=calico --cpus='4' --memory='8g' --ports=30180:30180,443:443,80:80", minikube, t.KubeConf.Arg.MinikubeProfile)
+	cmd = fmt.Sprintf("%s start -p '%s' --extra-config=apiserver.service-node-port-range=445-32767 --kubernetes-version=v1.33.3 --container-runtime=containerd --network-plugin=cni --cni=calico --cpus='4' --memory='8g' --ports=30180:30180,443:443,80:80", minikube, t.KubeConf.Arg.MinikubeProfile)
 	if _, err := runtime.GetRunner().Cmd(cmd, false, true); err != nil {
 		return errors.Wrap(err, "failed to create minikube cluster")
 	}
