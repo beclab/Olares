@@ -21,9 +21,11 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/emicklei/go-restful/v3"
 	"helm.sh/helm/v3/pkg/time"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -112,6 +114,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		RepoURL:      insReq.RepoURL,
 		MarketSource: marketSource,
 		Version:      chartVersion,
+		SelectedGpu:  insReq.SelectedGpuType,
 	})
 	klog.Infof("chartVersion: %s", chartVersion)
 	if err != nil {
@@ -123,6 +126,29 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		klog.Errorf("app %s can not be clone", app)
 		api.HandleBadRequest(resp, req, fmt.Errorf("app %s can not be clone", app))
 		return
+	}
+
+	if insReq.SelectedGpuType != "" {
+		// check selected gpu type can be supported
+		var nodes corev1.NodeList
+		err = h.ctrlClient.List(req.Request.Context(), &nodes, &client.ListOptions{})
+		if err != nil {
+			klog.Errorf("list node failed %v", err)
+			api.HandleError(resp, req, err)
+			return
+		}
+		gpuTypes, err := utils.GetAllGpuTypesFromNodes(&nodes)
+		if err != nil {
+			klog.Errorf("get gpu type failed %v", err)
+			api.HandleError(resp, req, err)
+			return
+		}
+
+		if _, ok := gpuTypes[insReq.SelectedGpuType]; !ok {
+			klog.Errorf("selected gpu type %s not found in cluster", insReq.SelectedGpuType)
+			api.HandleBadRequest(resp, req, fmt.Errorf("selected gpu type %s not found in cluster", insReq.SelectedGpuType))
+			return
+		}
 	}
 
 	client, err := utils.GetClient()

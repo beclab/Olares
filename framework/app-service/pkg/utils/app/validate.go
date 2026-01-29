@@ -398,7 +398,9 @@ func GetClusterResource(token string) (*prometheus.ClusterMetrics, []string, err
 				arches.Insert(n.Labels["kubernetes.io/arch"])
 				if quantity, ok := n.Status.Capacity[constants.NvidiaGPU]; ok {
 					total += quantity.AsApproximateFloat64()
-				} else if quantity, ok = n.Status.Capacity[constants.VirtAiTechVGPU]; ok {
+				} else if quantity, ok = n.Status.Capacity[constants.NvidiaGB10GPU]; ok {
+					total += quantity.AsApproximateFloat64()
+				} else if quantity, ok = n.Status.Capacity[constants.AMDAPU]; ok {
 					total += quantity.AsApproximateFloat64()
 				}
 			}

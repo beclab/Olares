@@ -160,6 +160,13 @@ func (c *ApplicationConfig) GenSharedEntranceURL(ctx context.Context) ([]v1alpha
 	return app.GenSharedEntranceURL(ctx)
 }
 
+func (c *ApplicationConfig) GetSelectedGpuTypeValue() string {
+	if c.SelectedGpuType == "" {
+		return "none"
+	}
+	return c.SelectedGpuType
+}
+
 func (p *ProviderPermission) GetNamespace(ownerName string) string {
 	if p.Namespace != "" {
 		if p.Namespace == "user-space" || p.Namespace == "user-system" {
