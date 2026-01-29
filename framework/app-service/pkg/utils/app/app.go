@@ -792,7 +792,7 @@ func toApplicationConfig(app, chart, rawAppName, selectedGpu string, cfg *appcfg
 
 	// if requiredGPU is set and no supportedGpu specified, set suppertedGpu to ["nvidia"]
 	if cfg.Spec.RequiredGPU != "" && len(cfg.Spec.SupportedGpu) == 0 {
-		cfg.Spec.SupportedGpu = []interface{}{"nvidia"}
+		cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType}
 	}
 
 	// try to get selected GPU type special resource requirement
