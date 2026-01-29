@@ -234,7 +234,9 @@ func CheckAppRequirement(token string, appConfig *appcfg.ApplicationConfig, op v
 			return constants.CPU, constants.SystemCPUPressure, fmt.Errorf(constants.SystemCPUPressureMessage, op)
 		}
 	}
-	if appConfig.Requirement.GPU != nil {
+
+	// only support nvidia gpu managment by HAMi for now
+	if appConfig.Requirement.GPU != nil && appConfig.SelectedGpuType == utils.NvidiaCardType {
 		if !appConfig.Requirement.GPU.IsZero() && metrics.GPU.Total <= 0 {
 			return constants.GPU, constants.SystemGPUNotAvailable, fmt.Errorf(constants.SystemGPUNotAvailableMessage, op)
 

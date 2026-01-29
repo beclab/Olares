@@ -40,7 +40,7 @@ type depRequest struct {
 type installHelperIntf interface {
 	getAdminUsers() (admin []string, isAdmin bool, err error)
 	getInstalledApps() (installed bool, app []*v1alpha1.Application, err error)
-	getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion string) (err error)
+	getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (err error)
 	setAppConfig(req *api.InstallRequest, appName string)
 	validate(bool, []*v1alpha1.Application) error
 	setAppEnv(overrides []sysv1alpha1.AppEnvVar) error
@@ -222,7 +222,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	err = helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion)
+	err = helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, insReq.SelectedGpuType)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return
@@ -457,7 +457,7 @@ func (h *installHandlerHelper) getInstalledApps() (installed bool, app []*v1alph
 	return
 }
 
-func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion string) (err error) {
+func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (err error) {
 	var (
 		admin                   string
 		installAsAdmin          bool
@@ -506,6 +506,7 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 		Admin:        admin,
 		IsAdmin:      installAsAdmin,
 		MarketSource: marketSource,
+		SelectedGpu:  selectedGpuType,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get appconfig err=%v", err)
@@ -719,7 +720,7 @@ func (h *installHandlerHelperV2) _validateClusterScope(isAdmin bool, installedAp
 	return nil
 }
 
-func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion string) (err error) {
+func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (err error) {
 	klog.Info("get app config for install handler v2")
 
 	var (
@@ -747,6 +748,7 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 		Admin:        admin,
 		MarketSource: marketSource,
 		IsAdmin:      isAdmin,
+		SelectedGpu:  selectedGpuType,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get appconfig err=%v", err)
