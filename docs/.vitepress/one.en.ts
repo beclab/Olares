@@ -28,7 +28,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/access-olares-via-vpn",
         },
         {
-          text: "Redeem Olares Space membership",
+          text: "Redeem membership",
           link: "/one/redeem-membership",
         },
       ]
@@ -110,8 +110,18 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       text: "Explore",
       items: [
         {
-          text: "Play games with Steam Headless",
-          link: "/one/steam",
+          text: "Play Steam games",
+          collapsed: true,
+          items: [
+            {
+              text: "Streaming",
+              link: "/one/steam-stream"
+            },
+            {
+              text: "Direct play",
+              link: "/one/steam-direct-play",
+            }]
+
         },
         {
           text: "Access Windows in Olares",

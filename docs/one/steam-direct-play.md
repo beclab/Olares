@@ -33,7 +33,11 @@ However, simply plugging in a monitor is not enough. Because Steam Headless is o
 
 ## Step 1: Install Steam Headless
 
+<<<<<<< HEAD
 1. Open the Market, and search for "Steam".
+=======
+1. Open the Market, and search for "Steam."
+>>>>>>> 24de23a9 (add steam)
 2. Click **Get**, then **Install**.
    ![Install Steam Headless](/images/manual/use-cases/steam-install-steam-headless1.png#bordered)
 
@@ -242,6 +246,12 @@ Finally, you must manually select the correct audio output channel.
 Audio now plays directly from your monitor or speakers. You are ready to play.
 
 ## Optional: Enable audio for remote streaming
+<<<<<<< HEAD
+=======
+:::info
+For detailed streaming and pairing instructions, refer to [Stream your games with Steam Headless](stream-game.md).
+:::
+>>>>>>> 24de23a9 (add steam)
 Local play and remote streaming use exclusive audio modes.
 - **Local play** requires the `module-alsa-sink` module loaded.
 
