@@ -32,17 +32,17 @@ This guide walks you through setting up your Olares One for the first time.
 ## Step 2: Connect Olares One
 Once your ID is ready, you need to discover and link your Olares One.
 
-<template>
-<tabs #Set-up-via-wired-LAN>
+<tabs>
+<template #Set-up-via-wired-LAN>
 
 1.  Ensure your Olares One is connected to your router via Ethernet.
 2. In the LarePass app, tap **Discover nearby Olares**.
    ![Discover nearby Olares](/images/one/discover-nearby-olares.png#bordered){width=90%}  
 
 3.  Select your Olares One from the list of available devices.
-</tabs>
+</template>
 
-<tabs #Set-up-via-Wi-Fi-(Bluetooth)>
+<template #Set-up-via-Wi-Fi-(Bluetooth)>
 If wired access is not available, use Bluetooth to configure Wi-Fi credentials.
 
 1. In the LarePass app, tap **Discover nearby Olares**.
@@ -51,8 +51,8 @@ If wired access is not available, use Bluetooth to configure Wi-Fi credentials.
 4. Follow the prompts to connect Olares One to the Wi-Fi network your phone is currently using.
 5. Once connected, return to the main screen and tap **Discover nearby Olares** again to find your device.
 
-</tabs>
 </template>
+</tabs>
 
 ## Step 3: Install & activate Olares OS
 
@@ -123,7 +123,7 @@ We understand the community's preference for flexibility. In the upcoming March 
 
 Yes. You can use your own custom domain instead of the default `olares.com` domain. Note that setting this up currently requires the LarePass app.
 
-For details, refer to [Set up a custom domain for your Olares](../best-practices/set-custom-domain.md).
+For details, refer to [Set up a custom domain for your Olares](../manual/best-practices/set-custom-domain.md).
 
 ## Resources
 - [Access Olares using local network](access-olares-via-vpn.md)

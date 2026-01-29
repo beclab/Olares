@@ -18,14 +18,10 @@ This guide will walk through the process of setting up DeerFlow on your Olares d
 - Execute deep research tasks and manage reports.
 
 ## Before you begin
-
-**Network access requirements** <br>
 DeerFlow connects to Ollama using the `.com` domain.
 * For local access: If the **Authentication model** for the Ollama API is **None**, LarePass VPN is not required.
 * For remote access: You must enable LarePass VPN.
-:::warning
-Currently, the `.local` domain is not supported for connecting to the Ollama API in DeerFlow.
-:::
+
 ## Prerequisites
 **Hardware** <br>
 - Olares One connected to a stable network. 
@@ -42,7 +38,7 @@ Currently, the `.local` domain is not supported for connecting to the Ollama API
 
 ## Step 1: Install Ollama and DeerFlow
 1. Open Market, and search for "Ollama."
-   ![Install DeerFlow](/images/manual/use-cases/ollama.png#bordered)
+   ![Install Ollama](/images/manual/use-cases/ollama.png#bordered)
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
