@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
+	"github.com/go-viper/mapstructure/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
@@ -674,6 +675,7 @@ type ConfigOptions struct {
 	MarketSource string
 	IsAdmin      bool
 	RawAppName   string
+	SelectedGpu  string
 }
 
 // GetAppConfig get app installation configuration from app store
@@ -740,7 +742,7 @@ func getAppConfigFromRepo(ctx context.Context, options *ConfigOptions) (*appcfg.
 	return getAppConfigFromConfigurationFile(options, chartPath)
 }
 
-func toApplicationConfig(app, chart, rawAppName string, cfg *appcfg.AppConfiguration) (*appcfg.ApplicationConfig, string, error) {
+func toApplicationConfig(app, chart, rawAppName, selectedGpu string, cfg *appcfg.AppConfiguration) (*appcfg.ApplicationConfig, string, error) {
 	var permission []appcfg.AppPermission
 	if cfg.Permission.AppData {
 		permission = append(permission, appcfg.AppDataRW)
@@ -786,6 +788,57 @@ func toApplicationConfig(app, chart, rawAppName string, cfg *appcfg.AppConfigura
 	gpu, err := valuePtr(resource.ParseQuantity(cfg.Spec.RequiredGPU))
 	if err != nil {
 		return nil, chart, err
+	}
+
+	// set suppertedGpu to ["nvidia","nvidia-gb10"] by default
+	if len(cfg.Spec.SupportedGpu) == 0 {
+		cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType}
+	}
+
+	// try to get selected GPU type special resource requirement
+	if selectedGpu != "" {
+		found := false
+		for _, supportedGpu := range cfg.Spec.SupportedGpu {
+			if str, ok := supportedGpu.(string); ok && str == selectedGpu {
+				found = true
+				break
+			}
+
+			if supportedGpuResourceMap, ok := supportedGpu.(map[string]interface{}); ok {
+				if resourceRequirement, ok := supportedGpuResourceMap[selectedGpu].(map[string]interface{}); ok {
+					found = true
+					var specialResource appcfg.SpecialResource
+					err := mapstructure.Decode(resourceRequirement, &specialResource)
+					if err != nil {
+						return nil, chart, fmt.Errorf("failed to decode special resource for selected GPU type %s: %v", selectedGpu, err)
+					}
+
+					for _, resSetter := range []struct {
+						v **resource.Quantity
+						s *string
+					}{
+						{v: &mem, s: specialResource.RequiredMemory},
+						{v: &disk, s: specialResource.RequiredDisk},
+						{v: &cpu, s: specialResource.RequiredCPU},
+						{v: &gpu, s: specialResource.RequiredGPU},
+					} {
+
+						if resSetter.s != nil && *resSetter.s != "" {
+							*resSetter.v, err = valuePtr(resource.ParseQuantity(*resSetter.s))
+							if err != nil {
+								return nil, chart, fmt.Errorf("failed to parse special resource quantity %s: %v", *resSetter.s, err)
+							}
+						}
+					}
+
+					break
+				} // end if selected gpu's resource requirement found
+			} // end if supportedGpu is map
+		} // end for supportedGpu
+
+		if !found {
+			return nil, chart, fmt.Errorf("selected GPU type %s is not supported", selectedGpu)
+		}
 	}
 
 	// transform from Policy to AppPolicy
@@ -877,6 +930,7 @@ func toApplicationConfig(app, chart, rawAppName string, cfg *appcfg.AppConfigura
 		PodsSelectors:        podSelectors,
 		HardwareRequirement:  cfg.Spec.Hardware,
 		SharedEntrances:      cfg.SharedEntrances,
+		SelectedGpuType:      selectedGpu,
 	}, chart, nil
 }
 
@@ -890,7 +944,7 @@ func getAppConfigFromConfigurationFile(opt *ConfigOptions, chartPath string) (*a
 		return nil, chartPath, err
 	}
 
-	return toApplicationConfig(opt.App, chartPath, opt.RawAppName, &cfg)
+	return toApplicationConfig(opt.App, chartPath, opt.RawAppName, opt.SelectedGpu, &cfg)
 }
 
 func checkVersionFormat(constraint string) error {
