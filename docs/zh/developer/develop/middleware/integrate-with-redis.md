@@ -60,9 +60,9 @@ containers:
 
 Redis Values 是在部署过程中由系统自动注入到 `values.yaml` 中的预定义变量。这些值由系统统一管理，用户无法自行修改。
 
-| 变量名称  | 类型  | 说明  |
+| 键  | 类型  | 说明  |
 |--|--|--|
 | `.Values.redis.host` | String | Redis 数据库地址 |
 | `.Values.redis.port` | Number  | Redis 数据库端口 |
 | `.Values.redis.password`| String | Redis 数据库密码 |
-| `.Values.redis.namespaces` | Map<String, String> | Redis 命名空间名称，以申请命名空间作为 key。例如，若申请的命名空间名为 `app_ns`，可通过 `.Values.redis.namespaces.app_ns`获取对应值。 |
+| `.Values.redis.namespaces` | Map<String, String> | Redis 命名空间名称，以申请命名空间作为键。例如，若申请的命名空间名为 `app_ns`，可通过 `.Values.redis.namespaces.app_ns`获取对应值。 |

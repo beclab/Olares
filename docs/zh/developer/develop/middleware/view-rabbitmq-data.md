@@ -8,9 +8,9 @@ description: 了解如何在 Olares 中安装 RabbitMQ，并通过 RabbitMQ Dash
 
 ## 安装 RabbitMQ 服务
 
-在使用 RabbitMQ 之前，需从 Olares 应用市场安装 RabbitMQ 服务。
+在使用 RabbitMQ 之前，需从应用市场安装 RabbitMQ 服务。
 
-1. 从 Launchpad 打开 Olares 应用市场并搜索“RabbitMQ”。
+1. 从 Launchpad 打开应用市场并搜索“RabbitMQ”。
 2.  点击**获取**，然后点击**安装**，并等待安装完成。
 
 安装完成后，RabbitMQ 服务及其连接详情将显示在控制面板的中间件列表中。
@@ -19,7 +19,7 @@ description: 了解如何在 Olares 中安装 RabbitMQ，并通过 RabbitMQ Dash
 
 RabbitMQ 仪表盘依赖于 RabbitMQ 服务，只有在 RabbitMQ 服务就绪后才能安装。
 
-1. 在 Olares 应用市场中搜索“RabbitMQ 仪表盘”。
+1. 在应用市场中搜索“RabbitMQ 仪表盘”。
 2. 点击**获取**，然后点击**安装**，并等待安装完成。
 
 ## 获取连接信息
@@ -32,7 +32,7 @@ RabbitMQ 仪表盘依赖于 RabbitMQ 服务，只有在 RabbitMQ 服务就绪后
     - **用户**：用于连接 RabbitMQ 仪表盘。
     - **密码**：用于连接 RabbitMQ 仪表盘。
 
-    ![RabbitMQ details](/images/developer/develop/middleware/mw-rabbitmq-details.png#bordered){width=60% style="margin-left:0"}
+    ![RabbitMQ details](/images/zh/manual/developer/mw-rabbitmq-details.png#bordered){width=60% style="margin-left:0"}
 
 ## RabbitMQ 仪表盘可视化管理
 

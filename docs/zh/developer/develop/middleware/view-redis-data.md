@@ -16,7 +16,7 @@ Redis 服务在 Olares 中默认可用。本文将介绍如何在 Olares 中访�
     - **主机**：用于在 Bytebase 中建立连接。
     - **密码**：用于 CLI 和 Bytebase。
 
-    ![连接信息](/public/images/zh/manual/developer/mw-redis-details.png#bordered){width=60% style="margin-left:0"}
+    ![连接信息](/images/zh/manual/developer/mw-redis-details.png#bordered){width=60% style="margin-left:0"}
 
 ## 通过 CLI 访问
 
@@ -44,7 +44,7 @@ Bytebase 提供图形化界面，用于数据库管理和结构变更。
 Bytebase 使用 MongoDB 存储元数据。在安装 Bytebase 之前，需要先安装 MongoDB。
 :::
 
-1. 打开 Olares 应用市场，搜索“MongoDB”。
+1. 打开应用市场，搜索“MongoDB”。
 2. 点击**获取**，然后点击**安装**，并等待服务运行。
 3. MongoDB 安装完成后，在应用市场搜索“Bytebase”。
 4. 点击**获取**，然后点击**安装**。

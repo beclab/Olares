@@ -4,7 +4,7 @@ description: Learn how to integrate your app with the built-in Redis service in 
 ---
 # Integrate with Redis
 
-Use Olares Redis middleware by declaring it in `OlaresManifest.yaml`, then wiring the injected values into your container environment variables.
+Use Olares Redis middleware by declaring it in `OlaresManifest.yaml`, then mapping the injected values to your container environment variables.
 
 :::info Redis installed
 Redis service has been installed by default.

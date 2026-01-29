@@ -8,9 +8,9 @@ To visualize system metrics in Olares, you can run Grafana and connect it to the
 
 ## Install Grafana
 
-Before using Grafana, install it from Olares Market.
+Before using Grafana, install it from Market.
 
-1. Open Olares Market from Launchpad and search for "Grafana".
+1. Open Market from Launchpad and search for "Grafana".
 2. Click **Get**, then **Install**.
 3. In the pop-up window, set your login credentials:
    - `GF_USERNAME`: Grafana login username.

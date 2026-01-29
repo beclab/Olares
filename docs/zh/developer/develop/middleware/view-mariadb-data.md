@@ -4,13 +4,13 @@ description: 了解如何在 Olares 中通过 CLI 或 Bytebase 查看并管理 M
 ---
 # 查看 MariaDB 数据
 
-MariaDB 需要先在 Olares 应用市场安装后才能使用。本文将介绍安装流程，并说明如何在 Olares 中访问并管理 MariaDB 数据。
+MariaDB 需要先在应用市场安装后才能使用。本文将介绍安装流程，并说明如何在 Olares 中访问并管理 MariaDB 数据。
 
 ## 安装 MariaDB 服务
 
-在建立连接之前，需要先通过 Olares 应用市场安装 MariaDB 服务。
+在建立连接之前，需要先通过应用市场安装 MariaDB 服务。
 
-1. 从启动台打开 Olares 应用市场，搜索“MariaDB”。
+1. 从启动台打开应用市场，搜索“MariaDB”。
 2. 点击**获取**，然后点击**安装**，并等待安装完成。
 
 安装完成后，MariaDB 服务及其连接信息将显示在控制面板的中间件列表中。
@@ -60,7 +60,7 @@ Bytebase 提供图形化界面，用于数据库管理和结构变更。
 Bytebase 使用 MongoDB 存储元数据。在安装 Bytebase 之前，需要先安装 MongoDB。
 :::
 
-1. 打开 Olares 应用市场，搜索“MongoDB”。
+1. 打开应用市场，搜索“MongoDB”。
 2. 点击**获取**，然后点击**安装**，并等待服务运行。
 3. MongoDB 安装完成后，在应用市场搜索“Bytebase”。
 4. 点击**获取**，然后点击**安装**。

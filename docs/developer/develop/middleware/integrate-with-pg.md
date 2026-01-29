@@ -4,13 +4,13 @@ description: Learn how to integrate your app with the built-in PostgreSQL servic
 ---
 # Integrate with PostgreSQL
 
-Use Olares PostgreSQL middleware by declaring it in `OlaresManifest.yaml`, then wiring the injected values into your container environment variables.
+Use Olares PostgreSQL middleware by declaring it in `OlaresManifest.yaml`, then mapping the injected values to your container environment variables.
 
 :::info PosgreSQL installed
 PostgreSQL service has been installed by default.
 :::
 
-## Configure `OlaresManefest.yaml`
+## Configure `OlaresManifest.yaml`
 
 In `OlaresManifest.yaml`, add the required middleware configuration.
 

@@ -799,23 +799,63 @@ const side = {
             },
             {
               text: "MariaDB",
-              link :"/developer/develop/middleware/view-mariadb-data",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with MariaDB",
+                  link: "/developer/develop/middleware/integrate-with-mariadb",                },
+                {
+                  text: "View MariaDB data",
+                  link: "/developer/develop/middleware/view-mariadb-data",
+                },
+              ]
             },
             {
               text: "MinIO",
-              link :"/developer/develop/middleware/view-minio-data",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with MinIO",
+                  link: "/developer/develop/middleware/integrate-with-minio",                },
+                {
+                  text: "View MinIO data",
+                  link: "/developer/develop/middleware/view-minio-data",
+                },
+              ]
             },
             {
               text: "MongoDB",
-              link :"/developer/develop/middleware/view-mongodb-data",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with MongoDB",
+                  link: "/developer/develop/middleware/integrate-with-mongodb",                },
+                {
+                  text: "View MongoDB data",
+                  link: "/developer/develop/middleware/view-mongodb-data",
+                },
+              ]
             },
             {
               text: "MySQL",
-              link :"/developer/develop/middleware/view-mysql-data",
-            },
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with MySQL",
+                  link: "/developer/develop/middleware/integrate-with-mysql",                },
+                {
+                  text: "View MySQL data",
+                  link: "/developer/develop/middleware/view-mysql-data",
+                },
+              ]
+            },  
             {
               text: "NATS",
               link :"/developer/develop/middleware/view-nats-data",
+            },
+            {
+              text: "OpenTelemetry",
+              link :"/developer/develop/middleware/view-otel-data",
             },
             {
               text: "PostgreSQL",
@@ -832,7 +872,16 @@ const side = {
             },
             {
               text: "RabbitMQ",
-              link :"/developer/develop/middleware/view-rabbitmq-data",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with RabbitMQ",
+                  link: "/developer/develop/middleware/integrate-with-rabbitmq",                },
+                {
+                  text: "View RabbitMQ data",
+                  link: "/developer/develop/middleware/view-prabbitmqg-data",
+                }
+              ]
             },
             {
               text: "Redis",

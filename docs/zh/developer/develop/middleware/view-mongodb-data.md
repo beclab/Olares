@@ -4,13 +4,13 @@ description: 了解如何在 Olares 中通过 CLI 或 Bytebase 查看并管理 M
 ---
 # 查看 MongoDB 数据
 
-MongoDB 需要先在 Olares 应用市场安装后才能使用。本文将介绍安装流程，并说明如何在 Olares 中访问并管理 MongoDB 数据。
+MongoDB 需要先在应用市场安装后才能使用。本文将介绍安装流程，并说明如何在 Olares 中访问并管理 MongoDB 数据。
 
 ## 安装 MongoDB 服务
 
-在建立连接之前，需要在 Olares 应用市场安装 MongoDB 服务。
+在建立连接之前，需要在应用市场安装 MongoDB 服务。
 
-1. 从启动台打开 Olares 应用市场，搜索“MongoDB”。
+1. 从启动台打开应用市场，搜索“MongoDB”。
 2. 点击**获取**，然后点击**安装**，并等待安装完成。
 
 安装完成后，MongoDB 服务及其连接信息将显示在控制面板的中间件列表中。
@@ -55,7 +55,7 @@ Bytebase 提供图形化界面，用于数据库管理和结构变更。
 
 ### 安装 Bytebase
 
-1. 打开 Olares 应用市场，搜索“Bytebase”。
+1. 打开应用市场，搜索“Bytebase”。
 2. 点击**获取**，然后点击**安装**。
 
 ### 初始设置

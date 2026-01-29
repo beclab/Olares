@@ -8,9 +8,9 @@ This guide explains how to install RabbitMQ and manage data using RabbitMQ Dashb
 
 ## Install RabbitMQ service
 
-Before using RabbitMQ, install the RabbitMQ service from Olares Market.
+Before using RabbitMQ, install the RabbitMQ service from Market.
 
-1. Open Olares Market from the Launchpad and search for "RabbitMQ".
+1. Open Market from the Launchpad and search for "RabbitMQ".
 2. Click **Get**, then **Install**, and wait for the installation to complete.
 
 After installation, RabbitMQ service and its connection details will appear in the Middleware list in Control Hub.
@@ -19,7 +19,7 @@ After installation, RabbitMQ service and its connection details will appear in t
 
 RabbitMQ Dashboard depends on the RabbitMQ service and can only be installed after RabbitMQ is available.
 
-1. In Olares Market, search for "RabbitMQ Dashboard".
+1. In Market, search for "RabbitMQ Dashboard".
 2. Click **Get**, then **Install**, and wait for the installation to complete.
 
 ## Get connection information

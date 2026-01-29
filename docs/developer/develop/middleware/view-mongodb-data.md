@@ -4,12 +4,12 @@ description: Learn how to view and manage MongoDB data in Olares using CLI or By
 ---
 # View MongoDB data
 
-To use MongoDB in Olares, install it from Olares Market first. This guide walks you through the installation steps and shows how to access it from Olares.
+To use MongoDB in Olares, install it from Market first. This guide walks you through the installation steps and shows how to access it from Olares.
 
 ## Install MongoDB service
 
-Before connecting, install the MongoDB service from Olares Market.
-1. Open Olares Market from the Launchpad and search for "MongoDB".
+Before connecting, install the MongoDB service from Market.
+1. Open Market from the Launchpad and search for "MongoDB".
 2. Click **Get**, then **Install**, and wait for the installation to complete.
 
 Once installed, the service and its connection details will appear in the Middleware list in Control Hub.
@@ -54,7 +54,7 @@ Bytebase provides a graphical interface for database management and schema chang
 
 ### Install Bytebase
 
-1. Open Olares Market and search for "Bytebase".
+1. Open Market and search for "Bytebase".
 2. Click **Get**, then **Install**.
 
 ### First-time setup

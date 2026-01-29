@@ -8,9 +8,9 @@ description: 了解如何在 Olares 中使用 Grafana 仪表板可视化 Prometh
 
 ## 安装 Grafana
 
-在使用 Grafana 之前，需要先通过 Olares 应用市场安装 Grafana。
+在使用 Grafana 之前，需要先通过应用市场安装 Grafana。
 
-1. 从启动台打开 Olares 应用市场，搜索“Grafana”。
+1. 从启动台打开应用市场，搜索“Grafana”。
 2. 点击**获取**，然后点击**安装**。
 3. 在弹出的窗口，设置登录凭据：
    - `GF_USERNAME`：Grafana 登录用户名。

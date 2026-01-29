@@ -8,9 +8,9 @@ This guide explains how to install MinIO and manage object storage using MinIO D
 
 ## Install MinIO service
 
-Before using object storage, install the MinIO service from Olares Market.
+Before using object storage, install the MinIO service from Market.
 
-1. Open Olares Market from the Launchpad and search for "MinIO".
+1. Open Market from the Launchpad and search for "MinIO".
 2. Click **Get**, then **Install**, and wait for the installation to complete.
 
 After installation, MinIO service and its connection details will appear in the Middleware list in Control Hub.
@@ -19,7 +19,7 @@ After installation, MinIO service and its connection details will appear in the 
 
 MinIO Dashboard depends on the MinIO service and can only be installed after MinIO is available.
 
-1. In Olares Market, search for "MinIO Dashboard".
+1. In Market, search for "MinIO Dashboard".
 2. Click **Get**, then **Install**, and wait for the installation to complete.
 
 ## Get connection information

@@ -48,7 +48,7 @@ Bytebase 提供图形化界面，用于数据库管理和结构变更。
 Bytebase 使用 MongoDB 存储元数据。在安装 Bytebase 之前，需要先安装 MongoDB。
 :::
 
-1. 打开 Olares 应用市场，搜索“MongoDB”。
+1. 打开应用市场，搜索“MongoDB”。
 2. 点击**获取**，然后点击**安装**，并等待服务运行。
 3. MongoDB 安装完成后，在应用市场搜索“Bytebase”。
 4. 点击**获取**，然后点击**安装**。

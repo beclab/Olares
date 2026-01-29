@@ -4,12 +4,12 @@ description: Learn how to view and manage MySQL data in Olares using CLI or Byte
 ---
 # View MySQL data
 
-To use MySQL in Olares, install it from Olares Market first. This guide walks you through the installation steps and shows how to access it from Olares.
+To use MySQL in Olares, install it from Market first. This guide walks you through the installation steps and shows how to access it from Olares.
 
 ## Install MySQL service
 
-Before connecting, install the MySQL service from Olares Market.
-1. Open Olares Market from the Launchpad and search for "MySQL".
+Before connecting, install the MySQL service from Market.
+1. Open Market from the Launchpad and search for "MySQL".
 2. Click **Get**, then **Install**, and wait for the installation to complete.
 
 Once installed, the service and its connection details will appear in the Middleware list in Control Hub.
@@ -54,7 +54,7 @@ Bytebase provides a graphical interface for database management and schema chang
 Bytebase uses MongoDB to store its metadata. Install MongoDB before installing Bytebase.
 :::
 
-1. Open Olares Market and search for "MongoDB".
+1. Open Market and search for "MongoDB".
 2. Click **Get**, then **Install**, and wait until the service is running.
 3. After MongoDB is installed, search for "Bytebase" in Market.
 4. Click **Get**, then **Install**.

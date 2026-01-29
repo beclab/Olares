@@ -75,10 +75,10 @@ containers:
 ## PostgreSQL Values 参考
 PostgreSQL Values 是在部署过程中由系统自动注入到 `values.yaml` 中的预定义变量。这些值由系统统一管理，用户无法自行修改。
 
-| 变量名称  | 类型  | 说明  |
+| 键  | 类型  | 说明  |
 |--|--|--|
 | `.Values.postgres.host` | String  | PostgreSQL 数据库地址 |
 | `.Values.postgres.port` | Number | PostgreSQL 数据库端口 |
 | `.Values.postgres.username`  | String | PostgreSQL 数据库用户名 |
 | `.Values.postgres.password`  | String | PostgreSQL 数据库密码 |
-| `.Values.postgres.databases` | Map<String,String> | PostgreSQL 数据库以申请的数据库名作为 key。例如，若申请的数据库名为 `app_db`，可通过 `.Values.postgres.databases.app_db`获取对应值。|
+| `.Values.postgres.databases` | Map<String,String> | PostgreSQL 数据库以申请的数据库名作为键。例如，若申请的数据库名为 `app_db`，可通过 `.Values.postgres.databases.app_db`获取对应值。|

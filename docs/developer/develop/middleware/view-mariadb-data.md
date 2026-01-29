@@ -4,13 +4,13 @@ description: Learn how to connect to and manage MariaDB data in Olares using CLI
 ---
 # View MariaDB data
 
-To use MariaDB in Olares, install it from Olares Market first. This guide explains how to access and manage MariaDB data using CLI or Bytebase.
+To use MariaDB in Olares, install it from Market first. This guide explains how to access and manage MariaDB data using CLI or Bytebase.
 
 ## Install MariaDB service
 
-Before connecting, install the MariaDB service from Olares Market.
+Before connecting, install the MariaDB service from Market.
 
-1. Open Olares Market from Launchpad and search for "MariaDB".
+1. Open Market from Launchpad and search for "MariaDB".
 2. Click **Get**, then **Install**, and wait for the installation to complete.
 
 Once installed, the service and its connection details will appear in the Middleware list in Control Hub.
@@ -60,7 +60,7 @@ Bytebase provides a graphical interface for database management and schema chang
 Bytebase uses MongoDB to store its metadata. Install MongoDB before installing Bytebase.
 :::
 
-1. Open Olares Market and search for "MongoDB".
+1. Open Market and search for "MongoDB".
 2. Click **Get**, then **Install**, and wait until the service is running.
 3. After MongoDB is installed, search for "Bytebase" in Market.
 4. Click **Get**, then **Install**.

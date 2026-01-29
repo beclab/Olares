@@ -17,7 +17,7 @@ description: 了解如何在 Olares 中使用 NATS CLI 订阅和发布消息，�
     - **用户**：连接用户名。
     - **密码**：连接密码。
 
-    ![Nats 详情](/public/images/zh/manual/developer/mw-nats-details.png#bordered){width=60% style="margin-left:0"}
+    ![Nats 详情](/images/zh/manual/developer/mw-nats-details.png#bordered){width=60% style="margin-left:0"}
 
 ## 通过 CLI 访问
 

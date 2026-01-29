@@ -46,7 +46,7 @@ Bytebase provides a graphical interface for database management and schema chang
 Bytebase uses MongoDB to store its metadata. Install MongoDB before installing Bytebase.
 :::
 
-1. Open Olares Market and search for "MongoDB".
+1. Open Market and search for "MongoDB".
 2. Click **Get**, then **Install**, and wait until the service is running.
 3. After MongoDB is installed, search for "Bytebase" in Market.
 4. Click **Get**, then **Install**.
