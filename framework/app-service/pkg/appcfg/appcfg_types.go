@@ -68,7 +68,7 @@ type AppSpec struct {
 	PodGPUConsumePolicy string        `yaml:"podGpuConsumePolicy" json:"podGpuConsumePolicy"`
 	SubCharts           []Chart       `yaml:"subCharts" json:"subCharts"`
 	Hardware            Hardware      `yaml:"hardware" json:"hardware"`
-	SupportedGpu        []any         `yaml:"supportedGpu" json:"supportedGpu"`
+	SupportedGpu        []any         `yaml:"supportedGpu,omitempty" json:"supportedGpu,omitempty"`
 }
 
 type Hardware struct {
