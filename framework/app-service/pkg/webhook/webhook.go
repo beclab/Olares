@@ -591,7 +591,7 @@ func addResourceLimits(tpl *corev1.PodTemplateSpec, typeKey string, envKeyValues
 				if k.String() == constants.NvidiaGPU ||
 					k.String() == constants.NvidiaGB10GPU ||
 					k.String() == constants.AMDAPU {
-					// do not repeat set gpu resource
+					// unset all previous gpu limits
 					continue
 				}
 				t["limits"][k.String()] = v.String()
