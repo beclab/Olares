@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-system
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: amd-gpu-device-plugin
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: amd-gpu-device-plugin
+  template:
+    metadata:
+      labels:
+        app: amd-gpu-device-plugin
+    spec:
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "amd.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node.kubernetes.io/not-ready"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: amd-gpu-device-plugin
+          # ⚠️ Set the image you want to standardize on:
+          image: "rocm/k8s-device-plugin:latest"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          env:
+            - name: DP_DISABLE_SCALING
+              value: "false"
+          volumeMounts:
+            - name: dev-kfd
+              mountPath: /dev/kfd
+            - name: dev-dri
+              mountPath: /dev/dri
+            - name: sys
+              mountPath: /sys
+              readOnly: true
+      volumes:
+        - name: dev-kfd
+          hostPath: { path: /dev/kfd }
+        - name: dev-dri
+          hostPath: { path: /dev/dri }
+        - name: sys
+          hostPath: { path: /sys }

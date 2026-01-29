@@ -13,6 +13,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
 	"github.com/beclab/Olares/cli/version"
 	"github.com/spf13/cobra"
+	"github.com/beclab/Olares/cli/cmd/ctl/nfd"
 )
 
 func NewDefaultCommand() *cobra.Command {
