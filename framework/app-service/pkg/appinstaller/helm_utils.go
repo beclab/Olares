@@ -50,7 +50,7 @@ func (h *HelmOps) SetValues() (values map[string]interface{}, err error) {
 
 	values["domain"] = entries
 	userspace := make(map[string]interface{})
-	h.app.Permission = parseAppPermission(h.app.Permission)
+	h.app.Permission = ParseAppPermission(h.app.Permission)
 	for _, p := range h.app.Permission {
 		switch perm := p.(type) {
 		case appcfg.AppDataPermission, appcfg.AppCachePermission, appcfg.UserDataPermission:
