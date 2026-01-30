@@ -783,6 +783,19 @@ const side = {
           collapsed: true,
           items: [
             {
+              text: "Elasticsearch",
+              collapsed: true,
+              items :[
+                {
+                  text: "集成 Elasticsearch",
+                  link: "zh/developer/develop/middleware/integrate-with-es",                },
+                {
+                  text: "查看 Elasticsearch 数据",
+                  link: "zh/developer/develop/middleware/view-es-data",
+                },
+              ]
+            },
+            {
               text: "Grafana",
               link: "zh/developer/develop/middleware/view-grafana-data",
             },

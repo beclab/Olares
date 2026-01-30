@@ -794,6 +794,19 @@ const side = {
           collapsed: true,
           items: [
             {
+              text: "Elasticsearch",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with Elasticsearch",
+                  link: "/developer/develop/middleware/integrate-with-es",                },
+                {
+                  text: "View Elasticsearch data",
+                  link: "/developer/develop/middleware/view-es-data",
+                },
+              ]
+            },
+            {
               text: "Grafana",
               link :"/developer/develop/middleware/view-grafana-data",
             },
@@ -879,7 +892,7 @@ const side = {
                   link: "/developer/develop/middleware/integrate-with-rabbitmq",                },
                 {
                   text: "View RabbitMQ data",
-                  link: "/developer/develop/middleware/view-prabbitmqg-data",
+                  link: "/developer/develop/middleware/view-rabbitmq-data",
                 }
               ]
             },

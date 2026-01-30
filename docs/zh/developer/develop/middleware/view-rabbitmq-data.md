@@ -10,8 +10,8 @@ description: 了解如何在 Olares 中安装 RabbitMQ，并通过 RabbitMQ Dash
 
 在使用 RabbitMQ 之前，需从应用市场安装 RabbitMQ 服务。
 
-1. 从 Launchpad 打开应用市场并搜索“RabbitMQ”。
-2.  点击**获取**，然后点击**安装**，并等待安装完成。
+1. 从启动台打开应用市场并搜索“RabbitMQ”。
+2. 点击**获取**，然后点击**安装**，并等待安装完成。
 
 安装完成后，RabbitMQ 服务及其连接详情将显示在控制面板的中间件列表中。
 
