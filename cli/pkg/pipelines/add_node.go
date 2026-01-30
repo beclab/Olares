@@ -5,32 +5,27 @@ import (
 	"os"
 	"path"
 
-	"github.com/beclab/Olares/cli/cmd/ctl/options"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/phase/cluster"
-	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 )
 
-func AddNodePipeline(opts *options.AddNodeOptions) error {
+func AddNodePipeline() error {
 	arg := common.NewArgument()
 	if !arg.SystemInfo.IsLinux() {
 		fmt.Println("error: Only Linux nodes can be added to an Olares cluster!")
 		os.Exit(1)
 	}
-	arg.SetBaseDir(opts.BaseDir)
-	if opts.Version == "" {
-		return errors.New("Olares version must be specified")
-	}
-	arg.SetOlaresVersion(opts.Version)
-	if err := arg.LoadMasterHostConfigIfAny(); err != nil {
-		return errors.Wrap(err, "failed to load master host config")
-	}
-	arg.SetMasterHostOverride(opts.MasterHostConfig)
+
+	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
+	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
+	arg.SetConsoleLog("addnode.log", true)
+
 	if err := arg.MasterHostConfig.Validate(); err != nil {
 		return fmt.Errorf("invalid master host config: %w", err)
 	}
-	arg.SetConsoleLog("addnode.log", true)
-	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
+
+	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
 		return fmt.Errorf("error creating runtime: %v", err)
 	}
