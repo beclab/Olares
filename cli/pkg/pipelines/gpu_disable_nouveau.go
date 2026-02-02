@@ -11,7 +11,7 @@ func DisableNouveau() error {
 	arg := common.NewArgument()
 	arg.SetConsoleLog("gpudisable-nouveau.log", true)
 
-	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
+	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
 		return err
 	}
@@ -26,5 +26,3 @@ func DisableNouveau() error {
 
 	return p.Start()
 }
-
-

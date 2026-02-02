@@ -165,7 +165,7 @@ func (t *UpdateNvidiaContainerToolkitSource) Execute(runtime connector.Runtime) 
 
 	// decide mirror based on OLARES_SYSTEM_CDN_SERVICE
 	var mirrorHost string
-	cdnService := os.Getenv(common.ENV_OLARES_CDN_SERVICE)
+	cdnService := t.KubeConf.Arg.OlaresCDNService
 	if cdnService != "" {
 		cdnRaw := cdnService
 		if !strings.HasPrefix(cdnRaw, "http") {
@@ -291,6 +291,12 @@ type InstallPlugin struct {
 }
 
 func (t *InstallPlugin) Execute(runtime connector.Runtime) error {
+	nvidiaGb10PluginPath := path.Join(runtime.GetInstallerDir(), "wizard/config/gpu/nvidia/gb10-device-plugin.yaml")
+	_, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("kubectl apply -f %s", nvidiaGb10PluginPath), false, true)
+	if err != nil {
+		return err
+	}
+
 	chartPath := path.Join(runtime.GetInstallerDir(), "wizard/config/gpu/hami")
 	appName := "hami"
 	ns := "kube-system"

@@ -4,9 +4,11 @@ import (
 	"context"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -120,7 +122,7 @@ func (r *PodAbnormalSuspendAppController) Reconcile(ctx context.Context, req ctr
 
 	if pod.Status.Reason == "Evicted" {
 		klog.Infof("pod evicted name=%s namespace=%s, attempting to suspend app=%s owner=%s", pod.Name, pod.Namespace, appName, owner)
-		ok, err := r.trySuspendApp(ctx, owner, appName, constants.AppStopDueToEvicted, "evicted pod: "+pod.Namespace+"/"+pod.Name)
+		ok, err := r.trySuspendApp(ctx, owner, appName, constants.AppStopDueToEvicted, "evicted pod: "+pod.Namespace+"/"+pod.Name, pod.Namespace)
 		if err != nil {
 			klog.Errorf("suspend attempt failed for app=%s owner=%s: %v", appName, owner, err)
 			return ctrl.Result{}, err
@@ -147,7 +149,7 @@ func (r *PodAbnormalSuspendAppController) Reconcile(ctx context.Context, req ctr
 		}
 
 		klog.Infof("attempting to suspend app=%s owner=%s due to pending unschedulable timeout", appName, owner)
-		ok, err := r.trySuspendApp(ctx, owner, appName, constants.AppUnschedulable, "pending unschedulable timeout on pod: "+pod.Namespace+"/"+pod.Name)
+		ok, err := r.trySuspendApp(ctx, owner, appName, constants.AppUnschedulable, "pending unschedulable timeout on pod: "+pod.Namespace+"/"+pod.Name, pod.Namespace)
 		if err != nil {
 			klog.Errorf("suspend attempt failed for app=%s owner=%s: %v", appName, owner, err)
 			return ctrl.Result{}, err
@@ -191,7 +193,7 @@ func pendingUnschedulableSince(pod *corev1.Pod) (time.Time, bool) {
 
 // trySuspendApp attempts to suspend the app and returns (true, nil) if a suspend request was issued.
 // If the app is not suspendable yet, returns (false, nil) to trigger a short requeue.
-func (r *PodAbnormalSuspendAppController) trySuspendApp(ctx context.Context, owner, appName, reason, message string) (bool, error) {
+func (r *PodAbnormalSuspendAppController) trySuspendApp(ctx context.Context, owner, appName, reason, message, podNamespace string) (bool, error) {
 	name, err := apputils.FmtAppMgrName(appName, owner, "")
 	if err != nil {
 		klog.Errorf("failed to format app manager name app=%s owner=%s: %v", appName, owner, err)
@@ -213,6 +215,11 @@ func (r *PodAbnormalSuspendAppController) trySuspendApp(ctx context.Context, own
 	if !appstate.IsOperationAllowed(am.Status.State, appv1alpha1.StopOp) {
 		klog.Infof("operation StopOp not allowed in state=%s for app=%s owner=%s", am.Status.State, appName, owner)
 		return false, nil
+	}
+
+	isServerPod := strings.HasSuffix(podNamespace, "-shared")
+	if isServerPod {
+		am.Annotations[api.AppStopAllKey] = "true"
 	}
 
 	am.Spec.OpType = appv1alpha1.StopOp
