@@ -175,7 +175,8 @@ var (
 
 	UserAvatar = fmt.Sprintf("%s/avatar", AnnotationGroup)
 
-	UserLoginBackground = fmt.Sprintf("%s/login-background", AnnotationGroup)
+	UserLoginBackground      = fmt.Sprintf("%s/login-background", AnnotationGroup)
+	UserLoginBackgroundStyle = fmt.Sprintf("%s/login-background-style", AnnotationGroup)
 )
 
 var (

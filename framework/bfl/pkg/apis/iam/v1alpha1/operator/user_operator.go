@@ -127,13 +127,18 @@ func (o *UserOperator) GetReverseProxyType() (string, error) {
 	return o.GetUserAnnotation(user, constants.UserAnnotationReverseProxyType), nil
 }
 
-func (o *UserOperator) GetLoginBackground(user *iamV1alpha2.User) string {
+func (o *UserOperator) GetLoginBackground(user *iamV1alpha2.User) (string, string) {
 	b := o.GetUserAnnotation(user, constants.UserLoginBackground)
+	s := o.GetUserAnnotation(user, constants.UserLoginBackgroundStyle)
 	if b == "" {
-		return "/bg/0.jpg"
+		b = "/bg/0.jpg"
 	}
 
-	return b
+	if s == "" {
+		s = "fill"
+	}
+
+	return b, s
 }
 
 func (o *UserOperator) GetAvatar(user *iamV1alpha2.User) string {
