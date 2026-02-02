@@ -281,7 +281,7 @@ func (h *Handler) handleTerminusInfo(req *restful.Request, resp *restful.Respons
 		tInfo.TailScaleEnable = denyAll == 1
 	}
 
-	tInfo.LoginBackground = userOp.GetLoginBackground(user)
+	tInfo.LoginBackground, tInfo.Style = userOp.GetLoginBackground(user)
 	tInfo.Avatar = userOp.GetAvatar(user)
 	tInfo.UserDID = userOp.GetUserDID(user)
 
@@ -347,7 +347,7 @@ func (h *Handler) handleOlaresInfo(req *restful.Request, resp *restful.Response)
 		tInfo.TailScaleEnable = denyAll == 1
 	}
 
-	tInfo.LoginBackground = userOp.GetLoginBackground(user)
+	tInfo.LoginBackground, tInfo.Style = userOp.GetLoginBackground(user)
 	tInfo.Avatar = userOp.GetAvatar(user)
 	tInfo.UserDID = userOp.GetUserDID(user)
 
