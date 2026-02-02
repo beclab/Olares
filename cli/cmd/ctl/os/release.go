@@ -8,26 +8,27 @@ import (
 	"strings"
 	"time"
 
-	"github.com/beclab/Olares/cli/pkg/core/common"
+	"github.com/beclab/Olares/cli/cmd/config"
+	"github.com/beclab/Olares/cli/pkg/common"
+	corecommon "github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/pkg/release/builder"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func NewCmdRelease() *cobra.Command {
-	var (
-		baseDir             string
-		version             string
-		cdn                 string
-		ignoreMissingImages bool
-		extract             bool
-	)
-
 	cmd := &cobra.Command{
 		Use:   "release",
 		Short: "Build release based on a local Olares repository",
 		Run: func(cmd *cobra.Command, args []string) {
+			baseDir := viper.GetString(common.FlagBaseDir)
+			version := viper.GetString(common.FlagVersion)
+			cdn := viper.GetString(common.FlagCDNService)
+			ignoreMissingImages := viper.GetBool(common.FlagIgnoreMissingImages)
+			extract := viper.GetBool(common.FlagExtract)
+
 			cwd, err := os.Getwd()
 			if err != nil {
 				fmt.Printf("failed to get current working directory: %s\n", err)
@@ -43,7 +44,7 @@ func NewCmdRelease() *cobra.Command {
 					fmt.Printf("failed to get current user: %s\n", err)
 					os.Exit(1)
 				}
-				baseDir = filepath.Join(usr.HomeDir, common.DefaultBaseDir)
+				baseDir = filepath.Join(usr.HomeDir, corecommon.DefaultBaseDir)
 				fmt.Printf("--base-dir unspecified, using: %s\n", baseDir)
 				time.Sleep(1 * time.Second)
 			}
@@ -75,11 +76,20 @@ func NewCmdRelease() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&baseDir, "base-dir", "b", "", "base directory of Olares, where this release will be extracted to as a new version if --extract/-e is not disabled, defaults to $HOME/"+common.DefaultBaseDir)
-	cmd.Flags().StringVarP(&version, "version", "v", "", "version of this release, defaults to 0.0.0-local-dev-{yyyymmddhhmmss}")
-	cmd.Flags().StringVar(&cdn, "cdn-service", common.DefaultOlaresCDNService, "CDN used for downloading checksums of dependencies and images")
-	cmd.Flags().BoolVar(&ignoreMissingImages, "ignore-missing-images", true, "ignore missing images when downloading cheksums from CDN, only disable this if no new image is added, or the build may fail because the image is not uploaded to the CDN yet")
-	cmd.Flags().BoolVarP(&extract, "extract", "e", true, "extract this release to --base-dir after build, this can be disabled if only the release file itself is needed")
+	flagSetter := config.NewFlagSetterFor(cmd)
+	config.AddBaseDirFlagBy(flagSetter)
+	config.AddVersionFlagBy(flagSetter)
+	config.AddCDNServiceFlagBy(flagSetter)
+	flagSetter.Add(common.FlagIgnoreMissingImages,
+		"",
+		true,
+		"ignore missing images when downloading checksums from CDN, only disable this if no new image is added, or the build may fail because the image is not uploaded to the CDN yet",
+	)
+	flagSetter.Add(common.FlagExtract,
+		"e",
+		true,
+		"extract this release to --base-dir after build, this can be disabled if only the release file itself is needed",
+	)
 
 	return cmd
 }
