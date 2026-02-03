@@ -18,7 +18,6 @@ func CliInstallStoragePipeline() error {
 	}
 
 	arg := common.NewArgument()
-	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
 	arg.SetStorage(getStorageConfig())
 

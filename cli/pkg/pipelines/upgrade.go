@@ -46,7 +46,6 @@ func UpgradeOlaresPipeline() error {
 	}
 
 	arg := common.NewArgument()
-	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
 	arg.SetConsoleLog("upgrade.log", true)
 	arg.SetKubeVersion(phase.GetKubeType())
