@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 )
 
@@ -54,6 +55,10 @@ func (m *Manager) Package() error {
 	}
 
 	if err := m.packageGPU(); err != nil {
+		return err
+	}
+
+	if err := m.packageEnvConfig(); err != nil {
 		return err
 	}
 
@@ -120,4 +125,20 @@ func (m *Manager) packageGPU() error {
 		filepath.Join(m.olaresRepoRoot, "infrastructure/gpu/.olares/config/gpu"),
 		filepath.Join(m.distPath, "wizard/config/gpu"),
 	)
+}
+
+func (m *Manager) packageEnvConfig() error {
+	fmt.Println("packaging env config ...")
+
+	systemEnvSrc := filepath.Join(m.olaresRepoRoot, "build", common.OLARES_SYSTEM_ENV_FILENAME)
+	userEnvSrc := filepath.Join(m.olaresRepoRoot, "build", common.OLARES_USER_ENV_FILENAME)
+
+	if err := util.CopyFile(systemEnvSrc, filepath.Join(m.distPath, common.OLARES_SYSTEM_ENV_FILENAME)); err != nil {
+		return err
+	}
+	if err := util.CopyFile(userEnvSrc, filepath.Join(m.distPath, common.OLARES_USER_ENV_FILENAME)); err != nil {
+		return err
+	}
+
+	return nil
 }
