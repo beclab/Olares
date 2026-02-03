@@ -21,7 +21,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/files"
@@ -553,7 +552,7 @@ func parseDestination(dest string) (string, string, error) {
 	return alias, tokens[len(tokens)-1], nil
 }
 
-func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owner string) (appdirs []string, err error) {
+func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owner string, appData bool) (appCacheDirs []string, appDataDirs []string, err error) {
 	userspaceNs := utils.UserspaceName(owner)
 	config, err := ctrl.GetConfig()
 	if err != nil {
@@ -567,7 +566,6 @@ func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owne
 	if err != nil {
 		return
 	}
-	appName := fmt.Sprintf("%s-%s", namespace, name)
 	appCachePath := sts.GetAnnotations()["appcache_hostpath"]
 	if len(appCachePath) == 0 {
 		err = errors.New("empty appcache_hostpath")
@@ -576,20 +574,23 @@ func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owne
 	if !strings.HasSuffix(appCachePath, "/") {
 		appCachePath += "/"
 	}
-	dClient, err := versioned.NewForConfig(config)
-	if err != nil {
+
+	userspacePath := sts.GetAnnotations()["userspace_hostpath"]
+	if len(userspacePath) == 0 {
+		err = errors.New("empty userspace_hostpath annotation")
 		return
 	}
-	appCRD, err := dClient.AppV1alpha1().Applications().Get(ctx, appName, metav1.GetOptions{})
-	if err != nil {
-		return
+	appDataPath := filepath.Join(userspacePath, "Data")
+	if !strings.HasSuffix(appDataPath, "/") {
+		appDataPath += "/"
 	}
-	deploymentName := appCRD.Spec.DeploymentName
+
+	deploymentName := name
 	deployment, err := clientset.AppsV1().Deployments(namespace).
 		Get(context.Background(), deploymentName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return tryToGetAppdataDirFromSts(ctx, namespace, deploymentName, appCachePath)
+			return tryToGetAppdataDirFromSts(ctx, namespace, deploymentName, appCachePath, appDataPath)
 		}
 		return
 	}
@@ -601,15 +602,31 @@ func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owne
 				if appDirSet.Has(appDir) {
 					continue
 				}
-				appdirs = append(appdirs, appDir)
+				appCacheDirs = append(appCacheDirs, appDir)
 				appDirSet.Insert(appDir)
 			}
 		}
 	}
-	return appdirs, nil
+	if appData {
+		appDirSet := sets.NewString()
+
+		for _, v := range deployment.Spec.Template.Spec.Volumes {
+			if v.HostPath != nil && strings.HasPrefix(v.HostPath.Path, appDataPath) && len(v.HostPath.Path) > len(appDataPath) {
+				appDir := GetFirstSubDir(v.HostPath.Path, appDataPath)
+				if appDir != "" {
+					if appDirSet.Has(appDir) {
+						continue
+					}
+					appDataDirs = append(appDataDirs, appDir)
+					appDirSet.Insert(appDir)
+				}
+			}
+		}
+	}
+	return appCacheDirs, appDataDirs, nil
 }
 
-func tryToGetAppdataDirFromSts(ctx context.Context, namespace, stsName, baseDir string) (appdirs []string, err error) {
+func tryToGetAppdataDirFromSts(ctx context.Context, namespace, stsName, appCacheDir, appDataDir string) (appCacheDirs []string, appDataDirs []string, err error) {
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		return
@@ -626,18 +643,32 @@ func tryToGetAppdataDirFromSts(ctx context.Context, namespace, stsName, baseDir 
 	}
 	appDirSet := sets.NewString()
 	for _, v := range sts.Spec.Template.Spec.Volumes {
-		if v.HostPath != nil && strings.HasPrefix(v.HostPath.Path, baseDir) && len(v.HostPath.Path) > len(baseDir) {
-			appDir := GetFirstSubDir(v.HostPath.Path, baseDir)
+		if v.HostPath != nil && strings.HasPrefix(v.HostPath.Path, appCacheDir) && len(v.HostPath.Path) > len(appCacheDir) {
+			appDir := GetFirstSubDir(v.HostPath.Path, appCacheDir)
 			if appDir != "" {
 				if appDirSet.Has(appDir) {
 					continue
 				}
-				appdirs = append(appdirs, appDir)
+				appCacheDirs = append(appCacheDirs, appDir)
 				appDirSet.Insert(appDir)
 			}
 		}
 	}
-	return appdirs, nil
+	appDirSet = sets.NewString()
+
+	for _, v := range sts.Spec.Template.Spec.Volumes {
+		if v.HostPath != nil && strings.HasPrefix(v.HostPath.Path, appDataDir) && len(v.HostPath.Path) > len(appDataDir) {
+			appDir := GetFirstSubDir(v.HostPath.Path, appDataDir)
+			if appDir != "" {
+				if appDirSet.Has(appDir) {
+					continue
+				}
+				appDataDirs = append(appDataDirs, appDir)
+				appDirSet.Insert(appDir)
+			}
+		}
+	}
+	return appCacheDirs, appDataDirs, nil
 }
 
 func GetFirstSubDir(fullPath, basePath string) string {

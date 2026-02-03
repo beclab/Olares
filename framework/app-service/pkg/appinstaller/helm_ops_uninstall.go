@@ -29,8 +29,14 @@ func (h *HelmOps) UninstallAll() error {
 	if err != nil {
 		return err
 	}
+	appName := fmt.Sprintf("%s-%s", h.app.Namespace, h.app.AppName)
+	appmgr, err := h.client.AppClient.AppV1alpha1().ApplicationManagers().Get(h.ctx, appName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	deleteData := appmgr.Annotations["bytetrade.io/delete-data"] == "true"
 
-	appCacheDirs, err := apputils.TryToGetAppdataDirFromDeployment(h.ctx, h.app.Namespace, h.app.AppName, h.app.OwnerName)
+	appCacheDirs, appDataDirs, err := apputils.TryToGetAppdataDirFromDeployment(h.ctx, h.app.Namespace, h.app.AppName, h.app.OwnerName, deleteData)
 	if err != nil {
 		klog.Warningf("get app %s cache dir failed %v", h.app.AppName, err)
 	}
@@ -47,6 +53,13 @@ func (h *HelmOps) UninstallAll() error {
 	if err != nil {
 		klog.Errorf("Failed to clear app cache dirs %v err=%v", appCacheDirs, err)
 		return err
+	}
+	if deleteData {
+		h.ClearData(client, appDataDirs)
+		if err != nil {
+			klog.Errorf("Failed to clear app data dirs %v err=%v", appDataDirs, err)
+			return err
+		}
 	}
 
 	err = h.DeleteNamespace(client, h.app.Namespace)
@@ -117,7 +130,7 @@ func (h *HelmOps) ClearCache(client kubernetes.Interface, appCacheDirs []string)
 			formattedAppCacheDirs := apputils.FormatCacheDirs(appCacheDirs)
 
 			for _, n := range nodes.Items {
-				URL := fmt.Sprintf(constants.AppDataDirURL, n.Name)
+				URL := fmt.Sprintf(constants.AppCacheDirURL, n.Name)
 				c.SetHeader("X-Terminus-Node", n.Name)
 				c.SetHeader("X-Bfl-User", h.app.OwnerName)
 				res, e := c.R().SetBody(map[string]interface{}{
@@ -134,6 +147,32 @@ func (h *HelmOps) ClearCache(client kubernetes.Interface, appCacheDirs []string)
 			klog.Errorf("Failed to get nodes err=%v", e)
 		}
 	}
+	return nil
+}
+
+func (h *HelmOps) ClearData(client kubernetes.Interface, appDataDirs []string) error {
+	if len(appDataDirs) > 0 {
+		klog.Infof("clear app data dirs: %v", appDataDirs)
+
+		c := resty.New().SetTimeout(2 * time.Second).
+			SetAuthToken(h.token)
+
+		formattedAppDataDirs := apputils.FormatCacheDirs(appDataDirs)
+
+		URL := constants.AppDataDirURL
+		c.SetHeader("X-Bfl-User", h.app.OwnerName)
+		res, e := c.R().SetBody(map[string]interface{}{
+			"dirents": formattedAppDataDirs,
+		}).Delete(URL)
+		if e != nil {
+			klog.Errorf("Failed to delete data dir err=%v", e)
+			return nil
+		}
+		if res.StatusCode() != http.StatusOK {
+			klog.Infof("delete app data failed with: %v", res.String())
+		}
+	}
+
 	return nil
 }
 
