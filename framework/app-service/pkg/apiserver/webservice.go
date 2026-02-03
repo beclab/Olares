@@ -254,21 +254,9 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Param(ws.PathParameter(ParamEntranceName, "the name of a application entrance")).
 		Returns(http.StatusOK, "Success to set the application entrance policy", nil))
 
-	ws.Route(ws.POST("/gpu/disable/managed-memory").
-		To(handler.disableGpuManagedMemory).
-		Doc("disable nvshare's managed memory ").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "Success to disable", nil))
-
-	ws.Route(ws.POST("/gpu/enable/managed-memory").
-		To(handler.enableGpuManagedMemory).
-		Doc("enable nvshare's managed memory ").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "Success to enable", nil))
-
-	ws.Route(ws.GET("/gpu/managed-memory").
-		To(handler.getManagedMemoryValue).
-		Doc("get nvshare's managed memory enabled or not").
+	ws.Route(ws.GET("/gpu/types").
+		To(handler.getGpuTypes).
+		Doc("get all gpu types in the cluster").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to get ", &ResultResponse{}))
 
