@@ -15,7 +15,6 @@ import (
 func InstallGpuDrivers() error {
 	arg := common.NewArgument()
 	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
-	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetConsoleLog("gpuinstall.log", true)
 	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {

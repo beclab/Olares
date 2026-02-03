@@ -13,7 +13,6 @@ import (
 func DownloadInstallationWizard() error {
 	arg := common.NewArgument()
 	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
-	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetOlaresCDNService(viper.GetString(common.FlagCDNService))
 
 	runtime, err := common.NewKubeRuntime(*arg)

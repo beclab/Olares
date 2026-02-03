@@ -20,7 +20,6 @@ func UninstallTerminusPipeline() error {
 
 	var arg = common.NewArgument()
 	arg.SetOlaresVersion(version)
-	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetConsoleLog("uninstall.log", true)
 	arg.SetKubeVersion(kubeType)
 	arg.SetStorage(getStorageConfig())

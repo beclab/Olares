@@ -13,7 +13,6 @@ import (
 
 func DownloadInstallationPackage() error {
 	arg := common.NewArgument()
-	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
 	arg.SetOlaresCDNService(viper.GetString(common.FlagCDNService))
 

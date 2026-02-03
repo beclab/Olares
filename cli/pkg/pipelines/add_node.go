@@ -18,7 +18,6 @@ func AddNodePipeline() error {
 	}
 
 	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
-	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetConsoleLog("addnode.log", true)
 
 	if err := arg.MasterHostConfig.Validate(); err != nil {

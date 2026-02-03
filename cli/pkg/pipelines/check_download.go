@@ -12,7 +12,6 @@ import (
 func CheckDownloadInstallationPackage() error {
 	arg := common.NewArgument()
 	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
-	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 
 	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {

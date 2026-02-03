@@ -19,7 +19,6 @@ func ChangeIPPipeline() error {
 
 	var arg = common.NewArgument()
 	arg.SetOlaresVersion(terminusVersion)
-	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetConsoleLog("changeip.log", true)
 	arg.SetKubeVersion(kubeType)
 	arg.SetMinikubeProfile(viper.GetString(common.FlagMiniKubeProfile))
