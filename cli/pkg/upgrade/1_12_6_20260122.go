@@ -7,15 +7,15 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/task"
 )
 
-type upgrader_1_12_5_20260122 struct {
+type upgrader_1_12_6_20260122 struct {
 	breakingUpgraderBase
 }
 
-func (u upgrader_1_12_5_20260122) Version() *semver.Version {
-	return semver.MustParse("1.12.3-20260122")
+func (u upgrader_1_12_6_20260122) Version() *semver.Version {
+	return semver.MustParse("1.12.6-20260122")
 }
 
-func (u upgrader_1_12_5_20260122) UpgradeSystemComponents() []task.Interface {
+func (u upgrader_1_12_6_20260122) UpgradeSystemComponents() []task.Interface {
 	pre := []task.Interface{
 		&task.LocalTask{
 			Name:   "UpgradeL4BFLProxy",
@@ -28,5 +28,5 @@ func (u upgrader_1_12_5_20260122) UpgradeSystemComponents() []task.Interface {
 }
 
 func init() {
-	registerDailyUpgrader(upgrader_1_12_5_20260122{})
+	registerDailyUpgrader(upgrader_1_12_6_20260122{})
 }
