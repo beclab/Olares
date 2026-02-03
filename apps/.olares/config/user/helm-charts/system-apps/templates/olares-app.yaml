@@ -317,7 +317,7 @@ spec:
             chown -R 1000:1000 /uploadstemp && \
             chown -R 1000:1000 /appdata 
         - name: olares-app-init
-          image: beclab/system-frontend:v1.8.3
+          image: beclab/system-frontend:v1.8.4
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -439,7 +439,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.83
+          image: beclab/user-service:v0.0.84
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
