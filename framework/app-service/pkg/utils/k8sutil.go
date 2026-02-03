@@ -103,24 +103,37 @@ func GetAllNodesTunnelIPCIDRs() (cidrs []string) {
 	return cidrs
 }
 
-func FindGpuTypeFromNodes(nodes *corev1.NodeList) (string, error) {
-	gpuType := "none"
+// func FindGpuTypeFromNodes(nodes *corev1.NodeList) (string, error) {
+// 	gpuType := "none"
+// 	if nodes == nil {
+// 		return gpuType, errors.New("empty node list")
+// 	}
+// 	for _, n := range nodes.Items {
+// 		if _, ok := n.Status.Capacity[constants.NvidiaGPU]; ok {
+// 			if _, ok = n.Status.Capacity[constants.NvshareGPU]; ok {
+// 				return "nvshare", nil
+
+// 			}
+// 			gpuType = "nvidia"
+// 		}
+// 		if _, ok := n.Status.Capacity[constants.VirtAiTechVGPU]; ok {
+// 			return "virtaitech", nil
+// 		}
+// 	}
+// 	return gpuType, nil
+// }
+
+func GetAllGpuTypesFromNodes(nodes *corev1.NodeList) (map[string]struct{}, error) {
+	gpuTypes := make(map[string]struct{})
 	if nodes == nil {
-		return gpuType, errors.New("empty node list")
+		return gpuTypes, errors.New("empty node list")
 	}
 	for _, n := range nodes.Items {
-		if _, ok := n.Status.Capacity[constants.NvidiaGPU]; ok {
-			if _, ok = n.Status.Capacity[constants.NvshareGPU]; ok {
-				return "nvshare", nil
-
-			}
-			gpuType = "nvidia"
-		}
-		if _, ok := n.Status.Capacity[constants.VirtAiTechVGPU]; ok {
-			return "virtaitech", nil
+		if typeLabel, ok := n.Labels[NodeGPUTypeLabel]; ok {
+			gpuTypes[typeLabel] = struct{}{} // TODO: add driver version info
 		}
 	}
-	return gpuType, nil
+	return gpuTypes, nil
 }
 
 func IsNodeReady(node *corev1.Node) bool {
