@@ -56,14 +56,19 @@ type AppSpec struct {
 	Developer           string        `yaml:"developer" json:"developer"`
 	RequiredMemory      string        `yaml:"requiredMemory" json:"requiredMemory"`
 	RequiredDisk        string        `yaml:"requiredDisk" json:"requiredDisk"`
-	SupportClient       SupportClient `yaml:"supportClient" json:"supportClient"`
 	RequiredGPU         string        `yaml:"requiredGpu" json:"requiredGpu"`
 	RequiredCPU         string        `yaml:"requiredCpu" json:"requiredCpu"`
+	LimitedMemory       string        `yaml:"limitedMemory" json:"limitedMemory"`
+	LimitedDisk         string        `yaml:"limitedDisk" json:"limitedDisk"`
+	LimitedGPU          string        `yaml:"limitedGPU" json:"limitedGPU"`
+	LimitedCPU          string        `yaml:"limitedCPU" json:"limitedCPU"`
+	SupportClient       SupportClient `yaml:"supportClient" json:"supportClient"`
 	RunAsUser           bool          `yaml:"runAsUser" json:"runAsUser"`
 	RunAsInternal       bool          `yaml:"runAsInternal" json:"runAsInternal"`
 	PodGPUConsumePolicy string        `yaml:"podGpuConsumePolicy" json:"podGpuConsumePolicy"`
 	SubCharts           []Chart       `yaml:"subCharts" json:"subCharts"`
 	Hardware            Hardware      `yaml:"hardware" json:"hardware"`
+	SupportedGpu        []any         `yaml:"supportedGpu,omitempty" json:"supportedGpu,omitempty"`
 }
 
 type Hardware struct {
@@ -186,6 +191,17 @@ type Provider struct {
 	Entrance string   `yaml:"entrance" json:"entrance"`
 	Paths    []string `yaml:"paths" json:"paths"`
 	Verbs    []string `yaml:"verbs" json:"verbs"`
+}
+
+type SpecialResource struct {
+	RequiredMemory *string `yaml:"requiredMemory,omitempty" json:"requiredMemory,omitempty"`
+	RequiredDisk   *string `yaml:"requiredDisk,omitempty" json:"requiredDisk,omitempty"`
+	RequiredGPU    *string `yaml:"requiredGpu,omitempty" json:"requiredGpu,omitempty"`
+	RequiredCPU    *string `yaml:"requiredCpu,omitempty" json:"requiredCpu,omitempty"`
+	LimitedMemory  *string `yaml:"limitedMemory,omitempty" json:"limitedMemory,omitempty"`
+	LimitedDisk    *string `yaml:"limitedDisk,omitempty" json:"limitedDisk,omitempty"`
+	LimitedGPU     *string `yaml:"limitedGPU,omitempty" json:"limitedGPU,omitempty"`
+	LimitedCPU     *string `yaml:"limitedCPU,omitempty" json:"limitedCPU,omitempty"`
 }
 
 func (c *Chart) Namespace(owner string) string {

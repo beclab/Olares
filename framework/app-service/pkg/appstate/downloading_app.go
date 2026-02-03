@@ -16,7 +16,6 @@ import (
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -176,19 +175,8 @@ func (p *DownloadingApp) exec(ctx context.Context) error {
 		},
 	}
 
-	var nodes corev1.NodeList
-	err = p.client.List(ctx, &nodes, &client.ListOptions{})
-	if err != nil {
-		klog.Errorf("list node failed %v", err)
-		return err
-	}
-	gpuType, err := utils.FindGpuTypeFromNodes(&nodes)
-	if err != nil {
-		klog.Errorf("get gpu type failed %v", gpuType)
-		return err
-	}
 	values["GPU"] = map[string]interface{}{
-		"Type": gpuType,
+		"Type": appConfig.GetSelectedGpuTypeValue(),
 		"Cuda": os.Getenv("OLARES_SYSTEM_CUDA_VERSION"),
 	}
 

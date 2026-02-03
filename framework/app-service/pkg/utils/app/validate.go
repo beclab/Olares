@@ -234,7 +234,9 @@ func CheckAppRequirement(token string, appConfig *appcfg.ApplicationConfig, op v
 			return constants.CPU, constants.SystemCPUPressure, fmt.Errorf(constants.SystemCPUPressureMessage, op)
 		}
 	}
-	if appConfig.Requirement.GPU != nil {
+
+	// only support nvidia gpu managment by HAMi for now
+	if appConfig.Requirement.GPU != nil && appConfig.GetSelectedGpuTypeValue() == utils.NvidiaCardType {
 		if !appConfig.Requirement.GPU.IsZero() && metrics.GPU.Total <= 0 {
 			return constants.GPU, constants.SystemGPUNotAvailable, fmt.Errorf(constants.SystemGPUNotAvailableMessage, op)
 
@@ -398,7 +400,9 @@ func GetClusterResource(token string) (*prometheus.ClusterMetrics, []string, err
 				arches.Insert(n.Labels["kubernetes.io/arch"])
 				if quantity, ok := n.Status.Capacity[constants.NvidiaGPU]; ok {
 					total += quantity.AsApproximateFloat64()
-				} else if quantity, ok = n.Status.Capacity[constants.VirtAiTechVGPU]; ok {
+				} else if quantity, ok = n.Status.Capacity[constants.NvidiaGB10GPU]; ok {
+					total += quantity.AsApproximateFloat64()
+				} else if quantity, ok = n.Status.Capacity[constants.AMDAPU]; ok {
 					total += quantity.AsApproximateFloat64()
 				}
 			}

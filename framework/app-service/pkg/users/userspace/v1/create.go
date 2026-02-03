@@ -273,11 +273,7 @@ func (c *Creator) installSysApps(ctx context.Context, bflPod *corev1.Pod) error 
 		"arch": arch,
 	}
 
-	gpuType, err := utils.FindGpuTypeFromNodes(&nodes)
-	if err != nil {
-		return err
-	}
-	vals["gpu"] = gpuType
+	vals["gpu"] = "none" // unused currently
 
 	userIndex, userSubnet, err := c.getUserSubnet(ctx)
 	if err != nil {

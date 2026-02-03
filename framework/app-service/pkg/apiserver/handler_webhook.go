@@ -37,7 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -308,36 +307,21 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		return resp
 	}
 
-	GPUType, err := h.findNvidiaGpuFromNodes(ctx)
-	if err != nil && !errors.Is(err, api.ErrGPUNodeNotFound) {
-		return h.sidecarWebhook.AdmissionError(req.UID, err)
-	}
+	GPUType := appcfg.GetSelectedGpuTypeValue()
 
 	// no gpu found, no need to inject env, just return.
-	if GPUType == "" {
+	if GPUType == "none" || GPUType == "" {
 		return resp
 	}
 
-	terminus, err := utils.GetTerminus(ctx, h.ctrlClient)
-	if err != nil {
-		return h.sidecarWebhook.AdmissionError(req.UID, err)
-	}
-	nvshareManagedMemory := ""
-	if terminus.Spec.Settings != nil {
-		nvshareManagedMemory = terminus.Spec.Settings[constants.EnvNvshareManagedMemory]
+	envs := []webhook.EnvKeyValue{
+		{
+			Key:   constants.EnvGPUType,
+			Value: GPUType,
+		},
 	}
 
-	envs := []webhook.EnvKeyValue{}
-	if nvshareManagedMemory != "" {
-		envs = append(envs, webhook.EnvKeyValue{
-			Key:   constants.EnvNvshareManagedMemory,
-			Value: nvshareManagedMemory,
-		})
-	}
-
-	envs = append(envs, webhook.EnvKeyValue{Key: "NVSHARE_DEBUG", Value: "1"})
-
-	patchBytes, err := webhook.CreatePatchForDeployment(tpl, req.Namespace, gpuRequired, GPUType, envs)
+	patchBytes, err := webhook.CreatePatchForDeployment(tpl, h.getGPUResourceTypeKey(GPUType), envs)
 	if err != nil {
 		klog.Errorf("create patch error %v", err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
@@ -347,33 +331,17 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 	return resp
 }
 
-func (h *Handler) findNvidiaGpuFromNodes(ctx context.Context) (string, error) {
-	var nodes corev1.NodeList
-	err := h.ctrlClient.List(ctx, &nodes, &client.ListOptions{})
-	if err != nil {
-		return "", err
+func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
+	switch gpuType {
+	case utils.NvidiaCardType:
+		return constants.NvidiaGPU
+	case utils.GB10ChipType:
+		return constants.NvidiaGB10GPU
+	case utils.AmdApuCardType:
+		return constants.AMDAPU
+	default:
+		return ""
 	}
-
-	// return nvshare gpu or virtaitech gpu in priority
-	gtype := ""
-	for _, n := range nodes.Items {
-		if _, ok := n.Status.Capacity[constants.NvidiaGPU]; ok {
-			if _, ok = n.Status.Capacity[constants.NvshareGPU]; ok {
-				return constants.NvshareGPU, nil
-			}
-			gtype = constants.NvidiaGPU
-		}
-
-		if _, ok := n.Status.Capacity[constants.VirtAiTechVGPU]; ok {
-			return constants.VirtAiTechVGPU, nil
-		}
-	}
-
-	if gtype != "" {
-		return gtype, nil
-	}
-
-	return "", api.ErrGPUNodeNotFound
 }
 
 func (h *Handler) providerRegistryValidate(req *restful.Request, resp *restful.Response) {
