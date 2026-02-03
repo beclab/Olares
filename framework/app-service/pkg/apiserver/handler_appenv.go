@@ -6,10 +6,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/emicklei/go-restful/v3"
@@ -76,32 +78,74 @@ func (h *Handler) updateAppEnv(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	var refEnvOnce sync.Once
+	var listErr error
+	refEnvs := make(map[string]string)
+
 	updated := false
 	original := targetAppEnv.DeepCopy()
 	for i, existingEnv := range targetAppEnv.Envs {
 		for _, env := range updatedEnvs {
-			if existingEnv.EnvName == env.EnvName {
-				if !existingEnv.Editable {
-					api.HandleBadRequest(resp, req, fmt.Errorf("app env '%s' is not editable", env.EnvName))
-					return
-				}
-				if existingEnv.Required && existingEnv.Default == "" && env.Value == "" {
-					api.HandleBadRequest(resp, req, fmt.Errorf("app env '%s' is required", env.EnvName))
-					return
-				}
-				if existingEnv.Value != env.Value {
-					if err := existingEnv.ValidateValue(env.Value); err != nil {
-						api.HandleBadRequest(resp, req, fmt.Errorf("failed to update app env '%s': %v", env.EnvName, err))
+			if existingEnv.EnvName != env.EnvName {
+				continue
+			}
+			if !existingEnv.Editable {
+				api.HandleBadRequest(resp, req, fmt.Errorf("app env '%s' is not editable", env.EnvName))
+				return
+			}
+			if existingEnv.Required && existingEnv.Default == "" && env.Value == "" && (env.ValueFrom == nil || env.ValueFrom.EnvName == "") {
+				api.HandleBadRequest(resp, req, fmt.Errorf("app env '%s' is required", env.EnvName))
+				return
+			}
+			if env.ValueFrom != nil && env.ValueFrom.EnvName != "" && (existingEnv.ValueFrom == nil || existingEnv.ValueFrom.EnvName != env.ValueFrom.EnvName) {
+				refEnvOnce.Do(func() {
+					sysenvs := new(sysv1alpha1.SystemEnvList)
+					listErr = h.ctrlClient.List(req.Request.Context(), sysenvs)
+					if listErr != nil {
 						return
 					}
-					targetAppEnv.Envs[i].Value = env.Value
-					updated = true
-					if existingEnv.ApplyOnChange {
-						targetAppEnv.NeedApply = true
+					userenvs := new(sysv1alpha1.UserEnvList)
+					listErr = h.ctrlClient.List(req.Request.Context(), userenvs, client.InNamespace(utils.UserspaceName(owner)))
+					for _, sysenv := range sysenvs.Items {
+						refEnvs[sysenv.EnvName] = sysenv.GetEffectiveValue()
 					}
+					for _, userenv := range userenvs.Items {
+						refEnvs[userenv.EnvName] = userenv.GetEffectiveValue()
+					}
+				})
+				if listErr != nil {
+					api.HandleInternalError(resp, req, fmt.Errorf("failed to list referenced envs: %s", listErr))
+					return
 				}
-				break
+				value, ok := refEnvs[env.ValueFrom.EnvName]
+				if !ok {
+					api.HandleBadRequest(resp, req, fmt.Errorf("app env '%s' references unknown env '%s'", env.EnvName, env.ValueFrom.EnvName))
+					return
+				}
+				if existingEnv.Required && value == "" {
+					api.HandleBadRequest(resp, req, fmt.Errorf("required app env '%s' references empty env '%s'", env.EnvName, env.ValueFrom.EnvName))
+					return
+				}
+				if existingEnv.ValidateValue(value) != nil {
+					api.HandleBadRequest(resp, req, fmt.Errorf("app env '%s' references invalid value '%s' from '%s': %v", env.EnvName, value, env.ValueFrom.EnvName, err))
+					return
+				}
+				targetAppEnv.Envs[i].ValueFrom = env.ValueFrom
+				targetAppEnv.Envs[i].Value = value
+				targetAppEnv.Envs[i].ValueFrom.Status = constants.EnvRefStatusSynced
+				updated = true
+			} else if existingEnv.Value != env.Value {
+				if err := existingEnv.ValidateValue(env.Value); err != nil {
+					api.HandleBadRequest(resp, req, fmt.Errorf("failed to update app env '%s': %v", env.EnvName, err))
+					return
+				}
+				targetAppEnv.Envs[i].Value = env.Value
+				updated = true
 			}
+			if updated && existingEnv.ApplyOnChange {
+				targetAppEnv.NeedApply = true
+			}
+			break
 		}
 	}
 
