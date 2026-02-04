@@ -30,13 +30,7 @@ func UpgradeOlaresPipeline() error {
 		return fmt.Errorf("error parsing current Olares version: %v", err)
 	}
 
-	// should only be and defaults to the current cli version
-	// this argument is for backwards-compatibility with older olaresd
-	targetVersionStr := viper.GetString(common.FlagVersion)
-	if targetVersionStr == "" {
-		targetVersionStr = version.VERSION
-	}
-	targetVersion, err := utils.ParseOlaresVersionString(targetVersionStr)
+	targetVersion, err := utils.ParseOlaresVersionString(version.VERSION)
 	if err != nil {
 		return fmt.Errorf("error parsing target Olares version: %v", err)
 	}
