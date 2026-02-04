@@ -785,10 +785,27 @@ const side = {
         //      },
         //   ],
         //   },
+      ],
+    },
+    {
+      text: "Distribute Olares apps",
+      link: "/developer/develop/submit/index",
+      items: [ 
         {
-          text: "Submit application",
-          collapsed: true,
-          link: "/developer/develop/submit/",
+          text: "Summit apps",
+          link: "/developer/develop/submit/submit-apps",
+        },         
+        {
+          text: "Manage app lifecycle",
+          link: "/developer/develop/submit/manage-apps",
+        },
+        {
+          text: "Promote your apps",
+          link:"/developer/develop/submit/promote"
+        },
+        {
+          text: "Publish paid apps",
+          link: "/developer/develop/submit/paid-apps",
         },
       ],
     },
