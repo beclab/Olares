@@ -23,6 +23,7 @@ func UninstallTerminusPipeline() error {
 	arg.SetConsoleLog("uninstall.log", true)
 	arg.SetKubeVersion(kubeType)
 	arg.SetStorage(getStorageConfig())
+	arg.ClearMasterHostConfig()
 
 	phase := viper.GetString(common.FlagUninstallPhase)
 	all := viper.GetBool(common.FlagUninstallAll)
