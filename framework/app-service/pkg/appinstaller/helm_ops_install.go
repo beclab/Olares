@@ -684,7 +684,7 @@ func getApplicationPolicy(policies []appcfg.AppPolicy, entrances []appv1alpha1.E
 	return string(policyStr), nil
 }
 
-func parseAppPermission(data []appcfg.AppPermission) []appcfg.AppPermission {
+func ParseAppPermission(data []appcfg.AppPermission) []appcfg.AppPermission {
 	permissions := make([]appcfg.AppPermission, 0)
 	for _, p := range data {
 		switch perm := p.(type) {
