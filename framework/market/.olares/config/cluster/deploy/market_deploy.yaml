@@ -46,6 +46,14 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - iam.kubesphere.io
+    resources:
+      - users
+    verbs:
+      - get
+      - list
+      - watch
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -140,7 +148,7 @@ spec:
           name: check-chart-repo
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.17
+        image: beclab/market-backend:v0.6.18
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
