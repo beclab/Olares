@@ -57,6 +57,7 @@ func (s *Subscriber) Do(_ context.Context, obj interface{}, action watchers.Acti
 		return fmt.Errorf("invalid object type")
 	}
 	m := *mPtr
+	log.Infof("Sysenv data: %v", m)
 
 	// effective value can be from value or default
 	var newValue string
@@ -66,11 +67,14 @@ func (s *Subscriber) Do(_ context.Context, obj interface{}, action watchers.Acti
 	} else if d, ok := m["default"].(string); ok && d != "" {
 		newValue = d
 	}
+
 	if newValue == "" {
+		constant.OlaresRemoteService = constant.DefaultSyncServerURL
+		constant.SyncServerURL = constant.DefaultSyncServerURL
 		return nil
 	}
 
-	if constant.OlaresRemoteService == newValue {
+	if constant.SyncServerURL == newValue {
 		return nil
 	}
 
