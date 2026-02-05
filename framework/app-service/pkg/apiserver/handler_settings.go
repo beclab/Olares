@@ -586,6 +586,18 @@ func (h *Handler) getApplicationPermission(req *restful.Request, resp *restful.R
 		return
 	}
 
+	// sys app does not have app config
+	if am.Spec.Config == "" {
+		ret := &applicationPermission{
+			App:         am.Spec.AppName,
+			Owner:       owner,
+			Permissions: []permission{},
+		}
+
+		resp.WriteAsJson(ret)
+		return
+	}
+
 	var appConfig appcfg.ApplicationConfig
 	err = am.GetAppConfig(&appConfig)
 	if err != nil {
