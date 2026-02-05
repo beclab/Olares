@@ -281,7 +281,7 @@ func collectSystemdLogs(tw *tar.Writer, options *LogCollectOptions) error {
 }
 
 func collectDmesgLogs(tw *tar.Writer, options *LogCollectOptions) error {
-	cmd := exec.Command("dmesg -T")
+	cmd := exec.Command("dmesg", "-T")
 	output, err := cmd.Output()
 	if err != nil {
 		return err
