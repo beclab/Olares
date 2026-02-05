@@ -40,7 +40,7 @@ type UserEnvSyncController struct {
 
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
 //+kubebuilder:rbac:groups=iam.kubesphere.io,resources=users,verbs=get;list;watch
-//+kubebuilder:rbac:groups=sys.bytetrade.io,resources=userenvs,verbs=get;list;watch;create
+//+kubebuilder:rbac:groups=sys.bytetrade.io,resources=userenvs,verbs=get;list;watch;create;patch;update
 
 func (r *UserEnvSyncController) SetupWithManager(mgr ctrl.Manager) error {
 	cmPred := predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -164,14 +164,63 @@ func (r *UserEnvSyncController) syncUserEnvForUser(ctx context.Context, username
 		return 0, fmt.Errorf("list userenvs in %s failed: %w", userNs, err)
 	}
 
-	existSet := make(map[string]struct{}, len(existing.Items))
+	existByName := make(map[string]*sysv1alpha1.UserEnv, len(existing.Items))
 	for i := range existing.Items {
-		existSet[existing.Items[i].EnvName] = struct{}{}
+		existByName[existing.Items[i].EnvName] = &existing.Items[i]
 	}
 
 	created := 0
 	for _, spec := range base {
-		if _, ok := existSet[spec.EnvName]; ok {
+		if ue, ok := existByName[spec.EnvName]; ok {
+			original := ue.DeepCopy()
+			updated := false
+
+			if ue.Default == "" && spec.Default != "" {
+				ue.Default = spec.Default
+				updated = true
+			}
+			if ue.Type == "" && spec.Type != "" {
+				ue.Type = spec.Type
+				updated = true
+			}
+			if ue.Title == "" && spec.Title != "" {
+				ue.Title = spec.Title
+				updated = true
+			}
+			if ue.Description == "" && spec.Description != "" {
+				ue.Description = spec.Description
+				updated = true
+			}
+			if ue.RemoteOptions == "" && spec.RemoteOptions != "" {
+				ue.RemoteOptions = spec.RemoteOptions
+				updated = true
+			}
+			if ue.Regex == "" && spec.Regex != "" {
+				ue.Regex = spec.Regex
+				updated = true
+			}
+
+			if len(spec.Options) > 0 {
+				existOpt := make(map[string]struct{}, len(ue.Options))
+				for _, it := range ue.Options {
+					existOpt[it.Value] = struct{}{}
+				}
+				for _, it := range spec.Options {
+					if _, exists := existOpt[it.Value]; exists {
+						continue
+					}
+					ue.Options = append(ue.Options, it)
+					existOpt[it.Value] = struct{}{}
+					updated = true
+				}
+			}
+
+			if updated {
+				if err := r.Patch(ctx, ue, client.MergeFrom(original)); err != nil {
+					return created, fmt.Errorf("patch userenv %s/%s failed: %w", ue.Namespace, ue.Name, err)
+				}
+				klog.Infof("UserEnvSync: patched userenv %s/%s for user %s", ue.Namespace, ue.Name, username)
+			}
 			continue
 		}
 		name, err := apputils.EnvNameToResourceName(spec.EnvName)

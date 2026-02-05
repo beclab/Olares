@@ -429,7 +429,7 @@ const side = {
         },
         {
           text: "本地访问 Olares",
-          link: "/manual/best-practices/local-access",
+          link: "/zh/manual/best-practices/local-access",
         },
       ],
     },

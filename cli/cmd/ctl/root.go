@@ -13,6 +13,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
 	"github.com/beclab/Olares/cli/version"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func NewDefaultCommand() *cobra.Command {
@@ -25,6 +26,11 @@ func NewDefaultCommand() *cobra.Command {
 		Short:             "Olares Installer",
 		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
 		Version:           version.VERSION,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			viper.BindPFlags(cmd.InheritedFlags())
+			viper.BindPFlags(cmd.PersistentFlags())
+			viper.BindPFlags(cmd.Flags())
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if showVendor {
 				fmt.Println(version.VENDOR)

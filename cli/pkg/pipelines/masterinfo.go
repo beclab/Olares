@@ -8,7 +8,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/core/pipeline"
 	"github.com/beclab/Olares/cli/pkg/terminus"
-	"github.com/spf13/viper"
 )
 
 func MasterInfoPipeline() error {
@@ -17,7 +16,6 @@ func MasterInfoPipeline() error {
 		fmt.Println("error: Only Linux nodes can be added to an Olares cluster!")
 		os.Exit(1)
 	}
-	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetConsoleLog("masterinfo.log", true)
 
 	if err := arg.MasterHostConfig.Validate(); err != nil {
