@@ -43,6 +43,15 @@ userEnvs:
   - envName: OLARES_USER_SMTP_SECURITY_PROTOCOLS
     type: string
     editable: true        
+    options:
+    - title: "TLS"
+      value: "tls"
+    - title: "SSL"
+      value: "ssl"
+    - title: "StartTLS"
+      value: "starttls"
+    - title: "None"
+      value: "none"
   - envName: OLARES_USER_OPENAI_APIKEY
     type: password
     editable: true

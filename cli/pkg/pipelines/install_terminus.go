@@ -20,7 +20,6 @@ func CliInstallTerminusPipeline() error {
 	}
 
 	arg := common.NewArgument()
-	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetKubeVersion(viper.GetString(common.FlagKubeType))
 	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
 	arg.SetMinikubeProfile(viper.GetString(common.FlagMiniKubeProfile))
