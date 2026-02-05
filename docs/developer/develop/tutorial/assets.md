@@ -16,7 +16,7 @@ Before uploading, ensure your images are in the correct format.
 
 ## Upload and link assets
 
-1. Navigate to the [Olares Market Image Hosting service](https://imghost.joinolares.cn/).
+1. Navigate to the [Olares Market Image Hosting service](https://imghost.olares.com/).
 2. Select the type of asset you are uploading (e.g., Icon).
 3. Drag and drop your prepared file into the upload area, or click to select it.
 4. Click the image thumbnail to make simple edits if necessary.
