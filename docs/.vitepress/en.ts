@@ -791,6 +791,7 @@ const side = {
         },
         {
           text: "Middleware",
+          link: "/developer/develop/mw-overview",
           collapsed: true,
           items: [
             {
@@ -799,16 +800,16 @@ const side = {
               items :[
                 {
                   text: "Integrate with Elasticsearch",
-                  link: "/developer/develop/middleware/integrate-with-es",                },
+                  link: "/developer/develop/mw-integrate-with-es",                },
                 {
                   text: "View Elasticsearch data",
-                  link: "/developer/develop/middleware/view-es-data",
+                  link: "/developer/develop/mw-view-es-data",
                 },
               ]
             },
             {
               text: "Grafana",
-              link :"/developer/develop/middleware/view-grafana-data",
+              link :"/developer/develop/mw-view-grafana-data",
             },
             {
               text: "MariaDB",
@@ -816,10 +817,10 @@ const side = {
               items :[
                 {
                   text: "Integrate with MariaDB",
-                  link: "/developer/develop/middleware/integrate-with-mariadb",                },
+                  link: "/developer/develop/mw-integrate-with-mariadb",                },
                 {
                   text: "View MariaDB data",
-                  link: "/developer/develop/middleware/view-mariadb-data",
+                  link: "/developer/develop/mw-view-mariadb-data",
                 },
               ]
             },
@@ -829,10 +830,10 @@ const side = {
               items :[
                 {
                   text: "Integrate with MinIO",
-                  link: "/developer/develop/middleware/integrate-with-minio",                },
+                  link: "/developer/develop/mw-integrate-with-minio",                },
                 {
                   text: "View MinIO data",
-                  link: "/developer/develop/middleware/view-minio-data",
+                  link: "/developer/develop/mw-view-minio-data",
                 },
               ]
             },
@@ -842,10 +843,10 @@ const side = {
               items :[
                 {
                   text: "Integrate with MongoDB",
-                  link: "/developer/develop/middleware/integrate-with-mongodb",                },
+                  link: "/developer/develop/mw-integrate-with-mongodb",                },
                 {
                   text: "View MongoDB data",
-                  link: "/developer/develop/middleware/view-mongodb-data",
+                  link: "/developer/develop/mw-view-mongodb-data",
                 },
               ]
             },
@@ -855,20 +856,20 @@ const side = {
               items :[
                 {
                   text: "Integrate with MySQL",
-                  link: "/developer/develop/middleware/integrate-with-mysql",                },
+                  link: "/developer/develop/mw-integrate-with-mysql",                },
                 {
                   text: "View MySQL data",
-                  link: "/developer/develop/middleware/view-mysql-data",
+                  link: "/developer/develop/mw-view-mysql-data",
                 },
               ]
             },  
             {
               text: "NATS",
-              link :"/developer/develop/middleware/view-nats-data",
+              link :"/developer/develop/mw-view-nats-data",
             },
             {
               text: "OpenTelemetry",
-              link :"/developer/develop/middleware/view-otel-data",
+              link :"/developer/develop/mw-view-otel-data",
             },
             {
               text: "PostgreSQL",
@@ -876,10 +877,10 @@ const side = {
               items :[
                 {
                   text: "Integrate with PostgreSQL",
-                  link: "/developer/develop/middleware/integrate-with-pg",                },
+                  link: "/developer/develop/mw-integrate-with-pg",                },
                 {
                   text: "View PostgreSQL data",
-                  link: "/developer/develop/middleware/view-pg-data",
+                  link: "/developer/develop/mw-view-pg-data",
                 }
               ]
             },
@@ -889,10 +890,10 @@ const side = {
               items :[
                 {
                   text: "Integrate with RabbitMQ",
-                  link: "/developer/develop/middleware/integrate-with-rabbitmq",                },
+                  link: "/developer/develop/mw-integrate-with-rabbitmq",                },
                 {
                   text: "View RabbitMQ data",
-                  link: "/developer/develop/middleware/view-rabbitmq-data",
+                  link: "/developer/develop/mw-view-rabbitmq-data",
                 }
               ]
             },
@@ -902,10 +903,10 @@ const side = {
               items :[
                 {
                   text: "Integrate with Redis",
-                  link: "/developer/develop/middleware/integrate-with-redis",                },
+                  link: "/developer/develop/mw-integrate-with-redis",                },
                 {
                   text: "View Redis data",
-                  link: "/developer/develop/middleware/view-redis-data",
+                  link: "/developer/develop/mw-view-redis-data",
                 }
               ]
             },

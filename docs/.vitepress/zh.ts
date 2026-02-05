@@ -780,6 +780,7 @@ const side = {
         },
         {
           text: "中间件",
+          link: "/zh/developer/develop/mw-overview",
           collapsed: true,
           items: [
             {
@@ -788,16 +789,16 @@ const side = {
               items :[
                 {
                   text: "集成 Elasticsearch",
-                  link: "zh/developer/develop/middleware/integrate-with-es",                },
+                  link: "zh/developer/develop/mw-integrate-with-es",                },
                 {
                   text: "查看 Elasticsearch 数据",
-                  link: "zh/developer/develop/middleware/view-es-data",
+                  link: "zh/developer/develop/mw-view-es-data",
                 },
               ]
             },
             {
               text: "Grafana",
-              link: "zh/developer/develop/middleware/view-grafana-data",
+              link: "zh/developer/develop/mw-view-grafana-data",
             },
             {
               text: "MariaDB",
@@ -805,10 +806,10 @@ const side = {
               items :[
                 {
                   text: "集成 MariaDB",
-                  link: "zh/developer/develop/middleware/integrate-with-mariadb",                },
+                  link: "zh/developer/develop/mw-integrate-with-mariadb",                },
                 {
                   text: "查看 MariaDB 数据",
-                  link: "zh/developer/develop/middleware/view-mariadb-data",
+                  link: "zh/developer/develop/mw-view-mariadb-data",
                 },
               ]
             },
@@ -818,10 +819,10 @@ const side = {
               items :[
                 {
                   text: "集成 MinIO",
-                  link: "zh/developer/develop/middleware/integrate-with-minio",                },
+                  link: "zh/developer/develop/mw-integrate-with-minio",                },
                 {
                   text: "查看 MinIO 数据",
-                  link: "zh/developer/develop/middleware/view-minio-data",
+                  link: "zh/developer/develop/mw-view-minio-data",
                 },
               ]
             },
@@ -831,10 +832,10 @@ const side = {
               items :[
                 {
                   text: "集成 MongoDB",
-                  link: "zh/developer/develop/middleware/integrate-with-mongodb",                },
+                  link: "zh/developer/develop/mw-integrate-with-mongodb",                },
                 {
                   text: "查看 MongoDB 数据",
-                  link: "zh/developer/develop/middleware/view-mongodb-data",
+                  link: "zh/developer/develop/mw-view-mongodb-data",
                 },
               ]
             }, 
@@ -844,20 +845,20 @@ const side = {
               items :[
                 {
                   text: "集成 MySQL",
-                  link: "zh/developer/develop/middleware/integrate-with-mysql",                },
+                  link: "zh/developer/develop/mw-integrate-with-mysql",                },
                 {
                   text: "查看 MySQL 数据",
-                  link: "zh/developer/develop/middleware/view-mysql-data",
+                  link: "zh/developer/develop/mw-view-mysql-data",
                 },
               ]
             },           
             {
               text: "NATS",
-              link :"zh/developer/develop/middleware/view-nats-data",
+              link :"zh/developer/develop/mw-view-nats-data",
             },
             {
               text: "OpenTelemetry",
-              link :"zh/developer/develop/middleware/view-otel-data",
+              link :"zh/developer/develop/mw-view-otel-data",
             },
             {
               text: "PostgreSQL",
@@ -865,10 +866,10 @@ const side = {
               items :[
                 {
                   text: "集成 PostgreSQL",
-                  link: "zh/developer/develop/middleware/integrate-with-pg",                },
+                  link: "zh/developer/develop/mw-integrate-with-pg",                },
                 {
                   text: "查看 PostgreSQL 数据",
-                  link: "zh/developer/develop/middleware/view-pg-data",
+                  link: "zh/developer/develop/mw-view-pg-data",
                 }
               ]
             },
@@ -878,10 +879,10 @@ const side = {
               items :[
                 {
                   text: "集成 RabbitMQ",
-                  link: "zh/developer/develop/middleware/integrate-with-rabbitmq",                },
+                  link: "zh/developer/develop/mw-integrate-with-rabbitmq",                },
                 {
                   text: "查看 RabbitMQ 数据",
-                  link: "zh/developer/develop/middleware/view-rabbitmq-data",
+                  link: "zh/developer/develop/mw-view-rabbitmq-data",
                 }
               ]
             },
@@ -891,10 +892,10 @@ const side = {
               items :[
                 {
                   text: "集成 Redis",
-                  link: "zh/developer/develop/middleware/integrate-with-redis",                },
+                  link: "zh/developer/develop/mw-integrate-with-redis",                },
                 {
                   text: "查看 Redis 数据",
-                  link: "zh/developer/develop/middleware/view-redis-data",
+                  link: "zh/developer/develop/mw-view-redis-data",
                 },
               ]
             },
