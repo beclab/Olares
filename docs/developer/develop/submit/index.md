@@ -49,9 +49,6 @@ During submission:
 - GitBot validates file scope, ownership, and version rules.
 - Valid PRs are merged automatically without manual review.
 
-To learn how to submit a new application, see:
-- [Submit applications](/developer/develop/submit/submit-apps.md)
-
 ### 3. Automated validation and indexing
 
 After a PR is submitted, **Terminus-Gitbot** performs automated checks to ensure the submission follows distribution rules.
@@ -70,20 +67,11 @@ Lifecycle actions include:
 
 These actions are controlled using PR types and special control files in the OAC.
 
-To manage updates, suspension, or removal, see:
-- [Manage the app lifecycle](/developer/develop/submit/manage-app-lifecycle.md)
-
 ### 5. Optimize your Market listing
 
 Once published, you can improve how your app is presented in Olares Market by adding icons, screenshots, and featured images.
-
-To configure application visuals, see:
-- [Promote your apps](/developer/develop/submit/promote-your-apps.md)
 
 ### 6. (Optional) Publish paid applications
 
 Olares Market also supports paid application distribution.
 Paid apps require additional identity registration, pricing configuration, and license management.
-
-To learn how to publish and manage paid apps, see:
-- [Publish paid applications](/developer/develop/submit/publish-paid-apps.md)
