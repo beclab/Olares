@@ -6,10 +6,14 @@ description: 学习如何更新、暂停或移除你的应用。
 
 本文介绍应用发布后的管理操作，包括更新应用、暂停分发或从 Olares 应用市场移除应用。
 
-所有操作均通过提交指向 `beclab/apps:main` 的拉取请求（Pull Request，PR）完成。GitBot 支持三种管理操作：`UPDATE`、`SUSPEND` 和。`REMOVE`。
+所有操作均通过提交指向 `beclab/apps:main` 的拉取请求（Pull Request，PR）完成。应用发布后，Terminus-Gitbot 支持以下三种生命周期操作：
+
+- **UPDATE**：保持应用处于最新状态。发布新版本、修复问题或调整配置。
+- **SUSPEND**：暂停应用分发。在不影响现有用户的情况下，停止应用在 Olares Market 中的新发现、下载和安装。
+- **REMOVE**：下架应用。永久停止应用分发，并防止该图表文件夹名被再次使用。
 
 :::tip 降低冲突风险
-在创建 PR 前，建议先同步你的 Fork，并将分支 rebase 到最新的 `main`，以减少潜在冲突。
+在创建 PR 前，建议先同步你的 Fork，并将分支 Rebase 到最新的 `main` 分支，以减少潜在冲突。
 :::
 
 ## 控制文件
@@ -21,7 +25,7 @@ description: 学习如何更新、暂停或移除你的应用。
 | `.suspend` | 暂停分发 | 升级（>） | 空文件 |
 | `.remove` | 移除应用 | 相同（=） | 空文件 |
 
-`UPDATE` 类型的 PR 不能包含这些文件。它们仅用于 `SUSPEND` 与 `REMOVE`。
+`UPDATE` 或 `NEW` 类型的 PR 不能包含这些控制文件。控制文件仅用于 `SUSPEND` 和 `REMOVE`。
 
 ## 更新应用（UPDATE）
 
@@ -64,5 +68,5 @@ PR 合并后，应用将不再在 Olares 应用市场中展示。已安装该应
 
 PR 合并后：
 
-- 应用所有者无法再次使用该 Chart 文件夹名称。
+- 应用所有者无法再次使用该图表文件夹名称。
 - 已经安装该应用的用户可以继续使用。

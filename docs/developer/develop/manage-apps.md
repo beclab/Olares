@@ -6,7 +6,11 @@ description: Learn how to update, suspend, or remove your application from Olare
 
 This guide explains how to manage an application after it has been published, including updating, suspending, or removing it from Olares Market.
 
-All actions are performed through Pull Requests (PRs) to `beclab/apps:main`. GitBot handles three management actions: `UPDATE`, `SUSPEND`, and `REMOVE`.
+All actions are performed through Pull Requests (PRs) to the `main` branch. Terminus-Gitbot supports three lifecycle actions after your app is published:
+
+- **UPDATE**: Keep your app up to date. Release new versions, fix bugs, or adjust configurations.
+- **SUSPEND**: Pause distribution. Stop new discovery, downloads, and installs in Olares Market without affecting existing users.
+- **REMOVE**: Retire the app. Permanently stop distribution and prevent the chart folder name from being reused.
 
 :::tip Reduce conflicts
 Before opening the PR, sync your fork and rebase your branch onto the latest `main` to reduce potential conflicts.
@@ -21,7 +25,7 @@ Control files are special empty files in the OAC root directory that manage an a
 | `.suspend` | Suspend distribution | Upgrade (>) | Empty file |
 | `.remove` | Remove application | Same (=) | Empty file |
 
-An `UPDATE` PR must not include these files. They are only used for `SUSPEND` and `REMOVE`.
+An `UPDATE` PR or a `NEW` PR must not include these files. They are only used for `SUSPEND` and `REMOVE`.
 
 ## Update an app (UPDATE)
 

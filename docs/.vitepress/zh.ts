@@ -778,23 +778,23 @@ const side = {
     },
     {
       text: "分发 Olares 应用",
-      link: "/zh/developer/develop/submit/index",
+      link: "/zh/developer/develop/distribute-index",
       items: [
         {
           text: "提交应用",
-          link: "/zh/developer/develop/submit/submit-apps",
+          link: "/zh/developer/develop/submit-apps",
         },
         {
           text: "管理应用",
-          link: "/zh/developer/develop/submit/manage-apps",
+          link: "/zh/developer/develop/manage-apps",
         },
         {
           text: "推广应用",
-          link: "/zh/developer/develop/submit/promote",
+          link: "/zh/developer/develop/promote-apps",
         },
         {
           text: "付费应用",
-          link: "/zh/developer/develop/submit/paid-apps",
+          link: "/zh/developer/develop/paid-apps",
         },
       ]
     },

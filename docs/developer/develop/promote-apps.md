@@ -40,7 +40,7 @@ Configure these assets in your [`OlaresManifest.yaml`](/developer/develop/packag
 
 You can also host images on your own server or use the Olares image hosting service:
 
-1. Open [Olares Market image hosting](https://imghost.olares.cn/).
+1. Open [Olares Market image hosting](https://imghost.olares.com/).
 2. Select the image type: **app icon**, **featured image** or **promotional image**.
 3. Upload and preview the image.
 4. Copy the generated URL and paste it into your `OlaresManifest.yaml`.

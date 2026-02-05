@@ -789,23 +789,23 @@ const side = {
     },
     {
       text: "Distribute Olares apps",
-      link: "/developer/develop/submit/index",
+      link: "/developer/develop/distribute-index",
       items: [ 
         {
           text: "Summit apps",
-          link: "/developer/develop/submit/submit-apps",
+          link: "/developer/develop/submit-apps",
         },         
         {
           text: "Manage app lifecycle",
-          link: "/developer/develop/submit/manage-apps",
+          link: "/developer/develop/manage-apps",
         },
         {
           text: "Promote your apps",
-          link:"/developer/develop/submit/promote"
+          link:"/developer/develop/promote-apps"
         },
         {
           text: "Publish paid apps",
-          link: "/developer/develop/submit/paid-apps",
+          link: "/developer/develop/paid-apps",
         },
       ],
     },

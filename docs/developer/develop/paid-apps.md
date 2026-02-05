@@ -168,7 +168,7 @@ For detailed environment variable behavior, see [environment variables in `Olare
 
 ### Submit your app
 
-Follow the [standard submission flow](/developer/develop/submit/submit-apps.md) to create a Pull Request.
+Follow the [standard submission flow](/developer/develop/submit-apps.md) to create a Pull Request.
 
 ## Install and set up Merchant
 

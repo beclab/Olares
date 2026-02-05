@@ -174,7 +174,7 @@ envs:
 
 ### 提交应用
 
-按照[标准提交流程](/zh/developer/develop/submit/submit-apps.md)创建 PR，提交你的应用。
+按照[标准提交流程](/zh/developer/develop/submit-apps.md)创建 PR，提交你的应用。
 
 ## 安装并配置 Merchant
 
