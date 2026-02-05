@@ -17,7 +17,7 @@ const side = {
               link: "/zh/manual/help/olares",
             },
             {
-              text: "安装激活",
+              text: "安装配置与访问",
               link: "/zh/manual/help/installation",
             },
             {
