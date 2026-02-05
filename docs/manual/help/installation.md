@@ -85,7 +85,7 @@ The request to bind Multi-Factor Authentication (MFA) failed due to a network ti
 
 The request to the binding-zone interface failed due to a network timeout. This usually happens during account activation. Ensure your network is stable and retry.
 
-### What does `Invalid jws, timestamp is out of range` mean?
+### What does this error message mean: "Invalid jws, timestamp is out of range"?
 
 This occurs when there is a significant time difference (greater than 20 minutes) between the device running LarePass and the Olares server. Check the system time on your computer or phone and ensure it is synced correctly with internet time.
 
