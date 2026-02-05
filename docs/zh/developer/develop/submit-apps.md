@@ -47,9 +47,9 @@ Terminus-Gitbot 会同时校验你的 PR 元数据（例如标题和文件作用
     
 | 字段 | 说明 |
 |--|--|
-| PR 类型 | <ul><li>**NEW**：提交新应用。<br></li><li>**UPDATE**：更新已成功合并的应用。<br></li><li>**REMOVE**：移除已成功合并的应用。<br></li><li>**SUSPEND**：暂停已成功合并的应用在应用商店的分发。</li></ul> |
+| PR 类型 | <ul><li>**NEW**：提交新应用。</li><li>**UPDATE**：更新已成功合并的应用。</li><li>**REMOVE**：移除已成功合并的应用。</li><li>**SUSPEND**：暂停已成功合并的应用在应用商店的分发。</li></ul> |
 | 图表文件夹名 | 你的 OAC 目录。必须符合上述命名规范。 |
-| 版本 | 应用的 Chart 版本，必须与以下字段一致：<br><ul><li>`Chart.yaml` 中的 `version`</li><br><li>`OlaresManifest.yaml` 的 `metadata` 下的 `version`</li></ul> |
+| 版本 | 应用的 Chart 版本，必须与以下字段一致：<ul><li>`Chart.yaml` 中的 `version`</li><li>`OlaresManifest.yaml` 的 `metadata` 下的 `version`</li></ul> |
 | 标题内容 | 对 PR 的简要说明。 |
 
 2. **文件范围**：PR 只能新增或修改 PR 标题中声明的图表文件夹下的内容。

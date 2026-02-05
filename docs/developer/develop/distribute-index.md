@@ -39,6 +39,7 @@ Before distributing your application, it helps to understand a few core concepts
     Special empty files in the OAC root directory that control distribution status:
     - `.suspend`: suspend distribution
     - `.remove`: remove an app from the Market
+    
     For details, see [Manage the app lifecycle](/developer/develop/manage-apps.md#control-files).
 
 ## Ownership and collaboration
@@ -58,7 +59,7 @@ At this stage, developers typically:
 - Verify installation and upgrade behavior.
 - Finalize chart metadata and structure.
 
-For details, see [Olares Application Chart (OAC)](/developer/develop/package/chart.md)
+For details, see [Olares Application Chart (OAC)](/developer/develop/package/chart.md).
 
 ### 2. Submit the app to the default index
 
@@ -70,7 +71,7 @@ During submission:
 - Terminus-Gitbot validates file scope, ownership, and version rules.
 - Valid PRs are merged automatically without manual review.
 
-For details, see [Submit applications](/developer/develop/submit-apps.md)
+For details, see [Submit applications](/developer/develop/submit-apps.md).
 
 ### 3. Automated validation and indexing
 

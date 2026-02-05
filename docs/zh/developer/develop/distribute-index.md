@@ -21,7 +21,7 @@ Olares 的应用分发基于开放标准和自动化校验机制。如果你的�
 - **Terminus-Gitbot**  
   自动验证系统，负责校验提交的应用并执行分发规则。
 
-- **owners 文件（`owners`）**  
+- **Owners 文件（`owners`）**  
   OAC 根目录下的一个文件，用于验证所有权和权限。该文件没有后缀名。
     ```text
     owners:
@@ -33,6 +33,7 @@ Olares 的应用分发基于开放标准和自动化校验机制。如果你的�
     位于 OAC 根目录中的特殊空文件，用于控制应用的分发状态：
     - `.suspend`：暂停应用分发
     - `.remove`：从应用市场移除应用
+
     详情请参阅[管理应用生命周期](/zh/developer/develop/manage-apps.md#控制文件)。
 
 ## 所有权与协作
@@ -52,7 +53,7 @@ Olares 的应用分发基于开放标准和自动化校验机制。如果你的�
 - 验证应用的安装和升级行为。
 - 完善 Chart 的元数据和目录结构。
 
-详情请参阅[Olares 应用图表（OAC）](/zh/developer/develop/package/chart.md)
+详情请参阅[Olares 应用图表（OAC）](/zh/developer/develop/package/chart.md)。
 
 ### 2. 提交应用到默认索引
 

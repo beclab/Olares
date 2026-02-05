@@ -218,13 +218,13 @@ The status indicator above the transaction list supports manual refresh:
 | Field | Description|
 |--|--|
 | Wallet | Developer wallet address managed by Merchant|
-| Type | Transaction type:<br>`Incoming`: revenue as receiver<br>`Outgoing`: payment sent as sender|
+| Type | Transaction type:<ul><li>`Incoming`: revenue as receiver</li><li>`Outgoing`: payment sent as sender</li></ul>|
 | Tx Hash | The hash of the transaction record, a unique identifier for the on-chain<br> transaction.|
-| From/To | Counterparty address, shown based on the transaction type:<br>`Incoming`: sender address<br>`Outgoing`: recipient address |
-| Contract | Token contract address, indicating the asset type and source involved in <br>the transaction.<br>**Native**: native ETH transfer with no contract interaction <br>**[Contract address]**: ERC-20 token smart contract address |
+| From/To | Counterparty address, shown based on the transaction type:<ul><li>`Incoming`: sender address</li><li>`Outgoing`: recipient address </li></ul> |
+| Contract | Token contract address, indicating the asset type and source involved in <br>the transaction.<ul><li>**Native**: native ETH transfer with no contract interaction </li><li>**[Contract address]**: ERC-20 token smart contract address</li></ul> |
 | Amount | Transaction amount, denominated in the token specified by the Contract.|
 | Time | The timestamp when the transaction is confirmed and recorded on-chain.|
-| Product | **Product ID**: a transaction related to an Olares app purchase<br>**-**: a regular transfer not associated with app sales |
+| Product | <ul><li>**Product ID**: a transaction related to an Olares app purchase</li><li>**-**: a regular transfer not associated with app sales</li></ul> |
 
 ### Update developer information
 

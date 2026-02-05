@@ -46,9 +46,9 @@ To pass the Terminus-Gitbot automated checks, your PR must strictly follow these
     
 | Field | Description|
 |--|--|
-| PR type | <ul><li>**NEW**: Submit a new application. <br></li><li>**UPDATE**: Update an already successfully merged application.<br></li><li>**REMOVE**: Remove an already successfully merged application.<br></li><li>**SUSPEND**: Suspend an already successfully merged application from<br> distribution through the application store.</li></ul> |
+| PR type | <ul><li>**NEW**: Submit a new application. </li><li>**UPDATE**: Update an already successfully merged application.</li><li>**REMOVE**: Remove an already successfully merged application.<br></li><li>**SUSPEND**: Suspend an already successfully merged application from<br> distribution through the application store.</li></ul> |
 | Chart folder name | The directory name of your OAC. Must match the naming convention. |
-| Version | Chart version of your app. It must match:<br><ul><li>`version` in `Chart.yaml`</li><br><li>`version` under `metadata` in `OlaresManifest.yaml`</li></ul> |
+| Version | Chart version of your app. It must match:<ul><li>`version` in `Chart.yaml`</li><li>`version` under `metadata` in `OlaresManifest.yaml`</li></ul> |
 | Title content | A brief summary of your PR. |
 
 2. **File scope**: The PR only adds or modifies content under the chart folder name declared in the title.
