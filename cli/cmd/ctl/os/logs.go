@@ -3,6 +3,7 @@ package os
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -13,6 +14,9 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -20,6 +24,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // LogCollectOptions holds options for collecting logs
@@ -276,7 +281,7 @@ func collectSystemdLogs(tw *tar.Writer, options *LogCollectOptions) error {
 }
 
 func collectDmesgLogs(tw *tar.Writer, options *LogCollectOptions) error {
-	cmd := exec.Command("dmesg")
+	cmd := exec.Command("dmesg -T")
 	output, err := cmd.Output()
 	if err != nil {
 		return err
@@ -399,6 +404,126 @@ func collectKubernetesLogs(tw *tar.Writer, options *LogCollectOptions) error {
 		}
 	}
 
+	if err := collectNginxLogsFromLabeledPods(tw); err != nil {
+		if !options.IgnoreKubeErrors {
+			return fmt.Errorf("failed to collect nginx logs from labeled pods: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func collectNginxLogsFromLabeledPods(tw *tar.Writer) error {
+	if _, err := util.GetCommand("kubectl"); err != nil {
+		fmt.Printf("warning: kubectl not found, skipping collecting nginx logs from labeled pods\n")
+		return nil
+	}
+
+	cfg, err := ctrl.GetConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get kubeconfig: %v", err)
+	}
+	clientset, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create kube client: %v", err)
+	}
+
+	type selectorSpec struct {
+		LabelSelector string
+		ContainerName string
+	}
+	selectors := []selectorSpec{
+		{LabelSelector: "app=l4-bfl-proxy", ContainerName: ""},
+		{LabelSelector: "tier=bfl", ContainerName: "ingress"},
+	}
+
+	type targetPod struct {
+		Namespace     string
+		Name          string
+		ContainerName string
+	}
+	var targets []targetPod
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	for _, sel := range selectors {
+		podList, err := clientset.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{LabelSelector: sel.LabelSelector})
+		if err != nil {
+			return fmt.Errorf("failed to list pods by label %q: %v", sel.LabelSelector, err)
+		}
+		for _, pod := range podList.Items {
+			targets = append(targets, targetPod{
+				Namespace:     pod.Namespace,
+				Name:          pod.Name,
+				ContainerName: sel.ContainerName,
+			})
+		}
+	}
+
+	if len(targets) == 0 {
+		return nil
+	}
+
+	// simplest approach: use kubectl cp (it already implements copy via tar over exec)
+	tempDir, err := os.MkdirTemp("", "olares-nginx-logs-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory for nginx logs: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	files := []string{"/var/log/nginx/access.log", "/var/log/nginx/error.log"}
+	for _, target := range targets {
+		for _, remotePath := range files {
+			base := filepath.Base(remotePath)
+			archivePath := filepath.Join("nginx", target.Namespace, target.Name, base)
+
+			dest := filepath.Join(tempDir, fmt.Sprintf("%s__%s__%s", target.Namespace, target.Name, base))
+
+			err := kubectlCopyFile(target.Namespace, target.Name, target.ContainerName, remotePath, dest)
+			if err != nil {
+				return fmt.Errorf("failed to kubectl cp %s/%s:%s: %v", target.Namespace, target.Name, remotePath, err)
+			}
+
+			fi, err := os.Stat(dest)
+			if err != nil {
+				return fmt.Errorf("failed to stat copied nginx log %s: %v", dest, err)
+			}
+
+			f, err := os.Open(dest)
+			if err != nil {
+				return fmt.Errorf("failed to open copied nginx log %s: %v", dest, err)
+			}
+			defer f.Close()
+
+			header := &tar.Header{
+				Name:    archivePath,
+				Mode:    0644,
+				Size:    fi.Size(),
+				ModTime: time.Now(),
+			}
+			if err := tw.WriteHeader(header); err != nil {
+				return fmt.Errorf("failed to write header for %s: %v", archivePath, err)
+			}
+			if _, err := io.CopyN(tw, f, header.Size); err != nil {
+				return fmt.Errorf("failed to write data for %s: %v", archivePath, err)
+			}
+		}
+	}
+	return nil
+}
+
+func kubectlCopyFile(namespace, pod, container, remotePath, destPath string) error {
+	args := []string{"-n", namespace, "cp"}
+	if container != "" {
+		args = append(args, "-c", container)
+	}
+	args = append(args, fmt.Sprintf("%s:%s", pod, remotePath), destPath)
+
+	cmd := exec.Command("kubectl", args...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("kubectl %s failed: %v, output: %s", strings.Join(args, " "), err, strings.TrimSpace(string(out)))
+	}
 	return nil
 }
 
@@ -485,13 +610,9 @@ func collectNetworkConfigs(tw *tar.Writer, options *LogCollectOptions) error {
 }
 
 func getBaseDir() (string, error) {
-	// quick path to get basedir from argument instance
-	arg := &common.Argument{}
-	if err := arg.LoadReleaseInfo(); err != nil {
-		return "", fmt.Errorf("failed to load olares release info: %v", err)
-	}
-	if arg.BaseDir != "" {
-		return arg.BaseDir, nil
+	basedir := viper.GetString(common.FlagBaseDir)
+	if basedir != "" {
+		return basedir, nil
 	}
 	homeDir, err := util.Home()
 	if err != nil {

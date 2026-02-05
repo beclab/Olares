@@ -612,6 +612,7 @@ func (h *Handler) handleUpdateLocale(req *restful.Request, resp *restful.Respons
 func (h *Handler) handlerUpdateUserLoginBackground(req *restful.Request, resp *restful.Response) {
 	var background struct {
 		Background string `json:"background"`
+		Style      string `json:"style"`
 	}
 
 	err := req.ReadEntity(&background)
@@ -636,6 +637,7 @@ func (h *Handler) handlerUpdateUserLoginBackground(req *restful.Request, resp *r
 	err = userOp.UpdateUser(user, []func(*iamV1alpha2.User){
 		func(u *iamV1alpha2.User) {
 			u.Annotations[constants.UserLoginBackground] = background.Background
+			u.Annotations[constants.UserLoginBackgroundStyle] = background.Style
 		},
 	})
 

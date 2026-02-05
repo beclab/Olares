@@ -24,6 +24,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -233,7 +234,9 @@ func CheckAppRequirement(token string, appConfig *appcfg.ApplicationConfig, op v
 			return constants.CPU, constants.SystemCPUPressure, fmt.Errorf(constants.SystemCPUPressureMessage, op)
 		}
 	}
-	if appConfig.Requirement.GPU != nil {
+
+	// only support nvidia gpu managment by HAMi for now
+	if appConfig.Requirement.GPU != nil && appConfig.GetSelectedGpuTypeValue() == utils.NvidiaCardType {
 		if !appConfig.Requirement.GPU.IsZero() && metrics.GPU.Total <= 0 {
 			return constants.GPU, constants.SystemGPUNotAvailable, fmt.Errorf(constants.SystemGPUNotAvailableMessage, op)
 
@@ -260,42 +263,10 @@ func CheckAppRequirement(token string, appConfig *appcfg.ApplicationConfig, op v
 		}
 	}
 
-	allocatedResources, err := getRequestResources()
-	if err != nil {
-		return "", "", err
-	}
-	if len(allocatedResources) == 1 {
-		sufficientCPU, sufficientMemory := false, false
-		if appConfig.Requirement.CPU == nil {
-			sufficientCPU = true
-		}
-		if appConfig.Requirement.Memory == nil {
-			sufficientMemory = true
-		}
-		for _, v := range allocatedResources {
-			if appConfig.Requirement.CPU != nil {
-				if v.cpu.allocatable.Cmp(*appConfig.Requirement.CPU) > 0 {
-					sufficientCPU = true
-				}
-			}
-			if appConfig.Requirement.Memory != nil {
-				if v.memory.allocatable.Cmp(*appConfig.Requirement.Memory) > 0 {
-					sufficientMemory = true
-				}
-			}
-		}
-		if !sufficientCPU {
-			return constants.CPU, constants.K8sRequestCPUPressure, fmt.Errorf(constants.K8sRequestCPUPressureMessage, op)
-		}
-		if !sufficientMemory {
-			return constants.Memory, constants.K8sRequestMemoryPressure, fmt.Errorf(constants.K8sRequestMemoryPressureMessage, op)
-		}
-	}
-
-	return "", "", nil
+	return CheckAppK8sRequestResource(appConfig, op)
 }
 
-func getRequestResources() (map[string]resources, error) {
+func GetRequestResources() (map[string]resources, error) {
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		return nil, err
@@ -429,7 +400,9 @@ func GetClusterResource(token string) (*prometheus.ClusterMetrics, []string, err
 				arches.Insert(n.Labels["kubernetes.io/arch"])
 				if quantity, ok := n.Status.Capacity[constants.NvidiaGPU]; ok {
 					total += quantity.AsApproximateFloat64()
-				} else if quantity, ok = n.Status.Capacity[constants.VirtAiTechVGPU]; ok {
+				} else if quantity, ok = n.Status.Capacity[constants.NvidiaGB10GPU]; ok {
+					total += quantity.AsApproximateFloat64()
+				} else if quantity, ok = n.Status.Capacity[constants.AMDAPU]; ok {
 					total += quantity.AsApproximateFloat64()
 				}
 			}
@@ -959,4 +932,84 @@ func CheckCloneEntrances(ctrlClient client.Client, appConfig *appcfg.Application
 	}
 
 	return nil, nil
+}
+
+func GetClusterAvailableResource() (*resources, error) {
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	nodes, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	initAllocatable := resource.MustParse("0")
+	availableResources := resources{
+		cpu:    usage{allocatable: &initAllocatable},
+		memory: usage{allocatable: &initAllocatable},
+	}
+	nodeList := make([]corev1.Node, 0)
+	for _, node := range nodes.Items {
+		if !utils.IsNodeReady(&node) || node.Spec.Unschedulable {
+			continue
+		}
+		nodeList = append(nodeList, node)
+	}
+	if len(nodeList) == 0 {
+		return nil, errors.New("cluster has no suitable node to schedule")
+	}
+	for _, node := range nodeList {
+		availableResources.cpu.allocatable.Add(*node.Status.Allocatable.Cpu())
+		availableResources.memory.allocatable.Add(*node.Status.Allocatable.Memory())
+		fieldSelector := fmt.Sprintf("spec.nodeName=%s,status.phase!=Failed,status.phase!=Succeeded", node.Name)
+		pods, err := client.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
+			FieldSelector: fieldSelector,
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, pod := range pods.Items {
+			for _, container := range pod.Spec.Containers {
+				availableResources.cpu.allocatable.Sub(*container.Resources.Requests.Cpu())
+				availableResources.memory.allocatable.Sub(*container.Resources.Requests.Memory())
+			}
+		}
+	}
+	return &availableResources, nil
+}
+
+func CheckAppK8sRequestResource(appConfig *appcfg.ApplicationConfig, op v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+	availableResources, err := GetClusterAvailableResource()
+	if err != nil {
+		return "", "", err
+	}
+	if appConfig == nil {
+		return "", "", errors.New("nil appConfig")
+	}
+
+	sufficientCPU, sufficientMemory := false, false
+
+	if appConfig.Requirement.CPU == nil {
+		sufficientCPU = true
+	}
+	if appConfig.Requirement.Memory == nil {
+		sufficientMemory = true
+	}
+	if appConfig.Requirement.CPU != nil && availableResources.cpu.allocatable.Cmp(*appConfig.Requirement.CPU) > 0 {
+		sufficientCPU = true
+	}
+	if appConfig.Requirement.Memory != nil && availableResources.memory.allocatable.Cmp(*appConfig.Requirement.Memory) > 0 {
+		sufficientMemory = true
+	}
+	if !sufficientCPU {
+		return constants.CPU, constants.K8sRequestCPUPressure, fmt.Errorf(constants.K8sRequestCPUPressureMessage, op)
+	}
+	if !sufficientMemory {
+		return constants.Memory, constants.K8sRequestMemoryPressure, fmt.Errorf(constants.K8sRequestMemoryPressureMessage, op)
+	}
+	return "", "", nil
 }

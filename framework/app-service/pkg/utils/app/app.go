@@ -16,12 +16,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
+	"github.com/go-viper/mapstructure/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/files"
@@ -553,7 +553,7 @@ func parseDestination(dest string) (string, string, error) {
 	return alias, tokens[len(tokens)-1], nil
 }
 
-func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owner string) (appdirs []string, err error) {
+func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owner string, appData bool) (appCacheDirs []string, appDataDirs []string, err error) {
 	userspaceNs := utils.UserspaceName(owner)
 	config, err := ctrl.GetConfig()
 	if err != nil {
@@ -567,7 +567,6 @@ func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owne
 	if err != nil {
 		return
 	}
-	appName := fmt.Sprintf("%s-%s", namespace, name)
 	appCachePath := sts.GetAnnotations()["appcache_hostpath"]
 	if len(appCachePath) == 0 {
 		err = errors.New("empty appcache_hostpath")
@@ -576,20 +575,23 @@ func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owne
 	if !strings.HasSuffix(appCachePath, "/") {
 		appCachePath += "/"
 	}
-	dClient, err := versioned.NewForConfig(config)
-	if err != nil {
+
+	userspacePath := sts.GetAnnotations()["userspace_hostpath"]
+	if len(userspacePath) == 0 {
+		err = errors.New("empty userspace_hostpath annotation")
 		return
 	}
-	appCRD, err := dClient.AppV1alpha1().Applications().Get(ctx, appName, metav1.GetOptions{})
-	if err != nil {
-		return
+	appDataPath := filepath.Join(userspacePath, "Data")
+	if !strings.HasSuffix(appDataPath, "/") {
+		appDataPath += "/"
 	}
-	deploymentName := appCRD.Spec.DeploymentName
+
+	deploymentName := name
 	deployment, err := clientset.AppsV1().Deployments(namespace).
 		Get(context.Background(), deploymentName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return tryToGetAppdataDirFromSts(ctx, namespace, deploymentName, appCachePath)
+			return tryToGetAppdataDirFromSts(ctx, namespace, deploymentName, appCachePath, appDataPath)
 		}
 		return
 	}
@@ -601,15 +603,31 @@ func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owne
 				if appDirSet.Has(appDir) {
 					continue
 				}
-				appdirs = append(appdirs, appDir)
+				appCacheDirs = append(appCacheDirs, appDir)
 				appDirSet.Insert(appDir)
 			}
 		}
 	}
-	return appdirs, nil
+	if appData {
+		appDirSet := sets.NewString()
+
+		for _, v := range deployment.Spec.Template.Spec.Volumes {
+			if v.HostPath != nil && strings.HasPrefix(v.HostPath.Path, appDataPath) && len(v.HostPath.Path) > len(appDataPath) {
+				appDir := GetFirstSubDir(v.HostPath.Path, appDataPath)
+				if appDir != "" {
+					if appDirSet.Has(appDir) {
+						continue
+					}
+					appDataDirs = append(appDataDirs, appDir)
+					appDirSet.Insert(appDir)
+				}
+			}
+		}
+	}
+	return appCacheDirs, appDataDirs, nil
 }
 
-func tryToGetAppdataDirFromSts(ctx context.Context, namespace, stsName, baseDir string) (appdirs []string, err error) {
+func tryToGetAppdataDirFromSts(ctx context.Context, namespace, stsName, appCacheDir, appDataDir string) (appCacheDirs []string, appDataDirs []string, err error) {
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		return
@@ -626,18 +644,32 @@ func tryToGetAppdataDirFromSts(ctx context.Context, namespace, stsName, baseDir 
 	}
 	appDirSet := sets.NewString()
 	for _, v := range sts.Spec.Template.Spec.Volumes {
-		if v.HostPath != nil && strings.HasPrefix(v.HostPath.Path, baseDir) && len(v.HostPath.Path) > len(baseDir) {
-			appDir := GetFirstSubDir(v.HostPath.Path, baseDir)
+		if v.HostPath != nil && strings.HasPrefix(v.HostPath.Path, appCacheDir) && len(v.HostPath.Path) > len(appCacheDir) {
+			appDir := GetFirstSubDir(v.HostPath.Path, appCacheDir)
 			if appDir != "" {
 				if appDirSet.Has(appDir) {
 					continue
 				}
-				appdirs = append(appdirs, appDir)
+				appCacheDirs = append(appCacheDirs, appDir)
 				appDirSet.Insert(appDir)
 			}
 		}
 	}
-	return appdirs, nil
+	appDirSet = sets.NewString()
+
+	for _, v := range sts.Spec.Template.Spec.Volumes {
+		if v.HostPath != nil && strings.HasPrefix(v.HostPath.Path, appDataDir) && len(v.HostPath.Path) > len(appDataDir) {
+			appDir := GetFirstSubDir(v.HostPath.Path, appDataDir)
+			if appDir != "" {
+				if appDirSet.Has(appDir) {
+					continue
+				}
+				appDataDirs = append(appDataDirs, appDir)
+				appDirSet.Insert(appDir)
+			}
+		}
+	}
+	return appCacheDirs, appDataDirs, nil
 }
 
 func GetFirstSubDir(fullPath, basePath string) string {
@@ -674,6 +706,7 @@ type ConfigOptions struct {
 	MarketSource string
 	IsAdmin      bool
 	RawAppName   string
+	SelectedGpu  string
 }
 
 // GetAppConfig get app installation configuration from app store
@@ -740,7 +773,7 @@ func getAppConfigFromRepo(ctx context.Context, options *ConfigOptions) (*appcfg.
 	return getAppConfigFromConfigurationFile(options, chartPath)
 }
 
-func toApplicationConfig(app, chart, rawAppName string, cfg *appcfg.AppConfiguration) (*appcfg.ApplicationConfig, string, error) {
+func toApplicationConfig(app, chart, rawAppName, selectedGpu string, cfg *appcfg.AppConfiguration) (*appcfg.ApplicationConfig, string, error) {
 	var permission []appcfg.AppPermission
 	if cfg.Permission.AppData {
 		permission = append(permission, appcfg.AppDataRW)
@@ -786,6 +819,57 @@ func toApplicationConfig(app, chart, rawAppName string, cfg *appcfg.AppConfigura
 	gpu, err := valuePtr(resource.ParseQuantity(cfg.Spec.RequiredGPU))
 	if err != nil {
 		return nil, chart, err
+	}
+
+	// set suppertedGpu to ["nvidia","nvidia-gb10"] by default
+	if len(cfg.Spec.SupportedGpu) == 0 {
+		cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType}
+	}
+
+	// try to get selected GPU type special resource requirement
+	if selectedGpu != "" {
+		found := false
+		for _, supportedGpu := range cfg.Spec.SupportedGpu {
+			if str, ok := supportedGpu.(string); ok && str == selectedGpu {
+				found = true
+				break
+			}
+
+			if supportedGpuResourceMap, ok := supportedGpu.(map[string]interface{}); ok {
+				if resourceRequirement, ok := supportedGpuResourceMap[selectedGpu].(map[string]interface{}); ok {
+					found = true
+					var specialResource appcfg.SpecialResource
+					err := mapstructure.Decode(resourceRequirement, &specialResource)
+					if err != nil {
+						return nil, chart, fmt.Errorf("failed to decode special resource for selected GPU type %s: %v", selectedGpu, err)
+					}
+
+					for _, resSetter := range []struct {
+						v **resource.Quantity
+						s *string
+					}{
+						{v: &mem, s: specialResource.RequiredMemory},
+						{v: &disk, s: specialResource.RequiredDisk},
+						{v: &cpu, s: specialResource.RequiredCPU},
+						{v: &gpu, s: specialResource.RequiredGPU},
+					} {
+
+						if resSetter.s != nil && *resSetter.s != "" {
+							*resSetter.v, err = valuePtr(resource.ParseQuantity(*resSetter.s))
+							if err != nil {
+								return nil, chart, fmt.Errorf("failed to parse special resource quantity %s: %v", *resSetter.s, err)
+							}
+						}
+					}
+
+					break
+				} // end if selected gpu's resource requirement found
+			} // end if supportedGpu is map
+		} // end for supportedGpu
+
+		if !found {
+			return nil, chart, fmt.Errorf("selected GPU type %s is not supported", selectedGpu)
+		}
 	}
 
 	// transform from Policy to AppPolicy
@@ -877,6 +961,7 @@ func toApplicationConfig(app, chart, rawAppName string, cfg *appcfg.AppConfigura
 		PodsSelectors:        podSelectors,
 		HardwareRequirement:  cfg.Spec.Hardware,
 		SharedEntrances:      cfg.SharedEntrances,
+		SelectedGpuType:      selectedGpu,
 	}, chart, nil
 }
 
@@ -890,7 +975,7 @@ func getAppConfigFromConfigurationFile(opt *ConfigOptions, chartPath string) (*a
 		return nil, chartPath, err
 	}
 
-	return toApplicationConfig(opt.App, chartPath, opt.RawAppName, &cfg)
+	return toApplicationConfig(opt.App, chartPath, opt.RawAppName, opt.SelectedGpu, &cfg)
 }
 
 func checkVersionFormat(constraint string) error {
@@ -1080,12 +1165,27 @@ func IsClonedApp(appName, rawAppName string) bool {
 }
 
 func AppTitle(config string) string {
-	var cfg appcfg.ApplicationConfig
-	err := json.Unmarshal([]byte(config), &cfg)
-	if err != nil {
+	cfg := unmarshalApplicationConfig(config)
+	if cfg == nil {
 		return ""
 	}
 	return cfg.Title
+}
+func AppIcon(config string) string {
+	cfg := unmarshalApplicationConfig(config)
+	if cfg == nil {
+		return ""
+	}
+	return cfg.Icon
+}
+
+func unmarshalApplicationConfig(config string) *appcfg.ApplicationConfig {
+	var cfg appcfg.ApplicationConfig
+	err := json.Unmarshal([]byte(config), &cfg)
+	if err != nil {
+		return nil
+	}
+	return &cfg
 }
 
 func GetRawAppName(AppName, rawAppName string) string {

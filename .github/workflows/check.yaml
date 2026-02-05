@@ -75,7 +75,7 @@ jobs:
     steps:
       - id: generate
         run: |
-          v=1.12.5-$(echo $RANDOM$RANDOM)
+          v=1.12.6-$(echo $RANDOM$RANDOM)
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
   upload-cli:

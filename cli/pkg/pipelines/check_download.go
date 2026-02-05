@@ -3,23 +3,22 @@ package pipelines
 import (
 	"path"
 
-	"github.com/beclab/Olares/cli/cmd/ctl/options"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/phase/download"
+	"github.com/spf13/viper"
 )
 
-func CheckDownloadInstallationPackage(opts *options.CliDownloadOptions) error {
+func CheckDownloadInstallationPackage() error {
 	arg := common.NewArgument()
-	arg.SetOlaresVersion(opts.Version)
-	arg.SetBaseDir(opts.BaseDir)
+	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
 
-	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
+	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
 		return err
 	}
 
-	manifest := opts.Manifest
+	manifest := viper.GetString(common.FlagManifest)
 	if manifest == "" {
 		manifest = path.Join(runtime.GetInstallerDir(), "installation.manifest")
 	}

@@ -170,7 +170,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.4.75
+        image: beclab/app-service:0.5.0
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6755
@@ -196,7 +196,7 @@ spec:
         - name: SYS_APPS
           value: "market,auth,citus,desktop,did,docs,files,fsnotify,headscale,infisical,intentprovider,ksserver,message,mongo,monitoring,notifications,profile,redis,recommend,seafile,search,search-admin,settings,systemserver,tapr,vault,video,zinc,accounts,control-hub,dashboard,nitro,olares-app"
         - name: KB_MIDDLEWARES
-          value: "mongodb,minio,mysql,mariadb,elasticsearch,rabbitmq"
+          value: "mongodb,minio,mysql,mariadb,elasticsearch,rabbitmq,clickhouse"
         - name: GENERATED_APPS
           value: "citus,mongo-cluster-cfg,mongo-cluster-mongos,mongo-cluster-rs0,frp-agent,l4-bfl-proxy,drc-redis-cluster,appdata-backend,argoworkflows,argoworkflow-workflow-controller,velero,kvrocks"
         - name: WS_CONTAINER_IMAGE

@@ -21,9 +21,12 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
+	"golang.org/x/exp/maps"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/emicklei/go-restful/v3"
 	"helm.sh/helm/v3/pkg/time"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,7 +40,7 @@ type depRequest struct {
 type installHelperIntf interface {
 	getAdminUsers() (admin []string, isAdmin bool, err error)
 	getInstalledApps() (installed bool, app []*v1alpha1.Application, err error)
-	getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion string) (err error)
+	getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (err error)
 	setAppConfig(req *api.InstallRequest, appName string)
 	validate(bool, []*v1alpha1.Application) error
 	setAppEnv(overrides []sysv1alpha1.AppEnvVar) error
@@ -105,6 +108,36 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		}
 	}
 
+	// check selected gpu type can be supported
+	// if selectedGpuType != "" , then check if the gpu type exists in cluster
+	// if selectedGpuType == "" , and only one gpu type exists in cluster, then use it
+	var nodes corev1.NodeList
+	err = h.ctrlClient.List(req.Request.Context(), &nodes, &client.ListOptions{})
+	if err != nil {
+		klog.Errorf("list node failed %v", err)
+		api.HandleError(resp, req, err)
+		return
+	}
+	gpuTypes, err := utils.GetAllGpuTypesFromNodes(&nodes)
+	if err != nil {
+		klog.Errorf("get gpu type failed %v", err)
+		api.HandleError(resp, req, err)
+		return
+	}
+
+	if insReq.SelectedGpuType != "" {
+		if _, ok := gpuTypes[insReq.SelectedGpuType]; !ok {
+			klog.Errorf("selected gpu type %s not found in cluster", insReq.SelectedGpuType)
+			api.HandleBadRequest(resp, req, fmt.Errorf("selected gpu type %s not found in cluster", insReq.SelectedGpuType))
+			return
+		}
+	} else {
+		if len(gpuTypes) == 1 {
+			insReq.SelectedGpuType = maps.Keys(gpuTypes)[0]
+			klog.Infof("only one gpu type %s found in cluster, use it as selected gpu type", insReq.SelectedGpuType)
+		}
+	}
+
 	apiVersion, appCfg, err := apputils.GetApiVersionFromAppConfig(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
 		RawAppName:   rawAppName,
@@ -112,6 +145,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		RepoURL:      insReq.RepoURL,
 		MarketSource: marketSource,
 		Version:      chartVersion,
+		SelectedGpu:  insReq.SelectedGpuType,
 	})
 	klog.Infof("chartVersion: %s", chartVersion)
 	if err != nil {
@@ -188,7 +222,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	err = helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion)
+	err = helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, insReq.SelectedGpuType)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return
@@ -423,7 +457,7 @@ func (h *installHandlerHelper) getInstalledApps() (installed bool, app []*v1alph
 	return
 }
 
-func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion string) (err error) {
+func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (err error) {
 	var (
 		admin                   string
 		installAsAdmin          bool
@@ -472,6 +506,7 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 		Admin:        admin,
 		IsAdmin:      installAsAdmin,
 		MarketSource: marketSource,
+		SelectedGpu:  selectedGpuType,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get appconfig err=%v", err)
@@ -685,7 +720,7 @@ func (h *installHandlerHelperV2) _validateClusterScope(isAdmin bool, installedAp
 	return nil
 }
 
-func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion string) (err error) {
+func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (err error) {
 	klog.Info("get app config for install handler v2")
 
 	var (
@@ -713,6 +748,7 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 		Admin:        admin,
 		MarketSource: marketSource,
 		IsAdmin:      isAdmin,
+		SelectedGpu:  selectedGpuType,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get appconfig err=%v", err)

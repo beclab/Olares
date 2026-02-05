@@ -13,9 +13,9 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,6 +44,29 @@ func (r *downloadingInProgressApp) WaitAsync(ctx context.Context) {
 				}
 			}
 			// if the download is finished with error, we should not update the status to installing
+			return
+		}
+
+		// Check Kubernetes request resources before transitioning to Installing
+		var appConfig *appcfg.ApplicationConfig
+		if err := json.Unmarshal([]byte(r.manager.Spec.Config), &appConfig); err != nil {
+			klog.Errorf("failed to unmarshal app config for %s: %v", r.manager.Spec.AppName, err)
+			updateErr := r.updateStatus(context.TODO(), r.manager, appsv1.InstallFailed, nil, fmt.Sprintf("invalid app config: %v", err), "")
+			if updateErr != nil {
+				klog.Errorf("update app manager %s to %s state failed %v", r.manager.Name, appsv1.InstallFailed.String(), updateErr)
+			}
+			return
+		}
+
+		_, conditionType, checkErr := apputils.CheckAppK8sRequestResource(appConfig, r.manager.Spec.OpType)
+		if checkErr != nil {
+			klog.Errorf("k8s request resource check failed for app %s: %v", r.manager.Spec.AppName, checkErr)
+			opRecord := makeRecord(r.manager, appsv1.InstallFailed, checkErr.Error())
+			updateErr := r.updateStatus(context.TODO(), r.manager, appsv1.InstallFailed, opRecord, checkErr.Error(), string(conditionType))
+			if updateErr != nil {
+				klog.Errorf("update app manager %s to %s state failed %v", r.manager.Name, appsv1.InstallFailed.String(), updateErr)
+			}
+
 			return
 		}
 
@@ -152,19 +175,8 @@ func (p *DownloadingApp) exec(ctx context.Context) error {
 		},
 	}
 
-	var nodes corev1.NodeList
-	err = p.client.List(ctx, &nodes, &client.ListOptions{})
-	if err != nil {
-		klog.Errorf("list node failed %v", err)
-		return err
-	}
-	gpuType, err := utils.FindGpuTypeFromNodes(&nodes)
-	if err != nil {
-		klog.Errorf("get gpu type failed %v", gpuType)
-		return err
-	}
 	values["GPU"] = map[string]interface{}{
-		"Type": gpuType,
+		"Type": appConfig.GetSelectedGpuTypeValue(),
 		"Cuda": os.Getenv("OLARES_SYSTEM_CUDA_VERSION"),
 	}
 

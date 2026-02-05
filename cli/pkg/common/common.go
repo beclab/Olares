@@ -23,31 +23,19 @@ import (
 const (
 	DefaultK8sVersion          = "v1.33.3"
 	DefaultK3sVersion          = "v1.33.3-k3s"
-	DefaultKubernetesVersion   = ""
-	DefaultKubeSphereVersion   = "v3.3.0"
 	CurrentVerifiedCudaVersion = "13.1"
 )
 
 const (
-	K3s        = "k3s"
-	K8e        = "k8e"
-	Kubernetes = "kubernetes"
+	K3s = "k3s"
 
 	LocalHost = "localhost"
 
-	AllInOne    = "allInOne"
-	File        = "file"
-	Operator    = "operator"
-	CommandLine = "commandLine"
-
-	Master        = "master"
-	Worker        = "worker"
-	ETCD          = "etcd"
-	K8s           = "k8s"
-	Registry      = "registry"
-	KubeKey       = "kubekey"
-	Harbor        = "harbor"
-	DockerCompose = "compose"
+	Master   = "master"
+	Worker   = "worker"
+	ETCD     = "etcd"
+	K8s      = "k8s"
+	Registry = "registry"
 
 	KubeBinaries      = "KubeBinaries"
 	WslBinaries       = "WslBinaries"
@@ -58,23 +46,14 @@ const (
 	BinDir                       = "/usr/local/bin"
 	KubeConfigDir                = "/etc/kubernetes"
 	KubeAddonsDir                = "/etc/kubernetes/addons"
-	KubeEtcdCertDir              = "/etc/kubernetes/etcd"
 	KubeCertDir                  = "/etc/kubernetes/pki"
 	KubeManifestDir              = "/etc/kubernetes/manifests"
 	KubeScriptDir                = "/usr/local/bin/kube-scripts"
 	KubeletFlexvolumesPluginsDir = "/usr/libexec/kubernetes/kubelet-plugins/volume/exec"
-	K3sImageDir                  = "/var/lib/images"
 	MinikubeDefaultProfile       = "olares-0"
-	MinikubeEtcdCertDir          = "/var/lib/minikube/certs/etcd"
 	WSLDefaultDistribution       = "Ubuntu"
-	RunLockDir                   = "/var/run/lock"
 
-	InstallerScriptsDir = "scripts"
-
-	ETCDCertDir     = "/etc/ssl/etcd/ssl"
-	RegistryCertDir = "/etc/ssl/registry/ssl"
-
-	HaproxyDir = "/etc/kubekey/haproxy"
+	ETCDCertDir = "/etc/ssl/etcd/ssl"
 
 	IPv4Regexp = "[\\d]+\\.[\\d]+\\.[\\d]+\\.[\\d]+"
 	IPv6Regexp = "[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){0,7}::[a-f0-9]{0,4}(:[a-f0-9]{1,4}){0,7}"
@@ -85,7 +64,6 @@ const (
 	Kubeovn = "kubeovn"
 
 	Docker     = "docker"
-	Crictl     = "crictl"
 	Containerd = "containerd"
 	Crio       = "crio"
 	Isula      = "isula"
@@ -94,14 +72,8 @@ const (
 	// global cache key
 	// PreCheckModule
 	NodePreCheck           = "nodePreCheck"
-	K8sVersion             = "k8sVersion"        // current k8s version
-	MaxK8sVersion          = "maxK8sVersion"     // max k8s version of nodes
-	KubeSphereVersion      = "kubeSphereVersion" // current KubeSphere version
 	ClusterNodeStatus      = "clusterNodeStatus"
 	ClusterNodeCRIRuntimes = "ClusterNodeCRIRuntimes"
-	DesiredK8sVersion      = "desiredK8sVersion"
-	PlanK8sVersion         = "planK8sVersion"
-	NodeK8sVersion         = "NodeK8sVersion"
 
 	// ETCDModule
 	ETCDCluster = "etcdCluster"
@@ -113,15 +85,6 @@ const (
 	ClusterExist  = "clusterExist"
 
 	MasterInfo = "masterInfo"
-
-	// CertsModule
-	Certificate   = "certificate"
-	CaCertificate = "caCertificate"
-
-	// Artifact pipeline
-	Artifact = "artifact"
-
-	SkipMasterNodePullImages = "skipMasterNodePullImages"
 )
 
 const (
@@ -147,16 +110,6 @@ const (
 	Fedora   = "fedora"
 	RHEl     = "rhel"
 	Raspbian = "raspbian"
-	PVE      = "pve"
-	WSL      = "wsl"
-)
-
-const (
-	TRUE  = "true"
-	FALSE = "false"
-
-	YES = "yes"
-	NO  = "no"
 )
 
 const (
@@ -271,30 +224,82 @@ const (
 	ENV_OLARES_VERSION              = "OLARES_VERSION"
 	ENV_TERMINUS_IS_CLOUD_VERSION   = "TERMINUS_IS_CLOUD_VERSION"
 	ENV_KUBE_TYPE                   = "KUBE_TYPE"
-	ENV_REGISTRY_MIRRORS            = "REGISTRY_MIRRORS"
 	ENV_OLARES_CDN_SERVICE          = "OLARES_SYSTEM_CDN_SERVICE"
-	ENV_STORAGE                     = "STORAGE"
-	ENV_S3_BUCKET                   = "S3_BUCKET"
 	ENV_LOCAL_GPU_ENABLE            = "LOCAL_GPU_ENABLE"
-	ENV_AWS_ACCESS_KEY_ID_SETUP     = "AWS_ACCESS_KEY_ID_SETUP"
-	ENV_AWS_SECRET_ACCESS_KEY_SETUP = "AWS_SECRET_ACCESS_KEY_SETUP"
-	ENV_AWS_SESSION_TOKEN_SETUP     = "AWS_SESSION_TOKEN_SETUP"
-	ENV_BACKUP_KEY_PREFIX           = "BACKUP_KEY_PREFIX"
-	ENV_BACKUP_SECRET               = "BACKUP_SECRET"
-	ENV_CLUSTER_ID                  = "CLUSTER_ID"
-	ENV_BACKUP_CLUSTER_BUCKET       = "BACKUP_CLUSTER_BUCKET"
 	ENV_HOST_IP                     = "HOST_IP"
 	ENV_PREINSTALL                  = "PREINSTALL"
 	ENV_DISABLE_HOST_IP_PROMPT      = "DISABLE_HOST_IP_PROMPT"
 	ENV_AUTO_ADD_FIREWALL_RULES     = "AUTO_ADD_FIREWALL_RULES"
-	ENV_TERMINUS_OS_DOMAINNAME      = "TERMINUS_OS_DOMAINNAME"
 	ENV_DEFAULT_WSL_DISTRO_LOCATION = "DEFAULT_WSL_DISTRO_LOCATION" // If set to 1, the default WSL distro storage will be used.
 
-	ENV_CONTAINER      = "container"
 	ENV_CONTAINER_MODE = "CONTAINER_MODE" // running in docker container
 
 	OLARES_SYSTEM_ENV_FILENAME = "system-env.yaml"
 	OLARES_USER_ENV_FILENAME   = "user-env.yaml"
+)
+
+const (
+	FlagVersion = "version"
+	FlagBaseDir = "base-dir"
+
+	FlagWSLDistribution       = "wsl-distribution"
+	FlagLegacyWSLDistribution = "distribution"
+
+	FlagMasterHost              = "master-host"
+	FlagMasterNodeName          = "master-node-name"
+	FlagMasterSSHUser           = "master-ssh-user"
+	FlagMasterSSHPassword       = "master-ssh-password"
+	FlagMasterSSHPrivateKeyPath = "master-ssh-private-key-path"
+	FlagMasterSSHPort           = "master-ssh-port"
+
+	FlagOSUserName      = "os-username"
+	EnvLegacyOSUserName = "TERMINUS_OS_USERNAME"
+
+	FlagOSDomainName      = "os-domainname"
+	EnvLegacyOSDomainName = "TERMINUS_OS_DOMAINNAME"
+
+	FlagOSPassword               = "os-password"
+	EnvLegacyEncryptedOSPassword = "TERMINUS_OS_PASSWORD"
+
+	FlagCDNService          = "cdn-service"
+	FlagExtract             = "extract"
+	FlagIgnoreMissingImages = "ignore-missing-images"
+	FlagManifest            = "manifest"
+	FlagURLOverride         = "url-override"
+	FlagReleaseID           = "release-id"
+	FlagKubeType            = "kube-type"
+	FlagLegacyKubeType      = "kube"
+
+	FlagEnableJuiceFS       = "enable-juicefs"
+	FlagLegacyEnableJuiceFS = "with-juicefs"
+	EnvLegacyEnableJuiceFS  = "JUICEFS"
+
+	FlagMiniKubeProfile       = "minikube-profile"
+	FlagLegacyMiniKubeProfile = "profile"
+
+	FlagEnableReverseProxy = "enable-reverse-proxy"
+	FlagEnablePodSwap      = "enable-pod-swap"
+	FlagSwappiness         = "swappiness"
+	FlagEnableZRAM         = "enable-zram"
+	FlagZRAMSize           = "zram-size"
+	FlagZRAMSwapPriority   = "zram-swap-priority"
+	FlagRegistryMirrors    = "registry-mirrors"
+
+	FlagStorageType       = "storage-type"
+	FlagLegacyStorageType = "storage"
+
+	FlagS3Bucket                = "s3-bucket"
+	FlagBackupKeyPrefix         = "backup-key-prefix"
+	FlagAWSAccessKeyIDSetup     = "aws-access-key-id-setup"
+	FlagAWSSecretAccessKeySetup = "aws-secret-access-key-setup"
+	FlagAWSSessionTokenSetup    = "aws-session-token-setup"
+	FlagClusterID               = "cluster-id"
+	FlagBackupSecret            = "backup-secret"
+	FlagBackupClusterBucket     = "backup-cluster-bucket"
+	FlagIsCloudVersion          = "is-cloud-version"
+
+	FlagUninstallPhase = "uninstall-phase"
+	FlagUninstallAll   = "uninstall-all"
 )
 
 func SetSystemEnv(key, value string) {
