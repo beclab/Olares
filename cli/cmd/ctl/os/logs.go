@@ -648,7 +648,7 @@ func checkServiceExists(service string) bool {
 func NewCmdLogs() *cobra.Command {
 	options := &LogCollectOptions{
 		Since:            "7d",
-		MaxLines:         3000,
+		MaxLines:         20000,
 		OutputDir:        "./olares-logs",
 		IgnoreKubeErrors: false,
 	}
