@@ -27,4 +27,4 @@ Olares Studio 是专为加速应用开发周期而设计的开发平台。它提
 ## 第三步：提交应用
 应用构建并打包完毕后，即可将其分享给 Olares 社区。
 
-* **[提交至 Market](./submit/index.md)**： 了解如何将应用提交至 Olares Market 以进行审核与分发。
+* **[提交至 Market](/zh/developer/develop/distribute-index.md)**： 了解如何将应用提交至 Olares Market 以进行审核与分发。
