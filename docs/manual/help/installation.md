@@ -87,7 +87,7 @@ The request to the binding-zone interface failed due to a network timeout. This 
 
 ### What does this error message mean: "Invalid jws, timestamp is out of range"?
 
-This occurs when there is a significant time difference (greater than 20 minutes) between the device running LarePass and the Olares server. Check the system time on your computer or phone and ensure it is synced correctly with internet time.
+This occurs when there is a significant time difference (greater than 20 minutes) between the device running LarePass and the Olares device. Check the system time on your computer or phone and ensure it is synced correctly with internet time.
 
 ### I see a `Resolve name error` during setup. How to fix it?
 
