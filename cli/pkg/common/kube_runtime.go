@@ -385,6 +385,10 @@ func (a *Argument) loadMasterHostConfig() {
 	}
 }
 
+func (a *Argument) ClearMasterHostConfig() {
+	a.MasterHostConfig = &MasterHostConfig{}
+}
+
 func (a *Argument) SetManifest(manifest string) {
 	a.Manifest = manifest
 }
