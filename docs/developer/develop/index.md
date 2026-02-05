@@ -27,4 +27,4 @@ To publish your application to the Olares Market, you must structure it accordin
 ## Step 3: Submit your application
 Once your application is built and packaged, the final step is to share it with the Olares community.
 
-* **[Submit to Market](./submit/index.md)**: Learn how to submit your application to the Olares Market for review and distribution.
+* **[Submit to Market](/developer/develop/distribute-index.md)**: Learn how to submit your application to the Olares Market for review and distribution.
