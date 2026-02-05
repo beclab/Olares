@@ -17,7 +17,7 @@ const side = {
               link: "/manual/help/olares",
             },
             {
-              text: "Installation FAQs",
+              text: "Setup & access FAQs",
               link: "/manual/help/installation",
             },
             {

@@ -78,11 +78,11 @@ grep password $HOME/.olares/versions/v1.12.2/logs/install.log
 
 详见[使用蓝牙激活 Olares](../larepass/activate-olares.md#通过蓝牙激活)。
 
-### 创建账户时，收到错误提示MFA 绑定失败，怎么解决？
+### 创建账户时，收到错误提示 MFA 绑定失败，怎么解决？
 
 这表示，因网络超时，绑定多因素认证 (MFA) 的请求失败（`MFA binding error`）。检查网络连接并重试设置流程。
 
-### 激活账户时，收到错误提示DID 绑定失败，怎么解决？
+### 激活账户时，收到错误提示 DID 绑定失败，怎么解决？
 
 账户激活期间，遇到请求 binding-zone 接口失败（`DID binding error`），通常是由于网络超时。请确保网络稳定，点击重试。
 
@@ -92,7 +92,7 @@ grep password $HOME/.olares/versions/v1.12.2/logs/install.log
 
 ### 设置过程中出现域名解析错误，怎么处理？
 
-该报错（`Resolve name error`）表明 Olares 设备与 DID（数字身份）服务之间网络通讯失败。检查 Olares 设备网络链接，确保网络连接通畅。
+该报错（`Resolve name error`）表明 Olares 设备无法连接到 Olares 身份服务，通常由网络问题引起。请检查网络连接，并确保 Olares 设备具备正常的网络访问权限。
 
 ## 登录与认证
 
@@ -102,7 +102,7 @@ grep password $HOME/.olares/versions/v1.12.2/logs/install.log
 
 ### “登录失败，用户未找到”是什么原因？
 
-这表示系统未找到与用户名关联的账户。请核实该用户名是否正确，并确认该用户名已在Olares上注册创建。
+这表示系统未找到与用户名关联的账户。请核实该用户名是否正确，并确认该用户名已在 Olares 上注册。
 
 ### 收到“登录失败，lldap未查询到该用户”的报错，该怎么处理？
 
@@ -114,11 +114,11 @@ grep password $HOME/.olares/versions/v1.12.2/logs/install.log
 
 ### 提示“登录失败，磁盘空间已满”，怎么解决？
 
-这表示您的 Olares 设备存储已满，导致认证服务无法正常运行。请清理设备磁盘空间以解决这个问题。
+这表示你的 Olares 设备存储已满，导致认证服务无法正常运行。请清理设备磁盘空间以解决这个问题。
 
 ### “登录失败，lldap服务异常”，如何解决？
 
-这表示 Olares 设备上的内部身份服务 (LLDAP) 未运行或出现异常。重启 LLDAP 服务或 Olares 设备，然后重试。
+这表示 Olares 设备上的内部身份服务 (LLDAP) 未运行或出现异常。重启 Olares 设备并重试，或联系管理员。
 
 ### “登录失败，citus服务异常”，什么意思？
 

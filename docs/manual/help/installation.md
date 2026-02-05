@@ -89,36 +89,36 @@ The request to the binding-zone interface failed due to a network timeout. This 
 
 This occurs when there is a significant time difference (greater than 20 minutes) between the device running LarePass and the Olares device. Check the system time on your computer or phone and ensure it is synced correctly with internet time.
 
-### I see a `Resolve name error` during setup. How to fix it?
+### I see this error message during setup: "Resolve name error". How to fix it?
 
-This indicates a network communication failure between your Olares device and the DID service. Check your internet connection and ensure your Olares device has proper network access.
+This error means your Olares device cannot connect to the Olares identity service, which is usually caused by the network issue. Check your internet connection and ensure your Olares device has proper network access.
 
 ## Login and authentication
 
-### What should I do when I see `Authentication failed, incorrect password`?
+### What should I do when I see "Authentication failed, incorrect password"?
 
 This indicates the password entered is not accurate. Double-check your password for issues like typos or case sensitivity and try again.
 
-### What does `Authentication failed, user not found` mean?
+### What does this mean: "Authentication failed, user not found"?
 
-The system cannot find an account associated with the username entered. Verify that the username is correct and that the account has been created on the Olares device.
+The system cannot find an account associated with the username entered. Verify that the username is correct and this username is already registered on Olares.
 
-### I received an error saying `Authentication failed, failed to query user from lldap service`. How to resolve it?
+### I received an error saying "Authentication failed, failed to query user from lldap service". How to resolve it?
 
 The system was unable to retrieve user details from the internal directory. This might happen if the user data is corrupted or if the service is momentarily busy. Try again or contact your administrator.
 
-### I am locked out with the message `too many failed login attempts, retry again later after 5 minutes`. What should I do?
+### I am locked out with the message "too many failed login attempts, retry again later after 5 minutes". What should I do?
 
 For security reasons, the system temporarily locks logins after multiple incorrect attempts. Wait for 5 minutes and then try logging in again.
 
-### Why am I getting `Authentication failed, disk space is full`?
+### Why am I getting "Authentication failed, disk space is full"?
 
 Your Olares device storage is completely full, which prevents the authentication service from running correctly. Free up disk space on the device to resolve this issue.
 
-### What does `Authentication failed, lldap service is unavailable` mean?
+### What does this error message mean: "Authentication failed, lldap service is unavailable"?
 
-The internal identity service "LLDAP" on your Olares device is not running or is experiencing issues. Restart the LLDAP service or the Olares device and try again.
+The internal identity service "LLDAP" on your Olares device is not running or is experiencing issues. Restart the Olares device and try again, or contact your administrator.
 
-### What does `Authentication failed, citus service is unavailable` mean?
+### What does this error message mean: "Authentication failed, citus service is unavailable"?
 
 The internal database service "Citus" is currently unavailable. This is usually a temporary system issue. Restart your Olares device.
