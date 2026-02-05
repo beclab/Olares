@@ -47,9 +47,11 @@ jobs:
       - name: Setup Multi-arch for ARM64 libraries
         run: |
           sudo dpkg --add-architecture arm64
-          sudo sed -i 's/deb http/deb [arch=amd64] http/g' /etc/apt/sources.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -cs) main universe restricted multiverse" | sudo tee -a /etc/apt/sources.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -cs)-updates main universe restricted multiverse" | sudo tee -a /etc/apt/sources.list
+          sudo sed -i 's|deb http|deb [arch=amd64] http|g' /etc/apt/sources.list.d/*.list || true
+          sudo sed -i 's|deb http|deb [arch=amd64] http|g' /etc/apt/sources.list || true
+          echo "deb [arch=arm64] http://ports.ubuntu.com noble main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com noble-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com noble-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
 
       - name: Install dependencies and cross-compilers
         run: |
