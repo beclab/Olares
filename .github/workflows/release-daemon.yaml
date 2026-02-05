@@ -44,20 +44,26 @@ jobs:
         with:
           go-version: 1.24.11
 
-      - name: install udev-devel and pcap-devel
+      - name: Setup Multi-arch for ARM64 libraries
         run: |
-          sudo apt update && sudo apt install -y libudev-dev libpcap-dev
+          sudo dpkg --add-architecture arm64
+          sudo sed -i 's/deb http/deb [arch=amd64] http/g' /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -cs) main universe restricted multiverse" | sudo tee -a /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -cs)-updates main universe restricted multiverse" | sudo tee -a /etc/apt/sources.list
 
-      - name: Install x86_64 cross-compiler
-        run: sudo apt-get update && sudo apt-get install -y build-essential
-
-      - name: Install ARM cross-compiler
-        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Install dependencies and cross-compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libudev-dev libpcap-dev
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo apt-get install -y libudev-dev:arm64 libpcap-dev:arm64
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v3.1.0
         env:
           OLARES_RELEASE_ID: ${{ inputs.release-id }}
+          CC_linux_arm64: aarch64-linux-gnu-gcc
+          CXX_linux_arm64: aarch64-linux-gnu-g++
         with:
           distribution: goreleaser
           workdir: './daemon'
