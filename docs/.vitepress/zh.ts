@@ -429,7 +429,7 @@ const side = {
         },
         {
           text: "本地访问 Olares",
-          link: "/zh/manual/best-practices/local-access",
+          link: "/manual/best-practices/local-access",
         },
       ],
     },
@@ -615,7 +615,6 @@ const side = {
           link: "/zh/developer/install/cli/olares-cli",
           collapsed: true,
           items: [
-            { text: "访问 Olares 终端", link: "/zh/developer/reference/access-olares-terminal" },
             {
               text: "backups",
               link: "/zh/developer/install/cli/backups",
@@ -774,29 +773,154 @@ const side = {
         //         },
         //       ],
         //      },
+{
+          text: "中间件",
+          link: "/zh/developer/develop/mw-overview",
+          collapsed: true,
+          items: [
+            {
+              text: "Elasticsearch",
+              collapsed: true,
+              items :[
+                {
+                  text: "集成 Elasticsearch",
+                  link: "zh/developer/develop/mw-integrate-with-es",                },
+                {
+                  text: "查看 Elasticsearch 数据",
+                  link: "zh/developer/develop/mw-view-es-data",
+                },
+              ]
+            },
+            {
+              text: "Grafana",
+              link: "zh/developer/develop/mw-view-grafana-data",
+            },
+            {
+              text: "MariaDB",
+              collapsed: true,
+              items :[
+                {
+                  text: "集成 MariaDB",
+                  link: "zh/developer/develop/mw-integrate-with-mariadb",                },
+                {
+                  text: "查看 MariaDB 数据",
+                  link: "zh/developer/develop/mw-view-mariadb-data",
+                },
+              ]
+            },
+            {
+              text: "MinIO",
+              collapsed: true,
+              items :[
+                {
+                  text: "集成 MinIO",
+                  link: "zh/developer/develop/mw-integrate-with-minio",                },
+                {
+                  text: "查看 MinIO 数据",
+                  link: "zh/developer/develop/mw-view-minio-data",
+                },
+              ]
+            },
+            {
+              text: "MongoDB",
+              collapsed: true,
+              items :[
+                {
+                  text: "集成 MongoDB",
+                  link: "zh/developer/develop/mw-integrate-with-mongodb",                },
+                {
+                  text: "查看 MongoDB 数据",
+                  link: "zh/developer/develop/mw-view-mongodb-data",
+                },
+              ]
+            }, 
+            {
+              text: "MySQL",
+              collapsed: true,
+              items :[
+                {
+                  text: "集成 MySQL",
+                  link: "zh/developer/develop/mw-integrate-with-mysql",                },
+                {
+                  text: "查看 MySQL 数据",
+                  link: "zh/developer/develop/mw-view-mysql-data",
+                },
+              ]
+            },           
+            {
+              text: "NATS",
+              link :"zh/developer/develop/mw-view-nats-data",
+            },
+            {
+              text: "OpenTelemetry",
+              link :"zh/developer/develop/mw-view-otel-data",
+            },
+            {
+              text: "PostgreSQL",
+              collapsed: true,
+              items :[
+                {
+                  text: "集成 PostgreSQL",
+                  link: "zh/developer/develop/mw-integrate-with-pg",                },
+                {
+                  text: "查看 PostgreSQL 数据",
+                  link: "zh/developer/develop/mw-view-pg-data",
+                }
+              ]
+            },
+            {
+              text: "RabbitMQ",
+              collapsed: true,
+              items :[
+                {
+                  text: "集成 RabbitMQ",
+                  link: "zh/developer/develop/mw-integrate-with-rabbitmq",                },
+                {
+                  text: "查看 RabbitMQ 数据",
+                  link: "zh/developer/develop/mw-view-rabbitmq-data",
+                }
+              ]
+            },
+            {
+              text: "Redis",
+              collapsed: true,
+              items :[
+                {
+                  text: "集成 Redis",
+                  link: "zh/developer/develop/mw-integrate-with-redis",                },
+                {
+                  text: "查看 Redis 数据",
+                  link: "zh/developer/develop/mw-view-redis-data",
+                },
+              ]
+            },
+          ]
+        },
+        
       ],
     },
     {
       text: "分发 Olares 应用",
       link: "/zh/developer/develop/distribute-index",
-      items: [
+      items: [ 
         {
           text: "提交应用",
           link: "/zh/developer/develop/submit-apps",
-        },
+        },         
         {
           text: "管理应用",
           link: "/zh/developer/develop/manage-apps",
         },
         {
           text: "推广应用",
-          link: "/zh/developer/develop/promote-apps",
+          link:"/zh/developer/develop/promote-apps"
         },
         {
-          text: "付费应用",
+          text: "发布付费应用",
           link: "/zh/developer/develop/paid-apps",
         },
-      ]
+        
+      ],
     },
     {
       text: "参与贡献",

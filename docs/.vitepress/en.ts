@@ -785,6 +785,129 @@ const side = {
         //      },
         //   ],
         //   },
+        {
+          text: "Middleware",
+          link: "/developer/develop/mw-overview",
+          collapsed: true,
+          items: [
+            {
+              text: "Elasticsearch",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with Elasticsearch",
+                  link: "/developer/develop/mw-integrate-with-es",                },
+                {
+                  text: "View Elasticsearch data",
+                  link: "/developer/develop/mw-view-es-data",
+                },
+              ]
+            },
+            {
+              text: "Grafana",
+              link :"/developer/develop/mw-view-grafana-data",
+            },
+            {
+              text: "MariaDB",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with MariaDB",
+                  link: "/developer/develop/mw-integrate-with-mariadb",                },
+                {
+                  text: "View MariaDB data",
+                  link: "/developer/develop/mw-view-mariadb-data",
+                },
+              ]
+            },
+            {
+              text: "MinIO",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with MinIO",
+                  link: "/developer/develop/mw-integrate-with-minio",                },
+                {
+                  text: "View MinIO data",
+                  link: "/developer/develop/mw-view-minio-data",
+                },
+              ]
+            },
+            {
+              text: "MongoDB",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with MongoDB",
+                  link: "/developer/develop/mw-integrate-with-mongodb",                },
+                {
+                  text: "View MongoDB data",
+                  link: "/developer/develop/mw-view-mongodb-data",
+                },
+              ]
+            },
+            {
+              text: "MySQL",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with MySQL",
+                  link: "/developer/develop/mw-integrate-with-mysql",                },
+                {
+                  text: "View MySQL data",
+                  link: "/developer/develop/mw-view-mysql-data",
+                },
+              ]
+            },  
+            {
+              text: "NATS",
+              link :"/developer/develop/mw-view-nats-data",
+            },
+            {
+              text: "OpenTelemetry",
+              link :"/developer/develop/mw-view-otel-data",
+            },
+            {
+              text: "PostgreSQL",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with PostgreSQL",
+                  link: "/developer/develop/mw-integrate-with-pg",                },
+                {
+                  text: "View PostgreSQL data",
+                  link: "/developer/develop/mw-view-pg-data",
+                }
+              ]
+            },
+            {
+              text: "RabbitMQ",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with RabbitMQ",
+                  link: "/developer/develop/mw-integrate-with-rabbitmq",                },
+                {
+                  text: "View RabbitMQ data",
+                  link: "/developer/develop/mw-view-rabbitmq-data",
+                }
+              ]
+            },
+            {
+              text: "Redis",
+              collapsed: true,
+              items :[
+                {
+                  text: "Integrate with Redis",
+                  link: "/developer/develop/mw-integrate-with-redis",                },
+                {
+                  text: "View Redis data",
+                  link: "/developer/develop/mw-view-redis-data",
+                }
+              ]
+            },
+          ]
+        },
       ],
     },
     {
@@ -807,6 +930,7 @@ const side = {
           text: "Publish paid apps",
           link: "/developer/develop/paid-apps",
         },
+        
       ],
     },
     {
