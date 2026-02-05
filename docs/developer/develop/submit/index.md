@@ -23,7 +23,7 @@ Before distributing your application, it helps to understand a few core concepts
 
 - **Application index**
 
-    A service that provides application metadata to Olares Market. Olares includes a default public index, and developers may deploy their own.
+    A service that provides application metadata to Olares Market. Olares includes a default public index, and developers can deploy their own.
 
 - **GitBot**
 
