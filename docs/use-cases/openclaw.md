@@ -77,27 +77,6 @@ Run a quick setup for the agent in the OpenClaw CLI.
     |Enable hooks|Skip for now|
     |Hatch your bot|Do this later|
     
-<!--a. **I understand this is powerful and inherently risky. Continue?**: Select **Yes**.
-    
-    b. **Onboarding mode**: Select **QuickStart**.
-
-    c. **Config handling**: Select **Use existing values**.
-
-    d. **Model/auth provider**: Select **Skip for now** (we will configure the local model later).
-
-    e. **Filter models**: Select **All providers**.
-
-    f. **Default model**: Select **Keep current**.
-
-    g. **Select channel**: Select **Skip for now** (we will configure Discord later).
-
-    h. **Configure skills now**: Select **No**.
-
-    i. **Enable hooks**: Select **Skip for now**.
-
-    j. **Hatch your bot**: Select **Do this later**.
--->
-
 4. After you complete the wizard, scroll up to the **Control UI** section.
 5. Copy and save the token displayed in the **Web UI (with token)**. 
 6. Keep the CLI window open for the next step.
@@ -204,7 +183,6 @@ Configure the Discord channel in Control UI.
 
     b. Enable Discord DM and set the Discord DM Policy to **Pairing**.
 
-
     ```json
     "channels": {
         "discord": {
@@ -256,7 +234,7 @@ OpenClaw officially recommends Brave Search. Unlike other providers, Brave Searc
     |Where will the Gateway run|Local (this machine)|
     |Enable web_search (Brave Search)|Yes|
     |Brave Search API key| Your `BraveSearchAPIkey` |
-    |Enable web_fetch (keyless HTTP fetch)<br> |Yes|
+    |Enable web_fetch (keyless HTTP <br>fetch) |Yes|
 
 4. Finalize the configuration in Control UI.
 
