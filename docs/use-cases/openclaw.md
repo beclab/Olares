@@ -66,7 +66,7 @@ Run a quick setup for the agent in the OpenClaw CLI.
 
     | Settings | Option |
     |:-------- |:-------|
-    |I understand this is powerful and inherently risky. Continue?|Yes|
+    |I understand this is powerful and inherently <br>risky. Continue?|Yes|
     |Onboarding mode|QuickStart|
     |Config handling|Use existing values|
     |Model/auth provider|Skip for now|
@@ -256,7 +256,7 @@ OpenClaw officially recommends Brave Search. Unlike other providers, Brave Searc
     |Where will the Gateway run|Local (this machine)|
     |Enable web_search (Brave Search)|Yes|
     |Brave Search API key| Your `BraveSearchAPIkey` |
-    |Enable web_fetch (keyless HTTP fetch)|Yes|
+    |Enable web_fetch (keyless HTTP fetch)<br> |Yes|
 
 4. Finalize the configuration in Control UI.
 
