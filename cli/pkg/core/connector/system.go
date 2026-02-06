@@ -76,6 +76,8 @@ type Systems interface {
 	IsPveOrPveLxc() bool
 	IsRaspbian() bool
 	IsLinux() bool
+	IsGB10Chip() bool
+	IsAmdApu() bool
 
 	IsUbuntu() bool
 	IsDebian() bool
@@ -111,16 +113,17 @@ type Systems interface {
 }
 
 type SystemInfo struct {
-	HostInfo   *HostInfo       `json:"host"`
-	CpuInfo    *CpuInfo        `json:"cpu"`
-	DiskInfo   *DiskInfo       `json:"disk"`
-	MemoryInfo *MemoryInfo     `json:"memory"`
-	FsInfo     *FileSystemInfo `json:"filesystem"`
-	CgroupInfo *CgroupInfo     `json:"cgroup,omitempty"`
-	LocalIp    string          `json:"local_ip"`
-	NatGateway string          `json:"nat_gateway"`
-	PkgManager string          `json:"pkg_manager"`
-	IsOIC      bool            `json:"is_oic,omitempty"`
+	HostInfo    *HostInfo       `json:"host"`
+	CpuInfo     *CpuInfo        `json:"cpu"`
+	DiskInfo    *DiskInfo       `json:"disk"`
+	MemoryInfo  *MemoryInfo     `json:"memory"`
+	FsInfo      *FileSystemInfo `json:"filesystem"`
+	CgroupInfo  *CgroupInfo     `json:"cgroup,omitempty"`
+	LocalIp     string          `json:"local_ip"`
+	NatGateway  string          `json:"nat_gateway"`
+	PkgManager  string          `json:"pkg_manager"`
+	IsOIC       bool            `json:"is_oic,omitempty"`
+	ProductName string          `json:"product_name,omitempty"`
 }
 
 func (s *SystemInfo) IsSupport() error {
@@ -233,6 +236,14 @@ func (s *SystemInfo) IsRaspbian() bool {
 
 func (s *SystemInfo) IsLinux() bool {
 	return s.HostInfo.OsType == common.Linux
+}
+
+func (s *SystemInfo) IsGB10Chip() bool {
+	return s.CpuInfo.IsGB10Chip
+}
+
+func (s *SystemInfo) IsAmdApu() bool {
+	return s.CpuInfo.HasAmdiGpu
 }
 
 func (s *SystemInfo) IsUbuntu() bool {
@@ -437,6 +448,8 @@ type CpuInfo struct {
 	CpuModel         string `json:"cpu_model"`
 	CpuLogicalCount  int    `json:"cpu_logical_count"`
 	CpuPhysicalCount int    `json:"cpu_physical_count"`
+	IsGB10Chip       bool   `json:"is_gb10_chip,omitempty"`
+	HasAmdiGpu       bool   `json:"has_amd_igpu,omitempty"`
 }
 
 func getCpu() *CpuInfo {
@@ -452,10 +465,36 @@ func getCpu() *CpuInfo {
 		cpuModel = cpuInfo[0].ModelName
 	}
 
+	// check if is GB10 chip
+	isGB10Chip := false
+
+	// In Linux systems, it is recognized via lspci as "NVIDIA Corporation Device 2e12 (rev a1)
+	// or NVIDIA Corporation GB20B [GB10] (rev a1)
+	cmd := exec.Command("sh", "-c", "lspci | grep -i vga | egrep 'GB10|2e12'")
+	output, err := cmd.Output()
+	if err == nil && strings.TrimSpace(string(output)) != "" {
+		isGB10Chip = true
+	} else {
+		fmt.Printf("Error checking GB10 chip: %v\n", err)
+		gb10env := os.Getenv(common.ENV_GB10_CHIP)
+		if gb10env == "1" || strings.EqualFold(gb10env, "true") {
+			isGB10Chip = true
+		}
+	}
+
+	// check if has amd igpu
+	hasAmdiGpu, err := HasAmdIGPULocal()
+	if err != nil {
+		fmt.Printf("Error checking AMD iGPU: %v\n", err)
+		hasAmdiGpu = false
+	}
+
 	return &CpuInfo{
 		CpuModel:         cpuModel,
 		CpuLogicalCount:  cpuLogicalCount,
 		CpuPhysicalCount: cpuPhysicalCount,
+		IsGB10Chip:       isGB10Chip,
+		HasAmdiGpu:       hasAmdiGpu,
 	}
 }
 

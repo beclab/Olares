@@ -338,7 +338,9 @@ func (c *CudaChecker) Name() string {
 }
 
 func (c *CudaChecker) Check(runtime connector.Runtime) error {
-	if !runtime.GetSystemInfo().IsLinux() {
+	if !runtime.GetSystemInfo().IsLinux() ||
+		// Skip check on NVIDIA DGX Spark systems, which have their own GPU management
+		runtime.GetSystemInfo().IsGB10Chip() {
 		return nil
 	}
 
@@ -389,7 +391,7 @@ func (r *RocmChecker) Check(runtime connector.Runtime) error {
 	}
 
 	// detect AMD GPU presence
-	amdGPUExists, err := utils.HasAmdIGPU(runtime)
+	amdGPUExists, err := connector.HasAmdIGPU(runtime)
 	if err != nil {
 		return err
 	}
@@ -398,7 +400,7 @@ func (r *RocmChecker) Check(runtime connector.Runtime) error {
 		return nil
 	}
 
-	curV, err := utils.RocmVersion()
+	curV, err := connector.RocmVersion()
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}

@@ -15,6 +15,7 @@ spec:
       priorityClassName: system-node-critical
       nodeSelector:
         gpu.bytetrade.io/cuda-supported: 'true'
+        gpu.bytetrade.io/type: nvidia
       containers:
       - name: gpu-scheduler
         image: beclab/gpu-scheduler:v0.1.1
