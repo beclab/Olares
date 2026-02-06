@@ -13,7 +13,7 @@ OpenClaw is a personal AI assistant that is designed to run on your local device
 
 It acts as an "always-on" operator that can execute real tasks, such as searching and sending documents, managing calendars, or browsing webpages.
 
-## Learning objective
+## Learning objectives
 
 By the end of this tutorial, you are be able to:
 
@@ -21,14 +21,18 @@ By the end of this tutorial, you are be able to:
 - Pair and connect the OpenClaw CLI and the Control UI.
 - Configure OpenClaw to use the local AI model Ollama.
 - Integrate OpenClaw with Discord.
-- Enable web search capabilities using Brave Search.
+- Enable the web search capability using Brave Search.
 
 ## Prerequisites
 
 - Local model: Ensure Ollama is installed and running. You must have a tool-capable model installed, such as `glm-4.7-flash`, `qwen3`, and `llama3.1`. This tutorial uses `llama3.1:8b`.
 - Discord account: Required to create the bot application.
 - Discord server: A server where you have permissions to add bots.
-- (Optional) Brave search API key: Required for the agent to search web for real-time information. You can obtain a free API key from the [Brave Search API](https://brave.com/search/api/).
+- (Optional) Brave search API key: Required for the agent to search the web for real-time information. 
+
+    :::tip Tip
+    You can obtain a free API key from the [Brave Search API](https://brave.com/search/api/). The free tier of the "Data for Search"" plan is usually sufficient for personal use.
+    :::
 
 ## Install OpenClaw
 
@@ -36,9 +40,7 @@ By the end of this tutorial, you are be able to:
 
     ![Search for OpenClaw from Market](/images/manual/use-cases/find-openclaw.png#bordered){width=90%}
 
-2. Click **Get**, and then click **Install**.
-
-    When the installation finishes, two shortcuts appear in the Launchpad:
+2. Click **Get**, and then click **Install**. When the installation finishes, two shortcuts appear in the Launchpad:
     - **OpenClaw CLI**: The command line interface
     - **Control UI**: The graphical dashboard
 
@@ -48,7 +50,7 @@ By the end of this tutorial, you are be able to:
 
 Run a quick setup for the agent in the OpenClaw CLI.
 
-1. Open the OpenClaw CLI app from Launchpad.
+1. Open the OpenClaw CLI app from the Launchpad.
 2. Enter the following command to start the onboarding wizard.
 
     ```bash
@@ -56,13 +58,26 @@ Run a quick setup for the agent in the OpenClaw CLI.
     ```
     ![OpenClaw onboarding wizard](/images/manual/use-cases/openclaw-wizard.png#bordered){width=80%}
 
-3. The wizard guides you through several steps. Use the arrow keys to navigate and press Enter to confirm.
+3. The wizard guides you through a series of steps. Use the arrow keys to navigate and press Enter to confirm.
 
     :::tip Note on configurations
-    To get you started quickly, this tutorial will skip some advanced settings in the wizard. You can configure the AI models and Discord connection later using the Control UI.
+    To get you started quickly, this tutorial skips several advanced settings in the wizard. You can configure or modify them later.
     :::
 
-    a. **I understand this is powerful and inherently risky. Continue?**: Select **Yes**.
+    | Settings | Option |
+    |:-------- |:-------|
+    |I understand this is powerful and inherently risky. Continue?|Yes|
+    |Onboarding mode|QuickStart|
+    |Config handling|Use existing values|
+    |Model/auth provider|Skip for now|
+    |Filter models|All providers|
+    |Default model|Keep current|
+    |Select channel|Skip for now|
+    |Configure skills now|No|
+    |Enable hooks|Skip for now|
+    |Hatch your bot|Do this later|
+    
+<!--a. **I understand this is powerful and inherently risky. Continue?**: Select **Yes**.
     
     b. **Onboarding mode**: Select **QuickStart**.
 
@@ -81,11 +96,11 @@ Run a quick setup for the agent in the OpenClaw CLI.
     i. **Enable hooks**: Select **Skip for now**.
 
     j. **Hatch your bot**: Select **Do this later**.
+-->
 
 4. After you complete the wizard, scroll up to the **Control UI** section.
-
 5. Copy and save the token displayed in the **Web UI (with token)**. 
-6. Keep the CLI window open.
+6. Keep the CLI window open for the next step.
 
 ## Pair device
 
@@ -121,13 +136,11 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 3. Find the `agents` section and update the `defaults` block to specify your primary model. Ensure that the model name matches the one installed in Ollama.
 
     ```json
-    {
     "agents": {
         "defaults": {
         "model": {
             "primary": "ollama/llama3.1:8b"
         },
-        //
         "workspace": "/home/node/.openclaw/workspace",
         "maxConcurrent": 4,
         "subagents": {
@@ -135,9 +148,8 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
         }
         }
     },
-    }
     ```
-4. Click **Save** in the top right corner. The system validates the config and restarts automatically to apply the changes.
+4. Click **Save** in the upper-right corner. The system validates the config and restarts automatically to apply the changes.
 
 ## Integrate with Discord
 
@@ -166,11 +178,9 @@ To chat with your agent remotely, connect it to a Discord Bot.
 
 ### Step 2. Invite the bot to server
 
-Generate the URL to use for invite the newly created bot to your Discord server.
-
 1. From the left sidebar, select **OAuth2**, and then find the **OAuth2 URL Generator** section:
 
-    a. In **Scopes**, select **Bot**.
+    a. In **Scopes**, select **Bot** and **applications.commands**.
 
     ![OAuth2 URL Generator](/images/manual/use-cases/oauth2.png#bordered)
 
@@ -183,28 +193,36 @@ Generate the URL to use for invite the newly created bot to your Discord server.
 
     ![Bot added to server](/images/manual/use-cases/bot-added.png#bordered)
 
-### Step 3: Configure OpenClaw channel
+### Step 3: Configure channel in OpenClaw
 
-Configure OpenClaw channel in Control UI.
+Configure the Discord channel in Control UI.
 
 1. Return to the **Control UI** > **Config** > **Raw** tab.
-2. Find the `channels` section and update with your Discord bot token:
+2. Find the `channels` section:
+
+    a. Update with your Discord bot token.
+
+    b. Enable Discord DM and set the Discord DM Policy to **Pairing**.
+
 
     ```json
-    {
     "channels": {
         "discord": {
         "enabled": true,
-        "token": "YOUR_BOT_TOKEN"
+        "token": "{YOUR_BOT_TOKEN}",
+        "allowBots": true,
+        "dm": {
+            "enabled": true,
+            "policy": "pairing"
+        }
         }
     },
-    }
     ```
+
     ![Discord channel added](/images/manual/use-cases/channels.png#bordered)
 
-3. Set the Discord DM policy to **Pairing**.这步骤待验证，环境今天有问题
-4. Click **Save**.
-5. From the left sidebar, select **Channels**. On the Discord card, **Probe ok** indicates successful connection.
+3. Click **Save**.
+4. From the left sidebar, select **Channels**. On the Discord card, **Probe ok** indicates successful connection.
 
    ![Probe OK](/images/manual/use-cases/probe-ok.png#bordered)
 
@@ -212,7 +230,7 @@ Configure OpenClaw channel in Control UI.
 
 For security, the bot will not talk to unauthorized users. You must pair your Discord account with the bot.
 
-1. Open Discord and send a Direct Message to your new Bot. The Bot will reply with an error message containing a Pairing Code.
+1. Open Discord and send a Direct Message to your new bot. The bot will reply with an error message containing a Pairing Code.
 2. Open the OpenClaw CLI and enter the following command:
     ```bash
     openclaw pairing approve discord {Your-Pairing-Code}
@@ -221,7 +239,9 @@ For security, the bot will not talk to unauthorized users. You must pair your Di
 
 ## (Optional) Enable web search
 
-To allow your agent to browse the internet, you can enable the Web tool using Brave Search.
+By default, OpenClaw answers questions only based on its training data, which means it doesn't know about current events or real-time news. To give your agent access to the live internet, you can enable the web search tool.
+
+OpenClaw officially recommends Brave Search. Unlike other providers, Brave Search uses an independent web index optimized for AI retrieval, ensuring your agent finds accurate information.
 
 1. Open the OpenClaw CLI.
 2. Run the following command to start the web configuration wizard:
@@ -229,11 +249,48 @@ To allow your agent to browse the internet, you can enable the Web tool using Br
     ```bash
     openclaw configure --section web
     ```
-3. Select **Yes** to enable web search.
-4. Paste your Brave Search API Key.
-5. Select **Yes** to allow the agent read page content.
+3. Configure the basic settings as follows:
 
-Now your agent can answer questions that require real-time internet data, such as "What is the latest news on Olares".
+    |Settings|Option|
+    |:-------|:-----|
+    |Where will the Gateway run|Local (this machine)|
+    |Enable web_search (Brave Search)|Yes|
+    |Brave Search API key| Your `BraveSearchAPIkey` |
+    |Enable web_fetch (keyless HTTP fetch)|Yes|
+
+4. Finalize the configuration in Control UI.
+
+    The CLI wizard sets up the API key, but you can customize specific tool parameters such as timeouts and limits in the Control UI.
+
+    a. Return to the **Control UI** > **Config** > **Raw** tab. 
+
+    b. Find the `tools` section and update as follows: 
+
+    ```json
+    "tools": {
+        "web": {
+        "search": {
+            "enabled": true,
+            "provider": "brave",
+            "apiKey": "{Your-Brave-Search-API-Key}",
+            "maxResults": 10,
+            "timeoutSeconds": 30
+        },
+        "fetch": {
+            "enabled": true,
+            "timeoutSeconds": 30
+        }
+        }
+    },
+    ```
+
+5. Now you can ask the agent in Discord to answer questions that require real-time internet data.
+
+## FAQ
+
+### I see the error "HTTP 503" or "event gap detected"
+
+If you encounter these errors in Discord or the Control UI, check your Ollama and ensure it is running properly in the background.
 
 ## Resources
 
