@@ -98,7 +98,12 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     ```
 5. In the **Pending** table, find the **Request** ID associated with your current device.
 
+    :::info
+    The Request ID has a time limit. If the authorization fails, re-run `openclaw devices list` to obtain a new valid ID.
+    :::
+
     ![View pending device request](/images/manual/use-cases/pending-request.png#bordered)
+    
 6. Authorize the device by entering the following command:
 
     ```bash
@@ -219,7 +224,7 @@ For security, the bot does not talk to unauthorized users. You must pair your Di
 
 By default, OpenClaw answers questions only based on its training data, which means it doesn't know about current events or real-time news. To give your agent access to the live internet, you can enable the web search tool.
 
-OpenClaw officially recommends Brave Search. Unlike other providers, Brave Search uses an independent web index optimized for AI retrieval, ensuring your agent finds accurate information.
+OpenClaw officially recommends Brave Search. It uses an independent web index optimized for AI retrieval, ensuring your agent finds accurate information.
 
 1. Open the OpenClaw CLI.
 2. Run the following command to start the web configuration wizard:
