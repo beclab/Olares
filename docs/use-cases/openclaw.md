@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Learn
+description: Learn how to install, configure, and integrate OpenClaw with Discord.
 head:
   - - meta
     - name: keywords
