@@ -132,7 +132,7 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 
 ## Integrate with Discord
 
-To chat with your agent remotely, connect it to a Discord Bot.
+To chat with your agent remotely, connect it to a Discord bot.
 
 ### Step 1: Create a Discord bot
 
@@ -172,7 +172,7 @@ To chat with your agent remotely, connect it to a Discord Bot.
 
     ![Bot added to server](/images/manual/use-cases/bot-added.png#bordered)
 
-### Step 3: Configure channel in OpenClaw
+### Step 3: Configure channel
 
 Configure the Discord channel in Control UI.
 
@@ -181,7 +181,7 @@ Configure the Discord channel in Control UI.
 
     a. Update with your Discord bot token.
 
-    b. Enable Discord DM and set the Discord DM Policy to **Pairing**.
+    b. Enable Discord DM (Direct Messages) and set the Discord DM Policy to **Pairing**.
 
     ```json
     "channels": {
@@ -206,7 +206,7 @@ Configure the Discord channel in Control UI.
 
 ### Step 4: Authorize your account
 
-For security, the bot will not talk to unauthorized users. You must pair your Discord account with the bot.
+For security, the bot does not talk to unauthorized users. You must pair your Discord account with the bot.
 
 1. Open Discord and send a Direct Message to your new bot. The bot will reply with an error message containing a Pairing Code.
 2. Open the OpenClaw CLI and enter the following command:
