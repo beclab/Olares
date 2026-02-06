@@ -2,9 +2,9 @@
 outline: [2,3]
 description: Learn how to access your Olares services securely using the LarePass VPN.
 head:
-   - - meta
-     - name: keywords
-       content: Olares, LarePass VPN, local access
+  - - meta
+    - name: keywords
+      content: Olares, LarePass VPN, local access
 ---
 
 # Access Olares services securely using LarePass VPN
@@ -73,7 +73,7 @@ If the VPN was working previously but has stopped, you might need to reset the s
 :::info
 Depending on your macOS version, the UI might look slightly different.
 :::
-1. Open **System Settings**, search for "Extension", and select **Login Items & Extensions**.
+1. Open System Settings, search for "Extension", and select **Login Items & Extensions**.
 2. Scroll to the **Network Extensions** section and click the info icon (ⓘ) to view loaded extensions.
 3. Find LarePass, click the three dots (...), and select **Delete Extension**.
 4. Restart your Mac. 

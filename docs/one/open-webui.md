@@ -25,12 +25,12 @@ You can easily install Ollama and chat with your local LLM using the Open WebUI.
 - Admin privileges to install Ollama from the Market.
 
 ## Step 1: Install Ollama and Open WebUI
-1. Open Market, and search for "Ollama."
+1. Open Market, and search for "Ollama".
    ![Install Ollama](/images/manual/use-cases/ollama.png#bordered)
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
-3. Repeat the same steps to install "Open WebUI."
+3. Repeat the same steps to install "Open WebUI".
    ![Install Open WebUI](/images/one/open-webui.png#bordered)
 
 ## Step 2: Create Open WebUI admin account

@@ -1,9 +1,13 @@
 ---
 outline: [2, 3]
 description: Learn how to access the Olares One host terminal for command-line usage via Control Hub or SSH.
+head:
+  - - meta
+    - name: keywords
+      content: SSH, Olares Terminal, Control Hub
 ---
 
-# Connect to Olares One via SSH
+# Connect to Olares One via SSH  <Badge type="tip" text="10 min" />
 
 Certain development and operational tasks, such as connecting Olares One with other devices to form a cluster, require direct command-line access. 
 

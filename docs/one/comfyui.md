@@ -31,7 +31,7 @@ For image generation:
 - Admin privileges to install ComfyUI from the Market, and to start or stop the ComfyUI service for the cluster.
 
 ## Step 1: Install ComfyUI
-1. Open Market, and search for "ComfyUI."
+1. Open Market, and search for "ComfyUI".
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
    ![Install ComfyUI](/images/one/comfyui.png#bordered)

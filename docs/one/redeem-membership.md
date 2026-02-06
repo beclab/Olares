@@ -47,25 +47,25 @@ To redeem your benefits, you must verify the email address associated with your 
 1. In Olares Space, from the left navigation pane, click **Usage & billing**. 
 2. On the **Account email** tab, click **Email address**.
 
- ![Olares Space account email](/images/one/account-email.png#bordered)
+    ![Olares Space account email](/images/one/account-email.png#bordered)
 
 3. In the **Add email** window, enter the email address used for your Kickstarter order.
 
- ![Olares Space bind email](/images/one/bind-email.png#bordered)
+    ![Olares Space bind email](/images/one/bind-email.png#bordered)
 
 4. Click **Send verification code**.
 
 5. Follow the on-screen instructions to complete the verification.
  
- :::tip 
- If you do not see the email in your inbox, try checking your Spam or Junk folders.
- :::
+    :::tip 
+    If you do not see the email in your inbox, try checking your Spam or Junk folders.
+    :::
 
- A notification message will confirm that the email was added. Your account immediately upgrades to the Basic plan, and the 2-year validity period begins.
+    A notification message will confirm that the email was added. Your account immediately upgrades to the Basic plan, and the 2-year validity period begins.
  
 6. Click your avatar in the upper right corner. A **Basic** tag appearing next to your username confirms that your membership is active now.
 
- ![Olares Space Basic plan](/images/one/basic-plan.png#bordered)   
+    ![Olares Space Basic plan](/images/one/basic-plan.png#bordered)   
 
 ## Switch membership to a different Olares ID
 :::warning Validity period adjustment

@@ -49,15 +49,15 @@ You can use this second slot to expand your current system storage.
 
 3. Check the size and mount points to identify the new disk.
 
-Example output:
-
-```text
-NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
-sda           8:0    0 931.5G  0 disk
-├─sda1        8:1    0   512M  0 part /boot
-└─sda2        8:2    0   931G  0 part /
-nvme1n1     259:3    0 931.5G  0 disk
-```
+   Example output:
+   
+   ```text
+   NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+   sda           8:0    0 931.5G  0 disk
+   ├─sda1        8:1    0   512M  0 part /boot
+   └─sda2        8:2    0   931G  0 part /
+   nvme1n1     259:3    0 931.5G  0 disk
+   ```
 In this example, `sda` is the system drive which is mounted at `/` and `/boot`, while `nvme1n1` is the new, unmounted SSD.
 
 ## Step 2: Extend system storage

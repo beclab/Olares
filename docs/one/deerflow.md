@@ -37,12 +37,12 @@ DeerFlow connects to Ollama using the `.com` domain.
 - The LarePass app is installed on your device. This guide uses the desktop application to demonstrate the configuration and usage from desktop.
 
 ## Step 1: Install Ollama and DeerFlow
-1. Open Market, and search for "Ollama."
+1. Open Market, and search for "Ollama".
    ![Install Ollama](/images/manual/use-cases/ollama.png#bordered)
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
-3. Repeat the same steps to install "DeerFlow."
+3. Repeat the same steps to install "DeerFlow".
    ![Install DeerFlow](/images/manual/use-cases/deerflow.png#bordered)
 
 ## Step 2: Install models and configure Ollama
@@ -198,7 +198,7 @@ Restart the service to apply the new model and search configurations.
 
 ## Step 4: Run DeerFlow
 ### Run a deep research task
-1. Open **DeerFlow** from the Olares Launchpad.
+1. Open DeerFlow from the Olares Launchpad.
 2. Click **Get Started** and enter your research topic in the prompt box.
    ![Enter research prompt](/images/manual/use-cases/deerflow-enter-prompt.png#bordered)
 
