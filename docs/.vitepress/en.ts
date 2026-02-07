@@ -1,5 +1,5 @@
 import { defineConfig, type DefaultTheme } from "vitepress";
-
+import { oneSidebar } from './one.en.ts';
 const side = {
   "/manual/": [
     {
@@ -134,52 +134,7 @@ const side = {
       ],
     },
     {
-      text: "LarePass",
-      link: "/manual/larepass/",
-      collapsed: true,
-      items: [
-        {
-          text: "Manage accounts",
-          collapsed: true,
-          items: [
-            { text: "Create accounts", link: "/manual/larepass/create-account" },
-            { text: "Back up mnemonics", link: "/manual/larepass/back-up-mnemonics" },
-            { text: "Manage integrations", link: "/manual/larepass/integrations" },
-          ],
-        },
-        { text: "Use VPN", link: "/manual/larepass/private-network" },
-        {
-          text: "Manage device",
-          collapsed: true,
-          items: [
-            { text: "Activate Olares", link: "/manual/larepass/activate-olares" },
-            { text: "Manage Olares", link: "/manual/larepass/manage-olares" },
-          ],
-        },
-        { text: "Manage files", link: "/manual/larepass/manage-files" },
-        // collapsed: true,
-        //items: [
-        //  {text: "Common file operations", link:"/manual/larepass/manage-files"},
-        // {text: "Sync and share", link:"/manual/larepass/sync-share"}
-        // ]
-        // },
-        {
-          text: "Manage passwords",
-          collapsed: true,
-          items: [
-            { text: "Autofill passwords", link: "/manual/larepass/autofill" },
-            { text: "Generate 2FA codes", link: "/manual/larepass/two-factor-verification" },
-          ],
-        },
-        /*{
-          text: "Manage knowledge",
-          link: "/manual/larepass/manage-knowledge",
-        },*/
-      ],
-    },
-    {
       text: "Olares applications",
-      collapsed: true,
       link: "/manual/olares/",
       items: [
         { text: "Desktop", link: "/manual/olares/desktop", },
@@ -403,42 +358,53 @@ const side = {
       ],
     },
     {
-      text: "Tutorials",
-      link: "/manual/best-practices/",
+      text: "LarePass",
+      link: "/manual/larepass/",
       collapsed: true,
       items: [
         {
-          text: "Set up custom domain",
-          link: "/manual/best-practices/set-custom-domain",
+          text: "Manage accounts",
+          collapsed: true,
+          items: [
+            { text: "Create accounts", link: "/manual/larepass/create-account" },
+            { text: "Back up mnemonics", link: "/manual/larepass/back-up-mnemonics" },
+            { text: "Manage integrations", link: "/manual/larepass/integrations" },
+          ],
         },
+        { text: "Use VPN", link: "/manual/larepass/private-network" },
         {
-          text: "Manage knowledge with Wise",
-          link: "/manual/best-practices/organize-content",
+          text: "Manage device",
+          collapsed: true,
+          items: [
+            { text: "Activate Olares", link: "/manual/larepass/activate-olares" },
+            { text: "Manage Olares", link: "/manual/larepass/manage-olares" },
+          ],
         },
+        { text: "Manage files", link: "/manual/larepass/manage-files" },
+        // collapsed: true,
+        //items: [
+        //  {text: "Common file operations", link:"/manual/larepass/manage-files"},
+        // {text: "Sync and share", link:"/manual/larepass/sync-share"}
+        // ]
+        // },
         {
-          text: "Install a multi-node Olares cluster",
-          link: "/manual/best-practices/install-olares-multi-node",
+          text: "Manage passwords",
+          collapsed: true,
+          items: [
+            { text: "Autofill passwords", link: "/manual/larepass/autofill" },
+            { text: "Generate 2FA codes", link: "/manual/larepass/two-factor-verification" },
+          ],
         },
-        {
-          text: "Install Olares on PVE with GPU Passthrough",
-          link: "/manual/best-practices/install-olares-gpu-passthrough",
-        },
-        {
-          text: "Expand storage in Olares",
-          link: "/manual/best-practices/expand-storage-in-olares",
-        },
-        {
-          text: "Access Olares locally",
-          link: "/manual/best-practices/local-access",
-        },
+        /*{
+          text: "Manage knowledge",
+          link: "/manual/larepass/manage-knowledge",
+        },*/
       ],
     },
-    { text: "Glossary", link: "/manual/glossary" },
-  ],
-  "/space/": [
     {
       text: "Olares Space",
       link: "/space/",
+      collapsed: true,
       items: [
         {
           text: "Manage accounts",
@@ -479,6 +445,38 @@ const side = {
         { text: "Billing", link: "/space/billing" },
       ],
     },
+    {
+      text: "Tutorials",
+      link: "/manual/best-practices/",
+      collapsed: true,
+      items: [
+        {
+          text: "Set up custom domain",
+          link: "/manual/best-practices/set-custom-domain",
+        },
+        {
+          text: "Manage knowledge with Wise",
+          link: "/manual/best-practices/organize-content",
+        },
+        {
+          text: "Install a multi-node Olares cluster",
+          link: "/manual/best-practices/install-olares-multi-node",
+        },
+        {
+          text: "Install Olares on PVE with GPU Passthrough",
+          link: "/manual/best-practices/install-olares-gpu-passthrough",
+        },
+        {
+          text: "Expand storage in Olares",
+          link: "/manual/best-practices/expand-storage-in-olares",
+        },
+        {
+          text: "Access Olares locally",
+          link: "/manual/best-practices/local-access",
+        },
+      ],
+    },
+    { text: "Glossary", link: "/manual/glossary" },
   ],
   "/use-cases/": [
     {
@@ -1054,12 +1052,15 @@ export const en = defineConfig({
     socialLinks: [{ icon: "github", link: "https://github.com/beclab/olares" }],
 
     nav: [
-      { text: "Olares", link: "/manual/overview" },
-      { text: "Olares Space", link: "/space/" },
-      { text: "Use Cases", link: "/use-cases/" },
-      { text: "Developer Guide", link: "/developer/concepts/" },
+      { text: "Olares OS", link: "/manual/overview" },
+      { text: "Olares One", link: "/one/" },
+      { text: "Use cases", link: "/use-cases/" },
+      { text: "Developer guide", link: "/developer/concepts/" },
     ],
 
-    sidebar: side,
+    sidebar: {
+      ...side,
+      ...oneSidebar,
+    },
   },
 });

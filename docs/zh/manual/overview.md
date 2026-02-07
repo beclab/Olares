@@ -6,12 +6,6 @@ description: Olares 是为本地 AI 打造的开源私有云操作系统，支�
 ## Olares 是什么？
 Olares 是一款开源个人云操作系统，旨在让你能够轻松在本地拥有并管理自己的数字资产。你无需再依赖公有云服务，而可以在 Olares 上本地部署强大的开源平替服务或应用，例如可以使用 Ollama 托管大语言模型，使用 ComfyUI 生成图像，以及使用 Perplexica 打造本地化、注重隐私的 AI 搜索与问答体验。Olares 让你坐拥云计算的强大威力，又能完全将其置于自己掌控之下。
 
-:::info 开源与商业模式
-Olares 的模式类似于 **Android**：
-- **Olares OS**（软件层）完全**开源**，保证透明性、社区共建与可扩展性，详见 [GitHub](https://github.com/beclab/Olares) 页面。
-- **硬件**（运行 Olares 的设备）可授权制造商生产与销售，通过硬件产品和生态合作实现可持续发展。 
-:::
-
 <div class="cta">
   <a href="./get-started/">
     <div class="content">
