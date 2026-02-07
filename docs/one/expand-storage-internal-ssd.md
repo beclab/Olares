@@ -111,7 +111,7 @@ You can verify the storage increase from Control Hub (UI), or via the command li
 1. Open Dashboard.
 2. Check the Disk section to confirm the total system storage capacity has increased.
 
-   ![Check disk volume in Dashboard](/public/images/manual/tutorials/expand-dashboard-disk.png#bordered)
+   ![Check disk volume in Dashboard](/images/manual/tutorials/expand-dashboard-disk.png#bordered)
 </template>
 
 <template #Via-command-line>

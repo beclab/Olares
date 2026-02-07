@@ -68,12 +68,12 @@ To output audio to your monitor, the Steam container needs direct access to your
 Incorrect YAML syntax or indentation may prevent the application from starting.
 - **Verify changes:** Double-check that your indentation matches the existing lines.
 - **Revert when necessary:** If the app fails to start after applying changes, check **Revision records** and simply delete the lines you added to restore the previous configuration.
-  ![Check revision records](../public/images/manual/use-cases/steam-yaml-revision-records.png#bordered)
+  ![Check revision records](/images/manual/use-cases/steam-yaml-revision-records.png#bordered)
   :::
 
 1. Open Control Hub, then select the Steam project from the sidebar.
 2. Navigate to **Deployments** > **steamheadless**, and click <span class="material-symbols-outlined">edit_square</span> to open the editor.
-   ![Open Yaml editor](../public/images/manual/use-cases/steam-open-yaml-editor.png#bordered)
+   ![Open Yaml editor](/images/manual/use-cases/steam-open-yaml-editor.png#bordered)
 
 3. Locate the `volumes` section and append the following entry to the list.
    ```yaml
@@ -102,10 +102,10 @@ Incorrect YAML syntax or indentation may prevent the application from starting.
 By default, the system is configured for streaming. You need to modify the X11 configuration to use your physical monitor and peripherals.
 
 1. In Control Hub, click on the running Pod to view its details.
-   ![Click Pod](../public/images/manual/use-cases/steam-click-pod.png#bordered)
+   ![Click Pod](/images/manual/use-cases/steam-click-pod.png#bordered)
 
 2. Click the Terminal icon next to **steam-headless** to access the container's shell.
-   ![Access container's shell](../public/images/manual/use-cases/steam-access-container-shell.png#bordered)
+   ![Access container's shell](/images/manual/use-cases/steam-access-container-shell.png#bordered)
 
 3. Open the X configuration file:
    ```bash
