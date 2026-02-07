@@ -121,7 +121,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               text: "Direct play",
               link: "/one/steam-direct-play",
             }]
-
         },
         {
           text: "Access Windows in Olares",
@@ -166,17 +165,18 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         },
         {
           text: "Connect two Olares One",
-          items:
-            [
-              {
-                text: "Manage GPU",
-                link: "/one/two-one-gpu",
-              },
-              {
-                text: "Run larger local LLMs",
-                link: "/one/two-one-llm",
-              }
-            ]
+          link: "/one/connect-two-olares-one"
+          // items:
+          //   [
+          //     {
+          //       text: "Manage GPU",
+          //       link: "/one/two-one-gpu",
+          //     },
+          //     {
+          //       text: "Run larger local LLMs",
+          //       link: "/one/two-one-llm",
+          //     }
+          //   ]
         },
         {
           text: "Set up with eGPU",

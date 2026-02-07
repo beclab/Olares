@@ -110,8 +110,17 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       text: "Explore",
       items: [
         {
-          text: "Play games with Steam Headless",
-          link: "/zh/one/steam",
+          text: "Play Steam games",
+          collapsed: true,
+          items: [
+            {
+              text: "Streaming",
+              link: "/zh/one/steam-stream"
+            },
+            {
+              text: "Direct play",
+              link: "/zh/one/steam-direct-play",
+            }]
         },
         {
           text: "Access Windows in Olares",
@@ -156,17 +165,18 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         },
         {
           text: "Connect two Olares One",
-          items:
-            [
-              {
-                text: "Manage GPU",
-                link: "/zh/one/two-one-gpu",
-              },
-              {
-                text: "Run larger local LLMs",
-                link: "/zh/one/two-one-llm",
-              }
-            ]
+          link: "/zh/one/connect-two-olares-one"
+          // items:
+          //   [
+          //     {
+          //       text: "Manage GPU",
+          //       link: "/zh/one/two-one-gpu",
+          //     },
+          //     {
+          //       text: "Run larger local LLMs",
+          //       link: "/zh/one/two-one-llm",
+          //     }
+          //   ]
         },
         {
           text: "Set up with eGPU",
@@ -174,15 +184,16 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         },
         {
           text: "Dual-boot Olares OS with Windows",
+          collapsed: true,
           items:
             [
               {
-                text: "Single-drive setup",
-                link: "/zh/one/single-drive-dual-boot",
+                text: "Dual-drive setup (Recommended)",
+                link: "/zh/one/dual-boot-dual-drive",
               },
               {
                 text: "Dual-drive setup",
-                link: "/zh/one/dual-drive-dual-boot",
+                link: "/zh/one/dual-boot-single-drive",
               }
               ,
               {
