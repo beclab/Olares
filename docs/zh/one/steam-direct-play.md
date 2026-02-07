@@ -242,6 +242,11 @@ Finally, you must manually select the correct audio output channel.
 Audio now plays directly from your monitor or speakers. You are ready to play.
 
 ## Optional: Enable audio for remote streaming
+
+:::info
+For detailed streaming and pairing instructions, refer to [Stream Steam games to any device](steam-stream.md).
+:::
+
 Local play and remote streaming use exclusive audio modes.
 - **Local play** requires the `module-alsa-sink` module loaded.
 

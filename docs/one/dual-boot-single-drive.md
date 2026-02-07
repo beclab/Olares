@@ -100,11 +100,7 @@ Upon completion of the installation, the initial system information, including t
 3. Select the system language.
 
    ![Select language](/images/manual/get-started/select-language.png#bordered)
-<<<<<<< HEAD
 4. Select a reverse proxy node that is geographically closest to your location.
-=======
-4. Select a reverse proxy node that is geographically closest to your location. You can adjust this later on the [Change reverse proxy](../olares/settings/change-frp.md) page.
->>>>>>> 5972b65b (add single-drive setup & update dual-drive setup)
 
    ![Select FRP](/images/manual/get-started/wizard-frp.png#bordered)
 
