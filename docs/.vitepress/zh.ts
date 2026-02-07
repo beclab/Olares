@@ -1,5 +1,5 @@
 import { defineConfig, type DefaultTheme } from "vitepress";
-
+import { oneSidebar } from './one.zh.ts';
 const side = {
   "/zh/manual/": [
     {
@@ -133,52 +133,7 @@ const side = {
       ],
     },
     {
-      text: "LarePass",
-      link: "/zh/manual/larepass/",
-      collapsed: true,
-      items: [
-        {
-          text: "管理账户",
-          collapsed: true,
-          items: [
-            { text: "创建账户", link: "/zh/manual/larepass/create-account" },
-            { text: "备份助记词", link: "/zh/manual/larepass/back-up-mnemonics" },
-            { text: "管理集成", link: "/zh/manual/larepass/integrations" },
-          ],
-        },
-        { text: "使用专用网络", link: "/zh/manual/larepass/private-network" },
-        {
-          text: "管理设备",
-          collapsed: true,
-          items: [
-            { text: "激活 Olares", link: "/zh/manual/larepass/activate-olares" },
-            { text: "管理 Olares", link: "/zh/manual/larepass/manage-olares" },
-          ],
-        },
-        { text: "管理文件", link: "/zh/manual/larepass/manage-files" },
-        //    collapsed: true,
-        //    items: [
-        //    {text: "常用文件操作", link:"/zh/manual/larepass/manage-files"},
-        //    {text: "同步与共享", link:"/zh/manual/larepass/sync-share"}
-        //  ]
-        // },
-        {
-          text: "管理密码",
-          collapsed: true,
-          items: [
-            { text: "自动填充", link: "/zh/manual/larepass/autofill" },
-            { text: "双重验证", link: "/zh/manual/larepass/two-factor-verification" },
-          ],
-        },
-        /*{
-          text: "管理内容",
-          link: "/zh/manual/larepass/manage-knowledge",
-        },*/
-      ],
-    },
-    {
       "text": "Olares 应用",
-      "collapsed": true,
       "link": "/zh/manual/olares/",
       "items": [
         { "text": "桌面", "link": "/zh/manual/olares/desktop" },
@@ -399,9 +354,97 @@ const side = {
       ]
     },
     {
-      text: "教程",
+      text: "LarePass",
+      link: "/zh/manual/larepass/",
       collapsed: true,
+      items: [
+        {
+          text: "管理账户",
+          collapsed: true,
+          items: [
+            { text: "创建账户", link: "/zh/manual/larepass/create-account" },
+            { text: "备份助记词", link: "/zh/manual/larepass/back-up-mnemonics" },
+            { text: "管理集成", link: "/zh/manual/larepass/integrations" },
+          ],
+        },
+        { text: "使用专用网络", link: "/zh/manual/larepass/private-network" },
+        {
+          text: "管理设备",
+          collapsed: true,
+          items: [
+            { text: "激活 Olares", link: "/zh/manual/larepass/activate-olares" },
+            { text: "管理 Olares", link: "/zh/manual/larepass/manage-olares" },
+          ],
+        },
+        { text: "管理文件", link: "/zh/manual/larepass/manage-files" },
+        //    collapsed: true,
+        //    items: [
+        //    {text: "常用文件操作", link:"/zh/manual/larepass/manage-files"},
+        //    {text: "同步与共享", link:"/zh/manual/larepass/sync-share"}
+        //  ]
+        // },
+        {
+          text: "管理密码",
+          collapsed: true,
+          items: [
+            { text: "自动填充", link: "/zh/manual/larepass/autofill" },
+            { text: "双重验证", link: "/zh/manual/larepass/two-factor-verification" },
+          ],
+        },
+        /*{
+          text: "管理内容",
+          link: "/zh/manual/larepass/manage-knowledge",
+        },*/
+      ],
+    },
+      {
+        text: "Olares Space",
+        link: "/zh/space/",
+        collapsed: true,
+        items: [
+          {
+            text: "管理账号",
+            link: "/zh/space/manage-accounts",
+          },
+          {
+            text: "托管 Olares",
+            collapsed: true,
+            items: [
+              {
+                text: "创建 Olares",
+                link: "/zh/space/create-olares",
+              },
+              {
+                text: "管理 Olares",
+                link: "/zh/space/manage-olares",
+              },
+            ],
+          },
+          {
+            text: "托管域名",
+            collapsed: true,
+            items: [
+              {
+                text: "设置自定义域名",
+                link: "/zh/space/host-domain",
+              },
+              {
+                text: "管理域名",
+                link: "/zh/space/manage-domain",
+              },
+            ],
+          },
+          {
+            text: "备份与恢复",
+            link: "/zh/space/backup-restore",
+          },
+          { text: "计费", link: "/zh/space/billing" },
+        ],
+      },
+    {
+      text: "教程",      
       link: "/zh/manual/best-practices/",
+      collapsed: true,
       items: [
         {
           text: "设置自定义域名",
@@ -435,52 +478,7 @@ const side = {
     },
     { text: "术语", link: "/zh/manual/glossary" },
   ],
-  "/zh/space/": [
-    {
-      text: "Olares Space",
-      link: "/zh/space/",
-      collapsed: true,
-      items: [
-        {
-          text: "管理账号",
-          link: "/zh/space/manage-accounts",
-        },
-        {
-          text: "托管 Olares",
-          collapsed: true,
-          items: [
-            {
-              text: "创建 Olares",
-              link: "/zh/space/create-olares",
-            },
-            {
-              text: "管理 Olares",
-              link: "/zh/space/manage-olares",
-            },
-          ],
-        },
-        {
-          text: "托管域名",
-          collapsed: true,
-          items: [
-            {
-              text: "设置自定义域名",
-              link: "/zh/space/host-domain",
-            },
-            {
-              text: "管理域名",
-              link: "/zh/space/manage-domain",
-            },
-          ],
-        },
-        {
-          text: "备份与恢复",
-          link: "/zh/space/backup-restore",
-        },
-        { text: "计费", link: "/zh/space/billing" },
-      ],
-    },
-  ],
+
   "/zh/use-cases/": [
     {
       text: "应用示例",
@@ -1043,12 +1041,15 @@ export const zh = defineConfig({
     socialLinks: [{ icon: "github", link: "https://github.com/beclab/olares" }],
 
     nav: [
-      { text: "Olares", link: "zh/manual/overview" },
-      { text: "Olares Space", link: "/zh/space/" },
+      { text: "Olares OS", link: "zh/manual/overview" },
+      { text: "Olares One", link: "/zh/one/" },
       { text: "应用示例", link: "/zh/use-cases/" },
       { text: "开发者文档", link: "/zh/developer/concepts/" },
     ],
 
-    sidebar: side,
+    sidebar: {
+      ...side,
+      ...oneSidebar,
+    },
   },
 });
