@@ -729,6 +729,12 @@ func (h *Handler) getApplicationProviderList(req *restful.Request, resp *restful
 		return
 	}
 
+	// sys app does not have app config
+	if am.Spec.Config == "" {
+		resp.WriteAsJson([]providerRegistry{})
+		return
+	}
+
 	var appConfig appcfg.ApplicationConfig
 	err = am.GetAppConfig(&appConfig)
 	if err != nil {
