@@ -65,6 +65,19 @@ func AddContainer(c *restful.Container) error {
 		Metadata(restfulspec.KeyOpenAPITags, tags).
 		Returns(http.StatusOK, "", response.Response{}))
 
+	ws.Route(ws.GET("/external-network").
+		To(handler.handleGetExternalNetworkSwitch).
+		Doc("Get external network switch status.").
+		Metadata(restfulspec.KeyOpenAPITags, tags).
+		Returns(http.StatusOK, "", response.Response{}))
+
+	ws.Route(ws.POST("/external-network").
+		To(handler.handleUpdateExternalNetworkSwitch).
+		Doc("Enable/Disable external network access (owner only).").
+		Reads(ExternalNetworkSwitchUpdateRequest{}).
+		Metadata(restfulspec.KeyOpenAPITags, tags).
+		Returns(http.StatusOK, "", response.Response{}))
+
 	ws.Route(ws.GET("/launcher-acc-policy").
 		To(handler.handleGetLauncherAccessPolicy).
 		Doc("Get launcher access policy.").
