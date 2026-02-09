@@ -74,6 +74,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/vault",
         },
         {
+          text: "Connect applications",
+          link: "/one/connect-apps",
+        },
+        {
           text: "Download YouTube videos",
           link: "/one/wise-download",
         },
