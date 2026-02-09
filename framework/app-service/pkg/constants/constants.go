@@ -78,20 +78,23 @@ const (
 	SidecarInitContainerName   = "olares-sidecar-init"
 	EnvoyConfigWorkDirName     = "envoy-config"
 
-	ByteTradeAuthor         = "bytetrade.io"
-	NvshareGPU              = "nvshare.com/gpu"
-	NvidiaGPU               = "nvidia.com/gpu"
-	VirtAiTechVGPU          = "virtaitech.com/gpu"
-	PatchOpAdd              = "add"
-	PatchOpReplace          = "replace"
-	EnvNvshareManagedMemory = "NVSHARE_MANAGED_MEMORY"
+	ByteTradeAuthor = "bytetrade.io"
+	PatchOpAdd      = "add"
+	PatchOpReplace  = "replace"
+	EnvGPUType      = "GPU_TYPE"
+
+	// gpu resource keys
+	NvidiaGPU     = "nvidia.com/gpu"
+	NvidiaGB10GPU = "nvidia.com/gb10"
+	AMDAPU        = "amd.com/apu"
 
 	AuthorizationLevelOfPublic  = "public"
 	AuthorizationLevelOfPrivate = "private"
 
 	DependencyTypeSystem = "system"
 	DependencyTypeApp    = "application"
-	AppDataDirURL        = "http://files-service.os-framework/api/resources/cache/%s/"
+	AppCacheDirURL       = "http://files-service.os-framework/api/resources/cache/%s/"
+	AppDataDirURL        = "http://files-service.os-framework/api/resources/drive/Data/"
 
 	UserSpaceDirKey   = "userspace_hostpath"
 	UserAppDataDirKey = "appcache_hostpath"

@@ -211,6 +211,9 @@ func NewArgument() *Argument {
 	arg.IsOlaresInContainer = os.Getenv(ENV_CONTAINER_MODE) == "oic"
 	si.IsOIC = arg.IsOlaresInContainer
 
+	// Ensure BaseDir is initialized before loading master.conf
+	// so master host config can be loaded from ${base-dir}/master.conf reliably.
+	arg.SetBaseDir(viper.GetString(FlagBaseDir))
 	arg.loadMasterHostConfig()
 	return arg
 }
@@ -380,6 +383,10 @@ func (a *Argument) loadMasterHostConfig() {
 	if a.MasterHost != "" && a.MasterNodeName == "" {
 		a.MasterNodeName = "master"
 	}
+}
+
+func (a *Argument) ClearMasterHostConfig() {
+	a.MasterHostConfig = &MasterHostConfig{}
 }
 
 func (a *Argument) SetManifest(manifest string) {

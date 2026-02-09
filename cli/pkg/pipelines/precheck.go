@@ -11,7 +11,6 @@ import (
 func StartPreCheckPipeline() error {
 	var arg = common.NewArgument()
 	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
-	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetConsoleLog("precheck.log", true)
 
 	runtime, err := common.NewKubeRuntime(*arg)

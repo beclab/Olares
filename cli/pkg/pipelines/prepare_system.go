@@ -28,7 +28,6 @@ func PrepareSystemPipeline(components []string) error {
 	}
 
 	var arg = common.NewArgument()
-	arg.SetBaseDir(viper.GetString(common.FlagBaseDir))
 	arg.SetKubeVersion(viper.GetString(common.FlagKubeType))
 	arg.SetMinikubeProfile(viper.GetString(common.FlagMiniKubeProfile))
 	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))

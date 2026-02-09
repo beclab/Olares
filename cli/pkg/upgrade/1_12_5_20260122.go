@@ -12,7 +12,7 @@ type upgrader_1_12_5_20260122 struct {
 }
 
 func (u upgrader_1_12_5_20260122) Version() *semver.Version {
-	return semver.MustParse("1.12.3-20260122")
+	return semver.MustParse("1.12.5-20260122")
 }
 
 func (u upgrader_1_12_5_20260122) UpgradeSystemComponents() []task.Interface {

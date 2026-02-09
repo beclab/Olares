@@ -13,6 +13,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
@@ -520,6 +521,7 @@ type applicationPermission struct {
 	Permissions []permission `json:"permissions"`
 }
 
+// Deprecated
 func (h *Handler) applicationPermissionList(req *restful.Request, resp *restful.Response) {
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 	//token := req.HeaderParameter(constants.AuthorizationTokenKey)
@@ -572,46 +574,51 @@ func (h *Handler) applicationPermissionList(req *restful.Request, resp *restful.
 func (h *Handler) getApplicationPermission(req *restful.Request, resp *restful.Response) {
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
-	client, err := dynamic.NewForConfig(h.kubeConfig)
+	name, err := apputils.FmtAppMgrName(app, owner, "")
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
-	var ret *applicationPermission
-	apClient := provider.NewApplicationPermissionRequest(client)
-	namespace := fmt.Sprintf("user-system-%s", owner)
-	aps, err := apClient.List(req.Request.Context(), namespace, metav1.ListOptions{})
+	var am v1alpha1.ApplicationManager
+	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: name}, &am)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
-	for _, ap := range aps.Items {
-		if ap.Object == nil {
-			continue
+
+	// sys app does not have app config
+	if am.Spec.Config == "" {
+		ret := &applicationPermission{
+			App:         am.Spec.AppName,
+			Owner:       owner,
+			Permissions: []permission{},
 		}
-		appName, _, _ := unstructured.NestedString(ap.Object, "spec", "app")
-		if appName == app {
-			perms, _, _ := unstructured.NestedSlice(ap.Object, "spec", "permissions")
+
+		resp.WriteAsJson(ret)
+		return
+	}
+
+	var appConfig appcfg.ApplicationConfig
+	err = am.GetAppConfig(&appConfig)
+	if err != nil {
+		klog.Errorf("Failed to get app config err=%v", err)
+		api.HandleError(resp, req, err)
+		return
+	}
+
+	var ret *applicationPermission
+	permissions := appinstaller.ParseAppPermission(appConfig.Permission)
+	for _, ap := range permissions {
+		if perms, ok := ap.([]appcfg.ProviderPermission); ok {
 			permissions := make([]permission, 0)
 			for _, p := range perms {
-				if perm, ok := p.(map[string]interface{}); ok {
-					ops := make([]string, 0)
-					for _, op := range perm["ops"].([]interface{}) {
-						if opStr, ok := op.(string); ok {
-							ops = append(ops, opStr)
-						}
-					}
-					permissions = append(permissions, permission{
-						DataType: perm["dataType"].(string),
-						Group:    perm["group"].(string),
-						Version:  perm["version"].(string),
-						Ops:      ops,
-					})
-				}
-
+				permissions = append(permissions, permission{
+					DataType: p.ProviderName,
+					Group:    p.AppName,
+				})
 			}
 			ret = &applicationPermission{
-				App:         appName,
+				App:         am.Spec.AppName,
 				Owner:       owner,
 				Permissions: permissions,
 			}
@@ -642,6 +649,7 @@ type opApi struct {
 	URI  string `json:"uri"`
 }
 
+// Deprecated
 func (h *Handler) getProviderRegistry(req *restful.Request, resp *restful.Response) {
 	dataTypeReq := req.PathParameter(ParamDataType)
 	groupReq := req.PathParameter(ParamGroup)
@@ -708,56 +716,44 @@ func (h *Handler) getProviderRegistry(req *restful.Request, resp *restful.Respon
 func (h *Handler) getApplicationProviderList(req *restful.Request, resp *restful.Response) {
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 	app := req.PathParameter(ParamAppName)
-	client, err := dynamic.NewForConfig(h.kubeConfig)
+
+	name, err := apputils.FmtAppMgrName(app, owner, "")
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
+	var am v1alpha1.ApplicationManager
+	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: name}, &am)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
+	var appConfig appcfg.ApplicationConfig
+	err = am.GetAppConfig(&appConfig)
+	if err != nil {
+		klog.Errorf("Failed to get app config err=%v", err)
+		api.HandleError(resp, req, err)
+		return
+	}
+
 	ret := make([]providerRegistry, 0)
-	rClient := provider.NewRegistryRequest(client)
-	namespace := fmt.Sprintf("user-system-%s", owner)
-	prs, err := rClient.List(req.Request.Context(), namespace, metav1.ListOptions{})
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	for _, ap := range prs.Items {
-		if ap.Object == nil {
-			continue
-		}
-		deployment, _, _ := unstructured.NestedString(ap.Object, "spec", "deployment")
-		kind, _, _ := unstructured.NestedString(ap.Object, "spec", "kind")
-
-		if app == deployment && kind == "provider" {
-			dataType, _, _ := unstructured.NestedString(ap.Object, "spec", "dataType")
-			group, _, _ := unstructured.NestedString(ap.Object, "spec", "group")
-			description, _, _ := unstructured.NestedString(ap.Object, "spec", "description")
-			endpoint, _, _ := unstructured.NestedString(ap.Object, "spec", "endpoint")
-			ns, _, _ := unstructured.NestedString(ap.Object, "spec", "namespace")
-			version, _, _ := unstructured.NestedString(ap.Object, "spec", "version")
-			opApis := make([]opApi, 0)
-			opApiList, _, _ := unstructured.NestedSlice(ap.Object, "spec", "opApis")
-			for _, op := range opApiList {
-				if aop, ok := op.(map[string]interface{}); ok {
-					opApis = append(opApis, opApi{
-						Name: aop["name"].(string),
-						URI:  aop["uri"].(string),
-					})
-				}
-			}
-			ret = append(ret, providerRegistry{
-				DataType:    dataType,
-				Deployment:  deployment,
-				Description: description,
-				Endpoint:    endpoint,
-				Kind:        kind,
-				Group:       group,
-				Namespace:   ns,
-				OpApis:      opApis,
-				Version:     version,
+	ns := am.Spec.AppNamespace
+	for _, ap := range appConfig.Provider {
+		dataType := ap.Name
+		endpoint := ap.Entrance
+		opApis := make([]opApi, 0)
+		for _, op := range ap.Paths {
+			opApis = append(opApis, opApi{
+				URI: op,
 			})
-
 		}
+		ret = append(ret, providerRegistry{
+			DataType:  dataType,
+			Endpoint:  endpoint,
+			Namespace: ns,
+			OpApis:    opApis,
+		})
 	}
 	resp.WriteAsJson(ret)
 }

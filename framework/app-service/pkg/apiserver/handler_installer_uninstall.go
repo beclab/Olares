@@ -77,6 +77,7 @@ func (h *Handler) uninstall(req *restful.Request, resp *restful.Response) {
 	}
 	am.Annotations[api.AppTokenKey] = token
 	am.Annotations[api.AppUninstallAllKey] = fmt.Sprintf("%t", request.All)
+	am.Annotations[api.AppDeleteDataKey] = fmt.Sprintf("%t", request.DeleteData)
 	err = h.ctrlClient.Update(req.Request.Context(), &am)
 	if err != nil {
 		api.HandleError(resp, req, err)

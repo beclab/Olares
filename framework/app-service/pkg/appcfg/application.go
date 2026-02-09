@@ -100,6 +100,7 @@ type ApplicationConfig struct {
 	PodsSelectors        []metav1.LabelSelector
 	HardwareRequirement  Hardware
 	SharedEntrances      []v1alpha1.Entrance
+	SelectedGpuType      string
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
@@ -157,6 +158,13 @@ func (c *ApplicationConfig) GenSharedEntranceURL(ctx context.Context) ([]v1alpha
 	}
 
 	return app.GenSharedEntranceURL(ctx)
+}
+
+func (c *ApplicationConfig) GetSelectedGpuTypeValue() string {
+	if c.SelectedGpuType == "" {
+		return "none"
+	}
+	return c.SelectedGpuType
 }
 
 func (p *ProviderPermission) GetNamespace(ownerName string) string {
