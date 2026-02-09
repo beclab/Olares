@@ -14,7 +14,7 @@ Equipped by an NVDIA 5090 mobile GPU, with the Steam Headless app, Olares One tr
 ## Learning objectives
 - Set up Steam Headless on your Olares One.
 - Configure the Sunshine streaming service.
-- Pair your device via Moonlight and stream games locally or remotely.
+- Pair your Olares One via Moonlight and stream games locally or remotely.
 
 ## Prerequisites
 **Hardware** <br>
@@ -61,16 +61,17 @@ If Steam installation or update fails due to network issues, go to the top-left 
 ## Step 3: Pair Sunshine with Moonlight
 Steam Headless uses Sunshine to stream video. You must pair it with the Moonlight app on your playing device.
 
-### 1. Access the Sunshine console
+### Access the Sunshine console
 
 You need to access the Sunshine Web UI running on your Olares One to enter a pairing PIN.
 
 1. Copy the URL of your current Steam Headless browser tab.
 2. Open a new browser tab and modify the URL to access port `47990`. The address varies depending on your network.
-    - **Same network**: Use `http` and your `.local` address. For example:
+    - **Same network**: Use HTTPS with your `.local` address. Either format works (dots or hyphens in the hostname):
 
    ```plain
-   http://139ebc4f0.<your Olares ID>.olares.local:47990
+   https://139ebc4f0.<your Olares ID>.olares.local:47990
+   https://139ebc4f0-<your Olares ID>-olares.local:47990
    ```
 
     - **Different network (via VPN)**: Enable LarePass VPN on your device, then append `:47990`. For example:
@@ -108,7 +109,7 @@ If it doesn't appear, or if you are connecting over different networks, follow t
 2. Enter the PIN displayed in Moonlight and give your device a name.
    ![Enter pairing PIN](/images/manual/use-cases/steam-enter-pairing-pin.png#bordered)
 
-3. Click **Send**. 
+3. Click **Send**.
 4. Upon success, you will see a confirmation message, and the lock icon in Moonlight will disappear.
    ![Host in Moonlight](/images/manual/use-cases/steam-host-in-moonlight.png#bordered)
 
@@ -131,6 +132,12 @@ The following steps demonstrate local streaming.
 3.  Steam **Big Picture Mode** will launch. Select a game from your library and start playing.
 
 ## FAQs
+
+### Why can't I access the Sunshine Web UI using the `.local` address?
+
+Olares supports `.local` addresses with the HTTP protocol for most services. The Sunshine Web UI is different because it requires HTTPS to secure local communication. If you use `http://` with your `.local` URL, the Sunshine page will not load.
+
+To fix this, use `https://` instead of `http://` in your browser's address bar (for example, `https://139ebc4f0.<your Olares ID>.olares.local:47990`).
 
 ### Why isn't the game displaying in full screen?
 
@@ -155,7 +162,7 @@ After finishing, exit Steam Big Picture mode to release system resources on Olar
 
 You can check the downloaded games in the Files app. By default, games are saved in:
 
-```
+```plain
 /Cache/olares/steam-headless/c0/.steam/steam/steamapps/common
 ```
 
@@ -185,10 +192,11 @@ To fix it, simply restart Steam Headless in Olares and try pairing again:
 
 You can change your Sunshine credentials directly from the Sunshine web console.
 
-1. Open Sunshine in your browser using your local address, for example: `http://139ebc4f0.<your Olares ID>.olares.local:47990`.
+1. Open Sunshine in your browser using your local address, for example: `https://139ebc4f0.<your Olares ID>.olares.local:47990`.
 2. Log in with your current username and password.
 3. Go to the **Change Password** tab.
    ![Change Sunshine password](/images/manual/use-cases/steam-change-sunshine-pw.png#bordered)
+
 4. Enter a new password (and username if desired), then click **Save**.
 
 ## Resources
