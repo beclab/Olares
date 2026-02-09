@@ -49,6 +49,9 @@ type ReverseProxyConfig struct {
 	FRPConfig
 	EnableCloudFlareTunnel bool `json:"enable_cloudflare_tunnel"`
 	EnableFRP              bool `json:"enable_frp"`
+	// ExternalNetworkOff is an internal flag controlled by the owner BFL only.
+	// When enabled, reverse proxy agent/DNS config will be frozen.
+	ExternalNetworkOff bool `json:"external_network_off,omitempty"`
 }
 
 type FRPConfig struct {
@@ -67,14 +70,15 @@ var (
 	FRPAuthMethodJWS    string = "jws"
 	FRPAuthMethodToken  string = "token"
 
-	ReverseProxyConfigKeyPublicIP         = "public_ip"
-	ReverseProxyConfigKeyCloudFlareEnable = "cloudflare.enable"
-	ReverseProxyConfigKeyFRPEnable        = "frp.enable"
-	ReverseProxyConfigValueEnabled        = "1"
-	ReverseProxyConfigKeyFRPServer        = "frp.server"
-	ReverseProxyConfigKeyFRPPort          = "frp.port"
-	ReverseProxyConfigKeyFRPAuthMethod    = "frp.auth_method"
-	ReverseProxyConfigKeyFRPAuthToken     = "frp.auth_token"
+	ReverseProxyConfigKeyPublicIP           = "public_ip"
+	ReverseProxyConfigKeyCloudFlareEnable   = "cloudflare.enable"
+	ReverseProxyConfigKeyFRPEnable          = "frp.enable"
+	ReverseProxyConfigValueTrue             = "1"
+	ReverseProxyConfigKeyFRPServer          = "frp.server"
+	ReverseProxyConfigKeyFRPPort            = "frp.port"
+	ReverseProxyConfigKeyFRPAuthMethod      = "frp.auth_method"
+	ReverseProxyConfigKeyFRPAuthToken       = "frp.auth_token"
+	ReverseProxyConfigKeyExternalNetworkOff = "external_network_off"
 )
 
 func NewReverseProxyConfigurator() (*ReverseProxyConfigurator, error) {
@@ -119,6 +123,9 @@ func NewReverseProxyConfigurator() (*ReverseProxyConfigurator, error) {
 func (conf *ReverseProxyConfig) Check() error {
 	if conf == nil {
 		return errors.New("nil ReverseProxyConfig")
+	}
+	if conf.ExternalNetworkOff {
+		return nil
 	}
 	if conf.EnableCloudFlareTunnel {
 		if conf.EnableFRP {
@@ -347,15 +354,25 @@ func (configurator *ReverseProxyConfigurator) Configure(ctx context.Context) (er
 		if err != nil {
 			return
 		}
-		err = errors.Wrap(configurator.configureDNS(publicIP, localIP, publicCName), "failed to configure DNS")
-		if err != nil {
-			return
+		if !conf.ExternalNetworkOff {
+			err = errors.Wrap(configurator.configureDNS(publicIP, localIP, publicCName), "failed to configure DNS")
+			if err != nil {
+				return
+			}
 		}
 		err = errors.Wrap(configurator.markApplied(ctx, cm, conf), "failed to update reverse proxy configmap to mark apply completed")
 	}()
 	cm, err = configurator.markApplying(ctx, cm)
 	if err != nil {
 		return errors.Wrap(err, "failed to mark reverse proxy configmap as applying")
+	}
+	if conf.ExternalNetworkOff {
+		err := configurator.kubeClient.AppsV1().Deployments(constants.Namespace).Delete(ctx, ReverseProxyAgentDeploymentName, metav1.DeleteOptions{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			return errors.Wrap(err, "failed to delete existing reverse proxy agent")
+		}
+		proxyType = constants.ReverseProxyTypeExternalNetworkOff
+		return nil
 	}
 	localL4ProxyIP, err := k8sutil.GetL4ProxyNodeIP(ctx, 30*time.Second)
 	if err != nil {
@@ -371,7 +388,7 @@ func (configurator *ReverseProxyConfigurator) Configure(ctx context.Context) (er
 		if err != nil && !apierrors.IsNotFound(err) {
 			return errors.Wrap(err, "failed to delete existing reverse proxy agent")
 		}
-		proxyType = constants.ReverseProxyTypeNone
+		proxyType = constants.ReverseProxyTypePublic
 		return nil
 	}
 
@@ -509,13 +526,16 @@ func setReverseProxyAgentDeploymentToCloudFlare(deployConf *applyAppsv1.Deployme
 }
 
 func (conf *ReverseProxyConfig) readFromReverseProxyConfigMapData(cmData map[string]string) error {
-	if cmData[ReverseProxyConfigKeyCloudFlareEnable] == ReverseProxyConfigValueEnabled {
+	if cmData[ReverseProxyConfigKeyExternalNetworkOff] == ReverseProxyConfigValueTrue {
+		conf.ExternalNetworkOff = true
+	}
+	if cmData[ReverseProxyConfigKeyCloudFlareEnable] == ReverseProxyConfigValueTrue {
 		conf.EnableCloudFlareTunnel = true
 		// don't break circuit here or at the above public ip logic
 		// because the validity check will be done by the configurator
 		// this method is only meant for parsing
 	}
-	if cmData[ReverseProxyConfigKeyFRPEnable] == ReverseProxyConfigValueEnabled {
+	if cmData[ReverseProxyConfigKeyFRPEnable] == ReverseProxyConfigValueTrue {
 		conf.EnableFRP = true
 		conf.FRPServer = cmData[ReverseProxyConfigKeyFRPServer]
 		if portStr := cmData[ReverseProxyConfigKeyFRPPort]; portStr != "" {
@@ -533,11 +553,14 @@ func (conf *ReverseProxyConfig) readFromReverseProxyConfigMapData(cmData map[str
 
 func (conf *ReverseProxyConfig) generateReverseProxyConfigMapData() map[string]string {
 	cmData := make(map[string]string)
+	if conf.ExternalNetworkOff {
+		cmData[ReverseProxyConfigKeyExternalNetworkOff] = ReverseProxyConfigValueTrue
+	}
 	if conf.EnableCloudFlareTunnel {
-		cmData[ReverseProxyConfigKeyCloudFlareEnable] = ReverseProxyConfigValueEnabled
+		cmData[ReverseProxyConfigKeyCloudFlareEnable] = ReverseProxyConfigValueTrue
 	}
 	if conf.EnableFRP {
-		cmData[ReverseProxyConfigKeyFRPEnable] = ReverseProxyConfigValueEnabled
+		cmData[ReverseProxyConfigKeyFRPEnable] = ReverseProxyConfigValueTrue
 		cmData[ReverseProxyConfigKeyFRPServer] = conf.FRPServer
 		if conf.FRPPort != 0 {
 			cmData[ReverseProxyConfigKeyFRPPort] = strconv.Itoa(conf.FRPPort)
@@ -565,7 +588,18 @@ func GetReverseProxyConfigFromNamespace(ctx context.Context, namespace string) (
 }
 
 func (conf *ReverseProxyConfig) writeToReverseProxyConfigMap(ctx context.Context) error {
+	// Preserve the external-network-off flag if it already exists in the ConfigMap.
+	// This flag is owned by the owner BFL and must not be modified by frontend APIs.
+	existing, err := k8sutil.GetConfigMapData(ctx, constants.Namespace, constants.ReverseProxyConfigMapName)
+	if err != nil {
+		// if configmap doesn't exist yet, just write the generated config
+		cmData := conf.generateReverseProxyConfigMapData()
+		e := k8sutil.WriteConfigMapData(ctx, constants.Namespace, constants.ReverseProxyConfigMapName, cmData)
+		return errors.Wrap(e, "error writing configmap")
+	}
+	offVal, _ := existing[ReverseProxyConfigKeyExternalNetworkOff]
 	cmData := conf.generateReverseProxyConfigMapData()
-	err := k8sutil.WriteConfigMapData(ctx, constants.Namespace, constants.ReverseProxyConfigMapName, cmData)
-	return errors.Wrap(err, "error writing configmap")
+	cmData[ReverseProxyConfigKeyExternalNetworkOff] = offVal
+	e := k8sutil.WriteConfigMapData(ctx, constants.Namespace, constants.ReverseProxyConfigMapName, cmData)
+	return errors.Wrap(e, "error writing configmap")
 }
