@@ -25,5 +25,6 @@ From running AI models to building seamless workflows across your self-hosted se
   { title: 'LobeChat', link: './lobechat.html', tags: ['AI']},
   { title: 'Stirling PDF', link: './stirling-pdf.html', tags: ['Productivity']},
   { title: 'PDFMathTranslate', link: './pdfmathtranslate.html', tags: ['AI']},
+  { title: 'OpenClaw', link: './openclaw.html', tags: ['AI']},
 ]" 
 />

@@ -568,6 +568,10 @@ const side = {
           text: "LobeChat",
           link: "/use-cases/lobechat",
         },
+        {
+          text: "OpenClaw",
+          link: "/use-cases/openclaw",
+        },
       ],
     },
   ],
