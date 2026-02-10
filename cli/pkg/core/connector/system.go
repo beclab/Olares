@@ -78,6 +78,8 @@ type Systems interface {
 	IsLinux() bool
 	IsGB10Chip() bool
 	IsAmdApu() bool
+	IsAmdGPU() bool
+	IsAmdGPUOrAPU() bool
 
 	IsUbuntu() bool
 	IsDebian() bool
@@ -124,6 +126,7 @@ type SystemInfo struct {
 	PkgManager  string          `json:"pkg_manager"`
 	IsOIC       bool            `json:"is_oic,omitempty"`
 	ProductName string          `json:"product_name,omitempty"`
+	HasAmdGPU   bool            `json:"has_amd_gpu,omitempty"`
 }
 
 func (s *SystemInfo) IsSupport() error {
@@ -243,7 +246,15 @@ func (s *SystemInfo) IsGB10Chip() bool {
 }
 
 func (s *SystemInfo) IsAmdApu() bool {
-	return s.CpuInfo.HasAmdiGpu
+	return s.CpuInfo.HasAmdAPU
+}
+
+func (s *SystemInfo) IsAmdGPU() bool {
+	return s.HasAmdGPU
+}
+
+func (s *SystemInfo) IsAmdGPUOrAPU() bool {
+	return s.CpuInfo.HasAmdAPU || s.HasAmdGPU
 }
 
 func (s *SystemInfo) IsUbuntu() bool {
@@ -332,6 +343,12 @@ func GetSystemInfo() *SystemInfo {
 	si.DiskInfo = getDisk()
 	si.MemoryInfo = getMem()
 	si.FsInfo = getFs()
+
+	hasAmdGPU, err := getAmdGPU()
+	if err != nil {
+		panic(errors.Wrap(err, "failed to get amd apu/gpu"))
+	}
+	si.HasAmdGPU = hasAmdGPU
 
 	localIP, err := util.GetLocalIP()
 	if err != nil {
@@ -449,7 +466,27 @@ type CpuInfo struct {
 	CpuLogicalCount  int    `json:"cpu_logical_count"`
 	CpuPhysicalCount int    `json:"cpu_physical_count"`
 	IsGB10Chip       bool   `json:"is_gb10_chip,omitempty"`
-	HasAmdiGpu       bool   `json:"has_amd_igpu,omitempty"`
+	HasAmdAPU        bool   `json:"has_amd_apu,omitempty"`
+}
+
+// Not considering the case where AMD GPU and AMD APU coexist.
+func getAmdGPU() (bool, error) {
+	APUOrGPUExists, err := HasAmdAPUOrGPULocal()
+	if err != nil {
+		fmt.Printf("Error checking AMD APU/GPU: %v\n", err)
+		return false, err
+	}
+
+	hasAmdAPU, err := HasAmdAPULocal()
+	if err != nil {
+		fmt.Printf("Error checking AMD APU: %v\n", err)
+		return false, err
+	}
+
+	if APUOrGPUExists && !hasAmdAPU {
+		return true, nil
+	}
+	return false, nil
 }
 
 func getCpu() *CpuInfo {
@@ -482,11 +519,11 @@ func getCpu() *CpuInfo {
 		}
 	}
 
-	// check if has amd igpu
-	hasAmdiGpu, err := HasAmdIGPULocal()
+	// check if it has amd igpu
+	hasAmdAPU, err := HasAmdAPULocal()
 	if err != nil {
 		fmt.Printf("Error checking AMD iGPU: %v\n", err)
-		hasAmdiGpu = false
+		hasAmdAPU = false
 	}
 
 	return &CpuInfo{
@@ -494,7 +531,7 @@ func getCpu() *CpuInfo {
 		CpuLogicalCount:  cpuLogicalCount,
 		CpuPhysicalCount: cpuPhysicalCount,
 		IsGB10Chip:       isGB10Chip,
-		HasAmdiGpu:       hasAmdiGpu,
+		HasAmdAPU:        hasAmdAPU,
 	}
 }
 

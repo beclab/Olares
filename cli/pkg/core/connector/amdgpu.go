@@ -9,7 +9,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
-func hasAmdIGPU(cmdExec func(s string) (string, error)) (bool, error) {
+func hasAmdAPU(cmdExec func(s string) (string, error)) (bool, error) {
 	// Detect by CPU model names that bundle AMD AI NPU/graphics
 	targets := []string{
 		"AMD Ryzen AI Max+ 395",
@@ -48,19 +48,53 @@ func hasAmdIGPU(cmdExec func(s string) (string, error)) (bool, error) {
 	return false, nil
 }
 
-func HasAmdIGPU(execRuntime Runtime) (bool, error) {
-	return hasAmdIGPU(func(s string) (string, error) {
+func hasAmdAPUOrGPU(cmdExec func(s string) (string, error)) (bool, error) {
+	out, err := cmdExec("lspci -d '1002:' | grep  'AMD' || true")
+	if err != nil {
+		return false, err
+	}
+	if out != "" {
+		return true, nil
+	}
+	out, err = cmdExec("lshw -c display -numeric -disable network | grep -q 'vendor: .* \\[1002\\]' || true")
+	if err != nil {
+		return false, err
+	}
+	if out != "" {
+		return true, nil
+	}
+	return false, nil
+}
+
+func HasAmdAPU(execRuntime Runtime) (bool, error) {
+	return hasAmdAPU(func(s string) (string, error) {
 		return execRuntime.GetRunner().SudoCmd(s, false, false)
 	})
 }
 
-func HasAmdIGPULocal() (bool, error) {
-	return hasAmdIGPU(func(s string) (string, error) {
+func HasAmdAPULocal() (bool, error) {
+	return hasAmdAPU(func(s string) (string, error) {
 		out, err := exec.Command("sh", "-c", s).Output()
 		if err != nil {
 			return "", err
 		}
 		return string(out), nil
+	})
+}
+
+func HasAmdAPUOrGPULocal() (bool, error) {
+	return hasAmdAPUOrGPU(func(s string) (string, error) {
+		out, err := exec.Command("sh", "-c", s).Output()
+		if err != nil {
+			return "", err
+		}
+		return string(out), nil
+	})
+}
+
+func HasAmdAPUOrGPU(execRuntime Runtime) (bool, error) {
+	return hasAmdAPUOrGPU(func(s string) (string, error) {
+		return execRuntime.GetRunner().SudoCmd(s, false, false)
 	})
 }
 

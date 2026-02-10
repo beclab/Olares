@@ -390,12 +390,12 @@ func (r *RocmChecker) Check(runtime connector.Runtime) error {
 		return nil
 	}
 
-	// detect AMD GPU presence
-	amdGPUExists, err := connector.HasAmdIGPU(runtime)
+	// detect AMD APU/GPU presence
+	amdGPUExists, err := connector.HasAmdAPUOrGPU(runtime)
 	if err != nil {
 		return err
 	}
-	// no AMD GPU found, no need to check rocm
+	// no AMD APU/GPU found, no need to check rocm
 	if !amdGPUExists {
 		return nil
 	}
