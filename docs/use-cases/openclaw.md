@@ -66,20 +66,24 @@ Run a quick setup for the agent in the OpenClaw CLI.
 
     | Settings | Option |
     |:-------- |:-------|
-    |I understand this is powerful and inherently <br>risky. Continue?|Yes|
-    |Onboarding mode|QuickStart|
-    |Config handling|Use existing values|
-    |Model/auth provider|Skip for now|
-    |Filter models|All providers|
-    |Default model|Keep current|
-    |Select channel|Skip for now|
-    |Configure skills now|No|
-    |Enable hooks|Skip for now|
-    |Hatch your bot|Do this later|
+    | I understand this is powerful and inherently <br>risky. Continue? | Yes |
+    | Onboarding mode | QuickStart |
+    | Config handling | Use existing values |
+    | Model/auth provider | Skip for now |
+    | Filter models by provider | All providers |
+    | Default model | Keep current |
+    | Select channel | Skip for now |
+    | Configure skills now | No |
+    | How do you want to hatch your bot | Do this later |
     
-4. After you complete the wizard, scroll up to the **Control UI** section.
-5. Copy and save the token displayed in the **Web UI (with token)**. 
-6. Keep the CLI window open for the next step.
+4. After you complete the wizard, restart OpenClaw CLI.
+5. Enter the following command to view and copy the gateway token displayed:
+
+    ```bash
+    openclaw config get gateway.auth.token
+    ```
+
+6. Keep the OpenClaw CLI window open for the next step.
 
 ## Pair device
 
