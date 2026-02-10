@@ -29,7 +29,7 @@ spec:
         name: check-auth
       containers:
       - name: auth-front
-        image: beclab/login:v1.8.5
+        image: beclab/login:v1.9.2
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
