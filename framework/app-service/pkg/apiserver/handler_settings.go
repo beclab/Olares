@@ -586,6 +586,18 @@ func (h *Handler) getApplicationPermission(req *restful.Request, resp *restful.R
 		return
 	}
 
+	// sys app does not have app config
+	if am.Spec.Config == "" {
+		ret := &applicationPermission{
+			App:         am.Spec.AppName,
+			Owner:       owner,
+			Permissions: []permission{},
+		}
+
+		resp.WriteAsJson(ret)
+		return
+	}
+
 	var appConfig appcfg.ApplicationConfig
 	err = am.GetAppConfig(&appConfig)
 	if err != nil {
@@ -714,6 +726,12 @@ func (h *Handler) getApplicationProviderList(req *restful.Request, resp *restful
 	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: name}, &am)
 	if err != nil {
 		api.HandleError(resp, req, err)
+		return
+	}
+
+	// sys app does not have app config
+	if am.Spec.Config == "" {
+		resp.WriteAsJson([]providerRegistry{})
 		return
 	}
 
