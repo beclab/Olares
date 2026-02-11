@@ -332,10 +332,10 @@ func (t *CheckGpuStatus) Execute(runtime connector.Runtime) error {
 	}
 
 	selector := "app.kubernetes.io/component=hami-device-plugin"
-	if runtime.GetSystemInfo().IsGB10Chip() {
-		// TODO: check GB10 plugin status
-		selector = "name=nvidia-gb10-device-plugin"
-	}
+	// if runtime.GetSystemInfo().IsGB10Chip() {
+	// 	// TODO: check GB10 plugin status
+	// 	selector = "name=nvidia-gb10-device-plugin"
+	// }
 	cmd := fmt.Sprintf("%s get pod  -n kube-system -l '%s' -o jsonpath='{.items[*].status.phase}'", kubectlpath, selector)
 
 	rphase, _ := runtime.GetRunner().SudoCmd(cmd, false, false)
