@@ -62,7 +62,8 @@ Run a quick setup for the agent in the OpenClaw CLI.
 3. The wizard guides you through a series of steps. Use the arrow keys to navigate and press Enter to confirm.
 
     :::tip Note on configurations
-    To get you started quickly, this tutorial skips several advanced settings in the wizard. You can configure or modify them later.
+    - To get you started quickly, this tutorial skips several advanced settings in the wizard. You can configure or modify them later.
+    - Do not configure skills here, because the Olares security environment prevents the wizard from automatically installing skills. You need to install them manually. For more information, see [Manage skills and plugins](#manage-skills-and-plugins).
     :::
 
     | Settings | Option |
@@ -74,7 +75,7 @@ Run a quick setup for the agent in the OpenClaw CLI.
     | Filter models by provider | All providers |
     | Default model | Keep current |
     | Select channel | Skip for now |
-    | Configure skills now | No |
+    | Configure skills now | No<br>(Manual installation required) |
     | How do you want to hatch your bot | Do this later |
     
 4. After you complete the wizard, close OpenClaw CLI and open it again.
@@ -281,6 +282,10 @@ OpenClaw officially recommends Brave Search. It uses an independent web index op
 OpenClaw can be extended using skills and plugins：
 - Skills add new capabilities to the AI. For example, managing Model Context Protocol servers.
 - Plugins extend the system to support additional channels or community features. For example, adding iMessage via BlueBubbles.
+
+:::info Why manual installation required
+To protect your device, OpenClaw runs in a restricted, non-root environment without administrative privileges. This prevents the agent from modifying your system or self-installing software.
+:::
 
 ### Step 1: Install ClawHub
 
