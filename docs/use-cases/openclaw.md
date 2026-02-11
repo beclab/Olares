@@ -21,6 +21,7 @@ By the end of this tutorial, you are be able to:
 - Pair and connect the OpenClaw CLI and the Control UI.
 - Configure OpenClaw to use the local AI model Ollama.
 - Integrate OpenClaw with Discord.
+- Manage skills and plug-ins.
 - Enable the web search capability using Brave Search.
 
 ## Prerequisites
@@ -76,14 +77,14 @@ Run a quick setup for the agent in the OpenClaw CLI.
     | Configure skills now | No |
     | How do you want to hatch your bot | Do this later |
     
-4. After you complete the wizard, restart OpenClaw CLI.
-5. Enter the following command to view and copy the gateway token displayed:
+4. After you complete the wizard, close OpenClaw CLI and open it again.
+5. Enter the following command to obtain the gateway token:
 
     ```bash
     openclaw config get gateway.auth.token
     ```
 
-6. Keep the OpenClaw CLI window open for the next step.
+6. Copy the token and keep the OpenClaw CLI window open for the next step.
 
 ## Pair device
 
@@ -164,7 +165,7 @@ To chat with your agent remotely, connect it to a Discord bot.
 
     ![Reset token](/images/manual/use-cases/reset-token.png#bordered)
 
-### Step 2. Invite the bot to server
+### Step 2: Invite the bot to server
 
 1. From the left sidebar, select **OAuth2**, and then find the **OAuth2 URL Generator** section:
 
@@ -219,12 +220,14 @@ For security, the bot does not talk to unauthorized users. You must pair your Di
 
 1. Open Discord and send a Direct Message to your new bot. The bot will reply with an error message containing a Pairing Code.
 2. Open the OpenClaw CLI and enter the following command:
+
     ```bash
     openclaw pairing approve discord {Your-Pairing-Code}
     ```
+
 3. Once approved, you can start chatting with your agent in Discord.
 
-## (Optional) Enable web search
+## Optional: Enable web search
 
 By default, OpenClaw answers questions only based on its training data, which means it doesn't know about current events or real-time news. To give your agent access to the live internet, you can enable the web search tool.
 
@@ -238,12 +241,12 @@ OpenClaw officially recommends Brave Search. It uses an independent web index op
     ```
 3. Configure the basic settings as follows:
 
-    |Settings|Option|
+    | Settings | Option |
     |:-------|:-----|
-    |Where will the Gateway run|Local (this machine)|
-    |Enable web_search (Brave Search)|Yes|
-    |Brave Search API key| Your `BraveSearchAPIkey` |
-    |Enable web_fetch (keyless HTTP <br>fetch) |Yes|
+    | Where will the Gateway run | Local (this machine) |
+    | Enable web_search (Brave Search) | Yes |
+    | Brave Search API key | Your `BraveSearchAPIkey` |
+    | Enable web_fetch (keyless HTTP <br>fetch) | Yes |
 
 4. Finalize the configuration in Control UI.
 
@@ -273,11 +276,102 @@ OpenClaw officially recommends Brave Search. It uses an independent web index op
 
 5. Now you can ask the agent in Discord to answer questions that require real-time internet data.
 
-## FAQ
+## Manage skills and plugins
 
-### I see the error "HTTP 503" or "event gap detected"
+OpenClaw can be extended using skills and plugins：
+- Skills add new capabilities to the AI. For example, managing Model Context Protocol servers.
+- Plugins extend the system to support additional channels or community features. For example, adding iMessage via BlueBubbles.
 
-If you encounter these errors in Discord or the Control UI, check your Ollama and ensure it is running properly in the background.
+### Step 1: Install ClawHub
+
+To manage skills and plugins, install ClawHub. It is the package manager for OpenClaw.
+
+1. Open the OpenClaw CLI.
+2. Enter the following command:
+
+    ```bash
+    npx clawhub
+    ```
+
+3. When prompted to proceed, press Y.
+
+### Step 2: Install and enable skills
+
+1. Check the list of available skills by entering the following command:
+
+    ```bash
+    openclaw skills
+    ```
+    ![View skills](/images/manual/use-cases/available-skills.png#bordered)
+
+2. Find the target skill name in the **Skill** column, and then install by entering the following command:
+
+    ```bash
+    npx clawhub install {SkillName}
+    ```
+
+    For example, to install mcporter, enter the following command:
+
+    ```bash
+    npx clawhub install mcporter
+    ```
+
+3. If prompted to **Install anyway**, select **Yes**.
+4. When the installation is completed, verify by entering the following command:
+
+    ```bash
+    openclaw skills
+    ```
+    The status of **mcporter** is **ready**, indicating the installation is successful.
+
+    ![Skill installed](/images/manual/use-cases/skill-installed.png#bordered)
+
+5. Open the Control UI, go to the **Skills** page and find **mcporter**:
+
+    - If it is enabled, click **Disable**, and then click **Enable** again to force the system to save the configuration.
+    - If it is disabled, click **Enable**.
+
+    ![Enable skill](/images/manual/use-cases/enable-skill.png#bordered)
+
+6. Click **Save** in the upper-right corner. The system validates the config and restarts automatically to apply the changes.   
+
+### Step 3: Install plug-ins
+
+1. In the OpenClaw CLI, check the list of compatible plug-ins by entering the following command:
+
+    ```bash
+    openclaw plugins list
+    ```
+
+2. Find the target plug-in name in the **Name** column, and then install by entering the following command:
+
+    ```bash
+    openclaw plugins install {Name}
+    ```
+    For example, to install BlueBubbles, enter the following command:
+
+    ```bash
+    openclaw plugins install @openclaw/bluebubbles
+    ```
+
+3. When the installation is completed, close OpenClaw CLI and open it again to load the new plug-in.
+
+4. Verify by checking the plugin status:
+
+    ```bash
+    openclaw plugins list
+    ```
+
+    Now the status of the plug-in is **loaded**.
+
+5. Open the Control UI, go to **Config** > **Plugins**, and then find **@openclaw/bluebubbles** on the **All** tab:
+
+    - If it is enabled, turn off the toggle switch, and then turn on again to force the system to explicitly save the configuration.
+    - If it is disabled, turn on the toggle switch.
+
+    ![Toggle on plugin](/images/manual/use-cases/toggle-plugin.png#bordered)
+
+6. Click **Save** in the upper-right corner. The system validates the config and restarts automatically to apply the changes.      
 
 ## Resources
 
