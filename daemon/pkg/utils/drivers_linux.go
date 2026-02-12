@@ -42,7 +42,7 @@ func detectdStorageDevices(ctx context.Context, bus string) (usbDevs []storageDe
 		for _, d := range ds {
 			if d.Properties()["ID_BUS"] == bus {
 				usbs = append(usbs, d)
-			} else if d.Properties()["ID_BUS"] == "ata" &&
+			} else if (d.Properties()["ID_BUS"] == "ata" || d.Properties()["ID_BUS"] == "scsi") &&
 				d.Properties()["ID_USB_TYPE"] == "disk" &&
 				bus == "usb" {
 				usbs = append(usbs, d)
@@ -97,14 +97,18 @@ func detectdStorageDevices(ctx context.Context, bus string) (usbDevs []storageDe
 
 		idSerial := device.Properties()["ID_SERIAL"]
 		idSerialShort := device.Properties()["ID_SERIAL_SHORT"]
+		idUsbSerial := device.Properties()["ID_USB_SERIAL"]
+		idUsbSerialShort := device.Properties()["ID_USB_SERIAL_SHORT"]
 		partUUID := device.Properties()["ID_PART_ENTRY_UUID"]
 
 		usbDevs = append(usbDevs, storageDevice{
-			DevPath:       devPath,
-			Vender:        vender,
-			IDSerial:      idSerial,
-			IDSerialShort: idSerialShort,
-			PartitionUUID: partUUID,
+			DevPath:          devPath,
+			Vender:           vender,
+			IDSerial:         idSerial,
+			IDSerialShort:    idSerialShort,
+			IDUsbSerial:      idUsbSerial,
+			IDUsbSerialShort: idUsbSerialShort,
+			PartitionUUID:    partUUID,
 		})
 	}
 
@@ -199,7 +203,10 @@ func MountedHddPath(ctx context.Context) ([]string, error) {
 
 func FilterBySerial(serial string) func(dev storageDevice) bool {
 	return func(dev storageDevice) bool {
-		return strings.HasSuffix(serial, dev.IDSerial) || strings.HasSuffix(serial, dev.IDSerialShort)
+		return strings.HasSuffix(serial, dev.IDSerial) ||
+			strings.HasSuffix(serial, dev.IDSerialShort) ||
+			strings.HasSuffix(serial, dev.IDUsbSerial) ||
+			strings.HasSuffix(serial, dev.IDUsbSerialShort)
 	}
 }
 
