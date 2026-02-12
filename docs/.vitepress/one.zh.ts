@@ -80,19 +80,19 @@ export const oneSidebar: DefaultTheme.Sidebar = {
 
       ]
     },
-//     {
-//       text: "Manage",
-//       items: [
-//         {
-//           text: "Set up app entrances",
-//           link: "/zh/one/app-entrances",
-//         },
-//         {
-//           text: "Create users",
-//           link: "/zh/one/users",
-//         },
-//       ]
-//     },
+     {
+       text: "Manage",
+       items: [
+         {
+           text: "Set up app entrances",
+           link: "/zh/one/app-entrances",
+         },
+         {
+           text: "Create users",
+           link: "/zh/one/users",
+         },
+       ]
+     },
     {
       text: "Monitor",
       items: [
