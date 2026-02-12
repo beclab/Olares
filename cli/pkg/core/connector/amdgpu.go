@@ -49,14 +49,14 @@ func hasAmdAPU(cmdExec func(s string) (string, error)) (bool, error) {
 }
 
 func hasAmdAPUOrGPU(cmdExec func(s string) (string, error)) (bool, error) {
-	out, err := cmdExec("lspci -d '1002:' | grep  'AMD' || true")
+	out, err := cmdExec("lspci -d '1002:' 2>/dev/null | grep 'AMD' || true")
 	if err != nil {
 		return false, err
 	}
 	if out != "" {
 		return true, nil
 	}
-	out, err = cmdExec("lshw -c display -numeric -disable network | grep -q 'vendor: .* \\[1002\\]' || true")
+	out, err = cmdExec("lshw -c display -numeric -disable network 2>/dev/null | grep 'vendor: .* \\[1002\\]' || true")
 	if err != nil {
 		return false, err
 	}
