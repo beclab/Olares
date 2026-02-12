@@ -15,9 +15,10 @@ To unlock the full potential of Wise, it is recommended to install the following
 
 - **Rss Subscribe**: Use it to subscribe to RSS feeds directly while browsing web pages.
 - **YT-DLP**: Use it to download audio and video from supported web pages into Wise.
+- **Twitter/X plugin**: Use it to save posts and download attached files from Twitter/X into Wise.
 
 :::tip 
-Wise works without these apps, but in-browser subscription and media download will be unavailable until you install them.
+Wise works without these apps, but some features require them, such as in-browser subscriptions, media downloads, and Twitter/X link recognition and saving.
 :::
 
 ## Build your library
@@ -40,6 +41,10 @@ Import files directly from your computer, including PDFs, EPUBs, audio, video, a
 
 1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar, and select **Upload**.
 2. Select one or more files from your local computer.
+    :::tip 
+    You can also drag and drop files into the Wise interface.
+    :::
+3. In the Upload files window, select the destination folder, then click **Confirm**.
 
 #### Add items via link
 
@@ -52,11 +57,16 @@ If a link requires login or other access control, Wise may need cookies to fetch
 1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar, and select **Add Link**.
 2. Paste or type a URL.
 
-    Wise analyzes the link and lists all actions available:
-    - **Save to library**: The content will be saved as an item in your library and added to **Inbox**.
+    Wise analyzes the link and lists all the available actions:
+    - **Save to library**: The content will be saved as an item in your library and added to **Inbox**. Twitter/X posts are supported when the Twitter/X plugin is installed.
     - **Subscribe to RSS feed**: If Wise detects one or more RSS feeds for the site, they will be listed here. Select the feed you want to follow, and new items from that feed will be automatically [added to **Feeds**](./subscribe).
     ![Subscribe to RSS feed](/images/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
-    - **Download file**: If Wise detects videos or other downloadable files on the page, this option will appear. Select the file you want to download to save it for offline access. **[YT-DLP](https://market.olares.com/app/market.olares/ytdlp)** is required.
+    - **Download file**: If Wise detects downloadable media (such as audio, video, or attached files in Twitter/X posts), this option will appear. Select the file you want to download to save it for offline access. 
+        :::tip Install helper services
+        Some downloads require helper services: 
+        - [YT-DLP](https://market.olares.com/app/market.olares/ytdlp) is commonly used to download audio or video from supported pages when downloadable media is available.
+        - [Twitter/X plugin](https://market.olares.com/app/market.olares/twitter) is required to download attached files from Twitter/X posts.
+        :::
     ![Download files](/images/manual/olares/wise-add-link-download.png#bordered){width=300}
 
 Newly saved items will appear under their content type.
@@ -72,22 +82,23 @@ You can also save content to Wise directly from your browser using the [LarePass
 
 Items saved via LarePass are added to your Wise library and appear in the main **Inbox** folder and under the appropriate content type.
 
-### Monitor and manage media downloads
+### Monitor and manage file tasks
 
-When you add new audio or video content, Wise automatically creates download tasks and save media files to Olares. This:
+Wise tracks background transfer tasks in two lists:
 
-- Ensures your media is available offline.
-- Protects your library if the original source is removed. 
-- Makes it faster to open and play items.
+- **Download list**: Created when you add downloadable media. Wise downloads the files to Olares so you can access them offline.
+- **Upload list**: Created when you upload local files into Wise. Wise tracks the upload progress and results.
 
-To manage all download tasks:
+To manage transfer tasks:
 
-1. Go to **<i class="material-symbols-outlined">settings</i> Settings** > **Transmission** > **Download**.
-2. Review the list of media downloads and their status.
-3. You can:
-
-    - Click <i class="material-symbols-outlined">folder_open</i> to locate a downloaded file in Files.
-    - Click <i class="material-symbols-outlined">do_not_disturb_on</i> to remove it from the list.
+1. Go to **<i class="material-symbols-outlined">settings</i> Settings** > **Download list** or **Upload list**.
+2. Use the tabs to filter tasks: 
+    - Download list tabs: **All**, **Downloading**, **Complete**, **Failed**
+    - Upload list tabs: **All**, **Uploading**, **Complete**, **Failed**.
+3. Review the task list and status.
+4. You can:
+   - Click <i class="material-symbols-outlined">folder_open</i> to locate the transferred file in Files.
+   - Click <i class="material-symbols-outlined">do_not_disturb_on</i> to remove it from the list.
 
 ## Use reading tools
 

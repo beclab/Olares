@@ -41,8 +41,8 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
 
 ### 知识收藏
 通过 LarePass 收集网页内容并订阅 RSS。
-- [通过 LarePass 扩展收集内容](manage-knowledge.md#通过-larepass-扩展收集内容)
-- [订阅 RSS 源](manage-knowledge.md#订阅-rss-源)
+- [通过 LarePass 扩展收集内容](/zh/manual/olares/wise/basics.md#使用-larepass-扩展)
+- [订阅 RSS 源](/zh/manual/olares/wise/subscribe.md#使用-larepass-浏览器扩展订阅)
 
 ## 功能对比
 
@@ -184,37 +184,36 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
   </tbody>
 </table>
 
-## 下载与安装 LarePass
+## 下载并安装 LarePass
 
-前往 [LarePass 官网](https://www.olares.cn/larepass) 获取适用于你设备的最新版本。
+请前往 [LarePass 官网](https://www.olares.cn/larepass) 获取适用于你设备的最新版本。
 
-### 安装 LarePass 浏览器扩展
+- **iOS**： App Store
+- **Android**： Google Play 或官网直接下载
+- **macOS 和 Windows**：从官网下载安装桌面客户端
 
-<tabs>
-<template #从-Chrome-Web-Store-安装>
+### Chrome 扩展
 
-1. 在 [Chrome 网上应用店](https://chrome.google.com/webstore) 搜索 **LarePass**。
-2. 打开详情页并点击 **添加至 Chrome**。
-3. 通过导入 Olares ID 登录扩展：
-    - 打开 LarePass 扩展，点击 **导入账户**。
-    - 输入 Olares ID 的助记词。
-    - 输入 Olares 密码完成登录。
+使用 LarePass 扩展可以直接在浏览器中收集内容并管理密码。目前仅支持 Google Chrome 浏览器，且必须手动安装。
 
-</template>
+:::warning 保留扩展程序文件夹
+浏览器会从你选择的文件夹中加载扩展。如果删除、移动或重命名该文件夹，扩展将无法正常使用。
 
-<template #离线安装>
+请将 ZIP 文件解压到一个长期保留的位置，例如用户目录下的文件夹，而不要解压到临时目录。
+:::
 
 1. 访问 [LarePass 网站](https://olares.cn/olares) 下载扩展 ZIP 包。
-2. 在浏览器地址栏输入 `chrome://extensions/`。
-3. 打开右上角 **开发者模式**。
-4. 点击 **加载已解压的扩展程序**，选择解压后的 LarePass 文件夹。
-5. 登录流程：
-    - 打开 LarePass 扩展，点击 **导入账户**。
-    - 输入 Olares ID 的助记词。
-    - 输入 Olares 密码完成登录。
-</template>
-</tabs>
+2. 将 ZIP 文件解压到电脑中的一个固定文件夹。
+3. 在浏览器打开 `chrome://extensions/`。
+4. 开启右上角**开发者模式**。
+5. 点击**加载已解压的扩展程序**，选择解压后的 LarePass 文件夹。
+
+### 登录扩展程序
+
+1. 点击浏览器工具栏中的 LarePass 图标。
+2. 点击 **导入账户**。
+3. 输入你的助记词和密码以完成设置。
 
 ::: tip 快速访问
-安装完成后，可在 Chrome 扩展菜单中固定 LarePass，方便一键启动。
+安装完成后，点击浏览器工具栏中的拼图图标，将 LarePass 扩展固定，以便一键访问。
 :::

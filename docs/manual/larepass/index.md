@@ -38,8 +38,8 @@ Use Vault to autofill credentials, store passwords, and generate 2FA codes acros
 
 ### Knowledge collection
 Use LarePass to collect web content and follow RSS feeds.
-- [Collect content via LarePass extension](manage-knowledge.md#collect-content-via-the-larepass-extension)
-- [Subscribe to RSS feeds](manage-knowledge.md#subscribe-to-rss-feeds)
+- [Collect content via LarePass extension](/manual/olares/wise/basics.md#save-from-browser-with-larepass-extension)
+- [Subscribe to RSS feeds](/manual/olares/wise/subscribe.md#use-larepass-browser-extension)
 
 ## Feature comparison
 
@@ -181,38 +181,35 @@ Use LarePass to collect web content and follow RSS feeds.
   </tbody>
 </table>
 
-
 ## Download and install LarePass
 
-Get the latest version for your device at the [LarePass website](https://www.olares.com/larepass).
+Download the latest version for your platform from the [LarePass website](https://www.olares.com/larepass).
 
-### Install the LarePass browser extension
+- **iOS**: App Store
+- **Android**: Google Play or direct download from the website
+- **macOS and Windows**: Desktop client from the website
 
-<tabs>
-<template #Install-from-Chrome-Web-Store>
+### Chrome extension
 
-1. Search for **LarePass** in the [Chrome Web Store](https://chrome.google.com/webstore).
-2. Open the details page and click **Add to Chrome**.
-3. Log into the LarePass extension by importing your Olares ID:
-   - Open the LarePass extension, and click **Import an account**.
-   - Enter the mnemonics for your Olares ID.
-   - Enter your Olares password to complete login.
+The LarePass extension allows you to collect content and manage passwords directly from your browser. It currently supports Google Chrome only and must be installed manually.
 
-</template>
+:::warning Keep the extension folder
+Your browser loads the extension from the folder you select. If you delete, move, or rename that folder, the extension will stop working.  
+Extract the ZIP file to a permanent location, such as a folder under your user directory, rather than a temporary directory.
+:::
 
-<template #Install-offline>
+1. Visit the [LarePass website](https://www.olares.com/larepass) and download the extension ZIP file.
+2. Extract the ZIP file to a permanent folder on your computer.
+3. In your browser, go to `chrome://extensions/`.
+4. Enable **Developer mode** in the top-right corner.
+5. Click **Load unpacked** and select the extracted extension folder.
 
-1. Visit [https://www.olares.com/larepass](https://www.olares.com/larepass) and download the extension ZIP file.
-2. Go to `chrome://extensions/` in your browser.
-3. Enable **Developer mode** in the top-right corner.
-4. Click **Load unpacked** and select the extracted LarePass extension folder.
-5. Log in:
-   - Open the LarePass extension, and click **Import an account**.
-   - Enter the mnemonics for your Olares ID.
-   - Enter your Olares password to complete login.
-</template>
-</tabs>
+#### Sign in to the extension
 
-  :::tip Quick access
-  After installation, pin the LarePass extension from Chrome’s extension menu for one-click access.
-  :::
+1. Click the LarePass icon in your browser toolbar.
+2. Select **Import an account**.
+3. Enter your mnemonics and password to complete setup.
+
+:::tip Quick access
+After installation, click the puzzle icon in your browser toolbar and pin the LarePass extension for one-click access.
+:::

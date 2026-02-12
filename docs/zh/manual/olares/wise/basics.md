@@ -14,9 +14,10 @@ Wise 助你搭建专注、高效的阅读环境。本文将带你了解日常核
 
 - **Rss Subscribe**：用于在浏览网页时直接订阅 RSS 源。
 - **YT-DLP**：用于将网页上的音频和视频下载到 Wise 中。
+- **Twitter/X plugin**：用于保存 Twitter/X 的推文，并将推文中的附件下载到 Wise。
 
 :::tip
-即使不安装这些应用，你也可以正常使用 Wise，但无法使用浏览器内订阅和媒体下载功能。
+即使不安装这些应用，你也可以正常使用 Wise，但部分功能需要安装相应应用后才能使用，例如浏览器内订阅、媒体下载，以及 Twitter/X 链接识别与保存。
 :::
 
 ## 打造你的内容库
@@ -39,6 +40,10 @@ Wise 通过以下两种方式将内容收集到库中：
 
 1. 点击左下角菜单栏的 <i class="material-symbols-outlined">add_circle</i>，选择**上传**。
 2. 从本地电脑选择一个或多个文件。
+   :::tip 
+   你也可以直接将文件拖放到 Wise 界面中。 
+   :::
+3. 在上传文件窗口，选择目标文件夹，然后点击**确认**。
 
 #### 通过链接添加
 
@@ -52,11 +57,15 @@ Wise 通过以下两种方式将内容收集到库中：
 2. 粘贴或输入 URL。
 
    Wise 会解析链接，并列出所有可行操作：
-    - **保存到库**：将内容保存为库中的一个文件，并添加至**收件箱**。
+    - **保存到库**：将内容保存为库中的一个文件，并添加至**收件箱**。安装 Twitter/X plugin 后，也支持保存 Twitter/X 推文。
     - **订阅 RSS 源**：如果 Wise 检测到站点有一或多个 RSS 源，会在此列出。选择你想要订阅的源，之后该订阅源下的更新会自动出现在[**订阅源**](./subscribe)中。
     ![订阅 RSS 源](/images/zh/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
-    - **下载文件**：如果 Wise 检测到页面上有视频或其他可下载文件，会出现此选项。选择你要下载的文件，将其保存以便离线访问。使用此功能需安装[YT-DLP](https://market.olares.com/app/market.olares/ytdlp)。
-
+    - **下载文件**：如果 Wise 检测到可下载的媒体内容（例如音频、视频或 Twitter/X 帖子中的附加文件），会显示此选项。选择你要下载的文件，将其保存以便离线访问。
+        :::tip 安装辅助服务
+        部分下载需要辅助服务支持：
+        - [YT-DLP](https://market.olares.com/app/market.olares/ytdlp) 通常用于在有可下载媒体时，从支持的页面下载音频或视频。
+        - [Twitter/X plugin](https://market.olares.com/app/market.olares/twitter) 用于下载 Twitter/X 推文附件文件。
+        :::    
     ![Download files](/images/zh/manual/olares/wise-add-link-download.png#bordered){width=300}
 
 新保存的内容会出现在对应类型文件夹下。
@@ -72,19 +81,21 @@ Wise 通过以下两种方式将内容收集到库中：
 
    通过 LarePass 扩展保存的内容会添加到内容库中，同时出现在主界面**收件箱**以及对应的内容类型文件夹中。
 
-### 监控和管理媒体下载
+### 监控与管理传输任务
 
-当你添加新的音频或视频内容时，Wise 会自动创建下载任务并将媒体文件保存到 Olares。这可以：
+Wise 会在后台跟踪两类传输任务：
 
-- 确保你能离线访问媒体。
-- 在库中保留副本，即使原始来源被删除也不受影响。
-- 加快打开和播放内容的速度。
+- **下载列表**：当你添加可下载媒体时创建。Wise 会将文件下载到 Olares，以便离线访问。
+- **上传列表**：你上传本地文件到 Wise 时创建。Wise 会跟踪上传进度和结果。
 
-要管理所有下载任务：
+要管理传输任务：
 
-1. 进入 **<i class="material-symbols-outlined">settings</i> 设置** > **传输** > **下载**.
-2. 查看媒体列表及其状态。
-3. 你可以：
+1. 进入 **<i class="material-symbols-outlined">settings</i> 设置** > **下载列表**或**上传列表**。
+2. 使用标签页筛选任务：
+   - 下载列表：**全部**、**正在下载**、**完成**、**失败**。
+   - 上传列表：**全部**、**正在上传**、**完成**、**失败**。
+3. 查看任务列表和状态。
+4. 你可以：
 
     - 点击<i class="material-symbols-outlined">folder_open</i>在 Olares 文件管理器中定位文件。
     - 点击<i class="material-symbols-outlined">do_not_disturb_on</i>从列表中移除文件。
