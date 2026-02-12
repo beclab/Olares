@@ -134,5 +134,5 @@ Sub-policies allow you to protect sensitive areas of your application while keep
 
 ## Resources
 
-- [Entrance concept](../../../developer/concepts/network.md#entrance): Learn more about the technical background.
+- [Entrance concept](/developer/concepts/network.md#entrance): Learn more about the technical background.
 - [Activate custom domain name](/manual/olares/settings/custom-app-domain.md#custom-domain-name): Learn how to activate a custom domain name in detail.
