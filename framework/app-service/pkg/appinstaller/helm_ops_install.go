@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
@@ -587,7 +588,7 @@ func (h *HelmOps) isStartUp() (bool, error) {
 		}
 		klog.Infof("podSErvers: %v", podNames)
 
-		serverStarted, err := checkIfStartup(serverPods, true)
+		serverStarted, err := h.checkIfStartup(serverPods, true)
 		if err != nil {
 			klog.Errorf("v2 app %s server pods not ready: %v", h.app.AppName, err)
 			return false, err
@@ -606,7 +607,7 @@ func (h *HelmOps) isStartUp() (bool, error) {
 		return false, err
 	}
 
-	clientStarted, err := checkIfStartup(clientPods, false)
+	clientStarted, err := h.checkIfStartup(clientPods, false)
 	if err != nil {
 		return false, err
 	}
@@ -669,7 +670,7 @@ func (h *HelmOps) findServerPods() ([]corev1.Pod, error) {
 	return pods, nil
 }
 
-func checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, error) {
+func (h *HelmOps) checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, error) {
 	if len(pods) == 0 {
 		return false, errors.New("no pod found")
 	}
@@ -678,6 +679,16 @@ func checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, error) {
 	for _, pod := range pods {
 		creationTime := pod.GetCreationTimestamp()
 		pendingDuration := time.Since(creationTime.Time)
+		pendingKind, err := h.getPendingKind(&pod)
+		if err != nil {
+			return false, err
+		}
+		if pendingKind == "hami-scheduler" {
+			if isServerSide {
+				return false, errcode.ErrServerSidePodPending
+			}
+			return false, errcode.ErrPodPending
+		}
 
 		if pod.Status.Phase == corev1.PodPending && pendingDuration > time.Minute*10 {
 			if isServerSide {
@@ -701,6 +712,28 @@ func checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func (h *HelmOps) getPendingKind(pod *corev1.Pod) (string, error) {
+	fieldSelector := fields.OneTermEqualSelector("involvedObject.name", pod.Name).String()
+	events, err := h.client.KubeClient.Kubernetes().CoreV1().Events(pod.Namespace).List(h.ctx, metav1.ListOptions{
+		FieldSelector: fieldSelector,
+	})
+	if err != nil {
+		return "", err
+	}
+	eventFrom := ""
+	for _, event := range events.Items {
+		if event.Reason == "FailedScheduling" {
+			if event.ReportingController != "" {
+				eventFrom = event.ReportingController
+			} else {
+				eventFrom = event.Source.Component
+			}
+			break
+		}
+	}
+	return eventFrom, nil
 }
 
 type applicationSettingsSubPolicy struct {

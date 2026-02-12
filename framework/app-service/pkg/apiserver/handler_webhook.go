@@ -338,7 +338,10 @@ func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 	case utils.GB10ChipType:
 		return constants.NvidiaGB10GPU
 	case utils.AmdApuCardType:
-		return constants.AMDAPU
+		return constants.AMDGPU
+	case utils.AmdGpuCardType:
+		return constants.AMDGPU
+
 	default:
 		return ""
 	}

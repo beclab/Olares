@@ -87,6 +87,7 @@ const (
 	NvidiaGPU     = "nvidia.com/gpu"
 	NvidiaGB10GPU = "nvidia.com/gb10"
 	AMDAPU        = "amd.com/apu"
+	AMDGPU        = "amd.com/gpu"
 
 	AuthorizationLevelOfPublic  = "public"
 	AuthorizationLevelOfPrivate = "private"
