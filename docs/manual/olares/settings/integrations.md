@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Connect Olares with different services and manage cookies for web access and subscriptions — all from Integrations in Settings.
+description: Centralize third-party service connections, SMB network storage credentials, and website cookies in Olares. Extend file storage capabilities and ensure smooth access to subscriptions and automated tasks.
 ---
 
 # Manage integrations in Settings
@@ -9,6 +9,7 @@ The **Integrations** section in **Settings** centralizes all services and authen
 
 - **Connect services** – Link cloud storage services such as **Olares Space**, **AWS S3**, and **Tencent Cloud COS** to extend Olares’ storage capabilities.
 - **Manage cookies** – Store, import, and delete website cookies to support Olares’ access to subscription-based or restricted content.
+- **Manage SMB accounts** – Store and manage usernames and passwords for SMB network shares, making it easier to reference them when mounting SMB shares in Files.
 
 ## View and manage connected services
 
@@ -65,14 +66,22 @@ When a cookie expires, the system will highlight it in red.
 Expired or missing cookies may cause some subscription or web automation tasks to fail. It’s recommended to check and update cookies periodically.
 :::
 
+## Manage SMB accounts
 
+SMB account management allows you to centrally store usernames and passwords for accessing SMB network shares. You can view, add, or delete accounts here for easy reference when mounting SMB shares in Files.
 
+1. To view SMB accounts, go to **Settings** > **Integration** > **SMB account management**. All saved SMB accounts are listed.
+2. To add an SMB account:
+   
+   a. In **SMB account management**, click **Add account**.
 
+   b. In the **Add account** window, enter the username and password required to access the SMB share.
 
+   c. Click **Confirm**. The information is saved and displayed as a new record in the SMB account list.
 
+3. To delete an account, click <i class="material-symbols-outlined">delete</i> on the right of the account record, and then click **Confirm**. The account and its credentials are removed.
 
-
-
-
-
-
+:::tip Use SMB accounts to mount shares
+- SMB credentials are stored locally and are not uploaded to the cloud. It is recommended to periodically check and update saved credentials to keep them in sync with the server.
+- Saved SMB accounts do not automatically mount shared folders, and you cannot select them directly in Files. To mount an SMB share, manually enter the server address along with the username and password saved here in Files. For more information, see [Mount SMB shares](../files/mount-SMB.md).
+:::
