@@ -12,13 +12,12 @@ This guide helps users understand how to install, update, and uninstall applicat
 ## Before you begin
 Before you start, it is recommended to familiarize yourself with a few concepts for Olares applications:
 
-| Terminology                                                                             | Description                                                                                                                                                                                       |
-|-----------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [System application](../../../developer/concepts/application.md#system-applications)                    | Built-in applications that come pre-installed with Olares,<br/> such as Profile, Files, and Vault.                                                       [](../../../developer/concepts/)                                         |
-| [Community application](../../../developer/concepts/application.md#community-applications)              | Applications that are created and maintained by third-party<br/> developers.                                                                                                                      |
-| [Shared application](../../../developer/concepts/application.md#cluster-scoped-applications) | A special category of community applications on Olares<br/> designed to provide unified, shared resources or services to all <br/>users within an Olares cluster. Only one <br/>instance is allowed per cluster. |
-| [Reference application](../../../developer/concepts/application.md#reference-applications)              | The applications that have been granted access to specific<br/> shared applications                                                                                                                    |
-| [Dependencies](../../../developer/concepts/application.md#dependencies)                                 | Prerequisite applications that must already be<br/> installed before a user can access an application <br/>that requires them.                                                                              |
+| Terminology | Description   |
+|:------------|:--------------|
+| [System application](../../../developer/concepts/application.md#system-applications)   | Built-in applications that come pre-installed with Olares,<br/> such as Profile, Files, and Vault. |
+| [Community application](../../../developer/concepts/application.md#community-applications)  | Applications that are created and maintained by third-party<br/> developers.   |
+| [Shared application](../../../developer/concepts/application.md#shared-applications) | A special category of community applications on Olares designed<br/> to provide unified, shared resources or services to all users within<br/> an Olares cluster. <br/><br/>Shared applications expose standard APIs or shared entrances that<br/> can be directly invoked by any application in the cluster. |
+| [Dependencies](../../../developer/concepts/application.md#dependencies) | Prerequisite applications that must already be<br/> installed before a user can access an application <br/>that requires them.  | 
 
 ## Find applications
 
@@ -79,26 +78,33 @@ To install an application from Market:
 4. (Optional) To cancel the installation, click <i class="material-symbols-outlined">close_small</i> on the right of the button.
 5. Once finished, the button will change to **Open**.
 
-### Install shared and reference applications
+### Install shared applications
 
-To ensure a shared service is running and accessible within the cluster, follow this general installation process based on the type of Shared App:
+To ensure a shared service is running and accessible within the cluster, follow the installation process based on the type of shared application:
 
 * **Headless backend service**:
-    This type of shared applications typically require third-party reference applications to access its service. Take Ollama for example:
-    1. The administrator installs the shared application first. This makes the core service available in the cluster.
-    
-    2. Members (including the administrator) install the corresponding reference application (e.g., Open WebUI or LobeChat) to access the Ollama service.
 
-* **Complete application with built-in UI**:
-    This type of shared applications can provide service to itself. Typical examples are Dify Shared and ComfyUI Shared.
+    This type of shared application provides API services and does not include a graphical user interface. No dedicated reference application is required. Any client that supports the corresponding API can directly invoke the service. Take Ollama as an example:
+
+    1. The administrator installs Ollama first. Once installed, the shared service starts within the cluster and exposes a standard API endpoint.
     
-    1. The administrator installs the shared application first. This not only launches the shared service for the cluster, but also installs the client-side interface as the reference application.
+    2. Cluster members access the shared service:
+
+        a. Retrieve the access address of Ollama in Olares **Settings** > **Applications** > **Ollama** > **Shared entrances**.
+
+        b. Install a third-party client that supports the Ollama API, such as LobeChat or Open WebUI, and enter the access address in the client's configuration settings.
+
+* **Applications with built-in UI**:
+
+    This type of shared applications include both a backend service and a Web UI. They can provide services to users independently. Typical examples are Dify Shared and ComfyUI Shared.
+    
+    1. The administrator installs the shared application first. This not only launches the shared service for the cluster, but also installs the client-side interface as the access point.
     
        ::: tip ComfyUI Launcher
        ComfyUI Shared contains a web launcher component to facilitate the management of related services and resources. The administrator needs to configure and start the service from the ComfyUI Launcher.
        :::
 
-    2. Other members in the cluster install the same application. For these users, only the access point to the shared application is installed.
+    2. Cluster members install the same application. For these users, only the access point to the shared application is installed.
 
 ### Install custom applications
 
@@ -174,7 +180,7 @@ If you can't install an application, it might be due to:
 * **Insufficient system resources**: Try freeing up system resources, or increasing your resource quota.
 * **Missing dependencies**: Check the **Dependency** section on the application details page and make sure all required apps are installed.
 * **Incompatible system version**: Try upgrading Olares to the latest version.
-* **Shared application restrictions** (for Olares member): Install the reference app, and contact your Olares admin to install the corresponding shared application.
+* **Shared service dependency** (for Olares members): The application requires a shared service to be running in the cluster. Contact your admin to install the shared application first before you can install it.
 
 ### Why can't I resume my application?
 
