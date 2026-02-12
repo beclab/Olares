@@ -174,6 +174,28 @@ Since Olares OS is based on Ubuntu 24.04, it follows standard Linux dual-boot pr
 ### Can I set Olares OS as the default boot option but switch to Windows when needed?
 Yes. Both the UEFI Boot Manager and GRUB support this configuration. You can set Olares OS as the persistent default boot option in the BIOS. To boot into Windows for specific tasks like gaming, you can select the Windows Boot Manager during the startup sequence.
 
+## Activation & setup
+
+### Why are some apps missing from the Market?
+
+Sometimes, an application listed on the official [Olares Market website](https://market.olares.com) might be missing from the Market on your device. This can happen if the system didn't finish downloading the full app list during your initial setup.
+
+If your device has been running for more than 2 hours and the app is still missing, follow these steps to manually refresh the Market:
+1. Open **Control Hub** from your desktop, and then go to **Browse** > **System** > **os-framework**.
+
+    ![Open Control Hub](/images/one/open-control-hub.png#bordered)
+
+2. In the **Deployments** list, find **chartrepo-deployment**, and then click **Restart**. Wait until its status turns to **Running**.
+
+    ![Restart chartrepo](/images/one/restart-chart.png#bordered)
+
+3. In the same list, find **market-deployment**, and then click **Restart**. Wait until its status turns to **Running**.
+
+    ![Restart market](/images/one/restart-market.png#bordered) 
+
+4. Wait 2 to 3 minutes for the services to initialize.
+5. Refresh the Market app.
+
 ## Clustering
 
 ### Can I connect two Olares One units together?
