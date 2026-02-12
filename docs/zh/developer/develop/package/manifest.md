@@ -881,6 +881,8 @@ options:
 - 可选
 
 请在此处声明与该应用冲突的其他应用。必须卸载冲突应用后才能安装此应用。
+
+:::info 示例
 ```yaml
 options:
   conflicts:

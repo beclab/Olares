@@ -883,6 +883,8 @@ options:
 - Optional
 
 List other applications that conflict with this app here. Conflicting apps must be uninstalled before this app can be installed.
+
+:::info Example
 ```yaml
 options:
   conflicts:
@@ -939,7 +941,6 @@ Specifies the timeout limit for API providers in seconds. The default value is `
 apiTimeout: 0
 ```
 :::
-
 
 
 ### allowedOutboundPorts
