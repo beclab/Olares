@@ -138,6 +138,13 @@ func filesNodeApiPatch(ctx context.Context, r *NginxController, s *config.Server
 		"/api/preview/share/",
 		"/api/tree/share/",
 		"/api/raw/share/",
+		"/api/resources/sync/",
+		"/api/preview/sync/",
+		"/api/tree/sync/",
+		"/api/raw/sync/",
+		"/api/md5/sync/",
+		"/api/sync/account/info/",
+		"/api/search/sync_search/",
 	}
 
 	for node := range podMap {
