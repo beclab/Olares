@@ -371,7 +371,7 @@ ports:
 ### exposePort
 - Type: `int`
 - Optional
-- Accepted Value: `0-65535`
+- Accepted Value: `0-65535`, except reserved ports 22, 80, 81, 443, 444, 2379, 18088
 
 Olares will expose the ports you specify for an application, which are accessible via the application domain name in the local network, for example: `84864c1f.your_olares_id.olares.com:46879`. For each port you expose, Olares configures both TCP and UDP with the same port number.
 
