@@ -7,7 +7,15 @@ outline: [2, 3]
 每一个 Olares 应用的 Chart 根目录下都必须有一个名为 `OlaresManifest.yaml` 的文件。`OlaresManifest.yaml` 描述了一个 Olares 应用的所有基本信息。Olares 应用市场协议和 Olares 系统依赖这些关键信息来正确分发和安装应用。
 
 :::info 提示
-最新的 Olares 系统使用的 Manifest 版本为: `0.10.0`
+最新的 Olares 系统使用的 Manifest 版本为: `0.11.0`
+- 移除 已不支持的sysData 配置项
+- 修改 共享应用的案例
+- 增加 apiVersion 字段说明
+- 增加 共享入口的配置说明
+
+:::
+:::details Changelog
+`0.10.0`
 - 修改 `categories` 分类
 - 增加 Permission 部分中 `provider` 权限的申请
 - 增加 Provider 部分，用于让应用对集群内暴露指定服务接口
@@ -15,8 +23,7 @@ outline: [2, 3]
 - 移除 Option 部分已不支持的一些配置项
 - 增加 `allowMultipleInstall` 配置，允许应用克隆出多个独立的实例
 - 增加 Envs 部分，支持应用声明需要的环境变量
-:::
-:::details Changelog
+
 `0.9.0`
 - 在 `options` 中增加 `conflict` 字段, 用于声明不兼容的应用
 - 移除 `options` 中 `analytics` 配置项
@@ -131,6 +138,14 @@ olaresManifest.version: '2.2'
 olaresManifest.version: "3.0.122"
 ```
 
+## apiVersion
+- 类型：`string`
+- 可选
+- 有效值：`v1`,`v2`
+- 默认值：`v1`
+
+共享应用需使用 `v2` 版本，支持一个 OAC 中包含多个子图表。其他应用请使用`v1`
+
 ## Metadata
 
 应用的基本信息，用于在 Olares 系统和应用市场中展示应用。
@@ -199,8 +214,6 @@ OS 1.12 有效值：
 - `Lifestyle`：生活方式
 - `Utilities_v112`：实用工具
 - `AI`：AI
-
-
 
 :::info 提示
 Olares OS 1.12.0 版本对应用商店的应用分类进行了调整，因此如果应用需要同时兼容 1.11 和 1.12 版本，请同时填写两个版本所需的分类。
@@ -322,6 +335,23 @@ entrances:
 ```
 :::
 
+## sharedEntrances
+
+共享入口是共享应用为集群内其他应用调用提供的接口地址。共享入口的字段配置和常规入口基本一致，一个典型的共享入口配置如下
+
+:::info 示例
+```yaml
+sharedEntrances:
+  - name: ollamav2
+    host: sharedentrances-ollama
+    port: 0
+    title: Ollama API
+    icon: https://app.cdn.olares.com/appstore/ollama/icon.png
+    invisible: true
+    authLevel: internal
+```
+:::
+
 ## Ports
 
 定义暴露的端口
@@ -338,14 +368,48 @@ ports:
 ```
 :::
 
-Olares 会为你的应用暴露指定的端口，这些端口可通过应用域名在本地网络下访问，如`84864c1f.your_olares_id.olares.com:46879`。对于每个公开的端口，Olares 会自动配置相同端口号的 TCP 和 UDP。
-
-当将 `addToTailscaleAcl` 字段设置为 `true` 时，系统会为该端口分配一个随机端口，并自动将其加入到 Tailscale 的 ACL 中。
+### exposePort
+- 类型： `int`
+- 可选
+- 有效值： `0-65535`，保留端口 22, 80, 81, 443, 444, 2379, 18088 除外
+Olares 会为你的应用暴露指定的端口，这些端口可通过应用域名在本地网络下访问，如84864c1f.your_olares_id.olares.com:46879。对于每个公开的端口，Olares 会自动配置相同端口号的 TCP 和 UDP。
 
 :::info 提示
 暴露的端口只能通过本地网络或 Olares 专用网络访问。
 :::
 
+### protocol
+- 类型： `string`
+- 可选
+- 有效值： `udp`、`tcp`
+
+暴露端口使用的协议 ，如果不填默认同时开通udp和tcp。
+
+### addToTailscaleAcl
+- 类型： `boolean`
+- 可选
+- 默认值：`false`
+
+当将 addToTailscaleAcl 字段设置为 true 时，系统会为该端口分配一个随机端口，并自动将其加入到 Tailscale 的 ACL 中。
+
+## Tailscale
+- 类型：`map`
+- 可选
+
+允许应用在 Tailscale 的ACL(Access Control Lists)中开放指定端口。
+
+:::info 示例
+```yaml
+tailscale:
+  acls:
+  - proto: tcp
+    dst:
+    - "*:46879"
+  - proto: "" # 可选, 如果未指定，则允许使用所有支持的协议
+    dst:
+    -  "*:4557"  
+```
+:::
 
 ## Permission
 
@@ -380,51 +444,6 @@ permission:
 
 应用是否需要对用户的 `Home` 文件夹进行读写权限。列出应用需要访问的用户 `Home` 下的所有目录。部署 YAML 中配置的所有 `userData` 目录都必须包含在此处。
 
-### sysData
-
-- 类型：`list<map>`
-- 可选
-
-声明该应用程序需要访问的 API 列表。
-
-:::info 提示
-从 1.12.0 版本开始，该权限配置已经被废弃。
-:::
-
-:::info 示例
-```yaml
-  sysData:
-  - group: service.bfl
-    dataType: app
-    version: v1
-    ops:
-    - InstallDevApp
-  - dataType: legacy_prowlarr
-    appName: prowlarr
-    port: 9696
-    group: api.prowlarr
-    version: v2
-    ops:
-    - All
-```
-:::
-
-所有系统 API [providers](../advanced/provider.md) 如下：
-| Group | version | dataType | ops |
-| ----------- | ----------- | ----------- | ----------- |
-| service.appstore | v1 | app | InstallDevApp, UninstallDevApp
-| message-disptahcer.system-server | v1 | event | Create, List
-| service.desktop | v1 | ai_message | AIMessage
-| service.did | v1 | did | ResolveByDID, ResolveByName, Verify
-| api.intent | v1 | legacy_api | POST
-| service.intent | v1 | intent | RegisterIntentFilter, UnregisterIntentFilter, SendIntent, QueryIntent, ListDefaultChoice, CreateDefaultChoice, RemoveDefaultChoice, ReplaceDefaultChoice
-| service.message | v1 | message | GetContactLogs, GetMessages, Message
-| service.notification | v1 | message | Create
-| service.notification | v1 | token | Create
-| service.search | v1 | search | Input, Delete, InputRSS, DeleteRSS, QueryRSS, QuestionAI
-| secret.infisical | v1 | secret | CreateSecret, RetrieveSecret
-| secret.vault | v1 | key | List, Info, Sign
-
 ### provider
 
 - 类型：`list<map>`
@@ -432,7 +451,11 @@ permission:
 
 用于声明本应用需访问的其他应用接口。被访问的应用需在其 `provider` 部分声明对外开放的 `providerName`，详见下方 Provider 章节。
 
-此处 `appName` 应填写目标应用的 `name`，`providerName` 填写目标应用 `provider` 配置中的 `name` 字段。`podSelectors` 字段用于指定本应用中哪些 pod 需要访问目标应用。如果未声明此字段，则默认为本应用的所有 pod 注入 `outbound envoy sidecar`。
+配置访问的方式如下
+1. 在 `appName` 字段填写目标应用的 `name` 字段。
+2. 在`providerName` 字段填写目标应用 `provider` 配置中的 `name` 字段。
+
+你可以使用 `podSelectors` 字段来指定本应用中哪些 pod 需要访问目标应用。如果未声明此字段，则默认为本应用的所有 pod 注入 `outbound envoy sidecar`。
 
 :::info 调用应用示例
 ```yaml
@@ -457,25 +480,6 @@ provider:
 ```
 :::
 
-
-## Tailscale
-- 类型：`map`
-- 可选
-
-允许应用在 Tailscale 的ACL(Access Control Lists)中开放指定端口。
-
-:::info 示例
-```yaml
-tailscale:
-  acls:
-  - proto: tcp
-    dst:
-    - "*:46879"
-  - proto: "" # 可选, 如果未指定，则允许使用所有支持的协议
-    dst:
-    -  "*:4557"  
-```
-:::
 
 ## Spec
 记录额外的应用信息，主要用于应用商店的展示。
@@ -796,7 +800,7 @@ middleware:
 
 ## Options
 
-在此部分配置系统相关的选项。
+此部分用于配置与Olares系统相关的选项。
 
 ### policies
 - 类型：`map`
@@ -816,40 +820,40 @@ options:
 ```
 :::
 
-### clusterScoped
+### appScope
 - 类型：`map`
 - 可选
 
-是否为 Olares 集群中的所有用户安装此应用程序。
+是否为 Olares 集群中的所有用户安装此应用程序。对用共享应用，需要设置 `clusterScoped` 为 `true`, 同时在 `appRef` 字段填入应用名称
 
-:::info 服务端示例
+
+:::info 应用ollamav2示例
 ```yaml
 metadata:
-  name: gitlab
+  name: ollamav2
 options:
   appScope:
+  {{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}  # 仅管理员安装共享服务
     clusterScoped: true
     appRef:
-      - gitlabclienta # 客户端的应用名称
-      - gitlabclientb
+      - ollamav2  # 此应用在 metadata.name 中声明的名字
+  {{- else }}
+    clusterScoped: false
+  {{- end }}
+  dependencies:
+    - name: olares
+      version: '>=1.12.3-0'
+      type: system
+  {{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}
+  {{- else }} 
+    - name: ollamav2
+      type: application
+      version: '>=1.0.1'
+      mandatory: true  # 其他用户安装客户端，依赖管理员安装的共享服务
+  {{- end }}
 ```
 :::
 
-:::info 客户端示例
-```yaml
-metadata:
-  name: gitlabclienta
-options:
-  dependencies:
-    - name: olares
-      version: ">=0.3.6-0"
-      type: system
-    - name: gitlab # 服务器端的应用名称
-      version: ">=0.0.1"
-      type: application
-      mandatory: true
-```
-:::
 
 ### dependencies
 - 类型：`list<map>`
@@ -871,6 +875,24 @@ options:
       mandatory: true # 如果必须先安装此依赖，请将此字段设为 true。
 ```
 :::
+
+### conflicts
+- 类型：`list<map>`
+- 可选
+
+请在此处声明与该应用冲突的其他应用。必须卸载冲突应用后才能安装此应用。
+
+:::info 示例
+```yaml
+options:
+  conflicts:
+  - name: comfyui
+    type: application
+  - name: comfyuiclient
+    type: application  
+```
+:::
+
 
 ### mobileSupported
 - 类型： `boolean`

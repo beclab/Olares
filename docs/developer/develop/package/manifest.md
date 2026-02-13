@@ -7,7 +7,15 @@ outline: [2, 3]
 Every **Olares Application Chart** should include an `OlaresManifest.yaml` file in the root directory. `OlaresManifest.yaml` provides all the essential information about an Olares App. Both the **Olares Market protocol** and the Olares depend on this information to distribute and install applications.
 
 :::info NOTE
-Latest Olares Manifest version: `0.10.0`
+Latest Olares Manifest version: `0.11.0`
+- Removed deprecated fields of sysData
+- Updated the example of shared app
+- Added the apiVersion
+- Added the sharedEntrance section
+
+:::
+:::details Changelog
+`0.9.0`
 - Modified the `categories` field
 - Added the `provider` field in the Permission section
 - Added the Provider section, to allow apps to expose specific service interfaces within the cluster
@@ -15,8 +23,7 @@ Latest Olares Manifest version: `0.10.0`
 - Removed some deprecated fields from the Option section
 - Added the `allowMultipleInstall` field, allowing the app to be installed as multiple independent instances
 - Added the Envs section, to define environment variables required by the application
-:::
-:::details Changelog
+
 `0.9.0`
 - Added a `conflict` field in `options` to declare incompatible applications
 - Removed `analytics` field in `options`
@@ -130,6 +137,13 @@ olaresManifest.version: 1.1.0
 olaresManifest.version: '2.2'
 olaresManifest.version: "3.0.122"
 ```
+## apiVersion
+- Type: `string`
+- Optional
+- Accepted Value: `v1`,`v2`
+- Default: `v1`
+
+For shared applications, use version `v2`, which supports multiple subcharts in a single OAC. For other applications, use `v1`.
 
 ## Metadata
 
@@ -189,8 +203,7 @@ The **Chart Version** of the application. It should be incremented each time the
 Used to display your app on different category page in Olares Market.
 
 Accepted Value for OS 1.11:
-
-`Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity`
+- `Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity`
 
 Accepted Value for OS 1.12: 
 - `Creativity`
@@ -200,7 +213,6 @@ Accepted Value for OS 1.12:
 - `Lifestyle`
 - `Utilities_v112` (displayed as Utilities)
 - `AI`
-
 
 :::info NOTE
 Olares Market categories were updated in OS 1.12.0. To ensure your app is compatible with both versions 1.11 and 1.12, include category values for both versions in your configuration.
@@ -322,6 +334,24 @@ To ensure a seamless user experience, you can enable this option by setting it t
 ```
 :::
 
+
+## sharedEntrances
+
+A shared entrance is an internal address provided by a shared application for other applications within the cluster to access. The field configuration for shared entrances is basically the same as for regular entrances. A typical shared entrance configuration is shown below.
+
+:::info 示例
+```yaml
+sharedEntrances:
+  - name: ollamav2
+    host: sharedentrances-ollama
+    port: 0
+    title: Ollama API
+    icon: https://app.cdn.olares.com/appstore/ollama/icon.png
+    invisible: true
+    authLevel: internal
+```
+:::
+
 ## Ports
 
 Specify exposed ports
@@ -338,13 +368,48 @@ ports:
 ```
 :::
 
+### exposePort
+- Type: `int`
+- Optional
+- Accepted Value: `0-65535`, except reserved ports 22, 80, 81, 443, 444, 2379, 18088
+
 Olares will expose the ports you specify for an application, which are accessible via the application domain name in the local network, for example: `84864c1f.your_olares_id.olares.com:46879`. For each port you expose, Olares configures both TCP and UDP with the same port number.
-
-When the `addToTailscaleAcl` field is set to `true`, the system will automatically assign a random port and add it to the Tailscale ACLs.
-
 
 :::info NOTE
 The exposed ports can only be accessed on the local network or through a VPN.
+:::
+
+### protocol
+- Type: `string`
+- Optional
+- Accepted Value: `udp`, `tcp`
+
+The protocol used for the exposed port. If not specified, both UDP and TCP will be enabled by default.
+
+### addToTailscaleAcl
+- Type: `boolean`
+- Optional
+- Default: `false`
+
+When the `addToTailscaleAcl` field is set to `true`, the system will automatically assign a random port and add it to the Tailscale ACLs.
+
+## Tailscale
+- Type: `map`
+- Optional
+
+Allow applications to add Access Control Lists (ACL) in Tailscale to open specified ports.
+
+:::info Example
+```yaml
+tailscale:
+  acls:
+  - proto: tcp
+    dst:
+    - "*:46879"
+  - proto: "" # Optional. If not specified, all supported protocols will be allowed.
+    dst:
+    -  "*:4557"    
+```
 :::
 
 ## Permission
@@ -380,51 +445,6 @@ Whether the app requires read and write permission to the `Data` folder. If `.Va
 
 Whether the app requires read and write permission to user's `Home` folder. List all directories that the application needs to access under the user's `Home`. All `userData` directory configured in the deployment YAML, must be included here.
 
-### sysData
-
-- Type: `list<map>`
-- Optional
-
-Declare the list of APIs that this app needs to access.
-
-:::info NOTE
-This configuration has been deprecated since version 1.12.0.
-:::
-
-:::info Example
-```yaml
-  sysData:
-  - group: service.bfl
-    dataType: app
-    version: v1
-    ops:
-    - InstallDevApp
-  - dataType: legacy_prowlarr
-    appName: prowlarr
-    port: 9696
-    group: api.prowlarr
-    version: v2
-    ops:
-    - All
-```
-:::
-
-All system API [providers](../advanced/provider.md) are list below:
-| Group | version | dataType | ops |
-| ----------- | ----------- | ----------- | ----------- |
-| service.appstore | v1 | app | InstallDevApp, UninstallDevApp
-| message-dispatcher.system-server | v1 | event | Create, List
-| service.desktop | v1 | ai_message | AIMessage
-| service.did | v1 | did | ResolveByDID, ResolveByName, Verify
-| api.intent | v1 | legacy_api | POST
-| service.intent | v1 | intent | RegisterIntentFilter, UnregisterIntentFilter, SendIntent, QueryIntent, ListDefaultChoice, CreateDefaultChoice, RemoveDefaultChoice, ReplaceDefaultChoice
-| service.message | v1 | message | GetContactLogs, GetMessages, Message
-| service.notification | v1 | message | Create
-| service.notification | v1 | token | Create
-| service.search | v1 | search | Input, Delete, InputRSS, DeleteRSS, QueryRSS, QuestionAI
-| secret.infisical | v1 | secret | CreateSecret, RetrieveSecret
-| secret.vault | v1 | key | List, Info, Sign
-
 ### provider
 
 - Type: `list<map>`
@@ -458,25 +478,6 @@ provider:
   entrance: bazarr-svc
   paths: ["/*"]
   verbs: ["*"]
-```
-:::
-
-## Tailscale
-- Type: `map`
-- Optional
-
-Allow applications to add Access Control Lists (ACL) in Tailscale to open specified ports.
-
-:::info Example
-```yaml
-tailscale:
-  acls:
-  - proto: tcp
-    dst:
-    - "*:46879"
-  - proto: "" # Optional. If not specified, all supported protocols will be allowed.
-    dst:
-    -  "*:4557"    
 ```
 :::
 
@@ -803,7 +804,7 @@ Use the middleware information in deployment YAML
 
 ## Options
 
-Configure system-related options here.
+Configure Olares OS related options here.
 
 ### policies
 - Type: `map`
@@ -823,38 +824,35 @@ options:
 ```
 :::
 
-### clusterScoped
+### appScope
 - Type: `map`
 - Optional
 
-Whether this app is installed for all users in an Olares cluster.
+Specifies whether the app should be installed for all users in the Olares cluster. For shared apps, set `clusterScoped` to `true` and provide the current app's name in the `appRef` field.
 
-:::info Example For Server
+:::info Example of ollamav2
 ```yaml
 metadata:
-  name: gitlab
+  name: ollamav2
 options:
   appScope:
+  {{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}  # Only the administrator installs the shared service
     clusterScoped: true
     appRef:
-      - gitlabclienta #app name of clients
-      - gitlabclientb
-```
-:::
-
-:::info Example For Client
-```yaml
-metadata:
-  name: gitlabclienta
-options:
+      - ollamav2 # the name of current app specified in metadata.name
+  {{- else }}
+    clusterScoped: false
+  {{- end }}
   dependencies:
     - name: olares
-      version: ">=0.3.6-0"
+      version: '>=1.12.3-0'
       type: system
-    - name: gitlab #app name of server
-      version: ">=0.0.1"
+  {{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}
+  {{- else }}
       type: application
-      mandatory: true
+      version: '>=1.0.1'
+      mandatory: true   # Other users install the client, depend on the shared service installed by the admin
+  {{- end }}
 ```
 :::
 
@@ -879,6 +877,24 @@ options:
       mandatory: true # Set this field to true if the dependency needs to be installed first.
 ```
 :::
+
+### conflicts
+- Type: `list<map>`
+- Optional
+
+List other applications that conflict with this app here. Conflicting apps must be uninstalled before this app can be installed.
+
+:::info Example
+```yaml
+options:
+  conflicts:
+  - name: comfyui
+    type: application
+  - name: comfyuiclient
+    type: application  
+```
+:::
+
 
 ### mobileSupported
 - Type: `boolean`
@@ -925,7 +941,6 @@ Specifies the timeout limit for API providers in seconds. The default value is `
 apiTimeout: 0
 ```
 :::
-
 
 
 ### allowedOutboundPorts
