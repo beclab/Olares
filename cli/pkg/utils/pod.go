@@ -11,6 +11,13 @@ func AssertPodReady(pod *corev1.Pod) error {
 		return fmt.Errorf("pod is nil")
 	}
 
+	// simply ignore finished pod
+	// it can be seen as just an execution record, not a running pod
+	// and the deployment will create a new replica
+	if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+		return nil
+	}
+
 	podKey := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
 	if pod.DeletionTimestamp != nil {
 		return fmt.Errorf("pod %s is terminating", podKey)
