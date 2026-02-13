@@ -27,10 +27,7 @@ Olares One requires a specific system image designed for its hardware. If you in
 
 ## Step 1. Download Olares image
 
-Get the official installation file for the Olares operating system.
-
-1. Click [Download Olares ISO](https://cdn.olares.com/one/olares.iso).
-2. The latest image file `olares.iso` is automatically downloaded to your computer.
+Click to download the [ISO image for Olares One](https://cdn.olares.com/one/olares.iso). The file `olares.iso` will be saved to your computer.
 
 ## Step 2. Install flashing tool
 

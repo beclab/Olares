@@ -60,8 +60,8 @@ You can switch market sources to speed up browsing, searching, and downloading, 
 
 1.  Open **Market**, and navigate to **My Olares** > **Settings** from the left sidebar.
 2.  Under **Market sources**, click **Add source** to add a new app source. The current official sources include:
-    * Global: `https://appstore-server-prod.bttcdn.com`
-    * China: `https://appstore-china-server-prod.api.jointerminus.cn`
+    * Global: `https://api.olares.com/market`
+    * China: `https://api.olares.cn/market`
 3.  Fill in the source name, URL, and description as required, then click **Confirm** to finish adding.
 4.  In the source list, select the target source to activate it. Wait for about 10 minutes for the store page to switch.
 
@@ -76,11 +76,8 @@ To install an application from Market:
 1. Open Market from Dock or Launchpad.
 2. Navigate to the app you want, and click **Get**.
 3. When the operation button changes to **Install**, click it to start the installation.
-4. Once finished, the button will change to **Open**.
-
-:::tip
-To cancel an installation, hover over the operation button and click **Cancel** when it appears.
-:::
+4. (Optional) To cancel the installation, click <i class="material-symbols-outlined">close_small</i> on the right of the button.
+5. Once finished, the button will change to **Open**.
 
 ### Install shared and reference applications
 
@@ -140,6 +137,12 @@ To uninstall an application from Market:
 1. Open Market from Dock or Launchpad.
 2. In the left sidebar, navigate to the **My Olares** section. Use the source tabs to filter and find your installed applications.
 3. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the application's operation button, and select **Uninstall**.
+4. In the **Uninstall** window, select **Also remove all local data** as needed:
+
+    - If you select this option, app data (in the Data directory) and cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
+    - If you do not select this option, app data (in the Data directory) will be retained and can be restored upon re-installation, while cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
+    
+5. Click **Confirm**.
 
 ### Uninstall from Launchpad
 
@@ -147,7 +150,12 @@ You can also uninstall an application from LaunchPad:
 
 1. In Olares, click the Launchpad icon in the Dock to display all installed apps.
 2. Click and hold the app icon until all the apps begin to jiggle.
-3. Click <i class="material-symbols-outlined">cancel</i> on the app icon to uninstall it.
+3. In the **Uninstall** window, select **Also remove all local data** as needed:
+
+    - If you select this option, app data (in the Data directory) and cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
+    - If you do not select this option, app data (in the Data directory) will be retained and can be restored upon re-installation, while cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
+
+4. Click **Confirm**.
 
 ## View app operation logs
 
@@ -172,13 +180,13 @@ If you can't install an application, it might be due to:
 
 When you try to resume an application in Olares and receive an error message about insufficient CPU, memory, or disk, it means the system's current available resources cannot support running the application. You need to close other applications to free up resources.
 
-#### Why was my application stopped?
+### Why was my application stopped?
 
 An application is usually stopped due to one of the following reasons:
 * **System auto stop**: To ensure Olares's stability, the Olares system monitors resource usage. If an application consumes excessive resources (such as CPU or memory) causing a high system load, the system might automatically pause it to prevent the entire device from freezing or crashing.
 * **Manual stop**: You or an administrator might have manually stopped the application previously, and the application has not been resumed yet.
 
-#### Why can't I resume my application now?
+### Why can't I resume my application now?
 
 Starting an application requires reserving a specific amount of computing resources. If other running applications are already occupying most of the resources, the remaining free resources are not enough for the application you want to start.
 
@@ -190,11 +198,11 @@ Therefore, when you try to resume the application, you might encounter the follo
 | Insufficient disk space | The hard drive is full, and new data cannot be written. |
 | Available CPU/memory insufficient | There are some resources left, they are less than the minimum<br> amount required by this specific application. |
 
-#### How to resume my application?
+### How to resume my application?
 
 To resume your application, you need to free up some occupied resources:
 
 1. Go to **Settings** > **Application** to view the applications that are currently **Running**.
 2. Find applications that you do not need to use right now.
-3. Stop each application by clicking the app and clicking <i class="material-symbols-outlined">toggle_on</i> to toggle off **Running**.
+3. Stop each application by clicking the app and clicking **Stop**.
 4. After resources are freed, go back to your target application and click **Resume** again.
