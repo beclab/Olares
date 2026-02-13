@@ -92,6 +92,25 @@ type PublicDomainAccessPolicy struct {
 	// AllowedDomains []string `json:"allowed_domains"`
 }
 
+type ExternalNetworkSwitchUpdateRequest struct {
+	Disabled bool `json:"disabled"`
+}
+
+type ExternalNetworkSwitchView struct {
+	Spec   ExternalNetworkSwitchSpecView   `json:"spec"`
+	Status ExternalNetworkSwitchStatusView `json:"status"`
+}
+
+type ExternalNetworkSwitchSpecView struct {
+	Disabled bool `json:"disabled"`
+}
+
+type ExternalNetworkSwitchStatusView struct {
+	Phase     string `json:"phase,omitempty"`
+	Message   string `json:"message,omitempty"`
+	UpdatedAt string `json:"updatedAt,omitempty"`
+}
+
 type ActivateRequest struct {
 	Language string `json:"language"`
 	Location string `json:"location"`

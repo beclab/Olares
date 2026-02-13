@@ -12,6 +12,7 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/api/response"
 	"bytetrade.io/web3os/bfl/pkg/apis"
 	"bytetrade.io/web3os/bfl/pkg/apis/iam/v1alpha1/operator"
+	external_network "bytetrade.io/web3os/bfl/pkg/apis/settings/v1alpha1/external_network"
 	"bytetrade.io/web3os/bfl/pkg/apiserver/runtime"
 	app_service "bytetrade.io/web3os/bfl/pkg/app_service/v1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
@@ -305,6 +306,14 @@ func (h *Handler) handleChangeReverseProxyConfig(req *restful.Request, resp *res
 		response.HandleError(resp, err)
 		return
 	}
+	// external_network_off is an internal field controlled by the owner BFL only.
+	// Preserve the existing value if present to prevent frontend from modifying it.
+	{
+		existing, err := GetReverseProxyConfig(ctx)
+		if err == nil && existing != nil {
+			conf.ExternalNetworkOff = existing.ExternalNetworkOff
+		}
+	}
 	if err := conf.Check(); err != nil {
 		response.HandleError(resp, errors.Wrap(err, "invalid reverse proxy config"))
 		return
@@ -326,6 +335,86 @@ func (h *Handler) handleGetReverseProxyConfig(req *restful.Request, resp *restfu
 		return
 	}
 	response.Success(resp, conf)
+}
+
+func (h *Handler) handleGetExternalNetworkSwitch(req *restful.Request, resp *restful.Response) {
+	ctx := req.Request.Context()
+	cfg, _, err := external_network.Load(ctx)
+	if err != nil {
+		response.HandleError(resp, err)
+		return
+	}
+	view := ExternalNetworkSwitchView{
+		Spec: ExternalNetworkSwitchSpecView{Disabled: cfg.Spec.Disabled},
+		Status: ExternalNetworkSwitchStatusView{
+			Phase:     cfg.Status.Phase,
+			Message:   cfg.Status.Message,
+			UpdatedAt: cfg.Status.UpdatedAt,
+		},
+	}
+	response.Success(resp, view)
+}
+
+func (h *Handler) handleUpdateExternalNetworkSwitch(req *restful.Request, resp *restful.Response) {
+	ctx := req.Request.Context()
+
+	userOp, err := operator.NewUserOperator()
+	if err != nil {
+		response.HandleError(resp, err)
+		return
+	}
+	user, err := userOp.GetUser("")
+	if err != nil {
+		response.HandleError(resp, err)
+		return
+	}
+	if userOp.GetUserAnnotation(user, constants.UserAnnotationOwnerRole) != constants.RoleOwner {
+		response.HandleBadRequest(resp, errors.New("only owner can update external network switch"))
+		return
+	}
+
+	var payload ExternalNetworkSwitchUpdateRequest
+	if err := req.ReadEntity(&payload); err != nil {
+		response.HandleBadRequest(resp, err)
+		return
+	}
+
+	current, _, err := external_network.Load(ctx)
+	if err != nil {
+		response.HandleError(resp, err)
+		return
+	}
+	// idempotent: if the intended spec is already set and not failed, return success
+	if payload.Disabled == current.Spec.Disabled && current.Status.Phase != external_network.PhaseFailed {
+		response.SuccessNoData(resp)
+		return
+	}
+	if current.Spec.Disabled != payload.Disabled && current.Status.Phase == external_network.PhaseProcessing {
+		response.HandleError(resp, errors.New("external network config is being processed"))
+		return
+	}
+
+	terminusName := userOp.GetUserAnnotation(user, constants.UserAnnotationTerminusNameKey)
+	// validate the integration account is available before updating spec.
+	if _, err := external_network.GetIntegrationAccount(ctx, user.Name, terminusName); err != nil {
+		response.HandleError(resp, errors.Wrap(err, "failed to retrieve integration account token"))
+		return
+	}
+
+	_, err = external_network.Upsert(ctx, func(sw *external_network.SwitchConfig) error {
+		sw.Spec.Disabled = payload.Disabled
+		sw.Status.StartedAt = time.Now().UTC().Format(time.RFC3339)
+		sw.Status.Phase = external_network.PhaseProcessing
+		sw.Status.TaskID = ""
+		sw.Status.Message = ""
+		return nil
+	})
+	if err != nil {
+		response.HandleError(resp, err)
+		return
+	}
+
+	response.SuccessNoData(resp)
 }
 
 func (h *Handler) handleGetLauncherAccessPolicy(req *restful.Request, resp *restful.Response) {
