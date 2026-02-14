@@ -37,6 +37,11 @@ type CudaInstalled struct {
 }
 
 func (p *CudaInstalled) PreCheck(runtime connector.Runtime) (bool, error) {
+	if runtime.GetSystemInfo().IsGB10Chip() {
+		logger.Debug("Assume DGX Spark or GB10 OEM system has CUDA installed")
+		return true, nil
+	}
+
 	st, err := utils.GetNvidiaStatus(runtime)
 	if err != nil {
 		return false, err
@@ -50,17 +55,15 @@ func (p *CudaInstalled) PreCheck(runtime connector.Runtime) (bool, error) {
 
 type CudaNotInstalled struct {
 	common.KubePrepare
+	CudaInstalled
 }
 
 func (p *CudaNotInstalled) PreCheck(runtime connector.Runtime) (bool, error) {
-	st, err := utils.GetNvidiaStatus(runtime)
+	installed, err := p.CudaInstalled.PreCheck(runtime)
 	if err != nil {
 		return false, err
 	}
-	if st == nil || !st.Installed {
-		return true, nil
-	}
-	return false, nil
+	return !installed, nil
 }
 
 type CurrentNodeInK8s struct {

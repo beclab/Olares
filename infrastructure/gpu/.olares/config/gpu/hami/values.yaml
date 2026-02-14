@@ -4,7 +4,7 @@ nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: ""
 imagePullSecrets: []
-version: "v2.6.10"
+version: "v2.6.11-compatible-arm"
 
 # Nvidia GPU Parameters
 resourceName: "nvidia.com/gpu"
@@ -172,6 +172,7 @@ devicePlugin:
   podAnnotations: {}
   nvidianodeSelector:
     gpu.bytetrade.io/cuda-supported: "true"
+    gpu.bytetrade.io/type: nvidia
   tolerations: []
   # The updateStrategy for DevicePlugin DaemonSet.
   # If you want to update the DaemonSet by manual, set type as "OnDelete".
