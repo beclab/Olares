@@ -1,0 +1,154 @@
+apiVersion: app.bytetrade.io/v1alpha1
+kind: Application
+metadata:
+  name: getloodllm
+  namespace: "{{ .Values.userspace }}"
+spec:
+  metadata:
+    title: Getlood LLM
+    description: Local LLM runtime powered by Ollama with GPU acceleration
+    icon: https://file.bttcdn.com/appstore/getlood/getloodllm.webp
+    appid: getloodllm
+    version: 1.0.0
+    categories:
+      - AI
+      - Infrastructure
+      - Utilities
+    author: Getlood
+    website: https://getlood.com
+    sourceCode: https://github.com/ollama/ollama
+    submitter: Getlood
+    language:
+      - en
+    requiredMemory: 4Gi
+    requiredDisk: 100Gi
+    requiredCpu: 2000m
+    supportClient:
+      edge: "N/A"
+
+  entrances:
+    - name: api
+      host: api
+      port: 11434
+      title: Getlood LLM API
+      authLevel: private
+      invisible: false
+    - name: ui
+      host: ui
+      port: 3000
+      title: Getlood LLM Manager
+      authLevel: private
+      invisible: false
+
+  permission:
+    appData: true
+    appCache: true
+    gpu: true  # Demander accès GPU si disponible
+    sysData:
+      - dataType: legacy_api
+        appName: getloodllm
+        port: 11434
+        group: api.getloodllm
+        version: v1
+        ops:
+          - POST
+          - GET
+
+  middleware:
+    postgres:
+      username: getloodllm
+      password: "{{ randAlphaNum 16 }}"
+      databases:
+        - name: getloodllm
+          distributed: false
+
+  deployment:
+    - name: getloodllm-ollama
+      image: ollama/ollama:latest
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 11434
+          protocol: TCP
+      volumeMounts:
+        - name: appdata
+          mountPath: /root/.ollama
+      env:
+        - name: OLLAMA_HOST
+          value: "0.0.0.0:11434"
+        - name: OLLAMA_MODELS
+          value: "/root/.ollama/models"
+        - name: OLLAMA_KEEP_ALIVE
+          value: "24h"
+        - name: OLLAMA_NUM_PARALLEL
+          value: "4"
+        - name: OLLAMA_MAX_LOADED_MODELS
+          value: "3"
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 2Gi
+        limits:
+          cpu: 4000m
+          memory: 8Gi
+          # GPU sera ajouté dynamiquement si disponible
+          # nvidia.com/gpu: 1
+
+    - name: getloodllm-ui
+      image: getlood/ollama-ui:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+      env:
+        - name: OLLAMA_URL
+          value: "http://getloodllm-ollama:11434"
+        - name: POSTGRES_HOST
+          value: "{{ .Values.postgres.host }}"
+        - name: POSTGRES_PORT
+          value: "{{ .Values.postgres.port }}"
+        - name: POSTGRES_USER
+          value: "{{ .Values.postgres.username }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ .Values.postgres.password }}"
+        - name: POSTGRES_DB
+          value: "getloodllm"
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
+
+    - name: getloodllm-model-manager
+      image: getlood/ollama-model-manager:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+      volumeMounts:
+        - name: appdata
+          mountPath: /data
+      env:
+        - name: OLLAMA_URL
+          value: "http://getloodllm-ollama:11434"
+        - name: POSTGRES_HOST
+          value: "{{ .Values.postgres.host }}"
+        - name: POSTGRES_PORT
+          value: "{{ .Values.postgres.port }}"
+        - name: POSTGRES_USER
+          value: "{{ .Values.postgres.username }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ .Values.postgres.password }}"
+        - name: POSTGRES_DB
+          value: "getloodllm"
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
