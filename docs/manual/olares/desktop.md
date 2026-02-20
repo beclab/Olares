@@ -1,53 +1,53 @@
 # Get familiar with Desktop
 
-The Desktop application serves as the primary interface for user interaction with the Olares system. It offers an intuitive and efficient way to manage and utilize both built-in system applications and those you install.
+Desktop is the primary interface for interacting with Olares. From here, you can open and manage built-in system apps as well as the apps you install.
 
-## Desktop concepts
+## Desktop basics
 
-![Desktp[]](/images/manual/olares/desktop.png)
+![Desktop](/images/manual/olares/desktop.png#bordered)
 
-### Dock & Launchpad
+### Dock
 
-* **Dock:** An application quick-launch bar located on the side of the screen.
-* **Launchpad:** Accessed by clicking the "Launchpad" icon on the Dock, it displays all installed applications.
+The Dock is an application quick-launch bar on the left side of the screen. Use it to open frequently used apps and access key Desktop features.
+
+### Launchpad
+
+Launchpad shows all installed applications. Click the **Launchpad** icon in the Dock to open it.
 
 ### Application windows
 
-* Applications open in "window" mode by default.
-* Windows support standard operations: dragging, resizing, minimizing, maximizing, and closing.
-* **Search:** Enables quick application launching, file searching, and more.
+By default, applications open in **window mode** as an embedded page within Desktop. You can manage windows like you would on a standard computer:
 
-## Use the Launchpad
+- Drag the title bar to move the window.
+- Drag the window edges to resize it.
+- Minimize, maximize, or close the window.
+- Click <i class="material-symbols-outlined">open_in_new</i> to open the app in a new browser tab.
 
-From the Launchpad, you can:
+::: tip Note
+Some applications only support opening in a browser tab.
+:::
 
-* View all installed applications.
-* Click an application icon to open it.
-* Drag icons to reorder them within the Launchpad.
-* Drag an icon to the Dock for quick access.
+### Search and notifications
+
+- **Search:** Quickly launch applications and find supported content across Olares.
+- **Notifications:** Click the notification icon to view system and application notifications.
+
+## Use Launchpad
+
+From Launchpad, you can:
+
+- View all installed applications.
+- Click an application icon to open it.
+- Drag icons to reorder them within Launchpad.
+- Drag an icon to the Dock for quick access.
 
 ### Uninstall applications
 
-1. Press and hold an application icon to enter the editing mode.
-2. If an "X" appears in the top-right corner of the application icon, click it to delete the application.
+1. Press and hold an application icon to enter editing mode.
+2. If a <i class="material-symbols-outlined">close_small</i> icon appears in the top-left corner of the app icon, click it to uninstall the application.
 
 ::: tip Note
 Built-in system applications such as Files, Market, and Profile cannot be uninstalled.
-:::
-
-### Control application windows
-
-You can access applications via two modes.
-
-By default, applications open in "window" mode, which is an iframe page embedded within the desktop. You can manipulate these windows much like standard computer windows:
-
-* Drag the title bar to move the window.
-* Drag the window's edges to resize it.
-* Minimize, maximize, or close the window.
-* Click the <i class="material-symbols-outlined">open_in_new</i> button to open the application in a new browser tab.
-
-::: tip Note
-Some applications only support opening in a tabbed view.
 :::
 
 ## Search within Olares
