@@ -593,22 +593,3 @@ func (d *DeleteClusterModule) Init() {
 		execScript,
 	}
 }
-
-type SaveKubeConfigModule struct {
-	common.KubeModule
-}
-
-func (s *SaveKubeConfigModule) Init() {
-	s.Name = "SaveKubeConfigModule"
-	s.Desc = "Save kube config file as a configmap"
-
-	save := &task.LocalTask{
-		Name:   "SaveKubeConfig(k3s)",
-		Desc:   "Save kube config as a configmap",
-		Action: new(SaveKubeConfig),
-	}
-
-	s.Tasks = []task.Interface{
-		save,
-	}
-}

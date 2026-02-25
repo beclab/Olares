@@ -175,7 +175,8 @@ var (
 
 	UserAvatar = fmt.Sprintf("%s/avatar", AnnotationGroup)
 
-	UserLoginBackground = fmt.Sprintf("%s/login-background", AnnotationGroup)
+	UserLoginBackground      = fmt.Sprintf("%s/login-background", AnnotationGroup)
+	UserLoginBackgroundStyle = fmt.Sprintf("%s/login-background-style", AnnotationGroup)
 )
 
 var (
@@ -187,10 +188,17 @@ var (
 
 	UserAnnotationLocalDomainDNSRecord = fmt.Sprintf("%s/local-domain-dns-record", AnnotationGroup)
 
-	UserAnnotationReverseProxyType = fmt.Sprintf("%s/reverse-proxy-type", AnnotationGroup)
-	ReverseProxyTypeFRP            = "frp"
-	ReverseProxyTypeCloudflare     = "cloudflare"
-	ReverseProxyTypeNone           = "none"
+	UserAnnotationReverseProxyType     = fmt.Sprintf("%s/reverse-proxy-type", AnnotationGroup)
+	ReverseProxyTypeFRP                = "frp"
+	ReverseProxyTypeCloudflare         = "cloudflare"
+	ReverseProxyTypePublic             = "public"
+	ReverseProxyTypeNone               = "none"
+	ReverseProxyTypeExternalNetworkOff = "external_network_off"
+)
+
+var (
+	ExternalNetworkSwitchConfigMapName = "external-network-switch"
+	ExternalNetworkSwitchConfigKey     = "config.json"
 )
 
 var (

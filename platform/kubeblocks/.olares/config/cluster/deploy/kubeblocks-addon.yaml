@@ -140,3 +140,27 @@ spec:
   installable:
     autoInstall: true
   type: Helm
+---
+apiVersion: extensions.kubeblocks.io/v1alpha1
+kind: Addon
+metadata:
+  annotations:
+    addon.kubeblocks.io/kubeblocks-version: '>=1.0.0'
+  labels:
+    addon.kubeblocks.io/model: RDBMS
+    addon.kubeblocks.io/name: clickhouse
+    addon.kubeblocks.io/provider: community
+    addon.kubeblocks.io/version: 1.0.1
+  name: clickhouse
+spec:
+  defaultInstallValues:
+    - enabled: true
+  description: ClickHouse is an open-source column-oriented OLAP database management
+    system. Use it to boost your database performance while providing linear scalability
+    and hardware efficiency.
+  helm:
+    chartLocationURL: file:///clickhouse-1.0.1.tgz
+    chartsImage: beclab/kubeblock-addon-charts:v1.0.1-ext3
+  installable:
+    autoInstall: true
+  type: Helm

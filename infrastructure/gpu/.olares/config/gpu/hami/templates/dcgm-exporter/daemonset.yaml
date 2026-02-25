@@ -67,6 +67,9 @@ spec:
         {{- toYaml . | nindent 6 }}
       {{- end }}
       volumes:
+      - name: hostdev
+        hostPath:
+          path: /dev
       - name: "pod-gpu-resources"
         hostPath:
           path: '{{ .Values.dcgmExporter.kubeletPath }}'
@@ -124,6 +127,8 @@ spec:
         - name: "metrics"
           containerPort: {{ .Values.dcgmExporter.service.port }}
         volumeMounts:
+        - name: hostdev
+          mountPath: /dev
         - name: "pod-gpu-resources"
           readOnly: true
           mountPath: "/var/lib/kubelet/pod-resources"

@@ -180,7 +180,7 @@ spec:
             memory: 300Mi
             
       - name: download-server
-        image: "beclab/download-server:v0.1.17"
+        image: "beclab/download-server:v0.1.21"
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 0

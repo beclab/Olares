@@ -50,7 +50,7 @@ func (h *HelmOps) SetValues() (values map[string]interface{}, err error) {
 
 	values["domain"] = entries
 	userspace := make(map[string]interface{})
-	h.app.Permission = parseAppPermission(h.app.Permission)
+	h.app.Permission = ParseAppPermission(h.app.Permission)
 	for _, p := range h.app.Permission {
 		switch perm := p.(type) {
 		case appcfg.AppDataPermission, appcfg.AppCachePermission, appcfg.UserDataPermission:
@@ -170,17 +170,12 @@ func (h *HelmOps) SetValues() (values map[string]interface{}, err error) {
 	values["cluster"] = map[string]interface{}{
 		"arch": arch,
 	}
-	gpuType, err := utils.FindGpuTypeFromNodes(nodes)
-	if err != nil {
-		klog.Errorf("Failed to get gpuType err=%v", err)
-		return values, err
-	}
 	values["GPU"] = map[string]interface{}{
-		"Type": gpuType,
+		"Type": h.app.GetSelectedGpuTypeValue(),
 		"Cuda": os.Getenv("OLARES_SYSTEM_CUDA_VERSION"),
 	}
 
-	values["gpu"] = gpuType
+	values["gpu"] = h.app.GetSelectedGpuTypeValue()
 
 	if h.app.OIDC.Enabled {
 		err = h.createOIDCClient(values, zone, h.app.Namespace)

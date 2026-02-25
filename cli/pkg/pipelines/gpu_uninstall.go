@@ -19,7 +19,7 @@ func UninstallGpuDrivers() error {
 	}
 	arg.SetConsoleLog("gpuuninstall.log", true)
 
-	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
+	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
 		return err
 	}

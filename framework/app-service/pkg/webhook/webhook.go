@@ -30,7 +30,6 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -544,16 +543,21 @@ type EnvKeyValue struct {
 }
 
 // CreatePatchForDeployment add gpu env for deployment and returns patch bytes.
-func CreatePatchForDeployment(tpl *corev1.PodTemplateSpec, namespace string, gpuRequired *resource.Quantity, typeKey string, envKeyValues []EnvKeyValue) ([]byte, error) {
-	patches, err := addResourceLimits(tpl, namespace, gpuRequired, typeKey, envKeyValues)
+func CreatePatchForDeployment(tpl *corev1.PodTemplateSpec, typeKey string, envKeyValues []EnvKeyValue) ([]byte, error) {
+	patches, err := addResourceLimits(tpl, typeKey, envKeyValues)
 	if err != nil {
 		return []byte{}, err
 	}
 	return json.Marshal(patches)
 }
 
-func addResourceLimits(tpl *corev1.PodTemplateSpec, namespace string, gpuRequired *resource.Quantity, typeKey string, envKeyValues []EnvKeyValue) (patch []patchOp, err error) {
-	if typeKey == constants.NvidiaGPU || typeKey == constants.NvshareGPU {
+func addResourceLimits(tpl *corev1.PodTemplateSpec, typeKey string, envKeyValues []EnvKeyValue) (patch []patchOp, err error) {
+	if typeKey == "" {
+		klog.Warning("No gpu type selected, skip adding resource limits")
+		return patch, nil
+	}
+
+	if typeKey == constants.NvidiaGPU || typeKey == constants.NvidiaGB10GPU {
 		if tpl.Spec.RuntimeClassName != nil {
 			patch = append(patch, patchOp{
 				Op:    constants.PatchOpReplace,
@@ -584,7 +588,10 @@ func addResourceLimits(tpl *corev1.PodTemplateSpec, namespace string, gpuRequire
 			t := make(map[string]map[string]string)
 			t["limits"] = map[string]string{}
 			for k, v := range container.Resources.Limits {
-				if k.String() == constants.NvidiaGPU || k.String() == constants.NvshareGPU || k.String() == constants.VirtAiTechVGPU {
+				if k.String() == constants.NvidiaGPU ||
+					k.String() == constants.NvidiaGB10GPU ||
+					k.String() == constants.AMDAPU {
+					// unset all previous gpu limits
 					continue
 				}
 				t["limits"][k.String()] = v.String()

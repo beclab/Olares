@@ -20,6 +20,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/utils"
 	templates "github.com/beclab/Olares/cli/pkg/windows/templates"
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -487,7 +488,6 @@ func (i *InstallTerminus) Execute(runtime connector.Runtime) error {
 
 	var envs = []string{
 		fmt.Sprintf("export %s=%s", common.ENV_KUBE_TYPE, i.KubeConf.Arg.Kubetype),
-		fmt.Sprintf("export %s=%s", common.ENV_REGISTRY_MIRRORS, i.KubeConf.Arg.RegistryMirrors),
 		fmt.Sprintf("export %s=%s", common.ENV_PREINSTALL, os.Getenv(common.ENV_PREINSTALL)),
 		fmt.Sprintf("export %s=%s", common.ENV_HOST_IP, systemInfo.GetLocalIp()),
 		fmt.Sprintf("export %s=%s", common.ENV_DISABLE_HOST_IP_PROMPT, os.Getenv(common.ENV_DISABLE_HOST_IP_PROMPT)),
@@ -495,12 +495,12 @@ func (i *InstallTerminus) Execute(runtime connector.Runtime) error {
 	}
 
 	var bashUrl = fmt.Sprintf("https://%s", cc.DefaultBashUrl)
-	var defaultDomainName = os.Getenv(common.ENV_TERMINUS_OS_DOMAINNAME)
+	var defaultDomainName = viper.GetString(common.FlagOSDomainName)
 	if !utils.IsValidDomain(defaultDomainName) {
 		defaultDomainName = ""
 	}
 	if defaultDomainName != "" {
-		envs = append(envs, fmt.Sprintf("export %s=%s", common.ENV_TERMINUS_OS_DOMAINNAME, defaultDomainName))
+		envs = append(envs, fmt.Sprintf("export %s=%s", common.EnvLegacyOSDomainName, defaultDomainName))
 		bashUrl = fmt.Sprintf("https://%s", defaultDomainName)
 	}
 

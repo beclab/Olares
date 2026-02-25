@@ -3,10 +3,13 @@ package apiserver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+
+	"golang.org/x/exp/maps"
 
 	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
@@ -426,6 +429,11 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			api.HandleError(resp, req, err)
 			return
 		}
+		for i := range appconfig.Entrances {
+			if appconfig.Entrances[i].AuthLevel == "" {
+				appconfig.Entrances[i].AuthLevel = "private"
+			}
+		}
 		now := metav1.Now()
 		name, _ := apputils.FmtAppMgrName(am.Spec.AppName, owner, appconfig.Namespace)
 		app := &v1alpha1.Application{
@@ -443,6 +451,7 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 				Owner:           owner,
 				Entrances:       appconfig.Entrances,
 				SharedEntrances: appconfig.SharedEntrances,
+				Ports:           appconfig.Ports,
 				Icon:            appconfig.Icon,
 				Settings: map[string]string{
 					"title": am.Annotations[constants.ApplicationTitleLabel],
@@ -477,6 +486,8 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			}
 			if v, ok := appsMap[a.Name]; ok {
 				v.Spec.Settings = a.Spec.Settings
+				v.Spec.Entrances = a.Spec.Entrances
+				v.Spec.Ports = a.Spec.Ports
 			}
 		}
 	}
@@ -738,6 +749,11 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			api.HandleError(resp, req, err)
 			return
 		}
+		for i := range appconfig.Entrances {
+			if appconfig.Entrances[i].AuthLevel == "" {
+				appconfig.Entrances[i].AuthLevel = "private"
+			}
+		}
 
 		now := metav1.Now()
 		app := v1alpha1.Application{
@@ -754,6 +770,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
 				Entrances:       appconfig.Entrances,
+				Ports:           appconfig.Ports,
 				SharedEntrances: appconfig.SharedEntrances,
 				Icon:            appconfig.Icon,
 				Settings: map[string]string{
@@ -788,6 +805,8 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		}
 		if v, ok := appsMap[a.Name]; ok {
 			v.Spec.Settings = a.Spec.Settings
+			v.Spec.Entrances = a.Spec.Entrances
+			v.Spec.Ports = a.Spec.Ports
 		}
 	}
 
@@ -930,12 +949,37 @@ func (h *Handler) oamValues(req *restful.Request, resp *restful.Response) {
 		api.HandleError(resp, req, err)
 		return
 	}
-	gpuType, err := utils.FindGpuTypeFromNodes(&nodes)
+	gpuTypes, err := utils.GetAllGpuTypesFromNodes(&nodes)
 	if err != nil {
-		klog.Errorf("get gpu type failed %v", gpuType)
+		klog.Errorf("get gpu type failed %v", err)
 		api.HandleError(resp, req, err)
 		return
 	}
+
+	gpuType := "none"
+	selectedGpuType := req.QueryParameter("gputype")
+	if len(gpuTypes) > 0 {
+		if selectedGpuType != "" {
+			if _, ok := gpuTypes[selectedGpuType]; ok {
+				gpuType = selectedGpuType
+			} else {
+				err := fmt.Errorf("selected gpu type %s not found in cluster", selectedGpuType)
+				klog.Error(err)
+				api.HandleError(resp, req, err)
+				return
+			}
+		} else {
+			if len(gpuTypes) == 1 {
+				gpuType = maps.Keys(gpuTypes)[0]
+			} else {
+				err := fmt.Errorf("multiple gpu types found in cluster, please specify one")
+				klog.Error(err)
+				api.HandleError(resp, req, err)
+				return
+			}
+		}
+	}
+
 	values["GPU"] = map[string]interface{}{
 		"Type": gpuType,
 		"Cuda": os.Getenv("OLARES_SYSTEM_CUDA_VERSION"),
@@ -982,6 +1026,9 @@ func (h *Handler) oamValues(req *restful.Request, resp *restful.Response) {
 	}
 	values["redis"] = map[string]interface{}{}
 	values["mongodb"] = map[string]interface{}{
+		"databases": map[string]interface{}{},
+	}
+	values["clickhouse"] = map[string]interface{}{
 		"databases": map[string]interface{}{},
 	}
 	values["svcs"] = map[string]interface{}{}

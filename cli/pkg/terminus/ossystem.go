@@ -125,6 +125,11 @@ func (t *CreateUserEnvConfigMap) Execute(runtime connector.Runtime) error {
 		return nil
 	}
 
+	desiredBytes, err := os.ReadFile(userEnvPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to read user env config file")
+	}
+
 	configK8s, err := ctrl.GetConfig()
 	if err != nil {
 		return errors.Wrap(err, "failed to get kubernetes config")
@@ -144,17 +149,24 @@ func (t *CreateUserEnvConfigMap) Execute(runtime connector.Runtime) error {
 	defer cancel()
 
 	name := "user-env"
+	namespace := common.NamespaceOsFramework
 	cm := &corev1.ConfigMap{}
-	err = ctrlclient.Get(ctx, types.NamespacedName{Name: name, Namespace: common.NamespaceOsFramework}, cm)
+	err = ctrlclient.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, cm)
 	if apierrors.IsNotFound(err) {
-		// create via kubectl from file
-		kubectl, _ := util.GetCommand(common.CommandKubectl)
-		cmd := fmt.Sprintf("%s -n %s create configmap %s --from-file=%s=%s",
-			kubectl, common.NamespaceOsFramework, name, common.OLARES_USER_ENV_FILENAME, userEnvPath,
-		)
-		if _, cerr := runtime.GetRunner().SudoCmd(cmd, false, true); cerr != nil {
-			return errors.Wrap(errors.WithStack(cerr), "failed to create user-env configmap")
+		cm = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Data: map[string]string{
+				common.OLARES_USER_ENV_FILENAME: string(desiredBytes),
+			},
 		}
+
+		if err := ctrlclient.Create(ctx, cm); err != nil && !apierrors.IsAlreadyExists(err) {
+			return errors.Wrap(err, "failed to create user-env configmap")
+		}
+
 		logger.Infof("Created user env configmap from %s", userEnvPath)
 		return nil
 	}
@@ -162,57 +174,21 @@ func (t *CreateUserEnvConfigMap) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(err, "failed to get user-env configmap")
 	}
 
-	// If exists, merge missing envs and update via client
-	newDataBytes, err := os.ReadFile(userEnvPath)
-	if err != nil {
-		return errors.Wrap(err, "failed to read user env config file")
-	}
-
-	var newCfg UserEnvConfig
-	if err := yaml.Unmarshal(newDataBytes, &newCfg); err != nil {
-		return errors.Wrap(err, "failed to parse user env config file")
-	}
-
-	var existingCfg UserEnvConfig
-	existingContent := cm.Data[common.OLARES_USER_ENV_FILENAME]
-	if existingContent != "" {
-		if err := yaml.Unmarshal([]byte(existingContent), &existingCfg); err != nil {
-			return errors.Wrap(err, "failed to parse existing user env configmap data")
-		}
-	}
-
-	existingSet := make(map[string]struct{}, len(existingCfg.UserEnvs))
-	for _, e := range existingCfg.UserEnvs {
-		existingSet[e.EnvName] = struct{}{}
-	}
-
-	missing := 0
-	for _, e := range newCfg.UserEnvs {
-		if _, ok := existingSet[e.EnvName]; !ok {
-			existingCfg.UserEnvs = append(existingCfg.UserEnvs, e)
-			missing++
-		}
-	}
-
-	if missing == 0 {
-		logger.Infof("No new user envs to add; configmap up to date")
-		return nil
-	}
-
-	updatedBytes, err := yaml.Marshal(existingCfg)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal updated user env config")
-	}
 	if cm.Data == nil {
 		cm.Data = map[string]string{}
 	}
-	cm.Data[common.OLARES_USER_ENV_FILENAME] = string(updatedBytes)
+	if cm.Data[common.OLARES_USER_ENV_FILENAME] == string(desiredBytes) {
+		logger.Infof("user-env configmap is up to date")
+		return nil
+	}
+
+	cm.Data[common.OLARES_USER_ENV_FILENAME] = string(desiredBytes)
 
 	if err := ctrlclient.Update(ctx, cm); err != nil {
 		return errors.Wrap(err, "failed to update user-env configmap")
 	}
 
-	logger.Infof("Appended %d missing user env(s) and updated configmap", missing)
+	logger.Infof("Updated user env configmap from %s", userEnvPath)
 	return nil
 }
 

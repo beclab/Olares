@@ -32,7 +32,7 @@ func (m *singleTaskModule) Init() {
 func AmdGpuInstall() error {
 	arg := common.NewArgument()
 	arg.SetConsoleLog("amdgpuinstall.log", true)
-	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
+	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func AmdGpuInstall() error {
 func AmdGpuUninstall() error {
 	arg := common.NewArgument()
 	arg.SetConsoleLog("amdgpuuninstall.log", true)
-	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
+	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func AmdGpuUninstall() error {
 
 func AmdGpuStatus() error {
 	arg := common.NewArgument()
-	runtime, err := common.NewKubeRuntime(common.AllInOne, *arg)
+	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
 		return err
 	}

@@ -54,6 +54,7 @@ rules:
   - "/system/configuration/encoding"
   - "/api/search/get_directory/"
   - "/api/search/sync_search/"
+  - "/api/share/smb_share_user/"
   verbs: ["*"]
 
 ---

@@ -13,6 +13,7 @@ const (
 	AppMarketSourceKey  = constants.AppMarketSourceKey
 	AppInstallSourceKey = "bytetrade.io/install-source"
 	AppUninstallAllKey  = "bytetrade.io/uninstall-all"
+	AppDeleteDataKey    = "bytetrade.io/delete-data"
 	AppStopAllKey       = "bytetrade.io/stop-all"
 	AppResumeAllKey     = "bytetrade.io/resume-all"
 	AppImagesKey        = "bytetrade.io/images"
@@ -126,15 +127,16 @@ type UpgradeRequest struct {
 
 // InstallRequest represents a request to install an application.
 type InstallRequest struct {
-	Dev        bool                    `json:"devMode"`
-	RepoURL    string                  `json:"repoUrl"`
-	CfgURL     string                  `json:"cfgUrl"`
-	Source     AppSource               `json:"source"`
-	Images     []Image                 `json:"images"`
-	Envs       []sysv1alpha1.AppEnvVar `json:"envs"`
-	RawAppName string                  `json:"rawAppName"`
-	Title      string                  `json:"title"`
-	Entrances  []EntranceClone         `json:"entrances"`
+	Dev             bool                    `json:"devMode"`
+	RepoURL         string                  `json:"repoUrl"`
+	CfgURL          string                  `json:"cfgUrl"`
+	Source          AppSource               `json:"source"`
+	Images          []Image                 `json:"images"`
+	Envs            []sysv1alpha1.AppEnvVar `json:"envs"`
+	RawAppName      string                  `json:"rawAppName"`
+	Title           string                  `json:"title"`
+	Entrances       []EntranceClone         `json:"entrances"`
+	SelectedGpuType string                  `json:"selectedGpuType"`
 }
 
 type Image struct {
@@ -144,7 +146,8 @@ type Image struct {
 
 // UninstallRequest represents a request to uninstall an application.
 type UninstallRequest struct {
-	All bool `json:"all"`
+	All        bool `json:"all"`
+	DeleteData bool `json:"deleteData"`
 }
 
 // StopRequest represents a request to stop an application.

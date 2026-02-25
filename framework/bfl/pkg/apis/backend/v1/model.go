@@ -40,6 +40,7 @@ type TerminusInfo struct {
 	UserDID         string                 `json:"did"`
 	ReverseProxy    string                 `json:"reverseProxy"`
 	Terminusd       string                 `json:"terminusd"`
+	Style           string                 `json:"style"`
 }
 
 type OlaresInfo struct {
@@ -53,6 +54,7 @@ type OlaresInfo struct {
 	ID                 string                 `json:"id"`
 	UserDID            string                 `json:"did"`
 	Olaresd            string                 `json:"olaresd"`
+	Style              string                 `json:"style"`
 }
 
 type MyAppsParam struct {

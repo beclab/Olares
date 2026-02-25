@@ -29,10 +29,8 @@ type KubeAction struct {
 func (k *KubeAction) AutoAssert(runtime connector.Runtime) {
 	kubeRuntime := runtime.(*KubeRuntime)
 	conf := &KubeConf{
-		Cluster:     kubeRuntime.Cluster,
-		ClusterName: kubeRuntime.ClusterName,
-		Kubeconfig:  kubeRuntime.Kubeconfig,
-		Arg:         kubeRuntime.Arg,
+		Cluster: kubeRuntime.Cluster,
+		Arg:     kubeRuntime.Arg,
 	}
 
 	k.KubeConf = conf

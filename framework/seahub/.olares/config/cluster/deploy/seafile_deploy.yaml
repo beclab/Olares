@@ -166,6 +166,7 @@ data:
     user = seafile_os_framework
     password = {{ $pg_password | b64dec }}
     db_name = os_framework_seafile
+    ccnet_db_name = os_framework_ccnet
     connection_charset = utf8
     create_tables = true
   ccnet.conf: |-
@@ -248,7 +249,7 @@ spec:
 
       containers:
       - name: seafile-server
-        image: beclab/pg_seafile_server:v0.0.18
+        image: beclab/pg_seafile_server:v0.0.19
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 8082

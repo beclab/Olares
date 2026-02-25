@@ -531,7 +531,7 @@ func (t *GetStorageKeyTask) Execute(runtime connector.Runtime) error {
 	defer cancel()
 
 	if stdout, err := runtime.GetRunner().CmdContext(ctx, fmt.Sprintf("%s get terminus terminus -o jsonpath='{.metadata.annotations.bytetrade\\.io/s3-ak}'", kubectl), false, false); err != nil {
-		storageAccessKey = os.Getenv(common.ENV_AWS_ACCESS_KEY_ID_SETUP)
+		storageAccessKey = t.KubeConf.Arg.Storage.StorageAccessKey
 		if storageAccessKey == "" {
 			logger.Errorf("storage access key not found")
 		}
@@ -540,7 +540,7 @@ func (t *GetStorageKeyTask) Execute(runtime connector.Runtime) error {
 	}
 
 	if stdout, err := runtime.GetRunner().CmdContext(ctx, fmt.Sprintf("%s get terminus terminus -o jsonpath='{.metadata.annotations.bytetrade\\.io/s3-sk}'", kubectl), false, false); err != nil {
-		storageSecretKey = os.Getenv(common.ENV_AWS_SECRET_ACCESS_KEY_SETUP)
+		storageSecretKey = t.KubeConf.Arg.Storage.StorageSecretKey
 		if storageSecretKey == "" {
 			logger.Errorf("storage secret key not found")
 		}
@@ -549,7 +549,7 @@ func (t *GetStorageKeyTask) Execute(runtime connector.Runtime) error {
 	}
 
 	if stdout, err := runtime.GetRunner().CmdContext(ctx, fmt.Sprintf("%s get terminus terminus -o jsonpath='{.metadata.annotations.bytetrade\\.io/s3-sts}'", kubectl), false, false); err != nil {
-		storageToken = os.Getenv(common.ENV_AWS_SESSION_TOKEN_SETUP)
+		storageToken = t.KubeConf.Arg.Storage.StorageToken
 		if storageToken == "" {
 			logger.Errorf("storage token not found")
 		}
@@ -558,7 +558,7 @@ func (t *GetStorageKeyTask) Execute(runtime connector.Runtime) error {
 	}
 
 	if stdout, err := runtime.GetRunner().CmdContext(ctx, fmt.Sprintf("%s get terminus terminus -o jsonpath='{.metadata.labels.bytetrade\\.io/cluster-id}'", kubectl), false, false); err != nil {
-		storageClusterId = os.Getenv(common.ENV_CLUSTER_ID)
+		storageClusterId = t.KubeConf.Arg.Storage.StorageClusterId
 		if storageClusterId == "" {
 			logger.Errorf("storage cluster id not found")
 		}

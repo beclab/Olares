@@ -18,7 +18,7 @@ fi
 if [[ x"$VERSION" == x"" ]]; then
     if [[ "$LOCAL_RELEASE" == "1" ]]; then
         ts=$(date +%Y%m%d%H%M%S)
-        export VERSION="1.12.5-$ts"
+        export VERSION="1.12.6-$ts"
         echo "will build and use a local release of Olares with version: $VERSION"
         echo ""
     else
@@ -28,7 +28,7 @@ fi
 
 if [[ "x${VERSION}" == "x" || "x${VERSION:3}" == "xVERSION__" ]]; then
     echo "error: Olares version is unspecified, please set the VERSION env var and rerun this script."
-    echo "for example: VERSION=1.12.5-20241124 bash $0"
+    echo "for example: VERSION=1.12.6-20241124 bash $0"
     exit 1
 fi
 
@@ -66,13 +66,7 @@ if ! command_exists tar; then
     exit 1
 fi
 
-if [[ x"$KUBE_TYPE" == x"" ]]; then
-    echo "the KUBE_TYPE env var is not set, defaulting to \"k3s\""
-    echo ""
-    export KUBE_TYPE="k3s"
-fi
-
-BASE_DIR="$HOME/.olares"
+export BASE_DIR="$HOME/.olares"
 if [ ! -d $BASE_DIR ]; then
     mkdir -p $BASE_DIR
 fi
@@ -148,10 +142,6 @@ else
     fi
 fi
 
-PARAMS="--version $VERSION --base-dir $BASE_DIR"
-KUBE_PARAM="--kube $KUBE_TYPE"
-CDN="--cdn-service ${cdn_url}"
-
 if [[ -f $BASE_DIR/.prepared ]]; then
     echo "file $BASE_DIR/.prepared detected, skip preparing phase"
     echo ""
@@ -162,7 +152,7 @@ else
             echo ""
         else
             echo "building local release ..."
-            $sh_c "$INSTALL_OLARES_CLI release $PARAMS $CDN"
+            $sh_c "$INSTALL_OLARES_CLI release"
             if [[ $? -ne 0 ]]; then
                 echo "error: failed to build local release"
                 exit 1
@@ -171,16 +161,13 @@ else
     else
         echo "running system prechecks ..."
         echo ""
-        $sh_c "$INSTALL_OLARES_CLI precheck $PARAMS"
+        $sh_c "$INSTALL_OLARES_CLI precheck"
         if [[ $? -ne 0 ]]; then
             exit 1
         fi
         echo "downloading installation wizard..."
         echo ""
-        if [[ ! -z "$RELEASE_ID_SUFFIX" ]]; then
-            DOWNLOAD_WIZARD_RELEASE_ID_PARAM="--release-id $RELEASE_ID"
-        fi
-        $sh_c "$INSTALL_OLARES_CLI download wizard $PARAMS $KUBE_PARAM $CDN $DOWNLOAD_WIZARD_RELEASE_ID_PARAM"
+        $sh_c "$INSTALL_OLARES_CLI download wizard"
         if [[ $? -ne 0 ]]; then
             echo "error: failed to download installation wizard"
             exit 1
@@ -189,7 +176,7 @@ else
 
     echo "downloading installation packages..."
     echo ""
-    $sh_c "$INSTALL_OLARES_CLI download component $PARAMS $KUBE_PARAM $CDN"
+    $sh_c "$INSTALL_OLARES_CLI download component"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to download installation packages"
         exit 1
@@ -197,11 +184,7 @@ else
 
     echo "preparing installation environment..."
     echo ""
-    # env 'REGISTRY_MIRRORS' is a docker image cache mirrors, separated by commas
-    if [ x"$REGISTRY_MIRRORS" != x"" ]; then
-        extra="--registry-mirrors $REGISTRY_MIRRORS"
-    fi
-    $sh_c "$INSTALL_OLARES_CLI prepare $PARAMS $KUBE_PARAM $extra"
+    $sh_c "$INSTALL_OLARES_CLI prepare"
     if [[ $? -ne 0 ]]; then
         echo "error: failed to prepare installation environment"
         exit 1
@@ -218,38 +201,18 @@ if [ "$PREINSTALL" == "1" ]; then
     exit 0
 fi
 
-if [[ "$JUICEFS" == "1" ]]; then
-    echo "JuiceFS is enabled"
-    fsflag="--with-juicefs=true"
-    if [[ "$STORAGE" == "" ]]; then
-        echo "installing MinIO ..."
-    else
-        echo "checking storage config ..."
-    fi
-    $sh_c "$INSTALL_OLARES_CLI install storage $PARAMS"
-    if [[ $? -ne 0 ]]; then
-      exit 1
-    fi
+
+echo "configuring storage ..."
+$sh_c "$INSTALL_OLARES_CLI install storage"
+if [[ $? -ne 0 ]]; then
+    echo "error: failed to configure storage"
+    exit 1
 fi
 
-if [[ -n "$SWAPPINESS" ]]; then
-    swapflag="$swapflag --swappiness $SWAPPINESS"
-fi
-if [[ "$ENABLE_POD_SWAP" == "1" ]]; then
-    swapflag="$swapflag --enable-pod-swap"
-fi
-if [[ "$ENABLE_ZRAM" == "1" ]]; then
-    swapflag="$swapflag --enable-zram"
-fi
-if [[ -n "$ZRAM_SIZE" ]]; then
-    swapflag="$swapflag --zram-size $ZRAM_SIZE"
-fi
-if [[ -n "$ZRAM_SWAP_PRIORITY" ]]; then
-    swapflag="$swapflag --zram-swap-priority $ZRAM_SWAP_PRIORITY"
-fi
+
 echo "installing Olares..."
 echo ""
-$sh_c "$INSTALL_OLARES_CLI install $PARAMS $KUBE_PARAM $fsflag $swapflag"
+$sh_c "$INSTALL_OLARES_CLI install"
 
 if [[ $? -ne 0 ]]; then
     echo "error: failed to install Olares"
