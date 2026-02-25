@@ -218,7 +218,7 @@ To resume your application, you need to free up some occupied resources:
 Sometimes, an application listed on the official [Olares Market website](https://market.olares.com) might be missing from the Market on your device. This can happen if the system didn't finish downloading the full app list during your initial setup.
 
 If your device has been running for more than 2 hours and the app is still missing, follow these steps to manually refresh the Market:
-1. Open **Control Hub** from your desktop, and then go to **Browse** > **System** > **os-framework**.
+1. Open Control Hub, and then go to **Browse** > **System** > **os-framework**.
 
     ![Open Control Hub](/images/manual/olares/open-control-hub.png#bordered)
 
