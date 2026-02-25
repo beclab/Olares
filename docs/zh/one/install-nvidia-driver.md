@@ -26,7 +26,7 @@ This guide walks you through downloading the package and using the provided inst
 
 ## Step 1: Download the driver package
 
-Download the driver package `AGBOX_B1_DVT_driver251125.zip` from http://cdn.olares.com/common/AGBOX_B1_DVT_driver251125.zip.
+Download the [driver package](http://cdn.olares.com/common/AGBOX_B1_DVT_driver251125.zip).
 
 :::tip Browser security warning
 Because the download links use a standard HTTP connection rather than HTTPS, your web browser might flag or block it as an insecure download. If this happens, select **Keep** or **Allow** in your browser's download manager to continue the download.
