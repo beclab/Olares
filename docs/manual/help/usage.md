@@ -35,7 +35,7 @@ Yes. You can install [Studio](../../developer/develop/tutorial/index.md) to code
 
 In Olares, certain applications such as Ollama and LLM apps are deployed as [shared applications](/developer/concepts/application.md#shared-applications). These apps are designed to provide unified, shared resources or services to all users within an Olares cluster.
 
-In Olares 1.12.4 and earlier versions, when you stop a shared application from **Settings**, only its user-facing interface is stopped. The underlying system‑level service, which actually consumes most of the resources such as memory and GPU, continues running in the background. This ensures that the shared service remains accessible to any other applications in the cluster that might depend on it. As a result, memory usage does not drop immediately after the app is stopped.
+In Olares 1.12.4 and earlier versions, when you stop a shared application from **Settings**, only its user-facing interface is stopped. The underlying system‑level service, which actually consumes most of the resources such as memory and GPU, continues running in the background. This ensures that the service remains available for other users. As a result, memory usage does not drop immediately after the app is stopped.
 
 In future releases, we will introduce an option to shut down both the user-facing service and the underlying system service,  freeing up memory and other resources directly.
 
