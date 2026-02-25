@@ -25,7 +25,6 @@ The Olares Market offers various ways to discover and browse applications.
 
 ![Market](/images/manual/olares/market-discover1.png#bordered)
 
-
 ### Browse by categories
 
 Upon launching the Market app, the **Discover** page serves as your central hub for exploration, organizing content into intuitive sections to guide your journey:
@@ -136,9 +135,10 @@ To update an application from Market:
 
 ## Uninstall applications
 
-### Uninstall from Market
+Uninstall an application from Market or LaunchPad. 
 
-To uninstall an application from Market:
+<tabs>
+<template #Uninstall-from-Market>
 
 1. Open Market from Dock or Launchpad.
 2. In the left sidebar, navigate to the **My Olares** section. Use the source tabs to filter and find your installed applications.
@@ -149,10 +149,8 @@ To uninstall an application from Market:
     - If you do not select this option, app data (in the Data directory) will be retained and can be restored upon re-installation, while cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
     
 5. Click **Confirm**.
-
-### Uninstall from Launchpad
-
-You can also uninstall an application from LaunchPad:
+</template>
+<template #Uninstall-from-Launchpad>
 
 1. In Olares, click the Launchpad icon in the Dock to display all installed apps.
 2. Click and hold the app icon until all the apps begin to jiggle.
@@ -162,6 +160,12 @@ You can also uninstall an application from LaunchPad:
     - If you do not select this option, app data (in the Data directory) will be retained and can be restored upon re-installation, while cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
 
 4. Click **Confirm**.
+</template>
+</tabs>
+
+### Uninstall shared applications
+
+
 
 ## View app operation logs
 
@@ -176,15 +180,12 @@ You can also click the <i class="material-symbols-outlined">download</i> button 
 ## FAQs
 
 ### Why can't I install an application?
+
 If you can't install an application, it might be due to:
 * **Insufficient system resources**: Try freeing up system resources, or increasing your resource quota.
 * **Missing dependencies**: Check the **Dependency** section on the application details page and make sure all required apps are installed.
 * **Incompatible system version**: Try upgrading Olares to the latest version.
 * **Shared service dependency** (for Olares members): The application requires a shared service to be running in the cluster. Contact your admin to install the shared application first before you can install it.
-
-### Why can't I resume my application?
-
-When you try to resume an application in Olares and receive an error message about insufficient CPU, memory, or disk, it means the system's current available resources cannot support running the application. You need to close other applications to free up resources.
 
 ### Why was my application stopped?
 
@@ -192,17 +193,57 @@ An application is usually stopped due to one of the following reasons:
 * **System auto stop**: To ensure Olares's stability, the Olares system monitors resource usage. If an application consumes excessive resources (such as CPU or memory) causing a high system load, the system might automatically pause it to prevent the entire device from freezing or crashing.
 * **Manual stop**: You or an administrator might have manually stopped the application previously, and the application has not been resumed yet.
 
-### Why can't I resume my application now?
+### Why can't I resume my application?
 
 Starting an application requires reserving a specific amount of computing resources. If other running applications are already occupying most of the resources, the remaining free resources are not enough for the application you want to start.
 
-Therefore, when you try to resume the application, you might encounter the following messages:
+Therefore, when you try to resume the application, you might encounter the following messages. You need to stop applications that you do not need to use right now to free up resources.
 
 | Error message | Description |
 | :--- | :--- |
 | Insufficient system CPU/memory | The physical resources of the entire system are nearly exhausted. |
 | Insufficient disk space | The hard drive is full, and new data cannot be written. |
 | Available CPU/memory insufficient | There are some resources left, they are less than the minimum<br> amount required by this specific application. |
+
+### How to free up resources from unused apps?
+
+If certain applications are not in use and you want to free up the system resources they are using, you can stop them from Market or Settings.
+
+<tabs>
+<template #Stop-apps-from-Market>
+
+1. Open Market from Dock or Launchpad.
+2. In the left sidebar, click **My Olares**. Use the source tabs to filter and find the app you want to stop.
+3. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the application's operation button, and then select **Stop**.
+</template>
+<template #Stop-apps-from-Settings>
+
+1. Go to **Settings** > **Application**.
+2. Click the target application you want to stop from the list.
+3. Click <i class="material-symbols-outlined">toggle_on</i>.
+
+</template>
+</tabs>
+
+#### Managing shared application resources (Admin only)
+
+Shared applications, such as Ollama, require the system-side service to be stopped to fully release memory and other resources.
+
+Only administrators can stop system-side services. When the administrator stops a shared application, a **Also disable shared server-side (will affect all users)** checkbox appears:
+- To fully release the resources, select this option. This stops the service for the entire cluster.
+- To keep the service running, do not select this option. This only stops your personal user interface while the backend service remains active for other users.
+
+:::info 
+If you are the only user in the cluster, the system will automatically stop both the interface and the system-side service by default.
+:::
+
+#### Instructions for V1.12.4 and earlier
+
+In Olares 1.12.4 and earlier versions, the option to stop the shared server-side service is not available in Settings. Administrators must use the Market to ensure resources are fully released.
+If you have already paused a shared application through Settings and the memory has not been released, follow these steps:
+1. Return to the Market and resume the application.
+2. Pause the application again within the Market.
+3. Ensure the option Also disable shared server-side is selected before confirming.
 
 ### How to resume my application?
 
