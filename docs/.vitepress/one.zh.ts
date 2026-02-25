@@ -192,7 +192,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
                 link: "/zh/one/dual-boot-dual-drive",
               },
               {
-                text: "Dual-drive setup",
+                text: "Single-drive setup",
                 link: "/zh/one/dual-boot-single-drive",
               }
               ,
