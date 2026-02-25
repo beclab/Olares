@@ -187,3 +187,23 @@ Olares **应用市场**提供多种方式发现和浏览应用。
 2. 找到你暂时不需要使用的应用。
 3. 点击该应用，然后点击**暂停**以关闭运行状态，从而停止该应用。
 4. 资源释放后，回到你原来的应用，再次点击**恢复**。
+
+### 为什么应用商店（Market）中缺少某些应用？
+
+有时，你在 Olares Market 官方网站上看到的应用程序可能未显示在你设备的商店中。这通常是因为系统在初始设置期间未能完整下载应用列表。
+
+如果您的设备已运行超过 2 小时，但应用仍未显示，请按照以下步骤手动刷新商店：
+1. 打开**控制面板**，依次进入**浏览** > **System** > **os-framework**。
+
+    ![Open Control Hub](/images/zh/manual/olares/open-control-hub.png#bordered)
+
+2. 在**部署**列表中找到 **chartrepo-deployment**，点击**重启**。等待其状态变为 Running（运行中）。
+
+    ![Restart chartrepo](/images/zh/manual/olares/restart-chart.png#bordered)
+
+3. 在同一列表中找到 **market-deployment**，点击**重启**。同样等待其状态变为 Running（运行中）。
+
+    ![Restart market](/images/zh/manual/olares/restart-market.png#bordered) 
+    
+4. 等待 2 到 3 分钟，让服务完成初始化。
+5. 刷新你的 Market 应用。
