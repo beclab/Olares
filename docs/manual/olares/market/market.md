@@ -212,3 +212,23 @@ To resume your application, you need to free up some occupied resources:
 2. Find applications that you do not need to use right now.
 3. Stop each application by clicking the app and clicking **Stop**.
 4. After resources are freed, go back to your target application and click **Resume** again.
+
+### Why are some apps missing from the Market?
+
+Sometimes, an application listed on the official [Olares Market website](https://market.olares.com) might be missing from the Market on your device. This can happen if the system didn't finish downloading the full app list during your initial setup.
+
+If your device has been running for more than 2 hours and the app is still missing, follow these steps to manually refresh the Market:
+1. Open **Control Hub** from your desktop, and then go to **Browse** > **System** > **os-framework**.
+
+    ![Open Control Hub](/images/one/open-control-hub.png#bordered)
+
+2. In the **Deployments** list, find **chartrepo-deployment**, and then click **Restart**. Wait until its status turns to **Running**.
+
+    ![Restart chartrepo](/images/one/restart-chart.png#bordered)
+
+3. In the same list, find **market-deployment**, and then click **Restart**. Wait until its status turns to **Running**.
+
+    ![Restart market](/images/one/restart-market.png#bordered) 
+
+4. Wait 2 to 3 minutes for the services to initialize.
+5. Refresh the Market app.
