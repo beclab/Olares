@@ -31,25 +31,6 @@ For detailed instructions, refer to [Run a Windows VM on your Olares device](../
 
 Yes. You can install [Studio](../../developer/develop/tutorial/index.md) to code directly in your browser or connect your local VS Code to the device. This provides a development experience similar to your local machine but leverages the greater power of your server hardware.
 
-### Why is memory not released after I stop an application?
-
-In Olares, certain applications such as Ollama and LLM apps are deployed as [shared applications](/developer/concepts/application.md#shared-applications). These apps are designed to provide unified, shared resources or services to all users within an Olares cluster.
-
-In Olares 1.12.4 and earlier versions, when you stop a shared application from **Settings**, only its user-facing interface is stopped. The underlying system‑level service, which actually consumes most of the resources such as memory and GPU, continues running in the background. This ensures that the service remains available for other users. As a result, memory usage does not drop immediately after the app is stopped.
-
-In future releases, we will introduce an option to shut down both the user-facing service and the underlying system service,  freeing up memory and other resources directly.
-
-#### How to free up memory in V1.12.4 and earlier
-
-If you are using Olares 1.12.4 or earlier versions, use the following procedure to release memory immediately:
-1. Log in to Olares with an administrator account.
-2. Open the Control Hub app from the desktop.
-3. Go to **Browse** > **System**, and then click the system-side service for the application you want to stop. For example, ollamaserver-shared.
-4. In the **Deployments** list, click the the deployment corresponding to the service.
-5. Click **Stop** in the upper‑right corner of the deployment details. This manually stops the underlying system container, releasing the memory it was using.
-
-    ![Release resources](/images/manual/olares/release-resources.png#bordered)
-
 ## Storage
 ### If I add new disks to a running Olares machine, will Olares use them automatically?
 
