@@ -15,7 +15,7 @@ olares-cli stop [option]
 | `--help`           | `-h`      | Displays help information.                                                                                | No                   | N/A     |
 | `--timeout`        |           | Sets the maximum time to wait for a graceful shutdown before using SIGKILL (e.g., `5s`, `2m`, `3h`).       | No                   | `1m`    |
 
-## Example
+## Examples
 ```bash
 # Stop the Olares system
 olares-cli stop

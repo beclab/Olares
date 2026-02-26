@@ -224,7 +224,11 @@ func GenerateEncryptedPassword(length int) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	return plainText, utils.MD5(plainText + "@Olares2025"), nil
+	return plainText, EncryptPassword(plainText), nil
+}
+
+func EncryptPassword(plainText string) string {
+	return utils.MD5(plainText + "@Olares2025")
 }
 
 func RemoveAnsiCodes(input string) string {

@@ -28,7 +28,7 @@ olares-cli logs [option]
 | `--output-dir`         |           | Saves logs to the specified directory. Creates the directory if it does not exist.                                                                                                                 | No                   | `./olares-logs`                |
 | `--since`              |           | Fetches logs newer than a specified relative duration (e.g., `5s`, `2m`, `3h`).                                                                                                                    | No                   | `7d`                           |
 
-## Example
+## Examples
 ```bash
 # Collect all logs with default settings
 olares-cli logs

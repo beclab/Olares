@@ -372,6 +372,48 @@ func (c *CudaChecker) Check(runtime connector.Runtime) error {
 	return nil
 }
 
+// RocmChecker checks AMD ROCm version for AMD GPU on Ubuntu 22.04/24.04 only.
+type RocmChecker struct{}
+
+func (r *RocmChecker) Name() string {
+	return "ROCm"
+}
+
+func (r *RocmChecker) Check(runtime connector.Runtime) error {
+	if !runtime.GetSystemInfo().IsLinux() {
+		return nil
+	}
+	si := runtime.GetSystemInfo()
+	if !si.IsUbuntu() || !(si.IsUbuntuVersionEqual(connector.Ubuntu2204) || si.IsUbuntuVersionEqual(connector.Ubuntu2404)) {
+		return nil
+	}
+
+	// detect AMD GPU presence
+	amdGPUExists, err := utils.HasAmdIGPU(runtime)
+	if err != nil {
+		return err
+	}
+	// no AMD GPU found, no need to check rocm
+	if !amdGPUExists {
+		return nil
+	}
+
+	curV, err := utils.RocmVersion()
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	if os.IsNotExist(err) {
+		return nil
+	}
+
+	min := semver.MustParse("7.1.1")
+	if curV.LessThan(min) {
+		return fmt.Errorf("detected ROCm version %s, which is lower than required %s; please uninstall existing ROCm/AMDGPU components before installation with command: olares-cli amdgpu uninstall", curV.Original(), min.Original())
+	}
+	return nil
+}
+
 //////////////////////////////////////////////
 // precheck - task
 
@@ -489,7 +531,7 @@ func (t *GetStorageKeyTask) Execute(runtime connector.Runtime) error {
 	defer cancel()
 
 	if stdout, err := runtime.GetRunner().CmdContext(ctx, fmt.Sprintf("%s get terminus terminus -o jsonpath='{.metadata.annotations.bytetrade\\.io/s3-ak}'", kubectl), false, false); err != nil {
-		storageAccessKey = os.Getenv(common.ENV_AWS_ACCESS_KEY_ID_SETUP)
+		storageAccessKey = t.KubeConf.Arg.Storage.StorageAccessKey
 		if storageAccessKey == "" {
 			logger.Errorf("storage access key not found")
 		}
@@ -498,7 +540,7 @@ func (t *GetStorageKeyTask) Execute(runtime connector.Runtime) error {
 	}
 
 	if stdout, err := runtime.GetRunner().CmdContext(ctx, fmt.Sprintf("%s get terminus terminus -o jsonpath='{.metadata.annotations.bytetrade\\.io/s3-sk}'", kubectl), false, false); err != nil {
-		storageSecretKey = os.Getenv(common.ENV_AWS_SECRET_ACCESS_KEY_SETUP)
+		storageSecretKey = t.KubeConf.Arg.Storage.StorageSecretKey
 		if storageSecretKey == "" {
 			logger.Errorf("storage secret key not found")
 		}
@@ -507,7 +549,7 @@ func (t *GetStorageKeyTask) Execute(runtime connector.Runtime) error {
 	}
 
 	if stdout, err := runtime.GetRunner().CmdContext(ctx, fmt.Sprintf("%s get terminus terminus -o jsonpath='{.metadata.annotations.bytetrade\\.io/s3-sts}'", kubectl), false, false); err != nil {
-		storageToken = os.Getenv(common.ENV_AWS_SESSION_TOKEN_SETUP)
+		storageToken = t.KubeConf.Arg.Storage.StorageToken
 		if storageToken == "" {
 			logger.Errorf("storage token not found")
 		}
@@ -516,7 +558,7 @@ func (t *GetStorageKeyTask) Execute(runtime connector.Runtime) error {
 	}
 
 	if stdout, err := runtime.GetRunner().CmdContext(ctx, fmt.Sprintf("%s get terminus terminus -o jsonpath='{.metadata.labels.bytetrade\\.io/cluster-id}'", kubectl), false, false); err != nil {
-		storageClusterId = os.Getenv(common.ENV_CLUSTER_ID)
+		storageClusterId = t.KubeConf.Arg.Storage.StorageClusterId
 		if storageClusterId == "" {
 			logger.Errorf("storage cluster id not found")
 		}

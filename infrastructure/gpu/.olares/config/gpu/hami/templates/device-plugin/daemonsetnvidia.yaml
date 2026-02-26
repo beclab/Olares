@@ -80,6 +80,8 @@ spec:
           resources:
           {{- toYaml .Values.devicePlugin.resources | nindent 12 }}
           volumeMounts:
+            - name: hostdev
+              mountPath: /dev
             - name: device-plugin
               mountPath: /var/lib/kubelet/device-plugins
             - name: lib
@@ -120,6 +122,8 @@ spec:
           resources:
           {{- toYaml .Values.devicePlugin.vgpuMonitor.resources | nindent 12 }}
           volumeMounts:
+            - name: hostdev
+              mountPath: /dev
             - name: ctrs
               mountPath: {{ .Values.devicePlugin.monitorctrPath }}
             - name: dockers
@@ -133,6 +137,9 @@ spec:
             - name: hosttmp
               mountPath: /tmp
       volumes:
+        - name: hostdev
+          hostPath:
+            path: /dev
         - name: ctrs
           hostPath:
             path: {{ .Values.devicePlugin.monitorctrPath }}

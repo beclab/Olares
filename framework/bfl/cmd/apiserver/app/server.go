@@ -7,7 +7,9 @@ import (
 	"time"
 
 	network_activation "bytetrade.io/web3os/bfl/pkg/watchers/network_activation"
+	"bytetrade.io/web3os/bfl/pkg/apis/iam/v1alpha1/operator"
 	"bytetrade.io/web3os/bfl/pkg/watchers/reverse_proxy"
+	external_network_switch "bytetrade.io/web3os/bfl/pkg/watchers/external_network_switch"
 	"bytetrade.io/web3os/bfl/pkg/watchers/systemenv"
 	corev1 "k8s.io/api/core/v1"
 
@@ -103,6 +105,18 @@ func Run() error {
 	err = watchers.AddToWatchers[map[string]interface{}](w, systemenv.GVR, sysEnvSubscriber.Handler())
 	if err != nil {
 		return fmt.Errorf("failed to add systemenv watcher: %w", err)
+	}
+
+	// external network switch watcher: only owner bfl acts as controller
+	if uop, e := operator.NewUserOperator(); e == nil {
+		if u, e2 := uop.GetUser(""); e2 == nil {
+			if uop.GetUserAnnotation(u, constants.UserAnnotationOwnerRole) == constants.RoleOwner {
+				ens := external_network_switch.NewSubscriber(w)
+				if e3 := watchers.AddToWatchers[corev1.ConfigMap](w, external_network_switch.GVR, ens.Handler()); e3 != nil {
+					return fmt.Errorf("failed to add external network switch watcher: %w", e3)
+				}
+			}
+		}
 	}
 	log.Info("start watchers")
 	go w.Run(1)

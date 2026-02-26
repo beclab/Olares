@@ -51,7 +51,6 @@ type ModuleRuntime interface {
 	GetBaseDir() string
 	GetInstallerDir() string
 	GetWorkDir() string
-	GetIgnoreErr() bool
 	GetAllHosts() []Host
 	SetAllHosts([]Host)
 	GetHostsByRole(role string) []Host

@@ -48,7 +48,6 @@ type ClusterSpec struct {
 	Network              NetworkConfig        `yaml:"network" json:"network,omitempty"`
 	Registry             RegistryConfig       `yaml:"registry" json:"registry,omitempty"`
 	Addons               []Addon              `yaml:"addons" json:"addons,omitempty"`
-	KubeSphere           KubeSphere           `json:"kubesphere,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster
@@ -134,10 +133,6 @@ type ClusterList struct {
 	Items           []Cluster `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&Cluster{}, &ClusterList{})
-}
-
 // HostCfg defines host information for cluster.
 type HostCfg struct {
 	Name            string `yaml:"name,omitempty" json:"name,omitempty"`
@@ -185,13 +180,6 @@ type RegistryConfig struct {
 	DataRoot           string               `yaml:"dataRoot" json:"dataRoot,omitempty"`
 	NamespaceOverride  string               `yaml:"namespaceOverride" json:"namespaceOverride,omitempty"`
 	Auths              runtime.RawExtension `yaml:"auths" json:"auths,omitempty"`
-}
-
-// KubeSphere defines the configuration information of the KubeSphere.
-type KubeSphere struct {
-	Enabled        bool   `json:"enabled,omitempty"`
-	Version        string `json:"version,omitempty"`
-	Configurations string `json:"configurations,omitempty"`
 }
 
 // GenerateCertSANs is used to generate cert sans for cluster.

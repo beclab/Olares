@@ -7,7 +7,7 @@ The `info` command displays general information about the installed Olares versi
 olares-cli info
 ```
 
-## Flag
+## Options
 
 | Name     | Shorthand | Usage                     |
 |----------|-----------|---------------------------|

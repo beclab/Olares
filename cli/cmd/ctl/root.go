@@ -1,6 +1,10 @@
 package ctl
 
 import (
+	"fmt"
+
+	"github.com/beclab/Olares/cli/cmd/config"
+	"github.com/beclab/Olares/cli/cmd/ctl/amdgpu"
 	"github.com/beclab/Olares/cli/cmd/ctl/disk"
 	"github.com/beclab/Olares/cli/cmd/ctl/gpu"
 	"github.com/beclab/Olares/cli/cmd/ctl/node"
@@ -9,18 +13,27 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
 	"github.com/beclab/Olares/cli/version"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func NewDefaultCommand() *cobra.Command {
 	var showVendor bool
+	cobra.OnInitialize(func() {
+		config.Init()
+	})
 	cmds := &cobra.Command{
 		Use:               "olares-cli",
 		Short:             "Olares Installer",
 		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
 		Version:           version.VERSION,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			viper.BindPFlags(cmd.InheritedFlags())
+			viper.BindPFlags(cmd.PersistentFlags())
+			viper.BindPFlags(cmd.Flags())
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if showVendor {
-				println(version.VENDOR)
+				fmt.Println(version.VENDOR)
 			} else {
 				cmd.Usage()
 			}
@@ -33,6 +46,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(os.NewOSCommands()...)
 	cmds.AddCommand(node.NewNodeCommand())
 	cmds.AddCommand(gpu.NewCmdGpu())
+	cmds.AddCommand(amdgpu.NewCmdAmdGpu())
 	cmds.AddCommand(user.NewUserCommand())
 	cmds.AddCommand(disk.NewDiskCommand())
 

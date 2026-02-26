@@ -81,6 +81,7 @@ func (m *RunPrechecksModule) Init() {
 		new(NvidiaCardArchChecker),
 		new(NouveauChecker),
 		new(CudaChecker),
+		new(RocmChecker),
 	}
 	runPreChecks := &task.LocalTask{
 		Name: "RunPrechecks",

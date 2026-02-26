@@ -5,10 +5,6 @@ description: 介绍 Olares Space 的数据备份工具，支持查看备份记�
 
 Olares Space 是为 Olares 实例提供快照备份的官方解决方案。你可以随时将 Olares 恢复到最近的状态。本节介绍如何在 Olares Space 中管理备份和恢复操作。
 
-:::info 注意
-每个 Olares 实例可以获得 10GB 的免费备份空间。超出部分将按照云服务商的定价收费。
-:::
-
 ## 查看备份列表
 
 备份任务列表显示每个备份任务的信息，包括：
@@ -17,7 +13,7 @@ Olares Space 是为 Olares 实例提供快照备份的官方解决方案。你�
 - 最近快照时间
 - 总体存储用量
 
-![alt text](/images/how-to/space/backup_list.jpg#bordered)
+![Olares Space 中的任务列表](/images/how-to/space/backup_list.jpg#bordered)
 
 点击任务的**查看详情**可以进入详情页面。详情页面展示了该任务创建以来的存储用量变化，以及所有成功的快照记录。
 
@@ -27,7 +23,7 @@ Olares Space 是为 Olares 实例提供快照备份的官方解决方案。你�
 
 ## 将备份恢复至 Olares Space
 
-![alt text](/images/how-to/space/restore_backup_to_the_olares_space.jpg#bordered)
+![Olares Space 中的快照列表](/images/how-to/space/restore_backup_to_the_olares_space.jpg#bordered)
 
 将快照恢复到云端的操作流程与新建云端 Olares 类似。
 
@@ -39,7 +35,7 @@ Olares Space 是为 Olares 实例提供快照备份的官方解决方案。你�
 
    c. 确认快照信息并输入备份密码。
 
-2. 了解存储和带宽费用。<br>每个实例都包含一定额度的免费存储和流量配额。超出部分将产生费用。
+2. 了解存储和带宽费用。<br>每个实例都包含一定额度的免费流量。超出配额部分将产生费用。更多详情，请见[计费说明](billing.md)。
 
 3. 确认订单并完成支付。之后 Olares 开始安装。
 
