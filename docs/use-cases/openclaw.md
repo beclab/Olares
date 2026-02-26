@@ -39,7 +39,7 @@ By the end of this tutorial, you are be able to:
 
 If you are upgrading an existing OpenClaw installation, review the following version-specific changes and troubleshooting steps before proceeding.
 
-### Upgrade to 2026.02.25 or later
+### Upgrade to 2026.02.25
 
 The OpenClaw 2026.02.25 update introduced a security enhancement that requires existing users to explicitly declare the allowed Control UI access address. Therefore, if your Control UI fails to start after the upgrade, follow these steps to resolve the issue.
 
