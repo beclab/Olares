@@ -21,8 +21,8 @@ By the end of this tutorial, you are be able to:
 - Pair and connect the OpenClaw CLI and the Control UI.
 - Configure OpenClaw to use the local AI model Ollama.
 - Integrate OpenClaw with Discord.
-- Manage skills and plug-ins.
 - Enable the web search capability using Brave Search.
+- Manage skills and plug-ins.
 
 ## Prerequisites
 
@@ -31,8 +31,8 @@ By the end of this tutorial, you are be able to:
 - Discord server: A server where you have permissions to add bots.
 - (Optional) Brave search API key: Required for the agent to search the web for real-time information. 
 
-    :::tip Tip
-    You can obtain a free API key from the [Brave Search API](https://brave.com/search/api/). The free tier of the "Data for Search"" plan is usually sufficient for personal use.
+    :::tip
+    You can obtain a free API key from the [Brave Search API](https://brave.com/search/api/). The free tier of the "Data for Search" plan is usually sufficient for personal use.
     :::
 
 ## Install OpenClaw
@@ -47,11 +47,24 @@ By the end of this tutorial, you are be able to:
 
     ![OpenClaw entry points](/images/manual/use-cases/openclaw-entry-points.png#bordered){width=30%}
 
+:::tip Run multiple OpenClaw agents
+Olares supports app cloning. If you want to run multiple independent AI agents for different tasks, you can clone the OpenClaw app. For more information, see [Clone applications](../manual/olares/market/clone-apps.md).
+:::
+
 ## Initialize OpenClaw
 
 Run a quick setup for the agent in the OpenClaw CLI.
 
 1. Open the OpenClaw CLI app from the Launchpad.
+2. Enter the following command to generate the dashboard access credentials:
+    ```bash
+    openclaw dashboard --no-open
+    ```
+3. Locate the **Dashboard URL** in the terminal output.
+4. Find and copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token.
+5. Keep the OpenClaw CLI window open for the next step.
+
+<!--1. Open the OpenClaw CLI app from the Launchpad.
 2. Enter the following command to start the onboarding wizard.
 
     ```bash
@@ -85,7 +98,11 @@ Run a quick setup for the agent in the OpenClaw CLI.
     openclaw config get gateway.auth.token
     ```
 
-6. Copy the token and keep the OpenClaw CLI window open for the next step.
+6. Copy the token and keep the OpenClaw CLI window open for the next step.-->
+
+:::tip For advanced users
+If you prefer to fully customize your initial setup, you can run the `openclaw onboard` command instead to launch the interactive configuration wizard.
+:::
 
 ## Pair device
 
