@@ -11,17 +11,16 @@ head:
 
 To ensure optimal performance and system stability when running Windows on your Olares One, Olares provides a tested all-in-one driver package. This package contains all the necessary drivers for your device, such as audio, network, and NVIDIA graphics drivers.
 
-This guide walks you through installing the all-in-one driver package, as well as how to install NVIDIA graphics driver if you need the latest features or specific optimizations.
+This guide walks you through downloading and installing the all-in-one driver package.
 
 ## Learning objectives
 
 - Download and install all system drivers using the driver package.
-- (Optional) Download and install the latest NVIDIA graphics driver.
 
 ## Before you begin
 
-:::info About driver versions
-This package contains stable, fully compatible drivers tested specifically for Olares One. You can manually update individual drivers later through hardware vendors like NVIDIA to access the newest features.
+:::info About driver updates
+This all-in-one package provides stable, fully tested drivers specifically optimized for your Olares One. To ensure system stability, please avoid downloading and installing standalone drivers directly from hardware vendor websites, because unverified versions might introduce compatibility issues.
 :::
 
 - **Administrator access**: You need admin rights to install system drivers.
@@ -29,11 +28,7 @@ This package contains stable, fully compatible drivers tested specifically for O
 - **Close applications**: Save your work and close any graphic-intensive programs like games or photo editors before starting the installation. The screen might temporarily turn black or blink during the update, which can cause open applications to crash or lose unsaved data.
 - **Windows version**: For the best stability and driver compatibility, Windows 11 version 24H2 is recommended.
 
-## Install all drivers using the driver package
-
-This driver package sets up your entire system in one go.
-
-### Step 1: Download and extract the driver package
+## Step 1: Download and extract the driver package
 
 1. Download the [driver package](http://cdn.olares.com/common/AGBOX_B1_DVT_driver251125.zip).
 
@@ -57,7 +52,7 @@ This driver package sets up your entire system in one go.
     └── uwp_install
     ```
 
-### Step 2: Install the drivers
+## Step 2: Install the drivers
 
 1. In the extracted folder, locate the file `driver_install`, and then double-click it.
 2. The system will automatically open a command prompt window and begin installing the driver. This process is fully automated.
@@ -73,7 +68,7 @@ This driver package sets up your entire system in one go.
 
     ![System restart](/images/one/system-restart-windows.png#bordered)    
 
-## (Optional) Install the NVIDIA graphics driver
+<!--## (Optional) Install the NVIDIA graphics driver
 
 If you need the latest features, bug fixes, or specific optimizations, you can download and install the newest official graphics driver directly from NVIDIA.
 
@@ -140,4 +135,4 @@ If you need the latest features, bug fixes, or specific optimizations, you can d
 
     ![Installation finish](/images/one/nvidia-install-finish.png#bordered){width=65%}
 
-6. Restart Windows to complete the setup.
+6. Restart Windows to complete the setup.-->
