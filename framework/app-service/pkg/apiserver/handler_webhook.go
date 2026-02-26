@@ -327,7 +327,9 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 	klog.Info("patchBytes:", string(patchBytes))
-	h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+	if len(patchBytes) > 0 {
+		h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+	}
 	return resp
 }
 
@@ -344,7 +346,9 @@ func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 		return constants.AMDGPU
 	case utils.StrixHaloChipType:
 		return constants.AMDGPU
-
+	case utils.CPUType:
+		klog.Info("CPU type is selected, no GPU resource will be injected")
+		return ""
 	default:
 		return ""
 	}

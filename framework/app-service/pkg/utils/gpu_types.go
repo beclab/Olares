@@ -6,6 +6,7 @@ const (
 )
 
 const (
+	CPUType           = "cpu"         // force to use CPU, no GPU
 	NvidiaCardType    = "nvidia"      // handling by HAMi
 	AmdGpuCardType    = "amd-gpu"     //
 	AmdApuCardType    = "amd-apu"     // AMD APU with integrated GPU , AI Max 395 etc.
