@@ -11,11 +11,11 @@ head:
 
 To ensure optimal performance and system stability when running Windows on your Olares One, Olares provides a tested all-in-one driver package. This package contains all the necessary drivers for your device, such as audio, network, and NVIDIA graphics drivers.
 
-This guide walks you through installing the all-in-one package, as well as how to install NVIDIA graphics driver if you need the latest features or specific optimizations.
+This guide walks you through installing the all-in-one driver package, as well as how to install NVIDIA graphics driver if you need the latest features or specific optimizations.
 
 ## Learning objectives
 
-- Download and install all system drivers using the Olares all-in-one package.
+- Download and install all system drivers using the driver package.
 - (Optional) Download and install the latest NVIDIA graphics driver.
 
 ## Before you begin
@@ -29,9 +29,9 @@ This package contains stable, fully compatible drivers tested specifically for O
 - **Close applications**: Save your work and close any graphic-intensive programs like games or photo editors before starting the installation. The screen might temporarily turn black or blink during the update, which can cause open applications to crash or lose unsaved data.
 - **Windows version**: For the best stability and driver compatibility, Windows 11 version 24H2 is recommended.
 
-## Install all drivers using the Olares package
+## Install all drivers using the driver package
 
-This automated package sets up your entire system in one go.
+This driver package sets up your entire system in one go.
 
 ### Step 1: Download and extract the driver package
 
