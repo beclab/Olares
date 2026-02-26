@@ -30,10 +30,16 @@ const side = {
             //       text: "技术支持",
             //      link: "/zh/manual/help/request-technical-support",
             //       },
-            //     {
-            //       text: "Troubleshooting Guide",
-            //       link: "/zh/manual/help/troubleshooting-guide",
-            //     },
+          ],
+        },
+        {
+          text: "故障排查",
+          collapsed: true,
+          items: [
+            {
+              text: "内存不足或没有释放",
+              link: "/zh/manual/help/ts-free-memory",
+            },
           ],
         },
       ],

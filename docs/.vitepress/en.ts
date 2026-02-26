@@ -30,10 +30,17 @@ const side = {
             //               text: "Request support",
             //               link: "/manual/help/request-technical-support",
             //             },
-            //             {
-            //              text: "Troubleshooting",
-            //              link: "/manual/help/troubleshooting",
-            //             },
+
+          ],
+        },
+        {
+          text: "Troubleshooting",
+          collapsed: true,
+          items: [
+            {
+              text: "Insufficient memory or memory not freed",
+              link: "/manual/help/ts-free-memory",
+            },
           ],
         },
       ],
