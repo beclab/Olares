@@ -147,7 +147,7 @@ If you prefer to fully customize your initial setup, you can run the `openclaw o
 ## (Optional) Pair device manually
 
 :::tip When to use manual pairing
-The quick setup in the previous section uses the `--latest` command to automatically approve the most recent pairing request. If you have multiple pending requests and need to manually select which device to approve, follow the steps in this section instead.
+The quick setup in the previous section uses the `openclaw devices approve --latest` command to automatically approve the most recent pairing request. If you have multiple pending requests and need to manually select which device to approve, follow the steps in this section instead.
 :::
 
 Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
