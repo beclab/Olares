@@ -20,7 +20,7 @@ This guide walks you through downloading and installing the all-in-one driver pa
 ## Before you begin
 
 :::info About NVIDIA graphics driver update
-This all-in-one package includes a stable, fully tested NVIDIA graphics driver specifically optimized for Olares One. To ensure system stability, please avoid downloading and installing standalone graphics drivers directly from the official NVIDIA website, because that might introduce compatibility issues.
+This all-in-one package includes a stable, fully tested NVIDIA graphics driver specifically optimized for Olares One. To ensure system stability, avoid downloading and installing standalone graphics drivers directly from the official NVIDIA website, because that might introduce compatibility issues.
 :::
 
 - **Administrator access**: You need admin rights to install system drivers.
