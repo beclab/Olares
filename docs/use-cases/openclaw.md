@@ -35,6 +35,63 @@ By the end of this tutorial, you are be able to:
     You can obtain a free API key from the [Brave Search API](https://brave.com/search/api/). The free tier of the "Data for Search" plan is usually sufficient for personal use.
     :::
 
+## Upgrade notes
+
+If you are upgrading an existing OpenClaw installation, review the following version-specific changes and troubleshooting steps before proceeding.
+
+### Upgrade to 2026.02.25 or later
+
+The OpenClaw 2026.02.25 update introduced a security enhancement that requires existing users to explicitly declare the allowed Control UI access address. Therefore, if your Control UI fails to start after the upgrade, follow these steps to resolve the issue.
+
+1. Open Control Hub on your desktop to check the container logs for **clawdbot**. 
+
+    ![Check container logs](/images/manual/use-cases/check-container-logs.png#bordered)
+
+2. Look for the following error message. If it appears, proceed to the next step.
+
+    ```text
+    Gateway failed to start: Error: non-loopback Control UI requires gateway.controlUi.allowedOrigins (set explicit origins), or set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true to use Host-header origin fallback mode
+    ```
+    
+    ![Error logs](/images/manual/use-cases/container-logs.png#bordered)
+
+3. Open **Settings**, go to **Application** > **OpenClaw** > **Control UI** > **Set up endpoint**, and then copy the endpoint address.
+
+    ![OpenClaw endpoint address](/images/manual/use-cases/openclaw-endpoint.png#bordered){width=70%}    
+
+4. Open **Files**, go to **Application** > **Data** > **clawdbot** > **config**, right-click the `openclaw.json` file, and then download it.
+
+    ![OpenClaw configuration file](/images/manual/use-cases/openclaw-config-json.png#bordered)
+
+5. Open the downloaded file in a text editor, find the `gateway` section, and then add a `controlUi` block with your endpoint address.
+
+    ```json
+    "controlUi": {
+      "allowedOrigins": ["Endpoint-Address"]
+    },
+    ``` 
+    ![Update configuration file](/images/manual/use-cases/add-control-ui-endpoint.png#bordered)
+
+    :::info
+    If you access the Control UI using multiple addresses such as local IPs or custom domains, add them to the `allowedOrigins` array separated by commas. For example, `["https://url-one.com", "https://url-two.com"]`.
+    :::
+    
+6. Return to Files, rename the original `openclaw.json` file to keep it as a backup, and then upload your modified `openclaw.json` file.
+
+7. Return to Control Hub, click **clawbot** under **Deployments**, and then click **Restart** in the upper-right corner.
+
+     ![Restart OpenClaw](/images/manual/use-cases/restart-openclaw.png#bordered)
+    
+8. In the **Restart clawdbot** window, type `clawdbot` exactly as shown, and then click **Confirm**. Wait for the program status to show as **Running**, which is indicated by a green dot.
+
+      ![Restart finish](/images/manual/use-cases/restart-openclaw-finish.png#bordered)   
+
+9. Check the container logs again to verify the gateway has started successfully.
+
+      ![Verify container logs](/images/manual/use-cases/verify-container-logs.png#bordered)       
+    
+10. Open the Control UI. Refresh the browser page if an error still displays.
+
 ## Install OpenClaw
 
 1. From the Olares Market, search for "OpenClaw".
@@ -64,13 +121,34 @@ Run a quick setup for the agent in the OpenClaw CLI.
 4. Find and copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token.
 
     ![Obtain gateway token](/images/manual/use-cases/obtain-gateway-token.png#bordered)
-5. Keep the OpenClaw CLI window open for the next step.
+5. Open the Control UI app from the Launchpad.
+6. On the **Overview** page, in the **Gateway Access** panel, specify the following settings:
+    - **Gateway Token**: Enter the token you copied in the previous step.
+    - **Default Session Key**: Enter `agent:main:main`.
+7. Click **Connect**.
+
+    The connection error `disconnected[1008]:pairing required` occurs. This is expected and means the device connection is waiting for approval.
+8. Return to the OpenClaw CLI window and enter the following command:
+
+    ```bash
+    openclaw devices approve --latest
+    ```
+9. When the terminal displays the approval message, return to the Control UI and refresh it.
+    ![Pair sucess](/images/manual/use-cases/new-pair-success.png#bordered)
+
+    Now the **STATUS** in the **Snapshot** panel should be **Connected**.
+
+    ![Health OK](/images/manual/use-cases/openclaw-connected.png#bordered)
 
 :::tip For advanced users
 If you prefer to fully customize your initial setup, you can run the `openclaw onboard` command instead to launch the interactive configuration wizard.
 :::
 
-## Pair device
+## (Optional) Pair device manually
+
+:::tip When to use manual pairing
+The quick setup in the previous section uses the `--latest` command to automatically approve the most recent pairing request. If you have multiple pending requests and need to manually select which device to approve, follow the steps in this section instead.
+:::
 
 Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 
@@ -98,9 +176,7 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     ```bash
     openclaw devices approve {RequestID}
     ```
-7. When the terminal displays `Approved {DeviceID}`, return to the Control UI. Now the **STATUS** in the **Snapshot** panel should be **Connected**.
-
-    ![Device approved](/images/manual/use-cases/device-approved.png#bordered)    
+7. When the terminal displays the approval message, return to the Control UI. Now the **STATUS** in the **Snapshot** panel should be **Connected**.
 
     ![Health OK](/images/manual/use-cases/openclaw-connected.png#bordered)
 
