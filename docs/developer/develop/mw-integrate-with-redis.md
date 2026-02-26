@@ -25,9 +25,9 @@ middleware:
     namespace: db0
 ```
 
-## Inject environment variables
+## Map to environment variables
 
-In your deployment YAML, map the injected `.Values.redis.*` fields to the environment variables your app uses.
+In your deployment YAML, map the injected `.Values.redis.*` fields to the container environment variables your app requires.
 
 **Example**
 ```yaml
@@ -54,10 +54,11 @@ containers:
         value: {{ .Values.redis.namespaces.<namespace> }}
 ```
 
-## Redis Values reference
+## Redis values reference
 
-Redis Values are predefined environment variables injected into `values.yaml` during deployment. They are system-managed and not user-editable.
-| Key  | Type  | Description  |
+Redis values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
+
+| Value  | Type  | Description  |
 |--|--|--|
 | `.Values.redis.host` | String | Redis service host |
 | `.Values.redis.port` | Number  | Redis service port |

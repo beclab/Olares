@@ -35,9 +35,9 @@ middleware:
       # Please make sure each line is a complete query.
 ```
 
-## Inject environment variables
+## Map to environment variables
 
-In your deployment YAML, map the injected `.Values.mongodb.*` fields to the environment variables your app uses.
+In your deployment YAML, map the injected `.Values.mongodb.*` fields to the container environment variables your app requires.
 
 **Example**
 ```yaml
@@ -63,11 +63,11 @@ containers:
         value: "{{ .Values.mongodb.databases.app_db }}"
 ```
 
-## MongoDB Values reference
+## MongoDB values reference
 
-MongoDB Values are predefined environment variables injected into `values.yaml` during deployment. They are system-managed and not user-editable.
+MongoDB values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-| Key  | Type  | Description  |
+| Value  | Type  | Description  |
 |--|--|--|
 | `.Values.mongodb.host` | String  | MongoDB database host |
 | `.Values.mongodb.port` | Number  | MongoDB database port |

@@ -31,9 +31,8 @@ middleware:
       - name: mybucket
 ```
 
-## Inject environment variables
-
-In your deployment YAML, map the injected `.Values.minio.*` fields to the environment variables your app uses.
+## Map to environment variables
+In your deployment YAML, map the injected `.Values.minio.*` fields to the container environment variables your app requires.
 
 **Example**
 ```yaml
@@ -60,11 +59,11 @@ containers:
         value: "{{ .Values.minio.buckets.mybucket }}"
 ```
 
-## MinIO Values reference
+## MinIO values reference
 
-MinIO Values are predefined environment variables injected into `values.yaml` during deployment. They are system-managed and not user-editable.
+MinIO values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-| Key  | Type  | Description  |
+| Value  | Type  | Description  |
 |--|--|--|
 | `.Values.minio.host` | String | MinIO service host |
 | `.Values.minio.port` | Number | MinIO service port |

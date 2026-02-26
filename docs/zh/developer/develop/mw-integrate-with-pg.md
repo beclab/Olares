@@ -38,9 +38,9 @@ middleware:
       - COMMIT;
 ```
 
-## 注入环境变量
+## 映射环境变量
 
-在应用的部署 YAML 中，将系统注入的 `.Values.postgres.*` 字段映射为应用所使用的环境变量。
+在应用的部署 YAML 中，将系统注入的 `.Values.postgres.*` 字段映射为应用所需的环境变量。
 
 **示例**
 ```yaml
@@ -70,10 +70,11 @@ containers:
         value: {{ .Values.postgres.password }}
 ```
 
-## PostgreSQL Values 参考
-PostgreSQL Values 是在部署过程中由系统自动注入到 `values.yaml` 中的预定义变量。这些值由系统统一管理，用户无法自行修改。
+## PostgreSQL 变量参考
 
-| 键  | 类型  | 说明  |
+PostgreSQL 运行时变量会在部署过程中注入到 `values.yaml` 中。这些变量由系统统一管理，用户无法自行修改。
+
+| 变量 | 类型 | 说明 |
 |--|--|--|
 | `.Values.postgres.host` | String  | PostgreSQL 数据库地址 |
 | `.Values.postgres.port` | Number | PostgreSQL 数据库端口 |

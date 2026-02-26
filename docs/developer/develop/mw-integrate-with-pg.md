@@ -38,9 +38,9 @@ middleware:
       - COMMIT;
 ```
 
-## Inject environment variables
+## Map to environment variables
 
-In your deployment YAML, map the injected `.Values.postgres.*` fields to the environment variables your app uses.
+In your deployment YAML, map the injected `.Values.postgres.*` fields to the container environment variables your app requires.
 
 **Example**
 ```yaml
@@ -69,10 +69,11 @@ containers:
         value: {{ .Values.postgres.password }}
 ```
 
-## PostgreSQL Values reference
+## PostgreSQL values reference
 
-PostgreSQL Values are predefined environment variables injected into `values.yaml` during deployment. They are system-managed and not user-editable.
-| Key  | Type  | Description  |
+PostgreSQL values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
+
+| Value  | Type  | Description  |
 |--|--|--|
 | `.Values.postgres.host` | String  | PostgreSQL database host |
 | `.Values.postgres.port` | Number | PostgreSQL database port |

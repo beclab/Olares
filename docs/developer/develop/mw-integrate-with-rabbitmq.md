@@ -31,9 +31,9 @@ middleware:
       - name: aaa
 ```
 
-## Inject environment variables
+## Map to environment variables
 
-In your deployment YAML, map the injected `.Values.rabbitmq.*` fields to the environment variables your app uses.
+In your deployment YAML, map the injected `.Values.rabbitmq.*` fields to the container environment variables your app requires.
 
 **Example**
 ```yaml
@@ -78,11 +78,11 @@ portMQ := os.Getenv("RABBITMQ_PORT")
 url := fmt.Sprintf("amqp://%s:%s@%s:%s/%s", user, password, host, portMQ, vhost)
 ```
 
-## RabbitMQ Values reference
+## RabbitMQ values reference
 
-RabbitMQ Values are predefined environment variables injected into `values.yaml` during deployment. They are system-managed and not user-editable.
+RabbitMQ values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-| Key  | Type  | Description  |
+| Value  | Type  | Description  |
 |--|--|--|
 | `.Values.rabbitmq.host` | String | RabbitMQ service host |
 | `.Values.rabbitmq.port` | Number | RabbitMQ service port |

@@ -31,9 +31,8 @@ middleware:
       - name: aaa
 ```
 
-## Inject environment variables
-
-In your deployment YAML, map the injected `.Values.mariadb.*` fields to the environment variables your app uses.
+## Map to environment variables
+In your deployment YAML, map the injected `.Values.mariadb.*` fields to the container environment variables your app requires.
 
 **Example**
 ```yaml
@@ -59,11 +58,10 @@ containers:
         value: "{{ .Values.mariadb.databases.aaa }}"
 ```
 
-## MariaDB Values reference
+## MariaDB values reference
+MariaDB values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-MariaDB Values are predefined environment variables injected into `values.yaml` during deployment. They are system-managed and not user-editable.
-
-| Key  | Type  | Description  |
+| Value  | Type  | Description  |
 |--|--|--|
 | `.Values.mariadb.host` | String | MariaDB database host |
 | `.Values.mariadb.port` | Number | MariaDB database port |

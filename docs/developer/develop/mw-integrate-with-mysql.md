@@ -31,9 +31,9 @@ middleware:
       - name: aaa
 ```
 
-## Inject environment variables
+## Map to environment variables
 
-In your deployment YAML, map the injected `.Values.mysql.*` fields to the environment variables your app uses.
+In your deployment YAML, map the injected `.Values.mysql.*` fields to the container environment variables your app requires.
 
 **Example**
 ```yaml
@@ -59,11 +59,11 @@ containers:
         value: "{{ .Values.mysql.databases.aaa }}"
 ```
 
-## MySQL Values reference
+## MySQL values reference
 
-MySQL Values are predefined environment variables injected into `values.yaml` during deployment. They are system-managed and not user-editable.
+MySQL values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-| Key  | Type  | Description  |
+| Value  | Type  | Description  |
 |--|--|--|
 | `.Values.mysql.host` | String | MySQL database host |
 | `.Values.mysql.port` | Number | MySQL database port |
