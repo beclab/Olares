@@ -140,13 +140,4 @@ If you need the latest features, bug fixes, or specific optimizations, you can d
 
     ![Installation finish](/images/one/nvidia-install-finish.png#bordered){width=65%}
 
-6. Restart your computer to complete the setup.-->
-
-## Next steps
-
-Now your Windows environment is ready, you can proceed to configure your system for the Olares installation.
-
-## Resources
-
-- [Install Olares](../manual/get-started/install-olares.md)
-- [Olares installation and activation FAQs](../manual/help/installation.md)
+6. Restart Windows to complete the setup.
