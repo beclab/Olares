@@ -62,6 +62,8 @@ Run a quick setup for the agent in the OpenClaw CLI.
     ```
 3. Locate the **Dashboard URL** in the terminal output.
 4. Find and copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token.
+
+    ![Obtain gateway token](/images/manual/use-cases/obtain-gateway-token.png#bordered)
 5. Keep the OpenClaw CLI window open for the next step.
 
 :::tip For advanced users
@@ -97,6 +99,8 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     openclaw devices approve {RequestID}
     ```
 7. When the terminal displays `Approved {DeviceID}`, return to the Control UI. Now the **STATUS** in the **Snapshot** panel should be **Connected**.
+
+    ![Device approved](/images/manual/use-cases/device-approved.png#bordered)    
 
     ![Health OK](/images/manual/use-cases/openclaw-connected.png#bordered)
 
