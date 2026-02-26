@@ -64,42 +64,6 @@ Run a quick setup for the agent in the OpenClaw CLI.
 4. Find and copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token.
 5. Keep the OpenClaw CLI window open for the next step.
 
-<!--1. Open the OpenClaw CLI app from the Launchpad.
-2. Enter the following command to start the onboarding wizard.
-
-    ```bash
-    openclaw onboard
-    ```
-    ![OpenClaw onboarding wizard](/images/manual/use-cases/openclaw-wizard.png#bordered){width=80%}
-
-3. The wizard guides you through a series of steps. Use the arrow keys to navigate and press Enter to confirm.
-
-    :::tip Note on configurations
-    - To get you started quickly, this tutorial skips several advanced settings in the wizard. You can configure or modify them later.
-    - Do not configure skills here, because the Olares security environment prevents the wizard from automatically installing skills. You need to install them manually. For more information, see [Manage skills and plugins](#manage-skills-and-plugins).
-    :::
-
-    | Settings | Option |
-    |:-------- |:-------|
-    | I understand this is powerful and inherently <br>risky. Continue? | Yes |
-    | Onboarding mode | QuickStart |
-    | Config handling | Use existing values |
-    | Model/auth provider | Skip for now |
-    | Filter models by provider | All providers |
-    | Default model | Keep current |
-    | Select channel | Skip for now |
-    | Configure skills now | No<br>(Manual installation required) |
-    | How do you want to hatch your bot | Do this later |
-    
-4. After you complete the wizard, close OpenClaw CLI and open it again.
-5. Enter the following command to obtain the gateway token:
-
-    ```bash
-    openclaw config get gateway.auth.token
-    ```
-
-6. Copy the token and keep the OpenClaw CLI window open for the next step.-->
-
 :::tip For advanced users
 If you prefer to fully customize your initial setup, you can run the `openclaw onboard` command instead to launch the interactive configuration wizard.
 :::
@@ -145,14 +109,14 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     ```json
     "agents": {
         "defaults": {
-        "model": {
-            "primary": "ollama/llama3.1:8b"
-        },
-        "workspace": "/home/node/.openclaw/workspace",
-        "maxConcurrent": 4,
-        "subagents": {
-            "maxConcurrent": 8
-        }
+            "model": {
+                "primary": "ollama/llama3.1:8b"
+            },
+            "workspace": "/home/node/.openclaw/workspace",
+            "maxConcurrent": 4,
+            "subagents": {
+                "maxConcurrent": 8
+            }
         }
     },
     ```
