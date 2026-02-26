@@ -197,7 +197,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               }
               ,
               {
-                text: "Install NVIDIA driver",
+                text: "Install drivers on Windows",
                 link: "/zh/one/install-nvidia-driver",
               }
             ]
