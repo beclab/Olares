@@ -1,30 +1,62 @@
 ---
 outline: [2, 3]
-description: Learn how to identify your NVIDIA GPU model and install the correct driver for optimal Windows performance.
+description: Learn how to download and install the dedicated NVIDIA graphics driver provided by Olares for optimal Windows performance.
 head:
   - - meta
     - name: keywords
       content: Olares, Olares One, NVIDIA drivers, GPU, graphics card，Windows
 ---
 
-# Install NVIDIA drivers on Windows <Badge type="tip" text="10 min"/>
+# Install NVIDIA drivers on Windows <Badge type="tip" text="15 min"/>
 
-Installing the official drivers ensures the best graphics performance and stability when running Windows in your dual-boot setup.
+To ensure the best graphics performance and system stability when running Windows in your dual-boot setup, install the dedicated graphics driver provided and fully tested by Olares. 
 
-This guide walks you through identifying your specific graphics card model and installing the correct driver.
+This guide walks you through downloading the package and using the provided installer to complete the driver installation.
 
 ## Learning objectives
 
-- Identify the model of your NVIDIA graphics card.
-- Download the correct driver from the official NVIDIA website.
-- Install the graphics driver.
+- Download the dedicated driver package provided by Olares.
+- Run the installer application to set up the driver.
 
 ## Before you begin
 
-- Connect to internet: The driver file is large (often 500 MB+), so a stable connection is required.
+- Connect to internet: The driver file is large (3.5 GB), so a stable connection is required.
 - Close applications: Save your work and close any graphic-intensive programs like games or photo editors before starting the installation. The screen might temporarily turn black or blink during the update, which can cause open applications to crash or lose unsaved data.
+- Windows version: For the best stability and driver compatibility, Windows 11 version 24H2 is recommended. While other versions might work, they have not been fully validated with Olares One. 
 
-## Prerequisites
+## Step 1: Download the driver package
+
+Download the [driver package](http://cdn.olares.com/common/AGBOX_B1_DVT_driver251125.zip).
+
+:::tip Browser security warning
+Because the download links use a standard HTTP connection rather than HTTPS, your web browser might flag or block it as an insecure download. If this happens, select **Keep** or **Allow** in your browser's download manager to continue the download.
+:::
+
+:::info Download time
+The driver package is large. Depending on your internet connection speed, the download might take a while to complete.
+:::
+
+## Step 2: Extract the package
+
+1. Locate the downloaded `.zip` file on your computer.
+2. Right-click the file and select the corresponding extract option provided by your unzip software.
+3. Open the extracted folder and verify that the files, including the `driver_install` application, are present.
+
+## Step 3: Install the driver
+
+1. In the extracted folder, locate the file `driver_install`, and then double-click it.
+2. The system will automatically open a command prompt window and begin installing the driver. This process is fully automated.
+
+    ![Install driver](/images/one/driver-install.png#bordered)
+
+    :::tip Screen flickering
+    Your screen might turn black or blink for a few seconds during installation. This is normal behavior as the system switches to the new driver.
+    :::
+
+3. When the driver is successfully installed, your device restarts automatically. 
+4. After the system reboots and you log back in to Windows, a command prompt window appears. Follow the on-screen instructions and press any key until the window closes. This indicates that the installation is completely finished.
+
+<!--## Prerequisites
 
 - Administrator access: You need admin rights to install system drivers.
 - Windows OS: You must be currently booted into the Windows operating system.
@@ -101,7 +133,7 @@ Before downloading a driver, you need to know exactly which graphics card model 
 
     ![Installation finish](/images/one/nvidia-install-finish.png#bordered){width=65%}
 
-6. Restart your computer to complete the setup.
+6. Restart your computer to complete the setup.-->
 
 ## Next steps
 

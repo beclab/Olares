@@ -1,7 +1,9 @@
 import { defineConfig, type DefaultTheme } from "vitepress";
 import { oneSidebar } from './one.en.ts';
+import { useCaseSidebar } from './usecase.en.ts';
+import { developerSidebar } from './developer.en.ts';
 const side = {
-  "/manual/": [
+"/manual/": [
     {
       text: "What is Olares",
       link: "/manual/overview",
@@ -403,12 +405,12 @@ const side = {
     },
     {
       text: "Olares Space",
-      link: "/space/",
+      link: "/manual/space/",
       collapsed: true,
       items: [
         {
           text: "Manage accounts",
-          link: "/space/manage-accounts",
+          link: "/manual/space/manage-accounts",
         },
         {
           text: "Host Olares",
@@ -416,11 +418,11 @@ const side = {
           items: [
             {
               text: "Create Olares",
-              link: "/space/create-olares",
+              link: "/manual/space/create-olares",
             },
             {
               text: "Manage Olares",
-              link: "/space/manage-olares",
+              link: "/manual/space/manage-olares",
             },
           ],
         },
@@ -430,19 +432,19 @@ const side = {
           items: [
             {
               text: "Set up a custom domain",
-              link: "/space/host-domain",
+              link: "/manual/space/host-domain",
             },
             {
               text: "Manage a domain",
-              link: "/space/manage-domain",
+              link: "/manual/space/manage-domain",
             },
           ],
         },
         {
           text: "Back up and restore",
-          link: "/space/backup-restore",
+          link: "/manual/space/backup-restore",
         },
-        { text: "Billing", link: "/space/billing" },
+        { text: "Billing", link: "/manual/space/billing" },
       ],
     },
     {
@@ -1069,6 +1071,8 @@ export const en = defineConfig({
     sidebar: {
       ...side,
       ...oneSidebar,
+      ...useCaseSidebar,
+      ...developerSidebar,
     },
   },
 });

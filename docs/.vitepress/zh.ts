@@ -1,5 +1,7 @@
 import { defineConfig, type DefaultTheme } from "vitepress";
 import { oneSidebar } from './one.zh.ts';
+import { useCaseSidebar } from './usecase.zh.ts';
+import { developerSidebar } from './developer.zh.ts';
 const side = {
   "/zh/manual/": [
     {
@@ -399,12 +401,12 @@ const side = {
     },
       {
         text: "Olares Space",
-        link: "/zh/space/",
+        link: "/zh/manual/space/index",
         collapsed: true,
         items: [
           {
             text: "管理账号",
-            link: "/zh/space/manage-accounts",
+            link: "/zh/manual/space/manage-accounts",
           },
           {
             text: "托管 Olares",
@@ -412,11 +414,11 @@ const side = {
             items: [
               {
                 text: "创建 Olares",
-                link: "/zh/space/create-olares",
+                link: "/zh/manual/space/create-olares",
               },
               {
                 text: "管理 Olares",
-                link: "/zh/space/manage-olares",
+                link: "/zh/manual/space/manage-olares",
               },
             ],
           },
@@ -426,19 +428,19 @@ const side = {
             items: [
               {
                 text: "设置自定义域名",
-                link: "/zh/space/host-domain",
+                link: "/zh/manual/space/host-domain",
               },
               {
                 text: "管理域名",
-                link: "/zh/space/manage-domain",
+                link: "/zh/manual/space/manage-domain",
               },
             ],
           },
           {
             text: "备份与恢复",
-            link: "/zh/space/backup-restore",
+            link: "/zh/manual/space/backup-restore",
           },
-          { text: "计费", link: "/zh/space/billing" },
+          { text: "计费", link: "/zh/manual/space/billing" },
         ],
       },
     {
@@ -472,7 +474,7 @@ const side = {
         },
         {
           text: "本地访问 Olares",
-          link: "/manual/best-practices/local-access",
+          link: "/zh/manual/best-practices/local-access",
         },
       ],
     },
@@ -1054,6 +1056,8 @@ export const zh = defineConfig({
     sidebar: {
       ...side,
       ...oneSidebar,
+      ...useCaseSidebar,
+      ...developerSidebar,
     },
   },
 });
