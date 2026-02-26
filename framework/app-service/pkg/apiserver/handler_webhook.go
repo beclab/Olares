@@ -331,15 +331,18 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 	return resp
 }
 
+// FIXME: should not hardcode
 func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 	switch gpuType {
 	case utils.NvidiaCardType:
 		return constants.NvidiaGPU
 	case utils.GB10ChipType:
-		return constants.NvidiaGB10GPU
+		return constants.NvidiaGPU
 	case utils.AmdApuCardType:
 		return constants.AMDGPU
 	case utils.AmdGpuCardType:
+		return constants.AMDGPU
+	case utils.StrixHaloChipType:
 		return constants.AMDGPU
 
 	default:

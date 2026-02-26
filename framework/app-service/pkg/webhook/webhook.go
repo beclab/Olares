@@ -557,7 +557,7 @@ func addResourceLimits(tpl *corev1.PodTemplateSpec, typeKey string, envKeyValues
 		return patch, nil
 	}
 
-	if typeKey == constants.NvidiaGPU || typeKey == constants.NvidiaGB10GPU {
+	if typeKey == constants.NvidiaGPU {
 		if tpl.Spec.RuntimeClassName != nil {
 			patch = append(patch, patchOp{
 				Op:    constants.PatchOpReplace,
@@ -589,7 +589,7 @@ func addResourceLimits(tpl *corev1.PodTemplateSpec, typeKey string, envKeyValues
 			t["limits"] = map[string]string{}
 			for k, v := range container.Resources.Limits {
 				if k.String() == constants.NvidiaGPU ||
-					k.String() == constants.NvidiaGB10GPU ||
+					// k.String() == constants.NvidiaGB10GPU ||
 					k.String() == constants.AMDAPU {
 					// unset all previous gpu limits
 					continue
