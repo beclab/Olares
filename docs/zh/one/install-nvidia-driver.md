@@ -140,7 +140,7 @@ If you need the latest features, bug fixes, or specific optimizations, you can d
 
     ![Installation finish](/images/one/nvidia-install-finish.png#bordered){width=65%}
 
-6. Restart your computer to complete the setup.
+6. Restart your computer to complete the setup.-->
 
 ## Next steps
 
