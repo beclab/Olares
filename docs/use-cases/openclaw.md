@@ -73,7 +73,7 @@ The OpenClaw 2026.02.25 update introduced a security enhancement that requires e
     ![Update configuration file](/images/manual/use-cases/add-control-ui-endpoint.png#bordered)
 
     :::info
-    If you access the Control UI using multiple addresses such as local IPs or custom domains, add them to the `allowedOrigins` array separated by commas. For example, `["https://url-one.com", "https://url-two.com"]`.
+    If you access the Control UI using multiple addresses such as local URLs or custom domains, add them to the `allowedOrigins` array separated by commas. For example, `["https://url-one.com", "https://url-two.com"]`.
     :::
     
 6. Return to Files, rename the original `openclaw.json` file to keep it as a backup, and then upload your modified `openclaw.json` file.
