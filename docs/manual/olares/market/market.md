@@ -136,32 +136,45 @@ To update an application from Market:
 
 ## Uninstall applications
 
-### Uninstall from Market
+Uninstall an application from Market or LaunchPad. 
 
-To uninstall an application from Market:
+<tabs>
+<template #Uninstall-from-Market>
 
 1. Open Market from Dock or Launchpad.
 2. In the left sidebar, navigate to the **My Olares** section. Use the source tabs to filter and find your installed applications.
 3. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the application's operation button, and select **Uninstall**.
-4. In the **Uninstall** window, select **Also remove all local data** as needed:
+4. In the **Uninstall** window, select the removal option as needed:
 
-    - If you select this option, app data (in the Data directory) and cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
-    - If you do not select this option, app data (in the Data directory) will be retained and can be restored upon re-installation, while cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
-    
+    - **Also remove all local data**
+
+        - If you select this option, app data (in the Data directory) and cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
+        - If you do not select this option, app data (in the Data directory) will be retained and can be restored upon re-installation, while cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
+    - **Also uninstall the shared server (affects all users)**
+
+        - If this is a shared application, select this option to remove it for all users in the cluster.
+        - If you have uninstalled the user-facing app before removing the share app, you must re-install the user-facing app first, and then uninstall the shared application. 
+
 5. Click **Confirm**.
-
-### Uninstall from Launchpad
-
-You can also uninstall an application from LaunchPad:
+</template>
+<template #Uninstall-from-Launchpad>
 
 1. In Olares, click the Launchpad icon in the Dock to display all installed apps.
 2. Click and hold the app icon until all the apps begin to jiggle.
-3. In the **Uninstall** window, select **Also remove all local data** as needed:
+3. In the **Uninstall** window, select the removal option as needed:
 
-    - If you select this option, app data (in the Data directory) and cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
-    - If you do not select this option, app data (in the Data directory) will be retained and can be restored upon re-installation, while cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
+    - **Also remove all local data**
+
+        - If you select this option, app data (in the Data directory) and cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
+        - If you do not select this option, app data (in the Data directory) will be retained and can be restored upon re-installation, while cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
+    - **Also uninstall the shared server (affects all users)**
+
+        - If this is a shared application, select this option to remove it for all users in the cluster.
+        - If you have uninstalled the user-facing app before removing the share app, you must re-install the user-facing app first, and then uninstall the shared application. 
 
 4. Click **Confirm**.
+</template>
+</tabs>
 
 ## View app operation logs
 
@@ -182,21 +195,17 @@ If you can't install an application, it might be due to:
 * **Incompatible system version**: Try upgrading Olares to the latest version.
 * **Shared service dependency** (for Olares members): The application requires a shared service to be running in the cluster. Contact your admin to install the shared application first before you can install it.
 
-### Why can't I resume my application?
-
-When you try to resume an application in Olares and receive an error message about insufficient CPU, memory, or disk, it means the system's current available resources cannot support running the application. You need to close other applications to free up resources.
-
 ### Why was my application stopped?
 
 An application is usually stopped due to one of the following reasons:
 * **System auto stop**: To ensure Olares's stability, the Olares system monitors resource usage. If an application consumes excessive resources (such as CPU or memory) causing a high system load, the system might automatically pause it to prevent the entire device from freezing or crashing.
 * **Manual stop**: You or an administrator might have manually stopped the application previously, and the application has not been resumed yet.
 
-### Why can't I resume my application now?
+### Why can't I resume my application?
 
 Starting an application requires reserving a specific amount of computing resources. If other running applications are already occupying most of the resources, the remaining free resources are not enough for the application you want to start.
 
-Therefore, when you try to resume the application, you might encounter the following messages:
+Therefore, when you try to resume the application, you might encounter the following messages, and you need to stop other applications to free up resources.
 
 | Error message | Description |
 | :--- | :--- |
@@ -212,3 +221,38 @@ To resume your application, you need to free up some occupied resources:
 2. Find applications that you do not need to use right now.
 3. Stop each application by clicking the app and clicking **Stop**.
 4. After resources are freed, go back to your target application and click **Resume** again.
+
+### How to free up resources from unused apps?
+
+If certain applications are not in use and you want to free up the system resources they are using, you can stop them from Market or Settings.
+
+<tabs>
+<template #Stop-apps-from-Market>
+
+1. Open Market from Dock or Launchpad.
+2. In the left sidebar, click **My Olares**. Use the source tabs to filter and find the app you want to stop.
+3. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the application's operation button, and then select **Stop**.
+</template>
+<template #Stop-apps-from-Settings>
+
+1. Go to **Settings** > **Application**.
+2. Click the target application you want to stop from the list.
+3. Click <i class="material-symbols-outlined">toggle_on</i>.
+
+</template>
+</tabs>
+
+#### Free up shared application resources
+
+To fully release resources for shared applications such as Ollama, the system-side service must be stopped. This action can only be performed by an administrator.
+
+When the admin stops a shared application, the **Also uninstall the shared server (affects all users)** checkbox appears:
+- To fully release the resources, this checkbox must be selected.
+- Once selected, the service is disabled for the entire cluster, and other users will no longer be able to use the application.
+- This checkbox only appears in multi-user clusters. In a single-user scenario, the system automatically stops both the user-facing application and the system-side service by default.
+
+:::info Notes for Olares V1.12.4 and earlier
+In Olares 1.12.4 and earlier versions, to fully release resources, you must use Market:
+- Stop the app in Market and ensure that the **Also uninstall the shared server (affects all users)** option is selected.
+- If the user-facing application has already been stopped through Settings, you must first resume it in Market, and then stop the shared application while ensuring the **Also uninstall the shared server (affects all users)** option is selected. 
+:::
