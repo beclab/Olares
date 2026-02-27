@@ -358,7 +358,7 @@ const side = {
                 { text: "恢复", link: "/zh/manual/olares/settings/restore" },
               ],
             },
-            { text: "开发者资源", link: "/zh/manual/olares/settings/developer" },
+            { text: "高级设置", link: "/zh/manual/olares/settings/developer" },
           ]
         },
         { "text": "仪表盘", "link": "/zh/manual/olares/resources-usage" },
