@@ -55,7 +55,7 @@ To export system logs:
 4.  Right-click the generated log file and select **Download** to save it to your local machine.
 
     :::tip
-    You can attach this log file to a GitHub feedback issue to help the Olares team locate and resolve your problem faster.
+    You can attach this log file to a GitHub issue to help the Olares team locate and resolve your problem faster.
     :::
 
 ## Set system environment variables
@@ -73,7 +73,7 @@ To manage environment variables:
 
 1. Go to **Settings** > **Advanced** > **System environment variables**.
 
-    ![System environment variables](/images/manual/olares/sys-env-var1.png#bordered){width=65%}
+    ![System system-level environment variables](/images/manual/olares/sys-env-var1.png#bordered){width=65%}
 
 2. To add a new custom variable:
 
