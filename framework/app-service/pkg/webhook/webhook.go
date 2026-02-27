@@ -543,21 +543,23 @@ type EnvKeyValue struct {
 }
 
 // CreatePatchForDeployment add gpu env for deployment and returns patch bytes.
-func CreatePatchForDeployment(tpl *corev1.PodTemplateSpec, typeKey string, envKeyValues []EnvKeyValue) ([]byte, error) {
-	patches, err := addResourceLimits(tpl, typeKey, envKeyValues)
+func CreatePatchForDeployment(tpl *corev1.PodTemplateSpec, injectAll bool, injectContainer []string, gpuTypeKey string, gpumem *string, envKeyValues []EnvKeyValue) ([]byte, error) {
+	patches, err := addGpuResourceLimits(tpl, injectAll, injectContainer, gpuTypeKey, gpumem)
 	if err != nil {
 		return []byte{}, err
 	}
+	patches = append(patches, addEnvToPatch(tpl, envKeyValues)...)
 	return json.Marshal(patches)
 }
 
-func addResourceLimits(tpl *corev1.PodTemplateSpec, typeKey string, envKeyValues []EnvKeyValue) (patch []patchOp, err error) {
+func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectContainer []string, typeKey string, gpumem *string) (patch []patchOp, err error) {
 	if typeKey == "" {
 		klog.Warning("No gpu type selected, skip adding resource limits")
 		return patch, nil
 	}
 
-	if typeKey == constants.NvidiaGPU || typeKey == constants.NvidiaGB10GPU {
+	// add runtime class for nvidia gpu, HAMi runtime class is "nvidia"
+	if typeKey == constants.NvidiaGPU {
 		if tpl.Spec.RuntimeClassName != nil {
 			patch = append(patch, patchOp{
 				Op:    constants.PatchOpReplace,
@@ -575,21 +577,31 @@ func addResourceLimits(tpl *corev1.PodTemplateSpec, typeKey string, envKeyValues
 
 	for i := range tpl.Spec.Containers {
 		container := tpl.Spec.Containers[i]
+		if !injectAll && !funk.Contains(injectContainer, container.Name) {
+			continue
+		}
 
 		if len(container.Resources.Limits) == 0 {
+			limitsValues := map[string]interface{}{
+				typeKey: "1",
+			}
+
+			if gpumem != nil && *gpumem != "" && typeKey == constants.NvidiaGPU {
+				limitsValues[constants.NvidiaGPUMem] = *gpumem
+			}
+
 			patch = append(patch, patchOp{
-				Op:   constants.PatchOpAdd,
-				Path: fmt.Sprintf(resourcePath, i),
-				Value: map[string]interface{}{
-					typeKey: "1",
-				},
+				Op:    constants.PatchOpAdd,
+				Path:  fmt.Sprintf(resourcePath, i),
+				Value: limitsValues,
 			})
+
 		} else {
 			t := make(map[string]map[string]string)
 			t["limits"] = map[string]string{}
 			for k, v := range container.Resources.Limits {
 				if k.String() == constants.NvidiaGPU ||
-					k.String() == constants.NvidiaGB10GPU ||
+					k.String() == constants.NvidiaGPUMem ||
 					k.String() == constants.AMDAPU {
 					// unset all previous gpu limits
 					continue
@@ -597,12 +609,24 @@ func addResourceLimits(tpl *corev1.PodTemplateSpec, typeKey string, envKeyValues
 				t["limits"][k.String()] = v.String()
 			}
 			t["limits"][typeKey] = "1"
+			if gpumem != nil && *gpumem != "" && typeKey == constants.NvidiaGPU {
+				t["limits"][constants.NvidiaGPUMem] = *gpumem
+			}
 			patch = append(patch, patchOp{
 				Op:    constants.PatchOpReplace,
 				Path:  fmt.Sprintf(resourcePath, i),
 				Value: t["limits"],
 			})
 		}
+	}
+
+	return patch, nil
+}
+
+func addEnvToPatch(tpl *corev1.PodTemplateSpec, envKeyValues []EnvKeyValue) (patch []patchOp) {
+	for i := range tpl.Spec.Containers {
+		container := tpl.Spec.Containers[i]
+
 		envNames := make([]string, 0)
 		if len(container.Env) == 0 {
 			value := make([]map[string]string, 0)
@@ -643,7 +667,7 @@ func addResourceLimits(tpl *corev1.PodTemplateSpec, typeKey string, envKeyValues
 
 	}
 
-	return patch, nil
+	return patch
 }
 
 func genPatchesForEnv(op string, containerIdx, envIdx int, name, value string) (patch []patchOp) {
