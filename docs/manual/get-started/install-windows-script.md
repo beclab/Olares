@@ -67,26 +67,25 @@ A GPU is not required to install Olares, but is necessary for AI applications.
     ```
 
 ## Install Olares
-1. Click https://windows.olares.sh to download the installation script `publicInstaller.latest.ps1`.
+1. Click https://windows.olares.sh to download the installation script `publicInstall.latest.ps1`.
 
-2. Run the installation script.
-
-   a. Launch PowerShell as an administrator and navigate to the folder where you downloaded the script. For example, if the script is in your `Downloads` folder, enter:
+2. Execute the script.
+   
+   a. Open PowerShell as administrator, then navigate to the folder where the script is located. For example, if the script is in the `Downloads` folder, run the following command:
    ```powershell
-   # Replace <YourUsername> with your actual Windows username
    cd C:\Users\<YourUsername>\Downloads
    ```
-
-   b. In the appropriate directory, execute the script with:
+   
+   b. Once in the correct folder, run the following command:
    ```powershell
-   .\publicInstaller.latest.ps1
+   .\publicInstall.latest.ps1
    ```
   
    :::warning Administrator privileges required 
    Running PowerShell without administrator privileges will cause the installation to fail. See [How to make sure I am using PowerShell as administrator](#how-to-make-sure-i-am-using-powershell-as-administrator).
    :::
 
-3. When you see the security warning, type `R` and press **Enter** to run the script once. The installation process for Olares will start.
+3. When prompted with security warning, type `R` and press **Enter** to run the script once. The installation process for Olares will start.
 
    ```powershell{4}
    Security warning
@@ -95,7 +94,7 @@ A GPU is not required to install Olares, but is necessary for AI applications.
    [D] Do not run [R] Run once [S] Suspend [?] Help (default is "D"):
    ```
 
-4. When prompted to select the drive to store the WSL Ubuntu distro, type the drive letter of an available disk. Ensure the selected drive has at least 80 GB of free space.
+4. When prompted to select the drive to store the WSL Ubuntu distro, type the drive letter of an available disk. Ensure the selected drive has at least **80 GB** of free space.
    ```powershell{8}
    Installing Olares will create a WSL Ubuntu Distro and occupy at least 80 GB of disk space.
    Please select the drive where you want to install it.

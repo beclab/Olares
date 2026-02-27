@@ -415,7 +415,7 @@ export default defineComponent({
 		background-color: $background-1;
 
 		.app_title {
-			font-family: 'Roboto' !important;
+			font-family: 'Inter';
 			font-style: normal;
 			font-weight: 600;
 			font-size: 16px;

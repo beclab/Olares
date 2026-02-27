@@ -358,7 +358,7 @@ export default defineComponent({
 		left: 0;
 
 		.app_title {
-			font-family: 'Roboto' !important;
+			font-family: 'Source Han Sans CN';
 			font-style: normal;
 			font-weight: 500;
 			font-size: 16px;

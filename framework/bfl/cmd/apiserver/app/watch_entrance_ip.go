@@ -72,9 +72,7 @@ func reconcile(ctx context.Context, terminusName constants.TerminusName, zone st
 	case "":
 		log.Warnf("user %q's network is not set up yet", user.Name)
 		return nil
-	case constants.ReverseProxyTypeExternalNetworkOff:
-		return nil
-	case constants.ReverseProxyTypePublic, constants.ReverseProxyTypeNone:
+	case constants.ReverseProxyTypeNone:
 		isPublicIP = true
 	case constants.ReverseProxyTypeCloudflare:
 		isCloudFlareTunnel = true
