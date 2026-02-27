@@ -228,6 +228,10 @@ export const developerSidebar: DefaultTheme.Sidebar = {
             //         },
             //       ],
             //      },
+                    {
+          text: "运行时变量",
+          link: "/zh/developer/develop/runtime-values",
+        },
     {
               text: "中间件",
               link: "/zh/developer/develop/mw-overview",

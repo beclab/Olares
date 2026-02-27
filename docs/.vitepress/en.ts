@@ -789,11 +789,6 @@ const side = {
         //      },
         //   ],
         //   },
-        
-        {
-          text: "Runtime values",
-          link: "/developer/develop/runtime-values",
-        },
         {
           text: "Middleware",
           link: "/developer/develop/mw-overview",
