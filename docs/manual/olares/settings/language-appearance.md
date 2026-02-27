@@ -27,14 +27,15 @@ The change applies immediately.
 
 To customize your desktop or login screen background:
 
-1. Open **Settings** from the Dock.
+1. Open Settings from the Dock.
 2. Select **Appearance** from the left sidebar.
 3. In the **Wallpaper** panel, choose where to apply the wallpaper: **Desktop background** or **Login background**.
-4. Choose a wallpaper:
-   - Built-in: Browse and select from the provided image gallery.
-   - Uploaded images: Select from wallpapers you've previously uploaded.
-5. To upload a custom wallpaper, click **Upload image**, select an image file from your computer, then click **Open**.
-6. (Optional) Adjust how the wallpaper is displayed using the drop-down list next to **Upload image**:
-   - **Stretch**, **Fill**, or **Tile**.
-7. (Optional) Manage uploaded wallpapers:
-   - In **Uploaded images**, hover over an image and click the <i class="material-symbols-outlined">close</i> icon to delete it.
+4. To use a built-in wallpaper, browse and select from the provided image gallery.
+5. To use a custom wallpaper:
+
+   a. Click **Upload image**, select an image file from your computer, then click **Open**.  
+   b. (Optional) Adjust how the wallpaper is displayed using the drop-down list next to **Upload image**:  
+      - **Stretch** 
+      - **Fill**
+      - **Tile**
+6. (Optional) To remove a custom wallpaper, hover over the uploaded image in **Uploaded images** and click the <i class="material-symbols-outlined">close</i> icon.
