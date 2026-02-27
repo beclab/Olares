@@ -11,38 +11,79 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
 
 ## 主要功能
 
-### 账户与身份管理
-创建和管理 Olares ID，安全备份凭证并连接外部服务。
-- [创建 Olares ID](create-account.md)
-- [备份助记词](back-up-mnemonics.md)
-- [设置或重置本地密码](back-up-mnemonics.md#设置本地密码)
-- [管理集成服务](integrations.md)
+- **账户与身份管理**  
+  创建和管理 Olares ID，连接第三方服务集成，安全备份你的账户凭证。
+  :::details 相关指南
+  - [创建 Olares ID](create-account.md)
+  - [备份助记词](back-up-mnemonics.md)
+  - [设置或重置本地密码](back-up-mnemonics.md#set-up-local-password)
+  - [管理集成](integrations.md)
+  :::
 
-### 启用专用网络
-随时随地通过 LarePass 专用网络访问 Olares。
-- [打开专用网络](private-network.md#在-larepass-中启用专用网络)
-- [排查连接问题](private-network.md#故障排查)
+- **安全文件访问与同步**  
+  通过 Olares 提供的安全同步能力，在不同设备之间访问和管理文件。
+  :::details 相关指南
+  - [使用 LarePass 管理文件](manage-files.md)
+  :::
+- **设备与网络管理**  
+  激活并管理 Olares 设备，通过 LarePass VPN 安全连接，维护系统运行状态。
+  :::details 相关指南
+  - [激活 Olares 设备](activate-olares.md)
+  - [升级 Olares](manage-olares.md#升级-olares)
+  - [双因素登录 Olares](activate-olares.md#使用-larepass-进行双因素验证)
+  - [管理 Olares](manage-olares.md)
+  - [切换有线/无线网络](manage-olares.md#有线切换至无线)
+  - [启用专用网络](private-network.md)
+  :::
 
-### 设备管理
-激活并管理 Olares 设备，通过 LarePass VPN 安全连接。
-- [激活 Olares 设备](activate-olares.md)
-- [升级 Olares](manage-olares.md#升级-olares)
-- [双因素登录 Olares](activate-olares.md#使用-larepass-进行双因素验证)
-- [管理 Olares](manage-olares.md)
-- [切换有线/无线网络](manage-olares.md#有线切换至无线)
+- **密码与密钥管理**  
+  使用 Vault 在多设备间存储、自动填充并生成安全密码和通行密钥。
+  :::details 相关指南
+  - [自动填充密码](autofill.md)
+  - [生成 2FA 验证码](two-factor-verification.md)
+  :::
+- **知识收藏**  
+  通过浏览器扩展收集网页内容，将资源保存至 Wise，并订阅 RSS 源。
+  :::details 相关指南
+  - [通过 LarePass 扩展收集内容](/zh/manual/olares/wise/basics.md#使用-larepass-扩展)
+  - [订阅 RSS 源](/zh/manual/olares/wise/subscribe.md#使用-larepass-浏览器扩展订阅)
+  :::
+  
+## 下载 LarePass
 
-### 安全文件访问与同步
-- [使用 LarePass 管理文件](manage-files.md)
+### iOS
+请前往 [App Store 产品页面](https://apps.apple.com/cn/app/larepass/id6448082605)下载 LarePass。
 
-### 密码与密钥管理
-使用 Vault 自动填充凭证、存储密码并生成 2FA 代码。
-- [自动填充密码](autofill.md)
-- [生成 2FA 代码](two-factor-verification.md)
+### Android
+请前往 [Google Play 产品页面](https://play.google.com/store/apps/details?id=com.terminus.termipass)，或直接从 [LarePass 官网](https://www.olares.cn/larepass)下载最新 APK。
 
-### 知识收藏
-通过 LarePass 收集网页内容并订阅 RSS。
-- [通过 LarePass 扩展收集内容](/zh/manual/olares/wise/basics.md#使用-larepass-扩展)
-- [订阅 RSS 源](/zh/manual/olares/wise/subscribe.md#使用-larepass-浏览器扩展订阅)
+### macOS & Windows
+请从 [LarePass 官网](https://www.olares.cn/larepass)下载最新桌面客户端。
+
+### Chrome 扩展
+
+使用 LarePass 扩展可以直接在浏览器中收集内容并管理密码。目前仅支持 Google Chrome 浏览器，且必须手动安装。
+
+:::warning 保留扩展程序文件夹
+浏览器会从你选择的文件夹中加载扩展。如果删除、移动或重命名该文件夹，扩展将无法正常使用。
+
+请将 ZIP 文件解压到一个长期保留的位置，例如用户目录下的文件夹，而不要解压到临时目录。
+:::
+
+1. 访问 [LarePass 网站](https://olares.cn/olares) 下载扩展 ZIP 包。
+2. 将 ZIP 文件解压到电脑中的一个固定文件夹。
+3. 在 Chrome 浏览器打开 `chrome://extensions/`。
+4. 开启右上角**开发者模式**。
+5. 点击**加载已解压的扩展程序**，选择解压后的 LarePass 文件夹。
+
+::: tip 快速访问
+安装完成后，点击浏览器工具栏中的拼图图标，将 LarePass 扩展固定，以便一键访问。
+:::
+
+### 设置账户
+
+- 在移动设备上，你可以使用 LarePass 直接[创建 Olares ID](/zh/manual/larepass/create-account.md#创建-olares-id)。
+- 在桌面客户端或 Chrome 扩展上，你需要[导入现有 Olares 账户](/zh/manual/larepass/create-account.md#导入现有账户)。
 
 ## 功能对比
 
@@ -184,36 +225,3 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
   </tbody>
 </table>
 
-## 下载并安装 LarePass
-
-请前往 [LarePass 官网](https://www.olares.cn/larepass) 获取适用于你设备的最新版本。
-
-- **iOS**： App Store
-- **Android**： Google Play 或官网直接下载
-- **macOS 和 Windows**：从官网下载安装桌面客户端
-
-### Chrome 扩展
-
-使用 LarePass 扩展可以直接在浏览器中收集内容并管理密码。目前仅支持 Google Chrome 浏览器，且必须手动安装。
-
-:::warning 保留扩展程序文件夹
-浏览器会从你选择的文件夹中加载扩展。如果删除、移动或重命名该文件夹，扩展将无法正常使用。
-
-请将 ZIP 文件解压到一个长期保留的位置，例如用户目录下的文件夹，而不要解压到临时目录。
-:::
-
-1. 访问 [LarePass 网站](https://olares.cn/olares) 下载扩展 ZIP 包。
-2. 将 ZIP 文件解压到电脑中的一个固定文件夹。
-3. 在浏览器打开 `chrome://extensions/`。
-4. 开启右上角**开发者模式**。
-5. 点击**加载已解压的扩展程序**，选择解压后的 LarePass 文件夹。
-
-### 登录扩展程序
-
-1. 点击浏览器工具栏中的 LarePass 图标。
-2. 点击 **导入账户**。
-3. 输入你的助记词和密码以完成设置。
-
-::: tip 快速访问
-安装完成后，点击浏览器工具栏中的拼图图标，将 LarePass 扩展固定，以便一键访问。
-:::
