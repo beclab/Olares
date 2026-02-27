@@ -32,6 +32,7 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -337,12 +338,14 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		},
 	}
 
+	gpuRequiredValue := gpuRequired.Value() / 1024 / 1024 // HAMi gpu memory format
+	hamiFormatGpuRequired := resource.NewQuantity(gpuRequiredValue, resource.DecimalSI)
 	patchBytes, err := webhook.CreatePatchForDeployment(
 		tpl,
 		injectAll,
 		injectContainer,
 		h.getGPUResourceTypeKey(GPUType),
-		ptr.To(gpuRequired.String()),
+		ptr.To(hamiFormatGpuRequired.String()),
 		envs,
 	)
 	if err != nil {
