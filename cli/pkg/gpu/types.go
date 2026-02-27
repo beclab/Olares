@@ -9,7 +9,6 @@ var (
 	GpuCudaLabel          = GpuLabelGroup + "/cuda"
 	GpuCudaSupportedLabel = GpuLabelGroup + "/cuda-supported"
 	GpuType               = GpuLabelGroup + "/type"
-	GpuChipType           = GpuLabelGroup + "/chip-type"
 )
 
 const (

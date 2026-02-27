@@ -248,16 +248,12 @@ func (u *UpdateNodeAmdGPUInfo) Execute(runtime connector.Runtime) error {
 
 	// Determine GPU type (APU vs discrete GPU)
 	gpuType := gpu.AmdGpuCardType
-	chipType := ""
 	if runtime.GetSystemInfo().IsAmdApu() {
 		gpuType = gpu.AmdApuCardType
-		chipType = gpu.StrixHaloChipType
-	} else if runtime.GetSystemInfo().IsGB10Chip() {
-		chipType = gpu.GB10ChipType
 	}
 
 	// Use ROCm version as both driver and "cuda" version for AMD
-	return gpu.UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &rocmVersion, nil, nil, &gpuType, &chipType)
+	return gpu.UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &rocmVersion, nil, nil, &gpuType)
 }
 
 // InstallAmdPlugin installs the AMD GPU device plugin DaemonSet.
