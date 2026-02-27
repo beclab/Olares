@@ -172,7 +172,6 @@ devicePlugin:
   podAnnotations: {}
   nvidianodeSelector:
     gpu.bytetrade.io/cuda-supported: "true"
-    gpu.bytetrade.io/type: nvidia
   tolerations: []
   # The updateStrategy for DevicePlugin DaemonSet.
   # If you want to update the DaemonSet by manual, set type as "OnDelete".
