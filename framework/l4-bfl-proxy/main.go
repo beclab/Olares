@@ -146,8 +146,6 @@ type Server struct {
 	ngxCmd *nginx.Command
 
 	ngxTmpl *template.Template
-
-	prevNgxConf []byte
 }
 
 func (s *Server) init() error {
@@ -934,13 +932,6 @@ func (s *Server) renderAndReload() error {
 		return err
 	}
 	nginxConfig := buf.Bytes()
-
-	if bytes.Equal(nginxConfig, s.prevNgxConf) {
-		klog.Infof("nginx config not changed, skip reload")
-		return nil
-	}
-	s.prevNgxConf = nginxConfig
-
 	err = s.testTemplate(nginxConfig)
 	if err != nil {
 		return err

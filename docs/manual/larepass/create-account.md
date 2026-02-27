@@ -67,11 +67,50 @@ Upon completion, you will receive an Organization Olares ID.
 
 ## Import an existing account
 
-You can also set up an account by importing an existing Olares ID:
+You can set up LarePass by importing an existing Olares ID.
 
 :::tip Back up mnemonic phrase
-You must have already [backed up the mnemonic phrase](back-up-mnemonics.md) for the Olares ID to import.
+Make sure you have already [backed up the mnemonic phrase](back-up-mnemonics.md) for the Olares ID to import.
 :::
 
-1. In LarePass app, tap **Import an account**.
-2. Enter the 12-word mnemonic phrase to import your Olares ID.
+### First-time setup
+
+If no account has been added on this device:
+
+1. Open LarePass.
+2. Follow the prompt to enter the 12-word mnemonic phrase for your Olares ID.
+3. Complete the setup as prompted.
+
+### Import an additional account
+
+If you already have an account signed in and want to add another one:
+<Tabs>
+<template #iOS-&-Android>
+
+1. Open the LarePass app.
+2. Tap your profile avatar.
+3. On the Switch account page, tap **Add a new account** at the bottom. 
+4. Tap **Import an account**.
+5. Enter the 12-word mnemonic phrase for your Olares ID.
+6. Complete the setup as prompted.
+
+</template>
+<template #macOS-&-Windows>
+
+1. Open the LarePass desktop client.
+2. Click your profile avatar.
+3. Click **Switch account**.
+4. Click **Add a new account** at the bottom.
+5. Enter the 12-word mnemonic phrase for your Olares ID.
+6. Complete the setup as prompted.
+
+</template>
+<template #Chrome-extension>
+
+1. Open the LarePass extension in Chrome.
+2. Click the options icon above your profile avatar.
+3. Click **Add a new account**.
+4. Enter the 12-word mnemonic phrase for your Olares ID.
+5. Complete the setup as prompted.
+</template>
+</Tabs>

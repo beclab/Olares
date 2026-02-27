@@ -1,78 +1,44 @@
 ---
 outline: [2, 3]
-description: Learn how to download and use the all-in-one driver package provided by Olares to install all necessary Windows drivers, including the NVIDIA graphics driver.
+description: Learn how to identify your NVIDIA GPU model and install the correct driver for optimal Windows performance.
 head:
   - - meta
     - name: keywords
-      content: Olares, Olares One, Windows drivers, NVIDIA graphics driver, GPU
+      content: Olares, Olares One, NVIDIA drivers, GPU, graphics card，Windows
 ---
 
-# Install drivers on Windows <Badge type="tip" text="15 min"/>
+# Install NVIDIA drivers on Windows <Badge type="tip" text="10 min"/>
 
-To ensure optimal performance and system stability when running Windows on your Olares One, Olares provides a tested all-in-one driver package. This package contains all the necessary drivers for your device, such as audio, network, and NVIDIA graphics drivers.
+Installing the official drivers ensures the best graphics performance and stability when running Windows in your dual-boot setup.
 
-This guide walks you through downloading and installing the all-in-one driver package.
+This guide walks you through identifying your specific graphics card model and installing the correct driver.
 
 ## Learning objectives
 
-- Download and install all system drivers using the driver package.
+- Identify the model of your NVIDIA graphics card.
+- Download the correct driver from the official NVIDIA website.
+- Install the graphics driver.
 
 ## Before you begin
 
-:::info About NVIDIA graphics driver update
-This all-in-one package includes a stable, fully tested NVIDIA graphics driver specifically optimized for Olares One. To ensure system stability, avoid downloading and installing standalone graphics drivers directly from the official NVIDIA website, because that might introduce compatibility issues.
-:::
+- Connect to internet: The driver file is large (often 500 MB+), so a stable connection is required.
+- Close applications: Save your work and close any graphic-intensive programs like games or photo editors before starting the installation. The screen might temporarily turn black or blink during the update, which can cause open applications to crash or lose unsaved data.
 
-- **Administrator access**: You need admin rights to install system drivers.
-- **Internet connection**: The driver file is large (about 3.5 GB), so a stable connection is required.
-- **Close applications**: Save your work and close any graphic-intensive programs like games or photo editors before starting the installation. The screen might temporarily turn black or blink during the update, which can cause open applications to crash or lose unsaved data.
-- **Windows version**: For the best stability and driver compatibility, Windows 11 version 24H2 is recommended.
+## Prerequisites
 
-## Step 1: Download and extract the driver package
+- Administrator access: You need admin rights to install system drivers.
+- Windows OS: You must be currently booted into the Windows operating system.
 
-1. Download the [driver package](http://cdn.olares.com/common/AGBOX_B1_DVT_driver251125.zip).
+## Step 1: Identify your graphics card model
 
-    :::tip Browser security warning
-    Because the download links use a standard HTTP connection rather than HTTPS, your web browser might flag or block it as an insecure download. If this happens, select **Keep** or **Allow** in your browser's download manager to continue the download.
-    :::
+Before downloading a driver, you need to know exactly which graphics card model you have. Olares One features an NVIDIA-based graphics card, so you can identify the model directly in the device settings.
 
-    :::info Download time
-    The driver package is large. Depending on your internet connection speed, the download might take a while to complete.
-    :::
+1. Open Olares Settings.
+2. Click **GPU** and you can find the specific model name "GeForce RTX 5090".
 
-2. Locate the downloaded `.zip` file on your computer.
-3. Right-click the file and select **Extract All**.
-4. Open the extracted folder and verify that the files, including the `driver_install` application, are present.
+    ![Find GPU model](/images/one/find-gpu-model.png#bordered){width=70%}
 
-    ```text
-    Extracted_Folder/
-    ├── driver/
-    ├── uwp/
-    ├── driver_install
-    └── uwp_install
-    ```
-
-## Step 2: Install the drivers
-
-1. In the extracted folder, locate the file `driver_install`, and then double-click it.
-2. The system will automatically open a command prompt window and begin installing the driver. This process is fully automated.
-
-    ![Install driver](/images/one/driver-install.png#bordered)
-
-    :::tip Screen flickering
-    Your screen might turn black or blink for a few seconds during installation. This is normal behavior as the system switches to the new driver.
-    :::
-
-3. When the driver is successfully installed, your device restarts automatically. 
-4. After the system reboots and you log back in to Windows, a command prompt window appears. Follow the on-screen instructions and press any key until the window closes. This indicates that the installation is completely finished.
-
-    ![System restart](/images/one/system-restart-windows.png#bordered)    
-
-<!--## (Optional) Install the NVIDIA graphics driver
-
-If you need the latest features, bug fixes, or specific optimizations, you can download and install the newest official graphics driver directly from NVIDIA.
-
-### Step 1: Download the driver
+## Step 2: Download the driver
 
 1. Go to the official [NVIDIA Drivers Download](https://www.nvidia.com/en-us/drivers/) page.
 
@@ -101,7 +67,7 @@ If you need the latest features, bug fixes, or specific optimizations, you can d
 
     ![Nvidia download](/images/one/nvidia-download.png#bordered)
 
-### Step 2: Install the driver
+## Step 3: Install the driver
 
 1. Double-click the downloaded `.exe` file to start the installer.
 
@@ -135,4 +101,13 @@ If you need the latest features, bug fixes, or specific optimizations, you can d
 
     ![Installation finish](/images/one/nvidia-install-finish.png#bordered){width=65%}
 
-6. Restart Windows to complete the setup.-->
+6. Restart your computer to complete the setup.
+
+## Next steps
+
+Now your Windows environment is ready, you can proceed to configure your system for the Olares installation.
+
+## Resources
+
+- [Install Olares](../manual/get-started/install-olares.md)
+- [Olares installation and activation FAQs](../manual/help/installation.md)

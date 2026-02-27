@@ -192,12 +192,12 @@ export const oneSidebar: DefaultTheme.Sidebar = {
                 link: "/zh/one/dual-boot-dual-drive",
               },
               {
-                text: "Single-drive setup",
+                text: "Dual-drive setup",
                 link: "/zh/one/dual-boot-single-drive",
               }
               ,
               {
-                text: "Install drivers on Windows",
+                text: "Install NVIDIA driver",
                 link: "/zh/one/install-nvidia-driver",
               }
             ]
