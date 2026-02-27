@@ -330,7 +330,7 @@ const side = {
               collapsed: true,
               items: [
                 {
-                  text: "Change revere proxy",
+                  text: "Change reverse proxy",
                   link: "/manual/olares/settings/change-frp",
                 },
                 {

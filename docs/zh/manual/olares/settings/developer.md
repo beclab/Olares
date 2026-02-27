@@ -54,7 +54,7 @@ head:
    ![生成日志](/images/zh/manual/olares/export-log1.png#bordered){width=65%}
 
     :::tip
-    你可以将此日志文件附加到 GitHub 问题中，以帮助 Olares 团队更快地定位和解决你的问题。
+    你可以将此日志文件附加到 GitHub Issue 中，以帮助 Olares 团队更快地定位和解决你的问题。
     :::
 
 ## 设置系统级环境变量
