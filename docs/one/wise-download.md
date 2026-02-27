@@ -59,12 +59,12 @@ If you frequently save videos while browsing, the [LarePass extension](https://w
 
 When you save a video to the library, Wise creates a record immediately, and the file download runs in the background.
 
-1. In Wise, click <i class="material-symbols-outlined">settings</i> in the bottom-left menu bar, then select **Transmission**.
-2. In the Download tab, check the list of downloads and their status.
-3. You can:
-
-    - Click <i class="material-symbols-outlined">folder_open</i> to locate a downloaded file in Files.
-    - Click <i class="material-symbols-outlined">do_not_disturb_on</i> to remove it from the list.
+1. In Wise, click <i class="material-symbols-outlined">settings</i> in the bottom-left menu bar, then select **Download list**.
+2. Use the tabs to filter tasks: **All**, **Downloading**, **Complete**, **Failed**.
+3. Review the task list and status.
+4. You can:
+   - Click <i class="material-symbols-outlined">folder_open</i> to locate the transferred file in Files.
+   - Click <i class="material-symbols-outlined">do_not_disturb_on</i> to remove it from the list.
 
 Once the download is complete, you can play the video directly inside Wise even without an internet connection.
 
