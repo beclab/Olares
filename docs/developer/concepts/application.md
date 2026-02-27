@@ -89,14 +89,8 @@ Key characteristics of shared applications include:
 * **Centralized management**: Only administrators can install the core service of a shared application. Administrators are responsible for installing, configuring, and hosting the app's service, resources, and runtime environment within the cluster.
 * **Easy identification**: In Olares Market, shared applications are typically marked with a "Shared" label for easy identification.
 * **Flexible access**: The method for accessing a shared application depends on the app's form:
-    * **Headless backend service**: For shared applications that typically run as a background service without a graphical UI (e.g., Ollama), users need to install a **reference application** to call the service. For example, users within the cluster can access the Ollama service via Open WebUI or LobeChat.
+    * **Headless backend service**: For shared applications that typically run as a background service without a graphical UI (e.g., Ollama), no dedicated reference application is required. The service exposes standard APIs and shared entrances that can be directly consumed by any compatible third‑party client such as LobeChat and Open WebUI. Users install the client and point it to the shared app’s API endpoint found in the Olares **Settings** > **Applications** > **Entrances**. 
     * **Complete application with built-in UI**: For shared applications that include a complete user interface and backend service themselves (e.g., ComfyUI Shared or Dify Shared), administrators and other users in the cluster can obtain the service access point by directly installing the shared application itself.
-
-### Reference applications
-
-Reference applications are applications that have been granted access to specific shared applications within Olares. They typically provide a user-friendly interface, allowing users to easily access the APIs or services exposed by the shared applications.
-
-For example, Open WebUI, LobeChat, and n8n are reference applications for Ollama. Dify Shared is the reference application of itself.
 
 ### Dependencies
 
