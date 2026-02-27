@@ -350,7 +350,7 @@ const side = {
                 { text: "Restore", link: "/manual/olares/settings/restore" },
               ],
             },
-            { text: "Developer resources", link: "/manual/olares/settings/developer" },
+            { text: "Advanced settings", link: "/manual/olares/settings/developer" },
           ]
         },
         { text: "Dashboard", link: "/manual/olares/resources-usage" },
