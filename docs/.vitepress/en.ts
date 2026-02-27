@@ -41,6 +41,10 @@ const side = {
               text: "Insufficient memory or memory not freed",
               link: "/manual/help/ts-free-memory",
             },
+            {
+              text: "Missing apps in Market",
+              link: "/manual/help/ts-missing-apps",
+            },
           ],
         },
       ],

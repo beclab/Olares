@@ -40,6 +40,10 @@ const side = {
               text: "内存不足或没有释放",
               link: "/zh/manual/help/ts-free-memory",
             },
+            {
+              text: "应用市场应用缺失",
+              link: "/zh/manual/help/ts-missing-apps",
+            }
           ],
         },
       ],
