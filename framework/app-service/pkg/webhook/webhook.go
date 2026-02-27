@@ -543,8 +543,8 @@ type EnvKeyValue struct {
 }
 
 // CreatePatchForDeployment add gpu env for deployment and returns patch bytes.
-func CreatePatchForDeployment(tpl *corev1.PodTemplateSpec, gpuTypeKey string, gpumem *string, envKeyValues []EnvKeyValue) ([]byte, error) {
-	patches, err := addGpuResourceLimits(tpl, gpuTypeKey, gpumem)
+func CreatePatchForDeployment(tpl *corev1.PodTemplateSpec, injectAll bool, injectContainer []string, gpuTypeKey string, gpumem *string, envKeyValues []EnvKeyValue) ([]byte, error) {
+	patches, err := addGpuResourceLimits(tpl, injectAll, injectContainer, gpuTypeKey, gpumem)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -552,7 +552,7 @@ func CreatePatchForDeployment(tpl *corev1.PodTemplateSpec, gpuTypeKey string, gp
 	return json.Marshal(patches)
 }
 
-func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, typeKey string, gpumem *string) (patch []patchOp, err error) {
+func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectContainer []string, typeKey string, gpumem *string) (patch []patchOp, err error) {
 	if typeKey == "" {
 		klog.Warning("No gpu type selected, skip adding resource limits")
 		return patch, nil
@@ -577,6 +577,9 @@ func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, typeKey string, gpumem *s
 
 	for i := range tpl.Spec.Containers {
 		container := tpl.Spec.Containers[i]
+		if !injectAll && !funk.Contains(injectContainer, container.Name) {
+			continue
+		}
 
 		if len(container.Resources.Limits) == 0 {
 			limitsValues := map[string]interface{}{

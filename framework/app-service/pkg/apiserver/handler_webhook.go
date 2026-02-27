@@ -304,8 +304,23 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 	if gpuRequired == nil {
 		return resp
 	}
-	if annotations[applicationGpuInjectKey] != "true" {
+
+	var injectContainer []string
+	injectAll := false
+	if injectValue, ok := annotations[applicationGpuInjectKey]; !ok || injectValue == "false" || injectValue == "" {
 		return resp
+	} else {
+		if injectValue != "true" {
+			injectToken := strings.Split(injectValue, ",")
+			for _, token := range injectToken {
+				c := strings.TrimSpace(token)
+				if c != "" {
+					injectContainer = append(injectContainer, c)
+				}
+			}
+		} else {
+			injectAll = true
+		}
 	}
 
 	GPUType := appcfg.GetSelectedGpuTypeValue()
@@ -322,7 +337,14 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		},
 	}
 
-	patchBytes, err := webhook.CreatePatchForDeployment(tpl, h.getGPUResourceTypeKey(GPUType), ptr.To(gpuRequired.String()), envs)
+	patchBytes, err := webhook.CreatePatchForDeployment(
+		tpl,
+		injectAll,
+		injectContainer,
+		h.getGPUResourceTypeKey(GPUType),
+		ptr.To(gpuRequired.String()),
+		envs,
+	)
 	if err != nil {
 		klog.Errorf("create patch error %v", err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
