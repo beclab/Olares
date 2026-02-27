@@ -1,8 +1,7 @@
 package utils
 
 const (
-	NodeGPUTypeLabel     = "gpu.bytetrade.io/type"
-	NodeGPUChipTypeLabel = "gpu.bytetrade.io/chip-type"
+	NodeGPUTypeLabel = "gpu.bytetrade.io/type"
 )
 
 const (

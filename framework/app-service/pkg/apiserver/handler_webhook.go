@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -321,7 +322,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		},
 	}
 
-	patchBytes, err := webhook.CreatePatchForDeployment(tpl, h.getGPUResourceTypeKey(GPUType), envs)
+	patchBytes, err := webhook.CreatePatchForDeployment(tpl, h.getGPUResourceTypeKey(GPUType), ptr.To(gpuRequired.String()), envs)
 	if err != nil {
 		klog.Errorf("create patch error %v", err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)

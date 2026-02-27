@@ -84,7 +84,8 @@ const (
 	EnvGPUType      = "GPU_TYPE"
 
 	// gpu resource keys
-	NvidiaGPU = "nvidia.com/gpu"
+	NvidiaGPU    = "nvidia.com/gpu"
+	NvidiaGPUMem = "nvidia.com/gpumem"
 	//	NvidiaGB10GPU = "nvidia.com/gb10"
 	AMDAPU = "amd.com/apu"
 	AMDGPU = "amd.com/gpu"

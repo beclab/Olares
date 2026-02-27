@@ -130,12 +130,6 @@ func GetAllGpuTypesFromNodes(nodes *corev1.NodeList) (map[string]struct{}, error
 	}
 	for _, n := range nodes.Items {
 		if typeLabel, ok := n.Labels[NodeGPUTypeLabel]; ok {
-			if typeLabel != "" {
-				chipTypeLabel := n.Labels[NodeGPUChipTypeLabel]
-				if chipTypeLabel != "" {
-					typeLabel = chipTypeLabel
-				}
-			}
 			gpuTypes[typeLabel] = struct{}{} // TODO: add driver version info
 		}
 	}
