@@ -3,11 +3,13 @@ package utils
 import "strings"
 
 type storageDevice struct {
-	DevPath       string
-	Vender        string
-	IDSerial      string
-	IDSerialShort string
-	PartitionUUID string
+	DevPath          string
+	Vender           string
+	IDSerial         string
+	IDSerialShort    string
+	IDUsbSerial      string
+	IDUsbSerialShort string
+	PartitionUUID    string
 }
 
 type mountedPath struct {

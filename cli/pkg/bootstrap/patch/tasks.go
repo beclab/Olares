@@ -59,7 +59,7 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 		pre_reqs = pre_reqs + " network-manager "
 	}
 
-	pre_reqs += " conntrack socat apache2-utils net-tools make gcc bison flex tree unzip "
+	pre_reqs += " conntrack socat apache2-utils net-tools make gcc bison flex tree unzip lshw"
 
 	var systemInfo = runtime.GetSystemInfo()
 	var platformFamily = systemInfo.GetOsPlatformFamily()

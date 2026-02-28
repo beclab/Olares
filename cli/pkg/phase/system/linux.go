@@ -83,6 +83,13 @@ func (l *linuxPhaseBuilder) build() []module.Module {
 		addModule(gpuModuleBuilder(func() []module.Module {
 			return []module.Module{
 				&amdgpu.InstallAmdRocmModule{},
+				&amdgpu.InstallAmdContainerToolkitModule{Skip: func() bool {
+					if l.runtime.GetSystemInfo().IsAmdGPUOrAPU() {
+						return false
+					}
+					return true
+				}(),
+				},
 				&gpu.InstallDriversModule{
 					ManifestModule: manifest.ManifestModule{
 						Manifest: l.manifestMap,

@@ -76,6 +76,10 @@ type Systems interface {
 	IsPveOrPveLxc() bool
 	IsRaspbian() bool
 	IsLinux() bool
+	IsGB10Chip() bool
+	IsAmdApu() bool
+	IsAmdGPU() bool
+	IsAmdGPUOrAPU() bool
 
 	IsUbuntu() bool
 	IsDebian() bool
@@ -111,16 +115,18 @@ type Systems interface {
 }
 
 type SystemInfo struct {
-	HostInfo   *HostInfo       `json:"host"`
-	CpuInfo    *CpuInfo        `json:"cpu"`
-	DiskInfo   *DiskInfo       `json:"disk"`
-	MemoryInfo *MemoryInfo     `json:"memory"`
-	FsInfo     *FileSystemInfo `json:"filesystem"`
-	CgroupInfo *CgroupInfo     `json:"cgroup,omitempty"`
-	LocalIp    string          `json:"local_ip"`
-	NatGateway string          `json:"nat_gateway"`
-	PkgManager string          `json:"pkg_manager"`
-	IsOIC      bool            `json:"is_oic,omitempty"`
+	HostInfo    *HostInfo       `json:"host"`
+	CpuInfo     *CpuInfo        `json:"cpu"`
+	DiskInfo    *DiskInfo       `json:"disk"`
+	MemoryInfo  *MemoryInfo     `json:"memory"`
+	FsInfo      *FileSystemInfo `json:"filesystem"`
+	CgroupInfo  *CgroupInfo     `json:"cgroup,omitempty"`
+	LocalIp     string          `json:"local_ip"`
+	NatGateway  string          `json:"nat_gateway"`
+	PkgManager  string          `json:"pkg_manager"`
+	IsOIC       bool            `json:"is_oic,omitempty"`
+	ProductName string          `json:"product_name,omitempty"`
+	HasAmdGPU   bool            `json:"has_amd_gpu,omitempty"`
 }
 
 func (s *SystemInfo) IsSupport() error {
@@ -235,6 +241,22 @@ func (s *SystemInfo) IsLinux() bool {
 	return s.HostInfo.OsType == common.Linux
 }
 
+func (s *SystemInfo) IsGB10Chip() bool {
+	return s.CpuInfo.IsGB10Chip
+}
+
+func (s *SystemInfo) IsAmdApu() bool {
+	return s.CpuInfo.HasAmdAPU
+}
+
+func (s *SystemInfo) IsAmdGPU() bool {
+	return s.HasAmdGPU
+}
+
+func (s *SystemInfo) IsAmdGPUOrAPU() bool {
+	return s.CpuInfo.HasAmdAPU || s.HasAmdGPU
+}
+
 func (s *SystemInfo) IsUbuntu() bool {
 	return s.HostInfo.OsPlatformFamily == common.Ubuntu
 }
@@ -321,6 +343,12 @@ func GetSystemInfo() *SystemInfo {
 	si.DiskInfo = getDisk()
 	si.MemoryInfo = getMem()
 	si.FsInfo = getFs()
+
+	hasAmdGPU, err := getAmdGPU()
+	if err != nil {
+		panic(errors.Wrap(err, "failed to get amd apu/gpu"))
+	}
+	si.HasAmdGPU = hasAmdGPU
 
 	localIP, err := util.GetLocalIP()
 	if err != nil {
@@ -437,6 +465,28 @@ type CpuInfo struct {
 	CpuModel         string `json:"cpu_model"`
 	CpuLogicalCount  int    `json:"cpu_logical_count"`
 	CpuPhysicalCount int    `json:"cpu_physical_count"`
+	IsGB10Chip       bool   `json:"is_gb10_chip,omitempty"`
+	HasAmdAPU        bool   `json:"has_amd_apu,omitempty"`
+}
+
+// Not considering the case where AMD GPU and AMD APU coexist.
+func getAmdGPU() (bool, error) {
+	APUOrGPUExists, err := HasAmdAPUOrGPULocal()
+	if err != nil {
+		fmt.Printf("Error checking AMD APU/GPU: %v\n", err)
+		return false, err
+	}
+
+	hasAmdAPU, err := HasAmdAPULocal()
+	if err != nil {
+		fmt.Printf("Error checking AMD APU: %v\n", err)
+		return false, err
+	}
+
+	if APUOrGPUExists && !hasAmdAPU {
+		return true, nil
+	}
+	return false, nil
 }
 
 func getCpu() *CpuInfo {
@@ -452,10 +502,36 @@ func getCpu() *CpuInfo {
 		cpuModel = cpuInfo[0].ModelName
 	}
 
+	// check if is GB10 chip
+	isGB10Chip := false
+
+	// In Linux systems, it is recognized via lspci as "NVIDIA Corporation Device 2e12 (rev a1)
+	// or NVIDIA Corporation GB20B [GB10] (rev a1)
+	cmd := exec.Command("sh", "-c", "lspci | grep -i vga | egrep 'GB10|2e12'")
+	output, err := cmd.Output()
+	if err == nil && strings.TrimSpace(string(output)) != "" {
+		isGB10Chip = true
+	} else {
+		fmt.Printf("Error checking GB10 chip: %v\n", err)
+		gb10env := os.Getenv(common.ENV_GB10_CHIP)
+		if gb10env == "1" || strings.EqualFold(gb10env, "true") {
+			isGB10Chip = true
+		}
+	}
+
+	// check if it has amd igpu
+	hasAmdAPU, err := HasAmdAPULocal()
+	if err != nil {
+		fmt.Printf("Error checking AMD iGPU: %v\n", err)
+		hasAmdAPU = false
+	}
+
 	return &CpuInfo{
 		CpuModel:         cpuModel,
 		CpuLogicalCount:  cpuLogicalCount,
 		CpuPhysicalCount: cpuPhysicalCount,
+		IsGB10Chip:       isGB10Chip,
+		HasAmdAPU:        hasAmdAPU,
 	}
 }
 

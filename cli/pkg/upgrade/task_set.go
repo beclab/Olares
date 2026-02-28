@@ -380,7 +380,7 @@ func (a *upgradeGPUDriverIfNeeded) Execute(runtime connector.Runtime) error {
 		if err != nil {
 			return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 		}
-		err = gpu.UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &targetDriverVersionStr, ptr.To(common.CurrentVerifiedCudaVersion), ptr.To("true"))
+		err = gpu.UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &targetDriverVersionStr, ptr.To(common.CurrentVerifiedCudaVersion), ptr.To("true"), ptr.To(gpu.NvidiaCardType))
 		if err != nil {
 			return err
 		}
