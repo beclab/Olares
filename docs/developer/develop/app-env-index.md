@@ -3,7 +3,7 @@ outline: [2, 3]
 description: Learn how variables are injected during Olares app deployment, including  declarative environment variables (.Values.olaresEnv) and system-injected runtime Helm values (.Values.*).
 ---
 
-# Environment Variables Overview
+# Environment variables overview
 
 Olares apps use App Service to inject runtime context and configuration into the app's `values.yaml` (Helm values). In Helm templates, you can reference these values via `.Values.*`.
 
