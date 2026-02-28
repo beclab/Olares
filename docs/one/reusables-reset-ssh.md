@@ -17,9 +17,7 @@ To view the saved password in Vault:
 
 ### Reset in Olares Settings
 If you prefer to use an SSH password instead of the automatically generated one, you can manually reset the password in Settings.
-:::info
-If you reset the SSH password here, it will not be saved to your Vault automatically.
-:::
+
 1. Open Settings. On the **My Olares** page, select **My hardware**.
 2. Select **Reset SSH login password** at the bottom.
    ![Reset SSH login password](/images/one/ssh-reset-password-in-settings.png#bordered){width=70%}
