@@ -202,10 +202,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               }
             ]
         },
-        {
-          text: "Create a bootable USB",
-          link: "/one/create-drive",
-        },
       ]
     },
     {
@@ -221,7 +217,21 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         },
         {
           text: "Factory reset",
-          link: "/one/factory-reset",
+          collapsed: true,
+          items: [
+            {
+              text: "Using LarePass",
+              link: "/one/factory-reset",
+            },
+            {
+              text: "In BIOS",
+              link: "/one/factory-reset-in-bios",
+            },
+            {
+              text: "Using bootable USB",
+              link: "/one/create-drive",
+            },
+          ],
         },
       ]
     },

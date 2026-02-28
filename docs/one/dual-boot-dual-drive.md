@@ -21,15 +21,16 @@ This dual-drive configuration physically isolates the systems. This ensures Olar
 
 ## Step 1: Boot into BIOS
 1. Insert the Windows USB boot drive into a USB port on Olares One.
-2. Power on Olares One or restart if it is already running.
-3. Immediately press and hold the **Delete** key repeatedly until the BIOS setup screen appears.
+2. Power on Olares One or restart it if it is already running.
+3. When the Olares logo appears, immediately press the **Delete** key repeatedly to enter **BIOS setup**.
+   ![BIOS setup](/images/one/bios-setup.png#bordered)
 
 ## Step 2: Boot from USB
 
 1. Navigate to the **Boot** tab using the arrow keys on your keyboard.
-2. Locate **Boot Option #1** or **Boot Override** and select your USB flash drive.
-3. Press **Enter** to boot from the USB drive immediately.
-4. The system will restart and load the Windows installation interface.
+2. Set **Boot Option #1** to your Windows USB flash drive, and press **Enter**.
+3. Press **F10**, then select **Yes** to save and exit BIOS.
+4. The system restarts and boots from the USB drive into the Windows installation interface.
 
 ## Step 3: Install Windows
 1. Follow the on-screen prompts to begin the Windows installation.
@@ -49,16 +50,16 @@ Because the operating systems are on separate physical drives, you switch betwee
 
 ### Switch to Olares OS
 1. Restart Olares One.
-2. Press **Delete** repeatedly to enter BIOS.
+2. Press the **Delete** key repeatedly to enter **BIOS setup**.
 3. Go to the **Boot** tab.
 4. Set **Boot Option #1** to the SSD containing Olares OS.
-5. Press **F4** to confirm.
+5. Press **F10** to save and exit BIOS.
 
 ### Switch to Windows
 1. Restart Olares One.
-2. Press **Delete** repeatedly to enter BIOS.
+2. Press the **Delete** key repeatedly to enter **BIOS setup**.
 3. Set **Boot Option #1** to the secondary SSD containing Windows.
-4. Press **F4** to confirm.
+4. Press **F10** to save and exit BIOS.
 
 ## Resources
 - [Install NVIDIA drivers on Windows](install-nvidia-driver.md)
