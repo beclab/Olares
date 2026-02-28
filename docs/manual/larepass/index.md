@@ -9,37 +9,81 @@ LarePass is the official cross-platform client software for Olares. It acts as a
 
 ![LarePass](/images/manual/larepass/larepass.png)
 
-
 ## Key features
+- **Account & identity management**  
+  Create and manage your Olares ID, connect integrations with other services, and back up your credentials securely.
 
-### Account & identity management
-Create and manage your Olares ID, connect integrations with other services, and back up your credentials securely.
-- [Create an Olares ID](create-account.md)
-- [Back up mnemonics](back-up-mnemonics.md)
-- [Set or reset local password](back-up-mnemonics.md#set-up-local-password)
-- [Manage integrations](integrations.md)
+  :::details Related guides
+  - [Create an Olares ID](create-account.md)
+  - [Back up mnemonics](back-up-mnemonics.md)
+  - [Set or reset local password](back-up-mnemonics.md#set-up-local-password)
+  - [Manage integrations](integrations.md)
+  :::
+- **Secure file access & sync**  
+  Access and manage your files across devices with secure synchronization powered by Olares.
 
-### Secure file access & sync
-- [Manage files with LarePass](manage-files.md)
+  :::details Related guides
+  - [Manage files with LarePass](manage-files.md)
+  :::
 
-### Device & network management
-Activate and manage Olares devices, and securely connect to Olares via LarePass VPN.
-- [Activate your Olares device](activate-olares.md)
-- [Upgrade Olares](manage-olares.md#upgrade-olares)
-- [Log in to Olares with 2FA](activate-olares.md#two-factor-verification-with-larepass)
-- [Manage Olares](manage-olares.md)
-- [Switch networks](manage-olares.md#switch-from-wired-to-wireless-network)
-- [Enable VPN for remote access](private-network.md)
+- **Device & network management**  
+  Activate and manage Olares devices, and securely connect to Olares via LarePass VPN.
+  :::details Related guides
+  - [Activate your Olares device](activate-olares.md)
+  - [Upgrade Olares](manage-olares.md#upgrade-olares)
+  - [Log in to Olares with 2FA](activate-olares.md#two-factor-verification-with-larepass)
+  - [Manage Olares](manage-olares.md)
+  - [Switch networks](manage-olares.md#switch-from-wired-to-wireless-network)
+  - [Enable VPN for remote access](private-network.md)
+  :::
 
-### Password & secret management
-Use Vault to autofill credentials, store passwords, and generate 2FA codes across devices.
-- [Autofill passwords](/manual/larepass/autofill.md)
-- [Generate 2FA codes](/manual/larepass/two-factor-verification.md)
+- **Password & secret management**  
+  Store, autofill, and generate secure credentials across your devices with Vault.
+  :::details Related guides
+  - [Autofill passwords](/manual/larepass/autofill.md)
+  - [Generate 2FA codes](/manual/larepass/two-factor-verification.md)
+  :::
 
-### Knowledge collection
-Use LarePass to collect web content and follow RSS feeds.
-- [Collect content via LarePass extension](manage-knowledge.md#collect-content-via-the-larepass-extension)
-- [Subscribe to RSS feeds](manage-knowledge.md#subscribe-to-rss-feeds)
+- **Knowledge collection**  
+  Collect web content, save resources to Wise, and subscribe to RSS feeds directly from your browser.
+  :::details Related guides
+  - [Collect content via LarePass extension](/manual/olares/wise/basics.md#save-from-browser-with-larepass-extension)
+  - [Subscribe to RSS feeds](/manual/olares/wise/subscribe.md#use-larepass-browser-extension)
+  :::
+
+## Download LarePass
+
+### iOS
+Visit the [App Store product page](https://apps.apple.com/us/app/larepass/id6448082605) to download LarePass.
+
+### Android
+Visit the [Google Play product page](https://play.google.com/store/apps/details?id=com.terminus.termipass), or download the latest APK directly from the [LarePass website](https://www.olares.com/larepass).
+
+### macOS & Windows
+Download the latest desktop client from the [LarePass website](https://www.olares.com/larepass).
+
+### Chrome extension
+
+The LarePass extension allows you to collect content and manage passwords directly from your browser. It currently supports Google Chrome only and must be installed manually.
+
+:::warning Keep the extension folder
+Your browser loads the extension from the folder you select. If you delete, move, or rename that folder, the extension will stop working.  
+Extract the ZIP file to a permanent location, such as a folder under your user directory, rather than a temporary directory.
+:::
+
+1. Visit the [LarePass website](https://www.olares.com/larepass) and download the extension ZIP file.
+2. Extract the ZIP file to a permanent folder on your computer.
+3. In Chrome, go to `chrome://extensions/`.
+4. Enable **Developer mode** in the top-right corner.
+5. Click **Load unpacked** and select the extracted extension folder.
+
+:::tip Quick access
+After installation, click the puzzle icon in your browser toolbar and pin the LarePass extension for one-click access.
+:::
+
+### Set up account 
+- On mobile devices, you can [create an Olares ID](/manual/larepass/create-account.md#create-an-olares-id) directly in the app.
+- On the desktop client or Chrome extension, you must [import an existing Olares account](/manual/larepass/create-account.md#import-an-existing-account).
 
 ## Feature comparison
 
@@ -180,39 +224,3 @@ Use LarePass to collect web content and follow RSS feeds.
     </tr>
   </tbody>
 </table>
-
-
-## Download and install LarePass
-
-Get the latest version for your device at the [LarePass website](https://www.olares.com/larepass).
-
-### Install the LarePass browser extension
-
-<tabs>
-<template #Install-from-Chrome-Web-Store>
-
-1. Search for **LarePass** in the [Chrome Web Store](https://chrome.google.com/webstore).
-2. Open the details page and click **Add to Chrome**.
-3. Log into the LarePass extension by importing your Olares ID:
-   - Open the LarePass extension, and click **Import an account**.
-   - Enter the mnemonics for your Olares ID.
-   - Enter your Olares password to complete login.
-
-</template>
-
-<template #Install-offline>
-
-1. Visit [https://www.olares.com/larepass](https://www.olares.com/larepass) and download the extension ZIP file.
-2. Go to `chrome://extensions/` in your browser.
-3. Enable **Developer mode** in the top-right corner.
-4. Click **Load unpacked** and select the extracted LarePass extension folder.
-5. Log in:
-   - Open the LarePass extension, and click **Import an account**.
-   - Enter the mnemonics for your Olares ID.
-   - Enter your Olares password to complete login.
-</template>
-</tabs>
-
-  :::tip Quick access
-  After installation, pin the LarePass extension from Chrome’s extension menu for one-click access.
-  :::
