@@ -214,8 +214,30 @@ export const developerSidebar: DefaultTheme.Sidebar = {
         //   ],
         //   },
         {
-          text: "Runtime values",
-          link: "/developer/develop/runtime-values",
+          text: "Application environment variables",
+          link: "/developer/develop/app-env-index",
+          collapsed: true,
+          items: [
+            {
+              text: "Custom environment variables",
+              link: "/developer/develop/app-env-vars",
+              collapsed: true,
+              items:[
+                {
+                  text: "System environment variables",
+                  link: "/developer/develop/app-sys-env-vars",
+                },
+                {
+                  text: "User environment variables",
+                  link: "/developer/develop/app-user-env-vars",
+                },
+              ]
+            },
+            {
+              text: "Runtime values",
+              link: "/developer/develop/runtime-values",
+            },
+          ]
         },
         {
           text: "Middleware",

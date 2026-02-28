@@ -39,6 +39,8 @@ spec:
 
 ## 变量参考
 
+下表中的类型表示 Helm values 的数据类型，并不对应 `OlaresManifest.yaml` 中 `envs.type` 的枚举定义。
+
 ### 用户与身份信息
 | 变量 | 类型 | 说明 |
 | -- | -- | -- |

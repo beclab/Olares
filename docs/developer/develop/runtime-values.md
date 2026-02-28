@@ -39,6 +39,8 @@ spec:
 
 ## Value reference
 
+The "Type" column below describes the data type in Helm values and does not correspond to the `envs.type` enum in `OlaresManifest.yaml`.
+
 ### User and identity
 | Value | Type | Description |
 | -- | -- | -- |

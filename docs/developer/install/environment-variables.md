@@ -1,80 +1,161 @@
 ---
 outline: [2, 3]
-description: Reference for environment variables used to customize the Olares installation process.
+description: Environment variables available in Olares for customizing networking, authentication, GPU support and other features. Includes configuration examples and specifications.
 ---
-# Customize Olares installation with environment variables
+# Olares environment variables
 
-Olares supports advanced installation customization through shell-level environment variables.
+Olares provides a highly customizable installation process through the use of environment variables. These variables can override default settings, enabling advanced configurations to suit your specific requirements.
 
-These variables are evaluated by the installation script and override default settings, allowing you to configure networking behavior, hardware support, Kubernetes distribution, and initial system setup.
+## Usage examples
 
-:::info 
-These variables are only effective during installation. They are not available as environment variables inside application Helm charts, containers, or runtime environments.
-:::
+To customize the installation process, you can set the environment variables before running the installation command. For example:
 
-## Usage example
-
-Set the environment variables in your terminal before running the installation command.
-
-### Use the official installer
 ```bash
 # Specify Kubernetes (k8s) instead of k3s
 export KUBE_TYPE=k8s \
 && curl -sSfL https://olares.sh | bash -
 ```
 
-### Use a local installation script
+Or, if you have already downloaded the installation script `install.sh`:
 
 ```bash
 # Specify Kubernetes (k8s) instead of k3s
 export KUBE_TYPE=k8s && bash install.sh
 ```
+
 Both methods achieve the same result. The environment variable `KUBE_TYPE` is passed to the installation script and modifies its behavior accordingly.
 
 ## Environment variables reference
 
-### Kubernetes & infrastructure
+The section lists all the environment variables, along with their default values, optional values, and descriptions. Configure them as needed. 
 
-|Variable| Type | Default | Allowed values | Description |
-|--|--|--|--|--|
-| `KUBE_TYPE` | String | `k3s` | `k3s`, `k8s` | Determines the Kubernetes distribution to install. |
-| `PREINSTALL` | Integer | — | `1` | Runs only the system dependency setup phase.|
-| `JUICEFS` | Integer | — | `1` | Installs [JuiceFS](https://juicefs.com/) alongside Olares.|
-| `REGISTRY_MIRRORS` | URL | `https://registry-1.docker.io` | Valid URL | Specifies a custom Docker registry mirror for image pulls. |
+### CLOUDFLARE_ENABLE 
 
-### Networking & exposure
-|Variable| Type | Default | Allowed values | Description |
-|--|--|--|--|--|
-| `PUBLICLY_ACCESSIBLE` |	Integer |	`0`	| `0`, `1` |If `1`, specifies machine is publicly accessible, and reverse proxy is skipped. |
-| `CLOUDFLARE_ENABLE` |	Integer |	`0` |	`0`, `1` | If `1`, enables Cloudflare proxy support. |
-| `FRP_ENABLE` | Integer | `0` | `0`, `1` |	If `1`, enables FRP for internal network tunneling.|
-| `FRP_AUTH_METHOD` |	String	| `jws` |	`jws`, `token`, empty string | Sets the FRP authentication method. When set to `token`, `FRP_AUTH_TOKEN` is required. When set to empty string, no authentication is used. |
-| `FRP_AUTH_TOKEN` | String	| — |	Any non-empty string | Token for FRP communication (required if `FRP_AUTH_METHOD`=`token`).|
-| `FRP_PORT` | Integer | `7000` |	`1–65535`	| Specifies the FRP server's listening port. Defaults to `7000` if unset or set to `0`. |
+Specifies whether to enable the Cloudflare proxy. 
+- **Valid values**: 
+    - `0` (disable) 
+    - `1` (enable) 
+- **Default**: `0` 
 
-### GPU configuration
-|Variable| Type | Default | Allowed values | Description |
-|--|--|--|--|--|
-| `LOCAL_GPU_ENABLE` | Integer | `0` | `0`, `1` | If `1`, enables GPU support and installs related drivers. |
-| `LOCAL_GPU_SHARE` | Integer | `0`| `0`, `1` | If `1`, enables GPU sharing (applies only if GPU is enabled). |
-| `NVIDIA_CONTAINER_REPO_MIRROR` | String | `nvidia.github.io` | Mirror URL | Specifies the APT repository mirror for installing the NVIDIA Container Toolkit. |
+### FRP_AUTH_METHOD 
 
-### Initial account & domain setup
-These variables skip interactive prompts during installation.
+Sets the FRP authentication method. 
+- **Valid values**: 
+    - `jws `
+    - `token` (requires `FRP_AUTH_TOKEN`) 
+    - (empty) – No authentication 
+- **Default**: `jws` 
 
-| Variable | Type | Default | Validation | Description |
-|--|--|--|--|--|
-| `TERMINUS_OS_USERNAME` | String | Prompt | 2–250 characters | Admin username (no reserved keywords). |
-| `TERMINUS_OS_PASSWORD` | String | Random 8-character password | 6–32 characters | Admin password. |
-| `TERMINUS_OS_EMAIL` | String | Temporary generated email | Valid email | Admin email address. |
-| `TERMINUS_OS_DOMAINNAME` | String | Prompt | Valid domain | System domain name. |
-| `TERMINUS_IS_CLOUD_VERSION`| Boolean | — | `true` | Marks the machine explicitly as a cloud instance. |
+### FRP_AUTH_TOKEN 
 
-:::info Reserved keywords
-`user`, `system`, `space`, `default`, `os`, `kubesphere`, `kube`, `kubekey`, `kubernetes`, `gpu`, `tapr`, `bfl`, `bytetrade`, `project`, `pod`.
-:::
+Specifies the token for FRP communication (required if `FRP_AUTH_METHOD=token`). 
+- **Valid values**: Any non-empty string 
+- **Default**: None 
 
-### Security
-| Variable | Type | Default | Description |
-|--|--|--|--|
-| `TOKEN_MAX_AGE` | Integer | `31536000` | Maximum validity period for authentication tokens (in seconds). |
+### FRP_ENABLE 
+
+Specifies whether to enable FRP for internal network tunneling. Requires additional FRP-related variables if using a custom server. 
+- **Valid values**: 
+    - `0` (disable) 
+    - `1` (enable) 
+- **Default**: `0` 
+
+### FRP_PORT 
+
+Specifies the FRP server's listening port. 
+- **Valid values**: An integer in the range `1–65535` 
+- **Default**: `7000` (if not set or set to `0`) 
+
+### JUICEFS 
+
+Installs [JuiceFS](https://juicefs.com/) alongside Olares. 
+- **Valid values**: `1` 
+- **Default**: None (does not install JuiceFS if not set) 
+
+### KUBE_TYPE 
+
+Determines the Kubernetes distribution to install. 
+- **Valid values**: 
+    - `k8s`(full Kubernetes) 
+    - `k3s` (lightweight Kubernetes) 
+- **Default**: `k3s` 
+
+### LOCAL_GPU_ENABLE 
+Specifies whether to enable GPU support and install related drivers. 
+- **Valid values**: 
+    - `0` (disable) 
+    - `1` (enable) 
+- **Default**: `0` 
+
+### LOCAL_GPU_SHARE 
+
+Specifies whether to enable GPU sharing. Applies only if GPU is enabled. 
+- **Valid values**:
+    - `0` (disable) 
+    - `1` (enable) 
+- **Default**: `0` 
+
+### NVIDIA_CONTAINER_REPO_MIRROR 
+
+Specifies the APT repository mirror for installing NVIDIA Container Toolkit. 
+- **Valid values**: 
+    - `nvidia.github.io` 
+    - `mirrors.ustc.edu.cn` (recommended for better connectivity in mainland China) 
+- **Default**: `nvidia.github.io` 
+
+### PREINSTALL 
+
+Runs only the pre-installation phase (system dependency setup) without proceeding to the full Olares installation. 
+- **Valid values**: `1` 
+- **Default**: None (performs full installation if not set) 
+
+### PUBLICLY_ACCESSIBLE 
+
+Explicitly specifies that this machine is accessible publicly on the internet, and a reverse proxy should not be used.
+- **Valid values**: 
+    - `0` (false) 
+    - `1` (true) 
+- **Default**: `0` 
+
+### REGISTRY_MIRRORS 
+
+Specifies a custom Docker registry mirror for faster image pulls. 
+- **Valid values**: `https://mirrors.olares.com` or any other valid URL 
+- **Default**: `https://registry-1.docker.io` 
+
+### TERMINUS_IS_CLOUD_VERSION 
+
+Marks the machine explicitly as a cloud instance. 
+- **Valid values**: `true` 
+- **Default**: None 
+
+### TERMINUS_OS_DOMAINNAME 
+
+Sets the domain name before installation to skip the interactive prompt. 
+- **Valid values**: Any valid domain name 
+- **Default**: None (prompts for domain name if not set) 
+
+### TERMINUS_OS_EMAIL 
+
+Specifies the email address to use instead of a generated one. 
+- **Valid values**: Any valid email address 
+- **Default**: None (a temporary email is generated if not set) 
+
+### TERMINUS_OS_PASSWORD 
+
+Specifies the password to use instead of a generated one. 
+- **Valid values**: A valid password with 6–32 characters 
+- **Default**: A randomly generated 8-character password 
+
+### TERMINUS_OS_USERNAME 
+
+Specifies the username before installation to skip the interactive prompt. 
+- **Valid values**: Any valid username (2–250 characters, excluding reserved keywords) 
+- **Default**: None (prompts for username if not set) 
+- **Validation**: Reserved keywords include `user`, `system`, `space`, `default`, `os`, `kubesphere`, `kube`, `kubekey`, `kubernetes`, `gpu`, `tapr`, `bfl`, `bytetrade`, `project`, `pod`. 
+
+### TOKEN_MAX_AGE 
+
+Sets the maximum validity period for a token (in seconds). 
+- **Valid values**: Any integer (in seconds) 
+- **Default**: `31536000` (365 days)

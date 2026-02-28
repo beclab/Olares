@@ -228,9 +228,31 @@ export const developerSidebar: DefaultTheme.Sidebar = {
             //         },
             //       ],
             //      },
-                    {
-          text: "运行时变量",
-          link: "/zh/developer/develop/runtime-values",
+        {
+          text: "应用环境变量",
+          link: "/zh/developer/develop/app-env-index",
+          collapsed: true,
+          items: [
+            {
+              text: "环境变量",
+              link: "/zh/developer/develop/app-env-vars",
+              collapsed: true,
+              items: [
+                {
+                  text: "系统环境变量",
+                  link: "/zh/developer/develop/app-sys-env-vars",
+                },
+                {
+                  text: "用户环境变量",
+                  link: "/zh/developer/develop/app-user-env-vars",
+                },
+              ]
+            },
+            {
+              text: "运行时变量",
+              link: "/zh/developer/develop/runtime-values",
+            },
+          ]
         },
     {
               text: "中间件",
