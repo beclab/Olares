@@ -19,9 +19,9 @@ You can connect to the host shell using one of the following methods:
 
 ## Before you begin
 
-- The default username and password for Olares One are both `olares`.
-   :::warning Reset default SSH password
-   Even if you primarily use the Control Hub terminal, you must reset this password immediately in **Settings** > **My hardware** to secure your device against unauthorized access.
+- The default username and password for Olares One are both `olares`. 
+   :::tip Reset default SSH password
+   Reset this password as soon as you finish setup to secure your device. If you have already reset it but do not remember it, see [Reset SSH password](#reset-ssh-password) to view the saved password in Vault or reset it again.
    :::
 - SSH access grants powerful control over the system. Ensure you keep your credentials secure.
 
@@ -107,3 +107,5 @@ For security, SSH access via VPN is disabled by default. You must enable it once
     ssh olares@192.168.31.155
     ```
 5. Enter the host password when prompted.
+
+<!--@include: ./reusables-reset-ssh.md{4,}-->
