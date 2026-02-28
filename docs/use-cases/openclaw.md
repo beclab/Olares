@@ -26,7 +26,12 @@ By the end of this tutorial, you are be able to:
 
 ## Prerequisites
 
-- Local model: Ensure Ollama is installed and running. You must have a tool-capable model installed, such as `glm-4.7-flash`, `qwen3`, and `llama3.1`. This tutorial uses `llama3.1:8b`.
+- Local model: Ensure Ollama is installed and running. You must have a tool-capable model installed, such as `glm-4.7-flash`, `qwen3.5:27b`, and `gpt-oss:20b`. This tutorial uses `qwen3.5:27b`.
+
+    :::tip
+    OpenClaw requires a large "context window" (that is the AI's short-term memory) to handle complex tasks without forgetting your previous instructions. If you are using local models, it is recommended to select a model that natively supports a context window of at least 64K tokens.
+    :::
+
 - Discord account: Required to create the bot application.
 - Discord server: A server where you have permissions to add bots.
 - (Optional) Brave search API key: Required for the agent to search the web for real-time information. 
@@ -190,7 +195,7 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     "agents": {
         "defaults": {
             "model": {
-                "primary": "ollama/llama3.1:8b"
+                "primary": "ollama/qwen3.5:27b"
             },
             "workspace": "/home/node/.openclaw/workspace",
             "maxConcurrent": 4,
