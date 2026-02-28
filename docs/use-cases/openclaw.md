@@ -21,8 +21,8 @@ By the end of this tutorial, you are be able to:
 - Pair and connect the OpenClaw CLI and the Control UI.
 - Configure OpenClaw to use the local AI model Ollama.
 - Integrate OpenClaw with Discord.
-- Manage skills and plug-ins.
 - Enable the web search capability using Brave Search.
+- Manage skills and plug-ins.
 
 ## Prerequisites
 
@@ -31,9 +31,66 @@ By the end of this tutorial, you are be able to:
 - Discord server: A server where you have permissions to add bots.
 - (Optional) Brave search API key: Required for the agent to search the web for real-time information. 
 
-    :::tip Tip
-    You can obtain a free API key from the [Brave Search API](https://brave.com/search/api/). The free tier of the "Data for Search"" plan is usually sufficient for personal use.
+    :::tip
+    You can obtain a free API key from the [Brave Search API](https://brave.com/search/api/). The free tier of the "Data for Search" plan is usually sufficient for personal use.
     :::
+
+## Upgrade notes
+
+If you are upgrading an existing OpenClaw installation, review the following version-specific changes and troubleshooting steps before proceeding.
+
+### Upgrade to 2026.02.25
+
+The OpenClaw 2026.02.25 update introduced a security enhancement that requires existing users to explicitly declare the allowed Control UI access address. Therefore, if your Control UI fails to start after the upgrade, follow these steps to resolve the issue.
+
+1. Open Control Hub on your desktop to check the container logs for **clawdbot**. 
+
+    ![Check container logs](/images/manual/use-cases/check-container-logs.png#bordered)
+
+2. Look for the following error message. If it appears, proceed to the next step.
+
+    ```text
+    Gateway failed to start: Error: non-loopback Control UI requires gateway.controlUi.allowedOrigins (set explicit origins), or set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true to use Host-header origin fallback mode
+    ```
+    
+    ![Error logs](/images/manual/use-cases/container-logs.png#bordered)
+
+3. Open **Settings**, go to **Application** > **OpenClaw** > **Control UI** > **Set up endpoint**, and then copy the endpoint address.
+
+    ![OpenClaw endpoint address](/images/manual/use-cases/openclaw-endpoint.png#bordered){width=70%}    
+
+4. Open **Files**, go to **Application** > **Data** > **clawdbot** > **config**, right-click the `openclaw.json` file, and then download it.
+
+    ![OpenClaw configuration file](/images/manual/use-cases/openclaw-config-json.png#bordered)
+
+5. Open the downloaded file in a text editor, find the `gateway` section, and then add a `controlUi` block with your endpoint address.
+
+    ```json
+    "controlUi": {
+      "allowedOrigins": ["Endpoint-Address"]
+    },
+    ``` 
+    ![Update configuration file](/images/manual/use-cases/add-control-ui-endpoint.png#bordered)
+
+    :::info
+    If you access the Control UI using multiple addresses such as local URLs or custom domains, add them to the `allowedOrigins` array separated by commas. For example, `["https://url-one.com", "https://url-two.com"]`.
+    :::
+    
+6. Return to Files, rename the original `openclaw.json` file to keep it as a backup, and then upload your modified `openclaw.json` file.
+
+7. Return to Control Hub, click **clawbot** under **Deployments**, and then click **Restart** in the upper-right corner.
+
+     ![Restart OpenClaw](/images/manual/use-cases/restart-openclaw.png#bordered)
+    
+8. In the **Restart clawdbot** window, type `clawdbot` exactly as shown, and then click **Confirm**. Wait for the program status to show as **Running**, which is indicated by a green dot.
+
+      ![Restart finish](/images/manual/use-cases/restart-openclaw-finish.png#bordered)   
+
+9. Check the container logs again to verify the gateway has started successfully.
+
+      ![Verify container logs](/images/manual/use-cases/verify-container-logs.png#bordered)       
+    
+10. Open the Control UI. Refresh the browser page if an error still displays.
 
 ## Install OpenClaw
 
@@ -47,47 +104,51 @@ By the end of this tutorial, you are be able to:
 
     ![OpenClaw entry points](/images/manual/use-cases/openclaw-entry-points.png#bordered){width=30%}
 
+:::tip Run multiple OpenClaw agents
+Olares supports app cloning. If you want to run multiple independent AI agents for different tasks, you can clone the OpenClaw app. For more information, see [Clone applications](../manual/olares/market/clone-apps.md).
+:::
+
 ## Initialize OpenClaw
 
 Run a quick setup for the agent in the OpenClaw CLI.
 
 1. Open the OpenClaw CLI app from the Launchpad.
-2. Enter the following command to start the onboarding wizard.
+2. Enter the following command to generate the dashboard access credentials:
+    ```bash
+    openclaw dashboard --no-open
+    ```
+3. Locate the **Dashboard URL** in the terminal output.
+4. Find and copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token.
+
+    ![Obtain gateway token](/images/manual/use-cases/obtain-gateway-token.png#bordered)
+5. Open the Control UI app from the Launchpad.
+6. On the **Overview** page, in the **Gateway Access** panel, specify the following settings:
+    - **Gateway Token**: Enter the token you copied in the previous step.
+    - **Default Session Key**: Enter `agent:main:main`.
+7. Click **Connect**.
+
+    The connection error `disconnected[1008]:pairing required` occurs. This is expected and means the device connection is waiting for approval.
+8. Return to the OpenClaw CLI window and enter the following command:
 
     ```bash
-    openclaw onboard
+    openclaw devices approve --latest
     ```
-    ![OpenClaw onboarding wizard](/images/manual/use-cases/openclaw-wizard.png#bordered){width=80%}
+9. When the terminal displays the approval message, return to the Control UI and refresh it.
+    ![Pair sucess](/images/manual/use-cases/new-pair-success.png#bordered)
 
-3. The wizard guides you through a series of steps. Use the arrow keys to navigate and press Enter to confirm.
+    Now the **STATUS** in the **Snapshot** panel should be **Connected**.
 
-    :::tip Note on configurations
-    - To get you started quickly, this tutorial skips several advanced settings in the wizard. You can configure or modify them later.
-    - Do not configure skills here, because the Olares security environment prevents the wizard from automatically installing skills. You need to install them manually. For more information, see [Manage skills and plugins](#manage-skills-and-plugins).
-    :::
+    ![Health OK](/images/manual/use-cases/openclaw-connected.png#bordered)
 
-    | Settings | Option |
-    |:-------- |:-------|
-    | I understand this is powerful and inherently <br>risky. Continue? | Yes |
-    | Onboarding mode | QuickStart |
-    | Config handling | Use existing values |
-    | Model/auth provider | Skip for now |
-    | Filter models by provider | All providers |
-    | Default model | Keep current |
-    | Select channel | Skip for now |
-    | Configure skills now | No<br>(Manual installation required) |
-    | How do you want to hatch your bot | Do this later |
-    
-4. After you complete the wizard, close OpenClaw CLI and open it again.
-5. Enter the following command to obtain the gateway token:
+:::tip For advanced users
+If you prefer to fully customize your initial setup, you can run the `openclaw onboard` command instead to launch the interactive configuration wizard.
+:::
 
-    ```bash
-    openclaw config get gateway.auth.token
-    ```
+## (Optional) Pair device manually
 
-6. Copy the token and keep the OpenClaw CLI window open for the next step.
-
-## Pair device
+:::tip When to use manual pairing
+The quick setup in the previous section uses the `openclaw devices approve --latest` command to automatically approve the most recent pairing request. If you have multiple pending requests and need to manually select which device to approve, follow the steps in this section instead.
+:::
 
 Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 
@@ -115,7 +176,7 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     ```bash
     openclaw devices approve {RequestID}
     ```
-7. When the terminal displays `Approved {DeviceID}`, return to the Control UI. Now the **STATUS** in the **Snapshot** panel should be **Connected**.
+7. When the terminal displays the approval message, return to the Control UI. Now the **STATUS** in the **Snapshot** panel should be **Connected**.
 
     ![Health OK](/images/manual/use-cases/openclaw-connected.png#bordered)
 
@@ -128,14 +189,14 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     ```json
     "agents": {
         "defaults": {
-        "model": {
-            "primary": "ollama/llama3.1:8b"
-        },
-        "workspace": "/home/node/.openclaw/workspace",
-        "maxConcurrent": 4,
-        "subagents": {
-            "maxConcurrent": 8
-        }
+            "model": {
+                "primary": "ollama/llama3.1:8b"
+            },
+            "workspace": "/home/node/.openclaw/workspace",
+            "maxConcurrent": 4,
+            "subagents": {
+                "maxConcurrent": 8
+            }
         }
     },
     ```
