@@ -1,76 +1,223 @@
 ---
-outline: [2, 4]
+outline: [2, 4] 
 description: Learn how to install LobeChat on Olares and integrate it with Ollama to build and enhance your local custom AI assistants.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LobeHub agent, LobeChat assistant, AI agent, AI agent team
 ---
 
-# Build your local AI assistant with LobeChat
+# Build your local AI agent with LobeHub
 
-LobeChat is an open‑source framework for building secure, local AI chat experiences. It supports file handling, knowledge bases, and multimodal inputs, and it supports Ollama to run and switch local LLMs.
+LobeHub (previously LobeChat) is an open‑source framework for building secure, local AI chat experiences. It supports file handling, knowledge bases, and multimodal inputs, and it supports Ollama to run and switch local LLMs.
 
 Olares streamlines and simplifies the deployment of both, allowing you to skip complex manual environment configurations.
 
-This guide covers the installation, configuration, and practical usage of these tools to create your personalized AI assistants.
+This guide covers the installation, configuration, and practical usage of these tools to create your personalized AI agents.
 
 ## Learning objectives
 
-By the end of this guide, you are able to:
-- Configure LobeChat to communicate with your local Ollama instance.
-- Use LobeChat for specific scenarios such as content writing and coding.
+- Configure LobeHub to communicate with your local Ollama instance.
+- Create specialized agents tailored to specific tasks and equip them with specific Skills.
+- Create an agent group to enable multiple agents to collaborate on complex workflows.
+- Use LobeHub for practical scenarios such as content writing and coding.
 
 ## Prerequisites
 
 Before you begin, make sure:
 
 - Ollama is installed and running in your Olares environment.
-- At least one model is installed using Ollama. For more information, see [Ollama](ollama.md).
+- The models you want to use are downloaded using Ollama. This tutorial uses `llama3.1:8b` and `qwen2.5`. For more information, see [Download a model](ollama.md#download-a-model).
 
-## Install LobeChat
+## Install LobeHub
 
 1. From the Olares Market, search for "LobeChat".
 
-   ![Search for LobeChat from Market](/images/manual/use-cases/find-lobechat.png#bordered)
+   ![Search for LobeChat from Market](/images/manual/use-cases/find-lobechat1.png#bordered)
 
 2. Click **Get**, and then click **Install**. Wait for the installation to finish.
 
-## Configure the connection
-
-After the installation is completed, you must connect LobeChat to Ollama to make the chat interface work.
+## Sign in to LobeHub
 
 1. Open **LobeChat** from Launchpad.
-2. Click the LobeChat icon in the upper-left corner, and then go to **Settings** > **Language Model**.
+2. In the **Sign up or log in to your LobeHub account** field, enter your email address, and then click <i class="material-symbols-outlined">arrow_forward_ios</i>.
+3. If you have not signed up before, you are prompted to create an account using this email. And then you are signed in to LobeHub directly. Click let's get started. Set up your user name, your interested areas, language preference, default model used by the agent (you can change later). Then you are ready to go.
 
-   ![LobeChat settings menu](/images/manual/use-cases/lobechat-settings-menu.png#bordered){width=75%} 
+      ![LobeHub welcome interface](/images/manual/use-cases/lobehub-start.png#bordered)
 
-3. (Optional) To obtain your local Ollama host address, go to Olares **Settings** > **Application** > **Ollama** > **Ollama API** > **Set up endpoint**, and then copy the endpoint address.
+## Configure the connection
 
-   ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl.png#bordered){width=60%} 
+Connect LobeHub to Ollama to make the chat interface work.
 
-4. In the **Ollama** section, find the **Interface proxy address** field, and then enter your local Ollama address. 
+1. From the left sidebar, click **AI Service Provider**, and then select **Ollama**.
 
-   ![Interface proxy address connection](/images/manual/use-cases/lobechat-connection-setting.png#bordered)
+      ![Configure Ollama in LobeHub](/images/manual/use-cases/lobehub-config-ollama.png#bordered)
 
-5. Click **Check** under the Ollama model list to verify the connection. A **Check Passed** message indicates that the proxy address is correct.
+2. In the **Interface proxy address** field, enter your local Ollama address.
 
-   ![Ollama connection successful](/images/manual/use-cases/ollama-model-checkpass.png#bordered)
+   :::tip Obtain your local Ollama host address
+   To obtain your local Ollama host address, go to Olares **Settings** > **Applications** > **Ollama**, click **Ollama API** under **Entraces** or **Shared entrances**, and then copy the endpoint address.
 
-## Install language models
+   ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl1.png#bordered){width=60%} 
 
-By default, LobeChat lists supported models, including models that are not installed yet. 
+3. Disable the **Use Client Request Mode** option.
 
-You can click **Get Model List** to fetch available models from Ollama.
+   :::tip
+   When you are running local models, do not enable the **Use Client Request Mode** option.
+   :::
+4. In **Model List**, click **Fetch models** to pull the list of installed models, and then enable the models you want to use.
 
-To download additional models, use one of the following options:
-   - Download via LobeChat UI
+   ![Fetch model list and enable models](/images/manual/use-cases/lobehub-fetch-enable-model.png#bordered){width=85%} 
 
-      When you are chatting with a selected language model, if the language model is not installed, you are prompted right in the chat to download and install it.
+5. In the **Connectivity Check** section, select the model you just enabled, and then click **Check** to verify the connection. When the model is large, it might take a while to load.
 
-      ![Install language model via LobeChat UI](/images/manual/use-cases/download-in-lobechat.png#bordered)
+   ![Connectivity check](/images/manual/use-cases/lobehub-connectivity-check.png#bordered){width=85%} 
 
-   - Download using the Ollama CLI. For more information, see [Download a model](ollama.md#download-a-model).
+   The button turning to **Check Passed** indicates that the proxy address is correct. 
 
-## Create an assistant
+   ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass.png#bordered){width=85%}    
 
-LobeChat allows you to create specialized assistants to handle specific tasks by leveraging various language models and combining them with functional plug-ins.
+6. Click the home icon at the upper-left corner to return to the main page.
+
+   ![Return to homepage](/images/manual/use-cases/lobehub-return-home.png#bordered){width=45%} 
+
+## Use Lobe AI
+
+1. From the left sidebar, click **Lobe AI**.
+   
+   ![Click Lobe AI](/images/manual/use-cases/lobe-ai.png#bordered){width=85%} 
+
+## Create an agent 
+
+### Create an agent using Agent Builder
+
+If you prefer not to configure everything manually, you can use Agent Builder. This is LobeHub's built-in assistant that helps you create specialized agents through conversations. Simply describe your needs, and it will automatically generate a complete agent configuration, including role settings, system prompts, and skill setups.
+
+1. On the homepage, click **Create Agent** under the chat box.
+
+   ![Create Agent button](/images/manual/use-cases/lobehub-create-agent.png#bordered){width=85%} 
+
+2. In the chat box, describe the specific task you want the agent to handle. For exmaple,
+
+   ```
+   I need an agent to review my daily work items and summarize them.
+   The summary should focus on the overall purpose of the tasks and
+   highlight specific action items.
+   ```
+3. Select the language model. For exmaple, `llama3.1:8b`.
+4. Press **Enter**. The profile page of the new agent opens, and you can see the Agent Builder immediately starts configuring your agent automatically.
+
+   ![Agent builder](/images/manual/use-cases/lobehub-agent-builder.png#bordered){width=85%} 
+
+5. Use the chat interface on the lower right to interact with the Agent Builder. As you provide more details or refine your requirements, the Agent Builder automatically drafts and updates. 
+6. After the creation is completed, click **Start Conversation** to use the agent.
+7. Provide your text in the chat, and then you can get the refined results.
+
+   ![Start using agent](/images/manual/use-cases/lobehub-agent-use1.png#bordered){width=85%} 
+
+### Create a custom agent
+
+If you have specific needs, you can create a custom assistant tailored to your personal requirements.
+
+Custom assistants offer the highest level of personalization. You can set the assistant’s avatar, name, prompts, preferred AI model, and plugins to create a truly unique AI assistant. All customization can be done manually on the assistant profile page.
+
+1. On the homepage, click the robot icon and then select **Create Agent**.
+
+   ![Create custom agent](/images/manual/use-cases/lobehub-create-custom-agent.png#bordered){width=40%} 
+
+   The **Agent Profile** page opens.
+
+   ![Custom agent profile](/images/manual/use-cases/lobehub-custom-agent-profile.png#bordered){width=85%} 
+
+2. Enter the agent name, select the language model,
+
+## Manage agents
+
+When you have many assistants and group chats, organizing them into groups is the most intuitive way to manage them. It keeps your assistant list clean and makes switching between them easier.
+
+### Create a group
+
+On the LobeHub homepage, open the assistant list menu and select "Add New Group" to create a new group.
+
+### Move to a group
+
+If you have multiple groups, go to the assistant list or group menu and select "Manage Groups" to easily rename or reorder them.
+
+### Pin freqnetly used agents
+
+You can pin frequently used assistants to the top of the list for quicker access. Select the assistant and choose "Pin" from the menu. Pinned assistants will stay at the top of the list for easy access.
+
+## Create an agent team
+
+For complex workflows, a single agent might not be enough. LobeHub allows you to create an Agent Group (or Agent Team), where multiple specialized agents collaborate, execute tasks in parallel, and iterate on each other's work.
+
+<!--1. On the homepage, click the robot icon and then select **Create Group**.
+
+   ![Create agent group](/images/manual/use-cases/lobehub-create-agent-group.png#bordered){width=40%} 
+
+   The Group Profile page opens.
+
+2. In the **Agent Builder** panel, describe the specific task you want the agent team to handle in the chat box. For exmaple,
+
+   ```
+   I need a team to research trending tech news and write a daily newsletter.
+   One agent should gather the facts, and another should format them into an
+   engaging email draft.
+   ```
+3. Select the language model, and then press **Enter**.
+
+   ![Agent group builder](/images/manual/use-cases/lobehub-group-builder.png#bordered){width=40%} 
+
+   The profile page of the new agent group opens, and you can see the Agent Builder immediately starts designing your agent team automatically.-->
+
+1. On the homepage, click **Create Group** under the chat box.
+
+   ![Create Group button](/images/manual/use-cases/lobehub-create-group.png#bordered){width=85%} 
+
+2. In the chat box, describe the specific task you want the agent team to handle. For exmaple,
+
+   ```
+   I need a team to research trending tech news and write a daily newsletter.
+   One agent should gather the facts, and another should format them into an
+   engaging email draft.
+   ```
+3. Select the language model, and then press **Enter**.
+
+   ![Create Group chat box](/images/manual/use-cases/lobehub-create-group-start.png#bordered){width=85%} 
+
+   The profile page of the new agent group opens, and you can see the Lobe AI immediately starts designing your agent team automatically.
+
+   ![Agent group builder](/images/manual/use-cases/lobehub-agent-group-builder.png#bordered){width=85%} 
+
+4. Communicate with Lobe AI to clarity your requirements, provide details to it for next step, confirm operations, or approve actions.
+
+   For example, you agree with the Lobe AI's design to create a new agent for tech news gathering, and then you provide the following details to it:
+
+   ```
+   Agent name: TechNewsGatherer
+   Description: Responsible for collecting and summarizing the latest tech news from give URL.
+   Tools: Web-crawler to fetch relevant articles from related tech websites.
+   System Role: Information catching.
+   ```
+   
+   It will send a create agent request for you to approve:
+
+   ![Building agent group](/images/manual/use-cases/creating-agent-team.png#bordered){width=35%} 
+
+   Once approved, the new agent is created and added to the agent team automatically.
+
+    ![Agent team member created](/images/manual/use-cases/agent-group-member-created.png#bordered){width=85%} 
+
+5. From the left sidebar, point to **Memebers**, and then click the **Add Member** icon to bring additional assistants into the group chat.
+6. From the left sidebar, point to an existing member, and then click the **Remove Member** icon to delete a member from the group chat.
+7. Configure the group setting, such as group name, description on group objectives or work modes.
+8. When all set, click **Start Conversation** to use it.
+
+
+
+<!--## Create an assistant
+
+LobeHub allows you to create specialized assistants to handle specific tasks by leveraging various language models and combining them with functional plug-ins.
 
 - **Flexible model switching**: You can switch language models instantly within the same chat to achieve the best results. For example, if you are not satisfied with a response, you can select a different model from the list to leverage their unique strengths.
 - **Plug-in extensions**: You can also install plug-ins to extend and enhance the capabilities of your assistant.
@@ -82,7 +229,7 @@ LobeChat allows you to create specialized assistants to handle specific tasks by
 The following steps outline the standard workflow for creating and configuring any assistant in LobeChat. You can apply this procedure using specific settings provided in the [use scenarios](#use-scenarios) section.
 
 1. Create a new assistant:
-   - From the left navigation pane, click **New Assistant**. 
+   - From the left navigation pane, click **Lobe AI**. 
    - If you already have active chats, click <i class="material-symbols-outlined">add_comment</i> to create a new one.
 2. Configure the assistant such as identity and role:
 
@@ -253,20 +400,13 @@ Build an assistant that keeps you updated with the latest technology trends. By 
 
 1. In the basic interaction area, hover over the plug-in icon to ensure that the **Website Crawler** plug-in is enabled.
 2. Send the URL address to the chat. For example, `https://github.com/trending`.
-3. Paste and send the URL to the chat. The assistant lists specific news stories with summaries.
+3. Paste and send the URL to the chat. The assistant lists specific news stories with summaries.-->
 
 ## FAQ
 
 ### Why did the connection check fail when I connected to Ollama?
 
-This usually happens due to network or authentication settings. Follow these steps to resolve it:
+1. Ensure the **Use Client Request Mode** option on the Ollama settings page is disabled.
+2. Ensure the model you are using is downloaded using Ollama.
 
-1.  Open Settings, and ensure that the **Authentication level** for Ollama is set to **Internal**.
-2.  Turn on the VPN in the LarePass desktop client, and confirm that the status changes to **Intranet** or **P2P**.
-3.  Run the connection check again.
-
-:::tip
-If you are on the same local network as your device and the **Authentication level** for Ollama is set to **None**, you do not need to enable the LarePass VPN.
-:::
-
-For more information, see [Ensure network connectivity](ollama.md#ensure-network-connectivity).
+   ![Connectivity error](/images/manual/use-cases/lobehub-connection-error.png#bordered){width=85%} 
