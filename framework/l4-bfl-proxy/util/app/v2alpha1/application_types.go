@@ -59,10 +59,27 @@ type ApplicationSpec struct {
 	// the service address of the application
 	Entrances []Entrance `json:"entrances,omitempty"`
 
-	Ports []ServicePort `json:"ports,omitempty"`
+	// SharedEntrances contains entrances shared with other applications
+	SharedEntrances []Entrance `json:"sharedEntrances,omitempty"`
+
+	Ports         []ServicePort `json:"ports,omitempty"`
+	TailScale     TailScale     `json:"tailscale,omitempty"`
+	TailScaleACLs []ACL         `json:"tailscaleAcls,omitempty"`
 
 	// the extend settings of the application
 	Settings map[string]string `json:"settings,omitempty"`
+}
+
+type ACL struct {
+	Action string   `json:"action,omitempty"`
+	Src    []string `json:"src,omitempty"`
+	Proto  string   `json:"proto"`
+	Dst    []string `json:"dst"`
+}
+
+type TailScale struct {
+	ACLs      []ACL    `json:"acls,omitempty"`
+	SubRoutes []string `json:"subRoutes,omitempty"`
 }
 
 type ServicePort struct {
@@ -72,10 +89,6 @@ type ServicePort struct {
 
 	ExposePort int32 `yaml:"exposePort,omitempty" json:"exposePort,omitempty"`
 
-	// The protocol for this entrance. Supports "tcp" and "udp".
-	// Default is udp.
-	// +default="udp"
-	// +optional
 	Protocol string `yaml:"protocol,omitempty" json:"protocol,omitempty"`
 }
 

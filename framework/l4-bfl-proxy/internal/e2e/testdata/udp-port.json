@@ -1,0 +1,253 @@
+{
+  "clusters": [
+    {
+      "name": "user_alice",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "user_alice",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "bfl.user-space-alice",
+                      "portValue": 444
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "transportSocket": {
+        "name": "envoy.transport_sockets.upstream_proxy_protocol",
+        "typedConfig": {
+          "@type": "type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport",
+          "config": {},
+          "transportSocket": {
+            "name": "envoy.transport_sockets.raw_buffer",
+            "typedConfig": {
+              "@type": "type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "direct_alice_51820",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "direct_alice_51820",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "bfl.user-space-alice",
+                      "portValue": 51820
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "listeners": [
+    {
+      "name": "http_redirect_81",
+      "address": {
+        "socketAddress": {
+          "address": "0.0.0.0",
+          "portValue": 81
+        }
+      },
+      "filterChains": [
+        {
+          "filters": [
+            {
+              "name": "envoy.filters.network.http_connection_manager",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
+                "statPrefix": "http_redirect_81",
+                "routeConfig": {
+                  "name": "http_redirect_81_routes",
+                  "virtualHosts": [
+                    {
+                      "name": "redirect",
+                      "domains": [
+                        "*"
+                      ],
+                      "routes": [
+                        {
+                          "match": {
+                            "prefix": "/"
+                          },
+                          "redirect": {
+                            "httpsRedirect": true
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "httpFilters": [
+                  {
+                    "name": "envoy.filters.http.router",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                    }
+                  }
+                ],
+                "streamIdleTimeout": "300s",
+                "internalAddressConfig": {}
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "tls_443",
+      "address": {
+        "socketAddress": {
+          "address": "0.0.0.0",
+          "portValue": 443
+        }
+      },
+      "filterChains": [
+        {
+          "filterChainMatch": {
+            "serverNames": [
+              "alice.snowinning.com",
+              "*.alice.snowinning.com"
+            ]
+          },
+          "filters": [
+            {
+              "name": "envoy.filters.network.tcp_proxy",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy",
+                "statPrefix": "route_alice",
+                "cluster": "user_alice",
+                "idleTimeout": "3600s",
+                "accessLog": [
+                  {
+                    "name": "envoy.access_loggers.file",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
+                      "path": "/dev/stdout",
+                      "logFormat": {
+                        "textFormatSource": {
+                          "inlineString": "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -\u003e %UPSTREAM_HOST% SNI=%REQUESTED_SERVER_NAME% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS%\n"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "route_alice"
+        }
+      ],
+      "listenerFilters": [
+        {
+          "name": "envoy.filters.listener.tls_inspector",
+          "typedConfig": {
+            "@type": "type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector"
+          }
+        }
+      ]
+    },
+    {
+      "name": "tls_444",
+      "address": {
+        "socketAddress": {
+          "address": "0.0.0.0",
+          "portValue": 444
+        }
+      },
+      "filterChains": [
+        {
+          "filterChainMatch": {
+            "serverNames": [
+              "alice.snowinning.com",
+              "*.alice.snowinning.com"
+            ]
+          },
+          "filters": [
+            {
+              "name": "envoy.filters.network.tcp_proxy",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy",
+                "statPrefix": "route_alice",
+                "cluster": "user_alice",
+                "idleTimeout": "3600s",
+                "accessLog": [
+                  {
+                    "name": "envoy.access_loggers.file",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
+                      "path": "/dev/stdout",
+                      "logFormat": {
+                        "textFormatSource": {
+                          "inlineString": "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -\u003e %UPSTREAM_HOST% SNI=%REQUESTED_SERVER_NAME% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS%\n"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "route_alice"
+        }
+      ],
+      "listenerFilters": [
+        {
+          "name": "envoy.filters.listener.proxy_protocol",
+          "typedConfig": {
+            "@type": "type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol"
+          }
+        },
+        {
+          "name": "envoy.filters.listener.tls_inspector",
+          "typedConfig": {
+            "@type": "type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector"
+          }
+        }
+      ]
+    },
+    {
+      "name": "stream_udp_51820",
+      "address": {
+        "socketAddress": {
+          "protocol": "UDP",
+          "address": "0.0.0.0",
+          "portValue": 51820
+        }
+      },
+      "listenerFilters": [
+        {
+          "name": "envoy.filters.udp_listener.udp_proxy",
+          "typedConfig": {
+            "@type": "type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig",
+            "statPrefix": "direct_51820",
+            "cluster": "direct_alice_51820"
+          }
+        }
+      ],
+      "udpListenerConfig": {}
+    }
+  ]
+}
