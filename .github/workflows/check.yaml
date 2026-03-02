@@ -220,6 +220,7 @@ jobs:
 
       # test
       - env:
+          VERSION: ${{ needs.test-version.outputs.version }}
           REPO_PATH: '${{ secrets.REPO_PATH }}'
         run: |
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
