@@ -24,11 +24,15 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/first-boot",
         },
         {
-          text: "Access Olares securely",
+          text: "Access Olares via VPN",
           link: "/zh/one/access-olares-via-vpn",
         },
         {
-          text: "Redeem Olares Space membership",
+          text: "Access Olares via .local domain",
+          link: "/zh/one/access-olares-via-local-domain",
+        },
+        {
+          text: "Redeem membership",
           link: "/zh/one/redeem-membership",
         },
       ]
@@ -165,7 +169,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         },
         {
           text: "Connect two Olares One",
-          link: "/zh/one/connect-two-olares-one"
+          link: "/zh/one/connect-two-olares-one",
           // items:
           //   [
           //     {
