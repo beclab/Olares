@@ -72,12 +72,25 @@ jobs:
           version: v1.18.2
           args: release --clean
 
-      - name: Upload to CDN
+      - name: Install coscmd
+        run: pip install coscmd        
+
+      - name: Configure coscmd
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: 'us-east-1'
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
+          COS_BUCKET: ${{ secrets.COS_BUCKET }}
+          COS_REGION: ${{ secrets.COS_REGION }}
+          END_POINT: ${{ secrets.END_POINT }}
+        run: |
+          coscmd config -a $TENCENT_SECRET_ID \
+                        -s $TENCENT_SECRET_KEY \
+                        -b $COS_BUCKET \
+                        -r $COS_REGION 
+
+
+      - name: Upload to CDN
         run: |
           cd daemon/output && for file in $(ls *.tar.gz | grep -v no-release-id); do
-            aws s3 cp "$file" s3://terminus-os-install${{ secrets.REPO_PATH }}${file} --acl=public-read
+            coscmd upload cp "$file" ${{ secrets.REPO_PATH }}${file} --acl=public-read
           done

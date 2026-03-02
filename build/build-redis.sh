@@ -27,4 +27,5 @@ mkdir redis-5.0.14 && \
 cp /usr/local/bin/redis* ./redis-5.0.14/
 
 tar czvf ./redis-5.0.14.tar.gz ./redis-5.0.14/ && \
-aws s3 cp redis-5.0.14.tar.gz s3://terminus-os-install/redis-5.0.14_${os}_${arch}${SUFFIX}.tar.gz --acl=public-read
+# aws s3 cp redis-5.0.14.tar.gz s3://terminus-os-install/redis-5.0.14_${os}_${arch}${SUFFIX}.tar.gz --acl=public-read
+coscmd upload redis-5.0.14.tar.gz /redis-5.0.14_${os}_${arch}${SUFFIX}.tar.gz --acl=public-read
