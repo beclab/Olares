@@ -204,11 +204,11 @@ jobs:
       - name: Upload to COS
         run: |
           md5sum install-wizard-v${{ github.event.inputs.tags }}.tar.gz > install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt && \
-          coscmd upload cp install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt --acl=public-read && \
-          coscmd upload cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.tar.gz --acl=public-read
+          coscmd upload install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt && \
+          coscmd upload install-wizard-v${{ github.event.inputs.tags }}.tar.gz ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.tar.gz
 
-          coscmd upload cp install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.md5sum.txt --acl=public-read && \
-          coscmd upload cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.tar.gz --acl=public-read
+          coscmd upload install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.md5sum.txt && \
+          coscmd upload install-wizard-v${{ github.event.inputs.tags }}.tar.gz ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.tar.gz
 
   release:
     runs-on: ubuntu-latest
