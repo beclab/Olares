@@ -1,9 +1,9 @@
 ---
-outline: [2, 3]
-description: Reference for predefined runtime values injected into application values.yaml during Olares deployment.
+outline: [2, 4]
+description: Reference for runtime values injected into application `values.yaml` during Olares deployment.
 ---
 
-# Predefined runtime values
+# System-injected runtime values
 
 At deployment, Olares automatically injects a set of system-managed values into the app's `values.yaml`. These values are read-only and cover user identity, storage paths, cluster metadata, app dependencies, and middleware credentials.
 
@@ -16,7 +16,7 @@ Reference these values directly in your Helm templates, such as `deployment.yaml
 **Example**: pass the current username and Postgres host into container environment variables.
 
 ```yaml
-# Pass predefined runtime values into container environment variables
+# Pass system-injected runtime values into container environment variables
 spec:
   containers:
     - name: my-app
@@ -29,7 +29,7 @@ spec:
 
 For the full list of available values, see [Value reference](#value-reference).
 
-## Value reference
+## Value references
 
 The Type column describes the Helm value data type. It does not correspond to the `type` field in `OlaresManifest.yaml`.
 

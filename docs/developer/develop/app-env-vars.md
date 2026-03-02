@@ -1,12 +1,61 @@
 ---
-outline: [2, 3]
+outline: [2, 4]
 description: Declare and validate app configuration via envs in `OlaresManifest.yaml`, and reference values in templates through `.Values.olaresEnv`.
 ---
 # Declarative environment variables
 
-Use `envs` in `OlaresManifest.yaml` to declare the configuration parameters your app needs, such as passwords, API endpoints, or feature flags. During deployment, app-service resolves the values and injects them into `.Values.olaresEnv` in `values.yaml`. Reference them in templates as <code v-pre>{{ .Values.olaresEnv.&lt;envName&gt; }}</code>.
+Use `envs` in `OlaresManifest.yaml` to declare the configuration parameters, such as passwords, API endpoints, or feature flags. During deployment, app-service resolves the values and injects them into `.Values.olaresEnv` in `values.yaml`. Reference them in Helm templates as <code v-pre>{{ .Values.olaresEnv.&lt;envName&gt; }}</code>.
 
-## Field reference
+## Variable sources
+
+Declarative variables can obtain values from configurations managed outside the application:
+
+- **System variables** — Cluster-wide infrastructure configurations managed by administrators, such as CDN endpoints or root paths.
+- **User variables** — Per-user configurations managed by individual users, such as time zones, SMTP settings, or API keys.
+
+Applications cannot modify these variables directly. To use them, map the variable via the `valueFrom` field.
+
+## Map environment variables
+
+Both system environment variables and user environment variables use the same mapping mechanism via `valueFrom`.
+
+The following example maps the system variable `OLARES_SYSTEM_CDN_SERVICE` to an application variable:
+
+1. In `OlaresManifest.yaml`, declare an app variable under `envs` and set `valueFrom.envName` to the system variable name.
+
+    ```yaml
+    # Map system variable OLARES_SYSTEM_CDN_SERVICE to app variable APP_CDN_ENDPOINT
+    olaresManifest.version: '0.10.0'
+    olaresManifest.type: app
+
+    envs:
+      - envName: APP_CDN_ENDPOINT
+        required: true
+        applyOnChange: true
+        valueFrom:
+          envName: OLARES_SYSTEM_CDN_SERVICE
+    ```
+
+2. In your Helm template, reference the app variable via `.Values.olaresEnv.<envName>`.
+
+    ```yaml
+    # Use APP_CDN_ENDPOINT in a container environment variable
+    env:
+      - name: CDN_ENDPOINT
+        value: "{{ .Values.olaresEnv.APP_CDN_ENDPOINT }}"
+    ```
+
+At deployment, app-service resolves the referenced variable and injects the value into `values.yaml`:
+
+```yaml
+# Injected by app-service into values.yaml at deployment
+olaresEnv:
+  APP_CDN_ENDPOINT: "https://cdn.olares.com"
+```
+
+For the full list of available environment variables, see [Variable references](#variable-references).
+
+## Declaration fields
 
 The following fields are available under each `envs` entry.
 
@@ -91,3 +140,64 @@ envs:
 ### description
 
 A human-readable description of the variable's purpose and valid values. Displayed in the Olares interface.
+
+## Variable references
+
+### System environment variables
+
+The `editable` and `required` columns describe the system variable's own properties, not something your app controls.
+
+| Variable | Type | Default | editable | required | Description |
+| --- | --- | --- | --- | --- | --- |
+| `OLARES_SYSTEM_REMOTE_SERVICE` | `url` | `https://api.olares.com` | `true` | `true` | Remote service endpoint for Olares, such as Market and Olares Space. |
+| `OLARES_SYSTEM_CDN_SERVICE` | `url` | `https://cdn.olares.com` | `true` | `true` | CDN endpoint for system resources. |
+| `OLARES_SYSTEM_DOCKERHUB_SERVICE` | `url` | None | `true` | `false` | Docker Hub mirror or accelerator endpoint. |
+| `OLARES_SYSTEM_ROOT_PATH` | `string` | `/olares` | `false` | `true` | Olares root directory path. |
+| `OLARES_SYSTEM_ROOTFS_TYPE` | `string` | `fs` | `false` | `true` | Olares filesystem type. |
+| `OLARES_SYSTEM_CUDA_VERSION` | `string` | None | `false` | `false` | Host CUDA version. |
+
+### User environment variables
+
+All user environment variables are editable by the user.
+
+#### User information
+
+| Variable | Type | Default | Description |
+| --- | --- | --- | --- |
+| `OLARES_USER_EMAIL` | `string` | None | User email address. |
+| `OLARES_USER_USERNAME` | `string` | None | Username. |
+| `OLARES_USER_PASSWORD` | `password` | None | User password. |
+| `OLARES_USER_TIMEZONE` | `string` | None | User timezone. For example, `Asia/Shanghai`. |
+
+#### SMTP settings
+
+| Variable | Type | Default | Description |
+| --- | --- | --- | --- |
+| `OLARES_USER_SMTP_ENABLED` | `bool` | None | Whether to enable SMTP. |
+| `OLARES_USER_SMTP_SERVER` | `domain` | None | SMTP server domain. |
+| `OLARES_USER_SMTP_PORT` | `int` | None | SMTP server port. Typically `465` or `587`. |
+| `OLARES_USER_SMTP_USERNAME` | `string` | None | SMTP username. |
+| `OLARES_USER_SMTP_PASSWORD` | `password` | None | SMTP password or authorization code. |
+| `OLARES_USER_SMTP_FROM_ADDRESS` | `email` | None | Sender email address. |
+| `OLARES_USER_SMTP_SECURE` | `bool` | `"true"` | Whether to use a secure protocol. |
+| `OLARES_USER_SMTP_USE_TLS` | `bool` | None | Use TLS. |
+| `OLARES_USER_SMTP_USE_SSL` | `bool` | None | Use SSL. |
+| `OLARES_USER_SMTP_SECURITY_PROTOCOLS` | `string` | None | Security protocol. Allowed values: `tls`, `ssl`, `starttls`, `none`. |
+
+#### Mirror and proxy endpoints
+
+| Variable | Type | Default | Description |
+| --- | --- | --- | --- |
+| `OLARES_USER_HUGGINGFACE_SERVICE` | `url` | `https://huggingface.co/` | Hugging Face service URL. |
+| `OLARES_USER_HUGGINGFACE_TOKEN` | `string` | None | Hugging Face access token. |
+| `OLARES_USER_PYPI_SERVICE` | `url` | `https://pypi.org/simple/` | PyPI mirror URL. |
+| `OLARES_USER_GITHUB_SERVICE` | `url` | `https://github.com/` | GitHub mirror URL. |
+| `OLARES_USER_GITHUB_TOKEN` | `string` | None | GitHub personal access token. |
+
+#### API keys
+
+| Variable | Type | Default | Description |
+| --- | --- | --- | --- |
+| `OLARES_USER_OPENAI_APIKEY` | `password` | None | OpenAI API key. |
+| `OLARES_USER_CUSTOM_OPENAI_SERVICE` | `url` | None | Custom OpenAI-compatible service URL. |
+| `OLARES_USER_CUSTOM_OPENAI_APIKEY` | `password` | None | API key for the custom OpenAI-compatible service. |

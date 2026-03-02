@@ -222,20 +222,10 @@ export const developerSidebar: DefaultTheme.Sidebar = {
               text: "Declarative environment variables",
               link: "/developer/develop/app-env-vars",
               collapsed: true,
-              items:[
-                {
-                  text: "System environment variables",
-                  link: "/developer/develop/app-sys-env-vars",
-                },
-                {
-                  text: "User environment variables",
-                  link: "/developer/develop/app-user-env-vars",
-                },
-              ]
             },
             {
-              text: "Predefined runtime values",
-              link: "/developer/develop/runtime-values",
+              text: "System-injected values",
+              link: "/developer/develop/app-sys-injected-values",
             },
           ]
         },
