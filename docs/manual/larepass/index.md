@@ -10,46 +10,11 @@ LarePass is the official cross-platform client software for Olares. It acts as a
 ![LarePass](/images/manual/larepass/larepass.png)
 
 ## Key features
-- **Account & identity management**  
-  Create and manage your Olares ID, connect integrations with other services, and back up your credentials securely.
-
-  :::details Related guides
-  - [Create an Olares ID](create-account.md)
-  - [Back up mnemonics](back-up-mnemonics.md)
-  - [Set or reset local password](back-up-mnemonics.md#set-up-local-password)
-  - [Manage integrations](integrations.md)
-  :::
-- **Secure file access & sync**  
-  Access and manage your files across devices with secure synchronization powered by Olares.
-
-  :::details Related guides
-  - [Manage files with LarePass](manage-files.md)
-  :::
-
-- **Device & network management**  
-  Activate and manage Olares devices, and securely connect to Olares via LarePass VPN.
-  :::details Related guides
-  - [Activate your Olares device](activate-olares.md)
-  - [Upgrade Olares](manage-olares.md#upgrade-olares)
-  - [Log in to Olares with 2FA](activate-olares.md#two-factor-verification-with-larepass)
-  - [Manage Olares](manage-olares.md)
-  - [Switch networks](manage-olares.md#switch-from-wired-to-wireless-network)
-  - [Enable VPN for remote access](private-network.md)
-  :::
-
-- **Password & secret management**  
-  Store, autofill, and generate secure credentials across your devices with Vault.
-  :::details Related guides
-  - [Autofill passwords](/manual/larepass/autofill.md)
-  - [Generate 2FA codes](/manual/larepass/two-factor-verification.md)
-  :::
-
-- **Knowledge collection**  
-  Collect web content, save resources to Wise, and subscribe to RSS feeds directly from your browser.
-  :::details Related guides
-  - [Collect content via LarePass extension](/manual/olares/wise/basics.md#save-from-browser-with-larepass-extension)
-  - [Subscribe to RSS feeds](/manual/olares/wise/subscribe.md#use-larepass-browser-extension)
-  :::
+- Account & identity management
+- Secure file access & sync
+- Device & network management
+- Password & secret management
+- Knowledge collection
 
 ## Download LarePass
 
