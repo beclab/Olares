@@ -81,7 +81,7 @@ Extract the ZIP file to a permanent location, such as a folder under your user d
 After installation, click the puzzle icon in your browser toolbar and pin the LarePass extension for one-click access.
 :::
 
-### Set up account 
+## Set up account 
 - On mobile devices, you can [create an Olares ID](/manual/larepass/create-account.md#create-an-olares-id) directly in the app.
 - On the desktop client or Chrome extension, you must [import an existing Olares account](/manual/larepass/create-account.md#import-an-existing-account).
 
