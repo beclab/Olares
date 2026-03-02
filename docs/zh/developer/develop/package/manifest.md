@@ -89,7 +89,7 @@ spec:
   website: https://link.to.your.website
   sourceCode: https://link.to.sourceCode
   submitter: Submitter's Name
-  language:
+  locale:
   - en
   doc: https://link.to.documents
   supportArch:
@@ -167,7 +167,7 @@ metadata:
 ### name
 
 - 类型：`string`
-- Accepted Value: `[a-z][a-z0-9]?`
+- Accepted Value: `^[a-z][a-z0-9]{0,29}$`
 
 Olares 中的应用的命名空间，仅限小写字母数字字符。最多 30 个字符，需要与 `Chart.yaml` 中的 `FolderName` 和 `name` 字段保持一致。
 
@@ -803,7 +803,7 @@ middleware:
 此部分用于配置与Olares系统相关的选项。
 
 ### policies
-- 类型：`map`
+- 类型：`list<map>`
 - 可选
 
 定义应用子域的详细访问控制。

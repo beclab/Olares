@@ -166,7 +166,7 @@ metadata:
 ### name
 
 - Type: `string`
-- Accepted Value: `[a-z][a-z0-9]?`
+- Accepted Value: `^[a-z][a-z0-9]{0,29}$`
 
 App’s namespace in Olares, lowercase alphanumeric characters only. It can be up to 30 characters, and needs to be consistent with `FolderName` and `name` field in `Chart.yaml`.
 
@@ -807,7 +807,7 @@ Use the middleware information in deployment YAML
 Configure Olares OS related options here.
 
 ### policies
-- Type: `map`
+- Type: `list<map>`
 - Optional
 
 Define detailed access control for subdomains of the app.
