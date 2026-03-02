@@ -33,7 +33,7 @@ User permissions and resource usage depend on the assigned role.
 To create a new user, make sure the following conditions are met:
 - **Permissions**: You are logged in as **Super admin** or **Admin**.
 - **Olares ID**: The new user has a valid Olares ID that is not already activated on another Olares device.
-- **Domain matching**: The domain part of the new user's Olares ID matches the Olares One server owner.
+- **Domain matching**: The domain part of the new user's Olares ID matches the current domain.
 - **Resources**: Your Olares One has sufficient available CPU and memory resources.
 
 ## Create a new user
@@ -42,7 +42,7 @@ To create a new user, make sure the following conditions are met:
 2. Click **Create account**.
 3. In the dialog, fill in the required information:
 
-   - **Olares ID**: Enter the local name only.
+   - **Olares ID**: Enter only the username (the part before `@`).
    - **Role**: Choose **Members** or **Admin**.
    - **CPU**: Allocate CPU cores. Minimum 1 core.
    - **Memory**: Allocate memory. Minimum 3 GB.
