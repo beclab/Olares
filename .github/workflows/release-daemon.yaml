@@ -92,5 +92,5 @@ jobs:
       - name: Upload to CDN
         run: |
           cd daemon/output && for file in $(ls *.tar.gz | grep -v no-release-id); do
-            coscmd upload cp "$file" ${{ secrets.REPO_PATH }}${file} --acl=public-read
+            coscmd upload cp "$file" ${{ secrets.REPO_PATH }}${file}
           done
