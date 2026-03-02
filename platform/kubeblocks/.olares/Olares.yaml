@@ -7,4 +7,4 @@ output:
     -
       name: beclab/kubeblocks:1.0.1-ext1
     -
-      name: beclab/kubeblock-addon-charts:v1.0.1-ext2
+      name: beclab/kubeblock-addon-charts:v1.0.1-ext3
