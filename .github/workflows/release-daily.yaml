@@ -199,11 +199,11 @@ jobs:
         id: upload
         run: |
           md5sum install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz > install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt && \
-          coscmd upload cp install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt ${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt --acl=public-read && \
-          coscmd upload cp install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz ${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz --acl=public-read && \
+          coscmd upload install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt ${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt && \
+          coscmd upload install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz ${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz && \
 
-          coscmd upload cp install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt ${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.md5sum.txt --acl=public-read && \
-          coscmd upload cp install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz ${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.tar.gz --acl=public-read
+          coscmd upload install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt ${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.md5sum.txt && \
+          coscmd upload install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz ${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.tar.gz 
 
 
   release:
