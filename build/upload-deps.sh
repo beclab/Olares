@@ -31,7 +31,7 @@ while read line; do
     curl -fsSLI https://cdn.olares.com/$path$name > /dev/null
     if [ $? -ne 0 ]; then
         code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://cdn.olares.com/$path$name)
-        if [ $code -eq 403 ]; then
+        if [[ $code -eq 403 || $code -eq 404 ]]; then
 
             bash ${BASE_DIR}/download-deps.sh $PLATFORM $line
             if [ $? -ne 0 ]; then
