@@ -262,8 +262,8 @@ jobs:
     - name: Upload package
       run: |
         md5sum install-wizard-v${{ needs.test-version.outputs.version }}.tar.gz > install-wizard-v${{ needs.test-version.outputs.version }}.md5sum.txt && \
-        coscmd upload install-wizard-v${{ needs.test-version.outputs.version }}.md5sum.txt /install-wizard-v${{ needs.test-version.outputs.version }}.md5sum.txt --acl=public-read && \
-        coscmd upload install-wizard-v${{ needs.test-version.outputs.version }}.tar.gz /install-wizard-v${{ needs.test-version.outputs.version }}.tar.gz --acl=public-read
+        coscmd upload install-wizard-v${{ needs.test-version.outputs.version }}.md5sum.txt /install-wizard-v${{ needs.test-version.outputs.version }}.md5sum.txt && \
+        coscmd upload install-wizard-v${{ needs.test-version.outputs.version }}.tar.gz /install-wizard-v${{ needs.test-version.outputs.version }}.tar.gz
 
 
   install-test:
