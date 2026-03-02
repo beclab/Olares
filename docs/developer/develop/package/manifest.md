@@ -15,7 +15,7 @@ Latest Olares Manifest version: `0.11.0`
 
 :::
 :::details Changelog
-`0.9.0`
+`0.10.0`
 - Modified the `categories` field
 - Added the `provider` field in the Permission section
 - Added the Provider section, to allow apps to expose specific service interfaces within the cluster
