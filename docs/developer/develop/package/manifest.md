@@ -89,7 +89,7 @@ spec:
   website: https://link.to.your.website
   sourceCode: https://link.to.sourceCode
   submitter: Submitter's Name
-  language:
+  locale:
   - en
   doc: https://link.to.documents
   supportArch:
@@ -174,7 +174,7 @@ App’s namespace in Olares, lowercase alphanumeric characters only. It can be u
 
 - Type: `string`
 
-The title of your app title shown in the Olares Market.  Must be within `30` characters.
+The title of your app shown in the Olares Market. Must be within `30` characters.
 
 ### description
 
@@ -220,7 +220,7 @@ Olares Market categories were updated in OS 1.12.0. To ensure your app is compat
 
 ## Entrances
 
-The number of entrances through which to access the app.  You must specify at least 1 access method, with a maximum of 10 allowed.
+The entrances (up to 10) that users can use to access the app. At least 1 is required.
 
 :::info Example
 ```yaml
@@ -339,7 +339,7 @@ To ensure a seamless user experience, you can enable this option by setting it t
 
 A shared entrance is an internal address provided by a shared application for other applications within the cluster to access. The field configuration for shared entrances is basically the same as for regular entrances. A typical shared entrance configuration is shown below.
 
-:::info 示例
+:::info Example
 ```yaml
 sharedEntrances:
   - name: ollamav2
@@ -371,7 +371,7 @@ ports:
 ### exposePort
 - Type: `int`
 - Optional
-- Accepted Value: `0-65535`, except reserved ports 22, 80, 81, 443, 444, 2379, 18088
+- Accepted Value: `0-65535`, except reserved ports `22`, `80`, `81`, `443`, `444`, `2379`, `18088`.
 
 Olares will expose the ports you specify for an application, which are accessible via the application domain name in the local network, for example: `84864c1f.your_olares_id.olares.com:46879`. For each port you expose, Olares configures both TCP and UDP with the same port number.
 
@@ -384,7 +384,7 @@ The exposed ports can only be accessed on the local network or through a VPN.
 - Optional
 - Accepted Value: `udp`, `tcp`
 
-The protocol used for the exposed port. If not specified, both UDP and TCP will be enabled by default.
+The protocol used for the exposed port. If specified, Olares exposes only the specified protocol. If omitted, Olares exposes both UDP and TCP by default.
 
 ### addToTailscaleAcl
 - Type: `boolean`
@@ -608,7 +608,7 @@ When set to `true`, Olares forces the application to run under user ID `1000` (a
 - Type: `map`
 - Optional
 
-The Olares provides highly available middleware services. Developers do not need to install middleware repeatedly. Just simply add required middleware here, You can then directly use the corresponding middleware information in the application's deployment YAML file.
+Olares provides highly available middleware services. Developers do not need to install middleware repeatedly. Add the required middleware here, then use the corresponding middleware values in the application's deployment YAML file.
 
 Use the `scripts` field to specify scripts that should be executed after the database is created. Additionally, use the `extension` field to add the corresponding extension in the  database.
 
