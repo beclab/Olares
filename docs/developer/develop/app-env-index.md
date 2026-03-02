@@ -21,7 +21,5 @@ Olares injects variables through two channels:
 
 ## Next steps
 
-1. [Declarative environment variables](app-env-vars.md): Field reference for the `envs` schema.
-2. [System environment variables](app-sys-env-vars.md): Available system variables and how to map them.
-3. [User environment variables](app-user-env-vars.md): Available user variables and how to map them.
-4. [System-injected runtime values](app-sys-injected-values.md): Full reference for all system-injected values.
+1. [Declarative environment variables](app-env-vars.md): Field reference for the `envs` schema, including variable mapping and variable references.
+2. [System-injected runtime variables](app-sys-injected-variables.md): Full reference for all system-injected runtime variables.

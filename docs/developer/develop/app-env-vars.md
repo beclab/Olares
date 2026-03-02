@@ -10,8 +10,8 @@ Use `envs` in `OlaresManifest.yaml` to declare the configuration parameters, suc
 
 Declarative variables can obtain values from configurations managed outside the application:
 
-- **System variables** — Cluster-wide infrastructure configurations managed by administrators, such as CDN endpoints or root paths.
-- **User variables** — Per-user configurations managed by individual users, such as time zones, SMTP settings, or API keys.
+- **System variables**: Cluster-wide infrastructure configurations managed by administrators, such as CDN endpoints or root paths.
+- **User variables**: Per-user configurations managed by individual users, such as time zones, SMTP settings, or API keys.
 
 Applications cannot modify these variables directly. To use them, map the variable via the `valueFrom` field.
 
@@ -19,7 +19,7 @@ Applications cannot modify these variables directly. To use them, map the variab
 
 Both system environment variables and user environment variables use the same mapping mechanism via `valueFrom`.
 
-The following example maps the system variable `OLARES_SYSTEM_CDN_SERVICE` to an application variable:
+The following example maps the system variable `OLARES_SYSTEM_CDN_SERVICE` to an application variable `APP_CDN_ENDPOINT`:
 
 1. In `OlaresManifest.yaml`, declare an app variable under `envs` and set `valueFrom.envName` to the system variable name.
 
@@ -145,9 +145,9 @@ A human-readable description of the variable's purpose and valid values. Display
 
 ### System environment variables
 
-The `editable` and `required` columns describe the system variable's own properties, not something your app controls.
+The following table lists system-level environment variables that can be referenced via `valueFrom`.
 
-| Variable | Type | Default | editable | required | Description |
+| Variable | Type | Default | Editable | Required | Description |
 | --- | --- | --- | --- | --- | --- |
 | `OLARES_SYSTEM_REMOTE_SERVICE` | `url` | `https://api.olares.com` | `true` | `true` | Remote service endpoint for Olares, such as Market and Olares Space. |
 | `OLARES_SYSTEM_CDN_SERVICE` | `url` | `https://cdn.olares.com` | `true` | `true` | CDN endpoint for system resources. |

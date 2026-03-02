@@ -224,8 +224,8 @@ export const developerSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
             },
             {
-              text: "System-injected values",
-              link: "/developer/develop/app-sys-injected-values",
+              text: "System-injected variables",
+              link: "/developer/develop/app-sys-injected-variables",
             },
           ]
         },
