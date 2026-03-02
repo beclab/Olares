@@ -18,6 +18,16 @@ If you prefer to try the cloud version of Olares instead of self-hosting, refer 
 </div>
 
 <div class="cta">
+  <a href="./join-olares">
+    <div class="content">
+      <h3>Joining an existing Olares?</h3>
+      <p>Create your Olares ID and activate your account using the link from your admin.</p>
+    </div>
+    <div class="arrow">→</div>
+  </a>
+</div>
+
+<div class="cta">
   <a href="../olares/">
     <div class="content">
       <h3>Already have an Olares?</h3>

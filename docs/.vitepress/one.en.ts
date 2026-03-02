@@ -31,6 +31,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Redeem membership",
           link: "/one/redeem-membership",
         },
+        {
+          text: "Activate your account (For new members)",
+          link: "/manual/get-started/join-olares",
+        },
       ]
     },
     {
@@ -83,13 +87,13 @@ export const oneSidebar: DefaultTheme.Sidebar = {
      {
        text: "Manage",
        items: [
+        {
+          text: "Create and manage users",
+          link: "/one/create-users",
+        },
          {
            text: "Set up app entrances",
-           link: "/one/app-entrances",
-         },
-         {
-           text: "Create users",
-           link: "/one/users",
+           link: "/one/set-app-entrance",
          },
        ]
      },

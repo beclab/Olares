@@ -120,6 +120,10 @@ const side = {
           ],
         },
         {
+          text: "Join an Olares",
+          link: "/manual/get-started/join-olares",
+        },
+        {
           text: "Back up mnemonics",
           link: "/manual/larepass/back-up-mnemonics"
         },
