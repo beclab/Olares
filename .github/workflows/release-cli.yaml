@@ -76,8 +76,8 @@ jobs:
                         -b $COS_BUCKET \
                         -r $COS_REGION 
 
-      - name: Upload to S3
+      - name: Upload to CDN
         run: |
           cd cli/output && for file in $(ls *.tar.gz | grep -v no-release-id); do
-            coscmd upload cp "$file" ${{ secrets.REPO_PATH }}${file}
+            coscmd upload "$file" ${{ secrets.REPO_PATH }}${file}
           done
