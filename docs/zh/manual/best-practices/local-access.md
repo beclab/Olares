@@ -34,73 +34,47 @@ Olares 的设计初衷是让你随时随地都能无缝访问自己的服务。
 ## 方法 1：启用 LarePass VPN
 LarePass VPN 旨在兼顾连接安全与性能优化。启用后，LarePass 会自动检测设备是否处于同一网络，并切换至**内网**模式。
 
-:::tip 始终启用 VPN 以进行远程访问
-保持 LarePass VPN 启用。它会自动优先选择最快的可用路由，确保你无需手动切换即可获得最佳速度。
-:::
-:::info iOS 和 macOS 设置
-在 iOS 或 macOS 上首次启用该功能时，系统可能会提示你添加 VPN 配置文件。允许此操作以完成设置。
-:::
+<!--@include: ../../reusables/larepass-vpn.md{19,24}-->
 
-直接在你当前用于访问 Olares 的设备上启用 LarePass VPN。
+在用来访问 Olares 的当前设备上直接启用 LarePass VPN。
 
-<tabs>
-<template #使用-LarePass-移动端>
-
-1. 打开 LarePass 应用，进入**设置**。
-2. 在**我的 Olares** 卡片中，打开 VPN 开关。
-
-   ![移动端开启 LarePass VPN](/images/zh/manual/get-started/larepass-vpn-mobile.png#bordered)
-</template>
-<template #使用-LarePass-桌面端>
-
-1. 打开 LarePass 应用，点击左上角的头像打开用户菜单。
-2. 打开**专用网络连接**开关。
-
-   ![桌面端开启 LarePass VPN](/images/zh/manual/get-started/larepass-vpn-desktop.png#bordered)
-</template>
-</tabs>
-
-启用后，可以查看 LarePass 中的网络状态以确认连接类型：
-
-| 状态         | 描述                         |
-|:-----------|:---------------------------|
-| **内网**     | 通过本地局域网 IP 直连。速度最快。        |
-| **P2P**    | 设备间的直接加密隧道。连接速度快。          |
-| **DERP**   | 通过安全中继服务器路由，仅在无法直连时作为备用方案。 |
+<!--@include: ../../reusables/larepass-vpn.md{26,50}-->
 
 ## 方法 2：使用 `.local` 域名
-若不希望安装额外应用，可使用 `.local` 域名访问服务。根据操作系统不同，有两种域名格式。
 
-:::info 使用 HTTP 协议
-`.local` 域名不支持 HTTPS。务必在 URL 开头显式添加 `http://`。
-:::
+如果不希望安装额外应用，可使用 `.local` 域名访问服务。根据操作系统不同，有两种域名格式。
 
 ### 单级域名（所有操作系统适用）
 :::warning 仅支持社区应用
 Desktop 和文件管理器等 Olares 系统应用不支持此 URL 格式，因此无法正确加载。
 :::
 此格式通过连字符（`-`）连接入口 ID 和用户名来使用单级主机名。
-- **默认 URL**：
-   ```plain
-   https://<entrance_id>.<username>.olares.cn
-   ```
-- **本地访问 URL**：
-   ```plain
-   http://<entrance_id>-<username>-olares.local
-   ```
 
-### 多级域名 (macOS 和 iOS 适用)
-Apple 设备支持通过 [Bonjour](https://developer.apple.com/bonjour/)（零配置网络）进行本地服务发现，因此能够在 macOS 和 iOS 上解析 `.local` 下的多级域名。这使得本地 URL 格式可以与默认的远程访问地址保持结构一致。
+**标准 URL**
+```plain
+https://<entrance_id>.<username>.olares.cn
+```
+**本地访问 URL**
+```plain
+http://<entrance_id>-<username>-olares.local
+```
 
-- **默认 URL**：
-   ```plain
-   https://<entrance_id>.<username>.olares.cn
-   ```
-- **本地访问 URL**：
-   ```plain
-   http://<entrance_id>.<username>.olares.local
-   ```
+### 多级域名
+
+The multi-level format below matches the structure of your standard Olares URL. Use it as shown.
+
+<!--@include: ../../reusables/local-domain.md{7,23}-->
+
 ![多级域名](/images/manual/get-started/multilevel-local-domain-mac.png#bordered)
+
+#### macOS and iOS
+Apple devices support local service discovery via [Bonjour](https://developer.apple.com/bonjour/) (zero‑configuration networking), which can resolve multi‑label domains under `.local` on macOS and iOS.
+
+Therefore, no extra setup is needed. You can directly use local URL in your browser.
+
+#### Windows
+
+<!--@include: ../../reusables/local-domain.md{26,40}-->
 
 ## 方法 3：配置本地 DNS
 为了获得无缝体验（即标准 URL 自动解析为你的本地 IP 地址），你可以配置网络 DNS。此配置确保网络上所有设备的访问一致，无需单独设置客户端。
@@ -212,39 +186,7 @@ ping desktop.<username>.olares.cn
 
 
 ## 常见问题
-### 为什么在 Mac 上无法再启用 LarePass VPN？
-如果之前成功启用过 VPN，但现在停止工作，可能需要重置系统扩展。
-:::info
-根据 macOS 版本不同，界面可能略有差异。
-:::
-1. 打开**系统设置**，搜索`扩展`，选择**登录项与扩展**。
-2. 滚动到**网络扩展** 部分，点击信息图标 (ⓘ) 查看已加载的扩展。
-3. 找到 LarePass，点击三个点 (...)，选择**删除扩展**。
-4. 确认卸载。
-5. 重启 Mac 并在 LarePass 桌面客户端中重新启用 VPN。
 
-### 为什么我在 Windows 上无法启用 LarePass VPN？
-第三方杀毒软件可能会错误地将 LarePass 桌面客户端标记为可疑，从而阻止其启动 VPN 服务。
+<!--@include: ../../reusables/larepass-vpn.md{50,75}-->
 
-如果在首次打开 LarePass 时收到杀毒软件提示，请允许应用程序继续运行。
-
-如果 VPN 仍然无法启用：
-1. 打开安全软件，检查 LarePass 是否被拦截。
-2. 将 LarePass 主程序添加到杀毒软件的白名单或排除项中。
-3. 重启 LarePass 并启用 VPN。
-
-### 为什么在 macOS 上，Chrome 无法访问 `.local` 域名？
-如果 macOS 未授予局域网访问权限，Chrome 可能会无法访问本地 URL。
-要启用访问权限：
-1. 打开 Apple 菜单，进入**系统设置**。
-2. 进入**隐私与安全性** > **局域网**。
-3. 在列表中找到 Google Chrome 和 Google Chrome Helper，并开启开关。
-   ![启用局域网权限](/images/manual/larepass/mac-chrome-local-access.png#bordered){width=400}
-
-4. 重启 Chrome 并再次尝试访问本地 URL。
-
-### 为什么在 Chrome 上使用 `.local` 域名时，应用无法在 iFrame 中加载 (macOS) ？
-使用本地域名时，Chrome 可能会默认使用 HTTPS，你可能会看到“连接不安全”的警告。
-![本地地址错误](/images/manual/get-started/incorrect-local-address.png#bordered)
-
-要解决此问题，在 URL 开头显式添加 HTTP 协议头 (`http://`)，告诉浏览器这是一个仅在本地网络中使用的链接。
+<!--@include: ../../reusables/local-domain.md{42,75}-->

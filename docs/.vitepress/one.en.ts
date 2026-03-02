@@ -24,8 +24,12 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/first-boot",
         },
         {
-          text: "Access Olares securely",
+          text: "Access Olares via VPN",
           link: "/one/access-olares-via-vpn",
+        },
+        {
+          text: "Access Olares via .local domain",
+          link: "/one/access-olares-via-local-domain",
         },
         {
           text: "Redeem membership",
