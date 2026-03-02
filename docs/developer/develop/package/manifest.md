@@ -944,7 +944,7 @@ apiTimeout: 0
 
 
 ### allowedOutboundPorts
-- Type: `map`
+- Type: `list<int>`
 - Optional
 
 ​​The specified ports will be opened to allow external access via non-HTTP protocols, such as SMTP.

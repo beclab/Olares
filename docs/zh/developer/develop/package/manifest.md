@@ -941,7 +941,7 @@ apiTimeout: 0
 :::
 
 ### allowedOutboundPorts
-- 类型： `map`
+- 类型： `list<int>`
 - 可选
 
 要求开通以下端口进行非 HTTP 协议的对外访问，例如 SMTP 服务等。
