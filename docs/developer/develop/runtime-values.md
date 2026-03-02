@@ -3,30 +3,20 @@ outline: [2, 3]
 description: Reference for predefined runtime values injected into application values.yaml during Olares deployment.
 ---
 
-# Use predefined runtime values
+# Predefined runtime values
 
-During application deployment, Olares injects system-managed values into the application's `values.yaml`.
+At deployment, Olares automatically injects a set of system-managed values into the app's `values.yaml`. These values are read-only and cover user identity, storage paths, cluster metadata, app dependencies, and middleware credentials.
 
-These predefined runtime values provide runtime context for:
+Because they are Helm values, they are not automatically available inside containers. To pass one into a container, map it explicitly under `env:` in your deployment template.
 
-- User and identity information  
-- Storage paths  
-- Cluster metadata  
-- Application dependency endpoints  
-- Middleware connection credentials  
+## Use in your app
 
-:::info
-These values are managed by the Olares system and cannot be edited.
+Reference these values directly in your Helm templates, such as `deployment.yaml`.
 
-Because they are Helm values (accessed via `.Values.*`), they are not automatically available inside containers. Map them explicitly in your templates if needed.
-:::
-
-## Usage example
-
-To use these values in your application, reference them inside your Helm templates (e.g., `deployment.yaml`):
+**Example**: pass the current username and Postgres host into container environment variables.
 
 ```yaml
-# Example: mapping Olares runtime values to container environment variables
+# Pass predefined runtime values into container environment variables
 spec:
   containers:
     - name: my-app
@@ -37,51 +27,49 @@ spec:
           value: "{{ .Values.postgres.host }}"
 ```
 
+For the full list of available values, see [Value reference](#value-reference).
+
 ## Value reference
 
-The "Type" column below describes the data type in Helm values and does not correspond to the `envs.type` enum in `OlaresManifest.yaml`.
+The Type column describes the Helm value data type. It does not correspond to the `type` field in `OlaresManifest.yaml`.
 
 ### User and identity
+
 | Value | Type | Description |
-| -- | -- | -- |
+| --- | --- | --- |
 | `.Values.bfl.username` | String | Current username. |
-| `.Values.user.zone`    | String | Current user's domain.   |
-| `.Values.admin`        | String | Administrator username. |
+| `.Values.user.zone` | String | Current user's domain. |
+| `.Values.admin` | String | Administrator username. |
 
 ### Application and system information
 
 | Value | Type | Description |
-| -- | -- | -- |
-| `.Values.domain` | Map<String,String> | Application entrance URLs in the format `entry_name => URL`. |
-| `.Values.sysVersion` | String | Current system version. |
-| `.Values.deviceName` | String  | Device name. |
-| `.Values.downloadCdnURL` | String | CDN address for system resource downloads. |
+| --- | --- | --- |
+| `.Values.domain` | Map\<String,String> | App entrance URLs. Each entry maps an entrance name to its URL. |
+| `.Values.sysVersion` | String | Current Olares system version. |
+| `.Values.deviceName` | String | Device name. |
+| `.Values.downloadCdnURL` | String | CDN address used for system resource downloads. |
 
 ### Storage paths
 
-Olares injects predefined storage paths that applications can use for data storage and caching.
-
-| Value | Type   | Description |
-| -- | -- | -- |
-| `.Values.userspace.appData` | String | Cluster storage path available to the application. Directory: `/Data/<appname>`. |
-| `.Values.userspace.appCache` | String | Node-local cache path available to the application. Directory: `/Cache/<appname>`. |
-| `.Values.userspace.userData` | String | User data directory. Path: `/Files/Home/`. |
-| `.Values.sharedlib` | String | User external storage directory. Path: `/Files/External/<devicename>/`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.userspace.appData` | String | Cluster storage path for the app. Path: `/Data/<appname>`. |
+| `.Values.userspace.appCache` | String | Node-local cache path for the app. Path: `/Cache/<appname>`. |
+| `.Values.userspace.userData` | String | User's home data directory. Path: `/Files/Home/`. |
+| `.Values.sharedlib` | String | User's external storage directory. Path: `/Files/External/<devicename>/`. |
 
 ### Cluster hardware metadata
 
-Cluster hardware information is injected into `values.yaml` at deployment time.
-
 | Value | Type | Description |
-| -- | -- | -- |
-| `.Values.cluster.arch` | String | Cluster CPU architecture (e.g., `amd64`). Mixed-architecture clusters are not supported. |
-| `.Values.nodes` | List\<NodeInfo> | List of node hardware metadata objects injected under `values["nodes"]`. |
+| --- | --- | --- |
+| `.Values.cluster.arch` | String | Cluster CPU architecture, such as `amd64`. Mixed-architecture clusters are not supported. |
+| `.Values.nodes` | List\<NodeInfo> | Hardware metadata for each node in the cluster. |
 
-The value of `values["nodes"]` is a list of `NodeInfo` objects.
-
-**Example `NodeInfo` structure**:
+Each entry in `.Values.nodes` follows this structure:
 
 ```json
+// Single entry in the .Values.nodes list
 [
   {
     "cudaVersion": "12.9",
@@ -113,32 +101,24 @@ The value of `values["nodes"]` is a list of `NodeInfo` objects.
 
 ### Application dependencies
 
-When an application declares a dependency on another application in `OlaresManifest.yaml`, Olares injects connection information into `values.yaml`.
+When an app declares a dependency in `OlaresManifest.yaml`, Olares injects connection information into `values.yaml`.
 
 | Value | Type | Description |
-| -- | -- | -- |
-| `.Values.deps` | Map<String,Value> | Host and port of the dependent application. |
-| `.Values.svcs` | Map<String,Value> | Services and ports exposed by the dependent application. |
+| --- | --- | --- |
+| `.Values.deps` | Map\<String,Value> | Main entry host and port for each declared dependency. Keys follow the pattern `<entry_name>_host` and `<entry_name>_port`. |
+| `.Values.svcs` | Map\<String,Value> | All service hosts and ports for each declared dependency. Keys follow the pattern `<service_name>_host` and `<service_name>_port`. Port values are lists to support multiple ports per service. |
 
-For `.Values.deps`, Olares injects:
-- `<entry_name>_host`
-- `<entry_name>_port`
+**Example**: for a dependency with entry name `aserver` and service name `aserver-svc`.
 
-**Example**:
-
+`.Values.deps`:
 ```json
 {
   "aserver_host": "aserver-svc.<namespace>",
   "aserver_port": 80
 }
 ```
-For `.Values.svcs`, Olares injects:
-- `<service_name>_host`
-- `<service_name>_port`
 
-The `_port` value is a list. If a service exposes multiple ports, all ports are included.
-
-**Example**:
+`.Values.svcs`:
 ```json
 {
   "aserver-svc_host": "aserver-svc.<namespace>",
@@ -148,87 +128,87 @@ The `_port` value is a list. If a service exposes multiple ports, all ports are 
 
 ### Middleware values
 
-Middleware values are injected only when declared in the `middleware` section of `OlaresManifest.yaml`.
+Middleware values are injected only after you declare the middleware dependency in the `middleware` section of `OlaresManifest.yaml`.
 
-PostgreSQL and Redis are preinstalled. Other middleware (MongoDB, MinIO, RabbitMQ, MySQL, MariaDB, Elasticsearch) must be installed before use.
+PostgreSQL and Redis are preinstalled. MongoDB, MinIO, RabbitMQ, MySQL, MariaDB, and Elasticsearch must be installed separately before your app can use them.
 
 See [Middleware](/developer/develop/mw-overview.md#supported-services) for installation and configuration details.
 
 #### Elasticsearch
 
-| Value  | Type  | Description  |
-|--|--|--|
-|`.Values.elasticsearch.host`| String | Elasticsearch service host |
-|`.Values.elasticsearch.port`| Number | Elasticsearch service port |
-|`.Values.elasticsearch.username`| String | Elasticsearch username |
-|`.Values.elasticsearch.password`| String | Elasticsearch password |
-|`.Values.elasticsearch.indexes` | Map<String,String> | The requested index name is used<br> as the key. For example, if you request `aaa`, the value is available at `.Values.elasticsearch.indexes.aaa`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.elasticsearch.host` | String | Elasticsearch service host. |
+| `.Values.elasticsearch.port` | Number | Elasticsearch service port. |
+| `.Values.elasticsearch.username` | String | Elasticsearch username. |
+| `.Values.elasticsearch.password` | String | Elasticsearch password. |
+| `.Values.elasticsearch.indexes` | Map\<String,String> | Requested indexes, keyed by index name. For example, a request for `aaa` is available at `.Values.elasticsearch.indexes.aaa`. |
 
 #### MariaDB
 
-| Value  | Type  | Description  |
-|--|--|--|
-| `.Values.mariadb.host` | String | MariaDB database host |
-| `.Values.mariadb.port` | Number | MariaDB database port |
-| `.Values.mariadb.username` | String | MariaDB database username |
-| `.Values.mariadb.password` | String | MariaDB database password |
-| `.Values.mariadb.databases` | Map<String,String> | The requested database name is used as the key. <br/>For example, if you request `aaa`, the value is available at `.Values.mariadb.databases.aaa`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.mariadb.host` | String | MariaDB host. |
+| `.Values.mariadb.port` | Number | MariaDB port. |
+| `.Values.mariadb.username` | String | MariaDB username. |
+| `.Values.mariadb.password` | String | MariaDB password. |
+| `.Values.mariadb.databases` | Map\<String,String> | Requested databases, keyed by database name. For example, a request for `app_db` is available at `.Values.mariadb.databases.app_db`. |
 
 #### MinIO
 
-| Value  | Type  | Description  |
-|--|--|--|
-| `.Values.minio.host` | String | MinIO service host |
-| `.Values.minio.port` | Number | MinIO service port |
-| `.Values.minio.username` | String | MinIO access key |
-| `.Values.minio.password` | String | MinIO secret key |
-| `.Values.minio.buckets` | Map<String,String> | The requested bucket name is used as the key. <br>For example, if you request `mybucket`, the value is available at `.Values.minio.buckets.mybucket`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.minio.host` | String | MinIO service host. |
+| `.Values.minio.port` | Number | MinIO service port. |
+| `.Values.minio.username` | String | MinIO access key. |
+| `.Values.minio.password` | String | MinIO secret key. |
+| `.Values.minio.buckets` | Map\<String,String> | Requested buckets, keyed by bucket name. For example, a request for `mybucket` is available at `.Values.minio.buckets.mybucket`. |
 
 #### MongoDB
 
-| Value  | Type  | Description  |
-|--|--|--|
-| `.Values.mongodb.host` | String  | MongoDB database host |
-| `.Values.mongodb.port` | Number  | MongoDB database port |
-| `.Values.mongodb.username` | String | MongoDB database username |
-| `.Values.mongodb.password`  | String | MongoDB database password |
-| `.Values.mongodb.databases` | Map<String,String> | The requested database name is used as the key. <br/>For example, if you request `app_db`, the value is available at `.Values.mongodb.databases.app_db`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.mongodb.host` | String | MongoDB host. |
+| `.Values.mongodb.port` | Number | MongoDB port. |
+| `.Values.mongodb.username` | String | MongoDB username. |
+| `.Values.mongodb.password` | String | MongoDB password. |
+| `.Values.mongodb.databases` | Map\<String,String> | Requested databases, keyed by database name. For example, a request for `app_db` is available at `.Values.mongodb.databases.app_db`. |
 
 #### MySQL
 
-| Value  | Type  | Description  |
-|--|--|--|
-| `.Values.mysql.host` | String | MySQL database host |
-| `.Values.mysql.port` | Number | MySQL database port |
-| `.Values.mysql.username` | String | MySQL database username |
-| `.Values.mysql.password` | String | MySQL database password |
-| `.Values.mysql.databases` | Map<String,String> | The requested database name is used as the key. <br/>For example, if you request `aaa`, the value is available at `.Values.mysql.databases.aaa`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.mysql.host` | String | MySQL host. |
+| `.Values.mysql.port` | Number | MySQL port. |
+| `.Values.mysql.username` | String | MySQL username. |
+| `.Values.mysql.password` | String | MySQL password. |
+| `.Values.mysql.databases` | Map\<String,String> | Requested databases, keyed by database name. For example, a request for `app_db` is available at `.Values.mysql.databases.app_db`. |
 
 #### PostgreSQL
 
-| Value  | Type  | Description  |
-|--|--|--|
-| `.Values.postgres.host` | String  | PostgreSQL database host |
-| `.Values.postgres.port` | Number | PostgreSQL database port |
-| `.Values.postgres.username`  | String | PostgreSQL database username |
-| `.Values.postgres.password`  | String | PostgreSQL database password |
-| `.Values.postgres.databases` | Map<String,String> | The requested database name is used as the key. <br>For example, if you request `app_db`, the value is available at `.Values.postgres.databases.app_db`|
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.postgres.host` | String | PostgreSQL host. |
+| `.Values.postgres.port` | Number | PostgreSQL port. |
+| `.Values.postgres.username` | String | PostgreSQL username. |
+| `.Values.postgres.password` | String | PostgreSQL password. |
+| `.Values.postgres.databases` | Map\<String,String> | Requested databases, keyed by database name. For example, a request for `app_db` is available at `.Values.postgres.databases.app_db`. |
 
 #### RabbitMQ
 
-| Value  | Type  | Description  |
-|--|--|--|
-| `.Values.rabbitmq.host` | String | RabbitMQ service host |
-| `.Values.rabbitmq.port` | Number | RabbitMQ service port |
-| `.Values.rabbitmq.username` | String | RabbitMQ username |
-| `.Values.rabbitmq.password` | String | RabbitMQ password |
-| `.Values.rabbitmq.vhosts` | Map<String,String> | The requested vhost name is used as the key. <br/>For example, if you request `aaa`, the value is available at `.Values.rabbitmq.vhosts.aaa`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.rabbitmq.host` | String | RabbitMQ host. |
+| `.Values.rabbitmq.port` | Number | RabbitMQ port. |
+| `.Values.rabbitmq.username` | String | RabbitMQ username. |
+| `.Values.rabbitmq.password` | String | RabbitMQ password. |
+| `.Values.rabbitmq.vhosts` | Map\<String,String> | Requested vhosts, keyed by vhost name. For example, a request for `myvhost` is available at `.Values.rabbitmq.vhosts.myvhost`. |
 
 #### Redis
 
-| Value  | Type  | Description  |
-|--|--|--|
-| `.Values.redis.host` | String | Redis service host |
-| `.Values.redis.port` | Number  | Redis service port |
-| `.Values.redis.password`| String | Redis service password |
-| `.Values.redis.namespaces` | Map<String,String> | The requested namespace is used as the key. <br>For example, if you request `app_ns`, the value is available at `.Values.redis.namespaces.app_ns`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.redis.host` | String | Redis host. |
+| `.Values.redis.port` | Number | Redis port. |
+| `.Values.redis.password` | String | Redis password. |
+| `.Values.redis.namespaces` | Map\<String,String> | Requested namespaces, keyed by namespace name. For example, a request for `app_ns` is available at `.Values.redis.namespaces.app_ns`. |

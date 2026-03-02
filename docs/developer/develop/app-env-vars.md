@@ -2,78 +2,70 @@
 outline: [2, 3]
 description: Declare and validate app configuration via envs in `OlaresManifest.yaml`, and reference values in templates through `.Values.olaresEnv`.
 ---
-# Custom environment variables
+# Declarative environment variables
 
-Developers can declare the configuration parameters required by an app under `envs` in `OlaresManifest.yaml`. During deployment or upgrade, App Service injects the final resolved values into `.Values.olaresEnv` in the app's `values.yaml`.
+Use `envs` in `OlaresManifest.yaml` to declare the configuration parameters your app needs, such as passwords, API endpoints, or feature flags. During deployment, app-service resolves the values and injects them into `.Values.olaresEnv` in `values.yaml`. Reference them in templates as <code v-pre>{{ .Values.olaresEnv.&lt;envName&gt; }}</code>.
 
-:::tip Injection notes
-- All variables declared in `envs` use the same template path: <code v-pre>{{ .Values.olaresEnv.&lt;envName&gt; }}</code>
-- If `values.yaml` contains a field with the same name, it will be overwritten by the system-injected value.
-:::
+## Field reference
 
-## How to use
+The following fields are available under each `envs` entry.
 
-### Declare in the manifest
+### envName
 
-**Example**:
+The name of the variable as injected into `values.yaml`. Reference it in templates as <code v-pre>{{ .Values.olaresEnv.&lt;envName&gt; }}</code>.
 
-```yaml
-olaresManifest.version: '0.10.0'
-olaresManifest.type: app
+### value
 
-envs:
-  - envName: ADMIN_PASSWORD
-    type: password
-    required: true
-    editable: false
-    description: "Password must be at least 6 characters long"
-    regex: '^[\w\-!@#$%^&*()+={}\[\]:,.?~]{6,}$'
-```
-
-### Reference in templates
-
-**Example**:
-
-```yaml
-env:
-  - name: ADMIN_PASSWORD
-    value: "{{ .Values.olaresEnv.ADMIN_PASSWORD }}"
-```
-
-## Field Reference
-
-The following fields define where a variable's value comes from, how it is validated, and whether it can be edited.
-
-### applyOnChange
-
-Boolean. When `true`, changing this variable automatically restarts all apps/components that use it so the change takes effect.
-
-:::info How changes take effect
-When `applyOnChange` is `false`, the change will not take effect even if you manually stop/start the app. It only takes effect after the app is upgraded or reinstalled.
-:::
+The resolved value of the variable. You cannot set a fixed constant directly. The value comes from `default`, user input, or a referenced variable via `valueFrom`.
 
 ### default
 
-The default value of the variable. Developers can provide it when authoring the app, and users cannot modify it. When the value is not provided by user input or `valueFrom`, `default` is used.
+The default value for the variable. Provided by the developer at authoring time. Users cannot modify it. Used when no value is supplied by the user or by `valueFrom`.
 
-### description
+### valueFrom
 
-Describes the purpose of the variable and the meaning of valid values.
+Maps this variable to a system or user environment variable. When set, the current variable inherits all fields from the referenced variable (`type`, `editable`, `regex`, and so on). Any fields defined locally on the current variable are ignored. `default` and `options` have no effect when `valueFrom` is used.
+
+**Example**: map the app variable `APP_CDN_ENDPOINT` to the system variable `OLARES_SYSTEM_CDN_SERVICE`.
+
+```yaml
+# Map app env APP_CDN_ENDPOINT to system variable OLARES_SYSTEM_CDN_SERVICE
+envs:
+  - envName: APP_CDN_ENDPOINT
+    required: true
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_SYSTEM_CDN_SERVICE
+```
+
+### required
+
+Boolean. When `true`, the variable must have a value for installation to proceed. If no `default` is set, the user is prompted to enter one. After installation, the value cannot be set to empty.
 
 ### editable
 
 Boolean. When `true`, the variable can be modified after installation.
 
-### envName
+### applyOnChange
 
-The key injected into `values.yaml`. Template reference: <code v-pre>{{ .Values.olaresEnv.&lt;envName&gt; }}</code>.
+Boolean. When `true`, changing this variable automatically restarts all apps or components that use it. When `false`, a change only takes effect after the app is upgraded or reinstalled. Stopping and starting the app manually has no effect.
+
+### type
+
+The expected type of the value. Used for validation before the value is accepted. Supported types: `int`, `bool`, `url`, `ip`, `domain`, `email`, `string`, `password`.
+
+### regex
+
+A regular expression the value must match. If validation fails, the value cannot be set and installation or upgrade may fail.
 
 ### options
 
-An allowlist of values. The variable's value must be chosen from the list, and the system usually provides a selection UI for users.
+Restricts the variable to a fixed list of allowed values. The system presents users with a selection UI.
 
-**Example**:
+**Example**: a dropdown where the display title and the stored value differ.
+
 ```yaml
+# Dropdown: title shown in UI, value stored internally
 envs:
   - envName: VERSION
     options:
@@ -83,59 +75,19 @@ envs:
         value: "iso/win7_sp1_x64_1.iso"
 ```
 
-### regex
-
-Regex validation. Only values matching `regex` are allowed. Validation failure may cause setting to fail, or cause installation/upgrade to fail.
-
 ### remoteOptions
 
-Provides the options list via a URL. The response body must be a JSON-encoded options array.
+Loads the options list from a URL instead of defining it inline. The response body must be a JSON-encoded array in the same format as `options`.
 
-**Example**:
+**Example**: options fetched from a remote endpoint.
 
 ```yaml
+# Options list fetched from remote URL at install time
 envs:
   - envName: VERSION
     remoteOptions: https://app.cdn.olares.com/appstore/windows/version_options.json
 ```
 
-### required
+### description
 
-Boolean. When `true`, the variable is required for installation:
-- If `default` is not set, the system will prompt the user to enter a value before installation.
-- After installation, the value cannot be changed to empty.
-
-### type
-
-The value type used for validation. If validation fails, the value cannot be set. Supported types:
-
-- `int`
-- `bool`
-- `url`
-- `ip`
-- `domain`
-- `email`
-- `string`
-- `password`
-
-### value
-
-The value of an environment variable. It does not support directly hardcoding arbitrary constants. The value can come from `default`, user input, or by referencing other variables via `valueFrom`.
-
-### valueFrom
-
-References the value of an Olares system environment variable or user environment variable. 
-
-**Example**:
-```yaml
-envs:
-  - envName: APP_CDN_ENDPOINT
-    required: true
-    applyOnChange: true
-    valueFrom:
-      envName: OLARES_SYSTEM_CDN_SERVICE
-```
-
-:::info Inheritance rules for references
-When `valueFrom` is used, the current variable inherits all attribute fields from the referenced variable (such as `type`, `editable`, `regex`, etc.). Any fields with the same names defined on the current variable will be ignored. In addition, `default` and `options` are not effective in this case.
-:::
+A human-readable description of the variable's purpose and valid values. Displayed in the Olares interface.

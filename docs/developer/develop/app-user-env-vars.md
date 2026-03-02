@@ -5,19 +5,16 @@ description: User environment variables are user-level personalized settings. Ap
 
 # User environment variables
 
-User environment variables are personalized settings for each Olares user and are managed by the current user. In a cluster with multiple users, each user’s environment variables are independent.
+User environment variables are per-user settings managed by the user themselves. Common examples include timezone, email address, SMTP configuration, mirror endpoints, and API keys. In a cluster with multiple users, each user's values are independent.
 
-:::info
-User environment variables are a "variable pool". Apps must map them to their own `envName` via `envs.valueFrom`, and then use them in templates via `.Values.olaresEnv.<envName>`.
-:::
+Apps cannot read these variables directly. To use one, map it to an app variable in `envs` using `valueFrom`, then reference it in templates via `.Values.olaresEnv.<envName>`.
 
-## How to use
+## Map a user variable to your app
 
-1. Declare the mapping in `OlaresManifest.yaml`. Under `envs`, declare an app variable and use `valueFrom` to reference the user environment variable.
-
-    **Example**:
+1. In `OlaresManifest.yaml`, declare an app variable under `envs` and set `valueFrom.envName` to the user variable name.
 
     ```yaml
+    # Map user variable OLARES_USER_TIMEZONE to app variable USER_TIMEZONE
     olaresManifest.version: "0.10.0"
     olaresManifest.type: app
 
@@ -26,232 +23,68 @@ User environment variables are a "variable pool". Apps must map them to their ow
         valueFrom:
           envName: OLARES_USER_TIMEZONE
     ```
-2. In your Helm template where the variable is needed, reference it using the `.Values.olaresEnv` path.
 
-    **Example**:
-    ```yaml
-    value: "{{ .Values.olaresEnv.USER_TIMEZONE }}"
-    ```
-3. When the app is deployed via App Service, the system automatically retrieves the current user's configuration and injects it into `values.yaml`.
-
-    **Example output**:
+2. In your Helm template, reference the app variable via `.Values.olaresEnv.<envName>`.
 
     ```yaml
-    olaresEnv:
-      USER_TIMEZONE: "Asia/Shanghai"
+    # Use USER_TIMEZONE in a container environment variable
+    env:
+      - name: TZ
+        value: "{{ .Values.olaresEnv.USER_TIMEZONE }}"
     ```
-## User environment variables reference
 
-### User info
+At deployment, app-service retrieves the current user's value and injects it into `values.yaml`:
 
-#### OLARES_USER_EMAIL
+```yaml
+# Injected by app-service into values.yaml at deployment
+olaresEnv:
+  USER_TIMEZONE: "Asia/Shanghai"
+```
 
-- Type: `string`
-- Editable: Yes
+For the full list of available user variables, see [Variable reference](#variable-reference).
 
-#### OLARES_USER_USERNAME
+## Variable reference
 
-- Type: `string`
-- Editable: Yes
+All user environment variables are editable by the user.
 
-#### OLARES_USER_PASSWORD
+### User information
 
-- Type: `password`
-- Editable: Yes
-
-#### OLARES_USER_TIMEZONE
-
-- Type: `string`
-- Editable: Yes
+| Variable | Type | Default | Description |
+| --- | --- | --- | --- |
+| `OLARES_USER_EMAIL` | `string` | None | User email address. |
+| `OLARES_USER_USERNAME` | `string` | None | Username. |
+| `OLARES_USER_PASSWORD` | `password` | None | User password. |
+| `OLARES_USER_TIMEZONE` | `string` | None | User timezone. For example, `Asia/Shanghai`. |
 
 ### SMTP settings
 
-#### OLARES_USER_SMTP_ENABLED
-Whether to enable SMTP.
-- Type: `bool`
-- Editable: Yes
+| Variable | Type | Default | Description |
+| --- | --- | --- | --- |
+| `OLARES_USER_SMTP_ENABLED` | `bool` | None | Whether to enable SMTP. |
+| `OLARES_USER_SMTP_SERVER` | `domain` | None | SMTP server domain. |
+| `OLARES_USER_SMTP_PORT` | `int` | None | SMTP server port. Typically `465` or `587`. |
+| `OLARES_USER_SMTP_USERNAME` | `string` | None | SMTP username. |
+| `OLARES_USER_SMTP_PASSWORD` | `password` | None | SMTP password or authorization code. |
+| `OLARES_USER_SMTP_FROM_ADDRESS` | `email` | None | Sender email address. |
+| `OLARES_USER_SMTP_SECURE` | `bool` | `"true"` | Whether to use a secure protocol. |
+| `OLARES_USER_SMTP_USE_TLS` | `bool` | None | Use TLS. |
+| `OLARES_USER_SMTP_USE_SSL` | `bool` | None | Use SSL. |
+| `OLARES_USER_SMTP_SECURITY_PROTOCOLS` | `string` | None | Security protocol. Allowed values: `tls`, `ssl`, `starttls`, `none`. |
 
-#### OLARES_USER_SMTP_SERVER
-SMTP server domain.
-- Type: `domain`
-- Editable: Yes
+### Mirror and proxy endpoints
 
-#### OLARES_USER_SMTP_PORT
-SMTP server port, typically "465" or "587".
-- Type: `int`
-- Editable: Yes
-
-#### OLARES_USER_SMTP_USERNAME
-SMTP username.
-- Type: `string`
-- Editable: Yes
-
-#### OLARES_USER_SMTP_PASSWORD
-SMTP password or authorization code.
-- Type: `password`
-- Editable: Yes
-
-#### OLARES_USER_SMTP_FROM_ADDRESS
-Sender email address.
-- Type: `email`
-- Editable: Yes
-
-#### OLARES_USER_SMTP_SECURE
-Whether to use a secure protocol.
-- Type: `bool`
-- Default: `true`
-- Editable: Yes
-
-#### OLARES_USER_SMTP_USE_TLS
-Secure protocol option.
-- Type: `bool`
-- Editable: Yes
-
-#### OLARES_USER_SMTP_USE_SSL
-Secure protocol option.
-- Type: `bool`
-- Editable: Yes
-
-#### OLARES_USER_SMTP_SECURITY_PROTOCOLS
-Security protocol. Allowed values: `tls`, `ssl`, `starttls`, `none`
-- Type: `string`
-- Editable: Yes
-
-### Mirror/Proxy endpoints
-
-#### OLARES_USER_HUGGINGFACE_SERVICE
-
-- Type: `url`
-- Default: `"https://huggingface.co/"`
-- Editable: Yes
-
-#### OLARES_USER_HUGGINGFACE_TOKEN
-
-- Type: `string`
-- Editable: Yes
-
-#### OLARES_USER_PYPI_SERVICE
-
-- Type: `url`
-- Default: `"https://pypi.org/simple/"`
-- Editable: Yes
-
-#### OLARES_USER_GITHUB_SERVICE
-
-- Type: `url`
-- Default: `"https://github.com/"`
-- Editable: Yes
-
-#### OLARES_USER_GITHUB_TOKEN
-
-- Type: `string`
-- Editable: Yes
+| Variable | Type | Default | Description |
+| --- | --- | --- | --- |
+| `OLARES_USER_HUGGINGFACE_SERVICE` | `url` | `https://huggingface.co/` | Hugging Face service URL. |
+| `OLARES_USER_HUGGINGFACE_TOKEN` | `string` | None | Hugging Face access token. |
+| `OLARES_USER_PYPI_SERVICE` | `url` | `https://pypi.org/simple/` | PyPI mirror URL. |
+| `OLARES_USER_GITHUB_SERVICE` | `url` | `https://github.com/` | GitHub mirror URL. |
+| `OLARES_USER_GITHUB_TOKEN` | `string` | None | GitHub personal access token. |
 
 ### API keys
 
-#### OLARES_USER_OPENAI_APIKEY
-
-- Type: `password`
-- Editable: Yes
-
-#### OLARES_USER_CUSTOM_OPENAI_SERVICE
-
-- Type: `url`
-- Editable: Yes
-
-#### OLARES_USER_CUSTOM_OPENAI_APIKEY
-
-- Type: `password`
-- Editable: Yes
-
-## Full structure example
-
-```yaml
-userEnvs:
-# User info
-  - envName: OLARES_USER_EMAIL
-    type: string
-    editable: true
-  - envName: OLARES_USER_USERNAME
-    type: string
-    editable: true
-  - envName: OLARES_USER_PASSWORD
-    type: password
-    editable: true
-  - envName: OLARES_USER_TIMEZONE
-    type: string
-    editable: true    
-
-# SMTP settings
-    
-  - envName: OLARES_USER_SMTP_ENABLED
-    type: bool
-    editable: true
-    
-  - envName: OLARES_USER_SMTP_SERVER
-    type: domain 
-    editable: true
-    
-  - envName: OLARES_USER_SMTP_PORT
-    type: int
-    editable: true
-    
-  - envName: OLARES_USER_SMTP_USERNAME
-    type: string
-    editable: true
-    
-  - envName: OLARES_USER_SMTP_PASSWORD
-    type: password
-    editable: true
-    
-  - envName: OLARES_USER_SMTP_FROM_ADDRESS
-    type: email
-    editable: true    
-   
-  - envName: OLARES_USER_SMTP_SECURE
-    type: bool
-    editable: true
-    default: "true"   
-    
-  - envName: OLARES_USER_SMTP_USE_TLS
-    type: bool
-    editable: true
-  - envName: OLARES_USER_SMTP_USE_SSL
-    type: bool
-    editable: true
-    
-  - envName: OLARES_USER_SMTP_SECURITY_PROTOCOLS
-    type: string
-    editable: true        
-    
-# Mirror/Proxy endpoints
-  - envName: OLARES_USER_HUGGINGFACE_SERVICE
-    type: url
-    editable: true
-    default: "https://huggingface.co/"
-  - envName: OLARES_USER_HUGGINGFACE_TOKEN
-    type: string
-    editable: true    
-  - envName: OLARES_USER_PYPI_SERVICE
-    type: url
-    editable: true
-    default: "https://pypi.org/simple/"
-  - envName: OLARES_USER_GITHUB_SERVICE
-    type: url
-    editable: true
-    default: "https://github.com/"
-  - envName: OLARES_USER_GITHUB_TOKEN
-    type: string
-    editable: true
-
-# API keys
-  - envName: OLARES_USER_OPENAI_APIKEY
-    type: password
-    editable: true
-  - envName: OLARES_USER_CUSTOM_OPENAI_SERVICE
-    type: url
-    editable: true    
-  - envName: OLARES_USER_CUSTOM_OPENAI_APIKEY
-    type: password
-    editable: true     
-```
+| Variable | Type | Default | Description |
+| --- | --- | --- | --- |
+| `OLARES_USER_OPENAI_APIKEY` | `password` | None | OpenAI API key. |
+| `OLARES_USER_CUSTOM_OPENAI_SERVICE` | `url` | None | Custom OpenAI-compatible service URL. |
+| `OLARES_USER_CUSTOM_OPENAI_APIKEY` | `password` | None | API key for the custom OpenAI-compatible service. |

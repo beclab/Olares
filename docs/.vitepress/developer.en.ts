@@ -219,7 +219,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
           collapsed: true,
           items: [
             {
-              text: "Custom environment variables",
+              text: "Declarative environment variables",
               link: "/developer/develop/app-env-vars",
               collapsed: true,
               items:[
@@ -234,7 +234,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
-              text: "Runtime values",
+              text: "Predefined runtime values",
               link: "/developer/develop/runtime-values",
             },
           ]

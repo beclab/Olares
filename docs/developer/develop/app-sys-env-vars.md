@@ -5,20 +5,16 @@ description: System environment variables are cluster-wide global settings maint
 
 # System environment variables
 
-System environment variables are global settings for each Olares cluster instance. They are configured during system installation or maintained by the cluster administrator. All users in the cluster share the same set of system environment variables.
+System environment variables are cluster-wide settings configured at Olares install time or managed by the cluster administrator. All users in the cluster share the same values. Common examples include the CDN endpoint, Docker Hub mirror, and Olares root path.
 
-:::info
-System environment variables are a "variable pool". Apps cannot modify them directly—they are maintained by the administrator. Apps must map them to their own `envName` via `envs.valueFrom`, and then use them in templates via `.Values.olaresEnv.<envName>`.
-:::
+Apps cannot modify these variables. To use one, map it to an app variable in `envs` using `valueFrom`, then reference it in templates via `.Values.olaresEnv.<envName>`.
 
-## How to Use
+## Map a system variable to your app
 
-The following example shows how to reference a system environment variable `APP_CDN_ENDPOINT` in an app.
+1. In `OlaresManifest.yaml`, declare an app variable under `envs` and set `valueFrom.envName` to the system variable name.
 
-1. Declare the mapping in `OlaresManifest.yaml`. Under `envs`, declare an app variable and use `valueFrom` to reference the system environment variable.
-
-    **Example**:
     ```yaml
+    # Map system variable OLARES_SYSTEM_CDN_SERVICE to app variable APP_CDN_ENDPOINT
     olaresManifest.version: '0.10.0'
     olaresManifest.type: app
 
@@ -30,106 +26,34 @@ The following example shows how to reference a system environment variable `APP_
           envName: OLARES_SYSTEM_CDN_SERVICE
     ```
 
-2. In your Helm template where the variable is needed, reference it using the `.Values.olaresEnv` path.
+2. In your Helm template, reference the app variable via `.Values.olaresEnv.<envName>`.
 
-    **Example**:
     ```yaml
-    value: "{{ .Values.olaresEnv.APP_CDN_ENDPOINT }}"
+    # Use APP_CDN_ENDPOINT in a container environment variable
+    env:
+      - name: CDN_ENDPOINT
+        value: "{{ .Values.olaresEnv.APP_CDN_ENDPOINT }}"
     ```
 
-3. When the app is deployed through App Service, the system injects the corresponding system environment variable value into `values.yaml`.
+At deployment, app-service resolves the system variable and injects the value into `values.yaml`:
 
-    **Example**:
-    ```yaml
-    olaresEnv:
-      APP_CDN_ENDPOINT: "https://cdn.olares.com"
-    ```
-## System environment variables reference
-
-### OLARES_SYSTEM_REMOTE_SERVICE
-
-Remote service endpoint for the Olares system (such as the Market, Olares Space, etc.)
-
-- Type: `url`
-- Default: `https://api.olares.com`
-- Editable:  Yes
-- Required: Yes
-
-### OLARES_SYSTEM_CDN_SERVICE
-
-CDN endpoint for system resources
-
-- Type: `url`
-- Default: `https://cdn.olares.com`
-- Editable: Yes
-- Required: Yes
-
-### OLARES_SYSTEM_DOCKERHUB_SERVICE
-
-Docker Hub mirror/accelerator endpoint
-
-- Type: `url`
-- Editable: Yes
-- Required: No
-
-### OLARES_SYSTEM_ROOT_PATH
-
-Olares root directory path
-
-- Type: `string`
-- Default: `/olares`
-- Editable: No
-- Required: Yes
-
-### OLARES_SYSTEM_ROOTFS_TYPE
-
-Olares filesystem type
-
-- Type: `string`
-- Default: `fs`
-- Editable: No
-- Required: Yes
-
-### OLARES_SYSTEM_CUDA_VERSION
-
-Host CUDA version
-
-- Type: `string`
-- Editable: No
-- Required: No
-
-## Full Structure Example
 ```yaml
-systemEnvs:
-    
-  - envName: OLARES_SYSTEM_REMOTE_SERVICE
-    default: "https://api.olares.com"
-    type: url
-    editable: true
-    required: true
-    
-  - envName: OLARES_SYSTEM_CDN_SERVICE
-    default: "https://cdn.olares.com"
-    type: url
-    editable: true
-    required: true
-    
-  - envName: OLARES_SYSTEM_DOCKERHUB_SERVICE
-    type: url
-    editable: true
-    required: false
-    
-  - envName: OLARES_SYSTEM_ROOT_PATH
-    default: /olares
-    editable: false
-    required: true
-    
-  - envName: OLARES_SYSTEM_ROOTFS_TYPE
-    default: fs
-    editable: false
-    required: true
-    
-  - envName: OLARES_SYSTEM_CUDA_VERSION
-    editable: false
-    required: false
+# Injected by app-service into values.yaml at deployment
+olaresEnv:
+  APP_CDN_ENDPOINT: "https://cdn.olares.com"
 ```
+
+For the full list of available system variables, see [Variable reference](#variable-reference).
+
+## Variable reference
+
+The `editable` and `required` columns describe the system variable's own properties, not something your app controls.
+
+| Variable | Type | Default | editable | required | Description |
+| --- | --- | --- | --- | --- | --- |
+| `OLARES_SYSTEM_REMOTE_SERVICE` | `url` | `https://api.olares.com` | `true` | `true` | Remote service endpoint for Olares, such as Market and Olares Space. |
+| `OLARES_SYSTEM_CDN_SERVICE` | `url` | `https://cdn.olares.com` | `true` | `true` | CDN endpoint for system resources. |
+| `OLARES_SYSTEM_DOCKERHUB_SERVICE` | `url` | None | `true` | `false` | Docker Hub mirror or accelerator endpoint. |
+| `OLARES_SYSTEM_ROOT_PATH` | `string` | `/olares` | `false` | `true` | Olares root directory path. |
+| `OLARES_SYSTEM_ROOTFS_TYPE` | `string` | `fs` | `false` | `true` | Olares filesystem type. |
+| `OLARES_SYSTEM_CUDA_VERSION` | `string` | None | `false` | `false` | Host CUDA version. |
