@@ -41,4 +41,4 @@ Olares 当前支持以下语言：
    - **填充**
    - **平铺**
 
-6. 若要移除自定义壁纸，请将鼠标悬停在在**已上传图片**区域，点击右上角的 <i class="material-symbols-outlined">close</i> 图标。
+6. 若要移除自定义壁纸，请将鼠标悬停在**已上传图片**区域，点击右上角的 <i class="material-symbols-outlined">close</i> 图标。
