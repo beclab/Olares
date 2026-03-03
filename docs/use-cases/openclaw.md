@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Learn how to install, configure, and integrate OpenClaw with Discord.
+description: Learn how to install, configure, personalize, and integrate OpenClaw with Discord.
 head:
   - - meta
     - name: keywords
@@ -15,11 +15,10 @@ It acts as an "always-on" operator that can execute real tasks, such as searchin
 
 ## Learning objectives
 
-By the end of this tutorial, you are be able to:
-
 - Install and initialize the OpenClaw environment.
 - Pair and connect the OpenClaw CLI and the Control UI.
 - Configure OpenClaw to use the local AI model Ollama.
+- Personalize OpenClaw to establish its identity and behavior.
 - Integrate OpenClaw with Discord.
 - Enable the web search capability using Brave Search.
 - Manage skills and plug-ins.
@@ -132,18 +131,18 @@ Run a quick setup for the agent in the OpenClaw CLI.
     - **Default Session Key**: Enter `agent:main:main`.
 7. Click **Connect**.
 
-    The connection error `disconnected[1008]:pairing required` occurs. This is expected and means the device connection is waiting for approval.
+    The connection error `pairing required` occurs. This is expected and means the device connection is waiting for approval.
 8. Return to the OpenClaw CLI window and enter the following command:
 
     ```bash
     openclaw devices approve --latest
     ```
-9. When the terminal displays the approval message, return to the Control UI and refresh it.
+9. When the terminal displays the approval message, return to the Control UI.
     ![Pair sucess](/images/manual/use-cases/new-pair-success.png#bordered)
 
-    Now the **STATUS** in the **Snapshot** panel should be **Connected**.
+    Now the **STATUS** in the **Snapshot** panel should be **OK**.
 
-    ![Health OK](/images/manual/use-cases/openclaw-connected.png#bordered)
+    ![Health OK](/images/manual/use-cases/openclaw-connected1.png#bordered)
 
 :::tip For advanced users
 If you prefer to fully customize your initial setup, you can run the `openclaw onboard` command instead to launch the interactive configuration wizard.
@@ -163,7 +162,7 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     - **Default Session Key**: Enter `agent:main:main`.
 3. Click **Connect**. 
 
-    The connection error `disconnected[1008]:pairing required` occurs. This is expected and means the device connection is waiting for approval.
+    The connection error `pairing required` occurs. This is expected and means the device connection is waiting for approval.
 4. Return to the OpenClaw CLI window and enter the following command:
     ```bash
     openclaw devices list
@@ -181,9 +180,9 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     ```bash
     openclaw devices approve {RequestID}
     ```
-7. When the terminal displays the approval message, return to the Control UI. Now the **STATUS** in the **Snapshot** panel should be **Connected**.
+7. When the terminal displays the approval message, return to the Control UI. Now the **STATUS** in the **Snapshot** panel should be **OK**.
 
-    ![Health OK](/images/manual/use-cases/openclaw-connected.png#bordered)
+    ![Health OK](/images/manual/use-cases/openclaw-connected1.png#bordered)
 
 ## Configure local AI model
 
@@ -206,6 +205,56 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     },
     ```
 4. Click **Save** in the upper-right corner. The system validates the config and restarts automatically to apply the changes.
+
+## Personalize OpenClaw
+
+To make your OpenClaw bot more personalized, it is highly recommended to complete the persona setup process. This establishes the agent's identity, behavioral boundaries, and long-term memory.
+
+1. In the Control UI, select **Chat** from the left sidebar.
+2. Ensure <i class="material-symbols-outlined">neurology</i> at the upper-right corner is enabled. This allows you to watch the agent think and edit persona files in real time.
+3. Enter and send the following message to start:
+    ```text
+    Wake up please!
+    ```
+    The agent responds and starts interviewing you. You can establish rules, personality traits, and preferences. For example,
+
+    ```text
+    - Call me Bella. I like simple language without technical jargons and 
+    concise bulleted answers.
+    - You are John, a witty assistant who uses emojis.
+    - Never access my calendar without asking first, and never execute any 
+    financial operations.
+    ```
+4. As you chat with the agent, look for the **Edit** messages. These indicate the agent is successfully writing your preferences to its core persona files, such as `IDENTITY.md`, `USER.md`, and `SOUL.md`. 
+
+    ![Persona files editing by OpenClaw](/images/manual/use-cases/openclaw-persona-recording.png#bordered){width=90%}
+
+    :::tip
+    If you do not see the intermediate persona file operations, refresh the page by clicking <i class="material-symbols-outlined">refresh</i> at the upper-right corner or by pressing F5.
+    :::
+5. Continue the conversation until the agent gathers enough information. Then, it automatically deletes the temporary `BOOTSTRAP.md` file to finish the personalization process.
+
+    ![Finish hatch agent](/images/manual/use-cases/openclaw-hatch-finish.png#bordered){width=90%}
+
+    :::tip Bootstrap deletion fails
+    If the agent fails to delete `BOOTSTRAP.md`, explicitly instruct it to do so in the chat. If it still struggles, your model's context window might be full. Ensure your model supports at least 64K tokens (200K+ is recommended), or temporarily switch to a smarter model with better tool-calling capabilities.
+    :::
+
+6. Verify your agent's persona files:
+
+    a. Open Files from the Launchpad.
+    
+    b. Go to **Application** > **Data** > **clawdbot** > **config** > **workspace**.
+    
+    c. Look for the generated persona files in `.md` format. These files keep your agent's behavior consistent across all platforms and channels.
+
+    ![Persona files generated by OpenClaw](/images/manual/use-cases/openclaw-persona-files.png#bordered){width=90%}
+      
+    :::tip Modify persona settings
+    To change these settings in the future, use one of the following methods:
+    - Ask the agent in the chat to update its rules.
+    - Download the `.md` files from this folder, edit them in a text editor, and re-upload them to overwrite the old ones. 
+    :::
 
 ## Integrate with Discord
 
@@ -345,7 +394,7 @@ OpenClaw officially recommends Brave Search. It uses an independent web index op
 
 ## Manage skills and plugins
 
-OpenClaw can be extended using skills and plugins：
+OpenClaw can be extended using skills and plugins:
 - Skills add new capabilities to the AI. For example, managing Model Context Protocol servers.
 - Plugins extend the system to support additional channels or community features. For example, adding iMessage via BlueBubbles.
 
