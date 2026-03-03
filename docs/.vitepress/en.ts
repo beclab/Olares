@@ -45,6 +45,10 @@ const side = {
               text: "Missing apps in Market",
               link: "/manual/help/ts-missing-apps",
             },
+            {
+              text: "LarePass VPN not working",
+              link: "/manual/help/ts-larepass-vpn-not-working",
+            },
           ],
         },
       ],

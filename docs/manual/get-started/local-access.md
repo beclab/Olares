@@ -39,7 +39,7 @@ No setup is needed. Use the local URL in your browser (for example, `http://desk
 
 ### FAQs
 
-<!--@include: ../../reusables/larepass-vpn.md{50,75}-->
+<!--@include: ../../reusables/larepass-vpn.md{50,57}-->
 
 <!--@include: ../../reusables/local-domain.md{42,75}-->
 
