@@ -15,7 +15,7 @@ cat $1|while read image; do
     curl -fsSLI https://cdn.olares.com/$path$name.tar.gz > /dev/null
     if [ $? -ne 0 ]; then
         code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://cdn.olares.com/$path$name.tar.gz)
-        if [ $code -eq 403 ]; then
+        if [[ $code -eq 403 || $code -eq 404 ]]; then
             set -ex
             skopeo copy --insecure-policy docker://$image oci-archive:$name.tar
             gzip $name.tar
@@ -53,7 +53,7 @@ cat $1|while read image; do
     curl -fsSLI https://cdn.olares.com/$path$checksum > /dev/null
     if [ $? -ne 0 ]; then
         code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://cdn.olares.com/$path$checksum)
-        if [ $code -eq 403 ]; then
+        if [[ $code -eq 403 || $code -eq 404 ]]; then
             set -ex
             skopeo copy --insecure-policy docker://$image oci-archive:$name.tar
             gzip $name.tar
@@ -88,7 +88,7 @@ cat $1|while read image; do
     curl -fsSLI https://cdn.olares.com/$path$manifest > /dev/null
     if [ $? -ne 0 ]; then   
         code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://cdn.olares.com/$path$manifest)
-        if [ $code -eq 403 ]; then
+        if [[ $code -eq 403 || $code -eq 404 ]]; then
             set -ex
             BASE_DIR=$(dirname $(realpath -s $0))
             python3 $BASE_DIR/get-manifest.py $image -o $manifest
