@@ -4,8 +4,11 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/beclab/Olares/cli/pkg/core/action"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/etcd/templates"
 	"github.com/beclab/Olares/cli/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/version"
 )
 
@@ -32,6 +35,27 @@ func (u upgrader_1_12_5) AddedBreakingChange() bool {
 		return true
 	}
 	return false
+}
+
+func (u upgrader_1_12_5) PrepareForUpgrade() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name: "GenerateETCDService",
+			Desc: "Generate etcd service",
+			Action: &action.Template{
+				Name:     "GenerateETCDService",
+				Template: templates.ETCDService,
+				Dst:      "/etc/systemd/system/etcd.service",
+			},
+		},
+		&task.LocalTask{
+			Name: "ReloadSystemd",
+			Desc: "Reload systemd",
+			Action: &terminus.SystemctlCommand{
+				DaemonReloadPreExec: true,
+			},
+		},
+	}
 }
 
 func (u upgrader_1_12_5) UpgradeSystemComponents() []task.Interface {
