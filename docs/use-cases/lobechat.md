@@ -19,8 +19,7 @@ This guide covers the installation, configuration, and practical usage of these 
 
 - Configure LobeHub to communicate with your local Ollama instance.
 - Create specialized agents tailored to specific tasks and equip them with specific Skills.
-- Create an agent group to enable multiple agents to collaborate on complex workflows.
-- Use LobeHub for practical scenarios such as content writing and coding.
+<!--- Create an agent group to enable multiple agents to collaborate on complex workflows.-->
 
 ## Prerequisites
 
@@ -40,10 +39,10 @@ Before you begin, make sure:
 ## Sign in to LobeHub
 
 1. Open **LobeChat** from Launchpad.
-2. In the **Sign up or log in to your LobeHub account** field, enter your email address, and then click <i class="material-symbols-outlined">arrow_forward_ios</i>.
-3. If you have not signed up before, you are prompted to create an account using this email. And then you are signed in to LobeHub directly. Click let's get started. Set up your user name, your interested areas, language preference, default model used by the agent (you can change later). Then you are ready to go.
+2. Log in using your LobeHub account.
+3. (Optional) If you do not have a LobeHub account, enter your email address, and then follow the prompts on the page to create one and log in.
 
-      ![LobeHub welcome interface](/images/manual/use-cases/lobehub-start.png#bordered)
+   ![LobeHub home page](/images/manual/use-cases/lobehub-start.png#bordered)
 
 ## Configure the connection
 
@@ -55,7 +54,7 @@ Connect LobeHub to Ollama to make the chat interface work.
 
 2. In the **Interface proxy address** field, enter your local Ollama address.
 
-   :::tip Obtain your local Ollama host address
+   :::tip Obtain local Ollama host address
    To obtain your local Ollama host address, go to Olares **Settings** > **Applications** > **Ollama**, click **Ollama API** under **Entraces** or **Shared entrances**, and then copy the endpoint address.
 
    ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl1.png#bordered){width=60%} 
@@ -65,35 +64,51 @@ Connect LobeHub to Ollama to make the chat interface work.
    :::tip
    When you are running local models, do not enable the **Use Client Request Mode** option.
    :::
-4. In **Model List**, click **Fetch models** to pull the list of installed models, and then enable the models you want to use.
+4. In the **Model List** section, click **Fetch models** to pull the list of installed models, and then enable the models you want to use.
 
    ![Fetch model list and enable models](/images/manual/use-cases/lobehub-fetch-enable-model.png#bordered){width=85%} 
 
-5. In the **Connectivity Check** section, select the model you just enabled, and then click **Check** to verify the connection. When the model is large, it might take a while to load.
+5. In the **Connectivity Check** section, select the model you just enabled from the list, and then click **Check** to verify the connection. When the model is large, it might take a while to load.
 
    ![Connectivity check](/images/manual/use-cases/lobehub-connectivity-check.png#bordered){width=85%} 
 
-   The button turning to **Check Passed** indicates that the proxy address is correct. 
+   The button changing to **Check Passed** indicates that the proxy address is correct. 
 
    ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass.png#bordered){width=85%}    
 
-6. Click the home icon at the upper-left corner to return to the main page.
+6. Click the home icon at the upper-left corner to return to the LobeChat home page.
 
-   ![Return to homepage](/images/manual/use-cases/lobehub-return-home.png#bordered){width=45%} 
+   ![Return to home page](/images/manual/use-cases/lobehub-return-home.png#bordered){width=45%} 
 
 ## Use Lobe AI
+
+Lobe AI is the official default agent from LobeHub. It is designed to help you accomplish a wide range of tasks without the need for complex setup, such as software development, learning support, creative writing, data analysis, and daily personal tasks.
+
+If Lobe AI does not meet your specific workflow needs, you can build your own specialized agents. For more information, see [Create an agent](#create-an-agent).
 
 1. From the left sidebar, click **Lobe AI**.
    
    ![Click Lobe AI](/images/manual/use-cases/lobe-ai.png#bordered){width=85%} 
 
-## Create an agent 
+2. In the chat window, select the language model, and interact just like you would with any standard conversational AI.
+
+## Create an agent
+
+Create your own specialized agents by using the conversational Agent Builder or by manually configuring the settings from scratch.
+
+LobeHub allows you to create specialized assistants to handle specific tasks by leveraging various language models and combining them with skills.
+- Flexible model switching: You can switch language models instantly within the same chat to achieve the best results. For example, if you are not satisfied with a response, you can select a different model from the list to leverage their unique strengths.
+- Skill extensions: You can also install additional skilss to extend and enhance the capabilities of your agent.
+
+   :::info
+   To install plug-ins, ensure that you select a model compatible with Function Calling. Look for <i class="material-symbols-outlined">brick</i> next to the model name, which indicates the model supports function calls.
+   :::
 
 ### Create an agent using Agent Builder
 
-If you prefer not to configure everything manually, you can use Agent Builder. This is LobeHub's built-in assistant that helps you create specialized agents through conversations. Simply describe your needs, and it will automatically generate a complete agent configuration, including role settings, system prompts, and skill setups.
+Agent Builder is LobeHub's built-in assistant that helps you create specialized agents through conversations. Describe your needs, and it will automatically generate a complete agent configurations, including role settings, system prompts, and skills.
 
-1. On the homepage, click **Create Agent** under the chat box.
+1. On the home page, click **Create Agent** under the chat box.
 
    ![Create Agent button](/images/manual/use-cases/lobehub-create-agent.png#bordered){width=85%} 
 
@@ -105,23 +120,24 @@ If you prefer not to configure everything manually, you can use Agent Builder. T
    highlight specific action items.
    ```
 3. Select the language model. For exmaple, `llama3.1:8b`.
-4. Press **Enter**. The profile page of the new agent opens, and you can see the Agent Builder immediately starts configuring your agent automatically.
+4. Press **Enter**. The profile page of the new agent opens, and you can see the Agent Builder starts configuring your agent automatically.
 
    ![Agent builder](/images/manual/use-cases/lobehub-agent-builder.png#bordered){width=85%} 
 
-5. Use the chat interface on the lower right to interact with the Agent Builder. As you provide more details or refine your requirements, the Agent Builder automatically drafts and updates. 
+5. Use the chat interface on the lower right to interact with the Agent Builder. As you provide more details or refine your requirements, the Agent Builder automatically drafts and updates accordingly. 
 6. After the creation is completed, click **Start Conversation** to use the agent.
 7. Provide your text in the chat, and then you can get the refined results.
 
    ![Start using agent](/images/manual/use-cases/lobehub-agent-use1.png#bordered){width=85%} 
+8. If you are satisfied with the assistant's performance, hover over the assistant from the left sidebar, click <i class="material-symbols-outlined">more_horiz</i>, and then click **Pin** to keep it accessible at the top of your agent list.
 
 ### Create a custom agent
 
-If you have specific needs, you can create a custom assistant tailored to your personal requirements.
+If you have specific requirements and prefer to configure the agent entirely manually, create a custom agent.
 
-Custom assistants offer the highest level of personalization. You can set the assistant’s avatar, name, prompts, preferred AI model, and plugins to create a truly unique AI assistant. All customization can be done manually on the assistant profile page.
+Custom agents offer the highest level of personalization. You can set the agent's avatar, name, AI model, skills, and prompt to create a unique AI agent.
 
-1. On the homepage, click the robot icon and then select **Create Agent**.
+1. On the home page, click the robot icon and then select **Create Agent**.
 
    ![Create custom agent](/images/manual/use-cases/lobehub-create-custom-agent.png#bordered){width=40%} 
 
@@ -129,284 +145,136 @@ Custom assistants offer the highest level of personalization. You can set the as
 
    ![Custom agent profile](/images/manual/use-cases/lobehub-custom-agent-profile.png#bordered){width=85%} 
 
-2. Enter the agent name, select the language model,
+2. Click the default robot avatar to select a new icon for your agent.
+3. Enter the agent name. For example, `SEO Copywriter`.
+4. Select the language model. For example, `qwen 2.5`.
+5. Click **+ Add Skill** to equip the agent with additional tools. For example, select **Web Browsing** for gathering SEO data.
+6. Define role and behavior by filling out the structured markdown template to define exactly how the agent operates. For example,
 
+   ```
+   #### Goal
+   Write SEO-optimized blog posts based on the user-provided topic.
+   #### Skills
+   - Keyword research, deployment, and and density optimization
+   - Engaging headline generation
+   - Markdown formatting
+   #### Workflow
+   1. Ask the user for a topic.
+   2. Suggest target keywords, an H1 title, and an optimal meta description.
+   3. Generate a structured outline designed for google's featured snippets.
+   4. Generate a structured outline for approval.
+   5. Write the full blog post once the outline is approved.
+   #### Constraints
+   - Use simple language and avoid technical jargon.
+   - Focus on user values instead of listing product features.
+   - Avoid using passive voice.
+   - Target users with the second person "you"
+   ```
+6. Click **Start Conversation** to use it. For example, type the following request:
+
+   ```
+   I want to rank for "local AI alternatives"
+   ```
+7. Review the proposal and output, and then iterate with it until you are satified with the results.
+
+   ![Custom agent result sample](/images/manual/use-cases/lobehub-seo-sample.png#bordered){width=85%} 
+
+8. If you are satisfied with the agent's performance, hover over the agent from the left sidebar, click <i class="material-symbols-outlined">more_horiz</i>, and then click **Pin** to keep it accessible at the top of your agent list.
+
+<!--
 ## Manage agents
 
 When you have many assistants and group chats, organizing them into groups is the most intuitive way to manage them. It keeps your assistant list clean and makes switching between them easier.
 
-### Create a group
+### Pin agents
 
-On the LobeHub homepage, open the assistant list menu and select "Add New Group" to create a new group.
+Pin frequently used assistants to the top of the agent list for quicker access. 
+1. On the LobeHub home page, find the assistant in the **Agent** section on the left sidebar.
+2. Point to it, click <i class="material-symbols-outlined">more_horiz</i>, and then click **Pin**. The pinned assistants will stay at the top of the list for easy access.
+
+### Categorize agents
+
+create categories to group different agents for
+
+1. On the LobeHub home page, point to **Agent** from the left sidebar, click <i class="material-symbols-outlined">more_horiz</i>, and then click **Add New Category**. A **New Category** section is created under **Agent**.
+   ![Add New Category menu](/images/manual/use-cases/lobehub-new-category.png#bordered){width=45%} 
+
+2. Point to **New Category**, click <i class="material-symbols-outlined">more_horiz</i>, and then click **Rename Category**. 
 
 ### Move to a group
 
 If you have multiple groups, go to the assistant list or group menu and select "Manage Groups" to easily rename or reorder them.
 
-### Pin freqnetly used agents
-
-You can pin frequently used assistants to the top of the list for quicker access. Select the assistant and choose "Pin" from the menu. Pinned assistants will stay at the top of the list for easy access.
-
 ## Create an agent team
 
-For complex workflows, a single agent might not be enough. LobeHub allows you to create an Agent Group (or Agent Team), where multiple specialized agents collaborate, execute tasks in parallel, and iterate on each other's work.
+For complex workflows, a single agent might not be enough. LobeHub allows you to create an agent team, where multiple specialized agents collaborate as members, execute tasks in parallel, and iterate on each other's work.
 
-<!--1. On the homepage, click the robot icon and then select **Create Group**.
-
-   ![Create agent group](/images/manual/use-cases/lobehub-create-agent-group.png#bordered){width=40%} 
-
-   The Group Profile page opens.
-
-2. In the **Agent Builder** panel, describe the specific task you want the agent team to handle in the chat box. For exmaple,
-
-   ```
-   I need a team to research trending tech news and write a daily newsletter.
-   One agent should gather the facts, and another should format them into an
-   engaging email draft.
-   ```
-3. Select the language model, and then press **Enter**.
-
-   ![Agent group builder](/images/manual/use-cases/lobehub-group-builder.png#bordered){width=40%} 
-
-   The profile page of the new agent group opens, and you can see the Agent Builder immediately starts designing your agent team automatically.-->
-
-1. On the homepage, click **Create Group** under the chat box.
+1. On the home page, click **Create Group** under the chat box.
 
    ![Create Group button](/images/manual/use-cases/lobehub-create-group.png#bordered){width=85%} 
 
 2. In the chat box, describe the specific task you want the agent team to handle. For exmaple,
 
    ```
-   I need a team to research trending tech news and write a daily newsletter.
-   One agent should gather the facts, and another should format them into an
-   engaging email draft.
+   I need a team to research trending AI tech news and write a daily 
+   newsletter. One agent should gather the facts, and another should
+   format them into an engaging email draft.
    ```
 3. Select the language model, and then press **Enter**.
 
    ![Create Group chat box](/images/manual/use-cases/lobehub-create-group-start.png#bordered){width=85%} 
 
-   The profile page of the new agent group opens, and you can see the Lobe AI immediately starts designing your agent team automatically.
+   The **Group Profile** opens with a **Supervisor** created by default. Every agent team chat includes a built-in moderator responsible for: Understanding your needs and assigning discussion tasks, Coordinating the speaking order of assistants, Summarizing the discussion and extracting key conclusions, and Keeping the conversation organized and on-topic.
+   
+   Meanwhile, the Lobe AI starts designing the team automatically and lists the steps to complete the task.
 
    ![Agent group builder](/images/manual/use-cases/lobehub-agent-group-builder.png#bordered){width=85%} 
 
-4. Communicate with Lobe AI to clarity your requirements, provide details to it for next step, confirm operations, or approve actions.
+4. Communicate with Lobe AI to complete the steps:
+   - Provide detailed for group settings and agent configurations.
+   - Approve the requests to create individudal agent members.
+   - Clarity your requirements when necessary.
 
-   For example, you agree with the Lobe AI's design to create a new agent for tech news gathering, and then you provide the following details to it:
+   When the creation of the team agents is completed, the agents are displayed in Members on the left sidebar.
 
-   ```
-   Agent name: TechNewsGatherer
-   Description: Responsible for collecting and summarizing the latest tech news from give URL.
-   Tools: Web-crawler to fetch relevant articles from related tech websites.
-   System Role: Information catching.
-   ```
-   
-   It will send a create agent request for you to approve:
+    ![Agent team member created](/images/manual/use-cases/agent-group-member-created.png#bordered){width=85%}
 
-   ![Building agent group](/images/manual/use-cases/creating-agent-team.png#bordered){width=35%} 
+5. Click **Group Profile** and check the configurations of each agent on its tab. Make adjustments as needed. For example,
+ 
+   - Group Settings:
+      - Group name: AI Tech News Research & Newsletter Team
+      - Group objectives or work modes: I need a team to research trending AI tech news and write a daily newsletter. This will be used as the shared prompt for team agents.
 
-   Once approved, the new agent is created and added to the agent team automatically.
+   - Configure the Supervisor, including the avatar, name, model, skill, and supervisor information to enable more precise workflow coordination.
+      - Name: Supervisor
+      - Model: Qwen2.5 7B
+      - Skill: Web browsing
+      - Description: I need a team to research trending AI tech news and write a daily newsletter. This will be used as the shared prompt for team agents.
 
-    ![Agent team member created](/images/manual/use-cases/agent-group-member-created.png#bordered){width=85%} 
+6. Click **Start Conversation** to use it. For example, type `crawl this webpage https://news.ycombinator.com/ and draft a short, engaging newsletter for the latest three AI news`, and then 
 
-5. From the left sidebar, point to **Memebers**, and then click the **Add Member** icon to bring additional assistants into the group chat.
-6. From the left sidebar, point to an existing member, and then click the **Remove Member** icon to delete a member from the group chat.
-7. Configure the group setting, such as group name, description on group objectives or work modes.
-8. When all set, click **Start Conversation** to use it.
+   ![Agent team work result sample](/images/manual/use-cases/lobehub-team-result.png#bordered){width=85%} 
 
+## Manage agent teams
 
+### Add or remove members
+ 
+1. In the team chat, from the left sidebar, point to **Memebers**, and then click the **Add Member** icon to bring additional assistants into the group chat.
+2. From the left sidebar, point to an existing member, and then click the **Remove Member** icon to delete the member from the team chat.
 
-<!--## Create an assistant
+### Delete agent teams
 
-LobeHub allows you to create specialized assistants to handle specific tasks by leveraging various language models and combining them with functional plug-ins.
-
-- **Flexible model switching**: You can switch language models instantly within the same chat to achieve the best results. For example, if you are not satisfied with a response, you can select a different model from the list to leverage their unique strengths.
-- **Plug-in extensions**: You can also install plug-ins to extend and enhance the capabilities of your assistant.
-
-   :::info
-   To install plug-ins, ensure that you select a model compatible with Function Calling. Look for <i class="material-symbols-outlined">brick</i> next to the model name, which indicates the model supports function calls.
-   :::
-
-The following steps outline the standard workflow for creating and configuring any assistant in LobeChat. You can apply this procedure using specific settings provided in the [use scenarios](#use-scenarios) section.
-
-1. Create a new assistant:
-   - From the left navigation pane, click **Lobe AI**. 
-   - If you already have active chats, click <i class="material-symbols-outlined">add_comment</i> to create a new one.
-2. Configure the assistant such as identity and role:
-
-   a. Click **Open Chat Settings**.
-
-      ![Open Chat Settings](/images/manual/use-cases/open-chat-settings.png#bordered)
-
-   b. On the **Assistant Info** tab, set the avatar, name, and description, and then click **Update Assistant Information**.
-
-      ![LobeChat session settings](/images/manual/use-cases/lobechat-session-settings.png#bordered)   
-
-   c. On the **Role Configuration** tab, enter your prompt for this specific role to define its behavior, and then click **OK**.
-
-   d. Close the **Session Settings** page to return to the chat window.
-
-3. Select the language model from the basic interaction area.
-   
-   ![Select language model](/images/manual/use-cases/select-qwen.png#bordered) 
-   
-4. (Optional) Install LobeChat plug-ins to enhance the assistant's capabilities:
-
-   a. In the basic interaction area, hover over the plug-in icon and click **Plugin Store**.
-
-      ![Install LobeChat plug-in](/images/manual/use-cases/lobechat-plugin-install.png#bordered)
-
-   b. On the **LobeHub Plugins** tab, search for the target plug-in, and then click **Install**.
-
-5. Interact with the assistant.
-6. (Optional) Pin for quick access:
-
-   If you are satisfied with the assistant's performance, hover over the assistant in the sidebar, click <i class="material-symbols-outlined">more_vert</i>, and then click **Pin** to keep it accessible at the top of your list.
-
-## Use scenarios
-
-The following scenarios provide some practical examples for your daily tasks. Apply these specific settings during the [general creation procedure](#create-an-assistant) to build specialized assistants tailored to your workflow.
-
-### Polish content and visualize ideas
-
-Create a specialized assistant to help you refine text and generate images based on descriptions.
-
-#### Configurations
-
-- **Name**: `Writing Bot`
-- **Role prompt**:
-
-   ```
-   You are a creative editor. When I provide text, review it for clarity 
-   and tone. When I describe a scene, use the drawing plug-in to generate 
-   an image based on my description.
-   ``` 
-
-- **Language model**: `qwen2.5:7b`
-
-   :::info
-   `qwen2.5:7b` excels at various NLP tasks such as contextual understanding and content writing. It is also compatible with functional calling, so you can install LobeChat plug-ins for enhanced capabilities.
-   :::
-
-- **LobeChat plug-in**: "Pollinate drawing", which is used to create images based on description
-
-   ![Install LobeChat plug-in Pollinate Drawing](/images/manual/use-cases/install-pollinate-drawing.png#bordered)
-
-#### Interaction
-
-1. Enter and send your draft content to get a refined version.
-2. Hover over the plug-in icon to ensure that **Pollinate drawing** is enabled, and then ask the assistant to create a cover image for the content.
-3. Brainstorm and iterate with the language model to get your ideal content textually and visually.
-
-### Coding assistant
-
-Create a specialized assistant to help you write efficient code and act as a dedicated pair programmer.
-
-#### Configurations
-
-- **Name**: `Dev Bot`
-- **Role prompt**: 
-   ```
-   You are an expert developer. When I describe a task or requirement, 
-   generate clean, efficient, and well-commented code to solve it.
-   ``` 
-- **Language model**: `deepseek-coder-v2`
-
-   :::info
-   `deepseek-coder-v2` is good at coding use cases such as code generation and long text understanding.
-   :::
-
-#### Interaction
-
-1. Describe a data generation task and send to the chat.
-   ```
-   Write a Python script to generate a CSV file named employees.csv with
-   20 rows of mock data. Columns should include: ID, Name, Department, 
-   and Salary. Use the random library to generate varied data.
-   ```
-2. The assistant processes your request and generates a standalone Python script with explanation.
-
-   ```python
-   import csv
-   import random
-
-   def generate_mock_data():
-      departments = ['HR', 'Engineering', 'Marketing', 'Sales', 'Finance']
-      filename = "employees.csv"
-
-      print(f"Generating {filename}...")
-
-      with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-         fieldnames = ['ID', 'Name', 'Department', 'Salary']
-         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-         writer.writeheader()
-
-         for i in range(1, 21):
-               writer.writerow({
-                  'ID': f'EMP{i:03d}',
-                  'Name': f'Employee {i}',
-                  'Department': random.choice(departments),
-                  'Salary': random.randint(50000, 120000)
-               })
-
-      print(f"Successfully created {filename} with 20 records.")
-
-   if __name__ == "__main__":
-      generate_mock_data()
-   ```
-3. Run the generated code to verify.
-
-   a. Copy the generated Python code block and save it as `generate_data.py`.
-
-   b. Open the Terminal, navigate to the folder, and run the following command:
-
-   ```python
-   python3 generate_data.py
-   ```
-
-   c. Check your current folder. You should see a new file named `employees.csv`. Open it to verify the generated mock data.
-
-      ![Dev bot result verification](/images/manual/use-cases/dev-bot-result.png#bordered)  
-
-### Real-time news analyst
-
-Build an assistant that keeps you updated with the latest technology trends. By using the Website Crawler plug-in, this assistant can read live news sites and provide instant summaries of what's happening right now.
-
-#### Configurations
-
-- **Name**: `Daily Tech Digest`
-- **Role prompt**:
-
-   ```
-   You are a tech news reporter. When I send you a news site URL, 
-   read the headlines and summarize the latest top five stories for me.
-   Limit the list to five.
-   ``` 
-- **Language model**: `qwen2.5:7b`
-
-   :::info
-   `qwen2.5:7b` excels at various NLP tasks such as contextual understanding and content writing. It is also compatible with functional calling, so you can install LobeChat plug-ins for enhanced capabilities.
-   :::
-- **LobeChat plug-in**: "Website Crawler", which is used to access live web pages and analyze real-time content from provided URLs
-
-   :::info How Website Crawler works (Real-time vs. Offline)
-   Standard local AI models are offline and rely on pre-trained data from the past. The Website Crawler plug-in, specifically the getWebsiteContent function, acts as a bridge to the live internet.
-   
-   When you provide a URL, the plug-in instantly accesses the web page in real time via an API, fetches the current content, and feeds it to the AI. This ensures that the AI model is accessing the latest live web content rather than using the old memory.
-   :::
-
-   ![Install LobeChat plug-in Website Crawler](/images/manual/use-cases/install-website-crawler.png#bordered)
-
-#### Interaction
-
-1. In the basic interaction area, hover over the plug-in icon to ensure that the **Website Crawler** plug-in is enabled.
-2. Send the URL address to the chat. For example, `https://github.com/trending`.
-3. Paste and send the URL to the chat. The assistant lists specific news stories with summaries.-->
+1. On the LobeHub home page, point to the target agent team, click <i class="material-symbols-outlined">more_horiz</i>, and then click **Delete**.
+-->
 
 ## FAQ
 
 ### Why did the connection check fail when I connected to Ollama?
 
-1. Ensure the **Use Client Request Mode** option on the Ollama settings page is disabled.
-2. Ensure the model you are using is downloaded using Ollama.
+If you encounter the `Error requesting Ollama service` error, troubleshoot as follows and retry:
 
    ![Connectivity error](/images/manual/use-cases/lobehub-connection-error.png#bordered){width=85%} 
+1. Ensure the specific model you are using is downloaded using Ollama.
+2. Ensure the **Use Client Request Mode** option on the Ollama settings page is disabled.
+
+   ![Disable the use client request mode option](/images/manual/use-cases/lobehub-disable-client-request-mode.png#bordered){width=85%} 
