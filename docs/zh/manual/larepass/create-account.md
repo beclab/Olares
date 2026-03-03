@@ -65,13 +65,40 @@ Olares 目前通过 Gmail 提供 VC 支持，详情参见 [Gmail Issuer Service]
 </template>
 </Tabs>
 
-## 导入现有账户
+## 导入账户
 
-你也可以通过导入已存在的 Olares ID 来设置账户。
+你可以使用 12 个单词的助记词，将已有的 Olares ID 导入到 LarePass，从而在新设备或其他 LarePass 客户端上访问你的 Olares 服务。
 
 ::: tip 备份助记词
-确保已 [备份助记词](back-up-mnemonics.md)，否则无法导入。
+确保已 [备份助记词](back-up-mnemonics.md)，否则无法完成账户导入。
 :::
 
-1. 在 LarePass 中点击**导入账户**。  
-2. 输入 12 个助记词导入你的 Olares ID。  
+
+<Tabs>
+<template #iOS-&-Android>
+
+1. 打开 LarePass 应用。
+2. 点击你的头像。
+3. 在**切换账户**页面底部，点击**添加新账户**。
+4. 点击**导入账户**。
+5. 输入 Olares ID 对应的 12 个助记词。
+
+</template>
+<template #macOS-&-Windows>
+
+1. 打开 LarePass 桌面客户端。
+2. 点击你的头像。
+3. 点击**切换账户**。
+4. 点击底部的**添加新账户**。
+5. 输入 Olares ID 对应的 12 个助记词。
+
+</template>
+<template #Chrome-extension>
+
+1. 打开 Chrome 浏览器中的 LarePass 扩展程序。
+2. 点击头像上方的选项图标。
+3. 点击**添加新账户**。
+4. 输入 Olares ID 对应的 12 个助记词。
+
+</template>
+</Tabs>

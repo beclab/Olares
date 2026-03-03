@@ -5,9 +5,9 @@ description: Manage cookies for Wise so it can access protected websites and fee
 
 # Manage cookies for Wise
 
-Some websites require a login to access their content. To allow Wise to fetch content from these protected sources, you may need to upload cookies so it can authenticate the connection.
+Some websites require you to log in to access their content. To allow Wise to fetch content from these protected sources, you may need to upload cookies so Wise can authenticate its requests.
 
-This grants Wise permission to pass login checks, ensuring that features like **Save to library** or **Subscribe to RSS feed** work securely on restricted sites.
+This allows Wise to authenticate access, ensuring that features like **Save to library**, **Subscribe to RSS feed** and **Download file** work securely on restricted sites.
 
 This guide explains how to manage cookies in Olares for Wise.
 
