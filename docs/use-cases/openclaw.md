@@ -238,11 +238,16 @@ This process establishes the agent's identity, behavioral boundaries, and long-t
 
     ![Finish hatch agent](/images/manual/use-cases/openclaw-hatch-finish.png#bordered){width=90%}
 
-6. (Optional) If the agent fails to delete `BOOTSTRAP.md`, explicitly instruct it to do so in the chat. If the issue persists, your configured context window might be full. 
+6. (Optional) If the agent fails to update the persona files or delete `BOOTSTRAP.md`, explicitly instruct it to do so in the chat. 
 
-    To resolve this, use one of the following methods:
-    - Select **Config** from the left sidebar, switch to the **Raw** tab, find the `models` section, and then increase the `contextWindow` value to at least 64K (200K is recommended). Note that a larger context window consumes more VRAM, so choose a value that your hardware can support. 
-    - Switch to a model with better tool-calling capabilities.
+    If the issue persists, resolve it using one of the following methods:
+    - **Increase the context window**: Select **Config** from the left sidebar, switch to the **Raw** tab, find the `models` section, and then increase the `contextWindow` value to at least 64K (200K is recommended). 
+    
+        :::tip
+        Note that a larger context window consumes more VRAM, so choose a value that your hardware can support.
+        :::
+
+    - **Change the model**: Switch to a model with better tool-calling and instruction‑following capabilities.
 
 7. Verify your agent's persona files are updated:
 
