@@ -216,7 +216,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/update",
         },
         {
-          text: "Back up & restore",
+          text: "Back up & restore data",
           link: "/one/backup-resotre",
         },
         {
