@@ -82,10 +82,10 @@ url := fmt.Sprintf("amqp://%s:%s@%s:%s/%s", user, password, host, portMQ, vhost)
 
 RabbitMQ values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-| Value  | Type  | Description  |
-|--|--|--|
-| `.Values.rabbitmq.host` | String | RabbitMQ service host |
-| `.Values.rabbitmq.port` | Number | RabbitMQ service port |
-| `.Values.rabbitmq.username` | String | RabbitMQ username |
-| `.Values.rabbitmq.password` | String | RabbitMQ password |
-| `.Values.rabbitmq.vhosts` | Map<String,String> | The requested vhost name is used as the key. <br/>For example, if you request `aaa`, the value is available at `.Values.rabbitmq.vhosts.aaa`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.rabbitmq.host` | String | RabbitMQ host. |
+| `.Values.rabbitmq.port` | Number | RabbitMQ port. |
+| `.Values.rabbitmq.username` | String | RabbitMQ username. |
+| `.Values.rabbitmq.password` | String | RabbitMQ password. |
+| `.Values.rabbitmq.vhosts` | Map\<String,String> | Requested vhosts, keyed by vhost name. For example, a request for `myvhost` is available at `.Values.rabbitmq.vhosts.myvhost`. |

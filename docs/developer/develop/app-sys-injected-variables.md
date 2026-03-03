@@ -132,9 +132,9 @@ Middleware values are injected only after you declare the middleware dependency 
 
 PostgreSQL and Redis are preinstalled. MongoDB, MinIO, RabbitMQ, MySQL, MariaDB, and Elasticsearch must be installed separately before your app can use them.
 
-See [Middleware](/developer/develop/mw-overview.md#supported-services) for installation and configuration details.
-
 #### Elasticsearch
+
+See [Integrate with Elasticsearch](/developer/develop/mw-integrate-with-es.md) for installation and configuration details.
 
 | Value | Type | Description |
 | --- | --- | --- |
@@ -146,6 +146,8 @@ See [Middleware](/developer/develop/mw-overview.md#supported-services) for insta
 
 #### MariaDB
 
+See [Integrate with MariaDB](/developer/develop/mw-integrate-with-mariadb.md) for installation and configuration details.
+
 | Value | Type | Description |
 | --- | --- | --- |
 | `.Values.mariadb.host` | String | MariaDB host. |
@@ -155,6 +157,8 @@ See [Middleware](/developer/develop/mw-overview.md#supported-services) for insta
 | `.Values.mariadb.databases` | Map\<String,String> | Requested databases, keyed by database name. For example, a request for `app_db` is available at `.Values.mariadb.databases.app_db`. |
 
 #### MinIO
+
+See [Integrate with MinIO](/developer/develop/mw-integrate-with-minio.md) for installation and configuration details.
 
 | Value | Type | Description |
 | --- | --- | --- |
@@ -166,6 +170,8 @@ See [Middleware](/developer/develop/mw-overview.md#supported-services) for insta
 
 #### MongoDB
 
+See [Integrate with MongoDB](/developer/develop/mw-integrate-with-mongodb.md) for installation and configuration details.
+
 | Value | Type | Description |
 | --- | --- | --- |
 | `.Values.mongodb.host` | String | MongoDB host. |
@@ -175,6 +181,8 @@ See [Middleware](/developer/develop/mw-overview.md#supported-services) for insta
 | `.Values.mongodb.databases` | Map\<String,String> | Requested databases, keyed by database name. For example, a request for `app_db` is available at `.Values.mongodb.databases.app_db`. |
 
 #### MySQL
+
+See [Integrate with MySQL](/developer/develop/mw-integrate-with-mysql.md) for installation and configuration details.
 
 | Value | Type | Description |
 | --- | --- | --- |
@@ -186,6 +194,8 @@ See [Middleware](/developer/develop/mw-overview.md#supported-services) for insta
 
 #### PostgreSQL
 
+See [Integrate with PostgreSQL](/developer/develop/mw-integrate-with-pg.md) for installation and configuration details.
+
 | Value | Type | Description |
 | --- | --- | --- |
 | `.Values.postgres.host` | String | PostgreSQL host. |
@@ -196,6 +206,8 @@ See [Middleware](/developer/develop/mw-overview.md#supported-services) for insta
 
 #### RabbitMQ
 
+See [Integrate with RabbitMQ](/developer/develop/mw-integrate-with-rabbitmq.md) for installation and configuration details.
+
 | Value | Type | Description |
 | --- | --- | --- |
 | `.Values.rabbitmq.host` | String | RabbitMQ host. |
@@ -205,6 +217,8 @@ See [Middleware](/developer/develop/mw-overview.md#supported-services) for insta
 | `.Values.rabbitmq.vhosts` | Map\<String,String> | Requested vhosts, keyed by vhost name. For example, a request for `myvhost` is available at `.Values.rabbitmq.vhosts.myvhost`. |
 
 #### Redis
+
+See [Integrate with Redis](/developer/develop/mw-integrate-with-redis.md) for installation and configuration details.
 
 | Value | Type | Description |
 | --- | --- | --- |

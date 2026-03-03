@@ -63,10 +63,10 @@ containers:
 
 MinIO values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-| Value  | Type  | Description  |
-|--|--|--|
-| `.Values.minio.host` | String | MinIO service host |
-| `.Values.minio.port` | Number | MinIO service port |
-| `.Values.minio.username` | String | MinIO access key |
-| `.Values.minio.password` | String | MinIO secret key |
-| `.Values.minio.buckets` | Map<String,String> | The requested bucket name is used as the key. <br>For example, if you request `mybucket`, the value is available at `.Values.minio.buckets.mybucket`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.minio.host` | String | MinIO service host. |
+| `.Values.minio.port` | Number | MinIO service port. |
+| `.Values.minio.username` | String | MinIO access key. |
+| `.Values.minio.password` | String | MinIO secret key. |
+| `.Values.minio.buckets` | Map\<String,String> | Requested buckets, keyed by bucket name. For example, a request for `mybucket` is available at `.Values.minio.buckets.mybucket`. |

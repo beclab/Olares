@@ -76,8 +76,8 @@ PostgreSQL 运行时变量会在部署过程中注入到 `values.yaml` 中。这
 
 | 变量 | 类型 | 说明 |
 |--|--|--|
-| `.Values.postgres.host` | String  | PostgreSQL 数据库地址 |
-| `.Values.postgres.port` | Number | PostgreSQL 数据库端口 |
-| `.Values.postgres.username`  | String | PostgreSQL 数据库用户名 |
-| `.Values.postgres.password`  | String | PostgreSQL 数据库密码 |
-| `.Values.postgres.databases` | Map<String,String> | PostgreSQL 数据库以申请的数据库名作为键。例如，若申请的数据库名为 `app_db`，可通过 `.Values.postgres.databases.app_db`获取对应值。|
+| `.Values.postgres.host` | String  | PostgreSQL 主机地址。 |
+| `.Values.postgres.port` | Number | PostgreSQL 端口。 |
+| `.Values.postgres.username`  | String | PostgreSQL 用户名。 |
+| `.Values.postgres.password`  | String | PostgreSQL 密码。 |
+| `.Values.postgres.databases` | Map<String,String> | 请求的数据库集合，按数据库名为键。例如，若申请的数据库名为 `app_db`，可通过 `.Values.postgres.databases.app_db`获取对应值。|

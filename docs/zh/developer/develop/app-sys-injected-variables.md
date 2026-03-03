@@ -1,6 +1,6 @@
 ---
 outline: [2, 4]
-description: Olares 在应用部署期间注入到 `application values.yaml` 中的预定义运行时变量。
+description: Olares 在应用部署期间注入到 `application values.yaml` 中的运行时变量。
 ---
 
 # 系统注入的运行时变量
@@ -44,7 +44,7 @@ spec:
 
 | 变量 | 类型 | 说明 |
 | -- | -- | -- |
-| `.Values.domain` | Map<String,String> | 应用入口地址映射，格式为 `entry_name => URL`。 |
+| `.Values.domain` | Map<String,String> | 应用入口地址映射，每个条目将入口名称映射为对应的 URL。 |
 | `.Values.sysVersion` | String | 系统版本号。 |
 | `.Values.deviceName` | String  | 设备名称。 |
 | `.Values.downloadCdnURL` | String | 系统资源下载使用的 CDN 地址。 |
@@ -64,7 +64,7 @@ spec:
 
 | 变量 | 类型 | 说明 |
 | -- | -- | -- |
-| `.Values.cluster.arch` | String | 集群 CPU 架构（例如 `amd64`）。不支持混合架构集群。 |
+| `.Values.cluster.arch` | String | 集群 CPU 架构（例如 `amd64`）。Olares 目前不支持混合架构组成集群。 |
 | `.Values.nodes` | List\<NodeInfo> | 节点硬件元数据列表，注入在 `values["nodes"]`下。 |
 
 `.Values.nodes` 中每个条目结构如下：
@@ -134,9 +134,9 @@ spec:
 
 PostgreSQL 与 Redis 为预安装组件。MongoDB、MinIO、RabbitMQ、MySQL、MariaDB 和 Elasticsearch 需要单独安装后方可使用。
 
-安装与配置详情请参见[中间件](/zh/developer/develop/mw-overview.md#支持的服务)。
-
 #### Elasticsearch
+
+安装与配置详情请参见[集成 Elasticsearch](/zh/developer/develop/mw-integrate-with-es.md)。
 
 | 变量 | 类型 | 说明 |
 |--|--|--|
@@ -148,6 +148,8 @@ PostgreSQL 与 Redis 为预安装组件。MongoDB、MinIO、RabbitMQ、MySQL、M
 
 #### MariaDB
 
+安装与配置详情请参见[集成 MariaDB](/zh/developer/develop/mw-integrate-with-mariadb.md)。
+
 | 变量 | 类型 | 说明 |
 |--|--|--|
 | `.Values.mariadb.host` | String | MariaDB 主机地址。 |
@@ -157,6 +159,8 @@ PostgreSQL 与 Redis 为预安装组件。MongoDB、MinIO、RabbitMQ、MySQL、M
 | `.Values.mariadb.databases` | Map<String,String> | 请求的数据库集合，按数据库名为键。<br/>例如申请 `app_db`，可通过 `.Values.mariadb.databases.app_db` 获取对应的值。 |
 
 #### MinIO
+
+安装与配置详情请参见[集成 MinIO](/zh/developer/develop/mw-integrate-with-minio.md)。
 
 | 变量 | 类型 | 说明 |
 |--|--|--|
@@ -168,6 +172,8 @@ PostgreSQL 与 Redis 为预安装组件。MongoDB、MinIO、RabbitMQ、MySQL、M
 
 #### MongoDB
 
+安装与配置详情请参见[集成 MongoDB](/zh/developer/develop/mw-integrate-with-mongodb.md)。
+
 | 变量 | 类型 | 说明 |
 |--|--|--|
 | `.Values.mongodb.host` | String | MongoDB 主机地址。 |
@@ -177,6 +183,8 @@ PostgreSQL 与 Redis 为预安装组件。MongoDB、MinIO、RabbitMQ、MySQL、M
 | `.Values.mongodb.databases` | Map<String,String> | 请求的数据库集合，按数据库名为键。<br/>例如申请 `app_db`，可通过 `.Values.mongodb.databases.app_db` 获取对应的值。 |
 
 #### MySQL
+
+安装与配置详情请参见[集成 MySQL](/zh/developer/develop/mw-integrate-with-mysql.md)。
 
 | 变量 | 类型 | 说明 |
 |--|--|--|
@@ -188,6 +196,8 @@ PostgreSQL 与 Redis 为预安装组件。MongoDB、MinIO、RabbitMQ、MySQL、M
 
 #### PostgreSQL
 
+安装与配置详情请参见[集成 PostgreSQL](/zh/developer/develop/mw-integrate-with-pg.md)。
+
 | 变量 | 类型 | 说明 |
 |--|--|--|
 | `.Values.postgres.host` | String  | PostgreSQL 主机地址。 |
@@ -198,6 +208,8 @@ PostgreSQL 与 Redis 为预安装组件。MongoDB、MinIO、RabbitMQ、MySQL、M
 
 #### RabbitMQ
 
+安装与配置详情请参见[集成 RabbitMQ](/zh/developer/develop/mw-integrate-with-rabbitmq.md)。
+
 | 变量 | 类型 | 说明 |
 |--|--|--|
 | `.Values.rabbitmq.host` | String | RabbitMQ 主机地址。 |
@@ -207,6 +219,8 @@ PostgreSQL 与 Redis 为预安装组件。MongoDB、MinIO、RabbitMQ、MySQL、M
 | `.Values.rabbitmq.vhosts` | Map<String,String> | 请求的虚拟主机集合，按名称为键。<br/>例如申请 `myvhost`，可通过 `.Values.rabbitmq.vhosts.myvhost` 获取对应的值。 |
 
 #### Redis
+
+安装与配置详情请参见[集成 Redis](/zh/developer/develop/mw-integrate-with-redis.md)。
 
 | 变量 | 类型 | 说明 |
 |--|--|--|

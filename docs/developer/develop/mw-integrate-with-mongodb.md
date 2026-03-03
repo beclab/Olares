@@ -67,10 +67,10 @@ containers:
 
 MongoDB values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-| Value  | Type  | Description  |
-|--|--|--|
-| `.Values.mongodb.host` | String  | MongoDB database host |
-| `.Values.mongodb.port` | Number  | MongoDB database port |
-| `.Values.mongodb.username` | String | MongoDB database username |
-| `.Values.mongodb.password`  | String | MongoDB database password |
-| `.Values.mongodb.databases` | Map<String,String> | The requested database name is used as the key. <br/>For example, if you request `app_db`, the value is available at `.Values.mongodb.databases.app_db`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.mongodb.host` | String | MongoDB host. |
+| `.Values.mongodb.port` | Number | MongoDB port. |
+| `.Values.mongodb.username` | String | MongoDB username. |
+| `.Values.mongodb.password` | String | MongoDB password. |
+| `.Values.mongodb.databases` | Map\<String,String> | Requested databases, keyed by database name. For example, a request for `app_db` is available at `.Values.mongodb.databases.app_db`. |

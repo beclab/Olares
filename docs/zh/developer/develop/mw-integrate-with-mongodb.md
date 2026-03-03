@@ -69,8 +69,8 @@ MongoDB 运行时变量会在部署过程中注入到 `values.yaml` 中。这些
 
 | 变量 | 类型 | 说明 |
 |--|--|--|
-| `.Values.mongodb.host` | String | MongoDB 数据库地址 |
-| `.Values.mongodb.port` | Number | MongoDB 数据库端口 |
-| `.Values.mongodb.username` | String | MongoDB 数据库用户名 |
-| `.Values.mongodb.password` | String  | MongoDB 数据库密码 |
-| `.Values.mongodb.databases` | Map<String,String> | 以申请的数据库名作为键。<br/>例如申请 `app_db`，可通过 `.Values.mongodb.databases.app_db` 获取对应的值。 |
+| `.Values.mongodb.host` | String | MongoDB 主机地址。 |
+| `.Values.mongodb.port` | Number | MongoDB 端口。 |
+| `.Values.mongodb.username` | String | MongoDB 用户名。 |
+| `.Values.mongodb.password` | String  | MongoDB 密码。 |
+| `.Values.mongodb.databases` | Map<String,String> | 请求的数据库集合，按数据库名为键。<br/>例如申请 `app_db`，可通过 `.Values.mongodb.databases.app_db` 获取对应的值。 |

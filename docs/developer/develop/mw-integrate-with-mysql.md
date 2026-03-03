@@ -63,10 +63,10 @@ containers:
 
 MySQL values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-| Value  | Type  | Description  |
-|--|--|--|
-| `.Values.mysql.host` | String | MySQL database host |
-| `.Values.mysql.port` | Number | MySQL database port |
-| `.Values.mysql.username` | String | MySQL database username |
-| `.Values.mysql.password` | String | MySQL database password |
-| `.Values.mysql.databases` | Map<String,String> | The requested database name is used as the key. <br/>For example, if you request `aaa`, the value is available at `.Values.mysql.databases.aaa`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.mysql.host` | String | MySQL host. |
+| `.Values.mysql.port` | Number | MySQL port. |
+| `.Values.mysql.username` | String | MySQL username. |
+| `.Values.mysql.password` | String | MySQL password. |
+| `.Values.mysql.databases` | Map\<String,String> | Requested databases, keyed by database name. For example, a request for `app_db` is available at `.Values.mysql.databases.app_db`. |

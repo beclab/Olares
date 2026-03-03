@@ -73,10 +73,10 @@ containers:
 
 PostgreSQL values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-| Value  | Type  | Description  |
-|--|--|--|
-| `.Values.postgres.host` | String  | PostgreSQL database host |
-| `.Values.postgres.port` | Number | PostgreSQL database port |
-| `.Values.postgres.username`  | String | PostgreSQL database username |
-| `.Values.postgres.password`  | String | PostgreSQL database password |
-| `.Values.postgres.databases` | Map<String,String> | The requested database name is used as the key. <br>For example, if you request `app_db`, the value is available at `.Values.postgres.databases.app_db`|
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.postgres.host` | String | PostgreSQL host. |
+| `.Values.postgres.port` | Number | PostgreSQL port. |
+| `.Values.postgres.username` | String | PostgreSQL username. |
+| `.Values.postgres.password` | String | PostgreSQL password. |
+| `.Values.postgres.databases` | Map\<String,String> | Requested databases, keyed by database name. For example, a request for `app_db` is available at `.Values.postgres.databases.app_db`. |

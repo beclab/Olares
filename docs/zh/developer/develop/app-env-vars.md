@@ -11,8 +11,8 @@ description: 通过 `OlaresManifest.yaml` 中的 `envs` 声明并校验应用配
 
 声明式变量可以从应用外部管理的配置中获取值：
 
-- **系统变量**：由管理员管理的集群级基础设施配置，例如 CDN 端点或根路径。
-- **用户变量**：由用户个人管理的配置，例如时区、SMTP 设置或 API Key。
+- **系统变量**：Olares 集群实例级别的环境变量，在系统安装时设置，或由管理员统一管理。集群中的所有用户共享。
+- **用户变量**：Olares 用户级别的环境变量，由用户自行管理。在同一集群中，不同用户的变量彼此独立。
 
 应用本身无法直接修改这些变量。如需使用，需通过 `valueFrom` 字段映射。
 
@@ -111,7 +111,7 @@ envs:
 
 将变量限制为固定的可选值列表。系统会在界面中提供选择界面。
 
-**示例**：显示标题与实际存储值不同的下拉菜单。
+**示例**：显示可安装的 Windows 版本的下拉列表。
 
 ```yaml
 envs:
@@ -137,7 +137,7 @@ envs:
 
 ### description
 
-变量用途及合法取值范围的说明。显示在 Olares 界面中。
+变量用途及有效取值范围的说明。显示在 Olares 界面中。
 
 ## 变量参考
 
@@ -147,12 +147,12 @@ envs:
 
 | 变量 | 类型 | 默认值 | 可编辑 | 必填 | 描述 |
 | --- | --- | --- | --- | --- | --- |
-| `OLARES_SYSTEM_REMOTE_SERVICE` | `url` | `https://api.olares.com` | `true` | `true` | Olares 远程服务端点，例如应用商店与 Olares Space。 |
-| `OLARES_SYSTEM_CDN_SERVICE` | `url` | `https://cdn.olares.com` | `true` | `true` | 系统资源 CDN 端点。 |
-| `OLARES_SYSTEM_DOCKERHUB_SERVICE` | `url` | 无 | `true` | `false` | Docker Hub 镜像或加速端点。 |
-| `OLARES_SYSTEM_ROOT_PATH` | `string` | `/olares` | `false` | `true` | Olares 根目录路径。 |
-| `OLARES_SYSTEM_ROOTFS_TYPE` | `string` | `fs` | `false` | `true` | Olares 文件系统类型。 |
-| `OLARES_SYSTEM_CUDA_VERSION` | `string` | 无 | `false` | `false` | 主机 CUDA 版本。 |
+| `OLARES_SYSTEM_REMOTE_SERVICE` | `url` | `https://api.olares.com` | 是 | 是 | Olares 远程服务端点，例如应用商店与 Olares Space。 |
+| `OLARES_SYSTEM_CDN_SERVICE` | `url` | `https://cdn.olares.com` | 是 | 是 | 系统资源 CDN 端点。 |
+| `OLARES_SYSTEM_DOCKERHUB_SERVICE` | `url` | 无 | 是 | 否 | Docker Hub 镜像或加速端点。 |
+| `OLARES_SYSTEM_ROOT_PATH` | `string` | `/olares` | 否 | 是 | Olares 根目录路径。 |
+| `OLARES_SYSTEM_ROOTFS_TYPE` | `string` | `fs` | 否 | 是 | Olares 文件系统类型。 |
+| `OLARES_SYSTEM_CUDA_VERSION` | `string` | 无 | 否 | 否 | 主机 CUDA 版本。 |
 
 ### 用户环境变量
 
@@ -178,8 +178,8 @@ envs:
 | `OLARES_USER_SMTP_PASSWORD` | `password` | 无 | SMTP 密码或授权码。 |
 | `OLARES_USER_SMTP_FROM_ADDRESS` | `email` | 无 | 发件人邮箱地址。 |
 | `OLARES_USER_SMTP_SECURE` | `bool` | `"true"` | 是否使用安全协议。 |
-| `OLARES_USER_SMTP_USE_TLS` | `bool` | 无 | 使用 TLS。 |
-| `OLARES_USER_SMTP_USE_SSL` | `bool` | 无 | 使用 SSL。 |
+| `OLARES_USER_SMTP_USE_TLS` | `bool` | 无 | 是否使用 TLS。 |
+| `OLARES_USER_SMTP_USE_SSL` | `bool` | 无 | 是否使用 SSL。 |
 | `OLARES_USER_SMTP_SECURITY_PROTOCOLS` | `string` | 无 | 安全协议类型，可选值包括：`tls`、`ssl`、`starttls`、`none`。 |
 
 #### 镜像与代理端点

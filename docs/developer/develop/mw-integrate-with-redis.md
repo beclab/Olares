@@ -58,9 +58,9 @@ containers:
 
 Redis values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-| Value  | Type  | Description  |
-|--|--|--|
-| `.Values.redis.host` | String | Redis service host |
-| `.Values.redis.port` | Number  | Redis service port |
-| `.Values.redis.password`| String | Redis service password |
-| `.Values.redis.namespaces` | Map<String, String> | The requested namespace is used as the key. <br>For example, if you request `app_ns`, the value is available at `.Values.redis.namespaces.app_ns`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.redis.host` | String | Redis host. |
+| `.Values.redis.port` | Number | Redis port. |
+| `.Values.redis.password` | String | Redis password. |
+| `.Values.redis.namespaces` | Map\<String,String> | Requested namespaces, keyed by namespace name. For example, a request for `app_ns` is available at `.Values.redis.namespaces.app_ns`. |

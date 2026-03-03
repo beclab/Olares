@@ -10,8 +10,8 @@ Use `envs` in `OlaresManifest.yaml` to declare the configuration parameters, suc
 
 Declarative variables can obtain values from configurations managed outside the application:
 
-- **System variables**: Cluster-wide infrastructure configurations managed by administrators, such as CDN endpoints or root paths.
-- **User variables**: Per-user configurations managed by individual users, such as time zones, SMTP settings, or API keys.
+- **System variables**: Environment variables defined at the Olares cluster level. They are set during system installation or centrally managed by administrators, and are shared by all users within the cluster.
+- **User variables**: Environment variables defined at the Olares user level. They are managed individually by each user, and are isolated from one another within the same cluster.
 
 Applications cannot modify these variables directly. To use them, map the variable via the `valueFrom` field.
 
@@ -111,7 +111,7 @@ A regular expression the value must match. If validation fails, the value cannot
 
 Restricts the variable to a fixed list of allowed values. The system presents users with a selection UI.
 
-**Example**: a dropdown where the display title and the stored value differ.
+**Example**: a dropdown list of supported Windows versions for installation.
 
 ```yaml
 # Dropdown: title shown in UI, value stored internally
@@ -149,12 +149,12 @@ The following table lists system-level environment variables that can be referen
 
 | Variable | Type | Default | Editable | Required | Description |
 | --- | --- | --- | --- | --- | --- |
-| `OLARES_SYSTEM_REMOTE_SERVICE` | `url` | `https://api.olares.com` | `true` | `true` | Remote service endpoint for Olares, such as Market and Olares Space. |
-| `OLARES_SYSTEM_CDN_SERVICE` | `url` | `https://cdn.olares.com` | `true` | `true` | CDN endpoint for system resources. |
-| `OLARES_SYSTEM_DOCKERHUB_SERVICE` | `url` | None | `true` | `false` | Docker Hub mirror or accelerator endpoint. |
-| `OLARES_SYSTEM_ROOT_PATH` | `string` | `/olares` | `false` | `true` | Olares root directory path. |
-| `OLARES_SYSTEM_ROOTFS_TYPE` | `string` | `fs` | `false` | `true` | Olares filesystem type. |
-| `OLARES_SYSTEM_CUDA_VERSION` | `string` | None | `false` | `false` | Host CUDA version. |
+| `OLARES_SYSTEM_REMOTE_SERVICE` | `url` | `https://api.olares.com` | Yes | Yes | Remote service endpoint for Olares, such as Market and Olares Space. |
+| `OLARES_SYSTEM_CDN_SERVICE` | `url` | `https://cdn.olares.com` | Yes | Yes | CDN endpoint for system resources. |
+| `OLARES_SYSTEM_DOCKERHUB_SERVICE` | `url` | None | Yes | No | Docker Hub mirror or accelerator endpoint. |
+| `OLARES_SYSTEM_ROOT_PATH` | `string` | `/olares` | No | Yes | Olares root directory path. |
+| `OLARES_SYSTEM_ROOTFS_TYPE` | `string` | `fs` |  No | Yes | Olares filesystem type. |
+| `OLARES_SYSTEM_CUDA_VERSION` | `string` | None | No | No | Host CUDA version. |
 
 ### User environment variables
 
@@ -180,8 +180,8 @@ All user environment variables are editable by the user.
 | `OLARES_USER_SMTP_PASSWORD` | `password` | None | SMTP password or authorization code. |
 | `OLARES_USER_SMTP_FROM_ADDRESS` | `email` | None | Sender email address. |
 | `OLARES_USER_SMTP_SECURE` | `bool` | `"true"` | Whether to use a secure protocol. |
-| `OLARES_USER_SMTP_USE_TLS` | `bool` | None | Use TLS. |
-| `OLARES_USER_SMTP_USE_SSL` | `bool` | None | Use SSL. |
+| `OLARES_USER_SMTP_USE_TLS` | `bool` | None | Whether to use TLS. |
+| `OLARES_USER_SMTP_USE_SSL` | `bool` | None | Whether to use SSL. |
 | `OLARES_USER_SMTP_SECURITY_PROTOCOLS` | `string` | None | Security protocol. Allowed values: `tls`, `ssl`, `starttls`, `none`. |
 
 #### Mirror and proxy endpoints

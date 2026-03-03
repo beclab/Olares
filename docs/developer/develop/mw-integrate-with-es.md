@@ -62,10 +62,10 @@ containers:
 
 Elasticsearch values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-| Value  | Type  | Description  |
-|--|--|--|
-|`.Values.elasticsearch.host`| String | Elasticsearch service host |
-|`.Values.elasticsearch.port`| Number | Elasticsearch service port |
-|`.Values.elasticsearch.username`| String | Elasticsearch username |
-|`.Values.elasticsearch.password`| String | Elasticsearch password |
-|`.Values.elasticsearch.indexes` | Map<String,String> | The requested index name is used<br> as the key. For example, if you request `aaa`, the value is available at `.Values.elasticsearch.indexes.aaa`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.elasticsearch.host` | String | Elasticsearch service host. |
+| `.Values.elasticsearch.port` | Number | Elasticsearch service port. |
+| `.Values.elasticsearch.username` | String | Elasticsearch username. |
+| `.Values.elasticsearch.password` | String | Elasticsearch password. |
+| `.Values.elasticsearch.indexes` | Map\<String,String> | Requested indexes, keyed by index name. For example, a request for `aaa` is available at `.Values.elasticsearch.indexes.aaa`. |
