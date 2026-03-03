@@ -1,12 +1,12 @@
 ---
 outline: [2, 3]
-description: Learn how to restore your Olares One to factory settings using LarePass.
+description: Learn how to factory reset your Olares One using LarePass.
 head:
   - - meta
     - name: keywords
-      content: Factory reset, Olares One
+      content: factory reset, Olares One, LarePass
 ---
-# Reset to factory settings using LarePass <Badge type="tip" text="10 min" />
+# Factory reset via LarePass <Badge type="tip" text="10 min" />
 
 If you have already activated Olares One and want to return it to the factory state, you can perform a reset in LarePass.
 

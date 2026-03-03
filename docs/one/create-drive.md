@@ -1,15 +1,15 @@
 ---
 outline: [2, 3]
-description: Reinstall Olares OS on Olares One using a bootable USB to restore the device to factory state.
+description: Reinstall Olares OS on Olares One using a bootable USB drive to restore the device to a clean initial state.
 head:
   - - meta
     - name: keywords
-      content: Olares One, reinstall, factory reset, bootable USB, installation USB
+      content: Olares One, reinstall, Olares OS, bootable USB, installation USB
 ---
 
-# Reset to factory settings using installation USB <Badge type="tip" text="15 min"/>
+# Reinstall Olares OS using bootable USB <Badge type="tip" text="15 min"/>
 
-Resetting to factory settings returns your Olares One to the initial setup state. You can reinstall Olares OS using the bootable USB drive included with Olares One.
+Reinstalling Olares OS returns your Olares One to a clean initial state. You can do this using the bootable USB drive included with Olares One.
 
 :::warning Data loss
 This will permanently delete all accounts, settings, and data on the device. This action cannot be undone.
@@ -18,6 +18,9 @@ This will permanently delete all accounts, settings, and data on the device. Thi
 ## Prerequisites
 **Hardware**<br>
 - The bootable USB drive that came with Olares One.
+   :::tip Don't have the USB drive?
+   Download the [Olares One ISO](https://cdn.olares.com/one/v1.12.4-amd64.iso), which is device-specific and different from the standard Olares ISO, and flash it to a USB drive (8 GB or larger) using a tool such as [Balena Etcher](https://etcher.balena.io/).
+   :::
 - A monitor and keyboard connected to Olares One.
 
 ## Step 1: Boot from the USB drive
