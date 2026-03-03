@@ -97,6 +97,8 @@ var (
 
 	APIDNSSetCloudFlareTunnel string
 
+	APIMyExternalIP string
+
 	NameSSLConfigMapName = "zone-ssl-config"
 
 	nameParamters = "name=%s"
@@ -315,6 +317,11 @@ func ReloadEnvDependantVars() error {
 		return err
 	}
 	APIPrefixDNSOPService, err := url.JoinPath(OlaresRemoteService, "/dns/op")
+	if err != nil {
+		return err
+	}
+
+	APIMyExternalIP, err = url.JoinPath(OlaresRemoteService, "/myip/ip")
 	if err != nil {
 		return err
 	}
