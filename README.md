@@ -3,10 +3,10 @@
 # Olares: An Open-Source Personal Cloud to </br>Reclaim Your Data<!-- omit in toc -->
 
 [![Mission](https://img.shields.io/badge/Mission-Let%20people%20own%20their%20data%20again-purple)](#)<br/>
-[![Last Commit](https://img.shields.io/github/last-commit/beclab/olares)](https://github.com/beclab/olares/commits/main)
+[![Last Commit](https://img.shields.io/github/last-commit/beclab/Olares)](https://github.com/beclab/olares/commits/main)
 ![Build Status](https://github.com/beclab/olares/actions/workflows/release-daily.yaml/badge.svg)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/beclab/olares)](https://github.com/beclab/olares/releases)
-[![GitHub Repo stars](https://img.shields.io/github/stars/beclab/olares?style=social)](https://github.com/beclab/olares/stargazers)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/beclab/Olares)](https://github.com/beclab/olares/releases)
+[![GitHub Repo stars](https://img.shields.io/github/stars/beclab/Olares?style=social)](https://github.com/beclab/Olares/stargazers)
 [![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.gg/olares)
 [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](https://github.com/beclab/olares/blob/main/LICENSE)
 
@@ -45,7 +45,7 @@ Just as Public clouds offer IaaS, PaaS, and SaaS layers, Olares provides open-so
 
   ![Tech Stacks](https://app.cdn.olares.com/github/olares/olares-architecture.jpg)
 
- For detailed description of each component, refer to [Olares architecture](https://docs.olares.com/manual/concepts/system-architecture.html).
+ For detailed description of each component, refer to [Olares architecture](https://docs.olares.com/developer/concepts/system-architecture.html).
 
 > 🔍 **How is Olares different from traditional NAS?**
 >
