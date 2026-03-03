@@ -237,7 +237,7 @@ To make your OpenClaw bot more personalized, it is highly recommended to complet
     ![Finish hatch agent](/images/manual/use-cases/openclaw-hatch-finish.png#bordered){width=90%}
 
     :::tip Bootstrap deletion fails
-    If the agent fails to delete `BOOTSTRAP.md`, explicitly instruct it to do so in the chat. If it still struggles, your model's context window might be full. Ensure your model supports at least 64K tokens (200K+ is recommended), or temporarily switch to a smarter model with better tool-calling capabilities.
+    If the agent fails to delete `BOOTSTRAP.md`, explicitly instruct it to do so in the chat. If it still fails, your model's context window might be full. Verify that your model supports at least 64K tokens (200K+ recommended), or temporarily switch to a model with better tool-calling capabilities.
     :::
 
 6. Verify your agent's persona files:
