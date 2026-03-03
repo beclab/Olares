@@ -325,7 +325,8 @@ func (t *CheckGpuStatus) Execute(runtime connector.Runtime) error {
 		return fmt.Errorf("kubectl not found")
 	}
 
-	cmd := fmt.Sprintf("%s get pod  -n kube-system -l 'app.kubernetes.io/component=hami-device-plugin' -o jsonpath='{.items[*].status.phase}'", kubectlpath)
+	selector := "app.kubernetes.io/component=hami-device-plugin"
+	cmd := fmt.Sprintf("%s get pod  -n kube-system -l '%s' -o jsonpath='{.items[*].status.phase}'", kubectlpath, selector)
 
 	rphase, _ := runtime.GetRunner().SudoCmd(cmd, false, false)
 	if rphase == "Running" {
@@ -363,7 +364,16 @@ func (u *UpdateNodeGPUInfo) Execute(runtime connector.Runtime) error {
 		driverVersion = st.LibraryVersion
 	}
 
-	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &driverVersion, &st.CudaVersion, &supported)
+	// TODO:
+	gpuType := NvidiaCardType
+	switch {
+	case runtime.GetSystemInfo().IsAmdApu():
+		gpuType = AmdApuCardType
+	case runtime.GetSystemInfo().IsGB10Chip():
+		gpuType = GB10ChipType
+	}
+
+	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &driverVersion, &st.CudaVersion, &supported, &gpuType)
 }
 
 type RemoveNodeLabels struct {
@@ -376,12 +386,12 @@ func (u *RemoveNodeLabels) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 	}
 
-	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), nil, nil, nil)
+	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), nil, nil, nil, nil)
 }
 
 // update k8s node labels gpu.bytetrade.io/driver and gpu.bytetrade.io/cuda.
 // if labels are not exists, create it.
-func UpdateNodeGpuLabel(ctx context.Context, client kubernetes.Interface, driver, cuda *string, supported *string) error {
+func UpdateNodeGpuLabel(ctx context.Context, client kubernetes.Interface, driver, cuda *string, supported *string, gpuType *string) error {
 	// get node name from hostname
 	nodeName, err := os.Hostname()
 	if err != nil {
@@ -408,6 +418,7 @@ func UpdateNodeGpuLabel(ctx context.Context, client kubernetes.Interface, driver
 		{GpuDriverLabel, driver},
 		{GpuCudaLabel, cuda},
 		{GpuCudaSupportedLabel, supported},
+		{GpuType, gpuType},
 	} {
 		old, ok := labels[label.key]
 		switch {

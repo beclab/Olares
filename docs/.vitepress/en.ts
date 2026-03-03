@@ -30,10 +30,21 @@ const side = {
             //               text: "Request support",
             //               link: "/manual/help/request-technical-support",
             //             },
-            //             {
-            //              text: "Troubleshooting",
-            //              link: "/manual/help/troubleshooting",
-            //             },
+
+          ],
+        },
+        {
+          text: "Troubleshooting",
+          collapsed: true,
+          items: [
+            {
+              text: "Insufficient memory or memory not freed",
+              link: "/manual/help/ts-free-memory",
+            },
+            {
+              text: "Missing apps in Market",
+              link: "/manual/help/ts-missing-apps",
+            },
           ],
         },
       ],
@@ -332,7 +343,7 @@ const side = {
               collapsed: true,
               items: [
                 {
-                  text: "Change revere proxy",
+                  text: "Change reverse proxy",
                   link: "/manual/olares/settings/change-frp",
                 },
                 {
@@ -352,7 +363,7 @@ const side = {
                 { text: "Restore", link: "/manual/olares/settings/restore" },
               ],
             },
-            { text: "Developer resources", link: "/manual/olares/settings/developer" },
+            { text: "Advanced settings", link: "/manual/olares/settings/developer" },
           ]
         },
         { text: "Dashboard", link: "/manual/olares/resources-usage" },

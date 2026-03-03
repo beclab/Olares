@@ -202,11 +202,15 @@ if [ "$PREINSTALL" == "1" ]; then
 fi
 
 
-echo "configuring storage ..."
-$sh_c "$INSTALL_OLARES_CLI install storage"
-if [[ $? -ne 0 ]]; then
-    echo "error: failed to configure storage"
-    exit 1
+if [[ "$JUICEFS" == "1" ]]; then
+    echo "configuring storage for juicefs ..."
+    $sh_c "$INSTALL_OLARES_CLI install storage"
+    if [[ $? -ne 0 ]]; then
+        echo "error: failed to configure storage"
+        exit 1
+    fi
+else
+    echo "juicefs is not enabled, skip configuring storage"
 fi
 
 

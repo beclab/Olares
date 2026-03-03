@@ -34,11 +34,13 @@ Partitioning a drive carries a risk of data loss. If you have important data on 
 
 ## Step 1: Install Windows
 1. Insert the Windows USB boot drive into a USB port on Olares One.
-2. Power on Olares One or restart if it is already running.
-3. Immediately press and hold the **Delete** key repeatedly until the BIOS setup screen appears.
+2. Power on Olares One or restart it if it is already running.
+3. When the Olares logo appears, immediately press the **Delete** key repeatedly to enter **BIOS setup**.
+   ![BIOS setup](/images/one/bios-setup.png#bordered)
+
 4. Navigate to the **Boot** tab using the arrow keys on your keyboard.
-5. Locate **Boot Option #1** or **Boot Override** and select your USB flash drive.
-6. Press **Enter** to boot from the USB drive immediately. 
+5. Set **Boot Option #1** to your Windows USB flash drive, and press **Enter**.
+6. Press **F10**, then select **Yes** to save and exit BIOS. The system restarts and boots from the USB drive into the Windows installation interface.
 7. Follow the on-screen prompts to begin the Windows installation. 
 8. When the installation finishes and the system restarts, unplug the Windows USB drive.
 
@@ -59,13 +61,14 @@ The system will boot into Windows automatically.
 Olares OS runs on top of a Linux kernel. You will install Ubuntu to serve as the host system.
 
 1. Insert the Ubuntu USB drive and restart Olares One.
-2. Press **Delete** repeatedly to enter BIOS, then select the USB drive as the boot device.
-3. Follow the installer prompts until you reach the **Installation type** screen.
-4. Select **Install Ubuntu alongside Windows Boot Manager**.
+2. When the Olares logo appears, press the **Delete** key repeatedly to enter **BIOS setup**.
+3. Navigate to the **Boot** tab, set **Boot Option #1** to your Ubuntu USB flash drive, and then press **Enter**.
+4. Press **F10**, then select **Yes** to save and exit BIOS. The system restarts and boots from the USB drive into the Ubuntu installer.
+5. Follow the installer prompts until you reach the **Installation type** screen.
     :::tip
     If this option does not appear, select the manual installation option to manually assign the unallocated space to Ubuntu.
     :::
-5. When the installation finishes and the system restarts, unplug the Ubuntu USB drive.
+6. When the installation finishes and the system restarts, unplug the Ubuntu USB drive.
 
 The system will boot into Ubuntu automatically.
 
@@ -120,17 +123,17 @@ After setup is complete, the LarePass app returns to the home screen, and the br
 You switch between Windows and Olares using the BIOS boot priority.
 ### Switch to Olares OS
 1. Restart Olares One.
-2. Press **Delete** repeatedly to enter BIOS.
+2. Press the **Delete** key repeatedly to enter **BIOS setup**.
 3. Go to the **Boot** tab.
 4. Set **Boot Override** to Ubuntu.
-5. Press **F4** to confirm.
+5. Press **F10** to save and exit BIOS.
 
 ### Switch to Windows
 1. Restart Olares One.
-2. Press **Delete** repeatedly to enter BIOS.
+2. Press the **Delete** key repeatedly to enter **BIOS setup**.
 3. Go to the **Boot** tab.
 4. Set **Boot Override** to Windows.
-5. Press **F4** to confirm.
+5. Press **F10** to save and exit BIOS.
 
 ## Troubleshooting
 

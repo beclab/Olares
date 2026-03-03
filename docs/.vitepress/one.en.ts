@@ -24,8 +24,12 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/first-boot",
         },
         {
-          text: "Access Olares securely",
+          text: "Access Olares via VPN",
           link: "/one/access-olares-via-vpn",
+        },
+        {
+          text: "Access Olares via .local domain",
+          link: "/one/access-olares-via-local-domain",
         },
         {
           text: "Redeem membership",
@@ -197,14 +201,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               }
               ,
               {
-                text: "Install NVIDIA driver",
+                text: "Install drivers on Windows",
                 link: "/one/install-nvidia-driver",
               }
             ]
-        },
-        {
-          text: "Create a bootable USB",
-          link: "/one/create-drive",
         },
       ]
     },
@@ -221,7 +221,21 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         },
         {
           text: "Factory reset",
-          link: "/one/factory-reset",
+          collapsed: true,
+          items: [
+            {
+              text: "Using LarePass",
+              link: "/one/factory-reset",
+            },
+            {
+              text: "In BIOS",
+              link: "/one/factory-reset-in-bios",
+            },
+            {
+              text: "Using bootable USB",
+              link: "/one/create-drive",
+            },
+          ],
         },
       ]
     },

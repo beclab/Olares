@@ -5,6 +5,7 @@ package utils
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -42,7 +43,7 @@ func detectdStorageDevices(ctx context.Context, bus string) (usbDevs []storageDe
 		for _, d := range ds {
 			if d.Properties()["ID_BUS"] == bus {
 				usbs = append(usbs, d)
-			} else if d.Properties()["ID_BUS"] == "ata" &&
+			} else if (d.Properties()["ID_BUS"] == "ata" || d.Properties()["ID_BUS"] == "scsi") &&
 				d.Properties()["ID_USB_TYPE"] == "disk" &&
 				bus == "usb" {
 				usbs = append(usbs, d)
@@ -97,14 +98,18 @@ func detectdStorageDevices(ctx context.Context, bus string) (usbDevs []storageDe
 
 		idSerial := device.Properties()["ID_SERIAL"]
 		idSerialShort := device.Properties()["ID_SERIAL_SHORT"]
+		idUsbSerial := device.Properties()["ID_USB_SERIAL"]
+		idUsbSerialShort := device.Properties()["ID_USB_SERIAL_SHORT"]
 		partUUID := device.Properties()["ID_PART_ENTRY_UUID"]
 
 		usbDevs = append(usbDevs, storageDevice{
-			DevPath:       devPath,
-			Vender:        vender,
-			IDSerial:      idSerial,
-			IDSerialShort: idSerialShort,
-			PartitionUUID: partUUID,
+			DevPath:          devPath,
+			Vender:           vender,
+			IDSerial:         idSerial,
+			IDSerialShort:    idSerialShort,
+			IDUsbSerial:      idUsbSerial,
+			IDUsbSerialShort: idUsbSerialShort,
+			PartitionUUID:    partUUID,
 		})
 	}
 
@@ -199,7 +204,10 @@ func MountedHddPath(ctx context.Context) ([]string, error) {
 
 func FilterBySerial(serial string) func(dev storageDevice) bool {
 	return func(dev storageDevice) bool {
-		return strings.HasSuffix(serial, dev.IDSerial) || strings.HasSuffix(serial, dev.IDSerialShort)
+		return strings.HasSuffix(serial, dev.IDSerial) ||
+			strings.HasSuffix(serial, dev.IDSerialShort) ||
+			strings.HasSuffix(serial, dev.IDUsbSerial) ||
+			strings.HasSuffix(serial, dev.IDUsbSerialShort)
 	}
 }
 
@@ -270,7 +278,17 @@ func MountUsbDevice(ctx context.Context, mountBaseDir string, dev []storageDevic
 			continue
 		}
 
-		if err = mounter.Mount(d.DevPath, mkMountDir, "", []string{"uid=1000", "gid=1000"}); err != nil {
+		options := []string{}
+		fsType, err := getFsTypeOfDevice(ctx, d.DevPath)
+		if err != nil {
+			klog.Warning("get fs type of device error, ", err, ", ", d.DevPath)
+		} else {
+			if strings.Contains(fsType, "FAT") || strings.Contains(fsType, "NTFS") {
+				options = append(options, "uid=1000", "gid=1000")
+			}
+		}
+
+		if err = mounter.Mount(d.DevPath, mkMountDir, "", options); err != nil {
 			klog.Warning("mount usb error, ", err, ", ", d.DevPath, ", ", mkMountDir)
 			// clear the empty mount dir
 			// do not use remove all, only remove the mount point path, assume it's an empty dir
@@ -684,4 +702,36 @@ func isDeviceExists(devicePath string) bool {
 
 	_, err := os.Stat(devicePath)
 	return !os.IsNotExist(err)
+}
+
+func getFsTypeOfDevice(ctx context.Context, devicePath string) (string, error) {
+	// output format
+	// {
+	// "blockdevices": [
+	// 	{
+	// 		"fstype": "ext4"
+	// 	}
+	// ]
+	// }
+	cmd := exec.CommandContext(ctx, "lsblk", "-f", devicePath, "-o", "fstype", "-J")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+
+	var result struct {
+		BlockDevices []struct {
+			FsType string `json:"fstype"`
+		} `json:"blockdevices"`
+	}
+
+	if err := json.Unmarshal(output, &result); err != nil {
+		return "", err
+	}
+
+	if len(result.BlockDevices) == 0 {
+		return "", fmt.Errorf("no block devices found for %s", devicePath)
+	}
+
+	return result.BlockDevices[0].FsType, nil
 }

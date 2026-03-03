@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"github.com/beclab/Olares/cli/pkg/amdgpu"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/gpu"
@@ -58,6 +59,12 @@ func (l *linuxInstallPhaseBuilder) installGpuPlugin() phase {
 	return []module.Module{
 		&gpu.RestartK3sServiceModule{Skip: !(l.runtime.Arg.Kubetype == common.K3s)},
 		&gpu.InstallPluginModule{Skip: skipGpuPlugin},
+		&amdgpu.InstallAmdPluginModule{Skip: func() bool {
+			if l.runtime.GetSystemInfo().IsAmdGPUOrAPU() {
+				return false
+			}
+			return true
+		}()},
 	}
 }
 

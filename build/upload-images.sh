@@ -15,7 +15,7 @@ cat $1|while read image; do
     curl -fsSLI https://cdn.olares.com/$path$name.tar.gz > /dev/null
     if [ $? -ne 0 ]; then
         code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://cdn.olares.com/$path$name.tar.gz)
-        if [ $code -eq 403 ]; then
+        if [[ $code -eq 403 || $code -eq 404 ]]; then
             set -ex
             skopeo copy --insecure-policy docker://$image oci-archive:$name.tar
             gzip $name.tar
@@ -28,11 +28,16 @@ cat $1|while read image; do
             fi
 
             echo "start to upload [$name.tar.gz]"
-            aws s3 cp $name.tar.gz s3://terminus-os-install/$path$name.tar.gz --acl=public-read
-            aws s3 cp $name.tar.gz s3://terminus-os-install/backup/$path$backup_file --acl=public-read
-            aws s3 cp $checksum s3://terminus-os-install/$path$checksum --acl=public-read
-            echo "upload $name completed"
-            
+            # aws s3 cp $name.tar.gz s3://terminus-os-install/$path$name.tar.gz --acl=public-read
+            # aws s3 cp $name.tar.gz s3://terminus-os-install/backup/$path$backup_file --acl=public-read
+            # aws s3 cp $checksum s3://terminus-os-install/$path$checksum --acl=public-read
+            # echo "upload $name completed"
+
+            coscmd upload ./$name.tar.gz /$path$name.tar.gz
+            coscmd upload ./$name.tar.gz /backup/$path$backup_file
+            coscmd upload ./$checksum /$path$checksum
+            echo "upload $name to cos completed"        
+
             set +ex
         else
             if [ $code -ne 200  ]; then
@@ -48,7 +53,7 @@ cat $1|while read image; do
     curl -fsSLI https://cdn.olares.com/$path$checksum > /dev/null
     if [ $? -ne 0 ]; then
         code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://cdn.olares.com/$path$checksum)
-        if [ $code -eq 403 ]; then
+        if [[ $code -eq 403 || $code -eq 404 ]]; then
             set -ex
             skopeo copy --insecure-policy docker://$image oci-archive:$name.tar
             gzip $name.tar
@@ -60,10 +65,16 @@ cat $1|while read image; do
                 exit 1
             fi
 
-            aws s3 cp $name.tar.gz s3://terminus-os-install/$path$name.tar.gz --acl=public-read
-            aws s3 cp $name.tar.gz s3://terminus-os-install/backup/$path$backup_file --acl=public-read
-            aws s3 cp $checksum s3://terminus-os-install/$path$checksum --acl=public-read
-            echo "upload $name completed"
+            # aws s3 cp $name.tar.gz s3://terminus-os-install/$path$name.tar.gz --acl=public-read
+            # aws s3 cp $name.tar.gz s3://terminus-os-install/backup/$path$backup_file --acl=public-read
+            # aws s3 cp $checksum s3://terminus-os-install/$path$checksum --acl=public-read
+            # echo "upload $name completed"
+
+            coscmd upload ./$name.tar.gz /$path$name.tar.gz
+            coscmd upload ./$name.tar.gz /backup/$path$backup_file
+            coscmd upload ./$checksum /$path$checksum
+            echo "upload $name to cos completed"        
+
             set +ex
         else
             if [ $code -ne 200  ]; then
@@ -77,13 +88,16 @@ cat $1|while read image; do
     curl -fsSLI https://cdn.olares.com/$path$manifest > /dev/null
     if [ $? -ne 0 ]; then   
         code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://cdn.olares.com/$path$manifest)
-        if [ $code -eq 403 ]; then
+        if [[ $code -eq 403 || $code -eq 404 ]]; then
             set -ex
             BASE_DIR=$(dirname $(realpath -s $0))
             python3 $BASE_DIR/get-manifest.py $image -o $manifest
 
-            aws s3 cp $manifest s3://terminus-os-install/$path$manifest --acl=public-read
+            # aws s3 cp $manifest s3://terminus-os-install/$path$manifest --acl=public-read
+
+            coscmd upload $manifest /$path$manifest
             echo "upload $name manifest completed"
+
             set +ex
         else
             if [ $code -ne 200  ]; then

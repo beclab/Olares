@@ -51,10 +51,23 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tags }}
 
+      - name: Install coscmd
+        run: pip install coscmd        
+
+      - name: Configure coscmd
+        env:
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
+          COS_BUCKET: ${{ secrets.COS_BUCKET }}
+          COS_REGION: ${{ secrets.COS_REGION }}
+          END_POINT: ${{ secrets.END_POINT }}
+        run: |
+          coscmd config -a $TENCENT_SECRET_ID \
+                        -s $TENCENT_SECRET_KEY \
+                        -b $COS_BUCKET \
+                        -r $COS_REGION 
+
       - env: 
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: 'us-east-1'
           VERSION: ${{ github.event.inputs.tags }}
         run: |
           bash build/image-manifest.sh && bash build/upload-images.sh .manifest/images.mf
@@ -68,10 +81,24 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tags }}
 
+      - name: Install coscmd
+        run: pip install coscmd        
+
+      - name: Configure coscmd
+        env:
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
+          COS_BUCKET: ${{ secrets.COS_BUCKET }}
+          COS_REGION: ${{ secrets.COS_REGION }}
+          END_POINT: ${{ secrets.END_POINT }}
+        run: |
+          coscmd config -a $TENCENT_SECRET_ID \
+                        -s $TENCENT_SECRET_KEY \
+                        -b $COS_BUCKET \
+                        -r $COS_REGION 
+
+
       - env: 
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: 'us-east-1'
           VERSION: ${{ github.event.inputs.tags }}
         run: |
           export PATH=$PATH:/usr/local/bin:/home/ubuntu/.local/bin
@@ -85,11 +112,24 @@ jobs:
       - name: "Checkout source code"
         uses: actions/checkout@v3
 
+      - name: Install coscmd
+        run: pip install coscmd        
+
+      - name: Configure coscmd
+        env:
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
+          COS_BUCKET: ${{ secrets.COS_BUCKET }}
+          COS_REGION: ${{ secrets.COS_REGION }}
+          END_POINT: ${{ secrets.END_POINT }}
+        run: |
+          coscmd config -a $TENCENT_SECRET_ID \
+                        -s $TENCENT_SECRET_KEY \
+                        -b $COS_BUCKET \
+                        -r $COS_REGION 
+
       # test
       - env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: "us-east-1"
           VERSION: ${{ github.event.inputs.tags }}
           RELEASE_ID: ${{ needs.release-id.outputs.id }}
           REPO_PATH: '${{ secrets.REPO_PATH }}'
@@ -104,11 +144,25 @@ jobs:
       - name: "Checkout source code"
         uses: actions/checkout@v3
 
+      - name: Install coscmd
+        run: pip install coscmd        
+
+      - name: Configure coscmd
+        env:
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
+          COS_BUCKET: ${{ secrets.COS_BUCKET }}
+          COS_REGION: ${{ secrets.COS_REGION }}
+          END_POINT: ${{ secrets.END_POINT }}
+        run: |
+          coscmd config -a $TENCENT_SECRET_ID \
+                        -s $TENCENT_SECRET_KEY \
+                        -b $COS_BUCKET \
+                        -r $COS_REGION 
+
+
       # test
       - env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: "us-east-1"
           VERSION: ${{ github.event.inputs.tags }}
           RELEASE_ID: ${{ needs.release-id.outputs.id }}
           REPO_PATH: '${{ secrets.REPO_PATH }}'
@@ -131,18 +185,30 @@ jobs:
         run: |
           bash build/build.sh ${{ github.event.inputs.tags }} ${{ needs.release-id.outputs.id }}
 
-      - name: Upload to S3
-        env: 
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: 'us-east-1'
+      - name: Install coscmd
+        run: pip install coscmd        
+
+      - name: Configure coscmd
+        env:
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
+          COS_BUCKET: ${{ secrets.COS_BUCKET }}
+          COS_REGION: ${{ secrets.COS_REGION }}
+          END_POINT: ${{ secrets.END_POINT }}
+        run: |
+          coscmd config -a $TENCENT_SECRET_ID \
+                        -s $TENCENT_SECRET_KEY \
+                        -b $COS_BUCKET \
+                        -r $COS_REGION 
+
+      - name: Upload to COS
         run: |
           md5sum install-wizard-v${{ github.event.inputs.tags }}.tar.gz > install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt && \
-          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt --acl=public-read && \
-          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.tar.gz --acl=public-read
+          coscmd upload install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt && \
+          coscmd upload install-wizard-v${{ github.event.inputs.tags }}.tar.gz ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.tar.gz
 
-          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.md5sum.txt --acl=public-read && \
-          aws s3 cp install-wizard-v${{ github.event.inputs.tags }}.tar.gz s3://terminus-os-install${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.tar.gz --acl=public-read
+          coscmd upload install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.md5sum.txt && \
+          coscmd upload install-wizard-v${{ github.event.inputs.tags }}.tar.gz ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.tar.gz
 
   release:
     runs-on: ubuntu-latest
