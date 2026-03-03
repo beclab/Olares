@@ -11,44 +11,12 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
 
 ## 主要功能
 
-- **账户与身份管理**  
-  创建和管理 Olares ID，连接第三方服务集成，安全备份你的账户凭证。
-  :::details 相关指南
-  - [创建 Olares ID](create-account.md)
-  - [备份助记词](back-up-mnemonics.md)
-  - [设置或重置本地密码](back-up-mnemonics.md#set-up-local-password)
-  - [管理集成](integrations.md)
-  :::
+- 账户与身份管理
+- 安全文件访问与同步
+- 设备与网络管理
+- 密码与密钥管理
+- 知识收藏
 
-- **安全文件访问与同步**  
-  通过 Olares 提供的安全同步能力，在不同设备之间访问和管理文件。
-  :::details 相关指南
-  - [使用 LarePass 管理文件](manage-files.md)
-  :::
-- **设备与网络管理**  
-  激活并管理 Olares 设备，通过 LarePass VPN 安全连接，维护系统运行状态。
-  :::details 相关指南
-  - [激活 Olares 设备](activate-olares.md)
-  - [升级 Olares](manage-olares.md#升级-olares)
-  - [双因素登录 Olares](activate-olares.md#使用-larepass-进行双因素验证)
-  - [管理 Olares](manage-olares.md)
-  - [切换有线/无线网络](manage-olares.md#有线切换至无线)
-  - [启用专用网络](private-network.md)
-  :::
-
-- **密码与密钥管理**  
-  使用 Vault 在多设备间存储、自动填充并生成安全密码和通行密钥。
-  :::details 相关指南
-  - [自动填充密码](autofill.md)
-  - [生成 2FA 验证码](two-factor-verification.md)
-  :::
-- **知识收藏**  
-  通过浏览器扩展收集网页内容，将资源保存至 Wise，并订阅 RSS 源。
-  :::details 相关指南
-  - [通过 LarePass 扩展收集内容](/zh/manual/olares/wise/basics.md#使用-larepass-扩展)
-  - [订阅 RSS 源](/zh/manual/olares/wise/subscribe.md#使用-larepass-浏览器扩展订阅)
-  :::
-  
 ## 下载 LarePass
 
 ### iOS
@@ -80,10 +48,10 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
 安装完成后，点击浏览器工具栏中的拼图图标，将 LarePass 扩展固定，以便一键访问。
 :::
 
-### 设置账户
+## 设置账户
 
 - 在移动设备上，你可以使用 LarePass 直接[创建 Olares ID](/zh/manual/larepass/create-account.md#创建-olares-id)。
-- 在桌面客户端或 Chrome 扩展上，你需要[导入现有 Olares 账户](/zh/manual/larepass/create-account.md#导入现有账户)。
+- 在桌面客户端或 Chrome 扩展上，你需要[导入 Olares 账户](/zh/manual/larepass/create-account.md#导入账户)。
 
 ## 功能对比
 
