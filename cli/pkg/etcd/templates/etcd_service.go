@@ -27,7 +27,7 @@ var (
 	ETCDService = template.Must(template.New("etcd.service").Parse(
 		dedent.Dedent(`[Unit]
 Description=etcd
-After=network.target
+After=network-online.target
 StartLimitIntervalSec=0
 
 [Service]
