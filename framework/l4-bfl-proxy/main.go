@@ -371,87 +371,96 @@ func (s *Server) lookupHostAddr(svc string) (string, error) {
 	return "", fmt.Errorf("svc %s, no host lookup", svc)
 }
 
-func (s *Server) listApplications() ([]string, []string, []string) {
+func (s *Server) listApplications() ([]string, []string, []string, map[string][]string) {
 	publicApps := []string{"headscale"} // hardcode headscale appid
 	var publicCustomDomainApps []string
 	var customDomainApps []string
+	var customDomainAppsWithUsers = make(map[string][]string)
 
-	// DEPRECATED:
-	//
-	// list, err := s.client.Resource(appGVR).List(context.TODO(), metav1.ListOptions{})
-	// if err != nil {
-	// 	return nil, nil, nil
-	// }
+	list, err := s.client.Resource(appGVR).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, nil, nil, nil
+	}
 
-	// data, err := list.MarshalJSON()
-	// if err != nil {
-	// 	return nil, nil, nil
-	// }
+	data, err := list.MarshalJSON()
+	if err != nil {
+		return nil, nil, nil, nil
+	}
 
-	// var appList appv2alpha1.ApplicationList
-	// if err = json.Unmarshal(data, &appList); err != nil {
-	// 	return nil, nil, nil
-	// }
+	var appList appv2alpha1.ApplicationList
+	if err = json.Unmarshal(data, &appList); err != nil {
+		return nil, nil, nil, nil
+	}
 
-	// getAppPrefix := func(entrancecount, index int, appid string) string {
-	// 	if entrancecount == 1 {
-	// 		return appid
-	// 	}
-	// 	return fmt.Sprintf("%s%d", appid, index)
-	// }
+	getAppPrefix := func(entrancecount, index int, appid string) string {
+		if entrancecount == 1 {
+			return appid
+		}
+		return fmt.Sprintf("%s%d", appid, index)
+	}
 
-	// for _, app := range appList.Items {
-	// 	if len(app.Spec.Entrances) == 0 {
-	// 		continue
-	// 	}
+	for _, app := range appList.Items {
+		if len(app.Spec.Entrances) == 0 {
+			continue
+		}
 
-	// 	var customDomains []string
-	// 	var customDomainsPrefix []string
-	// 	var entrancecounts = len(app.Spec.Entrances)
+		var customDomains []string
+		var customDomainsPrefix []string
+		var entrancecounts = len(app.Spec.Entrances)
+		var name = app.Spec.Owner
 
-	// 	for index, entrance := range app.Spec.Entrances {
-	// 		prefix := getAppPrefix(entrancecounts, index, app.Spec.Appid)
+		for index, entrance := range app.Spec.Entrances {
+			prefix := getAppPrefix(entrancecounts, index, app.Spec.Appid)
 
-	// 		customDomainEntrancesMap := getSettingsKeyMap(&app, settingsCustomDomain)
-	// 		entranceAuthorizationLevel := entrance.AuthLevel
+			customDomainEntrancesMap := getSettingsKeyMap(&app, settingsCustomDomain)
+			entranceAuthorizationLevel := entrance.AuthLevel
 
-	// 		customDomainEntrance, ok := customDomainEntrancesMap[entrance.Name]
-	// 		if ok {
-	// 			if entrancePrefix := customDomainEntrance[settingsCustomDomainThirdLevelDomain]; entrancePrefix != "" {
-	// 				if entranceAuthorizationLevel == ApplicationAuthorizationLevelPublic {
-	// 					customDomainsPrefix = append(customDomainsPrefix, entrancePrefix)
-	// 				}
-	// 			}
-	// 			if entranceCustomDomain := customDomainEntrance[settingsCustomDomainThirdPartyDomain]; entranceCustomDomain != "" {
-	// 				customDomainApps = append(customDomainApps, entranceCustomDomain)
+			customDomainEntrance, ok := customDomainEntrancesMap[entrance.Name]
+			if ok {
+				if entrancePrefix := customDomainEntrance[settingsCustomDomainThirdLevelDomain]; entrancePrefix != "" {
+					if entranceAuthorizationLevel == ApplicationAuthorizationLevelPublic {
+						customDomainsPrefix = append(customDomainsPrefix, entrancePrefix)
+					}
+				}
+				if entranceCustomDomain := customDomainEntrance[settingsCustomDomainThirdPartyDomain]; entranceCustomDomain != "" {
+					customDomainApps = append(customDomainApps, entranceCustomDomain)
 
-	// 				if entranceAuthorizationLevel == ApplicationAuthorizationLevelPublic {
-	// 					customDomains = append(customDomains, entranceCustomDomain)
-	// 				}
-	// 			}
-	// 		}
+					val, userExists := customDomainAppsWithUsers[name]
+					if !userExists {
+						customDomainAppsWithUsers[name] = []string{entranceCustomDomain}
+					} else {
+						val = append(val, entranceCustomDomain)
+						customDomainAppsWithUsers[name] = val
+					}
 
-	// 		if prefix != "" {
-	// 			if entranceAuthorizationLevel == ApplicationAuthorizationLevelPublic {
-	// 				publicApps = append(publicApps, prefix)
-	// 			}
+					if entranceAuthorizationLevel == ApplicationAuthorizationLevelPublic {
+						customDomains = append(customDomains, entranceCustomDomain)
+					}
+				}
+			}
 
-	// 			if len(customDomainsPrefix) > 0 {
-	// 				publicApps = append(publicApps, customDomainsPrefix...)
-	// 			}
+			if prefix != "" {
+				if entranceAuthorizationLevel == ApplicationAuthorizationLevelPublic {
+					publicApps = append(publicApps, prefix)
+				}
 
-	// 			if len(customDomains) > 0 {
-	// 				publicCustomDomainApps = append(publicCustomDomainApps, customDomains...)
-	// 			}
-	// 		}
-	// 	}
-	// }
+				if len(customDomainsPrefix) > 0 {
+					publicApps = append(publicApps, customDomainsPrefix...)
+				}
 
-	return publicApps, publicCustomDomainApps, customDomainApps
+				if len(customDomains) > 0 {
+					publicCustomDomainApps = append(publicCustomDomainApps, customDomains...)
+				}
+			}
+		}
+	}
+
+	return publicApps, publicCustomDomainApps, customDomainApps, customDomainAppsWithUsers
 }
 
 func (s *Server) listUsers() (Users, error) {
-	publicAppIdList, publicCustomDomainAppList, customDomainAppList := s.listApplications()
+	publicAppIdList, publicCustomDomainAppList, customDomainAppList, customDomainAppListWithUsers := s.listApplications()
+	_ = customDomainAppList
 
 	list, err := s.client.Resource(iamUserGVR).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
@@ -530,9 +539,14 @@ func (s *Server) listUsers() (Users, error) {
 			denyAllStatus = getUserAnnotation(&user, userDenyAllPolicy)
 			allowedDomainsAnno = getPublicAccessDomain(zone, publicAppIdList, publicCustomDomainAppList, denyAllStatus)
 
-			if len(customDomainAppList) > 0 {
-				ngxServerNameDomains = append(ngxServerNameDomains, customDomainAppList...)
+			userCustomDomains, ok := customDomainAppListWithUsers[user.Name]
+			if ok && len(userCustomDomains) > 0 {
+				ngxServerNameDomains = append(ngxServerNameDomains, userCustomDomains...)
 			}
+
+			// if len(customDomainAppList) > 0 {
+			// 	ngxServerNameDomains = append(ngxServerNameDomains, customDomainAppList...)
+			// }
 		} else {
 			// creator user
 			creator := getUserAnnotation(&user, userAnnotationCreator)
