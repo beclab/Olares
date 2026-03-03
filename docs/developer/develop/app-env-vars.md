@@ -63,10 +63,6 @@ The following fields are available under each `envs` entry.
 
 The name of the variable as injected into `values.yaml`. Reference it in templates as <code v-pre>{{ .Values.olaresEnv.&lt;envName&gt; }}</code>.
 
-### value
-
-The resolved value of the variable. You cannot set a fixed constant directly. The value comes from `default`, user input, or a referenced variable via `valueFrom`.
-
 ### default
 
 The default value for the variable. Provided by the developer at authoring time. Users cannot modify it. Used when no value is supplied by the user or by `valueFrom`.

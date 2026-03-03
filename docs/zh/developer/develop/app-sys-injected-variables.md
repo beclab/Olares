@@ -132,19 +132,7 @@ spec:
 
 仅当在 `OlaresManifest.yaml` 的 `middleware` 部分声明中间件依赖时，才会注入对应变量。
 
-PostgreSQL 与 Redis 为预安装组件。MongoDB、MinIO、RabbitMQ、MySQL、MariaDB 和 Elasticsearch 需要单独安装后方可使用。
-
-#### Elasticsearch
-
-安装与配置详情请参见[集成 Elasticsearch](/zh/developer/develop/mw-integrate-with-es.md)。
-
-| 变量 | 类型 | 说明 |
-|--|--|--|
-| `.Values.elasticsearch.host` | String | Elasticsearch 服务地址。 |
-| `.Values.elasticsearch.port` | Number  | Elasticsearch 服务端口。 |
-| `.Values.elasticsearch.username` | String | Elasticsearch 用户名。 |
-| `.Values.elasticsearch.password` | String | Elasticsearch 密码。 |
-| `.Values.elasticsearch.indexes`  | Map<String,String> | 请求的索引集合，按索引名为键。例如申请 `aaa`，可通过 `.Values.elasticsearch.indexes.aaa` 获取对应的值。 |
+PostgreSQL 与 Redis 为预安装组件。MongoDB、MinIO、RabbitMQ、MySQL 和 MariaDB 需要单独安装后方可使用。
 
 #### MariaDB
 

@@ -248,7 +248,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
               link: "/zh/developer/develop/mw-overview",
               collapsed: true,
               items: [
-                {
+                /*{
                   text: "Elasticsearch",
                   collapsed: true,
                   items :[
@@ -260,7 +260,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
                       link: "zh/developer/develop/mw-view-es-data",
                     },
                   ]
-                },
+                },*/
                 {
                   text: "Grafana",
                   link: "zh/developer/develop/mw-view-grafana-data",

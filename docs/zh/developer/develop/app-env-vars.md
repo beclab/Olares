@@ -64,10 +64,6 @@ olaresEnv:
 
 注入到 `values.yaml` 中的变量名。在模板中通过 <code v-pre>{{ .Values.olaresEnv.&lt;envName&gt; }}</code> 引用。
 
-### value
-
-变量解析后的最终值。不能直接将其设置为固定常量。该值来源于 `default`、用户输入或通过 `valueFrom` 引用的变量。
-
 ### default
 
 变量的默认值。由开发者在编写应用时提供。用户不可修改。当用户未提供值或未通过 `valueFrom` 引用时使用。

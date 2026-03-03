@@ -130,19 +130,7 @@ When an app declares a dependency in `OlaresManifest.yaml`, Olares injects conne
 
 Middleware values are injected only after you declare the middleware dependency in the `middleware` section of `OlaresManifest.yaml`.
 
-PostgreSQL and Redis are preinstalled. MongoDB, MinIO, RabbitMQ, MySQL, MariaDB, and Elasticsearch must be installed separately before your app can use them.
-
-#### Elasticsearch
-
-See [Integrate with Elasticsearch](/developer/develop/mw-integrate-with-es.md) for installation and configuration details.
-
-| Value | Type | Description |
-| --- | --- | --- |
-| `.Values.elasticsearch.host` | String | Elasticsearch service host. |
-| `.Values.elasticsearch.port` | Number | Elasticsearch service port. |
-| `.Values.elasticsearch.username` | String | Elasticsearch username. |
-| `.Values.elasticsearch.password` | String | Elasticsearch password. |
-| `.Values.elasticsearch.indexes` | Map\<String,String> | Requested indexes, keyed by index name. For example, a request for `aaa` is available at `.Values.elasticsearch.indexes.aaa`. |
+PostgreSQL and Redis are preinstalled. MongoDB, MinIO, RabbitMQ, MySQL and MariaDB must be installed separately before your app can use them.
 
 #### MariaDB
 
