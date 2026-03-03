@@ -206,7 +206,7 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     ```
 4. Click **Save** in the upper-right corner. The system validates the config and restarts automatically to apply the changes.
 
-## Personalize OpenClaw
+## (Optional) Personalize OpenClaw
 
 To make your OpenClaw bot more personalized, it is highly recommended to complete the persona setup process. 
 
