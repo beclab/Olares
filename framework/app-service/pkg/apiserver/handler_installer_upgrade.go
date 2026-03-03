@@ -342,6 +342,19 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	// hold env batch lease during upgrade kickoff
+	// to avoid AppEnv controller racing and switching app manager op/state to ApplyEnv in this window
+	userNamespace := utils.UserspaceName(owner)
+	releaseLease, err := h.acquireUserEnvBatchLease(req.Request.Context(), userNamespace)
+	if err != nil {
+		klog.Errorf("Failed to acquire user env batch lease err=%v", err)
+		api.HandleError(resp, req, err)
+		return
+	}
+	if releaseLease != nil {
+		defer releaseLease()
+	}
+
 	err = helper.applyAppEnv(req.Request.Context())
 	if err != nil {
 		klog.Errorf("Failed to apply app env err=%v", err)
