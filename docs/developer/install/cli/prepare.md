@@ -18,7 +18,7 @@ olares-cli prepare [option]
 | `--version`        | `-v`      | Specifies the Olares version. <br>Version values follow the format `x.y.z` (e.g., `1.10.0`) or include a build date (e.g., `1.10.0-20241109`).<br> Refer to the [GitHub Releases page](https://github.com/beclab/Olares/releases) for available versions. | No                   | Current version |
 
 
-## Example
+## Examples
 ```bash
 # Uses JuiceFS as the root filesystem
 olares-cli prepare --with-juicefs=true

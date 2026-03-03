@@ -394,26 +394,6 @@ func (c *UmountKubeModule) Init() {
 	}
 }
 
-type SaveKubeConfigModule struct {
-	common.KubeModule
-}
-
-func (s *SaveKubeConfigModule) Init() {
-	s.Name = "SaveKubeConfigModule"
-	s.Desc = "Save kube config file as a configmap"
-
-	save := &task.LocalTask{
-		Name:   "SaveKubeConfig(k8s)",
-		Desc:   "Save kube config as a configmap",
-		Action: new(SaveKubeConfig),
-		Retry:  5,
-	}
-
-	s.Tasks = []task.Interface{
-		save,
-	}
-}
-
 type ConfigureKubernetesModule struct {
 	common.KubeModule
 }

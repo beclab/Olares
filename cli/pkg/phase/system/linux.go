@@ -3,8 +3,7 @@ package system
 import (
 	"strings"
 
-	"github.com/beclab/Olares/cli/pkg/gpu"
-
+	"github.com/beclab/Olares/cli/pkg/amdgpu"
 	"github.com/beclab/Olares/cli/pkg/bootstrap/os"
 	"github.com/beclab/Olares/cli/pkg/bootstrap/patch"
 	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
@@ -12,6 +11,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/container"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/daemon"
+	"github.com/beclab/Olares/cli/pkg/gpu"
 	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	"github.com/beclab/Olares/cli/pkg/manifest"
@@ -82,6 +82,14 @@ func (l *linuxPhaseBuilder) build() []module.Module {
 		addModule(&terminus.WriteReleaseFileModule{}).
 		addModule(gpuModuleBuilder(func() []module.Module {
 			return []module.Module{
+				&amdgpu.InstallAmdRocmModule{},
+				&amdgpu.InstallAmdContainerToolkitModule{Skip: func() bool {
+					if l.runtime.GetSystemInfo().IsAmdGPUOrAPU() {
+						return false
+					}
+					return true
+				}(),
+				},
 				&gpu.InstallDriversModule{
 					ManifestModule: manifest.ManifestModule{
 						Manifest: l.manifestMap,

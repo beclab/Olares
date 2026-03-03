@@ -31,7 +31,7 @@ require (
 	github.com/jaypipes/ghw v0.13.0
 	github.com/jochenvg/go-udev v0.0.0-20171110120927-d6b62d56d37b
 	github.com/joho/godotenv v1.5.1
-	github.com/klauspost/cpuid/v2 v2.2.8
+	github.com/klauspost/cpuid/v2 v2.3.0
 	github.com/labstack/echo/v4 v4.0.0-00010101000000-000000000000
 	github.com/libp2p/go-netroute v0.2.2
 	github.com/mackerelio/go-osstat v0.2.5

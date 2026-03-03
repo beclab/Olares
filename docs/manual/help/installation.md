@@ -2,9 +2,9 @@
 outline: [2, 3]
 description: Find answers to common questions during the installation and activation of Olares.
 ---
-# Olares installation and activation FAQs
+# Olares installation, activation & login FAQs
 
-This page lists the FAQs about installing, configuring, and activating Olares on your hardware.
+This page lists the FAQs about installing, configuring, activating, and logging into Olares on your hardware.
 
 ## Installation
 ### What platforms does Olares support?
@@ -76,3 +76,49 @@ Ensure both your phone and Olares device are on the same network. If they are no
 In situations where you cannot connect via Wi-Fi, you can use the Bluetooth network setup in the LarePass app to connect Olares to the same network as your phone.
 
 For details, see [Activate Olares using Bluetooth](../../manual/larepass/activate-olares.md#activate-olares-using-bluetooth).
+
+### I received the MFA binding error. How can I resolve it?
+
+The request to bind Multi-Factor Authentication (MFA) failed due to a network timeout. Check your network connection and retry the setup process.
+
+### I received a DID binding error. How to resolve it?
+
+The request to the binding-zone interface failed due to a network timeout. This usually happens during account activation. Ensure your network is stable and retry.
+
+### What does this error message mean: "Invalid jws, timestamp is out of range"?
+
+This occurs when there is a significant time difference (greater than 20 minutes) between the device running LarePass and the Olares device. Check the system time on your computer or phone and ensure it is synced correctly with internet time.
+
+### I see this error message during setup: "Resolve name error". How to fix it?
+
+This error means your Olares device cannot connect to the Olares identity service, which is usually caused by the network issue. Check your internet connection and ensure your Olares device has proper network access.
+
+## Login and authentication
+
+### What should I do when I see "Authentication failed, incorrect password"?
+
+This indicates the password entered is not accurate. Double-check your password for issues like typos or case sensitivity and try again.
+
+### What does this mean: "Authentication failed, user not found"?
+
+The system cannot find an account associated with the username entered. Verify that the username is correct and this username is already registered on Olares.
+
+### I received an error saying "Authentication failed, failed to query user from lldap service". How to resolve it?
+
+The system was unable to retrieve user details from the internal directory. This might happen if the user data is corrupted or if the service is momentarily busy. Try again or contact your administrator.
+
+### I am locked out with the message "too many failed login attempts, retry again later after 5 minutes". What should I do?
+
+For security reasons, the system temporarily locks logins after multiple incorrect attempts. Wait for 5 minutes and then try logging in again.
+
+### Why am I getting "Authentication failed, disk space is full"?
+
+Your Olares device storage is completely full, which prevents the authentication service from running correctly. Free up disk space on the device to resolve this issue.
+
+### What does this error message mean: "Authentication failed, lldap service is unavailable"?
+
+The internal identity service "LLDAP" on your Olares device is not running or is experiencing issues. Restart the Olares device and try again, or contact your administrator.
+
+### What does this error message mean: "Authentication failed, citus service is unavailable"?
+
+The internal database service "Citus" is currently unavailable. This is usually a temporary system issue. Restart your Olares device.

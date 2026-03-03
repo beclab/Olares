@@ -2,24 +2,24 @@ package app
 
 import (
 	"fmt"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"strconv"
 
 	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 	"bytetrade.io/web3os/tapr/pkg/constants"
 	"bytetrade.io/web3os/tapr/pkg/workload/citus"
+	"bytetrade.io/web3os/tapr/pkg/workload/clickhouse"
 	"bytetrade.io/web3os/tapr/pkg/workload/elasticsearch"
 	"bytetrade.io/web3os/tapr/pkg/workload/mariadb"
-	wmysql "bytetrade.io/web3os/tapr/pkg/workload/mysql"
-	"bytetrade.io/web3os/tapr/pkg/workload/nats"
-
 	"bytetrade.io/web3os/tapr/pkg/workload/minio"
 	"bytetrade.io/web3os/tapr/pkg/workload/mongodb"
+	wmysql "bytetrade.io/web3os/tapr/pkg/workload/mysql"
+	"bytetrade.io/web3os/tapr/pkg/workload/nats"
 	"bytetrade.io/web3os/tapr/pkg/workload/rabbitmq"
 	rediscluster "bytetrade.io/web3os/tapr/pkg/workload/redis-cluster"
 	"bytetrade.io/web3os/tapr/pkg/workload/zinc"
 
 	"github.com/gofiber/fiber/v2"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
@@ -421,6 +421,31 @@ func (s *Server) handleListMiddlewares(ctx *fiber.Ctx) error {
 				Password:  pwd,
 				Proxy: Proxy{
 					Endpoint: m.Name + "-mysql-headless." + m.Namespace + ":" + "3306",
+					Size:     m.Spec.ComponentSpecs[0].Replicas,
+				},
+			}
+			clusterResp = append(clusterResp, &cres)
+		}
+	case string(aprv1.TypeClickHouse):
+		dbs, err := clickhouse.ListClickHouseClusters(ctx.UserContext(), s.ctrlClient, "")
+		if err != nil {
+			return err
+		}
+		for _, m := range dbs {
+			user, pwd, err := clickhouse.FindClickHouseAdminUser(ctx.UserContext(), s.k8sClientSet, m.Namespace)
+			if err != nil {
+				return err
+			}
+			cres := MiddlewareClusterResp{
+				MiddlewareType: TypeClickHouse,
+				MetaInfo: MetaInfo{
+					Name:      m.Name,
+					Namespace: m.Namespace,
+				},
+				AdminUser: user,
+				Password:  pwd,
+				Proxy: Proxy{
+					Endpoint: "clickhouse-svc." + m.Namespace + ":" + "9000",
 					Size:     m.Spec.ComponentSpecs[0].Replicas,
 				},
 			}

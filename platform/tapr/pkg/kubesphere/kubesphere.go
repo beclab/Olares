@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"bytetrade.io/web3os/tapr/pkg/constants"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

@@ -32,12 +32,13 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -304,76 +305,79 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 	if gpuRequired == nil {
 		return resp
 	}
-	if annotations[applicationGpuInjectKey] != "true" {
+
+	var injectContainer []string
+	injectAll := false
+	if injectValue, ok := annotations[applicationGpuInjectKey]; !ok || injectValue == "false" || injectValue == "" {
 		return resp
+	} else {
+		if injectValue != "true" {
+			injectToken := strings.Split(injectValue, ",")
+			for _, token := range injectToken {
+				c := strings.TrimSpace(token)
+				if c != "" {
+					injectContainer = append(injectContainer, c)
+				}
+			}
+		} else {
+			injectAll = true
+		}
 	}
 
-	GPUType, err := h.findNvidiaGpuFromNodes(ctx)
-	if err != nil && !errors.Is(err, api.ErrGPUNodeNotFound) {
-		return h.sidecarWebhook.AdmissionError(req.UID, err)
-	}
+	GPUType := appcfg.GetSelectedGpuTypeValue()
 
 	// no gpu found, no need to inject env, just return.
-	if GPUType == "" {
+	if GPUType == "none" || GPUType == "" {
 		return resp
 	}
 
-	terminus, err := utils.GetTerminus(ctx, h.ctrlClient)
-	if err != nil {
-		return h.sidecarWebhook.AdmissionError(req.UID, err)
-	}
-	nvshareManagedMemory := ""
-	if terminus.Spec.Settings != nil {
-		nvshareManagedMemory = terminus.Spec.Settings[constants.EnvNvshareManagedMemory]
+	envs := []webhook.EnvKeyValue{
+		{
+			Key:   constants.EnvGPUType,
+			Value: GPUType,
+		},
 	}
 
-	envs := []webhook.EnvKeyValue{}
-	if nvshareManagedMemory != "" {
-		envs = append(envs, webhook.EnvKeyValue{
-			Key:   constants.EnvNvshareManagedMemory,
-			Value: nvshareManagedMemory,
-		})
-	}
-
-	envs = append(envs, webhook.EnvKeyValue{Key: "NVSHARE_DEBUG", Value: "1"})
-
-	patchBytes, err := webhook.CreatePatchForDeployment(tpl, req.Namespace, gpuRequired, GPUType, envs)
+	gpuRequiredValue := gpuRequired.Value() / 1024 / 1024 // HAMi gpu memory format
+	hamiFormatGpuRequired := resource.NewQuantity(gpuRequiredValue, resource.DecimalSI)
+	patchBytes, err := webhook.CreatePatchForDeployment(
+		tpl,
+		injectAll,
+		injectContainer,
+		h.getGPUResourceTypeKey(GPUType),
+		ptr.To(hamiFormatGpuRequired.String()),
+		envs,
+	)
 	if err != nil {
 		klog.Errorf("create patch error %v", err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 	klog.Info("patchBytes:", string(patchBytes))
-	h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+	if len(patchBytes) > 0 {
+		h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+	}
 	return resp
 }
 
-func (h *Handler) findNvidiaGpuFromNodes(ctx context.Context) (string, error) {
-	var nodes corev1.NodeList
-	err := h.ctrlClient.List(ctx, &nodes, &client.ListOptions{})
-	if err != nil {
-		return "", err
+// FIXME: should not hardcode
+func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
+	switch gpuType {
+	case utils.NvidiaCardType:
+		return constants.NvidiaGPU
+	case utils.GB10ChipType:
+		return constants.NvidiaGPU
+	case utils.AmdApuCardType:
+		return constants.AMDGPU
+	case utils.AmdGpuCardType:
+		return constants.AMDGPU
+	case utils.StrixHaloChipType:
+		return constants.AMDGPU
+	case utils.CPUType:
+		klog.Info("CPU type is selected, no GPU resource will be injected")
+		return ""
+	default:
+		return ""
 	}
-
-	// return nvshare gpu or virtaitech gpu in priority
-	gtype := ""
-	for _, n := range nodes.Items {
-		if _, ok := n.Status.Capacity[constants.NvidiaGPU]; ok {
-			if _, ok = n.Status.Capacity[constants.NvshareGPU]; ok {
-				return constants.NvshareGPU, nil
-			}
-			gtype = constants.NvidiaGPU
-		}
-
-		if _, ok := n.Status.Capacity[constants.VirtAiTechVGPU]; ok {
-			return constants.VirtAiTechVGPU, nil
-		}
-	}
-
-	if gtype != "" {
-		return gtype, nil
-	}
-
-	return "", api.ErrGPUNodeNotFound
 }
 
 func (h *Handler) providerRegistryValidate(req *restful.Request, resp *restful.Response) {

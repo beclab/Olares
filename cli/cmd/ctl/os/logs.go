@@ -24,6 +24,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // LogCollectOptions holds options for collecting logs
@@ -609,13 +610,9 @@ func collectNetworkConfigs(tw *tar.Writer, options *LogCollectOptions) error {
 }
 
 func getBaseDir() (string, error) {
-	// quick path to get basedir from argument instance
-	arg := &common.Argument{}
-	if err := arg.LoadReleaseInfo(); err != nil {
-		return "", fmt.Errorf("failed to load olares release info: %v", err)
-	}
-	if arg.BaseDir != "" {
-		return arg.BaseDir, nil
+	basedir := viper.GetString(common.FlagBaseDir)
+	if basedir != "" {
+		return basedir, nil
 	}
 	homeDir, err := util.Home()
 	if err != nil {

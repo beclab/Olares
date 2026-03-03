@@ -2,10 +2,13 @@ package appstate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -21,25 +24,25 @@ import (
 const suspendAnnotation = "bytetrade.io/suspend-by"
 const suspendCauseAnnotation = "bytetrade.io/suspend-cause"
 
-func suspendOrResumeApp(ctx context.Context, cli client.Client, am *appv1alpha1.ApplicationManager, replicas int32) error {
-	suspend := func(list client.ObjectList) error {
-		namespace := am.Spec.AppNamespace
-		err := cli.List(ctx, list, client.InNamespace(namespace))
-		if err != nil && !apierrors.IsNotFound(err) {
-			klog.Errorf("Failed to get workload namespace=%s err=%v", namespace, err)
+// suspendOrResumeApp suspends or resumes an application.
+func suspendOrResumeApp(ctx context.Context, cli client.Client, am *appv1alpha1.ApplicationManager, replicas int32, stopOrResumeServer bool) error {
+	suspendOrResume := func(list client.ObjectList, targetNamespace, targetAppName string) error {
+		err := cli.List(ctx, list, client.InNamespace(targetNamespace))
+		if err != nil {
+			klog.Errorf("Failed to get workload namespace=%s err=%v", targetNamespace, err)
 			return err
 		}
 
 		listObjects, err := apimeta.ExtractList(list)
 		if err != nil {
-			klog.Errorf("Failed to extract list namespace=%s err=%v", namespace, err)
+			klog.Errorf("Failed to extract list namespace=%s err=%v", targetNamespace, err)
 			return err
 		}
 		check := func(appName, deployName string) bool {
-			if namespace == fmt.Sprintf("user-space-%s", am.Spec.AppOwner) ||
-				namespace == fmt.Sprintf("user-system-%s", am.Spec.AppOwner) ||
-				namespace == "os-platform" ||
-				namespace == "os-framework" {
+			if targetNamespace == fmt.Sprintf("user-space-%s", am.Spec.AppOwner) ||
+				targetNamespace == fmt.Sprintf("user-system-%s", am.Spec.AppOwner) ||
+				targetNamespace == "os-platform" ||
+				targetNamespace == "os-framework" {
 				if appName == deployName {
 					return true
 				}
@@ -54,7 +57,7 @@ func suspendOrResumeApp(ctx context.Context, cli client.Client, am *appv1alpha1.
 			workloadName := ""
 			switch workload := w.(type) {
 			case *appsv1.Deployment:
-				if check(am.Spec.AppName, workload.Name) {
+				if check(targetAppName, workload.Name) {
 					if workload.Annotations == nil {
 						workload.Annotations = make(map[string]string)
 					}
@@ -64,7 +67,7 @@ func suspendOrResumeApp(ctx context.Context, cli client.Client, am *appv1alpha1.
 					workloadName = workload.Namespace + "/" + workload.Name
 				}
 			case *appsv1.StatefulSet:
-				if check(am.Spec.AppName, workload.Name) {
+				if check(targetAppName, workload.Name) {
 					if workload.Annotations == nil {
 						workload.Annotations = make(map[string]string)
 					}
@@ -92,15 +95,79 @@ func suspendOrResumeApp(ctx context.Context, cli client.Client, am *appv1alpha1.
 	} // end of suspend func
 
 	var deploymentList appsv1.DeploymentList
-	err := suspend(&deploymentList)
+	err := suspendOrResume(&deploymentList, am.Spec.AppNamespace, am.Spec.AppName)
 	if err != nil {
 		return err
 	}
 
 	var stsList appsv1.StatefulSetList
-	err = suspend(&stsList)
+	err = suspendOrResume(&stsList, am.Spec.AppNamespace, am.Spec.AppName)
+	if err != nil {
+		return err
+	}
 
-	return err
+	// If stopOrResumeServer is true, also suspend/resume shared server charts for V2 apps
+	if stopOrResumeServer {
+		var appCfg *appcfg.ApplicationConfig
+		if err := json.Unmarshal([]byte(am.Spec.Config), &appCfg); err != nil {
+			klog.Warningf("failed to unmarshal app config for stopServer check: %v", err)
+			return err
+		}
+
+		if appCfg != nil && appCfg.IsV2() && appCfg.HasClusterSharedCharts() {
+			for _, chart := range appCfg.SubCharts {
+				if !chart.Shared {
+					continue
+				}
+				ns := chart.Namespace(am.Spec.AppOwner)
+				if replicas == 0 {
+					klog.Infof("suspending shared chart %s in namespace %s", chart.Name, ns)
+				} else {
+					klog.Infof("resuming shared chart %s in namespace %s", chart.Name, ns)
+				}
+
+				var sharedDeploymentList appsv1.DeploymentList
+				if err := suspendOrResume(&sharedDeploymentList, ns, chart.Name); err != nil {
+					klog.Errorf("failed to scale deployments in shared chart %s namespace %s: %v", chart.Name, ns, err)
+					return err
+				}
+
+				var sharedStsList appsv1.StatefulSetList
+				if err := suspendOrResume(&sharedStsList, ns, chart.Name); err != nil {
+					klog.Errorf("failed to scale statefulsets in shared chart %s namespace %s: %v", chart.Name, ns, err)
+					return err
+				}
+			}
+		}
+
+		// Reset the stop-all/resume-all annotation after processing
+		if am.Annotations != nil {
+			delete(am.Annotations, api.AppStopAllKey)
+			delete(am.Annotations, api.AppResumeAllKey)
+			if err := cli.Update(ctx, am); err != nil {
+				klog.Warningf("failed to reset stop-all/resume-all annotations for app=%s owner=%s: %v", am.Spec.AppName, am.Spec.AppOwner, err)
+				// Don't return error, operation already succeeded
+			}
+		}
+	}
+
+	return nil
+}
+
+func suspendV1AppOrV2Client(ctx context.Context, cli client.Client, am *appv1alpha1.ApplicationManager) error {
+	return suspendOrResumeApp(ctx, cli, am, 0, false)
+}
+
+func suspendV2AppAll(ctx context.Context, cli client.Client, am *appv1alpha1.ApplicationManager) error {
+	return suspendOrResumeApp(ctx, cli, am, 0, true)
+}
+
+func resumeV1AppOrV2AppClient(ctx context.Context, cli client.Client, am *appv1alpha1.ApplicationManager) error {
+	return suspendOrResumeApp(ctx, cli, am, 1, false)
+}
+
+func resumeV2AppAll(ctx context.Context, cli client.Client, am *appv1alpha1.ApplicationManager) error {
+	return suspendOrResumeApp(ctx, cli, am, 1, true)
 }
 
 func isStartUp(am *appv1alpha1.ApplicationManager, cli client.Client) (bool, error) {

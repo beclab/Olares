@@ -91,7 +91,7 @@ func (h *HelmOpsV2) Upgrade() error {
 		}
 
 		ok, err := h.WaitForStartUp()
-		if err != nil && errors.Is(err, errcode.ErrPodPending) {
+		if err != nil && (errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending)) {
 			return err
 		}
 

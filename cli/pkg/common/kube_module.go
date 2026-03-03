@@ -22,11 +22,8 @@ import (
 )
 
 type KubeConf struct {
-	ClusterHosts []string
-	ClusterName  string
-	Cluster      *kubekeyapiv1alpha2.ClusterSpec
-	Kubeconfig   string
-	Arg          *Argument
+	Cluster *kubekeyapiv1alpha2.ClusterSpec
+	Arg     *Argument
 }
 
 type KubeModule struct {
@@ -41,27 +38,8 @@ func (k *KubeModule) IsSkip() bool {
 func (k *KubeModule) AutoAssert() {
 	kubeRuntime := k.Runtime.(*KubeRuntime)
 	conf := &KubeConf{
-		ClusterName: kubeRuntime.ClusterName,
-		Cluster:     kubeRuntime.Cluster,
-		Kubeconfig:  kubeRuntime.Kubeconfig,
-		Arg:         kubeRuntime.Arg,
-	}
-
-	k.KubeConf = conf
-}
-
-type KubeCustomModule struct {
-	module.CustomModule
-	KubeConf *KubeConf
-}
-
-func (k *KubeCustomModule) AutoAssert() {
-	kubeRuntime := k.Runtime.(*KubeRuntime)
-	conf := &KubeConf{
-		ClusterName: kubeRuntime.ClusterName,
-		Cluster:     kubeRuntime.Cluster,
-		Kubeconfig:  kubeRuntime.Kubeconfig,
-		Arg:         kubeRuntime.Arg,
+		Cluster: kubeRuntime.Cluster,
+		Arg:     kubeRuntime.Arg,
 	}
 
 	k.KubeConf = conf

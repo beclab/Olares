@@ -287,6 +287,32 @@ spec:
     user: {{ .Middleware.Username }}
 `
 
+const clickHouseRequest = `apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: {{ .AppName }}-clickhouse
+  namespace: {{ .Namespace }}
+spec:
+  app: {{ .AppName }}
+  appNamespace: {{ .AppNamespace }}
+  middleware: clickhouse
+  clickhouse:
+    databases:
+    {{- range $k, $v := .Middleware.Databases }}
+    - name: {{ $v.Name }}
+    {{- end }}
+    password:
+     {{- if not (eq .Middleware.Password "") }}
+      value: {{ .Middleware.Password }}
+     {{- else }}
+      valueFrom:
+        secretKeyRef:
+          name: {{ .AppName }}-{{ .Namespace }}-clickhouse-password
+          key: "password"
+     {{- end }}
+    user: {{ .Middleware.Username }}
+`
+
 type RequestParams struct {
 	MiddlewareType MiddlewareType
 	AppName        string
@@ -318,6 +344,8 @@ func GenMiddleRequest(p RequestParams) ([]byte, error) {
 		return genMariadbRequest(p)
 	case TypeMySQL:
 		return genMysqlRequest(p)
+	case TypeClickHouse:
+		return genClickHouseRequest(p)
 	default:
 		return []byte{}, fmt.Errorf("unsupported middleware type: %s", p.MiddlewareType)
 	}
@@ -511,4 +539,23 @@ func genElasticsearchRequest(p RequestParams) ([]byte, error) {
 		},
 	}
 	return renderTemplate(elasticsearchRequest, data)
+}
+
+func genClickHouseRequest(p RequestParams) ([]byte, error) {
+	data := struct {
+		AppName      string
+		AppNamespace string
+		Namespace    string
+		Middleware   *ClickHouseConfig
+	}{
+		AppName:      p.AppName,
+		AppNamespace: p.AppNamespace,
+		Namespace:    p.Namespace,
+		Middleware: &ClickHouseConfig{
+			Username:  p.Username,
+			Password:  p.Password,
+			Databases: p.Middleware.ClickHouse.Databases,
+		},
+	}
+	return renderTemplate(clickHouseRequest, data)
 }

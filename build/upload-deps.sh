@@ -31,7 +31,7 @@ while read line; do
     curl -fsSLI https://cdn.olares.com/$path$name > /dev/null
     if [ $? -ne 0 ]; then
         code=$(curl -o /dev/null -fsSLI -w "%{http_code}" https://cdn.olares.com/$path$name)
-        if [ $code -eq 403 ]; then
+        if [[ $code -eq 403 || $code -eq 404 ]]; then
 
             bash ${BASE_DIR}/download-deps.sh $PLATFORM $line
             if [ $? -ne 0 ]; then
@@ -46,28 +46,25 @@ while read line; do
             fi
 
             set -ex
-            aws s3 cp $name s3://terminus-os-install/$path$name --acl=public-read
-            aws s3 cp $name s3://terminus-os-install/backup/$path$backup_file --acl=public-read
-            aws s3 cp $checksum s3://terminus-os-install/$path$checksum --acl=public-read
-            echo "upload $name to s3 completed"
+            # aws s3 cp $name s3://terminus-os-install/$path$name --acl=public-read
+            # aws s3 cp $name s3://terminus-os-install/backup/$path$backup_file --acl=public-read
+            # aws s3 cp $checksum s3://terminus-os-install/$path$checksum --acl=public-read
+            # echo "upload $name to s3 completed"
+
+            coscmd upload ./$name /$path$name
+            coscmd upload ./$name /backup/$path$backup_file
+            coscmd upload ./$checksum /$path$checksum
+            echo "upload $name to cos completed"        
+
             set +ex
         else
             if [ $code -ne 200  ]; then
-                echo  "failed to check image"
+                echo  "failed to check file"
                 exit -1
             fi
         fi
     fi        
 
-    # upload to tencent cloud cos
-#    curl -fsSLI https://cdn.joinolares.cn/$path$name > /dev/null
-#    if [ $? -ne 0 ]; then
-#         set -ex
-#         coscmd upload ./$name /$path$name
-#         coscmd upload ./$checksum /$path$checksum
-#         echo "upload $name to cos completed"
-#         set +ex
-#    fi        
 done < components
 
 popd
