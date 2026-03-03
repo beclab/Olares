@@ -5,6 +5,7 @@ package utils
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -277,7 +278,17 @@ func MountUsbDevice(ctx context.Context, mountBaseDir string, dev []storageDevic
 			continue
 		}
 
-		if err = mounter.Mount(d.DevPath, mkMountDir, "", []string{"uid=1000", "gid=1000"}); err != nil {
+		options := []string{}
+		fsType, err := getFsTypeOfDevice(ctx, d.DevPath)
+		if err != nil {
+			klog.Warning("get fs type of device error, ", err, ", ", d.DevPath)
+		} else {
+			if strings.Contains(fsType, "FAT") || strings.Contains(fsType, "NTFS") {
+				options = append(options, "uid=1000", "gid=1000")
+			}
+		}
+
+		if err = mounter.Mount(d.DevPath, mkMountDir, "", options); err != nil {
 			klog.Warning("mount usb error, ", err, ", ", d.DevPath, ", ", mkMountDir)
 			// clear the empty mount dir
 			// do not use remove all, only remove the mount point path, assume it's an empty dir
@@ -691,4 +702,36 @@ func isDeviceExists(devicePath string) bool {
 
 	_, err := os.Stat(devicePath)
 	return !os.IsNotExist(err)
+}
+
+func getFsTypeOfDevice(ctx context.Context, devicePath string) (string, error) {
+	// output format
+	// {
+	// "blockdevices": [
+	// 	{
+	// 		"fstype": "ext4"
+	// 	}
+	// ]
+	// }
+	cmd := exec.CommandContext(ctx, "lsblk", "-f", devicePath, "-o", "fstype", "-J")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+
+	var result struct {
+		BlockDevices []struct {
+			FsType string `json:"fstype"`
+		} `json:"blockdevices"`
+	}
+
+	if err := json.Unmarshal(output, &result); err != nil {
+		return "", err
+	}
+
+	if len(result.BlockDevices) == 0 {
+		return "", fmt.Errorf("no block devices found for %s", devicePath)
+	}
+
+	return result.BlockDevices[0].FsType, nil
 }
