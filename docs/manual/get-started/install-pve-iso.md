@@ -4,31 +4,33 @@ description: Guide to installing Olares on Proxmox VE (PVE) using ISO image with
 # Install Olares on PVE with ISO image
 You can install Olares directly on Proxmox Virtual Environment (PVE) using an ISO image. This guide walks you through downloading the Olares ISO, configuring PVE environment, completing the installation, and getting your Olares up and running.
 
-:::warning Not recommended for production use
+:::warning Not for production use
 Currently, Olares on PVE has certain limitations. We recommend using it only for development or testing purposes.
 :::
 
 <!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
+
 Make sure your device meets the following requirements.
+
 ### Required specifications
-- CPU: Minimum 4 cores with x86-64 architecture (Intel or AMD). ARM-based processors are not currently supported for this method.
-- RAM: At least 8 GB of available memory
-- Storage: At least 200 GB of available SSD storage. 
-    ::: warning SSD required
-    The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
-    :::
-- Supported Systems: PVE 8.2.2
+
+- **CPU**: At least 4 cores. Intel or AMD x86-64 architecture required. ARM is not currently supported.
+- **RAM**: At least 8 GB of available memory.
+- **Storage**: At least 200 GB of available SSD storage.
+  :::warning SSD required
+  The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
+  :::
+- **Supported systems**: PVE 8.2.2
 
 ### Optional hardware
 
-A GPU is not required to install Olares, but is necessary for AI applications.
+<!--@include: ./gpu-requirements.md{5,}-->
 
-- GPU (NVIDIA only):
-   - Architecture: Turing or newer (e.g., GTX 16 series, RTX 20 series, and later).
-   - Verification: Run `lspci | grep -i nvidia` in the PVE host shell to confirm the card is detected.
-   - Setup: To utilize the GPU, you must configure PCI passthrough. Please refer to [Configure GPU passthrough in PVE](/manual/best-practices/install-olares-gpu-passthrough.md#configure-gpu-passthrough-in-pve) for detailed instructions.
+:::tip PCI passthrough required
+To use the GPU within Olares on PVE, you must configure PCI passthrough first. Refer to [Configure GPU passthrough in PVE](/manual/best-practices/install-olares-gpu-passthrough.md#configure-gpu-passthrough-in-pve) for instructions.
+:::
 
 ## Download Olares ISO image
 Click [here](https://cdn.olares.com/olares-latest-amd64.iso) to download the official Olares ISO image.

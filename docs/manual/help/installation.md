@@ -32,9 +32,9 @@ No. You must use an SSD. The installation will likely fail if a mechanical hard 
 
 ### Does the system support NVIDIA GPUs?
 
-Yes. Olares is fully optimized for NVIDIA hardware. It automatically handles driver installation, allowing you to get immediate AI and gaming performance.
+Yes, but only **NVIDIA Turing architecture or newer** (GTX 16xx, RTX 20xx, 30xx, 40xx, 50xx series, and later). GPUs with older architectures are not recognized by Olares, and AI applications that require GPU access will not run. This requirement comes from both the NVIDIA open-source driver, which requires Turing's hardware GSP module, and CUDA 13.x, which no longer supports older GPU architectures.
 
-It also supports multiple GPUs on a single motherboard (currently NVIDIA only), allowing users with custom hardware to leverage all available compute power for AI workloads.
+For supported GPUs, Olares automatically handles driver installation. It also supports multiple GPUs on a single motherboard, allowing users to leverage all available compute power for AI workloads.
 
 ### How do I manually install NVIDIA drivers if the automatic setup fails?
 

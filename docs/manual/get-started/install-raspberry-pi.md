@@ -4,22 +4,23 @@ description: Complete guide to installing Olares on Raspberry Pi including hardw
 # Install Olares on Raspberry Pi
 This guide explains how to install Olares on a Raspberry Pi.
 
-:::warning Not recommended for production use
+:::warning Not for production use
 Currently, Olares on Raspberry Pi has certain limitations. We recommend using it only for development or testing purposes.
 :::
 <!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
-Make sure your Raspbian device meets the following requirements.
-- Hardware: Raspberry Pi 4B or Raspberry Pi 5 with 8GB memory
-- Operating system: Raspbian 12
-- Storage: At least 150GB of available SSD storage. 
-::: warning SSD required
-The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
-:::
-::: info GPU limitation
-Olares GPU acceleration currently supports NVIDIA GPUs only. Consequently, GPU resources cannot be managed or utilized for AI workloads on macOS devices.
-:::
+
+Make sure your Raspberry Pi meets the following requirements.
+
+### Required specifications
+
+- **Hardware**: Raspberry Pi 4B or Raspberry Pi 5 with 8 GB memory.
+- **Operating system**: Raspbian 12.
+- **Storage**: At least 150 GB of available SSD storage.
+  :::warning SSD required
+  The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.
+  :::
 
 ## Set up system environment
 1. Configure the Raspbian environment to enable necessary features:

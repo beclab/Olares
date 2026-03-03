@@ -5,7 +5,7 @@ description: Guide to installing Olares on Windows using WSL (Windows Subsystem 
 # Install Olares on Windows via the script
 This guide explains how to install Olares on Windows (WSL 2) using the provided installation script.
 
-:::warning Not recommended for production use
+:::warning Not for production use
 Currently, Olares on Windows has certain limitations including:
 - Lack of distributed storage support
 - Inability to add local nodes.
@@ -15,28 +15,29 @@ We recommend using it only for development or testing purposes.
 
 <!--@include: ./reusables.md{44,51}-->
 
-## System compatibility
+## System requirements
+
 Make sure your Windows meets the following requirements.
+
 ### Required specifications
-- CPU: At least 4 cores
-- RAM: At least 16 GB of available memory
-- Storage: At least 150 GB of available SSD storage. 
-   ::: warning SSD required
-   The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
-   :::
-- Supported systems:
-    - Windows 10 or 11
-    - Linux (on WSL 2): Ubuntu 22.04 LTS or later; Debian 12 or later
+
+- **CPU**: At least 4 cores.
+- **RAM**: At least 16 GB of available memory.
+- **Storage**: At least 150 GB of available SSD storage.
+  :::warning SSD required
+  The installation will if an HDD (mechanical hard drive) is used instead of an SSD.
+  :::
+- **Supported systems**:
+  - Windows 10 or 11
+  - Linux (on WSL 2): Ubuntu 22.04 LTS or later; Debian 12 or later
 
 ### Optional hardware
 
-A GPU is not required to install Olares, but is necessary for AI applications.
+<!--@include: ./gpu-requirements.md{5,}-->
 
-- **GPU (NVIDIA only)**:
-   - Architecture: Turing or newer (e.g., GTX 16 series, RTX 20 series, and later).
-   - Verification:
-      1. Open **Task Manager > Performance** to confirm your GPU model (must be NVIDIA).
-      2. Run `nvidia-smi` inside your WSL terminal to confirm the driver is accessible.
+:::tip Windows verification
+You can also confirm your GPU in **Task Manager > Performance**. To verify the driver is accessible in WSL, run `nvidia-smi` in your WSL terminal.
+:::
 
 ## Set up system environment
 1. Enable the required Windows features for virtualization.

@@ -9,27 +9,24 @@ This guide explains how to install Olares on a physical machine using the offici
 
 <!--@include: ./reusables.md{44,51}-->
 
-## Prerequisites
+## System requirements
 
-### Required
-- **Host requirements**:
-  - **CPU**: Minimum 4 cores with **x86-64 architecture** (Intel or AMD). ARM-based processors are not currently supported for this method.
-  - **Memory**: At least 8 GB of available RAM.
-  - **Storage**: Minimum 150 GB SSD.
-  - **Network**: The device must be connected to a wired LAN.
-  ::: warning SSD required
-  The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
+Make sure your device meets the following requirements.
+
+### Required specifications
+
+- **CPU**: At least 4 cores. Intel or AMD x86-64 architecture required. ARM is not currently supported.
+- **RAM**: At least 8 GB of available memory.
+- **Storage**: At least 150 GB of available SSD storage.
+  :::warning SSD required
+  The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.
   :::
+- **Network**: Wired LAN connection required.
+- **USB flash drive**: 8 GB capacity or larger.
 
-- **USB flash drive**: **8 GB** capacity or larger.
+### Optional hardware
 
-### Optional
-
-A GPU is not required to install Olares, but is necessary for AI applications.
-
-- **GPU (NVIDIA only)**:
-  - **Architecture**: Turing or newer (e.g., GTX 16 series, RTX 20 series).
-  - **Verification**: Run `lspci | grep -i nvidia` and check the [compatible GPU table](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus).
+<!--@include: ./gpu-requirements.md{5,}-->
 
 ## Create a bootable USB drive
 

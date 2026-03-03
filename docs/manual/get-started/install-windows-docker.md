@@ -5,7 +5,7 @@ description: Learn how to run Olares on Windows using WSL 2 and Docker, includin
 # Install Olares on Windows (WSL 2) with Docker image
 You can use Docker to install and run Olares in a containerized environment. This guide walks you through setting up Olares with Docker and WSL 2, preparing the installation environment, completing the activation process, and managing the container lifecycle.
 
-:::warning Not recommended for production use
+:::warning Not for production use
 Currently, Olares on Windows has certain limitations including:
 - Lack of distributed storage support
 - Inability to add local nodes.
@@ -16,17 +16,20 @@ We recommend using it only for development or testing purposes.
 <!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
-Make sure your Windows meets the following requirements.
-- CPU: At least 4 cores
-- RAM: At least 16GB of available memory
-- Storage: At least 150GB of available SSD storage.  
-- Supported systems:
-    - Windows 10 or 11
-    - Linux (on WSL 2): Ubuntu 22.04 LTS or later; Debian 12 or later
 
-::: warning SSD required
-The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
-:::
+Make sure your Windows meets the following requirements.
+
+### Required specifications
+
+- **CPU**: At least 4 cores.
+- **RAM**: At least 16 GB of available memory.
+- **Storage**: At least 150 GB of available SSD storage.
+  :::warning SSD required
+  The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.
+  :::
+- **Supported systems**:
+  - Windows 10 or 11
+  - Linux (on WSL 2): Ubuntu 22.04 LTS or later; Debian 12 or later
 
 ## Before you begin
 Before you begin, ensure the following:
@@ -107,7 +110,7 @@ If you have installed Docker Desktop before modifying `.wslconfig`, remove docke
 
 ## Run Olares using the Docker CLI
 :::warning CUDA version requirements
-CUDA version 12.4 or above is required for GPU support. Older versions are incompatible.
+CUDA 13.1 is required for GPU support. Ensure your NVIDIA driver is up to date to support CUDA 13.1.
 :::
 Run the following command to pull the Olares image.
 Replace `<host ip>` with your device's IP address and `<olares version>` with the desired version of Olares:

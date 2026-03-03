@@ -5,9 +5,7 @@ description: Learn how to deploy Olares on a Linux server using Docker Compose. 
 # Install Olares on Linux using Docker Compose
 You can use Docker to install and run Olares in a containerized environment. This guide walks you through setting up Olares with Docker, preparing the installation environment, completing the activation process, and managing the container lifecycle.
 
-:::tip Recommendation for production use
-For best performance and stability, we recommend [installing Olares on Linux via script](/manual/get-started/install-olares.md).
-:::
+<!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
 
@@ -31,11 +29,7 @@ While these specific versions are confirmed to work, the process may still work 
 
 ### Optional hardware
 
-A GPU is not required to install Olares, but is necessary for AI applications.
-
-- **GPU (NVIDIA only)**:
-  - **Architecture**: Turing or newer (e.g., GTX 16 series, RTX 20 series).
-  - **Verification**: Run `lspci | grep -i nvidia` and check the [compatible GPU table](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus).
+<!--@include: ./gpu-requirements.md{5,}-->
 
 ## Before you begin
 Before you begin, ensure the following:
@@ -75,8 +69,8 @@ cd ~/olares-config
     sudo dpkg -i --force-all /tmp/keyring.deb
     
     sudo apt update
-    sudo apt install nvidia-kernel-open-570
-    sudo apt install nvidia-driver-570
+    sudo apt install nvidia-kernel-open-590
+    sudo apt install nvidia-driver-590
     ````
 
 2. Install the NVIDIA Container Toolkit to enable Docker to access your GPU. 
@@ -114,7 +108,7 @@ cd ~/olares-config
 
     ```
     +-----------------------------------------------------------------------------------------+
-    | NVIDIA-SMI 570.169                Driver Version: 570.169        CUDA Version: 12.8     |
+    | NVIDIA-SMI 590.44                 Driver Version: 590.44         CUDA Version: 13.1     |
     |-----------------------------------------+------------------------+----------------------+
     | GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
     | Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |

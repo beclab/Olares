@@ -7,9 +7,10 @@ outline: [2,4]
 
 This page provides an overview of supported installation methods for Olares.
 
-Before installation, make sure you have:
-- Created your [Olares ID](create-olares-id.md).
-- Verified your operating system and hardware meet the minimum requirements as described in the specific guide.
+## Before you begin
+
+- Create your [Olares ID](create-olares-id.md) if you haven't already.
+- Check that your operating system and hardware meet the minimum requirements described in the specific installation guide.
 
 ## Choosing the right method
 
@@ -19,16 +20,13 @@ Olares supports multiple platforms and deployment methods. Choose the installati
 
 Linux (Ubuntu or Debian) is the recommended platform for running Olares, as it offers the best performance and stability in production environments.
 
-- [**ISO image**](install-linux-iso.md): Perform a fresh installation on a physical machine, auto<br/> configuring the Linux host environment, container runtime,<br/> drivers, and core dependencies.
-- [**One-line script**](install-linux-script.md): Quick install on existing Linux systems.                                   
-
-:::tip Recommendation
-The ISO installation method ensures maximum compatibility, performance, and system-level optimization.
-:::
+- [**ISO image**](install-linux-iso.md) (Recommended): Perform a fresh installation on a physical machine, auto-configuring the Linux host environment, container runtime, drivers, and core dependencies.
+- [**One-line script**](install-linux-script.md): Quick install on existing Linux systems.
+- [**Docker image**](install-linux-docker.md): Run Olares in a containerized environment on Linux.
 
 ### Alternative installation methods
 
-These methods are suitable for **development**, **testing**, or **lightweight environments**. 
+These methods are suitable for development, testing, or lightweight environments. 
 
 #### Windows
 - [**One-line script**](install-windows-script.md): Install Olares in Windows Subsystem for Linux 2 (WSL 2).

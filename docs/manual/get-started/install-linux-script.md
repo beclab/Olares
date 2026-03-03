@@ -29,11 +29,7 @@ While these specific versions are confirmed to work, the process may still work 
 
 ### Optional hardware
 
-A GPU is not required to install Olares, but is necessary for AI applications.
-
-- **GPU (NVIDIA only)**:
-  - **Architecture**: Turing or newer (e.g., GTX 16 series, RTX 20 series).
-  - **Verification**: Run `lspci | grep -i nvidia` and check the [compatible GPU table](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus).
+<!--@include: ./gpu-requirements.md{5,}-->
 
 ## Install Olares
 

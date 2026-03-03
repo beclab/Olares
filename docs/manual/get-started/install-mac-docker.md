@@ -16,18 +16,15 @@ We recommend using it only for development or testing purposes.
 <!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
+
 Make sure your device meets the following requirements.
 
-- Architecture: AMD64 or ARM64
-- CPU: At least 4 cores
-- RAM: At least 8 GB of available memory
-- Storage: At least 150 GB of available SSD storage. 
-::: warning SSD required
-The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.
-:::
-::: info GPU limitation
-Olares GPU acceleration currently supports NVIDIA GPUs only. Consequently, GPU resources cannot be managed or utilized for AI workloads on macOS devices.
-:::
+### Required specifications
+
+- **Architecture**: x86-64 or ARM64.
+- **CPU**: At least 4 cores.
+- **RAM**: At least 8 GB of available memory.
+- **Storage**: At least 150 GB of available storage.
 
 ## Before you begin
 Before you begin, ensure the following:
@@ -47,7 +44,7 @@ If you are unsure which chip your Mac is using, go to the Apple menu and select 
 <tabs>
 <template #Apple-Silicon>
 
-1. Download `olaresd-proxy` via the link: https://dc3p1870nn3cj.cloudfront.net/olaresd-proxy-v0.1.0-darwin-arm64.tar.gz .
+1. Download [`olaresd-proxy`](https://dc3p1870nn3cj.cloudfront.net/olaresd-proxy-v0.1.0-darwin-arm64.tar.gz).
 2. Unzip the file, then start `olaresd-proxy`.
    :::info Keep `olaresd-proxy` running in the background
    During Olares installation and activation, keep `olaresd-proxy` running in the background.
