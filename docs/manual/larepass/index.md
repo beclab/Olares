@@ -10,10 +10,10 @@ LarePass is the official cross-platform client software for Olares. It acts as a
 ![LarePass](/images/manual/larepass/larepass.png)
 
 ## Key features
-- Account & identity management
-- Secure file access & sync
-- Device & network management
-- Password & secret management
+- Account and identity management
+- Secure file access and sync
+- Device and network management
+- Password and secret management
 - Knowledge collection
 
 ## Download LarePass
