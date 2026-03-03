@@ -70,8 +70,8 @@ Each Windows instance uses a unique port. If you have cloned the Windows app, en
 :::
 1. Open Settings, and navigate to **Application** > **Windows**.
 2. Under **Permissions**, click **ACLs**.
-3. Note the port number listed in the **Dst** column. You will need this for the connection step.
-   ![Locate port number](../public/images/manual/use-cases/win-port-number.png#bordered)
+3. Note the port number listed in the **Port** column. You will need this for the connection step.
+   ![Locate port number](../public/images/manual/use-cases/win-port-number.png#bordered){width=90%}
 
 #### Connect to Windows via RDP
 :::info
@@ -87,6 +87,8 @@ The following steps show the macOS interface, but the workflow is similar on all
    - **Android:** Download [Windows App from Google Play](https://play.google.com/store/apps/details?id=com.microsoft.rdc.androidx).
 
 3. Open Windows from the Launchpad in your browser. Copy the domain from the address bar (exclude `https://` and any text after the domain).
+![Domain address](../public/images/manual/use-cases/win-url.png#bordered)
+
 4. Add your Windows VM as an RDP connection. 
 
     a. Open the Windows App on your device.
@@ -95,9 +97,9 @@ The following steps show the macOS interface, but the workflow is similar on all
 
     c. In **PC name**, enter the domain you get from the previous step, followed by a colon and the port number.
 
-      For example, if your URL is `https://7e89d2a1.<username>.olares.com`, and the port is `49268`, enter:
+      For example, if your URL is `https://0f4137ed.<username>.olares.com`, and the port is `47374`, enter:
       ```
-      7e89d2a1.<username>.olares.com:49268
+      0f4137ed.<username>.olares.com:47374
       ```
 
    ![Add PC](../public/images/manual/use-cases/win-add-pc1.png#bordered)
