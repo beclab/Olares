@@ -1,14 +1,14 @@
 ---
 outline: [2, 3]
-description: Learn how to restore your Olares One to factory settings in BIOS.
+description: Learn how to restore BIOS defaults on Olares One to return the device to its initial setup state.
 head:
   - - meta
     - name: keywords
-      content: Factory reset, Olares One, BIOS
+      content: Olares One, BIOS defaults, restore, BIOS setup
 ---
-# Reset to factory settings in BIOS <Badge type="tip" text="10 min" />
+# Restore BIOS defaults <Badge type="tip" text="10 min" />
 
-Resetting to factory settings returns your Olares One to its initial setup state. If you have a monitor and keyboard connected, you can perform this reset directly in BIOS instead of using LarePass.
+Restoring BIOS defaults resets the firmware configuration and returns your Olares One to its initial setup state. If you have a monitor and keyboard connected, you can perform this directly in BIOS.
 
 :::warning Data loss
 This will permanently delete all accounts, settings, and data on the device. This action cannot be undone.

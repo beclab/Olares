@@ -220,19 +220,19 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/backup-resotre",
         },
         {
-          text: "Factory reset",
+          text: "Restore Olares One",
           collapsed: true,
           items: [
             {
-              text: "Using LarePass",
+              text: "Factory reset",
               link: "/one/factory-reset",
             },
             {
-              text: "In BIOS",
+              text: "Restore BIOS defaults",
               link: "/one/factory-reset-in-bios",
             },
             {
-              text: "Using bootable USB",
+              text: "Reinstall Olares OS",
               link: "/one/create-drive",
             },
           ],
