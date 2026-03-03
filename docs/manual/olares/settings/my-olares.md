@@ -63,7 +63,7 @@ Define system-level access and authentication policies to control how users conn
 
 * **Login security requirement**: Set the authentication method for logging into Olares.
   * **Two-factor** (Recommended): Requires both your login password and a two-factor authentication code for enhanced security.
-  * **One-factor**: Only requires your login password (less secure).
+  * **One-factor**: Only requires your login password.
 
 ## View login history
 

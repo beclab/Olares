@@ -38,4 +38,4 @@ To customize your desktop or login screen background:
       - **Stretch** 
       - **Fill**
       - **Tile**
-6. (Optional) To remove a custom wallpaper, hover over the uploaded image in **Uploaded images** and click the <i class="material-symbols-outlined">close</i> icon.
+6. To remove a custom wallpaper, hover over the uploaded image in **Uploaded images** and click the <i class="material-symbols-outlined">close</i> icon.
