@@ -30,7 +30,7 @@ Windows is available as an app in the Olares Market.
 ### Install Windows
 1. Open the Market, and search for "Windows".
 2. Click **Get**, then click **Install**.
-   ![Install Windows](../public/images/manual/use-cases/win-install1.png#bordered)
+   ![Install Windows](/images/manual/use-cases/win-install1.png#bordered)
 
 3. When prompted, set environment variables:
     - **USERNAME:** Create a username for accessing Windows.
