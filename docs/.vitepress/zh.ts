@@ -119,6 +119,10 @@ const side = {
           ],
         },
         {
+          text: "加入 Olares",
+          link: "/zh/manual/get-started/join-olares",
+        },
+        {
           text: "备份助记词",
           link: "/zh/manual/larepass/back-up-mnemonics",
         },

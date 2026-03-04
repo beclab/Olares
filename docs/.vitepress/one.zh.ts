@@ -31,6 +31,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Redeem Olares Space membership",
           link: "/zh/one/redeem-membership",
         },
+        {
+          text: "Activate your account (For new members)",
+          link: "/manual/get-started/join-olares",
+        },
       ]
     },
     {
