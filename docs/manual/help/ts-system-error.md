@@ -16,7 +16,11 @@ Use this guide when the **System** section in LarePass displays `System error`.
 
 One or more system pods on the Olares device are not running normally. When this happens, LarePass cannot retrieve system status and displays `System error`.
 
-## Solution: Identify the failing pod
+## Solution
+
+To resolve this issue, use the built-in terminal to locate the failing pod, retrieve its error message, and share it with our support team.
+
+### Step 1: Identify the failing pod
 
 Check the status of system pods and identify any pods that are not running.
 
@@ -28,11 +32,14 @@ Check the status of system pods and identify any pods that are not running.
     kubectl get pods -A
     ```
     ![Check pod status](/images/manual/help/ts-sys-err-pod-status.png#bordered){width=90%}
-4. Check the **STATUS** column and locate any pods that are not in the `Running` state. Note down the exact NAMESPACE and NAME of the problematic pod.
+4. Check the **STATUS** column and locate any pods that are not in the `Running` state. Note down the exact **NAMESPACE** (the first column) and **NAME** (the second column) of the problematic pod.
     ![Locate problematic pod](/images/manual/help/ts-sys-err-pod-crash.png#bordered){width=90%}
-5. Inspect the problematic pod to view detailed error messages.
 
-    Run the following command, replacing `<namespace>` and `<pod-name>` with the values you noted in the previous step:
+### Step 2: Inspect the pod error
+
+View the detailed error message for the problematic pod.
+
+1. Run the following command, replacing `<namespace>` and `<pod-name>` with the values you noted in the previous step:
 
     ```bash
     kubectl describe pod <pod-name> -n <namespace>
@@ -43,6 +50,19 @@ Check the status of system pods and identify any pods that are not running.
     ```bash
     kubectl describe pod backup-66f8c76996-d7vnq -n os-framework
     ```
-6. Scroll down to the **Events** section in the output to identify the cause of the failure.
+2. Scroll down to the **Events** section in the output to identify the error message related to the failure.
     ![Locate problematic pod](/images/manual/help/ts-sys-err-pod-event-detail.png#bordered){width=90%}
-7. Collect the command output or take a screenshot, then contact technical support via WhatsApp or email at hi@olares.com.
+
+### Step 3: Contact support
+
+Contact technical support and include the following information:
+
+- The output of `kubectl describe pod <pod-name> -n <namespace>`.
+- A screenshot of the error message if available.
+
+This information helps our team investigate and resolve the issue faster.
+
+You can:
+- Create a discussion in the [Olares GitHub repository](https://github.com/beclab/Olares/discussions).
+- Contact us via WhatsApp.
+- Email us at hi@olares.com.

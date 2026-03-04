@@ -43,6 +43,10 @@ const side = {
             {
               text: "应用市场应用缺失",
               link: "/zh/manual/help/ts-missing-apps",
+            },
+            {
+              text: "LarePass 显示系统错误",
+              link: "/zh/manual/help/ts-system-error",
             }
           ],
         },
