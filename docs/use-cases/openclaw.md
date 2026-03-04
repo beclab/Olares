@@ -529,7 +529,7 @@ To manage skills and plugins, install ClawHub. It is the package manager for Ope
 
 If you attempt to manually start, stop, or restart OpenClaw using commands like `openclaw gateway` or `openclaw gateway stop` in the OpenClaw CLI, you receive the following error messages:
 - `Gateway failed to start: gateway already running (pid 1); lock timeout after 5000ms`
-- `Gateway service check failed: Error: systemctl --user unavailable: spawn systemctl EACCES`
+- `Gateway service check failed: Error: systemctl --user unavailable: spawn systemctl ENOENT`
 
 #### Cause
 
