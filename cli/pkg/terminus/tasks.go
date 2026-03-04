@@ -1033,3 +1033,37 @@ func (a *SaveMasterHostConfig) Execute(runtime connector.Runtime) error {
 	}
 	return os.WriteFile(filepath.Join(runtime.GetBaseDir(), common.MasterHostConfigFile), content, 0644)
 }
+
+type WaitTimeSyncTask struct {
+	common.KubeAction
+}
+
+func (t *WaitTimeSyncTask) Execute(runtime connector.Runtime) error {
+	if chronyc, err := util.GetCommand(common.CommandChronyc); err == nil && chronyc != "" {
+		ticker := time.NewTicker(2 * time.Second)
+		timeout := time.NewTimer(5 * time.Minute)
+		defer ticker.Stop()
+		defer timeout.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				// output format:
+				// 68839BAF,104.131.155.175,3,1772592384.619310832,-0.001840593,0.001674238,0.001874871,-5.194,-0.001,0.112,0.162520304,0.010412607,1035.0,Normal
+				if res, err := runtime.GetRunner().Cmd(fmt.Sprintf("%s -c tracking", chronyc), false, true); err != nil {
+					logger.Errorf("failed to execute chronyc tracking: %v", err)
+					return err
+				} else {
+					resToken := strings.Split(res, ",")
+					// if the stratum of the server is 10 which means the local reference (hardware RTC) is active.
+					if strings.ToLower(resToken[2]) != "10" { // Stratum
+						logger.Infof("time synchronization is normal")
+						return nil
+					}
+				}
+			case <-timeout.C:
+				return fmt.Errorf("timeout waiting for time synchronization")
+			}
+		}
+	}
+	return nil
+}
