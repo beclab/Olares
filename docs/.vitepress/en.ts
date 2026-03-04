@@ -46,7 +46,7 @@ const side = {
               link: "/manual/help/ts-missing-apps",
             },
             {
-              text: "LarePass shows System error",
+              text: "System error in LarePass",
               link: "/manual/help/ts-system-error",
             }
           ],
