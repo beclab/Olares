@@ -5,7 +5,7 @@ description: Learn how to join an existing Olares as a new member using a wizard
 
 # Join an Olares
 
-If an admin has invited you to join an existing Olares device, follow this guide to set up your Olares ID and activate your account. You do not need physical access to the device.
+If an admin invites you to use an existing Olares device, follow this guide to set up your Olares ID and activate your account. You do not need physical access to the device.
 
 ## Step 1: Create your Olares ID
 
@@ -19,9 +19,13 @@ The domain of your Olares ID must match the domain of the Olares device you are 
 
 ## Step 2: Activate your account
 
-Once your Olares ID is ready, use the wizard URL and one-time password shared by your admin to complete activation.
+Once your Olares ID is ready, use the wizard URL and one-time password shared by your admin to complete activation. This process connects the Olares device with your Olares ID using LarePass.
 
-<!--@include: ./activate-olares.md-->
+<!--@include: ./activate-olares.md{8,39}-->
+
+## Step 3: Log in to Olares
+
+<!--@include: ./log-in-to-olares.md{6,17}-->
 
 ## Resources
 

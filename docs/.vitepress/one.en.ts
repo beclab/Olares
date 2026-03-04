@@ -31,10 +31,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Redeem membership",
           link: "/one/redeem-membership",
         },
-        {
-          text: "Activate your account (For new members)",
-          link: "/manual/get-started/join-olares",
-        },
       ]
     },
     {
