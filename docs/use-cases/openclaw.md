@@ -206,6 +206,14 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     ```
 4. Click **Save** in the upper-right corner. The system validates the config and restarts automatically to apply the changes.
 
+    ::: tip Manual restart
+    If you need to restart OpenClaw manually, do not use the OpenClaw CLI. Use one of the following methods:
+    - **Restart the app from Settings or Market**: 
+        - Open **Settings**, go to **Applications** > **OpenClaw**, click **Stop**, and then click **Resume**.
+        - Open **Market**, go to **My Olares**, find **OpenClaw**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the operation button, select **Stop**, and then select **Resume**.
+    - **Restart the container**: Open **Control Hub**, click `clawdbot` under **Deployments**, and then click **Restart**.
+    :::
+
 ## (Optional) Personalize OpenClaw
 
 To make your OpenClaw bot more personalized, it is highly recommended to complete the persona setup process. 
@@ -502,7 +510,35 @@ To manage skills and plugins, install ClawHub. It is the package manager for Ope
 
     ![Toggle on plugin](/images/manual/use-cases/toggle-plugin.png#bordered)
 
-6. Click **Save** in the upper-right corner. The system validates the config and restarts automatically to apply the changes.      
+6. Click **Save** in the upper-right corner. The system validates the config and restarts automatically to apply the changes.
+
+    ::: tip Manual restart
+    If you need to restart OpenClaw manually, do not use the OpenClaw CLI. Use one of the following methods:
+    - **Restart the app from Settings or Market**: 
+        - Open **Settings**, go to **Applications** > **OpenClaw**, click **Stop**, and then click **Resume**.
+        - Open **Market**, go to **My Olares**, find **OpenClaw**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the operation button, select **Stop**, and then select **Resume**.
+    - **Restart the container**: Open **Control Hub**, click `clawdbot` under **Deployments**, and then click **Restart**.
+    :::
+
+## FAQ
+
+### Cannot restart OpenClaw in CLI
+
+If you attempt to manually start, stop, or restart OpenClaw using commands like `openclaw gateway` or `openclaw gateway stop` in the OpenClaw CLI, you receive the following error messages:
+- `Gateway failed to start: gateway already running (pid 1); lock timeout after 5000ms`
+- `Gateway service check failed: Error: systemctl --user unavailable: spawn systemctl EACCES`
+
+#### Cause
+
+OpenClaw is deployed as a containerized app in Olares, where the gateway runs as the primary container process `pid 1` and is always active. This environment does not use standard Linux system and service management tools such as `systemd` and `systemctl`, so these commands do not work. 
+
+#### Solution
+
+Do not use the OpenClaw CLI to manage the gateway service. Instead, restart OpenClaw using one of the following methods:
+- **Restart OpenClaw from Settings or Market**: 
+    - Open **Settings**, go to **Applications** > **OpenClaw**, click **Stop**, and then click then **Resume**.
+    - Open **Market**, go to **My Olares**, find **OpenClaw**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the operation button, select **Stop**, and then select **Resume**.
+- **Restart the container**: Open **Control Hub**, click `clawdbot` under **Deployments**, and then click **Restart**.
 
 ## Resources
 
