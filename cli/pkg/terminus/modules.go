@@ -116,8 +116,14 @@ func (m *CheckPreparedModule) Init() {
 		Action: &CheckPrepared{Force: m.Force},
 	}
 
+	checkTimeSync := &task.LocalTask{
+		Name:   "CheckTimeSynced",
+		Action: &WaitTimeSyncTask{},
+	}
+
 	m.Tasks = []task.Interface{
 		checkPrepared,
+		checkTimeSync,
 	}
 }
 
