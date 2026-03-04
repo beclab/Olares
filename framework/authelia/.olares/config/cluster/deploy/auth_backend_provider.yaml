@@ -26,6 +26,7 @@ metadata:
 rules:
   - nonResourceURLs: 
       - "/api/reset/*"
+      - "/cli/api/reset/*"
     verbs: ["*"]
 
 ---
