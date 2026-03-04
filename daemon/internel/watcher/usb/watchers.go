@@ -27,7 +27,7 @@ func WithSerial(ctx context.Context, serial string) context.Context {
 }
 
 func (w *usbWatcher) Watch(ctx context.Context) {
-	retry := 1
+	retry := 3
 	devs, err := utils.DetectdUsbDevices(ctx)
 	for {
 		if err != nil {
