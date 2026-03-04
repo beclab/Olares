@@ -1054,7 +1054,8 @@ func (t *WaitTimeSyncTask) Execute(runtime connector.Runtime) error {
 					return err
 				} else {
 					resToken := strings.Split(res, ",")
-					if strings.ToLower(resToken[len(resToken)-1]) == "normal" {
+					// if the stratum of the server is 10 which means the local reference (hardware RTC) is active.
+					if strings.ToLower(resToken[2]) != "10" { // Stratum
 						logger.Infof("time synchronization is normal")
 						return nil
 					}
