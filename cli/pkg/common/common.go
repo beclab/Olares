@@ -159,6 +159,7 @@ const (
 	CommandUpdatePciids = "update-pciids"
 	CommandNmcli        = "nmcli"
 	CommandZRAMCtl      = "zramctl"
+	CommandChronyc      = "chronyc"
 
 	CacheCommandKubectlPath  = "kubectl_bin_path"
 	CacheCommandMinikubePath = "minikube_bin_path"
