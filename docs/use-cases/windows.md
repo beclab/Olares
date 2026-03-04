@@ -71,7 +71,7 @@ Each Windows instance uses a unique port. If you have cloned the Windows app, en
 1. Open Settings, and navigate to **Application** > **Windows**.
 2. Under **Permissions**, click **ACLs**.
 3. Note the port number listed in the **Port** column. You will need this for the connection step.
-   ![Locate port number](../public/images/manual/use-cases/win-port-number.png#bordered){width=90%}
+   ![Locate port number](/images/manual/use-cases/win-port-number.png#bordered){width=90%}
 
 #### Connect to Windows via RDP
 :::info
@@ -87,7 +87,7 @@ The following steps show the macOS interface, but the workflow is similar on all
    - **Android:** Download [Windows App from Google Play](https://play.google.com/store/apps/details?id=com.microsoft.rdc.androidx).
 
 3. Open Windows from the Launchpad in your browser. Copy the domain from the address bar (exclude `https://` and any text after the domain).
-![Domain address](../public/images/manual/use-cases/win-url.png#bordered)
+   ![Domain address](/images/manual/use-cases/win-url.png#bordered)
 
 4. Add your Windows VM as an RDP connection. 
 
