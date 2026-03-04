@@ -319,14 +319,16 @@ To chat with your agent remotely, connect it to a Discord bot.
 
 ### Step 3: Configure channel
 
-Configure the Discord channel in Control UI.
+Connect OpenClaw to your Discord bot by adding its configuration in the Control UI.
+
+:::info About channel configuration
+This tutorial provides the basic setup to get your bot running in Discord quickly. For more detailed configurations, see the official [OpenClaw documentation](https://docs.openclaw.ai/channels).
+:::
 
 1. Return to the **Control UI** > **Config** > **Raw** tab.
-2. Find the `channels` section:
+2. Add the following `channels` section to the configuration file. 
 
-    a. Update with your Discord bot token.
-
-    b. Enable Discord DM (Direct Messages) and set the Discord DM Policy to **Pairing**.
+    This configuration enables Discord Direct Messages (DMs) and sets the DM policy to pairing for security.
 
     ```json
     "channels": {
@@ -344,8 +346,9 @@ Configure the Discord channel in Control UI.
 
     ![Discord channel added](/images/manual/use-cases/channels.png#bordered)
 
-3. Click **Save**.
-4. From the left sidebar, select **Channels**. On the Discord card, **Probe ok** indicates successful connection.
+3. Replace `{YOUR_BOT_TOKEN}` with your Discord bot token.
+4. Click **Save**.
+5. From the left sidebar, select **Channels**. On the Discord card, **Probe ok** indicates successful connection.
 
    ![Probe OK](/images/manual/use-cases/probe-ok.png#bordered)
 
