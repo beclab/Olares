@@ -4,14 +4,17 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/libp2p/go-netroute"
 	pkg_errors "github.com/pkg/errors"
 	"github.com/txn2/txeh"
@@ -267,15 +270,7 @@ func GetHostIpFromHostsFile(domain string) (string, error) {
 	return ip, nil
 }
 
-// GetMyExternalIPAddr get my network outgoing ip address
 func GetMyExternalIPAddr() string {
-	sites := map[string]string{
-		"httpbin":    "https://httpbin.org/ip",
-		"ifconfigme": "https://ifconfig.me/all.json",
-		"externalip": "https://myexternalip.com/json",
-		"joinolares": "https://myip.joinolares.cn/ip",
-	}
-
 	type httpBin struct {
 		Origin string `json:"origin"`
 	}
@@ -295,80 +290,80 @@ func GetMyExternalIPAddr() string {
 		IP string `json:"ip"`
 	}
 
-	var unmarshalFuncs = map[string]func(v []byte) string{
-		"httpbin": func(v []byte) string {
-			var hb httpBin
-			if err := json.Unmarshal(v, &hb); err == nil && hb.Origin != "" {
-				return hb.Origin
-			}
-			return ""
-		},
-		"ifconfigme": func(v []byte) string {
-			var ifMe ifconfigMe
-			if err := json.Unmarshal(v, &ifMe); err == nil && ifMe.IPAddr != "" {
-				return ifMe.IPAddr
-			}
-			return ""
-		},
-		"externalip": func(v []byte) string {
-			var extip externalIP
-			if err := json.Unmarshal(v, &extip); err == nil && extip.IP != "" {
-				return extip.IP
-			}
-			return ""
-		},
-		"joinolares": func(v []byte) string {
-			return strings.TrimSpace(string(v))
-		},
+	type siteConfig struct {
+		url           string
+		unmarshalFunc func(v []byte) string
 	}
 
-	ch := make(chan any, len(sites))
-
-	for site := range sites {
-		go func(name string) {
-			http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-			c := http.Client{Timeout: 5 * time.Second}
-			resp, err := c.Get(sites[name])
-			if err != nil {
-				ch <- err
-				return
-			}
-			defer resp.Body.Close()
-			respBytes, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				ch <- err
-				return
-			}
-
-			ip := unmarshalFuncs[name](respBytes)
-			//println(name, site, ip)
-			ch <- ip
-		}(site)
+	externalIPServiceURL, err := url.JoinPath(commands.OLARES_REMOTE_SERVICE, "/myip/ip")
+	if err != nil {
+		klog.Error("failed to parse external IP service URL, ", err)
+		return ""
 	}
 
-	tr := time.NewTimer(time.Duration(5*len(sites)+3) * time.Second)
-
-LOOP:
-	for i := 0; i < len(sites); i++ {
-		select {
-		case r, ok := <-ch:
-			if !ok {
-				continue
-			}
-
-			switch v := r.(type) {
-			case string:
-				ip := net.ParseIP(v)
-				if ip != nil && ip.To4() != nil && !ip.IsLoopback() && !ip.IsMulticast() {
-					return v
+	sites := []siteConfig{
+		{
+			url: externalIPServiceURL,
+			unmarshalFunc: func(v []byte) string {
+				return strings.TrimSpace(string(v))
+			},
+		},
+		{
+			url: "https://httpbin.org/ip",
+			unmarshalFunc: func(v []byte) string {
+				var hb httpBin
+				if err := json.Unmarshal(v, &hb); err == nil && hb.Origin != "" {
+					return hb.Origin
 				}
-			case error:
-				klog.Warningf("got an error, %v", v)
-			}
-		case <-tr.C:
-			tr.Stop()
-			klog.Warning("timed out")
-			break LOOP
+				return ""
+			},
+		},
+		{
+			url: "https://ifconfig.me/all.json",
+			unmarshalFunc: func(v []byte) string {
+				var ifMe ifconfigMe
+				if err := json.Unmarshal(v, &ifMe); err == nil && ifMe.IPAddr != "" {
+					return ifMe.IPAddr
+				}
+				return ""
+			},
+		},
+		{
+			url: "https://myexternalip.com/json",
+			unmarshalFunc: func(v []byte) string {
+				var extip externalIP
+				if err := json.Unmarshal(v, &extip); err == nil && extip.IP != "" {
+					return extip.IP
+				}
+				return ""
+			},
+		},
+	}
+
+	client := http.Client{
+		Timeout: 3 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+	for _, site := range sites {
+		resp, err := client.Get(site.url)
+		if err != nil {
+			log.Warnf("failed to get external ip from %s, %v", site.url, err)
+			continue
+		}
+
+		respBytes, readErr := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if readErr != nil {
+			log.Warnf("failed to read response from %s, %v", site.url, readErr)
+			continue
+		}
+
+		ipStr := site.unmarshalFunc(respBytes)
+		ip := net.ParseIP(ipStr)
+		if ip != nil && ip.To4() != nil && !ip.IsLoopback() && !ip.IsMulticast() {
+			return ipStr
 		}
 	}
 
