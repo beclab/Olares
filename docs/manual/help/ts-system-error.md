@@ -27,11 +27,11 @@ Check the status of system pods and identify any pods that are not running.
 1. Open a browser and access your Olares system at `https://desktop.<your-olaresID>.olares.com`.
 2. Open Control Hub. In the left sidebar, under the **Terminal** section, click **Olares**.
     ![Open terminal](/images/manual/help/ts-sys-err-terminal.png#bordered){width=90%}
+    
 3. Run the following command to get the status of all pods across all namespaces:
     ```bash
     kubectl get pods -A
     ```
-    ![Check pod status](/images/manual/help/ts-sys-err-pod-status.png#bordered){width=90%}
 4. Check the **STATUS** column and locate any pods that are not in the `Running` state. Note down the exact **NAMESPACE** (the first column) and **NAME** (the second column) of the problematic pod.
     ![Locate problematic pod](/images/manual/help/ts-sys-err-pod-crash.png#bordered){width=90%}
 
@@ -55,14 +55,9 @@ View the detailed error message for the problematic pod.
 
 ### Step 3: Contact support
 
-Contact technical support and include the following information:
+Create an issue in the [Olares GitHub repository](https://github.com/beclab/Olares/issues) and provide the following information:
 
 - The output of `kubectl describe pod <pod-name> -n <namespace>`.
-- A screenshot of the error message if available.
+- A screenshot of the error message, if available.
 
 This information helps our team investigate and resolve the issue faster.
-
-You can:
-- Create a discussion in the [Olares GitHub repository](https://github.com/beclab/Olares/discussions).
-- Contact us via WhatsApp.
-- Email us at hi@olares.com.
