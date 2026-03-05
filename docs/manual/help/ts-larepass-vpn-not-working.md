@@ -9,15 +9,17 @@ Use this guide when the LarePass VPN toggle does nothing, the VPN stays stuck in
 
 ## Condition
 
-- On macOS, clicking the VPN toggle in the LarePass desktop client does nothing, or the VPN stays stuck in "connecting".
-- On macOS, LarePass VPN used to work on this device but now fails to connect or drops immediately.
-- On Windows, clicking the VPN toggle in the LarePass desktop client does nothing, or the VPN cannot be enabled.
+**macOS** 
+- Clicking the VPN toggle in the LarePass desktop client does nothing, or the VPN status stays stuck in "connecting".
+- LarePass VPN used to work on this device but now fails to connect or drops immediately.
+**Windows** 
+- Clicking the VPN toggle in the LarePass desktop client does nothing, or the VPN cannot be enabled.
 
 ## Cause
 
-On macOS, LarePass VPN requires both a system-level network extension and a VPN configuration to be fully set up. If you skipped or did not complete either step during the initial setup prompt, or if the network extension has become stuck or corrupted, macOS will block LarePass from creating the VPN tunnel.
+-  **macOS**: LarePass VPN requires both a system-level network extension and a VPN configuration to be fully set up. If you skipped or did not complete either step during the initial setup prompt, or if the network extension has become stuck or corrupted, macOS will block LarePass from creating the VPN tunnel.
 
-On Windows, third-party antivirus or security software may mistakenly flag the LarePass desktop client as suspicious, preventing the VPN service from starting.
+- **Windows**: Third-party antivirus or security software may mistakenly flag the LarePass desktop client as suspicious, preventing the VPN service from starting.
 
 ## Solution
 
