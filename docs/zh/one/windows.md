@@ -97,6 +97,7 @@ The following steps show the macOS interface, but the workflow is similar on all
 ::: 
 
 1. Open Windows from the Launchpad. Copy the domain from the address bar (exclude `https://` and any text after the domain).
+   ![Domain address](/images/one/win-url.png#bordered)
 2. Open the Windows App (or Remote Desktop) on your device.
 3. Add your Windows VM as an RDP connection. 
 
