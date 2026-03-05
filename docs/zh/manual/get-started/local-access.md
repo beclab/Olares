@@ -39,7 +39,7 @@ description: 了解如何使用 LarePass VPN 或 .local 域名安全访问 Olare
 
 ### 常见问题
 
-<!--@include: ../../reusables/larepass-vpn.md{50,75}-->
+<!--@include: ../../reusables/larepass-vpn.md{50,57}-->
 
 <!--@include: ../../reusables/local-domain.md{42,75}-->
 

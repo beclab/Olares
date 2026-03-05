@@ -3,7 +3,7 @@ search: false
 ---
 <!-- Reusable LarePass VPN content. Include by line range.
      Steps (no headings): Step 1 7-16, Step 2 18-41, Step 3 42-49.
-     FAQs: 50-75 -->
+     FAQs: 50-57 -->
 
 To use the secure VPN connection, the LarePass client must be installed on the device you are using to access Olares.
 
@@ -50,25 +50,8 @@ Once enabled, check the status indicator in LarePass to verify the connection ty
 
 ### Why doesn't LarePass VPN work on my Mac anymore?
 
-If you successfully enabled the VPN previously, but it has stopped working, you might need to reset the system extension.
-
-:::info
-Depending on your macOS version, the UI might look slightly different.
-:::
-
-1. Open **System Settings**, search for "Extension", and select **Login Items & Extensions**.
-2. Scroll to the **Network Extensions** section and click the info icon (ⓘ) to view loaded extensions.
-3. Find LarePass, click the three dots (...), and select **Delete Extension**.
-4. Confirm the uninstallation.
-5. Restart your Mac and re-enable the VPN in the LarePass desktop client.
+macOS blocks the VPN tunnel if the network extension or VPN configuration was not fully set up, or if the extension has become stuck or corrupted. See [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working) to reset the extension and restore the VPN.
 
 ### Why can't I enable LarePass VPN on Windows?
 
-Third-party antivirus software might mistakenly flag the LarePass desktop client as suspicious, preventing it from launching the VPN service.
-
-If prompted by your antivirus when opening LarePass for the first time, allow the application to continue.
-
-If the VPN still fails to enable:
-1. Open your security software and check if LarePass was blocked.
-2. Add the main LarePass executable to the allowlist or exclusions of your antivirus.
-3. Restart LarePass and enable the VPN.
+Third-party antivirus or security software may mistakenly flag LarePass as suspicious, preventing the VPN service from starting. See [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working) to resolve the issue.

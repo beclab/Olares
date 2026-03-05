@@ -34,4 +34,4 @@ While this address works from anywhere, it's recommended to enable the LarePass 
 
 ## Troubleshooting
 
-<!--@include: ../reusables/larepass-vpn.md{50,74}-->
+<!--@include: ../reusables/larepass-vpn.md{50,57}-->

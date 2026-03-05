@@ -187,6 +187,6 @@ If the IP address starts with `192.168`, it indicates successful configuration.
 
 ## FAQs
 
-<!--@include: ../../reusables/larepass-vpn.md{50,75}-->
+<!--@include: ../../reusables/larepass-vpn.md{50,57}-->
 
 <!--@include: ../../reusables/local-domain.md{42,75}-->

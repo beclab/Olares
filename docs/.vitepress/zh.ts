@@ -43,6 +43,10 @@ const side = {
             {
               text: "应用市场应用缺失",
               link: "/zh/manual/help/ts-missing-apps",
+            },
+            {
+              text: "LarePass VPN 无法使用",
+              link: "/zh/manual/help/ts-larepass-vpn-not-working",
             }
           ],
         },

@@ -187,6 +187,6 @@ ping desktop.<username>.olares.cn
 
 ## 常见问题
 
-<!--@include: ../../reusables/larepass-vpn.md{50,75}-->
+<!--@include: ../../reusables/larepass-vpn.md{50,57}-->
 
 <!--@include: ../../reusables/local-domain.md{42,75}-->
