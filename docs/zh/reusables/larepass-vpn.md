@@ -3,7 +3,7 @@ search: false
 ---
 <!-- 可复用的 LarePass VPN 内容。按行号范围引用。
      步骤（无标题）：Step 1 7-16，Step 2 18-41，Step 3 42-49。
-     常见问题：50-75 -->
+     常见问题：50-57 -->
 
 要使用安全 VPN 连接，必须在用来访问 Olares 的设备上安装 LarePass 客户端。
 
@@ -50,25 +50,8 @@ search: false
 
 ### 为什么在 Mac 上无法再启用 LarePass VPN？
 
-如果之前能正常启用 VPN 但现在失效，可能需要重置系统扩展。
-
-:::info
-不同 macOS 版本下界面可能略有差异。
-:::
-
-1. 打开**系统设置**，搜索“扩展”，选择**登录项与扩展**。
-2. 滚动到**网络扩展**，点击信息图标 (ⓘ) 查看已加载的扩展。
-3. 找到 LarePass，点击三点 (...)，选择**删除扩展**。
-4. 确认卸载。
-5. 重启 Mac，在 LarePass 桌面客户端中重新启用 VPN。
+如果网络扩展或 VPN 配置未完整设置，或网络扩展出现卡死、损坏，macOS 会阻止 LarePass 建立 VPN 隧道。参考 [LarePass VPN 无法使用](/zh/manual/help/ts-larepass-vpn-not-working)，重置扩展并恢复 VPN。
 
 ### 为什么在 Windows 上无法启用 LarePass VPN？
 
-第三方杀毒软件可能误将 LarePass 桌面客户端标记为可疑，导致无法启动 VPN 服务。
-
-首次打开 LarePass 时如果杀毒软件有提示，选择允许应用继续运行。
-
-如果 VPN 仍然无法启用：
-1. 打开安全软件，查看是否拦截了 LarePass。
-2. 将 LarePass 主程序加入杀毒软件的白名单或排除项。
-3. 重启 LarePass 并再次启用 VPN。
+第三方杀毒或安全软件可能误将 LarePass 标记为可疑程序，导致 VPN 服务无法启动。参考 [LarePass VPN 无法使用](/zh/manual/help/ts-larepass-vpn-not-working) 解决该问题。

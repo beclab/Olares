@@ -48,7 +48,11 @@ const side = {
             {
               text: "System error in LarePass",
               link: "/manual/help/ts-system-error",
-            }
+            },
+            {
+              text: "LarePass VPN not working",
+              link: "/manual/help/ts-larepass-vpn-not-working",
+            },
           ],
         },
       ],
@@ -152,7 +156,6 @@ const side = {
     },
     {
       text: "Olares applications",
-      link: "/manual/olares/",
       items: [
         { text: "Desktop", link: "/manual/olares/desktop", },
         {

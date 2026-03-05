@@ -43,11 +43,12 @@ type state struct {
 	Disk       string  `json:"disk"`
 
 	// network info
-	WikiConnected  bool    `json:"wifiConnected"`
-	WifiSSID       *string `json:"wifiSSID,omitempty"`
-	WiredConnected bool    `json:"wiredConnected"`
-	HostIP         string  `json:"hostIp"`
-	ExternalIP     string  `json:"externalIp"`
+	WikiConnected       bool      `json:"wifiConnected"`
+	WifiSSID            *string   `json:"wifiSSID,omitempty"`
+	WiredConnected      bool      `json:"wiredConnected"`
+	HostIP              string    `json:"hostIp"`
+	ExternalIP          string    `json:"externalIp"`
+	ExternalIPProbeTime time.Time `json:"-"`
 
 	// installing / uninstalling / upgrading state
 	InstallingState         ProcessingState `json:"installingState"`
@@ -130,7 +131,8 @@ func CheckCurrentStatus(ctx context.Context) error {
 		klog.Info("current state: ", CurrentState.TerminusState)
 	}()
 
-	utils.ForceMountHdd(ctx)
+	// Deprecated, only for Olares Zero
+	// utils.ForceMountHdd(ctx)
 
 	// set default value
 	if CurrentState.TerminusVersion == nil {
@@ -237,11 +239,18 @@ func CheckCurrentStatus(ctx context.Context) error {
 		return nil
 	}
 
-	if !slices.ContainsFunc(ips, func(i *nets.NetInterface) bool { return i.IP == hostIp }) {
-		// wrong host ip
-		klog.Warningf("host ip %s not in internal ips, try to fix it", hostIp)
-		if err = fix(); err != nil {
-			return err
+	if hostIp != "" {
+		if !slices.ContainsFunc(ips, func(i *nets.NetInterface) bool { return i.IP == hostIp }) {
+			// wrong host ip
+			klog.Warningf("host ip %s not in internal ips, try to fix it", hostIp)
+			if err = fix(); err != nil {
+				klog.Warning("fix host ip failed,", err)
+			}
+		} else if hostIpInFile, err := nets.GetHostIpFromHostsFile(hostname); err == nil && hostIpInFile != "" && hostIpInFile != hostIp {
+			klog.Warningf("host ip %s in hosts file is different from current host ip %s, try to fix it", hostIpInFile, hostIp)
+			if err = fix(); err != nil {
+				klog.Warning("fix host ip failed,", err)
+			}
 		}
 	}
 
@@ -250,12 +259,15 @@ func CheckCurrentStatus(ctx context.Context) error {
 	} else if conflict {
 		klog.Warningf("domain %s conflict with internal ip, try to fix it", hostname)
 		if err = fix(); err != nil {
-			return err
+			klog.Warning("fix host ip failed,", err)
 		}
 	}
 
 	CurrentState.HostIP = hostIp
-	CurrentState.ExternalIP = nets.GetMyExternalIPAddr()
+	if time.Since(CurrentState.ExternalIPProbeTime) > 1*time.Minute {
+		CurrentState.ExternalIP = nets.GetMyExternalIPAddr()
+		CurrentState.ExternalIPProbeTime = time.Now()
+	}
 
 	// get olares state
 
