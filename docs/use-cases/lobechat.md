@@ -24,9 +24,14 @@ This guide covers the installation, configuration, and practical usage of these 
 ## Prerequisites
 
 Before you begin, make sure:
-
 - Ollama is installed and running in your Olares environment.
 - The models you want to use are downloaded using Ollama. This tutorial uses `llama3.1:8b` and `qwen2.5`. For more information, see [Download a model](ollama.md#download-a-model).
+- You obtained the local Ollama host address.
+   :::tip Obtain local Ollama host address
+   To obtain your local Ollama host address, go to Olares **Settings** > **Applications** > **Ollama**, click **Ollama API** under **Entraces** or **Shared entrances**, and then copy the endpoint address.
+
+   ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl1.png#bordered){width=60%}
+   :::
 
 ## Install LobeHub
 
@@ -39,8 +44,8 @@ Before you begin, make sure:
 ## Sign in to LobeHub
 
 1. Open **LobeChat** from Launchpad.
-2. Log in using your LobeHub account.
-3. (Optional) If you do not have a LobeHub account, enter your email address, and then follow the prompts on the page to create one and log in.
+2. Sign in using your LobeHub account.
+3. (Optional) If you do not have a LobeHub account, enter your email address, and then follow the prompts on the page to create one and sign in.
 
    ![LobeHub home page](/images/manual/use-cases/lobehub-start.png#bordered)
 
@@ -48,35 +53,29 @@ Before you begin, make sure:
 
 Connect LobeHub to Ollama to make the chat interface work.
 
-1. From the left sidebar, click **AI Service Provider**, and then select **Ollama**.
+1. From the left sidebar, go to **Settings** > **AI Service Provider** > **Ollama**.
 
       ![Configure Ollama in LobeHub](/images/manual/use-cases/lobehub-config-ollama.png#bordered)
 
 2. In the **Interface proxy address** field, enter your local Ollama address.
-
-   :::tip Obtain local Ollama host address
-   To obtain your local Ollama host address, go to Olares **Settings** > **Applications** > **Ollama**, click **Ollama API** under **Entraces** or **Shared entrances**, and then copy the endpoint address.
-
-   ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl1.png#bordered){width=60%} 
-
 3. Disable the **Use Client Request Mode** option.
 
    :::tip
    When you are running local models, do not enable the **Use Client Request Mode** option.
    :::
-4. In the **Model List** section, click **Fetch models** to pull the list of installed models, and then enable the models you want to use.
+4. In the **Model List** section, click **Fetch models** to pull the list of supported models, and then click <i class="material-symbols-outlined">toggle_off</i> to enable the models you want to use.
 
    ![Fetch model list and enable models](/images/manual/use-cases/lobehub-fetch-enable-model.png#bordered){width=85%} 
 
-5. In the **Connectivity Check** section, select the model you just enabled from the list, and then click **Check** to verify the connection. When the model is large, it might take a while to load.
+5. In the **Connectivity Check** section, select the model you just enabled from the list, and then click **Check** to verify the connection. If the model is large, it might take a little longer to load.
 
    ![Connectivity check](/images/manual/use-cases/lobehub-connectivity-check.png#bordered){width=85%} 
 
-   The button changing to **Check Passed** indicates that the proxy address is correct. 
+   The button changes to **Check Passed**, indicating that the proxy address is correct. 
 
    ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass.png#bordered){width=85%}    
 
-6. Click the home icon at the upper-left corner to return to the LobeChat home page.
+6. Click the home icon at the upper-left corner to return to the LobeHub home page.
 
    ![Return to home page](/images/manual/use-cases/lobehub-return-home.png#bordered){width=45%} 
 
@@ -97,14 +96,11 @@ If Lobe AI does not meet your specific workflow needs, you can build your own sp
 Create your own specialized agents by using the conversational Agent Builder or by manually configuring the settings from scratch.
 
 LobeHub allows you to create specialized assistants to handle specific tasks by leveraging various language models and combining them with skills.
-- Flexible model switching: You can switch language models instantly within the same chat to achieve the best results. For example, if you are not satisfied with a response, you can select a different model from the list to leverage their unique strengths.
-- Skill extensions: You can also install additional skilss to extend and enhance the capabilities of your agent.
+- **Flexible model switching**: You can switch language models instantly within the same chat to achieve the best results. For example, if you are not satisfied with a response, you can select a different model from the list to leverage their unique strengths.
+- **Skill extensions**: You can also install additional skilss to extend and enhance the capabilities of your agent.
+   To install skills, ensure that you select a model compatible with Function Calling. Look for <i class="material-symbols-outlined">brick</i> next to the model name, which indicates the model supports function calls.
 
-   :::info
-   To install plug-ins, ensure that you select a model compatible with Function Calling. Look for <i class="material-symbols-outlined">brick</i> next to the model name, which indicates the model supports function calls.
-   :::
-
-### Create an agent using Agent Builder
+### Create using Agent Builder
 
 Agent Builder is LobeHub's built-in assistant that helps you create specialized agents through conversations. Describe your needs, and it will automatically generate a complete agent configurations, including role settings, system prompts, and skills.
 
@@ -129,6 +125,19 @@ Agent Builder is LobeHub's built-in assistant that helps you create specialized 
 7. Provide your text in the chat, and then you can get the refined results.
 
    ![Start using agent](/images/manual/use-cases/lobehub-agent-use1.png#bordered){width=85%} 
+
+   For example, 
+   ```
+   - fix bug 405 on login
+   - discuss with design on new dashbaord
+   - answer customer question about billing in email.
+   - review pr112, ddl 11:00 am tmrw
+   ```
+
+   You get the following output:
+
+   ![Sample output by agent builder](/images/manual/use-cases/agent-builder-example.png#bordered){width=85%}    
+
 8. If you are satisfied with the assistant's performance, hover over the assistant from the left sidebar, click <i class="material-symbols-outlined">more_horiz</i>, and then click **Pin** to keep it accessible at the top of your agent list.
 
 ### Create a custom agent
@@ -278,3 +287,18 @@ If you encounter the `Error requesting Ollama service` error, troubleshoot as fo
 2. Ensure the **Use Client Request Mode** option on the Ollama settings page is disabled.
 
    ![Disable the use client request mode option](/images/manual/use-cases/lobehub-disable-client-request-mode.png#bordered){width=85%} 
+
+### Error: Model requires more system memory than is available
+
+If you encounter errors similar te:
+
+```json
+{
+  "error": {
+    "message": "model requires more system memory (4.5 GiB) than is available (3.8 GiB)",
+    "name": "ResponseError",
+    "status_code": 500
+  },
+  "provider": "ollama"
+}
+```
