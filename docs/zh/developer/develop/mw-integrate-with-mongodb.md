@@ -35,9 +35,9 @@ middleware:
       # 请确保每一行都是完整的查询语句。
 ```
 
-## 注入环境变量
+## 映射环境变量
 
-在应用的部署 YAML 中，将系统注入的 `.Values.mongodb.*` 字段映射为应用所使用的环境变量。
+在应用的部署 YAML 中，将系统注入的 `.Values.mongodb.*` 字段映射为应用所需的环境变量。
 
 **示例**
 ```yaml
@@ -63,14 +63,14 @@ containers:
         value: "{{ .Values.mongodb.databases.app_db }}"
 ```
 
-## MongoDB Values 参考
+## MongoDB 变量参考
 
-MongoDB Values 是在部署过程中自动注入到 `values.yaml` 中的预定义变量，由系统统一管理，用户不可手动修改。
+MongoDB 运行时变量会在部署过程中注入到 `values.yaml` 中。这些变量由系统统一管理，用户无法自行修改。
 
-| 键  | 类型  | 说明  |
+| 变量 | 类型 | 说明 |
 |--|--|--|
-| `.Values.mongodb.host` | String | MongoDB 数据库地址 |
-| `.Values.mongodb.port` | Number | MongoDB 数据库端口 |
-| `.Values.mongodb.username` | String | MongoDB 数据库用户名 |
-| `.Values.mongodb.password` | String  | MongoDB 数据库密码 |
-| `.Values.mongodb.databases` | Map<String,String> | 以申请的数据库名作为键。<br/>例如申请 `app_db`，可通过 `.Values.mongodb.databases.app_db` 获取对应的值。 |
+| `.Values.mongodb.host` | String | MongoDB 主机地址。 |
+| `.Values.mongodb.port` | Number | MongoDB 端口。 |
+| `.Values.mongodb.username` | String | MongoDB 用户名。 |
+| `.Values.mongodb.password` | String  | MongoDB 密码。 |
+| `.Values.mongodb.databases` | Map<String,String> | 请求的数据库集合，按数据库名为键。<br/>例如申请 `app_db`，可通过 `.Values.mongodb.databases.app_db` 获取对应的值。 |

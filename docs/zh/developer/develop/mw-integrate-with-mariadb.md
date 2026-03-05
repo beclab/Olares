@@ -31,9 +31,9 @@ middleware:
       - name: aaa
 ```
 
-## 注入环境变量
+## 映射环境变量
 
-在应用的部署 YAML 中，将系统注入的 `.Values.mariadb.*` 字段映射为应用所使用的环境变量。
+在应用的部署 YAML 中，将系统注入的 `.Values.mariadb.*` 字段映射为应用所需的环境变量。
 
 **示例**
 ```yaml
@@ -59,14 +59,14 @@ containers:
         value: "{{ .Values.mariadb.databases.aaa }}"
 ```
 
-## MariaDB Values 参考
+## MariaDB 变量参考
 
-MariaDB Values 是在部署过程中由系统自动注入到 `values.yaml` 中的预定义变量。这些值由系统统一管理，用户无法自行修改。
+MariaDB 运运行时变量会在部署过程中注入到 `values.yaml` 中。这些变量由系统统一管理，用户无法自行修改。
 
-| 键  | 类型  | 说明  |
+| 变量 | 类型 | 说明 |
 |--|--|--|
-| `.Values.mariadb.host` | String | MariaDB 数据库地址 |
-| `.Values.mariadb.port` | Number | MariaDB 数据库端口 |
-| `.Values.mariadb.username` | String | MariaDB 数据库用户名 |
-| `.Values.mariadb.password` | String | MariaDB 数据库密码 |
-| `.Values.mariadb.databases` | Map<String,String> | 以申请的数据库名作为键。<br/>例如申请 `aaa`，可通过 `.Values.mariadb.databases.aaa` 获取对应的值。 |
+| `.Values.mariadb.host` | String | MariaDB 主机地址。 |
+| `.Values.mariadb.port` | Number | MariaDB 端口。 |
+| `.Values.mariadb.username` | String | MariaDB 用户名。 |
+| `.Values.mariadb.password` | String | MariaDB 密码。 |
+| `.Values.mariadb.databases` | Map<String,String> | 请求的数据库集合，按数据库名为键。<br/>例如申请 `app_db`，可通过 `.Values.mariadb.databases.app_db` 获取对应的值。 |

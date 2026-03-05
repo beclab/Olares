@@ -152,7 +152,6 @@ const side = {
     },
     {
       text: "Olares applications",
-      link: "/manual/olares/",
       items: [
         { text: "Desktop", link: "/manual/olares/desktop", },
         {

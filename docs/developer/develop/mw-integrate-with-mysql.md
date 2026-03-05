@@ -31,9 +31,9 @@ middleware:
       - name: aaa
 ```
 
-## Inject environment variables
+## Map to environment variables
 
-In your deployment YAML, map the injected `.Values.mysql.*` fields to the environment variables your app uses.
+In your deployment YAML, map the injected `.Values.mysql.*` fields to the container environment variables your app requires.
 
 **Example**
 ```yaml
@@ -59,14 +59,14 @@ containers:
         value: "{{ .Values.mysql.databases.aaa }}"
 ```
 
-## MySQL Values reference
+## MySQL values reference
 
-MySQL Values are predefined environment variables injected into `values.yaml` during deployment. They are system-managed and not user-editable.
+MySQL values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-| Key  | Type  | Description  |
-|--|--|--|
-| `.Values.mysql.host` | String | MySQL database host |
-| `.Values.mysql.port` | Number | MySQL database port |
-| `.Values.mysql.username` | String | MySQL database username |
-| `.Values.mysql.password` | String | MySQL database password |
-| `.Values.mysql.databases` | Map<String,String> | The requested database name is used as the key. <br/>For example, if you request `aaa`, the value is available at `.Values.mysql.databases.aaa`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.mysql.host` | String | MySQL host. |
+| `.Values.mysql.port` | Number | MySQL port. |
+| `.Values.mysql.username` | String | MySQL username. |
+| `.Values.mysql.password` | String | MySQL password. |
+| `.Values.mysql.databases` | Map\<String,String> | Requested databases, keyed by database name. For example, a request for `app_db` is available at `.Values.mysql.databases.app_db`. |

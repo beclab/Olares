@@ -31,9 +31,9 @@ middleware:
       - name: aaa
 ```
 
-## 注入环境变量
+## 映射环境变量
 
-在应用的部署 YAML 中，将系统注入的 `.Values.rabbitmq.*` 字段映射为应用所使用的环境变量。
+在应用的部署 YAML 中，将系统注入的 `.Values.rabbitmq.*` 字段映射为应用所需的环境变量。
 
 **示例**
 ```yaml
@@ -78,14 +78,14 @@ portMQ := os.Getenv("RABBITMQ_PORT")
 url := fmt.Sprintf("amqp://%s:%s@%s:%s/%s", user, password, host, portMQ, vhost)
 ```
 
-## RabbitMQ Values 参考
+## RabbitMQ 变量参考
 
-RabbitMQ Values 是在部署过程中自动注入到 `values.yaml` 中的预定义变量，由系统统一管理，用户不可手动修改。
+RabbitMQ 运行时变量会在部署过程中注入到 `values.yaml` 中。这些变量由系统统一管理，用户无法自行修改。
 
-| 键  | 类型  | 说明  |
+| 变量 | 类型 | 说明 |
 |--|--|--|
-| `.Values.rabbitmq.host` | String | RabbitMQ 服务地址 |
-| `.Values.rabbitmq.port` | Number | RabbitMQ 服务端口 |
-| `.Values.rabbitmq.username` | String | RabbitMQ 用户名 |
-| `.Values.rabbitmq.password` | String | RabbitMQ 密码 |
-| `.Values.rabbitmq.vhosts` | Map<String,String> | 以申请的 vhost 名作为键。<br/>例如申请 `aaa`，可通过 `.Values.rabbitmq.vhosts.aaa` 获取对应的值。 |
+| `.Values.rabbitmq.host` | String | RabbitMQ 主机地址。 |
+| `.Values.rabbitmq.port` | Number | RabbitMQ 端口。 |
+| `.Values.rabbitmq.username` | String | RabbitMQ 用户名。 |
+| `.Values.rabbitmq.password` | String | RabbitMQ 密码。 |
+| `.Values.rabbitmq.vhosts` | Map<String,String> | 请求的虚拟主机集合，按名称为键。<br/>例如申请 `myvhost`，可通过 `.Values.rabbitmq.vhosts.myvhost` 获取对应的值。 |

@@ -31,9 +31,9 @@ middleware:
       - name: mybucket
 ```
 
-## 注入环境变量
+## 映射环境变量
 
-在应用的部署 YAML 中，将系统注入的 `.Values.minio.*` 字段映射为应用所使用的环境变量。
+在应用的部署 YAML 中，将系统注入的 `.Values.minio.*` 字段映射为应用所需的环境变量。
 
 **示例**
 ```yaml
@@ -60,14 +60,14 @@ containers:
         value: "{{ .Values.minio.buckets.mybucket }}"
 ```
 
-## MinIO Values 参考
+## MinIO 变量参考
 
-MinIO Values 是在部署过程中由系统自动注入到 `values.yaml` 中的预定义变量。这些值由系统统一管理，用户无法自行修改。
+MinIO 运行时变量会在部署过程中注入到 `values.yaml` 中。这些变量由系统统一管理，用户无法自行修改。
 
-| 键  | 类型  | 说明  |
+| 变量 | 类型 | 说明 |
 |--|--|--|
-| `.Values.minio.host` | String | MinIO 服务地址 |
-| `.Values.minio.port` | Number | MinIO 服务端口 |
-| `.Values.minio.username` | String | MinIO 访问密钥（Access Key） |
-| `.Values.minio.password` | String | MinIO 密钥（Secret Key） |
-| `.Values.minio.buckets` | Map<String,String> | 以申请的存储桶名称作为键。例如申请 `mybucket`，可通过 `.Values.minio.buckets.mybucket` 获取对应的值。 |
+| `.Values.minio.host` | String | MinIO 服务地址。 |
+| `.Values.minio.port` | Number | MinIO 服务端口。 |
+| `.Values.minio.username` | String | MinIO 访问密钥。 |
+| `.Values.minio.password` | String | MinIO 密钥。 |
+| `.Values.minio.buckets` | Map<String,String> | 请求的存储桶集合，按桶名为键。例如申请 `mybucket`，可通过 `.Values.minio.buckets.mybucket` 获取对应的值。 |
