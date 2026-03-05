@@ -512,7 +512,6 @@ func getCpu() *CpuInfo {
 	if err == nil && strings.TrimSpace(string(output)) != "" {
 		isGB10Chip = true
 	} else {
-		fmt.Printf("Error checking GB10 chip: %v\n", err)
 		gb10env := os.Getenv(common.ENV_GB10_CHIP)
 		if gb10env == "1" || strings.EqualFold(gb10env, "true") {
 			isGB10Chip = true
