@@ -11,3 +11,4 @@ This section offers in-depth guides and proven best practices to help you get th
 - [Install Olares on PVE via ISO with GPU Passthrough](install-olares-gpu-passthrough.md)
 - [Expand Olares storage capacity](expand-storage-in-olares.md)
 - [Access Olares services locally](local-access.md)
+- [Connect AI apps](connect-ai-apps.md)
