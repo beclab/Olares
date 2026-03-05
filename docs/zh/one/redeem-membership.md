@@ -4,12 +4,12 @@ description: Learn how to redeem your complimentary Olares Space Basic membershi
 head:
   - - meta
     - name: keywords
-      content: Olares, Olares One, Olares Space, redeem membership card, kickstarter backers, Basic plan
+      content: Olares, Olares One, Olares Space, redeem membership card, Basic plan, kickstarter backers
 ---
 
-# Redeem Olares Space membership <Badge type="tip" text="Kickstarter Backers Only" />
+# Redeem Olares Space membership
 
-If you backed Olares One on Kickstarter, your package includes an "Olares Space Membership" card. This card grants you a complimentary 2-year Basic membership to use the enhanced connectivity services provided by Olares Space.
+Depending on your purchase channel such as the Kickstarter campaign, your Olares One package might include an Olares Space Membership card. This card grants you a complimentary 2-year Basic membership to use the enhanced connectivity services provided by Olares Space.
 
 :::tip Olares One is a one-time purchase
 Your Olares One hardware and system updates are free forever.
@@ -24,6 +24,7 @@ Olares Space is a secure connectivity platform that extends the capabilities of 
 * **Remote access (FRP)**: High-speed remote connection with 50 GB of monthly traffic at speeds up to 50 Mbps. This includes access to regional acceleration nodes for faster response times. If you exceed the monthly quota, speed is throttled to 5 Mbps. The free alternative is to use the LarePass VPN or host your own FRP server.
 
 ## Log in to Olares Space
+
 1. Go to https://space.olares.com.
 
     ![Olares Space login page](/images/one/olares-space-login.png#bordered)
@@ -40,21 +41,23 @@ Olares Space is a secure connectivity platform that extends the capabilities of 
     ![Log in to Olares Space](/images/one/login-olares-space.png#bordered)
 
 ## Redeem Basic plan
+
 :::info
 The 2-year validity period begins the moment you successfully bind your email to an Olares ID.
 :::
-To redeem your benefits, you must verify the email address associated with your Kickstarter order using the Olares Space dashboard.
+
+To redeem the Basic plan benefits, you must link your account to the email address associated with your purchase order using the Olares Space dashboard. For example, the email associated with your Kickstarter order.
+
 1. In Olares Space, from the left navigation pane, click **Usage & billing**. 
 2. On the **Account email** tab, click **Email address**.
 
     ![Olares Space account email](/images/one/account-email.png#bordered)
 
-3. In the **Add email** window, enter the email address used for your Kickstarter order.
+3. In the **Add email** window, enter the email address used for your purchase order.
 
     ![Olares Space bind email](/images/one/bind-email.png#bordered)
 
 4. Click **Send verification code**.
-
 5. Follow the on-screen instructions to complete the verification.
  
     :::tip 
@@ -67,29 +70,32 @@ To redeem your benefits, you must verify the email address associated with your 
 
     ![Olares Space Basic plan](/images/one/basic-plan.png#bordered)   
 
-## Switch membership to a different Olares ID
+## Transfer membership to a different Olares ID
+
 :::warning Validity period adjustment
-Transferring your membership to a new Olares ID reduces your remaining validity period by one month. If you transfer multiple times within the same month, the deduction only occurs once.
-:::
-:::warning Changing your bound email
-The Basic membership is tied strictly to the specific email address used on Kickstarter. If you change the email, you will lose the Basic membership immediately.
+Transferring your membership to a new Olares ID reduces your remaining validity period by one month. If you transfer multiple times within the same calendar month, the deduction only occurs once.
 :::
 
-If you want to move your Basic membership to a new Olares ID:
+:::warning Changing bound email
+The Basic membership is tied strictly to the specific email address used for your purchase order. If you change the email, the current account loses the Basic membership immediately.
+:::
+
+If you want to transfer your Basic membership to a new Olares ID:
 
 1. Log in to Olares Space with your old Olares ID. 
 2. Go to **Usage & billing** > **Account email**. 
-3. Click **Unbind** to remove the Kickstarter email from the account email settings. 
+3. Click **Unbind** to remove the purchase order email from the account email settings. 
 
     ![Unbind email](/images/one/unbind-button.png#bordered) 
 
 4. Click **Send verification code**.
 5. Follow the on-screen instructions to complete the verification.
     
-    A notification message will confirm that the email was removed. Your account automatically changes to the Free plan.
+    A notification message will confirm that the email was removed. The current account changes to the Free plan immediately.
 
 6. Log in to Olares Space with the new Olares ID. 
-7. Bind and verify the Kickstarter email using the steps in the [Activate membership](#activate-membership) section. This will immediately upgrade the new Olares ID to the Basic plan.
+7. Bind the purchase order email using the steps in the [Redeem Basic plan](#redeem-basic-plan) section. This will upgrade the new Olares ID to the Basic plan immediately.
+
 ## Resources
 
 - [Monitor traffic in Olares Space](space.md)
