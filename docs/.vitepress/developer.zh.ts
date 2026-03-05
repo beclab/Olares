@@ -228,12 +228,27 @@ export const developerSidebar: DefaultTheme.Sidebar = {
             //         },
             //       ],
             //      },
+        {
+          text: "应用环境变量",
+          link: "/zh/developer/develop/app-env-index",
+          collapsed: true,
+          items: [
+            {
+              text: "声明式环境变量",
+              link: "/zh/developer/develop/app-env-vars",        
+            },
+            {
+              text: "系统注入的运行时变量",
+              link: "/zh/developer/develop/app-sys-injected-variables",
+            },
+          ]
+        },
     {
               text: "中间件",
               link: "/zh/developer/develop/mw-overview",
               collapsed: true,
               items: [
-                {
+                /*{
                   text: "Elasticsearch",
                   collapsed: true,
                   items :[
@@ -245,7 +260,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
                       link: "zh/developer/develop/mw-view-es-data",
                     },
                   ]
-                },
+                },*/
                 {
                   text: "Grafana",
                   link: "zh/developer/develop/mw-view-grafana-data",
