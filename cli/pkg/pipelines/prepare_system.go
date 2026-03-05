@@ -32,6 +32,7 @@ func PrepareSystemPipeline(components []string) error {
 	arg.SetMinikubeProfile(viper.GetString(common.FlagMiniKubeProfile))
 	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
 	arg.SetStorage(getStorageConfig())
+	arg.ClearMasterHostConfig()
 
 	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
