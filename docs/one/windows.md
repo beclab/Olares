@@ -87,8 +87,8 @@ Make sure you check the **ACLs** for the specific instance you want to connect t
 
 1. Open Settings, and navigate to **Application** > **Windows**.
 2. Under **Permissions**, click **ACLs**.
-3. Note the port number listed in the **Dst** column. You will need this for the connection step.
-   ![Locate port number](/images/one/win-port-no.png#bordered)
+3. Note the port number listed in the **Port** column. You will need this for the connection step.
+   ![Locate port number](/images/one/win-port-number.png#bordered)
 
 #### Connect to Windows
 
@@ -97,6 +97,7 @@ The following steps show the macOS interface, but the workflow is similar on all
 ::: 
 
 1. Open Windows from the Launchpad. Copy the domain from the address bar (exclude `https://` and any text after the domain).
+   ![Domain address](/images/one/win-url.png#bordered)
 2. Open the Windows App (or Remote Desktop) on your device.
 3. Add your Windows VM as an RDP connection. 
 
