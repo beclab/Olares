@@ -24,8 +24,12 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/first-boot",
         },
         {
-          text: "Access Olares securely",
+          text: "Access Olares via VPN",
           link: "/one/access-olares-via-vpn",
+        },
+        {
+          text: "Access Olares via .local domain",
+          link: "/one/access-olares-via-local-domain",
         },
         {
           text: "Redeem membership",
@@ -197,14 +201,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               }
               ,
               {
-                text: "Install NVIDIA driver",
+                text: "Install drivers on Windows",
                 link: "/one/install-nvidia-driver",
               }
             ]
-        },
-        {
-          text: "Create a bootable USB",
-          link: "/one/create-drive",
         },
       ]
     },
@@ -216,12 +216,26 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/update",
         },
         {
-          text: "Back up & restore",
+          text: "Back up & restore data",
           link: "/one/backup-resotre",
         },
         {
-          text: "Factory reset",
-          link: "/one/factory-reset",
+          text: "Restore Olares One",
+          collapsed: true,
+          items: [
+            {
+              text: "Factory reset",
+              link: "/one/factory-reset",
+            },
+            {
+              text: "Restore BIOS defaults",
+              link: "/one/factory-reset-in-bios",
+            },
+            {
+              text: "Reinstall Olares OS",
+              link: "/one/create-drive",
+            },
+          ],
         },
       ]
     },

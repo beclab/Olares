@@ -98,4 +98,6 @@ const (
 
 const (
 	ZfsSnapshotter = "/var/lib/containerd/io.containerd.snapshotter.v1.zfs"
+
+	ENV_GB10_CHIP = "GB10_CHIP" // for building images for NVIDIA GB10 Superchip systems
 )

@@ -24,11 +24,15 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/first-boot",
         },
         {
-          text: "Access Olares securely",
+          text: "Access Olares via VPN",
           link: "/zh/one/access-olares-via-vpn",
         },
         {
-          text: "Redeem Olares Space membership",
+          text: "Access Olares via .local domain",
+          link: "/zh/one/access-olares-via-local-domain",
+        },
+        {
+          text: "Redeem membership",
           link: "/zh/one/redeem-membership",
         },
       ]
@@ -165,7 +169,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         },
         {
           text: "Connect two Olares One",
-          link: "/zh/one/connect-two-olares-one"
+          link: "/zh/one/connect-two-olares-one",
           // items:
           //   [
           //     {
@@ -197,14 +201,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               }
               ,
               {
-                text: "Install NVIDIA driver",
+                text: "Install drivers on Windows",
                 link: "/zh/one/install-nvidia-driver",
               }
             ]
-        },
-        {
-          text: "Create a bootable USB",
-          link: "/zh/one/create-drive",
         },
       ]
     },
@@ -216,12 +216,26 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/update",
         },
         {
-          text: "Back up & restore",
+          text: "Back up & restore data",
           link: "/zh/one/backup-resotre",
         },
         {
-          text: "Factory reset",
-          link: "/zh/one/factory-reset",
+          text: "Restore Olares One",
+          collapsed: true,
+          items: [
+            {
+              text: "Factory reset",
+              link: "/zh/one/factory-reset",
+            },
+            {
+              text: "Restore BIOS defaults",
+              link: "/zh/one/factory-reset-in-bios",
+            },
+            {
+              text: "Reinstall Olares OS",
+              link: "/zh/one/create-drive",
+            },
+          ],
         },
       ]
     },

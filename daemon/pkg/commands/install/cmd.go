@@ -181,6 +181,7 @@ var (
 		// {"installing k8s and kubesphere", "3%", 3},
 		// {"Generating \"ca\" certificate and key", "3%", 3},
 		// {"PatchKsCoreStatus success", "6%", 6},
+		{"time synchronization is normal", "3%", 3},
 		{"k8s and kubesphere installation is complete", "10%", 10},
 		{"Installing account ...", "15%", 15},
 		{"Installing settings ...", "20%", 20},

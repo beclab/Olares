@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Learn how to install, configure, and integrate OpenClaw with Discord.
+description: Learn how to install, configure, personalize, and integrate OpenClaw with Discord.
 head:
   - - meta
     - name: keywords
@@ -15,25 +15,86 @@ It acts as an "always-on" operator that can execute real tasks, such as searchin
 
 ## Learning objectives
 
-By the end of this tutorial, you are be able to:
-
 - Install and initialize the OpenClaw environment.
 - Pair and connect the OpenClaw CLI and the Control UI.
 - Configure OpenClaw to use the local AI model Ollama.
+- Personalize OpenClaw to establish its identity and behavior.
 - Integrate OpenClaw with Discord.
-- Manage skills and plug-ins.
 - Enable the web search capability using Brave Search.
+- Manage skills and plug-ins.
 
 ## Prerequisites
 
-- Local model: Ensure Ollama is installed and running. You must have a tool-capable model installed, such as `glm-4.7-flash`, `qwen3`, and `llama3.1`. This tutorial uses `llama3.1:8b`.
+- Local model: Ensure Ollama is installed and running. You must have a tool-capable model installed, such as `glm-4.7-flash`, `qwen3.5:27b`, and `gpt-oss:20b`. This tutorial uses `qwen3.5:27b`.
+
+    :::tip
+    OpenClaw requires a large "context window" (that is the AI's short-term memory) to handle complex tasks without forgetting your previous instructions. If you are using local models, it is recommended to select a model that natively supports a context window of at least 64K tokens.
+    :::
+
 - Discord account: Required to create the bot application.
 - Discord server: A server where you have permissions to add bots.
 - (Optional) Brave search API key: Required for the agent to search the web for real-time information. 
 
-    :::tip Tip
-    You can obtain a free API key from the [Brave Search API](https://brave.com/search/api/). The free tier of the "Data for Search"" plan is usually sufficient for personal use.
+    :::tip
+    You can obtain a free API key from the [Brave Search API](https://brave.com/search/api/). The free tier of the "Data for Search" plan is usually sufficient for personal use.
     :::
+
+## Upgrade notes
+
+If you are upgrading an existing OpenClaw installation, review the following version-specific changes and troubleshooting steps before proceeding.
+
+### Upgrade to 2026.02.25
+
+The OpenClaw 2026.02.25 update introduced a security enhancement that requires existing users to explicitly declare the allowed Control UI access address. Therefore, if your Control UI fails to start after the upgrade, follow these steps to resolve the issue.
+
+1. Open Control Hub on your desktop to check the container logs for **clawdbot**. 
+
+    ![Check container logs](/images/manual/use-cases/check-container-logs.png#bordered)
+
+2. Look for the following error message. If it appears, proceed to the next step.
+
+    ```text
+    Gateway failed to start: Error: non-loopback Control UI requires gateway.controlUi.allowedOrigins (set explicit origins), or set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true to use Host-header origin fallback mode
+    ```
+    
+    ![Error logs](/images/manual/use-cases/container-logs.png#bordered)
+
+3. Open **Settings**, go to **Application** > **OpenClaw** > **Control UI** > **Set up endpoint**, and then copy the endpoint address.
+
+    ![OpenClaw endpoint address](/images/manual/use-cases/openclaw-endpoint.png#bordered){width=70%}    
+
+4. Open **Files**, go to **Application** > **Data** > **clawdbot** > **config**, right-click the `openclaw.json` file, and then download it.
+
+    ![OpenClaw configuration file](/images/manual/use-cases/openclaw-config-json.png#bordered)
+
+5. Open the downloaded file in a text editor, find the `gateway` section, and then add a `controlUi` block with your endpoint address.
+
+    ```json
+    "controlUi": {
+      "allowedOrigins": ["Endpoint-Address"]
+    },
+    ``` 
+    ![Update configuration file](/images/manual/use-cases/add-control-ui-endpoint.png#bordered)
+
+    :::info
+    If you access the Control UI using multiple addresses such as local URLs or custom domains, add them to the `allowedOrigins` array separated by commas. For example, `["https://url-one.com", "https://url-two.com"]`.
+    :::
+    
+6. Return to Files, rename the original `openclaw.json` file to keep it as a backup, and then upload your modified `openclaw.json` file.
+
+7. Return to Control Hub, click **clawbot** under **Deployments**, and then click **Restart** in the upper-right corner.
+
+     ![Restart OpenClaw](/images/manual/use-cases/restart-openclaw.png#bordered)
+    
+8. In the **Restart clawdbot** window, type `clawdbot` exactly as shown, and then click **Confirm**. Wait for the program status to show as **Running**, which is indicated by a green dot.
+
+      ![Restart finish](/images/manual/use-cases/restart-openclaw-finish.png#bordered)   
+
+9. Check the container logs again to verify the gateway has started successfully.
+
+      ![Verify container logs](/images/manual/use-cases/verify-container-logs.png#bordered)       
+    
+10. Open the Control UI. Refresh the browser page if an error still displays.
 
 ## Install OpenClaw
 
@@ -47,47 +108,51 @@ By the end of this tutorial, you are be able to:
 
     ![OpenClaw entry points](/images/manual/use-cases/openclaw-entry-points.png#bordered){width=30%}
 
+:::tip Run multiple OpenClaw agents
+Olares supports app cloning. If you want to run multiple independent AI agents for different tasks, you can clone the OpenClaw app. For more information, see [Clone applications](../manual/olares/market/clone-apps.md).
+:::
+
 ## Initialize OpenClaw
 
 Run a quick setup for the agent in the OpenClaw CLI.
 
 1. Open the OpenClaw CLI app from the Launchpad.
-2. Enter the following command to start the onboarding wizard.
+2. Enter the following command to generate the dashboard access credentials:
+    ```bash
+    openclaw dashboard --no-open
+    ```
+3. Locate the **Dashboard URL** in the terminal output.
+4. Find and copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token.
+
+    ![Obtain gateway token](/images/manual/use-cases/obtain-gateway-token.png#bordered)
+5. Open the Control UI app from the Launchpad.
+6. On the **Overview** page, in the **Gateway Access** panel, specify the following settings:
+    - **Gateway Token**: Enter the token you copied in the previous step.
+    - **Default Session Key**: Enter `agent:main:main`.
+7. Click **Connect**.
+
+    The connection error `pairing required` occurs. This is expected and means the device connection is waiting for approval.
+8. Return to the OpenClaw CLI window and enter the following command:
 
     ```bash
-    openclaw onboard
+    openclaw devices approve --latest
     ```
-    ![OpenClaw onboarding wizard](/images/manual/use-cases/openclaw-wizard.png#bordered){width=80%}
+9. When the terminal displays the approval message, return to the Control UI.
+    ![Pair sucess](/images/manual/use-cases/new-pair-success.png#bordered)
 
-3. The wizard guides you through a series of steps. Use the arrow keys to navigate and press Enter to confirm.
+    Now the **STATUS** in the **Snapshot** panel should be **OK**.
 
-    :::tip Note on configurations
-    - To get you started quickly, this tutorial skips several advanced settings in the wizard. You can configure or modify them later.
-    - Do not configure skills here, because the Olares security environment prevents the wizard from automatically installing skills. You need to install them manually. For more information, see [Manage skills and plugins](#manage-skills-and-plugins).
-    :::
+    ![Health OK](/images/manual/use-cases/openclaw-connected1.png#bordered)
 
-    | Settings | Option |
-    |:-------- |:-------|
-    | I understand this is powerful and inherently <br>risky. Continue? | Yes |
-    | Onboarding mode | QuickStart |
-    | Config handling | Use existing values |
-    | Model/auth provider | Skip for now |
-    | Filter models by provider | All providers |
-    | Default model | Keep current |
-    | Select channel | Skip for now |
-    | Configure skills now | No<br>(Manual installation required) |
-    | How do you want to hatch your bot | Do this later |
-    
-4. After you complete the wizard, close OpenClaw CLI and open it again.
-5. Enter the following command to obtain the gateway token:
+:::tip For advanced users
+If you prefer to fully customize your initial setup, you can run the `openclaw onboard` command instead to launch the interactive configuration wizard.
+:::
 
-    ```bash
-    openclaw config get gateway.auth.token
-    ```
+## (Optional) Pair device manually
 
-6. Copy the token and keep the OpenClaw CLI window open for the next step.
-
-## Pair device
+:::tip When to use manual pairing
+The quick setup in the previous section uses the `openclaw devices approve --latest` command to automatically approve the most recent pairing request. If you have multiple pending requests and need to manually select which device to approve, follow the steps in this section instead.
+:::
 
 Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 
@@ -97,7 +162,7 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     - **Default Session Key**: Enter `agent:main:main`.
 3. Click **Connect**. 
 
-    The connection error `disconnected[1008]:pairing required` occurs. This is expected and means the device connection is waiting for approval.
+    The connection error `pairing required` occurs. This is expected and means the device connection is waiting for approval.
 4. Return to the OpenClaw CLI window and enter the following command:
     ```bash
     openclaw devices list
@@ -115,9 +180,9 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     ```bash
     openclaw devices approve {RequestID}
     ```
-7. When the terminal displays `Approved {DeviceID}`, return to the Control UI. Now the **STATUS** in the **Snapshot** panel should be **Connected**.
+7. When the terminal displays the approval message, return to the Control UI. Now the **STATUS** in the **Snapshot** panel should be **OK**.
 
-    ![Health OK](/images/manual/use-cases/openclaw-connected.png#bordered)
+    ![Health OK](/images/manual/use-cases/openclaw-connected1.png#bordered)
 
 ## Configure local AI model
 
@@ -128,18 +193,87 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     ```json
     "agents": {
         "defaults": {
-        "model": {
-            "primary": "ollama/llama3.1:8b"
-        },
-        "workspace": "/home/node/.openclaw/workspace",
-        "maxConcurrent": 4,
-        "subagents": {
-            "maxConcurrent": 8
-        }
+            "model": {
+                "primary": "ollama/qwen3.5:27b"
+            },
+            "workspace": "/home/node/.openclaw/workspace",
+            "maxConcurrent": 4,
+            "subagents": {
+                "maxConcurrent": 8
+            }
         }
     },
     ```
 4. Click **Save** in the upper-right corner. The system validates the config and restarts automatically to apply the changes.
+
+    ::: tip Manual restart
+    If you need to restart OpenClaw manually, do not use the OpenClaw CLI. Use one of the following methods:
+    - **Restart the app from Settings or Market**: 
+        - Open **Settings**, go to **Applications** > **OpenClaw**, click **Stop**, and then click **Resume**.
+        - Open **Market**, go to **My Olares**, find **OpenClaw**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the operation button, select **Stop**, and then select **Resume**.
+    - **Restart the container**: Open **Control Hub**, click `clawdbot` under **Deployments**, and then click **Restart**.
+    :::
+
+## (Optional) Personalize OpenClaw
+
+To make your OpenClaw bot more personalized, it is highly recommended to complete the persona setup process. 
+
+This process establishes the agent's identity, behavioral boundaries, and long-term memory through persona files. These files keep your agent's behavior consistent across all platforms and channels.
+
+1. In the Control UI, select **Chat** from the left sidebar.
+2. Ensure <i class="material-symbols-outlined">neurology</i> at the upper-right corner is enabled. This allows you to watch the agent think and edit persona files in real time.
+3. Enter and send the following message to start:
+    ```text
+    Wake up please!
+    ```
+    The agent responds and starts interviewing you. You can establish rules, personality traits, and preferences. For example,
+
+    ```text
+    - Call me Bella. I like simple language without technical jargons and 
+    concise bulleted answers.
+    - You are John, a witty assistant who uses emojis.
+    - Never access my calendar without asking first, and never execute any 
+    financial operations.
+    ```
+4. As you chat with the agent, look for the **Edit** messages. These indicate the agent is successfully writing your preferences to its core persona files, such as `IDENTITY.md`, `USER.md`, and `SOUL.md`. 
+
+    ![Persona files editing by OpenClaw](/images/manual/use-cases/openclaw-persona-recording.png#bordered){width=90%}
+
+    :::tip
+    If you do not see the intermediate persona file operations, refresh the page by clicking <i class="material-symbols-outlined">refresh</i> at the upper-right corner or by pressing F5.
+    :::
+5. Continue the conversation until the agent gathers enough information. Then, it automatically deletes the temporary `BOOTSTRAP.md` file to finish the personalization process.
+
+    ![Finish hatch agent](/images/manual/use-cases/openclaw-hatch-finish.png#bordered){width=90%}
+
+6. (Optional) If the agent fails to update the persona files or delete `BOOTSTRAP.md`, explicitly instruct it to do so in the chat. 
+
+    If the issue persists, resolve it using one of the following methods:
+    - **Increase the context window**: Select **Config** from the left sidebar, switch to the **Raw** tab, find the `models` section, and then increase the `contextWindow` value to at least 64K (200K is recommended). 
+    
+        :::tip
+        Note that a larger context window consumes more VRAM, so choose a value that your hardware can support.
+        :::
+
+    - **Change the model**: Switch to a model with better tool-calling and instruction‑following capabilities.
+
+7. Verify your agent's persona files are updated:
+
+    a. Open Files from the Launchpad.
+    
+    b. Go to **Application** > **Data** > **clawdbot** > **config** > **workspace**.
+    
+    c. Check the modified time of the `.md` files to identify which ones were recently updated, such as `USER.md` and `IDENTITY.md`.
+
+    ![Persona files generated by OpenClaw](/images/manual/use-cases/openclaw-persona-files.png#bordered){width=90%}
+
+    d. (Optional) Double-click a file to verify that it contains your newly established rules such as name, language style, and restrictions.
+      
+    :::tip Modify persona settings
+    To change these settings in the future, use one of the following methods:
+    - Ask the agent in the chat to update its rules.
+    - Download the `.md` files from this folder, edit them in a text editor, and re-upload them to overwrite the old ones. 
+    :::
 
 ## Integrate with Discord
 
@@ -185,14 +319,16 @@ To chat with your agent remotely, connect it to a Discord bot.
 
 ### Step 3: Configure channel
 
-Configure the Discord channel in Control UI.
+Connect OpenClaw to your Discord bot by adding its configuration in the Control UI.
+
+:::info About channel configuration
+This tutorial provides the basic setup to get your bot running in Discord quickly. For more detailed configurations, see the official [OpenClaw documentation](https://docs.openclaw.ai/channels).
+:::
 
 1. Return to the **Control UI** > **Config** > **Raw** tab.
-2. Find the `channels` section:
+2. Add the following `channels` section to the configuration file. 
 
-    a. Update with your Discord bot token.
-
-    b. Enable Discord DM (Direct Messages) and set the Discord DM Policy to **Pairing**.
+    This configuration enables Discord Direct Messages (DMs) and sets the DM policy to pairing for security.
 
     ```json
     "channels": {
@@ -210,8 +346,9 @@ Configure the Discord channel in Control UI.
 
     ![Discord channel added](/images/manual/use-cases/channels.png#bordered)
 
-3. Click **Save**.
-4. From the left sidebar, select **Channels**. On the Discord card, **Probe ok** indicates successful connection.
+3. Replace `{YOUR_BOT_TOKEN}` with your Discord bot token.
+4. Click **Save**.
+5. From the left sidebar, select **Channels**. On the Discord card, **Probe ok** indicates successful connection.
 
    ![Probe OK](/images/manual/use-cases/probe-ok.png#bordered)
 
@@ -279,7 +416,7 @@ OpenClaw officially recommends Brave Search. It uses an independent web index op
 
 ## Manage skills and plugins
 
-OpenClaw can be extended using skills and plugins：
+OpenClaw can be extended using skills and plugins:
 - Skills add new capabilities to the AI. For example, managing Model Context Protocol servers.
 - Plugins extend the system to support additional channels or community features. For example, adding iMessage via BlueBubbles.
 
@@ -376,7 +513,35 @@ To manage skills and plugins, install ClawHub. It is the package manager for Ope
 
     ![Toggle on plugin](/images/manual/use-cases/toggle-plugin.png#bordered)
 
-6. Click **Save** in the upper-right corner. The system validates the config and restarts automatically to apply the changes.      
+6. Click **Save** in the upper-right corner. The system validates the config and restarts automatically to apply the changes.
+
+    ::: tip Manual restart
+    If you need to restart OpenClaw manually, do not use the OpenClaw CLI. Use one of the following methods:
+    - **Restart the app from Settings or Market**: 
+        - Open **Settings**, go to **Applications** > **OpenClaw**, click **Stop**, and then click **Resume**.
+        - Open **Market**, go to **My Olares**, find **OpenClaw**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the operation button, select **Stop**, and then select **Resume**.
+    - **Restart the container**: Open **Control Hub**, click `clawdbot` under **Deployments**, and then click **Restart**.
+    :::
+
+## FAQ
+
+### Cannot restart OpenClaw in CLI
+
+If you attempt to manually start, stop, or restart OpenClaw using commands like `openclaw gateway` or `openclaw gateway stop` in the OpenClaw CLI, you receive the following error messages:
+- `Gateway failed to start: gateway already running (pid 1); lock timeout after 5000ms`
+- `Gateway service check failed: Error: systemctl --user unavailable: spawn systemctl ENOENT`
+
+#### Cause
+
+OpenClaw is deployed as a containerized app in Olares, where the gateway runs as the primary container process `pid 1` and is always active. This environment does not use standard Linux system and service management tools such as `systemd` and `systemctl`, so these commands do not work. 
+
+#### Solution
+
+Do not use the OpenClaw CLI to manage the gateway service. Instead, restart OpenClaw using one of the following methods:
+- **Restart OpenClaw from Settings or Market**: 
+    - Open **Settings**, go to **Applications** > **OpenClaw**, click **Stop**, and then click then **Resume**.
+    - Open **Market**, go to **My Olares**, find **OpenClaw**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the operation button, select **Stop**, and then select **Resume**.
+- **Restart the container**: Open **Control Hub**, click `clawdbot` under **Deployments**, and then click **Restart**.
 
 ## Resources
 

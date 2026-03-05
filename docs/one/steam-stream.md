@@ -67,7 +67,12 @@ You need to access the Sunshine Web UI running on your Olares One to enter a pai
 
 1. Copy the URL of your current Steam Headless browser tab.
 2. Open a new browser tab and modify the URL to access port `47990`. The address varies depending on your network.
-    - **Same network**: Use HTTPS with your `.local` address. Either format works (dots or hyphens in the hostname):
+    - **Same network**: Use HTTPS with your `.local` address. Either 
+    format works (dots or hyphens in the hostname):
+
+   :::info Sunshine and .local
+   Use HTTPS (not HTTP) with your `.local` address for this app.
+   :::
 
    ```plain
    https://139ebc4f0.<your Olares ID>.olares.local:47990
@@ -135,9 +140,9 @@ The following steps demonstrate local streaming.
 
 ### Why can't I access the Sunshine Web UI using the `.local` address?
 
-Olares supports `.local` addresses with the HTTP protocol for most services. The Sunshine Web UI is different because it requires HTTPS to secure local communication. If you use `http://` with your `.local` URL, the Sunshine page will not load.
+For most Olares services, you use HTTP with `.local` addresses. Sunshine is an exception and requires HTTPS to secure local communication. If you use `http://` with your `.local` URL, the Sunshine page will not load.
 
-To fix this, use `https://` instead of `http://` in your browser's address bar (for example, `https://139ebc4f0.<your Olares ID>.olares.local:47990`).
+Use `https://` in your browser's address bar (for example, `https://139ebc4f0.<your Olares ID>.olares.local:47990`).
 
 ### Why isn't the game displaying in full screen?
 

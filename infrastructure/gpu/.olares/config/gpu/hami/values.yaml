@@ -4,7 +4,7 @@ nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: ""
 imagePullSecrets: []
-version: "v2.6.10"
+version: "v2.6.11"
 
 # Nvidia GPU Parameters
 resourceName: "nvidia.com/gpu"
@@ -151,9 +151,9 @@ devicePlugin:
   deviceMemoryScaling: 1
   deviceCoreScaling: 1
   # The runtime class name to be used by the device plugin, and added to the pod.spec.runtimeClassName of applications utilizing NVIDIA GPUs
-  runtimeClassName: ""
+  runtimeClassName: "nvidia"
   # Whether to create runtime class, name comes from runtimeClassName when it is set
-  createRuntimeClass: false
+  createRuntimeClass: true
   migStrategy: "none"
   disablecorelimit: "false"
   passDeviceSpecsEnabled: false

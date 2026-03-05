@@ -89,20 +89,16 @@ Your Olares ID is secured by a unique 12-word mnemonic phrase. This phrase is th
 4. Enter the local password as prompted.
 5. Write the 12 words onto the **Recovery Sheet**, and then store the sheet in a secure, offline location.
 
+### Reset SSH password
+
+<!--@include: ./reusables-reset-ssh.md{7,16}-->
+
+For instructions on how to SSH into Olares One, see [Connect to Olares One via SSH](access-terminal-ssh.md).
+
 ### Access Olares services securely
 For secure remote access without complex network configuration, it is recommended to enable the LarePass VPN.
 
 See [Access Olares services securely using LarePass VPN](access-olares-via-vpn.md).
-
-### Reset SSH password
-If you plan to connect to your Olares One via terminal (SSH), you must update the default SSH password.
-
-1. Open Olares Settings, on the **My hardware** page, click **Reset SSH password**.
-2. In the dialog, enter a new SSH password that meets all strength requirements, then click **OK**.
-3. Open the LarePass app and scan the QR code shown on the screen.
-4. Click **Confirm** on LarePass to finish.
-
-For details, see [Connect to Olares One via SSH](access-terminal-ssh.md).
 
 ### Explore
 Olares OS comes with pre-installed system apps. You can also browse the **Market** to download additional applications that best suit your needs.

@@ -43,11 +43,12 @@ type state struct {
 	Disk       string  `json:"disk"`
 
 	// network info
-	WikiConnected  bool    `json:"wifiConnected"`
-	WifiSSID       *string `json:"wifiSSID,omitempty"`
-	WiredConnected bool    `json:"wiredConnected"`
-	HostIP         string  `json:"hostIp"`
-	ExternalIP     string  `json:"externalIp"`
+	WikiConnected       bool      `json:"wifiConnected"`
+	WifiSSID            *string   `json:"wifiSSID,omitempty"`
+	WiredConnected      bool      `json:"wiredConnected"`
+	HostIP              string    `json:"hostIp"`
+	ExternalIP          string    `json:"externalIp"`
+	ExternalIPProbeTime time.Time `json:"-"`
 
 	// installing / uninstalling / upgrading state
 	InstallingState         ProcessingState `json:"installingState"`
@@ -130,7 +131,8 @@ func CheckCurrentStatus(ctx context.Context) error {
 		klog.Info("current state: ", CurrentState.TerminusState)
 	}()
 
-	utils.ForceMountHdd(ctx)
+	// Deprecated, only for Olares Zero
+	// utils.ForceMountHdd(ctx)
 
 	// set default value
 	if CurrentState.TerminusVersion == nil {
@@ -255,7 +257,10 @@ func CheckCurrentStatus(ctx context.Context) error {
 	}
 
 	CurrentState.HostIP = hostIp
-	CurrentState.ExternalIP = nets.GetMyExternalIPAddr()
+	if time.Since(CurrentState.ExternalIPProbeTime) > 1*time.Minute {
+		CurrentState.ExternalIP = nets.GetMyExternalIPAddr()
+		CurrentState.ExternalIPProbeTime = time.Now()
+	}
 
 	// get olares state
 

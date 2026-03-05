@@ -45,6 +45,10 @@ const side = {
               text: "Missing apps in Market",
               link: "/manual/help/ts-missing-apps",
             },
+            {
+              text: "LarePass VPN not working",
+              link: "/manual/help/ts-larepass-vpn-not-working",
+            },
           ],
         },
       ],
@@ -342,7 +346,7 @@ const side = {
               collapsed: true,
               items: [
                 {
-                  text: "Change revere proxy",
+                  text: "Change reverse proxy",
                   link: "/manual/olares/settings/change-frp",
                 },
                 {
@@ -362,7 +366,7 @@ const side = {
                 { text: "Restore", link: "/manual/olares/settings/restore" },
               ],
             },
-            { text: "Developer resources", link: "/manual/olares/settings/developer" },
+            { text: "Advanced settings", link: "/manual/olares/settings/developer" },
           ]
         },
         { text: "Dashboard", link: "/manual/olares/resources-usage" },
