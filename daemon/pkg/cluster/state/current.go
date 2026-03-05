@@ -131,7 +131,8 @@ func CheckCurrentStatus(ctx context.Context) error {
 		klog.Info("current state: ", CurrentState.TerminusState)
 	}()
 
-	utils.ForceMountHdd(ctx)
+	// Deprecated, only for Olares Zero
+	// utils.ForceMountHdd(ctx)
 
 	// set default value
 	if CurrentState.TerminusVersion == nil {
