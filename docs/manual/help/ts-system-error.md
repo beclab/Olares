@@ -1,24 +1,23 @@
 ---
 outline: [2,3]
-description: Diagnose the cause when the System section in LarePass shows "System error".
+description: Diagnose and collect information when the System section in LarePass shows "System error".
 ---
-# `System error` in LarePass
+# "System error" in LarePass
 
-Use this guide when the **System** section in LarePass displays `System error`.
-    ![System error in LarePass](/images/manual/help/ts-sys-err.png#bordered){width=90%}
-
+Use this guide when the **System** section in LarePass displays "System error". There can be multiple underlying causes for this message, so follow the steps below to collect diagnostic information first, and then contact the Olares team with the results.
+![System error in LarePass](/images/manual/help/ts-sys-err.png#bordered){width=90%}
 ## Condition
 
-- The **System** section in LarePass shows `System error`.
+- The **System** section in LarePass shows "System error".
 - Your Olares device is accessible, but LarePass cannot retrieve system status.
 
 ## Cause
 
-One or more system pods on the Olares device are not running normally. When this happens, LarePass cannot retrieve system status and displays `System error`.
+The "System error" message can be triggered by different underlying issues. A common cause is that one or more system pods on the Olares device are not running normally. When this happens, LarePass cannot retrieve system status and displays "System error".
 
 ## Solution
 
-To resolve this issue, use the built-in terminal to locate the failing pod, retrieve its error message, and share it with our support team.
+Use the built-in terminal to locate any failing pods, retrieve their error messages, and then share this information with the Olares team. This helps narrow down the possible causes and speeds up troubleshooting.
 
 ### Step 1: Identify the failing pod
 
