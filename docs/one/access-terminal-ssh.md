@@ -78,7 +78,7 @@ If you are not on the same local network as Olares One, use LarePass VPN to esta
 
 1. On Olares, go to **Settings** > **VPN** > **View VPN connection status**.
 2. Find **olares**, and click it to expand the connection details.
-3. Locate the IP address that starts with `100.64`.
+3. Locate the IP address that starts with `100.64`, and note it down.
     ![Enable LarePass VPN on desktop](/images/one/ssh-remote-ip.png#bordered){width=80%}
 
 ### Step 2: Check SSH password in Vault
@@ -100,10 +100,13 @@ The default username for Olares One is `olares`.
    ```bash
    ssh olares@<tailscale_ip_address>
    ```
+   :::info
+   After you enable SSH over VPN, the first SSH access is slower because VPN routes are being applied. Wait a short time for the connection to complete.
+   :::
 3. When prompted, enter the SSH password.
 
 :::tip Connect using the local IP address instead
-If **Subnet routes** is enabled in **Settings** > **VPN**, all devices on Olares One's local network become reachable through the VPN. You can then SSH using the regular local IP address (for example, `192.168.x.x`) instead of the Tailscale IP, even when accessing from a different network.
+If **Subnet routes** is enabled in **Settings** > **VPN**, all devices on Olares One's local network become reachable through the VPN. You can then SSH using the local IP address (`192.168.x.x`) instead of the Tailscale IP (`100.64.x.x`), even when accessing from a different network.
 :::
 
 ## Reset SSH password
