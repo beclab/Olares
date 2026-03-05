@@ -4,7 +4,7 @@ description: Learn how to redeem your complimentary Olares Space Basic membershi
 head:
   - - meta
     - name: keywords
-      content: Olares, Olares One, Olares Space, redeem membership card, Basic plan， kickstarter backers
+      content: Olares, Olares One, Olares Space, redeem membership card, Basic plan, kickstarter backers
 ---
 
 # Redeem Olares Space membership
