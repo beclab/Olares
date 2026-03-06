@@ -45,6 +45,10 @@ const side = {
               link: "/zh/manual/help/ts-missing-apps",
             },
             {
+              text: "LarePass 显示系统错误",
+              link: "/zh/manual/help/ts-system-error",
+            },
+            {
               text: "LarePass VPN 无法使用",
               link: "/zh/manual/help/ts-larepass-vpn-not-working",
             }
