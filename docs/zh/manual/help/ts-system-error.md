@@ -5,7 +5,7 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 # # LarePass 显示“系统错误”
 
 当 LarePass 移动端的**系统**部分显示“系统错误”时，请参考本指南进行排查。出现此提示可能由多种底层原因导致，请先按照以下步骤收集诊断信息，然后将结果提供给 Olares 团队。
-    ![系统错误](/images/zh/manual/help/ts-sys-err.png#bordered){width=90%}
+ ![系统错误](/images/zh/manual/help/ts-sys-err.png#bordered){width=90%}
 
 ## 适用情况
 
@@ -18,13 +18,13 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 
 ## 解决方案
 
-使用系统内置终端，定位异常 Pod 并获取其错误信息，最后将相关信息提供给我们的支持团队。这有助于缩小排查范围，加快故障排查。
+使用系统内置终端，定位异常 Pod 并获取其错误信息，最后将相关信息提供给 Olares 团队。这有助于缩小排查范围，加快故障排查。
 
 ### 步骤 1：定位异常 Pod
 
 检查系统 Pod 的运行状态，找出未能正常运行的 Pod。
 
-1. 打开浏览器，登录你的 Olares 桌面：`https://desktop.<your-olaresID>.olares.com`。
+1. 打开浏览器，登录你的 Olares 桌面：`https://desktop.<your-olaresID>.olares.cn`。
 2. 打开控制面板，在左侧边栏的**终端**部分，点击 **Olares**。
     ![打开终端](/images/zh/manual/help/ts-sys-err-terminal.png#bordered){width=90%}
 
