@@ -36,8 +36,7 @@ Try this method first because it is the most convenient way to access your devic
 
     a. Tap **Vault** in the LarePass app. When prompted, enter your local password to unlock.
 
-    b. In the top-left corner, tap **Authenticator** to open the side navigation, then tap **All vaults** to display all saved items.
-        ![Switch Vault filter](/images/one/ssh-switch-filter.png#bordered)
+    b. In the top-left corner, tap **Vault** to open the side navigation, and then tap **All vaults** to display all saved items.
 
     c. Find the item with the <span class="material-symbols-outlined">terminal</span> icon and tap it to reveal the password.
         ![Check saved SSH password in Vault](/images/one/ssh-check-password-in-vault.png#bordered)
@@ -54,7 +53,7 @@ Try this method first because it is the most convenient way to access your devic
         
     c. When prompted, type the SSH password, and then press **Enter**.
 
-    d. If the connection is successful, skip to [Step 3](#step-3-check-system-status).
+    d. If the connection is successful, skip to [Step 3](#step-3-check-system-pod-status).
 
 ### Step 2: Log in locally
 
@@ -69,15 +68,15 @@ When the SSH access is unavailable, log in to the device locally using a monitor
 2. Type the username `olares` and press **Enter**.
 3. Type the same SSH password obtained in **Step 1** and press **Enter**.
 
-### Step 3: Check system status
+### Step 3: Check system pod status
 
-1. Once you log in successfully, type the following command and then press **Enter** to view the list of internal software components:
+1. Once you log in successfully, type the following command and then press **Enter** to to get the status of all pods across all namespaces:
 
     ```bash
     kubectl get pods -A
     ```
     
-2. Check the **STATUS** column for any components that are not showing `Running` or `Completed`.
-3. Take a clear photo or a screenshot of the full command output, or manually note down the abnormal components.
+2. Check the **STATUS** column for any pods that are not in the `Running` state.
+3. Take a clear photo or a screenshot of the full command output, or manually note down the problematic pods.
 4. Attach this photo or your notes with descriptions to Olares team by [submitting a GitHub Issue](https://github.com/beclab/Olares/issues/new).
 
