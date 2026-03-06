@@ -3,7 +3,7 @@ outline: [2, 3]
 description: Troubleshoot the issue where your Olares One is connected to the network but remains unreachable through standard access methods.
 ---
 
-# Olares One is online but unreachable
+# Olares One is connected but unreachable
 
 Use this guide to troubleshoot a device that appears powered on and connected to the network but has unexpectedly stopped responding.
 
