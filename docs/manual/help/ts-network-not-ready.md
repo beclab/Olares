@@ -49,17 +49,16 @@ Try this method first because it is the most convenient way to access your devic
     b. Type the following command, replace `<local_ip_address>` with the Intranet IP, and then press **Enter**:
     
     ```bash
-    ssh olares@<host_ip_address>
+    ssh olares@<local_ip_address>
     ```
-    c. Type the username `olares` and press **Enter**.
-    
-    d. When prompted, type the SSH password, and then press **Enter**.
+        
+    c. When prompted, type the SSH password, and then press **Enter**.
 
-    e. If the connection is successful, skip to [Step 3](#step-3-check-system-status).
+    d. If the connection is successful, skip to [Step 3](#step-3-check-system-status).
 
 ### Step 2: Log in locally
 
-When the SSH access is blocked or fails, log in to the device locally using a monitor and keyboard.
+When the SSH access is unavailable, log in to the device locally using a monitor and keyboard.
 
 1. Connect a monitor and keyboard to your Olares One. A text-based login prompt is displayed on your screen automatically.
 
