@@ -9,7 +9,7 @@ Use this guide to troubleshoot a device that appears powered on and connected to
 
 ## Condition
 
-- The LarePass app displays **Network not ready** and accessing your Olares desktop shows an olares connection error, but your router shows the device is connected and the device responds to a network `ping`.
+- The LarePass app displays **Network not ready** and accessing your Olares desktop shows an Olares connection error, but your router shows the device is connected and the device responds to a network `ping`.
 - Restarting the device and your router does not fix the issue.
 
 ## Cause
