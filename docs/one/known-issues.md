@@ -12,7 +12,7 @@ Olares One fails during the initial setup process with the installation stopping
 
 During startup, the system performs an asynchronous NTP time synchronization before issuing security certificates. While this usually completes instantly, occasional delays can cause a certificate to be issued with a future timestamp. This is especially common if the device has not yet updated from its default shipped timezone of UTC+8, finally causing the activation to fail.
 
-### Solution
+### Workaround
 
 Uninstall the incomplete installation and reactivate the device.
 
