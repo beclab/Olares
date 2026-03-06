@@ -1,17 +1,15 @@
 ---
 outline: [2, 3]
-description: Troubleshoot the issue where your Olares One is connected to the network but cannot be accessed via the LarePass app, web browser desktop, or SSH.
+description: Troubleshoot the issue where your Olares One is connected to the network but remains unreachable through standard access methods.
 ---
 
 # Olares One is online but unreachable
 
-Use this guide when your Olares One suddenly stops responding after working normally for a few days, even though it is still powered on and connected to your network.
+Use this guide to troubleshoot a device that appears powered on and connected to the network but has unexpectedly stopped responding.
 
 ## Condition
 
-- Your router shows the device is connected and the device responds to a network `ping`, but:
-    - The LarePass app displays **Network not ready** or **Olares not found**.
-    - Accessing your Olares desktop `https://desktop.{your-olares-id}.olares.com` in a web browser shows an olares connection error.
+- The LarePass app displays **Network not ready** and accessing your Olares desktop shows an olares connection error, but your router shows the device is connected and the device responds to a network `ping`.
 - Restarting the device and your router does not fix the issue.
 
 ## Cause
@@ -26,17 +24,46 @@ This freeze is typically caused by an abnormal software container or a system se
 
 Follow these steps to gather diagnostic information so Olares team can help you get back online.
 
-### Step 1: Attempt a remote SSH connection
+### Step 1: Attempt SSH connection
 
-While this specific issue usually blocks SSH connections, it is always best to try this method first because it is the most convenient way to access your device and collect diagnostic information.
+Try this method first because it is the most convenient way to access your device and collect diagnostic information.
 
-1. Follow instructions [on this page](https://docs.olares.com/one/access-terminal-ssh.html#method-2-access-via-ssh) to access Olares One via SSH.
-2. If the connection is successful, skip to [Step 3](#step-3-check-system-status).
-3. If the connection times out or is refused, proceed to **Step 2**.
+1. Get the local IP address of Olares One.
+
+    a. Open the LarePass app, and go to **Settings** > **System** to navigate to the **Olares management** page.
+    ![Tap the System card](/images/manual/get-started/larepass-system.png#bordered)
+    
+    b. Tap the Olares One device card.
+
+    c. Scroll down to the **Network** section and note the **Intranet IP**.
+2. Check SSH password in Vault.
+
+    a. Tap **Vault** in the LarePass app. When prompted, enter your local password to unlock.
+
+    b. In the top-left corner, tap **Authenticator** to open the side navigation, then tap **All vaults** to display all saved items.
+        ![Switch Vault filter](/images/one/ssh-switch-filter.png#bordered)
+
+    c. Find the item with the <span class="material-symbols-outlined">terminal</span> icon and tap it to reveal the password.
+        ![Check saved SSH password in Vault](/images/one/ssh-check-password-in-vault.png#bordered)
+
+3. Connect via SSH.
+    
+    a. Open a terminal on your computer.
+
+    b. Type the following command, replace `<local_ip_address>` with the Intranet IP, and then press **Enter**:
+    
+    ```bash
+    ssh olares@<host_ip_address>
+    ```
+    c. Type the username `olares` and press **Enter**.
+    
+    d. When prompted, type the SSH password, and then press **Enter**.
+
+    e. If the connection is successful, skip to [Step 3](#step-3-check-system-status).
 
 ### Step 2: Log in locally
 
-When the remote SSH access is blocked, you must log in to the device locally using a monitor and keyboard.
+When the SSH access is blocked or fails, log in to the device locally using a monitor and keyboard.
 
 1. Connect a monitor and keyboard to your Olares One.
 2. Power on Olares One and wait for the system to boot. A text-based login prompt is displayed on your screen automatically:
@@ -45,9 +72,8 @@ When the remote SSH access is blocked, you must log in to the device locally usi
     olares login:
     ```
 
-3. Log in with the username `olares` and the same SSH password obtained in **Step 1**.
-4. If the login is successful, proceed to **Step 3**.
-5. If the login fails, skip the next step and contact Olares Support directly for advanced recovery options.
+3. Type the username `olares` and press **Enter**.
+4. Type the same SSH password obtained in **Step 1** and press **Enter**.
 
 ### Step 3: Check system status
 
@@ -58,6 +84,6 @@ When the remote SSH access is blocked, you must log in to the device locally usi
     ```
     
 2. Check the **STATUS** column for any components that are not showing `Running` or `Completed`.
-3. Take a clear photo of the full command output, or manually note down the abnormal components.
-4. Send this photo or your notes with descriptions to Olares Support by [submitting a GitHub Issue](https://github.com/beclab/Olares/issues/new).
+3. Take a clear photo or screen shot of the full command output, or manually note down the abnormal components.
+4. Attach this photo or your notes with descriptions to Olares team by [submitting a GitHub Issue](https://github.com/beclab/Olares/issues/new).
 
