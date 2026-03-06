@@ -38,7 +38,7 @@ func (u upgrader_1_12_5) AddedBreakingChange() bool {
 }
 
 func (u upgrader_1_12_5) PrepareForUpgrade() []task.Interface {
-	return []task.Interface{
+	return append([]task.Interface{
 		&task.LocalTask{
 			Name: "GenerateETCDService",
 			Desc: "Generate etcd service",
@@ -55,7 +55,7 @@ func (u upgrader_1_12_5) PrepareForUpgrade() []task.Interface {
 				DaemonReloadPreExec: true,
 			},
 		},
-	}
+	}, u.upgraderBase.PrepareForUpgrade()...)
 }
 
 func (u upgrader_1_12_5) UpgradeSystemComponents() []task.Interface {
