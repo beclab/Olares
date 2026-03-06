@@ -53,7 +53,7 @@ const side = {
               link: "/zh/manual/help/ts-larepass-vpn-not-working",
             },
             {
-              text: "网络尚未准备好或olares连接错误",
+              text: "网络尚未准备好或 olares 连接错误",
               link: "/zh/manual/help/ts-network-not-ready",
             }            
           ],

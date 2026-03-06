@@ -26,19 +26,19 @@ Olares One 设备的底层操作系统运行正常，因此能够成功连接至
 
 1. 获取 Olares One 的局域网 IP 地址。
 
-   a. 打开 LarePass 移动端，进入 **设置** > **系统**，打开 **Olares 管理**页面。
+   a. 打开 LarePass 移动端，进入**设置** > **系统**，打开 **Olares 管理**页面。
 
    ![访问 Olares 管理](/images/zh/manual/larepass/system.png#bordered)
 
    b. 点击 Olares One 设备卡片。
 
-   c. 向下滚动至 **网络** 部分，记录 **内网 IP**。
+   c. 向下滚动至**网络**部分，记录**内网 IP**。
 
 2. 在 Vault 中查看 SSH 密码。
 
    a. 在 LarePass 移动端中点击 **Vault**。根据提示输入本地密码解锁。
 
-   b. 点击左上角的 **验证器** 打开侧边导航，然后点击 **所有 Vault** 显示所有已保存条目。
+   b. 点击左上角的**验证器**打开侧边导航，然后点击**所有 Vault** 显示所有已保存条目。
 
    c. 找到带有 <span class="material-symbols-outlined">terminal</span> 图标的条目，点击查看密码。
 
@@ -48,19 +48,19 @@ Olares One 设备的底层操作系统运行正常，因此能够成功连接至
 
    a. 在电脑上打开终端。
 
-   b. 输入以下命令，将 `<local_ip_address>` 替换为内网 IP，然后按 **Enter**：
+   b. 输入以下命令，将 `<local_ip_address>` 替换为内网 IP，然后按回车键：
 
       ```bash
       ssh olares@<local_ip_address>
       ```
 
-   c. 根据提示输入 SSH 密码，然后按 **Enter**。
+   c. 根据提示输入 SSH 密码，然后按回车键。
 
    d. 如果连接成功，直接跳转至**步骤 3**。
 
 ### 步骤 2：本地登录设备
 
-当 SSH 无法访问时，使用显示器和键盘本地登录设备。
+如果无法通过 SSH 访问，使用显示器和键盘在本地登录设备。
 
 1. 将显示器和键盘连接至 Olares One。屏幕上会自动显示基于文本的登录提示窗口：
 
@@ -68,12 +68,12 @@ Olares One 设备的底层操作系统运行正常，因此能够成功连接至
    olares login:
    ```
 
-2. 输入用户名 `olares` 并按 **Enter**。
-3. 输入**步骤 1**中获取的 SSH 密码并按 **Enter**。
+2. 输入用户名 `olares` 并按回车键。
+3. 输入**步骤 1**中获取的 SSH 密码并按回车键。
 
 ### 步骤 3：检查系统状态
 
-1. 登录成功后，输入以下命令并按 **Enter**，查看内部软件组件列表：
+1. 登录成功后，输入以下命令并按回车键，查看内部软件组件列表：
 
    ```bash
    kubectl get pods -A
