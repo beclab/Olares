@@ -1,5 +1,4 @@
 ---
-outline: [2, 3]
 description: This page documents the known issues and unexpected behaviors you might encounter when using Olares One, along with their corresponding solutions or workarounds.
 ---
 
@@ -9,15 +8,11 @@ Use this page to identify and troubleshoot currently known issues with your Olar
 
 ## Olares One initial setup fails at 9%
 
-### Symptom
-
 Olares One fails during the initial setup process with the installation stopping at around 9% and prompting you to uninstall or reinstall.
 
-### Cause
+During startup, the system performs an asynchronous NTP time synchronization before issuing security certificates. While this usually completes instantly, occasional delays can cause a certificate to be issued with a future timestamp. This is especially common if the device has not yet updated from its default shipped timezone of UTC+8, finally causing the activation to fail.
 
-Olares One devices are shipped with the default timezone set to East Eight Time (Beijing time). If you start the installation process immediately after powering on the device, certain components that rely on timestamp validation might fail due to unsynchronized system time.
-
-### Solution
+### Workaround
 
 Uninstall the incomplete installation and reactivate the device.
 
@@ -25,36 +20,17 @@ Uninstall the incomplete installation and reactivate the device.
 
 Try this method first if you do not already have a monitor and keyboard connected to your Olares device.
 
-1. Get the local IP address of Olares One.
-
-    a. Open the LarePass app, and go to **Settings** > **System** to navigate to the **Olares management** page.
-    ![Tap the System card](/images/manual/get-started/larepass-system.png#bordered)
+1. Get the local **IP** address of Olares One from the **Activate Olares** page on the LarePass app.
+    ![IP address displayed on Activate Olares](/images/one/obtain-ip-from-install.png#bordered)
     
-    b. Tap the Olares One device card.
-
-    c. Scroll down to the **Network** section and note the **Intranet IP**.
-2. Check SSH password in Vault.
-
-    a. Tap **Vault** in the LarePass app. When prompted, enter your local password to unlock.
-
-    b. In the top-left corner, tap **Authenticator** to open the side navigation, and then tap **All vaults** to display all saved items.
-        ![Switch Vault filter](/images/one/ssh-switch-filter.png#bordered)
-
-    c. Find the item with the <span class="material-symbols-outlined">terminal</span> icon and tap it to reveal the password.
-        ![Check saved SSH password in Vault](/images/one/ssh-check-password-in-vault.png#bordered)
-
-3. Connect via SSH.
-    
-    a. Open a terminal on your computer.
-
-    b. Type the following command, replace `<local_ip_address>` with the Intranet IP, and then press **Enter**:
+2. Open a terminal on your computer.
+3. Type the following command, replace `<local_ip_address>` with the above local IP address, and then press **Enter**:
     
     ```bash
-    ssh olares@<host_ip_address>
+    ssh olares@<local_ip_address>
     ```
-    c. When prompted, type the SSH password, and then press **Enter**.
-
-    e. If the connection is successful, skip to [Step 3](#step-3-run-the-uninstall-command).
+4. When prompted, type the default SSH password `olares`, and then press **Enter**.
+5. If the connection is successful, skip to [Step 3](#step-3-run-the-uninstall-command).
 
 #### Step 2: Log in locally
 
@@ -67,7 +43,7 @@ When the SSH access is unavailable, log in to the device locally using a monitor
     ```
 
 3. Type the username `olares` and press **Enter**.
-4. Type the same SSH password obtained in **Step 1** and press **Enter**.
+4. When prompted, type the default SSH password `olares`, and then press **Enter**.
 
 #### Step 3: Run the uninstall command
 
@@ -76,7 +52,7 @@ When the SSH access is unavailable, log in to the device locally using a monitor
     ```bash
     sudo olares-cli uninstall
     ```
-2. Wait until the uninstallation is completed and the device automatically reboots.
+2. Wait until the uninstallation is completed.
 
 #### Step 4: Reinstall and activate using LarePass
 
@@ -113,8 +89,3 @@ To ensure accurate time synchronization, let the device remain powered on for a 
     </tabs>
 
 4. Find your Olares One from the list of available devices, and then tap **Install now** on it. The installation should now proceed and complete successfully.
-5. When installation finishes, tap **Activate now** to initialize the system.
-6. Select a reverse proxy node that is closest to your location and tap **Confirm**. The reverse proxy node acts as a secure gateway for remote access. Choosing the nearest node ensures the fastest connection speed and best stability.
-7. Set the login password for Olares.
-8. Copy or note down your personal desktop URL. You need this URL to access your Olares services.
-9. Tap **Got it** to close the prompt.

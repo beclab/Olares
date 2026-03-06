@@ -89,4 +89,3 @@ To ensure accurate time synchronization, let the device remain powered on for a 
     </tabs>
 
 4. Find your Olares One from the list of available devices, and then tap **Install now** on it. The installation should now proceed and complete successfully.
-5. When installation finishes, try to install and activate Olares OS again.
