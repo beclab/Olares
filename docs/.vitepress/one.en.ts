@@ -14,6 +14,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "FAQs",
           link: "/one/faq",
         },
+        {
+          text: "Known issues",
+          link: "/one/known-issues",
+        },        
       ],
     },
     {
