@@ -3,7 +3,7 @@ outline: [2, 3]
 description: 排查 Olares One 设备已连接网络但无法通过标准访问方式连接的问题。
 ---
 
-# Network not ready 或 olares connection error
+# 网络尚未准备好或 olares 连接错误
 
 当你的 Olares One 设备已开机并连接至网络，但突然停止响应时，可参考本指南进行排查。
 
@@ -27,7 +27,8 @@ Olares One 设备的底层操作系统运行正常，因此能够成功连接至
 1. 获取 Olares One 的局域网 IP 地址。
 
    a. 打开 LarePass 移动端，进入 **设置** > **系统**，打开 **Olares 管理**页面。
-   ![点击系统标签页](/images/manual/get-started/larepass-system.png#bordered)
+
+   ![访问 Olares 管理](/images/zh/manual/larepass/system.png#bordered)
 
    b. 点击 Olares One 设备卡片。
 
@@ -37,11 +38,11 @@ Olares One 设备的底层操作系统运行正常，因此能够成功连接至
 
    a. 在 LarePass 移动端中点击 **Vault**。根据提示输入本地密码解锁。
 
-   b. 点击左上角的 **所有 Vault** 打开侧边导航，然后点击 **所有 Vault** 显示所有已保存条目。
-      ![切换 Vault 筛选器](/images/one/ssh-switch-filter.png#bordered)
+   b. 点击左上角的 **验证器** 打开侧边导航，然后点击 **所有 Vault** 显示所有已保存条目。
 
    c. 找到带有 <span class="material-symbols-outlined">terminal</span> 图标的条目，点击查看密码。
-      ![在 Vault 中查看保存的 SSH 密码](/images/one/ssh-check-password-in-vault.png#bordered)
+
+      ![在 Vault 中查看保存的 SSH 密码](/public/images/zh/manual/olares/ssh-check-password-in-vault1.png#bordered)
 
 3. 通过 SSH 连接。
 
@@ -55,20 +56,20 @@ Olares One 设备的底层操作系统运行正常，因此能够成功连接至
 
    c. 根据提示输入 SSH 密码，然后按 **Enter**。
 
-   d. 如果连接成功，直接跳转至[步骤 3](#步骤-3检查系统状态)。
+   d. 如果连接成功，直接跳转至**步骤 3**。
 
 ### 步骤 2：本地登录设备
 
 当 SSH 无法访问时，使用显示器和键盘本地登录设备。
 
-1. 将显示器和键盘连接至 Olares One。屏幕上会自动显示基于文本的登录提示符。
+1. 将显示器和键盘连接至 Olares One。屏幕上会自动显示基于文本的登录提示窗口：
 
    ```text
    olares login:
    ```
 
 2. 输入用户名 `olares` 并按 **Enter**。
-3. 输入**步骤 1** 中获取的 SSH 密码并按 **Enter**。
+3. 输入**步骤 1**中获取的 SSH 密码并按 **Enter**。
 
 ### 步骤 3：检查系统状态
 
