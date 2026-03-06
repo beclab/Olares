@@ -27,9 +27,9 @@ Try this method first if you do not already have a monitor and keyboard connecte
 3. Type the following command, replace `<local_ip_address>` with the above local IP address, and then press **Enter**:
     
     ```bash
-    ssh olares@<host_ip_address>
+    ssh olares@<local_ip_address>
     ```
-4. When prompted, type the SSH password `olares`, and then press **Enter**.
+4. When prompted, type the default SSH password `olares`, and then press **Enter**.
 5. If the connection is successful, skip to [Step 3](#step-3-run-the-uninstall-command).
 
 #### Step 2: Log in locally
@@ -43,7 +43,7 @@ When the SSH access is unavailable, log in to the device locally using a monitor
     ```
 
 3. Type the username `olares` and press **Enter**.
-4. Type the same SSH password obtained in **Step 1** and press **Enter**.
+4. When prompted, type the default SSH password `olares`, and then press **Enter**.
 
 #### Step 3: Run the uninstall command
 
@@ -52,7 +52,7 @@ When the SSH access is unavailable, log in to the device locally using a monitor
     ```bash
     sudo olares-cli uninstall
     ```
-2. Wait until the uninstallation is completed and the device automatically reboots.
+2. Wait until the uninstallation is completed.
 
 #### Step 4: Reinstall and activate using LarePass
 
