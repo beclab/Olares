@@ -1,5 +1,4 @@
 ---
-outline: [2, 3]
 description: This page documents the known issues and unexpected behaviors you might encounter when using Olares One, along with their corresponding solutions or workarounds.
 ---
 
@@ -9,13 +8,9 @@ Use this page to identify and troubleshoot currently known issues with your Olar
 
 ## Olares One initial setup fails at 9%
 
-### Symptom
-
 Olares One fails during the initial setup process with the installation stopping at around 9% and prompting you to uninstall or reinstall.
 
-### Cause
-
-Olares One devices are shipped with the default timezone set to East Eight Time (Beijing time). If you start the installation process immediately after powering on the device, certain components that rely on timestamp validation might fail due to unsynchronized system time.
+During startup, your Olares One automatically synchronizes its clock with the internet to generate security certificates. This background update usually happens instantly. However, if the time check is delayed, the device might use its factory default time (UTC+8, Beijing Time). This creates a "future" timestamp on its security certificates, which forces the activation to fail. 
 
 ### Solution
 
@@ -113,8 +108,4 @@ To ensure accurate time synchronization, let the device remain powered on for a 
     </tabs>
 
 4. Find your Olares One from the list of available devices, and then tap **Install now** on it. The installation should now proceed and complete successfully.
-5. When installation finishes, tap **Activate now** to initialize the system.
-6. Select a reverse proxy node that is closest to your location and tap **Confirm**. The reverse proxy node acts as a secure gateway for remote access. Choosing the nearest node ensures the fastest connection speed and best stability.
-7. Set the login password for Olares.
-8. Copy or note down your personal desktop URL. You need this URL to access your Olares services.
-9. Tap **Got it** to close the prompt.
+5. When installation finishes, try to install and activate Olares OS again.
