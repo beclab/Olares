@@ -85,7 +85,6 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
-		Port:   9443,
 	})
 	if err != nil {
 		setupLog.Error(err, "failed to start manager")
