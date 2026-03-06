@@ -53,6 +53,10 @@ const side = {
               text: "LarePass VPN not working",
               link: "/manual/help/ts-larepass-vpn-not-working",
             },
+            {
+              text: "Network not ready or olares connection error",
+              link: "/manual/help/ts-network-not-ready",
+            },
           ],
         },
       ],
