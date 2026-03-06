@@ -61,15 +61,14 @@ Try this method first because it is the most convenient way to access your devic
 
 When the SSH access is blocked or fails, log in to the device locally using a monitor and keyboard.
 
-1. Connect a monitor and keyboard to your Olares One.
-2. Power on Olares One and wait for the system to boot. A text-based login prompt is displayed on your screen automatically:
+1. Connect a monitor and keyboard to your Olares One. A text-based login prompt is displayed on your screen automatically.
 
     ```text
     olares login:
     ```
 
-3. Type the username `olares` and press **Enter**.
-4. Type the same SSH password obtained in **Step 1** and press **Enter**.
+2. Type the username `olares` and press **Enter**.
+3. Type the same SSH password obtained in **Step 1** and press **Enter**.
 
 ### Step 3: Check system status
 
