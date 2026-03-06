@@ -3,22 +3,18 @@ outline: [2, 3]
 description: Troubleshoot the issue where your Olares One is connected to the network but remains unreachable through standard access methods.
 ---
 
-# Olares One is connected but unreachable
+# Network not ready or olares connection error
 
-Use this guide to troubleshoot a device that appears powered on and connected to the network but has unexpectedly stopped responding.
+Use this guide to troubleshoot an Olares One device that appears powered on and connected to the network but has unexpectedly stopped responding.
 
 ## Condition
 
-- The LarePass app displays **Network not ready** and accessing your Olares desktop shows an Olares connection error, but your router shows the device is connected and the device responds to a network `ping`.
+- The LarePass app displays **Network not ready** and accessing your Olares desktop shows an **olares connection error**, but your router shows the device is connected and the device responds to a network `ping`.
 - Restarting the device and your router does not fix the issue.
 
 ## Cause
 
 Your device's underlying operating system is running normally, which is why it successfully connects to your router and appears online. However, the core Olares software services (the Kubernetes cluster) have unexpectedly frozen or crashed. 
-
-Because these core services are down, the specific network ports required for secure access like port `22` for SSH and port `443` for HTTPS stop working. As a result, the device cannot accept incoming connections from the LarePass app, your web browser, or your terminal. 
-
-This freeze is typically caused by an abnormal software container or a system service that has become stuck.
 
 ## Solution
 
