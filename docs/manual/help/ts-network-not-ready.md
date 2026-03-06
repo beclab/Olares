@@ -78,6 +78,6 @@ When the SSH access is unavailable, log in to the device locally using a monitor
     ```
     
 2. Check the **STATUS** column for any components that are not showing `Running` or `Completed`.
-3. Take a clear photo or screen shot of the full command output, or manually note down the abnormal components.
+3. Take a clear photo or a screenshot of the full command output, or manually note down the abnormal components.
 4. Attach this photo or your notes with descriptions to Olares team by [submitting a GitHub Issue](https://github.com/beclab/Olares/issues/new).
 
