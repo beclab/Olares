@@ -16,7 +16,7 @@ Use this guide when your Olares One suddenly stops responding after working norm
 
 ## Cause
 
-Your device’s underlying operating system is running normally, which is why it successfully connects to your router and appears online. However, the core Olares software services (the Kubernetes cluster) have unexpectedly frozen or crashed. 
+Your device's underlying operating system is running normally, which is why it successfully connects to your router and appears online. However, the core Olares software services (the Kubernetes cluster) have unexpectedly frozen or crashed. 
 
 Because these core services are down, the specific network ports required for secure access like port `22` for SSH and port `443` for HTTPS stop working. As a result, the device cannot accept incoming connections from the LarePass app, your web browser, or your terminal. 
 
@@ -24,7 +24,7 @@ This freeze is typically caused by an abnormal software container or a system se
 
 ## Solution
 
-Follow these steps in order to gather diagnostic information so Olares Support can help you get back online.
+Follow these steps to gather diagnostic information so Olares team can help you get back online.
 
 ### Step 1: Attempt a remote SSH connection
 
