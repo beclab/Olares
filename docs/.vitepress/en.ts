@@ -46,6 +46,10 @@ const side = {
               link: "/manual/help/ts-missing-apps",
             },
             {
+              text: "System error in LarePass",
+              link: "/manual/help/ts-system-error",
+            },
+            {
               text: "LarePass VPN not working",
               link: "/manual/help/ts-larepass-vpn-not-working",
             },
