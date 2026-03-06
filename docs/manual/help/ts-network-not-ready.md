@@ -53,7 +53,7 @@ Try this method first because it is the most convenient way to access your devic
         
     c. When prompted, type the SSH password, and then press **Enter**.
 
-    d. If the connection is successful, skip to [Step 3](#step-3-check-system-status).
+    d. If the connection is successful, skip to [Step 3](#step-3-check-system-pod-status).
 
 ### Step 2: Log in locally
 
