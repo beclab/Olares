@@ -248,12 +248,14 @@ defineExpose({ slideTo });
 		position: absolute;
 		top: calc(50% - var(--NavigationOffsite));
 		left: 25px;
+		cursor: pointer;
 	}
 
 	.button-right {
 		position: absolute;
 		top: calc(50% - var(--NavigationOffsite));
 		right: 25px;
+		cursor: pointer;
 	}
 
 	.swiper {
