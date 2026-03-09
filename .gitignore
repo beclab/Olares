@@ -40,4 +40,3 @@ node_modules
 cli/olares-cli*
 
 framework/app-service/bin
-apps/packages
