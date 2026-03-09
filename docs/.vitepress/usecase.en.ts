@@ -94,7 +94,26 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "OpenClaw",
               link: "/use-cases/openclaw",
-            },
+              collapsed: true,
+              items: [
+                {
+                  text: "Integrate with Discord",
+                  link: "/use-cases/openclaw-integration",
+                },
+                {
+                  text: "Enable web search",
+                  link: "/use-cases/openclaw-web-access",
+                },
+                {
+                  text: "Manage skills and plugins",
+                  link: "/use-cases/openclaw-skills",
+                },
+                {
+                  text: "Upgrade OpenClaw",
+                  link: "/use-cases/openclaw-upgrade",
+                },                                 
+              ]
+            },            
           ],
         },
       ],
