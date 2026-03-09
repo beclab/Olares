@@ -38,7 +38,7 @@ For advanced use cases requiring higher availability and distributed storage, yo
 :::danger Clean installation required
 Setting up a cluster requires a clean environment. If Olares OS is already installed on this device, you must uninstall it first:
 ```bash
-sudo olares-cli uninstall --all
+sudo olares-cli uninstall
 ```
 :::
 
