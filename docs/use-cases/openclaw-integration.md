@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 
+description: Learn how to integrate OpenClaw with Discord by creating a bot, configuring channels, and authorizing your account.
 head:
   - - meta
     - name: keywords
@@ -11,24 +11,29 @@ head:
 
 To chat with your agent remotely, connect it to a Discord bot.
 
+## Prerequisites
+
+- Discord account: Required to create the bot application.
+- Discord server: A server where you have permissions to add bots.
+
 ## Step 1: Create a Discord bot
 
 1. Log in to the [Discord Developer Portal](https://discord.com/developers/applications) with your Discord account.
 2. Click **New Application**.
-    ![Search for OpenClaw from Market](/images/manual/use-cases/new-app.png#bordered){width=90%}
+    ![New application in Discord developer portal](/images/manual/use-cases/new-app.png#bordered){width=90%}
 
 3. Enter a name for the new app, agree to terms, and then click **Create**.
 
-    ![Search for OpenClaw from Market](/images/manual/use-cases/create-app.png#bordered){width=40%}
+    ![Create an application window](/images/manual/use-cases/create-app.png#bordered){width=40%}
 
 4. From the left sidebar, select **Bot**.
-4. Scroll down to the **Privileged Gateway Intents** section and enable the following settings:
+5. Scroll down to the **Privileged Gateway Intents** section and enable the following settings:
 
     - Presence Intent
     - Server Members Intent
     - Message Content Intent
-5. Click **Save Changes**.
-6. Scroll up to the **Token** section, click **Reset Token**, and then copy the generated token for your Discord bot. You need the token for channel configuration later in Control UI.
+6. Click **Save Changes**.
+7. Scroll up to the **Token** section, click **Reset Token**, and then copy the generated token for your Discord bot. You need the token for channel configuration later in Control UI.
 
     ![Reset token](/images/manual/use-cases/reset-token.png#bordered)
 

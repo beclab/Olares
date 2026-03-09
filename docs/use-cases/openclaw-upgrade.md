@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 
+description: Learn about version-specific changes and troubleshooting steps when upgrading OpenClaw.
 head:
   - - meta
     - name: keywords
@@ -9,7 +9,7 @@ head:
 
 # Upgrade OpenClaw
 
-If you are upgrading an existing OpenClaw installation, review the following version-specific changes and troubleshooting steps.
+Before upgrading an existing OpenClaw installation, review the version-specific changes and troubleshooting steps on this page to ensure a smooth transition.
 
 ## Upgrade to 2026.02.25
 
@@ -50,7 +50,7 @@ The OpenClaw 2026.02.25 update introduced a security enhancement that requires e
     
 6. Return to Files, rename the original `openclaw.json` file to keep it as a backup, and then upload your modified `openclaw.json` file.
 
-7. Return to Control Hub, click **clawbot** under **Deployments**, and then click **Restart** in the upper-right corner.
+7. Return to Control Hub, click **clawdbot** under **Deployments**, and then click **Restart** in the upper-right corner.
 
      ![Restart OpenClaw](/images/manual/use-cases/restart-openclaw.png#bordered)
     

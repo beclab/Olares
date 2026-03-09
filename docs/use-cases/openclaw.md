@@ -4,7 +4,7 @@ description: Learn how to install, configure, personalize, and integrate OpenCla
 head:
   - - meta
     - name: keywords
-      content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning
+      content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw installation
 ---
 
 # OpenClaw
@@ -54,7 +54,7 @@ Olares supports app cloning. If you want to run multiple independent AI agents f
 
 ## Initialize OpenClaw
 
-Run a quick setup for the agent in the OpenClaw CLI.
+Run a quick setup for the agent.
 
 ### Step 1: Prepare your model
 
@@ -64,7 +64,19 @@ Install a tool-capable model, such as `glm-4.7-flash`, `qwen3.5:27b`, and `gpt-o
 OpenClaw requires a large "context window" (that is the AI's short-term memory) to handle complex tasks without forgetting your previous instructions. If you are using local models, it is recommended to select a model that natively supports a context window of at least 64K tokens.
 :::
 
-#### Download via Ollama
+<Tabs>
+<template #(Recommended)-Download-from-Market>
+
+1. From the Olares Market, search for "Qwen3.5 27B".
+
+    ![Find model from Market](/images/manual/use-cases/find-model.png#bordered){width=60%}
+2. Click **Get**, and then click **Install**. 
+3. When the installation finishes, click **Open**. The model download is started automatically.
+4. When the model download is completed, copy and save the **Model Name** and **API** address exactly as shown. You need the information in later configurations
+
+    ![Note model detailed info](/images/manual/use-cases/obtain-model-details.png#bordered){width=40%}
+</template>
+<template #Download-via-Ollama>
 
 1. View the list of models that were installed by running the following command:
 
@@ -73,20 +85,11 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
     ```
 2. Copy and save the model name exactly as shown in the **Name** column.
 3. If the model is not installed, download it. For more information, see [Ollama](ollama.md).
-4. Obtain the Ollama API address from **Settings** > **Applications** > **Ollama** > **Shared Entrances** > **Ollama API**, and then copy the endpoint address. For example, `http://d54536a50.shared.olares.com`.
+4. Obtain the Ollama API address from **Settings** > **Applications** > **Ollama** > **Shared Entrances** > **Ollama API**, and then copy the endpoint address.
 
     ![Obtain Ollama API](/images/manual/use-cases/ollama-endpoint.png#bordered){width=50%}
-
-#### Download from Market
-
-1. From the Olares Market, search for "Qwen3.5 27B".
-
-    ![Find model from Market](/images/manual/use-cases/find-model.png#bordered){width=90%}
-2. Click **Get**, and then click **Install**. 
-3. When the installation finishes, click **Open**. The model download is started automatically.
-4. When the model download is completed, copy and save the **Model Name** and **API** address exactly as shown. You need the information in later configurations
-
-    ![Note model detailed info](/images/manual/use-cases/obtain-model-details.png#bordered){width=50%}
+</template>
+</Tabs>
 
 ### Step 2: Run onboarding wizard
 
@@ -120,13 +123,16 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
     | How do you want to hatch your bot | Do this later |
 
 4. After you complete the onboarding wizard, scroll up to the **Control UI** section.
-6. Find the **Web UI (with token)**, and then copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token.
+5. Find the **Web UI (with token)**, and then copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token.
 
     ![Obtain gateway token](/images/manual/use-cases/obtain-gateway-token1.png#bordered){width=70%}
 
 ### Step 3. Pair device
 
 Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
+
+<Tabs>
+<template #(Recommended)-Pair-device-automatically>
 
 1. Open the Control UI app from the Launchpad.
 2. On the **Overview** page, in the **Gateway Access** panel, specify the following settings:
@@ -146,14 +152,12 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     Now the **STATUS** in the **Snapshot** panel should be **OK**.
 
     ![Health OK](/images/manual/use-cases/openclaw-connected1.png#bordered)
-
-### (Optional) Step 4: Pair device manually
+</template>
+<template #(Optional)-Pair-device-manually>
 
 :::tip When to use manual pairing
 The quick setup in the previous section uses the `openclaw devices approve --latest` command to automatically approve the most recent pairing request. If you have multiple pending requests and need to manually select which device to approve, follow the steps in this section instead.
 :::
-
-Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 
 1. Open the Control UI app from the Launchpad.
 2. On the **Overview** page, in the **Gateway Access** panel, specify the following settings:
@@ -182,8 +186,10 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 7. When the terminal displays the approval message, return to the Control UI. Now the **STATUS** in the **Snapshot** panel should be **OK**.
 
     ![Health OK](/images/manual/use-cases/openclaw-connected1.png#bordered)
+</template>
+</Tabs>
 
-### Step 5: Personalize OpenClaw
+### Step 4: Personalize OpenClaw
 
 To make your OpenClaw bot more personalized, it is highly recommended to complete the persona setup process. 
 
@@ -198,7 +204,7 @@ This process establishes the agent's identity, behavioral boundaries, and long-t
     The agent responds and starts interviewing you. You can establish rules, personality traits, and preferences. For example,
 
     ```text
-    - Call me Bella. I like simple language without technical jargons and 
+    - Call me Bella. I like simple language without technical jargon and 
     concise bulleted answers.
     - You are John, a witty assistant who uses emojis.
     - Never access my calendar without asking first, and never execute any 
@@ -264,7 +270,7 @@ OpenClaw is deployed as a containerized app in Olares, where the gateway runs as
 
 Do not use the OpenClaw CLI to manage the gateway service. Instead, restart OpenClaw using one of the following methods:
 - **Restart OpenClaw from Settings or Market**: 
-    - Open **Settings**, go to **Applications** > **OpenClaw**, click **Stop**, and then click then **Resume**.
+    - Open **Settings**, go to **Applications** > **OpenClaw**, click **Stop**, and then click **Resume**.
     - Open **Market**, go to **My Olares**, find **OpenClaw**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the operation button, select **Stop**, and then select **Resume**.
 - **Restart the container**: Open **Control Hub**, click `clawdbot` under **Deployments**, and then click **Restart**.
 
@@ -293,6 +299,6 @@ Extend this timeout limit by modifying the configuration file as follows:
     ```
 3. Click **Save** to restart the gateway and apply the changes.
 
-## Resources
+## Learn more
 
 - [How do I create a server in Discord](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server)
