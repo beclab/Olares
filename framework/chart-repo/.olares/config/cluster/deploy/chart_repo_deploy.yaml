@@ -109,13 +109,13 @@ spec:
       initContainers:
         - args:
           - -it
-          - authelia-backend.os-framework:9091
+          - authelia-backend.os-framework.svc.cluster.local:9091
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-auth
         - args:
           - -it
-          - app-service.os-framework:6755
+          - app-service.os-framework.svc.cluster.local:6755
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-appservice

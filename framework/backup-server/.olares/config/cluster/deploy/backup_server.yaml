@@ -142,7 +142,7 @@ spec:
       initContainers:
         - args:
           - -it
-          - nats.os-platform:4222
+          - nats.os-platform.svc.cluster.local:4222
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-nats
