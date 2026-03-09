@@ -18,14 +18,13 @@ This guide covers the installation, configuration, and practical usage of these 
 ## Learning objectives
 
 - Configure LobeHub to communicate with your local Ollama instance.
-- Create specialized agents tailored to specific tasks and equip them with specific Skills.
+- Create specialized agents tailored to specific tasks and equip them with specific skills.
 <!--- Create an agent group to enable multiple agents to collaborate on complex workflows.-->
 
 ## Prerequisites
 
-Before you begin, make sure:
 - Ollama is installed and running in your Olares environment.
-- The models you want to use are downloaded using Ollama. This tutorial uses `llama3.1:8b` and `qwen2.5`. For more information, see [Download a model](ollama.md#download-a-model).
+- The models you want to use are downloaded and run using Ollama. This tutorial uses `llama3.1:8b` and `qwen2.5`. For more information, see [Download and run local AI models via Ollama](ollama.md).
 - You obtained the local Ollama host address.
    :::tip Obtain local Ollama host address
    To obtain your local Ollama host address, go to Olares **Settings** > **Applications** > **Ollama**, click **Ollama API** under **Entraces** or **Shared entrances**, and then copy the endpoint address.
@@ -97,7 +96,7 @@ Create your own specialized agents by using the conversational Agent Builder or 
 
 LobeHub allows you to create specialized assistants to handle specific tasks by leveraging various language models and combining them with skills.
 - **Flexible model switching**: You can switch language models instantly within the same chat to achieve the best results. For example, if you are not satisfied with a response, you can select a different model from the list to leverage their unique strengths.
-- **Skill extensions**: You can also install additional skilss to extend and enhance the capabilities of your agent.
+- **Skill extensions**: You can also install additional skills to extend and enhance the capabilities of your agent.
    To install skills, ensure that you select a model compatible with Function Calling. Look for <i class="material-symbols-outlined">brick</i> next to the model name, which indicates the model supports function calls.
 
 ### Create using Agent Builder
@@ -108,37 +107,36 @@ Agent Builder is LobeHub's built-in assistant that helps you create specialized 
 
    ![Create Agent button](/images/manual/use-cases/lobehub-create-agent.png#bordered){width=85%} 
 
-2. In the chat box, describe the specific task you want the agent to handle. For exmaple,
+2. In the chat box, describe the specific task you want the agent to handle. For example,
 
    ```
    I need an agent to review my daily work items and summarize them.
    The summary should focus on the overall purpose of the tasks and
    highlight specific action items.
    ```
-3. Select the language model. For exmaple, `llama3.1:8b`.
+3. Select the language model. For example, `llama3.1:8b`.
 4. Press **Enter**. The profile page of the new agent opens, and you can see the Agent Builder starts configuring your agent automatically.
 
    ![Agent builder](/images/manual/use-cases/lobehub-agent-builder.png#bordered){width=85%} 
 
 5. Use the chat interface on the lower right to interact with the Agent Builder. As you provide more details or refine your requirements, the Agent Builder automatically drafts and updates accordingly. 
 6. After the creation is completed, click **Start Conversation** to use the agent.
-7. Provide your text in the chat, and then you can get the refined results.
-
-   ![Start using agent](/images/manual/use-cases/lobehub-agent-use1.png#bordered){width=85%} 
-
-   For example, 
+7. Provide your text in the chat, and then you can get the refined results. For example, 
    ```
    - fix bug 405 on login
-   - discuss with design on new dashbaord
+   - discuss with design on new dashboard
    - answer customer question about billing in email.
    - review pr112, ddl 11:00 am tmrw
    ```
-
-   You get the following output:
+   You get the output:
 
    ![Sample output by agent builder](/images/manual/use-cases/agent-builder-example.png#bordered){width=85%}    
 
-8. If you are satisfied with the assistant's performance, hover over the assistant from the left sidebar, click <i class="material-symbols-outlined">more_horiz</i>, and then click **Pin** to keep it accessible at the top of your agent list.
+8. If you are satisfied with the agent's performance, pin it for quick access:
+
+   a. Return to the home page.
+   
+   b. Hover over the agent from the left sidebar, click <i class="material-symbols-outlined">more_horiz</i>, and then click **Pin**.
 
 ### Create a custom agent
 
@@ -146,7 +144,7 @@ If you have specific requirements and prefer to configure the agent entirely man
 
 Custom agents offer the highest level of personalization. You can set the agent's avatar, name, AI model, skills, and prompt to create a unique AI agent.
 
-1. On the home page, click the robot icon and then select **Create Agent**.
+1. On the home page, click the robot icon in the upper left corner, and then select **Create Agent**.
 
    ![Create custom agent](/images/manual/use-cases/lobehub-create-custom-agent.png#bordered){width=40%} 
 
@@ -179,16 +177,20 @@ Custom agents offer the highest level of personalization. You can set the agent'
    - Avoid using passive voice.
    - Target users with the second person "you"
    ```
-6. Click **Start Conversation** to use it. For example, type the following request:
+7. Click **Start Conversation** to use it. For example, type the following request:
 
    ```
    I want to rank for "local AI alternatives"
    ```
-7. Review the proposal and output, and then iterate with it until you are satified with the results.
+8. Review the proposal and output, and then iterate with it until you are satisfied with the results.
 
    ![Custom agent result sample](/images/manual/use-cases/lobehub-seo-sample.png#bordered){width=85%} 
 
-8. If you are satisfied with the agent's performance, hover over the agent from the left sidebar, click <i class="material-symbols-outlined">more_horiz</i>, and then click **Pin** to keep it accessible at the top of your agent list.
+9. If you are satisfied with the agent's performance, pin it for quick access:
+
+   a. Return to the home page.
+   
+   b. Hover over the agent from the left sidebar, click <i class="material-symbols-outlined">more_horiz</i>, and then click **Pin**.
 
 <!--
 ## Manage agents
@@ -222,7 +224,7 @@ For complex workflows, a single agent might not be enough. LobeHub allows you to
 
    ![Create Group button](/images/manual/use-cases/lobehub-create-group.png#bordered){width=85%} 
 
-2. In the chat box, describe the specific task you want the agent team to handle. For exmaple,
+2. In the chat box, describe the specific task you want the agent team to handle. For example,
 
    ```
    I need a team to research trending AI tech news and write a daily 
