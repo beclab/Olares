@@ -230,7 +230,7 @@ spec:
         image: beclab/seahub-init:v0.0.6
         env:
           - name: DB_HOST
-            value: citus-headless.os-platform
+            value: citus-headless.os-platform.svc.cluster.local
           - name: DB_PORT
             value: '5432'
           - name: DB_USER
