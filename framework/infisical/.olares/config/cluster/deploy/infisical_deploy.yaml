@@ -145,7 +145,7 @@ spec:
             echo -e "Checking for the availability of PostgreSQL Server deployment"; until psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDB -c "SELECT 1"; do sleep 1; printf "-"; done; sleep 5; echo -e " >> PostgreSQL DB Server has started";
         env:
           - name: PGHOST
-            value: citus-0.citus-headless.os-platform
+            value: citus-0.citus-headless.os-platform.svc.cluster.local
           - name: PGPORT
             value: "5432"
           - name: PGUSER
