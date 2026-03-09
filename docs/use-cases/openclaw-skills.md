@@ -26,8 +26,8 @@ Understanding where skills come from and how they are loaded helps you manage th
 Skills are loaded from three locations. If a skill with the same name exists in multiple locations, OpenClaw uses the one with the highest precedence, allowing you to easily customize or override built-in skills.
 
 The order of precedence from highest to lowest is as follows:
-1. Workspace skills (`<workspace>/skills`): Per-agent skills that override all others.
-2. Managed/local skills (`~/.openclaw/skills`): Shared skills available to all agents on the same machine.
+1. Workspace skills (`Data/clawdbot/config/workspace/skills`): Per-agent skills that override all others.
+2. Managed/local skills (`Data/clawdbot/config/skills`): Shared skills available to all agents on the same machine.
 3. Bundled skills: Default skills shipped with your OpenClaw installation.
 
 :::tip View all available skills
@@ -72,7 +72,7 @@ Installing skills via ClawHub automatically handles the necessary package depend
 5. Find the target skill name in the **Skill** column, and then install by entering the following command:
 
     ```bash
-    npx clawhub install {SkillName}
+    npx clawhub install {skill_name}
     ```
 
     For example, to install mcporter, enter the following command:
@@ -107,41 +107,65 @@ Installing skills via ClawHub automatically handles the necessary package depend
 3. Upload your skill package such as an extracted zip file into this `skills` folder.
 4. Install required package dependencies if there is anyone missing.
 
-#### Troubleshoot and install missing dependencies
+## Install missing dependencies
 
 If a skill is blocked or unusable, you need to identify and install its missing dependencies.
 
-1. **Check the block reason**:
-    - Go to the **Skills** page in the Control UI, and then expand **BUILT-IN SKILLS** to see why the skill is unavailable.
-    - Run the following command in the OpenClaw CLI:
-    
-    ```bash
-    openclaw skills info {skill_name}
-    ```
-2. **Install via UI**: Some missing components can be installed directly from the Control UI by clicking the install prompt on the right.
+<Tabs>
+<template #Fix-via-Control-UI>
+
+1. Go to the **Skills** page in the Control UI, and then expand **BUILT-IN SKILLS** to see why the skill is unavailable and what dependency is missing.
+
+    ![Identify missing dependency from Control UI](/images/manual/use-cases/identify-missing-dependency.png#bordered)
+
+2. Some missing dependencies can be installed directly from the Control UI by clicking the install prompt on the right.
 
     ![Install missing dependency from Control UI](/images/manual/use-cases/install-missing-package-ui.png#bordered)
-
-3. **Install via CLI**: If the Control UI installation fails or isn't available, open the OpenClaw CLI and use `npm` or `brew` to install the dependency manually. For details information about the installation requirements, see the `skills.md` file. 
-
-    - Example: The `gh-issues` skill requires `gh` to be installed. 
-    - Run the following command to install it:
-        ```bash
-        npm i -g gh
-        ```
-4. **Restart to apply**: When the installation of missing components is completed, restart the OpenClaw container for the changes to take effect:
+3. When the installation of missing components is completed, restart the OpenClaw container for the changes to take effect:
 
     a. Open Control Hub from Desktop.
     
     b. Click **clawdbot** under **Deployments**, and then click **Restart**.
 
-5. **Verify installation**:
+4. Verify the installation:
 
     a. Open the Control UI.
     
     b. Go to the **Skills** page. The skill should now be tagged with **eligible**. 
     
     c. Configure required API keys if there is any, and then the agent will be able to use the skill.
+</template>
+<template #Fix-via-OpenClaw-CLI>
+
+1. Open OpenClaw CLI and run the following command:
+    
+    ```bash
+    openclaw skills info {skill_name}
+    ```
+    ![Install missing dependency from CLI](/images/manual/use-cases/missing-dependency-cli.png#bordered){width=70%}
+
+2. Use `npm` or `brew` to install the dependency manually. For details information about the installation requirements, see the `skills.md` file. 
+
+    - Example: The `gh-issues` skill requires `gh` to be installed. 
+    - Run the following command to install it:
+        ```bash
+        npm i -g gh
+        ```
+3. When the installation of missing components is completed, restart the OpenClaw container for the changes to take effect:
+
+    a. Open Control Hub from Desktop.
+    
+    b. Click **clawdbot** under **Deployments**, and then click **Restart**.
+
+4. Verify the installation:
+
+    a. Open the Control UI.
+    
+    b. Go to the **Skills** page. The skill should now be tagged with **eligible**. 
+    
+    c. Configure required API keys if there is any, and then the agent will be able to use the skill.
+</template>
+</Tabs>
 
 ## Install plug-ins
 

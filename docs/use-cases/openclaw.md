@@ -84,7 +84,7 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
     ollama list
     ```
 2. Copy and save the model name exactly as shown in the **Name** column.
-3. If the model is not installed, download it. For more information, see [Ollama](ollama.md).
+3. If the model is not installed, download and then run it. For more information, see [Ollama](ollama.md).
 4. Obtain the Ollama API address from **Settings** > **Applications** > **Ollama** > **Shared Entrances** > **Ollama API**, and then copy the endpoint address.
 
     ![Obtain Ollama API](/images/manual/use-cases/ollama-endpoint.png#bordered){width=50%}
@@ -114,11 +114,11 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
     | How do you want to provide this API key? | Paste API key now |
     | API Key (leave blank if not required) | Leave it blank or enter any value |
     | Endpoint compatibility | OpenAI-compatible |
-    | Model ID | The exact model name, <br>such as `qwen3.5:27b-q4_K_M` |
+    | Model ID | The exact model name from **Step 1**, <br>such as `qwen3.5:27b-q4_K_M` |
     | Endpoint ID | A name for this configuration, <br>such as `ollama-qwen3.5` |
     | Model alias (optional) | A short alias such as `qwen3.5` |
     | Select channel | Skip for now<br>(You can configure channels later) |
-    | Configure skills now | No <br>(You can install later) |
+    | Configure skills now | No <br>(You can install skills later) |
     | Enable hooks | Select all | 
     | How do you want to hatch your bot | Do this later |
 
@@ -252,7 +252,9 @@ This process establishes the agent's identity, behavioral boundaries, and long-t
 
 ## Next
 
-[Integrate with Discord](openclaw-integration.md) to chat with your agent remotely.
+1. [Integrate with Discord](openclaw-integration.md) to chat with your agent remotely.
+2. [Optional: Enable web search](openclaw-web-access.md) to give your agent access to the live internet information.
+3. [Install skills and plugins](openclaw-skills.md) to enhance your agent's capabilities.
 
 ## FAQ
 
