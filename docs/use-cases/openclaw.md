@@ -189,7 +189,18 @@ The quick setup in the previous section uses the `openclaw devices approve --lat
 </template>
 </Tabs>
 
-### Step 4: Personalize OpenClaw
+### Step 4: Configure context window
+
+OpenClaw requires a large "context window" (that is the AI's short-term memory) to handle complex tasks without forgetting your previous instructions. 
+
+1. In the Control UI, select **Config** from the left sidebar, and then switch to the **Raw** tab.
+2. Find the `models` section and locate the configuration block for your model.
+3. Add or update the `contextWindow` value. Set it to at least 64000 (64K). If your hardware VRAM permits, it is highly recommended to increase it to 200000 (200K).
+
+    ![Configure context window](/images/manual/use-cases/configure-context-win.png#bordered){width=55%}
+4. Click **Save** in the upper-right corner. The system validates the configuration and restarts automatically.
+
+### Step 5: Personalize OpenClaw
 
 To make your OpenClaw bot more personalized, it is highly recommended to complete the persona setup process. 
 
@@ -250,7 +261,7 @@ This process establishes the agent's identity, behavioral boundaries, and long-t
     - Download the `.md` files from this folder, edit them in a text editor, and re-upload them to overwrite the old ones. 
     :::
 
-## Next
+## Next steps
 
 1. [Integrate with Discord](openclaw-integration.md) to chat with your agent remotely.
 2. [Optional: Enable web search](openclaw-web-access.md) to give your agent access to the live internet information.

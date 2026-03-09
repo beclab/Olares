@@ -102,7 +102,7 @@ For security, the bot does not talk to unauthorized users. You must pair your Di
 
 3. Once approved, you can start chatting with your agent in Discord.
 
-## Next
+## Next steps
 
 - [Optional: Enable web search](openclaw-web-access.md)
 - [Manage skills and plugins](openclaw-skills.md)
