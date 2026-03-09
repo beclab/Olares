@@ -1,4 +1,10 @@
 <template>
+	<div v-if="notificationStore.data.length > 0" class="clear-all-bar">
+		<span class="clear-all-btn" @click="notificationStore.deleteAll(); notificationStore.showNotification = false">
+			<span class="clearAllTxt">Clear All</span>
+			<q-icon class="icon" name="close" size="12px" />
+		</span>
+	</div>
 	<div v-for="(item, index) in notificationStore.data" :key="item.id">
 		<div class="title" style="margin-top: 32px" v-if="item.open">
 			<div class="brige">{{ item.appName }}</div>
@@ -114,6 +120,37 @@ const formatStampTime = (createTime: number) => {
 </script>
 
 <style scoped lang="scss">
+.clear-all-bar {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 8px;
+
+	.clear-all-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		height: 28px;
+		padding: 0 12px;
+		border-radius: 14px;
+		background: rgba(246, 246, 246, 0.4);
+		box-shadow: 0px 0px 40px 0px rgba(0, 0, 0, 0.2),
+			0px 0px 2px 0px rgba(0, 0, 0, 0.4);
+		backdrop-filter: blur(30px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		color: #5c5551;
+		font-size: 12px;
+		cursor: pointer;
+
+		.icon {
+			color: #5c5551;
+		}
+
+		&:hover {
+			background: rgba(230, 230, 230, 0.6);
+		}
+	}
+}
+
 .title {
 	display: flex;
 	align-items: center;
