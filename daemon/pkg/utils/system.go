@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
+	cpu "github.com/klauspost/cpuid/v2"
 	"github.com/mackerelio/go-osstat/uptime"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
@@ -141,4 +143,19 @@ func GetBaseDirFromReleaseFile() (string, error) {
 
 	baseDir := data["OLARES_BASE_DIR"]
 	return baseDir, nil
+}
+
+func GetCPUName() string {
+	brandName := cpu.CPU.BrandName
+	if brandName == "" {
+		// cannot read info from /proc/cpuinfo, try to get from lscpu command
+		cmd := exec.Command("sh", "-c", "lscpu | awk -F: '/BIOS Model name/ {print $2}' | head -1 | sed 's/^[ \t]*//'")
+		output, err := cmd.Output()
+		if err != nil {
+			klog.Error("get CPU name error, ", err)
+			return ""
+		}
+		brandName = strings.TrimSpace(string(output))
+	}
+	return brandName
 }
