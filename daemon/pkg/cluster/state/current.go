@@ -16,7 +16,6 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
-	cpu "github.com/klauspost/cpuid/v2"
 	"github.com/pbnjay/memory"
 )
 
@@ -171,7 +170,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 	CurrentState.OsVersion = osVersion
 	CurrentState.OsType = osType
 	CurrentState.DeviceName = utils.GetDeviceName()
-	CurrentState.CpuInfo = cpu.CPU.BrandName
+	CurrentState.CpuInfo = utils.GetCPUName()
 	CurrentState.Memory = bToGb(memory.TotalMemory())
 	CurrentState.Disk = bToGb(diskSize)
 	CurrentState.GpuInfo = gpu
