@@ -27,9 +27,11 @@ First, select the GPU mode that best matches your task needs. The following tabl
 
 Before making changes, check your current GPU resource allocation.
 
-1. Go to **Settings** > **GPU**.
-2. On the GPU details page, review the GPU's model, node, total VRAM, current gpu working mode, and bound applications.
-3. If you have multiple GPUs, click a GPU in the list to view its details.
+1. Open the Settings app from the Dock or Launchpad on Olares, and then select **GPU**.
+2. On the GPU details page, review the GPU's model, node, total VRAM, current working mode, and bound applications.
+    ![Single GPU details](/images/one/single-gpu-details.png#bordered){width=70%}
+3. If you have multiple GPUs, click a GPU from the list to view its details.
+    ![Multiple GPU list](/images/one/multiple-gpu-list.png#bordered){width=70%}
 
 ## 3. Configure GPU mode
 
@@ -39,28 +41,49 @@ After choosing a GPU mode based on your task, follow the steps below to configur
 Changing a GPU's mode will automatically restart all application containers currently associated with this GPU.
 :::
 
-### Share GPU among multiple apps (Time slicing)
+### Share GPU among multiple apps (Time slicing) <Badge type="tip" text="Olares One only" />
 
 To run multiple light-weight applications, the "Time slicing" mode is suitable.
 
 This is the system's default mode. Applications without a specific binding are automatically scheduled to GPUs in this mode.
 
 :::tip Switching to "Time slicing" from "App exclusive"
-If switching to this mode from the **App Exclusive** mode:
+If you are switching to this mode from the **App Exclusive** mode:
 - The previously exclusive application will be unbound and remain **Running**.
 - However, other applications that were stopped due to exclusive mode will not resume automatically. You must manually resume these applications from **Market** > **My Olares** or from **Settings** > **Applications**.
 :::
 
 1. On the GPU details page, select **Time slicing** from the **GPU mode** list.
 2. In the **Switch GPU mode** window, click **Confirm**. 
-3. (Optional) To bind a specific application to this GPU:
+3. Bind an application to this GPU:
 
     a. In the **Pin application** section, click **Bind app**.
 
-    b. Select the target application and click **Confirm**. 
+    b. Select the target application and click **Confirm**.
+
+    c. Repeat the same steps to bind all apps you want. 
     
-    After binding, the application will always use this GPU.
-4. (Optional) To move a bound application to another GPU on the same node, click <i class="material-symbols-outlined">repeat</i> and confirm. The application will be migrated to the new target GPU.
+    After binding, the applications will always use this GPU.
+4. (Optional) To move a bound application to another GPU on the same node:
+
+    a. Click <i class="material-symbols-outlined">repeat</i> next to the app.
+    ![Switch GPU](/images/one/switch-gpu.png#bordered){width=70%}
+    
+    b. In the **Switch GPU** window, select a new GPU, and then click **Confirm**.
+    
+    c. In the **Unbind app** window, review your switch details again, and then click **Confirm**. 
+    
+    The app is immediately unbound from the current GPU, and it is automatically migrated to the new GPU as a bound app.
+
+5. (Optional) To remove the app binding:
+
+    a. Stop the app from **Settings** > **Applications** or from **Market** > **My Olares**.
+    
+    b. Return to the **Pin application** section and click <i class="material-symbols-outlined">link_off</i> next to the app. 
+
+    c. In the **Unbind app** window, click **Confirm**.
+    
+    After unbinding, the application is removed from the bound app list automatically.
 
 ### Dedicate a GPU to a high‑performance app (App exclusive)
 
@@ -70,26 +93,38 @@ To run an application that exclusively occupies the entire GPU, use the "App exc
 When switching to the **App Exclusive** mode from other modes ("Time slicing" or "Memory slicing"), all other applications currently running on this GPU will be stopped automatically to ensure the exclusive application receives full resources.
 :::
 
-1. On the GPU details page, select **App exclusive** from the **GPU mode** list.
+1. On the target GPU details page, select **App exclusive** from the **GPU mode** list.
 2. In the **Switch GPU mode** window, click **Confirm**.
 3. In the **Select exclusive app** section, click **Bind app**.
+    ![Select exclusive app](/images/one/bind-exclusive-app.png#bordered){width=70%}
 4. Select the target application you want to grant exclusive access to and click **Confirm**.
-5. (Optional) To replace the exclusive application:
+5. (Optional) To move the exclusive application to another GPU on the same node:
 
-    a. First, go to **Market** > **My Olares** or **Settings** > **Applications** to resume the new application to the **Running** state.
-
-    b. Return to the **Select exclusive app** section, click **Switch app**, select the new application, and then click **Confirm**. 
+    a. Click <i class="material-symbols-outlined">repeat</i> next to the app.
+    ![Switch GPU](/images/one/switch-gpu-exclusive.png#bordered){width=70%}
     
-    The original exclusive application will be automatically unbound and removed from the list.
+    b. In the **Switch GPU** window, select a new GPU, and then click **Confirm**.
 
-6. (Optional) To remove the exclusive binding, click **Unbind**. After unbinding, the application will be stopped automatically and you need to manually resume it.
-7. (Optional) To move the exclusive application to another GPU on the same node, click <i class="material-symbols-outlined">repeat</i> and confirm.
-
-    :::info
-    An application can use multiple GPUs only if they are located on the same node. If you switch the application to a GPU on a different node, the application will be moved out of the original node and bound only to that target GPU.
+    :::tip Switch GPU unavailable
+    In the **Switch GPU** window, if the new GPU you want to switch to is not available, it is because the current app has already been bound to it. Switch to that GPU and check the bound app list.
+    ![Switch GPU not available](/images/one/switch-gpu-disabled.png#bordered){width=70%}    
     :::
+    
+    c. In the **Unbind app** window, review your switch details again, and then click **Confirm**. 
+    
+    The app is immediately unbound from the current GPU, and it is automatically migrated to the new GPU as a bound app.
 
-### Run multiple apps with strict VRAM limits (Memory slicing)
+7. (Optional) To remove the exclusive binding:
+
+    a. Stop the app from **Settings** > **Applications** or from **Market** > **My Olares**.
+    
+    b. Return to the **Select exclusive app** section and click <i class="material-symbols-outlined">link_off</i> next to the app. 
+
+    c. In the **Unbind app** window, click **Confirm**.
+    
+    After unbinding, the application is removed from the bound app list automatically.
+
+### Run multiple apps with specific VRAM limits (Memory slicing)
 
 To run multiple applications concurrently with precise control over each application's VRAM usage, use the "Memory slicing" mode.
 
@@ -99,18 +134,34 @@ When switching to the **Memory slicing** mode from other modes ("Time slicing" o
 - If switching from the "App exclusive" mode, the previously exclusive application will be unbound, and other applications that were stopped will not resume automatically. You must manually resume them from **Market** > **My Olares** or from **Settings** > **Applications**.
 :::
 
-1. On the GPU details page, select **Memory slicing** from the **GPU mode** list.
+1. On the target GPU details page, select **Memory slicing** from the **GPU mode** list.
 2. In the **Switch GPU mode** window, click **Confirm**.
 3. In the **Allocate VRAM** section, click **Bind app**.
-4. Select the target application and assign an appropriate VRAM quota in GB.
+4. In the **Bind app** window, select the target application, assign an appropriate VRAM quota to it in GB, and then click **Confirm**.
 
     :::tip
     The sum of all allocated VRAM quotas must not exceed the GPU's total VRAM.
     :::
-5. Click **Confirm** and repeat for other applications that need VRAM limits.
-6. (Optional) To remove an application's VRAM binding:
+5. Repeat the same allocation for other applications that need VRAM limits.
+6. (Optional) To edit the VRAM quota for an app, click <i class="material-symbols-outlined">edit_square</i> next to the app, update the value, and then click **Confirm**.
+7. (Optional) To move the application to another GPU on the same node:
 
-    a. First, manually stop the application from **Market** > **My Olares** or from **Settings** > **Applications**.
+    a. Click <i class="material-symbols-outlined">repeat</i> next to the app.
+    
+    b. In the **Switch GPU** window, select a new GPU, and then click **Confirm**.
+
+    :::tip Switch GPU unavailable
+    In the **Switch GPU** window, if the new GPU you want to switch to is not available, it is because the current app has already been bound to it. Switch to that GPU and check the bound app list.
+    ![Switch GPU not available](/images/one/switch-gpu-disabled.png#bordered){width=70%}    
+    :::
+    
+    c. In the **Unbind app** window, review your switch details again, and then click **Confirm**. 
+    
+    The app is immediately unbound from the current GPU, and it is automatically migrated to the new GPU as a bound app.
+
+8. (Optional) To remove an application's VRAM binding:
+
+    a. Stop the application from **Market** > **My Olares** or from **Settings** > **Applications**.
     
     b. Return to the **Allocate VRAM** section, click **Unbind** next to the app, and then click **Confirm**.
 
