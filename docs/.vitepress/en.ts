@@ -45,6 +45,18 @@ const side = {
               text: "Missing apps in Market",
               link: "/manual/help/ts-missing-apps",
             },
+            {
+              text: "System error in LarePass",
+              link: "/manual/help/ts-system-error",
+            },
+            {
+              text: "LarePass VPN not working",
+              link: "/manual/help/ts-larepass-vpn-not-working",
+            },
+            {
+              text: "Network not ready or olares connection error",
+              link: "/manual/help/ts-network-not-ready",
+            },
           ],
         },
       ],
@@ -148,7 +160,6 @@ const side = {
     },
     {
       text: "Olares applications",
-      link: "/manual/olares/",
       items: [
         { text: "Desktop", link: "/manual/olares/desktop", },
         {

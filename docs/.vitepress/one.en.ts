@@ -14,6 +14,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "FAQs",
           link: "/one/faq",
         },
+        {
+          text: "Known issues",
+          link: "/one/known-issues",
+        },        
       ],
     },
     {
@@ -216,23 +220,23 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/update",
         },
         {
-          text: "Back up & restore",
+          text: "Back up & restore data",
           link: "/one/backup-resotre",
         },
         {
-          text: "Factory reset",
+          text: "Restore Olares One",
           collapsed: true,
           items: [
             {
-              text: "Using LarePass",
+              text: "Factory reset",
               link: "/one/factory-reset",
             },
             {
-              text: "In BIOS",
+              text: "Restore BIOS defaults",
               link: "/one/factory-reset-in-bios",
             },
             {
-              text: "Using bootable USB",
+              text: "Reinstall Olares OS",
               link: "/one/create-drive",
             },
           ],

@@ -31,9 +31,8 @@ middleware:
       - name: aaa
 ```
 
-## Inject environment variables
-
-In your deployment YAML, map the injected `.Values.mariadb.*` fields to the environment variables your app uses.
+## Map to environment variables
+In your deployment YAML, map the injected `.Values.mariadb.*` fields to the container environment variables your app requires.
 
 **Example**
 ```yaml
@@ -59,14 +58,13 @@ containers:
         value: "{{ .Values.mariadb.databases.aaa }}"
 ```
 
-## MariaDB Values reference
+## MariaDB values reference
+MariaDB values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
 
-MariaDB Values are predefined environment variables injected into `values.yaml` during deployment. They are system-managed and not user-editable.
-
-| Key  | Type  | Description  |
-|--|--|--|
-| `.Values.mariadb.host` | String | MariaDB database host |
-| `.Values.mariadb.port` | Number | MariaDB database port |
-| `.Values.mariadb.username` | String | MariaDB database username |
-| `.Values.mariadb.password` | String | MariaDB database password |
-| `.Values.mariadb.databases` | Map<String,String> | The requested database name is used as the key. <br/>For example, if you request `aaa`, the value is available at `.Values.mariadb.databases.aaa`. |
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.mariadb.host` | String | MariaDB host. |
+| `.Values.mariadb.port` | Number | MariaDB port. |
+| `.Values.mariadb.username` | String | MariaDB username. |
+| `.Values.mariadb.password` | String | MariaDB password. |
+| `.Values.mariadb.databases` | Map\<String,String> | Requested databases, keyed by database name. For example, a request for `app_db` is available at `.Values.mariadb.databases.app_db`. |

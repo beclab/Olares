@@ -178,8 +178,8 @@ func (h *Handler) setupAppCustomDomain(req *restful.Request, resp *restful.Respo
 	var settings app_service.ApplicationsSettings
 	appServiceClient := app_service.NewAppServiceClient()
 
-	var terminusName, zone string
-	terminusName, zone, err = h.getUserInfo()
+	var zone string
+	_, zone, err = h.getUserInfo()
 	if err != nil {
 		response.HandleError(resp, err)
 		return
@@ -223,8 +223,6 @@ func (h *Handler) setupAppCustomDomain(req *restful.Request, resp *restful.Respo
 		return
 	}
 
-	cm := certmanager.NewCertManager(constants.TerminusName(terminusName))
-
 	var operate = h.getCustomDomainOperation(reqCustomDomain, existsAppCustomDomain)
 	log.Infof("setAppCustomDomain: app: %s-%s, reqDomain: %s, existsDomain: %s, operate: %d, req: %s",
 		appName, entranceName, reqCustomDomain, existsAppCustomDomain, operate, utils.ToJSON(customDomain))
@@ -260,12 +258,6 @@ func (h *Handler) setupAppCustomDomain(req *restful.Request, resp *restful.Respo
 			customDomain = entranceCustomDomainMap
 		}
 	case constants.CustomDomainDelete, constants.CustomDomainUpdate:
-		_, err := cm.DeleteCustomDomainOnCloudflare(existsAppCustomDomain)
-		if err != nil {
-			log.Errorf("setAppCustomDomain: app: %s-%s, delete custom domain error %v", appName, entranceName, err)
-			response.HandleError(resp, err)
-			return
-		}
 		fallthrough
 	case constants.CustomDomainAdd:
 		formatSettings(customDomain, zone, "", "")

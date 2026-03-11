@@ -43,7 +43,19 @@ const side = {
             {
               text: "应用市场应用缺失",
               link: "/zh/manual/help/ts-missing-apps",
-            }
+            },
+            {
+              text: "LarePass 显示系统错误",
+              link: "/zh/manual/help/ts-system-error",
+            },
+            {
+              text: "LarePass VPN 无法使用",
+              link: "/zh/manual/help/ts-larepass-vpn-not-working",
+            },
+            {
+              text: "网络尚未准备好或 olares 连接错误",
+              link: "/zh/manual/help/ts-network-not-ready",
+            }            
           ],
         },
       ],
@@ -146,7 +158,6 @@ const side = {
     },
     {
       "text": "Olares 应用",
-      "link": "/zh/manual/olares/",
       "items": [
         { "text": "桌面", "link": "/zh/manual/olares/desktop" },
         {
@@ -462,10 +473,10 @@ const side = {
           text: "设置自定义域名",
           link: "/zh/manual/best-practices/set-custom-domain",
         },
-        {
+        /*{
           text: "使用 Wise 管理知识",
           link: "/zh/manual/best-practices/organize-content",
-        },
+        },*/
         {
           text: "安装多节点",
           link: "/zh/manual/best-practices/install-olares-multi-node",
