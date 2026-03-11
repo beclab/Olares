@@ -10,11 +10,9 @@ doc_version: "2.0"
 doc_updated: "2026-03-11"
 ---
 
-# Chat with local LLMs using Open WebUI
+# Chat with Local LLMs Using Open WebUI
 
-Open WebUI provides an intuitive chat interface for managing LLMs. Running Open WebUI on an Olares device gives you a private, self-hosted alternative to cloud-based AI services, ensuring your conversations remain on your own hardware.
-
-This guide covers the recommended approach: using a single-model app from the Market, such as Qwen3.5 27B Q4_K_M (Ollama).
+Open WebUI provides a user-friendly chat interface for local models on your Olares device. It does not include any models by default, so you need to install a dedicated model app that acts as the backend. This guide walks you through the setup process using the Qwen3.5 27B Q4_K_M model app as an example.
 
 :::tip Alternative method
 If you prefer to manage multiple models through the Ollama app, see [Set up Open WebUI with Ollama](openwebui-ollama.md).

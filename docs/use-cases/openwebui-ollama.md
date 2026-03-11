@@ -1,6 +1,6 @@
 ---
 outline: deep
-description: Set up Open WebUI on Olares with Ollama to pull and run models from Ollama.com.
+description: Set up Open WebUI on Olares with Ollama as the model backend to pull and run models from the Ollama Registry.
 head:
   - - meta
     - name: keywords
@@ -12,7 +12,7 @@ doc_updated: "2026-03-11"
 
 # Set up Open WebUI with Ollama
 
-This guide covers installing Open WebUI with Ollama, which allows you to pull any model from Ollama.com. This method is useful if you want to experiment with different models or use specific versions not available as model apps.
+This guide shows how to use Open WebUI with Ollama on Olares. Ollama lets you pull and switch between different models from the Ollama Registry, offering more flexibility than individual model apps.
 
 :::warning GPU time slicing limitation
 When using Ollama to manage multiple models, GPU time slicing is not supported between models.
@@ -58,7 +58,7 @@ By the end of this guide, you will be able to:
 ## Download a model
 
 :::tip Browse models first
-Visit the Ollama Library at [ollama.com/library](https://ollama.com/library) to find models before downloading.
+Visit [Ollama Library](https://ollama.com) to browse available models and get the exact model name before downloading. Model names must match exactly to pull successfully.
 :::
 
 <Tabs>
