@@ -12,7 +12,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/alecthomas/assert/v2 v2.11.0
-	github.com/beclab/Olares/framework/app-service v0.0.0-20251225061130-909b7656fd70
+	github.com/beclab/Olares/framework/app-service v0.0.0-20260311124303-23a6533bc2ad
 	github.com/beclab/api v0.0.2
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/containerd/containerd v1.7.29
