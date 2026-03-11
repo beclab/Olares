@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/client-go/util/retry"
 	"os"
 	"os/exec"
 	"path"
@@ -522,7 +523,14 @@ func (a *addEntrancePolicy) Execute(runtime connector.Runtime) error {
 			return errors.Wrapf(errors.WithStack(err), "failed to build patch payload for %s", appName)
 		}
 
-		if _, err := dynamicClient.Resource(applicationGVR).Patch(ctx, appName, types.MergePatchType, patchContent, metav1.PatchOptions{}); err != nil {
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			_, err = dynamicClient.Resource(applicationGVR).Patch(ctx, appName, types.MergePatchType, patchContent, metav1.PatchOptions{})
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
 			return errors.Wrapf(errors.WithStack(err), "failed to patch olares-app application %s", appName)
 		}
 		patchedCount++
