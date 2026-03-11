@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"k8s.io/client-go/util/retry"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"k8s.io/client-go/util/retry"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
@@ -32,15 +33,21 @@ import (
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/pkg/utils"
+	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const cacheRebootNeeded = "reboot.needed"
@@ -537,5 +544,245 @@ func (a *addEntrancePolicy) Execute(runtime connector.Runtime) error {
 	}
 
 	logger.Infof("application olares-app policy updated with headscale sub_policies for %d users", patchedCount)
+	return nil
+}
+
+type waitForStatefulSetReady struct {
+	common.KubeAction
+	Namespace string
+	Name      string
+	InitDelay time.Duration
+}
+
+func (w *waitForStatefulSetReady) Execute(_ connector.Runtime) error {
+	if w.InitDelay > 0 {
+		logger.Infof("waiting %s before checking statefulset %s/%s", w.InitDelay, w.Namespace, w.Name)
+		time.Sleep(w.InitDelay)
+	}
+
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to get kubernetes config")
+	}
+
+	scheme := kruntime.NewScheme()
+	if err := appsv1.AddToScheme(scheme); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to add apps/v1 scheme")
+	}
+
+	c, err := ctrlclient.New(config, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to create client")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var sts appsv1.StatefulSet
+	key := ctrlclient.ObjectKey{Namespace: w.Namespace, Name: w.Name}
+	if err := c.Get(ctx, key, &sts); err != nil {
+		return errors.Wrapf(errors.WithStack(err), "failed to get statefulset %s/%s", w.Namespace, w.Name)
+	}
+
+	if sts.Status.ObservedGeneration < sts.Generation {
+		return fmt.Errorf("statefulset %s/%s rollout not observed yet (generation %d, observed %d)",
+			w.Namespace, w.Name, sts.Generation, sts.Status.ObservedGeneration)
+	}
+
+	replicas := int32(1)
+	if sts.Spec.Replicas != nil {
+		replicas = *sts.Spec.Replicas
+	}
+
+	if sts.Status.UpdatedReplicas < replicas {
+		return fmt.Errorf("statefulset %s/%s not fully updated: %d/%d updated",
+			w.Namespace, w.Name, sts.Status.UpdatedReplicas, replicas)
+	}
+
+	if sts.Status.ReadyReplicas < replicas {
+		return fmt.Errorf("statefulset %s/%s not ready: %d/%d ready",
+			w.Namespace, w.Name, sts.Status.ReadyReplicas, replicas)
+	}
+
+	if sts.Status.CurrentRevision != sts.Status.UpdateRevision {
+		return fmt.Errorf("statefulset %s/%s revision mismatch: current=%s update=%s",
+			w.Namespace, w.Name, sts.Status.CurrentRevision, sts.Status.UpdateRevision)
+	}
+
+	logger.Infof("statefulset %s/%s is ready", w.Namespace, w.Name)
+	return nil
+}
+
+type backfillAppGPUConfig struct {
+	common.KubeAction
+}
+
+var gpuMemoryByRawAppName = map[string]string{
+	"ollamallama318bv2":  "8Gi",
+	"ollamaminicpmv8bv2": "8Gi",
+	"vllmhymt1518bv2":    "8Gi",
+
+	"ollamacogito14bv2":     "12Gi",
+	"ollamadeepseekr114bv2": "12Gi",
+	"ollamallava1613bv2":    "12Gi",
+	"ollamaphi414bv2":       "12Gi",
+	"ollamaqwen314bv2":      "12Gi",
+	"ollamaqwen359bv2":      "12Gi",
+	"deepseekocrwebuiv2":    "12Gi",
+	"vllmhymt157bv2":        "12Gi",
+
+	"ollamagptoss20bv2": "19Gi",
+	"indexttsv2":        "19Gi",
+	"vllmgemma312bitv2": "19Gi",
+
+	"ollamagemma327bv2":             "23Gi",
+	"ollamaglm47flashv2":            "23Gi",
+	"ollamaqwen330ba3bv2":           "23Gi",
+	"ollamaqwen3527bq4kmv2":         "23Gi",
+	"llamacppgptoss120bggufv2":      "23Gi",
+	"vllmqwen330ba3binstruct4bitv2": "23Gi",
+	"vllmgptoss20bv2":               "23Gi",
+	"vllmgemma327bqatv2":            "23Gi",
+}
+
+const defaultGPUMemory = "2Gi"
+
+func (a *backfillAppGPUConfig) Execute(_ connector.Runtime) error {
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to get kubernetes config")
+	}
+
+	scheme := kruntime.NewScheme()
+	if err := appv1alpha1.AddToScheme(scheme); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to add app-service scheme")
+	}
+	if err := appsv1.AddToScheme(scheme); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to add apps/v1 scheme")
+	}
+
+	c, err := ctrlclient.New(config, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to create controller-runtime client")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	var amList appv1alpha1.ApplicationManagerList
+	if err := c.List(ctx, &amList); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to list applicationmanagers")
+	}
+
+	patchedCount := 0
+	for i := range amList.Items {
+		am := &amList.Items[i]
+		if am.Spec.Config == "" {
+			continue
+		}
+
+		var appCfg appcfg.ApplicationConfig
+		if err := json.Unmarshal([]byte(am.Spec.Config), &appCfg); err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to unmarshal config for applicationmanager %s", am.Name)
+		}
+
+		if appCfg.RequiredGPU == "" {
+			continue
+		}
+
+		modified := false
+
+		if appCfg.Requirement.GPU == nil {
+			gpuMem, ok := gpuMemoryByRawAppName[am.Spec.RawAppName]
+			if !ok {
+				gpuMem = defaultGPUMemory
+			}
+			q := resource.MustParse(gpuMem)
+			appCfg.Requirement.GPU = &q
+			modified = true
+		}
+
+		if appCfg.SelectedGpuType == "" {
+			appCfg.SelectedGpuType = "nvidia"
+			modified = true
+		}
+
+		if !modified {
+			continue
+		}
+
+		updatedConfig, err := json.Marshal(&appCfg)
+		if err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to marshal updated config for %s", am.Name)
+		}
+
+		patchObj := map[string]interface{}{
+			"spec": map[string]interface{}{
+				"config": string(updatedConfig),
+			},
+		}
+		patchContent, err := json.Marshal(patchObj)
+		if err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to build patch for %s", am.Name)
+		}
+
+		if err := c.Patch(ctx, am, ctrlclient.RawPatch(types.MergePatchType, patchContent)); err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to patch applicationmanager %s", am.Name)
+		}
+
+		logger.Infof("backfilled GPU config for applicationmanager %s", am.Name)
+		patchedCount++
+
+		if err := annotateWorkloadsForGPUBackfill(ctx, c, am, &appCfg); err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to annotate workloads for %s", am.Name)
+		}
+	}
+
+	logger.Infof("backfilled GPU config for %d applicationmanagers", patchedCount)
+	return nil
+}
+
+func annotateWorkloadsForGPUBackfill(ctx context.Context, c ctrlclient.Client, am *appv1alpha1.ApplicationManager, appCfg *appcfg.ApplicationConfig) error {
+	var namespaces []string
+	if appCfg.IsMultiCharts() {
+		for _, chart := range appCfg.SubCharts {
+			namespaces = append(namespaces, chart.Namespace(am.Spec.AppOwner))
+		}
+	} else {
+		if am.Spec.AppNamespace == "" {
+			return nil
+		}
+		namespaces = []string{am.Spec.AppNamespace}
+	}
+
+	timestamp := time.Now().Format(time.RFC3339)
+	annotationPatch := ctrlclient.RawPatch(types.MergePatchType,
+		[]byte(fmt.Sprintf(`{"metadata":{"annotations":{"bytetrade.io/upgrade-gpu-backfill":"%s"}}}`, timestamp)))
+	for _, ns := range namespaces {
+		var deployList appsv1.DeploymentList
+		if err := c.List(ctx, &deployList, ctrlclient.InNamespace(ns)); err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to list deployments in %s", ns)
+		}
+		for i := range deployList.Items {
+			d := &deployList.Items[i]
+			if err := c.Patch(ctx, d, annotationPatch); err != nil {
+				return errors.Wrapf(errors.WithStack(err), "failed to annotate deployment %s/%s", ns, d.Name)
+			}
+			logger.Infof("annotated deployment %s/%s for GPU config backfill", ns, d.Name)
+		}
+
+		var stsList appsv1.StatefulSetList
+		if err := c.List(ctx, &stsList, ctrlclient.InNamespace(ns)); err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to list statefulsets in %s", ns)
+		}
+		for i := range stsList.Items {
+			s := &stsList.Items[i]
+			if err := c.Patch(ctx, s, annotationPatch); err != nil {
+				return errors.Wrapf(errors.WithStack(err), "failed to annotate statefulset %s/%s", ns, s.Name)
+			}
+			logger.Infof("annotated statefulset %s/%s for GPU config backfill", ns, s.Name)
+		}
+	}
+
 	return nil
 }

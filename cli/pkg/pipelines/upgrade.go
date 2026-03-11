@@ -7,7 +7,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/upgrade"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/beclab/Olares/cli/version"
-	"github.com/spf13/viper"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
@@ -40,7 +39,7 @@ func UpgradeOlaresPipeline() error {
 	}
 
 	arg := common.NewArgument()
-	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
+	arg.SetOlaresVersion(version.VERSION)
 	arg.SetConsoleLog("upgrade.log", true)
 	arg.SetKubeVersion(phase.GetKubeType())
 
@@ -74,6 +73,7 @@ func UpgradeOlaresPipeline() error {
 func UpgradePreCheckPipeline() error {
 	var arg = common.NewArgument()
 	arg.SetConsoleLog("upgrade-precheck.log", true)
+	arg.SetOlaresVersion(version.VERSION)
 
 	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
