@@ -2,7 +2,9 @@ package upgrade
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"k8s.io/client-go/util/retry"
 	"os"
 	"os/exec"
 	"path"
@@ -31,7 +33,14 @@ import (
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/utils/ptr"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const cacheRebootNeeded = "reboot.needed"
@@ -401,5 +410,132 @@ func (r *rebootIfNeeded) Execute(runtime connector.Runtime) error {
 	if ok && val {
 		_, _ = runtime.GetRunner().SudoCmd("reboot now", false, false)
 	}
+	return nil
+}
+
+type addEntrancePolicy struct {
+	common.KubeAction
+}
+
+type applicationSettingsSubPolicy struct {
+	URI      string `json:"uri"`
+	Policy   string `json:"policy"`
+	OneTime  bool   `json:"one_time"`
+	Duration int32  `json:"valid_duration"`
+}
+
+type applicationSettingsPolicy struct {
+	DefaultPolicy string                          `json:"default_policy"`
+	SubPolicies   []*applicationSettingsSubPolicy `json:"sub_policies"`
+	OneTime       bool                            `json:"one_time"`
+	Duration      int32                           `json:"valid_duration"`
+}
+
+func (a *addEntrancePolicy) Execute(runtime connector.Runtime) error {
+	_ = runtime
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to get kubernetes config")
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to create dynamic client")
+	}
+
+	userGVR := schema.GroupVersionResource{
+		Group:    "iam.kubesphere.io",
+		Version:  "v1alpha2",
+		Resource: "users",
+	}
+
+	applicationGVR := schema.GroupVersionResource{
+		Group:    "app.bytetrade.io",
+		Version:  "v1alpha1",
+		Resource: "applications",
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	userList, err := dynamicClient.Resource(userGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to list users")
+	}
+
+	patchedCount := 0
+	for _, user := range userList.Items {
+		if user.GetDeletionTimestamp() != nil {
+			continue
+		}
+		if state, found, _ := unstructured.NestedString(user.Object, "status", "state"); found && (state == "Failed" || state == "Deleting") {
+			continue
+		}
+		username := strings.TrimSpace(user.GetName())
+		if username == "" {
+			continue
+		}
+		appName := fmt.Sprintf("user-space-%s-olares-app", username)
+		appObj, err := dynamicClient.Resource(applicationGVR).Get(ctx, appName, metav1.GetOptions{})
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				logger.Warnf("olares-app application not found %s, skipping", appName)
+				continue
+			}
+			return errors.Wrapf(errors.WithStack(err), "failed to get olares-app application %s", appName)
+		}
+
+		policyStr, found, err := unstructured.NestedString(appObj.Object, "spec", "settings", "policy")
+		if err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to read olares-app settings.policy from %s", appName)
+		}
+
+		policyObj := make(map[string]*applicationSettingsPolicy)
+
+		if found && strings.TrimSpace(policyStr) != "" {
+			if err := json.Unmarshal([]byte(policyStr), &policyObj); err != nil {
+				return errors.Wrapf(errors.WithStack(err), "failed to deserialize olares-app settings.policy from %s", appName)
+			}
+		}
+
+		headscalePolicy := &applicationSettingsSubPolicy{
+			URI:      "/api/refresh",
+			Policy:   "public",
+			OneTime:  false,
+			Duration: 0,
+		}
+
+		policyObj["headscale"].SubPolicies = append(policyObj["headscale"].SubPolicies, headscalePolicy)
+
+		updatedPolicyBytes, err := json.Marshal(policyObj)
+		if err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to serialize updated settings.policy for %s", appName)
+		}
+
+		patchObj := map[string]interface{}{
+			"spec": map[string]interface{}{
+				"settings": map[string]interface{}{
+					"policy": string(updatedPolicyBytes),
+				},
+			},
+		}
+		patchContent, err := json.Marshal(patchObj)
+		if err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to build patch payload for %s", appName)
+		}
+
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			_, err = dynamicClient.Resource(applicationGVR).Patch(ctx, appName, types.MergePatchType, patchContent, metav1.PatchOptions{})
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to patch olares-app application %s", appName)
+		}
+		patchedCount++
+	}
+
+	logger.Infof("application olares-app policy updated with headscale sub_policies for %d users", patchedCount)
 	return nil
 }
