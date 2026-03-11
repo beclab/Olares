@@ -15,11 +15,11 @@ As an administrator, you can balance resource usage and application performance 
 
 ## 1. Choose a GPU mode
 
-First, select the GPU mode that best matches your task needs. The following table summarizes how each mode handles resources:
+First, select the GPU mode that best matches your task needs. The following table summarizes how each mode handles resources.
 
 | Workload needs | Recommended mode | How it works | Example |
 | :--- | :--- | :--- | :--- |
-| Multiple light-weight apps sharing resources | Time slicing (Default) | Apps take turns using the GPU's compute cores and VRAM. | Running several light-weight AI services or image tools simultaneously. |
+| Multiple lightweight apps sharing resources | Time slicing (Default) | Apps take turns using the GPU's compute cores and VRAM. | Running several lightweight AI services or image tools simultaneously. |
 | Single high-performance app requiring maximum power | App exclusive | One app gets full, uninterrupted access to a single GPU. | Fine-tuning large language models (LLMs) or high-end 3D rendering. |
 | Multiple apps with strict VRAM limits | Memory slicing | The GPU's VRAM is divided into fixed quotas for concurrent apps. | Running different, VRAM-constrained AI models for multiple users. |
 
@@ -30,20 +30,16 @@ Before making changes, check your current GPU resource allocation.
 1. Open the Settings app from the Dock or Launchpad on Olares, and then select **GPU**.
 2. On the GPU details page, review the GPU's model, node, total VRAM, current working mode, and bound applications.
     ![Single GPU details](/images/one/single-gpu-details.png#bordered){width=70%}
-3. If you have multiple GPUs, click a GPU from the list to view its details.
+3. If you have multiple GPUs, click a specific GPU from the list to view its details.
     ![Multiple GPU list](/images/one/multiple-gpu-list.png#bordered){width=70%}
 
 ## 3. Configure GPU mode
 
-After choosing a GPU mode based on your task, follow the steps below to configure it. 
-
-:::info
-Changing a GPU's mode will automatically restart all application containers currently associated with this GPU.
-:::
+After choosing a GPU mode based on your task, follow the steps below to configure it.
 
 ### Share GPU among multiple apps (Time slicing) <Badge type="tip" text="Olares One only" />
 
-To run multiple light-weight applications, the "Time slicing" mode is suitable.
+To run multiple lightweight applications, the "Time slicing" mode is suitable.
 
 This is the system's default mode. Applications without a specific binding are automatically scheduled to GPUs in this mode.
 
@@ -61,7 +57,7 @@ If you are switching to this mode from the **App Exclusive** mode:
 
     b. Select the target application and click **Confirm**.
 
-    c. Repeat the same steps to bind all apps you want. 
+    c. Repeat the same steps to bind additional apps. 
     
     After binding, the applications will always use this GPU.
 4. (Optional) To move a bound application to another GPU on the same node:
@@ -75,7 +71,7 @@ If you are switching to this mode from the **App Exclusive** mode:
     
     The app is immediately unbound from the current GPU, and it is automatically migrated to the new GPU as a bound app.
 
-5. (Optional) To remove the app binding:
+5. (Optional) To remove an app binding:
 
     a. Stop the app from **Settings** > **Applications** or from **Market** > **My Olares**.
     
@@ -114,7 +110,7 @@ When switching to the **App Exclusive** mode from other modes ("Time slicing" or
     
     The app is immediately unbound from the current GPU, and it is automatically migrated to the new GPU as a bound app.
 
-7. (Optional) To remove the exclusive binding:
+6. (Optional) To remove the exclusive binding:
 
     a. Stop the app from **Settings** > **Applications** or from **Market** > **My Olares**.
     
@@ -179,12 +175,10 @@ When switching from the "App exclusive" mode to another mode:
 - The exclusive application will be unbound and remain **Running**.
 - However, other applications that were stopped due to exclusive mode will not resume automatically, so they remain **Stopped**.
 
-Therefore, you need to manually resume these apps one by one from **Market** > **My Olares** or from **Settings** > **Applications**.
+Therefore, you must manually resume these apps one by one from **Market** > **My Olares** or from **Settings** > **Applications**.
 
 ### How are application VRAM quotas set when switching to "Memory slicing" mode?
 
-When switching from other modes to the **Memory slicing**, the system automatically assigns a minimum VRAM quota to each currently running application. However, this quota might not be sufficient for the application's actual runtime needs. 
+When switching from other modes to the **Memory slicing**, the system automatically assigns a minimum VRAM quota to each currently running application. However, this quota might not be sufficient for the application's actual runtime needs. You must manually check and adjust each application's VRAM quota to ensure they can run properly.
 
-Therefore, you need to manually check and adjust each application's VRAM quota to ensure they can run properly.
-
-Note that the sum of all quotas must not exceed the GPU's total VRAM. So before any mode switch, it's recommended to check the current applications running on the GPU and plan accordingly in advance.
+Note that the sum of all quotas must not exceed the GPU's total VRAM. So before any mode switch, it's recommended to check the current applications running on the GPU and plan your VRAM allocation in advance.
