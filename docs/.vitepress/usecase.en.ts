@@ -31,7 +31,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "Open WebUI",
-              link: "/use-cases/openwebui",
+              collapsed: true,
+              items: [
+                {
+                  text: "Set up with model apps",
+                  link: "/use-cases/openwebui",
+                },
+                {
+                  text: "Set up with Ollama",
+                  link: "/use-cases/openwebui-ollama",
+                },
+              ]
             },
             {
               text: "Perplexica",
