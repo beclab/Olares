@@ -14,13 +14,13 @@ This guide walks you through installing Open WebUI and Qwen3.5 27B on Olares One
 
 ## Learning objectives
 - Use Open WebUI on Olares One to run local LLMs.
-- Make the Qwen3.5 27B Q4_K_M model available to other apps through a shared endpoint.
+- Make the Qwen3.5 27B Q4_K_M model available to other apps.
 
 ## Prerequisites
 **Hardware** <br>
 - Olares One connected to a stable network.
 - At least 20 GB free disk space to download the model.
-- Sufficient GPU VRAM and system memory to run large language models.
+- Sufficient GPU VRAM and system memory to run LLMs.
 
 **User permissions**
 - Admin privileges to install shared apps from the Market and manage GPU resources.
@@ -44,18 +44,7 @@ This guide walks you through installing Open WebUI and Qwen3.5 27B on Olares One
 3. Once you see the following screen, the model is ready to use.
    ![Qwen3.5 27B downloaded](/images/one/qwen3.5-27b-downloaded.png#bordered)
 
-4. To let Open WebUI access this model, you need to get its shared endpoint URL.
-
-   a. Open Olares Settings, then navigate to **Application** > **Qwen3.5 27B Q4_K_M (Ollama)**.
-
-   b. In **Shared entrances**, select **Qwen3.5 27B Q4_K_M** to view the endpoint URL.
-   ![Qwen3.5 27B shared entrance](/images/one/qwen3.5-27b-shared-entrance.png#bordered)
-
-   c. Copy the shared endpoint. For example:
-      ```plain
-      http://94a553e00.shared.olares.com
-      ```
-   You will need this URL in a later step.
+4. Copy the URL shown on the model page. You will need this to configure Open WebUI.
 
 ## Step 3: Create an Open WebUI admin account
 1. Open the Open WebUI app.
@@ -76,8 +65,8 @@ This guide walks you through installing Open WebUI and Qwen3.5 27B on Olares One
    By default, the local Ollama API is pre-configured and visible under **Manage Ollama API connections**.
    :::
 3. Click <span class="material-symbols-outlined">add</span> to open the Add Connection dialog.
-4. In the **URL** field, paste the shared endpoint you copied in Step 2, then click **Save**. Open WebUI automatically verifies the connection. When you see "Ollama API settings updated", the connection is established.
-   ![Connection established](/images/one/open-webui-connection-established.png#bordered)
+4. In the **URL** field, paste the URL you copied in Step 2, then click **Save**. Open WebUI automatically verifies the connection. When you see "Ollama API settings updated", the connection is established.
+   ![Connection established](/images/one/open-webui-connection-established1.png#bordered)
 
 ## Step 5: Chat with your local LLM
 1. On the main chat page, confirm that **qwen3.5:27b-q4_K_M** is selected in the model dropdown.
