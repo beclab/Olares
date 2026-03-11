@@ -111,7 +111,3 @@ If **Subnet routes** is enabled in **Settings** > **VPN**, all devices on Olares
 
 ## Reset SSH password
 <!--@include: ./reusables-reset-ssh.md{19,}-->
-
-:::info
-Your reset SSH password will be saved to Vault.
-:::

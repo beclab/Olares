@@ -24,4 +24,4 @@ If you prefer to use an SSH password instead of the automatically generated one,
 
 3. In the dialog, enter a new SSH password that meets all strength requirements, then click **OK**.
 4. Open the LarePass app and scan the QR code shown on the screen.
-5. Click **Confirm** on LarePass to finish.
+5. Click **Confirm** on LarePass to finish. Your reset SSH password will be saved to Vault.
