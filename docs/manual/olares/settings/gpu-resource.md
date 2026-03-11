@@ -1,5 +1,5 @@
 ---
-outline: [2, 3]
+outline: deep
 description: Manage and optimize GPU resources in Olares with centralized controls, supporting time-slicing, memory-slicing, and exclusive access across single or multi-GPU setups.
 ---
 # Manage GPU usage
@@ -16,30 +16,39 @@ In this guide, you will learn how to:
 
 ## Before you begin
 
-Before changing GPU settings, it helps to understand how Olares manages GPU allocation.
+Before managing GPU resources, it helps to understand:
+- What binding and unbinding mean.
+- How an app's state affects available actions.
+- Where to resume or stop an app.
+- How GPU modes differ.
 
-- **Bind an app** means allocating GPU resources to a running app.
-- **Unbind an app** means removing that allocation so GPU resources can be released or reassigned.
+### Understand GPU allocation
 
-### App state and GPU allocation
+In Olares, allocating GPU resources to an app is called "binding", while revoking that access so the GPU can be released or reassigned is called "unbinding".
 
-Whether GPU resources can be allocated to or revoked from an app depends on its current state:
+Whether you can bind or unbind an app depends mainly on whether it is running or stopped. Use the table below as a quick reference:
 
-- To use GPU resources, the app must be running. If the app is stopped, resume it first.
-- To fully revoke an app's GPU allocation, you may need to stop the app first.
+| App state | Bind (Allocate GPU access) | Unbind (Revoke GPU access) |
+| -- | -- | -- |
+| **Running** | Supported | Stop the app first.* |
+| **Stopped** | Resume the app first. | Supported |
 
-You can change an app's state in either of these places:
-
-- Go to **Market** > **My Olares**, then choose **Resume** or **Stop** from the dropdown list.
-- Go to **Settings** > **Applications**, select the app, then click **Resume** or **Stop**.
+*\*Multi-GPU exception: If an app is allocated to multiple GPUs on the same node, you can revoke its access from one GPU while it remains running on the others.*
 
 :::info
 Stopping an app pauses its workload, but it does not automatically clear its GPU allocation.
 
-To fully release the GPU or VRAM for other workloads, you must unbind the app after stopping it.
+To fully release the GPU or VRAM for other workloads, you must explicitly unbind the app after stopping it.
 :::
 
-## Choose a GPU mode
+### Check or change an app's state
+
+You can check whether an app is **Running** or **Stopped**, and change its state, in either of these places:
+
+- **Market** > **My Olares**: The current status is displayed on the app's card. Click the dropdown menu to select **Stop** or **Resume**.
+- **Settings** > **Applications**: The current status is shown in the app list. Select the app, then click **Stop** or **Resume**.
+
+### Understand GPU modes
 
 Olares supports three GPU modes. Each mode determines how GPU resources are shared and what happens to running apps after you switch modes.
 
@@ -55,28 +64,15 @@ Changing a GPU's mode unbinds all apps currently using that GPU and restarts the
 After the restart, Olares automatically reallocates GPU resources to running apps based on the newly selected mode.
 :::
 
-## View GPU status
-
-To see your GPU configuration:
-
-1. Go to **Settings** > **GPU**.
-2. If your device has one GPU, Olares opens its details page directly.
-![GPU overview single-GPU](/images/manual/olares/gpu-time-slicing-single.png#bordered){width=90%}
-
-3. If your device has multiple GPUs, review the list to see each GPU's model, node, total VRAM, and current mode, then click a GPU to open its details page.
-![GPU overview multiple-GPU](/images/manual/olares/gpu-overview.png#bordered){width=90%}
-
-## Change a GPU mode
-
-Follow these steps to change how a GPU is used:
-
-1. Go to **Settings** > **GPU**.
-2. Click the GPU you want to configure.
-3. Choose a mode from the **GPU mode** dropdown.
-
 ## Single-GPU setup
 
 Use this section if your Olares device has only one GPU.
+
+### Open GPU settings
+
+1. Go to **Settings** > **GPU**.
+2. Olares opens the GPU details page directly.
+3. Choose a mode from the **GPU mode** dropdown.
 
 ### Time slicing
 
@@ -84,12 +80,13 @@ Use this section if your Olares device has only one GPU.
 
 #### Manually add an app
 
-In most cases, GPU resources are allocated automatically when an app runs.
+In most cases, running apps are automatically bound and appear in the list.
 
-If the target app does not appear in the list, or if no app appears:
-1. Refresh the page.
-2. In the **Pin application** section, click **Bind app**.
-3. Select the app and click **Confirm**.
+If the target app does not appear:
+1. Make sure the app is running.
+2. Reload the GPU page in your browser.
+3. In the **Pin application** section, click **Bind app**.
+4. Select the app and click **Confirm**.
 
 :::info
 **Bind app** appears only when there are running apps that require GPU resources and do not currently have GPU access.
@@ -114,22 +111,23 @@ If the target app does not appear in the list, or if no app appears:
 :::warning
 The total VRAM allocated to all apps cannot exceed the GPU's total VRAM.
 
-If the value is lower than the application's minimum requirement, **Confirm** is disabled.
+If the value is lower than the app's minimum requirement, **Confirm** is disabled.
 :::
 
 #### Manually add an app
 
-In most cases, VRAM is allocated automatically when an app runs.
+In most cases, running apps are automatically bound and appear in the list.
 
-If the target app does not appear in the list, or if no app appears:
-1. Refresh the page.
-2. In the **Allocate VRAM** section, click **Bind app**.
-3. Select the app, assign VRAM, and click **Confirm**.
+If the target app does not appear:
+1. Make sure the app is running.
+2. Reload the GPU page in your browser.
+3. In the **Allocate VRAM** section, click **Bind app**.
+4. Select the app, assign VRAM, and click **Confirm**.
 
 #### Revoke an app's VRAM allocation
 
 1. Stop the app first.
-2. Return to **Settings** > **GPU**. 
+2. Return to the GPU page.
 3. In the **Allocate VRAM** section, click <i class="material-symbols-outlined">link_off</i>, then click **Confirm**.
 
 ### App exclusive
@@ -138,43 +136,63 @@ If the target app does not appear in the list, or if no app appears:
 
 #### Change the exclusive app
 
-1. In the **Select exclusive app** section, click **Switch app**.
-2. Choose the new app and click **Confirm**.
+1. Make sure the new target app is running.
+2. In the **Select exclusive app** section, click **Switch app**.
+3. Choose the new app and click **Confirm**.
 
 #### Manually set the exclusive app
 
-In most cases, Olares assigns an exclusive app automatically.
+In most cases, Olares automatically selects one running app for exclusive access.
 
 If no app appears:
-1. Refresh the page.
-2. In the **Select exclusive app** section, click **Bind app**.
-3. Select the app and click **Confirm**.
+1. Make sure the target app is running.
+2. Reload the GPU page in your browser.
+3. In the **Select exclusive app** section, click **Bind app**.
+4. Select the app and click **Confirm**.
 
 #### Revoke an app's exclusive access
 
 1. Stop the app first.
-2. Return to **Settings** > **GPU**. 
+2. Return to the GPU page.
 3. In the **Select exclusive app** section, click <i class="material-symbols-outlined">link_off</i>, then click **Confirm**.
 
 ## Multi-GPU setup
 
-Use this section if your system has multiple GPUs. 
-:::info Multi-GPU scheduling
-When multiple GPUs are available, Olares may distribute running apps across different GPUs. 
+Use this section if your system has multiple GPUs.
 
-After switching GPU modes, running apps may be allocated to different GPUs. 
+### Open GPU settings
+
+1. Go to **Settings** > **GPU**.
+2. Review the list to see each GPU's model, node, total VRAM, and current mode.
+3. Click the GPU you want to configure.
+4. Choose a mode from the **GPU mode** dropdown.
+
+![GPU overview multiple-GPU](/images/manual/olares/gpu-overview.png#bordered){width=90%}
+
+:::info Multi-GPU scheduling
+When multiple GPUs are available, Olares may distribute running apps across different GPUs.
+
+After switching GPU modes, running apps may be allocated to different GPUs.
 
 You can also reassign an app to a different GPU or fully revoke its GPU access.
 :::
-:::tip Can't find the target app?
-If the app does not appear as an available option when you click **Bind app**, it may already be assigned to a GPU on another node.
 
-Check other GPUs in the list and find where the app is currently assigned, then use **Switch GPU** to reassign it to the target GPU.
+:::tip Can't find the target app?
+If the target app does not appear as an available option when you click **Bind app**, it may already be assigned to another GPU on the same node or on another node.
+
+Check other GPUs to find where the app is currently assigned, then use **Switch GPU** to reassign it to the target GPU.
 :::
 
 ### Time slicing
 
 ![Time slicing multi GPU](/images/manual/olares/gpu-time-slicing-multi.png#bordered){width=90%}
+
+#### Manually add an app
+
+If the target app is not assigned to the current GPU:
+
+1. In the **Pin application** section, click **Bind app**.
+2. Select the app and click **Confirm**.
 
 #### Reassign an app to another GPU
 
@@ -184,26 +202,26 @@ Check other GPUs in the list and find where the app is currently assigned, then 
 
 The app continues running during this process.
 
-#### Manually add an app
+#### Revoke an app's access to this GPU
 
-If the app does not appear on the target GPU:
-
-1. In the **Pin application** section, click **Bind app**.
-2. Select the app and click **Confirm**.
-
-#### Revoke the app's access to this GPU
-
-1. If the app is bound only to this GPU, stop the app first.
-2. Return to **Settings** > **GPU**. 
+1. If the app is bound only to this GPU, stop it first.
+2. Return to **Settings** > **GPU**.
 3. In the **Pin application** section, click <i class="material-symbols-outlined">link_off</i>, then click **Confirm**.
 
 :::tip Unbind from multiple GPUs
-If the app has also been allocated resources on other GPUs on the same node, you can clear the allocation from the current GPU without stopping it.
+If the app is still allocated to other GPUs on the same node, you can revoke its access from the current GPU without stopping it.
 :::
 
 ### Memory slicing
 
 ![Multi-GPU memory slicing](/images/manual/olares/gpu-mem-slicing-multi.png#bordered){width=90%}
+
+#### Manually add an app
+
+If the target app is not assigned to the current GPU:
+
+1. In the **Allocate VRAM** section, click **Bind app**.
+2. Select the app and click **Confirm**.
 
 #### Adjust VRAM allocation
 
@@ -219,15 +237,9 @@ If the value is lower than the app's minimum requirement, **Confirm** is disable
 
 #### Reassign an app to another GPU
 
-1. In the application list, find the app and click <i class="material-symbols-outlined">repeat</i>.
+1. In the **Allocate VRAM** section, find the app and click <i class="material-symbols-outlined">repeat</i>.
 2. Choose the target GPU.
 3. Click **Confirm**.
-
-#### Manually add an app
-
-If the target app does not appear on the target GPU:
-1. In the **Allocate VRAM** section, click **Bind app**.
-2. Select the app and click **Confirm**.
 
 #### Revoke an app's VRAM allocation on this GPU
 
@@ -243,17 +255,17 @@ If the app has also been allocated VRAM on other GPUs on the same node, you can 
 
 ![Multi-GPU app exclusive](/images/manual/olares/gpu-app-exclusive-multi.png#bordered){width=90%}
 
-#### Reassign the exclusive app to another GPU
-
-1. Click <i class="material-symbols-outlined">repeat</i>.
-2. Choose the target GPU.
-3. Click **Confirm**.
-
 #### Manually set the exclusive app
 
-If no app appears on the target GPU:
+If no app is selected on the current GPU:
 1. In the **Select exclusive app** section, click **Bind app**.
 2. Select the app and click **Confirm**.
+
+#### Reassign the exclusive app to another GPU
+
+1. In the **Select exclusive app** section, click <i class="material-symbols-outlined">repeat</i>.
+2. Choose the target GPU.
+3. Click **Confirm**.
 
 #### Revoke an app's exclusive access to this GPU
 
