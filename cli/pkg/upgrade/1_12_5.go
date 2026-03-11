@@ -72,6 +72,12 @@ func (u upgrader_1_12_5) UpgradeSystemComponents() []task.Interface {
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},
+		&task.LocalTask{
+			Name:   "AddEntrancePolicy",
+			Action: new(addEntrancePolicy),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
 	}
 	return append(pre, u.upgraderBase.UpgradeSystemComponents()...)
 }
