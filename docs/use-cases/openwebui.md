@@ -1,101 +1,110 @@
 ---
-outline: [2, 3]
-description: Guide to using Open WebUI in Olares for managing Large Language Models. Learn about model management, voice interactions, and image generation capabilities with both Ollama and OpenAI-compatible APIs.
+outline: deep
+description: Set up Open WebUI on Olares to chat with local Large Language Models using pre-configured model apps.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Open WebUI, local LLM, AI chatbot
+app_version: "1.0.20"
+doc_version: "2.0"
+doc_updated: "2026-03-11"
 ---
 
-# Open WebUI
+# Chat with Local LLMs Using Open WebUI
 
-Open WebUI provides an intuitive interface for managing Large Language Models (LLMs) that supports both Ollama and OpenAI-compatible APIs. This page helps you set up and configure Open WebUI in Olares for:
+Open WebUI provides a user-friendly chat interface for local models on your Olares device. It does not include any models by default, so you need to install a dedicated model app that acts as the backend. This guide walks you through the setup process using the Qwen3.5 27B Q4_K_M model app as an example.
 
-* Model management
-* Voice interactions (speech-to-text and text-to-speech)
-* Image generation capabilities
-
-:::tip Enable LarePass VPN
-Make sure your device has LassPass installed and [VPN enabled](../manual/larepass/private-network.md#enable-vpn-on-larepass) to ensure a fast and stable access. 
+:::tip Alternative method
+If you prefer to manage multiple models through the Ollama app, see [Set up Open WebUI with Ollama](openwebui-ollama.md).
 :::
 
-## Installation
-Ollama is required prior to launching Open WebUI:
-* **For admin**: Install both "Ollama" and "Open WebUI".
-* **For team members**: Ensure that "Ollama" is already installed by Olares admin, and then install "Open WebUI" only.
+## Learning objectives
 
-![Install Ollama and Open WebUI](/images/manual/use-cases/install-open-webui.png){width=30%}
+In this guide, you will learn how to:
+- Run a model app from the Market with Open WebUI on Olares.
+- Use the shared endpoint URL to connect the model to Open WebUI.
+- Start a chat using the connected local model.
 
-:::info
-First-time users need to create a local Open WebUI account. This account is specifically for your Olares installation and doesn't connect to external services. Note that existing Open WebUI accounts from other installations cannot be used here - you'll need to create a new one.
-:::
+## Prerequisites
 
-## Download models
-:::tip
-Browse available models on [Hugging Face's Chatbot Arena Leaderboard](https://huggingface.co/spaces/lmsys/chatbot-arena-leaderboard) and verify model names in the [Ollama Library](https://ollama.com/library) before downloading.
-:::
+- An Olares device with sufficient disk space and memory
+- Admin privileges to install shared apps from Market
 
-Recommended starter models for optimal performance (13B parameters or smaller):
+## Install the model app and Open WebUI
 
-* `gemma2`: Google's latest  efficient and powerful language model
-* `llama3.2`: Meta's latest open-source vision-language model
+1. Open **Market** and search for your desired model.
+2. Click **Get**, then click **Install**.
+   ![Install model app](/images/one/qwen3.5-27b.png#bordered)
+3. Search for "Open WebUI" and install it as well.
+   ![Install Open WebUI](/images/one/open-webui.png#bordered)
+4. Wait for both installations to complete.
 
-### Quick download
-1. Click the dropdown menu, enter the model name (e.g., `llama3.2`).
-2. Select **Pull from Ollama.com**. The download starts automatically.
-### Download from settings
-1. Click your username in the bottom left.
-2. Navigate to **Admin Panel** > **Settings** > **Models**.
-3. Under **Pull a model from Ollama.com**, enter the model name (e.g., `llama3.2`).
-4. Click <i class="material-symbols-outlined">download</i> to initiate the download.
-## Configure speech features
-### Speech-to-text
-1. Install Faster Whisper from Market based on your role:
-   - Admin: Install both "Faster Whisper For Cluster" and "Faster Whisper".
-   - Team members: Ensure that "Faster Whisper For Cluster" is already installed by Olares admin, and install "Faster Whisper" only.
+## Download the model
 
-   ![Install Faster Whisper](/images/manual/use-cases/install-faster-whisper.png){width=40%}
-2. Open WebUI, and navigate to **Admin Panel** > **Settings** > **Audio**.
-3. Select **OpenAI** as the speech-to-text engine, with the following configurations:
-   - API Base URL: `http://whisper.whisper-{admin's local name}:8000/v1`. For example: `http://whisper.whisper-alice123:8000/v1`.
-   - API key: enter any character.
-4. Enter a model variant (default: `whisper-1`). You can select from the following:
-   - `tiny.en`
-   - `tiny`
-   - `base.en`
-   - `base`
-   - `small.en`
-   - `small`
-   - `medium.en`
-   - `medium`
-   - `large-v1`
-   - `large-v2`
-   - `large-v3`
-   - `large`
-   - `distil-large-v2`
-   - `distil-medium.en`
-   - `distil-small.en`
-   - `distil-large-v3`
-5. Click **Save**.
-6. Launch Faster Whisper after configuration. You'll see that the model you configured in Open WebUI is automatically loaded. At this point, you can either:
-   - Upload audio directly to start transcription
-   - Adjust parameters including:
-      - Select different sub-models
-      - Choose task types
-      - Configure **Temperature** settings
+1. Open the model app you just installed.
+2. View the model downloading progress.
+   ![Downloading model](/images/one/qwen3.5-27b-downloading.png#bordered)
+3. Once you see the completion screen, the model is ready.
+   ![Model downloaded](/images/one/qwen3.5-27b-downloaded.png#bordered)
+4. To let Open WebUI access this model, you need to get its shared endpoint URL.
 
-### Text-to-speech
-1. The admin installs OpenedAI Speech from Market. This launches the service within the cluster.
-   :::info
-   "OpenedAI Speech" is a shared application and can only be installed by Olares admin. If you are a team member, ensure that the Olares admin has already installed "OpenedAI Speech".
-2. Open WebUI, and navigate to **Admin Panel** > **Settings** > **Audio**.
-3. Select OpenAI as the text-to-speech engine, with the following configurations:
-    - API Base URL: `http://openedaispeech.openedaispeech-{admin's local name}:8000/v1`. For example: `http://openedaispeech.openedaispeech-alice123:8000/v1`.
-    - API key: enter any character.
-4. Click **Save**.
+   a. Open Olares Settings, then navigate to **Application** > **Qwen3.5 27B Q4_K_M (Ollama)**.
 
-### Text-to-image
-With [SD Web UI Shared installed in your Olares environment](stable-diffusion.md#install-sd-web-ui), you can leverage Stable Diffusion's powerful image generation capabilities directly through Open WebUI.
+   b. In **Shared entrances**, select **Qwen3.5 27B Q4_K_M** to view the endpoint URL.
+   ![Qwen3.5 27B shared entrance](/images/one/qwen3.5-27b-shared-entrance.png#bordered)
 
-1. The admin installs SD Web UI Shared from Market. This launches the Stable Diffusion service within the cluster.
-2. Open Open WebUI, and navigate to **Admin Panel** > **Settings** > **Images**.
-3. Select **Automatic1111** as the image generation engine, with the base URL:  `http://sdwebui.sdwebui--{admin's local name}:7860`. For example: `http://sdwebui.sdwebui-alice123:7860`.
-4. Click <i class="material-symbols-outlined">cached</i> to verify the connection.
-5. Turn on **Image Generation (Experimental)**, and select your preferred text-to-image model checkpoint.
-6. Click **Save**.
+   c. Copy the shared endpoint. For example:
+      ```plain
+      http://94a553e00.shared.olares.com
+      ```
+   You will need this URL in a later step.
+
+
+   :::tip Why not use the URL shown on the model page?
+   The URL shown on the model app page is user-specific and relies on browser-based frontend calls. If your device and Olares are not on the same local network, those calls may trigger Olares sign-in and you may encounter cross-origin restrictions (CORS). To avoid these issues, use the shared endpoint URL.
+   :::
+
+## Create an admin account
+
+1. Open the Open WebUI app.
+2. On the welcome page, click **Get started**.
+   ![Create account](/images/one/open-webui-create-account.png#bordered)
+3. Enter your name, email, and password to create the account.
+
+   :::info First account is admin
+   The first account created has full administrator privileges for managing models and settings.
+   :::
+
+   :::info Local account only
+   This account is stored locally on your Olares device and does not connect to external services.
+   :::
+
+## Configure the connection
+
+1. Click your **profile icon** in the bottom-left corner and select **Admin Panel**.
+2. Navigate to **Settings** > **Connections**.
+3. Click <span class="material-symbols-outlined">add</span> to add a new connection.
+4. In the **URL** field, paste the shared endpoint URL you copied earlier.
+5. Click **Save**. Open WebUI verifies the connection automatically.
+   ![Connection established](/images/one/open-webui-connection-established.png#bordered)
+
+When you see "Ollama API settings updated", the connection is established.
+
+## Start chatting
+
+1. On the main chat page, confirm that your model is selected in the dropdown.
+   ![Select model](/images/one/open-webui-qwen3.5-27b.png#bordered)
+2. Enter your prompt in the text box and press **Enter** to start chatting.
+   ![Chat with LLM](/images/one/open-webui-chat1.png#bordered)
+
+## Troubleshooting
+
+### Model app is stuck at "Waiting for Ollama" or "Needs attention"
+
+If the model app stays in these states for more than a few minutes:
+
+- Go to **Settings** > **GPU**.
+- If you are using **Memory slicing**, make sure the model app is bound to the GPU and has enough VRAM allocated.
+- If you are using **App exclusive**, make sure the exclusive app is set to your model app.
+
+Then restart the model app from Launchpad and check the status again.
