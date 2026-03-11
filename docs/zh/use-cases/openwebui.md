@@ -14,7 +14,7 @@ doc_updated: "2026-03-11"
 
 Open WebUI provides an intuitive chat interface for managing LLMs. Running Open WebUI on an Olares device gives you a private, self-hosted alternative to cloud-based AI services, ensuring your conversations remain on your own hardware.
 
-This guide covers the recommended approach: using model apps from the Market.
+This guide covers the recommended approach: using a single-model app from the Market, such as Qwen3.5 27B Q4_K_M (Ollama).
 
 :::tip Alternative method
 If you prefer to manage multiple models through the Ollama app, see [Set up Open WebUI with Ollama](openwebui-ollama.md).
@@ -24,7 +24,7 @@ If you prefer to manage multiple models through the Ollama app, see [Set up Open
 
 In this guide, you will learn how to:
 - Run a model app from the Market with Open WebUI on Olares.
-- Use the model app URL to connect the model to Open WebUI.
+- Use the shared endpoint URL to connect the model to Open WebUI.
 - Start a chat using the connected local model.
 
 ## Prerequisites
@@ -48,7 +48,23 @@ In this guide, you will learn how to:
    ![Downloading model](/images/one/qwen3.5-27b-downloading.png#bordered)
 3. Once you see the completion screen, the model is ready.
    ![Model downloaded](/images/one/qwen3.5-27b-downloaded.png#bordered)
-4. Copy the URL shown on the model page. You will need this to configure Open WebUI.
+4. To let Open WebUI access this model, you need to get its shared endpoint URL.
+
+   a. Open Olares Settings, then navigate to **Application** > **Qwen3.5 27B Q4_K_M (Ollama)**.
+
+   b. In **Shared entrances**, select **Qwen3.5 27B Q4_K_M** to view the endpoint URL.
+   ![Qwen3.5 27B shared entrance](/images/one/qwen3.5-27b-shared-entrance.png#bordered)
+
+   c. Copy the shared endpoint. For example:
+      ```plain
+      http://94a553e00.shared.olares.com
+      ```
+   You will need this URL in a later step.
+
+
+   :::tip Why not use the URL shown on the model page?
+   The URL shown on the model app page is user-specific and relies on browser-based frontend calls. If your device and Olares are not on the same local network, those calls may trigger Olares sign-in and you may encounter cross-origin restrictions (CORS). To avoid these issues, use the shared endpoint URL.
+   :::
 
 ## Create an admin account
 
@@ -70,9 +86,9 @@ In this guide, you will learn how to:
 1. Click your **profile icon** in the bottom-left corner and select **Admin Panel**.
 2. Navigate to **Settings** > **Connections**.
 3. Click <span class="material-symbols-outlined">add</span> to add a new connection.
-4. In the **URL** field, paste the URL you copied earlier.
+4. In the **URL** field, paste the shared endpoint URL you copied earlier.
 5. Click **Save**. Open WebUI verifies the connection automatically.
-   ![Connection established](/images/one/open-webui-connection-established1.png#bordered)
+   ![Connection established](/images/one/open-webui-connection-established.png#bordered)
 
 When you see "Ollama API settings updated", the connection is established.
 

@@ -44,7 +44,22 @@ This guide walks you through installing Open WebUI and Qwen3.5 27B on Olares One
 3. Once you see the following screen, the model is ready to use.
    ![Qwen3.5 27B downloaded](/images/one/qwen3.5-27b-downloaded.png#bordered)
 
-4. Copy the URL shown on the model page. You will need this to configure Open WebUI.
+4. To let Open WebUI access this model, you need to get its shared endpoint URL.
+
+   a. Open Olares Settings, then navigate to **Application** > **Qwen3.5 27B Q4_K_M (Ollama)**.
+
+   b. In **Shared entrances**, select **Qwen3.5 27B Q4_K_M** to view the endpoint URL.
+   ![Qwen3.5 27B shared entrance](/images/one/qwen3.5-27b-shared-entrance.png#bordered)
+
+   c. Copy the shared endpoint. For example:
+      ```plain
+      http://94a553e00.shared.olares.com
+      ```
+   You will need this URL in a later step.
+
+   :::tip Why use the shared endpoint URL?
+   The URL shown on the model app page is user-specific. If your device and Olares One are not on the same local network, frontend calls may trigger Olares sign-in and you may encounter cross-origin restrictions (CORS). To avoid these issues, use the shared endpoint URL.
+   :::
 
 ## Step 3: Create an Open WebUI admin account
 1. Open the Open WebUI app.
@@ -65,8 +80,8 @@ This guide walks you through installing Open WebUI and Qwen3.5 27B on Olares One
    By default, the local Ollama API is pre-configured and visible under **Manage Ollama API connections**.
    :::
 3. Click <span class="material-symbols-outlined">add</span> to open the Add Connection dialog.
-4. In the **URL** field, paste the URL you copied in Step 2, then click **Save**. Open WebUI automatically verifies the connection. When you see "Ollama API settings updated", the connection is established.
-   ![Connection established](/images/one/open-webui-connection-established1.png#bordered)
+4. In the **URL** field, paste the shared endpoint URL you copied in Step 2, then click **Save**. Open WebUI automatically verifies the connection. When you see "Ollama API settings updated", the connection is established.
+   ![Connection established](/images/one/open-webui-connection-established.png#bordered)
 
 ## Step 5: Chat with your local LLM
 1. On the main chat page, confirm that **qwen3.5:27b-q4_K_M** is selected in the model dropdown.
