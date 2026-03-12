@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 
 	"github.com/beclab/Olares/daemon/pkg/cli"
 	"github.com/beclab/Olares/daemon/pkg/commands"
@@ -69,7 +70,6 @@ func (i *upgrade) Execute(ctx context.Context, p any) (res any, err error) {
 
 	params := []string{
 		"upgrade",
-		"--version", target.Version.Original(),
 		"--base-dir", commands.TERMINUS_BASE_DIR,
 	}
 	if err = cmd.RunAsync_(ctx, cli.TERMINUS_CLI, params...); err != nil {
