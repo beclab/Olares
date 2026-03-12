@@ -12,8 +12,6 @@ Currently, Olares on PVE has certain limitations. We recommend using it only for
 
 ## System requirements
 
-Make sure your device meets the following requirements.
-
 ### Required specifications
 
 - **CPU**: At least 4 cores.
@@ -24,9 +22,8 @@ Make sure your device meets the following requirements.
   :::
 - **Supported systems**: PVE 8.2.2
 
-:::info Version compatibility
-While the specific version is confirmed to work, the process may still work on other versions. Adjustments may be necessary depending on your environment. If you meet any issues with these platforms, feel free to raise an issue on [GitHub](https://github.com/beclab/Olares/issues/new).
-:::
+<!--@include: ./reusables.md{63,65}-->
+
 
 ### Optional hardware
 

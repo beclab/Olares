@@ -17,8 +17,6 @@ We recommend using it only for development or testing purposes.
 
 ## System requirements
 
-Make sure your Windows meets the following requirements.
-
 ### Required specifications
 
 - **CPU**: At least 4 cores.
@@ -30,6 +28,13 @@ Make sure your Windows meets the following requirements.
 - **Supported systems**:
   - Windows 10 or 11
   - Linux (on WSL 2): Ubuntu 22.04 LTS or later; Debian 12 or later
+### Optional hardware
+
+<!--@include: ./gpu-requirements.md{5,}-->
+
+:::tip Windows verification
+You can also confirm your GPU in **Task Manager > Performance**. To verify the driver is accessible in WSL, run `nvidia-smi` in your WSL terminal.
+:::
 
 ## Before you begin
 Before you begin, ensure the following:
@@ -158,6 +163,8 @@ The `--rm` flag automatically deletes the container after it stops. If this happ
 :::
 
 <!--@include: ./install-and-activate-olares.md-->
+
+<!--@include: ./log-in-to-olares.md-->
 
 <!--@include: ./manage-olares-container.md-->
 

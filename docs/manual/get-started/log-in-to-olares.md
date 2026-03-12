@@ -3,7 +3,7 @@ search: false
 ---
 ## Log in to Olares
 
-1. Enter the Olares desktop address in your browser, and press any key to continue.
+1. Open the Olares desktop address in your browser, and press any key to continue.
 2. On the login page, enter your Olares login password.
 
    ![Log in](/images/manual/get-started/log-in.png#bordered)
@@ -11,7 +11,7 @@ search: false
 
    ![Confirm login](/images/manual/larepass/confirm-login.png#bordered)
    ::: info
-   The verification code is time-sensitive. Ensure you enter it before it expires. If it does, you will need to generate a new code.
+   The verification code is time-sensitive. Ensure you enter it before it expires.
    :::
 
 Once you've logged in, you'll be directed to the Olares desktop.🎉

@@ -37,7 +37,7 @@ These methods are suitable for development, testing, or lightweight environments
 - [**Docker image**](install-mac-docker.md): Run Olares in Docker on macOS.
 
 #### PVE
-- [**ISO image (recommended)**](install-pve-iso.md): Deploy Olares as a full VM in Proxmox VE using the ISO installer.
+- [**ISO image**](install-pve-iso.md) (Recommended): Deploy Olares as a full VM in Proxmox VE using the ISO installer.
 - [**One-line script**](install-pve-script.md): Install Olares directly on a PVE node.
 - [**LXC container**](install-lxc.md): Deploy Olares in Proxmox VE using Linux containers (LXC).
 

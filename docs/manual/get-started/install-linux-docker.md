@@ -9,8 +9,6 @@ You can use Docker to install and run Olares in a containerized environment. Thi
 
 ## System requirements
 
-Make sure your device meets the following requirements.
-
 ### Required specifications
 
 - **CPU**: At least 4 cores.
@@ -23,9 +21,7 @@ Make sure your device meets the following requirements.
   - Ubuntu 22.04-25.04 LTS
   - Debian 12 or 13
 
-:::info Version compatibility
-While these specific versions are confirmed to work, the process may still work on other versions. Adjustments may be necessary depending on your environment. If you meet any issues with these platforms, feel free to raise an issue on [GitHub](https://github.com/beclab/Olares/issues/new).
-:::
+<!--@include: ./reusables.md{63,65}-->
 
 ### Optional hardware
 
@@ -169,28 +165,8 @@ cd ~/olares-config
 
 <!--@include: ./install-and-activate-olares.md-->
 
-## Manage the Olares container
-Ensure that you are in the directory containing the `docker-compose.yaml` file before proceeding with any commands.
-### Stop the container
-To stop the running container:
-```bash
-docker compose stop
-```
+<!--@include: ./log-in-to-olares.md-->
 
-### Restart the container
-To restart the container after it has been stopped:
-```bash
-docker compose start
-```
-It may take 6 to 7 minutes for all services to fully initialize after restarting.
-
-### Uninstall the container
-To uninstall the container:
-```bash
-docker compose down
-```
+<!--@include: ./manage-olares-container.md-->
 
 <!--@include: ./reusables.md{38,42}-->
-   
-   
-

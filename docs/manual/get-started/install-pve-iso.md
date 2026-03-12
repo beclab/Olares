@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: Guide to installing Olares on Proxmox VE (PVE) using ISO image with system requirements, VM configuration, installation, and step-by-step activation instructions.
 ---
 # Install Olares on PVE with ISO image
@@ -11,9 +12,6 @@ Currently, Olares on PVE has certain limitations. We recommend using it only for
 <!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
-
-Make sure your device meets the following requirements.
-
 ### Required specifications
 
 - **CPU**: At least 4 cores. Intel or AMD x86-64 architecture required. ARM is not currently supported.
@@ -24,16 +22,18 @@ Make sure your device meets the following requirements.
   :::
 - **Supported systems**: PVE 8.2.2
 
+<!--@include: ./reusables.md{63,65}-->
+
 ### Optional hardware
 
 <!--@include: ./gpu-requirements.md{5,}-->
 
-:::tip PCI passthrough required
-To use the GPU within Olares on PVE, you must configure PCI passthrough first. Refer to [Configure GPU passthrough in PVE](/manual/best-practices/install-olares-gpu-passthrough.md#configure-gpu-passthrough-in-pve) for instructions.
+:::tip GPU passthrough required
+To use the GPU within Olares on PVE, you must configure GPU passthrough first. Refer to [Configure GPU passthrough in PVE](/manual/best-practices/install-olares-gpu-passthrough.md#configure-gpu-passthrough-in-pve) for instructions.
 :::
 
 ## Download Olares ISO image
-Click [here](https://cdn.olares.com/olares-latest-amd64.iso) to download the official Olares ISO image.
+Download [the latest official Olares ISO image](https://cdn.olares.com/olares-latest-amd64.iso).
 
 ## Configure VM in PVE
 
@@ -55,10 +55,6 @@ To run Olares on PVE, make sure the VM is configured with the following settings
 Below is a sample configuration for the VM hardware settings in PVE. 
 
 ![PVE Hardware](/images/developer/install/pve-hardware.png#bordered)
-
-:::info Version compatibility
-While the specific version is confirmed to work, the process may still work on other versions. Adjustments may be necessary depending on your environment. If you meet any issues with these platforms, feel free to raise an issue on [GitHub](https://github.com/beclab/Olares/issues/new).
-:::
 
 ## Install on PVE
 

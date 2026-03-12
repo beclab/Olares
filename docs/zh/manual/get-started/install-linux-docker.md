@@ -5,32 +5,27 @@ description: 了解如何使用 Docker Compose 在 Linux 服务器上部署 Olar
 # 使用 Docker Compose 在 Linux 上安装 Olares
 通过 Docker 可以在容器化环境中安装和运行 Olares。本文将介绍如何使用 Docker 设置 Olares、准备安装环境、完成激活过程以及管理容器生命周期。
 
-::: warning 不适用于生产环境
-该部署方式仅适用于开发或测试环境。我们推荐[通过脚本方式在 Linux 上安装 Olares](/zh/manual/get-started/install-olares.md)，以获得最佳的性能与稳定性。
-:::
+<!--@include: ./reusables.md{44,51}-->
 
 ## 系统要求
+
 ### 必要配置
-- **宿主机要求**:
-  - **CPU**：4 核及以上。
-  - **内存**：至少 8 GB 可用内存。
-  - **存储**：至少 150 GB 可用磁盘空间。
+
+- **CPU**：4 核及以上。
+- **内存**：至少 8 GB 可用内存。
+- **存储**：至少 150 GB 可用磁盘空间。
    ::: warning 必须使用 SSD
    请勿使用机械硬盘 (HDD)。如果未检测到 SSD，安装将失败。
    :::
-  - **支持的系统**：
-    - Ubuntu 22.04-25.04 LTS
-    - Debian 12 或 13
-:::info 版本兼容性
-上述版本已通过验证，但安装流程可能也适用于其他版本。具体是否需要调整取决于你的环境。如果遇到任何问题，欢迎在 [GitHub](https://github.com/beclab/Olares/issues/new) 上提交 Issue。
-:::
+- **支持的系统**：
+   - Ubuntu 22.04-25.04 LTS
+   - Debian 12 或 13
+
+<!--@include: ./reusables.md{63,65}-->
+
 ### 可选硬件
 
-安装 Olares 不需要 GPU，但运行 AI 应用需要 GPU支持。
-
-- **GPU (仅支持 NVIDIA)**：
-  - **架构**：Turing 架构或更新版本 (例如 GTX 16 系列、RTX 20 系列)。
-  - **验证方法**：运行 `lspci | grep -i nvidia` 并查看 [兼容 GPU 列表](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus)。
+<!--@include: ./gpu-requirements.md{5,}-->
 
 ## 开始之前
 开始安装前，请确保：
@@ -70,8 +65,8 @@ cd ~/olares-config
     sudo dpkg -i --force-all /tmp/keyring.deb
     
     sudo apt update
-    sudo apt install nvidia-kernel-open-570
-    sudo apt install nvidia-driver-570
+    sudo apt install nvidia-kernel-open-590
+    sudo apt install nvidia-driver-590
     ````
 
 2. 安装 NVIDIA Container Toolkit，确保 Docker 能访问 GPU。 
@@ -108,9 +103,9 @@ cd ~/olares-config
     
    如果安装成功，你将看到如下类似的输出：
 
-    ```
-    +-----------------------------------------------------------------------------------------+
-    | NVIDIA-SMI 570.169                Driver Version: 570.169        CUDA Version: 12.8     |
+   ```
+   +-----------------------------------------------------------------------------------------+
+   | NVIDIA-SMI 590.44                 Driver Version: 590.44         CUDA Version: 13.1     |
     |-----------------------------------------+------------------------+----------------------+
     | GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
     | Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
@@ -189,28 +184,8 @@ cd ~/olares-config
 
 <!--@include: ./install-and-activate-olares.md-->
 
-## 管理 Olares 容器
-在运行任何命令之前，请确保你位于包含 `docker-compose.yaml` 文件的目录中。
-### 停止容器
-要停止当前正在运行的容器：
-```bash
-docker compose stop
-```
+<!--@include: ./log-in-to-olares.md-->
 
-### 重启容器
-容器停止后，使用以下命令重启：
-```bash
-docker compose start
-```
-容器重启后，所有服务可能需要 6–7 分钟才能完全初始化。在此时间内请耐心等待。
+<!--@include: ./manage-olares-container.md-->
 
-### 卸载容器
-要完全删除容器：
-```bash
-docker compose down
-```
-
-<!--@include: ./reusables.md{33,37}-->
-   
-   
-
+<!--@include: ./reusables.md{38,42}-->

@@ -17,8 +17,6 @@ We recommend using it only for development or testing purposes.
 
 ## System requirements
 
-Make sure your Windows meets the following requirements.
-
 ### Required specifications
 
 - **CPU**: At least 4 cores.
@@ -133,17 +131,18 @@ wsl --unregister ubuntu
 After uninstalling, retry the installation by running the original installation command.
 :::
 
-<!--@include: ./reusables.md{24,37}-->
+<!--@include: ./reusables.md{23,37}-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{39,43}-->
+<!--@include: ./reusables.md{38,42}-->
 
 ## FAQ
 
 ### How to make sure I am using PowerShell as administrator?
+
 You can confirm that PowerShell is running as an administrator if you see "Administrator: Windows PowerShell" in the title bar of the PowerShell window.
 
 ![Confirm run Powershell as administrator](/images/manual/get-started/confirm-run-powershell-as-admin.png#bordered){width=70%}
@@ -189,6 +188,7 @@ For example, to use 4 CPU cores:
    processors=4
    swap=0GB
    ```
+
 2. Save the `.wslconfig` file with your custom changes. 
 3. Close all running virtual machines by running the following command in PowerShell:
    ```powershell

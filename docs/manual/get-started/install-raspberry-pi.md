@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: Complete guide to installing Olares on Raspberry Pi including hardware requirements, installation process, and system activation steps.
 ---
 # Install Olares on Raspberry Pi
@@ -7,13 +8,10 @@ This guide explains how to install Olares on a Raspberry Pi.
 :::warning Not for production use
 Currently, Olares on Raspberry Pi has certain limitations. We recommend using it only for development or testing purposes.
 :::
+
 <!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
-
-Make sure your Raspberry Pi meets the following requirements.
-
-### Required specifications
 
 - **Hardware**: Raspberry Pi 4B or Raspberry Pi 5 with 8 GB memory.
 - **Operating system**: Raspbian 12.

@@ -11,8 +11,6 @@ This guide explains how to install Olares on a physical machine using the offici
 
 ## System requirements
 
-Make sure your device meets the following requirements.
-
 ### Required specifications
 
 - **CPU**: At least 4 cores. Intel or AMD x86-64 architecture required. ARM is not currently supported.
@@ -30,19 +28,21 @@ Make sure your device meets the following requirements.
 
 ## Create a bootable USB drive
 
-1. Click [here](https://cdn.olares.com/olares-latest-amd64.iso) to download the official Olares ISO image.
+1. Download [the latest official Olares ISO image](https://cdn.olares.com/olares-latest-amd64.iso).
 2. Download and install [**Balena Etcher**](https://etcher.balena.io/).
 3. Insert the USB flash drive into your computer.
 4. Launch Etcher and follow these steps:
    ![Bootable USB](/images/manual/get-started/iso-flash.png#bordered)
-   - **Image**: Select the Olares ISO.
-   - **Target disk**: Select your USB drive.
-   - Click **Flash** to write the installer to the USB drive.
+   a. **Image**: Select the Olares ISO.
+   
+   b. **Target disk**: Select your USB drive.
+
+   c. Click **Flash** to write the installer to the USB drive.
 
 ## Boot from USB drive
 
 1. Insert the bootable USB drive into the target machine.
-2. Enter the **BIOS setup** and set **USB Boot** as the first boot option.
+2. Enter the BIOS setup and set USB Boot as the first boot option.
 3. Save and restart. The system will automatically boot into the Olares installer interface.
 
 ## Install Olares

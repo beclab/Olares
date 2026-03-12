@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: Step-by-step instructions for installing Olares on macOS systems including prerequisites, installation commands, and activation process.
 ---
 # Install Olares on Mac via the script
@@ -15,10 +16,6 @@ We recommend using it only for development or testing purposes.
 <!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
-
-Make sure your Mac meets the following requirements.
-
-### Required specifications
 
 - **Architecture**: x86-64 or ARM64.
 - **CPU**: At least 4 cores.

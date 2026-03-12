@@ -17,10 +17,6 @@ We recommend using it only for development or testing purposes.
 
 ## System requirements
 
-Make sure your device meets the following requirements.
-
-### Required specifications
-
 - **Architecture**: x86-64 or ARM64.
 - **CPU**: At least 4 cores.
 - **RAM**: At least 8 GB of available memory.
@@ -53,7 +49,7 @@ If you are unsure which chip your Mac is using, go to the Apple menu and select 
 
 <template #Intel>
 
-1. Download `olaresd-proxy` via the link: https://dc3p1870nn3cj.cloudfront.net/olaresd-proxy-v0.1.0-darwin-amd64.tar.gz .
+1. Download [`olaresd-proxy`](https://dc3p1870nn3cj.cloudfront.net/olaresd-proxy-v0.1.0-darwin-amd64.tar.gz).
 2. Unzip the file, then start `olaresd-proxy`.
    :::info Keep `olaresd-proxy` running in the background
    During Olares installation and activation, keep `olaresd-proxy` running in the background.
@@ -97,6 +93,8 @@ The `--rm` flag automatically deletes the container after it stops. If this happ
 :::
 
 <!--@include: ./install-and-activate-olares.md-->
+
+<!--@include: ./log-in-to-olares.md-->
 
 <!--@include: ./manage-olares-container.md-->
 
