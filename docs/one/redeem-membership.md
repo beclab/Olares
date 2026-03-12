@@ -96,6 +96,49 @@ If you want to transfer your Basic membership to a new Olares ID:
 6. Log in to Olares Space with the new Olares ID. 
 7. Bind the purchase order email using the steps in the [Redeem Basic plan](#redeem-basic-plan) section. This will upgrade the new Olares ID to the Basic plan immediately.
 
+## FAQs
+
+### What happens if I unlink my email?
+
+Your email is linked to the Olares One complimentary Basic plan. If you unlink it:
+- The current account downgrades to the Free plan immediately.
+- All Basic plan benefits end on this account.
+- The validity period continues counting down.
+
+**Can I regain access?**
+
+Yes, you can regain access to the remaining validity by re-linking the same email before it expires:
+- If you re-link to the same account: The remaining validity continues unchanged.
+- If you link to another Olares ID: That ID will receive the benefits, with 1 month deducted from the remaining period. Multiple transfers within the same calendar month are only deducted once.
+
+### What happens if I switch to Free plan?
+
+If you're on the Olares One complimentary Basic plan and manually change to the Free plan:
+- All Basic plan benefits end on this account immediately.
+- The validity period continues counting down.
+
+**Can I switch back to Basic on this account?**
+
+Yes, you can upgrade back to Basic on the current account for free anytime before the validity expires:
+1. Go to **Usage & billing** > **Plan**.
+2. Click **Change**.
+3. Select **Basic** and confirm. Your account will be restored to Basic with the remaining validity unchanged.
+
+### What happens when my 2-year Basic membership ends?
+
+When your complimentary Basic plan expires:
+- Your account automatically downgrades to the Free plan.
+- All Basic plan benefits end.
+
+**How to continue enjoying Basic benefits?**
+
+To keep using Basic plan features, you can subscribe to the standard Basic plan:
+1. Go to **Usage & billing** > **Plan**.
+2. Click **Change**.
+3. Select **Basic**.
+4. Review the payment details, and then click **Confirm**.
+5. Complete the payment.
+
 ## Resources
 
 - [Monitor traffic in Olares Space](space.md)
