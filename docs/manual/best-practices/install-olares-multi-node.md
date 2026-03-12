@@ -5,7 +5,7 @@ description: Technical guide for installing and configuring a multi-node Olares 
 
 # Install a multi-node Olares cluster <Badge type="warning" text="Alpha" />
 
-The default Olares installation sets up a single-node cluster. Starting from v1.11.3, Olares supports adding worker nodes on Linux systems. 
+The default Olares installation sets up a single-node cluster. Starting from v1.11.3, support is added for adding worker nodes to Olares installations on Linux systems.
 
 This tutorial explains how to configure a master node and add worker nodes to create a scalable, multi-node Olares cluster.
 
@@ -14,7 +14,7 @@ This feature is currently in the **Alpha** stage and is not recommended for prod
 :::
 
 :::info For Olares One hardware
-If you are setting up a multi-node Olares cluster using two Olares One devices, see [Connect two Olares One](/one/connect-two-olares-one.md).
+If you want to set up a multi-node Olares cluster using two Olares One devices, see [Connect two Olares One](/one/connect-two-olares-one.md).
 :::
 
 ## Objectives
