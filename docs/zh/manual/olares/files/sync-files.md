@@ -5,16 +5,16 @@ description: Olares 文件同步指南，助你实现本地设备与云端数据
 
 # 同步文件至本地
 
-<!--@include: ../../get-started/reusables.md{57,61}-->
+<!--@include: ../../../reusables/sync-files.md{9,15}-->
 
 ## 创建库
 
-<!--@include: ../../get-started/reusables.md{65,73}-->
+<!--@include: ../../../reusables/sync-files.md{17,26}-->
 
 ## 开启同步
 
-<!--@include: ../../get-started/reusables.md{77,86}-->
+<!--@include: ../../../reusables/sync-files.md{29,40}-->
 
 ## 管理同步
 
-<!--@include: ../../get-started/reusables.md{90,96}-->
+<!--@include: ../../../reusables/sync-files.md{42,50}-->
