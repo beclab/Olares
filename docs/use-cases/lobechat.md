@@ -53,18 +53,21 @@ Connect LobeHub to Ollama to make the chat interface work.
 
       ![Configure Ollama in LobeHub](/images/manual/use-cases/lobehub-config-ollama.png#bordered)
 
-2. In the **Interface proxy address** field, enter your local Ollama address.
+2. Obtain and enter your local Ollama address:
 
-   :::tip Obtain local Ollama host address
-   To obtain your local Ollama host address, go to Olares **Settings** > **Applications** > **Ollama**, click **Ollama API** under **Entraces** or **Shared entrances**, and then copy the endpoint address.
+   a. Open Olares Settings, and then go to **Applications** > **Ollama**.
+   
+   b. Click **Ollama API** under **Entrances** or **Shared entrances**, and then copy the endpoint address.
 
    ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl1.png#bordered){width=60%}
    :::
 
+   c. Return to LobeHub, and then enter the endpoint address in the **Interface proxy address** field.
+
 3. Disable the **Use Client Request Mode** option.
 
    :::tip
-   When you are running local models, do not enable the **Use Client Request Mode** option.
+   Do not enable the **Use Client Request Mode** option when running local models. This mode is designed for remote API calls and might cause connection errors.
    :::
 4. In the **Model List** section, click **Fetch models** to pull the list of supported models, and then click <i class="material-symbols-outlined">toggle_off</i> to enable the models you want to use.
 
@@ -122,7 +125,7 @@ Agent Builder is LobeHub's built-in assistant that helps you create specialized 
 3. Select the language model. For example, `llama3.1:8b`.
 4. Press **Enter**. The profile page of the new agent opens, and you can see the Agent Builder starts configuring your agent automatically.
 
-   ![Agent builder](/images/manual/use-cases/lobehub-agent-builder.png#bordered){width=85%} 
+   ![Agent builder](/images/manual/use-cases/lobehub-agent-builder.png#bordered)
 
 5. Use the chat interface on the lower right to interact with the Agent Builder. As you provide more details or refine your requirements, the Agent Builder automatically drafts and updates accordingly. 
 6. After the creation is completed, click **Start Conversation** to use the agent.
@@ -155,8 +158,7 @@ Custom agents offer the highest level of personalization. You can set the agent'
 
    The **Agent Profile** page opens.
 
-   ![Custom agent profile](/images/manual/use-cases/lobehub-custom-agent-profile.png#bordered){width=85%} 
-
+   ![Custom agent profile](/images/manual/use-cases/lobehub-custom-agent-profile.png#bordered)
 2. Click the default robot avatar to select a new icon for your agent.
 3. Enter the agent name. For example, `SEO Copywriter`.
 4. Select the language model. For example, `qwen 2.5`.
@@ -294,18 +296,3 @@ If you encounter the `Error requesting Ollama service` error, troubleshoot as fo
 2. Ensure the **Use Client Request Mode** option on the Ollama settings page is disabled.
 
    ![Disable the use client request mode option](/images/manual/use-cases/lobehub-disable-client-request-mode.png#bordered){width=85%} 
-
-### Error: Model requires more system memory than is available
-
-If you encounter errors similar te:
-
-```json
-{
-  "error": {
-    "message": "model requires more system memory (4.5 GiB) than is available (3.8 GiB)",
-    "name": "ResponseError",
-    "status_code": 500
-  },
-  "provider": "ollama"
-}
-```
