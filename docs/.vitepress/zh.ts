@@ -94,6 +94,20 @@ const side = {
               ],
             },
             {
+              text: "DGX Spark",
+              collapsed: true,
+              items: [
+                {
+                  text: "使用脚本（推荐）",
+                  link: "/zh/manual/get-started/install-spark-script",
+                },
+                {
+                  text: "使用 ISO 镜像",
+                  link: "/zh/manual/get-started/install-spark-iso",
+                },
+              ],
+            },
+            {
               text: "macOS",
               collapsed: true,
               items: [
