@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	v1alpha1App "bytetrade.io/web3os/bfl/internal/ingress/api/app.bytetrade.io/v1alpha1"
 	"bytetrade.io/web3os/bfl/internal/ingress/envoy"
 	"bytetrade.io/web3os/bfl/internal/ingress/message"
 	"bytetrade.io/web3os/bfl/internal/ingress/provider"
@@ -19,6 +18,7 @@ import (
 	"bytetrade.io/web3os/bfl/internal/ingress/xds/server"
 	xdstranslator "bytetrade.io/web3os/bfl/internal/ingress/xds/translator"
 	"bytetrade.io/web3os/bfl/pkg/constants"
+	v1alpha1App "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"

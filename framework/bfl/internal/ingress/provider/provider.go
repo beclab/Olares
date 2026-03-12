@@ -9,11 +9,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	v1alpha1App "bytetrade.io/web3os/bfl/internal/ingress/api/app.bytetrade.io/v1alpha1"
 	"bytetrade.io/web3os/bfl/internal/ingress/message"
 	"bytetrade.io/web3os/bfl/pkg/constants"
-
+	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -58,7 +58,7 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		return fmt.Errorf("get configmap informer: %w", err)
 	}
 
-	appInformer, err := p.cache.GetInformer(ctx, &v1alpha1App.Application{})
+	appInformer, err := p.cache.GetInformer(ctx, &appv1alpha1.Application{})
 	if err != nil {
 		return fmt.Errorf("get application informer: %w", err)
 	}
@@ -94,7 +94,7 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 
 	if _, err = appInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
-			app, ok := obj.(*v1alpha1App.Application)
+			app, ok := obj.(*appv1alpha1.Application)
 			if !ok {
 				return false
 			}
@@ -314,7 +314,7 @@ func (p *Provider) getUserLanguage(ctx context.Context) (string, error) {
 }
 
 func (p *Provider) getOwnerApps(ctx context.Context) ([]*message.AppInfo, error) {
-	var appList v1alpha1App.ApplicationList
+	var appList appv1alpha1.ApplicationList
 	if err := p.cache.List(ctx, &appList, client.InNamespace("")); err != nil {
 		return nil, fmt.Errorf("list applications: %w", err)
 	}
@@ -439,16 +439,16 @@ func (p *Provider) getFileserverNodes(ctx context.Context) ([]*message.Fileserve
 func (p *Provider) getCustomDomainCerts(ctx context.Context) ([]*message.CertInfo, error) {
 	var cmList corev1.ConfigMapList
 	if err := p.cache.List(ctx, &cmList, client.MatchingLabels{
-		v1alpha1App.AppEntranceCertConfigMapLabel: "true",
+		constants.AppEntranceCertConfigMapLabel: "true",
 	}); err != nil {
 		return nil, fmt.Errorf("list custom domain cert configmaps: %w", err)
 	}
 
 	var certs []*message.CertInfo
 	for _, cm := range cmList.Items {
-		domain := cm.Data[v1alpha1App.AppEntranceCertConfigMapZoneKey]
-		certData := cm.Data[v1alpha1App.AppEntranceCertConfigMapCertKey]
-		keyData := cm.Data[v1alpha1App.AppEntranceCertConfigMapKeyKey]
+		domain := cm.Data[constants.AppEntranceCertConfigMapZoneKey]
+		certData := cm.Data[constants.AppEntranceCertConfigMapCertKey]
+		keyData := cm.Data[constants.AppEntranceCertConfigMapKeyKey]
 		if domain == "" || certData == "" || keyData == "" {
 			continue
 		}

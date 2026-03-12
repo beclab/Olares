@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"bytetrade.io/web3os/bfl/internal/ingress/api/app.bytetrade.io/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
