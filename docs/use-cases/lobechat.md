@@ -1,19 +1,23 @@
 ---
 outline: [2, 4] 
-description: Learn how to install LobeChat on Olares and integrate it with Ollama to build and enhance your local custom AI assistants.
+description: Learn how to install LobeHub (LobeChat) on Olares and integrate it with Ollama to build and enhance your local custom AI assistants.
 head:
   - - meta
     - name: keywords
       content: Olares, LobeHub agent, LobeChat assistant, AI agent, AI agent team
 ---
 
-# Build your local AI agent with LobeHub
+# Build your local AI agent with LobeHub (LobeChat)
 
 LobeHub (previously LobeChat) is an open‑source framework for building secure, local AI chat experiences. It supports file handling, knowledge bases, and multimodal inputs, and it supports Ollama to run and switch local LLMs.
 
 Olares streamlines and simplifies the deployment of both, allowing you to skip complex manual environment configurations.
 
 This guide covers the installation, configuration, and practical usage of these tools to create your personalized AI agents.
+
+:::tip About the product name
+LobeHub is the official platform name, but the application is currently listed as "LobeChat" in the Olares Market. We use both names in this guide to match exactly what you will see on your screen. The Market will be updated to reflect the new LobeHub branding in the future release.
+:::
 
 ## Learning objectives
 
@@ -25,12 +29,6 @@ This guide covers the installation, configuration, and practical usage of these 
 
 - Ollama is installed and running in your Olares environment.
 - The models you want to use are downloaded and run using Ollama. This tutorial uses `llama3.1:8b` and `qwen2.5`. For more information, see [Download and run local AI models via Ollama](ollama.md).
-- You obtained the local Ollama host address.
-   :::tip Obtain local Ollama host address
-   To obtain your local Ollama host address, go to Olares **Settings** > **Applications** > **Ollama**, click **Ollama API** under **Entraces** or **Shared entrances**, and then copy the endpoint address.
-
-   ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl1.png#bordered){width=60%}
-   :::
 
 ## Install LobeHub
 
@@ -42,9 +40,8 @@ This guide covers the installation, configuration, and practical usage of these 
 
 ## Sign in to LobeHub
 
-1. Open **LobeChat** from Launchpad.
-2. Sign in using your LobeHub account.
-3. (Optional) If you do not have a LobeHub account, enter your email address, and then follow the prompts on the page to create one and sign in.
+1. Open **LobeChat** from the Launchpad.
+2. Enter your email address, and then follow the prompts on the page to create a LobeHub account and sign in.
 
    ![LobeHub home page](/images/manual/use-cases/lobehub-start.png#bordered)
 
@@ -57,6 +54,13 @@ Connect LobeHub to Ollama to make the chat interface work.
       ![Configure Ollama in LobeHub](/images/manual/use-cases/lobehub-config-ollama.png#bordered)
 
 2. In the **Interface proxy address** field, enter your local Ollama address.
+
+   :::tip Obtain local Ollama host address
+   To obtain your local Ollama host address, go to Olares **Settings** > **Applications** > **Ollama**, click **Ollama API** under **Entraces** or **Shared entrances**, and then copy the endpoint address.
+
+   ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl1.png#bordered){width=60%}
+   :::
+
 3. Disable the **Use Client Request Mode** option.
 
    :::tip
@@ -88,7 +92,8 @@ If Lobe AI does not meet your specific workflow needs, you can build your own sp
    
    ![Click Lobe AI](/images/manual/use-cases/lobe-ai.png#bordered){width=85%} 
 
-2. In the chat window, select the language model, and interact just like you would with any standard conversational AI.
+2. In the chat window, click the model selector and select a local language model.
+3. Chat as you would with any standard conversational AI.
 
 ## Create an agent
 
