@@ -5,16 +5,16 @@ description: Guide to synchronizing files between your local devices and Olares.
 
 # Sync files to local computer
 
-<!--@include: ../../get-started/reusables.md{69,73}-->
+<!--@include: ../../../reusables/sync-files.md{9,15}-->
 
 ## Create a library
 
-<!--@include: ../../get-started/reusables.md{77,85}-->
+<!--@include: ../../../reusables/sync-files.md{17,26}-->
 
 ## Enable synchronization
 
-<!--@include: ../../get-started/reusables.md{89,98}-->
+<!--@include: ../../../reusables/sync-files.md{29,40}-->
 
 ## Manage synchronization
 
-<!--@include: ../../get-started/reusables.md{102,108}-->
+<!--@include: ../../../reusables/sync-files.md{42,50}-->

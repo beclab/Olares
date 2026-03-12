@@ -4,5 +4,6 @@
 
 - **local-domain.md**：`.local` 域名说明、URL 格式、HTTP 说明及故障排除（Chrome、Safari）。被 `manual/get-started/local-access.md`、`manual/best-practices/local-access.md` 引用。
 - **larepass-vpn.md**：LarePass VPN 步骤（下载、启用、确认连接类型）及常见问题（链接至故障排查文档）。被 `manual/get-started/local-access.md`、`manual/best-practices/local-access.md` 引用。
+- **sync-files.md**：同步文件至本地（引言与提示、创建库、开启同步、管理同步）。被 `manual/larepass/manage-files.md`、`manual/olares/files/sync-files.md` 引用。
 
 在各文件顶部注释中注明可引用的行号范围。
