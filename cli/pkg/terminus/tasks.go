@@ -938,14 +938,19 @@ func (t *GetMasterInfo) Execute(runtime connector.Runtime) (err error) {
 			masterInfo.JuiceFSEnabled = true
 		}
 	}
+	exists, err := runtime.GetRunner().FileExist("/usr/local/bin/kubectl")
+	if err != nil {
+		return errors.Wrap(err, "failed to check whether kubectl exists")
+	}
+	if !exists {
+		masterInfo.KubernetesInstalled = false
+		return nil
+	}
+	masterInfo.KubernetesInstalled = true
 	nodeList := &corev1.NodeList{}
-	nodeCheckCMD := "kubectl get node -o json"
+	nodeCheckCMD := "kubectl get node -o json 2>/dev/null"
 	output, err := runtime.GetRunner().SudoCmd(nodeCheckCMD, false, false)
 	if err != nil {
-		if strings.Contains(err.Error(), "command not found") {
-			masterInfo.KubernetesInstalled = false
-			return nil
-		}
 		return errors.Wrap(err, "failed to get Kubernetes node info")
 	}
 	masterInfo.KubernetesInstalled = true
