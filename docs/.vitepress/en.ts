@@ -359,7 +359,24 @@ const side = {
                 },
               ],
             },
-            { text: "Manage GPU", link: "/manual/olares/settings/gpu-resource" },
+            { 
+              text: "Manage GPU", 
+              collapsed: true,
+              items:[
+                {
+                  text: "Understand GPU management",
+                  link: "/manual/olares/settings/gpu-resource" 
+                },
+                {
+                  text: "Manage single-GPU resources",
+                  link: "/manual/olares/settings/single-gpu" 
+                },
+                {
+                  text: "Manage multi-GPU resources",
+                  link: "/manual/olares/settings/multi-gpu"
+                },
+              ]
+            },
             { text: "Set video playback", link: "/manual/olares/settings/video" },
             { text: "Manage search rules", link: "/manual/olares/settings/search" },
             {

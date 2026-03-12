@@ -354,7 +354,24 @@ const side = {
                 },
               ],
             },
-            { text: "管理 GPU", link: "/zh/manual/olares/settings/gpu-resource" },
+            { 
+              "text": "管理 GPU", 
+              "collapsed": true,
+              "items": [
+                {
+                  "text": "GPU 资源管理",
+                  "link": "/zh/manual/olares/settings/gpu-resource" 
+                },
+                {
+                  "text": "管理单 GPU 资源",
+                  "link": "/zh/manual/olares/settings/single-gpu" 
+                },
+                {
+                  "text": "管理多 GPU 资源",
+                  "link": "/zh/manual/olares/settings/multi-gpu" 
+                },
+              ]
+            },
             { text: "视频设置", link: "/zh/manual/olares/settings/video" },
             { text: "文件搜索", link: "/zh/manual/olares/settings/search" },
             {
