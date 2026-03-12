@@ -27,7 +27,7 @@ Visit the [Google Play product page](https://play.google.com/store/apps/details?
 ### macOS & Windows
 Download the latest desktop client from the [LarePass website](https://www.olares.com/larepass).
 
-### Chrome extension
+<!--### Chrome extension
 
 The LarePass extension allows you to collect content and manage passwords directly from your browser. It currently supports Google Chrome only and must be installed manually.
 
@@ -45,10 +45,10 @@ Extract the ZIP file to a permanent location, such as a folder under your user d
 :::tip Quick access
 After installation, click the puzzle icon in your browser toolbar and pin the LarePass extension for one-click access.
 :::
-
+-->
 ## Set up account 
 - On mobile devices, you can [create an Olares ID](/manual/larepass/create-account.md#create-an-olares-id) directly in the app.
-- On the desktop client or Chrome extension, you must [import an Olares account](/manual/larepass/create-account.md#import-an-account).
+- On the desktop client<!-- or Chrome extension-->, you must [import an Olares account](/manual/larepass/create-account.md#import-an-account).
 
 ## Feature comparison
 
