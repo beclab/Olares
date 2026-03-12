@@ -692,12 +692,18 @@ func (a *backfillAppGPUConfig) Execute(_ connector.Runtime) error {
 
 		modified := false
 
-		if appCfg.Requirement.GPU == nil {
-			gpuMem, ok := gpuMemoryByRawAppName[am.Spec.RawAppName]
-			if !ok {
-				gpuMem = defaultGPUMemory
-			}
-			q := resource.MustParse(gpuMem)
+		gpuMem, ok := gpuMemoryByRawAppName[am.Spec.RawAppName]
+		if !ok {
+			gpuMem = defaultGPUMemory
+		}
+		q := resource.MustParse(gpuMem)
+
+		if appCfg.RequiredGPU != q.String() {
+			appCfg.RequiredGPU = q.String()
+			modified = true
+		}
+
+		if appCfg.Requirement.GPU == nil || !appCfg.Requirement.GPU.Equal(q) {
 			appCfg.Requirement.GPU = &q
 			modified = true
 		}
