@@ -1,4 +1,4 @@
-FROM golang:1.22 AS builder
+FROM golang:1.24.11 AS builder
 
 WORKDIR /workspace
 
@@ -9,7 +9,6 @@ RUN cd bytetrade.io/web3os/l4-bfl-proxy && \
 
 COPY cmd/ bytetrade.io/web3os/l4-bfl-proxy/cmd/
 COPY internal/ bytetrade.io/web3os/l4-bfl-proxy/internal/
-COPY util/ bytetrade.io/web3os/l4-bfl-proxy/util/
 
 
 RUN cd bytetrade.io/web3os/l4-bfl-proxy/ && \

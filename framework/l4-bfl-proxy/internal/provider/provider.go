@@ -11,10 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/beclab/l4-bfl-proxy/internal/message"
-
+	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
-	appv2alpha1 "github.com/beclab/l4-bfl-proxy/util/app/v2alpha1"
+	"github.com/beclab/l4-bfl-proxy/internal/message"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 	ctrlcache "sigs.k8s.io/controller-runtime/pkg/cache"
@@ -78,7 +77,7 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		return fmt.Errorf("get user informer: %w", err)
 	}
 
-	appInformer, err := p.cache.GetInformer(ctx, &appv2alpha1.Application{})
+	appInformer, err := p.cache.GetInformer(ctx, &appv1alpha1.Application{})
 	if err != nil {
 		return fmt.Errorf("get app informer: %w", err)
 	}
@@ -233,7 +232,7 @@ func (p *Provider) mergeStaleUsers(current []*message.UserInfo) []*message.UserI
 	return current
 }
 
-func (p *Provider) buildAppInfos(appList []appv2alpha1.Application) []*message.AppInfo {
+func (p *Provider) buildAppInfos(appList []appv1alpha1.Application) []*message.AppInfo {
 	var result []*message.AppInfo
 	for _, app := range appList {
 		entrances := make([]message.EntranceInfo, 0, len(app.Spec.Entrances))
@@ -266,7 +265,7 @@ func (p *Provider) buildAppInfos(appList []appv2alpha1.Application) []*message.A
 	return result
 }
 
-func (p *Provider) listUsers(ctx context.Context, rawApps []appv2alpha1.Application) ([]*message.UserInfo, int, error) {
+func (p *Provider) listUsers(ctx context.Context, rawApps []appv1alpha1.Application) ([]*message.UserInfo, int, error) {
 	publicAppIDs, publicCustomDomainApps, _, customDomainAppsWithUsers := p.listApplicationDetails(rawApps)
 
 	userList, err := p.getUsersFromCache(ctx)
@@ -393,7 +392,7 @@ func (p *Provider) listUsers(ctx context.Context, rawApps []appv2alpha1.Applicat
 	return result, dnsFailures, nil
 }
 
-func (p *Provider) listApplicationDetails(appList []appv2alpha1.Application) ([]string, []string, []string, map[string][]string) {
+func (p *Provider) listApplicationDetails(appList []appv1alpha1.Application) ([]string, []string, []string, map[string][]string) {
 	publicApps := []string{"headscale"}
 	var publicCustomDomainApps []string
 	var customDomainApps []string
@@ -451,8 +450,8 @@ func (p *Provider) listApplicationDetails(appList []appv2alpha1.Application) ([]
 	return publicApps, publicCustomDomainApps, customDomainApps, customDomainAppsWithUsers
 }
 
-func (p *Provider) getAppsFromCache(ctx context.Context) ([]appv2alpha1.Application, error) {
-	var appList appv2alpha1.ApplicationList
+func (p *Provider) getAppsFromCache(ctx context.Context) ([]appv1alpha1.Application, error) {
+	var appList appv1alpha1.ApplicationList
 	if err := p.cache.List(ctx, &appList); err != nil {
 		klog.Errorf("provider: list apps from cache: %v", err)
 		return nil, fmt.Errorf("list apps from cache failed: %v", err)
@@ -482,7 +481,7 @@ func isValidUser(user *iamv1alpha2.User) bool {
 	return getAnnotation(user, userAnnotationDid) != "" && getAnnotation(user, userAnnotationZone) != ""
 }
 
-func getSettingsKeyMap(app *appv2alpha1.Application, key string) map[string]map[string]string {
+func getSettingsKeyMap(app *appv1alpha1.Application, key string) map[string]map[string]string {
 	r := make(map[string]map[string]string)
 	if app.Spec.Settings == nil {
 		return r

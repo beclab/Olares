@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/l4-bfl-proxy/internal/envoy"
 	"github.com/beclab/l4-bfl-proxy/internal/message"
@@ -18,7 +19,6 @@ import (
 	"github.com/beclab/l4-bfl-proxy/internal/translator"
 	"github.com/beclab/l4-bfl-proxy/internal/xds/server"
 	xdstranslator "github.com/beclab/l4-bfl-proxy/internal/xds/translator"
-	appv2alpha1 "github.com/beclab/l4-bfl-proxy/util/app/v2alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -55,7 +55,7 @@ func main() {
 	if err := iamv1alpha2.AddToScheme(scheme); err != nil {
 		klog.Fatalf("add iam scheme failed: %v", err)
 	}
-	if err := appv2alpha1.AddToScheme(scheme); err != nil {
+	if err := appv1alpha1.AddToScheme(scheme); err != nil {
 		klog.Fatalf("add app scheme failed: %v", err)
 	}
 
