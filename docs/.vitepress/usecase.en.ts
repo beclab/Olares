@@ -88,7 +88,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/pdfmathtranslate",
             },
             {
-              text: "LobeChat",
+              text: "LobeHub (LobeChat)",
               link: "/use-cases/lobechat",
             },
             {
