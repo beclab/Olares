@@ -8,7 +8,7 @@ head:
 
 # Build your digital library with Komga
 
-Komga is a specialized, open-source media server designed to give you full control over your digital collection of comics, manga, magazines, and e-books. By installing Komga on Olares, you transform your device into a private media hub, organizing your favorite series into a beautiful, searchable library accessible from all your devices.
+Komga is a specialized, open-source media server designed to give you full control over your digital collection of comics, manga, Bandes Dessinées (BD), magazines, and e-books. By installing Komga on Olares, you transform your device into a private media hub, organizing your favorite series into a neat, searchable library accessible from all your devices.
 
 This guide shows you how to install Komga on Olares, organize your media files for automatic scanning, configure secure user access, and use the built-in reader and metadata editors to enhance your digital reading experience.
 
@@ -29,7 +29,7 @@ By the end of this guide, you are able to:
 
 2. Click **Get**, and then click **Install**. Wait for the installation to finish.
 
-## 2. Set up admin account
+## 2. Set up the admin account
 
 1. Open Komga.
 
@@ -44,7 +44,7 @@ By the end of this guide, you are able to:
 
 ## 3. Prepare your media files
 
-Komga scans a dedicated directory to populate your library. You must place your media files in the designated Olares folder for the application to detect them.
+Komga scans a dedicated Olares directory to populate your library. You must place your media files in the designated folder for the application to detect them.
 
 1. Open the Files app from the Dock or Launchpad on Olares.
 2. Go to **Data > komga > data**.
@@ -54,12 +54,14 @@ Komga scans a dedicated directory to populate your library. You must place your 
 
 ## 4. Create and scan a library
 
-After uploading your files, connect them to the Komga interface by creating a library.
+After uploading your files, connect them to the Komga interface by creating libraries.
 
 1. In **Komga**, click **ADD LIBRARY** on the main screen, or click <i class="material-symbols-outlined">add_2</i> next to **Libraries** from the left sidebar. The **Add Library** window appears.
 2. On the **GENERAL** tab, configure the following settings, and then click **NEXT**:
     - **Name**: Specify a name for the library.
-    - **Root folder**: Click **BROWSE** to choose the `/data` folder or a sub-folder you created.
+    - **Root folder**: Click **BROWSE** to choose the file location:
+        - Select the `/data` folder to include all media files and sub-folders in one large library.
+        - Select a sub-folder to limit this library's content to that specific category.
 
     ![Komga general settings](/images/manual/use-cases/komga-general.png#bordered){width=60%} 
 
