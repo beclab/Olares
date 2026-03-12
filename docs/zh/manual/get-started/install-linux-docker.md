@@ -13,9 +13,9 @@ description: 了解如何使用 Docker Compose 在 Linux 服务器上部署 Olar
 
 - **CPU**：4 核及以上。
 - **内存**：至少 8 GB 可用内存。
-- **存储**：至少 150 GB 可用磁盘空间。
-   ::: warning 必须使用 SSD
-   请勿使用机械硬盘 (HDD)。如果未检测到 SSD，安装将失败。
+- **存储**：至少 150 GB 的可用 SSD 磁盘空间。
+   :::warning 必须使用 SSD
+   使用机械硬盘 (HDD) 会导致安装失败。
    :::
 - **支持的系统**：
    - Ubuntu 22.04-25.04 LTS

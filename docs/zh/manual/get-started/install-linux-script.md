@@ -12,10 +12,10 @@ description: 在 Linux 系统 Ubuntu 和 Debian 上安装配置 Olares 的完整
 ### 必要配置
 - **CPU**：4 核及以上。
 - **内存**：至少 8 GB 可用内存。
-- **存储**：至少 150 GB 可用磁盘空间。
-  ::: warning 必须使用 SSD
-  请勿使用机械硬盘 (HDD)。如果未检测到 SSD，安装将失败。
-  :::
+- **存储**：至少 150 GB 的可用 SSD 磁盘空间。
+   :::warning 必须使用 SSD
+   使用机械硬盘 (HDD) 会导致安装失败。
+   :::
 - **支持的系统**：
   - Ubuntu 22.04-25.04 LTS
   - Debian 12 或 13

@@ -22,9 +22,9 @@ Windows 版 Olares 目前存在以下限制：
 - **CPU**：4 核及以上。
 - **内存**：不少于 16 GB 可用内存。
 - **存储**：不少于 150 GB 的可用 SSD 磁盘空间。
-  :::warning 必须使用 SSD
-  请勿使用机械硬盘 (HDD)。如果未检测到 SSD，安装将失败。
-  :::
+   :::warning 必须使用 SSD
+   使用机械硬盘 (HDD) 会导致安装失败。
+   :::
 - **支持的系统**：
   - Windows 10 或 11
   - Linux（WSL 2 环境）：Ubuntu 22.04-25.04 LTS；Debian 12, 13

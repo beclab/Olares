@@ -17,7 +17,6 @@ We recommend using it only for development or testing purposes.
 
 ## System requirements
 
-- **Architecture**: x86-64 or ARM64.
 - **CPU**: At least 4 cores.
 - **RAM**: At least 8 GB of available memory.
 - **Storage**: At least 150 GB of available storage.

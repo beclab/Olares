@@ -16,7 +16,7 @@ Currently, Olares on LXC has certain limitations. We recommend using it only for
 
 - **CPU**: At least 4 cores.
 - **RAM**: At least 8 GB of available memory.
-- **Storage**: At least 150 GB of available SSD storage.
+- **Storage**: At least 200 GB of available SSD storage.
   :::warning SSD required
   The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.
   :::
