@@ -10,7 +10,7 @@ description: Olares 多节点集群部署教程，包括主节点配置、工作
 :::warning Alpha 功能
 此功能目前处于 **Alpha** 阶段，可能存在性能问题并需要额外的手动配置，不建议用于生产环境。如果遇到任何问题，请在 [Olares 的 GitHub 仓库](https://github.com/beclab/Olares/issues)中提交 Issue。
 :::
-:::info 关于 Olares One 硬件
+:::info 关于使用 Olares One 硬件
 如果你正在使用两台 Olares One 设备组建多节点 Olares 集群，可参阅[连接两台 Olares One](/zh/one/connect-two-olares-one.md)。
 :::
 
