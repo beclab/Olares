@@ -15,7 +15,7 @@ In this guide, you will learn:
 - How app state affects available GPU actions.
 - How GPU modes differ and when to use each one.
 
-## Understand GPU allocation
+## How GPU allocation works
 
 In Olares, giving an app access to GPU resources is called binding. Unbinding removes that access so the GPU can be released or reassigned.
 
@@ -23,10 +23,16 @@ Whether you can bind or unbind an app depends mainly on whether the app is runni
 
 | App state | Bind (Give access) | Unbind (Remove access) |
 | -- | -- | -- |
-| **Running** | Supported | Stop the app first.* |
-| **Stopped** | Resume the app first. | Supported |
+| **Running** | Supported | Not supported. Stop the app first.* |
+| **Stopped** | Not supported. Resume the app first. | Supported |
 
 *\*Multi-GPU exception: If an app is allocated to multiple GPUs on the same node, you can remove its access from one GPU while it remains running on the others.*
+
+You can check whether an app is running or stopped in either of these places:
+
+- **Market** > **My Olares**: The current status is displayed on the app's card. 
+- **Settings** > **Applications**: The current status is shown in the app list. 
+- **Launchpad**: A stopped app is marked with an orange dot next to its name.
 
 :::info
 Stopping an app pauses its workload, but it does not automatically remove its GPU allocation.
@@ -34,14 +40,7 @@ Stopping an app pauses its workload, but it does not automatically remove its GP
 To fully release the GPU or VRAM for other workloads, you must explicitly unbind the app after stopping it.
 :::
 
-## Check or change an app's state
-
-You can check whether an app is **Running** or **Stopped**, and change its state, in either of these places:
-
-- **Market** > **My Olares**: The current status is displayed on the app's card. Click the dropdown menu to select **Stop** or **Resume**.
-- **Settings** > **Applications**: The current status is shown in the app list. Select the app, then click **Stop** or **Resume**.
-
-## Understand GPU modes
+## GPU modes and when to use them
 
 Olares supports three GPU modes. Each mode determines how GPU resources are shared and what happens to running apps after you switch modes.
 

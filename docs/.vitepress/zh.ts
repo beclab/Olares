@@ -357,11 +357,8 @@ const side = {
             { 
               "text": "管理 GPU", 
               "collapsed": true,
+              "link": "/zh/manual/olares/settings/gpu-resource" ,
               "items": [
-                {
-                  "text": "GPU 资源管理",
-                  "link": "/zh/manual/olares/settings/gpu-resource" 
-                },
                 {
                   "text": "管理单 GPU 资源",
                   "link": "/zh/manual/olares/settings/single-gpu" 

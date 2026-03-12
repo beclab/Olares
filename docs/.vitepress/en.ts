@@ -362,11 +362,8 @@ const side = {
             { 
               text: "Manage GPU", 
               collapsed: true,
+              link: "/manual/olares/settings/gpu-resource",
               items:[
-                {
-                  text: "Understand GPU management",
-                  link: "/manual/olares/settings/gpu-resource" 
-                },
                 {
                   text: "Manage single-GPU resources",
                   link: "/manual/olares/settings/single-gpu" 
