@@ -5,13 +5,13 @@ description: Olares 多节点集群部署教程，包括主节点配置、工作
 
 # 安装多节点 Olares 集群 <Badge type="warning" text="Alpha" />
 
-默认情况下，Olares 的安装会部署单节点集群。从 v1.11.3 开始，Olares 支持添加子节点。本教程将指导你如何配置主节点并添加子节点，以创建一个可扩展的多节点 Olares 集群。
+默认情况下，Olares 的安装会部署单节点集群。自 v1.11.3 起，Olares 支持 Linux 系统节点加入 Olares 集群。本教程将介绍如何配置主节点并添加子节点，以创建一个可扩展的多节点 Olares 集群。
 
 :::warning Alpha 功能
 此功能目前处于 **Alpha** 阶段，可能存在性能问题并需要额外的手动配置，不建议用于生产环境。如果遇到任何问题，请在 [Olares 的 GitHub 仓库](https://github.com/beclab/Olares/issues)中提交 Issue。
 :::
-:::info 仅支持 Linux
-当前仅支持 Linux 系统节点加入 Olares 集群。
+:::info 关于使用 Olares One 硬件
+如需使用两台 Olares One 设备组建多节点 Olares 集群，可参阅[连接两台 Olares One](/zh/one/connect-two-olares-one.md)。
 :::
 
 ## 目标
