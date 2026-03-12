@@ -26,7 +26,7 @@ Before proceeding, ensure that your setup meets the following requirements:
 - RAM: Recommended 16 GB or more 
 - Storage: Minimum 200 GB SSD (installation may fail on HDD)  
 - PVE Version: 8.3.2
-- Olares ISO Image: Download the [official Olares ISO image](https://dc3p1870nn3cj.cloudfront.net/olares-v1.12.1-amd64.iso) before you start.
+- Olares ISO Image: Download the [official Olares ISO image](https://cdn.olares.com/olares-latest-amd64.iso) before you start.
 
 ## Configure GPU passthrough in PVE
 

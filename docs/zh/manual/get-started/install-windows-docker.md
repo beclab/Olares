@@ -12,18 +12,28 @@ Windows 版 Olares 目前存在以下限制：
 
 建议仅用于开发或测试环境。
 :::
+<!--@include: ./reusables.md{44,51}-->
 
 ## 系统要求
-Windows 设备需满足以下条件：
-- CPU：4 核及以上
-- 内存：不少于 16GB 可用内存
-- 存储：不少于 150GB 的可用磁盘空间，需使用 SSD 硬盘安装。使用 HDD（机械硬盘）可能会导致安装失败。
-- 支持的系统：
-    - Windows 10 或 11
-    - Linux（WSL 2 环境）：Ubuntu 22.04-25.04 LTS；Debian 12, 13
 
-:::warning 注意
-使用 HDD（机械硬盘）可能会导致安装失败。
+### 必要配置
+
+- **CPU**：4 核及以上。
+- **内存**：不少于 16 GB 可用内存。
+- **存储**：不少于 150 GB 的可用 SSD 磁盘空间。
+   :::warning 必须使用 SSD
+   使用机械硬盘 (HDD) 会导致安装失败。
+   :::
+- **支持的系统**：
+  - Windows 10 或 11
+  - Linux（WSL 2 环境）：Ubuntu 22.04-25.04 LTS；Debian 12, 13
+
+### 可选硬件
+
+<!--@include: ./gpu-requirements.md{5,}-->
+
+:::tip Windows 上的显卡确认方式
+你也可以在 **任务管理器 > 性能** 中确认显卡型号是否为 NVIDIA，并在 WSL 终端中运行 `nvidia-smi` 检查驱动是否在子系统中可用。
 :::
 
 ## 开始之前
@@ -122,7 +132,7 @@ Windows 设备需满足以下条件：
 
 ## 使用 Docker CLI 运行 Olares
 :::warning CUDA 版本要求
-如果需要启用 GPU 支持，请确保 CUDA 版本为 12.4 或以上。较低版本不支持 GPU 功能。
+如需启用 GPU 支持，必须使用 CUDA 13.1。请提前将 NVIDIA 驱动升级到支持 CUDA 13.1 的版本。
 :::
 使用下列命令拉取 Olares 的镜像。
 将 `<host ip>` 替换为设备的 IP 地址，将 `<olares version>-cn` 替换为想要使用的 Olares 版本：
@@ -171,6 +181,8 @@ docker run --gpus all -d --privileged -v oic-data:/var \
 
 <!--@include: ./install-and-activate-olares.md-->
 
+<!--@include: ./log-in-to-olares.md-->
+
 <!--@include: ./manage-olares-container.md-->
 
-<!--@include: ./reusables.md{33,37}-->
+<!--@include: ./reusables.md{38,42}-->

@@ -41,13 +41,13 @@ You're almost ready to start using Olares! Before diving in, it's crucial to ens
 
 - [Back up your mnemonic phrase](/manual/larepass/back-up-mnemonics.md)
 
-:::info Having trouble with installation?  
-If you encounter issues during the installation process, feel free to [submit a GitHub Issue](https://github.com/beclab/Olares/issues/new). Please include the following information when submitting:
+:::info Having trouble?
+If you run into any issues, [submit a GitHub Issue](https://github.com/beclab/Olares/issues/new) and include your platform, installation method, and error details.
+:::
 
-- The platform or environment you're using (e.g., Ubuntu, Docker, WSL, etc.).
-- The installation method (script installation or Docker image).
-- Detailed error information (including logs, error messages, or screenshots).  
-  :::
+
+
+
 
 ## System requirements
 

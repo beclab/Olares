@@ -4,38 +4,35 @@ description: Instructions for installing Olares on Linux Containers (LXC) includ
 # Install Olares on LXC
 LXC (Linux Containers) is a lightweight virtualization method that runs applications in isolated containers. When used on PVE, it enables an efficient way to deploy Olares without the overhead of a full virtual machine.
 
-:::warning Not recommended for production use
+:::warning Not for production use
 Currently, Olares on LXC has certain limitations. We recommend using it only for development or testing purposes.
 :::
 
 <!--@include: ./reusables.md{44,51}-->
 
 ## System requirements
-Make sure your device meets the following requirements.
+
 ### Required specifications
-- CPU: At least 4 cores
-- RAM: At least 8 GB of available memory
-- Storage: At least 150 GB of available SSD storage.
-    ::: warning SSD required
-    The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
-    :::
-- Supported systems:
-    - PVE 8.2.2
-    - Linux container: Debian 12 (for existing LXC containers on PVE)
 
+- **CPU**: At least 4 cores.
+- **RAM**: At least 8 GB of available memory.
+- **Storage**: At least 200 GB of available SSD storage.
+  :::warning SSD required
+  The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.
+  :::
+- **Supported systems**:
+  - PVE 8.2.2
+  - Linux container: Debian 12 (for existing LXC containers on PVE)
 
-:::info Version compatibility
-While the specific versions are confirmed to work, the process may still work on other versions. Adjustments may be necessary depending on your environment. If you meet any issues with these platforms, feel free to raise an issue on [GitHub](https://github.com/beclab/Olares/issues/new).
-:::
+<!--@include: ./reusables.md{63,65}-->
 
 ### Optional hardware
 
-A GPU is not required to install Olares, but is necessary for AI applications.
+<!--@include: ./gpu-requirements.md{5,}-->
 
-- GPU (NVIDIA only):
-   - Architecture: Turing or newer (e.g., GTX 16 series, RTX 20 series, and later).
-   - Verification: Run `lspci | grep -i nvidia` in the PVE host shell to confirm the card is detected.
-   - Setup: To utilize the GPU, you must configure LXC device passthrough. Please refer to [Configure GPU passthrough in PVE](/manual/best-practices/install-olares-gpu-passthrough.md#configure-gpu-passthrough-in-pve) for detailed instructions.
+:::tip LXC device passthrough required
+To use the GPU within Olares on LXC, you must configure device passthrough first. Refer to [Configure GPU passthrough in PVE](/manual/best-practices/install-olares-gpu-passthrough.md#configure-gpu-passthrough-in-pve) for instructions.
+:::
 
 ## Prerequisites
 
@@ -58,7 +55,7 @@ To install Olares on an existing LXC container, skip to step 2 directly. Make su
    To create a container, you need to assign it a unique container ID. In this guide, we use `16553`, but you can replace it with any available numeric ID. Make sure to update all commands and configurations accordingly.
    :::
 
-   ``` bash{2}
+   ```bash{2}
    export ROOTPASS=123456 
    pct create 16553 /var/lib/vz/template/cache/debian-12-standard_12.7-1_amd64.tar.zst \
    --hostname olares \

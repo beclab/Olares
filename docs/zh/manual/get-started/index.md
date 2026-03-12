@@ -4,10 +4,6 @@ description: Olares 的上手指南，选择适合个人或团队的使用路径
 # 快速上手
 嗨！欢迎来到 Olares 的世界！让我们帮你在你喜欢的平台上轻松上手 Olares。
 
-::: tip
-想直接体验云端版本？不用自己搭建？来看看 [Olares Space 的介绍](../../space/)吧！
-:::
-
 <div class="cta">
   <a href="./create-olares-id">
     <div class="content">

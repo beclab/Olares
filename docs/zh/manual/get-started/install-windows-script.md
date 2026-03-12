@@ -12,33 +12,30 @@ Windows 版 Olares 目前存在以下限制：
 
 建议仅用于开发或测试环境。
 :::
-:::info 安装遇到问题？
-如果你在安装过程中遇到问题，欢迎[提交 GitHub Issue](https://github.com/beclab/Olares/issues/new)。提交时请尽量附上以下信息：
 
-- 你使用的平台或环境（例如 Ubuntu、Docker、WSL 等）。
-- 安装方式（脚本安装或 Docker 镜像）。
-- 详细的错误信息（包括日志、报错信息或截图）。
-:::
+<!--@include: ./reusables.md{44,51}-->
+
 ## 系统要求
-Windows 设备需满足以下条件：
+
 ### 必要配置
-- CPU：4 核及以上
-- 内存：不少于 16 GB 可用内存
-- 存储：不少于 150 GB 的可用磁盘空间，需使用 SSD 硬盘安装。
-   ::: warning 必须使用 SSD
-   请勿使用机械硬盘 (HDD)。如果未检测到 SSD，安装将失败。
+
+- **CPU**：4 核及以上。
+- **内存**：不少于 16 GB 可用内存。
+- **存储**：不少于 150 GB 的可用 SSD 磁盘空间。
+   :::warning 必须使用 SSD
+   使用机械硬盘 (HDD) 会导致安装失败。
    :::
-- 支持的系统：
-    - Windows 10 或 11
-    - Linux（WSL 2 环境）：Ubuntu 22.04-25.04 LTS；Debian 12, 13
+- **支持的系统**：
+  - Windows 10 或 11
+  - Linux（WSL 2 环境）：Ubuntu 22.04-25.04 LTS；Debian 12, 13
 
 ### 可选硬件
-安装 Olares 不需要 GPU，但运行 AI 应用需要 GPU支持。
-- GPU (仅支持 NVIDIA)：
-  - 架构：Turing 架构或更新版本 (例如 GTX 16 系列、RTX 20 系列)。
-  - 验证方法：
-   1. 打开**任务管理器** > **性能**来确认 GPU 型号 (必须为 NVIDIA)。
-   2. 在 WSL 终端中运行 `nvidia-smi` 以确认驱动程序可被访问。
+
+<!--@include: ./gpu-requirements.md{5,}-->
+
+:::tip Windows 上的显卡确认方式
+你也可以在 **任务管理器 > 性能** 中确认显卡型号是否为 NVIDIA，并在 WSL 终端中运行 `nvidia-smi` 检查驱动是否在子系统中可用。
+:::
 
 ## 配置系统环境
 1. 启用虚拟化所需的 Windows 功能。
@@ -74,10 +71,12 @@ Windows 设备需满足以下条件：
 2. 执行安装脚本。
 
    a. 以管理员身份打开 PowerShell 并导航至脚本所在文件夹。例如，如果脚本在 `Downloads` 文件夹里，则执行以下命令：
-      ```powershell
-      cd C:\Users\<YourUsername>\Downloads
-      ```
-   
+
+   ```powershell
+   # 将 <YourUsername> 替换成实际的 Windows 用户名
+   cd C:\Users\<YourUsername>\Downloads
+   ```
+
    b. 进入正确的文件目录后，执行以下命令：
       ```powershell
       .\publicInstall.latest.ps1
@@ -94,6 +93,7 @@ Windows 设备需满足以下条件：
    publicInstall.latest.ps1?
    [D] Do not run [R] Run once [S] Suspend [?] Help (default is "D"):
    ```
+
 4. 选择 WSL Ubuntu 的存储位置。请输入一个可用磁盘的盘符，并确保所选磁盘至少有 **80 GB** 的可用空间。
    ```powershell{8}
    Installing Olares will create a WSL Ubuntu Distro and occupy at least 80 GB of disk space.
@@ -131,13 +131,13 @@ wsl --unregister ubuntu
 卸载完成后，重新运行安装命令进行安装。
 :::
 
-<!--@include: ./reusables.md{23,31}-->
+<!--@include: ./reusables.md{23,37}-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{33,37}-->
+<!--@include: ./reusables.md{38,42}-->
 
 ## 常见问题
 
@@ -157,12 +157,15 @@ wsl --unregister ubuntu
 **在安装之前调整内存**
 
 例如分配 16GB 内存：
+
 1. 使用如下信息添加用户变量。
    - **变量名**: `WSL_MEMORY`
    - **变量值**: `16`
 
      ![添加用户变量](/images/manual/get-started/add-user-variable.png#bordered)
+
 2. 点击**确定**使变更生效。
+
    :::tip 提示
    如果你已经打开了一个 PowerShell 窗口，环境变量的更改不会在当前会话中生效。请务必以管理员身份打开一个新的 PowerShell 窗口，然后再运行安装脚本。
    :::
@@ -170,11 +173,13 @@ wsl --unregister ubuntu
 **安装完成后调整内存和 CPU**
 
 安装完成后，系统会在用户主目录下生成一个名为 `.wslconfig` 的配置文件（路径为 `C:\Users\<你的用户名>\`）。可以通过编辑此文件调整内存和 CPU 设置。默认配置如下：
+
 ```bash
 [wsl2]
 memory=12GB
 swap=0GB
 ```
+
 例如，设置为使用 4 核 CPU：
 1. 在文件中添加 `processors` 参数：
    ```bash
@@ -217,6 +222,7 @@ wsl -d Ubuntu
 1. 打开**控制面板** > **系统和安全** > **Windows Defender 防火墙**。
 
    ![进入 Windows Defender 防火墙](/images/manual/get-started/select-firewall.png#bordered)
+
 2. 在左侧导航栏中，点击**高级设置**。
 
    ![选择高级设置](/images/manual/get-started/select-advanced-settings.png#bordered)
@@ -233,6 +239,7 @@ wsl -d Ubuntu
 
    ![允许连接](/images/manual/get-started/allow-the-connection.png#bordered)
 7. 确保规则适用于**域**、**专用**和**公用**网络，然后点击**下一步**。
+
 
    ![确认规则适用范围](/images/manual/get-started/confirm-rules.png#bordered)
 8. 为规则提供一个名称，然后点击**完成**。

@@ -15,7 +15,6 @@ curl -fsSL https://cn.olares.sh |  bash -
 
 ```bash
 olares-cli uninstall --all
-
 ```
 
 卸载完成后，重新运行安装命令进行安装。
@@ -29,6 +28,11 @@ olares-cli uninstall --all
 
 安装完成后，屏幕将显示初始系统信息，包括向导地址和初始一次性密码。这些信息在后续激活步骤中会用到。
 
+
+
+
+
+
 ![Wizard URL](/images/manual/get-started/wizard-url-and-login-password.png)
 
 ## 下一步：安全保存 Olares ID
@@ -36,6 +40,14 @@ olares-cli uninstall --all
 你已经准备好开始使用 Olares！在此之前，请务必确保 Olares ID 已安全备份。如果不备份，你将无法在需要时恢复 Olares ID。
 
 - [备份助记词](../larepass/back-up-mnemonics.md)
+
+:::info 安装遇到问题？
+如果你在安装或使用过程中遇到问题，可以[提交 GitHub Issue](https://github.com/beclab/Olares/issues/new)，并附上你的平台、安装方式和错误详情。
+:::
+
+
+
+
 
 ## 系统要求
 
