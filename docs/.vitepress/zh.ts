@@ -232,7 +232,7 @@ const side = {
             }
           ]
         },
-        {
+        /*{
           "text": "Wise",
           "collapsed": true,
           "link": "/zh/manual/olares/wise/",
@@ -244,7 +244,7 @@ const side = {
             /*{
               "text": "获取推荐引擎",
               "link": "/zh/manual/olares/wise/recommend"
-            },*/
+            },
             {
               "text": "管理订阅",
               "link": "/zh/manual/olares/wise/subscribe"
@@ -269,7 +269,7 @@ const side = {
               ],
             },
           ],
-        },
+        },*/
         {
           "text": "控制面板",
           "collapsed": true,

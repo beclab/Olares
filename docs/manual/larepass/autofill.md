@@ -7,7 +7,7 @@ Password autofill eliminates the hassle of manually typing credentials while mai
 
 ## Before you begin
 
-Make sure you have LarePass mobile clients or Chrome extension installed on your device, and logged in using your Olares ID.
+Make sure you have LarePass mobile clients <!--or Chrome extension -->installed on your device, and logged in using your Olares ID.
 
 :::tip
 For different download options of LarePass, visit the [official website](https://www.olares.com/larepass).
@@ -30,16 +30,16 @@ Due to iOS system restrictions, you have to manually enable autofill for LarePas
 3. Ensure the Autofill service is on, then activate LarePass as an autofill provider.
 
 </template>
-<template #Chrome-extension>
+<!--<template #Chrome-extension>
 
 Autofill is automatically enabled upon logging in with the browser extension.
-</template>
+</template>-->
 </tabs>
 
 ## Save password
 When you enter credentials in an app or website, LarePass will detect this action and prompt you to save them.
 :::info
-On iOS, passwords cannot be automatically saved. You can manually add a vault item or use the Chrome extension. Vault items sync across all platforms.
+On iOS, passwords cannot be automatically saved. You can manually add a vault item<!-- or use the Chrome extension-->. Vault items sync across all platforms.
 :::
 1. Log in to an app or website.
 2. When prompted, click **Save** to store your password in LarePass.
@@ -67,13 +67,13 @@ On iOS, passwords cannot be automatically saved. You can manually add a vault it
    :::
 5. Select the matching vault item to autofill your login details.
 </template>
-<template #Chrome-extension>
+<!--<template #Chrome-extension>
 
 1. Open a website where you aren't logged in.
 2. Click the LarePass icon in the text field.
 3. In the overlay popup, select the matching login to autofill your login details.
 4. If no credentials are saved for this site, select **New item** to add a new vault item.
-</template>
+</template>-->
 </tabs>
 
 

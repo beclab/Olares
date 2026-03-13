@@ -234,7 +234,7 @@ const side = {
             },
           ],
         },
-        {
+        /*{
           text: "Wise",
           collapsed: true,
           link: "/manual/olares/wise/",
@@ -243,10 +243,10 @@ const side = {
               text: "Basic operations",
               link: "/manual/olares/wise/basics",
             },
-            /*{
+            {
               text: "Get recommendation engine",
               link: "/manual/olares/wise/recommend",
-            },*/
+            },
             {
               text: "Manage your feeds",
               link: "/manual/olares/wise/subscribe",
@@ -271,7 +271,7 @@ const side = {
               ],
             },
           ],
-        },
+        },*/
         {
           text: "Control Hub",
           collapsed: true,

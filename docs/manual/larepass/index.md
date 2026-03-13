@@ -27,7 +27,7 @@ Visit the [Google Play product page](https://play.google.com/store/apps/details?
 ### macOS & Windows
 Download the latest desktop client from the [LarePass website](https://www.olares.com/larepass).
 
-### Chrome extension
+<!--### Chrome extension
 
 The LarePass extension allows you to collect content and manage passwords directly from your browser. It currently supports Google Chrome only and must be installed manually.
 
@@ -45,10 +45,10 @@ Extract the ZIP file to a permanent location, such as a folder under your user d
 :::tip Quick access
 After installation, click the puzzle icon in your browser toolbar and pin the LarePass extension for one-click access.
 :::
-
+-->
 ## Set up account 
 - On mobile devices, you can [create an Olares ID](/manual/larepass/create-account.md#create-an-olares-id) directly in the app.
-- On the desktop client or Chrome extension, you must [import an Olares account](/manual/larepass/create-account.md#import-an-account).
+- On the desktop client<!-- or Chrome extension-->, you must [import an Olares account](/manual/larepass/create-account.md#import-an-account).
 
 ## Feature comparison
 
@@ -59,7 +59,7 @@ After installation, click the puzzle icon in your browser toolbar and pin the La
       <th style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top; background-color: #f4f4f4;">Features</th>
       <th style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top; background-color: #f4f4f4;">Mobile</th>
       <th style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top; background-color: #f4f4f4;">Desktop</th>
-      <th style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top; background-color: #f4f4f4;">Chrome Extension</th>
+      <!-- <th style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top; background-color: #f4f4f4;">Chrome Extension</th> -->
     </tr>
   </thead>
   <tbody>
@@ -68,124 +68,124 @@ After installation, click the puzzle icon in your browser toolbar and pin the La
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Create Olares ID</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td> -->
     </tr>
     <tr style="background-color: #f9f9f9;">
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Import Olares ID</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td> -->
     </tr>
     <tr>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Multi-account management</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td> -->
     </tr>
     <tr style="background-color: #f9f9f9;">
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">SSO login</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td> -->
     </tr>
     <tr>
       <td rowspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle; font-weight: bold;">Device & network management</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Activate Olares</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td> -->
     </tr>
     <tr style="background-color: #f9f9f9;">
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">View resource consumption</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td> -->
     </tr>
     <tr>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Remote device control</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td> -->
     </tr>
     <tr style="background-color: #f9f9f9;">
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Manage VPN connections</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td> -->
     </tr>
     <tr>
       <td rowspan="7" style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle; font-weight: bold;">Knowledge & file management</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Sync files across devices</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td> -->
     </tr>
     <tr style="background-color: #f9f9f9;">
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Manage files on Olares</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td> -->
     </tr>
     <tr>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Collect webpage/video/podcast/PDF /eBook to Wise</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td> -->
     </tr>
     <tr style="background-color: #f9f9f9;">
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Download video/podcast/PDF/eBook to Files</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td> -->
     </tr>
     <tr>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Add RSS feed subscription</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td> -->
     </tr>
     <tr style="background-color: #f9f9f9;">
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Immersive translation</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td> -->
     </tr>
     <tr>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Backup your photos and files on phone</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td> -->
     </tr>
     <tr style="background-color: #f9f9f9;">
       <td rowspan="5" style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle; font-weight: bold;">Secret management</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Generate, share, and autofill <br> strong passwords and passkeys</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td> -->
     </tr>
     <tr>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">One-time authentication management</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td> -->
     </tr>
     <tr style="background-color: #f9f9f9;">
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Cookies Sync</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td> -->
     </tr>
     <tr>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">3rd-party SaaS account integration</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td> -->
     </tr>
     <tr style="background-color: #f9f9f9;">
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Verifiable Credential (VC) card management</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
+      <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td> -->
     </tr>
   </tbody>
 </table>

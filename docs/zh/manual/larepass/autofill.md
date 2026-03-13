@@ -6,7 +6,7 @@ description: 设置和使用 LarePass 的密码自动填充功能，在所有设
 密码自动填充让你无需手动输入凭据，既方便又安全。通过 LarePass，你可以将密码安全地存储在密码库中，并在所有设备上自动填充。
 ## 开始之前
 
-确保你的设备上已安装 LarePass 移动客户端或 Chrome 扩展程序，并使用 Olares ID 登录。
+确保你的设备上已安装 LarePass 移动客户端<!--或 Chrome 扩展程序-->，并使用 Olares ID 登录。
 
 :::tip 提示
 要获取 LarePass 的不同下载选项，请访问 [LarePass 页面](https://olares.cn/larepass)。
@@ -30,10 +30,10 @@ description: 设置和使用 LarePass 的密码自动填充功能，在所有设
 3. 确保自动填充服务已开启，然后激活 LarePass 作为自动填充提供程序。
 
 </template>
-<template #Chrome-扩展>
+<!--<template #Chrome-扩展>
 
 登录浏览器扩展程序时会自动启用自动填充。
-</template>
+</template>-->
 </tabs>
 
 ## 保存密码
@@ -41,7 +41,7 @@ description: 设置和使用 LarePass 的密码自动填充功能，在所有设
 当你在应用或网站中输入凭据时，LarePass 会检测该操作并提示保存密码。
 
 :::info 提示
-在 iOS 上，密码无法自动保存。可以手动添加 Vault 项目或使用 Chrome 扩展。Vault 项目将在所有平台同步。
+在 iOS 上，密码无法自动保存。可以手动添加 Vault 项目<!--或使用 Chrome 扩展-->。Vault 项目将在所有平台同步。
 :::
 
 1. 登录应用或网站。

@@ -52,9 +52,9 @@ Cookie 管理页会按网站域名分组展示所有已保存的 Cookie。每个
 可执行的操作包括：
 
 - **导入 Cookie**：目前支持手工导入，复制并粘贴 Cookie 内容至导入对话框。支持格式为 **Netscape**、**Json**、以及 **Head String**。
-   :::tip 注意
+   <!-- :::tip 注意
    第一次使用仅支持导入。你也可以在 [LarePass 插件](../../larepass/manage-knowledge.md#通过-larepass-扩展收集内容)中直接从浏览器导入当前页面 Cookie。
-   :::
+   ::: -->
 - **编辑 Cookie**：点击具体的 Cookie 条目，可在下方输入框中编辑对应的值。
 - **删除 Cookie**：移除无效或过期条目。支持对单个域名或全部 Cookie 进行删除。
 

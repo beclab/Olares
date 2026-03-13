@@ -55,9 +55,9 @@ Each entry shows the cookie name, value, expiration date, and associated domain.
 You can perform the following actions:
 
 - **Upload cookie** – Paste cookie content into the import dialog. Supported formats include **Netscape**, **JSON**, and **Header String**.  
-   :::tip Note  
+   <!--:::tip Note  
    (First-time users can only import cookies manually. You can also use the [LarePass extension](../../larepass/manage-knowledge.md#collect-content-via-larepass-extension) to upload cookies from the browser.)
-   :::
+   :::-->
 - **Edit cookie** – Click a specific cookie entry to modify its value in the editor below.
 - **Delete cookie** – Remove invalid or expired cookies. You can delete cookies individually or in bulk.
 

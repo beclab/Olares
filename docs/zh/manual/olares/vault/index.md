@@ -15,7 +15,7 @@ Vault 的关键功能包括：
 ## 客户端
 
 Vault 的服务器组件运行在 Olares 上，同步单个用户的多个客户端设备。数据在传输和存储过程中使用私钥加密，确保安全性。
-你可以通过 Olares 使用 Vault，也可以通过移动设备、桌面和浏览器扩展的 LarePass 客户端访问，实现跨平台一致的用户体验。
+你可以通过 Olares 使用 Vault，也可以通过移动设备、桌面<!--和浏览器扩展-->的 LarePass 客户端访问，实现跨平台一致的用户体验。
 
 访问 [LarePass 页面](https://olares.cn/larepass) 获取 LarePass 的详细信息和下载选项。
 
