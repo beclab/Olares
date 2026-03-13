@@ -154,4 +154,4 @@ Proceed with the Olares OS installation. The installation script automatically i
 
 
 ## Resources
-- [Install NVIDIA drivers on Windows](install-nvidia-driver.md)
+- [Install drivers on Windows](install-nvidia-driver.md)
