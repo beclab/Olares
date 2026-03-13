@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"os"
 	"strconv"
 	"strings"
@@ -85,6 +86,21 @@ func (r *PodAbnormalSuspendAppController) SetUpWithManager(mgr ctrl.Manager) err
 		klog.Errorf("pod-abnormal-suspend-app-controller failed to watch err=%v", err)
 		return err
 	}
+	err = mgr.GetFieldIndexer().IndexField(context.Background(),
+		&corev1.Event{},
+		"involvedObject.name",
+		func(obj client.Object) []string {
+			event := obj.(*corev1.Event)
+			if event.InvolvedObject.Name != "" {
+				return []string{event.InvolvedObject.Name}
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		klog.Errorf("pod-abnormal-suspend-app-controller failed to set index err=%v", err)
+		return err
+	}
 	return nil
 }
 
@@ -149,7 +165,15 @@ func (r *PodAbnormalSuspendAppController) Reconcile(ctx context.Context, req ctr
 		}
 
 		klog.Infof("attempting to suspend app=%s owner=%s due to pending unschedulable timeout", appName, owner)
-		ok, err := r.trySuspendApp(ctx, owner, appName, constants.AppUnschedulable, "pending unschedulable timeout on pod: "+pod.Namespace+"/"+pod.Name, pod.Namespace)
+		reason := constants.AppUnschedulable
+		pendingKind, err := utils.GetPendingKind(r.Client, &pod)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if pendingKind == "hami-scheduler" {
+			reason = constants.AppHamiSchedulable
+		}
+		ok, err := r.trySuspendApp(ctx, owner, appName, reason, "pending unschedulable timeout on pod: "+pod.Namespace+"/"+pod.Name, pod.Namespace)
 		if err != nil {
 			klog.Errorf("suspend attempt failed for app=%s owner=%s: %v", appName, owner, err)
 			return ctrl.Result{}, err
