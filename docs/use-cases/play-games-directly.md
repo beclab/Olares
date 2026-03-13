@@ -7,7 +7,11 @@ description: Learn how to turn your Olares device into a gaming console by conne
 
 While Olares is typically used as a headless system, you can connect a monitor, keyboard, and mouse to play games directly on the device.
 
-However, simply plugging in a monitor is not enough. Because Steam Headless is optimized for remote streaming by default, you must manually configure the audio settings to output audio locally.
+However, simply plugging in a monitor is not enough. Because Steam Headless is optimized for remote streaming by default, you must manually configure the display and audio settings for local gameplay.
+
+:::tip Olares One users
+Olares One has display and audio pre-configured for local gaming, so no manual setup is required. For Olares One, see [Play Steam games locally on Olares One](../one/steam-direct-play.md).
+:::
 
 ## Learning objectives
 
@@ -58,8 +62,8 @@ To output audio to your monitor, the Steam container needs direct access to your
 
 :::warning Edit with caution
 Incorrect YAML syntax or indentation may prevent the application from starting.
-- **Verify changes:** Double-check that your indentation matches the existing lines.
-- **Revert when necessary:** If the app fails to start after applying changes, check **Revision records** and simply delete the lines you added to restore the previous configuration.
+- Verify changes: Double-check that your indentation matches the existing lines.
+- Revert when necessary: If the app fails to start after applying changes, check **Revision records** and simply delete the lines you added to restore the previous configuration.
   ![Check revision records](../public/images/manual/use-cases/steam-yaml-revision-records.png#bordered)
 :::
 
