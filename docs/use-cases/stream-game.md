@@ -75,6 +75,10 @@ Access the Sunshine console to pair your Moonlight client with Olares.
 
 1. Copy the URL of your current Steam Headless browser tab.
 2. Open a new browser tab and modify the URL to access port `47990`. The address varies depending on your network.
+   :::info Access Sunshine with HTTPS
+   Most Olares services can be accessed through `.local` addresses over HTTP.  
+   However, the Sunshine Web UI requires **HTTPS** for secure local communication.
+   :::
     - **Same network**: Use HTTPS with your `.local` address. Either format works (dots or hyphens in the hostname):
 
    ```plain
@@ -87,7 +91,6 @@ Access the Sunshine console to pair your Moonlight client with Olares.
    ```plain
    https://139ebc4f0.<your Olares ID>.olares.com:47990
    ```
-
 3. Press **Enter** to open the Sunshine console page.
 4. Sign in using the `SUNSHINE_USER` and `SUNSHINE_PASS` credentials you created earlier.
    ![Sign in to Sunshine](/images/manual/use-cases/steam-sign-in-to-sunshine.png#bordered)
