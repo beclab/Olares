@@ -38,10 +38,19 @@ The change takes effect immediately.
 
 You can set a distinct look for your desktop and login screen.
 
-1. In **Wallpaper** , select the target: **Desktop background** or **Login background**.
+1. In **Wallpaper**, select the target: **Desktop background** or **Login background**.
 2. Choose a background:
-   - Built-in: Browse and select from the provided images.
-   - Custom: Click <i class="material-symbols-outlined">add_photo_alternate</i>, select an image file from your computer, then click **Open**.
+   - Built-in: Browse and select from the provided image gallery.
+   - Uploaded images: Select from images you've previously uploaded.
+   - Upload image: Click **Upload image** to upload an image from your computer.
+3. (Optional) Adjust how the wallpaper is displayed:
+   - Click the drop-down list next to **Upload image**, then choose **Stretch**, **Fill**, or **Tile**.
+
+#### Manage uploaded images
+
+Uploaded wallpapers appear in a separate **Uploaded images** section.
+
+To delete an uploaded image, hover over it and click the <i class="material-symbols-outlined">close</i> icon in the top-right corner.
 
 ## Design your public profile
 
