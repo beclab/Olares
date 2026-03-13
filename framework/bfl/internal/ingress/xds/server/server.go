@@ -141,6 +141,17 @@ func (s *XdsServer) logSnapshotYAML(xdsSnapshot *message.XdsSnapshot) {
 		klog.Errorf("xds-server: marshal config to json: %v", err)
 		return
 	}
+	var sanitized interface{}
+	if err := json.Unmarshal(jsonData, &sanitized); err != nil {
+		klog.Errorf("xds-server: unmarshal config json: %v", err)
+		return
+	}
+	maskCertificateChainInlineString(sanitized)
+	jsonData, err = json.Marshal(sanitized)
+	if err != nil {
+		klog.Errorf("xds-server: marshal sanitized config json: %v", err)
+		return
+	}
 
 	yamlData, err := sigsyaml.JSONToYAML(jsonData)
 	if err != nil {
@@ -149,6 +160,29 @@ func (s *XdsServer) logSnapshotYAML(xdsSnapshot *message.XdsSnapshot) {
 	}
 
 	klog.Infof("xds-server: full envoy xDS config (YAML):\n---\n%s", string(yamlData))
+}
+
+func maskCertificateChainInlineString(v interface{}) {
+	switch x := v.(type) {
+	case map[string]interface{}:
+		if certificateChain, ok := x["certificateChain"].(map[string]interface{}); ok {
+			if _, ok := certificateChain["inlineString"]; ok {
+				certificateChain["inlineString"] = "*"
+			}
+		}
+		if privateKey, ok := x["privateKey"].(map[string]interface{}); ok {
+			if _, ok := privateKey["inlineString"]; ok {
+				privateKey["inlineString"] = "*"
+			}
+		}
+		for _, child := range x {
+			maskCertificateChainInlineString(child)
+		}
+	case []interface{}:
+		for _, item := range x {
+			maskCertificateChainInlineString(item)
+		}
+	}
 }
 
 func (s *XdsServer) runGRPC(ctx context.Context) error {
