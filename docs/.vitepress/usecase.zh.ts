@@ -3,10 +3,6 @@ import { defineConfig, type DefaultTheme } from "vitepress";
 export const useCaseSidebar: DefaultTheme.Sidebar = {
     "/zh/use-cases/": [
         {
-          text: "应用示例",
-          link: "/zh/use-cases/",
-        },
-        {
           text: "AI",
           collapsed: false,
           items: [
