@@ -109,7 +109,7 @@ This step uses the voice model you trained in Step 1 to synthesize new audio fro
    ![Generate audio file](/images/manual/use-cases/duix-avatar-generate-audio-file.png#bordered)
 
 6. Rename the downloaded file to `new.mp3`. In the same folder, convert it to `.wav` with `ffmpeg`:
-    ```bashß
+    ```bash
    ffmpeg -i new.mp3 new.wav
    ```
 7. Upload the new `new.wav` file to:
