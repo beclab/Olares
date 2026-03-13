@@ -33,7 +33,7 @@ Follow these steps to install ACE-Step.
 1. Open the **Market** app in your Olares web interface.  
 2. Use the search bar and type "ACE-Step". 
 3. Click **Get**, then click **Install**.  
-   ![ACE-Step install](../public/images/manual/use-cases/ace-step-install.png#bordered)
+   ![ACE-Step install](/images/manual/use-cases/ace-step-install.png#bordered)
 4. Wait a few minutes for the installation to complete.
 
 ### Download required models on first-time launch
@@ -41,7 +41,7 @@ Follow these steps to install ACE-Step.
 Once installation finishes, open ACE-Step from Launchpad.
 
 Olares will automatically download and install required models. A **Download Manager** window will appear, showing model size and download progress.  
-   ![ACE-Step Download Manager](../public/images/manual/use-cases/ace-step-download-manager.png#bordered){width=500}
+   ![ACE-Step Download Manager](/images/manual/use-cases/ace-step-download-manager.png#bordered){width=500}
 
 After the download completes, the ACE-Step generation interface will open automatically.
 
@@ -75,7 +75,7 @@ Follow these steps to set your parameters and begin music generation.
 
 1.  Click **Generate** when all parameters are set. 
 2.  Once generation is complete, click the **Play** button to preview your track.
-   ![Generate the audio](../public/images/manual/use-cases/ace-step-generate.png#bordered)
+   ![Generate the audio](/images/manual/use-cases/ace-step-generate.png#bordered)
 
 ### Save the generated music
 
@@ -101,7 +101,7 @@ You can generate a new version of the entire track.
 2. Adjust the **variance** slider to control how different the new version will be. The higher the value, the more different the song will be.
 3. Click **Retake** and wait for the generation.
 4. Click the **Play** button below to preview the style change.
-    ![Preview the retake](../public/images/manual/use-cases/ace-step-retake.png#bordered)
+    ![Preview the retake](/images/manual/use-cases/ace-step-retake.png#bordered)
 
 ### Regenerate a specific section
 
@@ -116,7 +116,7 @@ You can update only a selected time range while keeping the rest of the track un
     - `upload`: The audio you uploaded.
 5. Click **Repaint** and wait for the generation.
 6. Click the **Play** button below to preview the result.
-    ![Preview the repaint](../public/images/manual/use-cases/ace-step-repaint.png#bordered)
+    ![Preview the repaint](/images/manual/use-cases/ace-step-repaint.png#bordered)
 
 ### Edit lyrics
 
@@ -128,7 +128,7 @@ You can edit lyrics to modify specific lines without affecting the rest of the t
 4. Under **Edit Type**, select `only_lyrics`.
 5. Click **Edit** and wait for the generation.
 6. Click the **Play** button below to preview the change.
-    ![Edit lyrics](../public/images/manual/use-cases/ace-step-edit-lyrics.png#bordered)
+    ![Edit lyrics](/images/manual/use-cases/ace-step-edit-lyrics.png#bordered)
 
 ### Edit tags
 
@@ -139,7 +139,7 @@ You can edit tags to reset the style or timbre of the track.
 3. In **Edit Type**, select `remix`.
 4. Click **Edit** and wait for the generation.
 5. Click the **Play** button below to preview the change.
-    ![Edit tags](../public/images/manual/use-cases/ace-step-edit-tags.png#bordered)
+    ![Edit tags](/images/manual/use-cases/ace-step-edit-tags.png#bordered)
 
 ### Extend the audio
 
@@ -154,7 +154,7 @@ You can extend the length of the original track by adding new audio before or af
     - `upload`: The audio you uploaded.
 5. Click **Extend** and wait for the generation.
 6. Click the **Play** button below to preview the change.
-    ![Extend tags](../public/images/manual/use-cases/ace-step-extend.png#bordered)
+    ![Extend tags](/images/manual/use-cases/ace-step-extend.png#bordered)
 
 ## Audio2Audio
 
@@ -165,4 +165,4 @@ You can create a new track based on a **reference audio** clip you upload. It an
 4. Select a **Preset** style, or keep the default.
 5. Set other parameters as needed.
 6. Click **Generate** to create new music with an atmosphere similar to the reference audio.
-    ![Audio2Audio](../public/images/manual/use-cases/ace-step-audio2audio.png#bordered)
+    ![Audio2Audio](/images/manual/use-cases/ace-step-audio2audio.png#bordered)
