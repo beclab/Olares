@@ -84,7 +84,7 @@ After setup is complete, the LarePass app returns to the home screen, and the Wi
 
 ## Configure GPU memory for AI apps
 
-DGX Spark features a unified memory architecture where the CPU and GPU share 128 GB of LPDDR5x memory. Unlike traditional GPUs with dedicated VRAM, Spark does not distinguish between system memory and GPU memory.
+DGX Spark features a unified memory architecture where the CPU and GPU share 128 GB of LPDDR5x memory. Unlike traditional GPUs with dedicated VRAM, DGX Spark does not distinguish between system memory and GPU memory.
 
 On DGX Spark, Olares uses **Memory slicing** mode by default for GPU resource management. When you install an AI application, Olares automatically allocates the minimum required memory to ensure the app can start and run properly.
 

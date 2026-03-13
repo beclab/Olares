@@ -69,10 +69,10 @@ sudo nft flush ruleset
 
 5. 使用 LarePass 应用激活 Olares。
 
-   a. 打开 LarePass 应用，点击**扫描二维码**，扫描向导页面上的二维码完成激活。
    :::warning 网络要求
    为避免激活失败，管理员用户需确保手机和 Olares 设备连接到同一网络。
    :::
+   a. 打开 LarePass 应用，点击**扫描二维码**，扫描向导页面上的二维码完成激活。
 
    ![激活 Olares](/images/manual/get-started/activate-olares.png#bordered)
 
@@ -84,7 +84,7 @@ sudo nft flush ruleset
 
 ## 配置 AI 应用的 GPU 显存
 
-DGX Spark 采用统一内存架构，CPU 和 GPU 共享 128 GB 的 LPDDR5x 内存。与传统 GPU 拥有独立显存不同，Spark 不区分系统内存和 GPU 显存。
+DGX Spark 采用统一内存架构，CPU 和 GPU 共享 128 GB 的 LPDDR5x 内存。与传统 GPU 拥有独立显存不同，DGX Spark 不区分系统内存和 GPU 显存。
 
 在 DGX Spark 上，Olares 默认使用**显存分片**模式进行 GPU 资源管理。当你安装 AI 应用时，Olares 会自动分配最低所需的内存，以确保应用能够正常启动和运行。
 

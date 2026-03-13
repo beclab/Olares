@@ -26,15 +26,15 @@ DGX Spark support is currently in Release Candidate (RC). We are actively testin
 1. Download [the official Olares ISO image for DGX Spark](https://cdn.olares.com/spark/olares.iso).
 2. Download and install [Balena Etcher](https://etcher.balena.io/).
 3. Insert the USB flash drive into your computer.
-4. Launch Etcher and follow these steps:
+4. Launch Balena Etcher and follow these steps:
+
+   ![Bootable USB](/images/manual/get-started/iso-flash.png#bordered)
 
    a. **Image**: Select the Olares ISO.
 
    b. **Target disk**: Select your USB drive.
 
    c. Click **Flash** to write the installer to the USB drive.
-
-   ![Bootable USB](/images/manual/get-started/iso-flash.png#bordered)
 
 ## Boot from USB drive
 
@@ -110,7 +110,7 @@ Once activation is complete, LarePass will display the desktop address of your O
 
 ## Configure GPU memory for AI apps
 
-DGX Spark features a unified memory architecture where the CPU and GPU share 128 GB of LPDDR5x memory. Unlike traditional GPUs with dedicated VRAM, Spark does not distinguish between system memory and GPU memory.
+DGX Spark features a unified memory architecture where the CPU and GPU share 128 GB of LPDDR5x memory. Unlike traditional GPUs with dedicated VRAM, DGX Spark does not distinguish between system memory and GPU memory.
 
 On DGX Spark, Olares uses **Memory slicing** mode by default for GPU resource management. When you install an AI application, Olares automatically allocates the minimum required memory to ensure the app can start and run properly.
 
