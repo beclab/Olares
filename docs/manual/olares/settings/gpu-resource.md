@@ -1,130 +1,61 @@
 ---
-outline: [2, 3]
-description: Manage and optimize GPU resources in Olares with centralized controls, supporting time-slicing, exclusive access, and VRAM-slicing across single or multi-node setups.
+outline: [2,3]
+description: Learn how GPU allocation works in Olares, including binding and unbinding, how app state affects GPU actions, and how time slicing, memory slicing, and app exclusive differ from one another.
 ---
-# Manage GPU usage
+# Understand GPU management
+
 :::info
 Only Olares admins can change GPU modes. This helps avoid conflicts and keeps GPU performance predictable for everyone.
 :::
 
-Olares lets you manage your graphics cards, or GPUs, to speed up tasks like AI, image and video generation, and gaming. You can control how your applications use these resources from Olares Settings page.
+Olares lets you manage how apps use available GPUs for workloads such as AI, image and video generation, transcoding, and gaming.
 
-This guide explains:
-- How to choose the right GPU mode.
-- How to configure GPU modes step by step.
+In this guide, you will learn:
+- How GPU allocation works in Olares.
+- How app state affects available GPU actions.
+- How GPU modes differ and when to use each one.
 
-## Choose the right GPU mode
+## How GPU allocation works
 
-Use the table below to pick a mode based on your workload.
+In Olares, giving an app access to GPU resources is called binding. Unbinding removes that access so the GPU can be released or reassigned.
 
-| GPU mode | Definition | Use scenario |
-| :--- | :--- | :--- |
-| **Time slicing** (Default) | Multiple apps share one GPU<br> by taking turns using compute<br> and VRAM. | General workloads that run several lightweight apps. |
-| **App exclusive** | One app gets full, uninterrupted<br> access to the compute and VRAM<br> of a single GPU. | Heavy workloads that require maximum stability, such as LLMs and high‑end gaming. |
-| **Memory slicing** | The GPU's VRAM is divided into<br> fixed quotas, and apps run concurrently<br> within their limits. | Running specific apps simultaneously while strictly limiting their memory usage. |
+Whether you can bind or unbind an app depends mainly on whether the app is running or stopped.
 
-## View GPU status
+| App state | Bind (Give access) | Unbind (Remove access) |
+| -- | -- | -- |
+| **Running** | Supported | Not supported. You need to stop the app first. <sup>1, 2</sup> |
+| **Stopped** | Not supported. You need to resume <br>the app first. | Supported |
 
-To see your GPUs and their current configuration:
+1. Stopping an app pauses its workload, but it does not automatically remove its GPU allocation. To fully release the GPU or VRAM for other workloads, you must explicitly unbind the app after stopping it.
+2. If an app is allocated to multiple GPUs on the same node, you can unbind it from one GPU while it continues running on the others.
 
-1. Go to **Settings** > **GPU**.
-2. Review the list to see each GPU's model, node, total VRAM, and current mode.
-   ![GPU overview](/images/manual/olares/gpu-overview.png#bordered)
-3. Click a GPU to open its details page.  
+You can check whether an app is running or stopped in either of these places:
 
-:::tip
-If you have only one GPU, Olares may open the GPU details page directly.
+- **Market** > **My Olares**: The current status is displayed on the app's card. 
+- **Settings** > **Applications**: The current status is shown in the app list. 
+- **Launchpad**: A stopped app is marked with an orange dot next to its name.
+
+## GPU modes and when to use them
+
+Olares supports three GPU modes. Each mode determines how GPU resources are shared and what happens to running apps after you switch modes.
+
+:::info DGX Spark support
+On DGX Spark, you can use **Memory slicing** and **App exclusive** to manage GPU resources.
 :::
 
-## Configure GPU mode
+| GPU mode | How resources are<br> shared | After switching to this mode | Best for |
+| -- | -- | -- | -- |
+| **Time slicing** (Default) | Multiple apps share <br>the same GPU over <br>time. | Running apps that require a GPU are automatically assigned to share the GPU. | Running several GPU-dependent apps at the same time. |
+| **Memory slicing** | Multiple apps share <br>the GPU, with fixed <br>VRAM allocations <br>for each app. | Running apps that require a GPU are automatically added and assigned the minimum VRAM required to run. | Running multiple GPU-dependent apps while strictly controlling VRAM usage. |
+| **App exclusive** | One app gets full, <br>uninterrupted access<br> to the GPU. | One running app that requires a GPU is automatically selected and given exclusive access. | Heavy workloads that need maximum performance, such as large models, rendering, or high-end gaming. |
 
-Follow these steps to change how a GPU is used:
+:::warning App interruption notice
+Changing a GPU's mode reallocates hardware resources. Depending on the mode you choose, apps that are currently using the GPU may be paused automatically.
 
-1. Go to **Settings** > **GPU**.
-2. Click the GPU you want to configure.
-3. Choose a mode from the **GPU mode** dropdown.
-
-:::warning Restart notice 
-Changing a GPU's mode will unbind apps from that GPU and restart their containers.
-
-After restart, apps without specific GPU bindings are automatically scheduled to any available GPU in Time slicing mode.
+After switching modes, check the state of your apps and manually resume them if necessary.
 :::
 
-### Time slicing
+## Next steps
 
-**Time slicing** is the default mode in Olares. Use this mode to allow multiple applications to share resources.
-
-Apps without a specific GPU binding are automatically scheduled onto GPUs in **Time slicing** mode.
-
-![Time slicing](/images/manual/olares/gpu-time-slicing.png#bordered)
-
-#### Bind app
-To assign an app to this GPU:
-1. In **Pin application** section, click **Bind App**.
-2. Choose your target application and click **Confirm**.
-
-#### Switch GPU
-
-:::info Same-node limitation
-An application can use multiple GPUs only if they are located on the same node. If you switch an app to a GPU on a different node, the app is moved and bound only to the target GPU.
-:::
-
-If your system has more than one GPU, you can move an assigned app to a different GPU:
-1. In **Pin application** section, find the app you want to move.
-2. Click <i class="material-symbols-outlined">repeat</i>, then choose the target GPU and click **Confirm**.
-
-
-#### Unbind app
-To remove an app from this GPU:
-1. In **Pin application** section, find the app you want to remove.
-2. Click <i class="material-symbols-outlined">link_off</i>, then **Confirm**.
-
-### App exclusive
-
-Use **App exclusive** mode to dedicate a GPU entirely to one high-demand application.
-
-![App exclusive](/images/manual/olares/gpu-app-exclusive.png#bordered)
-
-#### Bind app
-To give an app exclusive access:
-1. In **Select exclusive app** section, click **Bind App**.
-2. Select your target application and click **Confirm**.
-
-#### Switch app
-To replace the current exclusive app with a new one:
-1. In **Select exclusive app** section, click **Switch App**.
-2. Choose the new application and confirm.
-
-The previous app is unbound, and the new app takes over exclusive access.
-
-#### Switch GPU
-If your system has more than one GPU, you can move the exclusive app to a different GPU:
-1. In **Select exclusive app** section, click <i class="material-symbols-outlined">repeat</i>.
-2. Choose the target GPU and confirm.
-
-:::info Same-node limitation
-An application can use multiple GPUs only if they are located on the same node. If you switch an app to a GPU on a different node, the app is moved and bound only to the target GPU.
-:::
-
-#### Unbind app
-To remove the exclusive binding:
-1. In **Select exclusive app** section, click <i class="material-symbols-outlined">link_off</i>.
-2. Click **Confirm**.
-
-### Memory slicing
-
-Use **Memory slicing** to run apps concurrently with strict VRAM limits.
-
-![Memory slicing](/images/manual/olares/gpu-memory-slicing.png#bordered)
-
-#### Bind app and allocate VRAM
-
-1. In **Allocate VRAM** section, click **Bind App**.
-2. Select your target application, assign it a specific amount of VRAM in GB, and click **Confirm**.
-   :::warning
-   The total of all VRAM limits must not exceed the GPU total VRAM.
-   :::
-3. Repeat for other apps as needed.
-
-## Learn more
-- [Monitor GPU usage in Olares](../resources-usage.md)
+- [Manage GPU resources for a single GPU](./single-gpu.md)
+- [Manage GPU resources for multiple GPUs](./multi-gpu.md)
