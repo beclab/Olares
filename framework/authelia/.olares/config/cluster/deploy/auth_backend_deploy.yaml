@@ -408,7 +408,7 @@ spec:
             echo -e " >> $PGDB exists";
         env:
           - name: PGHOST
-            value: citus-headless.os-platform
+            value: citus-headless.os-platform.svc.cluster.local
           - name: PGPORT
             value: "5432"
           - name: PGUSER
