@@ -23,7 +23,7 @@ DGX Spark support is currently in Release Candidate (RC). We are actively testin
 
 ## Create a bootable USB drive
 
-1. Download [the official Olares ISO image for Spark](https://cdn.olares.com/spark/olares.iso).
+1. Download [the official Olares ISO image for DGX Spark](https://cdn.olares.com/spark/olares.iso).
 2. Download and install [Balena Etcher](https://etcher.balena.io/).
 3. Insert the USB flash drive into your computer.
 4. Launch Etcher and follow these steps:
@@ -64,7 +64,7 @@ DGX Spark support is currently in Release Candidate (RC). We are actively testin
    Installation completed successfully!
    ```
 
-4. Remove the USB drive, and manually shut down Spark and then turn it back on.
+4. Remove the USB drive, and manually shut down DGX Spark and then turn it back on.
    :::warning Important
    If you skip this step, the activation process will fail.
    :::
@@ -95,8 +95,8 @@ DGX Spark support is currently in Release Candidate (RC). We are actively testin
 ## Activate Olares
 
 1. In the LarePass app, on the device you just found, tap **Install now**.
-2. When the installation completes, click **Activate now**.
-3. In the **Select a reverse proxy** dialog, select a node that is closer to your geographical location. The installer will then configure HTTPs certificate and DNS for Olares.
+2. When the installation completes, tap **Activate now**.
+3. In the **Select a reverse proxy** dialog, select a node that is closer to your geographical location. The installer will then configure HTTPS certificate and DNS for Olares.
    :::tip Note
    You can change this setting later on the [Change reverse proxy](../olares/settings/change-frp.md) page in Olares.
    :::
