@@ -56,7 +56,7 @@ To follow this guide using the `ffmpeg` command, ensure it is installed on your 
    ```
    ![Upload source audio](/images/manual/use-cases/duix-avatar-upload-source-audio.png#bordered)
 
-   2. Upload `output_video.mp4` to:
+3. Upload `output_video.mp4` to:
    ```plain
    /Data/heygem/face2face-data/temp/
    ```
@@ -159,4 +159,3 @@ Confirm the following:
 
 ### Media is updated, but the old video is still generated
 Ensure you are using a new, unique `code` parameter for the video synthesis. The system caches results, so reusing a `code` will return the previously cached video.
-
