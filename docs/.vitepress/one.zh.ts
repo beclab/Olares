@@ -77,10 +77,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Secure passwords",
           link: "/zh/one/vault",
         },
-        {
+        /*{
           text: "Download YouTube videos",
           link: "/zh/one/wise-download",
-        },
+        },*/
         {
           text: "Deploy an app",
           link: "/zh/one/deploy",

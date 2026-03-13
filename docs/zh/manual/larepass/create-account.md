@@ -93,12 +93,10 @@ Olares 目前通过 Gmail 提供 VC 支持，详情参见 [Gmail Issuer Service]
 5. 输入 Olares ID 对应的 12 个助记词。
 
 </template>
-<template #Chrome-extension>
-
+<!--<template #Chrome-extension>
 1. 打开 Chrome 浏览器中的 LarePass 扩展程序。
 2. 点击头像上方的选项图标。
 3. 点击**添加新账户**。
 4. 输入 Olares ID 对应的 12 个助记词。
-
-</template>
+</template>-->
 </Tabs>
