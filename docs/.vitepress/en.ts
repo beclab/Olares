@@ -492,10 +492,10 @@ const side = {
           text: "Set up custom domain",
           link: "/manual/best-practices/set-custom-domain",
         },
-        {
-          text: "Manage knowledge with Wise",
-          link: "/manual/best-practices/organize-content",
-        },
+        // {
+        //   text: "Manage knowledge with Wise",
+        //   link: "/manual/best-practices/organize-content",
+        // },
         {
           text: "Install a multi-node Olares cluster",
           link: "/manual/best-practices/install-olares-multi-node",
