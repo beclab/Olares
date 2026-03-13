@@ -140,7 +140,7 @@ func NewL4ProxyDeploymentApplyConfiguration(namespace, serviceAccountName string
 	strategyRecreate := appsv1.RecreateDeploymentStrategyType
 	dnsPolicy := corev1.DNSClusterFirstWithHostNet
 	protocolTCP := corev1.ProtocolTCP
-	containerPort := intstr.FromInt(port)
+	//containerPort := intstr.FromInt(port)
 	nodeSelectorOperatorIn := corev1.NodeSelectorOpIn
 	nodeSelectorOperatorExists := corev1.NodeSelectorOpExists
 
@@ -203,7 +203,7 @@ func NewL4ProxyDeploymentApplyConfiguration(namespace, serviceAccountName string
 												Values:   []string{"linux"},
 											},
 											{
-												Key:      pointer.String("node-role.kubernetes.io/master"),
+												Key:      pointer.String("node-role.kubernetes.io/control-plane"),
 												Operator: &nodeSelectorOperatorExists,
 											},
 										},
@@ -219,8 +219,14 @@ func NewL4ProxyDeploymentApplyConfiguration(namespace, serviceAccountName string
 							ImagePullPolicy: &imagePullPolicy,
 							Command: []string{
 								"/l4-bfl-proxy",
-								"-w",
-								workerProcessesNum,
+								"-v",
+								"4",
+								"-xds-tcp-idle-timeout",
+								"1h",
+								"-xds-http-stream-idle-timeout",
+								"1h",
+								"-xds-connect-timeout",
+								"5s",
 							},
 							Env: []applyCorev1.EnvVarApplyConfiguration{
 								{
@@ -233,9 +239,18 @@ func NewL4ProxyDeploymentApplyConfiguration(namespace, serviceAccountName string
 								},
 							},
 							LivenessProbe: &applyCorev1.ProbeApplyConfiguration{
-								HandlerApplyConfiguration: applyCorev1.HandlerApplyConfiguration{
-									TCPSocket: &applyCorev1.TCPSocketActionApplyConfiguration{
-										Port: &containerPort,
+								ProbeHandlerApplyConfiguration: applyCorev1.ProbeHandlerApplyConfiguration{
+									//TCPSocket: &applyCorev1.TCPSocketActionApplyConfiguration{
+									//	Port: &containerPort,
+									HTTPGet: &applyCorev1.HTTPGetActionApplyConfiguration{
+										Port: func() *intstr.IntOrString {
+											port := intstr.FromInt(8081)
+											return &port
+										}(),
+										Path: func() *string {
+											path := "/healthz"
+											return &path
+										}(),
 									},
 								},
 								FailureThreshold:    pointer.Int32(8),
@@ -244,9 +259,16 @@ func NewL4ProxyDeploymentApplyConfiguration(namespace, serviceAccountName string
 								TimeoutSeconds:      pointer.Int32(10),
 							},
 							ReadinessProbe: &applyCorev1.ProbeApplyConfiguration{
-								HandlerApplyConfiguration: applyCorev1.HandlerApplyConfiguration{
-									TCPSocket: &applyCorev1.TCPSocketActionApplyConfiguration{
-										Port: &containerPort,
+								ProbeHandlerApplyConfiguration: applyCorev1.ProbeHandlerApplyConfiguration{
+									HTTPGet: &applyCorev1.HTTPGetActionApplyConfiguration{
+										Port: func() *intstr.IntOrString {
+											port := intstr.FromInt(8081)
+											return &port
+										}(),
+										Path: func() *string {
+											path := "/readyz"
+											return &path
+										}(),
 									},
 								},
 								FailureThreshold: pointer.Int32(5),

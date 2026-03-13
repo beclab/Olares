@@ -1,0 +1,1386 @@
+{
+  "clusters": [
+    {
+      "name": "profile_service",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "profile_service",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "profile-service.user-space-alice.svc.cluster.local",
+                      "portValue": 3000
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "app_game_web",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "app_game_web",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "game-svc.ns-alice.svc.cluster.local",
+                      "portValue": 80
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "nonapp_auth",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "nonapp_auth",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "authelia-svc..svc.cluster.local",
+                      "portValue": 80
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "nonapp_desktop",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "nonapp_desktop",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "edge-desktop..svc.cluster.local",
+                      "portValue": 80
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "nonapp_wizard",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "nonapp_wizard",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "wizard..svc.cluster.local",
+                      "portValue": 80
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "authelia_backend",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "authelia_backend",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "authelia-backend.os-framework.svc.cluster.local",
+                      "portValue": 9091
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "stream_tcp_25565",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "stream_tcp_25565",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "game-svc.ns-alice.svc.cluster.local",
+                      "portValue": 25565
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "listeners": [
+    {
+      "name": "https_443",
+      "address": {
+        "socketAddress": {
+          "address": "0.0.0.0",
+          "portValue": 443
+        }
+      },
+      "filterChains": [
+        {
+          "filters": [
+            {
+              "name": "envoy.filters.network.http_connection_manager",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
+                "statPrefix": "https_443",
+                "rds": {
+                  "configSource": {
+                    "ads": {},
+                    "resourceApiVersion": "V3"
+                  },
+                  "routeConfigName": "https_443_routes"
+                },
+                "httpFilters": [
+                  {
+                    "name": "envoy.filters.http.ext_authz",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
+                      "httpService": {
+                        "serverUri": {
+                          "uri": "http://authelia_backend",
+                          "cluster": "authelia_backend",
+                          "timeout": "15s"
+                        },
+                        "pathPrefix": "/api/authz/ext-authz/",
+                        "authorizationRequest": {
+                          "allowedHeaders": {
+                            "patterns": [
+                              {
+                                "exact": "host"
+                              },
+                              {
+                                "exact": "authorization"
+                              },
+                              {
+                                "exact": "proxy-authorization"
+                              },
+                              {
+                                "exact": "accept"
+                              },
+                              {
+                                "exact": "cookie"
+                              }
+                            ]
+                          },
+                          "headersToAdd": [
+                            {
+                              "key": "X-Forwarded-Proto",
+                              "value": "https"
+                            },
+                            {
+                              "key": "X-BFL-USER",
+                              "value": "alice"
+                            }
+                          ]
+                        },
+                        "authorizationResponse": {
+                          "allowedUpstreamHeaders": {
+                            "patterns": [
+                              {
+                                "prefix": "remote-"
+                              },
+                              {
+                                "prefix": "authelia-"
+                              }
+                            ]
+                          },
+                          "allowedClientHeaders": {
+                            "patterns": [
+                              {
+                                "exact": "set-cookie"
+                              }
+                            ]
+                          },
+                          "allowedClientHeadersOnSuccess": {
+                            "patterns": [
+                              {
+                                "exact": "set-cookie"
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "transportApiVersion": "V3"
+                    }
+                  },
+                  {
+                    "name": "envoy.filters.http.lua",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
+                      "defaultSourceCode": {
+                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\")\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str\n    if pushstate then\n      new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\")\n    else\n      new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    end\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
+                      }
+                    }
+                  },
+                  {
+                    "name": "envoy.filters.http.router",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                    }
+                  }
+                ],
+                "commonHttpProtocolOptions": {
+                  "idleTimeout": "1800s"
+                },
+                "streamIdleTimeout": "1800s",
+                "accessLog": [
+                  {
+                    "name": "envoy.access_loggers.file",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
+                      "path": "/dev/stdout",
+                      "logFormat": {
+                        "textFormatSource": {
+                          "inlineString": "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -\u003e %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS% route=%ROUTE_NAME% cluster=%UPSTREAM_CLUSTER% details=%RESPONSE_CODE_DETAILS% ufail=%UPSTREAM_TRANSPORT_FAILURE_REASON%\n"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "useRemoteAddress": true,
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ],
+                "stripAnyHostPort": true
+              }
+            }
+          ],
+          "transportSocket": {
+            "name": "envoy.transport_sockets.tls",
+            "typedConfig": {
+              "@type": "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext",
+              "commonTlsContext": {
+                "tlsCertificates": [
+                  {
+                    "certificateChain": {
+                      "inlineString": "CERT"
+                    },
+                    "privateKey": {
+                      "inlineString": "KEY"
+                    }
+                  }
+                ],
+                "alpnProtocols": [
+                  "http/1.1"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "perConnectionBufferLimitBytes": 32768
+    },
+    {
+      "name": "https_444",
+      "address": {
+        "socketAddress": {
+          "address": "0.0.0.0",
+          "portValue": 444
+        }
+      },
+      "filterChains": [
+        {
+          "filters": [
+            {
+              "name": "envoy.filters.network.http_connection_manager",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
+                "statPrefix": "https_444",
+                "rds": {
+                  "configSource": {
+                    "ads": {},
+                    "resourceApiVersion": "V3"
+                  },
+                  "routeConfigName": "https_444_routes"
+                },
+                "httpFilters": [
+                  {
+                    "name": "envoy.filters.http.ext_authz",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
+                      "httpService": {
+                        "serverUri": {
+                          "uri": "http://authelia_backend",
+                          "cluster": "authelia_backend",
+                          "timeout": "15s"
+                        },
+                        "pathPrefix": "/api/authz/ext-authz/",
+                        "authorizationRequest": {
+                          "allowedHeaders": {
+                            "patterns": [
+                              {
+                                "exact": "host"
+                              },
+                              {
+                                "exact": "authorization"
+                              },
+                              {
+                                "exact": "proxy-authorization"
+                              },
+                              {
+                                "exact": "accept"
+                              },
+                              {
+                                "exact": "cookie"
+                              }
+                            ]
+                          },
+                          "headersToAdd": [
+                            {
+                              "key": "X-Forwarded-Proto",
+                              "value": "https"
+                            },
+                            {
+                              "key": "X-BFL-USER",
+                              "value": "alice"
+                            }
+                          ]
+                        },
+                        "authorizationResponse": {
+                          "allowedUpstreamHeaders": {
+                            "patterns": [
+                              {
+                                "prefix": "remote-"
+                              },
+                              {
+                                "prefix": "authelia-"
+                              }
+                            ]
+                          },
+                          "allowedClientHeaders": {
+                            "patterns": [
+                              {
+                                "exact": "set-cookie"
+                              }
+                            ]
+                          },
+                          "allowedClientHeadersOnSuccess": {
+                            "patterns": [
+                              {
+                                "exact": "set-cookie"
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "transportApiVersion": "V3"
+                    }
+                  },
+                  {
+                    "name": "envoy.filters.http.lua",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
+                      "defaultSourceCode": {
+                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\")\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str\n    if pushstate then\n      new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\")\n    else\n      new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    end\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
+                      }
+                    }
+                  },
+                  {
+                    "name": "envoy.filters.http.router",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                    }
+                  }
+                ],
+                "commonHttpProtocolOptions": {
+                  "idleTimeout": "1800s"
+                },
+                "streamIdleTimeout": "1800s",
+                "accessLog": [
+                  {
+                    "name": "envoy.access_loggers.file",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
+                      "path": "/dev/stdout",
+                      "logFormat": {
+                        "textFormatSource": {
+                          "inlineString": "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -\u003e %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS% route=%ROUTE_NAME% cluster=%UPSTREAM_CLUSTER% details=%RESPONSE_CODE_DETAILS% ufail=%UPSTREAM_TRANSPORT_FAILURE_REASON%\n"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "useRemoteAddress": true,
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ],
+                "stripAnyHostPort": true
+              }
+            }
+          ],
+          "transportSocket": {
+            "name": "envoy.transport_sockets.tls",
+            "typedConfig": {
+              "@type": "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext",
+              "commonTlsContext": {
+                "tlsCertificates": [
+                  {
+                    "certificateChain": {
+                      "inlineString": "CERT"
+                    },
+                    "privateKey": {
+                      "inlineString": "KEY"
+                    }
+                  }
+                ],
+                "alpnProtocols": [
+                  "http/1.1"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "perConnectionBufferLimitBytes": 32768,
+      "listenerFilters": [
+        {
+          "name": "envoy.filters.listener.proxy_protocol",
+          "typedConfig": {
+            "@type": "type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol"
+          }
+        }
+      ]
+    },
+    {
+      "name": "stream_tcp_25565",
+      "address": {
+        "socketAddress": {
+          "address": "0.0.0.0",
+          "portValue": 25565
+        }
+      },
+      "filterChains": [
+        {
+          "filters": [
+            {
+              "name": "envoy.filters.network.tcp_proxy",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy",
+                "statPrefix": "stream_tcp_25565",
+                "cluster": "stream_tcp_25565",
+                "idleTimeout": "3600s"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "name": "https_443_routes",
+      "virtualHosts": [
+        {
+          "name": "profile",
+          "domains": [
+            "alice.snowinning.com",
+            "alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "profile_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "profile_service",
+                "timeout": "300s"
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en"
+                  }
+                }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "alice"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
+            }
+          ],
+          "responseHeadersToAdd": [
+            {
+              "header": {
+                "key": "access-control-allow-headers",
+                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-methods",
+                "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "app_game_web",
+          "domains": [
+            "game.alice.snowinning.com",
+            "game.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "default_game_web",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "app_game_web",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en"
+                  }
+                }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "alice"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
+            }
+          ],
+          "responseHeadersToAdd": [
+            {
+              "header": {
+                "key": "access-control-allow-headers",
+                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-methods",
+                "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "nonapp_auth",
+          "domains": [
+            "auth.alice.snowinning.com",
+            "auth.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "nonapp_auth_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "nonapp_auth",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en"
+                  }
+                }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "alice"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
+            }
+          ],
+          "responseHeadersToAdd": [
+            {
+              "header": {
+                "key": "access-control-allow-headers",
+                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-methods",
+                "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "nonapp_desktop",
+          "domains": [
+            "desktop.alice.snowinning.com",
+            "desktop.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "nonapp_desktop_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "nonapp_desktop",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en"
+                  }
+                }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "alice"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
+            }
+          ],
+          "responseHeadersToAdd": [
+            {
+              "header": {
+                "key": "access-control-allow-headers",
+                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-methods",
+                "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "nonapp_wizard",
+          "domains": [
+            "wizard.alice.snowinning.com",
+            "wizard.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "nonapp_wizard_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "nonapp_wizard",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en"
+                  }
+                }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "alice"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
+            }
+          ],
+          "responseHeadersToAdd": [
+            {
+              "header": {
+                "key": "access-control-allow-headers",
+                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-methods",
+                "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "default",
+          "domains": [
+            "*"
+          ],
+          "routes": [
+            {
+              "name": "ping",
+              "match": {
+                "path": "/ping"
+              },
+              "directResponse": {
+                "status": 200,
+                "body": {
+                  "inlineString": "pong"
+                }
+              },
+              "responseHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "content-type",
+                    "value": "text/plain"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
+            },
+            {
+              "match": {
+                "prefix": "/"
+              },
+              "directResponse": {
+                "status": 421,
+                "body": {
+                  "inlineString": "\u003ch1\u003e\u003ca href='https://www.olares.com/'\u003eOlares\u003c/a\u003e\u003c/h1\u003e"
+                }
+              }
+            }
+          ],
+          "responseHeadersToAdd": [
+            {
+              "header": {
+                "key": "access-control-allow-headers",
+                "value": "Accept, Content-Type, Accept-Encoding"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-methods",
+                "value": "GET, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        }
+      ],
+      "requestHeadersToAdd": [
+        {
+          "header": {
+            "key": "X-Forwarded-Host",
+            "value": "%REQ(:AUTHORITY)%"
+          },
+          "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+        },
+        {
+          "header": {
+            "key": "X-Forwarded-Proto",
+            "value": "https"
+          },
+          "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+        },
+        {
+          "header": {
+            "key": "X-Real-IP",
+            "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
+          },
+          "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+        },
+        {
+          "header": {
+            "key": "X-Original-Forwarded-For",
+            "value": "%REQ(X-FORWARDED-FOR)%"
+          },
+          "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+        }
+      ]
+    },
+    {
+      "name": "https_444_routes",
+      "virtualHosts": [
+        {
+          "name": "profile",
+          "domains": [
+            "alice.snowinning.com",
+            "alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "profile_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "profile_service",
+                "timeout": "300s"
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en"
+                  }
+                }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "alice"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
+            }
+          ],
+          "responseHeadersToAdd": [
+            {
+              "header": {
+                "key": "access-control-allow-headers",
+                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-methods",
+                "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "app_game_web",
+          "domains": [
+            "game.alice.snowinning.com",
+            "game.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "default_game_web",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "app_game_web",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en"
+                  }
+                }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "alice"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
+            }
+          ],
+          "responseHeadersToAdd": [
+            {
+              "header": {
+                "key": "access-control-allow-headers",
+                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-methods",
+                "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "nonapp_auth",
+          "domains": [
+            "auth.alice.snowinning.com",
+            "auth.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "nonapp_auth_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "nonapp_auth",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en"
+                  }
+                }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "alice"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
+            }
+          ],
+          "responseHeadersToAdd": [
+            {
+              "header": {
+                "key": "access-control-allow-headers",
+                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-methods",
+                "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "nonapp_desktop",
+          "domains": [
+            "desktop.alice.snowinning.com",
+            "desktop.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "nonapp_desktop_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "nonapp_desktop",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en"
+                  }
+                }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "alice"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
+            }
+          ],
+          "responseHeadersToAdd": [
+            {
+              "header": {
+                "key": "access-control-allow-headers",
+                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-methods",
+                "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "nonapp_wizard",
+          "domains": [
+            "wizard.alice.snowinning.com",
+            "wizard.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "nonapp_wizard_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "nonapp_wizard",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en"
+                  }
+                }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "alice"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
+            }
+          ],
+          "responseHeadersToAdd": [
+            {
+              "header": {
+                "key": "access-control-allow-headers",
+                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-methods",
+                "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "default",
+          "domains": [
+            "*"
+          ],
+          "routes": [
+            {
+              "name": "ping",
+              "match": {
+                "path": "/ping"
+              },
+              "directResponse": {
+                "status": 200,
+                "body": {
+                  "inlineString": "pong"
+                }
+              },
+              "responseHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "content-type",
+                    "value": "text/plain"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
+            },
+            {
+              "match": {
+                "prefix": "/"
+              },
+              "directResponse": {
+                "status": 421,
+                "body": {
+                  "inlineString": "\u003ch1\u003e\u003ca href='https://www.olares.com/'\u003eOlares\u003c/a\u003e\u003c/h1\u003e"
+                }
+              }
+            }
+          ],
+          "responseHeadersToAdd": [
+            {
+              "header": {
+                "key": "access-control-allow-headers",
+                "value": "Accept, Content-Type, Accept-Encoding"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-methods",
+                "value": "GET, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        }
+      ],
+      "requestHeadersToAdd": [
+        {
+          "header": {
+            "key": "X-Forwarded-Host",
+            "value": "%REQ(:AUTHORITY)%"
+          },
+          "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+        },
+        {
+          "header": {
+            "key": "X-Forwarded-Proto",
+            "value": "https"
+          },
+          "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+        },
+        {
+          "header": {
+            "key": "X-Real-IP",
+            "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
+          },
+          "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+        },
+        {
+          "header": {
+            "key": "X-Original-Forwarded-For",
+            "value": "%REQ(X-FORWARDED-FOR)%"
+          },
+          "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+        }
+      ]
+    }
+  ]
+}
