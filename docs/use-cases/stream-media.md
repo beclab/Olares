@@ -51,7 +51,7 @@ With your media ready, install Jellyfin and complete its setup wizard.
 1. Open the **Market** app in your Olares web interface.
 2. Find **Jellyfin** in the **Fun** category or use the search bar.
 3. Click **Get**, then **Install**.
-   ![Install Jellyfin](../public/images/manual/use-cases/jellyfin-install.png#bordered)
+   ![Install Jellyfin](/images/manual/use-cases/jellyfin-install.png#bordered)
 4. Once the installation is finished, click **Open** to launch the setup wizard.
 
 ### Complete the initial setup
@@ -64,14 +64,14 @@ Follow the wizard prompts to finish configuring Jellyfin.
 5. For remote access, keep the default settings (unchecked) and click **Next**. Olares VPN will handle secure remote access.
 6. Click **Finish** to complete the setup wizard.
 7. You will be taken to the login page. Sign in with the admin credentials you just created.
-![Sign in to Jellyfin](../public/images/manual/use-cases/jellyfin-sign-in.png#bordered)
+![Sign in to Jellyfin](/images/manual/use-cases/jellyfin-sign-in.png#bordered)
 
 ## Add media libraries
 
 With Jellyfin installed and running, the next step is to tell it where your media is stored.
 1. In Jellyfin's sidebar, go to **Dashboard** > **Libraries** > **Libraries**.
 2. Click **Add Media Library**.
-![Add Media Library](../public/images/manual/use-cases/jellyfin-add-media-lib.png#bordered)
+![Add Media Library](/images/manual/use-cases/jellyfin-add-media-lib.png#bordered)
 3. Configure media library settings:
    - **Content type**: Choose the type of media (e.g., Movies, Shows, Music). For folders containing both movies and TV shows, choose **Mixed Movies and Shows**.
    - **Display name**: Enter the name to display for the library.<br>
@@ -87,7 +87,7 @@ Once saved, Jellyfin will automatically scan your folders and begin building you
 To ensure smooth playback for high-resolution videos, enable hardware acceleration. This allows Jellyfin to use your device's hardware for faster, more efficient transcoding.
 1. In the Jellyfin **Dashboard** (click the ≡ icon > Dashboard), go to **Playback** > **Transcoding**.
 2. Under **Hardware acceleration**, choose your preferred method based on your Olares device's hardware.
-![Enable transcoding](../public/images/manual/use-cases/jellyfin-transcoding.png#bordered)
+![Enable transcoding](/images/manual/use-cases/jellyfin-transcoding.png#bordered)
 
 ## Enhance experience with community plugins
 
@@ -96,19 +96,19 @@ You can install plugins to improve metadata, fetch better artwork, and add new f
 
 The process for installing plugins is the same for all. Here's an example using **Skin Manager**:
 1. In the Dashboard, go to **Plugins** > **Catalog**.
-![Catalog](../public/images/manual/use-cases/jellyfin-catalog.png#bordered)
+![Catalog](/images/manual/use-cases/jellyfin-catalog.png#bordered)
 2. Click the <span style="font-size: 1.1em;">&#9881;</span> icon to go to **Repositories** page, then click **+** to add a new repository.
 3. Enter the **Repository Name** and **Repository URL** of the plugin, and click **Save**.
-![Add plugin repository](../public/images/manual/use-cases/jellyfin-plugin-repo.png#bordered)
+![Add plugin repository](/images/manual/use-cases/jellyfin-plugin-repo.png#bordered)
 4. Click **Ok** to confirm the installation.
-![Confirm plug installation](../public/images/manual/use-cases/jellyfin-confirm-plug.png#bordered)
+![Confirm plug installation](/images/manual/use-cases/jellyfin-confirm-plug.png#bordered)
 5. Return to the **Catalog** tab, find your desired plugin (you may need to refresh) and click **Install**.
-![Catalog plugin](../public/images/manual/use-cases/jellyfin-catalog-plug.png#bordered)
-![Install plugin](../public/images/manual/use-cases/jellyfin-plug-install.png#bordered)
+![Catalog plugin](/images/manual/use-cases/jellyfin-catalog-plug.png#bordered)
+![Install plugin](/images/manual/use-cases/jellyfin-plug-install.png#bordered)
 6. After installation, a prompt will appear to restart Jellyfin. Go to the **Dashboard** page and click **Restart**.
-![Restart Jellyfin](../public/images/manual/use-cases/jellyfin-restart.png#bordered)
+![Restart Jellyfin](/images/manual/use-cases/jellyfin-restart.png#bordered)
 7. After it restarts, return to **Dashboard** > **Plugins** > **My Plugins** to confirm the plugin you installed is listed and has an **Active** status.
-![Plugin status](../public/images/manual/use-cases/jellyfin-plug-status.png#bordered)
+![Plugin status](/images/manual/use-cases/jellyfin-plug-status.png#bordered)
 
 
 After installing plugins, you may need to enable or configure them before they take effect.
@@ -128,9 +128,9 @@ If you haven’t done this yet, see [Enable VPN on LarePass](../manual/larepass/
 1. In your Olares web interface, go to **Settings** > **Application**.
 2. Find and click **Jellyfin**. 
 3. Go to the **Entrances** tab.
-![Entrances](../public/images/manual/use-cases/jellyfin-entrances.png#bordered)
+![Entrances](/images/manual/use-cases/jellyfin-entrances.png#bordered)
 4. Set the **Authentication level** to **Internal**. This is a required step to enable the private endpoint to accept login credentials.
-![Authentication level](../public/images/manual/use-cases/jellyfin-auth-level.png#bordered)
+![Authentication level](/images/manual/use-cases/jellyfin-auth-level.png#bordered)
 
 ### Connect your Jellyfin client
 
@@ -138,12 +138,12 @@ Assume you've already installed the official [Jellyfin client app](https://jelly
 
 1. Open the Jellyfin client app on your device.
 2. Click **Add Server**.
-![Add server](../public/images/manual/use-cases/jellyfin-add-server.png#bordered)
+![Add server](/images/manual/use-cases/jellyfin-add-server.png#bordered)
 3. In your Olares web interface, go to **Settings** > **Application** > **Jellyfin** > **Entrances** > **Set up endpoint**.
 4. Copy the server address shown next to **Endpoint** (e.g., `https://7e89d2a1.laresprime.olares.com`)
-![Endpoint](../public/images/manual/use-cases/jellyfin-endpoint.png#bordered)
+![Endpoint](/images/manual/use-cases/jellyfin-endpoint.png#bordered)
 5. Paste this address into the client and click **Connect**.
-![Connect to server](../public/images/manual/use-cases/jellyfin-connect.png#bordered)
+![Connect to server](/images/manual/use-cases/jellyfin-connect.png#bordered)
 6. Sign in with your Jellyfin admin account.
 
 You should now see your media libraries displayed in the app.
