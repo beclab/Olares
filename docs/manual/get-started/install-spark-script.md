@@ -17,9 +17,6 @@ DGX Spark support is currently in Release Candidate (RC). We are actively testin
 
 - **DGX Spark**: Ensure your device has completed the [initial setup](https://docs.nvidia.com/dgx/dgx-spark/first-boot.html), with a user account created and network configured.
 - **Storage**: At least 150 GB of available SSD storage on DGX Spark.
-  :::warning SSD required
-  The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD, or if insufficient storage is available.
-  :::
 - **Access method**: You need access to the terminal on DGX Spark, either via:
   - Direct access: Connect a monitor, keyboard, and mouse to DGX Spark.
   - Remote access: Connect via SSH from another computer on the same network.
@@ -28,6 +25,15 @@ DGX Spark support is currently in Release Candidate (RC). We are actively testin
 ## Prepare DGX Spark
 
 Before installing Olares, you need to remove the pre-installed container runtime on DGX Spark.
+
+Olares installs and manages its own containerd runtime. If the system already has Docker or containerd installed, it will cause conflicts that prevent Olares from functioning properly.
+
+:::warning Impact of removing container runtime
+The following steps will:
+- Uninstall Docker packages
+- Stop and disable the existing containerd service
+- Clear existing network rules
+:::
 
 On DGX Spark, open a terminal and run:
 
@@ -40,9 +46,7 @@ sudo nft flush ruleset
 
 ## Install Olares
 
-1. Open a terminal on DGX Spark.
-
-2. Run the following command:
+1. In the same terminal, run the following command:
 
 <!--@include: ./reusables.md{4,36}-->
 
@@ -65,10 +69,10 @@ Use the Wizard URL and initial one-time password to activate. This process conne
 
 5. Activate Olares using LarePass app.
 
-   a. Open LarePass app, and tap **Scan QR code** to scan the QR code on the Wizard page and complete the activation.
    :::warning Same network required for admin users
    To avoid activation failures, ensure that both your phone and the Olares device are connected to the same network.
    :::
+   a. Open LarePass app, and tap **Scan QR code** to scan the QR code on the Wizard page and complete the activation.
 
    ![Activate Olares](/images/manual/get-started/activate-olares.png#bordered)
 
@@ -80,9 +84,11 @@ After setup is complete, the LarePass app returns to the home screen, and the Wi
 
 ## Configure GPU memory for AI apps
 
-The system uses **Memory slicing** mode for GPU resource management. When you install an AI application, Olares automatically allocates the minimum required VRAM to ensure the app can start and run properly.
+DGX Spark features a unified memory architecture where the CPU and GPU share 128 GB of LPDDR5x memory. Unlike traditional GPUs with dedicated VRAM, Spark does not distinguish between system memory and GPU memory.
 
-You can manually adjust the VRAM allocation for each AI application based on your specific needs:
+On DGX Spark, Olares uses **Memory slicing** mode by default for GPU resource management. When you install an AI application, Olares automatically allocates the minimum required memory to ensure the app can start and run properly.
+
+If needed, you can manually adjust the memory allocation for each AI application:
 
 1. Open Settings from Olares, and then navigate to **GPU**.
 2. In the **Allocate VRAM** section, find the target app.

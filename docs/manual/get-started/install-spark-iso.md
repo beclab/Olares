@@ -14,7 +14,7 @@ DGX Spark support is currently in Release Candidate (RC). We are actively testin
 
 <!--@include: ./reusables.md{44,51}-->
 
-## Before you begin
+## System requirements
 
 - **DGX Spark**: Ensure your device is connected to a monitor and keyboard.
 - **USB flash drive**: A drive with 8 GB or higher capacity.
@@ -110,9 +110,11 @@ Once activation is complete, LarePass will display the desktop address of your O
 
 ## Configure GPU memory for AI apps
 
-The system uses **Memory slicing** mode for GPU resource management. When you install an AI application, Olares automatically allocates the minimum required VRAM to ensure the app can start and run properly.
+DGX Spark features a unified memory architecture where the CPU and GPU share 128 GB of LPDDR5x memory. Unlike traditional GPUs with dedicated VRAM, Spark does not distinguish between system memory and GPU memory.
 
-You can manually adjust the VRAM allocation for each AI application based on your specific needs:
+On DGX Spark, Olares uses **Memory slicing** mode by default for GPU resource management. When you install an AI application, Olares automatically allocates the minimum required memory to ensure the app can start and run properly.
+
+If needed, you can manually adjust the memory allocation for each AI application:
 
 1. Open Settings from Olares, and then navigate to **GPU**.
 2. In the **Allocate VRAM** section, find the target app.
