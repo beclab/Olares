@@ -16,35 +16,35 @@ To add a restore task:
 <tabs>
 <template #Restore-from-local>
 
-3. Select the local backup path. The path must point to the backup task folder. For example, if the task name is `demo` and the location is `/documents`, the correct path would be: `/documents/olares-backups/demo-xxxx`.
-4. Enter your backup password.
-5. Click **Query snapshots** to get available snapshots.
-6. Click **Restore** next to the desired snapshot to load it.
-7. If restoring **files**, specify the restore location and destination folder, then click **Start Restore**.  
+1. Select the local backup path. The path must point to the backup task folder. For example, if the task name is `demo` and the location is `/documents`, the correct path would be: `/documents/olares-backups/demo-xxxx`.
+2. Enter your backup password.
+3. Click **Query snapshots** to get available snapshots.
+4. Click **Restore** next to the desired snapshot to load it.
+5. If restoring **files**, specify the restore location and destination folder, then click **Start Restore**.  
 If restoring the **Wise** application, simply click **Start Restore** without specifying a path.
 
 </template>
 <template #Restore-from-Olares-Space>
 
-3. Use the LarePass app to scan and log in to [Olares Space](https://space.olares.com).
-4. On the **Backup** page, locate the desired backup and click **View Details** on the right.
-5. Click the **Restore** button at the top right to get the latest snapshot URL, or select a specific snapshot and click **Restore** next to it.
-6. Copy the URL and paste it into the **Backup URL** field in the Olares restore page.
-7. Enter your backup password.
-8. If restoring **files**, specify the restore location and destination folder, then click **Start Restore**.  
+1. Use the LarePass app to scan and log in to [Olares Space](https://space.olares.com).
+2. On the **Backup** page, locate the desired backup and click **View Details** on the right.
+3. Click the **Restore** button at the top right to get the latest snapshot URL, or select a specific snapshot and click **Restore** next to it.
+4. Copy the URL and paste it into the **Backup URL** field in the Olares restore page.
+5. Enter your backup password.
+6. If restoring **files**, specify the restore location and destination folder, then click **Start Restore**.  
    If restoring the **Wise** application, simply click **Start Restore** without specifying a path.
 
 </template>
 <template #Restore-from-AWS-S3>
 
-3. Go to the [AWS S3 Console](https://console.aws.amazon.com/s3), navigate to your bucket, and locate the `olares-backups` directory.
-4. Select the target backup folder, then generate a **pre-signed URL** for that folder.  
+1. Go to the [AWS S3 Console](https://console.aws.amazon.com/s3), navigate to your bucket, and locate the `olares-backups` directory.
+2. Select the target backup folder, then generate a **pre-signed URL** for that folder.  
    See [AWS S3 documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html) for help.
-5. Copy the URL and paste it into the **Backup URL** field in the Olares restore page.
-6. Enter your backup password.
-7. Click **Query snapshots** to load available snapshots.
-8. Click **Restore** next to the desired snapshot.
-9. If restoring **files**, specify the restore location and destination folder, then click **Start Restore**.  
+3. Copy the URL and paste it into the **Backup URL** field in the Olares restore page.
+4. Enter your backup password.
+5. Click **Query snapshots** to load available snapshots.
+6. Click **Restore** next to the desired snapshot.
+7. If restoring **files**, specify the restore location and destination folder, then click **Start Restore**.  
    If restoring the **Wise** application, simply click **Start Restore** without specifying a path.
 </template>
 </tabs>

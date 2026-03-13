@@ -84,11 +84,11 @@ Windows 版 Olares 目前存在以下限制：
    -  `linux-msft-wsl-6.6.75.1`
    -  `linux-msft-wsl-6.6.36.6`
    -  `linux-msft-wsl-6.6.36.3`
-3. 设置 WSL 使用的默认版本：
+4. 设置 WSL 使用的默认版本：
    ```bash
    wsl --set-default-version 2
    ```
-4. 在 `C:\Users\<YourUsername>\` 目录下创建文件 `.wslconfig`，填入以下内容：
+5. 在 `C:\Users\<YourUsername>\` 目录下创建文件 `.wslconfig`，填入以下内容：
    ```txt
    [wsl2]
    kernel=c:\\path\\to\\your\\kernel\\bzImage-<version> # 注意：使用双反斜杠 (\\) 作为路径分隔符
@@ -101,7 +101,7 @@ Windows 版 Olares 目前存在以下限制：
    wsl --unregister docker-desktop
    wsl --unregister docker-desktop-data # 如果存在此版本
    ```
-5. 重启 Windows 使变更生效。
+6. 重启 Windows 使变更生效。
 
 ## 更新 Docker 的镜像源
 添加 Olares 的镜像源，提高镜像拉取速度：

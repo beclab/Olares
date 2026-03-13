@@ -62,5 +62,5 @@ Because the operating systems are on separate physical drives, you switch betwee
 4. Press **F10** to save and exit BIOS.
 
 ## Resources
-- [Install NVIDIA drivers on Windows](install-nvidia-driver.md)
+- [Install drivers on Windows](install-nvidia-driver.md)
 - [Run a Windows VM on Olares One](windows.md)
