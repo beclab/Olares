@@ -108,7 +108,7 @@
                     }
                   }
                 ],
-                "streamIdleTimeout": "300s",
+                "streamIdleTimeout": "1800s",
                 "internalAddressConfig": {}
               }
             }

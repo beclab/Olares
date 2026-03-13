@@ -62,10 +62,8 @@ func TestBuildSNIMatches_EphemeralUser(t *testing.T) {
 	got := buildSNIMatches(user, allAppIDs)
 
 	assert.Equal(t, []string{
-		"vault-tempuser.snowinning.com",
-		"vault-tempuser.snowinning.com.olares.local",
-		"desktop-tempuser.snowinning.com",
-		"desktop-tempuser.snowinning.com.olares.local",
+		"wizard-tempuser.snowinning.com",
+		"wizard-tempuser.snowinning.local",
 	}, got)
 }
 
@@ -77,7 +75,10 @@ func TestBuildSNIMatches_EphemeralNoApps(t *testing.T) {
 	}
 
 	got := buildSNIMatches(user, nil)
-	assert.Empty(t, got)
+	assert.Equal(t, []string{
+		"wizard-tempuser.snowinning.com",
+		"wizard-tempuser.snowinning.local",
+	}, got)
 }
 
 // ---------------------------------------------------------------------------

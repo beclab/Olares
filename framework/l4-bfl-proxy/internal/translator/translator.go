@@ -183,7 +183,7 @@ func (t *Translator) buildUserRoutes(user *message.UserInfo, allAppIDs []string)
 // Ephemeral users enumerate exact "{appid}-{username}.{zone}" for all known appids.
 func buildSNIMatches(user *message.UserInfo, allAppIDs []string) []string {
 	if user.IsEphemeral {
-		return buildEphemeralSNI(user, allAppIDs)
+		return buildEphemeralSNI(user)
 	}
 
 	var snis []string
@@ -194,13 +194,31 @@ func buildSNIMatches(user *message.UserInfo, allAppIDs []string) []string {
 	return snis
 }
 
-func buildEphemeralSNI(user *message.UserInfo, allAppIDs []string) []string {
+func buildEphemeralSNI(user *message.UserInfo) []string {
 	var snis []string
-	for _, appID := range allAppIDs {
-		snis = append(snis, fmt.Sprintf("%s-%s.%s", appID, user.Name, user.Zone))
-		snis = append(snis, fmt.Sprintf("%s-%s.%s.olares.local", appID, user.Name, user.Zone))
+	seen := make(map[string]struct{})
+	sni := fmt.Sprintf("wizard-%s.%s", user.Name, user.Zone)
+	if _, ok := seen[sni]; !ok {
+		snis = append(snis, sni)
+		seen[sni] = struct{}{}
+	}
+	local := WithLocal("local")(user.Zone)
+	sni = fmt.Sprintf("wizard-%s.%s", user.Name, local)
+	if _, ok := seen[sni]; !ok && local != user.Zone {
+		snis = append(snis, sni)
+		seen[sni] = struct{}{}
 	}
 	return snis
+}
+
+func WithLocal(local string) func(string) string {
+	return func(domain string) string {
+		lastDot := strings.LastIndex(domain, ".")
+		if lastDot == -1 {
+			return domain
+		}
+		return domain[:lastDot+1] + local
+	}
 }
 
 func (t *Translator) buildStreamListeners(resources *message.Resources) []*ir.ListenerIR {

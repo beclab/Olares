@@ -94,7 +94,7 @@ func TestBuildHTTPRedirectListener_StreamIdleTimeout(t *testing.T) {
 	require.NoError(t, filter.GetTypedConfig().UnmarshalTo(hcm))
 
 	require.NotNil(t, hcm.GetStreamIdleTimeout())
-	assert.EqualValues(t, 300, hcm.GetStreamIdleTimeout().GetSeconds())
+	assert.EqualValues(t, 1800, hcm.GetStreamIdleTimeout().GetSeconds())
 }
 
 // ---------------------------------------------------------------------------

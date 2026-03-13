@@ -84,7 +84,7 @@
                     }
                   }
                 ],
-                "streamIdleTimeout": "300s",
+                "streamIdleTimeout": "1800s",
                 "internalAddressConfig": {}
               }
             }
@@ -104,10 +104,8 @@
         {
           "filterChainMatch": {
             "serverNames": [
-              "files-tempuser.snowinning.com",
-              "files-tempuser.snowinning.com.olares.local",
-              "vault-tempuser.snowinning.com",
-              "vault-tempuser.snowinning.com.olares.local"
+              "wizard-tempuser.snowinning.com",
+              "wizard-tempuser.snowinning.local"
             ]
           },
           "filters": [
@@ -159,10 +157,8 @@
         {
           "filterChainMatch": {
             "serverNames": [
-              "files-tempuser.snowinning.com",
-              "files-tempuser.snowinning.com.olares.local",
-              "vault-tempuser.snowinning.com",
-              "vault-tempuser.snowinning.com.olares.local"
+              "wizard-tempuser.snowinning.com",
+              "wizard-tempuser.snowinning.local"
             ]
           },
           "filters": [
