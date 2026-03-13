@@ -169,12 +169,12 @@ const side = {
               "link": "/zh/manual/olares/market/market"
             },
             {
-              "text": "管理付费应用",
-              "link": "/zh/manual/olares/market/purchase-paid-apps"
-            },
-            {
               "text": "克隆应用",
               "link": "/zh/manual/olares/market/clone-apps"
+            },
+            {
+              "text": "管理付费应用",
+              "link": "/zh/manual/olares/market/purchase-paid-apps"
             },
           ],
         },
