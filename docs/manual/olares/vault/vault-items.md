@@ -90,7 +90,7 @@ To add a vault item:
 5. Click **Save** to create the new vault item.
 </template>
 
-<template #LarePass-browser-extension>
+<!--<template #LarePass-browser-extension>
 
 :::info
 The LarePass browser extension is currently only available for Google Chrome. Visit the [official page](https://www.olares.com/larepass) to download the extension.
@@ -104,7 +104,7 @@ To easily access LarePass, you can pin the extension to your toolbar.
 4. Select a type, such as **Website / App** for storing account details, and click **Create**.
 5. Fill in the required fields like item name, Username, Password, and URL. The URL field is automatically populated with the current web address.
 6. Click **Save** to create the new vault item.
-</template>
+</template>-->
 </tabs>
 
 ### Import
@@ -125,9 +125,9 @@ The import process must be completed using the LarePass desktop client.
 The imported items will be automatically tagged with the import file's name, making them easy to find and manage in your Vault.
 
 ### Edit
-:::info
+<!--:::info
 The LarePass browser extension does not support editing vault items. For full editing capabilities, please use the Vault app in Olares, the mobile, or desktop versions of LarePass.
-:::
+:::-->
 In the edit mode, you can:
 - Update required fields.
 - Add tags to items for easy organization and filtering.
