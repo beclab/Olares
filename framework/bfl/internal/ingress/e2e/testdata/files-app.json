@@ -285,9 +285,6 @@
                 "commonHttpProtocolOptions": {
                   "idleTimeout": "1800s"
                 },
-                "http2ProtocolOptions": {
-                  "allowConnect": true
-                },
                 "streamIdleTimeout": "1800s",
                 "accessLog": [
                   {
@@ -297,7 +294,7 @@
                       "path": "/dev/stdout",
                       "logFormat": {
                         "textFormatSource": {
-                          "inlineString": "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -\u003e %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS%\n"
+                          "inlineString": "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -\u003e %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS% route=%ROUTE_NAME% cluster=%UPSTREAM_CLUSTER% details=%RESPONSE_CODE_DETAILS% ufail=%UPSTREAM_TRANSPORT_FAILURE_REASON%\n"
                         }
                       }
                     }
@@ -332,7 +329,6 @@
                   }
                 ],
                 "alpnProtocols": [
-                  "h2",
                   "http/1.1"
                 ]
               }
@@ -457,9 +453,6 @@
                 "commonHttpProtocolOptions": {
                   "idleTimeout": "1800s"
                 },
-                "http2ProtocolOptions": {
-                  "allowConnect": true
-                },
                 "streamIdleTimeout": "1800s",
                 "accessLog": [
                   {
@@ -469,7 +462,7 @@
                       "path": "/dev/stdout",
                       "logFormat": {
                         "textFormatSource": {
-                          "inlineString": "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -\u003e %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS%\n"
+                          "inlineString": "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -\u003e %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS% route=%ROUTE_NAME% cluster=%UPSTREAM_CLUSTER% details=%RESPONSE_CODE_DETAILS% ufail=%UPSTREAM_TRANSPORT_FAILURE_REASON%\n"
                         }
                       }
                     }
@@ -504,7 +497,6 @@
                   }
                 ],
                 "alpnProtocols": [
-                  "h2",
                   "http/1.1"
                 ]
               }

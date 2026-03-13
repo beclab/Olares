@@ -457,9 +457,6 @@ func buildHTTPSListener(listenerIR *ir.HTTPListenerIR, irClusters []*ir.ClusterI
 		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
 			IdleTimeout: durationpb.New(httpStreamIdleTimeout),
 		},
-		Http2ProtocolOptions: &corev3.Http2ProtocolOptions{
-			AllowConnect: true,
-		},
 	}
 
 	// TLS context
@@ -475,7 +472,7 @@ func buildHTTPSListener(listenerIR *ir.HTTPListenerIR, irClusters []*ir.ClusterI
 						Specifier: &corev3.DataSource_InlineString{InlineString: mainSecret.KeyData},
 					},
 				}},
-				AlpnProtocols: []string{"h2", "http/1.1"},
+				AlpnProtocols: []string{"http/1.1"},
 			},
 		}
 	}
@@ -510,7 +507,7 @@ func buildHTTPSListener(listenerIR *ir.HTTPListenerIR, irClusters []*ir.ClusterI
 						Specifier: &corev3.DataSource_InlineString{InlineString: s.KeyData},
 					},
 				}},
-				AlpnProtocols: []string{"h2", "http/1.1"},
+				AlpnProtocols: []string{"http/1.1"},
 			},
 		}
 		filterChains = append(filterChains, &listenerv3.FilterChain{
@@ -904,7 +901,7 @@ func buildAccessLog() *accesslogv3.AccessLog {
 				Format: &corev3.SubstitutionFormatString_TextFormatSource{
 					TextFormatSource: &corev3.DataSource{
 						Specifier: &corev3.DataSource_InlineString{
-							InlineString: "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -> %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS%\n",
+							InlineString: "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -> %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS% route=%ROUTE_NAME% cluster=%UPSTREAM_CLUSTER% details=%RESPONSE_CODE_DETAILS% ufail=%UPSTREAM_TRANSPORT_FAILURE_REASON%\n",
 						},
 					},
 				},
