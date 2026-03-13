@@ -167,6 +167,7 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 		OpType:     v1alpha1.ResumeOp,
 		OpID:       opID,
 		State:      v1alpha1.Resuming,
+		Reason:     v1alpha1.Resuming.String(),
 		Message:    fmt.Sprintf("app %s was resume by user %s", am.Spec.AppName, am.Spec.AppOwner),
 		StatusTime: &now,
 		UpdateTime: &now,

@@ -4,19 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -170,47 +166,68 @@ func resumeV2AppAll(ctx context.Context, cli client.Client, am *appv1alpha1.Appl
 	return suspendOrResumeApp(ctx, cli, am, 1, true)
 }
 
-func isStartUp(am *appv1alpha1.ApplicationManager, cli client.Client) (bool, error) {
-	var labelSelector string
-	var deployment appsv1.Deployment
-
-	err := cli.Get(context.TODO(), types.NamespacedName{Name: am.Spec.AppName, Namespace: am.Spec.AppNamespace}, &deployment)
-
-	if err == nil {
-		labelSelector = metav1.FormatLabelSelector(deployment.Spec.Selector)
+func findServerPods(cli client.Client, subChart []appcfg.Chart, owner string) ([]corev1.Pod, error) {
+	pods := make([]corev1.Pod, 0)
+	for _, c := range subChart {
+		if !c.Shared {
+			continue
+		}
+		ns := c.Namespace(owner)
+		var podList corev1.PodList
+		err := cli.List(context.TODO(), &podList, client.InNamespace(ns))
+		if err != nil {
+			klog.Errorf("failed to list pods %v", err)
+			return nil, err
+		}
+		pods = append(pods, podList.Items...)
 	}
+	return pods, nil
+}
 
-	if apierrors.IsNotFound(err) {
-		var sts appsv1.StatefulSet
-		err = cli.Get(context.TODO(), types.NamespacedName{Name: am.Spec.AppName, Namespace: am.Spec.AppNamespace}, &sts)
+func findV1OrClientPods(cli client.Client, ns string) ([]corev1.Pod, error) {
+	var podList corev1.PodList
+	err := cli.List(context.TODO(), &podList, client.InNamespace(ns))
+	if err != nil {
+		klog.Errorf("get ns:%s pods err %v", ns, err)
+		return nil, err
+	}
+	return podList.Items, nil
+
+}
+
+func isStartUp(am *appv1alpha1.ApplicationManager, cli client.Client) (bool, error) {
+	var appconfig appcfg.ApplicationConfig
+	err := json.Unmarshal([]byte(am.Spec.Config), &appconfig)
+	if err != nil {
+		return false, err
+	}
+	if appconfig.IsV2() && appconfig.IsMultiCharts() {
+		serverPods, err := findServerPods(cli, appconfig.SubCharts, appconfig.OwnerName)
 		if err != nil {
 			return false, err
+		}
+		podNames := make([]string, 0)
+		for _, p := range serverPods {
+			podNames = append(podNames, p.Name)
+		}
+		serverStarted, err := utils.CheckIfStartup(cli, serverPods, true)
+		if err != nil {
+			return false, err
+		}
+		if !serverStarted {
+			return false, nil
+		}
 
-		}
-		labelSelector = metav1.FormatLabelSelector(sts.Spec.Selector)
 	}
-	var pods corev1.PodList
-	//pods, err := h.client.KubeClient.Kubernetes().CoreV1().Pods(h.app.Namespace).
-	//	List(h.ctx, metav1.ListOptions{LabelSelector: labelSelector})
-	selector, _ := labels.Parse(labelSelector)
-	err = cli.List(context.TODO(), &pods, &client.ListOptions{Namespace: am.Spec.AppNamespace, LabelSelector: selector})
-	if len(pods.Items) == 0 {
-		return false, errors.New("no pod found..")
+	clientPods, err := findV1OrClientPods(cli, am.Namespace)
+	if err != nil {
+		return false, err
 	}
-	for _, pod := range pods.Items {
-		totalContainers := len(pod.Spec.Containers)
-		startedContainers := 0
-		for i := len(pod.Status.ContainerStatuses) - 1; i >= 0; i-- {
-			container := pod.Status.ContainerStatuses[i]
-			if *container.Started == true {
-				startedContainers++
-			}
-		}
-		if startedContainers == totalContainers {
-			return true, nil
-		}
+	clientStarted, err := utils.CheckIfStartup(cli, clientPods, false)
+	if err != nil {
+		return false, err
 	}
-	return false, nil
+	return clientStarted, nil
 }
 
 func makeRecord(am *appv1alpha1.ApplicationManager, status appv1alpha1.ApplicationManagerState, message string) *appv1alpha1.OpRecord {

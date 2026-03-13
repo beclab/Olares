@@ -8,6 +8,7 @@ import (
 	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubeblocks"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 
@@ -111,6 +112,18 @@ func (p *resumingInProgressApp) Exec(ctx context.Context) (StatefulInProgressApp
 func (p *resumingInProgressApp) WaitAsync(ctx context.Context) {
 	appFactory.waitForPolling(ctx, p, func(err error) {
 		if err != nil {
+			if errors.Is(err, errcode.ErrServerSidePodPending) || errors.Is(err, errcode.ErrPodPending) {
+				reason := constants.AppUnschedulable
+				if errors.Is(err, errcode.ErrHamiUnschedulable) {
+					reason = constants.AppHamiSchedulable
+				}
+				updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Stopping, nil, err.Error(), reason)
+				if updateErr != nil {
+					klog.Errorf("update status failed %v", updateErr)
+					return
+				}
+				return
+			}
 			opRecord := makeRecord(p.manager, appsv1.ResumeFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
 			updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.ResumeFailed, opRecord, err.Error(), appsv1.ResumeFailed.String())
 			if updateErr != nil {
@@ -134,7 +147,10 @@ func (p *resumingInProgressApp) poll(ctx context.Context) error {
 	if p.manager.Spec.Type == appsv1.Middleware {
 		return nil
 	}
-	ok := p.IsStartUp(ctx)
+	ok, err := p.IsStartUp(ctx)
+	if err != nil {
+		return err
+	}
 	if !ok {
 		return fmt.Errorf("wait for app %s startup failed", p.manager.Spec.AppName)
 	}
@@ -142,21 +158,25 @@ func (p *resumingInProgressApp) poll(ctx context.Context) error {
 	return nil
 }
 
-func (p *resumingInProgressApp) IsStartUp(ctx context.Context) bool {
+func (p *resumingInProgressApp) IsStartUp(ctx context.Context) (bool, error) {
 	timer := time.NewTicker(time.Second)
 	start := time.Now()
 	for {
 		select {
 		case <-timer.C:
-			startedUp, _ := isStartUp(p.manager, p.client)
+			startedUp, err := isStartUp(p.manager, p.client)
 			klog.Infof("wait app %s pod to startup, time elapsed: %v", p.manager.Spec.AppOwner, time.Since(start))
 			if startedUp {
 				klog.Infof("time: %v, appState: %v", time.Now(), appsv1.Initializing)
-				return true
+				return true, nil
 			}
+			if errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending) {
+				return false, err
+			}
+
 		case <-ctx.Done():
 			klog.Infof("Waiting for app startup canceled appName=%s", p.manager.Spec.AppName)
-			return false
+			return false, nil
 		}
 	}
 }
