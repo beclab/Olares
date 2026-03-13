@@ -23,22 +23,17 @@ Whether you can bind or unbind an app depends mainly on whether the app is runni
 
 | App state | Bind (Give access) | Unbind (Remove access) |
 | -- | -- | -- |
-| **Running** | Supported | Not supported. Stop the app first.* |
-| **Stopped** | Not supported. Resume the app first. | Supported |
+| **Running** | Supported | Not supported. You need to stop the app first. <sup>1, 2</sup> |
+| **Stopped** | Not supported. You need to resume <br>the app first. | Supported |
 
-*\*Multi-GPU exception: If an app is allocated to multiple GPUs on the same node, you can remove its access from one GPU while it remains running on the others.*
+1. Stopping an app pauses its workload, but it does not automatically remove its GPU allocation. To fully release the GPU or VRAM for other workloads, you must explicitly unbind the app after stopping it.
+2. Multi-GPU exception: If an app is allocated to multiple GPUs on the same node, you can remove its access from one GPU while it remains running on the others.
 
 You can check whether an app is running or stopped in either of these places:
 
 - **Market** > **My Olares**: The current status is displayed on the app's card. 
 - **Settings** > **Applications**: The current status is shown in the app list. 
 - **Launchpad**: A stopped app is marked with an orange dot next to its name.
-
-:::info
-Stopping an app pauses its workload, but it does not automatically remove its GPU allocation.
-
-To fully release the GPU or VRAM for other workloads, you must explicitly unbind the app after stopping it.
-:::
 
 ## GPU modes and when to use them
 

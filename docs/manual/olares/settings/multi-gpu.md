@@ -25,7 +25,7 @@ Check other GPUs to see where the app is currently assigned. If needed, use **Sw
 ## Time slicing
 
 :::info
-Time slicing is currently not supported on DGX Spark.
+Time slicing is not supported on DGX Spark.
 :::
 
 ![Time slicing multi GPU](/images/manual/olares/gpu-time-slicing-multi.png#bordered){width=90%}

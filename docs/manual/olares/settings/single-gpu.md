@@ -18,7 +18,7 @@ This page shows GPU details and lets you change the GPU mode.
 ## Time slicing
 
 :::info
-Time slicing is currently not supported on DGX Spark.
+Time slicing is not supported on DGX Spark.
 :::
 ![Time slicing](/images/manual/olares/gpu-time-slicing-single.png#bordered){width=90%}
 
