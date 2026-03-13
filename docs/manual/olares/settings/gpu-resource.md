@@ -27,7 +27,7 @@ Whether you can bind or unbind an app depends mainly on whether the app is runni
 | **Stopped** | Not supported. You need to resume <br>the app first. | Supported |
 
 1. Stopping an app pauses its workload, but it does not automatically remove its GPU allocation. To fully release the GPU or VRAM for other workloads, you must explicitly unbind the app after stopping it.
-2. Multi-GPU exception: If an app is allocated to multiple GPUs on the same node, you can remove its access from one GPU while it remains running on the others.
+2. If an app is allocated to multiple GPUs on the same node, you can unbind it from one GPU while it continues running on the others.
 
 You can check whether an app is running or stopped in either of these places:
 
