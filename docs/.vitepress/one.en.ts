@@ -56,6 +56,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Switch GPU mode",
           link: "/one/gpu",
         },
+        {
+          text: "Manage GPU resources",
+          link: "/one/manage-gpu",
+        },        
       ]
     },
     {
