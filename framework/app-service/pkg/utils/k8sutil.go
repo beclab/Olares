@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
 	"k8s.io/apimachinery/pkg/fields"
 	"net"
 	"net/http"
@@ -507,48 +506,4 @@ func GetPendingKind(ctrlClient client.Client, pod *corev1.Pod) (string, error) {
 		}
 	}
 	return eventFrom, nil
-}
-
-func CheckIfStartup(cli client.Client, pods []corev1.Pod, isServerSide bool) (bool, error) {
-	if len(pods) == 0 {
-		return false, errors.New("no pod found")
-	}
-	startedPods := 0
-	totalPods := len(pods)
-	for _, pod := range pods {
-		creationTime := pod.GetCreationTimestamp()
-		pendingDuration := time.Since(creationTime.Time)
-		pendingKind, err := GetPendingKind(cli, &pod)
-		if err != nil {
-			return false, err
-		}
-		if pendingKind == "hami-scheduler" {
-			if isServerSide {
-				return false, errors.Join(errcode.ErrServerSidePodPending, errcode.ErrHamiUnschedulable)
-			}
-			return false, errcode.ErrPodPending
-		}
-
-		if pod.Status.Phase == corev1.PodPending && pendingDuration > time.Minute*10 {
-			if isServerSide {
-				return false, errcode.ErrServerSidePodPending
-			}
-			return false, errcode.ErrPodPending
-		}
-		totalContainers := len(pod.Spec.Containers)
-		startedContainers := 0
-		for i := len(pod.Status.ContainerStatuses) - 1; i >= 0; i-- {
-			container := pod.Status.ContainerStatuses[i]
-			if *container.Started {
-				startedContainers++
-			}
-		}
-		if startedContainers == totalContainers {
-			startedPods++
-		}
-	}
-	if totalPods == startedPods {
-		return true, nil
-	}
-	return false, nil
 }
