@@ -13,22 +13,22 @@ There can be multiple underlying causes for this message, so follow the steps be
 
 - The **System** section in LarePass shows "System error".
 - LarePass cannot retrieve the system status of your Olares device.
-- Olares desktop may be inaccessible.
+- Olares desktop might be inaccessible.
 
 ## Cause
 
-The "System error" message can be triggered by different underlying issues. A common cause is that one or more system pods on the Olares device are not running normally. When this happens, LarePass cannot retrieve system status and displays "System error". In some cases, the same underlying issue may also make **Control Hub** inaccessible.
+The "System error" message can be triggered by different underlying issues. A common cause is that one or more system pods on the Olares device are not running normally. When this happens, LarePass cannot retrieve system status and displays "System error".
 
 ## Solution
 
-Access the command line to identify any pod that is not running normally, inspect its error details, and then share this information with the Olares team. This helps narrow down the possible causes and speeds up troubleshooting.
+Access the device terminal to identify any pod that is not running normally, inspect its error details, and then share this information with the Olares team. This helps narrow down the possible causes and speeds up troubleshooting.
 
-### Step 1: Access the command line
+### Step 1: Access the terminal
 
-- If you can still open the Olares desktop in a browser, follow [Option A](#option-a-access-the-command-line-from-the-desktop).
-- If the desktop no longer opens, follow [Option B](#option-b-access-the-command-line-through-ssh).
+- If you can access Control Hub in Olares desktop, follow [Option A](#option-a-access-the-command-line-from-the-desktop).
+-  If you cannot access Control Hub, follow [Option B](#option-b-access-the-command-line-through-ssh).
 
-#### Option A: Access the command line from Olares desktop
+#### Option A: Access via Control Hub
 
 1. Open a browser and access your Olares desktop: 
     ```text
@@ -37,30 +37,31 @@ Access the command line to identify any pod that is not running normally, inspec
 2. Open Control Hub. In the left sidebar, under the **Terminal** section, click **Olares**.
     ![Open terminal](/images/manual/help/ts-sys-err-terminal.png#bordered){width=90%}
     
-#### Option B: Access the command line through SSH
-
-Use this method if the Olares desktop is no longer accessible.
+#### Option B: Access via SSH
 
 :::warning
 To connect through SSH, make sure your computer and the Olares device are on the same local network. Otherwise, the SSH connection will fail.
 :::
 
-1. If you already know the local IP address, go to the next step. Otherwise, use one of the following methods to find it.
+1. (Optional) Obtain the local IP address using one of the following methods.
 
     <Tabs>
-    <template #From-LarePass-app>
+    <template #From-LarePass-mobile-client>
 
-    1. Open the LarePass app, and go to **Settings** > **System** to navigate to the **Olares management** page.
-    2. Tap the Olares device card.
-    3. Scroll down to the **Network** section and note the **Intranet IP**.
+    a. Open the LarePass app, and go to **Settings** > **System** to navigate to the **Olares management** page.
+
+    b. Tap the Olares device card.
+
+    c. Scroll down to the **Network** section and note the **Intranet IP**.
 
     </template>
 
     <template #Via-monitor>
+    a. Connect your Olares device to a monitor and a keyboard.
 
-    1. Connect your Olares device to a monitor and a keyboard.
-    2. Open a terminal, and run `ifconfig`.
-    3. Look for your active interface, typically `enp3s0` (wired) or `wlo1` (wireless). The IP address appears after `inet`.
+    b. Open a terminal, and run `ifconfig`.
+    
+    c. Look for your active interface, typically `enp3s0` (wired) or `wlo1` (wireless). The IP address appears after `inet`.
 
     </template>
 
