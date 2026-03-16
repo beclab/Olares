@@ -312,6 +312,6 @@ You can verify the storage increase in both terminal and UI.
 #### In UI
 Open Dashboard from Launchpad and confirm that total system storage capacity has increased.
 
-![Check disk volume in Dashboard](/public/images/manual/tutorials/expand-dashboard-disk.png#bordered)
+![Check disk volume in Dashboard](/images/manual/tutorials/expand-dashboard-disk.png#bordered)
 
 For full command usage and options, please refer to [`disk`](/developer/install/cli/disk.md).

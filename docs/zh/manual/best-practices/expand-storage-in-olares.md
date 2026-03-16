@@ -315,7 +315,7 @@ nvme1n1     259:3    0 931.5G  0 disk
 #### 在 UI 界面
 从启动台打开仪表盘，确认系统总存储容量已增加。
 
-![Check disk volume in Dashboard](/public/images/zh/manual/tutorials/expand-dashboard-disk.png#bordered)
+![Check disk volume in Dashboard](/images/zh/manual/tutorials/expand-dashboard-disk.png#bordered)
 
 
 如需查看完整用法与选项，请参考 [`disk`](/zh/developer/install/cli/disk.md)。
