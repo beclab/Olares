@@ -232,7 +232,7 @@ const side = {
             }
           ]
         },
-        {
+        /*{
           "text": "Wise",
           "collapsed": true,
           "link": "/zh/manual/olares/wise/",
@@ -244,7 +244,7 @@ const side = {
             /*{
               "text": "获取推荐引擎",
               "link": "/zh/manual/olares/wise/recommend"
-            },*/
+            },
             {
               "text": "管理订阅",
               "link": "/zh/manual/olares/wise/subscribe"
@@ -269,7 +269,7 @@ const side = {
               ],
             },
           ],
-        },
+        },*/
         {
           "text": "控制面板",
           "collapsed": true,
@@ -358,7 +358,21 @@ const side = {
                 },
               ],
             },
-            { text: "管理 GPU", link: "/zh/manual/olares/settings/gpu-resource" },
+            { 
+              "text": "管理 GPU", 
+              "collapsed": true,
+              "link": "/zh/manual/olares/settings/gpu-resource" ,
+              "items": [
+                {
+                  "text": "管理单 GPU 资源",
+                  "link": "/zh/manual/olares/settings/single-gpu" 
+                },
+                {
+                  "text": "管理多 GPU 资源",
+                  "link": "/zh/manual/olares/settings/multi-gpu" 
+                },
+              ]
+            },
             { text: "视频设置", link: "/zh/manual/olares/settings/video" },
             { text: "文件搜索", link: "/zh/manual/olares/settings/search" },
             {

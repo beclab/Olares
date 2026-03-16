@@ -27,8 +27,8 @@ func NewCmdUpgradeOs() *cobra.Command {
 	}
 
 	flagSetter := config.NewFlagSetterFor(cmd)
-	config.AddVersionFlagBy(flagSetter)
 	config.AddBaseDirFlagBy(flagSetter)
+	config.AddVersionFlagBy(flagSetter)
 
 	cmd.AddCommand(NewCmdCurrentVersionUpgradeSpec())
 	cmd.AddCommand(NewCmdUpgradeViable())

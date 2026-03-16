@@ -45,7 +45,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       text: "Onboarding",
       items: [
         {
-          text: "Open WebUI with Ollama",
+          text: "Chat with local LLMs",
           link: "/zh/one/open-webui",
         },
         {
@@ -77,10 +77,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Secure passwords",
           link: "/zh/one/vault",
         },
-        {
+        /*{
           text: "Download YouTube videos",
           link: "/zh/one/wise-download",
-        },
+        },*/
         {
           text: "Deploy an app",
           link: "/zh/one/deploy",

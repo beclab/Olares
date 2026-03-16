@@ -92,11 +92,11 @@ Make sure you have already [backed up the mnemonic phrase](back-up-mnemonics.md)
 5. Enter the 12-word mnemonic phrase for your Olares ID.
 
 </template>
-<template #Chrome-extension>
+<!--<template #Chrome-extension>
 
 1. Open the LarePass extension in Chrome.
 2. Click the options icon above your profile avatar.
 3. Click **Add a new account**.
 4. Enter the 12-word mnemonic phrase for your Olares ID.
-</template>
+</template>-->
 </Tabs>

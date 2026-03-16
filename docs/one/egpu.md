@@ -20,11 +20,11 @@ Always shut down Olares One completely before connecting or disconnecting the de
 
 ## Prerequisites
 **Hardware**<br>
-- The external GPU must support the Thunderbolt 5 protocol and be compatible with Ubuntu/Linux environments.
+- The external GPU must be **NVIDIA Turing architecture or newer** (GTX 16xx, RTX 20xx, 30xx, 40xx, 50xx series, and later), support the Thunderbolt 5 protocol, and be compatible with Ubuntu/Linux.
 - Ensure the external GPU has its own independent power source connected.
 
 :::warning Compatibility
-The external GPU must be compatible with Linux (Ubuntu). Unsupported devices might not be recognized by the system.
+The external GPU must be an NVIDIA GPU with Turing or newer architecture, and compatible with Linux (Ubuntu). An unsupported GPU will not be recognized by Olares, and AI applications that require GPU access will not run.
 :::
 
 ## Step 1: Connect the eGPU
