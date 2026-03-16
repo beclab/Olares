@@ -110,11 +110,15 @@ Olares One will boot into Olares OS.
    done
    ```
 
-4. Shut down Olares One, wait a few seconds, and then power it on again. You should now see a GRUB menu with both Olares and Windows entries.
-
 ## Step 6: Switch between operating systems
 
-At the GRUB menu:
+1. Shut down Olares One, wait a few seconds, and then power it on again. You should now see a GRUB menu with both Olares and Windows entries.
+
+   ![Switch systems at startup](/images/one/one-dual-boot.png#bordered)
+   :::tip
+   The highlighted entry (Olares GNU/Linux) will be executed automatically in 10 seconds.
+   :::
+2. At the GRUB menu:
 
 - **Boot Olares OS**: Select `Olares GNU/Linux`.
 - **Boot Windows**: Select `Windows Boot Manager`.
