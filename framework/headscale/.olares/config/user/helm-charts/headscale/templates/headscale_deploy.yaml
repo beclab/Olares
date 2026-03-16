@@ -312,6 +312,13 @@ spec:
           - key: acl.json
             path: acl.json
           name: tailscale-acl
+      - name: headscale-nginx-config
+        configMap:
+          defaultMode: 420
+          items:
+          - key: default.conf
+            path: default.conf
+          name: headscale-nginx-config
 
 ---
 apiVersion: apps/v1
