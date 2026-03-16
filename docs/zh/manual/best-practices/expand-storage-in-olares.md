@@ -245,7 +245,7 @@ nvme1n1     259:3    0 931.5G  0 disk
 2. 将检测到的未挂载磁盘加入系统存储：
 
     ```bash
-    olares-cli disk extend
+    sudo olares-cli disk extend
     ```
 3. 当命令行提示确认时，输入 `YES` 继续。
 

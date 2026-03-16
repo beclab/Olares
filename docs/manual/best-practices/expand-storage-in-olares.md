@@ -244,7 +244,7 @@ In this example, `sda` is the system drive which is mounted at `/` and `/boot`, 
 2. Add the disk to the system volume:
 
     ```bash
-    olares-cli disk extend
+    sudo olares-cli disk extend
     ```
 
 3. Type `YES` to proceed when the command prompts for confirmation.
