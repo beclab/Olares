@@ -13,6 +13,7 @@ import (
 
 	kbopv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -22,6 +23,8 @@ var _ OperationApp = &ResumingApp{}
 type ResumingApp struct {
 	*baseOperationApp
 }
+
+var errStopRequestedDueToPendingPod = errors.New("stop requested due to pending pod")
 
 func NewResumingApp(c client.Client,
 	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
@@ -111,6 +114,10 @@ func (p *resumingInProgressApp) Exec(ctx context.Context) (StatefulInProgressApp
 func (p *resumingInProgressApp) WaitAsync(ctx context.Context) {
 	appFactory.waitForPolling(ctx, p, func(err error) {
 		if err != nil {
+			if errors.Is(err, errStopRequestedDueToPendingPod) {
+				klog.Infof("app %s stop requested while resuming, skip setting ResumeFailed", p.manager.Spec.AppName)
+				return
+			}
 			opRecord := makeRecord(p.manager, appsv1.ResumeFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
 			updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.ResumeFailed, opRecord, err.Error(), appsv1.ResumeFailed.String())
 			if updateErr != nil {
@@ -135,7 +142,15 @@ func (p *resumingInProgressApp) poll(ctx context.Context) error {
 		return nil
 	}
 	ok := p.IsStartUp(ctx)
+
 	if !ok {
+		isPending, err := p.stopRequested(ctx)
+		if err != nil {
+			return err
+		}
+		if isPending {
+			return errStopRequestedDueToPendingPod
+		}
 		return fmt.Errorf("wait for app %s startup failed", p.manager.Spec.AppName)
 	}
 
@@ -159,6 +174,15 @@ func (p *resumingInProgressApp) IsStartUp(ctx context.Context) bool {
 			return false
 		}
 	}
+}
+
+func (p *resumingInProgressApp) stopRequested(ctx context.Context) (bool, error) {
+	var latest appsv1.ApplicationManager
+	if err := p.client.Get(ctx, types.NamespacedName{Name: p.manager.Name}, &latest); err != nil {
+		klog.Errorf("failed to get app manager %s while waiting startup: %v", p.manager.Name, err)
+		return false, err
+	}
+	return latest.Annotations[api.AppStopByControllerDuePendingPod] == "true", nil
 }
 
 func (p *ResumingApp) execMiddleware(ctx context.Context) error {

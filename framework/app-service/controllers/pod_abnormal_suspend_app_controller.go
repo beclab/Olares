@@ -155,10 +155,15 @@ func (r *PodAbnormalSuspendAppController) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, nil
 	}
 
-	if pendingSince, found := pendingUnschedulableSince(&pod); found {
+	pendingKind, err := utils.GetPendingKind(r.Client, &pod)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if pendingSince, found := pendingUnschedulableSince(&pod); found || pendingKind == "hami-scheduler" {
 		elapsed := time.Since(pendingSince)
 		klog.Infof("pod pending unschedulable name=%s namespace=%s since=%s elapsed=%v timeout=%v", pod.Name, pod.Namespace, pendingSince.Format(time.RFC3339), elapsed, r.pendingTimeout)
-		if elapsed < r.pendingTimeout {
+		if elapsed < r.pendingTimeout && pendingKind != "hami-scheduler" {
 			delay := r.pendingTimeout - elapsed
 			klog.Infof("requeue pod name=%s namespace=%s after %v until timeout", pod.Name, pod.Namespace, delay)
 			return ctrl.Result{RequeueAfter: r.pendingTimeout - elapsed}, nil
@@ -166,10 +171,7 @@ func (r *PodAbnormalSuspendAppController) Reconcile(ctx context.Context, req ctr
 
 		klog.Infof("attempting to suspend app=%s owner=%s due to pending unschedulable timeout", appName, owner)
 		reason := constants.AppUnschedulable
-		pendingKind, err := utils.GetPendingKind(r.Client, &pod)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+
 		if pendingKind == "hami-scheduler" {
 			reason = constants.AppHamiSchedulable
 		}
@@ -243,6 +245,9 @@ func (r *PodAbnormalSuspendAppController) trySuspendApp(ctx context.Context, own
 
 	isServerPod := strings.HasSuffix(podNamespace, "-shared")
 	if isServerPod {
+		if am.Annotations == nil {
+			am.Annotations = make(map[string]string)
+		}
 		am.Annotations[api.AppStopAllKey] = "true"
 	}
 
@@ -263,7 +268,11 @@ func (r *PodAbnormalSuspendAppController) trySuspendApp(ctx context.Context, own
 		Reason:     reason,
 		Message:    message,
 	}
-	if _, err := apputils.UpdateAppMgrStatus(name, status); err != nil {
+	if _, err := apputils.UpdateAppMgrStatus(name, status, func(manager *appv1alpha1.ApplicationManager) {
+		if reason == constants.AppHamiSchedulable || reason == constants.AppUnschedulable {
+			manager.Annotations[api.AppStopByControllerDuePendingPod] = "true"
+		}
+	}); err != nil {
 		return false, err
 	}
 	klog.Infof("suspend requested for app=%s owner=%s, reason=%s", am.Spec.AppName, am.Spec.AppOwner, message)
