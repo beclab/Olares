@@ -43,7 +43,7 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 要通过 SSH 连接，确保你的电脑和 Olares 设备连接到同一个局域网。否则，SSH 连接会失败。
 :::
 
-1. （可选）通过以下任意方式获取内网 IP 地址。
+1. （可选）通过以下任一方式获取内网 IP 地址。
 
     <Tabs>
     <template #通过-LarePass-移动端>

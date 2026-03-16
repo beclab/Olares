@@ -25,8 +25,8 @@ Access the device terminal to identify any pod that is not running normally, ins
 
 ### Step 1: Access the terminal
 
-- If you can access Control Hub in Olares desktop, follow [Option A](#option-a-access-the-command-line-from-the-desktop).
--  If you cannot access Control Hub, follow [Option B](#option-b-access-the-command-line-through-ssh).
+- If you can access Control Hub in Olares desktop, follow [Option A](#option-a-access-via-control-hub).
+-  If you cannot access Control Hub, follow [Option B](#option-b-access-via-ssh).
 
 #### Option A: Access via Control Hub
 
@@ -60,7 +60,7 @@ To connect through SSH, make sure your computer and the Olares device are on the
     a. Connect your Olares device to a monitor and a keyboard.
 
     b. Open a terminal, and run `ifconfig`.
-    
+
     c. Look for your active interface, typically `enp3s0` (wired) or `wlo1` (wireless). The IP address appears after `inet`.
 
     </template>
