@@ -7,96 +7,90 @@ description: Learn how to connect AI applications on Olares using shared endpoin
 
 Many AI applications on Olares follow the same pattern: one app provides AI capabilities over an API, and another app provides the interface you use every day. Once you understand this pattern, you can apply the same steps to connect almost any compatible combination of apps.
 
-This tutorial explains the core concepts and walks you through practical examples using Ollama as the AI service.
+This tutorial explains the core concepts and walks you through practical examples using Ollama as the AI model app.
 
 ## Objectives
 
 By the end of this tutorial, you will be able to:
 
-- Identify shared applications that can act as AI services.
-- Locate the correct endpoint for a shared AI service.
-- Choose the right endpoint format for different client apps.
-- Connect common client apps such as LobeChat, n8n, and Continue.dev to Ollama.
+- Distinguish between AI model apps and client apps.
+- Configure authentication levels to allow seamless app-to-app communication.
+- Understand when to use shared endpoint or user endpoint.
+- Connect common client apps such as LobeHub (previously LobeChat), n8n, and Continue.dev to Ollama.
 
 ## How it works
 
-Connecting a client app to a shared AI service on Olares usually involves three steps:
+Connecting a client app to an AI model app usually involves three steps:
 
-1. In Olares Settings, find the shared application's API entrance and set the **Authentication level** to **Internal**.
+1. In Olares Settings, find the API entrance of the AI model app, and set its **Authentication level** to **Internal**.
 2. Copy the endpoint shown for that entrance.
-3. In your client app, paste this endpoint into the model or API configuration page. If the connection fails, adjust the endpoint according to the rules in [Which endpoint to use](#which-endpoint-to-use).
+3. In the client app, paste this endpoint into the model or API configuration page. If the connection fails, adjust the endpoint according to the rules in [Which endpoint to use](#which-endpoint-to-use).
 
 ## Core concepts
 
-### Shared applications
+### AI model apps vs. Client apps
 
-A shared application is an app that is installed once and shared by all users on the device, rather than belonging to a single user. In Olares Market, shared applications are marked with a group badge.
-
-Not every shared application exposes an API for other apps to call. This tutorial focuses on shared applications that provide an API entrance, for example, Ollama or ComfyUI Shared. In the connection examples, they usually act as the AI service side. These apps commonly appear in two forms:
-
-- **Backend-only service**: Runs as a headless service with no built-in interface, like Ollama. It exposes API endpoints that compatible client apps can use. To work with this type, install a supported client app and point it to the shared endpoint.
-- **Service with built-in interface**: Includes both a backend service and its own user interface, like ComfyUI Shared. You can use it directly in the browser, or connect compatible third-party clients to its API.
-
-### Service apps and client apps
-
-- **Service apps** provide AI capabilities over an API. In the examples in this tutorial, a shared app such as Ollama plays this role.
-- **Client apps** are the apps you use directly. To work, they need to know which AI service to use and which address to call. LobeChat and Open WebUI are examples: they provide the chat interface but rely on a service like Ollama to generate responses.
-
-### Endpoints
-
-An endpoint is the URL through which an application's entrance can be reached. When a shared app exposes an API entrance, you will usually see both of the following endpoint types:
-
-| Type | Format | Description |
-|------|--------|-------------|
-| User endpoint | `https://{route-ID}.{OlaresID}.olares.com` | Tied to a specific user, typically used for browser-facing access |
-| Shared endpoint | `http://{route-ID}.shared.olares.com` | System-wide access, not tied to any user |
-
-### Frontend calls vs. backend calls
-
-Client apps send API requests in one of two ways:
-
-- **Backend calls**: The client app's server process makes the request. This is the most common approach for AI integrations.
-- **Frontend (browser) calls**: The request is sent directly from your browser, which requires HTTPS and may be subject to CORS restrictions.
-
-Most AI client apps use backend calls. Some lightweight or browser-based tools send requests from the browser instead. Check the client app's documentation if you are unsure which it uses.
+- **AI model apps**: These act as the backend engine. They provide AI capabilities over an API, and they often run as services without a chat interface of their own. For example, Ollama and ComfyUI Shared.
+- **Client apps**: These act as the user-facing app. They provide the chat interface you interact with directly, but they rely on an AI model app to generate responses. For example, LobeHub, Open WebUI, and n8n.
 
 ### Authentication levels
 
 Olares provides three access levels for each application entrance:
-
+- **Internal (recommmended)**: Allows apps to communicate without user authentication. It also allows access within your LAN or via LarePass VPN. 
+<!--- **Private**: Requires user authentication, which might break automated API connections between apps.-->
 - **Public**: Open to anyone on the internet. Not recommended for private services.
-- **Internal**: Allows access within the LAN or via LarePass VPN. This is the recommended setting for API entrances when connecting apps in this tutorial.
-- **Private**: Requires user authentication.
 
-## Which endpoint to use
+### Frontend calls vs. Backend calls
 
-This tutorial covers connections using the `olares.com` domain. If your client device is on the same local network as Olares, the same approach applies using `.local` addresses.
+Client apps send API requests to AI model apps in one of two ways:
+- **Backend calls (highly recommended)**: The client app's server process makes the request directly to the model app. By setting the model app's API to "Internal", these calls bypass authentication, making this the most stable method.
+- **Frontend calls**: The request is sent directly from your browser. This depends on the relative location of your browser and the Olares host. These calls might trigger Olares login authentication or Cross-Origin (CORS) restrictions if your device and Olares are not on the same local network.
 
-When configuring a client app to use a shared AI service:
+### Endpoints
 
-1. **Try the shared endpoint first** (`http://{route-ID}.shared.olares.com`). Shared endpoints are designed for direct app-to-app API access. They do not require user credentials and are generally the most reliable option.
+An endpoint is the URL through which an application's entrance can be reached. When an AI model app exposes an API entrance, you will usually see two types of endpoint:
 
-2. **Fall back to the user endpoint** (`https://{route-ID}.{OlaresID}.olares.com`). If the shared endpoint is unavailable, or the client app sends requests from the browser rather than its own server, use the user endpoint. Set its **Authentication level** to **Internal** (recommended) so it can be accessed without a login prompt but is not exposed publicly.
+| Type | Format | Description |
+|------|--------|-------------|
+| User endpoint | `https://{route-ID}.{OlaresID}.olares.com` | Frontend calls or external access via VPN. |
+| Shared endpoint | `http://{route-ID}.shared.olares.com` | Backend calls. System-wide access, highly reliable for app-to-app communication. |
 
-3. **Adjust the path suffix if needed**. Many client apps expect the base URL to end with `/v1` for OpenAI-compatible APIs, or `/api` for other formats. If the connection fails, try appending the appropriate suffix. For example: `http://{route-ID}.shared.olares.com/v1`. This applies to both endpoint types.
+### Which endpoint to use
 
-If a client app requires an API key but the service does not use one, enter any placeholder text such as `ollama` to satisfy the required field.
+:::tip
+This tutorial covers connections using the `olares.com` domain. If your client device is on the same local network as Olares, the same approach applies using the `.local` address.
+:::
 
-## Example 1: Connect Ollama to LobeChat
+1. Try the shared endpoint first (`http://{route-ID}.shared.olares.com`).
 
-In this example, Ollama Shared acts as the AI service, and LobeChat is the client app that provides the chat interface.
+   Shared endpoints are designed for direct app-to-app API access. They do not require user credentials and are generally the most reliable option.
+2. Fall back to the user endpoint (`https://{route-ID}.{OlaresID}.olares.com`). 
+
+   If the shared endpoint is unavailable, or the client app sends requests from the browser rather than its own server, use the user endpoint. Set its **Authentication level** to **Internal** (recommended) so it can be accessed without a login prompt but is not exposed publicly.
+3. Add suffixes if needed. 
+
+   Many client apps expect the base URL to end with `/v1` for OpenAI-compatible APIs, or `/api` for other formats. If the connection fails, try appending the appropriate suffix. For example: `http://{route-ID}.shared.olares.com/v1`. This applies to both endpoint types.
+4. Placeholder API key.
+
+   If a client app requires an API key but the service does not use one, enter any placeholder text such as `ollama` to satisfy the required field.
+
+## Examples
+
+### Connect Ollama to LobeHub
+
+In this example, Ollama Shared acts as the AI model app, and LobeHub is the client app.
 
 This example uses `qwen2.5:1.5b` as the model. Make sure you have downloaded it before starting.
 
-1. On Olares, open Settings, then go to **Application** > **Ollama**.
+1. On Olares, open Settings, then go to **Applications** > **Ollama**.
 2. In **Shared entrances**, select **Ollama API**.
    ![Ollama shared entrance](/images/manual/tutorials/api-ollama-shared.png#bordered)
    
 3. Copy the shared endpoint URL.
-4. Open LobeChat, then go to **Settings** > **AI Service Provider** > **Ollama**.
-5. In the **Interface proxy address** field, paste the Ollama shared endpoint you copied.
+4. Open LobeHub, then go to **Settings** > **AI Service Provider** > **Ollama**.
+5. In the **Interface proxy address** field, paste the shared endpoint you copied.
    :::warning
-   If you are using local Ollama models, do not enable **Use Client Request Mode**.
+   If you are using local Ollama models, do not enable **Use Client Request Mode**. This setting switches the app to use frontend calls, which often triggers login prompts or connection failures when using local AI model apps.
    :::
    ![Enter shared endpoint](/images/manual/tutorials/api-lobechat-enter-url.png#bordered)
 6. Verify the connection:
@@ -111,7 +105,7 @@ This example uses `qwen2.5:1.5b` as the model. Make sure you have downloaded it 
       When **Check Passed** appears, the connection is established.
       ![Check passed](/images/manual/tutorials/api-lobechat-check-passed.png#bordered)
 
-## Example 2: Connect Ollama to n8n
+### Connect Ollama to n8n
 
 n8n makes requests from the browser rather than its server, so it requires a user endpoint. Configure the authentication level to **Internal** so it can be accessed without a login prompt.
 
@@ -129,11 +123,10 @@ n8n makes requests from the browser rather than its server, so it requires a use
 
    d. Click **Save**. n8n will automatically test the connection.
 
-      When **Connection tested successfully** appears, the connection is established.
-      
+      When **Connection tested successfully** appears, the connection is established.   
       ![n8n Ollama connected](/images/manual/tutorials/api-n8n-connected.png#bordered)
 
-## Example 3: Connect Ollama to Continue.dev (outside Olares)
+### Connect Ollama to Continue.dev (outside Olares)
 
 You can connect your local IDE to Ollama running on your Olares system, so that AI assistance and code completion are powered by your own hardware rather than a third-party cloud.
 
@@ -188,9 +181,11 @@ This example uses `llama3.1:8b`, `qwen2.5-coder:7b`, and `qwen2.5-coder:1.5b`. M
 
    Continue will route the request to Ollama on your Olares system and return the result. With LarePass VPN enabled, your IDE can reach the Ollama endpoint as if it were on the same private network.
    ![Result](/images/manual/tutorials/api-continue-hello-world.png#bordered){width=60%}
+
 ## Learn more
 
 - [Applications](../../developer/concepts/application.md)
 - [Network](../../developer/concepts/network.md)
 - [Manage application entrances](../olares/settings/manage-entrance.md)
+- [Use cases](../../use-cases/index.md)
 
