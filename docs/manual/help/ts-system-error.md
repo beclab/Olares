@@ -1,12 +1,14 @@
 ---
-outline: [2,3]
+outline: [2, 3]
 description: Diagnose and collect information when the System section in LarePass shows "System error".
 ---
+
 # "System error" in LarePass
 
-Use this guide when the **System** section in LarePass displays "System error". 
+Use this guide when the **System** section in LarePass displays "System error".
 
-There can be multiple underlying causes for this message, so follow the steps below to collect diagnostic information first, and then contact the Olares team with the results.
+This guide uses Olares One as the example device. If you are using another Olares device, you can follow the same general process where applicable.
+
 ![System error in LarePass](/images/manual/help/ts-sys-err.png#bordered){width=90%}
 
 ## Condition
@@ -21,73 +23,92 @@ The "System error" message can be triggered by different underlying issues. A co
 
 ## Solution
 
-Access the device terminal to identify any pod that is not running normally, inspect its error details, and then share this information with the Olares team. This helps narrow down the possible causes and speeds up troubleshooting.
+Follow the steps below to access the device terminal, identify any pod that is not running normally, inspect its error details, and share the results with the Olares team. This helps narrow down possible causes and speed up troubleshooting.
 
-### Step 1: Access the terminal
+### Step 1: Try to access Olares desktop
 
-- If you can access Control Hub in Olares desktop, follow [Option A](#option-a-access-via-control-hub).
--  If you cannot access Control Hub, follow [Option B](#option-b-access-via-ssh).
+If you can still access the Olares desktop, open Control Hub and use its built-in terminal.
 
-#### Option A: Access via Control Hub
+1. Open a browser and access your Olares desktop:
 
-1. Open a browser and access your Olares desktop: 
     ```text
-    https://desktop.<your-olaresID>.olares.com
+    https://desktop.<your-olares-id>.olares.com
     ```
-2. Open Control Hub. In the left sidebar, under the **Terminal** section, click **Olares**.
-    ![Open terminal](/images/manual/help/ts-sys-err-terminal.png#bordered){width=90%}
-    
-#### Option B: Access via SSH
 
-:::warning
-To connect through SSH, make sure your computer and the Olares device are on the same local network. Otherwise, the SSH connection will fail.
+2. Open Control Hub.
+3. In the left sidebar, under the **Terminal** section, click **Olares**.
+    ![Open terminal](/images/manual/help/ts-sys-err-terminal.png#bordered){width=90%}
+
+If you can access the terminal successfully, go to [Step 4](#step-4-check-system-pod-status).
+
+### Step 2: Attempt SSH connection
+
+If you cannot access the Olares desktop, try SSH first.
+
+:::info Same network required
+Your computer and the Olares device should be on the same local network.
 :::
 
-1. (Optional) Obtain the local IP address using one of the following methods.
-
-    <Tabs>
-    <template #From-LarePass-mobile-client>
+1. Get the local IP address of your Olares device. 
+If you cannot find the local IP address, continue to get the SSH password below, and then go to **Step 3**.
 
     a. Open the LarePass app, and go to **Settings** > **System** to navigate to the **Olares management** page.
 
-    b. Tap the Olares device card.
+    b. Tap the Olares One device card.
 
     c. Scroll down to the **Network** section and note the **Intranet IP**.
 
-    </template>
+2. Check SSH password in Vault.
 
-    <template #Via-monitor>
-    a. Connect your Olares device to a monitor and a keyboard.
+    a. Tap **Vault** in the LarePass app. When prompted, enter your local password to unlock.
 
-    b. Open a terminal, and run `ifconfig`.
+    b. In the top-left corner, tap **Vault** to open the side navigation, and then tap **All vaults** to display all saved items.
 
-    c. Look for your active interface, typically `enp3s0` (wired) or `wlo1` (wireless). The IP address appears after `inet`.
+    c. Find the item with the <span class="material-symbols-outlined">terminal</span> icon and tap it to reveal the password.
+        ![Check saved SSH password in Vault](/images/one/ssh-check-password-in-vault.png#bordered)
 
-    </template>
+3. Connect via SSH.
+    
+    a. Open a terminal on your computer.
 
-    </Tabs>
-
-2. Run the following command, replacing `<local_ip_address>` with the Intranet IP you get from the previous step.
+    b. Type the following command, replace `<local_ip_address>` with the Intranet IP, and then press **Enter**:
+    
     ```bash
     ssh olares@<local_ip_address>
     ```
-3. If prompted to confirm the connection, type `yes` and press Enter.
-4. When prompted, enter the SSH password.
-    :::tip
-    If you have not changed it, the default SSH password is `olares`.
-    :::
+        
+    c. When prompted, type the SSH password, and then press **Enter**.
 
-### Step 2: Identify the problematic pod
+If the connection is successful, go to [Step 4](#step-4-check-system-pod-status).
+
+If you cannot connect through SSH, go to [Step 3](#step-3-log-in-locally).
+
+### Step 3: Log in locally
+
+Use a monitor and keyboard to log in to the device locally.
+
+1. Connect a monitor and keyboard to your Olares device. A text-based login prompt is displayed on your screen automatically.
+
+    ```text
+    olares login:
+    ```
+
+2. Type the username `olares` and press **Enter**.
+3. Type the same SSH password obtained in **Step 2** and press **Enter**.
+
+### Step 4: Check system pod status
 
 1. Run the following command to get the status of all pods across all namespaces:
+
     ```bash
     kubectl get pods -A
     ```
-2. Check the **STATUS** column and locate any pods that are not in the `Running` state. 
-3. Note down the exact **NAMESPACE** (the first column) and **NAME** (the second column) of each problematic pod.
+
+2. Check the **STATUS** column for any pods that are not in the `Running` state.
+3. Note down the exact **NAMESPACE** and **NAME** of each problematic pod.
     ![Locate problematic pod](/images/manual/help/ts-sys-err-pod-crash.png#bordered){width=90%}
 
-### Step 3: Inspect the pod error
+### Step 5: Inspect the pod error
 
 1. Run the following command, replacing `<namespace>` and `<pod-name>` with the values you noted in the previous step:
 
@@ -95,7 +116,7 @@ To connect through SSH, make sure your computer and the Olares device are on the
     kubectl describe pod <pod-name> -n <namespace>
     ```
 
-    In this example:
+    For example:
 
     ```bash
     kubectl describe pod backup-66f8c76996-d7vnq -n os-framework
@@ -104,11 +125,11 @@ To connect through SSH, make sure your computer and the Olares device are on the
 2. Scroll down to the **Events** section to find the detailed error message.
     ![Locate problematic pod](/images/manual/help/ts-sys-err-pod-event-detail.png#bordered){width=90%}
 
-### Step 4: Contact support
+### Step 6: Contact support
 
 Create an issue in the [Olares GitHub repository](https://github.com/beclab/Olares/issues) and provide the following information:
 
-- The output of `kubectl describe pod <pod-name> -n <namespace>`.
-- A screenshot of the error message, if available.
+- The output of `kubectl describe pod <pod-name> -n <namespace>`
+- A screenshot of the error message, if available
 
 This information helps our team investigate and resolve the issue faster.
