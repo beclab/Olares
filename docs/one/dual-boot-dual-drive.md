@@ -12,6 +12,15 @@ For competitive gaming or Windows-exclusive software, you can add a secondary NV
 
 This dual-drive configuration physically isolates the systems. This ensures Olares OS remains stable and secure while providing full native performance for your Windows applications.
 
+## Learning objectives
+
+By the end of this guide, you will learn how to:
+
+- Install Windows on a secondary SSD alongside Olares OS.
+- Configure BIOS boot settings for dual-boot.
+- Set up GRUB to detect and boot both operating systems.
+- Switch between Olares OS and Windows at startup.
+
 ## Prerequisites
 **Hardware**<br>
 - A secondary NVMe M.2 SSD physically installed in Olares One.
@@ -42,25 +51,77 @@ This dual-drive configuration physically isolates the systems. This ensures Olar
 
 2. When the installation finishes and the system restarts, unplug the Windows USB drive.
 
-Once installation is complete, the system will restart into Windows automatically.
+## Step 4: Boot back into Olares OS
 
-## Switch between operating systems
-
-Because the operating systems are on separate physical drives, you switch between them using the BIOS boot priority.
-
-### Switch to Olares OS
 1. Restart Olares One.
-2. Press the **Delete** key repeatedly to enter **BIOS setup**.
-3. Go to the **Boot** tab.
-4. Set **Boot Option #1** to the SSD containing Olares OS.
-5. Press **F10** to save and exit BIOS.
+2. When the Olares logo appears, press the **Delete** key repeatedly to enter **BIOS setup**.
+3. Go to the **Boot** tab and set **Boot Option #1** to the SSD that contains Olares OS.
+4. Press **F10**, then select **Yes** to save and exit BIOS.
 
-### Switch to Windows
-1. Restart Olares One.
-2. Press the **Delete** key repeatedly to enter **BIOS setup**.
-3. Set **Boot Option #1** to the secondary SSD containing Windows.
-4. Press **F10** to save and exit BIOS.
+Olares One will boot into Olares OS.
+
+## Step 5: Detect Windows and update GRUB
+
+1. Log in using the default credentials:
+    * **Username**: `olares`
+    * **Password**: `olares`
+   
+   ![Log in to Olares One](/images/one/one-terminal.png#bordered)
+2. Run the following command:
+
+   ```bash
+   sudo os-prober
+   ```
+
+   If Windows has been installed successfully, you should see an entry similar to:
+
+   ```bash
+   /dev/nvme0n1p1@/efi/Microsoft/Boot/bootmgfw.efi:Windows Boot Manager:Windows:efi
+   ```
+
+3. Enable GRUB to probe other operating systems and regenerate the boot menu:
+
+   a. Create a symbolic link for GRUB configuration:
+      ```bash
+      sudo ln -s /boot/efi/grub /boot/grub
+      ```
+
+   b. Enable OS prober to detect Windows:
+      ```bash
+      sudo sed -i 's|GRUB_DISABLE_OS_PROBER=true|GRUB_DISABLE_OS_PROBER=false|' /etc/default/grub
+      ```
+
+   c. Regenerate the GRUB boot menu:
+      ```bash
+      sudo update-grub
+      ```
+
+   Example output:
+
+   ```bash
+   Sourcing file '/etc/default/grub'
+   Generating grub configuration file ...
+   Warning: os-prober will be executed to detect other bootable partitions.
+   Its output will be used to detect bootable binaries on them and create new boot entries.
+   Found Windows Boot Manager on /dev/nvme0n1p1@/efi/Microsoft/Boot/bootmgfw.efi
+   Adding boot menu entry for UEFI Firmware Settings ...
+   done
+   ```
+
+## Step 6: Switch between operating systems
+
+1. Shut down Olares One, wait a few seconds, and then power it on again. You should now see a GRUB menu with both Olares and Windows entries.
+
+   ![Switch systems at startup](/images/one/one-dual-boot.png#bordered)
+   :::tip
+   The highlighted entry (**Olares GNU/Linux**) will be executed automatically in 10 seconds.
+   :::
+2. At the GRUB menu:
+
+   - **Boot Olares OS**: Select **Olares GNU/Linux**.
+   - **Boot Windows**: Select **Windows Boot Manager**.
 
 ## Resources
+
 - [Install NVIDIA drivers on Windows](install-nvidia-driver.md)
 - [Run a Windows VM on Olares One](windows.md)
