@@ -116,12 +116,12 @@ Olares One will boot into Olares OS.
 
    ![Switch systems at startup](/images/one/one-dual-boot.png#bordered)
    :::tip
-   The highlighted entry (Olares GNU/Linux) will be executed automatically in 10 seconds.
+   The highlighted entry (**Olares GNU/Linux**) will be executed automatically in 10 seconds.
    :::
 2. At the GRUB menu:
 
-- **Boot Olares OS**: Select `Olares GNU/Linux`.
-- **Boot Windows**: Select `Windows Boot Manager`.
+   - **Boot Olares OS**: Select **Olares GNU/Linux**.
+   - **Boot Windows**: Select **Windows Boot Manager**.
 
 ## Resources
 
