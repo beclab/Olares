@@ -42,7 +42,7 @@ Olares One 设备的底层操作系统运行正常，因此能够成功连接至
 
    c. 找到带有 <span class="material-symbols-outlined">terminal</span> 图标的条目，点击查看密码。
 
-      ![在 Vault 中查看保存的 SSH 密码](/public/images/zh/manual/olares/ssh-check-password-in-vault1.png#bordered)
+      ![在 Vault 中查看保存的 SSH 密码](/images/zh/manual/olares/ssh-check-password-in-vault1.png#bordered)
 
 3. 通过 SSH 连接。
 
