@@ -23,33 +23,33 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 
 ## 解决方案
 
-请按照以下步骤访问 Olares 设备终端，定位未正常运行的 Pod，查看其错误详情，并将这些信息提供给 Olares 团队。这有助于缩小可能原因范围，加快故障排查。
+按照以下步骤访问 Olares 设备终端，定位未正常运行的 Pod，查看其错误详情，并将这些信息提供给 Olares 团队。这有助于缩小可能原因范围，加快故障排查。
 
 ### 步骤 1：尝试访问 Olares 桌面
 
-如果你仍然可以访问 Olares 桌面，请打开控制面板并使用 Olares 内置终端。
+如果你仍然可以访问 Olares 桌面，打开控制面板并使用 Olares 内置终端。
 
 1. 打开浏览器，登录你的 Olares 桌面：
 
     ```text
-    https://desktop.<your-olares-id>.olares.cn
+    https://desktop.<username>.olares.cn
     ```
 
 2. 打开控制面板。
 3. 在左侧边栏的**终端**部分，点击 **Olares**。
     ![打开终端](/images/zh/manual/help/ts-sys-err-terminal.png#bordered){width=90%}
 
-如果你可以成功访问终端，直接跳转至[步骤 4](#步骤-4-检查系统-pod-状态)。
+如果你可以成功访问终端，跳转至[步骤 4](#步骤-4-检查系统-pod-状态)。
 
 ### 步骤 2: 尝试 SSH 连接
 
-如果你无法访问 Olares 桌面，请先尝试 SSH 连接。
+如果你无法访问 Olares 桌面，可以尝试 SSH 连接。
 
 :::info 需处于同一网络
-你的电脑和 Olares 设备必须连接到同一个本地网络。
+你的电脑和 Olares  One 必须连接到同一个本地网络。
 :::
 
-1. 获取 Olares 设备的本地 IP 地址。
+1. 获取 Olares One 的本地 IP 地址。
 
    a. 打开 LarePass 移动端，进入**设置** > **系统**，打开 **Olares 管理**页面。
 
@@ -67,7 +67,7 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 
       ![在 Vault 中查看保存的 SSH 密码](/public/images/zh/manual/olares/ssh-check-password-in-vault1.png#bordered)
 
-3. 在电脑打开终端，然后通过 SSH 连接设备。
+3. 在你的电脑上打开终端，通过 SSH 连接设备。
 
     a. 输入以下命令，将 `<local_ip_address>` 替换为此前获取的内网 IP：
 
@@ -76,13 +76,13 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
       ```
     b. 根据提示输入 SSH 密码。
 
-如果连接成功，直接跳转至[步骤 4](#步骤-4-检查系统-pod-状态)。
+如果连接成功，跳转至[步骤 4](#步骤-4-检查系统-pod-状态)。
 
 ### 步骤 3: 本地登录设备
 
 如果无法通过 SSH 访问，使用显示器和键盘在本地登录设备。
 
-1. 将显示器和键盘连接至 Olares One。屏幕上会自动显示基于文本的登录提示窗口：
+1. 将显示器和键盘连接至 Olares One。屏幕上会有一行文字提示登录。
 
    ```text
    olares login:
@@ -115,14 +115,14 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
     kubectl describe pod backup-66f8c76996-d7vnq -n os-framework
     ```
 2. 在输出结果中向下滚动到 **Events** 部分，查看失败相关的错误信息。
-    ![Locate problematic pod](/images/zh/manual/help/ts-sys-err-pod-event-detail.png#bordered){width=90%}
+    ![Pod 错误详情](/images/zh/manual/help/ts-sys-err-pod-event-detail.png#bordered){width=90%}
 
 ### 步骤 6：联系技术支持
 
-请在 [Olares GitHub 仓库](https://github.com/beclab/Olares/issues)提交 Issue，并提供以下信息：
+在 [Olares GitHub 仓库](https://github.com/beclab/Olares/issues)提交 Issue，并提供以下信息：
 
-- 每个异常 Pod 对应的 `kubectl describe pod <pod-name> -n <namespace>` 完整输出结果。
-- 错误信息的截图（如有）。
-- 错误最初出现的时间及简要说明（例如，是在更新后还是重启后出现的）。
+- 每个异常 Pod 对应的 `kubectl describe pod <pod-name> -n <namespace>` 完整输出结果
+- 错误信息的截图（如有）
+- 错误最初出现的时间及简要说明（例如，是在更新后还是重启后出现的）
 
-这些信息将帮助我们的团队更快排查并解决问题。
+这些信息将帮助团队更快排查并解决问题。

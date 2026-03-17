@@ -33,7 +33,7 @@ If you can still access the Olares Desktop, open Control Hub and use its built-i
 1. Open a browser and access your Olares Desktop:
 
     ```text
-    https://desktop.<your-olares-id>.olares.com
+    https://desktop.<username>.olares.com
     ```
 
 2. Open Control Hub.
