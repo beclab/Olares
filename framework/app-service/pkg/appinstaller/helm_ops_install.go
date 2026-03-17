@@ -685,7 +685,7 @@ func (h *HelmOps) checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, er
 		}
 		if pendingKind == "hami-scheduler" {
 			if isServerSide {
-				return false, errcode.ErrServerSidePodPending
+				return false, errors.Join(errcode.ErrServerSidePodPending, errcode.ErrHamiUnschedulable)
 			}
 			return false, errcode.ErrPodPending
 		}

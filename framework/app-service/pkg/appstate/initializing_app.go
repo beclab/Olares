@@ -109,7 +109,7 @@ func (p *InitializingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 						message = fmt.Sprintf(constants.ApplyEnvOperationCompletedTpl, p.manager.Spec.Type.String(), p.manager.Spec.AppName)
 					}
 					opRecord := makeRecord(p.manager, appsv1.Running, message)
-					updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Running, opRecord, appsv1.Running.String(), "")
+					updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Running, opRecord, appsv1.Running.String(), appsv1.Running.String())
 					if updateErr != nil {
 						klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.Running, updateErr)
 						return
@@ -124,7 +124,7 @@ func (p *InitializingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 }
 
 func (p *InitializingApp) Cancel(ctx context.Context) error {
-	err := p.updateStatus(ctx, p.manager, appsv1.InitializingCanceling, nil, constants.OperationCanceledByTerminusTpl, "")
+	err := p.updateStatus(ctx, p.manager, appsv1.InitializingCanceling, nil, constants.OperationCanceledByTerminusTpl, appsv1.InitializingCanceling.String())
 	if err != nil {
 		klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InitializingCanceling, err)
 		return err

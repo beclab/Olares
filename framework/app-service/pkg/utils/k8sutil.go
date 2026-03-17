@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"k8s.io/apimachinery/pkg/fields"
 	"net"
 	"net/http"
 	"net/url"
@@ -481,4 +482,28 @@ func GetDeviceName() (string, error) {
 	}
 	klog.Infof("getDeviceName: %#v", result.Data)
 	return result.Data.DeviceName, nil
+}
+
+func GetPendingKind(ctrlClient client.Client, pod *corev1.Pod) (string, error) {
+	fieldSelector := fields.OneTermEqualSelector("involvedObject.name", pod.Name)
+	var eventList corev1.EventList
+	err := ctrlClient.List(context.TODO(), &eventList, &client.ListOptions{
+		FieldSelector: fieldSelector,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	eventFrom := ""
+	for _, event := range eventList.Items {
+		if event.Reason == "FailedScheduling" {
+			if event.ReportingController != "" {
+				eventFrom = event.ReportingController
+			} else {
+				eventFrom = event.Source.Component
+			}
+			break
+		}
+	}
+	return eventFrom, nil
 }

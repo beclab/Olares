@@ -120,6 +120,7 @@ const (
 	AppForceUninstall      = "ForceUninstall"
 	AppForceUninstalled    = "ForceUninstalled"
 	AppUnschedulable       = "Unschedulable"
+	AppHamiSchedulable     = "HamiUnschedulable"
 	AppStopByUser          = "StopByUser"
 	AppStopDueToInitFailed = "InitFailed"
 	AppStopDueToEvicted    = "Evicted"

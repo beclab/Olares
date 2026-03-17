@@ -78,7 +78,7 @@ func (p *UpgradingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) 
 						klog.Info("upgrade app failed, update app status to upgradeFailed, ", p.manager.Name)
 						opRecord := makeRecord(p.manager, appsv1.UpgradeFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
 
-						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.UpgradeFailed, opRecord, err.Error(), "")
+						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.UpgradeFailed, opRecord, err.Error(), appsv1.UpgradeFailed.String())
 						if updateErr != nil {
 							klog.Errorf("update appmgr state to upgradeFailed state failed %v", updateErr)
 						}
@@ -88,7 +88,7 @@ func (p *UpgradingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) 
 
 				p.finally = func() {
 					klog.Info("upgrade app success, update app status to initializing, ", p.manager.Name)
-					updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Initializing, nil, appsv1.Initializing.String(), "")
+					updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Initializing, nil, appsv1.Initializing.String(), appsv1.Initializing.String())
 					if updateErr != nil {
 						klog.Errorf("update appmgr state to initializing state failed %v", updateErr)
 						return
@@ -264,7 +264,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 }
 
 func (p *UpgradingApp) Cancel(ctx context.Context) error {
-	err := p.updateStatus(ctx, p.manager, appsv1.UpgradingCanceling, nil, constants.OperationCanceledByTerminusTpl, "")
+	err := p.updateStatus(ctx, p.manager, appsv1.UpgradingCanceling, nil, constants.OperationCanceledByTerminusTpl, appsv1.UpgradingCanceling.String())
 	if err != nil {
 		klog.Errorf("update appmgr state to upgradingCanceling state failed %v", err)
 		return err

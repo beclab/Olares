@@ -63,7 +63,7 @@ func (p *InstallingCancelingApp) Exec(ctx context.Context) (StatefulInProgressAp
 		klog.Error("execute installing cancel operation failed", err)
 
 		state := appsv1.InstallingCancelFailed
-		updateErr := p.updateStatus(ctx, p.manager, state, nil, state.String(), "")
+		updateErr := p.updateStatus(ctx, p.manager, state, nil, err.Error(), appsv1.InstallingCancelFailed.String())
 
 		if updateErr != nil {
 			klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, state, updateErr)
@@ -164,7 +164,7 @@ func (p *InstallingCancelingApp) Cancel(ctx context.Context) error {
 	}
 
 	state := appsv1.InstallingCancelFailed
-	updateErr := p.updateStatus(ctx, p.manager, state, nil, state.String(), "")
+	updateErr := p.updateStatus(ctx, p.manager, state, nil, state.String(), appsv1.InstallingCancelFailed.String())
 
 	if updateErr != nil {
 		klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, state, updateErr)
@@ -211,7 +211,7 @@ func (p *installingCancelInProgressApp) poll(ctx context.Context) error {
 func (p *installingCancelInProgressApp) WaitAsync(ctx context.Context) {
 	appFactory.waitForPolling(ctx, p, func(err error) {
 		if err != nil {
-			updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallingCancelFailed, nil, appsv1.InstallingCancelFailed.String(), "")
+			updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallingCancelFailed, nil, appsv1.InstallingCancelFailed.String(), appsv1.InstallingCancelFailed.String())
 			if updateErr != nil {
 				klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InstallingCancelFailed.String(), updateErr)
 				return
@@ -224,7 +224,7 @@ func (p *installingCancelInProgressApp) WaitAsync(ctx context.Context) {
 			message = constants.OperationCanceledByTerminusTpl
 		}
 		opRecord := makeRecord(p.manager, appsv1.InstallingCanceled, message)
-		updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallingCanceled, opRecord, message, "")
+		updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallingCanceled, opRecord, message, appsv1.InstallingCanceled.String())
 		if updateErr != nil {
 			klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InstallingCanceled.String(), updateErr)
 			return

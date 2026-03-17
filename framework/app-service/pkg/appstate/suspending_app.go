@@ -49,7 +49,7 @@ func (p *SuspendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 	if err != nil {
 		klog.Errorf("suspend app %s failed %v", p.manager.Spec.AppName, err)
 		opRecord := makeRecord(p.manager, appsv1.StopFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
-		updateErr := p.updateStatus(ctx, p.manager, appsv1.StopFailed, opRecord, err.Error(), "")
+		updateErr := p.updateStatus(ctx, p.manager, appsv1.StopFailed, opRecord, err.Error(), appsv1.StopFailed.String())
 		if updateErr != nil {
 			klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.StopFailed, err)
 			return nil, updateErr

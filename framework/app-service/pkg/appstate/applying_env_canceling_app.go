@@ -43,10 +43,10 @@ func (p *ApplyingEnvCancelingApp) Exec(ctx context.Context) (StatefulInProgressA
 	if ok := appFactory.cancelOperation(p.manager.Name); !ok {
 		klog.Errorf("app %s operation is not cancelable", p.manager.Name)
 	}
-	err = p.updateStatus(ctx, p.manager, appsv1.Stopping, nil, appsv1.Stopping.String(), "")
+	err = p.updateStatus(ctx, p.manager, appsv1.Stopping, nil, appsv1.Stopping.String(), appsv1.Stopping.String())
 	if err != nil {
 		klog.Errorf("update appmgr state to running state failed %v", err)
-		err = p.updateStatus(ctx, p.manager, appsv1.ApplyingEnvCancelFailed, nil, "Failed to update status after canceling", "")
+		err = p.updateStatus(ctx, p.manager, appsv1.ApplyingEnvCancelFailed, nil, "Failed to update status after canceling", appsv1.ApplyingEnvCancelFailed.String())
 		if err != nil {
 			klog.Errorf("update appmgr state to suspending failed %v", err)
 			return nil, err

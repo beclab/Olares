@@ -85,8 +85,21 @@ func InitializeSystemEnvProcessEnv(ctx context.Context, c client.Client) error {
 	}
 
 	var errs []error
-	var domainName string
+	var getSysCRerr error
+	var isCNDomain bool
 	var once sync.Once
+	checkDomainRegion := func() {
+		sysCR := &sysv1alpha1.Terminus{}
+		getSysCRerr = c.Get(ctx, client.ObjectKey{Name: "terminus"}, sysCR)
+		if getSysCRerr != nil {
+			klog.Errorf("get sysinfo failed: %v", getSysCRerr)
+			return
+		}
+		domainName := sysCR.Spec.Settings["domainName"]
+		if strings.HasSuffix(domainName, ".cn") {
+			isCNDomain = true
+		}
+	}
 	for i := range list.Items {
 		se := &list.Items[i]
 
@@ -109,24 +122,11 @@ func InitializeSystemEnvProcessEnv(ctx context.Context, c client.Client) error {
 					}
 				}
 			} else {
-				var err error
-				once.Do(func() {
-					sysCR := &sysv1alpha1.Terminus{}
-					err = c.Get(ctx, client.ObjectKey{Name: "terminus"}, sysCR)
-					if err != nil {
-						klog.Errorf("get terminus failed: %v", err)
-						return
-					}
-					domainName = sysCR.Spec.Settings["domainName"]
-				})
-				if err != nil {
-					return fmt.Errorf("get terminus failed: %w", err)
+				once.Do(checkDomainRegion)
+				if getSysCRerr != nil {
+					return fmt.Errorf("get sysinfo failed: %w", getSysCRerr)
 				}
 
-				var isCNDomain bool
-				if strings.HasSuffix(domainName, ".cn") {
-					isCNDomain = true
-				}
 				var newDefaultVal string
 				switch se.EnvName {
 				case "OLARES_SYSTEM_DOCKERHUB_SERVICE":
@@ -164,5 +164,40 @@ func InitializeSystemEnvProcessEnv(ctx context.Context, c client.Client) error {
 			}
 		}
 	}
+
+	var userEnvList sysv1alpha1.UserEnvList
+	if err := c.List(ctx, &userEnvList); err != nil {
+		return fmt.Errorf("failed to list UserEnvs: %v", err)
+	}
+	for i := range userEnvList.Items {
+		userEnv := &userEnvList.Items[i]
+		if userEnv.Annotations != nil && userEnv.Annotations[migrationAnnotationKey] == "true" {
+			continue
+		}
+		once.Do(checkDomainRegion)
+		if getSysCRerr != nil {
+			return fmt.Errorf("get sysinfo failed: %w", getSysCRerr)
+		}
+		var newDefaultVal string
+		switch userEnv.EnvName {
+		case "OLARES_USER_HUGGINGFACE_SERVICE":
+			newDefaultVal = "https://huggingface.co/"
+			if isCNDomain {
+				newDefaultVal = "https://hf-mirror.com"
+			}
+		}
+		if newDefaultVal != "" && userEnv.Default != newDefaultVal {
+			original := userEnv.DeepCopy()
+			userEnv.Default = newDefaultVal
+			if userEnv.Annotations == nil {
+				userEnv.Annotations = make(map[string]string)
+			}
+			userEnv.Annotations[migrationAnnotationKey] = "true"
+			if err := c.Patch(ctx, userEnv, client.MergeFrom(original)); err != nil {
+				errs = append(errs, fmt.Errorf("patch UserEnv %s default failed: %w", userEnv.EnvName, err))
+			}
+		}
+	}
+
 	return utilerrors.NewAggregate(errs)
 }

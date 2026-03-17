@@ -53,7 +53,7 @@ func (p *UpgradingCancelingApp) Exec(ctx context.Context) (StatefulInProgressApp
 		klog.Errorf("app %s operation is not ", p.manager.Name)
 	}
 
-	err = p.updateStatus(ctx, p.manager, appsv1.Stopping, nil, appsv1.Stopping.String(), "")
+	err = p.updateStatus(ctx, p.manager, appsv1.Stopping, nil, appsv1.Stopping.String(), appsv1.Stopping.String())
 	if err != nil {
 		klog.Errorf("update appmgr state to suspending state failed %v", err)
 		return nil, err
