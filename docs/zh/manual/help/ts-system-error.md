@@ -5,6 +5,7 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 # LarePass 显示“系统错误”
 
 当 LarePass 移动端的**系统**部分显示“系统错误”时，请参考本指南进行排查。
+
 本文以 Olares One 为示例设备。如果你使用的是其他 Olares 设备，也可以参考相同的排障流程。
 
  ![系统错误](/images/zh/manual/help/ts-sys-err.png#bordered){width=90%}
