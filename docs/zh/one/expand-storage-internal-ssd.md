@@ -71,7 +71,7 @@ In this example, `sda` is the system drive which is mounted at `/` and `/boot`, 
 2. Run the extension command:
 
     ```bash
-    olares-cli disk extend
+    sudo olares-cli disk extend
     ```
 
 3. When the command prompts for confirmation, type `YES` to proceed.

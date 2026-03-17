@@ -244,7 +244,7 @@ In this example, `sda` is the system drive which is mounted at `/` and `/boot`, 
 2. Add the disk to the system volume:
 
     ```bash
-    olares-cli disk extend
+    sudo olares-cli disk extend
     ```
 
 3. Type `YES` to proceed when the command prompts for confirmation.
@@ -312,6 +312,6 @@ You can verify the storage increase in both terminal and UI.
 #### In UI
 Open Dashboard from Launchpad and confirm that total system storage capacity has increased.
 
-![Check disk volume in Dashboard](/public/images/manual/tutorials/expand-dashboard-disk.png#bordered)
+![Check disk volume in Dashboard](/images/manual/tutorials/expand-dashboard-disk.png#bordered)
 
 For full command usage and options, please refer to [`disk`](/developer/install/cli/disk.md).

@@ -245,7 +245,7 @@ nvme1n1     259:3    0 931.5G  0 disk
 2. 将检测到的未挂载磁盘加入系统存储：
 
     ```bash
-    olares-cli disk extend
+    sudo olares-cli disk extend
     ```
 3. 当命令行提示确认时，输入 `YES` 继续。
 
@@ -315,7 +315,7 @@ nvme1n1     259:3    0 931.5G  0 disk
 #### 在 UI 界面
 从启动台打开仪表盘，确认系统总存储容量已增加。
 
-![Check disk volume in Dashboard](/public/images/zh/manual/tutorials/expand-dashboard-disk.png#bordered)
+![Check disk volume in Dashboard](/images/zh/manual/tutorials/expand-dashboard-disk.png#bordered)
 
 
 如需查看完整用法与选项，请参考 [`disk`](/zh/developer/install/cli/disk.md)。
