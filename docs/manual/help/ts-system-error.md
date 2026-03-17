@@ -16,7 +16,7 @@ This guide uses Olares One as an example. If you installed Olares on your own ha
 ## Condition
 
 - The **System** section in LarePass shows **System error** instead of **Running**.
-- The Olares Desktop might be inaccessible.
+- The Olares desktop might be inaccessible.
 
 ## Cause
 
@@ -26,9 +26,9 @@ The "System error" message usually means one or more system pods are not running
 
 Follow the steps below to access the device terminal, identify any pod that is not running normally, inspect its error details, and share the results with the Olares team. This helps narrow down possible causes and speed up troubleshooting.
 
-### Step 1: Try to access Olares Desktop
+### Step 1: Try to access Olares desktop
 
-If you can still access the Olares Desktop, open Control Hub and use its built-in terminal.
+If you can still access the Olares desktop, open Control Hub and use its built-in terminal.
 
 1. Open a browser and access your Olares Desktop:
 
@@ -44,7 +44,7 @@ If you can access the terminal successfully, skip to [Step 4](#step-4-check-syst
 
 ### Step 2: Connect via SSH
 
-If you cannot access the Olares Desktop, try connecting via SSH.
+If you cannot access the Olares desktop, try connecting via SSH.
 
 :::info Same network required
 Your computer and Olares One should be on the same local network.
