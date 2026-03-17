@@ -36,15 +36,15 @@ Connecting a client app to an AI model app usually involves three steps:
 ### Authentication levels
 
 Olares provides the following access levels for application entrance:
-- **Internal (recommmended)**: Allows apps to communicate without login prompts. It also allows access within your LAN or via LarePass VPN. 
+- **Internal (recommmended)**: Allows apps to communicate without login prompts. It also allows access via your local network or via LarePass VPN. 
 <!--- **Private**: Requires user authentication, which might break automated API connections between apps.-->
 - **Public**: Open to anyone on the internet. Not recommended for private services.
 
 ### Frontend calls vs. Backend calls
 
 Client apps send API requests to AI model apps in one of the following ways:
-- **Backend calls (highly recommended)**: The client app's server process makes the request directly to the model app. By setting the model app's API to "Internal", these calls bypass authentication, making this the most stable method.
-- **Frontend calls**: The request is sent directly from your browser. This depends on the relative location of your browser and the Olares host. These calls might trigger Olares login authentication or Cross-Origin (CORS) restrictions if your device and Olares are not on the same local network.
+- **Backend calls (highly recommended)**: The client app's server process makes the request directly to the model app. By setting the model app's API to "Internal", these calls bypass authentication, making this the most stable connection method.
+- **Frontend calls**: The request is sent directly from your browser. This avoid server-side forwarding, making it generally faster. However, even with "Internal" permissions, these calls might trigger Olares login prompts or be blocked by Cross-Origin (CORS) restrictions, causing the connection to fail.
 
 ### Endpoints
 
@@ -90,7 +90,7 @@ This example uses `qwen2.5:1.5b` as the model. Make sure you have downloaded it 
 4. Open LobeHub, then go to **Settings** > **AI Service Provider** > **Ollama**.
 5. In the **Interface proxy address** field, paste the shared endpoint you copied.
    :::warning
-   If you are using local Ollama models, do not enable **Use Client Request Mode**. This setting switches the app to use frontend calls, which often triggers login prompts or connection failures when using local AI model apps.
+   If you are using local Ollama models, do not enable **Use Client Request Mode**. This setting switches the app to use [frontend calls](#frontend-calls-vs-backend-calls), which often triggers login prompts or connection failures when using local AI model apps.
    :::
    ![Enter shared endpoint](/images/manual/tutorials/api-lobechat-enter-url.png#bordered)
 6. Verify the connection:
@@ -108,6 +108,10 @@ This example uses `qwen2.5:1.5b` as the model. Make sure you have downloaded it 
 ### Connect Ollama to n8n
 
 n8n makes requests from the browser rather than its server, so it requires a user endpoint. Configure the authentication level to **Internal** so it can be accessed without a login prompt.
+
+:::tip Network requirement
+Because this connection uses the "Internal" authentication level, your device must be on the same local network as Olares or have the VPN enabled in LarePass for the connection to work.
+:::
 
 1. On Olares, open Settings, then go to **Application** > **Ollama**.
 2. In **Entrances**, click **Ollama API**.
