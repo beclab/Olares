@@ -5,16 +5,15 @@ description: Diagnose and collect information when the System section in LarePas
 
 # "System error" in LarePass
 
-Use this guide when the **System** section in LarePass displays "System error".
+Use this guide when the **System** section in LarePass displays "System error". There can be multiple underlying causes for this message, so follow the steps below to collect diagnostic information first, and then contact the Olares team with the results.
 
-This guide uses Olares One as the example device. If you are using another Olares device, you can follow the same general process where applicable.
+This guide uses Olares One as the example device. If you are using a different device, you can follow the same general process where applicable.
 
 ![System error in LarePass](/images/manual/help/ts-sys-err.png#bordered){width=90%}
 
 ## Condition
 
 - The **System** section in LarePass shows "System error".
-- LarePass cannot retrieve the system status of your Olares device.
 - Olares desktop might be inaccessible.
 
 ## Cause
@@ -50,7 +49,6 @@ Your computer and the Olares device should be on the same local network.
 :::
 
 1. Get the local IP address of your Olares device. 
-If you cannot find the local IP address, continue to get the SSH password below, and then go to **Step 3**.
 
     a. Open the LarePass app, and go to **Settings** > **System** to navigate to the **Olares management** page.
 
@@ -81,11 +79,9 @@ If you cannot find the local IP address, continue to get the SSH password below,
 
 If the connection is successful, go to [Step 4](#step-4-check-system-pod-status).
 
-If you cannot connect through SSH, go to [Step 3](#step-3-log-in-locally).
-
 ### Step 3: Log in locally
 
-Use a monitor and keyboard to log in to the device locally.
+When the SSH access is unavailable, log in to the device locally using a monitor and keyboard.
 
 1. Connect a monitor and keyboard to your Olares device. A text-based login prompt is displayed on your screen automatically.
 
