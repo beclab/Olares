@@ -150,6 +150,38 @@ spec:
         - -c
         - |
           chown -R 1000:1000 /headscale 
+      - args:
+        - |
+          set -euo pipefail
+
+          if [ ! -f /certs/tls.crt ]; then
+            echo "→ Generating self-signed cert for ${DOMAIN}"
+            openssl req -x509 -newkey rsa:4096 -nodes \
+              -keyout /certs/tls.key \
+              -out /certs/tls.crt \
+              -days 36500 \
+              -subj "/CN=${DOMAIN}" \
+              -addext "subjectAltName=DNS:${DOMAIN},DNS:${DOMAIN}.user-space-{{ .Values.bfl.username }},DNS:${DOMAIN}.user-space-{{ .Values.bfl.username }}.svc,DNS:${DOMAIN}.user-space-{{ .Values.bfl.username }}.svc.cluster.local"
+            cp -v /certs/tls.crt /certs/ca.crt
+          else
+            echo "→ Certificate already exists, skipping generation"
+          fi
+
+          echo "→ Fixing permissions..."
+          chmod 644 /certs/tls.crt /certs/ca.crt
+          chmod 600 /certs/tls.key
+        command:
+        - sh
+        - -c
+        env:
+        - name: DOMAIN
+          value: headscale-server-svc
+        image: alpine/openssl:3.5.5
+        imagePullPolicy: IfNotPresent
+        name: init-cert
+        volumeMounts:
+        - mountPath: /certs
+          name: tls-cert
       - name: init
         image: beclab/headscale-init:v0.1.13
         imagePullPolicy: IfNotPresent
@@ -222,6 +254,23 @@ spec:
           readOnly: true
         ports:
         - containerPort: 8080
+      - command:
+        - nginx
+        - -g
+        - daemon off;
+        image: nginxinc/nginx-unprivileged:1.29.5-alpine3.23
+        imagePullPolicy: IfNotPresent
+        name: headscale-nginx-https
+        ports:
+        - containerPort: 443
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /etc/nginx/certs
+          name: tls-cert
+          readOnly: true
+        - mountPath: /etc/nginx/conf.d/
+          name: headscale-nginx-config
+          readOnly: true
       - args:
         - APIKEY=$(cat /etc/headscale/apikey) exec /headscale-api-wrapper
         command:
@@ -240,6 +289,10 @@ spec:
         - containerPort: 9000
         - containerPort: 8000
       volumes:
+      - name: tls-cert
+        hostPath:
+          path: '{{ .Values.userspace.appCache  }}/headscale/config/certs'
+          type: DirectoryOrCreate
       - name: config
         hostPath:
           type: DirectoryOrCreate
@@ -259,6 +312,13 @@ spec:
           - key: acl.json
             path: acl.json
           name: tailscale-acl
+      - name: headscale-nginx-config
+        configMap:
+          defaultMode: 420
+          items:
+          - key: default.conf
+            path: default.conf
+          name: headscale-nginx-config
 
 ---
 apiVersion: apps/v1
@@ -293,11 +353,13 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: tailscale
-        image: tailscale/tailscale:v1.48.1
+        image: tailscale/tailscale:v1.94.2
         imagePullPolicy: IfNotPresent
         command: ["/bin/sh", "-c"]
         args:
           - >-
+            cp /certs/ca.crt /usr/local/share/ca-certificates/headscale-ca.crt &&
+            update-ca-certificates &&
             TS_AUTHKEY=$(cat /etc/headscale/preauthkey)
             exec /usr/local/bin/containerboot
         securityContext:
@@ -312,6 +374,9 @@ spec:
           mountPath: /etc/headscale
         - name: tailscale-data
           mountPath: /var/lib/tailscale
+        - mountPath: /certs
+          name: tls-cert
+          readOnly: true
         env:
         - name: COREDNS_SVC
           value: {{ $corednsIP }}
@@ -340,7 +405,7 @@ spec:
           value: $(COREDNS_SVC)/32
         - name: TS_EXTRA_ARGS
           value: >-
-            --login-server http://headscale-server-svc:8080
+            --login-server https://headscale-server-svc
             --netfilter-mode {{ if eq $role "owner" }}on{{ else }}off{{ end }}
         - name: TS_USERSPACE
           value: "false"
@@ -355,6 +420,10 @@ spec:
         hostPath:
           type: DirectoryOrCreate
           path: '{{ .Values.userspace.appCache }}/tailscale/data'
+      - name: tls-cert
+        hostPath:
+          path: '{{ .Values.userspace.appCache }}/headscale/config/certs'
+          type: DirectoryOrCreate
 
 ---
 apiVersion: v1
@@ -417,4 +486,34 @@ data:
 kind: ConfigMap
 metadata:
   name: tailscale-acl
+  namespace: user-space-{{ .Values.bfl.username }}
+
+---
+
+apiVersion: v1
+data:
+  default.conf: |
+    map $http_upgrade $connection_upgrade {
+      default upgrade;
+      ''      close;
+    }
+
+    server {
+      listen 8443 ssl;
+      ssl_certificate /etc/nginx/certs/tls.crt;
+      ssl_certificate_key /etc/nginx/certs/tls.key;
+
+      location / {
+        proxy_pass http://127.0.0.1:8080;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection '$connection_upgrade';
+      }
+    }
+kind: ConfigMap
+metadata:
+  name: headscale-nginx-config
   namespace: user-space-{{ .Values.bfl.username }}
