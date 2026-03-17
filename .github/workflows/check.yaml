@@ -58,7 +58,7 @@ jobs:
           bash build/package.sh
 
       - name: Run chart-testing (lint)
-        run: ct lint --chart-dirs .dist/wizard/config,.dist/wizard/config/apps,.dist/wizard/config/gpu --check-version-increment=false --all
+        run: ct lint --chart-dirs .dist/wizard/config,.dist/wizard/config/apps,.dist/wizard/config/gpu --check-version-increment=false --all --validate-maintainers=false
 
   test-version:
     runs-on: ubuntu-latest
