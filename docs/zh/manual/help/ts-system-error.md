@@ -6,7 +6,9 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 
 当 LarePass 移动端的**系统**部分显示“系统错误”时，请参考本指南进行排查。出现此提示可能由多种底层原因导致，请先按照以下步骤收集诊断信息，然后将结果提供给 Olares 团队。
 
-本文以 Olares One 为示例设备。如果你使用的是其他设备，也可以参考相同的排障流程。
+:::info
+本文以 Olares One 为示例设备。如果你在自己的设备上安装 Olares，排查步骤基本相同，只是访问终端的方式可能有所不同。
+:::
 
  ![系统错误](/images/zh/manual/help/ts-sys-err.png#bordered){width=90%}
 
@@ -17,7 +19,7 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 
 ## 原因
 
-“系统错误”提示可能由不同的底层问题触发。常见原因之一是 Olares 设备上的一个或多个系统 Pod 未能正常运行。发生这种情况时，LarePass 无法获取整体系统状态，因此会显示“系统错误”。
+“系统错误”通常意味着一个或多个系统 Pod 运行异常。发生这种情况时，LarePass 无法获取整体系统状态。
 
 ## 解决方案
 
@@ -65,17 +67,14 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 
       ![在 Vault 中查看保存的 SSH 密码](/public/images/zh/manual/olares/ssh-check-password-in-vault1.png#bordered)
 
-3. 通过 SSH 连接。
+3. 在电脑打开终端，然后通过 SSH 连接设备。
 
-   a. 在电脑上打开终端。
-
-   b. 输入以下命令，将 `<local_ip_address>` 替换为内网 IP，然后按回车键：
+    a. 输入以下命令，将 `<local_ip_address>` 替换为此前获取的内网 IP：
 
       ```bash
       ssh olares@<local_ip_address>
       ```
-
-   c. 根据提示输入 SSH 密码，然后按回车键。
+    b. 根据提示输入 SSH 密码。
 
 如果连接成功，直接跳转至[步骤 4](#步骤-4-检查系统-pod-状态)。
 
@@ -90,7 +89,7 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
    ```
 
 2. 输入用户名 `olares` 并按回车键。
-3. 输入**步骤 2** 中获取的设备登录密码并按回车键。
+3. 输入[步骤 2](#步骤-2-尝试-ssh-连接) 中获取的设备登录密码并按回车键。
 
 ### 步骤 4: 检查系统 Pod 状态
 
@@ -99,7 +98,7 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
     kubectl get pods -A
     ```
 2. 查看 **STATUS** 列，找到状态不是 `Running` 的 Pod。
-3. 准确记录每个异常 Pod 的 **NAMESPACE**（第一列）和 **NAME**（第二列）。
+3. 准确记录每个异常 Pod 的 **NAMESPACE** 和 **NAME**。
     ![定位异常 Pod](/images/zh/manual/help/ts-sys-err-pod-crash.png#bordered){width=90%}
 
 ### 步骤 5：查看 Pod 错误信息
@@ -122,7 +121,8 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 
 请在 [Olares GitHub 仓库](https://github.com/beclab/Olares/issues)提交 Issue，并提供以下信息：
 
-- `kubectl describe pod <pod-name> -n <namespace>` 命令的输出结果。
+- 每个异常 Pod 对应的 `kubectl describe pod <pod-name> -n <namespace>` 完整输出结果。
 - 错误信息的截图（如有）。
+- 错误最初出现的时间及简要说明（例如，是在更新后还是重启后出现的）。
 
 这些信息将帮助我们的团队更快排查并解决问题。
