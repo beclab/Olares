@@ -35,14 +35,14 @@ Connecting a client app to an AI model app usually involves three steps:
 
 ### Authentication levels
 
-Olares provides three access levels for each application entrance:
-- **Internal (recommmended)**: Allows apps to communicate without user authentication. It also allows access within your LAN or via LarePass VPN. 
+Olares provides the following access levels for application entrance:
+- **Internal (recommmended)**: Allows apps to communicate without login prompts. It also allows access within your LAN or via LarePass VPN. 
 <!--- **Private**: Requires user authentication, which might break automated API connections between apps.-->
 - **Public**: Open to anyone on the internet. Not recommended for private services.
 
 ### Frontend calls vs. Backend calls
 
-Client apps send API requests to AI model apps in one of two ways:
+Client apps send API requests to AI model apps in one of the following ways:
 - **Backend calls (highly recommended)**: The client app's server process makes the request directly to the model app. By setting the model app's API to "Internal", these calls bypass authentication, making this the most stable method.
 - **Frontend calls**: The request is sent directly from your browser. This depends on the relative location of your browser and the Olares host. These calls might trigger Olares login authentication or Cross-Origin (CORS) restrictions if your device and Olares are not on the same local network.
 
