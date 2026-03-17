@@ -51,8 +51,6 @@ By the end of this guide, you will learn how to:
 
 2. When the installation finishes and the system restarts, unplug the Windows USB drive.
 
-Once installation is complete, the system will restart into Windows automatically.
-
 ## Step 4: Boot back into Olares OS
 
 1. Restart Olares One.
