@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -55,40 +56,55 @@ func suspendOrResumeApp(ctx context.Context, cli client.Client, am *appv1alpha1.
 		//var zeroReplica int32 = 0
 		for _, w := range listObjects {
 			workloadName := ""
-			switch workload := w.(type) {
-			case *appsv1.Deployment:
-				if check(targetAppName, workload.Name) {
-					if workload.Annotations == nil {
-						workload.Annotations = make(map[string]string)
+			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				switch workload := w.(type) {
+				case *appsv1.Deployment:
+					var latest appsv1.Deployment
+					if err := cli.Get(ctx, types.NamespacedName{Name: workload.Name, Namespace: workload.Namespace}, &latest); err != nil {
+						return err
 					}
-					workload.Annotations[suspendAnnotation] = "app-service"
-					workload.Annotations[suspendCauseAnnotation] = "user operate"
-					workload.Spec.Replicas = &replicas
-					workloadName = workload.Namespace + "/" + workload.Name
-				}
-			case *appsv1.StatefulSet:
-				if check(targetAppName, workload.Name) {
-					if workload.Annotations == nil {
-						workload.Annotations = make(map[string]string)
+					if !check(targetAppName, latest.Name) {
+						return nil
 					}
-					workload.Annotations[suspendAnnotation] = "app-service"
-					workload.Annotations[suspendCauseAnnotation] = "user operate"
-					workload.Spec.Replicas = &replicas
-					workloadName = workload.Namespace + "/" + workload.Name
+					if latest.Annotations == nil {
+						latest.Annotations = make(map[string]string)
+					}
+					latest.Annotations[suspendAnnotation] = "app-service"
+					latest.Annotations[suspendCauseAnnotation] = "user operate"
+					latest.Spec.Replicas = &replicas
+					workloadName = latest.Namespace + "/" + latest.Name
+					return cli.Update(ctx, &latest)
+				case *appsv1.StatefulSet:
+					var latest appsv1.StatefulSet
+					if err := cli.Get(ctx, types.NamespacedName{Name: workload.Name, Namespace: workload.Namespace}, &latest); err != nil {
+						return err
+					}
+					if !check(targetAppName, latest.Name) {
+						return nil
+					}
+					if latest.Annotations == nil {
+						latest.Annotations = make(map[string]string)
+					}
+					latest.Annotations[suspendAnnotation] = "app-service"
+					latest.Annotations[suspendCauseAnnotation] = "user operate"
+					latest.Spec.Replicas = &replicas
+					workloadName = latest.Namespace + "/" + latest.Name
+					return cli.Update(ctx, &latest)
 				}
-			}
-			if replicas == 0 {
-				klog.Infof("Try to suspend workload name=%s", workloadName)
-			} else {
-				klog.Infof("Try to resume workload name=%s", workloadName)
-			}
-			err := cli.Update(ctx, w.(client.Object))
+				return nil
+			})
 			if err != nil {
 				klog.Errorf("Failed to scale workload name=%s err=%v", workloadName, err)
 				return err
 			}
-
-			klog.Infof("Success to operate workload name=%s", workloadName)
+			if workloadName != "" {
+				if replicas == 0 {
+					klog.Infof("Try to suspend workload name=%s", workloadName)
+				} else {
+					klog.Infof("Try to resume workload name=%s", workloadName)
+				}
+				klog.Infof("Success to operate workload name=%s", workloadName)
+			}
 		} // end list object loop
 
 		return nil
@@ -142,9 +158,19 @@ func suspendOrResumeApp(ctx context.Context, cli client.Client, am *appv1alpha1.
 
 		// Reset the stop-all/resume-all annotation after processing
 		if am.Annotations != nil {
-			delete(am.Annotations, api.AppStopAllKey)
-			delete(am.Annotations, api.AppResumeAllKey)
-			if err := cli.Update(ctx, am); err != nil {
+			if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				var latest appv1alpha1.ApplicationManager
+				if err := cli.Get(ctx, types.NamespacedName{Name: am.Name}, &latest); err != nil {
+					return err
+				}
+				if latest.Annotations == nil {
+					return nil
+				}
+				delete(latest.Annotations, api.AppStopAllKey)
+				delete(latest.Annotations, api.AppResumeAllKey)
+				delete(latest.Annotations, api.AppStopByControllerDuePendingPod)
+				return cli.Update(ctx, &latest)
+			}); err != nil {
 				klog.Warningf("failed to reset stop-all/resume-all annotations for app=%s owner=%s: %v", am.Spec.AppName, am.Spec.AppOwner, err)
 				// Don't return error, operation already succeeded
 			}
