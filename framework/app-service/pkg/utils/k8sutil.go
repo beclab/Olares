@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"k8s.io/apimachinery/pkg/fields"
 	"net"
 	"net/http"
 	"net/url"
@@ -12,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/go-resty/resty/v2"
 
@@ -484,6 +485,10 @@ func GetDeviceName() (string, error) {
 	return result.Data.DeviceName, nil
 }
 
+const (
+	PendingKindInSufficientGPU = "InsufficientGPU"
+)
+
 func GetPendingKind(ctrlClient client.Client, pod *corev1.Pod) (string, error) {
 	fieldSelector := fields.OneTermEqualSelector("involvedObject.name", pod.Name)
 	var eventList corev1.EventList
@@ -494,16 +499,11 @@ func GetPendingKind(ctrlClient client.Client, pod *corev1.Pod) (string, error) {
 		return "", err
 	}
 
-	eventFrom := ""
+	pendingKind := ""
 	for _, event := range eventList.Items {
-		if event.Reason == "FailedScheduling" {
-			if event.ReportingController != "" {
-				eventFrom = event.ReportingController
-			} else {
-				eventFrom = event.Source.Component
-			}
-			break
+		if event.Reason == PendingKindInSufficientGPU {
+			pendingKind = PendingKindInSufficientGPU
 		}
 	}
-	return eventFrom, nil
+	return pendingKind, nil
 }
