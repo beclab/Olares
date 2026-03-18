@@ -512,6 +512,10 @@ const side = {
           text: "Access Olares locally",
           link: "/manual/best-practices/local-access",
         },
+        {
+          text: "Connect AI apps",
+          link: "/manual/best-practices/connect-ai-apps",
+        },
       ],
     },
     { text: "Glossary", link: "/manual/glossary" },
