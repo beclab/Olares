@@ -110,7 +110,7 @@ This example uses `qwen2.5:1.5b` as the model. Make sure you have downloaded it 
 n8n makes requests from the browser rather than its server, so it requires a user endpoint. Configure the authentication level to **Internal** so it can be accessed without a login prompt.
 
 :::tip Network requirement
-Because this connection uses the "Internal" authentication level, your device must be on the same local network as Olares or have the VPN enabled in LarePass for the connection to work.
+Ensure that your device is on the same local network as Olares or has the VPN enabled in LarePass for the connection to work.
 :::
 
 1. On Olares, open Settings, then go to **Application** > **Ollama**.
