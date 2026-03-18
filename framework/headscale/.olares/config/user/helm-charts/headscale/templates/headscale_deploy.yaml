@@ -262,7 +262,7 @@ spec:
         imagePullPolicy: IfNotPresent
         name: headscale-nginx-https
         ports:
-        - containerPort: 443
+        - containerPort: 8443
           protocol: TCP
         volumeMounts:
         - mountPath: /etc/nginx/certs
@@ -444,6 +444,10 @@ spec:
       name: api
       port: 8000
       targetPort: 8000
+    - protocol: TCP
+      name: https
+      port: 443
+      targetPort: 8443
 
 ---
 apiVersion: v1
