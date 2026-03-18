@@ -7,31 +7,31 @@ description: Learn how to connect AI applications on Olares using shared endpoin
 
 Many AI applications on Olares follow the same pattern: one app provides AI capabilities over an API, and another app provides the interface you use every day. Once you understand this pattern, you can apply the same steps to connect almost any compatible combination of apps.
 
-This tutorial explains the core concepts and walks you through practical examples using Ollama as the AI model app.
+This tutorial explains the core concepts and walks you through practical examples using Ollama as the AI service app.
 
 ## Objectives
 
 By the end of this tutorial, you will be able to:
 
-- Distinguish between AI model apps and client apps.
+- Distinguish between AI service apps and client apps.
 - Configure authentication levels to allow seamless app-to-app communication.
 - Understand when to use shared endpoint or user endpoint.
 - Connect common client apps such as LobeHub (previously LobeChat), n8n, and Continue.dev to Ollama.
 
 ## How it works
 
-Connecting a client app to an AI model app usually involves three steps:
+Connecting a client app to an AI service app usually involves three steps:
 
-1. In Olares Settings, find the API entrance of the AI model app, and set its **Authentication level** to **Internal**.
+1. In Olares Settings, find the API entrance of the AI service app, and set its **Authentication level** to **Internal**.
 2. Copy the endpoint shown for that entrance.
 3. In the client app, paste this endpoint into the model or API configuration page. If the connection fails, adjust the endpoint according to the rules in [Which endpoint to use](#which-endpoint-to-use).
 
 ## Core concepts
 
-### AI model apps vs. Client apps
+### AI service apps vs. Client apps
 
-- **AI model apps**: These act as the backend engine. They provide AI capabilities over an API, and they often run as services without a chat interface of their own. For example, Ollama and ComfyUI Shared.
-- **Client apps**: These act as the user-facing app. They provide the chat interface you interact with directly, but they rely on an AI model app to generate responses. For example, LobeHub, Open WebUI, and n8n.
+- **AI service apps**: These act as the backend engine. They provide AI capabilities over an API, and they often run as services without a chat interface of their own. For example, Ollama and ComfyUI Shared.
+- **Client apps**: These act as the user-facing app. They provide the chat interface you interact with directly, but they rely on an AI service app to generate responses. For example, LobeHub, Open WebUI, and n8n.
 
 ### Authentication levels
 
@@ -42,13 +42,13 @@ Olares provides the following access levels for application entrance:
 
 ### Frontend calls vs. Backend calls
 
-Client apps send API requests to AI model apps in one of the following ways:
-- **Backend calls (highly recommended)**: The client app's server process makes the request directly to the model app. By setting the model app's API to "Internal", these calls bypass authentication, making this the most stable connection method.
+Client apps send API requests to AI service apps in one of the following ways:
+- **Backend calls (highly recommended)**: The client app's server process makes the request directly to the AI service app. By setting the service app's API to "Internal", these calls bypass authentication, making this the most stable connection method.
 - **Frontend calls**: The request is sent directly from your browser. This avoid server-side forwarding, making it generally faster. However, even with "Internal" permissions, these calls might trigger Olares login prompts or be blocked by Cross-Origin (CORS) restrictions, causing the connection to fail.
 
 ### Endpoints
 
-An endpoint is the URL through which an application's entrance can be reached. When an AI model app exposes an API entrance, you will usually see two types of endpoint:
+An endpoint is the URL through which an application's entrance can be reached. When an AI service app exposes an API entrance, you will usually see two types of endpoint:
 
 | Type | Format | Description |
 |------|--------|-------------|
@@ -78,19 +78,19 @@ This tutorial covers connections using the `olares.com` domain. If your client d
 
 ### Connect Ollama to LobeHub
 
-In this example, Ollama Shared acts as the AI model app, and LobeHub is the client app.
+In this example, Ollama Shared acts as the AI service app, and LobeHub is the client app.
 
 This example uses `qwen2.5:1.5b` as the model. Make sure you have downloaded it before starting.
 
 1. On Olares, open Settings, then go to **Applications** > **Ollama**.
 2. In **Shared entrances**, select **Ollama API**.
-   ![Ollama shared entrance](/images/manual/tutorials/api-ollama-shared.png#bordered)
+   ![Ollama shared entrance](/images/manual/tutorials/api-ollama-shared.png#bordered){width=80%}
    
 3. Copy the shared endpoint URL.
 4. Open LobeHub, then go to **Settings** > **AI Service Provider** > **Ollama**.
 5. In the **Interface proxy address** field, paste the shared endpoint you copied.
    :::warning
-   If you are using local Ollama models, do not enable **Use Client Request Mode**. This setting switches the app to use [frontend calls](#frontend-calls-vs-backend-calls), which often triggers login prompts or connection failures when using local AI model apps.
+   If you are using local Ollama models, do not enable **Use Client Request Mode**. This setting switches the app to use [frontend calls](#frontend-calls-vs-backend-calls), which often triggers login prompts or connection failures when using local AI service apps.
    :::
    ![Enter shared endpoint](/images/manual/tutorials/api-lobechat-enter-url.png#bordered)
 6. Verify the connection:
@@ -144,7 +144,7 @@ This example uses `llama3.1:8b`, `qwen2.5-coder:7b`, and `qwen2.5-coder:1.5b`. M
 6. Configure models in Continue to use Ollama:
 
    a. Click **Local Config** to open the **Configs** menu, then click the Settings icon next to **Local Config**.
-   ![Open local config](/images/manual/tutorials/api-continue-local-config.png#bordered){width=60%}
+   ![Open local config](/images/manual/tutorials/api-continue-local-config.png#bordered){width=45%}
 
    b. In the `config.yaml` that opens, update the model entries with the Ollama endpoint you copied:
    ```yaml
@@ -181,10 +181,10 @@ This example uses `llama3.1:8b`, `qwen2.5-coder:7b`, and `qwen2.5-coder:1.5b`. M
    ```plain
    Write a hello world python script
    ```
-   ![Enter prompt](/images/manual/tutorials/api-continue-prompt.png#bordered){width=60%}
+   ![Enter prompt](/images/manual/tutorials/api-continue-prompt.png#bordered){width=45%}
 
    Continue will route the request to Ollama on your Olares system and return the result. With LarePass VPN enabled, your IDE can reach the Ollama endpoint as if it were on the same private network.
-   ![Result](/images/manual/tutorials/api-continue-hello-world.png#bordered){width=60%}
+   ![Result](/images/manual/tutorials/api-continue-hello-world.png#bordered){width=45%}
 
 ## Learn more
 
