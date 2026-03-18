@@ -2,11 +2,12 @@ package controllers
 
 import (
 	"context"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
@@ -160,10 +161,10 @@ func (r *PodAbnormalSuspendAppController) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 
-	if pendingSince, found := pendingUnschedulableSince(&pod); found || pendingKind == "hami-scheduler" {
+	if pendingSince, found := pendingUnschedulableSince(&pod); found || pendingKind == utils.PendingKindInSufficientGPU {
 		elapsed := time.Since(pendingSince)
 		klog.Infof("pod pending unschedulable name=%s namespace=%s since=%s elapsed=%v timeout=%v", pod.Name, pod.Namespace, pendingSince.Format(time.RFC3339), elapsed, r.pendingTimeout)
-		if elapsed < r.pendingTimeout && pendingKind != "hami-scheduler" {
+		if elapsed < r.pendingTimeout && pendingKind != utils.PendingKindInSufficientGPU {
 			delay := r.pendingTimeout - elapsed
 			klog.Infof("requeue pod name=%s namespace=%s after %v until timeout", pod.Name, pod.Namespace, delay)
 			return ctrl.Result{RequeueAfter: r.pendingTimeout - elapsed}, nil
@@ -172,7 +173,7 @@ func (r *PodAbnormalSuspendAppController) Reconcile(ctx context.Context, req ctr
 		klog.Infof("attempting to suspend app=%s owner=%s due to pending unschedulable timeout", appName, owner)
 		reason := constants.AppUnschedulable
 
-		if pendingKind == "hami-scheduler" {
+		if pendingKind == utils.PendingKindInSufficientGPU {
 			reason = constants.AppHamiSchedulable
 		}
 		ok, err := r.trySuspendApp(ctx, owner, appName, reason, "pending unschedulable timeout on pod: "+pod.Namespace+"/"+pod.Name, pod.Namespace)
