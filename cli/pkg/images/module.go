@@ -20,7 +20,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/prepare"
 	"github.com/beclab/Olares/cli/pkg/core/task"
-	"github.com/beclab/Olares/cli/pkg/kubesphere/plugins"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 )
 
@@ -41,7 +40,6 @@ func (p *PreloadImagesModule) Init() {
 		Name:  "PreloadImages",
 		Hosts: p.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
-			&plugins.IsCloudInstance{Not: true},
 			&ContainerdInstalled{},
 		},
 		Action: &LoadImages{
