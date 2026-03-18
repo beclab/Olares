@@ -341,9 +341,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 		currentTerminusState = Uninitialized
 	}
 
-	if changed, err := utils.IsIpChanged(ctx, CurrentState.TerminusState != NotInstalled); err != nil {
-		return err
-	} else if changed {
+	if utils.IsIpChanged(ctx, CurrentState.TerminusState != NotInstalled) {
 		currentTerminusState = InvalidIpAddress
 		return nil
 	}
@@ -388,6 +386,8 @@ func CheckCurrentStatus(ctx context.Context) error {
 	// (not during download phase)
 	upgradeTarget, err := GetOlaresUpgradeTarget()
 	if err != nil {
+		// keep the current state if error occurs when getting upgrade target, avoid state flapping
+		currentTerminusState = CurrentState.TerminusState
 		return fmt.Errorf("error getting Olares upgrade target: %v", err.Error())
 	}
 	if upgradeTarget != nil && upgradeTarget.Downloaded && !upgradeTarget.DownloadOnly {
