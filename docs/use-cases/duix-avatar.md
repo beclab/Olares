@@ -56,7 +56,7 @@ To follow this guide using the `ffmpeg` command, ensure it is installed on your 
    ```
    ![Upload source audio](/images/manual/use-cases/duix-avatar-upload-source-audio.png#bordered)
 
-   2. Upload `output_video.mp4` to:
+3. Upload `output_video.mp4` to:
    ```plain
    /Data/heygem/face2face-data/temp/
    ```
@@ -109,7 +109,7 @@ This step uses the voice model you trained in Step 1 to synthesize new audio fro
    ![Generate audio file](/images/manual/use-cases/duix-avatar-generate-audio-file.png#bordered)
 
 6. Rename the downloaded file to `new.mp3`. In the same folder, convert it to `.wav` with `ffmpeg`:
-    ```bashß
+    ```bash
    ffmpeg -i new.mp3 new.wav
    ```
 7. Upload the new `new.wav` file to:
@@ -159,4 +159,3 @@ Confirm the following:
 
 ### Media is updated, but the old video is still generated
 Ensure you are using a new, unique `code` parameter for the video synthesis. The system caches results, so reusing a `code` will return the previously cached video.
-

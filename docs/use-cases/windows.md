@@ -163,7 +163,7 @@ If the Windows system image fails to download during setup:
     2. Select the windows project.
     3. Under **Deployment**, click windows.
     4. Click **Restart**.
-    ![Restart VM](/images/manual/use-cases//win-restart.png#bordered)
+    ![Restart VM](/images/manual/use-cases/win-restart.png#bordered)
 
   After the restart, the system image download will automatically retry.
 - If repeated failures occur, your IP may have been temporarily blocked by Microsoft due to multiple download attempts in a short period.  

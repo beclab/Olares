@@ -84,8 +84,8 @@ Deleted files cannot be recovered.
 <template #LarePass-desktop>
 
 1. Open the LarePass desktop client.
-1. In **Files**, select the file to delete, right-click to open the context menu, and select **Delete**.
-2. Confirm the deletion in the popup window.
+2. In **Files**, select the file to delete, right-click to open the context menu, and select **Delete**.
+3. Confirm the deletion in the popup window.
 </template>
 <template #LarePass-mobile>
 
