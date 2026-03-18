@@ -497,6 +497,10 @@ const side = {
           text: "本地访问 Olares",
           link: "/zh/manual/best-practices/local-access",
         },
+        {
+          text: "连接 AI 应用",
+          link: "/zh/manual/best-practices/connect-ai-apps",
+        },        
       ],
     },
     { text: "术语", link: "/zh/manual/glossary" },
