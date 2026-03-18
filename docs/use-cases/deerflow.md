@@ -119,8 +119,8 @@ Restart the service to apply the new model and search configurations.
 2. Under **Deployments**, locate **deerflow** and click **Restart**.
    ![Restart DeerFlow](/images/manual/use-cases/deerflow-restart.png#bordered)
 
-2. In the confirmation dialog, type `deerflow` and click **Confirm**.
-3. Wait for the status icon to turn green, which indicates the service has successfully restarted.
+3. In the confirmation dialog, type `deerflow` and click **Confirm**.
+4. Wait for the status icon to turn green, which indicates the service has successfully restarted.
 
 ## Run DeerFlow
 ### Run a deep research task

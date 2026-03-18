@@ -49,7 +49,7 @@ To search an app in the market:
 
 1. Open the Market app from the Dock or Launchpad.
 2. In the **Manage** submenu on the left, click **Search**.
-2. Enter the keywords. The relevant results will appear as you type.
+3. Enter the keywords. The relevant results will appear as you type.
 
 ![Search app](/images/manual/olares/search-app.png#bordered)
 
@@ -246,13 +246,13 @@ If certain applications are not in use and you want to free up the system resour
 
 To fully release resources for shared applications such as Ollama, the system-side service must be stopped. This action can only be performed by an administrator.
 
-When the admin stops a shared application, the **Also uninstall the shared server (affects all users)** checkbox appears:
+When the admin stops a shared application, the **Also stop the shared server (affects all users)** checkbox appears:
 - To fully release the resources, this checkbox must be selected.
 - Once selected, the service is disabled for the entire cluster, and other users will no longer be able to use the application.
 - This checkbox only appears in multi-user clusters. In a single-user scenario, the system automatically stops both the user-facing application and the system-side service by default.
 
 :::info Notes for Olares V1.12.4 and earlier
 In Olares 1.12.4 and earlier versions, to fully release resources, you must use Market:
-- Stop the app in Market and ensure that the **Also uninstall the shared server (affects all users)** option is selected.
-- If the user-facing application has already been stopped through Settings, you must first resume it in Market, and then stop the shared application while ensuring the **Also uninstall the shared server (affects all users)** option is selected. 
+- Stop the app in Market and ensure that the **Also stop the shared server (affects all users)** option is selected.
+- If the user-facing application has already been stopped through Settings, you must first resume it in Market, and then stop the shared application while ensuring the **Also stop the shared server (affects all users)** option is selected. 
 :::

@@ -65,7 +65,7 @@ Olares supports multiple users and provides two distinct namespaces for system a
 
    System applications and user's built-in applications are generally restricted from direct access by third-party applications.
   
-   However, if built-in applications or database clusters make specific service interfaces available through a [service provider](../develop/advanced/provider.md), community applications can request access by [declaring these permissions](../develop/package/manifest.md#sysdata).
+   However, if built-in applications or database clusters make specific service interfaces available through a [service provider](../develop/advanced/provider.md), community applications can request access by [declaring these permissions](../develop/package/manifest.md).
    
    When such access is granted, the system routes these network requests through secure proxies in the `user-system` namespace, ensuring proper authentication and protection of resources.
 

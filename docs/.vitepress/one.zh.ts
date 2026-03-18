@@ -135,7 +135,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/windows",
         },
         {
-          text: "Generate music with Ace-Step",
+          text: "Generate music with ACE-Step",
           link: "/zh/one/ace-step",
         },
 
@@ -225,7 +225,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         },
         {
           text: "Restore Olares One",
-          collapsed: true,
           items: [
             {
               text: "Factory reset",
