@@ -70,7 +70,7 @@ This tutorial covers connections using the `olares.com` domain. If your client d
 3. Add suffixes if needed. 
 
    Many client apps expect the base URL to end with `/v1` for OpenAI-compatible APIs, or `/api` for other formats. If the connection fails, try appending the appropriate suffix. For example: `http://{route-ID}.shared.olares.com/v1`. This applies to both endpoint types.
-4. Placeholder API key.
+4. Use a placeholder API key.
 
    If a client app requires an API key but the service does not use one, enter any placeholder text such as `ollama` to satisfy the required field.
 
@@ -78,7 +78,7 @@ This tutorial covers connections using the `olares.com` domain. If your client d
 
 ### Connect Ollama to LobeHub
 
-In this example, Ollama Shared acts as the AI service app, and LobeHub is the client app.
+In this example, Ollama acts as the AI service app, and LobeHub is the client app.
 
 This example uses `qwen2.5:1.5b` as the model. Make sure you have downloaded it before starting.
 
