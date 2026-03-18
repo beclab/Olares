@@ -141,7 +141,11 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 					if errors.Is(err, errcode.ErrPodPending) {
 						p.finally = func() {
 							klog.Infof("app %s pods is still pending, update app state to stopping", p.manager.Spec.AppName)
-							updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Stopping, nil, err.Error(), constants.AppUnschedulable)
+							reason := constants.AppUnschedulable
+							if errors.Is(err, errcode.ErrHamiUnschedulable) {
+								reason = constants.AppHamiSchedulable
+							}
+							updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Stopping, nil, err.Error(), reason)
 							if updateErr != nil {
 								klog.Errorf("update status failed %v", updateErr)
 								return
