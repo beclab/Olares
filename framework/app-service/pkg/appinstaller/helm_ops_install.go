@@ -683,11 +683,11 @@ func (h *HelmOps) checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, er
 		if err != nil {
 			return false, err
 		}
-		if pendingKind == "hami-scheduler" {
+		if pendingKind == utils.PendingKindInSufficientGPU {
 			if isServerSide {
 				return false, errors.Join(errcode.ErrServerSidePodPending, errcode.ErrHamiUnschedulable)
 			}
-			return false, errcode.ErrPodPending
+			return false, errors.Join(errcode.ErrPodPending, errcode.ErrHamiUnschedulable)
 		}
 
 		if pod.Status.Phase == corev1.PodPending && pendingDuration > time.Minute*10 {
@@ -722,18 +722,14 @@ func (h *HelmOps) getPendingKind(pod *corev1.Pod) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	eventFrom := ""
+	pendingKind := ""
 	for _, event := range events.Items {
-		if event.Reason == "FailedScheduling" {
-			if event.ReportingController != "" {
-				eventFrom = event.ReportingController
-			} else {
-				eventFrom = event.Source.Component
-			}
+		if event.Reason == utils.PendingKindInSufficientGPU {
+			pendingKind = utils.PendingKindInSufficientGPU
 			break
 		}
 	}
-	return eventFrom, nil
+	return pendingKind, nil
 }
 
 type applicationSettingsSubPolicy struct {

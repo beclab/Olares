@@ -164,9 +164,9 @@ func (p *resumingInProgressApp) IsStartUp(ctx context.Context) bool {
 		select {
 		case <-timer.C:
 			startedUp, _ := isStartUp(p.manager, p.client)
-			klog.Infof("wait app %s pod to startup, time elapsed: %v", p.manager.Spec.AppOwner, time.Since(start))
+			klog.Infof("wait app %s pod to startup, time elapsed: %v", p.manager.Spec.AppName, time.Since(start))
 			if startedUp {
-				klog.Infof("time: %v, appState: %v", time.Now(), appsv1.Initializing)
+				klog.Infof("app: %s,time: %v, appState: %v", p.manager.Spec.AppName, time.Now(), appsv1.Initializing)
 				return true
 			}
 		case <-ctx.Done():

@@ -2,11 +2,12 @@ package controllers
 
 import (
 	"context"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
@@ -35,18 +36,23 @@ import (
 
 const (
 	envPendingPodSuspendAppTimeout = "PENDING_POD_SUSPEND_APP_TIMEOUT"
+	envPendingPodMinRequeueDelay   = "PENDING_POD_MIN_REQUEUE_DELAY"
 )
 
 // PodAbnormalSuspendAppController watches Pods belonging to applications and suspends the app
 // when a Pod is Evicted, or when Pending and Unschedulable beyond a timeout.
 type PodAbnormalSuspendAppController struct {
 	client.Client
-	pendingTimeout time.Duration
+	pendingTimeout  time.Duration
+	minRequeueDelay time.Duration
 }
 
 func (r *PodAbnormalSuspendAppController) SetUpWithManager(mgr ctrl.Manager) error {
-	r.pendingTimeout = parsePendingTimeout(os.Getenv(envPendingPodSuspendAppTimeout))
-
+	r.pendingTimeout = parseTimeWithDefault(envPendingPodSuspendAppTimeout, 3*time.Minute)
+	r.minRequeueDelay = parseTimeWithDefault(envPendingPodMinRequeueDelay, 3*time.Second)
+	if r.minRequeueDelay > r.pendingTimeout {
+		r.minRequeueDelay = r.pendingTimeout
+	}
 	c, err := controller.New("pod-abnormal-suspend-app-controller", mgr, controller.Options{
 		Reconciler: r,
 	})
@@ -54,7 +60,7 @@ func (r *PodAbnormalSuspendAppController) SetUpWithManager(mgr ctrl.Manager) err
 		return err
 	}
 
-	klog.Infof("pod-abnormal-suspend-app-controller initialized, pendingTimeout=%v", r.pendingTimeout)
+	klog.Infof("pod-abnormal-suspend-app-controller initialized, pendingTimeout=%v, minRequeueDelay=%v", r.pendingTimeout, r.minRequeueDelay)
 
 	err = c.Watch(source.Kind(
 		mgr.GetCache(),
@@ -160,19 +166,22 @@ func (r *PodAbnormalSuspendAppController) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 
-	if pendingSince, found := pendingUnschedulableSince(&pod); found || pendingKind == "hami-scheduler" {
+	if pendingSince, found := pendingUnschedulableSince(&pod); found || pendingKind == utils.PendingKindInSufficientGPU {
 		elapsed := time.Since(pendingSince)
 		klog.Infof("pod pending unschedulable name=%s namespace=%s since=%s elapsed=%v timeout=%v", pod.Name, pod.Namespace, pendingSince.Format(time.RFC3339), elapsed, r.pendingTimeout)
-		if elapsed < r.pendingTimeout && pendingKind != "hami-scheduler" {
+		if elapsed < r.pendingTimeout && pendingKind != utils.PendingKindInSufficientGPU {
 			delay := r.pendingTimeout - elapsed
+			if delay > r.minRequeueDelay {
+				delay = r.minRequeueDelay
+			}
 			klog.Infof("requeue pod name=%s namespace=%s after %v until timeout", pod.Name, pod.Namespace, delay)
-			return ctrl.Result{RequeueAfter: r.pendingTimeout - elapsed}, nil
+			return ctrl.Result{RequeueAfter: delay}, nil
 		}
 
 		klog.Infof("attempting to suspend app=%s owner=%s due to pending unschedulable timeout", appName, owner)
 		reason := constants.AppUnschedulable
 
-		if pendingKind == "hami-scheduler" {
+		if pendingKind == utils.PendingKindInSufficientGPU {
 			reason = constants.AppHamiSchedulable
 		}
 		ok, err := r.trySuspendApp(ctx, owner, appName, reason, "pending unschedulable timeout on pod: "+pod.Namespace+"/"+pod.Name, pod.Namespace)
@@ -234,7 +243,7 @@ func (r *PodAbnormalSuspendAppController) trySuspendApp(ctx context.Context, own
 		klog.Errorf("failed to get applicationmanager name=%s for app=%s owner=%s: %v", name, appName, owner, err)
 		return false, err
 	}
-	if am.Status.State == appv1alpha1.Stopped {
+	if am.Status.OpType == appv1alpha1.StopOp || am.Status.State == appv1alpha1.Stopped || am.Status.State == appv1alpha1.Stopping {
 		return true, nil
 	}
 
@@ -279,16 +288,17 @@ func (r *PodAbnormalSuspendAppController) trySuspendApp(ctx context.Context, own
 	return true, nil
 }
 
-func parsePendingTimeout(v string) time.Duration {
+func parseTimeWithDefault(name string, defaultValue time.Duration) time.Duration {
+	v := os.Getenv(name)
 	if v == "" {
-		klog.Infof("%s not set, using default 3m", envPendingPodSuspendAppTimeout)
-		return 3 * time.Minute
+		klog.Infof("%s not set, using default %v", name, defaultValue)
+		return defaultValue
 	}
 	d, err := time.ParseDuration(v)
 	if err != nil || d <= 0 {
-		klog.Warningf("invalid %s value %q, using default 3m", envPendingPodSuspendAppTimeout, v)
-		return 3 * time.Minute
+		klog.Warningf("invalid %s value %q, using default %v", name, v, defaultValue)
+		return defaultValue
 	}
-	klog.Infof("%s set to %v", envPendingPodSuspendAppTimeout, d)
+	klog.Infof("%s set to %v", name, d)
 	return d
 }
