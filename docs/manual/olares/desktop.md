@@ -65,7 +65,7 @@ Global search can find applications, files, and other supported search targets.
 | Directories enabled for full-text search | Search files by filename and by text content inside <br>supported documents. |
 | Other directories in File manager storage  | Search files by filename only.  |
 | Team shared files | Search shared files by filename only. |
-| File manager synced drive | Search synced files by filename only. |
+| Syned files | Search synced files by filename only. |
 | Wise reader content | Search RSS feeds, web pages, and PDFs by name. |
 
 ### Configure file search rules

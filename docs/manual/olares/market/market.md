@@ -49,7 +49,7 @@ To search an app in the market:
 
 1. Open the Market app from the Dock or Launchpad.
 2. In the **Manage** submenu on the left, click **Search**.
-2. Enter the keywords. The relevant results will appear as you type.
+3. Enter the keywords. The relevant results will appear as you type.
 
 ![Search app](/images/manual/olares/search-app.png#bordered)
 

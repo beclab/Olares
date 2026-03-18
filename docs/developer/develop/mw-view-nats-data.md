@@ -17,7 +17,7 @@ Before connecting, obtain NATS connection details from the Control Hub.
     - **User**: The connection username.
     - **Password**: The connection password.
 
-    ![Nats details](/public/images/developer/develop/middleware/mw-nats-details.png#bordered){width=60% style="margin-left:0"}
+    ![Nats details](/images/developer/develop/middleware/mw-nats-details.png#bordered){width=60% style="margin-left:0"}
 
 ## Access via CLI
 

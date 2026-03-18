@@ -65,7 +65,7 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
 :::
 
 <Tabs>
-<template #(Recommended)-Download-from-Market>
+<template #Download-from-Market-(Recommended)>
 
 1. From the Olares Market, search for "Qwen3.5 27B".
 
@@ -104,35 +104,34 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
     To get you started quickly, this tutorial skips several advanced settings in the wizard. You can configure or modify them later.
     :::
 
-    | Settings | Option |
-    |:---------|:-------|
-    | I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue? | Yes |
-    | Onboarding mode | QuickStart |
-    | Config handling |  Use existing values |
-    | Model/auth provider | Custom Provider |
-    | API Base URL | The API address appended with `/v1` from **Step 1**,<br>such as `https://37e62186.demo0002.olares.com/v1`|
-    | How do you want to provide this API key? | Paste API key now |
-    | API Key (leave blank if not required) | Leave it blank or enter any value |
-    | Endpoint compatibility | OpenAI-compatible |
-    | Model ID | The exact model name from **Step 1**, <br>such as `qwen3.5:27b-q4_K_M` |
-    | Endpoint ID | A name for this configuration, <br>such as `ollama-qwen3.5` |
-    | Model alias (optional) | A short alias such as `qwen3.5` |
-    | Select channel | Skip for now<br>(You can configure channels later) |
-    | Configure skills now | No <br>(You can install skills later) |
-    | Enable hooks | Select all | 
-    | How do you want to hatch your bot | Do this later |
+    | Settings                                                                                         | Option                                                                                                    |
+    |:-------------------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------|
+    | I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue? | Yes                                                                                                       |
+    | Onboarding mode                                                                                  | QuickStart                                                                                                |
+    | Config handling                                                                                  | Use existing values                                                                                       |
+    | Model/auth provider                                                                              | Custom Provider                                                                                           |
+    | API Base URL                                                                                     | The API address appended with `/v1` from **Step 1**,<br>such as `https://37e62186.demo0002.olares.com/v1` |
+    | How do you want to provide this API key?                                                         | Paste API key now                                                                                         |
+    | API Key (leave blank if not required)                                                            | Leave it blank or enter any value                                                                         |
+    | Endpoint compatibility                                                                           | OpenAI-compatible                                                                                         |
+    | Model ID                                                                                         | The exact model name from **Step 1**, <br>such as `qwen3.5:27b-q4_K_M`                                    |
+    | Endpoint ID                                                                                      | A name for this configuration, <br>such as `ollama-qwen3.5`                                               |
+    | Model alias (optional)                                                                           | A short alias such as `qwen3.5`                                                                           |
+    | Select channel                                                                                   | Skip for now<br>(You can configure channels later)                                                        |
+    | Configure skills now                                                                             | No <br>(You can install skills later)                                                                     |
+    | Enable hooks                                                                                     | Select all                                                                                                | 
+    | How do you want to hatch your bot                                                                | Do this later                                                                                             |
 
 4. After you complete the onboarding wizard, scroll up to the **Control UI** section.
 5. Find the **Web UI (with token)**, and then copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token.
 
     ![Obtain gateway token](/images/manual/use-cases/obtain-gateway-token1.png#bordered){width=70%}
-
-### Step 3. Pair device
+### Step 3: Pair device
 
 Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 
 <Tabs>
-<template #(Recommended)-Pair-device-automatically>
+<template #Pair-device-automatically-(Recommended)>
 
 1. Open the Control UI app from the Launchpad.
 2. On the **Overview** page, in the **Gateway Access** panel, specify the following settings:
@@ -153,7 +152,7 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 
     ![Health OK](/images/manual/use-cases/openclaw-connected1.png#bordered)
 </template>
-<template #(Optional)-Pair-device-manually>
+<template #Pair-device-manually-(Optional)>
 
 :::tip When to use manual pairing
 The quick setup in the previous section uses the `openclaw devices approve --latest` command to automatically approve the most recent pairing request. If you have multiple pending requests and need to manually select which device to approve, follow the steps in this section instead.

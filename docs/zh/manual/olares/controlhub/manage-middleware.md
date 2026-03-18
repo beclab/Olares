@@ -21,4 +21,4 @@ description: 通过控制面板管理 Olares 中间件。
 
 ![postgres](/images/how-to/olares/controlhub/middleware/01.jpg#bordered)
 
-要查看数据库实例具体使用情况，请参考[在 Olares 中查看数据库状态](view-database-status.md)。
+如需了解如何访问中间件数据或将中间件集成到应用中，参考 [Olares 中间件](/zh/developer/develop/mw-overview.md)。

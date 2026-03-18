@@ -89,7 +89,7 @@ You can save your generated music via two methods.
 
 Click the <i class="material-symbols-outlined">download</i> button in the upper right corner to save the audio file directly to your local device.
 </template>
-<template #From Olares Files>
+<template #From-Olares-Files>
 
 1. Open Files.
 2. Navigate to: `/Home/AI/output/acestepv2`.

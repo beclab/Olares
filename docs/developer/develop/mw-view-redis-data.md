@@ -16,7 +16,7 @@ Before connecting, obtain Redis connection details from the Control Hub.
     - **Host**: Used for Bytebase connection.
     - **Password**: Used for both CLI and Bytebase.
 
-    ![Redis details](/public/images/developer/develop/middleware/mw-redis-details.png#bordered){width=60% style="margin-left:0"}
+    ![Redis details](/images/developer/develop/middleware/mw-redis-details.png#bordered){width=60% style="margin-left:0"}
 
 ## Access via CLI
 

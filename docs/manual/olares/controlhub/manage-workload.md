@@ -41,10 +41,10 @@ In Olares, a **workload** represents an application or service running in the Ol
 
 To view a specific workload:
 
-1.  In the left navigation, click **Browse**, 
-2.  In the first column, click the target namespace to expand it.
-2.  In the second column, click to expand the **Deployment/StatefulSet/DaemonSet** list, and then select the desired workload item.
-3.  View the workload details un the third column:
+1. In the left navigation, click **Browse**, 
+2. In the first column, click the target namespace to expand it.
+3. In the second column, click to expand the **Deployment/StatefulSet/DaemonSet** list, and then select the desired workload item.
+4. View the workload details un the third column:
     ![Workload](/images/manual/olares/controlhub-workload.png#bordered)
 
     | Section                   | Description                                                                                                            |

@@ -110,8 +110,8 @@ You can view and manage all shared folders in the **Share** list.
 
 1. Open the Files application from the Dock or Launchpad on Olares.
 2. Click **Share** in the left sidebar.
-2. You can view the list of all currently shared folders on the right.
-3. If you want to view the details of a specific folder, right-click the target folder and click **Attributes**. 
+3. You can view the list of all currently shared folders on the right.
+4. If you want to view the details of a specific folder, right-click the target folder and click **Attributes**. 
 
     You will see the sharer, current path, original path, share scope, owner, current permissions, expiration date, and link details.
 

@@ -122,6 +122,4 @@ Olares One will boot into Olares OS.
    - **Boot Windows**: Select **Windows Boot Manager**.
 
 ## Resources
-
-- [Install NVIDIA drivers on Windows](install-nvidia-driver.md)
-- [Run a Windows VM on Olares One](windows.md)
+- [Install drivers on Windows](install-nvidia-driver.md)

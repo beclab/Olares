@@ -18,7 +18,7 @@ Before using Grafana, install it from Market.
     :::tip Remember your login credentials
     These are the login credentials for Grafana. You will need them if you access Grafana later.
     :::
-    ![Set login credentials](/public/images/developer/develop/middleware/mw-grafana-set-login.png#bordered){width=90% style="margin-left:0"}
+    ![Set login credentials](/images/developer/develop/middleware/mw-grafana-set-login.png#bordered){width=90% style="margin-left:0"}
 4. Wait for the installation to complete.
 
 ## Access Grafana
@@ -42,7 +42,7 @@ To connect Grafana to this internal service:
     ```
     Replace `<olaresid>` with your Olares ID.
 4. Click **Save & test** at the bottom of the page. If the connection is successful, you will see the prompt below.
-    ![Successful connection](/public/images/developer/develop/middleware/mw-grafana-connect.png#bordered){width=90% style="margin-left:0"}
+    ![Successful connection](/images/developer/develop/middleware/mw-grafana-connect.png#bordered){width=90% style="margin-left:0"}
 
 ## Create a dashboard
 
@@ -64,4 +64,4 @@ If you do not need to build dashboards from scratch, you can import existing das
 5. Click **Import** to complete the import.
 
 Imported dashboards provide predefined panels and queries and can be customized after import.
-![Imported dashboard](/public/images/developer/develop/middleware/mw-grafana-dashboard.png#bordered){width=90%}
+![Imported dashboard](/images/developer/develop/middleware/mw-grafana-dashboard.png#bordered){width=90%}
