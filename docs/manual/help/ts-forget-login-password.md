@@ -95,7 +95,7 @@ After you accessed the terminal, run the following commands to enable the reset 
 2. Type the following command, and then press **Enter** to reset the password:
 
     ```bash
-    olares-cli user reset-password <username> --p <newpassword>
+    olares-cli user reset-password <username> -p <newpassword>
     ```
 
     For example, reset password for the user named "alice123":
