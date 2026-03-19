@@ -115,7 +115,7 @@ func NewDownloadingApp(c client.Client,
 func (p *DownloadingApp) Cancel(ctx context.Context) error {
 	// only cancel the downloading operation when the app is timeout
 	klog.Infof("call timeout downloadingApp cancel....")
-	err := p.updateStatus(ctx, p.manager, appsv1.DownloadingCanceling, nil, constants.OperationCanceledByTerminusTpl, "")
+	err := p.updateStatus(ctx, p.manager, appsv1.DownloadingCanceling, nil, constants.OperationCanceledByTerminusTpl, appsv1.DownloadingCanceling.String())
 	if err != nil {
 		klog.Errorf("update app manager name=%s to downloadingCanceling state failed %v", p.manager.Name, err)
 		return err
@@ -128,7 +128,7 @@ func (p *DownloadingApp) Exec(ctx context.Context) (StatefulInProgressApp, error
 	if err != nil {
 		klog.Errorf("app %s downloading failed %v", p.manager.Spec.AppName, err)
 		opRecord := makeRecord(p.manager, appsv1.DownloadFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
-		updateErr := p.updateStatus(ctx, p.manager, appsv1.DownloadFailed, opRecord, err.Error(), "")
+		updateErr := p.updateStatus(ctx, p.manager, appsv1.DownloadFailed, opRecord, err.Error(), appsv1.DownloadFailed.String())
 		if updateErr != nil {
 			klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.DownloadFailed.String(), updateErr)
 			err = errors.Wrapf(err, "update status failed %v", updateErr)

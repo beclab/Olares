@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/fields"
+
 	"github.com/go-resty/resty/v2"
 
 	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
@@ -481,4 +483,27 @@ func GetDeviceName() (string, error) {
 	}
 	klog.Infof("getDeviceName: %#v", result.Data)
 	return result.Data.DeviceName, nil
+}
+
+const (
+	PendingKindInSufficientGPU = "InsufficientGPU"
+)
+
+func GetPendingKind(ctrlClient client.Client, pod *corev1.Pod) (string, error) {
+	fieldSelector := fields.OneTermEqualSelector("involvedObject.name", pod.Name)
+	var eventList corev1.EventList
+	err := ctrlClient.List(context.TODO(), &eventList, &client.ListOptions{
+		FieldSelector: fieldSelector,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	pendingKind := ""
+	for _, event := range eventList.Items {
+		if event.Reason == PendingKindInSufficientGPU {
+			pendingKind = PendingKindInSufficientGPU
+		}
+	}
+	return pendingKind, nil
 }
