@@ -57,6 +57,10 @@ const side = {
               text: "Network not ready or olares connection error",
               link: "/manual/help/ts-network-not-ready",
             },
+            {
+              text: "Slow or delayed Steam streaming on Olares",
+              link: "/manual/help/ts-steam-stream-lag",
+            },
           ],
         },
       ],
