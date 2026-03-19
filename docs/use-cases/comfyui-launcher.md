@@ -1,5 +1,5 @@
 ---
-outline: [2, 3]
+outline: deep
 description: Administrators' guide for managing ComfyUI on Olares with ComfyUI Launcher—covering a quick preflight network check, service control, network configuration, model storage and installation, plugin management, Python dependencies, and maintenance.
 ---
 
@@ -15,9 +15,10 @@ By the end of this tutorial, you will learn how to:
 
 - Start and stop the ComfyUI service for all users in the cluster.
 - Verify and adjust network settings so GitHub, PyPI, and Hugging Face are accessible.
-- Install essential models and additional models, and understand where models are stored in **Files**.
+- Install essential models and additional models, and understand where models are stored in Olares Files.
 - Manage plugins registered in ComfyUI Launcher as well as from GitHub.
 - Manage Python dependencies by installing, updating, removing packages, and analyzing missing dependencies for plugins.
+- Customize launch options to configure startup parameters.
 - Troubleshoot common issues using logs and safely reset ComfyUI to its initial state when necessary.
 
 ## Start and stop the service
@@ -212,17 +213,65 @@ ComfyUI's operation relies on a set of Python dependency libraries. You can mana
 
 ### Analyze dependency installation status
 
-1. Go to **Python dependencies** > **Dependency analysis**. 
+1. Go to **Python dependencies** > **Dependency analysis**.
 2. Click **ANALYZE NOW** to start analyzing.
 3. From the plugins list on the left, find the problematic plugin highlighted in red, and click on it.
 4. From **Dependency list**, find the missing library for the plugin, and click the **Install** button on the right. You can also click **FIX ALL** to automatically install all missing libraries.
 ![Analyze dependencies](/images/manual/use-cases/comfyui-dependency-analy.png#bordered)
 
+## Configure ComfyUI launch options
+
+The **Lab** page lets you customize how ComfyUI starts. You can view the current launch command and modify startup parameters using two methods: editing arguments manually or selecting from the preset list.
+
+![Lab](/images/manual/use-cases/comfyui-lab.png#bordered)
+
+### View launch command
+
+The **Current full launch command** section displays the complete command used to start ComfyUI, including all enabled options. Click <i class="material-symbols-outlined">content_copy</i> to copy it for sharing or documentation.
+
+### Edit launch options
+
+You can modify launch parameters using either of the following methods.
+#### Method 1: Manually edit extra arguments
+
+Use this method when you need to add custom arguments not available in the preset list.
+
+1. In **Manually edit extra arguments**, enter your additional arguments in the text field (separated by spaces).
+2. Click **SAVE MANUAL ARGS**.
+3. Go to **Home** and click **RESTART** to apply the changes.
+
+#### Method 2: Use the launch options list
+
+Use this method to select parameters from a predefined list and set their values.
+
+:::info
+Some options (such as `--port` and `--front-end-version`) are fixed by the system and cannot be modified.
+:::
+
+To configure via the list:
+
+1. In the **Launch options list**, find the option you want to configure.
+2. Check the **Enable** checkbox to add the option to the launch command.
+3. If the option requires a value, enter it in the **Value** field.
+4. Click **SAVE LIST ARGS** to save your changes.
+5. Go to **Home** and click **RESTART** to apply the changes.
+
+### Restore to defaults
+
+If you encounter issues caused by incorrect launch parameters, you can restore all options to their default values.
+
+1. Click **RESTORE DEFAULT**.
+2. Go to **Home** and click **RESTART** to apply the changes.
+
 ## Troubleshoot and maintain ComfyUI
 
-ComfyUI Launcher provides tools to help diagnose and maintain the ComfyUI service.
+ComfyUI Launcher provides tools to help diagnose issues and maintain the ComfyUI service.
 
-### Export ComfyUI logs
+### Gather diagnostic information
+
+When something goes wrong, collect the following information to help identify the root cause.
+
+#### Export ComfyUI logs
 
 You can export logs to diagnose the current running status of ComfyUI:
 
@@ -231,18 +280,46 @@ You can export logs to diagnose the current running status of ComfyUI:
 2. Click the <i class="material-symbols-outlined">refresh</i> button to refresh the log, and the <i class="material-symbols-outlined">download</i> button to download the log.
 ![Export Logs](/images/manual/use-cases/comfyui-export-logs.png#bordered){width=450}
 
+#### Check dependency conflicts
+
+If a workflow that previously worked starts failing after installing new plugins, the issue is likely caused by dependency conflicts. Run a dependency analysis to identify and fix the problem. See [Analyze dependency installation status](#analyze-dependency-installation-status) for detailed steps.
+
+#### Get launch parameters
+
+If the service fails to start or behaves unexpectedly, check the current launch parameters:
+
+1. Go to **Lab**.
+2. Copy the current launch parameters for reference or sharing with support.
+3. Optional: If you suspect launch parameters are causing issues, click **RESTORE DEFAULT** to reset them to original values.
+
+![Get launch parameters](/images/manual/use-cases/comfyui-launch-params.png#bordered)
+
+
+#### Get workflow error details
+
+If a workflow fails during execution, you can retrieve the error details from ComfyUI:
+
+1. In the ComfyUI client, click **Active** to open the **Job Queue**.
+2. Select the failed task from the list.
+3. Click **Report error**, then click **Show Report** to expand details.
+4. Take a screenshot of the error report for troubleshooting or sharing.
+
+![Workflow error report](/images/manual/use-cases/comfyui-workflow-error.png#bordered)
+
 ### Reset ComfyUI configuration
 
+If troubleshooting does not resolve the issue, you can reset ComfyUI to its initial state as a last resort.
+
 :::warning Perform with caution
-Restoring ComfyUI is an irreversible operation. Please operate carefully.
+Resetting ComfyUI is irreversible. All plugins, custom configurations, and Python dependencies will be removed. Models stored in the shared `model` folder are not affected.
 :::
 
-To reset ComfyUI to its initial state:
+To reset ComfyUI:
 
-1. Go to **Home** and click <i class="material-symbols-outlined">more_vert</i> in the upper-right corner, then click **Wipe and restore**. 
+1. Go to **Home** and click <i class="material-symbols-outlined">more_vert</i> in the upper-right corner, then click **Wipe and restore**.
 2. In the prompt window, click **WIPE AND RESTORE**.
 ![Wipe and restore](/images/manual/use-cases/comfyui-wipe-and-restore.png#bordered){width=350}
 3. Enter `CONFIRM`, then click **CONFIRM**.
 ![Second confirmation](/images/manual/use-cases/comfyui-second-confirm.png#bordered){width=350}
 
-After the restoration operation is complete, restart ComfyUI for the changes to take effect.
+After the reset is complete, restart ComfyUI for the changes to take effect.
