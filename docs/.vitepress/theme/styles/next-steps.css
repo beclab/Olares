@@ -1,0 +1,63 @@
+/* Next Steps Page - Card Grid (No Icons) */
+
+.next-steps-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 1.5rem;
+}
+
+.next-steps-grid > a.card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  text-decoration: none !important;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.next-steps-grid > a.card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.next-steps-grid .card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.vp-doc .next-steps-grid a.card .card-content h3.card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+  line-height: 1.4;
+  border: none;
+  padding: 0;
+  letter-spacing: normal;
+}
+
+.vp-doc .next-steps-grid a.card .card-content p.card-description {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--vp-c-text-2);
+  line-height: 1.5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .next-steps-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .next-steps-grid > a.card {
+    padding: 1rem;
+  }
+}
