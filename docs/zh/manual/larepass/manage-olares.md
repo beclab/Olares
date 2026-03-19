@@ -52,18 +52,20 @@ LarePass 应用可以让你轻松管理你的 Olares 设备。你可以通过手
 1. 在 **Olares 管理**页面，点击**系统更新**。
 
 2. 在**系统更新**页面，确认**新版本**字段中的可更新版本信息，然后点击**升级**。
-   ![检查可用更新](/images/zh/manual/larepass/check-version.png#bordered)
+   ![检查可用更新](/images/zh/manual/larepass/check-version1.png#bordered)
 
 3. 在弹出的对话框中，选择升级方式：
     - **仅下载**：  
     Olares 只下载更新包，你可以照常使用 Olares。  
     - **下载并升级**：  
     Olares 会下载更新包，并在你确认重启后开始安装。
-   ![升级方法](/images/zh/manual/larepass/olares-upgrade1.png#bordered)
+   ![升级方法](/images/zh/manual/larepass/olares-upgrade2.png#bordered)
 
 4. 如果你选择了**仅下载**，在**系统更新**页面点击**升级**，开始更新流程。
 5. 如果你选择了**下载并升级**，在出现提示时确认重新启动，即可开始安装。
-6. 请耐心等待更新与重启过程完成。Olares 重新启动后，你会看到升级成功提示，然后即可继续使用 Olares 服务。
+6. 等待更新和重启完成。出现成功消息表示升级已完成。
+   ![升级成功提示](/images/zh/manual/larepass/olares-upgrade-success.png#bordered)
+7. 刷新你的 Olares 桌面以同步最新的系统更改。
 
 ## 远程重启或关闭 Olares
 
