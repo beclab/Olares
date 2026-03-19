@@ -55,7 +55,11 @@ const side = {
             {
               text: "网络尚未准备好或 olares 连接错误",
               link: "/zh/manual/help/ts-network-not-ready",
-            }            
+            },
+            {
+              text: "忘记登录密码",
+              link: "/zh/manual/help/ts-forget-login-password",
+            }                        
           ],
         },
       ],
