@@ -35,7 +35,7 @@ Set the GPU to **App exclusive** mode, and make sure Steam Headless is selected 
 3. In the **Select exclusive app** section, check whether Steam Headless is selected.
    ![Check GPU mode](/images/manual/help/ts-steam-stream-gpu-mode.png#bordered)
 
-If Steam Headless is already selected, continue to [Step 3](#step-3-check-steam-cpu-and-memory-usage-while-the-game-is-running).
+If Steam Headless is already selected, continue to [Step 3](#step-3-check-runtime-cpu-and-memory-usage).
 
 If another app is selected, switch it to Steam Headless as follows:
 
@@ -53,7 +53,7 @@ If another app is selected, switch it to Steam Headless as follows:
 
 ### Step 3: Check runtime CPU and memory usage
 
-Launch the game, then check Steam Headless runtime CPU and memory usage to see if it is hitting a bottleneck.
+Launch the game, then check Steam Headless runtime CPU and memory usage while it is running.
 
 1. Open Control Hub from the Launchpad.
 2. In the left sidebar, click **Browse**.
@@ -80,9 +80,6 @@ After checking the runtime usage, open the Steam Headless deployment YAML file a
    ```
    ![Check Steam CPU and memory limits](/images/manual/help/ts-steam-stream-limit.png#bordered)
 4. Compare these configured limits with the runtime usage you noted in Step 3.
-
-    For example, if the CPU limit is 8 cores and the runtime CPU usage stays close to 8000 m, the CPU is likely hitting its current limit.
-
 5. If the runtime usage is consistently close to the current limit, increase the corresponding `cpu` or `memory` value based on your device capacity.
 
 6. Click **Confirm** to save the changes, then test the game again.
