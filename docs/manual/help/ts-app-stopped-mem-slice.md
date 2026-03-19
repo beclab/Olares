@@ -10,17 +10,15 @@ Use this guide when a GPU-dependent app installs successfully but remains stoppe
 
 ## Condition
 
-This guide applies when:
-
-- The GPU mode is set to **Memory slicing**.
+When the GPU mode is set to **Memory slicing** and you encounter either of the following:
 - After installation, a GPU-dependent app remains in the **Stopped** state.
 - After you click **Resume**, a GPU-dependent app remains in the **Stopped** state.
 
 ## Cause
 
-In **Memory slicing** mode, each GPU-dependent app is assigned a fixed amount of VRAM.
+Starting from Olares 1.12.5, in **Memory slicing** mode, the system automatically attempts to allocate VRAM to a GPU-dependent app when the app is installed or resumed. In earlier versions, shared GPU apps were added manually.
 
-If most VRAM has already been allocated to other apps, the system cannot provide enough VRAM for the target app to run, so the app remains stopped.
+If most VRAM has already been allocated to other apps, the system cannot provide enough VRAM for the target app to run, so the app cannot initialize and remains in a **Stopped** state.
 
 ## Solution: Free up VRAM
 
@@ -32,17 +30,17 @@ If most VRAM has already been allocated to other apps, the system cannot provide
 
 ![Check required VRAM for the target app](/images/manual/help/ts-mem-slice-vram-app-gpu.png#bordered){width=85%}
 
-### Step 2: Check current VRAM allocation
+### Step 2: Check current VRAM availability
 
 1. Go to **Settings** > **GPU**.
 2. In the **Allocate VRAM** section, check how much VRAM has already been allocated to apps in the list.
-3. Compare the total allocated VRAM with your GPU's total VRAM capacity to see how much VRAM is still available.
+3. Subtract the total allocated VRAM from your GPU's total VRAM capacity.
 
 ![Check current VRAM allocation](/images/manual/help/ts-mem-slice-vram-gpu-mode.png#bordered){width=90%}
 
 In the example above, 22 GB of VRAM is currently allocated, leaving only 2 GB available, which is less than the 4 GB required by the target app.
 
-### Step 3: Make more VRAM available
+### Step 3: Increase available VRAM
 
 If there is not enough available VRAM, do one of the following:
 
@@ -53,7 +51,7 @@ If there is not enough available VRAM, do one of the following:
 
 ![Reduce VRAM allocation](/images/manual/help/ts-mem-slice-vram-reduce-vram.png#bordered){width=90%}
 
-#### Option B: Remove VRAM allocation from an unused app
+#### Option B: Release VRAM from unused apps
 
 1. Stop an app that is not currently needed.
    - In **Market** > **My Olares**, open the dropdown menu and click **Stop**.
@@ -61,8 +59,7 @@ If there is not enough available VRAM, do one of the following:
 2. Return to **Settings** > **GPU**.
 3. In the **Allocate VRAM** section, click <i class="material-symbols-outlined">link_off</i>.
 4. Click **Confirm** to remove the app's VRAM allocation completely.
-
-Repeat these steps until enough VRAM is available.
+5. (Optional) Repeat these steps until enough VRAM is available.
 
 ### Step 4: Resume the target app
 
