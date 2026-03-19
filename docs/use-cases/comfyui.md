@@ -20,7 +20,7 @@ In this guide, you will learn how to:
 - Download the essential Stable Diffusion model package via ComfyUI Launcher.
 - Start the ComfyUI service and generate your first image using the default workflow.
 
-## Before you begin
+## Prerequisites
 - A working Olares installation with a GPU and sufficient disk space to download models.
 - Admin privileges to install ComfyUI from Market and to start the ComfyUI service.
 

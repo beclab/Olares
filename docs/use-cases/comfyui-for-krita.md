@@ -7,14 +7,14 @@ head:
       content: Olares, ComfyUI, Krita, AI art, digital painting, Krita AI Diffusion, image generation
 app_version: "1.0.21"
 doc_version: "1.0"
-doc_updated: "2026-03-18"
+doc_updated: "2026-03-19"
 ---
 
 # Create AI art with ComfyUI and Krita
 
-Running ComfyUI locally on Olares gives you the flexibility of server-side AI processing, but making it work seamlessly with your creative tools requires additional steps. Instead of confining ComfyUI to a single device, Olares allows you to extend its functionality to other machines, enabling smooth integration with tools such as Krita for editing and refinement.
+ComfyUI provides powerful AI image generation, but to make it truly useful, you need to integrate it into your creative workflow. This guide shows you how to connect ComfyUI running on Olares to Krita on your computer, so you can generate AI artwork directly within your digital painting environment.
 
-This tutorial will show you how to connect a locally hosted ComfyUI instance on Olares to Krita running on a separate computer. By combining the power of ComfyUI with Krita, you'll be able to create a streamlined, AI-driven workflow that fits naturally into your creative process.
+By the end of this tutorial, you'll be generating AI images in Krita using your Olares-hosted ComfyUI instance.
 
 ## Learning objectives
 
@@ -24,20 +24,11 @@ In this guide, you will learn how to:
 - Connect Krita to your Olares-hosted ComfyUI instance.
 - Generate AI artwork using text prompts in Krita.
 
-## Before you begin
+## Prerequisites
 
-- A working Olares installation with ComfyUI Shared installed and running.
-- A computer connected to the same local network as Olares.
-- Krita installed on your computer.
-- Sufficient system resources (recommended: 16GB RAM for optimal performance).
-
-## Understanding the components
-
-Your AI art studio consists of three key pieces working together:
-
-* **ComfyUI**: The AI engine running in your Olares environment that powers image generation.
-* **Krita**: Professional-grade digital art software where you'll create and edit your artwork.
-* **Krita AI Diffusion Plugin**: The connector that enables seamless communication between Krita and ComfyUI.
+- A working Olares installation with [ComfyUI Shared installed and running](comfyui.md).
+- [Krita](https://krita.org/en/download/) installed on your computer.
+- Sufficient system resources on your Olares device to download models.
 
 ## Set up ComfyUI
 
@@ -52,23 +43,20 @@ You can set the GPU mode to **App exclusive** and assign ComfyUI full GPU access
 1. On Olares, open Settings, then go to **Application** > **ComfyUI Shared**.
 2. In **Entrances**, click **ComfyUI**.
 3. Make sure its **Authentication level** is set to **Internal**.
-
-   ![ComfyUI authentication level](/images/manual/use-cases/comfyui-authentication-level.png#bordered){width=70%}
-
 4. Click **Set up endpoint**, then copy the endpoint URL displayed.
 
    ![Set up endpoint](/images/manual/use-cases/comfyui-set-up-endpoint.png#bordered)
 
-## Set up Krita
-1. Download and install [Krita](https://krita.org/en/download/).
-2. Download the [Krita AI Diffusion plugin](https://github.com/Acly/krita-ai-diffusion/releases).
-3. Launch Krita, and navigate to **Tools** > **Scripts** > **Import Python Plugin from File**. Select the downloaded ZIP package.
+## Download and enable AI Diffusion plugin
+1. Download the [Krita AI Diffusion plugin](https://github.com/Acly/krita-ai-diffusion/releases).
+2. Launch Krita, and from the toolbar, select **Tools** > **Scripts** > **Import Python Plugin from File**.
 
-   ![Import AI plugin](/images/manual/use-cases/krita-import-plugin.png#bordered){width=70%}
+   ![Import AI plugin](/images/manual/use-cases/krita-import-plugin1.png#bordered)
 
-4. Confirm the plugin activation and restart Krita.
+3. Select the downloaded ZIP package.
+4. When prompted, confirm the plugin activation and restart Krita.
 
-   ![Confirm plugin activation](/images/manual/use-cases/krita-confirm-plugin.png#bordered){width=70%}
+   ![Confirm plugin activation](/images/manual/use-cases/krita-comfirm-plugin-activation.png#bordered){width=40%}
 
 5. After restarting, verify the installation in **Krita** > **Preferences** > **Python Plugin Manager**.
 
@@ -76,10 +64,12 @@ You can set the GPU mode to **App exclusive** and assign ComfyUI full GPU access
 
 ## Connect Krita to ComfyUI
 
+The connection steps depend on whether your computer and Olares device are on the same network.
+
 <tabs>
 <template #Use-.local-domain-(LAN,-recommended)>
 
-If your client device is on the same local network as Olares, you can use the `.local` domain. You will need to slightly modify the URL you copied earlier.
+If your computer is on the same local network as Olares, use the `.local` domain. You'll need to modify the URL slightly.
 
 1. Create a new document in Krita.
 
@@ -93,7 +83,7 @@ If your client device is on the same local network as Olares, you can use the `.
 
 3. Click **Configure** to access the plugin settings.
 
-   ![Configure AI plugin](/images/manual/use-cases/krita-configure-plugin.png#bordered){width=70%}
+   ![Configure AI plugin](/images/manual/use-cases/krita-configure-plugin1.png#bordered){width=70%}
 
 4. Set up the ComfyUI connection:
 
@@ -110,7 +100,7 @@ If your client device is on the same local network as Olares, you can use the `.
 
    c. Click **Connect** to verify the connection.
 
-   ![Connect ComfyUI](/images/manual/use-cases/krita-comfyui-connected.png#bordered)
+   ![Connect ComfyUI](/images/manual/use-cases/krita-missing-required-nodes-local.png#bordered)
 
    You might see an error message indicating the connection is established but the server is missing required custom nodes or models. This is expected. Proceed to [Prepare models and plugins](#prepare-models-and-plugins) to download the required resources.
 
@@ -118,7 +108,7 @@ If your client device is on the same local network as Olares, you can use the `.
 
 <template #Use-.com-domain>
 
-If your client device is not on the same local network as Olares, you need to enable LarePass VPN to ensure a secure connection.
+If your computer is not on the same local network as Olares, enable LarePass VPN to ensure a secure connection.
 
 1. Enable LarePass VPN on the LarePass desktop client:
 
@@ -140,7 +130,7 @@ If your client device is not on the same local network as Olares, you need to en
 
 4. Click **Configure** to access the plugin settings.
 
-   ![Configure AI plugin](/images/manual/use-cases/krita-configure-plugin.png#bordered){width=70%}
+   ![Configure AI plugin](/images/manual/use-cases/krita-configure-plugin1.png#bordered){width=70%}
 
 5. Set up the ComfyUI connection:
 
@@ -148,7 +138,7 @@ If your client device is not on the same local network as Olares, you need to en
 
    b. Click **Connect** to verify the connection.
 
-   ![Connect ComfyUI](/images/manual/use-cases/krita-comfyui-connected.png#bordered)
+   ![Connect ComfyUI](/images/manual/use-cases/krita-missing-required-nodes-com.png#bordered)
 
    You might see an error message indicating the connection is established but the server is missing required custom nodes or models. This is expected. Proceed to [Prepare models and plugins](#prepare-models-and-plugins) to download the required resources.
 
@@ -160,28 +150,30 @@ If your client device is not on the same local network as Olares, you need to en
 ### Install required custom nodes
 
 The Krita AI Diffusion plugin requires the following custom nodes:
-- [ControlNet preprocessors](https://github.com/Fannovel16/comfyui_controlnet_aux)
-- [IP-Adapter](https://github.com/cubiq/ComfyUI_IPAdapter_plus)
-- [Inpaint nodes](https://github.com/Acly/comfyui-inpaint-nodes)
-- [External tooling nodes](https://github.com/Acly/comfyui-tooling-nodes)
+- ControlNet preprocessors: https://github.com/Fannovel16/comfyui_controlnet_aux
+- IP-Adapter: https://github.com/cubiq/ComfyUI_IPAdapter_plus
+- Inpaint nodes: https://github.com/Acly/comfyui-inpaint-nodes
+- External tooling nodes: https://github.com/Acly/comfyui-tooling-nodes
 
 To install them:
 
 1. Open ComfyUI Launcher, and go to **Plugins** > **Custom Install**.
 2. Paste the GitHub URL of the custom node (e.g., `https://github.com/Acly/comfyui-tooling-nodes`), and click **INSTALL PLUGIN**.
 3. Repeat for each of the remaining custom nodes listed above.
+   ![Download custom nodes](/images/manual/use-cases/comfyui-download-custom-nodes.png#bordered)
+4. Optional: If you go back to Krita and click **Connect** again, you should see an error message indicating that required models are still missing.
+
+   ![Missing required models](/images/manual/use-cases/krita-missing-required-models.png#bordered)
 
 ### Install required models
 
-Some utility models are required for the plugin to function properly. Without them, the connection might fail or certain features will not work. Pre-installing them ensures a smoother experience.
+The plugin needs these utility models to work properly. Without them, some features will not function correctly. Pre-installing them ensures a smoother experience.
 
-| Model | URL | Destination |
-|:------|:----|:------------|
-| NMKD Superscale | `https://huggingface.co/gemasai/4x_NMKD-Superscale-SP_178000_G/resolve/main/4x_NMKD-Superscale-SP_178000_G.pth` | Upscale Models |
-| OmniSR X2 | `https://huggingface.co/Acly/Omni-SR/resolve/main/OmniSR_X2_DIV2K.safetensors` | Upscale Models |
-| OmniSR X3 | `https://huggingface.co/Acly/Omni-SR/resolve/main/OmniSR_X3_DIV2K.safetensors` | Upscale Models |
-| OmniSR X4 | `https://huggingface.co/Acly/Omni-SR/resolve/main/OmniSR_X4_DIV2K.safetensors` | Upscale Models |
-| MAT Inpaint | `https://huggingface.co/Acly/MAT/resolve/main/MAT_Places512_G_fp16.safetensors` | Custom: `inpaint` |
+- NMKD Superscale: https://huggingface.co/gemasai/4x_NMKD-Superscale-SP_178000_G/resolve/main/4x_NMKD-Superscale-SP_178000_G.pth
+- OmniSR X2: https://huggingface.co/Acly/Omni-SR/resolve/main/OmniSR_X2_DIV2K.safetensors
+- OmniSR X3: https://huggingface.co/Acly/Omni-SR/resolve/main/OmniSR_X3_DIV2K.safetensors
+- OmniSR X4: https://huggingface.co/Acly/Omni-SR/resolve/main/OmniSR_X4_DIV2K.safetensors
+- MAT Inpaint: https://huggingface.co/Acly/MAT/resolve/main/MAT_Places512_G_fp16.safetensors
 
 To download them via ComfyUI Launcher:
 
@@ -189,6 +181,7 @@ To download them via ComfyUI Launcher:
 2. Download upscale models:
 
    a. Paste the NMKD Superscale URL, set **Destination folder** to **Upscale Models**, and click **DOWNLOAD MODEL**.
+      ![Download required upscale models](/images/manual/use-cases/comfyui-download-upscale-models.png#bordered)
 
    b. Repeat for the three OmniSR models using the same destination folder.
 
@@ -201,10 +194,14 @@ To download them via ComfyUI Launcher:
    c. Enter `inpaint` as the **Directory Name**.
 
    d. Click **DOWNLOAD MODEL**.
+      ![Download required inpaint model](/images/manual/use-cases/comfyui-download-inpaint-model.png#bordered)
+4. Optional: If you go back to Krita and click **Connect** again, you should see an error message indicating that base models are still missing.
+
+   ![Missing required models](/images/manual/use-cases/krita-missing-base-models.png#bordered)
 
 ### Install a base diffusion model
 
-At least one diffusion model (commonly called a “checkpoint”) is required. This guide uses Z-Image Turbo as an example. Z-Image is a medium-sized diffusion model that falls between Flux 1 and Flux 2 4B in terms of memory requirements and speed. The Turbo variant delivers convincing realistic images with reasonable performance.
+At least one diffusion model (commonly called a “checkpoint”) is required. This guide uses Z-Image Turbo as an example. Z-Image Turbo is a medium-sized model that balances quality and speed, producing realistic images without requiring excessive memory.
 
 1. Open ComfyUI Launcher, and scroll down to the **Package installation** section.
 2. Find **Z-Image Turbo Package** and click **VIEW**.
@@ -213,48 +210,108 @@ At least one diffusion model (commonly called a “checkpoint”) is required. T
 
 3. On the package details page, click **GET ALL** to start downloading. You can track the progress in the status bar.
 
-   ![Download progress](/images/manual/use-cases/comfyui-download-progress1.png#bordered)
+   ![Download progress](/images/manual/use-cases/comfyui-download-progress-z-image.png#bordered)
 
-### Verify plugins and models in Krita
+4. Optional: Verify the model
 
-1. In ComfyUI Launcher, restart the ComfyUI service.
-2. Go back to the **Connection** > **Server Configuration** page in Krita, and click **Connect** again. A green “Connected” indicator confirms a successful connection. In the detected base model list, you should see Z-Image marked as “supported”.
+   a. Click **Open** to open ComfyUI, then click **Templates** in the left navigation bar to browse available templates.
 
-3. Adjust ComfyUI settings:
+   b. Select **Image** as the generation type, and select the template: **Z-Image-Turbo Text to Image**.
 
-   a. In **Styles**, select **Z-image Turbo** from **Style Presets**.
+   c. When prompted that this workflow is missing models, simply close the window.
 
-   b. Keep default values for other settings unless you need specific optimizations.
+   d. Prepend `public/` to the filename in the Text to Image node. For example:
+   - **Default**: `ae.safetensors`
+   - **Change to**: `public/ae.safetensors`
+   :::info Shared model path
+   ComfyUI in Olares uses a file structure that differs from the standard installation. This change allows models to be shared between ComfyUI and SD Web UI.
+   :::
+   ![Change model path](/images/manual/use-cases/comfyui-z-image-change-model-path.png#bordered){width=50%}
 
-   c. Click **Ok** to exit.
+   e. Update the text prompt in the same node to describe the image you want to generate.
+   
+   f. Click **Run** in the toolbar to start generation.
+
+   ![Generated image](/images/manual/use-cases/comfyui-z-image-result.png#bordered)
+
+## Verify the connection in Krita
+
+1. Go back to the **Connection** > **Server Configuration** page in Krita.
+   
+2. Click **Connect** again. A green “Connected” indicator confirms a successful connection. In the detected base model list, you should see Z-Image marked as “supported”.
+
+   ![Z-Image detected](/images/manual/use-cases/comfyui-z-image-detected.png#bordered)
+
+
+## Add a style
+
+Before generating images, you need to create a Style Preset that tells Krita which model to use.
+
+1. Open the **Configure Image Diffusion** dialog in Krita, and go to the **Styles** tab.
+2. In the dropdown **Style Presets**, select **Z-image Turbo** from the built-in styles.
+
+   ![Select built-in Z-image Turbo style](/images/manual/use-cases/krita-select-built-in-style.png#bordered)
+
+3. Click the duplicate icon to create a duplicate of the current style.
+
+   ![Duplicate style](/images/manual/use-cases/krita-duplicate-style.png#bordered)
+
+4. For **Model Checkpoint**, select the Z-Image model. The model name should be `public/z_image_turbo_bf16`.
+
+   ![Select Z-Image model](/images/manual/use-cases/krita-select-z-image-model.png#bordered)
+
+5. Click the refresh icon to refresh the available styles.
+   ![Refresh style list](/images/manual/use-cases/krita-refresh-style-list.png#bordered)
+
+6. Keep default values for other settings, and click **Ok** to save changes.
+   :::warning
+   It is recommended to use the default settings if you are not familiar with Krita. Changing the default settings might generate unexpected results.
+   :::
 
 ## Create AI art with text prompts
 
-Now comes the exciting part — creating AI-generated artwork using natural language prompts.
+1. In the **AI Image Generation** panel, confirm that the Z-Image Turbo style is selected.
 
-1. Enter your prompts in the text box, and click **Generate**.
+2. Enter your prompts in the text box. For example: 
 
-2. Browse through the generated image variations.
+   ```plain
+   A person relaxing on a sandy beach, basking in the warm sunlight, with the calm blue ocean in the background.
+   ```
 
-3. Select a preferred result, and click **Apply** to add it to the canvas.
+3. Click **Generate**. The generated image will be automatically displayed on the canvas.
+   ![Generate image](/images/manual/use-cases/krita-generated-image-1.png#bordered)
 
-   ![Generate AI art](/images/manual/use-cases/krita-generate-ai-art.png#bordered)
+4. Click **Generate** again to generate a new image.
+   ![Generate image](/images/manual/use-cases/krita-generated-image-2.png#bordered)
 
-::: tip Refining results
-If the results aren't quite what you want, you can:
-- Create additional variations with new generations.
-- Fine-tune the generation parameters.
-- Refine your text prompt for more precise results.
-- Experiment with different style settings.
-:::
+5. Select a preferred result, and click **Apply** to add it to the layers.
+
+## Inpaint
+
+To refine specific areas of a generated image, use inpainting. This lets you modify parts of the image while keeping the rest intact.
+
+1. Select the freehand selection tool and draw around the area you want to modify.
+   ![Use the freehand selection tool](/images/manual/use-cases/krita-use-selection-tool.png#bordered)
+
+2. Enter a description for what you want in the selected area. For example:
+   ```plain
+   Seagulls can be seen flying in the distant sky.
+   ```
+
+3. Click **Fill**. Several fill candidates will appear in the panel.
+   ![Fill candidates](/images/manual/use-cases/krita-fill.png#bordered)
+4. Click each candidate to preview it on the canvas.
+
+5. When you find a result you like, click **Apply** to add it to the layers. 
+   ![Select inpaint candidate](/images/manual/use-cases/krita-select-inpaint-candidate.png#bordered)
 
 ## FAQ
 
-### Connection cannot be established
+### Connection cannot be established between ComfyUI and Krita
 If the connection fails:
 - Verify network connectivity between your computer and Olares.
 - Confirm ComfyUI's authentication level is set to "Internal".
-- If you are using `.com` URL, confirm LarePass VPN is enabled.
+- If you are using a `.com` URL, confirm LarePass VPN is enabled.
 - Check for and disable any interfering proxy services.
 - Ensure ComfyUI is running correctly on Olares.
 - Check whether ComfyUI has GPU access.
