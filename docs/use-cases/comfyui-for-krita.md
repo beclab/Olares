@@ -161,7 +161,9 @@ To install them:
 2. Paste the GitHub URL of the custom node (e.g., `https://github.com/Acly/comfyui-tooling-nodes`), and click **INSTALL PLUGIN**.
 3. Repeat for each of the remaining custom nodes listed above.
    ![Download custom nodes](/images/manual/use-cases/comfyui-download-custom-nodes.png#bordered)
-4. Optional: If you go back to Krita and click **Connect** again, you should see an error message indicating that required models are still missing.
+4. Go back to the **Home** page in ComfyUI Launcher, then click **RESTART** for the changes to take effect.
+
+5. Optional: If you go back to Krita and click **Connect** again, you should see an error message indicating that required models are still missing.
 
    ![Missing required models](/images/manual/use-cases/krita-missing-required-models.png#bordered)
 
@@ -195,7 +197,8 @@ To download them via ComfyUI Launcher:
 
    d. Click **DOWNLOAD MODEL**.
       ![Download required inpaint model](/images/manual/use-cases/comfyui-download-inpaint-model.png#bordered)
-4. Optional: If you go back to Krita and click **Connect** again, you should see an error message indicating that base models are still missing.
+4. Go back to the **Home** page in ComfyUI Launcher, then click **RESTART** for the changes to take effect.
+5. Optional: If you go back to Krita and click **Connect** again, you should see an error message indicating that base models are still missing.
 
    ![Missing required models](/images/manual/use-cases/krita-missing-base-models.png#bordered)
 
@@ -212,36 +215,10 @@ At least one diffusion model (commonly called a “checkpoint”) is required. T
 
    ![Download progress](/images/manual/use-cases/comfyui-download-progress-z-image.png#bordered)
 
-4. Optional: Verify the model
-
-   a. Click **Open** to open ComfyUI, then click **Templates** in the left navigation bar to browse available templates.
-
-   b. Select **Image** as the generation type, and select the template: **Z-Image-Turbo Text to Image**.
-
-   c. When prompted that this workflow is missing models, simply close the window.
-
-   d. Prepend `public/` to the filename in the Text to Image node. For example:
-   - **Default**: `ae.safetensors`
-   - **Change to**: `public/ae.safetensors`
-   :::info Shared model path
-   ComfyUI in Olares uses a file structure that differs from the standard installation. This change allows models to be shared between ComfyUI and SD Web UI.
-   :::
-   ![Change model path](/images/manual/use-cases/comfyui-z-image-change-model-path.png#bordered){width=50%}
-
-   e. Update the text prompt in the same node to describe the image you want to generate.
-   
-   f. Click **Run** in the toolbar to start generation.
-
-   ![Generated image](/images/manual/use-cases/comfyui-z-image-result.png#bordered)
-
-## Verify the connection in Krita
-
-1. Go back to the **Connection** > **Server Configuration** page in Krita.
-   
-2. Click **Connect** again. A green “Connected” indicator confirms a successful connection. In the detected base model list, you should see Z-Image marked as “supported”.
+4. Go back to the **Home** page in ComfyUI Launcher, then click **RESTART** for the changes to take effect.
+5. In Krita, go to **Connection** > **Server Configuration** and click **Connect** again. A green “Connected” indicator confirms a successful connection. You should see Z-Image marked as “supported” in the base model list.
 
    ![Z-Image detected](/images/manual/use-cases/comfyui-z-image-detected.png#bordered)
-
 
 ## Add a style
 
@@ -305,16 +282,21 @@ To refine specific areas of a generated image, use inpainting. This lets you mod
 5. When you find a result you like, click **Apply** to add it to the layers. 
    ![Select inpaint candidate](/images/manual/use-cases/krita-select-inpaint-candidate.png#bordered)
 
-## FAQ
+## Troubleshooting
 
-### Connection cannot be established between ComfyUI and Krita
-If the connection fails:
-- Verify network connectivity between your computer and Olares.
-- Confirm ComfyUI's authentication level is set to "Internal".
-- If you are using a `.com` URL, confirm LarePass VPN is enabled.
-- Check for and disable any interfering proxy services.
-- Ensure ComfyUI is running correctly on Olares.
-- Check whether ComfyUI has GPU access.
+### Cannot connect to ComfyUI from Krita
+
+If Krita shows a connection error:
+
+| Check | What to do |
+|:------|:-----------|
+| Network connectivity | Make sure your computer and Olares are on the same network. |
+| ComfyUI authentication level | In **Settings** > **Application** > **ComfyUI Shared**, confirm it is set to **Internal**. |
+| LarePass VPN for `.com` URLs | Enable **VPN connection** in the LarePass desktop app. |
+| Interfering proxy/VPN | Temporarily disable other VPN or proxy software. |
+| ComfyUI service status | Open ComfyUI Launcher and verify the service is **Running**. |
+| GPU access | In **Settings** > **GPU**, verify ComfyUI is bound to the GPU with enough<br> VRAM allocated. |
+| Required plugins and models | Make sure all custom nodes, utility models, and base diffusion models<br> are downloaded and ComfyUI has been restarted. |
 
 ## Learn more
 
