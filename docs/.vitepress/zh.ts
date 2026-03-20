@@ -55,7 +55,11 @@ const side = {
             {
               text: "网络尚未准备好或 olares 连接错误",
               link: "/zh/manual/help/ts-network-not-ready",
-            }            
+            },
+            {
+              text: "GPU 应用安装或恢复后处于暂停状态",
+              link: "/zh/manual/help/ts-vram-shortage",
+            },            
           ],
         },
       ],
