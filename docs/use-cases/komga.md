@@ -1,9 +1,13 @@
 ---
+outline: deep
 description: Learn how to install, configure, and use Komga on Olares to manage your digital media library.
 head:
   - - meta
     - name: keywords
       content: Olares, Komga, media server, digital library, comics, manga
+app_version: "1.0.7"
+doc_version: "1.0"
+doc_updated: "2026-03-20"
 ---
 
 # Build your digital library with Komga
@@ -14,12 +18,11 @@ This guide shows you how to install Komga on Olares, organize your media files f
 
 ## Learning objectives
 
-By the end of this guide, you are able to:
+In this guide, you will learn how to:
 - Install Komga and set up an administrator account.
 - Prepare and organize media files in the Olares Files app for automatic detection.
 - Create and configure libraries to categorize content.
 - Read books and refine their metadata.
-- Manage user accounts and set access restrictions.
 
 ## Install Komga
 
@@ -48,8 +51,8 @@ When opening Komga for the first time, you must register an account. This is the
 
 Komga scans a dedicated Olares directory to populate your library. You must place your media files in the designated folder for the application to detect them.
 
-1. Open the Files app from the Dock or Launchpad on Olares.
-2. Go to **Data** > **komga > **data**.
+1. Open the Files app from Launchpad.
+2. Navigate to `Application/Data/komga/data/`.
 3. Upload your media files to this directory, or create sub-folders in it to categorize your files.
 
     ![Komga data directory](/images/manual/use-cases/komga-data-path.png#bordered)
@@ -80,7 +83,7 @@ After uploading your files, connect them to the Komga interface by creating libr
 
 ## Edit metadata
 
-Komga automatically pulls embedded metadata from your media files, such as summaries and release dates. But you can manually refine these data to polish your library's appearance and make your library easier to browse.
+Komga automatically pulls embedded metadata from your media files, such as summaries and release dates. But you can manually refine this data to polish your library's appearance and make your library easier to browse.
 
 1. Hover over the book cover, and then click <i class="material-symbols-outlined">edit</i>.
 2. In the **Edit metadata** window, use the following tabs to customize your content:
@@ -177,4 +180,6 @@ If you uninstall Komga and want to remove all remaining data:
 
 The Import feature is designed to move or copy files from a location outside your library (such as the `Downloads` folder) into an existing series. In the Olares environment, the file picker is restricted to the `/data` directory for security and privacy. Since your libraries already reside in this directory, there are no external files for the system to detect, making the import tool unusable.
 
-To add new files, use the Files app on Olares to upload your media files directly in the path:
+To add new files, use the Files app to upload your media files to: `Application/Data/komga/data/`.
+
+Once uploaded, Komga detects them during the next scheduled scan, or you can trigger a manual scan by selecting **Scan library files**.
