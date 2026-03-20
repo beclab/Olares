@@ -7,7 +7,7 @@ head:
       content: Olares, ComfyUI, Stable Diffusion, AI image generation, self-hosted, ComfyUI Launcher
 app_version: "1.0.21"
 doc_version: "1.0"
-doc_updated: "2026-03-17"
+doc_updated: "2026-03-20"
 ---
 # ComfyUI
 
@@ -41,7 +41,7 @@ Member users will only see the ComfyUI client icon. The administrator must start
 
 ## Download the essential model package
 
-Before generating images, you need to prepare models. This guide uses Stable Diffusion v1.5 as an example. ComfyUI Launcher provides a one-click package that includes VAEs, utility models, and preview decoders.
+Before generating images, you need to prepare models. This guide uses Stable Diffusion v1.5 as an example. ComfyUI Launcher provides a one-click package that includes all essential base models.
 
 1. Open **ComfyUI Launcher** from Launchpad.
 2. Scroll down to the **Package installation** section.
@@ -64,44 +64,25 @@ Before generating images, you need to prepare models. This guide uses Stable Dif
    :::
 
 2. Once the status changes to "Running", click **OPEN** to launch the ComfyUI client in a new browser tab.
+3. When prompted that this workflow is missing models, simply close the window.
 
 ## Generate your first image
 
-The ComfyUI client loads with a default text-to-image workflow. This workflow contains all the basic nodes you need to generate an image.
+ComfyUI loads with a default text-to-image workflow. This workflow contains all the basic nodes you need to generate an image.
 
 ![Default workflow](/images/manual/use-cases/comfyui-default-workflow.png#bordered)
 
-The key nodes in the default workflow:
+:::tip Learn about the default workflow
+To understand each node and what it does, see [ComfyUI text-to-image workflow node explanation](https://docs.comfy.org/tutorials/basic/text-to-image#comfyui-text-to-image-workflow-node-explanation).
+:::
 
-| Node | Purpose |
-|:-----|:--------|
-| **Load Checkpoint** | Loads the base Stable Diffusion model. |
-| **CLIP Text Encode** (positive) | Your text description of what you want to generate. |
-| **CLIP Text Encode** (negative) | Text describing what to avoid in the generated image. |
-| **Empty Latent Image** | Sets the image dimensions and batch size. |
-| **KSampler** | Controls the generation process (steps, CFG scale, sampler). |
-| **Save Image** | Displays and stores the output image. |
-
-### Set your prompts
-
-1. In the **positive prompt** node (CLIP Text Encode), enter a description of what you want to generate. For example:
-   ```text
-   a purple glass bottle, studio lighting, high detail, product photography
-   ```
-
-2. In the **negative prompt** node, enter elements you want to avoid. For example:
-   ```text
-   blurry, low quality, distorted
-   ```
-
-### Run the workflow
-
-1. Click **Run** in the toolbar to start generation.
-2. Wait for the process to complete. The generated image appears in the **Save Image** node.
+1. Click **Run** in the toolbar to generate an image using the default prompts. The generated image appears in the **Save Image** node.
 
    ![Generated image](/images/manual/use-cases/comfyui-generated-image.png#bordered)
 
-   You can right-click the image in the **Save Image** node to save it locally, or find all output files in the Files app at `External/olares/ai/output/comfyui`.
+2. Try modifying the text in the **CLIP Text Encode** nodes and click **Run** again to see how the output changes.
+
+3. Right-click the image in the **Save Image** node to save it locally, or find all output files in the Files app at `External/olares/ai/output/comfyui`.
 
    ![Check generated image in Files](/images/manual/use-cases/comfyui-check-generated-image-in-files.png#bordered)
 
@@ -112,11 +93,10 @@ The key nodes in the default workflow:
 
 If you open ComfyUI Launcher and see an error message saying the connection cannot be established:
 
-- Go to **Settings** > **GPU**.
-- If you are using **Memory slicing**, make sure ComfyUI is bound to the GPU and has enough VRAM allocated.
-- If you are using **App exclusive**, make sure the exclusive app is set to ComfyUI.
-
-Wait a while and then open ComfyUI Launcher from Launchpad again.
+1. Go to **Settings** > **GPU** and check your GPU mode:
+   - If you are using **Memory slicing**, make sure ComfyUI is bound to the GPU and has enough VRAM allocated.
+   - If you are using **App exclusive**, make sure the exclusive app is set to ComfyUI.
+2. Wait a moment, then open ComfyUI Launcher from Launchpad again.
 
 ## Learn more
 

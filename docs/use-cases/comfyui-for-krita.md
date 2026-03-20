@@ -7,14 +7,12 @@ head:
       content: Olares, ComfyUI, Krita, AI art, digital painting, Krita AI Diffusion, image generation
 app_version: "1.0.21"
 doc_version: "1.0"
-doc_updated: "2026-03-19"
+doc_updated: "2026-03-20"
 ---
 
 # Create AI art with ComfyUI and Krita
 
 ComfyUI provides powerful AI image generation, but to make it truly useful, you need to integrate it into your creative workflow. This guide shows you how to connect ComfyUI running on Olares to Krita on your computer, so you can generate AI artwork directly within your digital painting environment.
-
-By the end of this tutorial, you'll be generating AI images in Krita using your Olares-hosted ComfyUI instance.
 
 ## Learning objectives
 
@@ -34,7 +32,7 @@ In this guide, you will learn how to:
 
 Open ComfyUI Launcher and click **START** to make sure the service is running.
 
-::: tip Maximize GPU performance
+:::tip Maximize GPU performance
 You can set the GPU mode to **App exclusive** and assign ComfyUI full GPU access in **Settings** > **GPU** to ensure maximum performance.
 :::
 
@@ -73,7 +71,7 @@ If your computer is on the same local network as Olares, use the `.local` domain
 
 1. Create a new document in Krita.
 
-   ::: tip Canvas size
+   :::tip Canvas size
    Start with a 512 x 512 pixel canvas to optimize performance and manage graphics memory efficiently.
    :::
 
@@ -120,7 +118,7 @@ If your computer is not on the same local network as Olares, enable LarePass VPN
 
 2. Create a new document in Krita.
 
-   ::: tip Canvas size
+   :::tip Canvas size
    Start with a 512 x 512 pixel canvas to optimize performance and manage graphics memory efficiently.
    :::
 
@@ -225,9 +223,9 @@ At least one diffusion model (commonly called a “checkpoint”) is required. T
 Before generating images, you need to create a Style Preset that tells Krita which model to use.
 
 1. Open the **Configure Image Diffusion** dialog in Krita, and go to the **Styles** tab.
-2. In the dropdown **Style Presets**, select **Z-image Turbo** from the built-in styles.
+2. For **Style Presets**, select **Z-Image Turbo** from the built-in styles.
 
-   ![Select built-in Z-image Turbo style](/images/manual/use-cases/krita-select-built-in-style.png#bordered)
+   ![Select built-in Z-Image Turbo style](/images/manual/use-cases/krita-select-built-in-style.png#bordered)
 
 3. Click the duplicate icon to create a duplicate of the current style.
 
@@ -255,7 +253,7 @@ Before generating images, you need to create a Style Preset that tells Krita whi
    A person relaxing on a sandy beach, basking in the warm sunlight, with the calm blue ocean in the background.
    ```
 
-3. Click **Generate**. The generated image will be automatically displayed on the canvas.
+3. Click **Generate**. The generated image appears on the canvas.
    ![Generate image](/images/manual/use-cases/krita-generated-image-1.png#bordered)
 
 4. Click **Generate** again to generate a new image.

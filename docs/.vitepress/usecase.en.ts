@@ -53,7 +53,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/comfyui-launcher",
                 },
                 {
-                  text: "Use ComfyUI for Krita",
+                  text: "Use ComfyUI in Krita",
                   link: "/use-cases/comfyui-for-krita",
                 },
               ]
