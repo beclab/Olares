@@ -21,15 +21,15 @@ By the end of this guide, you are able to:
 - Read books and refine their metadata.
 - Manage user accounts and set access restrictions.
 
-## 1. Install Komga
+## Install Komga
 
-1. From the Olares Market, search for "Komga".
+1. Open Olares Market and search for "Komga".
 
     ![Search for Komga from Market](/images/manual/use-cases/install-komga.png#bordered){width=90%}
 
 2. Click **Get**, and then click **Install**. Wait for the installation to finish.
 
-## 2. Set up the admin account
+## Set up the admin account
 
 When opening Komga for the first time, you must register an account. This is the administrator account that gives you full control over the server settings, libraries, and user management.
 
@@ -44,7 +44,7 @@ When opening Komga for the first time, you must register an account. This is the
 
     ![Komga welcome page](/images/manual/use-cases/komga-welcome.png#bordered)
 
-## 3. Prepare your media files
+## Prepare your media files
 
 Komga scans a dedicated Olares directory to populate your library. You must place your media files in the designated folder for the application to detect them.
 
@@ -54,7 +54,7 @@ Komga scans a dedicated Olares directory to populate your library. You must plac
 
     ![Komga data directory](/images/manual/use-cases/komga-data-path.png#bordered)
 
-## 4. Create a library
+## Create a library
 
 After uploading your files, connect them to the Komga interface by creating libraries. A library is a group of books. You can create multiple libraries to separate different types of content.
 
@@ -78,7 +78,7 @@ After uploading your files, connect them to the Komga interface by creating libr
 
     ![Add library completed](/images/manual/use-cases/komga-library-added.png#bordered){width=90%}  
 
-## 5. Edit metadata
+## Edit metadata
 
 Komga automatically pulls embedded metadata from your media files, such as summaries and release dates. But you can manually refine these data to polish your library's appearance and make your library easier to browse.
 
@@ -103,7 +103,7 @@ Komga automatically pulls embedded metadata from your media files, such as summa
 5. On the **Links** tab, click the plus icon to add external URLs, such as official series websites or fan wikis. This allows for quick access to more information about the book.
 6. On the **Poster** tab, drag and drop a new image or choose a file to replace the default book cover. This ensure your digial shelf looks exactly how you want it.-->
 
-## 6. Read books
+## Read books
 
 Once your library is organized, you can start reading using the built-in Webreader.
 
@@ -118,7 +118,7 @@ Once your library is organized, you can start reading using the built-in Webread
 
     ![Book opened in Webreader](/images/manual/use-cases/komga-book-opened.png#bordered){width=90%}  
 
-## 7. Scan library files
+## Scan library files
 
 By default, Komga scans your libraries regularly based on the interval you set during library creation. However, if you add, rename, or move media files and want them to appear immediately, you can trigger a manual scan.
 
@@ -127,7 +127,7 @@ By default, Komga scans your libraries regularly based on the interval you set d
 
     ![Scan library files](/images/manual/use-cases/komga-scan-lib-files.png#bordered){width=50%}
 
-## 8. Manage users
+<!--## Manage users
 
 You can share your libraries with others by adding individual accounts with specific access levels.
 
@@ -146,11 +146,6 @@ You can share your libraries with others by adding individual accounts with spec
     | Kobo Sync | Allows the user to synchronize their reading progress, bookmarks, <br>and libraries with Kobo devices. |
     | KOReader Sync | Allows the user to synchronize their reading progress, bookmarks, <br>and libraries with the KOReader application. |
 
-    <!--- **Administrator:** Grants the user full control over server settings, libraries, and user management.
-    - **File download:** Allows the user to download save the media files to their local device for offline reading.
-    - **Page streaming:** Allows the user to read books directly through the web browser or compatible apps.
-    - **Kobo Sync** and **KOReader Sync**: Allows the user to synchronize their reading progress, bookmarks, and libraries with Kobo devices or the KOReader application.-->
-
 4. Click **ADD**. The newly added user is displayed on the **Users** page.
 
     ![User added](/images/manual/use-cases/komga-user-added.png#bordered){width=60%}
@@ -167,7 +162,8 @@ You can share your libraries with others by adding individual accounts with spec
 
     ![Content restrictions](/images/manual/use-cases/komga-content-restrictions.png#bordered){width=60%}
 
-    c. Click **SAVE CHANGES**. 
+    c. Click **SAVE CHANGES**.
+--> 
 
 ## FAQs
 
