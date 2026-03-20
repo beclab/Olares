@@ -196,14 +196,15 @@ If a skill is blocked or unusable, you need to identify and install its missing 
 
     Now the status of the plug-in is **loaded**.
 
-5. Open the Control UI, go to **Config** > **Plugins**, and then find **@openclaw/bluebubbles** on the **All** tab:
+5. Open the Control UI, go to **Automation** > **Plugins**.
+6. Find **@openclaw/bluebubbles** and click it to expand its panel:
 
     - If it is enabled, turn off the toggle switch, and then turn on again to force the system to explicitly save the configuration.
     - If it is disabled, turn on the toggle switch.
 
-    ![Toggle on plugin](/images/manual/use-cases/toggle-plugin.png#bordered)
+    ![Toggle on plugin](/images/manual/use-cases/toggle-plugin1.png#bordered)
 
-6. Click **Save** in the upper-right corner. The system validates the config and restarts automatically to apply the changes.
+7. Click **Save** in the upper-right corner. The system validates the config and applies the change automatically.
 
     ::: tip Manual restart
     If you need to restart OpenClaw manually, do not use the OpenClaw CLI. Use one of the following methods:

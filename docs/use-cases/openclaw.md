@@ -250,10 +250,10 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
     ![Reveal configuration blocks](/images/manual/use-cases/click-hide-icon.png#bordered)
 
 3. Find the `models` section and locate the configuration block for your model.
-3. Add or update the `contextWindow` value. Set it to at least 64000 (64K). If your hardware VRAM permits, it is highly recommended to increase it to 200000 (200K).
+4. Add or update the `contextWindow` value. Set it to at least 64000 (64K). If your hardware VRAM permits, it is highly recommended to increase it to 200000 (200K).
 
     ![Configure context window](/images/manual/use-cases/configure-context-win2.png#bordered)
-4. Click **Save** in the upper-right corner. The system validates the configuration and applies the change automatically.
+5. Click **Save** in the upper-right corner. The system validates the configuration and applies the change automatically.
 
 ### Step 5: Personalize OpenClaw
 
@@ -312,7 +312,7 @@ This process establishes the agent's identity, behavioral boundaries, and long-t
     - Ask the agent in the chat to update its rules.
     - Download the `.md` files from this folder, edit them in a text editor, and re-upload them to overwrite the old ones. 
     :::
-8. Right-click the temporary `BOOTSTRAP.md` file and select delete to finish the personalization process.
+8. Right-click the temporary `BOOTSTRAP.md` file and select **Delete** to finish the personalization process.
 
 ## Next steps
 
