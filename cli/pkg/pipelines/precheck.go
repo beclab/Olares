@@ -5,12 +5,12 @@ import (
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/core/pipeline"
-	"github.com/spf13/viper"
+	"github.com/beclab/Olares/cli/version"
 )
 
 func StartPreCheckPipeline() error {
 	var arg = common.NewArgument()
-	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
+	arg.SetOlaresVersion(version.VERSION)
 	arg.SetConsoleLog("precheck.log", true)
 
 	runtime, err := common.NewKubeRuntime(*arg)
