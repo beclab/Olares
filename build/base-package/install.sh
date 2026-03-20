@@ -103,7 +103,7 @@ else
         echo "olares-cli already installed and is the expected version"
         echo ""
     else
-        if [[ ! -f ${CLI_FILE} ]]; then
+        if [[ ! -f ${CLI_FILE} ]] || ! gzip -t ${CLI_FILE} 2>/dev/null; then
             CLI_URL="${cdn_url}${REPO_PATH}${CLI_FILE}"
 
             echo "downloading Olares installer from ${CLI_URL} ..."
@@ -143,8 +143,14 @@ else
 fi
 
 if [[ -f $BASE_DIR/.prepared ]]; then
-    echo "file $BASE_DIR/.prepared detected, skip preparing phase"
-    echo ""
+    if [[ "$(cat $BASE_DIR/.prepared)" == "$VERSION" ]]; then
+        echo "file $BASE_DIR/.prepared detected, skip preparing phase"
+        echo ""
+    else
+        echo "file $BASE_DIR/.prepared detected with version: $(cat $BASE_DIR/.prepared), but the expected version is: $VERSION"
+        echo "if it is left by an unclean uninstallation, please execute a full uninstallation and rerun the installer"
+        exit 1
+    fi
 else
     if [[ "$LOCAL_RELEASE" == "1" ]]; then
         if [[ -d $BASE_DIR/versions/v$VERSION  ]]; then
@@ -192,9 +198,15 @@ else
 fi
 
 if [ -f $BASE_DIR/.installed ]; then
-    echo "file $BASE_DIR/.installed detected, skip installing"
-    echo "if it is left by an unclean uninstallation, please manually remove it and invoke the installer again"
-    exit 0
+    if grep -q "$VERSION" $BASE_DIR/.installed; then
+        echo "file $BASE_DIR/.installed detected, skip installing"
+        echo ""
+        exit 0
+    else
+        echo "file $BASE_DIR/.installed detected with version: $(cat $BASE_DIR/.installed), but the expected version is: $VERSION"
+        echo "if it is left by an unclean uninstallation, please execute a full uninstallation and rerun the installer"
+        exit 1
+    fi
 fi
 if [ "$PREINSTALL" == "1" ]; then
     echo "Pre Install mode is specified by the \"PREINSTALL\" env var, skip installing"

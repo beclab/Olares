@@ -7,19 +7,20 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/phase/cluster"
+	"github.com/beclab/Olares/cli/version"
 	"github.com/spf13/viper"
 )
 
 func UninstallTerminusPipeline() error {
-	version := viper.GetString(common.FlagVersion)
 	kubeType := phase.GetKubeType()
 
-	if version == "" {
-		version, _ = phase.GetOlaresVersion()
+	sysversion, _ := phase.GetOlaresVersion()
+	if sysversion == "" {
+		sysversion = version.VERSION
 	}
 
 	var arg = common.NewArgument()
-	arg.SetOlaresVersion(version)
+	arg.SetOlaresVersion(sysversion)
 	arg.SetConsoleLog("uninstall.log", true)
 	arg.SetKubeVersion(kubeType)
 	arg.SetStorage(getStorageConfig())

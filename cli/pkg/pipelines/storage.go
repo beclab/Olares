@@ -7,6 +7,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/phase/system"
+	"github.com/beclab/Olares/cli/version"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
@@ -18,7 +19,7 @@ func CliInstallStoragePipeline() error {
 	}
 
 	arg := common.NewArgument()
-	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
+	arg.SetOlaresVersion(version.VERSION)
 	arg.SetStorage(getStorageConfig())
 
 	runtime, err := common.NewKubeRuntime(*arg)

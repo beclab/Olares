@@ -9,12 +9,12 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/pipeline"
 	"github.com/beclab/Olares/cli/pkg/gpu"
 	"github.com/beclab/Olares/cli/pkg/manifest"
-	"github.com/spf13/viper"
+	"github.com/beclab/Olares/cli/version"
 )
 
 func InstallGpuDrivers() error {
 	arg := common.NewArgument()
-	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
+	arg.SetOlaresVersion(version.VERSION)
 	arg.SetConsoleLog("gpuinstall.log", true)
 	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
