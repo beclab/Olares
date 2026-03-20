@@ -57,6 +57,10 @@ const side = {
               text: "Network not ready or olares connection error",
               link: "/manual/help/ts-network-not-ready",
             },
+            {
+              text: "GPU app remains stopped after installation or resume",
+              link: "/manual/help/ts-vram-shortage",
+            },
           ],
         },
       ],
