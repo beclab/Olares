@@ -29,6 +29,10 @@ To resolve this, you must access the Olares host terminal (via SSH or local CLI)
 
 This is the most convenient way to access your Olares host terminal. If SSH is not accessible, skip to [Step 2](#step-2-log-in-locally).
 
+:::info Same network required
+Your computer and your Olares device must be on the same local network.
+:::
+
 1. Get the local IP address of your Olares device.
 
     a. Open the LarePass app, and go to **Settings** > **System** to navigate to the **Olares management** page.
@@ -79,7 +83,7 @@ If you cannot connect via SSH, log in to the device locally using a monitor and 
     olares login:
     ```
 
-2. Type the username `olares` and press **Enter**.
+2. Type the default SSH username `olares` and press **Enter**.
 3. Type the same SSH password obtained in [**Step 1**](#step-1-access-the-terminal-via-ssh) and press **Enter**.
 
 ### Step 3: Reset the password
@@ -98,7 +102,7 @@ After you accessed the terminal, run the following commands to enable the reset 
     olares-cli user reset-password <username> -p <newpassword>
     ```
 
-    For example, reset password for the user named "alice123":
+    For example, reset password for the user "alice123" to "NewSecurePassword456!":
 
     ```bash
     olares-cli user reset-password alice123 -p NewSecurePassword456!
