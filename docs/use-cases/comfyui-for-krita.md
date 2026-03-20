@@ -67,7 +67,15 @@ The connection steps depend on whether your computer and Olares device are on th
 <tabs>
 <template #Use-.local-domain-(LAN,-recommended)>
 
-If your computer is on the same local network as Olares, use the `.local` domain. You'll need to modify the URL slightly.
+If your computer is on the same local network as Olares, you can use the `.local` domain to connect without LarePass VPN. The steps below use macOS as an example, where `.local` domains work natively with no additional setup.
+
+:::info Windows users
+On Windows, multi-level `.local` domains need a bit of extra setup. Try one of these:
+- **Import hosts in LarePass**: Open the LarePass desktop app and use the built-in option to import Olares hosts to your system.
+- **Use the single-level domain**: Change `https://806ba3e40.{username}.olares.com` to `http://806ba3e40-{username}-olares.local`.  
+
+For details, see [Access Olares services locally](../manual/best-practices/local-access.md).
+:::
 
 1. Create a new document in Krita.
 
