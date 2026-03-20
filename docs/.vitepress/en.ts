@@ -58,8 +58,8 @@ const side = {
               link: "/manual/help/ts-network-not-ready",
             },
             {
-              text: "GPU-dependent app remains stopped after installation or resume",
-              link: "/manual/help/ts-app-stopped-mem-slice",
+              text: "GPU app remains stopped after installation or resume",
+              link: "/manual/help/ts-vram-shortage",
             },
           ],
         },
