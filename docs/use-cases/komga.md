@@ -8,7 +8,7 @@ head:
 
 # Build your digital library with Komga
 
-Komga is a specialized, open-source media server designed to give you full control over your digital collection of comics, manga, Bandes Dessinées (BD), magazines, and e-books. By installing Komga on Olares, you transform your device into a private media hub, organizing your favorite series into a neat, searchable library accessible from all your devices.
+Komga is a specialized, open-source media server designed to manage your digital collection of comics, manga, Bandes Dessinées (BD), magazines, and e-books.
 
 This guide shows you how to install Komga on Olares, organize your media files for automatic scanning, configure secure user access, and use the built-in reader and metadata editors to enhance your digital reading experience.
 
@@ -49,7 +49,7 @@ When opening Komga for the first time, you must register an account. This is the
 Komga scans a dedicated Olares directory to populate your library. You must place your media files in the designated folder for the application to detect them.
 
 1. Open the Files app from the Dock or Launchpad on Olares.
-2. Go to **Data > komga > data**.
+2. Go to **Data** > **komga > **data**.
 3. Upload your media files to this directory, or create sub-folders in it to categorize your files.
 
     ![Komga data directory](/images/manual/use-cases/komga-data-path.png#bordered)
@@ -169,14 +169,16 @@ You can share your libraries with others by adding individual accounts with spec
 
     c. Click **SAVE CHANGES**. 
 
-## FAQ
+## FAQs
 
 ### How to perform a clean uninstallation?
 
-If you uninstall Komga and want to remove all remaining data, go to the Files app and delete the `komga` folder located in the **Data** directory. This removes all database configurations and cached metadata.
+If you uninstall Komga and want to remove all remaining data:
+1. Open the Files app, and go to **Application** > **Data**
+2. Delete the `komga` folder. This removes all database configurations and cached metadata.
 
 ### Why can't I use the "Import" function in Komga?
 
-The "Import" feature is designed to move or copy files from a location outside your library (such as the `Downloads` folder) into an existing series. In the Olares environment, the file picker is restricted to the `/data` directory for security and privacy. Since your libraries already reside in this directory, there are no "external" files for the system to detect, making the import tool unusable.
+The Import feature is designed to move or copy files from a location outside your library (such as the `Downloads` folder) into an existing series. In the Olares environment, the file picker is restricted to the `/data` directory for security and privacy. Since your libraries already reside in this directory, there are no external files for the system to detect, making the import tool unusable.
 
-To add new files, use the Files app on Olares to upload your media files directly to `Data > komga > data`. Once uploaded, Komga detects them during the next scheduled scan, or you can trigger a manual scan by selecting **Scan library files**.
+To add new files, use the Files app on Olares to upload your media files directly in the path:
