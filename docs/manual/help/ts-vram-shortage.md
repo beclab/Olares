@@ -3,7 +3,7 @@ outline: [2, 3]
 description: Troubleshoot GPU-dependent apps that remain stopped after installation or resume in Memory slicing mode.
 ---
 
-# GPU-dependent app remains stopped after installation or resume
+# GPU app remains stopped after installation or resume
 
 Use this guide when a GPU-dependent app remains in the **Stopped** state after installation or resume in **Memory slicing** mode.
 
