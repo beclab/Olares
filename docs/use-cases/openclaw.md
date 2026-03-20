@@ -96,12 +96,12 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
 ### Step 2: Run onboarding wizard
 
 1. Open the OpenClaw CLI app from the Launchpad.
-2. Enter the following command to open the onboarding wizard. Ensure you replaced `{your-model-api}` and `{your-model-name}` with the exact details you copied in **Step 1**.
+2. Enter the following command to open the onboarding wizard. Ensure you replaced `{Your-Model-API}` and `{Your-Model-Name}` with the exact details you copied in **Step 1**.
     ```bash
     openclaw onboard --non-interactive \
     --auth-choice ollama \
-    --custom-base-url "{your-model-api}" \
-    --custom-model-id "{your-model-name}" \
+    --custom-base-url "{Your-Model-API}" \
+    --custom-model-id "{Your-Model-Name}" \
     --accept-risk
     ```
     For example,
@@ -185,7 +185,7 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 
     ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard.png#bordered){width=60%}
 
-    The error message `unauthorized: device token mismatch (rotate/reissue device token)` occurs. This is expected and means you have not provided your access token yet.
+    The error `unauthorized: device token mismatch (rotate/reissue device token)` occurs. This is expected and means you have not provided your access token yet.
 
 2. In **Gateway Token** field, enter the token you copied in the previous step, and then click **Connect**.
 
