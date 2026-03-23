@@ -49,7 +49,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/open-webui",
         },
         {
-          text: "Generate images with ComfyUI",
+          text: "Generate images and videos with ComfyUI",
           link: "/zh/one/comfyui",
         },
         {

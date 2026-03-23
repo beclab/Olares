@@ -111,11 +111,11 @@ Essential models are basic resources required for ComfyUI to run, including SD l
 1. Open the package page in either of the following ways:
     - In the **Missing essential models** prompt window that appears on first start, click **INSTALL MODELS**.
     - Go to **Home**, scroll to the **Package installation** section, find **Stable Diffusion base package**, and click **VIEW**. This package provides the necessary foundation for ComfyUI, including VAEs, utility models, and preview decoders.
-    ![Install basic package](/images/manual/use-cases/comfyui-base-package.png#bordered)
+    ![Install basic package](/images/manual/use-cases/comfyui-base-package1.png#bordered)
 
 2. On the **Package Details** page, click **GET ALL** to start the automatic installation. You can track the progress in the status bar.
     
-    ![Download progress](/images/manual/use-cases/comfyui-download-progress.png#bordered)
+    ![Download progress](/images/manual/use-cases/comfyui-download-progress1.png#bordered)
 
 ### Install additional models
 
