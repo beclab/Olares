@@ -28,32 +28,30 @@ This is the most convenient way to access your Olares host terminal. If SSH is n
 Your computer and your Olares device must be on the same local network.
 :::
 
-1. Get the local IP address of your Olares device.
+1. Prepare your credentials based on your device type:
 
-    a. Open the LarePass app, and go to **Settings** > **System** to navigate to the **Olares management** page.
-    ![Tap the System card](/images/manual/get-started/larepass-system.png#bordered)
-    
-    b. Tap your device card: **Selfhosted** or **Olares One**.
+    | Details | Selfhosted | Olares One |
+    |:--------|:-----------|:-----------|
+    | Local IP address | The Intranet IP of your Olares device | The Intranet IP of your Olares device |
+    | SSH username | The default `olares`, or<br> the custom one you reset previously | `olares` |
+    | SSH password | The default `olares`, or<br> the custom one you reset previously | Located in LarePass Vault. <br>If your LarePass mobile client is not accessible, skip to [Step 2](#step-2-log-in-locally).|
 
-    c. Scroll down to the **Network** section and note down the **Intranet IP**.
+    :::tip How to find the Olares One SSH password
+    Open the LarePass mobile client, go to **Vault** > **All vaults**, find the one with the <span class="material-symbols-outlined">terminal</span> icon, and then tap it to reveal the password.
+    ![Check saved SSH password in Vault for Olares One](/images/one/ssh-check-password-in-vault.png#bordered)
+    :::
 
-2. Retrieve the SSH password.
-
-    - Self-host Olares: The default password is `olares` unless previously changed.
-    - Olares One: In LarePass, go to **Vault** > **All vaults**, find the one with the <span class="material-symbols-outlined">terminal</span> icon, and then tap it to reveal the password.
-            ![Check saved SSH password in Vault for Olares One](/images/one/ssh-check-password-in-vault.png#bordered)
-
-3. Connect to the host terminal.
+2. Connect to the host terminal.
 
     a. Open a terminal on your computer.
 
-    b. Type the following command, replace `<local_ip_address>` with the Intranet IP, and then press **Enter**:
+    b. Type the following command, replace `<local-ip-address>` with the Intranet IP, and then press **Enter**:
 
     ```bash
-    ssh olares@<local_ip_address>
+    ssh <system-username>@<local-ip-address>
     ```
 
-    For example,
+    Take Olares One for example,
     ```bash
     ssh olares@192.168.11.12
     ```
@@ -78,8 +76,8 @@ If you cannot connect via SSH, log in to the device locally using a monitor and 
     olares login:
     ```
 
-2. Type the default SSH username `olares` and press **Enter**.
-3. Type the same SSH password obtained in [**Step 1**](#step-1-access-the-terminal-via-ssh) and press **Enter**.
+2. Type the default username `olares` and press **Enter**.
+3. Type the same password obtained in [Step 1](#step-1-access-the-terminal-via-ssh) and press **Enter**.
 
 ### Step 3: Reset the password
 
@@ -94,7 +92,7 @@ After you accessed the terminal, run the following commands to enable the reset 
 2. Type the following command, and then press **Enter** to reset the password:
 
     ```bash
-    olares-cli user reset-password <username> -p <newpassword>
+    olares-cli user reset-password <olares-id> -p <newpassword>
     ```
 
     For example, reset password for the user "alice123" to "NewSecurePassword456!":
@@ -108,7 +106,7 @@ After you accessed the terminal, run the following commands to enable the reset 
     When the terminal returns the following message, it means the password is reset successfully:
 
     ```text
-    Password for user '<username>' reset successfully
+    Password for user '<olares-id>' reset successfully
     ```
 
 ### Step 4: Verify login

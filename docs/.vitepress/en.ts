@@ -60,7 +60,8 @@ const side = {
             {
               text: "Forgot login password",
               link: "/manual/help/ts-forget-login-password",
-            },            
+            },
+            {            
               text: "GPU app remains stopped after installation or resume",
               link: "/manual/help/ts-vram-shortage",
             },
