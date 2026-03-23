@@ -40,12 +40,12 @@ DGX Spark support is currently in Release Candidate (RC). We are actively testin
 
 1. Insert the bootable USB drive into DGX Spark.
 2. Restart DGX Spark, then immediately press the **Delete** key repeatedly to enter the BIOS setup.
-   ![BIOS setup](/images/one/bios-setup.png#bordered)
+   <!-- ![BIOS setup](/images/one/bios-setup.png#bordered) -->
 
 3. Navigate to the **Boot** tab, set **Boot Option #1** to the USB drive, and then press **Enter**.
-   ![Set boot option](/images/one/bios-set-boot-option.png#bordered)
+   <!-- ![Set boot option](/images/one/bios-set-boot-option.png#bordered) -->
 
-4. Press **F10** to save and restart. The system will automatically boot into the Olares installer interface.
+4. Press **F4** to save and restart. The system will automatically boot into the Olares installer interface.
 
 ## Install Olares
 
