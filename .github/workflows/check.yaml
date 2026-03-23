@@ -285,7 +285,7 @@ jobs:
       - name: Deploy Request
         uses: fjogeleit/http-request-action@v1
         with:
-          url: 'https://cloud-dev-api.bttcdn.com/v1/resource/installTest'
+          url: 'https://api.test.olares.com/space/v1/resource/installTest'
           method: 'POST'
           customHeaders: '{"Authorization": "${{ secrets.INSTALL_SECRET }}"}'
           data: 'versions=${{ needs.test-version.outputs.version }}&downloadUrl=https://cdn.olares.com/install-wizard-v${{ needs.test-version.outputs.version }}.tar.gz'
@@ -294,7 +294,7 @@ jobs:
       - name: Check Result
         uses: eball/poll-check-endpoint@v0.1.0
         with:
-          url: https://cloud-dev-api.bttcdn.com/v1/resource/installResult
+          url: https://api.test.olares.com/space/v1/resource/installResult
           method: 'POST'
           expectStatus: 200
           failedBodyRegex: '"installedAt":"[0-9]{10,}".*"isSuccess":false'
