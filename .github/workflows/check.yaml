@@ -30,7 +30,16 @@ on:
 
 
 jobs:
+  check-permission:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'pull_request_target' ||
+      contains(fromJSON('["MEMBER","OWNER"]'), github.event.pull_request.author_association)
+    steps:
+      - run: echo "author association check passed"
+
   lint-test:
+    needs: check-permission
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -61,6 +70,7 @@ jobs:
         run: ct lint --chart-dirs .dist/wizard/config,.dist/wizard/config/apps,.dist/wizard/config/gpu --check-version-increment=false --all --validate-maintainers=false
 
   test-version:
+    needs: check-permission
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.generate.outputs.version }}
@@ -89,6 +99,7 @@ jobs:
       repository: ${{ github.event.pull_request.head.repo.full_name }}
 
   push-image:
+    needs: check-permission
     runs-on: ubuntu-latest
 
     steps:
@@ -119,6 +130,7 @@ jobs:
           bash build/image-manifest.sh && bash build/upload-images.sh .manifest/images.mf
 
   push-image-arm64:
+    needs: check-permission
     runs-on: [self-hosted, linux, ARM64]
 
     steps:
