@@ -59,7 +59,7 @@ Connect LobeHub to Ollama to make the chat interface work.
    
    b. Under **Shared entrances**, click **Ollama API**, and then copy the endpoint address.
 
-   ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl1.png#bordered){width=60%}
+   ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl2.png#bordered){width=60%}
 
    c. Return to LobeHub, and then enter the endpoint address in the **Interface proxy address** field.
 
