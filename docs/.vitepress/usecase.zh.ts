@@ -126,6 +126,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 }
               ]
             },
+            {
+              text: "Komga",
+              link: "/zh/use-cases/komga",
+            },
           ]
         },
         {
