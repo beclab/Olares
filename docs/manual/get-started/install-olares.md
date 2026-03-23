@@ -24,11 +24,7 @@ Linux (Ubuntu or Debian) is the recommended platform for running Olares, as it o
 - [**One-line script**](install-linux-script.md): Quick install on existing Linux systems.
 - [**Docker image**](install-linux-docker.md): Run Olares in a containerized environment on Linux.
 
-### DGX Spark <Badge type="warning" text="RC" />
-
-:::warning RC version
-DGX Spark support is currently in Release Candidate (RC). We are actively testing and will release the stable version soon.
-:::
+### DGX Spark
 
 NVIDIA DGX Spark is a compact AI development platform featuring a high-performance GPU. Olares is optimized to leverage the full capabilities of DGX Spark hardware.
 

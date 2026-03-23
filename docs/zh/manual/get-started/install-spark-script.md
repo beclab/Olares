@@ -3,13 +3,9 @@ outline: [2, 3]
 description: 在 NVIDIA DGX Spark 上通过命令行安装脚本快速部署 Olares。
 ---
 
-# 使用命令行安装 Olares <Badge type="warning" text="RC" />
+# 使用命令行安装 Olares
 
 本文介绍如何在 NVIDIA DGX Spark 上通过命令行安装脚本安装 Olares。
-
-:::warning RC 版本
-DGX Spark 支持目前处于候选发布版（RC）阶段。我们正在积极测试，将很快推出正式版本。
-:::
 
 <!--@include: ./reusables.md{44,51}-->
 

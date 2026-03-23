@@ -3,13 +3,9 @@ outline: [2, 3]
 description: Install Olares on NVIDIA DGX Spark using the command-line installation script for quick deployment.
 ---
 
-# Install Olares on DGX Spark via script <Badge type="warning" text="RC" />
+# Install Olares on DGX Spark via script
 
 This guide explains how to install Olares on NVIDIA DGX Spark using the command-line installation script.
-
-:::warning RC version
-DGX Spark support is currently in Release Candidate (RC). We are actively testing and will release the stable version soon.
-:::
 
 <!--@include: ./reusables.md{44,51}-->
 

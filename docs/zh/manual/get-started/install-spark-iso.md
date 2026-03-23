@@ -3,13 +3,9 @@ outline: [2, 3]
 description: 使用官方 ISO 镜像在 NVIDIA DGX Spark 上安装 Olares，包括制作启动盘、安装步骤和激活流程。
 ---
 
-# 通过 ISO 镜像安装 Olares <Badge type="warning" text="RC" />
+# 通过 ISO 镜像安装 Olares
 
 本文介绍如何使用官方 ISO 镜像在 NVIDIA DGX Spark 上安装 Olares。
-
-:::warning RC 版本
-DGX Spark 支持目前处于候选发布版（RC）阶段。我们正在积极测试，将很快推出正式版本。
-:::
 
 ::: tip 激活遇到问题？
 当前 ISO 镜像使用了国际版网络配置（使用 `olares.com` 域名）。如遇激活问题，请暂时切换至[命令行安装](install-spark-script.md)方式安装激活。

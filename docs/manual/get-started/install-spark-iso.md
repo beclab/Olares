@@ -4,13 +4,9 @@ outline: [2, 3]
 description: Install Olares on NVIDIA DGX Spark using the official ISO image, including bootable USB creation, installation steps, and activation process.
 ---
 
-# Install Olares on DGX Spark via ISO <Badge type="warning" text="RC" />
+# Install Olares on DGX Spark via ISO
 
 This guide explains how to install Olares on NVIDIA DGX Spark using the official ISO image.
-
-:::warning RC version
-DGX Spark support is currently in Release Candidate (RC). We are actively testing and will release the stable version soon.
-:::
 
 <!--@include: ./reusables.md{44,51}-->
 
