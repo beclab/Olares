@@ -67,9 +67,7 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
 <Tabs>
 <template #(Recommended)-Download-from-Market>
 
-1. From the Olares Market, search for "Qwen3.5 35B A3B Q4 (Ollama)" or "Qwen3.5 35B A3B UD-Q4 (Ollama)".
-
-    ![Find model app from Market](/images/manual/use-cases/find-model1.png#bordered)
+1. From the Olares Market, search for "Qwen3.5 35B A3B UD-Q4 (Ollama)".
 
     ![Find model app from Market](/images/manual/use-cases/find-model2.png#bordered)    
 2. Click **Get**, and then click **Install**. 
