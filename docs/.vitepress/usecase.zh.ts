@@ -12,19 +12,19 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "Integrate with Discord",
+                  text: "集成 Discord",
                   link: "/zh/use-cases/openclaw-integration",
                 },
                 {
-                  text: "Enable web search",
+                  text: "启用网页搜索",
                   link: "/zh/use-cases/openclaw-web-access",
                 },
                 {
-                  text: "Manage skills and plugins",
+                  text: "管理技能和插件",
                   link: "/zh/use-cases/openclaw-skills",
                 },
                 {
-                  text: "Upgrade OpenClaw",
+                  text: "升级 OpenClaw",
                   link: "/zh/use-cases/openclaw-upgrade",
                 },
               ]
@@ -39,11 +39,11 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "Manage ComfyUI",
+                  text: "管理 ComfyUI",
                   link: "/zh/use-cases/comfyui-launcher",
                 },
                 {
-                  text: "Use ComfyUI for Krita",
+                  text: "在 Krita 中使用 ComfyUI",
                   link: "/zh/use-cases/comfyui-for-krita",
                 },
               ]

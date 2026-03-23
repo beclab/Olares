@@ -14,13 +14,15 @@ Olares provides ComfyUI Shared to allow multiple users to share models, plugins,
 ## Learning objectives
 - Install and configure the ComfyUI service.
 - Use ComfyUI Launcher to download optimized model packages.
-- Generate high-quality images using the Nunchaku Flux.1-dev workflow.
+- Generate images using the Z-Image Turbo workflow.
 - Generate videos using the Wan 2.2 model.
 
+<!--
 ## Before you begin
 For image generation:
 - Olares One is equipped with an NVIDIA RTX 5090 mobile GPU. This allows you to leverage the Nunchaku Flux.1-dev model to generate images significantly faster than standard FP16 or FP8 versions.
 - Nunchaku Flux.1-dev is an optimized model utilizing SVDQuant quantization (NVFP4). It is designed to deliver high-performance inference on this specific hardware while maintaining minimal loss in visual quality.
+-->
 
 ## Prerequisites
 **Hardware** <br>
@@ -44,14 +46,15 @@ After it finished, you can see two icons for ComfyUI on Launchpad:
 To generate content, you must first download the specific model package.
 
 1. Open ComfyUI Launcher, and scroll down to **Package installation**.
-2. For image generation, select **Nunchaku Flux FP4 Package** and click **GET ALL**. This downloads the necessary Nunchaku plugin and quantized models.
+2. For image generation, find **Z-Image Turbo Package** and click **GET ALL** to download necessary models.
 3. For video generation, select **Wan 2.2 Text to Video 14B Package** and click **GET ALL** to download necessary models.
 
-   ![Install model package](/images/one/comfyui-install-model-package.png#bordered)
+   ![Install model package](/images/one/comfyui-install-model-package1.png#bordered)
 
-:::info ComfyUI service restart required
-Whenever you install a new model package or custom node, you must restart the ComfyUI service for the changes to take effect.
-:::
+
+   <!-- ![Install model package](/images/one/comfyui-install-model-package.png#bordered) -->
+
+4. . When the download completes, click **RESTART** on the **Home** page for the changes to take effect.
 
 ## Step 3: Start the ComfyUI service
 1. In ComfyUI Launcher, click **START** in the upper-right corner.
@@ -62,11 +65,33 @@ Whenever you install a new model package or custom node, you must restart the Co
 2. Once the status changes to "Running," click **OPEN**. This will launch the ComfyUI client in a new browser tab.
 
 ## Step 4: Generate images
+This section uses the Z-Image Turbo workflow to help you get started.
+
+1. In the ComfyUI client, click **Templates** in the left navigation bar to browse available templates.
+2. Select **Image** as the generation type, and select the template: **Z-Image-Turbo Text to Image**.
+   ![Z-Image Turbo Package](/images/manual/use-cases/comfyui-zimage-turbo-package.png#bordered)
+
+3. When prompted that this workflow is missing models, simply close the window.
+4. Prepend `public/` to the filename in the **Text to Image** node. For example:
+   - **Default**: `ae.safetensors`
+   - **Change to**: `public/ae.safetensors`
+   :::info Shared model path
+   ComfyUI in Olares uses a file structure that differs from the standard installation. This change allows models to be shared between ComfyUI and SD Web UI.
+   :::
+   ![Change model path](/images/manual/use-cases/comfyui-z-image-change-model-path.png#bordered){width=50%}
+
+5. Update the text prompt in the same node to describe the image you want to generate.
+
+6. Click **Run** in the toolbar to start generation.
+   ![Generated image](/images/manual/use-cases/comfyui-z-image-result.png#bordered)
+
+<!--
+## Step 4: Generate images
 This section uses the `nunchaku-flux.1-dev-qencoder` workflow to help you get started.
 
 1. In the ComfyUI client, click the **ComfyUI** icon in the top-left corner to open the menu.
 2. Select **View** > **Browse Templates**.
-3. Under **EXTENSIONS**, select **ComfyUI-nunchaku**. 
+3. Under **EXTENSIONS**, select **ComfyUI-nunchaku**.
 4. Choose the template: **nunchaku-flux.1-dev-qencoder**.
    ![Open Nunchaku workflow](/images/one/comfyui-nunchaku-templates.png#bordered)
 
@@ -83,12 +108,13 @@ This section uses the `nunchaku-flux.1-dev-qencoder` workflow to help you get st
    8-bit cyberpunk: Blocky pixel cat holds "olares is fast!" neon on pixel street.
     ```
 7. Click **Run** in the toolbar to start generation.
+-->
 
 ## Step 5: Generate videos
 This section uses the Wan 2.2 workflow.
 
 1. In ComfyUI, open the ComfyUI menu and select **View** > **Browse Templates**.
-2. Under the **GENERATION TYPE** category, select **Video**. 
+2. Under the **GENERATION TYPE** category, select **Video**.
 3. Select the template: **Wan 2.2 14B Text to Video**.
    ![Open Wan 2.2 workflow](/images/one/comfyui-video-templates.png#bordered)
 
