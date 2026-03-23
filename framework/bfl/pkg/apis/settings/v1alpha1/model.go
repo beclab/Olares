@@ -1,12 +1,9 @@
 package v1alpha1
 
 import (
-	"fmt"
-	"runtime"
-	"strconv"
-
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/utils"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +12,6 @@ import (
 	applyAppsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 	applyCorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	applyMetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 )
 
@@ -147,12 +143,6 @@ func NewL4ProxyDeploymentApplyConfiguration(namespace, serviceAccountName string
 	imageVersion := utils.EnvOrDefault("L4_PROXY_IMAGE_VERSION", "v0.2.0")
 	imageName := fmt.Sprintf("%s:%s", utils.EnvOrDefault("L4_PROXY_IMAGE_NAME", constants.L4ProxyImage), imageVersion)
 
-	workerProcessesNum := strconv.Itoa(runtime.NumCPU() / 2)
-	if workerProcessesNum == "" || workerProcessesNum == "0" {
-		klog.Warning("get cpu num error")
-		workerProcessesNum = "4"
-	}
-
 	return applyAppsv1.DeploymentApplyConfiguration{
 		TypeMetaApplyConfiguration: applyMetav1.TypeMetaApplyConfiguration{
 			Kind:       pointer.String("Deployment"),
@@ -162,7 +152,8 @@ func NewL4ProxyDeploymentApplyConfiguration(namespace, serviceAccountName string
 			Name:      pointer.String(L4ProxyDeploymentName),
 			Namespace: pointer.String(namespace),
 			Labels: map[string]string{
-				"app": L4ProxyDeploymentName,
+				"app":  L4ProxyDeploymentName,
+				"tier": "bfl",
 			},
 			Annotations: nil,
 		},
@@ -173,13 +164,15 @@ func NewL4ProxyDeploymentApplyConfiguration(namespace, serviceAccountName string
 			},
 			Selector: &applyMetav1.LabelSelectorApplyConfiguration{
 				MatchLabels: map[string]string{
-					"app": L4ProxyDeploymentName,
+					"app":  L4ProxyDeploymentName,
+					"tier": "bfl",
 				},
 			},
 			Template: &applyCorev1.PodTemplateSpecApplyConfiguration{
 				ObjectMetaApplyConfiguration: &applyMetav1.ObjectMetaApplyConfiguration{
 					Labels: map[string]string{
-						"app": L4ProxyDeploymentName,
+						"app":  L4ProxyDeploymentName,
+						"tier": "bfl",
 					},
 				},
 				Spec: &applyCorev1.PodSpecApplyConfiguration{
