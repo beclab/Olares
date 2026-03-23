@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Troubleshoot and reset a forgotten login password for your Olares desktop. 
+description: Reset login password for your Olares device using Olares CLI. 
 ---
 
 # Forgot login password
@@ -9,21 +9,16 @@ Use this guide to regain access to your Olares desktop if you have forgotten you
 
 ## Condition
 
-- Unable to log in to the Olares desktop via a browser.
-- The error message "Authentication failed, incorrect password" appears repeatedly.
+You cannot log in to the Olares desktop and see the error message "Authentication failed, incorrect password".
 
 ## Cause
 
-The local authentication credentials stored in the Olares cluster do not match the input. 
+You have forgotten your Olares login password.
 
 ## Solution
 
 To resolve this, you must access the Olares host terminal (via SSH or local CLI) to manually reset the login password.
 
-:::tip Hardware prerequisites
-- Your Olares device is powered on and connected to a network.
-- You have a client device (such as a computer) to access the terminal.
-:::
 
 ### Step 1: Access the terminal via SSH
 
