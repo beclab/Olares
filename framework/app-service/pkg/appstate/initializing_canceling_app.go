@@ -44,7 +44,7 @@ func (p *InitializingCancelingApp) Exec(ctx context.Context) (StatefulInProgress
 		klog.Errorf("app %s operation is not ", p.manager.Name)
 	}
 
-	err := p.updateStatus(ctx, p.manager, appsv1.Stopping, nil, appsv1.Stopping.String(), "")
+	err := p.updateStatus(ctx, p.manager, appsv1.Stopping, nil, appsv1.Stopping.String(), appsv1.Stopping.String())
 	if err != nil {
 		klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.Stopping.String(), err)
 		return nil, err
@@ -54,7 +54,7 @@ func (p *InitializingCancelingApp) Exec(ctx context.Context) (StatefulInProgress
 }
 
 func (p *InitializingCancelingApp) Cancel(ctx context.Context) error {
-	err := p.updateStatus(ctx, p.manager, appsv1.InstallingCancelFailed, nil, appsv1.InstallingCancelFailed.String(), "")
+	err := p.updateStatus(ctx, p.manager, appsv1.InstallingCancelFailed, nil, appsv1.InstallingCancelFailed.String(), appsv1.InstallingCancelFailed.String())
 	if err != nil {
 		klog.Errorf("update name %s to state %s failed %v", p.manager.Name, appsv1.InstallingCancelFailed, err)
 		return err

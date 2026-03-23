@@ -151,7 +151,7 @@ func UpdateAppState(ctx context.Context, am *v1alpha1.ApplicationManager, state 
 }
 
 // UpdateAppMgrStatus update applicationmanager status, if filed in parameter status is empty that field will not be set.
-func UpdateAppMgrStatus(name string, status v1alpha1.ApplicationManagerStatus) (*v1alpha1.ApplicationManager, error) {
+func UpdateAppMgrStatus(name string, status v1alpha1.ApplicationManagerStatus, modifiers ...func(*v1alpha1.ApplicationManager)) (*v1alpha1.ApplicationManager, error) {
 	client, err := utils.GetClient()
 	if err != nil {
 		return nil, err
@@ -189,6 +189,11 @@ func UpdateAppMgrStatus(name string, status v1alpha1.ApplicationManagerStatus) (
 		status.Payload = payload
 
 		appMgrCopy.Status = status
+		for _, modifier := range modifiers {
+			if modifier != nil {
+				modifier(appMgrCopy)
+			}
+		}
 
 		appMgr, err = client.AppV1alpha1().ApplicationManagers().Update(context.TODO(), appMgrCopy, metav1.UpdateOptions{})
 		return err

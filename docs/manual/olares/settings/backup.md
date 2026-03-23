@@ -25,12 +25,12 @@ To add a backup task:
     Ensure the selected storage has enough available space to store the backup data.
     :::
 
-3. Set backup schedule & security:
+4. Set backup schedule & security:
    - **Snapshot frequency** – Choose from daily / weekly / monthly
    - **Snapshot time** – Set the time when the backup task should run
    - **Backup password** – Protect your snapshots with a password
 
-4. Click **Submit** to start the backup task. The first execution will perform a **full backup**. Subsequent runs will perform **incremental backups**.
+5. Click **Submit** to start the backup task. The first execution will perform a **full backup**. Subsequent runs will perform **incremental backups**.
 
     :::warning
     Before starting the backup, please make sure:
@@ -58,6 +58,3 @@ At the bottom of the backup management page, you’ll see a list of snapshots fo
 - **Size**: Size of the snapshot.
 - **Status**: The execution status of the snapshot.
 - **Backup type**: The snapshot is a full backup or an incremental backup.
-
-
-

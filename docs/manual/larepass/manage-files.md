@@ -73,7 +73,7 @@ You can view, pause, or cancel the download tasks in **Transfer** > **Download**
 </template>
 </Tabs>
 
-<!--@include: ../get-started/reusables.md{67,108}-->
+<!--@include: ../../reusables/sync-files.md{8,50}-->
 
 ## Delete files
 :::warning
@@ -84,8 +84,8 @@ Deleted files cannot be recovered.
 <template #LarePass-desktop>
 
 1. Open the LarePass desktop client.
-1. In **Files**, select the file to delete, right-click to open the context menu, and select **Delete**.
-2. Confirm the deletion in the popup window.
+2. In **Files**, select the file to delete, right-click to open the context menu, and select **Delete**.
+3. Confirm the deletion in the popup window.
 </template>
 <template #LarePass-mobile>
 

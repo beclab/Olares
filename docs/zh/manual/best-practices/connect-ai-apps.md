@@ -1,0 +1,1 @@
+<!-- @include: ../../../manual/best-practices/connect-ai-apps.md -->

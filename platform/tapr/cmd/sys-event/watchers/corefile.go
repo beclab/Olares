@@ -325,7 +325,18 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 			append(localTemplatesPlugins, localDomainTemplatesPlugins...)...),
 	}
 
-	file.Servers = []*corefile.Server{inclusterServer, vpnServer, otherServer}
+	servers := []*corefile.Server{inclusterServer, vpnServer, otherServer}
+
+	nxdomainServer, err := buildBlockLocalSearchServer()
+	if err != nil {
+		klog.Error("build NXDOMAIN server block error, ", err)
+		return err
+	}
+	if nxdomainServer != nil {
+		servers = append(servers, nxdomainServer)
+	}
+
+	file.Servers = servers
 
 	newCorefileData := file.ToString()
 	corefileConfigMap.Data["Corefile"] = newCorefileData
@@ -533,6 +544,59 @@ func getUserIngressIP(ctx context.Context, kubeClient kubernetes.Interface, user
 	}
 
 	return bfl.Status.PodIP, nil
+}
+
+func getNonClusterLocalSearchDomains() ([]string, error) {
+	data, err := os.ReadFile("/etc/resolv.conf")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read /etc/resolv.conf: %w", err)
+	}
+
+	var domains []string
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "search") {
+			continue
+		}
+		for _, d := range strings.Fields(line)[1:] {
+			if !strings.HasSuffix(d, "cluster.local") {
+				domains = append(domains, d)
+			}
+		}
+	}
+	return domains, nil
+}
+
+func buildBlockLocalSearchServer() (*corefile.Server, error) {
+	domains, err := getNonClusterLocalSearchDomains()
+	if err != nil {
+		return nil, err
+	}
+	if len(domains) == 0 {
+		return nil, nil
+	}
+
+	var domPorts []string
+	for _, d := range domains {
+		domPorts = append(domPorts, d+":53")
+	}
+
+	klog.Infof("adding NXDOMAIN server block for search domains: %v", domains)
+	return &corefile.Server{
+		DomPorts: domPorts,
+		Plugins: []*corefile.Plugin{
+			{
+				Name: "template",
+				Args: []string{"ANY", "ANY"},
+				Options: []*corefile.Option{
+					{
+						Name: "rcode",
+						Args: []string{"NXDOMAIN"},
+					},
+				},
+			},
+		},
+	}, nil
 }
 
 const UserAnnotationZoneKey = "bytetrade.io/zone"

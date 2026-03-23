@@ -34,21 +34,21 @@ Make sure that:
 2. In the **My Olares** card, tap **System** to enter the **Olares management** page.
 3. Tap **System update**.
 4. If a new version appears in the **New version** field, tap **Upgrade**.
-![Check for available version](/images/manual/larepass/check-version.png#bordered)
+  ![Check for available version](/images/one/check-version1.png#bordered)
 
 ## Select upgrade method
 
 A dialog will appear asking how you want to handle the update package. Choose the method that fits your schedule:
 
 - **Download only**: Olares downloads the package in the background. You can continue using the system and install the update manually later.
-
 - **Download and upgrade**: Olares downloads the package and prompts you to restart and install it when the download finishes.
-
-    ![Choose upgrade method](/images/manual/larepass/olares-upgrade1.png#bordered)
+    ![Choose upgrade method](/images/one/olares-upgrade1.png#bordered)
 
 ## Install and restart
 
 1. Start installation based on your selection:
    - **Download only**: After the download completes, return to **System update** and tap **Upgrade now**. Confirm the restart prompt to begin installation.
    - **Download and upgrade**: After the download completes, confirm the restart prompt to begin installation.
-2. Wait for the update and restart to finish. When Olares starts up again, you'll see a success message and can continue using it.
+2. Wait for the update and restart to finish. A success message indicates the upgrade is completed.
+    ![Upgrade success message](/images/one/upgrade-success.png#bordered)
+3. Refresh your Olares desktop to sync the latest system changes.

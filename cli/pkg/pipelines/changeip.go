@@ -7,18 +7,19 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/phase/cluster"
+	"github.com/beclab/Olares/cli/version"
 	"github.com/spf13/viper"
 )
 
 func ChangeIPPipeline() error {
-	terminusVersion := viper.GetString(common.FlagVersion)
 	kubeType := phase.GetKubeType()
-	if terminusVersion == "" {
-		terminusVersion, _ = phase.GetOlaresVersion()
+	sysversion, _ := phase.GetOlaresVersion()
+	if sysversion == "" {
+		sysversion = version.VERSION
 	}
 
 	var arg = common.NewArgument()
-	arg.SetOlaresVersion(terminusVersion)
+	arg.SetOlaresVersion(sysversion)
 	arg.SetConsoleLog("changeip.log", true)
 	arg.SetKubeVersion(kubeType)
 	arg.SetMinikubeProfile(viper.GetString(common.FlagMiniKubeProfile))

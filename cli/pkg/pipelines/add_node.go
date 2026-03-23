@@ -7,7 +7,7 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/phase/cluster"
-	"github.com/spf13/viper"
+	"github.com/beclab/Olares/cli/version"
 )
 
 func AddNodePipeline() error {
@@ -17,7 +17,7 @@ func AddNodePipeline() error {
 		os.Exit(1)
 	}
 
-	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
+	arg.SetOlaresVersion(version.VERSION)
 	arg.SetConsoleLog("addnode.log", true)
 
 	if err := arg.MasterHostConfig.Validate(); err != nil {

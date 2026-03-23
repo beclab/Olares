@@ -15,9 +15,8 @@ The owner can navigate to **Teams** > **Members** to view all team members and t
 
 ![Vault team](/images/manual/olares/vault-team.png#bordered)
 
-| Role | Owner                                                                                       | Member |
-|---|---------------------------------------------------------------------------------------------|---|
-| Permissions | - Create, remove, and edit shared Vaults; <br/>- Assign read & write permissions to members | Access or edit shared Vault items based on assigned permissions |
+- **Owner**: Has full control over shared Vaults, including creating, editing, and deleting them, as well as assigning read or write permissions to members.
+- **Member**: Can access and edit shared Vault items based on the permissions assigned by the owner.
 
 ## Set team access
 
