@@ -524,6 +524,7 @@ type Server struct {
 	EnableOIDC            bool   `json:"enableOIDC"`
 	EnableWindowPushState bool   `json:"enableWindowPushState"`
 	Language              string `json:"language"`
+	DisableHttp2          bool   `json:"disableHttp2"`
 }
 
 type StreamServer struct {

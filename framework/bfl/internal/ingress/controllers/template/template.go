@@ -386,9 +386,9 @@ func buildHTTPSListener(p interface{}, t interface{}, s interface{}) string {
 		return ""
 	}
 
-	hostname, ok := s.(string)
+	server, ok := s.(config.Server)
 	if !ok {
-		klog.Errorf("expected a 'string' type but %T was returned", s)
+		klog.Errorf("expected a 'config.Server' type but %T was returned", s)
 		return ""
 	}
 
@@ -398,14 +398,14 @@ func buildHTTPSListener(p interface{}, t interface{}, s interface{}) string {
 		return ""
 	}
 
-	co := commonListenOptions(tc, hostname)
+	co := commonListenOptions(tc, server.Hostname)
 
 	addrV4 := []string{""}
 	if len(tc.Cfg.BindAddressIpv4) > 0 {
 		addrV4 = tc.Cfg.BindAddressIpv4
 	}
 
-	out = append(out, httpsListener(addrV4, co, tc, port)...)
+	out = append(out, httpsListener(addrV4, co, tc, port, server)...)
 
 	if !tc.IsIPV6Enabled {
 		return strings.Join(out, "\n")
@@ -416,7 +416,7 @@ func buildHTTPSListener(p interface{}, t interface{}, s interface{}) string {
 		addrV6 = tc.Cfg.BindAddressIpv6
 	}
 
-	out = append(out, httpsListener(addrV6, co, tc, port)...)
+	out = append(out, httpsListener(addrV6, co, tc, port, server)...)
 
 	return strings.Join(out, "\n")
 }
@@ -470,11 +470,15 @@ func httpListener(addresses []string, co string, tc config.TemplateConfig) []str
 	return out
 }
 
-func httpsListener(addresses []string, co string, tc config.TemplateConfig, port int) []string {
+func httpsListener(addresses []string, co string, tc config.TemplateConfig, port int, server config.Server) []string {
 	out := make([]string, 0)
 
 	fn := func(address string) []string {
 		lo := []string{"listen"}
+
+		if server.DisableHttp2 {
+			port = 10000 + port
+		}
 
 		if address == "" {
 			lo = append(lo, fmt.Sprintf("%v", port))
@@ -485,7 +489,7 @@ func httpsListener(addresses []string, co string, tc config.TemplateConfig, port
 		lo = append(lo, co)
 		lo = append(lo, "ssl")
 
-		if tc.Cfg.UseHTTP2 {
+		if tc.Cfg.UseHTTP2 && !server.DisableHttp2 {
 			lo = append(lo, "http2")
 		}
 

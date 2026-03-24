@@ -81,8 +81,9 @@ func (r *NginxController) addDomainServers(ctx context.Context, isEphemeral bool
 				ProxyPass: fmt.Sprintf(constants.IndexAppEndpoint, constants.Username),
 			},
 		},
-		EnableAuth: false,
-		Language:   language,
+		EnableAuth:   false,
+		Language:     language,
+		DisableHttp2: true,
 	}
 
 	formatDomain := func(customPrefixDomain string) []string {

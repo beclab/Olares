@@ -215,8 +215,8 @@ http {
         {{ buildHTTPListener $all $server.Hostname }};
 
         {{ if $server.EnableSSL }}
-        {{ buildHTTPSListener 443 $all $server.Hostname }};
-        {{ buildHTTPSListener 444 $all $server.Hostname }} proxy_protocol;
+        {{ buildHTTPSListener 443 $all $server }};
+        {{ buildHTTPSListener 444 $all $server }} proxy_protocol;
         ssl_certificate     {{ $all.SSLCertificatePath -}};
         ssl_certificate_key {{ $all.SSLCertificateKeyPath -}};
         ssl_protocols {{ $cfg.SSLProtocols }};
@@ -344,8 +344,8 @@ http {
         {{ buildHTTPListener $all $server.Hostname }};
 
         {{ if $server.EnableSSL }}
-        {{ buildHTTPSListener 443 $all $server.Hostname }};
-        {{ buildHTTPSListener 444 $all $server.Hostname }} proxy_protocol;
+        {{ buildHTTPSListener 443 $all $server }};
+        {{ buildHTTPSListener 444 $all $server }} proxy_protocol;
         ssl_certificate     {{ $server.SslCertPath -}};
         ssl_certificate_key {{ $server.SslKeyPath -}};
         ssl_protocols {{ $cfg.SSLProtocols }};
