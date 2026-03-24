@@ -2,9 +2,9 @@
 outline: [2,4]
 description: Troubleshoot slow or delayed Steam streaming on Olares by checking nginx restarts, network connection, GPU mode, system mode, game compatibility, and Steam Headless resource limits.
 ---
-# Slow or delayed Steam streaming on Olares
+# Slow or delayed Steam streaming
 
-Use this guide when Steam streaming on Olares feels slow or delayed during gameplay.
+Use this guide when Steam streaming from Olares feels slow or delayed during gameplay.
 
 ## Condition
 
@@ -14,10 +14,10 @@ Steam streaming feels slow or delayed during gameplay, which may appear as high 
 
 Slow or delayed Steam streaming may be related to one or more of the following:
 
-- **Nginx restarts**: An nginx restart interrupts the streaming session. In Olares 1.12.4, this happens periodically. In 1.12.5, the periodic restart issue is fixed, but app installation, uninstallation, or other system events may still trigger nginx restarts in some cases.
+- **Nginx restarts**: An nginx restart interrupts the streaming session.
 - **Network**: The Olares device is using Wi-Fi instead of Ethernet, causing lower bandwidth or higher latency.
-- **GPU allocation**: The GPU is not set to **App exclusive** mode, so Steam Headless must compete with other apps for GPU resources.
-- **Power mode**: The system is running in **Quiet mode**, which may reduce performance during gameplay.
+- **GPU allocation**: The GPU resources are occupied by other apps.
+- **GPU power**: The GPU is not running at full power.
 - **Compatibility**: The game is not performing well with the current Proton version.
 - **Resource limits**: Steam Headless is reaching its configured CPU or memory limits.
 
@@ -32,13 +32,11 @@ Check the following items in order of priority.
 
 ### Use a wired connection
 
-Check whether your Olares device is connected through **Ethernet** instead of Wi-Fi.
-
-If the device is using Wi-Fi, switch to Ethernet and test the game again.
+If your Olares device is connected through Wi‑Fi, use a wired connection instead.
 
 ### Set the GPU to App exclusive mode
 
-Set the GPU to **App exclusive** mode and make sure Steam Headless is selected.
+Grant Steam Headless full GPU access to maximize performance.
 
 1. Go to **Settings** > **GPU** and select **App exclusive** from the **GPU mode** dropdown.
 2. In the **Select exclusive app** section, check whether Steam Headless is selected. If it is, continue to the next check.
@@ -54,7 +52,9 @@ If another app is currently selected:
 
    ![Set the GPU to App exclusive mode](/images/manual/help/ts-steam-stream-exclu.png#bordered)
 
-### Switch to Performance mode
+### Switch to Performance mode (Olares One only)
+
+If you are using Olares One, try switching to **Performance mode**.
 
 1. Go to **Settings** > **My Olares** > **My hardware**.
 2. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to **Power mode** and select **Performance mode**.
@@ -63,6 +63,10 @@ If another app is currently selected:
 ### Try a different Proton version
 
 If the issue only happens with a specific game, try changing the game's Proton version in Steam.
+
+:::info What is Proton?
+Proton is Steam’s compatibility layer used to run Windows games on Linux-based systems. Since different games interact with hardware differently, the version of Proton you use can directly impact game compatibility and streaming performance.
+:::
 
 1. In Steam, open the target game in your **Library**, then click  <i class="material-symbols-outlined">settings</i>  > **Properties...**
 2. Go to **Compatibility**.
@@ -119,6 +123,6 @@ If the issue persists after completing the steps above, create an issue in the [
 - A screenshot showing Steam Headless CPU and memory usage while the game is running.
 - The game title and Proton version in use.
 - A short description of the issue.
-- The device you are streaming to, such as a laptop,handheld device, phone, or TV.
+- The device you are streaming to, such as a laptop, handheld device, phone, or TV.
 
 Providing this information helps the team narrow down the cause more quickly.
