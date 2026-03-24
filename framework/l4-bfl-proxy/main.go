@@ -114,6 +114,7 @@ type User struct {
 	NgxServerNameDomains []string `json:"ngx_server_name_domains"`
 	CreateTimestamp      int64    `json:"create_timestamp"`
 	LocalDomainIp        string   `json:"local_domain_ip"`
+	ProfileSvcPort       int      `json:"profile_svc_port"`
 }
 
 type Users []User
@@ -580,12 +581,12 @@ func (s *Server) listUsers() (Users, error) {
 			klog.V(2).Infof("list user: lookup svc host err, %v", err)
 			continue
 		}
-
 		_user := User{
 			Name:                 user.Name,
 			Namespace:            fmt.Sprintf("%s-%s", userNamespacePrefix, user.Name),
 			BFLIngressSvcHost:    addr,
 			BFLIngressSvcPort:    bflServicePort,
+			ProfileSvcPort:       10000 + bflServicePort,
 			Did:                  did,
 			Zone:                 zone,
 			IsEphemeral:          isEphemeralDomain,

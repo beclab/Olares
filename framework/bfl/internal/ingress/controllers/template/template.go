@@ -476,6 +476,10 @@ func httpsListener(addresses []string, co string, tc config.TemplateConfig, port
 	fn := func(address string) []string {
 		lo := []string{"listen"}
 
+		if server.DisableHttp2 {
+			port = 10000 + port
+		}
+
 		if address == "" {
 			lo = append(lo, fmt.Sprintf("%v", port))
 		} else {

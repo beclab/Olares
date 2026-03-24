@@ -95,10 +95,15 @@ local function match_user(server_name)
     return nil
 end
 
-local function set_variables(user)
+local function set_variables(user, server_name)
     ngx.var.bfl_username = user.name
     ngx.var.bfl_ingress_host = user.bfl_ingress_svc_host
-    ngx.var.bfl_ingress_port = user.bfl_ingress_svc_port
+    local local_zone = user.name .. ".olares.local"
+    if user.zone == server_name or local_zone == server_name then
+        ngx.var.bfl_ingress_port = user.profile_svc_port
+    else
+        ngx.var.bfl_ingress_port = user.bfl_ingress_svc_port
+    end
 end
 
 local function deny_filter(user, server_name)
@@ -201,7 +206,7 @@ function _M.preread()
     ngx.log(ngx.INFO, "server_name: " .. server_name .. ", current user: " .. cjson.encode(curr_user))
 
     -- set user variables
-    set_variables(curr_user)
+    set_variables(curr_user, server_name)
 
     -- access filter
     -- if not access_filter(curr_user) then
