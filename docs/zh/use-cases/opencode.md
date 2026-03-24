@@ -1,1 +1,1 @@
-<!--@include: ../../use-cases/duix-avatar.md-->
+<!--@include: ../../use-cases/opencode.md-->

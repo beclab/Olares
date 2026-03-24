@@ -10,14 +10,14 @@ doc_version: "1.0"
 doc_updated: "2026-03-23"
 ---
 
-# Code with AI agents using OpenCode
+# Set up OpenCode as your AI coding agent
 
 OpenCode is an AI-powered coding agent that lets you write, test, and manage code through natural language. It supports multiple AI providers and can run shell commands, create files, and install development environments from a chat interface.
 
 On Olares, you can use OpenCode in two ways:
 
-- **Browser (OpenCode on Olares)**: Install OpenCode as an app on Olares and access it through your browser.
-- **Local CLI (OpenCode on your computer)**: Install OpenCode on your local machine and connect it to Ollama running on Olares. This provides a native TUI experience.
+- **Browser**: Install OpenCode as an app on Olares and access it through your browser.
+- **Local CLI**: Install OpenCode on your computer and connect it to Ollama running on Olares for a native terminal experience.
 
 ## Learning objectives
 
@@ -32,7 +32,7 @@ In this guide, you will learn how to:
 - An Olares device with sufficient disk space and memory
 - [Ollama installed](./ollama.md) on Olares with at least one model downloaded
 - Admin privileges to install apps from Market
-- For local CLI usage: [OpenCode](https://opencode.ai/docs/#install) installed on your computer and LarePass VPN enabled
+- For local CLI usage: LarePass VPN enabled on your computer
 
 ## Install and configure Ollama
 
@@ -41,12 +41,13 @@ If you haven't already set up Ollama, follow these steps:
 1. Open **Market** and search for "Ollama".
 2. Click **Get**, then click **Install**, and wait for installation to complete.
    ![Install Ollama](/images/manual/use-cases/ollama.png#bordered)
+
 3. Download a model using the Ollama CLI. For example:
    ```bash
    ollama pull qwen3.5:9b
    ```
 
-## Option 1: Run OpenCode on Olares (Browser)
+## Run OpenCode in the browser
 
 This option installs OpenCode as an application on your Olares device. You access it through your browser.
 
@@ -63,17 +64,13 @@ This option installs OpenCode as an application on your Olares device. You acces
 To connect OpenCode to Ollama, get the shared entrance URL:
 
 1. Open Olares **Settings**, then navigate to **Applications** > **Ollama**.
-2. In **Shared entrances**, select **Ollama API** to view the endpoint URL.
-   ![Ollama shared entrance](/images/manual/use-cases/ollama-shared.png#bordered)
+2. In **Shared entrances**, select **Ollama API** to view the shared endpoint URL.
+   ![Ollama shared entrance](/images/manual/use-cases/ollama-shared.png#bordered){width=80%}
 
 3. Copy the shared endpoint. For example:
    ```plain
    http://d54536a50.shared.olares.com
    ```
-
-:::info If the shared entrance doesn't work
-On some devices, the shared entrance URL may not work with OpenCode. This is a known issue. In this case, use the Ollama API endpoint from **Settings** > **Applications** > **Ollama** > **Ollama API** > **Endpoint** instead.
-:::
 
 ### Connect to Ollama
 
@@ -88,13 +85,13 @@ On some devices, the shared entrance URL may not work with OpenCode. This is a k
    - **Display name**: The name shown in the provider list. For example: `Olares Ollama`.
    - **Base URL**: The endpoint URL you copied above, with `/v1` appended.
    - **Models**
-     - **Model ID**: The model you are going to use. For example: `qwen3.5:9b`.
+     - **Model ID**: The model to use. For example: `qwen3.5:9b`.
      - **Display Name**: The name shown for this model. For example: `Qwen3.5 9B`.
 
    ![Provider configuration](/images/manual/use-cases/opencode-provider-config.png#bordered){width=70%}
-4. If you want to add multiple models, click **Add model** then add the model id and display name.
+4. To add multiple models, click **Add model** and enter the model ID and display name.
 
-5. Click **Submit** to save the configuration. Your Ollama models will appear in the provider list.
+5. Click **Submit** to save the configuration. Your custom server will appear in the provider list.
    ![Provider list](/images/manual/use-cases/opencode-provider-list.png#bordered)
 
 ### Start coding
@@ -109,46 +106,43 @@ After selecting a model, you can interact with OpenCode through the chat interfa
 4. Click <span class="material-symbols-outlined">folder_open</span> to open the file browser and review the generated code.
    ![View files](/images/manual/use-cases/opencode-view-files.png#bordered)
 
-5. Use `@` to mention a file in the chat window and ask OpenCode to adjust it.
+5. Use `@` to mention a file in the chat window and ask OpenCode to edit it.
    ![Mention file in chat](/images/manual/use-cases/opencode-mention.png#bordered)
 
-### Use the TUI (optional)
+### Use the TUI
 
-OpenCode's primary interface is a terminal-based UI (TUI). If you want to use the TUI for a session:
+OpenCode also offers a terminal-based UI (TUI). To use the TUI in the browser:
 
 1. Click <span class="material-symbols-outlined">terminal_2</span> from the top-right to open the terminal.
    ![Open web terminal](/images/manual/use-cases/opencode-web-terminal.png#bordered)
 
-2. Enter the command to launch OpenCode:
-   ```bash
-   opencode
-   ```
-   This launches the TUI directly in the browser.
+2. Run `opencode` to launch the TUI:
    ![Launch TUI in browser](/images/manual/use-cases/opencode-web-launch-tui.png#bordered)
 
-3. Type `/models` to switch models, then select Qwen3.5 9B.
+3. Use the `/models` command to switch to Qwen3.5 9B.
    ![Select model in TUI](/images/manual/use-cases/opencode-web-tui-select-model.png#bordered)
 
 4. Type your prompt directly. For example, ask OpenCode to improve the code.
    ![Chat in TUI](/images/manual/use-cases/opencode-web-tui-chat.png#bordered)
 
-### Edit config file
+### Edit the config file
 
 OpenCode stores its configuration in a JSON file. You can edit this file directly to manage providers, models, and tools.
 
 1. Open Files and navigate to `Application/Data/opencode/.config/opencode/`.
 2. Right click `config.jsonc` and select **Rename**.
    ![Rename config file](/images/manual/use-cases/opencode-rename-config-file.png#bordered)
+
 3. Rename the file to `config.json` so you can directly edit it in Olares Files. OpenCode recognizes both extensions.
 
 4. Open `config.json` and click <span class="material-symbols-outlined">edit_square</span> to edit it.
    ![Edit config file](/images/manual/use-cases/opencode-edit-config-file.png#bordered)
 5. Save the changes.
 
-6. Restart OpenCode from **Settings** to apply the changes.
+6. Restart OpenCode from **Settings** > **Applications** to apply the changes.
 
 
-## Option 2: Run OpenCode on your computer (CLI)
+## Run OpenCode from your computer
 
 This option installs the OpenCode CLI tool directly on your local machine. You run it in your terminal and connect to Ollama on Olares via LarePass VPN.
 
@@ -162,98 +156,85 @@ curl -fsSL https://opencode.ai/install.sh | sh
 
 ### Get the Ollama endpoint
 
-For the local CLI to connect to Ollama, use the Ollama API endpoint (the shared entrance URL does not work for CLI connections):
+For the local CLI to connect to Ollama, use the Ollama API endpoint. The shared entrance URL does not work for CLI connections.
 
-1. Open Olares **Settings**, then navigate to **Applications** > **Ollama**.
-2. Click **Ollama API** > **Set up endpoint** to view the API endpoint URL.
-   ![Ollama API endpoint](/images/manual/use-cases/ollama-api.png#bordered)
+1. Open **Settings**, then navigate to **Applications** > **Ollama**.
+2. In **Entrances**, select **Ollama API** to view the endpoint URL.
+   ![Ollama API endpoint](/images/manual/use-cases/ollama-api.png#bordered){width=70%}
 
 3. Copy the endpoint URL. For example:
    ```plain
-   https://a5be22681.{username}.olares.com
+   https://a5be22681.laresprime.olares.com
    ```
-
-:::info Why use the API endpoint for CLI?
-The shared entrance URL only works within the Olares network. When running OpenCode on your local computer, you need the authenticated API endpoint to access Ollama securely.
-:::
 
 ### Configure the connection
 
-1. Enable LarePass VPN on your computer to access Olares on the same network.
+1. Enable LarePass VPN on your computer to connect to Olares.
    ![Enable LarePass VPN on desktop](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
 
-2. Add Ollama as a custom provider:
-
-   :::info Windows WSL users
-   On Windows, if you're using WSL, your OpenCode config and sessions are stored within the WSL environment at `~/.local/share/opencode/`.
+   :::tip On the same local network?
+   If your computer and Olares are on the same LAN, you can skip VPN and use the `.local` domain instead. Replace `https://a5be22681.{username}.olares.com` with `http://xxx.username.olares.local` in the config below. For details, see [Use `.local` domain](../manual/best-practices/local-access.md#method-2-use-local-domain).
    :::
 
-   a. Navigate to the folder:
-   ```bash
-   cd .config/opencode
+2. Open the OpenCode config file at `~/.config/opencode/config.json` in a text editor. Add a custom provider with your Ollama endpoint and model. The general format is:
+
+   ```json
+   {
+     "$schema": "https://opencode.ai/config.json",
+     "provider": {
+       "<provider-id>": {
+         "npm": "@ai-sdk/openai-compatible",
+         "name": "<display-name>",
+         "options": {
+           "baseURL": "<your-endpoint>/v1"
+         },
+         "models": {
+           "<model-id>": {
+             "name": "<model-display-name>"
+           }
+         }
+       }
+     }
+   }
    ```
 
-   b. Edit `config.json` using a text editor. For example:
-   ```bash
-   vi config.json
+   For example, to connect to Ollama on Olares with the Qwen3.5 9B model:
+
+   ```json
+   {
+     "$schema": "https://opencode.ai/config.json",
+     "disabled_providers": [
+       "ollama"
+     ],
+     "provider": {
+       "olares-ollama": {
+         "name": "olares-ollama",
+         "npm": "@ai-sdk/openai-compatible",
+         "models": {
+           "qwen3.5:9b": {
+             "name": "Qwen3.5 9B"
+           }
+         },
+         "options": {
+           "baseURL": "https://a5be22681.laresprime.olares.com/v1"
+         }
+       }
+     }
+   }
    ```
 
-   c. Update with your configuration:
-      ```json
-      {
-        "$schema": "https://opencode.ai/config.json",
-        "provider": {
-          "myprovider": {
-            "npm": "@ai-sdk/openai-compatible",
-            "name": "My AI Provider",
-            "options": {
-              "baseURL": "https://api.myprovider.com/v1"
-            },
-            "models": {
-              "my-model-name": {
-                "name": "My Model"
-              }
-            }
-          }
-        }
-      }
-      ```
+   :::info Windows WSL users
+   If you installed OpenCode in WSL, the config file path is `~/.local/share/opencode/config.json`.
+   :::
 
-      For example:
-      ```json
-      {
-        "$schema": "https://opencode.ai/config.json",
-        "disabled_providers": [
-          "ollama"
-        ],
-        "provider": {
-          "olares-ollama": {
-            "name": "olares-ollama",
-            "npm": "@ai-sdk/openai-compatible",
-            "models": {
-              "qwen3.5:9b": {
-                "name": "Qwen3.5 9B"
-              }
-            },
-            "options": {
-              "baseURL": "https://a5be22681.laresprime.olares.com/v1"
-            }
-          }
-        }
-      }
-      ```
-
-3. Save the changes.
+3. Save the file.
 
 ### Launch OpenCode TUI
 
-1. In your terminal, type:
-   ```bash
-   opencode
-   ```
+1. In your terminal, type `opencode` to launch the TUI:
    ![TUI launch](/images/manual/use-cases/opencode-terminal-tui.png#bordered)
 
-2. Type `/models` to switch models, then select Qwen3.5 9B.
+2. Use the `/models` command to switch to Qwen3.5 9B.
    ![Select model in terminal](/images/manual/use-cases/opencode-terminal-tui-select-model.png#bordered)
 
 3. Chat with your local models.
@@ -262,29 +243,37 @@ The shared entrance URL only works within the Olares network. When running OpenC
 :::info First connection
 The first connection might take longer to establish.
 :::
-:::tip Using skills
-You can also use `/skills` to see what skills have been installed in OpenCode.
+:::tip Agent skills
+OpenCode can discover reusable instructions from your repo or home directory. Use `/skills` to see available skills.
 :::
 
-You can also launch OpenCode in your IDE such as VS Code to work with your codebase directly.
-   ![OpenCode in VS Code](/images/manual/use-cases/opencode-vscode.png#bordered)
+### Use OpenCode in VS Code
+
+To work with your codebase directly, open a terminal in VS Code and run `opencode` from your project directory.
+
+![OpenCode in VS Code](/images/manual/use-cases/opencode-vscode.png#bordered)
 
 ## Known issues
 
-### Web terminal not available on some devices (Option 1 only)
+### Shared entrance URL not working with OpenCode
 
-The web UI terminal works on most devices with app version 1.0.1 or later. On some devices (such as ARM-based systems), the terminal panel appears but cannot accept input. Use the container terminal in Control Hub as a workaround.
+On some devices, the shared entrance URL might not work with OpenCode. In this case, use the Ollama API endpoint from **Settings** > **Applications** > **Ollama** > **Ollama API** > **Endpoint** instead.
+
+### Web terminal not available on some devices
+
+The web UI terminal works on most devices with app version 1.0.1 or later. On ARM64 devices, the terminal panel appears but cannot accept input. Use the OpenCode container's terminal in Control Hub as a workaround.
 
 ### Plan mode errors
 
-OpenCode loads frontend resources from a CDN (`app.opencode.ai`) rather than bundling them locally. When the CDN has a bug, it can affect Plan mode even if your local installation is up to date. This is a known upstream issue tracked at [github.com/sst/opencode/issues](https://github.com/sst/opencode). If Plan mode fails unexpectedly, check whether a newer version has been released.
+OpenCode loads frontend resources from a CDN at `app.opencode.ai` rather than bundling them locally. When the CDN has a bug, it can affect Plan mode even if your local installation is up to date. This is a known upstream issue tracked at [github.com/sst/opencode/issues](https://github.com/sst/opencode). If Plan mode fails unexpectedly, check whether a newer version has been released.
 
-### Alpine Linux limits available package managers 
+### Limited package manager support on Alpine Linux
 
-The OpenCode container uses Alpine Linux. Some package managers and tools that require a glibc-based environment (such as certain Node.js native modules or Python packages with C extensions) may not work. Use Alpine-compatible alternatives (e.g., `apk` for system packages) where possible.
+The OpenCode container uses Alpine Linux. Some package managers and tools that require a glibc-based environment, like certain Node.js native modules or Python packages with C extensions, might not work. Use Alpine-compatible alternatives like `apk` for system packages where possible.
 
 ## Learn more
 
+- [Connect AI apps](../manual/best-practices/connect-ai-apps.md)
 - [Download and run local AI models via Ollama](./ollama.md)
 - [Chat with Local LLMs Using Open WebUI](./openwebui.md)
 - [OpenCode official documentation](https://opencode.ai/docs)
