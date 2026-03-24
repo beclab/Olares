@@ -45,7 +45,7 @@ Olares 支持多用户系统的统一认证。
 2. 每个用户请求都会先经过 Authelia 服务进行认证。
 3. 如果认证失败，应用会将用户重定向到登录页面重新认证。
 4. 如果认证成功，[Backend for Launcher (BFL)](https://github.com/beclab/bfl) 会附加用户的基本信息并将请求转发给应用服务。这样应用本身就不需要处理认证逻辑。
-5. 对于[共享应用（Shared application）](application.md#共享应用)，开发者需要构建额外的 `Auth Server` 来连接应用账号与 BFL 账号。
+5. 对于[共享应用](application.md#共享应用)，开发者需要构建额外的 `Auth Server` 来连接应用账号与 BFL 账号。
 
 ## 多因素认证（MFA）
 

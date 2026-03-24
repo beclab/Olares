@@ -157,80 +157,80 @@ const side = {
       ],
     },
     {
-      "text": "Olares 应用",
-      "items": [
-        { "text": "桌面", "link": "/zh/manual/olares/desktop" },
+      text: "Olares 应用",
+      items: [
+        { text: "桌面", link: "/zh/manual/olares/desktop" },
         {
-          "text": "应用市场",
-          "collapsed": true,
-          "items": [
+          text: "应用市场",
+          collapsed: true,
+          items: [
             {
-              "text": "基本操作",
-              "link": "/zh/manual/olares/market/market"
+              text: "基本操作",
+              link: "/zh/manual/olares/market/market",
             },
             {
-              "text": "管理付费应用",
-              "link": "/zh/manual/olares/market/purchase-paid-apps"
+              text: "克隆应用",
+              link: "/zh/manual/olares/market/clone-apps",
             },
             {
-              "text": "克隆应用",
-              "link": "/zh/manual/olares/market/clone-apps"
+              text: "管理付费应用",
+              link: "/zh/manual/olares/market/purchase-paid-apps",
             },
           ],
         },
         {
-          "text": "文件管理器",
-          "collapsed": true,
-          "link": "/zh/manual/olares/files/",
-          "items": [
+          text: "文件管理器",
+          collapsed: true,
+          link: "/zh/manual/olares/files/",
+          items: [
             {
-              "text": "基本文件操作",
-              "link": "/zh/manual/olares/files/add-edit-download"
+              text: "基本文件操作",
+              link: "/zh/manual/olares/files/add-edit-download",
             },
             //{
-            //   "text": "同步与共享",
-            //  "link": "/zh/manual/larepass/sync-share"
-            //  },
+            //   text: "同步与共享",
+            //   link: "/zh/manual/larepass/sync-share",
+            //},
             {
-              "text": "分享文件",
-              "link": "/zh/manual/olares/files/share-files"
+              text: "分享文件",
+              link: "/zh/manual/olares/files/share-files",
             },
             {
-              "text": "同步文件至本地",
-              "link": "/zh/manual/olares/files/sync-files"
+              text: "同步文件至本地",
+              link: "/zh/manual/olares/files/sync-files",
             },
             {
-              "text": "挂载 SMB",
-              "link": "/zh/manual/olares/files/mount-SMB"
+              text: "挂载 SMB",
+              link: "/zh/manual/olares/files/mount-SMB",
             },
             {
-              "text": "挂载云存储",
-              "link": "/zh/manual/olares/files/mount-cloud-storage"
+              text: "挂载云存储",
+              link: "/zh/manual/olares/files/mount-cloud-storage",
             },
           ],
         },
         {
-          "text": "Vault",
-          "collapsed": true,
-          "link": "/zh/manual/olares/vault/",
-          "items": [
+          text: "Vault",
+          collapsed: true,
+          link: "/zh/manual/olares/vault/",
+          items: [
             {
-              "text": "管理 Vault 项目",
-              "link": "/zh/manual/olares/vault/vault-items"
+              text: "管理 Vault 项目",
+              link: "/zh/manual/olares/vault/vault-items",
             },
             {
-              "text": "管理共享 Vault",
-              "link": "/zh/manual/olares/vault/share-vault-items"
+              text: "管理共享 Vault",
+              link: "/zh/manual/olares/vault/share-vault-items",
             },
             {
-              "text": "自动填充",
-              "link": "/zh/manual/larepass/autofill"
+              text: "自动填充",
+              link: "/zh/manual/larepass/autofill",
             },
             {
-              "text": "双因素验证",
-              "link": "/zh/manual/larepass/two-factor-verification"
-            }
-          ]
+              text: "双因素验证",
+              link: "/zh/manual/larepass/two-factor-verification",
+            },
+          ],
         },
         {
           "text": "Wise",
@@ -238,58 +238,58 @@ const side = {
           "link": "/zh/manual/olares/wise/",
           "items": [
             {
-              "text": "基本操作",
-              "link": "/zh/manual/olares/wise/basics"
+              text: "基本操作",
+              link: "/zh/manual/olares/wise/basics",
             },
             /*{
               "text": "获取推荐引擎",
               "link": "/zh/manual/olares/wise/recommend"
             },*/
             {
-              "text": "管理订阅",
-              "link": "/zh/manual/olares/wise/subscribe"
+              text: "管理订阅",
+              link: "/zh/manual/olares/wise/subscribe",
             },
             {
               text: "管理 Cookie",
               link: "/zh/manual/olares/wise/manage-cookies",
             },
             {
-              "text": "管理知识",
-              "link": "/zh/manual/olares/wise/filter",
+              text: "管理知识",
+              link: "/zh/manual/olares/wise/filter",
               collapsed: true,
               items: [
                 {
-                  "text": "过滤语法参考",
-                  "link": "/zh/manual/olares/wise/filter-syntax-guide"
+                  text: "过滤语法参考",
+                  link: "/zh/manual/olares/wise/filter-syntax-guide",
                 },
                 {
-                  "text": "过滤视图示例",
-                  "link": "/zh/manual/olares/wise/filter-examples"
-                }
+                  text: "过滤视图示例",
+                  link: "/zh/manual/olares/wise/filter-examples",
+                },
               ],
             },
           ],
         },
         {
-          "text": "控制面板",
-          "collapsed": true,
-          "link": "/zh/manual/olares/controlhub/",
-          "items": [
+          text: "控制面板",
+          collapsed: true,
+          link: "/zh/manual/olares/controlhub/",
+          items: [
             {
-              "text": "管理工作负载",
-              "link": "/zh/manual/olares/controlhub/manage-workload"
+              text: "管理工作负载",
+              link: "/zh/manual/olares/controlhub/manage-workload",
             },
             {
-              "text": "管理容器",
-              "link": "/zh/manual/olares/controlhub/manage-container"
+              text: "管理容器",
+              link: "/zh/manual/olares/controlhub/manage-container",
             },
             {
-              "text": "管理资源配置",
-              "link": "/zh/manual/olares/controlhub/manage-resource"
+              text: "管理资源配置",
+              link: "/zh/manual/olares/controlhub/manage-resource",
             },
             {
-              "text": "管理中间件",
-              "link": "/zh/manual/olares/controlhub/manage-middleware"
+              text: "管理中间件",
+              link: "/zh/manual/olares/controlhub/manage-middleware",
             },
             {
               text: "访问终端",
@@ -298,36 +298,36 @@ const side = {
           ],
         },
         {
-          "text": "设置",
-          "collapsed": true,
-          "link": "/zh/manual/olares/settings/",
-          "items": [
-            { "text": "我的 Olares", link: "/zh/manual/olares/settings/my-olares" },
+          text: "设置",
+          collapsed: true,
+          link: "/zh/manual/olares/settings/",
+          items: [
+            { text: "我的 Olares", link: "/zh/manual/olares/settings/my-olares" },
             {
-              "text": "管理用户",
-              "collapsed": true,
-              "items": [
+              text: "管理用户",
+              collapsed: true,
+              items: [
                 {
-                  "text": "角色与权限",
-                  "link": "/zh/manual/olares/settings/roles-permissions",
+                  text: "角色与权限",
+                  link: "/zh/manual/olares/settings/roles-permissions",
                 },
                 {
-                  "text": "创建管理用户",
-                  "link": "/zh/manual/olares/settings/manage-team",
-                }
+                  text: "创建管理用户",
+                  link: "/zh/manual/olares/settings/manage-team",
+                },
               ],
             },
             {
-              "text": "管理应用",
-              "collapsed": true,
-              "items": [
+              text: "管理应用",
+              collapsed: true,
+              items: [
                 {
-                  "text": "管理应用入口",
-                  "link": "/zh/manual/olares/settings/manage-entrance",
+                  text: "管理应用入口",
+                  link: "/zh/manual/olares/settings/manage-entrance",
                 },
                 {
-                  "text": "自定义应用域名",
-                  "link": "/zh/manual/olares/settings/custom-app-domain",
+                  text: "自定义应用域名",
+                  link: "/zh/manual/olares/settings/custom-app-domain",
                 },
                 {
                   text: "管理应用环境变量",
@@ -336,25 +336,25 @@ const side = {
               ],
             },
             {
-              "text": "管理集成",
-              "link": "/zh/manual/olares/settings/integrations",
+              text: "管理集成",
+              link: "/zh/manual/olares/settings/integrations",
             },
             {
-              "text": "自定义外观",
-              "link": "/zh/manual/olares/settings/language-appearance",
+              text: "自定义外观",
+              link: "/zh/manual/olares/settings/language-appearance",
             },
-            { text: "管理 VPN", link: "/zh/manual/olares/settings/remote-access", },
+            { text: "管理 VPN", link: "/zh/manual/olares/settings/remote-access" },
             {
-              "text": "配置网络",
-              "collapsed": true,
-              "items": [
+              text: "配置网络",
+              collapsed: true,
+              items: [
                 {
-                  "text": "更改反向代理",
-                  "link": "/zh/manual/olares/settings/change-frp",
+                  text: "更改反向代理",
+                  link: "/zh/manual/olares/settings/change-frp",
                 },
                 {
-                  "text": "设置 hosts 文件",
-                  "link": "/zh/manual/olares/settings/set-up-hosts",
+                  text: "设置 hosts 文件",
+                  link: "/zh/manual/olares/settings/set-up-hosts",
                 },
               ],
             },
@@ -362,19 +362,19 @@ const side = {
             { text: "视频设置", link: "/zh/manual/olares/settings/video" },
             { text: "文件搜索", link: "/zh/manual/olares/settings/search" },
             {
-              "text": "备份与恢复",
-              "collapsed": true,
-              "items": [
+              text: "备份与恢复",
+              collapsed: true,
+              items: [
                 { text: "备份", link: "/zh/manual/olares/settings/backup" },
                 { text: "恢复", link: "/zh/manual/olares/settings/restore" },
               ],
             },
             { text: "高级设置", link: "/zh/manual/olares/settings/developer" },
-          ]
+          ],
         },
-        { "text": "仪表盘", "link": "/zh/manual/olares/resources-usage" },
-        { "text": "Profile", "link": "/zh/manual/olares/profile" }
-      ]
+        { text: "仪表盘", link: "/zh/manual/olares/resources-usage" },
+        { text: "Profile", link: "/zh/manual/olares/profile" },
+      ],
     },
     {
       text: "LarePass",
@@ -497,6 +497,10 @@ const side = {
           text: "本地访问 Olares",
           link: "/zh/manual/best-practices/local-access",
         },
+        {
+          text: "连接 AI 应用",
+          link: "/zh/manual/best-practices/connect-ai-apps",
+        },        
       ],
     },
     { text: "术语", link: "/zh/manual/glossary" },
