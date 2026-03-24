@@ -61,6 +61,10 @@ const side = {
               text: "GPU app remains stopped after installation or resume",
               link: "/manual/help/ts-vram-shortage",
             },
+            {
+              text: "A stopped app reappears in App exclusive mode",
+              link: "/manual/help/ts-cs-app-reappears",
+            },
           ],
         },
       ],
