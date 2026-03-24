@@ -14,7 +14,7 @@ Steam streaming feels slow or delayed during gameplay, which may appear as high 
 
 Slow or delayed Steam streaming may be related to one or more of the following:
 
-- **Nginx restarts**: An nginx restart interrupts the streaming session. In Olares 1.12.4, this happens periodically. In 1.12.5, app installation, uninstallation, or other system events may still trigger nginx restarts in some cases.
+- **Nginx restarts**: An nginx restart interrupts the streaming session. In Olares 1.12.4, this happens periodically. In 1.12.5, the periodic restart issue is fixed, but app installation, uninstallation, or other system events may still trigger nginx restarts in some cases.
 - **Network**: The Olares device is using Wi-Fi instead of Ethernet, causing lower bandwidth or higher latency.
 - **GPU allocation**: The GPU is not set to **App exclusive** mode, so Steam Headless must compete with other apps for GPU resources.
 - **Power mode**: The system is running in **Quiet mode**, which may reduce performance during gameplay.
@@ -40,26 +40,19 @@ If the device is using Wi-Fi, switch to Ethernet and test the game again.
 
 Set the GPU to **App exclusive** mode and make sure Steam Headless is selected.
 
-1. Go to **Settings** > **GPU**.
-2. From the **GPU mode** dropdown, select **App exclusive**.
-3. In the **Select exclusive app** section, check whether Steam Headless is selected.
+1. Go to **Settings** > **GPU** and select **App exclusive** from the **GPU mode** dropdown.
+2. In the **Select exclusive app** section, check whether Steam Headless is selected. If it is, continue to the next check.
 
    ![Check GPU mode](/images/manual/help/ts-steam-stream-gpu-mode.png#bordered)
 
-If another app is selected, switch it to Steam Headless as follows:
+If another app is currently selected:
 
-1. Stop that app.
-   - In **Market** > **My Olares**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the app's operation button and click **Stop**.
-   - Or go to **Settings** > **Applications**, select the app, then click **Stop**.
-2. Return to **Settings** > **GPU**, then click <i class="material-symbols-outlined">link_off</i> to unbind the current app.
-3. Resume Steam Headless and make sure it is running.
-   - In **Market** > **My Olares**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the app's operation button and click **Resume**.
-   - Or go to **Settings** > **Applications**, select Steam Headless, then click **Resume**.
-4. Wait a few seconds, then click <i class="material-symbols-outlined">sync</i> to refresh the app list.
-5. If Steam Headless is still not selected automatically, click **Bind app** to set it manually.
+1. Go to **Settings** > **Applications**, select the app, and click **Stop**.
+2. Return to **Settings** > **GPU** and click <i class="material-symbols-outlined">link_off</i>.
+3. Go back to **Settings** > **Applications**, select Steam Headless, and click **Resume**.
+4. Return to **Settings** > **GPU**, click <i class="material-symbols-outlined">sync</i> to refresh the app list, and if Steam Headless is still not selected, click **Bind app** to set it manually.
 
-   ![Set the GPU to App exclusive mode](/images/manual/help/ts-steam-stream-exclu.png#bordered
-)
+   ![Set the GPU to App exclusive mode](/images/manual/help/ts-steam-stream-exclu.png#bordered)
 
 ### Switch to Performance mode
 

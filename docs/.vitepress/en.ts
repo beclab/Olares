@@ -60,6 +60,8 @@ const side = {
             {
               text: "Slow or delayed Steam streaming on Olares",
               link: "/manual/help/ts-steam-stream-lag",
+            },
+            {
               text: "GPU app remains stopped after installation or resume",
               link: "/manual/help/ts-vram-shortage",
             },

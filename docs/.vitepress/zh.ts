@@ -57,6 +57,10 @@ const side = {
               link: "/zh/manual/help/ts-network-not-ready",
             },
             {
+              text: "Steam 串流卡顿或延迟",
+              link:"/zh/manual/help/ts-steam-stream-lag"
+            },
+            {
               text: "GPU 应用安装或恢复后处于暂停状态",
               link: "/zh/manual/help/ts-vram-shortage",
             },            
