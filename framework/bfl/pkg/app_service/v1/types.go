@@ -3,7 +3,7 @@ package app_service
 import (
 	"time"
 
-	appv1 "bytetrade.io/web3os/bfl/internal/ingress/api/app.bytetrade.io/v1alpha1"
+	appv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 
 	k8sv1 "k8s.io/api/apps/v1"
 )
