@@ -30,7 +30,8 @@ A Brave Search API key is required to complete this setup. You can obtain a free
     | Settings | Option |
     |:-------|:-----|
     | Where will the Gateway run | Local (this machine) |
-    | Enable web_search (Brave Search) | Yes |
+    | Enable web_search | Yes |
+    | Choose web search provider | Brave Search |
     | Brave Search API key | Your `BraveSearchAPIkey` |
     | Enable web_fetch (keyless HTTP fetch) | Yes |
 
@@ -40,9 +41,13 @@ A Brave Search API key is required to complete this setup. You can obtain a free
     Whihe the CLI wizard sets up the API key, the Control UI allows you to customize specific parameters such as timeouts and limits.
     :::
 
-    a. Return to the **Control UI** > **Config** > **Raw** tab. 
+    a. Return to the **Control UI** > **Config** > **Raw** tab.
 
-    b. Find the `tools` section and update as follows. Replace `{Your-Brave-Search-API-Key}` with your actual key.
+    b. Click <i class="material-symbols-outlined">visibility_off</i> to reveal the configuration fields.
+
+    ![Reveal configuration blocks](/images/manual/use-cases/click-hide-icon.png#bordered) 
+
+    c. Find the `tools` section and update as follows. Replace `{Your-Brave-Search-API-Key}` with your actual key.
 
     ```json
     "tools": {
