@@ -62,7 +62,7 @@ const side = {
               link: "/manual/help/ts-vram-shortage",
             },
             {
-              text: "A stopped app reappears in App exclusive mode",
+              text: "Cannot remove a stopped app in App exclusive mode",
               link: "/manual/help/ts-cs-app-reappears",
             },
           ],

@@ -1,26 +1,22 @@
 ---
 outline: [2, 3]
-description: Troubleshoot when a stopped app reappears in App exclusive mode after you remove it in Olares 1.12.5.
+description: Troubleshoot when a stopped app cannot be removed in App exclusive mode in Olares 1.12.5.
 ---
 
-# A stopped app reappears in App exclusive mode
+# Cannot remove a stopped app in App exclusive mode
 
-Use this guide when an app reappears in **App exclusive** mode after you remove it, even though the app is shown as **Stopped** in Settings, Market, or Launchpad.
+Use this guide when an app still appears in **App exclusive** mode after you stop it and remove it.
 
 ## Condition
 
-- Your device is running Olares 1.12.5.
-- You switched the GPU from **Time-slicing** or **Memory slicing** to **App exclusive** mode.
-- You removed the app that the system automatically selected, but after refreshing the page, it appears again in the **Select exclusive app** section.
-- The app is shown as **Stopped** in Settings, Market, or Launchpad.
+- In **App exclusive** mode, after you stop an app and remove it, it appears again in the **Select exclusive app** section.
+- The app is still shown as **Stopped** in Settings, Market, and Launchpad.
 
 ## Cause
 
-This usually happens with apps that use a client/server (C/S) architecture.
+In Olares 1.12.5, when you switch the GPU mode to **App exclusive**, the system automatically selects an app as the exclusive app.
 
-In some cases, only the client side of the app has stopped, while the server side is still running in the background. Because of this, the system still treats the app as active and shows it again in the **Select exclusive app** section.
-
-Before the GPU can be assigned to another app, the app must be fully stopped.
+To remove that app, you must stop it first. However, if the app uses a client/server (C/S) architecture, stopping it may stop only the client side while the server side continues running in the background. As a result, the app may still occupy GPU resources and appear again in the **Select exclusive app** section.
 
 ## Solution
 
@@ -38,7 +34,7 @@ Before the GPU can be assigned to another app, the app must be fully stopped.
 
 4. Go back to **Settings** > **GPU**, and then click <i class="material-symbols-outlined">link_off</i> to remove the app again.
 
-5. Refresh the page and verify that the app no longer appears in the **Select exclusive app** section.
+5. Refresh the list and verify that the app no longer appears in the **Select exclusive app** section.
 
     ![Check App exclusive mode again](/images/manual/help/ts-cs-app-reappears-no-apps.png#bordered){width=90%}
 
