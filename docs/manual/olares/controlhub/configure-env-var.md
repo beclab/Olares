@@ -7,10 +7,11 @@ description:
 
 Control Hub allows you to modify application environment variables to support debugging, feature updates, or temporary adjustments.
 
-:::tip Persistence warning
-- Check global settings first: Before making changes, go to **Settings** > **Advanced** > **System environment variables**. Global variables (like API keys or mail server details) configured there persist after application updates. For more information, see [Set system environment variables](../settings/developer.md#set-system-environment-variables).
+
+## Before you begin
+
+- Before making changes, go to **Settings** > **Advanced** > **System environment variables**. Global variables (like API keys or mail server details) configured there persist after application updates. For more information, see [Set system environment variables](../settings/developer.md#set-system-environment-variables).
 - Changes made directly in Control Hub are overwritten and lost when an application is upgraded.
-:::
 
 ## 1. Locate environment variables
 
@@ -29,7 +30,7 @@ Identify which Kubernetes resource contains the variable you want to change. Var
     - **`env`**: If the variable appears as a name/value pair, modify it directly here.
     - **`envFrom`**: If the variable refers to a `configMapRef` or `secretRef`, the variable is actually stored in the referenced Configmap or Secret. You must locate that referenced resource to make modifications.
 
-    Example: In the following YAML, `envFrom` references the ConfigMap `lobechat-config`, and `env` directly defines `PGID`, `PUID`, and `TZ`.
+    Example: In the following YAML, `envFrom` references the ConfigMap `lobechat-config`, and `env` directly defines `PGID` (group ID), `PUID` (user ID), and `TZ` (time zone).
 
     ```yaml
         spec:
@@ -103,8 +104,8 @@ Configmaps store environment variables, startup parameters, and configuration fi
 
 The following steps uses the example of adding a Tavily API key to DeerFlow configuration to enable web search.
 
-1. In Control Hub, go to **Browse** > **laresprime** (the user namespace) > **deerflow-laresprime**.
-2. From the resource list, expand **Configmaps**, and click `deerflow-config`.
+1. In Control Hub, go to **Browse** > **laresprime** > **deerflow-laresprime**.
+2. From the resource list, expand **Configmaps**, and then click `deerflow-config`.
     ![Browse to DeerFlow's configmaps](/images/manual/use-cases/deerflow-configmap.png#bordered)
 3. On the resource details page, click <span class="material-symbols-outlined">edit_square</span> in the top-right to open the YAML editor.
 4. Add the following key-value pairs under the `data` section:
@@ -129,9 +130,42 @@ The following steps uses the example of adding a Tavily API key to DeerFlow conf
 
 The following steps use the example of modifying Ollama's timeout and model concurrency.
 
-1. Modify proxy (User namespace): Go to **Browse > User Namespace > Configmaps**, select `nginx-config`, and select **Edit**. Update `proxy_read_timeout` under the `nginx.conf` section.
-2. Modify core (System namespace): Go to **Browse > System Namespace > Configmaps**, select `ollama-env`, and select **Edit**. Update `OLLAMA_MAX_LOADED_MODELS` under the `data` field.
-3. Apply changes: Go to **Deployments** and **Restart** the workload. Alternatively, stop and resume the application via the **Market** or **Settings**.
+1. Modify proxy in User namespace:
+
+    a. Go to **Browse > laresprime > ollamav2-laresprime** > **Deployments** > **ollamav2**, and then click <span class="material-symbols-outlined">edit_square</span>.
+
+    b. In the YAML editor, find the `containers` section, locate and check the `env` field. The configuration here references `nginx.conf`.
+
+    c. Click **Cancel** to close the editor.
+
+    d. Return to the resource group **ConfigMaps**, click the `nginx-config` instance, and then click <span class="material-symbols-outlined">edit_square</span> in the upper‑right corner. 
+
+    e. In the YAML editor, find the `data` section, locate the `nginx-config` field, and then modify the `proxy_read_timeout` value from `300s` to `600s`.
+ 
+    f. Click **Confirm**.
+
+2. Modify core in System namespace: 
+
+    a. Go to **Browse** > **System** > **ollamaserver-shared** > **Deployments** > **ollama**, and then lick <span class="material-symbols-outlined">edit_square</span>.
+
+    b. In the YAML editor, find the `containers` section, locate the `envFrom` field. The configuration here references `ollama-env`.
+
+    c. Click **Cancel** to close the editor.
+
+    d. Return to the resource group **ConfigMaps**, click the `ollama-env` instance, and then click <span class="material-symbols-outlined">edit_square</span> in the upper‑right corner.
+    
+    e. In the YAML editor, find the `data` section, and then change the value of `OLLAMA_MAX_LOADED_MODELS` from `3` to `5`.
+ 
+    f. Click **Confirm**.
+
+3. Apply changes using one of the following methods:
+
+    - Go to **Deployments** and **Restart** the workload. 
+    - If you are not sure which workload to restart, stop the application and then resume it via the **Market** or **Settings**.
+
+    :::info
+    Because `ollama-env` is referenced via environment variables (`envFrom`), you must restart the associated pod for the changes to take effect.
+    ::: 
 
 ### Modify sensitive data
 
