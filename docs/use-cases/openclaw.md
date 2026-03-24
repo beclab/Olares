@@ -93,26 +93,32 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
 
 ### Step 2: Verify model accessibility
 
-Before configuring OpenClaw, verify that your model is accessible and responsive.
+Before configuring OpenClaw, verify that your model is accessible and responsive via the API.
 
 1. Open the OpenClaw CLI app from the Launchpad.
-2. Enter the following command to check if the model API address and model name are correct. Ensure you replaced `{Your-Model-API}` and `{Your-Model-Name}` with the exact details you copied in **Step 1**.
+2. Enter the following command to verify your API address and retrieve the list of available models. Ensure you replaced `{Your-Model-API}` with the exact API endpoint you copied in **Step 1**.
 
     ```bash
-    curl {Your-Model-API}/api/show -d '{"model": "{Your-Model-Name}"}'
+    curl {Your-Model-API}/api/tags
     ```
     For example, 
     ```bash
-    curl https://ab694c1c.laresprime.olares.com/api/show -d '{"model": "qwen3.5:35b-a3b-ud-q4_K_L"}'
+    curl https://ab694c1c.laresprime.olares.com/api/tags
+    ```
+
+    The terminal returns the details of available models, indicating the API is reachable. For example,
+
+    ```text
+    {"models":[{"details":{"families":["qwen35moe"],"family":"qwen35moe","format":"gguf","parameter_size":"34.7B","parent_model":"","quantization_level":"Q8_0"},"digest":"ff81134b3a699cbc79d3a9e9ee439335fdcd6f43f4d296f31bf46986fa83e01a","model":"qwen3.5:35b-a3b-ud-q4_K_L","modified_at":"2026-03-24T09:59:18.969770729Z","name":"qwen3.5:35b-a3b-ud-q4_K_L","size":20205634377}]}
     ```    
  
-3. Enter the following command to force the model to load into memory and test its response speed.
+3. Enter the following command to force the model to load into memory and test its response speed. Ensure you replaced `{Your-Model-API}` and `{Your-Model-Name}` with the exact details you copied in **Step 1**.
 
     ```bash
     curl {Your-Model-API}/api/generate -d '{
     "model": "{Your-Model-Name}",
-        "prompt": "say hello world",
-        "stream": false
+    "prompt": "say hello world",
+    "stream": false
     }'
     ```
     For example,
@@ -120,21 +126,17 @@ Before configuring OpenClaw, verify that your model is accessible and responsive
     ```bash
     curl https://ab694c1c.laresprime.olares.com/api/generate -d '{
     "model": "qwen3.5:35b-a3b-ud-q4_K_L",
-        "prompt": "say hello world",
-        "stream": false
+    "prompt": "say hello world",
+    "stream": false
     }'
     ```
 
-    If the terminal returns a successful JSON response containing `Hello world!`, your model is ready.
+    The terminal returns a successful response containing `Hello World!`, indicating your model is ready to use. For example,
 
-4. (Optional) To verify that your model is correctly configured, run the following command:
+    ```text
+    {"model":"qwen3.5:35b-a3b-ud-q4_K_L","created_at":"2026-03-24T11:40:21.619815369Z","response":"Hello World","done":true,"done_reason":"stop","context":[248045,846,198,35571,23066,1814,593,26003,248046,198,248045,74455,198,248068,271,248069,271,9419,4196],"total_duration":47302041704,"load_duration":41637938018,"prompt_eval_count":13,"prompt_eval_duration":4645064174,"eval_count":7,"eval_duration":961633505}
+    ```    
 
-    ```bash
-    openclaw models status --probe
-    ```
-
-    ![Verify model readiness](/images/manual/use-cases/openclaw-verify-model.png#bordered){width=55%}
-    
 ### Step 3: Run onboarding wizard
 
 1. Open the OpenClaw CLI app from the Launchpad.
@@ -163,7 +165,15 @@ Before configuring OpenClaw, verify that your model is accessible and responsive
     Tip: run `openclaw configure --section web` to store your Brave API key for web_search. Docs: https://docs.openclaw.ai/tools/web
     ```
 
-3. Enter the following command to obtain the gateway dashboard access token:
+3. Enter the following command to verify that your model is correctly configured:
+
+    ```bash
+    openclaw models status --probe
+    ```
+
+    In the terminal output, check the **Auth probes** table. The `Status` column shows `ok`, indicating the model is successfully connected and ready to use.
+    
+4. Enter the following command to obtain the gateway dashboard access token:
     ```bash
     openclaw dashboard --no-open
     ```
@@ -175,11 +185,11 @@ Before configuring OpenClaw, verify that your model is accessible and responsive
     Browser launch disabled (--no-open). Use the URL above.
     ```
 
-4. Find the **Dashboard URL**, and then copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token. 
+5. Find the **Dashboard URL**, and then copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token. 
 
     For example, in the output above, the token you need to copy is `489bad6c7dbe1f49ace62bf647ca66d6f7d78c76d1ba5d0b`.
 
-5. Keep the OpenClaw CLI window open. You need it in the next step.
+6. Keep the OpenClaw CLI window open. You need it in the next step.
 
 <!--### Step 2: Run onboarding wizard
 
