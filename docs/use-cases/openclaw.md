@@ -56,7 +56,7 @@ Olares supports app cloning. If you want to run multiple independent AI agents f
 
 Run a quick setup for the agent.
 
-### Step 1: Prepare your model
+### Step 1: Install your model
 
 Install a tool-capable model, such as `glm-4.7-flash`, `qwen3.5:35b`, and `gpt-oss:20b`. This tutorial uses `qwen3.5:35b`.
 
@@ -91,7 +91,51 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
 </template>
 </Tabs>
 
-### Step 2: Run onboarding wizard
+### Step 2: Verify model accessibility
+
+Before configuring OpenClaw, verify that your model is accessible and responsive.
+
+1. Open the OpenClaw CLI app from the Launchpad.
+2. Enter the following command to check if the model API address and model name are correct. Ensure you replaced `{Your-Model-API}` and `{Your-Model-Name}` with the exact details you copied in **Step 1**.
+
+    ```bash
+    curl {Your-Model-API}/api/show -d '{"model": "{Your-Model-Name}"}'
+    ```
+    For example, 
+    ```bash
+    curl https://ab694c1c.laresprime.olares.com/api/show -d '{"model": "qwen3.5:35b-a3b-ud-q4_K_L"}'
+    ```    
+ 
+3. Enter the following command to force the model to load into memory and test its response speed.
+
+    ```bash
+    curl {Your-Model-API}/api/generate -d '{
+    "model": "{Your-Model-Name}",
+        "prompt": "say hello world",
+        "stream": false
+    }'
+    ```
+    For example,
+
+    ```bash
+    curl https://ab694c1c.laresprime.olares.com/api/generate -d '{
+    "model": "qwen3.5:35b-a3b-ud-q4_K_L",
+        "prompt": "say hello world",
+        "stream": false
+    }'
+    ```
+
+    If the terminal returns a successful JSON response containing `Hello world!`, your model is ready.
+
+4. (Optional) To verify that your model is correctly configured, run the following command:
+
+    ```bash
+    openclaw models status --probe
+    ```
+
+    ![Verify model readiness](/images/manual/use-cases/openclaw-verify-model.png#bordered){width=55%}
+    
+### Step 3: Run onboarding wizard
 
 1. Open the OpenClaw CLI app from the Launchpad.
 2. Enter the following command to open the onboarding wizard. Ensure you replaced `{Your-Model-API}` and `{Your-Model-Name}` with the exact details you copied in **Step 1**.
@@ -172,7 +216,7 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
 5. Find the **Web UI (with token)**, and then copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token.
 
     ![Obtain gateway token](/images/manual/use-cases/obtain-gateway-token1.png#bordered){width=70%}-->
-### Step 3: Pair device
+### Step 4: Pair device
 
 Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 
@@ -208,18 +252,20 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 The quick setup in the previous section uses the `openclaw devices approve --latest` command to automatically approve the most recent pairing request. If you have multiple pending requests and need to manually select which device to approve, follow the steps in this section instead.
 :::
 
-1. Open the Control UI app from the Launchpad.
-2. On the **Overview** page, in the **Gateway Access** panel, specify the following settings:
-    - **Gateway Token**: Enter the token you copied in the previous step.
-    - **Default Session Key**: Enter `agent:main:main`.
-3. Click **Connect**. 
+1. Open the Control UI app from the Launchpad. The **OpenClaw Gateway Dashboard** opens:
+
+    ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard.png#bordered){width=60%}
+
+    The error `unauthorized: device token mismatch (rotate/reissue device token)` occurs. This is expected and means you have not provided your access token yet.
+
+2. In **Gateway Token** field, enter the token you copied in the previous step, and then click **Connect**.
 
     The connection error `pairing required` occurs. This is expected and means the device connection is waiting for approval.
-4. Return to the OpenClaw CLI window and enter the following command:
+3. Return to the OpenClaw CLI window and enter the following command:
     ```bash
     openclaw devices list
     ```
-5. In the **Pending** table, find the **Request** ID associated with your current device.
+4. In the **Pending** table, find the **Request** ID associated with your current device.
 
     :::info
     The Request ID has a time limit. If the authorization fails, re-run `openclaw devices list` to obtain a new valid ID.
@@ -227,18 +273,18 @@ The quick setup in the previous section uses the `openclaw devices approve --lat
 
     ![View pending device request](/images/manual/use-cases/pending-request.png#bordered)
     
-6. Authorize the device by entering the following command:
+5. Authorize the device by entering the following command:
 
     ```bash
     openclaw devices approve {RequestID}
     ```
-7. When the terminal displays the approval message, return to the Control UI. Now the **STATUS** in the **Snapshot** panel should be **OK**.
+6. When the terminal displays the approval message, return to the Control UI. Now the **STATUS** in the **Snapshot** panel should be **OK**.
 
     ![Health OK](/images/manual/use-cases/openclaw-connected2.png#bordered)
 </template>
 </Tabs>
 
-### Step 4: Configure context window
+### Step 5: Configure context window
 
 OpenClaw requires a large "context window" (that is the AI's short-term memory) to handle complex tasks without forgetting your previous instructions. 
 
@@ -253,7 +299,7 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
     ![Configure context window](/images/manual/use-cases/configure-context-win2.png#bordered)
 5. Click **Save** in the upper-right corner. The system validates the configuration and applies the change automatically.
 
-### Step 5: Personalize OpenClaw
+### Step 6: Personalize OpenClaw
 
 To make your OpenClaw bot more personalized, it is highly recommended to complete the persona setup process. 
 
