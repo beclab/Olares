@@ -58,7 +58,7 @@ const side = {
               link: "/manual/help/ts-network-not-ready",
             },
             {
-              text: "Forgot login password",
+              text: "Forgotten desktop login password",
               link: "/manual/help/ts-forget-login-password",
             },
             {            
