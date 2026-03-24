@@ -59,7 +59,7 @@ Connect LobeHub to Ollama to make the chat interface work.
    
    b. Under **Shared entrances**, click **Ollama API**, and then copy the endpoint address.
 
-   ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl2.png#bordered){width=60%}
+   ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl2.png#bordered){width=70%}
 
    c. Return to LobeHub, and then enter the endpoint address in the **Interface proxy address** field.
 
@@ -74,11 +74,11 @@ Connect LobeHub to Ollama to make the chat interface work.
 
 5. In the **Connectivity Check** section, select the model you just enabled from the list, and then click **Check** to verify the connection. If the model is large, it might take a little longer to load.
 
-   ![Connectivity check](/images/manual/use-cases/lobehub-connectivity-check.png#bordered){width=85%} 
+   ![Connectivity check](/images/manual/use-cases/lobehub-connectivity-check1.png#bordered){width=85%} 
 
    The button changes to **Check Passed**, indicating that the proxy address is correct. 
 
-   ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass.png#bordered){width=85%}    
+   ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass1.png#bordered){width=85%}    
 
 6. Click the home icon at the upper-left corner to return to the LobeHub home page.
 
@@ -294,4 +294,4 @@ If you encounter the `Error requesting Ollama service` error, troubleshoot as fo
 1. Ensure the specific model you are using is downloaded using Ollama.
 2. Ensure the **Use Client Request Mode** option on the Ollama settings page is disabled.
 
-   ![Disable the use client request mode option](/images/manual/use-cases/lobehub-disable-client-request-mode.png#bordered){width=85%} 
+   ![Disable the use client request mode option](/images/manual/use-cases/lobehub-disable-client-request-mode2.png#bordered){width=85%} 
