@@ -9,6 +9,4 @@ export const redirects = {
     '/manual/olares/studio/assets': '/developer/develop/tutorial/assets',
     '/developer/develop/tutorial/studio': '/developer/develop/tutorial',
     '/zh/developer/develop/tutorial/studio': '/zh/developer/develop/tutorial',
-    '/use-cases/perplexica': '/use-cases/vane',
-    '/zh/use-cases/perplexica': '/zh/use-cases/vane',
 }

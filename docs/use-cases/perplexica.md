@@ -3,7 +3,7 @@ description: Explore Vane for advanced AI-driven search and Q&A with Olares. Lea
 ---
 # Set up a privacy-focused AI search engine with Vane
 
-**Vane** (formerly Perplexica)is an open-source AI-powered search engine that provides intelligent search capabilities while maintaining user privacy. The project was previously named **Perplexica**. As an alternative to Perplexity AI, Vane combines advanced machine learning with comprehensive web search to deliver accurate, source-cited answers to your queries.
+**Vane** (formerly **Perplexica**) is an open-source AI-powered search engine that provides intelligent search capabilities while maintaining user privacy. The project was renamed to **Vane**; behavior and Olares integration are unchanged. As an alternative to Perplexity AI, Vane combines advanced machine learning with comprehensive web search to deliver accurate, source-cited answers to your queries.
 
 This guide will use Ollama as the model provider and SearXNG as the search provider.
 

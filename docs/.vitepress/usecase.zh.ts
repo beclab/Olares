@@ -62,7 +62,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "Vane(Perplexica)",
-              link: "/zh/use-cases/vane",
+              link: "/zh/use-cases/perplexica",
             },
             {
               text: "ACE-Step",
