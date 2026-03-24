@@ -1,18 +1,22 @@
-FROM golang:1.18 as builder
+FROM golang:1.24.11 AS builder
 
 WORKDIR /workspace
 
+COPY go.mod bytetrade.io/web3os/l4-bfl-proxy/
+COPY go.sum bytetrade.io/web3os/l4-bfl-proxy/
+RUN cd bytetrade.io/web3os/l4-bfl-proxy && \
+    go mod download
 
-# Copy the go project
-COPY . bytetrade.io/web3os/l4-bfl-proxy/
+COPY cmd/ bytetrade.io/web3os/l4-bfl-proxy/cmd/
+COPY internal/ bytetrade.io/web3os/l4-bfl-proxy/internal/
+
 
 RUN cd bytetrade.io/web3os/l4-bfl-proxy/ && \
-    CGO_ENABLED=0 go build -a -o l4-bfl-proxy main.go
+    CGO_ENABLED=0 go build -o l4-bfl-proxy ./cmd/
 
-FROM bytetrade/openresty:1.25.3-realip
+FROM beclab/envoyproxy-envoy:v1.32-latest
 WORKDIR /
-COPY --from=builder /workspace/bytetrade.io/web3os/l4-bfl-proxy/config/lua etc/nginx/lua
+
 COPY --from=builder /workspace/bytetrade.io/web3os/l4-bfl-proxy/l4-bfl-proxy .
-COPY nginx.conf /etc/nginx/nginx.conf
 
 ENTRYPOINT ["/l4-bfl-proxy"]
