@@ -171,7 +171,7 @@ Before configuring OpenClaw, verify that your model is accessible and responsive
     openclaw models status --probe
     ```
 
-    In the terminal output, check the **Auth probes** table. The `Status` column shows `ok`, indicating the model is successfully connected and ready to use.
+    The **Status** column in the **Auth probes** table shows `ok`, indicating the model is successfully connected and ready to use.
     
 4. Enter the following command to obtain the gateway dashboard access token:
     ```bash
