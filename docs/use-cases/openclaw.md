@@ -114,6 +114,10 @@ Before configuring OpenClaw, verify that your model is accessible and responsive
  
 3. Enter the following command to force the model to load into memory and test its response speed. Ensure you replaced `{Your-Model-API}` and `{Your-Model-Name}` with the exact details you copied in **Step 1**.
 
+    :::info Why do this before onboarding?
+    Ollama unloads models from memory after 5 minutes of inactivity by default. Reloading large models takes time and can cause the onboarding verification in the next step to time out and fail. This command "wakes" the model to ensure a smooth setup.
+    ::: 
+
     ```bash
     curl {Your-Model-API}/api/generate -d '{
     "model": "{Your-Model-Name}",
@@ -135,8 +139,8 @@ Before configuring OpenClaw, verify that your model is accessible and responsive
 
     ```text
     {"model":"qwen3.5:35b-a3b-ud-q4_K_L","created_at":"2026-03-24T11:40:21.619815369Z","response":"Hello World","done":true,"done_reason":"stop","context":[248045,846,198,35571,23066,1814,593,26003,248046,198,248045,74455,198,248068,271,248069,271,9419,4196],"total_duration":47302041704,"load_duration":41637938018,"prompt_eval_count":13,"prompt_eval_duration":4645064174,"eval_count":7,"eval_duration":961633505}
-    ```    
-
+    ```
+   
 ### Step 3: Run onboarding wizard
 
 1. Open the OpenClaw CLI app from the Launchpad.
