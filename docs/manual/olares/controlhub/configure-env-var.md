@@ -57,7 +57,11 @@ Identify which Kubernetes resource contains the variable you want to change. Var
 
     a. Locate that resource in the corresponding resource group, and then edit it following the same steps above.
 
-    b. Restart to apply the changes. If you are not sure which container to restart, you can stop and then resume the app via the Market or Settings to apply the changes.
+    b. Restart the deployment to apply the changes. 
+    
+    :::tip
+    If you are not sure which container to restart, you can stop and then resume the app via the Market or Settings to apply the changes.
+    :::
 
 ### Locate variables in C/S apps
 
@@ -68,7 +72,7 @@ Some applications use a Client/Server (C/S) architecture, such as Ollama. Their 
 | User | Client/Proxy | Nginx config, Envoy sidebar config | Controls external access, routing, and load balancing |
 | System | Server/Application core | Application parameters such as model settings, concurrency, and debug switches | Controls core app behaviors |
 
-The steps to locate these variables are the same, but you must look in the correct namespace depending on what you want to achieve:
+The steps to locate these variables are the same, but you must look in the correct namespace depending on what you want to modify:
 - To modify external access behavior, go to the User namespace, and then look for Configmaps typically containing `nginx` or `sidecar` in the name.
 - To modify core application parameters, go to the System namespace, and then look for Configmaps typically containing `env`, `config`, or similar identifiers.
 
