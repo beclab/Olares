@@ -68,10 +68,7 @@ After users are created, you can adjust their resource limits or remove access a
 2. Adjust CPU and memory values, then click **OK**.
 
 ### Reset password
-
-:::tip Forgot your password
 If a user forgets the password, a higher-level role can reset it. Super admins can reset passwords for Admins and Members. Admins can reset passwords for Members.
-:::
 
 1. Click **Reset password**.
 2. Share the generated password with the user.

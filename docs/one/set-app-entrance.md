@@ -12,13 +12,13 @@ Each app on Olares has an entrance that controls how users access it. You can co
 Understand the two settings you'll configure:
 
 - **Authentication level**: Defines when authentication is required. The app can be private, accessible over VPN without login, or fully public.
-- **Authentication model**: Defines how users authenticate. Options include password only, two-factor, or none.
+- **Authentication model**: Defines how users authenticate.
 
 | Authentication level | Available authentication models | Access behavior |
 | -- | -- | -- |
-| **Private** | System, One factor, Two factor | All users must authenticate before accessing the app. |
-| **Internal** | System, One factor, Two factor | Authentication is bypassed only with LarePass VPN enabled. All other access requires authentication. |
-| **Public** | **None** (fixed) | Anyone can access the app without logging in. |
+| **Private** | **System**, **One factor**, **Two factor** | All users must authenticate before accessing the app. |
+| **Internal** | **System**, **One factor**, **Two factor** | Authentication is bypassed only with LarePass VPN enabled. All other access requires authentication. |
+| **Public** | **None** | Anyone can access the app without logging in. |
 
 ## Set the access policy
 
