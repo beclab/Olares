@@ -168,12 +168,15 @@ const side = {
                 { text: "LXC on PVE", link: "/manual/get-started/install-lxc" },
               ],
             },
-
             {
               text: "Raspberry Pi",
               link: "/manual/get-started/install-raspberry-pi",
             },
           ],
+        },
+        {
+          text: "Join an Olares",
+          link: "/manual/get-started/join-olares",
         },
         {
           text: "Back up mnemonics",

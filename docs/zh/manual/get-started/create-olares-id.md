@@ -41,10 +41,10 @@ Olares ID 由本地名称和域名两部分组成。以 `alice123@olares.cn` 为
 请妥善保管新创建的 Olares ID 和 LarePass 应用，后续步骤中会用到。
 
 如果要以管理员身份安装和激活 Olares：
-- [安装 Olares](./install-olares)
+- [安装 Olares](/zh/manual/get-started/install-olares)
 
 如果你的团队已经部署了 Olares，需要以成员身份加入：
-- [激活 Olares](./activate-olares)
+- [加入 Olares](/zh/manual/get-started/join-olares)
 
 如果要登录 Olares Space 或创建基于云的 Olares：
-- [管理 Olares Space 账号](../../space/manage-accounts)
+- [管理 Olares Space 账号](/zh/manual/space/manage-accounts.md)
