@@ -71,7 +71,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/lobechat",
             },
             {
-              text: "Vane(Perplexica)",
+              text: "Vane (Perplexica)",
               link: "/use-cases/perplexica",
             },
             {

@@ -28,7 +28,7 @@ This integration enables Vane to function as a complete search solution while ma
 ## Install Vane
 With the search backend now running, you can install the main Vane app.
 1. Open **Market**, and search for "Vane".
-   ![Vane](/images/manual/use-cases/perplexica.png#bordered)
+   ![Vane](/images/manual/use-cases/vane.png#bordered)
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
