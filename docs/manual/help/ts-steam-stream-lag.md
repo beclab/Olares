@@ -1,6 +1,6 @@
 ---
-outline: [2,4]
-description: Troubleshoot slow or delayed Steam streaming on Olares by checking nginx restarts, network connection, GPU mode, system mode, game compatibility, and Steam Headless resource limits.
+outline: deep
+description: Troubleshoot slow or delayed game streaming with Steam Headless.
 ---
 # Slow or delayed Steam streaming
 
@@ -8,18 +8,18 @@ Use this guide when Steam streaming from Olares feels slow or delayed during gam
 
 ## Condition
 
-Steam streaming feels slow or delayed during gameplay, which may appear as high latency, stuttering, sudden disconnections, or delayed input response.
+Steam streaming feels slow or delayed during gameplay, which may appear as high latency, stuttering, sudden disconnections, or input delay.
 
 ## Cause
 
-Slow or delayed Steam streaming may be related to one or more of the following:
+Slow or delayed Steam streaming can result from one or more of the following:
 
-- **Nginx restarts**: An nginx restart interrupts the streaming session.
-- **Network**: The Olares device is using Wi-Fi instead of Ethernet, causing lower bandwidth or higher latency.
-- **GPU allocation**: The GPU resources are occupied by other apps.
-- **GPU power**: The GPU is not running at full power.
-- **Compatibility**: The game is not performing well with the current Proton version.
-- **Resource limits**: Steam Headless is reaching its configured CPU or memory limits.
+- **nginx restarts**: An nginx restart interrupts the active streaming session.
+- **Network**: The Olares device is connected through Wi-Fi instead of Ethernet.
+- **GPU allocation**: GPU resources are occupied by other apps.
+- **GPU power**: The GPU is throttled by power management settings.
+- **Compatibility**: The game does not run well with the current Proton version.
+- **Resource limits**: Steam Headless is hitting its configured CPU or memory limits.
 
 ## Solution
 
@@ -27,7 +27,7 @@ Check the following items in order of priority.
 
 ### Avoid interruptions from nginx restarts
 
-- If you are running Olares 1.12.4, update to 1.12.5.
+- If you are running Olares 1.12.4, update to 1.12.5 or later.
 - Avoid installing, uninstalling, or updating apps while streaming a game.
 
 ### Use a wired connection
@@ -52,23 +52,19 @@ If another app is currently selected:
 
    ![Set the GPU to App exclusive mode](/images/manual/help/ts-steam-stream-exclu.png#bordered)
 
-### Switch to Performance mode (Olares One only)
+### Check GPU power state
 
-If you are using Olares One, try switching to **Performance mode**.
+The GPU on your device may be throttled by power management settings. Make sure the GPU is running at full power.
 
+For Olares One users:
 1. Go to **Settings** > **My Olares** > **My hardware**.
 2. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to **Power mode** and select **Performance mode**.
    ![Set power mode to Performance mode](/images/manual/help/ts-steam-stream-lag-power-mode.png#bordered)
 
 ### Try a different Proton version
 
-If the issue only happens with a specific game, try changing the game's Proton version in Steam.
-
-:::info What is Proton?
-Proton is Steam’s compatibility layer used to run Windows games on Linux-based systems. Since different games interact with hardware differently, the version of Proton you use can directly impact game compatibility and streaming performance.
-:::
-
-1. In Steam, open the target game in your **Library**, then click  <i class="material-symbols-outlined">settings</i>  > **Properties...**
+If the issue only happens with a specific game, try changing the game's Proton version in Steam. Proton is Steam's compatibility layer for running Windows games on Linux-based systems, and different versions can affect game performance.
+1. In Steam, open the target game in your **Library**, then click <i class="material-symbols-outlined">settings</i>  > **Properties…**.
 2. Go to **Compatibility**.
 3. Enable **Force the use of a specific Steam Play compatibility tool**.
 4. Select a Proton version from the dropdown list.
@@ -125,4 +121,4 @@ If the issue persists after completing the steps above, create an issue in the [
 - A short description of the issue.
 - The device you are streaming to, such as a laptop, handheld device, phone, or TV.
 
-Providing this information helps the team narrow down the cause more quickly.
+Providing this information helps the team narrow down the cause.
