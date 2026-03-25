@@ -71,7 +71,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/lobechat",
             },
             {
-              text: "Perplexica",
+              text: "Vane (Perplexica)",
               link: "/use-cases/perplexica",
             },
             {
@@ -90,6 +90,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             //   text: "Stable Diffusion",
             //   link: "/use-cases/stable-diffusion",
             // },
+            {
+              text: "DeerFlow 2.0",
+              link: "/use-cases/deerflow2",
+            },
             {
               text: "DeerFlow",
               link: "/use-cases/deerflow",

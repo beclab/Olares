@@ -14,7 +14,7 @@ doc_updated: "2026-03-20"
 
 Komga is a specialized, open-source media server designed to manage your digital collection of comics, manga, Bandes Dessinées (BD), magazines, and e-books.
 
-This guide shows you how to install Komga on Olares, organize your media files for automatic scanning, configure secure user access, and use the built-in reader and metadata editors to enhance your digital reading experience.
+This guide shows you how to install Komga on Olares, organize your media files for automatic scanning, and use the built-in reader and metadata editors to enhance your digital reading experience.
 
 ## Learning objectives
 

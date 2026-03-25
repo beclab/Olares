@@ -23,7 +23,7 @@ A personal cloud is a private infrastructure that replicates the utility of publ
 
 Olares is designed for anyone who wants to use powerful AI tools locally without dealing with complex technical setups.
 
-* **For general users**: You can deploy complex applications like ComfyUI or Perplexica from the Market with a single click.
+* **For general users**: You can deploy complex applications like ComfyUI or Vane (formerly Perplexica) from the Market with a single click.
 * **For developers**: Olares functions as an efficient local development environment. You can leverage the sandboxing and agent infrastructure to build and test applications directly on your Olares device, saving time on environment configuration.
 
 ### How is Olares different from NAS operating systems?

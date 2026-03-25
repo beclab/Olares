@@ -61,8 +61,16 @@ const side = {
               link:"/zh/manual/help/ts-steam-stream-lag"
             },
             {
+              text: "忘记桌面登录密码",
+              link: "/zh/manual/help/ts-forget-login-password",
+            },
+            {                        
               text: "GPU 应用安装或恢复后处于暂停状态",
               link: "/zh/manual/help/ts-vram-shortage",
+            },
+            {
+              text: "无法在应用独占模式移除已暂停应用",
+              link: "/zh/manual/help/ts-cs-app-reappears",
             },            
           ],
         },
