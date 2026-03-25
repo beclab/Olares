@@ -4,11 +4,11 @@ description: 排查并解决 Steam Headless 游戏串流卡顿或延迟的问题
 ---
 # Steam 串流卡顿或延迟
 
-从 Olares 串流 Steam 游戏时出现卡顿或延迟，可参考本指南进行排查。
+从 Olares 串流 Steam 游戏时出现卡顿或延迟，可参考本指南排查。
 
 ## 适用情况
 
-串流游玩 Steam 游戏时出现卡顿或延迟，具体表现可能为高延迟、画面卡顿、突然断连或输入延迟。
+串流 Steam 游戏时出现卡顿或延迟，表现为高延迟、画面卡顿、突然断连或输入延迟。
 
 ## 原因
 
@@ -27,19 +27,19 @@ Steam 串流卡顿或延迟，可能由以下一个或多个原因导致：
 
 ### 避免 nginx 重启导致的中断
 
-- 如果你当前使用的是 Olares 1.12.4，请升级到 1.12.5 或更高版本。
+- 如果你当前使用的是 Olares 1.12.4，升级到 1.12.5 或更高版本。
 - 串流游戏时，避免安装、卸载或更新应用。
 
 ### 使用有线网络连接
 
-如果 Olares 设备当前通过 Wi-Fi 连接，请改用有线网络。
+如果 Olares 设备当前通过 Wi-Fi 连接，改用有线网络。
 
 ### 将 GPU 设置为应用独占模式
 
 为 Steam Headless 分配完整的 GPU 访问权限，以获得最佳性能。
 
 1. 前往**设置** > **GPU**，在 **GPU 模式**下拉菜单中选择**应用独占**。
-2. 选择 Steam Headless 作为独占应用。如果当前已绑定其他应用，请先前往**设置** > **应用**停止该应用，然后返回绑定 Steam Headless。
+2. 选择 Steam Headless 作为独占应用。如果当前已绑定其他应用，先前往**设置** > **应用**，停止该应用，然后返回绑定 Steam Headless。
 
    ![设置应用独占模式](/images/zh/manual/help/ts-steam-stream-exclu.png#bordered)
 
@@ -47,7 +47,7 @@ Steam 串流卡顿或延迟，可能由以下一个或多个原因导致：
 
 你设备上的 GPU 可能因电源管理设置而被降频。请确保 GPU 以全功率运行。
 
-对于 Olares One 用户：
+如果你正在使用 Olares One：
 
 1. 前往**设置** > **我的 Olares** > **我的硬件**。
 2. 点击**工作模式**旁边的 <i class="material-symbols-outlined">keyboard_arrow_down</i>，然后选择**性能模式**。
@@ -56,7 +56,7 @@ Steam 串流卡顿或延迟，可能由以下一个或多个原因导致：
 
 ### 尝试使用其他 Proton 版本
 
-如果问题只出现在某一款游戏中，可以尝试在 Steam 中更换该游戏使用的 Proton 版本。Proton 是 Steam 用于在基于 Linux 的系统上运行 Windows 游戏的兼容层，不同版本可能会影响游戏性能。
+如果问题只出现在某一款游戏中，可以尝试在 Steam 中更换该游戏使用的 Proton 版本。Proton 是 Steam 的兼容层，用于在 Linux 环境中运行 Windows 游戏，不同版本可能会影响游戏性能。
 
 1. 在 Steam 的**库**里打开目标游戏页面，然后点击 <i class="material-symbols-outlined">settings</i> > **属性…**。
 2. 前往**兼容性**选项卡。
@@ -91,7 +91,7 @@ Steam Headless 可能已达到配置的 CPU 或内存上限。先启动游戏，
    ```
    ![检查 CPU 和内存上限](/images/zh/manual/help/ts-steam-stream-limit.png#bordered)
 
-4. 如果实际使用量持续接近配置的上限，请根据设备容量适当调高 `cpu` 或 `memory` 的值。
+4. 如果实际使用量持续接近配置的上限，根据设备容量适当调高 `cpu` 或 `memory` 的值。
 5. 点击 **Confirm** 保存更改，然后重新测试游戏串流效果。
 
 ## 如果问题仍然存在
