@@ -190,7 +190,7 @@ if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$VE
     echo "olares-cli already installed and is the expected version"
     echo ""
 else
-    if [[ ! -f ${CLI_FILE} ]]; then
+    if [[ ! -f ${CLI_FILE} ]] || ! gzip -t ${CLI_FILE} 2>/dev/null; then
         CLI_URL="${cdn_url}${REPO_PATH}${CLI_FILE}"
         echo "downloading Olares installer from ${CLI_URL} ..."
         echo ""
@@ -224,14 +224,24 @@ if [[ ! "$master_olares_version" ]]; then
     echo "failed to fetch the version of Olares installed on master node"
     exit 1
 fi
+if [[ "$master_olares_version" != "$VERSION" ]]; then
+    echo "error: The version of Olares installed on the master node ($master_olares_version) does not match the local VERSION ($VERSION)."
+    echo "please ensure the join node and the master node use the same Olares version."
+    exit 1
+fi
+
 PARAMS="--version $master_olares_version --base-dir $BASE_DIR"
 CDN="--cdn-service ${cdn_url}"
 
 if [[ -f $BASE_DIR/.prepared ]]; then
-    echo "file $BASE_DIR/.prepared detected, skip preparing phase"
-    echo ""
-    echo "please make sure the prepared Olares version is the same as the master, or there might be compatibility issues"
-    echo ""
+    if [[ "$(cat $BASE_DIR/.prepared)" == "$master_olares_version" ]]; then
+        echo "file $BASE_DIR/.prepared detected, skip preparing phase"
+        echo ""
+    else
+        echo "file $BASE_DIR/.prepared detected with version: $(cat $BASE_DIR/.prepared), but the expected version is: $VERSION"
+        echo "if it is left by an unclean uninstallation, please execute a full uninstallation and rerun the installer"
+        exit 1
+    fi
 else
     echo "running system prechecks ..."
     echo ""
@@ -273,9 +283,15 @@ else
 fi
 
 if [ -f $BASE_DIR/.installed ]; then
-    echo "file $BASE_DIR/.installed detected, skip installing"
-    echo "if it is left by an unclean uninstallation, please manually remove it and invoke the installer again"
-    exit 0
+    if grep -q "$VERSION" $BASE_DIR/.installed; then
+        echo "file $BASE_DIR/.installed detected, skip installing"
+        echo ""
+        exit 0
+    else
+        echo "file $BASE_DIR/.installed detected with version: $(cat $BASE_DIR/.installed), but the expected version is: $VERSION"
+        echo "if it is left by an unclean uninstallation, please execute a full uninstallation and rerun the installer"
+        exit 1
+    fi
 fi
 
 echo "installing Kubernetes and joining Olares cluster..."

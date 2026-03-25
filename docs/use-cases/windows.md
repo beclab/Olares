@@ -38,7 +38,7 @@ Windows is available as an app in the Olares Market.
     - **VERSION:** Select your preferred Windows version from the dropdown list.
     - **DISK_SIZE:** Allocate disk space for Windows.
 
-    ![Set environment variables](../public/images/manual/use-cases/win-set-env-var1.png#bordered){width=70%}
+    ![Set environment variables](/images/manual/use-cases/win-set-env-var1.png#bordered){width=70%}
 
 4. Wait a few minutes for the installation and initialization to complete.
 
@@ -48,7 +48,7 @@ Once the installation is finished, open Windows from Launchpad to start the VM f
 
 Olares will automatically download and install the system image of the corresponding Windows version. This may take several minutes depending on your network speed.
 
-![Download Windows 11](../public/images/manual/use-cases/win-downloading-win11.png#bordered)
+![Download Windows 11](/images/manual/use-cases/win-downloading-win11.png#bordered)
 ## Access the Windows VM
 
 You can access your VM in two ways: 
@@ -102,32 +102,32 @@ The following steps show the macOS interface, but the workflow is similar on all
       0f4137ed.<username>.olares.com:47374
       ```
 
-   ![Add PC](../public/images/manual/use-cases/win-add-pc1.png#bordered)
+   ![Add PC](/images/manual/use-cases/win-add-pc1.png#bordered)
 
     d. Click **Add**.
 
 5. Connect to the Windows VM.
 
    a. Double-click your saved PC entry, or click **⋯** and choose **Connect**.
-   ![Connect to PC](../public/images/manual/use-cases/win-connect-device1.png#bordered)
+   ![Connect to PC](/images/manual/use-cases/win-connect-device1.png#bordered)
         
    b. When prompted, enter the **Username** and **Password** you created earlier.
-   ![Log in to PC](../public/images/manual/use-cases/win-log-in1.png#bordered)
+   ![Log in to PC](/images/manual/use-cases/win-log-in1.png#bordered)
 
    c. If a security warning appears, click **Continue**.
-   ![Continue to log in](../public/images/manual/use-cases/win-confirm-connect1.png#bordered)
+   ![Continue to log in](/images/manual/use-cases/win-confirm-connect1.png#bordered)
 
 You are now connected to your Windows VM via RDP.
-![Windows VM](../public/images/manual/use-cases/win-vm-interface.png#bordered)
+![Windows VM](/images/manual/use-cases/win-vm-interface.png#bordered)
 
 ## Optional: Change your Windows login password
 
 You can update your Windows login password directly from inside the VM:
 1. Click the search bar in the Windows taskbar and type "password".  
 2. Select **Change your password**.  
-    ![Change your password](../public/images/manual/use-cases/win-change-pw.png#bordered)
+    ![Change your password](/images/manual/use-cases/win-change-pw.png#bordered)
 3. Click **Change** to set your new password.
-    ![Set new password](../public/images/manual/use-cases/win-set-pw.png#bordered)
+    ![Set new password](/images/manual/use-cases/win-set-pw.png#bordered)
 
 ## Transfer files between your computer and Windows
 
@@ -150,7 +150,7 @@ The Windows VM continues running on your Olares device and is always ready for y
 ### The Windows VM shows a blank screen or no desktop
 
 The browser may have suspended the VNC connection due to inactivity to conserve system resources.  
-    ![Reconnect VM](../public/images/manual/use-cases/win-vnc-reconnect.png#bordered)
+    ![Reconnect VM](/images/manual/use-cases/win-vnc-reconnect.png#bordered)
 
 Click **Connect** to restore the session.
 
@@ -163,7 +163,7 @@ If the Windows system image fails to download during setup:
     2. Select the windows project.
     3. Under **Deployment**, click windows.
     4. Click **Restart**.
-    ![Restart VM](../public/images/manual/use-cases//win-restart.png#bordered)
+    ![Restart VM](/images/manual/use-cases/win-restart.png#bordered)
 
   After the restart, the system image download will automatically retry.
 - If repeated failures occur, your IP may have been temporarily blocked by Microsoft due to multiple download attempts in a short period.  

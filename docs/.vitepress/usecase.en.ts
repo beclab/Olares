@@ -3,12 +3,45 @@ import { defineConfig, type DefaultTheme } from "vitepress";
 export const useCaseSidebar: DefaultTheme.Sidebar = {
     "/use-cases/": [
         {
-          text: "Use cases",
-          link: "/use-cases/",
+          text: "AI",
+          collapsed: false,
           items: [
             {
-              text: "Stable Diffusion",
-              link: "/use-cases/stable-diffusion",
+              text: "OpenClaw",
+              link: "/use-cases/openclaw",
+              collapsed: true,
+              items: [
+                {
+                  text: "Integrate with Discord",
+                  link: "/use-cases/openclaw-integration",
+                },
+                {
+                  text: "Enable web search",
+                  link: "/use-cases/openclaw-web-access",
+                },
+                {
+                  text: "Manage skills and plugins",
+                  link: "/use-cases/openclaw-skills",
+                },
+                {
+                  text: "Upgrade OpenClaw",
+                  link: "/use-cases/openclaw-upgrade",
+                },
+              ]
+            },
+            {
+              text: "Open WebUI",
+              collapsed: true,
+              items: [
+                {
+                  text: "Set up with model apps",
+                  link: "/use-cases/openwebui",
+                },
+                {
+                  text: "Set up with Ollama",
+                  link: "/use-cases/openwebui-ollama",
+                },
+              ]
             },
             {
               text: "ComfyUI",
@@ -20,7 +53,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/comfyui-launcher",
                 },
                 {
-                  text: "Use ComfyUI for Krita",
+                  text: "Use ComfyUI in Krita",
                   link: "/use-cases/comfyui-for-krita",
                 },
               ]
@@ -29,18 +62,66 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Ollama",
               link: "/use-cases/ollama",
             },
+            // {
+            //   text: "Dify",
+            //   link: "/use-cases/dify",
+            // },
             {
-              text: "Open WebUI",
-              link: "/use-cases/openwebui",
+              text: "LobeHub (LobeChat)",
+              link: "/use-cases/lobechat",
             },
             {
-              text: "Perplexica",
+              text: "Vane (Perplexica)",
               link: "/use-cases/perplexica",
             },
             {
-              text: "Dify",
-              link: "/use-cases/dify",
+              text: "ACE-Step",
+              link: "/use-cases/ace-step",
             },
+            {
+              text: "Duix.Avatar",
+              link: "/use-cases/duix-avatar",
+            },
+            {
+              text: "PDFMathTranslate",
+              link: "/use-cases/pdfmathtranslate",
+            },
+            // {
+            //   text: "Stable Diffusion",
+            //   link: "/use-cases/stable-diffusion",
+            // },
+            {
+              text: "DeerFlow 2.0",
+              link: "/use-cases/deerflow2",
+            },
+            {
+              text: "DeerFlow",
+              link: "/use-cases/deerflow",
+            },
+          ]
+        },
+        {
+          text: "Virtual machine",
+          collapsed: false,
+          items: [
+            // {
+            //   text: "macOS",
+            //   link: "/use-cases/macOS",
+            // },
+            {
+              text: "Windows",
+              link: "/use-cases/windows",
+            },
+            // {
+            //   text: "Redroid",
+            //   link: "/use-cases/host-cloud-android",
+            // },
+          ]
+        },
+        {
+          text: "Entertainment",
+          collapsed: false,
+          items: [
             {
               text: "Jellyfin",
               link: "/use-cases/stream-media",
@@ -59,43 +140,21 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 }
               ]
             },
-            //         {
-            //           text: "Redroid",
-            //           link: "/use-cases/host-cloud-android",
-            //         },
             {
-              text: "Windows",
-              link: "/use-cases/windows",
+              text: "Komga",
+              link: "/use-cases/komga",
             },
-            {
-              text: "DeerFlow",
-              link: "/use-cases/deerflow",
-            },
-            {
-              text: "Duix.Avatar",
-              link: "/use-cases/duix-avatar",
-            },
-            {
-              text: "ACE-Step",
-              link: "/use-cases/ace-step",
-            },
+          ]
+        },
+        {
+          text: "Productivity",
+          collapsed: false,
+          items: [
             {
               text: "Stirling PDF",
               link: "/use-cases/stirling-pdf",
             },
-            {
-              text: "PDFMathTranslate",
-              link: "/use-cases/pdfmathtranslate",
-            },
-            {
-              text: "LobeChat",
-              link: "/use-cases/lobechat",
-            },
-            {
-              text: "OpenClaw",
-              link: "/use-cases/openclaw",
-            },
-          ],
+          ]
         },
       ],
     }

@@ -130,25 +130,25 @@ spec:
       initContainers:
         - args:
           - -it
-          - authelia-backend.os-framework:9091
+          - authelia-backend.os-framework.svc.cluster.local:9091
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-auth
         - args:
           - -it
-          - app-service.os-framework:6755
+          - app-service.os-framework.svc.cluster.local:6755
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-appservice
         - args:
           - -it
-          - chart-repo-service.os-framework:82
+          - chart-repo-service.os-framework.svc.cluster.local:82
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-chart-repo
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.18
+        image: beclab/market-backend:v0.6.25
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81

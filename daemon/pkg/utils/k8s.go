@@ -152,21 +152,24 @@ func IsTerminusRunning(ctx context.Context, client kubernetes.Interface) (bool, 
 	return true, nil
 }
 
-func IsIpChanged(ctx context.Context, installed bool) (bool, error) {
+func IsIpChanged(ctx context.Context, installed bool) bool {
 	ips, err := nets.GetInternalIpv4Addr()
 	if err != nil {
-		return false, err
+		klog.Error("get internal ip error, ", err)
+		return false
 	}
 
 	masterIpFromETCD, err := MasterNodeIp(installed)
 	if err != nil {
-		return false, err
+		klog.Error("get master node ip error, ", err)
+		return false
 	}
 
 	for _, ip := range ips {
 		hostIps, err := nets.LookupHostIps()
 		if err != nil {
-			return false, err
+			klog.Error("get host ip error, ", err)
+			return false
 		}
 
 		for _, hostIp := range hostIps {
@@ -176,20 +179,20 @@ func IsIpChanged(ctx context.Context, installed bool) (bool, error) {
 				if !installed {
 					// terminus not installed
 					if masterIpFromETCD == "" {
-						return false, nil
+						return false
 					}
 
 					if masterIpFromETCD == ip.IP {
-						return false, nil
+						return false
 					}
 
-					return true, nil
+					return true
 				}
 
 				kubeClient, err := GetKubeClient()
 				if err != nil {
 					klog.Error("get kube client error, ", err)
-					return false, nil
+					return false
 				}
 
 				_, nodeIp, nodeRole, err := GetThisNodeName(ctx, kubeClient)
@@ -197,35 +200,35 @@ func IsIpChanged(ctx context.Context, installed bool) (bool, error) {
 					klog.Warning("get this node name error, ", err, ", try to compare with etcd ip")
 					if masterIpFromETCD == "" {
 						klog.Info("master node ip not found, mybe it's a worker node")
-						return false, nil
+						return false
 					}
 
 					if masterIpFromETCD == ip.IP {
-						return false, nil
+						return false
 					}
 
 					klog.Info("master node ip from etcd is not the same as internal ip of interface, ", masterIpFromETCD, ", ", hostIp, ", ", ip.IP)
-					return true, nil
+					return true
 
 				}
 
 				if nodeRole == "master" && nodeIp == ip.IP {
-					return false, nil
+					return false
 				}
 
 				// FIXME:(BUG) worker node will not work with this check
 				if nodeRole == "worker" {
-					return false, nil
+					return false
 				}
 
 				klog.Info("node is master and node ip is not the same as internal ip of interface, ", nodeIp, ", ", hostIp, ", ", ip.IP)
-				return true, nil
+				return true
 			}
 		} // end for host ips
 	} // end for interface ips
 
 	klog.Info("no host ip is the same as internal ip of interface, ", ips)
-	return true, nil
+	return true
 }
 
 func MasterNodeIp(installed bool) (addr string, err error) {

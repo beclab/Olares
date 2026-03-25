@@ -88,7 +88,7 @@ spec:
               PostgreSQL DB Server has started";
           env:
             - name: PGHOST
-              value: citus-headless.os-platform
+              value: citus-headless.os-platform.svc.cluster.local
             - name: PGPORT
               value: '5432'
             - name: PGUSER
@@ -210,7 +210,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.148
+          image: beclab/files-server:v0.2.153
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true

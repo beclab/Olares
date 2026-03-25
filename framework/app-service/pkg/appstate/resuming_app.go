@@ -13,6 +13,7 @@ import (
 
 	kbopv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -22,6 +23,8 @@ var _ OperationApp = &ResumingApp{}
 type ResumingApp struct {
 	*baseOperationApp
 }
+
+var errStopRequestedDueToPendingPod = errors.New("stop requested due to pending pod")
 
 func NewResumingApp(c client.Client,
 	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
@@ -43,7 +46,7 @@ func NewResumingApp(c client.Client,
 func (p *ResumingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 	err := p.exec(ctx)
 	if err != nil {
-		updateErr := p.updateStatus(ctx, p.manager, appsv1.ResumeFailed, nil, appsv1.ResumeFailed.String(), "")
+		updateErr := p.updateStatus(ctx, p.manager, appsv1.ResumeFailed, nil, err.Error(), appsv1.ResumeFailed.String())
 		if updateErr != nil {
 			klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.ResumeFailed, err)
 			err = errors.Wrapf(err, "update status failed %v", updateErr)
@@ -85,7 +88,7 @@ func (p *ResumingApp) exec(ctx context.Context) error {
 }
 
 func (p *ResumingApp) Cancel(ctx context.Context) error {
-	err := p.updateStatus(ctx, p.manager, appsv1.ResumingCanceling, nil, constants.OperationCanceledByTerminusTpl, "")
+	err := p.updateStatus(ctx, p.manager, appsv1.ResumingCanceling, nil, constants.OperationCanceledByTerminusTpl, appsv1.ResumingCanceling.String())
 	if err != nil {
 		klog.Errorf("update appmgr state to resumingCanceling state failed %v", err)
 		return err
@@ -111,8 +114,12 @@ func (p *resumingInProgressApp) Exec(ctx context.Context) (StatefulInProgressApp
 func (p *resumingInProgressApp) WaitAsync(ctx context.Context) {
 	appFactory.waitForPolling(ctx, p, func(err error) {
 		if err != nil {
+			if errors.Is(err, errStopRequestedDueToPendingPod) {
+				klog.Infof("app %s stop requested while resuming, skip setting ResumeFailed", p.manager.Spec.AppName)
+				return
+			}
 			opRecord := makeRecord(p.manager, appsv1.ResumeFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
-			updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.ResumeFailed, opRecord, err.Error(), "")
+			updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.ResumeFailed, opRecord, err.Error(), appsv1.ResumeFailed.String())
 			if updateErr != nil {
 				klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.ResumeFailed.String(), updateErr)
 				return
@@ -120,7 +127,7 @@ func (p *resumingInProgressApp) WaitAsync(ctx context.Context) {
 
 			return
 		}
-		updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Initializing, nil, appsv1.Initializing.String(), "")
+		updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Initializing, nil, appsv1.Initializing.String(), appsv1.Initializing.String())
 		if updateErr != nil {
 			klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.Initializing.String(), updateErr)
 			return
@@ -135,7 +142,15 @@ func (p *resumingInProgressApp) poll(ctx context.Context) error {
 		return nil
 	}
 	ok := p.IsStartUp(ctx)
+
 	if !ok {
+		isPending, err := p.stopRequested(ctx)
+		if err != nil {
+			return err
+		}
+		if isPending {
+			return errStopRequestedDueToPendingPod
+		}
 		return fmt.Errorf("wait for app %s startup failed", p.manager.Spec.AppName)
 	}
 
@@ -149,9 +164,9 @@ func (p *resumingInProgressApp) IsStartUp(ctx context.Context) bool {
 		select {
 		case <-timer.C:
 			startedUp, _ := isStartUp(p.manager, p.client)
-			klog.Infof("wait app %s pod to startup, time elapsed: %v", p.manager.Spec.AppOwner, time.Since(start))
+			klog.Infof("wait app %s pod to startup, time elapsed: %v", p.manager.Spec.AppName, time.Since(start))
 			if startedUp {
-				klog.Infof("time: %v, appState: %v", time.Now(), appsv1.Initializing)
+				klog.Infof("app: %s,time: %v, appState: %v", p.manager.Spec.AppName, time.Now(), appsv1.Initializing)
 				return true
 			}
 		case <-ctx.Done():
@@ -159,6 +174,15 @@ func (p *resumingInProgressApp) IsStartUp(ctx context.Context) bool {
 			return false
 		}
 	}
+}
+
+func (p *resumingInProgressApp) stopRequested(ctx context.Context) (bool, error) {
+	var latest appsv1.ApplicationManager
+	if err := p.client.Get(ctx, types.NamespacedName{Name: p.manager.Name}, &latest); err != nil {
+		klog.Errorf("failed to get app manager %s while waiting startup: %v", p.manager.Name, err)
+		return false, err
+	}
+	return latest.Annotations[api.AppStopByControllerDuePendingPod] == "true", nil
 }
 
 func (p *ResumingApp) execMiddleware(ctx context.Context) error {

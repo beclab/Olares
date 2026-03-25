@@ -42,8 +42,8 @@ When the SSH access is unavailable, log in to the device locally using a monitor
     olares login:
     ```
 
-3. Type the username `olares` and press **Enter**.
-4. When prompted, type the default SSH password `olares`, and then press **Enter**.
+2. Type the username `olares` and press **Enter**.
+3. When prompted, type the default SSH password `olares`, and then press **Enter**.
 
 #### Step 3: Run the uninstall command
 
@@ -88,4 +88,4 @@ To ensure accurate time synchronization, let the device remain powered on for a 
     </template>
     </tabs>
 
-4. Find your Olares One from the list of available devices, and then tap **Install now** on it. The installation should now proceed and complete successfully.
+2. Find your Olares One from the list of available devices, and then tap **Install now** on it. The installation should now proceed and complete successfully.

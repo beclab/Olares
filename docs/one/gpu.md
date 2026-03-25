@@ -1,5 +1,5 @@
 ---
-outline: [2, 3]
+outline: [2, 4]
 description: Learn about the three GPU modes in Olares and how to switch between them to match different workloads.
 head:
   - - meta
@@ -18,71 +18,58 @@ Olares lets you control how applications use GPU resources for workloads like AI
 
 By the end of this tutorial, you will learn how to:
 
-- Choose between the three GPU modes.
+- Choose the right GPU mode for your workload.
 - Switch GPU mode in Settings.
-- Configure app binding for **App exclusive** mode and **Memory slicing** mode.
+- Use the basic app controls in each GPU mode.
 
 ## Choose the right GPU mode
 
 Olares provides three GPU modes, each designed for a different usage pattern.
 
-| GPU mode                   | Definition                                                                                          | Use scenario                                                                      |
-|:---------------------------|:----------------------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
+| GPU mode | Definition | Best for |
+|--|--|--|
 | **Time slicing** (Default) | Multiple apps share one GPU<br> by taking turns using compute<br> and VRAM.                         | General workloads that run several lightweight apps.                              |
-| **App exclusive**          | One app gets full, uninterrupted<br> access to the compute and VRAM<br> of a single GPU.            | Heavy workloads that require maximum stability, such as LLMs and high‑end gaming. |
 | **Memory slicing**         | The GPU's VRAM is divided into<br> fixed quotas, and apps run concurrently<br> within their limits. | Running specific apps simultaneously while strictly limiting their memory usage.  |
+| **App exclusive**          | One app gets full, uninterrupted<br> access to the compute and VRAM<br> of a single GPU.            | Heavy workloads that require maximum stability, such as LLMs and high‑end gaming. |
 
-## View GPU details
+## Open GPU settings
 
-Go to **Settings** > **GPU** to view your GPU status and current mode.
-
-![GPU overview](/images/one/gpu-details.png#bordered){width=85%}
-
-:::tip 
-If you have more than one GPU, Olares lists all your GPUs on this page. Just click a GPU to open its details page directly. 
-:::
-
-## Switch GPU mode
-
-Follow these steps to change how a GPU is used:
+This page displays your GPU details and allows you to change its mode.
 
 1. Go to **Settings** > **GPU**.
+  ![GPU overview](/images/one/gpu-details.png#bordered){width=85%}
+
 2. Choose a mode from the **GPU mode** dropdown.
 
-:::warning Restart notice
-Changing a GPU's mode restarts applications currently using that GPU.
+:::warning App interruption notice
+Changing a GPU mode reallocates hardware resources. Depending on the mode you choose, apps that are currently using the GPU may be paused automatically.
+
+After switching modes, check the state of your apps and manually resume them if needed.
 :::
+
+## Manage app access by mode
 
 ### Time slicing
 
-**Time slicing** is the default mode in Olares. Use this mode to allow multiple applications to share resources.
+**Time slicing** is the default mode in Olares. Use this mode to let multiple apps share GPU resources.
+  ![Time slicing](/images/one/gpu-time-slicing.png#bordered){width=85%}
 
-When a GPU is in **Time slicing** mode, GPU-enabled applications are automatically assigned to it. These applications will appear in the app list on this page.
+#### Add an app
 
-![Time slicing](/images/one/gpu-time-slicing.png#bordered){width=85%}
+In most cases, running apps are automatically bound and appear in the list after GPU scheduling is complete.
 
-### App exclusive
+If the target app does not appear:
+1. Wait a few seconds.
+2. In the **Pin application** section, click <i class="material-symbols-outlined">sync</i> to refresh the list.
+3. If the app is still not bound automatically, click **Bind app**, then select the app and click **Confirm**.
 
-Use **App exclusive** mode to dedicate a GPU entirely to one high-demand application.
+#### Remove GPU access
 
-![App exclusive](/images/one/gpu-app-exclusive.png#bordered){width=85%}
-
-#### Bind app
-To give an app exclusive access:
-1. In **Select exclusive app** section, click **Bind app**.
-2. Select your target application and click **Confirm**.
-
-#### Switch app
-To replace the current exclusive app with a new one:
-1. In **Select exclusive app** section, click **Switch app**.
-2. Choose the new application and click **Confirm**.
-
-The previous app is unbound, and the new app takes over exclusive access.
-
-#### Unbind app
-To remove the exclusive binding:
-1. In **Select exclusive app** section, click <i class="material-symbols-outlined">link_off</i>.
-2. In the pop-up window, click **Confirm** to unbind the app from the GPU.
+1. Stop the app.
+    - Go to **Market** > **My Olares**, then select **Stop** from the dropdown list.
+    - Or go to **Settings** > **Applications**, select the app, then click **Stop**.
+2. Return to **Settings** > **GPU**.
+3. In the **Pin application** section, click <i class="material-symbols-outlined">link_off</i>, then click **Confirm**.
 
 ### Memory slicing
 
@@ -90,14 +77,71 @@ Use **Memory slicing** to run apps concurrently with strict VRAM limits.
 
 ![Memory slicing](/images/one/gpu-mem-slicing.png#bordered){width=85%}
 
-#### Bind app and allocate VRAM
+#### Adjust VRAM allocation
 
-1. In **Allocate VRAM** section, click **Bind app**.
-2. Select your target application, assign it a specific amount of VRAM in GB, and click **Confirm**.
-   :::warning
-   The total of all VRAM limits must not exceed the GPU total VRAM.
-   :::
-3. Repeat for other apps as needed.
+1. In the **Allocate VRAM** section, find the target app.
+2. Click <i class="material-symbols-outlined">edit_square</i> next to the VRAM value.
+3. In the **Edit VRAM allocation** dialog, enter the desired VRAM amount in GB and click **Confirm**.
+
+:::warning
+The total VRAM allocated to all apps cannot exceed the GPU's total VRAM.
+
+If the value is lower than the app's minimum requirement, **Confirm** is disabled.
+:::
+
+#### Add an app and assign VRAM
+
+In most cases, running apps are automatically bound and appear in the list after GPU scheduling is complete.
+
+If the target app does not appear:
+1. Wait a few seconds.
+2. In the **Allocate VRAM** section, click <i class="material-symbols-outlined">sync</i> to refresh the list.
+3. If the app is still not bound automatically, click **Bind app**, then select the app and assign VRAM.
+
+#### Remove VRAM allocation
+
+1. Stop the app first.
+    - Go to **Market** > **My Olares**, then select **Stop** from the dropdown list.
+    - Or go to **Settings** > **Applications**, select the app, then click **Stop**.
+2. Return to **Settings** > **GPU**.
+3. In the **Allocate VRAM** section, click <i class="material-symbols-outlined">link_off</i>, then click **Confirm**.
+
+### App exclusive
+
+Use **App exclusive** mode to dedicate a GPU entirely to one high-demand application.
+
+![App exclusive](/images/one/gpu-app-exclusive.png#bordered){width=85%}
+
+#### Change the exclusive app
+
+1. Stop the current exclusive app.
+    - Go to **Market** > **My Olares**, then select **Stop** from the dropdown list.
+    - Or go to **Settings** > **Applications**, select the app, then click **Stop**.
+2. In the **Select exclusive app** section, click <i class="material-symbols-outlined">link_off</i> to unbind the current app.
+3. Resume the new target app and make sure it is running.
+    - Go to **Market** > **My Olares**, then select **Resume** from the dropdown list.
+    - Or go to **Settings** > **Applications**, select the app, then click **Resume**.
+4. Wait a few seconds.
+5. In the **Select exclusive app** section, click <i class="material-symbols-outlined">sync</i> to refresh the list.
+6. If the system still does not automatically select the new exclusive app, click **Bind app** to set it manually.
+
+#### Set the exclusive app
+
+In most cases, Olares automatically selects one running app for exclusive access after GPU scheduling is complete.
+
+If no app appears:
+1. Wait a few seconds.
+2. In the **Select exclusive app** section, click <i class="material-symbols-outlined">sync</i> to refresh the list.
+3. If the system still does not automatically select an app, click **Bind app** to set it manually.
+
+#### Remove exclusive access
+
+1. Stop the app first.
+    - Go to **Market** > **My Olares**, then select **Stop** from the dropdown list.
+    - Or go to **Settings** > **Applications**, select the app, then click **Stop**.
+2. Return to **Settings** > **GPU**.
+3. In the **Select exclusive app** section, click <i class="material-symbols-outlined">link_off</i>, then click **Confirm**.
 
 ## Resources
-- [Manage GPU usage](/manual/olares/settings/gpu-resource.md): For advanced operations when you have multiple GPUs.
+- [Understand GPU management](/manual/olares/settings/gpu-resource.md): Learn how GPU allocation and GPU modes work in Olares.
+- [Manage GPU resources for multiple GPUs](/manual/olares/settings/multi-gpu.md): For advanced operations when you have multiple GPUs.

@@ -197,6 +197,7 @@ var OperationAllowedInState = map[appv1alpha1.ApplicationManagerState]map[appv1a
 	},
 	appv1alpha1.Resuming: {
 		appv1alpha1.CancelOp: true,
+		appv1alpha1.StopOp:   true,
 	},
 	appv1alpha1.Uninstalling:          {},
 	appv1alpha1.PendingCanceling:      {},

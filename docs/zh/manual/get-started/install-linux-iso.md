@@ -10,49 +10,43 @@ description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括
 ::: tip 激活遇到问题？
 当前 ISO 镜像使用了国际版网络配置（使用 `olares.com` 域名）。如遇激活问题，请暂时切换至[一键安装脚本](install-linux-script.md)方式安装激活。
 :::
-:::info 安装遇到问题？
-如果你在安装过程中遇到问题，欢迎[提交 GitHub Issue](https://github.com/beclab/Olares/issues/new)。提交时请尽量附上以下信息：
+<!--@include: ./reusables.md{44,51}-->
 
-- 你使用的平台或环境（例如 Ubuntu、Docker、WSL 等）。
-- 安装方式（脚本安装或 Docker 镜像）。
-- 详细的错误信息（包括日志、报错信息或截图）。
-:::
+## 系统要求
 
-## 准备条件
+### 必要配置
 
-### 必要条件
-- **宿主机要求**:
-  - **CPU**：4 核及以上，X86-64 架构（AMD 或 Intel）。ARM 芯片目前不支持 ISO 镜像安装。
-  - **内存**：至少 8 GB 可用内存。
-  - **存储**：至少 150 GB SSD（若使用机械硬盘 HDD，将导致安装失败）。
-  - **网络**：需连接至有线局域网。
-   ::: warning 必须使用 SSD
-   请勿使用机械硬盘 (HDD)。如果未检测到 SSD，安装将失败。
+- **CPU**：4 核及以上，x86-64 架构（AMD 或 Intel）。ARM 芯片目前不支持 ISO 镜像安装。
+- **内存**：至少 8 GB 可用内存。
+- **存储**：至少 150 GB 的可用 SSD 磁盘空间。
+   :::warning 必须使用 SSD
+   使用机械硬盘 (HDD) 会导致安装失败。
    :::
-- **U 盘**：容量 **8 GB** 及以上。
+- **网络**：需连接至有线局域网。
+- **U 盘**：容量 8 GB 或更大。
 
-### 可选条件
+### 可选硬件
 
-安装 Olares 不需要 GPU，但运行 AI 应用需要 GPU支持。
-
-- **GPU (仅支持 NVIDIA)**：
-  - **架构**：Turing 架构或更新版本 (例如 GTX 16 系列、RTX 20 系列)。
-  - **验证方法**：运行 `lspci | grep -i nvidia` 并查看 [兼容 GPU 列表](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus)。
+<!--@include: ./gpu-requirements.md{5,}-->
 
 ## 制作启动盘
 
-1. 点击[此处](https://cdn.olares.cn/olares-latest-amd64.iso)下载最新官方 Olares ISO 镜像。
+1. 下载[最新官方 Olares ISO 镜像](https://cdn.olares.cn/olares-latest-amd64.iso)。
 2. 下载并安装 [**Balena Etcher**](https://etcher.balena.io/) 工具。
 3. 将 U 盘插入电脑。
 4. 打开 Etcher，依次选择：
+
    ![启动盘](/images/manual/get-started/iso-flash.png#bordered)
-    - **镜像文件**：Olares ISO
-    - **目标磁盘**：U 盘
-    - 点击 **Flash** 开始写入安装镜像。
+    
+    a. **镜像文件**：选择 Olares ISO。
+    
+    b. **目标磁盘**：选择 U 盘。
+    
+    c. 点击 **Flash** 开始写入安装镜像。
 
 ## 从 U 盘启动
 1. 将刚刚制作的启动盘插入目标机器。
-2. 开机进入 **BIOS 设置**，并将 **USB 启动盘** 设置为第一启动项。
+2. 开机进入 BIOS 设置，并将 USB 启动盘 设置为第一启动项。
 3. 保存设置并重启，系统会自动进入 Olares 安装界面。
 
 ## 安装 Olares
@@ -62,7 +56,7 @@ description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括
    :::tip 提示
    安装过程中若出现 NVIDIA 显卡驱动相关提示，按回车确认即可。
    :::
-3.出现以下提示时表示安装成功：
+3. 出现以下提示时表示安装成功：
 
    ```shell
    Installation completed successfully!
@@ -89,8 +83,9 @@ description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括
    check Olaresd: success
    check Containerd: success
    ```
+
 <!--@include: ./install-and-activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{34,38}-->
+<!--@include: ./reusables.md{38,42}-->
