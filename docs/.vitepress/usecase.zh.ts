@@ -94,10 +94,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           text: "虚拟机",
           collapsed: false,
           items: [
-            // {
-            //   text: "macOS",
-            //   link: "/zh/use-cases/macOS",
-            // },
+            {
+              text: "macOS",
+              link: "/zh/use-cases/macos",
+            },
             {
               text: "Windows",
               link: "/zh/use-cases/windows",

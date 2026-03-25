@@ -104,10 +104,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           text: "Virtual machine",
           collapsed: false,
           items: [
-            // {
-            //   text: "macOS",
-            //   link: "/use-cases/macOS",
-            // },
+            {
+              text: "macOS",
+              link: "/use-cases/macos",
+            },
             {
               text: "Windows",
               link: "/use-cases/windows",
