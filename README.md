@@ -35,7 +35,7 @@
 ![Personal Cloud](https://app.cdn.olares.com/github/olares/public-cloud-to-personal-cloud.jpg)
 We believe you have a fundamental right to control your digital life. The most effective way to uphold this right is by hosting your data locally, on your own hardware.
 
-Olares is an **open-source personal cloud operating system** designed to empower you to own and manage your digital assets locally. Instead of relying on public cloud services, you can deploy powerful open-source alternatives locally on Olares, such as Ollama for hosting LLMs, ComfyUI for image generation, and Perplexica for private, AI-driven search and reasoning. Imagine the power of the cloud, but with you in complete command.
+Olares is an **open-source personal cloud operating system** designed to empower you to own and manage your digital assets locally. Instead of relying on public cloud services, you can deploy powerful open-source alternatives locally on Olares, such as Ollama for hosting LLMs, ComfyUI for image generation, and Vane (formerly Perplexica) for private, AI-driven search and reasoning. Imagine the power of the cloud, but with you in complete command.
 
 > 🌟 *Star us to receive instant notifications about new releases and updates.* 
 
