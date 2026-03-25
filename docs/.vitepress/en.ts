@@ -57,6 +57,22 @@ const side = {
               text: "Network not ready or olares connection error",
               link: "/manual/help/ts-network-not-ready",
             },
+            {
+              text: "Slow or delayed Steam streaming",
+              link: "/manual/help/ts-steam-stream-lag",
+            },
+            {
+              text: "Forgotten desktop login password",
+              link: "/manual/help/ts-forget-login-password",
+            },
+            {            
+              text: "GPU app remains stopped after installation or resume",
+              link: "/manual/help/ts-vram-shortage",
+            },
+            {
+              text: "Cannot remove a stopped app in App exclusive mode",
+              link: "/manual/help/ts-cs-app-reappears",
+            },
           ],
         },
       ],

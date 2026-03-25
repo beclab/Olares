@@ -91,6 +91,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             //   link: "/use-cases/stable-diffusion",
             // },
             {
+              text: "DeerFlow 2.0",
+              link: "/use-cases/deerflow2",
+            },
+            {
               text: "DeerFlow",
               link: "/use-cases/deerflow",
             },

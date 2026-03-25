@@ -67,11 +67,14 @@ You need to access the Sunshine Web UI running on your Olares One to enter a pai
 
 1. Copy the URL of your current Steam Headless browser tab.
 2. Open a new browser tab and modify the URL to access port `47990`. The address varies depending on your network.
+
     - **Same network**: Use HTTPS with your `.local` address. Either 
     format works (dots or hyphens in the hostname):
 
-   :::info Sunshine and .local
-   Use HTTPS (not HTTP) with your `.local` address for this app.
+   :::info Access Sunshine with HTTPS
+   Most Olares services can be accessed through `.local` addresses over HTTP. 
+    
+   However, the Sunshine Web UI requires HTTPS for secure local communication.
    :::
 
    ```plain
