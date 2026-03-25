@@ -57,6 +57,10 @@ const side = {
               link: "/zh/manual/help/ts-network-not-ready",
             },
             {
+              text: "Steam 串流卡顿或延迟",
+              link:"/zh/manual/help/ts-steam-stream-lag"
+            },
+            {
               text: "忘记桌面登录密码",
               link: "/zh/manual/help/ts-forget-login-password",
             },
