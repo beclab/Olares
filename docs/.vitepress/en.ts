@@ -26,10 +26,6 @@ const side = {
               text: "Usage FAQs",
               link: "/manual/help/usage",
             },
-            //             {
-            //               text: "Request support",
-            //               link: "/manual/help/request-technical-support",
-            //             },
 
           ],
         },
@@ -70,6 +66,10 @@ const side = {
               link: "/manual/help/ts-cs-app-reappears",
             },
           ],
+        },
+        {
+          text: "Get technical support",
+          link: "/manual/help/request-technical-support",
         },
       ],
     },

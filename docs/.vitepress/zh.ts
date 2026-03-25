@@ -26,10 +26,6 @@ const side = {
               text: "使用",
               link: "/zh/manual/help/usage",
             },
-            //     {
-            //       text: "技术支持",
-            //      link: "/zh/manual/help/request-technical-support",
-            //       },
           ],
         },
         {
@@ -69,6 +65,10 @@ const side = {
               link: "/zh/manual/help/ts-cs-app-reappears",
             },            
           ],
+        },
+        {
+          text: "技术支持",
+          link: "/zh/manual/help/request-technical-support",
         },
       ],
     },

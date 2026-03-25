@@ -46,17 +46,11 @@ The **Image management** page provides a comprehensive view of all downloaded an
 System logs record the operational status of various system components and provide crucial diagnostic information for troubleshooting. 
 
 To export system logs:
-1. Go to **Settings** > **Advanced** > **Logs**.
-2. Click **Collect** to generate the log file. The log is automatically saved to the `/Home/pod_logs` directory.
-3. Click **Open** to open the logs directory in a new window.
+<!--@include: ../../../reusables/export-system-logs.md{8,14}-->
 
-   ![Generate logs](/images/manual/olares/export-log1.png#bordered){width=65%}
-
-4.  Right-click the generated log file and select **Download** to save it to your local machine.
-
-    :::tip
-    You can attach this log file to a GitHub issue to help the Olares team locate and resolve your problem faster.
-    :::
+:::tip
+You can attach this log file to a GitHub issue to help the Olares team locate and resolve your problem faster.
+:::
 
 ## Set system environment variables
 
