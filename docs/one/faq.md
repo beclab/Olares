@@ -174,6 +174,18 @@ Since Olares OS is based on Ubuntu 24.04, it follows standard Linux dual-boot pr
 ### Can I set Olares OS as the default boot option but switch to Windows when needed?
 Yes. Both the UEFI Boot Manager and GRUB support this configuration. You can set Olares OS as the persistent default boot option in the BIOS. To boot into Windows for specific tasks like gaming, you can select the Windows Boot Manager during the startup sequence.
 
+### Why does the Thunderbolt 5 port show as USB4 in Windows Device Manager?
+
+In a dual-boot setup with Windows 11, the Thunderbolt 5 port is displayed as "USB4(TM) Host Router" or "USB4 Root Router" in the Device Manager. This is a normal behavior and does not affect functionality.
+
+This display behavior is by design from Intel and Microsoft. Starting with Windows 11, Thunderbolt drivers are built into the operating system and managed through the `Usb4HostRouter.sys` driver, which handles Thunderbolt 3, 4, and 5 devices uniformly. The USB4 label in Device Manager reflects this unified architecture and does not indicate that the port is operating at a reduced speed.
+
+When a Thunderbolt 5 device is connected, the system still negotiates the full 80 Gbps bandwidth, and Thunderbolt 5 docking stations work as expected. You can verify the connection speed by checking the **Current bandwidth (down/up)** field on the USB4 device properties page.
+
+For more information, see:
+- [Why Are There No Thunderbolt™ Drivers for Intel® NUC Products Using Windows 11](https://www.intel.com/content/www/us/en/support/articles/000094522/intel-nuc.html)
+- [Introduction to the USB4 connection manager in Windows](https://learn.microsoft.com/en-us/windows-hardware/design/component-guidelines/usb4-intro-to-connection-manager)
+
 ## Clustering
 
 ### Can I connect two Olares One units together?
