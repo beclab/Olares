@@ -39,16 +39,7 @@ If your Olares device is connected through Wi‑Fi, use a wired connection inste
 Grant Steam Headless full GPU access to maximize performance.
 
 1. Go to **Settings** > **GPU** and select **App exclusive** from the **GPU mode** dropdown.
-2. In the **Select exclusive app** section, check whether Steam Headless is selected. If it is, continue to the next check.
-
-   ![Check GPU mode](/images/manual/help/ts-steam-stream-gpu-mode.png#bordered)
-
-If another app is currently selected:
-
-1. Go to **Settings** > **Applications**, select the app, and click **Stop**.
-2. Return to **Settings** > **GPU** and click <i class="material-symbols-outlined">link_off</i>.
-3. Go back to **Settings** > **Applications**, select Steam Headless, and click **Resume**.
-4. Return to **Settings** > **GPU**, click <i class="material-symbols-outlined">sync</i> to refresh the app list, and if Steam Headless is still not selected, click **Bind app** to set it manually.
+2. Select Steam Headless as the exclusive app. If another app is currently bound, stop that app first in **Settings** > **Applications**, then return to bind Steam Headless.
 
    ![Set the GPU to App exclusive mode](/images/manual/help/ts-steam-stream-exclu.png#bordered)
 
@@ -75,30 +66,18 @@ If the issue only happens with a specific game, try changing the game's Proton v
    
 5. Launch the game again and check whether streaming performance improves.
 
-### Check CPU and memory usage
+### Check and adjust CPU and memory limits
 
-#### Check runtime usage
+Steam Headless may be hitting its configured CPU or memory limits. Launch the game first, then check whether the actual usage is close to the limits.
 
-Launch the game, then check how much CPU and memory Steam Headless is actively using.
-
-1. Open Control Hub from the Launchpad.
-2. In the left sidebar, click **Browse**.
-3. In the resource tree, expand your project and then **Deployments**.
-4. Select the Steam Headless deployment.
-5. In the upper-right corner of the details pane, click <i class="material-symbols-outlined">more_vert</i>.
-6. Click **Details** and note the highest CPU and memory usage values while the game runs.
+1. Open Control Hub from the Launchpad. In the left sidebar, click **Browse**, expand your project and then **Deployments**, and select the Steam Headless deployment.
+2. In the upper-right corner of the details pane, click <i class="material-symbols-outlined">more_vert</i> > **Details** and note the highest CPU and memory usage values while the game runs.
    - CPU usage is shown in `m` (millicores), where 1000 m = 1 CPU core.
    - Memory usage is shown in `Gi`.
-   
+
    ![Check Steam resource usage](/images/manual/help/ts-steam-stream-details.png#bordered)
 
-#### Compare usage with the configured limits
-
-Check if the runtime usage is hitting the configured limits.
-
-1. Close the **Details** page and return to the Steam Headless deployment page in Control Hub.
-2. In the details pane on the right, click <i class="material-symbols-outlined">edit_square</i> to edit the YAML file.
-3. Find `cpu` and `memory` under `limits`.
+3. Back on the Steam Headless deployment page, click <i class="material-symbols-outlined">edit_square</i> to edit the YAML file. Find `cpu` and `memory` under `limits`.
    
    For example:
    ```yaml
@@ -107,9 +86,9 @@ Check if the runtime usage is hitting the configured limits.
       memory: 64Gi
    ```
    ![Check Steam CPU and memory limits](/images/manual/help/ts-steam-stream-limit.png#bordered)
-4. Compare these limits with the actual usage you noted earlier.
-5. If the usage is consistently close to the current limit, increase the `cpu` or `memory` value based on your device capacity.
-6. Click **Confirm** to save the changes, then test the game again.
+
+4. If the actual usage is consistently close to these limits, increase the cpu or memory value based on your device capacity.
+5. Click **Confirm** to save the changes, then test the game again.
 
 ## If the issue persists
 
