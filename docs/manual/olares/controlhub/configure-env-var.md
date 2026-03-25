@@ -53,7 +53,7 @@ Identify which Kubernetes resource contains the variable you want to change. Var
                 - name: TZ
                 value: Etc/UTC
     ```    
-6. (Optional) If the variable comes from a referenced Configmap or Secret:
+7. (Optional) If the variable comes from a referenced Configmap or Secret:
 
     a. Locate that resource in the corresponding resource group, and then edit it following the same steps above.
 
@@ -169,7 +169,7 @@ Modify Ollama's timeout settings (Client) and model concurrency (Server).
 
 2. Modify core in System namespace: 
 
-    a. Go to **Browse** > **System** > **ollamaserver-shared** > **Deployments** > **ollama**, and then lick <span class="material-symbols-outlined">edit_square</span>.
+    a. Go to **Browse** > **System** > **ollamaserver-shared** > **Deployments** > **ollama**, and then click <span class="material-symbols-outlined">edit_square</span>.
 
    ![Locate Ollama in System namespace](/images/manual/use-cases/locate-ollama-sys-namespace.png#bordered)    
 
