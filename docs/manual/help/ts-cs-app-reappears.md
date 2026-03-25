@@ -5,7 +5,7 @@ description: Troubleshoot when a stopped app cannot be removed in App exclusive 
 
 # Cannot remove a stopped app in App exclusive mode
 
-Use this guide when an app still appears in **App exclusive** mode after you stop it and remove it.
+Use this guide when an app still appears in **App exclusive** mode after you stop and remove it, preventing you from assigning the GPU to another app.
 
 ## Condition
 
@@ -14,11 +14,13 @@ Use this guide when an app still appears in **App exclusive** mode after you sto
 
 ## Cause
 
-In Olares 1.12.5, when you switch the GPU mode to **App exclusive**, the system automatically selects an app as the exclusive app.
+In Olares 1.12.5, when you switch the GPU mode to **App exclusive**, the system automatically selects an app as the exclusive app. To remove that app, you must stop it first.
 
-To remove that app, you must stop it first. However, if the app uses a client/server (C/S) architecture, stopping it may stop only the client side while the server side continues running in the background. As a result, the app may still occupy GPU resources and appear again in the **Select exclusive app** section.
+However, some apps are deployed as [shared applications](../../developer/concepts/application.md#shared-application). Even if such an app shows as **Stopped**, its server may still be running in the background and occupying GPU resources. As a result, the app reappears in the **Select exclusive app** section after you remove it.
 
 ## Solution
+
+To fully stop both the client and server, resume the app first, then stop it again.
 
 1. Open **Settings** > **GPU** and check which app is currently shown in the **Select exclusive app** section.
 
@@ -37,5 +39,3 @@ To remove that app, you must stop it first. However, if the app uses a client/se
 5. Refresh the list and verify that the app no longer appears in the **Select exclusive app** section.
 
     ![Check App exclusive mode again](/images/manual/help/ts-cs-app-reappears-no-apps.png#bordered){width=90%}
-
-6. You can now resume the app you want to use and select it as the exclusive app.
