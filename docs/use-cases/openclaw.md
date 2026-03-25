@@ -89,9 +89,9 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
     ```
 2. Copy and save the model name exactly as shown in the **Name** column.
 3. If the model is not installed, download and then run it. For more information, see [Ollama](ollama.md).
-4. Obtain the Ollama API address from **Settings** > **Applications** > **Ollama** > **Shared Entrances** > **Ollama API**, and then copy the endpoint address.
+4. Obtain the Ollama API address from **Settings** > **Applications** > **Ollama** > **Shared entrances** > **Ollama API**, and then copy the endpoint address.
 
-    ![Obtain Ollama API](/images/manual/use-cases/ollama-endpoint.png#bordered){width=50%}
+    ![Obtain Ollama API](/images/manual/use-cases/ollama-endpoint1.png#bordered){width=65%}
 </template>
 </Tabs>
 
@@ -436,7 +436,7 @@ To completely remove OpenClaw and all of its data before reinstalling, follow th
 <Tabs>
 <template #V1.12.5-and-later>
 
-1. Open **Market**, go to **My Olares**, find **OpenClaw**.
+1. Open **Market**, go to **My Olares**, and then find **OpenClaw**.
 2. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the app's operation button, and select **Uninstall**.
 3. In the **Uninstall** window, select **Also remove all local data**. Then app data (in the Data directory) and cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
     ![Remove local app data option during uninstallation](/images/manual/use-cases/uninstall-remove-local-data.png#bordered){width=65%}
@@ -445,7 +445,7 @@ To completely remove OpenClaw and all of its data before reinstalling, follow th
 </template>
 <template #V1.12.4-and-earlier>
 
-1. Open **Market**, go to **My Olares**, find **OpenClaw**.
+1. Open **Market**, go to **My Olares**, and then find **OpenClaw**.
 2. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the app's operation button, and select **Uninstall**.
 3. When the installation finishes, open the **Files** app, and then go to **Application** > **Data**.
 4. Find the `clawdbot` folder, right-click it, select **Delete**, and then click **Confirm**. This permanently removes all the  previous configurations and workspaces.
