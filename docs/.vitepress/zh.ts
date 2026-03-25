@@ -57,7 +57,7 @@ const side = {
               link: "/zh/manual/help/ts-network-not-ready",
             },
             {
-              text: "忘记登录密码",
+              text: "忘记桌面登录密码",
               link: "/zh/manual/help/ts-forget-login-password",
             },
             {                        
