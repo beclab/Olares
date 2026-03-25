@@ -286,10 +286,6 @@ const side = {
               link: "/manual/olares/controlhub/manage-workload",
             },
             {
-              text: "Configure environment variables",
-              link: "/manual/olares/controlhub/configure-env-var",
-            },
-            {
               text: "Manage containers",
               link: "/manual/olares/controlhub/manage-container",
             },
@@ -305,6 +301,10 @@ const side = {
               text: "Access Terminal",
               link: "/manual/olares/controlhub/terminal",
             },
+            {
+              text: "Configure environment variables",
+              link: "/manual/olares/controlhub/configure-env-var",
+            },            
           ],
         },
         {
