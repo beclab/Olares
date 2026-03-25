@@ -1,0 +1,103 @@
+---
+outline: deep
+description: Troubleshoot slow or delayed game streaming with Steam Headless.
+---
+# Slow or delayed Steam streaming
+
+Use this guide when Steam streaming from Olares feels slow or delayed during gameplay.
+
+## Condition
+
+Steam streaming feels slow or delayed during gameplay, which may appear as high latency, stuttering, sudden disconnections, or input delay.
+
+## Cause
+
+Slow or delayed Steam streaming can result from one or more of the following:
+
+- **nginx restarts**: An nginx restart interrupts the active streaming session.
+- **Network**: The Olares device is connected through Wi-Fi instead of Ethernet.
+- **GPU allocation**: GPU resources are occupied by other apps.
+- **GPU power**: The GPU is throttled by power management settings.
+- **Compatibility**: The game does not run well with the current Proton version.
+- **Resource limits**: Steam Headless is hitting its configured CPU or memory limits.
+
+## Solution
+
+Check the following items in order of priority.
+
+### Avoid interruptions from nginx restarts
+
+- If you are running Olares 1.12.4, update to 1.12.5 or later.
+- Avoid installing, uninstalling, or updating apps while streaming a game.
+
+### Use a wired connection
+
+If your Olares device is connected through Wi‑Fi, use a wired connection instead.
+
+### Set the GPU to App exclusive mode
+
+Grant Steam Headless full GPU access to maximize performance.
+
+1. Go to **Settings** > **GPU** and select **App exclusive** from the **GPU mode** dropdown.
+2. Select Steam Headless as the exclusive app. If another app is currently bound, stop that app first in **Settings** > **Applications**, then return to bind Steam Headless.
+
+   ![Set the GPU to App exclusive mode](/images/manual/help/ts-steam-stream-exclu.png#bordered)
+
+### Check GPU power state
+
+The GPU on your device may be throttled by power management settings. Make sure the GPU is running at full power.
+
+For Olares One users:
+1. Go to **Settings** > **My Olares** > **My hardware**.
+2. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to **Power mode** and select **Performance mode**.
+   ![Set power mode to Performance mode](/images/manual/help/ts-steam-stream-lag-power-mode.png#bordered)
+
+### Try a different Proton version
+
+If the issue only happens with a specific game, try changing the game's Proton version in Steam. Proton is Steam's compatibility layer for running Windows games on Linux-based systems, and different versions can affect game performance.
+1. In Steam, open the target game in your **Library**, then click <i class="material-symbols-outlined">settings</i>  > **Properties…**.
+2. Go to **Compatibility**.
+3. Enable **Force the use of a specific Steam Play compatibility tool**.
+4. Select a Proton version from the dropdown list.
+   :::tip
+   You can check [ProtonDB](https://www.protondb.com/) for compatibility reports and recommended Proton versions for specific games.
+   :::
+   ![Proton version](/images/manual/help/ts-steam-stream-lag-proton.png#bordered)
+   
+5. Launch the game again and check whether streaming performance improves.
+
+### Check and adjust CPU and memory limits
+
+Steam Headless may be hitting its configured CPU or memory limits. Launch the game first, then check whether the actual usage is close to the limits.
+
+1. Open Control Hub from the Launchpad. In the left sidebar, click **Browse**, expand your project and then **Deployments**, and select the Steam Headless deployment.
+2. In the upper-right corner of the details pane, click <i class="material-symbols-outlined">more_vert</i> > **Details** and note the highest CPU and memory usage values while the game runs.
+   - CPU usage is shown in `m` (millicores), where 1000 m = 1 CPU core.
+   - Memory usage is shown in `Gi`.
+
+   ![Check Steam resource usage](/images/manual/help/ts-steam-stream-details.png#bordered)
+
+3. Back on the Steam Headless deployment page, click <i class="material-symbols-outlined">edit_square</i> to edit the YAML file. Find `cpu` and `memory` under `limits`.
+   
+   For example:
+   ```yaml
+   limits:
+      cpu: '18'
+      memory: 64Gi
+   ```
+   ![Check Steam CPU and memory limits](/images/manual/help/ts-steam-stream-limit.png#bordered)
+
+4. If the actual usage is consistently close to these limits, increase the cpu or memory value based on your device capacity.
+5. Click **Confirm** to save the changes, then test the game again.
+
+## If the issue persists
+
+If the issue persists after completing the steps above, create an issue in the [Olares GitHub repository](https://github.com/beclab/Olares/issues) and share the results of your checks, including:
+
+- The current `cpu` and `memory` limits configured for Steam Headless.
+- A screenshot showing Steam Headless CPU and memory usage while the game is running.
+- The game title and Proton version in use.
+- A short description of the issue.
+- The device you are streaming to, such as a laptop, handheld device, phone, or TV.
+
+Providing this information helps the team narrow down the cause.
