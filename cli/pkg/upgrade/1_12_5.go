@@ -8,7 +8,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/etcd/templates"
 	"github.com/beclab/Olares/cli/pkg/gpu"
-	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/version"
 )
 
@@ -46,13 +45,6 @@ func (u upgrader_1_12_5) PrepareForUpgrade() []task.Interface {
 				Name:     "GenerateETCDService",
 				Template: templates.ETCDService,
 				Dst:      "/etc/systemd/system/etcd.service",
-			},
-		},
-		&task.LocalTask{
-			Name: "ReloadSystemd",
-			Desc: "Reload systemd",
-			Action: &terminus.SystemctlCommand{
-				DaemonReloadPreExec: true,
 			},
 		},
 	}, u.upgraderBase.PrepareForUpgrade()...)
