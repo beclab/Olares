@@ -4,17 +4,17 @@ description: Access the Olares host terminal via Control Hub or SSH.
 ---
 # Access the Olares terminal
 
-Some development and operational tasks require running commands on the Olares host, such as inspecting disks, verifying host state, or updating host-level configuration. Terminal access is typically provided remotely through Control Hub or SSH.
+Some development and operational tasks require running commands on the Olares host, such as inspecting disks, verifying host state, or updating host-level configuration. Since Olares hosts are commonly deployed without a monitor or keyboard, terminal access is provided remotely.
 
 You can connect to the host terminal using one of the following methods:
-- **Control Hub Terminal** is a web-based interface for direct `root` access. It is recommended for quick or occasional tasks.
-- **Secure Shell (SSH)** is the standard protocol for remote management and more advanced or automated operations.
+- **Control Hub Terminal**: A web-based interface for direct `root` access. It is recommended for quick or occasional tasks.
+- **Secure Shell (SSH)**: The standard protocol for remote management. It is recommended for advanced or automated operations.
 
 :::tip For Olares One users
 If you are using Olares One, refer to [SSH into Olares One](/one/access-terminal-ssh.md).
 :::
 
-## Method 1: Access via Control Hub
+## Access via Control Hub
 
 For quick access without configuring an SSH client, use the web-based terminal built into Control Hub.
 
@@ -26,21 +26,15 @@ For quick access without configuring an SSH client, use the web-based terminal b
 The Control Hub terminal runs as `root` by default. You do not need to prefix commands with `sudo`.
 :::
 
-## Method 2: Access via SSH
+## Access via SSH
 
-SSH establishes an encrypted session over the network, allowing you to run command-line operations on the Olares host from your current device.
-
-### Prerequisites
-
-Before connecting, ensure that you have the following:
-
-- Access to the Olares host over the same local network, or through LarePass VPN if connecting from a different network. For remote access, see [Connect from a different network](#connect-from-a-different-network).
-- The IP address of the Olares host.
-- The username and password for the Olares host.
+SSH establishes an encrypted session over the network, allowing you to run command-line operations on the Olares host from your computer.
 
 ### Connect over a local network
 
-If your computer is on the same local network as your Olares host, use the following steps:
+Before connecting, make sure you have:
+- The local IP address of the Olares host.
+- The username and password for the Olares host.
 
 1. Open a terminal on your computer.
 2. Run the SSH command using the following format:
@@ -49,7 +43,7 @@ If your computer is on the same local network as your Olares host, use the follo
    ssh <username>@<host_ip_address>
    ```
 
-   Example:
+   For example:
    ```bash
    ssh olares@192.168.31.155
    ```
@@ -59,12 +53,20 @@ If your computer is on the same local network as your Olares host, use the follo
 
 If your computer is not on the same local network as the Olares host, enable LarePass VPN to establish a secure tunnel to your host.
 
+Before connecting, make sure you have:
+
+- LarePass installed and signed in on the computer you will use for the VPN connection.
+- The username and password for the Olares host.
+
 1. On Olares, go to **Settings** > **VPN**, and enable **Allow SSH via VPN**.
-2. Open the LarePass desktop client, and click your avatar in the top-left corner to open the user menu. 
-3. Toggle on the switch for **VPN connection**. 
-4. On Olares, go to **Settings** > **VPN** > **View VPN connection status**, locate the host entry, and note the IP address that starts with `100.64`.
-5. Open a terminal on your computer. 
-6. Run the SSH command using the following format:
+  ![Allow SSH via VPN](/images/developer/develop/access-terminal-allow-vpn.png#bordered){width=90%}
+
+2. Open the LarePass desktop client, click your avatar in the top-left corner, and turn on **VPN connection**. 
+3. On Olares, go to **Settings** > **VPN** > **View VPN connection status**, locate the host entry, and note the IP address that starts with `100.64`.
+  ![View tailscale ip](/images/developer/develop/access-terminal-tailscale-ip.png#bordered){width=90%}
+
+4. Open a terminal on your computer. 
+5. Run the SSH command using the following format:
 
     ```bash
     ssh <username>@<tailscale_ip_address>
@@ -74,4 +76,4 @@ If your computer is not on the same local network as the Olares host, enable Lar
     ```bash
     ssh olares@100.64.0.1
     ```
-7. Enter the host password when prompted.
+6. Enter the host password when prompted.
