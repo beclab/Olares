@@ -11,6 +11,14 @@ head:
 
 Before upgrading an existing OpenClaw installation, review the version-specific changes and troubleshooting steps on this page to ensure a smooth transition.
 
+## Upgrade to 2026.03.22
+
+The OpenClaw 2026.03.22 update introduced several changes that restrict plugin permissions. Because of this security enhancement, older plugins might no longer be compatible. For more information, see the [OpenClaw release notes](https://github.com/openclaw/openclaw/releases/tag/v2026.3.22).
+
+If you find that a previously working plugin is unavailable after upgrading to this version, try the following solutions:
+- **Update the plugin**: Check if a newer version is available that complies with the updated permission restrictions.
+- **Verify configuration methods**: Check with the plugin provider to see if new configurations are required for OpenClaw 2026.03.22 and later.
+
 ## Upgrade to 2026.02.25
 
 The OpenClaw 2026.02.25 update introduced a security enhancement that requires existing users to explicitly declare the allowed Control UI access address. Therefore, if your Control UI fails to start after the upgrade, follow these steps to resolve the issue.
