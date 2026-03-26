@@ -14,6 +14,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "FAQs",
           link: "/one/faq",
         },
+        {
+          text: "Known issues",
+          link: "/one/known-issues",
+        },        
       ],
     },
     {
@@ -41,11 +45,11 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       text: "Onboarding",
       items: [
         {
-          text: "Open WebUI with Ollama",
+          text: "Chat with local LLMs",
           link: "/one/open-webui",
         },
         {
-          text: "Generate images with ComfyUI",
+          text: "Generate images and videos with ComfyUI",
           link: "/one/comfyui",
         },
         {
@@ -73,10 +77,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Secure passwords",
           link: "/one/vault",
         },
-        {
+        /*{
           text: "Download YouTube videos",
           link: "/one/wise-download",
-        },
+        },*/
         {
           text: "Deploy an app",
           link: "/one/deploy",
@@ -131,7 +135,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/windows",
         },
         {
-          text: "Generate music with Ace-Step",
+          text: "Generate music with ACE-Step",
           link: "/one/ace-step",
         },
 
@@ -221,7 +225,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         },
         {
           text: "Restore Olares One",
-          collapsed: true,
           items: [
             {
               text: "Factory reset",

@@ -7,6 +7,7 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/daemon"
+	"github.com/beclab/Olares/cli/version"
 
 	bootstrapos "github.com/beclab/Olares/cli/pkg/bootstrap/os"
 	"github.com/beclab/Olares/cli/pkg/bootstrap/patch"
@@ -30,8 +31,9 @@ func PrepareSystemPipeline(components []string) error {
 	var arg = common.NewArgument()
 	arg.SetKubeVersion(viper.GetString(common.FlagKubeType))
 	arg.SetMinikubeProfile(viper.GetString(common.FlagMiniKubeProfile))
-	arg.SetOlaresVersion(viper.GetString(common.FlagVersion))
+	arg.SetOlaresVersion(version.VERSION)
 	arg.SetStorage(getStorageConfig())
+	arg.ClearMasterHostConfig()
 
 	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {

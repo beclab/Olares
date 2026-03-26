@@ -27,7 +27,7 @@ description: 在 Vault 中设置和使用双因素身份验证。生成安全的
 :::
 
 <tabs>
-<template #Olares、LarePass-桌面端和浏览器扩展>
+<template #Olares、LarePass-桌面端>
 
 1. 在 Vault 中，右上角点击 **<i class="material-symbols-outlined">add</i>添加**。
 2. 选择**验证器**作为项目类型，并点击**创建**。

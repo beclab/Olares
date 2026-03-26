@@ -42,7 +42,7 @@ func (p *ResumingCancelingApp) Exec(ctx context.Context) (StatefulInProgressApp,
 		klog.Errorf("app %s operation is not ", p.manager.Name)
 	}
 
-	err := p.updateStatus(ctx, p.manager, appsv1.Stopping, nil, appsv1.Stopping.String(), "")
+	err := p.updateStatus(ctx, p.manager, appsv1.Stopping, nil, appsv1.Stopping.String(), appsv1.Stopping.String())
 	if err != nil {
 		klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.Stopping.String(), err)
 		return nil, err
@@ -52,5 +52,5 @@ func (p *ResumingCancelingApp) Exec(ctx context.Context) (StatefulInProgressApp,
 }
 
 func (p *ResumingCancelingApp) Cancel(ctx context.Context) error {
-	return p.updateStatus(ctx, p.manager, appsv1.ResumingCancelFailed, nil, appsv1.ResumingCancelFailed.String(), "")
+	return p.updateStatus(ctx, p.manager, appsv1.ResumingCancelFailed, nil, appsv1.ResumingCancelFailed.String(), appsv1.ResumingCancelFailed.String())
 }

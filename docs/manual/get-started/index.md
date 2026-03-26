@@ -3,9 +3,6 @@ description: Choose your path to begin using Olares for personal or team use.
 ---
 # Get started
 Welcome to Olares! This guide will help you quickly set up and start using Olares on your preferred platform.
-::: tip
-If you prefer to try the cloud version of Olares instead of self-hosting, refer to the [Olares Space documentation](../../space/).
-:::
 
 <div class="cta">
   <a href="./create-olares-id">

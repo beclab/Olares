@@ -24,16 +24,18 @@ Switch between light and dark themes for system applications.
 The change applies immediately.
 
 ## Wallpaper
+
 To customize your desktop or login screen background:
 
-1. Open the Settings app from the Dock or Launchpad.
+1. Open Settings from the Dock.
 2. Select **Appearance** from the left sidebar.
-3. In the **Wallpaper** panel, select where to apply the wallpaper: desktop or login screen.
-4. To use a built-in wallpaper, browse and select from the provided images.
-5. To add a custom wallpaper:
+3. In the **Wallpaper** panel, choose where to apply the wallpaper: **Desktop background** or **Login background**.
+4. To use a built-in wallpaper, browse and select from the provided image gallery.
+5. To use a custom wallpaper:
 
-   a. Click <i class="material-symbols-outlined">add_photo_alternate</i> and navigate to the target folder on your computer. 
-   
-   b. Select your desired image file.
-
-   c. Click **Confirm** or **Open** to set it as your wallpaper.
+   a. Click **Upload image**, select an image file from your computer, then click **Open**.  
+   b. (Optional) Adjust how the wallpaper is displayed using the drop-down list next to **Upload image**:  
+      - **Stretch** 
+      - **Fill**
+      - **Tile**
+6. To remove a custom wallpaper, hover over the uploaded image in **Uploaded images** and click the <i class="material-symbols-outlined">close</i> icon.

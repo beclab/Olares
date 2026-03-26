@@ -5,7 +5,7 @@ description: Learn about Olares, an open-source sovereign cloud OS for local AI.
 
 ## What is Olares?
 
-Olares is an open-source personal cloud operating system designed to empower you to own and manage your digital assets locally. Instead of relying on public cloud services, you can deploy powerful open-source alternatives locally on Olares, such as Ollama for hosting LLMs, ComfyUI for image generation, and Perplexica for private, AI-driven search and reasoning. Imagine the power of the cloud, but with you in complete command.
+Olares is an open-source personal cloud operating system designed to empower you to own and manage your digital assets locally. Instead of relying on public cloud services, you can deploy powerful open-source alternatives locally on Olares, such as Ollama for hosting LLMs, ComfyUI for image generation, and Vane (formerly Perplexica) for private, AI-driven search and reasoning. Imagine the power of the cloud, but with you in complete command.
 
 <div class="cta">
   <a href="./get-started/">
@@ -54,6 +54,7 @@ Olares offers a wide array of features designed to enhance security, ease of use
 - 🏡 **Smart home**: Use Olares as the central control point for managing IoT devices and home automation.
 - 🤝 **Decentralized social media**: Host decentralized social media platforms like Mastodon, Ghost, or WordPress to build your personal brand without the risks of bans or platform fees.
 
+<!--
 ## Pick your path
 
 Before you roll up your sleeves and get your hands dirty with Olares, feel free to take a quick tour. Here are some alternative paths to get a feel for what Olares can do.
@@ -72,6 +73,7 @@ Before you roll up your sleeves and get your hands dirty with Olares, feel free 
     <p class="cta-description">Grasp the fundamental principles and architecture behind Olares.</p>
   </a>
 </div>
+-->
 
 ## Other resources
 

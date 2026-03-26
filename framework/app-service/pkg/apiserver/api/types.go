@@ -7,16 +7,17 @@ import (
 )
 
 const (
-	AppTokenKey         = "bytetrade.io/token"
-	AppRepoURLKey       = "bytetrade.io/repo-url"
-	AppVersionKey       = "bytetrade.io/chart-version"
-	AppMarketSourceKey  = constants.AppMarketSourceKey
-	AppInstallSourceKey = "bytetrade.io/install-source"
-	AppUninstallAllKey  = "bytetrade.io/uninstall-all"
-	AppDeleteDataKey    = "bytetrade.io/delete-data"
-	AppStopAllKey       = "bytetrade.io/stop-all"
-	AppResumeAllKey     = "bytetrade.io/resume-all"
-	AppImagesKey        = "bytetrade.io/images"
+	AppTokenKey                      = "bytetrade.io/token"
+	AppRepoURLKey                    = "bytetrade.io/repo-url"
+	AppVersionKey                    = "bytetrade.io/chart-version"
+	AppMarketSourceKey               = constants.AppMarketSourceKey
+	AppInstallSourceKey              = "bytetrade.io/install-source"
+	AppUninstallAllKey               = "bytetrade.io/uninstall-all"
+	AppDeleteDataKey                 = "bytetrade.io/delete-data"
+	AppStopAllKey                    = "bytetrade.io/stop-all"
+	AppResumeAllKey                  = "bytetrade.io/resume-all"
+	AppStopByControllerDuePendingPod = "bytetrade.io/pending-pod"
+	AppImagesKey                     = "bytetrade.io/images"
 )
 
 // Response represents the code for response.

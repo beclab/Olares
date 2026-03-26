@@ -102,7 +102,7 @@ However, given that AI model sizes have been shrinking roughly tenfold each year
 
 ### Can local AI models access the internet for research?
 Yes. We support several applications that enable this. For example:
-* **Perplexica**: An open‑source alternative to Perplexity. It retrieves the latest information using SearxNG and analyzes it with a local LLM.
+* **Vane** (formerly Perplexica): An open‑source alternative to Perplexity. It retrieves the latest information using SearxNG and analyzes it with a local LLM.
 * **DeerFlow**: An open‑source alternative to OpenResearch. It uses RAGFlow to configure a local knowledge base, integrates Tavily for web search, and performs analysis using a local LLM.
 
 ### Can I use a NAS for storage and use Olares for AI processing?

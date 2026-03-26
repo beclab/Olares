@@ -7,7 +7,11 @@ description: Learn how to turn your Olares device into a gaming console by conne
 
 While Olares is typically used as a headless system, you can connect a monitor, keyboard, and mouse to play games directly on the device.
 
-However, simply plugging in a monitor is not enough. Because Steam Headless is optimized for remote streaming by default, you must manually configure the audio settings to output audio locally.
+However, simply plugging in a monitor is not enough. Because Steam Headless is optimized for remote streaming by default, you must manually configure the display and audio settings for local gameplay.
+
+:::tip Olares One users
+Olares One has display and audio pre-configured for local gaming, so no manual setup is required. For Olares One, see [Play Steam games locally on Olares One](../one/steam-direct-play.md).
+:::
 
 ## Learning objectives
 
@@ -31,7 +35,7 @@ Follow these steps to install and configure Steam Headless:
 
 1. Open the Market, and search for "Steam".
 2. Click **Get**, then **Install**.
-   ![Install Steam Headless](../public/images/manual/use-cases/steam-install-steam-headless1.png#bordered)
+   ![Install Steam Headless](/images/manual/use-cases/steam-install-steam-headless1.png#bordered)
 3. A prompt will appear asking you to configure environment variables. This creates your login credentials for the Sunshine Web UI:
     - `SUNSHINE_USER`: Set the username for Sunshine access.
     - `SUNSHINE_PASS`: Set the corresponding password.
@@ -46,12 +50,12 @@ Sign in to Steam to complete setup and access your game library.
 If Steam installation or update fails due to network issues, go to the top-left menu in the Steam Headless console and navigate to **Applications** > **Internet** > **Steam** to restart the installation.
 :::
 1. Once installed, open Steam Headless and click **Connect**.
-   ![Connect to Steam](../public/images/manual/use-cases/steam-connect-to-steam.png#bordered)
+   ![Connect to Steam](/images/manual/use-cases/steam-connect-to-steam.png#bordered)
 2. The Steam client will automatically install and update. This process may take several minutes.
-   ![Install Steam](../public/images/manual/use-cases/steam-install-steam.png#bordered)
-   ![Update Steam](../public/images/manual/use-cases/steam-update-steam.png#bordered)
+   ![Install Steam](/images/manual/use-cases/steam-install-steam.png#bordered)
+   ![Update Steam](/images/manual/use-cases/steam-update-steam.png#bordered)
 3. When the installation completes, the Steam login screen appears. Sign in with your Steam account.
-   ![Sign in to Steam](../public/images/manual/use-cases/steam-sign-in-to-steam.png#bordered)
+   ![Sign in to Steam](/images/manual/use-cases/steam-sign-in-to-steam.png#bordered)
 
 ## 2. Grant sound card permissions
 To output audio to your monitor, the Steam container needs direct access to your sound card. You must edit the deployment configuration to "pass through" these hardware components.
@@ -60,12 +64,12 @@ To output audio to your monitor, the Steam container needs direct access to your
 Incorrect YAML syntax or indentation may prevent the application from starting.
 - **Verify changes:** Double-check that your indentation matches the existing lines.
 - **Revert when necessary:** If the app fails to start after applying changes, check **Revision records** and simply delete the lines you added to restore the previous configuration.
-  ![Check revision records](../public/images/manual/use-cases/steam-yaml-revision-records.png#bordered)
+  ![Check revision records](/images/manual/use-cases/steam-yaml-revision-records.png#bordered)
 :::
 
 1. Open Control Hub, then select the Steam project from the sidebar.
 2. Navigate to **Deployments** > **steamheadless**, and click <span class="material-symbols-outlined">edit_square</span> to open the editor.
-   ![Open Yaml editor](../public/images/manual/use-cases/steam-open-yaml-editor.png#bordered)
+   ![Open Yaml editor](/images/manual/use-cases/steam-open-yaml-editor.png#bordered)
    
 3. Locate the `volumes` section and append the following entry to the list.
    ```yaml
@@ -94,10 +98,10 @@ Incorrect YAML syntax or indentation may prevent the application from starting.
 By default, the system is configured for streaming. You need to modify the X11 configuration to use your physical monitor and peripherals.
 
 1. In Control Hub, click on the running Pod to view its details.
-   ![Click Pod](../public/images/manual/use-cases/steam-click-pod.png#bordered)
+   ![Click Pod](/images/manual/use-cases/steam-click-pod.png#bordered)
 
 2. Click the Terminal icon next to **steam-headless** to access the container's shell.
-   ![Access container's shell](../public/images/manual/use-cases/steam-access-container-shell.png#bordered)
+   ![Access container's shell](/images/manual/use-cases/steam-access-container-shell.png#bordered)
 
 3. Open the X configuration file:
    ```bash
@@ -255,6 +259,4 @@ To enable audio for streaming:
 ### Why does my monitor show the Steam interface even when I'm not playing?
 The Olares device usually displays a terminal prompt. However, running the Steam application activates a graphical interface that takes over the display.
 
-To return the monitor to the standard terminal view, you must stop the Steam application via **Market** or **Settings**.
-
-
+To return the monitor to the standard terminal view, you must stop the Steam application from Olares Market or Settings.

@@ -61,13 +61,9 @@ Update your Olares login password to enhance your account security.
 
 Define system-level access and authentication policies to control how users connect to your Olares.
 
-* **Network visibility**: Control how visible your Olares services are on the network. Options include:
-  * **Public**: Services are accessible to anyone on the internet.
-  * **Protected**: Services are public but require a login for access.
-  * **Private**: Services are not exposed to the internet and are only accessible via VPN.
 * **Login security requirement**: Set the authentication method for logging into Olares.
   * **Two-factor** (Recommended): Requires both your login password and a two-factor authentication code for enhanced security.
-  * **One-factor**: Only requires your login password (less secure).
+  * **One-factor**: Only requires your login password.
 
 ## View login history
 

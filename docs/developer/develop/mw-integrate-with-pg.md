@@ -38,9 +38,9 @@ middleware:
       - COMMIT;
 ```
 
-## Inject environment variables
+## Map to environment variables
 
-In your deployment YAML, map the injected `.Values.postgres.*` fields to the environment variables your app uses.
+In your deployment YAML, map the injected `.Values.postgres.*` fields to the container environment variables your app requires.
 
 **Example**
 ```yaml
@@ -69,13 +69,14 @@ containers:
         value: {{ .Values.postgres.password }}
 ```
 
-## PostgreSQL Values reference
+## PostgreSQL values reference
 
-PostgreSQL Values are predefined environment variables injected into `values.yaml` during deployment. They are system-managed and not user-editable.
-| Key  | Type  | Description  |
-|--|--|--|
-| `.Values.postgres.host` | String  | PostgreSQL database host |
-| `.Values.postgres.port` | Number | PostgreSQL database port |
-| `.Values.postgres.username`  | String | PostgreSQL database username |
-| `.Values.postgres.password`  | String | PostgreSQL database password |
-| `.Values.postgres.databases` | Map<String,String> | The requested database name is used as the key. <br>For example, if you request `app_db`, the value is available at `.Values.postgres.databases.app_db`|
+PostgreSQL values are predefined runtime values injected into `values.yaml` during deployment. They are system-managed and not user-editable.
+
+| Value | Type | Description |
+| --- | --- | --- |
+| `.Values.postgres.host` | String | PostgreSQL host. |
+| `.Values.postgres.port` | Number | PostgreSQL port. |
+| `.Values.postgres.username` | String | PostgreSQL username. |
+| `.Values.postgres.password` | String | PostgreSQL password. |
+| `.Values.postgres.databases` | Map\<String,String> | Requested databases, keyed by database name. For example, a request for `app_db` is available at `.Values.postgres.databases.app_db`. |

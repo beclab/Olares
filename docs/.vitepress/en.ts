@@ -46,8 +46,32 @@ const side = {
               link: "/manual/help/ts-missing-apps",
             },
             {
+              text: "System error in LarePass",
+              link: "/manual/help/ts-system-error",
+            },
+            {
               text: "LarePass VPN not working",
               link: "/manual/help/ts-larepass-vpn-not-working",
+            },
+            {
+              text: "Network not ready or olares connection error",
+              link: "/manual/help/ts-network-not-ready",
+            },
+            {
+              text: "Slow or delayed Steam streaming",
+              link: "/manual/help/ts-steam-stream-lag",
+            },
+            {
+              text: "Forgotten desktop login password",
+              link: "/manual/help/ts-forget-login-password",
+            },
+            {            
+              text: "GPU app remains stopped after installation or resume",
+              link: "/manual/help/ts-vram-shortage",
+            },
+            {
+              text: "Cannot remove a stopped app in App exclusive mode",
+              link: "/manual/help/ts-cs-app-reappears",
             },
           ],
         },
@@ -152,7 +176,6 @@ const side = {
     },
     {
       text: "Olares applications",
-      link: "/manual/olares/",
       items: [
         { text: "Desktop", link: "/manual/olares/desktop", },
         {
@@ -227,7 +250,7 @@ const side = {
             },
           ],
         },
-        {
+        /*{
           text: "Wise",
           collapsed: true,
           link: "/manual/olares/wise/",
@@ -236,10 +259,10 @@ const side = {
               text: "Basic operations",
               link: "/manual/olares/wise/basics",
             },
-            /*{
+            {
               text: "Get recommendation engine",
               link: "/manual/olares/wise/recommend",
-            },*/
+            },
             {
               text: "Manage your feeds",
               link: "/manual/olares/wise/subscribe",
@@ -264,7 +287,7 @@ const side = {
               ],
             },
           ],
-        },
+        },*/
         {
           text: "Control Hub",
           collapsed: true,
@@ -356,7 +379,21 @@ const side = {
                 },
               ],
             },
-            { text: "Manage GPU", link: "/manual/olares/settings/gpu-resource" },
+            { 
+              text: "Manage GPU", 
+              collapsed: true,
+              link: "/manual/olares/settings/gpu-resource",
+              items:[
+                {
+                  text: "Manage single-GPU resources",
+                  link: "/manual/olares/settings/single-gpu" 
+                },
+                {
+                  text: "Manage multi-GPU resources",
+                  link: "/manual/olares/settings/multi-gpu"
+                },
+              ]
+            },
             { text: "Set video playback", link: "/manual/olares/settings/video" },
             { text: "Manage search rules", link: "/manual/olares/settings/search" },
             {
@@ -471,10 +508,10 @@ const side = {
           text: "Set up custom domain",
           link: "/manual/best-practices/set-custom-domain",
         },
-        {
-          text: "Manage knowledge with Wise",
-          link: "/manual/best-practices/organize-content",
-        },
+        // {
+        //   text: "Manage knowledge with Wise",
+        //   link: "/manual/best-practices/organize-content",
+        // },
         {
           text: "Install a multi-node Olares cluster",
           link: "/manual/best-practices/install-olares-multi-node",
@@ -490,6 +527,10 @@ const side = {
         {
           text: "Access Olares locally",
           link: "/manual/best-practices/local-access",
+        },
+        {
+          text: "Connect AI apps",
+          link: "/manual/best-practices/connect-ai-apps",
         },
       ],
     },

@@ -67,7 +67,7 @@ func (p *UninstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 					p.finally = func() {
 						klog.Infof("uninstalling app %s failed %v", p.manager.Spec.AppName, err)
 						opRecord := makeRecord(p.manager, appsv1.UninstallFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
-						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.UninstallFailed, opRecord, err.Error(), "")
+						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.UninstallFailed, opRecord, err.Error(), appsv1.UninstallFailed.String())
 						if updateErr != nil {
 							klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.UninstallFailed.String(), err)
 							err = errors.Wrapf(err, "update status failed %v", updateErr)
@@ -81,7 +81,7 @@ func (p *UninstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 				p.finally = func() {
 					klog.Infof("uninstalled app %s success", p.manager.Spec.AppName)
 					opRecord := makeRecord(p.manager, appsv1.Uninstalled, fmt.Sprintf(constants.UninstallOperationCompletedTpl, p.manager.Spec.Type, p.manager.Spec.AppName))
-					updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Uninstalled, opRecord, appsv1.Uninstalled.String(), "")
+					updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Uninstalled, opRecord, appsv1.Uninstalled.String(), appsv1.Uninstalled.String())
 					if updateErr != nil {
 						klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.Uninstalled.String(), err)
 						return
@@ -221,7 +221,7 @@ func (p *UninstallingApp) Cancel(ctx context.Context) error {
 		klog.Errorf("app %s operation is not ", p.manager.Name)
 	}
 
-	err := p.updateStatus(ctx, p.manager, appsv1.UninstallFailed, nil, appsv1.UninstallFailed.String(), "")
+	err := p.updateStatus(ctx, p.manager, appsv1.UninstallFailed, nil, appsv1.UninstallFailed.String(), appsv1.UninstallFailed.String())
 	if err != nil {
 		klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.UninstallFailed.String(), err)
 	}

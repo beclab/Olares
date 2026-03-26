@@ -214,11 +214,27 @@ export const developerSidebar: DefaultTheme.Sidebar = {
         //   ],
         //   },
         {
+          text: "Application environment variables",
+          link: "/developer/develop/app-env-index",
+          collapsed: true,
+          items: [
+            {
+              text: "Declarative environment variables",
+              link: "/developer/develop/app-env-vars",
+              collapsed: true,
+            },
+            {
+              text: "System-injected variables",
+              link: "/developer/develop/app-sys-injected-variables",
+            },
+          ]
+        },
+        {
           text: "Middleware",
           link: "/developer/develop/mw-overview",
           collapsed: true,
           items: [
-            {
+            /*{
               text: "Elasticsearch",
               collapsed: true,
               items :[
@@ -230,7 +246,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
                   link: "/developer/develop/mw-view-es-data",
                 },
               ]
-            },
+            },*/
             {
               text: "Grafana",
               link :"/developer/develop/mw-view-grafana-data",

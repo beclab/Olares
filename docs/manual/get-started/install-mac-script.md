@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: Step-by-step instructions for installing Olares on macOS systems including prerequisites, installation commands, and activation process.
 ---
 # Install Olares on Mac via the script
@@ -14,19 +15,12 @@ We recommend using it only for development or testing purposes.
 
 <!--@include: ./reusables.md{44,51}-->
 
-## System compatibility
-Make sure your Mac meets the following requirements.
-- Architecture: X86-64 or ARM64.
-- RAM: At least 8 GB of available memory.
-- Storage: At least 150 GB of available SSD storage.
-    ::: warning SSD required
-    The installation will likely fail if an HDD (mechanical hard drive) is used instead of an SSD.
-    :::
-- MacOS: Monterey (12) or later.
+## System requirements
 
-::: info GPU limitation
-Olares GPU acceleration currently supports NVIDIA GPUs only. Consequently, GPU resources cannot be managed or utilized for AI workloads on macOS devices.
-:::
+- **CPU**: At least 4 cores.
+- **RAM**: At least 8 GB of available memory.
+- **Storage**: At least 150 GB of available storage.
+- **macOS**: Monterey 12 or later.
 
 ## Before you begin
 Ensure you have the following installed:

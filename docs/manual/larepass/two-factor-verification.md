@@ -20,7 +20,7 @@ If the service provides recovery codes, store them securely. They are crucial to
 Visit the [official page](https://www.olares.com/larepass) for download options.
 :::
 <tabs>
-<template #Olares,-LarePass-desktop,-or-browser-extension>
+<template #Olares,-LarePass-desktop>
 
 1. In Vault, click <i class="material-symbols-outlined">add</i> in the top right corner.
 2. Select **Authenticator** as the item type, and click **Create**.

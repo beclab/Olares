@@ -3,12 +3,35 @@ import { defineConfig, type DefaultTheme } from "vitepress";
 export const useCaseSidebar: DefaultTheme.Sidebar = {
     "/zh/use-cases/": [
         {
-          text: "应用示例",
-          link: "/zh/use-cases/",
+          text: "AI",
+          collapsed: false,
           items: [
             {
-              text: "Stable Diffusion",
-              link: "/zh/use-cases/stable-diffusion",
+              text: "OpenClaw",
+              link: "/zh/use-cases/openclaw",
+              collapsed: true,
+              items: [
+                {
+                  text: "集成 Discord",
+                  link: "/zh/use-cases/openclaw-integration",
+                },
+                {
+                  text: "启用网页搜索",
+                  link: "/zh/use-cases/openclaw-web-access",
+                },
+                {
+                  text: "管理技能和插件",
+                  link: "/zh/use-cases/openclaw-skills",
+                },
+                {
+                  text: "升级 OpenClaw",
+                  link: "/zh/use-cases/openclaw-upgrade",
+                },
+              ]
+            },
+            {
+              text: "Open WebUI",
+              link: "/zh/use-cases/openwebui",
             },
             {
               text: "ComfyUI",
@@ -16,11 +39,11 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "Manage ComfyUI",
+                  text: "管理 ComfyUI",
                   link: "/zh/use-cases/comfyui-launcher",
                 },
                 {
-                  text: "Use ComfyUI for Krita",
+                  text: "在 Krita 中使用 ComfyUI",
                   link: "/zh/use-cases/comfyui-for-krita",
                 },
               ]
@@ -29,18 +52,66 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Ollama",
               link: "/zh/use-cases/ollama",
             },
+            // {
+            //   text: "Dify",
+            //   link: "/zh/use-cases/dify",
+            // },
             {
-              text: "Open WebUI",
-              link: "/zh/use-cases/openwebui",
+              text: "LobeHub (LobeChat)",
+              link: "/zh/use-cases/lobechat",
             },
             {
-              text: "Perplexica",
+              text: "Vane (Perplexica)",
               link: "/zh/use-cases/perplexica",
             },
             {
-              text: "Dify",
-              link: "/zh/use-cases/dify",
+              text: "ACE-Step",
+              link: "/zh/use-cases/ace-step",
             },
+            {
+              text: "Duix.Avatar",
+              link: "/zh/use-cases/duix-avatar",
+            },
+            {
+              text: "PDFMathTranslate",
+              link: "/zh/use-cases/pdfmathtranslate",
+            },
+            // {
+            //   text: "Stable Diffusion",
+            //   link: "/zh/use-cases/stable-diffusion",
+            // },
+            {
+              text: "DeerFlow 2.0",
+              link: "/zh/use-cases/deerflow2",
+            },
+            {
+              text: "DeerFlow",
+              link: "/zh/use-cases/deerflow",
+            },
+          ]
+        },
+        {
+          text: "虚拟机",
+          collapsed: false,
+          items: [
+            // {
+            //   text: "macOS",
+            //   link: "/zh/use-cases/macOS",
+            // },
+            {
+              text: "Windows",
+              link: "/zh/use-cases/windows",
+            },
+            // {
+            //   text: "Redroid",
+            //   link: "/zh/use-cases/host-cloud-android",
+            // },
+          ]
+        },
+        {
+          text: "娱乐",
+          collapsed: false,
+          items: [
             {
               text: "Jellyfin",
               link: "/zh/use-cases/stream-media",
@@ -59,11 +130,21 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 }
               ]
             },
-            // {
-            //   text: "Redroid",
-            //   link: "/zh/use-cases/host-cloud-android",
-            // },
+            {
+              text: "Komga",
+              link: "/zh/use-cases/komga",
+            },
+          ]
+        },
+        {
+          text: "效率",
+          collapsed: false,
+          items: [
+            {
+              text: "Stirling PDF",
+              link: "/zh/use-cases/stirling-pdf",
+            },
           ],
         },
       ],
-    }
+    };

@@ -53,11 +53,11 @@ Olares currently supports VC via Google Gmail. For details, refer to the [Gmail 
 You must have already [set up a custom domain in Olares Space](/space/host-domain.md#add-your-domain) and created the organization for it on LarePass. 
 :::
 1. In the LarePass app, tap **Create an account**.
-1. On the account creation page, tap <i class="material-symbols-outlined">display_settings</i> in the top-right corner.
-2. In the **Advanced account creation** page, tap **Organization Olares ID** > **Join an existing organization**.
+2. On the account creation page, tap <i class="material-symbols-outlined">display_settings</i> in the top-right corner.
+3. In the **Advanced account creation** page, tap **Organization Olares ID** > **Join an existing organization**.
     ![Advanced account creation](/images/manual/larepass/advanced_creation_org.png)
-3. Enter your organization's domain name and click **Continue**.
-4. Bind the VC via your email accounts. Currently, only Gmail and Google Workspace email are supported.
+4. Enter your organization's domain name and click **Continue**.
+5. Bind the VC via your email accounts. Currently, only Gmail and Google Workspace email are supported.
 
    ![Org ID VC](/images/manual/larepass/organization_olares_id.png)
 
@@ -92,11 +92,11 @@ Make sure you have already [backed up the mnemonic phrase](back-up-mnemonics.md)
 5. Enter the 12-word mnemonic phrase for your Olares ID.
 
 </template>
-<template #Chrome-extension>
+<!--<template #Chrome-extension>
 
 1. Open the LarePass extension in Chrome.
 2. Click the options icon above your profile avatar.
 3. Click **Add a new account**.
 4. Enter the 12-word mnemonic phrase for your Olares ID.
-</template>
+</template>-->
 </Tabs>

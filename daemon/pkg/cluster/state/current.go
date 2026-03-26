@@ -16,7 +16,6 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
-	cpu "github.com/klauspost/cpuid/v2"
 	"github.com/pbnjay/memory"
 )
 
@@ -171,7 +170,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 	CurrentState.OsVersion = osVersion
 	CurrentState.OsType = osType
 	CurrentState.DeviceName = utils.GetDeviceName()
-	CurrentState.CpuInfo = cpu.CPU.BrandName
+	CurrentState.CpuInfo = utils.GetCPUName()
 	CurrentState.Memory = bToGb(memory.TotalMemory())
 	CurrentState.Disk = bToGb(diskSize)
 	CurrentState.GpuInfo = gpu
@@ -239,11 +238,18 @@ func CheckCurrentStatus(ctx context.Context) error {
 		return nil
 	}
 
-	if !slices.ContainsFunc(ips, func(i *nets.NetInterface) bool { return i.IP == hostIp }) {
-		// wrong host ip
-		klog.Warningf("host ip %s not in internal ips, try to fix it", hostIp)
-		if err = fix(); err != nil {
-			return err
+	if hostIp != "" {
+		if !slices.ContainsFunc(ips, func(i *nets.NetInterface) bool { return i.IP == hostIp }) {
+			// wrong host ip
+			klog.Warningf("host ip %s not in internal ips, try to fix it", hostIp)
+			if err = fix(); err != nil {
+				klog.Warning("fix host ip failed,", err)
+			}
+		} else if hostIpInFile, err := nets.GetHostIpFromHostsFile(hostname); err == nil && hostIpInFile != "" && hostIpInFile != hostIp {
+			klog.Warningf("host ip %s in hosts file is different from current host ip %s, try to fix it", hostIpInFile, hostIp)
+			if err = fix(); err != nil {
+				klog.Warning("fix host ip failed,", err)
+			}
 		}
 	}
 
@@ -252,7 +258,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 	} else if conflict {
 		klog.Warningf("domain %s conflict with internal ip, try to fix it", hostname)
 		if err = fix(); err != nil {
-			return err
+			klog.Warning("fix host ip failed,", err)
 		}
 	}
 
@@ -335,9 +341,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 		currentTerminusState = Uninitialized
 	}
 
-	if changed, err := utils.IsIpChanged(ctx, CurrentState.TerminusState != NotInstalled); err != nil {
-		return err
-	} else if changed {
+	if utils.IsIpChanged(ctx, CurrentState.TerminusState != NotInstalled) {
 		currentTerminusState = InvalidIpAddress
 		return nil
 	}
@@ -382,6 +386,8 @@ func CheckCurrentStatus(ctx context.Context) error {
 	// (not during download phase)
 	upgradeTarget, err := GetOlaresUpgradeTarget()
 	if err != nil {
+		// keep the current state if error occurs when getting upgrade target, avoid state flapping
+		currentTerminusState = CurrentState.TerminusState
 		return fmt.Errorf("error getting Olares upgrade target: %v", err.Error())
 	}
 	if upgradeTarget != nil && upgradeTarget.Downloaded && !upgradeTarget.DownloadOnly {
