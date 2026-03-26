@@ -2,7 +2,7 @@
 outline: [2, 3]
 description: Access the Olares host terminal via Control Hub or SSH.
 ---
-# Access the Olares Terminal
+# Access the Olares terminal
 
 Some development and operational tasks require running commands on the Olares host, such as inspecting disks, verifying host state, or updating host-level configuration. Terminal access is typically provided remotely through Control Hub or SSH.
 
@@ -23,9 +23,7 @@ For quick access without configuring an SSH client, use the web-based terminal b
   ![Terminal](/images/developer/develop/controlhub-terminal.png#bordered)
 
 :::tip Run as `root`
-The Control Hub terminal runs as `root` by default.
-
-You do not need to prefix commands with `sudo`.
+The Control Hub terminal runs as `root` by default. You do not need to prefix commands with `sudo`.
 :::
 
 ## Method 2: Access via SSH
@@ -40,7 +38,9 @@ Before connecting, ensure that you have the following:
 - The IP address of the Olares host.
 - The username and password for the Olares host.
 
-### Connect over local network
+### Connect over a local network
+
+If your computer is on the same local network as your Olares host, use the following steps:
 
 1. Open a terminal on your computer.
 2. Run the SSH command using the following format:
@@ -57,7 +57,7 @@ Before connecting, ensure that you have the following:
 
 ### Connect from a different network
 
-If your computer is not on the same local network as the Olares host, enable LarePass VPN.
+If your computer is not on the same local network as the Olares host, enable LarePass VPN to establish a secure tunnel to your host.
 
 1. On Olares, go to **Settings** > **VPN**, and enable **Allow SSH via VPN**.
 2. Open the LarePass desktop client, and click your avatar in the top-left corner to open the user menu. 
