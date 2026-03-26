@@ -47,7 +47,7 @@ func (u upgrader_1_12_5) PrepareForUpgrade() []task.Interface {
 				Dst:      "/etc/systemd/system/etcd.service",
 			},
 		},
-	}, u.upgraderBase.PrepareForUpgrade()...)
+	}, u.upgraderBase.PrepareForUpgrade()... )
 }
 
 func (u upgrader_1_12_5) UpgradeSystemComponents() []task.Interface {
