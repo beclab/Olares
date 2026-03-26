@@ -1,17 +1,17 @@
 ---
 outline: [2, 3]
-description: Access the Olares host terminal via SSH or Control Hub.
+description: Access the Olares host terminal via Control Hub or SSH.
 ---
 # Access the Olares Terminal
 
 Some development and operational tasks require running commands on the Olares host, such as inspecting disks, verifying host state, or updating host-level configuration. Terminal access is typically provided remotely through Control Hub or SSH.
 
-You can connect to the host shell using one of the following methods:
+You can connect to the host terminal using one of the following methods:
 - **Control Hub Terminal** is a web-based interface for direct `root` access. It is recommended for quick or occasional tasks.
 - **Secure Shell (SSH)** is the standard protocol for remote management and more advanced or automated operations.
 
 :::tip For Olares One users
-If you are using Olares One, refer to [Connect to Olares One via SSH](/one/access-terminal-ssh.md).
+If you are using Olares One, refer to [SSH into Olares One](/one/access-terminal-ssh.md).
 :::
 
 ## Method 1: Access via Control Hub
@@ -70,7 +70,7 @@ If your computer is not on the same local network as the Olares host, enable Lar
     ssh <username>@<tailscale_ip_address>
     ```
     
-    Example:
+    For example:
     ```bash
     ssh olares@100.64.0.1
     ```
