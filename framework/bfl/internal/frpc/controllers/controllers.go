@@ -3,7 +3,6 @@ package controllers
 import (
 	"bytes"
 	"bytetrade.io/web3os/bfl/internal/frpc/command"
-	v1alpha1App "bytetrade.io/web3os/bfl/internal/ingress/api/app.bytetrade.io/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/apis/iam/v1alpha1/operator"
 	"bytetrade.io/web3os/bfl/pkg/apis/settings/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
@@ -11,6 +10,7 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/utils/k8sutil"
 	"context"
 	"encoding/json"
+	v1alpha1App "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"os"

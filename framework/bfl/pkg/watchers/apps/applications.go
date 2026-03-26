@@ -14,13 +14,13 @@ import (
 	"strings"
 	"time"
 
-	appv1 "bytetrade.io/web3os/bfl/internal/ingress/api/app.bytetrade.io/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/apis/iam/v1alpha1/operator"
 	clientset "bytetrade.io/web3os/bfl/pkg/client/clientset/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/client/dynamic_client"
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/utils/certmanager"
 	"bytetrade.io/web3os/bfl/pkg/watchers"
+	appv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/pkg/errors"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -272,7 +272,7 @@ func (s *Subscriber) checkStatus(domainName string) (string, error) {
 }
 
 func (s *Subscriber) getStatusByCustomDomainCert(domainName string) (string, error) {
-	certConfigMapName := fmt.Sprintf(appv1.AppEntranceCertConfigMapNameTpl, domainName)
+	certConfigMapName := fmt.Sprintf(constants.AppEntranceCertConfigMapNameTpl, domainName)
 	certConfigMap, err := s.client.Kubernetes().CoreV1().ConfigMaps(constants.Namespace).Get(context.Background(), certConfigMapName, metav1.GetOptions{})
 	if err != nil {
 		if kerrors.IsNotFound(err) {
@@ -283,9 +283,9 @@ func (s *Subscriber) getStatusByCustomDomainCert(domainName string) (string, err
 	if certConfigMap.Data == nil {
 		return constants.CustomDomainCnameStatusCertNotFound, nil
 	}
-	certData := certConfigMap.Data[appv1.AppEntranceCertConfigMapCertKey]
-	keyData := certConfigMap.Data[appv1.AppEntranceCertConfigMapKeyKey]
-	zone := certConfigMap.Data[appv1.AppEntranceCertConfigMapZoneKey]
+	certData := certConfigMap.Data[constants.AppEntranceCertConfigMapCertKey]
+	keyData := certConfigMap.Data[constants.AppEntranceCertConfigMapKeyKey]
+	zone := certConfigMap.Data[constants.AppEntranceCertConfigMapZoneKey]
 	if certData == "" || keyData == "" || zone == "" {
 		return constants.CustomDomainCnameStatusCertNotFound, nil
 	}
