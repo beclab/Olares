@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 
-	appv1 "bytetrade.io/web3os/bfl/internal/ingress/api/app.bytetrade.io/v1alpha1"
 	"bytetrade.io/web3os/bfl/internal/log"
 	"bytetrade.io/web3os/bfl/pkg/api"
 	"bytetrade.io/web3os/bfl/pkg/api/response"
@@ -17,6 +16,7 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/utils"
 	"bytetrade.io/web3os/bfl/pkg/utils/certmanager"
+	appv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/emicklei/go-restful/v3"
@@ -90,7 +90,7 @@ func (h *Handler) getAppPolicy(req *restful.Request, resp *restful.Response) {
 }
 
 func (h *Handler) handleCertConfig(ctx context.Context, customDomain map[string]interface{}) error {
-	cert, key, thirdPartyDomain := customDomain[appv1.AppEntranceCertConfigMapCertKey], customDomain[appv1.AppEntranceCertConfigMapKeyKey], customDomain[constants.ApplicationThirdPartyDomain]
+	cert, key, thirdPartyDomain := customDomain[constants.AppEntranceCertConfigMapCertKey], customDomain[constants.AppEntranceCertConfigMapKeyKey], customDomain[constants.ApplicationThirdPartyDomain]
 	if cert == nil || key == nil || thirdPartyDomain == nil {
 		log.Infof("skip storing empty cert config, cert: %s, key: %s, thirdPartyDomain: %s", cert, key, thirdPartyDomain)
 		return nil
@@ -112,7 +112,7 @@ func (h *Handler) handleCertConfig(ctx context.Context, customDomain map[string]
 		log.Infof("skip storing empty cert config, cert: %s, key: %s, thirdPartyDomain: %s", cert, key, thirdPartyDomain)
 		return nil
 	}
-	configMapName := fmt.Sprintf(appv1.AppEntranceCertConfigMapNameTpl, zoneData)
+	configMapName := fmt.Sprintf(constants.AppEntranceCertConfigMapNameTpl, zoneData)
 
 	client, err := runtime.NewKubeClientInCluster()
 	if err != nil {
@@ -127,13 +127,13 @@ func (h *Handler) handleCertConfig(ctx context.Context, customDomain map[string]
 			Name:      configMapName,
 			Namespace: constants.Namespace,
 			Labels: map[string]string{
-				appv1.AppEntranceCertConfigMapLabel: "true",
+				constants.AppEntranceCertConfigMapLabel: "true",
 			},
 		},
 		Data: map[string]string{
-			appv1.AppEntranceCertConfigMapKeyKey:  keyData,
-			appv1.AppEntranceCertConfigMapCertKey: certData,
-			appv1.AppEntranceCertConfigMapZoneKey: zoneData,
+			constants.AppEntranceCertConfigMapKeyKey:  keyData,
+			constants.AppEntranceCertConfigMapCertKey: certData,
+			constants.AppEntranceCertConfigMapZoneKey: zoneData,
 		},
 	}
 	_, err = client.Kubernetes().CoreV1().ConfigMaps(constants.Namespace).Create(ctx, configMap, metav1.CreateOptions{})
@@ -141,7 +141,7 @@ func (h *Handler) handleCertConfig(ctx context.Context, customDomain map[string]
 }
 
 func (h *Handler) checkCertExists(ctx context.Context, domainName string) error {
-	configMapName := fmt.Sprintf(appv1.AppEntranceCertConfigMapNameTpl, domainName)
+	configMapName := fmt.Sprintf(constants.AppEntranceCertConfigMapNameTpl, domainName)
 	client, err := runtime.NewKubeClientInCluster()
 	if err != nil {
 		return err

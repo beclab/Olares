@@ -345,6 +345,14 @@ func ReloadEnvDependantVars() error {
 	return nil
 }
 
+const (
+	AppEntranceCertConfigMapLabel   = "app.bytetrade.io/custom-domain-cert"
+	AppEntranceCertConfigMapNameTpl = "%s-ssl-config"
+	AppEntranceCertConfigMapCertKey = "cert"
+	AppEntranceCertConfigMapKeyKey  = "key"
+	AppEntranceCertConfigMapZoneKey = "zone"
+)
+
 func init() {
 	ReloadEnvDependantVars()
 }

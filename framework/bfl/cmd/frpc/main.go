@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"bytetrade.io/web3os/bfl/internal/frpc/controllers"
-	"bytetrade.io/web3os/bfl/internal/ingress/api/app.bytetrade.io/v1alpha1"
 	v1alpha2 "bytetrade.io/web3os/bfl/pkg/apis/settings/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -85,7 +85,6 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
-		Port:   9443,
 	})
 	if err != nil {
 		setupLog.Error(err, "failed to start manager")

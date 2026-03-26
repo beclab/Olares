@@ -104,7 +104,7 @@ func AppUrlGenerator(req *restful.Request, user string) (URLGenerator, error) {
 		appURL = func(appname, appid string) string {
 			url, ok := appUrlMap["app-"+appname]
 			if !ok {
-				klog.Errorf("app [ %s ]'s ServicePort not found !")
+				klog.Errorf("app [ %s ]'s ServicePort not found !", appname)
 				return ""
 			}
 
@@ -203,7 +203,7 @@ func AppUrlGeneratorMultiEntrance(req *restful.Request, user string) (URLGenerat
 		appURL = func(appname, appid string, index int, entrances []Entrance, appDomainConfigs []utils.DefaultThirdLevelDomainConfig) string {
 			url, ok := appUrlMap["app-"+appname]
 			if !ok {
-				klog.Errorf("app [ %s ]'s ServicePort not found !")
+				klog.Errorf("app [ %s ]'s ServicePort not found !", appname)
 				return ""
 			}
 
