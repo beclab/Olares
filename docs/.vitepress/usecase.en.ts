@@ -123,6 +123,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "Immich",
+              link: "/use-cases/immich",
+            },
+            {
               text: "Jellyfin",
               link: "/use-cases/stream-media",
             },
