@@ -1,16 +1,15 @@
 ---
-description: Learn how to get technical support for Olares through GitHub discussions and issues. Guide includes steps to collect and export system logs for troubleshooting.
+description: Learn how to get technical support for Olares。
 ---
 # Get technical support
 
-If your issue is not covered in the troubleshooting guides, you can export your system logs and reach out to the Olares team for help.
+If you cannot resolve an issue using the troubleshooting guides, you can export your system logs and reach out to the Olares team for help.
 
-## Export system logs
+## Step 1: Export system logs
 
-To export system logs:
 <!--@include: ../../reusables/export-system-logs.md{8,14}-->
 
-## Contact Olares team
+## Step 2: Contact Olares team
 
 1. Visit the [Olares GitHub Repository](https://github.com/beclab/Olares) and choose one of the following options:
     - Open a new **[Discussion](https://github.com/beclab/Olares/discussions/new?category=q-a)** for general questions or assistance.

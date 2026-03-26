@@ -11,4 +11,4 @@ search: false
 
    ![生成日志](/images/zh/manual/olares/export-log1.png#bordered){width=65%}
 
-4. 右键单击生成的日志文件，选择**下载**将其保存到本地。
+4. 右键单击生成的日志文件，然后选择**下载**。

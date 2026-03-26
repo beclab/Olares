@@ -1,16 +1,13 @@
+description: 了解如何获取 Olares 技术支持。
 ---
-description: 通过 GitHub Discussion 和 Issues 获取 Olares 技术支持，包括如何导出系统日志以协助排查问题。
----
-# 技术支持
+# 获取技术支持
 
-如果故障排查指南没有覆盖你遇到的问题，可以导出系统日志并联系 Olares 团队获取帮助。
+如果你无法通过故障排查指南解决问题，可以导出系统日志并联系 Olares 团队获取帮助。
 
-## 导出系统日志
-
-导出系统日志的步骤如下：
+## 第一步：导出系统日志
 <!--@include: ../../reusables/export-system-logs.md{8,14}-->
 
-## 联系 Olares 团队
+## 第二步：联系 Olares 团队
 
 1. 打开 [Olares GitHub 仓库](https://github.com/beclab/Olares)，选择以下方式提交问题：
     - 创建一个新的 **[Discussion](https://github.com/beclab/Olares/discussions/new?category=q-a)**（适合一般问题或需求帮助）。

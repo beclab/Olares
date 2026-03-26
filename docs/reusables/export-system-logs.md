@@ -11,4 +11,4 @@ search: false
 
    ![Generate logs](/images/manual/olares/export-log1.png#bordered){width=65%}
 
-4. Right-click the generated log file and select **Download** to save it to your local machine.
+4. Right-click the generated log file and select **Download**.
