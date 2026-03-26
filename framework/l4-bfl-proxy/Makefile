@@ -13,7 +13,7 @@ vet: ;$(info $(M)...Begin to run go vet against code.) @
 
 l4-bfl-proxy: fmt vet
 	$(info $(M)...Begin to build l4-bfl-proxy)
-	go build -o output/l4-bfl-proxy main.go
+	go build -o output/l4-bfl-proxy ./cmd/main.go
 
 run: fmt vet; $(info $(M)...Run bfl.)
-	go run main.go
+	go run ./cmd/main.go
