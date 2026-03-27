@@ -454,6 +454,17 @@ To completely remove OpenClaw and all of its data before reinstalling, follow th
 </template>
 </Tabs>
 
+### "Rate limit exceeded" when installing skills
+
+If installing a skill fails with a `429` error, it is because the ClawHub registry temporarily limits downloads due to high traffic to maintain server stability:
+
+```text
+Downloading xurl@1.0.0 from ClawHub...
+ClawHub /api/v1/download failed (429): Rate limit exceeded
+```
+
+To resolve the issue, simply wait a few hours and run the installation command again.
+
 ## Learn more
 
 - [How do I create a server in Discord](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server)
