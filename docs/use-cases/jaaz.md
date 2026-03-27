@@ -56,7 +56,7 @@ Since Jaaz runs locally, if a login prompt appears, close it by clicking the **X
 1. Open Olares Settings, then go to **Applications** > **Ollama**.
 2. Under **Shared entrances**, click **Ollama API**, and then copy the endpoint address.
 
-   <!-- ![Get Ollama shared endpoint](/images/manual/use-cases/jaaz-ollama-shared-endpoint.png#bordered) -->
+   ![Get Ollama shared endpoint](/images/manual/use-cases/obtain-ollama-hosturl2.png#bordered){width=70%}
 
 3. In the Jaaz interface, click the **Settings** icon in the upper-right toolbar.
 4. In the Ollama section, paste the endpoint address into the **API URL** field.
