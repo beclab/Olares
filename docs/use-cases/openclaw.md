@@ -463,7 +463,7 @@ Downloading xurl@1.0.0 from ClawHub...
 ClawHub /api/v1/download failed (429): Rate limit exceeded
 ```
 
-To resolve the issue, simply wait a few minutes and run the installation command again.
+To resolve the issue, simply wait a few hours and run the installation command again.
 
 ## Learn more
 
