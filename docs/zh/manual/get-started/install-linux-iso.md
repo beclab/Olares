@@ -7,9 +7,6 @@ description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括
 
 本文介绍如何通过官方 ISO 镜像在物理机上安装 Olares 系统。
 
-::: tip 激活遇到问题？
-当前 ISO 镜像使用了国际版网络配置（使用 `olares.com` 域名）。如遇激活问题，请暂时切换至[一键安装脚本](install-linux-script.md)方式安装激活。
-:::
 <!--@include: ./reusables.md{44,51}-->
 
 ## 系统要求

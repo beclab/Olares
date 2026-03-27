@@ -19,7 +19,7 @@ This will permanently delete all accounts, settings, and data on the device. Thi
 **Hardware**<br>
 - The bootable USB drive that came with Olares One.
    :::tip Don't have the USB drive?
-   Download the [Olares One ISO](https://cdn.olares.com/one/v1.12.4-amd64.iso), which is device-specific and different from the standard Olares ISO, and flash it to a USB drive (8 GB or larger) using a tool such as [Balena Etcher](https://etcher.balena.io/).
+   Download the [Olares One ISO](https://cdn.olares.com/one/olares-latest-amd64.iso), which is device-specific and different from the standard Olares ISO, and flash it to a USB drive (8 GB or larger) using a tool such as [Balena Etcher](https://etcher.balena.io/).
    :::
 - A monitor and keyboard connected to Olares One.
 

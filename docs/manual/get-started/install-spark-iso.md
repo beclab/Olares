@@ -19,7 +19,7 @@ This guide explains how to install Olares on NVIDIA DGX Spark using the official
 
 ## Create a bootable USB drive
 
-1. Download [the official Olares ISO image for DGX Spark](https://cdn.olares.com/spark/olares.iso).
+1. Download [the official Olares ISO image for DGX Spark](https://cdn.olares.com/spark/olares-latest-arm64.iso).
 2. Download and install [Balena Etcher](https://etcher.balena.io/).
 3. Insert the USB flash drive into your computer.
 4. Launch Balena Etcher and follow these steps:
