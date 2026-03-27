@@ -63,7 +63,7 @@ Before connecting, make sure you have:
 
 2. Open the LarePass desktop client, click your avatar in the top-left corner, and turn on **VPN connection**. 
 3. On Olares, go to **Settings** > **VPN** > **View VPN connection status**, locate the host entry, and note the IP address that starts with `100.64`.
-  ![View tailscale ip](/images/developer/develop/access-terminal-tailscale-ip.png#bordered){width=90%}
+  ![View Tailscale IP](/images/developer/develop/access-terminal-tailscale-ip.png#bordered){width=90%}
 
 4. Open a terminal on your computer. 
 5. Run the SSH command using the following format:
