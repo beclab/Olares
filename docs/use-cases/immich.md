@@ -170,9 +170,9 @@ In the library settings, you can configure automatic scanning: choose **real-tim
 
 2. Log in to the server.
 
-   a. Open LarePass on your mobile device, log in, and enable LarePass VPN.
+   a. Open LarePass on your mobile device and enable LarePass VPN.
 
-      <!-- ![Enable LarePass VPN](/images/manual/use-cases/immich-larepass-mobile.png#bordered) -->
+      <!-- ![Enable LarePass VPN](/images/manual/get-started/larepass-vpn-mobile.png#bordered) -->
 
    b. Open the Immich app and enter your Immich server URL, admin email, and password to log in.
 
