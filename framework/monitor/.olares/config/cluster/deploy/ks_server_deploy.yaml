@@ -20,6 +20,7 @@ spec:
       labels:
         app: monitoring-server
     spec:
+      priorityClassName: "system-cluster-critical"
       containers:
       - name: monitoring-server
         image: beclab/monitoring-server-v1:v0.3.9
