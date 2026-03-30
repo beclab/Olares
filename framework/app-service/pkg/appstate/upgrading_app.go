@@ -290,7 +290,7 @@ func (p *UpgradingApp) getRefsForImageManager(appConfig *appcfg.ApplicationConfi
 		// For V2 multi-charts, we need to get refs from each chart
 		var chartRefs []appsv1.Ref
 		for _, chart := range appConfig.SubCharts {
-			chartRefs, err = utils.GetRefFromResourceList(chart.ChartPath(appConfig.AppName), values, appConfig.Images)
+			chartRefs, err = utils.GetRefFromResourceList(chart.ChartPath(appConfig.RawAppName, chart.Name), values, appConfig.Images)
 			if err != nil {
 				klog.Errorf("get refs from chart %s failed %v", chart.Name, err)
 				return
