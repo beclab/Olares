@@ -1,0 +1,27 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backend:{{ .Values.bfl.username }}:system-frontend:market-provider-svc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:market-provider-svc
+subjects:
+  - kind: ServiceAccount
+    name: system-frontend
+    namespace: user-space-{{ .Values.bfl.username }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: market
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  type: ClusterIP
+  selector:
+    app: systemserver
+  ports:
+    - protocol: TCP
+      port: 28080
+      targetPort: 28080
