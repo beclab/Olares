@@ -37,86 +37,132 @@ In this guide, you will learn how to:
 ## Set up the admin account
 
 1. Open Immich from Launchpad. The welcome page appears.
+
+   ![Immich welcome page](/images/manual/use-cases/immich-welcome.png#bordered)
+
 2. Click **Getting Started**.
-3. In the **Admin Registration** step, set the admin email, password, and name. The first registered user becomes the administrator.
+3. In the **Admin Registration** step, set the admin email, password, and name. The first registered user becomes the administrator, responsible for administrative tasks, and additional users will be created by admin.
 
-   <!-- ![Register the admin account](/images/manual/use-cases/immich-admin-registration.png#bordered) -->
+   ![Register the admin account](/images/manual/use-cases/immich-admin-registration.png#bordered){width=50%}
 
-4. Log in with the email and password you just created.
-5. In Olares, navigate to **Settings** > **Applications** > **Immich** and change the **Authentication level** to **Internal**. This allows devices on your local network to access Immich without additional authentication.
+4. Log in with the email and password you just registered. You are landed on the **Photos** page by default.
+5. In Olares, navigate to **Settings** > **Applications** > **Immich** and ensure the **Authentication level** is set to **Internal**. This allows devices on your local network to access Immich without additional authentication.
 
-   <!-- ![Change authentication level to Internal](/images/manual/use-cases/immich-auth-level.png#bordered) -->
+   ![Change authentication level to Internal](/images/manual/use-cases/immich-auth-level.png#bordered){width=50%}
 
 ## Manage photos
 
 ### Upload photos
 
-1. Click the **Upload** button in the center of the page, or click the upload icon in the upper-right corner. Select the photo files you want to upload.
+1. On the **Photos** page, click the upload area in the center of the page, or click **Upload** in the upper-right corner. 
 
-   <!-- ![Upload photos to Immich](/images/manual/use-cases/immich-upload-photos.png#bordered) -->
-
+   ![Upload photos to Immich](/images/manual/use-cases/immich-upload-photos.png#bordered)
+2. Select the photo files you want to upload.
    Once uploaded, photos are automatically sorted by date on the main timeline.
 
-2. Click any photo to open the preview. You can zoom with the scroll wheel, drag to pan, and use arrow keys to browse adjacent photos.
+   ![Photos uploaded to Immich](/images/manual/use-cases/immich-photos-uploaded.png#bordered)
 
-### View photo details
+### View photos and details
 
-In the photo preview, click the **i** button in the upper-right corner to view metadata such as capture date, camera model, file format, and location.
+To view a photo and its details:
 
-<!-- ![View photo details and metadata](/images/manual/use-cases/immich-photo-details.png#bordered) -->
+1. On the **Photos** page, locate and click the target photo. The photo preview is opened.
+2. Click <i class="material-symbols-outlined">info</i> in the upper-right corner. The **Info** panel is opened on the right, displaying the photo's metadata such as capture date, camera model, and file format.
+
+   ![View photo details and metadata](/images/manual/use-cases/immich-photo-details.png#bordered)
 
 ### Favorite photos
 
-Click the heart icon on a photo to mark it as a favorite. All favorited photos can be found under **Favorites** in the left sidebar.
+To mark a photo as a favorite:
+1. On the **Photos** page, hover over the photo, and then click  <i class="material-symbols-outlined">check_circle</i> in the upper left corner to select it.
+2. Click <i class="material-symbols-outlined">favorite</i> on the top right. The photo is marked as a favorite and it is added to the **Favorites** in the left sidebar.
 
-<!-- ![Favorite a photo](/images/manual/use-cases/immich-favorite-photo.png#bordered) -->
+   ![Favorite a photo](/images/manual/use-cases/immich-favorite-photo.png#bordered)
 
 ### Delete and restore photos
 
-Click the trash icon to delete a photo. Deleted photos are moved to **Trash** in the left sidebar and kept for 30 days.
+To delete or restore a photo:
+1. On the **Photos** page, hover over the photo, and then click <i class="material-symbols-outlined">check_circle</i> in the upper left corner to select it.
+2. Click <i class="material-symbols-outlined">more_vert</i> on the top right, and then select **Delete**. The deleted photo is moved to **Trash** in the left sidebar and will be permenently deleted after 30 days.
+3. To permanently delete it immediately, click **Trash** in the left sidebar, select the photo, and then click <i class="material-symbols-outlined">delete_forever</i>.
 
-In the Trash view, select a photo and click **Restore** to recover it, or click **Delete** to remove it permanently.
+   ![Permenently delete photos](/images/manual/use-cases/immich-trash-delete.png#bordered)
 
-<!-- ![Delete and restore photos from Trash](/images/manual/use-cases/immich-trash-restore.png#bordered) -->
+### Restore photos
+
+To restore a deleted photo:
+1. Click **Trash** in the left sidebar.
+2. Hover over the photo, and then click <i class="material-symbols-outlined">check_circle</i> in the upper left corner to select it.
+3. Click **Restore** on the top right.
+
+   ![Restore photos from Trash](/images/manual/use-cases/immich-trash-restore.png#bordered)
 
 ### Download photos
 
-Click the menu button (**⋮**) on a photo and select **Download** to save it to your computer. When multiple photos are selected, Immich packages them into a ZIP file for batch download.
+To download photos:
+1. On the **Photos** page, hover over the target photo, and then click <i class="material-symbols-outlined">check_circle</i> in the upper left corner to select it.
+2. Click <i class="material-symbols-outlined">more_vert</i> on the top right, and then select **Download**. The photo is saved to your computer. When multiple photos are selected, Immich packages them into a ZIP file for batch download.
 
-<!-- ![Download a photo](/images/manual/use-cases/immich-download-photo.png#bordered) -->
+   ![Download a photo](/images/manual/use-cases/immich-download-photo.png#bordered)
 
 ## Organize with albums
 
 ### Create an album
 
-1. Click **Albums** in the left sidebar, then click **Create album** at the top of the page.
-2. Set the album name and description, then click **Select photos** to add photos from your library.
+1. Click **Albums** in the left sidebar, and then click the album creation area in the center of the page, or click **Create album** at the top of the page.
 
-   <!-- ![Create a new album](/images/manual/use-cases/immich-create-album.png#bordered) -->
+   ![Create a new album](/images/manual/use-cases/immich-create-album.png#bordered)
+
+2. Set the album name and description, and then click **Select photos**.
+3. To add an existing photo, select the photo, and then click **Add assets**.
+4. To add a photo from your local device, click **Select from computer**.
 
    The new album appears in the **Albums** list in the left sidebar.
 
-   :::tip Quick album creation
-   You can also select multiple photos from the main timeline and click the **+** icon in the upper-right corner to create an album directly.
-   :::
+:::tip Quick album creation
+You can also select multiple photos from the main timeline and click <i class="material-symbols-outlined">add_2</i> in the upper-right corner to create an album directly.
+:::
 
 ### Smart search
 
-Type a keyword like "cat" in the search bar at the top of the page. Immich uses a CLIP-based machine learning model to analyze image content, so you can search for people, places, and objects using natural language without relying on metadata.
+Immich uses a CLIP-based machine learning model to analyze image content, so you can search based on context. Tha means you can search for people, places, and objects using natural language without relying on metadata of the photo files.
 
-<!-- ![Smart search for photos](/images/manual/use-cases/immich-smart-search.png#bordered) -->
+1. At the top of the page, type a search word in the search field. For example, `halloween`.
+
+   ![Smart search for photos](/images/manual/use-cases/immich-smart-search.png#bordered)
+
+2. Results are displayed at the very first or first ones.
+
+   ![Smart search result](/images/manual/use-cases/immich-smart-search-result.png#bordered)
 
 ### Face recognition
 
+Immich recognizes faces in your photos and videos and groups them together into people. You can then assign names to these people and search for them. The list of people is shown in the Explore page. Upon clicking on a person, a list of assets that contain their face will be shown.
+
 1. Click **Explore** in the left sidebar to see automatically detected faces grouped by person.
 
-   <!-- ![Explore face recognition results](/images/manual/use-cases/immich-face-recognition.png#bordered) -->
+   ![Explore face recognition results](/images/manual/use-cases/immich-face-recognition.png#bordered)
 
-2. Click a face group to view all photos containing that person. Type a name in the **Add a name** field to label them.
-3. If the same person appears in multiple groups, assign the same name to merge them automatically.
-4. To hide unwanted face entries, click the menu button (**⋮**) on a face group and select **Hide Person**.
+2. Click a face group to view all photos containing that person.
+3. Type a name in the **Add a name** field to label this face.
 
-   <!-- ![Name and manage recognized faces](/images/manual/use-cases/immich-face-naming.png#bordered) -->
+   ![Name a face group](/images/manual/use-cases/immich-face-group-name.png#bordered)
+
+4. To hide the face of the person from the Explore page and the people details page, click <i class="material-symbols-outlined">more_vert</i> on the top right, and then select **Hide person**.
+
+   ![Hide person](/images/manual/use-cases/immich-face-group-hide.png#bordered)
+
+5. To show hidden people again:
+
+   a. On the Explorer page, click **View All**.
+
+   ![View all Immich people](/images/manual/use-cases/immich-face-group-details.png#bordered)
+      
+   b. On the people details page, click **Show & hide people**.
+
+   c. Click <i class="material-symbols-outlined">visibility_off</i> on the face group.
+
+   d. Click **Done**.
 
 ## View photos on the map
 
@@ -125,7 +171,7 @@ Click **Map** in the left sidebar to see all geotagged photos plotted on a map. 
 - Photos taken with a phone usually include GPS data and appear on the map automatically.
 - Photos without location data, such as those from a standalone camera, can be geotagged manually. Open the photo details and enter a location name in the address field.
 
-<!-- ![View photos on the map](/images/manual/use-cases/immich-map-view.png#bordered) -->
+![View photos on the map](/images/manual/use-cases/immich-map-view.png#bordered)
 
 ## Sync photos
 
@@ -135,68 +181,72 @@ To sync photos from your PC to Immich, first upload them to Files on Olares, the
 
 1. Upload your photos to the **Pictures** folder in Files.
 2. In Immich, click your user avatar in the upper-right corner and select **Administration**.
-3. In the left sidebar, select **External Libraries**, then click **Create Library**.
+3. In the left sidebar, select **External Libraries**, and then click **Create Library**.
+4. Set the **Owner** to your admin account and click **Create**. The **New External Library** page opens.
 
-   <!-- ![Create an external library](/images/manual/use-cases/immich-external-libraries.png#bordered) -->
-
-4. Set the **Owner** to your admin account and click **Create**.
-5. Click **Add** under the new library entry and add the import path:
+   ![Create an external library](/images/manual/use-cases/immich-external-libraries.png#bordered)
+5. In the **Folders** area, click **Add**.
+6. Eenter the import path, and then click **Add**. The path is case-sensitive.
 
    ```text
    /home/Pictures
    ```
+7. Click **Scan** in the upper right to start importing photos.
 
-   :::info
-   The path is case-sensitive.
-   :::
+   ![Scan the external library](/images/manual/use-cases/immich-scan-library.png#bordered)
 
-6. Click the menu button (**⋮**) next to the library and select **Scan** to start importing photos.
+   Once complete, the imported photos appear in the main timeline on the **Photos** page.
 
-   <!-- ![Scan the external library](/images/manual/use-cases/immich-scan-library.png#bordered) -->
+8. To configure automatic periodic scanning:
 
-7. Check the scan progress under **Jobs** in the left sidebar. Once complete, the imported photos appear in the main timeline.
+   a. Click **Settings** from the left sidebar, and then expand the **External Library** panel.
 
-:::tip Auto-sync options
-In the library settings, you can configure automatic scanning: choose **real-time scanning** (syncs when files change) or **scheduled scanning** (syncs at set intervals).
-:::
+   ![Configure library scan settings](/images/manual/use-cases/immich-scan-settings.png#bordered)
 
-<!-- ![Configure library scan settings](/images/manual/use-cases/immich-scan-settings.png#bordered) -->
+   b. To set real-time scanning, expand **Library watching**, and then enable it. Immich will watch for changed files automatically.
+
+   c. To set scheduled scanning, expand **Periodic Scanning**, and then select your preferred scan interval from the **Cron expression presets**.
+
+   d. Click **Save**.
 
 ### Sync from mobile devices
 
 1. Download the Immich mobile app.
-   - **iOS**: Search for "Immich" in the App Store.
-   - **Android**: Download the APK from the [Immich GitHub Releases](https://github.com/immich-app/immich/releases) page or install from [Google Play](https://play.google.com/store/apps/details?id=app.alextran.immich).
+   - iOS: Search and install "Immich" from the App Store.
+   - Android: Download the APK from the [Immich GitHub Releases](https://github.com/immich-app/immich/releases) page or install from [Google Play](https://play.google.com/store/apps/details?id=app.alextran.immich).
 
 2. Log in to the server.
 
    a. Open LarePass on your mobile device and enable LarePass VPN.
 
-      <!-- ![Enable LarePass VPN](/images/manual/get-started/larepass-vpn-mobile.png#bordered) -->
+      <!--![Enable LarePass VPN](/images/manual/get-started/larepass-vpn-mobile.png#bordered)-->
 
-   b. Open the Immich app and enter your Immich server URL, admin email, and password to log in.
+   b. Open the Immich app, and then enter your Immich server URL, admin email, and password to log in. 
+   
+3. If this is your first time using the app please make sure to choose a backup album so that the timeline can populate photos and videos in it.
 
-3. Tap the cloud icon in the upper-right corner to open the backup screen. Tap **Allow** to grant access to your photo library.
+   a. Tap <i class="material-symbols-outlined">backup</i> in the upper-right corner to open the backup screen. 
 
-4. Select the albums to back up. You can enable the **Sync** toggle to keep them continuously synced. Scroll down and tap **Start Backup**.
+   b. Tap **Select** to choose the albums to back up. You can enable **Sync albums** to keep them continuously synced. Scroll down and tap **Start Backup**.
 
-   <!-- ![Start mobile backup](/images/manual/use-cases/immich-mobile-backup.png#bordered) -->
+   <!--![Start mobile backup](/images/manual/use-cases/immich-mobile-backup.png#bordered)-->
 
-5. Once the backup is complete, the photos appear on the Immich server. From now on, newly taken photos are automatically synced each time you open the Immich app.
+   Once the backup is completed, the photos appear on the Immich server. From now on, newly taken photos are automatically synced each time you open the Immich app.
 
-   <!-- ![Photos synced from mobile](/images/manual/use-cases/immich-mobile-sync-result.png#bordered) -->
+   <!--![Photos synced from mobile](/images/manual/use-cases/immich-mobile-sync-result.png#bordered)-->
 
 ## Share photos
 
 ### Share individual photos
 
-1. Select the photos you want to share on the web interface.
-2. Click the share icon in the upper-right corner.
-3. Add a description and access password if needed, then click **Create Link**. Immich generates a share link and QR code that others can use to view the shared photos.
+1. Open the Immich web interface, select the photos you want to share from the **Photos** page.
+2. Click <i class="material-symbols-outlined">share</i> in the upper-right corner.
+3. Specify settings for the share link as needed, such as URL, description, access password and expiration date.
+4. Click **Create link**. Immich generates a share link and QR code that others can use to view the shared photos.
 
-   <!-- ![Create a share link](/images/manual/use-cases/immich-share-link.png#bordered) -->
+   ![Create a share link](/images/manual/use-cases/immich-share-link.png#bordered){width=50%}
 
-### Create shared albums
+### Share albums
 
 1. Click your user avatar and go to **Administration**. Use **Create User** to create accounts for family members or friends.
 2. Click **Sharing** in the left sidebar, then click **Create album** in the upper-right corner to create a shared album.
