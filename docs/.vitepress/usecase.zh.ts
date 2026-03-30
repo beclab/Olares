@@ -134,6 +134,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Komga",
               link: "/zh/use-cases/komga",
             },
+            {
+              text: "PhotoPrism",
+              link: "/zh/use-cases/photoprism",
+            },
           ]
         },
         {
