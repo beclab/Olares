@@ -5,10 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"slices"
-	"strconv"
-
 	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
@@ -22,7 +18,10 @@ import (
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
 	"golang.org/x/exp/maps"
+	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"slices"
+	"strconv"
 
 	"github.com/emicklei/go-restful/v3"
 	"helm.sh/helm/v3/pkg/time"
@@ -153,7 +152,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		api.HandleBadRequest(resp, req, err)
 		return
 	}
-	if !appCfg.AllowMultipleInstall && insReq.RawAppName != "" || (appCfg.AllowMultipleInstall && (apiVersion == appcfg.V2 || appCfg.AppScope.ClusterScoped)) {
+	if !appCfg.AllowMultipleInstall && insReq.RawAppName != "" {
 		klog.Errorf("app %s can not be clone", app)
 		api.HandleBadRequest(resp, req, fmt.Errorf("app %s can not be clone", app))
 		return
@@ -705,7 +704,8 @@ func (h *installHandlerHelperV2) _validateClusterScope(isAdmin bool, installedAp
 	// check if subcharts has a client chart
 	for _, subChart := range h.appConfig.SubCharts {
 		if !subChart.Shared {
-			if subChart.Name != h.app {
+			subChartName := utils.GetChartName(h.appConfig.AppName, h.appConfig.RawAppName, subChart.Name)
+			if subChartName != h.app {
 				err := fmt.Errorf("non-shared subchart must has the same name with the app, subchart name is %s but the main app is %s", subChart.Name, h.app)
 				klog.Error(err)
 				api.HandleBadRequest(h.resp, h.req, err)
