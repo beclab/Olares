@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -123,6 +124,12 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 		return plugins
 	} // func addUserTemplates
 
+	ingressIp, err := getUserIngressIP(ctx, kubeClient)
+	if err != nil {
+		klog.Error("get user ingress ip error, ", err)
+		return err
+	}
+
 	for _, u := range userList.Items {
 		userzone := u.GetAnnotations()[UserAnnotationZoneKey]
 		if userzone == "" {
@@ -140,11 +147,6 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 			continue
 		}
 
-		ingressIp, err := getUserIngressIP(ctx, kubeClient, &u)
-		if err != nil {
-			klog.Error("get user ingress ip error, ", err)
-			return err
-		}
 		if ingressIp == "" {
 			klog.Info("user ", u.GetName(), " has no valid ingress ip, skip corefile update")
 			continue
@@ -536,14 +538,20 @@ func getUserLocalIp(user *unstructured.Unstructured) (net.IP, error) {
 	return localIp, nil
 }
 
-func getUserIngressIP(ctx context.Context, kubeClient kubernetes.Interface, user *unstructured.Unstructured) (string, error) {
-	bfl, err := kubeClient.CoreV1().Pods("user-space-"+user.GetName()).Get(ctx, "bfl-0", metav1.GetOptions{})
+func getUserIngressIP(ctx context.Context, kubeClient kubernetes.Interface) (string, error) {
+	pods, err := kubeClient.CoreV1().Pods("os-network").List(ctx, metav1.ListOptions{
+		LabelSelector: "app=l4-bfl-proxy",
+	})
 	if err != nil {
-		klog.Error("get bfl pod error, ", err)
+		klog.Error("get l4 pod error, ", err)
 		return "", err
 	}
+	if len(pods.Items) == 0 {
+		return "", errors.New("no l4 proxy pod found")
+	}
+	pod := pods.Items[0]
 
-	return bfl.Status.PodIP, nil
+	return pod.Status.PodIP, nil
 }
 
 func getNonClusterLocalSearchDomains() ([]string, error) {
