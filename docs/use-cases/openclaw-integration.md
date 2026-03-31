@@ -64,11 +64,8 @@ Connect OpenClaw to your Discord bot by adding its configuration in the Control 
 This tutorial provides the basic setup to get your bot running in Discord quickly. For more detailed configurations, see the official [OpenClaw documentation](https://docs.openclaw.ai/channels).
 :::
 
-1. Open the Control UI, select **Config** from the left sidebar, and then switch to the **Raw** tab.
-2. Click <i class="material-symbols-outlined">visibility_off</i> to reveal the configuration fields.
-
-    ![Reveal configuration blocks](/images/manual/use-cases/click-hide-icon.png#bordered)
-3. Add the following `channels` section to the configuration file. 
+1. Return to the **Control UI** > **Config** > **Raw** tab.
+2. Add the following `channels` section to the configuration file.
 
     This configuration enables Discord Direct Messages (DMs) and sets the DM policy to pairing for security.
 
@@ -86,11 +83,13 @@ This tutorial provides the basic setup to get your bot running in Discord quickl
     },
     ```
 
-    ![Discord channel added](/images/manual/use-cases/channels1.png#bordered)
+    ![Discord channel added](/images/manual/use-cases/channels.png#bordered)
 
 3. Replace `{YOUR_BOT_TOKEN}` with your Discord bot token.
 4. Click **Save**.
 5. From the left sidebar, select **Channels**. On the Discord card, **Probe ok** indicates successful connection.
+
+    ![Probe OK](/images/manual/use-cases/probe-ok.png#bordered)
 
 ## Step 4: Authorize your account
 
