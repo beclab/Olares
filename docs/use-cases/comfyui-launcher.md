@@ -28,7 +28,7 @@ As the administrator, you must start the ComfyUI service before you or other mem
 - **Start ComfyUI service**
 
     Go to **Home** and click the **START** button in the upper-right corner.
-    ![Start ComfyUI service](/images/manual/use-cases/comfyui-start-service.png#bordered){width}    
+    ![Start ComfyUI service](/images/manual/use-cases/comfyui-start-service.png#bordered)   
     
     :::tip Notes on first run
     - Initial startup of ComfyUI Launcher typically takes 10-20 seconds for environment initialization.
@@ -102,11 +102,15 @@ Make sure the model type matches the target folder so ComfyUI can detect and use
 
 ComfyUI supports multiple ways to add models. Choose the method that best matches the model source and your workflow.
 
-- **Use ComfyUI Launcher**: Download models directly to Olares.
-- **Upload from your local device**: Download the model file first, then upload it through Files or LarePass.
-- **Use workflow-provided downloaders**: Some workflows can fetch models automatically.
+| Method | Use this when | Notes |
+|--|--|--|
+| **ComfyUI Launcher** | The model is a public Hugging Face<br> model that does not require login or<br> a token. | In most cases, this is the easiest way to download the model directly to Olares. |
+| **Upload local models** | The model requires login, a token,<br> approval, or manual download, or it<br> comes from a source not supported<br> by ComfyUI Launcher. | Download the model file to your local device first, then upload it through Files or LarePass. |
+| **Downloader nodes** | A custom node provides its own<br> model downloader. | Follow the custom node documentation for setup, storage location, and model requirements. |
 
 ### Download with ComfyUI Launcher
+
+Use this method for public Hugging Face models that do not require login or a token.
 
 ComfyUI Launcher provides three common ways to download models directly to Olares.
 
@@ -130,7 +134,7 @@ Use this method when you want to download an individual public model directly in
 
 #### Download by direct URL
 
-Use this method when you already have a direct download URL for the model file.
+Use this method when you already have a direct download URL for a model file that ComfyUI Launcher can access directly.
 
 1. Go to **Models** > **Custom Download**.
 2. Paste the model URL.
@@ -139,24 +143,21 @@ Use this method when you already have a direct download URL for the model file.
 
    ![Custom download](/images/manual/use-cases/comfyui-model-link.png#bordered){width=90%}
 
-:::tip Model download links from templates
-If a template does not show the model download link clearly, see [How do I get a model URL?](#how-do-i-get-a-model-url).
-:::
-
 ### Upload local models
 
-If you already downloaded a model file to your local device, you can upload it to Olares through Files or LarePass. This is often the easiest option for models that require a login, token, approval, or manual download.
+Use this method when the model requires login, a token, approval, or manual download, or when the model source is not supported by ComfyUI Launcher.
 
-1. Open Files from the Launchpad.
-2. Navigate to `External/olares/ai/model`.
-3. Open the folder that matches the model type. If you're not sure which folder to use, see [Understand the `model` directory structure](#understand-the-model-directory-structure).
-4. Upload the model file directly to the target folder.
+1. Download the model file to your local device. If needed, see [How do I download a model outside of ComfyUI Launcher](#how-do-i-download-a-model-outside-of-comfyui-launcher).
+2. Open Files from the Launchpad.
+3. Navigate to `External/olares/ai/model`.
+4. Open the folder that matches the model type. If you're not sure which folder to use, see [Understand the `model` directory structure](#understand-the-model-directory-structure).
+5. Upload the model file to the target folder.
 
-### Use workflow-provided downloaders
+### Use downloader nodes
 
-Some workflows use downloaders provided by custom nodes or other extensions to fetch models automatically.
+Some custom nodes can download models automatically.
 
-Follow the documentation provided by the workflow or extension author for setup, storage location, and model requirements.
+Follow the documentation provided by the node author for setup, storage location, and model requirements.
 
 If the workflow still reports a missing model after download, check whether the file was saved to the expected location and whether it matches the model type expected by the workflow.
 
@@ -350,12 +351,35 @@ If the issue persists after the wipe and restore, uninstall and reinstall ComfyU
 
 ## FAQ
 
-### How do I get a model URL?
+### How do I download a model outside of ComfyUI Launcher?
 
-You can usually find it in one of the following ways:
+If a model cannot be downloaded in ComfyUI Launcher, you can usually find the download link in one of the following ways.
 
-- Check the template notes or the **Model Links** section. Some official templates list the required model files, download URLs, and storage locations there.
+#### Method 1: Check the template notes or Model Links section
+
+Some official templates include notes or a **Model Links** section that lists:
+
+- the required model file
+- the download URL
+- the expected storage location
+
+If available, you can use this information to copy the download URL or open the model page directly.
     ![Model links](/images/manual/use-cases/comfyui-model-links.png#bordered){width=90%}
 
-- Use a browser helper extension such as [WAN Download URL Helper](https://github.com/carlric/wan-download-url-helper) to reveal the hidden URL from the missing-model dialog.
-- Inspect the page in browser developer tools to find the download request and storage hint.
+#### Method 2: Use a browser helper extension
+
+If the template shows a missing-model dialog but does not expose the full URL clearly, you can use a browser helper extension.
+
+For example, with [WAN Download URL Helper](https://github.com/carlric/wan-download-url-helper):
+
+1. Open the missing-model dialog in ComfyUI.
+2. Hover over a download icon.
+3. Right-click the icon and choose **Show download URL**.
+    ![ComfyUI download URL helper](/images/manual/use-cases/comfyui-download-url-helper.png#bordered){width=90%}
+
+4. Copy the URL, then use it in your downloader or save it for manual download.
+    
+#### Method 3: Inspect the page in browser developer tools
+
+If the URL is not shown in the template notes or dialog, inspect the page in your browser developer tools and look for network requests triggered by the template or missing-model dialog.
+    ![Inspect url](/images/manual/use-cases/comfyui-inspect-url.png#bordered){width=90%}
