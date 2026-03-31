@@ -13,6 +13,10 @@ Before upgrading an existing OpenClaw installation, review the version-specific 
 
 ## Upgrade to 2026.03.22
 
+:::tip Prerequisite
+You must upgrade your Olares OS to V1.12.5 before updating OpenClaw to 2026.03.22.
+:::
+
 The OpenClaw 2026.03.22 update introduced several changes that restrict plugin permissions. Because of this security enhancement, older plugins might no longer be compatible. For more information, see the [OpenClaw release notes](https://github.com/openclaw/openclaw/releases/tag/v2026.3.22).
 
 If you find that a previously working plugin is unavailable after upgrading to this version, try the following solutions:
