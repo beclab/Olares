@@ -122,13 +122,19 @@ var (
 	httpStreamIdleTimeout = 30 * time.Minute
 	connectTimeout        = 5 * time.Second
 	routeTimeout          = 5 * time.Minute
+	// clusterIdleTimeout is the idle timeout applied to upstream HTTP connections
+	// via CommonHttpProtocolOptions. When a pooled connection is idle for longer
+	// than this duration Envoy closes it. Should be set shorter than the backend's
+	// own keep-alive limit to avoid "connection reset" errors on reuse.
+	clusterIdleTimeout = 10 * time.Second
 )
 
-func SetTimeouts(tcpIdle, httpStream, connect, route time.Duration) {
+func SetTimeouts(tcpIdle, httpStream, connect, route, clusterIdle time.Duration) {
 	tcpIdleTimeout = tcpIdle
 	httpStreamIdleTimeout = httpStream
 	connectTimeout = connect
 	routeTimeout = route
+	clusterIdleTimeout = clusterIdle
 }
 
 // mustAny marshals a proto.Message into an anypb.Any, panicking on error.
@@ -1257,6 +1263,9 @@ func buildL7Cluster(c *ir.ClusterIR) *clusterv3.Cluster {
 		Name:                 c.Name,
 		ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: discoveryType},
 		ConnectTimeout:       durationpb.New(connectTimeout),
+		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
+			IdleTimeout: durationpb.New(clusterIdleTimeout),
+		},
 		LoadAssignment: &endpointv3.ClusterLoadAssignment{
 			ClusterName: c.Name,
 			Endpoints: []*endpointv3.LocalityLbEndpoints{{

@@ -46,10 +46,11 @@ func main() {
 	httpStreamIdleTimeout := flag.Duration("xds-http-stream-idle-timeout", 30*time.Minute, "http stream idle timeout")
 	connectTimeout := flag.Duration("xds-connect-timeout", 5*time.Second, "upstream connect timeout")
 	routeTimeout := flag.Duration("xds-route-timeout", 5*time.Minute, "route timeout")
+	clusterIdleTimeout := flag.Duration("xds-cluster-idle-timeout", 10*time.Second, "upstream HTTP connection idle timeout (CommonHttpProtocolOptions.IdleTimeout); set below the backend keep-alive limit to avoid stale-connection resets")
 
 	flag.Parse()
 	defer klog.Flush()
-	xdstranslator.SetTimeouts(*tcpIdleTimeout, *httpStreamIdleTimeout, *connectTimeout, *routeTimeout)
+	xdstranslator.SetTimeouts(*tcpIdleTimeout, *httpStreamIdleTimeout, *connectTimeout, *routeTimeout, *clusterIdleTimeout)
 
 	ctrl.SetLogger(klog.NewKlogr())
 
