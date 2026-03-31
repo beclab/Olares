@@ -107,6 +107,32 @@ func (r *TailScaleACLController) SetUpWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return err
 	}
+	err = c.Watch(source.Kind(
+		mgr.GetCache(),
+		&corev1.ConfigMap{},
+		handler.TypedEnqueueRequestsFromMapFunc(
+			func(ctx context.Context, cm *corev1.ConfigMap) []reconcile.Request {
+				owner := strings.TrimPrefix(cm.Namespace, tailScaleNamespacePrefix)
+				return []reconcile.Request{{NamespacedName: types.NamespacedName{
+					Name:      tailScaleACLConfigMapName,
+					Namespace: owner,
+				}}}
+			}),
+		predicate.TypedFuncs[*corev1.ConfigMap]{
+			CreateFunc: func(e event.TypedCreateEvent[*corev1.ConfigMap]) bool {
+				return isTailScalAclConfigmap(e.Object)
+			},
+			UpdateFunc: func(e event.TypedUpdateEvent[*corev1.ConfigMap]) bool {
+				return isTailScalAclConfigmap(e.ObjectNew)
+			},
+			DeleteFunc: func(e event.TypedDeleteEvent[*corev1.ConfigMap]) bool {
+				return false
+			},
+		},
+	))
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
