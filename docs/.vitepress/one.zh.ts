@@ -92,12 +92,12 @@ export const oneSidebar: DefaultTheme.Sidebar = {
        text: "Manage",
        items: [
         {
-          text: "Create and manage users",
+          text: "Add and manage users",
           link: "/zh/one/create-users",
         },
          {
-           text: "Set up app entrances",
-           link: "/zh/one/set-app-entrance",
+           text: "Configure application access",
+           link: "/zh/one/config-app-access",
          },
        ]
      },

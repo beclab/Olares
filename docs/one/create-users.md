@@ -3,19 +3,19 @@ outline: [2, 3]
 description: Learn how to add users to Olares One, assign roles and resource limits, and manage existing accounts.
 ---
 
-# Create and manage users <Badge text="5 min"/>
+# Add and manage users <Badge text="5 min"/>
 
 On Olares One, you can create multiple user accounts to share the device securely. Each user has their own space, applications, and resource limits.
 
 ## Before you begin
 
-User permissions and resource usage depend on the assigned role.
+Determine the role to assign to the user based on the following permissions:
 
-|  | **Super admin** | **Admin** | **Members** |
+| **Permission** | **Super admin** | **Admin** | **Members** |
 |--|--|--|--|
-| Create | Admin and Members | Members | — |
-| Remove | Admin and Members | Members | — |
-| Resources | Use all resources | Use allocated resources | Use allocated resources |
+| Create users | Admin and Members | Members | — |
+| Remove users | Admin and Members | Members | — |
+| Resource access | Use all resources | Use allocated resources | Use allocated resources |
 
 ## Prerequisites
 
@@ -29,7 +29,7 @@ User permissions and resource usage depend on the assigned role.
 - The new user has a valid Olares ID that is not already activated on another Olares device.
 - The domain part of the new user's Olares ID matches the current domain.
 
-## Create a new user
+## Add a user
 
 1. Go to **Settings** > **Users**.
 2. Click **Create account**.
@@ -44,43 +44,35 @@ User permissions and resource usage depend on the assigned role.
 
    Once the account is created, the system generates a temporary activation wizard URL and a one-time password.
 
-5. Click **Copy** to copy the activation credentials, and share them with the user.
+5. Copy and share the activation credentials with the user.
 
 :::tip Remote activation
-New users do not need physical access to Olares One. They can complete the setup entirely using the activation URL. Share [Join an Olares](/manual/get-started/join-olares) with them for the full steps.
+The invited users can activate their access remotely. For full steps, see [Join an Olares](/manual/get-started/join-olares).
 :::
 
-You can check whether the user has completed activation on the **Users** page.
+6. To check the user's activate status, go to the **Users** page.
 ![View user lists](/images/one/settings-create-users.png#bordered){width=85%}
 
 ## Manage existing users
 
-After users are created, you can adjust their resource limits or remove access as needed.
+After a user is created, you can view account details, adjust resource limits, reset the password, or remove the user.
+
 
 1. Go to **Settings** > **Users**.
 2. Select a user to open the **Account info** page.
+   ![Manage users](/images/one/settings-manage-user.png#bordered){width=90%}
 
-![Manage users](/images/one/settings-manage-user.png#bordered){width=90%}
+- **Adjust resource limits**
+   
+   Click **Modify limits**. Update the CPU or memory values, then click **OK**.
+- **Reset the password**
+   
+   Click **Reset password**, then share the generated password with the user. 
+   
+   A higher-level role can reset passwords for lower-level roles. Super admins can reset passwords for Admins and Members. Admins can reset passwords for Members.
+- **Remove the user**
 
-### Adjust resource limits
-
-1. Click **Modify limits**.
-2. Adjust CPU and memory values, then click **OK**.
-
-### Reset password
-If a user forgets the password, a higher-level role can reset it. Super admins can reset passwords for Admins and Members. Admins can reset passwords for Members.
-
-1. Click **Reset password**.
-2. Share the generated password with the user.
-
-### Remove a user
-
-:::warning
-Deleting a user permanently removes their data. Proceed with caution.
-:::
-
-1. Click **Delete user**.
-2. Click **OK** to confirm the deletion.
+   Click **Delete user**, then click **OK** to confirm.
 
 ## Resources
 
