@@ -106,17 +106,14 @@ func (l *linuxPhaseBuilder) build() []module.Module {
 			}
 
 		}).withGPU(l.runtime)...).
-		addModule(cloudModuleBuilder(func() []module.Module {
-			// unitl now, system ready
-			return []module.Module{
-				&images.PreloadImagesModule{
-					ManifestModule: manifest.ManifestModule{
-						Manifest: l.manifestMap,
-						BaseDir:  l.runtime.GetBaseDir(), // l.runtime.Arg.BaseDir,
-					},
-				}, //
-			}
-		}).withoutCloud(l.runtime)...).
+		addModule(
+			&images.PreloadImagesModule{
+				ManifestModule: manifest.ManifestModule{
+					Manifest: l.manifestMap,
+					BaseDir:  l.runtime.GetBaseDir(), // l.runtime.Arg.BaseDir,
+				},
+			},
+		).
 		addModule(terminusBoxModuleBuilder(func() []module.Module {
 			return []module.Module{
 				&daemon.InstallTerminusdBinaryModule{
