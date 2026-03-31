@@ -23,7 +23,10 @@ By the end of this guide, you are able to:
 
 ## Prerequisites
 
-- Local model: Ensure Ollama is installed and running.
+- Local model: Ensure Ollama or another model provider is installed and running.
+    :::tip Model provider
+    This tutorial uses Ollama as the model provider. If you are using a different provider or a local proxy, see the [OpenClaw documentation on custom providers](https://docs.openclaw.ai/concepts/model-providers#providers-via-models-providers-custom%2Fbase-url) for configuration details.
+    :::
 - Discord account: Required to create the bot application.
 - Discord server: A server where you have permissions to add bots.
 - (Optional) Brave search API key: Required for the agent to search the web for real-time information. 
