@@ -178,6 +178,7 @@ RELEASE_ID="#__RELEASE_ID__"
 if [[ $RELEASE_ID == "" || "${RELEASE_ID:3}" == "RELEASE_ID__" ]]; then
   RELEASE_ID_SUFFIX=""
 else
+  export RELEASE_ID="$RELEASE_ID"
   RELEASE_ID_SUFFIX=".$RELEASE_ID"
 fi
 CLI_FILE="olares-cli-v${VERSION}_linux_${ARCH}${RELEASE_ID_SUFFIX}.tar.gz"

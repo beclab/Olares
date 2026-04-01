@@ -71,6 +71,7 @@ func NewCmdInstallOs() *cobra.Command {
 		"Set the swap priority of the ZRAM device, between -1 and 32767, defaults to 100",
 	)
 
+	config.AddHostIPFlagBy(flagSetter)
 	config.AddCDNServiceFlagBy(flagSetter)
 	config.AddVersionFlagBy(flagSetter)
 	config.AddBaseDirFlagBy(flagSetter)

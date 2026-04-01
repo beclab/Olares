@@ -61,6 +61,9 @@ userEnvs:
   - envName: OLARES_USER_CUSTOM_OPENAI_APIKEY
     type: password
     editable: true
+  - envName: OLARES_USER_ANTHROPIC_APIKEY
+    type: password
+    editable: true
   - envName: OLARES_USER_HUGGINGFACE_SERVICE
     type: url
     editable: true
