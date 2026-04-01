@@ -2,11 +2,12 @@ package images
 
 import (
 	"fmt"
-	"github.com/distribution/reference"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/distribution/reference"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/cache"
@@ -139,6 +140,10 @@ func (t *LoadImages) Execute(runtime connector.Runtime) (reserr error) {
 
 		if err := retry(func() error {
 			if _, err := runtime.GetRunner().SudoCmd(loadCmd, false, false); err != nil {
+				if strings.Contains(err.Error(), "no match for platform") {
+					logger.Warnf("image %s has no match for this platform, skip importing", imageRepoTag)
+					return nil
+				}
 				return fmt.Errorf("%s(%s) error: %v", imageRepoTag, imgFileName, err)
 			} else {
 				logger.Infof("(%d/%d) imported image: %s, time: %s", index+1, len(missingImages), imageRepoTag, time.Since(start))
