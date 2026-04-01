@@ -23,7 +23,7 @@ Refresh the related annotations and restart the required service.
 
    b. In the left sidebar, under **Terminal**, click **Olares**.
     ![Olares terminal](/images/developer/develop/controlhub-terminal.png#bordered){width=90%}
-2. Run the following commands in order. Replace `<olaresid>` with your actual Olares ID.
+2. Run the following commands in order. Replace `<olaresid>` with your actual Olares ID. This is the part before `@` in your Olares address. For example, in `alice123@olares.com`, the Olares ID is `alice123`.
     ```bash
     kubectl annotate configmap tailscale-acl -n user-space-<olaresid> tailscale-acl-md5-
 
