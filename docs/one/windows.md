@@ -19,6 +19,10 @@ Olares lets you run a full Windows virtual machine directly on your device, givi
 
 This guide walks you through installing the Windows VM, enabling secure networking, and connecting using either a browser or Remote Desktop.
 
+:::warning Known issue after upgrading to 1.12.5
+If you upgraded from Olares 1.12.4 to 1.12.5 and can no longer remotely connect to Windows after the device restarts, see [Known issues](/use-cases/windows-issues.md#windows-cannot-be-remotely-accessed-after-upgrading-from-1124-to-1125).
+:::
+
 ## Learning objectives
 
 By the end of this tutorial, you will learn how to:
@@ -188,33 +192,6 @@ Currently, the following Windows versions are supported:
 - **Windows Server**: 2025, 2022, 2019, 2016, 2012, 2008, 2003
 
 After Windows installation, you can change the display language using the standard Windows language settings.
-
-### Why can't I remotely connect to Windows after upgrading from 1.12.4 to 1.12.5?
-
-After upgrading Olares from version 1.12.4 to 1.12.5, Windows may become unavailable for remote access after the device restarts.
-
-This issue may occur because some Tailscale ACL-related annotations are not refreshed correctly during the upgrade.
-
-To work around this issue:
-
-1. Open the built-in terminal in Control Hub:
-   - Open Control Hub.
-   - In the left sidebar, under **Terminal**, click **Olares**.
-
-2. Run the following commands in order. Replace `<olaresid>` with your actual Olares ID.
-
-   ```bash
-   kubectl annotate configmap tailscale-acl -n user-space-<olaresid> tailscale-acl-md5-
-
-   kubectl patch deployment headscale -n user-space-<olaresid> --type=json -p='[{"op":"remove","path":"/spec/template/metadata/annotations/tailscale-acl-md5"}]'
-   ```
-
-3. Restart `app-service`.
-  ```bash
-  kubectl rollout restart sts app-service -n os-framework
-  ```
-  
-4. Wait a few minutes, and then try remotely connecting to Windows again.
 
 ## Resources
 

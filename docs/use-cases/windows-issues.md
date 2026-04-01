@@ -5,7 +5,7 @@ description: This page documents the known issues and unexpected behaviors you m
 
 # Known issues
 
-Use this page to identify and troubleshoot currently known issues with Windows on Olares. We regularly update this list with temporary workarounds and permanent fixes as they become available.
+Use this page to identify and troubleshoot currently known issues with Windows on Olares.
 
 ## Windows cannot be remotely accessed after upgrading from 1.12.4 to 1.12.5
 
