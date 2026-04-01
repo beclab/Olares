@@ -73,6 +73,14 @@ func AddManifestFlagBy(flagSetter CommandFlagSetter) {
 	)
 }
 
+func AddHostIPFlagBy(flagSetter CommandFlagSetter) {
+	flagSetter.Add(common.FlagHostIP,
+		"",
+		"",
+		"Set the host IP address, used as NAT gateway IP on macOS/WSL/container platforms",
+	).WithEnv(common.ENV_HOST_IP)
+}
+
 func AddMasterHostFlagsBy(flagSetter CommandFlagSetter) {
 	flagSetter.Add(common.FlagMasterHost, "", "", "IP address of the master node")
 	flagSetter.Add(common.FlagMasterNodeName, "", "", "Name of the master node")
