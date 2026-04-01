@@ -28,6 +28,7 @@ type UserInfo struct {
 	SSL               *SSLConfig
 	Apps              []*AppInfo
 	FileserverNodes   []*FileserverNodeInfo
+	MasterNodeCIDR    string
 }
 
 type AppInfo struct {

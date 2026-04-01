@@ -200,7 +200,7 @@ func NewArgument() *Argument {
 		NetworkSettings:  &NetworkSettings{},
 		RegistryMirrors:  viper.GetString(FlagRegistryMirrors),
 		OlaresCDNService: viper.GetString(FlagCDNService),
-		HostIP:           viper.GetString(ENV_HOST_IP),
+		HostIP:           viper.GetString(FlagHostIP),
 		Environment:      os.Environ(),
 		MasterHostConfig: &MasterHostConfig{},
 		SwapConfig:       &SwapConfig{},

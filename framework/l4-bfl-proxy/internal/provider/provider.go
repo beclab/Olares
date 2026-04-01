@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -495,6 +496,10 @@ func (p *Provider) listUsers(ctx context.Context, rawAppsMap map[string][]*appv1
 		if err != nil {
 			return nil, err
 		}
+		masterNodeCIDR, err := p.getMasterNodeCIDR(ctx)
+		if err != nil {
+			return nil, err
+		}
 
 		info := &message.UserInfo{
 			Name:              user.Name,
@@ -514,6 +519,7 @@ func (p *Provider) listUsers(ctx context.Context, rawAppsMap map[string][]*appv1
 			SSL:               sslConfig,
 			CustomDomainCerts: allCerts[user.Name],
 			FileserverNodes:   fileserverNodes,
+			MasterNodeCIDR:    masterNodeCIDR,
 		}
 		result = append(result, info)
 	}
@@ -672,6 +678,28 @@ func (p *Provider) getUsers(ctx context.Context) ([]iamv1alpha2.User, error) {
 	}
 	users := userList.Items
 	return users, nil
+}
+
+func (p *Provider) getMasterNodeCIDR(ctx context.Context) (string, error) {
+	var nodeList corev1.NodeList
+	if err := p.cache.List(ctx, &nodeList, client.HasLabels{"node-role.kubernetes.io/control-plane"}); err != nil {
+		klog.Errorf("provider: list node failed: %v", err)
+		return "", err
+	}
+	if len(nodeList.Items) == 0 {
+		return "", errors.New("no master node found")
+	}
+	node := nodeList.Items[0]
+	if len(node.Annotations) == 0 {
+		klog.Warningf("provider: node %s with empty annotations", node.Name)
+		return "", nil
+	}
+	cidr, ok := node.Annotations["projectcalico.org/IPv4Address"]
+	if !ok {
+		klog.Warningf("provider: node %s has no projectcalico.org/IPv4Address annotation", node.Name)
+		return "", nil
+	}
+	return cidr, nil
 }
 
 func getAnnotation(user *iamv1alpha2.User, key string) string {
