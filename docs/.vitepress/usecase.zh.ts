@@ -101,6 +101,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Windows",
               link: "/zh/use-cases/windows",
+              collapsed: true,
+              items:[
+                {
+                  text: "Known issues",
+                  link: "/zh/use-cases/windows-issues",
+                },
+              ]
             },
             // {
             //   text: "Redroid",

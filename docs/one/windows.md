@@ -19,6 +19,10 @@ Olares lets you run a full Windows virtual machine directly on your device, givi
 
 This guide walks you through installing the Windows VM, enabling secure networking, and connecting using either a browser or Remote Desktop.
 
+:::warning Known issue after upgrading to 1.12.5
+If you upgraded from Olares 1.12.4 to 1.12.5 and can no longer remotely connect to Windows after the device restarts, see [Known issues](/use-cases/windows-issues.md#windows-cannot-be-remotely-accessed-after-upgrading-from-1124-to-1125).
+:::
+
 ## Learning objectives
 
 By the end of this tutorial, you will learn how to:

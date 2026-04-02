@@ -23,6 +23,11 @@ type mountedPath struct {
 	ReadOnly      bool
 }
 
+type nfsSharedPath struct {
+	Path string `json:"path"`
+	Acl  string `json:"acl"`
+}
+
 func SubpathOfMountedPath(path string) func(mountedPath) bool {
 	return func(mp mountedPath) bool {
 		if mp.Type != SMB {
@@ -52,4 +57,5 @@ const (
 	USB DeviceType = "usb"
 	HDD DeviceType = "hdd"
 	SMB DeviceType = "smb"
+	NFS DeviceType = "nfs"
 )

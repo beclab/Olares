@@ -6,10 +6,12 @@ import (
 	collectlogs "github.com/beclab/Olares/daemon/pkg/commands/collect_logs"
 	connectwifi "github.com/beclab/Olares/daemon/pkg/commands/connect_wifi"
 	"github.com/beclab/Olares/daemon/pkg/commands/install"
+	mountnfs "github.com/beclab/Olares/daemon/pkg/commands/mount_nfs"
 	mountsmb "github.com/beclab/Olares/daemon/pkg/commands/mount_smb"
 	"github.com/beclab/Olares/daemon/pkg/commands/reboot"
 	"github.com/beclab/Olares/daemon/pkg/commands/shutdown"
 	sshpassword "github.com/beclab/Olares/daemon/pkg/commands/ssh_password"
+	umountnfs "github.com/beclab/Olares/daemon/pkg/commands/umount_nfs"
 	umountsmb "github.com/beclab/Olares/daemon/pkg/commands/umount_smb"
 	umountusb "github.com/beclab/Olares/daemon/pkg/commands/umount_usb"
 	"github.com/beclab/Olares/daemon/pkg/commands/uninstall"
@@ -87,6 +89,18 @@ func init() {
 		handlers.RequireOwner(
 			handlers.WaitServerRunning(
 				handlers.RunCommand(handlers.PostSSHPassword, sshpassword.New)))))
+
+	cmd.Post("/mount-nfs", handlers.RequireLocal(
+		handlers.WaitServerRunning(
+			handlers.RunCommand(handlers.PostMountNfsDriver, mountnfs.New))))
+
+	cmd.Post("/umount-nfs", handlers.RequireLocal(
+		handlers.WaitServerRunning(
+			handlers.RunCommand(handlers.PostUmountNfs, umountnfs.New))))
+
+	cmd.Post("/umount-nfs-incluster", handlers.RequireLocal(
+		handlers.WaitServerRunning(
+			handlers.RunCommand(handlers.PostUmountNfsInCluster, umountnfs.New))))
 
 	cmdv2 := cmd.Group("v2")
 	cmdv2.Post("/mount-samba", handlers.RequireLocal(
