@@ -81,31 +81,31 @@ Mac 版 Olares 目前存在以下限制：
 
 执行以下命令来拉取 Olares 的镜像。
 
-将 `<host ip>` 替换为设备的 IP 地址，将 `<olares version>-cn` 替换为想要使用的 Olares 版本：
+将 `<host ip>` 替换为设备的 IP 地址，将 `<olares version>` 替换为想要使用的 Olares 版本：
 
 ```bash{2,9}
 docker run -d --privileged -v oic-data:/var \
-  -e HOST_IP=<host ip> \
+  -e OLARES_HOST_IP=<host ip> \
   -p 80:80 \
   -p 443:443 \
   -p 30180:30180 \
   -p 18088:18088 \
   -p 41641:41641/udp \
   --name oic \
-  beclab/olares:<olares version>-cn
+  beclab/olares:<olares version>
 ```
 其中：
   - `-d`：以分离模式（detached mode）启动容器，允许其在后台运行。
   - `--privileged`：授予容器完整的系统权限。
   - `-v oic-data:/var`：将 Docker 数据卷（`oic-data`）挂载到容器内的 `/var` 目录以持久化数据。
-  - `-e HOST_IP=<host ip>`：设置主机设备的 IP 地址作为环境变量
+  - `-e OLARES_HOST_IP=<host ip>`：设置主机设备的 IP 地址作为环境变量
   - `-p 80:80`：将主机的 `80` 端口映射到容器的 `80` 端口。
   - `-p 443:443`：将主机的 `443` 端口映射到容器的 4`43` 端口。
   - `-p 30180:30180`：将主机的 `30180` 端口映射到容器的 `30180` 端口。
   - `-p 18088:18088`：将宿主机的 `18088` 端口映射到容器的 `18088` 端口。
   - `-p 41641:41641/udp`：将宿主机的 `41641` UDP 端口映射到容器的 `41641` UDP 端口。
   - `--name oic`：将容器命名为 `oic`（Olares in container）方便后续引用。
-  - `beclab/olares:<olares version>-cn`：指定 Olares Docker 镜像及版本，例如`beclab/olares:1.11.5-cn`。
+  - `beclab/olares:<olares version>`：指定 Olares Docker 镜像及版本，例如`beclab/olares:1.11.5-cn`。
 
 容器启动后，你会看到一个容器 ID。
 :::warning 请勿添加 `--rm` 参数

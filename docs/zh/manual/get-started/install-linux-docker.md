@@ -141,10 +141,10 @@ cd ~/olares-config
 
 1. 在 `olares-config` 目录，运行以下命令设置环境变量并启动容器：
    ```bash
-   VERSION=<olares version>-cn HOST_IP=<host ip> docker compose up -d
+   VERSION=<olares version> OLARES_HOST_IP=<host ip> docker compose up -d
    ```
-   - `VERSION=<olares version>-cn`：指定 Olares 镜像的版本。将 `<olares version>-cn` 替换为实际版本，如 `1.11.5-cn`。
-   - `HOST_IP=<host ip>`：指定当前主机设备的 IP 地址。将 `<host ip>` 替换为实际地址。
+   - `VERSION=<olares version>`：指定 Olares 镜像的版本。将 `<olares version>` 替换为实际版本，如 `1.11.5-cn`。
+   - `OLARES_HOST_IP=<host ip>`：指定当前主机设备的 IP 地址。将 `<host ip>` 替换为实际地址。
 
    运行完成后，输出结果如下：
    ```bash
