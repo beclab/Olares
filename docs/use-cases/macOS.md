@@ -1,18 +1,18 @@
 ---
 outline: deep
-description: Run MacOS as a virtual machine on Olares. Learn how to install MacOS from the Market, configure initial settings, and connect via browser-based VNC or VNC client.
+description: Run macOS as a virtual machine on Olares. Learn how to install MacOS from the Market, configure initial settings, and connect via browser-based VNC or VNC client.
 head:
   - - meta
     - name: keywords
-      content: Olares, MacOS, virtual machine, VNC, MacOS VM
+      content: Olares, macOS, virtual machine, VNC, macOS VM
 app_version: "1.0.8"
 doc_version: "1.0"
 doc_updated: "2026-03-25"
 ---
 
-# Run a MacOS VM on your Olares device
+# Run a macOS VM on your Olares device
 
-Olares allows you to run MacOS as a virtual machine (VM) directly on your device. This enables access to Apple-specific applications and workflows from any computer via a web browser or a VNC client.
+Olares allows you to run macOS as a virtual machine (VM) directly on your device. This enables access to Apple-specific applications and workflows from any computer via a web browser or a VNC client.
 
 :::tip System capabilities
 - **Hardware dependency**: The VM performance depends on your CPU. GPU acceleration is not supported.
@@ -22,23 +22,23 @@ Olares allows you to run MacOS as a virtual machine (VM) directly on your device
 ## Learning objectives
 
 By the end of this tutorial, you will learn how to:
-- Install and set up the MacOS VM environment on your Olares device.
-- Access the MacOS VM directly in your web browser or via a VNC app.
+- Install and set up the macOS VM environment on your Olares device.
+- Access the macOS VM directly in your web browser or via a VNC app.
 
-## Install and configure MacOS VM
+## Install and configure macOS VM
 
-MacOS is available as an app in the Olares Market.
+macOS is available as an app in the Olares Market.
 
-### Install MacOS
+### Install macOS
 
 1. Open Market and search for "macOS".
 
-   ![MacOS app in Market](/images/manual/use-cases/macos.png#bordered)
+   ![macOS app in Market](/images/manual/use-cases/macos.png#bordered)
 
 2. Click **Get**, and then click **Install**.
 3. When prompted, set the environment variables:
-    - **VERSION**: Select your preferred MacOS version from the dropdown list.
-    - **DISK_SIZE**: Allocate disk space for MacOS.
+    - **VERSION**: Select your preferred macOS version from the dropdown list.
+    - **DISK_SIZE**: Allocate disk space for macOS.
 
    ![Set environment variables](/images/manual/use-cases/macos-set-env-var.png#bordered){width=65%}
 
@@ -46,7 +46,7 @@ MacOS is available as an app in the Olares Market.
 
 ### Format the virtual disk
 
-1. Open the MacOS app from the Launchpad.
+1. Open the macOS app from the Launchpad.
 
    :::tip First launch
    On the first launch, Olares automatically downloads and installs the system image. This might take several minutes depending on your network speed.
@@ -54,7 +54,7 @@ MacOS is available as an app in the Olares Market.
 
 2. When the **Recovery** screen appears, select **Disk Utility** from the main menu, and then click **Continue**.
 
-   ![MacOS Recovery menu](/images/manual/use-cases/macos-recovery-menu.png#bordered){width=50%}
+   ![macOS Recovery menu](/images/manual/use-cases/macos-recovery-menu.png#bordered){width=50%}
 
 3. In the left sidebar, select the **Apple Inc. VirtIO Block Media** with the largest capacity, and then click **Erase** on the toolbar.
 
@@ -73,17 +73,17 @@ MacOS is available as an app in the Olares Market.
 
 6. Close the **Disk Utility** window to return to the main menu.
 
-### Install MacOS system
+### Install macOS system
 
 1. From the main menu, select **Reinstall macOS**, and then click **Continue**.
 
-   ![Reinstall MacOS](/images/manual/use-cases/macos-reinstall.png#bordered){width=50%}
+   ![Reinstall macOS](/images/manual/use-cases/macos-reinstall.png#bordered){width=50%}
 
 2. Accept the license agreement.
 3. Select the disk you just formatted, and then click **Continue**.
 4. Wait for the installation to finish, which takes typically 20-40 minutes.
 
-   ![MacOS installation progress](/images/manual/use-cases/macos-installing.png#bordered){width=60%}
+   ![macOS installation progress](/images/manual/use-cases/macos-installing.png#bordered){width=60%}
 
 ### Complete initial setup
 
@@ -92,15 +92,15 @@ After the system installation finishes:
 1. Follow the prompts for region, language, and accessibility settings.
 2. **Migration Assistant**: Select **Not Now** in the lower left corner.
 3. **Sign In with Your Apple ID**: Select **Set Up Later** in the lower left corner.
-4. Set up a username and password for the MacOS account. For the remaining setup steps, you can skip or accept the defaults.
+4. Set up a username and password for the macOS account. For the remaining setup steps, you can skip or accept the defaults.
 
-   ![MacOS desktop](/images/manual/use-cases/macos-desktop.png#bordered)
+   ![macOS desktop](/images/manual/use-cases/macos-desktop.png#bordered)
 
-## Access the MacOS VM
+## Access the macOS VM
 
 ### Access from browser
 
-Open the MacOS app from the Launchpad to launch the VM directly in your browser. 
+Open the macOS app from the Launchpad to launch the VM directly in your browser. 
 
 Use this for initial setup, quick access, or troubleshooting.
 
@@ -110,8 +110,8 @@ A dedicated VNC client provides better stability, lower latency, and better keyb
 
 #### Step 1: Obtain connection details
 
-:::warning Multiple MacOS instances
-Each MacOS instance uses a unique port. If you have cloned the MacOS app, ensure you check the **ACLs** section for the specific instance you want to access.
+:::warning Multiple macOS instances
+Each macOS instance uses a unique port. If you have cloned the MacOS app, ensure you check the **ACLs** section for the specific instance you want to access.
 :::
 
 1. Open Settings, and then go to **Applications** > **MacOS**.
@@ -161,7 +161,7 @@ You must be on the Olares secure network to connect via VNC Viewer.
 4. Click **File** > **New connection**.   
 5. Enter the address obtained from **Step1**. In this case, it is `43b9d8ea.alexmiles.olares.com:49238`.
 
-   ![New connection in VNC Viewer](/images/manual/use-cases/vnc-new-connection.png#bordered){width=60%}
+   ![New connection in VNC Viewer on macOS](/images/manual/use-cases/vnc-new-connection.png#bordered){width=60%}
 
 6. Click **OK**. The connection is saved in the VNC Viewer.
 
@@ -171,24 +171,26 @@ You must be on the Olares secure network to connect via VNC Viewer.
 8. If the Unencrypted connection warning appears, click **Continue**.
 9. When prompted, enter the username and password you created earlier. 
 
-      You are now connected to your MacOS VM via the VNC Viewer.
+      You are now connected to your macOS VM via the VNC Viewer.
 
-10. To disconnect from the MacOS VM, close the VNC Viewer window. 
+10. To disconnect from the macOS VM, close the VNC Viewer window. 
    
-      The MacOS VM continues running on your Olares device and remains ready for you to reconnect.
+      The macOS VM continues running on your Olares device and remains ready for you to reconnect.
 
 </template>
 <template #Windows>
 
 1. Download and install [RealVNC Viewer](https://www.realvnc.com/en/connect/download/viewer/).
-2. Open VNC Viewer.
-3. Click **File** > **New connection**.
-4. Enter the address obtained from **Step1**. 
-5. Save the connection.
+2. Open VNC Viewer from your computer and sign in with your RealVNC account. If you do not have the account, create one and then sign in.
+3. Click **File** > **New connection**. 
+4. Enter the address obtained from **Step1**. In this case, it is `43b9d8ea.alexmiles.olares.com:49238`.
+
+   ![New connection in VNC Viewer on Windows](/images/manual/use-cases/vnc-viewer-windows.png#bordered){width=60%}
+5. Click **OK**. The connection is saved in the VNC Viewer.
 6. Double-click the saved connection to connect.
-7. To disconnect from the MacOS VM, close the VNC Viewer window. 
+7. To disconnect from the macOS VM, close the VNC Viewer window. 
    
-      The MacOS VM continues running on your Olares device and remains ready for you to reconnect.
+      The macOS VM continues running on your Olares device and remains ready for you to reconnect.
 
 </template>
 </Tabs>
@@ -199,18 +201,18 @@ You must be on the Olares secure network to connect via VNC Viewer.
 
 While you can sign in with an Apple ID during setup, some Apple services might not function correctly in a virtualized environment. For best results, use local accounts or skip Apple ID setup.
 
-### What MacOS versions are supported?
+### What macOS versions are supported?
 
 Currently supported versions:
-- MacOS 14 Sonoma
-- MacOS 13 Ventura
-- MacOS 12 Monterey
-- MacOS 11 Big Sur
-- MacOS 10 Catalina
+- macOS 14 Sonoma
+- macOS 13 Ventura
+- macOS 12 Monterey
+- macOS 11 Big Sur
+- macOS 10 Catalina
 
 ### The connection closed unexpectedly
 
-When you attempt to connect with the MacOS VM from the VNC Viewer, the error `The connection closed unexpectedly` occurs.
+When you attempt to connect with the macOS VM from the VNC Viewer, the error `The connection closed unexpectedly` occurs.
 
 This usually happens when the LarePass VPN is disabled. 
 
