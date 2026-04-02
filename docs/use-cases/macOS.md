@@ -1,6 +1,6 @@
 ---
 outline: deep
-description: Run MacOS as a virtual machine on Olares. Learn how to install macOS from the Market, configure initial settings, and connect via browser-based VNC or VNC client.
+description: Run MacOS as a virtual machine on Olares. Learn how to install MacOS from the Market, configure initial settings, and connect via browser-based VNC or VNC client.
 head:
   - - meta
     - name: keywords
@@ -23,15 +23,7 @@ Olares allows you to run MacOS as a virtual machine (VM) directly on your device
 
 By the end of this tutorial, you will learn how to:
 - Install and set up the MacOS VM on your Olares device.
-- Access the MacOS VM using the browser-based user interface or the VNC View.
-
-## Prerequisites
-
-- **Hardware minimums**:
-  - CPU: 4 cores
-  - Memory: 6 GB RAM
-  - Disk: 128 GB free space
-- **Network**: [LarePass desktop client is installed](../manual/larepass/index.md).
+- Access the MacOS VM directly in your web browser or via a VNC app.
 
 ## Install and configure MacOS VM
 
@@ -194,7 +186,7 @@ Each MacOS instance uses a unique port. If you have cloned the MacOS app, ensure
 
    a. Click **File** > **New connection**.
 
-   b. Enter the address with port number you obtained from the ACLs section.
+   b. Enter the address obtained from **Step1**. 
 
    c. Save the connection.
 
