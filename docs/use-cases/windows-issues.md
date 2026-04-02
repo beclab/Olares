@@ -21,7 +21,7 @@ To restore remote access, update the access control settings and restart the req
 2. In the left sidebar, under **Terminal**, click **Olares**.
     ![Olares terminal](/images/developer/develop/controlhub-terminal.png#bordered){width=90%}
 
-3. Run the following commands one at a time. Replace `<olaresid>` with your Olares ID, which is the part before `@` in your Olares address. For example, in `alice123@olares.com`, the Olares ID is `alice123`.
+3. Run the following commands one at a time. Replace `<username>` with the part before `@` in your Olares ID. For example, if your Olares ID is `alice123@olares.com`, then `<username>` is `alice123`.
 
     ```bash
     kubectl annotate configmap tailscale-acl -n user-space-<username> tailscale-acl-md5-
