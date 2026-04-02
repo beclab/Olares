@@ -105,7 +105,7 @@ docker run -d --privileged -v oic-data:/var \
   - `-p 18088:18088`：将宿主机的 `18088` 端口映射到容器的 `18088` 端口。
   - `-p 41641:41641/udp`：将宿主机的 `41641` UDP 端口映射到容器的 `41641` UDP 端口。
   - `--name oic`：将容器命名为 `oic`（Olares in container）方便后续引用。
-  - `beclab/olares:<olares version>`：指定 Olares Docker 镜像及版本，例如`beclab/olares:1.11.5-cn`。
+  - `beclab/olares:<olares version>`：指定 Olares Docker 镜像及版本，例如`beclab/olares:1.12.5`。
 
 容器启动后，你会看到一个容器 ID。
 :::warning 请勿添加 `--rm` 参数

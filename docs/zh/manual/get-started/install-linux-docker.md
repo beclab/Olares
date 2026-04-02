@@ -143,7 +143,7 @@ cd ~/olares-config
    ```bash
    VERSION=<olares version> OLARES_HOST_IP=<host ip> docker compose up -d
    ```
-   - `VERSION=<olares version>`：指定 Olares 镜像的版本。将 `<olares version>` 替换为实际版本，如 `1.11.5-cn`。
+   - `VERSION=<olares version>`：指定 Olares 镜像的版本。将 `<olares version>` 替换为实际版本，如 `1.12.5`。
    - `OLARES_HOST_IP=<host ip>`：指定当前主机设备的 IP 地址。将 `<host ip>` 替换为实际地址。
 
    运行完成后，输出结果如下：
@@ -179,7 +179,7 @@ cd ~/olares-config
    ```bash
    CONTAINER ID   IMAGE                         COMMAND                  CREATED              STATUS              PORTS                   NAMES
    28e86c473750   beclab/olaresd:proxy-v0.1.0   "/mdns-agent"            About a minute ago   Up About a minute                           olares-olaresd-proxy-1
-   5fd68a8709ad   beclab/olares:1.11.5-cn       "/usr/local/bin/entr…"   2 minutes ago        Up About a minute   0.0.0.0:80->80/tcp...   olares-olares-1
+   5fd68a8709ad   beclab/olares:1.12.5       "/usr/local/bin/entr…"   2 minutes ago        Up About a minute   0.0.0.0:80->80/tcp...   olares-olares-1
    ```
 
 <!--@include: ./install-and-activate-olares.md-->
