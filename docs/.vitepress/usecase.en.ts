@@ -67,6 +67,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             //   link: "/use-cases/dify",
             // },
             {
+              text: "LLMFit",
+              link: "/use-cases/llmfit",
+            },
+            {
               text: "LobeHub (LobeChat)",
               link: "/use-cases/lobechat",
             },
