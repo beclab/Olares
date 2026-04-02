@@ -102,6 +102,9 @@ func init() {
 		handlers.WaitServerRunning(
 			handlers.RunCommand(handlers.PostUmountNfsInCluster, umountnfs.New))))
 
+	cmd.Post("/list-nfs", handlers.RequireLocal(
+		handlers.WaitServerRunning(handlers.PostListNfs)))
+
 	cmdv2 := cmd.Group("v2")
 	cmdv2.Post("/mount-samba", handlers.RequireLocal(
 		handlers.WaitServerRunning(
