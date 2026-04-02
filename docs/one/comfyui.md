@@ -50,7 +50,6 @@ To generate content, you must first download the specific model package.
 3. For video generation, select **Wan 2.2 Text to Video 14B Package** and click **GET ALL** to download necessary models.
 
    ![Install model package](/images/one/comfyui-install-model-package2.png#bordered){width=90%}
-   <p style="text-align: center; color: #999; font-size: 14px;">Resource packages in ComfyUI Launcher</p>
    <!-- ![Install model package](/images/one/comfyui-install-model-package.png#bordered) -->
 
 4. When the download completes, click **RESTART** on the **Home** page for the changes to take effect.
@@ -67,7 +66,7 @@ To generate content, you must first download the specific model package.
 This section uses the Z-Image Turbo workflow to help you get started.
 
 1. In the ComfyUI client, click **Templates** in the left navigation bar, then select **Image** under **GENERATION TYPE**.
-2. Search for "Z-Image-Turbo Text to Image", then select **Z-Image-Turbo Text to Image** from the results to open the workflow.
+2. Search for "Z-Image", then select **Z-Image-Turbo Text to Image** from the results to open the workflow.
    ![Z-Image Turbo template](/images/one/comfyui-tti-template.png#bordered)
 
 3. Update the text prompt in the same node to describe the image you want to generate.
@@ -103,7 +102,7 @@ This section uses the `nunchaku-flux.1-dev-qencoder` workflow to help you get st
 This section uses the Wan 2.2 workflow.
 
 1. In the ComfyUI client, click **Templates** in the left navigation bar, then select **Video** under **GENERATION TYPE**.
-2. Search for "Wan 2.2 14B Text to Video", then select **Wan 2.2 14B Text to Video** from the results to open the workflow.
+2. Search for "Wan 2.2", then select **Wan 2.2 14B Text to Video** from the results to open the workflow.
    ![Open Wan 2.2 workflow](/images/one/comfyui-video-templates.png#bordered)
 
 3. In the workflow, locate the **CLIP Text Encode (Positive Prompt)** node and edit the prompt as needed. You can revise the full prompt or only the parts you want to change. If needed, you can also adjust the **CLIP Text Encode (Negative Prompt)** node.

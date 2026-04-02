@@ -48,7 +48,6 @@ Before generating images, you need to prepare models. This guide uses Stable Dif
 3. Find **Stable Diffusion base package** and click **VIEW**.
 
    ![Stable Diffusion base package](/images/manual/use-cases/comfyui-base-package2.png#bordered){width=90%}
-   <p style="text-align: center; color: #999; font-size: 14px;">Resource packages in ComfyUI Launcher</p>
 4. On the package details page, click **GET ALL** to start downloading. You can track the progress in the status bar.
 
    ![Download progress](/images/manual/use-cases/comfyui-download-progress1.png#bordered){width=90%}
