@@ -151,6 +151,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "NocoDB",
+              link: "/use-cases/nocodb",
+            },
+            {
               text: "Stirling PDF",
               link: "/use-cases/stirling-pdf",
             },
