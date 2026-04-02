@@ -78,3 +78,18 @@ func FilterBySerial(serial string) func(dev storageDevice) bool {
 		return dev.IDSerial == serial || dev.IDSerialShort == serial
 	}
 }
+
+func MountNfsDriver(ctx context.Context, mountBaseDir, mountPath string, nfsServer, nfsPath string) error {
+	klog.Warning("not implement")
+	return nil
+}
+
+func UmountNfsDriver(ctx context.Context, mountDir string) error {
+	klog.Warning("not implement")
+	return nil
+}
+
+func ListNfsDriver(ctx context.Context, nfsServer string) ([]nfsSharedPath, error) {
+	klog.Warning("not implement")
+	return nil, nil
+}
