@@ -11,7 +11,7 @@ services:
       - "18088:18088"    
       - "41641:41641/udp"
     environment:
-      - HOST_IP=${HOST_IP}
+      - OLARES_HOST_IP=${HOST_IP}
 
   olaresd-proxy:
     image: beclab/olaresd:proxy-v0.1.0

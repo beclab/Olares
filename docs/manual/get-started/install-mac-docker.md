@@ -63,7 +63,7 @@ To pull the image of Olares, execute the following command.
 Replace `<host ip>` with your device's IP address and `<olares version>` with the desired version of Olares:
 ```bash{2,9}
 docker run -d --privileged -v oic-data:/var \
-  -e HOST_IP=<host ip> \
+  -e OLARES_HOST_IP=<host ip> \
   -p 80:80 \
   -p 443:443 \
   -p 30180:30180 \
@@ -76,7 +76,7 @@ where:
   - `-d`: Starts the container in detached mode to allow it to run in the background.
   - `--privileged`: Grants the container elevated privileges.
   - `-v oic-data:/var`: Binds a Docker volume (`oic-data`) to the `/var` directory inside the container to persist data.
-  - `-e HOST_IP=<host ip>`: Specifies the host device's IP address as an environment variable.
+  - `-e OLARES_HOST_IP=<host ip>`: Specifies the host device's IP address as an environment variable.
   - `-p 80:80`: Maps port `80` on the host to port `80` in the container.
   - `-p 443:443`: Maps port `443` on the host to port `443` in the container.
   - `-p 30180:30180`: Maps port `30180` on the host to port `30180` in the container.
