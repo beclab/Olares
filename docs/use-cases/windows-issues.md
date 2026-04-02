@@ -24,9 +24,9 @@ To restore remote access, update the access control settings and restart the req
 3. Run the following commands one at a time. Replace `<olaresid>` with your Olares ID, which is the part before `@` in your Olares address. For example, in `alice123@olares.com`, the Olares ID is `alice123`.
 
     ```bash
-    kubectl annotate configmap tailscale-acl -n user-space-<olaresid> tailscale-acl-md5-
+    kubectl annotate configmap tailscale-acl -n user-space-<username> tailscale-acl-md5-
 
-    kubectl patch deployment headscale -n user-space-<olaresid> --type=json -p='[{"op":"remove","path":"/spec/template/metadata/annotations/tailscale-acl-md5"}]'
+    kubectl patch deployment headscale -n user-space-<username> --type=json -p='[{"op":"remove","path":"/spec/template/metadata/annotations/tailscale-acl-md5"}]'
 
     kubectl rollout restart sts app-service -n os-framework
     ```
