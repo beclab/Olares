@@ -77,7 +77,7 @@ Use the Immich mobile app to upload the photos on your mobile device to the Immi
 
 2. Open LarePass on your mobile device and enable the VPN to ensure a secure connection to your Olares.
 
-      ![Enable LarePass VPN](/images/manual/get-started/larepass-vpn-mobile.png#bordered)
+      ![Enable LarePass VPN](/images/manual/use-cases/alex-larepass-vpn-mobile.png#bordered)
 
 3. Open the Immich mobile app, and then enter your Immich server URL, admin email, and password to log in. The photos you uploaded from the web UI are displayed.
 
