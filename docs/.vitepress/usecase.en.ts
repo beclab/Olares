@@ -24,6 +24,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/openclaw-skills",
                 },
                 {
+                  text: "Enable local file access",
+                  link: "/use-cases/openclaw-local-access",
+                },                
+                {
                   text: "Upgrade OpenClaw",
                   link: "/use-cases/openclaw-upgrade",
                 },

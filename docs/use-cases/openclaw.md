@@ -20,6 +20,7 @@ By the end of this guide, you are able to:
 - Integrate OpenClaw with Discord.
 - Optional: Enable the web search capability using Brave Search.
 - Manage skills and plug-ins.
+- Optional: Grant OpenClaw access to local files.
 
 ## Prerequisites
 
