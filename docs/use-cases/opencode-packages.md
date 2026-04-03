@@ -48,12 +48,6 @@ To install a system package:
 pkg-install <package>
 ```
 
-For example, to install `ffmpeg`:
-
-```bash
-pkg-install ffmpeg
-```
-
 To install a specific version:
 
 ```bash
@@ -74,7 +68,7 @@ OpenCode runs on Alpine Linux. Package names may differ from those on Debian or 
 
 You can also install system packages through the OpenCode chat interface. Send a message such as "Install ffmpeg", and the `system-admin` skill runs the appropriate `pkg-install` command automatically.
 
-![Install packages through AI chat](/images/manual/use-cases/opencode-ai-pkg-install.png#bordered)
+![Install packages through AI chat](/images/manual/use-cases/opencode-ai-pkg-install.png#bordered){width=50%}
 
 If the skill does not activate, load it manually by entering the following command in the chat:
 
@@ -82,7 +76,7 @@ If the skill does not activate, load it manually by entering the following comma
 /skill load system-admin
 ```
 
-![Manually load system-admin skill](/images/manual/use-cases/opencode-load-system-admin.png#bordered)
+![Manually load system-admin skill](/images/manual/use-cases/opencode-load-system-admin.png#bordered){width=50%}
 
 ## Language packages
 

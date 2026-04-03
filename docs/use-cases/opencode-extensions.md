@@ -117,8 +117,11 @@ Place `.js` or `.ts` files in a plugin directory. OpenCode loads them automatica
 
 | Plugin | Description |
 |:-------|:------------|
-| `opencode-helicone-session` | Session tracking and analytics via Helicone |
-| `opencode-wakatime` | Coding activity tracking via WakaTime |
+| `opencode-wakatime` | Track OpenCode usage time |
+| `opencode-firecrawl` | Web crawling and search |
+| `oh-my-opencode` | Background Agent, LSP/AST tools, and preset Agents |
+| `opencode-supermemory` | Cross-session persistent memory |
+| `opencode-pty` | Let AI run and interact with background processes in PTY |
 
 ## Learn more
 
