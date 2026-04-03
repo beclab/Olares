@@ -39,8 +39,8 @@ After permissions are granted, Olares mounts your **Home** and **External** dire
 - `/home/userdata/external/`
 
 You must tell the agent about these locations. There are two ways to do this:
-- Simply chat with the agent and ask it to remember them.
-- (Recommended) Manually add the access rules to its core files by using the following steps.
+- (Recommended) Simply chat with the agent and ask it to remember them.
+- Manually add the access rules to its core files by using the following steps.
 
 1. Open the Control UI.
 2. Go to **Agents** > **Files**, and then click **TOOLS** in the **Core Files** area.
