@@ -56,5 +56,5 @@ llmfit
 
 ## Learn more
 
-- [Download and run local AI models via Ollama](ollama.md): Set up Ollama to download and serve local LLM models.
-- [Set up Open WebUI with Ollama](openwebui-ollama.md): Add a graphical chat interface for your local models.
+- [Download and run local AI models via Ollama](ollama.md)
+- [Set up Open WebUI with Ollama](openwebui-ollama.md)
