@@ -61,10 +61,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             //   link: "/zh/use-cases/dify",
             // },
             {
-<<<<<<< docs/feat/add-llmfit
               text: "LLMFit",
               link: "/zh/use-cases/llmfit",
-=======
+            },
+            {  
               text: "OpenCode",
               link: "/zh/use-cases/opencode",
               collapsed: true,
@@ -82,7 +82,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/opencode-issues",
                 },
               ]
->>>>>>> main
             },
             {
               text: "LobeHub (LobeChat)",

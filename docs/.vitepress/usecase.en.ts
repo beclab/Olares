@@ -73,6 +73,8 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "LLMFit",
               link: "/use-cases/llmfit",
+            },
+            {  
               text: "OpenCode",
               link: "/use-cases/opencode",
               collapsed: true,
