@@ -788,6 +788,15 @@ spec:
             label_replace(node_disk_smartctl_info, "node", "$1", "instance", "(.*)")
           record: node:node_disk_smartctl_info
         - expr: |
+            label_replace(node_rapl_package_joules_total, "node", "$1", "instance", "(.*)")
+          record: node:node_rapl_package_joules_total
+        - expr: |
+            label_replace(node_rapl_core_joules_total, "node", "$1", "instance", "(.*)")
+          record: node:node_rapl_core_joules_total
+        - expr: |
+            label_replace(node_disk_lsblk_info, "node", "$1", "instance", "(.*)")
+          record: node:node_disk_lsblk_info
+        - expr: |
             label_replace(node_disk_temp_celsius, "node", "$1", "instance", "(.*)")
           record: node:node_disk_temp_celsius
         - expr: |

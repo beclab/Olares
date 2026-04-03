@@ -403,3 +403,61 @@ func (r *rebootIfNeeded) Execute(runtime connector.Runtime) error {
 	}
 	return nil
 }
+
+// applyNodeExporterServiceMonitorAction applies embedded prometheus node-exporter ServiceMonitor
+type applyNodeExporterServiceMonitorAction struct {
+	common.KubeAction
+}
+
+func (a *applyNodeExporterServiceMonitorAction) Execute(runtime connector.Runtime) error {
+	kubectlpath, err := util.GetCommand(common.CommandKubectl)
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "kubectl not found")
+	}
+	manifest := path.Join(runtime.GetInstallerDir(), cc.BuildFilesCacheDir, cc.BuildDir, "prometheus", "node-exporter", "node-exporter-serviceMonitor.yaml")
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectlpath, manifest), false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "apply node-exporter ServiceMonitor failed")
+	}
+	return nil
+}
+
+// applyKubernetesPrometheusRuleAction applies embedded prometheus kubernetes prometheusRule
+type applyKubernetesPrometheusRuleAction struct {
+	common.KubeAction
+}
+
+func (a *applyKubernetesPrometheusRuleAction) Execute(runtime connector.Runtime) error {
+	kubectlpath, err := util.GetCommand(common.CommandKubectl)
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "kubectl not found")
+	}
+	manifest := path.Join(runtime.GetInstallerDir(), cc.BuildFilesCacheDir, cc.BuildDir, "prometheus", "kubernetes", "kubernetes-prometheusRule.yaml")
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectlpath, manifest), false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "apply kubernetes prometheusRule failed")
+	}
+	return nil
+}
+
+func upgradeNodeExporterServiceMonitor() []task.Interface {
+	return []task.Interface{
+		// prometheus node-exporter ServiceMonitor
+		&task.LocalTask{
+			Name:   "ApplyNodeExporterServiceMonitor",
+			Action: new(applyNodeExporterServiceMonitorAction),
+			Retry:  5,
+			Delay:  5 * time.Second,
+		},
+	}
+}
+
+func upgradeKubernetesPrometheusRule() []task.Interface {
+	return []task.Interface{
+		// prometheus kubernetes prometheusRule
+		&task.LocalTask{
+			Name:   "ApplyKubernetesPrometheusRule",
+			Action: new(applyKubernetesPrometheusRuleAction),
+			Retry:  5,
+			Delay:  5 * time.Second,
+		},
+	}
+}
