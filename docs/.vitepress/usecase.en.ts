@@ -71,6 +71,25 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             //   link: "/use-cases/dify",
             // },
             {
+              text: "OpenCode",
+              link: "/use-cases/opencode",
+              collapsed: true,
+              items: [
+                {
+                  text: "Manage packages",
+                  link: "/use-cases/opencode-packages",
+                },
+                {
+                  text: "Skills and plugins",
+                  link: "/use-cases/opencode-extensions",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/opencode-issues",
+                },
+              ]
+            },
+            {
               text: "LobeHub (LobeChat)",
               link: "/use-cases/lobechat",
             },
