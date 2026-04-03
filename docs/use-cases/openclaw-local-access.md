@@ -38,7 +38,9 @@ After permissions are granted, Olares mounts your **Home** and **External** dire
 - `/home/userdata/home/`
 - `/home/userdata/external/`
 
-You must tell the agent about these locations. The recommended way is to add these access rules to its core files.
+You must tell the agent about these locations. There are two ways to do this:
+- Simply chat with the agent and ask it to remember them.
+- (Recommended) Manually add the access rules to its core files by using the following steps.
 
 1. Open the Control UI.
 2. Go to **Agents** > **Files**, and then click **TOOLS** in the **Core Files** area.
@@ -69,7 +71,7 @@ You must tell the agent about these locations. The recommended way is to add the
 
 Verify that OpenClaw can read and write to your Olares file system.
 
-1. Go to the **Chat** page in the **Control UI**, or use your connected Discord bot.
+1. Go to the **Chat** page in the Control UI, or use your connected Discord bot.
 2. Send a message to the agent like:
 
     ```text
