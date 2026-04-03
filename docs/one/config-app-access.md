@@ -9,15 +9,17 @@ Each app on Olares has an entrance that controls how users access it. You can co
 
 ## Before you begin
 
-The access policies mainly consist of the following settings:
+Access policies have two settings:
 
-- **Authentication level**: Defines when authentication is required. The app can be private, accessible over VPN without login, or fully public.
+- **Authentication level**: Defines when authentication is required.
 - **Authentication model**: Defines how users authenticate.
 
+The following table shows the available combinations and their access behavior:
+
 | Authentication level | Authentication models | Access behavior |
-| -- | -- | -- |
+| --- | --- | --- |
 | **Private** | **System**, **One factor**, **Two factor** | All users must authenticate before accessing the app. |
-| **Internal** | **System**, **One factor**, **Two factor** | Authentication is bypassed only with LarePass VPN enabled. All other access requires authentication. |
+| **Internal** | **System**, **One factor**, **Two factor** | Users on LarePass VPN skip authentication. All other access requires authentication. |
 | **Public** | **None** | Anyone can access the app without logging in. |
 
 ## Set the access policy
@@ -39,12 +41,14 @@ The access policies mainly consist of the following settings:
    - **None** for no authentication.
 
    :::warning
-   **None** is available only when the **Authentication level** is set to **Public**. Use it carefully, especially for apps exposed to the public internet.
+   **None** is available only when the **Authentication level** is set to **Public**. This means anyone with the URL can access the app without logging in.
    :::
 
 6. Click **Confirm** to save your changes.
 
 ## Resources
-
 - [Entrance concept](/developer/concepts/network.md#entrance): Learn more about the technical background.
-- [Activate custom domain name](/manual/olares/settings/custom-app-domain.md#custom-domain-name): Learn how to bind a custom domain to an app entrance.
+- [Customize app domain](/manual/olares/settings/custom-app-domain.md#custom-domain-name): Learn how to use your own domain name to access your apps.
+
+- [Entrance concept](/developer/concepts/network.md#entrance)
+- [Customize app domain](/manual/olares/settings/custom-app-domain.md#custom-domain-name)

@@ -12,20 +12,20 @@ On Olares One, you can create multiple user accounts to share the device securel
 Determine the role to assign to the user based on the following permissions:
 
 | **Permission** | **Super admin** | **Admin** | **Members** |
-|--|--|--|--|
+|---|---|---|---|
 | Create users | Admin and Members | Members | — |
 | Remove users | Admin and Members | Members | — |
 | Resource access | Use all resources | Use allocated resources | Use allocated resources |
 
 ## Prerequisites
 
-**Hardware**<br>
+**Hardware**
 - Your Olares One has sufficient available CPU and memory resources.
 
-**User permissions**<br>
+**User permissions**
 - You are logged in as **Super admin** or **Admin**.
 
-**Olares ID**<br>
+**Olares ID**
 - The new user has a valid Olares ID that is not already activated on another Olares device.
 - The domain part of the new user's Olares ID matches the current domain.
 
@@ -50,29 +50,22 @@ Determine the role to assign to the user based on the following permissions:
 The invited users can activate their access remotely. For full steps, see [Join an Olares](/manual/get-started/join-olares).
 :::
 
-6. To check the user's activate status, go to the **Users** page.
-![View user lists](/images/one/settings-create-users.png#bordered){width=85%}
+6. To check the user's activation status, go to the **Users** page.
+   ![View user lists](/images/one/settings-create-users.png#bordered){width=85%}
 
 ## Manage existing users
 
 After a user is created, you can view account details, adjust resource limits, reset the password, or remove the user.
 
-
 1. Go to **Settings** > **Users**.
 2. Select a user to open the **Account info** page.
-   ![Manage users](/images/one/settings-manage-user.png#bordered){width=90%}
+3. To adjust resource limits, click **Modify limits**. Update the CPU or memory values, then click **OK**.
+4. To reset the password, click **Reset password**, then share the generated password with the user.
 
-- **Adjust resource limits**
-   
-   Click **Modify limits**. Update the CPU or memory values, then click **OK**.
-- **Reset the password**
-   
-   Click **Reset password**, then share the generated password with the user. 
-   
-   A higher-level role can reset passwords for lower-level roles. Super admins can reset passwords for Admins and Members. Admins can reset passwords for Members.
-- **Remove the user**
+   Super admins can reset passwords for Admins and Members. Admins can reset passwords for Members.
+5. To remove the user, click **Delete user**, then click **OK** to confirm.
 
-   Click **Delete user**, then click **OK** to confirm.
+![Manage users](/images/one/settings-manage-user.png#bordered){width=90%}
 
 ## Resources
 
