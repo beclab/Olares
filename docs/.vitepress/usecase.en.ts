@@ -194,5 +194,15 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
           ]
         },
+        {
+          text: "Utilities",
+          collapsed: false,
+          items: [
+            {
+              text: "FlareSolverr",
+              link: "/use-cases/flaresolverr",
+            },
+          ]
+        },
       ],
     }

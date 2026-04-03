@@ -184,5 +184,15 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
           ],
         },
+        {
+          text: "工具",
+          collapsed: false,
+          items: [
+            {
+              text: "FlareSolverr",
+              link: "/zh/use-cases/flaresolverr",
+            },
+          ],
+        },
       ],
     };
