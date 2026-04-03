@@ -49,6 +49,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "Context7",
+              link: "/zh/use-cases/context7",
+            },
+            {
               text: "Ollama",
               link: "/zh/use-cases/ollama",
             },
@@ -57,8 +61,28 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             //   link: "/zh/use-cases/dify",
             // },
             {
+<<<<<<< docs/feat/add-llmfit
               text: "LLMFit",
               link: "/zh/use-cases/llmfit",
+=======
+              text: "OpenCode",
+              link: "/zh/use-cases/opencode",
+              collapsed: true,
+              items: [
+                {
+                  text: "包管理",
+                  link: "/zh/use-cases/opencode-packages",
+                },
+                {
+                  text: "技能与插件",
+                  link: "/zh/use-cases/opencode-extensions",
+                },
+                {
+                  text: "常见问题",
+                  link: "/zh/use-cases/opencode-issues",
+                },
+              ]
+>>>>>>> main
             },
             {
               text: "LobeHub (LobeChat)",
@@ -105,6 +129,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Windows",
               link: "/zh/use-cases/windows",
+              collapsed: true,
+              items:[
+                {
+                  text: "Known issues",
+                  link: "/zh/use-cases/windows-issues",
+                },
+              ]
             },
             // {
             //   text: "Redroid",
@@ -144,6 +175,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           text: "效率",
           collapsed: false,
           items: [
+            {
+              text: "Excalidraw",
+              link: "/zh/use-cases/excalidraw",
+            },
             {
               text: "Stirling PDF",
               link: "/zh/use-cases/stirling-pdf",

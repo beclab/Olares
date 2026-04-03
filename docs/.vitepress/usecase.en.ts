@@ -59,6 +59,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "Context7",
+              link: "/use-cases/context7",
+            },
+            {
               text: "Ollama",
               link: "/use-cases/ollama",
             },
@@ -69,6 +73,23 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "LLMFit",
               link: "/use-cases/llmfit",
+              text: "OpenCode",
+              link: "/use-cases/opencode",
+              collapsed: true,
+              items: [
+                {
+                  text: "Manage packages",
+                  link: "/use-cases/opencode-packages",
+                },
+                {
+                  text: "Skills and plugins",
+                  link: "/use-cases/opencode-extensions",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/opencode-issues",
+                },
+              ]
             },
             {
               text: "LobeHub (LobeChat)",
@@ -115,6 +136,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Windows",
               link: "/use-cases/windows",
+              collapsed: true,
+              items: [
+                {
+                  text: "Known issues",
+                  link: "/use-cases/windows-issues",
+                }
+              ]
             },
             // {
             //   text: "Redroid",
@@ -154,6 +182,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           text: "Productivity",
           collapsed: false,
           items: [
+            {
+              text: "Excalidraw",
+              link: "/use-cases/excalidraw",
+            },
             {
               text: "Stirling PDF",
               link: "/use-cases/stirling-pdf",

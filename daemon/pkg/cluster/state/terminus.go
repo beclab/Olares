@@ -104,7 +104,8 @@ func (n NotInstalledValidator) ValidateOp(op commands.Interface) error {
 	switch op.OperationName() {
 	case commands.Install, commands.ChangeIp, commands.Shutdown,
 		commands.Reboot, commands.ConnectWifi, commands.ChangeHost,
-		commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword:
+		commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -119,7 +120,8 @@ func (u UninitializedValidator) ValidateOp(op commands.Interface) error {
 	case commands.Initialize, commands.ChangeIp, commands.Reboot,
 		commands.Shutdown, commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
 		commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.CreateUpgradeTarget, commands.SetSSHPassword:
+		commands.CreateUpgradeTarget, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -134,7 +136,8 @@ func (u InitializingValidator) ValidateOp(op commands.Interface) error {
 	case commands.ChangeIp, commands.Reboot,
 		commands.Shutdown, commands.Uninstall,
 		commands.ConnectWifi, commands.ChangeHost,
-		commands.CollectLogs, commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword:
+		commands.CollectLogs, commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -149,7 +152,8 @@ func (u UpgradingValidator) ValidateOp(op commands.Interface) error {
 		commands.Shutdown, commands.Uninstall,
 		commands.ConnectWifi, commands.ChangeHost,
 		commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword:
+		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -164,7 +168,8 @@ func (u InitializeFailedValidator) ValidateOp(op commands.Interface) error {
 	case commands.ChangeIp, commands.Reboot,
 		commands.Shutdown, commands.Uninstall,
 		commands.ConnectWifi, commands.ChangeHost,
-		commands.CollectLogs, commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword:
+		commands.CollectLogs, commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -204,7 +209,8 @@ func (r RunningValidator) ValidateOp(op commands.Interface) error {
 	case commands.ChangeIp, commands.Reboot, commands.Shutdown,
 		commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
 		commands.UmountUsb, commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword:
+		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -218,7 +224,8 @@ func (i InvalidIpValidator) ValidateOp(op commands.Interface) error {
 	switch op.OperationName() {
 	case commands.ChangeIp, commands.Reboot, commands.Shutdown,
 		commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
-		commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword:
+		commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -233,7 +240,8 @@ func (s SystemErrorValidator) ValidateOp(op commands.Interface) error {
 	case commands.ChangeIp, commands.Reboot, commands.Shutdown,
 		commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
 		commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword:
+		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
