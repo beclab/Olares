@@ -158,6 +158,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "Excalidraw",
+              link: "/use-cases/excalidraw",
+            },
+            {
               text: "Stirling PDF",
               link: "/use-cases/stirling-pdf",
             },
