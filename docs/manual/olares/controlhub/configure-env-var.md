@@ -1,130 +1,113 @@
 ---
-outline: [2, 4]
+outline: [2, 3]
 description: Learn how to locate and modify application environment variables in Control Hub for debugging, updates, or configuration changes.
 ---
 
 # Configure environment variables
 
-Control Hub allows you to modify application environment variables to support debugging, feature updates, or temporary adjustments.
+Control Hub allows you to view and modify application environment variables for debugging, feature configuration, or temporary adjustments.
 
 ## Before you begin
 
-- **Global vs. local variables**: Before making changes here, check **Settings** > **Advanced** > **System environment variables**. Global variables like API keys or mail server details configured there persist after application updates. For more information, see [Set system environment variables](../settings/developer.md#set-system-environment-variables).
-- **Updates overwrite local changes**: Any changes you make directly in Control Hub are temporary. They will be overwritten and lost when the application is upgraded.
+Check where the target variable should be configured before making changes.
 
-## 1. Locate environment variables
+| | System-level variables | App-specific variables |
+|:---|:---|:---|
+| Where to configure | Settings | Control Hub |
+| Scope | Shared across all apps<br> that reference them | Specific to a single app resource |
+| What it covers | Common variables pre-configured<br> by Olares, such as API keys and<br> mail server settings | App-specific parameters not covered by system-level variables |
+| Persist after app upgrades | Yes | No |
 
-Identify which Kubernetes resource contains the variable you want to change. Variables typically reside in one of following locations:
-- **Deployments**: Within the workload YAML for direct, simple variables
-- **Secrets**: For sensitive data like database connections and admin accounts
-- **Configmaps**: For general configuration data or files
+Check [Settings](../settings/developer.md#set-system-environment-variables) first to see if the variable you need is already available there. If not, configure it directly in Control Hub using the steps below.
 
-### Locate variables in standard apps
+## Identify where a variable is stored
 
-1. Open Control Hub and click **Browse** from the left sidebar.
-2. Select the target namespace in the first column.
-3. View its associated resources, which are grouped under categories like **Deployments**, **Secrets**, and **Configmaps**.
-4. Select the specific resource instance under **Deployments** to open its details page.
-5. Click <span class="material-symbols-outlined">edit_square</span> next to the resource name.
-6. In the YAML editor, locate the `spec` > `containers` section to see how variables and values are injected:
-    - **`env`**: If the variable appears as a name/value pair, you can modify it directly here.
-    - **`envFrom`**: If the variable refers to a `configMapRef`, the variable is actually stored in the referenced Configmap. You must locate that specific Configmap resource instance to make modifications instead.
-    - **`valueFrom`**: If the variable refers to a `secretKeyRef`, the variable is actually stored in the referenced Secret. You must locate that specific Secret resource instance to make modifications instead.
+Variables in an app can be stored in different Kubernetes resource types. Knowing which resource holds your target variable determines how you modify it and whether a restart is needed.
 
-    Example: In the following YAML, `envFrom` references the Configmap `lobechat-config`, while `env` directly defines `PGID` (group ID), `PUID` (user ID), and `TZ` (time zone).
+| Resource type | Typical content | Restart after editing |
+|:---|:---|:---|
+| Deployment | Direct name/value pairs | Automatic |
+| Configmap | Configuration data, startup<br> parameters, config files | Manual restart required |
+| Secret | Sensitive data such as <br>passwords, tokens, credentials | Manual restart required |
 
-    ```yaml
-        spec:
-        containers:
-            - name: lobechat
-            image: docker.io/beclab/lobehub-lobehub:2.1.18
-            ports:
-                - name: http
-                containerPort: 3210
-                protocol: TCP
-            envFrom:
-                - configMapRef:
-                    name: lobechat-config
-            env:
-                - name: PGID
-                value: '1000'
-                - name: PUID
-                value: '1000'
-                - name: TZ
-                value: Etc/UTC
-    ```    
-7. (Optional) If the variable comes from a referenced Configmap or Secret:
+### Standard apps
 
-    a. Locate that resource in the corresponding resource group, and then edit it following the same steps above.
+To determine where a variable is stored, open the Deployment in the YAML editor and check the `spec` > `containers` section. The injection method tells you the source:
 
-    b. Restart the deployment to apply the changes. 
-    
-    :::tip
-    If you are not sure which container to restart, you can stop and then resume the app via the Market or Settings to apply the changes.
-    :::
+- `env`: The variable is defined directly in the Deployment as a name/value pair.
+- `envFrom` with `configMapRef`: The variable is stored in the referenced Configmap.
+- `valueFrom` with `secretKeyRef`: The variable is stored in the referenced Secret.
 
-### Locate variables in C/S apps
+For example, in the following YAML, `envFrom` references the Configmap `lobechat-config`, while `env` directly defines `PGID`, `PUID`, and `TZ`.
 
-Some applications use a Client/Server (C/S) architecture, such as Ollama. Their environment variables are distributed across two different namespaces:
+```yaml{9-18}
+spec:
+  containers:
+    - name: lobechat
+      image: docker.io/beclab/lobehub-lobehub:2.1.18
+      ports:
+        - name: http
+          containerPort: 3210
+          protocol: TCP
+      envFrom:
+        - configMapRef:
+            name: lobechat-config
+      env:
+        - name: PGID
+          value: '1000'
+        - name: PUID
+          value: '1000'
+        - name: TZ
+          value: Etc/UTC
+```
 
-| Namespace category | Role | Common content | Function |
-|:---|:---|:---|:---|
-| User | Client/Proxy | Nginx config, Envoy sidebar config | Controls external access, routing, and load balancing |
-| System | Server/Application core | Application parameters such as model settings, concurrency, and debug switches | Controls core app behaviors |
+### C/S apps
 
-The steps to locate these variables are the same, but you must look in the correct namespace depending on what you want to modify:
-- To modify external access behavior, go to the User namespace, and then look for Configmaps typically containing `nginx` or `sidecar` in the name.
-- To modify core application parameters, go to the System namespace, and then look for Configmaps typically containing `env`, `config`, or similar identifiers.
+Some applications use a Client/Server (C/S) architecture, such as Ollama. Their variables are distributed across two namespaces: the User namespace for client-side resources and the System namespace for server-side resources.
 
-## 2. Modify environment variables
+For C/S apps, environment variables are typically stored in Configmaps across both namespaces. Navigate to the correct namespace based on what you want to change:
 
-Depending on whether your target variables are stored in a Deployment, a Configmap, or a Secret, select the corresponding method below to apply your changes.
+- To modify external access behavior, go to the User namespace and look for Configmaps containing `nginx` or `sidecar` in the name.
+- To modify core application parameters, go to the System namespace and look for Configmaps containing `env`, `config`, or similar identifiers.
 
-### Modify variables in a Deployment
+## Modify variables in a Deployment
 
-Use this method for direct, temporary adjustments to a workload, such as changing log levels or time zones.
+Use this method for direct adjustments to a workload. The following example changes the time zone for Jellyfin so the media library displays local timestamps instead of UTC.
 
-**Example scenario**
+1. In Control Hub, select the Jellyfin project from the Browse panel.
 
-Change the time zone for Jellyfin so the media library displays local timestamps instead of UTC.
-
-**Procedure**
-
-1. Go to **Browse** > **demo0002** > **jellyfin-demo0002** > **Deployments** > **jellyfin**, and then click <span class="material-symbols-outlined">edit_square</span>.
+2. Under **Deployments**, click **jellyfin**, then click <i class="material-symbols-outlined">edit_square</i>.
 
     ![Browse to Jellyfin's deployment](/images/manual/olares/jellyfin-env-var.png#bordered)
 
-2. In the YAML editor, find the `containers` section, locate the `env` field for jellyfin, and then change the value of `TZ`:
+3. In the YAML editor, find the `containers` section, locate the `env` field for jellyfin, and then change the value of `TZ`:
 
     ```yaml
     env:
-    - name: PGID
+      - name: PGID
         value: '1000'
-    - name: PUID
+      - name: PUID
         value: '1000'
-    - name: UMASK
+      - name: UMASK
         value: '002'
-    - name: TZ
+      - name: TZ
         value: Asia/Shanghai   # changed from Etc/UTC
     ```
-3. Click **Confirm**. The pod restarts automatically to apply the changes.
+4. Click **Confirm**. The pod restarts automatically to apply the changes.
 
-### Modify variables in a Configmap
+## Modify variables in a Configmap
 
-Configmaps store environment variables, startup parameters, and configuration files. Use this method to add third-party API keys or modify service parameters.
+Use this method to add third-party API keys, modify startup parameters, or update configuration files.
 
-#### Update a standard app
+### Standard apps {#modify-standard-apps}
 
-**Example scenario**
+The following example adds a Tavily API key to DeerFlow's configuration to enable web search.
 
-Add a Tavily API key to DeerFlow's configuration to enable web search.
-
-**Procedure**
-
-1. In Control Hub, go to **Browse** > **laresprime** > **deerflow-laresprime**.
-2. From the resource list, expand **Configmaps**, and then click `deerflow-config`.
+1. In Control Hub, select the DeerFlow project from the Browse panel.
+2. Under **Configmaps**, click `deerflow-config`.
     ![Browse to DeerFlow's configmaps](/images/manual/use-cases/deerflow-configmap.png#bordered)
-3. On the resource details page, click <span class="material-symbols-outlined">edit_square</span> in the top-right to open the YAML editor.
+
+3. On the resource details page, click <i class="material-symbols-outlined">edit_square</i> in the top-right to open the YAML editor.
 4. Add the following key/value pairs under the `data` section:
    ```yaml
    SEARCH_API: tavily
@@ -132,75 +115,81 @@ Add a Tavily API key to DeerFlow's configuration to enable web search.
    ```
    ![Configure Tavily](/images/manual/use-cases/deerflow-configure-tavily.png#bordered)
 5. Click **Confirm** to save the changes.
-6. Return to **Deployments** in the resource list, locate **deerflow**, and then click **Restart**.
+6. Return to **Deployments** > **deerflow**, and then click **Restart**.
 
    ![Restart DeerFlow](/images/manual/use-cases/deerflow-restart.png#bordered)
 
 7. In the confirmation dialog, type `deerflow`, and then click **Confirm**.
-8. Wait for the status icon to turn green, which indicates the new configuration has been loaded.
 
-#### Update a C/S app
+Wait for the status icon to turn green, which indicates the new configuration has been loaded.
 
-**Example scenario**
+### C/S apps {#modify-cs-apps}
 
-Modify Ollama's timeout settings (Client) and model concurrency (Server).
+Depending on what you want to change, you may need to modify variables in the User namespace, the System namespace, or both.
 
-**Procedure**
+#### Modify client settings in the User namespace
 
-1. Modify the proxy in User namespace:
+The following steps change Ollama's proxy read timeout from `300s` to `600s`.
 
-    a. Go to **Browse > laresprime > ollamav2-laresprime** > **Deployments** > **ollamav2**, and then click <span class="material-symbols-outlined">edit_square</span>.
+1. In Control Hub, select the Ollama project from the Browse panel.
 
+2. Under **Deployments**, click **ollamav2**, then click <i class="material-symbols-outlined">edit_square</i>.
    ![Locate Ollama instance in Control Hub](/images/manual/use-cases/locate-ollama-instance.png#bordered)
 
-    b. In the YAML editor, find the `containers` section, locate and check the `env` field. The configuration here references `nginx.conf`.
+3. In the YAML editor, find the `containers` section, locate and check the `env` field. The configuration here references `nginx.conf`.
 
    ![Edit YAML for Ollama deployment](/images/manual/use-cases/edit-yaml-ollama.png#bordered)
 
-    c. Click **Cancel** to close the editor.
+4. Click **Cancel** to close the editor.
 
-    d. Return to the resource group **ConfigMaps**, click the `nginx-config` instance, and then click <span class="material-symbols-outlined">edit_square</span> in the upper‑right corner. 
+5. Click **Configmaps** to expand the resource group, click `nginx-config`, and then click <i class="material-symbols-outlined">edit_square</i> in the upper-right corner.
 
    ![Locate Nginx config instance](/images/manual/use-cases/locate-nginx-config.png#bordered)
-    
-    e. In the YAML editor, find the `data` section, locate the `nginx-config` field, and then modify the `proxy_read_timeout` value from `300s` to `600s`.
+
+6. In the YAML editor, find the `data` section, locate the `nginx.conf` key, and then modify the `proxy_read_timeout` value from `300s` to `600s`.
 
    ![Edit Nginx configuration](/images/manual/use-cases/edit-nginx-conf.png#bordered)
- 
-    f. Click **Confirm**.
 
-    g. Return to **Deployments** > **ollamav2**, and then click **Restart** to apply the change.
+7. Click **Confirm**.
 
-2. Modify core in System namespace: 
+8. Return to **Deployments** > **ollamav2**, and then click **Restart** to apply the change.
 
-    a. Go to **Browse** > **System** > **ollamaserver-shared** > **Deployments** > **ollama**, and then click <span class="material-symbols-outlined">edit_square</span>.
+Wait for the status icon to turn green, which indicates the new configuration has been loaded.
 
-   ![Locate Ollama in System namespace](/images/manual/use-cases/locate-ollama-sys-namespace.png#bordered)    
+#### Modify server settings in the System namespace
 
-    b. In the YAML editor, find the `containers` section, locate the `envFrom` field. The configuration here references `ollama-env`.
+The following steps change Ollama's maximum loaded models from `3` to `5`.
 
-   ![Edit YAML](/images/manual/use-cases/edit-yaml-envfrom.png#bordered)  
-    
-    c. Click **Cancel** to close the editor.
+1. In Control Hub, scroll down in the Browse panel and click **System** to expand the system section.
 
-    d. Return to the resource group **ConfigMaps**, click the `ollama-env` instance, and then click <span class="material-symbols-outlined">edit_square</span> in the upper‑right corner.
+2. Select **ollamaserver-shared**, and under **Deployments**, click **ollama**, and then click <i class="material-symbols-outlined">edit_square</i>.
+
+   ![Locate Ollama in System namespace](/images/manual/use-cases/locate-ollama-sys-namespace.png#bordered)
+
+3. In the YAML editor, find the `containers` section, and check the `envFrom` field. The configuration here references `ollama-env`.
+
+   ![Edit YAML](/images/manual/use-cases/edit-yaml-envfrom.png#bordered)
+
+4. Click **Cancel** to close the editor.
+
+5. Return to the resource group **Configmaps**, click the `ollama-env` instance, and then click <i class="material-symbols-outlined">edit_square</i> in the upper-right corner.
 
    ![Edit Ollama env](/images/manual/use-cases/edit-ollama-env.png#bordered)
-    
-    e. In the YAML editor, find the `data` section, and then change the value of `OLLAMA_MAX_LOADED_MODELS` from `3` to `5`.
+
+6. In the YAML editor, find the `data` section, and then change the value of `OLLAMA_MAX_LOADED_MODELS` from `3` to `5`.
 
    ![Edit Ollama variable](/images/manual/use-cases/modify-var-ollama.png#bordered)
-    
-    f. Click **Confirm**.
 
-    g. Return to **Deployments** > **ollama**, and then click **Restart** to apply the change.
+7. Click **Confirm**.
 
-### Modify variables in a Secret
+8. Return to **Deployments** > **ollama**, and then click **Restart** to apply the change.
 
-Secrets store encrypted data like passwords and tokens.
+Wait for the status icon to turn green, which indicates the new configuration has been loaded.
 
-Because they operate identically to Configmaps, you can modify them by following the same workflow as [standard applications](#update-a-standard-app).
+## Modify variables in a Secret
+
+The workflow for Secrets is the same as for Configmaps. Follow the steps for [standard apps](#modify-standard-apps) or [C/S apps](#modify-cs-apps), depending on your app type.
 
 :::info
-When you open the YAML editor for a Secret, all values entered under the `data` field must be Base64 encoded.
+When you open the YAML editor for a Secret, all values under the `data` field must be Base64 encoded.
 :::
