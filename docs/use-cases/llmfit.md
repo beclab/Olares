@@ -46,8 +46,6 @@ llmfit
 
 ![LLMFit container terminal](/images/manual/use-cases/llmfit-terminal.png#bordered)
 
-<!-- ![LLMFit TUI](/images/manual/use-cases/llmfit-tui.png#bordered) -->
-
 ## Learn more
 
 - [Download and run local AI models via Ollama](ollama.md): Set up Ollama to download and serve local LLM models.
