@@ -65,8 +65,7 @@ Find the correct library ID that you’ll use to fetch documentation.
     Description: React.dev is the official documentation website for React, a JavaScript library for building user interfaces, providing guides, API references, and tutorials.
     Code Snippets: 2781
     Source Reputation: High
-    Benchmark Score: 85.1  
-    When multiple results come back, the best match is usually the one with the closest name, highest snippet count, and strongest reputation.
+    Benchmark Score: 85.1
     ``` 
 
     When multiple results are returned, the best match is usually the one with the closest name, highest snippet count, and strongest reputation.
