@@ -24,6 +24,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/openclaw-skills",
                 },
                 {
+                  text: "启用本地文件访问",
+                  link: "/zh/use-cases/openclaw-local-access",
+                },                
+                {
                   text: "升级 OpenClaw",
                   link: "/zh/use-cases/openclaw-upgrade",
                 },
