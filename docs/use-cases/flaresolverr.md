@@ -94,7 +94,7 @@ The challenge-solving process might take some time and does not always succeed o
 You can check FlareSolverr's logs to confirm it is receiving and solving Cloudflare challenges.
 
 1. Open Control Hub and select the **FlareSolverr** project from the sidebar.
-2. Under **Deployments**, click the running pod of flaresolverr, then expand the container to view its logs.
+2. Under **Deployments**, click the running pod of **flaresolverr**, then expand the container to view its logs.
 
    ![FlareSolverr container logs](/images/manual/use-cases/flaresolverr-logs.png#bordered){width=80%}
 
