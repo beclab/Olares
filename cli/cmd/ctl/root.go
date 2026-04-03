@@ -5,6 +5,7 @@ import (
 
 	"github.com/beclab/Olares/cli/cmd/config"
 	"github.com/beclab/Olares/cli/cmd/ctl/amdgpu"
+	"github.com/beclab/Olares/cli/cmd/ctl/app"
 	"github.com/beclab/Olares/cli/cmd/ctl/disk"
 	"github.com/beclab/Olares/cli/cmd/ctl/gpu"
 	"github.com/beclab/Olares/cli/cmd/ctl/node"
@@ -49,6 +50,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(amdgpu.NewCmdAmdGpu())
 	cmds.AddCommand(user.NewUserCommand())
 	cmds.AddCommand(disk.NewDiskCommand())
+	cmds.AddCommand(app.NewAppCommand())
 
 	return cmds
 }
