@@ -46,13 +46,18 @@ Use these scores to decide which models to download and run on your Olares devic
 
 LLMFit uses its built-in web dashboard as the primary interface for simplicity. The dashboard provides the same functionality as the TUI.
 
-If you prefer the terminal-based TUI, open Control Hub, navigate to the LLMFit container terminal, and then run the following command:
+If you prefer the terminal-based TUI:
+1. Open Control Hub, and then navigate to open the LLMFit container terminal.
 
-```bash
-llmfit
-```
+    ![LLMFit container terminal](/images/manual/use-cases/llmfit-terminal.png#bordered)
 
-![LLMFit container terminal](/images/manual/use-cases/llmfit-terminal.png#bordered)
+2. Run the following command:
+
+    ```bash
+    llmfit
+    ```
+
+    ![LLMFit TUI](/images/manual/use-cases/llmfit-tui.png#bordered)
 
 ## Learn more
 
