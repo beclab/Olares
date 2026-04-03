@@ -49,6 +49,3 @@ The following table shows the available combinations and their access behavior:
 ## Resources
 - [Entrance concept](/developer/concepts/network.md#entrance): Learn more about the technical background.
 - [Customize app domain](/manual/olares/settings/custom-app-domain.md#custom-domain-name): Learn how to use your own domain name to access your apps.
-
-- [Entrance concept](/developer/concepts/network.md#entrance)
-- [Customize app domain](/manual/olares/settings/custom-app-domain.md#custom-domain-name)
