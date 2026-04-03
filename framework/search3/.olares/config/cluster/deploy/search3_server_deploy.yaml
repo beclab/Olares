@@ -59,6 +59,7 @@ spec:
         - pg_trgm
         - btree_gin
         - zhparser
+        - vector
         scripts:
         - begin;
         - CREATE TEXT SEARCH CONFIGURATION chinese (PARSER = zhparser);
