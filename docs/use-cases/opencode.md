@@ -257,7 +257,5 @@ OpenCode stores its configuration in a JSON file. You can edit this file directl
 - [Manage packages](opencode-packages.md): Install system-level and language-specific packages.
 - [Skills and plugins](opencode-extensions.md): Add capabilities through skills and plugins.
 - [Common issues](opencode-issues.md): Solutions for known problems.
-- [Connect AI apps](../manual/best-practices/connect-ai-apps.md)
-- [Download and run local AI models via Ollama](./ollama.md)
-- [Chat with local LLMs using Open WebUI](./openwebui.md)
+- [Connect AI coding assistants to up-to-date docs with Context7](context7.md#opencode): Register Context7 as a remote MCP server in OpenCode.
 - [OpenCode official documentation](https://opencode.ai/docs)
