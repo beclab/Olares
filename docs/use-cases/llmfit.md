@@ -14,13 +14,13 @@ doc_updated: "2026-04-02"
 
 LLMFit automatically detects your system's RAM, CPU, and GPU, then recommends LLM models that run well on your hardware. It scores each model across four dimensions: quality, speed, compatibility, and context length, so you can quickly see which models will perform best on your setup.
 
-## Before you begin
+:::warning Known limitations
 
-Be aware of the following limitations in the current version of LLMFit:
-
+The current version of LLMFit has these limitations:
 * **Random node allocation**: In a multi-node environment, the specific node that the LLMFit container is assigned to is random.
 * **Single GPU detection**: LLMFit can only detect and evaluate the GPU assigned to it on the specific node where it resides.
 * **Multi-GPU display limitations**: If your node has multiple GPUs, the dashboard displays only one of them (which one is unpredictable). The API detects multiple cards correctly, but their VRAM is not aggregated or summed together in the interface.
+:::
 
 ## Install LLMFit
 
