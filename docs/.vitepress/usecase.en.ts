@@ -59,6 +59,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "Context7",
+              link: "/use-cases/context7",
+            },
+            {
               text: "Ollama",
               link: "/use-cases/ollama",
             },
