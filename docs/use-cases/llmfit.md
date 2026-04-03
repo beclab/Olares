@@ -17,20 +17,20 @@ LLMFit automatically detects your system's RAM, CPU, and GPU, then recommends LL
 ## Install LLMFit
 
 1. Open Market and search for "LLMFit".
-   <!-- ![Install LLMFit](/images/manual/use-cases/llmfit.png#bordered) -->
+   ![Install LLMFit](/images/manual/use-cases/llmfit.png#bordered)
 
-2. Click **Get**, then **Install**, and wait for installation to complete.
+2. Click **Get**, and then click **Install**. Wait for the installation to complete.
 
 ## Use LLMFit
 
-Open LLMFit from Launchpad. The dashboard displays:
+Open LLMFit from the Launchpad. The dashboard displays:
 
-- **Node information**: The current node and its hardware details (CPU, RAM, GPU).
-- **Model benchmarks**: A list of LLM models with estimated TPS (tokens per second) and scores for quality, speed, compatibility, and context length.
+- **System Summary**: The current node and its hardware details such as CPU, RAM, and GPU.
+- **Model Fit Explorer**: A list of LLM models with estimated TPS (tokens per second) and scores for quality, speed, fit, and context.
 
 Use these scores to decide which models to download and run on your Olares device.
 
-<!-- ![LLMFit dashboard](/images/manual/use-cases/llmfit-dashboard.png#bordered) -->
+![LLMFit dashboard](/images/manual/use-cases/llmfit-dashboard.png#bordered)
 
 ## FAQ
 
@@ -38,13 +38,13 @@ Use these scores to decide which models to download and run on your Olares devic
 
 LLMFit uses its built-in web dashboard as the primary interface for simplicity. The dashboard provides the same functionality as the TUI.
 
-If you prefer the terminal-based TUI, open Control Hub, navigate to the LLMFit container terminal, and run:
+If you prefer the terminal-based TUI, open Control Hub, navigate to the LLMFit container terminal, and then run the following command:
 
 ```bash
 llmfit
 ```
 
-<!-- ![LLMFit container terminal](/images/manual/use-cases/llmfit-terminal.png#bordered) -->
+![LLMFit container terminal](/images/manual/use-cases/llmfit-terminal.png#bordered)
 
 <!-- ![LLMFit TUI](/images/manual/use-cases/llmfit-tui.png#bordered) -->
 
