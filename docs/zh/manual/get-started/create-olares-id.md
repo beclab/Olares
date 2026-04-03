@@ -46,5 +46,5 @@ Olares ID 由本地名称和域名两部分组成。以 `alice123@olares.cn` 为
 如果你的团队已经部署了 Olares，需要以成员身份加入：
 - [加入 Olares](/zh/manual/get-started/join-olares)
 
-如果要登录 Olares Space 或创建基于云的 Olares：
+如果要登录 Olares Space：
 - [管理 Olares Space 账号](/zh/manual/space/manage-accounts.md)

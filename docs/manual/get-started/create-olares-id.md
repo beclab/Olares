@@ -57,5 +57,5 @@ To install and activate Olares as an administrator:
 If your team already has Olares, and you're joining as a member:
 - [Join an Olares](/manual/get-started/join-olares)
 
-If you wish to log in to Olares Space, or creating a cloud-based Olares:
+If you wish to log in to Olares Space:
 - [Manage accounts in Olares Space](/manual/space/manage-accounts.md)
