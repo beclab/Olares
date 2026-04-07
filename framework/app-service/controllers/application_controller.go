@@ -568,6 +568,10 @@ func (r *ApplicationReconciler) getAppSettings(ctx context.Context, appName, app
 		settings["source"] = chartSource
 	}
 
+	if marketSource, ok := deployment.GetAnnotations()[constants.AppMarketSourceKey]; ok {
+		settings["market_source"] = marketSource
+	}
+
 	if systemService, ok := deployment.GetLabels()[constants.ApplicationSystemServiceLabel]; ok {
 		settings["system_service"] = systemService
 	}

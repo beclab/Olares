@@ -4,12 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sort"
-	"strings"
-
 	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,12 +20,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"sort"
+	"strings"
 )
 
 const (
 	tailScaleACLPolicyMd5Key       = "tailscale-acl-md5"
+	tailScaleACLConfigMapName      = "tailscale-acl"
 	tailScaleDeployOrContainerName = "tailscale"
 	subnetRoutesEnv                = "TS_ROUTES"
+	tailScaleNamespacePrefix       = "user-space-"
+	headScaleUpdatedTimeKey        = "headscale-updated"
 )
 
 var defaultACLs = []v1alpha1.ACL{
@@ -106,6 +107,32 @@ func (r *TailScaleACLController) SetUpWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return err
 	}
+	err = c.Watch(source.Kind(
+		mgr.GetCache(),
+		&corev1.ConfigMap{},
+		handler.TypedEnqueueRequestsFromMapFunc(
+			func(ctx context.Context, cm *corev1.ConfigMap) []reconcile.Request {
+				owner := strings.TrimPrefix(cm.Namespace, tailScaleNamespacePrefix)
+				return []reconcile.Request{{NamespacedName: types.NamespacedName{
+					Name:      tailScaleACLConfigMapName,
+					Namespace: owner,
+				}}}
+			}),
+		predicate.TypedFuncs[*corev1.ConfigMap]{
+			CreateFunc: func(e event.TypedCreateEvent[*corev1.ConfigMap]) bool {
+				return isTailScalAclConfigmap(e.Object)
+			},
+			UpdateFunc: func(e event.TypedUpdateEvent[*corev1.ConfigMap]) bool {
+				return isTailScalAclConfigmap(e.ObjectNew)
+			},
+			DeleteFunc: func(e event.TypedDeleteEvent[*corev1.ConfigMap]) bool {
+				return false
+			},
+		},
+	))
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -134,7 +161,6 @@ func (r *TailScaleACLController) Reconcile(ctx context.Context, req ctrl.Request
 		return filteredApps[j].CreationTimestamp.Before(&filteredApps[i].CreationTimestamp)
 	})
 
-	tailScaleACLConfig := "tailscale-acl"
 	headScaleNamespace := fmt.Sprintf("user-space-%s", owner)
 
 	// calculate acls
@@ -199,14 +225,13 @@ func (r *TailScaleACLController) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	configMap := &corev1.ConfigMap{}
-	err = r.Get(ctx, types.NamespacedName{Name: tailScaleACLConfig, Namespace: headScaleNamespace}, configMap)
+	err = r.Get(ctx, types.NamespacedName{Name: tailScaleACLConfigMapName, Namespace: headScaleNamespace}, configMap)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// If no ACLs need to be applied and the ConfigMap tailscale-acl has not been updated by the Tailscale ACL controller,
-	// there is no need to update.
-	if len(acls) == 0 && (configMap.Annotations == nil || (configMap.Annotations != nil && configMap.Annotations[tailScaleACLPolicyMd5Key] == "")) {
+	// If no ACLs need to be applied there is no need to update.
+	if len(acls) == 0 {
 		return ctrl.Result{}, nil
 	}
 
@@ -215,13 +240,17 @@ func (r *TailScaleACLController) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 	klog.Infof("aclPolicyByte:string: %s", string(aclPolicyByte))
-	oldTailScaleACLPolicyMd5Sum := ""
-	if configMap.Annotations != nil {
-		oldTailScaleACLPolicyMd5Sum = configMap.Annotations[tailScaleACLPolicyMd5Key]
+	existingTailScaleACLPolicyMd5Sum := ""
+
+	if existingData, ok := configMap.Data["acl.json"]; ok {
+		existingTailScaleACLPolicyMd5Sum = utils.Md5String(existingData)
 	}
+
 	curTailScaleACLPolicyMd5Sum := utils.Md5String(string(aclPolicyByte))
 
-	if curTailScaleACLPolicyMd5Sum != oldTailScaleACLPolicyMd5Sum {
+	if curTailScaleACLPolicyMd5Sum != existingTailScaleACLPolicyMd5Sum {
+		klog.Infof("tailscale-acl acl.json md5 drift: dataMd5=%s desiredMd5=%s",
+			existingTailScaleACLPolicyMd5Sum, curTailScaleACLPolicyMd5Sum)
 		if configMap.Annotations == nil {
 			configMap.Annotations = make(map[string]string)
 		}
@@ -229,38 +258,11 @@ func (r *TailScaleACLController) Reconcile(ctx context.Context, req ctrl.Request
 			configMap.Data = make(map[string]string)
 		}
 
-		configMap.Annotations[tailScaleACLPolicyMd5Key] = curTailScaleACLPolicyMd5Sum
 		configMap.Data["acl.json"] = string(aclPolicyByte)
 		err = r.Update(ctx, configMap)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-	}
-
-	deploy := &appsv1.Deployment{}
-	err = r.Get(ctx, types.NamespacedName{Namespace: headScaleNamespace, Name: "headscale"}, deploy)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	headScaleACLMd5 := ""
-	if deploy.Spec.Template.Annotations != nil {
-		klog.Infof("headscaleaclmd5..: %s", deploy.Spec.Template.Annotations[tailScaleACLPolicyMd5Key])
-		headScaleACLMd5 = deploy.Spec.Template.Annotations[tailScaleACLPolicyMd5Key]
-	}
-	klog.Infof("oldheadscaleACLmd5: %v, newmd5: %v", headScaleACLMd5, curTailScaleACLPolicyMd5Sum)
-	if headScaleACLMd5 != curTailScaleACLPolicyMd5Sum {
-		if deploy.Spec.Template.Annotations == nil {
-			deploy.Spec.Template.Annotations = make(map[string]string)
-		}
-
-		// update headscale deploy template annotations for rolling update
-		deploy.Spec.Template.Annotations[tailScaleACLPolicyMd5Key] = curTailScaleACLPolicyMd5Sum
-		err = r.Update(ctx, deploy)
-		if err != nil {
-			klog.Errorf("update headscale deploy failed: %v", err)
-			return ctrl.Result{}, err
-		}
-		klog.Infof("rolling update headscale...")
 	}
 
 	return ctrl.Result{}, nil

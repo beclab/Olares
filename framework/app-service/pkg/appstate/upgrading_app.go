@@ -152,6 +152,12 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 	}
 
 	if !userspace.IsSysApp(getRawAppName(p.manager.Spec.RawAppName)) {
+		var cfg *appcfg.ApplicationConfig
+		err = json.Unmarshal([]byte(p.manager.Spec.Config), &cfg)
+		if err != nil {
+			klog.Errorf("unmarshal to appConfig failed %v", err)
+			return err
+		}
 		appConfig, _, err = apputils.GetAppConfig(ctx, &apputils.ConfigOptions{
 			App:          p.manager.Spec.AppName,
 			Owner:        p.manager.Spec.AppOwner,
@@ -162,18 +168,14 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 			Admin:        admin,
 			MarketSource: marketSource,
 			IsAdmin:      isAdmin,
+			SelectedGpu:  cfg.SelectedGpuType,
 		})
 
 		if err != nil {
 			klog.Errorf("get app config failed %v", err)
 			return err
 		}
-		var cfg *appcfg.ApplicationConfig
-		err = json.Unmarshal([]byte(p.manager.Spec.Config), &cfg)
-		if err != nil {
-			klog.Errorf("unmarshal to appConfig failed %v", err)
-			return err
-		}
+
 		appConfig.Ports = cfg.Ports
 		appConfig.TailScale = cfg.TailScale
 

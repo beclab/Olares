@@ -43,6 +43,7 @@ type statusData struct {
 	Version        string                   `json:"version"`
 	Title          string                   `json:"title"`
 	SyncProvider   []map[string]interface{} `json:"syncProvider,omitempty"`
+	MarketSource   string                   `json:"market_source"`
 }
 
 type metadata struct {

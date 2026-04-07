@@ -7,6 +7,7 @@ import (
 
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -184,18 +185,19 @@ func (r *ApplicationManagerController) preEnqueueCheckForUpdate(old, new client.
 
 func (r *ApplicationManagerController) publishStateChangeEvent(am *appv1alpha1.ApplicationManager) {
 	appevent.PublishAppEventToQueue(utils.EventParams{
-		Owner:      am.Spec.AppOwner,
-		Name:       am.Spec.AppName,
-		OpType:     string(am.Status.OpType),
-		OpID:       am.Status.OpID,
-		State:      am.Status.State.String(),
-		Progress:   am.Status.Progress,
-		RawAppName: am.Spec.RawAppName,
-		Type:       am.Spec.Type.String(),
-		Title:      apputils.AppTitle(am.Spec.Config),
-		Icon:       apputils.AppIcon(am.Spec.Config),
-		Reason:     am.Status.Reason,
-		Message:    am.Status.Message,
+		Owner:        am.Spec.AppOwner,
+		Name:         am.Spec.AppName,
+		OpType:       string(am.Status.OpType),
+		OpID:         am.Status.OpID,
+		State:        am.Status.State.String(),
+		Progress:     am.Status.Progress,
+		RawAppName:   am.Spec.RawAppName,
+		Type:         am.Spec.Type.String(),
+		Title:        apputils.AppTitle(am.Spec.Config),
+		Icon:         apputils.AppIcon(am.Spec.Config),
+		Reason:       am.Status.Reason,
+		Message:      am.Status.Message,
+		MarketSource: am.Annotations[constants.AppMarketSourceKey],
 	})
 }
 

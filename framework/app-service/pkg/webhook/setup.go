@@ -319,6 +319,11 @@ func (wh *Webhook) CreateOrUpdateGpuLimitMutatingWebhook() error {
 							Operator: metav1.LabelSelectorOpNotIn,
 							Values:   security.GPUSystemNamespaces,
 						},
+						{
+							Key:      "bytetrade.io/ns-type",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   []string{"user-space"},
+						},
 					},
 				},
 				ObjectSelector: &metav1.LabelSelector{
