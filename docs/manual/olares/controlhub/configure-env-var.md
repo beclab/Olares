@@ -11,7 +11,7 @@ Control Hub allows you to view and modify application environment variables for 
 
 Check where the target variable should be configured before making changes.
 
-| | System-level variables | App-specific variables |
+| Metric | System-level variables | App-specific variables |
 |:---|:---|:---|
 | Where to configure | Settings | Control Hub |
 | Scope | Shared across all apps<br> that reference them | Specific to a single app resource |
@@ -193,3 +193,22 @@ The workflow for Secrets is the same as for Configmaps. Follow the steps for [st
 :::info
 When you open the YAML editor for a Secret, all values under the `data` field must be Base64 encoded.
 :::
+
+## FAQ
+
+### Changes to a ConfigMap or Secret are not applied
+
+After you modify a ConfigMap or Secret, the associated workload (Deployment) does not automatically reload the configuration. You must restart the workload to pick up the new values.
+
+Use one of the following methods to restart the workload:
+- **In Control Hub**  
+  
+  Go to **Deployments** under the app's namespace, click the target workload, and then click **Restart**.
+
+- **Via Market or Settings**  
+  
+  If you are not sure which Deployment to restart, stop and then resume the app:
+   - Go to **Market** > **My Olares**, find the app, click **Stop**, and then click **Resume**.
+   - Go to **Settings** > **Applications**, click the app, click **Stop**, and then click **Resume**.
+
+Both methods will apply and load the latest configuration from the ConfigMap or Secret.
