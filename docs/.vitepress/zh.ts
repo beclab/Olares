@@ -299,6 +299,10 @@ const side = {
               text: "访问终端",
               link: "/zh/manual/olares/controlhub/terminal",
             },
+            {
+              text: "配置环境变量",
+              link: "/zh/manual/olares/controlhub/configure-env-var",
+            },            
           ],
         },
         {
