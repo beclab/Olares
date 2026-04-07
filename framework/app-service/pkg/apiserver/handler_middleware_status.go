@@ -126,6 +126,7 @@ func getMiddlewareStatus(ctx context.Context, kubeConfig *rest.Config, app, owne
 		ResourceStatus: mgr.Status.State.String(),
 		ResourceType:   v1alpha1.Middleware.String(),
 		Metadata:       metadata{Name: app},
+		MarketSource:   mgr.Annotations[constants.AppMarketSourceKey],
 	}
 
 	if release != nil {

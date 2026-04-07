@@ -454,7 +454,8 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 				Ports:           appconfig.Ports,
 				Icon:            appconfig.Icon,
 				Settings: map[string]string{
-					"title": am.Annotations[constants.ApplicationTitleLabel],
+					"title":         am.Annotations[constants.ApplicationTitleLabel],
+					"market_source": am.Annotations[constants.AppMarketSourceKey],
 				},
 			},
 			Status: v1alpha1.ApplicationStatus{
@@ -774,7 +775,8 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 				SharedEntrances: appconfig.SharedEntrances,
 				Icon:            appconfig.Icon,
 				Settings: map[string]string{
-					"title": am.Annotations[constants.ApplicationTitleLabel],
+					"title":         am.Annotations[constants.ApplicationTitleLabel],
+					"market_source": am.Annotations[constants.AppMarketSourceKey],
 				},
 			},
 			Status: v1alpha1.ApplicationStatus{

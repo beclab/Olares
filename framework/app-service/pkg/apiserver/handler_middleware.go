@@ -87,6 +87,9 @@ func (h *Handler) installMiddleware(req *restful.Request, resp *restful.Response
 	mgr := &v1alpha1.ApplicationManager{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
+			Annotations: map[string]string{
+				api.AppMarketSourceKey: marketSource,
+			},
 		},
 		Spec: v1alpha1.ApplicationManagerSpec{
 			AppName:      app,
@@ -111,6 +114,11 @@ func (h *Handler) installMiddleware(req *restful.Request, resp *restful.Response
 		}
 	} else {
 		patchData := map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"annotations": map[string]interface{}{
+					api.AppMarketSourceKey: marketSource,
+				},
+			},
 			"spec": map[string]interface{}{
 				"source": insReq.Source.String(),
 			},
