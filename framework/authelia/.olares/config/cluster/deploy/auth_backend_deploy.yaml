@@ -184,7 +184,7 @@ data:
           authelia_url: https://authelia-svc.example.com/
 
     regulation:
-      max_retries: 3
+      max_retries: 5
       find_time: 120
       ban_time: 300
 
