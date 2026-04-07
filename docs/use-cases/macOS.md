@@ -17,7 +17,8 @@ Olares allows you to run macOS as a virtual machine (VM) directly on your device
 :::tip System capabilities
 - **Hardware dependency**: The VM performance depends on your CPU. GPU acceleration is not supported.
 - **Use Case**: Ideal for macOS applications that do not require high-performance graphics.
-:::
+:::info
+This VM runs on CPU only. GPU acceleration is not available, so it is recommended for applications that don't require high-performance graphics.                                                                                                                 :::
 
 ## Learning objectives
 
@@ -81,7 +82,7 @@ macOS is available as an app in the Olares Market.
 
 2. Accept the license agreement.
 3. Select the disk you just formatted, and then click **Continue**.
-4. Wait for the installation to finish, which takes typically 20-40 minutes.
+4. Wait for the installation to finish, which typically takes 20-40 minutes.
 
    ![macOS installation progress](/images/manual/use-cases/macos-installing.png#bordered){width=60%}
 
@@ -90,8 +91,8 @@ macOS is available as an app in the Olares Market.
 After the system installation finishes:
 
 1. Follow the prompts for region, language, and accessibility settings.
-2. **Migration Assistant**: Select **Not Now** in the lower left corner.
-3. **Sign In with Your Apple ID**: Select **Set Up Later** in the lower left corner.
+2. When prompted to set up migration assistant, select **Not Now** in the lower left corner.
+3. When prompted to sign in with your Apple ID, select **Set Up Later** in the lower left corner.
 4. Set up a username and password for the macOS account. For the remaining setup steps, you can skip or accept the defaults.
 
    ![macOS desktop](/images/manual/use-cases/macos-desktop.png#bordered)
@@ -100,13 +101,13 @@ After the system installation finishes:
 
 ### Access from browser
 
-Open the macOS app from the Launchpad to launch the VM directly in your browser. 
+Open the macOS app from the Launchpad to access the VM directly in your browser. 
 
 Use this for initial setup, quick access, or troubleshooting.
 
 ### Access using VNC Viewer
 
-A dedicated VNC client provides better stability, lower latency, and better keyboard mapping.
+A dedicated VNC client provides better stability, lower latency, and improved keyboard mapping.
 
 #### Step 1: Obtain connection details
 
@@ -149,7 +150,7 @@ You must be on the Olares secure network to connect via VNC Viewer.
 <template #macOS>
 
 1. (Optional) [Install Homebrew](https://brew.sh) if you did not.
-2. Open a terminal on your computer, and then run the following command to install the the VNC Viewer app: 
+2. Open a terminal on your computer, and then run the following command to install the VNC Viewer app: 
 
    ```bash
    brew install --cask vnc-viewer
@@ -157,9 +158,9 @@ You must be on the Olares secure network to connect via VNC Viewer.
 
    The message `vnc-viewer was successfully installed!` indicates successful installation.
 
-3. Open VNC Viewer from your computer and sign in with your RealVNC account. If you do not have the account, create one and then sign in.
+3. Open VNC Viewer from your computer and sign in with your RealVNC account. If you do not have an account, create one and then sign in.
 4. Click **File** > **New connection**.   
-5. Enter the address obtained from **Step1**. In this case, it is `43b9d8ea.alexmiles.olares.com:49238`.
+5. Enter the address obtained from Step 1. In this case, it is `43b9d8ea.alexmiles.olares.com:49238`.
 
    ![New connection in VNC Viewer on macOS](/images/manual/use-cases/vnc-new-connection.png#bordered){width=60%}
 
@@ -183,7 +184,7 @@ You must be on the Olares secure network to connect via VNC Viewer.
 1. Download and install [RealVNC Viewer](https://www.realvnc.com/en/connect/download/viewer/).
 2. Open VNC Viewer from your computer and sign in with your RealVNC account. If you do not have the account, create one and then sign in.
 3. Click **File** > **New connection**. 
-4. Enter the address obtained from **Step1**. In this case, it is `43b9d8ea.alexmiles.olares.com:49238`.
+4. Enter the address obtained from Step 1. In this case, it is `43b9d8ea.alexmiles.olares.com:49238`.
 
    ![New connection in VNC Viewer on Windows](/images/manual/use-cases/vnc-viewer-windows.png#bordered){width=60%}
 5. Click **OK**. The connection is saved in the VNC Viewer.
@@ -212,7 +213,7 @@ Currently supported versions:
 
 ### The connection closed unexpectedly
 
-When you attempt to connect with the macOS VM from the VNC Viewer, the error `The connection closed unexpectedly` occurs.
+When you attempt to connect with the macOS VM from the VNC Viewer, the error "The connection closed unexpectedly" occurs.
 
 This usually happens when the LarePass VPN is disabled. 
 
