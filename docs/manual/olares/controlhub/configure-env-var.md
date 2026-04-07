@@ -208,7 +208,7 @@ Use one of the following methods to restart the workload:
 - **Via Market or Settings**  
   
   If you are not sure which Deployment to restart, stop and then resume the app:
-   - Go to **Market** > **My Olares**, find the app, click **Stop**, and then click **Resume**.
+   - Go to **Market** > **My Olares**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the app's operation button, click **Stop**, and then click **Resume**.
    - Go to **Settings** > **Applications**, click the app, click **Stop**, and then click **Resume**.
 
 Both methods will apply and load the latest configuration from the ConfigMap or Secret.
