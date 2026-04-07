@@ -200,6 +200,7 @@ func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 		MarketSource: marketSource,
 		IsAdmin:      isAdmin,
 		RawAppName:   h.rawAppName,
+		SelectedGpu:  prevCfg.SelectedGpuType,
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
