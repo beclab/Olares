@@ -29,6 +29,7 @@ type Event struct {
 	Reason           string                    `json:"reason,omitempty"`
 	Message          string                    `json:"message,omitempty"`
 	SharedEntrances  []v1alpha1.Entrance       `json:"sharedEntrances,omitempty"`
+	MarketSource     string                    `json:"marketSource,omitempty"`
 }
 
 // EventParams defines parameters to publish an app-related event
@@ -47,6 +48,7 @@ type EventParams struct {
 	Message          string
 	SharedEntrances  []v1alpha1.Entrance
 	Icon             string
+	MarketSource     string
 }
 
 func PublishEvent(nc *nats.Conn, subject string, data interface{}) error {
