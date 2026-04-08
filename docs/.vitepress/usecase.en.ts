@@ -24,6 +24,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/openclaw-skills",
                 },
                 {
+                  text: "Enable local file access",
+                  link: "/use-cases/openclaw-local-access",
+                },                
+                {
                   text: "Upgrade OpenClaw",
                   link: "/use-cases/openclaw-upgrade",
                 },
@@ -59,6 +63,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "Context7",
+              link: "/use-cases/context7",
+            },
+            {
               text: "Ollama",
               link: "/use-cases/ollama",
             },
@@ -66,6 +74,29 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             //   text: "Dify",
             //   link: "/use-cases/dify",
             // },
+            {
+              text: "LLMFit",
+              link: "/use-cases/llmfit",
+            },
+            {  
+              text: "OpenCode",
+              link: "/use-cases/opencode",
+              collapsed: true,
+              items: [
+                {
+                  text: "Manage packages",
+                  link: "/use-cases/opencode-packages",
+                },
+                {
+                  text: "Skills and plugins",
+                  link: "/use-cases/opencode-extensions",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/opencode-issues",
+                },
+              ]
+            },
             {
               text: "LobeHub (LobeChat)",
               link: "/use-cases/lobechat",
@@ -104,13 +135,20 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           text: "Virtual machine",
           collapsed: false,
           items: [
-            // {
-            //   text: "macOS",
-            //   link: "/use-cases/macOS",
-            // },
+            {
+              text: "macOS",
+              link: "/use-cases/macos",
+            },
             {
               text: "Windows",
               link: "/use-cases/windows",
+              collapsed: true,
+              items: [
+                {
+                  text: "Known issues",
+                  link: "/use-cases/windows-issues",
+                }
+              ]
             },
             // {
             //   text: "Redroid",
@@ -151,8 +189,22 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "Excalidraw",
+              link: "/use-cases/excalidraw",
+            },
+            {
               text: "Stirling PDF",
               link: "/use-cases/stirling-pdf",
+            },
+          ]
+        },
+        {
+          text: "Utilities",
+          collapsed: false,
+          items: [
+            {
+              text: "FlareSolverr",
+              link: "/use-cases/flaresolverr",
             },
           ]
         },

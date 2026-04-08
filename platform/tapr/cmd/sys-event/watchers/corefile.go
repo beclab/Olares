@@ -45,6 +45,22 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 
 	defaultsServer := file.Servers[0]
 	var defaultPlugins []*corefile.Plugin
+
+	// put the hosts plugin before other plugins, especially the forward plugin
+	defaultPlugins = append(defaultPlugins, &corefile.Plugin{
+		Name: "hosts",
+		Args: []string{"/node-etc/hosts"},
+		Options: []*corefile.Option{
+			{
+				Name: "ttl",
+				Args: []string{"30"},
+			},
+			{
+				Name: "fallthrough",
+			},
+		},
+	})
+
 	for _, p := range defaultsServer.Plugins {
 		switch p.Name {
 		case "errors", "health", "ready", "kubernetes", "prometheus", "forward", "cache", "loop", "reload", "loadbalance":

@@ -94,7 +94,7 @@ func (t *CheckKeyPodsRunning) Execute(runtime connector.Runtime) error {
 			logger.Debugf("skipping pod %s that's not on node %s", pod.Name, t.Node)
 			continue
 		}
-		if !strings.HasPrefix(pod.Namespace, "user-") && !strings.HasPrefix(pod.Namespace, "os-") {
+		if !strings.HasPrefix(pod.Namespace, "user-") && !strings.HasPrefix(pod.Namespace, "os-") && !strings.HasPrefix(pod.Namespace, "kube") {
 			continue
 		}
 		if err := utils.AssertPodReady(&pod); err != nil {
