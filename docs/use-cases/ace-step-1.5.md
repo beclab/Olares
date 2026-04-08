@@ -6,7 +6,7 @@ description: Learn how to install ACE-Step 1.5 on Olares, generate music from pr
 
 ACE-Step 1.5 is an AI music generation app that turns your text, lyrics, and audio guidance into complete songs. On Olares, it runs in a ready-to-use workspace, so you can focus on creating music right away.
 
-This guide covers the everyday workflows to generate, edit, and manage your tracks.
+This guide covers everyday workflows for generating, editing, and managing your tracks.
 
 ## Learning objectives
 
@@ -44,7 +44,7 @@ ACE-Step can help draft inputs such as Music Caption, Lyrics, and related settin
 Once the inputs are ready, click **Generate Music** to create the audio.
 
 - In Simple mode, ACE-Step helps you draft the inputs first. 
-- In Custom mode, you skip that drafting step and enter your own Music Caption and Lyrics.
+- In Custom mode, you skip the drafting step and enter your own Music Caption and Lyrics.
 
 ## Install and launch ACE-Step 1.5
 
@@ -70,7 +70,7 @@ This is the most common workflow for **text2music**.
 
 1. Draft the idea.
 
-    a. In Task Type, select **text2music**.
+    a. In **Task Type**, select **text2music**.
 
     b. In Generation Mode, select **Simple**.
 
@@ -88,9 +88,9 @@ This is the most common workflow for **text2music**.
     a. Review the text that the AI generated in the Music Caption and Lyrics boxes.
     ![Edit music caption](/images/manual/use-cases/ace-step-1.5-music-caption.png#bordered){width=90%}
 
-    b. Edit the lyrics manually if needed. Ensure structure tags like `[Verse]` and `[Chorus]` are present.
+    b. Edit the lyrics if needed, and make sure structure tags like `[Verse]` and `[Chorus]` are present.
 
-    c. Check that Music Caption and Lyrics do not conflict. For example, if your Caption says "acoustic guitar", don't put `[Heavy Metal Guitar Solo]` in the lyrics.
+    c. Check that Music Caption and Lyrics do not conflict. For example, if you add "acoustic guitar” for caption, don't put `[Heavy Metal Guitar Solo]` in the lyrics.
 
 3. Generate and listen.
 
@@ -138,7 +138,7 @@ Use this when you want the result to follow the feel of an existing clip more cl
 
 ### Restyle an existing track with Cover
 
-Use Cover task type when you want to create a new version of a song while strictly keeping its core melodic structure and rhythm.
+Use the **Cover** task type when you want to create a new version of a song while strictly keeping its core melodic structure and rhythm.
 
 1. In Task Type, select **Cover**. 
 2. In Audio Uploads, upload the original track to Source Audio. If you want to continue from a track you just generated, click **Send To Src Audio** in the Results area instead.
@@ -150,11 +150,11 @@ Use Cover task type when you want to create a new version of a song while strict
 
 ### Regenerate part of a track with Repaint
 
-Use Repaint task type when only one specific section of a track needs to change.
+Use the **Repaint** task type when only one specific section of a track needs to change.
 
 1. In Task Type, select **Repaint**. 
 2. In Audio Uploads, upload the track to Source Audio. 
-3. Set Repainting Start and Repainting End to isolate the section that needs to be regenerated. Use `-1` in Repainting End if you want the edit to continue to the end of the file. 
+3. Set Repainting Start and Repainting End to isolate the section that needs to be regenerated. Use `-1` in Repainting End if you want the edit to continue to the end of the track. 
     ![Regenerate with Repaint](/images/manual/use-cases/ace-step-1.5-repaint.png#bordered){width=90%}
 
 4. Enter a Music Caption describing what the updated section should sound like. 
