@@ -6,7 +6,7 @@ description: Learn how to install ACE-Step 1.5 on Olares, generate music from pr
 
 ACE-Step 1.5 is an AI music generation app that turns your text, lyrics, and audio guidance into complete songs. On Olares, it runs in a ready-to-use workspace, so you can focus on creating music right away.
 
-This guide focuses on the everyday workflows you need to generate, refine, and manage music on Olares.
+This guide covers the everyday workflows to generate, edit, and manage your tracks.
 
 ## Learning objectives
 
