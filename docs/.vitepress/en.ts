@@ -328,6 +328,10 @@ const side = {
               text: "Access Terminal",
               link: "/manual/olares/controlhub/terminal",
             },
+            {
+              text: "Configure environment variables",
+              link: "/manual/olares/controlhub/configure-env-var",
+            },            
           ],
         },
         {
