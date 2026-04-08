@@ -26,7 +26,7 @@ To use this feature, your system must meet the following requirements:
 
 When configuring the sandbox, the `mode` setting specifies when the sandbox is triggered: 
 - **off**: The sandbox is disabled. All commands run in the main container.
-- **non-main**: The sandbox isolates commands executed via external channels such as Discord. Commands executed directly in the Control UI's Chat page bypass the sandbox and run in the main container.
+- **non-main**: The sandbox isolates commands executed via external channels such as Discord. Commands executed directly in the Control UI's **Chat** page bypass the sandbox and run in the main container.
 - **all**: All commands run inside the sandbox, regardless of which interface or channel you use.
 
 ## Enable sandbox
@@ -65,7 +65,8 @@ The OpenClaw sandbox is disabled by default. You can enable it by modifying the 
 
     ![Enable sandbox via configuration file](/images/manual/use-cases/openclaw-edit-config-file.png#bordered)
 
-5. Click <i class="material-symbols-outlined">save</i> in the upper-right corner. The system validates the configuration and applies the change automatically.
+5. Click <i class="material-symbols-outlined">save</i> in the upper-right corner.
+6. Restart OpenClaw for the changes to take effect.
 </template>
 <template #Enable-via-Control-UI>
 
@@ -86,12 +87,13 @@ The OpenClaw sandbox is disabled by default. You can enable it by modifying the 
 
     ![Enable sandbox in Control UI](/images/manual/use-cases/openclaw-sandbox-enable-ui.png#bordered)
     
-4. Click **Save** in the upper-right corner. The system validates the configuration and applies the change automatically.
+4. Click **Save** in the upper-right corner.
+5. Restart OpenClaw for the changes to take effect.
 
 </template>
 </Tabs>
 
-## Use the sandbox
+## Use sandbox
 
 Once enabled, OpenClaw automatically creates and uses the isolated sandbox environment whenever it needs to execute commands.
 
@@ -122,7 +124,7 @@ If you want the sandbox to interact with your Olares files, you must explicitly 
 
 ### Grant access
 
-For example, to grant the sandbox read-only (`ro`) access to your Home directory:
+For example, to grant the sandbox read-only (`ro`) access to your **Home** directory:
 1. Ensure OpenClaw has access to your local files in the **Home** directory by enabling the `ALLOW_HOME_DIR_ACCESS` environment variable. For more information, see [Enable file access settings](../use-cases/openclaw-local-access.md#step-1-enable-file-access-settings).
 2. Open the Files app, and then go to **Data** > **clawdbot** > **config**.
 3. Double-click the `openclaw.json` file to open it.
@@ -146,7 +148,7 @@ In the previous step, the sandbox mode is `non-main`, and the bind mount is set 
 
 #### Test the main session
 
-Open the **Chat** page in the **Control UI**, and then send the following message:
+Open the **Chat** page in the Control UI, and then send the following message:
 
 ```text
 Write a self-instruction file in txt format, and save it to the Documents folder in my Olares
@@ -156,7 +158,7 @@ Write a self-instruction file in txt format, and save it to the Documents folder
 
 ![File creation success in specified directory](/images/manual/use-cases/openclaw-sandbox-file-created.png#bordered)
 
-**Reason**: Commands sent through the Control UI's Chat page belong to the "main" session. Because you set the sandbox mode to `non-main`, this session bypasses the sandbox entirely. The agent uses OpenClaw's default system permissions to write the file.
+**Reason**: Commands sent through the Control UI's **Chat** page belong to the "main" session. Because you set the sandbox mode to `non-main`, this session bypasses the sandbox entirely. The agent uses OpenClaw's default system permissions to write the file.
 
 #### Test a non-main session
 
@@ -170,9 +172,7 @@ Write a sci-fi story outline in txt format, and save it to the Documents folder 
 
 ![File creation failure in specified directory](/images/manual/use-cases/openclaw-sandbox-file-failure.png#bordered)
 
-**Reason**: Commands sent through external channels like Discord trigger the sandbox. Because you configured the sandbox with a read-only (`ro`) bind mount for the Home directory, the agent is blocked from writing or modifying any files.
-
-
+**Reason**: Commands sent through external channels like Discord trigger the sandbox. Because you configured the sandbox with a read-only (`ro`) bind mount for the **Home** directory, the agent is blocked from writing or modifying any files.
 
 ## Learn more
 
