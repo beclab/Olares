@@ -3,7 +3,7 @@ module github.com/beclab/l4-bfl-proxy
 go 1.24.11
 
 require (
-	github.com/beclab/Olares/framework/app-service v0.0.0-20260312103125-c6842142f45c
+	github.com/beclab/Olares/framework/app-service v0.0.0-20260408054606-1d4748811e82
 	github.com/beclab/api v0.0.2
 	github.com/envoyproxy/go-control-plane v0.14.0
 	github.com/envoyproxy/go-control-plane/envoy v1.36.0
