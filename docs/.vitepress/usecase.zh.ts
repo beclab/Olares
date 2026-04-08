@@ -114,7 +114,14 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           items: [
             {
               text: "Immich",
-              link: "/zh/use-cases/immich",
+              link: "/zh/use-cases/immich",              
+              collapsed: true,
+              items: [
+                {
+                  text: "Import photos from NAS",
+                  link: "/zh/use-cases/immich-import-from-nas",
+                },
+              ]
             },
             {
               text: "Jellyfin",

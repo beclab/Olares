@@ -120,6 +120,12 @@ If you have photos stored in the Olares Files app, you can configure Immich to s
 
    ![Scan the external library](/images/manual/use-cases/immich-scan-library.png#bordered)
 
+### Import from NAS
+
+If you have a large collection of photos stored on a local NAS device, you can mount your NAS directly in Olares and map these directories into Immich without duplicating files. 
+
+For detailed steps on setting up an SMB connection and mapping paths, see [Import photos from NAS](./immich-import-from-nas.md).
+
 ## Browse and manage photos   
 
 With your library populated, you can now interact with the photos.
