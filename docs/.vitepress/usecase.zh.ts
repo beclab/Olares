@@ -26,7 +26,11 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "启用本地文件访问",
                   link: "/zh/use-cases/openclaw-local-access",
-                },                
+                },
+                {
+                  text: "启用沙盒",
+                  link: "/use-cases/openclaw-enable-sandbox",
+                },                                 
                 {
                   text: "升级 OpenClaw",
                   link: "/zh/use-cases/openclaw-upgrade",

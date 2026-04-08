@@ -21,6 +21,7 @@ By the end of this guide, you are able to:
 - Optional: Enable the web search capability using Brave Search.
 - Manage skills and plug-ins.
 - Optional: Grant OpenClaw access to local files.
+- Optional: Enable the sandbox for secure code execution.
 
 ## Prerequisites
 
