@@ -31,7 +31,7 @@ To ensure system stability and security, only the latest firmware versions are a
 
 | Version | Release date | Changelog |
 |:--------|:-------------|:----------|
-| [1.01 (Download)]() pending cdn address | 2025-12-04 | <ul><li>Fix the issue where SSDs unexpectedly disconnect by disabling ASPM and L-state power management for SSD1 and SSD2.</li></ul> |
+| [1.01 (Download)](http://cdn.olares.com/common/AGBOX4_CWL_BIOS_ARL_Release-AGBOX4_BIOS_101.zip) | 2025-12-04 | <ul><li>Fix the issue where SSDs unexpectedly disconnect by disabling ASPM and L-state power management for SSD1 and SSD2.</li></ul> |
 | 1.00 | 2025-11-28 | <ul><li>Update version naming convention.</li></ul> |
 | C400 | 2025-11-05 | <ul><li>Hide advanced BIOS options by default.</li><li>Remove MCU version display.</li><li>Fix the issue where memory tests report errors by enabling SAGV.</li></ul> |
 
@@ -91,7 +91,7 @@ Do not disconnect the power supply or turn off the device during the BIOS update
 :::
 
 1. Extract the downloaded BIOS update package.
-2. Copy the resulting folder (e.g., `AGBOX4_BIOS_103`) to the root directory of your USB drive.
+2. Copy the resulting folder (e.g., `AGBOX4_BIOS_101`) to the root directory of your USB drive.
 3. Connect the USB drive to your Olares One.
 4. Power on the device or restart it if it is already running.
 5. When the Olares logo appears, immediately press and hold the **F7** key to enter the boot menu.
@@ -106,7 +106,7 @@ Do not disconnect the power supply or turn off the device during the BIOS update
 8. Run the following commands one by one to navigate to the AFU directory and start the flash script:
 
     ```bash
-    cd AGBOX4_BIOS_103
+    cd AGBOX4_BIOS_101
     cd AFU
     FlashAFU.nsh
     ```
