@@ -37,7 +37,6 @@ import (
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -543,36 +542,6 @@ type backfillAppGPUConfig struct {
 	common.KubeAction
 }
 
-var gpuMemoryByRawAppName = map[string]string{
-	"ollamallama318bv2":  "8Gi",
-	"ollamaminicpmv8bv2": "8Gi",
-	"vllmhymt1518bv2":    "8Gi",
-
-	"ollamacogito14bv2":     "12Gi",
-	"ollamadeepseekr114bv2": "12Gi",
-	"ollamallava1613bv2":    "12Gi",
-	"ollamaphi414bv2":       "12Gi",
-	"ollamaqwen314bv2":      "12Gi",
-	"ollamaqwen359bv2":      "12Gi",
-	"deepseekocrwebuiv2":    "12Gi",
-	"vllmhymt157bv2":        "12Gi",
-
-	"ollamagptoss20bv2": "19Gi",
-	"indexttsv2":        "19Gi",
-	"vllmgemma312bitv2": "19Gi",
-
-	"ollamagemma327bv2":             "23Gi",
-	"ollamaglm47flashv2":            "23Gi",
-	"ollamaqwen330ba3bv2":           "23Gi",
-	"ollamaqwen3527bq4kmv2":         "23Gi",
-	"llamacppgptoss120bggufv2":      "23Gi",
-	"vllmqwen330ba3binstruct4bitv2": "23Gi",
-	"vllmgptoss20bv2":               "23Gi",
-	"vllmgemma327bqatv2":            "23Gi",
-}
-
-const defaultGPUMemory = "2Gi"
-
 func (a *backfillAppGPUConfig) Execute(_ connector.Runtime) error {
 	config, err := ctrl.GetConfig()
 	if err != nil {
@@ -633,22 +602,6 @@ func (a *backfillAppGPUConfig) Execute(_ connector.Runtime) error {
 
 		modified := false
 
-		gpuMem, ok := gpuMemoryByRawAppName[am.Spec.RawAppName]
-		if !ok {
-			gpuMem = defaultGPUMemory
-		}
-		q := resource.MustParse(gpuMem)
-
-		if appCfg.RequiredGPU != q.String() {
-			appCfg.RequiredGPU = q.String()
-			modified = true
-		}
-
-		if appCfg.Requirement.GPU == nil || !appCfg.Requirement.GPU.Equal(q) {
-			appCfg.Requirement.GPU = &q
-			modified = true
-		}
-
 		if appCfg.SelectedGpuType == "" {
 			appCfg.SelectedGpuType = gpuType
 			modified = true
@@ -680,56 +633,8 @@ func (a *backfillAppGPUConfig) Execute(_ connector.Runtime) error {
 		logger.Infof("backfilled GPU config for applicationmanager %s", am.Name)
 		patchedCount++
 
-		if err := annotateWorkloadsForGPUBackfill(ctx, c, am, &appCfg); err != nil {
-			return errors.Wrapf(errors.WithStack(err), "failed to annotate workloads for %s", am.Name)
-		}
 	}
 
 	logger.Infof("backfilled GPU config for %d applicationmanagers", patchedCount)
-	return nil
-}
-
-func annotateWorkloadsForGPUBackfill(ctx context.Context, c ctrlclient.Client, am *appv1alpha1.ApplicationManager, appCfg *appcfg.ApplicationConfig) error {
-	var namespaces []string
-	if appCfg.IsMultiCharts() {
-		for _, chart := range appCfg.SubCharts {
-			namespaces = append(namespaces, chart.Namespace(am.Spec.AppOwner))
-		}
-	} else {
-		if am.Spec.AppNamespace == "" {
-			return nil
-		}
-		namespaces = []string{am.Spec.AppNamespace}
-	}
-
-	timestamp := time.Now().Format(time.RFC3339)
-	annotationPatch := ctrlclient.RawPatch(types.MergePatchType,
-		[]byte(fmt.Sprintf(`{"metadata":{"annotations":{"bytetrade.io/upgrade-gpu-backfill":"%s"}}}`, timestamp)))
-	for _, ns := range namespaces {
-		var deployList appsv1.DeploymentList
-		if err := c.List(ctx, &deployList, ctrlclient.InNamespace(ns)); err != nil {
-			return errors.Wrapf(errors.WithStack(err), "failed to list deployments in %s", ns)
-		}
-		for i := range deployList.Items {
-			d := &deployList.Items[i]
-			if err := c.Patch(ctx, d, annotationPatch); err != nil {
-				return errors.Wrapf(errors.WithStack(err), "failed to annotate deployment %s/%s", ns, d.Name)
-			}
-			logger.Infof("annotated deployment %s/%s for GPU config backfill", ns, d.Name)
-		}
-
-		var stsList appsv1.StatefulSetList
-		if err := c.List(ctx, &stsList, ctrlclient.InNamespace(ns)); err != nil {
-			return errors.Wrapf(errors.WithStack(err), "failed to list statefulsets in %s", ns)
-		}
-		for i := range stsList.Items {
-			s := &stsList.Items[i]
-			if err := c.Patch(ctx, s, annotationPatch); err != nil {
-				return errors.Wrapf(errors.WithStack(err), "failed to annotate statefulset %s/%s", ns, s.Name)
-			}
-			logger.Infof("annotated statefulset %s/%s for GPU config backfill", ns, s.Name)
-		}
-	}
-
 	return nil
 }
