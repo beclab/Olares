@@ -7,7 +7,7 @@ head:
       content: Olares, macOS, virtual machine, VNC, macOS VM
 app_version: "1.0.8"
 doc_version: "1.0"
-doc_updated: "2026-03-25"
+doc_updated: "2026-04-08"
 ---
 
 # Run a macOS VM on your Olares device

@@ -192,3 +192,7 @@ Currently, the following Windows version are supported:
 - Windows Server 2003
 
 After Windows installation, you can change the display language using the standard Windows language settings.
+
+## Learn more
+
+- [Run a macOS VM on your Olares device](./macos.md)
