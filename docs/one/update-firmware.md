@@ -19,7 +19,7 @@ Review the following changelogs for features or fixes included in each update. D
 
 | Version | Release date | Changelog | Download |
 | :--- | :--- | :--- | :--- |
-| 1.02 | 2026-01-19 | <ul><li>Fix the issue where the keyboard fails to wake the system from sleep mode.</li></ul> | [Download package]() pending cdn address|
+| 1.02 | 2026-01-19 | <ul><li>Fix the issue where the keyboard fails to wake the system from sleep mode.</li></ul> | [Download package](http://cdn.olares.com/common/update_ec_1.02_tool.zip) |
 | 1.01 | 2026-01-13 | <ul><li>Add support for Wake-on-LAN (WOL).</li><li>Disable the white breathing LED indicator during S3 sleep state.</li></ul> | [Download package]()pending cdn address |
 | 1.00 | 2025-12-01 | <ul><li>Initial MP SMT release.</li><li>Enable the white breathing LED indicator during S3 sleep state.</li></ul>  | [Download package]()pending cdn address |
 
@@ -27,7 +27,7 @@ Review the following changelogs for features or fixes included in each update. D
 
 | Version | Release date | Changelog | Download |
 | :--- | :--- | :--- | :--- |
-| 1.03 | 2026-03-19 | <ul><li>Fix the issue where ACPI errors occur during Ubuntu startup.</li><li>Update Intel CPU microcode to the latest version (121).</li></ul> | [Download package]() pending cdn address|
+| 1.03 | 2026-03-19 | <ul><li>Fix the issue where ACPI errors occur during Ubuntu startup.</li><li>Update Intel CPU microcode to the latest version (121).</li></ul> | [Download package](http://cdn.olares.com/common/AGBOX4_CWL_BIOS_ARL_Release-AGBOX4_BIOS_103.zip) |
 | 1.01 | 2025-12-04 | <ul><li>Fix the issue where SSDs unexpectedly disconnect by disabling ASPM and L-state power management for SSD1 and SSD2.</li></ul> | [Download package]() pending cdn address|
 | 1.00 | 2025-11-28 | <ul><li>Update version naming convention.</li></ul> | [Download package]()pending cdn address |
 | C400 | 2025-11-05 | <ul><li>Hide advanced BIOS options by default.</li><li>Remove MCU version display.</li><li>Fix the issue where memory tests report errors by enabling SAGV.</li></ul>  | [Download package]()pending cdn address |
