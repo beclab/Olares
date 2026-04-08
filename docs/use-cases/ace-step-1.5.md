@@ -1,6 +1,13 @@
 ---
 outline: [2, 3]
 description: Learn how to install ACE-Step 1.5 on Olares, generate music from prompts or lyrics, and refine your ideas with reference audio, Cover, Repaint, and LoRA-based workflows.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, ACE-Step 1.5, AI music generation, text-to-music, audio editing, LoRA training
+app_version: "1.0.1"
+doc_version: "1.0"
+doc_updated: "2026-04-08"
 ---
 # Create AI-generated music with ACE-Step 1.5
 
@@ -28,41 +35,35 @@ Before you begin, make sure:
 
 ## Understand the two-step workflow
 
-ACE-Step 1.5 usually works in two steps:
-
-1. You describe the musical idea.
-2. ACE-Step turns that idea into generation inputs, then into audio.
+Unlike simple one-click generators, ACE-Step 1.5 splits the music creation process into two distinct phases.
 
 ### Step 1: Draft the generation inputs
 
-Start with a high-level idea in Song Description, then click **Create Sample**.
+Start with a high-level idea in **Song Description**, then click **Create Sample**.
 
-ACE-Step can help draft inputs such as Music Caption, Lyrics, and related settings for you to review and refine.
+ACE-Step can help draft inputs such as **Music Caption**, **Lyrics**, and related settings for you to review and refine.
 
 ### Step 2: Generate the audio
 
 Once the inputs are ready, click **Generate Music** to create the audio.
 
-- In Simple mode, ACE-Step helps you draft the inputs first. 
-- In Custom mode, you skip the drafting step and enter your own Music Caption and Lyrics.
+- In **Simple** mode, ACE-Step helps you draft the inputs first. 
+- In **Custom** mode, you skip the drafting step and enter your own Music Caption and Lyrics.
 
+:::tip
+Before you dive into the specific workflows below, you can jump to the [Key controls overview](#key-controls-overview) to familiarize yourself with the main tools in the workspace.
+:::
 ## Install and launch ACE-Step 1.5
 
-### Install ACE-Step 1.5
-
-1. Open **Market** and search for "ACE-Step 1.5". 
+1. Open Market and search for "ACE-Step 1.5". 
 2. Click **Get**, then **Install** and wait for the installation to complete.
     ![Install Ace-Step 1.5](/images/manual/use-cases/install-ace-step-1.5.png#bordered){width=90%}
 
-### Complete first-launch setup
+3. Open ACE-Step 1.5. 
+4. On first launch, wait until the required models finish downloading and initialization completes. This download may take some time depending on your network conditions.
+   ![Download required models](/images/manual/use-cases/ace-step-1.5-download-models.png#bordered){width=90%}
 
-When you open ACE-Step 1.5 for the first time, the app downloads the required model files automatically.
-
-1. Open **ACE-Step 1.5** from Launchpad. 
-2. Wait until the download and initialization finish.
-    ![Download required models](/images/manual/use-cases/ace-step-1.5-download-models.png#bordered){width=90%}
-
-The setup is complete when the main workspace appears.
+When the main workspace appears, ACE-Step 1.5 is ready to use.
 
 ## Create and refine a track
 
@@ -72,9 +73,9 @@ This is the most common workflow for **text2music**.
 
     a. In **Task Type**, select **text2music**.
 
-    b. In Generation Mode, select **Simple**.
+    b. In **Generation Mode**, select **Simple**.
 
-    c. Enter a high-level idea in the Song Description.
+    c. Enter a high-level idea in the **Song Description**.
 
     For example:
     ```text
@@ -85,18 +86,18 @@ This is the most common workflow for **text2music**.
     ![Create sample](/images/manual/use-cases/ace-step-1.5-create-sample.png#bordered){width=90%}
 2. Refine the draft.
 
-    a. Review the text that the AI generated in the Music Caption and Lyrics boxes.
+    a. Review the text that the AI generated in the **Music Caption** and **Lyrics** boxes.
     ![Edit music caption](/images/manual/use-cases/ace-step-1.5-music-caption.png#bordered){width=90%}
 
     b. Edit the lyrics if needed, and make sure structure tags like `[Verse]` and `[Chorus]` are present.
 
-    c. Check that Music Caption and Lyrics do not conflict. For example, if you add "acoustic guitar” for caption, don't put `[Heavy Metal Guitar Solo]` in the lyrics.
+    c. Check that content in **Music Caption** and **Lyrics** do not conflict. For example, if you add "acoustic guitar” for caption, don't put `[Heavy Metal Guitar Solo]` in the lyrics.
 
 3. Generate and listen.
 
     a. Click **Generate Music**.
     
-    b. Preview the result in the Results area.
+    b. Preview the result in the **Results** area.
     ![View results](/images/manual/use-cases/ace-step-1.5-results.png#bordered){width=90%}
     :::tip
     Always generate a few variations. AI music involves randomness. If you don't love the first track, click **Generate Music** again to get a different interpretation of the same prompt.
@@ -114,24 +115,42 @@ Once you are comfortable with the general workflow, you can explore more precise
 
 ### Generate in custom mode
 
-Use Custom mode when you want to skip the drafting step and enter your own lyrics and settings.
+Use **Custom** mode when you want to skip the drafting step and enter your own lyrics and settings.
 
-1. In Task Type, select **text2music**.
-2. In Generation Mode, select **Custom**.
-3. Fill in Music Caption with the target style, genre, instruments, and mood.
+1. In **Task Type**, select **text2music**.
+2. In **Generation Mode**, select **Custom**.
+3. Fill in **Music Caption** with the target style, genre, instruments, and mood.
 4. Optionally click **Format** to expand a simple handwritten caption into a richer description.
-5. Enter your text in Lyrics.
-6. Set metadata such as BPM, Key Scale, or Audio Duration when needed.
+5. Enter your text in **Lyrics**.
+6. Set metadata such as **BPM**, **Key Scale**, **Time Signature** or **Audio Duration** when needed.
+    :::details Need help setting music metadata?
+
+    If you do not have a music theory background, you can use these guidelines to customize your song's emotion, tempo, and rhythm:
+
+    - **Key Scale (Emotion):**
+        - `Major` (e.g., `C Major`): Bright, sunny, or uplifting tracks.
+        - `Minor` (e.g., `A Minor`): Sad, melancholic, or cold tracks.
+    - **BPM (Tempo):** 
+        - `60–80`: Slow ballads and lo-fi.
+        - `90–120`: Mid-tempo pop and rock.
+        - `130–180`: Fast-paced electronic, trap, or high-energy rock.
+    - **Time Signature (Rhythm/Groove):**
+        - `4`: 4/4 time. The standard for pop, rock, and most modern music. If in doubt, this is always a safe choice.
+        - `3`: 3/4 time. Gives a classic waltz or dancing rhythm.
+        - `2`: 2/4 time. Powerful and driving, perfect for marching music or fast country.
+        - `6`: 6/8 time. Creates a gentle, swaying feel, excellent for slow love songs or bluesy ballads.
+    :::
 7. Click **Generate Music**.
     ![Custom mode](/images/manual/use-cases/ace-step-1.5-custom-mode.png#bordered){width=90%}
+
 ### Add style guidance with reference audio
 
 Use this when you want the result to follow the feel of an existing clip more closely, without directly modifying that clip.
 
-1. Go to Audio Uploads. 
-2. Upload a clip to Reference Audio, or use the microphone icon to record one.
+1. Go to **Audio Uploads**. 
+2. Upload a clip to **Reference Audio**, or use the microphone icon to record one.
     ![Reference audio](/images/manual/use-cases/ace-step-1.5-reference-audio.png#bordered){width=90%}
-3. Fill in Music Caption and Lyrics as needed.
+3. Fill in **Music Caption** and **Lyrics** as needed.
 4. Click **Generate Music**. 
 
 ## Modify existing tracks
@@ -140,10 +159,10 @@ Use this when you want the result to follow the feel of an existing clip more cl
 
 Use the **Cover** task type when you want to create a new version of a song while strictly keeping its core melodic structure and rhythm.
 
-1. In Task Type, select **Cover**. 
-2. In Audio Uploads, upload the original track to Source Audio. If you want to continue from a track you just generated, click **Send To Src Audio** in the Results area instead.
-3. Enter a Music Caption describing the new style or sound you want. 
-4. In Advanced Settings, adjust the **Audio Cover Strength** slider. In general, a lower Audio Cover Strength value allows more variation, while a higher value keeps the result closer to the original structure.
+1. In **Task Type**, select **Cover**. 
+2. In **Audio Uploads**, upload the original track to **Source Audio**. If you want to continue from a track you just generated, click **Send To Src Audio** in the **Results** area instead.
+3. Enter a **Music Caption** describing the new style or sound you want. 
+4. In **Advanced Settings**, adjust the **Audio Cover Strength** slider. In general, a lower **Audio Cover Strength** value allows more variation, while a higher value keeps the result closer to the original structure.
     ![Restyle with Cover](/images/manual/use-cases/ace-step-1.5-cover.png#bordered){width=90%}
 
 5. Click **Generate Music**. 
@@ -152,12 +171,12 @@ Use the **Cover** task type when you want to create a new version of a song whil
 
 Use the **Repaint** task type when only one specific section of a track needs to change.
 
-1. In Task Type, select **Repaint**. 
-2. In Audio Uploads, upload the track to Source Audio. 
-3. Set Repainting Start and Repainting End to isolate the section that needs to be regenerated. Use `-1` in Repainting End if you want the edit to continue to the end of the track. 
+1. In **Task Type**, select **Repaint**. 
+2. In **Audio Uploads**, upload the track to **Source Audio**. 
+3. Set **Repainting Start** and **Repainting End** to isolate the section that needs to be regenerated. Use `-1` in **Repainting End** if you want the edit to continue to the end of the track. 
     ![Regenerate with Repaint](/images/manual/use-cases/ace-step-1.5-repaint.png#bordered){width=90%}
 
-4. Enter a Music Caption describing what the updated section should sound like. 
+4. Enter a **Music Caption** describing what the updated section should sound like. 
 5. Click **Generate Music**. 
 
 ## Review, save, and reuse results
@@ -166,19 +185,16 @@ After generation finishes:
 
 1. Listen to the results.
 2. Compare a few versions.
-3. Save the promising ones.
-4. Continue from the version you want to refine.
-
-In the Results area, you can easily manage your workflow:
-
-- **Send To Src Audio**: Moves the current result directly into the Source Audio slot to instantly start a Cover or Repaint task.
-- **Apply These Settings to UI**: Restores the parameters of a promising track back into your workspace to generate similar variations.
-- **Score**: Reviews automatic alignment scores when comparing multiple versions.
-- **Save**: Keeps the current result for later reuse.
+3. Decide which track to keep or refine.
+4. Use the tools in the **Results** area to continue:
+   - **Send To Src Audio**: Moves the current result directly into the **Source Audio** slot so you can start a **Cover** or **Repaint** task right away.
+   - **Apply These Settings to UI**: Restores the parameters of a promising track back to the workspace so you can generate similar variations.
+   - **Score**: Shows automatic alignment scores for comparing multiple versions.
+   - **Save**: Keeps the current result for later reuse.
 
 ## Train a custom style with LoRA
 
-Use LoRA training when you want ACE-Step to learn a more consistent style from your own dataset.
+Use **LoRA Training** when you want ACE-Step 1.5 to learn a more consistent style from your own dataset.
 
 This is an advanced workflow and is not required for everyday music generation.
 
@@ -194,46 +210,25 @@ Before you start, note the following:
 At a high level, the workflow is:
 
 1. Prepare a dataset with audio files, lyrics, and annotations.
-2. In Dataset Builder, scan or load a dataset.
+2. In **Dataset Builder**, scan or load a dataset.
 3. Review and edit the detected metadata if needed.
 4. Save the dataset and preprocess it into tensors.
-5. Switch to Train LoRA tab to start training.
+5. Switch to **Train LoRA** tab to start training.
 6. After training finishes, load the trained LoRA and use it in generation.
 
 For detailed dataset requirements, parameter reference, and full training steps, refer to the official [ACE-Step 1.5 LoRA training](https://github.com/ace-step/ACE-Step-1.5/blob/main/docs/en/LoRA_Training_Tutorial.md) documentation.
 
-## Quick reference and tips
-
-Use these tips to better control your generations.
-
-### Key controls overview
+## Key controls overview
 
 | Control | Use it for |
 | --- | --- |
-| **Song Description** | Start from a high-level idea in Simple mode. |
+| **Song Description** | Start from a high-level idea in **Simple** mode. |
 | **Music Caption** | Describe style, instruments, mood, vocals, and sonic direction. |
-| **Create Sample** | Draft Music Caption, Lyrics, and related settings. |
+| **Create Sample** | Draft **Music Caption**, **Lyrics**, and related settings. |
 | **Generate Music** | Generate the actual audio. |
 | **Reference Audio** | Add style guidance without directly modifying a track. |
-| **Source Audio** | Provide the track used by Cover or Repaint. |
-| **Audio Cover Strength** | Control how closely Cover follows the original structure. |
-
-### Music metadata tips
-
-While the AI can usually guess the correct settings, you can manually set the metadata to force a specific vibe:
-
-- **Key Scale (Emotion):** 
-    - `Major` (e.g., `C Major`): Bright, sunny, or uplifting tracks.
-    - `Minor` (e.g., `A Minor`): Sad, melancholic, or cold tracks.
-- **BPM (Tempo):** 
-    - `60–80`: Slow ballads and lo-fi.
-    - `90–120`: Mid-tempo pop and rock.
-    - `130–180`: Fast-paced electronic, trap, or high-energy rock.
-- **Time Signature (Rhythm/Groove):**
-    - `4`: 4/4 time. The standard for pop, rock, and most modern music. If in doubt, this is always a safe choice.
-    - `3`: 3/4 time. Gives a classic waltz or dancing rhythm.
-    - `2`: 2/4 time. Powerful and driving, perfect for marching music or fast country.
-    - `6`: 6/8 time. Creates a gentle, swaying feel, excellent for slow love songs or bluesy ballads.
+| **Source Audio** | Provide the track used by **Cover** or **Repaint**. |
+| **Audio Cover Strength** | Control how closely **Cover** follows the original structure. |
 
 ## Troubleshoot common issues
 
@@ -255,9 +250,9 @@ AI music generation often requires iteration.
 
 If the result does not match your intent:
 
-- Make your Music Caption more specific.
-- Make sure your Lyrics use clear structure tags such as `[Verse]` and `[Chorus]`.
-- Check that Music Caption and Lyrics do not conflict.
+- Make your **Music Caption** more specific.
+- Make sure your **Lyrics** use clear structure tags such as `[Verse]` and `[Chorus]`.
+- Check that contents in **Music Caption** and **Lyrics** do not conflict.
 - Click **Generate Music** more than once to explore different versions.
 
 ## Learn more

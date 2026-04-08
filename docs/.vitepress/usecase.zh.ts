@@ -96,12 +96,12 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/perplexica",
             },
             {
-              text: "ACE-Step",
-              link: "/zh/use-cases/ace-step",
-            },
-            {
               text: "ACE-Step 1.5",
               link: "/zh/use-cases/ace-step-1.5",
+            },            
+            {
+              text: "ACE-Step",
+              link: "/zh/use-cases/ace-step",
             },
             {
               text: "Duix.Avatar",
