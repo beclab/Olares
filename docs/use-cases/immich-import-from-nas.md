@@ -7,49 +7,69 @@ head:
       content: Olares, Immich, photo backup, self-hosted photos, photo management, face recognition, smart search
 app_version: "1.0.15"
 doc_version: "1.0"
-doc_updated: "2026-04-10"
+doc_updated: "2026-04-09"
 ---
 
 # Import photos from NAS
 
 If you have photos stored on a NAS device, you can mount the NAS shared folder in Olares and import them into Immich as an external library.
 
-## Prerequisites
-
-- Immich is updated to V1.0.15 or later.
-- The Olares device and NAS are on the same local network.
-- The NAS shared folder has LAN access permissions enabled.
-
 :::info
 This tutorial uses Synology NAS as the example. The process might differ for other NAS brands.
 :::
 
-## Step 1: Mount the NAS shared folder
+## Prerequisites
 
-1. On your NAS, create a shared folder and ensure the **Hide this shared folder in "My Network Places"** option is not selected.
+- Immich is updated to V1.0.15 or later.
+- The Olares device and the NAS are on the same local network.
+- Shared folder configurations:
+  - The shared folder is configured to allow read/write access over the local network (SMB).
+  - The **Hide this shared folder in "My Network Places"** option is not selected for the shared folder.
 
-2. In Olares, open Files, click **External**, and then click **Connect to server**.
+## Step 1: Mount the NAS shared folder to Olares
 
-3. In the **Connect to server** window, enter the NAS IP address in SMB format (e.g., `//192.168.1.100`.), and then click **Confirm**. 
+1. Open Files, click **External**, and then click **Connect to server**.
 
-4. Choose to mount the entire shared folder or a specific subdirectory, then log in with your NAS credentials.
+   ![Connect to server in Files](/images/manual/use-cases/immich-connect-server.png#bordered)
 
-## Step 2: Add to Immich external library
+2. In the **Connect to server** window:
 
-1. In Immich, go to **Administration** > **External Libraries**. Create a new library or use an existing one.
+    a. Enter the NAS IP address in SMB format (e.g., `//192.168.50.156/`), and then click **Confirm**.
 
-2. Add the import path. The path format is `/external_storage/` followed by the directory name you mounted in Files. For example:
+    b. Enter your NAS user name and password, and then click **Confirm**.
+
+      ![Connect to server in Files](/images/manual/use-cases/immich-nas-login.png#bordered){width=60%}
+  
+    c. Select the folder to mount (`/CZ-test` in this case), and then click **Confirm**.
+
+      ![Connect to server in Files](/images/manual/use-cases/immich-nas-select-share.png#bordered){width=60%}
+
+      Once connected, the shared folder will appear in the **External** directory.
+
+      ![NAS mounted to Files](/images/manual/use-cases/immich-nas-mounted.png#bordered)
+
+## Step 2: Add the folder to an Immich external library
+
+1. Open Immich, click your user avatar in the upper-right corner, and then select **Administration**.
+2. Click **External Libraries** from the left sidebar. 
+3. Create a new library or use an existing one.
+4. In the **Folders** area, click **Add**.
+5. Enter the import path. The path format is `/external_storage/` followed by the directory name you mounted in Files. In this case, it is:
 
    ```text
-   /external_storage/temp/test/
+   /external_storage/CZ-test
    ```
+   ![NAS mounted to Files](/images/manual/use-cases/immich-add-nas-folder.png#bordered)
 
-3. Click Scan in the upper-right corner to start scanning.
+6. Click **Add**.
+7. Click **Scan** in the upper-right corner to start scanning. 
 
-:::tip Scanning large folders
-If the folder contains many files, scanning might take a while and consume significant NAS disk I/O. You can pause some tasks in the Jobs queue to speed up processing.
-:::
+    Once the scan finishes, photos from the NAS appear in the photos timeline.
 
-4. Once the scan is complete, the NAS photos appear in the Immich timeline.
+    :::tip Scanning large folders
+    If the folder contains many files, scanning might take a while and consume significant NAS disk I/O. You can go to **Administration** > **Job Queues** and pause some tasks in it to speed up processing.
+    :::
+
+
 
 
