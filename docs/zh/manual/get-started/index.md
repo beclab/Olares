@@ -15,6 +15,16 @@ description: Olares 的上手指南，选择适合个人或团队的使用路径
 </div>
 
 <div class="cta">
+  <a href="./join-olares">
+    <div class="content">
+      <h3>加入 Olares 集群？</h3>
+      <p>使用管理员提供的链接，创建 Olares ID 并激活账号。</p>
+    </div>
+    <div class="arrow">→</div>
+  </a>
+</div>
+
+<div class="cta">
   <a href="../olares/">
     <div class="content">
       <h3>已是 Olares 用户？</h3>

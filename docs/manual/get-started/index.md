@@ -15,6 +15,16 @@ Welcome to Olares! This guide will help you quickly set up and start using Olare
 </div>
 
 <div class="cta">
+  <a href="./join-olares">
+    <div class="content">
+      <h3>Joining an existing Olares?</h3>
+      <p>Create your Olares ID and activate your account using the link from your admin.</p>
+    </div>
+    <div class="arrow">→</div>
+  </a>
+</div>
+
+<div class="cta">
   <a href="../olares/">
     <div class="content">
       <h3>Already have an Olares?</h3>
