@@ -33,26 +33,25 @@ Before you begin, make sure:
 - Your device has enough available storage for the initial model download. 
 - You have a stable network connection. 
 
-## Understand the two-step workflow
+## Understand how ACE-Step 1.5 works
 
-Unlike simple one-click generators, ACE-Step 1.5 splits the music creation process into two distinct phases.
+ACE-Step 1.5 usually works in two stages:
 
-### Step 1: Draft the generation inputs
+1. You describe the musical idea.
+2. ACE-Step turns that idea into generation inputs, then into audio.
 
-Start with a high-level idea in **Song Description**, then click **Create Sample**.
+Before you start, use the table below as a quick guide to the main controls.
 
-ACE-Step can help draft inputs such as **Music Caption**, **Lyrics**, and related settings for you to review and refine.
+| Control | Use it for |
+| --- | --- |
+| **Song Description** | Start from a high-level idea in **Simple** mode. |
+| **Music Caption** | Describe style, instruments, mood, vocals, and sonic direction. |
+| **Create Sample** | Draft **Music Caption**, **Lyrics**, and related settings. |
+| **Generate Music** | Generate the actual audio. |
+| **Reference Audio** | Add style guidance without directly modifying a track. |
+| **Source Audio** | Provide the track used by **Cover** or **Repaint**. |
+| **Audio Cover Strength** | Control how closely **Cover** follows the original structure. 
 
-### Step 2: Generate the audio
-
-Once the inputs are ready, click **Generate Music** to create the audio.
-
-- In **Simple** mode, ACE-Step helps you draft the inputs first. 
-- In **Custom** mode, you skip the drafting step and enter your own Music Caption and Lyrics.
-
-:::tip
-Before you dive into the specific workflows below, you can jump to the [Key controls overview](#key-controls-overview) to familiarize yourself with the main tools in the workspace.
-:::
 ## Install and launch ACE-Step 1.5
 
 1. Open Market and search for "ACE-Step 1.5". 
@@ -217,18 +216,6 @@ At a high level, the workflow is:
 6. After training finishes, load the trained LoRA and use it in generation.
 
 For detailed dataset requirements, parameter reference, and full training steps, refer to the official [ACE-Step 1.5 LoRA training](https://github.com/ace-step/ACE-Step-1.5/blob/main/docs/en/LoRA_Training_Tutorial.md) documentation.
-
-## Key controls overview
-
-| Control | Use it for |
-| --- | --- |
-| **Song Description** | Start from a high-level idea in **Simple** mode. |
-| **Music Caption** | Describe style, instruments, mood, vocals, and sonic direction. |
-| **Create Sample** | Draft **Music Caption**, **Lyrics**, and related settings. |
-| **Generate Music** | Generate the actual audio. |
-| **Reference Audio** | Add style guidance without directly modifying a track. |
-| **Source Audio** | Provide the track used by **Cover** or **Repaint**. |
-| **Audio Cover Strength** | Control how closely **Cover** follows the original structure. |
 
 ## Troubleshoot common issues
 
