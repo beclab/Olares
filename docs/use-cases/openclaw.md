@@ -601,7 +601,9 @@ Use the same context size for all apps that share a model to reduce reload times
 
     ![View model details in Ollama terminal](/images/manual/use-cases/ollama-ps.png#bordered)
 
-    - If you use a standalone model app, open its pod terminal in **Control Hub** and run `ollama ps` as well.
+    - If you use a standalone model app, open its pod terminal in **Control Hub**, run `ollama run {model-name}`, press **Ctrl** + **D**, and then run `ollama ps`.
+
+    ![View model details in Control Hub](/images/manual/use-cases/ollama-ps-ctrl-hub.png#bordered)
 
 2. Go to each app that uses the same model, and adjust them to use the same context size.
 
