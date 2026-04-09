@@ -33,6 +33,18 @@ Before you begin, make sure:
 - Your device has enough available storage for the initial model download. 
 - You have a stable network connection. 
 
+## Install and launch ACE-Step 1.5
+
+1. Open Market and search for "ACE-Step 1.5". 
+2. Click **Get**, then **Install** and wait for the installation to complete.
+    ![Install Ace-Step 1.5](/images/manual/use-cases/install-ace-step-1.5.png#bordered){width=90%}
+
+3. Open ACE-Step 1.5. 
+4. On first launch, wait for the required models finish downloading and initialization completes. This download may take some time depending on your network conditions.
+   ![Download required models](/images/manual/use-cases/ace-step-1.5-download-models.png#bordered){width=60%}
+
+When the main workspace appears, ACE-Step 1.5 is ready to use.
+
 ## Understand how ACE-Step 1.5 works
 
 ACE-Step 1.5 usually works in two stages:
@@ -50,19 +62,7 @@ Before you start, use the table below as a quick guide to the main controls.
 | **Generate Music** | Generate the actual audio. |
 | **Reference Audio** | Add style guidance without directly modifying a track. |
 | **Source Audio** | Provide the track used by **Cover** or **Repaint**. |
-| **Audio Cover Strength** | Control how closely **Cover** follows the original structure. 
-
-## Install and launch ACE-Step 1.5
-
-1. Open Market and search for "ACE-Step 1.5". 
-2. Click **Get**, then **Install** and wait for the installation to complete.
-    ![Install Ace-Step 1.5](/images/manual/use-cases/install-ace-step-1.5.png#bordered){width=90%}
-
-3. Open ACE-Step 1.5. 
-4. On first launch, wait for the required models finish downloading and initialization completes. This download may take some time depending on your network conditions.
-   ![Download required models](/images/manual/use-cases/ace-step-1.5-download-models.png#bordered){width=90%}
-
-When the main workspace appears, ACE-Step 1.5 is ready to use.
+| **Audio Cover Strength** | Control how closely **Cover** follows the original structure. |
 
 ## Create and refine a track
 
