@@ -1,53 +1,40 @@
 ---
-outline: deep
-description: Resolve common ComfyUI Launcher issues on Olares, including startup problems, missing models outside of ComfyUI Launcher, workflow errors, and troubleshooting steps.
+outline: [2, 3]
+description: Common issues and solutions for ComfyUI on Olares, including startup problems, launcher log messages, missing models, workflow errors, and high CPU temperature on Olares One
+head:
+  - - meta
+    - name: keywords
+      content: Olares, ComfyUI, troubleshooting, common issues, self-hosted
 ---
+# Common issues
 
-# Resolve common issues in ComfyUI Launcher
-
-Use this page to identify and troubleshoot common issues with ComfyUI Launcher on Olares.
-
-For routine setup and maintenance tasks, see [Manage ComfyUI using ComfyUI Launcher](./comfyui-launcher).
-
-**Common issues**
-- [ComfyUI cannot start](#comfyui-cannot-start)
-- [Why does the Launcher log show errors?](#why-does-the-launcher-log-show-errors)
-- [Download missing models outside of ComfyUI Launcher](#download-missing-models-outside-of-comfyui-launcher)
-- [A workflow reports an error](#a-workflow-reports-an-error)
-- [CPU temperature rises unusually high on Olares One](#cpu-temperature-rises-unusually-high-on-olares-one)
-
-**General recovery flow**
-
-- [Troubleshooting flow](#troubleshooting-flow)
+Use this page to identify and resolve common issues with ComfyUI on Olares.
 
 ## ComfyUI cannot start
 
-If ComfyUI does not start, keeps stopping, or behaves unexpectedly when you try to launch it, start with the checks below.
+ComfyUI does not start, keeps stopping, or behaves unexpectedly when you try to launch it.
+
+This is often related to insufficient system resources, an unsuitable GPU mode, or plugin dependency conflicts.
+
+To resolve this:
 
 1. Check whether enough CPU, memory, and VRAM are available. Stop other resource-intensive apps if needed.
-2. Check whether the current [GPU mode](/manual/olares/settings/single-gpu.md) is suitable for the workload.
-3. If the issue started after installing new plugins, continue with [Check dependency conflicts](#check-dependency-conflicts).
-4. If ComfyUI still cannot start, continue with [Troubleshooting flow](#troubleshooting-flow).
+2. Check whether the current [GPU mode](/manual/olares/settings/single-gpu.md) is suitable for your workload.
+3. If the issue still persists, follow the [Troubleshooting flow](/use-cases/comfyui-launcher#troubleshooting-flow).
 
-## Why does the Launcher log show errors?
+## Launcher log shows unexpected errors
 
-Log messages in ComfyUI Launcher do not always mean that ComfyUI is broken.
+Log messages in ComfyUI Launcher do not always mean that ComfyUI is broken. Some `Error` messages may appear during startup, plugin scanning, or environment checks even when ComfyUI is still usable.
 
-Some `Error` messages may appear during startup, plugin scanning, or environment checks even when ComfyUI is working normally.
+If ComfyUI starts successfully, many of these warnings may not require action. You only need to investigate the logs if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
 
-You usually only need to investigate the logs if:
+If you need to escalate the issue, see [Collect information for support](/use-cases/comfyui-launcher.md#collect-information-for-support). 
 
-- ComfyUI does not start
-- a workflow cannot run
-- a plugin stops working after installation
+## Models cannot be downloaded in ComfyUI Launcher
 
-If you need to escalate the issue, see [Collect information for support](#collect-information-for-support).
+A workflow may require a model that needs a login, access token, or approval to download. ComfyUI Launcher cannot download these models directly.
 
-## Download missing models outside of ComfyUI Launcher
-
-Some workflows require models that cannot be downloaded directly in ComfyUI Launcher.
-
-This usually happens when a model requires login, a token, approval, manual download, or comes from a source not supported by ComfyUI Launcher.
+To solve it, find the download link using one of the methods below, download the model manually, and [upload it](/use-cases/comfyui-launcher.md#upload-local-models) to the correct folder in Olares Files. 
 
 ### Method 1: Check the template notes or Model Links section
 
@@ -70,49 +57,50 @@ For example, with [WAN Download URL Helper](https://github.com/carlric/wan-downl
 1. Open the missing-model dialog in ComfyUI.
 2. Hover over a download icon.
 3. Right-click the icon and choose **Show download URL**.
-    ![ComfyUI download URL helper](/images/manual/use-cases/comfyui-download-url-helper.png#bordered){width=90%}
-
 4. Copy the URL, then use it in your downloader or save it for manual download.
+
+![ComfyUI download URL helper](/images/manual/use-cases/comfyui-download-url-helper.png#bordered){width=80%}
 
 ### Method 3: Inspect the page in browser developer tools
 
 If the URL is not shown in the template notes or dialog, inspect the page in your browser developer tools and look for network requests triggered by the template or missing-model dialog.
 
-![Inspect url](/images/manual/use-cases/comfyui-inspect-url.png#bordered){width=90%}
+![Inspect url](/images/manual/use-cases/comfyui-inspect-url.png#bordered){width=80%}
 
-After downloading the model manually, upload it to the correct folder in Olares Files. For detailed steps, see [Upload local models](/use-cases/comfyui-launcher.md#upload-local-models).
+## Workflow fails during execution
 
-## A workflow reports an error
+ComfyUI starts successfully, but a workflow halts and reports an error.
 
-If ComfyUI starts successfully but a workflow fails during execution, find out why by checking the error report in the client.
+This happens when the workflow encounters missing models, missing custom nodes, or Python dependency conflicts during the generation process.
+
+To resolve this, find out the exact cause by checking the error report:
 
 1. In the ComfyUI client, click **Active** to open the **Job Queue**.
 2. Select the failed task from the list.
 3. Click **Report error**, then click **Show Report** to expand the details.
 
-   ![Workflow error report](/images/manual/use-cases/comfyui-workflow-error.png#bordered){width=90%}
+   ![Workflow error report](/images/manual/use-cases/comfyui-workflow-error.png#bordered){width=80%}
 
 Once you have the error details, decide your next step:
 
-- If the error points to a missing model, see [Download missing models outside of ComfyUI Launcher](#download-missing-models-outside-of-comfyui-launcher).
-- If the error points to a missing Python module or node, see [Check dependency conflicts](#check-dependency-conflicts).
-- If the cause is still unclear, continue with the [Troubleshooting flow](#troubleshooting-flow).
+- If the error points to a missing model, see [Models cannot be downloaded in ComfyUI Launcher](#models-cannot-be-downloaded-in-comfyui-launcher).
+- If the error points to a missing Python module or node, see [Analyze dependency installation status](/use-cases/comfyui-launcher#analyze-dependency-installation-status).
+- If the cause is still unclear, follow the [Troubleshooting flow](/use-cases/comfyui-launcher#troubleshooting-flow).
 
 ## CPU temperature rises unusually high on Olares One
 
-If CPU temperature rises unusually high while running some ComfyUI workloads on Olares One, follow the workaround below.
+CPU temperature rises unusually high while running certain ComfyUI workloads on Olares One.
 
-This issue typically occurs when running large workflows that require more memory (VRAM) than your graphics card has available.
+This issue typically occurs when running large workflows that require more memory (VRAM) than your graphics card has available. When this happens, the system may place an unusually heavy load on a single CPU core to swap data, driving the reported CPU temperature very high.
 
-When this happens, the system may place unusually heavy load on a single CPU core and drive the reported CPU temperature very high.
-
-To reduce the temperature, you can temporarily lower the CPU frequency.
+**Workaround**: Temporarily lower the CPU frequency.
 
 1. Open the Control Hub app.
-2. In the left sidebar, under the **Terminal** section, click **Olares**.
-    ![Open terminal](/images/manual/use-cases/comfyui-ts-terminal.png#bordered){width=90%}
+2. In the left sidebar, under **Terminal**, click **Olares**.
 
-3. Run the following command to lower the maximum CPU frequency to a lower value.
+   ![Open terminal](/images/manual/use-cases/comfyui-ts-terminal.png#bordered){width=90%}
+
+3. Run the following command to lower the maximum CPU frequency.
 
    For example, to set it to 5.0 GHz, run:
     ```bash
@@ -125,73 +113,3 @@ To reduce the temperature, you can temporarily lower the CPU frequency.
     ```
 
 This is a temporary workaround. A long-term fix is still under investigation.
-
-## Troubleshooting flow
-
-Use the following flow when the issue is not resolved by the problem-specific guidance above, or when you are not sure which problem category applies.
-
-Start with the step that best matches your situation:
-
-- If a workflow that previously worked starts failing after installing new plugins, check dependency conflicts first.
-- If the issue is still not resolved, continue with reset or reinstall.
-- If you need help from teammates or support, collect diagnostic information before escalating the issue.
-
-### Check dependency conflicts
-
-If problems start after installing new plugins, the issue may be caused by dependency conflicts.
-
-Run a dependency analysis to identify and fix the problem. For detailed steps, see [Analyze dependency installation status](./comfyui-launcher#analyze-dependency-installation-status).
-
-### Reset ComfyUI configuration
-
-If the issue is still not resolved after the checks above, reset ComfyUI to its initial state.
-
-:::warning Perform with caution
-Resetting ComfyUI is irreversible. All plugins, custom configurations, and Python dependencies will be removed. Models stored in the shared `model` folder are not affected.
-:::
-:::tip Get diagnostic details
-If you plan to contact support, export your ComfyUI logs before resetting, as this action will erase the current system state. See [Collect information for support](#collect-information-for-support).
-:::
-
-To reset ComfyUI:
-
-1. In ComfyUI Launcher, go to **Home** and click <i class="material-symbols-outlined">more_vert</i> in the upper-right corner, then click **Wipe and restore**.
-2. In the prompt window, click **WIPE AND RESTORE**.
-    ![Wipe and restore](/images/manual/use-cases/comfyui-wipe-and-restore.png#bordered){width=50%}
-
-3. Enter `CONFIRM`, then click **CONFIRM**.
-    ![Second confirmation](/images/manual/use-cases/comfyui-second-confirm.png#bordered){width=50%}
-
-After the reset is complete, restart ComfyUI for the changes to take effect.
-
-### Reinstall ComfyUI completely
-
-If the issue persists after the wipe and restore, uninstall and reinstall ComfyUI completely.
-
-1. Go to **Market** > **My Olares**.
-2. Click the dropdown arrow next to ComfyUI's operation button and select **Uninstall**.
-3. In the **Uninstall** window, select **Also remove all local data**, then click **Confirm**.
-4. Open Files from the Launchpad and go to `External/olares/ai`.
-5. Delete the `comfyui` folder.
-6. Reinstall ComfyUI from Market.
-7. Once installation is complete, open ComfyUI Launcher and start the service.
-
-### Collect information for support
-
-If you cannot resolve the issue and need to escalate it to the support team, prepare the following diagnostic information.
-
-#### Export ComfyUI logs
-
-Logs contain the backend running status and error traces.
-
-1. In ComfyUI Launcher, go to **Home** and click <i class="material-symbols-outlined">more_vert</i> in the upper-right corner, then click **View logs**.
-   ![View Logs](/images/manual/use-cases/comfyui-view-logs1.png#bordered){width=90%}
-2. Click the <i class="material-symbols-outlined">refresh</i> button to ensure you have the latest output.
-3. Click the <i class="material-symbols-outlined">download</i> button to save the log file.
-   ![Export Logs](/images/manual/use-cases/comfyui-export-logs.png#bordered){width=90%}
-
-#### Get the workflow error report (optional)
-
-If a specific workflow is failing, include a screenshot of the workflow error report.
-
-For detailed steps, see [A workflow reports an error](#a-workflow-reports-an-error).

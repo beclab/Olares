@@ -1,13 +1,13 @@
 ---
 outline: deep
-description: Administrators' guide for managing ComfyUI on Olares with ComfyUI Launcher, covering service control, network configuration, model and plugin management, and Python dependencies.
+description: Administrators' guide for managing ComfyUI on Olares with ComfyUI Launcher, covering service control, network configuration, model and plugin management, Python dependencies, and troubleshooting.
 ---
 
 # Manage ComfyUI using ComfyUI Launcher
 
 ComfyUI Launcher is the core management tool for ComfyUI administrators. Use it to control the ComfyUI service across the cluster, and manage models, plugins, the runtime environment, and network settings.
 
-This guide walks you through using ComfyUI Launcher for service management and routine administration.
+This guide walks you through using ComfyUI Launcher for service management, routine administration, and troubleshooting.
 
 ## Learning objectives
 
@@ -18,6 +18,7 @@ In this guide, you will learn how to:
 - Add models in different ways and understand where models are stored in Olares Files.
 - Manage plugins from the ComfyUI Launcher library or install them from GitHub.
 - Manage Python dependencies by installing, updating, removing packages, and analyzing missing dependencies for plugins.
+- Troubleshoot common issues by checking dependency conflicts, resetting ComfyUI, reinstalling it, and collecting diagnostic information for support.
 
 ## Start and stop the service
 
@@ -145,7 +146,7 @@ Use this method when you already have a direct download URL for a model file tha
 
 Use this method when the model requires login, a token, approval, or manual download, or when the model source is not supported by ComfyUI Launcher.
 
-1. Download the model file to your local device. If needed, see [Download missing models outside of ComfyUI Launcher](/use-cases/comfyui-common-issues.md#download-missing-models-outside-of-comfyui-launcher).
+1. Download the model file to your local device. If needed, see [Models cannot be downloaded in ComfyUI Launcher](/use-cases/comfyui-common-issues#models-cannot-be-downloaded-in-comfyui-launcher).
 2. Open Files from the Launchpad.
 3. Navigate to `External/olares/ai/model`.
 4. Open the folder that matches the model type. If you're not sure which folder to use, see [Understand the `model` directory structure](#understand-the-model-directory-structure).
@@ -274,6 +275,66 @@ If incorrect launch parameters are causing issues, restore all options to their 
 2. Go to **Home** and click **RESTART** to apply the changes.
 -->
 
-## Learn more
+## Troubleshooting flow
 
-- [Resolve common issues in ComfyUI Launcher](/use-cases/comfyui-common-issues.md): A guide to troubleshooting startup failures, missing models, and workflow errors.
+Use the following flow when you encounter an issue and need a general recovery path.
+
+### Check dependency conflicts
+
+If problems start after installing new plugins, the issue may be caused by dependency conflicts.
+
+Run a dependency analysis to identify and fix the problem. For detailed steps, see [Analyze dependency installation status](#analyze-dependency-installation-status).
+
+### Reset ComfyUI configuration
+
+If the issue is still not resolved after the checks above, reset ComfyUI to its initial state.
+
+:::warning Perform with caution
+Resetting ComfyUI is irreversible. All plugins, custom configurations, and Python dependencies will be removed. Models stored in the shared `model` folder are not affected.
+:::
+:::tip Get diagnostic details
+If you plan to contact support, export your ComfyUI logs before resetting, as this action will erase the current system state. See [Collect information for support](#collect-information-for-support).
+:::
+
+To reset ComfyUI:
+
+1. In ComfyUI Launcher, go to **Home** and click <i class="material-symbols-outlined">more_vert</i> in the upper-right corner, then click **Wipe and restore**.
+2. In the prompt window, click **WIPE AND RESTORE**.
+    ![Wipe and restore](/images/manual/use-cases/comfyui-wipe-and-restore.png#bordered){width=50%}
+
+3. Enter `CONFIRM`, then click **CONFIRM**.
+    ![Second confirmation](/images/manual/use-cases/comfyui-second-confirm.png#bordered){width=50%}
+
+After the reset is complete, restart ComfyUI for the changes to take effect.
+
+### Reinstall ComfyUI completely
+
+If the issue persists after the wipe and restore, uninstall and reinstall ComfyUI completely.
+
+1. Go to **Market** > **My Olares**.
+2. Click the dropdown arrow next to ComfyUI's operation button and select **Uninstall**.
+3. In the **Uninstall** window, select **Also remove all local data**, then click **Confirm**.
+4. Open Files from the Launchpad and go to `External/olares/ai`.
+5. Delete the `comfyui` folder.
+6. Reinstall ComfyUI from Market.
+7. Once installation is complete, open ComfyUI Launcher and start the service.
+
+### Collect information for support
+
+If you cannot resolve the issue and need to escalate it to the support team, prepare the following diagnostic information.
+
+#### Export ComfyUI logs
+
+Logs contain the backend running status and error traces.
+
+1. In ComfyUI Launcher, go to **Home** and click <i class="material-symbols-outlined">more_vert</i> in the upper-right corner, then click **View logs**.
+   ![View Logs](/images/manual/use-cases/comfyui-view-logs1.png#bordered){width=90%}
+2. Click the <i class="material-symbols-outlined">refresh</i> button to ensure you have the latest output.
+3. Click the <i class="material-symbols-outlined">download</i> button to save the log file.
+   ![Export Logs](/images/manual/use-cases/comfyui-export-logs.png#bordered){width=90%}
+
+#### Get the workflow error report (optional)
+
+If a specific workflow is failing, include a screenshot of the workflow error report.
+
+For detailed steps, see [Workflow fails during execution](/use-cases/comfyui-common-issues#workflow-fails-during-execution).
