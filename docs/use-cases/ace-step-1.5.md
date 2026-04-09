@@ -36,11 +36,11 @@ Before you begin, make sure:
 ## Install and launch ACE-Step 1.5
 
 1. Open Market and search for "ACE-Step 1.5". 
-2. Click **Get**, then **Install** and wait for the installation to complete.
     ![Install Ace-Step 1.5](/images/manual/use-cases/install-ace-step-1.5.png#bordered){width=90%}
 
-3. Open ACE-Step 1.5. 
-4. On first launch, wait for the required models finish downloading and initialization completes. This download may take some time depending on your network conditions.
+2. Click **Get**, then **Install** and wait for the installation to complete.
+
+3. Open ACE-Step 1.5 and wait for the required models to download. This process may take some time depending on your network conditions.
    ![Download required models](/images/manual/use-cases/ace-step-1.5-download-models.png#bordered){width=60%}
 
 When the main workspace appears, ACE-Step 1.5 is ready to use.
@@ -193,26 +193,21 @@ After generation finishes:
 
 ## Train a custom style with LoRA
 
-Use **LoRA Training** when you want ACE-Step 1.5 to learn a more consistent style from your own dataset.
+Use **LoRA Training** when you want ACE-Step 1.5 to learn a more consistent style from your own dataset. This is an advanced workflow and is not required for everyday music generation.
 
-This is an advanced workflow and is not required for everyday music generation.
-
-Before you start, note the following:
-
-- LoRA training has higher hardware requirements than everyday generation.
-- Training generally needs at least 16 GB of VRAM, and 20 GB or more is recommended for longer songs.
-- Your dataset should include audio files, lyrics, and annotation data.
-- If you are unfamiliar with training parameters, the default values are generally fine.
+:::info
+Training requires at least 16 GB of VRAM. 20 GB or more is recommended for longer songs.
+:::
 
 ![LoRA training](/images/manual/use-cases/ace-step-1.5-lora-training.png#bordered){width=90%}
 
-At a high level, the workflow is:
+To train a LoRA:
 
 1. Prepare a dataset with audio files, lyrics, and annotations.
-2. In **Dataset Builder**, scan or load a dataset.
+2. In **Dataset Builder**, scan or load your dataset.
 3. Review and edit the detected metadata if needed.
 4. Save the dataset and preprocess it into tensors.
-5. Switch to **Train LoRA** tab to start training.
+5. Switch to the **Train LoRA** tab and start training. If you are unfamiliar with training parameters, the default values are generally fine.
 6. After training finishes, load the trained LoRA and use it in generation.
 
 For detailed dataset requirements, parameter reference, and full training steps, refer to the official [ACE-Step 1.5 LoRA training](https://github.com/ace-step/ACE-Step-1.5/blob/main/docs/en/LoRA_Training_Tutorial.md) documentation.
