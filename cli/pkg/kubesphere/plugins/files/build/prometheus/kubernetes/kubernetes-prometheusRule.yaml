@@ -797,6 +797,15 @@ spec:
             label_replace(node_disk_lsblk_info, "node", "$1", "instance", "(.*)")
           record: node:node_disk_lsblk_info
         - expr: |
+            label_replace(node_rapl_constraint_0_max_power_uw, "node", "$1", "instance", "(.*)")
+          record: node:node_rapl_constraint_0_max_power_uw
+        - expr: |
+            label_replace(node_rapl_constraint_0_power_limit_uw, "node", "$1", "instance", "(.*)")
+          record: node:node_rapl_constraint_0_power_limit_uw
+        - expr: |
+            label_replace(node_rapl_constraint_1_power_limit_uw, "node", "$1", "instance", "(.*)")
+          record: node:node_rapl_constraint_1_power_limit_uw
+        - expr: |
             label_replace(node_disk_temp_celsius, "node", "$1", "instance", "(.*)")
           record: node:node_disk_temp_celsius
         - expr: |
