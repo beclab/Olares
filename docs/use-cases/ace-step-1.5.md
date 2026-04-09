@@ -60,7 +60,7 @@ Before you dive into the specific workflows below, you can jump to the [Key cont
     ![Install Ace-Step 1.5](/images/manual/use-cases/install-ace-step-1.5.png#bordered){width=90%}
 
 3. Open ACE-Step 1.5. 
-4. On first launch, wait until the required models finish downloading and initialization completes. This download may take some time depending on your network conditions.
+4. On first launch, wait for the required models finish downloading and initialization completes. This download may take some time depending on your network conditions.
    ![Download required models](/images/manual/use-cases/ace-step-1.5-download-models.png#bordered){width=90%}
 
 When the main workspace appears, ACE-Step 1.5 is ready to use.
@@ -91,7 +91,7 @@ This is the most common workflow for **text2music**.
 
     b. Edit the lyrics if needed, and make sure structure tags like `[Verse]` and `[Chorus]` are present.
 
-    c. Check that content in **Music Caption** and **Lyrics** do not conflict. For example, if you add "acoustic guitar” for caption, don't put `[Heavy Metal Guitar Solo]` in the lyrics.
+    c. Check that content in **Music Caption** and **Lyrics** do not conflict. For example, if you add "acoustic guitar” to the caption, don't put `[Heavy Metal Guitar Solo]` in the lyrics.
 
 3. Generate and listen.
 
@@ -157,7 +157,7 @@ Use this when you want the result to follow the feel of an existing clip more cl
 
 ### Restyle an existing track with Cover
 
-Use the **Cover** task type when you want to create a new version of a song while strictly keeping its core melodic structure and rhythm.
+Use the **Cover** task type when you want to create a new version of a song while preserving its core melodic structure and rhythm.
 
 1. In **Task Type**, select **Cover**. 
 2. In **Audio Uploads**, upload the original track to **Source Audio**. If you want to continue from a track you just generated, click **Send To Src Audio** in the **Results** area instead.
@@ -252,7 +252,7 @@ If the result does not match your intent:
 
 - Make your **Music Caption** more specific.
 - Make sure your **Lyrics** use clear structure tags such as `[Verse]` and `[Chorus]`.
-- Check that contents in **Music Caption** and **Lyrics** do not conflict.
+- Check that content in **Music Caption** and **Lyrics** do not conflict.
 - Click **Generate Music** more than once to explore different versions.
 
 ## Learn more
