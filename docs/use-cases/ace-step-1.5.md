@@ -7,7 +7,7 @@ head:
       content: Olares, ACE-Step 1.5, AI music generation, text-to-music, audio editing, LoRA training
 app_version: "1.0.1"
 doc_version: "1.0"
-doc_updated: "2026-04-08"
+doc_updated: "2026-04-09"
 ---
 # Create AI-generated music with ACE-Step 1.5
 
