@@ -73,6 +73,9 @@ This section uses the Z-Image Turbo workflow to help you get started.
 4. Click **Run** in the toolbar to start generation.
    ![Generated image](/images/manual/use-cases/comfyui-z-image-result.png#bordered)
 
+   :::details CPU temperature rises unusually high
+   Running large workflows may cause the CPU temperature on Olares One to rise unusually high. If this happens, see [CPU temperature rises unusually high on Olares One](/use-cases/comfyui-common-issues#cpu-temperature-rises-unusually-high-on-olares-one) for a temporary workaround.
+   :::
 <!--
 ## Step 4: Generate images
 This section uses the `nunchaku-flux.1-dev-qencoder` workflow to help you get started.
@@ -116,6 +119,10 @@ This section uses the Wan 2.2 workflow.
 4. Click **Run** in the toolbar to start generation. Video generation takes significantly longer than image generation.
    ![Generated video](/images/manual/use-cases/comfyui-w-video-result.png#bordered)
 
+   :::details CPU temperature rises unusually high
+   Running large workflows may cause the CPU temperature on Olares One to rise unusually high. If this happens, see [CPU temperature rises unusually high on Olares One](/use-cases/comfyui-common-issues#cpu-temperature-rises-unusually-high-on-olares-one) for a temporary workaround.
+   :::
+
 ## Step 6: Download output files
 You can download all output images and videos from Olares One to your local computer.
 1. Open the Files app.
@@ -132,3 +139,4 @@ You can download all output images and videos from Olares One to your local comp
 - [ComfyUI official docs](https://docs.comfy.org/)
 - [Manage models](/use-cases/comfyui-launcher.md#manage-models)
 - [Manage ComfyUI using ComfyUI Launcher](../use-cases/comfyui-launcher.md)
+- [Resolve common issues in ComfyUI Launcher](/use-cases/comfyui-common-issues.md)
