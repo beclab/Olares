@@ -165,6 +165,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "Immich",
+              link: "/use-cases/immich",              
+              collapsed: true,
+              items: [
+                {
+                  text: "Import photos from NAS",
+                  link: "/use-cases/immich-import-from-nas",
+                },
+              ]
+            },
+            {
               text: "Jellyfin",
               link: "/use-cases/stream-media",
             },
