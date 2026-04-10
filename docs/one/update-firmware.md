@@ -91,7 +91,7 @@ Do not disconnect the power supply or turn off the device during the BIOS update
 :::
 
 1. Extract the downloaded BIOS update package.
-2. Copy the resulting folder (e.g., `AGBOX4_BIOS_101`) to the root directory of your USB drive.
+2. Copy the resulting folder (e.g., `AGBOX4_BIOS_101` and `EFI`) to the root directory of your USB drive.
 3. Connect the USB drive to your Olares One.
 4. Power on the device or restart it if it is already running.
 5. When the Olares logo appears, immediately press and hold the **F7** key to enter the boot menu.
