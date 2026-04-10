@@ -95,9 +95,9 @@ This usually happens due to the way Ollama manages system resources and applicat
 
 To fix the issue, try one of the following methods.
 
-#### Method 1: Enable **KEEP ALIVE** for model apps
+#### Method 1: Prevent automatic offloading for model apps
 
-Keep the standalone model app permanently in memory and prevent automatic offloading.
+Keep the model permanently in memory by enabling the `KEEP_ALIVE` environment variable for your model app.
 
 1. Open **Settings**, and then go to **Applications** > **{Your Model App}** > **Manage environment variables**.
 2. Find **KEEP_ALIVE**, click <i class="material-symbols-outlined">edit_square</i>, set the value to **true**, and then click **Confirm**.
@@ -106,19 +106,19 @@ Keep the standalone model app permanently in memory and prevent automatic offloa
 
 3. Click **Apply**.
 
-#### Method 2: Unify context settings across apps
+#### Method 2: Unify context sizes across apps
 
-Use the same context size for all apps that share a model to reduce reload times.
+Use the same context size for all apps that share the same model to reduce reload times.
 
-1. Check the context size of your running models:
+1. Check the current context size of your running models:
 
-    - In the Ollama terminal, run `ollama ps` to see the details of all running models, including context.
+    - In the Ollama terminal, run `ollama ps`. The `CONTEXT` column shows the context size in use.
 
         ![View model details in Ollama terminal](/images/manual/use-cases/ollama-ps.png#bordered)
 
-    - If you use a standalone model app, check in Control Hub instead:
+    - For a standalone model app, check the context size using Control Hub:
     
-        a. Under the **System** namespace, find the model app's project, which is typically named `{model-name-}server-shared`,  and then open its pod terminal.
+        a. Under the **System** namespace, find the model app's project (typically named `{model-name}server-shared`), and then open its pod terminal.
 
         ![Open pod terminal in Control Hub](/images/manual/use-cases/pod-terminal-ctrl-hub.png#bordered)        
         
@@ -126,7 +126,7 @@ Use the same context size for all apps that share a model to reduce reload times
 
         ![View model details in Control Hub](/images/manual/use-cases/ollama-ps-ctrl-hub.png#bordered)
 
-2. Go to each app that uses the same model, and adjust them to use the same context size.
+2. Set all apps to use the same context size.
 
 ## Clean reinstall OpenClaw
 
