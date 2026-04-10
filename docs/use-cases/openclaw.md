@@ -409,7 +409,7 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
 2. Double-click the `openclaw.json` file to open it.
 3. Click <i class="material-symbols-outlined">edit_square</i> in the upper-right corner to enter the edit mode.
 4. Find the `models` section and locate the configuration block for your model.
-5. Update the `contextWindow` value to at least 64000 (64K). If your hardware VRAM permits, it is highly recommended to increase it to 200000 (200K).
+5. Update the `contextWindow` value to at least 65536 (64K). If your hardware VRAM permits, it is highly recommended to increase it to 204800 (200K).
 
     ![Configure context window in config file](/images/manual/use-cases/configure-context-win3.png#bordered)
 
