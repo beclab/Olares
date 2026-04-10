@@ -493,7 +493,7 @@ const side = {
           link: "/manual/space/manage-olares",
         },
         {
-          text: "Host domains",
+          text: "Add custom domain",
           collapsed: true,
           items: [
             {
