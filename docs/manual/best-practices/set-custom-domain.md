@@ -41,13 +41,13 @@ If you have previously installed and activated an Olares instance on your device
 
 ## Step 1: Create a DID
 
-A DID (Decentralized Identifier) is a temporary account state before you get your final Olares ID. You can only bind a custom domain to the account when it is in the DID stage. To create one:
+A DID (Decentralized Identifier) is a temporary account state before you get your final Olares ID. You can only associate a custom domain with the account when it is in the DID stage. To create one:
 
 1. In the LarePass app, go to the account creation page.
 
 2. Tap **Create an account**.
    
-   ![Create DID](/images/manual/tutorials/create-a-did1.png)
+   ![LarePass account creation page](/images/manual/tutorials/create-a-did1.png)
    
 <!-- 
 
@@ -66,11 +66,11 @@ The following steps use `olares.hellocoffee.online` as an example custom domain.
 1. In your browser, open [Olares Space](https://space.olares.com/).
 2. In the LarePass app, tap the scan icon in the top-right corner and scan the QR code on the login page to log in to Olares Space.
 
-   ![Scan QR code](/images/manual/tutorials/scan-qr-code1.png)
+   ![LarePass QR code scanner](/images/manual/tutorials/scan-qr-code1.png)
 
 3. In Olares Space, go to the **Domain management** page and select **Set up domain name**.
 
-   ![Navigate to the domain management page](/images/manual/tutorials/custom-domain-set-up-domain-name.png#bordered)
+   ![Domain management page with Set up domain name button](/images/manual/tutorials/custom-domain-set-up-domain-name.png#bordered)
 
 4. In the pop-up dialog, enter a valid subdomain like `olares.hellocoffee.online`, and click **Confirm**.
    :::warning Do not use a primary domain
@@ -85,7 +85,7 @@ The following steps use `olares.hellocoffee.online` as an example custom domain.
    b. Follow the on-screen instructions to add a TXT record to your DNS provider configuration.
 
    Once verified, the status updates to **Awaiting NS record configuration**.
-   ![Add NS records](/images/manual/tutorials/custom-domain-add-ns.png#bordered)
+   ![Domain status updated to Awaiting NS record configuration](/images/manual/tutorials/custom-domain-add-ns.png#bordered)
 
 
 6. Verify the Name Server (NS) record for your custom domain. This delegates the DNS resolution for your domain to Olares's Cloudflare.
@@ -95,7 +95,7 @@ The following steps use `olares.hellocoffee.online` as an example custom domain.
    b. Follow the on-screen instructions to add two NS records to your DNS provider configuration.
 
    Once verified, the domain status will update to **Awaiting the application for the Domain's Verifiable Credential**.
-   ![Wait VC](/images/manual/tutorials/custom-domain-wait-vc.png#bordered)
+   ![Domain status updated to Awaiting the application for the Domain's Verifiable Credential](/images/manual/tutorials/custom-domain-wait-vc.png#bordered)
 
    :::warning
    Once verification is successful, do not modify the NS record. Doing so will cause the custom domain resolution to fail, making it inaccessible.
@@ -105,7 +105,7 @@ Once TXT and NS records are verified, your domain is successfully added to Olare
 
 ## Step 3: Create an organization for the domain
 
-This step binds your domain to an organization in Olares and requests the Verifiable Credential (VC) for the domain.
+This step links your domain to an organization in Olares and requests the Verifiable Credential (VC) for the domain.
 
 ::: tip Verifiable Credential
 A Verifiable Credential (VC) is a digital certificate that confirms your organization's ownership of the domain.
@@ -114,12 +114,12 @@ A Verifiable Credential (VC) is a digital certificate that confirms your organiz
 1. Create a new organization in the LarePass app.
 
    a. On the account creation page, tap <i class="material-symbols-outlined">display_settings</i> in the top-right corner to go to the **Advanced account creation** page.
-      ![Select Advanced account creation](/images/manual/tutorials/custom-domain-advanced.png)
+      ![Advanced account creation option in LarePass](/images/manual/tutorials/custom-domain-advanced.png)
 
    b. Go to **Organization Olares ID** > **Create a new organization**. The organization for your domain will automatically show in the list. 
-      ![Select Organization Olares ID](/images/manual/tutorials/custom-domain-org-olares-id.png)
+      ![Organization Olares ID options in LarePass](/images/manual/tutorials/custom-domain-org-olares-id.png)
 
-      ![Select Create a new organization](/images/manual/tutorials/create-org1.png)
+      ![Organization list showing verified domain](/images/manual/tutorials/create-org1.png)
 
    c. Tap the organization name.
 
@@ -128,8 +128,8 @@ A Verifiable Credential (VC) is a digital certificate that confirms your organiz
    The username part of your Olares ID should be 1-63 characters long, with lowercase alphanumeric characters only.
    :::
 
-3. Click **Confirm**. Your Olares ID now has admin privileges to manage organization users.
-   ![Create an Olares ID as the organization admin](/images/manual/tutorials/custom-domain-admin-olares-id-created.png)
+3. Tap **Confirm**. Your Olares ID now has admin privileges to manage organization users.
+   ![Olares ID created with admin privileges](/images/manual/tutorials/custom-domain-admin-olares-id-created.png)
 
 ## Step 4: Install and activate Olares
 
@@ -158,7 +158,7 @@ Once activation is complete, LarePass will display the desktop address of your O
 
 2. Click **Add New User** and enter the username (the part before your custom domain) for the member. For example, `admin456`.
 
-   ![Add a new user](/images/manual/tutorials/custom-domain-add-user.png#bordered)
+   ![Add a new user dialog in Olares Space](/images/manual/tutorials/custom-domain-add-user.png#bordered)
 
 3. Click **Submit**. Repeat steps 2 and 3 to add more users.
 
@@ -174,19 +174,19 @@ As an organization admin, you can manage your organization's member list at any 
 
 1. In the LarePass app, tap **Create an account**.
 2. Tap <i class="material-symbols-outlined">display_settings</i> in the top-right corner to go to the **Advanced account creation** page.
-      ![Select Advanced account creation](/images/manual/tutorials/custom-domain-advanced.png)
+      ![Advanced account creation option in LarePass](/images/manual/tutorials/custom-domain-advanced.png)
 
 3. Go to **Organization Olares ID** > **Join an existing organization**.
 
 4. Enter the Olares ID (including the domain part) and password.
-   ![Join an organization](/images/manual/tutorials/custom-domain-member-olares-id.png)
+   ![Joining an organization with Olares ID and password](/images/manual/tutorials/custom-domain-member-olares-id.png)
 
-5. Click **Continue**.
+5. Tap **Continue**.
 
 Your custom Olares ID is now created. Next, activate Olares:
 
 - **Separate device**: Follow [Step 4](#step-4-install-and-activate-olares) to install and activate Olares on a new device.
-- **Same device as the admin**: Get the activation wizard URL and one-time password from the admin, then scan the wizard QR code in LarePass to activate. <!--See [Activate Olares](../../get-started/activate-olares) for details.  -->
+- **Same device as the admin**: Get the activation wizard URL and one-time password from the admin, then scan the wizard QR code in LarePass to activate. See [Activate Olares](../get-started/join-olares.md) for details. 
 
 
 ## Learn more

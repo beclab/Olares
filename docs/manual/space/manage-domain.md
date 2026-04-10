@@ -3,24 +3,32 @@ outline: [2, 3]
 description: Manage organization members in Olares Space. Add new users under your custom domain and configure member access for your organization.
 ---
 
-# Manage users
+# Manage domain members
 
-After [setting up your custom domain](host-domain.md), you can manage organization members from the **Domain Management** page in Olares Space.
+After [setting up your custom domain](host-domain.md), you can manage members from the **Domain management** page in Olares Space.
 
 ## Add a new user
 
 1. In Olares Space, go to **Domain management** and click **View** next to your domain.
 2. Click **Add New User** and enter the username (the part before your custom domain) for the member. For example, `admin456`.
 
-   ![Add a new user](/images/manual/tutorials/custom-domain-add-user.png#bordered)
+   ![Add a new user dialog in Olares Space](/images/manual/tutorials/custom-domain-add-user.png#bordered)
 
 3. Click **Submit**.
 4. Repeat steps 2 and 3 to add more users.
 5. Provide the Olares ID and the corresponding password to the user.
 
 :::tip Manage member list
-As an organization admin, you can manage your organization's member list at any time from the **Domain Management** page.
+As an organization admin, you can manage your organization's member list at any time from the **Domain management** page.
 :::
+
+## Remove a user
+
+You can only remove a user if they have not yet created an Olares ID under your domain.
+
+1. In Olares Space, go to **Domain management**, and click **View** next to your domain.
+2. Find the username you want to remove, and click **Delete**.
+3. Click **Confirm** in the pop-up dialog.
 
 ## What's next
 

@@ -478,7 +478,7 @@ const side = {
         collapsed: true,
         items: [
           {
-            text: "管理账号",
+            text: "登录和管理账号",
             link: "/zh/manual/space/manage-accounts",
           },
           {
@@ -494,7 +494,7 @@ const side = {
                 link: "/zh/manual/space/host-domain",
               },
               {
-                text: "管理用户",
+                text: "管理域名成员",
                 link: "/zh/manual/space/manage-domain",
               },
             ],

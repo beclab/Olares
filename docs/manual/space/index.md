@@ -9,9 +9,9 @@ Your Olares Space account is associated with your Olares IDs or DIDs. You can lo
 
 This section walks you through using Olares Space:
 
-- [Manage accounts](manage-accounts.md)
+- [Log in and manage accounts](manage-accounts.md)
 - [Manage Olares](manage-olares.md)
 - [Set up a custom domain](host-domain.md)
-- [Manage users](manage-domain.md)
+- [Manage domain members](manage-domain.md)
 - [Back up & restore Olares](backup-restore.md)
 - [Billing](billing.md)
