@@ -79,6 +79,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             //   link: "/use-cases/dify",
             // },
             {
+              text: "LiteLLM",
+              link: "/use-cases/litellm",
+            },
+            {
               text: "LLMFit",
               link: "/use-cases/llmfit",
             },
