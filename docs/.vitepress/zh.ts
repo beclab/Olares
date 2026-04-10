@@ -482,18 +482,8 @@ const side = {
             link: "/zh/manual/space/manage-accounts",
           },
           {
-            text: "托管 Olares",
-            collapsed: true,
-            items: [
-              {
-                text: "创建 Olares",
-                link: "/zh/manual/space/create-olares",
-              },
-              {
-                text: "管理 Olares",
-                link: "/zh/manual/space/manage-olares",
-              },
-            ],
+            text: "管理 Olares",
+            link: "/zh/manual/space/manage-olares",
           },
           {
             text: "托管域名",
@@ -504,7 +494,7 @@ const side = {
                 link: "/zh/manual/space/host-domain",
               },
               {
-                text: "管理域名",
+                text: "管理用户",
                 link: "/zh/manual/space/manage-domain",
               },
             ],

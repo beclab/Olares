@@ -1,43 +1,27 @@
 ---
 outline: [2, 3]
-description: Configure domain settings in Olares Space with email invitation rules and member management. Administrate organizational Olares IDs for seamless team collaboration.
+description: Manage organization members in Olares Space. Add new users under your custom domain and configure member access for your organization.
 ---
-:::warning Documentation does not match current experience
-We are currently updating this documentation to match the latest experience on the Olares Space platform. If there are differences, follow the actual platform.
-:::
-# Manage your domain
 
-You must [add a domain](host-domain.md#add-your-domain) before managing it. Once your domain is set up, you can configure email invitation rules for organization members and invite them to create their own organizational **Olares ID** via email.
+# Manage users
 
-## Set email invitation rules
+After [setting up your custom domain](host-domain.md), you can manage organization members from the **Domain Management** page in Olares Space.
 
-Most companies use a standard domain suffix for their team members' emails, like `A@myteam.com` for person A or `B@myteam.com` for person B. However, sometimes, team members might use emails in different domains. To accommodate these scenarios, Olares provides two types of rules for adding organization members' emails:
+## Add a new user
 
-![alt text](/images/how-to/space/set_rule.jpg#bordered)
+1. In Olares Space, go to **Domain management** and click **View** next to your domain.
+2. Click **Add New User** and enter the username (the part before your custom domain) for the member. For example, `admin456`.
 
-- **Fixed email suffix**: Use this option when all team members share the same email domain. Enter your organization's domain suffix (example: @company.com). Any email matching this suffix can be associated with your organization's Olares ID.
+   ![Add a new user](/images/manual/tutorials/custom-domain-add-user.png#bordered)
 
-- **Specified email address**: Use this option if your organization doesn't have a corporate email suffix. You need to manually add the email address for each member of the organization.
+3. Click **Submit**.
+4. Repeat steps 2 and 3 to add more users.
+5. Provide the Olares ID and the corresponding password to the user.
 
-:::info
-- Currently, only Gmail is supported for both rule types.
-- Emails that have been used to create organizational Olares IDs will appear in the member list and cannot be deleted.
-- Emails that are manually added and have not been used to create the Olares ID appear as "unbound" and can be removed.
+:::tip Manage member list
+As an organization admin, you can manage your organization's member list at any time from the **Domain Management** page.
 :::
 
-## Manage members
+## What's next
 
-After setting email rules, you can add or remove members under your organization.
-
-![alt text](/images/how-to/space/management_members.jpg#bordered)
-
-### Add a member
-
-To add a member:
-
-1. On the domain management page, add members to the organization by entering their email address.
-2. Notify the corresponding users to use their email addresses to [create an organizational Olares ID](host-domain.md#create-an-org-olares-id).
-
-### Remove a member
-
-You can remove email addresses that haven't been used to create an Olares ID. Once an email address is associated with an organization's Olares ID, it cannot be removed.
+Once users receive their Olares ID and password, they can [join the organization in LarePass](../larepass/create-org-account.md#join-an-existing-organization). If the member will join the admin's existing Olares instance, see [Manage your team](../olares/settings/manage-team.md) for details.
