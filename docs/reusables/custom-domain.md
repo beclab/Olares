@@ -6,9 +6,9 @@ search: false
 
   Block 1 – Create a DID:                  lines 21-27
   Block 2 – Add domain (TXT + NS):         lines 30-65
-  Block 3 – Create a new organization:      lines 68-91
-  Block 4 – Add a new user:                 lines 94-105
-  Block 5 – Join an existing organization:  lines 108-117
+  Block 3 – Create a new organization:      lines 68-94
+  Block 4 – Add a new user:                 lines 95-110
+  Block 5 – Join an existing organization:  lines 111-122
 
   Used by:
   - manual/best-practices/set-custom-domain.md (Blocks 1-5)
@@ -27,13 +27,13 @@ A DID (Decentralized Identifier) is a temporary account state before you get you
    ![LarePass account creation page](/images/manual/tutorials/create-a-did1.png)
 
 <!-- Block 2: Add domain (TXT + NS) -->
-The following steps use `olares.hellocoffee.online` as an example custom domain.
+The following steps use `space.n1.monster` as an example custom domain.
 
 1. In Olares Space, go to the **Domain management** page and select **Set up domain name**.
 
    ![Domain management page with Set up domain name button](/images/manual/tutorials/custom-domain-set-up-domain-name.png#bordered)
 
-2. In the pop-up dialog, enter a valid subdomain like `olares.hellocoffee.online`, and click **Confirm**.
+2. In the pop-up dialog, enter a valid subdomain, and click **Confirm**.
 
    :::warning Do not use a primary domain
    Using a primary domain like `yourdomain.com` will move all DNS management to Olares Space and will not transfer your existing records automatically.
@@ -43,7 +43,7 @@ The following steps use `olares.hellocoffee.online` as an example custom domain.
 3. Add and verify a TXT record to prove ownership of the domain.
 
    a. Click **Guide** in the **Action** column.
-
+   ![Verify TXT](/images/manual/tutorials/custom-domain-verify-txt.png#bordered)
    b. Follow the on-screen instructions to add a TXT record to your DNS provider configuration.
 
    Once verified, the status updates to **Awaiting NS record configuration**.
@@ -77,28 +77,33 @@ Once an organization is created for a domain, the domain cannot be removed from 
 
    ![Organization Olares ID options in LarePass](/images/manual/tutorials/custom-domain-org-olares-id.png)
 
-   ![Organization list showing verified domain](/images/manual/tutorials/create-org1.png)
+   ![Create a new organization](/images/manual/tutorials/custom-domain-create-org.png)
 
 3. Tap the domain name.
-4. Enter the username for your Olares ID. For example, if you want `admin123@olares.hellocoffee.online`, enter `admin123`.
+   ![Select the domain for the organization](/images/manual/tutorials/custom-domain-select-org.png)
+
+4. Enter the username for your Olares ID. For example, if you enter `alex`, your Olares ID will be `alex@space.n1.monster`.
 
    :::info
    The username part of your Olares ID should be 1-63 characters long, with lowercase alphanumeric characters only.
    :::
+   ![Create an Olares ID with admin privileges](/images/manual/tutorials/custom-domain-create-olares-id-as-admin.png)
 
-5. Tap **Confirm**. Your Olares ID now has admin privileges to manage users under this domain.
+5. Tap **Confirm**.
 
-   ![Olares ID created with admin privileges](/images/manual/tutorials/custom-domain-admin-olares-id-created.png)
+Your Olares ID is now created and has admin privileges to manage users under this domain.
 
 <!-- Block 4: Add a new user -->
-1. In Olares Space, go to **Domain management** and click **View** next to your domain.
-2. Click **Add New User** and enter the username (the part before your custom domain) for the member. For example, `admin456`.
+1. In Olares Space, refresh the **Domain management** page, and click **View** next to your domain.
+   ![Domain member list in Olares Space](/images/manual/tutorials/custom-domain-view-user.png#bordered)
+
+2. Click **Add New User** and enter the username (the part before your custom domain) for the member. For example, `alice`.
 
    ![Add a new user dialog in Olares Space](/images/manual/tutorials/custom-domain-add-user.png#bordered)
 
 3. Click **Submit**.
 4. Repeat steps 2 and 3 to add more users.
-5. Provide the Olares ID and the corresponding password to the user.
+5. Provide the full Olares ID (e.g., `alice@space.n1.monster`) and password to the user.
 
 :::tip Manage member list
 As an organization admin, you can manage your organization's member list at any time from the **Domain management** page.
@@ -110,8 +115,10 @@ As an organization admin, you can manage your organization's member list at any 
    ![Advanced account creation option in LarePass](/images/manual/tutorials/custom-domain-advanced.png)
 
 2. Go to **Organization Olares ID** > **Join an existing organization**.
+   ![Join an exisitng organization](/images/manual/tutorials/custom-domain-join-org.png)
+
 3. Enter the Olares ID (including the domain part) and password provided by the admin.
 
-   ![Joining an organization with Olares ID and password](/images/manual/tutorials/custom-domain-member-olares-id.png)
+   ![Join an organization with Olares ID and password](/images/manual/tutorials/custom-domain-member-olares-id.png)
 
 4. Tap **Continue**.

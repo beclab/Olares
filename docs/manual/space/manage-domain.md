@@ -5,11 +5,11 @@ description: Manage organization members in Olares Space. Add new users under yo
 
 # Manage domain members
 
-After [setting up your custom domain](host-domain.md), you can manage members from the **Domain management** page in Olares Space.
+After you set up your custom domain and create your organization and Olares ID, use **Domain management** in Olares Space to manage members.
 
 ## Add a new user
 
-<!--@include: ../../reusables/custom-domain.md{94,105}-->
+<!--@include: ../../reusables/custom-domain.md{95,110}-->
 
 ## Remove a user
 

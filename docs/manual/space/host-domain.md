@@ -26,4 +26,4 @@ Make sure you have:
 
 ## What's next
 
-To create an Olares ID under your custom domain, see [Create an Olares ID with a custom domain](../larepass/create-org-account.md).
+In LarePass, create your organization and Olares ID on the domain you added here. For details, see [Create an Olares ID with a custom domain](../larepass/create-org-account.md).

@@ -59,7 +59,7 @@ In this step, you create an organization for your domain and an Olares ID with a
 A Verifiable Credential (VC) is a digital certificate that confirms your organization's ownership of the domain.
 :::
 
-<!--@include: ../../reusables/custom-domain.md{68,91}-->
+<!--@include: ../../reusables/custom-domain.md{68,94}-->
 
 ## Step 4: Install and activate Olares
 
@@ -76,28 +76,32 @@ The installation steps are similar to the standard process. The following exampl
    ```
    This runs a partial installation (prepare phase only) without proceeding to full setup.
 
-<!--@include: ../get-started/install-and-activate-olares.md{9,13}-->
+<!--@include: ../get-started/install-and-activate-olares.md{9,10}-->
+   ![Discover Olares in LarePass](/images/manual/tutorials/custom-domain-discover-olares.png#bordered)
+
+<!--@include: ../get-started/install-and-activate-olares.md{11,13}-->
+
 
 <!--@include: ../get-started/install-and-activate-olares.md{20,20}-->
 
-Once activation is complete, LarePass will display the desktop address of your Olares device with the custom domain, such as `https://desktop.admin123.olares.hellocoffee.online`.
+Once activation is complete, LarePass will display the desktop address of your Olares device with the custom domain, such as `https://desktop.alex.space.n1.monster`.
 
 ## Step 5: Add a new user within the same organization
 
-<!--@include: ../../reusables/custom-domain.md{94,105}-->
+<!--@include: ../../reusables/custom-domain.md{95,110}-->
 
-6. (Optional) If the member will use your existing Olares instance instead of installing on a separate device, you also need to create the user on your Olares and allocate resources. See [Manage your team](../olares/settings/manage-team.md) for details.
+6. (Optional) If the member will use your existing Olares instance instead of installing on a separate device, you also need to create the user on your Olares and allocate resources. See [Manage your team](../olares/settings/manage-team.md) for details. 
 
 ## Join an organization as a member
 
 In the LarePass app, tap **Create an account** to start the account creation flow.
 
-<!--@include: ../../reusables/custom-domain.md{108,117}-->
+<!--@include: ../../reusables/custom-domain.md{111,122}-->
 
-Your custom Olares ID is now created. Next, activate Olares:
+Your custom Olares ID is now created. Next, to activate Olares:
 
-- **Separate device**: Follow [Step 4](#step-4-install-and-activate-olares) to install and activate Olares on a new device.
-- **Same device as the admin**: Get the activation wizard URL and one-time password from the admin, then scan the wizard QR code in LarePass to activate. See [Activate Olares](../get-started/join-olares.md) for details. 
+- **On a separate device**: Follow [Step 4](#step-4-install-and-activate-olares) to install and activate Olares on a new device.
+- **On the same device as the admin**: Get the activation wizard URL and one-time password from the admin, then scan the wizard QR code in LarePass to activate. See [Activate Olares](../get-started/join-olares.md) for details. 
 
 
 ## Learn more
