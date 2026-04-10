@@ -97,7 +97,7 @@ Do not disconnect the power supply or turn off the device during the BIOS update
 5. When the Olares logo appears, immediately press and hold the **F7** key to enter the boot menu.
 6. Select your USB drive from the list, and then press **Enter**.
 
-    ![Select USB boot device](/images/one/select-usb-boot.png#bordered)
+    ![Select USB boot device](/images/one/select-usb-boot1.png#bordered)
 
 7. When the EFI startup countdown screen appears (`Press ESC in 5 seconds to skip startup.nsh`), immediately press **Enter** to access the command shell.
 
@@ -110,7 +110,7 @@ Do not disconnect the power supply or turn off the device during the BIOS update
     cd AFU
     FlashAFU.nsh
     ```
-    ![Run BIOS flash script](/images/one/bios-flash-commands.png#bordered)
+    ![Run BIOS flash script](/images/one/bios-flash-commands-101.png#bordered)
 
 9. Wait for the script execution to finish.
 
@@ -122,8 +122,22 @@ Do not disconnect the power supply or turn off the device during the BIOS update
 
     ![BIOS flash progress screen - ME FW Update](/images/one/bios-update-progress-me.png#bordered)
 
-11. When the **ME FW Update** finishes, the system will automatically reboot again. 
+11. When the **ME FW Update** finishes, the system will automatically reboot two times. Wait until the normal `olares login` prompt appears.
 
     :::info
-    During the final reboot, the system will perform a comprehensive hardware self-test. This process takes approximately 2 to 3 minutes. The screen might remain black during this time. Wait until the normal `olares login` prompt appears.
+    During the reboot, the system will perform a comprehensive hardware self-test. This process takes approximately 2 to 3 minutes. The screen might remain black during this time.
     :::
+
+11. Verify the BIOS version.
+
+    a. Restart Olares One manually.
+    
+    b. When the Olares logo appears, immediately press and hold **F7** to enter the boot menu.
+
+    c. Select **Enter Setup** to access the BIOS.
+
+    ![Enter setup for BIOS](/images/one/enter-setup.png#bordered)    
+
+    d. On the **Main** tab, verify that the **System BIOS Version** displays 1.01 (or your target version) to confirm the update was successful.
+
+    ![Enter setup for BIOS](/images/one/enter-setup-bios1.png#bordered)   
