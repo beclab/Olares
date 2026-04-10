@@ -44,7 +44,7 @@ To ensure system stability and security, only the latest firmware versions are a
 ## Update the EC firmware
 
 1. Extract the downloaded EC update package.
-2. Copy the resulting folders (e.g. `AGBOX4_EC_01_02` and `EFI`) to the root directory of your USB drive.
+2. Copy the resulting folders (e.g., `AGBOX4_EC_01_02` and `EFI`) to the root directory of your USB drive.
 3. Connect the USB drive to your Olares One.
 4. Power on the device or restart it if it is already running.
 5. When the Olares logo appears, immediately press and hold the **F7** key to enter the boot menu.
@@ -128,7 +128,7 @@ Do not disconnect the power supply or turn off the device during the BIOS update
     During the reboot, the system will perform a comprehensive hardware self-test. This process takes approximately 2 to 3 minutes. The screen might remain black during this time.
     :::
 
-11. Verify the BIOS version.
+12. Verify the BIOS version.
 
     a. Restart Olares One manually.
     
