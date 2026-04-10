@@ -7,7 +7,7 @@ head:
       content: Olares, AnythingLLM, RAG, knowledge base, local LLM, embedding, Ollama
 app_version: "1.0.13"
 doc_version: "1.0"
-doc_updated: "2026-04-09"
+doc_updated: "2026-04-10"
 ---
 
 # Build a local knowledge base with AnythingLLM
@@ -34,19 +34,20 @@ You need three apps: a chat model for generating responses, an embedding model f
 You can also use other chat and embedding models available in Market, or install models through the [Ollama](ollama.md) app.
 
 1. Open Market and search for "AnythingLLM".
-2. Click **Get**, then **Install**.
 
-   <!-- ![Install AnythingLLM](/images/manual/use-cases/anythingllm.png#bordered) -->
+   ![Install AnythingLLM](/images/manual/use-cases/anythingllm.png#bordered)
+
+2. Click **Get**, and then click **Install**.
 
 3. Search for "Cogito 14B" and install it.
 
-   <!-- ![Install Cogito 14B](/images/manual/use-cases/cogito-14b.png#bordered) -->
+   ![Install Cogito 14B](/images/manual/use-cases/cogito-14b.png#bordered)
 
 4. Search for "Nomic Embed v1.5" and install it.
 
-   <!-- ![Install Nomic Embed v1.5](/images/manual/use-cases/nomic-embed.png#bordered) -->
+   ![Install Nomic Embed v1.5](/images/manual/use-cases/nomic-embed.png#bordered)
 
-5. Wait for all installations to complete.
+5. Wait for all installations to finish.
 
 ## Download the models and get shared endpoints
 
