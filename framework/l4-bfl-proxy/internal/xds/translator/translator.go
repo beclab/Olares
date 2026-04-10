@@ -799,6 +799,8 @@ func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.C
 					AllowedClientHeaders: &matcherv3.ListStringMatcher{
 						Patterns: []*matcherv3.StringMatcher{
 							{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "set-cookie"}},
+							{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "location"}},
+							{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "www-authenticate"}},
 						},
 					},
 					AllowedClientHeadersOnSuccess: &matcherv3.ListStringMatcher{
