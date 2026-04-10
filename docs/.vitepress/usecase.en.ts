@@ -35,6 +35,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Upgrade OpenClaw",
                   link: "/use-cases/openclaw-upgrade",
                 },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/openclaw-common-issues",
+                },                
               ]
             },
             {
