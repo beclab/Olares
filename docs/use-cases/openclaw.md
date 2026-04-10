@@ -171,7 +171,7 @@ Set up OpenClaw using the step-by-step interactive wizard, or bypass the prompts
     | Setup mode   | QuickStart   |
     | Config handling  | Use existing values    |
     | Model/auth provider  | Ollama    |
-    | Ollama base URL  | The API address appended with `/v1` from [Step 1](#step-1-install-your-model),<br>such as `https://37e62186.demo0002.olares.com/v1` |
+    | Ollama base URL  | The API address from [Step 1](#step-1-install-your-model),<br>such as `https://37e62186.demo0002.olares.com` |
     | Ollama mode | Local |
     | Default model | Select your installed model |
     | Select channel  | Skip for now<br>(You can configure channels later)  |
