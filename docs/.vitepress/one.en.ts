@@ -134,10 +134,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Access Windows in Olares",
           link: "/one/windows",
         },
-        {
+        /*{
           text: "Generate music with ACE-Step",
           link: "/one/ace-step",
-        },
+        },*/
 
         {
           text: "Deep research with DeerFlow",

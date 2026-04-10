@@ -110,9 +110,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/perplexica",
             },
             {
+              text: "ACE-Step 1.5",
+              link: "/use-cases/ace-step-1.5",
+            },            
+            /*{
               text: "ACE-Step",
               link: "/use-cases/ace-step",
-            },
+            },*/
             {
               text: "Duix.Avatar",
               link: "/use-cases/duix-avatar",
