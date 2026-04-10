@@ -54,7 +54,7 @@ To ensure system stability and security, only the latest firmware versions are a
 
 7. When the EFI startup countdown screen appears (`Press ESC in 5 seconds to skip startup.nsh`), immediately press **Enter** to access the command shell.
 
-    ![UEFI shell startup](/images/one/uefi-shell-startup.png#bordered)
+    ![UEFI shell startup](/images/one/uefi-shell-startup-ec.png#bordered)
 
 8. Enter the following command, and then press **Enter** to navigate to the EC directory:
 
@@ -80,6 +80,7 @@ To ensure system stability and security, only the latest firmware versions are a
 11. Select **Enter Setup** to access the BIOS.
 
     ![Enter setup for BIOS](/images/one/enter-setup-bios.png#bordered)
+
 12. On the **Main** tab, verify that the **EC FW Version** displays `1.02` (or your target version) to confirm the update was successful.
 
     ![Verify EC version in BIOS](/images/one/verify-ec-version.png#bordered)
@@ -136,8 +137,8 @@ Do not disconnect the power supply or turn off the device during the BIOS update
 
     c. Select **Enter Setup** to access the BIOS.
 
-    ![Enter setup for BIOS](/images/one/enter-setup.png#bordered)    
+    ![Enter setup for BIOS](/images/one/enter-setup.png#bordered)  
 
     d. On the **Main** tab, verify that the **System BIOS Version** displays 1.01 (or your target version) to confirm the update was successful.
 
-    ![Enter setup for BIOS](/images/one/enter-setup-bios1.png#bordered)   
+    ![Verify BIOS version](/images/one/enter-setup-bios1.png#bordered)   
