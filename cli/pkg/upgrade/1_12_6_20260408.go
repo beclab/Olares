@@ -43,5 +43,5 @@ func (u upgrader_1_12_6_20260408) UpgradeSystemComponents() []task.Interface {
 }
 
 func init() {
-	registerMainUpgrader(upgrader_1_12_6_20260408{})
+	registerDailyUpgrader(upgrader_1_12_6_20260408{})
 }
