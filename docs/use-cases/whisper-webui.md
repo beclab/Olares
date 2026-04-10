@@ -43,9 +43,9 @@ When using the **File**, **YouTube**, or **Mic** tabs, choose the output format 
 
 | Format | Best for |
 |:--|:--|
-| SRT | Standard subtitle files for video players and editors |
-| WebVTT | Web video subtitles and browser-based playback |
-| TXT | Plain text transcripts without timestamps |
+| SRT | Standard subtitle files for video players and editors. |
+| WebVTT | Web video subtitles and browser-based playback. |
+| TXT | Plain text transcripts without timestamps. |
 | LRC | Synchronized lyrics for music players and audio applications. |
 
 ### Choose a transcription model
