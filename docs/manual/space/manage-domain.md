@@ -9,7 +9,7 @@ After [setting up your custom domain](host-domain.md), you can manage members fr
 
 ## Add a new user
 
-<!--@include: ../../reusables/custom-domain.md{90,101}-->
+<!--@include: ../../reusables/custom-domain.md{94,105}-->
 
 ## Remove a user
 

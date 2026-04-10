@@ -6,9 +6,9 @@ search: false
 
   Block 1 – Create a DID:                  lines 21-27
   Block 2 – Add domain (TXT + NS):         lines 30-65
-  Block 3 – Create a new organization:      lines 68-87
-  Block 4 – Add a new user:                 lines 90-101
-  Block 5 – Join an existing organization:  lines 104-113
+  Block 3 – Create a new organization:      lines 68-91
+  Block 4 – Add a new user:                 lines 94-105
+  Block 5 – Join an existing organization:  lines 108-117
 
   Used by:
   - manual/best-practices/set-custom-domain.md (Blocks 1-5)
@@ -65,6 +65,10 @@ The following steps use `olares.hellocoffee.online` as an example custom domain.
 Once TXT and NS records are verified, your domain is successfully added to Olares Space.
 
 <!-- Block 3: Create a new organization -->
+:::warning
+Once an organization is created for a domain, the domain cannot be removed from Olares Space.
+:::
+
 1. On the account creation page, tap <i class="material-symbols-outlined">display_settings</i> in the top-right corner to go to the **Advanced account creation** page.
 
    ![Advanced account creation option in LarePass](/images/manual/tutorials/custom-domain-advanced.png)

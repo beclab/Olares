@@ -25,7 +25,7 @@ Before you start, make sure the custom domain has been [set up in Olares Space](
 
 As the domain owner, create an organization and get an admin Olares ID under your custom domain.
 
-<!--@include: ../../reusables/custom-domain.md{68,87}-->
+<!--@include: ../../reusables/custom-domain.md{68,91}-->
 
 After setting up the domain, you can [add members](../space/manage-domain.md) in Olares Space.
 
@@ -33,6 +33,6 @@ After setting up the domain, you can [add members](../space/manage-domain.md) in
 
 If the domain admin has already created the organization and added you, use the Olares ID and password provided by the admin to join.
 
-<!--@include: ../../reusables/custom-domain.md{104,113}-->
+<!--@include: ../../reusables/custom-domain.md{108,117}-->
 
 Your Olares ID is now created. You can proceed to [install and activate Olares](../get-started/install-olares.md).
