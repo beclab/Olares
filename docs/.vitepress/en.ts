@@ -442,7 +442,7 @@ const side = {
           text: "Manage accounts",
           collapsed: true,
           items: [
-            { text: "Create an account", link: "/manual/larepass/create-account" },
+            { text: "Create an Olares ID", link: "/manual/larepass/create-account" },
             { text: "Create an org Olares ID", link: "/manual/larepass/create-org-account" },
             { text: "Import an account", link: "/manual/larepass/import-account" },
             { text: "Back up mnemonics", link: "/manual/larepass/back-up-mnemonics" },

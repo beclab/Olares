@@ -10,10 +10,9 @@ By default, when you create an account in LarePass, you get an Olares ID with th
 ## Learning objectives
 In this tutorial, you will learn how to:
 - Add and verify your custom domain in Olares Space
-- Create an organization to manage your custom domain
-- Configure member access for your organization
-- Create an Olares ID under your custom domain
-- Install and activate Olares with your Olares ID
+- Create an organization and an Olares ID under your domain in LarePass
+- Install and activate Olares with your custom domain
+- Add members to your organization in Olares Space
 
 ## How custom domains work in Olares
 Custom domains in Olares are managed through organizations. Whether you're an individual user or representing a company, you'll need to set up an organization first. The required actions depend on your role:
@@ -41,34 +40,32 @@ If you have previously installed and activated an Olares instance on your device
 
 ## Step 1: Create a DID
 
-<!--@include: ../../reusables/custom-domain.md{21,27}-->
+<!--@include: ../../reusables/custom-domain.md{21,31}-->
 
-## Step 2: Add your domain to Olares Space
+## Step 2: Add your domain
 
-Open [Olares Space](https://space.olares.com/) in your browser and scan the QR code with LarePass to log in.
+The following steps use `space.n1.monster` as an example custom domain.
 
-![LarePass QR code scanner](/images/manual/tutorials/scan-qr-code1.png)
+1. Open [Olares Space](https://space.olares.com/) in your browser and scan the QR code with LarePass to log in.
 
-<!--@include: ../../reusables/custom-domain.md{30,65}-->
+   ![LarePass QR code scanner](/images/manual/tutorials/scan-qr-code1.png)
 
-## Step 3: Create an organization for the domain
+<!--@include: ../../reusables/custom-domain.md{36,73}-->
 
-In this step, you create an organization for your domain and an Olares ID with admin privileges in LarePass.
+## Step 3: Create an organization
 
-::: tip Verifiable Credential
-A Verifiable Credential (VC) is a digital certificate that confirms your organization's ownership of the domain.
-:::
+In LarePass, create an organization for your domain and an Olares ID with admin privileges.
 
-<!--@include: ../../reusables/custom-domain.md{68,94}-->
+<!--@include: ../../reusables/custom-domain.md{76,107}-->
 
 ## Step 4: Install and activate Olares
 
 Now you can install and activate Olares with your Olares ID.
 
-The installation steps are similar to the standard process. The following example uses Linux. For other systems or a clean install with an ISO image, refer to the [installation guide](../get-started/install-olares.md).
+The installation steps are similar to the standard process. The following example uses Linux. For other systems, refer to the [installation guide](../get-started/install-olares.md).
 <!--@include: ../get-started/install-and-activate-olares.md{5,7}-->
 
-1. In the terminal, run the following script to start the installation:
+1. Open a terminal on the machine where you want to install Olares, and run the following command:
 
    ```bash
    export PREINSTALL=1 &&
@@ -77,26 +74,28 @@ The installation steps are similar to the standard process. The following exampl
    This runs a partial installation (prepare phase only) without proceeding to full setup.
 
 <!--@include: ../get-started/install-and-activate-olares.md{9,10}-->
-   ![Discover Olares in LarePass](/images/manual/tutorials/custom-domain-discover-olares.png#bordered)
 
 <!--@include: ../get-started/install-and-activate-olares.md{11,13}-->
-
 
 <!--@include: ../get-started/install-and-activate-olares.md{20,20}-->
 
 Once activation is complete, LarePass will display the desktop address of your Olares device with the custom domain, such as `https://desktop.alex.space.n1.monster`.
 
-## Step 5: Add a new user within the same organization
+## Step 5: Add members
 
-<!--@include: ../../reusables/custom-domain.md{95,110}-->
+As the admin, add members to your organization in Olares Space.
 
-6. (Optional) If the member will use your existing Olares instance instead of installing on a separate device, you also need to create the user on your Olares and allocate resources. See [Manage your team](../olares/settings/manage-team.md) for details. 
+<!--@include: ../../reusables/custom-domain.md{109,123}-->
+
+   The member will use these credentials to create their Olares ID in LarePass.
+
+7. (Optional) If the member will use your existing Olares instance instead of installing on a separate device, you also need to create the user on your Olares and allocate resources. See [Manage your team](../olares/settings/manage-team.md) for details. 
 
 ## Join an organization as a member
 
 In the LarePass app, tap **Create an account** to start the account creation flow.
 
-<!--@include: ../../reusables/custom-domain.md{111,122}-->
+<!--@include: ../../reusables/custom-domain.md{130,141}-->
 
 Your custom Olares ID is now created. Next, to activate Olares:
 

@@ -120,7 +120,7 @@ This action will reset your device to the prepare phase, where you can scan the 
 3. Enter your local LarePass lock screen password, and tap **Confirm**. If you haven't set a local password, you will be prompted to set one first.
    ![Enter local unlock password](/images/manual/larepass/enter-password-to-uninstall.png#bordered)
 
-4. Wait for the reset to complete. Once finished, you will return to the account activation page.
+4. Wait for the reset to complete. Once finished, you will return to the Olares activation page.
 
 ### Reset SSH password <Badge type="tip" text="Olares One Only" />
 :::warning Required action

@@ -29,6 +29,7 @@ See [Set up a custom domain for your Olares](../best-practices/set-custom-domain
    ![LarePass account list showing a DID](/images/manual/tutorials/did-stage1.png)
 
 2. Tap the scan icon in the top-right corner and scan the QR code on the Olares Space login page.
+   ![LarePass QR code scanner](/images/manual/tutorials/scan-qr-code1.png)
 
 ## Log out
 
@@ -45,7 +46,7 @@ Alternatively, you can:
 
 ## Manage multiple accounts 
 
-Each Olares ID is linked to only one Olares. With multi-account management in Olares Space, you can switch between accounts effortlessly — perfect for managing multiple Olares IDs and instances.
+Each Olares ID is linked to only one Olares. With multi-account management in Olares Space, you can switch between different accounts to manage multiple Olares IDs and instances.
 
 To add an account:
 

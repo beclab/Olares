@@ -22,7 +22,7 @@ Make sure you have:
 
 ## Add your domain
 
-<!--@include: ../../reusables/custom-domain.md{30,65}-->
+<!--@include: ../../reusables/custom-domain.md{34,73}-->
 
 ## What's next
 
