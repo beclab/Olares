@@ -73,13 +73,13 @@ This guide explains how to install Olares on NVIDIA DGX Spark using the official
 <template #Set-up-via-wired-LAN>
 
 1. Ensure DGX Spark is connected to your router via Ethernet.
-2. In the LarePass app, on your account activation page, tap **Discover nearby Olares**.
+2. In the LarePass app, on your Olares activation page, tap **Discover nearby Olares**.
 3. Select the target Olares instance from the list.
 
 </template>
 <template #Set-up-via-wireless-network>
 
-1. In the LarePass app, on your account activation page, tap **Discover nearby Olares**.
+1. In the LarePass app, on your Olares activation page, tap **Discover nearby Olares**.
 2. Tap **Bluetooth network setup** at the bottom.
 3. Select your device from the Bluetooth list and tap **Network setup**.
 4. Follow the prompts to connect DGX Spark to the Wi-Fi network your phone is currently using.

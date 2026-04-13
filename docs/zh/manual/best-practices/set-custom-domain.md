@@ -1,299 +1,111 @@
 ---
 outline: [2, 3]
-description: 详细指导如何为 Olares 设置自定义域名，包括域名验证、组织创建、成员管理和账号激活的完整配置流程。
+description: 详细指导如何为 Olares 设置自定义域名，包括域名验证、组织创建、成员管理和 Olares ID 激活的完整流程。
 ---
 
 # 为 Olares 设置自定义域名
 
-默认情况下，当你在 LarePass 中创建账户时，系统会为你提供一个带有 `olares.cn` 域名的 Olares ID。这意味着，你可以通过类似 `desktop.{your-username}.olares.cn` 的 URL 来访问自己的 Olares 服务。虽然这种默认设置能够省去常见的网络和域名配置烦恼，但在以下情形中，你可能更希望使用自己的域名：
+默认情况下，在 LarePass 中创建账户时，系统会分配一个 `olares.cn` 域名的 Olares ID。这意味着你通过类似 `desktop.{your-username}.olares.cn` 的 URL 访问 Olares 服务。如果你希望使用自己的域名，可以按照本教程完成配置。
 
-- **作为组织**：为所有团队成员使用与企业邮箱类似的公司域名，例如 `employee@company.com`。
-- **作为个人**：使用自己的域名，以获得更个性化的使用体验。
-
-本教程将介绍如何为 Olares 设置自定义域名。
-
-## 目标
+## 学习目标
 通过本教程，你将学习：
-- 在 Olares Space 中添加并验证你的自定义域名
-- 创建一个组织来管理自定义域名
-- 为组织配置成员访问方式
-- 在自定义域名下创建 Olares ID
-- 使用你的 Olares ID 安装并激活 Olares
+- 在 Olares Space 中添加并验证自定义域名
+- 在 LarePass 中创建组织和域名下的 Olares ID
+- 使用自定义域名安装并激活 Olares
+- 在 Olares Space 中为组织添加成员
 
-## 理解 Olares 自定义域名机制
-在 Olares 中，自定义域名通过“组织”进行管理。无论你是个人用户还是代表公司，都需要先创建一个组织。该组织将作为自定义域名配置的载体。
+## 自定义域名工作原理
 
-下表列出了设置自定义域名所需的步骤，以及针对个人用户、组织管理员及组织成员的责任分工。根据你自身的角色不同，实际需要执行的操作也会有所差异。
+在 Olares 中，自定义域名通过组织进行管理。无论你是个人用户还是代表公司，都需要先创建一个组织。所需操作取决于你的角色：
 
-| 步骤                  | 个人用户 | 组织管理员 | 组织成员 |
-|---------------------|:----:|:-----:|:----:|
-| 创建 DID              |  ✅   |   ✅   |  ✅   |
-| 将域名添加到 Olares Space |  ✅   |   ✅   |      |
-| 为该域名创建组织            |  ✅   |   ✅   |      |
-| 向组织添加邮箱             |  ✅   |   ✅   |      |
-| 加入组织并创建 Olares ID   |  ✅   |   ✅   |  ✅   |
-| 设置 Olares           |  ✅   |   ✅   |  ✅   |
+| 步骤                                                          | 组织管理员 | 组织成员 |
+|---------------------------------------------------------------|:--------:|:------:|
+| 在 LarePass 中创建 DID                                         | ✅       | ✅     |
+| 将自定义域名添加到 Olares Space                                   | ✅       |        |
+| 为域名创建组织，并以管理员身份<br>在 LarePass 中创建 Olares ID        | ✅       |        |
+| 在 Olares Space 中为组织添加新用户                                | ✅       |        |
+| 加入组织，并在 LarePass 中创建 Olares ID                          |          | ✅     |
+| 安装 Olares                                                    | ✅       | ✅     |
 
-## 开始之前
+如果你要加入已有组织，可以直接跳到[以成员身份加入组织](#以成员身份加入组织)。
 
-确保你已具备以下条件：
-- 已向域名注册商购买并注册了一个可用的域名。
-  :::warning 域名备案
-  中国大陆范围内访问未备案的域名可能会被运营商拦截，典型场景包括但不限于云主机、IDC 机房、部分公司专线。因此，为确保激活成功及后续正常访问，尽量使用已备案的域名。
-  :::
-- 拥有一个 Gmail 或 G-Suite 账号。目前仅支持这两种格式的账号用于加入组织域名。
-- 已在手机上安装 LarePass 应用。<br>
-  你将在后续步骤中使用 LarePass 登录 Olares Space，并将自定义域名与 Olares ID 进行绑定。
+## 前提条件
+
+请确保你已准备好：
+- 从域名注册商购买了一个有效的域名。
+- 在手机上安装了 LarePass 应用。你将使用 LarePass 登录 Olares Space，并将自定义域名与 Olares ID 关联。
+
+:::info
+如果你之前已在设备上安装并激活过 Olares，并且想在同一硬件上使用自定义域名，请先[恢复出厂设置](../larepass/manage-olares.md#将-olares-恢复出厂设置)，然后[创建新账户](../larepass/create-account.md)，再按照本教程操作。
+:::
 
 ## 第 1 步：创建 DID
 
-DID（Decentralized Identifier，去中心化标识符）是在获得最终的 Olares ID 前，账户所处的临时状态。只有当账户处于 DID 阶段时，才能绑定自定义域名。创建方式如下：
+<!--@include: ../../reusables/custom-domain.md{21,31}-->
 
-1. 在 LarePass 应用中，打开账户创建页面。
+## 第 2 步：添加域名
 
-2. 点击**创建账户**以触发 DID 创建。
-   
-  ![创建 DID](/images/manual/tutorials/create-a-did1.png)
+以下步骤以 `space.n1.monster` 为例。
 
-   此操作将为你创建一个 DID 阶段的 Olares 账户。
+1. 在浏览器中打开 [Olares Space](https://space.olares.com/)，使用 LarePass 扫码登录。
 
-  ![DID 阶段](/images/manual/tutorials/did-stage1.png)
-3. 点击你刚创建的 Olares 账户。
+   ![LarePass 扫码登录](/images/manual/tutorials/scan-qr-code1.png)
 
-## 第 2 步：将域名添加到 Olares Space
-在绑定域名之前，你需要先在 Olares Space 中添加并验证域名。
+<!--@include: ../../reusables/custom-domain.md{36,73}-->
 
-1. 在浏览器中访问 [Olares Space](https://space.olares.com/)。
-2. 在手机端的 LarePass 应用中，点击右上角的扫码图标，并扫描登录页面的二维码以登录 Olares Space。
+## 第 3 步：创建组织
 
-   ![扫描二维码](/images/manual/tutorials/scan-qr-code1.png)
+在 LarePass 中，为你的域名创建组织并获得管理员权限的 Olares ID。
 
-3. 在 Olares Space 中，进入**域名管理** > **域名设置**，输入你的域名并点击**确认**。
+<!--@include: ../../reusables/custom-domain.md{76,107}-->
 
-   ![添加域名](/images/manual/tutorials/add-domain.png#bordered)
+## 第 4 步：安装并激活 Olares
 
-4. 添加并验证 TXT 记录，以证明你对域名的所有权。
+现在可以使用你的 Olares ID 安装并激活 Olares 了。
 
-   a. 在操作列中，点击**引导**。
- d
-   b. 按照屏幕提示，将 TXT 记录添加到你的 DNS 服务商配置中。
+安装步骤与标准流程类似。以下以 Linux 为例，其他系统请参阅[安装指南](../get-started/install-olares.md)。
+<!--@include: ../get-started/install-and-activate-olares.md{5,7}-->
 
-    ![验证 TXT](/images/manual/tutorials/verify-txt.png#bordered)
+1. 在要安装 Olares 的设备上打开终端，运行以下命令：
 
-   完成验证后，域名状态会自动更新为**等待添加域名 NS 记录**。
-
-5. 验证域名的名称服务器（Name Server，或 NS）记录。此操作将把你域名的 DNS 解析委托给 Olares 的 Cloudflare。
-
-   a. 在操作列中，点击**引导**。
-
-   b. 按照屏幕提示，将 NS 记录添加到你的 DNS 服务商配置中。
-
-   一旦通过验证，域名状态将更新为**等待为域名申请可验证凭证**。
-
-   ![域名状态更新](/images/manual/tutorials/domain-added.png#bordered)
-
-:::tip 注意
-- TXT 验证通常在 30 分钟内完成。NS 记录验证可能需要长达 2 小时。如果整个过程超过 3 小时，请联系你的 DNS 服务商进行排查。
-- 验证通过后不要修改 NS 记录，否则会引起自定义域名解析失效，无法访问。
-:::
-
-完成 TXT 和 NS 记录的验证后，你的域名将成功添加至 Olares Space。
-
-## 第 3 步：为域名创建组织
-
-此步骤将在 Olares 中为你的域名创建一个组织，并请求该域名的可验证凭证（Verifiable Credential，或 VC）。
-
-::: tip 可验证凭证
-可验证凭证是一种数字格式的证明，用于在不披露额外个人信息的情况下，验证持有者的某些属性或资格。
-:::
-
-1. 在 LarePass 应用中创建新组织。
-
-   a. 在账户创建页面，点击右上角的 <i class="material-symbols-outlined">display_settings</i>，进入**高级账户创建**页面。
-      ![选择高级账户创建](/images/manual/tutorials/custom-domain-advanced.png)
-
-   b. 前往**组织 Olares ID** > **创建新组织**。与你域名对应的组织会自动显示在列表中。
-      ![选择组织 Olares ID](/images/manual/tutorials/custom-domain-org-olares-id.png)
-
-      ![选择创建新组织](/images/manual/tutorials/create-org1.png)
-
-   c. 点击该组织名称以申请 VC。完成后，你将看到待绑定的域名。
-
-   d. 点击**确定**完成在 LarePass 中的组织域名绑定。
-
-   ![绑定组织](/images/manual/tutorials/bind-domain-with-org.png)
-
-2. 在 Olares Space 中，进入**域名管理**页面。此时，域名状态应变为**等待规则配置**。
-
-至此，你已成功将自定义域名绑定到组织，并可在 Olares Space 中配置域名规则。
-
-## 第 4 步：添加新成员
-
-域名规则决定了如何向组织添加成员。只有组织成员才能在组织域名（即你的自定义域名）下申请 Olares ID。要配置域名规则，请执行以下步骤：
-
-1. 在 Olares Space 中，进入**域名管理**，然后在目标域名右侧点击**查看**。
-2. 在**域名邀请规则**下，选择**指定邮箱地址**，并点击**保存**。
-   :::tip 邀请规则
-    提供两种规则：
-     - **固定邮箱后缀**：适用于使用同一企业邮箱域名（例如 `@company.com`）的大型团队。符合指定后缀的邮箱均可申请组织下的 Olares ID。仅支持单个后缀，且须符合 G-Suite 格式。
-     - **指定邮箱地址**：通过指定成员邮箱地址添加成员。若无企业邮箱域名且只需邀请少数成员，建议使用此选项。支持 Gmail 与 G-Suite 账号。
-   :::
-
-3. 点击**添加新用户**并输入成员的 Gmail 地址，例如 `justtest1953@gmail.com`。
-
-   ![设置邀请规则](/images/manual/tutorials/set-domain-rule.png#bordered)
-
-4. 点击**提交**完成成员添加。若要添加更多用户，重复步骤 3 和 4。
-
-:::tip 维护成员列表
-作为组织管理员，你可以随时在**域名管理**页面管理组织成员列表。
-:::
-
-## 第 5 步：使用自定义域名创建 Olares ID
-
-要使用该域名，需要在组织下申请一个 Olares ID。
-
-1. 在 LarePass 应用的账户创建页面，点击右上角的 <i class="material-symbols-outlined">display_settings</i> 进入**高级账户创建**页面。
-2. 点击**组织 Olares ID** >**加入已有组织**。
-3. 输入组织域名（即已验证的自定义域名），然后点击**继续**。如果出现错误，请检查域名拼写是否正确，并确认在 Olares Space 中的域名规则已正确配置。
-4. 为成员申请 VC。
-
-   a. 在系统提示时，选择 Google 作为你的 VC 凭证提供商。
-
-   b. 使用之前添加的 Gmail 帐号登录，并授权 VC 验证。
-
-   ![加入组织](/images/manual/tutorials/join-org.png)
-
-授权成功后，就会自动创建一个使用自定义域名的 Olares ID，例如 `justtest1953@xxxx.cloud`。
-
-## 第 6 步：安装并激活 Olares
-最后，你只需安装并激活 Olares，即可通过自定义域名进行访问。
-
-<tabs>
-<template #Linux-and-macOS>
-
-1. 在终端中执行安装脚本来启动安装：
-
-    ```bash
-    curl -sSfL https://cn.olares.sh | bash -
-    ```
-
-2. 根据提示，输入你的自定义域名和 Olares ID。此教程中，我们的自定义域名为 `xxxx.cloud`，Olares ID 为 `justtest1953`。
-
-   ![输入域名](/images/manual/get-started/enter-olares-id.png)
-
-3. 等待安装完成。根据你的网络情况，安装可能需要 10–30 分钟。安装完成后，终端会显示向导地址和登录凭证，例如：
-
-    ```bash
-    2024-12-17T21:00:58.086+0800        Olares is running at:
-    2024-12-17T21:00:58.086+0800        http://192.168.1.16:30180
-
-    2024-12-17T21:00:58.086+0800        Open your browser and visit the above address
-    2024-12-17T21:00:58.086+0800        with the following credentials:
-
-    2024-12-17T21:00:58.086+0800        Username: justtest1953
-    2024-12-17T21:00:58.086+0800        Password: 2uO5PZ2X
-    ```
-
-4. 在浏览器中打开上述向导地址，并按照屏幕提示完成激活。
-
-更多步骤说明参阅[安装 Olares](../get-started/install-olares.md)。
-
-</template>
-<template #Windows>
-
-:::warning 需配置系统环境
-在进行以下操作之前，请确保已正确完成 Windows 环境的配置。
-
-如果环境未正确设置，安装脚本可能无法正常运行。有关详细说明，请参阅 [Windows 安装指南](../get-started/install-windows-script.md)。
-:::
-
-1. 点击 https://cn.windows.olares.sh 下载安装脚本 `publicInstall.latest.ps1`。
-
-2. 使用记事本打开 `publicInstall.latest.ps1`，编辑下列环境变量：
-
-    ```bash {3}
-    $env:DOWNLOAD_CDN_URL = "https://cdn.olares.cn"
-    $env:OLARES_SYSTEM_CDN_SERVICE = "https://cdn.olares.cn"
-    $env:TERMINUS_OS_DOMAINNAME = "olares.cn"
-    $env:NVIDIA_CONTAINER_REPO_MIRROR = "mirrors.ustc.edu.cn"
-    ```
-   - `$env:TERMINUS_OS_DOMAINNAME = "olares.cn"`: 指定你的自定义域名，请将 `olares.cn` 替换为实际的域名。
-
-3. 执行安装脚本。
-
-   a. 以管理员身份打开 PowerShell，进入保存脚本的目录。例如脚本在 `Downloads` 文件夹时：
-
-   ```powershell
-   # 将 <YourUsername> 替换为你的 Windows 用户名
-   cd C:\Users\<YourUsername>\Downloads
+   ```bash
+   export PREINSTALL=1 &&
+   curl -sSfL https://cn.olares.sh | bash -
    ```
+   此命令仅执行预安装阶段，不会进入完整安装流程。
 
-   b. 运行脚本：
+<!--@include: ../get-started/install-and-activate-olares.md{9,10}-->
 
-   ```powershell
-   .\publicInstall.latest.ps1
-   ```
+<!--@include: ../get-started/install-and-activate-olares.md{11,12}-->
 
-4. 看到安全提示时，输入 `R` 并按下 **Enter**，以“仅运行一次”方式执行脚本，开始安装 Olares。
+<!--@include: ../get-started/install-and-activate-olares.md{19,19}-->
 
-   ```powershell
-   Security warning
-   Run only scripts that you trust. While scripts from the internet can be useful, this script can potentially harm your computer. If you trust this script, use the Unblock-File cmdlet to allow the script to run without this warning message. Do you want to run
-   publicInstall.latest.ps1?
-   [D] Do not run [R] Run once [S] Suspend [?] Help (default is "D"):
-   ```
+激活完成后，LarePass 将显示带有自定义域名的 Olares 桌面地址，如 `https://desktop.alex.space.n1.monster`。
 
-5. 当提示选择 WSL Ubuntu 的安装盘时，输入一个有至少 80 GB 可用空间的盘符。
+## 第 5 步：添加成员
 
-   ```powershell{8}
-   Installing Olares will create a WSL Ubuntu Distro and occupy at least 80 GB of disk space.
-   Please select the drive where you want to install it.
-   
-   Available drives and free space:
-   C:\  Free Disk: 391.07 GB
-   D:\  Free Disk: 281.32 GB
-   
-   Please enter the drive letter (e.g., C):
-   ```
+作为管理员，在 Olares Space 中为组织添加成员。
 
-6. 当提示配置防火墙规则时，输入 `yes` 自动配置，或输入 `no` 跳过。若跳过，需自行[暂时关闭 Windows Defender 防火墙](../get-started/install-windows-script.md#如何关闭-windows-defender-防火墙)或[手动添加 TCP 入站规则](../get-started/install-windows-script.md#如何手动设置防火墙规则)。
+<!--@include: ../../reusables/custom-domain.md{109,123}-->
 
-   ```powershell{2}
-   Accessing Olares requires setting up firewall rules, specifically adding TCP inbound rules for ports 80, 443, and 30180.
-   Do you want to set up the firewall rules? (yes/no):
-   ```
+   成员将使用这些凭据在 LarePass 中创建自己的 Olares ID。
 
-7. 当提示确认 Windows（NAT 网关）的 IP 地址时，输入 **Y** 确认或 **R** 重新输入。
+7. （可选）如果成员将使用你现有的 Olares 实例而非单独安装设备，你还需要在 Olares 上创建该用户并分配资源。详见[管理团队](../olares/settings/manage-team.md)。
 
-   ```powershell
-   The NAT gateway (the Windows host)'s IP is 192.168.50.136. Confirm [Y] or Re-enter [R]?
-   ```
+## 以成员身份加入组织
 
-8. 等待安装完成。根据网络情况，可能需要 10–30 分钟。完成后终端会显示向导地址和登录凭证，例如：
+在 LarePass 应用中，点击**创建账户**开始账户创建流程。
 
-    ```bash
-    2024-12-17T21:00:58.086+0800        Olares is running at:
-    2024-12-17T21:00:58.086+0800        http://192.168.1.16:30180
-   
-    2024-12-17T21:00:58.086+0800        Open your browser and visit the above address
-    2024-12-17T21:00:58.086+0800        with the following credentials:
-   
-    2024-12-17T21:00:58.086+0800        Username: justtest1953
-    2024-12-17T21:00:58.086+0800        Password: 2uO5PZ2X
-    ```
+<!--@include: ../../reusables/custom-domain.md{130,141}-->
 
-9. 在浏览器中打开上述向导地址，按页面提示完成激活。
+自定义域名的 Olares ID 创建完成。下一步是激活 Olares：
 
-更多说明与故障排除，参阅 [Windows 安装指南](../get-started/install-windows-script.md)。
+- **在单独的设备上安装**：按照[第 4 步](#第-4-步：安装并激活-olares)操作。
+- **在与管理员相同的设备上**：从管理员处获取激活向导地址和一次性密码，然后在 LarePass 中扫描向导二维码完成激活。详见[激活 Olares](../get-started/join-olares.md)。
 
-</template>
-</tabs>
-
-完成上述步骤后，你即可通过自定义域名访问安装好的 Olares。
 
 ## 了解更多
 
-- [Olares 账户](../../developer/concepts/account.md)
-- [安装 Olares](../get-started/install-olares.md)
-- [设置域名规则](../../space/manage-domain.md)
+- [Olares 账户](../../developer/concepts/account.md)：DID、Olares ID 和组织的工作原理。
+- [安装 Olares](../get-started/install-olares.md)：不同平台和环境的安装方式。
+- [管理团队](../olares/settings/manage-team.md)：在 Olares 实例中创建和管理用户账户。
