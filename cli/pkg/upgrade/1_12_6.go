@@ -53,6 +53,12 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},
+		&task.LocalTask{
+			Name:   "PatchNodeAffinityToRequired",
+			Action: new(patchNodeAffinityToRequired),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
 	}
 	pre = append(pre, u.upgraderBase.UpgradeSystemComponents()...)
 	return append(pre,
