@@ -138,6 +138,16 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           ]
         },
         {
+          text: "具身智能",
+          collapsed: false,
+          items: [
+            {
+              text: "Isaac Lab",
+              link: "/zh/use-cases/isaac-lab",
+            },
+          ]
+        },
+        {
           text: "虚拟机",
           collapsed: false,
           items: [
