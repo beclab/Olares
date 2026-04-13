@@ -63,7 +63,7 @@ var (
 												Values:   []string{"linux"},
 											},
 											{
-												Key:      "node-role.kubernetes.io/master",
+												Key:      "node-role.kubernetes.io/control-plane",
 												Operator: "Exists",
 											},
 										},
