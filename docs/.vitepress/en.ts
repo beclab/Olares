@@ -442,7 +442,9 @@ const side = {
           text: "Manage accounts",
           collapsed: true,
           items: [
-            { text: "Create accounts", link: "/manual/larepass/create-account" },
+            { text: "Create an account", link: "/manual/larepass/create-account" },
+            { text: "Create with a custom domain", link: "/manual/larepass/create-org-account" },
+            { text: "Import an account", link: "/manual/larepass/import-account" },
             { text: "Back up mnemonics", link: "/manual/larepass/back-up-mnemonics" },
             { text: "Manage integrations", link: "/manual/larepass/integrations" },
           ],
@@ -483,25 +485,15 @@ const side = {
       collapsed: true,
       items: [
         {
-          text: "Manage accounts",
+          text: "Log in and manage accounts",
           link: "/manual/space/manage-accounts",
         },
         {
-          text: "Host Olares",
-          collapsed: true,
-          items: [
-            {
-              text: "Create Olares",
-              link: "/manual/space/create-olares",
-            },
-            {
-              text: "Manage Olares",
-              link: "/manual/space/manage-olares",
-            },
-          ],
+          text: "Manage Olares",
+          link: "/manual/space/manage-olares",
         },
         {
-          text: "Host domains",
+          text: "Add custom domain",
           collapsed: true,
           items: [
             {
@@ -509,7 +501,7 @@ const side = {
               link: "/manual/space/host-domain",
             },
             {
-              text: "Manage a domain",
+              text: "Manage domain members",
               link: "/manual/space/manage-domain",
             },
           ],

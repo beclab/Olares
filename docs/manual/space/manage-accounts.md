@@ -1,27 +1,35 @@
 ---
-description: Learn how to access and manage Olares Space accounts using LarePass authentication. 
+description: Learn how to log in to Olares Space with a DID or Olares ID, manage multiple accounts, and log out.
 ---
-:::warning Documentation does not match current experience
-We are currently updating this documentation to match the latest experience on the Olares Space platform. If there are differences, follow the actual platform.
-:::
-# Manage accounts in Olares Space
 
-This guide walks you through common account operations with Olares Space, including logging in, managing multiple accounts, and logging out.  
+# Log in and manage accounts
+
+This guide covers logging in to Olares Space, managing multiple accounts, and logging out.  
 
 ## Log in to Olares Space
 
-Olares Space uses a decentralized ID (DID) or Olares ID for authentication. Make sure you already have obtained your credentials on your LarePass. 
+Open [Olares Space](https://space.olares.com/) in your browser, and scan the QR code using LarePass to log in. The available features depend on the account type you use.
 
-1. In the LarePass app, select the DID or Olares ID you wish to use to log in. 
-2. Open https://space.olares.com/ in your browser. 
-3. Scan the QR code using LarePass.  
+### Log in with an Olares ID
 
-:::info
-The features and services available on Olares Space vary depending on whether you use a DID or Olares ID for login. 
-- **Logging in with a DID** allows you to set your own domain since no domain is associated to the account. However, you must bind the DID to an Olares ID before you can activate an Olares device.
-- **Logging in with an Olares ID** enables you to create an Olares, provided the name isn't already linked to another Olares device. However, you cannot use your custom domain since your Olares ID already corresponds to a unique domain.
+Log in with an Olares ID to create and manage your Olares directly.
+
+1. In the LarePass app, select the Olares ID you want to use.
+2. Tap the scan icon in the top-right corner and scan the QR code on the Olares Space login page.
+
+### Log in with a DID
+
+Log in with a DID if you haven't created an Olares ID yet. This allows you to [set up a custom domain](host-domain.md) for your organization.
+
+:::tip First time setting up a custom domain?
+See [Set up a custom domain for your Olares](../best-practices/set-custom-domain.md) for a complete end-to-end walkthrough.
 :::
 
+1. In the LarePass app, create a DID or select a DID from your account list.
+   ![LarePass account list showing a DID](/images/manual/tutorials/did-stage1.png)
+
+2. Tap the scan icon in the top-right corner and scan the QR code on the Olares Space login page.
+   ![LarePass QR code scanner](/images/manual/tutorials/scan-qr-code1.png)
 
 ## Log out
 
@@ -38,7 +46,7 @@ Alternatively, you can:
 
 ## Manage multiple accounts 
 
-Each Olares ID is linked to only one Olares. With multi-account management in Olares Space, you can switch between accounts effortlessly — perfect for managing multiple Olares IDs and instances.
+Each Olares ID is linked to only one Olares. With multi-account management in Olares Space, you can switch between different accounts to manage multiple Olares IDs and instances.
 
 To add an account:
 
