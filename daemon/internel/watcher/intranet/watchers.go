@@ -263,7 +263,7 @@ func getPodNeighborInfo(podIp string) (mac, iface string, err error) {
 	}
 
 	for _, n := range neighs {
-		if n.IP.String() == podIp {
+		if n.IP.String() == podIp && n.State == netlink.NUD_REACHABLE {
 			mac = n.HardwareAddr.String()
 			if mac == "<nil>" {
 				mac = ""

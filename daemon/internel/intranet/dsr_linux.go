@@ -34,7 +34,6 @@ type DSRProxy struct {
 	responseConn *raw.Conn
 	backendConn  *raw.Conn
 
-	closed bool
 	mu     sync.Mutex
 	stopCh chan struct{}
 
@@ -121,15 +120,12 @@ func (d *DSRProxy) Close() {
 		d.backendConn = nil
 	}
 
-	d.closed = true
 }
 
 func (d *DSRProxy) Stop() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if !d.closed {
-		d.Close()
-	}
+	d.Close()
 
 	close(d.stopCh)
 	return nil
@@ -467,9 +463,7 @@ func (d *DSRProxy) regonfigure() error {
 		return nil
 	}
 
-	if !d.closed {
-		d.Close()
-	}
+	d.Close()
 
 	klog.Info("reconfigure DSR proxy")
 	klog.Infof("VIP: %s on interface %s", d.vip.String(), d.vipInterface.Name)
@@ -502,7 +496,6 @@ func (d *DSRProxy) regonfigure() error {
 		return err
 	}
 
-	d.closed = false
 	d.configChanged = false
 
 	return nil
