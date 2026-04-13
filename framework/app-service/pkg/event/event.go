@@ -164,6 +164,7 @@ func PublishAppEventToQueue(p utils.EventParams) {
 		Reason:          p.Reason,
 		Message:         p.Message,
 		SharedEntrances: p.SharedEntrances,
+		MarketSource:    p.MarketSource,
 	}
 	if len(p.EntranceStatuses) > 0 {
 		data.EntranceStatuses = p.EntranceStatuses

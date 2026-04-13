@@ -20,6 +20,8 @@ By the end of this guide, you are able to:
 - Integrate OpenClaw with Discord.
 - Optional: Enable the web search capability using Brave Search.
 - Manage skills and plug-ins.
+- Optional: Grant OpenClaw access to local files.
+- Optional: Enable the sandbox for secure code execution.
 
 ## Prerequisites
 
@@ -100,7 +102,7 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
 Before configuring OpenClaw, verify that your model is accessible and responsive via the API.
 
 1. Open the OpenClaw CLI app from the Launchpad.
-2. Enter the following command to verify your API address and retrieve the list of available models. Ensure you replaced `{Your-Model-API}` with the exact API endpoint you copied in **Step 1**.
+2. Enter the following command to verify your API address and retrieve the list of available models. Ensure you replaced `{Your-Model-API}` with the exact API endpoint you copied in [Step 1](#step-1-install-your-model).
 
     ```bash
     curl {Your-Model-API}/api/tags
@@ -116,7 +118,7 @@ Before configuring OpenClaw, verify that your model is accessible and responsive
     {"models":[{"details":{"families":["qwen35moe"],"family":"qwen35moe","format":"gguf","parameter_size":"34.7B","parent_model":"","quantization_level":"Q8_0"},"digest":"ff81134b3a699cbc79d3a9e9ee439335fdcd6f43f4d296f31bf46986fa83e01a","model":"qwen3.5:35b-a3b-ud-q4_K_L","modified_at":"2026-03-24T09:59:18.969770729Z","name":"qwen3.5:35b-a3b-ud-q4_K_L","size":20205634377}]}
     ```    
  
-3. Enter the following command to force the model to load into memory and test its response speed. Ensure you replaced `{Your-Model-API}` and `{Your-Model-Name}` with the exact details you copied in **Step 1**.
+3. Enter the following command to force the model to load into memory and test its response speed. Ensure you replaced `{Your-Model-API}` and `{Your-Model-Name}` with the exact details you copied in [Step 1](#step-1-install-your-model).
 
     :::info Why do this before onboarding?
     Ollama unloads models from memory after 5 minutes of inactivity by default. Reloading large models takes time and can cause the onboarding verification in the next step to time out and fail. This command "wakes" the model to ensure a smooth setup.
@@ -144,11 +146,52 @@ Before configuring OpenClaw, verify that your model is accessible and responsive
     ```text
     {"model":"qwen3.5:35b-a3b-ud-q4_K_L","created_at":"2026-03-24T11:40:21.619815369Z","response":"Hello World","done":true,"done_reason":"stop","context":[248045,846,198,35571,23066,1814,593,26003,248046,198,248045,74455,198,248068,271,248069,271,9419,4196],"total_duration":47302041704,"load_duration":41637938018,"prompt_eval_count":13,"prompt_eval_duration":4645064174,"eval_count":7,"eval_duration":961633505}
     ```
-   
+
 ### Step 3: Run onboarding wizard
 
+Set up OpenClaw using the step-by-step interactive wizard, or bypass the prompts using direct commands.
+
+<Tabs>
+<template #Interactive-setup>
+
 1. Open the OpenClaw CLI app from the Launchpad.
-2. Enter the following command to open the onboarding wizard. Ensure you replaced `{Your-Model-API}` and `{Your-Model-Name}` with the exact details you copied in **Step 1**.
+2. Enter the following command to start the onboarding wizard:
+    ```bash
+    openclaw onboard
+    ```
+3. The wizard guides you through a series of steps. Use the arrow keys to navigate and press **Enter** to confirm.
+
+    :::tip Note on configurations
+    To get you started quickly, this tutorial skips several advanced settings in the wizard. You can configure or modify them later.
+    :::
+
+    | Settings   | Option   |
+    |:-----------|:---------|
+    | I understand this is personal-by-default and <br>shared/multi-user use requires lock-down. Continue? | Yes  |
+    | Setup mode   | QuickStart   |
+    | Config handling  | Use existing values    |
+    | Model/auth provider  | Ollama    |
+    | Ollama base URL  | The API address from [Step 1](#step-1-install-your-model),<br>such as `https://37e62186.demo0002.olares.com` |
+    | Ollama mode | Local |
+    | Default model | Select your installed model |
+    | Select channel  | Skip for now<br>(You can configure channels later)  |
+    | Search provider | Skip for now |
+    | Configure skills now   | No <br>(You can install skills later)       |
+    | Enable hooks | Skip for now<br>(Press **Space** to select and then press **Enter** to continue) |
+    | How do you want to hatch your bot   | Do this later   |
+
+4. After you complete the onboarding wizard, scroll up to the **Control UI** section.
+5. Find the **Web UI (with token)**, and then copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token. 
+
+    In this case, it is `f8d86f68cd2457ddabc4e93a3e04a5f49aa9983104ea7be8`.
+
+    ![Obtain gateway token](/images/manual/use-cases/obtain-gateway-token2.png#bordered)
+6. Keep the OpenClaw CLI window open. You need it in the next step.
+</template>
+<template #Command-setup>
+
+1. Open the OpenClaw CLI app from the Launchpad.
+2. Enter the following command to open the onboarding wizard. Ensure you replaced `{Your-Model-API}` and `{Your-Model-Name}` with the exact details you copied in [Step 1](#step-1-install-your-model).
     ```bash
     openclaw onboard --non-interactive \
     --auth-choice ollama \
@@ -198,6 +241,62 @@ Before configuring OpenClaw, verify that your model is accessible and responsive
     For example, in the output above, the token you need to copy is `489bad6c7dbe1f49ace62bf647ca66d6f7d78c76d1ba5d0b`.
 
 6. Keep the OpenClaw CLI window open. You need it in the next step.
+</template>
+</Tabs>
+
+<!--### Step 3: Run onboarding wizard
+
+1. Open the OpenClaw CLI app from the Launchpad.
+2. Enter the following command to open the onboarding wizard. Ensure you replaced `{Your-Model-API}` and `{Your-Model-Name}` with the exact details you copied in [Step 1](#step-1-install-your-model).
+    ```bash
+    openclaw onboard --non-interactive \
+    --auth-choice ollama \
+    --custom-base-url "{Your-Model-API}" \
+    --custom-model-id "{Your-Model-Name}" \
+    --accept-risk
+    ```
+    For example,
+    ```text
+    openclaw onboard --non-interactive \
+    --auth-choice ollama \
+    --custom-base-url "https://ab694c1c.laresprime.olares.com" \
+    --custom-model-id "qwen3.5:35b-a3b-ud-q4_K_L" \
+    --accept-risk
+    ```
+
+    A success message displaying your agent's information will appear in the terminal. For example,
+    ```text
+    Agents: main (default)
+    Heartbeat interval: 30m (main)
+    Session store (main): /home/node/.openclaw/agents/main/sessions/sessions.json (0 entries)
+    Tip: run `openclaw configure --section web` to store your Brave API key for web_search. Docs: https://docs.openclaw.ai/tools/web
+    ```
+
+3. Enter the following command to verify that your model is correctly configured:
+
+    ```bash
+    openclaw models status --probe
+    ```
+
+    The **Status** column in the **Auth probes** table shows `ok`, indicating the model is successfully connected and ready to use.
+    
+4. Enter the following command to obtain the gateway dashboard access token:
+    ```bash
+    openclaw dashboard --no-open
+    ```
+
+    The dashboard information is displayed. For example,
+    ```
+    Dashboard URL: http://127.0.0.1:18789/#token=489bad6c7dbe1f49ace62bf647ca66d6f7d78c76d1ba5d0b
+    Copy to clipboard unavailable.
+    Browser launch disabled (--no-open). Use the URL above.
+    ```
+
+5. Find the **Dashboard URL**, and then copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token. 
+
+    For example, in the output above, the token you need to copy is `489bad6c7dbe1f49ace62bf647ca66d6f7d78c76d1ba5d0b`.
+
+6. Keep the OpenClaw CLI window open. You need it in the next step.-->
 
 <!--### Step 2: Run onboarding wizard
 
@@ -306,7 +405,18 @@ The quick setup in the previous section uses the `openclaw devices approve --lat
 
 OpenClaw requires a large "context window" (that is the AI's short-term memory) to handle complex tasks without forgetting your previous instructions. 
 
-1. In the Control UI, select **Config** from the left sidebar, and then switch to the **Raw** tab.
+1. Open the Files app, and then go to **Data** > **clawdbot** > **config**.
+2. Double-click the `openclaw.json` file to open it.
+3. Click <i class="material-symbols-outlined">edit_square</i> in the upper-right corner to enter the edit mode.
+4. Find the `models` section and locate the configuration block for your model.
+5. Update the `contextWindow` value to at least 65536 (64K). If your hardware VRAM permits, it is highly recommended to increase it to 204800 (200K).
+
+    ![Configure context window in config file](/images/manual/use-cases/configure-context-win3.png#bordered)
+
+6. Click <i class="material-symbols-outlined">save</i> in the upper-right corner.
+7. Restart OpenClaw for the changes to take effect.
+
+<!--1. In the Control UI, select **Config** from the left sidebar, and then switch to the **Raw** tab.
 2. Click <i class="material-symbols-outlined">visibility_off</i> to reveal the configuration fields.
 
     ![Reveal configuration blocks](/images/manual/use-cases/click-hide-icon.png#bordered)
@@ -315,7 +425,7 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
 4. Add or update the `contextWindow` value. Set it to at least 64000 (64K). If your hardware VRAM permits, it is highly recommended to increase it to 200000 (200K).
 
     ![Configure context window](/images/manual/use-cases/configure-context-win2.png#bordered)
-5. Click **Save** in the upper-right corner. The system validates the configuration and applies the change automatically.
+5. Click **Save** in the upper-right corner. The system validates the configuration and applies the change automatically.-->
 
 ### Step 6: Personalize OpenClaw
 
@@ -382,88 +492,9 @@ This process establishes the agent's identity, behavioral boundaries, and long-t
 2. [Optional: Enable web search](openclaw-web-access.md) to give your agent access to the live internet information.
 3. [Install skills and plugins](openclaw-skills.md) to enhance your agent's capabilities.
 
-## FAQs
+## Troubleshooting and FAQs
 
-### Cannot restart OpenClaw in CLI
-
-If you attempt to manually start, stop, or restart OpenClaw using commands like `openclaw gateway` or `openclaw gateway stop` in the OpenClaw CLI, you receive the following error messages:
-- `Gateway failed to start: gateway already running (pid 1); lock timeout after 5000ms`
-- `Gateway service check failed: Error: systemctl --user unavailable: spawn systemctl ENOENT`
-
-#### Cause
-
-OpenClaw is deployed as a containerized app in Olares, where the gateway runs as the primary container process `pid 1` and is always active. This environment does not use standard Linux system and service management tools such as `systemd` and `systemctl`, so these commands do not work. 
-
-#### Solution
-
-Do not use the OpenClaw CLI to manage the gateway service. Instead, restart OpenClaw using one of the following methods:
-- **Restart OpenClaw from Settings or Market**: 
-    - Open **Settings**, go to **Applications** > **OpenClaw**, click **Stop**, and then click **Resume**.
-    - Open **Market**, go to **My Olares**, find **OpenClaw**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the operation button, select **Stop**, and then select **Resume**.
-- **Restart the container**: Open **Control Hub**, click `clawdbot` under **Deployments**, and then click **Restart**.
-
-### Why does my OpenClaw automatically stop during long tasks?
-
-When you ask the OpenClaw agent to perform tasks that take a long time to process like massive web scrapes or deep analysis, the task is abruptly terminated before returning the result.
-
-#### Cause
-
-By default, OpenClaw sets a maximum runtime limit of 10 minutes per task. If a task exceeds this limit, the system forcefully terminates it to save resources.
-
-#### Solution
-
-Extend this timeout limit by modifying the configuration file as follows:
-1. Open the Control UI, go to **Config** > **Raw**, and then find the `agents` section.
-2. In the `defaults` block, add the `timeoutSeconds` field or modify the existing one in it. 
-
-    To set it to 1 hour, specify `3600` for the value:
-
-    ```json
-    "agents": {
-        "defaults": {
-            "timeoutSeconds": 3600
-        }
-    }
-    ```
-3. Click **Save** to restart the gateway and apply the changes.
-
-### How to completely remove OpenClaw and reinstall it?
-
-If you want to uninstall OpenClaw and start fresh, simply uninstalling the app is not enough. By default, Olares preserves your application data such as configurations and persona files, so you do not lose your work.
-
-To completely remove OpenClaw and all of its data before reinstalling, follow the steps based on your Olares OS version.
-
-<Tabs>
-<template #V1.12.5-and-later>
-
-1. Open **Market**, go to **My Olares**, and then find **OpenClaw**.
-2. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the app's operation button, and select **Uninstall**.
-3. In the **Uninstall** window, select **Also remove all local data**. Then app data (in the Data directory) and cache data (in the Cache directory) will be permanently deleted and cannot be recovered.
-    ![Remove local app data option during uninstallation](/images/manual/use-cases/uninstall-remove-local-data.png#bordered){width=65%}
-4. Click **Confirm**.
-5. Return to Market and reinstall OpenClaw. It will now install from a completely clean state.
-</template>
-<template #V1.12.4-and-earlier>
-
-1. Open **Market**, go to **My Olares**, and then find **OpenClaw**.
-2. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the app's operation button, and select **Uninstall**.
-3. When the installation finishes, open the **Files** app, and then go to **Application** > **Data**.
-4. Find the `clawdbot` folder, right-click it, select **Delete**, and then click **Confirm**. This permanently removes all the  previous configurations and workspaces.
-    ![Remove OpenClaw app data](/images/manual/use-cases/remove-app-data.png#bordered){width=80%}
-5. Return to Market and reinstall OpenClaw. It will now install from a completely clean state.
-</template>
-</Tabs>
-
-### "Rate limit exceeded" when installing skills
-
-If installing a skill fails with a `429` error, it is because the ClawHub registry temporarily limits downloads due to high traffic to maintain server stability:
-
-```text
-Downloading xurl@1.0.0 from ClawHub...
-ClawHub /api/v1/download failed (429): Rate limit exceeded
-```
-
-To resolve the issue, simply wait a few hours and run the installation command again.
+Find solutions to common errors and behavioral issues in [Common issues](openclaw-common-issues.md).
 
 ## Learn more
 

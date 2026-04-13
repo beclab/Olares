@@ -24,9 +24,21 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/openclaw-skills",
                 },
                 {
+                  text: "Enable local file access",
+                  link: "/use-cases/openclaw-local-access",
+                },
+                {
+                  text: "Enable sandbox",
+                  link: "/use-cases/openclaw-enable-sandbox",
+                },                                 
+                {
                   text: "Upgrade OpenClaw",
                   link: "/use-cases/openclaw-upgrade",
                 },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/openclaw-common-issues",
+                },                
               ]
             },
             {
@@ -59,6 +71,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "Context7",
+              link: "/use-cases/context7",
+            },
+            {
               text: "Ollama",
               link: "/use-cases/ollama",
             },
@@ -66,6 +82,33 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             //   text: "Dify",
             //   link: "/use-cases/dify",
             // },
+            {
+              text: "LiteLLM",
+              link: "/use-cases/litellm",
+            },
+            {
+              text: "LLMFit",
+              link: "/use-cases/llmfit",
+            },
+            {  
+              text: "OpenCode",
+              link: "/use-cases/opencode",
+              collapsed: true,
+              items: [
+                {
+                  text: "Manage packages",
+                  link: "/use-cases/opencode-packages",
+                },
+                {
+                  text: "Skills and plugins",
+                  link: "/use-cases/opencode-extensions",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/opencode-issues",
+                },
+              ]
+            },
             {
               text: "LobeHub (LobeChat)",
               link: "/use-cases/lobechat",
@@ -75,9 +118,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/perplexica",
             },
             {
+              text: "ACE-Step 1.5",
+              link: "/use-cases/ace-step-1.5",
+            },            
+            /*{
               text: "ACE-Step",
               link: "/use-cases/ace-step",
-            },
+            },*/
             {
               text: "Duix.Avatar",
               link: "/use-cases/duix-avatar",
@@ -104,13 +151,20 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           text: "Virtual machine",
           collapsed: false,
           items: [
-            // {
-            //   text: "macOS",
-            //   link: "/use-cases/macOS",
-            // },
+            {
+              text: "macOS",
+              link: "/use-cases/macos",
+            },
             {
               text: "Windows",
               link: "/use-cases/windows",
+              collapsed: true,
+              items: [
+                {
+                  text: "Known issues",
+                  link: "/use-cases/windows-issues",
+                }
+              ]
             },
             // {
             //   text: "Redroid",
@@ -122,6 +176,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           text: "Entertainment",
           collapsed: false,
           items: [
+            {
+              text: "Immich",
+              link: "/use-cases/immich",              
+              collapsed: true,
+              items: [
+                {
+                  text: "Import photos from NAS",
+                  link: "/use-cases/immich-import-from-nas",
+                },
+              ]
+            },
             {
               text: "Jellyfin",
               link: "/use-cases/stream-media",
@@ -153,10 +218,22 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Plane",
               link: "/use-cases/plane",
+              text: "Excalidraw",
+              link: "/use-cases/excalidraw",
             },
             {
               text: "Stirling PDF",
               link: "/use-cases/stirling-pdf",
+            },
+          ]
+        },
+        {
+          text: "Utilities",
+          collapsed: false,
+          items: [
+            {
+              text: "FlareSolverr",
+              link: "/use-cases/flaresolverr",
             },
           ]
         },

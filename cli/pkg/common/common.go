@@ -284,6 +284,7 @@ const (
 	FlagEnableZRAM         = "enable-zram"
 	FlagZRAMSize           = "zram-size"
 	FlagZRAMSwapPriority   = "zram-swap-priority"
+	FlagHostIP             = "host-ip"
 	FlagRegistryMirrors    = "registry-mirrors"
 
 	FlagStorageType       = "storage-type"

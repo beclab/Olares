@@ -573,6 +573,17 @@ export const useFilesStore = defineStore('files', {
 				path.param == this.currentPath[id].param
 			) {
 				this.currentFileList[id] = res;
+				// Re-apply the active sort preference to freshly fetched items.
+				// Without this, navigating between directories resets the displayed order
+				// to the server default even though activeSort[id] is still set, causing
+				// the UI to show stale order until the user clicks sort twice (issue #2446).
+				if (this.activeSort[id] && this.currentFileList[id]) {
+					this.currentFileList[id]!.items = this.sortList(
+						this.currentFileItems(id),
+						this.currentDirItems(id),
+						id
+					);
+				}
 			}
 			return fileList;
 		},

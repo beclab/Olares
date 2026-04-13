@@ -393,6 +393,14 @@ func IsCifsInvalid(mountPoint *mountutils.MountPoint) bool {
 	return false
 }
 
+func IsNfsInvalid(mountPoint *mountutils.MountPoint) bool {
+	// TODO: implement nfs invalid check logic,
+	// currently we have not found a good way to check nfs mount is valid or not,
+	// since nfs client will retry to connect server by itself, so we just return false here,
+	// and we will check the nfs server status in controller level before mount
+	return false
+}
+
 /*
 umount mount point if it's an usb device and remove the mount point path
 */
@@ -616,6 +624,8 @@ func MountedPath(ctx context.Context) ([]mountedPath, error) {
 			paths = append(paths, mountedPath{m.Path, HDD, false, hdds[idx].IDSerial, hdds[idx].IDSerialShort, hdds[idx].PartitionUUID, "", false})
 		case m.Type == "cifs":
 			paths = append(paths, mountedPath{m.Path, SMB, IsCifsInvalid(&m), "", "", "", m.Device, isReadOnly(&m)})
+		case m.Type == "nfs":
+			paths = append(paths, mountedPath{m.Path, NFS, IsNfsInvalid(&m), "", "", "", m.Device, isReadOnly(&m)})
 		}
 
 	}
@@ -734,4 +744,90 @@ func getFsTypeOfDevice(ctx context.Context, devicePath string) (string, error) {
 	}
 
 	return result.BlockDevices[0].FsType, nil
+}
+
+func MountNfsDriver(ctx context.Context, mountBaseDir, mountPath string, nfsServer, nfsPath string) error {
+	mounter := mountutils.New("")
+
+	if mountPath == "" || mountPath == "." || mountPath == ".." ||
+		strings.ContainsAny(mountPath, "/\x00") {
+		return fmt.Errorf("invalid mount path name: %s", mountPath)
+	}
+
+	mntPath := filepath.Join(mountBaseDir, mountPath)
+	err := os.MkdirAll(mntPath, 0755)
+	if err != nil {
+		klog.Error("create mount path error, ", err)
+		return err
+	}
+
+	var opts []string
+
+	// check duplicate mount
+	mountedPath, err := MountedPath(ctx)
+	if err != nil {
+		klog.Warning("list mounted path error, ", err)
+	} else {
+		for _, m := range mountedPath {
+			if m.Path == mntPath {
+				return errors.New("duplicate mounted path")
+			}
+		}
+	}
+
+	nfsMountPath := fmt.Sprintf("%s:%s", nfsServer, nfsPath)
+	opts = append(opts, "uid=1000", "gid=1000")
+	err = mounter.Mount(nfsMountPath, mntPath, "nfs", opts)
+	if err != nil {
+		klog.Error("mount path as rw error, ", err)
+
+		// retry to mount as read-only
+		opts = append(opts, "ro")
+		err = mounter.Mount(nfsMountPath, mntPath, "nfs", opts)
+		if err != nil {
+			if e := os.Remove(mntPath); e != nil {
+				klog.Error("remove dir error, ", e, ", ", mntPath)
+			}
+		}
+	}
+
+	return err
+}
+
+func UmountNfsDriver(ctx context.Context, mountDir string) error {
+	mounter := mountutils.New("")
+
+	err := mounter.Unmount(mountDir)
+	if err != nil {
+		klog.Error("umount nfs path error, ", err)
+		return err
+	}
+
+	return os.Remove(mountDir)
+}
+
+func ListNfsDriver(ctx context.Context, nfsServer string) ([]nfsSharedPath, error) {
+	cmd := exec.CommandContext(ctx, "showmount", "-e", nfsServer, "--no-headers")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+
+	var nfsPaths []nfsSharedPath
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		nfsPaths = append(nfsPaths, nfsSharedPath{
+			Path: strings.TrimSpace(fields[0]),
+			Acl:  strings.TrimSpace(fields[1]),
+		})
+	}
+
+	return nfsPaths, nil
 }

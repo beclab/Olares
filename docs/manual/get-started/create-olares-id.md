@@ -52,10 +52,10 @@ To resolve this, please enter **Advanced account creation** mode <i class="mater
 Keep your newly created Olares ID and LarePass app handy – you'll need them later.
 
 To install and activate Olares as an administrator:
-- [Install Olares](./install-olares)
+- [Install Olares](/manual/get-started/install-olares)
 
 If your team already has Olares, and you're joining as a member:
-- [Activate Olares](./activate-olares)
+- [Join an Olares](/manual/get-started/join-olares)
 
-If you wish to log in to Olares Space, or creating a cloud-based Olares:
-- [Manage accounts in Olares Space](../../space/manage-accounts) 
+If you wish to log in to Olares Space:
+- [Manage accounts in Olares Space](/manual/space/manage-accounts.md)
