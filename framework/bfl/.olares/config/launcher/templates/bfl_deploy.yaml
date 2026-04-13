@@ -218,7 +218,7 @@ spec:
                 operator: In
                 values:
                 - linux
-              - key: node-role.kubernetes.io/master
+              - key: node-role.kubernetes.io/control-plane
                 operator: Exists
 {{ end }}            
       serviceAccountName: bytetrade-controller
