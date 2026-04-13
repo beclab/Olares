@@ -216,6 +216,16 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           ],
         },
         {
+          text: "开发工具",
+          collapsed: false,
+          items: [
+            {
+              text: "JupyterHub",
+              link: "/zh/use-cases/jupyterhub",
+            },
+          ],
+        },
+        {
           text: "工具",
           collapsed: false,
           items: [
