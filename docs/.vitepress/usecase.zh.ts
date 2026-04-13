@@ -135,6 +135,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "DeerFlow",
               link: "/zh/use-cases/deerflow",
             },
+            {
+              text: "IndexTTS2",
+              link: "/zh/use-cases/indextts2",
+            },
           ]
         },
         {
