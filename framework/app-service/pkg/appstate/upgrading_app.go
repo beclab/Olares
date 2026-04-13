@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
@@ -32,6 +31,16 @@ var _ OperationApp = &UpgradingApp{}
 type UpgradingApp struct {
 	*baseOperationApp
 	imageClient images.ImageManager
+	finallyCh   chan func()
+}
+
+func (p *UpgradingApp) Finally() {
+	if p.finallyCh == nil {
+		return
+	}
+	if fn, ok := <-p.finallyCh; ok && fn != nil {
+		fn()
+	}
 }
 
 func (p *UpgradingApp) State() string {
@@ -57,6 +66,7 @@ func NewUpgradingApp(c client.Client,
 }
 
 func (p *UpgradingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
+	p.finallyCh = make(chan func(), 1)
 
 	opCtx, cancel := context.WithCancel(context.Background())
 	return appFactory.execAndWatch(opCtx, p,
@@ -71,31 +81,36 @@ func (p *UpgradingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) 
 
 			go func() {
 				defer cancel()
+				defer close(p.finallyCh)
 
-				err := p.exec(c)
-				if err != nil {
-					p.finally = func() {
-						klog.Info("upgrade app failed, update app status to upgradeFailed, ", p.manager.Name)
-						opRecord := makeRecord(p.manager, appsv1.UpgradeFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
+				var execErr error
+				defer func() {
+					if r := recover(); r != nil {
+						klog.Errorf("panic in upgrade exec goroutine: %v", r)
+						execErr = fmt.Errorf("panic: %v", r)
+					}
+					if execErr != nil {
+						p.finallyCh <- func() {
+							klog.Info("upgrade app failed, update app status to upgradeFailed, ", p.manager.Name)
+							opRecord := makeRecord(p.manager, appsv1.UpgradeFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, execErr.Error()))
 
-						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.UpgradeFailed, opRecord, err.Error(), appsv1.UpgradeFailed.String())
-						if updateErr != nil {
-							klog.Errorf("update appmgr state to upgradeFailed state failed %v", updateErr)
+							updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.UpgradeFailed, opRecord, execErr.Error(), appsv1.UpgradeFailed.String())
+							if updateErr != nil {
+								klog.Errorf("update appmgr state to upgradeFailed state failed %v", updateErr)
+							}
+						}
+					} else {
+						p.finallyCh <- func() {
+							klog.Info("upgrade app success, update app status to initializing, ", p.manager.Name)
+							updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Initializing, nil, appsv1.Initializing.String(), appsv1.Initializing.String())
+							if updateErr != nil {
+								klog.Errorf("update appmgr state to initializing state failed %v", updateErr)
+							}
 						}
 					}
-					return
-				}
+				}()
 
-				p.finally = func() {
-					klog.Info("upgrade app success, update app status to initializing, ", p.manager.Name)
-					updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Initializing, nil, appsv1.Initializing.String(), appsv1.Initializing.String())
-					if updateErr != nil {
-						klog.Errorf("update appmgr state to initializing state failed %v", updateErr)
-						return
-					}
-
-				}
-
+				execErr = p.exec(c)
 			}()
 
 			return &in, nil
@@ -149,6 +164,10 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 			return p.manager.Spec.AppName
 		}
 		return rawAppName
+	}
+
+	if isAdmin {
+		admin = p.manager.Spec.AppOwner
 	}
 
 	if !userspace.IsSysApp(getRawAppName(p.manager.Spec.RawAppName)) {
@@ -206,43 +225,14 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 		klog.Errorf("make helmop failed %v", err)
 		return err
 	}
-	if isAdmin {
-		admin = p.manager.Spec.AppOwner
-	}
-	values := map[string]interface{}{
-		"admin": admin,
-		"bfl": map[string]string{
-			"username": p.manager.Spec.AppOwner,
-		},
-	}
-	values["GPU"] = map[string]interface{}{
-		"Type": appConfig.GetSelectedGpuTypeValue(),
-		"Cuda": os.Getenv("OLARES_SYSTEM_CUDA_VERSION"),
-	}
 
-	terminus, err := utils.GetTerminusVersion(ctx, kubeConfig)
+	values, err := appinstaller.BuildBaseHelmValues(ctx, kubeConfig, appConfig, p.manager.Spec.AppOwner, true)
 	if err != nil {
-		klog.Infof("get terminus error %v", err)
-		return err
-	}
-	values["sysVersion"] = terminus.Spec.Version
-
-	nodeInfo, err := utils.GetNodeInfo(ctx)
-	if err != nil {
-		klog.Errorf("failed to get node info %v", err)
-		return err
-	}
-	values["nodes"] = nodeInfo
-
-	deviceName, err := utils.GetDeviceName()
-	if err != nil {
-		klog.Errorf("failed to get deviceName %v", err)
+		klog.Errorf("build base helm values failed %v", err)
 		return err
 	}
 
-	values["deviceName"] = deviceName
-
-	refs, err := p.getRefsForImageManager(appConfig, values)
+	refs, err := GetRefsForImageManager(appConfig, values)
 	if err != nil {
 		klog.Errorf("get image refs from resources failed %v", err)
 		return err
@@ -266,10 +256,16 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 }
 
 func (p *UpgradingApp) Cancel(ctx context.Context) error {
-	err := p.updateStatus(ctx, p.manager, appsv1.UpgradingCanceling, nil, constants.OperationCanceledByTerminusTpl, appsv1.UpgradingCanceling.String())
+	var err error
+	klog.Infof("execute upgrading cancel operation appName=%s", p.manager.Spec.AppName)
+	err = p.imageClient.UpdateStatus(ctx, p.manager.Name, appsv1.DownloadingCanceled.String(), appsv1.DownloadingCanceled.String())
 	if err != nil {
-		klog.Errorf("update appmgr state to upgradingCanceling state failed %v", err)
+		klog.Errorf("update im name=%s to downloadingCanceled state failed %v", p.manager.Name, err)
 		return err
+	}
+
+	if ok := appFactory.cancelOperation(p.manager.Name); !ok {
+		klog.Errorf("app %s cancel operation is not allowed", p.manager.Name)
 	}
 	return nil
 }
@@ -284,24 +280,4 @@ type upgradingInProgressApp struct {
 // override to avoid duplicate exec
 func (p *upgradingInProgressApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 	return nil, nil
-}
-
-func (p *UpgradingApp) getRefsForImageManager(appConfig *appcfg.ApplicationConfig, values map[string]interface{}) (refs []appsv1.Ref, err error) {
-	switch {
-	case appConfig.APIVersion == appcfg.V2 && appConfig.IsMultiCharts():
-		// For V2 multi-charts, we need to get refs from each chart
-		var chartRefs []appsv1.Ref
-		for _, chart := range appConfig.SubCharts {
-			chartRefs, err = utils.GetRefFromResourceList(chart.ChartPath(appConfig.RawAppName, chart.Name), values, appConfig.Images)
-			if err != nil {
-				klog.Errorf("get refs from chart %s failed %v", chart.Name, err)
-				return
-			}
-
-			refs = append(refs, chartRefs...)
-		}
-	default:
-		refs, err = utils.GetRefFromResourceList(appConfig.ChartsName, values, appConfig.Images)
-	}
-	return
 }
