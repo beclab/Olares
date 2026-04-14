@@ -33,6 +33,6 @@ After setting up the domain, you can [add members](../space/manage-domain.md) in
 
 If the domain admin has already created the organization and added you, use the username and password provided by the admin to join.
 
-<!--@include: ../../reusables/custom-domain.md{130,141}-->
+<!--@include: ../../reusables/custom-domain.md{130,145}-->
 
 Your Olares ID is now created. You can proceed to [install and activate Olares](../get-started/install-olares.md).

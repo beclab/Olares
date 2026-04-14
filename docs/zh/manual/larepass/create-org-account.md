@@ -33,6 +33,6 @@ description: 使用自定义域名创建 Olares ID。首次设置域名创建组
 
 如果域名管理员已创建组织并添加了你，使用管理员提供的用户名和密码加入。
 
-<!--@include: ../../reusables/custom-domain.md{130,141}-->
+<!--@include: ../../reusables/custom-domain.md{130,145}-->
 
 Olares ID 创建完成，可以继续[安装并激活 Olares](../get-started/install-olares.md)。
