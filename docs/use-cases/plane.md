@@ -163,8 +163,8 @@ In this scenario, we will create the following task items for the project.
 |:---|:---|:---|:---|
 | Conduct UX audit | Technical SEO | Phase 1: Discovery | High |
 | Draft eye-catching headlines | Copywriting | Phase 1: Discovery | Urgent |
-| Create Low-Fi sketches | Visual Assets | Phase 1: Discovery | Medium |
-| Design final UI mockups | Visual Assets | Phase 2: Execution | High |
+| Create Low-Fi sketches | Visual assets | Phase 1: Discovery | Medium |
+| Design final UI mockups | Visual assets | Phase 2: Execution | High |
 | Write meta descriptions | Technical SEO | Phase 2: Execution | Medium |
 
 1. In the left sidebar, click **Work items**.
