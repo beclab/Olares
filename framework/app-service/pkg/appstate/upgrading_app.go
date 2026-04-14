@@ -18,6 +18,8 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
@@ -30,8 +32,13 @@ var _ OperationApp = &UpgradingApp{}
 
 type UpgradingApp struct {
 	*baseOperationApp
-	imageClient images.ImageManager
-	finallyCh   chan func()
+	imageClient          images.ImageManager
+	finallyCh            chan func()
+	isDownloading        bool
+	isDownloaded         bool
+	downloadTTL          time.Duration
+	downloadedTime       *metav1.Time
+	downloadingStartTime *metav1.Time
 }
 
 func (p *UpgradingApp) Finally() {
@@ -48,7 +55,7 @@ func (p *UpgradingApp) State() string {
 }
 
 func NewUpgradingApp(c client.Client,
-	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
+	manager *appsv1.ApplicationManager, downloadTTL, ttl time.Duration) (StatefulApp, StateError) {
 
 	return appFactory.New(c, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
@@ -60,6 +67,7 @@ func NewUpgradingApp(c client.Client,
 						client:  c,
 					},
 				},
+				downloadTTL: downloadTTL,
 				imageClient: images.NewImageManager(c),
 			}
 		})
@@ -242,11 +250,19 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 		klog.Errorf("create imagemanager failed %v", err)
 		return err
 	}
+	p.isDownloading = true
+	p.downloadingStartTime = ptr.To(metav1.Now())
 	err = p.imageClient.PollDownloadProgress(ctx, p.manager)
 	if err != nil {
 		klog.Errorf("poll image download progress failed %v", err)
+		p.isDownloading = false
+		p.downloadedTime = ptr.To(metav1.Now())
 		return err
 	}
+	p.isDownloading = false
+	p.downloadedTime = ptr.To(metav1.Now())
+	p.isDownloaded = true
+
 	err = ops.Upgrade()
 	if err != nil {
 		klog.Errorf("upgrade app %s failed %v", p.manager.Spec.AppName, err)
@@ -268,6 +284,21 @@ func (p *UpgradingApp) Cancel(ctx context.Context) error {
 		klog.Errorf("app %s cancel operation is not allowed", p.manager.Name)
 	}
 	return nil
+}
+
+func (p *UpgradingApp) IsTimeout() bool {
+	if p.isDownloading {
+		if p.downloadTTL <= 0 {
+			return false
+		}
+		return p.downloadingStartTime.Add(p.downloadTTL).Before(time.Now())
+	}
+
+	if !p.isDownloaded {
+		return p.baseOperationApp.IsTimeout()
+	}
+
+	return p.downloadedTime.Add(p.ttl).Before(time.Now())
 }
 
 var _ StatefulInProgressApp = &upgradingInProgressApp{}
