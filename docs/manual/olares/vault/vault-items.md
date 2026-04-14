@@ -53,13 +53,14 @@ Fields are the core component of Vault Items, allowing storage of various data t
 When use Vault in Olares for the first time, you will be prompted to set a local password. This password should not be the same as your Olares login password.
 
 1. Set the local password for Vault.
-2. Import the Olares ID that's already linked to your Olares server using mnemonic phrase. 
+   ![Vault password](/images/manual/olares/vault-local-password1.png#bordered){width=40%}
 
-![Vault password](/images/manual/olares/vault-local-password.png)
+2. Import the Olares ID that's already linked to your Olares server using mnemonic phrase. 
+   ![Vault mnemonics](/images/manual/olares/vault-mnemonics.png#bordered){width=40%}
 
 :::info
 If you don't know where to find the mnemonic phrase, see [back up mnemonic phrase](/manual/larepass/back-up-mnemonics).
-
+:::
 
 ## Manage vault items
 :::tip

@@ -20,6 +20,6 @@ To avoid activation failures, ensure that both your phone and the Olares device 
 6. Follow the on-screen instructions to set the login password for Olares, then tap **Complete**.
 
 
-   ![ISO Activate-2](/images/manual/larepass/iso-activate-2.png#bordered)
+   ![ISO Activate-2](/images/manual/larepass/iso-activate-2-260413.png#bordered)
 
 Once activation is complete, LarePass will display the desktop address of your Olares device, such as `https://desktop.marvin123.olares.com`.

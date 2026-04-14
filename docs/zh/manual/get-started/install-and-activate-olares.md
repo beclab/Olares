@@ -18,6 +18,6 @@ search: false
    
 5. 按照屏幕提示设置 Olares 的登录密码，然后点击**完成**。
 
-   ![ISO Activate-2](/images/manual/larepass/iso-activate-2.png#bordered)
+   ![ISO Activate-2](/images/manual/larepass/iso-activate-2-260413.png#bordered)
 
 激活完成后，LarePass 将显示 Olares 设备的桌面地址，如 `https://desktop.marvin123.olares.cn`。

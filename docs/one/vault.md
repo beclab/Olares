@@ -45,7 +45,7 @@ When you open Vault on your device for the first time, you must initialize it fo
 
 2. Set a local password for Vault, which is used to unlock Vault on the current device only. This local Vault password acts as a second layer of defense. 
 
-   ![Open Vault for the first time](/images/one/open-vault.png#bordered){width=35%}
+   ![Open Vault for the first time](/images/one/open-vault1.png#bordered){width=35%}
 
    :::tip Security best practice
    Do not use the same password as your Olares login. If someone guesses your login password, this secondary password ensures your sensitive data remains locked.
