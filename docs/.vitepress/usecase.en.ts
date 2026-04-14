@@ -218,6 +218,8 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Plane",
               link: "/use-cases/plane",
+            },
+            {  
               text: "Excalidraw",
               link: "/use-cases/excalidraw",
             },
