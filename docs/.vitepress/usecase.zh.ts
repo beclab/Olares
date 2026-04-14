@@ -210,6 +210,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "Plane",
+              link: "/zh/use-cases/plane",
+            },
+            {  
               text: "Excalidraw",
               link: "/zh/use-cases/excalidraw",
             },
