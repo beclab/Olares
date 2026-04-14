@@ -45,9 +45,6 @@ spec:
         - image: beclab/integration-server:0.0.3
           imagePullPolicy: IfNotPresent
           name: integration
-          env:
-            - name: DEBUG
-              value: "true"
           ports:
             - containerPort: 8090
               protocol: TCP
