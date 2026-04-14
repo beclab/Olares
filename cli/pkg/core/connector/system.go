@@ -81,6 +81,7 @@ type Systems interface {
 	IsAmdApu() bool
 	IsAmdGPU() bool
 	IsAmdGPUOrAPU() bool
+	IsMThreadsM1000() bool
 
 	IsUbuntu() bool
 	IsDebian() bool
@@ -255,6 +256,10 @@ func (s *SystemInfo) IsAmdGPU() bool {
 
 func (s *SystemInfo) IsAmdGPUOrAPU() bool {
 	return s.CpuInfo.HasAmdAPU || s.HasAmdGPU
+}
+
+func (s *SystemInfo) IsMThreadsM1000() bool {
+	return s.CpuInfo.IsMThreadsM1000
 }
 
 func (s *SystemInfo) IsUbuntu() bool {
@@ -469,6 +474,7 @@ type CpuInfo struct {
 	CpuPhysicalCount int    `json:"cpu_physical_count"`
 	IsGB10Chip       bool   `json:"is_gb10_chip,omitempty"`
 	HasAmdAPU        bool   `json:"has_amd_apu,omitempty"`
+	IsMThreadsM1000  bool   `json:"is_mthreads_m1000,omitempty"`
 }
 
 // Not considering the case where AMD GPU and AMD APU coexist.
@@ -536,6 +542,9 @@ func getCpu() *CpuInfo {
 		fmt.Printf("Error checking AMD iGPU: %v\n", err)
 		hasAmdAPU = false
 	}
+
+	// check if it is mthreads m1000
+	ret.IsMThreadsM1000 = IsMThreadsAIBookM1000Local()
 
 	ret.IsGB10Chip = isGB10Chip
 	ret.HasAmdAPU = hasAmdAPU

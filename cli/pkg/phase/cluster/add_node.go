@@ -1,14 +1,11 @@
 package cluster
 
 import (
-	"github.com/beclab/Olares/cli/pkg/amdgpu"
 	"github.com/beclab/Olares/cli/pkg/bootstrap/os"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/core/pipeline"
-	"github.com/beclab/Olares/cli/pkg/core/task"
-	"github.com/beclab/Olares/cli/pkg/gpu"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	"github.com/beclab/Olares/cli/pkg/kubernetes"
 	"github.com/beclab/Olares/cli/pkg/manifest"
@@ -79,23 +76,10 @@ func (m *AddNodeModule) Init() {
 			&k3s.JoinNodesModule{},
 		}
 	}
-	m.underlyingModules = append(m.underlyingModules, &gpu.NodeLabelingModule{})
 	for _, underlyingModule := range m.underlyingModules {
 		underlyingModule.Default(m.Runtime, m.PipelineCache, m.ModuleCache)
 		underlyingModule.AutoAssert()
 		underlyingModule.Init()
 		m.Tasks = append(m.Tasks, underlyingModule.GetTasks()...)
 	}
-	m.Tasks = append(m.Tasks,
-		&task.RemoteTask{
-			Name:   "UpdateNodeGPUInfo",
-			Action: new(gpu.UpdateNodeGPUInfo),
-			Retry:  1,
-		},
-		&task.LocalTask{
-			Name:   "UpdateNodeAmdGPUInfo",
-			Action: new(amdgpu.UpdateNodeAmdGPUInfo),
-			Retry:  1,
-		},
-	)
 }
