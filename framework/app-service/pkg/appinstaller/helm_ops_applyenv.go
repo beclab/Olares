@@ -20,7 +20,7 @@ func (h *HelmOps) ApplyEnv() error {
 	}
 
 	values := make(map[string]interface{})
-	if err := h.AddEnvironmentVariables(values); err != nil {
+	if err := h.AddEnvironmentVariables(values, true); err != nil {
 		klog.Errorf("Failed to add environment variables: %v", err)
 		return err
 	}

@@ -694,9 +694,6 @@ func (h *installHandlerHelper) applyAppEnv(ctx context.Context) (err error) {
 	return
 }
 
-func (h *installHandlerHelperV2) setAppConfig(req *api.InstallRequest, appName string) {
-	return
-}
 
 func (h *installHandlerHelperV2) _validateClusterScope(isAdmin bool, installedApps []*v1alpha1.Application) (err error) {
 	klog.Info("validate cluster scope for install handler v2")

@@ -231,6 +231,11 @@ func isStartUp(am *appv1alpha1.ApplicationManager, cli client.Client) (bool, err
 			container := pod.Status.ContainerStatuses[i]
 			if *container.Started == true {
 				startedContainers++
+				continue
+			}
+			// job-created pods with completed status are also treated as started
+			if container.State.Terminated != nil && container.State.Terminated.Reason == "Completed" {
+				startedContainers++
 			}
 		}
 		if startedContainers == totalContainers {
