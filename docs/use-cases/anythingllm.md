@@ -29,7 +29,7 @@ In this guide, you will learn how to:
 
 ## Install AnythingLLM and model apps
 
-You need three apps: AnythingLLM, a chat model for generating responses, and an embedding model for processing documents. 
+To build a local knowledge base, three components are required: AnythingLLM, a chat model for generating responses, and an embedding model for processing documents. 
 
 This guide uses "Qwen3.5 9B" as the chat model and "Nomic Embed v1.5" as the embedding model.
 
