@@ -116,6 +116,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/ace-step",
             },*/
             {
+              text: "AnythingLLM",
+              link: "/zh/use-cases/anythingllm",
+            },
+            {
               text: "Duix.Avatar",
               link: "/zh/use-cases/duix-avatar",
             },
