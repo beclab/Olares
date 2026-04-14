@@ -28,6 +28,15 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
 ### macOS & Windows
 请从 [LarePass 官网](https://www.olares.cn/larepass)下载最新桌面客户端。
 
+### Linux
+
+:::info 系统要求
+- **架构**：Linux 安装包仅适用于 x86_64（amd64）系统。
+- **环境**：在 Linux 上使用 LarePass 需要图形桌面环境。
+:::
+
+请从 [LarePass 官网](https://www.olares.cn/larepass)下载最新 Linux 桌面客户端。
+
 <!--### Chrome 扩展
 
 使用 LarePass 扩展可以直接在浏览器中收集内容并管理密码。目前仅支持 Google Chrome 浏览器，且必须手动安装。

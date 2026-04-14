@@ -15,9 +15,25 @@ description: 在 LarePass 移动端创建 Olares ID，几步即可完成。
 2. 输入你想要的用户名，至少 8 个字符，仅支持小写字母和数字。
 3. 点击**继续**完成创建。
 
-   ![创建 Olares ID](/images/manual/larepass/create-olares-id.png)
+   ![创建 Olares ID](/images/manual/larepass/create-olares-id1.png#bordered)
 
 获得 Olares ID 后，等待 [Olares 安装](../get-started/install-olares.md)完成，然后进行[激活](../get-started/activate-olares.md)。
+
+## 切换 Olares ID
+
+如果你已经在 LarePass 中添加了多个 Olares ID，可以在移动端或桌面端随时切换使用的账户。
+
+### 移动端
+
+1. 点击左上角头像，打开切换账户页面。
+2. 在列表中点击你想使用的账户。
+   ![移动端切换账户](/images/manual/larepass/switch-account-mobile.png#bordered)
+
+### 桌面端
+
+1. 点击左上角头像，然后点击**切换账户**。
+2. 在列表中点击你想使用的账户。
+   ![桌面端切换账户](/images/manual/larepass/switch-account-desktop.png#bordered)
 
 ## 了解更多
 

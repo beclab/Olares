@@ -21,7 +21,7 @@ Make sure you have already [backed up the mnemonic phrase](back-up-mnemonics.md)
 5. Enter the 12-word mnemonic phrase for your Olares ID.
 
 </template>
-<template #macOS-&-Windows>
+<template #macOS-&-Windows-&-Linux>
 
 1. Open the LarePass desktop client.
 2. Click your profile avatar.
