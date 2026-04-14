@@ -287,10 +287,6 @@ func (p *UpgradingApp) Cancel(ctx context.Context) error {
 }
 
 func (p *UpgradingApp) IsTimeout() bool {
-	if !p.isDownloaded {
-		return p.baseOperationApp.IsTimeout()
-	}
-
 	if p.isDownloading {
 		if p.downloadTTL <= 0 {
 			return false
@@ -298,8 +294,8 @@ func (p *UpgradingApp) IsTimeout() bool {
 		return p.downloadingStartTime.Add(p.downloadTTL).Before(time.Now())
 	}
 
-	if p.ttl <= 0 {
-		return false
+	if !p.isDownloaded {
+		return p.baseOperationApp.IsTimeout()
 	}
 
 	return p.downloadedTime.Add(p.ttl).Before(time.Now())
