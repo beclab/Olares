@@ -26,7 +26,11 @@ In this guide, you will learn how to:
 
 ## Install Plane and required dependencies
 
-Before installing Plane, you must first install its dependencies: RabbitMQ (V4.0.0 or later) and MinIO (V1.0.0 or later).
+Before you can install Plane, you must first install RabbitMQ (V4.0.0 or later) and MinIO (V1.0.0 or later)
+
+:::info
+Plane relies on multiple middleware components to run smoothly. While PostgreSQL and Redis are already pre-installed on your Olares system, RabbitMQ and MinIO require manual installation.
+:::
 
 1. Open Market and search for "RabbitMQ".
 
@@ -62,14 +66,22 @@ After installation, register your account and create a workspace where all your 
 
 Invite team members into the workspace so they can collaborate with you.
 
-1. Click your workspace name in the top-left corner, and then select **Invite members**.
-2. On the **Members** page, click **Add member**.
-3. Enter the email address of the team member, and then select the role to assign to the member.
-4. To invite multiple members at once, click **Add more**.
+:::info
+Before sending invitations, you must make Plane publicly accessible in Olares. Otherwise, they cannot join without an Olares password.
+:::
+
+1. Open Settings, go to **Applications** > **Plane** > **Entrances** > **Plane**, and then change the **Authentication level** to **Public**.
+
+   ![Change authentication level for Plane](/images/manual/use-cases/plane-auth-level.png#bordered){width=80%}
+
+2. Return to Plane, click your workspace name in the top-left corner, and then select **Invite members**.
+3. On the **Members** page, click **Add member**.
+4. Enter the email address of the team member, and then select the role to assign to the member.
+5. To invite multiple members at once, click **Add more**.
 
    ![Invite team members](/images/manual/use-cases/plane-invite-members.png#bordered){width=80%}
 
-5. Click **Send invitations**. Invitees appear in the **Pending invites** panel.
+6. Click **Send invitations**. Invitees appear in the **Pending invites** panel.
 
    When the invited members accept the invitation, they join the workspace automatically.
 
@@ -197,7 +209,7 @@ Share knowledge across your team. Keep everyone aligned by writing and storing p
 
    ![Document collaboration](/images/manual/use-cases/plane-documents.png#bordered) 
 
-6. To connect a document to a work item, click <span class="material-symbols-outlined">link_2</span> in the upper-right corner to copy the document URL, and then paste it into a work item's description so the assignee has the context needed.
+6. To connect a document to a work item, click the copy link icon in the upper-right corner, and then paste it into a work item's description so the assignee has the context needed.
 7. To save a local copy of the document, click <span class="material-symbols-outlined">more_horiz</span> in the upper-right corner, and then click **Export**.
 
 ## Learn more
