@@ -35,6 +35,7 @@ type UpgradingApp struct {
 	imageClient          images.ImageManager
 	finallyCh            chan func()
 	isDownloading        bool
+	isDownloaded         bool
 	downloadTTL          time.Duration
 	downloadedTime       *metav1.Time
 	downloadingStartTime *metav1.Time
@@ -260,6 +261,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 	}
 	p.isDownloading = false
 	p.downloadedTime = ptr.To(metav1.Now())
+	p.isDownloaded = true
 
 	err = ops.Upgrade()
 	if err != nil {
@@ -285,6 +287,10 @@ func (p *UpgradingApp) Cancel(ctx context.Context) error {
 }
 
 func (p *UpgradingApp) IsTimeout() bool {
+	if !p.isDownloaded {
+		return p.baseOperationApp.IsTimeout()
+	}
+
 	if p.isDownloading {
 		if p.downloadTTL <= 0 {
 			return false
