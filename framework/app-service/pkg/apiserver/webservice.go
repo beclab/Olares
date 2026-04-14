@@ -658,12 +658,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Param(ws.PathParameter(ParamInstallationID, "the id of a installation or uninstallation")).
 		Returns(http.StatusOK, "Success to cancel app install", &api.InstallationResponse{}))
 
-	ws.Route(ws.POST("/apps/manifest/render").
-		To(handler.renderManifest).
-		Doc("render olares manifest").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "Success to render olares manifest", &api.ManifestRenderResponse{}))
-
 	ws.Route(ws.POST("/systemenvs").
 		To(handler.createSystemEnv).
 		Doc("create a system environment variable (admin only)").
