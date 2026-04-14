@@ -9,14 +9,14 @@ head:
 
 # Update firmware
 
-To ensure system stability and access the latest hardware features, you might occasionally need to update the Embedded Controller (EC) and BIOS firmware on your Olares One device.
+To ensure system stability and access the latest hardware features, you may need to update the Embedded Controller (EC) and BIOS firmware on your Olares One device.
 
-## Before you begin
+## Version history
 
-Review the following changelogs for features or fixes included in each update. Download the required update packages to your local computer before starting the update process.
+Review the following changelogs for features or fixes included in each update.
 
 :::info
-To ensure system stability and security, only the latest firmware versions are available for download. Previous changelogs are provided for your reference only.
+Only the latest firmware versions are available for download.
 :::
 
 ### EC versions
@@ -24,8 +24,8 @@ To ensure system stability and security, only the latest firmware versions are a
 | Version | Release date | Changelog |
 |:--------|:-------------|:----------|
 | [1.02 (Download)](http://cdn.olares.com/common/OlaresOne_EC_1.02.zip) | 2026-01-19 | <ul><li>Fix the issue where the keyboard fails to wake the system from sleep mode.</li></ul> |
-| 1.01 | 2026-01-13 | <ul><li>Add support for Wake-on-LAN (WOL).</li><li>Disable the white breathing LED indicator during S3 sleep state.</li></ul> |
-| 1.00 | 2025-12-01 | <ul><li>Initial MP SMT release.</li><li>Enable the white breathing LED indicator during S3 sleep state.</li></ul> |
+| 1.01 | 2026-01-13 | <ul><li>Add support for Wake-on-LAN (WOL).</li><li>Disable the white breathing LED indicator during the sleep state.</li></ul> |
+| 1.00 | 2025-12-01 | <ul><li>Initial release.</li><li>Enable the white breathing LED indicator during the sleep state.</li></ul> |
 
 ### BIOS versions
 
@@ -37,9 +37,9 @@ To ensure system stability and security, only the latest firmware versions are a
 
 ## Prerequisites
 
-- A USB flash drive formatted to **FAT32**.
+- A USB flash drive formatted to `FAT32`.
 - A monitor and a USB keyboard connected to your Olares One.
-- The EC or BIOS update packages were downloaded.
+- The EC or BIOS update package, downloaded to your computer.
 
 ## Update the EC firmware
 
@@ -139,6 +139,6 @@ Do not disconnect the power supply or turn off the device during the BIOS update
 
     ![Enter setup for BIOS](/images/one/enter-setup.png#bordered)  
 
-    d. On the **Main** tab, verify that the **System BIOS Version** displays 1.01 (or your target version) to confirm the update was successful.
+    d. On the **Main** tab, verify that the **System BIOS Version** displays `1.01` (or your target version) to confirm the update was successful.
 
     ![Verify BIOS version](/images/one/enter-setup-bios1.png#bordered)   
