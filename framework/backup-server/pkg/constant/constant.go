@@ -17,6 +17,7 @@ var (
 	SyncServerURL       string
 	OlaresRemoteService string = DefaultSyncServerURL
 	NodeName            string = os.Getenv("NODE_NAME")
+	DebugMode           bool
 )
 
 const (
@@ -198,4 +199,11 @@ func ReloadEnvDependantVars() error {
 		return err
 	}
 	return nil
+}
+
+func InitDebugMode() {
+	d := os.Getenv(EnvIntegrationDebug)
+	if d == "1" {
+		DebugMode = true
+	}
 }
