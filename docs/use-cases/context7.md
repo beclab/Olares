@@ -125,7 +125,7 @@ Before proceeding, ensure that you have configured the necessary settings within
 
 To use Context7 with Olares-hosted AI agents, you need to obtain the MCP endpoint URL first, and then configure Context7 in your preferred agent app.
 
-1. Open Settings, and then go to **Applications** > **Context7** > **Context7 MCP**
+1. Open Settings, and then go to **Applications** > **Context7** > **Context7 MCP**.
 2. Copy the endpoint URL. For example, `https://f86d25051.olaresdemo.olares.com`.
 
     ![Context7 MCP endpoint](/images/manual/use-cases/context7-mcp-endpoint.png#bordered){width=70%}
