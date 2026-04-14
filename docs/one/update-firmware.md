@@ -23,7 +23,7 @@ To ensure system stability and security, only the latest firmware versions are a
 
 | Version | Release date | Changelog |
 |:--------|:-------------|:----------|
-| [1.02 (Download)](http://cdn.olares.com/common/update_ec_1.02_tool.zip) | 2026-01-19 | <ul><li>Fix the issue where the keyboard fails to wake the system from sleep mode.</li></ul> |
+| [1.02 (Download)](http://cdn.olares.com/common/OlaresOne_EC_1.02.zip) | 2026-01-19 | <ul><li>Fix the issue where the keyboard fails to wake the system from sleep mode.</li></ul> |
 | 1.01 | 2026-01-13 | <ul><li>Add support for Wake-on-LAN (WOL).</li><li>Disable the white breathing LED indicator during S3 sleep state.</li></ul> |
 | 1.00 | 2025-12-01 | <ul><li>Initial MP SMT release.</li><li>Enable the white breathing LED indicator during S3 sleep state.</li></ul> |
 
@@ -31,7 +31,7 @@ To ensure system stability and security, only the latest firmware versions are a
 
 | Version | Release date | Changelog |
 |:--------|:-------------|:----------|
-| [1.01 (Download)](http://cdn.olares.com/common/AGBOX4_CWL_BIOS_ARL_Release-AGBOX4_BIOS_101.zip) | 2025-12-04 | <ul><li>Fix the issue where SSDs unexpectedly disconnect by disabling ASPM and L-state power management for SSD1 and SSD2.</li></ul> |
+| [1.01 (Download)](http://cdn.olares.com/common/OlaresOne_BIOS_1.01.zip) | 2025-12-04 | <ul><li>Fix the issue where SSDs unexpectedly disconnect by disabling ASPM and L-state power management for SSD1 and SSD2.</li></ul> |
 | 1.00 | 2025-11-28 | <ul><li>Update version naming convention.</li></ul> |
 | C400 | 2025-11-05 | <ul><li>Hide advanced BIOS options by default.</li><li>Remove MCU version display.</li><li>Fix the issue where memory tests report errors by enabling SAGV.</li></ul> |
 
