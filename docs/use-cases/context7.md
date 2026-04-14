@@ -125,7 +125,7 @@ Before proceeding, ensure that you have configured the necessary settings within
 
 To use Context7 with Olares-hosted AI agents, you need to obtain the MCP endpoint URL first, and then configure Context7 in your preferred agent app.
 
-1. Open Settings, and then go to **Applications** > **Context7** > **Context7 MCP**
+1. Open Settings, and then go to **Applications** > **Context7** > **Context7 MCP**.
 2. Copy the endpoint URL. For example, `https://f86d25051.olaresdemo.olares.com`.
 
     ![Context7 MCP endpoint](/images/manual/use-cases/context7-mcp-endpoint.png#bordered){width=70%}
@@ -269,11 +269,18 @@ Create a configuration file to register Context7 as a remote MCP server, then re
 
 You can also connect Context7 to coding assistants running on your computer, such as Cursor or Claude Desktop. This section uses Cursor as an example.
 
-1. Open Cursor, and then go to **Settings** > **Tools & MCP** > **Add custom MCP**.
+1. Open the LarePass desktop client on your computer, and then enable **VPN connection** to connect to Olares.
+   ![Enable LarePass VPN on desktop](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
+
+    :::tip On the same local network?
+    If your computer and Olares are on the same LAN, you can skip VPN and use the `.local` domain instead. Replace `https://f86d25051.{username}.olares.com` with `http://f86d25051.{username}.olares.local` in the config in Step 3. For details, see [Use `.local` domain](../manual/best-practices/local-access.md#method-2-use-local-domain).
+    :::
+
+2. Open Cursor, and then go to **Settings** > **Tools & MCP** > **Add custom MCP**.
 
   ![Cursor settings](/images/manual/use-cases/context7-cursor-settings.png#bordered){width=70%}
 
-2. Enter the following configurations in the `mcp.json` file. Replace `<your-context7-endpoint>` with your Context7 MCP endpoint.
+3. Enter the following configurations in the `mcp.json` file. Replace `<your-context7-endpoint>` with your Context7 MCP endpoint.
 
     ```json
     {
@@ -284,11 +291,11 @@ You can also connect Context7 to coding assistants running on your computer, suc
       }
     }
     ```
-3. Save the changes. Now Context7 is enabled.
+4. Save the changes. Now Context7 is enabled.
 
   ![Context7 enabled in Cursor](/images/manual/use-cases/cursor-context7-enabled.png#bordered){width=50%}
 
-4. Ask in the chat. For example,
+5. Ask in the chat. For example,
 
     ```text
     Use the Context7 MCP server to look up the latest React 19 documentation.
