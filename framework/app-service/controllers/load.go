@@ -128,7 +128,7 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 		case appv1alpha1.Stopping:
 			return appstate.NewSuspendingApp(appmgr, &am, 30*time.Minute)
 		case appv1alpha1.Upgrading:
-			return appstate.NewUpgradingApp(appmgr, &am, 300*time.Minute)
+			return appstate.NewUpgradingApp(appmgr, &am, 24*time.Hour, 30*time.Minute)
 		case appv1alpha1.ApplyingEnv:
 			return appstate.NewApplyingEnvApp(appmgr, &am, 30*time.Minute)
 		case appv1alpha1.Resuming:
