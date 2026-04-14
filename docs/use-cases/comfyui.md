@@ -44,14 +44,13 @@ Member users will only see the ComfyUI client icon. The administrator must start
 Before generating images, you need to prepare models. This guide uses Stable Diffusion v1.5 as an example. ComfyUI Launcher provides a one-click package that includes all essential base models.
 
 1. Open **ComfyUI Launcher** from Launchpad.
-2. Scroll down to the **Package installation** section.
+2. Scroll down to the **Resource Package** section.
 3. Find **Stable Diffusion base package** and click **VIEW**.
 
-   ![Stable Diffusion base package](/images/manual/use-cases/comfyui-base-package1.png#bordered)
-
+   ![Stable Diffusion base package](/images/manual/use-cases/comfyui-base-package2.png#bordered){width=90%}
 4. On the package details page, click **GET ALL** to start downloading. You can track the progress in the status bar.
 
-   ![Download progress](/images/manual/use-cases/comfyui-download-progress1.png#bordered)
+   ![Download progress](/images/manual/use-cases/comfyui-download-progress1.png#bordered){width=90%}
 
 ## Start the ComfyUI service
 

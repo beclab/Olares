@@ -45,16 +45,14 @@ After it finished, you can see two icons for ComfyUI on Launchpad:
 ## Step 2: Download model package
 To generate content, you must first download the specific model package.
 
-1. Open ComfyUI Launcher, and scroll down to **Package installation**.
+1. Open ComfyUI Launcher, and scroll down to **Resource Package**.
 2. For image generation, find **Z-Image Turbo Package** and click **GET ALL** to download necessary models.
 3. For video generation, select **Wan 2.2 Text to Video 14B Package** and click **GET ALL** to download necessary models.
 
-   ![Install model package](/images/one/comfyui-install-model-package1.png#bordered)
-
-
+   ![Install model package](/images/one/comfyui-install-model-package2.png#bordered){width=90%}
    <!-- ![Install model package](/images/one/comfyui-install-model-package.png#bordered) -->
 
-4. . When the download completes, click **RESTART** on the **Home** page for the changes to take effect.
+4. When the download completes, click **RESTART** on the **Home** page for the changes to take effect.
 
 ## Step 3: Start the ComfyUI service
 1. In ComfyUI Launcher, click **START** in the upper-right corner.
@@ -67,22 +65,12 @@ To generate content, you must first download the specific model package.
 ## Step 4: Generate images
 This section uses the Z-Image Turbo workflow to help you get started.
 
-1. In the ComfyUI client, click **Templates** in the left navigation bar to browse available templates.
-2. Select **Image** as the generation type, and select the template: **Z-Image-Turbo Text to Image**.
-   ![Z-Image Turbo Package](/images/manual/use-cases/comfyui-zimage-turbo-package.png#bordered)
+1. In the ComfyUI client, click **Templates** in the left navigation bar, then select **Image** under **GENERATION TYPE**.
+2. Search for "Z-Image", then select **Z-Image-Turbo Text to Image** from the results to open the workflow.
+   ![Z-Image Turbo template](/images/one/comfyui-tti-template.png#bordered)
 
-3. When prompted that this workflow is missing models, simply close the window.
-4. Prepend `public/` to the filename in the **Text to Image** node. For example:
-   - **Default**: `ae.safetensors`
-   - **Change to**: `public/ae.safetensors`
-   :::info Shared model path
-   ComfyUI in Olares uses a file structure that differs from the standard installation. This change allows models to be shared between ComfyUI and SD Web UI.
-   :::
-   ![Change model path](/images/manual/use-cases/comfyui-z-image-change-model-path.png#bordered){width=50%}
-
-5. Update the text prompt in the same node to describe the image you want to generate.
-
-6. Click **Run** in the toolbar to start generation.
+3. Update the text prompt in the same node to describe the image you want to generate.
+4. Click **Run** in the toolbar to start generation.
    ![Generated image](/images/manual/use-cases/comfyui-z-image-result.png#bordered)
 
 <!--
@@ -113,25 +101,20 @@ This section uses the `nunchaku-flux.1-dev-qencoder` workflow to help you get st
 ## Step 5: Generate videos
 This section uses the Wan 2.2 workflow.
 
-1. In ComfyUI, open the ComfyUI menu and select **View** > **Browse Templates**.
-2. Under the **GENERATION TYPE** category, select **Video**.
-3. Select the template: **Wan 2.2 14B Text to Video**.
+1. In the ComfyUI client, click **Templates** in the left navigation bar, then select **Video** under **GENERATION TYPE**.
+2. Search for "Wan 2.2", then select **Wan 2.2 14B Text to Video** from the results to open the workflow.
    ![Open Wan 2.2 workflow](/images/one/comfyui-video-templates.png#bordered)
 
-4. Prepend `public/` to the filename in each model loader node. For example:
-   - **Default**: `wan_2.1_vae.safetensors`
-   - **Change to**: `public/wan_2.1_vae.safetensors`
-     :::info Shared model path
-     ComfyUI in Olares uses a file structure that differs from the standard installation. This change allows models to be shared between ComfyUI and SD Web UI.
-     :::
-   ![Change model path](/images/one/comfyui-wan-change-model-path.png#bordered){width=90%}
+3. In the workflow, locate the **CLIP Text Encode (Positive Prompt)** node and edit the prompt as needed. You can revise the full prompt or only the parts you want to change. If needed, you can also adjust the **CLIP Text Encode (Negative Prompt)** node.
 
-5. Locate the **CLIP Text Encode** node and enter a detailed prompt for your video.
+   For example:
+
     ```plain
     A woman with long brown hair and light skin smiles at another woman with long blonde hair. The woman with brown hair wears a black jacket and has a small, barely noticeable mole on her right cheek. The camera angle is a close-up, focused on the woman with brown hair's face. The lighting is warm and natural, likely from the setting sun, casting a soft glow on the scene. The scene appears to be real-life footage.
     ```
-6. Click **Run** in the toolbar to start generation. Video generation takes significantly longer than image generation.
 
+4. Click **Run** in the toolbar to start generation. Video generation takes significantly longer than image generation.
+   ![Generated video](/images/manual/use-cases/comfyui-w-video-result.png#bordered)
 
 ## Step 6: Download output files
 You can download all output images and videos from Olares One to your local computer.
@@ -141,10 +124,11 @@ You can download all output images and videos from Olares One to your local comp
     External/olares/ai/output/comfyui
     ```
    ![View output files](/images/one/comfyui-output.png#bordered)
+   
 3. Select the files you wish to save.
 4. Right-click and select **Download** to save them to your local computer.
 
 ## Resources
 - [ComfyUI official docs](https://docs.comfy.org/)
-- [ComfyUI-nunchaku docs](https://nunchaku.tech/docs/ComfyUI-nunchaku/index.html)
+- [Manage models](/use-cases/comfyui-launcher.md#manage-models)
 - [Manage ComfyUI using ComfyUI Launcher](../use-cases/comfyui-launcher.md)

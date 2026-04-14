@@ -88,19 +88,19 @@ export const oneSidebar: DefaultTheme.Sidebar = {
 
       ]
     },
-//     {
-//       text: "Manage",
-//       items: [
-//         {
-//           text: "Set up app entrances",
-//           link: "/zh/one/app-entrances",
-//         },
-//         {
-//           text: "Create users",
-//           link: "/zh/one/users",
-//         },
-//       ]
-//     },
+    {
+       text: "Manage",
+       items: [
+        {
+          text: "Add and manage users",
+          link: "/zh/one/create-users",
+        },
+         {
+           text: "Configure application access",
+           link: "/zh/one/config-app-access",
+         },
+       ]
+     },
     {
       text: "Monitor",
       items: [
@@ -134,10 +134,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Access Windows in Olares",
           link: "/zh/one/windows",
         },
-        {
+        /*{
           text: "Generate music with ACE-Step",
           link: "/zh/one/ace-step",
-        },
+        },*/
 
         {
           text: "Deep research with DeerFlow",

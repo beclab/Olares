@@ -298,7 +298,10 @@ func (t *Translator) applyDenyAllRestrictions(user *message.UserInfo, vhosts []*
 	if user.LocalDomainIP != "" {
 		restrictCIDRs = append(restrictCIDRs, user.LocalDomainIP+"/32")
 	}
-	restrictCIDRs = append(restrictCIDRs, user.AllowCIDRs...)
+	if user.MasterNodeCIDR != "" {
+		restrictCIDRs = append(restrictCIDRs, user.MasterNodeCIDR)
+	}
+	//restrictCIDRs = append(restrictCIDRs, user.AllowCIDRs...)
 
 	for _, vh := range vhosts {
 		isAllowed := false

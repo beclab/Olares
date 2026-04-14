@@ -2,6 +2,7 @@ package upgrade
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -30,8 +31,17 @@ import (
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/pkg/utils"
+	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+
 	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const cacheRebootNeeded = "reboot.needed"
@@ -401,5 +411,230 @@ func (r *rebootIfNeeded) Execute(runtime connector.Runtime) error {
 	if ok && val {
 		_, _ = runtime.GetRunner().SudoCmd("reboot now", false, false)
 	}
+	return nil
+}
+
+// applyNodeExporterServiceMonitorAction applies embedded prometheus node-exporter ServiceMonitor
+type applyNodeExporterServiceMonitorAction struct {
+	common.KubeAction
+}
+
+func (a *applyNodeExporterServiceMonitorAction) Execute(runtime connector.Runtime) error {
+	kubectlpath, err := util.GetCommand(common.CommandKubectl)
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "kubectl not found")
+	}
+	manifest := path.Join(runtime.GetInstallerDir(), cc.BuildFilesCacheDir, cc.BuildDir, "prometheus", "node-exporter", "node-exporter-serviceMonitor.yaml")
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectlpath, manifest), false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "apply node-exporter ServiceMonitor failed")
+	}
+	return nil
+}
+
+// applyKubernetesPrometheusRuleAction applies embedded prometheus kubernetes prometheusRule
+type applyKubernetesPrometheusRuleAction struct {
+	common.KubeAction
+}
+
+func (a *applyKubernetesPrometheusRuleAction) Execute(runtime connector.Runtime) error {
+	kubectlpath, err := util.GetCommand(common.CommandKubectl)
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "kubectl not found")
+	}
+	manifest := path.Join(runtime.GetInstallerDir(), cc.BuildFilesCacheDir, cc.BuildDir, "prometheus", "kubernetes", "kubernetes-prometheusRule.yaml")
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectlpath, manifest), false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "apply kubernetes prometheusRule failed")
+	}
+	return nil
+}
+
+func upgradeNodeExporterServiceMonitor() []task.Interface {
+	return []task.Interface{
+		// prometheus node-exporter ServiceMonitor
+		&task.LocalTask{
+			Name:   "ApplyNodeExporterServiceMonitor",
+			Action: new(applyNodeExporterServiceMonitorAction),
+			Retry:  5,
+			Delay:  5 * time.Second,
+		},
+	}
+}
+
+func upgradeKubernetesPrometheusRule() []task.Interface {
+	return []task.Interface{
+		// prometheus kubernetes prometheusRule
+		&task.LocalTask{
+			Name:   "ApplyKubernetesPrometheusRule",
+			Action: new(applyKubernetesPrometheusRuleAction),
+			Retry:  5,
+			Delay:  5 * time.Second,
+		},
+	}
+}
+
+type waitForStatefulSetReady struct {
+	common.KubeAction
+	Namespace string
+	Name      string
+	InitDelay time.Duration
+}
+
+func (w *waitForStatefulSetReady) Execute(_ connector.Runtime) error {
+	if w.InitDelay > 0 {
+		logger.Infof("waiting %s before checking statefulset %s/%s", w.InitDelay, w.Namespace, w.Name)
+		time.Sleep(w.InitDelay)
+	}
+
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to get kubernetes config")
+	}
+
+	scheme := kruntime.NewScheme()
+	if err := appsv1.AddToScheme(scheme); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to add apps/v1 scheme")
+	}
+
+	c, err := ctrlclient.New(config, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to create client")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var sts appsv1.StatefulSet
+	key := ctrlclient.ObjectKey{Namespace: w.Namespace, Name: w.Name}
+	if err := c.Get(ctx, key, &sts); err != nil {
+		return errors.Wrapf(errors.WithStack(err), "failed to get statefulset %s/%s", w.Namespace, w.Name)
+	}
+
+	if sts.Status.ObservedGeneration < sts.Generation {
+		return fmt.Errorf("statefulset %s/%s rollout not observed yet (generation %d, observed %d)",
+			w.Namespace, w.Name, sts.Generation, sts.Status.ObservedGeneration)
+	}
+
+	replicas := int32(1)
+	if sts.Spec.Replicas != nil {
+		replicas = *sts.Spec.Replicas
+	}
+
+	if sts.Status.UpdatedReplicas < replicas {
+		return fmt.Errorf("statefulset %s/%s not fully updated: %d/%d updated",
+			w.Namespace, w.Name, sts.Status.UpdatedReplicas, replicas)
+	}
+
+	if sts.Status.ReadyReplicas < replicas {
+		return fmt.Errorf("statefulset %s/%s not ready: %d/%d ready",
+			w.Namespace, w.Name, sts.Status.ReadyReplicas, replicas)
+	}
+
+	if sts.Status.CurrentRevision != sts.Status.UpdateRevision {
+		return fmt.Errorf("statefulset %s/%s revision mismatch: current=%s update=%s",
+			w.Namespace, w.Name, sts.Status.CurrentRevision, sts.Status.UpdateRevision)
+	}
+
+	logger.Infof("statefulset %s/%s is ready", w.Namespace, w.Name)
+	return nil
+}
+
+type backfillAppGPUConfig struct {
+	common.KubeAction
+}
+
+func (a *backfillAppGPUConfig) Execute(_ connector.Runtime) error {
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to get kubernetes config")
+	}
+
+	scheme := kruntime.NewScheme()
+	if err := appv1alpha1.AddToScheme(scheme); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to add app-service scheme")
+	}
+	if err := appsv1.AddToScheme(scheme); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to add apps/v1 scheme")
+	}
+	if err := corev1.AddToScheme(scheme); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to add corev1 scheme")
+	}
+
+	c, err := ctrlclient.New(config, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to create controller-runtime client")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	var amList appv1alpha1.ApplicationManagerList
+	if err := c.List(ctx, &amList); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to list applicationmanagers")
+	}
+	var gpuType = "nvidia"
+	var nodeList corev1.NodeList
+	if err := c.List(ctx, &nodeList); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to list nodes")
+	}
+	for _, node := range nodeList.Items {
+		annoGpuType := node.Annotations["gpu.bytetrade.io/type"]
+		if annoGpuType != "" {
+			gpuType = annoGpuType
+			break
+		}
+	}
+
+	patchedCount := 0
+	for i := range amList.Items {
+		am := &amList.Items[i]
+		if am.Spec.Config == "" {
+			continue
+		}
+
+		var appCfg appcfg.ApplicationConfig
+		if err := json.Unmarshal([]byte(am.Spec.Config), &appCfg); err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to unmarshal config for applicationmanager %s", am.Name)
+		}
+
+		if appCfg.RequiredGPU == "" {
+			continue
+		}
+
+		modified := false
+
+		if appCfg.SelectedGpuType == "" {
+			appCfg.SelectedGpuType = gpuType
+			modified = true
+		}
+
+		if !modified {
+			continue
+		}
+
+		updatedConfig, err := json.Marshal(&appCfg)
+		if err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to marshal updated config for %s", am.Name)
+		}
+
+		patchObj := map[string]interface{}{
+			"spec": map[string]interface{}{
+				"config": string(updatedConfig),
+			},
+		}
+		patchContent, err := json.Marshal(patchObj)
+		if err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to build patch for %s", am.Name)
+		}
+
+		if err := c.Patch(ctx, am, ctrlclient.RawPatch(types.MergePatchType, patchContent)); err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to patch applicationmanager %s", am.Name)
+		}
+
+		logger.Infof("backfilled GPU config for applicationmanager %s", am.Name)
+		patchedCount++
+
+	}
+
+	logger.Infof("backfilled GPU config for %d applicationmanagers", patchedCount)
 	return nil
 }

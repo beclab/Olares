@@ -37,6 +37,8 @@ const (
 	MountSmb            Operations = "mountSmb"
 	UmountSmb           Operations = "umountSmb"
 	SetSSHPassword      Operations = "setSSHPassword"
+	MountNfs            Operations = "mountNfs"
+	UmountNfs           Operations = "umountNfs"
 )
 
 func (p Operations) Stirng() string {

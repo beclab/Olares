@@ -204,13 +204,13 @@ type SpecialResource struct {
 	LimitedCPU     *string `yaml:"limitedCPU,omitempty" json:"limitedCPU,omitempty"`
 }
 
-func (c *Chart) Namespace(owner string) string {
+func (c *Chart) Namespace(owner string, chartName string) string {
 	if c.Shared {
-		return fmt.Sprintf("%s-%s", c.Name, "shared")
+		return fmt.Sprintf("%s-%s", chartName, "shared")
 	}
-	return fmt.Sprintf("%s-%s", c.Name, owner)
+	return fmt.Sprintf("%s-%s", chartName, owner)
 }
 
-func (c *Chart) ChartPath(appName string) string {
-	return AppChartPath(filepath.Join(appName, c.Name))
+func (c *Chart) ChartPath(appName string, chartName string) string {
+	return AppChartPath(filepath.Join(appName, chartName))
 }
