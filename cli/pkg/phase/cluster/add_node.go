@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"github.com/beclab/Olares/cli/pkg/amdgpu"
 	"github.com/beclab/Olares/cli/pkg/bootstrap/os"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
@@ -9,6 +8,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/pipeline"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/gpu/amdgpu"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	"github.com/beclab/Olares/cli/pkg/kubernetes"
 	"github.com/beclab/Olares/cli/pkg/manifest"
