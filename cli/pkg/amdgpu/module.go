@@ -78,39 +78,26 @@ func (m *InstallAmdPluginModule) Init() {
 	m.Name = "InstallAmdPlugin"
 
 	// update node with AMD GPU labels
-	updateNode := &task.RemoteTask{
-		Name:  "UpdateNodeAmdGPUInfo",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
-		},
-		Action:   new(UpdateNodeAmdGPUInfo),
-		Parallel: false,
-		Retry:    1,
+	updateNode := &task.LocalTask{
+		Name:   "UpdateNodeAmdGPUInfo",
+		Action: new(UpdateNodeAmdGPUInfo),
+		Retry:  1,
 	}
 
-	installPlugin := &task.RemoteTask{
-		Name:  "InstallAmdPlugin",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
-		},
-		Action:   new(InstallAmdPlugin),
-		Parallel: false,
-		Retry:    1,
+	installPlugin := &task.LocalTask{
+		Name:   "InstallAmdPlugin",
+		Action: new(InstallAmdPlugin),
+		Retry:  1,
 	}
 
-	checkGpuState := &task.RemoteTask{
-		Name:  "CheckAmdGPUState",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
+	checkGpuState := &task.LocalTask{
+		Name: "CheckAmdGPUState",
 		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
 			new(RocmInstalled),
 		},
-		Action:   new(CheckAmdGpuStatus),
-		Parallel: false,
-		Retry:    50,
-		Delay:    10 * time.Second,
+		Action: new(CheckAmdGpuStatus),
+		Retry:  50,
+		Delay:  10 * time.Second,
 	}
 
 	m.Tasks = []task.Interface{
