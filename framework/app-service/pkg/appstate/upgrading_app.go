@@ -287,6 +287,10 @@ func (p *UpgradingApp) Cancel(ctx context.Context) error {
 }
 
 func (p *UpgradingApp) IsTimeout() bool {
+	if !p.isDownloaded {
+		return p.baseOperationApp.IsTimeout()
+	}
+
 	if p.isDownloading {
 		if p.downloadTTL <= 0 {
 			return false
