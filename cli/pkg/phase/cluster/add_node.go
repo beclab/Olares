@@ -1,11 +1,13 @@
 package cluster
 
 import (
+	"github.com/beclab/Olares/cli/pkg/amdgpu"
 	"github.com/beclab/Olares/cli/pkg/bootstrap/os"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/core/pipeline"
+	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/gpu"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	"github.com/beclab/Olares/cli/pkg/kubernetes"
@@ -40,6 +42,7 @@ func AddNodePhase(runtime *common.KubeRuntime) *pipeline.Pipeline {
 		},
 	)
 
+	m = append(m, (&linuxInstallPhaseBuilder{runtime: runtime, manifestMap: manifestMap}).installGpuPlugin()...)
 	m = append(m, &terminus.SaveMasterHostConfigModule{}, &terminus.InstalledModule{})
 
 	return &pipeline.Pipeline{
@@ -83,4 +86,16 @@ func (m *AddNodeModule) Init() {
 		underlyingModule.Init()
 		m.Tasks = append(m.Tasks, underlyingModule.GetTasks()...)
 	}
+	m.Tasks = append(m.Tasks,
+		&task.RemoteTask{
+			Name:   "UpdateNodeGPUInfo",
+			Action: new(gpu.UpdateNodeGPUInfo),
+			Retry:  1,
+		},
+		&task.LocalTask{
+			Name:   "UpdateNodeAmdGPUInfo",
+			Action: new(amdgpu.UpdateNodeAmdGPUInfo),
+			Retry:  1,
+		},
+	)
 }
