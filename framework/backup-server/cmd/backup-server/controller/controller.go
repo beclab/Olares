@@ -17,6 +17,7 @@ import (
 	"olares.com/backup-server/pkg/controllers"
 	"olares.com/backup-server/pkg/handlers"
 	"olares.com/backup-server/pkg/integration"
+	pkgutil "olares.com/backup-server/pkg/util"
 	"olares.com/backup-server/pkg/util/log"
 	"olares.com/backup-server/pkg/watchers"
 	"olares.com/backup-server/pkg/watchers/notification"
@@ -78,7 +79,10 @@ func addFlags(fs *pflag.FlagSet) {
 }
 
 func Run() error {
-	log.InitLog("debug")
+	log.InitLog(logLevel)
+
+	constant.InitDebugMode()
+	pkgutil.InitRestyClient(constant.DebugMode)
 
 	f, err := client.NewFactory()
 	if err != nil {
