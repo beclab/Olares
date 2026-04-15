@@ -230,7 +230,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               items: [
                 {
                   text: "Advanced settings",
-                  link: "trek-advanced-settings"
+                  link: "/use-cases/trek-advanced-settings",
                 }
               ]
             },
