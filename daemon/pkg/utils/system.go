@@ -157,5 +157,28 @@ func GetCPUName() string {
 		}
 		brandName = strings.TrimSpace(string(output))
 	}
+
+	// try to get AIBOOK M1000 model name
+	if brandName == "" {
+		cmd := exec.Command("sh", "-c", "command -v dmidecode && dmidecode -s processor-version")
+		output, err := cmd.Output()
+		if err != nil {
+			klog.Error("get CPU name error, ", err)
+			return ""
+		}
+		brandName = strings.TrimSpace(string(output))
+	}
+
+	// try to get rockchip model name for rockchip devices which cannot get cpu info from /proc/cpuinfo
+	if brandName == "" {
+		cmd := exec.Command("sh", "-c", "test -f /proc/device-tree/model && cat /proc/device-tree/model || true")
+		output, err := cmd.Output()
+		if err != nil {
+			klog.Error("get CPU name error, ", err)
+			return ""
+		}
+		brandName = strings.TrimSpace(string(output))
+	}
+
 	return brandName
 }
