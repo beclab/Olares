@@ -24,8 +24,8 @@ Only the latest firmware versions are available for download.
 | Version | Release date | Changelog |
 |:--------|:-------------|:----------|
 | [1.02 (Download)](http://cdn.olares.com/common/OlaresOne_EC_1.02.zip) | 2026-01-19 | <ul><li>Fix the issue where the keyboard fails to wake the system from sleep mode.</li></ul> |
-| 1.01 | 2026-01-13 | <ul><li>Add support for Wake-on-LAN (WOL).</li><li>Disable the white breathing LED indicator during the sleep state.</li></ul> |
-| 1.00 | 2025-12-01 | <ul><li>Initial release.</li><li>Enable the white breathing LED indicator during the sleep state.</li></ul> |
+| 1.01 | 2026-01-13 | <ul><li>Add support for Wake-on-LAN (WOL).</li><li>Disable the white breathing LED indicator during the sleep mode.</li></ul> |
+| 1.00 | 2025-12-01 | <ul><li>Initial release.</li><li>Enable the white breathing LED indicator during the sleep mode.</li></ul> |
 
 ### BIOS versions
 
