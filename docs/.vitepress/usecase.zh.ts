@@ -203,6 +203,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Komga",
               link: "/zh/use-cases/komga",
             },
+            {
+              text: "Navidrome",
+              link: "/zh/use-cases/navidrome",
+            },
           ]
         },
         {
