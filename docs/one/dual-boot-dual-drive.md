@@ -62,6 +62,9 @@ Olares One will boot into Olares OS.
 
 ## Step 5: Detect Windows and update GRUB
 
+<Tabs>
+<template #Olares-not-activated>
+
 1. Log in using the default credentials:
     * **Username**: `olares`
     * **Password**: `olares`
@@ -107,6 +110,122 @@ Olares One will boot into Olares OS.
    Adding boot menu entry for UEFI Firmware Settings ...
    done
    ```
+</template>
+<template #Olares-already-activated>
+
+1. Obtain the SSH password from LarePass.
+
+   :::info
+   Right after you activate Olares, you will be prompted to reset the SSH password on the LarePass app. The password is automatically generated and saved to your Vault.
+   :::
+
+   a. Tap **Vault** in the LarePass app. When prompted, enter your local password to unlock.
+
+   b. In the top-left corner, tap **Authenticator** to open the side navigation, then tap **All vaults** to display all saved items.
+
+      ![Switch Vault filter](/images/one/ssh-switch-filter.png#bordered)
+
+   c. Find the item with the <span class="material-symbols-outlined">terminal</span> icon and tap it to reveal the password.
+
+      ![Check saved SSH password in Vault](/images/one/ssh-check-password-in-vault.png#bordered)
+   
+   d. Note down the password.
+
+
+2. Log in using the default credentials:
+    * **Username**: `olares`
+    * **Password**: The one you obtained in Step 1.
+   
+   ![Log in to Olares One](/images/one/one-terminal.png#bordered)
+3. Run the following command:
+
+   ```bash
+   sudo os-prober
+   ```
+
+   If Windows has been installed successfully, you should see an entry similar to:
+
+   ```bash
+   /dev/nvme0n1p1@/efi/Microsoft/Boot/bootmgfw.efi:Windows Boot Manager:Windows:efi
+   ```
+
+4. Enable GRUB to probe other operating systems and regenerate the boot menu:
+
+   a. Create a symbolic link for GRUB configuration:
+      ```bash
+      sudo ln -s /boot/efi/grub /boot/grub
+      ```
+
+   b. Enable OS prober to detect Windows:
+      ```bash
+      sudo sed -i 's|GRUB_DISABLE_OS_PROBER=true|GRUB_DISABLE_OS_PROBER=false|' /etc/default/grub
+      ```
+
+   c. Regenerate the GRUB boot menu:
+      ```bash
+      sudo update-grub
+      ```
+
+   Example output:
+
+   ```bash
+   Sourcing file '/etc/default/grub'
+   Generating grub configuration file ...
+   Warning: os-prober will be executed to detect other bootable partitions.
+   Its output will be used to detect bootable binaries on them and create new boot entries.
+   Found Windows Boot Manager on /dev/nvme0n1p1@/efi/Microsoft/Boot/bootmgfw.efi
+   Adding boot menu entry for UEFI Firmware Settings ...
+   done
+   ```
+</template>
+</Tabs>
+
+<!--1. Log in using the default credentials:
+    * **Username**: `olares`
+    * **Password**: `olares`
+   
+   ![Log in to Olares One](/images/one/one-terminal.png#bordered)
+2. Run the following command:
+
+   ```bash
+   sudo os-prober
+   ```
+
+   If Windows has been installed successfully, you should see an entry similar to:
+
+   ```bash
+   /dev/nvme0n1p1@/efi/Microsoft/Boot/bootmgfw.efi:Windows Boot Manager:Windows:efi
+   ```
+
+3. Enable GRUB to probe other operating systems and regenerate the boot menu:
+
+   a. Create a symbolic link for GRUB configuration:
+      ```bash
+      sudo ln -s /boot/efi/grub /boot/grub
+      ```
+
+   b. Enable OS prober to detect Windows:
+      ```bash
+      sudo sed -i 's|GRUB_DISABLE_OS_PROBER=true|GRUB_DISABLE_OS_PROBER=false|' /etc/default/grub
+      ```
+
+   c. Regenerate the GRUB boot menu:
+      ```bash
+      sudo update-grub
+      ```
+
+   Example output:
+
+   ```bash
+   Sourcing file '/etc/default/grub'
+   Generating grub configuration file ...
+   Warning: os-prober will be executed to detect other bootable partitions.
+   Its output will be used to detect bootable binaries on them and create new boot entries.
+   Found Windows Boot Manager on /dev/nvme0n1p1@/efi/Microsoft/Boot/bootmgfw.efi
+   Adding boot menu entry for UEFI Firmware Settings ...
+   done
+   ```
+-->
 
 ## Step 6: Switch between operating systems
 
