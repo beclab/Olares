@@ -7,7 +7,7 @@ head:
       content: Olares, TREK, trip planner, travel planning, collaborative, itinerary, budget, packing list, self-hosted
 app_version: "1.0.0"
 doc_version: "1.0"
-doc_updated: "2026-04-13"
+doc_updated: "2026-04-16"
 ---
 
 # Plan trips collaboratively with TREK
@@ -17,314 +17,263 @@ TREK is a self-hosted, real-time collaborative trip planner. It combines interac
 ## Learning objectives
 
 In this guide, you will learn how to:
-- Install TREK and set up your account
-- Create and manage trip plans with itineraries, budgets, and packing lists
-- Share trips and collaborate with others in real time
+- Install and set up TREK on Olares.
+- Build trip plans, including daily schedules, budgets, and packing lists.
+- Invite friends and collaborate on travel plans in real time.
+- Secure your account and back up your travel data.
+- Configure advanced settings, such as third-party single sign-on (SSO) and map API keys.
 
 ## Install TREK
 
 1. Open Market and search for "TREK".
 
-   <!-- ![TREK](/images/manual/use-cases/trek.png#bordered) -->
+   ![TREK](/images/manual/use-cases/trek.png#bordered)
 
-2. Click **Get**, then **Install**. When prompted, set the following environment variables:
+2. Click **Get**, and then click **Install**. 
+3. When prompted, set the environment variables:
    - **ADMIN_EMAIL**: Your admin email address.
    - **ADMIN_PASSWORD**: Your admin password.
+   
    :::info Password requirements
    The password must be at least 8 characters and include uppercase letters, lowercase letters, and numbers.
    :::
-3. Wait for installation to complete.
+
+4. Click **Confirm** and wait for the installation to finish.
 
 ## Set up TREK
 
-1. Open TREK from Launchpad. Log in with the email and password you set during installation.
-
-   <!-- ![Log in to TREK](/images/manual/use-cases/trek-login.png#bordered) -->
-
-2. On first login, TREK requires you to reset your password. Enter a new password and click **Update Password**.
-
-   <!-- ![Reset password](/images/manual/use-cases/trek-reset-password.png#bordered) -->
+1. Open TREK from then Launchpad, and then sign in with the email and password you set during installation.
+2. On the first signin, TREK requires you to reset your password. Enter a new password, and then click **Update password**.
 
 ## Use TREK
 
-### Create a trip
+### Create a trip plan
 
 1. On the home page, click **Create First Trip**.
 
-   <!-- ![Create first trip](/images/manual/use-cases/trek-create-trip.png#bordered) -->
+   ![Create first trip](/images/manual/use-cases/trek-create-trip.png#bordered)
 
-2. Enter the trip details:
-   - **Trip name**: For example, `Paris Summer 2026`.
-   - **Destination**: Enter your destination, such as `Paris, France`.
+2. Specify the trip details.
+   - **Cover Image**: Upload a cover image for your trip.
+   - **Title**: Specify the name of the trip, such as `Paris Summer 2026`.
+   - **Description**: Enter a description for the trip, such as the overal theme or goal.
    - **Dates**: Select the start and end dates for your trip.
+   - **Number of Days**: Select the duration of the trip.
 
-3. Click **Create**. TREK opens the trip planner where you can start adding places and activities.
+3. Click **Create New Trip**. The trip appears on the **My Trips** page.
 
-### Plan your itinerary
+   ![First trip created](/images/manual/use-cases/trek-trip-created.png#bordered)
+
+### Plan your daily itinerary
 
 Build a day-by-day plan by adding places and organizing them into each day's schedule.
 
-1. In your trip, click **Add Place** to search for a location. For example, search for `Eiffel Tower` and select it from the results.
+1. Click the newly created trip to open the trip planner where you start adding places and activities.
 
-2. Drag the place into a specific day on your itinerary. For a week in Paris, you might organize it like this:
-   - **Day 1**: Eiffel Tower, Trocadero Gardens
-   - **Day 2**: Louvre Museum, Tuileries Garden
-   - **Day 3**: Notre-Dame Cathedral, Sainte-Chapelle, Latin Quarter
+   ![Trip planner](/images/manual/use-cases/trek-trip-planner.png#bordered)
 
-3. Reorder places within a day by dragging and dropping them. TREK also supports cross-day moves, so you can easily shift an activity to another day.
+2. Click **Add Place/Activity**.
+3. Enter the location to search such as `Eiffel Tower`, click <i class="material-symbols-outlined">search</i>, select the target one from the results list, and then click **Add**. 
 
-4. Click on a place to add notes, set a visit time, or view it on the interactive map.
+   The place appears on the right panel in the trip planner.
 
-   <!-- ![Itinerary view](/images/manual/use-cases/trek-itinerary.png#bordered) -->
+   ![Add a place](/images/manual/use-cases/trek-place-added.png#bordered)   
+
+4. Drag the place into a specific day on your itinerary. 
+
+   For example:
+      - **Day 1**: Eiffel Tower, Trocadero Gardens
+      - **Day 2**: Louvre Museum, Tuileries Garden
+      - **Day 3**: Notre-Dame Cathedral, Sainte-Chapelle, Latin Quarter
+
+5. Reorder places within a day by dragging and dropping them. 
+6. Drag an activity across days to shift it to a new date.
+7. Click a place to add notes, enter a visit time, or view it on the interactive map.
+8. Click a place to add notes, set the visit time, or view it on Google Maps.
+
+   ![Itinerary view](/images/manual/use-cases/trek-itinerary.png#bordered)
 
 :::tip Route optimization
-Click **Optimize Route** to automatically reorder places within a day for the most efficient route. You can also export the route to Google Maps for navigation.
+Select **Optimize** to automatically reorder places within a day for the most efficient path. You can also export the route to Google Maps for navigation.
+
+   ![Optimize route](/images/manual/use-cases/trek-optimize-route.png#bordered){width=40%}
 :::
 
 ### Check weather forecasts
 
-Click on a date in your itinerary to view the weather forecast for that destination. TREK provides up to 16-day forecasts through Open-Meteo (no API key needed), with historical climate averages as a fallback for dates further out.
+Click a date in your itinerary to view the weather forecast for that destination. TREK provides up to 16-day forecasts through Open-Meteo (no API key needed), with historical climate averages as a fallback for dates further out.
 
-<!-- ![Weather forecast](/images/manual/use-cases/trek-weather.png#bordered) -->
+![Weather forecast](/images/manual/use-cases/trek-weather.png#bordered)
 
 ### Export your itinerary as PDF
 
-Once your plan is ready, export it as a PDF to share with travel companions or print for offline reference.
+After your plan is ready, export it as a PDF to share with travel companions or print for offline reference.
 
 1. Open the trip you want to export.
-2. Click **PDF**.
-3. TREK generates a PDF with a cover page, your day-by-day itinerary, images, and notes.
+2. Click **PDF** at the top of your itinerary.
 
-<!-- ![Export as PDF](/images/manual/use-cases/trek-export-pdf.png#bordered) -->
+   ![Export plan as a PDF](/images/manual/use-cases/trek-export-pdf.png#bordered){width=40%}
 
-### Manage travel documents
+3. In the popup window, click **Save as PDF**.   
 
-Attach booking confirmations, e-tickets, travel insurance documents, and other PDFs to specific itinerary items, places, or reservations. Each file can be up to 50 MB.
+   TREK generates a PDF with a cover page, your day-by-day itinerary, images, and notes.
 
-1. Navigate to the trip's **Files** tab.
-2. Click **Upload** and select the file to attach.
-3. Choose where to link the document (a specific day, place, or reservation).
+### Attach travel documents
 
-<!-- ![Document management](/images/manual/use-cases/trek-documents.png#bordered) -->
+Keep booking confirmations, e-tickets, and travel insurance documents organized by attaching them directly to your itinerary items, places, or reservations. Each file supports a maximum size of 50 MB.
 
-### Track your budget
+1. In your trip planner, click the **Files** tab.
+2. Upload the files to attach.
+3. In the **Assign File** window, add a note for file, and then select where to link the document, such as a specific day or place.
+
+   ![Assign file](/images/manual/use-cases/trek-documents.png#bordered)
+
+4. Close the window.
+
+### Track trip expenses
 
 Keep track of trip expenses with category-based budgeting and multi-currency support.
 
-1. Navigate to the trip's **Budget** tab.
-2. Click **Add Expense** and fill in the details:
-   - **Category**: Select a category such as `Food`, `Transport`, `Accommodation`, or `Activities`.
-   - **Amount**: Enter the expense amount and currency (for example, `45 EUR` for a Seine river cruise).
-   - **Description**: Add a brief note, such as `Seine dinner cruise`.
+1. In your trip planner, click the **Budget** tab.
+2. Enter a category name for your expenses, such as `Food`, `Transport`, `Accommodation`, or `Activities`.
 
-3. TREK displays a pie chart breakdown of your spending by category and calculates per-person and per-day costs.
+   ![Create budget category](/images/manual/use-cases/trek-budget-category.png#bordered)
 
-<!-- ![Budget management](/images/manual/use-cases/trek-budget.png#bordered) -->
+3. Click <i class="material-symbols-outlined">add_2</i>. The budget planner is displayed.
 
-### Manage reservations
+   ![Budget planner](/images/manual/use-cases/trek-budget-table.png#bordered)
 
-Track flights, hotels, restaurants, and activity bookings in one place.
+4. Specify your preferred currency from the drop-down menu in the top-right corner.
+5. Specify the details for the expense:
 
-1. Navigate to the trip's **Bookings** tab.
-2. Click **Manual Booking** and enter the details:
-   - **Type**: Select `Flight`, `Hotel`, `Restaurant`, or `Activity`.
-   - **Details**: For example, for a hotel reservation: hotel name, check-in/check-out dates, confirmation number.
-   - **Status**: Mark it as `Confirmed`, `Pending`, or `Cancelled`.
+   - **NAME**: Enter the item name, such as `Dinner cruise on the Seine`.
+   - **TOTAL**: Enter the total cost.
+   - **PERSONS**: Enter the number of people sharing the cost.
+   - **DAYS**: Enter the duration of the expense.
+   - **DATE**: Enter the date of the expense.
+   - **NOTE**: Enter additional context.
 
-3. Optionally attach a confirmation document to the reservation.
+6. Select <i class="material-symbols-outlined">add</i> at the end of the row to add the entry. 
 
-<!-- ![Reservations](/images/manual/use-cases/trek-reservations.png#bordered) -->
+   TREK automatically calculates the **PER PERSON**, **PER DAY**, and **P. P / DAY** amounts, and updates your total budget on the right.
 
-### Create packing lists
+7. To add more expense catetory, enter the category name on the right panel, and then click <i class="material-symbols-outlined">add</i> next to it.
 
-Build categorized packing lists with item assignments and progress tracking.
+   TREK displays a pie chart breakdown of your spending by category.
 
-1. Navigate to the trip's **Packing List** tab.
-2. Click **Add Item** and enter what to pack. Organize items by category such as `Clothing`, `Electronics`, or `Toiletries`.
-3. Assign items to specific travelers if you are planning with others.
-4. Check off items as you pack them. TREK shows your overall packing progress.
+   ![Budget management](/images/manual/use-cases/trek-budget.png#bordered)
 
-<!-- ![Packing list](/images/manual/use-cases/trek-packing-list.png#bordered) -->
+### Log reservations
 
-To create reusable packing templates for future trips:
+Keep track of your flights, accommodations, restaurants, and tour bookings in one place.
 
-1. Navigate to **Admin** > **Configuration** > **Packing Templates**.
-2. Create a new template with pre-defined categories and items.
-3. When creating a new trip's packing list, apply the template to start with a pre-populated checklist.
+1. In your trip planner, click the **Book** tab.
+2. Click **Manual Booking** to open the **New Reservation** window.
+3. Select a **BOOKING TYPE**, such as **Flight**.
+4. Specify the reservation details. For example, for a hotel stay:
 
-<!-- ![Packing templates](/images/manual/use-cases/trek-packing-templates.png#bordered) -->
+   - **TITLE**: Enter the name of the reservation, such as Hotel Le Meurice.
+   - **LINK TO DAY ASSIGNMENT**: Select a specific day in your itinerary to link this booking.
+   - **DATE and END DATE**: Specify your check-in and check-out dates.
+   - **STATUS**: Select the current state of the booking, such as Pending or Confirmed.
+   - **LOCATION / ADDRESS**: Enter the hotel's address.
+   - **BOOKING CODE**: Enter your confirmation number.
+   - **FILES**: Select **Attach file** to upload your booking confirmation or e-ticket.
+   - **PRICE** and **BUDGET CATEGORY**: enter the total cost to automatically sync this reservation with your trip budget.
 
-### Take notes
+   <!--![Reservations](/images/manual/use-cases/trek-reservations.png#bordered)-->
 
-Add notes to individual days with timestamps and icon tags. You can create custom note categories to organize different types of travel notes.
+5. Click **Add**.
 
-1. Navigate to the trip's **Notes** tab.
-2. To add a note category, click **Setting**, enter a category name (for example, `Restaurant Tips` or `Local Phrases`), click **+**, then click **Save**.
+### Build packing lists
 
-   <!-- ![Notes categories](/images/manual/use-cases/trek-notes-categories.png#bordered) -->
+Create categorized packing lists, assign responsibilities, and track your packing progress.
 
-3. Click **Add Note**, select a category, and write your note.
-4. Drag and drop notes to reorder them.
+1. In your trip planner, click the **Lists** tab.
+2. Click **Add category**, enter a catetory name such as `Clothing`, `Electronics`, or `Toiletries`, and then click <i class="material-symbols-outlined">check</i> at the end of the row.
+3. Under your new category, enter the items to pack such as `Walking shoes` and specify the quantity for each item.
+4. To assign the category to a specific travel companion, click <i class="material-symbols-outlined">person_add</i>.
+5. Select the checkbox next to an item as you pack it. TREK updates your overall packing progress at the top of the page.
 
-<!-- ![Notes drag and drop](/images/manual/use-cases/trek-notes-reorder.png#bordered) -->
+   ![Packing list](/images/manual/use-cases/trek-packing-list.png#bordered)
+
+6. To save time on future trips, select **Save as template** in the top-right corner to save your current list. When planning your next trip, click **Apply template** to load a saved template, so you can start with a pre-populated checklist.
+
+### Add trip notes
+
+Jot down daily reminders, travel ideas, or specific plans on your itinerary.
+
+1. In your trip planner, click the **Plan** tab.
+2. Locate the specific day where you want to add a note, and then click <i class="material-symbols-outlined">docs</i>.
+3. Select an icon that matches the theme of your note.
+4. In the **Note** field, enter a short title or summary, such as `Buy Metro tickets`.
+5. In the **Daily Note** field, enter additional details, such as `Get a carnet of 10 tickets at the station before heading to the Louvre`.
+6. Click **Add**.
+
+   ![Add notes to days](/images/manual/use-cases/trek-add-note.png#bordered){width=40%}
 
 ## Collaborate with others
 
 ### Invite members to a trip
 
 :::info External access
-To let people outside your Olares network collaborate, first set the app's entrance to **Public** in Olares **Settings** > **Applications** > **TREK**.
+To invite people outside your Olares network, first set the **Authentication level** of the app to **Public** in **Settings** > **Applications** > **TREK**.
+
+![Authentication level of TREK](/images/manual/use-cases/trek-auth-level.png#bordered){width=70%}
 :::
 
-You can invite people to a trip in two ways:
+<Tabs>
+<template #Option-1:-Share-an-invite-link>
+Generate a read-only link so friends or family can view your itinerary without logging in.
 
-#### Option 1: Share an invite link
+1. Open a trip, and then click **Share** in the upper-right corner.
+2. Under **Public Link**, select the trip modules you want to make visible, such as **Map & Plan**, **Bookings**, or **Packing**.
+3. Click **Create link**.
+4. Copy the generated link and send it to your travel companions.
 
-1. Open a trip and click **Share** in the top-right corner.
-2. Click **Create Invite Link**.
-3. Configure the maximum number of uses and an expiration time.
-4. Copy the link and send it to your travel companions. They can register and join the trip through this link.
+![Invite link](/images/manual/use-cases/trek-invite-link.png#bordered)
+</template>
+<template #Option-2:-Create-a-user-account>
+1. Click your user avatar in the upper-right corner, and then click **Admin**.
+2. On the **Users** tab, click **Create User**.
 
-<!-- ![Invite link](/images/manual/use-cases/trek-invite-link.png#bordered) -->
+   ![Create user](/images/manual/use-cases/trek-create-user.png#bordered)
 
-#### Option 2: Create a user account
+3. In the **Create Users** window:
 
-1. Navigate to **Admin** > **Users** > **Create User**.
-2. Enter the new member's name, email, and password, then click **Create**.
+   a. Enter the new member's name, email, and password.
 
-   <!-- ![Create user](/images/manual/use-cases/trek-create-user.png#bordered) -->
+   b. Select the role to assign.
 
-3. Open the trip you want to share and click **Share** > **Invite User**.
-4. Select the user from the list and click **Invite**.
+   c. Click **Create User**.
+
+4. Click My Trips in the upper-left corner, and then open the trip you want to share.
+5. Click **Share** in the upper-right corner.
+6. In the **Share Trip** window, select the user from the **Invite User** list, and then click **Invite**.
+
+   ![Invite user](/images/manual/use-cases/trek-invite-user.png#bordered)
+
+   The invited member logs in and views the shared trip immediately.
 
    <!-- ![Share trip](/images/manual/use-cases/trek-share-trip.png#bordered) -->
 
-   <!-- ![Invite user](/images/manual/use-cases/trek-invite-user.png#bordered) -->
-
-The invited member can log in and see the shared trip immediately.
-
-<!-- ![Synced trip](/images/manual/use-cases/trek-synced-trip.png#bordered) -->
+   <!-- ![Synced trip](/images/manual/use-cases/trek-synced-trip.png#bordered) -->
+</template>
+</Tabs>
 
 ### Collaborate in real time
 
-Once members join a trip, all changes sync instantly through WebSocket. The **Collab** tab provides additional team features:
-
+When members join a trip, all changes sync instantly through WebSocket. The **Collab** tab provides additional team features:
 - **Chat**: Discuss plans with your travel group in real time.
 - **Shared notes**: Post notes visible to all trip members.
 - **Polls**: Create polls to vote on destinations, restaurants, or activities (for example, "Day 3: Versailles or Montmartre?").
 - **Activity sign-ups**: Track who is joining each day's activities.
 
-<!-- ![Team collaboration](/images/manual/use-cases/trek-collaboration.png#bordered) -->
+![Team collaboration](/images/manual/use-cases/trek-collaboration.png#bordered)
 
-## Set up OIDC single sign-on
+## Next steps
 
-TREK supports third-party login through Google, Apple, Authentik, Keycloak, or any OIDC provider. The following example uses Google.
-
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/auth/clients) and create an OAuth client. Set the following:
-   - **Authorized JavaScript origins**: `https://<your-trek-domain>`
-   - **Authorized redirect URIs**: `https://<your-trek-domain>/oidc/callback`
-
-   <!-- ![Google OAuth client](/images/manual/use-cases/trek-google-oauth.png#bordered) -->
-
-2. After creating the client, copy the **Client ID** and **Client Secret**.
-
-   <!-- ![Client credentials](/images/manual/use-cases/trek-client-credentials.png#bordered) -->
-
-3. In TREK, navigate to **Admin** > **Configuration** > **OIDC** and paste the Client ID and Client Secret. Click **Save**.
-
-   <!-- ![Paste OIDC credentials](/images/manual/use-cases/trek-oidc-config.png#bordered) -->
-
-4. Log out. On the login page, you can now sign in with your Google account.
-
-   <!-- ![Google login](/images/manual/use-cases/trek-google-login.png#bordered) -->
-
-## Add Google API keys
-
-Adding a Google API key enables place photos, ratings, and opening hours when you search for locations in your itinerary.
-
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/) and create an API key.
-2. In TREK, navigate to **Admin** > **Settings** > **API Keys**, paste your Google API key, and click **Save**.
-
-   <!-- ![API key settings](/images/manual/use-cases/trek-api-key.png#bordered) -->
-
-3. Places you add now display photos, ratings, and opening hours.
-
-   <!-- ![Place details](/images/manual/use-cases/trek-place-details.png#bordered) -->
-
-## Enable two-factor authentication
-
-TREK supports TOTP-based two-factor authentication (2FA) with apps like Google Authenticator or Authy.
-
-### Enable 2FA
-
-1. Navigate to **Settings** > **Two-factor authentication (2FA)** > **Set up authentication**.
-2. Scan the QR code with your authenticator app and enter the generated code.
-3. Click **Enable 2FA**.
-
-   <!-- ![2FA setup](/images/manual/use-cases/trek-2fa-setup.png#bordered) -->
-
-4. Save the backup codes displayed on screen. Store them in a safe place, then click **OK**.
-
-   <!-- ![Backup codes](/images/manual/use-cases/trek-2fa-backup-codes.png#bordered) -->
-
-### Disable 2FA
-
-1. Navigate to **Settings** > **Two-factor authentication (2FA)**.
-2. Enter your current password and a 2FA code from your authenticator app.
-3. Click **Disable 2FA**.
-
-   <!-- ![Disable 2FA](/images/manual/use-cases/trek-2fa-disable.png#bordered) -->
-
-## Back up your data
-
-TREK supports both manual and automatic backups.
-
-- **Manual backup**: Navigate to **Admin** > **Backups** to create a new backup or upload an existing backup file.
-
-  <!-- ![Manual backup](/images/manual/use-cases/trek-backup-manual.png#bordered) -->
-
-- **Automatic backup**: Configure scheduled backups under **Admin** > **Backups** > **Auto Backup** settings.
-
-  <!-- ![Auto backup](/images/manual/use-cases/trek-backup-auto.png#bordered) -->
-
-## Set up email notifications
-
-TREK can send email notifications for trip updates and invitations. You can either use the global SMTP configuration from Olares Settings, or configure SMTP manually within TREK.
-
-### Option 1: Use global Olares SMTP settings
-
-If you have already configured SMTP in Olares system environment variables, TREK automatically inherits the global configuration. No additional setup is needed.
-
-To configure global SMTP settings:
-
-1. Go to **Settings** > **Advanced** > **System environment variables**.
-
-2. Add or edit the following SMTP variables:
-
-   | Variable | Description |
-   |:---------|:------------|
-   | `OLARES_USER_SMTP_ENABLED` | Set to `true` to enable SMTP. |
-   | `OLARES_USER_SMTP_SERVER` | SMTP server domain (for example, `smtp.gmail.com`). |
-   | `OLARES_USER_SMTP_PORT` | SMTP server port. Typically `465` (SSL) or `587` (TLS). |
-   | `OLARES_USER_SMTP_USERNAME` | Your email address or SMTP username. |
-   | `OLARES_USER_SMTP_PASSWORD` | Your email password or app-specific password. |
-   | `OLARES_USER_SMTP_FROM_ADDRESS` | Sender email address. |
-   | `OLARES_USER_SMTP_SECURE` | Set to `true` to use a secure connection. |
-
-   For each variable, click **Add environment variables**, enter the key and value, and click **Save**.
-
-3. Click **Apply** at the bottom of the page.
-
-<!-- ![Global SMTP settings](/images/manual/use-cases/trek-smtp-global.png#bordered) -->
-
-### Option 2: Configure SMTP manually for TREK
-
-If you haven't set up global SMTP, or want to use a different SMTP server for TREK:
-
-1. In Olares, go to **Settings** > **Applications** > **TREK** and disable the global SMTP configuration.
-2. In TREK, navigate to **Admin** > **Notifications**, enter your SMTP server details, and click **Save**.
-
-<!-- ![SMTP manual configuration](/images/manual/use-cases/trek-smtp-manual.png#bordered) -->
+- [Trek advanced settings](trek-advanced-settings.md)
 
 ## FAQs
 
@@ -346,4 +295,4 @@ Each file can be up to 50 MB. Supported formats include jpg, png, gif, webp, hei
 
 ## Learn more
 
-- [TREK on GitHub](https://github.com/mauriceboe/NOMAD): Source code and release notes.
+- [TREK on GitHub](https://github.com/mauriceboe/NOMAD)

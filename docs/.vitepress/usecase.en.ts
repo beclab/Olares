@@ -226,6 +226,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "TREK",
               link: "/use-cases/trek",
+              collapsed: true,
+              items: [
+                {
+                  text: "Advanced settings",
+                  link: "trek-advanced-settings"
+                }
+              ]
             },
           ]
         },
