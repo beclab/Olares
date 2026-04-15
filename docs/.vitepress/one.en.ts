@@ -220,6 +220,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/update",
         },
         {
+          text: "Update firmware",
+          link: "/one/update-firmware",
+        },        
+        {
           text: "Back up & restore data",
           link: "/one/backup-resotre",
         },
