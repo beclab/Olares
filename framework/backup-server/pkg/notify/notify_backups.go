@@ -104,7 +104,7 @@ func NotifyBackup(ctx context.Context, cloudApiUrl string, backup *Backup) error
 		var result *Response
 		client := resty.New().SetTimeout(15 * time.Second).
 			SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}).
-			SetDebug(true)
+			SetDebug(constant.DebugMode)
 
 		resp, err := client.R().
 			SetContext(ctx).
@@ -155,7 +155,7 @@ func NotifySnapshot(ctx context.Context, cloudApiUrl string, snapshot *Snapshot)
 		var headers = make(map[string]string)
 		headers[restful.HEADER_ContentType] = "application/x-www-form-urlencoded"
 
-		result, err := httpx.Post[Response](ctx, url, headers, data, true)
+		result, err := httpx.Post[Response](ctx, url, headers, data, constant.DebugMode)
 		if err != nil {
 			return err
 		}
@@ -189,7 +189,7 @@ func NotifyStopBackup(ctx context.Context, cloudApiUrl string, userId, token, ba
 		var headers = make(map[string]string)
 		headers[restful.HEADER_ContentType] = "application/x-www-form-urlencoded"
 
-		result, err := httpx.Post[Response](ctx, url, headers, data, true)
+		result, err := httpx.Post[Response](ctx, url, headers, data, constant.DebugMode)
 		if err != nil {
 			log.Errorf("[notify] delete backup record failed: %v", err)
 			return err
@@ -228,7 +228,7 @@ func CheckCloudStorageQuotaAndPermission(ctx context.Context, cloudApiUrl string
 		var headers = make(map[string]string)
 		headers[restful.HEADER_ContentType] = "application/x-www-form-urlencoded"
 
-		result, err = httpx.Post[Usage](ctx, url, headers, data, true)
+		result, err = httpx.Post[Usage](ctx, url, headers, data, constant.DebugMode)
 		if err != nil {
 			log.Errorf("[notify] check backup usage failed: %v", err)
 			return err

@@ -15,12 +15,21 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
 )
 
 const (
 	DateFormat = "2006-01-02 15:04:05"
 )
+
+
+var RestClient *resty.Client
+
+func InitRestyClient(debugMode bool) {
+	RestClient = resty.New().SetTimeout(20 * time.Second).SetDebug(debugMode)
+}
+
 
 func TrimLineBreak(s string) string {
 	return strings.TrimRight(s, "\r\n")
