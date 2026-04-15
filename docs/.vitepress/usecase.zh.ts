@@ -203,6 +203,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Komga",
               link: "/zh/use-cases/komga",
             },
+            {
+              text: "Owncast",
+              link: "/zh/use-cases/owncast",
+            },
           ]
         },
         {
