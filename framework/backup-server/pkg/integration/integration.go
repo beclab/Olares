@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -37,15 +36,9 @@ type authToken struct {
 }
 
 func NewIntegrationManager(factory client.Factory) {
-	var debug = false
-	d := os.Getenv(constant.EnvIntegrationDebug)
-	if d == "1" {
-		debug = true
-	}
-
 	IntegrationService = &Integration{
 		Factory:      factory,
-		rest:         resty.New().SetTimeout(20 * time.Second).SetDebug(debug),
+		rest:         resty.New().SetTimeout(20 * time.Second).SetDebug(constant.DebugMode),
 		OlaresTokens: make(map[string]*SpaceToken),
 		authToken:    make(map[string]*authToken),
 	}
