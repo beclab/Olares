@@ -13,6 +13,7 @@ import (
 	"olares.com/backup-server/pkg/constant"
 	"olares.com/backup-server/pkg/integration"
 	"olares.com/backup-server/pkg/signals"
+	pkgutil "olares.com/backup-server/pkg/util"
 	"olares.com/backup-server/pkg/util/log"
 	"olares.com/backup-server/pkg/watchers"
 	"olares.com/backup-server/pkg/watchers/systemenv"
@@ -58,6 +59,10 @@ func Run(o *options.ServerRunOptions, ctx context.Context) error {
 	ictx, cancel := context.WithCancel(context.TODO())
 	errCh := make(chan error)
 	defer close(errCh)
+
+	constant.InitDebugMode()
+	pkgutil.InitRestyClient(constant.DebugMode)
+
 
 	go func() {
 		if err := run(o, ictx); err != nil {
