@@ -318,7 +318,7 @@ spec:
             chown -R 1000:1000 /uploadstemp && \
             chown -R 1000:1000 /appdata 
         - name: olares-app-init
-          image: beclab/system-frontend:v1.10.12
+          image: beclab/system-frontend:v1.10.13
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
