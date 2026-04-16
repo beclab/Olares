@@ -218,6 +218,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/excalidraw",
             },
             {
+              text: "RNA Sequencing",
+              link: "/zh/use-cases/rna-sequencing",
+            },
+            {
               text: "Stirling PDF",
               link: "/zh/use-cases/stirling-pdf",
             },
