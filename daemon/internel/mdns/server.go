@@ -20,7 +20,7 @@ const (
 	INSTANCE_NAME = "olaresd"
 )
 
-type serverInf interface {
+type serverIntf interface {
 	Restart() error
 	Close()
 }
@@ -38,7 +38,7 @@ type sunshineServer struct {
 	ctx context.Context
 }
 
-func NewServer(apiPort int) (serverInf, error) {
+func NewServer(apiPort int) (serverIntf, error) {
 	s := &server{
 		port:        apiPort,
 		serviceName: SERVICE_NAME,
@@ -47,7 +47,7 @@ func NewServer(apiPort int) (serverInf, error) {
 	return s, s.Restart()
 }
 
-func NewSunShineProxyWithoutStart(ctx context.Context) serverInf {
+func NewSunShineProxyWithoutStart(ctx context.Context) serverIntf {
 	s := &sunshineServer{server: server{port: 47989, name: "", serviceName: "_nvstream._tcp"}, ctx: ctx}
 	return s
 }
