@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	vpnCIDR               = "100.64.0.0/24"
+	vpnCIDR               = "100.64.0.0/16"
 	autheliaClusterPrefix = "authelia_backend"
 	autheliaHostFormat    = "authelia-backend.user-system-%s.svc.cluster.local"
 	fileserverHostFormat  = "files-%s.user-system-%s.svc.cluster.local"
