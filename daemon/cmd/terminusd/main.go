@@ -95,7 +95,7 @@ func main() {
 
 	defer s.Close()
 
-	sunshine := mdns.NewSunShineProxyWithoutStart()
+	sunshine := mdns.NewSunShineProxyWithoutStart(mainCtx)
 	defer sunshine.Close()
 
 	state.WatchStatus(mainCtx, []watcher.Watcher{
