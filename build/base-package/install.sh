@@ -19,6 +19,7 @@ if [[ x"$VERSION" == x"" ]]; then
     if [[ "$LOCAL_RELEASE" == "1" ]]; then
         ts=$(date +%Y%m%d%H%M%S)
         export VERSION="1.12.7-$ts"
+        export OLARES_LOCAL_RELEASE_VERSION_OVERRIDE=$VERSION
         echo "will build and use a local release of Olares with version: $VERSION"
         echo ""
     else
