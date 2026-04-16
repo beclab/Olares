@@ -27,7 +27,7 @@ Visit the [Google Play product page](https://play.google.com/store/apps/details?
 ### macOS & Windows
 Download the latest desktop client from the [LarePass website](https://www.olares.com/larepass).
 
-### Linux
+### Linux <Badge type="tip" text="Beta" />
 
 :::info System requirements
 - **Architecture**: The Linux package is available for x86_64 (amd64) systems only.

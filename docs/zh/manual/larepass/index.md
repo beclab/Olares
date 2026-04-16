@@ -28,14 +28,14 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
 ### macOS & Windows
 请从 [LarePass 官网](https://www.olares.cn/larepass)下载最新桌面客户端。
 
-### Linux
+### Linux <Badge type="tip" text="Beta" />
 
 :::info 系统要求
 - **架构**：Linux 安装包仅适用于 x86_64（amd64）系统。
 - **环境**：在 Linux 上使用 LarePass 需要图形桌面环境。
 :::
 
-请从 [LarePass 官网](https://www.olares.cn/larepass)下载最新 Linux 桌面客户端。
+请从 [LarePass 官网](https://www.olares.com/larepass)下载最新 Linux 桌面客户端。
 
 <!--### Chrome 扩展
 

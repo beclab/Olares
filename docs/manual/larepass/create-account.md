@@ -19,22 +19,6 @@ To use Olares, you need to create an Olares ID first. Olares ID creation is only
 
 After you get your Olares ID, wait for [Olares installation](../get-started/install-olares.md) to complete, then proceed with [activation](../get-started/activate-olares.md).
 
-## Switch between Olares IDs
-
-If you already have multiple Olares IDs in LarePass, you can switch between them on mobile or desktop.
-
-### On mobile
-
-1. Tap your profile avatar in the top-left corner to open the Switch account page.
-2. In the list, tap the account you want to use.
-   ![Switch Olares ID on mobile](/images/manual/larepass/switch-account-mobile.png#bordered)
-
-### On desktop
-
-1. Click your profile avatar in the top-left corner, then click **Switch account**.
-2. In the list, click the account you want to use.
-   ![Switch Olares ID on desktop](/images/manual/larepass/switch-account-desktop.png#bordered)
-   
 ## Learn more
 
 - [Create an Olares ID with a custom domain](create-org-account.md)
