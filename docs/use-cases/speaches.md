@@ -5,16 +5,16 @@ head:
   - - meta
     - name: keywords
       content: Olares, Speaches, speech-to-text, text-to-speech, STT, TTS, voice chat, OpenAI-compatible, Whisper, Kokoro
-app_version: "1.0.0"
+app_version: "1.0.7"
 doc_version: "1.0"
 doc_updated: "2026-04-14"
 ---
 
 # Set up speech services with Speaches
 
-Speaches is an OpenAI API-compatible speech server that provides speech-to-text (STT) and text-to-speech (TTS) capabilities. It comes with pre-loaded models so you can start transcribing audio and generating speech right away.
+Speaches is an OpenAI-compatible speech server for speech-to-text (STT) and text-to-speech (TTS). With pre-loaded models, you can use it right out of the box, or easily integrate it as a drop-in backend for any app supporting the OpenAI SDK.
 
-Because Speaches exposes an OpenAI-compatible API, any app that supports the OpenAI SDK can use it as a drop-in speech backend.
+This guide walks you through installing and using Speaches on Olares, including speech-to-text, text-to-speech, Audio Chat, API access, and basic model management.
 
 ## Learning objectives
 
@@ -25,18 +25,18 @@ In this guide, you will learn how to:
 - Generate speech from text using text-to-speech.
 - Have voice conversations with an AI model using Audio Chat.
 - Access the Speaches API from other apps.
-- Download and manage speech models.
+- Manage speech models.
 
 ## Prerequisites
 
-- An NVIDIA GPU is recommended for faster processing. CPU mode is also available. See [Switch to CPU mode](#switch-to-cpu-mode).
+- A GPU is required for the default installation and usage flow.
 - [Ollama installed and running](ollama.md) with at least one chat model downloaded (required for Audio Chat only).
 
 ## Install Speaches
 
 1. Open Market and search for "Speaches".
 
-   <!-- ![Speaches in Market](/images/manual/use-cases/speaches.png#bordered) -->
+   ![Speaches in Market](/images/manual/use-cases/speaches.png#bordered){width=95%}
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
@@ -56,105 +56,135 @@ Speaches ships with two models ready to use out of the box:
 ### Transcribe audio
 
 1. Open Speaches and click the **Speech-to-Text** tab.
-2. For **STT model**, select a model.
-3. For **Task**, select **Transcribe**.
-4. Upload a `.wav` file or click **Record** to capture audio directly from your microphone.
-5. Click **Transcribe** to start the conversion.
+2. Under **Model**, select a STT model, such as `Systran/faster-whisper-small`.
+3. Under **Task**, select **transcribe**.
+4. Upload an audio file or click <i class="material-symbols-outlined">mic</i> to record audio from your microphone.
+5. (Optional) Enable **Stream** if you want to receive partial results while transcription is still in progress.
+6. Click **Generate**.
 
-<!-- ![Speech-to-text transcription](/images/manual/use-cases/speaches-stt-transcribe.png#bordered) -->
+   ![Speech-to-text transcription](/images/manual/use-cases/speaches-stt-transcribe.png#bordered){width=90%}
+
+The transcription appears in  **Textbox** after processing completes.
 
 ### Translate audio to English
 
 Speaches can automatically detect the language of the audio and translate it into English.
 
 1. Open Speaches and click the **Speech-to-Text** tab.
-2. For **STT model**, select a model.
-3. For **Task**, select **Translate**.
-4. Upload a `.wav` file or click **Record** to capture audio directly from your microphone.
-5. Click **Translate** to start the conversion.
+2. Under **Model**, select a STT model, such as `Systran/faster-whisper-small`.
+3. Under **Task**, select **translate**.
+4. Upload an audio file or click <i class="material-symbols-outlined">mic</i> to record audio from your microphone.
+5. (Optional) Enable **Stream** if you want to receive partial results while translation is still in progress. 
+6. Click **Generate**.
+   ![Speech-to-text translation](/images/manual/use-cases/speaches-stt-translate.png#bordered){width=90%}
 
-<!-- ![Speech-to-text translation](/images/manual/use-cases/speaches-stt-translate.png#bordered) -->
+The English translation appears in **Textbox** after processing completes.
 
 ### Generate speech from text
 
 1. Open Speaches and click the **Text-to-Speech** tab.
-2. Enter the text you want to convert.
-3. For **TTS model**, select a model.
-4. Select a **Voice** style from the dropdown.
-5. Select an output **Format**.
+2. Enter the text you want to convert in **Input Text**.
+3. Under **Model**, select a TTS model.
+4. Select a voice from **Voice**.
+5. Under **Response Format**, select an output format.
 6. Click **Generate Speech**.
 
-<!-- ![Text-to-speech generation](/images/manual/use-cases/speaches-tts.png#bordered) -->
+   ![Text-to-speech generation](/images/manual/use-cases/speaches-tts.png#bordered){width=90%}
+
+7. Play the generated audio and download it if needed.
 
 ### Chat with AI using voice
 
-Audio Chat lets you have a spoken conversation with an AI model. It combines STT, an LLM, and TTS into a single pipeline: your voice is transcribed to text, sent to the LLM for a response, and the reply is converted back to speech.
+Use **Audio Chat** to talk to an AI model with voice, text, or an audio file. Speaches first converts your voice to text, sends the text to the chat model, and can convert the reply back to speech.
+
 
 :::info
-- Audio Chat requires Ollama to be installed with at least one chat model downloaded.
-- Full text and audio output is currently supported for English queries. For other languages, only text output is available.
+- Audio Chat requires Ollama to be installed, with at least one chat model downloaded.
+- Audio playback is currently available for English replies only. For other languages, the reply is shown as text only.
 :::
 
 #### Start a voice conversation
 
 1. Open Speaches and click the **Audio Chat** tab.
-2. For **Chat Model**, select a model from Ollama (for example, `qwen2.5:7b`).
+2. Under **Chat Model**, select an Ollama model, such as `qwen2.5:7b`.
 3. Send a message using one of these methods:
+   - **Audio file**: Upload an audio file.
    - **Text**: Type your message in the input field next to the microphone icon and send it.
-   - **Voice**: Click **Record** to capture your message, then click the send button.
+   - **Voice**: Click <i class="material-symbols-outlined">mic</i> to record your message, then click <i class="material-symbols-outlined">send</i> to send it.
 
-   <!-- ![Audio Chat interface](/images/manual/use-cases/speaches-audio-chat.png#bordered) -->
+   ![Audio Chat interface](/images/manual/use-cases/speaches-audio-chat.png#bordered){width=90%}
 
-4. Wait for the response. The system transcribes your input, sends it to the LLM, and converts the reply to speech.
+4. Wait for Speaches to generate the reply.
 
 :::warning
-The full voice pipeline (STT, LLM, TTS) takes time to complete. Do not refresh the page while a response is being generated, as you might see UI flickering during processing.
+The full voice pipeline (STT, LLM, TTS) takes time to complete. Do not refresh the page while a reply is being generated, as you might see UI flickering during processing.
 :::
 
-#### Optional: Use a larger STT model
+#### Optional: Improve transcription accuracy for Audio Chat
 
-Audio Chat uses the pre-installed `Systran/faster-whisper-small` model by default. For better transcription accuracy, you can switch to a larger model such as `Systran/faster-whisper-large-v3`.
+Audio Chat uses the pre-installed `Systran/faster-whisper-small` speech-to-text model by default. For better transcription accuracy, you can switch to a larger model such as `Systran/faster-whisper-large-v3`.
+
+:::info More GPU resources may be required
+Larger models require more GPU resources. If generation tasks start failing after switching to a larger model, see [Why do generation tasks fail after I switch to a larger model?](#why-do-generation-tasks-fail-after-i-switch-to-a-larger-model).
+:::
 
 1. Open the Speaches terminal and download the model:
 
    ```bash
    hf download Systran/faster-whisper-large-v3
    ```
+   
+   If you see a warning about `HF_TOKEN`, you can ignore it. The model download can still continue without this setting.
 
-2. Open Settings, then go to **Applications** > **Speaches** > **Manage environment variables**.
+2. Go to **Settings** > **Applications** > **Speaches** > **Manage environment variables**.
+3. Click <i class="material-symbols-outlined">edit_square</i> next to `SPEACHES_WHISPER_MODEL`.
+4. Set the value as the model you downloaded, for example, `Systran/faster-whisper-large-v3`, then click **Confirm**.
+   ![Update STT model](/images/manual/use-cases/speaches-update-stt-model.png#bordered){width=90%}
 
-3. Change `SPEACHES_WHISPER_MODEL` to the model you downloaded (for example, `Systran/faster-whisper-large-v3`), and click **Apply**.
-   <!-- ![Update STT model](/images/manual/use-cases/speaches-update-stt-model.png#bordered) -->
+5. Click **Apply** to save the changes.
 
-Speaches restarts automatically to apply the changes.
+Speaches restarts automatically to apply the change.
+
+:::tip Wait for service initialization
+After the app shows as running again, wait a little longer before using it, as the service may still be initializing.
+:::
 
 ## Use the Speaches API
 
+This section is for connecting other apps to Speaches. If you only want to use Speaches in its own interface, you can skip this section.
+
 Speaches is fully compatible with the OpenAI API format. Any app that supports the OpenAI SDK can call it directly.
 
-### Access the API
+### Get the endpoint
 
 <!-- The following content is temporary. Will update with two separate examples (access from within Olares, and outside Olares). -->
 
-- **From other Olares apps**: Use the shared entrance endpoint. Go to **Settings** > **Applications** > **Speaches**, and copy the URL under **Shared entrances**. For example:
+- **From other Olares apps**: 
+   1. Go to **Settings** > **Applications** > **Speaches**.
+   2. Under **Shared entrances**, click **Speaches API**.
+   3. On the **Set up endpoint** page, copy the URL next to **Endpoint**. 
+   
+      For example:
+      ```
+      http://edd26bab0.shared.olares.com
+      ```
 
-  ```
-  http://d54536a50.shared.olares.com
-  ```
+   ![Speaches shared entrance](/images/manual/use-cases/speaches-shared-entrance.png#bordered){width=90%}
 
-  <!-- ![Speaches shared entrance](/images/manual/use-cases/speaches-shared-entrance.png#bordered) -->
+- **From external apps**: 
+   
+   Before you start, make sure [LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) is enabled on your device.
+   1. Go to **Settings** > **Applications** > **Speaches**.
+   2. Under **Entrances**, click **Speaches API**.
+   3. On the **Endpoint settings** panel, copy the URL next to **Endpoint**. 
+   
+      For example:
+      ```
+      https://a8259cf22.laresprime.olares.com
+      ```
 
-- **From external apps**: Use the Speaches API entrance URL. Go to **Settings** > **Applications** > **Speaches** > **Speaches API**, and copy the URL under **Entrances**. For example:
+   ![Speaches API entrance](/images/manual/use-cases/speaches-api-entrance.png#bordered){width=90%}
 
-  ```
-  https://39975b9a1.laresprime.olares.com
-  ```
-
-  <!-- ![Speaches API entrance](/images/manual/use-cases/speaches-api-entrance.png#bordered) -->
-
-  :::tip
-  External access requires [LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) to be enabled on your device.
-  :::
 
 <!-- ### Connect Open Notebook to Speaches
 
@@ -174,16 +204,22 @@ You can use Speaches as the STT/TTS backend for Open Notebook.
 
 ## Switch to CPU mode
 
-Speaches installs in GPU mode by default, which requires an NVIDIA GPU. If your device does not have an NVIDIA GPU, or you prefer to use CPU, change the `SPEACHES_GPU` setting to `false`:
+Speaches uses GPU mode by default. If needed, you can switch it to CPU mode instead. CPU mode is slower and is mainly suitable for small tasks.
+
+To switch to CPU mode:
 
 1. Go to **Settings** > **Applications** > **Speaches** > **Manage environment variables**.
-2. Find `SPEACHES_GPU` and change its value to `false`.
+2. Click <i class="material-symbols-outlined">edit_square</i> next to `SPEACHES_GPU`, change its value to `false`, then click **Confirm**.
 
-   <!-- ![Switch to CPU mode](/images/manual/use-cases/speaches-cpu-mode.png#bordered) -->
+   ![Switch to CPU mode](/images/manual/use-cases/speaches-cpu-mode.png#bordered){width=90%}
 
-The app automatically redeploys in CPU mode. Processing will be slower compared to GPU mode.
+3. Click **Apply** to save the changes.
+
+Speaches automatically redeploys in CPU mode. Processing will be slower compared to GPU mode.
 
 ## Manage models
+
+Manage models when you want to use a different model, improve quality, or free up storage space.
 
 ### Check downloaded models
 To see all downloaded models, open the Speaches terminal and run:
@@ -191,6 +227,8 @@ To see all downloaded models, open the Speaches terminal and run:
 ```bash
 hf cache list
 ```
+Example output:
+![Downloaded model list](/images/manual/use-cases/speaches-list-model.png#bordered)
 
 ### Download a new model
 
@@ -208,18 +246,19 @@ hf cache list
    # Highest accuracy Whisper model, requires more memory
    hf download Systran/faster-whisper-large-v3
    ```
+   ![Download a model](/images/manual/use-cases/speaches-download-a-model.png#bordered)
+
    :::tip Shared model storage
-   Models are stored in Olares Files, at `Home/Huggingface/`. If other apps on your Olares also use Hugging Face models, they share this directory.
+   Models are downloaded to Olares Files, at `/Home/Huggingface/speaches/`. If other apps on your Olares also use Hugging Face models, they share this directory.
    :::
 
-2. Go to **Settings** > **Applications** > **Speaches**, and click **Stop** then **Resume** to restart Speaches to load the new model.
-
-   <!-- ![Restart Speaches](/images/manual/use-cases/speaches-restart.png#bordered) -->
+2. Refresh the Speaches page to load the new model into the list.
 
 ### Remove a model
 
 To free up storage space, you can remove models you no longer need:
 
+1. Open the Speaches terminal and run:
 ```bash
 hf cache rm model/<model_name>
 ```
@@ -227,32 +266,52 @@ hf cache rm model/<model_name>
 For example:
 
 ```bash
-hf cache rm model/speaches-ai/Kokoro-82M-v1.0-ONNX
+hf cache rm model/Systran/faster-whisper-medium
 ```
 
-After removing a model, restart Speaches from **Settings** > **Applications** > **Speaches** to refresh the model list.
+Example output:
+![Remove a model](/images/manual/use-cases/speaches-remove-model.png#bordered)
+
+2. Refresh the Speaches page to update the model list.
 
 ## FAQs
+
+### Why won't Speaches start on a device without an NVIDIA GPU?
+
+Speaches uses NVIDIA GPU acceleration by default. If your device uses a non-NVIDIA GPU, it cannot use the default GPU acceleration and the app may fail to start.
+
+In this case, switch Speaches to CPU mode instead. See [Switch to CPU mode](#switch-to-cpu-mode).
 
 ### Can I use a different Ollama instance for Audio Chat?
 
 Yes. Update the `CHAT_COMPLETION_BASE_URL` in the deployment configuration:
 
 1. Open Control Hub and navigate to **Browse** > **System** > **speachesserver-shared** > **Deployments** > **speaches**.
+2. Click <i class="material-symbols-outlined">edit_square</i> to edit the YAML file.
 
-   <!-- ![Navigate to Speaches deployment](/images/manual/use-cases/speaches-controlhub-deployment.png#bordered) -->
+   ![Navigate to Speaches deployment](/images/manual/use-cases/speaches-controlhub-deployment.png#bordered){width=90%}
 
-2. Click **Edit YAML**, find `CHAT_COMPLETION_BASE_URL`, and update its value to your Ollama endpoint. Make sure the URL ends with `/v1`.
-
-   <!-- ![Edit CHAT_COMPLETION_BASE_URL](/images/manual/use-cases/speaches-edit-base-url.png#bordered) -->
+3. In **Edit YAML**, find `CHAT_COMPLETION_BASE_URL`, and update its value to your Ollama endpoint. Make sure the URL ends with `/v1`.
+   
+   ![Edit CHAT_COMPLETION_BASE_URL](/images/manual/use-cases/speaches-edit-base-url.png#bordered){width=90%}
 
 ### Why does Audio Chat show an error?
 
-Audio Chat requires Ollama to be running with at least one chat model downloaded. If Ollama is not installed or has no models available, Audio Chat displays an error. Install Ollama and download a chat model by following the [Ollama guide](ollama.md). Speaches detects Ollama automatically, so you do not need to restart Speaches.
+Audio Chat requires Ollama to be running with at least one chat model downloaded. If Ollama is not installed or has no models available, Audio Chat displays an error. 
 
-### Why won't Speaches start?
+To fix this issue, install Ollama and download a chat model by following the [Ollama guide](ollama.md). Speaches detects Ollama automatically, so you do not need to restart Speaches.
 
-If your device uses a non-NVIDIA GPU, Speaches cannot use the default GPU acceleration. Switch to CPU mode by setting `SPEACHES_GPU` to `false` in the app's environment variables. See [Switch to CPU mode](#switch-to-cpu-mode).
+### Why do generation tasks fail after I switch to a larger model?
+
+This issue usually happens when the GPU is in **Memory slicing** mode.
+
+Larger models require more VRAM. If Speaches is assigned only a small amount of VRAM, generation tasks may fail after you switch to a larger model.
+
+To fix this issue:
+- Increase the VRAM assigned to Speaches in **Memory slicing** mode.
+- Or switch the GPU to another mode.
+
+For detailed instructions, see [Manage GPU resources](/manual/olares/settings/single-gpu.md).
 
 ## Learn more
 
