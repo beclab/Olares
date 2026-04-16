@@ -475,12 +475,6 @@ func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName
 		return
 	}
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		klog.Error("get hostname error, ", err)
-		return
-	}
-
 	ips, err := nets.LookupHostIps()
 	if err != nil {
 		klog.Error("get host ip error, ", err)
@@ -488,11 +482,9 @@ func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName
 	}
 
 	for _, node := range nodes.Items {
-		var foundIp, foundHost bool
+		var foundIp bool
 		for _, address := range node.Status.Addresses {
 			switch address.Type {
-			case corev1.NodeHostName:
-				foundHost = address.Address == hostname
 			case corev1.NodeInternalIP:
 				for _, ip := range ips {
 					foundIp = address.Address == ip
@@ -503,7 +495,7 @@ func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName
 				}
 			}
 
-			if foundHost && foundIp {
+			if foundIp {
 				nodeName = node.Name
 
 				if cp, ok := node.Labels["node-role.kubernetes.io/control-plane"]; ok && cp != "false" {
