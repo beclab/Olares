@@ -4,7 +4,7 @@ description: Configure advanced settings in TREK on Olares, including OIDC singl
 head:
   - - meta
     - name: keywords
-      content: Olares, TREK, SSO, OIDC, Google API, 2FA, backup, restore, configuration, administration, self-hosted
+      content: Olares, TREK, NOMAD, SSO, OIDC, Google API, 2FA, backup, restore, configuration, administration, self-hosted
 app_version: "1.0.0"
 doc_version: "1.0"
 doc_updated: "2026-04-16"
