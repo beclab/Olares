@@ -4,15 +4,15 @@ description: Plan trips collaboratively with TREK on Olares. Create itineraries,
 head:
   - - meta
     - name: keywords
-      content: Olares, TREK, trip planner, travel planning, collaborative, itinerary, budget, packing list, self-hosted
+      content: Olares, TREK, NOMAD, trip planner, travel planning, collaborative, itinerary, budget, packing list, self-hosted
 app_version: "1.0.0"
 doc_version: "1.0"
 doc_updated: "2026-04-16"
 ---
 
-# Plan trips collaboratively with TREK
+# Plan trips collaboratively with TREK (NOMAD)
 
-TREK is a self-hosted, real-time collaborative trip planner. It combines interactive maps, detailed itineraries, budgeting, packing lists, and team features into a single app. Running TREK on Olares keeps all your travel data private while letting you plan trips together with friends and family.
+TREK (previously NOMAD) is a self-hosted, real-time collaborative trip planner. It combines interactive maps, detailed itineraries, budgeting, packing lists, and team features into a single app. Running TREK on Olares keeps all your travel data private while letting you plan trips together with friends and family.
 
 ## Learning objectives
 
@@ -217,10 +217,12 @@ After your plan is ready, export it as a PDF to share with travel companions or 
 
 Share your trip with friends and family: generate a public link for read-only viewing, or set up user accounts for your travel companions to collaborate on the trip.
 
-:::info External access
-To invite people outside your Olares network, first set the **Authentication level** of the app to **Public** in **Settings** > **Applications** > **TREK**.
+:::info External access and security
+- To invite people outside your Olares network, first set the **Authentication level** of the app to **Public** in **Settings** > **Applications** > **TREK**.
 
-![Authentication level of TREK](/images/manual/use-cases/trek-auth-level.png#bordered){width=70%}
+   ![Authentication level of TREK](/images/manual/use-cases/trek-auth-level.png#bordered){width=70%}
+
+- Setting the entrance level to Public makes your TREK login page accessible from anywhere on the Internet. Your data remains private, but it relies entirely on the TREK account credentials for protection. Ensure all users set strong passwords.
 :::
 
 <Tabs>
@@ -284,15 +286,39 @@ When members join a trip, all changes sync instantly. Go to the trip's **Collab*
 
 ### I forgot my TREK password. How do I reset it?
 
-Ask the TREK admin to reset your password from **Admin** > **Users**. Alternatively, view the initial credentials set during installation:
+The recovery process depends on the role of your account.
+- **For a member**
+   
+   Contact your TREK admin. The admin can log in to TREK and assign you a new password by going to **Admin** > **Users**.
 
-1. Open Control Hub, go to **Browse** > **trek-{username}** > **Deployments** > **trek**, and then click <i class="material-symbols-outlined">edit_square</i>.
+- **For an admin**
+   - If you have not changed the initial password, you can view the original credentials you set during installation in Control Hub:
+   
+      a. Go to **Browse** > **trek-{username}** > **Deployments** > **trek**, and then click <i class="material-symbols-outlined">edit_square</i>.
 
-   ![Trek in Control Hub](/images/manual/use-cases/trek-control-hub.png#bordered)
+      ![Trek in Control Hub](/images/manual/use-cases/trek-control-hub.png#bordered)
+      
+      b. In the YAML editor, find the `containers` section and locate the `ADMIN_EMAIL` and `ADMIN_PASSWORD` environment variables.
 
-2. In the YAML editor, find the `containers` section and locate the `ADMIN_EMAIL` and `ADMIN_PASSWORD` environment variables.
+      ![Trek credentials in Control Hub](/images/manual/use-cases/trek-env-vars.png#bordered)
 
-   ![Trek credentials in Control Hub](/images/manual/use-cases/trek-env-vars.png#bordered)
+   - If you have changed your initial password, you can force a reset using the container terminal:
+
+      a. Go to **Browse** > **trek-{username}** > **Deployments** > **trek** container, and then click <i class="material-symbols-outlined">terminal</i>.
+
+      ![Trek in Control Hub](/images/manual/use-cases/trek-pod-terminal.png#bordered)
+
+      b. In the trek terminal, enter the following command, and then press **Enter**. Ensure you replaced `YourNewPassword` with a new password, and replaced `your-email@example.com` with your admin email address.
+
+      ```bash
+      node -e "const db=require('better-sqlite3')('/app/data/travel.db');const h=require('bcryptjs').hashSync('YourNewPassword',12);console.log('Updated:',db.prepare('UPDATE users SET password_hash=?,mfa_enabled=0,mfa_secret=NULL,mfa_backup_codes=NULL WHERE email=?').run(h,'your-email@example.com').changes);db.close()"
+      ```
+
+      :::info
+      This command updates your password and automatically disables two-factor authentication (2FA) for your account so you can log in smoothly.
+      :::
+
+      When the prompt displays `Updated: 1`, your new password is set successfully.
 
 ### Map search returns no results
 
@@ -302,7 +328,7 @@ TREK uses OpenStreetMap by default. For more comprehensive search results, add a
 
 Each file supports a maximum size of 50 MB. 
 
-Supported formats include `.jpg`, `.png`, `.gif`, `.webp`, `.heic`, `.pdf`, `.doc`, `.xls`, `.txt`, and `.csv`.
+Supported formats include `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.heic`, `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.txt`, and `.csv`.
 
 ## Learn more
 

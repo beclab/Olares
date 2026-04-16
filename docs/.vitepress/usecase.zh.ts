@@ -199,6 +199,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Komga",
               link: "/zh/use-cases/komga",
             },
+            {
+              text: "TREK (NOMAD)",
+              link: "/zh/use-cases/trek",
+              collapsed: true,
+              items: [
+                {
+                  text: "Advanced settings",
+                  link: "/zh/use-cases/trek-advanced-settings",
+                }
+              ]
+            },            
           ]
         },
         {
@@ -212,17 +223,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Stirling PDF",
               link: "/zh/use-cases/stirling-pdf",
-            },
-            {
-              text: "TREK",
-              link: "/zh/use-cases/trek",
-              collapsed: true,
-              items: [
-                {
-                  text: "Advanced settings",
-                  link: "/zh/use-cases/trek-advanced-settings",
-                }
-              ]
             },
           ],
         },
