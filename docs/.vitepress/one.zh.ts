@@ -139,10 +139,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/ace-step",
         },*/
 
-        {
-          text: "Deep research with DeerFlow",
-          link: "/zh/one/deerflow",
-        },
+        // {
+        //   text: "Deep research with DeerFlow",
+        //   link: "/zh/one/deerflow",
+        // },
       ]
     },
     {

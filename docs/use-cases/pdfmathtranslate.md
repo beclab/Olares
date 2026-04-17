@@ -62,7 +62,8 @@ To use the local AI service Ollama for translation, configure the following sett
 
     c. Click **Set up endpoint**, and then click <i class="material-symbols-outlined">content_copy</i> to copy the endpoint address.
 
-    ![Obtain Ollama host address](/images/manual/use-cases/copy-localhost-address.png#bordered){width=60%}
+    ![Obtain Ollama host address](/images/manual/use-cases/onetest02-endpoint-entrances-ollama-api.png#bordered){width=80%}
+    
 
 3. In the **OLLAMA_HOST** field, enter the Ollama host address. 
 4. In the **OLLAMA_MODEL** field, enter the exact identifier of the Ollama model you have downloaded. For example, `gemma3:4b`.
