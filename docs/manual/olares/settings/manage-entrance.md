@@ -5,44 +5,46 @@ description: Learn how to manage application entrances in Olares, including sett
 
 # Manage application entrances
 
-**Entrances** define how users access your applications on Olares. For a deeper understanding, refer to the [Entrance concept](../../../developer/concepts/network.md#entrance) section.
+Entrances define how users access your applications on Olares. For more details, see the [Entrance](../../../developer/concepts/network.md#entrance) concept.
 
 Entrance management in Olares includes two main components:
 
-* **Endpoints**: Define the network address and routing configuration for the application.
+* **Endpoint settings**: Define the network address and routing configuration for the application.
 * **Access policies**: Control the authentication methods required to access the application.
-
 
 ## Access entrance management
 
-To manage an application's entrances:
-
 1. Go to **Settings** > **Application**.
-2. Click on the target application from the list to enter the application page.
-3. Click on the target entrance from the list to enter the **Entrances** settings page.
-![Manage entrance](/images/manual/olares/app-entrance.png#bordered)
+2. Click the target application.
+3. Under **Entrances**, click the target entrance.
 
-## Set up endpoints
+    ![Manage entrance](/images/manual/olares/app-entrance1.png#bordered){width=90%}
 
-The **Set up endpoints** page lets you customize how your application is accessed externally via a dedicated URL.
+## Endpoint settings
+
+The **Endpoint settings** panel lets you customize how your application is accessed externally through a dedicated URL.
+
+![Endpoint settings panel](/images/manual/olares/app-entrance-endpoint-panel.png#bordered){width=70%}
 
 Options include:
 
-- **Endpoint** – The domain for accessing your app. For example,`1870a8290.marvin112.olares.cn` (WordPress). You can click the copy icon to copy the URL.
+- **Endpoint**: The domain for accessing your app. Click <i class="material-symbols-outlined">content_copy</i> to copy the URL.
 
-**Default route ID** – The system-assigned identifier for the app route. For example, `1870a8290` for WordPress ).
+- **Default route ID**: The system-assigned identifier for the app route. In this example, the default route ID for Jellyfin is `7e89d2a1`.
 
-- **Set custom route ID** – Click the **+** icon to replace the default route ID with a custom one. For example, `1870a8290.marvin112.olares.cn` → `wordpress.marvin112.olares.cn`.
+- **Set custom route ID**: Click <i class="material-symbols-outlined">add</i> to replace the default route ID. For example, if you set it to "jellyfin", the app will be available at both `https://7e89d2a1.alexmiles.olares.com` and `https://jellyfin.alexmiles.olares.com`. For detailed instructions, refer to [Custom route ID](custom-app-domain.md#custom-route-id).
 
-- **Set custom domain** – Click the **+** icon to bind your own domain (e.g., app.yourdomain.com) to this application. You will need to follow DNS configuration steps to complete the setup.
+- **Set custom domain**: Click <i class="material-symbols-outlined">add</i> to add your own domain to this application. For example, `app.yourdomain.com`. You need to configure the required DNS records before the domain can work. For detailed instructions, refer to [Custom domain name](custom-app-domain.md#custom-domain-name).
 
-For detailed instructions on changing an application's domain, refer to [Customize app domain](custom-app-domain.md).
+## Access policies
 
-## Create access policies
+Access policies control who can access your application and their required authentication method. 
 
-Access policies control who can access your application and their required authentication method. Options include:
+![Access policies panel](/images/manual/olares/app-entrance-access-policy-panel.png#bordered){width=70%}
 
-* **Authentication Level**: Set the overall authentication requirement for the application:
+Options include:
+
+* **Authentication level**: Set the overall authentication requirement for the application:
 
     * **Public**: Accessible to anyone, with no login required.
     * **Private**: Requires users to log in to access.
@@ -55,8 +57,8 @@ Access policies control who can access your application and their required authe
     * **Two Factor**: Requires the Olares login password plus a second verification code.
     * **None**: No authentication is required for access.
 
-* **Sub-policies**: Apply fine-grained access rules to specific paths within the application using **regular expressions**.
+* **Manage sub-policies**: Apply fine-grained access rules to specific paths within the application using **regular expressions**.
 
-  1. Click the **+ icon** in the **Policies** section.
-  2. Define specific rules for desired paths.
-  3. Choose the appropriate authentication method for each sub-policy.
+  1. Click <i class="material-symbols-outlined">chevron_forward</i> to open the **Manage sub policies** page.
+  2. Click **Add sub policy**, then enter the target paths in **Affected URLs** and select an **Authentication mode**.
+  3. Click **Submit**.
