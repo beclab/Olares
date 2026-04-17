@@ -153,6 +153,26 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/access-terminal-ssh",
         },
         {
+          text: "Access Olares One terminal",
+          collapsed: true,
+          link: "/one/access-overview",
+          items:
+            [
+              {
+                text: "Access via Control Hub",
+                link: "/one/access-terminal-control-hub",
+              },
+              {
+                text: "Access via SSH",
+                link: "/one/access-terminal-ssh",
+              },
+              {
+                text: "Access via local console",
+                link: "/one/access-local-login",
+              },
+            ]
+        },        
+        {
           text: "Expand storage",
           collapsed: true,
           items:
