@@ -7,7 +7,7 @@ head:
       content: Olares One, terminal, Olares CLI, Control Hub
 ---
 
-# Access Olares One terminal via Olares CLI
+# Access Olares One terminal via Control Hub
 
 If you need to run quick, occasional commands or perform initial setup, use the Olares CLI. This web‑based terminal is built into the Control Hub application. It runs as `root` by default and requires no SSH client or IP address configuration.
 

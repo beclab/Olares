@@ -7,7 +7,7 @@ head:
       content: Olares One, terminal, SSH
 ---
 
-# Access Olares One terminal via network
+# Access Olares One terminal via network (SSH)
 
 Secure Shell (SSH) establishes an encrypted session over the network, allowing you to run command-line operations on Olares One from your own computer. 
 

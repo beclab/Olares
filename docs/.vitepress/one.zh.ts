@@ -163,7 +163,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
                 link: "/one/access-terminal-ssh",
               },
               {
-                text: "Access via local console",
+                text: "Access via physical console",
                 link: "/one/access-local-login",
               },
             ]
