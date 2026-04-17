@@ -396,11 +396,7 @@ If you are running OpenCode V1.0.4 on an ARM-based machine, the terminal command
           "enabled": true
         }
       }
-      ```
-
-      For example:
-
-      ![OpenCode configuration settings in Files](/images/manual/use-cases/context7-opencode-config-files.png#bordered)     
+      ```   
 
 4. Click <i class="material-symbols-outlined">save</i> to save the changes.
 
