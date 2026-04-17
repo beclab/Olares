@@ -16,6 +16,8 @@ Context7 is a Model Context Protocol (MCP) server that provides AI coding assist
 
 On Olares, you can connect Context7 to Olares-hosted AI agents like Agent Zero, LibreChat, and OpenCode, or to external coding assistants like Cursor and Claude Desktop.
 
+This guide focuses on establishing the MCP connection between Context7 and your AI tools. 
+
 ## Learning objectives
 
 In this guide, you will learn how to:
@@ -23,6 +25,10 @@ In this guide, you will learn how to:
 - (Optional) Register an API key for higher rate limits.
 - Connect Context7 to Olares-hosted AI agents.
 - Connect Context7 to external coding assistants like Cursor.
+
+## Prerequisites
+
+Before proceeding, ensure that your AI agents (Agent Zero, LibreChat, OpenCode, etc.) are already fully functional. You must have configured their required settings such as the model provider, model name, and base URLs. 
 
 ## Install Context7
 
@@ -371,6 +377,29 @@ No. The Context7 instance on Olares serves as an MCP server for AI assistants, n
 Your AI might not realize it has access to Context7. Unless you explicitly ask it to use Context7, it might fall back on its own training data, which could be outdated.
 
 To fix this issue, add a phrase like “Use Context7” to your question. For example, ask "Use Context7 to find how to use the `use` hook in React 19" instead of "How do I use the `use` hook in React 19".
+
+## Common issues
+
+### Manual configuration required for OpenCode on ARM-based machines
+
+If you are running OpenCode V1.0.4 on an ARM-based machine, the terminal command does not apply the configuration changes correctly. Instead, you must configure it manually via the Files app:
+
+1. Open Files and navigate to **Application** > **Data** > **opencode** > **.config** > **opencode**.
+2. Right-click `config.jsonc` and select **Rename**. Rename the file to `config.json` so you can edit it directly in Files. OpenCode recognizes both extensions.
+3. Double-click `config.json` to open it, and then click <i class="material-symbols-outlined">edit_square</i> to enter the edit mode.
+4. Paste the following `mcp` JSON block into the file. Replace `<your-context7-endpoint>` with your Context7 MCP endpoint.
+
+    ```json
+      "mcp": {
+        "context7": {
+          "type": "remote",
+          "url": "<your-context7-endpoint>/mcp",
+          "enabled": true
+        }
+      }
+    ```
+
+5. Click <i class="material-symbols-outlined">save</i> to save the changes.
 
 ## Learn more
 
