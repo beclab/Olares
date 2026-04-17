@@ -384,9 +384,10 @@ To fix this issue, add a phrase like “Use Context7” to your question. For ex
 
 If you are running OpenCode V1.0.4 on an ARM-based machine, the terminal command does not apply the configuration changes correctly. Instead, you must configure it manually via the Files app:
 
-1. Open Files, go to **Data** > **opencode** > **.config** > **opencode**, and then double-click the `opencode.json` file. 
-2. Click <i class="material-symbols-outlined">edit_square</i> to enter the edit mode. 
-3. Paste the the following `mcp` JSON block into it. Ensure you replaced `<your-context7-endpoint>` with your Context7 MCP endpoint.
+1. Open Files and navigate to **Application** > **Data** > **opencode** > **.config** > **opencode**.
+2. Right-click `config.jsonc` and select **Rename**. Rename the file to `config.json` so you can edit it directly in Files. OpenCode recognizes both extensions.
+3. Double-click `config.json` to open it, and then click <i class="material-symbols-outlined">edit_square</i> to enter the edit mode.
+4. Paste the following `mcp` JSON block into the file. Replace `<your-context7-endpoint>` with your Context7 MCP endpoint.
 
     ```json
       "mcp": {
@@ -396,9 +397,9 @@ If you are running OpenCode V1.0.4 on an ARM-based machine, the terminal command
           "enabled": true
         }
       }
-      ```   
+    ```
 
-4. Click <i class="material-symbols-outlined">save</i> to save the changes.
+5. Click <i class="material-symbols-outlined">save</i> to save the changes.
 
 ## Learn more
 
