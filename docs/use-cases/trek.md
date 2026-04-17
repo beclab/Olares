@@ -45,6 +45,10 @@ In this guide, you will learn how to:
 1. Open TREK from the Launchpad, and then sign in with the email and password you set during installation.
 2. On the first signin, TREK requires you to reset your password. Enter a new password, and then click **Update password**.
 
+   :::warning
+   Because TREK is a private, self-hosted application, it does not use an automated email password recovery system. If you forget your updated admin password, your account cannot be recovered. To prevent permanently losing access to your workspace and travel data, ensure you store your admin password securely, such as in a password manager.
+   :::
+
 ## Use TREK
 
 ### Create a trip plan
@@ -302,23 +306,7 @@ The recovery process depends on the role of your account.
 
       ![Trek credentials in Control Hub](/images/manual/use-cases/trek-env-vars.png#bordered)
 
-   - If you have changed your initial password, you can force a reset using the container terminal:
-
-      a. Go to **Browse** > **trek-{username}** > **Deployments** > **trek** container, and then click <i class="material-symbols-outlined">terminal</i>.
-
-      ![Trek in Control Hub](/images/manual/use-cases/trek-pod-terminal.png#bordered)
-
-      b. In the trek terminal, enter the following command, and then press **Enter**. Ensure you replaced `YourNewPassword` with a new password, and replaced `your-email@example.com` with your admin email address.
-
-      ```bash
-      node -e "const db=require('better-sqlite3')('/app/data/travel.db');const h=require('bcryptjs').hashSync('YourNewPassword',12);console.log('Updated:',db.prepare('UPDATE users SET password_hash=?,mfa_enabled=0,mfa_secret=NULL,mfa_backup_codes=NULL WHERE email=?').run(h,'your-email@example.com').changes);db.close()"
-      ```
-
-      :::info
-      This command updates your password and automatically disables two-factor authentication (2FA) for your account so you can log in smoothly.
-      :::
-
-      When the prompt displays `Updated: 1`, your new password is set successfully.
+   - If you have changed your initial password, it canont be recovered. To prevent losing access to your workspace and travel data, ensure you store your admin password securely, such as in a password manager.
 
 ### Map search returns no results
 
