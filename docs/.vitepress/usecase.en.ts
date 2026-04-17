@@ -213,6 +213,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Komga",
               link: "/use-cases/komga",
             },
+            {
+              text: "TREK (NOMAD)",
+              link: "/use-cases/trek",
+              collapsed: true,
+              items: [
+                {
+                  text: "Advanced settings",
+                  link: "/use-cases/trek-advanced-settings",
+                }
+              ]
+            },            
           ]
         },
         {
