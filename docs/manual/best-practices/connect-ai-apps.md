@@ -84,7 +84,7 @@ This example uses `qwen2.5:1.5b` as the model. Make sure you have downloaded it 
 
 1. On Olares, open Settings, then go to **Applications** > **Ollama**.
 2. In **Shared entrances**, select **Ollama API**.
-   ![Ollama shared entrance](/images/manual/tutorials/api-ollama-shared.png#bordered){width=80%}
+   ![Ollama shared entrance](/images/manual/use-cases/obtain-ollama-hosturl2.png#bordered)
    
 3. Copy the shared endpoint URL.
 4. Open LobeHub, then go to **Settings** > **AI Service Provider** > **Ollama**.

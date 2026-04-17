@@ -128,7 +128,8 @@ The process for installing plugins is the same for all. Here's an example using 
 After installing plugins, you may need to enable or configure them before they take effect.
 Since each plugin behaves differently, check the plugin's **GitHub repository** or **README** for setup details.
 
-## Get the endpoint for Jellyfin
+## Access your media library through Jellyfin clients
+### Get the endpoint for Jellyfin
 
 After Jellyfin is set up and your libraries are ready, you can connect from your client devices and start streaming your media.
 
