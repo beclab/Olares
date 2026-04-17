@@ -267,7 +267,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	if appMgr.Spec.RawAppName != "" {
 		rawAppName = appMgr.Spec.RawAppName
 	}
-	apiVersion, _, err := apputils.GetApiVersionFromAppConfig(req.Request.Context(), &apputils.ConfigOptions{
+	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
 		RawAppName:   rawAppName,
 		Owner:        owner,
