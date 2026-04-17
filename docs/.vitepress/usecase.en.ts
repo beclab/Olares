@@ -227,10 +227,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Excalidraw",
               link: "/use-cases/excalidraw",
             },
-            {
-              text: "Stirling PDF",
-              link: "/use-cases/stirling-pdf",
-            },
+            // {
+            //   text: "Stirling PDF",
+            //   link: "/use-cases/stirling-pdf",
+            // },
           ]
         },
         {
