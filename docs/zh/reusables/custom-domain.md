@@ -8,7 +8,7 @@ search: false
   Block 2 – 添加域名 (TXT + NS):   lines 34-73
   Block 3 – 创建新组织:             lines 76-106
   Block 4 – 添加新用户:             lines 109-127
-  Block 5 – 加入已有组织:           lines 130-141
+  Block 5 – 加入已有组织:           lines 130-145
 
   引用方:
   - manual/best-practices/set-custom-domain.md (Blocks 1-5)
@@ -135,6 +135,10 @@ TXT 和 NS 记录验证通过后，可以在 LarePass 中创建组织。
    ![加入已有组织](/images/manual/tutorials/custom-domain-join-org.png)
 
 3. 输入带域名的用户名（如 `alice@space.n1.monster`）和管理员提供的密码。
+
+   :::tip 一次性密码
+   此密码为一次性密码，用于创建 Olares ID 时验证你的身份。
+   :::
 
    ![使用 Olares ID 和密码加入组织](/images/manual/tutorials/custom-domain-member-olares-id.png)
 
