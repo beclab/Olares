@@ -159,6 +159,10 @@ func (h *HelmOps) SetValues() (values map[string]interface{}, err error) {
 	if err != nil {
 		return values, err
 	}
+	err = h.AddEnvironmentVariables(values, false)
+	if err != nil {
+		return values, err
+	}
 
 	// Refine admin: prefer the owner of an already-installed cluster-scoped instance.
 	appInstalled, installedApps, err := h.getInstalledApps(ctx)
