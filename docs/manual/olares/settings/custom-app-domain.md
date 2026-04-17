@@ -1,72 +1,72 @@
 ---
 outline: [2, 3]
-description: Customize Olares application URLs with personalized domain names and route IDs. Learn how to set up public access and manage application endpoints.
+description: Personalize how your Olares applications are accessed by setting a custom route ID or your own domain name.
 ---
 
-# Customize application domains
-You can access Olares applications anytime, anywhere, whether you're accessing from local or remotely. This guide will help you:
-- Personalize domain name for your applications
-- Allow public access without authentication
+# Customize application URLs
+
+Olares provides two ways to personalize how your applications are accessed:
+- Custom route ID
+- Custom domain name
 
 ## Before you begin
-Before you start, it is recommended to familiarize yourself with a few concepts for Olares applications:
+
+Familiarize yourself with these concepts for Olares applications:
 
 - [Endpoints](../../../developer/concepts/network.md#endpoints)
 - [Route ID](../../../developer/concepts/network.md#route-id)
 
-## Customize domain name for application
+## Custom route ID
 
-Olares provides two methods to optimize application access addresses:
-* Custom route ID
-* Custom domain name
-
-### Custom route ID
-Route ID is a crucial component in accessing your Olares applications. It forms part of the URL you use to reach your applications through a web browser:
+Route ID is part of the URL used to access your Olares applications in a web browser:
 
 `https://{routeID}.{OlaresDomainName}`
 
-For convenience, Olares uses easy-to-remember route IDs for pre-installed system applications.
-For community applications, you can quickly obtain a simple and memorable URL by changing the route ID. To use Jellyfin as an example:
+Olares uses easy-to-remember route IDs for pre-installed system applications. For community applications, you can get a simpler URL by setting a custom route ID. Using Jellyfin as an example:
 
 1. On Olares, open Settings, then go to **Application** > **Jellyfin**.
 2. Under **Entrances**, click **Jellyfin**.
-3. Under **Endpoint settings**, you can see the default route ID for Jellyfin which is a combination of numbers and letters.
-4. Next to **Set custom route ID**, click <i class="material-symbols-outlined">add</i>.
-5. Enter a route ID that is more memorable and recognizable. For example, `jellyfin`.
-6. Click **Confirm**.
+3. Under **Endpoint settings**, next to **Set custom route ID**, click <i class="material-symbols-outlined">add</i>.
+4. Enter a route ID that is more memorable and recognizable. For example, `jellyfin`.
+5. Click **Confirm**.
 
-   ![Custom route ID](/images/manual/olares/custom-route-id1.png#bordered){wdith=90%}
+   ![Custom route ID](/images/manual/olares/custom-route-id1.png#bordered){width=90%}
 
 Now, you can access Jellyfin from your new URL: `https://jellyfin.alexmiles.olares.com`.
 
-### Custom domain name
-Instead of using the default Olares domain, you can use your own domain name to access your applications, making them more professional and easier to remember. To configure a custom domain name for an app:
+## Custom domain name
+
+Instead of using the default Olares domain, you can use your own domain name to access your applications. To configure a custom domain name for an app:
 
 :::info
 Only applications with the authentication level set to **Internal** or **Public** support custom third-party domains.
 :::
 
-1. Open the Settings app, and select **Application** from the left sidebar.
-2. Click the application you want to configure to enter its details page.
-3. Go to **Entrances** > **Set up endpoint**, and click <i class="material-symbols-outlined">add</i> next to **Set custom domain**.
-4. In the **Third-party domain** pop-up, enter your custom domain, and click **Confirm** to submit. 
-![Submit third-party domain](/images/manual/olares/add-custom-domain.jpeg#bordered)
+1. On Olares, open Settings, then go to **Application** > *AppName*.
+2. Under **Entrances**, click the target entrance.
+3. Under **Endpoint settings**, next to **Set custom domain**, click <i class="material-symbols-outlined">add</i>.
+4. In the **Third-party domain** pop-up, enter your custom domain, and click **Confirm** to submit.
+
+   ![Submit third-party domain](/images/manual/olares/add-custom-domain.jpeg#bordered)
+
    ::: tip Note
    If you are using Olares Tunnel or Self-built FRP for reverse proxy, you must also upload a valid HTTPS certificate and its private key for your custom domain.
    :::
-   
-5. Click the **Activation** button to open the activation instruction pop-up. 
-   
+
+5. Click the **Activation** button to open the activation instruction pop-up.
+
    ![Activate third-party domain](/images/manual/olares/activate-custom-domain.jpeg#bordered)
+
 6. Follow the instructions in the pop-up to create a CNAME record with your domain hosting provider.
+
    ![Add CNAME](/images/manual/olares/add-cname.jpeg#bordered)
 
    :::tip Disable Proxy status for Cloudflare Tunnel
-   If you are using Cloudflare Tunnel, disable the **Proxy status** option next to your DNS record. This allows Olares to receive in-time updates on your domain's resolution status.
+   If you are using Cloudflare Tunnel, disable the **Proxy status** option next to your DNS record. This allows Olares to receive timely updates on your domain's resolution status.
    :::
 
-7. Click **Confirm** on the activation popup window to finish the activation.
- 
+7. Click **Confirm** on the activation pop-up to finish the activation.
+
 At this stage, the custom domain status will display as "Waiting for CNAME Activation". You will need to wait for it to take effect. DNS propagation typically takes a few minutes or hours, depending on your domain provider.
 
 Once the CNAME record is verified, the custom domain status will automatically update to "Activated".
