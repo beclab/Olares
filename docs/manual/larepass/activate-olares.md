@@ -16,7 +16,7 @@ For member users, the same network requirement does **not** apply.
 
 If you [installed Olares via the one-line script](../get-started/install-olares.md) and completed the initial setup in the wizard:
 
-![Activate Olares](/images/manual/larepass/activate-olares.png#bordered)
+![Activate Olares](/images/manual/larepass/activate-olares1.png#bordered)
 
 1. Open LarePass app.
 2. Tap **Scan QR code** to scan the QR code on the Wizard page. 
@@ -53,23 +53,27 @@ If you have reinstalled Olares, the original instance becomes unavailable. You c
 
 ## Two-factor verification with LarePass
 
-When you log in to Olares, you will be promoted to complete the two-factor verification. You can either confirm the login directly in LarePass app or manually enter a 6-digit verification code.
+When you log in to Olares, you will be prompted to complete the two-factor verification. You can either confirm the login directly in LarePass app or manually enter a 6-digit verification code.
 
 - **To confirm login on LarePass**:
-  ![2FA](/images/manual/larepass/second-confirmation.png#bordered)
+
   1. Open the login notification on your phone.
   2. In the message, click **Confirm** to complete the login process. 
+    ![2FA](/images/manual/larepass/second-confirmation.png#bordered)
 
 - **To manually enter the verification code**:
-  ![OTP](/images/manual/larepass/otp-larepass.jpg#bordered)
-
   1. On the Wizard page, select **Verify using one time password from LarePass**.
-  2. Open LarePass on your phone and go to **Settings**.
-  3. In the **My Olares** card, tap the authenticator to generate a one time verification code.
-  4. Return to your Wizard page and enter the code to complete the login.
+  2. Get the 6-digit code from one of the following:
+      - **On your phone**: Open LarePass app and go to **Settings**. In the **My Olares** card, tap the authenticator to view the one-time verification code.
+      ![OTP](/images/manual/larepass/otp-larepass1.png#bordered){width=95%}
+      
+      - **On your computer**: Open LarePass desktop client and go to **Vault**. Use the one-time verification code from the first item on the list.
+      ![OTP desktop](/images/manual/larepass/otp-larepass-desktop1.png#bordered){width=95%}
+
+  3. Return to your Wizard page and enter the code to complete the login.
 
 ::: tip Note
-The verification code is time-sensitive. Ensure you enter it before it expires. If it does, you will need to generate a new code.
+The verification code is time-sensitive. Ensure you enter it before it expires. If it expires, a new code will be generated automatically.
 :::
 
 After successful verification, you'll be redirected to the Olares desktop.
