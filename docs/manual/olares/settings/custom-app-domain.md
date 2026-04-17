@@ -28,16 +28,16 @@ Route ID is a crucial component in accessing your Olares applications. It forms 
 For convenience, Olares uses easy-to-remember route IDs for pre-installed system applications.
 For community applications, you can quickly obtain a simple and memorable URL by changing the route ID. To use Jellyfin as an example:
 
-1. Open the Settings app, and select **Application** from the left sidebar.
-2. Click **Jellyfin** on the right to view application details.
-3. Go to **Entrances** > **Set up endpoint**. You can see the default Route ID for Jellyfin, which is a combination of numbers and letters.
-4. Next to **Set custom Route ID**, click <i class="material-symbols-outlined">add</i>.
+1. On Olares, open Settings, then go to **Application** > **Jellyfin**.
+2. Under **Entrances**, click **Jellyfin**.
+3. Under **Endpoint settings**, you can see the default route ID for Jellyfin which is a combination of numbers and letters.
+4. Next to **Set custom route ID**, click <i class="material-symbols-outlined">add</i>.
 5. Enter a route ID that is more memorable and recognizable. For example, `jellyfin`.
-
-   ![Custom route ID](/images/manual/olares/custom-route-id.jpeg#bordered)
 6. Click **Confirm**.
 
-Now, you will be able to access Jellyfin from your new URL: `https://jellyfin.bob.olares.com`.
+   ![Custom route ID](/images/manual/olares/custom-route-id1.png#bordered){wdith=90%}
+
+Now, you can access Jellyfin from your new URL: `https://jellyfin.alexmiles.olares.com`.
 
 ### Custom domain name
 Instead of using the default Olares domain, you can use your own domain name to access your applications, making them more professional and easier to remember. To configure a custom domain name for an app:
@@ -45,6 +45,7 @@ Instead of using the default Olares domain, you can use your own domain name to 
 :::info
 Only applications with the authentication level set to **Internal** or **Public** support custom third-party domains.
 :::
+
 1. Open the Settings app, and select **Application** from the left sidebar.
 2. Click the application you want to configure to enter its details page.
 3. Go to **Entrances** > **Set up endpoint**, and click <i class="material-symbols-outlined">add</i> next to **Set custom domain**.
