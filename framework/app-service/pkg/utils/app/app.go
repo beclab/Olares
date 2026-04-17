@@ -714,6 +714,7 @@ type ConfigOptions struct {
 	IsAdmin      bool
 	RawAppName   string
 	SelectedGpu  string
+	InstallType  string
 }
 
 // GetAppConfig get app installation configuration from app store
@@ -756,6 +757,21 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	return appcfg, chartPath, nil
 }
 
+func GetApiVersionFromAppConfig(ctx context.Context, options *ConfigOptions) (appcfg.APIVersion, *appcfg.ApplicationConfig, error) {
+
+	cfg, _, err := GetAppConfig(ctx, options)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get app config: %w", err)
+	}
+
+	// default version is v1
+	if cfg.APIVersion == "" {
+		return appcfg.V1, cfg, nil
+	}
+
+	return cfg.APIVersion, cfg, nil
+}
+
 func getAppConfigFromRepo(ctx context.Context, options *ConfigOptions) (*appcfg.ApplicationConfig, string, error) {
 	chartPath, err := GetIndexAndDownloadChart(ctx, options)
 	if err != nil {
@@ -776,9 +792,6 @@ func GetAppConfigVersion(ctx context.Context, options *ConfigOptions) (appcfg.AP
 	}
 
 	apiVersion := GetTopLevelValue(raw, "apiVersion")
-	if apiVersion == "" {
-		apiVersion = "v1"
-	}
 	return appcfg.APIVersion(apiVersion), nil
 }
 
@@ -830,56 +843,54 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		return nil, chart, err
 	}
 
-	if !config.IsNewManifestVersion(cfg.ConfigVersion) {
-		// set suppertedGpu to ["nvidia","nvidia-gb10"] by default
-		if len(cfg.Spec.SupportedGpu) == 0 {
-			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType}
-		}
+	// set suppertedGpu to ["nvidia","nvidia-gb10"] by default
+	if len(cfg.Spec.SupportedGpu) == 0 {
+		cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType}
+	}
 
-		// try to get selected GPU type special resource requirement
-		if opt.SelectedGpu != "" {
-			found := false
-			for _, supportedGpu := range cfg.Spec.SupportedGpu {
-				if str, ok := supportedGpu.(string); ok && str == opt.SelectedGpu {
+	// try to get selected GPU type special resource requirement
+	if opt.SelectedGpu != "" {
+		found := false
+		for _, supportedGpu := range cfg.Spec.SupportedGpu {
+			if str, ok := supportedGpu.(string); ok && str == opt.SelectedGpu {
+				found = true
+				break
+			}
+
+			if supportedGpuResourceMap, ok := supportedGpu.(map[string]interface{}); ok {
+				if resourceRequirement, ok := supportedGpuResourceMap[opt.SelectedGpu].(map[string]interface{}); ok {
 					found = true
-					break
-				}
+					var specialResource appcfg.SpecialResource
+					err := mapstructure.Decode(resourceRequirement, &specialResource)
+					if err != nil {
+						return nil, chart, fmt.Errorf("failed to decode special resource for selected GPU type %s: %v", opt.SelectedGpu, err)
+					}
 
-				if supportedGpuResourceMap, ok := supportedGpu.(map[string]interface{}); ok {
-					if resourceRequirement, ok := supportedGpuResourceMap[opt.SelectedGpu].(map[string]interface{}); ok {
-						found = true
-						var specialResource appcfg.SpecialResource
-						err := mapstructure.Decode(resourceRequirement, &specialResource)
-						if err != nil {
-							return nil, chart, fmt.Errorf("failed to decode special resource for selected GPU type %s: %v", opt.SelectedGpu, err)
-						}
+					for _, resSetter := range []struct {
+						v **resource.Quantity
+						s *string
+					}{
+						{v: &mem, s: specialResource.RequiredMemory},
+						{v: &disk, s: specialResource.RequiredDisk},
+						{v: &cpu, s: specialResource.RequiredCPU},
+						{v: &gpu, s: specialResource.RequiredGPU},
+					} {
 
-						for _, resSetter := range []struct {
-							v **resource.Quantity
-							s *string
-						}{
-							{v: &mem, s: specialResource.RequiredMemory},
-							{v: &disk, s: specialResource.RequiredDisk},
-							{v: &cpu, s: specialResource.RequiredCPU},
-							{v: &gpu, s: specialResource.RequiredGPU},
-						} {
-
-							if resSetter.s != nil && *resSetter.s != "" {
-								*resSetter.v, err = valuePtr(resource.ParseQuantity(*resSetter.s))
-								if err != nil {
-									return nil, chart, fmt.Errorf("failed to parse special resource quantity %s: %v", *resSetter.s, err)
-								}
+						if resSetter.s != nil && *resSetter.s != "" {
+							*resSetter.v, err = valuePtr(resource.ParseQuantity(*resSetter.s))
+							if err != nil {
+								return nil, chart, fmt.Errorf("failed to parse special resource quantity %s: %v", *resSetter.s, err)
 							}
 						}
+					}
 
-						break
-					} // end if selected gpu's resource requirement found
-				} // end if supportedGpu is map
-			} // end for supportedGpu
+					break
+				} // end if selected gpu's resource requirement found
+			} // end if supportedGpu is map
+		} // end for supportedGpu
 
-			if !found {
-				return nil, chart, fmt.Errorf("selected GPU type %s is not supported", opt.SelectedGpu)
-			}
+		if !found {
+			return nil, chart, fmt.Errorf("selected GPU type %s is not supported", opt.SelectedGpu)
 		}
 	}
 
@@ -975,8 +986,12 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		SelectedGpuType:      opt.SelectedGpu,
 		Resources:            cfg.Spec.Resources,
 		Client:               cfg.Client,
-		ClientAndServer:      cfg.ClientAndServer,
+		Server:               cfg.Server,
 	}, chart, nil
+}
+
+func ResolveRequirementByCfg(cfg *appcfg.ApplicationConfig, opt *ConfigOptions) (*appcfg.AppRequirement, error) {
+	return cfg.ResolveRequirement(opt.SelectedGpu, opt.InstallType)
 }
 
 func getAppConfigFromConfigurationFile(opt *ConfigOptions, chartPath string) (*appcfg.ApplicationConfig, string, error) {
@@ -1363,5 +1378,5 @@ func GetTopLevelValue(content []byte, key string) string {
 			return value
 		}
 	}
-	return ""
+	return "v1"
 }

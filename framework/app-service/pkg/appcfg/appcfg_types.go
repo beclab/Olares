@@ -43,8 +43,8 @@ type AppConfiguration struct {
 	// Only for v2 c/s apps to share the api to other cluster scope apps
 	SharedEntrances []v1alpha1.Entrance `yaml:"sharedEntrances,omitempty" json:"sharedEntrances,omitempty"`
 
-	ClientAndServer *ConfigOverlay `yaml:"clientAndServer,omitempty" json:"clientAndServer,omitempty"`
-	Client          *ConfigOverlay `yaml:"client,omitempty" json:"client,omitempty"`
+	Server *ConfigOverlay `yaml:"server,omitempty" json:"server,omitempty"`
+	Client *ConfigOverlay `yaml:"client,omitempty" json:"client,omitempty"`
 }
 
 type AppSpec struct {
@@ -63,8 +63,8 @@ type AppSpec struct {
 	RequiredCPU         string         `yaml:"requiredCpu" json:"requiredCpu"`
 	LimitedMemory       string         `yaml:"limitedMemory" json:"limitedMemory"`
 	LimitedDisk         string         `yaml:"limitedDisk" json:"limitedDisk"`
-	LimitedGPU          string         `yaml:"limitedGpu" json:"limitedGpu"`
-	LimitedCPU          string         `yaml:"limitedCpu" json:"limitedCpu"`
+	LimitedGPU          string         `yaml:"limitedGPU" json:"limitedGPU"`
+	LimitedCPU          string         `yaml:"limitedCPU" json:"limitedCPU"`
 	SupportClient       SupportClient  `yaml:"supportClient" json:"supportClient"`
 	RunAsUser           bool           `yaml:"runAsUser" json:"runAsUser"`
 	RunAsInternal       bool           `yaml:"runAsInternal" json:"runAsInternal"`
@@ -209,9 +209,9 @@ type SpecialResource struct {
 }
 
 const (
-	InstallOrUpgradeClientOnly      string = "clientOnly"
-	InstallOrUpgradeClientAndServer string = "clientAndServer"
-	InstallOrUpgradeV1              string = "v1"
+	InstallClientOnly      string = "clientOnly"
+	InstallServerAndClient string = "clientAndServer"
+	InstallV1              string = "v1"
 )
 
 type ResourceRequirement struct {

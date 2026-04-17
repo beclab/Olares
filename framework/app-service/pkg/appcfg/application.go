@@ -105,7 +105,7 @@ type ApplicationConfig struct {
 	Resources            []ResourceMode
 	InstallType          string
 	Client               *ConfigOverlay
-	ClientAndServer      *ConfigOverlay
+	Server               *ConfigOverlay
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
@@ -201,9 +201,9 @@ func (c *ApplicationConfig) applyConfigOverlay(installType string) {
 	var overlay *ConfigOverlay
 	klog.Infof("applyConfigOverlay: installType: %v", installType)
 	switch installType {
-	case InstallOrUpgradeClientAndServer:
-		overlay = c.ClientAndServer
-	case InstallOrUpgradeClientOnly:
+	case InstallServerAndClient:
+		overlay = c.Server
+	case InstallClientOnly:
 		overlay = c.Client
 	}
 	if overlay == nil {
@@ -213,41 +213,37 @@ func (c *ApplicationConfig) applyConfigOverlay(installType string) {
 	c.Entrances = overlay.Entrances
 	c.Middleware = overlay.Middleware
 
-	if overlay.Permission != nil {
-		var permission []AppPermission
-		if overlay.Permission.AppData {
-			permission = append(permission, AppDataRW)
-		}
-		if overlay.Permission.AppCache {
-			permission = append(permission, AppCacheRW)
-		}
-		if len(overlay.Permission.UserData) > 0 {
-			permission = append(permission, UserDataRW)
-		}
-		if len(overlay.Permission.Provider) > 0 {
-			var perm []ProviderPermission
-			for _, s := range overlay.Permission.Provider {
-				perm = append(perm, ProviderPermission(s))
-			}
-			permission = append(permission, perm)
-		}
-		c.Permission = permission
+	var permission []AppPermission
+	if overlay.Permission.AppData {
+		permission = append(permission, AppDataRW)
 	}
+	if overlay.Permission.AppCache {
+		permission = append(permission, AppCacheRW)
+	}
+	if len(overlay.Permission.UserData) > 0 {
+		permission = append(permission, UserDataRW)
+	}
+	if len(overlay.Permission.Provider) > 0 {
+		var perm []ProviderPermission
+		for _, s := range overlay.Permission.Provider {
+			perm = append(perm, ProviderPermission(s))
+		}
+		permission = append(permission, perm)
+	}
+	c.Permission = permission
 
-	if overlay.Options != nil {
-		c.ResetCookieEnabled = overlay.Options.ResetCookie.Enabled
-		c.Dependencies = overlay.Options.Dependencies
-		c.Conflicts = overlay.Options.Conflicts
-		c.AppScope = overlay.Options.AppScope
-		c.WsConfig = overlay.Options.WsConfig
-		c.Upload = overlay.Options.Upload
-		c.MobileSupported = overlay.Options.MobileSupported
-		c.OIDC = overlay.Options.OIDC
-		c.ApiTimeout = overlay.Options.ApiTimeout
-		c.AllowedOutboundPorts = overlay.Options.AllowedOutboundPorts
-		c.Images = overlay.Options.Images
-		c.AllowMultipleInstall = overlay.Options.AllowMultipleInstall
-	}
+	c.ResetCookieEnabled = overlay.Options.ResetCookie.Enabled
+	c.Dependencies = overlay.Options.Dependencies
+	c.Conflicts = overlay.Options.Conflicts
+	c.AppScope = overlay.Options.AppScope
+	c.WsConfig = overlay.Options.WsConfig
+	c.Upload = overlay.Options.Upload
+	c.MobileSupported = overlay.Options.MobileSupported
+	c.OIDC = overlay.Options.OIDC
+	c.ApiTimeout = overlay.Options.ApiTimeout
+	c.AllowedOutboundPorts = overlay.Options.AllowedOutboundPorts
+	c.Images = overlay.Options.Images
+	c.AllowMultipleInstall = overlay.Options.AllowMultipleInstall
 	c.Provider = overlay.Provider
 	c.Envs = overlay.Envs
 }
@@ -275,13 +271,13 @@ func (c *ApplicationConfig) ResolveRequirement(selectedGpu, installType string) 
 	}
 
 	switch installType {
-	case InstallOrUpgradeClientOnly:
+	case InstallClientOnly:
 		if mode.Client == nil {
 			return nil, fmt.Errorf("client resource requirement can not be empty")
 		}
 		req := parseResourceRequirement(mode.Client)
 		return &req, nil
-	case InstallOrUpgradeClientAndServer:
+	case InstallServerAndClient:
 		req := sumResourceRequirements(mode.Server, mode.Client)
 		return &req, nil
 	}
