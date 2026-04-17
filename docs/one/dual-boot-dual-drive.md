@@ -113,7 +113,7 @@ Olares One will boot into Olares OS.
 </template>
 <template #Olares-already-activated>
 
-1. Obtain the SSH password from LarePass.
+1. Obtain the system password from LarePass.
 
    :::info
    Right after you activate Olares, you will be prompted to reset the SSH password on the LarePass app. The password is automatically generated and saved to your Vault.
