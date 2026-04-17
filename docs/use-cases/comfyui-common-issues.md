@@ -10,25 +10,27 @@ head:
 
 Use this page to identify and resolve common issues with ComfyUI on Olares.
 
+:::tip Need more help?
+If you are encountering an issue that is not listed here, refer to [Troubleshooting flow](./comfyui-launcher#troubleshooting-flow).
+:::
+
 ## ComfyUI cannot start
 
 ComfyUI does not start, keeps stopping, or behaves unexpectedly when you try to launch it.
 
-This is often related to insufficient system resources, an unsuitable GPU mode, or plugin dependency conflicts.
+This is usually caused by incorrect GPU allocation or insufficient resources. To resolve this:
 
-To resolve this:
+1. Go to **Settings** > **GPU** and check your GPU mode:
+   - If you are using **Memory slicing**, make sure ComfyUI is bound to the GPU and has enough VRAM allocated.
+   - If you are using **App exclusive**, make sure the exclusive app is set to ComfyUI.
+2. Check your system resources. If your CPU or memory usage is maxed out, stop other resource-intensive apps.
+3. Wait a moment, then try to launch ComfyUI again.
 
-1. Check whether enough CPU, memory, and VRAM are available. Stop other resource-intensive apps if needed.
-2. Check whether the current [GPU mode](/manual/olares/settings/single-gpu.md) is suitable for your workload.
-3. If the issue still persists, follow the [Troubleshooting flow](/use-cases/comfyui-launcher#troubleshooting-flow).
+## Launcher log shows errors
 
-## Launcher log shows unexpected errors
+Seeing `Error` messages in the Launcher logs does not necessarily indicate a system failure. During startup and plugin scanning, ComfyUI often logs non-fatal errors for missing optional dependencies or environment checks, even while the application is functioning perfectly.
 
-Log messages in ComfyUI Launcher do not always mean that ComfyUI is broken. Some `Error` messages may appear during startup, plugin scanning, or environment checks even when ComfyUI is still usable.
-
-If ComfyUI starts successfully, many of these warnings may not require action. You only need to investigate the logs if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
-
-If you need to escalate the issue, see [Collect information for support](/use-cases/comfyui-launcher.md#collect-information-for-support). 
+If ComfyUI starts successfully, many of these messages may not require action. You only need to investigate the logs if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
 
 ## Models cannot be downloaded in ComfyUI Launcher
 
@@ -67,26 +69,6 @@ If the URL is not shown in the template notes or dialog, inspect the page in you
 
 ![Inspect url](/images/manual/use-cases/comfyui-inspect-url.png#bordered){width=80%}
 
-## Workflow fails during execution
-
-ComfyUI starts successfully, but a workflow halts and reports an error.
-
-This happens when the workflow encounters missing models, missing custom nodes, or Python dependency conflicts during the generation process.
-
-To resolve this, find out the exact cause by checking the error report:
-
-1. In the ComfyUI client, click **Active** to open the **Job Queue**.
-2. Select the failed task from the list.
-3. Click **Report error**, then click **Show Report** to expand the details.
-
-   ![Workflow error report](/images/manual/use-cases/comfyui-workflow-error.png#bordered){width=80%}
-
-Once you have the error details, decide your next step:
-
-- If the error points to a missing model, see [Models cannot be downloaded in ComfyUI Launcher](#models-cannot-be-downloaded-in-comfyui-launcher).
-- If the error points to a missing Python module or node, see [Analyze dependency installation status](/use-cases/comfyui-launcher#analyze-dependency-installation-status).
-- If the cause is still unclear, follow the [Troubleshooting flow](/use-cases/comfyui-launcher#troubleshooting-flow).
-
 ## CPU temperature rises unusually high on Olares One
 
 CPU temperature rises unusually high while running certain ComfyUI workloads on Olares One.
@@ -111,5 +93,3 @@ This issue typically occurs when running large workflows that require more memor
     ```bash
     echo 5400000 | sudo tee /sys/devices/system/cpu/cpufreq/policy*/scaling_max_freq
     ```
-
-This is a temporary workaround. A long-term fix is still under investigation.

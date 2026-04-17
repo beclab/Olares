@@ -27,6 +27,7 @@ As the administrator, you must start the ComfyUI service before you or other mem
 - **Start ComfyUI service**
 
     Go to **Home** and click the **START** button in the upper-right corner.
+
     ![Start ComfyUI service](/images/manual/use-cases/comfyui-start-service.png#bordered)   
     
     :::tip Notes on first run
@@ -37,6 +38,7 @@ As the administrator, you must start the ComfyUI service before you or other mem
 - **Stop ComfyUI service**
 
     Go to **Home** and click the **STOP** button when ComfyUI is not in use. This releases VRAM and memory resources for other applications.
+
     ![Stop ComfyUI service](/images/manual/use-cases/comfyui-stop-service.png#bordered)   
 
 ## Configure network
@@ -46,6 +48,7 @@ ComfyUI needs access to GitHub for plugins, PyPI for Python packages, and Huggin
 1. Go to **Network**.
 2. Check the connectivity to GitHub, PyPI, and Hugging Face.
 3. If any service shows `Inaccessible`, fix your network or proxy settings, and then click **SAVE & CHECK** to test again.
+    
     ![Configure network](/images/manual/use-cases/comfyui-network-config.png#bordered)   
 
 4. Repeat until the status of each service becomes `Accessible`.
@@ -120,6 +123,7 @@ Use this method when you want to install a ready-to-use package provided by Olar
 1. Go to **Home** > **Resource Package**.
 2. Find the package you want, then click **VIEW**.
 3. On the **Package Details** page, click **GET ALL** to download all required files. You can track the progress in the status bar.
+    
     ![Download progress](/images/manual/use-cases/comfyui-download-progress1.png#bordered)
 
 #### Download from the model library
@@ -129,6 +133,7 @@ Use this method when you want to download an individual public model directly in
 1. Go to **Models** > **Model library**, then scroll to **Available models**.
 2. Search for the model by name, or browse by category.
 3. Find the model you want, then click the <i class="material-symbols-outlined">download</i> button to download it.
+   
    ![Library download](/images/manual/use-cases/comfyui-model-built-in.png#bordered)
 
 #### Download by direct URL
@@ -166,7 +171,8 @@ To delete a model:
 
 1. Go to **Models** > **Model library**.
 2. Under the **Installed models** section, find the model you want to delete, and click the delete icon.
-![Delete a model](/images/manual/use-cases/comfyui-delete-model.png#bordered)
+
+    ![Delete a model](/images/manual/use-cases/comfyui-delete-model.png#bordered)
 
 ## Manage plugins
 
@@ -203,7 +209,8 @@ To install plugins directly from GitHub repositories:
 2. Enter the GitHub repository URL of the plugin.
 3. (Optional) Specify the branch. If unsure, keep the default.
 4. Click **INSTALL PLUGIN**.
-    ![Download plugin](/images/manual/use-cases/comfyui-plugin-install.png#bordered)
+   
+   ![Download plugin](/images/manual/use-cases/comfyui-plugin-install.png#bordered)
 
 ## Manage environment
 
@@ -213,6 +220,7 @@ ComfyUI runs on a set of Python libraries. Manage them on the **Environment** pa
 
 1. Go to **Environment** > **INSTALL NEW PACKAGE**.
 2. In the pop-up window, enter the package name and version number (optional), and then click **INSTALL**.
+    
     ![Install new package](/images/manual/use-cases/comfyui-python-install.png#bordered){width=90%}
 
 ### Manage installed Python packages
@@ -220,6 +228,7 @@ ComfyUI runs on a set of Python libraries. Manage them on the **Environment** pa
 1. Go to **Environment**.
 2. Under the **Installed Python packages** tab, find the Python library you want to manage.
 3. Click the <i class="material-symbols-outlined">arrow_upward</i> button on the right to update the library, or the delete button to remove it.
+    
     ![Manage installed packages](/images/manual/use-cases/comfyui-python-manage.png#bordered){width=90%}
 
 ### Analyze dependency installation status
@@ -228,6 +237,7 @@ ComfyUI runs on a set of Python libraries. Manage them on the **Environment** pa
 2. Click **ANALYZE NOW** to start analyzing.
 3. From the plugins list on the left, find the problematic plugin highlighted in red, and click on it.
 4. From **Dependency list**, find the missing library for the plugin, and click the **Install** button on the right. You can also click **FIX ALL** to automatically install all missing libraries.
+    
     ![Analyze dependencies](/images/manual/use-cases/comfyui-dependency-analy.png#bordered)
 
 <!--## Configure ComfyUI launch options
@@ -300,9 +310,11 @@ To reset ComfyUI:
 
 1. In ComfyUI Launcher, go to **Home** and click <i class="material-symbols-outlined">more_vert</i> in the upper-right corner, then click **Wipe and restore**.
 2. In the prompt window, click **WIPE AND RESTORE**.
+    
     ![Wipe and restore](/images/manual/use-cases/comfyui-wipe-and-restore.png#bordered){width=50%}
 
 3. Enter `CONFIRM`, then click **CONFIRM**.
+    
     ![Second confirmation](/images/manual/use-cases/comfyui-second-confirm.png#bordered){width=50%}
 
 After the reset is complete, restart ComfyUI for the changes to take effect.
@@ -328,13 +340,20 @@ If you cannot resolve the issue and need to escalate it to the support team, pre
 Logs contain the backend running status and error traces.
 
 1. In ComfyUI Launcher, go to **Home** and click <i class="material-symbols-outlined">more_vert</i> in the upper-right corner, then click **View logs**.
+   
    ![View Logs](/images/manual/use-cases/comfyui-view-logs1.png#bordered){width=90%}
+
 2. Click the <i class="material-symbols-outlined">refresh</i> button to ensure you have the latest output.
 3. Click the <i class="material-symbols-outlined">download</i> button to save the log file.
+   
    ![Export Logs](/images/manual/use-cases/comfyui-export-logs.png#bordered){width=90%}
 
-#### Get the workflow error report (optional)
+#### Optional: Get the workflow error report
 
-If a specific workflow is failing, include a screenshot of the workflow error report.
+If a specific workflow failed, include a screenshot of the workflow error report to help the support team identify the problem.
 
-For detailed steps, see [Workflow fails during execution](/use-cases/comfyui-common-issues#workflow-fails-during-execution).
+1. In the ComfyUI client, click **Active** to open the **Job Queue**.
+2. Select the failed task from the list.
+3. Click **Report error**, then click **Show Report** to expand the details.
+
+    ![Workflow error report](/images/manual/use-cases/comfyui-workflow-error.png#bordered){width=80%}
