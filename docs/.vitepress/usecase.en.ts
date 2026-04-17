@@ -145,10 +145,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "DeerFlow 2.0",
               link: "/use-cases/deerflow2",
             },
-            {
-              text: "DeerFlow",
-              link: "/use-cases/deerflow",
-            },
+            // {
+            //   text: "DeerFlow",
+            //   link: "/use-cases/deerflow",
+            // },
           ]
         },
         {
@@ -238,10 +238,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Excalidraw",
               link: "/use-cases/excalidraw",
             },
-            {
-              text: "Stirling PDF",
-              link: "/use-cases/stirling-pdf",
-            },
+            // {
+            //   text: "Stirling PDF",
+            //   link: "/use-cases/stirling-pdf",
+            // },
           ]
         },
         {
