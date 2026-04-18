@@ -194,7 +194,7 @@ func (u *UserStore) SignJWS(payload map[string]any) (string, error) {
 	return signedJWT, nil
 }
 
-const TerminusDefaultDomain = "olares.cn"
+const TerminusDefaultDomain = "olares.com"
 
 func (u *UserStore) GetAuthURL() string {
 	if u.customAuthURL != "" {
