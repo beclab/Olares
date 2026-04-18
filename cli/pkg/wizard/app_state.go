@@ -71,22 +71,16 @@ func LoadAppState(storage Storage, did string) (*AppState, error) {
 	return state, nil
 }
 
-// Save persists the AppState (and any associated vaults) to the storage.
+// Save persists the AppState to the storage. Vaults are serialized inline
+// as part of the AppState (see the `Vaults` field above and TS
+// AppState.vaults / App.saveState in apps/packages/sdk/src/core/app.ts),
+// so we do NOT write per-vault files separately.
 func (s *AppState) Save() error {
 	if s.storage == nil {
 		return nil
 	}
 	if err := s.storage.Put(AppStateKind, s.ID, s); err != nil {
 		return fmt.Errorf("failed to save app state %s: %w", s.ID, err)
-	}
-	for i := range s.Vaults {
-		v := &s.Vaults[i]
-		if v.ID == "" {
-			continue
-		}
-		if err := s.storage.Put("vault", v.ID, v); err != nil {
-			return fmt.Errorf("failed to save vault %s: %w", v.ID, err)
-		}
 	}
 	return nil
 }
@@ -165,7 +159,9 @@ func (s *AppState) PutVault(v Vault) {
 	s.Vaults = append(s.Vaults, v)
 }
 
-// RemoveVault deletes the vault with the given id from state and storage.
+// RemoveVault deletes the vault with the given id from in-memory state.
+// The change is persisted next time Save() is called (vaults live inline
+// inside the AppState record, so there is no separate file to delete).
 func (s *AppState) RemoveVault(id string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -176,7 +172,4 @@ func (s *AppState) RemoveVault(id string) {
 		}
 	}
 	s.Vaults = out
-	if s.storage != nil {
-		_ = s.storage.Delete("vault", id)
-	}
 }
