@@ -151,20 +151,20 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Access Olares One terminal",
           collapsed: true,
-          link: "/one/access-overview",
+          link: "/zh/one/access-overview",
           items:
             [
               {
                 text: "Access via Control Hub",
-                link: "/one/access-terminal-control-hub",
+                link: "/zh/one/access-terminal-control-hub",
               },
               {
                 text: "Access via SSH",
-                link: "/one/access-terminal-ssh",
+                link: "/zh/one/access-terminal-ssh",
               },
               {
-                text: "Access via physical console",
-                link: "/one/access-local-login",
+                text: "Access directly on the device",
+                link: "/zh/one/access-physical-console",
               },
             ]
         },        

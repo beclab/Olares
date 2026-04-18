@@ -13,5 +13,5 @@ Connecting to the Olares One terminal is required for system tasks such as clust
 
 Choose the method that best fits your current task, network environment, and available tools:
 - [Access from Control Hub](access-terminal-control-hub.md): Use the built-in Olares CLI for direct `root` access from the Control Hub application. This is recommended for quick or occasional tasks.
-- [Access over the network (SSH)](access-terminal-ssh.md): Use the standard Secure Shell (SSH) protocol for advanced or automated operations. You can establish an SSH connection whether your device is on the same local network as Olares One, or you are connecting remotely from a different network.
-- [Access physically (Local login)](access-local-login.md): Log in directly on the device using a physical monitor and keyboard. This method is useful when SSH access is unavailable.
+- [Access over the network (SSH)](access-terminal-ssh.md): Use the standard Secure Shell (SSH) protocol to connect from either your local network or a remote network.
+- [Access directly on the device](access-physical-console.md): Log in on the device itself using a connected monitor and keyboard. This method is useful when SSH access is unavailable.
