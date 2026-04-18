@@ -147,8 +147,12 @@ func (a *App) CreateItem(params CreateItemParams) (*VaultItem, error) {
 	account := unlocked.Account
 
 	now := time.Now().UTC().Format(time.RFC3339Nano)
+	itemID := params.ID
+	if itemID == "" {
+		itemID = generateUUID()
+	}
 	item := VaultItem{
-		ID:        generateUUID(),
+		ID:        itemID,
 		Name:      params.Name,
 		Type:      params.Type,
 		Icon:      params.Icon,
@@ -188,6 +192,7 @@ func (a *App) CreateItem(params CreateItemParams) (*VaultItem, error) {
 
 // CreateItemParams is the Go counterpart of TS CreateItemParams.
 type CreateItemParams struct {
+	ID     string // optional; if empty, a new UUID is generated
 	Name   string
 	Vault  *Vault
 	Fields []Field

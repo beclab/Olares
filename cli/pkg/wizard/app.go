@@ -279,13 +279,21 @@ func (a *App) Login(params LoginParams) error {
 					if _, exists := mv.items.Items[id]; exists {
 						continue
 					}
+					if item.Name == "" {
+						continue
+					}
+					itemType := item.Type
+					if itemType == VaultTypeTerminusTotp {
+						itemType = VaultTypeDefault
+					}
 					if _, err := a.CreateItem(CreateItemParams{
+						ID:     id,
 						Name:   item.Name,
 						Vault:  mv,
 						Fields: item.Fields,
 						Tags:   item.Tags,
 						Icon:   item.Icon,
-						Type:   item.Type,
+						Type:   itemType,
 					}); err != nil {
 						log.Printf("Login: failed to migrate localvault item %s: %v", id, err)
 					}
