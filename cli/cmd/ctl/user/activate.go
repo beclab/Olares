@@ -13,6 +13,7 @@ type activateUserOptions struct {
 	Mnemonic      string
 	BflUrl        string
 	VaultUrl      string
+	AuthUrl       string
 	Password      string
 	OlaresId      string
 	ResetPassword string
@@ -48,6 +49,7 @@ func (o *activateUserOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Mnemonic, "mnemonic", "", "12-word mnemonic phrase, required for activation")
 	cmd.Flags().StringVar(&o.BflUrl, "bfl", "http://127.0.0.1:30180", "Bfl URL (e.g., https://example.com, default: http://127.0.0.1:30180)")
 	cmd.Flags().StringVar(&o.VaultUrl, "vault", "http://127.0.0.1:30180", "Vault URL (e.g., https://example.com, default: http://127.0.0.1:30181)")
+	cmd.Flags().StringVar(&o.AuthUrl, "authurl", "", "Auth URL (e.g., https://auth.example.com, default: empty -> auto-derived)")
 	cmd.Flags().StringVarP(&o.Password, "password", "p", "", "OS password for authentication, required for activation")
 	cmd.Flags().StringVar(&o.Location, "location", "Asia/Shanghai", "Timezone location (default: Asia/Shanghai)")
 	cmd.Flags().StringVar(&o.Language, "language", "en-US", "System language (default: en-US)")
@@ -84,6 +86,7 @@ func (c *activateUserOptions) Run() error {
 	log.Printf("Parameters:")
 	log.Printf("  BflUrl: %s", c.BflUrl)
 	log.Printf("  VaultUrl: %s", c.VaultUrl)
+	log.Printf("  AuthUrl: %s", c.AuthUrl)
 	log.Printf("  Terminus Name: %s", c.OlaresId)
 	log.Printf("  Local Name: %s", localName)
 
@@ -93,7 +96,7 @@ func (c *activateUserOptions) Run() error {
 		return fmt.Errorf("failed to initialize global stores: %v", err)
 	}
 
-	accessToken, err := wizard.UserBindTerminus(c.Mnemonic, c.BflUrl, c.VaultUrl, c.Password, c.OlaresId, localName)
+	accessToken, err := wizard.UserBindTerminus(c.Mnemonic, c.BflUrl, c.VaultUrl, c.AuthUrl, c.Password, c.OlaresId, localName)
 	if err != nil {
 		return fmt.Errorf("user bind failed: %v", err)
 	}

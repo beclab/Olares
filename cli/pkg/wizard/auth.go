@@ -170,7 +170,7 @@ func Authenticate(req AuthenticateRequest) (*AuthenticateResponse, error) {
 }
 
 // UserBindTerminus main user binding function (ref: TypeScript version)
-func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName string) (string, error) {
+func UserBindTerminus(mnemonic, bflUrl, vaultUrl, authUrl, osPwd, terminusName, localName string) (string, error) {
 	log.Printf("Starting userBindTerminus for user: %s", terminusName)
 
 	// 1. Initialize global storage
@@ -181,6 +181,11 @@ func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName
 			return "", fmt.Errorf("failed to initialize global stores: %w", err)
 		}
 		log.Printf("Global stores initialized successfully")
+	}
+
+	if authUrl != "" {
+		globalUserStore.SetAuthURL(authUrl)
+		log.Printf("Custom auth URL applied: %s", authUrl)
 	}
 
 	// 2. Initialize platform and App (if not already initialized)

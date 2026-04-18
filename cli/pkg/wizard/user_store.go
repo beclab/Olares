@@ -17,11 +17,18 @@ import (
 
 // UserStore implementation using actual DID keys
 type UserStore struct {
-	terminusName string
-	mnemonic     string
-	did          string
-	privateJWK   *jwk.JWK // Direct use of Web5 JWK structure
-	mfa          string   // Store MFA token
+	terminusName  string
+	mnemonic      string
+	did           string
+	privateJWK    *jwk.JWK // Direct use of Web5 JWK structure
+	mfa           string   // Store MFA token
+	customAuthURL string   // Optional override for the auth URL
+}
+
+// SetAuthURL sets a custom auth URL that takes precedence over the
+// auto-derived value returned by GetAuthURL.
+func (u *UserStore) SetAuthURL(url string) {
+	u.customAuthURL = url
 }
 
 func (u *UserStore) GetTerminusName() string {
@@ -190,6 +197,10 @@ func (u *UserStore) SignJWS(payload map[string]any) (string, error) {
 const TerminusDefaultDomain = "olares.cn"
 
 func (u *UserStore) GetAuthURL() string {
+	if u.customAuthURL != "" {
+		return u.customAuthURL
+	}
+
 	array := strings.Split(u.terminusName, "@")
 	localURL := u.getLocalURL()
 
