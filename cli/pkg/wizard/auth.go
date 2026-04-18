@@ -38,8 +38,13 @@ type FirstFactorResponse struct {
 	Data   Token  `json:"data"`
 }
 
-// OnFirstFactor implements first factor authentication (ref: BindTerminusBusiness.ts)
-func OnFirstFactor(baseURL, terminusName, osUser, osPwd string, acceptCookie, needTwoFactor bool) (*Token, error) {
+// OnFirstFactor implements first factor authentication (ref: BindTerminusBusiness.ts).
+//
+// If client is nil, a fresh http.Client is created internally. Pass a shared
+// client (e.g. from newAuthHTTPClient) when the caller intends to follow up
+// with /api/secondfactor/totp so that Authelia session cookies set by this
+// request are reused on the next one.
+func OnFirstFactor(client *http.Client, baseURL, terminusName, osUser, osPwd string, acceptCookie, needTwoFactor bool) (*Token, error) {
 	log.Printf("Starting onFirstFactor for user: %s", osUser)
 
 	// Process password (salted MD5)
@@ -60,9 +65,10 @@ func OnFirstFactor(baseURL, terminusName, osUser, osPwd string, acceptCookie, ne
 		return nil, fmt.Errorf("failed to marshal request: %v", err)
 	}
 
-	// Send HTTP request
-	client := &http.Client{
-		Timeout: 10 * time.Second,
+	if client == nil {
+		client = &http.Client{
+			Timeout: 10 * time.Second,
+		}
 	}
 
 	reqURL := fmt.Sprintf("%s/api/firstfactor?hideCookie=true", baseURL)
@@ -206,8 +212,10 @@ func UserBindTerminus(mnemonic, bflUrl, vaultUrl, authUrl, osPwd, terminusName, 
 
 	log.Printf("Using bflUrl: %s", bflUrl)
 
-	// 3. Call onFirstFactor to get token (ref: TypeScript implementation)
-	token, err := OnFirstFactor(bflUrl, terminusName, localName, osPwd, false, false)
+	// 3. Call onFirstFactor to get token (ref: TypeScript implementation).
+	// Use a cookie-jar-backed client for consistency with LoginTerminus,
+	// even though no second factor follows in this flow.
+	token, err := OnFirstFactor(newAuthHTTPClient(), bflUrl, terminusName, localName, osPwd, false, false)
 	if err != nil {
 		return "", fmt.Errorf("onFirstFactor failed: %v", err)
 	}

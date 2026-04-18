@@ -10,16 +10,36 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/http/cookiejar"
 	"strings"
 	"time"
 )
 
+// newAuthHTTPClient creates an HTTP client with a cookie jar so that
+// Set-Cookie headers from /api/firstfactor are automatically attached to
+// subsequent requests like /api/secondfactor/totp. This mirrors the
+// `withCredentials: true` behavior of the TS axios instance used in
+// loginTerminus (BindTerminusBusiness.ts).
+func newAuthHTTPClient() *http.Client {
+	jar, _ := cookiejar.New(nil)
+	return &http.Client{
+		Timeout: 10 * time.Second,
+		Jar:     jar,
+	}
+}
+
 // LoginTerminus implements Terminus login functionality (ref: BindTerminusBusiness.ts loginTerminus)
 func LoginTerminus(bflUrl, terminusName, localName, password string, needTwoFactor bool) (*Token, error) {
 	log.Printf("Starting loginTerminus for user: %s", terminusName)
-	
+
+	// Share a single http.Client (with cookie jar) across both factors so that
+	// the Authelia session cookie set by /api/firstfactor is automatically
+	// attached to /api/secondfactor/totp, mirroring the TS axios
+	// `withCredentials: true` behavior in loginTerminus.
+	client := newAuthHTTPClient()
+
 	// 1. Call onFirstFactor to get initial token (ref: loginTerminus line 364-372)
-	token, err := OnFirstFactor(bflUrl, terminusName, localName, password, true, needTwoFactor)
+	token, err := OnFirstFactor(client, bflUrl, terminusName, localName, password, true, needTwoFactor)
 	if err != nil {
 		return nil, fmt.Errorf("first factor authentication failed: %v", err)
 	}
@@ -39,7 +59,7 @@ func LoginTerminus(bflUrl, terminusName, localName, password string, needTwoFact
 		log.Printf("Generated TOTP: %s", totpValue)
 		
 		// Perform second factor authentication
-		secondToken, err := performSecondFactor(bflUrl, terminusName, totpValue)
+		secondToken, err := performSecondFactor(client, bflUrl, terminusName, totpValue)
 		if err != nil {
 			return nil, fmt.Errorf("second factor authentication failed: %v", err)
 		}
@@ -121,29 +141,35 @@ func generateHOTP(secret string, counter int64) (string, error) {
 	return fmt.Sprintf("%06d", otp), nil
 }
 
-// performSecondFactor performs second factor authentication (ref: loginTerminus line 419-446)
-func performSecondFactor(baseURL, terminusName, totpValue string) (*Token, error) {
+// performSecondFactor performs second factor authentication (ref: loginTerminus line 419-446).
+//
+// Pass the same *http.Client that was used for the first factor so that the
+// Authelia session cookie set on /api/firstfactor is automatically attached
+// here. If client is nil, a fresh client is created (cookies will not be
+// shared, which the server typically rejects).
+func performSecondFactor(client *http.Client, baseURL, terminusName, totpValue string) (*Token, error) {
 	log.Printf("Performing second factor authentication")
-	
+
 	// Build target URL
 	targetURL := fmt.Sprintf("https://desktop.%s/", strings.ReplaceAll(terminusName, "@", "."))
-	
+
 	// Build request data
 	reqData := map[string]interface{}{
 		"targetUrl": targetURL,
 		"token":     totpValue,
 	}
-	
+
 	jsonData, err := json.Marshal(reqData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %v", err)
 	}
-	
-	// Send HTTP request
-	client := &http.Client{
-		Timeout: 10 * time.Second,
+
+	if client == nil {
+		client = &http.Client{
+			Timeout: 10 * time.Second,
+		}
 	}
-	
+
 	url := fmt.Sprintf("%s/api/secondfactor/totp", baseURL)
 	req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonData)))
 	if err != nil {
