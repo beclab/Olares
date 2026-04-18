@@ -1,8 +1,6 @@
 package wizard
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -16,66 +14,43 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-// App class - simplified version for backend CLI use
+// App class - mirrors the TS App in apps/packages/sdk/src/core/app.ts.
+//
+// Holds a single AppState which is both the in-memory client state used
+// by the RPC Client and the persistable representation of the
+// account / vaults / orgs known to this client.
 type App struct {
-	Version string  `json:"version"`
-	API     *Client `json:"-"` // Uses Client from client.go
+	Version string     `json:"version"`
+	API     *Client    `json:"-"`
+	State   *AppState  `json:"-"`
 }
 
-// NewApp constructor - initializes with Client (corresponds to original TypeScript constructor)
-func NewApp(sender Sender) *App {
-	// Create simplified client state (backend CLI doesn't need complex state management)
-	state := &SimpleClientState{}
-
-	// Initialize Client (corresponds to original TypeScript's new Client(this.state, sender, hook))
+// NewApp constructs an App using the given sender and AppState.
+// If state is nil, an in-memory only state is created.
+func NewApp(sender Sender, state *AppState) *App {
+	if state == nil {
+		state = NewAppState(nil, "")
+	}
 	client := NewClient(state, sender)
-
 	return &App{
 		Version: "3.0",
 		API:     client,
+		State:   state,
 	}
 }
 
-// NewAppWithBaseURL creates App with base URL (convenience function)
+// NewAppWithBaseURL creates App with base URL (convenience function).
+// Uses an in-memory state. Prefer NewAppWithState when you need persistence.
 func NewAppWithBaseURL(baseURL string) *App {
-	// Create HTTP Sender
 	sender := NewHTTPSender(baseURL)
-
-	// Create App with HTTP Sender
-	return NewApp(sender)
+	return NewApp(sender, nil)
 }
 
-// SimpleClientState - simplified client state for backend CLI
-type SimpleClientState struct {
-	session *Session
-	account *Account
-	device  *DeviceInfo
-}
-
-func (s *SimpleClientState) GetSession() *Session {
-	return s.session
-}
-
-func (s *SimpleClientState) SetSession(session *Session) {
-	s.session = session
-}
-
-func (s *SimpleClientState) GetAccount() *Account {
-	return s.account
-}
-
-func (s *SimpleClientState) SetAccount(account *Account) {
-	s.account = account
-}
-
-func (s *SimpleClientState) GetDevice() *DeviceInfo {
-	if s.device == nil {
-		s.device = &DeviceInfo{
-			ID:       "cli-device-" + generateUUID(),
-			Platform: "go-cli",
-		}
-	}
-	return s.device
+// NewAppWithState creates App with an explicit AppState (typically backed
+// by a DirKVStorage rooted at ~/.olares/<did>/).
+func NewAppWithState(baseURL string, state *AppState) *App {
+	sender := NewHTTPSender(baseURL)
+	return NewApp(sender, state)
 }
 
 // Signup function - based on original TypeScript signup method (ref: app.ts)
@@ -155,14 +130,28 @@ func (a *App) Signup(params SignupParams) (*CreateAccountResponse, error) {
 
 	log.Printf("Login after signup successful")
 
-	// 5. Initialize main vault and create TOTP item (ref: app.ts line 1003-1038)
-	// err = a.initializeMainVaultWithTOTP(response.MFA)
-	// if err != nil {
-	// 	log.Printf("Warning: Failed to initialize main vault with TOTP: %v", err)
-	// 	// Don't return error as account creation was successful
-	// } else {
-	// 	log.Printf("Main vault initialized with TOTP item successfully")
-	// }
+	// 5. Inject MFA TOTP item into the freshly synchronized main vault
+	//    (ref: apps/packages/sdk/src/core/app.ts:1003-1038).
+	if mv := a.MainVault(); mv != nil && response.MFA != "" {
+		tpl := GetAuthenticatorTemplate()
+		if tpl != nil && len(tpl.Fields) > 0 {
+			tpl.Fields[0].Value = response.MFA
+			if _, err := a.CreateItem(CreateItemParams{
+				Name:   account.Name,
+				Vault:  mv,
+				Fields: tpl.Fields,
+				Tags:   []string{},
+				Icon:   tpl.Icon,
+				Type:   VaultTypeTerminusTotp,
+			}); err != nil {
+				log.Printf("Warning: failed to write TOTP item to main vault: %v", err)
+			} else {
+				log.Printf("Main vault updated with TOTP item")
+			}
+		}
+	} else if response.MFA != "" {
+		log.Printf("Warning: skipped TOTP injection (no main vault available yet)")
+	}
 
 	// 6. Activate account (ref: app.ts line 1039-1046)
 	activeParams := ActiveAccountParams{
@@ -184,25 +173,29 @@ func (a *App) Signup(params SignupParams) (*CreateAccountResponse, error) {
 	return response, nil
 }
 
-// Login function - simplified version
+// Login mirrors apps/packages/sdk/src/core/app.ts App.login.
+//
+// Flow:
+//  1. SRP negotiate session
+//  2. GetAccount → Account.Unlock(password) → AppState.SetUnlocked
+//  3. Persist app state to disk (Save)
+//  4. Synchronize (AuthInfo + Account + Orgs + Vaults)
+//  5. If a localvault existed before login (from a prior session), merge
+//     its items into the (possibly new) main vault.
 func (a *App) Login(params LoginParams) error {
 	log.Printf("Starting login process for DID: %s", params.DID)
 
-	// 1. Start creating session
-	startParams := StartCreateSessionParams{
+	// 1. SRP — start session
+	startResponse, err := a.API.StartCreateSession(StartCreateSessionParams{
 		DID:       params.DID,
 		AuthToken: params.AuthToken,
 		AsAdmin:   params.AsAdmin,
-	}
-
-	startResponse, err := a.API.StartCreateSession(startParams)
+	})
 	if err != nil {
 		return fmt.Errorf("failed to start create session: %v", err)
 	}
-
 	log.Printf("Session creation started for Account ID: %s", startResponse.AccountID)
 
-	// 2. Use SRP for authentication
 	authKey, err := deriveKeyPBKDF2(
 		[]byte(params.Password),
 		startResponse.KeyParams.Salt.Bytes(),
@@ -212,61 +205,100 @@ func (a *App) Login(params LoginParams) error {
 	if err != nil {
 		return fmt.Errorf("failed to derive auth key: %v", err)
 	}
-
-	// 3. SRP client negotiation
 	srpClient := NewSRPClient(SRPGroup4096)
-	err = srpClient.Initialize(authKey)
-	if err != nil {
+	if err := srpClient.Initialize(authKey); err != nil {
 		return fmt.Errorf("failed to initialize SRP client: %v", err)
 	}
-
-	err = srpClient.SetB(startResponse.B.Bytes())
-	if err != nil {
+	if err := srpClient.SetB(startResponse.B.Bytes()); err != nil {
 		return fmt.Errorf("failed to set B value: %v", err)
 	}
 
-	log.Printf("SRP negotiation completed")
-
-	// 4. Complete session creation
-	completeParams := CompleteCreateSessionParams{
+	session, err := a.API.CompleteCreateSession(CompleteCreateSessionParams{
 		SRPId:            startResponse.SRPId,
 		AccountID:        startResponse.AccountID,
 		A:                Base64Bytes(srpClient.GetA()),
 		M:                Base64Bytes(srpClient.GetM1()),
-		AddTrustedDevice: false,   // Don't add trusted device by default
-		Kind:             "oe",    // Based on server logs, kind should be "oe"
-		Version:          "4.0.0", // Based on server logs, version should be "4.0.0"
-	}
-
-	session, err := a.API.CompleteCreateSession(completeParams)
+		AddTrustedDevice: false,
+		Kind:             "oe",
+		Version:          "4.0.0",
+	})
 	if err != nil {
 		return fmt.Errorf("failed to complete create session: %v", err)
 	}
-
-	// 5. Set session key
-	sessionKey := srpClient.GetK()
-	session.Key = sessionKey
+	session.Key = srpClient.GetK()
 	a.API.State.SetSession(session)
-
 	log.Printf("Session created: %s", session.ID)
-	log.Printf("Session key length: %d bytes", len(sessionKey))
-	log.Printf("Session key (hex): %x", sessionKey)
 
-	// Create a simplified account object for subsequent operations
-	// account, err := a.API.GetAccount()
-	// if err != nil {
-	// 	return fmt.Errorf("failed to get account: %v", err)
-	// }
-
-	account := &Account{
-		ID:   startResponse.AccountID,
-		DID:  params.DID,
-		Name: params.DID,
+	// 2. Fetch & unlock the server account.
+	account, err := a.API.GetAccount()
+	if err != nil {
+		return fmt.Errorf("failed to fetch account after login: %v", err)
+	}
+	unlocked, err := account.Unlock(params.Password)
+	if err != nil {
+		return fmt.Errorf("failed to unlock account: %v", err)
+	}
+	a.API.State.SetAccount(account)
+	if a.State != nil {
+		a.State.SetUnlocked(unlocked)
 	}
 
-	a.API.State.SetAccount(account)
+	// 3. Snapshot any pre-existing local main vault so we can merge stale
+	//    items in step 5.
+	var localvault *Vault
+	if a.State != nil && len(a.State.Vaults) > 0 {
+		v := a.State.Vaults[0]
+		localvault = &v
+	}
 
-	log.Printf("Login completed successfully for DID: %s (skipped GetAccount due to signature issue)", params.DID)
+	// 4. Persist what we have so far, then synchronize.
+	if a.State != nil {
+		if err := a.State.Save(); err != nil {
+			log.Printf("Login: failed to persist app state: %v", err)
+		}
+	}
+	if err := a.Synchronize(); err != nil {
+		log.Printf("Login: synchronize failed: %v", err)
+		// Synchronize errors are non-fatal — the user can still operate
+		// against the local cache.
+	}
+
+	// 5. Merge the legacy localvault into the (possibly new) main vault
+	//    by re-creating any items that no longer exist remotely.
+	if localvault != nil && a.State != nil {
+		if mv := a.MainVault(); mv != nil && mv.ID != localvault.ID {
+			if err := localvault.Unlock(unlocked); err != nil {
+				log.Printf("Login: failed to unlock localvault for merge: %v", err)
+			} else if mv.aesKey == nil {
+				if err := mv.Unlock(unlocked); err != nil {
+					log.Printf("Login: failed to unlock new mainVault for merge: %v", err)
+				}
+			}
+			if mv.items != nil && localvault.items != nil {
+				for id, item := range localvault.items.Items {
+					if _, exists := mv.items.Items[id]; exists {
+						continue
+					}
+					if _, err := a.CreateItem(CreateItemParams{
+						Name:   item.Name,
+						Vault:  mv,
+						Fields: item.Fields,
+						Tags:   item.Tags,
+						Icon:   item.Icon,
+						Type:   item.Type,
+					}); err != nil {
+						log.Printf("Login: failed to migrate localvault item %s: %v", id, err)
+					}
+				}
+			}
+			a.State.RemoveVault(localvault.ID)
+			if err := a.State.Save(); err != nil {
+				log.Printf("Login: failed to persist app state after merge: %v", err)
+			}
+		}
+	}
+
+	log.Printf("Login completed successfully for DID: %s", params.DID)
 	return nil
 }
 
@@ -373,6 +405,46 @@ func (c *Client) UpdateVault(vault Vault) (*Vault, error) {
 		return nil, fmt.Errorf("failed to parse UpdateVault response: %v", err)
 	}
 
+	return &result, nil
+}
+
+// GetVault fetches a vault by id (mirrors api.getVault in TS).
+func (c *Client) GetVault(id string) (*Vault, error) {
+	response, err := c.call("getVault", []interface{}{id})
+	if err != nil {
+		return nil, err
+	}
+	var result Vault
+	if err := c.parseResponse(response.Result, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse GetVault response: %v", err)
+	}
+	return &result, nil
+}
+
+// GetOrg fetches an org by id (mirrors api.getOrg in TS).
+func (c *Client) GetOrg(id string) (*Org, error) {
+	response, err := c.call("getOrg", []interface{}{id})
+	if err != nil {
+		return nil, err
+	}
+	var result Org
+	if err := c.parseResponse(response.Result, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse GetOrg response: %v", err)
+	}
+	return &result, nil
+}
+
+// GetAuthInfo fetches the AuthInfo for the current session (mirrors
+// api.getAuthInfo in TS).
+func (c *Client) GetAuthInfo() (*AuthInfo, error) {
+	response, err := c.call("getAuthInfo", []interface{}{})
+	if err != nil {
+		return nil, err
+	}
+	var result AuthInfo
+	if err := c.parseResponse(response.Result, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse GetAuthInfo response: %v", err)
+	}
 	return &result, nil
 }
 
@@ -492,135 +564,15 @@ func getCurrentTimeISO() string {
 	return time.Now().UTC().Format(time.RFC3339)
 }
 
-// initializeMainVaultWithTOTP initializes main vault and creates TOTP item (ref: app.ts line 1003-1038)
-func (a *App) initializeMainVaultWithTOTP(mfaToken string) error {
-	account := a.API.State.GetAccount()
-	if account == nil {
-		return fmt.Errorf("account is null")
-	}
-
-	// 1. Initialize main vault (ref: server.ts line 1573-1579)
-	vault := &Vault{
-		Kind:    "vault", // Serializable.kind getter (ref: vault.ts line 18-20)
-		ID:      generateUUID(),
-		Name:    "My Vault",
-		Owner:   account.ID,
-		Created: getCurrentTimeISO(),
-		Updated: getCurrentTimeISO(),
-		Items:   []VaultItem{}, // Initialize empty items array
-		Version: "4.0.0",       // Serialization version (ref: encoding.ts toRaw)
-	}
-
-	// 2. Initialize parent class fields (SharedContainer extends BaseContainer)
-	// BaseContainer has: encryptionParams: AESEncryptionParams = new AESEncryptionParams()
-	vault.EncryptionParams = EncryptionParams{
-		Algorithm:      "AES-GCM",
-		TagSize:        128,
-		KeySize:        256,
-		IV:             "", // Empty, will be set when data is encrypted
-		AdditionalData: "", // Empty, will be set when data is encrypted
-		Version:        "4.0.0",
-	}
-
-	// SharedContainer has: keyParams: RSAEncryptionParams = new RSAEncryptionParams()
-	vault.KeyParams = map[string]any{
-		"algorithm": "RSA-OAEP",
-		"hash":      "SHA-256",
-		"kind":      "c",
-		"version":   "4.0.0",
-	}
-
-	// SharedContainer has: accessors: Accessor[] = []
-	vault.Accessors = []map[string]any{} // Empty array, will be populated via updateAccessors()
-
-	log.Printf("Main vault initialized: ID=%s, Name=%s, Owner=%s", vault.ID, vault.Name, vault.Owner)
-
-	// 2. Get authenticator template (ref: app.ts line 1008-1014)
-	template := GetAuthenticatorTemplate()
-	if template == nil {
-		return fmt.Errorf("authenticator template is null")
-	}
-
-	// 3. Set MFA token value (ref: app.ts line 1015)
-	template.Fields[0].Value = mfaToken
-	log.Printf("TOTP template prepared with MFA token: %s...", mfaToken[:min(8, len(mfaToken))])
-
-	// 4. Create vault item (ref: app.ts line 1024-1033)
-	item, err := a.createVaultItem(CreateVaultItemParams{
-		Name:   account.Name,
-		Vault:  vault,
-		Fields: template.Fields,
-		Tags:   []string{},
-		Icon:   template.Icon,
-		Type:   VaultTypeTerminusTotp,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create vault item: %v", err)
-	}
-
-	log.Printf("TOTP vault item created: ID=%s, Name=%s", item.ID, item.Name)
-	log.Printf("TOTP field value: %s", item.Fields[0].Value)
-
-	// 5. Add item to vault
-	vault.Items = append(vault.Items, *item)
-
-	// 6. Update vault on server (ref: app.ts line 2138: await this.addItems([item], vault))
-	// Note: The vault is created empty without encryption. Items will be encrypted when
-	// the user unlocks the vault for the first time via vault.unlock() -> vault.updateAccessors()
-	err = a.updateVault(vault)
-	if err != nil {
-		return fmt.Errorf("failed to update vault on server: %v", err)
-	}
-
-	log.Printf("Vault updated on server successfully")
-	return nil
-}
-
-// CreateVaultItemParams parameters for creating a vault item
-type CreateVaultItemParams struct {
-	Name   string
-	Vault  *Vault
-	Fields []Field
-	Tags   []string
-	Icon   string
-	Type   VaultType
-}
-
-// createVaultItem creates a new vault item (ref: app.ts line 2096-2141)
-func (a *App) createVaultItem(params CreateVaultItemParams) (*VaultItem, error) {
-	account := a.API.State.GetAccount()
-	if account == nil {
-		return nil, fmt.Errorf("account is null")
-	}
-
-	// Create vault item (ref: item.ts line 451-475)
-	item := &VaultItem{
-		ID:        generateUUID(),
-		Name:      params.Name,
-		Type:      params.Type,
-		Icon:      params.Icon,
-		Fields:    params.Fields,
-		Tags:      params.Tags,
-		Updated:   getCurrentTimeISO(),
-		UpdatedBy: account.ID,
-	}
-
-	log.Printf("Vault item created: ID=%s, Name=%s, Type=%d", item.ID, item.Name, item.Type)
-	return item, nil
-}
-
-// updateVault updates vault on server (ref: app.ts line 1855-2037)
+// updateVault is a thin wrapper that bumps revision/updated and pushes to
+// the server. The Vault must already be Commit()-ed by the caller.
 func (a *App) updateVault(vault *Vault) error {
-	// Update vault revision
 	vault.Revision = generateUUID()
 	vault.Updated = getCurrentTimeISO()
-
-	// Call server API to update vault
 	updatedVault, err := a.API.UpdateVault(*vault)
 	if err != nil {
 		return fmt.Errorf("failed to update vault on server: %v", err)
 	}
-
 	log.Printf("Vault updated on server: ID=%s, Revision=%s", updatedVault.ID, updatedVault.Revision)
 	return nil
 }
@@ -706,21 +658,8 @@ func (a *App) initializeAccount(account *Account, masterPassword string) error {
 	return nil
 }
 
-// encryptAESGCM encrypts data using AES-GCM
+// encryptAESGCM is kept for callers that already have a *App receiver; it
+// just delegates to the package-level aesGCMEncrypt helper.
 func (a *App) encryptAESGCM(key, plaintext, iv, additionalData []byte) ([]byte, error) {
-	// Import crypto/aes and crypto/cipher packages are needed at the top of the file
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cipher: %v", err)
-	}
-
-	gcm, err := cipher.NewGCMWithNonceSize(block, 16)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create GCM: %v", err)
-	}
-
-	// Encrypt the plaintext using AES-GCM
-	ciphertext := gcm.Seal(nil, iv, plaintext, additionalData)
-
-	return ciphertext, nil
+	return aesGCMEncrypt(key, plaintext, iv, additionalData)
 }

@@ -190,20 +190,18 @@ func UserBindTerminus(mnemonic, bflUrl, vaultUrl, authUrl, osPwd, terminusName, 
 
 	// 2. Initialize platform and App (if not already initialized)
 	var app *App
+	state, err := LoadAppState(globalStorage, globalUserStore.GetDid())
+	if err != nil {
+		return "", fmt.Errorf("failed to load app state: %w", err)
+	}
 	if platform == nil {
 		log.Printf("Initializing platform...")
-
-		// Create App using vaultUrl as base URL
-		app = NewAppWithBaseURL(vaultUrl)
-
-		// Create and set WebPlatform (no need to pass mnemonic, uses global storage)
+		app = NewAppWithState(vaultUrl, state)
 		webPlatform := NewWebPlatform(app.API)
 		SetPlatform(webPlatform)
-
 		log.Printf("Platform initialized successfully with base URL: %s", vaultUrl)
 	} else {
-		// If platform already initialized, create new App instance for signup
-		app = NewAppWithBaseURL(vaultUrl)
+		app = NewAppWithState(vaultUrl, state)
 	}
 
 	log.Printf("Using bflUrl: %s", bflUrl)
