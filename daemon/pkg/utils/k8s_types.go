@@ -1,7 +1,7 @@
 package utils
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	clistate "github.com/beclab/Olares/cli/pkg/daemon/state"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -15,7 +15,9 @@ var (
 	}
 )
 
-type NodePressure struct {
-	Type    corev1.NodeConditionType `json:"type"`
-	Message string                   `json:"message"`
-}
+// NodePressure is a daemon-local alias of the canonical wire type
+// shared with the olares-cli module. The Type field is plain string
+// rather than corev1.NodeConditionType because the JSON wire format
+// uses a string anyway and the cli module avoids depending on
+// k8s.io/api/core/v1.
+type NodePressure = clistate.NodePressure

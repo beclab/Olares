@@ -92,7 +92,7 @@ func (i *install) watch(ctx context.Context) {
 						return
 					} else {
 						state.CurrentState.InstallingState = state.Failed
-						state.CurrentState.ChangeTerminusStateTo(state.InstallFailed)
+						state.ChangeTerminusStateTo(state.InstallFailed)
 					}
 				}
 				return
