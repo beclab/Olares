@@ -274,7 +274,13 @@ func (a *App) Login(params LoginParams) error {
 					log.Printf("Login: failed to unlock new mainVault for merge: %v", err)
 				}
 			}
-			if mv.items != nil && localvault.items != nil {
+			// Only drop the legacy localvault once we are sure every item
+			// has been safely migrated into the new mainVault. If any
+			// unlock or CreateItem call failed we keep the localvault
+			// around so the next Login attempt can retry the merge.
+			mergeReady := mv.items != nil && localvault.items != nil
+			migrationFailed := false
+			if mergeReady {
 				for id, item := range localvault.items.Items {
 					if _, exists := mv.items.Items[id]; exists {
 						continue
@@ -296,12 +302,18 @@ func (a *App) Login(params LoginParams) error {
 						Type:   itemType,
 					}); err != nil {
 						log.Printf("Login: failed to migrate localvault item %s: %v", id, err)
+						migrationFailed = true
 					}
 				}
+			} else {
+				log.Printf("Login: skipping localvault merge (mv.items=%v, localvault.items=%v); keeping localvault for retry",
+					mv.items != nil, localvault.items != nil)
 			}
-			a.State.RemoveVault(localvault.ID)
-			if err := a.State.Save(); err != nil {
-				log.Printf("Login: failed to persist app state after merge: %v", err)
+			if mergeReady && !migrationFailed {
+				a.State.RemoveVault(localvault.ID)
+				if err := a.State.Save(); err != nil {
+					log.Printf("Login: failed to persist app state after merge: %v", err)
+				}
 			}
 		}
 	}
