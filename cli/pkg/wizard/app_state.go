@@ -46,7 +46,7 @@ func NewAppState(storage Storage, did string) *AppState {
 	}
 	return &AppState{
 		ID:      id,
-		Device:  &DeviceInfo{ID: "cli-device-" + generateUUID(), Platform: "go-cli"},
+		Device:  &DeviceInfo{ID: "cli-device-" + generateUUID(), Platform: "olares-cli"},
 		storage: storage,
 	}
 }
@@ -66,7 +66,10 @@ func LoadAppState(storage Storage, did string) (*AppState, error) {
 	}
 	state.storage = storage
 	if state.Device == nil {
-		state.Device = &DeviceInfo{ID: "cli-device-" + generateUUID(), Platform: "go-cli"}
+		state.Device = &DeviceInfo{ID: "cli-device-" + generateUUID(), Platform: "olares-cli"}
+	} else if state.Device.Platform == "go-cli" {
+		// Migrate legacy platform identifier from previous CLI versions.
+		state.Device.Platform = "olares-cli"
 	}
 	return state, nil
 }
@@ -115,7 +118,7 @@ func (s *AppState) GetDevice() *DeviceInfo {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.Device == nil {
-		s.Device = &DeviceInfo{ID: "cli-device-" + generateUUID(), Platform: "go-cli"}
+		s.Device = &DeviceInfo{ID: "cli-device-" + generateUUID(), Platform: "olares-cli"}
 	}
 	return s.Device
 }
