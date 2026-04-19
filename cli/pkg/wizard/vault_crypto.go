@@ -95,19 +95,6 @@ func (acc *Account) Unlock(password string) (*UnlockedAccount, error) {
 	}, nil
 }
 
-// CopySecrets transfers in-memory secrets and master key from `other` so
-// that a freshly-fetched Account can be re-used without re-deriving them
-// (mirrors Account.copySecrets in TS).
-func (acc *Account) CopySecrets(unlocked *UnlockedAccount) {
-	if unlocked == nil {
-		return
-	}
-	// no-op for the dehydrated server account; the unlocked struct already
-	// carries the secrets out of band, so callers should keep the
-	// UnlockedAccount around in AppState.
-	_ = acc
-}
-
 // =============================================================================
 // Vault crypto
 // =============================================================================
