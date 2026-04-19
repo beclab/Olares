@@ -1,15 +1,15 @@
-package user
+package wizard
 
 import (
 	"fmt"
 	"log"
 	"strings"
 
-	"github.com/beclab/Olares/cli/pkg/wizard"
+	wizardpkg "github.com/beclab/Olares/cli/pkg/wizard"
 	"github.com/spf13/cobra"
 )
 
-type activateUserOptions struct {
+type activateOptions struct {
 	Mnemonic      string
 	BflUrl        string
 	VaultUrl      string
@@ -25,11 +25,11 @@ type activateUserOptions struct {
 	Jws          string
 }
 
-func NewCmdActivateUser() *cobra.Command {
-	o := &activateUserOptions{}
+func NewCmdActivate() *cobra.Command {
+	o := &activateOptions{}
 	cmd := &cobra.Command{
 		Use:   "activate {Olares ID (e.g., user@example.com)}",
-		Short: "activate a new user",
+		Short: "run the activation wizard end-to-end",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			o.OlaresId = args[0]
@@ -45,7 +45,7 @@ func NewCmdActivateUser() *cobra.Command {
 	return cmd
 }
 
-func (o *activateUserOptions) AddFlags(cmd *cobra.Command) {
+func (o *activateOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Mnemonic, "mnemonic", "", "12-word mnemonic phrase, required for activation")
 	cmd.Flags().StringVar(&o.BflUrl, "bfl", "http://127.0.0.1:30180", "Bfl URL (e.g., https://example.com, default: http://127.0.0.1:30180)")
 	cmd.Flags().StringVar(&o.VaultUrl, "vault", "http://127.0.0.1:30180", "Vault URL (e.g., https://example.com, default: http://127.0.0.1:30181)")
@@ -59,7 +59,7 @@ func (o *activateUserOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.ResetPassword, "reset-password", "", "New password for resetting (required for password reset)")
 }
 
-func (o *activateUserOptions) Validate() error {
+func (o *activateOptions) Validate() error {
 	if o.OlaresId == "" {
 		return fmt.Errorf("Olares ID is required")
 	}
@@ -75,7 +75,7 @@ func (o *activateUserOptions) Validate() error {
 	return nil
 }
 
-func (c *activateUserOptions) Run() error {
+func (c *activateOptions) Run() error {
 	log.Println("=== TermiPass CLI - User Bind Terminus ===")
 
 	localName := c.OlaresId
@@ -91,12 +91,12 @@ func (c *activateUserOptions) Run() error {
 	log.Printf("  Local Name: %s", localName)
 
 	log.Printf("Initializing global stores with mnemonic...")
-	err := wizard.InitializeGlobalStores(c.Mnemonic, c.OlaresId)
+	err := wizardpkg.InitializeGlobalStores(c.Mnemonic, c.OlaresId)
 	if err != nil {
 		return fmt.Errorf("failed to initialize global stores: %v", err)
 	}
 
-	accessToken, err := wizard.UserBindTerminus(c.Mnemonic, c.BflUrl, c.VaultUrl, c.AuthUrl, c.Password, c.OlaresId, localName)
+	accessToken, err := wizardpkg.UserBindTerminus(c.Mnemonic, c.BflUrl, c.VaultUrl, c.AuthUrl, c.Password, c.OlaresId, localName)
 	if err != nil {
 		return fmt.Errorf("user bind failed: %v", err)
 	}
@@ -104,7 +104,7 @@ func (c *activateUserOptions) Run() error {
 	log.Printf("✅ Vault activation completed successfully!")
 	log.Printf("🚀 Starting system activation wizard...")
 
-	wizardConfig := wizard.CustomWizardConfig(c.Location, c.Language, c.EnableTunnel, c.Host, c.Jws, c.Password, c.ResetPassword)
+	wizardConfig := wizardpkg.CustomWizardConfig(c.Location, c.Language, c.EnableTunnel, c.Host, c.Jws, c.Password, c.ResetPassword)
 
 	log.Printf("Wizard configuration:")
 	log.Printf("  Location: %s", wizardConfig.System.Location)
@@ -115,7 +115,7 @@ func (c *activateUserOptions) Run() error {
 		log.Printf("  FRP JWS: %s", wizardConfig.System.FRP.Jws)
 	}
 
-	err = wizard.RunActivationWizard(c.BflUrl, accessToken, wizardConfig)
+	err = wizardpkg.RunActivationWizard(c.BflUrl, accessToken, wizardConfig)
 	if err != nil {
 		return fmt.Errorf("activation wizard failed: %v", err)
 	}
