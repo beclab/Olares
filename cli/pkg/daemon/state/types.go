@@ -232,12 +232,3 @@ type NodePressure struct {
 	// Message is the human-readable explanation provided by kubelet.
 	Message string `json:"message"`
 }
-
-// APIResponse is the envelope wrapper olaresd uses for its JSON
-// responses. The /system/status endpoint always returns
-// {code: 200, message: "success", data: <State>}.
-type APIResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Data    State  `json:"data"`
-}
