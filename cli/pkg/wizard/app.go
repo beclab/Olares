@@ -584,19 +584,6 @@ func getCurrentTimeISO() string {
 	return time.Now().UTC().Format(time.RFC3339)
 }
 
-// updateVault is a thin wrapper that bumps revision/updated and pushes to
-// the server. The Vault must already be Commit()-ed by the caller.
-func (a *App) updateVault(vault *Vault) error {
-	vault.Revision = generateUUID()
-	vault.Updated = getCurrentTimeISO()
-	updatedVault, err := a.API.UpdateVault(*vault)
-	if err != nil {
-		return fmt.Errorf("failed to update vault on server: %v", err)
-	}
-	log.Printf("Vault updated on server: ID=%s, Revision=%s", updatedVault.ID, updatedVault.Revision)
-	return nil
-}
-
 // min returns the minimum of two integers
 func min(a, b int) int {
 	if a < b {
