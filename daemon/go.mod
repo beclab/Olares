@@ -5,13 +5,13 @@ go 1.24.11
 replace (
 	bytetrade.io/web3os/backups-sdk => github.com/Above-Os/backups-sdk v0.1.17
 	bytetrade.io/web3os/bfl => github.com/beclab/bfl v0.3.36
+	github.com/beclab/Olares/cli => ../cli
 	github.com/labstack/echo/v4 => github.com/eball/echo/v4 v4.13.4-patch
 	k8s.io/api => k8s.io/api v0.34.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.34.0
 	k8s.io/client-go => k8s.io/client-go v0.34.0
 	kubesphere.io/api => ../../kubesphere-ext/staging/src/kubesphere.io/api/
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.19.6
-
 )
 
 require (
@@ -19,7 +19,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/beclab/Olares/cli v0.0.0-20251230161135-5264df60cc33
-	github.com/beclab/Olares/framework/app-service v0.0.0-20251225061130-909b7656fd70
+	github.com/beclab/Olares/framework/app-service v0.0.0-20260311124303-23a6533bc2ad
 	github.com/containerd/containerd v1.7.29
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/dustin/go-humanize v1.0.1
@@ -46,7 +46,7 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v4 v4.25.7
 	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/pflag v1.0.7
+	github.com/spf13/pflag v1.0.10
 	github.com/txn2/txeh v1.5.5
 	github.com/vishvananda/netlink v1.3.0
 	go.opentelemetry.io/otel/trace v1.40.0
@@ -173,7 +173,7 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect
 	go.opentelemetry.io/otel v1.40.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.34.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.35.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.34.0 // indirect
 	go.opentelemetry.io/otel/metric v1.40.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.40.0 // indirect

@@ -45,7 +45,7 @@ func (i *uninstall) Execute(ctx context.Context, p any) (res any, err error) {
 		return nil, err
 	}
 
-	state.CurrentState.ChangeTerminusStateTo(state.Uninstalling)
+	state.ChangeTerminusStateTo(state.Uninstalling)
 	state.CurrentState.UninstallingState = state.InProgress
 	state.CurrentState.UninstallingProgress = "1%"
 	state.CurrentState.UninstallingProgressNum = 1
@@ -67,7 +67,7 @@ func (i *uninstall) watch(ctx context.Context) {
 			}
 
 			if !installed {
-				state.CurrentState.ChangeTerminusStateTo(state.NotInstalled)
+				state.ChangeTerminusStateTo(state.NotInstalled)
 				state.CurrentState.UninstallingState = state.Completed
 				state.CurrentState.UninstallingProgress = "100%"
 				state.CurrentState.UninstallingProgressNum = 100
@@ -124,7 +124,7 @@ func (i *uninstall) tailLog() (finished bool) {
 						state.CurrentState.UninstallingState = state.InProgress
 					} else {
 						state.CurrentState.UninstallingState = state.Completed
-						state.CurrentState.ChangeTerminusStateTo(state.NotInstalled)
+						state.ChangeTerminusStateTo(state.NotInstalled)
 						return true
 					}
 				}

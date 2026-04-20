@@ -75,7 +75,7 @@ func (i *changeIp) Execute(ctx context.Context, p any) (res any, err error) {
 		klog.Error("cannot backup prev ip, ", err)
 	}
 
-	state.CurrentState.ChangeTerminusStateTo(state.IPChanging)
+	state.ChangeTerminusStateTo(state.IPChanging)
 
 	// remove PREV_IP_CHANGE_FAILED tag file if exists
 	if _, err = os.Stat(commands.PREV_IP_CHANGE_FAILED); err == nil {
@@ -114,7 +114,7 @@ func (i *changeIp) watch(ctx context.Context) {
 					// double check
 					if i.tailLog() {
 						klog.Info("change ip command finished, change state")
-						state.CurrentState.ChangeTerminusStateTo(successState)
+						state.ChangeTerminusStateTo(successState)
 						return
 					} else {
 						klog.Warning("check log file, process not succeed")
@@ -123,12 +123,12 @@ func (i *changeIp) watch(ctx context.Context) {
 					}
 				}
 				klog.Warning("change ip killed")
-				state.CurrentState.ChangeTerminusStateTo(state.SystemError)
+				state.ChangeTerminusStateTo(state.SystemError)
 				return
 			case <-ticker.C:
 				if i.tailLog() {
 					klog.Info("watch log succeed")
-					state.CurrentState.ChangeTerminusStateTo(successState)
+					state.ChangeTerminusStateTo(successState)
 					return
 				}
 			}
@@ -175,7 +175,7 @@ func (i *changeIp) tailLog() (finished bool) {
 func (i *changeIp) setFailedState() {
 	if i.isRetryChange {
 		klog.Error("retry ip change failed")
-		state.CurrentState.ChangeTerminusStateTo(state.SystemError)
+		state.ChangeTerminusStateTo(state.SystemError)
 	} else {
 		// create a ip change failed tag file, make the ip-change command can
 		// be resumed if the device get reboot
@@ -184,6 +184,6 @@ func (i *changeIp) setFailedState() {
 			klog.Error("write ip change failed tag file error, ", err)
 		}
 
-		state.CurrentState.ChangeTerminusStateTo(state.IPChangeFailed)
+		state.ChangeTerminusStateTo(state.IPChangeFailed)
 	}
 }
