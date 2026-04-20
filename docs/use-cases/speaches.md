@@ -29,7 +29,7 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-- A GPU is required for the default installation and usage flow.
+- Olares is running on a device with an NVIDIA GPU.
 - [Ollama installed and running](ollama.md) with at least one chat model downloaded (required for Audio Chat only).
 
 ## Install Speaches
@@ -282,12 +282,6 @@ Example output:
 2. Refresh the Speaches page to update the model list.
 
 ## FAQs
-
-### Why won't Speaches start on a device without an NVIDIA GPU?
-
-Speaches uses NVIDIA GPU acceleration by default. If your device uses a non-NVIDIA GPU, it cannot use the default GPU acceleration and the app may fail to start.
-
-In this case, switch Speaches to CPU mode instead. See [Switch to CPU mode](#switch-to-cpu-mode).
 
 ### Can I use a different Ollama instance for Audio Chat?
 
