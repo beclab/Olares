@@ -843,54 +843,56 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		return nil, chart, err
 	}
 
-	// set suppertedGpu to ["nvidia","nvidia-gb10"] by default
-	if len(cfg.Spec.SupportedGpu) == 0 {
-		cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType}
-	}
+	if !config.IsNewManifestVersion(cfg.ConfigVersion) {
+		// set suppertedGpu to ["nvidia","nvidia-gb10"] by default
+		if len(cfg.Spec.SupportedGpu) == 0 {
+			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType}
+		}
 
-	// try to get selected GPU type special resource requirement
-	if opt.SelectedGpu != "" {
-		found := false
-		for _, supportedGpu := range cfg.Spec.SupportedGpu {
-			if str, ok := supportedGpu.(string); ok && str == opt.SelectedGpu {
-				found = true
-				break
-			}
-
-			if supportedGpuResourceMap, ok := supportedGpu.(map[string]interface{}); ok {
-				if resourceRequirement, ok := supportedGpuResourceMap[opt.SelectedGpu].(map[string]interface{}); ok {
+		// try to get selected GPU type special resource requirement
+		if opt.SelectedGpu != "" {
+			found := false
+			for _, supportedGpu := range cfg.Spec.SupportedGpu {
+				if str, ok := supportedGpu.(string); ok && str == opt.SelectedGpu {
 					found = true
-					var specialResource appcfg.SpecialResource
-					err := mapstructure.Decode(resourceRequirement, &specialResource)
-					if err != nil {
-						return nil, chart, fmt.Errorf("failed to decode special resource for selected GPU type %s: %v", opt.SelectedGpu, err)
-					}
+					break
+				}
 
-					for _, resSetter := range []struct {
-						v **resource.Quantity
-						s *string
-					}{
-						{v: &mem, s: specialResource.RequiredMemory},
-						{v: &disk, s: specialResource.RequiredDisk},
-						{v: &cpu, s: specialResource.RequiredCPU},
-						{v: &gpu, s: specialResource.RequiredGPU},
-					} {
+				if supportedGpuResourceMap, ok := supportedGpu.(map[string]interface{}); ok {
+					if resourceRequirement, ok := supportedGpuResourceMap[opt.SelectedGpu].(map[string]interface{}); ok {
+						found = true
+						var specialResource appcfg.SpecialResource
+						err := mapstructure.Decode(resourceRequirement, &specialResource)
+						if err != nil {
+							return nil, chart, fmt.Errorf("failed to decode special resource for selected GPU type %s: %v", opt.SelectedGpu, err)
+						}
 
-						if resSetter.s != nil && *resSetter.s != "" {
-							*resSetter.v, err = valuePtr(resource.ParseQuantity(*resSetter.s))
-							if err != nil {
-								return nil, chart, fmt.Errorf("failed to parse special resource quantity %s: %v", *resSetter.s, err)
+						for _, resSetter := range []struct {
+							v **resource.Quantity
+							s *string
+						}{
+							{v: &mem, s: specialResource.RequiredMemory},
+							{v: &disk, s: specialResource.RequiredDisk},
+							{v: &cpu, s: specialResource.RequiredCPU},
+							{v: &gpu, s: specialResource.RequiredGPU},
+						} {
+
+							if resSetter.s != nil && *resSetter.s != "" {
+								*resSetter.v, err = valuePtr(resource.ParseQuantity(*resSetter.s))
+								if err != nil {
+									return nil, chart, fmt.Errorf("failed to parse special resource quantity %s: %v", *resSetter.s, err)
+								}
 							}
 						}
-					}
 
-					break
-				} // end if selected gpu's resource requirement found
-			} // end if supportedGpu is map
-		} // end for supportedGpu
+						break
+					} // end if selected gpu's resource requirement found
+				} // end if supportedGpu is map
+			} // end for supportedGpu
 
-		if !found {
-			return nil, chart, fmt.Errorf("selected GPU type %s is not supported", opt.SelectedGpu)
+			if !found {
+				return nil, chart, fmt.Errorf("selected GPU type %s is not supported", opt.SelectedGpu)
+			}
 		}
 	}
 
