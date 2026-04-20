@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	clistate "github.com/beclab/Olares/cli/pkg/daemon/state"
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/nets"
@@ -19,68 +20,11 @@ import (
 	"github.com/pbnjay/memory"
 )
 
-type state struct {
-	TerminusdState      TerminusDState `json:"terminusdState"`
-	TerminusState       TerminusState  `json:"terminusState"`
-	TerminusName        *string        `json:"terminusName,omitempty"`
-	TerminusVersion     *string        `json:"terminusVersion,omitempty"`
-	InstalledTime       *int64         `json:"installedTime,omitempty"`
-	InitializedTime     *int64         `json:"initializedTime,omitempty"`
-	OlaresdVersion      *string        `json:"olaresdVersion,omitempty"`
-	InstallFinishedTime *time.Time     `json:"-"`
-
-	// sys info
-	DeviceName *string `json:"device_name,omitempty"`
-	HostName   *string `json:"host_name,omitempty"`
-	OsType     string  `json:"os_type"`
-	OsArch     string  `json:"os_arch"`
-	OsInfo     string  `json:"os_info"`
-	OsVersion  string  `json:"os_version"`
-	CpuInfo    string  `json:"cpu_info"`
-	GpuInfo    *string `json:"gpu_info,omitempty"`
-	Memory     string  `json:"memory"`
-	Disk       string  `json:"disk"`
-
-	// network info
-	WikiConnected       bool      `json:"wifiConnected"`
-	WifiSSID            *string   `json:"wifiSSID,omitempty"`
-	WiredConnected      bool      `json:"wiredConnected"`
-	HostIP              string    `json:"hostIp"`
-	ExternalIP          string    `json:"externalIp"`
-	ExternalIPProbeTime time.Time `json:"-"`
-
-	// installing / uninstalling / upgrading state
-	InstallingState         ProcessingState `json:"installingState"`
-	InstallingProgress      string          `json:"installingProgress"`
-	InstallingProgressNum   int             `json:"-"`
-	UninstallingState       ProcessingState `json:"uninstallingState"`
-	UninstallingProgress    string          `json:"uninstallingProgress"`
-	UninstallingProgressNum int             `json:"-"`
-	UpgradingTarget         string          `json:"upgradingTarget"`
-	UpgradingRetryNum       int             `json:"upgradingRetryNum"`
-	UpgradingNextRetryAt    *time.Time      `json:"upgradingNextRetryAt,omitempty"`
-	UpgradingState          ProcessingState `json:"upgradingState"`
-	UpgradingStep           string          `json:"upgradingStep"`
-	UpgradingProgress       string          `json:"upgradingProgress"`
-	UpgradingProgressNum    int             `json:"-"`
-	UpgradingError          string          `json:"upgradingError"`
-
-	UpgradingDownloadState       ProcessingState `json:"upgradingDownloadState"`
-	UpgradingDownloadStep        string          `json:"upgradingDownloadStep"`
-	UpgradingDownloadProgress    string          `json:"upgradingDownloadProgress"`
-	UpgradingDownloadProgressNum int             `json:"-"`
-	UpgradingDownloadError       string          `json:"upgradingDownloadError"`
-
-	CollectingLogsState ProcessingState `json:"collectingLogsState"`
-	CollectingLogsError string          `json:"collectingLogsError"`
-
-	DefaultFRPServer string `json:"defaultFrpServer"`
-	FRPEnable        string `json:"frpEnable"`
-
-	ContainerMode *string `json:"containerMode,omitempty"`
-
-	Pressure []utils.NodePressure `json:"pressures,omitempty"`
-}
+// state is a daemon-local alias of the canonical wire-format struct
+// defined in cli/pkg/daemon/state. Keeping it as an alias means
+// existing daemon code keeps using the same field names without
+// changes, while the CLI shares the exact same data type.
+type state = clistate.State
 
 var CurrentState state
 var StateTrigger chan struct{}
@@ -92,11 +36,15 @@ func init() {
 	StateTrigger = make(chan struct{})
 }
 
-func (c *state) ChangeTerminusStateTo(s TerminusState) {
+// ChangeTerminusStateTo updates the global TerminusState under the
+// shared mutex. It used to be a method on state, but methods cannot
+// be defined on a type alias whose underlying type lives in another
+// package, so it is now a package-level function.
+func ChangeTerminusStateTo(s TerminusState) {
 	TerminusStateMu.Lock()
 	defer TerminusStateMu.Unlock()
 
-	c.TerminusState = s
+	CurrentState.TerminusState = s
 }
 
 func bToGb(b uint64) string {
@@ -193,7 +141,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 	}
 
 	// clear value
-	CurrentState.WikiConnected = false
+	CurrentState.WifiConnected = false
 	CurrentState.WifiSSID = nil
 	CurrentState.WiredConnected = false
 	for _, i := range ips {
@@ -201,7 +149,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 			if d, ok := devices[i.Iface.Name]; ok {
 				switch d.Type {
 				case "wifi":
-					CurrentState.WikiConnected = true
+					CurrentState.WifiConnected = true
 					CurrentState.WifiSSID = &d.Connection
 				case "ethernet":
 					CurrentState.WiredConnected = true
@@ -212,7 +160,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 
 		// for macos
 		if strings.HasPrefix(i.Iface.Name, "wl") {
-			CurrentState.WikiConnected = true
+			CurrentState.WifiConnected = true
 			CurrentState.WifiSSID = utils.WifiName()
 		}
 

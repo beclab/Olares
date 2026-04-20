@@ -19,5 +19,6 @@ func NewOSCommands() []*cobra.Command {
 		NewCmdStart(),
 		NewCmdStop(),
 		NewCmdUpgradeOs(),
+		NewCmdStatus(),
 	}
 }

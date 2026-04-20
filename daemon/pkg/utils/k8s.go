@@ -541,7 +541,7 @@ func GetNodesPressure(ctx context.Context, client kubernetes.Interface) (map[str
 	for _, node := range nodes.Items {
 		for _, condition := range node.Status.Conditions {
 			if condition.Type != corev1.NodeReady && condition.Status == corev1.ConditionTrue {
-				status[node.Name] = append(status[node.Name], NodePressure{Type: condition.Type, Message: condition.Message})
+				status[node.Name] = append(status[node.Name], NodePressure{Type: string(condition.Type), Message: condition.Message})
 			}
 		}
 	}

@@ -60,6 +60,7 @@ Olares 命令行工具使用如下语法：
 | `prepare` | `olares-cli prepare [选项]` | 为安装过程准备环境，包括设置 Olares 的基础服务和配置。 |
 | `release` | `olares-cli release [选项]` | 打包 Olares 安装资源以供分发或部署。|
 | `start` | `olares-cli start [选项]` | 启动 Olares 服务和组件。 |
+| `status` | `olares-cli status [选项]` | 查询本机 olaresd 守护进程，输出当前 Olares 系统状态。 |
 | `stop` | `olares-cli stop [选项]` | 停止 Olares 服务和组件。 |
 | `uninstall` | `olares-cli uninstall [选项]` | 完全卸载 Olares，或将安装回滚到特定阶段。 |
 | `upgrade` | `olares-cli upgrade <子命令> [选项]` | 升级 Olares，检查升级准备情况与兼容性。 |
