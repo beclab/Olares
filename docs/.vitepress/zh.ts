@@ -434,17 +434,24 @@ const side = {
       collapsed: true,
       items: [
         {
-          text: "管理账户",
+          text: "设置账户",
           collapsed: true,
           items: [
             { text: "创建账户", link: "/zh/manual/larepass/create-account" },
             { text: "使用自定义域名创建", link: "/zh/manual/larepass/create-org-account" },
             { text: "导入账户", link: "/zh/manual/larepass/import-account" },
-            { text: "备份助记词", link: "/zh/manual/larepass/back-up-mnemonics" },
-            { text: "管理集成", link: "/zh/manual/larepass/integrations" },
           ],
         },
-        { text: "使用专用网络", link: "/zh/manual/larepass/private-network" },
+        {
+          text: "管理账户",
+          collapsed: true,
+          items: [
+            { text: "切换账户", link: "/zh/manual/larepass/switch-account" },
+            { text: "备份助记词", link: "/zh/manual/larepass/back-up-mnemonics" },
+            
+          ],
+        },
+        { text: "管理集成", link: "/zh/manual/larepass/integrations" },
         {
           text: "管理设备",
           collapsed: true,
@@ -453,6 +460,7 @@ const side = {
             { text: "管理 Olares", link: "/zh/manual/larepass/manage-olares" },
           ],
         },
+        { text: "使用专用网络", link: "/zh/manual/larepass/private-network" },
         { text: "管理文件", link: "/zh/manual/larepass/manage-files" },
         //    collapsed: true,
         //    items: [
