@@ -44,6 +44,13 @@ After installation, you will see two icons on Launchpad:
 - Speaches: The main interface for speech-to-text, text-to-speech, and audio chat.
 - Speaches Terminal: A command-line terminal for managing models.
 
+:::info  Model setup on first launch
+When you open Speaches for the first time, it downloads and initializes its built-in models. Depending on your network connection, this process may take some time.
+
+If initialization does not finish within 30 minutes, it may time out and be canceled automatically. If this happens, wait until your network connection is stable, then open Speaches again to retry initialization.
+:::
+
+
 ## Use Speaches
 
 Speaches ships with two models ready to use out of the box:
