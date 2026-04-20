@@ -216,7 +216,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "*Arrs",
-              link: "/use-cases/arrs",
+              link: "/zh/use-cases/arrs",
             },                        
           ]
         },
