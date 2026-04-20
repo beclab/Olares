@@ -249,6 +249,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "Falco",
+              link: "/use-cases/falco",
+            },
+            {
               text: "FlareSolverr",
               link: "/use-cases/flaresolverr",
             },
