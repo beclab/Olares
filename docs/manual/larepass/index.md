@@ -47,8 +47,8 @@ After installation, click the puzzle icon in your browser toolbar and pin the La
 :::
 -->
 ## Set up account 
-- On mobile devices, you can [create an Olares ID](/manual/larepass/create-account.md#create-an-olares-id) directly in the app.
-- On the desktop client<!-- or Chrome extension-->, you must [import an Olares account](/manual/larepass/create-account.md#import-an-account).
+- On mobile devices, you can [create an Olares ID](create-account.md) directly in the app. To use a custom domain, see [Create an Olares ID with a custom domain](create-org-account.md).
+- On the desktop client<!-- or Chrome extension-->, you must [import an existing account](import-account.md).
 
 ## Feature comparison
 

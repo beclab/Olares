@@ -116,6 +116,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/ace-step",
             },*/
             {
+              text: "AnythingLLM",
+              link: "/zh/use-cases/anythingllm",
+            },
+            {
               text: "Duix.Avatar",
               link: "/zh/use-cases/duix-avatar",
             },
@@ -132,13 +136,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/deerflow2",
             },
             {
-              text: "DeerFlow",
-              link: "/zh/use-cases/deerflow",
-            },
-            {
               text: "IndexTTS2",
               link: "/zh/use-cases/indextts2",
             },
+            // {
+            //   text: "DeerFlow",
+            //   link: "/zh/use-cases/deerflow",
+            // },
           ]
         },
         {
@@ -203,6 +207,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Komga",
               link: "/zh/use-cases/komga",
             },
+            {
+              text: "TREK (NOMAD)",
+              link: "/zh/use-cases/trek",
+              collapsed: true,
+              items: [
+                {
+                  text: "Advanced settings",
+                  link: "/zh/use-cases/trek-advanced-settings",
+                }
+              ]
+            },            
           ]
         },
         {
@@ -210,13 +225,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "Plane",
+              link: "/zh/use-cases/plane",
+            },
+            {  
               text: "Excalidraw",
               link: "/zh/use-cases/excalidraw",
             },
-            {
-              text: "Stirling PDF",
-              link: "/zh/use-cases/stirling-pdf",
-            },
+            // {
+            //   text: "Stirling PDF",
+            //   link: "/zh/use-cases/stirling-pdf",
+            // },
           ],
         },
         {

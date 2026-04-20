@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/emicklei/go-restful/v3"
-	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -69,7 +68,6 @@ func GetBackupPassword(ctx context.Context, owner string, backupName string, tok
 		return true
 	}, func() error {
 		settingsUrl := fmt.Sprintf("http://settings.user-system-%s:28080/api/backup/password", owner)
-		client := resty.New().SetTimeout(15 * time.Second).SetDebug(true)
 
 		req := &proxyRequest{
 			Op:       "getAccount",
@@ -80,7 +78,7 @@ func GetBackupPassword(ctx context.Context, owner string, backupName string, tok
 		}
 
 		log.Info("fetch password from settings, ", settingsUrl)
-		resp, err := client.R().SetContext(ctx).
+		resp, err := util.RestClient.R().SetContext(ctx).
 			SetHeader(restful.HEADER_ContentType, restful.MIME_JSON).
 			SetHeader("Authorization", fmt.Sprintf("Bearer %s", token)).
 			SetBody(req).

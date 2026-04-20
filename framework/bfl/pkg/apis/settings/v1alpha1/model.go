@@ -185,10 +185,9 @@ func NewL4ProxyDeploymentApplyConfiguration(namespace, serviceAccountName string
 					}(),
 					Affinity: &applyCorev1.AffinityApplyConfiguration{
 						NodeAffinity: &applyCorev1.NodeAffinityApplyConfiguration{
-							PreferredDuringSchedulingIgnoredDuringExecution: []applyCorev1.PreferredSchedulingTermApplyConfiguration{
-								{
-									Weight: pointer.Int32(10),
-									Preference: &applyCorev1.NodeSelectorTermApplyConfiguration{
+							RequiredDuringSchedulingIgnoredDuringExecution: &applyCorev1.NodeSelectorApplyConfiguration{
+								NodeSelectorTerms: []applyCorev1.NodeSelectorTermApplyConfiguration{
+									{
 										MatchExpressions: []applyCorev1.NodeSelectorRequirementApplyConfiguration{
 											{
 												Key:      pointer.String("kubernetes.io/os"),

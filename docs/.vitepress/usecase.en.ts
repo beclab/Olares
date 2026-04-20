@@ -126,6 +126,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/ace-step",
             },*/
             {
+              text: "AnythingLLM",
+              link: "/use-cases/anythingllm",
+            },
+            {
               text: "Duix.Avatar",
               link: "/use-cases/duix-avatar",
             },
@@ -142,13 +146,14 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/deerflow2",
             },
             {
-              text: "DeerFlow",
-              link: "/use-cases/deerflow",
-            },
-            {
               text: "IndexTTS2",
               link: "/use-cases/indextts2",
             },
+            // {
+            //   text: "DeerFlow",
+            //   link: "/use-cases/deerflow",
+            // },
+
           ]
         },
         {
@@ -213,6 +218,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Komga",
               link: "/use-cases/komga",
             },
+            {
+              text: "TREK (NOMAD)",
+              link: "/use-cases/trek",
+              collapsed: true,
+              items: [
+                {
+                  text: "Advanced settings",
+                  link: "/use-cases/trek-advanced-settings",
+                }
+              ]
+            },            
           ]
         },
         {
@@ -220,13 +236,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "Plane",
+              link: "/use-cases/plane",
+            },
+            {  
               text: "Excalidraw",
               link: "/use-cases/excalidraw",
             },
-            {
-              text: "Stirling PDF",
-              link: "/use-cases/stirling-pdf",
-            },
+            // {
+            //   text: "Stirling PDF",
+            //   link: "/use-cases/stirling-pdf",
+            // },
           ]
         },
         {

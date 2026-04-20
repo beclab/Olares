@@ -77,9 +77,9 @@ var (
 				Spec: corev1.PodSpec{
 					Affinity: &corev1.Affinity{
 						NodeAffinity: &corev1.NodeAffinity{
-							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.PreferredSchedulingTerm{
-								{
-									Preference: corev1.NodeSelectorTerm{
+							RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+								NodeSelectorTerms: []corev1.NodeSelectorTerm{
+									{
 										MatchExpressions: []corev1.NodeSelectorRequirement{
 											{
 												Key:      "kubernetes.io/os",
@@ -87,12 +87,11 @@ var (
 												Values:   []string{"linux"},
 											},
 											{
-												Key:      "node-role.kubernetes.io/master",
+												Key:      "node-role.kubernetes.io/control-plane",
 												Operator: "Exists",
 											},
 										},
 									},
-									Weight: 10,
 								},
 							},
 						},

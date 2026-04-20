@@ -367,8 +367,6 @@ func (u *UpdateNodeGPUInfo) Execute(runtime connector.Runtime) error {
 	// TODO:
 	gpuType := NvidiaCardType
 	switch {
-	case runtime.GetSystemInfo().IsAmdApu():
-		gpuType = AmdApuCardType
 	case runtime.GetSystemInfo().IsGB10Chip():
 		gpuType = GB10ChipType
 	}

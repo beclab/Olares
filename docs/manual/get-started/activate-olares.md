@@ -10,7 +10,7 @@ Use the Wizard URL and initial one-time password to activate. This process conne
    ![Open wizard](/images/manual/get-started/open-wizard.png#bordered)
 2. Enter the one-time password and click **Continue**.
 
-   ![Enter password](/images/manual/get-started/wizard-enter-password.png#bordered)
+   ![Enter password](/images/manual/get-started/wizard-enter-password1.png#bordered)
 3. Select the system language.
 
    ![Select language](/images/manual/get-started/select-language.png#bordered)
@@ -28,7 +28,7 @@ Use the Wizard URL and initial one-time password to activate. This process conne
    :::
    a. Open LarePass app, and tap **Scan QR code** to scan the QR code on the Wizard page and complete the activation.
 
-   ![Activate Olares](/images/manual/get-started/activate-olares.png#bordered)
+   ![Activate Olares](/images/manual/get-started/activate-olares1.png#bordered)
 
    b. Reset the login password for Olares by following the on-screen instructions on LarePass.
 

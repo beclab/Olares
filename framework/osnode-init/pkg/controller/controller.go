@@ -236,7 +236,7 @@ func (r *NodeInitController) isMasterNode(config *rest.Config) (bool, string, er
 	}
 
 	var nodeLists *corev1.NodeList
-	labels := client.HasLabels{"node-role.kubernetes.io/master"}
+	labels := client.HasLabels{"node-role.kubernetes.io/control-plane"}
 	var opts client.ListOptions
 	labels.ApplyToList(&opts)
 

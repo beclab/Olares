@@ -139,10 +139,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/ace-step",
         },*/
 
-        {
-          text: "Deep research with DeerFlow",
-          link: "/one/deerflow",
-        },
+        // {
+        //   text: "Deep research with DeerFlow",
+        //   link: "/one/deerflow",
+        // },
       ]
     },
     {
@@ -219,6 +219,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Update OS",
           link: "/one/update",
         },
+        {
+          text: "Update firmware",
+          link: "/one/update-firmware",
+        },        
         {
           text: "Back up & restore data",
           link: "/one/backup-resotre",
