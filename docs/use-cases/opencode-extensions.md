@@ -16,6 +16,14 @@ OpenCode supports two types of extensions:
 
 Both can be scoped globally or to individual projects.
 
+## Learning objectives
+
+By the end of this tutorial, you will learn how to:
+- Use the pre-installed `system-admin` and `web-preview` skills.
+- List, load, and locate skill files at the global or project scope.
+- Install plugins as npm packages or as local `.js` / `.ts` files.
+- Identify popular community plugins that extend OpenCode.
+
 ## Skills
 
 OpenCode loads relevant skills automatically during a conversation, so you rarely need to manage them yourself.

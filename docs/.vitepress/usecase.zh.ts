@@ -42,6 +42,29 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "OpenCode",
+              link: "/zh/use-cases/opencode",
+              collapsed: true,
+              items: [
+                {
+                  text: "使用 oh-my-openagent 编排多 Agent",
+                  link: "/zh/use-cases/opencode-omo",
+                },
+                {
+                  text: "包管理",
+                  link: "/zh/use-cases/opencode-packages",
+                },
+                {
+                  text: "技能与插件",
+                  link: "/zh/use-cases/opencode-extensions",
+                },
+                {
+                  text: "常见问题",
+                  link: "/zh/use-cases/opencode-issues",
+                },
+              ]
+            },
+            {
               text: "Open WebUI",
               link: "/zh/use-cases/openwebui",
             },
@@ -79,25 +102,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "LLMFit",
               link: "/zh/use-cases/llmfit",
-            },
-            {  
-              text: "OpenCode",
-              link: "/zh/use-cases/opencode",
-              collapsed: true,
-              items: [
-                {
-                  text: "包管理",
-                  link: "/zh/use-cases/opencode-packages",
-                },
-                {
-                  text: "技能与插件",
-                  link: "/zh/use-cases/opencode-extensions",
-                },
-                {
-                  text: "常见问题",
-                  link: "/zh/use-cases/opencode-issues",
-                },
-              ]
             },
             {
               text: "LobeHub (LobeChat)",

@@ -19,6 +19,14 @@ On Olares, you can use OpenCode in two ways:
 - **Browser**: Install OpenCode as an app on Olares and access it through your browser.
 - **Local CLI**: Install OpenCode on your computer and connect it to Ollama on Olares for a native terminal experience.
 
+## Learning objectives
+
+By the end of this tutorial, you will learn how to:
+- Install OpenCode on Olares and connect it to an Ollama-hosted model.
+- Create projects and run coding tasks through the chat interface or the terminal-based UI (TUI).
+- Use OpenCode from your local computer over the LarePass VPN or from inside VS Code.
+- Edit the OpenCode configuration file to manage providers, models, and tools.
+
 ## Prerequisites
 
 - An Olares device with sufficient disk space and memory
@@ -256,6 +264,7 @@ OpenCode stores its configuration in a JSON file. You can edit this file directl
 
 - [Manage packages](opencode-packages.md): Install system-level and language-specific packages.
 - [Skills and plugins](opencode-extensions.md): Add capabilities through skills and plugins.
+- [Orchestrate multi-agent workflows with oh-my-openagent](opencode-omo.md): Enable OMO to run multi-agent collaboration in OpenCode.
 - [Common issues](opencode-issues.md): Solutions for known problems.
 - [Connect AI coding assistants to up-to-date docs with Context7](context7.md#opencode): Register Context7 as a remote MCP server in OpenCode.
 - [OpenCode official documentation](https://opencode.ai/docs)
