@@ -9,13 +9,5 @@
         }
       ]
     }
-  ],
-
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/manual/docs-home.html",
-      "permanent": true
-    }
   ]
 }
