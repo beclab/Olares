@@ -209,9 +209,9 @@ type SpecialResource struct {
 }
 
 const (
-	InstallClientOnly      string = "clientOnly"
-	InstallServerAndClient string = "clientAndServer"
-	InstallV1              string = "v1"
+	InstallOrUpgradeClientOnly      string = "clientOnly"
+	InstallOrUpgradeServerAndClient string = "clientAndServer"
+	InstallOrUpgradeV1              string = "v1"
 )
 
 type ResourceRequirement struct {

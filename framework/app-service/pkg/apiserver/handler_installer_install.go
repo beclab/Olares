@@ -335,16 +335,16 @@ func (h *installHandlerHelper) getAdminUsers() (admin []string, isAdmin bool, er
 
 func (h *installHandlerHelper) resolveInstallType(appConfig *appcfg.ApplicationConfig) (string, error) {
 	if appConfig.APIVersion == appcfg.V1 || appConfig.APIVersion == "" {
-		return appcfg.InstallV1, nil
+		return appcfg.InstallOrUpgradeV1, nil
 	}
 	exists, err := h.sharedNamespaceExists(appConfig)
 	if err != nil {
 		return "", err
 	}
 	if !exists {
-		return appcfg.InstallServerAndClient, nil
+		return appcfg.InstallOrUpgradeServerAndClient, nil
 	}
-	return appcfg.InstallClientOnly, nil
+	return appcfg.InstallOrUpgradeClientOnly, nil
 }
 
 func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.Application) (err error) {
@@ -541,7 +541,8 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 	case !isAdmin:
 		if len(adminUsers) == 0 {
 			klog.Errorf("No admin user found")
-			api.HandleBadRequest(h.resp, h.req, fmt.Errorf("no admin user found"))
+			err = fmt.Errorf("no admin user found")
+			api.HandleBadRequest(h.resp, h.req, err)
 			return
 		}
 		admin = adminUsers[0]
@@ -802,7 +803,8 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 	} else {
 		if len(adminUsers) == 0 {
 			klog.Errorf("No admin user found")
-			api.HandleBadRequest(h.resp, h.req, fmt.Errorf("no admin user found"))
+			err = fmt.Errorf("no admin user found")
+			api.HandleBadRequest(h.resp, h.req, err)
 			return
 		}
 		admin = adminUsers[0]

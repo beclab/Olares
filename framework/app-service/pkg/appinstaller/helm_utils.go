@@ -148,11 +148,13 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 			"refs":     map[string]interface{}{},
 		}
 	}
+
 	values["client"] = true
-	if appConfig.InstallType == appcfg.InstallServerAndClient {
+	if appConfig.InstallType == appcfg.InstallOrUpgradeServerAndClient {
 		values["server"] = true
 	}
-	if isUpgrade {
+
+	if isUpgrade && isAdmin {
 		values["server"] = true
 	}
 	return values, nil
