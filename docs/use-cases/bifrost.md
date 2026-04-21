@@ -182,7 +182,9 @@ In Open WebUI, add Bifrost as a direct external connection and register both exa
 
 ### Connect Open WebUI to Bifrost
 
-1. Open Open WebUI, click the model selector in the upper-left corner, and then select **Manage Connections**.
+1. In Open WebUI, click the model dropdown at the top of the chat page.
+
+click the model selector in the upper-left corner, and then select **Manage Connections**.
 
    <!-- ![Manage connections in Open WebUI](/images/manual/use-cases/bifrost-openwebui-manage-connections.png#bordered) -->
 
