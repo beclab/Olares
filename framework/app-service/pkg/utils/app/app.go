@@ -714,7 +714,6 @@ type ConfigOptions struct {
 	IsAdmin      bool
 	RawAppName   string
 	SelectedGpu  string
-	InstallType  string
 }
 
 // GetAppConfig get app installation configuration from app store
@@ -755,21 +754,6 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	appcfg.OwnerName = options.Owner
 	appcfg.RepoURL = options.RepoURL
 	return appcfg, chartPath, nil
-}
-
-func GetApiVersionFromAppConfig(ctx context.Context, options *ConfigOptions) (appcfg.APIVersion, *appcfg.ApplicationConfig, error) {
-
-	cfg, _, err := GetAppConfig(ctx, options)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to get app config: %w", err)
-	}
-
-	// default version is v1
-	if cfg.APIVersion == "" {
-		return appcfg.V1, cfg, nil
-	}
-
-	return cfg.APIVersion, cfg, nil
 }
 
 func getAppConfigFromRepo(ctx context.Context, options *ConfigOptions) (*appcfg.ApplicationConfig, string, error) {
