@@ -280,6 +280,12 @@ hf cache rm model/Systran/faster-whisper-medium
 
 ## FAQs
 
+### Why does Audio Chat show an error?
+
+Audio Chat requires Ollama to be running with at least one chat model downloaded. If Ollama is not installed or has no models available, Audio Chat displays an error. 
+
+To fix this issue, install Ollama and download a chat model by following the [Ollama guide](ollama.md). Speaches detects Ollama automatically, so you do not need to restart Speaches.
+
 ### Why do tasks fail after switching to a larger model?
 
 This issue usually happens when the GPU is in **Memory slicing** mode.
@@ -306,12 +312,6 @@ Yes. Update the `CHAT_COMPLETION_BASE_URL` in the deployment configuration:
    ![Edit CHAT_COMPLETION_BASE_URL](/images/manual/use-cases/speaches-edit-base-url.png#bordered){width=90%}
 
 4. Go to **Settings** > **Applications** > **Speaches**, click **Stop**, then click **Resume** to restart Speaches.
-
-### Why does Audio Chat show an error?
-
-Audio Chat requires Ollama to be running with at least one chat model downloaded. If Ollama is not installed or has no models available, Audio Chat displays an error. 
-
-To fix this issue, install Ollama and download a chat model by following the [Ollama guide](ollama.md). Speaches detects Ollama automatically, so you do not need to restart Speaches.
 
 ## Learn more
 
