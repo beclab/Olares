@@ -25,59 +25,64 @@ By the end of this tutorial, you will learn how to:
 - Configure OMO to work with local Ollama models, cloud models, or a hybrid of both.
 - Trigger multi-agent collaboration with the `ultrawork` keyword.
 - Use the built-in context7, grep_app, and websearch MCP servers.
-- Replace the built-in context7 MCP server with a self-hosted Olares deployment.
+- Route doc queries to a self-hosted Context7 alongside OMO.
 
 ## Prerequisites
-
+- Your Olares device must have internet access.
 - [OpenCode installed](opencode.md) on Olares, chart version 1.0.6 or later.
-- Local models that support tool use, [connected to OpenCode](opencode.md#connect-to-ollama). This guide uses Qwen3.5 27B Q4_K_M and Qwen3.5 9B Q4_K_M as an example. In Olares, each of these models is a separate single-model app, so you need to add them as two model providers.
+- Local models that support tool use, [connected to OpenCode](opencode.md#connect-to-a-custom-provider). This guide uses Qwen3.5 27B Q4_K_M and Qwen3.5 9B Q4_K_M as an example. In Olares, each of these models is a separate single-model app, so you need to add them as two model providers.
+
+  :::details Example model provider configuration
+
+  ```json
+  {
+    "$schema": "https://opencode.ai/config.json",
+    "disabled_providers": [],
+    "provider": {
+      "ollama-27b": {
+        "name": "Olares Ollama Qwen3.5 27B",
+        "npm": "@ai-sdk/openai-compatible",
+        "models": {
+          "qwen3.5:27b-q4_K_M": {
+            "name": "Qwen3.5 27B"
+          }
+        },
+        "options": {
+          "baseURL": "http://94a553e00.shared.olares.com/v1"
+        }
+      },
+      "ollama-9b": {
+        "name": "Olares Ollama Qwen3.5 9B",
+        "npm": "@ai-sdk/openai-compatible",
+        "models": {
+          "qwen3.5:9b": {
+            "name": "Qwen3.5 9B"
+          }
+        },
+        "options": {
+          "baseURL": "http://bd5355000.shared.olares.com/v1"
+        }
+      }
+    }
+  }
+  ```
+
+  :::
 
   :::info Model capability requirements
   - Local models with fewer than 7B parameters usually can't handle `tool_use` or structured output correctly. Avoid them for any agent.
   - A context window of at least 32K tokens is recommended. Core agents (Sisyphus, Hephaestus, Prometheus, Atlas) work better with 64K or more.
+  - Local models, especially the Qwen family, sometimes fail to generate `write` tool calls correctly. This is a known Ollama limitation.
   :::
-- Your Olares device has internet access.
 
 ## Understand OMO on Olares
-
-### How Olares manages OMO
-
-When you install OpenCode, Olares pre-configures OMO. The pre-installed items live under the global OpenCode config directory, which maps to `Application/Data/opencode/.config/opencode/` in Olares Files. The rest of this guide uses `~/.config/opencode/` as shorthand for this path.
-
-| Item | Path | Notes |
-|:-----|:-----|:------|
-| Plugin registration | `~/.config/opencode/`<br>`opencode.json`<br>(the `plugin` field) | Registers `"oh-my-openagent"`<br>in the global config. |
-| Agent-to-model mapping | `~/.config/opencode/`<br>`oh-my-openagent.json` | Recommended model per agent<br>plus a runtime fallback chain.<br>Written on first install only. |
-| Environment baseline instructions | `~/.config/opencode/`<br>`olares-baseline-instructions.md` | Web preview, package management,<br>and Olares domain conventions.<br>Refreshed on every startup. |
-| Skill files | `~/.config/opencode/skills/`<br>`web-preview/` and<br>`system-admin/` | Force-updated on every startup. |
-| npm package | `/usr/local/lib/node_modules/`<br>`oh-my-opencode/`<br>(inside the container) | Persisted in the system snapshot. |
-
-All Olares-managed settings live in the global config directory. They are never written to your workspace `opencode.json`. If your workspace config still contains the old Olares-managed instructions, Olares removes them only when they exactly match the previous preset. Anything you added or modified yourself is preserved.
-
-The `oh-my-openagent.json` file is only written on first install. If you later update it through the `install` command or by hand, your changes are not overwritten.
-
-### Agents
-
-OMO ships with a set of specialized agents, each with a prompt tuned for a specific role. The table below lists the main agents and how you access them.
-
-| Agent | Role | How to access |
-|:------|:-----|:--------------|
-| Sisyphus | Main orchestrator.<br>Plans, delegates to subagents,<br>and drives parallel execution<br>in `ultrawork` mode. | Agent selector |
-| Hephaestus | Autonomous deep worker.<br>Handles architectural reasoning<br>and long autonomous coding sessions. | Agent selector |
-| Prometheus | Strategic planner.<br>Interviews you about requirements<br>and produces a detailed plan. | Agent selector |
-| Atlas | Plan executor.<br>Takes over a Prometheus plan<br>and executes it. | Agent selector,<br>or `/start-work` after planning |
-| Oracle | Read-only architecture consultant.<br>Advises on architecture decisions<br>and complex debugging<br>without modifying files. | Auto-dispatched in `ultrawork` |
-| Explore | Code search agent.<br>Retrieves code across the repo. | Auto-dispatched in `ultrawork` |
-| Librarian | Documentation search agent.<br>Searches docs and code. | Auto-dispatched in `ultrawork` |
-
-Other supporting agents (such as Metis for plan gap analysis, Momus for plan review, and Multimodal Looker for vision input) are dispatched automatically by Sisyphus when needed.
 
 ### How models are selected
 
 OMO splits model selection between you and the config file:
 
 - **Main model**: The model for the agent you chat with directly. You pick it in the OpenCode UI's model selector. It is independent of `oh-my-openagent.json`.
-- **Subagent models (`oh-my-openagent.json`)**: When the main agent calls `delegate_task` to hand work off to a subagent (such as Explore or Librarian), the subagent uses the model defined for that agent under the `agents` field in `~/.config/opencode/oh-my-openagent.json`.
+- **Subagent models**: When the main agent calls `delegate_task` to hand work off to a subagent (such as Explore or Librarian), the subagent uses the model defined for that agent under the `agents` field in `~/.config/opencode/oh-my-openagent.json`.
 
 The default `oh-my-openagent.json` ships with a multi-tier fallback chain for each subagent: a paid primary model, paid backup models, and free models provided by OpenCode as the last-resort fallback. If the first model is unavailable at runtime, `runtime_fallback` automatically walks down the chain to the next one. Roughly:
 
@@ -90,8 +95,6 @@ oh-my-openagent.json
 ```
 
 This keeps subagent delegation working even when a provider is down.
-
-To use OMO with a local Ollama setup, override the entries in this file to point at your local model.
 
 ### Default models in the configuration file
 
@@ -109,9 +112,29 @@ OMO tunes each agent's prompt for a specific model family. The default config fi
 
 For the full list of recommended models per agent and per category, see the [Agent-to-model matching reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/agent-model-matching.md).
 
+### Files that Olares manages for OMO
+
+When you install OpenCode, Olares pre-configures OMO. The pre-installed items live under the global OpenCode config directory, which maps to `Application/Data/opencode/.config/opencode/` in Olares Files. The rest of this guide uses `~/.config/opencode/` as shorthand for this path.
+
+:::details File inventory
+
+| Path | What it does |
+|:-----|:-------------|
+| `~/.config/opencode/opencode.json` (the `plugin` field) | Registers `"oh-my-openagent"` in the global config. |
+| `~/.config/opencode/oh-my-openagent.json` | Recommended model per agent plus a runtime fallback chain. Written on first install only. |
+| `~/.config/opencode/olares-baseline-instructions.md` | Web preview, package management, and Olares domain conventions. Refreshed on every startup. |
+| `~/.config/opencode/skills/web-preview/` and `system-admin/` | Skill files. Force-updated on every startup. |
+| `/usr/local/lib/node_modules/oh-my-opencode/` (inside the container) | npm package. Persisted in the system snapshot. |
+
+:::
+
+All Olares-managed settings live in the global config directory. They are never written to your workspace `opencode.json`. If your workspace config still contains the old Olares-managed instructions, Olares removes them only when they exactly match the previous preset. Anything you added or modified yourself is preserved.
+
+The `oh-my-openagent.json` file is only written on first install. If you later update it through the `install` command or by hand, your changes are not overwritten.
+
 ## Configure OMO
 
-### Step 1: Enable OMO
+### Enable OMO
 
 OMO is controlled by the `OPENCODE_OMO` environment variable:
 
@@ -134,7 +157,7 @@ On first launch, OMO needs time to finish its initial configuration. This might 
 
 To disable OMO later, repeat the steps above and set `OPENCODE_OMO` to `false`. The plugin registration and MCP servers stop, but the npm package and the `oh-my-openagent.json` config stay on disk for the next time you turn it back on.
 
-### Step 2: Configure OMO to use local models
+### Configure local models
 
 Edit `~/.config/opencode/oh-my-openagent.json` so OMO delegates subagent work to your local Ollama models. You can skip this step in two cases:
 
@@ -145,10 +168,18 @@ Edit `~/.config/opencode/oh-my-openagent.json` so OMO delegates subagent work to
 Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes.
 :::
 
-1. Open Olares Files and navigate to `Application/Data/opencode/.config/opencode/`.
+1. Open Olares Files, navigate to `Application/Data/opencode/.config/opencode/`, and locate `oh-my-openagent.json`.
    ![Locate oh-my-openagent.json](/images/manual/use-cases/opencode-config-file.png#bordered)
 
-2. Edit `oh-my-openagent.json`. Under `agents`, point each agent's `model` field to your Ollama model and add `"stream": false`. The model name must include the provider prefix, which must match the provider names you defined when you added the Ollama apps (see `opencode.json`). For example, if your providers are named `ollama-27b` and `ollama-9b`, configure them as:
+2. Open `oh-my-openagent.json` and click <i class="material-symbols-outlined">edit_square</i> to open the editor.
+
+3. Update the `agents` section so subagent delegation uses your local Ollama models:
+
+   a. Point each agent's `model` field to your Ollama model. The model name must include the provider prefix, which must match the provider names you defined in `opencode.json`.
+
+   b. Add `"stream": false` to each agent.
+
+   For example, if your providers are named `ollama-27b` and `ollama-9b`:
 
    ```json
    {
@@ -167,84 +198,89 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
    Ollama's streaming mode returns NDJSON, which the SDK can't parse. Agents that use tools (especially Librarian and Explore) silently fall back to the next model in the chain if this is missing. This is a known Ollama limitation.
    :::
 
-3. In the `categories` section, make sure each category's `fallback_models` list points to local models first.
-
-   ```json
+4. In the `categories` section, update each category's `model` and `fallback_models` list so that local models come first. For example:
+  ```json
    "categories": {
      "visual-engineering": {
-       "model": "google/gemini-3.1-pro-preview",
-       "variant": "high",
+       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
        "fallback_models": [
-         { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
          { "model": "ollama-9b/qwen3.5:9b" }
          // ... keep the remaining default fallback entries unchanged
        ]
      },
      "ultrabrain": {
-       "model": "openai/gpt-5.4",
-       "variant": "xhigh",
+       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
        "fallback_models": [
-         { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
+         { "model": "ollama-9b/qwen3.5:9b" }
+         // ... keep the remaining default fallback entries unchanged
+       ]
+     },
+   }
+   ```
+
+  :::details Full `categories` section
+   ```json
+   "categories": {
+     "visual-engineering": {
+       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+       "fallback_models": [
+         { "model": "ollama-9b/qwen3.5:9b" }
+         // ... keep the remaining default fallback entries unchanged
+       ]
+     },
+     "ultrabrain": {
+       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+       "fallback_models": [
          { "model": "ollama-9b/qwen3.5:9b" }
          // ... keep the remaining default fallback entries unchanged
        ]
      },
      "deep": {
-       "model": "openai/gpt-5.4",
-       "variant": "medium",
+       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
        "fallback_models": [
-         { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
          { "model": "ollama-9b/qwen3.5:9b" }
          // ... keep the remaining default fallback entries unchanged
        ]
      },
      "artistry": {
-       "model": "google/gemini-3.1-pro-preview",
-       "variant": "high",
+       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
        "fallback_models": [
-         { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
          { "model": "ollama-9b/qwen3.5:9b" }
          // ... keep the remaining default fallback entries unchanged
        ]
      },
      "quick": {
-       "model": "openai/gpt-5.4-mini",
+       "model": "ollama-9b/qwen3.5:9b",
        "fallback_models": [
          { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-         { "model": "ollama-9b/qwen3.5:9b" }
          // ... keep the remaining default fallback entries unchanged
        ]
      },
      "unspecified-low": {
-       "model": "anthropic/claude-sonnet-4-6",
+       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
        "fallback_models": [
-         { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
          { "model": "ollama-9b/qwen3.5:9b" }
          // ... keep the remaining default fallback entries unchanged
        ]
      },
      "unspecified-high": {
-       "model": "anthropic/claude-sonnet-4-6",
+       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
        "fallback_models": [
-         { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
          { "model": "ollama-9b/qwen3.5:9b" }
          // ... keep the remaining default fallback entries unchanged
        ]
      },
      "writing": {
-       "model": "google/gemini-3-flash-preview",
+       "model": "ollama-9b/qwen3.5:9b",
        "fallback_models": [
          { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-         { "model": "ollama-9b/qwen3.5:9b" }
          // ... keep the remaining default fallback entries unchanged
        ]
      }
    }
    ```
-
-   If you'd rather replace the whole file at once, see the full sample below.
-
-4. Add concurrency limits in the same file. A local Ollama server has limited resources, and multiple agents hitting it at once can exhaust VRAM or cause heavy slowdowns.
+  :::
+5. Add concurrency limits in the same file. A local Ollama server has limited resources, and multiple agents hitting it at once can exhaust VRAM or cause heavy slowdowns.
 
    ```json
    {
@@ -263,148 +299,145 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
 
    This caps requests to the large model to one at a time and prevents out-of-memory crashes.
 
-   :::details Full oh-my-openagent.json
+  :::details Complete `oh-my-openagent.json` with local-model setup
 
-   ```json
-   {
-     "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
-     "runtime_fallback": {
-       "enabled": true,
-       "max_fallback_attempts": 7
-     },
-     "agents": {
-       "sisyphus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-       "hephaestus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-       "prometheus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-       "atlas": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-       "explore": { "model": "ollama-9b/qwen3.5:9b", "stream": false },
-       "librarian": { "model": "ollama-9b/qwen3.5:9b", "stream": false }
-     },
-     "categories": {
-       "visual-engineering": {
-         "model": "google/gemini-3.1-pro-preview",
-         "variant": "high",
-         "fallback_models": [
-           { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-           { "model": "ollama-9b/qwen3.5:9b" },
-           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
-           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
-           { "model": "github-copilot/claude-opus-4.6", "variant": "max" },
-           { "model": "opencode/big-pickle" }
-         ]
-       },
-       "ultrabrain": {
-         "model": "openai/gpt-5.4",
-         "variant": "xhigh",
-         "fallback_models": [
-           { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-           { "model": "ollama-9b/qwen3.5:9b" },
-           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
-           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
-           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
-           { "model": "github-copilot/claude-opus-4.6", "variant": "max" },
-           { "model": "opencode/big-pickle" }
-         ]
-       },
-       "deep": {
-         "model": "openai/gpt-5.4",
-         "variant": "medium",
-         "fallback_models": [
-           { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-           { "model": "ollama-9b/qwen3.5:9b" },
-           { "model": "github-copilot/gpt-5.4", "variant": "medium" },
-           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
-           { "model": "github-copilot/claude-opus-4.6", "variant": "max" },
-           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
-           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
-           { "model": "opencode/big-pickle" }
-         ]
-       },
-       "artistry": {
-         "model": "google/gemini-3.1-pro-preview",
-         "variant": "high",
-         "fallback_models": [
-           { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-           { "model": "ollama-9b/qwen3.5:9b" },
-           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
-           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
-           { "model": "github-copilot/claude-opus-4.6", "variant": "max" },
-           { "model": "openai/gpt-5.4" },
-           { "model": "github-copilot/gpt-5.4" },
-           { "model": "opencode/big-pickle" }
-         ]
-       },
-       "quick": {
-         "model": "openai/gpt-5.4-mini",
-         "fallback_models": [
-           { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-           { "model": "ollama-9b/qwen3.5:9b" },
-           { "model": "github-copilot/gpt-5.4-mini" },
-           { "model": "anthropic/claude-haiku-4-5" },
-           { "model": "github-copilot/claude-haiku-4.5" },
-           { "model": "google/gemini-3-flash-preview" },
-           { "model": "github-copilot/gemini-3-flash-preview" },
-           { "model": "opencode/gpt-5-nano" }
-         ]
-       },
-       "unspecified-low": {
-         "model": "anthropic/claude-sonnet-4-6",
-         "fallback_models": [
-           { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-           { "model": "ollama-9b/qwen3.5:9b" },
-           { "model": "github-copilot/claude-sonnet-4.6" },
-           { "model": "openai/gpt-5.3-codex", "variant": "medium" },
-           { "model": "google/gemini-3-flash-preview" },
-           { "model": "github-copilot/gemini-3-flash-preview" },
-           { "model": "opencode/big-pickle" }
-         ]
-       },
-       "unspecified-high": {
-         "model": "anthropic/claude-sonnet-4-6",
-         "fallback_models": [
-           { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-           { "model": "ollama-9b/qwen3.5:9b" },
-           { "model": "github-copilot/claude-sonnet-4.6" },
-           { "model": "openai/gpt-5.3-codex", "variant": "medium" },
-           { "model": "google/gemini-3-flash-preview" },
-           { "model": "github-copilot/gemini-3-flash-preview" },
-           { "model": "opencode/big-pickle" }
-         ]
-       },
-       "writing": {
-         "model": "google/gemini-3-flash-preview",
-         "fallback_models": [
-           { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-           { "model": "ollama-9b/qwen3.5:9b" },
-           { "model": "github-copilot/gemini-3-flash-preview" },
-           { "model": "anthropic/claude-sonnet-4-6" },
-           { "model": "github-copilot/claude-sonnet-4.6" },
-           { "model": "opencode/big-pickle" }
-         ]
-       }
-     },
-     "background_task": {
-       "providerConcurrency": {
-         "ollama-27b": 1,
-         "ollama-9b": 1
-       },
-       "modelConcurrency": {
-         "ollama-27b/qwen3.5:27b-q4_K_M": 1,
-         "ollama-9b/qwen3.5:9b": 2
-       }
-     }
-   }
-   ```
+  ```json
+  {
+    "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
+    "runtime_fallback": {
+      "enabled": true,
+      "max_fallback_attempts": 7
+    },
+    "agents": {
+      "sisyphus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
+      "hephaestus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
+      "prometheus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
+      "atlas": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
+      "explore": { "model": "ollama-9b/qwen3.5:9b", "stream": false },
+      "librarian": { "model": "ollama-9b/qwen3.5:9b", "stream": false }
+    },
+    "categories": {
+      "visual-engineering": {
+        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "fallback_models": [
+          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
+          { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
+          { "model": "anthropic/claude-opus-4-6", "variant": "max" },
+          { "model": "github-copilot/claude-opus-4.6", "variant": "max" },
+          { "model": "opencode/big-pickle" }
+        ]
+      },
+      "ultrabrain": {
+        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "fallback_models": [
+          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "openai/gpt-5.4", "variant": "xhigh" },
+          { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
+          { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
+          { "model": "anthropic/claude-opus-4-6", "variant": "max" },
+          { "model": "github-copilot/claude-opus-4.6", "variant": "max" },
+          { "model": "opencode/big-pickle" }
+        ]
+      },
+      "deep": {
+        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "fallback_models": [
+          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "openai/gpt-5.4", "variant": "medium" },
+          { "model": "github-copilot/gpt-5.4", "variant": "medium" },
+          { "model": "anthropic/claude-opus-4-6", "variant": "max" },
+          { "model": "github-copilot/claude-opus-4.6", "variant": "max" },
+          { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
+          { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
+          { "model": "opencode/big-pickle" }
+        ]
+      },
+      "artistry": {
+        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "fallback_models": [
+          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
+          { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
+          { "model": "anthropic/claude-opus-4-6", "variant": "max" },
+          { "model": "github-copilot/claude-opus-4.6", "variant": "max" },
+          { "model": "openai/gpt-5.4" },
+          { "model": "github-copilot/gpt-5.4" },
+          { "model": "opencode/big-pickle" }
+        ]
+      },
+      "quick": {
+        "model": "ollama-9b/qwen3.5:9b",
+        "fallback_models": [
+          { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
+          { "model": "openai/gpt-5.4-mini" },
+          { "model": "github-copilot/gpt-5.4-mini" },
+          { "model": "anthropic/claude-haiku-4-5" },
+          { "model": "github-copilot/claude-haiku-4.5" },
+          { "model": "google/gemini-3-flash-preview" },
+          { "model": "github-copilot/gemini-3-flash-preview" },
+          { "model": "opencode/gpt-5-nano" }
+        ]
+      },
+      "unspecified-low": {
+        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "fallback_models": [
+          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "anthropic/claude-sonnet-4-6" },
+          { "model": "github-copilot/claude-sonnet-4.6" },
+          { "model": "openai/gpt-5.3-codex", "variant": "medium" },
+          { "model": "google/gemini-3-flash-preview" },
+          { "model": "github-copilot/gemini-3-flash-preview" },
+          { "model": "opencode/big-pickle" }
+        ]
+      },
+      "unspecified-high": {
+        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "fallback_models": [
+          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "anthropic/claude-sonnet-4-6" },
+          { "model": "github-copilot/claude-sonnet-4.6" },
+          { "model": "openai/gpt-5.3-codex", "variant": "medium" },
+          { "model": "google/gemini-3-flash-preview" },
+          { "model": "github-copilot/gemini-3-flash-preview" },
+          { "model": "opencode/big-pickle" }
+        ]
+      },
+      "writing": {
+        "model": "ollama-9b/qwen3.5:9b",
+        "fallback_models": [
+          { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
+          { "model": "google/gemini-3-flash-preview" },
+          { "model": "github-copilot/gemini-3-flash-preview" },
+          { "model": "anthropic/claude-sonnet-4-6" },
+          { "model": "github-copilot/claude-sonnet-4.6" },
+          { "model": "opencode/big-pickle" }
+        ]
+      }
+    },
+    "background_task": {
+      "providerConcurrency": {
+        "ollama-27b": 1,
+        "ollama-9b": 1
+      },
+      "modelConcurrency": {
+        "ollama-27b/qwen3.5:27b-q4_K_M": 1,
+        "ollama-9b/qwen3.5:9b": 2
+      }
+    }
+  }
+  ```
 
-   :::
-
-5. Restart OpenCode to apply the changes.
+  :::
+6. Save the file.
+7. Restart OpenCode to apply the changes.
 
    a. Open Settings and navigate to **Applications** > **OpenCode**.
 
    b. Click **Stop**, then **Resume**.
 
-### Step 3: Confirm the plugin is loaded
+
+### Confirm the plugin is loaded
 
 After you enable OMO, open the OpenCode web UI. You should see Sisyphus, Prometheus, Atlas, and Hephaestus in the agent selector at the top.
 
@@ -416,15 +449,29 @@ You can also click the status icon in the upper-right corner to confirm that `oh
 
 ## Use OMO
 
+OMO ships with a set of specialized agents, each with a prompt tuned for a specific role. You choose the main agent from Sisyphus, Prometheus, Atlas, or Hephaestus in the agent selector. The rest are dispatched automatically during multi-agent collaboration.
+
+| Agent | Role | How to access |
+|:------|:-----|:--------------|
+| Sisyphus | Main orchestrator.<br>Plans, delegates to subagents, and drives parallel <br>execution in `ultrawork` mode. | Agent selector |
+| Hephaestus | Autonomous deep worker.<br>Handles architectural reasoning and long<br> autonomous coding sessions. | Agent selector |
+| Prometheus | Strategic planner.<br>Interviews you about requirements and produces<br> a detailed plan. | Agent selector |
+| Atlas | Plan executor.<br>Takes over a Prometheus plan and executes it. | Agent selector, or `/start-work` after planning |
+| Oracle | Read-only architecture consultant.<br>Advises on architecture decisions and complex<br> debugging without modifying files. | Auto-dispatched in `ultrawork` |
+| Explore | Code search agent.<br>Retrieves code across the repo. | Auto-dispatched in `ultrawork` |
+| Librarian | Documentation search agent.<br>Searches docs and code. | Auto-dispatched in `ultrawork` |
+
+Other supporting agents (such as Metis for plan gap analysis, Momus for plan review, and Multimodal Looker for vision input) are dispatched automatically by Sisyphus when needed.
+
 ### Single-agent mode
 
-With OMO enabled, the agent selector changes from Plan / Build to Sisyphus, Prometheus, Atlas, and Hephaestus. You don't need to start multi-agent collaboration every time. Without the `ultrawork` keyword, each agent runs on its own and behaves like the original Build or Plan mode, with no extra resource usage.
+With OMO enabled, the agent selector changes from Plan/Build to Sisyphus, Prometheus, Atlas, and Hephaestus. You don't need to start multi-agent collaboration every time. Without the `ultrawork` keyword, each agent runs on its own and behaves like the original Build or Plan mode, with no extra resource usage.
 
-| Previous usage | Current setup | Notes |
-|:---------------|:--------------|:------|
-| Build (direct coding) | Select Sisyphus and chat normally | Default agent, same experience as the original Build mode. |
-| Plan (plan first, then execute) | Select Prometheus | Prometheus interviews you and produces a plan. Type `/start-work` and Atlas takes over to execute. |
-| Deep autonomous coding | Select Hephaestus | Independent agent suited for large, complex tasks. |
+| Task | How to do it |
+|:-----|:-------------|
+| Direct coding<br> (previously Build) | Select Sisyphus and chat normally. Same experience as<br> the original Build mode. |
+| Plan first, then execute<br> (previously Plan) | Select Prometheus. It interviews you and produces<br> a plan. Type `/start-work` to hand off to Atlas. |
+| Deep autonomous coding | Select Hephaestus. Suited for large, complex tasks that run<br> autonomously. |
 
 :::tip
 Without `ultrawork` or `ulw`, OMO will not be triggered. Using an agent on its own is equivalent to the original Build or Plan mode.
@@ -435,7 +482,7 @@ Without `ultrawork` or `ulw`, OMO will not be triggered. Using an agent on its o
 Type `ultrawork` (or the alias `ulw`) followed by a task description in the chat box. For example:
 
 ```text
-ulw Implement a REST API user registration feature with email verfication.
+ulw Implement a REST API user registration feature with email verification.
 ```
 
 OMO analyzes the task, assigns it to specialized agents, and runs them in parallel until the task is complete. When `ultrawork` is active, the colors flashing above the chat box indicate which agent is currently working.
@@ -443,6 +490,10 @@ OMO analyzes the task, assigns it to specialized agents, and runs them in parall
 ![ultrawork running multi-agent collaboration](/images/manual/use-cases/opencode-ulw.png#bordered){width=70%}
 
 ### Prometheus planning mode
+
+:::info
+Some keywords in your task description might trigger OpenCode to invoke the `/web-preview` skill. If that happens, correct the agent and ask it to continue in planning mode.
+:::
 
 For large, complex tasks, plan first:
 
@@ -457,17 +508,21 @@ For large, complex tasks, plan first:
 
    ![Prometheus asking clarifying questions](/images/manual/use-cases/opencode-prometheus-ask.png#bordered){width=70%}
 
-4. After Prometheus has generated a Plan file, type `/start-work` to start execution.
+4. After Prometheus generates a plan file under `.sisyphus/plans/`, type `/start-work` to hand execution over to Atlas. If no plan file exists, `/start-work` has nothing to pass to Atlas and does nothing.
+
+   :::tip Be patient during planning
+   If Prometheus doesn't produce output right away, or the agent status shows `background output`, the agent is still working. Wait for it to finish before sending another message.
+   :::
 
 ### Common commands
 
-| Command | Type | Description |
-|:--------|:-----|:------------|
-| `ultrawork` / `ulw` | Keyword | Starts multi-agent collaboration mode. Type it in the chat box. |
-| `/start-work` | Slash command | Executes the plan produced by Prometheus. |
-| `/init-deep` | Slash command | Generates an `AGENTS.md` context file for each project directory. |
-| `/ulw-loop` | Slash command | Runs `ultrawork` in a loop until the task reaches 100% completion. |
-| `/handoff` | Slash command | Produces a context summary so you can continue the work in a new session. |
+| Command | Description |
+|:--------|:------------|
+| `ultrawork` / `ulw` | Starts multi-agent collaboration mode. Type it as a keyword in the chat box. |
+| `/start-work` | Executes the plan produced by Prometheus. |
+| `/init-deep` | Generates an `AGENTS.md` context file for each project directory. |
+| `/ulw-loop` | Runs `ultrawork` in a loop until the task reaches 100% completion. |
+| `/handoff` | Produces a context summary so you can continue the work in a new session. |
 
 ## Use the built-in MCP servers
 
@@ -475,17 +530,19 @@ OMO registers three remote MCP servers that give agents real-time access to exte
 
 ![Built-in MCP servers](/images/manual/use-cases/opencode-omo-mcps.png#bordered){width=50%}
 
-| MCP server | Provider | Remote endpoint | API key required | Use case |
-|:-----------|:---------|:----------------|:-----------------|:---------|
-| context7 | Upstash / Context7 | `https://mcp.context7.com/mcp` | No. Free to use. Sign up for a higher quota. | Real-time queries against official documentation. |
-| grep_app | Vercel / grep.app | `https://mcp.grep.app` | No. | GitHub-wide code search. |
-| websearch | Exa AI (default) or Tavily (configurable) | `https://mcp.exa.ai/mcp?tools=web_search_exa` | No for basic use. Set `EXA_API_KEY` or `TAVILY_API_KEY` for higher-quality results. | Real-time web search. |
+| MCP server | Use case | API key |
+|:-----------|:---------|:--------|
+| context7 | Real-time queries against official<br> documentation. | Not required for basic use.<br> Add a key for a higher quota. |
+| grep_app | GitHub-wide code search. | Not required. |
+| websearch | Real-time web search. | Not required for basic use.<br> Add a key for higher quotas,<br> or to switch the provider from Exa to Tavily. |
 
-The examples below explicitly tell the agent which MCP tool to use. If the agent detects your intent on its own, it triggers the matching tool automatically.
+The examples below name the MCP tool explicitly. You can also let the agent pick automatically when it detects the intent.
+
+To raise the quota for context7 or websearch, or to switch the websearch provider from Exa to Tavily, see [Configure API keys](#configure-api-keys-and-switch-providers).
 
 ### context7: live official documentation
 
-The AI's training data has a cutoff date. When you work with a newer library version, the AI might generate deprecated APIs or non-existent methods. Context7 pulls the latest content directly from the source docs and injects it into the conversation.
+The AI's training data has a cutoff date. When you work with a newer library version, the AI might generate deprecated APIs or non-existent methods. Context7 (provided by Upstash at `https://mcp.context7.com/mcp`) pulls the latest content directly from the source docs and injects it into the conversation.
 
 For example, enter:
 
@@ -497,7 +554,7 @@ Implement a form submission with React 19's useActionState Hook. use context7
 
 ### grep_app: GitHub-wide code search
 
-When the AI is unsure about best practices or API usage, it can search real code from GitHub projects for reference.
+When the AI is unsure about best practices or API usage, it can search real code from GitHub projects for reference. This MCP server is provided by Vercel at `https://mcp.grep.app`.
 
 For example, enter:
 
@@ -509,6 +566,8 @@ Find real examples of Drizzle ORM with PostgreSQL migrations. use grep_app
 
 ### websearch: real-time web search
 
+This MCP server defaults to Exa AI (`https://mcp.exa.ai/mcp?tools=web_search_exa`) and can be switched to Tavily through configuration.
+
 For example, enter:
 
 ```text
@@ -517,7 +576,89 @@ What are the major changes in Kubernetes 1.32 released in 2026? use websearch
 
 ![websearch MCP returning real-time results](/images/manual/use-cases/opencode-omo-websearch.png#bordered){width=70%}
 
+### Configure API keys and switch providers
+
+context7 and websearch both work without keys, but adding a key raises your quota and lifts rate limits. You can also switch websearch from Exa (the default) to Tavily. grep_app has no key.
+
+You configure all of this in `~/.config/opencode/oh-my-openagent.json` by overriding the built-in MCP definition under the `mcp` field. An override replaces the built-in definition entirely, so `type`, `url`, and `enabled` must all be present. If you set more than one override, put them under the same `mcp` object.
+
+:::tip Restart required
+Restart OpenCode after every edit to `oh-my-openagent.json` so the new definition takes effect.
+:::
+
+#### Add an API key for context7
+
+Get a key from [context7.com](https://context7.com/), then add the following to `oh-my-openagent.json`:
+
+```json
+{
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true,
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_CONTEXT7_KEY"
+      }
+    }
+  }
+}
+```
+
+To verify the key is active, ask the agent `use context7` to look up a recently released library, and check your Context7 dashboard for an increase in usage.
+
+#### Add an API key for websearch (Exa)
+
+By default, websearch uses Exa. Get a key from [exa.ai](https://exa.ai/), then add the following to `oh-my-openagent.json`:
+
+```json
+{
+  "mcp": {
+    "websearch": {
+      "type": "remote",
+      "url": "https://mcp.exa.ai/mcp?tools=web_search_exa",
+      "enabled": true,
+      "headers": {
+        "x-api-key": "YOUR_EXA_KEY"
+      }
+    }
+  }
+}
+```
+
+To verify the key is active, ask the agent to run a web search and check [dashboard.exa.ai](https://dashboard.exa.ai/) for an increase in usage after a successful search.
+
+#### Switch websearch from Exa to Tavily
+
+Tavily is an alternative web-search provider with 1,000 free searches per month. Get a key from [app.tavily.com](https://app.tavily.com/), then point `websearch` at Tavily:
+
+```json
+{
+  "mcp": {
+    "websearch": {
+      "type": "remote",
+      "url": "https://mcp.tavily.com/mcp/",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer YOUR_TAVILY_KEY"
+      }
+    }
+  }
+}
+```
+
+To verify, run a web search from the agent and check your [Tavily dashboard](https://app.tavily.com/) for an increase in usage. To switch back to Exa, replace this block with the Exa definition above.
+
 ### Disable a specific MCP server
+
+<tabs>
+<template #Disable-from-UI>
+
+1. Click the status icon in the upper-right corner, then select **MCP**.
+2. Toggle off the specific MCP server.
+
+</template>
+<template #Disable-via-config-file>
 
 1. Edit `~/.config/opencode/oh-my-openagent.json` and add the `disabled_mcps` field. For example, to disable websearch:
 
@@ -535,52 +676,27 @@ What are the major changes in Kubernetes 1.32 released in 2026? use websearch
 
    ![Disable an MCP server in oh-my-openagent.json](/images/manual/use-cases/opencode-omo-disable-mcp.png#bordered){width=50%}
 
-## Replace the built-in context7 with the Olares self-hosted version
+</template>
+</tabs>
 
-After you enable OMO, OpenCode shows a built-in `context7` MCP server that connects to the Context7 official cloud service (`https://mcp.context7.com/mcp`). The Olares Market also offers a standalone [Context7 app](context7.md), which is a self-hosted Context7 MCP server.
+## Use a self-hosted Context7 instead
 
-:::tip Compatibility with existing self-hosted context7
+OMO's built-in `context7` queries the public Context7 cloud at `https://mcp.context7.com/mcp`. To route doc queries to your own instance, install Context7 on Olares and register it in OpenCode by following [Connect Context7 to OpenCode](context7.md#opencode).
 
-If you added `context7` to your `opencode.json` before installing OMO (pointing to the Olares self-hosted version), upgrading to the OMO version still works.
+Entries in `opencode.json` always take priority over OMO's built-in MCP servers. If you registered a self-hosted Context7 entry in `opencode.json` before enabling OMO, whether the two coexist depends on the name you gave your entry:
 
-Your `opencode.json` entry has higher priority than OMO's built-in version and overrides it automatically. Your self-hosted version keeps working without changes.
+| Entry name in `opencode.json` | Effect | What to do |
+|:------------------------------|:-------|:-----------|
+| Any name other than `context7` | Your entry and OMO's built-in<br> Context7 server coexist. | Nothing. |
+| `context7` | Name collides with OMO's<br> built-in Context7 server. | Either: <br><ul><li>Rename your entry in `opencode.json` (for example, to `context7-local`)</li><li>disable OMO's built-in server by adding `"disabled_mcps": ["context7"]` to `oh-my-openagent.json`.</li></ul> |
 
-To switch back to OMO's cloud version later, delete the `context7` entry from `opencode.json`. The OMO built-in version takes effect automatically.
-:::
-
-If you want all doc queries to go to your self-hosted instance, follow these steps.
-
-1. In `~/.config/opencode/oh-my-openagent.json`, add the following to disable the built-in context7:
-
-   ```json
-   {
-     "disabled_mcps": ["context7"]
-   }
-   ```
-
-2. In `~/.config/opencode/opencode.json`, point to your self-hosted Context7 endpoint:
-
-   ```json
-   {
-     "mcp": {
-       "context7-local": {
-         "type": "remote",
-         "url": "<your-context7-endpoint>/mcp",
-         "enabled": true
-       }
-     }
-   }
-   ```
-
-3. Restart OpenCode to apply the changes.
-
-After the restart, refresh the page. The MCP tab should now show the self-hosted `context7-local` plus OMO's other two MCP servers.
-
-## Optional optimizations
+## Advanced configuration
 
 ### Regenerate the config for your subscriptions
 
-The pre-installed config enables all providers. If you only subscribe to some of them, ask the agent to regenerate the optimal config:
+The pre-installed config enables all providers. If you only subscribe to some of them, ask the agent to regenerate the optimal config.
+
+Use the `--claude`, `--openai`, `--gemini`, and `--copilot` flags (set each to `yes` or `no`) to match your actual subscriptions. For example, if you subscribe to Claude and Copilot but not OpenAI or Gemini, enter the following in the chat window:
 
 ```text
 Run: npx oh-my-opencode install --no-tui --claude=yes --openai=no --gemini=no --copilot=yes
@@ -619,7 +735,7 @@ Ask OpenCode to run the diagnostic:
 Run: npx oh-my-opencode doctor
 ```
 
-The most common cause is that no provider authentication has been completed.
+Usually this means no provider has been authenticated.
 
 ### How do settings in `oh-my-openagent.json` relate to the model picked in the UI?
 
@@ -647,7 +763,7 @@ No. `oh-my-openagent.json` is only written when the file doesn't exist. The glob
 
 ### Will I know when a model switches automatically?
 
-Yes. `runtime_fallback` has `notify_on_fallback` enabled by default. A toast notification appears when a model switch happens, showing which model is now in use.
+Yes. When `runtime_fallback` switches to another model, a toast notification appears showing which model is now in use.
 
 ## Learn more
 
