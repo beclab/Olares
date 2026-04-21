@@ -318,4 +318,3 @@ To fix this issue, install Ollama and download a chat model by following the [Ol
 - [Speaches official documentation](https://speaches.ai/): Full API reference and model compatibility.
 - [Ollama](ollama.md): Download and run local AI models.
 - [Open WebUI](openwebui.md): Chat interface that can use Speaches as a speech backend.
-- [IndexTTS2](indextts2.md): Generate speech from text with built-in or cloned voices.
