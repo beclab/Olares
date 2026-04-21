@@ -63,8 +63,8 @@ type AppSpec struct {
 	RequiredCPU         string         `yaml:"requiredCpu" json:"requiredCpu"`
 	LimitedMemory       string         `yaml:"limitedMemory" json:"limitedMemory"`
 	LimitedDisk         string         `yaml:"limitedDisk" json:"limitedDisk"`
-	LimitedGPU          string         `yaml:"limitedGPU" json:"limitedGPU"`
-	LimitedCPU          string         `yaml:"limitedCPU" json:"limitedCPU"`
+	LimitedGPU          string         `yaml:"limitedGpu" json:"limitedGpu"`
+	LimitedCPU          string         `yaml:"limitedCpu" json:"limitedCpu"`
 	SupportClient       SupportClient  `yaml:"supportClient" json:"supportClient"`
 	RunAsUser           bool           `yaml:"runAsUser" json:"runAsUser"`
 	RunAsInternal       bool           `yaml:"runAsInternal" json:"runAsInternal"`
