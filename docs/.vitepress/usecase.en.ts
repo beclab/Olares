@@ -42,6 +42,29 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "OpenCode",
+              link: "/use-cases/opencode",
+              collapsed: true,
+              items: [
+                {
+                  text: "Orchestrate with oh-my-openagent",
+                  link: "/use-cases/opencode-omo",
+                },
+                {
+                  text: "Manage packages",
+                  link: "/use-cases/opencode-packages",
+                },
+                {
+                  text: "Skills and plugins",
+                  link: "/use-cases/opencode-extensions",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/opencode-issues",
+                },
+              ]
+            },
+            {
               text: "Open WebUI",
               collapsed: true,
               items: [
@@ -89,25 +112,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "LLMFit",
               link: "/use-cases/llmfit",
-            },
-            {  
-              text: "OpenCode",
-              link: "/use-cases/opencode",
-              collapsed: true,
-              items: [
-                {
-                  text: "Manage packages",
-                  link: "/use-cases/opencode-packages",
-                },
-                {
-                  text: "Skills and plugins",
-                  link: "/use-cases/opencode-extensions",
-                },
-                {
-                  text: "Common issues",
-                  link: "/use-cases/opencode-issues",
-                },
-              ]
             },
             {
               text: "LobeHub (LobeChat)",
