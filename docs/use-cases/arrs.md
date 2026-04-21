@@ -19,7 +19,7 @@ By configuring connections between these tools, they communicate with each other
 ## Learning objectives
 
 In this guide, you will learn how to:
-- Locate application provider URLs in Olares.
+- Understand and construct application provider URLs in Olares.
 - Connect a download client (qBittorrent) to a media manager (Sonarr).
 - Connect an indexer manager (Prowlarr) to Sonarr.
 - Connect a subtitle manager (Bazarr) to Sonarr.
@@ -29,6 +29,47 @@ In this guide, you will learn how to:
 This guide focuses specifically on configuring the connections between the *Arrs applications. It does not cover the complete setup or general usage of each individual app. 
 
 Ensure you have properly configured the core settings of your media managers and download clients before connecting them.
+
+## Understand provider URLs
+
+In Olares, provider URLs are internal addresses that enable direct communication between applications within the same cluster.
+
+### How the provider mechanism works
+
+The mechanism operates through the following roles and features:
+- **Service provider**: An application offering a service, such as qBittorrent providing a download API, declares one or more entrances in its Olares Settings.
+- **Service consumer**: An application requiring that service explicitly requests access to the corresponding entrance. Olares grants permission only to authorized consumer applications.
+- **Visibility in Market**: When you view an application's details in Market, you see exactly which other applications it connects to. This indicates the supported provider relationships.
+
+Not every application supports the Olares provider mechanism. To establish a connection, both the provider application and the consumer application must explicitly declare and request the appropriate entrances.
+
+### How are provider URLs constructed
+
+A provider URL is the HTTP protocol version of an application's entrance endpoint. 
+
+For example, if the entrance address of an *Arrs application is `https://9691c178.alexmiles.olares.com`, its provider URL is `http://9691c178.alexmiles.olares.com`.
+
+The following steps demonstrate how to construct an application's provider URL in Olares using Sonarr as an example:
+
+1. Open Settings, go to **Applications** > **Sonarr** > **Entrances** > **Sonarr**.
+
+   ![Sonarr entrance in Settings](/images/manual/use-cases/arrs-sonarr-entrance.png#bordered){width=75%}
+
+2. Note down the URL in the **Endpoint** field, that is `https://9691c178.alexmiles.olares.com`.
+
+   ![Sonarr endpoint in Settings](/images/manual/use-cases/arrs-sonarr-endpoint.png#bordered){width=75%}
+
+3. Replace `https` with `http` to construct the provider URL, that is `http://9691c178.alexmiles.olares.com`.
+
+:::tip Which entrance to select?
+If an application exposes multiple entrances, ensure you select the correct one for the required service. For detailed instructions on identifying the correct entrance, see [Which entrance to use when an app has multiple](#which-entrance-to-use-when-an-app-has-multiple).
+:::
+
+### How provider URLs connect the *Arrs ecosystem
+
+Because the *Arrs ecosystem relies heavily on app-to-app communication, provider URLs are essential for connecting your media managers (Sonarr, Radarr, Lidarr, Readarr) with download clients (qBittorrent) and indexer managers (Prowlarr).
+
+When you configure connections between these *Arrs applications, the application asks you to enter either the full provider URL (including the `http://` prefix) or just the host address (excluding the prefix). For all provider URL‑based communication, you must specify the port as `80`.
 
 ## Install the *Arrs applications
 
@@ -65,11 +106,7 @@ The following steps demonstrate the initial setup for Sonarr.
    - **Basic (Browser Popup)**: To use your web browser's native login prompt, select this option. This method is often more compatible with automated password managers.
    - **Forms (Login Page)**: To use Sonarr's built-in, custom login interface for a more visually integrated experience, select this option.
 
-3. Select your security preference from the **Authentication Required** list:
-
-   - **Enabled**: This is the default selection, which requires your username and password regardless of where you access the app from. To ensure maximum security, use this option.
-   - **Disabled for Local Addresses**: This option bypasses the login screen when you open Sonarr from a device within your local network. Only select this option if you fully trust all users and devices connected to your local network.
-
+3. In the **Authentication Required** list, keep the default selection **Enabled** to ensure maximum security. This option requires your username and password regardless of where you access the app from.
 4. In the **Username** field, enter an admin username.
 5. In the **Password** field, enter a secure password.
 6. In the **Password Confirmation** field, type the same password again.
@@ -77,45 +114,11 @@ The following steps demonstrate the initial setup for Sonarr.
 
    ![Sonarr landing page](/images/manual/use-cases/arrs-sonarr-landing.png#bordered)
 
-## Locate provider URLs
-
-*Arrs applications use provider URLs to communicate securely within the Olares cluster. 
-
-A provider URL is the HTTP protocol version of an application's entrance endpoint. For example, if the entrance address of an *Arrs application is `https://9691c178.alexmiles.olares.com`, its provider URL is `http://9691c178.alexmiles.olares.com`.
-
-The following steps demonstrate how to locate an application's provider URL in Olares using Sonarr as an example:
-
-1. Open Settings, go to **Applications**, and then select the target application, that is **Sonarr**.
-2. Under **Entrances**, click **Sonarr**.
-
-   ![Sonarr entrance in Settings](/images/manual/use-cases/arrs-sonarr-entrance.png#bordered){width=75%}
-
-3. Note down the URL in the **Endpoint** field, that is `https://9691c178.alexmiles.olares.com`.
-
-   ![Sonarr endpoint in Settings](/images/manual/use-cases/arrs-sonarr-endpoint.png#bordered){width=75%}
-
-4. Replace `https` with `http` to construct the provider URL, that is `http://9691c178.alexmiles.olares.com`.
-
 ## Connect a download client to a media manager
 
-To download media, your must connect a download client like qBittorrent or Transmission to your media managers (Sonarr, Radarr, Lidarr, and Readarr).
+To download media, you must connect a download client like qBittorrent or Transmission to your media managers (Sonarr, Radarr, Lidarr, and Readarr).
 
 The following steps demonstrate how to connect qBittorrent to Sonarr. You can apply the same process for other media managers.
-
-### Step 1: Locate the provider URL for qBittorrent
-
-1. Open Settings, and then go to **Applications** > **qBittorrent**.
-
-   ![qBittorrent entrance in Settings](/images/manual/use-cases/arrs-qbittorrent-entrance.png#bordered){width=75%}
-
-2. Under **Entrances**, click **qBittorrent**.
-
-   ![qBittorrent endpoint in Settings](/images/manual/use-cases/arrs-qbittorrent-endpoint.png#bordered){width=75%}
-
-3. Note down the URL in the **Endpoint** field. In this case, it is `https://44e535c5.alexmiles.olares.com`.
-4. Replace `https` with `http` to construct the provider URL for qBittorrent. In this case, it becomes `http://44e535c5.alexmiles.olares.com`.
-
-### Step 2: Configure the connection in Sonarr
 
 1. Open Sonarr, click **Settings** from the left sidebar, and then select **Download Clients**.
 
@@ -126,13 +129,13 @@ The following steps demonstrate how to connect qBittorrent to Sonarr. You can ap
 
    ![Sonarr Download Clients settings](/images/manual/use-cases/arrs-sonarr-download-clients-settings.png#bordered)
 
-   - **Host**: Enter the qBittorrent provider URL, excluding the `http://` prefix and any trailing slashes. In this case, enter `44e535c5.alexmiles.olares.com`.
+   - **Host**: Enter the provider URL of qBittorrent, excluding the `http://` prefix and any trailing slashes. For example, `44e535c5.alexmiles.olares.com`.
    - **Port**: Enter `80`.
    - **Username** and **Password**:
       - If your qBittorrent client requires authentication, enter your username and password.
       - If you use the default qBittorrent settings without a password, leave the two fields blank.
-6. Click **Test**. A green checkmark appears, indicating the connection is successful.
-7. Select **Save**. qBittorrent appears in the **Download Clients** section as enabled.
+4. Click **Test**. A green checkmark appears, indicating the connection is successful.
+5. Select **Save**. qBittorrent appears in the **Download Clients** section as enabled.
 
    ![Sonarr Download Clients enabled](/images/manual/use-cases/arrs-sonarr-download-clients-enabled.png#bordered)
 
@@ -163,6 +166,10 @@ The following steps demonstrate how to connect Prowlarr to Sonarr. You can apply
    ![Prowlarr add an indexer](/images/manual/use-cases/arrs-prowlarr-add-indexer.png#bordered)
 
    b. Click **Test**. A green checkmark appears, indicating the connection is successful.
+
+   :::tip
+   If the connection test fails, the indexer might require a Cloudflare bypass. For instructions on resolving this issue, see [Access Cloudflare-protected sites in Prowlarr with FlareSolverr](flaresolverr.md).
+   :::   
 
    c. Click **Save**.
 
@@ -219,6 +226,29 @@ The following steps demonstrate how to connect Bazarr to Sonarr.
    Bazarr now monitors Sonarr. whenever Sonarr downloads a TV show, Bazarr automatically detects it and downloads the corresponding subtitles according to your language settings.
 
 ## FAQ
+
+### Which entrance to use when an app has multiple?
+
+Some applications expose more than one entrance. You must select the entrance that provides the actual service the consumer application needs.
+
+To identify the exact entrance required, match the provider name listed in the Market with the provider name in Settings:
+
+1. Open Market, and then go to the consumer application's details page. For example, Sonarr.
+2. Locate the **Connect to Other Apps** section to find the exact name of the required provider. For example, **qbittorrent-svc**.
+
+   ![Example of app connection requirements in Market](/images/manual/use-cases/arrs-market-connections.png#bordered){width=75%}
+
+3. Open Settings, and then go to **Applications** > **qBittorrent**.
+4. Under **Entrances**, select an entrance name to open its details page.
+5. Verify that the provider name at the top of the page matches the provider name from the Market (qbittorrent-svc).
+
+   ![Example of provider name in Settings](/images/manual/use-cases/arrs-settings-provider-name.png#bordered){width=70%}
+
+### Why can I not connect certain apps, like JDownloader, to my media managers?
+
+Not every application supports the Olares provider mechanism. To establish a connection, both the provider application and the consumer application must explicitly declare and request the appropriate entrances. For example, JDownloader does not connect to Sonarr or Radarr because it lacks the required provider permissions. 
+
+For more information, see [Understand provider URLs](#understand-provider-urls).
 
 ### Why does my connection test fail?
 
