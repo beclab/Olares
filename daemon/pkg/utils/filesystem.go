@@ -27,7 +27,7 @@ type FilesystemStat struct {
 
 const (
 	ignoredMountPointsPattern = "^/(dev|proc|sys|var/lib/docker/.+|var/lib/containerd/.+|var/lib/kubelet/.+)($|/)"
-	ignoredFSTypesPattern     = "^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs)$"
+	ignoredFSTypesPattern     = "^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs|cifs|smb|nfs|nfs4)$"
 )
 
 func GetNodeFilesystemTotalSize() (uint64, error) {
