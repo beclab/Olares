@@ -133,6 +133,10 @@ func (a *App) Signup(params SignupParams) (*CreateAccountResponse, error) {
 	// 5. Inject MFA TOTP item into the freshly synchronized main vault
 	//    (ref: apps/packages/sdk/src/core/app.ts:1003-1038).
 	if mv := a.MainVault(); mv != nil && response.MFA != "" {
+		log.Printf("Signup: TOTP injection target mv id=%s revision=%s accessors=%d encryptedData=%d aesKey?=%t items?=%t itemCount=%d",
+			mv.ID, mv.Revision, len(mv.Accessors), len(mv.EncryptedData),
+			mv.aesKey != nil, mv.items != nil, vaultItemCount(mv))
+
 		tpl := GetAuthenticatorTemplate()
 		if tpl != nil && len(tpl.Fields) > 0 {
 			tpl.Fields[0].Value = response.MFA
@@ -145,8 +149,63 @@ func (a *App) Signup(params SignupParams) (*CreateAccountResponse, error) {
 				Type:   VaultTypeTerminusTotp,
 			}); err != nil {
 				log.Printf("Warning: failed to write TOTP item to main vault: %v", err)
+				log.Printf("CRITICAL: TOTP item not stored in vault, web second-factor will fail: %v", err)
 			} else {
 				log.Printf("Main vault updated with TOTP item")
+
+				// Round-trip verification: refetch the vault from server,
+				// unlock with the same account, and list the items the
+				// server now persists. Diagnostic-only — useful for
+				// distinguishing "push succeeded" from "push succeeded
+				// but server did not actually persist TOTP".
+				if unlocked := a.State.Unlocked(); unlocked != nil {
+					verify, gerr := a.API.GetVault(mv.ID)
+					if gerr != nil {
+						log.Printf("verify: GetVault after TOTP push failed: %v", gerr)
+					} else {
+						if uerr := verify.Unlock(unlocked); uerr != nil {
+							log.Printf("verify: Unlock of refetched vault failed: %v", uerr)
+						}
+						count := vaultItemCount(verify)
+						log.Printf("verify: server vault id=%s revision=%s items=%d accessors=%d encryptedData=%d",
+							verify.ID, verify.Revision, count,
+							len(verify.Accessors), len(verify.EncryptedData))
+						if verify.items != nil {
+							for _, it := range verify.items.Items {
+								firstFieldType := ""
+								if len(it.Fields) > 0 {
+									firstFieldType = string(it.Fields[0].Type)
+								}
+								log.Printf("verify item: id=%s type=%d name=%s fields=%d firstFieldType=%s",
+									it.ID, it.Type, it.Name, len(it.Fields), firstFieldType)
+							}
+						}
+
+						// Vault id alignment: compare the vault id we just
+						// wrote into with the one the server records as
+						// account.mainVault.id. If they diverge, the web
+						// client (which reads account.mainVault.id from
+						// server) will fetch a different vault and never
+						// see the TOTP item.
+						srvAcc, aerr := a.API.GetAccount()
+						if aerr != nil {
+							log.Printf("post-signup: GetAccount failed: %v", aerr)
+						} else if srvAcc == nil {
+							log.Printf("post-signup: GetAccount returned nil account")
+						} else {
+							match := srvAcc.MainVault.ID == mv.ID
+							log.Printf("post-signup: account.id=%s account.did=%s account.mainVault.id=%s vs CLI mv.id=%s match=%t",
+								srvAcc.ID, srvAcc.DID, srvAcc.MainVault.ID, mv.ID, match)
+							for i, ac := range verify.Accessors {
+								accMatch := ac.ID == srvAcc.ID
+								log.Printf("post-signup: verify.accessors[%d].id=%s vs account.id=%s match=%t",
+									i, ac.ID, srvAcc.ID, accMatch)
+							}
+						}
+					}
+				} else {
+					log.Printf("verify: skipped (no unlocked account in state)")
+				}
 			}
 		}
 	} else if response.MFA != "" {

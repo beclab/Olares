@@ -163,20 +163,48 @@ func (a *App) CreateItem(params CreateItemParams) (*VaultItem, error) {
 	}
 
 	vault := params.Vault
+	log.Printf("CreateItem: enter id=%s revision=%s accessors=%d encryptedData=%d aesKey?=%t items?=%t itemCount=%d hasChanges=%t",
+		vault.ID, vault.Revision, len(vault.Accessors), len(vault.EncryptedData),
+		vault.aesKey != nil, vault.items != nil, vaultItemCount(vault), vaultHasChanges(vault))
+
 	if vault.aesKey == nil {
+		log.Printf("CreateItem: vault aesKey nil, calling Unlock to bootstrap")
 		if err := vault.Unlock(unlocked); err != nil {
 			return nil, fmt.Errorf("unlock vault: %w", err)
 		}
+		log.Printf("CreateItem: post-Unlock accessors=%d encryptedData=%d aesKey?=%t",
+			len(vault.Accessors), len(vault.EncryptedData), vault.aesKey != nil)
 	}
 
 	vault.AddItems(item)
+	{
+		fieldType := ""
+		fieldValueLen := 0
+		if len(item.Fields) > 0 {
+			fieldType = string(item.Fields[0].Type)
+			fieldValueLen = len(item.Fields[0].Value)
+		}
+		log.Printf("CreateItem: post-AddItems itemCount=%d added id=%s type=%d fields=%d firstFieldType=%s firstFieldValueLen=%d",
+			vaultItemCount(vault), item.ID, item.Type, len(item.Fields), fieldType, fieldValueLen)
+	}
+
 	if err := vault.Commit(); err != nil {
 		return nil, fmt.Errorf("commit vault: %w", err)
 	}
+	log.Printf("CreateItem: post-Commit encryptedData=%d iv?=%t aad?=%t",
+		len(vault.EncryptedData),
+		vault.EncryptionParams.IV != "", vault.EncryptionParams.AdditionalData != "")
+
+	log.Printf("CreateItem: pre-UpdateVault id=%s revision=%s encryptedData=%d accessors=%d",
+		vault.ID, vault.Revision, len(vault.EncryptedData), len(vault.Accessors))
 	pushed, err := a.API.UpdateVault(*vault)
 	if err != nil {
+		log.Printf("CreateItem: API.UpdateVault failed: %+v", err)
 		return nil, fmt.Errorf("updateVault: %w", err)
 	}
+	log.Printf("CreateItem: post-UpdateVault id=%s revision=%s encryptedData=%d accessors=%d",
+		pushed.ID, pushed.Revision, len(pushed.EncryptedData), len(pushed.Accessors))
+
 	pushed.aesKey = vault.aesKey
 	pushed.items = vault.items
 	if err := pushed.Unlock(unlocked); err != nil {
@@ -199,6 +227,24 @@ type CreateItemParams struct {
 	Tags   []string
 	Icon   string
 	Type   VaultType
+}
+
+// vaultItemCount returns the number of items currently held in the
+// vault's in-memory collection (0 if not yet unlocked).
+func vaultItemCount(v *Vault) int {
+	if v == nil || v.items == nil {
+		return 0
+	}
+	return len(v.items.Items)
+}
+
+// vaultHasChanges reports whether the vault's in-memory items collection
+// has any pending local changes.
+func vaultHasChanges(v *Vault) bool {
+	if v == nil || v.items == nil {
+		return false
+	}
+	return v.items.HasChanges()
 }
 
 // MainVault returns the (possibly nil) Vault stored locally that
