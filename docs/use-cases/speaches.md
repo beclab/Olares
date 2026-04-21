@@ -50,7 +50,6 @@ When you open Speaches for the first time, it downloads and initializes its buil
 If initialization does not finish within 30 minutes, it may time out and be canceled automatically. If this happens, wait until your network connection is stable, then open Speaches again to retry initialization.
 :::
 
-
 ## Use Speaches
 
 Speaches ships with two models ready to use out of the box:
@@ -135,7 +134,7 @@ Audio Chat uses the pre-installed `Systran/faster-whisper-small` speech-to-text 
 Larger models require more GPU resources. If generation tasks start failing after switching to a larger model, see [Why do tasks fail after switching to a larger model](#why-do-tasks-fail-after-switching-to-a-larger-model).
 :::
 
-1. Open the Speaches terminal and download the model:
+1. Open Speaches Terminal and download the model:
 
    ```bash
    hf download Systran/faster-whisper-large-v3
@@ -212,27 +211,12 @@ You can use Speaches as the STT/TTS backend for Open Notebook.
 
    ![Configure STT/TTS in Open Notebook](/images/manual/use-cases/speaches-open-notebook-config.png#bordered) -->
 
-## Switch to CPU mode
-
-Speaches uses GPU mode by default. If needed, you can switch it to CPU mode instead. CPU mode is slower and is mainly suitable for small tasks.
-
-To switch to CPU mode:
-
-1. Go to **Settings** > **Applications** > **Speaches** > **Manage environment variables**.
-2. Click <i class="material-symbols-outlined">edit_square</i> next to `SPEACHES_GPU`, change its value to `false`, then click **Confirm**.
-
-   ![Switch to CPU mode](/images/manual/use-cases/speaches-cpu-mode.png#bordered){width=90%}
-
-3. Click **Apply** to save the changes.
-
-Speaches automatically redeploys in CPU mode. Processing will be slower compared to GPU mode.
-
 ## Manage models
 
 Manage models when you want to use a different model, improve quality, or free up storage space.
 
 ### Check downloaded models
-To see all downloaded models, open the Speaches terminal and run:
+To see all downloaded models, open Speaches Terminal and run:
 
 ```bash
 hf cache list
@@ -240,7 +224,7 @@ hf cache list
 
 ### Download a new model
 
-1. Open the Speaches terminal and run:
+1. Open Speaches Terminal and run:
 
    ```bash
    hf download <model-name>
@@ -265,7 +249,7 @@ hf cache list
 
 To free up storage space, you can remove models you no longer need:
 
-1. Open the Speaches terminal and run:
+1. Open Speaches Terminal and run:
 ```bash
 hf cache rm model/<model_name>
 ```
@@ -277,6 +261,21 @@ hf cache rm model/Systran/faster-whisper-medium
 ```
 
 2. Refresh the Speaches page to update the model list.
+
+## Switch to CPU mode
+
+Speaches uses GPU mode by default. If needed, you can switch it to CPU mode instead. CPU mode is slower and is mainly suitable for small tasks.
+
+To switch to CPU mode:
+
+1. Go to **Settings** > **Applications** > **Speaches** > **Manage environment variables**.
+2. Click <i class="material-symbols-outlined">edit_square</i> next to `SPEACHES_GPU`, change its value to `false`, then click **Confirm**.
+
+   ![Switch to CPU mode](/images/manual/use-cases/speaches-cpu-mode.png#bordered){width=90%}
+
+3. Click **Apply** to save the changes.
+
+Speaches automatically redeploys in CPU mode. Processing will be slower compared to GPU mode.
 
 ## FAQs
 
