@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenCode, oh-my-openagent, OMO, multi-agent, AI coding agent, ultrawork, MCP, self-hosted
-app_version: "1.0.6"
+app_version: "1.0.10"
 doc_version: "1.0"
-doc_updated: "2026-04-18"
+doc_updated: "2026-04-21"
 ---
 
 # Orchestrate multi-agent workflows with oh-my-openagent
@@ -25,14 +25,14 @@ By the end of this tutorial, you will learn how to:
 - Configure OMO to work with local Ollama models, cloud models, or a hybrid of both.
 - Trigger multi-agent collaboration with the `ultrawork` keyword.
 - Use the built-in context7, grep_app, and websearch MCP servers.
-- Route doc queries to a self-hosted Context7 alongside OMO.
+- Route documentation queries to a self-hosted Context7 alongside OMO.
 
 ## Prerequisites
 - Your Olares device must have internet access.
 - [OpenCode installed](opencode.md) on Olares, chart version 1.0.6 or later.
 - Local models that support tool use, [connected to OpenCode](opencode.md#connect-to-a-custom-provider). This guide uses Qwen3.5 27B Q4_K_M and Qwen3.5 9B Q4_K_M as an example. In Olares, each of these models is a separate single-model app, so you need to add them as two model providers.
 
-  :::details Example model provider configuration
+  :::details Model provider configuration
 
   ```json
   {
@@ -79,7 +79,7 @@ By the end of this tutorial, you will learn how to:
 
 ### How models are selected
 
-OMO splits model selection between you and the config file:
+OMO splits model selection between you and the configuration file:
 
 - **Main model**: The model for the agent you chat with directly. You pick it in the OpenCode UI's model selector. It is independent of `oh-my-openagent.json`.
 - **Subagent models**: When the main agent calls `delegate_task` to hand work off to a subagent (such as Explore or Librarian), the subagent uses the model defined for that agent under the `agents` field in `~/.config/opencode/oh-my-openagent.json`.
@@ -98,7 +98,7 @@ This keeps subagent delegation working even when a provider is down.
 
 ### Default models in the configuration file
 
-OMO tunes each agent's prompt for a specific model family. The default config file uses the following primary and fallback models:
+OMO tunes each agent's prompt for a specific model family. The default configuration file uses the following primary and fallback models:
 
 | Agent | Recommended UI model (cloud) | Free fallback |
 |:------|:-----------------------------|:--------------|
@@ -114,13 +114,13 @@ For the full list of recommended models per agent and per category, see the [Age
 
 ### Files that Olares manages for OMO
 
-When you install OpenCode, Olares pre-configures OMO. The pre-installed items live under the global OpenCode config directory, which maps to `Application/Data/opencode/.config/opencode/` in Olares Files. The rest of this guide uses `~/.config/opencode/` as shorthand for this path.
+When you install OpenCode, Olares pre-configures OMO. The pre-installed items live under the global OpenCode configuration directory, which maps to `Application/Data/opencode/.config/opencode/` in Olares Files. The rest of this guide uses `~/.config/opencode/` as shorthand for this path.
 
 :::details File inventory
 
 | Path | What it does |
 |:-----|:-------------|
-| `~/.config/opencode/opencode.json` (the `plugin` field) | Registers `"oh-my-openagent"` in the global config. |
+| `~/.config/opencode/opencode.json` (the `plugin` field) | Registers `"oh-my-openagent"` in the global configuration. |
 | `~/.config/opencode/oh-my-openagent.json` | Recommended model per agent plus a runtime fallback chain. Written on first install only. |
 | `~/.config/opencode/olares-baseline-instructions.md` | Web preview, package management, and Olares domain conventions. Refreshed on every startup. |
 | `~/.config/opencode/skills/web-preview/` and `system-admin/` | Skill files. Force-updated on every startup. |
@@ -128,7 +128,7 @@ When you install OpenCode, Olares pre-configures OMO. The pre-installed items li
 
 :::
 
-All Olares-managed settings live in the global config directory. They are never written to your workspace `opencode.json`. If your workspace config still contains the old Olares-managed instructions, Olares removes them only when they exactly match the previous preset. Anything you added or modified yourself is preserved.
+All Olares-managed settings live in the global configuration directory. They are never written to your workspace `opencode.json`. If your workspace configuration still contains the old Olares-managed instructions, Olares removes them only when they exactly match the previous preset. Anything you added or modified yourself is preserved.
 
 The `oh-my-openagent.json` file is only written on first install. If you later update it through the `install` command or by hand, your changes are not overwritten.
 
@@ -138,8 +138,8 @@ The `oh-my-openagent.json` file is only written on first install. If you later u
 
 OMO is controlled by the `OPENCODE_OMO` environment variable:
 
-- `false` (default): the plugin is not loaded. The npm package and config files stay on disk, so enabling it later doesn't require another download.
-- `true`: the plugin is registered in the global config and the npm package is installed.
+- `false` (default): the plugin is not loaded. The npm package and configuration files stay on disk, so enabling it later doesn't require another download.
+- `true`: the plugin is registered in the global configuration and the npm package is installed.
 
 To enable OMO:
 
@@ -153,9 +153,9 @@ To enable OMO:
 
 4. Click **Apply** to save your changes and wait for the app to restart.
 
-On first launch, OMO needs time to finish its initial configuration. This might take a while.
+On first launch, OMO needs time to finish its initial configuration. This may take a few minutes.
 
-To disable OMO later, repeat the steps above and set `OPENCODE_OMO` to `false`. The plugin registration and MCP servers stop, but the npm package and the `oh-my-openagent.json` config stay on disk for the next time you turn it back on.
+To disable OMO later, repeat the steps above and set `OPENCODE_OMO` to `false`. The plugin registration and MCP servers stop, but the npm package and the `oh-my-openagent.json` configuration stay on disk for the next time you turn it back on.
 
 ### Configure local models
 
@@ -194,8 +194,8 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
    }
    ```
 
-   :::info Why `"stream": false`
-   Ollama's streaming mode returns NDJSON, which the SDK can't parse. Agents that use tools (especially Librarian and Explore) silently fall back to the next model in the chain if this is missing. This is a known Ollama limitation.
+   :::info `"stream": false` requirement
+   Ollama's streaming mode returns NDJSON, which the SDK can't parse. Agents that use tools (especially Librarian and Explore) silently fall back to the next model in the chain if `"stream": false` is missing. This is a known Ollama limitation.
    :::
 
 4. In the `categories` section, update each category's `model` and `fallback_models` list so that local models come first. For example:
@@ -218,7 +218,7 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
    }
    ```
 
-  :::details Full `categories` section
+  :::details `categories` section
    ```json
    "categories": {
      "visual-engineering": {
@@ -280,7 +280,7 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
    }
    ```
   :::
-5. Add concurrency limits in the same file. A local Ollama server has limited resources, and multiple agents hitting it at once can exhaust VRAM or cause heavy slowdowns.
+5. Add concurrency limits in the same file. A local Ollama server has limited resources, and multiple agents hitting it at once can exhaust VRAM or cause significant slowdowns.
 
    ```json
    {
@@ -297,9 +297,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
    }
    ```
 
-   This caps requests to the large model to one at a time and prevents out-of-memory crashes.
+   This limits the large model to one concurrent request and prevents out-of-memory crashes.
 
-  :::details Complete `oh-my-openagent.json` with local-model setup
+  :::details `oh-my-openagent.json` for local models
 
   ```json
   {
@@ -473,10 +473,6 @@ With OMO enabled, the agent selector changes from Plan/Build to Sisyphus, Promet
 | Plan first, then execute<br> (previously Plan) | Select Prometheus. It interviews you and produces<br> a plan. Type `/start-work` to hand off to Atlas. |
 | Deep autonomous coding | Select Hephaestus. Suited for large, complex tasks that run<br> autonomously. |
 
-:::tip
-Without `ultrawork` or `ulw`, OMO will not be triggered. Using an agent on its own is equivalent to the original Build or Plan mode.
-:::
-
 ### Multi-agent collaboration mode
 
 Type `ultrawork` (or the alias `ulw`) followed by a task description in the chat box. For example:
@@ -491,8 +487,8 @@ OMO analyzes the task, assigns it to specialized agents, and runs them in parall
 
 ### Prometheus planning mode
 
-:::info
-Some keywords in your task description might trigger OpenCode to invoke the `/web-preview` skill. If that happens, correct the agent and ask it to continue in planning mode.
+:::info Unintended skill trigger
+Some keywords in your task description might trigger OpenCode to invoke the `/web-preview` skill. If that happens, ask the agent to ignore it and continue planning.
 :::
 
 For large, complex tasks, plan first:
@@ -580,7 +576,7 @@ What are the major changes in Kubernetes 1.32 released in 2026? use websearch
 
 context7 and websearch both work without keys, but adding a key raises your quota and lifts rate limits. You can also switch websearch from Exa (the default) to Tavily. grep_app has no key.
 
-You configure all of this in `~/.config/opencode/oh-my-openagent.json` by overriding the built-in MCP definition under the `mcp` field. An override replaces the built-in definition entirely, so `type`, `url`, and `enabled` must all be present. If you set more than one override, put them under the same `mcp` object.
+To configure any of this, add an override for the built-in MCP definition under the `mcp` field in `~/.config/opencode/oh-my-openagent.json`. An override replaces the built-in definition entirely, so `type`, `url`, and `enabled` must all be present. If you set more than one override, put them under the same `mcp` object.
 
 :::tip Restart required
 Restart OpenCode after every edit to `oh-my-openagent.json` so the new definition takes effect.
@@ -605,7 +601,7 @@ Get a key from [context7.com](https://context7.com/), then add the following to 
 }
 ```
 
-To verify the key is active, ask the agent `use context7` to look up a recently released library, and check your Context7 dashboard for an increase in usage.
+To verify the key is active, ask the agent to look up a recently released library using `use context7`, then check your Context7 dashboard for an increase in usage.
 
 #### Add an API key for websearch (Exa)
 
@@ -681,20 +677,18 @@ To verify, run a web search from the agent and check your [Tavily dashboard](htt
 
 ## Use a self-hosted Context7 instead
 
-OMO's built-in `context7` queries the public Context7 cloud at `https://mcp.context7.com/mcp`. To route doc queries to your own instance, install Context7 on Olares and register it in OpenCode by following [Connect Context7 to OpenCode](context7.md#opencode).
+OMO's built-in `context7` server queries the public Context7 cloud at `https://mcp.context7.com/mcp`. To use your own instance, install Context7 on Olares and register it in OpenCode. See [Connect Context7 to OpenCode](context7.md#opencode) for steps.
 
-Entries in `opencode.json` always take priority over OMO's built-in MCP servers. If you registered a self-hosted Context7 entry in `opencode.json` before enabling OMO, whether the two coexist depends on the name you gave your entry:
+Entries in `opencode.json` take priority over OMO's built-in MCP servers. If you already have a self-hosted Context7 entry in `opencode.json`, what happens when you enable OMO depends on the entry name:
 
-| Entry name in `opencode.json` | Effect | What to do |
-|:------------------------------|:-------|:-----------|
-| Any name other than `context7` | Your entry and OMO's built-in<br> Context7 server coexist. | Nothing. |
-| `context7` | Name collides with OMO's<br> built-in Context7 server. | Either: <br><ul><li>Rename your entry in `opencode.json` (for example, to `context7-local`)</li><li>disable OMO's built-in server by adding `"disabled_mcps": ["context7"]` to `oh-my-openagent.json`.</li></ul> |
+- If the name is anything other than `context7`, both your self-hosted instance and OMO's built-in `context7` server load without conflict.
+- If the name is `context7`, it conflicts with OMO's built-in server. Rename your entry in `opencode.json` (for example, to `context7-local`), or add `"disabled_mcps": ["context7"]` to `~/.config/opencode/oh-my-openagent.json` to disable OMO's built-in server.
 
 ## Advanced configuration
 
-### Regenerate the config for your subscriptions
+### Regenerate the `oh-my-openagent.json` for your subscriptions
 
-The pre-installed config enables all providers. If you only subscribe to some of them, ask the agent to regenerate the optimal config.
+The pre-installed configuration enables all providers. If you only subscribe to some of them, ask the agent to regenerate the optimal configuration.
 
 Use the `--claude`, `--openai`, `--gemini`, and `--copilot` flags (set each to `yes` or `no`) to match your actual subscriptions. For example, if you subscribe to Claude and Copilot but not OpenAI or Gemini, enter the following in the chat window:
 
@@ -704,8 +698,8 @@ Run: npx oh-my-opencode install --no-tui --claude=yes --openai=no --gemini=no --
 
 Adjust `yes`/`no` based on which providers you actually have. This updates `~/.config/opencode/oh-my-openagent.json`.
 
-:::info
-This command requires OpenCode version 1.4.0 or later. This config only affects subagent delegation. The main agent's model is still selected in the UI.
+:::info Version requirement
+This command requires OpenCode version 1.4.0 or later. It rewrites the configuration for all agents, but only the subagent models take effect from the file. The main agent always uses the model you select in the OpenCode UI.
 :::
 
 ### Override an agent's model manually
@@ -722,7 +716,7 @@ To set a specific model for an agent, edit `~/.config/opencode/oh-my-openagent.j
 ```
 
 :::warning
-Do not assign expensive models to tool-type agents such as Explore and Librarian. It raises token usage without improving results.
+Explore and Librarian are tool-use agents. Assigning high-capability models to them raises token usage without improving results.
 :::
 
 ## FAQ
@@ -757,9 +751,9 @@ Check the Pod logs for the `init-packages` container and search for `oh-my-openc
 
 Yes. Authentication is stored under `~/.config/opencode/` and reloaded automatically after a restart.
 
-### Will an Olares upgrade overwrite my config?
+### Will an Olares upgrade overwrite my configuration?
 
-No. `oh-my-openagent.json` is only written when the file doesn't exist. The global `opencode.json` only manages the Olares-owned `plugin` and `instructions` entries. Other entries you added are untouched. Skill files (`web-preview`, `system-admin`) are force-updated to the latest version on every startup.
+No. `oh-my-openagent.json` is only written when the file doesn't exist. The global `opencode.json` only manages the Olares-owned `plugin` and `instructions` entries. Any other entries you added are preserved. Skill files (`web-preview`, `system-admin`) are force-updated to the latest version on every startup.
 
 ### Will I know when a model switches automatically?
 
