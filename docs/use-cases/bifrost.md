@@ -182,36 +182,32 @@ In Open WebUI, add Bifrost as a direct external connection and register both exa
 
 ### Connect Open WebUI to Bifrost
 
-1. In Open WebUI, click the model dropdown at the top of the chat page.
+1. In Open WebUI, click your user avatar, and then select **Admin Panel**.
+2. Click the **Settings** tab, and then select **Connections**.
+3. Enable **Direct Connection**, and then click <span class="material-symbols-outlined">add</span> on the right of **Manage OpenAI Connections**.
 
-click the model selector in the upper-left corner, and then select **Manage Connections**.
+   ![Direct connection toggle](/images/manual/use-cases/bifrost-openwebui-direct-connection.png#bordered)
 
-   <!-- ![Manage connections in Open WebUI](/images/manual/use-cases/bifrost-openwebui-manage-connections.png#bordered) -->
-
-2. Go to **Settings** > **External Connection**, enable **Direct Connection**, and then click <span class="material-symbols-outlined">add</span> next to **Manage OpenAI interface connections**.
-
-   <!-- ![Direct connection toggle](/images/manual/use-cases/bifrost-openwebui-direct-connection.png#bordered) -->
-
-3. In the connection form, enter the following details:
+4. In the **Add Connection** window, specify the following settings:
    - **URL**: Paste the Bifrost endpoint URL with `/v1` appended.
    - **Auth**: Select **None**.
-   - **Model IDs**: Enter each model ID in the `ollama/<model-name>` format, then click <span class="material-symbols-outlined">add</span>. For example:
+   - **Add a Model ID**: Enter each model ID in the `ollama/<model-name>` format, and then click <span class="material-symbols-outlined">add</span> to add it. For example:
      - `ollama/llama3.1:8b` (from Ollama)
      - `ollama/qwen3.5:9b` (from a single-model app)
 
-   <!-- ![Open WebUI connection form](/images/manual/use-cases/bifrost-openwebui-connection-form.png#bordered) -->
+   ![Open WebUI connection form](/images/manual/use-cases/bifrost-openwebui-connection-form.png#bordered)
 
-4. Click the refresh icon to verify the connection, and then click **Save**.
+4. Click <span class="material-symbols-outlined">refresh</span> to verify the connection, and then click **Save**.
 
 ### Chat and verify
 
-1. In Open WebUI, select one of the models you just added, and then start a conversation.
+1. In Open WebUI, on the **New Chat** page, select one of the models you just added, and then start a conversation.
 
-   <!-- ![Open WebUI chat](/images/manual/use-cases/bifrost-openwebui-chat.png#bordered) -->
+   ![Open WebUI chat](/images/manual/use-cases/bifrost-openwebui-chat.png#bordered)
 
 2. Return to Bifrost and check **Observability** > **LLM Logs** to confirm the request was routed through Bifrost.
 
-   <!-- ![Bifrost log for Open WebUI](/images/manual/use-cases/bifrost-openwebui-log.png#bordered) -->
+   ![Bifrost log for Open WebUI](/images/manual/use-cases/bifrost-openwebui-log.png#bordered)
 
 ## Learn more
 
