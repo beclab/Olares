@@ -35,6 +35,9 @@ daemon/bin
 
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+docs/.vitepress/_redirects.nginx
+!docs/.vitepress/scripts/
+!docs/.vitepress/scripts/**
 node_modules
 .idea/
 cli/olares-cli*
