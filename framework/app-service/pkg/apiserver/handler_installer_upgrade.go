@@ -219,7 +219,7 @@ func (h *upgradeHandlerHelper) resolveUpgradeType(appConfig *appcfg.ApplicationC
 		return appcfg.InstallOrUpgradeV1
 	}
 	if isAdmin {
-		return appcfg.InstallOrUpgradeClientAndServer
+		return appcfg.InstallOrUpgradeServerAndClient
 	}
 	return appcfg.InstallOrUpgradeClientOnly
 }
@@ -372,7 +372,6 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	appConfig, err = helper.overlayAppConfig(upgradeType)
 	if err != nil {
 		klog.Errorf("Failed to get overlay config err=%v", err)
-		api.HandleError(resp, req, err)
 		return
 	}
 

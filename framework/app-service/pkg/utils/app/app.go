@@ -792,6 +792,9 @@ func GetAppConfigVersion(ctx context.Context, options *ConfigOptions) (appcfg.AP
 	}
 
 	apiVersion := GetTopLevelValue(raw, "apiVersion")
+	if apiVersion == "" {
+		apiVersion = "v1"
+	}
 	return appcfg.APIVersion(apiVersion), nil
 }
 
@@ -990,10 +993,6 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		Client:               cfg.Client,
 		Server:               cfg.Server,
 	}, chart, nil
-}
-
-func ResolveRequirementByCfg(cfg *appcfg.ApplicationConfig, opt *ConfigOptions) (*appcfg.AppRequirement, error) {
-	return cfg.ResolveRequirement(opt.SelectedGpu, opt.InstallType)
 }
 
 func getAppConfigFromConfigurationFile(opt *ConfigOptions, chartPath string) (*appcfg.ApplicationConfig, string, error) {
@@ -1380,5 +1379,5 @@ func GetTopLevelValue(content []byte, key string) string {
 			return value
 		}
 	}
-	return "v1"
+	return ""
 }
