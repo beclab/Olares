@@ -1,6 +1,6 @@
 export const redirects = {
     // Root → default docs landing
-    '/': '/manual/docs-home.html',
+    '/': '/manual/overview',
 
     // Refactor: /manual/olares/studio/** → /developer/develop/tutorial/**
     '/manual/olares/studio/': '/developer/develop/tutorial/',
