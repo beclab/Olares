@@ -132,7 +132,7 @@ The full voice pipeline (STT, LLM, TTS) takes time to complete. Do not refresh t
 Audio Chat uses the pre-installed `Systran/faster-whisper-small` speech-to-text model by default. For better transcription accuracy, you can switch to a larger model such as `Systran/faster-whisper-large-v3`.
 
 :::info More GPU resources may be required
-Larger models require more GPU resources. If generation tasks start failing after switching to a larger model, see [Why do generation tasks fail after I switch to a larger model?](#why-do-generation-tasks-fail-after-i-switch-to-a-larger-model).
+Larger models require more GPU resources. If generation tasks start failing after switching to a larger model, see [Why do tasks fail after switching to a larger model](#why-do-tasks-fail-after-switching-to-a-larger-model).
 :::
 
 1. Open the Speaches terminal and download the model:
@@ -156,42 +156,45 @@ Speaches restarts automatically to apply the change.
 After the app shows as running again, wait a little longer before using it, as the service may still be initializing.
 :::
 
-## Use the Speaches API
+<!-- ## Use the Speaches API
 
 This section is for connecting other apps to Speaches. If you only want to use Speaches in its own interface, you can skip this section.
 
-Speaches is fully compatible with the OpenAI API format. Any app that supports the OpenAI SDK can call it directly.
+Speaches is fully compatible with the OpenAI API format. Any app that supports the OpenAI SDK can call it directly.-->
 
-### Get the endpoint
+<!-- ### Get the endpoint
 
-<!-- The following content is temporary. Will update with two separate examples (access from within Olares, and outside Olares). -->
+<Tabs>
+<template #Access-within-Olares>
 
-- **From other Olares apps**: 
-   1. Go to **Settings** > **Applications** > **Speaches**.
-   2. Under **Shared entrances**, click **Speaches API**.
-   3. On the **Set up endpoint** page, copy the URL next to **Endpoint**. 
-   
-      For example:
-      ```
-      http://edd26bab0.shared.olares.com
-      ```
+1. Go to **Settings** > **Applications** > **Speaches**.
+2. Under **Shared entrances**, click **Speaches API**.
+3. On the **Set up endpoint** page, copy the URL next to **Endpoint**. 
 
-   ![Speaches shared entrance](/images/manual/use-cases/speaches-shared-entrance.png#bordered){width=90%}
+   For example:
+   ```
+   http://edd26bab0.shared.olares.com
+   ```
 
-- **From external apps**: 
-   
-   Before you start, make sure [LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) is enabled on your device.
-   1. Go to **Settings** > **Applications** > **Speaches**.
-   2. Under **Entrances**, click **Speaches API**.
-   3. On the **Endpoint settings** panel, copy the URL next to **Endpoint**. 
-   
-      For example:
-      ```
-      https://a8259cf22.laresprime.olares.com
-      ```
+![Speaches shared entrance](/images/manual/use-cases/speaches-shared-entrance.png#bordered){width=90%}
 
-   ![Speaches API entrance](/images/manual/use-cases/speaches-api-entrance.png#bordered){width=90%}
+</template>
+<template #Access-outside-of-Olares>
 
+Before you start, make sure [LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) is enabled on your device.
+1. Go to **Settings** > **Applications** > **Speaches**.
+2. Under **Entrances**, click **Speaches API**.
+3. On the **Endpoint settings** panel, copy the URL next to **Endpoint**. 
+
+   For example:
+   ```
+   https://a8259cf22.laresprime.olares.com
+   ```
+
+![Speaches API entrance](/images/manual/use-cases/speaches-api-entrance.png#bordered){width=90%}
+
+</template>
+</Tabs> -->
 
 <!-- ### Connect Open Notebook to Speaches
 
@@ -234,8 +237,6 @@ To see all downloaded models, open the Speaches terminal and run:
 ```bash
 hf cache list
 ```
-Example output:
-![Downloaded model list](/images/manual/use-cases/speaches-list-model.png#bordered)
 
 ### Download a new model
 
@@ -253,7 +254,6 @@ Example output:
    # Highest accuracy Whisper model, requires more memory
    hf download Systran/faster-whisper-large-v3
    ```
-   ![Download a model](/images/manual/use-cases/speaches-download-a-model.png#bordered)
 
    :::tip Shared model storage
    Models are downloaded to Olares Files, at `/Home/Huggingface/speaches/`. If other apps on your Olares also use Hugging Face models, they share this directory.
@@ -276,12 +276,21 @@ For example:
 hf cache rm model/Systran/faster-whisper-medium
 ```
 
-Example output:
-![Remove a model](/images/manual/use-cases/speaches-remove-model.png#bordered)
-
 2. Refresh the Speaches page to update the model list.
 
 ## FAQs
+
+### Why do tasks fail after switching to a larger model?
+
+This issue usually happens when the GPU is in **Memory slicing** mode.
+
+Larger models require more VRAM. If Speaches is assigned only a small amount of VRAM, generation tasks may fail after you switch to a larger model.
+
+To fix this issue:
+- Increase the VRAM assigned to Speaches in **Memory slicing** mode.
+- Or switch the GPU to another mode.
+
+For detailed instructions, see [Manage GPU resources](/manual/olares/settings/single-gpu.md).
 
 ### Can I use a different Ollama instance for Audio Chat?
 
@@ -296,26 +305,17 @@ Yes. Update the `CHAT_COMPLETION_BASE_URL` in the deployment configuration:
    
    ![Edit CHAT_COMPLETION_BASE_URL](/images/manual/use-cases/speaches-edit-base-url.png#bordered){width=90%}
 
+4. Go to **Settings** > **Applications** > **Speaches**, click **Stop**, then click **Resume** to restart Speaches.
+
 ### Why does Audio Chat show an error?
 
 Audio Chat requires Ollama to be running with at least one chat model downloaded. If Ollama is not installed or has no models available, Audio Chat displays an error. 
 
 To fix this issue, install Ollama and download a chat model by following the [Ollama guide](ollama.md). Speaches detects Ollama automatically, so you do not need to restart Speaches.
 
-### Why do generation tasks fail after I switch to a larger model?
-
-This issue usually happens when the GPU is in **Memory slicing** mode.
-
-Larger models require more VRAM. If Speaches is assigned only a small amount of VRAM, generation tasks may fail after you switch to a larger model.
-
-To fix this issue:
-- Increase the VRAM assigned to Speaches in **Memory slicing** mode.
-- Or switch the GPU to another mode.
-
-For detailed instructions, see [Manage GPU resources](/manual/olares/settings/single-gpu.md).
-
 ## Learn more
 
 - [Speaches official documentation](https://speaches.ai/): Full API reference and model compatibility.
 - [Ollama](ollama.md): Download and run local AI models.
 - [Open WebUI](openwebui.md): Chat interface that can use Speaches as a speech backend.
+- [IndexTTS2](indextts2.md): Generate speech from text with built-in or cloned voices.
