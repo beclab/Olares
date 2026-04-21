@@ -137,6 +137,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "PDFMathTranslate",
               link: "/use-cases/pdfmathtranslate",
             },
+            {
+              text: "Speaches",
+              link: "/use-cases/speaches",
+            },
             // {
             //   text: "Stable Diffusion",
             //   link: "/use-cases/stable-diffusion",
