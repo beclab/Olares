@@ -132,9 +132,7 @@ You can download all output images and videos from Olares One to your local comp
 
 ### CPU temperature rises unusually high
 
-Running large workflows may cause the CPU temperature on Olares One to rise unusually high. 
-If this happens, see [CPU temperature rises unusually high on Olares One](/use-cases/comfyui-common-issues#cpu-temperature-rises-unusually-high-on-olares-one) for a temporary workaround.
-
+Running large workflows may cause the CPU temperature on Olares One to rise unusually high. See [CPU temperature rises unusually high on Olares One](/use-cases/comfyui-common-issues#cpu-temperature-rises-unusually-high-on-olares-one) for the workaround.
 
 ## Resources
 - [ComfyUI official docs](https://docs.comfy.org/)

@@ -28,13 +28,13 @@ This is usually caused by incorrect GPU allocation or insufficient resources. To
 
 ## Launcher log shows errors
 
-Seeing `Error` messages in the Launcher logs does not necessarily indicate a system failure. During startup and plugin scanning, ComfyUI often logs non-fatal errors for missing optional dependencies or environment checks, even while the application is functioning perfectly.
+`Error` messages in the Launcher logs do not necessarily indicate a system failure. During startup and plugin scanning, ComfyUI often logs non-fatal errors for missing optional dependencies or environment checks, even when running perfectly.
 
-If ComfyUI starts successfully, many of these messages may not require action. You only need to investigate the logs if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
+If ComfyUI starts successfully, many of these messages require action. Investigate logs only if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
 
 ## Models cannot be downloaded in ComfyUI Launcher
 
-A workflow may require a model that needs a login, access token, or approval to download. ComfyUI Launcher cannot download these models directly.
+Some workflows require models that need a login, access token, or approval to download. ComfyUI Launcher cannot download these models directly.
 
 To solve it, find the download link using one of the methods below, download the model manually, and [upload it](/use-cases/comfyui-launcher.md#upload-local-models) to the correct folder in Olares Files. 
 
@@ -42,19 +42,17 @@ To solve it, find the download link using one of the methods below, download the
 
 Some official templates include notes or a **Model Links** section that lists:
 
-- the required model file
-- the download URL
-- the expected storage location
+- The required model file
+- The download URL
+- The expected storage location
 
-If available, you can use this information to copy the download URL or open the model page directly.
+If available, copy the download URL or open the model page directly.
 
 ![Model links](/images/manual/use-cases/comfyui-model-links.png#bordered){width=90%}
 
 ### Method 2: Use a browser helper extension
 
-If the template shows a missing-model dialog but does not expose the full URL clearly, you can use a browser helper extension.
-
-For example, with [WAN Download URL Helper](https://github.com/carlric/wan-download-url-helper):
+If the template shows a missing-model dialog and does not expose the full URL, use a browser helper extension like [WAN Download URL Helper](https://github.com/carlric/wan-download-url-helper):
 
 1. Open the missing-model dialog in ComfyUI.
 2. Hover over a download icon.
@@ -67,13 +65,13 @@ For example, with [WAN Download URL Helper](https://github.com/carlric/wan-downl
 
 If the URL is not shown in the template notes or dialog, inspect the page in your browser developer tools and look for network requests triggered by the template or missing-model dialog.
 
-![Inspect url](/images/manual/use-cases/comfyui-inspect-url.png#bordered){width=80%}
+![Inspect URL](/images/manual/use-cases/comfyui-inspect-url.png#bordered){width=80%}
 
 ## CPU temperature rises unusually high on Olares One
 
-CPU temperature rises unusually high while running certain ComfyUI workloads on Olares One.
+CPU temperature rises unusually high when running certain ComfyUI workloads on Olares One.
 
-This issue typically occurs when running large workflows that require more memory (VRAM) than your graphics card has available. When this happens, the system may place an unusually heavy load on a single CPU core to swap data, driving the reported CPU temperature very high.
+This issue typically occurs when the workflow requires more VRAM than your graphics card has. When this happens, the system will place heavy load on a single CPU core to swap data, driving the temperature high.
 
 **Workaround**: Temporarily lower the CPU frequency.
 
