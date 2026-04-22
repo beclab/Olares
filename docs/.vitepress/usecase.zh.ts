@@ -225,7 +225,11 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/trek-advanced-settings",
                 }
               ]
-            },            
+            },
+            {
+              text: "*Arrs",
+              link: "/zh/use-cases/arrs",
+            },                        
           ]
         },
         {
