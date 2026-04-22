@@ -13,7 +13,9 @@ import mediumZoom from "medium-zoom";
 import OSTabs from "./components/OStabs.vue";
 import VersionSwitcher from "./components/VersionSwitcher.vue";
 import _ from "lodash";
-import { redirects } from './redirects';
+import { redirects, temporaryRedirects } from './redirects';
+
+const clientRedirects: Record<string, string> = { ...redirects, ...temporaryRedirects };
 import AppLinkGlobal from './components/AppLinkGlobal.vue'
 import AppLinkCN from './components/AppLinkCN.vue'
 
@@ -35,7 +37,7 @@ enhanceApp({ app, router }: { app: App; router: Router }) {
 
       router.onBeforeRouteChange = (to: string) => {
           const path = to.replace(/\.html$/i, ''),
-              toPath = redirects[path];
+              toPath = clientRedirects[path];
 
           if (toPath) {
               setTimeout(() => { router.go(toPath); })

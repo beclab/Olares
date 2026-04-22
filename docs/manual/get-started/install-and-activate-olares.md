@@ -1,5 +1,5 @@
 ---
-search: false
+noindex: true
 ---
 ## Finish installation and activate Olares
 :::warning Same network required
