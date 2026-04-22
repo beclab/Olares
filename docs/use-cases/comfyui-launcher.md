@@ -151,7 +151,7 @@ Use this method when you already have a direct download URL for a model file tha
 
 Use this method when the model requires login, a token, approval, or manual download, or when the model source is not supported by ComfyUI Launcher.
 
-1. Download the model file to your local device. If needed, see [Models cannot be downloaded in ComfyUI Launcher](/use-cases/comfyui-common-issues#models-cannot-be-downloaded-in-comfyui-launcher).
+1. Download the model file to your local device. If needed, see [Models cannot be downloaded in ComfyUI Launcher](./comfyui-common-issues#models-cannot-be-downloaded-in-comfyui-launcher).
 2. Open Files from the Launchpad.
 3. Navigate to `External/olares/ai/model`.
 4. Open the folder that matches the model type. If you're not sure which folder to use, see [Understand the `model` directory structure](#understand-the-model-directory-structure).
