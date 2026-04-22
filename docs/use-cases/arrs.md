@@ -4,10 +4,10 @@ description: Learn how to connect and configure the *Arrs family of applications
 head:
   - - meta
     - name: keywords
-      content: Olares, *Arrs, Sonarr, Radarr, Prowlarr, Bazarr, qBittorrent, media server, self-hosted
+      content: Olares, *Arrs, *Arr, Starr, Starrs, Sonarr, Radarr, Prowlarr, Bazarr, qBittorrent, media server, self-hosted
 app_version: "1.0.x"
 doc_version: "1.0"
-doc_updated: "2026-04-21"
+doc_updated: "2026-04-22"
 ---
 
 # Manage your media library with the *Arrs ecosystem
@@ -223,7 +223,7 @@ The following steps demonstrate how to connect Bazarr to Sonarr.
 
 4. Select **Save** in the upper-left corner.
 
-   Bazarr now monitors Sonarr. whenever Sonarr downloads a TV show, Bazarr automatically detects it and downloads the corresponding subtitles according to your language settings.
+   Bazarr now monitors Sonarr. Whenever Sonarr downloads a TV show, Bazarr automatically detects it and downloads the corresponding subtitles according to your language settings.
 
 ## FAQ
 
@@ -252,7 +252,7 @@ For more information, see [Understand provider URLs](#understand-provider-urls).
 
 ### Why does my connection test fail?
 
-- **Check the URL format**: Review the requirements for the specific application you configure. Some applications (like Prowlarr connecting to Sonarr) require the `http://` prefix, while others (like Sonarr connecting to qBittorrent, or Bazarr connecting to Sonarr) require to omit the `http://` prefix. 
+- **Check the URL format**: Review the requirements for the specific application you configure. Some applications (like Prowlarr connecting to Sonarr) require the `http://` prefix, while others (like Sonarr connecting to qBittorrent, or Bazarr connecting to Sonarr) require omitting the `http://` prefix. 
 - **Verify the port**: Ensure you set the port to `80`.
 
 ## Learn more
