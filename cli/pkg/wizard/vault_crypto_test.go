@@ -26,7 +26,10 @@ func buildTestAccount(t *testing.T, password string) *Account {
 	if err != nil {
 		t.Fatalf("marshal pub: %v", err)
 	}
-	privDER := x509.MarshalPKCS1PrivateKey(priv)
+	privDER, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		t.Fatalf("marshal pkcs8 priv: %v", err)
+	}
 	signingKey := generateRandomBytes(32)
 
 	salt := generateRandomBytes(16)

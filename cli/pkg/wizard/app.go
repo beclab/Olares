@@ -692,8 +692,14 @@ func (a *App) initializeAccount(account *Account, masterPassword string) error {
 		Version:        "3.0.14",
 	}
 
-	// 6. Create account secrets (private key + signing key)
-	privateKeyDER := x509.MarshalPKCS1PrivateKey(privateKey)
+	// 6. Create account secrets (private key + signing key).
+	//    Use PKCS#8 PrivateKeyInfo DER so the encrypted blob is
+	//    interoperable with the TS web client, whose WebCrypto
+	//    importKey('pkcs8', ...) only accepts this format.
+	privateKeyDER, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if err != nil {
+		return fmt.Errorf("failed to marshal private key as PKCS#8: %w", err)
+	}
 	signingKey := generateRandomBytes(32) // HMAC key
 
 	// Combine private key and signing key into account secrets
