@@ -57,8 +57,8 @@ func rsaOAEPEncrypt(publicKeyDER []byte, payload []byte) ([]byte, error) {
 	return rsa.EncryptOAEP(sha256.New(), rand.Reader, pub, payload, nil)
 }
 
-// rsaOAEPDecrypt decrypts an RSA-OAEP/SHA-256 payload using the provided
-// PKCS1 DER-encoded private key (matching how Account.initialize stores it).
+// rsaOAEPDecrypt decrypts an RSA-OAEP/SHA-256 payload using PKCS#8 DER
+// (same as apps/packages/sdk/src/crypto.ts subtle.importKey('pkcs8', ...)).
 func rsaOAEPDecrypt(privateKeyDER []byte, ciphertext []byte) ([]byte, error) {
 	priv, err := parseRSAPrivateKeyDER(privateKeyDER)
 	if err != nil {
@@ -67,19 +67,15 @@ func rsaOAEPDecrypt(privateKeyDER []byte, ciphertext []byte) ([]byte, error) {
 	return rsa.DecryptOAEP(sha256.New(), rand.Reader, priv, ciphertext, nil)
 }
 
-// parseRSAPrivateKeyDER accepts both PKCS1 and PKCS8 encoded RSA private
-// keys; falls back to PKCS8 if PKCS1 parsing fails.
+// parseRSAPrivateKeyDER parses PKCS#8 DER into an RSA private key.
 func parseRSAPrivateKeyDER(privateKeyDER []byte) (*rsa.PrivateKey, error) {
-	if priv, err := x509.ParsePKCS1PrivateKey(privateKeyDER); err == nil {
-		return priv, nil
-	}
 	keyAny, err := x509.ParsePKCS8PrivateKey(privateKeyDER)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse RSA private key (tried PKCS1 and PKCS8): %w", err)
+		return nil, fmt.Errorf("failed to parse PKCS#8 RSA private key: %w", err)
 	}
 	priv, ok := keyAny.(*rsa.PrivateKey)
 	if !ok {
-		return nil, fmt.Errorf("PKCS8 key is not an RSA key")
+		return nil, fmt.Errorf("PKCS#8 key is not an RSA key")
 	}
 	return priv, nil
 }

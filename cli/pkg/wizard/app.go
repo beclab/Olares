@@ -20,9 +20,9 @@ import (
 // by the RPC Client and the persistable representation of the
 // account / vaults / orgs known to this client.
 type App struct {
-	Version string     `json:"version"`
-	API     *Client    `json:"-"`
-	State   *AppState  `json:"-"`
+	Version string    `json:"version"`
+	API     *Client   `json:"-"`
+	State   *AppState `json:"-"`
 }
 
 // NewApp constructs an App using the given sender and AppState.
@@ -297,6 +297,7 @@ func (a *App) Login(params LoginParams) error {
 	if err != nil {
 		return fmt.Errorf("failed to unlock account: %v", err)
 	}
+
 	a.API.State.SetAccount(account)
 	if a.State != nil {
 		a.State.SetUnlocked(unlocked)
@@ -473,6 +474,22 @@ func (c *Client) GetAccount() (*Account, error) {
 }
 
 func (c *Client) UpdateVault(vault Vault) (*Vault, error) {
+	if vault.Revision == "" {
+		if acc := c.State.GetAccount(); acc != nil && vault.ID != "" &&
+			acc.MainVault.ID == vault.ID && acc.MainVault.Revision != "" {
+			vault.Revision = acc.MainVault.Revision
+		}
+	}
+	if vault.Revision == "" && vault.ID != "" {
+		current, err := c.GetVault(vault.ID)
+		if err != nil {
+			return nil, fmt.Errorf("updateVault: resolve revision: %w", err)
+		}
+		vault.Revision = current.Revision
+		if acc := c.State.GetAccount(); acc != nil && acc.MainVault.ID == vault.ID && current.Revision != "" {
+			acc.MainVault.Revision = current.Revision
+		}
+	}
 	requestParams := []interface{}{vault}
 	response, err := c.call("updateVault", requestParams)
 	if err != nil {
@@ -664,7 +681,7 @@ func (a *App) initializeAccount(account *Account, masterPassword string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal public key: %v", err)
 	}
-	account.PublicKey = base64.StdEncoding.EncodeToString(publicKeyDER)
+	account.PublicKey = base64.RawURLEncoding.EncodeToString(publicKeyDER)
 
 	// 3. Set up key derivation parameters (ref: container.ts line 125-133)
 	salt := generateRandomBytes(16)
@@ -673,8 +690,8 @@ func (a *App) initializeAccount(account *Account, masterPassword string) error {
 		Hash:       "SHA-256",
 		KeySize:    256,
 		Iterations: 100000,
-		Salt:       base64.StdEncoding.EncodeToString(salt),
-		Version:    "3.0.14",
+		Salt:       base64.RawURLEncoding.EncodeToString(salt),
+		Version:    "4.0.0",
 	}
 
 	// 4. Derive encryption key from master password
@@ -687,22 +704,29 @@ func (a *App) initializeAccount(account *Account, masterPassword string) error {
 		Algorithm:      "AES-GCM",
 		TagSize:        128,
 		KeySize:        256,
-		IV:             base64.StdEncoding.EncodeToString(iv),
-		AdditionalData: base64.StdEncoding.EncodeToString(additionalData),
-		Version:        "3.0.14",
+		IV:             base64.RawURLEncoding.EncodeToString(iv),
+		AdditionalData: base64.RawURLEncoding.EncodeToString(additionalData),
+		Kind:           "r",
+		Version:        "4.0.0",
 	}
 
 	// 6. Create account secrets (private key + signing key)
-	privateKeyDER := x509.MarshalPKCS1PrivateKey(privateKey)
+	// PKCS#8 matches browser TS WebCryptoProvider in apps/packages/sdk/src/crypto.ts:
+	// generateKey(RSA) → subtle.exportKey('pkcs8', ...), and _decryptRSA → importKey('pkcs8', ...).
+	// PKCS#1 (MarshalPKCS1PrivateKey) breaks that import and vault accessor unwrap on the client.
+	privateKeyDER, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if err != nil {
+		return fmt.Errorf("failed to marshal PKCS8 private key: %w", err)
+	}
 	signingKey := generateRandomBytes(32) // HMAC key
 
-	// Combine private key and signing key into account secrets
+	// Combine private key and signing key into account secrets (TS AccountSecrets uses @AsBytes → url-safe unpadded).
 	accountSecrets := struct {
-		SigningKey []byte `json:"signingKey"`
-		PrivateKey []byte `json:"privateKey"`
+		SigningKey Base64Bytes `json:"signingKey"`
+		PrivateKey Base64Bytes `json:"privateKey"`
 	}{
-		SigningKey: signingKey,
-		PrivateKey: privateKeyDER,
+		SigningKey: Base64Bytes(signingKey),
+		PrivateKey: Base64Bytes(privateKeyDER),
 	}
 
 	accountSecretsBytes, err := json.Marshal(accountSecrets)
@@ -715,7 +739,7 @@ func (a *App) initializeAccount(account *Account, masterPassword string) error {
 	if err != nil {
 		return fmt.Errorf("failed to encrypt account secrets: %v", err)
 	}
-	account.EncryptedData = base64.StdEncoding.EncodeToString(encryptedData)
+	account.EncryptedData = base64.RawURLEncoding.EncodeToString(encryptedData)
 
 	log.Printf("Account initialized with RSA key pair and encryption parameters")
 	log.Printf("Public key length: %d bytes", len(publicKeyDER))

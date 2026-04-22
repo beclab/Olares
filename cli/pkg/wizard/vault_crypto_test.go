@@ -26,7 +26,10 @@ func buildTestAccount(t *testing.T, password string) *Account {
 	if err != nil {
 		t.Fatalf("marshal pub: %v", err)
 	}
-	privDER := x509.MarshalPKCS1PrivateKey(priv)
+	privDER, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		t.Fatalf("marshal PKCS8: %v", err)
+	}
 	signingKey := generateRandomBytes(32)
 
 	salt := generateRandomBytes(16)
@@ -53,22 +56,25 @@ func buildTestAccount(t *testing.T, password string) *Account {
 		ID:        "acc-1",
 		DID:       "did:test:1",
 		Name:      "tester",
-		PublicKey: base64.URLEncoding.EncodeToString(pubDER),
+		PublicKey: base64.RawURLEncoding.EncodeToString(pubDER),
 		KeyParams: KeyParams{
 			Algorithm:  "PBKDF2",
 			Hash:       "SHA-256",
 			KeySize:    256,
 			Iterations: iter,
-			Salt:       base64.URLEncoding.EncodeToString(salt),
+			Salt:       base64.RawURLEncoding.EncodeToString(salt),
+			Version:    "4.0.0",
 		},
 		EncryptionParams: EncryptionParams{
 			Algorithm:      "AES-GCM",
 			TagSize:        128,
 			KeySize:        256,
-			IV:             base64.URLEncoding.EncodeToString(iv),
-			AdditionalData: base64.URLEncoding.EncodeToString(aad),
+			IV:             base64.RawURLEncoding.EncodeToString(iv),
+			AdditionalData: base64.RawURLEncoding.EncodeToString(aad),
+			Kind:           "r",
+			Version:        "4.0.0",
 		},
-		EncryptedData: base64.URLEncoding.EncodeToString(ciphertext),
+		EncryptedData: base64.RawURLEncoding.EncodeToString(ciphertext),
 	}
 }
 

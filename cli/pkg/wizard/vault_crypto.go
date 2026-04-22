@@ -118,20 +118,33 @@ func (v *Vault) Unlock(unlocked *UnlockedAccount) error {
 		return v.Commit()
 	}
 
-	var accessor *Accessor
+	var sharedKey []byte
 	for i := range v.Accessors {
-		if v.Accessors[i].ID == unlocked.Account.ID {
-			accessor = &v.Accessors[i]
-			break
+		if v.Accessors[i].ID != unlocked.Account.ID || len(v.Accessors[i].EncryptedKey) == 0 {
+			continue
+		}
+		sk, err := rsaOAEPDecrypt(unlocked.PrivateKey, []byte(v.Accessors[i].EncryptedKey))
+		if err != nil {
+			return fmt.Errorf("failed to unwrap shared key: %w", err)
+		}
+		sharedKey = sk
+		break
+	}
+	if sharedKey == nil {
+		// Accessor id may still be a pre-server client UUID while account.id is canonical.
+		for i := range v.Accessors {
+			if len(v.Accessors[i].EncryptedKey) == 0 {
+				continue
+			}
+			sk, err := rsaOAEPDecrypt(unlocked.PrivateKey, []byte(v.Accessors[i].EncryptedKey))
+			if err == nil {
+				sharedKey = sk
+				break
+			}
 		}
 	}
-	if accessor == nil || len(accessor.EncryptedKey) == 0 {
+	if sharedKey == nil {
 		return fmt.Errorf("no accessor entry for account %s", unlocked.Account.ID)
-	}
-
-	sharedKey, err := rsaOAEPDecrypt(unlocked.PrivateKey, []byte(accessor.EncryptedKey))
-	if err != nil {
-		return fmt.Errorf("failed to unwrap shared key: %w", err)
 	}
 	v.aesKey = sharedKey
 
@@ -192,6 +205,8 @@ func (v *Vault) UpdateAccessors(subjects []*UnlockedAccount) error {
 			Algorithm: "AES-GCM",
 			TagSize:   128,
 			KeySize:   256,
+			Kind:      "r",
+			Version:   "4.0.0",
 		}
 	}
 
@@ -218,6 +233,8 @@ func (v *Vault) UpdateAccessors(subjects []*UnlockedAccount) error {
 			ID:           subj.Account.ID,
 			PublicKey:    Base64Bytes(pubDER),
 			EncryptedKey: Base64Bytes(wrapped),
+			Kind:         "d",
+			Version:      "4.0.0",
 		})
 	}
 	return nil
@@ -247,14 +264,19 @@ func (v *Vault) setEncryptedData(plaintext []byte) error {
 	if err != nil {
 		return err
 	}
-	v.EncryptionParams.IV = base64.URLEncoding.EncodeToString(iv)
-	v.EncryptionParams.AdditionalData = base64.URLEncoding.EncodeToString(aad)
+	v.EncryptionParams.IV = base64.RawURLEncoding.EncodeToString(iv)
+	v.EncryptionParams.AdditionalData = base64.RawURLEncoding.EncodeToString(aad)
 	v.EncryptionParams.Algorithm = "AES-GCM"
+	v.EncryptionParams.Kind = "r"
+	v.EncryptionParams.Version = "4.0.0"
 	if v.EncryptionParams.TagSize == 0 {
 		v.EncryptionParams.TagSize = 128
 	}
 	if v.EncryptionParams.KeySize == 0 {
 		v.EncryptionParams.KeySize = 256
+	}
+	if v.Version == "" {
+		v.Version = "4.0.0"
 	}
 	v.EncryptedData = Base64Bytes(ciphertext)
 	return nil

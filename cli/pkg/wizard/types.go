@@ -221,7 +221,8 @@ type EncryptionParams struct {
 	KeySize        int    `json:"keySize"`        // 256
 	IV             string `json:"iv"`             // Base64 encoded initialization vector
 	AdditionalData string `json:"additionalData"` // Base64 encoded additional data
-	Version        string `json:"version"`        // "3.0.14"
+	Kind           string `json:"kind,omitempty"`    // TS Serializable short kind, e.g. "r"
+	Version        string `json:"version,omitempty"` // e.g. "4.0.0"
 }
 
 // KeyParams represents PBKDF2 key derivation parameters
@@ -231,7 +232,7 @@ type KeyParams struct {
 	KeySize    int    `json:"keySize"`    // 256
 	Iterations int    `json:"iterations"` // 100000
 	Salt       string `json:"salt"`       // Base64 encoded salt
-	Version    string `json:"version"`    // "3.0.14"
+	Version    string `json:"version,omitempty"`
 }
 
 type Account struct {
@@ -341,24 +342,26 @@ func (b *Base64Bytes) UnmarshalJSON(data []byte) error {
 	// Try base64url decoding first
 	decoded, err := base64.URLEncoding.DecodeString(str)
 	if err != nil {
-		// If base64url fails, try raw base64url decoding
 		decoded, err = base64.RawURLEncoding.DecodeString(str)
-		if err != nil {
-			// Finally try standard base64 decoding
-			decoded, err = base64.StdEncoding.DecodeString(str)
-			if err != nil {
-				return fmt.Errorf("failed to decode base64url/base64: %v", err)
-			}
-		}
+	}
+	if err != nil {
+		decoded, err = base64.StdEncoding.DecodeString(str)
+	}
+	if err != nil {
+		decoded, err = base64.RawStdEncoding.DecodeString(str)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to decode base64url/base64: %w", err)
 	}
 
 	*b = Base64Bytes(decoded)
 	return nil
 }
 
-// MarshalJSON implements JSON serialization, automatically encoding to base64 string
+// MarshalJSON encodes like TS bytesToBase64 (url-safe, no padding);
+// see apps/packages/sdk/src/core/base64.ts fromByteArray(..., urlSafe=true).
 func (b Base64Bytes) MarshalJSON() ([]byte, error) {
-	encoded := base64.StdEncoding.EncodeToString([]byte(b))
+	encoded := base64.RawURLEncoding.EncodeToString([]byte(b))
 	return json.Marshal(encoded)
 }
 
@@ -426,18 +429,60 @@ type Accessor struct {
 	ID           string      `json:"id"`
 	EncryptedKey Base64Bytes `json:"encryptedKey"`
 	PublicKey    Base64Bytes `json:"publicKey,omitempty"`
+	Kind         string      `json:"kind,omitempty"`
+	Version      string      `json:"version,omitempty"`
 }
 
 // RSAEncryptionParams mirrors the same-named TS class. Only RSA-OAEP /
 // SHA-256 is supported (matching the server defaults).
+//
+// Do not put Serializable "kind"/"version" on the wire: WebCryptoProvider in
+// apps/packages/sdk/src/crypto.ts passes keyParams into subtle.importKey/decrypt
+// via Object.assign; extra keys (e.g. kind, version) can cause DataError on decrypt.
 type RSAEncryptionParams struct {
 	Algorithm string `json:"algorithm"` // "RSA-OAEP"
 	Hash      string `json:"hash"`      // "SHA-256"
-	Kind      string `json:"kind,omitempty"`
-	Version   string `json:"version,omitempty"`
 }
 
-// NewRSAEncryptionParams constructs the canonical params used by TS.
+// MarshalJSON emits only algorithm+hash so WebCryptoProvider (crypto.ts) never
+// sees Serializable extras (kind/version) on keyParams after Object.assign.
+func (p RSAEncryptionParams) MarshalJSON() ([]byte, error) {
+	type wire struct {
+		Algorithm string `json:"algorithm"`
+		Hash      string `json:"hash"`
+	}
+	alg, h := p.Algorithm, p.Hash
+	if alg == "" {
+		alg = "RSA-OAEP"
+	}
+	if h == "" {
+		h = "SHA-256"
+	}
+	return json.Marshal(wire{Algorithm: alg, Hash: h})
+}
+
+// UnmarshalJSON ignores unknown fields (e.g. legacy kind/version from server).
+func (p *RSAEncryptionParams) UnmarshalJSON(data []byte) error {
+	type wire struct {
+		Algorithm string `json:"algorithm"`
+		Hash      string `json:"hash"`
+	}
+	var w wire
+	if err := json.Unmarshal(data, &w); err != nil {
+		return err
+	}
+	p.Algorithm = w.Algorithm
+	p.Hash = w.Hash
+	if p.Algorithm == "" {
+		p.Algorithm = "RSA-OAEP"
+	}
+	if p.Hash == "" {
+		p.Hash = "SHA-256"
+	}
+	return nil
+}
+
+// NewRSAEncryptionParams constructs the canonical params used by TS/WebCrypto.
 func NewRSAEncryptionParams() RSAEncryptionParams {
 	return RSAEncryptionParams{Algorithm: "RSA-OAEP", Hash: "SHA-256"}
 }
@@ -454,7 +499,7 @@ type Vault struct {
 	Org              *OrgInfo            `json:"org,omitempty"`
 	Created          string              `json:"created"`
 	Updated          string              `json:"updated"`
-	Revision         string              `json:"revision,omitempty"`
+	Revision         string              `json:"revision"` // required on updateVault (server revision check)
 	KeyParams        RSAEncryptionParams `json:"keyParams"`
 	EncryptionParams EncryptionParams    `json:"encryptionParams"`
 	Accessors        []Accessor          `json:"accessors"`
@@ -633,7 +678,7 @@ type AuthInfo struct {
 type UnlockedAccount struct {
 	Account    *Account
 	MasterKey  []byte
-	PrivateKey []byte // PKCS1 DER
+	PrivateKey []byte // PKCS#8 DER (matches apps/packages/sdk/src/crypto.ts subtle.exportKey('pkcs8', ...))
 	SigningKey []byte // HMAC key
 }
 
