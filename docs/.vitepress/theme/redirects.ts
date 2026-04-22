@@ -31,11 +31,9 @@ export const redirects = {
     '/zh/space/manage-olares': '/zh/manual/space/manage-olares',
     '/zh/space/host-domain': '/zh/manual/space/host-domain',
 
-    // Rename: deerflow → deerflow2
+    // Rename: deerflow → deerflow2 (permanent: old name is retired)
     '/use-cases/deerflow': '/use-cases/deerflow2',
-    '/one/deerflow': '/use-cases/deerflow2',
     '/zh/use-cases/deerflow': '/zh/use-cases/deerflow2',
-    '/zh/one/deerflow': '/zh/use-cases/deerflow2',
 
     // Rename: ace-step → ace-step-1.5
     '/use-cases/ace-step': '/use-cases/ace-step-1.5',
@@ -101,4 +99,13 @@ export const redirects = {
     '/zh/manual/concepts/system-architecture': '/zh/developer/concepts/system-architecture',
     '/zh/manual/concepts/vc': '/zh/developer/concepts/vc',
     '/zh/manual/concepts/wallet': '/zh/developer/concepts/wallet',
+}
+
+// Temporary redirects (302): content is offline but the URL may be reused later.
+// Once the page is restored at its original URL, remove the entry here.
+// Once the move is confirmed permanent, promote the entry to `redirects` above.
+export const temporaryRedirects = {
+    // /one/deerflow content temporarily offline; redirecting to deerflow2 in the meantime
+    '/one/deerflow': '/use-cases/deerflow2',
+    '/zh/one/deerflow': '/zh/use-cases/deerflow2',
 }
