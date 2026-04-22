@@ -35,11 +35,9 @@ export const redirects = {
     '/use-cases/deerflow': '/use-cases/deerflow2',
     '/zh/use-cases/deerflow': '/zh/use-cases/deerflow2',
 
-    // Rename: ace-step → ace-step-1.5
+    // Rename: ace-step → ace-step-1.5 (permanent: old name is retired)
     '/use-cases/ace-step': '/use-cases/ace-step-1.5',
-    '/one/ace-step': '/use-cases/ace-step-1.5',
     '/zh/use-cases/ace-step': '/zh/use-cases/ace-step-1.5',
-    '/zh/one/ace-step': '/zh/use-cases/ace-step-1.5',
 
     // Refactor: /manual/concepts/** → /developer/concepts/**
     '/manual/system-architecture': '/developer/concepts/system-architecture',
@@ -108,4 +106,8 @@ export const temporaryRedirects = {
     // /one/deerflow content temporarily offline; redirecting to deerflow2 in the meantime
     '/one/deerflow': '/use-cases/deerflow2',
     '/zh/one/deerflow': '/zh/use-cases/deerflow2',
+
+    // /one/ace-step content temporarily offline; redirecting to ace-step-1.5 in the meantime
+    '/one/ace-step': '/use-cases/ace-step-1.5',
+    '/zh/one/ace-step': '/zh/use-cases/ace-step-1.5',
 }
