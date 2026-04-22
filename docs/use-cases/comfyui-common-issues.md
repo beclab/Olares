@@ -16,27 +16,27 @@ If you are encountering an issue that is not listed here, refer to [Troubleshoot
 
 ## ComfyUI cannot start
 
-ComfyUI does not start, keeps stopping, or behaves unexpectedly when you try to launch it.
+ComfyUI fails to start, stops unexpectedly, or behaves abnormally.
 
-This is usually caused by incorrect GPU allocation or insufficient resources. To resolve this:
+This is usually caused by insufficient resources or incorrect GPU allocation. To resolve this:
 
-1. Go to **Settings** > **GPU** and check your GPU mode:
+1. Check your system resources. If your CPU or memory usage is maxed out, stop other resource-intensive apps.
+2. If system resources look fine, go to **Settings** > **GPU** and check your GPU mode:
    - If you are using **Memory slicing**, make sure ComfyUI is bound to the GPU and has enough VRAM allocated.
    - If you are using **App exclusive**, make sure the exclusive app is set to ComfyUI.
-2. Check your system resources. If your CPU or memory usage is maxed out, stop other resource-intensive apps.
 3. Wait a moment, then try to launch ComfyUI again.
 
 ## Launcher log shows errors
 
-`Error` messages in the Launcher logs do not necessarily indicate a system failure. During startup and plugin scanning, ComfyUI often logs non-fatal errors for missing optional dependencies or environment checks, even when running perfectly.
+`Error` messages in the Launcher logs do not necessarily indicate a system failure. During startup and plugin scanning, ComfyUI often logs non-fatal errors for missing optional dependencies or environment checks, even when running normally.
 
-If ComfyUI starts successfully, many of these messages require action. Investigate logs only if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
+If ComfyUI starts successfully, most of these messages do not require action. Investigate logs only if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
 
 ## Models cannot be downloaded in ComfyUI Launcher
 
-Some workflows require models that need a login, access token, or approval to download. ComfyUI Launcher cannot download these models directly.
+Some models require a login, access token, or approval before you can download them. ComfyUI Launcher cannot download these models directly.
 
-To solve it, find the download link using one of the methods below, download the model manually, and [upload it](/use-cases/comfyui-launcher.md#upload-local-models) to the correct folder in Olares Files. 
+To solve it, find the download link using one of the methods below. Then download the model manually and [upload it](/use-cases/comfyui-launcher.md#upload-local-models) to the correct folder in Olares Files.
 
 ### Method 1: Check the template notes or Model Links section
 
@@ -69,25 +69,24 @@ If the URL is not shown in the template notes or dialog, inspect the page in you
 
 ## CPU temperature rises unusually high on Olares One
 
-CPU temperature rises unusually high when running certain ComfyUI workloads on Olares One.
+When a workflow requires more VRAM than your graphics card has, the system places heavy load on a single CPU core to swap data, driving the temperature high.
 
-This issue typically occurs when the workflow requires more VRAM than your graphics card has. When this happens, the system will place heavy load on a single CPU core to swap data, driving the temperature high.
+The long-term fix is to reduce the VRAM footprint of your workflow (for example, lower resolution, use a smaller model, or enable model offloading). As a temporary workaround, you can lower the maximum CPU frequency.
 
-**Workaround**: Temporarily lower the CPU frequency.
+Olares One ships with a CPU whose default maximum frequency is 5.4 GHz. The steps below lower it to 5.0 GHz during the workload, then restore it.
 
 1. Open the Control Hub app.
 2. In the left sidebar, under **Terminal**, click **Olares**.
 
    ![Open terminal](/images/manual/use-cases/comfyui-ts-terminal.png#bordered){width=90%}
 
-3. Run the following command to lower the maximum CPU frequency.
-
-   For example, to set it to 5.0 GHz, run:
+3. Run the following command to lower the maximum CPU frequency to 5.0 GHz:
     ```bash
     echo 5000000 | sudo tee /sys/devices/system/cpu/cpufreq/policy*/scaling_max_freq
     ```
+   On other devices, adjust the target value based on your CPU's maximum frequency. Run `cat /sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq` to check it first.
 4. Run your task in ComfyUI.
-5. After the workload completes, run the following command to restore the normal maximum CPU frequency of 5.4 GHz.
+5. After the workload completes, run the following command to restore the default maximum CPU frequency of 5.4 GHz:
     ```bash
     echo 5400000 | sudo tee /sys/devices/system/cpu/cpufreq/policy*/scaling_max_freq
     ```

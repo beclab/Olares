@@ -289,6 +289,10 @@ If incorrect launch parameters are causing issues, restore all options to their 
 
 Use the following flow when you encounter an issue and need a general recovery path.
 
+:::tip
+For symptom-specific solutions such as ComfyUI cannot start, models cannot be downloaded, or high CPU temperature, see [Common issues](./comfyui-common-issues.md) first.
+:::
+
 ### Check dependency conflicts
 
 If problems start after installing new plugins, the issue may be caused by dependency conflicts.
@@ -303,7 +307,7 @@ If the issue is still not resolved after the checks above, reset ComfyUI to its 
 Resetting ComfyUI is irreversible. All plugins, custom configurations, and Python dependencies will be removed. Models stored in the shared `model` folder are not affected.
 :::
 :::tip Get diagnostic details
-If you plan to contact support, export your ComfyUI logs before resetting, as this action will erase the current system state. See [Collect information for support](#collect-information-for-support).
+If you plan to contact support, export your ComfyUI logs before resetting. See [Collect information for support](#collect-information-for-support).
 :::
 
 To reset ComfyUI:
@@ -317,11 +321,11 @@ To reset ComfyUI:
     
     ![Second confirmation](/images/manual/use-cases/comfyui-second-confirm.png#bordered){width=50%}
 
-After the reset is complete, restart ComfyUI for the changes to take effect.
+After the reset completes, restart ComfyUI for the changes to take effect.
 
 ### Reinstall ComfyUI completely
 
-If the issue persists after the wipe and restore, uninstall and reinstall ComfyUI completely.
+If the issue persists after wipe and restore, uninstall and reinstall ComfyUI completely.
 
 1. Go to **Market** > **My Olares**.
 2. Click the dropdown arrow next to ComfyUI's operation button and select **Uninstall**.
