@@ -67,7 +67,7 @@ If an application exposes multiple entrances, ensure you select the correct one 
 
 ### How provider URLs connect the *Arrs ecosystem
 
-Because the *Arrs ecosystem relies heavily on app-to-app communication, provider URLs are essential for connecting your media managers (Sonarr, Radarr, Lidarr, Readarr) with download clients (qBittorrent) and indexer managers (Prowlarr).
+Because the *Arrs ecosystem relies heavily on app-to-app communication, provider URLs are essential for connecting your media managers (Sonarr, Radarr, Lidarr, and Readarr) with download clients (such as qBittorrent) and indexer managers (such as Prowlarr).
 
 When you configure connections between these *Arrs applications, the application asks you to enter either the full provider URL (including the `http://` prefix) or just the host address (excluding the prefix). For all provider URL‑based communication, you must specify the port as `80`.
 
