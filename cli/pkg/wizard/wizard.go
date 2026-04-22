@@ -117,6 +117,7 @@ func (w *ActivationWizard) RunWizard() error {
 							return fmt.Errorf("password reset failed: %v", err)
 						}
 						log.Println("✅ Password reset completed")
+						return nil
 					}
 				}
 
