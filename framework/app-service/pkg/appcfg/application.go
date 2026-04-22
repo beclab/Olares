@@ -2,6 +2,7 @@ package appcfg
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -101,6 +102,10 @@ type ApplicationConfig struct {
 	HardwareRequirement  Hardware
 	SharedEntrances      []v1alpha1.Entrance
 	SelectedGpuType      string
+	Resources            []ResourceMode
+	InstallType          string
+	Client               *ConfigOverlay
+	Server               *ConfigOverlay
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
@@ -165,6 +170,193 @@ func (c *ApplicationConfig) GetSelectedGpuTypeValue() string {
 		return "none"
 	}
 	return c.SelectedGpuType
+}
+
+func (c *ApplicationConfig) DeepCopy() *ApplicationConfig {
+	data, err := json.Marshal(c)
+	if err != nil {
+		klog.Errorf("failed to marshal ApplicationConfig for deep copy: %v", err)
+		return nil
+	}
+	out := &ApplicationConfig{}
+	if err := json.Unmarshal(data, out); err != nil {
+		klog.Errorf("failed to unmarshal ApplicationConfig for deep copy: %v", err)
+		return nil
+	}
+	return out
+}
+
+// ApplyOverlay mutates c in place, merging fields from the Server/Client
+// overlay (selected by installType) into the top-level config. It's a no-op
+// when c is nil or no overlay is defined for the given installType.
+func (c *ApplicationConfig) ApplyOverlay(installType string) {
+	if c == nil {
+		return
+	}
+	c.InstallType = installType
+	c.applyConfigOverlay(installType)
+}
+
+func (c *ApplicationConfig) applyConfigOverlay(installType string) {
+	var overlay *ConfigOverlay
+	klog.Infof("applyConfigOverlay: installType: %v", installType)
+	switch installType {
+	case InstallOrUpgradeServerAndClient:
+		overlay = c.Server
+	case InstallOrUpgradeClientOnly:
+		overlay = c.Client
+	}
+	if overlay == nil {
+		return
+	}
+
+	c.Entrances = overlay.Entrances
+	c.Middleware = overlay.Middleware
+
+	if overlay.Permission != nil {
+		var permission []AppPermission
+		if overlay.Permission.AppData {
+			permission = append(permission, AppDataRW)
+		}
+		if overlay.Permission.AppCache {
+			permission = append(permission, AppCacheRW)
+		}
+		if len(overlay.Permission.UserData) > 0 {
+			permission = append(permission, UserDataRW)
+		}
+		if len(overlay.Permission.Provider) > 0 {
+			var perm []ProviderPermission
+			for _, s := range overlay.Permission.Provider {
+				perm = append(perm, ProviderPermission(s))
+			}
+			permission = append(permission, perm)
+		}
+		c.Permission = permission
+	}
+
+	if overlay.Options != nil {
+		c.ResetCookieEnabled = overlay.Options.ResetCookie.Enabled
+		c.Dependencies = overlay.Options.Dependencies
+		c.Conflicts = overlay.Options.Conflicts
+		c.AppScope = overlay.Options.AppScope
+		c.WsConfig = overlay.Options.WsConfig
+		c.Upload = overlay.Options.Upload
+		c.MobileSupported = overlay.Options.MobileSupported
+		c.OIDC = overlay.Options.OIDC
+		c.ApiTimeout = overlay.Options.ApiTimeout
+		c.AllowedOutboundPorts = overlay.Options.AllowedOutboundPorts
+		c.Images = overlay.Options.Images
+		c.AllowMultipleInstall = overlay.Options.AllowMultipleInstall
+	}
+	c.Provider = overlay.Provider
+	c.Envs = overlay.Envs
+}
+
+func (c *ApplicationConfig) ResolveRequirement(selectedGpu, installType string) (*AppRequirement, error) {
+	if len(c.Resources) == 0 {
+		return nil, fmt.Errorf("empty spec resources")
+	}
+
+	mode := resolveResourceMode(c.Resources, selectedGpu)
+	if mode == nil {
+		return nil, fmt.Errorf("mode %s not found in spec resources", selectedGpu)
+	}
+	if c.APIVersion == V1 {
+		req := parseResourceRequirement(&mode.ResourceRequirement)
+		return &req, nil
+	}
+
+	if mode.Client == nil && mode.Server == nil {
+		if mode.ResourceRequirement == (ResourceRequirement{}) {
+			return nil, fmt.Errorf("empty resource requirement")
+		}
+		req := parseResourceRequirement(&mode.ResourceRequirement)
+		return &req, nil
+	}
+
+	switch installType {
+	case InstallOrUpgradeClientOnly:
+		if mode.Client == nil {
+			return nil, fmt.Errorf("client resource requirement can not be empty")
+		}
+		req := parseResourceRequirement(mode.Client)
+		return &req, nil
+	case InstallOrUpgradeServerAndClient:
+		req := sumResourceRequirements(mode.Server, mode.Client)
+		return &req, nil
+	}
+	return nil, fmt.Errorf("no resource requirement found")
+}
+
+func resolveResourceMode(modes []ResourceMode, selectedGpu string) *ResourceMode {
+	targetMode := selectedGpu
+	if targetMode == "" || targetMode == "none" {
+		targetMode = utils.CPUType
+	}
+
+	for i := range modes {
+		if modes[i].Mode == targetMode {
+			return &modes[i]
+		}
+	}
+
+	// no target mode found fallback to cpu mode
+	for i := range modes {
+		if modes[i].Mode == utils.CPUType {
+			return &modes[i]
+		}
+	}
+
+	return nil
+}
+
+func parseResourceRequirement(req *ResourceRequirement) AppRequirement {
+	parseQty := func(s string) *resource.Quantity {
+		if s == "" {
+			return nil
+		}
+		q, err := resource.ParseQuantity(s)
+		if err != nil {
+			return nil
+		}
+		return &q
+	}
+
+	return AppRequirement{
+		CPU:    parseQty(req.RequiredCPU),
+		Memory: parseQty(req.RequiredMemory),
+		Disk:   parseQty(req.RequiredDisk),
+		GPU:    parseQty(req.RequiredGPU),
+	}
+}
+
+func sumResourceRequirements(parts ...*ResourceRequirement) AppRequirement {
+	parseAndAdd := func(existing *resource.Quantity, s string) *resource.Quantity {
+		if s == "" {
+			return existing
+		}
+		q, err := resource.ParseQuantity(s)
+		if err != nil {
+			return existing
+		}
+		if existing == nil {
+			return &q
+		}
+		existing.Add(q)
+		return existing
+	}
+
+	var cpu, mem, disk, gpu *resource.Quantity
+	for _, p := range parts {
+		if p == nil {
+			continue
+		}
+		cpu = parseAndAdd(cpu, p.RequiredCPU)
+		mem = parseAndAdd(mem, p.RequiredMemory)
+		disk = parseAndAdd(disk, p.RequiredDisk)
+		gpu = parseAndAdd(gpu, p.RequiredGPU)
+	}
+	return AppRequirement{CPU: cpu, Memory: mem, Disk: disk, GPU: gpu}
 }
 
 func (p *ProviderPermission) GetNamespace(ownerName string) string {

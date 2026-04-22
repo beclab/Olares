@@ -32,7 +32,7 @@ import (
 // cluster-scoped deps, middleware, etc.) so that a Helm template dry-run still
 // produces a complete manifest. When dryRun is false those keys are left unset
 // and the caller (SetValues) is expected to fill them with real data.
-func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig *appcfg.ApplicationConfig, ownerName string, dryRun bool) (values map[string]interface{}, err error) {
+func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig *appcfg.ApplicationConfig, ownerName string, dryRun bool, isUpgrade bool) (values map[string]interface{}, err error) {
 	values = make(map[string]interface{})
 
 	values["bfl"] = map[string]interface{}{
@@ -149,13 +149,21 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 		}
 	}
 
+	values["client"] = true
+	if appConfig.InstallType == appcfg.InstallOrUpgradeServerAndClient {
+		values["server"] = true
+	}
+
+	if isUpgrade && isAdmin {
+		values["server"] = true
+	}
 	return values, nil
 }
 
-func (h *HelmOps) SetValues() (values map[string]interface{}, err error) {
+func (h *HelmOps) SetValues(isUpgrade bool) (values map[string]interface{}, err error) {
 	ctx := context.TODO()
 
-	values, err = BuildBaseHelmValues(ctx, h.kubeConfig, h.app, h.app.OwnerName, false)
+	values, err = BuildBaseHelmValues(ctx, h.kubeConfig, h.app, h.app.OwnerName, false, isUpgrade)
 	if err != nil {
 		return values, err
 	}

@@ -42,33 +42,37 @@ type AppConfiguration struct {
 
 	// Only for v2 c/s apps to share the api to other cluster scope apps
 	SharedEntrances []v1alpha1.Entrance `yaml:"sharedEntrances,omitempty" json:"sharedEntrances,omitempty"`
+
+	Server *ConfigOverlay `yaml:"server,omitempty" json:"server,omitempty"`
+	Client *ConfigOverlay `yaml:"client,omitempty" json:"client,omitempty"`
 }
 
 type AppSpec struct {
-	Namespace           string        `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	OnlyAdmin           bool          `yaml:"onlyAdmin,omitempty" json:"onlyAdmin,omitempty"`
-	VersionName         string        `yaml:"versionName" json:"versionName"`
-	FullDescription     string        `yaml:"fullDescription" json:"fullDescription"`
-	UpgradeDescription  string        `yaml:"upgradeDescription" json:"upgradeDescription"`
-	PromoteImage        []string      `yaml:"promoteImage" json:"promoteImage"`
-	PromoteVideo        string        `yaml:"promoteVideo" json:"promoteVideo"`
-	SubCategory         string        `yaml:"subCategory" json:"subCategory"`
-	Developer           string        `yaml:"developer" json:"developer"`
-	RequiredMemory      string        `yaml:"requiredMemory" json:"requiredMemory"`
-	RequiredDisk        string        `yaml:"requiredDisk" json:"requiredDisk"`
-	RequiredGPU         string        `yaml:"requiredGpu" json:"requiredGpu"`
-	RequiredCPU         string        `yaml:"requiredCpu" json:"requiredCpu"`
-	LimitedMemory       string        `yaml:"limitedMemory" json:"limitedMemory"`
-	LimitedDisk         string        `yaml:"limitedDisk" json:"limitedDisk"`
-	LimitedGPU          string        `yaml:"limitedGPU" json:"limitedGPU"`
-	LimitedCPU          string        `yaml:"limitedCPU" json:"limitedCPU"`
-	SupportClient       SupportClient `yaml:"supportClient" json:"supportClient"`
-	RunAsUser           bool          `yaml:"runAsUser" json:"runAsUser"`
-	RunAsInternal       bool          `yaml:"runAsInternal" json:"runAsInternal"`
-	PodGPUConsumePolicy string        `yaml:"podGpuConsumePolicy" json:"podGpuConsumePolicy"`
-	SubCharts           []Chart       `yaml:"subCharts" json:"subCharts"`
-	Hardware            Hardware      `yaml:"hardware" json:"hardware"`
-	SupportedGpu        []any         `yaml:"supportedGpu,omitempty" json:"supportedGpu,omitempty"`
+	Namespace           string         `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	OnlyAdmin           bool           `yaml:"onlyAdmin,omitempty" json:"onlyAdmin,omitempty"`
+	VersionName         string         `yaml:"versionName" json:"versionName"`
+	FullDescription     string         `yaml:"fullDescription" json:"fullDescription"`
+	UpgradeDescription  string         `yaml:"upgradeDescription" json:"upgradeDescription"`
+	PromoteImage        []string       `yaml:"promoteImage" json:"promoteImage"`
+	PromoteVideo        string         `yaml:"promoteVideo" json:"promoteVideo"`
+	SubCategory         string         `yaml:"subCategory" json:"subCategory"`
+	Developer           string         `yaml:"developer" json:"developer"`
+	RequiredMemory      string         `yaml:"requiredMemory" json:"requiredMemory"`
+	RequiredDisk        string         `yaml:"requiredDisk" json:"requiredDisk"`
+	RequiredGPU         string         `yaml:"requiredGpu" json:"requiredGpu"`
+	RequiredCPU         string         `yaml:"requiredCpu" json:"requiredCpu"`
+	LimitedMemory       string         `yaml:"limitedMemory" json:"limitedMemory"`
+	LimitedDisk         string         `yaml:"limitedDisk" json:"limitedDisk"`
+	LimitedGPU          string         `yaml:"limitedGpu" json:"limitedGpu"`
+	LimitedCPU          string         `yaml:"limitedCpu" json:"limitedCpu"`
+	SupportClient       SupportClient  `yaml:"supportClient" json:"supportClient"`
+	RunAsUser           bool           `yaml:"runAsUser" json:"runAsUser"`
+	RunAsInternal       bool           `yaml:"runAsInternal" json:"runAsInternal"`
+	PodGPUConsumePolicy string         `yaml:"podGpuConsumePolicy" json:"podGpuConsumePolicy"`
+	SubCharts           []Chart        `yaml:"subCharts" json:"subCharts"`
+	Hardware            Hardware       `yaml:"hardware" json:"hardware"`
+	SupportedGpu        []any          `yaml:"supportedGpu,omitempty" json:"supportedGpu,omitempty"`
+	Resources           []ResourceMode `yaml:"resources,omitempty" json:"resources,omitempty"`
 }
 
 type Hardware struct {
@@ -202,6 +206,39 @@ type SpecialResource struct {
 	LimitedDisk    *string `yaml:"limitedDisk,omitempty" json:"limitedDisk,omitempty"`
 	LimitedGPU     *string `yaml:"limitedGPU,omitempty" json:"limitedGPU,omitempty"`
 	LimitedCPU     *string `yaml:"limitedCPU,omitempty" json:"limitedCPU,omitempty"`
+}
+
+const (
+	InstallOrUpgradeClientOnly      string = "clientOnly"
+	InstallOrUpgradeServerAndClient string = "clientAndServer"
+	InstallOrUpgradeV1              string = "v1"
+)
+
+type ResourceRequirement struct {
+	RequiredCPU    string `yaml:"requiredCpu,omitempty" json:"requiredCpu,omitempty"`
+	LimitedCPU     string `yaml:"limitedCpu,omitempty" json:"limitedCpu,omitempty"`
+	RequiredMemory string `yaml:"requiredMemory,omitempty" json:"requiredMemory,omitempty"`
+	LimitedMemory  string `yaml:"limitedMemory,omitempty" json:"limitedMemory,omitempty"`
+	RequiredDisk   string `yaml:"requiredDisk,omitempty" json:"requiredDisk,omitempty"`
+	LimitedDisk    string `yaml:"limitedDisk,omitempty" json:"limitedDisk,omitempty"`
+	RequiredGPU    string `yaml:"requiredGpu,omitempty" json:"requiredGpu,omitempty"`
+	LimitedGPU     string `yaml:"limitedGpu,omitempty" json:"limitedGpu,omitempty"`
+}
+
+type ResourceMode struct {
+	Mode                string `yaml:"mode" json:"mode"`
+	ResourceRequirement `yaml:",inline"`
+	Server              *ResourceRequirement `yaml:"server,omitempty" json:"server,omitempty"`
+	Client              *ResourceRequirement `yaml:"client,omitempty" json:"client,omitempty"`
+}
+
+type ConfigOverlay struct {
+	Entrances  []v1alpha1.Entrance     `yaml:"entrances,omitempty" json:"entrances,omitempty"`
+	Middleware *tapr.Middleware        `yaml:"middleware,omitempty" json:"middleware,omitempty"`
+	Permission *Permission             `yaml:"permission,omitempty" json:"permission,omitempty"`
+	Options    *Options                `yaml:"options,omitempty" json:"options,omitempty"`
+	Provider   []Provider              `yaml:"provider,omitempty" json:"provider,omitempty"`
+	Envs       []sysv1alpha1.AppEnvVar `yaml:"envs,omitempty" json:"envs,omitempty"`
 }
 
 func (c *Chart) Namespace(owner string, chartName string) string {
