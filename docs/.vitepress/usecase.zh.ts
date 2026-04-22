@@ -81,6 +81,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "在 Krita 中使用 ComfyUI",
                   link: "/zh/use-cases/comfyui-for-krita",
                 },
+                {
+                  text: "常见问题",
+                  link: "/zh/use-cases/comfyui-common-issues",
+                },
               ]
             },
             {
