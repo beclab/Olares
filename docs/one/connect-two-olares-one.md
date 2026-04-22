@@ -138,7 +138,6 @@ kubectl get nodes
 
 Example output:
 ```bash
-olares@oloares:~$ kubectl get nodes
 NAME            STATUS   ROLES                         AGE   VERSION
 olares          Ready    control-plane,master,worker   2h    v1.33.3+k3s1
 olares-worker   Ready    worker                        50m   v1.33.3+k3s1
