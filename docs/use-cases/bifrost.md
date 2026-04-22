@@ -7,21 +7,14 @@ head:
       content: Olares, Bifrost, AI gateway, LLM proxy, Ollama, OpenCode, Open WebUI, self-hosted
 app_version: "1.0.5"
 doc_version: "1.0"
-doc_updated: "2026-04-20"
+doc_updated: "2026-04-22"
 ---
 
-# Use Bifrost as an AI model gateway
+# Set up Bifrost as an AI model gateway
 
-Bifrost is an AI gateway that sits between your client apps and multiple model providers (such as OpenAI, Anthropic, and local engines like Ollama). It exposes a single OpenAI-compatible endpoint and routes each request to the right backend based on the model name.
+Bifrost is an AI gateway that sits between your client applications and multiple model providers, such as OpenAI, Anthropic, and local engines like Ollama. It exposes a single OpenAI-compatible endpoint and routes each request to the right backend based on the model name.
 
-Olares offers multiple AI gateways. Bifrost is a good fit when you need any of the following:
-- High request throughput with minimal added latency.
-- A built-in MCP gateway to give models access to external tools.
-- Response caching based on semantic similarity, not exact match.
-- Automatic fallback across providers when one is unavailable.
-- Per-key, per-team, or per-customer budgets and rate limits.
-
-For a simpler setup, consider a lighter-weight gateway such as [LiteLLM](litellm.md).
+Use Bifrost to achieve high request throughput, built-in MCP gateway access, semantic response caching, and automatic provider fallbacks.
 
 ## Learning objectives
 
@@ -29,15 +22,16 @@ In this guide, you will learn how to:
 
 - Install Bifrost.
 - Add Ollama or a single-model app as a model provider in Bifrost.
+- Locate the Bifrost endpoint URL.
 - Route models from Bifrost to OpenCode.
 - Route models from Bifrost to Open WebUI.
 - Verify model connections using Bifrost's observability logs.
 
 ## Prerequisites
 
-- [Ollama installed](ollama.md) on Olares with at least one model downloaded. This tutorial uses `llama3.1:8b` as an example.
-- At least one single-model app installed from Market. This tutorial uses the **Qwen3.5 9B Q4_K_M (Ollama)** app as an example.
-- Olares admin privileges.
+- [Ollama is installed](ollama.md) on Olares with at least one model downloaded. This tutorial uses `llama3.1:8b` as an example.
+- At least one single-model app is installed from Market. This tutorial uses the **Qwen3.5 9B Q4_K_M (Ollama)** app as an example.
+- You have Olares administrator privileges.
 
 ## Install Bifrost
 
@@ -47,15 +41,18 @@ In this guide, you will learn how to:
 
 2. Click **Get**, and then click **Install**. Wait for the installation to finish.
 
-## Register providers in Bifrost
+## Add model providers in Bifrost
 
-A Bifrost provider points at one backend URL. Connect an Ollama app once to route every model inside it, or connect a single-model app to expose just that model.
+In Bifrost, a model provider represents the engine hosting your AI models. You configure a provider by supplying the endpoint URL of the application running the models. 
 
-Both flows below use **Ollama** as the provider type, since the model apps run on the Ollama engine.
+You can connect the main Ollama application to route every model running inside it, or connect a single-model application to expose just that specific model.
 
-### From an Ollama app
+In this tutorial, since both model applications run on the Ollama engine, select **Ollama** as the provider type for both scenarios.
 
-This flow routes every model in your Ollama instance through Bifrost.
+<tabs>
+<template #Ollama-app>
+
+Use this method to route every downloaded model in your Ollama instance through Bifrost.
 
 1. Open **Settings**, go to **Applications** > **Ollama** > **Entrances** > **Ollama API**, and then copy the endpoint URL. For example:
 
@@ -72,14 +69,14 @@ This flow routes every model in your Ollama instance through Bifrost.
 3. Click **Edit Provider Config** in the upper-right corner.
 4. In **Base URL**, enter the Ollama endpoint URL you copied.
 
-   ![Edit provider config for Ollama](/images/manual/use-cases/bifrost-config-provider-ollama.png#bordered)
+   ![Edit provider config for Ollama](/images/manual/use-cases/bifrost-config-provider-ollama.png#bordered){width=90%}
 
 5. Click **Save Network Configuration**. The message "Provider configuration updated successfully" is displayed.
 6. Close the **Ollama Provider configuration** window.
+</template>
+<template #Single-model-app>
 
-### From a single-model app
-
-Use this flow when the model runs as its own Olares app, such as **Qwen3.5 9B Q4_K_M (Ollama)**.
+Use this method when the model runs as its own Olares application, such as Qwen3.5 9B Q4_K_M (Ollama).
 
 1. Open **Settings**, go to **Applications** > **Qwen3.5 9B Q4_K_M (Ollama)** > **Entrances**, click the model name under **Shared entrances**, and then note down the endpoint URL. 
 
@@ -100,14 +97,16 @@ Use this flow when the model runs as its own Olares app, such as **Qwen3.5 9B Q4
    - **Base URL**: Paste the endpoint URL you copied. Ensure the Base URL does not end with `/v1`.
    - **Timeout (seconds)**: Set it to `300`. Single-model apps can take longer to warm up than a running Ollama instance.
 
-   ![Edit provider config for single-model app](/images/manual/use-cases/bifrost-single-model-config.png#bordered)
+   ![Edit provider config for single-model app](/images/manual/use-cases/bifrost-single-model-config.png#bordered){width=90%}
 
 5. Click **Save Network Configuration**. The message "Provider configuration updated successfully" is displayed.
 6. Close the **Ollama Provider configuration** window.
+</template>
+</tabs>
 
-## Get the Bifrost endpoint
+## Obtain the Bifrost endpoint
 
-Clients connect to Bifrost through its own endpoint URL, not the backend provider URLs you configured above.
+Client applications connect to Bifrost through the Bifrost endpoint URL, not the model provider URLs you configured earlier.
 
 1. Open **Settings**, go to **Applications** > **Bifrost** > **Entrances** > **Bifrost**, and then copy the endpoint URL. For example:
 
@@ -127,11 +126,11 @@ Clients connect to Bifrost through its own endpoint URL, not the backend provide
 The `/v1` suffix is required for OpenAI-compatible clients. Without it, requests fail.
 :::
 
-## Use Bifrost with OpenCode
+## Route models to OpenCode
 
-In OpenCode, register Bifrost as a custom provider and declare both example models under it: one from Ollama and one from a single-model app.
+In OpenCode, register Bifrost as a custom provider and add your example models (from Ollama and the single-model app) under it.
 
-### Connect OpenCode to Bifrost
+### Step 1: Connect OpenCode to Bifrost
 
 1. Open OpenCode, and then go to **Settings** > **Providers** > **Custom provider** > **Connect**.
 
@@ -151,36 +150,34 @@ In OpenCode, register Bifrost as a custom provider and declare both example mode
          ![Add models in OpenCode](/images/manual/use-cases/bifrost-opencode-add-model.png#bordered){width=70%}
 
    :::warning
-   - Always append `/v1` to the Bifrost URL. Without it, OpenCode returns an error.
-   - The `ollama/` prefix on model IDs is required. Without it, calls fail.
-   - The model name must match the name downloaded in Ollama. You can verify available models by running `ollama list` in the Ollama terminal.
+   - You must append `/v1` to the Bifrost URL. Without it, OpenCode returns an error.
+   - You must include the `ollama/` prefix on model IDs. Without it, API calls fail.
+   - The model name you enter must exactly match the name of the downloaded model in your Ollama instance. To find the exact names of your downloaded models, run `ollama list` in the Ollama terminal.
    :::
 
 4. Click **Submit**. The message "Olares Bifrost connected" is displayed.
 5. Return to OpenCode, and then go to **Settings** > **Models** > **Olares Bifrost**.
-6. Ensure the models you just added are enabled.
+6. Verify the models you added are enabled.
 
    ![Added models enabled in OpenCode](/images/manual/use-cases/bifrost-opencode-add-model-enabled.png#bordered){width=70%}
 
-### Chat and verify
+### Step 2: Chat and verify
 
-1. Start a new session in OpenCode and select one of the Bifrost-managed models to begin chatting.
+1. Start a new session in OpenCode, and select one of the Bifrost-managed models to begin a chat.
 
    ![Chat in OpenCode](/images/manual/use-cases/bifrost-opencode-chat.png#bordered)
 
-2. Return to Bifrost, and then go to **Observability** > **LLM Logs**. Each request you send appears as a log entry, which confirms Bifrost is routing the traffic.
+2. Open Bifrost, and then go to **Observability** > **LLM Logs**.
+
+   Each request you send appears as a log entry, which confirms that Bifrost routes the traffic successfully.
 
    ![Bifrost LLM logs](/images/manual/use-cases/bifrost-llm-logs.png#bordered)
 
-:::tip
-Some models behave poorly as coding agents in OpenCode (for example, `deepseek-r1:latest`). If a model does not work well, try a different one.
-:::
+## Route models to Open WebUI
 
-## Use Bifrost with Open WebUI
+In Open WebUI, add Bifrost as a direct external connection and add both example models under it.
 
-In Open WebUI, add Bifrost as a direct external connection and register both example models under it.
-
-### Connect Open WebUI to Bifrost
+### Step 1: Connect Open WebUI to Bifrost
 
 1. In Open WebUI, click your user avatar, and then select **Admin Panel**.
 2. Click the **Settings** tab, and then select **Connections**.
@@ -192,22 +189,44 @@ In Open WebUI, add Bifrost as a direct external connection and register both exa
    - **URL**: Paste the Bifrost endpoint URL with `/v1` appended.
    - **Auth**: Select **None**.
    - **Add a Model ID**: Enter each model ID in the `ollama/<model-name>` format, and then click <span class="material-symbols-outlined">add</span> to add it. For example:
-     - `ollama/llama3.1:8b` (from Ollama)
-     - `ollama/qwen3.5:9b` (from a single-model app)
+     - `ollama/llama3.1:8b`
+     - `ollama/qwen3.5:9b`
 
-   ![Open WebUI connection form](/images/manual/use-cases/bifrost-openwebui-connection-form.png#bordered)
+   ![Open WebUI connection form](/images/manual/use-cases/bifrost-openwebui-connection-form.png#bordered){width=50%}
 
-4. Click <span class="material-symbols-outlined">refresh</span> to verify the connection, and then click **Save**.
+5. Click <span class="material-symbols-outlined">refresh</span> to verify the connection, and then click **Save**.
 
-### Chat and verify
+### Step 2: Chat and verify
 
-1. In Open WebUI, on the **New Chat** page, select one of the models you just added, and then start a conversation.
+1. In Open WebUI, go to the **New Chat** page.
+2. Select one of the configured models, and then start a conversation.
 
    ![Open WebUI chat](/images/manual/use-cases/bifrost-openwebui-chat.png#bordered)
 
-2. Return to Bifrost and check **Observability** > **LLM Logs** to confirm the request was routed through Bifrost.
+3. Open Bifrost, and then go to **Observability** > **LLM Logs**.
+
+   Each request you send appears as a log entry, which confirms that Bifrost routes the traffic successfully.
 
    ![Bifrost log for Open WebUI](/images/manual/use-cases/bifrost-openwebui-log.png#bordered)
+
+## FAQs
+
+### Use Bifrost or LiteLLM?
+
+Olares offers multiple AI gateways. Use Bifrost if you require high request throughput, built-in MCP gateway access, semantic caching, or advanced rate limiting. For a simpler setup without these advanced features, consider using [LiteLLM](litellm.md).
+
+### Why does OpenCode return an error when connecting to Bifrost?
+
+Ensure you appended `/v1` to the Bifrost endpoint URL in your client configuration. Without the `/v1` suffix, requests from OpenAI-compatible clients fail.
+
+### Why do my model calls fail even though the connection is successful?
+
+- **Check model IDs**: You must include the `ollama/` prefix on model IDs. For example, `ollama/llama3.1:8b`.
+- **Check model names**: Ensure the model name perfectly matches the name downloaded in your Ollama instance.
+
+### Why does the AI model behave poorly as a coding agent?
+
+Some models, such as `deepseek-r1:latest`, might not perform well as coding agents in OpenCode. If a model generates poor responses, try switching to a different model.
 
 ## Learn more
 
