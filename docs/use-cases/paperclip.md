@@ -20,11 +20,11 @@ Running Paperclip as a self-hosted app on Olares ensures that your API keys, tas
 
 In this guide, you will learn how to:
 - Install Paperclip on Olares.
-- Create the initial workspace admin user.
+- Set up the initial admin user account.
 - Configure API keys for the agents you plan to use.
-- Set up your first company and agent.
+- Set up your first company, agent, and task.
 - Create an issue and track agent progress.
-- Navigate the Paperclip interface.
+- Monitor operations and metrics from the dashboard.
 
 ## Prerequisites
 
