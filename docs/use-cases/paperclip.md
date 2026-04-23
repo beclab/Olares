@@ -33,64 +33,86 @@ In this guide, you will learn how to:
 ## Install Paperclip
 
 1. Open Market and search for "Paperclip".
-   <!-- ![Paperclip in Market](/images/manual/use-cases/paperclip.png#bordered) -->
+   ![Paperclip in Market](/images/manual/use-cases/paperclip.png#bordered)
 
-2. Click **Get**, then **Install**, and wait for installation to complete.
+2. Click **Get**, and then click **Install**. Wait for the installation to finish.
 
 ## Create the first user
 
-Paperclip ships without a default user. The first time you open it, create the CEO account from the pod terminal:
+Paperclip ships without a default user. The first time you open it, create the CEO account from the pod terminal.
 
-1. Open Control Hub and navigate to **Browse** > **paperclip** > **Deployments** > **paperclip**.
-2. Under **Pods**, click the pod name to view its containers, and then click <i class="material-symbols-outlined">terminal</i> next to the container to open the pod terminal.
-   <!-- ![Open the Paperclip pod terminal from Control Hub](/images/manual/use-cases/paperclip-enter-container.png#bordered) -->
+1. Open Paperclip from the Launchpad. You see the following prompt: 
 
-3. In the pod terminal, run:
+   No instance admin exists yet. Run this command in your Paperclip environment to generate the first admin invite URL: `pnpm paperclipai auth bootstrap-ceo`.
 
-    ```bash
-    pnpm paperclipai auth bootstrap-ceo
-    ```
+   ![Paperclip first launch](/images/manual/use-cases/paperclip-first-open.png#bordered)
 
-    <!-- ![Run the bootstrap-ceo command](/images/manual/use-cases/paperclip-bootstrap-command.png#bordered) -->
+2. Open Control Hub, and then go to **Browse** > **paperclip-<username>** > **Deployments** > **paperclip**.
+3. Under **Pods**, click the pod name to view its containers.
+4. Click <i class="material-symbols-outlined">terminal</i> next to the **paperclip** container to open the pod terminal.
 
-4. Copy the invite URL from the command output.
+   ![Open the Paperclip pod terminal from Control Hub](/images/manual/use-cases/paperclip-enter-container.png#bordered)
 
-    <!-- ![Bootstrap command result with invite URL](/images/manual/use-cases/paperclip-bootstrap-result.png#bordered) -->
+5. In the paperclip terminal, type the following command, and then press **Enter**:
 
-5. Open the invite URL in your browser and register an account.
+   ```bash
+   pnpm paperclipai auth bootstrap-ceo
+   ```
 
-    <!-- ![Paperclip registration page](/images/manual/use-cases/paperclip-register.png#bordered) -->
+   ![Run the bootstrap-ceo command](/images/manual/use-cases/paperclip-bootstrap-command.png#bordered)
 
-6. After the account is created, click **Accept bootstrap invite**.
+6. Type `Y`, and then press **Enter** to confirm to continue.
+7. Copy the invite URL from the command output. In this case, it is https://d8ac13f9.alexmiles.olares.com/invite/pcp_bootstrap_e173bf08e3f1a6ab69d4f3e9cdb76566c19bcf462dddff27.
 
-    <!-- ![Accept bootstrap invite](/images/manual/use-cases/paperclip-accept-invite.png#bordered) -->
+   ![Bootstrap command result with invite URL](/images/manual/use-cases/paperclip-bootstrap-result.png#bordered)
 
-7. Click **Open board** to enter your new workspace.
+8. Open the invite URL in your browser, and then click **Sign in /Create account**.
 
-    <!-- ![Open board](/images/manual/use-cases/paperclip-open-board.png#bordered) -->
+   ![Paperclip registration page](/images/manual/use-cases/paperclip-register.png#bordered){width=50%}
+
+9. On the **Sign in to Paperclip** page, click **Create one**, and then specify the required information.
+
+   ![Paperclip create account page](/images/manual/use-cases/paperclip-create-account.png#bordered){width=50%}
+
+10. After the account is created, click **Accept bootstrap invite**.
+
+   ![Accept bootstrap invite](/images/manual/use-cases/paperclip-accept-invite.png#bordered){width=50%}
+
+11. Click **Open board** to enter your new workspace.
+
+   ![Open board](/images/manual/use-cases/paperclip-open-board.png#bordered){width=50%}
+
 ## Configure API keys
 
 Each agent needs the API key for its underlying model provider. Set these as environment variables for Paperclip.
 
-1. Go to **Settings** > **Applications** > **Paperclip** > **Manage environment variables**.
-   <!-- ![Manage Paperclip environment variables](/images/manual/use-cases/paperclip-manage-env-vars.png#bordered) -->
+1. Open Settings, and then go to **Applications** > **Paperclip** > **Manage environment variables**.
+   
+   ![Manage Paperclip environment variables](/images/manual/use-cases/paperclip-manage-env-vars.png#bordered)
 
-2. Click <i class="material-symbols-outlined">edit_square</i> next to a variable and paste your API key. Paperclip supports these variables:
+2. Click <i class="material-symbols-outlined">edit_square</i> next to a variable, enter your API key in the **Value** field, and then click **Confirm**. 
 
-    | Variable | Used by |
-    |:---------|:--------|
-    | `ANTHROPIC_API_KEY` | Claude Code, OpenCode, Pi |
-    | `OPENAI_API_KEY` | Codex, OpenCode, Pi |
-    | `GEMINI_API_KEY` | Gemini CLI, Cursor |
-    | `CURSOR_API_KEY` | Cursor |
+   Paperclip supports the following variables:
+   | Variable | Used by |
+   |:---------|:--------|
+   | `ANTHROPIC_API_KEY` | Claude Code, OpenCode, Pi |
+   | `OPENAI_API_KEY` | Codex, OpenCode, Pi |
+   | `GEMINI_API_KEY` | Gemini CLI, Cursor |
+   | `CURSOR_API_KEY` | Cursor |
 
-    <!-- ![Input API key](/images/manual/use-cases/paperclip-input-api-key.png#bordered) -->
+3. Click **Apply** to save all changes.
 
-3. Click **Confirm** to save each value, then click **Apply** at the top of the page to save all changes.
-   <!-- ![Apply environment variable changes](/images/manual/use-cases/paperclip-apply-env-vars.png#bordered) -->
+   ![Apply environment variable changes](/images/manual/use-cases/paperclip-apply-env-vars.png#bordered)
 
-4. Restart Paperclip so the new keys take effect. In Control Hub, navigate to **Browse** > **paperclip** > **Deployments** > **paperclip** and restart the deployment.
-   <!-- ![Restart Paperclip](/images/manual/use-cases/paperclip-restart.png#bordered) -->
+4. Restart the Paperclip container so the new keys take effect:
+
+   a. Open Control Hub, and then go to **Browse** > **paperclip-<username>** > **Deployments** > **paperclip**.
+   
+   b. Click **Restart**.
+   
+   ![Restart Paperclip deployment](/images/manual/use-cases/paperclip-deploy-restart.png#bordered)
+
+   c. Type `paperclip`, and then click **Confirm**. Wait until the container status turns to **Running** again.
 
 :::tip Add more keys later
 You can come back and add or update keys at any time. Just repeat this procedure and restart Paperclip.
@@ -100,33 +122,31 @@ You can come back and add or update keys at any time. Just repeat this procedure
 
 A Paperclip workspace is organized around a company, which holds its agents, tasks, and issues.
 
-1. Reopen Paperclip and fill in the company details.
-   <!-- ![Set company basics](/images/manual/use-cases/paperclip-set-company.png#bordered) -->
+1. Return to Paperclip. On the **Company** tab, enter the name for the company, and optionally the mission or goal. Click **Next**. 
+   ![Set company basics](/images/manual/use-cases/paperclip-set-company.png#bordered)
 
-2. On the **Create Agent** page, create your first agent. The default name is `CEO`, but you can rename it.
+2. On the **Agent** page, create your first agent by specifying the following settings:
 
-    a. Name the agent.
+   - **Agent name**: Use the default name **CEO** or a custom one.
+   - **Adapter type**： Select an adapter. Claude Code (Local Claude agent) and Codex (Local Codex agent) are good starting points. Expand More Agent Adaper Types to select from like OpenCode (Local multi-provider agent) and Cursor (Local Cursor agent).
 
-    b. Select an **Adapter type**. Claude Code and Codex are good starting points.
+   c. Pick a model from the drop-down.
 
-    c. Pick a model from the drop-down.
+   d. Click **Test now** to check the configuration.
 
-    d. Click **Test now** to check the configuration.
+   ![Create an agent](/images/manual/use-cases/paperclip-create-agent.png#bordered)
 
-    <!-- ![Create an agent](/images/manual/use-cases/paperclip-create-agent.png#bordered) -->
+   e. Click **Next**.
 
-    For what each adapter type requires, see [Agent adapter reference](#agent-adapter-reference).
+   For what each adapter type requires, see [Agent adapter reference](#agent-adapter-reference).
 
-3. Set up the first task. It becomes your first issue once setup completes. You can keep the defaults or customize the title and description.
+3. Set up the first task. It becomes your first issue once setup completes. You can keep the defaults or customize the title and description. Click **Next**.
 
-    a. Enter a **Task title**.
+   ![Set up a task](/images/manual/use-cases/paperclip-set-task.png#bordered)
 
-    b. Enter a **Description**.
+4. Click **Create & Open Issue**. The **Issues** page opens.
 
-    <!-- ![Set up a task](/images/manual/use-cases/paperclip-set-task.png#bordered) -->
-
-4. Click **Finish**. The **Issues** page opens.
-   <!-- ![Issue page after setup](/images/manual/use-cases/paperclip-issue-page.png#bordered) -->
+   ![Issue page after setup](/images/manual/use-cases/paperclip-issue-page.png#bordered)
 
 ## File your first issue
 
