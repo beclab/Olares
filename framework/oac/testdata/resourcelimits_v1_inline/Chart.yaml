@@ -1,0 +1,6 @@
+apiVersion: v2
+name: resourcelimits-v1-inline
+description: fixture for resource limit checks (v1 inline manifest)
+type: application
+version: 0.1.0
+appVersion: "1"
