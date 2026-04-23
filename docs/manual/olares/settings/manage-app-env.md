@@ -24,7 +24,7 @@ The **Manage environment variables** page shows the environment variables curren
 You may see two types of variables depending on the application's configuration:
 
 - **Application-specific variables**: Variables defined for the application itself. They display normally and can be edited directly on this page.
-- **Referenced system environment variables**: System environment variables referenced by the application. These variables appear on this page only if the application uses them. They appear dimmed and cannot be edited directly. To modify them, go to **Settings** > **Advanced** > **System environment variables**.
+- **Referenced system environment variables**: System environment variables referenced by the application. These variables appear on this page only if the application uses them. They appear dimmed and cannot be edited directly. To modify them, see [Set system environment variables](/manual/olares/settings/developer.md#set-system-environment-variables)
 
 ## Edit an application-specific variable
 
