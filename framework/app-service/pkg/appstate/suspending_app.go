@@ -102,45 +102,45 @@ func (p *SuspendingApp) exec(ctx context.Context) error {
 		var appManagerList appsv1.ApplicationManagerList
 		if err := p.client.List(ctx, &appManagerList); err != nil {
 			klog.Errorf("failed to list application managers: %v", err)
-		} else {
-			// find all ApplicationManagers with same AppName but different AppOwner
-			for _, am := range appManagerList.Items {
-				// Skip if same owner (already handled) or different app
-				if am.Spec.AppName != p.manager.Spec.AppName || am.Spec.AppOwner == p.manager.Spec.AppOwner {
-					continue
-				}
-
-				if am.Spec.Type != appsv1.App && am.Spec.Type != appsv1.Middleware {
-					continue
-				}
-
-				if am.Status.State == appsv1.Stopped || am.Status.State == appsv1.Stopping {
-					klog.Infof("app %s owner %s already in stopped/stopping state, skip", am.Spec.AppName, am.Spec.AppOwner)
-					continue
-				}
-
-				if !IsOperationAllowed(am.Status.State, appsv1.StopOp) {
-					klog.Infof("app %s owner %s not allowed do stop operation, skip", am.Spec.AppName, am.Spec.AppOwner)
-					continue
-				}
-				opID := strconv.FormatInt(time.Now().Unix(), 10)
-				now := metav1.Now()
-				status := appsv1.ApplicationManagerStatus{
-					OpType:     appsv1.StopOp,
-					OpID:       opID,
-					State:      appsv1.Stopping,
-					StatusTime: &now,
-					UpdateTime: &now,
-					Reason:     p.manager.Status.Reason,
-					Message:    p.manager.Status.Message,
-				}
-				if _, err := apputils.UpdateAppMgrStatus(am.Name, status); err != nil {
-					return err
-				}
-
-				klog.Infof("stopping client for user %s, app %s", am.Spec.AppOwner, am.Spec.AppName)
-
+			return err
+		}
+		// find all ApplicationManagers with same AppName but different AppOwner
+		for _, am := range appManagerList.Items {
+			// Skip if same owner (already handled) or different app
+			if am.Spec.AppName != p.manager.Spec.AppName || am.Spec.AppOwner == p.manager.Spec.AppOwner {
+				continue
 			}
+
+			if am.Spec.Type != appsv1.App && am.Spec.Type != appsv1.Middleware {
+				continue
+			}
+
+			if am.Status.State == appsv1.Stopped || am.Status.State == appsv1.Stopping {
+				klog.Infof("app %s owner %s already in stopped/stopping state, skip", am.Spec.AppName, am.Spec.AppOwner)
+				continue
+			}
+
+			if !IsOperationAllowed(am.Status.State, appsv1.StopOp) {
+				klog.Infof("app %s owner %s not allowed do stop operation, skip", am.Spec.AppName, am.Spec.AppOwner)
+				continue
+			}
+			opID := strconv.FormatInt(time.Now().Unix(), 10)
+			now := metav1.Now()
+			status := appsv1.ApplicationManagerStatus{
+				OpType:     appsv1.StopOp,
+				OpID:       opID,
+				State:      appsv1.Stopping,
+				StatusTime: &now,
+				UpdateTime: &now,
+				Reason:     p.manager.Status.Reason,
+				Message:    p.manager.Status.Message,
+			}
+			if _, err := apputils.UpdateAppMgrStatus(am.Name, status); err != nil {
+				return err
+			}
+
+			klog.Infof("stopping client for user %s, app %s", am.Spec.AppOwner, am.Spec.AppName)
+
 		}
 	}
 

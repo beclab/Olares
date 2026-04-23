@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	"strconv"
 	"time"
 
 	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
@@ -18,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
@@ -199,6 +201,16 @@ func (p *UninstallingApp) exec(ctx context.Context) error {
 		klog.Errorf("uninstall app %s failed %v", p.manager.Spec.AppName, err)
 		return err
 	}
+
+	if uninstallAll == "true" && appCfg.APIVersion == appcfg.V2 {
+		// For V2 cluster-scoped apps, when the server is uninstalled, trigger
+		// uninstall for all other users' clients because they share the same
+		// server and cannot function without it.
+		if err := p.uninstallOtherUsersClients(ctx); err != nil {
+			return err
+		}
+	}
+
 	err = p.waitForDeleteNamespace(ctx)
 	if err != nil {
 		klog.Errorf("waiting app %s namespace %s being deleted failed", p.manager.Spec.AppName, p.manager.Spec.AppNamespace)
@@ -212,6 +224,60 @@ func (p *UninstallingApp) exec(ctx context.Context) error {
 			klog.Errorf("waiting for shared namespaces to be deleted failed for app %s: %v", p.manager.Spec.AppName, err)
 			return err
 		}
+	}
+
+	return nil
+}
+
+// uninstallOtherUsersClients marks every other user's ApplicationManager for
+// the same app as Uninstalling, so each user's own controller tears down
+// their client release. Mirrors the stop-all behavior in SuspendingApp.
+func (p *UninstallingApp) uninstallOtherUsersClients(ctx context.Context) error {
+	klog.Infof("uninstalling other users' clients for v2 app %s", p.manager.Spec.AppName)
+
+	var appManagerList appsv1.ApplicationManagerList
+	if err := p.client.List(ctx, &appManagerList); err != nil {
+		klog.Errorf("failed to list application managers: %v", err)
+		return err
+	}
+
+	for _, am := range appManagerList.Items {
+		// Skip if same owner (already handled) or different app
+		if am.Spec.AppName != p.manager.Spec.AppName || am.Spec.AppOwner == p.manager.Spec.AppOwner {
+			continue
+		}
+
+		if am.Spec.Type != appsv1.App {
+			continue
+		}
+
+		if am.Status.State == appsv1.Uninstalled || am.Status.State == appsv1.Uninstalling {
+			klog.Infof("app %s owner %s already in uninstalled/uninstalling state, skip", am.Spec.AppName, am.Spec.AppOwner)
+			continue
+		}
+
+		if !IsOperationAllowed(am.Status.State, appsv1.UninstallOp) {
+			klog.Infof("app %s owner %s not allowed do uninstall operation, skip", am.Spec.AppName, am.Spec.AppOwner)
+			continue
+		}
+
+		opID := strconv.FormatInt(time.Now().Unix(), 10)
+		now := metav1.Now()
+		status := appsv1.ApplicationManagerStatus{
+			OpType:     appsv1.UninstallOp,
+			OpID:       opID,
+			State:      appsv1.Uninstalling,
+			Progress:   "0.00",
+			StatusTime: &now,
+			UpdateTime: &now,
+			Reason:     p.manager.Status.Reason,
+			Message:    p.manager.Status.Message,
+		}
+		if _, err := apputils.UpdateAppMgrStatus(am.Name, status); err != nil {
+			return err
+		}
+
+		klog.Infof("uninstalling client for user %s, app %s", am.Spec.AppOwner, am.Spec.AppName)
 	}
 
 	return nil
