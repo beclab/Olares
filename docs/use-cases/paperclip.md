@@ -151,7 +151,7 @@ A Paperclip workspace is organized around a virtual company structure. This comp
    ![Create an agent](/images/manual/use-cases/paperclip-create-agent.png#bordered)
 
    :::tip
-   To understand specific adapter requirements, see [Agent adapter reference](#which-agent-adapters-does-paperclip-support).
+   To review the API key requirements for each adapter, see [Which agent adapters does Paperclip support](#which-agent-adapters-does-paperclip-support).
    :::
 
 4. On the **Task** tab, define your first task:
