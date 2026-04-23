@@ -117,22 +117,39 @@ func (p *WebPlatform) CompleteAuthRequest(req *StartAuthRequestResponse) (*Authe
 // Global variables
 var platform Platform
 var globalUserStore *UserStore
+var globalStorage Storage
 // globalJWSSigner removed as UserStore.SignJWS() is actually used
 
 func SetPlatform(p Platform) {
 	platform = p
 }
 
-// InitializeGlobalStores initializes global storage
+// GetGlobalStorage returns the process-wide DirKVStorage initialized via
+// InitializeGlobalStores. May be nil if init has not yet been called.
+func GetGlobalStorage() Storage {
+	return globalStorage
+}
+
+// InitializeGlobalStores initializes the global UserStore and the local
+// DirKVStorage rooted at ~/.olares/<did>/. The DID is derived from the
+// mnemonic via the UserStore.
 func InitializeGlobalStores(mnemonic, terminusName string) error {
 	// Create UserStore (contains all necessary JWS signing functionality)
 	userStore, err := NewUserStore(mnemonic, terminusName)
 	if err != nil {
 		return fmt.Errorf("failed to create UserStore: %w", err)
 	}
-	
-	// Set global variables
+
 	globalUserStore = userStore
-	
+
+	root, err := DefaultStorageRoot(userStore.GetDid())
+	if err != nil {
+		return fmt.Errorf("failed to resolve storage root: %w", err)
+	}
+	storage, err := NewDirKVStorage(root)
+	if err != nil {
+		return fmt.Errorf("failed to initialize storage: %w", err)
+	}
+	globalStorage = storage
 	return nil
 }
