@@ -5,23 +5,22 @@ description: Learn how to manage application environment variables in Olares
 
 # Manage application environment variables
 
-Application environment variables are key parameters used to configure the runtime behavior and settings of an application container. They determine how the application runs, which services it connects to, and what user credentials it uses.
+Application environment variables define how an application runs in its container, including its configuration, connected services, and other runtime settings.
 
 To view or modify an application's environment variables:
 
-1. Navigate to **Settings** > **Application**, 
+1. Go to **Settings** > **Application**.
 2. Select the target application.
-3. Enter the **Manage environment variables** page.
+3. Under **Environment variables**, click **Manage environment variables**.
 
-![Application environment variables](/images/manual/olares/manage-app-env.jpeg#bordered)
+![Application environment variables](/images/manual/olares/manage-app-env1.png#bordered){width=90%}
 
 ## Application environment variable types
 
-| Environment Variable Type                     | Description                                                                                                                                                        | Edit Permissions                                                                                                        |
-|:----------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------------|
-| **Referenced system environment variables**   | References system environment <br/>variables (e.g., **`OLARES_USER_USERNAME`**).<br/> When an application is declared to use <br/>system variables, you will see them here.       | **Read-only**. You must navigate to **Settings > Developer > System Environment Variables** page to make modifications. |
-| **Application-specific variables**            | Configuration variables that are specific to<br/> the application itself.                                                                                               | **Editable**. You can modify their values directly on this page without needing to edit YAML files in Control Hub.      |
-
+| Environment variable type | Description | Edit permissions |
+|:--|:--|:--|
+| **Referenced system environment variables**   | System environment variables<br> referenced by the application, such<br> as `OLARES_USER_USERNAME`.<br>If the application is configured to<br> use system environment variables, <br>they appear here. | **Read-only**. To modify them, go to **Settings** > **Advanced** > **System environment variables**. |
+| **Application-specific variables** | Environment variables defined <br>specifically for the application. | **Editable**. You can modify them directly on this page without editing YAML files in Control Hub. |
 
 ## Learn more 
 

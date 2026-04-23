@@ -155,3 +155,4 @@ Adjust these values gradually. Large changes may make the result sound less natu
 ## Learn more
 
 - [IndexTTS2 on GitHub](https://github.com/index-tts/index-tts): Source code and technical details.
+- [Speaches](speaches.md): Speech-to-text, text-to-speech, and voice chat in one app.
