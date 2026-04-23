@@ -103,7 +103,29 @@ type AccountProvisioning struct {
 	BillingPage   any            `json:"billingPage,omitempty"`
 	Quota         map[string]any `json:"quota"`
 	Features      map[string]any `json:"features"`
-	Orgs          []string       `json:"orgs"`
+	Orgs          []string       `json:"orgs,omitempty"`
+}
+
+// OrgProvisioning mirrors the subset of TS OrgProvisioning that can appear
+// inside AuthInfo.provisioning.orgs.
+type OrgProvisioning struct {
+	OrgID         string         `json:"orgId"`
+	OrgName       string         `json:"orgName,omitempty"`
+	Status        string         `json:"status,omitempty"`
+	StatusLabel   string         `json:"statusLabel,omitempty"`
+	StatusMessage any            `json:"statusMessage,omitempty"`
+	ActionURL     *string        `json:"actionUrl,omitempty"`
+	ActionLabel   *string        `json:"actionLabel,omitempty"`
+	MetaData      map[string]any `json:"metaData,omitempty"`
+	AutoCreate    bool           `json:"autoCreate,omitempty"`
+	Quota         map[string]any `json:"quota,omitempty"`
+	Features      map[string]any `json:"features,omitempty"`
+}
+
+// Provisioning mirrors apps/packages/sdk/src/core/provisioning.ts Provisioning.
+type Provisioning struct {
+	Account *AccountProvisioning `json:"account,omitempty"`
+	Orgs    []OrgProvisioning    `json:"orgs,omitempty"`
 }
 
 type StartAuthRequestResponse struct {
@@ -237,10 +259,18 @@ type DeviceInfo struct {
 	// Other device-related fields...
 }
 
-// Request represents an RPC request
+// Request represents an RPC request.
+//
+// IMPORTANT: do NOT add `omitempty` to Params. The TS client always
+// sends `params: []` on the wire (see apps/packages/sdk/src/core/client.ts
+// line 41-52: `typeof input === 'undefined' ? [] : [...]`), and the server
+// signs against `JSON.stringify(req.params)` (where `[]` -> "[]" but
+// `undefined` -> "undefined"). With `omitempty` Go would drop the field
+// for empty param calls (e.g. `getAccount`), causing a signature mismatch:
+// client signs `..._[]` while server signs `..._undefined`.
 type Request struct {
 	Method string        `json:"method"`
-	Params []interface{} `json:"params,omitempty"`
+	Params []interface{} `json:"params"`
 	Device *DeviceInfo   `json:"device,omitempty"`
 	Auth   *RequestAuth  `json:"auth,omitempty"`
 }
@@ -391,21 +421,236 @@ type VaultItem struct {
 	UpdatedBy string    `json:"updatedBy"`
 }
 
-// Vault represents a vault containing items
-type Vault struct {
-	Kind         string      `json:"kind"`                    // Always "vault" for Vault objects
+// Accessor mirrors apps/packages/sdk/src/core/container.ts Accessor.
+type Accessor struct {
 	ID           string      `json:"id"`
-	Name         string      `json:"name"`
-	Owner        string      `json:"owner"`
-	Created      string      `json:"created"`                 // ISO 8601 format
-	Updated      string      `json:"updated"`                 // ISO 8601 format
-	Revision     string      `json:"revision,omitempty"`
-	Items        []VaultItem `json:"items,omitempty"`
-	KeyParams    interface{} `json:"keyParams,omitempty"`
-	EncryptionParams interface{} `json:"encryptionParams,omitempty"`
-	Accessors    interface{} `json:"accessors,omitempty"`
-	EncryptedData interface{} `json:"encryptedData,omitempty"`
-	Version      string      `json:"version,omitempty"`       // Serialization version
+	EncryptedKey Base64Bytes `json:"encryptedKey"`
+	PublicKey    Base64Bytes `json:"publicKey,omitempty"`
+}
+
+// RSAEncryptionParams mirrors the same-named TS class. Only RSA-OAEP /
+// SHA-256 is supported (matching the server defaults).
+type RSAEncryptionParams struct {
+	Algorithm string `json:"algorithm"` // "RSA-OAEP"
+	Hash      string `json:"hash"`      // "SHA-256"
+	Kind      string `json:"kind,omitempty"`
+	Version   string `json:"version,omitempty"`
+}
+
+// NewRSAEncryptionParams constructs the canonical params used by TS.
+func NewRSAEncryptionParams() RSAEncryptionParams {
+	return RSAEncryptionParams{Algorithm: "RSA-OAEP", Hash: "SHA-256"}
+}
+
+// Vault is the Go counterpart of apps/packages/sdk/src/core/vault.ts.
+//
+// `items` and the cleartext shared key live only in memory after a
+// successful Unlock call; they are not serialized to JSON.
+type Vault struct {
+	Kind             string              `json:"kind"`
+	ID               string              `json:"id"`
+	Name             string              `json:"name"`
+	Owner            string              `json:"owner"`
+	Org              *OrgInfo            `json:"org,omitempty"`
+	Created          string              `json:"created"`
+	Updated          string              `json:"updated"`
+	Revision         string              `json:"revision,omitempty"`
+	KeyParams        RSAEncryptionParams `json:"keyParams"`
+	EncryptionParams EncryptionParams    `json:"encryptionParams"`
+	Accessors        []Accessor          `json:"accessors"`
+	EncryptedData    Base64Bytes         `json:"encryptedData,omitempty"`
+	Version          string              `json:"version,omitempty"`
+
+	// Runtime-only state populated by Unlock() / UpdateAccessors() / Commit().
+	items  *VaultItemCollection `json:"-"`
+	aesKey []byte               `json:"-"`
+}
+
+// VaultItemCollection mirrors apps/packages/sdk/src/core/collection.ts.
+// Items keyed by id; Changes records the last time an item was modified
+// locally so that merge() knows which side wins.
+type VaultItemCollection struct {
+	Items   map[string]VaultItem `json:"-"`
+	Changes map[string]ISOTime   `json:"-"`
+}
+
+// NewVaultItemCollection returns an empty collection.
+func NewVaultItemCollection() *VaultItemCollection {
+	return &VaultItemCollection{
+		Items:   map[string]VaultItem{},
+		Changes: map[string]ISOTime{},
+	}
+}
+
+// vaultItemCollectionRaw is the on-disk shape produced by TS
+// VaultItemCollection._toRaw: { items: VaultItem[], changes: [string,string][] }.
+type vaultItemCollectionRaw struct {
+	Items   []VaultItem `json:"items"`
+	Changes [][2]string `json:"changes"`
+}
+
+// ToBytes serializes the collection in a way compatible with the TS
+// implementation (items: array, changes: [[id, iso-time], ...]).
+func (c *VaultItemCollection) ToBytes() ([]byte, error) {
+	if c == nil {
+		c = NewVaultItemCollection()
+	}
+	raw := vaultItemCollectionRaw{
+		Items:   make([]VaultItem, 0, len(c.Items)),
+		Changes: make([][2]string, 0, len(c.Changes)),
+	}
+	for _, item := range c.Items {
+		raw.Items = append(raw.Items, item)
+	}
+	for id, t := range c.Changes {
+		raw.Changes = append(raw.Changes, [2]string{id, time.Time(t).UTC().Format(time.RFC3339Nano)})
+	}
+	return json.Marshal(raw)
+}
+
+// FromBytes deserializes a TS-compatible payload back into the collection.
+func (c *VaultItemCollection) FromBytes(data []byte) error {
+	var raw vaultItemCollectionRaw
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("failed to parse VaultItemCollection: %w", err)
+	}
+	c.Items = make(map[string]VaultItem, len(raw.Items))
+	for _, item := range raw.Items {
+		c.Items[item.ID] = item
+	}
+	c.Changes = make(map[string]ISOTime, len(raw.Changes))
+	for _, ch := range raw.Changes {
+		t, err := time.Parse(time.RFC3339Nano, ch[1])
+		if err != nil {
+			t, _ = time.Parse(time.RFC3339, ch[1])
+		}
+		c.Changes[ch[0]] = ISOTime(t)
+	}
+	return nil
+}
+
+// Update inserts or replaces the given items, marking each as changed.
+func (c *VaultItemCollection) Update(items ...VaultItem) {
+	now := time.Now().UTC()
+	for _, item := range items {
+		item.Updated = now.Format(time.RFC3339Nano)
+		c.Items[item.ID] = item
+		c.Changes[item.ID] = ISOTime(now)
+	}
+}
+
+// Remove deletes items by id and records the deletion as a change.
+func (c *VaultItemCollection) Remove(items ...VaultItem) {
+	now := time.Now().UTC()
+	for _, item := range items {
+		delete(c.Items, item.ID)
+		c.Changes[item.ID] = ISOTime(now)
+	}
+}
+
+// HasChanges reports whether any local changes are still pending sync.
+func (c *VaultItemCollection) HasChanges() bool {
+	return c != nil && len(c.Changes) > 0
+}
+
+// ClearChanges drops change records older than `before` (zero means all).
+func (c *VaultItemCollection) ClearChanges(before time.Time) {
+	if c == nil {
+		return
+	}
+	for id, t := range c.Changes {
+		if before.IsZero() || !time.Time(t).After(before) {
+			delete(c.Changes, id)
+		}
+	}
+}
+
+// Merge mirrors VaultItemCollection.merge in TS: locally-changed items
+// always win, otherwise the other side's items overwrite.
+func (c *VaultItemCollection) Merge(other *VaultItemCollection) {
+	if other == nil {
+		return
+	}
+	for id := range c.Items {
+		if _, changed := c.Changes[id]; !changed {
+			if _, ok := other.Items[id]; !ok {
+				delete(c.Items, id)
+			}
+		}
+	}
+	for id, item := range other.Items {
+		if _, changed := c.Changes[id]; !changed {
+			c.Items[id] = item
+		}
+	}
+}
+
+// Items returns the in-memory collection (allocating if needed).
+func (v *Vault) ItemsCollection() *VaultItemCollection {
+	if v.items == nil {
+		v.items = NewVaultItemCollection()
+	}
+	return v.items
+}
+
+// Org is the minimal subset of apps/packages/sdk/src/core/org.ts that
+// the CLI needs in order to fetch / iterate vaults shared via an org.
+type Org struct {
+	ID        string      `json:"id"`
+	Name      string      `json:"name,omitempty"`
+	Revision  string      `json:"revision,omitempty"`
+	PublicKey Base64Bytes `json:"publicKey,omitempty"`
+	Vaults    []OrgVault  `json:"vaults,omitempty"`
+	Members   []OrgMember `json:"members,omitempty"`
+}
+
+type OrgVault struct {
+	ID       string `json:"id"`
+	Name     string `json:"name,omitempty"`
+	Revision string `json:"revision,omitempty"`
+	Readonly bool   `json:"readonly,omitempty"`
+}
+
+type OrgMember struct {
+	ID        string      `json:"id,omitempty"`
+	AccountID string      `json:"accountId,omitempty"`
+	DID       string      `json:"did"`
+	Name      string      `json:"name,omitempty"`
+	PublicKey Base64Bytes `json:"publicKey,omitempty"`
+	Role      int         `json:"role,omitempty"`
+	Status    string      `json:"status,omitempty"`
+	Vaults    []OrgVault  `json:"vaults,omitempty"`
+}
+
+// AuthInfo is the minimal subset of apps/packages/sdk/src/core/api.ts
+// AuthInfo persisted by the CLI.
+type AuthInfo struct {
+	Provisioning *Provisioning `json:"provisioning,omitempty"`
+}
+
+// UnlockedAccount holds the in-memory secrets derived from a successful
+// Account.Unlock call (PBKDF2 → AES-GCM decrypt of EncryptedData).
+type UnlockedAccount struct {
+	Account    *Account
+	MasterKey  []byte
+	PrivateKey []byte // PKCS1 DER
+	SigningKey []byte // HMAC key
+}
+
+// AccountSecrets is the JSON shape that lives inside the account's
+// AES-GCM encryptedData blob.
+type AccountSecrets struct {
+	SigningKey Base64Bytes `json:"signingKey"`
+	PrivateKey Base64Bytes `json:"privateKey"`
+	Favorites  []string    `json:"favorites,omitempty"`
+	Tags       []TagInfo   `json:"tags,omitempty"`
+}
+
+// TagInfo mirrors apps/packages/sdk/src/core/item.ts TagInfo.
+type TagInfo struct {
+	Name     string  `json:"name"`
+	Unlisted *bool   `json:"unlisted,omitempty"`
+	Color    *string `json:"color,omitempty"`
 }
 
 // ItemTemplate represents a template for creating vault items

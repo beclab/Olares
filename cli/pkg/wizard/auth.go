@@ -38,8 +38,13 @@ type FirstFactorResponse struct {
 	Data   Token  `json:"data"`
 }
 
-// OnFirstFactor implements first factor authentication (ref: BindTerminusBusiness.ts)
-func OnFirstFactor(baseURL, terminusName, osUser, osPwd string, acceptCookie, needTwoFactor bool) (*Token, error) {
+// OnFirstFactor implements first factor authentication (ref: BindTerminusBusiness.ts).
+//
+// If client is nil, a fresh http.Client is created internally. Pass a shared
+// client (e.g. from newAuthHTTPClient) when the caller intends to follow up
+// with /api/secondfactor/totp so that Authelia session cookies set by this
+// request are reused on the next one.
+func OnFirstFactor(client *http.Client, baseURL, terminusName, osUser, osPwd string, acceptCookie, needTwoFactor bool) (*Token, error) {
 	log.Printf("Starting onFirstFactor for user: %s", osUser)
 
 	// Process password (salted MD5)
@@ -60,9 +65,10 @@ func OnFirstFactor(baseURL, terminusName, osUser, osPwd string, acceptCookie, ne
 		return nil, fmt.Errorf("failed to marshal request: %v", err)
 	}
 
-	// Send HTTP request
-	client := &http.Client{
-		Timeout: 10 * time.Second,
+	if client == nil {
+		client = &http.Client{
+			Timeout: 10 * time.Second,
+		}
 	}
 
 	reqURL := fmt.Sprintf("%s/api/firstfactor?hideCookie=true", baseURL)
@@ -170,7 +176,7 @@ func Authenticate(req AuthenticateRequest) (*AuthenticateResponse, error) {
 }
 
 // UserBindTerminus main user binding function (ref: TypeScript version)
-func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName string) (string, error) {
+func UserBindTerminus(mnemonic, bflUrl, vaultUrl, authUrl, osPwd, terminusName, localName string) (string, error) {
 	log.Printf("Starting userBindTerminus for user: %s", terminusName)
 
 	// 1. Initialize global storage
@@ -183,28 +189,33 @@ func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName
 		log.Printf("Global stores initialized successfully")
 	}
 
+	if authUrl != "" {
+		globalUserStore.SetAuthURL(authUrl)
+		log.Printf("Custom auth URL applied: %s", authUrl)
+	}
+
 	// 2. Initialize platform and App (if not already initialized)
 	var app *App
+	state, err := LoadAppState(globalStorage, globalUserStore.GetDid())
+	if err != nil {
+		return "", fmt.Errorf("failed to load app state: %w", err)
+	}
 	if platform == nil {
 		log.Printf("Initializing platform...")
-
-		// Create App using vaultUrl as base URL
-		app = NewAppWithBaseURL(vaultUrl)
-
-		// Create and set WebPlatform (no need to pass mnemonic, uses global storage)
+		app = NewAppWithState(vaultUrl, state)
 		webPlatform := NewWebPlatform(app.API)
 		SetPlatform(webPlatform)
-
 		log.Printf("Platform initialized successfully with base URL: %s", vaultUrl)
 	} else {
-		// If platform already initialized, create new App instance for signup
-		app = NewAppWithBaseURL(vaultUrl)
+		app = NewAppWithState(vaultUrl, state)
 	}
 
 	log.Printf("Using bflUrl: %s", bflUrl)
 
-	// 3. Call onFirstFactor to get token (ref: TypeScript implementation)
-	token, err := OnFirstFactor(bflUrl, terminusName, localName, osPwd, false, false)
+	// 3. Call onFirstFactor to get token (ref: TypeScript implementation).
+	// Use a cookie-jar-backed client for consistency with LoginTerminus,
+	// even though no second factor follows in this flow.
+	token, err := OnFirstFactor(newAuthHTTPClient(), bflUrl, terminusName, localName, osPwd, false, false)
 	if err != nil {
 		return "", fmt.Errorf("onFirstFactor failed: %v", err)
 	}
