@@ -29,9 +29,9 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-- [Ollama is installed](ollama.md) on Olares with at least one model downloaded. This tutorial uses `llama3.1:8b` as an example.
-- At least one single-model app is installed from Market. This tutorial uses the **Qwen3.5 9B Q4_K_M (Ollama)** app as an example.
-- You have Olares administrator privileges.
+Ensure you have a local AI model running on Olares using one of the following methods:
+- **Ollama application**: One app that hosts multiple models. Ensure [Ollama is installed](ollama.md) with at least one model downloaded, such as `llama3.1:8b`.
+- **Single-model application**: Runs one specific model as a standalone application. Ensure a model app is installed from Market with the model fully downloaded, such as **Qwen3.5 9B Q4_K_M (Ollama)**.
 
 ## Install Bifrost
 
@@ -45,9 +45,9 @@ In this guide, you will learn how to:
 
 In Bifrost, a model provider represents the engine hosting your AI models. You configure a provider by supplying the endpoint URL of the application running the models. 
 
-You can connect the main Ollama application to route every model running inside it, or connect a single-model application to expose just that specific model.
+You can connect the Ollama application to route every model running inside it, or connect a single-model application to expose just that specific model.
 
-In this tutorial, since both model applications run on the Ollama engine, select **Ollama** as the provider type for both scenarios.
+In this tutorial, since both the example models run on the Ollama engine, select **Ollama** as the provider type for both scenarios.
 
 <tabs>
 <template #Ollama-app>
@@ -224,9 +224,14 @@ Ensure you appended `/v1` to the Bifrost endpoint URL in your client configurati
 - **Check model IDs**: You must include the `ollama/` prefix on model IDs. For example, `ollama/llama3.1:8b`.
 - **Check model names**: Ensure the model name perfectly matches the name downloaded in your Ollama instance.
 
-### Why does the AI model behave poorly as a coding agent?
+### Why do I get errors when calling a model through Bifrost in OpenCode?
 
-Some models, such as `deepseek-r1:latest`, might not perform well as coding agents in OpenCode. If a model generates poor responses, try switching to a different model.
+Certain models have their own native output formats such as custom tags or reasoning blocks, or lack support for features the client expects, such as tool calling. When Bifrost routes these requests, the models might return responses that OpenAI-compatible clients like OpenCode fail to parse, resulting in failures.
+
+If you encounter this issue:
+- Review the model documentation for special output formats or capability limitations.
+- Verify the model supports the specific features your client requests.
+- Switch to a model that fully complies with the OpenAI API standard.
 
 ## Learn more
 
