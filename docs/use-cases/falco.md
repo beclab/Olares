@@ -5,28 +5,29 @@ head:
   - - meta
     - name: keywords
       content: Olares, Falco, runtime security, eBPF, Kubernetes, container security, threat detection, Falcosidekick
-app_version: "1.0.0"
+app_version: "1.0.11"
 doc_version: "1.0"
-doc_updated: "2026-04-20"
+doc_updated: "2026-04-23"
 ---
 
 # Monitor runtime security with Falco
 
 Falco is an open-source cloud-native runtime security tool built on eBPF. It watches Linux kernel events in real time and fires alerts when it spots suspicious behavior on hosts, in containers, or across Kubernetes workloads.
 
-On Olares, Falco runs as a shared application. Agents collect events on each node, and a central web UI brings everything into one place.
+On Olares, Falco runs as a shared application. Agents collect events on each node, and a central Falcosidekick UI brings everything into one place.
+
+Use this guide when you want to install Falco on Olares and review runtime security alerts from hosts, containers, and Kubernetes workloads.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
-- Understand how Falco is deployed on Olares.
-- View security alerts in the Falcosidekick Web UI.
-- Tune event retention, detection rules, output channels, and plugins.
+- View security alerts in the Falcosidekick UI.
+- Configure event retention, detection rules, output channels, and plugins.
 - Troubleshoot common plugin issues.
 
 ## Prerequisites
 
-- Admin access to Olares. Falco runs in a client/server architecture, and only administrators can install or configure it. If you are a regular user, ask your administrator to install the Falco shared application first.
+- **Admin access required**: Falco runs in a client/server architecture, and only administrators can install or configure it. If you are a regular user, ask your administrator to install the Falco shared application first.
 
 ## How Falco works on Olares
 
@@ -46,24 +47,27 @@ Falco uses distributed collection with centralized display, so you can monitor e
 1. `falco-agent` on each node captures kernel events locally.
 2. When an event matches a rule, `http_output` forwards it to `falco-sidekick`.
 3. `falco-sidekick` writes the event to Redis.
-4. The Web UI reads from Redis and renders the dashboard.
+4. The Falcosidekick UI reads from Redis and renders the dashboard.
 
 ## Install Falco
 
 1. Open Market and search for "Falco".
-   <!-- ![Falco in Market](/images/manual/use-cases/falco.png#bordered) -->
+
+  ![Falco in Market](/images/manual/use-cases/falco.png#bordered){width=90%}
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
-## View alerts in the Falcosidekick Web UI
+## View alerts in Falcosidekick UI
 
-The Falcosidekick Web UI is the recommended production setup. Alerts flow from each `falco-agent` into Falcosidekick and are rendered in the UI. You can also point Falcosidekick at external systems to forward alerts elsewhere. See [Configure output channels](#configure-output-channels) for details.
+After Falco is installed, open the Falco application to access the Falcosidekick UI and review security alerts.
+
+The Falcosidekick UI is the default place to review alerts on Olares. If needed, administrators can also forward alerts to external systems. See [Configure output channels](#configure-output-channels).
 
 ### Dashboard
 
-The dashboard gives you a real-time snapshot of what's happening across nodes.
+The **Dashboard** page gives you a real-time overview of alert activity across nodes.
 
-<!-- ![Falco dashboard](/images/manual/use-cases/falco-dashboard.png#bordered) -->
+  ![Falco dashboard](/images/manual/use-cases/falco-dashboard.png#bordered){width=90%}
 
 | Panel | What it shows |
 |:------|:--------------|
@@ -71,68 +75,80 @@ The dashboard gives you a real-time snapshot of what's happening across nodes.
 | Filter bar | Narrow results by source, priority, or tag. |
 | Snapshot counters | Live totals under the current filter: `Total`, `Critical`, and `Notice`. |
 | Pie chart | Alert distribution by source, priority, and tag. |
-| Rule bar chart | Alerts grouped by rule. Useful for spotting noisy rules that need allowlists or threshold tuning. |
+| Rule bar chart | Alerts grouped by rule. Useful for spotting noisy rules that need <br>allowlists or threshold tuning. |
 | Timeline by priority | Alert volume over time, split by priority. |
 | Timeline by source | Alert volume over time, split by source. |
 
 ### Events
 
-The **Event** page lists every alert with its full context.
+The **Events** page lists every alert with its full context.
 
-<!-- ![Falco events](/images/manual/use-cases/falco-events.png#bordered) -->
+  ![Falco events](/images/manual/use-cases/falco-events.png#bordered){width=90%}
 
 | Column | Description |
 |:-------|:------------|
-| Timestamp | When the alert fired, for example `2026-04-14 20:35:37`. |
-| Source | Where the event was collected from. |
-| Hostname | The node or Pod that triggered the alert. |
-| Priority | Severity, color-coded. |
+| Timestamp | When the alert was generated, for example `2026-04-14 20:35:37`. |
+| Source | Where the event came from. |
+| Hostname | The host associated with the alert. |
+| Priority | Alert severity, color-coded. |
 | Rule | The rule name from the Falco rule library. |
 | Output | The full alert message with context variables. |
 | Tags | Classification tags. |
 
-Click the details icon on any row to open the event view. From there, switch to the **JSON** tab to inspect or copy the raw payload.
+To inspect an alert in detail:
+1. On the **Events** page, find the alert you want to inspect.
+2. Click **{…}** on the right side of the row.
+3. Review the detail panel. Switch to the **JSON** tab if you need the raw payload.
 
 ## Configure Falco
+
+Use this section when you need to change how Falco stores, detects, or forwards alerts.
 
 :::warning Admin only
 Configuration requires admin privileges. Regular users cannot change Falco settings.
 :::
 
-This section covers the four areas administrators typically tune:
 
 | Area | What you control |
 |:-----|:-----------------|
-| [Event retention](#set-event-retention) | How long alerts stay in the Web UI before cleanup. |
+| [Event retention](#set-event-retention) | How long alerts stay in the Falcosidekick UI before cleanup. |
 | [Detection rules](#manage-detection-rules) | Which behaviors trigger alerts. |
-| [Output channels](#configure-output-channels) | Where alerts are sent (Web UI, file, external systems). |
+| [Output channels](#configure-output-channels) | Where alerts are sent (Falcosidekick UI, file, external systems). |
 | [Plugins](#install-and-use-plugins) | Extra event sources such as Kubernetes audit logs. |
-
-For anything not covered here, see the [official Falco documentation](https://falco.org/docs/).
 
 ### Set event retention
 
-Falcosidekick keeps alerts for 72 hours by default. To change this:
+Falco keeps alerts for 72 hours by default. To change how long alerts are kept:
 
-1. Navigate to **Settings** > **Applications** > **Falco** > **Environment variables**.
+1. Go to **Settings** > **Applications** > **Falco** > **Manage environment variables**.
+2. Click <i class="material-symbols-outlined">edit_square</i> next to `FALCOSIDEKICK_UI_TTL`. 
+3. Enter a duration with a unit suffix, such as `7d` for seven days. Supported suffixes include `s`, `m`, `h`, `d`, `w`, `M` and `y`. Leave the value empty to keep events indefinitely.
+4. Click **Confirm**, then click **Apply**.
 
-2. Edit `FALCOSIDEKICK_UI_TTL`. Use a numeric value followed by a unit suffix (`s`, `m`, `h`, `d`, `w`, `M`, `y`), for example `7d` for seven days. Leave the value empty to keep events indefinitely.
-   <!-- ![Edit FALCOSIDEKICK_UI_TTL](/images/manual/use-cases/falco-edit-ttl.png#bordered) -->
+  ![Edit FALCOSIDEKICK_UI_TTL](/images/manual/use-cases/falco-edit-ttl.png#bordered){width=90%}
 
-3. Click **Confirm** to save the change, then click **Apply** to apply it.
-
-4. Go to `system/falcoserver-shared/falco-central` and restart the process.
-   <!-- ![Restart falco-central](/images/manual/use-cases/falco-restart-central.png#bordered) -->
-
-5. Confirm the new value in either the YAML view at `system/falcoserver-shared/falco-central` or the `webui` environment variables on the same page.
+5. Optional: To verify that the new value is applied, open Control Hub, and go to **Browse** > **System** > **falcoserver-shared** > **Deployments** > **falco-central**.
+   - Click <i class="material-symbols-outlined">edit_square</i> to open the YAML file, locate `FALCOSIDEKICK_UI_TTL`, and check its value.
+   - In the right panel, under **Environment variables**, click **webui** and check the value of `FALCOSIDEKICK_UI_TTL`.
 
 ### Manage detection rules
 
-Falco ships with a default rule set. You can layer custom rules on top, or disable rules that don't apply to your environment.
+Falco uses rules to decide which behaviors should generate alerts.
+
+Use this section when you want to:
+- Check which rule files are currently loaded.
+- Add a custom rule.
+- Disable a rule that is not relevant in your environment.
+
+:::warning Restart required
+Rule changes take effect only after you restart the `falco-agent` DaemonSet.
+
+Rule names must be unique and match exactly. A mismatched rule name can prevent `falco-agent` from starting.
+:::
 
 #### Understand the rule format
 
-Every rule follows the same format:
+A Falco rule usually includes:
 
 ```yaml
 - rule: Test - Terminal Shell In Container
@@ -148,117 +164,155 @@ Every rule follows the same format:
 |:------|:------------|
 | `rule` | Unique rule name. |
 | `desc` | Short description. |
-| `condition` | When the rule fires. |
-| `output` | Alert template. Supports fields like `%proc.cmdline`. |
-| `priority` | Severity level. One of:<br>`EMERGENCY`, `ALERT`, `CRITICAL`, `ERROR`, `WARNING`, `NOTICE`, `INFORMATIONAL`, `DEBUG`. |
+| `condition` | The condition that triggers the alert. |
+| `output` | The alert message template. Supports fields like `%proc.cmdline`. |
+| `priority` | Alert severity. One of:<br>`EMERGENCY`, `ALERT`, `CRITICAL`, `ERROR`, `WARNING`, `NOTICE`,<br> `INFORMATIONAL`, `DEBUG`. |
 | `tags` | Tags for filtering and grouping. |
 
-:::warning Restart required
-Every rule change takes effect only after you restart the `falco-agent` DaemonSet. Rule names must be unique and match exactly. A mismatched name stops `falco-agent` from starting.
-:::
+#### Check loaded rule files
 
-#### View active rules
+Falco loads rule files at startup. The exact set of loaded files depends on your current configuration.
 
-Go to `system/falcoserver-shared/falco-agent` and open the startup logs. Falco loads three rule files:
+For example, Falco may load:
 
 | File | Purpose |
 |:-----|:--------|
-| `falco_rules.yaml` | Upstream default rules. Read-only. View them at `/etc/falco/falco_rules.yaml` in the `falco-agent` image. |
-| `custom_rules.yaml` | Your custom rules, managed through the `falco-custom-rules` ConfigMap. |
-| `falco_disable_rules.yaml` | Rules you've disabled, managed through the `falco-disable-rules` ConfigMap. |
+| `falco_rules.yaml` | Upstream default rules provided by Falco.  |
+| `custom_rules.yaml` | Custom rules that you add for your own environment. |
+| `falco_disable_rules.yaml` | Rules that you explicitly disable. |
 
-<!-- ![View active rules](/images/manual/use-cases/falco-view-rules.png#bordered) -->
+To check which rule files are currently loaded:
+
+1. Open Control Hub.
+2. Go to **Browse** > **System** > **falcoserver-shared** > **Daemonsets** > **falco-agent**. 
+3. Click your pod to open the details panel.
+4. Under **Containers**, click <i class="material-symbols-outlined">article</i> next to **falco** to open the logs. 
+
+  ![View active rules](/images/manual/use-cases/falco-view-rules.png#bordered){width=90%}
+
+5. Look for the `Loading rules from:` section in the logs.
+
+#### View default rules 
+
+To view the default Falco rules:
+
+1. Open Control Hub, then go to **Browse** > **System** > **falcoserver-shared** > **Daemonsets** > **falco-agent**.
+2. Click your pod to open the details panel.
+3. Under **Containers**, click <i class="material-symbols-outlined">terminal</i> next to **falco** to open the terminal. 
+4. Run the following command:
+
+    ```bash
+    cat /etc/falco/falco_rules.yaml
+    ```
 
 #### Create a custom rule
 
-1. Navigate to `system/falcoserver-shared/falco-custom-rules` and open the YAML editor. Add your rule under `data.custom_rules.yaml`. For example:
+1. Open Control Hub, then go to **Browse** > **System** > **falcoserver-shared** > **Configmaps** > **falco-custom-rules**. 
+2. In the right panel, click <i class="material-symbols-outlined">edit_square</i> next to **falco-custom-rules**.
+3. Change `custom_rules.yaml:` to `custom_rules.yaml: |`, then add your rule on the next line.
 
-    ```yaml
-    kind: ConfigMap
-    apiVersion: v1
-    metadata:
-      name: falco-custom-rules
-      namespace: falcoserver-shared
-      labels:
-        app.kubernetes.io/managed-by: Helm
-      annotations:
-        meta.helm.sh/release-name: falcoserver
-        meta.helm.sh/release-namespace: falcoserver-shared
-    data:
-      custom_rules.yaml: |
-        - rule: Test - Terminal Shell In Container
-          desc: Test rule to validate Falco custom rules pipeline
-          condition: >
-            evt.type in (execve, execveat)
-            and container and shell_procs and proc.name in (bash, sh, zsh)
-            and k8s.ns.name exists
-            and not (k8s.ns.name in ("kube-system", "falco", "falcoserver-shared"))
-          output: >
-            TEST custom rule matched (ns=%k8s.ns.name user=%user.name command=%proc.cmdline container=%container.id image=%container.image.repository)
-          priority: WARNING
-          tags: [container, test]
+   Example:
+
+   ```yaml
+   data:
+     custom_rules.yaml: |
+       - rule: Test - Terminal Shell In Container
+         desc: Test rule to validate the custom rule pipeline
+         condition: >
+           evt.type in (execve, execveat)
+           and container
+           and shell_procs
+           and proc.name in (bash, sh, zsh)
+           and k8s.ns.name exists
+           and not (k8s.ns.name in ("kube-system", "falco", "falcoserver-shared"))
+         output: >
+           TEST custom rule matched (ns=%k8s.ns.name user=%user.name command=%proc.cmdline container=%container.id image=%container.image.repository)
+         priority: WARNING
+         tags: [container, test]
     ```
+4. Click **Confirm** to save the changes.
+5. Restart **falco-agent**.
+  
+    a. Go to **Browse** > **System** > **falcoserver-shared** > **Daemonsets** > **falco-agent**.
 
-2. Restart the `falco-agent` DaemonSet from `system/falcoserver-shared/falco-agent`.
-
-3. Verify the rule is active:
-    - Check `/etc/falco/rules.d/managed/custom_rules.yaml` in the `falco-agent` image to confirm the rule was written.
-    - Open the Falcosidekick Web UI dashboard and look for alerts from the new rule.
+    b. In the right panel, click <i class="material-symbols-outlined">more_vert</i>, then select **Restart**.
+6. Optional: Verify that the rule is active.
+    - On the same page, click your pod to open the details panel. Under **Containers**, click <i class="material-symbols-outlined">terminal</i> next to **falco**, then run:
+      ```bash
+      cat /etc/falco/rules.d/managed/custom_rules.yaml
+      ```
+    - On the Falcosidekick UI dashboard, check the **Rules** dropdown list for the new rule. The rule only appears after it is triggered.
 
 #### Disable a rule
 
-1. Navigate to `system/falcoserver-shared/falco-custom-rules` and edit the `falco-disable-rules` ConfigMap. For example, to disable the `Fileless execution via memfd_create` rule:
+1. Open Control Hub, then go to **Browse** > **System** > **falcoserver-shared** > **Configmaps** > **falco-disable-rules**. 
+2. In the right panel, click <i class="material-symbols-outlined">edit_square</i> next to **falco-disable-rules** to open the YAML editor.
+3. Add your rule on the line below `falco_disable_rules.yaml: |`.
+
+    For example, to disable the `Terminal shell in container` rule:
 
     ```yaml
-    kind: ConfigMap
-    apiVersion: v1
-    metadata:
-      name: falco-disable-rules
-      namespace: falcoserver-shared
-      labels:
-        app.kubernetes.io/managed-by: Helm
-      annotations:
-        meta.helm.sh/release-name: falcoserver
-        meta.helm.sh/release-namespace: falcoserver-shared
     data:
       falco_disable_rules.yaml: |
-        - rule: "Fileless execution via memfd_create"
+        - rule: Terminal shell in container
           override:
             enabled: replace
           enabled: false
     ```
 
-2. Restart the `falco-agent` DaemonSet.
+4. Click **Confirm**.
+5. Restart **falco-agent**.
+  
+    a. Go to **Browse** > **System** > **falcoserver-shared** > **Daemonsets** > **falco-agent**.
 
-3. Open the Falcosidekick Web UI dashboard and confirm the rule no longer fires.
+    b. In the right panel, click <i class="material-symbols-outlined">more_vert</i>, then select **Restart**.
+
+6. Optional: Verify that the rule is disabled.
+    - On the same page, click your pod to open the details panel. Under **Containers**, click <i class="material-symbols-outlined">terminal</i> next to **falco**, then run:
+      ```bash
+      cat /etc/falco/rules.d/managed/falco_disable_rules.yaml
+      ```
+    - On the Falcosidekick UI dashboard, check the **Rules** dropdown list. The disabled rule may still appear from past events, but new events will no longer trigger it, and it will disappear once those historical records expire.
 
 ### Configure output channels
 
-Falco supports several output channels. The Web UI is enabled by default. You can also log alerts to a local file or forward them to external systems.
+By default, Falco sends alerts to the Falcosidekick UI. You can also write alerts to a local file or forward them to external systems.
 
-#### Send alerts to the Web UI (default)
+#### Send alerts to the Falcosidekick UI
 
-Out of the box, `falco-agent` forwards alerts to Falcosidekick over HTTP, which the Web UI then displays. Verify the configuration at `system/falcoserver-shared/falco-agent`:
+By default, `falco-agent` forwards alerts to Falcosidekick over HTTP, and the alerts are then displayed in the Falcosidekick UI.
 
-```plain
-- '-o'
-- http_output.enabled=true
-- '-o'
-- http_output.url=http://falco-sidekick.{{ .Release.Namespace }}:2801/
-```
+1. Open Control Hub, then go to **Browse** > **System** > **falcoserver-shared** > **Daemonsets** > **falco-agent**. 
+2. In the right panel, click <i class="material-symbols-outlined">edit_square</i> next to **falco-agent** to open the YAML editor.
+3. Check for the following output configuration:
+    
+    Example:
+    ```plain
+    - '-o'
+    - http_output.enabled=true
+    - '-o'
+    - http_output.url=http://falco-sidekick.falcoserver-shared:2801/
+    ```
 
 #### Write alerts to a file
 
 To write alerts to a local log file:
 
-1. Navigate to **Settings** > **Applications** > **Falco** > **Environment variables**, set `File_output` to `true`, then click **Apply**.
-   <!-- ![Enable file output](/images/manual/use-cases/falco-enable-file-output.png#bordered) -->
+1. Go to **Settings** > **Applications** > **Falco** > **Manage environment variables**.
+2. Set `File_OUTPUT` to `true`.
+   
+   ![Enable file output](/images/manual/use-cases/falco-enable-file-output.png#bordered){width=90%}
 
-2. Restart the `falco-agent` DaemonSet from `system/falcoserver-shared/falco-agent`.
+3. Click **Confirm**, then click **Apply**.
+4. Optional: Verify that file output is enabled.
 
-3. Check the configuration in the YAML editor at `system/falcoserver-shared/falco-agent` to confirm the output is applied.
+    a. Open Control Hub, then go to **Browse** > **System** > **falcoserver-shared** > **Daemonsets** > **falco-agent**. 
+    
+    b. In the right panel, click <i class="material-symbols-outlined">edit_square</i> next to **falco-agent** to open the YAML editor. 
+    
+    c. Check whether the configuration includes `file_output.enabled=true`.
 
-4. Read the log file at **Files** > **Applications** > **Data** > **falco** > **logs** > `events.log`.
+5. New alerts are written to `events.log` in Files at `/Data/falco/logs/`.
 
     :::info
     The log directory is mounted in the admin environment. Only administrators can read it.
@@ -266,22 +320,51 @@ To write alerts to a local log file:
 
 #### Forward alerts to external systems
 
-For Slack, Elasticsearch, webhooks, and other destinations, configure Falcosidekick directly. See the [Falcosidekick documentation](https://github.com/falcosecurity/falcosidekick) for the full list.
+To forward alerts to Slack, Elasticsearch, Webhook, or other external destinations, configure Falcosidekick directly.
 
-### Install and use plugins
+See the [Falcosidekick documentation](https://github.com/falcosecurity/falcosidekick) for the full list of supported outputs.
 
-Falco plugins add new event sources. The example below installs the `k8saudit` plugin for Kubernetes audit logging.
+### Set up plugins
 
-1. Go to `System/falcoserver-shared/falco-plugin-installer` and open the toolbox terminal. Install the plugin artifacts:
+Falco plugins add additional event sources. The example below installs the `k8saudit` plugin for Kubernetes audit logging.
+
+#### Install plugins
+
+1. Open Control Hub, then go to **Browse** > **System** > **falcoserver-shared** > **Daemonsets** > **falco-plugin-installer**.
+2. Click your pod to open the details panel.
+3. Under **Containers**, click <i class="material-symbols-outlined">terminal</i> next to **toolbox**. 
+4. Run the following commands one by one to install the plugin artifacts:
 
     ```bash
     falcoctl artifact install k8saudit
     falcoctl artifact install k8saudit-rules
     falcoctl artifact install json
     ```
+5. Optional: Verify that the plugin is installed.
+    
+    a. Go to **Browse** > **System** > **falcoserver-shared** > **Daemonsets** > **falco-agent**.
 
-2. Enable the plugins. Edit `/etc/falco/config.d/plugins.local.yaml` in the `falco-agent` container (or directly from **Files** > **Applications** > **Data** > **falco**):
+    b. Click your pod to open the details panel. 
 
+    c. Under **Containers**, click <i class="material-symbols-outlined">article</i> next to **falco**.
+
+    d. Check whether `k8s_audit_rules.yaml` appears in the `Loading rules from:` section.
+
+#### Enable plugins
+
+<Tabs>
+<template #Edit-in-terminal>
+
+1. Open Control Hub, then go to **Browse** > **System** > **falcoserver-shared** > **Daemonsets** > **falco-plugin-installer**.
+2. Click your pod to open the details panel.
+3. Under **Containers**, click <i class="material-symbols-outlined">terminal</i> next to **toolbox**.
+4. Run the following commands:
+  ```bash
+  cd /etc/falco/config.d/
+  vi plugins.local.yaml
+  ```
+5. Update the file with the following example configuration:
+  
     ```yaml
     plugins:
       - name: k8saudit
@@ -293,29 +376,83 @@ Falco plugins add new event sources. The example below installs the `k8saudit` p
         init_config: ""
     load_plugins: [k8saudit, json]
     ```
+6. Save the file and exit the editor.
 
-3. Restart the `falco-agent` DaemonSet.
+</template>
+    
+<template #Edit-in-Files>
 
-4. Check the `falco-agent` logs. A successful install shows `k8s_audit` loaded at startup.
+1. In Files, open `/Data/falco/plugins.local.yaml`.
+2. Update the file with the following example configuration:
+  
+    ```yaml
+    plugins:
+      - name: k8saudit
+        library_path: /var/lib/falco/plugins/libk8saudit.so
+        init_config: ""
+        open_params: "http://:9765/k8s-audit"
+      - name: json
+        library_path: /var/lib/falco/plugins/libjson.so
+        init_config: ""
+    load_plugins: [k8saudit, json]
+    ```
+3. Save the file.
+
+</template>
+</Tabs>
+
+**After updating `plugins.local.yaml`:**
+
+1. Restart **falco-agent**.
+  
+    a. Go to **Browse** > **System** > **falcoserver-shared** > **Daemonsets** > **falco-agent**.
+
+    b. In the right panel, click <i class="material-symbols-outlined">more_vert</i>, then select **Restart**.
+
+2. Optional: Verify that the plugin is enabled.
+    
+    a. Go to **Browse** > **System** > **falcoserver-shared** > **Daemonsets** > **falco-agent**.
+
+    b. Click your pod to open the details panel.
+    
+    c. Under **Containers**, click <i class="material-symbols-outlined">article</i> next to **falco**.
+
+    d. Check whether the following info appears in the log:
+      - `Enabled event sources: k8s_audit`
+      - `Opening 'k8s_audit' source with plugin 'k8saudit'`
+
 
 ## Troubleshooting
 
-### falco-agent fails to start after installing k8saudit
+### falco-agent fails to start after installing k8saudit rules
+
+You may see an error like this in the logs:
+
+```plain
+LOAD_UNUSED_LIST (Unused list): List not referred to by any other rule/macro
+Error: Plugin requirement not satisfied, must load one of: k8saudit (>= 0.7.0), k8saudit-aks (>= 0.1.0), k8saudit-eks (>= 0.4.0), k8saudit-gke (>= 0.1.0), k8saudit-ovh (>= 0.1.0)
+```
 
 **Cause**
 
-The `k8saudit` rules were installed, but the plugins were not enabled in `plugins.local.yaml`. When `falco-agent` restarts, it tries to load rules for a plugin that isn't active and crashes.
+If the `k8saudit` rules are installed but the plugin is not enabled successfully in `plugins.local.yaml`, **falco-agent** fails to start after restart.
 
 **Solution**
 
-1. Open the `falco-plugin-installer` toolbox.
-2. Remove the orphaned rule file:
+1. Open Control Hub, then go to **Browse** > **System** > **falcoserver-shared** > **Daemonsets** > **falco-plugin-installer**.
+2. Click your pod to open the details panel.
+3. Under **Containers**, click <i class="material-symbols-outlined">terminal</i> next to **toolbox**.
+4. Remove the `k8s_audit_rules.yaml` file:
     ```bash
     rm /etc/falco/rules.d/managed/k8s_audit_rules.yaml
     ```
-3. Restart the `falco-agent` DaemonSet.
+5. Restart **falco-agent**.
+  
+    a. Go to **Browse** > **System** > **falcoserver-shared** > **Daemonsets** > **falco-agent**.
 
-To bring `k8saudit` back, redo [Install and use plugins](#install-and-use-plugins) from the beginning, making sure to enable the plugins in Step 2 before restarting.
+    b. In the right panel, click <i class="material-symbols-outlined">more_vert</i>, then select **Restart**.
+
+If you want to continue using `k8saudit`, repeat [Install and use plugins](#install-and-use-plugins) from the beginning.
 
 ## Learn more
 
