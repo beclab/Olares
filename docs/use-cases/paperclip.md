@@ -7,53 +7,58 @@ head:
       content: Olares, Paperclip, AI agent, multi-agent, Claude Code, Codex, OpenCode, Cursor, self-hosted
 app_version: "1.0.0"
 doc_version: "1.0"
-doc_updated: "2026-04-22"
+doc_updated: "2026-04-23"
 ---
 
 # Coordinate multiple AI agents with Paperclip
 
-Paperclip is an open-source platform for coordinating multiple AI agents under one workspace. You create a company, add agents backed by Claude Code, Codex, OpenCode, Cursor, or other providers, and file issues for them to work on, whether that's coding, research, content, or anything else the agents can handle.
+Paperclip is an open-source platform for coordinating multiple AI agents under one unified workspace. By setting up a virtual company, you add AI agents powered by Claude Code, Codex, OpenCode, Cursor, or other providers, and assign them issues to work on. Whether the task involves coding, research, or content creation, Paperclip manages the workflow.
 
-On Olares, Paperclip runs as a self-hosted app, so the API keys, task history, and agent output stay on your device.
+Running Paperclip as a self-hosted app on Olares ensures that your API keys, task history, and agent outputs remain entirely private on your device.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
-- Install Paperclip on Olares and create the first user.
+- Install Paperclip on Olares.
+- Create the initial workspace admin user.
 - Configure API keys for the agents you plan to use.
-- Set up your first company, agent, and task.
-- File an issue and watch an agent work on it.
-- Find your way around the Paperclip interface.
+- Set up your first company and agent.
+- Create an issue and track agent progress.
+- Navigate the Paperclip interface.
 
 ## Prerequisites
 
-- Olares is installed and running.
 - At least one API key for a supported agent provider, such as Anthropic, OpenAI, Google, or Cursor.
 
 ## Install Paperclip
 
 1. Open Market and search for "Paperclip".
+
    ![Paperclip in Market](/images/manual/use-cases/paperclip.png#bordered)
 
 2. Click **Get**, and then click **Install**. Wait for the installation to finish.
 
-## Create the first user
+## Set up the initial admin user
 
-Paperclip ships without a default user. The first time you open it, create the CEO account from the pod terminal.
+Paperclip ships without a default user account. To access the platform for the first time, you generate an invite link from the pod terminal to create the CEO account.
 
-1. Open Paperclip from the Launchpad. You see the following prompt: 
+1. Open Paperclip from the Launchpad. A prompt appears asking you to run a `bootstrap` command.
 
-   No instance admin exists yet. Run this command in your Paperclip environment to generate the first admin invite URL: `pnpm paperclipai auth bootstrap-ceo`.
+   ```text
+   No instance admin exists yet. Run this command in your Paperclip
+   environment to generate the first admin invite URL:
+   `pnpm paperclipai auth bootstrap-ceo`.
+   ```
 
-   ![Paperclip first launch](/images/manual/use-cases/paperclip-first-open.png#bordered)
+   ![Paperclip first launch prompt](/images/manual/use-cases/paperclip-first-open.png#bordered){width=60%}
 
-2. Open Control Hub, and then go to **Browse** > **paperclip-<username>** > **Deployments** > **paperclip**.
+2. Open Control Hub, and then go to **Browse** > **paperclip-{username}** > **Deployments** > **paperclip**.
 3. Under **Pods**, click the pod name to view its containers.
 4. Click <i class="material-symbols-outlined">terminal</i> next to the **paperclip** container to open the pod terminal.
 
    ![Open the Paperclip pod terminal from Control Hub](/images/manual/use-cases/paperclip-enter-container.png#bordered)
 
-5. In the paperclip terminal, type the following command, and then press **Enter**:
+5. Type the following command, and then press **Enter**:
 
    ```bash
    pnpm paperclipai auth bootstrap-ceo
@@ -61,34 +66,34 @@ Paperclip ships without a default user. The first time you open it, create the C
 
    ![Run the bootstrap-ceo command](/images/manual/use-cases/paperclip-bootstrap-command.png#bordered)
 
-6. Type `Y`, and then press **Enter** to confirm to continue.
-7. Copy the invite URL from the command output. In this case, it is https://d8ac13f9.alexmiles.olares.com/invite/pcp_bootstrap_e173bf08e3f1a6ab69d4f3e9cdb76566c19bcf462dddff27.
+6. Type `Y`, and then press **Enter** to continue.
+7. Copy the **Invite URL** address from the prompt output. 
 
    ![Bootstrap command result with invite URL](/images/manual/use-cases/paperclip-bootstrap-result.png#bordered)
 
 8. Open the invite URL in your browser, and then click **Sign in /Create account**.
 
-   ![Paperclip registration page](/images/manual/use-cases/paperclip-register.png#bordered){width=50%}
+   ![Paperclip registration page](/images/manual/use-cases/paperclip-register.png#bordered){width=60%}
 
 9. On the **Sign in to Paperclip** page, click **Create one**, and then specify the required information.
 
-   ![Paperclip create account page](/images/manual/use-cases/paperclip-create-account.png#bordered){width=50%}
+   ![Paperclip create account page](/images/manual/use-cases/paperclip-create-account.png#bordered){width=60%}
 
 10. After the account is created, click **Accept bootstrap invite**.
 
-   ![Accept bootstrap invite](/images/manual/use-cases/paperclip-accept-invite.png#bordered){width=50%}
+   ![Accept bootstrap invite](/images/manual/use-cases/paperclip-accept-invite.png#bordered){width=55%}
 
 11. Click **Open board** to enter your new workspace.
 
-   ![Open board](/images/manual/use-cases/paperclip-open-board.png#bordered){width=50%}
+   ![Open board](/images/manual/use-cases/paperclip-open-board.png#bordered){width=55%}
 
 ## Configure API keys
 
-Each agent needs the API key for its underlying model provider. Set these as environment variables for Paperclip.
+Each agent requires an API key for its underlying model provider. You configure these keys as environment variables in the Settings app.
 
 1. Open Settings, and then go to **Applications** > **Paperclip** > **Manage environment variables**.
    
-   ![Manage Paperclip environment variables](/images/manual/use-cases/paperclip-manage-env-vars.png#bordered)
+   ![Manage Paperclip environment variables](/images/manual/use-cases/paperclip-manage-env-vars.png#bordered){width=70%}
 
 2. Click <i class="material-symbols-outlined">edit_square</i> next to a variable, enter your API key in the **Value** field, and then click **Confirm**. 
 
@@ -101,138 +106,151 @@ Each agent needs the API key for its underlying model provider. Set these as env
    | `CURSOR_API_KEY` | Cursor |
 
 3. Click **Apply** to save all changes.
+4. Restart the Paperclip container to apply the new keys:
 
-   ![Apply environment variable changes](/images/manual/use-cases/paperclip-apply-env-vars.png#bordered)
-
-4. Restart the Paperclip container so the new keys take effect:
-
-   a. Open Control Hub, and then go to **Browse** > **paperclip-<username>** > **Deployments** > **paperclip**.
+   a. Open Control Hub, and then go to **Browse** > **paperclip-{username}** > **Deployments** > **paperclip**.
    
    b. Click **Restart**.
    
    ![Restart Paperclip deployment](/images/manual/use-cases/paperclip-deploy-restart.png#bordered)
 
-   c. Type `paperclip`, and then click **Confirm**. Wait until the container status turns to **Running** again.
+   c. Type `paperclip`, and then click **Confirm**. Wait for the container status to change back to **Running**.
 
-:::tip Add more keys later
-You can come back and add or update keys at any time. Just repeat this procedure and restart Paperclip.
+:::tip Add more API keys later
+Return to this section to add or update keys at any time. Repeat this procedure and restart Paperclip to apply new configurations.
 :::
 
 ## Set up your first company
 
-A Paperclip workspace is organized around a company, which holds its agents, tasks, and issues.
+A Paperclip workspace is organized around a virtual company structure. This company organizes your agents, tasks, and issues.
 
-1. Return to Paperclip. On the **Company** tab, enter the name for the company, and optionally the mission or goal. Click **Next**. 
+1. Return to Paperclip. 
+2. On the **Company** tab, configure the basic information:
+
+   a. Specify a name for the company.
+   
+   b. (Optional) Specify the mission or goal.
+
    ![Set company basics](/images/manual/use-cases/paperclip-set-company.png#bordered)
 
-2. On the **Agent** page, create your first agent by specifying the following settings:
+   c. Click **Next**.
 
-   - **Agent name**: Use the default name **CEO** or a custom one.
-   - **Adapter type**： Select an adapter. Claude Code (Local Claude agent) and Codex (Local Codex agent) are good starting points. Expand More Agent Adaper Types to select from like OpenCode (Local multi-provider agent) and Cursor (Local Cursor agent).
+3. On the **Agent** tab, create your first agent:
 
-   c. Pick a model from the drop-down.
+   a. Specify the following settings:
 
-   d. Click **Test now** to check the configuration.
+      - **Agent name**: Use the default name **CEO** or a custom one.
+      - **Adapter type**: Select the underlying framework. For example, select **Claude Code (Local Claude agent)** or **Codex (Local Codex agent)**.
+      - **More Agent Adapter Types**: Expand to select alternatives like **OpenCode** or **Cursor**.
+      - **Model**: Select a specific AI model from the drop-down list.
+
+   b. Click **Test now** to verify the configuration works with your API key.
+
+   c. Click **Next**.
 
    ![Create an agent](/images/manual/use-cases/paperclip-create-agent.png#bordered)
 
-   e. Click **Next**.
+   :::tip
+   To understand specific adapter requirements, see [Agent adapter reference](#which-agent-adapters-does-paperclip-support).
+   :::
 
-   For what each adapter type requires, see [Agent adapter reference](#agent-adapter-reference).
+4. On the **Task** tab, define your first task:
 
-3. Set up the first task. It becomes your first issue once setup completes. You can keep the defaults or customize the title and description. Click **Next**.
+   a. **Task title** and **Description**: Specify the title and description, or keep the defaults.
+
+   b. Click **Next**. This task automatically converts into your first issue after the setup is completed. 
 
    ![Set up a task](/images/manual/use-cases/paperclip-set-task.png#bordered)
 
-4. Click **Create & Open Issue**. The **Issues** page opens.
+5. Click **Create & Open Issue**. The **Issues** page opens, displaying your active workspace.
 
    ![Issue page after setup](/images/manual/use-cases/paperclip-issue-page.png#bordered)
 
-## File your first issue
+## Create and track issues
 
-In Paperclip, work happens through issues. You file an issue, Paperclip assigns it to an existing agent or hires a new one for it, and the agent takes it from there.
+In Paperclip, all work happens through issues. When you create an issue, Paperclip assigns it to an existing agent. If no suitable agent exists for the specific request, Paperclip automatically "hires" a new one to complete the job.
 
-1. On the **Issues** page, click **New Issue** and describe the work. For example, ask Paperclip to hire a writer agent to draft an article.
-   <!-- ![New Issue dialog](/images/manual/use-cases/paperclip-new-issue.png#bordered) -->
+1. On the **Issues** page, click **New issue** in the left sidebar.
+2. Specify details for the issue. For example:
 
-2. Click **Create**. Paperclip assigns the issue to an agent and starts work. Open **Inbox** to follow along.
-   <!-- ![Inbox tracking the new issue](/images/manual/use-cases/paperclip-inbox.png#bordered) -->
+   - **Issue title**: Write a guide on AI servers.
+   - **Description**: Hire a writing agent to research and draft a 200-word article explaining the benefits of self-hosting AI models.
+   - **Assignee**: Select **CEO** to evaluate the requirements.
+   
+   ![New issue dialog](/images/manual/use-cases/paperclip-new-issue.png#bordered){width=60%}
 
-3. Go to **Agents** to see the newly hired writer agent and its details.
-   <!-- ![Writer Agent details](/images/manual/use-cases/paperclip-agent-details.png#bordered) -->
+3. Click **Create Issue**. Paperclip assigns the issue and the agent starts working.
+4. Click **Inbox** in the left sidebar to monitor incoming requests and execution progress. If the assigned agent decides to delegate the task, a hiring request appears in your inbox.
 
-4. Open either the **Agents** page or the **Issues** page to read the agent's output.
-   <!-- ![Agent output](/images/manual/use-cases/paperclip-agent-output.png#bordered) -->
+   ![Inbox tracking the new issue](/images/manual/use-cases/paperclip-inbox.png#bordered)
 
-## Navigate the Paperclip interface
+5. Go to the **Agents** section in the left sidebar to see the newly hired writer agent and its details.
+   
+   ![Writer Agent details](/images/manual/use-cases/paperclip-agent-details.png#bordered)
 
-### Main interface
+6. Review the agent's output:
 
-<!-- ![Paperclip main interface](/images/manual/use-cases/paperclip-interface.png#bordered) -->
+   a. Go to the **Issues** page, and then select the issue to view its details. Look for the output directly in the chat history.
 
-| Area | Description |
-|------|-------------|
-| Company workspace tabs | Paperclip groups work by company. Create a new company<br> from the lower-left corner and switch between companies using the tabs. |
-| Quick actions | New issue, dashboard, inbox. |
-| Workflow modules | Issues, routines, goals. |
-| Project management | Plans, milestones, and related project views. |
-| Agent management | Hire, configure, and monitor agents. |
-| Company configuration | Organization, capabilities, costs, behaviors, settings. |
-| Core information area | The board view for whichever module you opened. |
-| Settings area | Documentation links, version info, demo settings, and display toggles. |
+   ![Agent output](/images/manual/use-cases/paperclip-agent-output.png#bordered)
 
-### Dashboard
+   b. If the output is missing from the chat, enter a comment in the issue asking the agent for the file path. Open the Olares Files app, and then go to the specified directory to retrieve your document.
 
-<!-- ![Paperclip dashboard](/images/manual/use-cases/paperclip-dashboard.png#bordered) -->
+   ![Agent output in Files app](/images/manual/use-cases/paperclip-agent-output-in-files.png#bordered)
 
-The **Agents** panel shows the top-line KPIs for your company, such as overall health and current activity.
+## Monitor operations from the dashboard
 
-The charts below show 14-day trends so you can spot changes at a glance:
+As your agents complete issues, use the dashboard to track your company's overall performance, monitor API costs, and identify potential bottlenecks.
 
-| Chart | Description |
-|-------|-------------|
-| Run Activity | Bar chart of execution counts over the past 14 days. |
-| Issues by Priority | Stacked bar chart of issues grouped by priority (critical, high, medium, low). |
-| Issues by Status | Stacked bar chart of issues grouped by status (in progress, completed, blocked). |
-| Success Rate | Bar chart of the execution success rate over the past 14 days. |
+1. Click **Dashboard** in the left sidebar.
 
-The activity log captures system events and agent actions, giving you a running audit trail. It lists recent behaviors and recent tasks.
+   ![Paperclip dashboard](/images/manual/use-cases/paperclip-dashboard.png#bordered)
 
-## Agent adapter reference
+2. Review the top agent cards to see the most recent tasks your agents worked on and their execution duration.
+3. Check the high-level metrics to monitor operational health, such as the total API cost incurred for the current month.
+4. Analyze the 14-day trend charts to spot performance changes:
 
-Paperclip currently supports these agent adapters. Each one depends on a specific API key.
+   - **Run Activity**: Check the total number of agent executions.
+   - **Issues by Priority**: View active issues grouped by urgency (critical, high, medium, and low).
+   - **Issues by Status**: Track progress by reviewing which issues are in progress, completed, or blocked.
+   - **Success Rate**: Monitor the execution success rate of your AI workforce.
 
-| Adapter | Required environment variable | Notes |
-|:--------|:------------------------------|:------|
-| Claude Code | `ANTHROPIC_API_KEY` | |
-| Codex | `OPENAI_API_KEY` | First-time setup needs a manual device-auth login. See [Codex login fails](#codex-login-fails). |
-| Gemini CLI | `GEMINI_API_KEY` | Currently unavailable due to adapter compatibility issues. Waiting for an upstream fix. |
-| Hermes Agent | N/A | Currently unavailable due to adapter compatibility issues. Waiting for an upstream fix. |
-| OpenCode | `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` | |
-| Pi | `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` | |
-| Cursor | `CURSOR_API_KEY` | |
-| OpenClaw | N/A | Not yet integrated. Waiting for upstream support. |
+5. Scroll to the activity log to audit recent system events and agent behaviors. This log provides a chronological trail of all recent tasks.
 
-## Troubleshooting
+## FAQs
 
-### Codex login fails
+### Which agent adapters does Paperclip support?
 
-After you update `OPENAI_API_KEY` and restart Paperclip, the Codex adapter still can't authenticate, because `codex login` opens a local browser for OAuth, which the container can't do. As a workaround, run a device-auth login manually:
+Paperclip currently supports the following agent adapters. You configure specific API keys as environment variables depending on the adapter you choose:
+- Claude Code: Requires `ANTHROPIC_API_KEY`.
+- Codex: Requires `OPENAI_API_KEY`.
+- OpenCode: Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`.
+- Pi: Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`.
+- Cursor: Requires `CURSOR_API_KEY`.
 
-1. In Control Hub, navigate to **Browse** > **paperclip** > **Deployments** > **paperclip**.
-2. Under **Pods**, click the pod name to open its details, and then click <i class="material-symbols-outlined">terminal</i> next to the container to open the pod terminal.
-   <!-- ![Open the Paperclip pod terminal for Codex login](/images/manual/use-cases/paperclip-codex-login.png#bordered) -->
+### Will more adapters be supported?
 
-3. In the pod terminal, run:
+Yes. We are actively working on integrating the Gemini CLI, Hermes Agent, and OpenClaw adapters. They will be available in a future update.
 
-    ```bash
-    codex login --device-auth
-    ```
+### Codex adapter fails to authenticate
 
-4. Open the device-auth link shown in the output to complete authorization.
-   <!-- ![Codex device-auth result](/images/manual/use-cases/paperclip-codex-login-result.png#bordered) -->
+After you update `OPENAI_API_KEY` and restart Paperclip, the Codex adapter might still fail to authenticate. This happens because the `codex login` command attempts to open a local browser for OAuth, which the background container cannot do.
 
-Once login succeeds, retry the Codex adapter in Paperclip.
+To resolve this issue, run a manual device-auth login:
+1. Open Control Hub, and then go to **Browse** > **paperclip-{username}** > **Deployments** > **paperclip**.
+2. Under **Pods**, click the pod name to view its containers, and then click <i class="material-symbols-outlined">terminal</i> next to the **paperclip** container to open the pod terminal.
+
+   ![Open the Paperclip pod terminal from Control Hub](/images/manual/use-cases/paperclip-enter-container.png#bordered)
+
+3. Type the following command, and then press **Enter**:
+
+   ```bash
+   codex login --device-auth
+   ```
+
+4. Open the device-auth link in your browser and sign in to complete the authorization. Then retry the Codex adapter in Paperclip.
+   
+   ![Codex device-auth result](/images/manual/use-cases/paperclip-codex-login-result.png#bordered)
 
 ## Learn more
 
