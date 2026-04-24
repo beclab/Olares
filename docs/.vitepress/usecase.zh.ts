@@ -136,6 +136,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/duix-avatar",
             },
             {
+              text: "Paperclip",
+              link: "/zh/use-cases/paperclip",
+            },
+            {
               text: "PDFMathTranslate",
               link: "/zh/use-cases/pdfmathtranslate",
             },
