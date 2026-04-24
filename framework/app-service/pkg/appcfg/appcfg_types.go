@@ -43,8 +43,8 @@ type AppConfiguration struct {
 	// Only for v2 c/s apps to share the api to other cluster scope apps
 	SharedEntrances []v1alpha1.Entrance `yaml:"sharedEntrances,omitempty" json:"sharedEntrances,omitempty"`
 
-	Server *ConfigOverlay `yaml:"server,omitempty" json:"server,omitempty"`
-	Client *ConfigOverlay `yaml:"client,omitempty" json:"client,omitempty"`
+	ClientAndServer *ConfigOverlay `yaml:"clientAndServer,omitempty" json:"clientAndServer,omitempty"`
+	Client          *ConfigOverlay `yaml:"client,omitempty" json:"client,omitempty"`
 }
 
 type AppSpec struct {
@@ -210,7 +210,7 @@ type SpecialResource struct {
 
 const (
 	InstallOrUpgradeClientOnly      string = "clientOnly"
-	InstallOrUpgradeServerAndClient string = "clientAndServer"
+	InstallOrUpgradeClientAndServer string = "clientAndServer"
 	InstallOrUpgradeV1              string = "v1"
 )
 
