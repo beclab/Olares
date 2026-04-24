@@ -5,6 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw installation
+app_version: "1.0.0"
+doc_version: "1.1"
+doc_updated: "2026-04-24"
 ---
 
 # OpenClaw
@@ -340,27 +343,52 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 <Tabs>
 <template #(Recommended)-Pair-device-automatically>
 
-1. Open the Control UI app from the Launchpad. The **OpenClaw Gateway Dashboard** opens:
+1. Open the Control UI app from the Launchpad. The **OpenClaw Gateway Dashboard** opens.
 
-    ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard.png#bordered){width=60%}
+    ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard1.png#bordered){width=60%}
 
-    The error `unauthorized: device token mismatch (rotate/reissue device token)` occurs. This is expected and means you have not provided your access token yet.
+    The `unauthorized: gateway token mismatch` error appears. This is expected and means you have not provided your access token yet.
 
 2. In **Gateway Token** field, enter the token you copied in the previous step, and then click **Connect**.
 
-    The connection error `pairing required` occurs. This is expected and means the device connection is waiting for approval.
+    The `pairing required` error appears. This is expected and means the device connection is waiting for approval.
 
-3. Return to the OpenClaw CLI window and enter the following command:
+3. Return to the OpenClaw CLI window and run the following command to view the pending connection request:
 
     ```bash
     openclaw devices approve --latest
     ```
-4. When the terminal displays the approval message, return to the Control UI.
 
-    ![Pair success](/images/manual/use-cases/new-pair-success1.png#bordered)
+    The terminal displays a `Selected pending device request` message similar to the following:
 
-5. Click **Connect** again. You will be logged in and directed to the **Chat** page by default.
-6. From the left sidebar, click **Overview** to check the connection status. The **STATUS** in the **Snapshot** panel should now be **OK**.
+    ```text
+    Selected pending device request 1174db8b-cad9-49af-b96a-e4ac634b7007
+      Device: 005748253152b66dc0f5f6a801f35617db043f107972f259630a6bd098d5f790
+      Requested: roles: operator; scopes: operator.admin, operator.approvals, operator.pairing, operator.read, operator.write
+      Approved: roles: none; scopes: operator.admin, operator.approvals, operator.pairing, operator.read, operator.write
+      Note:   First-time device pairing request.
+    Approve this exact request with: openclaw devices approve 1174db8b-cad9-49af-b96a-e4ac634b7007
+    ```
+
+4. Locate the `Approve this exact request with` line at the very bottom of the message.
+5. Copy and run the entire command shown after `Approve this exact request with:` to authorize the Control UI.
+
+    In this example, run the following command as indicated in the message line:
+
+    ```bash
+    openclaw devices approve 1174db8b-cad9-49af-b96a-e4ac634b7007
+    ```
+
+6. When the terminal displays the approval message, return to the Control UI.
+
+    ```text
+    Approved 005748253152b66dc0f5f6a801f35617db043f107972f259630a6bd098d5f790 (1174db8b-cad9-49af-b96a-e4ac634b7007)
+    ```
+
+    ![Pair success](/images/manual/use-cases/new-pair-success2.png#bordered)
+
+7. Click **Connect** again. You will be logged in and directed to the **Chat** page by default.
+8. From the left sidebar, click **Overview** to check the connection status. The **STATUS** in the **Snapshot** panel should now be **OK**.
     ![Health OK](/images/manual/use-cases/openclaw-connected2.png#bordered)
 </template>
 <template #(Optional)-Pair-device-manually>
@@ -371,13 +399,13 @@ The quick setup in the previous section uses the `openclaw devices approve --lat
 
 1. Open the Control UI app from the Launchpad. The **OpenClaw Gateway Dashboard** opens:
 
-    ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard.png#bordered){width=60%}
+    ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard1.png#bordered){width=60%}
 
-    The error `unauthorized: device token mismatch (rotate/reissue device token)` occurs. This is expected and means you have not provided your access token yet.
+    The `unauthorized: gateway token mismatch` error appears. This is expected and means you have not provided your access token yet.
 
 2. In **Gateway Token** field, enter the token you copied in the previous step, and then click **Connect**.
 
-    The connection error `pairing required` occurs. This is expected and means the device connection is waiting for approval.
+    The `pairing required` error occurs. This is expected and means the device connection is waiting for approval.
 3. Return to the OpenClaw CLI window and enter the following command:
     ```bash
     openclaw devices list
