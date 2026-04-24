@@ -342,7 +342,7 @@ func (h *installHandlerHelper) resolveInstallType(appConfig *appcfg.ApplicationC
 		return "", err
 	}
 	if !exists {
-		return appcfg.InstallOrUpgradeServerAndClient, nil
+		return appcfg.InstallOrUpgradeClientAndServer, nil
 	}
 	return appcfg.InstallOrUpgradeClientOnly, nil
 }

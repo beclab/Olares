@@ -105,7 +105,7 @@ type ApplicationConfig struct {
 	Resources            []ResourceMode
 	InstallType          string
 	Client               *ConfigOverlay
-	Server               *ConfigOverlay
+	ClientAndServer      *ConfigOverlay
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
@@ -201,8 +201,8 @@ func (c *ApplicationConfig) applyConfigOverlay(installType string) {
 	var overlay *ConfigOverlay
 	klog.Infof("applyConfigOverlay: installType: %v", installType)
 	switch installType {
-	case InstallOrUpgradeServerAndClient:
-		overlay = c.Server
+	case InstallOrUpgradeClientAndServer:
+		overlay = c.ClientAndServer
 	case InstallOrUpgradeClientOnly:
 		overlay = c.Client
 	}
@@ -281,7 +281,7 @@ func (c *ApplicationConfig) ResolveRequirement(selectedGpu, installType string) 
 		}
 		req := parseResourceRequirement(mode.Client)
 		return &req, nil
-	case InstallOrUpgradeServerAndClient:
+	case InstallOrUpgradeClientAndServer:
 		req := sumResourceRequirements(mode.Server, mode.Client)
 		return &req, nil
 	}

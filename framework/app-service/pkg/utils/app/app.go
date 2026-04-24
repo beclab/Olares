@@ -975,7 +975,7 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		SelectedGpuType:      opt.SelectedGpu,
 		Resources:            cfg.Spec.Resources,
 		Client:               cfg.Client,
-		Server:               cfg.Server,
+		ClientAndServer:      cfg.ClientAndServer,
 	}, chart, nil
 }
 
