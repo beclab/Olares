@@ -34,7 +34,7 @@ func (h *HelmOpsV2) Upgrade() error {
 		return err
 	}
 	if status.Info.Status == helmrelease.StatusDeployed {
-		values, err := h.SetValues()
+		values, err := h.SetValues(true)
 		if err != nil {
 			klog.Errorf("set values err %v", err)
 			return err

@@ -837,7 +837,7 @@ func ParseAppPermission(data []appcfg.AppPermission) []appcfg.AppPermission {
 
 func (h *HelmOps) Install() error {
 	var err error
-	values, err := h.SetValues()
+	values, err := h.SetValues(false)
 	if err != nil {
 		klog.Errorf("set values err %v", err)
 		return err

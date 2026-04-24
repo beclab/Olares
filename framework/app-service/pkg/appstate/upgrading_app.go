@@ -234,7 +234,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 		return err
 	}
 
-	values, err := appinstaller.BuildBaseHelmValues(ctx, kubeConfig, appConfig, p.manager.Spec.AppOwner, true)
+	values, err := appinstaller.BuildBaseHelmValues(ctx, kubeConfig, appConfig, p.manager.Spec.AppOwner, true, true)
 	if err != nil {
 		klog.Errorf("build base helm values failed %v", err)
 		return err

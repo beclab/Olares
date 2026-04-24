@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -24,6 +25,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/files"
 
 	"github.com/Masterminds/semver/v3"
@@ -754,21 +756,6 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	return appcfg, chartPath, nil
 }
 
-func GetApiVersionFromAppConfig(ctx context.Context, options *ConfigOptions) (appcfg.APIVersion, *appcfg.ApplicationConfig, error) {
-
-	cfg, _, err := GetAppConfig(ctx, options)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to get app config: %w", err)
-	}
-
-	// default version is v1
-	if cfg.APIVersion == "" {
-		return appcfg.V1, cfg, nil
-	}
-
-	return cfg.APIVersion, cfg, nil
-}
-
 func getAppConfigFromRepo(ctx context.Context, options *ConfigOptions) (*appcfg.ApplicationConfig, string, error) {
 	chartPath, err := GetIndexAndDownloadChart(ctx, options)
 	if err != nil {
@@ -778,7 +765,24 @@ func getAppConfigFromRepo(ctx context.Context, options *ConfigOptions) (*appcfg.
 	return getAppConfigFromConfigurationFile(options, chartPath)
 }
 
-func toApplicationConfig(app, chart, rawAppName, selectedGpu string, cfg *appcfg.AppConfiguration) (*appcfg.ApplicationConfig, string, error) {
+func GetAppConfigVersion(ctx context.Context, options *ConfigOptions) (appcfg.APIVersion, error) {
+	chartPath, err := GetIndexAndDownloadChart(ctx, options)
+	if err != nil {
+		return "", err
+	}
+	raw, err := os.ReadFile(filepath.Join(chartPath, AppCfgFileName))
+	if err != nil {
+		return "", err
+	}
+
+	apiVersion := GetTopLevelValue(raw, "apiVersion")
+	if apiVersion == "" {
+		apiVersion = "v1"
+	}
+	return appcfg.APIVersion(apiVersion), nil
+}
+
+func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfiguration) (*appcfg.ApplicationConfig, string, error) {
 	var permission []appcfg.AppPermission
 	if cfg.Permission.AppData {
 		permission = append(permission, appcfg.AppDataRW)
@@ -826,54 +830,56 @@ func toApplicationConfig(app, chart, rawAppName, selectedGpu string, cfg *appcfg
 		return nil, chart, err
 	}
 
-	// set suppertedGpu to ["nvidia","nvidia-gb10"] by default
-	if len(cfg.Spec.SupportedGpu) == 0 {
-		cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType}
-	}
+	if !config.IsNewManifestVersion(cfg.ConfigVersion) {
+		// set suppertedGpu to ["nvidia","nvidia-gb10"] by default
+		if len(cfg.Spec.SupportedGpu) == 0 {
+			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType}
+		}
 
-	// try to get selected GPU type special resource requirement
-	if selectedGpu != "" {
-		found := false
-		for _, supportedGpu := range cfg.Spec.SupportedGpu {
-			if str, ok := supportedGpu.(string); ok && str == selectedGpu {
-				found = true
-				break
-			}
-
-			if supportedGpuResourceMap, ok := supportedGpu.(map[string]interface{}); ok {
-				if resourceRequirement, ok := supportedGpuResourceMap[selectedGpu].(map[string]interface{}); ok {
+		// try to get selected GPU type special resource requirement
+		if opt.SelectedGpu != "" {
+			found := false
+			for _, supportedGpu := range cfg.Spec.SupportedGpu {
+				if str, ok := supportedGpu.(string); ok && str == opt.SelectedGpu {
 					found = true
-					var specialResource appcfg.SpecialResource
-					err := mapstructure.Decode(resourceRequirement, &specialResource)
-					if err != nil {
-						return nil, chart, fmt.Errorf("failed to decode special resource for selected GPU type %s: %v", selectedGpu, err)
-					}
+					break
+				}
 
-					for _, resSetter := range []struct {
-						v **resource.Quantity
-						s *string
-					}{
-						{v: &mem, s: specialResource.RequiredMemory},
-						{v: &disk, s: specialResource.RequiredDisk},
-						{v: &cpu, s: specialResource.RequiredCPU},
-						{v: &gpu, s: specialResource.RequiredGPU},
-					} {
+				if supportedGpuResourceMap, ok := supportedGpu.(map[string]interface{}); ok {
+					if resourceRequirement, ok := supportedGpuResourceMap[opt.SelectedGpu].(map[string]interface{}); ok {
+						found = true
+						var specialResource appcfg.SpecialResource
+						err := mapstructure.Decode(resourceRequirement, &specialResource)
+						if err != nil {
+							return nil, chart, fmt.Errorf("failed to decode special resource for selected GPU type %s: %v", opt.SelectedGpu, err)
+						}
 
-						if resSetter.s != nil && *resSetter.s != "" {
-							*resSetter.v, err = valuePtr(resource.ParseQuantity(*resSetter.s))
-							if err != nil {
-								return nil, chart, fmt.Errorf("failed to parse special resource quantity %s: %v", *resSetter.s, err)
+						for _, resSetter := range []struct {
+							v **resource.Quantity
+							s *string
+						}{
+							{v: &mem, s: specialResource.RequiredMemory},
+							{v: &disk, s: specialResource.RequiredDisk},
+							{v: &cpu, s: specialResource.RequiredCPU},
+							{v: &gpu, s: specialResource.RequiredGPU},
+						} {
+
+							if resSetter.s != nil && *resSetter.s != "" {
+								*resSetter.v, err = valuePtr(resource.ParseQuantity(*resSetter.s))
+								if err != nil {
+									return nil, chart, fmt.Errorf("failed to parse special resource quantity %s: %v", *resSetter.s, err)
+								}
 							}
 						}
-					}
 
-					break
-				} // end if selected gpu's resource requirement found
-			} // end if supportedGpu is map
-		} // end for supportedGpu
+						break
+					} // end if selected gpu's resource requirement found
+				} // end if supportedGpu is map
+			} // end for supportedGpu
 
-		if !found {
-			return nil, chart, fmt.Errorf("selected GPU type %s is not supported", selectedGpu)
+			if !found {
+				return nil, chart, fmt.Errorf("selected GPU type %s is not supported", opt.SelectedGpu)
+			}
 		}
 	}
 
@@ -903,10 +909,10 @@ func toApplicationConfig(app, chart, rawAppName, selectedGpu string, cfg *appcfg
 		}
 	}
 	var appid string
-	if userspace.IsSysApp(app) {
-		appid = app
+	if userspace.IsSysApp(opt.App) {
+		appid = opt.App
 	} else {
-		appid = utils.Md5String(app)[:8]
+		appid = utils.Md5String(opt.App)[:8]
 	}
 
 	if appcfg.APIVersion(cfg.APIVersion) == appcfg.V2 {
@@ -921,8 +927,8 @@ func toApplicationConfig(app, chart, rawAppName, selectedGpu string, cfg *appcfg
 		AppID:          appid,
 		APIVersion:     appcfg.APIVersion(cfg.APIVersion),
 		CfgFileVersion: cfg.ConfigVersion,
-		AppName:        app,
-		RawAppName:     rawAppName,
+		AppName:        opt.App,
+		RawAppName:     opt.RawAppName,
 		Title:          cfg.Metadata.Title,
 		Version:        cfg.Metadata.Version,
 		Target:         cfg.Metadata.Target,
@@ -966,11 +972,24 @@ func toApplicationConfig(app, chart, rawAppName, selectedGpu string, cfg *appcfg
 		PodsSelectors:        podSelectors,
 		HardwareRequirement:  cfg.Spec.Hardware,
 		SharedEntrances:      cfg.SharedEntrances,
-		SelectedGpuType:      selectedGpu,
+		SelectedGpuType:      opt.SelectedGpu,
+		Resources:            cfg.Spec.Resources,
+		Client:               cfg.Client,
+		ClientAndServer:      cfg.ClientAndServer,
 	}, chart, nil
 }
 
 func getAppConfigFromConfigurationFile(opt *ConfigOptions, chartPath string) (*appcfg.ApplicationConfig, string, error) {
+	raw, err := os.ReadFile(filepath.Join(chartPath, AppCfgFileName))
+	if err != nil {
+		return nil, chartPath, err
+	}
+
+	configVersion := GetTopLevelValue(raw, "olaresManifest.version")
+	if config.IsNewManifestVersion(configVersion) {
+		return parseNewManifest(opt, chartPath, raw)
+	}
+
 	data, err := utils.RenderManifest(filepath.Join(chartPath, AppCfgFileName), opt.Owner, opt.Admin, opt.IsAdmin)
 	if err != nil {
 		return nil, chartPath, err
@@ -980,7 +999,21 @@ func getAppConfigFromConfigurationFile(opt *ConfigOptions, chartPath string) (*a
 		return nil, chartPath, err
 	}
 
-	return toApplicationConfig(opt.App, chartPath, opt.RawAppName, opt.SelectedGpu, &cfg)
+	return toApplicationConfig(opt, chartPath, &cfg)
+}
+
+func parseNewManifest(opt *ConfigOptions, chartPath string, raw []byte) (*appcfg.ApplicationConfig, string, error) {
+	var cfg appcfg.AppConfiguration
+	if err := yaml.Unmarshal(raw, &cfg); err != nil {
+		return nil, chartPath, fmt.Errorf("failed to unmarshal new manifest: %w", err)
+	}
+
+	appConfig, chart, err := toApplicationConfig(opt, chartPath, &cfg)
+	if err != nil {
+		return nil, chart, err
+	}
+
+	return appConfig, chart, nil
 }
 
 func checkVersionFormat(constraint string) error {
@@ -1314,4 +1347,21 @@ func BuildPrevPortsMap(prevConfig *appcfg.ApplicationConfig) map[string]int32 {
 		}
 	}
 	return m
+}
+
+func GetTopLevelValue(content []byte, key string) string {
+	lines := strings.Split(string(content), "\n")
+	prefix := key + ":"
+
+	for _, line := range lines {
+		if len(line) == 0 || line[0] == ' ' || line[0] == '\t' || line[0] == '#' {
+			continue
+		}
+		if strings.HasPrefix(line, prefix) {
+			value := strings.TrimSpace(line[len(prefix):])
+			value = strings.Trim(value, `'"`)
+			return value
+		}
+	}
+	return ""
 }
