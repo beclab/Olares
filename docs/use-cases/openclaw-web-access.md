@@ -5,6 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw web search
+app_version: "1.0.9"
+doc_version: "1.1"
+doc_updated: "2026-04-24"
 ---
 
 # Optional: Enable web search
@@ -31,14 +34,49 @@ A Brave Search API key is required to complete this setup. You can obtain a free
     |:-------|:-----|
     | Where will the Gateway run | Local (this machine) |
     | Enable web_search | Yes |
-    | Choose web search provider | Brave Search |
+    | Search provider | Brave Search |
     | Brave Search API key | Your `BraveSearchAPIkey` |
     | Enable web_fetch (keyless HTTP fetch) | Yes |
 
+4. Finalize the settings in the configuration file.
+
+    :::tip
+    While the CLI wizard sets up the API key, the configuration file allows you to customize specific parameters, such as timeouts and limits.
+    :::
+
+    a. Open the Files app, and then go to **Data** > **clawdbot** > **config**.
+
+    b. Double-click the `openclaw.json` file to open it.
+
+    c. Click <i class="material-symbols-outlined">edit_square</i> in the upper-right corner to enter the edit mode.
+
+    d. Find the `tools` section and update as follows. Replace `{Your-Brave-Search-API-Key}` with your actual key.
+
+    ```json
+    "tools": {
+        "web": {
+        "search": {
+            "enabled": true,
+            "provider": "brave",
+            "apiKey": "{Your-Brave-Search-API-Key}",
+            "maxResults": 10,
+            "timeoutSeconds": 30
+        },
+        "fetch": {
+            "enabled": true,
+            "timeoutSeconds": 30
+        }
+        }
+    },
+    ```
+
+    e. Click <i class="material-symbols-outlined">save</i> in the upper-right corner to save the changes.
+
+<!--
 4. Finalize the configuration in Control UI.
 
     :::tip
-    Whihe the CLI wizard sets up the API key, the Control UI allows you to customize specific parameters such as timeouts and limits.
+    While the CLI wizard sets up the API key, the Control UI allows you to customize specific parameters such as timeouts and limits.
     :::
 
     a. Return to the **Control UI** > **Config** > **Raw** tab.
@@ -67,5 +105,5 @@ A Brave Search API key is required to complete this setup. You can obtain a free
     },
     ```
 
-5. Click **Save** in the upper-right corner. The system validates the configuration and restarts automatically to apply the changes.
-6. Open Discord and ask your agent a question that requires real-time internet data to verify the search tool is working.
+5. Click **Save** in the upper-right corner. The system validates the configuration and restarts automatically to apply the changes.-->
+5. To verify the search tool is working, open Discord and ask your agent a question that requires real-time internet data.

@@ -405,7 +405,6 @@ The quick setup in the previous section uses the `openclaw devices approve --lat
 2. In **Gateway Token** field, enter the token you copied in the previous step, and then click **Connect**.
 
     The `pairing required` error occurs. This is expected and means the device connection is waiting for approval.
-    
 3. Return to the OpenClaw CLI window and enter the following command:
     ```bash
     openclaw devices list
