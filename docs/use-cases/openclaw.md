@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw installation
-app_version: "1.0.9"
+app_version: "1.0.0"
 doc_version: "1.1"
-doc_updated: "2026-04-23"
+doc_updated: "2026-04-24"
 ---
 
 # OpenClaw

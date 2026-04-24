@@ -5,7 +5,7 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, channel integration, Discord integration
-app_version: "1.0.9"
+app_version: "1.0.0"
 doc_version: "1.1"
 doc_updated: "2026-04-24"
 ---
