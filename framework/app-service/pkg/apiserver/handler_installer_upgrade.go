@@ -372,6 +372,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	appConfig, err = helper.overlayAppConfig(upgradeType)
 	if err != nil {
 		klog.Errorf("Failed to get overlay config err=%v", err)
+		api.HandleError(resp, req, err)
 		return
 	}
 
