@@ -370,15 +370,16 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
     Approve this exact request with: openclaw devices approve 1174db8b-cad9-49af-b96a-e4ac634b7007
     ```
 
-4. Locate the `Approve this exact request with` line at the very bottom of the message, and then copy and run that exact command to authorize the Control UI.
+4. Locate the `Approve this exact request with` line at the very bottom of the message.
+5. Copy and run the entire command shown after `Approve this exact request with:` to authorize the Control UI.
 
-    In this example, run the following command as indicated:
+    In this example, run the following command as indicated in the message line:
 
     ```bash
     openclaw devices approve 1174db8b-cad9-49af-b96a-e4ac634b7007
     ```
 
-5. When the terminal displays the approval message, return to the Control UI.
+6. When the terminal displays the approval message, return to the Control UI.
 
     ```text
     Approved 005748253152b66dc0f5f6a801f35617db043f107972f259630a6bd098d5f790 (1174db8b-cad9-49af-b96a-e4ac634b7007)
@@ -386,8 +387,8 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 
     ![Pair success](/images/manual/use-cases/new-pair-success2.png#bordered)
 
-6. Click **Connect** again. You will be logged in and directed to the **Chat** page by default.
-7. From the left sidebar, click **Overview** to check the connection status. The **STATUS** in the **Snapshot** panel should now be **OK**.
+7. Click **Connect** again. You will be logged in and directed to the **Chat** page by default.
+8. From the left sidebar, click **Overview** to check the connection status. The **STATUS** in the **Snapshot** panel should now be **OK**.
     ![Health OK](/images/manual/use-cases/openclaw-connected2.png#bordered)
 </template>
 <template #(Optional)-Pair-device-manually>
