@@ -105,16 +105,7 @@ Each agent requires an API key for its underlying model provider. You configure 
    | `GEMINI_API_KEY` | Gemini CLI, Cursor |
    | `CURSOR_API_KEY` | Cursor |
 
-3. Click **Apply** to save all changes.
-4. Restart the Paperclip container to apply the new keys:
-
-   a. Open Control Hub, and then go to **Browse** > **paperclip-{username}** > **Deployments** > **paperclip**.
-   
-   b. Click **Restart**.
-   
-   ![Restart Paperclip deployment](/images/manual/use-cases/paperclip-deploy-restart.png#bordered)
-
-   c. Type `paperclip`, and then click **Confirm**. Wait for the container status to change back to **Running**.
+3. Click **Apply** to save and apply the new keys.
 
 :::tip Add more API keys later
 Return to this section to add or update keys at any time. Repeat this procedure and restart Paperclip to apply new configurations.
@@ -227,10 +218,6 @@ Paperclip currently supports the following agent adapters. You configure specifi
 - OpenCode: Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`.
 - Pi: Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`.
 - Cursor: Requires `CURSOR_API_KEY`.
-
-### Will more adapters be supported?
-
-Yes. We are actively working on integrating the Gemini CLI, Hermes Agent, and OpenClaw adapters. They will be available in a future update.
 
 ### Codex adapter fails to authenticate
 
