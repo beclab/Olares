@@ -219,7 +219,7 @@ func (h *upgradeHandlerHelper) resolveUpgradeType(appConfig *appcfg.ApplicationC
 		return appcfg.InstallOrUpgradeV1
 	}
 	if isAdmin {
-		return appcfg.InstallOrUpgradeServerAndClient
+		return appcfg.InstallOrUpgradeClientAndServer
 	}
 	return appcfg.InstallOrUpgradeClientOnly
 }
