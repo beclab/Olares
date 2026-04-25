@@ -27,6 +27,7 @@ type ResolvedProfile struct {
 	AuthURL    string
 	VaultURL   string
 	DesktopURL string
+	FilesURL   string
 
 	AccessToken string
 	// ExpiresAt is the unix-seconds expiry decoded from AccessToken's `exp`

@@ -86,3 +86,11 @@ func (id ID) VaultURL(localPrefix string) string {
 func (id ID) DesktopURL(localPrefix string) string {
 	return fmt.Sprintf("https://desktop.%s%s", localPrefix, id.TerminusName())
 }
+
+// FilesURL returns the per-user files-backend base URL, e.g.
+// "https://files.alice.olares.com". Mirrors the web app's
+// `getModuleSever('files')` derivation in
+// apps/packages/app/src/stores/user.ts.
+func (id ID) FilesURL(localPrefix string) string {
+	return fmt.Sprintf("https://files.%s%s", localPrefix, id.TerminusName())
+}

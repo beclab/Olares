@@ -1,0 +1,215 @@
+// Package files implements the `olares-cli files ...` command tree, which
+// talks to the per-user files-backend (the upstream `files` repo) over its
+// /api/resources REST surface.
+//
+// The files-backend models every resource as a 3-segment "front-end path":
+//
+//	<fileType>/<extend>/<subPath>
+//
+// where `fileType` selects the storage class, `extend` selects the concrete
+// volume / repo / account inside that class, and `subPath` is the relative
+// path inside that volume. See files/pkg/models/file_param.go (FileParam.convert)
+// and files/pkg/common/constant.go for the canonical definitions.
+//
+// We expose the full path verbatim on the CLI surface — the user always
+// types all three segments — so the tooling stays close to the protocol.
+// path.go centralizes parsing & validation; commands like `ls`, `cat`, `cp`
+// (the latter two land in Phase 2) all consume the resulting FrontendPath.
+package files
+
+import (
+	"fmt"
+	"net/url"
+	"path"
+	"sort"
+	"strings"
+)
+
+// Known fileType values understood by the files-backend.
+// Mirrors files/pkg/common/constant.go (Drive, Cache, Sync, External, AwsS3,
+// GoogleDrive ("google"), DropBox, TencentCos ("tencent"), Share, Internal).
+// The list is intentionally case-sensitive lowercase: the backend lowercases
+// the first segment before matching, so we accept only the canonical form on
+// input to avoid surprising behavior.
+var knownFileTypes = map[string]struct{}{
+	"drive":    {},
+	"cache":    {},
+	"sync":     {},
+	"external": {},
+	"awss3":    {},
+	"dropbox":  {},
+	"google":   {},
+	"tencent":  {},
+	"share":    {},
+	"internal": {},
+}
+
+// driveExtends enumerates the only valid `extend` values when fileType=="drive".
+// Backend enforcement: files/pkg/models/file_param.go convert() L59-61.
+var driveExtends = map[string]struct{}{
+	"Home": {},
+	"Data": {},
+}
+
+// knownFileTypesList is a stable, sorted, comma-joined rendering of
+// knownFileTypes, computed once so the (cold) error path doesn't allocate
+// on every parse failure. Keep in sync with knownFileTypes above.
+var knownFileTypesList = func() string {
+	out := make([]string, 0, len(knownFileTypes))
+	for k := range knownFileTypes {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return strings.Join(out, ", ")
+}()
+
+// FrontendPath is the parsed view of a 3-segment files-backend front-end path.
+// Construct via ParseFrontendPath; the zero value has no meaning.
+type FrontendPath struct {
+	// FileType is the (always-lowercase) storage class: drive/cache/sync/...
+	FileType string
+	// Extend is the volume / repo / account selector. Its semantics depend on
+	// FileType (Home|Data for drive, node name for cache/external, repo_id for
+	// sync, account key for cloud drives, ...). CLI-side we only hard-validate
+	// the drive case; everything else is left to the backend.
+	Extend string
+	// SubPath is the path inside Extend, always starting with '/'. Root is "/".
+	// A trailing slash present in the input is preserved (the backend uses it
+	// as a "this is a directory" hint in some places).
+	SubPath string
+	// trailingSlash records whether the original input ended with '/'. It's
+	// preserved through String() so we don't accidentally drop the trailing
+	// slash that the backend's FileParam.convert() requires for directory
+	// listings (it splits on '/' and rejects len < 3).
+	trailingSlash bool
+}
+
+// ParseFrontendPath parses a user-supplied path string into a FrontendPath.
+//
+// Examples:
+//
+//	"drive/Home/"                    → {drive, Home, "/", trailingSlash}
+//	"drive/Home/Documents"           → {drive, Home, "/Documents"}
+//	"drive/Home/Documents/"          → {drive, Home, "/Documents/", trailingSlash}
+//	"sync/<repo_id>/sub/dir"         → {sync, <repo_id>, "/sub/dir"}
+//	"awss3/<account>/<bucket>/k.txt" → {awss3, <account>, "/<bucket>/k.txt"}
+//
+// Validation:
+//   - Path must have at least 2 non-empty segments (fileType + extend).
+//     `drive/Home` (no trailing slash) is accepted by ParseFrontendPath but
+//     callers that hit /api/resources will need a trailing slash to satisfy
+//     the backend's len(split) >= 3 check; String() preserves it from the
+//     original input.
+//   - FileType must be a known value (case-sensitive lowercase). Unknown
+//     values fail fast on the client to avoid an opaque 500 from the server.
+//   - When FileType=="drive", Extend must be "Home" or "Data" (case-sensitive).
+//   - Other FileTypes' Extend values (node names, repo ids, account keys) are
+//     not pre-validated locally; the backend is the source of truth for those.
+//   - Path traversal segments like ".." are NOT stripped here — the backend
+//     applies its own sandboxing. We do collapse runs of "//" to a single "/"
+//     via path.Clean while preserving any user-supplied trailing slash.
+func ParseFrontendPath(raw string) (FrontendPath, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return FrontendPath{}, fmt.Errorf("front-end path is empty; expected <fileType>/<extend>[/<subPath>] (e.g. drive/Home/, sync/<repo_id>/)")
+	}
+
+	hadTrailingSlash := strings.HasSuffix(raw, "/")
+	trimmed := strings.Trim(raw, "/")
+	parts := strings.Split(trimmed, "/")
+	// strings.Split never returns empty slice; guard against the all-empty
+	// case for defense in depth.
+	if len(parts) == 0 || parts[0] == "" {
+		return FrontendPath{}, fmt.Errorf("front-end path %q is empty after trimming slashes", raw)
+	}
+	if len(parts) < 2 {
+		return FrontendPath{}, fmt.Errorf("front-end path %q must have <fileType>/<extend>[/<subPath>] (got only %d segment(s); try e.g. %q)",
+			raw, len(parts), parts[0]+"/<extend>/")
+	}
+
+	fileType := parts[0]
+	if _, ok := knownFileTypes[fileType]; !ok {
+		return FrontendPath{}, fmt.Errorf("unknown fileType %q, expected one of: %s",
+			fileType, knownFileTypesList)
+	}
+
+	extend := parts[1]
+	if extend == "" {
+		return FrontendPath{}, fmt.Errorf("front-end path %q has empty <extend> segment", raw)
+	}
+	if fileType == "drive" {
+		if _, ok := driveExtends[extend]; !ok {
+			return FrontendPath{}, fmt.Errorf("drive extend must be Home or Data (got %q)", extend)
+		}
+	}
+
+	sub := "/"
+	if len(parts) > 2 {
+		// path.Clean collapses "//", strips trailing "/" — restore the latter
+		// from the caller's intent below.
+		sub = path.Clean("/" + strings.Join(parts[2:], "/"))
+	}
+	if hadTrailingSlash && !strings.HasSuffix(sub, "/") {
+		sub += "/"
+	}
+
+	return FrontendPath{
+		FileType:      fileType,
+		Extend:        extend,
+		SubPath:       sub,
+		trailingSlash: hadTrailingSlash,
+	}, nil
+}
+
+// String renders the canonical front-end path as `<fileType>/<extend><subPath>`.
+// SubPath always starts with '/', so the output naturally looks like
+// "drive/Home/Documents" or "drive/Home/" for the root with a trailing slash.
+//
+// This is the human-readable form, suitable for error messages and logs.
+// For URL construction use URLPath() — String() does NOT percent-encode.
+func (p FrontendPath) String() string {
+	return p.FileType + "/" + p.Extend + p.SubPath
+}
+
+// URLPath returns the same path as String() but with every segment
+// percent-encoded via url.PathEscape, while preserving '/' separators and
+// any trailing '/'. This matches the web app's handling
+// (apps/packages/app/src/utils/encode.ts: encodeUrl) and is what the
+// files-backend's /api/resources endpoint expects for filenames containing
+// '#', '?', '+', spaces, '%', non-ASCII, etc.
+//
+// FileType is always one of the known lowercase tokens (no escaping needed
+// in practice), but we run it through the same escape so callers get a
+// single, predictable encoder.
+func (p FrontendPath) URLPath() string {
+	subEscaped := escapeSubPath(p.SubPath)
+	return url.PathEscape(p.FileType) + "/" + url.PathEscape(p.Extend) + subEscaped
+}
+
+// escapeSubPath percent-encodes each segment of SubPath while keeping the
+// leading '/' and any trailing '/' (the trailing slash is the backend's
+// "this is a directory" hint — see FileParam.convert in files-backend).
+func escapeSubPath(sub string) string {
+	if sub == "" || sub == "/" {
+		return sub
+	}
+	trailing := strings.HasSuffix(sub, "/")
+	trimmed := strings.Trim(sub, "/")
+	if trimmed == "" {
+		return sub
+	}
+	parts := strings.Split(trimmed, "/")
+	for i, p := range parts {
+		parts[i] = url.PathEscape(p)
+	}
+	out := "/" + strings.Join(parts, "/")
+	if trailing {
+		out += "/"
+	}
+	return out
+}
+
+// HasTrailingSlash reports whether the original input ended with '/'. Useful
+// for callers that want to disambiguate "list this directory" from "fetch this
+// resource by exact name" without re-parsing.
+func (p FrontendPath) HasTrailingSlash() bool { return p.trailingSlash }

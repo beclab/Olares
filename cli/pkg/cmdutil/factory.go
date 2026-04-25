@@ -3,16 +3,18 @@
 // config / etc. This is the olares-cli analogue of lark-cli's
 // cmdutil.Factory.
 //
-// Phase 1 keeps the Factory deliberately minimal: lazily-resolved credential
-// chain + Bearer-injecting HTTP client. Phase 2 will add automatic token
-// refresh inside the same HTTPClient call without changing this surface.
+// Phase 1 keeps the Factory deliberately minimal: a lazily-resolved
+// credential chain plus an HTTP client whose RoundTripper injects the access
+// token via the custom `X-Authorization` header (see authTransport for why
+// that header, not the standard `Authorization: Bearer`). Phase 2 will add
+// automatic token refresh inside the same HTTPClient call without changing
+// this surface.
 package cmdutil
 
 import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -28,14 +30,9 @@ import (
 // times reuses the same resolved profile + client.
 type Factory struct {
 	// ProfileOverride, when non-empty, forces ResolveProfile to look up this
-	// profile instead of the currently-selected one. Wired from a global
-	// `--profile` / `--olares-id` flag at the root command.
+	// profile instead of the currently-selected one. Wired from the root
+	// command's persistent `--profile` flag.
 	ProfileOverride string
-
-	// IOStreams (Phase 2) will live here so commands can write to a swappable
-	// io.Writer pair. For now we just expose a Stderr getter to avoid a hard
-	// dependency churn when we add it.
-	Stderr io.Writer
 
 	credentialOnce sync.Once
 	credentialErr  error
@@ -93,8 +90,9 @@ func (f *Factory) ResolveProfile(ctx context.Context) (*credential.ResolvedProfi
 }
 
 // HTTPClient returns an *http.Client whose RoundTripper transparently injects
-// `Authorization: Bearer <accessToken>` on every outbound request. The client
-// also honors the active profile's InsecureSkipVerify flag.
+// the active profile's access token on every outbound request via the custom
+// `X-Authorization` header (see authTransport). The client also honors the
+// active profile's InsecureSkipVerify flag.
 //
 // Phase 1: the token is fetched once at first call and reused until the
 // process exits. If it expires mid-run, requests will start returning 401 —
@@ -114,25 +112,37 @@ func (f *Factory) HTTPClient(ctx context.Context) (*http.Client, error) {
 		}
 		f.client = &http.Client{
 			Timeout:   30 * time.Second,
-			Transport: &bearerTransport{base: base, token: rp.AccessToken},
+			Transport: &authTransport{base: base, token: rp.AccessToken},
 		}
 	})
 	return f.client, nil
 }
 
-// bearerTransport injects Authorization: Bearer <token> on outbound requests.
-// It clones the request before mutating headers so the caller's *http.Request
-// is left untouched (important when callers retry).
-type bearerTransport struct {
+// authTransport injects the access token via the custom `X-Authorization`
+// header on outbound requests. It clones the request before mutating headers
+// so the caller's *http.Request is left untouched (important when callers
+// retry).
+//
+// Why X-Authorization (not the standard Authorization: Bearer)?
+// Olares' edge stack — Authelia ext-authz wired through l4-bfl-proxy —
+// inspects `X-Authorization` (and Cookie) to identify the user; see
+// framework/l4-bfl-proxy/internal/translator/translator.go (RequestHeaders
+// allow-list) and the BFL backend's
+// framework/bfl/pkg/apiserver/filters.go (UserAuthorizationTokenKey =
+// "X-Authorization"). The standard Authorization header is filtered out by
+// the edge before it reaches per-user services, so X-Authorization is the
+// only value that round-trips to the backend today. The web app does the
+// same thing in apps/packages/app/src/platform/platformAjaxSender.ts.
+type authTransport struct {
 	base  http.RoundTripper
 	token string
 }
 
-func (b *bearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	if b.token == "" {
-		return b.base.RoundTrip(req)
+func (a *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if a.token == "" {
+		return a.base.RoundTrip(req)
 	}
 	clone := req.Clone(req.Context())
-	clone.Header.Set("Authorization", "Bearer "+b.token)
-	return b.base.RoundTrip(clone)
+	clone.Header.Set("X-Authorization", a.token)
+	return a.base.RoundTrip(clone)
 }
