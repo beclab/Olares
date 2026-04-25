@@ -53,6 +53,10 @@ Examples:
 	}
 	for _, sub := range []*cobra.Command{
 		NewLsCommand(f),
+		NewUploadCommand(f),
+		NewDownloadCommand(f),
+		NewCatCommand(f),
+		NewRmCommand(f),
 	} {
 		// Same rationale as cmd/ctl/profile/root.go: bad creds / network /
 		// path-not-found errors are already actionable; don't bury them under
