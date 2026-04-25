@@ -30,28 +30,58 @@ type Token struct {
 	FA2          bool   `json:"fa2,omitempty"`
 }
 
-// LoginRequest captures everything Login needs to perform first-factor (and,
-// if needed, second-factor TOTP) authentication.
+// LoginRequest is the input shared by FirstFactor (low-level, equivalent
+// to the TS onFirstFactor primitive) and Login (high-level wrapper around
+// FirstFactor + optional /api/secondfactor/totp, equivalent to the TS
+// loginTerminus flow).
 //
-// AuthURL is the Olares auth subdomain base, e.g. "https://auth.alice.olares.com".
+// Field semantics mirror the TS web reference 1:1; if you change anything
+// here, also re-read those two TS functions and keep them aligned:
+//
+//   - apps/packages/app/src/utils/account.ts L7-71               (onFirstFactor)
+//   - apps/packages/app/src/utils/BindTerminusBusiness.ts L353-446 (loginTerminus)
+//
+// AuthURL is the Olares auth base, e.g. "https://auth.alice.olares.com".
 // The CLI POSTs to AuthURL + "/api/firstfactor" and AuthURL + "/api/secondfactor/totp".
 //
 // LocalName is the bare username (the part before `@` of the olaresId).
 // The web app uses this as `username` in the request body.
 //
-// TerminusName is "<local>.<domain>"; it's used to construct the second-factor
-// `targetUrl` field (https://desktop.<terminusName>/) which the auth backend
-// echoes back as the redirect target.
+// TerminusName is "<local>.<domain>"; it's only used to derive the
+// `targetURL` form field (vault.<name>/server by default,
+// desktop.<name>/ when NeedTwoFactor is true) and the second-factor
+// `targetUrl`.
 //
-// TOTP is optional — supply it when the account has 2FA enabled. If the
-// first-factor response indicates FA2 is required and TOTP is empty, Login
-// returns ErrTOTPRequired so the caller can prompt and retry.
+// TOTP is optional — supply it when the account has 2FA enabled. Login
+// returns ErrTOTPRequired when 2FA is needed (tok.FA2 || NeedTwoFactor)
+// but TOTP is empty. FirstFactor never reads TOTP.
+//
+// NeedTwoFactor mirrors the `needTwoFactor` parameter on TS onFirstFactor:
+// when true, swap targetURL from `vault.<name>/server` to
+// `desktop.<name>/`. This is the ONLY thing it does in the Go API.
+//
+// Authelia's per-URL access policy is what makes `fa2` flip to true in
+// the response — the vault URL maps to a 1FA policy, the desktop URL
+// maps to a 2FA policy. Callers that want the server to honestly tell
+// them whether the account has 2FA enabled (e.g. `profile login`'s
+// initial probe) MUST pass NeedTwoFactor=true so Authelia evaluates the
+// 2FA policy. NeedTwoFactor does NOT participate in Login's escalation
+// gate — Login uses `tok.FA2` from the server only; see Login's doc for
+// why we diverge from TS's `tok.FA2 || needTwoFactor` here.
+//
+// AcceptCookie mirrors the `acceptCookie` parameter on TS onFirstFactor;
+// it is passed through verbatim into the request body. callers known to
+// follow up with /api/secondfactor/totp pass true (so Authelia sets the
+// session cookie that the second-factor request needs); the
+// activation/signup caller (cli/pkg/wizard.UserBindTerminus) passes false.
 type LoginRequest struct {
 	AuthURL            string
 	LocalName          string
 	TerminusName       string
 	Password           string
 	TOTP               string
+	NeedTwoFactor      bool
+	AcceptCookie       bool
 	InsecureSkipVerify bool
 	Timeout            time.Duration // zero → 10s default
 }
@@ -61,25 +91,55 @@ type LoginRequest struct {
 // (e.g. `profile login`) can prompt the user and call Login again with TOTP set.
 var ErrTOTPRequired = errors.New("two-factor authentication is required: re-run with --totp <code>")
 
-// Login executes the password login flow:
-//  1. POST /api/firstfactor with the salted-MD5 password.
-//  2. If the response says fa2 is required, POST /api/secondfactor/totp with
-//     the supplied TOTP code (or return ErrTOTPRequired if none was given).
+// FirstFactor performs a single POST /api/firstfactor and returns the raw
+// token. Mirrors apps/packages/app/src/utils/account.ts:onFirstFactor (L7-71)
+// 1:1: it does NOT inspect or act on the response's `fa2` flag — choosing
+// whether to escalate to /api/secondfactor/totp is the caller's job.
 //
-// On success the returned Token contains the freshly minted access_token and
-// refresh_token (the second-factor response overrides them when present).
+// Two callers exist today:
 //
-// The function uses a short-lived http.Client with a cookie jar so that the
-// Authelia session cookie set on /api/firstfactor is automatically attached
-// to /api/secondfactor/totp — mirroring `withCredentials: true` in the web
-// implementation in apps/packages/app/src/utils/BindTerminusBusiness.ts.
+//   - Login (this file) wraps FirstFactor and does the
+//     `(tok.FA2 || NeedTwoFactor)` escalation, mirroring TS loginTerminus.
+//   - cli/pkg/wizard.UserBindTerminus uses FirstFactor directly and
+//     ignores fa2, mirroring TS userBindTerminus — at signup time there is
+//     no MFA seed yet, so the 1st-factor access_token is what the
+//     subsequent signup endpoints need.
+func FirstFactor(ctx context.Context, req LoginRequest) (*Token, error) {
+	if err := validateLoginRequest(req); err != nil {
+		return nil, err
+	}
+	client := newHTTPClient(req.Timeout, req.InsecureSkipVerify)
+	return firstFactorWithClient(ctx, client, req)
+}
+
+// Login executes the full password login flow:
+//
+//  1. POST /api/firstfactor with the salted-MD5 password (via FirstFactor).
+//  2. If the server reports `tok.FA2`, POST /api/secondfactor/totp with the
+//     supplied TOTP code (or return ErrTOTPRequired if none was given).
+//
+// Mirrors apps/packages/app/src/utils/BindTerminusBusiness.ts:loginTerminus
+// (L353-446), with one deliberate divergence: the gate is `tok.FA2` only,
+// not the TS `tok.FA2 || needTwoFactor`. The TS code OR's in
+// `needTwoFactor` so the web UI can *force* 2FA when it locally knows the
+// user has it but the server hasn't reported it (defensive UI-state
+// pattern). The CLI has no such caller-side knowledge — it can only
+// trust whatever the server says — and gating on the OR would make
+// non-2FA users (who get fa2=false) hit a spurious ErrTOTPRequired the
+// moment a caller passes NeedTwoFactor=true to probe with the desktop
+// targetURL (e.g. `profile login`).
+//
+// FirstFactor and the optional second-factor POST share a single
+// http.Client (with cookie jar) so the Authelia session cookie set on
+// /api/firstfactor automatically attaches to /api/secondfactor/totp,
+// mirroring `withCredentials: true` in the TS axios instance.
 func Login(ctx context.Context, req LoginRequest) (*Token, error) {
 	if err := validateLoginRequest(req); err != nil {
 		return nil, err
 	}
 	client := newHTTPClient(req.Timeout, req.InsecureSkipVerify)
 
-	tok, err := postFirstFactor(ctx, client, req)
+	tok, err := firstFactorWithClient(ctx, client, req)
 	if err != nil {
 		return nil, err
 	}
@@ -115,12 +175,18 @@ func validateLoginRequest(req LoginRequest) error {
 	return nil
 }
 
-// passwordSalt mirrors the `passwordAddSort` helper in
-// pkg/wizard/auth.go (and its TS counterpart in BindTerminusBusiness.ts):
-// MD5 of `<password>@Olares2025`. The salt is a public, account-independent
-// constant — it's NOT a security feature, just a wire-format quirk the auth
-// backend expects.
-func passwordSalt(password string) string {
+// PasswordSalt is the md5(`<password>@Olares2025`) wire-format the Authelia
+// backend expects on /api/firstfactor and on the bfl
+// /iam/v1alpha1/users/<name>/password reset endpoint. The salt string is a
+// public, account-independent constant — it is NOT a security feature, only
+// a quirk we have to reproduce on every code path that talks to those two
+// endpoints. The TS counterpart is `passwordAddSort` in
+// apps/packages/app/src/utils/BindTerminusBusiness.ts.
+//
+// Exported so cli/pkg/wizard.ResetPassword can reuse the same implementation
+// instead of carrying its own copy — having two copies invites silent drift
+// the day someone changes the salt server-side.
+func PasswordSalt(password string) string {
 	hash := md5.Sum([]byte(password + "@Olares2025"))
 	return fmt.Sprintf("%x", hash)
 }
@@ -140,21 +206,25 @@ type firstFactorResponse struct {
 	Data    Token  `json:"data"`
 }
 
-func postFirstFactor(ctx context.Context, client *http.Client, req LoginRequest) (*Token, error) {
+// firstFactorWithClient is the shared implementation behind FirstFactor and
+// Login. Splitting it out lets Login reuse the cookie-jarred client across
+// /api/firstfactor and /api/secondfactor/totp without re-dialling.
+//
+// targetURL derivation matches apps/packages/app/src/utils/account.ts
+// L19-26: vault.<name>/server by default, desktop.<name>/ when the caller
+// asks for the 2FA-bearing policy via NeedTwoFactor.
+func firstFactorWithClient(ctx context.Context, client *http.Client, req LoginRequest) (*Token, error) {
+	targetURL := "https://vault." + req.TerminusName + "/server"
+	if req.NeedTwoFactor {
+		targetURL = "https://desktop." + req.TerminusName + "/"
+	}
 	body := firstFactorBody{
 		Username:       req.LocalName,
-		Password:       passwordSalt(req.Password),
+		Password:       PasswordSalt(req.Password),
 		KeepMeLoggedIn: false,
 		RequestMethod:  "POST",
-		// Always declare the desktop subdomain as the post-login redirect target.
-		// Authelia's `fa2` flag in the response is computed against this URL via
-		// its access-control policy, and only the desktop.<terminusName>/ rule
-		// requires 2FA. Sending the auth or vault URL would silently downgrade
-		// the response to 1FA, hiding the fact that the account has 2FA enabled.
-		// See apps/packages/app/src/utils/account.ts (onFirstFactor) for the
-		// matching web behavior.
-		TargetURL:    "https://desktop." + req.TerminusName + "/",
-		AcceptCookie: true,
+		TargetURL:      targetURL,
+		AcceptCookie:   req.AcceptCookie,
 	}
 	resp, err := postJSON(ctx, client, req.AuthURL+"/api/firstfactor?hideCookie=true", body, nil)
 	if err != nil {

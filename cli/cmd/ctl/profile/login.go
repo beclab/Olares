@@ -92,11 +92,26 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 	}
 
 	tok, err := loginWithTOTPPrompt(ctx, auth.LoginRequest{
-		AuthURL:            authURL,
-		LocalName:          id.Local(),
-		TerminusName:       terminusName,
-		Password:           password,
-		TOTP:               o.totp,
+		AuthURL:      authURL,
+		LocalName:    id.Local(),
+		TerminusName: terminusName,
+		Password:     password,
+		TOTP:         o.totp,
+		// NeedTwoFactor=true sends targetURL=desktop.<name>/ on
+		// /api/firstfactor so Authelia evaluates its 2FA access policy
+		// and reports `fa2=true` for accounts that actually have 2FA
+		// enabled. Sending the vault targetURL (NeedTwoFactor=false)
+		// would silently downgrade the response to fa2=false even on
+		// 2FA-enabled accounts, and the user would never be prompted
+		// for their TOTP code. This is the CLI's "probe" — auth.Login's
+		// gate still uses tok.FA2 only, so non-2FA accounts under the
+		// same desktop probe just succeed without a TOTP prompt.
+		NeedTwoFactor: true,
+		// AcceptCookie mirrors apps/packages/app/src/utils/BindTerminusBusiness.ts
+		// L368 (loginTerminus): the web UI always asks Authelia to set
+		// the session cookie because it follows up with
+		// /api/secondfactor/totp when fa2 fires.
+		AcceptCookie:       true,
 		InsecureSkipVerify: o.insecureSkipVerify,
 	}, o.olaresID)
 	if err != nil {
