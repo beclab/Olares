@@ -25,8 +25,8 @@ type MultiProfileConfig struct {
 // user identity used to talk to it. The primary key is OlaresID; Name is an
 // optional alias users can pass to commands like `profile use <name>`.
 //
-// Tokens are NOT stored in this file — they live in tokens.json and are
-// looked up by OlaresID. See pkg/auth.TokenStore.
+// Tokens are NOT stored in this file — they live in the OS keychain
+// (one entry per OlaresID; see cli/internal/keychain and pkg/auth.TokenStore).
 type ProfileConfig struct {
 	// Name is an optional human-friendly alias. If empty, OlaresID is used as
 	// the display name.

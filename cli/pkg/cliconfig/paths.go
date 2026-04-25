@@ -1,5 +1,6 @@
 // Package cliconfig owns the on-disk profile configuration of olares-cli
-// (~/.olares-cli/config.json + ~/.olares-cli/tokens.json).
+// (~/.olares-cli/config.json). Token secrets are NOT stored here — they
+// live in the OS keychain via cli/internal/keychain.
 //
 // The package is named cliconfig (not "config") to avoid clashing with the
 // pre-existing cmd/config package, which serves a different purpose
@@ -20,14 +21,15 @@ const homeEnv = "OLARES_CLI_HOME"
 // unset.
 const defaultDir = ".olares-cli"
 
-// Filenames inside the config dir.
-const (
-	configFilename = "config.json"
-	tokensFilename = "tokens.json"
-)
+// configFilename is the only file this package owns. Token secrets used to
+// live next to it as tokens.json (Phase 1, plaintext); Phase 2 moved them
+// into the OS keychain — see cli/internal/keychain and
+// cli/pkg/auth/token_store_keychain.go.
+const configFilename = "config.json"
 
-// Permissions for the config dir & files. tokens.json carries refresh tokens
-// in plaintext during Phase 1; both files therefore use 0600 / 0700.
+// Permissions for the config dir & file. config.json holds the profile index
+// (no secrets) but we still keep it 0600 because it does carry the
+// `currentProfile` selection and any auth-URL overrides.
 const (
 	dirPerm  os.FileMode = 0o700
 	filePerm os.FileMode = 0o600
@@ -67,13 +69,4 @@ func ConfigFile() (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, configFilename), nil
-}
-
-// TokensFile returns the absolute path to tokens.json (without creating it).
-func TokensFile() (string, error) {
-	dir, err := Home()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, tokensFilename), nil
 }

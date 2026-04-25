@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/internal/keychain"
 	"github.com/beclab/Olares/cli/pkg/auth"
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
 )
@@ -45,10 +46,7 @@ func runRemove(key string) error {
 		return fmt.Errorf("save config: %w", err)
 	}
 
-	store, err := auth.NewFileStore()
-	if err != nil {
-		return err
-	}
+	store := auth.NewTokenStore()
 	if err := store.Delete(removed.OlaresID); err != nil && !errors.Is(err, auth.ErrTokenNotFound) {
 		// Non-fatal: config is already updated.
 		fmt.Printf("warning: failed to clear stored token for %s: %v\n", removed.OlaresID, err)
@@ -59,6 +57,18 @@ func runRemove(key string) error {
 		fmt.Printf("current profile is now: %s\n", cfg.CurrentProfile)
 	} else if len(cfg.Profiles) == 0 {
 		fmt.Println("no profiles remain.")
+		// Last profile gone → no remaining account is keyed under our
+		// keychain service. Wipe the master key + storage dir so we don't
+		// leave orphan secrets / files / registry values that would show
+		// up in security tooling (Keychain Access.app, regedit, etc.) for
+		// no functional reason. The config is already saved at this point,
+		// so a purge failure is non-fatal — log + continue.
+		if err := keychain.PurgeService(keychain.OlaresCliService); err != nil {
+			fmt.Printf("warning: failed to purge keychain storage: %v\n", err)
+		} else {
+			fmt.Printf("cleaned up keychain storage for service %q.\n",
+				keychain.OlaresCliService)
+		}
 	}
 	return nil
 }

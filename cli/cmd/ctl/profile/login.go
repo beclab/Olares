@@ -80,10 +80,7 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 	if err != nil {
 		return err
 	}
-	store, err := auth.NewFileStore()
-	if err != nil {
-		return err
-	}
+	store := auth.NewTokenStore()
 	profile, err := ensureProfileWritable(cfg, store, o.commonCredFlags, time.Now())
 	if err != nil {
 		return err
@@ -113,7 +110,7 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 
 	fmt.Printf("logged in as %s (profile: %s)\n", o.olaresID, profile.DisplayName())
 	printSwitchNotice(res, profile.DisplayName())
-	printPlaintextWarning()
+	printStorageNotice(profile.OlaresID)
 	return nil
 }
 

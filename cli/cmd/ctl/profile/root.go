@@ -23,8 +23,11 @@ func NewProfileCommand() *cobra.Command {
 (identified by an olaresId such as "alice@olares.com") with the local
 credentials used to talk to it.
 
-Phase 1 stores tokens in plaintext at ~/.olares-cli/tokens.json with 0600
-permissions; OS keychain support arrives in Phase 2.`,
+Tokens are stored in the OS keychain (service "olares-cli", account = the
+profile's olaresId): macOS Keychain on darwin, an AES-256-GCM file under
+~/.local/share/olares-cli/ on linux, and DPAPI under
+HKCU\Software\OlaresCli\keychain on windows. The plaintext
+~/.olares-cli/tokens.json from earlier builds is no longer used.`,
 	}
 	for _, sub := range []*cobra.Command{
 		NewListCommand(),

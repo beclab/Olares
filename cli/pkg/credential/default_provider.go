@@ -33,15 +33,12 @@ type DefaultProvider struct {
 	now   func() time.Time
 }
 
-// NewDefaultProvider opens the on-disk token store and returns a Provider
-// suitable for normal CLI invocations. Returns an error only if the token
-// store path itself can't be resolved (which usually means $HOME is broken).
+// NewDefaultProvider returns a Provider backed by the keychain-backed token
+// store. The error return is preserved from the Phase 1 file-store signature
+// so future backends with non-trivial init (e.g. a remote sidecar) can opt
+// in without re-touching every caller.
 func NewDefaultProvider() (Provider, error) {
-	store, err := auth.NewFileStore()
-	if err != nil {
-		return nil, err
-	}
-	return &DefaultProvider{store: store, now: time.Now}, nil
+	return &DefaultProvider{store: auth.NewTokenStore(), now: time.Now}, nil
 }
 
 // Name implements Provider.

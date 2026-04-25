@@ -3,9 +3,15 @@ package profile
 import (
 	"testing"
 
+	"github.com/beclab/Olares/cli/internal/keychain/keychainfake"
 	"github.com/beclab/Olares/cli/pkg/auth"
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
 )
+
+// staticProfileLister returns a fixed set of olaresIds for List() tests.
+type staticProfileLister []string
+
+func (s staticProfileLister) ListOlaresIDs() ([]string, error) { return []string(s), nil }
 
 // TestPersistTokenAndProfile_Switching exercises the auto-switch contract
 // added by the "login auto switch profile" plan. The behavior matrix lives
@@ -112,11 +118,7 @@ func TestPersistTokenAndProfile_Switching(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("OLARES_CLI_HOME", t.TempDir())
-			path, err := cliconfig.TokensFile()
-			if err != nil {
-				t.Fatalf("TokensFile: %v", err)
-			}
-			store := auth.NewFileStoreAt(path)
+			store := auth.NewTokenStoreWith(keychainfake.New(), staticProfileLister{tc.newProfile.OlaresID})
 
 			cfg := &cliconfig.MultiProfileConfig{
 				Profiles:        append([]cliconfig.ProfileConfig(nil), tc.seedProfiles...),

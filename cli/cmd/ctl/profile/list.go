@@ -53,10 +53,7 @@ func runList(out *os.File) error {
 		return nil
 	}
 
-	store, err := auth.NewFileStore()
-	if err != nil {
-		return err
-	}
+	store := auth.NewTokenStore()
 
 	current := cfg.Current()
 	now := time.Now()

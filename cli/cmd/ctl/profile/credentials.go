@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/beclab/Olares/cli/internal/keychain"
 	"github.com/beclab/Olares/cli/pkg/auth"
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
 	"github.com/beclab/Olares/cli/pkg/olares"
@@ -203,10 +204,17 @@ func printSwitchNotice(res persistResult, newDisplayName string) {
 	}
 }
 
-// printPlaintextWarning is shown after every successful login / import to set
-// expectations: Phase 1 stores tokens in clear text. Phase 2 will move them
-// into the OS keychain.
-func printPlaintextWarning() {
-	tokensPath, _ := cliconfig.TokensFile()
-	fmt.Printf("warning: token stored in plaintext at %s (mode 0600). OS keychain support is coming in a future release.\n", tokensPath)
+// printStorageNotice is the post-login UX hint that names where the freshly
+// minted access/refresh tokens just landed. We surface the backend label
+// (system-keychain / file-fallback / file / registry+dpapi) so a user who
+// expected the system keychain but landed on the sandbox/CI file fallback
+// notices immediately — that has very different security implications.
+//
+// We deliberately keep the (service, account) pair instead of an on-disk
+// path: the path can rotate with future layout changes, but the keychain
+// coordinates are the stable contract.
+func printStorageNotice(olaresID string) {
+	fmt.Printf("token stored via %s (service %q, account %q).\n",
+		keychain.Backend(keychain.OlaresCliService),
+		keychain.OlaresCliService, olaresID)
 }
