@@ -220,6 +220,25 @@ olares-cli settings search dirs rm  /home/alice/Documents
 
 `excludes add` / `dirs add` go through `PUT .../part`; the `rm` counterparts hit `DELETE .../part`. Both helpers dedupe and trim their inputs before sending so the upstream sees a clean list.
 
+### `vpn` — Headscale device + policy writes (Phase 3c1)
+
+```bash
+olares-cli settings vpn devices rename <device-id> <new-name>
+olares-cli settings vpn devices delete <device-id>            # prompts; pass --yes for automation
+olares-cli settings vpn devices tags   set <device-id> --tag ops --tag laptop
+olares-cli settings vpn devices tags   set <device-id>        # zero --tag flags clears the list
+
+olares-cli settings vpn routes enable  <route-id>             # IDs come from `devices routes <id>`
+olares-cli settings vpn routes disable <route-id>
+
+olares-cli settings vpn public-domain-policy set --deny-all   # block non-whitelisted entrances
+olares-cli settings vpn public-domain-policy set --allow-all  # default Olares behavior
+```
+
+`devices delete` is destructive: it disconnects the device from the mesh and invalidates any TermiPass session bound to it. The CLI prompts for `[y/N]` confirmation by default; for unattended scripts, pass `--yes` (non-TTY stdin without `--yes` is a hard error so a missed pipe doesn't silently destroy state). Tag values are normalized client-side into the `tag:<name>` form Headscale stores, so callers should pass the bare name (`--tag ops`, not `--tag tag:ops`) — both forms work, the CLI dedupes and normalizes either way.
+
+The Phase 3c1 surface deliberately leaves the SSH / subroutes / per-app ACL toggles (`/api/acl/...`) for a follow-up slice; those are admin-only and have a richer payload shape (per-proto port lists) that warrants its own design pass.
+
 ### `integration` — connected accounts
 
 ```bash

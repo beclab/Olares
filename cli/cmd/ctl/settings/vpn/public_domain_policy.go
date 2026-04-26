@@ -33,7 +33,7 @@ import (
 // (NO outer envelope — user-service unwraps it server-side, and the
 // SPA's interceptor passes the body through as-is for the same reason.)
 //
-// Phase 1 ships GET; Phase 3 will add `set --deny-all/--allow-all`.
+// Phase 1 ships GET; Phase 3 lands `set --deny-all/--allow-all`.
 func NewPublicDomainPolicyCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "public-domain-policy",
@@ -44,13 +44,12 @@ been individually whitelisted.
 
 Subcommands:
   get   show the current policy                           (Phase 1)
-
-Subcommands landing in Phase 3:
-  set   change the policy (set --deny-all / --allow-all)
+  set   change the policy (--deny-all / --allow-all)      (Phase 3)
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newPublicDomainPolicyGetCommand(f))
+	cmd.AddCommand(newPublicDomainPolicySetCommand(f))
 	return cmd
 }
 
@@ -122,4 +121,85 @@ func renderPublicDomainPolicy(w io.Writer, p publicDomainPolicy) error {
 		}
 	}
 	return nil
+}
+
+// `vpn public-domain-policy set` — flips deny_all between 0 and 1 via
+// POST /api/launcher-public-domain-access-policy. The SPA's
+// toggleHeadScaleStatus does the same thing on the VPN page's master
+// switch (stores/settings/headscale.ts:43-53).
+//
+// Mutually-exclusive flags rather than a positional value: --deny-all
+// and --allow-all read more clearly than `set 1` / `set 0`, and the
+// admin/owner reading the help should never have to remember which
+// integer means what. We still accept exactly one of the two so the
+// command is unambiguous and round-trips cleanly through JSON output.
+func newPublicDomainPolicySetCommand(f *cmdutil.Factory) *cobra.Command {
+	var (
+		denyAll  bool
+		allowAll bool
+	)
+	cmd := &cobra.Command{
+		Use:   "set",
+		Short: "set the public-domain access policy",
+		Long: `Set the public-domain access policy. Pass exactly one of:
+
+  --deny-all     block public-domain access for non-whitelisted entrances
+  --allow-all    permit public-domain access (default Olares behavior)
+
+The change takes effect immediately for new connections. Existing
+sessions stay open until their next renegotiation.
+
+Examples:
+  olares-cli settings vpn public-domain-policy set --deny-all
+  olares-cli settings vpn public-domain-policy set --allow-all
+`,
+		Args: cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			return runPublicDomainPolicySet(c.Context(), f, denyAll, allowAll)
+		},
+	}
+	cmd.Flags().BoolVar(&denyAll, "deny-all", false, "block public-domain access for non-whitelisted entrances (deny_all=1)")
+	cmd.Flags().BoolVar(&allowAll, "allow-all", false, "permit public-domain access for all entrances (deny_all=0)")
+	return cmd
+}
+
+func runPublicDomainPolicySet(ctx context.Context, f *cmdutil.Factory, denyAll, allowAll bool) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+	value, label, err := resolvePolicyFlag(denyAll, allowAll)
+	if err != nil {
+		return err
+	}
+	if err := doPolicySetViaDoer(ctx, pc.doer, value); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stdout, "public-domain-policy set to %s (deny_all=%d)\n", label, value)
+	return nil
+}
+
+// resolvePolicyFlag enforces mutual exclusion between --deny-all and
+// --allow-all and turns the boolean pair into the wire integer (0 = allow,
+// 1 = deny) plus a friendly label for the success message.
+func resolvePolicyFlag(denyAll, allowAll bool) (int, string, error) {
+	if denyAll == allowAll {
+		return 0, "", fmt.Errorf("pass exactly one of --deny-all or --allow-all")
+	}
+	if denyAll {
+		return 1, "deny-all", nil
+	}
+	return 0, "allow-all", nil
+}
+
+// doPolicySetViaDoer is the wire-only core of `vpn public-domain-policy
+// set`. The value must already be 0 or 1 (use resolvePolicyFlag);
+// callers shouldn't pass arbitrary integers.
+func doPolicySetViaDoer(ctx context.Context, d Doer, value int) error {
+	body := publicDomainPolicy{DenyAll: value}
+	return d.DoJSON(ctx, "POST", "/api/launcher-public-domain-access-policy", body, nil)
 }

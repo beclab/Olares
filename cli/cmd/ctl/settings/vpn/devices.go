@@ -39,29 +39,36 @@ import (
 //   vpn devices list                       (Phase 1)
 //   vpn devices routes <device-id>         (Phase 1)
 //
-// Phase 3 will add:
+// Phase 3 adds the writes:
 //
-//   vpn devices rename <id> <name>
-//   vpn devices delete <id>
-//   vpn devices tags <id> <tag,tag,...>
-//   vpn devices routes enable / disable <route-id>
+//   vpn devices rename <id> <name>         (Phase 3 — devices_writes.go)
+//   vpn devices delete <id>                (Phase 3 — devices_writes.go)
+//   vpn devices tags set <id> --tag ...    (Phase 3 — devices_writes.go)
+//
+// Route enable / disable lives under `settings vpn routes` rather than
+// here because Headscale routes are addressed by route id, not device
+// id (the device-id-keyed `vpn devices routes <id>` verb only *lists*
+// the device's routes — toggling them goes through /headscale/routes/
+// <route-id>/{enable,disable}).
 func NewDevicesCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "devices",
 		Short: "Manage Headscale devices on this Olares mesh",
-		Long: `Inspect Headscale devices that have joined this Olares user's mesh.
+		Long: `Inspect and manage Headscale devices that have joined this Olares user's
+mesh.
 
 Subcommands:
-  list    list all devices                         (Phase 1)
-  routes  list routes advertised by one device     (Phase 1)
-
-Subcommands landing in Phase 3:
-  rename, delete, tags, route enable / disable
+  list                                   list all devices                          (Phase 1)
+  routes <device-id>                     list routes advertised by one device      (Phase 1)
+  rename <device-id> <new-name>          rename a device                           (Phase 3)
+  delete <device-id>                     remove a device                           (Phase 3)
+  tags set <device-id> --tag <name>...   replace the device's forcedTags           (Phase 3)
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newDevicesListCommand(f))
 	cmd.AddCommand(newDevicesRoutesCommand(f))
+	addDevicesWriteCommands(cmd, f)
 	return cmd
 }
 
