@@ -189,7 +189,12 @@ func TestFrontendPathURLPath(t *testing.T) {
 		{
 			name:  "filename with plus and percent",
 			input: "drive/Home/100%/x+y.txt",
-			want:  "drive/Home/100%25/x+y.txt",
+			want:  "drive/Home/100%25/x%2By.txt",
+		},
+		{
+			name:  "parens and space like duplicate filename",
+			input: "drive/Home/Documents/report (1).txt",
+			want:  "drive/Home/Documents/report%20(1).txt",
 		},
 		{
 			name:  "non-ASCII filename",

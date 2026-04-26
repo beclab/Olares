@@ -19,10 +19,11 @@ package files
 
 import (
 	"fmt"
-	"net/url"
 	"path"
 	"sort"
 	"strings"
+
+	"github.com/beclab/Olares/cli/pkg/files/upload"
 )
 
 // Known fileType values understood by the files-backend.
@@ -171,42 +172,15 @@ func (p FrontendPath) String() string {
 	return p.FileType + "/" + p.Extend + p.SubPath
 }
 
-// URLPath returns the same path as String() but with every segment
-// percent-encoded via url.PathEscape, while preserving '/' separators and
-// any trailing '/'. This matches the web app's handling
-// (apps/packages/app/src/utils/encode.ts: encodeUrl) and is what the
-// files-backend's /api/resources endpoint expects for filenames containing
-// '#', '?', '+', spaces, '%', non-ASCII, etc.
-//
-// FileType is always one of the known lowercase tokens (no escaping needed
-// in practice), but we run it through the same escape so callers get a
-// single, predictable encoder.
+// URLPath returns the same logical path as String() but percent-encoded
+// with pkg/files/upload.EncodeURL — the Go counterpart of the web app's
+// apps/packages/app/src/utils/encode.ts `encodeUrl` (encodeURIComponent per
+// '/' segment). This MUST stay aligned with download/cat/rm/upload, which
+// already use EncodeURL; url.PathEscape is not equivalent (e.g. '+' and
+// '!*'()' differ) and would make `ls` hit different wire paths than the
+// other verbs for the same user-typed path.
 func (p FrontendPath) URLPath() string {
-	subEscaped := escapeSubPath(p.SubPath)
-	return url.PathEscape(p.FileType) + "/" + url.PathEscape(p.Extend) + subEscaped
-}
-
-// escapeSubPath percent-encodes each segment of SubPath while keeping the
-// leading '/' and any trailing '/' (the trailing slash is the backend's
-// "this is a directory" hint — see FileParam.convert in files-backend).
-func escapeSubPath(sub string) string {
-	if sub == "" || sub == "/" {
-		return sub
-	}
-	trailing := strings.HasSuffix(sub, "/")
-	trimmed := strings.Trim(sub, "/")
-	if trimmed == "" {
-		return sub
-	}
-	parts := strings.Split(trimmed, "/")
-	for i, p := range parts {
-		parts[i] = url.PathEscape(p)
-	}
-	out := "/" + strings.Join(parts, "/")
-	if trailing {
-		out += "/"
-	}
-	return out
+	return upload.EncodeURL(p.String())
 }
 
 // HasTrailingSlash reports whether the original input ended with '/'. Useful

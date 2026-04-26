@@ -125,8 +125,8 @@ func runLs(ctx context.Context, f *cmdutil.Factory, out io.Writer, rawPath strin
 		return err
 	}
 
-	// URLPath percent-encodes each path segment (mirrors the web app's
-	// encodeUrl helper) so filenames with '#', '?', '+', spaces, etc. survive
+	// URLPath uses upload.EncodeURL (same as download/cat/rm/upload) so
+	// filenames with '#', '?', '+', spaces, '!*'()', etc. survive
 	// the trip to the backend. ParseFrontendPath already guarantees that
 	// listing the extend root ("drive/Home" or "drive/Home/") yields a
 	// SubPath of "/", so URLPath() naturally ends with '/' there — which is
