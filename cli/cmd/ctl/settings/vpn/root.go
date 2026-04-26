@@ -13,8 +13,11 @@ import (
 // NewVPNCommand returns the `settings vpn` parent. Phase 1 ships the
 // read-only verbs (devices list / routes / public-domain-policy get);
 // Phase 3c1 lands devices rename / delete / tags + route enable /
-// disable + public-domain-policy set; Phase 3c2 will add the ACL +
-// SSH/subroutes toggles.
+// disable + public-domain-policy set; Phase 3c2 wires the SSH and
+// sub-routes ACL toggles. The per-app ACL editor (`vpn acl <app>
+// list/set`) is still TBD because its body shape (proto + dst[]) is
+// richer than a single boolean — once we have a clean flag surface
+// for it we'll add it.
 func NewVPNCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "vpn",
@@ -29,18 +32,20 @@ Subcommands:
   devices delete <device-id>                                (Phase 3)
   devices tags set <device-id> --tag <name>...              (Phase 3)
   routes enable | disable <route-id>                        (Phase 3)
+  ssh status | enable | disable                             (Phase 3)
+  subroutes status | enable | disable                       (Phase 3)
   public-domain-policy get                                  (Phase 1)
   public-domain-policy set --deny-all | --allow-all         (Phase 3)
 
-Subcommands landing in a later Phase 3 slice:
-  ssh status / enable / disable
-  subroutes status / enable / disable
-  acl <app> list / set
+Still TBD:
+  acl <app> list / set    (proto + dst[] shape; needs a clean flag surface)
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(NewDevicesCommand(f))
 	cmd.AddCommand(NewRoutesCommand(f))
+	cmd.AddCommand(NewSSHCommand(f))
+	cmd.AddCommand(NewSubroutesCommand(f))
 	cmd.AddCommand(NewPublicDomainPolicyCommand(f))
 	return cmd
 }
