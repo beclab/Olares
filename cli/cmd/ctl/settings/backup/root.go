@@ -16,21 +16,30 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewBackupCommand returns the `settings backup` parent.
-func NewBackupCommand(_ *cmdutil.Factory) *cobra.Command {
+// NewBackupCommand returns the `settings backup` parent. Phase 1
+// ships the read-only verbs that exercise the BFL backup-server
+// ingress prefix end-to-end; Phase 6 lands the write verbs (CRUD
+// + pause/resume + password set).
+func NewBackupCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "backup",
 		Short: "Backup plans + snapshots + repository password (Settings -> Backup)",
 		Long: `Manage backup plans (BFL backup-server, /apis/backup/v1/plans/backup/...)
 and the repository password (user-service, /api/backup/password/:name).
 
-Subcommands will be added in Phase 6:
-  Phase 1: plans list (read-only sanity check across the BFL prefix)
-  Phase 6: plans list / get / create / update / delete,
-           snapshots list / get / delete,
-           password get / set
+Subcommands:
+  plans list                                              (Phase 1)
+  snapshots list <backup-id>                              (Phase 1)
+
+Subcommands landing in Phase 6:
+  plans get / create / update / delete,
+  plans pause / resume,
+  snapshots get / create / cancel,
+  password get / set
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(NewPlansCommand(f))
+	cmd.AddCommand(NewSnapshotsCommand(f))
 	return cmd
 }
