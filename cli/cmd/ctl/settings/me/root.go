@@ -54,5 +54,6 @@ Subcommands will be added in subsequent phases:
 	cmd.AddCommand(NewCheckUpdateCommand(f))
 	cmd.AddCommand(NewLoginHistoryCommand(f))
 	cmd.AddCommand(NewSSOCommand(f))
+	cmd.AddCommand(NewPasswordCommand(f))
 	return cmd
 }

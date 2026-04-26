@@ -1,7 +1,7 @@
 ---
 name: olares-settings
-version: 0.1.0
-description: "olares-cli settings command tree: profile-based reads of every section the SPA's Settings page exposes (https://docs.olares.com/manual/olares/settings/). Phase 1 surface (read-only): users / appearance / apps / integration / vpn / network / gpu / video / search / backup / restore / advanced + a non-canonical `me` self-service tree (whoami / version / check-update / login-history / sso list). Covers role caching (owner / admin / normal) on the active profile, soft preflight + `profile whoami --refresh` recovery, the `-o table | json` output convention, and the diverse upstream wire formats the CLI normalizes (BFL envelope on /api/*, app-service ListResult on /api/users-v2 + /api/myapps, raw Headscale JSON on /headscale/*, raw upstream JSON on /apis/backup/v1/*, terminusd-proxied envelopes for advanced status / containerd registries / images). Use whenever the user mentions Olares Settings, Settings UI, the SPA Settings page, role / owner / admin / normal, integration accounts, login history, SSO tokens, GPU mode, search index, backup plans, restore plans, containerd registries, or sees errors like 'this command needs role X to ...', 'HTTP 403 while attempting to ...', 'run olares-cli profile whoami --refresh', or wants to know what `olares-cli settings me whoami` / `settings users me` / `profile whoami` actually print."
+version: 0.2.0
+description: "olares-cli settings command tree: profile-based reads of every section the SPA's Settings page exposes (https://docs.olares.com/manual/olares/settings/) plus the Phase 2 low-risk write verbs (me sso revoke, me password set with version-aware MD5+salt; appearance language set; search rebuild + excludes/dirs add+rm; integration accounts add awss3|tencent + accounts delete). Phase 1 surface (read-only): users / appearance / apps / integration / vpn / network / gpu / video / search / backup / restore / advanced + a non-canonical `me` self-service tree (whoami / version / check-update / login-history / sso list). Covers role caching (owner / admin / normal) on the active profile, soft preflight + `profile whoami --refresh` recovery, the `-o table | json` output convention, and the diverse upstream wire formats the CLI normalizes (BFL envelope on /api/*, app-service ListResult on /api/users-v2 + /api/myapps, raw Headscale JSON on /headscale/*, raw upstream JSON on /apis/backup/v1/*, terminusd-proxied envelopes for advanced status / containerd registries / images). Use whenever the user mentions Olares Settings, Settings UI, the SPA Settings page, role / owner / admin / normal, integration accounts, login history, SSO tokens, GPU mode, search index, backup plans, restore plans, containerd registries, password change, or sees errors like 'this command needs role X to ...', 'HTTP 403 while attempting to ...', 'run olares-cli profile whoami --refresh', or wants to know what `olares-cli settings me whoami` / `settings users me` / `profile whoami` actually print."
 metadata:
   requires:
     bins: ["olares-cli"]
@@ -107,7 +107,7 @@ If a future verb is missing from this table, look at the area's `common.go` to c
 
 ## Phase 1 verb cheatsheet
 
-All Phase 1 verbs are **read-only**. Mutating verbs land in Phase 2-6 per the plan; the area `--help` lists which phase each upcoming verb is scheduled for.
+Phase 1 covers the **read-only** surface for every area. The Phase 2 mutating verbs that have already landed (low-risk owner-and-self CRUD) are listed in the next section. Verbs scheduled for Phase 3-6 still print "this verb lands in phase N" in their `--help`; treat them as not yet implemented.
 
 ### `me` — self-service (any authenticated user)
 
@@ -119,7 +119,7 @@ olares-cli settings me version                    # Olares OS version + osBuild 
 olares-cli settings me check-update               # current_version, new_version, is_new
 olares-cli settings me login-history              # last login records (for the active profile only)
 olares-cli settings me login-history --limit 50
-olares-cli settings me sso list                   # SSO tokens with TermiPass binding indicator
+olares-cli settings me sso list                   # SSO tokens (with `ID` column for `me sso revoke`)
 ```
 
 ### `users` — instance roster
@@ -182,11 +182,68 @@ olares-cli settings backup snapshots list <backup-id> --limit 50
 olares-cli settings restore plans list
 ```
 
-## What's NOT in Phase 1 (yet)
+## Phase 2 verb cheatsheet (low-risk owner-and-self CRUD)
 
-Anything that mutates state ships in later phases per [plan.md "Phase 2-6"]:
+Every Phase 2 verb hits the same `<DesktopURL>` ingress over `X-Authorization`; none of them require a JWS-signed body. The endpoints are picked deliberately to mirror the SPA's *self-service* / *owner-only* dialogs that don't carry secrets in their request bodies (the one exception being `me password set`, which hashes locally before sending — see below).
 
-- **Phase 2** — low-risk owner CRUD per area (e.g. `appearance language set`, `search excludes add`, `search dirs add`, `me sso revoke`, `me password set`).
+### `me` — self-service writes
+
+```bash
+# Revoke an SSO token. The ID comes from the new "ID" column on `me sso list`.
+olares-cli settings me sso revoke <sso-id>
+
+# Change the current user's password.
+olares-cli settings me password set                         # interactive (hidden)
+printf '%s\n%s\n' "$CURRENT" "$NEW" |
+  olares-cli settings me password set --passwords-stdin     # automation
+```
+
+`me password set` hashes both passwords with the SPA's `saltedMD5` scheme (`md5(password+"@Olares2025")`) when the target OS reports `>= 1.12.0-0`, otherwise sends the raw password — implemented in [`cli/cmd/ctl/settings/me/passwordhash.go`](cli/cmd/ctl/settings/me/passwordhash.go) (mirrors [`apps/packages/app/src/utils/salted-md5.ts`](apps/packages/app/src/utils/salted-md5.ts) and [`apps/packages/app/src/utils/account.ts`](apps/packages/app/src/utils/account.ts) bit-for-bit, including the dash-prerelease quirk in `compareOlaresVersion`). Raw passwords never leave the machine. **After a successful password change, the existing access token may still work for a while; if a later CLI call returns 401, run `olares-cli profile login --olares-id <olares-id>`.**
+
+### `appearance` — language
+
+```bash
+olares-cli settings appearance language set --value en-US   # POST /api/wallpaper/update/language
+```
+
+The list of supported codes is whatever the SPA's i18n bundle ships; the server is the source of truth and rejects unknown values with a clear message.
+
+### `search` — index control
+
+```bash
+olares-cli settings search rebuild                          # POST /api/search/task/rebuild
+olares-cli settings search excludes add "node_modules" "*.tmp"
+olares-cli settings search excludes rm  "*.tmp"
+olares-cli settings search dirs add /home/alice/Documents
+olares-cli settings search dirs rm  /home/alice/Documents
+```
+
+`excludes add` / `dirs add` go through `PUT .../part`; the `rm` counterparts hit `DELETE .../part`. Both helpers dedupe and trim their inputs before sending so the upstream sees a clean list.
+
+### `integration` — connected accounts
+
+```bash
+olares-cli settings integration accounts add awss3 \
+  --access-key-id     "$AWS_ACCESS_KEY_ID" \
+  --access-key-secret "$AWS_SECRET_ACCESS_KEY" \
+  --endpoint          "https://s3.amazonaws.com" \
+  --bucket            "my-bucket"            # optional
+
+olares-cli settings integration accounts add tencent \
+  --access-key-id     "$TENCENT_SECRET_ID" \
+  --access-key-secret "$TENCENT_SECRET_KEY" \
+  --endpoint          "https://cos.ap-shanghai.myqcloud.com"
+
+olares-cli settings integration accounts delete awss3 my-bucket
+olares-cli settings integration accounts delete tencent          # name-less, single-tenant
+```
+
+The store key is composed as `integration-account:<type>:<name>` (or `integration-account:<type>` when no name is supplied), matching the SPA's `getStoreKey` in [`apps/packages/app/src/stores/settings/integration.ts`](apps/packages/app/src/stores/settings/integration.ts). **Do not paste secret-key values into the agent transcript — pipe them via env vars or shell redirection.**
+
+## What's NOT shipped yet
+
+Anything not listed above is still on the roadmap per [plan.md "Phase 3-6"]:
+
 - **Phase 3** — apps lifecycle / permissions / entrances / domain / policy / auth-level + secrets / env / ports / acl; vpn rename / delete / tags + acl + public-domain-policy set.
 - **Phase 4** — network reverse-proxy / hosts-file / frp / external-network / ssl mutations + advanced env + advanced collect-logs.
 - **Phase 5** — advanced containerd / upgrade; gate reboot / shutdown / ssh-password on JWS key sourcing.
@@ -239,5 +296,7 @@ olares-cli settings integration accounts get awss3 my-bucket -o json
 
 - **Never** echo `<access_token>` or any field returned by `me sso list` into the terminal beyond what the table view already shows. SSO tokens identify a TermiPass-bound device session and should never be logged or pasted into chat.
 - `settings users get <username>` returns the same record the SPA shows on the user detail page; treat its email / olaresId as PII and avoid forwarding it outside the requesting workflow.
-- Mutating verbs are **not** in Phase 1, so any user-visible "this will change X" prompt belongs to Phase 2-6 work — don't fabricate one for read verbs.
+- For Phase 2 writes that take secrets (`integration accounts add awss3|tencent`, `me password set`), **always** read the secret from an env var or stdin pipe — never paste it into the chat or expand it inline in an `olares-cli ...` command line you suggest. Bash history retention is the user's responsibility; the agent should default to `printf '%s\n' "$VAR" | ... --passwords-stdin` style invocations whenever a verb supports it.
+- `me password set` hashes locally; the raw password never leaves the machine. The agent should still avoid logging the input — even hidden-prompted data ends up on screen recordings and accessibility tooling. Never `echo` the result of a hash either: a leaked salted-MD5 is functionally as dangerous as the raw password against this backend.
+- Read-only verbs do **not** carry "this will change X" prompts — only Phase 2+ writes do, and the prompts they do carry come from the upstream server's own response messages. Don't fabricate one for read verbs.
 - The `me whoami --refresh` recovery path is the only authentication-adjacent action this skill should ever recommend. **All** other auth recovery (login expiry, profile import, 2FA) belongs in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
