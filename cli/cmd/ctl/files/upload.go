@@ -2,10 +2,8 @@ package files
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"io"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -144,18 +142,20 @@ func runUpload(
 		return err
 	}
 
-	// Build a dedicated *http.Client for the upload session: same
-	// X-Authorization injection convention as the rest of the CLI, but
-	// without the factory's 30s overall timeout — an 8 MiB chunk on a
-	// slow link can easily exceed that, and we'd rather fail via
-	// context cancellation than via http.Client.Timeout (the latter
-	// truncates the request body mid-flight, which leaves the server
-	// in an inconsistent state).
-	httpClient := newUploadHTTPClient(rp.InsecureSkipVerify)
+	// Use the factory's no-timeout client for the upload session: an
+	// 8 MiB chunk on a slow link can easily exceed the standard 30s
+	// timeout, and we'd rather fail via context cancellation than
+	// via http.Client.Timeout (the latter truncates the request body
+	// mid-flight, which leaves the server in an inconsistent state).
+	// X-Authorization injection + refresh-on-401 are handled by the
+	// factory's refreshingTransport.
+	httpClient, err := f.HTTPClientWithoutTimeout(ctx)
+	if err != nil {
+		return err
+	}
 	client := &upload.Client{
-		HTTPClient:  httpClient,
-		BaseURL:     rp.FilesURL,
-		AccessToken: rp.AccessToken,
+		HTTPClient: httpClient,
+		BaseURL:    rp.FilesURL,
 	}
 
 	node := o.node
@@ -309,28 +309,6 @@ func runUploads(
 	}
 	fmt.Fprintf(out, "done: %d file(s), %s\n", completed, formatBytes(bytesDone))
 	return nil
-}
-
-// newUploadHTTPClient builds a *http.Client suitable for streaming
-// chunks: TLS verification follows the active profile, NO overall
-// Timeout (we rely on context cancellation), and explicit keep-alive +
-// HTTP/2 from http.DefaultTransport.
-//
-// The X-Authorization header is injected per-request inside upload.Client
-// (rather than via a transport wrapper) so the same Client can talk to
-// httptest servers in tests without dragging the access token into the
-// fixture surface.
-func newUploadHTTPClient(insecureSkipVerify bool) *http.Client {
-	base := http.DefaultTransport.(*http.Transport).Clone()
-	if insecureSkipVerify {
-		base.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- explicit profile opt-in
-	}
-	return &http.Client{
-		// Timeout: 0 — no overall request timeout. Big chunks on slow
-		// links would otherwise truncate mid-POST. Cancellation flows
-		// through context (Ctrl-C / parent ctx).
-		Transport: base,
-	}
 }
 
 // pluralYies turns 1 → "y" and any other number → "ies", so the user-

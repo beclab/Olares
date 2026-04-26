@@ -17,9 +17,8 @@ func newTestClient(t *testing.T, h http.Handler) (*Client, *httptest.Server) {
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 	return &Client{
-		HTTPClient:  srv.Client(),
-		BaseURL:     srv.URL,
-		AccessToken: "test-token-XYZ",
+		HTTPClient: srv.Client(),
+		BaseURL:    srv.URL,
 	}, srv
 }
 
@@ -108,20 +107,20 @@ func TestPlan_NoTargets(t *testing.T) {
 }
 
 // TestDeleteBatch_WireShape exercises the actual HTTP DELETE: URL
-// path encoding, JSON body shape, X-Authorization injection, and
-// trailing-slash on the parent.
+// path encoding, JSON body shape, and trailing-slash on the parent.
+// X-Authorization is no longer this client's responsibility — it is
+// injected by the factory's refreshingTransport — so the header is not
+// asserted here.
 func TestDeleteBatch_WireShape(t *testing.T) {
 	var (
 		gotMethod string
 		gotPath   string
-		gotAuth   string
 		gotCType  string
 		gotBody   []byte
 	)
 	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotMethod = r.Method
 		gotPath = r.URL.Path
-		gotAuth = r.Header.Get("X-Authorization")
 		gotCType = r.Header.Get("Content-Type")
 		gotBody, _ = io.ReadAll(r.Body)
 		w.WriteHeader(http.StatusOK)
@@ -140,9 +139,6 @@ func TestDeleteBatch_WireShape(t *testing.T) {
 	}
 	if gotPath != "/api/resources/drive/Home/Documents/" {
 		t.Errorf("Path: got %q", gotPath)
-	}
-	if gotAuth != "test-token-XYZ" {
-		t.Errorf("X-Authorization: got %q", gotAuth)
 	}
 	if !strings.HasPrefix(gotCType, "application/json") {
 		t.Errorf("Content-Type: got %q", gotCType)

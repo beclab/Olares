@@ -14,6 +14,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/credential"
 	"github.com/beclab/Olares/cli/internal/files/rm"
 )
 
@@ -167,11 +168,13 @@ func runRm(
 	if err != nil {
 		return err
 	}
-	httpClient := newUploadHTTPClient(rp.InsecureSkipVerify)
+	httpClient, err := f.HTTPClient(ctx)
+	if err != nil {
+		return err
+	}
 	client := &rm.Client{
-		HTTPClient:  httpClient,
-		BaseURL:     rp.FilesURL,
-		AccessToken: rp.AccessToken,
+		HTTPClient: httpClient,
+		BaseURL:    rp.FilesURL,
 	}
 
 	// Serial DELETE per group. Per-group failures abort the rest:
@@ -258,10 +261,20 @@ func readYesNo(in io.Reader) (bool, error) {
 }
 
 // reformatRmHTTPErr maps rm.HTTPError onto user-friendly messages,
-// same spirit as the download counterpart.
+// same spirit as the download counterpart. Typed credential errors
+// from the refreshing transport are surfaced verbatim — see
+// reformatHTTPErr in download.go for the rationale.
 func reformatRmHTTPErr(err error, olaresID string, g *rm.Group) error {
 	if err == nil {
 		return nil
+	}
+	var inv *credential.ErrTokenInvalidated
+	if errors.As(err, &inv) {
+		return inv
+	}
+	var nli *credential.ErrNotLoggedIn
+	if errors.As(err, &nli) {
+		return nli
 	}
 	var hErr *rm.HTTPError
 	if errors.As(err, &hErr) {

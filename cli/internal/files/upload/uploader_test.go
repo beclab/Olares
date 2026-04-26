@@ -53,12 +53,16 @@ func fixtureFile(t *testing.T, size int64) string {
 
 // recordedChunk captures everything we want to assert about a single
 // chunk POST. Tests inspect a slice of these to verify the wire shape.
+//
+// X-Authorization is no longer captured here: the upload Client itself no
+// longer injects the header (that responsibility moved to the factory's
+// refreshingTransport), so asserting it from a stock httptest *http.Client
+// would always fail.
 type recordedChunk struct {
 	contentRange string
 	contentDisp  string
 	chunkBytes   []byte
 	form         map[string]string
-	xAuthHeader  string
 }
 
 // chunkRecorder is the upload-link target handler used by tests. It
@@ -97,7 +101,6 @@ func (cr *chunkRecorder) record(r *http.Request) (*recordedChunk, error) {
 	rc := recordedChunk{
 		contentRange: r.Header.Get("Content-Range"),
 		contentDisp:  r.Header.Get("Content-Disposition"),
-		xAuthHeader:  r.Header.Get("X-Authorization"),
 		form:         form,
 		chunkBytes:   chunkBytes,
 	}
@@ -170,7 +173,6 @@ func uploadServer(t *testing.T, opts uploadServerOpts) (*httptest.Server, *chunk
 //     all line up with the file size + chunk size
 //   - Content-Range uses INCLUSIVE end-byte semantics (matches
 //     resumejs.ts setHeaders())
-//   - X-Authorization is plumbed through on every chunk
 //   - the file's exact bytes round-trip
 func TestUploadFile_Multichunk(t *testing.T) {
 	const chunkSize = 1024
@@ -179,7 +181,7 @@ func TestUploadFile_Multichunk(t *testing.T) {
 	local := fixtureFile(t, fileSize)
 	srv, recorder := uploadServer(t, uploadServerOpts{})
 
-	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL, AccessToken: "tk"}
+	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 	if err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath:    local,
 		Node:         "n",
@@ -203,9 +205,6 @@ func TestUploadFile_Multichunk(t *testing.T) {
 	wholeFile := readFile(t, local)
 	gotFile := []byte{}
 	for i, ck := range recorder.chunks {
-		if ck.xAuthHeader != "tk" {
-			t.Errorf("chunk %d: X-Authorization = %q", i, ck.xAuthHeader)
-		}
 		if ck.contentRange != expectedRanges[i] {
 			t.Errorf("chunk %d: Content-Range = %q, want %q",
 				i, ck.contentRange, expectedRanges[i])
@@ -262,7 +261,7 @@ func TestUploadFile_ResumesFromServerOffset(t *testing.T) {
 		// (i.e. resumableChunkNumber 2 + 3, 0-based offsets 1 + 2).
 		uploadedBytes: int64(chunkSize + chunkSize/2),
 	})
-	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL, AccessToken: "tk"}
+	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 	if err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath: local, Node: "n",
 		ParentDir: "/drive/Home/", RemoteName: "f.bin", RelativePath: "f.bin",
@@ -295,7 +294,7 @@ func TestUploadFile_ServerHasFullFile(t *testing.T) {
 	fileSize := int64(2 * chunkSize)
 	local := fixtureFile(t, fileSize)
 	srv, recorder := uploadServer(t, uploadServerOpts{uploadedBytes: fileSize})
-	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL, AccessToken: "tk"}
+	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 	if err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath: local, Node: "n",
 		ParentDir: "/drive/Home/", RemoteName: "f.bin", RelativePath: "f.bin",
@@ -329,7 +328,7 @@ func TestUploadFile_Retries(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		},
 	})
-	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL, AccessToken: "tk"}
+	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 	if err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath: local, Node: "n",
 		ParentDir: "/drive/Home/", RemoteName: "f.bin", RelativePath: "f.bin",
@@ -358,7 +357,7 @@ func TestUploadFile_PermanentError(t *testing.T) {
 			http.Error(w, "bad", http.StatusBadRequest)
 		},
 	})
-	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL, AccessToken: "tk"}
+	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 	err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath: local, Node: "n",
 		ParentDir: "/drive/Home/", RemoteName: "f.bin", RelativePath: "f.bin",
@@ -413,7 +412,7 @@ func TestUploadFile_EmptyFile(t *testing.T) {
 	})
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
-	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL, AccessToken: "tk"}
+	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 	if err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath: local, Node: "n",
 		ParentDir: "/drive/Home/Docs/", RemoteName: "empty.bin", RelativePath: "empty.bin",
@@ -437,7 +436,7 @@ func TestUploadFile_FolderRelativePath(t *testing.T) {
 	const chunkSize = 256
 	local := fixtureFile(t, chunkSize)
 	srv, recorder := uploadServer(t, uploadServerOpts{})
-	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL, AccessToken: "tk"}
+	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 	if err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath:    local,
 		Node:         "n",
@@ -471,7 +470,7 @@ func TestUploadFile_ContextCancel(t *testing.T) {
 			http.Error(w, "transient", http.StatusBadGateway)
 		},
 	})
-	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL, AccessToken: "tk"}
+	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		time.Sleep(50 * time.Millisecond)

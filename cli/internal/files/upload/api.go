@@ -28,13 +28,15 @@ import (
 // command. It is cheap to construct; reuse one per `files upload`
 // invocation.
 //
-// AccessToken is sent as `X-Authorization` (not `Authorization: Bearer`),
-// because Olares' edge stack only forwards the X-Authorization header to
-// per-user services. See pkg/cmdutil/factory.go for the full rationale.
+// HTTPClient is expected to be a factory-provided client whose
+// refreshingTransport injects `X-Authorization` (not `Authorization:
+// Bearer`, see pkg/cmdutil/factory.go for why) and transparently refreshes
+// the token on 401/403 — except for chunk-streaming requests whose body
+// is a *os.File (req.GetBody == nil), where retry is impossible and the
+// 401 falls through to the caller.
 type Client struct {
-	HTTPClient  *http.Client
-	BaseURL     string // FilesURL, e.g. https://files.alice.olares.com
-	AccessToken string
+	HTTPClient *http.Client
+	BaseURL    string // FilesURL, e.g. https://files.alice.olares.com
 }
 
 // Node is the projection of files-backend's `FileNode` that we actually
@@ -262,9 +264,6 @@ func (c *Client) do(
 	req, err := http.NewRequestWithContext(ctx, method, endpoint, body)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
-	}
-	if c.AccessToken != "" {
-		req.Header.Set("X-Authorization", c.AccessToken)
 	}
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)

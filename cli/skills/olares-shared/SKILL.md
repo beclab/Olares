@@ -1,7 +1,7 @@
 ---
 name: olares-shared
-version: 1.0.0
-description: "Shared olares-cli foundation: profile model, first-time login (profile login with password + TOTP), bootstrapping a profile from an existing refresh token (profile import), switching/listing/removing profiles, the global --profile flag, where access/refresh tokens live in the OS keychain, and how to recover from auth errors (HTTP 401/403, token expired, token invalidated, two-factor authentication required). Use whenever the user is configuring olares-cli for the first time, logging in or importing credentials, switching/listing/removing profiles, or seeing errors like 'server rejected the access token', 'already authenticated', or 'two-factor authentication required'; also use when the user asks about refresh tokens, the keychain, olaresId, or profile management."
+version: 1.1.0
+description: "Shared olares-cli foundation: profile model, first-time login (profile login with password + TOTP), bootstrapping a profile from an existing refresh token (profile import), switching/listing/removing profiles, the global --profile flag, where access/refresh tokens live in the OS keychain, automatic access_token refresh via /api/refresh (transparent reactive retry on 401/403; pro-active JWT-exp refresh for streaming uploads; cross-goroutine + cross-process deduplication via flock), and how to recover from auth errors (HTTP 401/403, refresh token invalidated, not logged in, two-factor authentication required). Use whenever the user is configuring olares-cli for the first time, logging in or importing credentials, switching/listing/removing profiles, asking how token refresh works, scripting parallel olares-cli invocations, or seeing errors like 'server rejected the access token', 'refresh token for X became invalid', 'no access token for X', 'already authenticated', or 'two-factor authentication required'; also use when the user asks about refresh tokens, the keychain, olaresId, or profile management."
 metadata:
   requires:
     bins: ["olares-cli"]
@@ -171,11 +171,52 @@ token still valid ──▶│ Reject; tell the user to run profile remove <id> 
 
 Logic lives in [`cmd/ctl/profile/credentials.go`](cli/cmd/ctl/profile/credentials.go) `ensureProfileWritable`. If a script needs unconditional overwrite, it MUST `profile remove` first and then `profile login` / `profile import`.
 
+## Automatic token refresh
+
+**The CLI rotates expired access_tokens transparently.** Users do NOT need to run `profile login` just because their access_token aged out — only when the *refresh_token* itself becomes invalid.
+
+The refresh logic lives in [`cli/pkg/cmdutil/factory.go`](cli/pkg/cmdutil/factory.go) (`refreshingTransport`) and [`cli/pkg/credential/refresher.go`](cli/pkg/credential/refresher.go). Every `*http.Client` the Factory hands out has it wired in.
+
+### Two trigger paths
+
+| Trigger | Applies to | Behavior |
+|---------|------------|----------|
+| **Reactive (401/403 + retry)** | Replayable bodies — every JSON / `files cat` / `files download` / `files rm` / `market` JSON verb | Send with current token. On 401/403, `/api/refresh`, retry the same request once with the new token. One extra round-trip in the rare expiry case; zero overhead in steady state. |
+| **Pro-active (JWT exp + skew)** | Non-replayable bodies — `files upload` chunks (`*os.File`) | Decode the access_token's JWT exp before sending. If within 60s of expiry (or already past), `/api/refresh` first, send with the new token. Required because once a streaming body is consumed by the first send we can't replay it on a 401. |
+
+The pro-active skew is hardcoded at 60s in `cli/pkg/cmdutil/factory.go` (`preflightSkew`) — comfortably absorbs client↔server clock drift plus the time from local decode to the request landing on the server. Tokens issued without an `exp` claim, or values that don't decode as a JWT at all, skip the pre-flight gracefully and fall back to the reactive path.
+
+### Concurrency
+
+Across goroutines AND across concurrent `olares-cli` processes, **`/api/refresh` is hit at most once per stale token**:
+
+1. Process-wide `sync.Mutex` — losers wait, then read whatever the winner persisted.
+2. Compare-after-Get against the keychain — short-circuits when a sibling already rotated the token.
+3. On-disk `flock` under `<config-dir>/locks/<sanitized-olaresId>.refresh.lock` — serializes across processes; bounded by a 30s acquire timeout so a stuck peer can't hang the CLI.
+4. Re-check inside the flock — collapses any final race that snuck in between the in-process and on-disk locks.
+
+For most users this is invisible. It matters when you script multiple `olares-cli` invocations in parallel: they will not stampede `/api/refresh`.
+
+### When refresh itself fails
+
+| Outcome | What the user sees | Fix |
+|---------|---------------------|-----|
+| `/api/refresh` returns 200 + new tokens | (silent — request retried, command succeeds) | — |
+| `/api/refresh` returns 401/403 (refresh_token revoked / expired / rotated by another login) | `refresh token for <id> became invalid at <ts>; please run: olares-cli profile login --olares-id <id>` (typed `*ErrTokenInvalidated`) | `olares-cli profile login --olares-id <id>` |
+| No token in keychain at all | `no access token for <id>; run: olares-cli profile login --olares-id <id>` (typed `*ErrNotLoggedIn`) | `olares-cli profile login` (or `profile import`) |
+| `/api/refresh` returns 5xx / network error | Surfaced verbatim from the transport | Retry the command — the grant itself is still valid |
+
+The keychain entry is stamped `InvalidatedAt` on the 401 path so subsequent commands skip the network round-trip and go straight to the CTA. `profile list` shows these as `invalidated`.
+
+> **Do not implement custom retry/backoff loops on top of these errors.** The transport already handles the recoverable cases; once you see `ErrTokenInvalidated` or `ErrNotLoggedIn`, only `profile login` / `profile import` will help.
+
 ## Auth error recovery table
 
 | Error message (excerpt) | Meaning | Fix |
 |-------------------------|---------|-----|
-| `server rejected the access token (HTTP 401)` / `(HTTP 403)` | The current profile's access_token was rejected (expired, revoked, password rotated, ...) | `olares-cli profile login --olares-id <id>` |
+| `refresh token for <id> became invalid at <ts>` | `/api/refresh` itself returned 401/403 — the grant is dead | `olares-cli profile login --olares-id <id>` |
+| `no access token for <id>` | Profile selected but keychain has no entry | `olares-cli profile login` or `profile import` |
+| `server rejected the access token (HTTP 401)` / `(HTTP 403)` | After auto-refresh the server still rejects (rare; usually a server-side state drift) | `olares-cli profile login --olares-id <id>` |
 | `--olares-id is required` | login / import was invoked without olaresId | Add `--olares-id <id>` |
 | `already authenticated for <id> (expires in ...)` | A still-valid token exists for this olaresId | `olares-cli profile remove <id>` and re-run login / import |
 | `a token is already stored for <id> but its expiry can't be determined client-side` | Token present but JWT carries no exp claim, so we conservatively reject | Same: `profile remove <id>` and re-run |
@@ -183,7 +224,7 @@ Logic lives in [`cmd/ctl/profile/credentials.go`](cli/cmd/ctl/profile/credential
 | `password is empty` / `TOTP code is empty` | stdin / TTY returned an empty string | Check for premature EOF or an empty pipe |
 | `profile <name> not found` | `profile use` / `profile remove` referenced an unknown profile | `profile list` to see the actual names |
 
-> **Do not silently retry auth errors.** 401/403 / `already authenticated` are deterministic — follow the table; blind retries make the situation worse.
+> **Do not silently retry auth errors.** 401/403 after auto-refresh and `already authenticated` are deterministic — follow the table; blind retries make the situation worse.
 
 ## dev / internal flags
 

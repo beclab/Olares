@@ -1,6 +1,6 @@
 ---
 name: olares-files
-version: 1.0.0
+version: 1.1.0
 description: "olares-cli files command tree: list (ls), upload, download, cat, and rm against the per-user files-backend (drive/Home, drive/Data, sync, cache, external, awss3, dropbox, google, tencent, share). Covers the 3-segment frontend path schema (<fileType>/<extend>/<subPath>), resumable chunked upload (Drive v2 protocol), Range-based resumable download, recursive directory transfer with errgroup parallelism, batch DELETE wire shape, and two server-side quirks the user MUST know about (POST mkdir auto-renames existing dirs to 'Foo (1)'; GET single-file resource returns HTTP 500). Use whenever the user mentions files / drive / Home / Data / sync / cache, uploading or downloading files, listing a remote directory, deleting remote files, cat-ting a remote file, resumable transfers, /api/resources, /api/raw, frontend path, or sees errors like 'Documents (1)' appearing on the server."
 metadata:
   requires:
@@ -76,7 +76,20 @@ If the user reports `HTTP 500` against `/api/resources/.../<filename>` with no t
 
 ## Authentication transport
 
-Every files API call carries `X-Authorization: <access_token>` as a header (NOT the standard `Authorization: Bearer ...`). The Factory injects this automatically; see [`cli/pkg/cmdutil/factory.go`](cli/pkg/cmdutil/factory.go). Do not try to call the backend via `curl` with a Bearer token — that header shape is not what the per-user files-backend expects and the request will fail.
+Every files API call carries `X-Authorization: <access_token>` as a header (NOT the standard `Authorization: Bearer ...`). The Factory's `refreshingTransport` injects this automatically; see [`cli/pkg/cmdutil/factory.go`](cli/pkg/cmdutil/factory.go). Do not try to call the backend via `curl` with a Bearer token — that header shape is not what the per-user files-backend expects and the request will fail.
+
+The transport **auto-refreshes expired tokens transparently** through two paths (both detailed in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) "Automatic token refresh"):
+
+| Verb(s) | Body shape | Refresh path |
+|---------|------------|--------------|
+| `ls`, `cat`, `download`, `rm` | No body or `*bytes.Reader`/`*bytes.Buffer` (replayable) | **Reactive** — send with current token; on 401/403 call `/api/refresh` and retry once with the new token. |
+| `upload` (chunk POST) | `*os.File` slice (non-replayable streaming body) | **Pro-active** — decode the JWT's `exp` before each chunk; if within 60s of expiry, refresh BEFORE handing the body to the transport. |
+
+The pro-active path on `upload` exists because once a `*os.File` chunk is consumed by the first send, we can't replay it on a 401 — the resume probe would re-pull from the server-known offset on the next run, but the in-flight chunk would already have failed the user's command. Pre-flight rotation collapses that into a silent rotate-and-continue, even when `--parallel N>1` has multiple chunks racing the same expiry window (the `Refresher`'s in-process mutex + cross-process flock guarantee a single `/api/refresh` hit per stale token).
+
+Stat / Range probes inside `download` and `cat` use the reactive path normally — they're cheap GETs with no body.
+
+When the refresh leg itself fails (`/api/refresh` rejects the refresh_token), the typed `*credential.ErrTokenInvalidated` propagates through `reformatHTTPErr` / `reformatRmHTTPErr` so the user sees the canonical "run profile login" CTA directly, without a `Get "https://...":` URL prefix. Recovery rules live in `olares-shared`.
 
 ## Command cheatsheet (5 verbs)
 

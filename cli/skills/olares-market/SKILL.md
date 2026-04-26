@@ -1,6 +1,6 @@
 ---
 name: olares-market
-version: 1.0.0
+version: 1.1.0
 description: "olares-cli market command tree against the per-user Market app-store v2 API: list / get / categories for catalog browsing; install / uninstall / upgrade / clone / cancel / stop / resume for lifecycle; status for runtime state; upload / delete for local chart sources (cli / upload / studio); --watch / --watch-timeout / --watch-interval to block until terminal state. Covers source resolution (market.olares catalog vs local sources), the install/upgrade/uninstall/stop/resume/cancel state machine, OpType gating for race-safe watching, the op-agnostic status --watch recovery path, and JSON shape additions (finalState/finalOpType). Use whenever the user mentions market / app store / install / upgrade / uninstall / clone / stop / resume / cancel / status / upload chart / app state / running / installFailed / --watch, asks 'is firefox installed yet', or sees errors like 'app X is not installed', 'watch timed out', 'watch canceled by user', '--watch requires an app name'."
 metadata:
   requires:
@@ -59,13 +59,16 @@ The fix lives in [`cli/cmd/ctl/market/watch.go`](cli/cmd/ctl/market/watch.go) (`
 
 ## Authentication transport
 
-Every request goes through the factory-injected `*http.Client` and uses the resolved profile from `cmdutil.Factory`. There is no kubeconfig dependency.
+Every request goes through a factory-injected `*http.Client` whose `RoundTripper` (a `refreshingTransport` — see [`cli/pkg/cmdutil/factory.go`](cli/pkg/cmdutil/factory.go)) **injects `X-Authorization` and auto-rotates expired tokens transparently**. The `MarketClient` itself is purely an HTTP wrapper — it never sees the access_token.
 
 - Base URL: `<rp.MarketURL>/app-store/api/v2` — built in [`cli/cmd/ctl/market/client.go`](cli/cmd/ctl/market/client.go) (`NewMarketClient` / `apiPrefix`).
-- Auth header: `X-Authorization: <access_token>` (NOT `Authorization: Bearer …`). Cite [`cli/cmd/ctl/market/client.go`](cli/cmd/ctl/market/client.go) (`do` / `doStream`).
+- Auth header: `X-Authorization: <access_token>` (NOT `Authorization: Bearer …`). The transport handles header injection; the client code does not call `req.Header.Set("X-Authorization", …)` anywhere.
 - `MarketURL` is derived from the Olares ID (`https://market.<localPrefix><terminusName>`) and surfaced through [`cli/pkg/credential/types.go`](cli/pkg/credential/types.go) (`ResolvedProfile.MarketURL`).
-- For multipart chart uploads the CLI builds a separate, no-timeout client (`newMarketUploadHTTPClient`) so large `.tgz` pushes are not killed by the default request timeout.
-- 401 / 403 are reformatted into a single human message via `reformatMarketAuthErr`. **Recovery is not handled here — defer to [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).**
+- Two clients in `MarketClient`: `httpClient` (30s timeout, JSON verbs) and `uploadClient` (no timeout, multipart chart pushes). Both share the SAME `refreshingTransport` instance via the Factory, so a refresh triggered on one is immediately visible on the other.
+- 401/403 reaches `executeRequest` only when the transport already auto-refreshed and STILL got rejected (consistent server-side rejection); it's reformatted via `reformatMarketAuthErr`.
+- When `/api/refresh` itself fails, `executeRequest` surfaces the typed `*credential.ErrTokenInvalidated` / `*credential.ErrNotLoggedIn` directly so the user sees the canonical "run profile login" CTA without `request failed: Get "https://...":` noise. **Recovery rules → [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) "Automatic token refresh".**
+
+> All `market` verbs use replayable request bodies (JSON in `*bytes.Reader`, multipart in `*bytes.Buffer`), so they all benefit from the transport's reactive 401-retry path. There is no streaming-upload edge case in the market tree — chart pushes are fully buffered before the request goes out.
 
 ## Command cheatsheet
 

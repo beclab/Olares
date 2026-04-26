@@ -260,9 +260,6 @@ func (c *Client) attemptDownload(
 	if err != nil {
 		return 0, fmt.Errorf("build request: %w", err)
 	}
-	if c.AccessToken != "" {
-		req.Header.Set("X-Authorization", c.AccessToken)
-	}
 	if mode == writeResume && localSize > 0 {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", localSize))
 	}
@@ -472,9 +469,6 @@ func (c *Client) StreamRaw(ctx context.Context, plainPath string, w io.Writer) (
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return 0, fmt.Errorf("build request: %w", err)
-	}
-	if c.AccessToken != "" {
-		req.Header.Set("X-Authorization", c.AccessToken)
 	}
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {

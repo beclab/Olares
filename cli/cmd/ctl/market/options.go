@@ -133,8 +133,9 @@ func (o *MarketOptions) addWatchFlags(cmd *cobra.Command) {
 }
 
 // prepare resolves the active profile and returns a ready-to-use MarketClient
-// pointed at <MarketURL>/app-store/api/v2. Auth is handled transparently by
-// the Factory's authTransport (X-Authorization header injection).
+// pointed at <MarketURL>/app-store/api/v2. Auth (X-Authorization injection +
+// refresh-on-401 retry) is handled transparently by the Factory's
+// refreshingTransport.
 //
 // Background context is fine here: ResolveProfile reads from the local
 // credential store and HTTPClient builds the http.Client lazily; neither is a
@@ -154,7 +155,11 @@ func (o *MarketOptions) prepare() (*MarketClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewMarketClient(hc, rp, strings.TrimSpace(o.Source)), nil
+	uploadHC, err := o.factory.HTTPClientWithoutTimeout(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return NewMarketClient(hc, uploadHC, rp, strings.TrimSpace(o.Source)), nil
 }
 
 func (o *MarketOptions) failOp(op, app string, err error) error {

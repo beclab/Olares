@@ -3,8 +3,8 @@ package market
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -31,40 +31,45 @@ type APIResponse struct {
 // MarketClient talks to the per-user app-store v2 API at
 // `<MarketURL>/app-store/api/v2`. It is the moral counterpart of `files`'s
 // `download.Client`: a thin HTTP wrapper that delegates auth to the caller's
-// http.Client (Factory's authTransport injects `X-Authorization`) and
-// otherwise just maps Go method calls to JSON requests.
+// http.Client (Factory's refreshingTransport injects `X-Authorization` and
+// transparently refreshes on 401/403) and otherwise just maps Go method
+// calls to JSON requests.
 //
 // Two HTTP clients are stored:
-//   - httpClient comes from cmdutil.Factory and inherits the 30s overall
-//     timeout + authTransport injection. Used for short JSON requests.
-//   - For multipart chart uploads we build a per-call client without an
-//     overall timeout (see newMarketUploadHTTPClient) and inject the access
-//     token manually, mirroring files/upload.go's `newUploadHTTPClient`.
+//   - httpClient is the factory's standard 30s-timeout client; used for
+//     short JSON requests.
+//   - uploadClient is the factory's no-timeout client for multipart chart
+//     uploads. Both share the same refreshingTransport instance under the
+//     hood, so a refresh triggered through one is immediately visible to
+//     the other.
 type MarketClient struct {
-	httpClient *http.Client
-	baseURL    string
-	source     string
+	httpClient   *http.Client
+	uploadClient *http.Client
+	baseURL      string
+	source       string
 
-	// Identity bits captured from the resolved profile, used by:
-	//   - OperationResult.User (for diagnostics / scripting),
-	//   - upload helper to build the long-timeout client + X-Authorization.
-	olaresID           string
-	accessToken        string
-	insecureSkipVerify bool
+	// olaresID is captured for OperationResult.User (diagnostics /
+	// scripting) and for reformatting 401/403 messages with the user's
+	// own ID in the CTA.
+	olaresID string
 }
 
-// NewMarketClient builds a MarketClient from a factory-provided http.Client
-// (already wired with X-Authorization injection) and a resolved profile.
-// The base URL is `<rp.MarketURL>/app-store/api/v2`.
-func NewMarketClient(hc *http.Client, rp *credential.ResolvedProfile, source string) *MarketClient {
+// NewMarketClient builds a MarketClient from factory-provided http.Clients
+// (both already wired with refreshingTransport so X-Authorization injection
+// + refresh-on-401 happen transparently) and a resolved profile. The base
+// URL is `<rp.MarketURL>/app-store/api/v2`.
+//
+// hc is the standard timed client used for JSON requests; uploadHC is the
+// no-timeout client used for multipart chart uploads. Pass the same client
+// for both if streaming uploads aren't expected.
+func NewMarketClient(hc, uploadHC *http.Client, rp *credential.ResolvedProfile, source string) *MarketClient {
 	base := strings.TrimRight(rp.MarketURL, "/") + apiPrefix
 	return &MarketClient{
-		httpClient:         hc,
-		baseURL:            base,
-		source:             source,
-		olaresID:           rp.OlaresID,
-		accessToken:        rp.AccessToken,
-		insecureSkipVerify: rp.InsecureSkipVerify,
+		httpClient:   hc,
+		uploadClient: uploadHC,
+		baseURL:      base,
+		source:       source,
+		olaresID:     rp.OlaresID,
 	}
 }
 
@@ -114,30 +119,32 @@ func (c *MarketClient) doMultipart(ctx context.Context, path, filename string, d
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("Accept", "application/json")
-	// authTransport on c.httpClient also injects X-Authorization, but we use
-	// the dedicated upload client (no overall timeout) and add the header
-	// here ourselves — same pattern as files/upload.go.
-	if c.accessToken != "" {
-		req.Header.Set("X-Authorization", c.accessToken)
-	}
-
-	return c.executeRequest(newMarketUploadHTTPClient(c.insecureSkipVerify), req)
-}
-
-// newMarketUploadHTTPClient is the sibling of files/upload.go's
-// newUploadHTTPClient: same TLS knob, no overall Timeout (we rely on context
-// cancellation), no authTransport (the caller sets X-Authorization).
-func newMarketUploadHTTPClient(insecureSkipVerify bool) *http.Client {
-	base := http.DefaultTransport.(*http.Transport).Clone()
-	if insecureSkipVerify {
-		base.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- explicit profile opt-in
-	}
-	return &http.Client{Transport: base}
+	// X-Authorization is injected by the factory's refreshingTransport;
+	// we just pick the no-timeout client so large pushes aren't killed
+	// by the default 30s deadline. The body is a *bytes.Buffer so
+	// http.NewRequest sets GetBody automatically — refresh+retry on 401
+	// works here.
+	return c.executeRequest(c.uploadClient, req)
 }
 
 func (c *MarketClient) executeRequest(hc *http.Client, req *http.Request) (*APIResponse, error) {
 	resp, err := hc.Do(req)
 	if err != nil {
+		// The factory's refreshingTransport returns a typed
+		// credential error when /api/refresh itself fails (the grant
+		// is dead, or no token is stored at all). http.Client wraps
+		// it inside *url.Error, but errors.As walks the Unwrap chain
+		// — surface the typed error directly so the caller sees the
+		// canonical "run profile login" CTA instead of
+		// `request failed: Get "https://...": refresh token for ...`.
+		var inv *credential.ErrTokenInvalidated
+		if errors.As(err, &inv) {
+			return nil, inv
+		}
+		var nli *credential.ErrNotLoggedIn
+		if errors.As(err, &nli) {
+			return nil, nli
+		}
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
@@ -147,11 +154,14 @@ func (c *MarketClient) executeRequest(hc *http.Client, req *http.Request) (*APIR
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	// 401/403 are reformatted with the standard `profile login` CTA so users
-	// hit the same wording they get from `files ls`/`files cat` (see
-	// reformatMarketAuthErr). The body may not be JSON (the edge proxy can
-	// short-circuit to a plaintext page), so the JSON parse below is best-
-	// effort.
+	// 401/403 reaches us only when the factory's refreshingTransport
+	// already attempted a refresh+retry and STILL got rejected (the
+	// server is consistently saying no — usually a server-side state
+	// drift the user can't recover from). Reformat with the standard
+	// `profile login` CTA so users hit the same wording they get from
+	// `files ls`/`files cat`. The body may not be JSON (the edge proxy
+	// can short-circuit to a plaintext page), so the JSON parse below
+	// is best-effort.
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return nil, reformatMarketAuthErr(resp.StatusCode, respBody, c.olaresID)
 	}
