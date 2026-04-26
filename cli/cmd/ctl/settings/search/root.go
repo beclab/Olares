@@ -10,9 +10,9 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewSearchCommand returns the `settings search` parent. Phase 1 ships
-// the read-only verbs (status / excludes list / dirs list); Phase 2
-// will add rebuild + add/rm verbs for excludes/dirs.
+// NewSearchCommand returns the `settings search` parent. Phase 1 shipped
+// the read-only verbs (status / excludes list / dirs list); Phase 2 adds
+// rebuild + add/rm verbs for excludes/dirs.
 func NewSearchCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "search",
@@ -21,13 +21,13 @@ func NewSearchCommand(f *cmdutil.Factory) *cobra.Command {
 
 Subcommands:
   status                                                  (Phase 1)
+  rebuild                                                 (Phase 2)
   excludes list                                           (Phase 1)
+  excludes add <pattern>...                               (Phase 2)
+  excludes rm  <pattern>...                               (Phase 2)
   dirs list                                               (Phase 1)
-
-Subcommands landing in Phase 2:
-  rebuild
-  excludes add <pattern>..., excludes rm <pattern>...
-  dirs add <path>..., dirs rm <path>...
+  dirs add  <path>...                                     (Phase 2)
+  dirs rm   <path>...                                     (Phase 2)
 
 Streaming search proxies stay out of scope — they are interactive,
 chat-style flows that don't fit a one-shot CLI verb.
@@ -35,6 +35,7 @@ chat-style flows that don't fit a one-shot CLI verb.
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(NewStatusCommand(f))
+	cmd.AddCommand(NewRebuildCommand(f))
 	cmd.AddCommand(NewExcludesCommand(f))
 	cmd.AddCommand(NewDirsCommand(f))
 	return cmd
