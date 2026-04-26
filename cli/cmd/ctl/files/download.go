@@ -15,6 +15,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/credential"
 	"github.com/beclab/Olares/cli/internal/files/download"
 )
 
@@ -136,11 +137,13 @@ func runDownload(
 		return err
 	}
 
-	httpClient := newUploadHTTPClient(rp.InsecureSkipVerify)
+	httpClient, err := f.HTTPClientWithoutTimeout(ctx)
+	if err != nil {
+		return err
+	}
 	client := &download.Client{
-		HTTPClient:  httpClient,
-		BaseURL:     rp.FilesURL,
-		AccessToken: rp.AccessToken,
+		HTTPClient: httpClient,
+		BaseURL:    rp.FilesURL,
 	}
 
 	// Stat first so we (a) reject auth errors / 404s with a clean
@@ -343,9 +346,24 @@ func resolveLocalFile(localArg, remoteBase string) (string, error) {
 // share the helper directly because the download package's HTTPError
 // type isn't compatible with the upload package's, and untyped
 // duck-typing here would be more confusing than the small duplication.
+//
+// The factory's refreshingTransport may return a typed credential
+// error (ErrTokenInvalidated / ErrNotLoggedIn) wrapped inside
+// *url.Error when /api/refresh itself fails. We surface those
+// directly — their Error() already carries the canonical CTA, and
+// re-wrapping with our own "server rejected" wording would just bury
+// the real diagnosis under a layer of "Get https://...:".
 func reformatHTTPErr(err error, olaresID, op, target string) error {
 	if err == nil {
 		return nil
+	}
+	var inv *credential.ErrTokenInvalidated
+	if errors.As(err, &inv) {
+		return inv
+	}
+	var nli *credential.ErrNotLoggedIn
+	if errors.As(err, &nli) {
+		return nli
 	}
 	var hErr *download.HTTPError
 	if errors.As(err, &hErr) {

@@ -70,11 +70,13 @@ func runCat(ctx context.Context, f *cmdutil.Factory, out io.Writer, remoteArg st
 		return err
 	}
 
-	httpClient := newUploadHTTPClient(rp.InsecureSkipVerify)
+	httpClient, err := f.HTTPClientWithoutTimeout(ctx)
+	if err != nil {
+		return err
+	}
 	client := &download.Client{
-		HTTPClient:  httpClient,
-		BaseURL:     rp.FilesURL,
-		AccessToken: rp.AccessToken,
+		HTTPClient: httpClient,
+		BaseURL:    rp.FilesURL,
 	}
 
 	plain := strings.TrimSuffix(fp.String(), "/")

@@ -330,7 +330,7 @@ func newTestMarketClient(t *testing.T, baseURL string) *MarketClient {
 		AccessToken: "test-token",
 		MarketURL:   baseURL,
 	}
-	return NewMarketClient(http.DefaultClient, rp, "market.olares")
+	return NewMarketClient(http.DefaultClient, http.DefaultClient, rp, "market.olares")
 }
 
 // drain swallows any output runWithWatch / waitForTerminal would emit so
