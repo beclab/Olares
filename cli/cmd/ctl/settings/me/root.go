@@ -50,5 +50,9 @@ Subcommands will be added in subsequent phases:
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(NewWhoamiCommand(f))
+	cmd.AddCommand(NewVersionCommand(f))
+	cmd.AddCommand(NewCheckUpdateCommand(f))
+	cmd.AddCommand(NewLoginHistoryCommand(f))
+	cmd.AddCommand(NewSSOCommand(f))
 	return cmd
 }
