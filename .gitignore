@@ -45,5 +45,6 @@ cli/olares-cli*
 
 framework/app-service/bin
 
-/files/
-/market/
+files/
+market/
+user-service/
