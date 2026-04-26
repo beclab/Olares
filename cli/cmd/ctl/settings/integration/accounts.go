@@ -32,23 +32,26 @@ func NewAccountsCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "accounts",
 		Short: "external integration accounts (S3 / Dropbox / Drive / Tencent / Space)",
-		Long: `Inspect external integration accounts that Olares uses to authenticate
-against third-party storage / identity providers.
+		Long: `Inspect and manage external integration accounts that Olares uses to
+authenticate against third-party storage / identity providers.
 
 Subcommands:
-  list                       list all integration accounts
-  get <type> [name]          show a single account (full data)
+  list                                                  (Phase 1)
+  get <type> [name]                                     (Phase 1)
+  add <type> [flags]                                    (Phase 2)
+  delete <type> [name]                                  (Phase 2)
 
-The cookie store and Olares-Space NFT cloud-binding flows stay in the
+The "add" verb covers the *direct* object-storage flows (awss3, tencent)
+that don't need an OAuth/wallet redirect. The cookie store, OAuth flows
+(Google Drive, Dropbox), and Olares-Space NFT cloud-binding stay in the
 SPA — they need browser- or wallet-bound state that has no CLI surface.
-
-Subcommands landing in Phase 2:
-  create, delete
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newAccountsListCommand(f))
 	cmd.AddCommand(newAccountsGetCommand(f))
+	cmd.AddCommand(newAccountsAddCommand(f))
+	cmd.AddCommand(newAccountsDeleteCommand(f))
 	return cmd
 }
 
