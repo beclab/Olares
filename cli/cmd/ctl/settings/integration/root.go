@@ -12,20 +12,25 @@ import (
 )
 
 // NewIntegrationCommand returns the `settings integration` parent.
-func NewIntegrationCommand(_ *cmdutil.Factory) *cobra.Command {
+// Phase 1 ships read-only verbs; Phase 2 adds create/delete.
+func NewIntegrationCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "integration",
 		Short: "External integration accounts (Settings -> Integration)",
 		Long: `Manage integration accounts (S3 / Dropbox / Google Drive / Tencent COS / ...).
 
-Subcommands will be added in subsequent phases:
-  Phase 1: accounts list, accounts get
-  Phase 2: accounts create, accounts delete
+Subcommands:
+  accounts list                                           (Phase 1)
+  accounts get <type> [name]                              (Phase 1)
+
+Subcommands landing in Phase 2:
+  accounts create, accounts delete
 
 Cookie store and Olares-Space / NFT cloud-binding flows stay in the SPA —
 they are browser- and wallet-bound by design.
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(NewAccountsCommand(f))
 	return cmd
 }

@@ -10,16 +10,19 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewGPUCommand returns the `settings gpu` parent.
-func NewGPUCommand(_ *cmdutil.Factory) *cobra.Command {
+// NewGPUCommand returns the `settings gpu` parent. Phase 1 ships
+// `list`; Phase 2 adds the mutating verbs.
+func NewGPUCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "gpu",
 		Short: "GPU mode + per-app GPU assignment (Settings -> GPU)",
 		Long: `Inspect GPU device list, mode, and per-app assignment.
 
-Subcommands will be added in subsequent phases:
-  Phase 1: list
-  Phase 2: mode, assign, unassign, bulk-assign
+Subcommands:
+  list                                                    (Phase 1)
+
+Subcommands landing in Phase 2:
+  mode set, assign, unassign, bulk-assign
 
 Note: this differs from the top-level "olares-cli gpu" command — that one
 talks to the cluster via kubeconfig. "settings gpu" is the profile-based
@@ -27,5 +30,6 @@ edge-API surface that mirrors the SPA's Settings -> GPU page.
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(NewListCommand(f))
 	return cmd
 }

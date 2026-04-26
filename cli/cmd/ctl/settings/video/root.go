@@ -9,19 +9,23 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewVideoCommand returns the `settings video` parent.
-func NewVideoCommand(_ *cmdutil.Factory) *cobra.Command {
+// NewVideoCommand returns the `settings video` parent. Phase 1 ships
+// `config get`; Phase 2 will add `config set`.
+func NewVideoCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "video",
 		Short: "Video preferences (Settings -> Video)",
 		Long: `Read and update video playback preferences (single config blob exposed by
 user-service at /api/files/video/config).
 
-Subcommands will be added in subsequent phases:
-  Phase 1: config get
-  Phase 2: config set
+Subcommands:
+  config get                                              (Phase 1)
+
+Subcommands landing in Phase 2:
+  config set
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(NewConfigCommand(f))
 	return cmd
 }

@@ -13,8 +13,10 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewAdvancedCommand returns the `settings advanced` parent.
-func NewAdvancedCommand(_ *cmdutil.Factory) *cobra.Command {
+// NewAdvancedCommand returns the `settings advanced` parent. Phase 1
+// ships the read-only verbs that don't require JWS signing; Phase 4 +
+// Phase 5 add the env/logs/upgrade/restart verbs.
+func NewAdvancedCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "advanced",
 		Short: "Advanced / Developer (containerd, env, logs, upgrade, hardware)",
@@ -26,14 +28,25 @@ func NewAdvancedCommand(_ *cmdutil.Factory) *cobra.Command {
   - OS upgrade lifecycle
   - hardware / restart-class actions (reboot, shutdown, ssh-password)
 
-Subcommands will be added in subsequent phases:
-  Phase 1: status, registries list, images list
-  Phase 4: env (system|user) list / get / set / delete, collect-logs
-  Phase 5: registries / mirrors / images CRUD + prune; upgrade state /
-           start / cancel; reboot / shutdown / ssh-password
-           (gated on JWS key sourcing — see plan.md "Open questions")
+Subcommands:
+  status                                                  (Phase 1)
+  registries list                                         (Phase 1)
+  images list [--registry <name>]                         (Phase 1)
+
+Subcommands landing in Phase 4:
+  env (system|user) list / get / set / delete, collect-logs
+
+Subcommands landing in Phase 5 (JWS-signed):
+  registries mirrors get/set/delete, registries prune,
+  images delete / prune,
+  upgrade state / start / cancel,
+  reboot / shutdown / ssh-password
+  (gated on JWS key sourcing — see plan.md "Open questions")
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(NewStatusCommand(f))
+	cmd.AddCommand(NewRegistriesCommand(f))
+	cmd.AddCommand(NewImagesCommand(f))
 	return cmd
 }
