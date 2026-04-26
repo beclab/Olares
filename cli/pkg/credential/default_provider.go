@@ -135,6 +135,7 @@ func buildResolved(profile *cliconfig.ProfileConfig, accessToken string, exp tim
 		VaultURL:           id.VaultURL(profile.LocalURLPrefix),
 		DesktopURL:         id.DesktopURL(profile.LocalURLPrefix),
 		FilesURL:           id.FilesURL(profile.LocalURLPrefix),
+		MarketURL:          id.MarketURL(profile.LocalURLPrefix),
 		AccessToken:        accessToken,
 		InsecureSkipVerify: profile.InsecureSkipVerify,
 	}

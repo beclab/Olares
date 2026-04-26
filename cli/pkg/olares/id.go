@@ -94,3 +94,13 @@ func (id ID) DesktopURL(localPrefix string) string {
 func (id ID) FilesURL(localPrefix string) string {
 	return fmt.Sprintf("https://files.%s%s", localPrefix, id.TerminusName())
 }
+
+// MarketURL returns the per-user market base URL, e.g.
+// "https://market.alice.olares.com". The Market app-store v2 API is reachable
+// at `<MarketURL>/app-store/api/v2` — the same origin/path the Market SPA
+// itself talks to via apps/packages/app/src/stores/market/center.ts. The same
+// edge auth chain (Authelia + l4-bfl-proxy) accepts the `X-Authorization`
+// header here as it does for files / vault / desktop.
+func (id ID) MarketURL(localPrefix string) string {
+	return fmt.Sprintf("https://market.%s%s", localPrefix, id.TerminusName())
+}
