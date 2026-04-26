@@ -76,31 +76,31 @@ type FrontendPath struct {
 	Extend string
 	// SubPath is the path inside Extend, always starting with '/'. Root is "/".
 	// A trailing slash present in the input is preserved (the backend uses it
-	// as a "this is a directory" hint in some places).
+	// as a "this is a directory" hint in some places). It is also synthesized
+	// for `<fileType>/<extend>` (no subpath), where the only valid backend
+	// interpretation is "the extend root", because the backend's
+	// FileParam.convert() splits on '/' and rejects len < 3 for non-root
+	// resources.
 	SubPath string
-	// trailingSlash records whether the original input ended with '/'. It's
-	// preserved through String() so we don't accidentally drop the trailing
-	// slash that the backend's FileParam.convert() requires for directory
-	// listings (it splits on '/' and rejects len < 3).
-	trailingSlash bool
 }
 
 // ParseFrontendPath parses a user-supplied path string into a FrontendPath.
 //
 // Examples:
 //
-//	"drive/Home/"                    → {drive, Home, "/", trailingSlash}
+//	"drive/Home/"                    → {drive, Home, "/"}
+//	"drive/Home"                     → {drive, Home, "/"}    (root synthesized)
 //	"drive/Home/Documents"           → {drive, Home, "/Documents"}
-//	"drive/Home/Documents/"          → {drive, Home, "/Documents/", trailingSlash}
+//	"drive/Home/Documents/"          → {drive, Home, "/Documents/"}
 //	"sync/<repo_id>/sub/dir"         → {sync, <repo_id>, "/sub/dir"}
 //	"awss3/<account>/<bucket>/k.txt" → {awss3, <account>, "/<bucket>/k.txt"}
 //
 // Validation:
 //   - Path must have at least 2 non-empty segments (fileType + extend).
-//     `drive/Home` (no trailing slash) is accepted by ParseFrontendPath but
-//     callers that hit /api/resources will need a trailing slash to satisfy
-//     the backend's len(split) >= 3 check; String() preserves it from the
-//     original input.
+//     `drive/Home` (no trailing slash, no subpath) is accepted and treated as
+//     the extend root, because the backend's FileParam.convert() splits on
+//     '/' and rejects len < 3 — there is no valid reading of a bare extend
+//     other than "the root directory".
 //   - FileType must be a known value (case-sensitive lowercase). Unknown
 //     values fail fast on the client to avoid an opaque 500 from the server.
 //   - When FileType=="drive", Extend must be "Home" or "Data" (case-sensitive).
@@ -155,10 +155,9 @@ func ParseFrontendPath(raw string) (FrontendPath, error) {
 	}
 
 	return FrontendPath{
-		FileType:      fileType,
-		Extend:        extend,
-		SubPath:       sub,
-		trailingSlash: hadTrailingSlash,
+		FileType: fileType,
+		Extend:   extend,
+		SubPath:  sub,
 	}, nil
 }
 
@@ -183,7 +182,13 @@ func (p FrontendPath) URLPath() string {
 	return encodepath.EncodeURL(p.String())
 }
 
-// HasTrailingSlash reports whether the original input ended with '/'. Useful
-// for callers that want to disambiguate "list this directory" from "fetch this
-// resource by exact name" without re-parsing.
-func (p FrontendPath) HasTrailingSlash() bool { return p.trailingSlash }
+// HasTrailingSlash reports whether String() ends with '/' — i.e. whether the
+// path represents a directory. Useful for callers that want to disambiguate
+// "list this directory" from "fetch this resource by exact name" without
+// re-parsing. Derived from SubPath so it always agrees with String(); in
+// particular, `<fileType>/<extend>` (no subpath, no trailing slash on input)
+// reports true because SubPath is "/" — the only valid interpretation of a
+// bare extend reference is its root directory.
+func (p FrontendPath) HasTrailingSlash() bool {
+	return strings.HasSuffix(p.SubPath, "/")
+}

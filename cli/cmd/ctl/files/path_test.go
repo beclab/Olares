@@ -26,6 +26,19 @@ func TestParseFrontendPath(t *testing.T) {
 			wantString:   "drive/Home/",
 		},
 		{
+			// Regression: previously HasTrailingSlash() reported false here
+			// while String() rendered "drive/Home/" — an inconsistency that
+			// misled callers branching on directory-vs-file. The bare
+			// `<fileType>/<extend>` form has no valid non-directory reading.
+			name:         "drive Home root without trailing slash",
+			input:        "drive/Home",
+			wantFileType: "drive",
+			wantExtend:   "Home",
+			wantSubPath:  "/",
+			wantTrailing: true,
+			wantString:   "drive/Home/",
+		},
+		{
 			name:         "drive Home subdir",
 			input:        "drive/Home/Documents",
 			wantFileType: "drive",
