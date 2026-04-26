@@ -170,7 +170,7 @@ func equal(a, b []string) bool {
 
 // Sanity check: the tree handler should at least pretend to URL-encode,
 // so this no-op test confirms no panics on funky names. We don't go
-// deeper because the actual encoding lives in upload.EncodeURL, which
+// deeper because the actual encoding lives in encodepath.EncodeURL, which
 // has its own test suite.
 func TestList_PathEncoding_Roundtrip(t *testing.T) {
 	want := "Special !'()*"

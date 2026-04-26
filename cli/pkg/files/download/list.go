@@ -1,8 +1,9 @@
 // list.go: list a remote directory via GET /api/resources/<encPath>/.
 // The walker calls this once per directory to drive the recursive
-// download. Same envelope shape as `files ls` consumes (see
-// cli/cmd/ctl/files/ls.go's listingResponse), but we project even
-// further down: name + isDir + size is everything the walker needs.
+// download. This is not the `olares-cli files ls` implementation (that
+// lives in cli/cmd/ctl/files/ls.go); we only share the same JSON envelope
+// shape (see ls.go's listingResponse) but project down to name + isDir +
+// size — everything the download walker needs.
 package download
 
 import (

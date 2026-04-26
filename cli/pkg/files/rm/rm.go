@@ -27,7 +27,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/beclab/Olares/cli/pkg/files/upload"
+	"github.com/beclab/Olares/cli/pkg/files/encodepath"
 )
 
 // Client is the per-FilesURL handle used by DeleteBatch.
@@ -210,7 +210,7 @@ func (c *Client) DeleteBatch(ctx context.Context, g *Group) error {
 		parent += "/"
 	}
 	plain := g.FileType + "/" + g.Extend + parent
-	endpoint := c.BaseURL + "/api/resources/" + upload.EncodeURL(plain)
+	endpoint := c.BaseURL + "/api/resources/" + encodepath.EncodeURL(plain)
 
 	bodyBytes, err := json.Marshal(deleteRequestBody{Dirents: g.Dirents})
 	if err != nil {

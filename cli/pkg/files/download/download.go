@@ -88,7 +88,7 @@ type Options struct {
 type ProgressFunc func(written, total int64)
 
 // DownloadFile fetches `plainPath` (a `<fileType>/<extend>/<subPath>`
-// triple, un-encoded — the client encodes with EncodeURL internally)
+// triple, un-encoded — the client encodes with encodepath.EncodeURL internally)
 // into the local file at `dst`.
 //
 // Returns the number of bytes WRITTEN to dst by this call (so a

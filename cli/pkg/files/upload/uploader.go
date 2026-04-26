@@ -36,6 +36,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/cli/pkg/files/encodepath"
 )
 
 // DefaultChunkSize is 8 MiB — the same value the web app uses
@@ -297,7 +299,7 @@ func (c *Client) uploadChunk(
 		headers := http.Header{
 			"Accept": []string{"application/json; text/javascript, */*; q=0.01"},
 			"Content-Disposition": []string{
-				`attachment; filename="` + encodeURIComponent(opts.RemoteName) + `"`,
+				`attachment; filename="` + encodepath.EncodeURIComponent(opts.RemoteName) + `"`,
 			},
 			"Content-Range": []string{fmt.Sprintf(
 				"bytes %d-%d/%d",

@@ -23,7 +23,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/beclab/Olares/cli/pkg/files/upload"
+	"github.com/beclab/Olares/cli/pkg/files/encodepath"
 )
 
 // Known fileType values understood by the files-backend.
@@ -173,14 +173,14 @@ func (p FrontendPath) String() string {
 }
 
 // URLPath returns the same logical path as String() but percent-encoded
-// with pkg/files/upload.EncodeURL — the Go counterpart of the web app's
+// with pkg/files/encodepath.EncodeURL — the Go counterpart of the web app's
 // apps/packages/app/src/utils/encode.ts `encodeUrl` (encodeURIComponent per
 // '/' segment). This MUST stay aligned with download/cat/rm/upload, which
-// already use EncodeURL; url.PathEscape is not equivalent (e.g. '+' and
+// all use pkg/files/encodepath; url.PathEscape is not equivalent (e.g. '+' and
 // '!*'()' differ) and would make `ls` hit different wire paths than the
 // other verbs for the same user-typed path.
 func (p FrontendPath) URLPath() string {
-	return upload.EncodeURL(p.String())
+	return encodepath.EncodeURL(p.String())
 }
 
 // HasTrailingSlash reports whether the original input ended with '/'. Useful

@@ -26,7 +26,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/beclab/Olares/cli/pkg/files/upload"
+	"github.com/beclab/Olares/cli/pkg/files/encodepath"
 )
 
 // Client is the per-FilesURL handle used by Stat / List / DownloadFile
@@ -68,7 +68,7 @@ func (e *HTTPError) Error() string {
 // listings). plainPath looks like `drive/Home/Documents` or
 // `drive/Home/Documents/`.
 func (c *Client) resourcesURL(plainPath string) string {
-	return c.BaseURL + "/api/resources/" + upload.EncodeURL(plainPath)
+	return c.BaseURL + "/api/resources/" + encodepath.EncodeURL(plainPath)
 }
 
 // rawURL returns `<BaseURL>/api/raw/<encPlainPath>`. Mirrors the web
@@ -76,7 +76,7 @@ func (c *Client) resourcesURL(plainPath string) string {
 // raw endpoint refuses non-file paths with a 400, so callers should
 // Stat first when the user-supplied path could be either.
 func (c *Client) rawURL(plainPath string) string {
-	return c.BaseURL + "/api/raw/" + upload.EncodeURL(plainPath)
+	return c.BaseURL + "/api/raw/" + encodepath.EncodeURL(plainPath)
 }
 
 // do performs a single HTTP request with the configured access token

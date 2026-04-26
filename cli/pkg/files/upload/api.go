@@ -20,6 +20,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/beclab/Olares/cli/pkg/files/encodepath"
 )
 
 // Client is the per-FilesURL handle used by uploader.go and the cobra
@@ -97,7 +99,7 @@ func (c *Client) FetchNodes(ctx context.Context) ([]Node, error) {
 func (c *Client) GetUploadLink(ctx context.Context, node, parentDir string) (string, error) {
 	endpoint := c.BaseURL +
 		"/upload/upload-link/" + url.PathEscape(node) +
-		"/?file_path=" + encodeURIComponent(parentDir) +
+		"/?file_path=" + encodepath.EncodeURIComponent(parentDir) +
 		"&from=web"
 	body, err := c.do(ctx, http.MethodGet, endpoint, nil, nil, "")
 	if err != nil {
@@ -163,7 +165,7 @@ func (c *Client) GetUploadedBytes(ctx context.Context, node, parentDir, filename
 // to create a directory under Drive/Home. The trailing slash is what the
 // backend uses to discriminate "create directory" from "create empty file"
 // (postCreateFile in v2/common/utils.ts does the same thing — `isDir
-// ? '/' : ''`).
+// ? '/' : ”`).
 //
 // `relSubPath` is the directory path RELATIVE to /Home (e.g. "Documents"
 // or "Documents/photos"); it should NOT include leading or trailing
@@ -184,7 +186,7 @@ func (c *Client) Mkdir(ctx context.Context, relSubPath string) error {
 		// Drive/Home root always exists; nothing to do.
 		return nil
 	}
-	encoded := EncodeURL(clean)
+	encoded := encodepath.EncodeURL(clean)
 	endpoint := c.BaseURL + "/api/resources/drive/Home/" + encoded + "/"
 	_, err := c.do(ctx, http.MethodPost, endpoint, nil, nil, "")
 	if err != nil {
@@ -212,7 +214,7 @@ func (c *Client) CreateEmptyFile(ctx context.Context, relPath string) error {
 	if clean == "" {
 		return fmt.Errorf("CreateEmptyFile: empty path")
 	}
-	encoded := EncodeURL(clean)
+	encoded := encodepath.EncodeURL(clean)
 	endpoint := c.BaseURL + "/api/resources/drive/Home/" + encoded
 	_, err := c.do(ctx, http.MethodPost, endpoint, nil, nil, "")
 	if err != nil {
