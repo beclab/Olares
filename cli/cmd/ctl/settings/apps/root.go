@@ -17,16 +17,21 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewAppsCommand returns the `settings apps` parent. Subcommands land in
-// later phases; today the parent simply prints help.
-func NewAppsCommand(_ *cmdutil.Factory) *cobra.Command {
+// NewAppsCommand returns the `settings apps` parent. Phase 1 ships the
+// list / get reads; deeper per-app config verbs (permissions, entrances,
+// domain, env, secrets, ACL) and lifecycle (suspend / resume / uninstall)
+// land in Phase 3.
+func NewAppsCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "apps",
 		Short: "Per-app settings (lifecycle, permissions, entrances, env, secrets, ACL)",
 		Long: `Inspect and configure individual installed apps.
 
-Subcommands will be added in subsequent phases:
-  Phase 1: list, status
+Subcommands:
+  list   list installed apps                                (Phase 1)
+  get    show one app's settings record                     (Phase 1)
+
+Subcommands landing in later phases:
   Phase 3: suspend / resume / uninstall, permissions, entrances, providers,
            domain (get|set), policy (get|set), auth-level set, env, secrets,
            acl (get|set)
@@ -36,5 +41,7 @@ Note: install / upgrade / clone / cancel still live under "olares-cli market"
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(NewListCommand(f))
+	cmd.AddCommand(NewGetCommand(f))
 	return cmd
 }

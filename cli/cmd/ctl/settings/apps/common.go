@@ -1,0 +1,136 @@
+// Package apps hosts the `olares-cli settings apps ...` subtree.
+//
+// common.go centralizes the per-area Doer + output plumbing in the same
+// shape as cli/cmd/ctl/settings/me/common.go and
+// cli/cmd/ctl/settings/users/common.go. We intentionally keep these tiny
+// helpers per-area rather than hoisting to a shared package: each area
+// will accumulate its own quirks (e.g. apps mixes BFL envelope responses
+// with /admin/secret/... raw bodies in later phases) and the cost of a
+// 90-line per-area common.go is much smaller than churning an
+// over-abstracted shared helper.
+//
+// Phase 1 ships read-only verbs only. Mutating verbs (entrances policy,
+// domain, env, secrets, ACL) land in Phase 3 alongside per-app config
+// reads beyond the basic list/get surface.
+package apps
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+
+	"github.com/spf13/cobra"
+
+	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/credential"
+	"github.com/beclab/Olares/cli/pkg/whoami"
+)
+
+type Format string
+
+const (
+	FormatTable Format = "table"
+	FormatJSON  Format = "json"
+)
+
+func parseFormat(s string) (Format, error) {
+	v := strings.ToLower(strings.TrimSpace(s))
+	switch v {
+	case "", string(FormatTable):
+		return FormatTable, nil
+	case string(FormatJSON):
+		return FormatJSON, nil
+	default:
+		return "", fmt.Errorf("unsupported --output %q (allowed: table, json)", s)
+	}
+}
+
+func addOutputFlag(cmd *cobra.Command, target *string) {
+	cmd.Flags().StringVarP(target, "output", "o", "table", "output format: table, json")
+}
+
+// Doer is the smallest contract verbs need from the underlying HTTP
+// client. *whoami.HTTPClient satisfies it.
+type Doer interface {
+	DoJSON(ctx context.Context, method, path string, body, out interface{}) error
+}
+
+type preparedClient struct {
+	profile *credential.ResolvedProfile
+	doer    Doer
+}
+
+func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
+	if f == nil {
+		return nil, fmt.Errorf("internal error: settings apps not wired with cmdutil.Factory")
+	}
+	rp, err := f.ResolveProfile(ctx)
+	if err != nil {
+		return nil, err
+	}
+	hc, err := f.HTTPClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &preparedClient{
+		profile: rp,
+		doer:    whoami.NewHTTPClient(hc, rp.DesktopURL, rp.OlaresID),
+	}, nil
+}
+
+// bflEnvelope is the BFL response wrapper. /api/myapps and the
+// /api/applications/* endpoints all return this shape:
+//
+//	{ "code": 0, "message": "ok", "data": <typed payload> }
+type bflEnvelope struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
+}
+
+func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) error {
+	var env bflEnvelope
+	if err := d.DoJSON(ctx, "GET", path, nil, &env); err != nil {
+		return err
+	}
+	if env.Code != 0 {
+		msg := strings.TrimSpace(env.Message)
+		if msg == "" {
+			msg = fmt.Sprintf("server returned code=%d", env.Code)
+		}
+		return fmt.Errorf("GET %s: %s", path, msg)
+	}
+	if out == nil || len(env.Data) == 0 {
+		return nil
+	}
+	if err := json.Unmarshal(env.Data, out); err != nil {
+		return fmt.Errorf("GET %s: decode data: %w", path, err)
+	}
+	return nil
+}
+
+func printJSON(w io.Writer, v interface{}) error {
+	if w == nil {
+		w = os.Stdout
+	}
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(v)
+}
+
+func nonEmpty(s string) string {
+	if s == "" {
+		return "-"
+	}
+	return s
+}
+
+func boolStr(b bool) string {
+	if b {
+		return "yes"
+	}
+	return "no"
+}
