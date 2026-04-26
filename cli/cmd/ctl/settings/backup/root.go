@@ -29,17 +29,19 @@ and the repository password (user-service, /api/backup/password/:name).
 
 Subcommands:
   plans list                                              (Phase 1)
-  snapshots list <backup-id>                              (Phase 1)
+  plans delete <id>  | pause <id> | resume <id>           (Phase 6)
+  snapshots list   <backup-id>                            (Phase 1)
+  snapshots run    <backup-id>                            (Phase 6)
+  snapshots cancel <backup-id> <snapshot-id>              (Phase 6)
+  password set     <name>                                 (Phase 6)
 
-Subcommands landing in Phase 6:
-  plans get / create / update / delete,
-  plans pause / resume,
-  snapshots get / create / cancel,
-  password get / set
+Out of scope until a richer flag/file UX exists:
+  plans create / update    (full BackupPolicy + LocationConfig)
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(NewPlansCommand(f))
 	cmd.AddCommand(NewSnapshotsCommand(f))
+	cmd.AddCommand(NewPasswordCommand(f))
 	return cmd
 }

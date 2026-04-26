@@ -21,6 +21,7 @@
 package backup
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -30,6 +31,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
@@ -99,8 +101,12 @@ type bflEnvelope struct {
 }
 
 func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) error {
+	return doMutateEnvelope(ctx, d, "GET", path, nil, out)
+}
+
+func doMutateEnvelope(ctx context.Context, d Doer, method, path string, body, out interface{}) error {
 	var env bflEnvelope
-	if err := d.DoJSON(ctx, "GET", path, nil, &env); err != nil {
+	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
 		return err
 	}
 	switch env.Code {
@@ -108,15 +114,15 @@ func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) er
 	default:
 		msg := strings.TrimSpace(env.Message)
 		if msg == "" {
-			return fmt.Errorf("GET %s: upstream returned code %d", path, env.Code)
+			return fmt.Errorf("%s %s: upstream returned code %d", method, path, env.Code)
 		}
-		return fmt.Errorf("GET %s: upstream returned code %d: %s", path, env.Code, msg)
+		return fmt.Errorf("%s %s: upstream returned code %d: %s", method, path, env.Code, msg)
 	}
 	if out == nil || len(env.Data) == 0 {
 		return nil
 	}
 	if err := json.Unmarshal(env.Data, out); err != nil {
-		return fmt.Errorf("GET %s: decode data: %w", path, err)
+		return fmt.Errorf("%s %s: decode data: %w", method, path, err)
 	}
 	return nil
 }
@@ -145,4 +151,30 @@ func fmtUnix(sec int64) string {
 		return "-"
 	}
 	return time.Unix(sec, 0).Format(time.RFC3339)
+}
+
+// confirmDestructive guards plan / snapshot deletion behind a y/N
+// prompt unless --yes was passed. Mirrors the shape used in
+// settings/vpn/common.go: non-TTY stdin without --yes is a hard error
+// rather than an implicit yes.
+func confirmDestructive(prompt io.Writer, in io.Reader, message string) error {
+	if f, ok := in.(*os.File); ok {
+		if !term.IsTerminal(int(f.Fd())) {
+			return fmt.Errorf("stdin is not a terminal — pass --yes to confirm: %s", message)
+		}
+	}
+	if _, err := fmt.Fprintf(prompt, "%s [y/N]: ", message); err != nil {
+		return err
+	}
+	rd := bufio.NewReader(in)
+	line, err := rd.ReadString('\n')
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("read confirmation: %w", err)
+	}
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "y", "yes":
+		return nil
+	default:
+		return fmt.Errorf("aborted by user")
+	}
 }

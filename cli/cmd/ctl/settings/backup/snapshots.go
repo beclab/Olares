@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -21,25 +22,27 @@ import (
 // The SPA's BackupDetail page passes a backupId from the URL, so we
 // take it as a positional arg.
 //
-// Phase 6 adds `snapshots get <backup-id> <snapshot-id>`,
-// `snapshots create <backup-id>`, and `snapshots cancel <backup-id> <snapshot-id>`.
+// Phase 6 adds `snapshots run <backup-id>` and `snapshots cancel
+// <backup-id> <snapshot-id>`. Per-snapshot delete (a non-cancel
+// remove of a completed snapshot) is intentionally not exposed:
+// backup-server does not have a route for it and the SPA only wires
+// the cancel button on running / pending snapshots.
 func NewSnapshotsCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "snapshots",
 		Short: "backup snapshots for a single plan",
-		Long: `Inspect snapshots taken by a backup plan.
+		Long: `Inspect or trigger snapshots taken by a backup plan.
 
 Subcommands:
-  list <backup-id>                                        (Phase 1)
-
-Subcommands landing in Phase 6:
-  get <backup-id> <snapshot-id>,
-  create <backup-id>,
-  cancel <backup-id> <snapshot-id>
+  list   <backup-id>                                      (Phase 1)
+  run    <backup-id>                                      (Phase 6)
+  cancel <backup-id> <snapshot-id> [--yes]                (Phase 6)
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newSnapshotsListCommand(f))
+	cmd.AddCommand(newSnapshotsRunCommand(f))
+	cmd.AddCommand(newSnapshotsCancelCommand(f))
 	return cmd
 }
 
@@ -138,6 +141,89 @@ func renderSnapshotsTable(w io.Writer, rows []backupSnapshot) error {
 		}
 	}
 	return tw.Flush()
+}
+
+// newSnapshotsRunCommand wraps POST /apis/backup/v1/plans/backup/<id>/snapshots
+// with body {event: "create"} — the SPA's "Run now" button on
+// BackupDetail (BackupDetail.vue:325).
+func newSnapshotsRunCommand(f *cmdutil.Factory) *cobra.Command {
+	return &cobra.Command{
+		Use:   "run <backup-id>",
+		Short: "trigger an ad-hoc snapshot for a backup plan",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			return runSnapshotsRun(c.Context(), f, args[0])
+		},
+	}
+}
+
+func runSnapshotsRun(ctx context.Context, f *cmdutil.Factory, backupID string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	backupID = strings.TrimSpace(backupID)
+	if backupID == "" {
+		return fmt.Errorf("run requires a backup-id")
+	}
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+	path := fmt.Sprintf("/apis/backup/v1/plans/backup/%s/snapshots",
+		url.PathEscape(backupID))
+	body := map[string]string{"event": "create"}
+	if err := doMutateEnvelope(ctx, pc.doer, "POST", path, body, nil); err != nil {
+		return err
+	}
+	fmt.Printf("Triggered ad-hoc snapshot for backup plan %q.\n", backupID)
+	return nil
+}
+
+// newSnapshotsCancelCommand wraps DELETE /apis/backup/v1/plans/backup/<bid>/snapshots/<sid>
+// with body {event: "cancel"}. Note: backup-server uses DELETE-with-body
+// (BackupSnapshotDetail.vue:176-179); axios's `data:` quirk made the
+// SPA explicit about it, and we match that by sending the body even
+// though DELETE-with-body is unusual.
+func newSnapshotsCancelCommand(f *cmdutil.Factory) *cobra.Command {
+	var assumeYes bool
+	cmd := &cobra.Command{
+		Use:   "cancel <backup-id> <snapshot-id>",
+		Short: "cancel a running or pending snapshot",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(c *cobra.Command, args []string) error {
+			return runSnapshotsCancel(c.Context(), f, args[0], args[1], assumeYes)
+		},
+	}
+	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the y/N prompt (required for non-TTY stdin)")
+	return cmd
+}
+
+func runSnapshotsCancel(ctx context.Context, f *cmdutil.Factory, backupID, snapshotID string, assumeYes bool) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	backupID = strings.TrimSpace(backupID)
+	snapshotID = strings.TrimSpace(snapshotID)
+	if backupID == "" || snapshotID == "" {
+		return fmt.Errorf("cancel requires both backup-id and snapshot-id")
+	}
+	if !assumeYes {
+		if err := confirmDestructive(os.Stderr, os.Stdin, fmt.Sprintf("Cancel snapshot %q on plan %q?", snapshotID, backupID)); err != nil {
+			return err
+		}
+	}
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+	path := fmt.Sprintf("/apis/backup/v1/plans/backup/%s/snapshots/%s",
+		url.PathEscape(backupID), url.PathEscape(snapshotID))
+	body := map[string]string{"event": "cancel"}
+	if err := doMutateEnvelope(ctx, pc.doer, "DELETE", path, body, nil); err != nil {
+		return err
+	}
+	fmt.Printf("Cancelled snapshot %q on plan %q.\n", snapshotID, backupID)
+	return nil
 }
 
 // humanBytes mirrors the helper in settings/advanced — duplicated

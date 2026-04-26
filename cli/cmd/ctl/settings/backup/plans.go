@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -20,8 +21,13 @@ import (
 // fixed limit of 50 and pages forward via offset; Phase 1 keeps the
 // same UX (single page, --limit / --offset flags).
 //
-// Phase 6 will add `plans get / create / update / delete` and the
-// pause/resume verbs.
+// Phase 6 adds `plans delete / pause / resume`. Plan create + policy
+// update are intentionally out of scope: their wire shape requires a
+// full BackupPolicy + LocationConfig vector that the SPA assembles
+// from a multi-step form. Encoding that in CLI flags would be a poor
+// UX; we'd rather wait for either a `--from-file plan.json` mode or
+// for the upstream to expose a higher-level "create from defaults"
+// shortcut.
 func NewPlansCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "plans",
@@ -29,15 +35,20 @@ func NewPlansCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Manage backup plans on the BFL backup-server.
 
 Subcommands:
-  list   list backup plans                                (Phase 1)
+  list                          list backup plans          (Phase 1)
+  delete <id> [--yes]           delete a backup plan       (Phase 6)
+  pause  <id>                   pause a backup plan        (Phase 6)
+  resume <id>                   resume a paused plan       (Phase 6)
 
-Subcommands landing in Phase 6:
-  get <id>, create, update, delete <id>,
-  pause <id>, resume <id>
+Out of scope for now (need a richer flag/file UX before shipping):
+  create / update    (full BackupPolicy + LocationConfig vector)
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newPlansListCommand(f))
+	cmd.AddCommand(newPlansDeleteCommand(f))
+	cmd.AddCommand(newPlansPauseCommand(f))
+	cmd.AddCommand(newPlansResumeCommand(f))
 	return cmd
 }
 
@@ -121,6 +132,98 @@ func runPlansList(ctx context.Context, f *cmdutil.Factory, offset, limit int, ou
 	default:
 		return renderPlansTable(os.Stdout, resp.Backups)
 	}
+}
+
+// newPlansDeleteCommand wraps DELETE /apis/backup/v1/plans/backup/<id>.
+// The SPA wires this to the trash button on each plan row in
+// BackupDetail.vue:404. We add a destructive-confirmation prompt
+// (consistent with `vpn devices delete`) because deleting a plan also
+// orphans every snapshot it produced.
+func newPlansDeleteCommand(f *cmdutil.Factory) *cobra.Command {
+	var assumeYes bool
+	cmd := &cobra.Command{
+		Use:     "delete <id>",
+		Aliases: []string{"rm"},
+		Short:   "delete a backup plan",
+		Args:    cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			return runPlansDelete(c.Context(), f, args[0], assumeYes)
+		},
+	}
+	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the y/N prompt (required for non-TTY stdin)")
+	return cmd
+}
+
+func runPlansDelete(ctx context.Context, f *cmdutil.Factory, id string, assumeYes bool) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return fmt.Errorf("delete requires a plan id")
+	}
+	if !assumeYes {
+		if err := confirmDestructive(os.Stderr, os.Stdin, fmt.Sprintf("Delete backup plan %q (and orphan its snapshots)?", id)); err != nil {
+			return err
+		}
+	}
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+	path := "/apis/backup/v1/plans/backup/" + url.PathEscape(id)
+	if err := doMutateEnvelope(ctx, pc.doer, "DELETE", path, nil, nil); err != nil {
+		return err
+	}
+	fmt.Printf("Deleted backup plan %q.\n", id)
+	return nil
+}
+
+func newPlansPauseCommand(f *cmdutil.Factory) *cobra.Command {
+	return &cobra.Command{
+		Use:   "pause <id>",
+		Short: "pause a backup plan (skips upcoming scheduled runs)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			return runPlansEvent(c.Context(), f, args[0], "pause")
+		},
+	}
+}
+
+func newPlansResumeCommand(f *cmdutil.Factory) *cobra.Command {
+	return &cobra.Command{
+		Use:   "resume <id>",
+		Short: "resume a paused backup plan",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			return runPlansEvent(c.Context(), f, args[0], "resume")
+		},
+	}
+}
+
+func runPlansEvent(ctx context.Context, f *cmdutil.Factory, id, event string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return fmt.Errorf("%s requires a plan id", event)
+	}
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+	path := "/apis/backup/v1/plans/backup/" + url.PathEscape(id)
+	body := map[string]string{"event": event}
+	if err := doMutateEnvelope(ctx, pc.doer, "POST", path, body, nil); err != nil {
+		return err
+	}
+	verb := "Paused"
+	if event == "resume" {
+		verb = "Resumed"
+	}
+	fmt.Printf("%s backup plan %q.\n", verb, id)
+	return nil
 }
 
 func renderPlansTable(w io.Writer, rows []backupPlan) error {

@@ -18,6 +18,7 @@
 package restore
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -27,6 +28,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
@@ -90,8 +92,12 @@ type bflEnvelope struct {
 }
 
 func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) error {
+	return doMutateEnvelope(ctx, d, "GET", path, nil, out)
+}
+
+func doMutateEnvelope(ctx context.Context, d Doer, method, path string, body, out interface{}) error {
 	var env bflEnvelope
-	if err := d.DoJSON(ctx, "GET", path, nil, &env); err != nil {
+	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
 		return err
 	}
 	switch env.Code {
@@ -99,17 +105,71 @@ func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) er
 	default:
 		msg := strings.TrimSpace(env.Message)
 		if msg == "" {
-			return fmt.Errorf("GET %s: upstream returned code %d", path, env.Code)
+			return fmt.Errorf("%s %s: upstream returned code %d", method, path, env.Code)
 		}
-		return fmt.Errorf("GET %s: upstream returned code %d: %s", path, env.Code, msg)
+		return fmt.Errorf("%s %s: upstream returned code %d: %s", method, path, env.Code, msg)
 	}
 	if out == nil || len(env.Data) == 0 {
 		return nil
 	}
 	if err := json.Unmarshal(env.Data, out); err != nil {
-		return fmt.Errorf("GET %s: decode data: %w", path, err)
+		return fmt.Errorf("%s %s: decode data: %w", method, path, err)
 	}
 	return nil
+}
+
+// confirmDestructive guards the cancel verb. Mirrors the helper in
+// settings/backup and settings/vpn — non-TTY stdin without --yes is a
+// hard error rather than an implicit yes.
+func confirmDestructive(prompt io.Writer, in io.Reader, message string) error {
+	if f, ok := in.(*os.File); ok {
+		if !term.IsTerminal(int(f.Fd())) {
+			return fmt.Errorf("stdin is not a terminal — pass --yes to confirm: %s", message)
+		}
+	}
+	if _, err := fmt.Fprintf(prompt, "%s [y/N]: ", message); err != nil {
+		return err
+	}
+	rd := bufio.NewReader(in)
+	line, err := rd.ReadString('\n')
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("read confirmation: %w", err)
+	}
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "y", "yes":
+		return nil
+	default:
+		return fmt.Errorf("aborted by user")
+	}
+}
+
+// readPasswordOnce returns the password either from --password (literal),
+// from --password-stdin (read once from stdin), or from a TTY prompt
+// without echo. Used for the restore check-url and create flows where
+// the user has to provide the repo password.
+func readPasswordOnce(literal string, fromStdin bool, promptLabel string) (string, error) {
+	if literal != "" {
+		return literal, nil
+	}
+	if fromStdin {
+		buf, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return "", fmt.Errorf("read --password-stdin: %w", err)
+		}
+		return strings.TrimRight(string(buf), "\n\r"), nil
+	}
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return "", fmt.Errorf("stdin is not a terminal — pass --password or --password-stdin")
+	}
+	if _, err := fmt.Fprint(os.Stderr, promptLabel); err != nil {
+		return "", err
+	}
+	defer fmt.Fprintln(os.Stderr)
+	pw, err := term.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		return "", fmt.Errorf("read password: %w", err)
+	}
+	return string(pw), nil
 }
 
 func printJSON(w io.Writer, v interface{}) error {
