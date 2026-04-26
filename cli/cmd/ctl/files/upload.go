@@ -13,8 +13,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/beclab/Olares/cli/internal/files/upload"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
-	"github.com/beclab/Olares/cli/pkg/files/upload"
 )
 
 type uploadOptions struct {
@@ -31,7 +31,7 @@ type uploadOptions struct {
 // same chunked-resumable protocol the LarePass web app speaks
 // (Resumable.js + the Drive v2 endpoints under /upload/upload-link,
 // /upload/file-uploaded-bytes, /api/resources/drive/Home/...). See
-// pkg/files/upload/uploader.go for the wire-level details.
+// internal/files/upload/uploader.go for the wire-level details.
 //
 // Resume is enabled by default and is server-driven: before each file
 // the CLI calls /upload/file-uploaded-bytes/<node>/ to ask "how much do

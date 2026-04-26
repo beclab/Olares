@@ -60,7 +60,7 @@ These are real backend behaviors that have already cost us debugging time. Teach
 
 ### 1. POST `/api/resources/<dir>/` auto-renames existing directories
 
-Hitting the directory-create endpoint against an existing directory does **not** return 409. The server creates a sibling named `<dir> (1)` instead. See the docstring on [`cli/pkg/files/upload/api.go`](cli/pkg/files/upload/api.go)'s `Mkdir` for the precise wording.
+Hitting the directory-create endpoint against an existing directory does **not** return 409. The server creates a sibling named `<dir> (1)` instead. See the docstring on [`cli/internal/files/upload/api.go`](cli/internal/files/upload/api.go)'s `Mkdir` for the precise wording.
 
 Consequence baked into the CLI: `files upload` does **not** pre-create the destination directory. It relies on the chunk POST to implicitly materialize parents. **The destination directory MUST already exist on the server** — if you need a fresh directory, create it through the LarePass web app first (a future `files mkdir` verb may cover this).
 
@@ -70,7 +70,7 @@ User-visible symptom of getting this wrong (older CLI versions): an extra `Docum
 
 The backend's single-file `List` handler hard-codes `Content: true` (`files/pkg/drivers/posix/posix/posix.go` `getFiles`) and tries to slurp the file's bytes into the response envelope. For json / binary / large files, this just 500s.
 
-Consequence baked into the CLI: `Stat` always lists the **parent** directory and looks up the leaf in its items array (see [`cli/pkg/files/download/stat.go`](cli/pkg/files/download/stat.go)). This matches what the LarePass web app does — it never probes a single-file resource directly. Both `download` and `cat` use this code path.
+Consequence baked into the CLI: `Stat` always lists the **parent** directory and looks up the leaf in its items array (see [`cli/internal/files/download/stat.go`](cli/internal/files/download/stat.go)). This matches what the LarePass web app does — it never probes a single-file resource directly. Both `download` and `cat` use this code path.
 
 If the user reports `HTTP 500` against `/api/resources/.../<filename>` with no trailing slash, do NOT suggest "just retry". The right answer is: use the CLI command (`files cat` / `files download`), or list the parent and look at items.
 
@@ -97,7 +97,7 @@ Default output: a one-line header (`<path>  (N dirs, M files, modified ...)`) fo
 
 ### `files upload <local-path> <remote-path>`
 
-Resumable chunked upload to drive/Home/<...>. See [`cli/cmd/ctl/files/upload.go`](cli/cmd/ctl/files/upload.go) and [`cli/pkg/files/upload/`](cli/pkg/files/upload/).
+Resumable chunked upload to drive/Home/<...>. See [`cli/cmd/ctl/files/upload.go`](cli/cmd/ctl/files/upload.go) and [`cli/internal/files/upload/`](cli/internal/files/upload/).
 
 ```bash
 # Upload one file into an existing directory.
@@ -133,7 +133,7 @@ Resume is automatic and server-driven: re-running the same command after a Ctrl-
 
 ### `files download <remote-path> [<local-path>]`
 
-Download a single file or a whole directory tree. See [`cli/cmd/ctl/files/download.go`](cli/cmd/ctl/files/download.go) and [`cli/pkg/files/download/`](cli/pkg/files/download/).
+Download a single file or a whole directory tree. See [`cli/cmd/ctl/files/download.go`](cli/cmd/ctl/files/download.go) and [`cli/internal/files/download/`](cli/internal/files/download/).
 
 ```bash
 # Single file into the current directory (./<basename>).
@@ -188,7 +188,7 @@ Wire shape: `GET /api/raw/<encPath>?inline=true` (the same endpoint LarePass use
 
 ### `files rm [-r] [-f] <remote-path>...`
 
-Delete one or more remote files / directories. See [`cli/cmd/ctl/files/rm.go`](cli/cmd/ctl/files/rm.go) and [`cli/pkg/files/rm/`](cli/pkg/files/rm/).
+Delete one or more remote files / directories. See [`cli/cmd/ctl/files/rm.go`](cli/cmd/ctl/files/rm.go) and [`cli/internal/files/rm/`](cli/internal/files/rm/).
 
 ```bash
 # Delete one file.

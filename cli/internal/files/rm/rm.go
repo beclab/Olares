@@ -27,7 +27,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/beclab/Olares/cli/pkg/files/encodepath"
+	"github.com/beclab/Olares/cli/internal/files/encodepath"
 )
 
 // Client is the per-FilesURL handle used by DeleteBatch.

@@ -37,7 +37,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/beclab/Olares/cli/pkg/files/encodepath"
+	"github.com/beclab/Olares/cli/internal/files/encodepath"
 )
 
 // DefaultChunkSize is 8 MiB — the same value the web app uses

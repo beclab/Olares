@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
-	"github.com/beclab/Olares/cli/pkg/files/download"
+	"github.com/beclab/Olares/cli/internal/files/download"
 )
 
 // NewCatCommand: `olares-cli files cat <remote-path>`

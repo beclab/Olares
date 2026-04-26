@@ -69,4 +69,3 @@ func (c *Client) List(ctx context.Context, plainPath string) ([]Entry, error) {
 	}
 	return out, nil
 }
-

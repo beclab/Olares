@@ -110,9 +110,9 @@ func (cr *chunkRecorder) record(r *http.Request) (*recordedChunk, error) {
 // uploadServerOpts plumbs per-test customization into uploadServer
 // without proliferating constructor variants.
 type uploadServerOpts struct {
-	uploadedBytes  int64                                 // probe response
+	uploadedBytes  int64                                                    // probe response
 	uploadHandler  func(*chunkRecorder, http.ResponseWriter, *http.Request) // override chunk POST
-	uploadLinkPath string                                // override default link path
+	uploadLinkPath string                                                   // override default link path
 }
 
 // uploadServer wires up an httptest.Server that knows how to answer

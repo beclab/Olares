@@ -14,7 +14,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
-	"github.com/beclab/Olares/cli/pkg/files/rm"
+	"github.com/beclab/Olares/cli/internal/files/rm"
 )
 
 type rmOptions struct {

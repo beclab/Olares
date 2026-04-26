@@ -15,7 +15,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
-	"github.com/beclab/Olares/cli/pkg/files/download"
+	"github.com/beclab/Olares/cli/internal/files/download"
 )
 
 type downloadOptions struct {
