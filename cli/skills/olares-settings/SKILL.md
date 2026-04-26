@@ -1,7 +1,7 @@
 ---
 name: olares-settings
-version: 0.2.0
-description: "olares-cli settings command tree: profile-based reads of every section the SPA's Settings page exposes (https://docs.olares.com/manual/olares/settings/) plus the Phase 2 low-risk write verbs (me sso revoke, me password set with version-aware MD5+salt; appearance language set; search rebuild + excludes/dirs add+rm; integration accounts add awss3|tencent + accounts delete). Phase 1 surface (read-only): users / appearance / apps / integration / vpn / network / gpu / video / search / backup / restore / advanced + a non-canonical `me` self-service tree (whoami / version / check-update / login-history / sso list). Covers role caching (owner / admin / normal) on the active profile, soft preflight + `profile whoami --refresh` recovery, the `-o table | json` output convention, and the diverse upstream wire formats the CLI normalizes (BFL envelope on /api/*, app-service ListResult on /api/users-v2 + /api/myapps, raw Headscale JSON on /headscale/*, raw upstream JSON on /apis/backup/v1/*, terminusd-proxied envelopes for advanced status / containerd registries / images). Use whenever the user mentions Olares Settings, Settings UI, the SPA Settings page, role / owner / admin / normal, integration accounts, login history, SSO tokens, GPU mode, search index, backup plans, restore plans, containerd registries, password change, or sees errors like 'this command needs role X to ...', 'HTTP 403 while attempting to ...', 'run olares-cli profile whoami --refresh', or wants to know what `olares-cli settings me whoami` / `settings users me` / `profile whoami` actually print."
+version: 0.3.0
+description: "olares-cli settings command tree: profile-based reads of every section the SPA's Settings page exposes (https://docs.olares.com/manual/olares/settings/) plus the Phase 2-6 mutating verbs that don't require JWS-signed bodies (me sso revoke, me password set with version-aware MD5+salt; appearance language set; search rebuild + excludes/dirs add+rm; integration accounts add awss3|tencent + accounts delete; apps suspend/resume + per-app env get/set + per-app secrets list/set/delete; vpn devices rename/delete/tags + routes enable/disable + ssh enable/disable + subroutes enable/disable + public-domain-policy set; network reverse-proxy set; advanced env system|user list/set; backup plans delete/pause/resume + snapshots run/cancel + password set; restore plans check-url + create-from-snapshot + create-from-url + cancel). Phase 1 surface (read-only): users / appearance / apps / integration / vpn / network / gpu / video / search / backup / restore / advanced + a non-canonical `me` self-service tree (whoami / version / check-update / login-history / sso list). Covers role caching (owner / admin / normal) on the active profile, soft preflight + `profile whoami --refresh` recovery, the `-o table | json` output convention, and the diverse upstream wire formats the CLI normalizes (BFL envelope on /api/*, app-service ListResult on /api/users-v2 + /api/myapps, raw Headscale JSON on /headscale/*, BFL envelope on /apis/backup/v1/*, terminusd-proxied envelopes for advanced status / containerd registries / images, /admin/secret/<app> for per-app secrets). Use whenever the user mentions Olares Settings, Settings UI, the SPA Settings page, role / owner / admin / normal, integration accounts, login history, SSO tokens, GPU mode, search index, backup plans, restore plans, containerd registries, password change, app secrets, app env vars, app suspend/resume, VPN ACLs, reverse-proxy mode, restore from URL, or sees errors like 'this command needs role X to ...', 'HTTP 403 while attempting to ...', 'run olares-cli profile whoami --refresh', or wants to know what `olares-cli settings me whoami` / `settings users me` / `profile whoami` actually print."
 metadata:
   requires:
     bins: ["olares-cli"]
@@ -237,7 +237,21 @@ olares-cli settings vpn public-domain-policy set --allow-all  # default Olares b
 
 `devices delete` is destructive: it disconnects the device from the mesh and invalidates any TermiPass session bound to it. The CLI prompts for `[y/N]` confirmation by default; for unattended scripts, pass `--yes` (non-TTY stdin without `--yes` is a hard error so a missed pipe doesn't silently destroy state). Tag values are normalized client-side into the `tag:<name>` form Headscale stores, so callers should pass the bare name (`--tag ops`, not `--tag tag:ops`) — both forms work, the CLI dedupes and normalizes either way.
 
-The Phase 3c1 surface deliberately leaves the SSH / subroutes / per-app ACL toggles (`/api/acl/...`) for a follow-up slice; those are admin-only and have a richer payload shape (per-proto port lists) that warrants its own design pass.
+The Phase 3c1 surface plus the Phase 3c2 SSH / subroutes toggles below cover the boolean ACL flips. The richer per-app ACL editor (`/api/acl/app/status` with per-proto port lists) deliberately stays out of the CLI until we have a clean flag surface for it.
+
+### `vpn ssh` / `vpn subroutes` — boolean ACL toggles (Phase 3c2)
+
+```bash
+olares-cli settings vpn ssh status                  # GET /api/acl/ssh/status
+olares-cli settings vpn ssh enable                  # POST /api/acl/ssh/enable
+olares-cli settings vpn ssh disable                 # POST /api/acl/ssh/disable
+
+olares-cli settings vpn subroutes status            # GET /api/acl/subroutes/status (raw upstream JSON)
+olares-cli settings vpn subroutes enable
+olares-cli settings vpn subroutes disable
+```
+
+Both toggles send an explicit empty `{}` body to match the SPA's request shape, even though the upstream doesn't read the body. `subroutes status` always renders raw JSON because the upstream shape isn't strongly typed.
 
 ### `integration` — connected accounts
 
@@ -259,16 +273,107 @@ olares-cli settings integration accounts delete tencent          # name-less, si
 
 The store key is composed as `integration-account:<type>:<name>` (or `integration-account:<type>` when no name is supplied), matching the SPA's `getStoreKey` in [`apps/packages/app/src/stores/settings/integration.ts`](apps/packages/app/src/stores/settings/integration.ts). **Do not paste secret-key values into the agent transcript — pipe them via env vars or shell redirection.**
 
+### `apps` — lifecycle + per-app config (Phase 3a + 3b)
+
+```bash
+# Lifecycle (mirrors user-service /api/app/{suspend,resume})
+olares-cli settings apps suspend my-app             # POST /api/app/suspend  body {name, all:false}
+olares-cli settings apps resume  my-app             # GET  /api/app/resume/<name>
+
+# Per-app environment variables (read-modify-write merge)
+olares-cli settings apps env get my-app
+olares-cli settings apps env set my-app \
+  --var API_URL=https://api.example.com \
+  --var LOG_LEVEL=debug
+
+# Per-app secret store (/admin/secret/<app>; same X-Authorization Bearer)
+olares-cli settings apps secrets list my-app
+olares-cli settings apps secrets set  my-app --key API_KEY --value abc123
+echo -n "$API_KEY" | olares-cli settings apps secrets set my-app --key API_KEY --value-stdin
+olares-cli settings apps secrets delete my-app --key API_KEY              # prompts; --yes for automation
+```
+
+`apps env set` always reads the current env vector first (so unrelated values stay intact) and then PUTs the merged result back. Variables the SPA flags as `editable: false` are rejected by the upstream. `apps secrets set` upserts by default (POST first, fall back to PUT on "already exists"); use `--create-only` / `--update-only` when you need strict semantics. The CLI never echoes secret values in the table output (`-o table` shows only keys); pass `-o json` if you need the raw payload, but treat that as a credential dump.
+
+### `network` — reverse-proxy mode (Phase 4)
+
+```bash
+olares-cli settings network reverse-proxy set --mode public-ip --ip 203.0.113.5
+olares-cli settings network reverse-proxy set --mode frp \
+  --frp-server frp.example.com --frp-port 7000 \
+  --frp-auth-method token --frp-auth-token "$FRP_TOKEN"
+olares-cli settings network reverse-proxy set --mode cloudflare-tunnel
+olares-cli settings network reverse-proxy set --mode off
+```
+
+`reverse-proxy set` is a read-modify-write that fetches the existing config, applies the user's `--mode` + per-field flags, and POSTs the merged config back to `/api/reverse-proxy`. Unrelated fields (e.g. an FRP token you don't want to retype when switching modes) survive untouched.
+
+### `advanced env` — system + user environment variables (Phase 4)
+
+```bash
+olares-cli settings advanced env system list
+olares-cli settings advanced env system set --var FOO=bar --var BAZ=qux
+olares-cli settings advanced env user   list
+olares-cli settings advanced env user   set --var EDITOR=nvim
+```
+
+Same read-modify-write semantics as `apps env set`. The upstream rejects writes to system entries the SPA flagged as `editable: false`.
+
+### `backup` — plan + snapshot + password writes (Phase 6)
+
+```bash
+# Plan lifecycle (no create / update — those need a richer flag UX, see "Out of scope" below)
+olares-cli settings backup plans pause  <plan-id>
+olares-cli settings backup plans resume <plan-id>
+olares-cli settings backup plans delete <plan-id>                    # prompts; --yes for automation
+
+# Snapshots
+olares-cli settings backup snapshots run    <backup-id>              # POST .../snapshots {event:"create"}
+olares-cli settings backup snapshots cancel <backup-id> <snapshot-id>  # DELETE-with-body {event:"cancel"}; prompts
+
+# Repository password (separate from the plan record itself)
+olares-cli settings backup password set my-plan                      # interactive (hidden + confirm)
+echo -n "$PW" | olares-cli settings backup password set my-plan --password-stdin
+```
+
+`backup plans delete` orphans every snapshot the plan produced — the prompt body is explicit about this. Snapshot cancel is a `DELETE` with a `{"event": "cancel"}` body, mirroring backup-server's axios-style API. Repository passwords cannot be recovered: losing one means losing the ability to decrypt existing snapshots. The upstream encrypts them at rest, but the CLI defends against accidental disclosure by prompting for the password without echo (or reading once from `--password-stdin`).
+
+### `restore` — plan create / cancel + URL pre-flight (Phase 6)
+
+```bash
+# Probe a remote backup URL before creating a restore plan
+olares-cli settings restore plans check-url \
+  --backup-url s3:s3.amazonaws.com/bucket/repo \
+  --password "$REPO_PW"
+
+# Create from an existing snapshot (id from `settings backup snapshots list`)
+olares-cli settings restore plans create-from-snapshot \
+  --snapshot-id <sid> --path /restore/here
+
+# Create from a custom URL + password
+olares-cli settings restore plans create-from-url \
+  --backup-url s3:s3.amazonaws.com/bucket/repo \
+  --password-stdin --path /restore/here --dir subdir
+
+# Cancel a running restore
+olares-cli settings restore plans cancel <plan-id>                   # prompts; --yes for automation
+```
+
+`check-url` lists candidate snapshots without committing to a restore. The two `create-from-*` verbs both POST to `/apis/backup/v1/plans/restore`; pick the variant that matches what you have on hand (snapshot id vs raw URL). Cancel uses the same DELETE-with-body shape as `backup snapshots cancel`. **There is intentionally no `update` or non-cancel `delete` verb on restore plans — backup-server has no routes for them.**
+
 ## What's NOT shipped yet
 
-Anything not listed above is still on the roadmap per [plan.md "Phase 3-6"]:
+Anything not listed above either needs more design work or requires JWS-signed bodies the CLI can't produce yet:
 
-- **Phase 3** — apps lifecycle / permissions / entrances / domain / policy / auth-level + secrets / env / ports / acl; vpn rename / delete / tags + acl + public-domain-policy set.
-- **Phase 4** — network reverse-proxy / hosts-file / frp / external-network / ssl mutations + advanced env + advanced collect-logs.
-- **Phase 5** — advanced containerd / upgrade; gate reboot / shutdown / ssh-password on JWS key sourcing.
-- **Phase 6** — backup plans / snapshots / password write paths; restore plans CRUD + `check-url`.
+- **Per-app entrances writes** — permissions / entrances / providers / domain (get|set) / policy (get|set) / auth-level set / per-app ACL (proto + dst[]).
+- **Network writes that require a JWS-signed device-id header** — hosts-file write, FRP server register/delete, SSL enable/disable/update, external-network master switch (the SPA reads/writes these via `X-Signature` headers the CLI doesn't produce yet).
+- **Containerd registry mutations** — `registries mirrors put/delete`, `images delete/prune` (also `X-Signature`-gated).
+- **Hardware / restart-class** — reboot, shutdown, ssh-password, OS upgrade — these go through TermiPass-issued JWS over a QR callback URL today; the CLI will gain support once we have a JWS key sourcing path.
+- **Collect logs** — `POST /api/command/collectLogs` is `X-Signature`-gated.
+- **Backup plan create / update** — full `BackupPolicy` + `LocationConfig` vector; needs either a `--from-file plan.json` mode or an upstream "create from defaults" shortcut before shipping.
+- **Restore plan update / non-cancel delete** — backup-server has no routes for these.
 
-Every area's `--help` lists the verbs landing in later phases so the agent can stay calibrated about what's actually implemented today.
+Every area's `--help` lists what's currently implemented vs deferred so the agent can stay calibrated.
 
 ## Common errors → fixes
 
@@ -315,7 +420,7 @@ olares-cli settings integration accounts get awss3 my-bucket -o json
 
 - **Never** echo `<access_token>` or any field returned by `me sso list` into the terminal beyond what the table view already shows. SSO tokens identify a TermiPass-bound device session and should never be logged or pasted into chat.
 - `settings users get <username>` returns the same record the SPA shows on the user detail page; treat its email / olaresId as PII and avoid forwarding it outside the requesting workflow.
-- For Phase 2 writes that take secrets (`integration accounts add awss3|tencent`, `me password set`), **always** read the secret from an env var or stdin pipe — never paste it into the chat or expand it inline in an `olares-cli ...` command line you suggest. Bash history retention is the user's responsibility; the agent should default to `printf '%s\n' "$VAR" | ... --passwords-stdin` style invocations whenever a verb supports it.
+- For writes that take secrets (`integration accounts add awss3|tencent`, `me password set`, `apps secrets set`, `backup password set`, `restore plans check-url`, `restore plans create-from-url`), **always** read the secret from an env var or stdin pipe — never paste it into the chat or expand it inline in an `olares-cli ...` command line you suggest. Bash history retention is the user's responsibility; the agent should default to `printf '%s\n' "$VAR" | ... --password-stdin` (or the verb's equivalent `--value-stdin` / `--passwords-stdin` flag) style invocations whenever a verb supports it.
 - `me password set` hashes locally; the raw password never leaves the machine. The agent should still avoid logging the input — even hidden-prompted data ends up on screen recordings and accessibility tooling. Never `echo` the result of a hash either: a leaked salted-MD5 is functionally as dangerous as the raw password against this backend.
 - Read-only verbs do **not** carry "this will change X" prompts — only Phase 2+ writes do, and the prompts they do carry come from the upstream server's own response messages. Don't fabricate one for read verbs.
 - The `me whoami --refresh` recovery path is the only authentication-adjacent action this skill should ever recommend. **All** other auth recovery (login expiry, profile import, 2FA) belongs in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
