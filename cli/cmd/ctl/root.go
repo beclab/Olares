@@ -14,6 +14,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/os"
 	"github.com/beclab/Olares/cli/cmd/ctl/osinfo"
 	"github.com/beclab/Olares/cli/cmd/ctl/profile"
+	"github.com/beclab/Olares/cli/cmd/ctl/settings"
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
 	"github.com/beclab/Olares/cli/cmd/ctl/wizard"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
@@ -70,6 +71,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(app.NewAppCommand())
 	cmds.AddCommand(profile.NewProfileCommand())
 	cmds.AddCommand(files.NewFilesCommand(factory))
+	cmds.AddCommand(settings.NewSettingsCommand(factory))
 
 	return cmds
 }
