@@ -28,6 +28,7 @@ type ResolvedProfile struct {
 	VaultURL   string
 	DesktopURL string
 	FilesURL   string
+	MarketURL  string
 
 	AccessToken string
 	// ExpiresAt is the unix-seconds expiry decoded from AccessToken's `exp`

@@ -9,6 +9,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/disk"
 	"github.com/beclab/Olares/cli/cmd/ctl/files"
 	"github.com/beclab/Olares/cli/cmd/ctl/gpu"
+	"github.com/beclab/Olares/cli/cmd/ctl/market"
 	"github.com/beclab/Olares/cli/cmd/ctl/node"
 	"github.com/beclab/Olares/cli/cmd/ctl/os"
 	"github.com/beclab/Olares/cli/cmd/ctl/osinfo"
@@ -65,6 +66,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(user.NewUserCommand())
 	cmds.AddCommand(wizard.NewWizardCommand())
 	cmds.AddCommand(disk.NewDiskCommand())
+	cmds.AddCommand(market.NewMarketCommand(factory))
 	cmds.AddCommand(app.NewAppCommand())
 	cmds.AddCommand(profile.NewProfileCommand())
 	cmds.AddCommand(files.NewFilesCommand(factory))
