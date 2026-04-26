@@ -28,13 +28,16 @@ func NewAppsCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Inspect and configure individual installed apps.
 
 Subcommands:
-  list   list installed apps                                (Phase 1)
-  get    show one app's settings record                     (Phase 1)
+  list                          list installed apps                  (Phase 1)
+  get <name>                    show one app's settings record       (Phase 1)
+  suspend <name>                suspend a running app                (Phase 3)
+  resume  <name>                resume a suspended app               (Phase 3)
+  env get|set <name>            per-app environment variables        (Phase 3)
+  secrets list|set|delete <app> per-app secret store                 (Phase 3)
 
-Subcommands landing in later phases:
-  Phase 3: suspend / resume / uninstall, permissions, entrances, providers,
-           domain (get|set), policy (get|set), auth-level set, env, secrets,
-           acl (get|set)
+Subcommands still landing in later phases:
+  permissions / entrances / providers / domain (get|set) / policy (get|set) /
+  auth-level set / acl (get|set)
 
 Note: install / upgrade / clone / cancel still live under "olares-cli market"
 (per-user app-store API). "settings apps" is the *post-install* surface.
@@ -43,5 +46,9 @@ Note: install / upgrade / clone / cancel still live under "olares-cli market"
 	cmd.SilenceUsage = true
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(NewGetCommand(f))
+	cmd.AddCommand(NewSuspendCommand(f))
+	cmd.AddCommand(NewResumeCommand(f))
+	cmd.AddCommand(NewEnvCommand(f))
+	cmd.AddCommand(NewSecretsCommand(f))
 	return cmd
 }
