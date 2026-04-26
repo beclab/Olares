@@ -21,7 +21,9 @@
 //   - 4xx (other than 416 above) is a permanent error — no retries.
 //   - 5xx and transport errors retry with exponential backoff up to
 //     opts.MaxRetries times. Same retry classification spirit as the
-//     upload package's chunk POST loop.
+//     upload package's chunk POST loop. In --resume mode the local
+//     offset is re-read from disk before each attempt so a partial
+//     append from a failed try never re-sends a stale Range: header.
 //
 // Atomicity:
 //
@@ -105,7 +107,7 @@ func (c *Client) DownloadFile(
 
 	// Decide the strategy first — it dictates which path we open and
 	// what Range header (if any) we send.
-	mode, localSize, err := planLocalWrite(dst, opts)
+	mode, _, err := planLocalWrite(dst, opts)
 	if err != nil {
 		return 0, err
 	}
@@ -115,16 +117,30 @@ func (c *Client) DownloadFile(
 		maxAttempts = 1
 	}
 
+	var resumeWritten int64 // only for writeResume: sum of per-attempt appends
 	var lastErr error
 	backoff := opts.RetryBackoff
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		localSize, err := localSizeForAttempt(dst, mode)
+		if err != nil {
+			return 0, err
+		}
 		written, err := c.attemptDownload(ctx, plainPath, dst, mode, localSize, progress)
+		if mode == writeResume {
+			resumeWritten += written
+		}
 		if err == nil {
+			if mode == writeResume {
+				return resumeWritten, nil
+			}
 			return written, nil
 		}
 
 		// Cancellation is always final.
 		if ctxErr := ctx.Err(); ctxErr != nil {
+			if mode == writeResume {
+				return resumeWritten, ctxErr
+			}
 			return written, ctxErr
 		}
 
@@ -132,6 +148,9 @@ func (c *Client) DownloadFile(
 		// "already complete") is permanent: no point retrying.
 		var hErr *HTTPError
 		if errors.As(err, &hErr) && hErr.Status >= 400 && hErr.Status < 500 {
+			if mode == writeResume {
+				return resumeWritten, err
+			}
 			return written, err
 		}
 
@@ -140,6 +159,9 @@ func (c *Client) DownloadFile(
 			select {
 			case <-time.After(backoff):
 			case <-ctx.Done():
+				if mode == writeResume {
+					return resumeWritten, ctx.Err()
+				}
 				return written, ctx.Err()
 			}
 			// Exponential backoff capped at 4s.
@@ -148,6 +170,9 @@ func (c *Client) DownloadFile(
 				backoff = 4 * time.Second
 			}
 		}
+	}
+	if mode == writeResume {
+		return resumeWritten, fmt.Errorf("download %s: exhausted %d attempts: %w", plainPath, maxAttempts, lastErr)
 	}
 	return 0, fmt.Errorf("download %s: exhausted %d attempts: %w", plainPath, maxAttempts, lastErr)
 }
@@ -196,6 +221,24 @@ func planLocalWrite(dst string, opts Options) (writeMode, int64, error) {
 	default:
 		return 0, 0, fmt.Errorf("stat %s: %w", dst, err)
 	}
+}
+
+// localSizeForAttempt returns the byte offset the next HTTP GET should
+// use for Range (resume) or 0 for fresh/overwrite paths. For resume it
+// always reflects the current on-disk file size so retries after a
+// partial append never send a stale `bytes=N-` header.
+func localSizeForAttempt(dst string, mode writeMode) (int64, error) {
+	if mode != writeResume {
+		return 0, nil
+	}
+	st, err := os.Stat(dst)
+	if err != nil {
+		return 0, fmt.Errorf("stat resume destination %s: %w", dst, err)
+	}
+	if st.IsDir() {
+		return 0, fmt.Errorf("local destination %q is an existing directory", dst)
+	}
+	return st.Size(), nil
 }
 
 // attemptDownload runs one HTTP request + body copy. It is called

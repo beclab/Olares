@@ -264,6 +264,76 @@ func TestDownloadFile_Resume(t *testing.T) {
 	}
 }
 
+// errCut is an io.Reader that fails immediately — used after a prefix
+// in io.MultiReader so the server sends a short 206 body then stops.
+type errCut struct{}
+
+func (errCut) Read([]byte) (int, error) {
+	return 0, errors.New("simulated transport cut")
+}
+
+// TestDownloadFile_ResumeRetryRefreshesRange: a partial 206 append
+// followed by a read error must not duplicate bytes on retry; the
+// second GET must send Range: bytes=<current file size>-.
+func TestDownloadFile_ResumeRetryRefreshesRange(t *testing.T) {
+	prefix := []byte("AAAA") // 4 bytes on disk; full object is 8 bytes
+	wantFull := []byte("AAAABBBB")
+	var hits int32
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := atomic.AddInt32(&hits, 1)
+		rng := r.Header.Get("Range")
+		switch n {
+		case 1:
+			if rng != "bytes=4-" {
+				t.Fatalf("first Range: want bytes=4-, got %q", rng)
+			}
+			w.Header().Set("Content-Range", "bytes 4-7/8")
+			w.Header().Set("Content-Length", "4")
+			w.WriteHeader(http.StatusPartialContent)
+			_, _ = io.Copy(w, io.MultiReader(bytes.NewReader([]byte("BB")), errCut{}))
+			return
+		case 2:
+			if rng != "bytes=6-" {
+				t.Fatalf("second Range after partial append: want bytes=6-, got %q", rng)
+			}
+			w.Header().Set("Content-Range", "bytes 6-7/8")
+			w.Header().Set("Content-Length", "2")
+			w.WriteHeader(http.StatusPartialContent)
+			_, _ = w.Write([]byte("BB"))
+			return
+		default:
+			t.Fatalf("unexpected request #%d", n)
+		}
+	}))
+
+	dst := filepath.Join(t.TempDir(), "partial.bin")
+	if err := os.WriteFile(dst, prefix, 0o644); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	written, err := client.DownloadFile(context.Background(), "drive/Home/foo", dst, Options{
+		Resume:       true,
+		MaxRetries:   3,
+		RetryBackoff: time.Millisecond,
+	}, nil)
+	if err != nil {
+		t.Fatalf("DownloadFile: %v", err)
+	}
+	if written != 4 {
+		t.Errorf("written: want 4 (2+2 appended bytes this call), got %d", written)
+	}
+	got, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatalf("read dst: %v", err)
+	}
+	if !bytes.Equal(got, wantFull) {
+		t.Errorf("final file: got %q want %q", got, wantFull)
+	}
+	if hits != 2 {
+		t.Errorf("hits: want 2, got %d", hits)
+	}
+}
+
 // TestDownloadFile_RangeIgnored covers the "we asked for Range but
 // the server replied 200" case — falls back to a clean overwrite.
 func TestDownloadFile_RangeIgnored(t *testing.T) {

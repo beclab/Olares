@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -225,8 +224,8 @@ func runUpload(
 		totalBytes += ft.Size
 	}
 	fmt.Fprintf(out, "uploading %d file(s), %s, into %s (parallel=%d, chunk=%s)\n",
-		len(plan.Files), humanBytes(totalBytes), plan.ParentDir,
-		o.parallel, humanBytes(o.chunkSize))
+		len(plan.Files), formatBytes(totalBytes), plan.ParentDir,
+		o.parallel, formatBytes(o.chunkSize))
 
 	return runUploads(ctx, client, plan, node, o, out)
 }
@@ -260,7 +259,7 @@ func runUploads(
 			opts := plan.ToUploadOpts(task, node, o.chunkSize, o.maxRetries)
 
 			start := time.Now()
-			fmt.Fprintf(out, "  → %s (%s)\n", task.RelativePath, humanBytes(task.Size))
+			fmt.Fprintf(out, "  → %s (%s)\n", task.RelativePath, formatBytes(task.Size))
 
 			var lastReported int64
 			progress := func(uploaded, total int64) {
@@ -279,7 +278,7 @@ func runUploads(
 					lastReported = uploaded
 					fmt.Fprintf(out, "    %s: %d/%d (%s/%s)\n",
 						task.RelativePath, uploaded, total,
-						humanBytes(uploaded), humanBytes(total))
+						formatBytes(uploaded), formatBytes(total))
 				}
 			}
 			if err := client.UploadFile(gctx, opts, progress); err != nil {
@@ -288,11 +287,11 @@ func runUploads(
 
 			mu.Lock()
 			completed++
-			atomic.AddInt64(&bytesDone, task.Size)
+			bytesDone += task.Size
 			done := completed
 			mu.Unlock()
 			fmt.Fprintf(out, "  ✓ %s (%s, %s) [%d/%d]\n",
-				task.RelativePath, humanBytes(task.Size),
+				task.RelativePath, formatBytes(task.Size),
 				time.Since(start).Truncate(time.Millisecond),
 				done, totalFiles)
 			return nil
@@ -301,7 +300,7 @@ func runUploads(
 	if err := g.Wait(); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "done: %d file(s), %s\n", completed, humanBytes(bytesDone))
+	fmt.Fprintf(out, "done: %d file(s), %s\n", completed, formatBytes(bytesDone))
 	return nil
 }
 
@@ -335,23 +334,4 @@ func pluralYies(n int) string {
 		return "y"
 	}
 	return "ies"
-}
-
-// humanBytes is the local copy of the same helper from ls.go's
-// formatSize, kept inline so upload.go has no test-time dependency on
-// the listing-only render code.
-func humanBytes(n int64) string {
-	const unit = 1024
-	if n < 0 {
-		return fmt.Sprintf("%dB", n)
-	}
-	if n < unit {
-		return fmt.Sprintf("%dB", n)
-	}
-	div, exp := int64(unit), 0
-	for n2 := n / unit; n2 >= unit; n2 /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f%cB", float64(n)/float64(div), "KMGTPE"[exp])
 }

@@ -284,7 +284,16 @@ func formatSize(n int64, isDir bool) string {
 	if isDir {
 		return "-"
 	}
+	return formatBytes(n)
+}
+
+// formatBytes renders a byte count for CLI progress lines (ls rows use
+// formatSize; upload/download share this helper).
+func formatBytes(n int64) string {
 	const unit = 1024
+	if n < 0 {
+		return fmt.Sprintf("%dB", n)
+	}
 	if n < unit {
 		return fmt.Sprintf("%dB", n)
 	}

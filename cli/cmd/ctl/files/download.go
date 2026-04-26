@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -182,7 +181,7 @@ func runDownloadFile(
 		return err
 	}
 
-	fmt.Fprintf(out, "downloading %s (%s) → %s\n", fp.String(), humanBytes(remoteSize), dst)
+	fmt.Fprintf(out, "downloading %s (%s) → %s\n", fp.String(), formatBytes(remoteSize), dst)
 
 	start := time.Now()
 	written, err := client.DownloadFile(ctx, plain, dst, download.Options{
@@ -194,9 +193,9 @@ func runDownloadFile(
 		return reformatHTTPErr(err, "", "download", plain)
 	}
 	fmt.Fprintf(out, "done: wrote %s in %s (file size %s)\n",
-		humanBytes(written),
+		formatBytes(written),
 		time.Since(start).Truncate(time.Millisecond),
-		humanBytes(remoteSize),
+		formatBytes(remoteSize),
 	)
 	return nil
 }
@@ -249,7 +248,7 @@ func runDownloadDir(
 		totalBytes += t.Size
 	}
 	fmt.Fprintf(out, "downloading %d file(s), %s, into %s (parallel=%d)\n",
-		len(plan.Files), humanBytes(totalBytes), plan.LocalRoot, o.parallel)
+		len(plan.Files), formatBytes(totalBytes), plan.LocalRoot, o.parallel)
 
 	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(o.parallel)
@@ -264,7 +263,7 @@ func runDownloadDir(
 		task := task
 		g.Go(func() error {
 			start := time.Now()
-			fmt.Fprintf(out, "  → %s (%s)\n", task.RelativePath, humanBytes(task.Size))
+			fmt.Fprintf(out, "  → %s (%s)\n", task.RelativePath, formatBytes(task.Size))
 			written, err := client.DownloadFile(gctx, task.RemotePlainPath, task.LocalPath, download.Options{
 				Overwrite:  o.overwrite,
 				Resume:     o.resume,
@@ -275,11 +274,11 @@ func runDownloadDir(
 			}
 			mu.Lock()
 			completed++
-			atomic.AddInt64(&bytesDone, written)
+			bytesDone += written
 			done := completed
 			mu.Unlock()
 			fmt.Fprintf(out, "  ✓ %s (%s, %s) [%d/%d]\n",
-				task.RelativePath, humanBytes(written),
+				task.RelativePath, formatBytes(written),
 				time.Since(start).Truncate(time.Millisecond),
 				done, totalFiles)
 			return nil
@@ -288,7 +287,7 @@ func runDownloadDir(
 	if err := g.Wait(); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "done: %d file(s), %s\n", completed, humanBytes(bytesDone))
+	fmt.Fprintf(out, "done: %d file(s), %s\n", completed, formatBytes(bytesDone))
 	return nil
 }
 
