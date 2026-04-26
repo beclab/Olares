@@ -10,23 +10,36 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewNetworkCommand returns the `settings network` parent.
-func NewNetworkCommand(_ *cmdutil.Factory) *cobra.Command {
+// NewNetworkCommand returns the `settings network` parent. Phase 1
+// ships read-only verbs across all five sub-areas; Phase 4 will add
+// the matching mutating verbs.
+func NewNetworkCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "network",
 		Short: "Network settings (reverse-proxy, FRP, external-network, SSL, hosts-file)",
 		Long: `Read and configure network plumbing: reverse-proxy mode, FRP server, the
 external-network switch (owner-only), SSL toggles, and the system hosts-file.
 
-Subcommands will be added in subsequent phases:
-  Phase 1: reverse-proxy get, frp list, external-network get, hosts-file get
-  Phase 4: reverse-proxy set, frp set, external-network set, ssl enable,
-           hosts-file set
+Subcommands:
+  reverse-proxy get                                       (Phase 1)
+  frp list                                                (Phase 1)
+  external-network get                                    (Phase 1)
+  ssl status                                              (Phase 1)
+  hosts-file get                                          (Phase 1)
+
+Subcommands landing in Phase 4:
+  reverse-proxy set, frp set, external-network set,
+  ssl enable, hosts-file set
 
 Note: external-network set and reverse-proxy set (FRP host write) are
 owner-only; non-owner callers will hit a 403 from BFL.
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(NewReverseProxyCommand(f))
+	cmd.AddCommand(NewFRPCommand(f))
+	cmd.AddCommand(NewExternalNetworkCommand(f))
+	cmd.AddCommand(NewSSLCommand(f))
+	cmd.AddCommand(NewHostsFileCommand(f))
 	return cmd
 }
