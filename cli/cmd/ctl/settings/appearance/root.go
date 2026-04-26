@@ -11,7 +11,7 @@ import (
 )
 
 // NewAppearanceCommand returns the `settings appearance` parent. Phase 1
-// ships `get`; Phase 2 will add `language set`.
+// shipped `get`; Phase 2 adds `language set`.
 func NewAppearanceCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "appearance",
@@ -19,10 +19,8 @@ func NewAppearanceCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Read and update appearance preferences (Settings -> Appearance).
 
 Subcommands:
-  get   show language + locale                            (Phase 1)
-
-Subcommands landing in Phase 2:
-  language set --value <code>
+  get                              show language + locale         (Phase 1)
+  language set --value <code>      update the system language     (Phase 2)
 
 Wallpaper image upload + theme picker stay in the SPA — they are browser
 blob/picker flows with no useful CLI surface.
@@ -30,5 +28,6 @@ blob/picker flows with no useful CLI surface.
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(NewGetCommand(f))
+	cmd.AddCommand(NewLanguageCommand(f))
 	return cmd
 }

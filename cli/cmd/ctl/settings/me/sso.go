@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -20,16 +22,13 @@ import (
 // surfaces them under Person -> SSOToken; we mirror the same view here
 // so users can audit / clean up sessions from the CLI.
 //
-// Phase 1 ships read only:
+// Phase 1 / 2 verbs:
 //
-//   list      -> `olares-cli settings me sso list`
+//   list      -> `olares-cli settings me sso list`        (Phase 1)
+//   revoke    -> `olares-cli settings me sso revoke <id>` (Phase 2)
 //
-// Phase 2 will add:
-//
-//   revoke    -> `olares-cli settings me sso revoke <token>`
-//
-// Backend: user-service/src/device2.controller.ts:141 (@Get('/sso')).
-// The handler proxies Authelia (authelia-backend-svc:9091/api/usertokens)
+// Backend: user-service/src/device2.controller.ts. The list handler
+// (@Get('/sso')) proxies Authelia (authelia-backend-svc:9091/api/usertokens)
 // and merges in any matching TermiPass device record. Body shape after
 // the BFL envelope unwrap:
 //
@@ -39,12 +38,16 @@ import (
 //         expireTime, createTime, tokenType, username, uninitialized,
 //         authLevel, firstFactorTimestamp, secondFactorTimestamp
 //       },
-//       termiPass?: { ...TermiPassDeviceInfo }
+//       termiPass?: { sso: <token-id>, ...TermiPassDeviceInfo }
 //     },
 //     ...
 //   ]
 //
-// Role: any authenticated user can list their own tokens; no
+// The id used by `revoke` is `entry.termiPass.sso` (only tokens with a
+// bound TermiPass device can be revoked from the SPA either; the SPA
+// hides the delete icon when termiPass is missing).
+//
+// Role: any authenticated user can list / revoke their own tokens; no
 // PreflightRole check.
 
 func NewSSOCommand(f *cmdutil.Factory) *cobra.Command {
@@ -56,12 +59,13 @@ JWTs back the OIDC/SSO sessions Authelia hands out to third-party clients
 and to TermiPass devices bound to this account.
 
 Subcommands:
-  list   show all current tokens (Phase 1, read-only)
-  revoke revoke a specific token by id  (Phase 2)
+  list                            list active SSO tokens          (Phase 1)
+  revoke <id>                     revoke a TermiPass-bound token  (Phase 2)
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newSSOListCommand(f))
+	cmd.AddCommand(newSSORevokeCommand(f))
 	return cmd
 }
 
@@ -146,15 +150,21 @@ func renderSSOTable(w io.Writer, entries []ssoEntry) error {
 		return err
 	}
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "USERNAME\tTYPE\tCREATED\tEXPIRES\tAUTH LEVEL\tTERMIPASS"); err != nil {
+	if _, err := fmt.Fprintln(tw, "ID\tUSERNAME\tTYPE\tCREATED\tEXPIRES\tAUTH LEVEL\tTERMIPASS"); err != nil {
 		return err
 	}
 	for _, e := range entries {
+		id, hasTP := termiPassSSOID(e.TermiPass)
 		tp := "-"
-		if len(e.TermiPass) > 0 {
+		idCell := "-"
+		if hasTP {
 			tp = "yes"
+			if id != "" {
+				idCell = id
+			}
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%d\t%s\n",
+		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%d\t%s\n",
+			idCell,
 			nonEmpty(e.SSO.Username),
 			nonEmpty(e.SSO.TokenType),
 			fmtSSOTime(e.SSO.CreateTime),
@@ -165,7 +175,83 @@ func renderSSOTable(w io.Writer, entries []ssoEntry) error {
 			return err
 		}
 	}
-	return tw.Flush()
+	if err := tw.Flush(); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(w, "\nuse `olares-cli settings me sso revoke <id>` to revoke a TermiPass-bound token (only rows with a non-`-` ID can be revoked)"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// termiPassSSOID extracts the `termiPass.sso` field — that's the
+// Authelia-issued token id the revoke endpoint expects (mirrors
+// `${tokenStore.url}/api/device/sso/${token.termiPass.sso}` from
+// stores/settings/admin.ts revoke_token).
+func termiPassSSOID(tp map[string]interface{}) (string, bool) {
+	if len(tp) == 0 {
+		return "", false
+	}
+	raw, ok := tp["sso"]
+	if !ok {
+		return "", true
+	}
+	if s, ok := raw.(string); ok {
+		return s, true
+	}
+	return fmt.Sprint(raw), true
+}
+
+// `olares-cli settings me sso revoke <id>`
+//
+// The <id> is the value rendered in the ID column of `me sso list` — it
+// originates from `termiPass.sso` on the list response. Tokens without a
+// bound TermiPass device cannot be revoked through this endpoint (the
+// SPA's SSOToken.vue hides the delete icon for those rows; the server
+// returns 404 if you try anyway).
+func newSSORevokeCommand(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "revoke <id>",
+		Short: "revoke a TermiPass-bound SSO authorization token",
+		Long: `Revoke a single SSO authorization token by id.
+
+The id comes from the ID column of "settings me sso list" (which itself
+mirrors the SPA's Settings -> Person -> SSOToken page). Only tokens with
+a bound TermiPass device can be revoked through this endpoint; rows that
+list "-" in the TERMIPASS column have no revocable id.
+
+The current Olares CLI session is unaffected by revoking other devices'
+tokens, but revoking a token bound to your active TermiPass session may
+log it out — re-authenticate with the TermiPass app afterwards if so.
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			return runSSORevoke(c.Context(), f, args[0])
+		},
+	}
+	return cmd
+}
+
+func runSSORevoke(ctx context.Context, f *cmdutil.Factory, tokenID string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	tokenID = strings.TrimSpace(tokenID)
+	if tokenID == "" || tokenID == "-" {
+		return fmt.Errorf("revoke requires a non-empty token id (run `olares-cli settings me sso list` and copy the ID column)")
+	}
+
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+
+	path := "/api/device/sso/" + url.PathEscape(tokenID)
+	if err := pc.doer.DoJSON(ctx, "DELETE", path, nil, nil); err != nil {
+		return err
+	}
+	fmt.Printf("Revoked SSO token %q.\n", tokenID)
+	return nil
 }
 
 // fmtSSOTime renders epoch seconds in the user's local timezone, matching
