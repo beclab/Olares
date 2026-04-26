@@ -42,5 +42,7 @@ Subcommands will be added in subsequent phases:
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(NewMeCommand(f))
+	cmd.AddCommand(NewListCommand(f))
+	cmd.AddCommand(NewGetCommand(f))
 	return cmd
 }
