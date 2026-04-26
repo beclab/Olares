@@ -1,0 +1,243 @@
+---
+name: olares-settings
+version: 0.1.0
+description: "olares-cli settings command tree: profile-based reads of every section the SPA's Settings page exposes (https://docs.olares.com/manual/olares/settings/). Phase 1 surface (read-only): users / appearance / apps / integration / vpn / network / gpu / video / search / backup / restore / advanced + a non-canonical `me` self-service tree (whoami / version / check-update / login-history / sso list). Covers role caching (owner / admin / normal) on the active profile, soft preflight + `profile whoami --refresh` recovery, the `-o table | json` output convention, and the diverse upstream wire formats the CLI normalizes (BFL envelope on /api/*, app-service ListResult on /api/users-v2 + /api/myapps, raw Headscale JSON on /headscale/*, raw upstream JSON on /apis/backup/v1/*, terminusd-proxied envelopes for advanced status / containerd registries / images). Use whenever the user mentions Olares Settings, Settings UI, the SPA Settings page, role / owner / admin / normal, integration accounts, login history, SSO tokens, GPU mode, search index, backup plans, restore plans, containerd registries, or sees errors like 'this command needs role X to ...', 'HTTP 403 while attempting to ...', 'run olares-cli profile whoami --refresh', or wants to know what `olares-cli settings me whoami` / `settings users me` / `profile whoami` actually print."
+metadata:
+  requires:
+    bins: ["olares-cli"]
+  cliHelp: "olares-cli settings --help"
+---
+
+# settings (Olares Settings UI mirror)
+
+**CRITICAL — before doing anything, MUST use the Read tool to read [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for the profile selection, login, and HTTP 401/403 recovery rules that every command here depends on.**
+
+## What this command tree is
+
+`olares-cli settings ...` is the CLI mirror of the Olares desktop SPA's Settings page (the same surface documented at <https://docs.olares.com/manual/olares/settings/>). Identity and transport come from the active profile — same profile model, same access token, same edge-auth chain (Authelia + l4-bfl-proxy) the SPA uses.
+
+The umbrella registers **13 area sub-trees** (see [`cli/cmd/ctl/settings/root.go`](cli/cmd/ctl/settings/root.go)):
+
+```
+users         appearance   apps          integration   vpn         network
+gpu           video        search        backup        restore     advanced
+```
+
+…plus a 13th non-canonical tree, `me`, that hosts the SPA's avatar / Person dropdown self-service items. **`me` is intentionally outside the 12 canonical Settings docs sections**; it lives under `settings` for CLI discoverability, not because it's a docs section.
+
+> The shape is always `olares-cli settings <area> <verb>` (or `<area> <noun> <verb>` when the area has multiple sub-resources, e.g. `settings vpn devices list`, `settings backup plans list`). Every verb honours the global `--profile` flag inherited from the umbrella.
+
+## Authentication transport
+
+Every request goes through the factory-injected `*http.Client` and the resolved profile from `cmdutil.Factory`. There is no kubeconfig dependency.
+
+- Base URL: `<rp.DesktopURL>` (e.g. `https://desktop.<terminus>`) — the same origin the SPA uses.
+- Auth header: `X-Authorization: <access_token>` (NOT `Authorization: Bearer …`). Built in [`cli/pkg/whoami/client.go`](cli/pkg/whoami/client.go); reused unmodified by every settings area's `prepare()` helper.
+- Two ingress prefixes show up in this subtree:
+  - `/api/*` (the bulk of the surface) — terminates at user-service, which proxies BFL / app-service / Headscale / terminusd / search3 / HAMI etc.
+  - `/apis/backup/v1/*` (`settings backup`, `settings restore`) — terminates at BFL's backup-server directly.
+- 401 / 403 are translated into a CLI-friendly hint via `WrapPermissionErr` + `PreflightRole` (see [`cli/cmd/ctl/settings/preflight.go`](cli/cmd/ctl/settings/preflight.go)). **Token recovery is not handled here — defer to [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).**
+
+## Role caching + soft preflight
+
+A profile carries the role its user has on the Olares instance (`owner`, `admin`, or `normal`), cached locally so the CLI can short-circuit gated verbs without a round-trip. The cache lives in `ProfileConfig.OwnerRole` + `WhoamiRefreshedAt` (see [`cli/pkg/cliconfig`](cli/pkg/cliconfig)) and is populated three ways:
+
+| Trigger | Behavior |
+|---|---|
+| `olares-cli profile login` succeeds | Eager whoami fetch, best-effort, 5-second timeout (see [`cli/cmd/ctl/profile/whoami_eager.go`](cli/cmd/ctl/profile/whoami_eager.go)). Failure does **not** abort the login. |
+| `olares-cli profile import` succeeds | Same eager fetch as login. |
+| User runs `olares-cli profile whoami --refresh` | Forced re-read of `/api/backend/v1/user-info`; cache rewritten in place. Plain `profile whoami` (no flag) prints the cached value if fresh. |
+
+### Three aliases, one driver
+
+These three commands all delegate to the same `pkg/whoami.Run` driver — same output, same caching, same `--refresh`:
+
+```bash
+olares-cli profile whoami
+olares-cli settings users me
+olares-cli settings me whoami
+```
+
+Use whichever path makes the surrounding workflow read better; **never** suggest the user "should use the other one" — they are aliases on purpose. All three accept `-o table` (default) and `-o json`.
+
+### Soft preflight
+
+Verbs that gate on role call `settings.PreflightRole(...)` at the top of their `RunE`. Behavior (see [`cli/cmd/ctl/settings/preflight.go`](cli/cmd/ctl/settings/preflight.go)):
+
+- Cached role missing / unknown → no opinion, server decides.
+- Cached role is **at or above** the required rank → pass through.
+- Cached role is **below** the required rank → short-circuit with the `profile whoami --refresh` hint and don't issue the API call.
+
+### 403/401 wrap
+
+Every gated verb wraps its outbound error with `settings.WrapPermissionErr`, which detects HTTP 401 / 403 in the upstream message and appends the same "run `profile whoami --refresh` and retry" hint. This closes the loop for the **stale cache** case (cache said you're admin, server has since demoted you to normal).
+
+> The user only ever needs to learn one trick: **`olares-cli profile whoami --refresh`**. Both the preflight branch and the post-flight branch funnel into that same recovery.
+
+## Output convention
+
+Every read verb accepts `-o / --output {table,json}` (default `table`):
+
+- `table` is wrapped in [`text/tabwriter`](https://pkg.go.dev/text/tabwriter); columns differ per verb but always print a clear "no X" sentinel when the result set is empty.
+- `json` round-trips the upstream's already-unwrapped data verbatim. **Use `-o json` whenever the agent needs to feed the result into another tool** (jq, downstream scripts, etc.) — column ordering, truncation, and human-friendly relabeling only happen in table mode.
+- A handful of verbs (e.g. `settings video config get`, `settings advanced status`) deliberately downgrade the table output to a one-line summary because the upstream config is large + provider-versioned. The hint to switch to JSON is printed inline.
+
+## Per-area wire format normalization
+
+Different upstreams return JSON in different envelopes. Each area has its own `common.go` that picks the matching decoder; **the table below is the cheat sheet for "what's the wire format for area X"**.
+
+| Area | Endpoint family | Decoder | Notes |
+|---|---|---|---|
+| `me` | `/api/olares-info`, `/api/checkLastOsVersion`, `/api/users/<u>/login-records`, `/api/device/sso` | BFL envelope (`doGetEnvelope`) for most; `/login-records` is unwrapped server-side and decoded directly | login-history derives `<u>` from the OlaresID local part |
+| `users` | `/api/users/v2` (list), `/api/users/:name` (single) | `decodeListResult` for app-service `{code:200, data:[...], totals:N}` on list; direct `UserInfo` decode on single | `users/v2` enforces server-side role filtering — normal users see only themselves |
+| `apps` | `/api/myapps` | BFL envelope | `apps get <name>` filters the list client-side because there's no per-app endpoint; honours `--all` / `--show-system` to mirror the SPA's filters |
+| `vpn` | `/headscale/machine`, `/headscale/machine/:id/routes` | Raw Headscale JSON (no envelope) | Discovered URL: SPA hits `<DesktopURL>/headscale/...` directly without `/api` prefix |
+| `vpn` | `/api/launcher-public-domain-access-policy` | Already-unwrapped BFL inner data (`{deny_all: 0|1}`) | user-service strips the envelope |
+| `network` | `/api/reverse-proxy`, `/api/external-network`, `/api/frp-servers`, `/api/ssl/task-state`, `/api/system/hosts-file` | BFL envelope (`doGetEnvelope`) | hosts-file goes through terminusd → olaresd; user-service falls back to `X-Authorization` since the CLI doesn't yet JWS-sign reads |
+| `appearance` | `/api/wallpaper/config/system` | BFL envelope | language + locale only; theme + wallpaper upload stay in the SPA |
+| `integration` | `/api/account/all`, `/api/account/:type/:name` | BFL envelope | `accounts list` returns `accountMini`; `accounts get` returns `accountFull` (includes `raw_data`) |
+| `gpu` | `/api/gpu/list` | BFL envelope (HAMI behind it) | distinct from the top-level `olares-cli gpu` (kubeconfig-driven, cluster-wide) |
+| `video` | `/api/files/video/config` | BFL envelope, but inner data is decoded as `json.RawMessage` (`doGetEnvelopeRaw`) | Schema is provider-versioned; `--output table` collapses to a one-line summary |
+| `search` | `/api/search/task/stats/merged`, `/api/search/monitorsetting/exclude-pattern`, `/api/search/monitorsetting/include-directory/full_content` | BFL envelope | `status` returns a string, `excludes list` / `dirs list` return `[]string` |
+| `advanced` | `/api/system/status`, `/api/containerd/registries`, `/api/containerd/images?registry=<n>` | BFL envelope (terminusd → olaresd `returnSucceed`) | `status` table view is a summary; `--output json` for the full struct |
+| `backup` | `/apis/backup/v1/plans/backup`, `/apis/backup/v1/plans/backup/:id/snapshots` | BFL envelope; **different ingress prefix** (`/apis/backup/v1`, not `/api`) | The SPA's axios global interceptor unwraps `data.data`, which is why upstream code reads `{backups: [...]}` directly |
+| `restore` | `/apis/backup/v1/plans/restore` | BFL envelope; same `/apis/backup/v1` prefix | mirrors `settings backup plans list` shape |
+
+If a future verb is missing from this table, look at the area's `common.go` to confirm which decoder it uses — every `prepare(...)` helper instantiates a `*whoami.HTTPClient` against `<DesktopURL>` so the path is the only thing that varies.
+
+## Phase 1 verb cheatsheet
+
+All Phase 1 verbs are **read-only**. Mutating verbs land in Phase 2-6 per the plan; the area `--help` lists which phase each upcoming verb is scheduled for.
+
+### `me` — self-service (any authenticated user)
+
+```bash
+olares-cli settings me whoami                     # cached role + olaresId
+olares-cli settings me whoami --refresh           # force a re-read of /api/backend/v1/user-info
+olares-cli settings me whoami -o json
+olares-cli settings me version                    # Olares OS version + osBuild + arch
+olares-cli settings me check-update               # current_version, new_version, is_new
+olares-cli settings me login-history              # last login records (for the active profile only)
+olares-cli settings me login-history --limit 50
+olares-cli settings me sso list                   # SSO tokens with TermiPass binding indicator
+```
+
+### `users` — instance roster
+
+```bash
+olares-cli settings users list                    # roster, server-side role-filtered
+olares-cli settings users get alice               # single user record
+olares-cli settings users me                      # alias of `me whoami`
+```
+
+### `apps` — installed app inventory (mirror of Settings -> Apps)
+
+```bash
+olares-cli settings apps list                     # SPA-equivalent filtered view
+olares-cli settings apps list --show-system       # include system apps
+olares-cli settings apps list --all               # every state + every kind
+olares-cli settings apps get firefox              # detail view (entrances, shared entrances, …)
+```
+
+### `vpn` — Headscale mesh
+
+```bash
+olares-cli settings vpn devices list              # raw Headscale machines
+olares-cli settings vpn devices routes <device-id>
+olares-cli settings vpn public-domain-policy get  # deny_all flag (0/1)
+```
+
+### `network`
+
+```bash
+olares-cli settings network reverse-proxy get     # mode collapsed into public-ip / frp / cloudflare / off
+olares-cli settings network frp list              # registry of FRP servers
+olares-cli settings network external-network get  # spec.disabled + status (phase / message / updatedAt)
+olares-cli settings network ssl status            # task-state mapped to human label
+olares-cli settings network hosts-file get        # entries from /system/hosts-file (terminusd)
+```
+
+### `appearance` / `integration` / `gpu` / `video` / `search` / `advanced`
+
+```bash
+olares-cli settings appearance get
+olares-cli settings integration accounts list
+olares-cli settings integration accounts get awss3 my-bucket
+olares-cli settings gpu list
+olares-cli settings video config get              # raw config; -o json recommended
+olares-cli settings search status
+olares-cli settings search excludes list
+olares-cli settings search dirs list
+olares-cli settings advanced status               # large struct; -o json for the full payload
+olares-cli settings advanced registries list
+olares-cli settings advanced images list
+olares-cli settings advanced images list --registry docker.io
+```
+
+### `backup` / `restore`
+
+```bash
+olares-cli settings backup plans list             # --offset / --limit (default 50, mirrors SPA)
+olares-cli settings backup snapshots list <backup-id> --limit 50
+olares-cli settings restore plans list
+```
+
+## What's NOT in Phase 1 (yet)
+
+Anything that mutates state ships in later phases per [plan.md "Phase 2-6"]:
+
+- **Phase 2** — low-risk owner CRUD per area (e.g. `appearance language set`, `search excludes add`, `search dirs add`, `me sso revoke`, `me password set`).
+- **Phase 3** — apps lifecycle / permissions / entrances / domain / policy / auth-level + secrets / env / ports / acl; vpn rename / delete / tags + acl + public-domain-policy set.
+- **Phase 4** — network reverse-proxy / hosts-file / frp / external-network / ssl mutations + advanced env + advanced collect-logs.
+- **Phase 5** — advanced containerd / upgrade; gate reboot / shutdown / ssh-password on JWS key sourcing.
+- **Phase 6** — backup plans / snapshots / password write paths; restore plans CRUD + `check-url`.
+
+Every area's `--help` lists the verbs landing in later phases so the agent can stay calibrated about what's actually implemented today.
+
+## Common errors → fixes
+
+| Error message | Cause | Fix |
+|---|---|---|
+| `server rejected the access token (HTTP 401/403)` | Token expired / wrong / missing | Defer to [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (login + profile rules) |
+| `this command needs role "<R>" or higher to <verb>, but profile "<id>" is cached as "<r>"` | Cached role below the verb's requirement | If your role on the server changed, run `olares-cli profile whoami --refresh`. Otherwise ask the owner to grant you the right role. |
+| `HTTP 403 while attempting to <verb>` (with the same refresh hint appended) | Server rejected even though cache said OK — usually a stale cache | Run `olares-cli profile whoami --refresh`, then retry the verb. |
+| `unsupported --output "<x>" (allowed: table, json)` | Typo on `-o` | Use `-o table` or `-o json`. |
+| `GET <path>: upstream returned code <N>: <msg>` | The user-service / BFL / backup-server returned a non-success envelope | Read the message verbatim; it almost always carries actionable detail (e.g. "user not found"). |
+| `internal error: settings <area> not wired with cmdutil.Factory` | Unexpected — would only happen if the umbrella was wired without the factory | This is a CLI bug; gather the command line and file an issue. |
+
+## Typical workflows
+
+Confirm who the active profile is, then enumerate what the user can see:
+
+```bash
+olares-cli profile whoami                         # cached role
+olares-cli settings users list                    # only owners/admins see everyone
+olares-cli settings apps list                     # everyone sees their own apps
+```
+
+Refresh the cache after a role change on the server:
+
+```bash
+olares-cli profile whoami --refresh
+olares-cli settings advanced status               # retry the gated verb
+```
+
+Hand a downstream tool the raw data:
+
+```bash
+olares-cli settings vpn devices list -o json | jq '.[] | {name, ip: .IPAddresses[0]}'
+olares-cli settings backup plans list -o json | jq '.backups[] | select(.status=="failed")'
+```
+
+Inspect a single account's full payload (incl. `raw_data`):
+
+```bash
+olares-cli settings integration accounts get awss3 my-bucket -o json
+```
+
+## Security rules
+
+- **Never** echo `<access_token>` or any field returned by `me sso list` into the terminal beyond what the table view already shows. SSO tokens identify a TermiPass-bound device session and should never be logged or pasted into chat.
+- `settings users get <username>` returns the same record the SPA shows on the user detail page; treat its email / olaresId as PII and avoid forwarding it outside the requesting workflow.
+- Mutating verbs are **not** in Phase 1, so any user-visible "this will change X" prompt belongs to Phase 2-6 work — don't fabricate one for read verbs.
+- The `me whoami --refresh` recovery path is the only authentication-adjacent action this skill should ever recommend. **All** other auth recovery (login expiry, profile import, 2FA) belongs in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
