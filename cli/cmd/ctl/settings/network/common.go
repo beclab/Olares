@@ -100,25 +100,32 @@ type bflEnvelope struct {
 // decodes the inner data into `out`. A code of 0 (or 200, which a
 // handful of olaresd-backed handlers use) is treated as success.
 func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) error {
+	return doMutateEnvelope(ctx, d, "GET", path, nil, out)
+}
+
+// doMutateEnvelope is the POST/PUT/DELETE counterpart of doGetEnvelope.
+// user-service routes return BFL `{code: 0}` (the most common shape —
+// returnSucceed wraps everything) or `{code: 200}` for a few
+// olaresd-proxied handlers. Both are treated as success here.
+func doMutateEnvelope(ctx context.Context, d Doer, method, path string, body, out interface{}) error {
 	var env bflEnvelope
-	if err := d.DoJSON(ctx, "GET", path, nil, &env); err != nil {
+	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
 		return err
 	}
 	switch env.Code {
 	case 0, 200:
-		// success
 	default:
 		msg := strings.TrimSpace(env.Message)
 		if msg == "" {
-			return fmt.Errorf("GET %s: upstream returned code %d", path, env.Code)
+			return fmt.Errorf("%s %s: upstream returned code %d", method, path, env.Code)
 		}
-		return fmt.Errorf("GET %s: upstream returned code %d: %s", path, env.Code, msg)
+		return fmt.Errorf("%s %s: upstream returned code %d: %s", method, path, env.Code, msg)
 	}
 	if out == nil || len(env.Data) == 0 {
 		return nil
 	}
 	if err := json.Unmarshal(env.Data, out); err != nil {
-		return fmt.Errorf("GET %s: decode data: %w", path, err)
+		return fmt.Errorf("%s %s: decode data: %w", method, path, err)
 	}
 	return nil
 }

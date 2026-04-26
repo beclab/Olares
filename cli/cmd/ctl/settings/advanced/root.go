@@ -32,21 +32,20 @@ Subcommands:
   status                                                  (Phase 1)
   registries list                                         (Phase 1)
   images list [--registry <name>]                         (Phase 1)
+  env (system|user) list / set --var KEY=VAL              (Phase 4)
 
-Subcommands landing in Phase 4:
-  env (system|user) list / get / set / delete, collect-logs
-
-Subcommands landing in Phase 5 (JWS-signed):
-  registries mirrors get/set/delete, registries prune,
+Out of scope until a JWS key sourcing path exists:
+  registries mirrors put/delete, registries prune,
   images delete / prune,
   upgrade state / start / cancel,
-  reboot / shutdown / ssh-password
-  (gated on JWS key sourcing — see plan.md "Open questions")
+  reboot / shutdown / ssh-password,
+  collect-logs (terminusd-signed)
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(NewStatusCommand(f))
 	cmd.AddCommand(NewRegistriesCommand(f))
 	cmd.AddCommand(NewImagesCommand(f))
+	cmd.AddCommand(NewEnvCommand(f))
 	return cmd
 }

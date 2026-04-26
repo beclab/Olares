@@ -87,8 +87,12 @@ type bflEnvelope struct {
 }
 
 func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) error {
+	return doMutateEnvelope(ctx, d, "GET", path, nil, out)
+}
+
+func doMutateEnvelope(ctx context.Context, d Doer, method, path string, body, out interface{}) error {
 	var env bflEnvelope
-	if err := d.DoJSON(ctx, "GET", path, nil, &env); err != nil {
+	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
 		return err
 	}
 	switch env.Code {
@@ -96,15 +100,15 @@ func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) er
 	default:
 		msg := strings.TrimSpace(env.Message)
 		if msg == "" {
-			return fmt.Errorf("GET %s: upstream returned code %d", path, env.Code)
+			return fmt.Errorf("%s %s: upstream returned code %d", method, path, env.Code)
 		}
-		return fmt.Errorf("GET %s: upstream returned code %d: %s", path, env.Code, msg)
+		return fmt.Errorf("%s %s: upstream returned code %d: %s", method, path, env.Code, msg)
 	}
 	if out == nil || len(env.Data) == 0 {
 		return nil
 	}
 	if err := json.Unmarshal(env.Data, out); err != nil {
-		return fmt.Errorf("GET %s: decode data: %w", path, err)
+		return fmt.Errorf("%s %s: decode data: %w", method, path, err)
 	}
 	return nil
 }
