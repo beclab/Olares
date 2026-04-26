@@ -10,21 +10,29 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewVPNCommand returns the `settings vpn` parent.
-func NewVPNCommand(_ *cmdutil.Factory) *cobra.Command {
+// NewVPNCommand returns the `settings vpn` parent. Phase 1 ships the
+// read-only verbs (devices list / routes / public-domain-policy get);
+// Phase 3 lands the mutating verbs.
+func NewVPNCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "vpn",
 		Short: "VPN / Headscale (devices, routes, ACL, public-domain-policy)",
 		Long: `Manage the per-Olares Headscale mesh: devices, routes, SSH/sub-routes ACLs,
 and public-domain-policy.
 
-Subcommands will be added in subsequent phases:
-  Phase 1: devices list, routes list
+Subcommands:
+  devices list                          (Phase 1)
+  devices routes <device-id>            (Phase 1)
+  public-domain-policy get              (Phase 1)
+
+Subcommands landing in subsequent phases:
   Phase 3: devices rename / delete / tags, routes enable / disable,
            ssh status / enable / disable, subroutes status / enable / disable,
-           public-domain-policy get / set
+           public-domain-policy set
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(NewDevicesCommand(f))
+	cmd.AddCommand(NewPublicDomainPolicyCommand(f))
 	return cmd
 }
