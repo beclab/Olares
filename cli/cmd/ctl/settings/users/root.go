@@ -23,7 +23,7 @@ import (
 // later phases; for now the parent prints its own help (cobra default when
 // no Run/RunE is set and no subcommands match), which is enough to confirm
 // the umbrella wires through.
-func NewUsersCommand(_ *cmdutil.Factory) *cobra.Command {
+func NewUsersCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "users",
 		Short: "Manage Olares users (Settings -> Users)",
@@ -41,5 +41,6 @@ Subcommands will be added in subsequent phases:
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(NewMeCommand(f))
 	return cmd
 }

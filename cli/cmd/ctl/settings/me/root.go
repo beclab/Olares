@@ -31,7 +31,7 @@ import (
 // NewMeCommand returns the `settings me` parent. Subcommands land in later
 // phases; the parent prints help by default, which is enough confirmation
 // that the umbrella wires through.
-func NewMeCommand(_ *cmdutil.Factory) *cobra.Command {
+func NewMeCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "me",
 		Short: "Self-service settings for the current user (whoami / version / login-history / sso / password)",
@@ -49,5 +49,6 @@ Subcommands will be added in subsequent phases:
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(NewWhoamiCommand(f))
 	return cmd
 }

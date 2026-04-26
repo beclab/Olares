@@ -89,5 +89,6 @@ func runImport(ctx context.Context, o *importOptions) error {
 	fmt.Printf("imported credentials for %s (profile: %s)\n", o.olaresID, profile.DisplayName())
 	printSwitchNotice(res, profile.DisplayName())
 	printStorageNotice(profile.OlaresID)
+	eagerWhoami(ctx, cfg, profile, tok.AccessToken)
 	return nil
 }

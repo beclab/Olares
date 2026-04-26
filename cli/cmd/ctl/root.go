@@ -69,7 +69,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(disk.NewDiskCommand())
 	cmds.AddCommand(market.NewMarketCommand(factory))
 	cmds.AddCommand(app.NewAppCommand())
-	cmds.AddCommand(profile.NewProfileCommand())
+	cmds.AddCommand(profile.NewProfileCommand(factory))
 	cmds.AddCommand(files.NewFilesCommand(factory))
 	cmds.AddCommand(settings.NewSettingsCommand(factory))
 
