@@ -71,7 +71,7 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	id, terminusName, authURL, err := o.commonCredFlags.validateAndDeriveAuthURL()
+	id, _, authURL, err := o.commonCredFlags.validateAndDeriveAuthURL()
 	if err != nil {
 		return err
 	}
@@ -92,11 +92,11 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 	}
 
 	tok, err := loginWithTOTPPrompt(ctx, auth.LoginRequest{
-		AuthURL:      authURL,
-		LocalName:    id.Local(),
-		TerminusName: terminusName,
-		Password:     password,
-		TOTP:         o.totp,
+		AuthURL:   authURL,
+		LocalName: id.Local(),
+		OlaresID:  o.olaresID,
+		Password:  password,
+		TOTP:      o.totp,
 		// NeedTwoFactor=true sends targetURL=desktop.<name>/ on
 		// /api/firstfactor so Authelia evaluates its 2FA access policy
 		// and reports `fa2=true` for accounts that actually have 2FA

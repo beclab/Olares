@@ -77,9 +77,10 @@ type Token struct {
 // session cookie that the second-factor request needs); the
 // activation/signup caller (cli/pkg/wizard.UserBindTerminus) passes false.
 type LoginRequest struct {
-	AuthURL            string
-	LocalName          string
-	TerminusName       string
+	AuthURL   string
+	LocalName string
+	// TerminusName       string
+	OlaresID           string
 	Password           string
 	TOTP               string
 	NeedTwoFactor      bool
@@ -169,8 +170,8 @@ func validateLoginRequest(req LoginRequest) error {
 		return errors.New("AuthURL is required")
 	case req.LocalName == "":
 		return errors.New("LocalName is required")
-	case req.TerminusName == "":
-		return errors.New("TerminusName is required")
+	case req.OlaresID == "":
+		return errors.New("OlaresID is required")
 	case req.Password == "":
 		return errors.New("Password is required")
 	}
@@ -217,7 +218,7 @@ type firstFactorResponse struct {
 // asks for the 2FA-bearing policy via NeedTwoFactor.
 func firstFactorWithClient(ctx context.Context, client *http.Client, req LoginRequest) (*Token, error) {
 
-	id, err := olares.ParseID(req.TerminusName)
+	id, err := olares.ParseID(req.OlaresID)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +272,7 @@ func postSecondFactorTOTP(ctx context.Context, client *http.Client, req LoginReq
 	// its scheme/host but otherwise just relays it back, so we hard-code the
 	// desktop subdomain pattern to match BindTerminusBusiness.ts.
 
-	id, err := olares.ParseID(req.TerminusName)
+	id, err := olares.ParseID(req.OlaresID)
 	if err != nil {
 		return nil, err
 	}
