@@ -20,6 +20,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0
 	github.com/distribution/reference v0.6.0
 	github.com/dominodatalab/os-release v0.0.0-20190522011736-bcdb4a3e3c2f
+	github.com/gofrs/flock v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/libp2p/go-netroute v0.2.2
@@ -43,6 +44,7 @@ require (
 	github.com/zalando/go-keyring v0.2.8
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.46.0
+	golang.org/x/sync v0.19.0
 	golang.org/x/sys v0.39.0
 	golang.org/x/term v0.38.0
 	golang.org/x/text v0.32.0
@@ -211,7 +213,6 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools/godoc v0.1.0-deprecated // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect

@@ -32,13 +32,13 @@ import (
 
 // Client is the per-FilesURL handle used by DeleteBatch.
 //
-// AccessToken is sent as `X-Authorization` (not `Authorization: Bearer`),
-// because Olares' edge stack only forwards the X-Authorization header to
-// per-user services. See pkg/cmdutil/factory.go for the full rationale.
+// HTTPClient is expected to be the factory-provided client whose
+// refreshingTransport injects `X-Authorization` (not `Authorization:
+// Bearer`, see pkg/cmdutil/factory.go for why) and transparently refreshes
+// on 401/403.
 type Client struct {
-	HTTPClient  *http.Client
-	BaseURL     string // FilesURL, e.g. https://files.alice.olares.com
-	AccessToken string
+	HTTPClient *http.Client
+	BaseURL    string // FilesURL, e.g. https://files.alice.olares.com
 }
 
 // HTTPError carries the status + truncated body of a non-2xx response
@@ -220,9 +220,6 @@ func (c *Client) DeleteBatch(ctx context.Context, g *Group) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
-	}
-	if c.AccessToken != "" {
-		req.Header.Set("X-Authorization", c.AccessToken)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")

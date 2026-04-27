@@ -17,18 +17,17 @@ import (
 	"time"
 )
 
-// newTestClient wires a *Client up to an httptest.Server. We always
-// inject a recognisable token so each test can assert that
-// X-Authorization made it onto the wire (the most common refactor
-// regression in this CLI is dropping the header).
+// newTestClient wires a *Client up to an httptest.Server. The download
+// Client itself no longer injects X-Authorization (that responsibility
+// moved to the factory's refreshingTransport), so test handlers should
+// assert wire shape but NOT the access-token header.
 func newTestClient(t *testing.T, h http.Handler) (*Client, *httptest.Server) {
 	t.Helper()
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 	return &Client{
-		HTTPClient:  srv.Client(),
-		BaseURL:     srv.URL,
-		AccessToken: "test-token-XYZ",
+		HTTPClient: srv.Client(),
+		BaseURL:    srv.URL,
 	}, srv
 }
 
@@ -72,9 +71,6 @@ func TestStat_LeafLookupInParent(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Header.Get("X-Authorization") != "test-token-XYZ" {
-					t.Fatalf("missing/wrong X-Authorization")
-				}
 				if r.Method != http.MethodGet {
 					t.Fatalf("want GET, got %s", r.Method)
 				}
@@ -474,9 +470,6 @@ func TestStreamRaw_HappyPath(t *testing.T) {
 		}
 		if r.URL.Query().Get("inline") != "true" {
 			t.Errorf("want inline=true, got %q", r.URL.Query().Get("inline"))
-		}
-		if r.Header.Get("X-Authorization") != "test-token-XYZ" {
-			t.Errorf("missing X-Authorization")
 		}
 		_, _ = w.Write(body)
 	}))

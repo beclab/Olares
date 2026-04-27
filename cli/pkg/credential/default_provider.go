@@ -11,7 +11,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/olares"
 )
 
-// DefaultProvider resolves a profile using the local config + plaintext token
+// DefaultProvider resolves a profile using the local config + keychain token
 // store. It implements the standard "ran `profile login` on the same machine"
 // scenario.
 //
@@ -20,14 +20,14 @@ import (
 //
 //  1. profile nil                    → return (nil, nil); orchestrator surfaces ErrNoProfile
 //  2. no token stored                → ErrNotLoggedIn
-//  3. stored.InvalidatedAt > 0       → ErrTokenInvalidated  (Phase 2 marks this on /api/refresh 401/403)
-//  4. JWT exp claim in the past      → ErrTokenExpired
-//  5. otherwise                      → ResolvedProfile
+//  3. stored.InvalidatedAt > 0       → ErrTokenInvalidated  (refresher writes this on /api/refresh 401/403)
+//  4. otherwise                      → ResolvedProfile, even if the JWT exp is in the past
 //
-// Note (3) takes precedence over (4): an explicitly-invalidated grant is
-// unusable even if the access_token JWT happens to still have time left,
-// because the refresh leg is dead and we cannot get a new one. Phase 1 does
-// NOT auto-refresh. Phase 2 will inject token-refresh logic here.
+// We deliberately do NOT short-circuit on a stale JWT exp claim: cli/pkg/cmdutil's
+// refreshingTransport will trigger /api/refresh on a 401 and retry the
+// request transparently. Failing here would deny it the chance to recover.
+// The ErrTokenExpired type is kept for backward compatibility (no callers
+// today) in case a future flow wants to assert on it.
 type DefaultProvider struct {
 	store auth.TokenStore
 	now   func() time.Time
@@ -53,8 +53,10 @@ func (e *ErrNotLoggedIn) Error() string {
 	return fmt.Sprintf("no access token for %s; run: olares-cli profile login --olares-id %s  (or profile import --refresh-token <tok>)", e.OlaresID, e.OlaresID)
 }
 
-// ErrTokenExpired is returned when a stored token's JWT `exp` is in the past.
-// Phase 1 does not auto-refresh; Phase 2 will catch this internally.
+// ErrTokenExpired is retained for backward compatibility but is no longer
+// produced by Resolve — refreshingTransport handles expiry transparently
+// via /api/refresh. Kept so any future flow (or external consumer of the
+// credential package) can still assert on it without API churn.
 type ErrTokenExpired struct {
 	OlaresID  string
 	ExpiredAt time.Time
@@ -69,9 +71,9 @@ func (e *ErrTokenExpired) Error() string {
 // marked unusable via TokenStore.MarkInvalidated. The grant cannot be
 // recovered locally — the user must re-authenticate.
 //
-// Phase 1 has no code path that writes InvalidatedAt; the only way to hit
-// this in Phase 1 is by hand-editing tokens.json. Phase 2's refreshWithLock
-// will write InvalidatedAt when /api/refresh returns 401/403.
+// Refresher.Refresh stamps InvalidatedAt when /api/refresh returns 401/403,
+// so subsequent commands skip the network round-trip and surface this CTA
+// directly.
 type ErrTokenInvalidated struct {
 	OlaresID      string
 	InvalidatedAt time.Time
@@ -109,9 +111,8 @@ func (d *DefaultProvider) Resolve(_ context.Context, profile *cliconfig.ProfileC
 	if expErr != nil && !errors.Is(expErr, auth.ErrNoExpClaim) {
 		return nil, fmt.Errorf("decode access token: %w", expErr)
 	}
-	if !exp.IsZero() && !d.now().Before(exp) {
-		return nil, &ErrTokenExpired{OlaresID: profile.OlaresID, ExpiredAt: exp}
-	}
+	// Stale JWTs are NOT rejected here — refreshingTransport will swap them
+	// out on a 401. We surface exp purely as a hint on ResolvedProfile.
 
 	return buildResolved(profile, stored.AccessToken, exp)
 }

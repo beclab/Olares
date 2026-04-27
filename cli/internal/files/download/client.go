@@ -33,13 +33,13 @@ import (
 // and by the cobra command. It is cheap to construct; reuse one per
 // `files download` / `files cat` invocation.
 //
-// AccessToken is sent as `X-Authorization` (not `Authorization: Bearer`),
-// because Olares' edge stack only forwards the X-Authorization header to
-// per-user services. See pkg/cmdutil/factory.go for the full rationale.
+// HTTPClient is expected to be the factory-provided client whose
+// refreshingTransport injects `X-Authorization` (not `Authorization:
+// Bearer`, see pkg/cmdutil/factory.go for why) and transparently refreshes
+// on 401/403.
 type Client struct {
-	HTTPClient  *http.Client
-	BaseURL     string // FilesURL, e.g. https://files.alice.olares.com
-	AccessToken string
+	HTTPClient *http.Client
+	BaseURL    string // FilesURL, e.g. https://files.alice.olares.com
 }
 
 // HTTPError carries the status + truncated body of a non-2xx response so
@@ -99,9 +99,6 @@ func (c *Client) do(
 	req, err := http.NewRequestWithContext(ctx, method, endpoint, body)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
-	}
-	if c.AccessToken != "" {
-		req.Header.Set("X-Authorization", c.AccessToken)
 	}
 	for k, vs := range headers {
 		for _, v := range vs {
