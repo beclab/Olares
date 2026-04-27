@@ -251,7 +251,7 @@ func runShareList(
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	client, _, err := setupShareClient(ctx, f)
+	client, rp, err := setupShareClient(ctx, f)
 	if err != nil {
 		return err
 	}
@@ -271,7 +271,7 @@ func runShareList(
 
 	rows, err := client.List(ctx, params)
 	if err != nil {
-		return reformatShareHTTPErr(err, "", "list shares")
+		return reformatShareHTTPErr(err, rp.OlaresID, "list shares")
 	}
 	if len(rows) == 0 {
 		fmt.Fprintln(out, "no shares found")
@@ -309,13 +309,13 @@ func runShareGet(ctx context.Context, f *cmdutil.Factory, out io.Writer, shareID
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	client, _, err := setupShareClient(ctx, f)
+	client, rp, err := setupShareClient(ctx, f)
 	if err != nil {
 		return err
 	}
 	r, err := client.Query(ctx, shareID)
 	if err != nil {
-		return reformatShareHTTPErr(err, "", "get share "+shareID)
+		return reformatShareHTTPErr(err, rp.OlaresID, "get share "+shareID)
 	}
 	if r == nil {
 		return fmt.Errorf("share %s: not found on the server", shareID)
@@ -364,12 +364,12 @@ func runShareRm(ctx context.Context, f *cmdutil.Factory, out io.Writer, ids []st
 			return fmt.Errorf("share rm: arg %d is empty; expected a non-empty share id", i+1)
 		}
 	}
-	client, _, err := setupShareClient(ctx, f)
+	client, rp, err := setupShareClient(ctx, f)
 	if err != nil {
 		return err
 	}
 	if err := client.Remove(ctx, ids); err != nil {
-		return reformatShareHTTPErr(err, "", "remove shares")
+		return reformatShareHTTPErr(err, rp.OlaresID, "remove shares")
 	}
 	fmt.Fprintf(out, "removed %d share%s: %s\n", len(ids), pluralS(len(ids)), strings.Join(ids, ", "))
 	return nil
@@ -381,13 +381,13 @@ func runSMBUsersList(ctx context.Context, f *cmdutil.Factory, out io.Writer) err
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	client, _, err := setupShareClient(ctx, f)
+	client, rp, err := setupShareClient(ctx, f)
 	if err != nil {
 		return err
 	}
 	accounts, err := client.ListSMBAccounts(ctx)
 	if err != nil {
-		return reformatShareHTTPErr(err, "", "list smb accounts")
+		return reformatShareHTTPErr(err, rp.OlaresID, "list smb accounts")
 	}
 	if len(accounts) == 0 {
 		fmt.Fprintln(out, "no SMB accounts; create one with `olares-cli files share smb-users create <name> <password>`")
@@ -410,12 +410,12 @@ func runSMBUsersCreate(ctx context.Context, f *cmdutil.Factory, out io.Writer, u
 	if user == "" || password == "" {
 		return errors.New("share smb-users create: both <name> and <password> are required and non-empty")
 	}
-	client, _, err := setupShareClient(ctx, f)
+	client, rp, err := setupShareClient(ctx, f)
 	if err != nil {
 		return err
 	}
 	if err := client.CreateSMBAccount(ctx, user, password); err != nil {
-		return reformatShareHTTPErr(err, "", "create smb account")
+		return reformatShareHTTPErr(err, rp.OlaresID, "create smb account")
 	}
 	fmt.Fprintf(out, "created SMB account: %s\n", user)
 	return nil
