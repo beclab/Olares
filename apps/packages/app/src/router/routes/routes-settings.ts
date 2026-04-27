@@ -43,6 +43,7 @@ const routes: RouteRecordRaw[] = [
 				component: () => import('src/pages/settings/Person/AuthorityPage.vue')
 			},
 			{
+				name: MENU_TYPE.Hardware,
 				path: '/hardware',
 				component: () => import('src/pages/settings/Person/HardwarePage.vue')
 			},
