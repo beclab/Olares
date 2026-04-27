@@ -27,9 +27,10 @@ import (
 // entire settings package into the auth flow.
 //
 // Auth + 401/403 reformatting are handled by the upstream http.Client
-// (factory.authTransport injects X-Authorization) and by formatBackendErr
-// below — kept consistent with files/download.go's reformatHTTPError so
-// users see one message for all "your token doesn't work" cases.
+// (factory.refreshingTransport injects X-Authorization and auto-rotates
+// expired access_tokens) and by formatBackendErr below — kept consistent
+// with files/download.go's reformatHTTPError so users see one message for
+// all "your token doesn't work" cases.
 type HTTPClient struct {
 	hc       *http.Client
 	baseURL  string
@@ -37,9 +38,9 @@ type HTTPClient struct {
 	// accessToken, when non-empty, is set on every outbound request as
 	// `X-Authorization`. This is for the `profile login` / `profile import`
 	// eager-fetch path, where we have a freshly-minted token but Factory's
-	// authTransport may be tied to a stale resolved profile (or to none).
-	// When empty, we trust the underlying http.Client's RoundTripper to
-	// inject the header (factory.authTransport does this).
+	// refreshingTransport may be tied to a stale resolved profile (or to
+	// none). When empty, we trust the underlying http.Client's RoundTripper
+	// to inject the header (factory.refreshingTransport does this).
 	accessToken string
 }
 
@@ -47,6 +48,8 @@ type HTTPClient struct {
 // caller-supplied http.Client. Use this when the caller has a Factory
 // http.Client whose RoundTripper already injects X-Authorization for the
 // active profile (e.g. `profile whoami` after a successful ResolveProfile).
+// Since the Factory client's transport is a refreshingTransport, expired
+// access_tokens are auto-rotated transparently for the caller.
 // olaresID is included only for diagnostic messages.
 func NewHTTPClient(hc *http.Client, desktopURL, olaresID string) *HTTPClient {
 	return &HTTPClient{
