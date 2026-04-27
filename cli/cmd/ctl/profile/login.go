@@ -75,6 +75,13 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 	if err != nil {
 		return err
 	}
+	// Use the same canonical olaresId `validateAndDeriveAuthURL` just parsed
+	// (trimmed, validated) for auth and prompts — not the raw flag value, and
+	// not id.TerminusName() (dot form). pkg/auth derives vault/desktop target
+	// URLs via olares.ParseID(OlaresID).Local/Domain, which only match
+	// "local@domain" (or unqualified) strings; a terminus name string would
+	// mis-parse. See auth.LoginRequest and pkg/olares.ID.
+	olaresID := string(id)
 
 	cfg, err := cliconfig.LoadMultiProfileConfig()
 	if err != nil {
@@ -86,7 +93,7 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 		return err
 	}
 
-	password, err := readPassword(o.passwordStdin, o.olaresID)
+	password, err := readPassword(o.passwordStdin, olaresID)
 	if err != nil {
 		return err
 	}
@@ -94,7 +101,7 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 	tok, err := loginWithTOTPPrompt(ctx, auth.LoginRequest{
 		AuthURL:   authURL,
 		LocalName: id.Local(),
-		OlaresID:  o.olaresID,
+		OlaresID:  olaresID,
 		Password:  password,
 		TOTP:      o.totp,
 		// NeedTwoFactor=true sends targetURL=desktop.<name>/ on
@@ -113,7 +120,7 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 		// /api/secondfactor/totp when fa2 fires.
 		AcceptCookie:       true,
 		InsecureSkipVerify: o.insecureSkipVerify,
-	}, o.olaresID)
+	}, olaresID)
 	if err != nil {
 		return err
 	}
@@ -123,7 +130,7 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 		return err
 	}
 
-	fmt.Printf("logged in as %s (profile: %s)\n", o.olaresID, profile.DisplayName())
+	fmt.Printf("logged in as %s (profile: %s)\n", olaresID, profile.DisplayName())
 	printSwitchNotice(res, profile.DisplayName())
 	printStorageNotice(profile.OlaresID)
 	return nil

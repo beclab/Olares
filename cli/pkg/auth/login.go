@@ -49,10 +49,12 @@ type Token struct {
 // LocalName is the bare username (the part before `@` of the olaresId).
 // The web app uses this as `username` in the request body.
 //
-// TerminusName is "<local>.<domain>"; it's only used to derive the
-// `targetURL` form field (vault.<name>/server by default,
-// desktop.<name>/ when NeedTwoFactor is true) and the second-factor
-// `targetUrl`.
+// OlaresID is the full olaresId string in @ form (e.g. "alice@olares.com")
+// or an unqualified local with implied domain — the same shape
+// `olares.ParseID` accepts. The implementation derives per-service host
+// names via that parsed ID's Local/Domain (e.g. vault.<local>.<domain>/);
+// do NOT pass the terminus-name dot string alone (e.g. "alice.olares.com")
+// or URL derivation will be wrong.
 //
 // TOTP is optional — supply it when the account has 2FA enabled. Login
 // returns ErrTOTPRequired when 2FA is needed (tok.FA2 || NeedTwoFactor)
@@ -79,8 +81,7 @@ type Token struct {
 type LoginRequest struct {
 	AuthURL   string
 	LocalName string
-	// TerminusName       string
-	OlaresID           string
+	OlaresID  string
 	Password           string
 	TOTP               string
 	NeedTwoFactor      bool
