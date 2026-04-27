@@ -13,6 +13,7 @@ export default {
 		users: 'Users',
 		vpn: 'VPN',
 		gpu: 'GPU',
+		hardware: 'Hardware',
 		restore: 'Restore',
 		developer: 'Developer',
 		video: 'Video',
