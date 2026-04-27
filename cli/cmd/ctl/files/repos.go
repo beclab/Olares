@@ -656,19 +656,50 @@ func runReposRm(ctx context.Context, f *cmdutil.Factory, out io.Writer, in io.Re
 			return errors.New("repos rm: refusing to delete without -y / --yes (or -f / --force) in a non-interactive context (no TTY)")
 		}
 	}
+	// Filter empty IDs up front so the prompt loop and the delete
+	// loop agree on what's about to happen. Previously the prompt
+	// silently skipped empties while the delete loop produced an
+	// error per empty entry, so a user who confirmed deletion of
+	// the IDs they SAW could still get a non-zero exit driven by
+	// entries that never appeared in the prompt.
+	var errs []error
+	validIDs := make([]string, 0, len(repoIDs))
+	for _, id := range repoIDs {
+		if id == "" {
+			errs = append(errs, errors.New("empty repo id in argument list"))
+			continue
+		}
+		validIDs = append(validIDs, id)
+	}
+	if len(validIDs) == 0 {
+		return fmt.Errorf("repos rm: no valid repo ids supplied: %w", errors.Join(errs...))
+	}
+
 	client, rp, err := setupReposClient(ctx, f)
 	if err != nil {
 		return err
 	}
 	if !assumeYes {
-		fmt.Fprintln(out, "The following Sync library/libraries will be PERMANENTLY deleted (all contents):")
-		for _, id := range repoIDs {
-			if id == "" {
-				continue
+		// Resolve display names with a single ListAll instead of one
+		// Client.Get per ID. Get fans out across mine / share_to_me /
+		// shared, so per-ID lookup balloons to 3*N /api/repos/ calls
+		// just to render the prompt; ListAll runs the same fan-out
+		// exactly once and we look each id up locally. Failure is
+		// non-fatal: name resolution is best-effort and we'd rather
+		// fall through to "?" than block the rm on a flaky list.
+		nameByID := map[string]string{}
+		if rows, listErr := client.ListAll(ctx); listErr == nil {
+			for _, r := range rows {
+				if _, seen := nameByID[r.RepoID]; !seen {
+					nameByID[r.RepoID] = r.RepoName
+				}
 			}
+		}
+		fmt.Fprintln(out, "The following Sync library/libraries will be PERMANENTLY deleted (all contents):")
+		for _, id := range validIDs {
 			name := "?"
-			if r, getErr := client.Get(ctx, id); getErr == nil && r != nil && r.RepoName != "" {
-				name = r.RepoName
+			if n, ok := nameByID[id]; ok && n != "" {
+				name = n
 			}
 			fmt.Fprintf(out, "  %s  (%s)\n", id, name)
 		}
@@ -683,16 +714,17 @@ func runReposRm(ctx context.Context, f *cmdutil.Factory, out io.Writer, in io.Re
 		}
 	}
 
-	var errs []error
 	deleted := 0
-	for _, id := range repoIDs {
-		if id == "" {
-			errs = append(errs, errors.New("empty repo id in argument list"))
-			continue
-		}
+	for _, id := range validIDs {
 		if err := client.Delete(ctx, id); err != nil {
-			errs = append(errs, reformatReposHTTPErr(err, rp.OlaresID, "delete repo "+id))
-			fmt.Fprintf(out, "failed: %s (%v)\n", id, err)
+			// Reformat once and use the same message in both the
+			// printed "failed:" line and the joined return error,
+			// so credential-aware CTAs (e.g. "please run profile
+			// login") aren't silently dropped from the on-screen
+			// output for auth failures.
+			rerr := reformatReposHTTPErr(err, rp.OlaresID, "delete repo "+id)
+			errs = append(errs, rerr)
+			fmt.Fprintf(out, "failed: %s (%v)\n", id, rerr)
 			continue
 		}
 		deleted++
