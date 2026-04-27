@@ -7,7 +7,15 @@
 //                                                        forwards data.data
 //                                                        from BFL — body
 //                                                        already unwrapped)
-//  3. (future) Subroutes / SSH at /api/... (Phase 3)
+//  3. Subroutes / SSH toggles at /api/acl/...            (no envelope on
+//                                                        the read; opaque
+//                                                        body on POST)
+//  4. Per-app ACL at /api/acl/app/status                 (BFL envelope on
+//                                                        both ends; GET
+//                                                        treats code!=0
+//                                                        as "no ACL
+//                                                        configured" not
+//                                                        a hard error)
 //
 // common.go centralizes the per-area Doer + output plumbing in the same
 // shape as the other settings subpackages. We deliberately don't reach
@@ -92,6 +100,48 @@ func printJSON(w io.Writer, v interface{}) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	return enc.Encode(v)
+}
+
+// bflEnvelope is the BFL response wrapper that comes back on the per-app
+// ACL endpoints. Most other vpn paths either hit Headscale directly (raw
+// JSON, no envelope) or a user-service route that already unwraps the
+// envelope before responding (public-domain-policy, ssh status). The
+// per-app ACL editor is the odd one out — both the GET and the POST
+// round-trip the envelope verbatim.
+type bflEnvelope struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
+}
+
+// doMutateEnvelope is the POST/PUT/DELETE counterpart of plain DoJSON
+// for routes that surface a BFL envelope on the response. Treats
+// `code: 0` and `code: 200` as success; anything else surfaces the
+// upstream message verbatim. Used today only by the per-app ACL editor;
+// the existing ssh/subroutes/public-domain-policy writes pass nil out
+// because user-service unwraps the envelope server-side for those
+// paths.
+func doMutateEnvelope(ctx context.Context, d Doer, method, path string, body, out interface{}) error {
+	var env bflEnvelope
+	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
+		return err
+	}
+	switch env.Code {
+	case 0, 200:
+	default:
+		msg := strings.TrimSpace(env.Message)
+		if msg == "" {
+			msg = fmt.Sprintf("server returned code=%d", env.Code)
+		}
+		return fmt.Errorf("%s %s: %s", method, path, msg)
+	}
+	if out == nil || len(env.Data) == 0 {
+		return nil
+	}
+	if err := json.Unmarshal(env.Data, out); err != nil {
+		return fmt.Errorf("%s %s: decode data: %w", method, path, err)
+	}
+	return nil
 }
 
 func nonEmpty(s string) string {

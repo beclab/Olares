@@ -1,7 +1,7 @@
 ---
 name: olares-settings
-version: 0.3.0
-description: "olares-cli settings command tree: profile-based reads of every section the SPA's Settings page exposes (https://docs.olares.com/manual/olares/settings/) plus the Phase 2-6 mutating verbs that don't require JWS-signed bodies (me sso revoke, me password set with version-aware MD5+salt; appearance language set; search rebuild + excludes/dirs add+rm; integration accounts add awss3|tencent + accounts delete; apps suspend/resume + per-app env get/set + per-app secrets list/set/delete; vpn devices rename/delete/tags + routes enable/disable + ssh enable/disable + subroutes enable/disable + public-domain-policy set; network reverse-proxy set; advanced env system|user list/set; backup plans delete/pause/resume + snapshots run/cancel + password set; restore plans check-url + create-from-snapshot + create-from-url + cancel). Phase 1 surface (read-only): users / appearance / apps / integration / vpn / network / gpu / video / search / backup / restore / advanced + a non-canonical `me` self-service tree (whoami / version / check-update / login-history / sso list). Covers role caching (owner / admin / normal) on the active profile, soft preflight + `profile whoami --refresh` recovery, the `-o table | json` output convention, and the diverse upstream wire formats the CLI normalizes (BFL envelope on /api/*, app-service ListResult on /api/users-v2 + /api/myapps, raw Headscale JSON on /headscale/*, BFL envelope on /apis/backup/v1/*, terminusd-proxied envelopes for advanced status / containerd registries / images, /admin/secret/<app> for per-app secrets). Use whenever the user mentions Olares Settings, Settings UI, the SPA Settings page, role / owner / admin / normal, integration accounts, login history, SSO tokens, GPU mode, search index, backup plans, restore plans, containerd registries, password change, app secrets, app env vars, app suspend/resume, VPN ACLs, reverse-proxy mode, restore from URL, or sees errors like 'this command needs role X to ...', 'HTTP 403 while attempting to ...', 'run olares-cli profile whoami --refresh', or wants to know what `olares-cli settings me whoami` / `settings users me` / `profile whoami` actually print."
+version: 0.3.1
+description: "olares-cli settings command tree: profile-based reads of every section the SPA's Settings page exposes (https://docs.olares.com/manual/olares/settings/) plus the Phase 2-6 mutating verbs that don't require JWS-signed bodies (me sso revoke, me password set with version-aware MD5+salt; appearance language set; search rebuild + excludes/dirs add+rm; integration accounts add awss3|tencent + accounts delete; apps suspend/resume + per-app env get/set + per-app secrets list/set/delete; vpn devices rename/delete/tags + routes enable/disable + ssh enable/disable + subroutes enable/disable + per-app acl get/set/add/remove/clear + public-domain-policy set; network reverse-proxy set; advanced env system|user list/set; backup plans delete/pause/resume + snapshots run/cancel + password set; restore plans check-url + create-from-snapshot + create-from-url + cancel). Phase 1 surface (read-only): users / appearance / apps / integration / vpn / network / gpu / video / search / backup / restore / advanced + a non-canonical `me` self-service tree (whoami / version / check-update / login-history / sso list). Covers role caching (owner / admin / normal) on the active profile, soft preflight + `profile whoami --refresh` recovery, the `-o table | json` output convention, and the diverse upstream wire formats the CLI normalizes (BFL envelope on /api/*, app-service ListResult on /api/users-v2 + /api/myapps, raw Headscale JSON on /headscale/*, BFL envelope on /apis/backup/v1/*, terminusd-proxied envelopes for advanced status / containerd registries / images, /admin/secret/<app> for per-app secrets). Use whenever the user mentions Olares Settings, Settings UI, the SPA Settings page, role / owner / admin / normal, integration accounts, login history, SSO tokens, GPU mode, search index, backup plans, restore plans, containerd registries, password change, app secrets, app env vars, app suspend/resume, VPN ACLs, reverse-proxy mode, restore from URL, or sees errors like 'this command needs role X to ...', 'HTTP 403 while attempting to ...', 'run olares-cli profile whoami --refresh', or wants to know what `olares-cli settings me whoami` / `settings users me` / `profile whoami` actually print."
 metadata:
   requires:
     bins: ["olares-cli"]
@@ -237,7 +237,7 @@ olares-cli settings vpn public-domain-policy set --allow-all  # default Olares b
 
 `devices delete` is destructive: it disconnects the device from the mesh and invalidates any TermiPass session bound to it. The CLI prompts for `[y/N]` confirmation by default; for unattended scripts, pass `--yes` (non-TTY stdin without `--yes` is a hard error so a missed pipe doesn't silently destroy state). Tag values are normalized client-side into the `tag:<name>` form Headscale stores, so callers should pass the bare name (`--tag ops`, not `--tag tag:ops`) — both forms work, the CLI dedupes and normalizes either way.
 
-The Phase 3c1 surface plus the Phase 3c2 SSH / subroutes toggles below cover the boolean ACL flips. The richer per-app ACL editor (`/api/acl/app/status` with per-proto port lists) deliberately stays out of the CLI until we have a clean flag surface for it.
+The Phase 3c1 surface plus the Phase 3c2 SSH / subroutes toggles below cover the boolean ACL flips. The richer per-app ACL editor (`/api/acl/app/status`) lands in Phase 3c3 — see `vpn acl` further down.
 
 ### `vpn ssh` / `vpn subroutes` — boolean ACL toggles (Phase 3c2)
 
@@ -252,6 +252,23 @@ olares-cli settings vpn subroutes disable
 ```
 
 Both toggles send an explicit empty `{}` body to match the SPA's request shape, even though the upstream doesn't read the body. `subroutes status` always renders raw JSON because the upstream shape isn't strongly typed.
+
+### `vpn acl` — per-app ACL editor (Phase 3c3)
+
+```bash
+olares-cli settings vpn acl get my-app                              # GET /api/acl/app/status?name=<app>
+olares-cli settings vpn acl get my-app -o json
+
+olares-cli settings vpn acl set    my-app --tcp 80,443 --udp 53    # full replace
+olares-cli settings vpn acl add    my-app --tcp 8080               # read-modify-write merge
+olares-cli settings vpn acl remove my-app --tcp 80                 # read-modify-write drop
+olares-cli settings vpn acl rm     my-app --udp 53                 # alias of `remove`
+olares-cli settings vpn acl clear  my-app                          # POST with acls:[] (prompts; --yes for automation)
+```
+
+`--tcp` / `--udp` accept either repeated flags (`--tcp 80 --tcp 443`) or comma-separated values (`--tcp 80,443`); both forms are deduped client-side. Port strings are passed verbatim — Headscale accepts single ports, ranges (`8000-8100`), `*`, etc., and the CLI doesn't second-guess the format.
+
+The upstream replaces the **whole** per-app ACL vector on every POST; there is no add / remove endpoint. `vpn acl add` and `vpn acl remove` are read-modify-write sugar over the same POST so unrelated entries survive untouched (matching how the SPA's add / remove buttons work). When `vpn acl get` returns no rows for an app, that's the upstream saying "no ACL configured" (HTTP 200 with `code != 0`) — the CLI surfaces this as an empty list rather than a hard error, the same way the SPA does.
 
 ### `integration` — connected accounts
 
@@ -365,7 +382,7 @@ olares-cli settings restore plans cancel <plan-id>                   # prompts; 
 
 Anything not listed above either needs more design work or requires JWS-signed bodies the CLI can't produce yet:
 
-- **Per-app entrances writes** — permissions / entrances / providers / domain (get|set) / policy (get|set) / auth-level set / per-app ACL (proto + dst[]).
+- **Per-app entrances writes** — permissions / entrances / providers / domain (get|set) / policy (get|set) / auth-level set. (Per-app VPN ACLs ship in Phase 3c3 above.)
 - **Network writes that require a JWS-signed device-id header** — hosts-file write, FRP server register/delete, SSL enable/disable/update, external-network master switch (the SPA reads/writes these via `X-Signature` headers the CLI doesn't produce yet).
 - **Containerd registry mutations** — `registries mirrors put/delete`, `images delete/prune` (also `X-Signature`-gated).
 - **Hardware / restart-class** — reboot, shutdown, ssh-password, OS upgrade — these go through TermiPass-issued JWS over a QR callback URL today; the CLI will gain support once we have a JWS key sourcing path.
