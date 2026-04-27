@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,9 +16,10 @@ import (
 // SettingsClient talks to user-service / BFL via the desktop ingress at
 // https://desktop.<terminusName>. It is the moral counterpart of
 // cli/cmd/ctl/market/client.go's MarketClient: a thin HTTP wrapper that
-// delegates auth to the caller's http.Client (Factory's authTransport injects
-// X-Authorization) and otherwise just maps Go method calls onto JSON HTTP
-// requests.
+// delegates auth to the caller's http.Client (Factory's refreshingTransport
+// injects X-Authorization and auto-rotates expired access_tokens via
+// /api/refresh — see cli/pkg/cmdutil/factory.go) and otherwise just maps
+// Go method calls onto JSON HTTP requests.
 //
 // Two URL prefixes ride this same host:
 //   - "/api/...", "/server/...", "/headscale/..." → user-service :3010
@@ -93,6 +95,22 @@ func (c *SettingsClient) DoJSON(ctx context.Context, method, path string, body, 
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		// The Factory's refreshingTransport may surface a typed
+		// credential error when /api/refresh itself fails (the grant is
+		// dead, or no token is stored at all). http.Client wraps it
+		// inside *url.Error, but errors.As walks the Unwrap chain — pull
+		// it out so the caller sees the canonical "run profile login"
+		// CTA instead of `GET https://...: Get "https://...": refresh
+		// token for ... became invalid at ...`. Mirrors the unwrapping
+		// done in cli/cmd/ctl/files/download.go and market/client.go.
+		var inv *credential.ErrTokenInvalidated
+		if errors.As(err, &inv) {
+			return inv
+		}
+		var nli *credential.ErrNotLoggedIn
+		if errors.As(err, &nli) {
+			return nli
+		}
 		return fmt.Errorf("%s %s: %w", method, url, err)
 	}
 	defer resp.Body.Close()

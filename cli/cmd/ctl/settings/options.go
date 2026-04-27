@@ -75,8 +75,9 @@ func (o *SettingsOptions) addOutputFlags(cmd *cobra.Command) {
 
 // prepare resolves the active profile and returns a ready-to-use
 // SettingsClient pointed at the desktop ingress (https://desktop.<name>).
-// Auth is handled transparently by the Factory's authTransport which injects
-// X-Authorization on every request.
+// Auth is handled transparently by the Factory's refreshingTransport which
+// injects X-Authorization on every request and auto-rotates expired
+// access_tokens via /api/refresh.
 //
 // Background context is fine here: ResolveProfile reads from the local
 // credential store and HTTPClient builds the http.Client lazily. Per-call

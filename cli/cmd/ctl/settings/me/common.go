@@ -82,9 +82,9 @@ type preparedClient struct {
 
 // prepare resolves the active profile and constructs a desktop-ingress
 // Doer. The factory's HTTPClient already injects X-Authorization via its
-// authTransport, so we just hand it to whoami.NewHTTPClient (which uses
-// the request transport's existing header injection rather than setting
-// its own token).
+// refreshingTransport (and auto-rotates expired access_tokens), so we just
+// hand it to whoami.NewHTTPClient — which uses the request transport's
+// existing header injection rather than setting its own token.
 func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 	if f == nil {
 		return nil, fmt.Errorf("internal error: settings me not wired with cmdutil.Factory")

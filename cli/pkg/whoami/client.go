@@ -5,11 +5,14 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/cli/pkg/credential"
 )
 
 // HTTPClient is a Doer that talks to the desktop ingress directly. It's
@@ -111,6 +114,22 @@ func (c *HTTPClient) DoJSON(ctx context.Context, method, path string, body, out 
 
 	resp, err := c.hc.Do(req)
 	if err != nil {
+		// The Factory's refreshingTransport may surface a typed
+		// credential error when /api/refresh itself fails (the grant is
+		// dead, or no token is stored at all). http.Client wraps it
+		// inside *url.Error, but errors.As walks the Unwrap chain — pull
+		// it out so the caller sees the canonical "run profile login"
+		// CTA instead of `GET https://...: Get "https://...": refresh
+		// token for ... became invalid at ...`. Mirrors the unwrapping
+		// done in cli/cmd/ctl/files/download.go and market/client.go.
+		var inv *credential.ErrTokenInvalidated
+		if errors.As(err, &inv) {
+			return inv
+		}
+		var nli *credential.ErrNotLoggedIn
+		if errors.As(err, &nli) {
+			return nli
+		}
 		return fmt.Errorf("%s %s: %w", method, url, err)
 	}
 	defer resp.Body.Close()
