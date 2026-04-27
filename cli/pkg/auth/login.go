@@ -13,6 +13,8 @@ import (
 	"net/http/cookiejar"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/cli/pkg/olares"
 )
 
 // Token mirrors the Authelia /api/firstfactor + /api/secondfactor/totp +
@@ -214,9 +216,15 @@ type firstFactorResponse struct {
 // L19-26: vault.<name>/server by default, desktop.<name>/ when the caller
 // asks for the 2FA-bearing policy via NeedTwoFactor.
 func firstFactorWithClient(ctx context.Context, client *http.Client, req LoginRequest) (*Token, error) {
-	targetURL := "https://vault." + req.TerminusName + "/server"
+
+	id, err := olares.ParseID(req.TerminusName)
+	if err != nil {
+		return nil, err
+	}
+
+	targetURL := id.VaultURL("")
 	if req.NeedTwoFactor {
-		targetURL = "https://desktop." + req.TerminusName + "/"
+		targetURL = id.DesktopURL("")
 	}
 	body := firstFactorBody{
 		Username:       req.LocalName,
@@ -262,8 +270,14 @@ func postSecondFactorTOTP(ctx context.Context, client *http.Client, req LoginReq
 	// be sent to after a successful second factor. The auth backend validates
 	// its scheme/host but otherwise just relays it back, so we hard-code the
 	// desktop subdomain pattern to match BindTerminusBusiness.ts.
+
+	id, err := olares.ParseID(req.TerminusName)
+	if err != nil {
+		return nil, err
+	}
+
 	body := secondFactorBody{
-		TargetURL: "https://desktop." + req.TerminusName + "/",
+		TargetURL: id.DesktopURL(""),
 		Token:     req.TOTP,
 	}
 	headers := map[string]string{
