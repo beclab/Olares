@@ -17,10 +17,10 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewAppsCommand returns the `settings apps` parent. Phase 1 ships the
-// list / get reads; deeper per-app config verbs (permissions, entrances,
-// domain, env, secrets, ACL) and lifecycle (suspend / resume / uninstall)
-// land in Phase 3.
+// NewAppsCommand returns the `settings apps` parent. Lifecycle (suspend
+// /resume), env, and secrets shipped in Phase 3a-3b. Per-app entrance
+// config (permissions / providers / entrances list / domain / policy /
+// auth-level) ships in Phase 3b2-3d.
 func NewAppsCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "apps",
@@ -28,19 +28,24 @@ func NewAppsCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Inspect and configure individual installed apps.
 
 Subcommands:
-  list                          list installed apps                  (Phase 1)
-  get <name>                    show one app's settings record       (Phase 1)
-  suspend <name>                suspend a running app                (Phase 3)
-  resume  <name>                resume a suspended app               (Phase 3)
-  env get|set <name>            per-app environment variables        (Phase 3)
-  secrets list|set|delete <app> per-app secret store                 (Phase 3)
+  list                                              list installed apps
+  get <name>                                        show one app's settings record
+  suspend <name>                                    suspend a running app
+  resume  <name>                                    resume a suspended app
+  env get|set <name>                                per-app environment variables
+  secrets list|set|delete <app>                     per-app secret store
 
-Subcommands still landing in later phases:
-  permissions / entrances / providers / domain (get|set) / policy (get|set) /
-  auth-level set / acl (get|set)
+  permissions <app>                                 declared permissions vector
+  providers list <app>                              registered provider vector
+  entrances list <app>                              live entrance vector
+  domain get|set|finish <app> <entrance>            per-entrance custom domain
+  policy get|set <app> <entrance>                   per-entrance auth policy
+  auth-level set <app> <entrance> --level X         per-entrance auth level
 
 Note: install / upgrade / clone / cancel still live under "olares-cli market"
 (per-user app-store API). "settings apps" is the *post-install* surface.
+Per-app ACL (mesh allow-list) lives under "olares-cli settings vpn acl"
+because the wire shape is shared with the VPN ACL family.
 `,
 	}
 	cmd.SilenceUsage = true
@@ -50,5 +55,11 @@ Note: install / upgrade / clone / cancel still live under "olares-cli market"
 	cmd.AddCommand(NewResumeCommand(f))
 	cmd.AddCommand(NewEnvCommand(f))
 	cmd.AddCommand(NewSecretsCommand(f))
+	cmd.AddCommand(NewPermissionsCommand(f))
+	cmd.AddCommand(NewProvidersCommand(f))
+	cmd.AddCommand(NewEntrancesCommand(f))
+	cmd.AddCommand(NewDomainCommand(f))
+	cmd.AddCommand(NewPolicyCommand(f))
+	cmd.AddCommand(NewAuthLevelCommand(f))
 	return cmd
 }

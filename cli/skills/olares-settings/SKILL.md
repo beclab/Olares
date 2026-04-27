@@ -1,7 +1,7 @@
 ---
 name: olares-settings
-version: 0.3.1
-description: "olares-cli settings command tree: profile-based reads of every section the SPA's Settings page exposes (https://docs.olares.com/manual/olares/settings/) plus the Phase 2-6 mutating verbs that don't require JWS-signed bodies (me sso revoke, me password set with version-aware MD5+salt; appearance language set; search rebuild + excludes/dirs add+rm; integration accounts add awss3|tencent + accounts delete; apps suspend/resume + per-app env get/set + per-app secrets list/set/delete; vpn devices rename/delete/tags + routes enable/disable + ssh enable/disable + subroutes enable/disable + per-app acl get/set/add/remove/clear + public-domain-policy set; network reverse-proxy set; advanced env system|user list/set; backup plans delete/pause/resume + snapshots run/cancel + password set; restore plans check-url + create-from-snapshot + create-from-url + cancel). Phase 1 surface (read-only): users / appearance / apps / integration / vpn / network / gpu / video / search / backup / restore / advanced + a non-canonical `me` self-service tree (whoami / version / check-update / login-history / sso list). Covers role caching (owner / admin / normal) on the active profile, soft preflight + `profile whoami --refresh` recovery, the `-o table | json` output convention, and the diverse upstream wire formats the CLI normalizes (BFL envelope on /api/*, app-service ListResult on /api/users-v2 + /api/myapps, raw Headscale JSON on /headscale/*, BFL envelope on /apis/backup/v1/*, terminusd-proxied envelopes for advanced status / containerd registries / images, /admin/secret/<app> for per-app secrets). Use whenever the user mentions Olares Settings, Settings UI, the SPA Settings page, role / owner / admin / normal, integration accounts, login history, SSO tokens, GPU mode, search index, backup plans, restore plans, containerd registries, password change, app secrets, app env vars, app suspend/resume, VPN ACLs, reverse-proxy mode, restore from URL, or sees errors like 'this command needs role X to ...', 'HTTP 403 while attempting to ...', 'run olares-cli profile whoami --refresh', or wants to know what `olares-cli settings me whoami` / `settings users me` / `profile whoami` actually print."
+version: 0.3.2
+description: "olares-cli settings command tree: profile-based reads of every section the SPA's Settings page exposes (https://docs.olares.com/manual/olares/settings/) plus the Phase 2-6 mutating verbs that don't require JWS-signed bodies (me sso revoke, me password set with version-aware MD5+salt; appearance language set; search rebuild + excludes/dirs add+rm; integration accounts add awss3|tencent + accounts delete; apps suspend/resume + per-app env get/set + per-app secrets list/set/delete + per-app permissions/providers/entrances/domain/policy/auth-level reads + per-entrance domain set/finish + per-entrance policy set + per-entrance auth-level set; vpn devices rename/delete/tags + routes enable/disable + ssh enable/disable + subroutes enable/disable + per-app acl get/set/add/remove/clear + public-domain-policy set; network reverse-proxy set; advanced env system|user list/set; backup plans delete/pause/resume + snapshots run/cancel + password set; restore plans check-url + create-from-snapshot + create-from-url + cancel). Phase 1 surface (read-only): users / appearance / apps / integration / vpn / network / gpu / video / search / backup / restore / advanced + a non-canonical `me` self-service tree (whoami / version / check-update / login-history / sso list). Covers role caching (owner / admin / normal) on the active profile, soft preflight + `profile whoami --refresh` recovery, the `-o table | json` output convention, and the diverse upstream wire formats the CLI normalizes (BFL envelope on /api/*, app-service ListResult on /api/users-v2 + /api/myapps, raw Headscale JSON on /headscale/*, BFL envelope on /apis/backup/v1/*, terminusd-proxied envelopes for advanced status / containerd registries / images, /admin/secret/<app> for per-app secrets, BFL envelope on /api/applications/<app>/<entrance>/setup/* for per-entrance config). Use whenever the user mentions Olares Settings, Settings UI, the SPA Settings page, role / owner / admin / normal, integration accounts, login history, SSO tokens, GPU mode, search index, backup plans, restore plans, containerd registries, password change, app secrets, app env vars, app suspend/resume, app permissions, app entrances, app custom domain, app two-factor policy, app authorization level, VPN ACLs, reverse-proxy mode, restore from URL, or sees errors like 'this command needs role X to ...', 'HTTP 403 while attempting to ...', 'run olares-cli profile whoami --refresh', or wants to know what `olares-cli settings me whoami` / `settings users me` / `profile whoami` actually print."
 metadata:
   requires:
     bins: ["olares-cli"]
@@ -312,6 +312,41 @@ olares-cli settings apps secrets delete my-app --key API_KEY              # prom
 
 `apps env set` always reads the current env vector first (so unrelated values stay intact) and then PUTs the merged result back. Variables the SPA flags as `editable: false` are rejected by the upstream. `apps secrets set` upserts by default (POST first, fall back to PUT on "already exists"); use `--create-only` / `--update-only` when you need strict semantics. The CLI never echoes secret values in the table output (`-o table` shows only keys); pass `-o json` if you need the raw payload, but treat that as a credential dump.
 
+### `apps` — per-app permissions / entrances / per-entrance config (Phase 3b/3d)
+
+```bash
+# Read-only inspection of declared permissions and live entrance vector
+olares-cli settings apps permissions     my-app          # GET /api/applications/permissions/<app>
+olares-cli settings apps providers list  my-app          # GET /api/applications/provider/registry/<app>
+olares-cli settings apps entrances list  my-app          # GET /api/applications/<app>/entrances (fresher than `apps get`)
+
+# Custom domain on a single entrance (read-modify-write)
+olares-cli settings apps domain get   my-app www
+olares-cli settings apps domain set   my-app www \
+  --third-level mysite \
+  --third-party www.example.com \
+  --cert-file /path/to/fullchain.pem \
+  --key-file  /path/to/privkey.pem
+olares-cli settings apps domain set   my-app www --clear-third-level --clear-third-party
+olares-cli settings apps domain finish my-app www        # GET .../setup/domain/finish (verify CNAME)
+
+# Two-factor / one-time-link policy on a single entrance (read-modify-write)
+olares-cli settings apps policy get my-app www
+olares-cli settings apps policy set my-app www \
+  --default-policy two_factor \
+  --one-time true \
+  --valid-duration 3600 \
+  --sub-policy "/api/private=two_factor" \
+  --sub-policy "/admin=password"
+olares-cli settings apps policy set my-app www --sub-policies-file ./sub-policies.json
+olares-cli settings apps policy set my-app www --clear-sub-policies
+
+# Authorization level on a single entrance (private | public | internal)
+olares-cli settings apps auth-level set my-app www --level public
+```
+
+`apps domain set` and `apps policy set` both fetch the current setup first and only overwrite the fields you pass, so you don't accidentally drop a cert when you only meant to flip a sub-domain. `--cert-file` / `--key-file` are read locally and POSTed as PEM strings — never paste cert/key bodies into the command line. `--clear-sub-policies` sends `null` (matches the SPA's "remove all sub-policies" semantics); use `--sub-policies-file` for full-replace, `--sub-policy` for per-path adjustments. The `auth-level` verb is write-only (re-read with `apps entrances list` or `apps get` to see the result). All four verbs target the BFL-style `/api/applications/<app>/<entrance>/setup/{domain,policy,auth-level}` routes.
+
 ### `network` — reverse-proxy mode (Phase 4)
 
 ```bash
@@ -382,7 +417,7 @@ olares-cli settings restore plans cancel <plan-id>                   # prompts; 
 
 Anything not listed above either needs more design work or requires JWS-signed bodies the CLI can't produce yet:
 
-- **Per-app entrances writes** — permissions / entrances / providers / domain (get|set) / policy (get|set) / auth-level set. (Per-app VPN ACLs ship in Phase 3c3 above.)
+- **App lifecycle (install / uninstall / upgrade / start / stop / cancel / clone)** — these route through the market service, not user-service; use `olares-cli market install|uninstall|upgrade|start|stop|cancel|clone` instead of `settings apps`. (Per-app suspend/resume + secrets/env/permissions/entrances/domain/policy/auth-level + per-app VPN ACLs do ship under `settings apps` / `settings vpn acl`.)
 - **Network writes that require a JWS-signed device-id header** — hosts-file write, FRP server register/delete, SSL enable/disable/update, external-network master switch (the SPA reads/writes these via `X-Signature` headers the CLI doesn't produce yet).
 - **Containerd registry mutations** — `registries mirrors put/delete`, `images delete/prune` (also `X-Signature`-gated).
 - **Hardware / restart-class** — reboot, shutdown, ssh-password, OS upgrade — these go through TermiPass-issued JWS over a QR callback URL today; the CLI will gain support once we have a JWS key sourcing path.
