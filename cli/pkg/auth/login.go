@@ -13,6 +13,8 @@ import (
 	"net/http/cookiejar"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/cli/pkg/olares"
 )
 
 // Token mirrors the Authelia /api/firstfactor + /api/secondfactor/totp +
@@ -47,10 +49,12 @@ type Token struct {
 // LocalName is the bare username (the part before `@` of the olaresId).
 // The web app uses this as `username` in the request body.
 //
-// TerminusName is "<local>.<domain>"; it's only used to derive the
-// `targetURL` form field (vault.<name>/server by default,
-// desktop.<name>/ when NeedTwoFactor is true) and the second-factor
-// `targetUrl`.
+// OlaresID is the full olaresId string in @ form (e.g. "alice@olares.com")
+// or an unqualified local with implied domain — the same shape
+// `olares.ParseID` accepts. The implementation derives per-service host
+// names via that parsed ID's Local/Domain (e.g. vault.<local>.<domain>/);
+// do NOT pass the terminus-name dot string alone (e.g. "alice.olares.com")
+// or URL derivation will be wrong.
 //
 // TOTP is optional — supply it when the account has 2FA enabled. Login
 // returns ErrTOTPRequired when 2FA is needed (tok.FA2 || NeedTwoFactor)
@@ -75,9 +79,9 @@ type Token struct {
 // session cookie that the second-factor request needs); the
 // activation/signup caller (cli/pkg/wizard.UserBindTerminus) passes false.
 type LoginRequest struct {
-	AuthURL            string
-	LocalName          string
-	TerminusName       string
+	AuthURL   string
+	LocalName string
+	OlaresID  string
 	Password           string
 	TOTP               string
 	NeedTwoFactor      bool
@@ -167,8 +171,8 @@ func validateLoginRequest(req LoginRequest) error {
 		return errors.New("AuthURL is required")
 	case req.LocalName == "":
 		return errors.New("LocalName is required")
-	case req.TerminusName == "":
-		return errors.New("TerminusName is required")
+	case req.OlaresID == "":
+		return errors.New("OlaresID is required")
 	case req.Password == "":
 		return errors.New("Password is required")
 	}
@@ -214,9 +218,15 @@ type firstFactorResponse struct {
 // L19-26: vault.<name>/server by default, desktop.<name>/ when the caller
 // asks for the 2FA-bearing policy via NeedTwoFactor.
 func firstFactorWithClient(ctx context.Context, client *http.Client, req LoginRequest) (*Token, error) {
-	targetURL := "https://vault." + req.TerminusName + "/server"
+
+	id, err := olares.ParseID(req.OlaresID)
+	if err != nil {
+		return nil, err
+	}
+
+	targetURL := id.VaultURL("")
 	if req.NeedTwoFactor {
-		targetURL = "https://desktop." + req.TerminusName + "/"
+		targetURL = id.DesktopURL("")
 	}
 	body := firstFactorBody{
 		Username:       req.LocalName,
@@ -262,8 +272,14 @@ func postSecondFactorTOTP(ctx context.Context, client *http.Client, req LoginReq
 	// be sent to after a successful second factor. The auth backend validates
 	// its scheme/host but otherwise just relays it back, so we hard-code the
 	// desktop subdomain pattern to match BindTerminusBusiness.ts.
+
+	id, err := olares.ParseID(req.OlaresID)
+	if err != nil {
+		return nil, err
+	}
+
 	body := secondFactorBody{
-		TargetURL: "https://desktop." + req.TerminusName + "/",
+		TargetURL: id.DesktopURL(""),
 		Token:     req.TOTP,
 	}
 	headers := map[string]string{
