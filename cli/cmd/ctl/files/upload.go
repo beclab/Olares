@@ -164,6 +164,13 @@ func runUpload(
 		if err != nil {
 			return fmt.Errorf("fetch upload nodes: %w", err)
 		}
+		// Defense in depth: client.FetchNodes already errors on empty
+		// data, but guard the index so a future regression in the
+		// lower layer surfaces as a clean error here instead of an
+		// "index out of range" panic at the call site.
+		if len(nodes) == 0 {
+			return fmt.Errorf("upload node list returned by /api/nodes/ is empty")
+		}
 		// Mirrors the web app's getUploadNode() — first node wins. A
 		// future iteration can pick by master flag or by --node, but
 		// the web app's default is good enough for the common case.

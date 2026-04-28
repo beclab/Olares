@@ -154,7 +154,12 @@ func resolveI18nField(m map[string]interface{}, path ...string) string {
 		return ""
 	}
 	fieldName := path[len(path)-1]
-	i18nPath := append(path[:len(path)-1], "i18n")
+	// Allocate a fresh slice so we don't mutate the caller's variadic
+	// argument: append(path[:len(path)-1], "i18n") would write "i18n" into
+	// path[len(path)-1] whenever path has spare capacity.
+	i18nPath := make([]string, 0, len(path))
+	i18nPath = append(i18nPath, path[:len(path)-1]...)
+	i18nPath = append(i18nPath, "i18n")
 
 	i18n := getNestedValue(m, i18nPath...)
 	i18nMap, ok := i18n.(map[string]interface{})
