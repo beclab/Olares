@@ -1,25 +1,25 @@
 ---
 outline: [2, 3]
-description: Troubleshoot the issue where your Olares One experiences a black screen, and you cannot access the BIOS setup menu.
+description: Troubleshoot the issue where your Olares One experiences a black screen, and you cannot access the BIOS setup interface.
 ---
 
 # Cannot enter BIOS (Black screen)
 
-Use this guide if your Olares One shows no display during startup, and you cannot access the BIOS setup screen.
+Use this guide if your Olares One shows no display during startup, and you cannot access the BIOS setup interface.
 
 ## Condition
 
-When you power on Olares One and attempt to enter the BIOS setup, the screen remains black, preventing the boot menu from displaying.
+When you power on Olares One and attempt to enter BIOS, the monitor screen remains black, preventing the BIOS setup interface from displaying.
 
 ## Cause
 
-This issue typically occurs if the `Primary Display` setting in the BIOS was changed from `Auto` (dedicated GPU mode) to `HG` (hybrid graphics mode).
+This issue typically occurs if the `Primary Display` setting in the BIOS was changed from `Discrete GPU` to `HG` (Hybrid Graphics).
 
-When `Primary Display` is set to `HG`, the video output during the early boot stage might be sent to a different display interface (e.g., integrated graphics) that your monitor does not detect. The system might actually enter BIOS successfully, but your monitor screen stays black, making it impossible to see the BIOS interface.
+When `Primary Display` is set to `HG`, the video output during the early boot stage might be sent to a different display interface (e.g., integrated graphics) that your monitor does not detect. The system might actually enter BIOS successfully, but your monitor screen stays black, making it impossible to see the BIOS setup interface.
 
 ## Solution
 
-Follow these steps to blindly reset the BIOS to factory defaults. This restores the `Primary Display` setting to its default value `Auto` (the dedicated GPU mode).
+Follow these steps to blindly reset the BIOS to factory defaults. This restores the `Primary Display` setting to its default value.
 
 :::warning
 - These steps require physical removal of storage devices. Ensure that you power off the device and disconnect the power cable before proceeding.   
@@ -38,7 +38,7 @@ Follow these steps to blindly reset the BIOS to factory defaults. This restores 
 ### Step 2: Perform a blind reset
 
 1. Power on Olares One, and then immediately press and hold the **Delete** key for about 20 seconds. 
-2. Verify that the system is receiving keyboard inputs by pressing the **Caps Lock** key: If the Caps Lock indicator light on your keyboard turns on and off, you have successfully entered the BIOS menu.
+2. Verify that the system is receiving keyboard inputs by pressing the **Caps Lock** key: If the Caps Lock indicator light on your keyboard turns on and off, you have successfully entered BIOS.
 3. Press the **F9** key, and then press **Enter**. This shortcut loads the factory default BIOS settings.
 4. Press the **F10** key, and then press **Enter**. This shortcut saves the configuration and prompts the device to restart.
 
