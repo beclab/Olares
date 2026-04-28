@@ -10,17 +10,17 @@ import (
 	"testing"
 )
 
-// newTestClient wires a Client to an httptest.Server. The fake token
-// is here primarily so api_test exercises the X-Authorization header
-// injection path that production traffic relies on.
+// newTestClient wires a Client to an httptest.Server. X-Authorization
+// is injected by the factory's refreshingTransport in production, not
+// by upload.Client itself, so tests use a stock httptest *http.Client
+// here and do NOT assert the access-token header.
 func newTestClient(t *testing.T, h http.Handler) (*Client, *httptest.Server) {
 	t.Helper()
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 	return &Client{
-		HTTPClient:  srv.Client(),
-		BaseURL:     srv.URL,
-		AccessToken: "test-token",
+		HTTPClient: srv.Client(),
+		BaseURL:    srv.URL,
 	}, srv
 }
 
@@ -28,9 +28,6 @@ func TestFetchNodes(t *testing.T) {
 	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/nodes/" {
 			t.Errorf("unexpected path: %q", r.URL.Path)
-		}
-		if got := r.Header.Get("X-Authorization"); got != "test-token" {
-			t.Errorf("X-Authorization = %q, want test-token", got)
 		}
 		fmt.Fprintln(w, `{"data":{"nodes":[{"name":"node-a","master":true},{"name":"node-b"}]}}`)
 	}))
