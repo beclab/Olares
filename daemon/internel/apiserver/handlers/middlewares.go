@@ -87,7 +87,7 @@ func (h *Handlers) RunCommand(next func(ctx *fiber.Ctx, cmd commands.Interface) 
 
 	return func(ctx *fiber.Ctx) error {
 		c := cmdNew()
-		err := state.CurrentState.TerminusState.ValidateOp(c)
+		err := state.ValidateOp(state.CurrentState.TerminusState, c)
 		if err != nil {
 			return h.ErrJSON(ctx, http.StatusForbidden, err.Error())
 		}
