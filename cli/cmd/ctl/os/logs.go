@@ -8,18 +8,19 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	appsv1 "k8s.io/api/apps/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/util"
@@ -404,126 +405,11 @@ func collectKubernetesLogs(tw *tar.Writer, options *LogCollectOptions) error {
 		}
 	}
 
-	if err := collectNginxLogsFromLabeledPods(tw); err != nil {
-		if !options.IgnoreKubeErrors {
-			return fmt.Errorf("failed to collect nginx logs from labeled pods: %v", err)
-		}
+	fmt.Println("collecting envoy config...")
+	if err := collectEnvoyConfig(tw); err != nil && !options.IgnoreKubeErrors {
+		return fmt.Errorf("failed to collect envoy config: %v", err)
 	}
 
-	return nil
-}
-
-func collectNginxLogsFromLabeledPods(tw *tar.Writer) error {
-	if _, err := util.GetCommand("kubectl"); err != nil {
-		fmt.Printf("warning: kubectl not found, skipping collecting nginx logs from labeled pods\n")
-		return nil
-	}
-
-	cfg, err := ctrl.GetConfig()
-	if err != nil {
-		return fmt.Errorf("failed to get kubeconfig: %v", err)
-	}
-	clientset, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to create kube client: %v", err)
-	}
-
-	type selectorSpec struct {
-		LabelSelector string
-		ContainerName string
-	}
-	selectors := []selectorSpec{
-		{LabelSelector: "app=l4-bfl-proxy", ContainerName: ""},
-		{LabelSelector: "tier=bfl", ContainerName: "ingress"},
-	}
-
-	type targetPod struct {
-		Namespace     string
-		Name          string
-		ContainerName string
-	}
-	var targets []targetPod
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	for _, sel := range selectors {
-		podList, err := clientset.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{LabelSelector: sel.LabelSelector})
-		if err != nil {
-			return fmt.Errorf("failed to list pods by label %q: %v", sel.LabelSelector, err)
-		}
-		for _, pod := range podList.Items {
-			targets = append(targets, targetPod{
-				Namespace:     pod.Namespace,
-				Name:          pod.Name,
-				ContainerName: sel.ContainerName,
-			})
-		}
-	}
-
-	if len(targets) == 0 {
-		return nil
-	}
-
-	// simplest approach: use kubectl cp (it already implements copy via tar over exec)
-	tempDir, err := os.MkdirTemp("", "olares-nginx-logs-*")
-	if err != nil {
-		return fmt.Errorf("failed to create temp directory for nginx logs: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	files := []string{"/var/log/nginx/access.log", "/var/log/nginx/error.log"}
-	for _, target := range targets {
-		for _, remotePath := range files {
-			base := filepath.Base(remotePath)
-			archivePath := filepath.Join("nginx", target.Namespace, target.Name, base)
-
-			dest := filepath.Join(tempDir, fmt.Sprintf("%s__%s__%s", target.Namespace, target.Name, base))
-
-			err := kubectlCopyFile(target.Namespace, target.Name, target.ContainerName, remotePath, dest)
-			if err != nil {
-				return fmt.Errorf("failed to kubectl cp %s/%s:%s: %v", target.Namespace, target.Name, remotePath, err)
-			}
-
-			fi, err := os.Stat(dest)
-			if err != nil {
-				return fmt.Errorf("failed to stat copied nginx log %s: %v", dest, err)
-			}
-
-			f, err := os.Open(dest)
-			if err != nil {
-				return fmt.Errorf("failed to open copied nginx log %s: %v", dest, err)
-			}
-			defer f.Close()
-
-			header := &tar.Header{
-				Name:    archivePath,
-				Mode:    0644,
-				Size:    fi.Size(),
-				ModTime: time.Now(),
-			}
-			if err := tw.WriteHeader(header); err != nil {
-				return fmt.Errorf("failed to write header for %s: %v", archivePath, err)
-			}
-			if _, err := io.CopyN(tw, f, header.Size); err != nil {
-				return fmt.Errorf("failed to write data for %s: %v", archivePath, err)
-			}
-		}
-	}
-	return nil
-}
-
-func kubectlCopyFile(namespace, pod, container, remotePath, destPath string) error {
-	args := []string{"-n", namespace, "cp"}
-	if container != "" {
-		args = append(args, "-c", container)
-	}
-	args = append(args, fmt.Sprintf("%s:%s", pod, remotePath), destPath)
-
-	cmd := exec.Command("kubectl", args...)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("kubectl %s failed: %v, output: %s", strings.Join(args, " "), err, strings.TrimSpace(string(out)))
-	}
 	return nil
 }
 
@@ -604,6 +490,69 @@ func collectNetworkConfigs(tw *tar.Writer, options *LogCollectOptions) error {
 		if _, err := tw.Write(output); err != nil {
 			return fmt.Errorf("failed to write nftables data: %v", err)
 		}
+	}
+
+	return nil
+}
+func collectEnvoyConfig(tw *tar.Writer) error {
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		fmt.Printf("  skipping envoy config: failed to get kubeconfig: %v\n", err)
+		return nil
+	}
+	scheme := kruntime.NewScheme()
+	if err := appsv1.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("failed to add apps/v1 scheme: %v", err)
+	}
+	c, err := ctrlclient.New(config, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		return fmt.Errorf("failed to create kubernetes client: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var deploy appsv1.Deployment
+	key := ctrlclient.ObjectKey{Namespace: "os-network", Name: "l4-bfl-proxy"}
+	if err := c.Get(ctx, key, &deploy); err != nil {
+		fmt.Printf("  skipping envoy config: l4-bfl-proxy deployment not found: %v\n", err)
+		return nil
+	}
+	if deploy.Status.AvailableReplicas == 0 {
+		fmt.Println("  skipping envoy config: l4-bfl-proxy deployment is not ready (no available replicas)")
+		return nil
+	}
+
+	url := "http://127.0.0.1:19000/config_dump"
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+	resp, err := client.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to request envoy config: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("envoy config API returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("kubeerror: failed to read envoy config body: %v", err)
+	}
+
+	header := &tar.Header{
+		Name:    "envoy-config.json",
+		Mode:    0644,
+		Size:    int64(len(body)),
+		ModTime: time.Now(),
+	}
+	if err := tw.WriteHeader(header); err != nil {
+		return fmt.Errorf("failed to write envoy-config.json header: %v", err)
+	}
+	if _, err := tw.Write(body); err != nil {
+		return fmt.Errorf("failed to write envoy-config.json data: %v", err)
 	}
 
 	return nil

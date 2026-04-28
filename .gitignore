@@ -30,13 +30,21 @@ olares-cli-*.tar.gz
 .vscode
 .DS_Store
 cli/output
+cli/docs/
 daemon/output
 daemon/bin
 
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+docs/.vitepress/_redirects.nginx
+!docs/.vitepress/scripts/
+!docs/.vitepress/scripts/**
 node_modules
 .idea/
 cli/olares-cli*
 
 framework/app-service/bin
+
+/files/
+market/
+user-service/

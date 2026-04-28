@@ -211,16 +211,15 @@ spec:
 {{ if .Values.bfl.admin_user }}
       affinity:
         nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - preference:
-              matchExpressions:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
               - key: kubernetes.io/os
                 operator: In
                 values:
                 - linux
-              - key: node-role.kubernetes.io/master
+              - key: node-role.kubernetes.io/control-plane
                 operator: Exists
-            weight: 10
 {{ end }}            
       serviceAccountName: bytetrade-controller
       priorityClassName: "system-cluster-critical"
@@ -266,7 +265,7 @@ spec:
 
       containers:
       - name: api
-        image: beclab/bfl:v0.4.43
+        image: beclab/bfl:v0.4.45
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000
@@ -304,7 +303,7 @@ spec:
         - name: BACKUP_SERVER
           value: backup-server.os-framework:8082
         - name: L4_PROXY_IMAGE_VERSION
-          value: v0.3.13
+          value: v0.3.17
         - name: L4_PROXY_SERVICE_ACCOUNT
           value: os-network-internal
         - name: L4_PROXY_NAMESPACE

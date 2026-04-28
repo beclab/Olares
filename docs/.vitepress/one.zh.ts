@@ -88,19 +88,19 @@ export const oneSidebar: DefaultTheme.Sidebar = {
 
       ]
     },
-//     {
-//       text: "Manage",
-//       items: [
-//         {
-//           text: "Set up app entrances",
-//           link: "/zh/one/app-entrances",
-//         },
-//         {
-//           text: "Create users",
-//           link: "/zh/one/users",
-//         },
-//       ]
-//     },
+    {
+       text: "Manage",
+       items: [
+        {
+          text: "Add and manage users",
+          link: "/zh/one/create-users",
+        },
+         {
+           text: "Configure application access",
+           link: "/zh/one/config-app-access",
+         },
+       ]
+     },
     {
       text: "Monitor",
       items: [
@@ -134,24 +134,40 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Access Windows in Olares",
           link: "/zh/one/windows",
         },
-        {
+        /*{
           text: "Generate music with ACE-Step",
           link: "/zh/one/ace-step",
-        },
+        },*/
 
-        {
-          text: "Deep research with DeerFlow",
-          link: "/zh/one/deerflow",
-        },
+        // {
+        //   text: "Deep research with DeerFlow",
+        //   link: "/zh/one/deerflow",
+        // },
       ]
     },
     {
       text: "Advanced",
       items: [
         {
-          text: "SSH into Olares One",
-          link: "/zh/one/access-terminal-ssh",
-        },
+          text: "Access Olares One terminal",
+          collapsed: true,
+          link: "/zh/one/access-overview",
+          items:
+            [
+              {
+                text: "Access via Control Hub",
+                link: "/zh/one/access-terminal-control-hub",
+              },
+              {
+                text: "Access via SSH",
+                link: "/zh/one/access-terminal-ssh",
+              },
+              {
+                text: "Access directly on the device",
+                link: "/zh/one/access-physical-console",
+              },
+            ]
+        },        
         {
           text: "Expand storage",
           collapsed: true,
@@ -219,6 +235,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Update OS",
           link: "/zh/one/update",
         },
+        {
+          text: "Update firmware",
+          link: "/zh/one/update-firmware",
+        },        
         {
           text: "Back up & restore data",
           link: "/zh/one/backup-resotre",

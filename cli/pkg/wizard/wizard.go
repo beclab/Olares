@@ -85,8 +85,8 @@ func (w *ActivationWizard) RunWizard() error {
 			return fmt.Errorf("activation failed with status: %s", status)
 		}
 
-		// Check in-progress status (ref: updateInfo line 238-244)
-		if status == "vault_activating" || status == "system_activating" || status == "network_activating" || status == "wait_activate_network" {
+		// Check in-progress / waiting statuses (ref: ActivateWizard.vue)
+		if status == "wait_activate_vault" || status == "vault_activating" || status == "system_activating" || status == "network_activating" || status == "wait_activate_network" {
 			log.Printf("⏳ System is %s, waiting...", status)
 		} else {
 			// Handle specific status (ref: updateInfo line 246-284)
@@ -117,6 +117,7 @@ func (w *ActivationWizard) RunWizard() error {
 							return fmt.Errorf("password reset failed: %v", err)
 						}
 						log.Println("✅ Password reset completed")
+						return nil
 					}
 				}
 

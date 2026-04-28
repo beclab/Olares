@@ -27,10 +27,12 @@ import (
 
 type upgradeHelperIntf interface {
 	getAdminUsers() (admin []string, isAdmin bool, err error)
-	getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (err error)
+	getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (appConfig *appcfg.ApplicationConfig, err error)
 	validate() error
 	applyAppEnv(ctx context.Context) error
 	setAndEncodingAppCofnig(prevCfg *appcfg.ApplicationConfig) (string, error)
+	resolveUpgradeType(appConfig *appcfg.ApplicationConfig, isAdmin bool) string
+	overlayAppConfig(upgradeType string) (*appcfg.ApplicationConfig, error)
 }
 
 var _ upgradeHelperIntf = (upgradeHelperIntf)(nil)
@@ -70,7 +72,7 @@ func (h *upgradeHandlerHelper) getAdminUsers() (admins []string, isAdmin bool, e
 	return
 }
 
-func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, _ bool) (err error) {
+func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, _ bool) (*appcfg.ApplicationConfig, error) {
 	var admin string
 	if !prevCfg.AppScope.ClusterScoped {
 		// installed as non-admin
@@ -101,11 +103,11 @@ func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, a
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
-		return
+		return nil, err
 	}
 
 	h.appConfig = appConfig
-	return nil
+	return appConfig, nil
 }
 
 func (h *upgradeHandlerHelper) validate() error {
@@ -174,13 +176,13 @@ func (h *upgradeHandlerHelper) applyAppEnv(ctx context.Context) (err error) {
 	return
 }
 
-func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (err error) {
+func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (*appcfg.ApplicationConfig, error) {
 	klog.Info("Getting app config for V2")
 	if len(adminUsers) == 0 {
 		err := fmt.Errorf("no admin users found")
 		klog.Error(err)
 		api.HandleError(h.resp, h.req, err)
-		return err
+		return nil, err
 	}
 
 	var admin string
@@ -200,15 +202,44 @@ func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 		MarketSource: marketSource,
 		IsAdmin:      isAdmin,
 		RawAppName:   h.rawAppName,
+		SelectedGpu:  prevCfg.SelectedGpuType,
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
-		return
+		return nil, err
 	}
 
 	h.appConfig = appConfig
 
-	return nil
+	return appConfig, nil
+}
+
+func (h *upgradeHandlerHelper) resolveUpgradeType(appConfig *appcfg.ApplicationConfig, isAdmin bool) string {
+	if appConfig.APIVersion == appcfg.V1 || appConfig.APIVersion == "" {
+		return appcfg.InstallOrUpgradeV1
+	}
+	if isAdmin {
+		return appcfg.InstallOrUpgradeClientAndServer
+	}
+	return appcfg.InstallOrUpgradeClientOnly
+}
+
+func (h *upgradeHandlerHelper) overlayAppConfig(upgradeType string) (*appcfg.ApplicationConfig, error) {
+	if h.appConfig == nil {
+		return nil, fmt.Errorf("app config is nil")
+	}
+	if !config.IsNewManifestVersion(h.appConfig.CfgFileVersion) {
+		return h.appConfig, nil
+	}
+	h.appConfig.ApplyOverlay(upgradeType)
+
+	appRequirement, err := h.appConfig.ResolveRequirement(h.appConfig.SelectedGpuType, upgradeType)
+	if err != nil {
+		return nil, fmt.Errorf("resolve requirement: %w", err)
+	}
+	h.appConfig.Requirement = *appRequirement
+
+	return h.appConfig, nil
 }
 
 func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
@@ -266,7 +297,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	if appMgr.Spec.RawAppName != "" {
 		rawAppName = appMgr.Spec.RawAppName
 	}
-	apiVersion, _, err := apputils.GetApiVersionFromAppConfig(req.Request.Context(), &apputils.ConfigOptions{
+	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
 		RawAppName:   rawAppName,
 		Owner:        owner,
@@ -331,9 +362,17 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	err = helper.getAppConfig(&prevCfg, adminUsers, marketSource, isAdmin)
+	appConfig, err := helper.getAppConfig(&prevCfg, adminUsers, marketSource, isAdmin)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
+		return
+	}
+	upgradeType := helper.resolveUpgradeType(appConfig, isAdmin)
+
+	appConfig, err = helper.overlayAppConfig(upgradeType)
+	if err != nil {
+		klog.Errorf("Failed to get overlay config err=%v", err)
+		api.HandleError(resp, req, err)
 		return
 	}
 

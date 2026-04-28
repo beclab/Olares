@@ -181,39 +181,26 @@ func (m *InstallPluginModule) Init() {
 	m.Name = "InstallPlugin"
 
 	// update node with gpu labels, to make plugins enabled
-	updateNode := &task.RemoteTask{
-		Name:  "UpdateNode",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
-		},
-		Action:   new(UpdateNodeGPUInfo),
-		Parallel: false,
-		Retry:    1,
+	updateNode := &task.LocalTask{
+		Name:   "UpdateNodeGPUInfo",
+		Action: new(UpdateNodeGPUInfo),
+		Retry:  1,
 	}
 
-	installPlugin := &task.RemoteTask{
-		Name:  "InstallPlugin",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
-		},
-		Action:   new(InstallPlugin),
-		Parallel: false,
-		Retry:    1,
+	installPlugin := &task.LocalTask{
+		Name:   "InstallGPUPlugin",
+		Action: new(InstallPlugin),
+		Retry:  1,
 	}
 
-	checkGpuState := &task.RemoteTask{
-		Name:  "CheckGPUState",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
+	checkGpuState := &task.LocalTask{
+		Name: "CheckGPUState",
 		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
 			new(CudaInstalled),
 		},
-		Action:   new(CheckGpuStatus),
-		Parallel: false,
-		Retry:    50,
-		Delay:    10 * time.Second,
+		Action: new(CheckGpuStatus),
+		Retry:  50,
+		Delay:  10 * time.Second,
 	}
 
 	m.Tasks = []task.Interface{

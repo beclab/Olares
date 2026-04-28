@@ -25,7 +25,7 @@ func (h *HelmOps) Upgrade() error {
 }
 
 func (h *HelmOps) upgrade() error {
-	values, err := h.SetValues()
+	values, err := h.SetValues(true)
 	if err != nil {
 		return err
 	}

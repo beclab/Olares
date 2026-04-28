@@ -168,12 +168,15 @@ const side = {
                 { text: "LXC on PVE", link: "/manual/get-started/install-lxc" },
               ],
             },
-
             {
               text: "Raspberry Pi",
               link: "/manual/get-started/install-raspberry-pi",
             },
           ],
+        },
+        {
+          text: "Join an Olares",
+          link: "/manual/get-started/join-olares",
         },
         {
           text: "Back up mnemonics",
@@ -328,6 +331,10 @@ const side = {
               text: "Access Terminal",
               link: "/manual/olares/controlhub/terminal",
             },
+            {
+              text: "Configure environment variables",
+              link: "/manual/olares/controlhub/configure-env-var",
+            },            
           ],
         },
         {
@@ -432,16 +439,23 @@ const side = {
       collapsed: true,
       items: [
         {
+          text: "Set up accounts",
+          collapsed: true,
+          items: [
+            { text: "Create an account", link: "/manual/larepass/create-account" },
+            { text: "Create with a custom domain", link: "/manual/larepass/create-org-account" },
+            { text: "Import an account", link: "/manual/larepass/import-account" },
+          ],
+        },
+        {
           text: "Manage accounts",
           collapsed: true,
           items: [
-            { text: "Create accounts", link: "/manual/larepass/create-account" },
+           { text: "Switch accounts", link: "/manual/larepass/switch-account" },       
             { text: "Back up mnemonics", link: "/manual/larepass/back-up-mnemonics" },
-            { text: "Manage integrations", link: "/manual/larepass/integrations" },
           ],
         },
-        { text: "Use VPN", link: "/manual/larepass/private-network" },
-        {
+        { text: "Manage integrations", link: "/manual/larepass/integrations" },        {
           text: "Manage device",
           collapsed: true,
           items: [
@@ -449,6 +463,7 @@ const side = {
             { text: "Manage Olares", link: "/manual/larepass/manage-olares" },
           ],
         },
+        { text: "Use VPN", link: "/manual/larepass/private-network" },
         { text: "Manage files", link: "/manual/larepass/manage-files" },
         // collapsed: true,
         //items: [
@@ -476,25 +491,15 @@ const side = {
       collapsed: true,
       items: [
         {
-          text: "Manage accounts",
+          text: "Log in and manage accounts",
           link: "/manual/space/manage-accounts",
         },
         {
-          text: "Host Olares",
-          collapsed: true,
-          items: [
-            {
-              text: "Create Olares",
-              link: "/manual/space/create-olares",
-            },
-            {
-              text: "Manage Olares",
-              link: "/manual/space/manage-olares",
-            },
-          ],
+          text: "Manage Olares",
+          link: "/manual/space/manage-olares",
         },
         {
-          text: "Host domains",
+          text: "Add custom domain",
           collapsed: true,
           items: [
             {
@@ -502,7 +507,7 @@ const side = {
               link: "/manual/space/host-domain",
             },
             {
-              text: "Manage a domain",
+              text: "Manage domain members",
               link: "/manual/space/manage-domain",
             },
           ],

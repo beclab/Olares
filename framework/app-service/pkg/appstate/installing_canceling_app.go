@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"time"
 
 	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
@@ -121,14 +122,15 @@ func (p *InstallingCancelingApp) handleInstallCancel(ctx context.Context) error 
 					klog.Errorf("Failed to create Kubernetes client: %v", err)
 					return err
 				}
+				chartName := utils.GetChartName(appCfg.AppName, appCfg.RawAppName, chart.Name)
 
-				sharedChartNamespace, err := client.CoreV1().Namespaces().Get(ctx, chart.Namespace(appCfg.OwnerName), metav1.GetOptions{})
+				sharedChartNamespace, err := client.CoreV1().Namespaces().Get(ctx, chart.Namespace(appCfg.OwnerName, chartName), metav1.GetOptions{})
 				if err != nil {
 					if apierrors.IsNotFound(err) {
-						klog.Infof("Shared chart namespace %s not found, skipping uninstall", chart.Namespace(appCfg.OwnerName))
+						klog.Infof("Shared chart namespace %s not found, skipping uninstall", chart.Namespace(appCfg.OwnerName, chartName))
 						break
 					}
-					klog.Errorf("Failed to get shared chart namespace %s: %v", chart.Namespace(appCfg.OwnerName), err)
+					klog.Errorf("Failed to get shared chart namespace %s: %v", chart.Namespace(appCfg.OwnerName, chartName), err)
 					return err
 				}
 

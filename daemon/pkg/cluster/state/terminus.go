@@ -3,52 +3,57 @@ package state
 import (
 	"errors"
 
+	clistate "github.com/beclab/Olares/cli/pkg/daemon/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 )
 
-type ProcessingState string
+// Wire-format types live in the cli module so that olaresd and the
+// olares-cli command share a single source of truth. Daemon code keeps
+// using the unqualified names below via these type aliases.
+
+type ProcessingState = clistate.ProcessingState
 
 const (
-	Completed  ProcessingState = "completed"
-	Failed     ProcessingState = "failed"
-	InProgress ProcessingState = "in-progress"
+	Completed  = clistate.Completed
+	Failed     = clistate.Failed
+	InProgress = clistate.InProgress
 )
 
-type TerminusState string
+type TerminusState = clistate.TerminusState
 
 const (
-	NotInstalled     TerminusState = "not-installed"
-	Installing       TerminusState = "installing"
-	InstallFailed    TerminusState = "install-failed"
-	Uninitialized    TerminusState = "uninitialized"
-	Initializing     TerminusState = "initializing"
-	InitializeFailed TerminusState = "initialize-failed"
-	TerminusRunning  TerminusState = "terminus-running"
-	InvalidIpAddress TerminusState = "invalid-ip-address"
-	SystemError      TerminusState = "system-error"
-	SelfRepairing    TerminusState = "self-repairing"
-	IPChanging       TerminusState = "ip-changing"
-	IPChangeFailed   TerminusState = "ip-change-failed"
-	AddingNode       TerminusState = "adding-node"
-	RemovingNode     TerminusState = "removing-node"
-	Uninstalling     TerminusState = "uninstalling"
-	Upgrading        TerminusState = "upgrading"
-	DiskModifing     TerminusState = "disk-modifing"
-	Shutdown         TerminusState = "shutdown"
-	Restarting       TerminusState = "restarting"
-	Checking         TerminusState = "checking"
-	NetworkNotReady  TerminusState = "network-not-ready"
+	NotInstalled     = clistate.NotInstalled
+	Installing       = clistate.Installing
+	InstallFailed    = clistate.InstallFailed
+	Uninitialized    = clistate.Uninitialized
+	Initializing     = clistate.Initializing
+	InitializeFailed = clistate.InitializeFailed
+	TerminusRunning  = clistate.TerminusRunning
+	InvalidIpAddress = clistate.InvalidIpAddress
+	SystemError      = clistate.SystemError
+	SelfRepairing    = clistate.SelfRepairing
+	IPChanging       = clistate.IPChanging
+	IPChangeFailed   = clistate.IPChangeFailed
+	AddingNode       = clistate.AddingNode
+	RemovingNode     = clistate.RemovingNode
+	Uninstalling     = clistate.Uninstalling
+	Upgrading        = clistate.Upgrading
+	DiskModifing     = clistate.DiskModifing
+	Shutdown         = clistate.Shutdown
+	Restarting       = clistate.Restarting
+	Checking         = clistate.Checking
+	NetworkNotReady  = clistate.NetworkNotReady
 )
 
-func (s TerminusState) String() string {
-	return string(s)
+// ValidateOp returns nil if the operation is allowed in the given
+// state, or a descriptive error otherwise. It replaces the previous
+// (TerminusState).ValidateOp method, since methods cannot be defined
+// on an alias of a type from another package.
+func ValidateOp(s TerminusState, op commands.Interface) error {
+	return getValidator(s).ValidateOp(op)
 }
 
-func (s TerminusState) ValidateOp(op commands.Interface) error {
-	return s.getValidator().ValidateOp(op)
-}
-
-func (s TerminusState) getValidator() Validator {
+func getValidator(s TerminusState) Validator {
 	switch s {
 	case NotInstalled:
 		return &NotInstalledValidator{}
@@ -104,7 +109,8 @@ func (n NotInstalledValidator) ValidateOp(op commands.Interface) error {
 	switch op.OperationName() {
 	case commands.Install, commands.ChangeIp, commands.Shutdown,
 		commands.Reboot, commands.ConnectWifi, commands.ChangeHost,
-		commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword:
+		commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -119,7 +125,8 @@ func (u UninitializedValidator) ValidateOp(op commands.Interface) error {
 	case commands.Initialize, commands.ChangeIp, commands.Reboot,
 		commands.Shutdown, commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
 		commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.CreateUpgradeTarget, commands.SetSSHPassword:
+		commands.CreateUpgradeTarget, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -134,7 +141,8 @@ func (u InitializingValidator) ValidateOp(op commands.Interface) error {
 	case commands.ChangeIp, commands.Reboot,
 		commands.Shutdown, commands.Uninstall,
 		commands.ConnectWifi, commands.ChangeHost,
-		commands.CollectLogs, commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword:
+		commands.CollectLogs, commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -149,7 +157,8 @@ func (u UpgradingValidator) ValidateOp(op commands.Interface) error {
 		commands.Shutdown, commands.Uninstall,
 		commands.ConnectWifi, commands.ChangeHost,
 		commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword:
+		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -164,7 +173,8 @@ func (u InitializeFailedValidator) ValidateOp(op commands.Interface) error {
 	case commands.ChangeIp, commands.Reboot,
 		commands.Shutdown, commands.Uninstall,
 		commands.ConnectWifi, commands.ChangeHost,
-		commands.CollectLogs, commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword:
+		commands.CollectLogs, commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -204,7 +214,8 @@ func (r RunningValidator) ValidateOp(op commands.Interface) error {
 	case commands.ChangeIp, commands.Reboot, commands.Shutdown,
 		commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
 		commands.UmountUsb, commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword:
+		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -218,7 +229,8 @@ func (i InvalidIpValidator) ValidateOp(op commands.Interface) error {
 	switch op.OperationName() {
 	case commands.ChangeIp, commands.Reboot, commands.Shutdown,
 		commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
-		commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword:
+		commands.MountSmb, commands.UmountSmb, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 
@@ -233,7 +245,8 @@ func (s SystemErrorValidator) ValidateOp(op commands.Interface) error {
 	case commands.ChangeIp, commands.Reboot, commands.Shutdown,
 		commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
 		commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
-		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword:
+		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword,
+		commands.MountNfs, commands.UmountNfs:
 		return nil
 	}
 

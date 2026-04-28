@@ -51,7 +51,8 @@ In this guide, you will learn how to:
    a. Open Olares Settings, then navigate to **Application** > **Qwen3.5 27B Q4_K_M (Ollama)**.
 
    b. In **Shared entrances**, select **Qwen3.5 27B Q4_K_M** to view the endpoint URL.
-   ![Qwen3.5 27B shared entrance](/images/one/qwen3.5-27b-shared-entrance.png#bordered)
+      
+      ![Get shared endpoint](/images/manual/use-cases/deerflow2-shared-entrance.png#bordered){width=90%}
 
    c. Copy the shared endpoint. For example:
       ```plain

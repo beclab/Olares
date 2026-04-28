@@ -67,6 +67,7 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 										}
 										return fmt.Sprintf("force delete application %s successfully", app.Name)
 									}(),
+									MarketSource: am.Annotations[constants.AppMarketSourceKey],
 								})
 
 								ticker := time.NewTicker(2 * time.Second)
@@ -81,16 +82,17 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 										klog.Infof("wait for namespace: %s to be deleted", app.Spec.Namespace)
 										if apierrors.IsNotFound(err) {
 											appevent.PublishAppEventToQueue(utils.EventParams{
-												Owner:      app.Spec.Owner,
-												Name:       app.Spec.Name,
-												OpType:     string(appv1alpha1.UninstallOp),
-												OpID:       opID,
-												State:      string(appv1alpha1.Uninstalled),
-												RawAppName: app.Spec.RawAppName,
-												Type:       "app",
-												Title:      app.Spec.Settings["title"],
-												Reason:     constants.AppForceUninstalled,
-												Message:    fmt.Sprintf("app %s was force uninstalled", app.Spec.Name),
+												Owner:        app.Spec.Owner,
+												Name:         app.Spec.Name,
+												OpType:       string(appv1alpha1.UninstallOp),
+												OpID:         opID,
+												State:        string(appv1alpha1.Uninstalled),
+												RawAppName:   app.Spec.RawAppName,
+												Type:         "app",
+												Title:        app.Spec.Settings["title"],
+												Reason:       constants.AppForceUninstalled,
+												Message:      fmt.Sprintf("app %s was force uninstalled", app.Spec.Name),
+												MarketSource: am.Annotations[constants.AppMarketSourceKey],
 											})
 											return
 										}
@@ -126,7 +128,7 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 		case appv1alpha1.Stopping:
 			return appstate.NewSuspendingApp(appmgr, &am, 30*time.Minute)
 		case appv1alpha1.Upgrading:
-			return appstate.NewUpgradingApp(appmgr, &am, 30*time.Minute)
+			return appstate.NewUpgradingApp(appmgr, &am, 24*time.Hour, 30*time.Minute)
 		case appv1alpha1.ApplyingEnv:
 			return appstate.NewApplyingEnvApp(appmgr, &am, 30*time.Minute)
 		case appv1alpha1.Resuming:

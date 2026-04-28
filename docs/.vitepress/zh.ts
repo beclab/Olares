@@ -45,7 +45,7 @@ const side = {
               link: "/zh/manual/help/ts-system-error",
             },
             {
-              text: "LarePass VPN 无法使用",
+              text: "LarePass 专用网络无法使用",
               link: "/zh/manual/help/ts-larepass-vpn-not-working",
             },
             {
@@ -171,6 +171,10 @@ const side = {
               link: "/zh/manual/get-started/install-raspberry-pi",
             },
           ],
+        },
+        {
+          text: "加入 Olares 集群",
+          link: "/zh/manual/get-started/join-olares",
         },
         {
           text: "备份助记词",
@@ -325,6 +329,10 @@ const side = {
               text: "访问终端",
               link: "/zh/manual/olares/controlhub/terminal",
             },
+            {
+              text: "配置环境变量",
+              link: "/zh/manual/olares/controlhub/configure-env-var",
+            },            
           ],
         },
         {
@@ -373,7 +381,7 @@ const side = {
               text: "自定义外观",
               link: "/zh/manual/olares/settings/language-appearance",
             },
-            { text: "管理 VPN", link: "/zh/manual/olares/settings/remote-access" },
+            { text: "管理专用网络", link: "/zh/manual/olares/settings/remote-access" },
             {
               text: "配置网络",
               collapsed: true,
@@ -426,15 +434,24 @@ const side = {
       collapsed: true,
       items: [
         {
-          text: "管理账户",
+          text: "设置账户",
           collapsed: true,
           items: [
             { text: "创建账户", link: "/zh/manual/larepass/create-account" },
-            { text: "备份助记词", link: "/zh/manual/larepass/back-up-mnemonics" },
-            { text: "管理集成", link: "/zh/manual/larepass/integrations" },
+            { text: "使用自定义域名创建", link: "/zh/manual/larepass/create-org-account" },
+            { text: "导入账户", link: "/zh/manual/larepass/import-account" },
           ],
         },
-        { text: "使用专用网络", link: "/zh/manual/larepass/private-network" },
+        {
+          text: "管理账户",
+          collapsed: true,
+          items: [
+            { text: "切换账户", link: "/zh/manual/larepass/switch-account" },
+            { text: "备份助记词", link: "/zh/manual/larepass/back-up-mnemonics" },
+            
+          ],
+        },
+        { text: "管理集成", link: "/zh/manual/larepass/integrations" },
         {
           text: "管理设备",
           collapsed: true,
@@ -443,6 +460,7 @@ const side = {
             { text: "管理 Olares", link: "/zh/manual/larepass/manage-olares" },
           ],
         },
+        { text: "使用专用网络", link: "/zh/manual/larepass/private-network" },
         { text: "管理文件", link: "/zh/manual/larepass/manage-files" },
         //    collapsed: true,
         //    items: [
@@ -454,8 +472,8 @@ const side = {
           text: "管理密码",
           collapsed: true,
           items: [
-            { text: "自动填充", link: "/zh/manual/larepass/autofill" },
-            { text: "双重验证", link: "/zh/manual/larepass/two-factor-verification" },
+            { text: "自动填充密码", link: "/zh/manual/larepass/autofill" },
+            { text: "生成 2FA 验证码", link: "/zh/manual/larepass/two-factor-verification" },
           ],
         },
         /*{
@@ -470,25 +488,15 @@ const side = {
         collapsed: true,
         items: [
           {
-            text: "管理账号",
+            text: "登录和管理账户",
             link: "/zh/manual/space/manage-accounts",
           },
           {
-            text: "托管 Olares",
-            collapsed: true,
-            items: [
-              {
-                text: "创建 Olares",
-                link: "/zh/manual/space/create-olares",
-              },
-              {
-                text: "管理 Olares",
-                link: "/zh/manual/space/manage-olares",
-              },
-            ],
+            text: "管理 Olares",
+            link: "/zh/manual/space/manage-olares",
           },
           {
-            text: "托管域名",
+            text: "添加自定义域名",
             collapsed: true,
             items: [
               {
@@ -496,7 +504,7 @@ const side = {
                 link: "/zh/manual/space/host-domain",
               },
               {
-                text: "管理域名",
+                text: "管理域名成员",
                 link: "/zh/manual/space/manage-domain",
               },
             ],

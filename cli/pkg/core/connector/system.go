@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -80,6 +81,7 @@ type Systems interface {
 	IsAmdApu() bool
 	IsAmdGPU() bool
 	IsAmdGPUOrAPU() bool
+	IsMThreadsM1000() bool
 
 	IsUbuntu() bool
 	IsDebian() bool
@@ -115,18 +117,17 @@ type Systems interface {
 }
 
 type SystemInfo struct {
-	HostInfo    *HostInfo       `json:"host"`
-	CpuInfo     *CpuInfo        `json:"cpu"`
-	DiskInfo    *DiskInfo       `json:"disk"`
-	MemoryInfo  *MemoryInfo     `json:"memory"`
-	FsInfo      *FileSystemInfo `json:"filesystem"`
-	CgroupInfo  *CgroupInfo     `json:"cgroup,omitempty"`
-	LocalIp     string          `json:"local_ip"`
-	NatGateway  string          `json:"nat_gateway"`
-	PkgManager  string          `json:"pkg_manager"`
-	IsOIC       bool            `json:"is_oic,omitempty"`
-	ProductName string          `json:"product_name,omitempty"`
-	HasAmdGPU   bool            `json:"has_amd_gpu,omitempty"`
+	HostInfo   *HostInfo       `json:"host"`
+	CpuInfo    *CpuInfo        `json:"cpu"`
+	DiskInfo   *DiskInfo       `json:"disk"`
+	MemoryInfo *MemoryInfo     `json:"memory"`
+	FsInfo     *FileSystemInfo `json:"filesystem"`
+	CgroupInfo *CgroupInfo     `json:"cgroup,omitempty"`
+	LocalIp    string          `json:"local_ip"`
+	NatGateway string          `json:"nat_gateway"`
+	PkgManager string          `json:"pkg_manager"`
+	IsOIC      bool            `json:"is_oic,omitempty"`
+	HasAmdGPU  bool            `json:"has_amd_gpu,omitempty"`
 }
 
 func (s *SystemInfo) IsSupport() error {
@@ -257,6 +258,10 @@ func (s *SystemInfo) IsAmdGPUOrAPU() bool {
 	return s.CpuInfo.HasAmdAPU || s.HasAmdGPU
 }
 
+func (s *SystemInfo) IsMThreadsM1000() bool {
+	return s.CpuInfo.IsMThreadsM1000
+}
+
 func (s *SystemInfo) IsUbuntu() bool {
 	return s.HostInfo.OsPlatformFamily == common.Ubuntu
 }
@@ -344,11 +349,13 @@ func GetSystemInfo() *SystemInfo {
 	si.MemoryInfo = getMem()
 	si.FsInfo = getFs()
 
-	hasAmdGPU, err := getAmdGPU()
-	if err != nil {
-		panic(errors.Wrap(err, "failed to get amd apu/gpu"))
+	if si.IsLinux() {
+		hasAmdGPU, err := getAmdGPU()
+		if err != nil {
+			panic(errors.Wrap(err, "failed to get amd apu/gpu"))
+		}
+		si.HasAmdGPU = hasAmdGPU
 	}
-	si.HasAmdGPU = hasAmdGPU
 
 	localIP, err := util.GetLocalIP()
 	if err != nil {
@@ -467,6 +474,7 @@ type CpuInfo struct {
 	CpuPhysicalCount int    `json:"cpu_physical_count"`
 	IsGB10Chip       bool   `json:"is_gb10_chip,omitempty"`
 	HasAmdAPU        bool   `json:"has_amd_apu,omitempty"`
+	IsMThreadsM1000  bool   `json:"is_mthreads_m1000,omitempty"`
 }
 
 // Not considering the case where AMD GPU and AMD APU coexist.
@@ -502,6 +510,16 @@ func getCpu() *CpuInfo {
 		cpuModel = cpuInfo[0].ModelName
 	}
 
+	ret := &CpuInfo{
+		CpuModel:         cpuModel,
+		CpuLogicalCount:  cpuLogicalCount,
+		CpuPhysicalCount: cpuPhysicalCount,
+	}
+
+	if runtime.GOOS != "linux" {
+		return ret
+	}
+
 	// check if is GB10 chip
 	isGB10Chip := false
 
@@ -525,13 +543,13 @@ func getCpu() *CpuInfo {
 		hasAmdAPU = false
 	}
 
-	return &CpuInfo{
-		CpuModel:         cpuModel,
-		CpuLogicalCount:  cpuLogicalCount,
-		CpuPhysicalCount: cpuPhysicalCount,
-		IsGB10Chip:       isGB10Chip,
-		HasAmdAPU:        hasAmdAPU,
-	}
+	// check if it is mthreads m1000
+	ret.IsMThreadsM1000 = IsMThreadsAIBookM1000Local()
+
+	ret.IsGB10Chip = isGB10Chip
+	ret.HasAmdAPU = hasAmdAPU
+
+	return ret
 }
 
 type DiskInfo struct {

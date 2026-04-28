@@ -60,8 +60,7 @@ func (s *Subscriber) Handler() cache.ResourceEventHandler {
 			if u.Name != constants.Username {
 				return false
 			}
-			status := u.Annotations[constants.UserTerminusWizardStatus]
-			return status == string(constants.NetworkActivating)
+			return isNetworkActivating(u)
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    handle,
@@ -84,6 +83,9 @@ func (s *Subscriber) Do(ctx context.Context, obj interface{}, _ watchers.Action)
 	current, err := userOp.GetUser(u.Name)
 	if err != nil {
 		return fmt.Errorf("get user failed: %w", err)
+	}
+	if !isNetworkActivating(current) {
+		return nil
 	}
 
 	terminusName := current.Annotations[constants.UserAnnotationTerminusNameKey]
@@ -139,6 +141,9 @@ func (s *Subscriber) markSuccess(ctx context.Context, user *iamV1alpha2.User, zo
 	}
 	return userOp.UpdateUser(user, []func(*iamV1alpha2.User){
 		func(u *iamV1alpha2.User) {
+			if !isNetworkActivating(u) {
+				return
+			}
 			if u.Annotations == nil {
 				u.Annotations = map[string]string{}
 			}
@@ -152,6 +157,13 @@ func (s *Subscriber) markSuccess(ctx context.Context, user *iamV1alpha2.User, zo
 	})
 }
 
+func isNetworkActivating(user *iamV1alpha2.User) bool {
+	if user == nil {
+		return false
+	}
+	return user.Annotations[constants.UserTerminusWizardStatus] == string(constants.NetworkActivating)
+}
+
 func (s *Subscriber) markFailed(ctx context.Context, user *iamV1alpha2.User, errorMsg string) error {
 	userOp, err := operator.NewUserOperatorWithContext(ctx)
 	if err != nil {
@@ -159,6 +171,9 @@ func (s *Subscriber) markFailed(ctx context.Context, user *iamV1alpha2.User, err
 	}
 	return userOp.UpdateUser(user, []func(*iamV1alpha2.User){
 		func(u *iamV1alpha2.User) {
+			if !isNetworkActivating(u) {
+				return
+			}
 			if u.Annotations == nil {
 				u.Annotations = map[string]string{}
 			}

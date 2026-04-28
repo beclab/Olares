@@ -91,7 +91,7 @@ Your Olares ID is secured by a unique 12-word mnemonic phrase. This phrase is th
 
 ### Reset SSH password
 
-<!--@include: ./reusables-reset-ssh.md{7,16}-->
+<!--@include: ./reusables-reset-ssh.md{7,17}-->
 
 For instructions on how to SSH into Olares One, see [Connect to Olares One via SSH](access-terminal-ssh.md).
 

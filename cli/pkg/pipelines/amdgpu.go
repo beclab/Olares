@@ -3,7 +3,6 @@ package pipelines
 import (
 	"strings"
 
-	"github.com/beclab/Olares/cli/pkg/amdgpu"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/action"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
@@ -11,6 +10,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/core/pipeline"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/gpu/amdgpu"
 )
 
 type singleTaskModule struct {

@@ -39,11 +39,11 @@ You can set the GPU mode to **App exclusive** and assign ComfyUI full GPU access
 ## Get the endpoint for ComfyUI
 
 1. On Olares, open Settings, then go to **Application** > **ComfyUI Shared**.
-2. In **Entrances**, click **ComfyUI**.
+2. Under **Entrances**, click **ComfyUI**.
 3. Make sure its **Authentication level** is set to **Internal**.
-4. Click **Set up endpoint**, then copy the endpoint URL displayed.
+4. Next to **Endpoint**, click <i class="material-symbols-outlined">content_copy</i> to copy the endpoint URL displayed.
 
-   ![Set up endpoint](/images/manual/use-cases/comfyui-set-up-endpoint.png#bordered)
+   ![Set up endpoint](/images/manual/use-cases/comfyui-set-up-endpoint1.png#bordered){width=90%}
 
 ## Download and enable AI Diffusion plugin
 1. Download the [Krita AI Diffusion plugin](https://github.com/Acly/krita-ai-diffusion/releases).

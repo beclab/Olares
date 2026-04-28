@@ -5,6 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, channel integration, Discord integration
+app_version: "1.0.0"
+doc_version: "1.1"
+doc_updated: "2026-04-24"
 ---
 
 # Integrate with Discord
@@ -56,8 +59,35 @@ To chat with your agent remotely, connect it to a Discord bot.
 
     ![Bot added to server](/images/manual/use-cases/bot-added.png#bordered)
 
-## Step 3: Configure channel
+## Step 3: Configure the channel
 
+Connect OpenClaw to your Discord bot by adding the channel settings to the configuration file.
+
+1. Open the Files app, and then go to **Data** > **clawdbot** > **config**.
+2. Double-click the `openclaw.json` file to open it.
+3. Click <i class="material-symbols-outlined">edit_square</i> in the upper-right corner to enter the edit mode.
+4. Add the following `channels` section to the configuration file. 
+
+    This configuration enables Discord Direct Messages (DMs) and sets the DM policy to `pairing` for security.
+
+    ```json
+    "channels": {
+        "discord": {
+        "enabled": true,
+        "token": "{YOUR_BOT_TOKEN}",
+        "allowBots": true,
+        "dm": {
+            "enabled": true,
+            "policy": "pairing"
+        }
+        }
+    },
+    ```
+5. Replace `{YOUR_BOT_TOKEN}` with your Discord bot token.
+6. Click <i class="material-symbols-outlined">save</i> in the upper-right corner to save the changes.
+7. Return to the Control UI, and then select **Channels** from the left sidebar. On the Discord card, a **Probe ok** status indicates the connection is successful.   
+
+<!--
 Connect OpenClaw to your Discord bot by adding its configuration in the Control UI.
 
 :::info About channel configuration
@@ -91,6 +121,7 @@ This tutorial provides the basic setup to get your bot running in Discord quickl
 3. Replace `{YOUR_BOT_TOKEN}` with your Discord bot token.
 4. Click **Save**.
 5. From the left sidebar, select **Channels**. On the Discord card, **Probe ok** indicates successful connection.
+-->
 
 ## Step 4: Authorize your account
 

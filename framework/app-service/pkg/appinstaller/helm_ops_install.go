@@ -188,6 +188,7 @@ func (h *HelmOps) AddApplicationLabelsToDeployment() error {
 				constants.ApplicationSourceLabel:  h.options.Source,
 				constants.ApplicationTailScaleKey: tailScale,
 				constants.ApplicationRequiredGPU:  h.app.RequiredGPU,
+				constants.AppMarketSourceKey:      h.options.MarketSource,
 			},
 		},
 	}
@@ -658,7 +659,10 @@ func (h *HelmOps) findServerPods() ([]corev1.Pod, error) {
 		if !c.Shared {
 			continue
 		}
-		ns := c.Namespace(h.app.OwnerName)
+
+		chartName := utils.GetChartName(h.app.AppName, h.app.RawAppName, c.Name)
+
+		ns := c.Namespace(h.app.OwnerName, chartName)
 		podList, err := h.client.KubeClient.Kubernetes().CoreV1().Pods(ns).List(h.ctx, metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("app %s get pods err %v", h.app.AppName, err)
@@ -701,6 +705,11 @@ func (h *HelmOps) checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, er
 		for i := len(pod.Status.ContainerStatuses) - 1; i >= 0; i-- {
 			container := pod.Status.ContainerStatuses[i]
 			if *container.Started {
+				startedContainers++
+				continue
+			}
+			// job-created pods with completed status are also treated as started
+			if container.State.Terminated != nil && container.State.Terminated.Reason == "Completed" {
 				startedContainers++
 			}
 		}
@@ -828,7 +837,7 @@ func ParseAppPermission(data []appcfg.AppPermission) []appcfg.AppPermission {
 
 func (h *HelmOps) Install() error {
 	var err error
-	values, err := h.SetValues()
+	values, err := h.SetValues(false)
 	if err != nil {
 		klog.Errorf("set values err %v", err)
 		return err
@@ -943,6 +952,13 @@ func (h *HelmOps) WaitForLaunch() (bool, error) {
 
 func (h *HelmOps) App() *appcfg.ApplicationConfig {
 	return h.app
+}
+
+func (h *HelmOps) IsCloneApp() bool {
+	if h.app.AppName != h.app.RawAppName {
+		return true
+	}
+	return false
 }
 
 func (h *HelmOps) KubeConfig() *rest.Config {

@@ -13,6 +13,10 @@ Before upgrading an existing OpenClaw installation, review the version-specific 
 
 ## Upgrade to 2026.03.22
 
+:::tip Prerequisite
+You must upgrade your Olares OS to V1.12.5 before updating OpenClaw to 2026.03.22.
+:::
+
 The OpenClaw 2026.03.22 update introduced several changes that restrict plugin permissions. Because of this security enhancement, older plugins might no longer be compatible. For more information, see the [OpenClaw release notes](https://github.com/openclaw/openclaw/releases/tag/v2026.3.22).
 
 If you find that a previously working plugin is unavailable after upgrading to this version, try the following solutions:
@@ -35,9 +39,9 @@ The OpenClaw 2026.02.25 update introduced a security enhancement that requires e
     
     ![Error logs](/images/manual/use-cases/container-logs.png#bordered)
 
-3. Open **Settings**, go to **Application** > **OpenClaw** > **Control UI** > **Set up endpoint**, and then copy the endpoint address.
+3. Open **Settings**, go to **Application** > **OpenClaw** > **Control UI** >. Under **Endpoint settings**, copy the endpoint address.
 
-    ![OpenClaw endpoint address](/images/manual/use-cases/openclaw-endpoint.png#bordered){width=70%}    
+    ![OpenClaw endpoint address](/images/manual/use-cases/onetest01-endpoint-openclaw-control-ui.png#bordered){width=70%}    
 
 4. Open **Files**, go to **Application** > **Data** > **clawdbot** > **config**, right-click the `openclaw.json` file, and then download it.
 
