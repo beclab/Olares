@@ -339,7 +339,7 @@ A task may fail after you switch models for one of these reasons:
 To fix this issue:
 
 - Wait for the first-time model download to complete, then retry the task.
-- [Assign more VRAM](/docs/manual/olares/settings/single-gpu.md#adjust-vram-allocation) to Whisper-WebUI in Memory slicing mode.
+- [Assign more VRAM](/manual/olares/settings/single-gpu.md#adjust-vram-allocation) to Whisper-WebUI in Memory slicing mode.
 - Switch the GPU to another suitable mode.
 - Choose a smaller model.
 
