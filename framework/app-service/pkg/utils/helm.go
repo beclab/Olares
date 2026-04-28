@@ -3,7 +3,6 @@ package utils
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -279,12 +278,4 @@ func RenderManifestFromContent(content []byte, owner, admin string, isAdmin bool
 	renderedYAML := renderedTemplates["chart/OlaresManifest.yaml"]
 
 	return renderedYAML, nil
-}
-
-func GetChartName(appName, rawAppName, chartName string) string {
-	if appName != rawAppName {
-		suffix := strings.TrimPrefix(appName, rawAppName)
-		return fmt.Sprintf("%s%s", chartName, suffix)
-	}
-	return chartName
 }

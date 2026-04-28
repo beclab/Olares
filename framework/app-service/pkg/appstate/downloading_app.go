@@ -154,7 +154,7 @@ func (p *DownloadingApp) exec(ctx context.Context) error {
 		return err
 	}
 
-	values, err := appinstaller.BuildBaseHelmValues(ctx, kubeConfig, appConfig, p.manager.Spec.AppOwner, true, false)
+	values, err := appinstaller.BuildBaseHelmValues(ctx, kubeConfig, appConfig, p.manager.Spec.AppOwner, true)
 	if err != nil {
 		klog.Errorf("build base helm values failed %v", err)
 		return err

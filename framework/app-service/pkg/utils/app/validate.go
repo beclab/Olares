@@ -948,11 +948,10 @@ func GetClusterAvailableResource() (*resources, error) {
 	if err != nil {
 		return nil, err
 	}
-	initAllocatableCPU := resource.MustParse("0")
-	initAllocatableMemory := resource.MustParse("0")
+	initAllocatable := resource.MustParse("0")
 	availableResources := resources{
-		cpu:    usage{allocatable: &initAllocatableCPU},
-		memory: usage{allocatable: &initAllocatableMemory},
+		cpu:    usage{allocatable: &initAllocatable},
+		memory: usage{allocatable: &initAllocatable},
 	}
 	nodeList := make([]corev1.Node, 0)
 	for _, node := range nodes.Items {
@@ -992,8 +991,6 @@ func CheckAppK8sRequestResource(appConfig *appcfg.ApplicationConfig, op v1alpha1
 	if appConfig == nil {
 		return "", "", errors.New("nil appConfig")
 	}
-	klog.Infof("availableResources: cpu: %#v", availableResources.cpu.allocatable.String())
-	klog.Infof("availableResources: memory: %#v", availableResources.memory.allocatable.String())
 
 	sufficientCPU, sufficientMemory := false, false
 

@@ -661,8 +661,7 @@ func (r *SecurityReconciler) findOwnerOfNamespace(ctx context.Context, ns *corev
 				system = cfg.AppScope.ClusterScoped && cfg.AppScope.SystemService
 				shared := false
 				for _, chart := range cfg.SubCharts {
-					chartName := utils.GetChartName(cfg.AppName, cfg.RawAppName, chart.Name)
-					if chart.Namespace(owner, chartName) == ns.Name {
+					if chart.Namespace(owner) == ns.Name {
 						if cfg.APIVersion == appcfg.V2 {
 							if !chart.Shared {
 								// V2: if the namespace is not cluster scoped, it cannot be considered as system app

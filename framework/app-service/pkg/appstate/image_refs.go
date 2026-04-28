@@ -15,7 +15,7 @@ func GetRefsForImageManager(appConfig *appcfg.ApplicationConfig, values map[stri
 	case appConfig.APIVersion == appcfg.V2 && appConfig.IsMultiCharts():
 		var chartRefs []appsv1.Ref
 		for _, chart := range appConfig.SubCharts {
-			chartRefs, err = utils.GetRefFromResourceList(chart.ChartPath(appConfig.RawAppName, chart.Name), values, appConfig.Images)
+			chartRefs, err = utils.GetRefFromResourceList(chart.ChartPath(appConfig.RawAppName), values, appConfig.Images)
 			if err != nil {
 				klog.Errorf("get refs from chart %s failed %v", chart.Name, err)
 				return

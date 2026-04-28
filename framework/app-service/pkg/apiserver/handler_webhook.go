@@ -372,8 +372,6 @@ func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 		return constants.AMDGPU
 	case utils.StrixHaloChipType:
 		return constants.AMDGPU
-	case utils.MthreadsM100ChipType:
-		return ""
 	case utils.CPUType:
 		klog.Info("CPU type is selected, no GPU resource will be injected")
 		return ""
