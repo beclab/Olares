@@ -127,7 +127,7 @@ func UserBindTerminus(mnemonic, bflUrl, vaultUrl, authUrl, osPwd, terminusName, 
 	token, err := auth.FirstFactor(context.TODO(), auth.LoginRequest{
 		AuthURL:       bflUrl,
 		LocalName:     localName,
-		TerminusName:  terminusName,
+		OlaresID:      terminusName,
 		Password:      osPwd,
 		NeedTwoFactor: false,
 		AcceptCookie:  false,
