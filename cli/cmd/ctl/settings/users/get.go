@@ -13,14 +13,23 @@ import (
 
 // `olares-cli settings users get <username>`
 //
-// Wraps user-service's GET /api/users/:username. user-service forwards to
-// app-service /app-service/v1/users/<name>, which writes a single
-// UserInfo struct directly to the response body (NO list wrapper, NO
-// app-service ListResult, NO BFL envelope) — see
-// framework/app-service/.../handler_user.go:422 (handleUser).
+// Wraps user-service's GET /api/users/:username. user-service's
+// bfl/users.controller.ts:95 explicitly returns `data.data` from the
+// upstream axios response — the upstream is app-service
+// /app-service/v1/users/<name>, which writes a single UserInfo struct
+// directly to the response body (see framework/app-service/.../
+// handler_user.go:422 handleUser).
 //
-// As a result this verb does NOT use decodeListResult or doGetEnvelope —
-// it just decodes UserInfo directly into the response body.
+// 2026-04-28 KI-3 fix: depending on whether NestJS' global response
+// interceptor is active, the wire body shows up either as the raw
+// UserInfo object or wrapped in an envelope `{code:200, data:{...}}`
+// (KI-3 reproduced the latter — every field rendered as "-" because
+// json.Unmarshal saw {code, data, ...} and userInfo's tags didn't match
+// any top-level key). decodeObjectResult (cli/cmd/ctl/settings/users/
+// common.go) probes for a top-level `code` field and unwraps `data`
+// accordingly, falling back to raw-body decode when no envelope is
+// present, so we stay forward-compatible with whichever shape
+// user-service settles on.
 //
 // Role: app-service does not gate handleUser server-side, so any
 // authenticated user can call this for any username (including users
@@ -67,7 +76,7 @@ func runGet(ctx context.Context, f *cmdutil.Factory, username, outputRaw string)
 
 	var u userInfo
 	path := "/api/users/" + username
-	if err := pc.doer.DoJSON(ctx, "GET", path, nil, &u); err != nil {
+	if err := decodeObjectResult(ctx, pc.doer, path, &u); err != nil {
 		return err
 	}
 

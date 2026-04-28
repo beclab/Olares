@@ -121,6 +121,65 @@ func decodeListResult[T any](ctx context.Context, d Doer, path string, out *appS
 	}
 }
 
+// decodeObjectResult is decodeListResult's single-object sibling.
+//
+// Some user-service routes (e.g. bfl/users.controller.ts:95 `@Get('/:username')`)
+// return `data.data` from the upstream axios response — depending on
+// whether NestJS' global response interceptor is active, the wire body
+// shows up either as the raw object:
+//
+//	{ "uid": "...", "name": "...", ... }
+//
+// or wrapped in an envelope (KI-3 in KNOWN_ISSUES.md, the cause of "all
+// fields show -"):
+//
+//	{ "code": 200, "data": { "uid": "...", "name": "...", ... }, ... }
+//
+// We probe the top-level keys: when `code` is present we treat it as an
+// envelope and decode `data` into out; otherwise we fall back to decoding
+// the raw body into out. Either form yields the same populated struct.
+func decodeObjectResult[T any](ctx context.Context, d Doer, path string, out *T) error {
+	var raw json.RawMessage
+	if err := d.DoJSON(ctx, "GET", path, nil, &raw); err != nil {
+		return err
+	}
+	if len(raw) == 0 {
+		return fmt.Errorf("GET %s: empty response body", path)
+	}
+	var probe map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &probe); err != nil {
+		// Not even a JSON object — caller likely got HTML / plain text.
+		return fmt.Errorf("decode GET %s response: %w", path, err)
+	}
+	if _, hasCode := probe["code"]; hasCode {
+		if dataRaw, ok := probe["data"]; ok && len(dataRaw) > 0 && string(dataRaw) != "null" {
+			if err := json.Unmarshal(dataRaw, out); err != nil {
+				return fmt.Errorf("decode GET %s envelope data: %w", path, err)
+			}
+			return nil
+		}
+		// Envelope present but no usable data — surface server message if any.
+		if msgRaw, ok := probe["message"]; ok {
+			var msg string
+			if err := json.Unmarshal(msgRaw, &msg); err == nil && msg != "" {
+				return fmt.Errorf("GET %s: %s", path, msg)
+			}
+		}
+		if errRaw, ok := probe["error"]; ok {
+			var msg string
+			if err := json.Unmarshal(errRaw, &msg); err == nil && msg != "" {
+				return fmt.Errorf("GET %s: %s", path, msg)
+			}
+		}
+		return fmt.Errorf("GET %s: server returned envelope without data", path)
+	}
+	// No envelope; treat as raw object body.
+	if err := json.Unmarshal(raw, out); err != nil {
+		return fmt.Errorf("decode GET %s response: %w", path, err)
+	}
+	return nil
+}
+
 func printJSON(w io.Writer, v interface{}) error {
 	if w == nil {
 		w = os.Stdout
