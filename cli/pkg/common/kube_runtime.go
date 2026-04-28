@@ -293,6 +293,9 @@ func (a *Argument) SetGPU(enable bool) {
 }
 
 func (a *Argument) SetOlaresVersion(version string) {
+	if viper.GetString(ENV_LOCAL_RELEASE_VERSION_OVERRIDE) != "" {
+		version = viper.GetString(ENV_LOCAL_RELEASE_VERSION_OVERRIDE)
+	}
 	if version == "" || len(version) <= 2 {
 		return
 	}
