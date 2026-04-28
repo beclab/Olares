@@ -106,7 +106,7 @@ spec:
           - :5572
           - --rc-no-auth
           - --log-level
-          - DEBUG
+          - INFO
           - --no-check-certificate
           - --s3-directory-markers
           - --fs-cache-expire-duration
@@ -210,7 +210,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.156
+          image: beclab/files-server:v0.2.158
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
