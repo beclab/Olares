@@ -21,11 +21,19 @@ import (
 //   GET /headscale/machine                 → list devices
 //   GET /headscale/machine/:id/routes      → list routes for one device
 //
-// Wire shapes (NO BFL envelope — Headscale returns raw JSON, which
-// user-service forwards verbatim through ProviderClient.execute):
+// Wire shapes (BFL/user-service envelope — confirmed in the browser
+// 2026-04-28 KI-12 fix):
 //
-//   /headscale/machine            → { "machines": [HeadScaleDevice...] }
-//   /headscale/machine/:id/routes → { "routes":   [Route...] }
+//   /headscale/machine            → { code, message, data: { machines: [HeadScaleDevice...] } }
+//   /headscale/machine/:id/routes → { code, message, data: { routes:   [Route...] } }
+//
+// The doc previously called this "raw JSON, forwarded verbatim"; that
+// was true at an earlier user-service version, but the current code path
+// goes through the standard envelope wrapper. We now decode through
+// doGetEnvelope so the inner data unwraps before our typed structs see
+// it. Companion KI-12 fix in cli/pkg/cmdutil/factory.go also adds
+// `auth_token` cookie + Origin/Referer headers so the /headscale/* path
+// no longer falls through to the SPA HTML fallback.
 //
 // HeadScaleDevice fields the SPA reads (HeadScaleDeviceCard.vue):
 //   id, name, givenName, ipAddresses[], lastSeen (ISO timestamp string),
@@ -160,7 +168,7 @@ func runDevicesList(ctx context.Context, f *cmdutil.Factory, outputRaw string) e
 	}
 
 	var resp devicesListResp
-	if err := pc.doer.DoJSON(ctx, "GET", "/headscale/machine", nil, &resp); err != nil {
+	if err := doMutateEnvelope(ctx, pc.doer, "GET", "/headscale/machine", nil, &resp); err != nil {
 		return err
 	}
 
@@ -275,7 +283,7 @@ func runDevicesRoutes(ctx context.Context, f *cmdutil.Factory, deviceID, outputR
 
 	var resp devicesRoutesResp
 	path := "/headscale/machine/" + deviceID + "/routes"
-	if err := pc.doer.DoJSON(ctx, "GET", path, nil, &resp); err != nil {
+	if err := doMutateEnvelope(ctx, pc.doer, "GET", path, nil, &resp); err != nil {
 		return err
 	}
 

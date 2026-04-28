@@ -92,6 +92,17 @@ func (c *SettingsClient) DoJSON(ctx context.Context, method, path string, body, 
 	if reqBody != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	// 2026-04-28 KI-12 / KI-15 / KI-16 reverted: an earlier draft
+	// also injected `Origin: <baseURL>` and `Referer: <baseURL>/`
+	// to mimic the browser/SPA shape. That caused a global
+	// regression — Authelia's CSRF/Origin gate on the desktop
+	// ingress takes the presence of an Origin header on a Go-style
+	// non-browser request as a sign of a forged request and
+	// redirects to login → 400 Bad Request HTML on every path that
+	// previously worked (31/34 verbs flipped from ok to fail). Until
+	// we have an actual Authelia config dump showing what shape it
+	// expects, we leave Origin/Referer unset (Go's default) so the
+	// /api/* paths keep working.
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

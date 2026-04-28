@@ -18,8 +18,26 @@ import (
 //
 // Backed by user-service's /api/account/* (account.controller.ts):
 //
-//   GET  /api/account/all                   → mini list  (list verb)
-//   GET  /api/account/:type/:name           → single full record (get verb)
+//   GET  /api/account/all                   → mini list                (list verb)
+//   GET  /api/account/:type                 → mini list per type       (list-by-type verb)
+//   POST /api/account/retrieve {name}       → single full record       (get verb)
+//
+// 2026-04-28 KI-14 split + retrieve fix: previously `accounts get <type>`
+// (single positional) decoded a single object, but `GET :type/:name`
+// upstream actually returns `[]IntegrationAccountMiniData` (same shape
+// as `/all` but filtered to one type/name) — see
+// account.service.ts:88-95 `getIntegrationAccountByAccountType` →
+// `IntegrationAccountMiniData[]`. That caused
+// `cannot unmarshal array into Go value of type integration.accountFull`.
+// The SPA itself handles this by hitting a *different* endpoint for
+// the full record: settings/src/stores/settings/integration.ts:166-174
+// `getAccountFullData` → `POST /api/account/retrieve { name: key }`
+// where `key = "integration-account:<type>:<name>"`. The CLI now
+// mirrors that exactly:
+//
+//   accounts list                          // GET  /api/account/all
+//   accounts list-by-type <type>           // GET  /api/account/<type>     -> []mini
+//   accounts get <type> <name>             // POST /api/account/retrieve   -> full
 //
 // The mini list omits raw_data/tokens; the per-account GET returns the
 // full IntegrationAccount including raw_data. We never print raw_data
@@ -37,9 +55,10 @@ authenticate against third-party storage / identity providers.
 
 Subcommands:
   list                                                  (Phase 1)
-  get <type> [name]                                     (Phase 1)
-  add <type> [flags]                                    (Phase 2)
-  delete <type> [name]                                  (Phase 2)
+  list-by-type <type>                                   (Phase 1)
+  get          <type> <name>                            (Phase 1)
+  add          <type> [flags]                           (Phase 2)
+  delete       <type> [name]                            (Phase 2)
 
 The "add" verb covers the *direct* object-storage flows (awss3, tencent)
 that don't need an OAuth/wallet redirect. The cookie store, OAuth flows
@@ -49,6 +68,7 @@ SPA — they need browser- or wallet-bound state that has no CLI surface.
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newAccountsListCommand(f))
+	cmd.AddCommand(newAccountsListByTypeCommand(f))
 	cmd.AddCommand(newAccountsGetCommand(f))
 	cmd.AddCommand(newAccountsAddCommand(f))
 	cmd.AddCommand(newAccountsDeleteCommand(f))
@@ -69,25 +89,54 @@ func newAccountsListCommand(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
+func newAccountsListByTypeCommand(f *cmdutil.Factory) *cobra.Command {
+	var output string
+	cmd := &cobra.Command{
+		Use:   "list-by-type <type>",
+		Short: "list integration accounts of a single type",
+		Long: `List the mini records of all integration accounts of the given type.
+
+Use this when you have multiple accounts of the same provider (e.g. two
+google drives) and want to see their names + availability before
+calling "accounts get <type> <name>" for the full record.
+
+This mirrors the SPA's getAccount(<type>) action, which feeds the
+integration list view filtered to one provider. Pass <type> = "all" to
+get every type — equivalent to plain "accounts list".
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			return runAccountsListByType(c.Context(), f, args[0], output)
+		},
+	}
+	addOutputFlag(cmd, &output)
+	return cmd
+}
+
 func newAccountsGetCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{
-		Use:   "get <type> [name]",
-		Short: "show a single integration account",
+		Use:   "get <type> <name>",
+		Short: "show a single integration account's full record",
 		Long: `Show a single integration account's full record (including raw_data).
 
-The first positional arg is the account type (e.g. google, dropbox, awss3,
-tencent, space). The second positional arg is the optional account name —
-the SPA uses it to disambiguate when a single user has multiple
-accounts of the same type.
+Both positional args are required:
+  <type>   account type (e.g. google, dropbox, awss3, tencent, space).
+  <name>   account name — disambiguates when a user has multiple
+           accounts of the same type.
+
+If you only know the type and want every account of that type, use
+"accounts list-by-type <type>" first to read the names, then come back
+here for the full record.
+
+This mirrors the SPA's getAccountFullData() action — internally hits
+POST /api/account/retrieve { name: "integration-account:<type>:<name>" },
+which is the only endpoint that returns the full IntegrationAccount
+(including raw_data tokens). GET :type/:name only returns mini metadata.
 `,
-		Args: cobra.RangeArgs(1, 2),
+		Args: cobra.ExactArgs(2),
 		RunE: func(c *cobra.Command, args []string) error {
-			name := ""
-			if len(args) > 1 {
-				name = args[1]
-			}
-			return runAccountsGet(c.Context(), f, args[0], name, output)
+			return runAccountsGet(c.Context(), f, args[0], args[1], output)
 		},
 	}
 	addOutputFlag(cmd, &output)
@@ -140,7 +189,7 @@ func runAccountsList(ctx context.Context, f *cmdutil.Factory, outputRaw string) 
 	}
 }
 
-func runAccountsGet(ctx context.Context, f *cmdutil.Factory, accountType, name, outputRaw string) error {
+func runAccountsListByType(ctx context.Context, f *cmdutil.Factory, accountType, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -157,13 +206,47 @@ func runAccountsGet(ctx context.Context, f *cmdutil.Factory, accountType, name, 
 		return err
 	}
 
-	path := "/api/account/" + accountType
-	if name != "" {
-		path += "/" + name
+	var rows []accountMini
+	if err := doGetEnvelope(ctx, pc.doer, "/api/account/"+accountType, &rows); err != nil {
+		return err
 	}
 
+	switch format {
+	case FormatJSON:
+		return printJSON(os.Stdout, rows)
+	default:
+		return renderAccountsTable(os.Stdout, rows)
+	}
+}
+
+func runAccountsGet(ctx context.Context, f *cmdutil.Factory, accountType, name, outputRaw string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	format, err := parseFormat(outputRaw)
+	if err != nil {
+		return err
+	}
+	if accountType == "" {
+		return fmt.Errorf("account type is required")
+	}
+	if name == "" {
+		return fmt.Errorf("account name is required")
+	}
+
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+
+	// SPA settings/src/stores/settings/integration.ts:149-154 builds the
+	// store key as `integration-account:<type>:<name>` and POSTs it to
+	// /api/account/retrieve to get the full record (incl. raw_data).
+	storeKey := "integration-account:" + accountType + ":" + name
+	body := map[string]string{"name": storeKey}
+
 	var account accountFull
-	if err := doGetEnvelope(ctx, pc.doer, path, &account); err != nil {
+	if err := doMutateEnvelope(ctx, pc.doer, "POST", "/api/account/retrieve", body, &account); err != nil {
 		return err
 	}
 
