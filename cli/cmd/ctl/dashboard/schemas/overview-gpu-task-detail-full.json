@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.gpu.task.detail.full",
+  "description": "Per-task 'details page' (SPA Overview2/GPU/TasksDetails.vue). Sections envelope with three keys: `detail` (HAMI /v1/container basic info, single-item leaf), `gauges` (2 instant-vector gauges in fixed order: compute_usage / vram_usage; allocation gauges are skipped when --sharemode is `2` (TimeSlicing) to mirror SPA's `displayAllocation`), `trends` (2 range-vector trends: compute_trend / vram_trend). Default time window is 1h ending now; override with --since/--start/--end. Same partial-failure semantics as `dashboard.overview.gpu.detail.full`: each item carries `raw.error` on failure and the parent envelope's `meta.warnings` accumulates one-line summaries. Empty reasons: 'no_vgpu_integration' (HAMI 404 on /v1/container), 'vgpu_unavailable' (HAMI 5xx — meta.error + meta.http_status), 'no_gpu_detected' (200 with empty body). Soft advisory (non-admin / no CUDA node) lands in meta.note + stderr in table mode.",
+  "type": "object",
+  "required": ["kind", "meta", "sections"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.gpu.task.detail.full"},
+    "meta": {
+      "type": "object",
+      "properties": {
+        "fetched_at": {"type": "string"},
+        "window": {
+          "type": "object",
+          "required": ["start", "end"],
+          "properties": {
+            "since": {"type": "string"},
+            "start": {"type": "string"},
+            "end":   {"type": "string"},
+            "step":  {"type": "string"}
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "empty": {"type": "boolean"},
+        "empty_reason": {
+          "type": "string",
+          "enum": ["no_vgpu_integration", "vgpu_unavailable", "no_gpu_detected"]
+        },
+        "error": {"type": "string"},
+        "http_status": {"type": "integer"},
+        "note": {"type": "string"}
+      }
+    },
+    "sections": {
+      "type": "object",
+      "required": ["detail", "gauges", "trends"],
+      "properties": {
+        "detail": {
+          "type": "object",
+          "description": "Single-item envelope wrapping HAMI's /v1/container body verbatim.",
+          "properties": {
+            "kind": {"const": "dashboard.overview.gpu.task.detail"},
+            "items": {"type": "array", "minItems": 0, "maxItems": 1}
+          }
+        },
+        "gauges": {
+          "type": "object",
+          "description": "Two instant-vector gauges in fixed order: compute_usage / vram_usage.",
+          "properties": {
+            "kind": {"const": "dashboard.overview.gpu.gauges"},
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "raw": {
+                    "type": "object",
+                    "properties": {
+                      "key":     {"type": "string", "enum": ["compute_usage", "vram_usage"]},
+                      "title":   {"type": "string"},
+                      "unit":    {"type": "string"},
+                      "query":   {"type": "string"},
+                      "value":   {"type": "number"},
+                      "used":    {"type": "number"},
+                      "total":   {"type": "number"},
+                      "percent": {"type": "number"},
+                      "error":   {"type": "string"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "trends": {
+          "type": "object",
+          "description": "Two range-vector trends in fixed order: compute_trend / vram_trend, each with one line `usage`.",
+          "properties": {
+            "kind": {"const": "dashboard.overview.gpu.trends"},
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "raw": {
+                    "type": "object",
+                    "properties": {
+                      "key":   {"type": "string", "enum": ["compute_trend", "vram_trend"]},
+                      "title": {"type": "string"},
+                      "unit":  {"type": "string"},
+                      "lines": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": ["label"],
+                          "properties": {
+                            "label":  {"type": "string"},
+                            "query":  {"type": "string"},
+                            "labels": {"type": "object", "additionalProperties": {"type": "string"}},
+                            "points": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "timestamp": {"type": "string"},
+                                  "value":     {"type": "number"}
+                                }
+                              }
+                            },
+                            "error": {"type": "string"}
+                          }
+                        }
+                      },
+                      "error": {"type": "string"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
