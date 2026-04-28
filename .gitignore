@@ -51,8 +51,7 @@ user-service/
 
 /settings/
 apps/packages/app/.quasar/*
-cli/local_report.md
-cli/local_report_phase2.md
+cli/cmd/ctl/settings/scripts/local_report*.md
 cli/cmd/ctl/settings/KNOWN_ISSUES.md
 cli/cmd/ctl/settings/NOTES.md
 cli/cmd/ctl/settings/scripts/README.md
