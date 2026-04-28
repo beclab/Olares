@@ -30,6 +30,7 @@ olares-cli-*.tar.gz
 .vscode
 .DS_Store
 cli/output
+cli/docs/
 daemon/output
 daemon/bin
 
@@ -40,3 +41,6 @@ node_modules
 cli/olares-cli*
 
 framework/app-service/bin
+
+/files/
+/market/
