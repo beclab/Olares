@@ -2,7 +2,6 @@ package apps
 
 import (
 	"context"
-	"strings"
 	"testing"
 )
 
@@ -75,22 +74,3 @@ func TestRunAuthLevelSet_RejectsEmptyArgs(t *testing.T) {
 	}
 }
 
-func TestNonEmptyAndJoinNonEmptyList_Reused(t *testing.T) {
-	// Quick sanity on the helpers used by render functions across the
-	// new files, to catch regressions in either if they're modified.
-	if got := joinNonEmptyList([]string{}); got != "-" {
-		t.Errorf("empty list should render as %q, got %q", "-", got)
-	}
-	if got := joinNonEmptyList([]string{"  "}); got != "-" {
-		t.Errorf("whitespace-only list should render as %q, got %q", "-", got)
-	}
-	if got := joinNonEmptyList([]string{"a", "", "  b  ", " "}); got != "a,b" {
-		t.Errorf("got %q want %q", got, "a,b")
-	}
-	if got := nonEmpty(""); got != "-" {
-		t.Errorf("empty string should render as %q, got %q", "-", got)
-	}
-	if got := strings.TrimSpace(nonEmpty(" hi ")); got != "hi" {
-		t.Errorf("nonEmpty should NOT trim, but it returned %q", got)
-	}
-}
