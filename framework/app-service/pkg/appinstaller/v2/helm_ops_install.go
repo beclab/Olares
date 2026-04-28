@@ -3,9 +3,9 @@ package v2
 import (
 	"context"
 	"errors"
+
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	v1 "github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
@@ -54,10 +54,14 @@ func (h *HelmOpsV2) Install() error {
 	}
 
 	var err error
-	values, err := h.SetValues(false)
+	values, err := h.SetValues()
 	if err != nil {
 		klog.Errorf("set values err %v", err)
 		return err
+	}
+	if values["isAdmin"].(bool) {
+		// force set the admin is owner
+		values["admin"] = h.App().OwnerName
 	}
 
 	// in v2, if app is multi-charts and has a cluster shared chart,
@@ -138,33 +142,32 @@ func (h *HelmOpsV2) hasClusterSharedCharts() bool {
 
 func (h *HelmOpsV2) install(values map[string]interface{}) (err error, sharedInstalled bool) {
 	for _, chart := range h.App().SubCharts {
-		chartName := utils.GetChartName(h.App().AppName, h.App().RawAppName, chart.Name)
 		if chart.Shared {
 			isAdmin, err := kubesphere.IsAdmin(h.Context(), h.KubeConfig(), h.App().OwnerName)
 			if err != nil {
-				klog.Errorf("Failed to check if user is admin for chart %s: %v", chartName, err)
+				klog.Errorf("Failed to check if user is admin for chart %s: %v", chart.Name, err)
 				return err, sharedInstalled
 			}
 
 			if !isAdmin {
-				klog.Infof("Skipping installation of shared chart %s for non-admin user %s", chartName, h.App().OwnerName)
+				klog.Infof("Skipping installation of shared chart %s for non-admin user %s", chart.Name, h.App().OwnerName)
 				continue
 			}
 		}
 
-		_, err := h.status(chartName)
+		_, err := h.status(chart.Name)
 		if err == nil {
 			if chart.Shared {
-				klog.Infof("chart %s already installed, skipping", chartName)
+				klog.Infof("chart %s already installed, skipping", chart.Name)
 				continue
 			} else {
-				klog.Errorf("chart %s already exists, cannot install again", chartName)
+				klog.Errorf("chart %s already exists, cannot install again", chart.Name)
 				return driver.ErrReleaseExists, sharedInstalled
 			}
 		}
 
 		if !errors.Is(err, driver.ErrReleaseNotFound) {
-			klog.Errorf("Failed to get status for chart %s: %v", chartName, err)
+			klog.Errorf("Failed to get status for chart %s: %v", chart.Name, err)
 			return err, sharedInstalled
 		}
 
@@ -172,7 +175,7 @@ func (h *HelmOpsV2) install(values map[string]interface{}) (err error, sharedIns
 		settings := h.Settings()
 		if chart.Shared {
 			// re-create action config for shared chart
-			actionConfig, settings, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName, chartName))
+			actionConfig, settings, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName))
 			if err != nil {
 				klog.Errorf("Failed to create action config for shared chart %s: %v", chart.Name, err)
 				return err, sharedInstalled
@@ -184,10 +187,10 @@ func (h *HelmOpsV2) install(values map[string]interface{}) (err error, sharedIns
 			h.Context(),
 			actionConfig,
 			settings,
-			chartName,
-			chart.ChartPath(h.App().RawAppName, chart.Name),
+			chart.Name,
+			chart.ChartPath(h.App().AppName),
 			h.App().RepoURL,
-			chart.Namespace(h.App().OwnerName, chartName),
+			chart.Namespace(h.App().OwnerName),
 			values,
 		)
 
@@ -208,7 +211,7 @@ func (h *HelmOpsV2) status(releaseName string) (*helmrelease.Release, error) {
 	for _, chart := range h.App().SubCharts {
 		if chart.Shared && chart.Name == releaseName {
 			// re-create action config for shared chart
-			actionConfig, _, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName, chart.Name))
+			actionConfig, _, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName))
 			if err != nil {
 				klog.Errorf("Failed to create action config for shared chart %s: %v", chart.Name, err)
 				return nil, err
@@ -231,9 +234,7 @@ func (h *HelmOpsV2) prepareNamespaces() error {
 	}
 
 	for _, chart := range h.App().SubCharts {
-		chartName := utils.GetChartName(h.App().AppName, h.App().RawAppName, chart.Name)
-
-		nsName := chart.Namespace(h.App().OwnerName, chartName)
+		nsName := chart.Namespace(h.App().OwnerName)
 		ns, err := k8s.CoreV1().Namespaces().Get(h.Context(), nsName, metav1.GetOptions{})
 		create := false
 		if err != nil {

@@ -992,8 +992,6 @@ func CheckAppK8sRequestResource(appConfig *appcfg.ApplicationConfig, op v1alpha1
 	if appConfig == nil {
 		return "", "", errors.New("nil appConfig")
 	}
-	klog.Infof("availableResources: cpu: %#v", availableResources.cpu.allocatable.String())
-	klog.Infof("availableResources: memory: %#v", availableResources.memory.allocatable.String())
 
 	sufficientCPU, sufficientMemory := false, false
 

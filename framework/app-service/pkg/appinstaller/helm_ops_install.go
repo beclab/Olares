@@ -659,10 +659,7 @@ func (h *HelmOps) findServerPods() ([]corev1.Pod, error) {
 		if !c.Shared {
 			continue
 		}
-
-		chartName := utils.GetChartName(h.app.AppName, h.app.RawAppName, c.Name)
-
-		ns := c.Namespace(h.app.OwnerName, chartName)
+		ns := c.Namespace(h.app.OwnerName)
 		podList, err := h.client.KubeClient.Kubernetes().CoreV1().Pods(ns).List(h.ctx, metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("app %s get pods err %v", h.app.AppName, err)
@@ -837,7 +834,7 @@ func ParseAppPermission(data []appcfg.AppPermission) []appcfg.AppPermission {
 
 func (h *HelmOps) Install() error {
 	var err error
-	values, err := h.SetValues(false)
+	values, err := h.SetValues()
 	if err != nil {
 		klog.Errorf("set values err %v", err)
 		return err
@@ -954,13 +951,6 @@ func (h *HelmOps) App() *appcfg.ApplicationConfig {
 	return h.app
 }
 
-func (h *HelmOps) IsCloneApp() bool {
-	if h.app.AppName != h.app.RawAppName {
-		return true
-	}
-	return false
-}
-
 func (h *HelmOps) KubeConfig() *rest.Config {
 	return h.kubeConfig
 }
@@ -1041,6 +1031,5 @@ func (h *HelmOps) RegisterOrUnregisterAppProvider(operation ProviderOperation) e
 			return errors.New(string(resp.Body()))
 		}
 	}
-
 	return nil
 }
