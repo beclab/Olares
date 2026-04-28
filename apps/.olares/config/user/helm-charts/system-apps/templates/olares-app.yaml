@@ -300,17 +300,6 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: status.podIP
-        - name: init-files-data
-          image: busybox:1.28
-          securityContext:
-            privileged: true
-            runAsNonRoot: false
-            runAsUser: 0
-          volumeMounts:
-            - name: fb-data
-              mountPath: /appdata
-            - name: uploads-temp
-              mountPath: /uploadstemp
         - name: olares-app-init
           image: beclab/system-frontend:v1.10.19
           imagePullPolicy: IfNotPresent
