@@ -62,10 +62,10 @@ func (h *HelmOpsV2) Upgrade() error {
 			return err
 		}
 
-		// add application labels to shared namespace
-		err = h.addApplicationLabelsToSharedNamespace()
+		// prepare namespaces for all charts
+		err = h.prepareNamespaces()
 		if err != nil {
-			klog.Errorf("Failed to add application labels to shared namespace err=%v", err)
+			klog.Errorf("Failed to prepare namespaces err=%v", err)
 			return err
 		}
 

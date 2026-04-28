@@ -486,8 +486,8 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 		installAsAdmin = false
 	case !isAdmin:
 		if len(adminUsers) == 0 {
-			klog.Errorf("No admin user found")
-			api.HandleBadRequest(h.resp, h.req, fmt.Errorf("no admin user found"))
+			err = fmt.Errorf("no admin user found")
+			api.HandleBadRequest(h.resp, h.req, err)
 			return
 		}
 		admin = adminUsers[0]
@@ -731,8 +731,8 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 		admin = h.owner
 	} else {
 		if len(adminUsers) == 0 {
-			klog.Errorf("No admin user found")
-			api.HandleBadRequest(h.resp, h.req, fmt.Errorf("no admin user found"))
+			err = fmt.Errorf("no admin user found")
+			api.HandleBadRequest(h.resp, h.req, err)
 			return
 		}
 		admin = adminUsers[0]
