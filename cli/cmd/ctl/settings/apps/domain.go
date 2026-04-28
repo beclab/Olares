@@ -87,12 +87,17 @@ a single app entrance. Requires both an <app> and an <entrance> name —
 get the entrance names from "olares-cli settings apps entrances list".
 
 Subcommands:
+  list   <app>                                             list every entrance's domain setup
   get    <app> <entrance>                                  show current setup
   set    <app> <entrance> [--third-level X] [--third-party X.com]
                           [--cert-file PEM] [--key-file PEM]
                           [--clear-third-level] [--clear-third-party]
                                                           replace the setup (RMW)
   finish <app> <entrance>                                  confirm third-party CNAME
+
+If you only know the app name and not its entrances yet, run
+"apps domain list <app>" (or "apps entrances list <app>") first to
+discover them.
 
 Set semantics: unspecified flags survive (read-modify-write). Use
 --clear-third-level / --clear-third-party to explicitly drop a
@@ -110,10 +115,111 @@ verify and activate the cert.
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(newDomainListCommand(f))
 	cmd.AddCommand(newDomainGetCommand(f))
 	cmd.AddCommand(newDomainSetCommand(f))
 	cmd.AddCommand(newDomainFinishCommand(f))
 	return cmd
+}
+
+// newDomainListCommand registers `apps domain list <app>`.
+//
+// Convenience verb that fans out one GET /setup/domain per entrance so
+// users who only know the app name don't have to run two commands
+// (entrances list, then domain get per entrance). The SPA reaches the
+// same effect by navigating into a per-app page that shows every
+// entrance's domain inline; we mirror that flat view here. It's also
+// the answer to KI-17's "apps domain get <app>" complaint — the
+// previous shape required <entrance>, now the user can run "list <app>"
+// to see them all at once.
+func newDomainListCommand(f *cmdutil.Factory) *cobra.Command {
+	var output string
+	cmd := &cobra.Command{
+		Use:   "list <app>",
+		Short: "list domain setup for every entrance of an app",
+		Long: `List the third-level / third-party / CNAME state for every entrance
+the app exposes. Internally fans out one "domain get" per entrance and
+collates the results into one table.
+
+Pass --output json for the raw {entrance: SetupDomain} map.
+
+Examples:
+  olares-cli settings apps domain list files
+  olares-cli settings apps domain list files -o json
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			return runDomainList(c.Context(), f, args[0], output)
+		},
+	}
+	addOutputFlag(cmd, &output)
+	return cmd
+}
+
+// domainListEntry pairs an entrance name with its SetupDomain so we can
+// keep the JSON output structurally explicit (callers can iterate
+// entries[].entrance / entries[].setup) without us inventing an ad-hoc
+// {entrance: SetupDomain} envelope.
+type domainListEntry struct {
+	Entrance string      `json:"entrance"`
+	Setup    SetupDomain `json:"setup"`
+}
+
+func runDomainList(ctx context.Context, f *cmdutil.Factory, app, outputRaw string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	app = strings.TrimSpace(app)
+	if app == "" {
+		return fmt.Errorf("app name is required")
+	}
+	format, err := parseFormat(outputRaw)
+	if err != nil {
+		return err
+	}
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+	entrancePath := "/api/applications/" + url.PathEscape(app) + "/entrances"
+	var env entrancesEnvelope
+	if err := doGetEnvelope(ctx, pc.doer, entrancePath, &env); err != nil {
+		return err
+	}
+	entries := make([]domainListEntry, 0, len(env.Items))
+	for _, e := range env.Items {
+		name := strings.TrimSpace(e.Name)
+		if name == "" {
+			continue
+		}
+		sd, err := getDomainSetup(ctx, pc.doer, app, name)
+		if err != nil {
+			return fmt.Errorf("entrance %q: %w", name, err)
+		}
+		entries = append(entries, domainListEntry{Entrance: name, Setup: sd})
+	}
+	if format == FormatJSON {
+		return printJSON(os.Stdout, entries)
+	}
+	return renderDomainList(os.Stdout, app, entries)
+}
+
+func renderDomainList(w io.Writer, app string, entries []domainListEntry) error {
+	if len(entries) == 0 {
+		_, err := fmt.Fprintf(w, "no entrances for app %q\n", app)
+		return err
+	}
+	for i, e := range entries {
+		if i > 0 {
+			if _, err := fmt.Fprintln(w); err != nil {
+				return err
+			}
+		}
+		if err := renderDomainSetup(w, app, e.Entrance, e.Setup); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func newDomainGetCommand(f *cmdutil.Factory) *cobra.Command {

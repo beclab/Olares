@@ -51,8 +51,22 @@ func newSnapshotsListCommand(f *cmdutil.Factory) *cobra.Command {
 	var offset, limit int
 	cmd := &cobra.Command{
 		Use:   "list <backup-id>",
-		Short: "list snapshots for a single backup plan",
-		Args:  cobra.ExactArgs(1),
+		Short: "list snapshots for a single backup plan (run 'backup plans list' first to find a <backup-id>)",
+		Long: `List snapshots taken by a single backup plan.
+
+Argument shape: <backup-id> is REQUIRED — snapshots are stored
+plan-scoped upstream (/apis/backup/v1/plans/backup/<id>/snapshots) so
+there is no "all snapshots" endpoint to list. Run
+
+  olares-cli settings backup plans list
+
+first to discover the plan IDs, then pass one of them here.
+
+Examples:
+  olares-cli settings backup snapshots list <backup-id>
+  olares-cli settings backup snapshots list <backup-id> -o json --limit 200
+`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			return runSnapshotsList(c.Context(), f, args[0], offset, limit, output)
 		},

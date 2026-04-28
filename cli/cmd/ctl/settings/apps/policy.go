@@ -114,14 +114,19 @@ mode (one_factor / two_factor / system / public) plus optional sub
 policies that override per URI.
 
 Subcommands:
-  get <app> <entrance>                                show current policy
-  set <app> <entrance> [--default-policy MODE]
-                       [--one-time true|false]
-                       [--valid-duration SECONDS]
-                       [--sub-policy "uri=...,policy=..."] (repeatable)
-                       [--sub-policies-file PATH]
-                       [--clear-sub-policies]
+  list <app>                                          list every entrance's policy
+  get  <app> <entrance>                               show current policy
+  set  <app> <entrance> [--default-policy MODE]
+                        [--one-time true|false]
+                        [--valid-duration SECONDS]
+                        [--sub-policy "uri=...,policy=..."] (repeatable)
+                        [--sub-policies-file PATH]
+                        [--clear-sub-policies]
                                                       replace the policy (RMW)
+
+If you only know the app name and not its entrances yet, run
+"apps policy list <app>" (or "apps entrances list <app>") first to
+discover them.
 
 --default-policy values: system | one_factor | two_factor | public
 
@@ -131,9 +136,104 @@ is passed; pass --clear-sub-policies to drop them.
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(newPolicyListCommand(f))
 	cmd.AddCommand(newPolicyGetCommand(f))
 	cmd.AddCommand(newPolicySetCommand(f))
 	return cmd
+}
+
+// newPolicyListCommand registers `apps policy list <app>`. Same shape /
+// motivation as `apps domain list`: fan out one GET /setup/policy per
+// entrance so users without a known entrance name can land on
+// per-entrance results in one command. Closes the KI-17 "policy get
+// <app>" complaint by introducing a "list <app>" sibling rather than
+// loosening the strict 2-arg signature of "get".
+func newPolicyListCommand(f *cmdutil.Factory) *cobra.Command {
+	var output string
+	cmd := &cobra.Command{
+		Use:   "list <app>",
+		Short: "list auth policy for every entrance of an app",
+		Long: `List the per-entrance auth policies (default mode + sub-policies) for
+every entrance the app exposes. Internally fans out one "policy get"
+per entrance and renders them in series.
+
+Pass --output json for an array of {entrance, policy} objects.
+
+Examples:
+  olares-cli settings apps policy list files
+  olares-cli settings apps policy list files -o json
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			return runPolicyList(c.Context(), f, args[0], output)
+		},
+	}
+	addOutputFlag(cmd, &output)
+	return cmd
+}
+
+// policyListEntry pairs an entrance name with its SetupPolicy for the
+// JSON output of `apps policy list`.
+type policyListEntry struct {
+	Entrance string      `json:"entrance"`
+	Policy   SetupPolicy `json:"policy"`
+}
+
+func runPolicyList(ctx context.Context, f *cmdutil.Factory, app, outputRaw string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	app = strings.TrimSpace(app)
+	if app == "" {
+		return fmt.Errorf("app name is required")
+	}
+	format, err := parseFormat(outputRaw)
+	if err != nil {
+		return err
+	}
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+	entrancePath := "/api/applications/" + url.PathEscape(app) + "/entrances"
+	var env entrancesEnvelope
+	if err := doGetEnvelope(ctx, pc.doer, entrancePath, &env); err != nil {
+		return err
+	}
+	entries := make([]policyListEntry, 0, len(env.Items))
+	for _, e := range env.Items {
+		name := strings.TrimSpace(e.Name)
+		if name == "" {
+			continue
+		}
+		sp, err := getPolicy(ctx, pc.doer, app, name)
+		if err != nil {
+			return fmt.Errorf("entrance %q: %w", name, err)
+		}
+		entries = append(entries, policyListEntry{Entrance: name, Policy: sp})
+	}
+	if format == FormatJSON {
+		return printJSON(os.Stdout, entries)
+	}
+	return renderPolicyList(os.Stdout, app, entries)
+}
+
+func renderPolicyList(w io.Writer, app string, entries []policyListEntry) error {
+	if len(entries) == 0 {
+		_, err := fmt.Fprintf(w, "no entrances for app %q\n", app)
+		return err
+	}
+	for i, e := range entries {
+		if i > 0 {
+			if _, err := fmt.Fprintln(w); err != nil {
+				return err
+			}
+		}
+		if err := renderPolicy(w, app, e.Entrance, e.Policy); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func newPolicyGetCommand(f *cmdutil.Factory) *cobra.Command {

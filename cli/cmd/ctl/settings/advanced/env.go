@@ -42,9 +42,13 @@ Olares injects into apps. The corresponding per-app surface lives at
 
 Subcommands:
   system list                                                 (Phase 4)
-  system set --var KEY=VALUE...                               (Phase 4)
+  system set --var KEY=VALUE [--var ...]                      (Phase 4)
   user   list                                                 (Phase 4)
-  user   set --var KEY=VALUE...                               (Phase 4)
+  user   set --var KEY=VALUE [--var ...]                      (Phase 4)
+
+NOTE: "set" requires --var KEY=VALUE flags (repeatable). Bare positional
+"KEY=VALUE" is NOT accepted — Cobra would treat the first token as a
+sub-verb and report "unknown command".
 `,
 	}
 	cmd.SilenceUsage = true
@@ -147,20 +151,34 @@ func newEnvSetCommand(f *cmdutil.Factory, scope, basePath string) *cobra.Command
 	var vars []string
 	cmd := &cobra.Command{
 		Use:   "set --var KEY=VALUE [--var ...]",
-		Short: fmt.Sprintf("update one or more %s environment variables", scope),
+		Short: fmt.Sprintf("update one or more %s env vars (use --var KEY=VALUE; positional KEY=VALUE is NOT accepted)", scope),
 		Long: `Update one or more environment variables.
+
+Argument shape: pass each variable as --var KEY=VALUE (repeatable);
+the bare form "set KEY=VALUE" is NOT accepted — Cobra would treat the
+first positional token as a sub-verb and reject it as "unknown command".
 
 The CLI does a read-modify-write to avoid clobbering values it doesn't
 know about: it fetches the current vector, overlays the --var pairs
 you pass, and PUTs the merged result back. The upstream rejects writes
 to system fields the SPA flags as editable: false.
+
+Examples:
+  olares-cli settings advanced env user   set --var FOO=bar
+  olares-cli settings advanced env system set --var FOO=bar --var BAZ=qux
 `,
-		Args: cobra.NoArgs,
-		RunE: func(c *cobra.Command, _ []string) error {
+		// Args: explicit ArbitraryArgs + a runtime guard so we can give
+		// a friendlier error than Cobra's default "unknown command FOO=bar"
+		// when a user types `set KEY=VAL` instead of `set --var KEY=VAL`.
+		Args: cobra.ArbitraryArgs,
+		RunE: func(c *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return fmt.Errorf("positional %q is not accepted; use --var %s", args[0], args[0])
+			}
 			return runEnvSet(c.Context(), f, basePath, scope, vars)
 		},
 	}
-	cmd.Flags().StringArrayVar(&vars, "var", nil, "KEY=VALUE pair (repeatable)")
+	cmd.Flags().StringArrayVar(&vars, "var", nil, "KEY=VALUE pair (repeatable; required)")
 	return cmd
 }
 

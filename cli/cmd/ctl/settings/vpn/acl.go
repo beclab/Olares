@@ -73,11 +73,15 @@ destinations (typically port strings) Headscale uses to gate mesh
 traffic to an app's pods.
 
 Subcommands:
+  all                                          dump every ACL the active user owns
   get    <app>                                 show the per-app ACL vector
   set    <app> [--tcp PORT...] [--udp PORT...] replace the whole vector
   add    <app> [--tcp PORT...] [--udp PORT...] merge new dsts in (read-modify-write)
   remove <app> [--tcp PORT...] [--udp PORT...] drop dsts (read-modify-write)
   clear  <app>                                 remove every ACL entry
+
+If you don't know the app name yet, run "vpn acl all" first to see
+every ACL configured for the active user.
 
 --tcp / --udp accept either repeated flags (--tcp 80 --tcp 443) or a
 single comma-separated value (--tcp 80,443) — both forms work and the
@@ -91,12 +95,155 @@ unrelated entries survive untouched.
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(newACLAllCommand(f))
 	cmd.AddCommand(newACLGetCommand(f))
 	cmd.AddCommand(newACLSetCommand(f))
 	cmd.AddCommand(newACLAddCommand(f))
 	cmd.AddCommand(newACLRemoveCommand(f))
 	cmd.AddCommand(newACLClearCommand(f))
 	return cmd
+}
+
+// newACLAllCommand registers `vpn acl all`.
+//
+// Wraps GET /api/acl/all (user-service/src/bfl/acl.controller.ts:157
+// getAclsAll) — the SPA does not currently surface this endpoint via a
+// page action, but the controller exists upstream and lets a user with
+// a single command see every per-app ACL configured under their
+// account. Closes the KI-17 "vpn acl get with no <app>" complaint by
+// giving the caller a top-level "show me everything" alternative.
+//
+// Wire shape: BFL envelope wrapping a map keyed by app name (the
+// upstream's headscale acls vector). We stay structurally agnostic by
+// surfacing the raw envelope's data field as JSON when --output json,
+// and unmarshaling into a map[string][]AclInfo for the table view.
+func newACLAllCommand(f *cmdutil.Factory) *cobra.Command {
+	var output string
+	cmd := &cobra.Command{
+		Use:   "all",
+		Short: "list every per-app ACL configured for the active user",
+		Long: `List the per-app ACL vectors for every app the active user owns.
+
+Wraps GET /api/acl/all (user-service AclController.getAclsAll). The
+upstream returns a map keyed by app name; the default table flattens
+it to one row per (app, proto). Pass --output json for the raw map.
+
+If the upstream returns an envelope error code (e.g. "not found")
+this verb surfaces an empty list, the same way "acl get <app>" does
+for individual apps.
+
+Examples:
+  olares-cli settings vpn acl all
+  olares-cli settings vpn acl all -o json
+`,
+		Args: cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			return runACLAll(c.Context(), f, output)
+		},
+	}
+	addOutputFlag(cmd, &output)
+	return cmd
+}
+
+func runACLAll(ctx context.Context, f *cmdutil.Factory, outputRaw string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	format, err := parseFormat(outputRaw)
+	if err != nil {
+		return err
+	}
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+	all, err := getAllACLViaDoer(ctx, pc.doer)
+	if err != nil {
+		return err
+	}
+	switch format {
+	case FormatJSON:
+		if all == nil {
+			all = map[string][]AclInfo{}
+		}
+		return printJSON(os.Stdout, all)
+	default:
+		return renderACLAll(os.Stdout, all)
+	}
+}
+
+// getAllACLViaDoer wraps the GET /api/acl/all envelope. Same envelope
+// quirk as `getAppACLViaDoer`: a non-zero `code` is treated as "no ACL
+// configured" rather than a hard error, matching the SPA's defensive
+// pattern of falling back to an empty list.
+//
+// We try two payload shapes the upstream has emitted historically:
+//
+//  1. map[string][]AclInfo  — keyed by app name, the natural shape.
+//  2. []struct{name, acls}  — older flat list; we coerce to the map
+//                             so the renderer has one code path.
+func getAllACLViaDoer(ctx context.Context, d Doer) (map[string][]AclInfo, error) {
+	var env bflEnvelope
+	if err := d.DoJSON(ctx, "GET", "/api/acl/all", nil, &env); err != nil {
+		return nil, err
+	}
+	if env.Code != 0 && env.Code != 200 {
+		return map[string][]AclInfo{}, nil
+	}
+	if len(env.Data) == 0 || string(env.Data) == "null" {
+		return map[string][]AclInfo{}, nil
+	}
+	// Try map shape first.
+	asMap := map[string][]AclInfo{}
+	if err := json.Unmarshal(env.Data, &asMap); err == nil {
+		return asMap, nil
+	}
+	// Fallback: array of {name, acls}.
+	var asArr []struct {
+		Name string    `json:"name"`
+		Acls []AclInfo `json:"acls"`
+	}
+	if err := json.Unmarshal(env.Data, &asArr); err != nil {
+		return nil, fmt.Errorf("decode acl/all data: %w", err)
+	}
+	out := make(map[string][]AclInfo, len(asArr))
+	for _, e := range asArr {
+		if strings.TrimSpace(e.Name) == "" {
+			continue
+		}
+		out[e.Name] = e.Acls
+	}
+	return out, nil
+}
+
+func renderACLAll(w io.Writer, all map[string][]AclInfo) error {
+	if len(all) == 0 {
+		_, err := fmt.Fprintln(w, "no ACL configured for any app")
+		return err
+	}
+	apps := make([]string, 0, len(all))
+	for app := range all {
+		apps = append(apps, app)
+	}
+	sort.Strings(apps)
+	if _, err := fmt.Fprintf(w, "%-24s  %-8s  %s\n", "APP", "PROTO", "DST"); err != nil {
+		return err
+	}
+	for _, app := range apps {
+		acls := all[app]
+		if len(acls) == 0 {
+			if _, err := fmt.Fprintf(w, "%-24s  %-8s  %s\n", app, "-", "(none)"); err != nil {
+				return err
+			}
+			continue
+		}
+		for _, a := range acls {
+			if _, err := fmt.Fprintf(w, "%-24s  %-8s  %s\n", app, nonEmpty(a.Proto), joinNonEmpty(a.Dst, ",")); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func newACLGetCommand(f *cmdutil.Factory) *cobra.Command {

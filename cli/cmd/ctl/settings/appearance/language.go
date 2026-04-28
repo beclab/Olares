@@ -38,7 +38,8 @@ Appearance > Language).
 The current value can be inspected via "settings appearance get".
 
 Subcommands:
-  set --value <code>    update the system language        (Phase 2)
+  set <locale>          update the system language        (Phase 2)
+                        (e.g. "set en-US"; --value also accepted)
 `,
 	}
 	cmd.SilenceUsage = true
@@ -46,27 +47,67 @@ Subcommands:
 	return cmd
 }
 
+// newLanguageSetCommand registers `appearance language set [<locale>]`.
+//
+// Argument shape: a positional <locale> is the canonical form (matches
+// the SKILL doc + SPA copy "language set en-US"); --value is kept as a
+// strict-flag alternative for users who prefer larksuite/cli-style
+// flag-only invocations. Exactly one of the two MUST be supplied; if
+// both are passed and disagree we error out rather than silently picking
+// one. The previous shape (required --value, NoArgs) was rejected by
+// the smoke matrix as KI-17 because every other "verb <obj>" verb in
+// this tree takes its primary subject positionally.
 func newLanguageSetCommand(f *cmdutil.Factory) *cobra.Command {
 	var value string
 	cmd := &cobra.Command{
-		Use:   "set",
-		Short: "update the system language preference",
+		Use:   "set <locale>",
+		Short: "update the system language preference (e.g. set en-US)",
 		Long: `Update the system language preference. The value is a locale code
 the SPA's language picker emits (e.g. "en", "zh-CN"); the server defines
 the supported set and will reject unknown codes.
 
+The locale can be passed as a positional argument or as --value. Pass
+exactly one of the two; passing both with conflicting values is an
+error.
+
 Examples:
+  olares-cli settings appearance language set en-US
+  olares-cli settings appearance language set zh-CN
   olares-cli settings appearance language set --value en
-  olares-cli settings appearance language set --value zh-CN
 `,
-		Args: cobra.NoArgs,
-		RunE: func(c *cobra.Command, _ []string) error {
-			return runLanguageSet(c.Context(), f, value)
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			resolved, err := resolveLanguageValue(args, value)
+			if err != nil {
+				return err
+			}
+			return runLanguageSet(c.Context(), f, resolved)
 		},
 	}
-	cmd.Flags().StringVar(&value, "value", "", "locale code to set (e.g. en, zh-CN)")
-	_ = cmd.MarkFlagRequired("value")
+	cmd.Flags().StringVar(&value, "value", "", "locale code to set (e.g. en, zh-CN); same as the positional <locale>")
 	return cmd
+}
+
+// resolveLanguageValue picks the locale from <args> or --value. Empty
+// after Trim is treated as "not supplied"; conflicting non-empty values
+// are an explicit error so a stale --value alias can't silently
+// override a positional intent (or vice versa).
+func resolveLanguageValue(args []string, flagValue string) (string, error) {
+	pos := ""
+	if len(args) == 1 {
+		pos = strings.TrimSpace(args[0])
+	}
+	flag := strings.TrimSpace(flagValue)
+	switch {
+	case pos == "" && flag == "":
+		return "", fmt.Errorf("a locale code is required (e.g. \"set en-US\" or --value en-US)")
+	case pos != "" && flag != "" && pos != flag:
+		return "", fmt.Errorf("conflicting locale: positional %q vs --value %q (pass only one)", pos, flag)
+	case pos != "":
+		return pos, nil
+	default:
+		return flag, nil
+	}
 }
 
 func runLanguageSet(ctx context.Context, f *cmdutil.Factory, value string) error {
@@ -75,7 +116,7 @@ func runLanguageSet(ctx context.Context, f *cmdutil.Factory, value string) error
 	}
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return fmt.Errorf("--value must be a non-empty locale code (e.g. en, zh-CN)")
+		return fmt.Errorf("a locale code is required (e.g. \"set en-US\" or --value en-US)")
 	}
 
 	pc, err := prepare(ctx, f)
