@@ -73,10 +73,10 @@ func (h *HelmOpsV2) Install() error {
 		return err
 	}
 
-	// add application labels to shared namespace
-	err = h.addApplicationLabelsToSharedNamespace()
+	// prepare namespaces for all charts
+	err = h.prepareNamespaces()
 	if err != nil {
-		klog.Errorf("Failed to add application labels to shared namespace err=%v", err)
+		klog.Errorf("Failed to prepare namespaces err=%v", err)
 		return err
 	}
 
@@ -227,34 +227,28 @@ func (h *HelmOpsV2) status(releaseName string) (*helmrelease.Release, error) {
 	return status, nil
 }
 
-func (h *HelmOpsV2) addApplicationLabelsToSharedNamespace() error {
+func (h *HelmOpsV2) prepareNamespaces() error {
 	k8s, err := kubernetes.NewForConfig(h.KubeConfig())
 	if err != nil {
 		return err
 	}
 
 	for _, chart := range h.App().SubCharts {
-		if !chart.Shared {
-			continue
-		}
-
-		// Use the shared namespace defined in the chart
-		sharedNamespace := chart.Namespace(h.App().OwnerName)
-		ns, err := k8s.CoreV1().Namespaces().Get(h.Context(), sharedNamespace, metav1.GetOptions{})
+		nsName := chart.Namespace(h.App().OwnerName)
+		ns, err := k8s.CoreV1().Namespaces().Get(h.Context(), nsName, metav1.GetOptions{})
 		create := false
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
-				klog.Errorf("Failed to get namespace %s: %v", sharedNamespace, err)
+				klog.Errorf("Failed to get namespace %s: %v", nsName, err)
 				return err
 			}
 			// try to create the namespace if not found
 			create = true
 			ns = &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: sharedNamespace,
+					Name: nsName,
 					Labels: map[string]string{
-						"name":                   sharedNamespace,
-						"bytetrade.io/ns-shared": "true",
+						"name": nsName,
 					},
 				},
 			}
@@ -269,14 +263,18 @@ func (h *HelmOpsV2) addApplicationLabelsToSharedNamespace() error {
 			ns.Labels[constants.ApplicationInstallUserLabel] = h.App().OwnerName
 		}
 
+		if chart.Shared {
+			ns.Labels["bytetrade.io/ns-shared"] = "true"
+		}
+
 		if create {
 			if _, err := k8s.CoreV1().Namespaces().Create(h.Context(), ns, metav1.CreateOptions{}); err != nil {
-				klog.Errorf("Failed to create namespace %s: %v", sharedNamespace, err)
+				klog.Errorf("Failed to create namespace %s: %v", nsName, err)
 				return err
 			}
 		} else {
 			if _, err := k8s.CoreV1().Namespaces().Update(h.Context(), ns, metav1.UpdateOptions{}); err != nil {
-				klog.Errorf("Failed to update namespace %s: %v", sharedNamespace, err)
+				klog.Errorf("Failed to update namespace %s: %v", nsName, err)
 				return err
 			}
 		}

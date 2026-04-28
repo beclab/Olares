@@ -1031,6 +1031,5 @@ func (h *HelmOps) RegisterOrUnregisterAppProvider(operation ProviderOperation) e
 			return errors.New(string(resp.Body()))
 		}
 	}
-
 	return nil
 }

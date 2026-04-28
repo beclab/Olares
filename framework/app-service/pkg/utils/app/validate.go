@@ -948,10 +948,11 @@ func GetClusterAvailableResource() (*resources, error) {
 	if err != nil {
 		return nil, err
 	}
-	initAllocatable := resource.MustParse("0")
+	initAllocatableCPU := resource.MustParse("0")
+	initAllocatableMemory := resource.MustParse("0")
 	availableResources := resources{
-		cpu:    usage{allocatable: &initAllocatable},
-		memory: usage{allocatable: &initAllocatable},
+		cpu:    usage{allocatable: &initAllocatableCPU},
+		memory: usage{allocatable: &initAllocatableMemory},
 	}
 	nodeList := make([]corev1.Node, 0)
 	for _, node := range nodes.Items {
