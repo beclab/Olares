@@ -36,12 +36,21 @@ import (
 //     {
 //       sso: {
 //         expireTime, createTime, tokenType, username, uninitialized,
-//         authLevel, firstFactorTimestamp, secondFactorTimestamp
+//         authLevel,                                  // string, e.g. "one_factor" / "two_factor"
+//         firstFactorTimestamp, secondFactorTimestamp
 //       },
 //       termiPass?: { sso: <token-id>, ...TermiPassDeviceInfo }
 //     },
 //     ...
 //   ]
+//
+// Wire-shape note (KI-2 in KNOWN_ISSUES.md, fixed 2026-04-28):
+//   - authLevel: string (not int as the CLI used to declare). user-service
+//     transparently forwards Authelia's raw.authLevel which has always
+//     been a string.
+//   - firstFactorTimestamp / secondFactorTimestamp: number (not string
+//     as the CLI used to declare). Modeled here as int64 to match
+//     ExpireTime / CreateTime — they share the epoch-seconds semantics.
 //
 // The id used by `revoke` is `entry.termiPass.sso` (only tokens with a
 // bound TermiPass device can be revoked from the SPA either; the SPA
@@ -94,7 +103,7 @@ fields the table elides).
 }
 
 // ssoToken mirrors the SSOToken interface in
-// apps/packages/app/src/stores/settings/admin.ts (and the server-side
+// settings/src/stores/settings/admin.ts (and the server-side
 // projection in device2.controller.ts:161-173). Only fields the SPA's
 // SSOToken.vue actually shows are surfaced in the table; the rest go
 // through to JSON output unchanged.
@@ -104,9 +113,9 @@ type ssoToken struct {
 	TokenType             string `json:"tokenType"`
 	Username              string `json:"username"`
 	Uninitialized         string `json:"uninitialized"`
-	AuthLevel             int    `json:"authLevel"`
-	FirstFactorTimestamp  string `json:"firstFactorTimestamp"`
-	SecondFactorTimestamp string `json:"secondFactorTimestamp"`
+	AuthLevel             string `json:"authLevel"`             // string, e.g. "one_factor" / "two_factor", mirrors Authelia raw payload
+	FirstFactorTimestamp  int64  `json:"firstFactorTimestamp"`  // epoch seconds, mirrors Authelia raw.firstFactorTimestamp (number)
+	SecondFactorTimestamp int64  `json:"secondFactorTimestamp"` // epoch seconds, mirrors Authelia raw.secondFactorTimestamp (number)
 }
 
 // ssoEntry is one element of the /api/device/sso response array.
@@ -163,13 +172,13 @@ func renderSSOTable(w io.Writer, entries []ssoEntry) error {
 				idCell = id
 			}
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%d\t%s\n",
+		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			idCell,
 			nonEmpty(e.SSO.Username),
 			nonEmpty(e.SSO.TokenType),
 			fmtSSOTime(e.SSO.CreateTime),
 			fmtSSOTime(e.SSO.ExpireTime),
-			e.SSO.AuthLevel,
+			nonEmpty(e.SSO.AuthLevel),
 			tp,
 		); err != nil {
 			return err
