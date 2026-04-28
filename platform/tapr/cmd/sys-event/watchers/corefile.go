@@ -583,7 +583,7 @@ func getNonClusterLocalSearchDomains() ([]string, error) {
 			continue
 		}
 		for _, d := range strings.Fields(line)[1:] {
-			if !strings.HasSuffix(d, "cluster.local") {
+			if !strings.HasSuffix(d, "cluster.local") && d != "local" {
 				domains = append(domains, d)
 			}
 		}
