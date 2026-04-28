@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -135,23 +135,22 @@ func suspendOrResumeApp(ctx context.Context, cli client.Client, am *appv1alpha1.
 				if !chart.Shared {
 					continue
 				}
-				chartName := utils.GetChartName(appCfg.AppName, appCfg.RawAppName, chart.Name)
-				ns := chart.Namespace(am.Spec.AppOwner, chartName)
+				ns := chart.Namespace(am.Spec.AppOwner)
 				if replicas == 0 {
-					klog.Infof("suspending shared chart %s in namespace %s", chartName, ns)
+					klog.Infof("suspending shared chart %s in namespace %s", chart.Name, ns)
 				} else {
-					klog.Infof("resuming shared chart %s in namespace %s", chartName, ns)
+					klog.Infof("resuming shared chart %s in namespace %s", chart.Name, ns)
 				}
 
 				var sharedDeploymentList appsv1.DeploymentList
-				if err := suspendOrResume(&sharedDeploymentList, ns, chartName); err != nil {
-					klog.Errorf("failed to scale deployments in shared chart %s namespace %s: %v", chartName, ns, err)
+				if err := suspendOrResume(&sharedDeploymentList, ns, chart.Name); err != nil {
+					klog.Errorf("failed to scale deployments in shared chart %s namespace %s: %v", chart.Name, ns, err)
 					return err
 				}
 
 				var sharedStsList appsv1.StatefulSetList
-				if err := suspendOrResume(&sharedStsList, ns, chartName); err != nil {
-					klog.Errorf("failed to scale statefulsets in shared chart %s namespace %s: %v", chartName, ns, err)
+				if err := suspendOrResume(&sharedStsList, ns, chart.Name); err != nil {
+					klog.Errorf("failed to scale statefulsets in shared chart %s namespace %s: %v", chart.Name, ns, err)
 					return err
 				}
 			}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"time"
 
 	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
@@ -126,9 +125,8 @@ func (p *UninstallingApp) waitForDeleteSharedNamespaces(ctx context.Context, app
 
 	var sharedNamespaces []string
 	for _, chart := range appCfg.SubCharts {
-		chartName := utils.GetChartName(appCfg.AppName, appCfg.RawAppName, chart.Name)
 		if chart.Shared {
-			sharedNamespace := chart.Namespace(appCfg.OwnerName, chartName)
+			sharedNamespace := chart.Namespace(appCfg.OwnerName)
 			if !apputils.IsProtectedNamespace(sharedNamespace) {
 				sharedNamespaces = append(sharedNamespaces, sharedNamespace)
 			}
