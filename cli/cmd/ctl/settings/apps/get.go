@@ -107,10 +107,29 @@ func renderAppDetail(w io.Writer, a appInfo) error {
 		{"Cluster-Scoped", boolStr(a.IsClusterScoped)},
 		{"Mobile Supported", boolStr(a.MobileSupported)},
 		{"Required GPU", nonEmpty(a.RequiredGpu)},
-		{"Ports", fmtPorts(a.Ports)},
 	}
 	for _, r := range rows {
 		if _, err := fmt.Fprintf(w, "%-19s %s\n", r[0]+":", r[1]); err != nil {
+			return err
+		}
+	}
+	// Ports lives outside the simple KV table because BFL ServicePort
+	// has up to 5 fields per port (name/host/port/exposePort/protocol);
+	// rendering a single comma-joined string would lose all of them.
+	// Empty case keeps the old single-line "Ports: -" shape so existing
+	// users / scripts still see the field.
+	if len(a.Ports) == 0 {
+		if _, err := fmt.Fprintf(w, "%-19s %s\n", "Ports:", "-"); err != nil {
+			return err
+		}
+	} else {
+		if _, err := fmt.Fprintln(w, ""); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintln(w, "Ports:"); err != nil {
+			return err
+		}
+		if err := renderPortsTable(w, a.Ports); err != nil {
 			return err
 		}
 	}
@@ -151,16 +170,31 @@ func renderEntrancesTable(w io.Writer, entries []appEntrance) error {
 	return tw.Flush()
 }
 
-func fmtPorts(ports []int) string {
-	if len(ports) == 0 {
-		return "-"
+func renderPortsTable(w io.Writer, ports []servicePort) error {
+	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
+	if _, err := fmt.Fprintln(tw, "  NAME\tHOST\tPORT\tEXPOSE\tPROTOCOL"); err != nil {
+		return err
 	}
-	out := ""
-	for i, p := range ports {
-		if i > 0 {
-			out += ","
+	for _, p := range ports {
+		expose := "-"
+		if p.ExposePort != 0 {
+			expose = fmt.Sprintf("%d", p.ExposePort)
 		}
-		out += fmt.Sprintf("%d", p)
+		// BFL marks tcp as the default and may omit it on the wire;
+		// surface "tcp" explicitly so the column is never blank.
+		proto := p.Protocol
+		if proto == "" {
+			proto = "tcp"
+		}
+		if _, err := fmt.Fprintf(tw, "  %s\t%s\t%d\t%s\t%s\n",
+			nonEmpty(p.Name),
+			nonEmpty(p.Host),
+			p.Port,
+			expose,
+			proto,
+		); err != nil {
+			return err
+		}
 	}
-	return out
+	return tw.Flush()
 }

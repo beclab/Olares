@@ -84,6 +84,22 @@ type appEntrance struct {
 	URL        string `json:"url"`
 }
 
+// servicePort mirrors BFL's ServicePort struct
+// (framework/bfl/pkg/app_service/v1/types.go:48-60). The wire shape has
+// been a struct array since 60d37998 (2025-12-11, BFL→main repo merge);
+// CLI shipped with `[]int` by mistake and only got away with it while
+// every probed app had ports=[] (empty arrays decode into any slice).
+// Once a real ports entry hit the wire, decode failed with
+// `cannot unmarshal object into Go struct field appInfo.ports of type int`
+// (KI-18, first surfaced in scripts/local_report_phase14b.md).
+type servicePort struct {
+	Name       string `json:"name"`
+	Host       string `json:"host"`
+	Port       int32  `json:"port"`
+	ExposePort int32  `json:"exposePort,omitempty"`
+	Protocol   string `json:"protocol,omitempty"` // "tcp" | "udp" (BFL default tcp)
+}
+
 // appInfo mirrors user-service's AppInfo struct (app.service.ts:116).
 // Field-for-field JSON shape so --output json is a 1:1 passthrough.
 type appInfo struct {
@@ -98,7 +114,7 @@ type appInfo struct {
 	Name             string        `json:"name"`
 	Namespace        string        `json:"namespace"`
 	Owner            string        `json:"owner"`
-	Ports            []int         `json:"ports"`
+	Ports            []servicePort `json:"ports"`
 	RequiredGpu      string        `json:"requiredGpu"`
 	State            string        `json:"state"`
 	Target           string        `json:"target"`

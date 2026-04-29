@@ -250,8 +250,18 @@ func fmtIsoTime(s string) string {
 // HeadScaleDeviceCard.vue (id, prefix, enabled). Additional Headscale
 // fields (advertised, isPrimary, created/updated) come through under
 // --output json via the typed fields below.
+//
+// KI-20 (2026-04-29 phase14c): the wire returns id as a string
+// (e.g. `"id":"3"`); the previous `int` shipped here decoded fine when
+// no machine had advertised routes (the empty array won't surface the
+// type mismatch) but exploded on any populated routes payload with
+// `cannot unmarshal string into Go struct field route.routes.id of
+// type int`. routes.go always treats route IDs as opaque path segments
+// (URL-escaped strings), so flipping ID to string costs nothing on
+// the writer side and fixes both `vpn devices routes <id>` and the
+// `pick_route_with_state` smoke RMW path that depends on it.
 type route struct {
-	ID         int    `json:"id"`
+	ID         string `json:"id"`
 	Prefix     string `json:"prefix"`
 	Advertised bool   `json:"advertised"`
 	Enabled    bool   `json:"enabled"`
@@ -305,8 +315,8 @@ func renderRoutesTable(w io.Writer, routes []route) error {
 		return err
 	}
 	for _, r := range routes {
-		if _, err := fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\n",
-			r.ID,
+		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n",
+			nonEmpty(r.ID),
 			nonEmpty(r.Prefix),
 			boolStr(r.Advertised),
 			boolStr(r.Enabled),
