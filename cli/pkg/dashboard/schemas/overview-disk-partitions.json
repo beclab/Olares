@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.disk.partitions",
+  "description": "Per-partition table for one physical disk — device / total / used / available / util / mountpoint.",
+  "type": "object",
+  "required": ["kind", "meta", "items"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.disk.partitions"},
+    "meta": {"type": "object"},
+    "items": {"type": "array", "items": {"type": "object"}}
+  }
+}

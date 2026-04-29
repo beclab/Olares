@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.applications.list",
+  "description": "Workload-grain application table — rank / app / namespace / state / cpu / memory / net_in / net_out / pods. Same data source as `overview ranking` (fetchWorkloadsMetrics) with the `state` and `pods` columns added.",
+  "type": "object",
+  "required": ["kind", "meta", "items"],
+  "properties": {
+    "kind": {"const": "dashboard.applications.list"},
+    "meta": {"type": "object"},
+    "items": {"type": "array", "items": {"type": "object"}}
+  }
+}

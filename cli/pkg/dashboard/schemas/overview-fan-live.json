@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.fan.live",
+  "description": "1-row real-time fan / temperature / power snapshot from capi /system/fan + graphics list. Olares One only — non-One devices return an empty envelope with meta.empty_reason='not_olares_one'.",
+  "type": "object",
+  "required": ["kind", "meta", "items"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.fan.live"},
+    "meta": {
+      "type": "object",
+      "properties": {
+        "empty": {"type": "boolean"},
+        "empty_reason": {
+          "type": "string",
+          "enum": ["not_olares_one", "no_fan_integration"]
+        },
+        "note": {"type": "string"},
+        "device_name": {"type": "string"}
+      }
+    },
+    "items": {"type": "array", "items": {"type": "object"}}
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.user",
+  "description": "User CPU / memory quota usage — mirrors the SPA's User Resources panel.",
+  "type": "object",
+  "required": ["kind", "meta", "items"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.user"},
+    "meta": {"type": "object"},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw": {"type": "object"},
+          "display": {
+            "type": "object",
+            "properties": {
+              "metric": {"type": "string"},
+              "used": {"type": ["string", "number"]},
+              "total": {"type": ["string", "number"]},
+              "utilisation": {"type": ["string", "number"]}
+            }
+          }
+        }
+      }
+    }
+  }
+}

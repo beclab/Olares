@@ -24,11 +24,12 @@ type ResolvedProfile struct {
 	OlaresID   string
 	UserUID    string
 
-	AuthURL    string
-	VaultURL   string
-	DesktopURL string
-	FilesURL   string
-	MarketURL  string
+	AuthURL      string
+	VaultURL     string
+	DesktopURL   string
+	FilesURL     string
+	MarketURL    string
+	DashboardURL string
 
 	AccessToken string
 	// ExpiresAt is the unix-seconds expiry decoded from AccessToken's `exp`
