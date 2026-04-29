@@ -38,7 +38,7 @@ type authToken struct {
 func NewIntegrationManager(factory client.Factory) {
 	IntegrationService = &Integration{
 		Factory:      factory,
-		rest:         resty.New().SetTimeout(20 * time.Second).SetDebug(constant.DebugMode),
+		rest:         resty.New().SetTimeout(20 * time.Second).SetDebug(false),
 		OlaresTokens: make(map[string]*SpaceToken),
 		authToken:    make(map[string]*authToken),
 	}
