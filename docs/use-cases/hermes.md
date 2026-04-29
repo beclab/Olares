@@ -4,21 +4,21 @@ description: Learn how to install and configure Hermes Agent on Olares and conne
 head:
   - - meta
     - name: keywords
-      content: Olares, Hermes, AI agent, Discord bot, Olares, self-hosted
+      content: Olares, Hermes, Hermes Agent, autonomous AI, self-improving AI, Discord bot, self-hosted
 app_version: "0.1.1"
 doc_version: "1.0"
-doc_updated: "2026-04-28"
+doc_updated: "2026-04-29"
 ---
 
-# Set up your terminal AI agent with Hermes
+# Set up a self-directed AI agent with Hermes
 
-Hermes is a powerful terminal-based AI agent that connects to local models and executes various tasks, from coding to system operations. By integrating it with messaging platforms like Discord, you can interact with your local AI agent remotely.
+Hermes Agent is a self-directed AI assistant that connects to your local models to execute system tasks, generate code, and manage workflows. It retains memory across sessions and creates reusable skills based on your interactions. By integrating it with messaging platforms like Discord, you can interact with your local AI agent remotely.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
 - Install Hermes Agent on Olares.
-- Configure Hermes Agent to connecto to a local model.
+- Configure Hermes Agent to connect to a local model.
 - Interact with your agent directly via the terminal.
 - Integrate with Discord for remote chat.
 
@@ -35,7 +35,6 @@ In this guide, you will learn how to:
    ![Install Hermes Agent](/images/manual/use-cases/hermes-agent.png#bordered)
 
 2. Click **Get**, and then click **Install**. When the installation finishes, two shortcuts appear in the Launchpad:
-
     - Dashboard: The graphical dashboard
     - Hermes CLI: The command line interface
 
@@ -100,7 +99,7 @@ Configure Hermes to connect to your local model using the interactive setup wiza
 
 ### Option 1: Terminal chat
 
-The Terminal User Interface (TUI) runs directly in the Hermes CLI. It requires no extra setup and is ideal for quick tests or when you are already working on Olares.
+The Terminal User Interface (TUI) runs directly in the Hermes CLI with no extra setup. It is ideal for quick tests.
 
 1. When the setup wizard completes, it prompts you to launch hermes chat. Type `y` and press **Enter** to start the TUI.
 
@@ -168,9 +167,13 @@ To chat with your agent remotely, connect it to a Discord bot.
 
 #### Step 3: Configure the messaging platform
 
-Connect Hermes Agent to your Discord bot by adding its configuration in the Hermes CLI.
+Connect Hermes Agent to your Discord bot by configuring and running the Hermes gateway.
 
-1. Open the Hermes CLI, and then enter the following command:
+:::warning
+The Hermes gateway is a separate service independent from the Hermes CLI. It handles messages from Discord, while the CLI is for local terminal chat. The gateway runs in the foreground. Leave the Hermes CLI window open to keep the Discord bot online. If you close the window, the bot disconnects.
+:::
+
+1. Open the Hermes CLI, and then enter the following command to start the configuration wizard:
 
    ```bash
    hermes gateway setup
@@ -179,7 +182,7 @@ Connect Hermes Agent to your Discord bot by adding its configuration in the Herm
 2. Select **Discord** as your messaging platform.
 3. Follow the prompts to configure the bot integration:
    - **Bot token**: Enter the bot token generated from your Discord Developer Portal. The input remains hidden.
-   - **Allowed user IDs or usernames**: Enter your Discord user ID to restrict the access to yourself.
+   - **Allowed user IDs or usernames**: Enter your Discord user ID to restrict access to yourself.
    - **Home channel ID**: Enter the ID of the Discord channel where the bot operates. 
    
         For more information, see [How to find the Channel ID number](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID).
@@ -189,15 +192,23 @@ Connect Hermes Agent to your Discord bot by adding its configuration in the Herm
    ```bash
    hermes gateway run
    ```
-   :::warning
-   The gateway runs in the foreground. Leave the **Hermes CLI** window open to keep the Discord bot online. If you close the window, the bot disconnects.
-   :::
 
-5. Send a Direct Message to your new bot. You are now communicating with your Hermes agent remotely.
+#### Step 4: Authorize your account
+
+For security, the bot does not talk to unauthorized users. You must pair your Discord account with the bot.
+
+1. Send a Direct Message to your new bot. The bot will reply with an error message containing a pairing code.
+2. Open the Hermes CLI and enter the following command:
+
+    ```bash
+    hermes pairing approve discord {Your-Pairing-Code}
+    ```
+
+3. Once approved, you can start chatting with your agent in Discord. If you are talking to it in a channel, mention it first.
 
 ## Advanced configuration
 
-To manually adjust parameters, edit the configuration files directly. 
+To manually adjust parameters, edit the configuration files directly, and then restart the Hermes CLI to apply the changes. 
 
 1. Open the Files app from the Launchpad.
 2. Go to **Data** > **hermesagent** > **home**, and locate the configuration files, such as `config.yaml` and `.env`. 
