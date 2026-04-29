@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
@@ -15,6 +14,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -61,8 +61,8 @@ func (h *Handler) get(req *restful.Request, resp *restful.Response) {
 			Spec: appv1alpha1.ApplicationSpec{
 				Name:            am.Spec.AppName,
 				RawAppName:      am.Spec.RawAppName,
-				Appid:           appv1alpha1.AppName(am.Spec.AppName).GetAppID(),
-				IsSysApp:        appv1alpha1.AppName(am.Spec.AppName).IsSysApp(),
+				Appid:           appcfg.AppName(am.Spec.AppName).GetAppID(),
+				IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           owner,
 				Entrances:       appconfig.Entrances,
@@ -114,8 +114,8 @@ func (h *Handler) list(req *restful.Request, resp *restful.Response) {
 				Spec: appv1alpha1.ApplicationSpec{
 					Name:            am.Spec.AppName,
 					RawAppName:      am.Spec.RawAppName,
-					Appid:           appv1alpha1.AppName(am.Spec.AppName).GetAppID(),
-					IsSysApp:        appv1alpha1.AppName(am.Spec.AppName).IsSysApp(),
+					Appid:           appcfg.AppName(am.Spec.AppName).GetAppID(),
+					IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 					Namespace:       am.Spec.AppNamespace,
 					Owner:           owner,
 					Entrances:       appconfig.Entrances,
@@ -214,8 +214,8 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			Spec: appv1alpha1.ApplicationSpec{
 				Name:            am.Spec.AppName,
 				RawAppName:      am.Spec.RawAppName,
-				Appid:           appv1alpha1.AppName(am.Spec.AppName).GetAppID(),
-				IsSysApp:        appv1alpha1.AppName(am.Spec.AppName).IsSysApp(),
+				Appid:           appcfg.AppName(am.Spec.AppName).GetAppID(),
+				IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
 				Entrances:       appconfig.Entrances,

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubeblocks"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
+	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	kbopv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"k8s.io/klog/v2"

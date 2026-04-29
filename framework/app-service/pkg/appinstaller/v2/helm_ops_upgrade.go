@@ -3,12 +3,12 @@ package v2
 import (
 	"errors"
 	"fmt"
-
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	v1 "github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	helmrelease "helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/storage/driver"
@@ -127,7 +127,7 @@ func (h *HelmOpsV2) upgrade(values map[string]interface{}) error {
 			if errors.Is(err, driver.ErrReleaseNotFound) && chart.Shared {
 				// upgrading single chart to multi-charts app,
 				klog.Infof("[upgrading] chart %s not found, installing it", chart.Name)
-				actionConfig, settings, err := helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName))
+				actionConfig, settings, err := helm.InitConfig(h.KubeConfig(), appcfg.ChartNamespace(&chart, h.App().OwnerName))
 				if err != nil {
 					klog.Errorf("Failed to create action config for shared chart %s: %v", chart.Name, err)
 					return err
@@ -138,9 +138,9 @@ func (h *HelmOpsV2) upgrade(values map[string]interface{}) error {
 					actionConfig,
 					settings,
 					chart.Name,
-					chart.ChartPath(h.App().AppName),
+					appcfg.ChartPath(h.App().AppName, chart.Name),
 					h.App().RepoURL,
-					chart.Namespace(h.App().OwnerName),
+					appcfg.ChartNamespace(&chart, h.App().OwnerName),
 					values,
 				)
 				if err != nil {
@@ -157,7 +157,7 @@ func (h *HelmOpsV2) upgrade(values map[string]interface{}) error {
 			settings := h.Settings()
 			if chart.Shared {
 				// re-create action config for shared chart
-				actionConfig, settings, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName))
+				actionConfig, settings, err = helm.InitConfig(h.KubeConfig(), appcfg.ChartNamespace(&chart, h.App().OwnerName))
 				if err != nil {
 					klog.Errorf("Failed to create action config for shared chart %s: %v", chart.Name, err)
 					return err
@@ -169,7 +169,7 @@ func (h *HelmOpsV2) upgrade(values map[string]interface{}) error {
 				actionConfig,
 				settings,
 				chart.Name,
-				chart.ChartPath(h.App().AppName),
+				appcfg.ChartPath(h.App().AppName, chart.Name),
 				h.App().RepoURL,
 				h.App().Namespace,
 				values,

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
@@ -18,6 +17,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -228,7 +228,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 		}
 	}
 	ops, err := versioned.NewHelmOps(ctx, kubeConfig, appConfig, token,
-		appinstaller.Opt{Source: p.manager.Spec.Source, MarketSource: p.manager.GetMarketSource()})
+		appinstaller.Opt{Source: p.manager.Spec.Source, MarketSource: appcfg.GetMarketSource(p.manager)})
 	if err != nil {
 		klog.Errorf("make helmop failed %v", err)
 		return err

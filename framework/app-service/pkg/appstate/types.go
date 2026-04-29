@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
-	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/middlewareinstaller"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -112,7 +112,7 @@ func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
 		return p.oldMongodbUninstall(ctx, kubeConfig)
 	}
 
-	ops, err := versioned.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: p.manager.GetMarketSource()})
+	ops, err := versioned.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: appcfg.GetMarketSource(p.manager)})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)
 		return err
