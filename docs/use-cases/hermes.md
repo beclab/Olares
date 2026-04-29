@@ -184,9 +184,6 @@ The Hermes gateway is a separate service independent from the Hermes CLI. It han
    - **Bot token**: Enter the bot token generated from your Discord Developer Portal. The input remains hidden.
    - **Allowed user IDs or usernames**: Enter your Discord user ID to restrict access to yourself.
    - **Home channel ID**: Enter the ID of the Discord channel where the bot operates. 
-   
-        For more information, see [How to find the Channel ID number](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID).
-
 4. Enter the following command to start the gateway:
 
    ```bash
@@ -231,4 +228,5 @@ The Hermes CLI in the Olares environment does not support `sudo` commands. Ignor
 ## Learn more
 
 - [How do I create a server in Discord](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server)
+- [How to find the Channel ID number](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID)
 - [OpenClaw](openclaw.md)
