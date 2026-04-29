@@ -17,7 +17,17 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Known issues",
           link: "/one/known-issues",
-        },        
+        },
+        {
+          text: "Troubleshooting",
+          collapsed: true,
+          items: [
+            {
+              text: "Cannot enter BIOS",
+              link: "/one/ts-bios-black-screen",
+            },
+          ],
+        },                
       ],
     },
     {
