@@ -19,11 +19,19 @@ import (
 //   updateLanguage(language) -> axios.post('/api/wallpaper/update/language',
 //                                          { language })
 //
-// The picker in Settings -> Appearance writes free-form locale codes
-// (e.g. "en", "zh-CN"); we don't validate against a hardcoded list here
-// since the supported set evolves with each release. The server is the
-// source of truth — if the value is rejected, surface the BFL error
-// verbatim.
+// We mirror the SPA's supportLanguages whitelist client-side
+// (apps/.../i18n/index.ts:12 — currently `en-US` and `zh-CN`) because
+// neither user-service nor BFL validate the value today: an unknown
+// code would land in the config-system CRD verbatim and the SPA's
+// i18n loader would silently fall back to defaultLanguage on the next
+// session — i.e. the call "succeeds" but nothing changes. The CLI
+// catches that early so callers get a real error instead of a
+// false-positive.
+//
+// `--force` is the escape hatch for the unusual case where the SPA
+// has shipped a new locale before this CLI build catches up. It
+// bypasses the local whitelist and PUTs the value through; the
+// upstream remains the final authority.
 //
 // Role: Appearance is in the normal-user menu (admin.ts:101-103). No
 // PreflightRole check.
@@ -47,6 +55,12 @@ Subcommands:
 	return cmd
 }
 
+// supportedLocales is the client-side whitelist mirrored from the
+// SPA's apps/.../i18n/index.ts supportLanguages list. Keep in sync
+// when SPA adds a locale; until then, callers can use --force to
+// bypass the check.
+var supportedLocales = []string{"en-US", "zh-CN"}
+
 // newLanguageSetCommand registers `appearance language set [<locale>]`.
 //
 // Argument shape: a positional <locale> is the canonical form (matches
@@ -57,22 +71,35 @@ Subcommands:
 // positional shape mirrors every other "verb <obj>" command in this
 // tree, which all take their primary subject positionally.
 func newLanguageSetCommand(f *cmdutil.Factory) *cobra.Command {
-	var value string
+	var (
+		value string
+		force bool
+	)
 	cmd := &cobra.Command{
 		Use:   "set <locale>",
 		Short: "update the system language preference (e.g. set en-US)",
 		Long: `Update the system language preference. The value is a locale code
-the SPA's language picker emits (e.g. "en", "zh-CN"); the server defines
-the supported set and will reject unknown codes.
+the SPA's language picker emits.
+
+Allowed locales (matches SPA's i18n bundle list):
+  en-US
+  zh-CN
 
 The locale can be passed as a positional argument or as --value. Pass
 exactly one of the two; passing both with conflicting values is an
 error.
 
+Pass --force to bypass the client-side whitelist. Use only when the
+SPA has shipped a new locale ahead of this CLI build — the upstream
+will accept any string today, so a typo with --force will silently
+land in the config-system CRD and the SPA will fall back to the
+default locale on the next session.
+
 Examples:
   olares-cli settings appearance language set en-US
   olares-cli settings appearance language set zh-CN
-  olares-cli settings appearance language set --value en
+  olares-cli settings appearance language set --value en-US
+  olares-cli settings appearance language set ja-JP --force
 `,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -80,11 +107,34 @@ Examples:
 			if err != nil {
 				return err
 			}
+			if err := validateLocale(resolved, force); err != nil {
+				return err
+			}
 			return runLanguageSet(c.Context(), f, resolved)
 		},
 	}
-	cmd.Flags().StringVar(&value, "value", "", "locale code to set (e.g. en, zh-CN); same as the positional <locale>")
+	cmd.Flags().StringVar(&value, "value", "", "locale code to set (e.g. en-US, zh-CN); same as the positional <locale>")
+	cmd.Flags().BoolVar(&force, "force", false, "bypass the client-side whitelist (use only when the SPA has shipped a new locale ahead of this CLI build)")
 	return cmd
+}
+
+// validateLocale enforces the client-side supportedLocales whitelist.
+// `force=true` short-circuits to nil so callers can opt into writing
+// a locale the CLI doesn't yet know about. The trim is symmetric with
+// resolveLanguageValue's trim so callers that bypass that helper still
+// get the same forgiving behavior.
+func validateLocale(value string, force bool) error {
+	value = strings.TrimSpace(value)
+	if force {
+		return nil
+	}
+	for _, l := range supportedLocales {
+		if value == l {
+			return nil
+		}
+	}
+	return fmt.Errorf("unsupported locale %q (allowed: %s; pass --force to bypass for forward compatibility)",
+		value, strings.Join(supportedLocales, ", "))
 }
 
 // resolveLanguageValue picks the locale from <args> or --value. Empty

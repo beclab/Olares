@@ -419,12 +419,12 @@ func renderPlansTable(w io.Writer, rows []restorePlan) error {
 		if p.BackupAppTypeName != "" {
 			typ = fmt.Sprintf("%s/%s", typ, p.BackupAppTypeName)
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%d%%\t%s\t%s\t%s\n",
+		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			nonEmpty(p.Name),
 			nonEmpty(p.ID),
 			typ,
 			nonEmpty(p.Status),
-			p.Progress,
+			formatProgressBP(p.Progress),
 			fmtUnix(p.SnapshotTime),
 			fmtUnix(p.CreateAt),
 			fmtUnix(p.EndAt),

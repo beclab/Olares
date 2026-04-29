@@ -243,13 +243,13 @@ func renderPlansTable(w io.Writer, rows []backupPlan) error {
 		if p.LocationConfigName != "" {
 			loc = fmt.Sprintf("%s/%s", loc, p.LocationConfigName)
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%d%%\t%s\t%s\t%s\n",
+		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			nonEmpty(p.Name),
 			nonEmpty(p.ID),
 			typ,
 			loc,
 			nonEmpty(p.Status),
-			p.Progress,
+			formatProgressBP(p.Progress),
 			nonEmpty(p.Size),
 			fmtUnix(p.NextBackupTimestamp),
 			fmtUnix(p.CreateAt),

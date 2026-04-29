@@ -143,6 +143,28 @@ func nonEmpty(s string) string {
 	return s
 }
 
+// formatProgressBP renders backup-server's progress field as a 0–100
+// integer percent. The wire value is *basis points* (0–10000 where
+// 10000 = 100.00%); the SPA divides by 10000 before feeding Quasar's
+// progress bar (BackupItem.vue, BackupSnapshotDetail.vue) and prints
+// `(progress / 100).toFixed(0) %` in BackupDetail.vue:178. We mirror
+// the BackupDetail integer-percent rendering — a Completed snapshot
+// shows "100%", not the raw 10000.
+//
+// Negative values are clamped to 0; values above 10000 are clamped to
+// 100 so a backend that briefly overshoots doesn't surface noise like
+// "10001%".
+func formatProgressBP(bp int) string {
+	switch {
+	case bp <= 0:
+		return "0%"
+	case bp >= 10000:
+		return "100%"
+	default:
+		return fmt.Sprintf("%d%%", bp/100)
+	}
+}
+
 // fmtUnix renders an epoch-seconds timestamp in local-time RFC3339
 // (or "-" if the value is zero / negative). Backup-server timestamps
 // are seconds, not milliseconds.

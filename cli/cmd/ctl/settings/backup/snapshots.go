@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 
@@ -78,10 +79,24 @@ Examples:
 
 // backupSnapshot mirrors the BackupSnapshot TypeScript interface
 // (constant/index.ts: SnapshotInfo + status + progress).
+//
+// Wire note: `size` is a *decimal string* on the wire even though the
+// SPA's BackupSnapshot interface declares `size: number` — backup-server
+// formats it via handlers.ParseSnapshotSize (`fmt.Sprintf("%d", *size)`,
+// see framework/backup-server/pkg/handlers/helper.go), so we decode as
+// string and humanize at render time. The same shape applies to
+// `backupPlan.Size` in plans.go.
+//
+// `progress` is an integer in *basis points* (0–10000 where 10000 =
+// 100.00%); we render it via formatProgressBP at the table layer, not
+// here, so JSON output preserves the raw wire value for downstream
+// scripts that prefer to do their own math. The same convention
+// applies to backupPlan.Progress (plans.go) and restorePlan.Progress
+// (restore/plans.go).
 type backupSnapshot struct {
 	ID       string `json:"id"`
 	CreateAt int64  `json:"createAt"`
-	Size     int64  `json:"size"`
+	Size     string `json:"size"`
 	Status   string `json:"status"`
 	Progress int    `json:"progress"`
 }
@@ -143,11 +158,11 @@ func renderSnapshotsTable(w io.Writer, rows []backupSnapshot) error {
 		return err
 	}
 	for _, s := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%d%%\t%s\t%s\n",
+		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n",
 			nonEmpty(s.ID),
 			nonEmpty(s.Status),
-			s.Progress,
-			humanBytes(s.Size),
+			formatProgressBP(s.Progress),
+			humanBytesString(s.Size),
 			fmtUnix(s.CreateAt),
 		); err != nil {
 			return err
@@ -237,6 +252,23 @@ func runSnapshotsCancel(ctx context.Context, f *cmdutil.Factory, backupID, snaps
 	}
 	fmt.Printf("Cancelled snapshot %q on plan %q.\n", snapshotID, backupID)
 	return nil
+}
+
+// humanBytesString accepts the raw `size` field as it arrives on the
+// wire (a decimal byte count formatted as a string by backup-server,
+// e.g. "1234567"). On a successful int64 parse it formats via
+// humanBytes; otherwise it falls back to the trimmed raw value, or
+// "-" when empty — so a future backend that switches to pre-formatted
+// human strings (e.g. "12.06 KiB") still renders cleanly.
+func humanBytesString(raw string) string {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return "-"
+	}
+	if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+		return humanBytes(n)
+	}
+	return s
 }
 
 // humanBytes mirrors the helper in settings/advanced — duplicated

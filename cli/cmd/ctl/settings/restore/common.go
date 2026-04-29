@@ -188,3 +188,20 @@ func fmtUnix(sec int64) string {
 	}
 	return time.Unix(sec, 0).Format(time.RFC3339)
 }
+
+// formatProgressBP renders backup-server's progress field as a 0–100
+// integer percent. The wire value is *basis points* (0–10000 where
+// 10000 = 100.00%) — see backup-server's handler_snapshot.go and the
+// SPA's RestoreDetail.vue / RestoreItem.vue, both of which divide by
+// 10000 before feeding Quasar's progress bar. Duplicated here from
+// settings/backup/common.go to keep area packages independent.
+func formatProgressBP(bp int) string {
+	switch {
+	case bp <= 0:
+		return "0%"
+	case bp >= 10000:
+		return "100%"
+	default:
+		return fmt.Sprintf("%d%%", bp/100)
+	}
+}

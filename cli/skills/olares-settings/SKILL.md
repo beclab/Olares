@@ -208,10 +208,12 @@ printf '%s\n%s\n' "$CURRENT" "$NEW" |
 ### `appearance` — language
 
 ```bash
-olares-cli settings appearance language set --value en-US   # POST /api/wallpaper/update/language
+olares-cli settings appearance language set en-US           # POST /api/wallpaper/update/language
+olares-cli settings appearance language set --value zh-CN
+olares-cli settings appearance language set ja-JP --force   # bypass whitelist (use sparingly)
 ```
 
-The list of supported codes is whatever the SPA's i18n bundle ships; the server is the source of truth and rejects unknown values with a clear message.
+The CLI mirrors the SPA's `supportLanguages` whitelist client-side ([`apps/packages/app/src/i18n/index.ts:12`](apps/packages/app/src/i18n/index.ts) — currently `en-US`, `zh-CN`) because **neither user-service nor BFL validate the value today**: an unknown locale would land in the config-system CRD verbatim and the SPA would silently fall back to `defaultLanguage` on the next session. Pass `--force` only when the SPA has shipped a new locale ahead of this CLI build; the upstream still accepts arbitrary strings, so a typo with `--force` will appear to succeed but produce no visible change.
 
 ### `search` — index control
 
