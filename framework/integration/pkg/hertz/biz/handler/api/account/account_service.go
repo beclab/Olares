@@ -76,7 +76,7 @@ func GetAccount(ctx context.Context, c *app.RequestContext) { // +
 
 	valueObj, err := unmarshalValue(accountResp.Data.Value)
 	if err != nil {
-		klog.Errorf("GetAccount failed, unmarshal error: %v, content: %s", err, accountResp.Data.Value)
+		klog.Errorf("GetAccount failed, unmarshal error: %v", err)
 		handler.ErrorResponse(c, err)
 		return
 	}
@@ -153,13 +153,13 @@ func GetList(ctx context.Context, c *app.RequestContext) { // +
 		}
 		accountType, accountName, err := getAccountName(item.Name)
 		if err != nil {
-			klog.Errorf("GetList failed, get accountInfo error: %v, name: %s", err, item.Name)
+			klog.Errorf("GetList failed, get accountInfo error: %v", err)
 			handler.ErrorResponse(c, err)
 			return
 		}
 		valueObj, err := unmarshalValue(item.Value)
 		if err != nil {
-			klog.Errorf("GetList failed, unmarshale error: %v, name: %s", err, item.Value)
+			klog.Errorf("GetList failed, unmarshale error: %v", err)
 			handler.ErrorResponse(c, err)
 			return
 		}
