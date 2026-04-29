@@ -18,11 +18,11 @@ If you [installed Olares via the one-line script](../get-started/install-olares.
 
 ![Activate Olares](/images/manual/larepass/activate-olares1.png#bordered)
 
-1. Open LarePass app.
+1. Open the LarePass app.
 2. Tap **Scan QR code** to scan the QR code on the Wizard page. 
 3. Follow the on-screen instructions on LarePass to reset the login password for Olares. 
 
-After successful activation, the LarePass app will automatically return to the home screen, and the Wizard will redirect you to the login page.
+After successful activation, the LarePass app returns to the home screen, and the Wizard redirects you to the login page.
 
 ## Activate after ISO installation
 
@@ -35,7 +35,7 @@ If you installed Olares via ISO on PVE or are using an Olares hardware device wi
 Use this method if LarePass cannot find your Olares device. This can happen if Olares is not on a wired network or if your phone is on a different network.
 
 By using Bluetooth, you can connect Olares directly to your phone's current Wi-Fi network and continue the activation process.
-![Bluetooth network](/images/manual/larepass/bluetooth-network.png)
+![Bluetooth network](/images/manual/larepass/bluetooth-network.png#bordered)
 
 1. On the **Olares not found** page, tap **Bluetooth network setup**. LarePass will use your phone's Bluetooth to scan for the nearby Olares device.
 2. When your device appears in the list, tap **Network setup**.
@@ -43,13 +43,41 @@ By using Bluetooth, you can connect Olares directly to your phone's current Wi-F
 4. Olares will begin connecting to the Wi-Fi network. Once the process is complete, a success message will appear. If you return to the Bluetooth network setup page, you'll see that Olares' IP address has changed to your phone's Wi-Fi subnet.
 5. Go back to the device scan page and tap **Discover nearby Olares** to find your device and proceed with activation.
 
-## Reactivate Olares with the same Olares ID
+## Reactivate Olares after reinstallation
 
-If you have reinstalled Olares, the original instance becomes unavailable. You can reactivate the new installation using your existing Olares ID:
+If you have reinstalled Olares, the original instance becomes unavailable. You can reactivate the new installation using your existing Olares ID without having to create a new one. 
 
-1. Open LarePass on your phone. You can see a red prompt: "No active Olares found".
-2. Tap **Learn more** > **Reactivate** to enter the QR scan page.
-3. Tap **Scan QR code** to scan the QR code on the wizard page and activate Olares.
+Select the reactivation method based on how you reinstalled Olares:
+
+<Tabs>
+<template #Script-reinstallation>
+
+If you used the one-line script to reinstall Olares and have already completed the initial setup wizard, follow these steps to reactivate with your existing Olares ID:
+
+<!--@include: ../larepass/activate-olares.md{18,25}-->
+</template>
+<template #ISO-or-Docker-reinstallation>
+
+If you reinstalled Olares using an ISO file or a Docker image, follow these steps to reactivate with your existing Olares ID:
+
+1. Open the LarePass app on your phone. The error message "No active Olares found" appears.
+
+    ![No active Olares found](/images/manual/larepass/no-active-olares-found.png#bordered)
+  
+2. Tap **Learn more** next to the message.
+3. Select **Reactivate**.
+
+    ![Reactivate Olares](/images/manual/larepass/reactivate-olares.png#bordered)
+
+<!--@include: ../get-started/install-and-activate-olares.md{10,20}-->
+
+8. Follow the on-screen instructions to reset the login password for Olares, and then tap **Complete**.
+
+    ![Reset password](/images/manual/larepass/docker-reset-password.png#bordered)
+
+Once the activation is completed, LarePass displays the desktop address of your Olares device, such as https://desktop.marvin123.olares.com.
+</template>
+</Tabs>
 
 ## Two-factor verification with LarePass
 
