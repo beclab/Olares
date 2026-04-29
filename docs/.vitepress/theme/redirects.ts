@@ -97,6 +97,12 @@ export const redirects = {
     '/zh/manual/concepts/system-architecture': '/zh/developer/concepts/system-architecture',
     '/zh/manual/concepts/vc': '/zh/developer/concepts/vc',
     '/zh/manual/concepts/wallet': '/zh/developer/concepts/wallet',
+
+    // Refactor: /manual/docs-home → /manual/overview
+    '/manual/docs-home': '/manual/overview',
+    
+    // Refactor: /zh/manual/docs-home → /zh/manual/overview
+    '/zh/manual/docs-home': '/zh/manual/overview',
 }
 
 // Temporary redirects (302): content is offline but the URL may be reused later.
