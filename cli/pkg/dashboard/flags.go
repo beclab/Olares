@@ -7,30 +7,33 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
-
-	"github.com/beclab/Olares/cli/cmd/ctl/dashboard/format"
+	"github.com/beclab/Olares/cli/pkg/dashboard/format"
 )
 
 // CommonFlags holds the persistent + shared flag values every leaf command
-// in the dashboard tree consumes. Subcommands embed it and call Bind() in
-// their constructor; PreRun then calls Validate() to enforce cross-flag
-// invariants before the leaf's RunE fires.
+// in the dashboard tree consumes. cmd-side area subpackages embed pointers
+// to it (set by the cobra binding in cli/cmd/ctl/dashboard/options.go) and
+// PreRun calls Validate() before the leaf's RunE fires.
 //
 // Why a single struct rather than per-command flags? Because every
 // `dashboard *` invocation goes through the same authentication / output /
 // timezone / temperature pipeline, and we want one place that documents
 // the cross-flag rules (e.g. --start/--end mutually exclusive with --since;
 // --watch requires a non-zero recommended-poll-seconds).
+//
+// Raw fields (OutputRaw, StartRaw, EndRaw, SinceRaw, TimezoneRaw,
+// TempUnitRaw) are EXPORTED so the cobra binding layer in cmd-side
+// options.go can wire pflags onto them without poking at unexported state.
+// Validate() turns each raw string into the typed field above.
 type CommonFlags struct {
 	// Output is the resolved --output / -o value. Defaults to OutputTable.
 	Output OutputFormat
 
-	// outputRaw is the raw flag string before normalisation. Cobra
+	// OutputRaw is the raw flag string before normalisation. Cobra
 	// binds onto this; Validate() turns it into Output.
-	outputRaw string
+	OutputRaw string
 
-	// Watch toggles the polling ticker (see watch.go). Defaults off.
+	// Watch toggles the polling ticker (see runner.go). Defaults off.
 	Watch bool
 	// WatchInterval is the cadence between iterations. 0 means "use the
 	// command's RecommendedPollSeconds". Lower values emit a stderr
@@ -52,13 +55,13 @@ type CommonFlags struct {
 	Start time.Time
 	End   time.Time
 
-	// startRaw / endRaw / sinceRaw / timezoneRaw store the raw flag
+	// StartRaw / EndRaw / SinceRaw / TimezoneRaw store the raw flag
 	// strings before parsing so Validate() can produce friendly error
 	// messages.
-	startRaw    string
-	endRaw      string
-	sinceRaw    string
-	timezoneRaw string
+	StartRaw    string
+	EndRaw      string
+	SinceRaw    string
+	TimezoneRaw string
 
 	// Timezone, when non-nil, overrides time.Local for FormatTime /
 	// Meta.FetchedAt rendering. Defaults to time.Local.
@@ -68,8 +71,8 @@ type CommonFlags struct {
 	// K). Defaults to TempC. JSON `raw` always emits Celsius regardless;
 	// this only affects table view + display.rendered fields.
 	TempUnit format.TempUnit
-	// tempUnitRaw is the raw flag string before normalisation.
-	tempUnitRaw string
+	// TempUnitRaw is the raw flag string before normalisation.
+	TempUnitRaw string
 
 	// User, when non-empty, targets a different user than the active
 	// profile (admin-only). Surfaced via Meta.User.
@@ -86,43 +89,9 @@ type CommonFlags struct {
 	Head int
 }
 
-// BindPersistent registers the persistent flags every dashboard command
-// needs on `cmd`. Call this on the dashboard root command.
-func (cf *CommonFlags) BindPersistent(cmd *cobra.Command) {
-	pf := cmd.PersistentFlags()
-	pf.StringVarP(&cf.outputRaw, "output", "o", "table",
-		"output format (table or json)")
-	pf.BoolVar(&cf.Watch, "watch", false,
-		"poll the upstream endpoint and emit one envelope per iteration (NDJSON in JSON mode)")
-	pf.DurationVar(&cf.WatchInterval, "watch-interval", 0,
-		"interval between watch iterations (default: command's recommended-poll-seconds)")
-	pf.IntVar(&cf.WatchIterations, "watch-iterations", 0,
-		"stop after N iterations (0 = unbounded)")
-	pf.DurationVar(&cf.WatchTimeout, "watch-timeout", 0,
-		"stop after this much wall-clock time (0 = unbounded)")
-	pf.StringVar(&cf.sinceRaw, "since", "",
-		"relative window for metric commands; sliding when --watch (e.g. 5m, 1h)")
-	pf.StringVar(&cf.startRaw, "start", "",
-		"absolute window start (RFC3339); fixed across iterations when --watch")
-	pf.StringVar(&cf.endRaw, "end", "",
-		"absolute window end (RFC3339); fixed across iterations when --watch")
-	pf.StringVar(&cf.timezoneRaw, "timezone", "",
-		"timezone for table rendering (IANA name, default: $TZ / system local)")
-	pf.StringVar(&cf.tempUnitRaw, "temp-unit", "C",
-		"temperature display unit: C, F, or K (JSON raw always Celsius)")
-	pf.StringVar(&cf.User, "user", "",
-		"target a different user than the active profile (platform-admin only)")
-	pf.IntVar(&cf.Limit, "limit", 0,
-		"page size for paginated endpoints (0 = upstream default)")
-	pf.IntVar(&cf.Page, "page", 0,
-		"page index for paginated endpoints (0 = first)")
-	pf.IntVar(&cf.Head, "head", 0,
-		"truncate output to the first N rows after sorting (0 = no truncation)")
-}
-
 // Validate parses the raw flag strings into the typed fields and enforces
-// cross-flag rules. Call from PreRunE, after cobra has populated the raw
-// strings.
+// cross-flag rules. cmd-side BindPersistent calls this from PreRunE, after
+// cobra has populated the raw strings.
 //
 // Invariants enforced here (the test suite asserts each one):
 //
@@ -135,20 +104,20 @@ func (cf *CommonFlags) BindPersistent(cmd *cobra.Command) {
 //
 // Validate is idempotent — calling it twice returns the same result.
 func (cf *CommonFlags) Validate() error {
-	out, err := ParseOutputFormat(cf.outputRaw)
+	out, err := ParseOutputFormat(cf.OutputRaw)
 	if err != nil {
 		return err
 	}
 	cf.Output = out
 
-	tu, err := parseTempUnit(cf.tempUnitRaw)
+	tu, err := parseTempUnit(cf.TempUnitRaw)
 	if err != nil {
 		return err
 	}
 	cf.TempUnit = tu
 
-	if cf.timezoneRaw != "" {
-		loc, err := format.LoadLocation(cf.timezoneRaw)
+	if cf.TimezoneRaw != "" {
+		loc, err := format.LoadLocation(cf.TimezoneRaw)
 		if err != nil {
 			return fmt.Errorf("--timezone: %w", err)
 		}
@@ -157,8 +126,8 @@ func (cf *CommonFlags) Validate() error {
 		cf.Timezone = format.LocalLocation()
 	}
 
-	if cf.sinceRaw != "" {
-		d, err := time.ParseDuration(cf.sinceRaw)
+	if cf.SinceRaw != "" {
+		d, err := time.ParseDuration(cf.SinceRaw)
 		if err != nil {
 			return fmt.Errorf("--since: %w", err)
 		}
@@ -167,15 +136,15 @@ func (cf *CommonFlags) Validate() error {
 		}
 		cf.Since = d
 	}
-	if cf.startRaw != "" {
-		t, err := time.Parse(time.RFC3339, cf.startRaw)
+	if cf.StartRaw != "" {
+		t, err := time.Parse(time.RFC3339, cf.StartRaw)
 		if err != nil {
 			return fmt.Errorf("--start: %w", err)
 		}
 		cf.Start = t
 	}
-	if cf.endRaw != "" {
-		t, err := time.Parse(time.RFC3339, cf.endRaw)
+	if cf.EndRaw != "" {
+		t, err := time.Parse(time.RFC3339, cf.EndRaw)
 		if err != nil {
 			return fmt.Errorf("--end: %w", err)
 		}

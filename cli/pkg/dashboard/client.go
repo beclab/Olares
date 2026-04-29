@@ -30,9 +30,11 @@ func debugHTTPEnabled() bool {
 }
 
 // Client is a thin wrapper around the factory's authenticated *http.Client.
-// Every command in the dashboard tree obtains one via NewClient(factory) and
-// calls DoJSON / DoEmpty / Get* helpers; the underlying refreshingTransport
-// handles X-Authorization injection + transparent /api/refresh on 401/403.
+// Every command in the dashboard tree obtains one via the area-local
+// `prepareClient` declared in each cmd subpackage's `common.go`
+// (cli/cmd/ctl/dashboard/<area>/common.go) and calls DoJSON / DoEmpty
+// / Get* helpers; the underlying refreshingTransport handles X-Authorization
+// injection + transparent /api/refresh on 401/403.
 //
 // Why a typed Client (vs. a raw http.Client + URL constants per file)?
 // Because we need to reformat 4xx/5xx into agent-friendly errors, expose an
@@ -54,9 +56,8 @@ type Client struct {
 	// systemStatusOnce / systemStatus / systemStatusErr cache the
 	// result of EnsureSystemStatus. The dashboard fan / gpu subtrees
 	// gate themselves on the device profile (Olares One vs. generic
-	// box, CUDA-capable vs. not) — see `gateOlaresOne` and `gpuAdvisory`
-	// in helpers.go. Cached for the lifetime of the Client to keep
-	// `dashboard overview` aggregations cheap.
+	// box, CUDA-capable vs. not). Cached for the lifetime of the
+	// Client to keep `dashboard overview` aggregations cheap.
 	systemStatusOnce sync.Once
 	systemStatus     *SystemStatus
 	systemStatusErr  error
@@ -80,6 +81,11 @@ func (c *Client) BaseURL() string { return c.baseURL }
 // OlaresID returns the OlaresID of the active profile (for Meta.Profile and
 // reformatted error messages).
 func (c *Client) OlaresID() string { return c.olaresID }
+
+// HTTPClient returns the underlying authenticated *http.Client. Surface area
+// for callers that need to issue raw requests bypassing DoJSON/DoRaw — kept
+// small on purpose so the auth + error-reformatting story stays centralised.
+func (c *Client) HTTPClient() *http.Client { return c.hc }
 
 // ----------------------------------------------------------------------------
 // HTTP helpers
@@ -113,7 +119,7 @@ func IsHTTPError(err error) (*HTTPError, bool) {
 }
 
 // ClassifyTransportErr maps an arbitrary error returned by hc.Do into an
-// ErrorKind enum. Used by watch.go to populate Meta.ErrorKind for failed
+// ErrorKind enum. Used by runner.go to populate Meta.ErrorKind for failed
 // iterations. Order matters: typed credential errors first, then HTTPError,
 // then generic transport.
 func ClassifyTransportErr(err error) string {

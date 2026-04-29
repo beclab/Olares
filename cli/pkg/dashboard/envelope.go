@@ -1,43 +1,28 @@
+// Package dashboard hosts the data + transport layer for the
+// `olares-cli dashboard` CLI subtree. This is the "heavy" half of the
+// thin-cmd / pkg-core split documented in
+// cli/skills/olares-dashboard/SKILL.md: every fetcher, gate, builder,
+// HTTP client, schema loader, and runtime envelope shape lives here so
+// the cmd-side area subpackages (cli/cmd/ctl/dashboard/{overview,
+// applications, schema, ...}) stay thin Cobra wrappers.
+//
+// Files in this package:
+//
+//	envelope.go     — Envelope / Item / Meta / TimeWindow shapes
+//	output.go       — OutputFormat parsing + table / JSON renderers
+//	flags.go        — CommonFlags data type + Validate + ResolveWindow
+//	runner.go       — Runner / RunOnce one-shot or watch ticker
+//	client.go       — *Client: HTTP wrappers, EnsureUser, RequireAdmin
+//	schema.go       — Kind constants + embedded JSON Schema bundle
+//	json_shim.go    — internal json marshal helpers
+//
+// Per-domain subpackages (monitoring/, apps/, system/, gpu/, gates/,
+// workloads/) host fetchers and computation that are shared across more
+// than one cmd area. Subpackages MUST NOT import each other; cross-
+// domain composition happens in the cmd leaf instead, never inside pkg.
 package dashboard
 
-import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"strings"
-	"text/tabwriter"
-	"time"
-)
-
-// OutputFormat is the on-the-wire choice for `--output / -o`. Default is
-// `table` (human-readable, fixed columns) — agents pass `json` for the
-// canonical envelope defined below.
-type OutputFormat string
-
-const (
-	OutputTable OutputFormat = "table"
-	OutputJSON  OutputFormat = "json"
-)
-
-// ValidOutputFormats returns the values cobra uses for ValidArgs / shell
-// completion of the `--output` flag.
-func ValidOutputFormats() []string {
-	return []string{string(OutputTable), string(OutputJSON)}
-}
-
-// ParseOutputFormat normalises and validates a user-supplied `--output`
-// value. Empty defaults to `table` (matches the SPA's "human view" default
-// and what `olares-cli files ls` already does).
-func ParseOutputFormat(s string) (OutputFormat, error) {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "", "table":
-		return OutputTable, nil
-	case "json":
-		return OutputJSON, nil
-	default:
-		return "", fmt.Errorf("unknown output format %q (valid: table, json)", s)
-	}
-}
+import "time"
 
 // ----------------------------------------------------------------------------
 // Envelope — the dual-shape JSON the CLI emits.
@@ -212,98 +197,4 @@ func NewMeta(now time.Time, profile, user string) Meta {
 		Profile:   profile,
 		User:      user,
 	}
-}
-
-// ----------------------------------------------------------------------------
-// Renderers
-// ----------------------------------------------------------------------------
-
-// WriteJSON marshals env as a single-line JSON document terminated by `\n`.
-// Used for both one-shot output and individual NDJSON lines in `--watch`
-// mode (the iteration / Error fields handle the per-line state).
-func WriteJSON(w io.Writer, env Envelope) error {
-	enc := json.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	return enc.Encode(env)
-}
-
-// TableColumn names a table column and how to extract its value. Each leaf
-// command supplies its own []TableColumn so the renderer stays agnostic.
-type TableColumn struct {
-	Header string
-	// Get pulls the cell value out of an Item — typically by reading
-	// item.Display[<key>]. Should never return nil; render "-" instead.
-	Get func(Item) string
-}
-
-// WriteTable emits a tabwriter-based table for items. Empty inputs emit a
-// single "-" row so the user has a visible signal that the call succeeded
-// but produced nothing.
-//
-// Header / footer matching the SPA aesthetic (two-space gutter, no border
-// chars) is intentional — bash piping (`| awk '{print $2}'`) stays simple.
-func WriteTable(w io.Writer, columns []TableColumn, items []Item) error {
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	headers := make([]string, len(columns))
-	for i, c := range columns {
-		headers[i] = c.Header
-	}
-	if _, err := fmt.Fprintln(tw, strings.Join(headers, "\t")); err != nil {
-		return err
-	}
-
-	if len(items) == 0 {
-		dash := make([]string, len(columns))
-		for i := range dash {
-			dash[i] = "-"
-		}
-		if _, err := fmt.Fprintln(tw, strings.Join(dash, "\t")); err != nil {
-			return err
-		}
-		return tw.Flush()
-	}
-
-	for _, it := range items {
-		row := make([]string, len(columns))
-		for i, c := range columns {
-			row[i] = c.Get(it)
-		}
-		if _, err := fmt.Fprintln(tw, strings.Join(row, "\t")); err != nil {
-			return err
-		}
-	}
-	return tw.Flush()
-}
-
-// DisplayString is a small helper for table column getters: pull `key` out
-// of item.Display and stringify it, falling back to "-" when missing or
-// empty. Centralises the rendering of `nil` / "" / 0-length so callers stay
-// declarative.
-func DisplayString(it Item, key string) string {
-	if it.Display == nil {
-		return "-"
-	}
-	v, ok := it.Display[key]
-	if !ok || v == nil {
-		return "-"
-	}
-	switch x := v.(type) {
-	case string:
-		if x == "" {
-			return "-"
-		}
-		return x
-	default:
-		return fmt.Sprintf("%v", v)
-	}
-}
-
-// HeadItems truncates items to at most `n`. n<=0 means "no truncation".
-// Mirrors --head's "first-N rows" semantics on top of any sort order the
-// command established.
-func HeadItems(items []Item, n int) []Item {
-	if n <= 0 || n >= len(items) {
-		return items
-	}
-	return items[:n]
 }
