@@ -157,6 +157,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "IndexTTS2",
               link: "/use-cases/indextts2",
             },
+            {
+              text: "NOFX",
+              link: "/use-cases/nofx",
+            },
             // {
             //   text: "DeerFlow",
             //   link: "/use-cases/deerflow",
