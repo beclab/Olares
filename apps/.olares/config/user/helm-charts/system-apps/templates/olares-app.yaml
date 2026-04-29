@@ -300,25 +300,8 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: status.podIP
-        - name: init-files-data
-          image: busybox:1.28
-          securityContext:
-            privileged: true
-            runAsNonRoot: false
-            runAsUser: 0
-          volumeMounts:
-            - name: fb-data
-              mountPath: /appdata
-            - name: uploads-temp
-              mountPath: /uploadstemp
-          command:
-          - sh
-          - -c
-          - |
-            chown -R 1000:1000 /uploadstemp && \
-            chown -R 1000:1000 /appdata 
         - name: olares-app-init
-          image: beclab/system-frontend:v1.10.18
+          image: beclab/system-frontend:v1.10.19
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -440,7 +423,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.0.90
+          image: beclab/user-service:v0.0.91
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000

@@ -1,6 +1,9 @@
 package intranet
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"net"
+)
 
 func ipv4Checksum(hdr []byte) uint16 {
 	var sum uint32
@@ -12,6 +15,51 @@ func ipv4Checksum(hdr []byte) uint16 {
 		sum = (sum & 0xffff) + (sum >> 16)
 	}
 	return ^uint16(sum)
+}
+
+// udpChecksum computes the UDP checksum over the IPv4 pseudo-header and the
+// UDP datagram (header + payload). srcIP and dstIP must be 4-byte IPv4
+// addresses. udp must contain the full UDP datagram with the checksum field
+// (bytes 6:8) ALREADY zeroed by the caller.
+//
+// Per RFC 768, if the computed checksum is 0 it is transmitted as 0xFFFF to
+// distinguish it from "no checksum" (which is 0).
+func udpChecksum(srcIP, dstIP net.IP, udp []byte) uint16 {
+	src := srcIP.To4()
+	dst := dstIP.To4()
+	if src == nil || dst == nil {
+		return 0
+	}
+
+	udpLen := uint32(len(udp))
+	var sum uint32
+
+	// Pseudo-header: src(4) + dst(4) + zero(1) + proto(1) + udpLen(2)
+	sum += uint32(binary.BigEndian.Uint16(src[0:2]))
+	sum += uint32(binary.BigEndian.Uint16(src[2:4]))
+	sum += uint32(binary.BigEndian.Uint16(dst[0:2]))
+	sum += uint32(binary.BigEndian.Uint16(dst[2:4]))
+	sum += uint32(17) // protocol UDP, with the leading zero byte = 0x0011
+	sum += udpLen
+
+	// UDP header + payload
+	i := 0
+	for ; i+1 < len(udp); i += 2 {
+		sum += uint32(binary.BigEndian.Uint16(udp[i : i+2]))
+	}
+	if i < len(udp) {
+		// odd byte: pad with zero on the right
+		sum += uint32(udp[i]) << 8
+	}
+
+	for (sum >> 16) != 0 {
+		sum = (sum & 0xffff) + (sum >> 16)
+	}
+	csum := ^uint16(sum)
+	if csum == 0 {
+		csum = 0xffff
+	}
+	return csum
 }
 
 // fragmentIPv4 attempts to split an Ethernet frame carrying an IPv4 packet
