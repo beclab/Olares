@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -135,7 +134,7 @@ func suspendOrResumeApp(ctx context.Context, cli client.Client, am *appv1alpha1.
 				if !chart.Shared {
 					continue
 				}
-				ns := chart.Namespace(am.Spec.AppOwner)
+				ns := appcfg.ChartNamespace(&chart, am.Spec.AppOwner)
 				if replicas == 0 {
 					klog.Infof("suspending shared chart %s in namespace %s", chart.Name, ns)
 				} else {

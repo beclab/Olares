@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -126,7 +126,7 @@ func (p *UninstallingApp) waitForDeleteSharedNamespaces(ctx context.Context, app
 	var sharedNamespaces []string
 	for _, chart := range appCfg.SubCharts {
 		if chart.Shared {
-			sharedNamespace := chart.Namespace(appCfg.OwnerName)
+			sharedNamespace := appcfg.ChartNamespace(&chart, appCfg.OwnerName)
 			if !apputils.IsProtectedNamespace(sharedNamespace) {
 				sharedNamespaces = append(sharedNamespaces, sharedNamespace)
 			}
@@ -182,7 +182,7 @@ func (p *UninstallingApp) exec(ctx context.Context) error {
 		klog.Infof("delete old mongodb ..........")
 		return p.oldMongodbUninstall(ctx, kubeConfig)
 	}
-	ops, err := versioned.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: p.manager.GetMarketSource()})
+	ops, err := versioned.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: appcfg.GetMarketSource(p.manager)})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)
 		return err

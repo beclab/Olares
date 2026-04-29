@@ -3,9 +3,8 @@ package v2
 import (
 	"context"
 	"errors"
-
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	v1 "github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
@@ -58,10 +57,6 @@ func (h *HelmOpsV2) Install() error {
 	if err != nil {
 		klog.Errorf("set values err %v", err)
 		return err
-	}
-	if values["isAdmin"].(bool) {
-		// force set the admin is owner
-		values["admin"] = h.App().OwnerName
 	}
 
 	// in v2, if app is multi-charts and has a cluster shared chart,
@@ -175,7 +170,9 @@ func (h *HelmOpsV2) install(values map[string]interface{}) (err error, sharedIns
 		settings := h.Settings()
 		if chart.Shared {
 			// re-create action config for shared chart
-			actionConfig, settings, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName))
+			//actionConfig, settings, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName))
+			actionConfig, settings, err = helm.InitConfig(h.KubeConfig(), appcfg.ChartNamespace(&chart, h.App().OwnerName))
+
 			if err != nil {
 				klog.Errorf("Failed to create action config for shared chart %s: %v", chart.Name, err)
 				return err, sharedInstalled
@@ -188,9 +185,9 @@ func (h *HelmOpsV2) install(values map[string]interface{}) (err error, sharedIns
 			actionConfig,
 			settings,
 			chart.Name,
-			chart.ChartPath(h.App().AppName),
+			appcfg.ChartPath(h.App().AppName, chart.Name),
 			h.App().RepoURL,
-			chart.Namespace(h.App().OwnerName),
+			appcfg.ChartNamespace(&chart, h.App().OwnerName),
 			values,
 		)
 
@@ -211,7 +208,9 @@ func (h *HelmOpsV2) status(releaseName string) (*helmrelease.Release, error) {
 	for _, chart := range h.App().SubCharts {
 		if chart.Shared && chart.Name == releaseName {
 			// re-create action config for shared chart
-			actionConfig, _, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName))
+			//actionConfig, _, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName))
+			actionConfig, _, err = helm.InitConfig(h.KubeConfig(), appcfg.ChartNamespace(&chart, h.App().OwnerName))
+
 			if err != nil {
 				klog.Errorf("Failed to create action config for shared chart %s: %v", chart.Name, err)
 				return nil, err
@@ -234,7 +233,8 @@ func (h *HelmOpsV2) prepareNamespaces() error {
 	}
 
 	for _, chart := range h.App().SubCharts {
-		nsName := chart.Namespace(h.App().OwnerName)
+		nsName := appcfg.ChartNamespace(&chart, h.App().OwnerName)
+
 		ns, err := k8s.CoreV1().Namespaces().Get(h.Context(), nsName, metav1.GetOptions{})
 		create := false
 		if err != nil {

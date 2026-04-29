@@ -6,11 +6,11 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/apecloud/kubeblocks v1.0.0
 	github.com/argoproj/argo-workflows/v3 v3.7.10
-	github.com/beclab/api v0.0.2
+	github.com/beclab/Olares/framework/oac v0.0.0-20260429093850-85adb4fe54f0
+	github.com/beclab/api v0.0.3
 	github.com/beclab/lldap-client v0.0.11
 	github.com/containerd/containerd v1.7.29
 	github.com/containers/image/v5 v5.36.1
-	github.com/dlclark/regexp2 v1.11.5
 	github.com/emicklei/go-restful-openapi/v2 v2.11.0
 	github.com/emicklei/go-restful/v3 v3.13.0
 	github.com/envoyproxy/go-control-plane/envoy v1.36.0
@@ -37,8 +37,7 @@ require (
 	github.com/thoas/go-funk v0.9.3
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96
-	google.golang.org/protobuf v1.36.11
-	gopkg.in/yaml.v2 v2.4.0
+	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
 	helm.sh/helm/v3 v3.19.0
@@ -47,8 +46,8 @@ require (
 	k8s.io/cli-runtime v0.34.0
 	k8s.io/client-go v0.34.0
 	k8s.io/code-generator v0.34.0
-	k8s.io/klog/v2 v2.130.1
-	k8s.io/utils v0.0.0-20260108192941-914a6e750570
+	k8s.io/klog/v2 v2.140.0
+	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
 	sigs.k8s.io/controller-runtime v0.22.0
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -121,6 +120,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.5.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
+	github.com/dlclark/regexp2 v1.12.0 // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker v28.5.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
@@ -143,6 +143,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.21.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.1 // indirect
+	github.com/go-ozzo/ozzo-validation/v4 v4.3.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gobwas/glob v0.2.4-0.20181002190808-e7a84e9525fe // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -248,7 +249,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.41.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.yaml.in/yaml/v2 v2.4.2 // indirect
+	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/mod v0.32.0 // indirect
@@ -258,7 +259,7 @@ require (
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/term v0.39.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
-	golang.org/x/time v0.12.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.41.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/api v0.236.0 // indirect
@@ -266,18 +267,18 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20260203192932-546029d2fa20 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/grpc v1.79.3 // indirect
-	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
+	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/apiextensions-apiserver v0.34.0 // indirect
 	k8s.io/apiserver v0.34.0 // indirect
 	k8s.io/component-base v0.34.0 // indirect
-	k8s.io/gengo/v2 v2.0.0-20250604051438-85fd79dbfd9f // indirect
-	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
+	k8s.io/gengo/v2 v2.0.0-20250922181213-ec3ebc5fd46b // indirect
+	k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a // indirect
 	k8s.io/kubectl v0.34.0 // indirect
 	oras.land/oras-go/v2 v2.6.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/kustomize/api v0.20.1 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.20.1 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )

@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,7 +61,7 @@ func (p *InitializingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 	opCtx, cancel := context.WithCancel(context.Background())
 
 	ops, err := versioned.NewHelmOps(opCtx, kubeConfig, appCfg, token,
-		appinstaller.Opt{Source: p.manager.Spec.Source, MarketSource: p.manager.GetMarketSource()})
+		appinstaller.Opt{Source: p.manager.Spec.Source, MarketSource: appcfg.GetMarketSource(p.manager)})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)
 		cancel()

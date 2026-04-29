@@ -5,24 +5,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"slices"
-	"strconv"
-
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
-	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	"golang.org/x/exp/maps"
+	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"slices"
+	"strconv"
 
 	"github.com/emicklei/go-restful/v3"
 	"helm.sh/helm/v3/pkg/time"
@@ -40,7 +39,7 @@ type depRequest struct {
 type installHelperIntf interface {
 	getAdminUsers() (admin []string, isAdmin bool, err error)
 	getInstalledApps() (installed bool, app []*v1alpha1.Application, err error)
-	getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (err error)
+	getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (appConfig *appcfg.ApplicationConfig, err error)
 	setAppConfig(req *api.InstallRequest, appName string)
 	validate(bool, []*v1alpha1.Application) error
 	setAppEnv(overrides []sysv1alpha1.AppEnvVar) error
@@ -138,7 +137,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		}
 	}
 
-	apiVersion, appCfg, err := apputils.GetApiVersionFromAppConfig(req.Request.Context(), &apputils.ConfigOptions{
+	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
 		RawAppName:   rawAppName,
 		Owner:        owner,
@@ -148,16 +147,13 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		SelectedGpu:  insReq.SelectedGpuType,
 	})
 	klog.Infof("chartVersion: %s", chartVersion)
+
 	if err != nil {
 		klog.Errorf("Failed to get api version err=%v", err)
 		api.HandleBadRequest(resp, req, err)
 		return
 	}
-	if !appCfg.AllowMultipleInstall && insReq.RawAppName != "" || (appCfg.AllowMultipleInstall && (apiVersion == appcfg.V2 || appCfg.AppScope.ClusterScoped)) {
-		klog.Errorf("app %s can not be clone", app)
-		api.HandleBadRequest(resp, req, fmt.Errorf("app %s can not be clone", app))
-		return
-	}
+	klog.Infof("apiVersion: %s", apiVersion)
 
 	client, err := utils.GetClient()
 	if err != nil {
@@ -222,11 +218,18 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	err = helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, insReq.SelectedGpuType)
+	appCfg, err := helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, insReq.SelectedGpuType)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return
 	}
+	if !appCfg.AllowMultipleInstall && insReq.RawAppName != "" ||
+		(appCfg.AllowMultipleInstall && (apiVersion == appcfg.V2 || appCfg.AppScope.ClusterScoped)) {
+		klog.Errorf("app %s can not be clone", app)
+		api.HandleBadRequest(resp, req, fmt.Errorf("app %s can not be clone", app))
+		return
+	}
+
 	err = helper.setAppEnv(insReq.Envs)
 	if err != nil {
 		klog.Errorf("Failed to set app env err=%v", err)
@@ -430,7 +433,7 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 
 func (h *installHandlerHelper) _validateClusterScope(isAdmin bool, installedApp []*v1alpha1.Application) (err error) {
 	for _, installedApp := range installedApp {
-		if h.appConfig.AppScope.ClusterScoped && installedApp.IsClusterScoped() {
+		if h.appConfig.AppScope.ClusterScoped && appcfg.IsClusterScoped(installedApp) {
 			return errors.New("only one cluster scoped app can install in on cluster")
 		}
 	}
@@ -457,7 +460,7 @@ func (h *installHandlerHelper) getInstalledApps() (installed bool, app []*v1alph
 	return
 }
 
-func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (err error) {
+func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (appConfig *appcfg.ApplicationConfig, err error) {
 	var (
 		admin                   string
 		installAsAdmin          bool
@@ -472,7 +475,7 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 			appOwner := installedApp.Spec.Owner
 			if slices.Contains(adminUsers, appOwner) {
 				// check the app is installed as cluster scope
-				if installedApp.IsClusterScoped() {
+				if appcfg.IsClusterScoped(installedApp) {
 					cluserAppInstalled = true
 					installedCluserAppOwner = appOwner
 				}
@@ -486,6 +489,7 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 		installAsAdmin = false
 	case !isAdmin:
 		if len(adminUsers) == 0 {
+			klog.Errorf("No admin user found")
 			err = fmt.Errorf("no admin user found")
 			api.HandleBadRequest(h.resp, h.req, err)
 			return
@@ -497,7 +501,7 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 		installAsAdmin = true
 	}
 
-	appConfig, _, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+	appConfig, _, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
 		RawAppName:   h.rawAppName,
 		Owner:        h.owner,
@@ -720,7 +724,7 @@ func (h *installHandlerHelperV2) _validateClusterScope(isAdmin bool, installedAp
 	return nil
 }
 
-func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (err error) {
+func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (appConfig *appcfg.ApplicationConfig, err error) {
 	klog.Info("get app config for install handler v2")
 
 	var (
@@ -731,14 +735,14 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 		admin = h.owner
 	} else {
 		if len(adminUsers) == 0 {
+			klog.Errorf("No admin user found")
 			err = fmt.Errorf("no admin user found")
 			api.HandleBadRequest(h.resp, h.req, err)
 			return
 		}
 		admin = adminUsers[0]
 	}
-
-	appConfig, _, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+	appConfig, _, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
 		RawAppName:   h.rawAppName,
 		Owner:        h.owner,

@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"

@@ -1,15 +1,11 @@
 package apiserver
 
 import (
-	"fmt"
 	"io/fs"
-	"io/ioutil"
-	"os"
+	"path/filepath"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
-
-	"gopkg.in/yaml.v2"
+	"github.com/beclab/Olares/framework/oac"
 )
 
 /*
@@ -26,37 +22,10 @@ metadata:
 */
 
 func (h *Handler) readAppInfo(dir fs.FileInfo) (*appcfg.AppConfiguration, error) {
-	cfgFileName := fmt.Sprintf("%s/%s/%s", appcfg.ChartsPath, dir.Name(), config.AppCfgFileName)
-
-	f, err := os.Open(cfgFileName)
+	chartDir := filepath.Join(appcfg.ChartsPath, dir.Name())
+	cfg, err := oac.LoadAppConfiguration(chartDir)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-
-	info, err := ioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	var appCfg appcfg.AppConfiguration
-	if err = yaml.Unmarshal(info, &appCfg); err != nil {
-		return nil, err
-	}
-
-	// cache app icon data
-	// var icon string
-	// iconData, found := imageCache.Get(appCfg.Metadata.Icon)
-	// if !found {
-	// 	icon, err = readImageToBase64(fmt.Sprintf("%s/%s", ChartsPath, dir.Name()), appCfg.Metadata.Icon)
-	// 	if err != nil {
-	// 		klog.Errorf("get app icon error: %s", err)
-	// 	} else {
-	// 		imageCache.Set(appCfg.Metadata.Icon, icon, cache.DefaultExpiration)
-	// 	}
-	// } else {
-	// 	icon = iconData.(string)
-	// }
-
-	return &appCfg, nil
+	return cfg, nil
 }

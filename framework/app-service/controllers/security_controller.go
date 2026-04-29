@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/go-logr/logr"
 	"github.com/thoas/go-funk"
@@ -519,7 +519,7 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 					})
 
 					var appConfig appcfg.ApplicationConfig
-					if err := depAppMgr.GetAppConfig(&appConfig); err != nil {
+					if err := appcfg.GetAppConfig(depAppMgr, &appConfig); err != nil {
 						logger.Error(err, "Failed to get app config for shared app", "app", sharedRefAppName)
 						return
 					}
@@ -649,7 +649,7 @@ func (r *SecurityReconciler) findOwnerOfNamespace(ctx context.Context, ns *corev
 
 			if mgr != nil {
 				var cfg appcfg.ApplicationConfig
-				err = mgr.GetAppConfig(&cfg)
+				err = appcfg.GetAppConfig(mgr, &cfg)
 				if err != nil {
 					r.Logger.Error(err, "Failed to get app config for app", "app", appName)
 					return false, false, false, false, err
@@ -661,7 +661,7 @@ func (r *SecurityReconciler) findOwnerOfNamespace(ctx context.Context, ns *corev
 				system = cfg.AppScope.ClusterScoped && cfg.AppScope.SystemService
 				shared := false
 				for _, chart := range cfg.SubCharts {
-					if chart.Namespace(owner) == ns.Name {
+					if appcfg.ChartNamespace(&chart, owner) == ns.Name {
 						if cfg.APIVersion == appcfg.V2 {
 							if !chart.Shared {
 								// V2: if the namespace is not cluster scoped, it cannot be considered as system app

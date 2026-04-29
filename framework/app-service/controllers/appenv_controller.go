@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"time"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
-	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 
 	coordinationv1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -2,6 +2,7 @@ package v2
 
 import (
 	"context"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
@@ -28,7 +29,8 @@ func (h *HelmOpsV2) UninstallAll() error {
 	// uninstall shared charts in priority
 	for _, chart := range h.App().SubCharts {
 		if chart.Shared {
-			namespace := chart.Namespace(h.App().OwnerName)
+			//namespace := chart.Namespace(h.App().OwnerName)
+			namespace := appcfg.ChartNamespace(&chart, h.App().OwnerName)
 			appCacheDirs, err := h.tryToGetSharedAppCache(h.Context(), client, namespace)
 			if err != nil {
 				klog.Warningf("get app %s cache dir failed %v", namespace, err)
