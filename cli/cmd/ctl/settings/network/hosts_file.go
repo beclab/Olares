@@ -9,7 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings network hosts-file ...`
@@ -53,7 +55,11 @@ func newHostsFileGetCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "show the current hosts-file entries",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runHostsFileGet(c.Context(), f, output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "show hosts-file entries"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runHostsFileGet(ctx, f, output), "show hosts-file entries")
 		},
 	}
 	addOutputFlag(cmd, &output)

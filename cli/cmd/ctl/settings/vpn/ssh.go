@@ -8,7 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings vpn ssh ...`
@@ -26,9 +28,9 @@ import (
 // shape (`state`, `allow_ssh`) — user-service strips the BFL envelope
 // before returning, same pattern as public-domain-policy.
 //
-// Role: SPA gates the switch on isAdmin; we don't hard-gate here
-// because the server is authoritative — a normal user calling this
-// will get a 403 with the WrapPermissionErr CTA.
+// Role: SPA gates the switch on isAdmin (VPNPage.vue:20-32). We mirror
+// that here with a soft preflight; the server stays authoritative, so a
+// non-admin caller still gets a friendly hint instead of a bare 403.
 
 func NewSSHCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
@@ -66,7 +68,11 @@ func newSSHStatusCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "show current SSH-over-Headscale state",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runSSHStatus(c.Context(), f, output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "show SSH-over-Headscale state"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runSSHStatus(ctx, f, output), "show SSH-over-Headscale state")
 		},
 	}
 	addOutputFlag(cmd, &output)
@@ -116,7 +122,11 @@ func newSSHEnableCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "permit SSH across the Headscale mesh",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runSSHToggle(c.Context(), f, true)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "enable SSH over mesh"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runSSHToggle(ctx, f, true), "enable SSH over mesh")
 		},
 	}
 }
@@ -127,7 +137,11 @@ func newSSHDisableCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "block SSH across the Headscale mesh",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runSSHToggle(c.Context(), f, false)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "disable SSH over mesh"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runSSHToggle(ctx, f, false), "disable SSH over mesh")
 		},
 	}
 }

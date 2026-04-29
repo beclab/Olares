@@ -8,7 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings vpn public-domain-policy ...`
@@ -66,7 +68,11 @@ scripting.
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runPublicDomainPolicyGet(c.Context(), f, output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "show public-domain policy"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runPublicDomainPolicyGet(ctx, f, output), "show public-domain policy")
 		},
 	}
 	addOutputFlag(cmd, &output)
@@ -153,7 +159,11 @@ Examples:
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runPublicDomainPolicySet(c.Context(), f, denyAll, allowAll)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "set public-domain policy"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runPublicDomainPolicySet(ctx, f, denyAll, allowAll), "set public-domain policy")
 		},
 	}
 	cmd.Flags().BoolVar(&denyAll, "deny-all", false, "block public-domain access for non-whitelisted entrances (deny_all=1)")

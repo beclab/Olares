@@ -10,7 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings advanced status`
@@ -32,7 +34,11 @@ func NewStatusCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "show system / daemon status (Settings -> Advanced)",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runStatus(c.Context(), f, output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "show system status"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runStatus(ctx, f, output), "show system status")
 		},
 	}
 	addOutputFlag(cmd, &output)

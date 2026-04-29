@@ -8,7 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings vpn subroutes ...`
@@ -54,7 +56,11 @@ func newSubroutesStatusCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "dump current sub-route ACL state (raw upstream JSON)",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runSubroutesStatus(c.Context(), f, output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "show sub-routes ACL state"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runSubroutesStatus(ctx, f, output), "show sub-routes ACL state")
 		},
 	}
 	addOutputFlag(cmd, &output)
@@ -92,7 +98,11 @@ func newSubroutesEnableCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "permit sub-domain access across the Headscale mesh",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runSubroutesToggle(c.Context(), f, true)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "enable sub-routes"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runSubroutesToggle(ctx, f, true), "enable sub-routes")
 		},
 	}
 }
@@ -103,7 +113,11 @@ func newSubroutesDisableCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "block sub-domain access across the Headscale mesh",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runSubroutesToggle(c.Context(), f, false)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "disable sub-routes"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runSubroutesToggle(ctx, f, false), "disable sub-routes")
 		},
 	}
 }

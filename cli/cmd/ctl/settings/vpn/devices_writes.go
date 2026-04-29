@@ -9,7 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings vpn devices rename | delete | tags set ...`
@@ -27,10 +29,11 @@ import (
 // headscale.ts:85+`) and just refreshes the device list afterward, which
 // the user can do via `settings vpn devices list`.
 //
-// Role: the SPA shows these controls on every Headscale device card
-// regardless of admin status (HeadScaleDeviceCard.vue has no isAdmin
-// gate), so we leave preflight to the server. Headscale itself enforces
-// per-machine ownership at the controller level.
+// Role: device write verbs (rename / delete / tags) require admin floor.
+// HeadScaleDeviceCard.vue itself has no isAdmin guard, but the device-
+// management surface lives under the admin-gated VPN page and is owner/
+// admin territory in practice. We soft-preflight to admin so a normal
+// caller fails fast with a friendly hint; Headscale stays authoritative.
 
 // NewDevicesCommand is defined in devices.go; we extend it here by
 // registering the write subcommands during package init via a pattern
@@ -66,7 +69,11 @@ Example:
 `,
 		Args: cobra.ExactArgs(2),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runDevicesRename(c.Context(), f, args[0], args[1])
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "rename Headscale device"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runDevicesRename(ctx, f, args[0], args[1]), "rename Headscale device")
 		},
 	}
 	return cmd
@@ -126,7 +133,11 @@ Example:
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runDevicesDelete(c.Context(), f, args[0], assumeYes)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "delete Headscale device"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runDevicesDelete(ctx, f, args[0], assumeYes), "delete Headscale device")
 		},
 	}
 	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the confirmation prompt (required for non-TTY automation)")
@@ -207,7 +218,11 @@ Examples:
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runDevicesTagsSet(c.Context(), f, args[0], tags)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "set Headscale device tags"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runDevicesTagsSet(ctx, f, args[0], tags), "set Headscale device tags")
 		},
 	}
 	cmd.Flags().StringArrayVar(&tags, "tag", nil, "tag to set on the device (repeat --tag for multiple); pass zero --tag flags to clear")

@@ -9,7 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings vpn routes ...`
@@ -52,7 +54,11 @@ func newRoutesEnableCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "enable a Headscale route",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runRouteToggle(c.Context(), f, args[0], true)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "enable Headscale route"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runRouteToggle(ctx, f, args[0], true), "enable Headscale route")
 		},
 	}
 }
@@ -63,7 +69,11 @@ func newRoutesDisableCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "disable a Headscale route (route stays advertised)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runRouteToggle(c.Context(), f, args[0], false)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "disable Headscale route"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runRouteToggle(ctx, f, args[0], false), "disable Headscale route")
 		},
 	}
 }

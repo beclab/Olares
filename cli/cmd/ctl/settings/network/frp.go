@@ -9,7 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings network frp ...`
@@ -46,7 +48,11 @@ func newFRPListCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "list available FRP servers",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runFRPList(c.Context(), f, output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "list FRP servers"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runFRPList(ctx, f, output), "list FRP servers")
 		},
 	}
 	addOutputFlag(cmd, &output)

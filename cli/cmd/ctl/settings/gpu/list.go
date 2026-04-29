@@ -9,7 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings gpu list`
@@ -33,7 +35,11 @@ func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "list GPUs / per-app assignment",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runList(c.Context(), f, output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "list GPUs"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runList(ctx, f, output), "list GPUs")
 		},
 	}
 	addOutputFlag(cmd, &output)

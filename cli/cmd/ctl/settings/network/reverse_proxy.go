@@ -9,7 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings network reverse-proxy ...`
@@ -66,7 +68,11 @@ view; pass --output json if you really need the raw token.
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runReverseProxyGet(c.Context(), f, output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "show reverse-proxy config"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runReverseProxyGet(ctx, f, output), "show reverse-proxy config")
 		},
 	}
 	addOutputFlag(cmd, &output)
@@ -202,7 +208,11 @@ stay intact unless you explicitly override them with --frp-*.
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runReverseProxySet(c.Context(), f, reverseProxySetFlags{
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "set reverse-proxy mode"); err != nil {
+				return err
+			}
+			err := runReverseProxySet(ctx, f, reverseProxySetFlags{
 				Mode:          mode,
 				IP:            ip,
 				FRPServer:     frpServer,
@@ -215,6 +225,7 @@ stay intact unless you explicitly override them with --frp-*.
 				MethodSet:     c.Flags().Changed("frp-auth-method"),
 				TokenSet:      c.Flags().Changed("frp-auth-token"),
 			})
+			return preflight.Wrap(ctx, f, err, "set reverse-proxy mode")
 		},
 	}
 	cmd.Flags().StringVar(&mode, "mode", "", "reverse-proxy mode (public-ip|frp|cloudflare-tunnel|off)")

@@ -8,7 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings network ssl ...`
@@ -55,7 +57,11 @@ func newSSLStatusCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "show the current SSL task state",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runSSLStatus(c.Context(), f, output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "show SSL task state"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runSSLStatus(ctx, f, output), "show SSL task state")
 		},
 	}
 	addOutputFlag(cmd, &output)

@@ -1,4 +1,4 @@
-package settings
+package whoami
 
 import (
 	"errors"
@@ -7,10 +7,9 @@ import (
 	"strings"
 
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
-	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
-// Soft preflight + 403 hint helpers for the settings umbrella.
+// Soft preflight + 403 hint helpers shared between command surfaces.
 //
 // "Soft" means: every check here is best-effort. The server is the only
 // authoritative source for "can this user do this" — the helpers here
@@ -21,11 +20,11 @@ import (
 // Why both halves? The two failure modes are distinct:
 //
 //   - Cache says no, server hasn't been asked yet:
-//     We catch it in PreflightRole and short-circuit with a hint
-//     to refresh — no wasted API call, the user has a clear next step.
+//     PreflightRole short-circuits with a hint to refresh — no wasted
+//     API call, the user has a clear next step.
 //
 //   - Cache says yes (or is empty) but the server rejects on permission:
-//     We catch it via WrapPermissionErr after the API call and explain
+//     WrapPermissionErr catches it after the API call and explains
 //     what likely happened (role drift since last cache write, e.g.
 //     owner demoted them). Same suggested action: refresh + retry.
 //
@@ -54,7 +53,7 @@ func PreflightRole(cfg *cliconfig.MultiProfileConfig, olaresID string, required 
 	if cfg == nil || olaresID == "" || required == "" {
 		return nil
 	}
-	requiredRank := whoami.Rank(required)
+	requiredRank := Rank(required)
 	if requiredRank == 0 {
 		return nil
 	}
@@ -62,7 +61,7 @@ func PreflightRole(cfg *cliconfig.MultiProfileConfig, olaresID string, required 
 	if prof == nil || prof.OwnerRole == "" {
 		return nil
 	}
-	have := whoami.Rank(prof.OwnerRole)
+	have := Rank(prof.OwnerRole)
 	if have == 0 || have >= requiredRank {
 		return nil
 	}
@@ -71,23 +70,23 @@ func PreflightRole(cfg *cliconfig.MultiProfileConfig, olaresID string, required 
 			"  if your role on the server changed recently, run:\n"+
 			"      olares-cli profile whoami --refresh\n"+
 			"  and retry. Otherwise ask the instance owner to grant you the right role.",
-		whoami.FriendlyLabel(required), verbDescr, olaresID, whoami.FriendlyLabel(prof.OwnerRole))
+		FriendlyLabel(required), verbDescr, olaresID, FriendlyLabel(prof.OwnerRole))
 }
 
-// WrapPermissionErr post-processes an HTTP error returned by SettingsClient
-// (or any whoami.Doer-shaped client). When the underlying error is a 403
-// (or a 401 the call site decided is permission-shaped), we add the same
-// "refresh and retry" hint PreflightRole emits — closing the loop on the
+// WrapPermissionErr post-processes an HTTP error returned by any of the
+// CLI's edge-API clients. When the underlying error is a 403 (or a 401
+// the call site decided is permission-shaped), we add the same "refresh
+// and retry" hint PreflightRole emits — closing the loop on the
 // "cache stale → server rejected" branch.
 //
 // `verbDescr` follows the same convention as PreflightRole.
 //
-// We intentionally don't try to parse the upstream JSON body for the role
-// reason: BFL / user-service / terminusd all phrase 403s slightly
-// differently, and chasing every variant would be a maintenance treadmill.
-// A generic "the server rejected this; here's how to refresh your cached
-// role" is good enough — the user can always read the wrapped error if
-// they want the verbatim server message.
+// We intentionally don't try to parse the upstream JSON body for the
+// role reason: BFL / user-service / terminusd all phrase 403s slightly
+// differently, and chasing every variant would be a maintenance
+// treadmill. A generic "the server rejected this; here's how to refresh
+// your cached role" is good enough — the user can always read the
+// wrapped error if they want the verbatim server message.
 func WrapPermissionErr(err error, olaresID, verbDescr string) error {
 	if err == nil {
 		return nil
@@ -109,10 +108,11 @@ func WrapPermissionErr(err error, olaresID, verbDescr string) error {
 		err, status, verbDescr, olaresID)
 }
 
-// isHTTPStatus is a deliberately simple substring sniffer. The settings
-// client formats HTTP errors as "<METHOD> <url>: HTTP <status>: <body>"
-// (see client.go's formatHTTPErr), so we can reliably detect the status
-// without plumbing a dedicated typed error through every call site.
+// isHTTPStatus is a deliberately simple substring sniffer. The shared
+// settings client formats HTTP errors as
+// "<METHOD> <url>: HTTP <status>: <body>", so we can reliably detect the
+// status without plumbing a dedicated typed error through every call
+// site.
 //
 // If we later add a typed *settings.HTTPError, switch this to errors.As.
 func isHTTPStatus(err error, status int) bool {

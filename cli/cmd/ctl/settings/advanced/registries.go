@@ -9,7 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings advanced registries ...`
@@ -45,7 +47,11 @@ func newRegistriesListCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "list configured containerd registries with image stats",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runRegistriesList(c.Context(), f, output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "list containerd registries"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runRegistriesList(ctx, f, output), "list containerd registries")
 		},
 	}
 	addOutputFlag(cmd, &output)

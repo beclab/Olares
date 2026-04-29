@@ -10,7 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings advanced env ...`
@@ -81,6 +83,11 @@ type baseEnv struct {
 	Description string `json:"description,omitempty"`
 }
 
+// newEnvListCommand returns the read verb for either scope. The SPA's
+// System Environment Variables page is reachable by every user (the
+// menu entry is not gated on isAdmin) — normal users just see system
+// rows with editable=false. We mirror that here: no soft preflight,
+// the server stays authoritative.
 func newEnvListCommand(f *cmdutil.Factory, scope, basePath string) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{
@@ -88,7 +95,9 @@ func newEnvListCommand(f *cmdutil.Factory, scope, basePath string) *cobra.Comman
 		Short: fmt.Sprintf("list %s environment variables", scope),
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runEnvList(c.Context(), f, basePath, output)
+			ctx := c.Context()
+			verb := fmt.Sprintf("list %s env", scope)
+			return preflight.Wrap(ctx, f, runEnvList(ctx, f, basePath, output), verb)
 		},
 	}
 	addOutputFlag(cmd, &output)
@@ -175,7 +184,19 @@ Examples:
 			if len(args) > 0 {
 				return fmt.Errorf("positional %q is not accepted; use --var %s", args[0], args[0])
 			}
-			return runEnvSet(c.Context(), f, basePath, scope, vars)
+			ctx := c.Context()
+			verb := fmt.Sprintf("set %s env", scope)
+			// System env is admin-only in the SPA: rows are rendered
+			// editable=false for normal users, so the matching
+			// scripted verb gets a soft admin gate. User env is
+			// per-user (every authenticated caller can write their
+			// own bag) and therefore stays ungated.
+			if scope == "system" {
+				if err := preflight.Gate(ctx, f, whoami.RoleAdmin, verb); err != nil {
+					return err
+				}
+			}
+			return preflight.Wrap(ctx, f, runEnvSet(ctx, f, basePath, scope, vars), verb)
 		},
 	}
 	cmd.Flags().StringArrayVar(&vars, "var", nil, "KEY=VALUE pair (repeatable; required)")

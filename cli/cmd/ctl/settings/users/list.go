@@ -10,7 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings users list`
@@ -32,8 +34,13 @@ import (
 // settings/me/common.go expects code=0 with a message field. App-service
 // uses code=200 and no message.
 //
-// Role: anyone authenticated. No PreflightRole — the v2 endpoint already
-// degrades gracefully for normal users.
+// Role: admin floor. The SPA only surfaces "Users" in the Settings
+// menu for admin/owner (apps/.../stores/settings/admin.ts:menus); we
+// mirror that here so a non-admin caller gets a refresh-and-retry
+// hint up front rather than a single self-only row that quietly hides
+// the rest of the instance. The server-side v2 endpoint still
+// gracefully degrades, so passing the gate (or running with an empty
+// role cache) yields the same shape the SPA would.
 func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{
@@ -49,7 +56,11 @@ last_login_time, and zone.
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runList(c.Context(), f, output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "list users"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runList(ctx, f, output), "list users")
 		},
 	}
 	addOutputFlag(cmd, &output)

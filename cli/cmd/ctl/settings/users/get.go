@@ -8,7 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings users get <username>`
@@ -28,11 +30,12 @@ import (
 // when no envelope is present, so we stay forward-compatible with
 // whichever shape user-service settles on.
 //
-// Role: app-service does not gate handleUser server-side, so any
-// authenticated user can call this for any username (including users
-// other than themselves). We don't preflight — let the server be
-// authoritative — and surface a clean 404 when the username doesn't
-// exist.
+// Role: admin floor. app-service does not gate handleUser server-side
+// (any authenticated user gets a successful response for any
+// username), but the SPA's "Users" page is admin-only — non-admin
+// users have no UI entry into per-user inspection. We mirror that
+// here so the CLI surface matches the SPA. A 404 still wins when the
+// username doesn't exist on the server.
 func NewGetCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{
@@ -47,7 +50,11 @@ zone, etc.).
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runGet(c.Context(), f, args[0], output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "get user"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runGet(ctx, f, args[0], output), "get user")
 		},
 	}
 	addOutputFlag(cmd, &output)

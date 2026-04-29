@@ -40,7 +40,7 @@ Every request goes through the factory-injected `*http.Client` and the resolved 
 - Two ingress prefixes show up in this subtree:
   - `/api/*` (the bulk of the surface) — terminates at user-service, which proxies BFL / app-service / Headscale / terminusd / search3 / HAMI etc.
   - `/apis/backup/v1/*` (`settings backup`, `settings restore`) — terminates at BFL's backup-server directly.
-- 401 / 403 that survive auto-refresh (i.e. the server still says no after the new token was issued) are intended to be translated into a CLI-friendly hint via the `WrapPermissionErr` + `PreflightRole` helpers in [`cli/cmd/ctl/settings/preflight.go`](cli/cmd/ctl/settings/preflight.go); see "Soft preflight" below for the current wiring status (helpers exist but are not yet plugged into any verb's `RunE`, so today these surface as raw upstream errors). **Token recovery is not handled here — defer to [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).**
+- 401 / 403 that survive auto-refresh (i.e. the server still says no after the new token was issued) are translated into a CLI-friendly hint via the `WrapPermissionErr` + `PreflightRole` helpers in [`cli/pkg/whoami/preflight.go`](cli/pkg/whoami/preflight.go), wrapped per-area through [`cli/cmd/ctl/settings/internal/preflight`](cli/cmd/ctl/settings/internal/preflight). See "Soft preflight" below for which verbs have been retrofitted. **Token recovery is not handled here — defer to [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).**
 
 ## Role caching + soft preflight
 
@@ -64,15 +64,22 @@ olares-cli settings me whoami
 
 Use whichever path makes the surrounding workflow read better; **never** suggest the user "should use the other one" — they are aliases on purpose. All three accept `-o table` (default) and `-o json`.
 
-### Soft preflight (helpers defined, not yet wired)
+### Soft preflight (wired per SPA UI gating)
 
-`settings.PreflightRole(...)` and `settings.WrapPermissionErr(...)` are defined in [`cli/cmd/ctl/settings/preflight.go`](cli/cmd/ctl/settings/preflight.go) and are intended to be called at the top of / around every gated `RunE`. The helpers compile and pass their unit tests, but they are **not yet invoked by any settings verb** in this release.
+`whoami.PreflightRole(...)` + `whoami.WrapPermissionErr(...)` (in [`cli/pkg/whoami/preflight.go`](cli/pkg/whoami/preflight.go)) are wrapped per-area by `preflight.Gate(...)` / `preflight.Wrap(...)` (in [`cli/cmd/ctl/settings/internal/preflight`](cli/cmd/ctl/settings/internal/preflight)) and called at the top of every admin-gated `RunE`.
+
+Floor assignment mirrors the SPA's `apps/.../stores/settings/admin.ts:menus` + per-page `v-if="adminStore.isAdmin"` guards 1:1:
+
+| Floor | Verbs |
+|---|---|
+| **Admin (owner / admin)** | `users list`, `users get`; all `network` verbs (reverse-proxy / frp / external-network / ssl / hosts-file); `gpu list`; `advanced status`, `advanced registries list`, `advanced images list`, `advanced env system set`; `vpn ssh status/enable/disable`, `vpn subroutes status/enable/disable`, `vpn acl all/get/set/add/remove/clear`, `vpn public-domain-policy get/set`, `vpn devices rename/delete/tags set`, `vpn routes enable/disable` |
+| **Normal (any authenticated user)** | `me whoami / version / check-update / sso list`, `me sso revoke`, `me password set`; `apps list/get`, `apps suspend/resume`, all `apps env / domain / policy / entrances` verbs; `vpn devices list`, `vpn devices routes <id>`; `appearance get`, `appearance language set`; `integration accounts list/get/add/delete`; `video config get`; `search status`, `search excludes list/add/rm`, `search dirs list/add/rm`, `search rebuild`; `backup` + `restore` plan/snapshot CRUD; `advanced env (system|user) list`, `advanced env user set` |
 
 Practical implications for the agent:
 
-- Failing role checks today surface as **raw upstream errors** (e.g. `HTTP 403 ...`, `code=400 ... <upstream message>`) rather than the friendly "this command needs role X / run `profile whoami --refresh`" hints described in the helpers' docstrings.
-- The Common errors table further down lists those friendly hints because they're the **target** UX. Once a verb is retrofitted to call the helpers, its error will gain the hint suffix; until then, treat absence of the hint as "this verb is not yet retrofitted", not as a bug.
-- The recovery action for **any** post-call 401/403 is still the same: `olares-cli profile whoami --refresh` then retry. Recommend it whenever a settings verb returns a permission-shaped error, regardless of whether the wrapper added the hint.
+- Admin-floor verbs run an upfront check against the cached role on the active profile and fail fast with **`role required: this command needs role "<R>" or higher to <verb>, but profile "<id>" is cached as "<r>" — run \`olares-cli profile whoami --refresh\` if your role on the server changed`** before issuing any HTTP call.
+- Both floors run their result through `WrapPermissionErr`, so a server-side 401 / 403 (e.g. role changed since last cache write) still gets the same refresh-and-retry hint suffix — even on verbs that don't preflight.
+- If `OwnerRole` isn't cached yet (very fresh `profile import`, or the `whoami_eager` fetch failed), preflight is **soft**: it lets the call through and lets the server be authoritative. Recommend `olares-cli profile whoami --refresh` whenever a settings verb returns a permission-shaped error.
 
 ## Output convention
 
@@ -426,7 +433,6 @@ The verbs below are **not shipped** in this release. They either need more desig
 - **Collect logs** — `POST /api/command/collectLogs` is `X-Signature`-gated.
 - **Backup plan create / update** — full `BackupPolicy` + `LocationConfig` vector; needs either a `--from-file plan.json` mode or an upstream "create from defaults" shortcut before shipping.
 - **Restore plan update / non-cancel delete** — backup-server has no routes for these.
-- **Soft preflight wiring** — the `preflight.go` helpers exist but aren't yet plugged into `RunE`; permission errors today surface as raw upstream HTTP 401 / 403 rather than the friendly "run `profile whoami --refresh`" hint described in Common errors.
 
 Every area's `--help` is the source of truth for what's currently implemented; if a verb isn't there, treat it as deferred.
 
@@ -437,8 +443,8 @@ Every area's `--help` is the source of truth for what's currently implemented; i
 | `refresh token for <id> became invalid at <ts>; please run: olares-cli profile login --olares-id <id>` | `/api/refresh` itself returned 401/403 — the grant is dead (typed `*credential.ErrTokenInvalidated`) | `olares-cli profile login --olares-id <id>`. Defer the full recovery flow to [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md). |
 | `no access token for <id>; run: olares-cli profile login --olares-id <id>` | Profile selected but keychain has no entry (typed `*credential.ErrNotLoggedIn`) | `olares-cli profile login` or `profile import`. |
 | `server rejected the access token (HTTP 401/403)` | Server still rejects after auto-refresh — rare, usually server-side state drift | Defer to [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (login + profile rules). |
-| `this command needs role "<R>" or higher to <verb>, but profile "<id>" is cached as "<r>"` | Cached role below the verb's requirement (only emitted by verbs that are wired to `PreflightRole`; **most settings verbs are not yet wired — see Soft preflight section**) | If your role on the server changed, run `olares-cli profile whoami --refresh`. Otherwise ask the owner to grant you the right role. |
-| `HTTP 403 while attempting to <verb>` (with the same refresh hint appended) | Server rejected even though cache said OK — usually a stale **role** cache (NOT a stale token; the transport already handled that). Only emitted by verbs wired to `WrapPermissionErr`; un-wired verbs return the raw `... HTTP 403 (code=...): <message>` with no hint. | Run `olares-cli profile whoami --refresh`, then retry the verb. |
+| `this command needs role "<R>" or higher to <verb>, but profile "<id>" is cached as "<r>"` | Cached role below the verb's requirement (emitted by admin-floor verbs — see the floor table in "Soft preflight"). | If your role on the server changed, run `olares-cli profile whoami --refresh`. Otherwise ask the owner to grant you the right role. |
+| `HTTP 403 while attempting to <verb>` (with the same refresh hint appended) | Server rejected even though cache said OK — usually a stale **role** cache (NOT a stale token; the transport already handled that). Wrapped on every settings verb. | Run `olares-cli profile whoami --refresh`, then retry the verb. |
 | `unsupported --output "<x>" (allowed: table, json)` | Typo on `-o` | Use `-o table` or `-o json`. |
 | `GET <path>: upstream returned code <N>: <msg>` | The user-service / BFL / backup-server returned a non-success envelope | Read the message verbatim; it almost always carries actionable detail (e.g. "user not found"). |
 | `internal error: settings <area> not wired with cmdutil.Factory` | Unexpected — would only happen if the umbrella was wired without the factory | This is a CLI bug; gather the command line and file an issue. |

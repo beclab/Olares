@@ -12,7 +12,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings vpn acl <app> ...`
@@ -137,7 +139,11 @@ Examples:
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runACLAll(c.Context(), f, output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "list per-app ACLs"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runACLAll(ctx, f, output), "list per-app ACLs")
 		},
 	}
 	addOutputFlag(cmd, &output)
@@ -264,7 +270,11 @@ Example:
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runACLGet(c.Context(), f, args[0], output)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "get per-app ACL"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runACLGet(ctx, f, args[0], output), "get per-app ACL")
 		},
 	}
 	addOutputFlag(cmd, &output)
@@ -363,7 +373,11 @@ Example:
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runACLSet(c.Context(), f, args[0], tcp, udp)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "set per-app ACL"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runACLSet(ctx, f, args[0], tcp, udp), "set per-app ACL")
 		},
 	}
 	cmd.Flags().StringSliceVar(&tcp, "tcp", nil, "TCP destinations (repeat or comma-separate)")
@@ -413,7 +427,11 @@ Example:
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runACLAdd(c.Context(), f, args[0], tcp, udp)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "add per-app ACL entries"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runACLAdd(ctx, f, args[0], tcp, udp), "add per-app ACL entries")
 		},
 	}
 	cmd.Flags().StringSliceVar(&tcp, "tcp", nil, "TCP destinations to add (repeat or comma-separate)")
@@ -468,7 +486,11 @@ Example:
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runACLRemove(c.Context(), f, args[0], tcp, udp)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "remove per-app ACL entries"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runACLRemove(ctx, f, args[0], tcp, udp), "remove per-app ACL entries")
 		},
 	}
 	cmd.Flags().StringSliceVar(&tcp, "tcp", nil, "TCP destinations to remove (repeat or comma-separate)")
@@ -526,7 +548,11 @@ Example:
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runACLClear(c.Context(), f, args[0], assumeYes)
+			ctx := c.Context()
+			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "clear per-app ACL"); err != nil {
+				return err
+			}
+			return preflight.Wrap(ctx, f, runACLClear(ctx, f, args[0], assumeYes), "clear per-app ACL")
 		},
 	}
 	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the confirmation prompt (required for non-TTY automation)")
