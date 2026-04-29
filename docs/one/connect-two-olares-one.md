@@ -12,7 +12,7 @@ For advanced use cases requiring higher availability and distributed storage, yo
 ## Learning objectives
 - Configure a master node with distributed storage support.
 - Resolve hostname conflicts between nodes.
-- Join a worker node to the cluster using the Olares CLI.
+- Join a worker node to the cluster using `joincluster.sh`.
 
 ## Before you begin
 - The default username and password for Olares One are both `olares`.
@@ -24,7 +24,6 @@ For advanced use cases requiring higher availability and distributed storage, yo
 ## Prerequisites
 **Hardware**<br>
 - Two Olares One units connected to the same local area network.
-- Both units running the same version of Olares OS.
 - You know the local IP addresses of both units.
 
 **Experience**<br>
@@ -78,6 +77,16 @@ After setup is complete, the LarePass app returns to the home screen, and the Wi
 
 ## Step 2: Set up the worker node
 
+:::info Worker node requirements before joining
+The worker must be in one of these states:
+
+- **Factory state (Olares pre-installed)**: Olares is pre-installed and the version matches the master node.
+
+  If the versions no longer match (for example, the master was upgraded to v1.12.5 while the worker still runs v1.12.4), run `sudo olares-cli uninstall --all` first to wipe the worker to a clean Linux state.
+
+- **Clean Linux**: No Olares installed.
+:::
+
 1. Access the worker node via SSH.
     ```bash
     ssh olares@<Worker-IP-Address>
@@ -89,43 +98,29 @@ After setup is complete, the LarePass app returns to the home screen, and the Wi
     :::info
     By default, all Olares One units have the hostname `olares`. Kubernetes requires unique hostnames for every node in a cluster. Before joining it to the cluster, you must ensure it has a unique hostname.
     :::
+3. Download `joincluster.sh`:
 
-3. Verify that the worker node can communicate with the master and that versions are compatible.
-    ```bash
-    sudo olares-cli node masterinfo \
-    --master-host=<Master-IP-Address> \
-    --master-ssh-user=olares \
-    --master-ssh-password=<Password>
+    ::: code-group
+    ```bash [curl]
+    # This command is for users who have curl installed.
+    curl -fsSL https://raw.githubusercontent.com/beclab/Olares/refs/heads/main/build/base-package/joincluster.sh -o joincluster.sh
     ```
 
-   Example output:
+    ```bash [wget]
+    # This command is for users who have wget installed.
+    wget https://raw.githubusercontent.com/beclab/Olares/refs/heads/main/build/base-package/joincluster.sh
+    ```
+    :::
+4. Run the script with the master node details:
     ```bash
-    current: root
-    2026-01-13T06:10:41.874Z        [Job] [Get Master Info] start ...
-    2026-01-13T06:10:41.874Z        [Module] GetMasterInfo
-    2026-01-13T06:10:42.528Z        Got master info:
-    OlaresVersion: 1.12.3
-    JuiceFSEnabled: true
-    KubernetesType: k3s
-    MasterNodeName: olares
-    AllNodes: olares
-    
-    2026-01-13T06:10:42.528Z        [A] olares: GetMasterInfo success (654.711582ms)
-    2026-01-13T06:10:42.529Z        [A] olares-worker: AddNodePrecheck success (37.084µs)
-    2026-01-13T06:10:42.529Z        [Job] Get Master Info execute successfully!!! (654.871193ms)
+    export MASTER_HOST=<Master-IP-Address> \
+        MASTER_NODE_NAME=olares \
+        MASTER_SSH_USER=olares \
+        MASTER_SSH_PASSWORD=<Password>
+    ./joincluster.sh
     ```
 
-4. Run the add node command. Ensure the `--version` matches the version found in the pre-check output (e.g., `1.12.3`):
-
-    ```bash
-    sudo olares-cli node add \
-    --master-host=<Master-IP-Address> \
-    --master-ssh-user=olares \
-    --master-ssh-password=<Password> \
-    --version=<Olares-Version>
-    ```
-
-5. Perform the same installation and activation steps for the worker node.
+   The script automatically detects whether Olares is already installed on the worker, runs the pre-install check against the master, and joins the cluster.
 
 ## Step 3: Verify the cluster
 
