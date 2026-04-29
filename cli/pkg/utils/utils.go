@@ -35,8 +35,8 @@ import (
 	"text/template"
 	"time"
 
-	"bytetrade.io/web3os/backups-sdk/pkg/utils"
 	"golang.org/x/term"
+	"olares.com/backups-sdk/pkg/utils"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"

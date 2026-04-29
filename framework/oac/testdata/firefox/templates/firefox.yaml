@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.28.0 (c4137012e)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: firefox
+  name: firefox
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: firefox
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert
+        kompose.version: 1.28.0 (c4137012e)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/chrome-default: "true"
+        io.kompose.service: firefox
+    spec:
+      containers:
+        - env:
+            - name: CHROME_CLI
+              value: https://www.linuxserver.io/
+            - name: PGID
+              value: "1000"
+            - name: PUID
+              value: "1000"
+            - name: TZ
+              value: Etc/UTC
+            - name: DISPLAY
+              value: ':0'               
+          image: docker.io/aboveos/linuxserver-firefox:131.0.3
+          name: firefox
+          command:
+            - bash
+            - '-c'
+            - >-
+              apt-get update; apt-get install -y fonts-wqy-zenhei
+              fonts-wqy-microhei; fc-cache -fv; /init
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 3000m
+              memory: 3Gi
+          ports:
+            - containerPort: 3000
+            - containerPort: 3001
+          volumeMounts:
+            - mountPath: /config
+              name: config
+            - mountPath: /config33
+              name: config33
+            - mountPath: /home
+              name: userdata
+            - mountPath: /config34
+              name: config34
+            - name: dshm 
+              mountPath: /dev/shm     
+      restartPolicy: Always
+      volumes:
+        - name: config
+          hostPath:
+            type: DirectoryOrCreate
+            path: {{ .Values.userspace.appCache }}/firefox
+        - hostPath:
+            path: '{{ .Values.userspace.userData }}'
+            type: DirectoryOrCreate
+          name: userdata
+        - name: config33
+          hostPath:
+            type: DirectoryOrCreate
+            path: {{ .Values.userspace.appCache }}/firefox333
+        - name: config34
+          hostPath:
+            type: DirectoryOrCreate
+            path: {{ .Values.userspace.appCache }}/firefox334
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 512Mi 
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.28.0 (c4137012e)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: firefox
+  name: firefox
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: "3000"
+      port: 3000
+      targetPort: 3000
+    - name: "3001"
+      port: 3001
+      targetPort: 3001
+  selector:
+    io.kompose.service: firefox
+status:
+  loadBalancer: {}

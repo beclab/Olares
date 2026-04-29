@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.pods",
+  "description": "Per-node running-pod count snapshot (last/avg/max over the sliding window).",
+  "type": "object",
+  "required": ["kind", "meta", "items"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.pods"},
+    "meta": {"type": "object"},
+    "items": {"type": "array", "items": {"type": "object"}}
+  }
+}

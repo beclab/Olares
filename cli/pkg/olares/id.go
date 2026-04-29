@@ -2,7 +2,8 @@
 // into a more specific subpackage.
 //
 // id.go: parse an Olares ID (e.g. "alice@olares.com") and derive the URLs of
-// the per-user services that olares-cli talks to (auth / vault / desktop).
+// the per-user services that olares-cli talks to (auth / vault / desktop /
+// files / market / dashboard).
 //
 // Background: every Olares user is identified by an "olaresId" of the form
 // "<local>@<domain>". The terminus name is the same identity rendered with a
@@ -133,4 +134,16 @@ func (id ID) FilesURL(localPrefix string) string {
 // header here as it does for files / vault / desktop.
 func (id ID) MarketURL(localPrefix string) string {
 	return fmt.Sprintf("https://market.%s%s", localPrefix, id.TerminusName())
+}
+
+// DashboardURL returns the per-user dashboard BFF base URL, e.g.
+// "https://dashboard.alice.olares.com". The dashboard SPA itself is served
+// here, and its Koa-based ks-apiserver-proxy backend is reachable at the
+// same origin under `/capi/*` (custom aggregation), `/(k)?api(s)?/*`
+// (wildcard kubesphere proxy), `/user-service/*` (BFL) and `/hami/*`
+// (HAMI vGPU). Same edge auth chain as the other per-user URLs —
+// X-Authorization is honored and 401/403 are recoverable via /api/refresh.
+// olares-cli's `dashboard` command tree talks to this URL.
+func (id ID) DashboardURL(localPrefix string) string {
+	return fmt.Sprintf("https://dashboard.%s%s", localPrefix, id.TerminusName())
 }

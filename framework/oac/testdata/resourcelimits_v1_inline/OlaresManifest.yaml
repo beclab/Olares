@@ -1,0 +1,39 @@
+olaresManifest.version: "0.12.0"
+olaresManifest.type: app
+apiVersion: v1
+metadata:
+  name: rcv1inline
+  icon: https://example.com/icon.png
+  description: fixture
+  title: Fixture
+  version: 1.0.0
+entrances:
+  - name: main
+    host: myfixture
+    port: 8080
+    title: Main
+    icon: https://example.com/e.png
+    authLevel: public
+    openMethod: default
+spec:
+  versionName: v1
+  fullDescription: x
+  upgradeDescription: x
+  promoteImage: []
+  promoteVideo: ""
+  subCategory: s
+  developer: dev
+  supportArch: [amd64, arm64]
+  resources:
+    - mode: cpu
+      requiredCpu: 100m
+      limitedCpu: 200m
+      requiredMemory: 128Mi
+      limitedMemory: 256Mi
+      requiredDisk: 1Gi
+      limitedDisk: 2Gi
+permission:
+  appData: false
+options:
+  policies: []
+  resetCookie: { enabled: false }

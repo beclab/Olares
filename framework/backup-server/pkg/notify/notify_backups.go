@@ -104,7 +104,7 @@ func NotifyBackup(ctx context.Context, cloudApiUrl string, backup *Backup) error
 		var result *Response
 		client := resty.New().SetTimeout(15 * time.Second).
 			SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}).
-			SetDebug(constant.DebugMode)
+			SetDebug(false)
 
 		resp, err := client.R().
 			SetContext(ctx).
@@ -218,7 +218,7 @@ func CheckCloudStorageQuotaAndPermission(ctx context.Context, cloudApiUrl string
 	var data = fmt.Sprintf("userid=%s&token=%s", userId, token)
 	var result *Usage
 
-	log.Infof("[notify] check backup usage data: %s", data)
+	log.Info("[notify] check backup usage")
 
 	if err := retry.OnError(backoff, func(err error) bool {
 		return true
@@ -243,6 +243,8 @@ func CheckCloudStorageQuotaAndPermission(ctx context.Context, cloudApiUrl string
 			log.Errorf("[notify] check backup usage failed, data is nil")
 			return fmt.Errorf("check backup usage failed, data is nil")
 		}
+
+		log.Infof("[notify] usaged: %s", util.ToJSON(result.Data))
 
 		return nil
 	}); err != nil {

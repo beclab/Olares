@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rcv1big
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rcv1big
+  template:
+    metadata:
+      labels:
+        app: rcv1big
+    spec:
+      containers:
+        - name: main
+          image: nginx:1
+          resources:
+            requests:
+              cpu: 200m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

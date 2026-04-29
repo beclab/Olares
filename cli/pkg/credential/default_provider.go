@@ -138,6 +138,7 @@ func buildResolved(profile *cliconfig.ProfileConfig, accessToken string, exp tim
 		SettingsURL:        id.SettingsURL(profile.LocalURLPrefix),
 		FilesURL:           id.FilesURL(profile.LocalURLPrefix),
 		MarketURL:          id.MarketURL(profile.LocalURLPrefix),
+		DashboardURL:       id.DashboardURL(profile.LocalURLPrefix),
 		AccessToken:        accessToken,
 		InsecureSkipVerify: profile.InsecureSkipVerify,
 	}
