@@ -7,24 +7,17 @@
 // that bundles a small set of self-service items every authenticated user
 // (including owner) routinely uses:
 //
-//	whoami        cached role + olaresId          (Phase 0b — alias for
-//	                                              `olares-cli profile whoami`)
-//	version       current OS version              (Phase 1)
-//	check-update  is there a newer release        (Phase 1)
-//	sso list      issued SSO authorization tokens (Phase 1)
-//	sso revoke    revoke an SSO token             (Phase 2)
-//	password set  change own password             (Phase 2)
+//	whoami        cached role + olaresId           (alias for `olares-cli profile whoami`)
+//	version       current OS version
+//	check-update  is there a newer release
+//	sso list      issued SSO authorization tokens
+//	sso revoke    revoke an SSO token
+//	password set  change own password
 //
 // All `me` verbs are roleNormal-floor: every authenticated user can call
 // them. Browser-bound / TermiPass-bound Person sub-pages (Hardware QR,
 // VaultActiveSession, OlaresSpace, Authority) are intentionally excluded —
 // see plan.md's "Self-service sub-tree" section for the rationale.
-//
-// Removed verbs (kept for archaeology):
-//   login-history — removed 2026-04-28 (KI-1 in KNOWN_ISSUES.md). The
-//     SPA entry was commented out in IndexPage.vue and user-service no
-//     longer routes /api/users/<u>/login-records, so the verb was a
-//     guaranteed 500. See git history for the prior implementation.
 package me
 
 import (
@@ -33,9 +26,9 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewMeCommand returns the `settings me` parent. Subcommands land in later
-// phases; the parent prints help by default, which is enough confirmation
-// that the umbrella wires through.
+// NewMeCommand returns the `settings me` parent. The parent prints help
+// by default; subcommands cover whoami / version / check-update / SSO
+// session management / password change.
 func NewMeCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "me",
@@ -47,10 +40,13 @@ the SPA's avatar/Person dropdown items have an obvious CLI home without
 bloating the 12 documented Settings sections. Every verb here is callable
 by any authenticated user (owner / admin / user).
 
-Subcommands will be added in subsequent phases:
-  Phase 0b: whoami        (alias for "olares-cli profile whoami")
-  Phase 1:  version, check-update, sso list
-  Phase 2:  sso revoke, password set
+Subcommands:
+  whoami                  alias for "olares-cli profile whoami"
+  version                 current OS version
+  check-update            check for a newer release
+  sso list                list issued SSO authorization tokens
+  sso revoke <id>         revoke an SSO token
+  password set            change the current user's password
 `,
 	}
 	cmd.SilenceUsage = true

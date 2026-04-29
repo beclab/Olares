@@ -28,7 +28,6 @@ import (
 //   8  ConfigureIngressHTTPs
 //   9  CheckTunnel
 //
-// Phase 1 ships GET; Phase 4 will add `enable` (POST /api/ssl/enable).
 func NewSSLCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ssl",
@@ -38,9 +37,9 @@ machine that drives the activation wizard's "checking certificate"
 step.
 
 Subcommands:
-  status   show the current ssl task state                (Phase 1)
+  status   show the current ssl task state
 
-Subcommands landing in Phase 4:
+Out of scope until a JWS key sourcing path exists:
   enable   re-trigger HTTPS provisioning (POST /api/ssl/enable)
 `,
 	}

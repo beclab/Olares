@@ -22,7 +22,7 @@ import (
 // Other appearance bits (login background, desktop style, theme picker,
 // wallpaper image upload) are intentionally browser-bound and stay out
 // of CLI scope — they're either visual blob workflows or only meaningful
-// inside an active SPA session. Phase 2 will add `language set`.
+// inside an active SPA session.
 func NewGetCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{

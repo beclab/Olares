@@ -22,10 +22,10 @@ import (
 // surfaces them under Person -> SSOToken; we mirror the same view here
 // so users can audit / clean up sessions from the CLI.
 //
-// Phase 1 / 2 verbs:
+// Verbs:
 //
-//   list      -> `olares-cli settings me sso list`        (Phase 1)
-//   revoke    -> `olares-cli settings me sso revoke <id>` (Phase 2)
+//   list      -> `olares-cli settings me sso list`
+//   revoke    -> `olares-cli settings me sso revoke <id>`
 //
 // Backend: user-service/src/device2.controller.ts. The list handler
 // (@Get('/sso')) proxies Authelia (authelia-backend-svc:9091/api/usertokens)
@@ -44,13 +44,12 @@ import (
 //     ...
 //   ]
 //
-// Wire-shape note (KI-2 in KNOWN_ISSUES.md, fixed 2026-04-28):
-//   - authLevel: string (not int as the CLI used to declare). user-service
-//     transparently forwards Authelia's raw.authLevel which has always
-//     been a string.
-//   - firstFactorTimestamp / secondFactorTimestamp: number (not string
-//     as the CLI used to declare). Modeled here as int64 to match
-//     ExpireTime / CreateTime — they share the epoch-seconds semantics.
+// Wire-shape pins:
+//   - authLevel ships as a string (e.g. "one_factor" / "two_factor");
+//     user-service transparently forwards Authelia's raw.authLevel.
+//   - firstFactorTimestamp / secondFactorTimestamp are numeric. Modeled
+//     here as int64 to match ExpireTime / CreateTime — they share the
+//     epoch-seconds semantics.
 //
 // The id used by `revoke` is `entry.termiPass.sso` (only tokens with a
 // bound TermiPass device can be revoked from the SPA either; the SPA
@@ -68,8 +67,8 @@ JWTs back the OIDC/SSO sessions Authelia hands out to third-party clients
 and to TermiPass devices bound to this account.
 
 Subcommands:
-  list                            list active SSO tokens          (Phase 1)
-  revoke <id>                     revoke a TermiPass-bound token  (Phase 2)
+  list                            list active SSO tokens
+  revoke <id>                     revoke a TermiPass-bound token
 `,
 	}
 	cmd.SilenceUsage = true

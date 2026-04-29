@@ -45,7 +45,7 @@ func newAccountsAddCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Add an integration account against user-service's
 POST /api/account/create.
 
-Phase 2 ships the *direct* object-storage flows that don't need an
+This verb covers the *direct* object-storage flows that don't need an
 OAuth/wallet redirect:
 
   add awss3      AWS S3 (or any S3-compatible endpoint)

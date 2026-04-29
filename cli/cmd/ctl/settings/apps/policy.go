@@ -145,9 +145,9 @@ is passed; pass --clear-sub-policies to drop them.
 // newPolicyListCommand registers `apps policy list <app>`. Same shape /
 // motivation as `apps domain list`: fan out one GET /setup/policy per
 // entrance so users without a known entrance name can land on
-// per-entrance results in one command. Closes the KI-17 "policy get
-// <app>" complaint by introducing a "list <app>" sibling rather than
-// loosening the strict 2-arg signature of "get".
+// per-entrance results in one command. Acts as a `policy get` sibling
+// for the case where the entrance name is unknown ahead of time,
+// without loosening the strict 2-arg signature of `get`.
 func newPolicyListCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{

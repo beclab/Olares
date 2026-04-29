@@ -23,8 +23,6 @@ import (
 // The SPA passes `registry` as a query string, so we expose it as
 // `--registry`. The default (no --registry) aggregates across all
 // registries.
-//
-// Phase 5 will add `delete <id>` and `prune`.
 func NewImagesCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "images",
@@ -32,9 +30,9 @@ func NewImagesCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `List containerd images, optionally scoped to a single registry.
 
 Subcommands:
-  list   list images                                      (Phase 1)
+  list   list images
 
-Subcommands landing in Phase 5 (JWS-signed):
+Out of scope until a JWS key sourcing path exists:
   delete <id>, prune
 `,
 	}

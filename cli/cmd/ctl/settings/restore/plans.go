@@ -18,12 +18,11 @@ import (
 //
 // Backed by /apis/backup/v1/plans/restore?offset=&limit= on the BFL
 // backup-server. Returns a BFL envelope around { restores: [...] }
-// (and probably a totalCount). The SPA pages forward via offset
-// with a fixed limit of 50; Phase 1 mirrors that.
+// (and probably a totalCount). The SPA pages forward via offset with
+// a fixed limit of 50; the CLI mirrors that default.
 //
-// Phase 6 lands `check-url`, `create-from-snapshot`, `create-from-url`,
-// and `cancel`. `update` and `delete` (non-cancel) are intentionally
-// out of scope: backup-server has no routes for them — see
+// `update` and `delete` (non-cancel) are intentionally out of scope:
+// backup-server has no routes for them — see
 // `framework/backup-server/pkg/modules/backup/v1/register.go`.
 func NewPlansCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
@@ -32,13 +31,12 @@ func NewPlansCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Manage restore plans on the BFL backup-server.
 
 Subcommands:
-  list                                                          (Phase 1)
+  list
   check-url --backup-url URL [--password ... | --password-stdin]
-                                                                (Phase 6)
-  create-from-snapshot --snapshot-id SID --path PATH            (Phase 6)
+  create-from-snapshot --snapshot-id SID --path PATH
   create-from-url --backup-url URL --path PATH [--dir DIR]
-                  [--password ... | --password-stdin]           (Phase 6)
-  cancel <id> [--yes]                                           (Phase 6)
+                  [--password ... | --password-stdin]
+  cancel <id> [--yes]
 
 Out of scope (no backup-server route):
   update / delete (non-cancel)

@@ -41,10 +41,10 @@ Olares injects into apps. The corresponding per-app surface lives at
 "olares-cli settings apps env get|set <name>".
 
 Subcommands:
-  system list                                                 (Phase 4)
-  system set --var KEY=VALUE [--var ...]                      (Phase 4)
-  user   list                                                 (Phase 4)
-  user   set --var KEY=VALUE [--var ...]                      (Phase 4)
+  system list
+  system set --var KEY=VALUE [--var ...]
+  user   list
+  user   set --var KEY=VALUE [--var ...]
 
 NOTE: "set" requires --var KEY=VALUE flags (repeatable). Bare positional
 "KEY=VALUE" is NOT accepted — Cobra would treat the first token as a

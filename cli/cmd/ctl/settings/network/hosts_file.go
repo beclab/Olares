@@ -26,19 +26,18 @@ import (
 // back to the access token (see olaresd/utils.ts). The CLI sends only
 // X-Authorization, so this verb works as long as olaresd accepts
 // authorization-header callers — if a future release tightens that,
-// we'll have to surface a JWS-signing path here. Phase 4 will land
-// the matching `set` command, which has the same caveat.
+// we'll have to surface a JWS-signing path here.
 func NewHostsFileCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "hosts-file",
 		Short: "system hosts-file (Settings -> Network)",
-		Long: `Inspect or change the system hosts-file used for custom DNS
-resolution inside the Olares mesh.
+		Long: `Inspect the system hosts-file used for custom DNS resolution
+inside the Olares mesh.
 
 Subcommands:
-  get   show the current hosts-file entries               (Phase 1)
+  get   show the current hosts-file entries
 
-Subcommands landing in Phase 4:
+Out of scope until a JWS key sourcing path exists:
   set   replace the entire hosts-file (atomic write)
 `,
 	}

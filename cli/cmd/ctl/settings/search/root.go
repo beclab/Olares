@@ -10,9 +10,8 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewSearchCommand returns the `settings search` parent. Phase 1 shipped
-// the read-only verbs (status / excludes list / dirs list); Phase 2 adds
-// rebuild + add/rm verbs for excludes/dirs.
+// NewSearchCommand returns the `settings search` parent: index status,
+// full-rebuild trigger, and exclude pattern / indexed directory editors.
 func NewSearchCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "search",
@@ -20,14 +19,14 @@ func NewSearchCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Manage the local search index: status / rebuild / excludes / dirs.
 
 Subcommands:
-  status                                                  (Phase 1)
-  rebuild                                                 (Phase 2)
-  excludes list                                           (Phase 1)
-  excludes add <pattern>...                               (Phase 2)
-  excludes rm  <pattern>...                               (Phase 2)
-  dirs list                                               (Phase 1)
-  dirs add  <path>...                                     (Phase 2)
-  dirs rm   <path>...                                     (Phase 2)
+  status
+  rebuild
+  excludes list
+  excludes add <pattern>...
+  excludes rm  <pattern>...
+  dirs list
+  dirs add  <path>...
+  dirs rm   <path>...
 
 Streaming search proxies stay out of scope — they are interactive,
 chat-style flows that don't fit a one-shot CLI verb.

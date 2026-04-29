@@ -7,9 +7,9 @@
 // Caveats:
 //   - The daemon side is JWS-signed for write paths. user-service's
 //     getXSignatureByRequest falls back to X-Authorization for read
-//     paths, so the CLI's bearer-token works for `status`, `registries
-//     list`, and `images list`. Phase 5 adds the daemon write/restart
-//     verbs, which need real JWS-signing first.
+//     paths, so the CLI's bearer token works for `status`, `registries
+//     list`, and `images list`. Daemon write / restart verbs require
+//     real JWS signing and stay out of scope until that lands.
 //   - This is the profile-based settings surface. Hardware/cluster
 //     verbs that don't go through user-service live under the existing
 //     top-level `olares-cli` subtrees.

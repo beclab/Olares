@@ -22,20 +22,20 @@ import (
 //     "status": { "phase": "...", "message": "...", "updatedAt": "RFC3339" }
 //   }
 //
-// Phase 1 ships GET; Phase 4 will add `set --enable / --disable`,
-// which is owner-only on the BFL side (BFL returns 400 to non-owners).
+// Only the read verb is in scope today; the matching write requires a
+// JWS-signed device-id header on the BFL side and is owner-only.
 func NewExternalNetworkCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "external-network",
 		Short: "external-network switch (Settings -> Network)",
-		Long: `Inspect or change the master "external network" switch. When disabled,
-the reverse-proxy agent and DNS configuration are frozen — useful for
+		Long: `Inspect the master "external network" switch. When disabled, the
+reverse-proxy agent and DNS configuration are frozen — useful for
 keeping an Olares isolated from the public internet.
 
 Subcommands:
-  get   show the current state                            (Phase 1)
+  get   show the current state
 
-Subcommands landing in Phase 4 (owner-only):
+Out of scope until a JWS key sourcing path exists (owner-only):
   set   --enable / --disable
 `,
 	}

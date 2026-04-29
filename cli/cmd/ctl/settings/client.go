@@ -29,15 +29,14 @@ import (
 // apps/packages/app/src/stores/desktop/token.ts and the SPA's backup store at
 // apps/packages/app/src/api/settings/backup.ts) — no extra host derivation
 // needed, just two path prefixes. We don't bake either prefix into the
-// client; callers pass full paths so backup/restore code in Phase 6 doesn't
-// need a second client type.
+// client; callers pass full paths so the backup/restore tree can share the
+// same client type.
 type SettingsClient struct {
 	httpClient *http.Client
 	baseURL    string
 
-	// Identity bits captured from the resolved profile, used by:
-	//   - 401/403 reformatting (CTA mentions OlaresID),
-	//   - whoami's eventual cache write in Phase 0b.
+	// Identity bits captured from the resolved profile, used by 401/403
+	// reformatting (the CTA mentions OlaresID) and any whoami cache writes.
 	olaresID    string
 	accessToken string
 }
@@ -52,14 +51,11 @@ type SettingsClient struct {
 // today (each area's common.go builds its own whoami.NewHTTPClient). It is
 // kept as scaffolding for potential future settings-tree consolidation.
 // When/if it gets a real caller, decide per-call whether DesktopURL or
-// rp.SettingsURL is the right base — see the per-area split documented in
-// olares.ID.DesktopURL / olares.ID.SettingsURL and KNOWN_ISSUES.md KI-12 /
-// KI-16: only verbs that hit settings-only nginx locations
-// (/headscale, /apis/backup, /admin, /drive, /vault, /images,
-// /api/cloud/sign) need rp.SettingsURL; everything else stays on
-// rp.DesktopURL to preserve baseline-verified behavior (notably the
-// /api/device, /api/refresh, /api/logout reverse proxies that exist only
-// in desktop.conf).
+// rp.SettingsURL is the right base. Only verbs that hit settings-only
+// nginx locations (/headscale, /apis/backup, /admin, /drive, /vault,
+// /images, /api/cloud/sign) need rp.SettingsURL; everything else stays
+// on rp.DesktopURL — the /api/device, /api/refresh and /api/logout
+// reverse proxies exist only in desktop.conf.
 func NewSettingsClient(hc *http.Client, rp *credential.ResolvedProfile) *SettingsClient {
 	return &SettingsClient{
 		httpClient:  hc,
@@ -69,9 +65,9 @@ func NewSettingsClient(hc *http.Client, rp *credential.ResolvedProfile) *Setting
 	}
 }
 
-// BaseURL exposes the desktop ingress base URL for callers that build their
-// own paths (e.g. Phase 0b's whoami helper, Phase 6's backup-server helpers).
-// Returned without a trailing slash so callers can prepend "/api/..." or
+// BaseURL exposes the desktop ingress base URL for callers that build
+// their own paths (whoami, the backup-server helpers, etc.). Returned
+// without a trailing slash so callers can prepend "/api/..." or
 // "/apis/backup/v1/..." without doubling slashes.
 func (c *SettingsClient) BaseURL() string { return c.baseURL }
 
@@ -106,17 +102,12 @@ func (c *SettingsClient) DoJSON(ctx context.Context, method, path string, body, 
 	if reqBody != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	// 2026-04-28 KI-12 / KI-15 / KI-16 reverted: an earlier draft
-	// also injected `Origin: <baseURL>` and `Referer: <baseURL>/`
-	// to mimic the browser/SPA shape. That caused a global
-	// regression — Authelia's CSRF/Origin gate on the desktop
-	// ingress takes the presence of an Origin header on a Go-style
-	// non-browser request as a sign of a forged request and
-	// redirects to login → 400 Bad Request HTML on every path that
-	// previously worked (31/34 verbs flipped from ok to fail). Until
-	// we have an actual Authelia config dump showing what shape it
-	// expects, we leave Origin/Referer unset (Go's default) so the
-	// /api/* paths keep working.
+	// Note: Origin / Referer headers are intentionally left unset.
+	// Authelia's CSRF/Origin gate on the desktop ingress treats an
+	// Origin on a non-browser request as a forged-request signal and
+	// redirects to login (400 Bad Request HTML). Until the Authelia
+	// config explicitly accepts a CLI Origin, leaving those headers
+	// at Go's defaults keeps every /api/* path working.
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

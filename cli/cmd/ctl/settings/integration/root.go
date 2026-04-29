@@ -11,9 +11,9 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewIntegrationCommand returns the `settings integration` parent.
-// Phase 1 shipped read-only verbs; Phase 2 adds add (object-storage) /
-// delete.
+// NewIntegrationCommand returns the `settings integration` parent:
+// inspect, add (object-storage credentials only) and delete external
+// integration accounts.
 func NewIntegrationCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "integration",
@@ -21,11 +21,11 @@ func NewIntegrationCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Manage integration accounts (S3 / Dropbox / Google Drive / Tencent COS / ...).
 
 Subcommands:
-  accounts list                                           (Phase 1)
-  accounts get <type> [name]                              (Phase 1)
-  accounts add awss3   [flags]                            (Phase 2)
-  accounts add tencent [flags]                            (Phase 2)
-  accounts delete <type> [name]                           (Phase 2)
+  accounts list
+  accounts get <type> [name]
+  accounts add awss3   [flags]
+  accounts add tencent [flags]
+  accounts delete <type> [name]
 
 OAuth flows (Google Drive, Dropbox), the cookie store and the
 Olares-Space / NFT cloud-binding flows stay in the SPA — they are

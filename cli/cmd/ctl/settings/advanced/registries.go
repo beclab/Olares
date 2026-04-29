@@ -19,8 +19,6 @@ import (
 //
 //   { "name": "...", "image_count": <int>, "image_size": <int>,
 //     "endpoints": ["..."] | null }
-//
-// Phase 5 will add `mirrors get/set/delete` and `prune`.
 func NewRegistriesCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "registries",
@@ -28,9 +26,9 @@ func NewRegistriesCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Inspect containerd registry mirrors / image cache distribution.
 
 Subcommands:
-  list                                                    (Phase 1)
+  list
 
-Subcommands landing in Phase 5 (JWS-signed):
+Out of scope until a JWS key sourcing path exists:
   mirrors get <registry>, mirrors set <registry> <endpoint>...,
   mirrors delete <registry>, prune
 `,

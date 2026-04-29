@@ -18,7 +18,7 @@ import (
 // FileSearch.vue uses to render the "exclude pattern" list. The wire
 // body is search3's {code, message, data: string[]} envelope.
 //
-// Phase 2 adds `add` / `rm` against /exclude-pattern/part with the body
+// `add` / `rm` POST against /exclude-pattern/part with body
 // `{exclude_pattern: [...]}`.
 //
 // SPA reference: apps/packages/app/src/api/settings/search.ts
@@ -34,9 +34,9 @@ func NewExcludesCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Inspect and edit the search index's exclude-pattern list.
 
 Subcommands:
-  list                                                    (Phase 1)
-  add <pattern>...                                        (Phase 2)
-  rm  <pattern>...                                        (Phase 2)
+  list
+  add <pattern>...
+  rm  <pattern>...
 `,
 	}
 	cmd.SilenceUsage = true

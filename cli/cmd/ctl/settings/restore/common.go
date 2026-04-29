@@ -7,14 +7,8 @@
 //     under `/apis/backup/v1/plans/restore/...`. Same BFL envelope
 //     handling as `settings backup`.
 //   - The URL pre-flight (`/apis/backup/v1/plans/restore/checkurl`)
-//     is a POST that takes a restic URL + password and lists
-//     candidate snapshots. Phase 6 will expose it as
-//     `restore check-url <url>`. We deliberately don't ship it in
-//     Phase 1 because (a) it's a POST and (b) it bears no read-only
-//     analogue that's safe to default on.
-//
-// We keep the Phase 1 surface to a single read-only verb
-// (`plans list`) that mirrors the SPA's Restore page list.
+//     is a POST that takes a restic-style URL + password and lists
+//     candidate snapshots, exposed as `plans check-url`.
 package restore
 
 import (

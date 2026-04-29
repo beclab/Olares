@@ -10,8 +10,9 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewAppearanceCommand returns the `settings appearance` parent. Phase 1
-// shipped `get`; Phase 2 adds `language set`.
+// NewAppearanceCommand returns the `settings appearance` parent: read
+// the language / locale and update the system language. Wallpaper +
+// theme picker stay in the SPA (browser blob/picker flows).
 func NewAppearanceCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "appearance",
@@ -19,8 +20,8 @@ func NewAppearanceCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Read and update appearance preferences (Settings -> Appearance).
 
 Subcommands:
-  get                              show language + locale         (Phase 1)
-  language set --value <code>      update the system language     (Phase 2)
+  get                              show language + locale
+  language set --value <code>      update the system language
 
 Wallpaper image upload + theme picker stay in the SPA — they are browser
 blob/picker flows with no useful CLI surface.

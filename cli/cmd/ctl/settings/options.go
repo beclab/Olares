@@ -26,11 +26,10 @@ var errReported = errors.New("(already reported)")
 // global --profile flag wired through cmdutil.Factory drives both, exactly
 // the way `olares-cli files`/`market` resolve identity.
 //
-// Phase 0a only wires output flags, factory, and a thin prepare() that yields
-// a ready-to-use SettingsClient pointed at the desktop ingress. Phase 0b adds
-// role-tag plumbing on top of this struct (RoleRequired, NoRoleCheck) and a
-// preflight helper. Per-command flags (e.g. --node, --app) get added to this
-// struct as the matching verbs land in Phase 1+.
+// SettingsOptions wires output flags, the factory, and a thin prepare()
+// that yields a ready-to-use SettingsClient pointed at the desktop
+// ingress. Per-command flags (e.g. --node, --app) hang off the
+// per-area structs that compose this one.
 type SettingsOptions struct {
 	factory *cmdutil.Factory
 

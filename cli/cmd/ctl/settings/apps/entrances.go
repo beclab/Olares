@@ -47,7 +47,7 @@ type entrancesEnvelope struct {
 }
 
 // NewEntrancesCommand returns the `settings apps entrances` parent.
-// Phase 3 ships only `list`; the per-entrance setup verbs live as
+// Only `list` lives here; the per-entrance setup verbs live as
 // top-level commands (`apps domain`, `apps policy`, `apps auth-level`)
 // rather than nested under `entrances` because the SPA flattens them
 // into separate side-panels rather than nesting under a single

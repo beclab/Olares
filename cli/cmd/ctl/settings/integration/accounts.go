@@ -22,18 +22,15 @@ import (
 //   GET  /api/account/:type                 → mini list per type       (list-by-type verb)
 //   POST /api/account/retrieve {name}       → single full record       (get verb)
 //
-// 2026-04-28 KI-14 split + retrieve fix: previously `accounts get <type>`
-// (single positional) decoded a single object, but `GET :type/:name`
-// upstream actually returns `[]IntegrationAccountMiniData` (same shape
-// as `/all` but filtered to one type/name) — see
-// account.service.ts:88-95 `getIntegrationAccountByAccountType` →
-// `IntegrationAccountMiniData[]`. That caused
-// `cannot unmarshal array into Go value of type integration.accountFull`.
-// The SPA itself handles this by hitting a *different* endpoint for
-// the full record: settings/src/stores/settings/integration.ts:166-174
+// `GET /api/account/:type` upstream returns
+// `[]IntegrationAccountMiniData` (same shape as `/all` but filtered to
+// one type/name) — see account.service.ts:88-95
+// `getIntegrationAccountByAccountType` → `IntegrationAccountMiniData[]`.
+// The SPA hits a *different* endpoint for the full record:
+// settings/src/stores/settings/integration.ts:166-174
 // `getAccountFullData` → `POST /api/account/retrieve { name: key }`
-// where `key = "integration-account:<type>:<name>"`. The CLI now
-// mirrors that exactly:
+// where `key = "integration-account:<type>:<name>"`. The CLI mirrors
+// that split:
 //
 //   accounts list                          // GET  /api/account/all
 //   accounts list-by-type <type>           // GET  /api/account/<type>     -> []mini
@@ -54,11 +51,11 @@ func NewAccountsCommand(f *cmdutil.Factory) *cobra.Command {
 authenticate against third-party storage / identity providers.
 
 Subcommands:
-  list                                                  (Phase 1)
-  list-by-type <type>                                   (Phase 1)
-  get          <type> <name>                            (Phase 1)
-  add          <type> [flags]                           (Phase 2)
-  delete       <type> [name]                            (Phase 2)
+  list
+  list-by-type <type>
+  get          <type> <name>
+  add          <type> [flags]
+  delete       <type> [name]
 
 The "add" verb covers the *direct* object-storage flows (awss3, tencent)
 that don't need an OAuth/wallet redirect. The cookie store, OAuth flows

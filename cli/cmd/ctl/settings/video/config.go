@@ -22,8 +22,6 @@ import (
 // by emitting the JSON tree as-is. The default --output table prints
 // the keys at the top level with their value/sub-object summaries; pass
 // --output json to script against the full structure.
-//
-// Phase 2 will add `config set` (POST /api/files/video/config).
 func NewConfigCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
@@ -32,9 +30,9 @@ func NewConfigCommand(f *cmdutil.Factory) *cobra.Command {
 Jellyfin (hardware accel, encoding scheme, transcoding, ...).
 
 Subcommands:
-  get   show the current config                           (Phase 1)
+  get   show the current config
 
-Subcommands landing in Phase 2:
+Out of scope for now:
   set   write a new config blob (atomic replace)
 `,
 	}

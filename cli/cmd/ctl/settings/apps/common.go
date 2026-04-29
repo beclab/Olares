@@ -2,16 +2,11 @@
 //
 // common.go centralizes the per-area Doer + output plumbing in the same
 // shape as cli/cmd/ctl/settings/me/common.go and
-// cli/cmd/ctl/settings/users/common.go. We intentionally keep these tiny
-// helpers per-area rather than hoisting to a shared package: each area
-// will accumulate its own quirks (e.g. apps mixes BFL envelope responses
-// with /admin/secret/... raw bodies in later phases) and the cost of a
-// 90-line per-area common.go is much smaller than churning an
-// over-abstracted shared helper.
-//
-// Phase 1 ships read-only verbs only. Mutating verbs (entrances policy,
-// domain, env, secrets, ACL) land in Phase 3 alongside per-app config
-// reads beyond the basic list/get surface.
+// cli/cmd/ctl/settings/users/common.go. These tiny helpers stay per-area
+// rather than being hoisted to a shared package because each area
+// accumulates its own response-shape quirks; the cost of a small
+// per-area common.go is much smaller than churning an over-abstracted
+// shared helper.
 package apps
 
 import (

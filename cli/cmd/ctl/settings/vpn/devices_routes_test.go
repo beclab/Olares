@@ -7,15 +7,12 @@ import (
 	"testing"
 )
 
-// TestDevicesRoutesDecode_KI20 pins KI-20: headscale's `/headscale/
-// machine/<id>/routes` returns route ids as strings (e.g. `"id":"3"`),
-// but the CLI shipped with `route.ID int`. The bug stayed dormant
-// while every probed device had no advertised routes (empty arrays
-// decode regardless of element type) and surfaced on phase14b /
-// phase14c the moment a populated routes payload hit the wire:
-// `cannot unmarshal string into Go struct field route.routes.id of
-// type int`. The fix flips ID to string and these cases lock it in.
-func TestDevicesRoutesDecode_KI20(t *testing.T) {
+// TestDevicesRoutesDecode_StringID pins the wire shape of
+// `/headscale/machine/<id>/routes`: route ids ship as strings
+// (e.g. `"id":"3"`). An empty advertised-routes array decodes
+// regardless of element type, so the test matrix covers an empty
+// payload, a single-route payload, and a multi-route payload.
+func TestDevicesRoutesDecode_StringID(t *testing.T) {
 	cases := []struct {
 		name     string
 		dataJSON string
@@ -23,12 +20,12 @@ func TestDevicesRoutesDecode_KI20(t *testing.T) {
 		wantLen  int
 	}{
 		{
-			name:     "empty routes (phase1-13/phase15a quiet shape)",
+			name:     "empty routes",
 			dataJSON: `{"routes":[]}`,
 			wantLen:  0,
 		},
 		{
-			name:     "single route, string id (phase14b/c wire)",
+			name:     "single route, string id",
 			dataJSON: `{"routes":[{"id":"3","prefix":"100.64.0.5/32","advertised":true,"enabled":true,"isPrimary":true}]}`,
 			wantIDs:  []string{"3"},
 			wantLen:  1,
@@ -47,7 +44,7 @@ func TestDevicesRoutesDecode_KI20(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var resp devicesRoutesResp
 			if err := json.Unmarshal([]byte(tc.dataJSON), &resp); err != nil {
-				t.Fatalf("unmarshal: %v (KI-20 regression: route.ID must be string, not int)", err)
+				t.Fatalf("unmarshal: %v (regression: route.ID must be string, not int)", err)
 			}
 			if len(resp.Routes) != tc.wantLen {
 				t.Fatalf("want %d routes, got %d", tc.wantLen, len(resp.Routes))
@@ -63,16 +60,15 @@ func TestDevicesRoutesDecode_KI20(t *testing.T) {
 
 // TestDevicesRoutesDecode_RejectsLegacyIntID guards against an
 // accidental rollback to `int`: feeding a numeric id on the wire
-// should still decode (Go quietly handles JSON number → string when
-// the target is string only via a custom unmarshaler — which we don't
-// have, so it WILL error). We assert the error path stays loud so
-// any future regression is obvious.
+// should still decode (Go quietly handles JSON number → string only via
+// a custom unmarshaler — which we don't have, so it WILL error). We
+// assert the error path stays loud so any future regression is obvious.
 func TestDevicesRoutesDecode_RejectsLegacyIntID(t *testing.T) {
 	data := `{"routes":[{"id":3,"prefix":"100.64.0.5/32"}]}`
 	var resp devicesRoutesResp
 	err := json.Unmarshal([]byte(data), &resp)
 	if err == nil {
-		t.Fatalf("want decode error for numeric id (headscale always returns string id post-KI-20); got nil — if upstream now also serves int id we should switch to json.RawMessage")
+		t.Fatalf("want decode error for numeric id (headscale ships id as a string); got nil — if upstream now also serves int id we should switch to json.RawMessage")
 	}
 	// Make sure the error is the expected type-mismatch rather than
 	// some unrelated parse failure (helps next reader diagnose).

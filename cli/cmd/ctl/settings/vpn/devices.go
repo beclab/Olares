@@ -21,19 +21,16 @@ import (
 //   GET /headscale/machine                 → list devices
 //   GET /headscale/machine/:id/routes      → list routes for one device
 //
-// Wire shapes (BFL/user-service envelope — confirmed in the browser
-// 2026-04-28 KI-12 fix):
+// Wire shapes (BFL/user-service envelope):
 //
 //   /headscale/machine            → { code, message, data: { machines: [HeadScaleDevice...] } }
 //   /headscale/machine/:id/routes → { code, message, data: { routes:   [Route...] } }
 //
-// The doc previously called this "raw JSON, forwarded verbatim"; that
-// was true at an earlier user-service version, but the current code path
-// goes through the standard envelope wrapper. We now decode through
-// doGetEnvelope so the inner data unwraps before our typed structs see
-// it. Companion KI-12 fix in cli/pkg/cmdutil/factory.go also adds
-// `auth_token` cookie + Origin/Referer headers so the /headscale/* path
-// no longer falls through to the SPA HTML fallback.
+// We decode through doGetEnvelope so the inner data unwraps before our
+// typed structs see it. The /headscale/* path also requires the
+// `auth_token` cookie + Origin/Referer headers (handled in
+// cli/pkg/cmdutil/factory.go) so the request does not fall through to
+// the SPA HTML fallback.
 //
 // HeadScaleDevice fields the SPA reads (HeadScaleDeviceCard.vue):
 //   id, name, givenName, ipAddresses[], lastSeen (ISO timestamp string),
@@ -42,16 +39,14 @@ import (
 // Route fields the SPA reads:
 //   id, prefix, enabled
 //
-// Phase 1 ships read-only verbs:
+// Read verbs:
+//   vpn devices list
+//   vpn devices routes <device-id>
 //
-//   vpn devices list                       (Phase 1)
-//   vpn devices routes <device-id>         (Phase 1)
-//
-// Phase 3 adds the writes:
-//
-//   vpn devices rename <id> <name>         (Phase 3 — devices_writes.go)
-//   vpn devices delete <id>                (Phase 3 — devices_writes.go)
-//   vpn devices tags set <id> --tag ...    (Phase 3 — devices_writes.go)
+// Write verbs (devices_writes.go):
+//   vpn devices rename <id> <name>
+//   vpn devices delete <id>
+//   vpn devices tags set <id> --tag ...
 //
 // Route enable / disable lives under `settings vpn routes` rather than
 // here because Headscale routes are addressed by route id, not device
@@ -66,11 +61,11 @@ func NewDevicesCommand(f *cmdutil.Factory) *cobra.Command {
 mesh.
 
 Subcommands:
-  list                                   list all devices                          (Phase 1)
-  routes <device-id>                     list routes advertised by one device      (Phase 1)
-  rename <device-id> <new-name>          rename a device                           (Phase 3)
-  delete <device-id>                     remove a device                           (Phase 3)
-  tags set <device-id> --tag <name>...   replace the device's forcedTags           (Phase 3)
+  list                                   list all devices
+  routes <device-id>                     list routes advertised by one device
+  rename <device-id> <new-name>          rename a device
+  delete <device-id>                     remove a device
+  tags set <device-id> --tag <name>...   replace the device's forcedTags
 `,
 	}
 	cmd.SilenceUsage = true
@@ -251,15 +246,9 @@ func fmtIsoTime(s string) string {
 // fields (advertised, isPrimary, created/updated) come through under
 // --output json via the typed fields below.
 //
-// KI-20 (2026-04-29 phase14c): the wire returns id as a string
-// (e.g. `"id":"3"`); the previous `int` shipped here decoded fine when
-// no machine had advertised routes (the empty array won't surface the
-// type mismatch) but exploded on any populated routes payload with
-// `cannot unmarshal string into Go struct field route.routes.id of
-// type int`. routes.go always treats route IDs as opaque path segments
-// (URL-escaped strings), so flipping ID to string costs nothing on
-// the writer side and fixes both `vpn devices routes <id>` and the
-// `pick_route_with_state` smoke RMW path that depends on it.
+// `id` is decoded as a string because the wire ships it as `"id":"3"`;
+// routes.go always treats route IDs as opaque path segments
+// (URL-escaped strings) so the writer side stays unchanged.
 type route struct {
 	ID         string `json:"id"`
 	Prefix     string `json:"prefix"`

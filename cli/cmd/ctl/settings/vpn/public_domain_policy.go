@@ -32,8 +32,6 @@ import (
 //
 // (NO outer envelope — user-service unwraps it server-side, and the
 // SPA's interceptor passes the body through as-is for the same reason.)
-//
-// Phase 1 ships GET; Phase 3 lands `set --deny-all/--allow-all`.
 func NewPublicDomainPolicyCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "public-domain-policy",
@@ -43,8 +41,8 @@ the Olares mesh blocks public-domain access for entrances that haven't
 been individually whitelisted.
 
 Subcommands:
-  get   show the current policy                           (Phase 1)
-  set   change the policy (--deny-all / --allow-all)      (Phase 3)
+  get   show the current policy
+  set   change the policy (--deny-all / --allow-all)
 `,
 	}
 	cmd.SilenceUsage = true

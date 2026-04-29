@@ -14,8 +14,8 @@ import (
 //
 // Backed by /api/search/monitorsetting/include-directory/full_content.
 // Same wire shape as excludes — search3's {code, message, data:
-// string[]} envelope. Phase 2 adds `add` / `rm` against
-// /include-directory/full_content/part with the body
+// string[]} envelope. `add` / `rm` POST against
+// /include-directory/full_content/part with body
 // `{include_directory: [...]}`.
 //
 // SPA reference: apps/packages/app/src/api/settings/search.ts
@@ -29,9 +29,9 @@ func NewDirsCommand(f *cmdutil.Factory) *cobra.Command {
 full-content indexing.
 
 Subcommands:
-  list                                                    (Phase 1)
-  add <path>...                                           (Phase 2)
-  rm  <path>...                                           (Phase 2)
+  list
+  add <path>...
+  rm  <path>...
 `,
 	}
 	cmd.SilenceUsage = true

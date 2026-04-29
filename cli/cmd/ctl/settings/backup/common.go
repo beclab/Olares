@@ -12,12 +12,12 @@
 //     `{ backups: [...] }` directly. The CLI does the same via
 //     `doGetEnvelope`.
 //   - The repository password endpoint goes through user-service at
-//     `/api/backup/password/:name` (not used in Phase 1 — Phase 6
-//     adds password get/set).
-//   - Phase 6 lands the write verbs (create / update / delete plan,
-//     create / cancel snapshot, password set). Phase 1 ships the two
-//     read-only verbs that exercise the BFL prefix end-to-end and
-//     populate cli/skills/olares-settings/SKILL.md.
+//     `/api/backup/password/:name`.
+//   - The CLI ships read verbs for plans / snapshots, the password
+//     set verb, plus the snapshot run / cancel and plan
+//     pause / resume / delete writes. Plan create / update remain out
+//     of scope until a richer flag/file UX exists for the full
+//     BackupPolicy + LocationConfig payload.
 package backup
 
 import (

@@ -35,8 +35,9 @@ import (
 //
 // Role: any authenticated user can change their *own* password (this is
 // the Person page, not Accounts), so no PreflightRole gate. Changing
-// somebody else's password lives in Phase 3 (admin-scoped users CRUD)
-// and will need a separate verb / role check.
+// somebody else's password belongs to the admin-scoped users CRUD
+// surface and needs a separate verb / role check; that surface is out
+// of scope for now.
 
 func NewPasswordCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{

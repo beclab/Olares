@@ -128,10 +128,9 @@ verify and activate the cert.
 // users who only know the app name don't have to run two commands
 // (entrances list, then domain get per entrance). The SPA reaches the
 // same effect by navigating into a per-app page that shows every
-// entrance's domain inline; we mirror that flat view here. It's also
-// the answer to KI-17's "apps domain get <app>" complaint — the
-// previous shape required <entrance>, now the user can run "list <app>"
-// to see them all at once.
+// entrance's domain inline; we mirror that flat view here. The per-app
+// list also gives operators a single command equivalent of
+// `domain get` when the entrance name is unknown ahead of time.
 func newDomainListCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{

@@ -39,7 +39,7 @@ import (
 // write registrations into NewDevicesCommand below — the original
 // definition lives in devices.go and must call this helper.
 
-// addDevicesWriteCommands wires the Phase 3c device-write verbs onto an
+// addDevicesWriteCommands wires the device-write verbs onto an
 // existing `devices` parent. devices.go's NewDevicesCommand must call
 // this so the read+write surface stays under one parent.
 func addDevicesWriteCommands(parent *cobra.Command, f *cmdutil.Factory) {

@@ -10,9 +10,10 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewNetworkCommand returns the `settings network` parent. Phase 1
-// ships read-only verbs across all five sub-areas; Phase 4 will add
-// the matching mutating verbs.
+// NewNetworkCommand returns the `settings network` parent: read-only
+// inspection of every sub-area plus the reverse-proxy mode write. The
+// remaining mutating endpoints require a JWS-signed device-id header
+// the CLI doesn't yet produce, so they're out of scope today.
 func NewNetworkCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "network",
@@ -21,18 +22,18 @@ func NewNetworkCommand(f *cmdutil.Factory) *cobra.Command {
 external-network switch (owner-only), SSL toggles, and the system hosts-file.
 
 Subcommands:
-  reverse-proxy get                                       (Phase 1)
-  frp list                                                (Phase 1)
-  external-network get                                    (Phase 1)
-  ssl status                                              (Phase 1)
-  hosts-file get                                          (Phase 1)
+  reverse-proxy get
+  reverse-proxy set --mode <public-ip|frp|cloudflare-tunnel|off> [...]
+  frp list
+  external-network get
+  ssl status
+  hosts-file get
 
-Subcommands landing in Phase 4:
-  reverse-proxy set, frp set, external-network set,
-  ssl enable, hosts-file set
+Out of scope until a JWS key sourcing path exists:
+  frp set, external-network set, ssl enable / disable / update, hosts-file set
 
-Note: external-network set and reverse-proxy set (FRP host write) are
-owner-only; non-owner callers will hit a 403 from BFL.
+Note: reverse-proxy set is owner-only; non-owner callers will hit a
+403 from BFL.
 `,
 	}
 	cmd.SilenceUsage = true

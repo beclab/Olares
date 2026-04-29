@@ -130,8 +130,8 @@ func decodeListResult[T any](ctx context.Context, d Doer, path string, out *appS
 //
 //	{ "uid": "...", "name": "...", ... }
 //
-// or wrapped in an envelope (KI-3 in KNOWN_ISSUES.md, the cause of "all
-// fields show -"):
+// or wrapped in an envelope (which previously caused "all fields show -"
+// when the CLI assumed the raw shape):
 //
 //	{ "code": 200, "data": { "uid": "...", "name": "...", ... }, ... }
 //

@@ -22,11 +22,10 @@ import (
 // The SPA's BackupDetail page passes a backupId from the URL, so we
 // take it as a positional arg.
 //
-// Phase 6 adds `snapshots run <backup-id>` and `snapshots cancel
-// <backup-id> <snapshot-id>`. Per-snapshot delete (a non-cancel
-// remove of a completed snapshot) is intentionally not exposed:
-// backup-server does not have a route for it and the SPA only wires
-// the cancel button on running / pending snapshots.
+// Per-snapshot delete (a non-cancel remove of a completed snapshot) is
+// intentionally not exposed: backup-server does not have a route for it
+// and the SPA only wires the cancel button on running / pending
+// snapshots.
 func NewSnapshotsCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "snapshots",
@@ -34,9 +33,9 @@ func NewSnapshotsCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Inspect or trigger snapshots taken by a backup plan.
 
 Subcommands:
-  list   <backup-id>                                      (Phase 1)
-  run    <backup-id>                                      (Phase 6)
-  cancel <backup-id> <snapshot-id> [--yes]                (Phase 6)
+  list   <backup-id>
+  run    <backup-id>
+  cancel <backup-id> <snapshot-id> [--yes]
 `,
 	}
 	cmd.SilenceUsage = true

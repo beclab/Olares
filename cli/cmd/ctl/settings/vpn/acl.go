@@ -107,11 +107,10 @@ unrelated entries survive untouched.
 // newACLAllCommand registers `vpn acl all`.
 //
 // Wraps GET /api/acl/all (user-service/src/bfl/acl.controller.ts:157
-// getAclsAll) — the SPA does not currently surface this endpoint via a
-// page action, but the controller exists upstream and lets a user with
-// a single command see every per-app ACL configured under their
-// account. Closes the KI-17 "vpn acl get with no <app>" complaint by
-// giving the caller a top-level "show me everything" alternative.
+// getAclsAll). The SPA does not currently surface this endpoint via a
+// page action, but the controller exists upstream; the verb gives the
+// caller a single command that lists every per-app ACL configured
+// under their account, complementing the per-app `vpn acl get <app>`.
 //
 // Wire shape: BFL envelope wrapping a map keyed by app name (the
 // upstream's headscale acls vector). We stay structurally agnostic by

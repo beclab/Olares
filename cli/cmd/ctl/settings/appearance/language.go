@@ -38,7 +38,7 @@ Appearance > Language).
 The current value can be inspected via "settings appearance get".
 
 Subcommands:
-  set <locale>          update the system language        (Phase 2)
+  set <locale>          update the system language
                         (e.g. "set en-US"; --value also accepted)
 `,
 	}
@@ -51,12 +51,11 @@ Subcommands:
 //
 // Argument shape: a positional <locale> is the canonical form (matches
 // the SKILL doc + SPA copy "language set en-US"); --value is kept as a
-// strict-flag alternative for users who prefer larksuite/cli-style
-// flag-only invocations. Exactly one of the two MUST be supplied; if
-// both are passed and disagree we error out rather than silently picking
-// one. The previous shape (required --value, NoArgs) was rejected by
-// the smoke matrix as KI-17 because every other "verb <obj>" verb in
-// this tree takes its primary subject positionally.
+// strict-flag alternative for users who prefer flag-only invocations.
+// Exactly one of the two MUST be supplied; if both are passed and
+// disagree we error out rather than silently picking one. The
+// positional shape mirrors every other "verb <obj>" command in this
+// tree, which all take their primary subject positionally.
 func newLanguageSetCommand(f *cmdutil.Factory) *cobra.Command {
 	var value string
 	cmd := &cobra.Command{

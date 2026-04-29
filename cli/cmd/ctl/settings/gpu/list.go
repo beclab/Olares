@@ -26,8 +26,6 @@ import (
 //     "memoryAllocated": 0, "memoryAvailable": 0,
 //     "apps": [{"appName": "...", "memory": <int>}],
 //   }
-//
-// Phase 2 will add `mode set`, `assign`, `unassign`, `bulk-assign`.
 func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{

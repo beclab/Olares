@@ -41,8 +41,8 @@ func NewEnvCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Inspect or change the environment variables an installed app sees.
 
 Subcommands:
-  get  <name>                         show current env vars              (Phase 3)
-  set  <name> --var KEY=VAL...        update one or more env vars        (Phase 3)
+  get  <name>                         show current env vars
+  set  <name> --var KEY=VAL...        update one or more env vars
 `,
 	}
 	cmd.SilenceUsage = true

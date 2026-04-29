@@ -27,7 +27,7 @@ import (
 //     "external_network_off": false   // owner-only flag, surface only
 //   }
 //
-// Phase 1 ships GET; Phase 4 lands `set --mode <mode>` and field-level
+// `set --mode <mode>` writes the same struct back, with field-level
 // overrides for FRP / public-IP modes.
 func NewReverseProxyCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
@@ -37,8 +37,8 @@ func NewReverseProxyCommand(f *cmdutil.Factory) *cobra.Command {
 public internet.
 
 Subcommands:
-  get   show the current configuration                    (Phase 1)
-  set   change reverse-proxy mode + fields                (Phase 4)
+  get   show the current configuration
+  set   change reverse-proxy mode + fields
 `,
 	}
 	cmd.SilenceUsage = true

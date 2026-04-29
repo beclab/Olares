@@ -9,18 +9,6 @@
 // `market` because the underlying API is on the Settings desktop ingress,
 // not the per-user market endpoint — see plan.md's "Settings vs Market"
 // disambiguation.
-//
-// Removed verbs (Phase 6 cleanup, 2026-04-28; see KNOWN_ISSUES.md KI-4 / KI-5 / KI-6):
-//   - permissions <app>           backend GET /api/applications/permissions/<app> 整条路由 404
-//                                  (user-service 已无 application/permission 控制器)；
-//                                  SPA UI 入口被 v-if + 注释守卫成 dead path、
-//                                  store getPermissions 已下架。
-//   - providers list <app>        同源；后端 GET /api/applications/provider/registry/<app>
-//                                  整条路由没了；SPA UI 入口已注释。
-//   - secrets list/set/delete     旧路径 /admin/secret/<app> 被 desktop ingress 当 SPA
-//                                  路由吞掉（GET 返 index.html、POST 返 nginx 405）；
-//                                  SPA secretStore.checkSecretPermission() 永远 false，
-//                                  ApplicationSecretPage UI 入口 dead。
 package apps
 
 import (
@@ -29,11 +17,9 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewAppsCommand returns the `settings apps` parent. Lifecycle (suspend
-// /resume), env shipped in Phase 3a-3b. Per-app entrance config
-// (entrances list / domain / policy / auth-level) ships in Phase 3b2-3d.
-// permissions / providers / secrets removed in Phase 6 cleanup
-// (2026-04-28; see package doc / KNOWN_ISSUES.md KI-4 / KI-5 / KI-6).
+// NewAppsCommand returns the `settings apps` parent: lifecycle
+// (suspend / resume), per-app env, and per-app entrance config
+// (entrances list, domain, policy, auth-level).
 func NewAppsCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "apps",

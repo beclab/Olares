@@ -3,11 +3,11 @@
 // common.go centralizes:
 //   - The BFL response envelope helper (every endpoint we hit here returns
 //     {code, message, data}).
-//   - The minimal output-format flag plumbing shared by the four Phase 1
-//     read verbs (version / check-update / login-history / sso list). We
-//     can't reuse settings.SettingsOptions directly because that type is
-//     in package settings and pulling it in here creates an import cycle
-//     (settings imports me, so me cannot import settings back).
+//   - The minimal output-format flag plumbing shared by the read verbs
+//     (version / check-update / sso list). We can't reuse
+//     settings.SettingsOptions directly because that type is in package
+//     settings and pulling it in here creates an import cycle (settings
+//     imports me, so me cannot import settings back).
 //
 // Transport reuses cli/pkg/whoami.HTTPClient — a misnomer for historical
 // reasons (it was first built for the whoami endpoint), but in practice

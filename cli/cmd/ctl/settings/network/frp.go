@@ -20,10 +20,9 @@ import (
 //
 //   { "code": 0, "message": "success", "data": [{"name":"...", "host":"..."}, ...] }
 //
-// We only ship `list` in Phase 1; the v2 endpoint (POST /api/frp-servers-v2)
+// Only `list` is in scope here; the v2 endpoint (POST /api/frp-servers-v2)
 // is locale/userName-aware and the SPA only uses it to drive a select
-// dropdown — there's no stable scripting use case for it yet, so we
-// keep it out until real demand surfaces.
+// dropdown — there's no stable scripting use case for it yet.
 func NewFRPCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "frp",
@@ -32,7 +31,7 @@ func NewFRPCommand(f *cmdutil.Factory) *cobra.Command {
 Olares-tunnel reverse-proxy mode.
 
 Subcommands:
-  list   list the available FRP servers                   (Phase 1)
+  list   list the available FRP servers
 `,
 	}
 	cmd.SilenceUsage = true

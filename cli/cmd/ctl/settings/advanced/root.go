@@ -3,8 +3,8 @@
 // Backed by user-service's terminusd.controller.ts (containerd, logs,
 // hosts-file, upgrade) + bfl/env.controller.ts (system / user env). The
 // hardware/restart-class verbs (reboot, shutdown, ssh-password) and the OS
-// upgrade flow are owner-only and require JWS-signed bodies — they land in
-// Phase 5 alongside the JWS-key sourcing decision (see plan.md "Phase 5").
+// upgrade flow are owner-only and require JWS-signed bodies; they are
+// out of scope until a JWS-key sourcing path exists.
 package advanced
 
 import (
@@ -13,9 +13,10 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewAdvancedCommand returns the `settings advanced` parent. Phase 1
-// ships the read-only verbs that don't require JWS signing; Phase 4 +
-// Phase 5 add the env/logs/upgrade/restart verbs.
+// NewAdvancedCommand returns the `settings advanced` parent: containerd
+// registries / images inspection plus system / user env management.
+// JWS-gated writes (registries mutations, OS upgrade, reboot / shutdown,
+// log collection) are not in scope until a JWS-key sourcing path lands.
 func NewAdvancedCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "advanced",
@@ -29,10 +30,10 @@ func NewAdvancedCommand(f *cmdutil.Factory) *cobra.Command {
   - hardware / restart-class actions (reboot, shutdown, ssh-password)
 
 Subcommands:
-  status                                                  (Phase 1)
-  registries list                                         (Phase 1)
-  images list [--registry <name>]                         (Phase 1)
-  env (system|user) list / set --var KEY=VAL              (Phase 4)
+  status
+  registries list
+  images list [--registry <name>]
+  env (system|user) list / set --var KEY=VAL
 
 Out of scope until a JWS key sourcing path exists:
   registries mirrors put/delete, registries prune,

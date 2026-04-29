@@ -10,8 +10,9 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewGPUCommand returns the `settings gpu` parent. Phase 1 ships
-// `list`; Phase 2 adds the mutating verbs.
+// NewGPUCommand returns the `settings gpu` parent: list devices and
+// per-app GPU assignments. Mutating verbs (mode set, assign,
+// unassign, bulk-assign) are out of scope for now.
 func NewGPUCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "gpu",
@@ -19,9 +20,9 @@ func NewGPUCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Inspect GPU device list, mode, and per-app assignment.
 
 Subcommands:
-  list                                                    (Phase 1)
+  list
 
-Subcommands landing in Phase 2:
+Out of scope for now:
   mode set, assign, unassign, bulk-assign
 
 Note: this differs from the top-level "olares-cli gpu" command — that one

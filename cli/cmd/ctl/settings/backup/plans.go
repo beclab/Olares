@@ -18,16 +18,15 @@ import (
 //
 // Backed by /apis/backup/v1/plans/backup?offset=&limit= on the BFL
 // backup-server. The SPA's Settings -> Backup page calls this with a
-// fixed limit of 50 and pages forward via offset; Phase 1 keeps the
+// fixed limit of 50 and pages forward via offset; the CLI keeps the
 // same UX (single page, --limit / --offset flags).
 //
-// Phase 6 adds `plans delete / pause / resume`. Plan create + policy
-// update are intentionally out of scope: their wire shape requires a
-// full BackupPolicy + LocationConfig vector that the SPA assembles
-// from a multi-step form. Encoding that in CLI flags would be a poor
-// UX; we'd rather wait for either a `--from-file plan.json` mode or
-// for the upstream to expose a higher-level "create from defaults"
-// shortcut.
+// Plan create + policy update are intentionally out of scope: their
+// wire shape requires a full BackupPolicy + LocationConfig vector that
+// the SPA assembles from a multi-step form. Encoding that in CLI flags
+// would be a poor UX; we'd rather wait for either a
+// `--from-file plan.json` mode or for the upstream to expose a
+// higher-level "create from defaults" shortcut.
 func NewPlansCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "plans",
@@ -35,10 +34,10 @@ func NewPlansCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Manage backup plans on the BFL backup-server.
 
 Subcommands:
-  list                          list backup plans          (Phase 1)
-  delete <id> [--yes]           delete a backup plan       (Phase 6)
-  pause  <id>                   pause a backup plan        (Phase 6)
-  resume <id>                   resume a paused plan       (Phase 6)
+  list                          list backup plans
+  delete <id> [--yes]           delete a backup plan
+  pause  <id>                   pause a backup plan
+  resume <id>                   resume a paused plan
 
 Out of scope for now (need a richer flag/file UX before shipping):
   create / update    (full BackupPolicy + LocationConfig vector)

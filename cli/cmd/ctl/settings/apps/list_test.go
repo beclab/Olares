@@ -7,15 +7,12 @@ import (
 	"testing"
 )
 
-// TestAppInfoDecode_PortsWireShape pins KI-18: the CLI shipped with
-// `Ports []int` while BFL's AppInfo.Ports has been `[]ServicePort`
-// since the BFL→main-repo merge (60d37998, 2025-12-11). The `[]int`
-// slipped past phase1-13 because every probed app's ports were `[]`
-// (an empty array decodes into any slice type), then blew up on
-// phase14b when a real entry hit the wire.
-//
-// These cases verify all three forms now decode without error and
-// land on []servicePort.
+// TestAppInfoDecode_PortsWireShape pins the wire shape of
+// AppInfo.ports: BFL's AppInfo.Ports is `[]ServicePort` (struct array)
+// since the BFL→main-repo merge (60d37998, 2025-12-11). Empty arrays
+// decode into any slice type, so the test matrix covers an empty
+// payload, a minimal-fields payload and a fully-populated payload to
+// keep both shapes round-tripping cleanly.
 func TestAppInfoDecode_PortsWireShape(t *testing.T) {
 	cases := []struct {
 		name      string
@@ -24,7 +21,7 @@ func TestAppInfoDecode_PortsWireShape(t *testing.T) {
 		assertOne func(t *testing.T, p servicePort)
 	}{
 		{
-			name:     "empty ports (phase1-13 testenv shape)",
+			name:     "empty ports",
 			dataJSON: `[{"id":"x","name":"testenv","ports":[]}]`,
 			wantLen:  0,
 		},
@@ -68,7 +65,7 @@ func TestAppInfoDecode_PortsWireShape(t *testing.T) {
 
 			var rows []appInfo
 			if err := doGetEnvelope(context.Background(), doer, "/api/myapps", &rows); err != nil {
-				t.Fatalf("doGetEnvelope: %v (KI-18 regression candidate)", err)
+				t.Fatalf("doGetEnvelope: %v (ports wire-shape regression)", err)
 			}
 			if len(rows) != 1 {
 				t.Fatalf("want 1 row, got %d", len(rows))

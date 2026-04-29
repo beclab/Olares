@@ -69,8 +69,8 @@ against per-app config.
 
 // appEntrance mirrors AppInfo.entrances element shape from
 // user-service/src/app.service.ts:118-130. Defined here rather than in a
-// shared types file because Phase 1 only renders a small subset; later
-// phases will add their own narrower types as the verbs land.
+// shared types file because the list verb only renders a small subset;
+// other verbs add their own narrower types as needed.
 type appEntrance struct {
 	AuthLevel  string `json:"authLevel"`
 	Icon       string `json:"icon"`
@@ -85,13 +85,10 @@ type appEntrance struct {
 }
 
 // servicePort mirrors BFL's ServicePort struct
-// (framework/bfl/pkg/app_service/v1/types.go:48-60). The wire shape has
-// been a struct array since 60d37998 (2025-12-11, BFL→main repo merge);
-// CLI shipped with `[]int` by mistake and only got away with it while
-// every probed app had ports=[] (empty arrays decode into any slice).
-// Once a real ports entry hit the wire, decode failed with
-// `cannot unmarshal object into Go struct field appInfo.ports of type int`
-// (KI-18, first surfaced in scripts/local_report_phase14b.md).
+// (framework/bfl/pkg/app_service/v1/types.go:48-60). The wire shape is
+// a struct array since 60d37998 (2025-12-11, BFL→main repo merge); we
+// decode into the same shape so populated-ports payloads and empty
+// payloads both round-trip cleanly.
 type servicePort struct {
 	Name       string `json:"name"`
 	Host       string `json:"host"`

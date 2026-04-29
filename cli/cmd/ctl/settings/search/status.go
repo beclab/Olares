@@ -21,16 +21,11 @@ import (
 // indexer). See settings/src/pages/settings/Search/FileSearch.vue:244
 // `const { status, full_content_task_error } = await getSearchTaskStatus()`.
 //
-// 2026-04-28 KI-13 fix: data was previously decoded as a bare string,
-// which matched an older search3 contract. The current backend returns
-// `data: {status, full_content_task_error, ...}` (object), causing
-// `cannot unmarshal object into Go value of type string`. We now decode
-// into searchTaskStats and surface both fields; full_content_task_error
-// is held as json.RawMessage so future schema bumps (currently object
-// or null) round-trip through `--output json` without further code
-// churn.
-//
-// Phase 2 will add `rebuild` (POST /api/search/task/rebuild).
+// The backend returns `data: {status, full_content_task_error, ...}`
+// (object). We decode into searchTaskStats and surface both fields;
+// full_content_task_error is held as json.RawMessage so future schema
+// bumps (currently object or null) round-trip through `--output json`
+// without further code churn.
 func NewStatusCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{

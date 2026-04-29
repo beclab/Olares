@@ -20,16 +20,13 @@ import (
 // directly to the response body (see framework/app-service/.../
 // handler_user.go:422 handleUser).
 //
-// 2026-04-28 KI-3 fix: depending on whether NestJS' global response
-// interceptor is active, the wire body shows up either as the raw
-// UserInfo object or wrapped in an envelope `{code:200, data:{...}}`
-// (KI-3 reproduced the latter — every field rendered as "-" because
-// json.Unmarshal saw {code, data, ...} and userInfo's tags didn't match
-// any top-level key). decodeObjectResult (cli/cmd/ctl/settings/users/
-// common.go) probes for a top-level `code` field and unwraps `data`
-// accordingly, falling back to raw-body decode when no envelope is
-// present, so we stay forward-compatible with whichever shape
-// user-service settles on.
+// Depending on whether NestJS' global response interceptor is active,
+// the wire body shows up either as the raw UserInfo object or wrapped
+// in an envelope `{code:200, data:{...}}`. decodeObjectResult
+// (cli/cmd/ctl/settings/users/common.go) probes for a top-level `code`
+// field and unwraps `data` accordingly, falling back to raw-body decode
+// when no envelope is present, so we stay forward-compatible with
+// whichever shape user-service settles on.
 //
 // Role: app-service does not gate handleUser server-side, so any
 // authenticated user can call this for any username (including users
