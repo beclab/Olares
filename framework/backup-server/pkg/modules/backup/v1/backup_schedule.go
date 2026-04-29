@@ -158,7 +158,7 @@ func (o *BackupPlan) apply(ctx context.Context) (*sysv1.Backup, error) {
 		backupAppTypeName = o.c.BackupCreateType.Name
 	}
 
-	log.Infof("merged backup spec: %s", util.ToJSON(backupSpec))
+	log.Infof("merged backup spec, name: %s, owner: %s, policy: %s, type: %s", backupSpec.Name, backupSpec.Owner, util.ToJSON(backupSpec.BackupPolicy), util.ToJSON(backupSpec.BackupType))
 
 	backup, err := o.handler.GetBackupHandler().Create(ctx, o.owner, o.c.Name, o.c.Path, backupType, backupAppTypeName, backupSpec)
 	if err != nil {
@@ -171,7 +171,7 @@ func (o *BackupPlan) apply(ctx context.Context) (*sysv1.Backup, error) {
 }
 
 func (o *BackupPlan) validLocation() error {
-	log.Infof("new backup %s location %s", o.c.Name, util.ToJSON(o.c.LocationConfig))
+	log.Infof("new backup %s location", o.c.Name)
 
 	location := o.c.Location
 	locationConfig := o.c.LocationConfig
@@ -221,7 +221,7 @@ func (o *BackupPlan) validIntegration(ctx context.Context) error {
 		return errors.WithStack(err)
 	}
 
-	log.Infof("backup %s location %s integration %s", o.c.Name, location, integrationName)
+	log.Infof("backup %s location %s integration", o.c.Name, location)
 
 	if location == constant.BackupLocationSpace.String() {
 		o.c.LocationConfig.Name = integrationName
@@ -234,7 +234,7 @@ func (o *BackupPlan) validIntegration(ctx context.Context) error {
 			log.Errorf("integration: %s, location: %s, token get error: %v", integrationName, location, err)
 			return errors.WithStack(err)
 		}
-		log.Infof("backup %s location: %s, integration: %s, endpoint: %s", o.c.Name, location, integrationName, integrationToken.Endpoint)
+		log.Infof("backup %s location: %s, integration, endpoint: %s", o.c.Name, location, integrationToken.Endpoint)
 		o.endpoint = integrationToken.Endpoint
 	}
 
