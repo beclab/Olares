@@ -1,0 +1,7 @@
+metadata:
+  description: Firefox 浏览器
+  title: Firefox
+
+spec:
+  fullDescription: |
+    Firefox 浏览器，也称为 Mozilla Firefox 或简称 Firefox，是由 Mozilla 基金会及其子公司 Mozilla 公司开发的免费开源网络浏览器。Firefox 使用 Gecko 布局引擎来呈现网页，该引擎实现了当前和预期的网络标准。
