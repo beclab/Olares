@@ -52,8 +52,11 @@ Connect a monitor, keyboard, and mouse to your Olares One to play Steam games di
 
 ## FAQs
 
-### Mouse not responding on first connection
-If your mouse doesn't respond when first connected, try unplugging it and plugging it back in. This is a common occurrence with USB peripherals on initial connection.
+### Keyboard or mouse not responding on first connection or after Steam restarts
+
+If your keyboard or mouse does not respond when first connected, or after Steam restarts, unplug the device and plug it back in.
+
+This is a known issue with device detection during Steam startup. Reconnecting the device triggers detection again and makes the keyboard or mouse available.
 
 ### Why does my monitor show the Steam interface even when I'm not playing?
 Olares One usually displays a terminal prompt when connected to a monitor. However, running the Steam application activates a graphical interface that takes over the display.
