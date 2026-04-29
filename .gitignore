@@ -51,8 +51,6 @@ user-service/
 
 /settings/
 apps/packages/app/.quasar/*
-cli/cmd/ctl/settings/scripts/local_report*.md
+cli/cmd/ctl/settings/scripts/*
 cli/cmd/ctl/settings/KNOWN_ISSUES.md
 cli/cmd/ctl/settings/NOTES.md
-cli/cmd/ctl/settings/scripts/README.md
-cli/cmd/ctl/settings/scripts/smoke.sh
