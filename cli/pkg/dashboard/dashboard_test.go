@@ -796,20 +796,10 @@ func TestFlattenLsblkHierarchy_FallbackWhenRootMissing(t *testing.T) {
 	}
 }
 
-func TestRenderDiskTemperature_HonoursUnitAndDash(t *testing.T) {
-	if got := renderDiskTemperature(0, format.TempC); got != "-" {
-		t.Errorf("zero celsius should print '-', got %q", got)
-	}
-	if got := renderDiskTemperature(40, format.TempC); got != "40°C" {
-		t.Errorf("40C → %q, want 40°C", got)
-	}
-	if got := renderDiskTemperature(40, format.TempF); got != "104°F" {
-		t.Errorf("40C in F → %q, want 104°F", got)
-	}
-	if got := renderDiskTemperature(40, format.TempK); got != "313.1K" {
-		t.Errorf("40C in K → %q, want 313.1K", got)
-	}
-}
+// TestRenderDiskTemperature_HonoursUnitAndDash was relocated to
+// cli/pkg/dashboard/overview/disk/main_test.go in P7 — the helper it
+// exercised (`renderDiskTemperature`) is private to the disk subpackage,
+// so the test now lives next to its production owner.
 
 // ----------------------------------------------------------------------------
 // Capability gates — fan / gpu subtree pre-flight checks

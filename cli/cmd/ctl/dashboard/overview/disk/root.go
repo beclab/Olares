@@ -1,19 +1,18 @@
 package disk
 
 import (
-	"context"
-	"fmt"
-	"os"
-	"time"
-
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	pkgdashboard "github.com/beclab/Olares/cli/pkg/dashboard"
+	pkgdisk "github.com/beclab/Olares/cli/pkg/dashboard/overview/disk"
 )
 
-// ----------------------------------------------------------------------------
-
+// NewDiskCommand assembles `dashboard overview disk` (root + main +
+// partitions). cf is the shared *pkgdashboard.CommonFlags pointer
+// stored in the area's `common` package var; cobra's persistent-
+// flag inheritance from the dashboard root mutates the pointed-at
+// struct before any leaf RunE fires.
 func NewDiskCommand(f *cmdutil.Factory, cf *pkgdashboard.CommonFlags) *cobra.Command {
 	common = cf
 	cmd := &cobra.Command{
@@ -31,80 +30,14 @@ func NewDiskCommand(f *cmdutil.Factory, cf *pkgdashboard.CommonFlags) *cobra.Com
 			if err := common.Validate(); err != nil {
 				return err
 			}
-			return runOverviewDiskDefault(c.Context(), f)
+			cli, err := prepareClient(c.Context(), f)
+			if err != nil {
+				return err
+			}
+			return pkgdisk.RunDefault(c.Context(), cli, common)
 		},
 	}
 	cmd.AddCommand(newOverviewDiskMainCommand(f))
 	cmd.AddCommand(newOverviewDiskPartitionsCommand(f))
 	return cmd
-}
-
-func runOverviewDiskDefault(ctx context.Context, f *cmdutil.Factory) error {
-	c, err := buildDashboardClient(ctx, f)
-	if err != nil {
-		return err
-	}
-	now := time.Now()
-
-	mainEnv, mainErr := buildDiskMainEnvelope(ctx, c, now)
-	partitionEnvs := map[string]Envelope{}
-
-	if mainErr == nil {
-		// One partitions section per device row in main.
-		for _, it := range mainEnv.Items {
-			device := DisplayString(it, "device")
-			if device == "-" || device == "" {
-				continue
-			}
-			env, err := buildDiskPartitionsEnvelope(ctx, c, device, now)
-			if err != nil {
-				env = Envelope{Kind: KindOverviewDiskPart}
-				env.Meta.Error = err.Error()
-				env.Meta.ErrorKind = ClassifyTransportErr(err)
-			}
-			env.Meta.FetchedAt = time.Now().In(common.Timezone.Time()).Format(time.RFC3339)
-			partitionEnvs[device] = env
-		}
-	}
-
-	sections := map[string]Envelope{
-		"main": mainEnv,
-	}
-	if mainErr != nil {
-		mainEnv.Kind = KindOverviewDiskMain
-		mainEnv.Meta.Error = mainErr.Error()
-		mainEnv.Meta.ErrorKind = ClassifyTransportErr(mainErr)
-		sections["main"] = mainEnv
-	}
-	// Embed per-device partitions under a single envelope whose Sections
-	// field is the device→partitions map. Lets consumers walk
-	// sections.partitions.sda just like sections.main.
-	partsEnv := Envelope{Kind: KindOverviewDiskPart, Sections: partitionEnvs}
-	sections["partitions"] = partsEnv
-
-	env := Envelope{
-		Kind:     KindOverviewDisk,
-		Meta:     NewMeta(time.Now().In(common.Timezone.Time()), c.OlaresID(), common.User),
-		Sections: sections,
-	}
-
-	if common.Output == OutputJSON {
-		return WriteJSON(os.Stdout, env)
-	}
-	// Table mode: render main, then for each device its partitions.
-	fmt.Fprintln(os.Stdout, "== MAIN ==")
-	if mainErr != nil {
-		fmt.Fprintf(os.Stdout, "(error: %s)\n", mainErr)
-	} else {
-		_ = writeDiskMainTable(mainEnv)
-	}
-	for device, pEnv := range partitionEnvs {
-		fmt.Fprintf(os.Stdout, "\n== PARTITIONS: %s ==\n", device)
-		if pEnv.Meta.Error != "" {
-			fmt.Fprintf(os.Stdout, "(error: %s)\n", pEnv.Meta.Error)
-			continue
-		}
-		_ = writeDiskPartitionsTable(pEnv)
-	}
-	return nil
 }
