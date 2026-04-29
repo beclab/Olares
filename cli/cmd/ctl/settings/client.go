@@ -46,6 +46,20 @@ type SettingsClient struct {
 // http.Client (already wired with X-Authorization injection) and a resolved
 // profile. The base URL is rp.DesktopURL — derived once by buildResolved in
 // pkg/credential/default_provider.go from the OlaresID's terminus name.
+//
+// NOTE: this helper currently has only one caller — settings/options.go's
+// SettingsClient() factory — and that factory is itself unused by any area
+// today (each area's common.go builds its own whoami.NewHTTPClient). It is
+// kept as scaffolding for potential future settings-tree consolidation.
+// When/if it gets a real caller, decide per-call whether DesktopURL or
+// rp.SettingsURL is the right base — see the per-area split documented in
+// olares.ID.DesktopURL / olares.ID.SettingsURL and KNOWN_ISSUES.md KI-12 /
+// KI-16: only verbs that hit settings-only nginx locations
+// (/headscale, /apis/backup, /admin, /drive, /vault, /images,
+// /api/cloud/sign) need rp.SettingsURL; everything else stays on
+// rp.DesktopURL to preserve baseline-verified behavior (notably the
+// /api/device, /api/refresh, /api/logout reverse proxies that exist only
+// in desktop.conf).
 func NewSettingsClient(hc *http.Client, rp *credential.ResolvedProfile) *SettingsClient {
 	return &SettingsClient{
 		httpClient:  hc,

@@ -27,8 +27,18 @@ type ResolvedProfile struct {
 	AuthURL    string
 	VaultURL   string
 	DesktopURL string
-	FilesURL   string
-	MarketURL  string
+	// SettingsURL is the per-user Settings SPA origin
+	// (https://settings.<terminus>). The Settings CLI subtree must use
+	// this rather than DesktopURL because the desktop nginx
+	// (apps/docker/system-frontend/nginx/desktop.conf) does NOT forward
+	// "/headscale/*", "/apis/backup/*", "/admin/*" etc. to the
+	// settings/backup/secret backends — only the settings nginx
+	// (settings.conf) does. See olares.ID.SettingsURL for the full
+	// rationale and KNOWN_ISSUES.md KI-12 / KI-16 for the regression
+	// that exposed this distinction.
+	SettingsURL string
+	FilesURL    string
+	MarketURL   string
 
 	AccessToken string
 	// ExpiresAt is the unix-seconds expiry decoded from AccessToken's `exp`

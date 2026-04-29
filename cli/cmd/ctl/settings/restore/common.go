@@ -81,7 +81,7 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 	}
 	return &preparedClient{
 		profile: rp,
-		doer:    whoami.NewHTTPClient(hc, rp.DesktopURL, rp.OlaresID),
+		doer:    whoami.NewHTTPClient(hc, rp.SettingsURL, rp.OlaresID),
 	}, nil
 }
 
