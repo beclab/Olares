@@ -1,7 +1,7 @@
 ---
 name: olares-dashboard
 version: 2.0.0
-description: "olares-cli dashboard command tree — AI-agent-oriented mirror of the dashboard SPA's Overview2 + Applications2 routes. Covers: the strict dual-shape JSON envelope (leaf items{raw|display}+meta vs aggregated sections+meta), the stable `dashboard.<area>.<verb>` Kind constants under cli/pkg/dashboard/schema.go, the 1:1 Go port of @bytetrade/core/src/monitoring.ts (UnitTypes / GetValueByUnit / GetSuitableUnit / GetSuitableValue / WorthValue / FormatFrequency / ConvertTemperature / GetDiskSize / GetThroughput / FormatTime / GetMinuteValue / GetLastMonitoringData / GetResult) under cli/pkg/dashboard/format/, the shared fetch helpers (FetchClusterMetrics / FetchNodeMetrics / FetchUserMetric / FetchWorkloadsMetrics / BuildRankingEnvelope / FetchSystemIFS / FetchSystemFan / FetchGraphicsList / FetchTaskList / FetchGraphicsDetail / FetchTaskDetail) split across cli/pkg/dashboard/{monitoring,workloads,ranking,system,gpu}.go, the two-layer architecture (cmd shell under cli/cmd/ctl/dashboard/ — directory tree mirrors command tree, one file per leaf, area-local var common *CommonFlags injected by NewXxxCommand factories — vs pkg core under cli/pkg/dashboard/ owning Envelope/Item/Meta/CommonFlags/Client/Runner/all fetchers/all aggregators/the schema bundle), the parent-command sections-envelope defaults (overview = physical+user+ranking, overview disk = main+per-disk partitions, overview fan = live+curve), the hardcoded FanCurveTable / FanSpeedMaxCPU / FanSpeedMaxGPU constants kept 1:1 with SPA Fan/config.ts, the `--watch` HTTP-polling semantics (interval / iterations / timeout / 3-consecutive-failure exit / NDJSON-per-iteration / SIGINT-graceful / ErrTokenInvalidated short-circuit), the `--since` (sliding window in --watch only) vs `--start --end` (fixed window) mutual-exclusion rule, the three-state empty-data semantics (HTTP 404 → no_<feature>_integration / HTTP 200 empty → no_<feature>_detected), the capability gates (overview fan = HARD-gated to Olares One via /user-service/api/system/status; overview gpu = SOFT advisory mirroring the SPA sidebar — admin role + CUDA-node check populates `meta.note` and a stderr advisory but lets the HAMI fetch proceed) producing `empty_reason ∈ {not_olares_one, no_fan_integration, no_vgpu_integration, vgpu_unavailable (HAMI 5xx — meta.error / meta.http_status), no_gpu_detected}` plus stderr hints, the `Client.EnsureUser` sync.Once globalrole cache + `Client.EnsureSystemStatus` + `IsOlaresOne` + `HasCUDANode` capability cache, plus `RequireAdmin` guard for `--user` and admin-only commands, and the iteration red-lines that forbid horizontal cmd-area imports (any cross-area share must be hoisted to cli/pkg/dashboard/ — the BuildRankingEnvelope precedent), pkg cross-domain imports, putting leaves directly under cmd/ctl/dashboard/ root instead of an area subpackage, or altering envelope/Kind/watch/sections-default/capability-gate semantics. Use whenever the user mentions `olares-cli dashboard`, asks 'show overview / cpu / memory / disk / pods / network / fan / gpu / ranking / applications / pods', wants JSON for an AI agent, mentions --watch / --since / --start / --end / --user / --head / --limit / --mode (memory) / --temp-unit / --timezone / --test-connectivity (network) on the dashboard tree, hits errors like 'mutually exclusive', 'watch requires', 'platform-admin', or sees `meta.empty=true` / `empty_reason ∈ {no_vgpu_integration, vgpu_unavailable, no_gpu_detected, not_olares_one, no_fan_integration}` / stderr lines like 'fan is only available on Olares One devices', '(advisory) GPU sidebar entry is hidden ...', or 'gpu data temporarily unavailable: HAMI returned HTTP 5xx ...'."
+description: "olares-cli dashboard command tree — AI-agent-oriented mirror of the dashboard SPA's Overview2 + Applications2 routes. Covers: the strict dual-shape JSON envelope (leaf items{raw|display}+meta vs aggregated sections+meta), the stable `dashboard.<area>.<verb>` Kind constants under cli/pkg/dashboard/schema.go, the 1:1 Go port of @bytetrade/core/src/monitoring.ts (UnitTypes / GetValueByUnit / GetSuitableUnit / GetSuitableValue / WorthValue / FormatFrequency / ConvertTemperature / GetDiskSize / GetThroughput / FormatTime / GetMinuteValue / GetLastMonitoringData / GetResult) under cli/pkg/dashboard/format/, the shared fetch helpers (FetchClusterMetrics / FetchNodeMetrics / FetchUserMetric / FetchWorkloadsMetrics / BuildRankingEnvelope / FetchSystemIFS / FetchSystemFan / FetchGraphicsList / FetchTaskList / FetchGraphicsDetail / FetchTaskDetail) at the cli/pkg/dashboard/ root, the two-layer architecture with MIRRORED subpackage trees on both sides — cmd shell under cli/cmd/ctl/dashboard/ (directory tree mirrors command tree, one thin .go file per leaf whose RunE is just `pkg<area>.RunXxx(...)`, slim ≤70-line common.go per area carrying var common+prepareClient+unknownSubcommandRunE only) vs pkg layer split into cli/pkg/dashboard/ (infra-only: Envelope/Item/Meta/CommonFlags/Client/Runner/all fetchers/all aggregators/the schema bundle) PLUS cli/pkg/dashboard/<area>/ subpackages (cli/pkg/dashboard/applications/, cli/pkg/dashboard/overview/, cli/pkg/dashboard/overview/disk/, cli/pkg/dashboard/overview/fan/, cli/pkg/dashboard/overview/gpu/) owning every leaf's Run*/Build*Envelope/Write*Table + tests next to the code, with strict no-upward (subpackage→root only, root→nothing) and no-sibling (overview/disk ↛ overview/fan) imports inside pkg — the parent-command sections-envelope defaults (overview = physical+user+ranking, overview disk = main+per-disk partitions, overview fan = live+curve) emit through pkg <area>/default.go's RunDefault, the hardcoded FanCurveTable / FanSpeedMaxCPU / FanSpeedMaxGPU constants kept 1:1 with SPA Fan/config.ts, the `--watch` HTTP-polling semantics (interval / iterations / timeout / 3-consecutive-failure exit / NDJSON-per-iteration / SIGINT-graceful / ErrTokenInvalidated short-circuit), the `--since` (sliding window in --watch only) vs `--start --end` (fixed window) mutual-exclusion rule, the three-state empty-data semantics (HTTP 404 → no_<feature>_integration / HTTP 200 empty → no_<feature>_detected), the capability gates (overview fan = HARD-gated to Olares One via /user-service/api/system/status; overview gpu = SOFT advisory mirroring the SPA sidebar — admin role + CUDA-node check populates `meta.note` and a stderr advisory but lets the HAMI fetch proceed) producing `empty_reason ∈ {not_olares_one, no_fan_integration, no_vgpu_integration, vgpu_unavailable (HAMI 5xx — meta.error / meta.http_status), no_gpu_detected}` plus stderr hints, the `Client.EnsureUser` sync.Once globalrole cache + `Client.EnsureSystemStatus` + `IsOlaresOne` + `HasCUDANode` capability cache, plus `RequireAdmin` guard for `--user` and admin-only commands, and the iteration red-lines that forbid horizontal cmd-area imports (any cross-area share must be hoisted to cli/pkg/dashboard/ — the BuildRankingEnvelope precedent), upward pkg-root←pkg-subpackage imports, sibling pkg subpackage imports, putting leaves directly under cmd/ctl/dashboard/ root instead of an area subpackage, putting envelope/table/watch/fan-out logic in cmd, reintroducing trampoline-alias common.go files, or altering envelope/Kind/watch/sections-default/capability-gate semantics. Use whenever the user mentions `olares-cli dashboard`, asks 'show overview / cpu / memory / disk / pods / network / fan / gpu / ranking / applications / pods', wants JSON for an AI agent, mentions --watch / --since / --start / --end / --user / --head / --limit / --mode (memory) / --temp-unit / --timezone / --test-connectivity (network) on the dashboard tree, hits errors like 'mutually exclusive', 'watch requires', 'platform-admin', or sees `meta.empty=true` / `empty_reason ∈ {no_vgpu_integration, vgpu_unavailable, no_gpu_detected, not_olares_one, no_fan_integration}` / stderr lines like 'fan is only available on Olares One devices', '(advisory) GPU sidebar entry is hidden ...', or 'gpu data temporarily unavailable: HAMI returned HTTP 5xx ...'."
 metadata:
   requires:
     bins: ["olares-cli"]
@@ -26,127 +26,69 @@ Everything else in the SPA (legacy `Overview/`, audit, settings, …) is **out o
 
 ## Architecture
 
-The dashboard CLI is a **two-layer split**: a thin cobra shell under
-`cli/cmd/ctl/dashboard/` (one directory per command-tree node) and the
-heavy pkg core under `cli/pkg/dashboard/` (envelope shapes, fetchers,
-aggregators, runner, schema, format pkg). The cmd subpackages are
-mostly cobra wiring; every fetch / merge / aggregate / format call goes
-through `pkgdashboard.X`.
+The dashboard CLI is a **two-layer split with mirrored subpackage
+trees on BOTH sides**:
+
+- **cmd shell** under `cli/cmd/ctl/dashboard/` — one directory per
+  command-tree parent, one `.go` file per leaf. Each leaf's RunE is a
+  thin `validate flags → prepareClient → pkg<area>.RunXxx(...)` body.
+  Per-area `common.go` is ≤ 70 lines and carries only `var common`,
+  `prepareClient`, `unknownSubcommandRunE`.
+- **pkg layer** under `cli/pkg/dashboard/`, split in two:
+  - the **pkg ROOT** (`cli/pkg/dashboard/*.go`) owns infrastructure
+    and shared fetchers — `Client`, `Runner`, `CommonFlags`,
+    `Envelope`/`Item`/`Meta`, `Fetch*` helpers, `BuildRankingEnvelope`,
+    capability gates, the `format` pkg, the schema bundle. **No
+    command-specific envelope builders or table writers live here.**
+  - the **pkg subpackages** (`cli/pkg/dashboard/applications/`,
+    `cli/pkg/dashboard/overview/`,
+    `cli/pkg/dashboard/overview/{disk,fan,gpu}/`) mirror the cmd
+    parent dirs. Each carries one `<verb>.go` file per leaf, exposing
+    a single `RunXxx(ctx, c, cf, ...)` entry plus its
+    `BuildXxxEnvelope` / `WriteXxxTable` triplet. Tests sit
+    alongside as `<verb>_test.go` (one shared `helpers_test.go` per
+    area for httptest fixtures).
+
+Every fetch / merge / aggregate / format call goes through pkg —
+either the root infra or, for envelope assembly, the matching pkg
+subpackage. The cmd shell never touches HTTP, never builds an
+envelope, never writes a table, never runs `Runner` directly.
 
 ```mermaid
 flowchart LR
     User[olares-cli dashboard <verb>] --> Factory[cmdutil.Factory<br/>refreshingTransport]
-    Factory --> CmdShell["cli/cmd/ctl/dashboard/&lt;area&gt;/&lt;leaf&gt;.go<br/>(thin cobra shell)"]
-    CmdShell --> PkgCore["cli/pkg/dashboard/<br/>(Envelope, Client, Runner,<br/>fetchers, aggregators, schema)"]
-    PkgCore -->|/capi/* + /kapis/* + /hami/*| BFF["dashboard.&lt;terminus&gt;<br/>(ks-apiserver-proxy)"]
+    Factory --> CmdShell["cli/cmd/ctl/dashboard/&lt;area&gt;/&lt;leaf&gt;.go<br/>(thin cobra shell:<br/>validate → prepareClient →<br/>pkg&lt;area&gt;.RunXxx)"]
+    CmdShell --> PkgArea["cli/pkg/dashboard/&lt;area&gt;/&lt;leaf&gt;.go<br/>(RunXxx + BuildXxxEnvelope +<br/>WriteXxxTable + watch loop)"]
+    PkgArea --> PkgRoot["cli/pkg/dashboard/<br/>(infra: Envelope, Client, Runner,<br/>fetchers, aggregators, gates, schema)"]
+    PkgRoot -->|/capi/* + /kapis/* + /hami/*| BFF["dashboard.&lt;terminus&gt;<br/>(ks-apiserver-proxy)"]
     BFF -->|wildcard proxy| KsAPI[ks-apiserver]
-    PkgCore --> Format["cli/pkg/dashboard/format<br/>(1:1 JS port)"]
-    CmdShell --> Output["WriteJSON / WriteTable<br/>(pkgdashboard.*)"]
+    PkgRoot --> Format["cli/pkg/dashboard/format<br/>(1:1 JS port)"]
+    PkgArea --> Output["WriteJSON / WriteTable<br/>(pkgdashboard.*)"]
     Output --> User
 ```
 
-cmd area ↔ pkg domain mapping — every cmd subpackage is a thin shell
-calling into one or more pkg domain files:
+cmd area ↔ pkg subpackage mapping — every cmd leaf is a thin
+`prepareClient` + `pkg<area>.RunXxx(...)` shell. The heavy logic
+(envelope builders, table writers, fan-out, watch loops) lives in a
+mirror subpackage under `cli/pkg/dashboard/<area>/`. The pkg root
+(`cli/pkg/dashboard/`) only owns infrastructure and shared fetchers.
 
-| cmd area | pkg domain files (heavy logic) |
-|---|---|
-| `cmd/ctl/dashboard/root.go` | `pkg/dashboard/{flags,output,client,runner,emit}.go` |
-| `cmd/ctl/dashboard/overview/{physical,user,ranking,cpu,memory,pods,network,nodes}.go` | `pkg/dashboard/{monitoring,workloads,ranking,system,gates,gpu,numbers,emit}.go` |
-| `cmd/ctl/dashboard/overview/disk/{main,partitions}.go` | `pkg/dashboard/{monitoring,lsblk,format/...}.go` |
-| `cmd/ctl/dashboard/overview/fan/{live,curve}.go` | `pkg/dashboard/{system,fan_curve}.go` |
-| `cmd/ctl/dashboard/overview/gpu/{list,tasks,get,task,detail,task_detail,specs}.go` | `pkg/dashboard/{gpu,gpu_format,gpu_query,gates,client}.go` |
-| `cmd/ctl/dashboard/applications/root.go` | `pkg/dashboard/{ranking,workloads,format/...}.go` |
-| `cmd/ctl/dashboard/schema/root.go` | `pkg/dashboard/schema.go` (loader + go:embed bundle) |
+| cmd area | pkg subpackage entry points (`Run*`) | shared infra it pulls from `cli/pkg/dashboard/` |
+|---|---|---|
+| `cmd/ctl/dashboard/root.go` + `options.go` | n/a — pure cobra wiring + `bindPersistentFlags` | `flags.go` (`CommonFlags`), `runner.go`, `emit.go`, `output.go` |
+| `cmd/ctl/dashboard/applications/root.go` | `pkg/dashboard/applications/list.go` → `RunList` | `ranking.go`, `workloads.go`, `apps.go`, `format/...` |
+| `cmd/ctl/dashboard/overview/{physical,user,ranking,root}.go` | `pkg/dashboard/overview/{physical,user,ranking,default}.go` → `RunPhysical`/`RunUser`/`RunRanking`/`RunDefault` | `monitoring.go`, `workloads.go`, `ranking.go`, `users.go`, `numbers.go` |
+| `cmd/ctl/dashboard/overview/{cpu,memory,pods,network}.go` | `pkg/dashboard/overview/{cpu,memory,pods,network}.go` → `RunCPU`/`RunMemory`/`RunPods`/`RunNetwork` (built on `nodes.go`'s `RunPerNodeMetric` scaffold) | `monitoring.go`, `system.go` (network → capi `/system/ifs`), `numbers.go` |
+| `cmd/ctl/dashboard/overview/disk/{root,main,partitions}.go` | `pkg/dashboard/overview/disk/{default,main,partitions}.go` → `RunDefault`/`RunMain`/`RunPartitions` | `monitoring.go` (node\_disk\_*), `lsblk.go`, `numbers.go`, `format/...` |
+| `cmd/ctl/dashboard/overview/fan/{root,live,curve}.go` | `pkg/dashboard/overview/fan/{default,live,curve}.go` → `RunDefault`/`RunLive`/`RunCurve` | `system.go` (`FetchSystemFan`), `gates.go` (`GateOlaresOne`), `gpu.go` (graphics list co-render), `fan_curve.go` |
+| `cmd/ctl/dashboard/overview/gpu/{root,list,tasks,get,task,detail,task_detail}.go` | `pkg/dashboard/overview/gpu/{list,tasks,get,task,detail,task_detail}.go` → `RunList`/`RunTasks`/`RunGet`/`RunTask`/`RunDetail`/`RunTaskDetail` (+ `specs.go` for the gauge/trend catalogue and concurrent fan-out) | `gpu.go`, `gpu_format.go`, `gpu_query.go`, `gates.go`, `client.go` |
+| `cmd/ctl/dashboard/schema/root.go` | n/a — schema loader stays in pkg root | `schema.go` (loader + `go:embed` bundle) |
 
 - HTTP base = `ResolvedProfile.DashboardURL = https://dashboard.<localPrefix><terminusName>` (derived in [`cli/pkg/olares/id.go`](cli/pkg/olares/id.go) `DashboardURL`).
 - All requests go through factory's `refreshingTransport` — header injection + 401 retry happen for free; **dashboard code MUST NOT touch `X-Authorization`** or instantiate its own `http.Client`.
 - Per-command leaf / aggregate decision is hard-coded; do not flip them.
 - The shared `*pkgdashboard.CommonFlags` is bound once in cmd-root (`bindPersistentFlags(&common, cmd)`), then passed by pointer to every area factory (`overview.NewOverviewCommand(f, &common)` etc.). Each area subpackage stores it in a package-level `var common *pkgdashboard.CommonFlags` so leaf RunE bodies keep `common.Output / common.Validate() / common.Timezone` selectors.
 
-## File layout (frozen — directory tree mirrors command tree)
-
-The cmd shell directory tree is **identical** to the command tree.
-Every parent command has a directory (with `root.go` + `common.go`),
-every leaf has its own `.go` file. No more monolithic files like the
-old `overview.go` / `applications.go`.
-
-```
-cli/cmd/ctl/dashboard/                               # cmd shell — thin cobra wiring
-├── root.go             # NewDashboardCommand(f) — top-level assembler; binds persistent flags into &common; AddCommand overview / applications / schema
-├── options.go          # bindPersistentFlags(&common, cmd) — sole cobra↔CommonFlags meeting point
-├── dashboard_test.go   # cmd-root tests only: TestUnknownSubcommandRunE_*, TestAllLeafCommandsSilenced
-│                       # (factory→*pkgdashboard.Client adapter lives area-locally in each <area>/common.go,
-│                       #  not at cmd-root — the cmd-root client.go was retired in P3b cleanup.)
-│
-├── overview/
-│   ├── root.go         # NewOverviewCommand(f, cf) — default = sections envelope (physical+user+ranking) + AddCommand 7 leaves + 3 subgroups
-│   ├── common.go       # var common *pkgdashboard.CommonFlags + area-local prepareClient + small trampolines aliasing pkg names
-│   ├── physical.go     # newOverviewPhysicalCommand — `overview physical`
-│   ├── user.go         # `overview user [<username>]` (admin gate via pkgdashboard.RequireAdmin)
-│   ├── ranking.go      # `overview ranking` — calls pkgdashboard.BuildRankingEnvelope
-│   ├── cpu.go          # `overview cpu` — per-node CPU table
-│   ├── pods.go         # `overview pods` — per-node running-pod count
-│   ├── memory.go       # `overview memory [--mode physical|swap]`
-│   ├── network.go      # `overview network` (capi /system/ifs, NOT monitoring)
-│   ├── nodes.go        # shared per-node metric scaffolding for cpu / memory / pods
-│   ├── disk/
-│   │   ├── root.go         # NewDiskCommand(f, cf) — default = sections (main + per-disk partitions)
-│   │   ├── common.go       # area-local var common + trampolines
-│   │   ├── main.go         # `overview disk main` — per-physical-disk table
-│   │   └── partitions.go   # `overview disk partitions <device>`
-│   ├── fan/
-│   │   ├── root.go         # NewFanCommand(f, cf) — default = sections (live + curve)
-│   │   ├── common.go
-│   │   ├── live.go         # `overview fan live` — capi /system/fan + graphics list
-│   │   └── curve.go        # `overview fan curve` — 10 hardcoded rows from pkgdashboard.FanCurveTable
-│   └── gpu/
-│       ├── root.go         # NewGPUCommand(f, cf) — default = list
-│       ├── common.go       # area-local var common + HAMI fetch trampolines + advisory wrappers
-│       ├── specs.go        # gpuDetailGaugeSpecs / gpuTaskDetailGaugeSpecs (shared by detail + task_detail)
-│       ├── list.go         # `overview gpu list` — Graphics management tab; 3-state aware
-│       ├── tasks.go        # `overview gpu tasks` — Task management tab; 3-state aware
-│       ├── get.go          # `overview gpu get <uuid>`
-│       ├── task.go         # `overview gpu task <name> <pod-uid>`
-│       ├── detail.go       # `overview gpu detail <uuid>` — full detail panel (4 instant + 6 range queries)
-│       ├── task_detail.go  # `overview gpu task-detail <name> <pod-uid> [--sharemode]`
-│       └── detail_test.go  # TestBuildGPUDetailFullEnvelope_PartialFailure / TestBuildGPUTaskDetailFullEnvelope_TimeSlicingSkipsAllocation
-│
-├── applications/
-│   ├── root.go         # NewApplicationsCommand(f, cf) — single leaf, default = workload-grain table; alias `apps`; calls pkgdashboard.BuildRankingEnvelope
-│   └── common.go
-│
-└── schema/
-    └── root.go         # NewSchemaCommand(cf) — schema introspection (loader is pkgdashboard.LoadSchemaIndex)
-
-cli/pkg/dashboard/                                    # pkg core — heavy logic + types + fetchers
-├── flags.go            # CommonFlags struct (raw fields exported so cobra binding works) + Validate + ResolveWindow
-├── output.go           # Envelope / Item / Meta / TableColumn + ParseOutputFormat + DisplayString
-├── emit.go             # WriteJSON (NDJSON-aware) + WriteTable + EmitDefault (cmd-side default table layout helper)
-├── client.go           # Client wrapper, DoJSON/DoEmpty/DoRaw, EnsureUser sync.Once, HTTPError
-├── http.go             # ClassifyTransportErr + IsHTTPError + low-level transport helpers
-├── runner.go           # Runner{Iter, RunOnce} — `--watch` interval/iter/timeout/SIGINT/3-fail/NDJSON rules
-├── system.go           # EnsureSystemStatus / IsOlaresOne + capi /system/* shapes
-├── gates.go            # GateOlaresOne (hard) + GPUAdvisory (soft) + HasCUDANode + VgpuUnavailableFromError + ResetCUDANodeCache
-├── monitoring.go       # FetchClusterMetrics / FetchNodeMetrics / FetchUserMetric + MonitoringQuery + MonitoringWindow defaults
-├── workloads.go        # FetchWorkloadsMetrics dual-fetch + MergeWorkloadMetrics + WorkloadAggregate / WorkloadApp / WorkloadRequest
-├── apps.go             # FetchAppsList + RawAppListItem (with empty-entrances filter mirroring SPA appsWithNamespace)
-├── ranking.go          # BuildRankingEnvelope — the ONLY legitimate cross-area share (consumed by overview/ranking + applications/root)
-├── lsblk.go            # HasPknameLabels / CollectSubtreeByPkname / ResolveParent / BuildLsblkTreePrefix / FlattenLsblkHierarchy / LsblkRow / LsblkFlatRow
-├── gpu.go              # FetchGraphicsList / FetchTaskList / FetchGraphicsDetail / FetchTaskDetail + ExtractHAMIMessage + GraphicsListBody
-├── gpu_format.go       # PercentString / PercentDirect / GPUModeLabel / GPUHealthLabel / GPUVRAMHuman / GPUTrendStep
-├── gpu_query.go        # FetchInstantVector / FetchRangeVector + InstantVectorSample / RangeVectorSeries
-├── numbers.go          # FormatFloat / SafeRatio / FormatRateAny / ParseRFCTimestamp / SampleFloat / LastSampleFromRow / FirstAnyInArray / ToFloat
-├── fan_curve.go        # FanCurveTable + FanSpeedMaxCPU / FanSpeedMaxGPU constants (1:1 with SPA Fan/config.ts)
-├── schema.go           # Kind* constants + AllKinds() + LoadSchemaIndex + go:embed schemas/*.json
-├── dashboard_test.go   # CommonFlags / Client / Runner / Fetch* / Merge* / lsblk / gates / GPU helpers — pure data tests
-├── helpers_test.go     # in-package test trampolines (var common *CommonFlags + lowercase shape aliases)
-├── format/
-│   ├── format.go       # 1:1 JS port; UnitTypes table; GetValueByUnit/Suitable*/WorthValue/...
-│   ├── location.go     # *Location wrapper (timezone abstraction)
-│   ├── format_test.go  # unit + TestFormat_GoldenOracle (skips if golden.json absent)
-│   └── testdata/golden-gen.js   # node script that runs @bytetrade/core to emit golden.json
-└── schemas/*.json      # JSON Schema draft-07, one per Kind, embedded via //go:embed
-```
 
 ## JSON envelope (frozen shapes)
 
@@ -210,41 +152,10 @@ Declared in [`cli/pkg/dashboard/schema.go`](cli/pkg/dashboard/schema.go). **`All
 
 Do NOT rename existing Kind values — agents rely on string equality.
 
-## Command tree
-
-```
-dashboard
-├── (default action)                     # Shape B: sections envelope (physical+user+ranking)
-├── schema [<command-path>]              # introspection; no-arg = Shape A index, with arg = draft-07 doc
-├── overview
-│   ├── (default action)                 # Shape B: sections envelope (physical+user+ranking)
-│   ├── physical                         # Shape A; 9 cluster metric rows
-│   ├── user [<username>]                # Shape A; user CPU/memory quota; admin only for non-self
-│   ├── ranking                          # Shape A; workload-grain ranking (fetchWorkloadsMetrics)
-│   ├── cpu                              # Shape A; per-node table
-│   ├── memory [--mode physical|swap]    # Shape A; per-node table
-│   ├── disk                             # Shape B (default action): main + per-disk partitions
-│   │   ├── main                         # Shape A; per-physical-disk table
-│   │   └── partitions <device>          # Shape A; per-partition table for one device
-│   ├── pods                             # Shape A; per-node running-pod count
-│   ├── network                          # Shape A; per-iface table from capi /system/ifs (NOT monitoring)
-│   ├── fan                              # Shape B (default action): live + curve
-│   │   ├── live                         # Shape A; 1 row from capi /system/fan + graphics list
-│   │   └── curve                        # Shape A; 10 hardcoded rows from fanCurveTable
-│   └── gpu                              # default action = list (Shape A)
-│       ├── list                         # Shape A; Graphics management tab; 3-state aware
-│       ├── tasks                        # Shape A; Task management tab; 3-state aware
-│       ├── get <uuid>                   # Shape A; per-GPU detail
-│       └── task <name> <pod-uid>        # Shape A; per-task detail
-└── applications                         # Shape A; workload-grain table (alias `apps`)
-```
-
-Notes on parent-command default actions:
-
-- `dashboard overview` / `dashboard overview disk` / `dashboard overview fan` ALL emit Shape B (sections envelope) when invoked with no subcommand. This is the unified default style for parent commands that logically aggregate multiple views.
-- `dashboard overview gpu` is the only exception: its default is `list` (single section view), kept for ergonomics ("list me the GPUs" is the natural first action).
-- `dashboard overview memory` and `dashboard overview cpu` are NOT parent commands — they are leaf commands with their own flags (`--mode physical|swap` for memory). No sections envelope here.
-- `dashboard applications` is a single-leaf command (no subverbs). Its default action is the workload-grain table — equivalent to the now-deleted `applications list`. The aliased `apps` short form is preserved. The previous `applications pods <namespace>` subcommand was removed in favor of `kubectl get pods -n <ns>` since it duplicated kubectl semantics 1:1.
+The authoritative listing of every command, its envelope shape, and
+its default-action semantics is the cmd/pkg directory tree itself
+(see [File layout](#file-layout-frozen--directory-tree-mirrors-command-tree-on-both-sides)) and `olares-cli dashboard --help`. Run `olares-cli dashboard schema -o
+json` for the live `dashboard.<area>.<verb>` Kind index.
 
 ## Frozen modules
 
@@ -252,8 +163,8 @@ The following are **load-bearing**. Touching them requires a separate user-confi
 
 | Frozen module | Why it's frozen | Where |
 |---|---|---|
-| Two-layer split: `cli/cmd/ctl/dashboard/` thin shell + `cli/pkg/dashboard/` heavy core | Architectural decision (P1–P3); leaves are reusable from tests + future tooling without dragging cobra in | [`cli/cmd/ctl/dashboard/`](cli/cmd/ctl/dashboard/) + [`cli/pkg/dashboard/`](cli/pkg/dashboard/) |
-| Directory tree mirrors command tree | One file per leaf, `root.go`+`common.go` per parent — prevents drift between `dashboard --help` and `ls` | every cmd subdirectory under [`cli/cmd/ctl/dashboard/`](cli/cmd/ctl/dashboard/) |
+| Two-layer split with mirrored `cmd/<area>` ↔ `pkg/dashboard/<area>` subpackages: cmd is a thin cobra shell that calls `pkg<area>.RunXxx(...)`; pkg owns every envelope builder, table writer, watch loop and fan-out. The pkg root holds only infrastructure + shared fetchers. | Architectural decision (P1–P7); each leaf's heavy logic is testable directly via `RunXxx` without dragging cobra in, and cmd-side line budgets stay flat as the surface grows | [`cli/cmd/ctl/dashboard/`](cli/cmd/ctl/dashboard/) + [`cli/pkg/dashboard/`](cli/pkg/dashboard/) |
+| Directory tree mirrors command tree on BOTH sides | One file per leaf in cmd (`<verb>.go`) AND in the matching pkg subpackage (`<verb>.go` exposing one `RunXxx` entry); `root.go`+`common.go` per cmd parent, `default.go` per pkg parent — prevents drift between `dashboard --help`, the cmd `ls`, and the pkg `ls` | every cmd subdirectory under [`cli/cmd/ctl/dashboard/`](cli/cmd/ctl/dashboard/) and every pkg subpackage under [`cli/pkg/dashboard/<area>/`](cli/pkg/dashboard/) |
 | Kind constants + `AllKinds()` | Public agent contract | [`pkg/dashboard/schema.go`](cli/pkg/dashboard/schema.go) |
 | Envelope shapes A / B | Public agent contract | [`pkg/dashboard/output.go`](cli/pkg/dashboard/output.go) |
 | `format` pkg signatures + JS-parity behaviour | Backed by `golden.json` oracle; even rounding quirks are intentional | [`pkg/dashboard/format/format.go`](cli/pkg/dashboard/format/format.go) |
@@ -269,8 +180,8 @@ The following are **load-bearing**. Touching them requires a separate user-confi
 | `ResolvedProfile.DashboardURL` derivation chain | URL is derived, not configured | [`cli/pkg/olares/id.go`](cli/pkg/olares/id.go), [`cli/pkg/credential/types.go`](cli/pkg/credential/types.go), [`cli/pkg/credential/default_provider.go`](cli/pkg/credential/default_provider.go) |
 | Cobra `SilenceUsage = true` + `SilenceErrors = true` on every dashboard cmd | Clean machine-readable error text; pinned by `TestAllLeafCommandsSilenced` in cmd-root | every `cobra.Command` literal under `cmd/ctl/dashboard/` |
 | Default output = `table` | Plan decision (`table_default`) | [`pkg/dashboard/output.go`](cli/pkg/dashboard/output.go) `ParseOutputFormat` |
-| **Dependency direction** — `cli/cmd/ctl/dashboard/<area>` may import `cli/pkg/dashboard` and its own children only; **horizontal cmd↔cmd imports are FORBIDDEN**. Cross-area shares MUST be hoisted to `cli/pkg/dashboard/` (the `BuildRankingEnvelope` precedent). | Architectural integrity; prevents the circular-import class of bugs that killed the 1.x layout | every `import` block under [`cli/cmd/ctl/dashboard/`](cli/cmd/ctl/dashboard/) |
-| **No pkg↔pkg cross-domain imports** — pkg files (workloads, gpu, fan_curve, …) are organized by domain; they may not import each other. Cross-domain orchestration happens at the cmd leaf level. | Keeps pkg leaves independently testable + reusable | every `import` block under [`cli/pkg/dashboard/`](cli/pkg/dashboard/) |
+| **Dependency direction (cmd side)** — `cli/cmd/ctl/dashboard/<area>` may import `cli/pkg/dashboard`, `cli/pkg/dashboard/<area>/...`, and its own cobra children only; **horizontal cmd↔cmd imports are FORBIDDEN**. The cmd shell is forbidden from owning envelope shapes / table writers / fan-out — those belong in the matching `pkg/dashboard/<area>` subpackage. | Architectural integrity; prevents the circular-import class of bugs that killed the 1.x layout, and keeps the cmd surface trivially line-budgeted | every `import` block under [`cli/cmd/ctl/dashboard/`](cli/cmd/ctl/dashboard/) |
+| **Dependency direction (pkg side)** — `cli/pkg/dashboard/<area>/...` may import `cli/pkg/dashboard` (the root infra: `Client`, `Runner`, fetchers, `format`, `numbers`, `gpu_format`, `gpu_query`, `gates`, `schema`, `output`, `emit`, `lsblk`, `fan_curve`); the pkg root MUST NOT import any subpackage (no upward import). Sibling subpackages (e.g. `overview/disk` ↔ `overview/fan`) MUST NOT import each other — if two areas need the same heavy helper, hoist it to `cli/pkg/dashboard/` (the `BuildRankingEnvelope` precedent). | Keeps the pkg root independently testable + reusable, and keeps each `<area>` subpackage a self-contained mirror of its cmd sibling | every `import` block under [`cli/pkg/dashboard/`](cli/pkg/dashboard/) |
 
 ## Three-state empty data
 
@@ -523,100 +434,145 @@ Rules:
 
 ## Shared helpers (the only legal call sites)
 
-All shared helpers live under [`cli/pkg/dashboard/`](cli/pkg/dashboard/)
-and are imported by cmd subpackages as `pkgdashboard "github.com/beclab/Olares/cli/pkg/dashboard"`.
+All shared infrastructure helpers live under
+[`cli/pkg/dashboard/`](cli/pkg/dashboard/) (the pkg root) and are
+imported as `pkgdashboard "github.com/beclab/Olares/cli/pkg/dashboard"`
+by the pkg subpackages (`pkg/dashboard/<area>/...`) and — for the
+plumbing types like `CommonFlags` / `Client` / `ErrAlreadyReported` —
+also by the cmd shells. The cmd shells additionally import
+`pkg<area> "github.com/beclab/Olares/cli/pkg/dashboard/<area>"` to
+reach `RunXxx`.
 
-### `pkg/dashboard/` API surface (heavy core)
+### `pkg/dashboard/` (root) API surface — infrastructure + shared fetchers
 
 | Domain file | Exposed surface | Used by |
 |---|---|---|
-| `flags.go` | `CommonFlags` struct (raw + parsed fields), `Validate`, `ResolveWindow`, `OutputFormat`, `ParseOutputFormat` | every leaf RunE, every fetcher; cobra binding lives in cmd-root `options.go` |
-| `output.go` / `emit.go` | `Envelope` / `Item` / `Meta` / `TableColumn`, `WriteJSON` (NDJSON-aware), `WriteTable`, `HeadItems`, `DisplayString`, `EmitDefault`, `NewMeta` | every output site (hand-rolling `json.Marshal` / `fmt.Println` for envelope output is forbidden) |
-| `client.go` / `http.go` | `Client.DoJSON / DoEmpty / DoRaw`, `EnsureUser` (sync.Once), `RequireAdmin`, `ResolveTargetUser`, `EnsureSystemStatus`, `IsOlaresOne`, `HTTPError`, `ClassifyTransportErr`, `IsHTTPError` | every HTTP call (direct `httpClient.Do` forbidden) |
-| `runner.go` | `Runner{Iter, RunOnce}`, `ParseStep` | every `--watch`-aware command |
-| `monitoring.go` | `FetchClusterMetrics(ctx,c,cf,metrics,window,now,instant)`, `FetchNodeMetrics`, `FetchUserMetric`, `MonitoringQuery`, `MonitoringWindow`, `DefaultClusterWindow`, `DefaultDetailWindow` | `overview physical / cpu / memory / pods / user / network` (where monitoring applies) |
-| `workloads.go` | `FetchWorkloadsMetrics(ctx,c,cf,req,window,now)`, `MergeWorkloadMetrics`, `WorkloadAggregate / WorkloadApp / WorkloadRequest`, `AggregateByDeployment`, `AggregateByNamespace`, `PodCountByDeployment`, `SortWorkloadAggregates` | `overview/ranking.go` and `applications/root.go` — but ONLY through `BuildRankingEnvelope` |
-| `apps.go` | `FetchAppsList`, `RawAppListItem` (with empty-`entrances[]` filter mirroring SPA `appsWithNamespace`) | `overview/ranking.go`, `applications/root.go` |
-| `ranking.go` | **`BuildRankingEnvelope(ctx,c,cf,target,sortBy,sortDir,now)`** — assembles a workload-grain ranking envelope | the ONE legitimate cross-area share — consumed by both `overview/ranking.go` and `applications/root.go` so first-row parity holds |
-| `system.go` | `FetchSystemIFS(ctx,c,testConnectivity)`, `FetchSystemFan`, `SystemIFSItem`, `SystemFanData`, `SystemStatus` | `overview/network.go` (capi /system/ifs), `overview/fan/live.go` (capi mdns/olares-one/cpu-gpu) |
-| `gates.go` | `GateOlaresOne` (hard gate, fan), `GPUAdvisory` (soft gate, gpu), `HasCUDANode`, `VgpuUnavailableFromError`, `ResetCUDANodeCache` | `overview/fan/*` (hard gate runs inside `Runner.Iter`), every `overview/gpu/*` leaf (advisory note + soft proceed) |
-| `gpu.go` | `FetchGraphicsList`, `FetchTaskList`, `FetchGraphicsDetail`, `FetchTaskDetail`, `ExtractHAMIMessage`, `GraphicsListBody` | `overview/gpu/{list,tasks,get,task,detail,task_detail}.go` |
-| `gpu_format.go` | `PercentString`, `PercentDirect`, `GPUModeLabel`, `GPUHealthLabel`, `GPUVRAMHuman`, `GPUTrendStep` | every `overview/gpu/*` table writer |
-| `gpu_query.go` | `FetchInstantVector`, `FetchRangeVector`, `InstantVectorSample`, `RangeVectorSeries / Range / Point` | `overview/gpu/detail.go`, `overview/gpu/task_detail.go` |
-| `lsblk.go` | `HasPknameLabels`, `CollectSubtreeByPkname`, `ResolveParent`, `BuildLsblkTreePrefix`, `FlattenLsblkHierarchy`, `LsblkRow / LsblkFlatRow` | `overview/disk/main.go`, `overview/disk/partitions.go` |
-| `numbers.go` | `FormatFloat`, `SafeRatio`, `FormatRateAny`, `ParseRFCTimestamp`, `SampleFloat`, `LastSampleFromRow`, `FirstAnyInArray`, `ToFloat`, `RenderTemperature` | every `display`-side rendering site that doesn't go through `format` directly |
-| `fan_curve.go` | `FanCurveTable` (10 rows), `FanSpeedMaxCPU`, `FanSpeedMaxGPU` | `overview/fan/curve.go` (do NOT fetch from BFF — UI constant; SPA also hardcodes) |
-| `schema.go` | Kind* constants, `AllKinds()`, `LoadSchemaIndex`, `//go:embed schemas/*.json` | `schema/root.go`, every command's `Use` field references one of these constants |
+| `flags.go` | `CommonFlags` struct (raw + parsed fields), `Validate`, `ResolveWindow`, `OutputFormat`, `ParseOutputFormat` | every cmd leaf RunE (validate), every pkg `RunXxx` (read fields), every fetcher; cobra binding lives in cmd-root `options.go` |
+| `output.go` / `emit.go` / `envelope.go` | `Envelope` / `Item` / `Meta` / `TableColumn`, `WriteJSON` (NDJSON-aware), `WriteTable`, `HeadItems`, `DisplayString`, `EmitDefault`, `NewMeta` | every `BuildXxxEnvelope` / `WriteXxxTable` site under `pkg/dashboard/<area>/...` (hand-rolling `json.Marshal` / `fmt.Println` for envelope output is forbidden) |
+| `client.go` / `users.go` | `Client.DoJSON / DoEmpty / DoRaw`, `EnsureUser` (sync.Once), `RequireAdmin`, `ResolveTargetUser`, `UserDetail`, `EnsureSystemStatus`, `IsOlaresOne`, `HTTPError`, `ClassifyTransportErr`, `IsHTTPError`, `ErrAlreadyReported` | every HTTP call (direct `httpClient.Do` forbidden); admin gating in `pkg/dashboard/overview/user.go` |
+| `runner.go` | `Runner{Iter, RunOnce}`, `ParseStep` | every `--watch`-aware `RunXxx` (instantiated and driven from inside the pkg subpackage, never from cmd) |
+| `monitoring.go` | `FetchClusterMetrics(ctx,c,cf,metrics,window,now,instant)`, `FetchNodeMetrics`, `FetchUserMetric`, `MonitoringQuery`, `MonitoringWindow`, `DefaultClusterWindow`, `DefaultDetailWindow` | `pkg/dashboard/overview/{physical,cpu,memory,pods,user}.go`, `pkg/dashboard/overview/disk/{main,partitions}.go` |
+| `workloads.go` | `FetchWorkloadsMetrics(ctx,c,cf,req,window,now)`, `MergeWorkloadMetrics`, `WorkloadAggregate / WorkloadApp / WorkloadRequest`, `AggregateByDeployment`, `AggregateByNamespace`, `PodCountByDeployment`, `SortWorkloadAggregates` | only via `BuildRankingEnvelope` (do NOT call `FetchWorkloadsMetrics` directly from `<area>` subpackages) |
+| `apps.go` | `FetchAppsList`, `RawAppListItem` (with empty-`entrances[]` filter mirroring SPA `appsWithNamespace`) | only via `BuildRankingEnvelope` |
+| `ranking.go` | **`BuildRankingEnvelope(ctx,c,cf,target,sortBy,sortDir,now)`** — assembles a workload-grain ranking envelope | consumed by `pkg/dashboard/overview/ranking.go` and `pkg/dashboard/applications/list.go` so first-row parity holds (the ONE legitimate cross-area share, hoisted to the pkg root) |
+| `system.go` | `FetchSystemIFS(ctx,c,testConnectivity)`, `FetchSystemFan`, `SystemIFSItem`, `SystemFanData`, `SystemStatus`, `EnsureSystemStatus` | `pkg/dashboard/overview/network.go` (capi /system/ifs), `pkg/dashboard/overview/fan/live.go` (capi mdns/olares-one/cpu-gpu) |
+| `gates.go` | `GateOlaresOne` (hard gate, fan), `GPUAdvisory` (soft gate, gpu), `HasCUDANode`, `VgpuUnavailableFromError`, `ResetCUDANodeCache` | `pkg/dashboard/overview/fan/*` (hard gate runs inside `Runner.Iter`), every `pkg/dashboard/overview/gpu/*` leaf (advisory note + soft proceed) |
+| `gpu.go` | `FetchGraphicsList`, `FetchTaskList`, `FetchGraphicsDetail`, `FetchTaskDetail`, `ExtractHAMIMessage`, `GraphicsListBody`, `TaskListBody` | every file under `pkg/dashboard/overview/gpu/` (list / tasks / get / task / detail / task_detail) |
+| `gpu_format.go` | `PercentString`, `PercentDirect`, `GPUModeLabel`, `GPUHealthLabel`, `GPUVRAMHuman`, `GPUTrendStep`, `RenderTemperature` | every `pkg/dashboard/overview/gpu/*` table writer; `pkg/dashboard/overview/disk/main.go` (renderDiskTemperature wraps `RenderTemperature`) |
+| `gpu_query.go` | `FetchInstantVector`, `FetchRangeVector`, `InstantVectorSample`, `RangeVectorSeries / Range / Point` | `pkg/dashboard/overview/gpu/specs.go` (gauge/trend runners), `pkg/dashboard/overview/gpu/detail.go`, `pkg/dashboard/overview/gpu/task_detail.go` |
+| `lsblk.go` | `HasPknameLabels`, `CollectSubtreeByPkname`, `ResolveParent`, `BuildLsblkTreePrefix`, `FlattenLsblkHierarchy`, `LsblkRow / LsblkFlatRow` | `pkg/dashboard/overview/disk/main.go`, `pkg/dashboard/overview/disk/partitions.go` |
+| `numbers.go` | `FormatFloat`, `SafeRatio`, `FormatRateAny`, `ParseRFCTimestamp`, `SampleFloat`, `LastSampleFromRow`, `FirstAnyInArray`, `ToFloat`, `RenderTemperature` | every `display`-side rendering site under `pkg/dashboard/<area>/...` that doesn't go through `format` directly (typically aliased lowercase in the area's `helpers.go`) |
+| `fan_curve.go` | `FanCurveTable` (10 rows), `FanSpeedMaxCPU`, `FanSpeedMaxGPU` | `pkg/dashboard/overview/fan/curve.go` (do NOT fetch from BFF — UI constant; SPA also hardcodes) |
+| `schema.go` | Kind* constants, `AllKinds()`, `LoadSchemaIndex`, `//go:embed schemas/*.json` | `cmd/ctl/dashboard/schema/root.go` (loader); every `pkg/dashboard/<area>/<verb>.go` references the matching `Kind*` constant when emitting envelopes |
 
-### cmd area `common.go` — the deliberate light duplication
+### `pkg/dashboard/<area>/` subpackages — heavy command-specific logic
+
+| Subpackage | Entry points | Main files |
+|---|---|---|
+| `pkg/dashboard/applications/` | `RunList(ctx,c,cf,sortBy,sortDir)` | `list.go` (+ `list_test.go`) |
+| `pkg/dashboard/overview/` | `RunDefault` (sections envelope), `RunPhysical`, `RunUser(target)`, `RunRanking(sortDir)`, `RunCPU`, `RunMemory(mode)`, `RunPods`, `RunNetwork(testConn)` + the per-node scaffold `RunPerNodeMetric` (`PerNodeDisplayFn`) | `default.go`, `physical.go`, `user.go`, `ranking.go`, `cpu.go`, `memory.go`, `pods.go`, `network.go`, `nodes.go`, `helpers.go` (+ tests) |
+| `pkg/dashboard/overview/disk/` | `RunDefault`, `RunMain`, `RunPartitions(device)` | `default.go`, `main.go`, `partitions.go`, `helpers.go` (+ tests) |
+| `pkg/dashboard/overview/fan/` | `RunDefault`, `RunLive`, `RunCurve` | `default.go`, `live.go`, `curve.go`, `helpers.go` (+ tests) |
+| `pkg/dashboard/overview/gpu/` | `RunList`, `RunTasks`, `RunGet(uuid)`, `RunTask(name,podUID,sharemode)`, `RunDetail(uuid)`, `RunTaskDetail(name,podUID,sharemode)` + the `specs.go` query catalogue (`gaugeSpec` / `trendSpec` / `runGauge` / `runTrend` / `fanoutGaugeAndTrend`) | `list.go`, `tasks.go`, `get.go`, `task.go`, `detail.go`, `task_detail.go`, `specs.go`, `helpers.go` (+ tests) |
+
+Each subpackage's `helpers.go` may carry **package-private lowercase
+aliases** (e.g. `formatFloat = pkgdashboard.FormatFloat`,
+`gpuVRAMHuman = pkgdashboard.GPUVRAMHuman`) for primitives the area
+calls many times. These are readability-only — they are NOT new
+helpers, do NOT carry behaviour, and are shadowed by `helpers_test.go`
+in the same area for the matching test bodies.
+
+### cmd area `common.go` — slim, intentionally near-identical
 
 Every cmd subpackage carries a small `common.go` whose contents are
 intentionally near-identical between areas. This is **expected**, not
 drift: each area declares its own factory + flag pointer so leaf code
 inside that area can read `common.X` selector-style without importing
-sibling areas. The shape is:
+sibling areas. The current shape (≤ 70 lines per area, tighter for
+sub-areas) is:
 
 ```go
+// Package <area> hosts the cobra wiring for `olares-cli dashboard <area>`;
+// business logic lives in cli/pkg/dashboard/<area>/.
 package <area>
 
 import (
-    pkgdashboard "github.com/beclab/Olares/cli/pkg/dashboard"
+    "context"
+    "fmt"
+    "strings"
+
+    "github.com/spf13/cobra"
+
     "github.com/beclab/Olares/cli/pkg/cmdutil"
-    // …
+    pkgdashboard "github.com/beclab/Olares/cli/pkg/dashboard"
 )
 
-// Area-local pointer to the singleton CommonFlags. Wired by
-// NewXxxCommand(f, cf); leaf RunE bodies read common.Output etc.
+// common is wired by NewXxxCommand; cobra's persistent-flag inheritance
+// mutates the pointed-at struct before any leaf RunE fires.
 var common *pkgdashboard.CommonFlags
 
-// Area-local prepareClient — one of the few bits cmd subpackages
-// duplicate. Each area calls cmdutil.Factory directly rather than
-// reaching into a sibling area's client.go.
-func prepareClient(ctx context.Context, f *cmdutil.Factory) (*pkgdashboard.Client, error) { … }
+// prepareClient is the area-private *pkgdashboard.Client factory.
+func prepareClient(ctx context.Context, f *cmdutil.Factory) (*pkgdashboard.Client, error) { /* ResolveProfile + HTTPClient + NewClient */ }
 
-// Trampolines that thin-wrap pkg names with the area's `common`
-// pointer (e.g. fetchClusterMetrics → pkgdashboard.FetchClusterMetrics(ctx, c, common, …)).
+// unknownSubcommandRunE prints a typed typo hint + returns ErrAlreadyReported.
+func unknownSubcommandRunE(c *cobra.Command, args []string) error { /* SuggestionsFor + ErrAlreadyReported */ }
 ```
 
-The duplication is bounded — each `common.go` is ~50–80 lines. **Do
-NOT** "consolidate" them by importing one area's `common.go` from
-another — that violates the no-horizontal-import red-line. If two areas
-need the same heavyweight helper, hoist it to `cli/pkg/dashboard/`
-(as we did with `BuildRankingEnvelope`).
+That's the WHOLE file. **No trampoline aliases**, no `pkgdashboard.X`
+re-exports, no envelope helpers. If a leaf needs a pkg helper, it
+imports `pkgdashboard` (or the area's pkg subpackage) and calls it
+directly. The earlier ~400-line `common.go` shape — full of lowercase
+re-exports of every pkg name — has been retired; reintroducing it is a
+forbidden regression (see [Iteration red-lines](#iteration-red-lines)).
+
+**Do NOT** "consolidate" `common.go` files by importing one area's
+from another — that violates the no-horizontal-import red-line. If two
+areas need the same heavyweight helper, hoist it to
+`cli/pkg/dashboard/` (as we did with `BuildRankingEnvelope`).
 
 ## Coding rules (project-specific, hold tight)
 
-- **Package layout**: cmd shell is hierarchical (one dir per parent command, one file per leaf); pkg core is by domain (one file per fetcher / aggregator family). Extract a NEW pkg domain file ONLY when its function set is independently testable and isn't a shim over an existing domain. Cmd subpackages NEVER import each other horizontally.
-- **File organization (cmd)**: each parent has `root.go` (cobra assembly + AddCommand for children) + `common.go` (`var common *pkgdashboard.CommonFlags`, area-local `prepareClient`, lowercase trampolines). Each leaf is a single file named after the verb (e.g. `cpu.go`, `disk/main.go`, `gpu/list.go`).
-- **File organization (pkg)**: domain-named files (`monitoring.go`, `workloads.go`, `gpu.go`, `gpu_format.go`, `gpu_query.go`, `lsblk.go`, `gates.go`, `fan_curve.go`, `numbers.go`, …). Cross-domain helpers (`emit.go`, `numbers.go`, `output.go`, `flags.go`) are explicit and minimal.
-- **Command constructors**: signature `NewXxxCommand(f *cmdutil.Factory, cf *pkgdashboard.CommonFlags) *cobra.Command`. The factory + flags pointer MUST be passed in explicitly; the area subpackage stores `cf` in `var common *pkgdashboard.CommonFlags` for leaf RunE bodies; **no package-level / global factory variable**.
+- **Package layout**: cmd shell mirrors the command tree (one dir per parent, one `<verb>.go` per leaf); pkg subpackages mirror the same tree (one `<verb>.go` per leaf, exposing one `RunXxx` entry); pkg root is by domain (one file per fetcher / aggregator / infrastructure family). Extract a NEW pkg-root domain file ONLY when its function set is independently testable and isn't a shim over an existing domain. Cmd subpackages NEVER import each other horizontally; pkg subpackages NEVER import each other horizontally and the pkg root NEVER imports a subpackage.
+- **File organization (cmd)**: each parent has `root.go` (cobra assembly + AddCommand for children, RunE = `pkg<area>.RunDefault` or `RunList` per the parent-default rule) + `common.go` (≤ 70 lines: `var common`, area-local `prepareClient`, `unknownSubcommandRunE` — and nothing else). Each leaf is a single file named after the verb (e.g. `cpu.go`, `disk/main.go`, `gpu/list.go`); RunE = `validate flags → prepareClient → pkg<area>.RunXxx(...)`. Stub-style trampoline aliases are forbidden (see [Iteration red-lines](#iteration-red-lines)).
+- **File organization (pkg)**: pkg-root files are domain-named (`monitoring.go`, `workloads.go`, `gpu.go`, `gpu_format.go`, `gpu_query.go`, `lsblk.go`, `gates.go`, `fan_curve.go`, `numbers.go`, …). Pkg subpackages (`<area>/`) carry `<verb>.go` files that own the RunXxx + Build*Envelope + Write*Table triplet for each leaf, plus an optional `helpers.go` (package-private lowercase aliases of pkg-root primitives, readability only).
+- **Command constructors**: signature `NewXxxCommand(f *cmdutil.Factory, cf *pkgdashboard.CommonFlags) *cobra.Command`. The factory + flags pointer MUST be passed in explicitly; the cmd area subpackage stores `cf` in `var common *pkgdashboard.CommonFlags` for leaf RunE bodies; **no package-level / global factory variable**.
 - **Cobra**: every leaf has `Use` / `Short` / (where helpful) `Example` filled. `SilenceUsage = true`, `SilenceErrors = true`. Stub-style commands (none today) print an envelope with `meta.error="not implemented"` AND a clear stderr line. The contract is pinned by `TestAllLeafCommandsSilenced` in cmd-root.
-- **Errors**: HTTP non-2xx → `*pkgdashboard.HTTPError`; auth errors → `reformatAuthErr`. Never wrap typed `*credential.ErrTokenInvalidated` / `*credential.ErrNotLoggedIn` — surface them directly so the standard "run profile login" CTA fires.
-- **Reuse before extend**: new cluster metric → check `pkgdashboard.FetchClusterMetrics`; new per-node metric → check `FetchNodeMetrics`; new user-grain metric → check `FetchUserMetric`; new workload-grain view → check `BuildRankingEnvelope`; new watchable command → use `pkgdashboard.Runner`.
-- **Tests stay tiered** (hard floors): `format` 100%, runner 100%, new pkg fields 100%, helpers wire-shape 100% (httptest), command implementations 80%. The ratchet only goes up.
+- **Errors**: HTTP non-2xx → `*pkgdashboard.HTTPError`; auth errors → reformatted at the pkg layer. Never wrap typed `*credential.ErrTokenInvalidated` / `*credential.ErrNotLoggedIn` — surface them directly so the standard "run profile login" CTA fires. Soft-printed errors (already shown to the user) return `pkgdashboard.ErrAlreadyReported` so the cmd-root wrapper does not double-print.
+- **Reuse before extend**: new cluster metric → check `pkgdashboard.FetchClusterMetrics`; new per-node metric → check `FetchNodeMetrics`; new user-grain metric → check `FetchUserMetric`; new workload-grain view → check `BuildRankingEnvelope`; new per-node leaf → reuse `pkg/dashboard/overview/nodes.RunPerNodeMetric` with a `PerNodeDisplayFn`; new watchable command → use `pkgdashboard.Runner` from inside the pkg `RunXxx` body.
+- **Tests stay tiered** (hard floors): `format` 100%, runner 100%, new pkg-root fetcher fields 100% (httptest wire-shape pin), per-leaf `RunXxx` happy-path + non-trivial branches (3-state empty, gating, soft-failure) 100%. The ratchet only goes up.
 - **Help text**: when a flag's behaviour depends on `--watch` (`--since`, `--watch-interval`, `--watch-iterations`, `--watch-timeout`), say so verbatim in the flag help to keep `olares-cli ... --help` self-documenting.
 
 ## Iteration red-lines
 
 Allowed (incremental work):
 
-- Add a NEW command (new `Kind` constant in `pkg/dashboard/schema.go`, new `schemas/<kind>.json` registered in `LoadSchemaIndex`, new `AllKinds()` entry, new test). The leaf file lives **in the matching area subpackage** (`overview/`, `overview/disk/`, `overview/gpu/`, `applications/`, `schema/`, …) — never directly under `cmd/ctl/dashboard/`.
-- Add a NEW area subpackage when a new top-level parent command is added — create `cmd/ctl/dashboard/<area>/{root.go, common.go}` mirroring the existing pattern (var common *pkgdashboard.CommonFlags + area-local prepareClient + trampolines).
+- Add a NEW leaf to an existing area:
+  1. Create the pkg entry first: `cli/pkg/dashboard/<area>/<verb>.go` exposing `RunXxx(ctx, c, cf, ...)` plus a `BuildXxxEnvelope` builder and (if it has a non-trivial table) a `WriteXxxTable`. Add a `<verb>_test.go` next to it (one happy-path test minimum, plus error-class coverage matching nearby leaves; reuse the area's `helpers_test.go` httptest fixtures).
+  2. Add the cmd shell: `cli/cmd/ctl/dashboard/<area>/<verb>.go` — a single cobra command literal whose `RunE` is `pkg<area>.RunXxx(...)` after `common.Validate()` + `prepareClient(...)`. No envelope / table code in cmd.
+  3. Wire it in the area's `root.go` via `AddCommand`.
+  4. Register the schema: new `KindXxx` in `pkg/dashboard/schema.go`, append to `AllKinds()`, drop the JSON file under `pkg/dashboard/schemas/`, register in `LoadSchemaIndex()`.
+  5. If the leaf participates in the `--watch` loop, drive `pkgdashboard.Runner` from inside `RunXxx` (do NOT spawn it from cmd).
+- Add a NEW area (new top-level parent command):
+  1. Create the cmd shell: `cli/cmd/ctl/dashboard/<area>/{root.go, common.go}` — `var common *pkgdashboard.CommonFlags`, area-local `prepareClient`, `unknownSubcommandRunE`. `common.go` stays ≤ 70 lines; do NOT add trampoline aliases.
+  2. Create the pkg subpackage: `cli/pkg/dashboard/<area>/{helpers.go, helpers_test.go, default.go}` (and per-leaf `<verb>.go` files as you go). `helpers.go` may carry package-private lowercase aliases for frequently called pkg-root primitives (readability only, no new symbols).
+  3. The area's `default.go` exposes `RunDefault` — either the parent's sections envelope (Shape B) or a single-leaf default (Shape A, as `overview/gpu` does).
 - Add a NEW `omitempty` field on `Meta` (forward-compatible).
 - Add a NEW optional `CommonFlags` flag (in `pkg/dashboard/flags.go`; bind in cmd-root `options.go`; `Validate` must keep all current rules).
 - Add a NEW per-leaf flag (today: `overview memory --mode`, `overview network --test-connectivity`, `overview gpu task --sharemode`, `overview ranking --sort`, `applications --sort`).
-- Extend smoke / unit / golden tests; add httptest-based wire-shape pins for new helpers in `pkg/dashboard/dashboard_test.go`.
+- Extend smoke / unit / golden tests; add httptest-based wire-shape pins to whichever tier owns the call site (pkg-root infra → `pkg/dashboard/dashboard_test.go`; per-leaf envelope → `pkg/dashboard/<area>/<verb>_test.go`; cobra wiring → `cmd/ctl/dashboard/dashboard_test.go`).
 - Tighten doc strings, fix typos, fix `display` rendering as long as `golden.json` still passes.
 
 Forbidden (regression / scope creep):
 
-- **Putting any leaf file directly under `cli/cmd/ctl/dashboard/`** — every leaf belongs in its area subpackage. The cmd-root only holds `root.go` (assembler), `client.go` (factory adapter), `options.go` (cobra↔CommonFlags binding), and `dashboard_test.go` (root-tier tests).
-- **Horizontal imports between cmd subpackages** — `applications/` may NOT import `overview/`; `overview/disk/` may NOT import `overview/fan/`. If two areas need the same heavyweight helper, hoist it to `cli/pkg/dashboard/` (the `BuildRankingEnvelope` precedent). Parent-area imports (`overview/root.go` importing `overview/disk` etc. for AddCommand wiring) are fine.
-- **Cross-domain imports inside `cli/pkg/dashboard/`** — pkg files are organized by domain (workloads, gpu, fan_curve, lsblk, …) and may not import each other. Cross-domain orchestration happens in cmd leaves.
-- **Reverting to a flat cmd package** — every fix-it-quick attempt to "just dump it next to overview.go" is a regression. The directory tree IS the command tree; keep them aligned.
+- **Putting any leaf file directly under `cli/cmd/ctl/dashboard/`** — every leaf belongs in its area subpackage. The cmd-root only holds `root.go` (assembler), `options.go` (cobra↔CommonFlags binding), and `dashboard_test.go` (root-tier tests).
+- **Putting envelope / table / watch / fan-out logic in cmd** — cmd leaf RunE bodies are a few lines (validate flags, build client, call `pkg<area>.RunXxx`). Any function that builds an `Envelope`, writes a table, runs `Runner.Run`, or fans out concurrent HTTP belongs in `cli/pkg/dashboard/<area>/...`.
+- **Horizontal imports between cmd subpackages** — `applications/` may NOT import `overview/`; `overview/disk/` may NOT import `overview/fan/`. Parent-area imports (`overview/root.go` importing `overview/disk` etc. for AddCommand wiring) are fine.
+- **Upward imports inside `cli/pkg/dashboard/`** — the pkg root MUST NOT import any subpackage; sibling subpackages (`overview/disk`, `overview/fan`, `overview/gpu`) MUST NOT import each other. If two area subpackages need the same heavy helper, hoist it to `cli/pkg/dashboard/` (the `BuildRankingEnvelope` precedent — consumed by both `pkg/dashboard/overview/ranking.go` and `pkg/dashboard/applications/list.go`).
+- **Re-introducing trampoline alias files in cmd `common.go`** — earlier revisions had ~400-line `common.go` files re-exporting every pkg name. The slim shape is the contract: `common.go` carries `var common`, `prepareClient`, `unknownSubcommandRunE`, and nothing else.
+- **Reverting to a flat cmd package** — every fix-it-quick attempt to "just dump it next to overview.go" is a regression. The directory tree IS the command tree; keep them aligned on both sides of the split.
 - Renaming, removing, or repurposing any `Kind*` constant.
 - Changing envelope shapes A / B (additive `omitempty` is fine; structural change is not).
-- Changing the parent-command default → sections envelope mapping. Specifically: `overview`, `overview disk`, `overview fan` default to Shape B; `overview gpu` defaults to `gpu list` (Shape A); `overview cpu` / `overview memory` / `overview pods` etc. are leaves and keep their Shape A defaults. New parent commands MUST pick one of these two shapes and pin it in the `Use` description.
+- Changing the parent-command default → sections envelope mapping. Specifically: `overview`, `overview disk`, `overview fan` default to Shape B; `overview gpu` defaults to `gpu list` (Shape A); `overview cpu` / `overview memory` / `overview pods` etc. are leaves and keep their Shape A defaults. New parent commands MUST pick one of these two shapes and pin it in the `Use` description (and in the area's pkg `default.go`).
 - Performing unit / number formatting outside `pkg/dashboard/format/` (including ad-hoc `fmt.Sprintf("%.2f", ...)` for user-visible values).
 - Bypassing the factory-injected client (handwritten `http.Client`, manual `X-Authorization`).
 - Editing `--watch` exit semantics (3-fail cap, `ErrTokenInvalidated` short-circuit, SIGINT exit-0, NDJSON-per-iteration). Adding new exit conditions requires a separate plan.
@@ -633,22 +589,27 @@ If a task seems to require any forbidden item, STOP, surface this skill to the u
 
 ## Test infrastructure
 
-Tests sit at three tiers, mirroring the cmd↔pkg split. The rule is:
-**a test belongs next to the code that owns its non-trivial behaviour**.
+Tests sit at four tiers, mirroring the two-layer split. The rule is:
+**a test belongs next to the code that owns its non-trivial
+behaviour**. Almost every dashboard test is now alongside the
+`Run*` it exercises, in the matching `pkg/dashboard/<area>/`
+subpackage; the pkg-root `dashboard_test.go` has narrowed to
+infrastructure only.
 
 | Tier | Where | What lives there | How to run |
 |---|---|---|---|
-| Pure data / fetcher / aggregator unit tests | `cli/pkg/dashboard/dashboard_test.go` + `helpers_test.go` (in-package trampolines) | `CommonFlags.Validate / ResolveWindow`, `Client.EnsureUser / EnsureSystemStatus / RequireAdmin / IsOlaresOne`, `Runner` (one-shot + watch + 3-fail), `Fetch*` wire-shape pins (httptest), `Merge*` / aggregator math, `lsblk` tree algorithms, `gates` (`HasCUDANode`, `GateOlaresOne`, `GPUAdvisory`, `VgpuUnavailableFromError`), GPU formatters & body builders, `Fetch{Instant,Range}Vector`, `WriteJSON` / `HeadItems` / `ClassifyTransportErr` | `go test ./cli/pkg/dashboard/...` |
-| Cmd-area integration tests | `cli/cmd/ctl/dashboard/<area>/*_test.go` (today: `overview/gpu/detail_test.go`) | Tests that exercise per-leaf builders backed by cobra-bound concurrency — e.g. `TestBuildGPUDetailFullEnvelope_PartialFailure`, `TestBuildGPUTaskDetailFullEnvelope_TimeSlicingSkipsAllocation`. Live next to the area subpackage so a future split / rename moves them in lockstep. | `go test ./cli/cmd/ctl/dashboard/<area>/...` |
-| Cmd-root behavioural tests | `cli/cmd/ctl/dashboard/dashboard_test.go` | Only what's tied to `NewDashboardCommand`'s cobra binding — `TestUnknownSubcommandRunE_PrintsSuggestionAndFailsOnTypo`, `TestUnknownSubcommandRunE_NoArgsPrintsHelp`, `TestAllLeafCommandsSilenced` (regression net for the "Cobra printed usage when HAMI returned 5xx" bug). | `go test ./cli/cmd/ctl/dashboard/` |
+| Pkg-root infrastructure tests | `cli/pkg/dashboard/dashboard_test.go` + `helpers_test.go` (in-package trampolines) | INFRA-only: `CommonFlags.Validate / ResolveWindow`, `Client.EnsureUser / EnsureSystemStatus / RequireAdmin / IsOlaresOne`, `Runner` (one-shot + watch + 3-fail + watch-required-flag), `Fetch*` wire-shape pins (httptest), `Merge*` / aggregator math, `lsblk` tree algorithms, `gates` (`HasCUDANode`, `GateOlaresOne`, `GPUAdvisory`, `VgpuUnavailableFromError`, `ExtractHAMIMessage`), GPU formatters & body builders (`Graphics/TaskListBody`), `Fetch{Instant,Range}Vector`, `GPUTrendStep`, `WriteJSON` / `HeadItems` / `ClassifyTransportErr`. **No envelope-shape or table-render tests for individual leaves** — those live in the area subpackages. | `go test ./cli/pkg/dashboard/` |
+| Pkg-area envelope / RunXxx tests | `cli/pkg/dashboard/<area>/<verb>_test.go` + per-area `helpers_test.go` (shared httptest fixtures) | Per-leaf coverage of the `RunXxx` / `BuildXxxEnvelope` / `WriteXxxTable` triplet, including 3-state empty handling, capability gating, soft-failure semantics, and partial-failure fan-out (e.g. `TestBuildGPUDetailFullEnvelope_PartialFailure`, `TestBuildGPUTaskDetailFullEnvelope_TimeSlicingSkipsAllocation`, `TestBuildLiveEnvelope_NoGraphicsIntegrationStillSucceeds`, `TestBuildSectionsEnvelope_ErrorPropagation`). Lark-aligned density: at least one happy-path + the bug classes the file actually has. | `go test ./cli/pkg/dashboard/<area>/...` |
+| Cmd-root behavioural tests | `cli/cmd/ctl/dashboard/dashboard_test.go` | Only what's tied to `NewDashboardCommand`'s cobra binding — `TestUnknownSubcommandRunE_PrintsSuggestionAndFailsOnTypo`, `TestUnknownSubcommandRunE_NoArgsPrintsHelp`, `TestLeafErrorsAreReported`, `TestLeafErrorsSentinelNotDoublePrinted`, `TestAllLeafCommandsSilenced` (regression net for "Cobra printed usage when HAMI returned 5xx"). The bar for this tier is high — keep the file short. | `go test ./cli/cmd/ctl/dashboard/` |
 | Format JS oracle | `pkg/dashboard/format/format_test.go` + `testdata/golden-gen.js` | `TestFormat_GoldenOracle` against `golden.json` (skips if absent) | `cd cli/pkg/dashboard/format/testdata && node golden-gen.js`; `go test ./cli/pkg/dashboard/format/...` |
 | Coverage | `go test -coverprofile` | `coverage-dashboard.html` | `go test -coverprofile=coverage-dashboard.out -covermode=atomic ./cli/cmd/ctl/dashboard/... ./cli/pkg/dashboard/... && go tool cover -html=coverage-dashboard.out -o coverage-dashboard.html` |
 
 Test layout rules:
 
-- **New pure pkg test** → goes into `cli/pkg/dashboard/dashboard_test.go` (or a new `<domain>_test.go` if the body is cohesive enough to stand alone). Leverage `helpers_test.go`'s `var common *CommonFlags` and lowercase trampolines (`fetchClusterMetrics`, `gateOlaresOne`, `newTestClient`, …) so the test reads the same way the SPA-mirroring helpers do.
-- **New cobra integration test** (e.g. exercises `NewXxxCommand` wiring or a builder that depends on cmd-side concurrency) → goes into `cli/cmd/ctl/dashboard/<area>/*_test.go`. Do NOT put it back at cmd-root.
-- **New root-tier behavioural test** (cobra silencing, suggestion routing) → cmd-root `dashboard_test.go`. The bar for this tier is high; the file should stay short.
+- **New pkg-root infra test** (a new fetcher / aggregator / gate / runner behaviour / format helper at the pkg root) → `cli/pkg/dashboard/dashboard_test.go` (or, if the file gets too long, a new `<domain>_test.go` next to it). Leverage `helpers_test.go`'s `var common *CommonFlags` and lowercase trampolines (`fetchClusterMetrics`, `gateOlaresOne`, `newTestClient`, …) so the body reads the same way the SPA-mirroring helpers do.
+- **New leaf-level test** (covers `RunXxx` / `BuildXxxEnvelope` / `WriteXxxTable` for one cmd verb) → `cli/pkg/dashboard/<area>/<verb>_test.go`, sharing the area's `helpers_test.go` httptest fixtures (`newTestClient`, area-specific `*StubMux`, etc.). Do NOT put it on the cmd side.
+- **New root-tier behavioural test** (cobra silencing, suggestion routing, leaf-error reporting) → cmd-root `dashboard_test.go`. Keep the file short; reject any test that could equally live in pkg.
+- Cmd subpackages currently carry **no** `*_test.go` files — every leaf's behaviour is covered through `Run*` in pkg. Resist the urge to add cobra-bound tests on the cmd side; if you need them, justify it with a regression that genuinely depends on cobra binding (the existing pkg-area files already cover everything that `Run*` can be exercised with).
 
 Real-machine end-to-end smoke / regression scripts live outside the
 repo — agents should drive `olares-cli dashboard <command> -o json`

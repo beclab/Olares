@@ -1,11 +1,10 @@
 package overview
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	pkgoverview "github.com/beclab/Olares/cli/pkg/dashboard/overview"
 )
 
 func newOverviewMemoryCommand(f *cmdutil.Factory) *cobra.Command {
@@ -21,14 +20,11 @@ func newOverviewMemoryCommand(f *cmdutil.Factory) *cobra.Command {
 			if err := common.Validate(); err != nil {
 				return err
 			}
-			switch mode {
-			case "", "physical":
-				return runPerNodeMetric(c.Context(), f, KindOverviewMemory, memoryPhysicalMetricSet(), memoryPhysicalColumns(), memoryPhysicalDisplay)
-			case "swap":
-				return runPerNodeMetric(c.Context(), f, KindOverviewMemory, memorySwapMetricSet(), memorySwapColumns(), memorySwapDisplay)
-			default:
-				return fmt.Errorf("--mode: %q must be physical or swap", mode)
+			cli, err := prepareClient(c.Context(), f)
+			if err != nil {
+				return err
 			}
+			return pkgoverview.RunMemory(c.Context(), cli, common, mode)
 		},
 	}
 	cmd.Flags().StringVar(&mode, "mode", "physical", "memory view: physical | swap")
