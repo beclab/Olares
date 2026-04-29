@@ -9,12 +9,14 @@ import (
 // NewFilesCommand returns the `files` parent command, ready to be added to
 // the olares-cli root.
 //
-// Current verbs (mkdir is the next obvious add):
+// Current verbs:
 //
 //	files ls       — list a directory                  (cmd/ctl/files/ls.go)
 //	files upload   — resumable chunked upload          (cmd/ctl/files/upload.go)
 //	files download — single-file or recursive pull     (cmd/ctl/files/download.go)
 //	files cat      — stream a file to stdout           (cmd/ctl/files/cat.go)
+//	files mkdir    — create a directory (with -p)      (cmd/ctl/files/mkdir.go,
+//	                                                    internal/files/mkdir/mkdir.go)
 //	files rm       — batched DELETE                    (cmd/ctl/files/rm.go)
 //	files cp       — server-side copy via paste        (cmd/ctl/files/cp.go)
 //	files mv       — server-side move via paste        (cmd/ctl/files/cp.go, action="move")
@@ -79,6 +81,7 @@ Examples:
 		NewUploadCommand(f),
 		NewDownloadCommand(f),
 		NewCatCommand(f),
+		NewMkdirCommand(f),
 		NewRmCommand(f),
 		NewCpCommand(f),
 		NewMvCommand(f),

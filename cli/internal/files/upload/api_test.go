@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 // newTestClient wires a Client to an httptest.Server. X-Authorization
@@ -142,7 +144,7 @@ func TestMkdir(t *testing.T) {
 		gotPath = r.URL.Path
 		w.WriteHeader(http.StatusOK)
 	}))
-	if err := client.Mkdir(context.Background(), "Documents/Backups"); err != nil {
+	if err := client.Mkdir(context.Background(), "/drive/Home/Documents/Backups"); err != nil {
 		t.Fatal(err)
 	}
 	if want := "/api/resources/drive/Home/Documents/Backups/"; gotPath != want {
@@ -154,7 +156,7 @@ func TestMkdir_409Idempotent(t *testing.T) {
 	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "exists", http.StatusConflict)
 	}))
-	if err := client.Mkdir(context.Background(), "Existing"); err != nil {
+	if err := client.Mkdir(context.Background(), "/drive/Home/Existing"); err != nil {
 		t.Errorf("Mkdir on 409 should be nil, got %v", err)
 	}
 }
@@ -163,7 +165,7 @@ func TestMkdir_OtherErrorReturns(t *testing.T) {
 	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "boom", http.StatusInternalServerError)
 	}))
-	err := client.Mkdir(context.Background(), "Bad")
+	err := client.Mkdir(context.Background(), "/drive/Home/Bad")
 	if err == nil {
 		t.Fatal("want error, got nil")
 	}
@@ -173,6 +175,152 @@ func TestMkdir_OtherErrorReturns(t *testing.T) {
 	}
 	if hErr.Status != http.StatusInternalServerError {
 		t.Errorf("status = %d", hErr.Status)
+	}
+}
+
+// --- WaitCloudTask: stage-2 cloud-transfer polling ---
+
+// TestWaitCloudTask_RunningThenCompleted: the happy path. Server
+// reports `running` for the first poll, then `completed`. Make sure
+// WaitCloudTask returns nil, the onUpdate callback fires for the
+// running poll (but NOT for completed — terminal status arrives via
+// return), and the request URL carries the right node + task_id.
+func TestWaitCloudTask_RunningThenCompleted(t *testing.T) {
+	var hits int32
+	var gotPath, gotQuery string
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotQuery = r.URL.RawQuery
+		n := atomic.AddInt32(&hits, 1)
+		w.Header().Set("Content-Type", "application/json")
+		if n == 1 {
+			fmt.Fprint(w, `{"task":{"id":"t-1","status":"running","progress":42}}`)
+			return
+		}
+		fmt.Fprint(w, `{"task":{"id":"t-1","status":"completed","progress":100}}`)
+	}))
+
+	var updates []CloudTaskUpdate
+	err := client.WaitCloudTask(
+		context.Background(), "node-a", "t-1",
+		// 1ms keeps the test fast; the real default is 2s.
+		time.Millisecond,
+		func(u CloudTaskUpdate) {
+			updates = append(updates, u)
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := atomic.LoadInt32(&hits), int32(2); got != want {
+		t.Errorf("hits = %d, want %d", got, want)
+	}
+	if want := "/api/task/node-a/"; gotPath != want {
+		t.Errorf("path = %q, want %q", gotPath, want)
+	}
+	if !strings.Contains(gotQuery, "task_id=t-1") {
+		t.Errorf("query missing task_id=t-1: %q", gotQuery)
+	}
+	if len(updates) != 1 {
+		t.Fatalf("got %d update callbacks, want 1 (only the running poll)", len(updates))
+	}
+	if updates[0].Status != "running" {
+		t.Errorf("update status = %q, want %q", updates[0].Status, "running")
+	}
+	if updates[0].Progress != 42 {
+		t.Errorf("update progress = %v, want 42", updates[0].Progress)
+	}
+}
+
+// TestWaitCloudTask_Failed: server reports `failed` with a
+// failed_reason. WaitCloudTask must surface the reason in the
+// returned error so the cobra layer can render a useful CTA without
+// the user having to dig into server logs.
+func TestWaitCloudTask_Failed(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `{"task":{"id":"t-2","status":"failed","failed_reason":"bucket quota exceeded"}}`)
+	}))
+	err := client.WaitCloudTask(context.Background(), "n", "t-2", time.Millisecond, nil)
+	if err == nil {
+		t.Fatal("expected error for failed task, got nil")
+	}
+	if !strings.Contains(err.Error(), "bucket quota exceeded") {
+		t.Errorf("err = %v; want it to mention failed_reason", err)
+	}
+	if !strings.Contains(err.Error(), "t-2") {
+		t.Errorf("err = %v; want it to mention task id", err)
+	}
+}
+
+// TestWaitCloudTask_FailedWithoutReason: if the server reports
+// `failed` but doesn't fill in `failed_reason`, the error message
+// should still be self-describing — silently swallowing the failure
+// would let the cobra layer print "uploaded" for a file that's not
+// actually in the bucket.
+func TestWaitCloudTask_FailedWithoutReason(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `{"task":{"id":"t-3","status":"failed"}}`)
+	}))
+	err := client.WaitCloudTask(context.Background(), "n", "t-3", time.Millisecond, nil)
+	if err == nil {
+		t.Fatal("expected error for failed task, got nil")
+	}
+	if !strings.Contains(err.Error(), "failed") {
+		t.Errorf("err = %v; want it to indicate failure", err)
+	}
+}
+
+// TestWaitCloudTask_Cancelled: the server-side `cancelled` /
+// `canceled` (both spellings — see OlaresTaskStatus enum) translate
+// to a returned error. We test the British spelling here; the
+// American spelling is covered by the same switch arm.
+func TestWaitCloudTask_Cancelled(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `{"task":{"id":"t-4","status":"cancelled"}}`)
+	}))
+	err := client.WaitCloudTask(context.Background(), "n", "t-4", time.Millisecond, nil)
+	if err == nil {
+		t.Fatal("expected error for cancelled task, got nil")
+	}
+	if !strings.Contains(err.Error(), "cancel") {
+		t.Errorf("err = %v; want it to mention cancellation", err)
+	}
+}
+
+// TestWaitCloudTask_CtxCancelBetweenPolls: while the task is still
+// in flight (status: running) cancelling ctx must bail out promptly
+// rather than hammering the server.
+func TestWaitCloudTask_CtxCancelBetweenPolls(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `{"task":{"id":"t-5","status":"running","progress":1}}`)
+	}))
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		cancel()
+	}()
+	err := client.WaitCloudTask(ctx, "n", "t-5", 5*time.Millisecond, nil)
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("err = %v; want context.Canceled", err)
+	}
+}
+
+// TestWaitCloudTask_EmptyArgs: WaitCloudTask must reject empty
+// node / taskID up-front — both are URL segments / required query
+// values, and silently accepting "" would produce a malformed
+// request URL like /api/task//?task_id= that the server would
+// either reject with a confusing 404 or (worse) match against a
+// different task than the user expected.
+func TestWaitCloudTask_EmptyArgs(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		t.Errorf("server should not be hit for empty-args case")
+		w.WriteHeader(http.StatusOK)
+	}))
+	if err := client.WaitCloudTask(context.Background(), "n", "", 0, nil); err == nil {
+		t.Error("expected error for empty taskID, got nil")
+	}
+	if err := client.WaitCloudTask(context.Background(), "", "t", 0, nil); err == nil {
+		t.Error("expected error for empty node, got nil")
 	}
 }
 

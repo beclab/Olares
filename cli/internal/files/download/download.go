@@ -41,6 +41,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -466,6 +467,99 @@ func totalFromContentRange(resp *http.Response) int64 {
 //     server's "not a file, path: ..." message.
 func (c *Client) StreamRaw(ctx context.Context, plainPath string, w io.Writer) (int64, error) {
 	endpoint := c.rawURL(plainPath) + "?inline=true"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return 0, fmt.Errorf("build request: %w", err)
+	}
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		body, _ := io.ReadAll(resp.Body)
+		return 0, &HTTPError{
+			Status: resp.StatusCode,
+			Body:   string(body),
+			URL:    endpoint,
+			Method: http.MethodGet,
+		}
+	}
+	return io.Copy(w, resp.Body)
+}
+
+// StreamCloudFile streams the bytes of a single file living on a
+// connected cloud drive (awss3 / google / dropbox / tencent) to `w`.
+//
+// Cloud drives don't serve raw bytes from /api/raw/<path>: that
+// endpoint only provides the metadata-listing / preview path on those
+// namespaces, and on most cloud drives a binary GET against it returns
+// a JSON envelope (or an empty body) instead of the file contents the
+// caller wants. The wire flow that DOES return raw bytes is
+//
+//	GET /drive/download_sync_stream
+//	    ?drive=<lowercase-driveType>      e.g. "awss3" / "google" / "dropbox"
+//	    &cloud_file_path=<path-in-bucket> e.g. "/photos/img.png"
+//	    &name=<account-or-bucket>         the FrontendPath's Extend segment
+//
+// which mirrors the LarePass web app's `generateDownloadUrl` helpers
+// (apps/packages/app/src/api/files/v2/{awss3,google,dropbox}/utils.ts —
+// they all build this same URL). The endpoint proxies to the
+// per-driver cloud bridge worker that pulls the object from the
+// underlying bucket and streams it back; the response body IS the
+// file contents and arrives with a Content-Length header in the
+// happy path.
+//
+// Caller's responsibilities:
+//
+//   - `driveType` must be the lowercase enum value the server
+//     recognises ("awss3" / "google" / "dropbox" / "tencent"). The
+//     cobra layer derives this from FrontendPath.FileType.
+//   - `cloudPath` is the path INSIDE the bucket — the `path` field
+//     returned by `files ls` on the cloud drive (e.g. `/03 (1).avi`).
+//     A leading slash is preserved verbatim; the URL-encoder handles
+//     spaces / parens / unicode.
+//   - `name` is the account / bucket identifier — the Extend segment
+//     of the FrontendPath. The web app sets this to the same value
+//     (see e.g. awss3/utils.ts `download()`); the backend uses it to
+//     pick the right cloud-bridge worker.
+//
+// Errors:
+//
+//   - non-2xx responses surface as *HTTPError, same shape as
+//     StreamRaw. 401/403 routes to the standard re-login CTA from the
+//     cobra layer; 404 typically means the object is gone in the
+//     bucket (or the account isn't linked anymore).
+//   - the response body is streamed straight into `w`; we never buffer
+//     the whole file, so a multi-GB cloud download is safe to pipe
+//     into `less` / `head`.
+//
+// Range support is intentionally NOT plumbed through here — the
+// /drive/download_sync_stream proxy doesn't currently honour
+// `Range: bytes=N-` (the web app's progress UI never sets one,
+// since cloud transfers are server-driven). If you need resumed
+// downloads on a cloud drive, retry the whole thing.
+func (c *Client) StreamCloudFile(
+	ctx context.Context,
+	driveType, cloudPath, name string,
+	w io.Writer,
+) (int64, error) {
+	if driveType == "" {
+		return 0, errors.New("StreamCloudFile: empty driveType")
+	}
+	if cloudPath == "" {
+		return 0, errors.New("StreamCloudFile: empty cloudPath")
+	}
+	if name == "" {
+		return 0, errors.New("StreamCloudFile: empty name (account/bucket extend)")
+	}
+
+	q := url.Values{}
+	q.Set("drive", driveType)
+	q.Set("cloud_file_path", cloudPath)
+	q.Set("name", name)
+	endpoint := c.BaseURL + "/drive/download_sync_stream?" + q.Encode()
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return 0, fmt.Errorf("build request: %w", err)

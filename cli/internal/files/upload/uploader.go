@@ -25,6 +25,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -59,7 +60,7 @@ const DefaultMaxRetries = 3
 const DefaultRetryBackoff = 5 * time.Second
 
 // UploadOpts is everything UploadFile needs to push one local file into
-// Drive/Home. It's a value type so callers (the cobra command, the
+// a files-backend namespace (drive/Home or sync/<repo_id>). It's a value type so callers (the cobra command, the
 // directory walker) can build one per file and tweak fields per call
 // without sharing mutable state.
 type UploadOpts struct {
@@ -71,16 +72,40 @@ type UploadOpts struct {
 	// and /upload/file-uploaded-bytes/<node>/. Resolved by the cobra
 	// command up-front via Client.FetchNodes.
 	Node string
+	// DriveType matches the web app query field (`Drive`, `Sync`, ...).
+	// For CLI upload we currently emit Drive or Sync.
+	DriveType string
 
-	// ParentDir is the destination directory on the server WITH the
-	// `/drive/Home/...` prefix and a TRAILING `/`, e.g.
-	// `/drive/Home/Documents/`. This is the value passed as the
-	// `file_path` query for upload-link, the `parent_dir` query for
-	// file-uploaded-bytes, AND the `parent_dir` form field on each
-	// chunk POST. They MUST agree byte-for-byte for resume to find the
-	// existing partial upload — that's why we plumb a single value
-	// rather than recomputing it at each call site.
+	// ParentDir is the destination directory on the server in the
+	// "API" form: `/<fileType>/<extend>/<sub>/` with a trailing `/`,
+	// e.g. `/drive/Home/Documents/` or `/sync/<repo_id>/Documents/`.
+	// This is the value passed as the `file_path` query for
+	// upload-link AND the `parent_dir` query for file-uploaded-bytes.
+	// The two API queries MUST agree byte-for-byte for resume to find
+	// the existing partial upload, which is why we plumb a single
+	// value rather than recomputing it at each call site.
+	//
+	// NOTE: this is NOT the value sent as the `parent_dir` multipart
+	// form field on the chunk POST itself — that's `ChunkParentDir`,
+	// which differs for Seafile-backed namespaces (Sync).
 	ParentDir string
+
+	// ChunkParentDir is the value sent as the `parent_dir` MULTIPART
+	// form field on each chunk POST. For Drive uploads it's identical
+	// to ParentDir (`/drive/Home/<sub>/`); for Sync uploads it's the
+	// path INSIDE the Seafile repo (e.g. `/Documents/` or `/`),
+	// because the chunk POST goes to `/seafhttp/upload-aj/<token>`
+	// where the token already pins the repo and Seafile interprets
+	// `parent_dir` as a path relative to that repo's root.
+	//
+	// Mirror of `pathname` in the web app's resumejs.ts onChunkingComplete:
+	// `formatUploaderPath` strips the `/Seahub/<RepoName>/` prefix for
+	// Sync and leaves `/drive/Home/<sub>/` as-is for Drive — that's
+	// exactly what we replicate here.
+	//
+	// When unset, normalize() defaults it to ParentDir so legacy
+	// drive-only callers keep working unchanged.
+	ChunkParentDir string
 
 	// RemoteName is the bare filename on the server (no directory
 	// components). For directory uploads, this is the leaf file name —
@@ -113,6 +138,36 @@ type UploadOpts struct {
 // reported as `(0, 0)` to indicate "an empty file just completed".
 type ProgressFunc func(uploaded, total int64)
 
+// UploadResult captures the per-file outcome of UploadFile beyond the
+// usual "did it succeed". Currently the only field is CloudTaskID,
+// which the cobra layer uses to drive the second leg of the two-stage
+// cloud-drive upload (Olares-staging → real cloud bucket); future
+// fields can be added without breaking callers that already use the
+// (UploadResult, error) return shape.
+type UploadResult struct {
+	// CloudTaskID is the server-side cloud-transfer task identifier
+	// returned by the FINAL chunk's response when the destination is
+	// a cloud drive (awss3 / google / dropbox). The Olares files-
+	// backend kicks off an internal "Olares-staging → cloud-bucket"
+	// transfer task when the chunk pipeline finalizes a cloud-bound
+	// file, and it surfaces the task handle on the last chunk's
+	// response body so the client can poll completion via
+	// `/api/task/<node>/?task_id=<id>` (see Client.WaitCloudTask).
+	//
+	// Empty for files-backend-managed namespaces (drive/sync/cache/
+	// external) where the upload is a single stage and no follow-up
+	// task is created.
+	//
+	// Mirror of resumejs.ts onFileUploadSuccess L591-606: the web app
+	// does `JSON.parse(message)` on the final chunk's response body,
+	// expects an array, reads `arr[0].taskId`, and registers it with
+	// Taskmanager. parseFinalChunkTaskID below replicates that exact
+	// shape — anything that doesn't match (Drive's empty body, an
+	// empty array, a missing taskId) collapses to "no follow-up
+	// task".
+	CloudTaskID string
+}
+
 // permanentStatuses lists HTTP status codes that the web app's
 // Resumable.js treats as non-retryable (resumable.js: see the
 // `permanentErrors` option, which the web app passes as the array
@@ -130,17 +185,27 @@ var permanentStatuses = map[int]struct{}{
 // `progress`, if non-nil, is invoked once after the resume probe (with
 // uploaded=<server bytes>, total=<file size>) and once per accepted
 // chunk thereafter. It is NOT invoked per retry attempt.
-func (c *Client) UploadFile(ctx context.Context, opts UploadOpts, progress ProgressFunc) error {
+//
+// Returns an UploadResult on success. The caller MUST inspect
+// `result.CloudTaskID` for cloud-drive uploads (awss3 / google /
+// dropbox) and follow up with Client.WaitCloudTask to drive the
+// second leg of the two-stage transfer; doing so is what the web app
+// resumejs.ts onFileUploadSuccess L591-606 path does, and skipping it
+// leaves the file stuck on the Olares-staging side without ever
+// landing in the user's cloud bucket. For files-backend-managed
+// namespaces (drive/sync/cache/external) CloudTaskID is empty and
+// the caller has nothing to wait on.
+func (c *Client) UploadFile(ctx context.Context, opts UploadOpts, progress ProgressFunc) (UploadResult, error) {
 	if err := opts.normalize(); err != nil {
-		return err
+		return UploadResult{}, err
 	}
 
 	st, err := os.Stat(opts.LocalPath)
 	if err != nil {
-		return fmt.Errorf("stat %s: %w", opts.LocalPath, err)
+		return UploadResult{}, fmt.Errorf("stat %s: %w", opts.LocalPath, err)
 	}
 	if st.IsDir() {
-		return fmt.Errorf("UploadFile: %s is a directory; use the walker", opts.LocalPath)
+		return UploadResult{}, fmt.Errorf("UploadFile: %s is a directory; use the walker", opts.LocalPath)
 	}
 	fileSize := st.Size()
 
@@ -148,17 +213,22 @@ func (c *Client) UploadFile(ctx context.Context, opts UploadOpts, progress Progr
 	// (uploadEmptyFile) instead of routing through Resumable.js. Mirror
 	// that here so 0-byte files actually materialize on the server
 	// (Resumable.js cannot generate a chunk of length 0).
+	//
+	// Cloud-drive caveat: the web app's empty-file path also doesn't
+	// register a follow-up Taskmanager task (see uploadEmptyFile in
+	// v2/drive/data.ts — it just postCreateFile's the zero-byte file
+	// and returns). We mirror that: empty files never carry a
+	// CloudTaskID. Per the user-facing contract this is fine because
+	// 0-byte cloud uploads have no payload to transfer in stage 2.
 	if fileSize == 0 {
-		// RemotePath inside Drive/Home for the create call: strip the
-		// `/drive/Home/` prefix the API client expects.
 		rel := joinRemote(opts.ParentDir, opts.RemoteName)
 		if err := c.CreateEmptyFile(ctx, rel); err != nil {
-			return err
+			return UploadResult{}, err
 		}
 		if progress != nil {
 			progress(0, 0)
 		}
-		return nil
+		return UploadResult{}, nil
 	}
 
 	// Resume probe: how many bytes does the server already have for
@@ -197,11 +267,18 @@ func (c *Client) UploadFile(ctx context.Context, opts UploadOpts, progress Progr
 	// (Resumable.js's behavior when its file-uploaded-bytes probe
 	// returns the full file size is to skip the upload entirely; we
 	// match that here).
+	//
+	// Cloud-drive caveat: if the previous run uploaded all chunks but
+	// the stage-2 cloud transfer never started (or was killed), this
+	// fast-path WILL leave the file stuck on the Olares-staging side
+	// with no taskID to wait on. The web app has the same issue —
+	// it relies on the user to retry and on the server to re-arm
+	// stage-2 from the next chunk POST. We accept the same edge.
 	if startChunk >= totalChunks {
 		if progress != nil {
 			progress(fileSize, fileSize)
 		}
-		return nil
+		return UploadResult{}, nil
 	}
 
 	// Open the file once and seek per chunk. Saves opening N file
@@ -209,18 +286,25 @@ func (c *Client) UploadFile(ctx context.Context, opts UploadOpts, progress Progr
 	// because it doesn't mutate the file cursor.
 	f, err := os.Open(opts.LocalPath)
 	if err != nil {
-		return fmt.Errorf("open %s: %w", opts.LocalPath, err)
+		return UploadResult{}, fmt.Errorf("open %s: %w", opts.LocalPath, err)
 	}
 	defer f.Close()
 
 	uploadLink, err := c.GetUploadLink(ctx, opts.Node, opts.ParentDir)
 	if err != nil {
-		return err
+		return UploadResult{}, err
 	}
 	chunkURL := c.BaseURL + uploadLink
 
 	identifier := uploadIdentifier(opts.ParentDir, opts.RelativePath)
 	mimeType := guessMIME(opts.LocalPath)
+
+	// lastChunkBody captures the response body of the LAST successfully
+	// posted chunk. For cloud-drive uploads (awss3/google/dropbox) this
+	// is the JSON `[{"taskId":"..."}]` payload that drives stage 2;
+	// for the files-backend-managed namespaces it's typically an empty
+	// body or the Seafile-style "ack" envelope and we silently drop it.
+	var lastChunkBody []byte
 
 	buf := make([]byte, opts.ChunkSize)
 	for chunkIdx := startChunk; chunkIdx < totalChunks; chunkIdx++ {
@@ -235,14 +319,14 @@ func (c *Client) UploadFile(ctx context.Context, opts UploadOpts, progress Progr
 		// short reads that aren't at EOF) is a hard failure.
 		n, rerr := f.ReadAt(buf[:chunkLen], startByte)
 		if rerr != nil && !(rerr == io.EOF && int64(n) == chunkLen) {
-			return fmt.Errorf("read %s @ %d: %w", opts.LocalPath, startByte, rerr)
+			return UploadResult{}, fmt.Errorf("read %s @ %d: %w", opts.LocalPath, startByte, rerr)
 		}
 		if int64(n) != chunkLen {
-			return fmt.Errorf("short read at chunk %d: got %d, want %d", chunkIdx+1, n, chunkLen)
+			return UploadResult{}, fmt.Errorf("short read at chunk %d: got %d, want %d", chunkIdx+1, n, chunkLen)
 		}
 		chunkData := buf[:chunkLen]
 
-		if err := c.uploadChunk(ctx, chunkURL, opts, chunkUploadCtx{
+		body, err := c.uploadChunk(ctx, chunkURL, opts, chunkUploadCtx{
 			ChunkIndex:    chunkIdx, // 0-based; we send +1 on the wire
 			TotalChunks:   totalChunks,
 			ChunkLen:      chunkLen,
@@ -251,15 +335,21 @@ func (c *Client) UploadFile(ctx context.Context, opts UploadOpts, progress Progr
 			Identifier:    identifier,
 			MimeType:      mimeType,
 			ChunkContents: chunkData,
-		}); err != nil {
-			return fmt.Errorf("upload chunk %d/%d of %s: %w",
+		})
+		if err != nil {
+			return UploadResult{}, fmt.Errorf("upload chunk %d/%d of %s: %w",
 				chunkIdx+1, totalChunks, opts.LocalPath, err)
+		}
+		if chunkIdx == totalChunks-1 {
+			lastChunkBody = body
 		}
 		if progress != nil {
 			progress(startByte+chunkLen, fileSize)
 		}
 	}
-	return nil
+	return UploadResult{
+		CloudTaskID: parseFinalChunkTaskID(lastChunkBody),
+	}, nil
 }
 
 // chunkUploadCtx bundles the per-chunk state. Pulled out into a struct
@@ -276,15 +366,17 @@ type chunkUploadCtx struct {
 }
 
 // uploadChunk POSTs a single chunk and applies the
-// permanent / retryable / success classification. It returns nil only
-// on a 2xx response (the web app accepts both 200 and 201; we follow
-// suit). Permanent errors short-circuit the retry loop.
+// permanent / retryable / success classification. It returns the
+// response body on a 2xx response (the web app accepts both 200 and
+// 201; we follow suit) so the caller can extract the cloud-transfer
+// taskId from the FINAL chunk's body. Permanent errors short-circuit
+// the retry loop.
 func (c *Client) uploadChunk(
 	ctx context.Context,
 	chunkURL string,
 	opts UploadOpts,
 	cu chunkUploadCtx,
-) error {
+) ([]byte, error) {
 	maxAttempts := opts.MaxRetries + 1
 	if maxAttempts < 1 {
 		maxAttempts = 1
@@ -294,7 +386,7 @@ func (c *Client) uploadChunk(
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		body, contentType, berr := buildChunkBody(opts, cu)
 		if berr != nil {
-			return berr
+			return nil, berr
 		}
 		headers := http.Header{
 			"Accept": []string{"application/json; text/javascript, */*; q=0.01"},
@@ -309,20 +401,20 @@ func (c *Client) uploadChunk(
 			)},
 		}
 
-		_, err := c.do(ctx, http.MethodPost, chunkURL, body, headers, contentType)
+		respBody, err := c.do(ctx, http.MethodPost, chunkURL, body, headers, contentType)
 		if err == nil {
-			return nil
+			return respBody, nil
 		}
 
 		// Don't burn retries on cancellation: ctx.Err is final.
 		if ctxErr := ctx.Err(); ctxErr != nil {
-			return ctxErr
+			return nil, ctxErr
 		}
 
 		var hErr *HTTPError
 		if errors.As(err, &hErr) {
 			if _, isPermanent := permanentStatuses[hErr.Status]; isPermanent {
-				return err
+				return nil, err
 			}
 		}
 		lastErr = err
@@ -331,11 +423,48 @@ func (c *Client) uploadChunk(
 			select {
 			case <-time.After(opts.RetryBackoff):
 			case <-ctx.Done():
-				return ctx.Err()
+				return nil, ctx.Err()
 			}
 		}
 	}
-	return fmt.Errorf("exhausted %d attempts: %w", maxAttempts, lastErr)
+	return nil, fmt.Errorf("exhausted %d attempts: %w", maxAttempts, lastErr)
+}
+
+// parseFinalChunkTaskID extracts the cloud-transfer task identifier
+// from the FINAL chunk's response body. The web app's
+// resumejs.ts onFileUploadSuccess L591-606 expects the body to be a
+// JSON array whose first element has a non-empty `taskId`:
+//
+//	[{"taskId":"<uuid>", ...}, ...]
+//
+// Anything that doesn't fit the shape — Drive's empty body, an empty
+// array, a non-array, a missing/empty taskId — means "no follow-up
+// task". We collapse all those cases to "" rather than erroring,
+// because:
+//
+//   - Files-backend-managed namespaces (drive/sync/cache/external)
+//     legitimately don't return a taskId, and treating their empty
+//     body as a failure would break every Drive upload.
+//   - A future server response shape that adds extra fields next to
+//     `taskId` shouldn't crash the CLI; ignore unknown fields and
+//     extract what we recognize.
+//
+// We don't try to recover from malformed JSON either: returning ""
+// turns the situation into "uploaded fine, no follow-up to wait on",
+// which is the safest fallback (the upload itself succeeded — we'd
+// rather under-track than refuse to acknowledge a successful upload).
+func parseFinalChunkTaskID(body []byte) string {
+	body = bytes.TrimSpace(body)
+	if len(body) == 0 || body[0] != '[' {
+		return ""
+	}
+	var arr []struct {
+		TaskID string `json:"taskId"`
+	}
+	if err := json.Unmarshal(body, &arr); err != nil || len(arr) == 0 {
+		return ""
+	}
+	return arr[0].TaskID
 }
 
 // buildChunkBody assembles the multipart/form-data body for one chunk.
@@ -382,11 +511,15 @@ func buildChunkBody(opts UploadOpts, cu chunkUploadCtx) (io.Reader, string, erro
 		}
 	}
 
-	// --- Drive customQuery (resumejs.ts setQuery + onChunkingComplete).
-	if err := add("parent_dir", opts.ParentDir); err != nil {
+	// --- customQuery (resumejs.ts setQuery + onChunkingComplete).
+	// Use ChunkParentDir (NOT ParentDir): for Sync the chunk POST
+	// hits /seafhttp/upload-aj/<token>, which expects parent_dir as
+	// a path INSIDE the repo. For Drive the two values are equal so
+	// this is a no-op vs. the previous behavior.
+	if err := add("parent_dir", opts.ChunkParentDir); err != nil {
 		return nil, "", err
 	}
-	if err := add("driveType", "Drive"); err != nil {
+	if err := add("driveType", opts.DriveType); err != nil {
 		return nil, "", err
 	}
 	if dir := relativeDir(opts.RelativePath); dir != "" {
@@ -427,6 +560,9 @@ func (o *UploadOpts) normalize() error {
 	if o.Node == "" {
 		return errors.New("UploadOpts.Node is required")
 	}
+	if o.DriveType == "" {
+		o.DriveType = "Drive"
+	}
 	if o.ParentDir == "" {
 		return errors.New("UploadOpts.ParentDir is required")
 	}
@@ -435,6 +571,16 @@ func (o *UploadOpts) normalize() error {
 		// parent_dir to end in '/'. Force it rather than failing — the
 		// caller almost always means "this directory".
 		o.ParentDir += "/"
+	}
+	if o.ChunkParentDir == "" {
+		// Drive uploads (and the legacy single-namespace test cases
+		// in this package) have ChunkParentDir == ParentDir; default
+		// it so callers that don't know about the Sync-only split
+		// keep working without changes.
+		o.ChunkParentDir = o.ParentDir
+	}
+	if !strings.HasSuffix(o.ChunkParentDir, "/") {
+		o.ChunkParentDir += "/"
 	}
 	if o.RemoteName == "" {
 		o.RemoteName = filepath.Base(o.LocalPath)
@@ -454,21 +600,14 @@ func (o *UploadOpts) normalize() error {
 	return nil
 }
 
-// joinRemote builds the Drive/Home-relative path used by CreateEmptyFile.
-// `parentDir` is the full `/drive/Home/...` form; we strip the prefix +
-// trailing slash so CreateEmptyFile can rebuild the URL with the right
-// percent-encoding.
+// joinRemote builds the absolute files path used by CreateEmptyFile.
+// `parentDir` is the full `/<fileType>/<extend>/...` form.
 func joinRemote(parentDir, name string) string {
 	pd := strings.TrimSuffix(parentDir, "/")
-	const prefix = "/drive/Home"
-	if strings.HasPrefix(pd, prefix) {
-		pd = strings.TrimPrefix(pd, prefix)
+	if pd == "" || pd == "/" {
+		return "/" + strings.TrimPrefix(name, "/")
 	}
-	pd = strings.Trim(pd, "/")
-	if pd == "" {
-		return name
-	}
-	return pd + "/" + name
+	return pd + "/" + strings.TrimPrefix(name, "/")
 }
 
 // relativeDir returns the directory portion of a POSIX-style relative
