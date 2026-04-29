@@ -27,7 +27,7 @@ const (
 var RestClient *resty.Client
 
 func InitRestyClient(debugMode bool) {
-	RestClient = resty.New().SetTimeout(20 * time.Second).SetDebug(debugMode)
+	RestClient = resty.New().SetTimeout(20 * time.Second).SetDebug(false)
 }
 
 
