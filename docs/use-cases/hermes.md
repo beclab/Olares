@@ -101,7 +101,7 @@ Configure Hermes to connect to your local model using the interactive setup wiza
 
 The Terminal User Interface (TUI) runs directly in the Hermes CLI with no extra setup. It is ideal for quick tests.
 
-1. When the setup wizard completes, it prompts you to launch hermes chat. Type `y` and press **Enter** to start the TUI.
+1. When the setup wizard completes, it prompts you to launch `hermes chat`. Type `y` and press **Enter** to start the TUI.
 
    :::tip
    If you exited the wizard, manually start the chat by entering `hermes chat` in the Hermes CLI.
