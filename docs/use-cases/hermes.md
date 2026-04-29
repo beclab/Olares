@@ -44,13 +44,11 @@ In this guide, you will learn how to:
 Olares supports app cloning. If you want to run multiple independent AI agents for different tasks, you can clone the Hermes Agent app. For more information, see [Clone applications](../manual/olares/market/clone-apps.md).
 :::
 
-## Initialize Hermes Agent
+## Configure Hermes Agent
 
-Run a quick setup to connect the agent to your local environment.
+Run a quick setup to connect Hermes Agent to your local model.
 
-### Step 1: Get the model endpoint
-
-To connect Hermes Agent to Ollama, get the shared entrance URL and your model details:
+### Step 1: Get model and endpoint details
 
 1. Check the installed models by running the following command:
 
@@ -70,8 +68,6 @@ To connect Hermes Agent to Ollama, get the shared entrance URL and your model de
     ![Obtain Ollama API](/images/manual/use-cases/ollama-endpoint1.png#bordered){width=65%}
 
 ### Step 2: Run the setup wizard
-
-Configure Hermes to connect to your local model using the interactive setup wizard.
 
 1. Open the Hermes CLI app from the Launchpad.
 2. Enter the following command to start the configuration wizard:
