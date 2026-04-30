@@ -11,7 +11,6 @@ import (
 	apiv1alpha1 "bytetrade.io/web3os/system-server/pkg/apiserver/v1alpha1/api"
 	"bytetrade.io/web3os/system-server/pkg/constants"
 	prodiverregistry "bytetrade.io/web3os/system-server/pkg/providerregistry/v1alpha1"
-	"bytetrade.io/web3os/system-server/pkg/utils"
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/go-resty/resty/v2"
@@ -78,7 +77,7 @@ func (d *Dispatcher) dispatch(obj interface{}) error {
 		return fmt.Errorf("invalid dispatch obj, %s, %v", reflect.TypeOf(obj), obj)
 	}
 
-	klog.Info("dispatch request, ", utils.PrettyJSON(request))
+	klog.Info("dispatch request, ", request.SafeString())
 
 	watchers, err := d.registry.GetWatchers(d.serverCtx,
 		request.DataType,

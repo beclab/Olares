@@ -1,6 +1,7 @@
 package serviceproxy
 
 import (
+	"fmt"
 	"strconv"
 
 	sysv1alpha1 "bytetrade.io/web3os/system-server/pkg/apis/sys/v1alpha1"
@@ -25,6 +26,16 @@ type ProxyRequest struct {
 	Param    interface{} `json:"param,omitempty"`
 	Data     interface{} `json:"data,omitempty"`
 	Token    string
+}
+
+// SafeString returns a log-safe representation that omits the access token
+// and any user-supplied payload (Param/Data) which may contain PII.
+func (p *ProxyRequest) SafeString() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("op=%s datatype=%s version=%s group=%s appkey=%s",
+		p.Op, p.DataType, p.Version, p.Group, p.AppKey)
 }
 
 type GetOpParam struct {
