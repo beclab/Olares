@@ -152,6 +152,7 @@ spec:
           echo "→ Fixing permissions..."
           chmod 644 /certs/tls.crt /certs/ca.crt
           chmod 600 /certs/tls.key
+          chown -R 1000:1000 /certs
         command:
         - sh
         - -c
@@ -161,6 +162,9 @@ spec:
         image: alpine/openssl:3.5.5
         imagePullPolicy: IfNotPresent
         name: init-cert
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
         volumeMounts:
         - mountPath: /certs
           name: tls-cert
@@ -169,6 +173,8 @@ spec:
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
+          runAsNonRoot: false
+          runAsUser: 0
         env:
         - name: COREDNS_SVC
           value: {{ $corednsIP }}
@@ -283,10 +289,6 @@ spec:
         hostPath:
           type: DirectoryOrCreate
           path: '{{ .Values.userspace.appCache }}/headscale/data'
-      - name: config-parent
-        hostPath:
-          type: DirectoryOrCreate
-          path: '{{ .Values.userspace.appCache  }}/headscale'
       - name: acl-config
         configMap:
           defaultMode: 420
