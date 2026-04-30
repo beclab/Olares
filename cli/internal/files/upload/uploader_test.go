@@ -182,7 +182,7 @@ func TestUploadFile_Multichunk(t *testing.T) {
 	srv, recorder := uploadServer(t, uploadServerOpts{})
 
 	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
-	if err := c.UploadFile(context.Background(), UploadOpts{
+	if _, err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath:    local,
 		Node:         "n",
 		ParentDir:    "/drive/Home/Docs/",
@@ -262,7 +262,7 @@ func TestUploadFile_ResumesFromServerOffset(t *testing.T) {
 		uploadedBytes: int64(chunkSize + chunkSize/2),
 	})
 	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
-	if err := c.UploadFile(context.Background(), UploadOpts{
+	if _, err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath: local, Node: "n",
 		ParentDir: "/drive/Home/", RemoteName: "f.bin", RelativePath: "f.bin",
 		ChunkSize: chunkSize,
@@ -295,7 +295,7 @@ func TestUploadFile_ServerHasFullFile(t *testing.T) {
 	local := fixtureFile(t, fileSize)
 	srv, recorder := uploadServer(t, uploadServerOpts{uploadedBytes: fileSize})
 	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
-	if err := c.UploadFile(context.Background(), UploadOpts{
+	if _, err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath: local, Node: "n",
 		ParentDir: "/drive/Home/", RemoteName: "f.bin", RelativePath: "f.bin",
 		ChunkSize: chunkSize,
@@ -329,7 +329,7 @@ func TestUploadFile_Retries(t *testing.T) {
 		},
 	})
 	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
-	if err := c.UploadFile(context.Background(), UploadOpts{
+	if _, err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath: local, Node: "n",
 		ParentDir: "/drive/Home/", RemoteName: "f.bin", RelativePath: "f.bin",
 		ChunkSize:    chunkSize,
@@ -358,7 +358,7 @@ func TestUploadFile_PermanentError(t *testing.T) {
 		},
 	})
 	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
-	err := c.UploadFile(context.Background(), UploadOpts{
+	_, err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath: local, Node: "n",
 		ParentDir: "/drive/Home/", RemoteName: "f.bin", RelativePath: "f.bin",
 		ChunkSize:    chunkSize,
@@ -413,7 +413,7 @@ func TestUploadFile_EmptyFile(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
-	if err := c.UploadFile(context.Background(), UploadOpts{
+	if _, err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath: local, Node: "n",
 		ParentDir: "/drive/Home/Docs/", RemoteName: "empty.bin", RelativePath: "empty.bin",
 		ChunkSize: 1024,
@@ -428,6 +428,295 @@ func TestUploadFile_EmptyFile(t *testing.T) {
 	}
 }
 
+// TestUploadFile_SyncMultichunk: end-to-end check that the chunk POST
+// for a Sync upload sends the inside-repo `parent_dir` (NOT the
+// /sync/<repo>/... API form). This is a regression test for the
+// HTTP 500 we got from seafhttp/upload-aj when the CLI sent the API
+// form as the chunk's parent_dir form field — Seafile resolves
+// parent_dir relative to the repo root pinned by the upload token,
+// so the API prefix would map to a non-existent dir inside the repo.
+func TestUploadFile_SyncMultichunk(t *testing.T) {
+	const chunkSize = 1024
+	fileSize := int64(2 * chunkSize)
+	local := fixtureFile(t, fileSize)
+	srv, recorder := uploadServer(t, uploadServerOpts{})
+	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+	if _, err := c.UploadFile(context.Background(), UploadOpts{
+		LocalPath:      local,
+		Node:           "n",
+		DriveType:      "Sync",
+		ParentDir:      "/sync/repo-1/docs/",
+		ChunkParentDir: "/docs/",
+		RemoteName:     "f.bin",
+		RelativePath:   "f.bin",
+		ChunkSize:      chunkSize,
+	}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(recorder.chunks); got != 2 {
+		t.Fatalf("got %d chunks, want 2", got)
+	}
+	for i, ck := range recorder.chunks {
+		if got := ck.form["parent_dir"]; got != "/docs/" {
+			t.Errorf("chunk %d: parent_dir = %q, want %q (inside-repo path)",
+				i, got, "/docs/")
+		}
+		if got := ck.form["driveType"]; got != "Sync" {
+			t.Errorf("chunk %d: driveType = %q, want %q", i, got, "Sync")
+		}
+	}
+}
+
+func TestUploadFile_EmptyFile_SyncPath(t *testing.T) {
+	local := fixtureFile(t, 0)
+	emptyHit := int32(0)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/resources/sync/repo-1/docs/empty.bin", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("empty file create: method = %s", r.Method)
+		}
+		atomic.AddInt32(&emptyHit, 1)
+		w.WriteHeader(http.StatusOK)
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+	if _, err := c.UploadFile(context.Background(), UploadOpts{
+		LocalPath: local, Node: "n",
+		DriveType: "Sync",
+		ParentDir: "/sync/repo-1/docs/", RemoteName: "empty.bin", RelativePath: "empty.bin",
+		ChunkSize: 1024,
+	}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := atomic.LoadInt32(&emptyHit); got != 1 {
+		t.Errorf("empty-file create hit = %d, want 1", got)
+	}
+}
+
+// TestUploadFile_FilesBackendNamespaces is the table-driven smoke
+// test for the namespaces that share the files-backend chunk
+// protocol (Drive/Data/Cache/External + the cloud drives whose v2
+// dataAPIs inherit DriveDataAPI's chunk pipeline without overrides:
+// Awss3, Google, Dropbox). Unlike Sync — whose chunk endpoint is
+// Seafile's seafhttp/upload-aj and demands an inside-repo
+// `parent_dir` (covered separately by
+// TestUploadFile_SyncMultichunk) — these all let
+// ChunkParentDir == ParentDir.
+//
+// What this test pins down:
+//
+//   - The chunk POST's `parent_dir` form field equals the API-form
+//     ParentDir verbatim (no Sync-style stripping). That's what
+//     keeps GET /upload/file-uploaded-bytes/ and the chunk POST in
+//     agreement, which is the requirement for resume to find an
+//     existing partial upload.
+//   - The chunk POST's `driveType` form field carries the
+//     web-app-style namespace literal. The server side is permissive
+//     here, but mirroring the wire output makes the CLI sessions
+//     visually indistinguishable from web-app sessions in server
+//     logs — useful for debugging and for any future server change
+//     that does start branching on driveType.
+//
+// Adding a 5th files-backend-managed namespace? Add a row here and
+// to TestUploadRootAndDriveType in cmd/ctl/files; both tests should
+// fail until the dispatcher is wired up.
+func TestUploadFile_FilesBackendNamespaces(t *testing.T) {
+	const chunkSize = 1024
+	fileSize := int64(2 * chunkSize)
+
+	cases := []struct {
+		name      string
+		parentDir string
+		driveType string
+	}{
+		{
+			name:      "drive Data",
+			parentDir: "/drive/Data/Backups/",
+			driveType: "Data",
+		},
+		{
+			name:      "cache",
+			parentDir: "/cache/node-1/AppName/data/",
+			driveType: "Cache",
+		},
+		{
+			name:      "external",
+			parentDir: "/external/node-1/hdd1/Movies/",
+			driveType: "External",
+		},
+		{
+			name:      "awss3 (cloud drive, regular multipart pipeline)",
+			parentDir: "/awss3/account-x/bucket/Backups/",
+			driveType: "Awss3",
+		},
+		{
+			name:      "google (cloud drive, regular multipart pipeline)",
+			parentDir: "/google/account-x/Documents/",
+			driveType: "Google",
+		},
+		{
+			name:      "dropbox (cloud drive, regular multipart pipeline)",
+			parentDir: "/dropbox/account-x/Notes/",
+			driveType: "Dropbox",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			local := fixtureFile(t, fileSize)
+			srv, recorder := uploadServer(t, uploadServerOpts{})
+			c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+			if _, err := c.UploadFile(context.Background(), UploadOpts{
+				LocalPath: local,
+				Node:      "n",
+				DriveType: tc.driveType,
+				// ChunkParentDir intentionally omitted — normalize()
+				// defaults it to ParentDir for the
+				// files-backend-managed namespaces, and the test
+				// asserts that default is what hits the wire.
+				ParentDir:    tc.parentDir,
+				RemoteName:   "f.bin",
+				RelativePath: "f.bin",
+				ChunkSize:    chunkSize,
+			}, nil); err != nil {
+				t.Fatal(err)
+			}
+			if got := len(recorder.chunks); got != 2 {
+				t.Fatalf("got %d chunks, want 2", got)
+			}
+			for i, ck := range recorder.chunks {
+				if got := ck.form["parent_dir"]; got != tc.parentDir {
+					t.Errorf("chunk %d: parent_dir = %q, want %q",
+						i, got, tc.parentDir)
+				}
+				if got := ck.form["driveType"]; got != tc.driveType {
+					t.Errorf("chunk %d: driveType = %q, want %q",
+						i, got, tc.driveType)
+				}
+			}
+		})
+	}
+}
+
+// TestUploadFile_CloudTaskIDFromFinalChunk: when the destination is a
+// cloud drive (awss3 / google / dropbox) the LAST chunk's response
+// body carries the stage-2 cloud-transfer taskId as
+// `[{"taskId":"<id>"}]`. UploadFile must parse it out and surface it
+// in UploadResult so the cobra layer can drive WaitCloudTask. This
+// is the regression test for the two-stage upload protocol; without
+// it a future refactor that drops the response body could silently
+// break cloud uploads (the chunked POST would still succeed, but
+// the file would never land in the user's actual bucket).
+//
+// Mirrors resumejs.ts onFileUploadSuccess L591-606's parsing
+// behavior: `JSON.parse(message)` → expect array → first element
+// `taskId` is the handle. Anything that doesn't fit collapses to ""
+// (covered by TestParseFinalChunkTaskID below).
+func TestUploadFile_CloudTaskIDFromFinalChunk(t *testing.T) {
+	const chunkSize = 1024
+	fileSize := int64(2 * chunkSize)
+	local := fixtureFile(t, fileSize)
+	const wantTaskID = "task-abc-123"
+
+	var chunkCount int32
+	srv, _ := uploadServer(t, uploadServerOpts{
+		uploadHandler: func(cr *chunkRecorder, w http.ResponseWriter, r *http.Request) {
+			n := atomic.AddInt32(&chunkCount, 1)
+			if _, err := cr.record(r); err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			// Drive emits an empty body; cloud drives stuff a JSON
+			// array with the stage-2 taskId on the FINAL chunk.
+			// The test fixture has totalChunks == 2, so write the
+			// taskId body on chunk 2.
+			if n == 2 {
+				w.Header().Set("Content-Type", "application/json")
+				fmt.Fprintf(w, `[{"taskId":"%s","node":"n"}]`, wantTaskID)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		},
+	})
+
+	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+	res, err := c.UploadFile(context.Background(), UploadOpts{
+		LocalPath:    local,
+		Node:         "n",
+		DriveType:    "Awss3",
+		ParentDir:    "/awss3/account-x/bucket/Backups/",
+		RemoteName:   "f.bin",
+		RelativePath: "f.bin",
+		ChunkSize:    chunkSize,
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.CloudTaskID != wantTaskID {
+		t.Errorf("CloudTaskID = %q, want %q", res.CloudTaskID, wantTaskID)
+	}
+}
+
+// TestUploadFile_NoCloudTaskIDForDrive: Drive's chunk endpoint
+// returns an empty body. Make sure we don't synthesise a phantom
+// taskId from "" — the cobra layer's WaitCloudTask call is gated
+// on CloudTaskID != "", so a false positive here would cause
+// drive uploads to start polling /api/task/ for nothing.
+func TestUploadFile_NoCloudTaskIDForDrive(t *testing.T) {
+	const chunkSize = 1024
+	fileSize := int64(chunkSize)
+	local := fixtureFile(t, fileSize)
+	srv, _ := uploadServer(t, uploadServerOpts{})
+	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+	res, err := c.UploadFile(context.Background(), UploadOpts{
+		LocalPath: local, Node: "n",
+		ParentDir: "/drive/Home/", RemoteName: "f.bin", RelativePath: "f.bin",
+		ChunkSize: chunkSize,
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.CloudTaskID != "" {
+		t.Errorf("CloudTaskID = %q, want \"\" (Drive uploads are single-stage)",
+			res.CloudTaskID)
+	}
+}
+
+// TestParseFinalChunkTaskID covers the ways the final-chunk response
+// body can be malformed-or-empty without us making the upload look
+// "failed". The principle is: the chunk POST already returned 2xx,
+// so the upload itself succeeded; if we can't extract a stage-2
+// taskId from the body, return "" and let the caller skip
+// WaitCloudTask. Erroring out here would turn a successful upload
+// into a CLI failure for the user.
+func TestParseFinalChunkTaskID(t *testing.T) {
+	cases := []struct {
+		name string
+		body []byte
+		want string
+	}{
+		{"happy path", []byte(`[{"taskId":"abc-123","node":"n"}]`), "abc-123"},
+		{"happy with whitespace", []byte("\n  [{\"taskId\":\"x\"}]\n"), "x"},
+		{"empty body (Drive)", []byte(``), ""},
+		{"empty array", []byte(`[]`), ""},
+		{"object instead of array", []byte(`{"taskId":"x"}`), ""},
+		{"missing taskId key", []byte(`[{"foo":"bar"}]`), ""},
+		{"empty taskId value", []byte(`[{"taskId":""}]`), ""},
+		{"malformed JSON", []byte(`[{"taskId":`), ""},
+		{"non-JSON text", []byte(`OK`), ""},
+		{"first element wins", []byte(`[{"taskId":"first"},{"taskId":"second"}]`), "first"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := parseFinalChunkTaskID(tc.body); got != tc.want {
+				t.Errorf("parseFinalChunkTaskID(%q) = %q, want %q",
+					tc.body, got, tc.want)
+			}
+		})
+	}
+}
+
 // TestUploadFile_FolderRelativePath: when a file lives in a subdir
 // of the upload root (RelativePath has '/'), the per-chunk
 // `relative_path` form field carries the directory prefix WITH a
@@ -437,7 +726,7 @@ func TestUploadFile_FolderRelativePath(t *testing.T) {
 	local := fixtureFile(t, chunkSize)
 	srv, recorder := uploadServer(t, uploadServerOpts{})
 	c := &Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
-	if err := c.UploadFile(context.Background(), UploadOpts{
+	if _, err := c.UploadFile(context.Background(), UploadOpts{
 		LocalPath:    local,
 		Node:         "n",
 		ParentDir:    "/drive/Home/X/",
@@ -476,7 +765,7 @@ func TestUploadFile_ContextCancel(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		cancel()
 	}()
-	err := c.UploadFile(ctx, UploadOpts{
+	_, err := c.UploadFile(ctx, UploadOpts{
 		LocalPath: local, Node: "n",
 		ParentDir: "/drive/Home/", RemoteName: "f.bin", RelativePath: "f.bin",
 		ChunkSize:    chunkSize,
@@ -507,6 +796,7 @@ func TestBuildChunkBody_FileFieldNameIsFile(t *testing.T) {
 	rdr, ct, err := buildChunkBody(UploadOpts{
 		ChunkSize: 1024, RemoteName: "x.bin", RelativePath: "x.bin",
 		ParentDir: "/drive/Home/",
+		DriveType: "Sync",
 	}, chunkUploadCtx{
 		ChunkIndex: 0, TotalChunks: 1, ChunkLen: 4, StartByte: 0, FileSize: 4,
 		Identifier: "id", MimeType: "application/octet-stream",
@@ -539,6 +829,58 @@ func TestBuildChunkBody_FileFieldNameIsFile(t *testing.T) {
 	}
 	if !sawFile {
 		t.Error("did not find a part named 'file' in the multipart body")
+	}
+
+	// Build and parse again to assert custom query for a Sync upload:
+	//   - driveType form field is "Sync"
+	//   - parent_dir form field is the inside-repo path
+	//     ("/docs/"), NOT the API-form "/sync/<repo>/docs/" — Seafile's
+	//     seafhttp/upload-aj resolves parent_dir relative to the repo
+	//     root the upload token already pinned, so sending the
+	//     `/sync/<repo>/...` prefix would 500 with "parent dir doesn't
+	//     exist" inside the repo.
+	rdr2, ct2, err := buildChunkBody(UploadOpts{
+		ChunkSize: 1024, RemoteName: "x.bin", RelativePath: "x.bin",
+		ParentDir:      "/sync/repo-1/docs/",
+		ChunkParentDir: "/docs/",
+		DriveType:      "Sync",
+	}, chunkUploadCtx{
+		ChunkIndex: 0, TotalChunks: 1, ChunkLen: 4, StartByte: 0, FileSize: 4,
+		Identifier: "id", MimeType: "application/octet-stream",
+		ChunkContents: []byte{1, 2, 3, 4},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, params2, err := mediaType(ct2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mr2 := multipart.NewReader(rdr2, params2["boundary"])
+	var gotDriveType, gotParentDir string
+	for {
+		p, err := mr2.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		switch p.FormName() {
+		case "driveType":
+			b, _ := io.ReadAll(p)
+			gotDriveType = string(b)
+		case "parent_dir":
+			b, _ := io.ReadAll(p)
+			gotParentDir = string(b)
+		}
+	}
+	if gotDriveType != "Sync" {
+		t.Errorf("driveType = %q, want %q", gotDriveType, "Sync")
+	}
+	if gotParentDir != "/docs/" {
+		t.Errorf("parent_dir = %q, want %q (inside-repo path; NOT the /sync/<repo>/... API form)",
+			gotParentDir, "/docs/")
 	}
 }
 

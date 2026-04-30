@@ -14,7 +14,7 @@
 //     each file's RelativePath includes <basename(local)> as the
 //     top-level component so the source folder's name appears under
 //     <remote> on the server (i.e. `upload mydir drive/Home/X/` →
-//     drive/Home/X/mydir/...). This matches the LarePass folder-upload
+//     drive/Home/X/mydir/...; same for sync/<repo_id>/X/). This matches the LarePass folder-upload
 //     UI, which always preserves the picked folder's name.
 //   - Empty subdirectories are recorded as EmptyDirs so the cobra
 //     command can pre-mkdir them before the chunk uploads start —
@@ -60,12 +60,23 @@ type FileTask struct {
 // run EmptyDirs through Client.Mkdir, then schedule Files through an
 // errgroup of Client.UploadFile.
 type Plan struct {
-	// ParentDir is the constant `/drive/Home/...` parent directory
-	// (with trailing '/') that the upload session is anchored to. Same
-	// value goes into UploadOpts.ParentDir for every file.
+	// ParentDir is the constant `/<fileType>/<extend>/<sub>/` "API"
+	// parent directory (with trailing '/') that the upload session is
+	// anchored to. Same value goes into UploadOpts.ParentDir for every
+	// file and is used as the `file_path`/`parent_dir` query for
+	// upload-link and file-uploaded-bytes.
 	ParentDir string
-	// RelativeRoot is the path RELATIVE to /Home that ParentDir maps
-	// to (no leading or trailing slash, e.g. "Documents/Backups"). The
+	// ChunkParentDir is the parent_dir VALUE that goes into each chunk
+	// POST's multipart form field (NOT the API queries above). For
+	// Drive uploads it equals ParentDir; for Sync uploads it's the
+	// path INSIDE the Seafile repo (e.g. `/sub/` instead of
+	// `/sync/<repo>/sub/`), because the chunk POST hits
+	// `/seafhttp/upload-aj/<token>` and Seafile interprets parent_dir
+	// relative to the repo root the token pins.
+	ChunkParentDir string
+	// RelativeRoot is the path RELATIVE to the selected upload root that
+	// ParentDir maps to (no leading or trailing slash, e.g.
+	// "Documents/Backups"). The
 	// cobra command passes this to Client.Mkdir to ensure the
 	// destination dir itself exists before any file upload runs. May
 	// be empty when uploading directly to /Home.
@@ -85,16 +96,24 @@ type Plan struct {
 // BuildPlan validates inputs against the local filesystem and returns
 // a Plan ready to be executed.
 //
-// `remoteSubPath` is the path RELATIVE to drive/Home as parsed from a
-// FrontendPath (so "Documents/Backups" or "Documents/Backups/" — with
-// or without leading slash; both are accepted). The trailing slash IS
+// `remoteSubPath` is the path RELATIVE to the selected upload root
+// (drive/Home or sync/<repo_id>) as parsed from a FrontendPath (so
+// "Documents/Backups" or "Documents/Backups/" — with or without leading
+// slash; both are accepted). The trailing slash IS
 // significant: it tells BuildPlan to interpret the remote as a
 // directory rather than a file rename target.
+//
+// `apiRootPrefix` is the prefix used for API queries (upload-link,
+// file-uploaded-bytes), e.g. `/drive/Home` or `/sync/<repo_id>`.
+// `chunkRootPrefix` is the prefix used for the chunk POST's parent_dir
+// form field; for Drive it equals apiRootPrefix, for Sync it's empty
+// (so the resulting form value is just `/<sub>/` — Seafile expects a
+// path INSIDE the repo since the upload token already pins the repo).
 //
 // Errors:
 //   - <local> doesn't exist
 //   - <local> is a directory but <remote> doesn't end with '/'
-func BuildPlan(localPath, remoteSubPath string) (*Plan, error) {
+func BuildPlan(localPath, remoteSubPath, apiRootPrefix, chunkRootPrefix string) (*Plan, error) {
 	st, err := os.Stat(localPath)
 	if err != nil {
 		return nil, fmt.Errorf("stat %s: %w", localPath, err)
@@ -104,14 +123,14 @@ func BuildPlan(localPath, remoteSubPath string) (*Plan, error) {
 	cleanRemote := strings.Trim(remoteSubPath, "/")
 
 	if st.Mode().IsRegular() {
-		return planForFile(localPath, st.Size(), cleanRemote, remoteIsDir), nil
+		return planForFile(localPath, st.Size(), cleanRemote, remoteIsDir, apiRootPrefix, chunkRootPrefix), nil
 	}
 	if st.IsDir() {
 		if !remoteIsDir {
 			return nil, fmt.Errorf("local %q is a directory; remote %q must end with '/'",
 				localPath, remoteSubPath)
 		}
-		return planForDir(localPath, cleanRemote)
+		return planForDir(localPath, cleanRemote, apiRootPrefix, chunkRootPrefix)
 	}
 	return nil, fmt.Errorf("%s is not a regular file or directory", localPath)
 }
@@ -123,7 +142,7 @@ func BuildPlan(localPath, remoteSubPath string) (*Plan, error) {
 //   - !remoteIsDir: cleanRemote is the full target path; we split it
 //     into parent + basename so parent_dir is well-formed (the chunk
 //     POST always wants a directory parent_dir, never a full path).
-func planForFile(localPath string, size int64, cleanRemote string, remoteIsDir bool) *Plan {
+func planForFile(localPath string, size int64, cleanRemote string, remoteIsDir bool, apiRootPrefix, chunkRootPrefix string) *Plan {
 	base := filepath.Base(localPath)
 
 	var (
@@ -150,8 +169,9 @@ func planForFile(localPath string, size int64, cleanRemote string, remoteIsDir b
 	}
 
 	return &Plan{
-		ParentDir:    parentDirFor(relativeRoot),
-		RelativeRoot: relativeRoot,
+		ParentDir:      parentDirFor(apiRootPrefix, relativeRoot),
+		ChunkParentDir: parentDirFor(chunkRootPrefix, relativeRoot),
+		RelativeRoot:   relativeRoot,
 		Files: []FileTask{{
 			LocalPath:    localPath,
 			RelativePath: remoteName,
@@ -171,13 +191,14 @@ func planForFile(localPath string, size int64, cleanRemote string, remoteIsDir b
 // cut because it conflicts with the file-vs-directory disambiguation
 // trailing slashes carry on the remote side; the few users who need
 // it can chain mv on the server.
-func planForDir(localDir, cleanRemote string) (*Plan, error) {
+func planForDir(localDir, cleanRemote, apiRootPrefix, chunkRootPrefix string) (*Plan, error) {
 	srcBase := filepath.Base(localDir)
 	relativeRoot := strings.Trim(cleanRemote, "/")
 
 	plan := &Plan{
-		ParentDir:    parentDirFor(relativeRoot),
-		RelativeRoot: relativeRoot,
+		ParentDir:      parentDirFor(apiRootPrefix, relativeRoot),
+		ChunkParentDir: parentDirFor(chunkRootPrefix, relativeRoot),
+		RelativeRoot:   relativeRoot,
 	}
 
 	// Pre-collect: walk first, then sort + decide which dirs are
@@ -272,26 +293,38 @@ func planForDir(localDir, cleanRemote string) (*Plan, error) {
 // ToUploadOpts converts one FileTask into an UploadOpts ready for
 // Client.UploadFile, threading per-call settings (node, chunk size,
 // retries) from the cobra command. Side-effect free.
-func (p *Plan) ToUploadOpts(t FileTask, node string, chunkSize int64, maxRetries int) UploadOpts {
+func (p *Plan) ToUploadOpts(t FileTask, node, driveType string, chunkSize int64, maxRetries int) UploadOpts {
 	return UploadOpts{
-		LocalPath:    t.LocalPath,
-		Node:         node,
-		ParentDir:    p.ParentDir,
-		RemoteName:   t.RemoteName,
-		RelativePath: t.RelativePath,
-		ChunkSize:    chunkSize,
-		MaxRetries:   maxRetries,
+		LocalPath:      t.LocalPath,
+		Node:           node,
+		DriveType:      driveType,
+		ParentDir:      p.ParentDir,
+		ChunkParentDir: p.ChunkParentDir,
+		RemoteName:     t.RemoteName,
+		RelativePath:   t.RelativePath,
+		ChunkSize:      chunkSize,
+		MaxRetries:     maxRetries,
 	}
 }
 
-// parentDirFor returns the `/drive/Home/...` parent_dir form for a
-// /Home-relative directory. Always ends with '/'.
-func parentDirFor(relativeRoot string) string {
+// parentDirFor returns the `/<fileType>/<extend>/...` parent_dir form
+// for a root-relative directory. Always ends with '/'.
+func parentDirFor(rootPrefix, relativeRoot string) string {
+	root := strings.TrimRight(rootPrefix, "/")
+	if root == "" {
+		root = "/"
+	}
 	rr := strings.Trim(relativeRoot, "/")
 	if rr == "" {
-		return "/drive/Home/"
+		if root == "/" {
+			return "/"
+		}
+		return root + "/"
 	}
-	return "/drive/Home/" + rr + "/"
+	if root == "/" {
+		return "/" + rr + "/"
+	}
+	return root + "/" + rr + "/"
 }
 
 // dirOfPosix returns the POSIX-style parent directory of `p`, or ""

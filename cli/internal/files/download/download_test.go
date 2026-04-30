@@ -507,6 +507,238 @@ func TestStreamRaw_NonFile(t *testing.T) {
 	}
 }
 
+// TestList_CloudDriveDataEnvelope: on awss3 / google / dropbox /
+// tencent the server returns the directory contents under the
+// top-level `data` field instead of `items`, with `fileSize`
+// populated as the canonical byte count and `mode` / `modified`
+// emitted as empty strings (see the awss3 sample the CLI now ships
+// against). List must accept both shapes; here we verify the
+// `data` path resolves to the same Entry slice the `items` path
+// produces, so the walker / Stat don't need namespace branching.
+func TestList_CloudDriveDataEnvelope(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `{
+			"data":[
+				{"name":"03 (1).avi","isDir":false,"isSymlink":false,"size":5788048,"fileSize":5788048,"mode":"","modified":"","path":"/03 (1).avi","type":""},
+				{"name":"datasets","isDir":true,"isSymlink":false,"size":0,"fileSize":0,"mode":"","modified":"","path":"/datasets","type":""}
+			],
+			"fileExtend":"AKIA...","filePath":"/","fileType":"awss3","name":"","status_code":"SUCCESS"
+		}`)
+	}))
+	entries, err := client.List(context.Background(), "awss3/AKIA.../")
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("want 2 entries, got %d (%+v)", len(entries), entries)
+	}
+	if entries[0].Name != "03 (1).avi" || entries[0].IsDir || entries[0].Size != 5788048 {
+		t.Errorf("entries[0] mismatch: %+v", entries[0])
+	}
+	if entries[1].Name != "datasets" || !entries[1].IsDir {
+		t.Errorf("entries[1] mismatch: %+v", entries[1])
+	}
+}
+
+// TestList_FileSizeFallback: when the cloud-drive server populates
+// `fileSize` but not `size` (the shape the format() helper in
+// awss3/filesFormat.ts treats as canonical), List must still surface
+// the right byte count — the walker uses it for progress totals.
+func TestList_FileSizeFallback(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `{
+			"data":[
+				{"name":"big.bin","isDir":false,"fileSize":17236328572}
+			]
+		}`)
+	}))
+	entries, err := client.List(context.Background(), "awss3/AKIA.../")
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Size != 17236328572 {
+		t.Errorf("want 1 entry with Size 17236328572, got %+v", entries)
+	}
+}
+
+// TestList_ItemsWinsWhenBothPresent: defensive — if a transitional
+// server emits both `items` and `data` (legacy shape during a
+// migration), the canonical files-backend `items` field wins.
+// Otherwise we'd silently double-count or pick the wrong shape on
+// hybrid backends.
+func TestList_ItemsWinsWhenBothPresent(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `{
+			"items":[{"name":"from-items","isDir":false,"size":1}],
+			"data":[{"name":"from-data","isDir":false,"size":2}]
+		}`)
+	}))
+	entries, err := client.List(context.Background(), "awss3/x/")
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Name != "from-items" {
+		t.Errorf("want items-wins, got %+v", entries)
+	}
+}
+
+// TestStreamCloudFile_HappyPath: cat for cloud drives must hit
+// /drive/download_sync_stream with `drive` / `cloud_file_path` /
+// `name` query params, and stream the response body verbatim.
+// Wire shape mirrors the LarePass web app's
+// `generateDownloadUrl` helper (utils.ts in v2/{awss3,dropbox,google}).
+func TestStreamCloudFile_HappyPath(t *testing.T) {
+	body := []byte("cloud body bytes")
+	var gotPath, gotQuery string
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotQuery = r.URL.RawQuery
+		_, _ = w.Write(body)
+	}))
+	var buf bytes.Buffer
+	n, err := client.StreamCloudFile(context.Background(), "awss3", "/photos/img.png", "AKIA...", &buf)
+	if err != nil {
+		t.Fatalf("StreamCloudFile: %v", err)
+	}
+	if n != int64(len(body)) {
+		t.Errorf("returned bytes: want %d, got %d", len(body), n)
+	}
+	if !bytes.Equal(buf.Bytes(), body) {
+		t.Errorf("body mismatch: got %q", buf.Bytes())
+	}
+	if gotPath != "/drive/download_sync_stream" {
+		t.Errorf("path: want /drive/download_sync_stream, got %q", gotPath)
+	}
+	if !strings.Contains(gotQuery, "drive=awss3") {
+		t.Errorf("query missing drive=awss3: %q", gotQuery)
+	}
+	if !strings.Contains(gotQuery, "name=AKIA") {
+		t.Errorf("query missing name=AKIA...: %q", gotQuery)
+	}
+	// `cloud_file_path` must round-trip the leading '/' (and the
+	// space + parens / unicode that real bucket keys contain). Decode
+	// and compare.
+	q, err := parseQueryStrict(gotQuery)
+	if err != nil {
+		t.Fatalf("parse query: %v", err)
+	}
+	if q["cloud_file_path"] != "/photos/img.png" {
+		t.Errorf("cloud_file_path: want /photos/img.png, got %q", q["cloud_file_path"])
+	}
+}
+
+// TestStreamCloudFile_PreservesUnicodeAndSpaces: bucket keys
+// regularly contain spaces, parens, and non-ASCII characters (the
+// awss3 sample shipped with `测试上传`). The percent-encoder must
+// preserve them verbatim end-to-end so the cloud-bridge worker
+// looks up the right object.
+func TestStreamCloudFile_PreservesUnicodeAndSpaces(t *testing.T) {
+	var gotQuery string
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.RawQuery
+		_, _ = w.Write([]byte("ok"))
+	}))
+	const wantPath = "/03 (1).avi"
+	if _, err := client.StreamCloudFile(context.Background(), "awss3", wantPath, "AKIA", io.Discard); err != nil {
+		t.Fatalf("StreamCloudFile: %v", err)
+	}
+	q, err := parseQueryStrict(gotQuery)
+	if err != nil {
+		t.Fatalf("parse query: %v", err)
+	}
+	if q["cloud_file_path"] != wantPath {
+		t.Errorf("cloud_file_path round-trip mismatch: want %q, got %q", wantPath, q["cloud_file_path"])
+	}
+}
+
+// TestStreamCloudFile_NotFound: 404 from the cloud-bridge worker
+// (object missing in bucket / account de-authorised) must surface
+// as *HTTPError so the cobra layer can render a friendly CTA.
+func TestStreamCloudFile_NotFound(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = io.WriteString(w, `{"error":"not found"}`)
+	}))
+	_, err := client.StreamCloudFile(context.Background(), "google", "/missing.txt", "acc-1", io.Discard)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var hErr *HTTPError
+	if !errors.As(err, &hErr) || hErr.Status != http.StatusNotFound {
+		t.Errorf("want *HTTPError(404), got %T: %v", err, err)
+	}
+}
+
+// TestStreamCloudFile_EmptyArgs: empty driveType / cloudPath / name
+// each fail fast without touching the network — those are URL query
+// values the server requires, and silently sending "" would either
+// 400 or (worse) match against an unrelated default.
+func TestStreamCloudFile_EmptyArgs(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("server should not be hit for empty-args case")
+		w.WriteHeader(http.StatusOK)
+	}))
+	if _, err := client.StreamCloudFile(context.Background(), "", "/p", "n", io.Discard); err == nil {
+		t.Error("expected error for empty driveType")
+	}
+	if _, err := client.StreamCloudFile(context.Background(), "awss3", "", "n", io.Discard); err == nil {
+		t.Error("expected error for empty cloudPath")
+	}
+	if _, err := client.StreamCloudFile(context.Background(), "awss3", "/p", "", io.Discard); err == nil {
+		t.Error("expected error for empty name")
+	}
+}
+
+// parseQueryStrict is a tiny wrapper over net/url's QueryUnescape
+// that returns a flat map[string]string for assertion purposes; the
+// values it surfaces are already URL-decoded so test cases can write
+// the un-encoded form they expect.
+func parseQueryStrict(raw string) (map[string]string, error) {
+	out := map[string]string{}
+	for _, kv := range strings.Split(raw, "&") {
+		if kv == "" {
+			continue
+		}
+		eq := strings.IndexByte(kv, '=')
+		if eq < 0 {
+			out[kv] = ""
+			continue
+		}
+		k := kv[:eq]
+		v := kv[eq+1:]
+		dv, err := decodeQueryValue(v)
+		if err != nil {
+			return nil, err
+		}
+		out[k] = dv
+	}
+	return out, nil
+}
+
+func decodeQueryValue(s string) (string, error) {
+	// net/url is intentionally not imported here: we only need
+	// percent-decoding, no query splitting; this keeps the test
+	// helper free of indirect dependencies.
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c == '+':
+			b.WriteByte(' ')
+		case c == '%' && i+2 < len(s):
+			h, err := strconv.ParseUint(s[i+1:i+3], 16, 8)
+			if err != nil {
+				return "", err
+			}
+			b.WriteByte(byte(h))
+			i += 2
+		default:
+			b.WriteByte(c)
+		}
+	}
+	return b.String(), nil
+}
+
 // TestDownloadFile_ContextCanceled confirms cancellation aborts
 // without burning the retry budget.
 func TestDownloadFile_ContextCanceled(t *testing.T) {
