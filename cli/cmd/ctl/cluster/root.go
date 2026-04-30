@@ -34,6 +34,8 @@ import (
 
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/application"
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/container"
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/cronjob"
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/job"
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/middleware"
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/namespace"
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/node"
@@ -95,6 +97,8 @@ tree is the runtime-state view of the resulting K8s objects.
 	cmd.AddCommand(namespace.NewNamespaceCommand(f))
 	cmd.AddCommand(node.NewNodeCommand(f))
 	cmd.AddCommand(middleware.NewMiddlewareCommand(f))
+	cmd.AddCommand(job.NewJobCommand(f))
+	cmd.AddCommand(cronjob.NewCronJobCommand(f))
 
 	return cmd
 }
