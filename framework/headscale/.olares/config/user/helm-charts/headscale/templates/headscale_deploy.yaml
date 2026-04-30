@@ -132,24 +132,6 @@ spec:
         runAsGroup: 1000
         fsGroup: 1000
       initContainers:
-      - name: init-data
-        image: busybox:1.28
-        securityContext:
-          privileged: true
-          runAsNonRoot: false
-          runAsUser: 0
-        volumeMounts:
-        - name: config
-          mountPath: /etc/headscale
-        - name: headscale-data
-          mountPath: /var/lib/headscale
-        - name: config-parent
-          mountPath: /headscale
-        command:
-        - sh
-        - -c
-        - |
-          chown -R 1000:1000 /headscale 
       - args:
         - |
           set -euo pipefail
@@ -183,7 +165,7 @@ spec:
         - mountPath: /certs
           name: tls-cert
       - name: init
-        image: beclab/headscale-init:v0.1.13
+        image: beclab/headscale-init:v0.1.14
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
