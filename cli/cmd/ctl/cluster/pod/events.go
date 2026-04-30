@@ -130,6 +130,9 @@ func runEvents(ctx context.Context, o *clusteropts.ClusterOptions, namespace, na
 			Items []Event `json:"items"`
 		}{Items: filtered})
 	}
+	if o.Quiet {
+		return nil
+	}
 
 	if len(filtered) == 0 {
 		fmt.Fprintf(os.Stderr, "no events for pod %s/%s\n", namespace, name)
@@ -187,8 +190,14 @@ func renderEventsTable(events []Event, noHeaders bool) error {
 		if ts == "" {
 			ts = e.Metadata.CreationTimestamp
 		}
+		// Avoid rendering literal "- ago" when the age is unknown:
+		// keep the bare "-" so the column matches every other table.
+		lastSeen := clusteropts.Age(ts, now)
+		if lastSeen != "-" {
+			lastSeen += " ago"
+		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\t%s\n",
-			clusteropts.Age(ts, now)+" ago",
+			lastSeen,
 			clusteropts.DashIfEmpty(e.Type),
 			clusteropts.DashIfEmpty(e.Reason),
 			count,

@@ -39,9 +39,12 @@ type Display struct {
 	GrantedClusters  []string `json:"grantedClusters,omitempty"`
 	Source           string   `json:"source"` // "cache" or "server"
 	RefreshedAt      int64    `json:"refreshedAt,omitempty"`
-	RefreshedAgoSecs int64    `json:"refreshedAgoSecs,omitempty"`
-	PreviousRole     string   `json:"previousGlobalrole,omitempty"`
-	Changed          bool     `json:"changed,omitempty"`
+	// RefreshedAgoSecs is always emitted (not omitempty) so JSON consumers
+	// see the same shape regardless of source: the server path naturally
+	// reads as 0 ("just fetched"), the cache path computes the real delta.
+	RefreshedAgoSecs int64  `json:"refreshedAgoSecs"`
+	PreviousRole     string `json:"previousGlobalrole,omitempty"`
+	Changed          bool   `json:"changed,omitempty"`
 }
 
 // Render writes `d` to `w` in the requested format. Table mode keeps

@@ -3,14 +3,12 @@ package clusterctx
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/beclab/Olares/cli/pkg/credential"
 )
@@ -36,12 +34,6 @@ type HTTPClient struct {
 	hc       *http.Client
 	baseURL  string
 	olaresID string
-	// accessToken, when non-empty, is set on every outbound request as
-	// `X-Authorization`. Used by NewHTTPClientWithToken (the eager-fetch
-	// variant). When empty, we trust the underlying http.Client's
-	// RoundTripper to inject the header (factory.refreshingTransport
-	// does this for the standard flow).
-	accessToken string
 }
 
 // NewHTTPClient builds a clusterctx Doer pointed at <controlHubURL>,
@@ -54,29 +46,6 @@ func NewHTTPClient(hc *http.Client, controlHubURL, olaresID string) *HTTPClient 
 		hc:       hc,
 		baseURL:  strings.TrimRight(controlHubURL, "/"),
 		olaresID: olaresID,
-	}
-}
-
-// NewHTTPClientWithToken is the eager-fetch variant (no Factory
-// memoization, no shared timeout). Mirrors
-// pkg/whoami.NewHTTPClientWithToken; reserved for any future
-// `profile login` / `profile import` flow that wants to populate
-// ClusterContext at login time. insecureSkipVerify mirrors the
-// profile's TLS knob.
-func NewHTTPClientWithToken(controlHubURL, olaresID, accessToken string, insecureSkipVerify bool) *HTTPClient {
-	tr := http.DefaultTransport.(*http.Transport).Clone()
-	if insecureSkipVerify {
-		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- explicit profile opt-in
-	}
-	hc := &http.Client{
-		Timeout:   10 * time.Second,
-		Transport: tr,
-	}
-	return &HTTPClient{
-		hc:          hc,
-		baseURL:     strings.TrimRight(controlHubURL, "/"),
-		olaresID:    olaresID,
-		accessToken: accessToken,
 	}
 }
 
@@ -99,9 +68,6 @@ func (c *HTTPClient) DoJSON(ctx context.Context, method, path string, body, out 
 	req.Header.Set("Accept", "application/json")
 	if reqBody != nil {
 		req.Header.Set("Content-Type", "application/json")
-	}
-	if c.accessToken != "" {
-		req.Header.Set("X-Authorization", c.accessToken)
 	}
 
 	resp, err := c.hc.Do(req)
