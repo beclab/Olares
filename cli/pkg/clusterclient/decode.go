@@ -131,3 +131,20 @@ func DecodeJSON(path string, body []byte, out interface{}) error {
 	}
 	return nil
 }
+
+// Patch issues a PATCH against `path` with the supplied Content-Type
+// (typically "application/merge-patch+json" or
+// "application/strategic-merge-patch+json" — K8s picks the merge
+// algorithm by header) and decodes the response into `out` when
+// non-nil.
+//
+// out should be a pointer to the typed struct describing the patched
+// object's expected shape (K8s returns the post-patch object on
+// success). Pass nil to discard the body when the caller only cares
+// about the success/failure outcome.
+func Patch[T any](ctx context.Context, c *Client, path, contentType string, body interface{}, out *T) error {
+	if out == nil {
+		return c.DoJSONWithContentType(ctx, http.MethodPatch, path, body, contentType, nil)
+	}
+	return c.DoJSONWithContentType(ctx, http.MethodPatch, path, body, contentType, out)
+}

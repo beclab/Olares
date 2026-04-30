@@ -56,6 +56,7 @@ active profile can see. Pass -n / --namespace to scope explicitly.
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(NewGetCommand(f))
 	cmd.AddCommand(NewYAMLCommand(f))
+	cmd.AddCommand(NewRolloutStatusCommand(f))
 
 	return cmd
 }

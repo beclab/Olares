@@ -126,6 +126,11 @@ type WorkloadStatus struct {
 	DesiredNumberScheduled int `json:"desiredNumberScheduled,omitempty"`
 	NumberMisscheduled     int `json:"numberMisscheduled,omitempty"`
 	NumberAvailable        int `json:"numberAvailable,omitempty"`
+	// UpdatedNumberScheduled is the DaemonSet equivalent of
+	// updatedReplicas — number of nodes whose pod is on the latest
+	// template version. Used by `cluster workload rollout-status` to
+	// decide whether a DaemonSet rollout has converged.
+	UpdatedNumberScheduled int `json:"updatedNumberScheduled,omitempty"`
 	// Generation observed by the controller; if it lags
 	// metadata.generation the rollout is still in progress.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`

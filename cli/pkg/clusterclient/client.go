@@ -91,7 +91,7 @@ func (c *Client) OlaresID() string { return c.olaresID }
 // (KubeSphere {items,totalItems}, K8s native, /capi/* custom) is the
 // caller's responsibility — typically via the helpers in decode.go.
 func (c *Client) DoJSON(ctx context.Context, method, path string, body, out interface{}) error {
-	respBody, err := c.do(ctx, method, path, body)
+	respBody, err := c.do(ctx, method, path, body, "")
 	if err != nil {
 		return err
 	}
@@ -113,10 +113,38 @@ func (c *Client) DoJSON(ctx context.Context, method, path string, body, out inte
 // All non-2xx handling (401/403 reformat, generic HTTP error) happens
 // before this returns, so a successful return always carries a 2xx body.
 func (c *Client) DoRaw(ctx context.Context, method, path string, body interface{}) ([]byte, error) {
-	return c.do(ctx, method, path, body)
+	return c.do(ctx, method, path, body, "")
 }
 
-func (c *Client) do(ctx context.Context, method, path string, body interface{}) ([]byte, error) {
+// DoJSONWithContentType is the variant DoJSON callers reach for when
+// the wire requires a non-default request Content-Type — the canonical
+// case is K8s PATCH, where merge semantics are picked by header
+// (`application/merge-patch+json` vs `application/strategic-merge-patch+json`
+// vs `application/json-patch+json`). The K8s API rejects PATCH bodies
+// without one of those headers.
+//
+// contentType="" falls back to the DoJSON default ("application/json"),
+// so callers can use this helper unconditionally for any future verb
+// that might-or-might-not need a custom header.
+//
+// Behavior is otherwise identical to DoJSON: same auth chain, same
+// 401/403 reformat, same generic HTTP error handling, same JSON
+// decode into out (when non-nil).
+func (c *Client) DoJSONWithContentType(ctx context.Context, method, path string, body interface{}, contentType string, out interface{}) error {
+	respBody, err := c.do(ctx, method, path, body, contentType)
+	if err != nil {
+		return err
+	}
+	if out == nil || len(respBody) == 0 {
+		return nil
+	}
+	if err := json.Unmarshal(respBody, out); err != nil {
+		return fmt.Errorf("decode %s %s response: %w (body=%s)", method, c.baseURL+path, err, truncate(string(respBody), 200))
+	}
+	return nil
+}
+
+func (c *Client) do(ctx context.Context, method, path string, body interface{}, contentType string) ([]byte, error) {
 	var reqBody io.Reader
 	if body != nil {
 		buf, err := json.Marshal(body)
@@ -133,7 +161,12 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}) 
 	}
 	req.Header.Set("Accept", "application/json")
 	if reqBody != nil {
-		req.Header.Set("Content-Type", "application/json")
+		// Empty contentType means "use default JSON" — keeps existing
+		// callers (DoJSON / DoRaw) working without changes.
+		if contentType == "" {
+			contentType = "application/json"
+		}
+		req.Header.Set("Content-Type", contentType)
 	}
 	// Origin / Referer left at Go defaults — see SettingsClient.DoJSON
 	// (cli/cmd/ctl/settings/client.go) for the Authelia CSRF rationale.
