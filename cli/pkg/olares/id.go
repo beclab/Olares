@@ -84,8 +84,38 @@ func (id ID) VaultURL(localPrefix string) string {
 
 // DesktopURL returns the per-user desktop base URL, e.g.
 // "https://desktop.alice.olares.com".
+//
+// IMPORTANT: this is the desktop launcher SPA's origin (see
+// apps/docker/system-frontend/nginx/desktop.conf). Its nginx exposes a
+// minimal location set ("/api", "/server", "/notification", "/video",
+// "/api/{device,logout,refresh}", "/kapis", "/seahub", "/ws"). Code that
+// targets verbs covered by the Settings SPA — anything under "/headscale",
+// "/apis/backup", "/admin", "/drive", "/vault", "/images",
+// "/api/cloud/sign" — must use SettingsURL instead. See KNOWN_ISSUES.md
+// KI-12 / KI-16 for the regression that surfaced this distinction.
 func (id ID) DesktopURL(localPrefix string) string {
 	return fmt.Sprintf("https://desktop.%s%s", localPrefix, id.TerminusName())
+}
+
+// SettingsURL returns the per-user settings SPA base URL, e.g.
+// "https://settings.alice.olares.com".
+//
+// This is the origin the Settings SPA uses (see
+// settings/src/application/settings.ts:42 — `tokenStore.setUrl(window.location.origin)`).
+// Its nginx (apps/docker/system-frontend/nginx/settings.conf) is the
+// superset that fans out to user-service ("/api", "/headscale",
+// "/api/cloud/sign"), backup-server ("/apis/backup"), Infisical
+// ("/admin"), files-service ("/drive", "/api/resources"),
+// vault-admin-server ("/vault"), and the image proxy ("/images").
+//
+// olares-cli's `settings ...` command tree should always be built against
+// this URL — DesktopURL appears to "work" for ~90% of verbs only because
+// both nginx configs forward "/api/*" to the same user-service upstream.
+// Verbs that hit any settings-only location regressed to HTML / 404 when
+// they were hard-wired to DesktopURL (KI-12 vpn devices, KI-16 backup /
+// restore plans, KI-6 apps secrets).
+func (id ID) SettingsURL(localPrefix string) string {
+	return fmt.Sprintf("https://settings.%s%s", localPrefix, id.TerminusName())
 }
 
 // FilesURL returns the per-user files-backend base URL, e.g.

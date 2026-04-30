@@ -363,6 +363,15 @@ func (t *refreshingTransport) clock() time.Time {
 // send injects token (when non-empty) and forwards to the base transport.
 // Clones the request so the caller's *http.Request is left untouched (some
 // callers retry at a higher level).
+//
+// 2026-04-28 KI-12 / KI-15 / KI-16 reverted: an earlier draft also
+// pasted the access_token into an `auth_token` cookie. That broke 31
+// previously-working verbs because Authelia's ext-authz on the desktop
+// ingress treats `auth_token` as its OWN session-id cookie (not the
+// JWT access_token) — pasting an unrecognized value triggered a
+// global redirect-to-login → 400 Bad Request HTML response on every
+// path. Until we figure out the real cookie name (or stop pretending
+// CLI requests are SPA-shaped), only X-Authorization rides here.
 func (t *refreshingTransport) send(req *http.Request, token string) (*http.Response, error) {
 	if token == "" {
 		return t.base.RoundTrip(req)
