@@ -5,7 +5,7 @@ head:
   - - meta
     - name: keywords
       content: Olares, NemoClaw, NVIDIA, OpenShell, Nemotron, OpenClaw, local LLM, AI assistant, self-hosted AI, Qwen
-app_version: "1.0.0"
+app_version: "1.0.3"
 doc_version: "1.0"
 doc_updated: "2026-04-30"
 ---
@@ -60,12 +60,12 @@ NemoClaw needs the model name and its shared endpoint URL during installation.
 
 4. Click **Confirm** and wait for installation to complete.
 
-   Installation takes about 10 minutes, depending on your network. During this time, NemoClaw installs the NVIDIA OpenShell runtime and runs the initial agent onboarding.
+   Installation takes about 15 minutes, depending on your network. During this time, NemoClaw installs the NVIDIA OpenShell runtime and runs the initial agent onboarding.
 
 When the installation finishes, two shortcuts appear on Launchpad:
 
-- **NemoClaw CLI**: The terminal interface for running NemoClaw commands.
-- **NemoClaw Web UI**: The browser-based dashboard.
+- **NemoClaw CLI**: The terminal interface for running NemoClaw and OpenClaw commands.
+- **OpenClaw Web UI**: The browser-based dashboard for OpenClaw.
 
 ## Optional: Keep the model loaded
 
