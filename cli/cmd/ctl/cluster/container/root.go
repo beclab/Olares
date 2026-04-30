@@ -23,10 +23,10 @@ import (
 )
 
 // NewContainerCommand assembles `olares-cli cluster container`.
-// Today's verbs are the read-only Phase 1c slice (list / env). Phase
-// 2 will bring `container logs` (currently the SPA also routes logs
-// per-container via /api/v1/namespaces/<ns>/pods/<name>/log?
-// container=<c>).
+// Today's verbs are the read-only Phase 1c slice (list / env) plus
+// Phase 2's `container logs`, which routes per-container via
+// /api/v1/namespaces/<ns>/pods/<name>/log?container=<c> (same
+// endpoint the SPA uses for its container log viewer).
 func NewContainerCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "container",
@@ -50,6 +50,7 @@ endpoint (/api/v1/namespaces/<ns>/pods/<name>).
 
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(NewEnvCommand(f))
+	cmd.AddCommand(NewLogsCommand(f))
 
 	return cmd
 }

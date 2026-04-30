@@ -2,14 +2,18 @@ package pod
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
 	"github.com/beclab/Olares/cli/pkg/clusterclient"
@@ -28,7 +32,11 @@ import (
 // is supplied, the positional argument is the bare pod name.
 func NewGetCommand(f *cmdutil.Factory) *cobra.Command {
 	o := clusteropts.NewClusterOptions(f)
-	var namespace string
+	var (
+		namespace string
+		watch     bool
+		interval  time.Duration
+	)
 
 	cmd := &cobra.Command{
 		Use:   "get <ns/name | name>",
@@ -42,6 +50,11 @@ form is required so we don't guess a namespace.
 In table mode, the output is a vertical key/value summary plus per-
 container rows. In json mode the response body is forwarded verbatim
 (no envelope wrapping) so the shape matches kube-apiserver exactly.
+
+--watch repeats the GET on --interval (default 2s). In table mode
+the screen is cleared and redrawn between ticks (when stdout is a
+terminal); in JSON mode each tick emits one JSON object on its own
+line (JSONL stream). Ctrl-C exits cleanly.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -49,10 +62,15 @@ container rows. In json mode the response body is forwarded verbatim
 			if err != nil {
 				return err
 			}
+			if watch {
+				return runGetWatch(c.Context(), o, ns, name, interval)
+			}
 			return runGet(c.Context(), o, ns, name)
 		},
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace (required when the positional argument is a bare name)")
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "re-fetch and re-render until interrupted (Ctrl-C to stop)")
+	cmd.Flags().DurationVar(&interval, "interval", 2*time.Second, "polling interval when --watch is set")
 	o.AddOutputFlags(cmd)
 	return cmd
 }
@@ -117,6 +135,83 @@ func runGet(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name 
 		return o.PrintJSON(*p)
 	}
 	return renderGetTable(*p)
+}
+
+// runGetWatch is the --watch variant of runGet: same fetch, repeated
+// on `interval` until the caller interrupts.
+//
+// Table mode: clear-screen + redraw on each tick when stdout is a TTY
+// so the output is readable as a live dashboard. When stdout is NOT a
+// TTY (piped to a file / grep), we skip the clear and just stream
+// repeated tables — that keeps `--watch | tee` useful without
+// littering the file with ANSI escapes.
+//
+// JSON mode: emit one JSON object per tick (JSONL stream). No clear,
+// no separators between objects beyond the trailing newline that
+// json.Encoder adds — matches the convention `kubectl get -o json
+// --watch` consumers (jq -c, tooling, etc.) already expect.
+//
+// Transient error policy mirrors the logs polling loop: tolerate up
+// to 5 consecutive HTTP errors before giving up so a transient 5xx /
+// network blip doesn't kill an otherwise-healthy `--watch`. Auth
+// failures (401/403) and other terminal errors propagate immediately
+// — they won't fix themselves on the next tick.
+func runGetWatch(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name string, interval time.Duration) error {
+	if interval <= 0 {
+		interval = 2 * time.Second
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	clearable := !o.IsJSON() && term.IsTerminal(int(os.Stdout.Fd()))
+	consecErr := 0
+	first := true
+	for {
+		if !first {
+			if err := sleepCtx(ctx, interval); err != nil {
+				return nil
+			}
+		}
+		first = false
+
+		p, err := Get(ctx, o, namespace, name)
+		if err != nil {
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return nil
+			}
+			consecErr++
+			o.Info("watch: failed to fetch pod (retry %d): %v", consecErr, err)
+			if consecErr >= 5 {
+				return fmt.Errorf("watch: aborted after %d consecutive errors: %w", consecErr, err)
+			}
+			continue
+		}
+		consecErr = 0
+
+		if o.IsJSON() {
+			if err := o.PrintJSON(*p); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if clearable {
+			// "\x1b[2J" clears the screen, "\x1b[H" homes the cursor
+			// to top-left. Same convention `top` / `htop` use; works
+			// on every terminal Cursor / iTerm / GNOME Terminal /
+			// Linux console emit. We deliberately don't gate on
+			// $TERM — any TTY honors these two sequences.
+			fmt.Fprint(os.Stdout, "\x1b[2J\x1b[H")
+			fmt.Fprintf(os.Stdout, "Watching pod %s/%s every %s (Ctrl-C to exit). Last fetch: %s\n\n",
+				namespace, name, interval, time.Now().Format(time.RFC3339))
+		}
+		if err := renderGetTable(*p); err != nil {
+			return err
+		}
+	}
 }
 
 func renderGetTable(p Pod) error {

@@ -17,9 +17,9 @@ import (
 )
 
 // NewPodCommand assembles `olares-cli cluster pod`. Verbs are added
-// incrementally; today's set is the read-only Phase 1a slice (list /
-// get / yaml / events). Phase 2 brings logs, Phase 3 brings --watch
-// onto get, Phase 6 brings restart / delete.
+// incrementally; today's set covers list / get / yaml / events
+// (Phase 1a), logs with polling --follow (Phase 2), and --watch
+// repaint on `get` (Phase 3). Phase 6 will add restart / delete.
 func NewPodCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pod",
@@ -39,6 +39,8 @@ Endpoints (all under https://control-hub.<terminus>):
   get / yaml    /api/v1/namespaces/<ns>/pods/<name>
   events        /api/v1/namespaces/<ns>/events
                   (filtered to involvedObject.kind=Pod, name=<pod>)
+  logs          /api/v1/namespaces/<ns>/pods/<name>/log?container=<c>
+                  (--follow polls; sinceTime advances per tick)
 `,
 	}
 	cmd.SilenceUsage = true
@@ -50,6 +52,7 @@ Endpoints (all under https://control-hub.<terminus>):
 	cmd.AddCommand(NewGetCommand(f))
 	cmd.AddCommand(NewYAMLCommand(f))
 	cmd.AddCommand(NewEventsCommand(f))
+	cmd.AddCommand(NewLogsCommand(f))
 
 	return cmd
 }
