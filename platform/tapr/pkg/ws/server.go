@@ -291,11 +291,11 @@ func (server *Server) routineWrite() {
 			}
 			msg, err := json.Marshal(elem.Message)
 			if err != nil {
-				klog.Errorf("send message marshal error %+v, data: %v", err, elem.Message)
+				klog.Errorf("send message marshal error %+v", err)
 				continue
 			}
 
-			klog.Infof("send message data: %s, connId: %s, token: %v, users: %v", string(msg), elem.ConnId, elem.Tokens, elem.Users)
+			klog.Infof("send message connId: %s, token: %v, users: %v", elem.ConnId, elem.Tokens, elem.Users)
 
 			var filter = NewFilter(server)
 			if elem.Users != nil && len(elem.Users) > 0 {

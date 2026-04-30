@@ -92,7 +92,7 @@ func (a *appController) SendMessage(c *fiber.Ctx) error {
 	var message sendMesssageReq
 	err := json.Unmarshal(body, &message)
 	if err != nil {
-		klog.Errorf("send message data invalid, %+v, data: %s", err, string(body))
+		klog.Errorf("send message data invalid, %+v", err)
 		return c.JSON(fiber.Map{
 			"code":    http.StatusBadRequest,
 			"message": "send data invalid, " + err.Error(),
@@ -100,7 +100,7 @@ func (a *appController) SendMessage(c *fiber.Ctx) error {
 	}
 
 	if message.ConnId == "" && (message.Users == nil || len(message.Users) == 0) && (message.Tokens == nil || len(message.Tokens) == 0) {
-		klog.Errorf("send message target is nil,  data: %s", string(body))
+		klog.Error("send message target is nil")
 		return c.JSON(fiber.Map{
 			"code":    http.StatusBadRequest,
 			"message": "send message target is nil",
