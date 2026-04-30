@@ -383,7 +383,7 @@ func (s *secretClient) CreateSecretInWorkspace(user *infisical.UserEncryptionKey
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		klog.Error("create secret response error, ", string(resp.Body()))
+		klog.Errorf("create secret response error, status=%d", resp.StatusCode())
 		return errors.New(string(resp.Body()))
 	}
 
@@ -413,7 +413,7 @@ func (s *secretClient) GetSecretInWorkspace(token, workspaceId, projectKey, env,
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		klog.Error("get secret response error, ", string(resp.Body()))
+		klog.Errorf("get secret response error, status=%d", resp.StatusCode())
 		return "", "", errors.New(string(resp.Body()))
 	}
 
@@ -475,7 +475,7 @@ func (s *secretClient) ListSecretInWorkspace(token, workspaceId, projectKey, env
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		klog.Error("list secret response error, ", string(resp.Body()))
+		klog.Errorf("list secret response error, status=%d", resp.StatusCode())
 		return nil, errors.New(string(resp.Body()))
 	}
 
@@ -544,7 +544,7 @@ func (s *secretClient) DeleteSecretInWorkspace(token, workspaceId, projectKey, e
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		klog.Error("delete secret response error, ", string(resp.Body()))
+		klog.Errorf("delete secret response error, status=%d", resp.StatusCode())
 		return errors.New(string(resp.Body()))
 	}
 
@@ -583,7 +583,7 @@ func (s *secretClient) UpdateSecretInWorkspace(user *infisical.UserEncryptionKey
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		klog.Error("update secret response error, ", string(resp.Body()))
+		klog.Errorf("update secret response error, status=%d", resp.StatusCode())
 		return errors.New(string(resp.Body()))
 	}
 

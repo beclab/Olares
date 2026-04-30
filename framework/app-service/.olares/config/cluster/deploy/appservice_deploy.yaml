@@ -200,7 +200,7 @@ spec:
         - name: GENERATED_APPS
           value: "citus,mongo-cluster-cfg,mongo-cluster-mongos,mongo-cluster-rs0,frp-agent,l4-bfl-proxy,drc-redis-cluster,appdata-backend,argoworkflows,argoworkflow-workflow-controller,velero,kvrocks"
         - name: WS_CONTAINER_IMAGE
-          value: "beclab/ws-gateway:v1.0.3"
+          value: "beclab/ws-gateway:v1.0.5"
         - name: UPLOAD_CONTAINER_IMAGE
           value: "beclab/upload:v1.0.3"
         - name: JOB_IMAGE
