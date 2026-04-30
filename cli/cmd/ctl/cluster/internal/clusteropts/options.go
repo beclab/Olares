@@ -12,9 +12,10 @@
 //     option scaffolding; the internal/ marker enforces that at the
 //     compile level.
 //
-// API surface (exported names) intentionally tracks the SettingsOptions
-// shape in cmd/ctl/settings/options.go so the two umbrellas read the
-// same way side-by-side.
+// API surface (exported names) intentionally tracks the per-area
+// option bags under cmd/ctl/settings/<area>/options.go and
+// cmd/ctl/market/options.go so the umbrellas read the same way
+// side-by-side.
 package clusteropts
 
 import (
@@ -33,20 +34,20 @@ import (
 
 // ErrReported is the canonical "the human already saw the error
 // message, don't let cobra print anything else" sentinel — mirrors
-// cli/cmd/ctl/{market,settings}/options.go errReported. RunE returns
-// this from failOp helpers so the parent command suppresses its
-// default "Error:" banner without losing the non-zero exit code.
+// cli/cmd/ctl/market/options.go errReported. RunE returns this from
+// failOp helpers so the parent command suppresses its default
+// "Error:" banner without losing the non-zero exit code.
 //
 // Exported (capital E) so subpackages (cluster/pod, cluster/application,
 // ...) can return the same sentinel without re-declaring it.
 var ErrReported = errors.New("(already reported)")
 
 // ClusterOptions is the per-command shared option bag for the cluster
-// umbrella, mirroring SettingsOptions in
-// cli/cmd/ctl/settings/options.go. Identity (--olares-id) and
-// transport (--host) are intentionally absent: the global --profile
-// flag wired through cmdutil.Factory drives both, exactly the way
-// `olares-cli files` / `market` / `settings` resolve identity.
+// umbrella, mirroring the per-area MarketOptions / per-settings-area
+// option bags. Identity (--olares-id) and transport (--host) are
+// intentionally absent: the global --profile flag wired through
+// cmdutil.Factory drives both, exactly the way `olares-cli files` /
+// `market` / `settings` resolve identity.
 //
 // ClusterOptions wires output flags + the factory + a thin Prepare()
 // that yields a ready-to-use clusterclient.Client pointed at
@@ -97,8 +98,8 @@ func (o *ClusterOptions) Info(format string, args ...interface{}) {
 }
 
 // AddOutputFlags wires the standard output trio every read verb gets.
-// Shape-compatible with SettingsOptions.addOutputFlags +
-// MarketOptions.addOutputFlags so help text stays consistent.
+// Shape-compatible with the per-area addOutputFlags helpers under
+// cmd/ctl/{settings,market}/... so help text stays consistent.
 func (o *ClusterOptions) AddOutputFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "table", "output format: table, json")
 	cmd.Flags().BoolVarP(&o.Quiet, "quiet", "q", false, "suppress output; exit code indicates success/failure")

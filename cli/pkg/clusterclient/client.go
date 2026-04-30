@@ -1,8 +1,7 @@
 // Package clusterclient is the HTTP wrapper olares-cli's `cluster` command
 // tree uses to talk to the per-user ControlHub BFF
 // (`<rp.ControlHubURL>`). It is the moral counterpart of
-// cli/cmd/ctl/market/client.go's MarketClient and
-// cli/cmd/ctl/settings/client.go's SettingsClient — a thin Doer that
+// cli/cmd/ctl/market/client.go's MarketClient — a thin Doer that
 // delegates auth to the caller's http.Client (Factory's
 // refreshingTransport injects X-Authorization and auto-rotates expired
 // access_tokens via /api/refresh) and just maps Go method calls onto
@@ -168,8 +167,9 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 		}
 		req.Header.Set("Content-Type", contentType)
 	}
-	// Origin / Referer left at Go defaults — see SettingsClient.DoJSON
-	// (cli/cmd/ctl/settings/client.go) for the Authelia CSRF rationale.
+	// Origin / Referer left at Go defaults — Authelia's CSRF gate on
+	// the desktop ingress treats an Origin on a non-browser request
+	// as a forged-request signal and redirects to login (400 HTML).
 	// ControlHub rides the same edge, so the same constraint applies.
 
 	resp, err := c.httpClient.Do(req)
@@ -179,8 +179,7 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 		// them in *url.Error; errors.As walks the Unwrap chain so
 		// callers see the canonical "run profile login" CTA instead
 		// of `Get "...": refresh token for ... became invalid at ...`.
-		// Mirrors cli/cmd/ctl/{files/download.go,market/client.go,
-		// settings/client.go}.
+		// Mirrors cli/cmd/ctl/{files/download.go,market/client.go}.
 		var inv *credential.ErrTokenInvalidated
 		if errors.As(err, &inv) {
 			return nil, inv
