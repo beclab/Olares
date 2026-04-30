@@ -32,23 +32,22 @@ func TokenVerify(baseURL, accessToken, validToken string) (map[string]interface{
 			"access_token": validToken,
 		}).Post(url)
 	if err != nil {
-		klog.Infof("send request failed: %v", err)
+		klog.Errorf("send token verify request failed: %v", err)
 		return nil, err
 	}
 	if resp.StatusCode() != http.StatusOK {
-		klog.Infof("not 200, %v, body: %v", resp.StatusCode(), string(resp.Body()))
-		return nil, errors.New(resp.String())
+		klog.Errorf("token verify returned non-200 status: %d", resp.StatusCode())
+		return nil, fmt.Errorf("token verify returned status %d", resp.StatusCode())
 	}
 	var response map[string]interface{}
 	err = json.Unmarshal(resp.Body(), &response)
 	if err != nil {
-		klog.Infof("unmarshal failed: %v", err)
+		klog.Errorf("unmarshal token verify response failed: %v", err)
 		return nil, err
 	}
-	klog.Infof("token verify res: %v", response)
 
 	if status, ok := response["status"]; ok && status == "invalid token" {
-		klog.Infof("token verify failed, status: %s", status)
+		klog.Info("token verify failed: invalid token")
 		return nil, errors.New("token verification failed")
 	}
 	return response, nil

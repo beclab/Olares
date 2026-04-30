@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"strings"
 	"time"
@@ -57,7 +56,7 @@ func NewProxy(registry *prodiverregistry.Registry) *Proxy {
 // DoRequest send request to provider.
 func (p *Proxy) DoRequest(req *restful.Request, op string, proxyrequest *ProxyRequest) (ret map[string]interface{}, statusCode int, err error) {
 
-	klog.Info("send request to provider: ", utils.PrettyJSON(proxyrequest))
+	klog.Info("send request to provider: ", proxyrequest.SafeString())
 
 	if !utils.ListContains(SUPPORTED_DATA_TYPE, proxyrequest.DataType) {
 		klog.Warning("unsupported data type, ", proxyrequest.DataType)
@@ -120,7 +119,7 @@ func (p *Proxy) ProxyLegacyAPI(ctx context.Context,
 	resp *restful.Response,
 ) (interface{}, error) {
 	klog.Info("send request to legacy api")
-	klog.Infof("proxyLegacyAPI: header: %v", req.Request.Header)
+	klog.Infof("proxyLegacyAPI: header: %v", utils.RedactedHeader(req.Request.Header))
 
 	version := req.PathParameter(apiv1alpha1.ParamVersion)
 	group := req.PathParameter(apiv1alpha1.ParamGroup)
@@ -183,11 +182,12 @@ func (p *Proxy) ProxyLegacyAPI(ctx context.Context,
 		}
 		return wsProxy.doWs(req.Request, resp, wsURL)
 	default:
-		dump, err := httputil.DumpRequest(req.Request, true)
-		if err != nil {
-			klog.Error("dump request err: ", err)
+		dump, dumpErr := utils.DumpRequestRedacted(req.Request)
+		if dumpErr != nil {
+			klog.Error("dump request err: ", dumpErr)
+		} else {
+			klog.Info("orig request: ", string(dump))
 		}
-		klog.Info("orig request: ", string(dump))
 
 		client := resty.New()
 		bodyData, err := ioutil.ReadAll(req.Request.Body)
@@ -257,11 +257,12 @@ func (p *Proxy) ProxyLegacyAPIV2(ctx context.Context,
 		}
 		return wsProxy.doWs(req.Request, resp, wsURL)
 	default:
-		dump, err := httputil.DumpRequest(req.Request, true)
-		if err != nil {
-			klog.Error("dump request err: ", err)
+		dump, dumpErr := utils.DumpRequestRedacted(req.Request)
+		if dumpErr != nil {
+			klog.Error("dump request err: ", dumpErr)
+		} else {
+			klog.Info("orig request: ", string(dump))
 		}
-		klog.Info("orig request: ", string(dump))
 
 		client := resty.New()
 		bodyData, err := ioutil.ReadAll(req.Request.Body)

@@ -136,7 +136,6 @@ func ValidateAppKey(appKey, subPath, dataType, version, group, signature string)
 	sha.Write([]byte(appSecret))
 	sha.Write([]byte(timestamp))
 	hash := hex.EncodeToString(sha.Sum(nil))
-	klog.Infof("hash = %s", hash)
 	if hash != signature {
 		return errors.New("invalid signature ")
 	}
