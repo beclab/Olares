@@ -30,7 +30,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Enable sandbox",
                   link: "/use-cases/openclaw-enable-sandbox",
-                },                                 
+                },
                 {
                   text: "Upgrade OpenClaw",
                   link: "/use-cases/openclaw-upgrade",
@@ -38,8 +38,12 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Common issues",
                   link: "/use-cases/openclaw-common-issues",
-                },                
+                },
               ]
+            },
+            {
+              text: "NemoClaw",
+              link: "/use-cases/nemoclaw",
             },
             {
               text: "OpenCode",
