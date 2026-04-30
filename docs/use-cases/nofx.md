@@ -17,9 +17,11 @@ NOFX is an open-source autonomous AI trading agent. Unlike traditional AI tools 
 :::warning Disclaimer
 NOFX is an open-source AI trading aid. It does not provide investment advice or any guarantee of returns.
 
+Olares provides the platform to run NOFX but does not operate, endorse, or control the NOFX software or any trading activities conducted through it. Olares is not a party to any transaction and assumes no responsibility for the software's functionality, security, or trading outcomes.
+
 Digital asset trading carries high risk, and market volatility can lead to partial or total loss of funds. The strategies, parameters, and examples in this guide are for technical demonstration only and do not represent trading advice. Ensure you fully understand the risks before trading, and bear the full consequences of your trading decisions.
 
-The NOFX project developers and contributors are not responsible for any direct or indirect losses resulting from the use of this project.
+The NOFX project developers, contributors, and Olares are not responsible for any direct or indirect losses resulting from the use of this project.
 :::
 
 ## Learning objectives
@@ -89,7 +91,9 @@ NOFX supports multiple exchanges, which all share the same configuration process
 An API wallet acts as a secure bridge, allowing NOFX to trade without ever exposing your main account credentials.
 
 :::info Prerequisite
-Before you create an API wallet, ensure you have an active Hyperliquid account funded with USDC on the Arbitrum chain. If you are new to Hyperliquid, follow the [Hyperliquid onboarding guide](https://hyperliquid.gitbook.io/hyperliquid-docs/onboarding/how-to-start-trading) to get started.
+Before you create an API wallet, ensure you have an active Hyperliquid account funded with at least 10 USDC on the Arbitrum chain. Hyperliquid requires this minimum balance to unlock the ability to create API wallets.
+
+If you are new to Hyperliquid, follow the [Hyperliquid onboarding guide](https://hyperliquid.gitbook.io/hyperliquid-docs/onboarding/how-to-start-trading) to get started.
 :::
 
 1. Open the Hyperliquid web interface at https://app.hyperliquid.xyz, and then log in to your account.
@@ -180,6 +184,10 @@ NOFX requires two different wallets for distinct purposes:
 * **API wallet**: Lives on your exchange, such as Hyperliquid. It does not hold funds. Instead, it securely grants NOFX permission to execute trades using the funds in your main exchange account.
 
 ### How to switch models?
+
+:::info
+If you configure your own API key, NOFX routes the requests directly through your provider. This means NOFX will not deduct model call fees from your internal AI wallet.
+:::
 
 1. On the **Config** page, click **+ MODELS_CONFIG**.
 
