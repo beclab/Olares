@@ -53,11 +53,13 @@ NemoClaw needs the model name and its shared endpoint URL during installation.
 2. Click **Get**, then **Install**.
 3. When prompted, set the environment variables:
 
-   - **NEMOCLAW_ENDPOINT_URL**: Enter or paste the shared endpoint URL, and append with `/v1`, such as `http://94a553e00.shared.olares.com/v1`.
+   - **NEMOCLAW_ENDPOINT_URL**: Enter or paste the shared endpoint URL, and append `/v1`, such as `http://94a553e00.shared.olares.com/v1`.
    - **NEMOCLAW_MODEL**: Enter or paste the model name, such as `qwen3.5:27b-q4_K_M`.
-    :::tip
-    You can change these environment variables later in **Settings** > **Applications** > **NemoClaw** > **Manage environment variables**.
-    :::
+
+   :::tip
+   You can change these environment variables later in **Settings** > **Applications** > **NemoClaw** > **Manage environment variables**.
+   :::
+
    ![Set environment variables for NemoClaw](/images/manual/use-cases/nemoclaw-set-environment-variables.png#bordered){width=70%}
 
 4. Click **Confirm** and wait for installation to complete.
@@ -86,11 +88,11 @@ Keeping the model loaded consumes VRAM continuously. If you only use the agent o
 
 ## Start your first chat
 
-NemoClaw uses the OpenClaw TUI for chat. Because the model and endpoint were configured during installation, you can skip the manual onboarding and go straight to a session.
+NemoClaw lets you chat with your agent in either the OpenClaw Web UI or the OpenClaw TUI inside the NemoClaw CLI. Because the model and endpoint were configured during installation, you can skip the manual onboarding and go straight to a session.
 
 <tabs>
-<template #In-OpenClaw-WebUI>
-1. Open the OpenClaw WebUI app from Launchpad. You will be directly directed to the Chat interface.
+<template #In-OpenClaw-Web-UI>
+1. Open the OpenClaw Web UI app from Launchpad. You will be taken directly to the Chat interface.
 
 2. Send a test message, such as `Hi`.
 
@@ -100,7 +102,7 @@ NemoClaw uses the OpenClaw TUI for chat. Because the model and endpoint were con
    How are you, and what model are you running on?
    ```
 
-   ![NemoClaw chat in OpenClaw WebUI](/images/manual/use-cases/nemoclaw-chat-test.png#bordered)
+   ![NemoClaw chat in OpenClaw Web UI](/images/manual/use-cases/nemoclaw-openclaw-chat-test.png#bordered)
 
 </template>
 
@@ -216,8 +218,8 @@ For security, the bot doesn't respond to unauthorized users. You must pair your 
 1. Open Discord and send a Direct Message (DM) to your bot.
 
    The bot replies with a pairing code, such as `M9ZEHYT7`.
-  
-   ![Model name shown in the model app](/images/manual/use-cases/nemoclaw-discord-pairing-code.png#bordered)
+
+   ![Pairing code from the bot DM](/images/manual/use-cases/nemoclaw-discord-pairing-code.png#bordered)
 
 2. Switch back to the NemoClaw CLI sandbox shell and approve the pairing:
 
@@ -232,13 +234,14 @@ For security, the bot doesn't respond to unauthorized users. You must pair your 
    ```
 
 3. After approval, you can chat with your agent directly in Discord.
-   ![Model name shown in the model app](/images/manual/use-cases/nemoclaw-discord-chat.png#bordered)
+
+   ![Chat with the agent in Discord](/images/manual/use-cases/nemoclaw-discord-chat.png#bordered)
 
 ## Enable web search
 
 By default, the agent answers only from its training data. To let it fetch real-time internet information, enable the web search tool with Brave Search.
 
-You need a [Brave Search API](https://brave.com/search/api/) key. The free "Data for Search" tier is usually enough for personal use.
+You need a [Brave Search API](https://brave.com/search/api/) key to proceed. The free "Data for Search" tier is usually enough for personal use.
 
 1. Open the NemoClaw CLI app from Launchpad.
 2. Connect to the runtime sandbox:
@@ -305,7 +308,7 @@ After `clawhub` is installed, run `openclaw skills search <name>` and `openclaw 
 
 ## Install plugins
 
-Plugins extend OpenClaw with additional channels and integrations. NemoClaw includes a Lark/Feishu plugin you can install with a single command.
+Plugins extend OpenClaw with additional channels and integrations.
 
 1. Open the NemoClaw CLI app from Launchpad.
 2. Connect to the runtime sandbox:
@@ -331,5 +334,5 @@ Each message you send and each agent reply might appear twice in the chat. This 
 ## Learn more
 
 - [NVIDIA NemoClaw](https://build.nvidia.com/nemoclaw): Official reference stack and documentation from NVIDIA.
-- [OpenClaw](openclaw.md): Set up OpenClaw features such as persona setup, Discord integration, and skills.
+- [OpenClaw](openclaw.md): Set up OpenClaw features such as persona setup.
 - [Common issues](openclaw-common-issues.md): Troubleshoot model timing and context window settings.
