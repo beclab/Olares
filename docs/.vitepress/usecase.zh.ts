@@ -42,10 +42,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
-              text: "NemoClaw",
-              link: "/zh/use-cases/nemoclaw",
-            },
-            {
               text: "OpenCode",
               link: "/zh/use-cases/opencode",
               collapsed: true,
@@ -90,6 +86,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/comfyui-common-issues",
                 },
               ]
+            },
+            {
+              text: "NemoClaw",
+              link: "/zh/use-cases/nemoclaw",
             },
             {
               text: "Context7",
