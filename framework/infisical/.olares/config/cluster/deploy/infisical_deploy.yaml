@@ -231,7 +231,7 @@ spec:
           subPath: nginx.conf
 
       - name: tapr-sidecar
-        image: beclab/secret-vault:0.1.15
+        image: beclab/secret-vault:0.1.16
         imagePullPolicy: IfNotPresent
         ports:
         - name: proxy
