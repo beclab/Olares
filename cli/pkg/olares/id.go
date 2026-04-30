@@ -147,3 +147,34 @@ func (id ID) MarketURL(localPrefix string) string {
 func (id ID) DashboardURL(localPrefix string) string {
 	return fmt.Sprintf("https://dashboard.%s%s", localPrefix, id.TerminusName())
 }
+
+// ControlHubURL returns the per-user control-hub BFF base URL, e.g.
+// "https://control-hub.alice.olares.com". The ControlHub SPA (a fork of
+// KubeSphere Console living under apps/packages/app/src/apps/controlHub)
+// is served from this origin; its dev-time proxy config in
+// apps/packages/app/config/control-hub.js confirms that the same origin
+// fans out to the K8s/KubeSphere proxy stack:
+//
+//   - "/capi/*"                  → Olares custom aggregator (per-user
+//                                  app/workspace metadata, e.g.
+//                                  /capi/app/detail)
+//   - "/api/v1/*", "/apis/*"     → wildcard K8s API proxy (native shapes
+//                                  like {kind, apiVersion, metadata, spec,
+//                                  status})
+//   - "/kapis/*"                 → KubeSphere aggregated API proxy
+//                                  (paginated {items, totalItems}
+//                                  envelopes)
+//   - "/user-service/*"          → BFL (re-using the same auth chain as
+//                                  desktop/settings)
+//   - "/middleware/*"            → Olares middleware controller
+//
+// Same edge auth chain as the other per-user URLs — X-Authorization is
+// honored and 401/403 are recoverable via /api/refresh. Per-user
+// resource scoping (which namespaces / workspaces a user can see) is
+// enforced server-side by the ControlHub backend; CLI code must NOT
+// attempt to filter or gate based on locally cached role/identity (see
+// olares-cluster SKILL.md). olares-cli's `cluster` command tree talks
+// to this URL.
+func (id ID) ControlHubURL(localPrefix string) string {
+	return fmt.Sprintf("https://control-hub.%s%s", localPrefix, id.TerminusName())
+}

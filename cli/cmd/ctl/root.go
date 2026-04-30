@@ -6,6 +6,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/config"
 	"github.com/beclab/Olares/cli/cmd/ctl/amdgpu"
 	"github.com/beclab/Olares/cli/cmd/ctl/app"
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster"
 	"github.com/beclab/Olares/cli/cmd/ctl/dashboard"
 	"github.com/beclab/Olares/cli/cmd/ctl/disk"
 	"github.com/beclab/Olares/cli/cmd/ctl/files"
@@ -74,6 +75,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(files.NewFilesCommand(factory))
 	cmds.AddCommand(dashboard.NewDashboardCommand(factory))
 	cmds.AddCommand(settings.NewSettingsCommand(factory))
+	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
 	return cmds
 }
