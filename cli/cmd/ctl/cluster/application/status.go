@@ -9,12 +9,12 @@ import (
 	"os/signal"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 	"golang.org/x/term"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
@@ -133,14 +133,20 @@ type appStatus struct {
 // snapshot. Per-lane errors are stashed on the snapshot rather than
 // returned so a partial view is still useful (e.g. events 5xx
 // shouldn't black out the workloads/pods sections).
+//
+// Implementation note: we deliberately do NOT use errgroup.WithContext
+// here. errgroup cancels its context the moment any goroutine returns
+// an error, which would cascade-cancel the in-flight HTTP requests on
+// the OTHER lanes and turn a single-lane failure into "everything
+// failed". That contradicts the per-lane partial-failure intent above.
+// Instead each lane runs against the parent ctx (so user-level Ctrl-C
+// still cancels everything) and writes its own success/error slot.
 func fetchStatus(ctx context.Context, c *clusterclient.Client, namespace string, eventsN int) appStatus {
 	out := appStatus{
 		Namespace: namespace,
 		FetchedAt: time.Now().Format(time.RFC3339),
 		Workloads: map[string]readyTotal{},
 	}
-
-	g, gctx := errgroup.WithContext(ctx)
 
 	// Per-kind workload fan-out (3 parallel GETs). We fetch all three
 	// concurrently so the polling interval bound is "the slowest one"
@@ -150,14 +156,30 @@ func fetchStatus(ctx context.Context, c *clusterclient.Client, namespace string,
 		bucket     readyTotal
 	}
 	wlResults := make(chan wlBucket, len(workload.SupportedKinds))
+
+	var (
+		wg         sync.WaitGroup
+		wlErrs     []string
+		wlErrsMu   sync.Mutex
+		podsBucket podPhaseCounts
+		podsErr    error
+		events     []pod.Event
+		eventsErr  error
+	)
+
 	for _, k := range workload.SupportedKinds {
 		k := k
-		g.Go(func() error {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 			plural, _ := workload.NormalizeKind(k)
 			path := buildNamespaceKindPath(namespace, plural)
-			resp, err := clusterclient.GetKubeSphereList[workload.Workload](gctx, c, path)
+			resp, err := clusterclient.GetKubeSphereList[workload.Workload](ctx, c, path)
 			if err != nil {
-				return fmt.Errorf("%s: %w", plural, err)
+				wlErrsMu.Lock()
+				wlErrs = append(wlErrs, fmt.Sprintf("%s: %v", plural, err))
+				wlErrsMu.Unlock()
+				return
 			}
 			ready, total := 0, len(resp.Items)
 			for _, w := range resp.Items {
@@ -166,61 +188,55 @@ func fetchStatus(ctx context.Context, c *clusterclient.Client, namespace string,
 				}
 			}
 			wlResults <- wlBucket{kindPlural: plural, bucket: readyTotal{Ready: ready, Total: total}}
-			return nil
-		})
+		}()
 	}
 
-	// Pods.
-	var podsBucket podPhaseCounts
-	g.Go(func() error {
+	// Pods. Single goroutine writer for podsBucket / podsErr — no mutex.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		path := "/kapis/resources.kubesphere.io/v1alpha3/namespaces/" +
 			url.PathEscape(namespace) + "/pods"
-		resp, err := clusterclient.GetKubeSphereList[pod.Pod](gctx, c, path)
+		resp, err := clusterclient.GetKubeSphereList[pod.Pod](ctx, c, path)
 		if err != nil {
-			return fmt.Errorf("pods: %w", err)
+			podsErr = fmt.Errorf("pods: %w", err)
+			return
 		}
 		podsBucket = bucketPods(resp.Items)
-		return nil
-	})
+	}()
 
 	// Events. Fetch namespace-wide events; sort+truncate client-side
 	// (same approach as `cluster pod events` for portability across
 	// kube-apiserver versions). Skipped entirely when --events 0 to
 	// save a roundtrip per tick.
-	var events []pod.Event
 	if eventsN > 0 {
-		g.Go(func() error {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 			path := fmt.Sprintf("/api/v1/namespaces/%s/events", url.PathEscape(namespace))
-			resp, err := clusterclient.GetK8sList[pod.Event](gctx, c, path)
+			resp, err := clusterclient.GetK8sList[pod.Event](ctx, c, path)
 			if err != nil {
-				return fmt.Errorf("events: %w", err)
+				eventsErr = fmt.Errorf("events: %w", err)
+				return
 			}
 			events = mostRecentEvents(resp.Items, eventsN)
-			return nil
-		})
+		}()
 	}
 
-	if err := g.Wait(); err != nil {
-		// Demux which lane(s) failed by message prefix. errgroup only
-		// surfaces the first error verbatim, but the same message
-		// hits stderr so the user knows what was lost.
-		msg := err.Error()
-		switch {
-		case strings.HasPrefix(msg, "deployments:"),
-			strings.HasPrefix(msg, "statefulsets:"),
-			strings.HasPrefix(msg, "daemonsets:"):
-			out.WorkloadsErr = msg
-		case strings.HasPrefix(msg, "pods:"):
-			out.PodsErr = msg
-		case strings.HasPrefix(msg, "events:"):
-			out.EventsErr = msg
-		default:
-			out.WorkloadsErr = msg
-		}
-	}
+	wg.Wait()
 	close(wlResults)
+
 	for r := range wlResults {
 		out.Workloads[workload.SingularKind(r.kindPlural)] = r.bucket
+	}
+	if len(wlErrs) > 0 {
+		out.WorkloadsErr = strings.Join(wlErrs, "; ")
+	}
+	if podsErr != nil {
+		out.PodsErr = podsErr.Error()
+	}
+	if eventsErr != nil {
+		out.EventsErr = eventsErr.Error()
 	}
 	out.Pods = podsBucket
 	out.Events = events
