@@ -4,7 +4,7 @@ description: Run NemoClaw on Olares with a local LLM such as Qwen3.5. Set up an 
 head:
   - - meta
     - name: keywords
-      content: Olares, NemoClaw, NVIDIA, OpenShell, Nemotron, OpenClaw, local LLM, AI assistant, self-hosted AI, Qwen, Discord, Brave Search, web search, ClawHub, skills, plugins, Lark
+      content: Olares, NemoClaw, NVIDIA, OpenShell, OpenClaw, local LLM, AI assistant, self-hosted AI, Qwen, Discord, Brave Search, web search, ClawHub, skills, plugins, BlueBubbles, Olares CLI
 app_version: "1.0.3"
 doc_version: "1.1"
 doc_updated: "2026-04-30"
@@ -12,7 +12,7 @@ doc_updated: "2026-04-30"
 
 # Run NemoClaw with a local LLM
 
-NemoClaw is an open-source reference stack from NVIDIA that runs OpenClaw always-on assistants with a single command. It bundles the NVIDIA OpenShell runtime for policy-based privacy and security guardrails, giving you more control over your agent's behavior and data handling.
+NemoClaw is an open-source reference stack from NVIDIA that runs OpenClaw with the NVIDIA OpenShell runtime bundled.
 
 This guide walks you through running NemoClaw on Olares with the Qwen3.5 27B Q4_K_M model app as the backend LLM.
 
@@ -48,7 +48,7 @@ NemoClaw needs the model name and its shared endpoint URL during installation.
 
 1. Open Market and search for "NemoClaw".
 
-   ![NemoClaw](/images/manual/use-cases/nemoclaw.png#bordered)
+   ![NemoClaw in Market](/images/manual/use-cases/nemoclaw.png#bordered)
 
 2. Click **Get**, then **Install**.
 3. When prompted, set the environment variables:
@@ -71,7 +71,7 @@ When the installation finishes, two shortcuts appear on Launchpad:
 - **NemoClaw CLI**: The terminal interface for running NemoClaw and OpenClaw commands.
 - **OpenClaw Web UI**: The browser-based dashboard for OpenClaw.
 
-## Optional: Keep the model loaded
+## Keep the model loaded (optional)
 
 By default, the local LLM unloads from memory after 5 minutes of inactivity, and the next reply has to wait for the model to reload. For an always-on agent, enable the keep-alive setting on the model app to keep it resident in memory.
 
@@ -187,7 +187,7 @@ To chat with your NemoClaw agent remotely, connect it to a Discord bot. You need
 
 ### Step 3: Configure the Discord channel
 
-NemoClaw runs OpenClaw inside a sandboxed runtime, so channel configuration must be done from within the runtime shell.
+NemoClaw runs OpenClaw inside a sandboxed runtime, so you must configure the channel from within the runtime shell.
 
 1. Open the NemoClaw CLI app from Launchpad.
 2. Connect to the runtime sandbox:
@@ -205,11 +205,13 @@ NemoClaw runs OpenClaw inside a sandboxed runtime, so channel configuration must
    ```
 
 4. Follow the prompts to add Discord:
-
-   - **Channel**: Discord
-   - **Bot token**: Paste the token from Step 1.
-   - **Channel access**: Open
-   - **DM policy**: Pairing
+   | Settings | Option |
+   |:---------|:-------|
+   | Where will the Gateway run | Local (this machine) |
+   | Channels | Configure/link |
+   | Select a channel | Discord (Bot API) |
+   | Bot token | Paste the token from Step 1. |
+   | DM policy | Pairing |
 
 ### Step 4: Authorize your Discord account
 
@@ -241,7 +243,7 @@ For security, the bot doesn't respond to unauthorized users. You must pair your 
 
 By default, the agent answers only from its training data. To let it fetch real-time internet information, enable the web search tool with Brave Search.
 
-You need a [Brave Search API](https://brave.com/search/api/) key to proceed. The free "Data for Search" tier is usually enough for personal use.
+You need a [Brave Search API](https://brave.com/search/api/) key. The free "Data for Search" tier is usually enough for personal use.
 
 1. Open the NemoClaw CLI app from Launchpad.
 2. Connect to the runtime sandbox:
@@ -274,9 +276,13 @@ You need a [Brave Search API](https://brave.com/search/api/) key to proceed. The
 
    The agent should fetch and cite live web results.
 
-## Install skills
+## Manage Olares with Olares CLI
 
-Skills add new capabilities to the agent. Install the `clawhub` skill first, which lets you search and install more skills from the [ClawHub](https://clawhub.ai/) registry.
+Skills add new capabilities to the agent. The Olares CLI skills let the agent manage files and apps on your Olares device through natural language. For other skills, see [Manage skills and plugins](openclaw-skills.md).
+
+### Step 1: Log in to Olares CLI
+
+Olares CLI requires your account password and two-factor authentication code. Sign in from the NemoClaw CLI before the agent can use the Olares CLI skills.
 
 1. Open the NemoClaw CLI app from Launchpad.
 2. Connect to the runtime sandbox:
@@ -285,26 +291,80 @@ Skills add new capabilities to the agent. Install the `clawhub` skill first, whi
    nemoclaw my-assistant connect
    ```
 
-3. Start the configuration wizard:
+   Wait until the terminal shows the sandbox prompt, such as `sandbox@my-assistant:~$`.
+
+3. Log in to your Olares account. Replace `<your-olares-id>` with your Olares ID:
 
    ```bash
-   openclaw config
+   olares-cli profile login --olares-id <your-olares-id>
    ```
 
-4. Navigate the prompts to install `clawhub`:
+   For example:
 
-   | Settings | Option |
-   |:---------|:-------|
-   | Where will the Gateway run | Local (this machine) |
-   | Select settings to configure | Skills |
-   | Configure skills now | Yes |
-   | Install missing skill dependencies | Navigate to **clawhub**, press **Space** to select, then press **Enter**. |
-   | Preferred node manager for skill installs | npm. Wait for `Installed clawhub` before proceeding. |
-   | Set [API_KEY] for [skill] | Select **No** for all. |
+   ```bash
+   olares-cli profile login --olares-id laresprime@olares.com
+   ```
 
-5. Select **Continue** at **Select sections to configure**. The `Configure complete` message indicates the setup is finished.
+   Follow the prompts to enter your Olares login password and the two-factor authentication code from the LarePass app.
 
-After `clawhub` is installed, run `openclaw skills search <name>` and `openclaw skills install <id>` inside the runtime to add more skills. For details, see [Manage skills and plugins](openclaw-skills.md).
+4. If you encounter an X.509 certificate error, run the following commands to work around the certificate check:
+
+   a. Extract the certificate chain. Replace `<username>` with your Olares username (the part before `@`):
+
+      ```bash
+      openssl s_client -proxy 10.200.0.1:3128 -connect auth.<username>.olares.com:443 -showcerts </dev/null 2>/dev/null \
+        | awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/{print}' > /tmp/openshell-chain.pem
+      ```
+
+   b. Set the trusted CA certificate file for the current shell:
+
+      ```bash
+      export SSL_CERT_FILE=/tmp/openshell-chain.pem
+      ```
+
+   c. Run the login command from step 3 again.
+
+### Step 2: Install Olares skills from ClawHub
+
+1. Open the OpenClaw Web UI and go to **Skills**.
+2. In the ClawHub search box, enter `olares` to find Olares skills.
+
+   ![Olares skills in ClawHub](/images/manual/use-cases/nemoclaw-install-olares-skills.png#bordered)
+
+3. Install Olares Shared first because it's the foundation of the other Olares skills.
+4. Install the remaining Olares skills, such as Olares Files and Olares Market.
+
+:::info Retry on 429 errors
+If you see a 429 error when downloading a skill, wait a moment and try again.
+:::
+
+### Step 3: Chat with the agent in natural language
+
+Open the OpenClaw Web UI or the OpenClaw TUI and ask the agent in natural language. For example:
+
+- To list all files and folders under `/drive/Home/`:
+
+  ```text
+  List drive/Home/
+  ```
+
+- To read a file:
+
+  ```text
+  Read the last 10 lines of the nemoclaw.log file in the Home directory.
+  ```
+
+- To install an app from Olares Market:
+
+  ```text
+  Install Firefox
+  ```
+
+- To uninstall an app from Olares Market:
+
+  ```text
+  Uninstall Firefox
+  ```
 
 ## Install plugins
 
@@ -317,10 +377,10 @@ Plugins extend OpenClaw with additional channels and integrations.
    nemoclaw my-assistant connect
    ```
 
-3. Install the Lark plugin:
+3. Install the BlueBubbles plugin:
 
    ```bash
-   npx -y @larksuite/openclaw-lark install
+   openclaw plugins install @openclaw/bluebubbles
    ```
 
 For other plugins, use the standard `openclaw plugins list` and `openclaw plugins install <name>` commands inside the runtime. For details, see [Manage skills and plugins](openclaw-skills.md).
@@ -330,6 +390,10 @@ For other plugins, use the standard `openclaw plugins list` and `openclaw plugin
 ### Duplicate messages
 
 Each message you send and each agent reply might appear twice in the chat. This is a known issue in the current NemoClaw version on Olares and doesn't affect the underlying agent state.
+
+### Olares CLI login and skills don't persist across restarts
+
+NemoClaw doesn't persist your Olares CLI login or installed ClawHub skills across restarts. After restarting NemoClaw, log in to Olares CLI again and reinstall the Olares skills. For details, see [Manage Olares with Olares CLI](#manage-olares-with-olares-cli).
 
 ## Learn more
 
