@@ -25,7 +25,6 @@
 package vpn
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -34,7 +33,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
@@ -172,35 +170,3 @@ func joinNonEmpty(ss []string, sep string) string {
 	return out
 }
 
-// confirmDestructive guards destructive verbs (device delete) behind a
-// y/N prompt unless --yes was passed. Non-TTY stdin without --yes is a
-// hard error rather than an implicit yes — we'd rather break a script
-// than silently delete something the operator didn't review.
-//
-// The prompt body should describe what's about to happen ("delete
-// device X"). The success criterion is a literal "y" or "yes" answer
-// (case-insensitive); anything else aborts with a clear error.
-func confirmDestructive(prompt io.Writer, in io.Reader, message string, assumeYes bool) error {
-	if assumeYes {
-		return nil
-	}
-	if f, ok := in.(*os.File); ok {
-		if !term.IsTerminal(int(f.Fd())) {
-			return fmt.Errorf("stdin is not a terminal — pass --yes to confirm: %s", message)
-		}
-	}
-	if _, err := fmt.Fprintf(prompt, "%s [y/N]: ", message); err != nil {
-		return err
-	}
-	rd := bufio.NewReader(in)
-	line, err := rd.ReadString('\n')
-	if err != nil && err != io.EOF {
-		return fmt.Errorf("read confirmation: %w", err)
-	}
-	switch strings.ToLower(strings.TrimSpace(line)) {
-	case "y", "yes":
-		return nil
-	default:
-		return fmt.Errorf("aborted by user")
-	}
-}

@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
+	"github.com/beclab/Olares/cli/pkg/cliutil"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
@@ -571,7 +572,7 @@ func runACLClear(ctx context.Context, f *cmdutil.Factory, app string, assumeYes 
 	if err != nil {
 		return err
 	}
-	if err := confirmDestructive(os.Stderr, os.Stdin,
+	if err := cliutil.ConfirmDestructive(os.Stderr, os.Stdin,
 		fmt.Sprintf("Remove every per-app ACL entry for %q? Existing mesh sessions stay open but new connections will be denied until ACLs are re-added.", app),
 		assumeYes); err != nil {
 		return err

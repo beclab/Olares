@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/cliutil"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -235,10 +236,10 @@ func runSnapshotsCancel(ctx context.Context, f *cmdutil.Factory, backupID, snaps
 	if backupID == "" || snapshotID == "" {
 		return fmt.Errorf("cancel requires both backup-id and snapshot-id")
 	}
-	if !assumeYes {
-		if err := confirmDestructive(os.Stderr, os.Stdin, fmt.Sprintf("Cancel snapshot %q on plan %q?", snapshotID, backupID)); err != nil {
-			return err
-		}
+	if err := cliutil.ConfirmDestructive(os.Stderr, os.Stdin,
+		fmt.Sprintf("Cancel snapshot %q on plan %q?", snapshotID, backupID),
+		assumeYes); err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
