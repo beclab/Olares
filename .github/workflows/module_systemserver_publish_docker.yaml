@@ -32,6 +32,6 @@ jobs:
                   push: true
                   tags: beclab/system-server:${{ github.event.inputs.tags }}
                   context: framework/system-server
-                  file: Dockerfile
+                  file: framework/system-server/Dockerfile
                   platforms: linux/amd64,linux/arm64
 
