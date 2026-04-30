@@ -30,7 +30,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "启用沙盒",
                   link: "/use-cases/openclaw-enable-sandbox",
-                },                                 
+                },
                 {
                   text: "升级 OpenClaw",
                   link: "/zh/use-cases/openclaw-upgrade",
@@ -38,7 +38,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "常见问题",
                   link: "/zh/use-cases/openclaw-common-issues",
-                }                
+                }
               ]
             },
             {
@@ -86,6 +86,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/comfyui-common-issues",
                 },
               ]
+            },
+            {
+              text: "NemoClaw",
+              link: "/zh/use-cases/nemoclaw",
             },
             {
               text: "Context7",
