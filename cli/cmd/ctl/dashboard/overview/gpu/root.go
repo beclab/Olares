@@ -5,12 +5,16 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	pkgdashboard "github.com/beclab/Olares/cli/pkg/dashboard"
+	pkggpu "github.com/beclab/Olares/cli/pkg/dashboard/overview/gpu"
 )
 
-// ----------------------------------------------------------------------------
-// overview gpu — list / tasks / get / task
-// ----------------------------------------------------------------------------
-
+// NewGPUCommand assembles `dashboard overview gpu` (root + 6
+// leaves). cf is the shared *pkgdashboard.CommonFlags pointer
+// stored in the area's `common` package var; cobra's persistent-
+// flag inheritance from the dashboard root mutates the pointed-at
+// struct before any leaf RunE fires. The default RunE (no
+// subverb) forwards to `list`, mirroring the SPA's "GPU view
+// opens to the device list" behaviour.
 func NewGPUCommand(f *cmdutil.Factory, cf *pkgdashboard.CommonFlags) *cobra.Command {
 	common = cf
 	cmd := &cobra.Command{
@@ -22,11 +26,14 @@ func NewGPUCommand(f *cmdutil.Factory, cf *pkgdashboard.CommonFlags) *cobra.Comm
 			if len(args) > 0 {
 				return unknownSubcommandRunE(c, args)
 			}
-			// Default action: forward to `list`.
 			if err := common.Validate(); err != nil {
 				return err
 			}
-			return runOverviewGPUList(c.Context(), f)
+			cli, err := prepareClient(c.Context(), f)
+			if err != nil {
+				return err
+			}
+			return pkggpu.RunList(c.Context(), cli, common)
 		},
 	}
 	cmd.AddCommand(newOverviewGPUListCommand(f))

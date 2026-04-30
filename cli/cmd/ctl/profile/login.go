@@ -133,6 +133,12 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 	fmt.Printf("logged in as %s (profile: %s)\n", olaresID, profile.DisplayName())
 	printSwitchNotice(res, profile.DisplayName())
 	printStorageNotice(profile.OlaresID)
+	// Best-effort: populate the role cache so `settings` preflight checks
+	// have something to compare against without a follow-up
+	// `profile whoami --refresh`. Failures here downgrade to a stderr
+	// warning so a transient backend blip doesn't shadow a successful
+	// login (see eagerWhoami doc comment).
+	eagerWhoami(ctx, cfg, profile, tok.AccessToken)
 	return nil
 }
 
