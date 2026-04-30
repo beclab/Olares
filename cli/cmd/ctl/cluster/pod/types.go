@@ -53,18 +53,65 @@ type PodSpec struct {
 }
 
 // PodContainer captures the per-container fields used by `cluster pod
-// get` to render image / ports. Not the full corev1.Container.
+// get` and `cluster container ...` to render image / ports / env.
+// Not the full corev1.Container — fields are added as verbs need
+// them.
 type PodContainer struct {
 	Name            string             `json:"name"`
 	Image           string             `json:"image"`
 	ImagePullPolicy string             `json:"imagePullPolicy,omitempty"`
 	Ports           []PodContainerPort `json:"ports,omitempty"`
+	Env             []PodEnvVar        `json:"env,omitempty"`
+	// EnvFrom is intentionally NOT modeled here — `cluster container
+	// env` only enumerates explicitly-declared env vars, not the
+	// implicit ones imported from configMapRef / secretRef. Add this
+	// later when a verb actually needs to render the implicit set.
 }
 
 type PodContainerPort struct {
 	Name          string `json:"name,omitempty"`
 	ContainerPort int    `json:"containerPort"`
 	Protocol      string `json:"protocol,omitempty"`
+}
+
+// PodEnvVar mirrors corev1.EnvVar — the explicit `name + (value |
+// valueFrom)` shape. Either `value` or `valueFrom` is populated, not
+// both. `cluster container env` renders Value verbatim or, when
+// missing, a `(from <source>)` description of ValueFrom so users can
+// see where the value would come from at pod-startup time without
+// resolving the reference.
+type PodEnvVar struct {
+	Name      string         `json:"name"`
+	Value     string         `json:"value,omitempty"`
+	ValueFrom *PodEnvVarFrom `json:"valueFrom,omitempty"`
+}
+
+// PodEnvVarFrom is the corev1.EnvVarSource subset our env renderer
+// recognizes. ConfigMapKeyRef / SecretKeyRef / FieldRef /
+// ResourceFieldRef are the four upstream variants; we model each as
+// an optional pointer so the wire JSON's "exactly one of these"
+// invariant carries through into Go without extra plumbing.
+type PodEnvVarFrom struct {
+	ConfigMapKeyRef  *PodEnvKeyRef           `json:"configMapKeyRef,omitempty"`
+	SecretKeyRef     *PodEnvKeyRef           `json:"secretKeyRef,omitempty"`
+	FieldRef         *PodEnvFieldRef         `json:"fieldRef,omitempty"`
+	ResourceFieldRef *PodEnvResourceFieldRef `json:"resourceFieldRef,omitempty"`
+}
+
+type PodEnvKeyRef struct {
+	Name string `json:"name"`
+	Key  string `json:"key"`
+}
+
+type PodEnvFieldRef struct {
+	APIVersion string `json:"apiVersion,omitempty"`
+	FieldPath  string `json:"fieldPath"`
+}
+
+type PodEnvResourceFieldRef struct {
+	ContainerName string `json:"containerName,omitempty"`
+	Resource      string `json:"resource"`
+	Divisor       string `json:"divisor,omitempty"`
 }
 
 type PodStatus struct {

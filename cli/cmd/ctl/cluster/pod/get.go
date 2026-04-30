@@ -57,6 +57,37 @@ container rows. In json mode the response body is forwarded verbatim
 	return cmd
 }
 
+// Get is the exported single-pod fetcher used by sibling packages
+// (cluster/container) that need to project pod contents — containers
+// list, env vars, etc. Returns the typed Pod without rendering.
+//
+// Same HTTP path as the `cluster pod get` verb; same server-side
+// scoping rules apply (a 404 means the pod doesn't exist OR your
+// token can't see it).
+func Get(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name string) (*Pod, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	client, err := o.Prepare()
+	if err != nil {
+		return nil, err
+	}
+	path := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s",
+		url.PathEscape(namespace), url.PathEscape(name))
+	var p Pod
+	if err := clusterclient.GetK8sObject(ctx, client, path, &p); err != nil {
+		return nil, fmt.Errorf("get pod %s/%s: %w", namespace, name, err)
+	}
+	return &p, nil
+}
+
+// SplitNsName is the exported splitter (sibling packages call this
+// for the same "<ns>/<name>" or "-n <ns> + <name>" argument grammar
+// `cluster pod get` accepts).
+func SplitNsName(nsFlag, arg string) (string, string, error) {
+	return splitNsName(nsFlag, arg)
+}
+
 // splitNsName accepts either "ns/name" (no -n) or "name" (with -n).
 // Mirrors the kubectl convention so script authors don't have to
 // learn a CLI-specific argument grammar.
@@ -78,25 +109,14 @@ func splitNsName(nsFlag, arg string) (string, string, error) {
 }
 
 func runGet(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name string) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	client, err := o.Prepare()
+	p, err := Get(ctx, o, namespace, name)
 	if err != nil {
 		return err
 	}
-
-	path := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s",
-		url.PathEscape(namespace), url.PathEscape(name))
-	var p Pod
-	if err := clusterclient.GetK8sObject(ctx, client, path, &p); err != nil {
-		return fmt.Errorf("get pod %s/%s: %w", namespace, name, err)
-	}
-
 	if o.IsJSON() {
-		return o.PrintJSON(p)
+		return o.PrintJSON(*p)
 	}
-	return renderGetTable(p)
+	return renderGetTable(*p)
 }
 
 func renderGetTable(p Pod) error {

@@ -33,7 +33,12 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/application"
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/container"
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/middleware"
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/namespace"
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/node"
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/pod"
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/workload"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -84,7 +89,12 @@ tree is the runtime-state view of the resulting K8s objects.
 
 	cmd.AddCommand(NewContextCommand(f))
 	cmd.AddCommand(pod.NewPodCommand(f))
+	cmd.AddCommand(container.NewContainerCommand(f))
+	cmd.AddCommand(workload.NewWorkloadCommand(f))
 	cmd.AddCommand(application.NewApplicationCommand(f))
+	cmd.AddCommand(namespace.NewNamespaceCommand(f))
+	cmd.AddCommand(node.NewNodeCommand(f))
+	cmd.AddCommand(middleware.NewMiddlewareCommand(f))
 
 	return cmd
 }

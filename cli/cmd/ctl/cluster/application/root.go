@@ -52,6 +52,9 @@ resulting K8s namespaces.
 	}
 
 	cmd.AddCommand(NewListCommand(f))
+	cmd.AddCommand(NewGetCommand(f))
+	cmd.AddCommand(NewWorkloadsCommand(f))
+	cmd.AddCommand(NewPodsCommand(f))
 
 	return cmd
 }

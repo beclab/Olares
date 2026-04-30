@@ -60,7 +60,7 @@ exists but isn't visible to your token).
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runList(c.Context(), o, namespace, labelSelector, fieldSelector, limit)
+			return RunList(c.Context(), o, namespace, labelSelector, fieldSelector, limit)
 		},
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "scope to a single namespace (default: all namespaces visible to your profile)")
@@ -71,7 +71,12 @@ exists but isn't visible to your token).
 	return cmd
 }
 
-func runList(ctx context.Context, o *clusteropts.ClusterOptions, namespace, labelSelector, fieldSelector string, limit int) error {
+// RunList is the exported entry point so sibling packages (e.g.
+// cluster/application) can share the same fetch + render path
+// without duplicating the table layout. opts is required; pass a
+// fresh clusteropts.NewClusterOptions(f) when calling from outside
+// cobra. namespace="" means cross-namespace.
+func RunList(ctx context.Context, o *clusteropts.ClusterOptions, namespace, labelSelector, fieldSelector string, limit int) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
