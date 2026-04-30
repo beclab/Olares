@@ -2,6 +2,7 @@ package files
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -244,6 +245,162 @@ func TestFormatMode(t *testing.T) {
 				t.Errorf("formatMode(%d, dir=%v, sym=%v) = %q, want %q", c.mode, c.isDir, c.isSymlink, got, c.want)
 			}
 		})
+	}
+}
+
+// TestListingResponseDecode_CloudDriveAwss3 covers the awss3 envelope
+// shape from a real backend response: children under top-level `data`
+// (NOT `items`), `mode` and `modified` as empty strings on every
+// child, no `numDirs` / `numFiles` summary, and `fileSize` populated
+// alongside `size`. The decoder must surface a fully-populated
+// listingResponse the renderer can use without per-namespace branches.
+func TestListingResponseDecode_CloudDriveAwss3(t *testing.T) {
+	const body = `{
+		"data": [
+			{
+				"name": "03 (1).avi",
+				"isDir": false,
+				"isSymlink": false,
+				"size": 5788048,
+				"fileSize": 5788048,
+				"mode": "",
+				"modified": "",
+				"path": "/03 (1).avi",
+				"type": "",
+				"meta": {"key": "03 (1).avi", "last_modified": ""}
+			},
+			{
+				"name": "datasets",
+				"isDir": true,
+				"isSymlink": false,
+				"size": 0,
+				"fileSize": 0,
+				"mode": "",
+				"modified": "",
+				"path": "/datasets",
+				"type": ""
+			}
+		],
+		"fileExtend": "AKIAVJDTX4VSSYHHRWAU",
+		"filePath": "/",
+		"fileType": "awss3",
+		"name": "",
+		"status_code": "SUCCESS"
+	}`
+	var got listingResponse
+	if err := json.Unmarshal([]byte(body), &got); err != nil {
+		t.Fatalf("unmarshal cloud envelope: %v", err)
+	}
+	if len(got.Items) != 2 {
+		t.Fatalf("want 2 items merged from `data`, got %d", len(got.Items))
+	}
+	first := got.Items[0]
+	if first.Name != "03 (1).avi" || first.IsDir || first.Size != 5788048 {
+		t.Errorf("first item mismatch: %+v", first)
+	}
+	if !first.Modified.IsZero() {
+		t.Errorf("modified should decode to zero time for empty-string input, got %v", first.Modified)
+	}
+	if first.Mode != 0 {
+		t.Errorf("mode should decode to 0 for empty-string input, got %d", first.Mode)
+	}
+	second := got.Items[1]
+	if second.Name != "datasets" || !second.IsDir {
+		t.Errorf("second item mismatch: %+v", second)
+	}
+}
+
+// TestListingResponseDecode_CloudDriveFileSizeOnly: when the server
+// only populates `fileSize` (no `size`), Items[].Size must still
+// surface the right byte count — the renderer's SIZE column would
+// otherwise show 0B for every cloud-drive entry.
+func TestListingResponseDecode_CloudDriveFileSizeOnly(t *testing.T) {
+	const body = `{
+		"data": [
+			{"name":"big.bin","isDir":false,"fileSize":17236328572,"mode":"","modified":""}
+		]
+	}`
+	var got listingResponse
+	if err := json.Unmarshal([]byte(body), &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(got.Items) != 1 || got.Items[0].Size != 17236328572 {
+		t.Errorf("want fileSize fallback, got %+v", got.Items)
+	}
+}
+
+// TestListingResponseDecode_DriveStillWorks ensures the standard
+// Drive/Sync envelope (children under `items`, `mode` as a number,
+// `modified` as RFC3339) keeps decoding correctly after the cloud-
+// envelope tolerance was added.
+func TestListingResponseDecode_DriveStillWorks(t *testing.T) {
+	const body = `{
+		"name": "Documents",
+		"path": "/drive/Home/Documents",
+		"modified": "2026-04-17T19:31:51Z",
+		"mode": 2147484141,
+		"numDirs": 1,
+		"numFiles": 1,
+		"items": [
+			{"name":"sub","isDir":true,"size":0,"mode":2147484141,"modified":"2026-04-01T12:30:00Z"},
+			{"name":"a.txt","isDir":false,"size":12,"mode":420,"modified":"2026-04-01T12:30:00Z","type":"text"}
+		]
+	}`
+	var got listingResponse
+	if err := json.Unmarshal([]byte(body), &got); err != nil {
+		t.Fatalf("unmarshal Drive envelope: %v", err)
+	}
+	if got.NumDirs != 1 || got.NumFiles != 1 {
+		t.Errorf("want NumDirs=1 NumFiles=1, got %d/%d", got.NumDirs, got.NumFiles)
+	}
+	if got.Modified.IsZero() {
+		t.Error("Drive envelope must decode `modified` as a real timestamp")
+	}
+	if got.Mode == 0 {
+		t.Error("Drive envelope must decode `mode` as a non-zero uint32")
+	}
+	if len(got.Items) != 2 {
+		t.Fatalf("want 2 items, got %d", len(got.Items))
+	}
+	if got.Items[1].Name != "a.txt" || got.Items[1].Size != 12 || got.Items[1].Mode != 420 {
+		t.Errorf("file item mismatch: %+v", got.Items[1])
+	}
+}
+
+// TestListingResponseDecode_ItemsWinsWhenBothPresent: defensive —
+// if a backend transition emits both shapes, the canonical `items`
+// field wins so a hybrid server can't double-count.
+func TestListingResponseDecode_ItemsWinsWhenBothPresent(t *testing.T) {
+	const body = `{
+		"items":[{"name":"from-items","isDir":false,"size":1,"mode":420,"modified":"2026-04-01T12:30:00Z"}],
+		"data":[{"name":"from-data","isDir":false,"size":2,"mode":"","modified":""}]
+	}`
+	var got listingResponse
+	if err := json.Unmarshal([]byte(body), &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(got.Items) != 1 || got.Items[0].Name != "from-items" {
+		t.Errorf("want items-wins, got %+v", got.Items)
+	}
+}
+
+// TestListingResponseDecode_BadModified: a malformed timestamp must
+// surface as an error rather than silently zeroing the field —
+// hiding server-side bugs would leave the renderer's MODIFIED
+// column blank with no diagnostic.
+func TestListingResponseDecode_BadModified(t *testing.T) {
+	const body = `{
+		"items": [
+			{"name":"x","isDir":false,"size":1,"mode":420,"modified":"not-a-time"}
+		]
+	}`
+	var got listingResponse
+	err := json.Unmarshal([]byte(body), &got)
+	if err == nil {
+		t.Fatal("expected decode error for bad timestamp")
+	}
+	if !strings.Contains(err.Error(), "modified") {
+		t.Errorf("error should mention `modified`: %v", err)
 	}
 }
 

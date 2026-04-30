@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/beclab/Olares/cli/internal/files/encodepath"
 )
@@ -163,16 +164,14 @@ func (c *Client) GetUploadedBytes(ctx context.Context, node, parentDir, filename
 	return env.UploadedBytes, nil
 }
 
-// Mkdir POSTs an empty body to /api/resources/drive/Home/<encoded relSubPath>/
-// to create a directory under Drive/Home. The trailing slash is what the
+// Mkdir POSTs an empty body to /api/resources/<encoded fullPath>/
+// to create a directory under the selected namespace root. The trailing slash is what the
 // backend uses to discriminate "create directory" from "create empty file"
 // (postCreateFile in v2/common/utils.ts does the same thing — `isDir
 // ? '/' : ”`).
 //
-// `relSubPath` is the directory path RELATIVE to /Home (e.g. "Documents"
-// or "Documents/photos"); it should NOT include leading or trailing
-// slashes — Mkdir handles slash placement and percent-encoding so the
-// caller can hand in plain UTF-8 segments.
+// `fullPath` is the absolute frontend path (e.g. `/drive/Home/Documents`
+// or `/sync/<repo_id>/docs`) without the `/api/resources` prefix.
 //
 // IMPORTANT: This call is NOT idempotent on the server side. The
 // files-backend auto-renames colliding directories ("Documents" exists
@@ -182,14 +181,14 @@ func (c *Client) GetUploadedBytes(ctx context.Context, node, parentDir, filename
 // they're confident don't exist yet (e.g. brand-new subdirectories
 // they computed from a local walk). The 409 fast-path stays in case
 // some deployments do return 409 for collisions.
-func (c *Client) Mkdir(ctx context.Context, relSubPath string) error {
-	clean := strings.Trim(relSubPath, "/")
+func (c *Client) Mkdir(ctx context.Context, fullPath string) error {
+	clean := strings.Trim(fullPath, "/")
 	if clean == "" {
-		// Drive/Home root always exists; nothing to do.
+		// Root always exists; nothing to do.
 		return nil
 	}
 	encoded := encodepath.EncodeURL(clean)
-	endpoint := c.BaseURL + "/api/resources/drive/Home/" + encoded + "/"
+	endpoint := c.BaseURL + "/api/resources/" + encoded + "/"
 	_, err := c.do(ctx, http.MethodPost, endpoint, nil, nil, "")
 	if err != nil {
 		var hErr *HTTPError
@@ -197,13 +196,13 @@ func (c *Client) Mkdir(ctx context.Context, relSubPath string) error {
 			// Directory already exists — exactly what we wanted.
 			return nil
 		}
-		return fmt.Errorf("mkdir %q: %w", relSubPath, err)
+		return fmt.Errorf("mkdir %q: %w", fullPath, err)
 	}
 	return nil
 }
 
 // CreateEmptyFile POSTs an empty body to
-// /api/resources/drive/Home/<encoded relPath> (no trailing slash) to
+// /api/resources/<encoded fullPath> (no trailing slash) to
 // materialize a zero-length file. The web app routes empty files through
 // uploadEmptyFile() instead of the chunk pipeline (resumable.js cannot
 // represent a 0-byte chunk), and we mirror that here.
@@ -211,18 +210,177 @@ func (c *Client) Mkdir(ctx context.Context, relSubPath string) error {
 // Unlike Mkdir, a 409 here is reported back to the caller — we don't
 // silently overwrite or pretend success when the user explicitly asked
 // to upload a file and a name collision happened.
-func (c *Client) CreateEmptyFile(ctx context.Context, relPath string) error {
-	clean := strings.Trim(relPath, "/")
+func (c *Client) CreateEmptyFile(ctx context.Context, fullPath string) error {
+	clean := strings.Trim(fullPath, "/")
 	if clean == "" {
 		return fmt.Errorf("CreateEmptyFile: empty path")
 	}
 	encoded := encodepath.EncodeURL(clean)
-	endpoint := c.BaseURL + "/api/resources/drive/Home/" + encoded
+	endpoint := c.BaseURL + "/api/resources/" + encoded
 	_, err := c.do(ctx, http.MethodPost, endpoint, nil, nil, "")
 	if err != nil {
-		return fmt.Errorf("create empty file %q: %w", relPath, err)
+		return fmt.Errorf("create empty file %q: %w", fullPath, err)
 	}
 	return nil
+}
+
+// --- Cloud-transfer task polling (stage 2 of cloud-drive uploads) ---
+//
+// Cloud drive uploads (awss3 / google / dropbox) are a two-stage
+// operation: stage 1 is the regular chunked POST to the Olares files-
+// backend (covered by UploadFile), and stage 2 is a server-side
+// transfer task that copies the staged file from Olares-internal
+// storage to the user's actual cloud bucket. The taskID for stage 2
+// is returned in the FINAL stage-1 chunk's response body (see
+// parseFinalChunkTaskID in uploader.go), and the client drives
+// stage 2 by polling /api/task/<node>/?task_id=<id> until the status
+// reaches a terminal value.
+//
+// This mirrors apps/packages/app/src/services/olaresTask/index.ts —
+// the web app's Taskmanager uses the same endpoint + the same status
+// vocabulary (pending/running/completed/failed/canceled/cancelled/paused).
+
+// CloudTaskStatus values mirror OlaresTaskStatus from
+// services/abstractions/olaresTask/interface.ts. The server returns
+// the literal lowercase strings, so we keep them as untyped string
+// constants (vs. a typed enum) — there's no validation; an unknown
+// status is treated as "still in flight" and the loop polls again.
+const (
+	cloudTaskStatusCompleted = "completed"
+	cloudTaskStatusFailed    = "failed"
+	cloudTaskStatusCanceled  = "canceled"
+	cloudTaskStatusCancelled = "cancelled" // server uses both spellings
+)
+
+// DefaultCloudTaskPollInterval is how often WaitCloudTask polls the
+// task-status endpoint when the caller doesn't override it. 2s is a
+// conservative compromise between responsiveness (cloud uploads of
+// small files can finish in <5s end-to-end) and not flooding the
+// server with status checks for big uploads.
+const DefaultCloudTaskPollInterval = 2 * time.Second
+
+// CloudTaskUpdate is the per-poll snapshot WaitCloudTask passes to
+// its onUpdate callback. The cobra layer renders progress lines
+// from these without having to know about the JSON envelope shape.
+type CloudTaskUpdate struct {
+	Status        string  // raw server status: pending / running / paused / ...
+	Progress      float64 // 0..100 (server-reported, may stay at 0 for short tasks)
+	CurrentPhase  int     // 1..TotalPhase, useful when the server splits the transfer in stages
+	TotalPhase    int
+	TotalFileSize int64
+	FailedReason  string
+}
+
+// CloudTaskUpdateFunc is invoked once per poll while the task is
+// still in flight (pending / running / paused / unknown). It is NOT
+// invoked for the terminal status — that arrives via WaitCloudTask's
+// return.
+type CloudTaskUpdateFunc func(CloudTaskUpdate)
+
+// taskQueryEnvelope is the JSON shape returned by GET
+// /api/task/<node>/?task_id=<id>. The web app reads `task.status` /
+// `task.progress` etc. straight off this envelope (see
+// olaresTask/index.ts getTask + cloudUpload/setQueryResult). We mirror
+// the field set conservatively — only fields we surface in
+// CloudTaskUpdate or the failure-reason error are decoded.
+type taskQueryEnvelope struct {
+	Code int    `json:"code,omitempty"`
+	Msg  string `json:"msg,omitempty"`
+	Task struct {
+		ID            string  `json:"id"`
+		Status        string  `json:"status"`
+		Progress      float64 `json:"progress"`
+		CurrentPhase  int     `json:"current_phase"`
+		TotalPhase    int     `json:"total_phase"`
+		TotalFileSize int64   `json:"total_file_size"`
+		FailedReason  string  `json:"failed_reason,omitempty"`
+	} `json:"task"`
+}
+
+// WaitCloudTask polls /api/task/<node>/?task_id=<taskID> at
+// `interval` (or DefaultCloudTaskPollInterval if interval == 0) and
+// returns when the task reaches a terminal status:
+//
+//   - completed                  → nil
+//   - failed                     → fmt.Errorf with `failed_reason`
+//     when the server provided
+//     one, otherwise a generic
+//     "task failed" message
+//   - canceled / cancelled       → fmt.Errorf("task ... was cancelled")
+//
+// `onUpdate` is called once per poll whenever the task is NOT yet
+// terminal — pass nil if the caller doesn't want progress updates.
+//
+// ctx cancellation is honored promptly between polls (and at every
+// HTTP request via Client.do). Transient HTTP errors during polling
+// (the task endpoint flapping, an in-cluster service redeploy)
+// surface immediately as errors — we don't paper over them, because
+// a long-running cloud transfer that can't be queried is
+// indistinguishable from a stuck transfer; the caller should bubble
+// up the failure.
+func (c *Client) WaitCloudTask(
+	ctx context.Context,
+	node, taskID string,
+	interval time.Duration,
+	onUpdate CloudTaskUpdateFunc,
+) error {
+	if taskID == "" {
+		return errors.New("WaitCloudTask: empty taskID")
+	}
+	if node == "" {
+		return errors.New("WaitCloudTask: empty node")
+	}
+	if interval <= 0 {
+		interval = DefaultCloudTaskPollInterval
+	}
+
+	q := url.Values{}
+	q.Set("task_id", taskID)
+	endpoint := c.BaseURL + "/api/task/" + url.PathEscape(node) + "/?" + q.Encode()
+
+	for {
+		body, err := c.do(ctx, http.MethodGet, endpoint, nil, nil, "")
+		if err != nil {
+			return fmt.Errorf("query cloud task %s on node %s: %w", taskID, node, err)
+		}
+		var env taskQueryEnvelope
+		if len(body) > 0 {
+			if err := json.Unmarshal(body, &env); err != nil {
+				return fmt.Errorf("decode task query response for %s: %w (body=%s)",
+					taskID, err, truncateBody(body))
+			}
+		}
+
+		switch env.Task.Status {
+		case cloudTaskStatusCompleted:
+			return nil
+		case cloudTaskStatusFailed:
+			reason := env.Task.FailedReason
+			if reason == "" {
+				reason = "server reported failure with no failed_reason"
+			}
+			return fmt.Errorf("cloud transfer task %s failed: %s", taskID, reason)
+		case cloudTaskStatusCanceled, cloudTaskStatusCancelled:
+			return fmt.Errorf("cloud transfer task %s was cancelled server-side", taskID)
+		}
+
+		if onUpdate != nil {
+			onUpdate(CloudTaskUpdate{
+				Status:        env.Task.Status,
+				Progress:      env.Task.Progress,
+				CurrentPhase:  env.Task.CurrentPhase,
+				TotalPhase:    env.Task.TotalPhase,
+				TotalFileSize: env.Task.TotalFileSize,
+				FailedReason:  env.Task.FailedReason,
+			})
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(interval):
+		}
+	}
 }
 
 // HTTPError carries the status + truncated body of a non-2xx response so
