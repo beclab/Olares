@@ -200,7 +200,7 @@ func (a *adminController) CreateAppSecret(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		klog.Error("create secret error, ", err, ", ", secret.Key, ", ", secret.Value)
+		klog.Error("create secret error, ", err, ", key=", secret.Key)
 		return c.JSON(fiber.Map{
 			"code":    http.StatusInternalServerError,
 			"message": "create secret error, " + err.Error(),

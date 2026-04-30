@@ -61,7 +61,7 @@ func InitSuperAdmin(ctx context.Context, pg *PostgresClient) error {
 }
 
 func InsertKsUserToPostgres(ctx context.Context, pg *PostgresClient, username, email, password string) error {
-	klog.Info("insert user: ", username, ", email: ", email, ", password: ", password)
+	klog.Info("insert user: ", username, ", email: ", email)
 
 	publicKeyBytes, privateKeyBytes, err := box.GenerateKey(rand.Reader)
 	if err != nil {
@@ -128,7 +128,7 @@ func InsertKsUserToPostgres(ctx context.Context, pg *PostgresClient, username, e
 }
 
 func InsertKsUserToMongo(ctx context.Context, mongo *MongoClient, username, email, password string) error {
-	klog.Info("insert user: ", username, ", email: ", email, ", password: ", password)
+	klog.Info("insert user: ", username, ", email: ", email)
 	publicKeyBytes, privateKeyBytes, err := box.GenerateKey(rand.Reader)
 	if err != nil {
 		return err

@@ -6,10 +6,26 @@ import (
 	"sync"
 	"time"
 
+	"bytetrade.io/web3os/tapr/pkg/utils"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/klog/v2"
 )
+
+func maskTokens(tokens []string) []string {
+	if len(tokens) == 0 {
+		return nil
+	}
+	masked := make([]string, len(tokens))
+	for i, t := range tokens {
+		if t == "" {
+			masked[i] = ""
+			continue
+		}
+		masked[i] = utils.MD5(t)
+	}
+	return masked
+}
 
 type callback func(data *ReadMessage)
 
@@ -291,11 +307,11 @@ func (server *Server) routineWrite() {
 			}
 			msg, err := json.Marshal(elem.Message)
 			if err != nil {
-				klog.Errorf("send message marshal error %+v", err)
+				klog.Errorf("send message marshal error %+v, data: %v", err, elem.Message)
 				continue
 			}
 
-			klog.Infof("send message connId: %s, token: %v, users: %v", elem.ConnId, elem.Tokens, elem.Users)
+			klog.Infof("send message len=%d, connId: %s, tokenFp: %v, users: %v", len(msg), elem.ConnId, maskTokens(elem.Tokens), elem.Users)
 
 			var filter = NewFilter(server)
 			if elem.Users != nil && len(elem.Users) > 0 {
