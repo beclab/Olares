@@ -345,7 +345,7 @@ func getAdminPassword() (string, error) {
 	}
 	secret, err := clientSet.CoreV1().Secrets(constants.PlatformNamespace).Get(context.TODO(), "nats-secrets", metav1.GetOptions{})
 	if err != nil {
-		klog.Infof("get secret err=%v", secret)
+		klog.Infof("get nats-secrets err=%v", err)
 		return "", err
 	}
 	password, ok := secret.Data["nats_password"]
