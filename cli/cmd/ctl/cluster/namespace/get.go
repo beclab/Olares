@@ -86,10 +86,10 @@ func renderGetTable(ns nsDetail) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	defer w.Flush()
 	fmt.Fprintf(w, "Name:\t%s\n", ns.Metadata.Name)
-	fmt.Fprintf(w, "Kind:\t%s\n", dashIfEmpty(ns.Kind))
-	fmt.Fprintf(w, "Phase:\t%s\n", dashIfEmpty(ns.Status.Phase))
-	fmt.Fprintf(w, "Created:\t%s\n", dashIfEmpty(ns.Metadata.CreationTimestamp))
-	fmt.Fprintf(w, "Age:\t%s\n", ageOf(ns.Metadata.CreationTimestamp, time.Now()))
+	fmt.Fprintf(w, "Kind:\t%s\n", clusteropts.DashIfEmpty(ns.Kind))
+	fmt.Fprintf(w, "Phase:\t%s\n", clusteropts.DashIfEmpty(ns.Status.Phase))
+	fmt.Fprintf(w, "Created:\t%s\n", clusteropts.DashIfEmpty(ns.Metadata.CreationTimestamp))
+	fmt.Fprintf(w, "Age:\t%s\n", clusteropts.Age(ns.Metadata.CreationTimestamp, time.Now()))
 	if ns.Metadata.UID != "" {
 		fmt.Fprintf(w, "UID:\t%s\n", ns.Metadata.UID)
 	}

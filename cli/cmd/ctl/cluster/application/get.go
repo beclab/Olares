@@ -95,8 +95,8 @@ func renderGetTable(ns NamespaceDetail) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	defer w.Flush()
 	fmt.Fprintf(w, "Name:\t%s\n", ns.Metadata.Name)
-	fmt.Fprintf(w, "Kind:\t%s\n", dashIfEmpty(ns.Kind))
-	fmt.Fprintf(w, "Phase:\t%s\n", dashIfEmpty(ns.Status.Phase))
+	fmt.Fprintf(w, "Kind:\t%s\n", clusteropts.DashIfEmpty(ns.Kind))
+	fmt.Fprintf(w, "Phase:\t%s\n", clusteropts.DashIfEmpty(ns.Status.Phase))
 	if ws, ok := ns.Metadata.Labels["kubesphere.io/workspace"]; ok && ws != "" {
 		fmt.Fprintf(w, "Workspace:\t%s\n", ws)
 	}
@@ -106,8 +106,8 @@ func renderGetTable(ns NamespaceDetail) error {
 	if creator, ok := ns.Metadata.Annotations["kubesphere.io/creator"]; ok && creator != "" {
 		fmt.Fprintf(w, "Creator:\t%s\n", creator)
 	}
-	fmt.Fprintf(w, "Created:\t%s\n", dashIfEmpty(ns.Metadata.CreationTimestamp))
-	fmt.Fprintf(w, "Age:\t%s\n", ageOf(ns.Metadata.CreationTimestamp, time.Now()))
+	fmt.Fprintf(w, "Created:\t%s\n", clusteropts.DashIfEmpty(ns.Metadata.CreationTimestamp))
+	fmt.Fprintf(w, "Age:\t%s\n", clusteropts.Age(ns.Metadata.CreationTimestamp, time.Now()))
 	if ns.Metadata.UID != "" {
 		fmt.Fprintf(w, "UID:\t%s\n", ns.Metadata.UID)
 	}

@@ -40,7 +40,7 @@ In ` + "`-o json`" + ` mode the per-container view is emitted verbatim as
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			ns, name, err := pod.SplitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}
@@ -114,7 +114,7 @@ func renderTable(views []containerView, noHeaders bool) error {
 			state = describeContainerState(v.Status.State)
 		}
 		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
-			v.Name, dashIfEmpty(v.Spec.Image), ready, restarts, state, formatPorts(v.Spec.Ports))
+			v.Name, clusteropts.DashIfEmpty(v.Spec.Image), ready, restarts, state, formatPorts(v.Spec.Ports))
 	}
 	return nil
 }
@@ -168,9 +168,3 @@ func describeContainerState(state map[string]interface{}) string {
 	return "-"
 }
 
-func dashIfEmpty(s string) string {
-	if s == "" {
-		return "-"
-	}
-	return s
-}

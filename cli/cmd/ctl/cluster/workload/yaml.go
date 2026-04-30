@@ -2,13 +2,11 @@ package workload
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/yaml"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
 	"github.com/beclab/Olares/cli/pkg/clusterclient"
@@ -50,7 +48,7 @@ point of the verb). For JSON, use ` + "`cluster workload get -o json`" + `.
 			if plural == KindAll {
 				return fmt.Errorf("--kind must be one of: deployment, statefulset, daemonset (not %q)", kindRaw)
 			}
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}
@@ -74,7 +72,7 @@ func runYAML(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name
 	if err != nil {
 		return fmt.Errorf("get %s %s/%s: %w", SingularKind(kindPlural), namespace, name, err)
 	}
-	out, err := jsonToYAML(body)
+	out, err := clusteropts.JSONToYAML(body)
 	if err != nil {
 		return fmt.Errorf("convert %s %s/%s response to YAML: %w", SingularKind(kindPlural), namespace, name, err)
 	}
@@ -87,12 +85,3 @@ func runYAML(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name
 	return nil
 }
 
-// jsonToYAML mirrors cluster/pod/yaml.go::jsonToYAML — kept private
-// per-package so the leaf packages stay independent of each other.
-func jsonToYAML(body []byte) ([]byte, error) {
-	var v interface{}
-	if err := json.Unmarshal(body, &v); err != nil {
-		return nil, fmt.Errorf("parse JSON: %w", err)
-	}
-	return yaml.Marshal(v)
-}

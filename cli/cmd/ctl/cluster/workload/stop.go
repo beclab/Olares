@@ -60,7 +60,7 @@ want to take it offline.
 			if plural == "daemonsets" {
 				return fmt.Errorf("DaemonSets cannot be stopped via scale; use `cluster workload delete` to remove them")
 			}
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}

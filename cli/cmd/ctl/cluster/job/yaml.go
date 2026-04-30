@@ -2,13 +2,11 @@ package job
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/yaml"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
 	"github.com/beclab/Olares/cli/pkg/clusterclient"
@@ -39,7 +37,7 @@ point). For JSON, use ` + "`cluster job get -o json`" + `.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}
@@ -62,7 +60,7 @@ func runYAML(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name
 	if err != nil {
 		return fmt.Errorf("get job %s/%s: %w", namespace, name, err)
 	}
-	out, err := jsonToYAML(body)
+	out, err := clusteropts.JSONToYAML(body)
 	if err != nil {
 		return fmt.Errorf("convert job %s/%s response to YAML: %w", namespace, name, err)
 	}
@@ -75,14 +73,3 @@ func runYAML(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name
 	return nil
 }
 
-// jsonToYAML decodes the K8s native JSON document and re-encodes it
-// as YAML. Re-declared here (rather than imported from pod / workload)
-// to keep this package independent — the conversion is a one-liner
-// anyway.
-func jsonToYAML(body []byte) ([]byte, error) {
-	var v interface{}
-	if err := json.Unmarshal(body, &v); err != nil {
-		return nil, fmt.Errorf("parse JSON: %w", err)
-	}
-	return yaml.Marshal(v)
-}

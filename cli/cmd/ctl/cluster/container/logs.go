@@ -97,8 +97,8 @@ this verb just delegates.
 // container slot isn't filled by the positional, --container must
 // supply it (this verb is named after the container, after all).
 //
-// nsFlag / containerFlag conflict checks mirror pod.SplitNsName so
-// users get a single, predictable error grammar across both entry
+// nsFlag / containerFlag conflict checks mirror clusteropts.SplitNsName
+// so users get a single, predictable error grammar across both entry
 // points.
 func splitNsPodContainer(nsFlag, containerFlag, arg string) (string, string, string, error) {
 	parts := strings.Split(arg, "/")

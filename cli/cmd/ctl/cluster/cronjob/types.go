@@ -1,10 +1,11 @@
 package cronjob
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
 )
 
 // CronJob is the minimal typed view used for both the KubeSphere
@@ -79,7 +80,7 @@ func (c CronJob) lastScheduleLabel(now time.Time) string {
 	if c.Status.LastScheduleTime == "" {
 		return "-"
 	}
-	return ageOf(c.Status.LastScheduleTime, now) + " ago"
+	return clusteropts.Age(c.Status.LastScheduleTime, now) + " ago"
 }
 
 // activeJobsLabel returns a comma-joined "<name>, <name>, ..." for
@@ -125,39 +126,5 @@ func (c CronJob) templateLabelSelector() string {
 }
 
 func (c CronJob) age(now time.Time) string {
-	return ageOf(c.Metadata.CreationTimestamp, now)
-}
-
-// ageOf / dashIfEmpty mirror the helpers in
-// cmd/ctl/cluster/{pod,workload,application,job}/types.go.
-// Re-declared here to keep the cronjob package independent.
-func ageOf(ts string, now time.Time) string {
-	if ts == "" {
-		return "-"
-	}
-	t, err := time.Parse(time.RFC3339, ts)
-	if err != nil {
-		return "-"
-	}
-	d := now.Sub(t)
-	if d < 0 {
-		d = 0
-	}
-	switch {
-	case d < time.Minute:
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	case d < time.Hour:
-		return fmt.Sprintf("%dm", int(d.Minutes()))
-	case d < 24*time.Hour:
-		return fmt.Sprintf("%dh", int(d.Hours()))
-	default:
-		return fmt.Sprintf("%dd", int(d.Hours()/24))
-	}
-}
-
-func dashIfEmpty(s string) string {
-	if s == "" {
-		return "-"
-	}
-	return s
+	return clusteropts.Age(c.Metadata.CreationTimestamp, now)
 }

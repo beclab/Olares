@@ -58,7 +58,7 @@ line (JSONL stream). Ctrl-C exits cleanly.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}
@@ -97,33 +97,6 @@ func Get(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name str
 		return nil, fmt.Errorf("get pod %s/%s: %w", namespace, name, err)
 	}
 	return &p, nil
-}
-
-// SplitNsName is the exported splitter (sibling packages call this
-// for the same "<ns>/<name>" or "-n <ns> + <name>" argument grammar
-// `cluster pod get` accepts).
-func SplitNsName(nsFlag, arg string) (string, string, error) {
-	return splitNsName(nsFlag, arg)
-}
-
-// splitNsName accepts either "ns/name" (no -n) or "name" (with -n).
-// Mirrors the kubectl convention so script authors don't have to
-// learn a CLI-specific argument grammar.
-func splitNsName(nsFlag, arg string) (string, string, error) {
-	if strings.Contains(arg, "/") {
-		parts := strings.SplitN(arg, "/", 2)
-		if parts[0] == "" || parts[1] == "" {
-			return "", "", fmt.Errorf("invalid <namespace>/<name>: %q", arg)
-		}
-		if nsFlag != "" && nsFlag != parts[0] {
-			return "", "", fmt.Errorf("argument namespace %q conflicts with --namespace %q", parts[0], nsFlag)
-		}
-		return parts[0], parts[1], nil
-	}
-	if nsFlag == "" {
-		return "", "", fmt.Errorf("namespace required: pass --namespace or use <namespace>/<name>")
-	}
-	return nsFlag, arg, nil
 }
 
 func runGet(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name string) error {
@@ -219,22 +192,22 @@ func renderGetTable(p Pod) error {
 	defer w.Flush()
 
 	fmt.Fprintf(w, "Name:\t%s\n", p.Metadata.Name)
-	fmt.Fprintf(w, "Namespace:\t%s\n", dashIfEmpty(p.Metadata.Namespace))
-	fmt.Fprintf(w, "Node:\t%s\n", dashIfEmpty(p.Spec.NodeName))
-	fmt.Fprintf(w, "Status:\t%s\n", dashIfEmpty(p.statusReason()))
-	fmt.Fprintf(w, "Phase:\t%s\n", dashIfEmpty(p.Status.Phase))
-	fmt.Fprintf(w, "Pod IP:\t%s\n", dashIfEmpty(p.Status.PodIP))
-	fmt.Fprintf(w, "Host IP:\t%s\n", dashIfEmpty(p.Status.HostIP))
+	fmt.Fprintf(w, "Namespace:\t%s\n", clusteropts.DashIfEmpty(p.Metadata.Namespace))
+	fmt.Fprintf(w, "Node:\t%s\n", clusteropts.DashIfEmpty(p.Spec.NodeName))
+	fmt.Fprintf(w, "Status:\t%s\n", clusteropts.DashIfEmpty(p.statusReason()))
+	fmt.Fprintf(w, "Phase:\t%s\n", clusteropts.DashIfEmpty(p.Status.Phase))
+	fmt.Fprintf(w, "Pod IP:\t%s\n", clusteropts.DashIfEmpty(p.Status.PodIP))
+	fmt.Fprintf(w, "Host IP:\t%s\n", clusteropts.DashIfEmpty(p.Status.HostIP))
 	fmt.Fprintf(w, "Ready:\t%s\n", p.readyCount())
 	fmt.Fprintf(w, "Restarts:\t%d\n", p.totalRestarts())
-	fmt.Fprintf(w, "QoS:\t%s\n", dashIfEmpty(p.Status.QOSClass))
-	fmt.Fprintf(w, "Service Account:\t%s\n", dashIfEmpty(p.Spec.ServiceAccount))
+	fmt.Fprintf(w, "QoS:\t%s\n", clusteropts.DashIfEmpty(p.Status.QOSClass))
+	fmt.Fprintf(w, "Service Account:\t%s\n", clusteropts.DashIfEmpty(p.Spec.ServiceAccount))
 	if !p.Spec.HostNetwork {
 		fmt.Fprintf(w, "Host Network:\tfalse\n")
 	} else {
 		fmt.Fprintf(w, "Host Network:\ttrue\n")
 	}
-	fmt.Fprintf(w, "Created:\t%s\n", dashIfEmpty(p.Metadata.CreationTimestamp))
+	fmt.Fprintf(w, "Created:\t%s\n", clusteropts.DashIfEmpty(p.Metadata.CreationTimestamp))
 	fmt.Fprintf(w, "Age:\t%s\n", p.age(time.Now()))
 
 	// Owner references — surface "controlled by" so users can pivot

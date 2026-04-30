@@ -80,7 +80,7 @@ new spec. --interval / --timeout drive that loop.
 			if replicas < 0 {
 				return fmt.Errorf("--replicas must be >= 0, got %d", replicas)
 			}
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}

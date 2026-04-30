@@ -75,7 +75,7 @@ Pass --yes to skip the confirmation prompt for scripted use.
 			if err != nil {
 				return err
 			}
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}

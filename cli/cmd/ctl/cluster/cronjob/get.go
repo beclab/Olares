@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -39,7 +38,7 @@ In JSON mode the typed view is forwarded; for byte-perfect output use
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}
@@ -74,28 +73,6 @@ func Get(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name str
 	return &c, nil
 }
 
-// SplitNsName mirrors job.SplitNsName.
-func SplitNsName(nsFlag, arg string) (string, string, error) {
-	return splitNsName(nsFlag, arg)
-}
-
-func splitNsName(nsFlag, arg string) (string, string, error) {
-	if strings.Contains(arg, "/") {
-		parts := strings.SplitN(arg, "/", 2)
-		if parts[0] == "" || parts[1] == "" {
-			return "", "", fmt.Errorf("invalid <namespace>/<name>: %q", arg)
-		}
-		if nsFlag != "" && nsFlag != parts[0] {
-			return "", "", fmt.Errorf("argument namespace %q conflicts with --namespace %q", parts[0], nsFlag)
-		}
-		return parts[0], parts[1], nil
-	}
-	if nsFlag == "" {
-		return "", "", fmt.Errorf("namespace required: pass --namespace or use <namespace>/<name>")
-	}
-	return nsFlag, arg, nil
-}
-
 func buildGetPath(namespace, name string) string {
 	return fmt.Sprintf("/apis/batch/v1beta1/namespaces/%s/cronjobs/%s",
 		url.PathEscape(namespace), url.PathEscape(name))
@@ -118,15 +95,15 @@ func renderGetTable(c CronJob) error {
 	now := time.Now()
 
 	fmt.Fprintf(w, "Name:\t%s\n", c.Metadata.Name)
-	fmt.Fprintf(w, "Namespace:\t%s\n", dashIfEmpty(c.Metadata.Namespace))
-	fmt.Fprintf(w, "Schedule:\t%s\n", dashIfEmpty(c.Spec.Schedule))
+	fmt.Fprintf(w, "Namespace:\t%s\n", clusteropts.DashIfEmpty(c.Metadata.Namespace))
+	fmt.Fprintf(w, "Schedule:\t%s\n", clusteropts.DashIfEmpty(c.Spec.Schedule))
 	fmt.Fprintf(w, "Suspend:\t%s\n", c.suspendLabel())
 	if c.Spec.ConcurrencyPolicy != "" {
 		fmt.Fprintf(w, "Concurrency Policy:\t%s\n", c.Spec.ConcurrencyPolicy)
 	}
 	fmt.Fprintf(w, "Active Jobs:\t%s\n", c.activeJobsLabel())
 	fmt.Fprintf(w, "Last Schedule:\t%s\n", c.lastScheduleLabel(now))
-	fmt.Fprintf(w, "Created:\t%s\n", dashIfEmpty(c.Metadata.CreationTimestamp))
+	fmt.Fprintf(w, "Created:\t%s\n", clusteropts.DashIfEmpty(c.Metadata.CreationTimestamp))
 	fmt.Fprintf(w, "Age:\t%s\n", c.age(now))
 	if sel := c.templateLabelSelector(); sel != "" {
 		fmt.Fprintf(w, "Job Template Selector:\t%s\n", sel)

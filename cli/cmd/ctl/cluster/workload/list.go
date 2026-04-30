@@ -170,13 +170,13 @@ func RunList(ctx context.Context, o *clusteropts.ClusterOptions, namespace, kind
 		switch {
 		case showNamespace && showKind:
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-				dashIfEmpty(r.Metadata.Namespace), dashIfEmpty(r.Kind), r.Metadata.Name, ready, age)
+				clusteropts.DashIfEmpty(r.Metadata.Namespace), clusteropts.DashIfEmpty(r.Kind), r.Metadata.Name, ready, age)
 		case showNamespace && !showKind:
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-				dashIfEmpty(r.Metadata.Namespace), r.Metadata.Name, ready, age)
+				clusteropts.DashIfEmpty(r.Metadata.Namespace), r.Metadata.Name, ready, age)
 		case !showNamespace && showKind:
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-				dashIfEmpty(r.Kind), r.Metadata.Name, ready, age)
+				clusteropts.DashIfEmpty(r.Kind), r.Metadata.Name, ready, age)
 		default:
 			fmt.Fprintf(w, "%s\t%s\t%s\n", r.Metadata.Name, ready, age)
 		}

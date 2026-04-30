@@ -57,7 +57,7 @@ Output columns mirror ` + "`cluster job list`" + ` for consistency.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}
@@ -145,7 +145,7 @@ func renderChildJobsTable(items []job.Job, noHeaders bool) error {
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 			j.Metadata.Name, comp, status,
-			ageOf(j.Metadata.CreationTimestamp, now))
+			clusteropts.Age(j.Metadata.CreationTimestamp, now))
 	}
 	if len(items) == 0 {
 		w.Flush()

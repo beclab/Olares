@@ -162,11 +162,11 @@ func renderListTable(items []Item, noHeaders bool) error {
 	}
 	for _, it := range items {
 		fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\n",
-			dashIfEmpty(it.Type),
-			dashIfEmpty(it.Name),
-			dashIfEmpty(it.Namespace),
+			clusteropts.DashIfEmpty(it.Type),
+			clusteropts.DashIfEmpty(it.Name),
+			clusteropts.DashIfEmpty(it.Namespace),
 			it.Nodes,
-			dashIfEmpty(it.AdminUser),
+			clusteropts.DashIfEmpty(it.AdminUser),
 		)
 	}
 	if len(items) == 0 {
@@ -191,9 +191,3 @@ func redactPasswords(items []Item) []Item {
 	return out
 }
 
-func dashIfEmpty(s string) string {
-	if s == "" {
-		return "-"
-	}
-	return s
-}

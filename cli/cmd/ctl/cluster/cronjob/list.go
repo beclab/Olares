@@ -109,13 +109,13 @@ func renderListTable(items []CronJob, showNamespace, noHeaders, paged bool, tota
 	for _, c := range items {
 		if showNamespace {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\t%s\t%s\n",
-				dashIfEmpty(c.Metadata.Namespace), c.Metadata.Name,
-				dashIfEmpty(c.Spec.Schedule), c.suspendLabel(),
+				clusteropts.DashIfEmpty(c.Metadata.Namespace), c.Metadata.Name,
+				clusteropts.DashIfEmpty(c.Spec.Schedule), c.suspendLabel(),
 				len(c.Status.Active), c.lastScheduleLabel(now), c.age(now))
 		} else {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\t%s\n",
 				c.Metadata.Name,
-				dashIfEmpty(c.Spec.Schedule), c.suspendLabel(),
+				clusteropts.DashIfEmpty(c.Spec.Schedule), c.suspendLabel(),
 				len(c.Status.Active), c.lastScheduleLabel(now), c.age(now))
 		}
 	}

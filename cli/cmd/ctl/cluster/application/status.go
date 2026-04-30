@@ -434,11 +434,11 @@ func renderStatusTable(s appStatus) error {
 			}
 			obj := e.InvolvedObject.Kind + "/" + e.InvolvedObject.Name
 			fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\t%s\n",
-				ageOf(ts, now)+" ago",
-				dashIfEmpty(e.Type),
-				dashIfEmpty(e.Reason),
-				dashIfEmpty(obj),
-				dashIfEmpty(e.Message),
+				clusteropts.Age(ts, now)+" ago",
+				clusteropts.DashIfEmpty(e.Type),
+				clusteropts.DashIfEmpty(e.Reason),
+				clusteropts.DashIfEmpty(obj),
+				clusteropts.DashIfEmpty(e.Message),
 			)
 		}
 		tw.Flush()

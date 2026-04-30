@@ -45,7 +45,7 @@ K8s native YAML.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}
@@ -80,33 +80,6 @@ func Get(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name str
 	return &j, nil
 }
 
-// SplitNsName is the exported splitter (sibling packages would call
-// this if they needed to share Job's "<ns>/<name>" or "-n + name"
-// argument grammar). Mirrors pod.SplitNsName.
-func SplitNsName(nsFlag, arg string) (string, string, error) {
-	return splitNsName(nsFlag, arg)
-}
-
-// splitNsName accepts either "ns/name" (no -n) or "name" (with -n).
-// Same shape as cluster/pod/get.go::splitNsName so verbs in this
-// package read consistently against the rest of the cluster tree.
-func splitNsName(nsFlag, arg string) (string, string, error) {
-	if strings.Contains(arg, "/") {
-		parts := strings.SplitN(arg, "/", 2)
-		if parts[0] == "" || parts[1] == "" {
-			return "", "", fmt.Errorf("invalid <namespace>/<name>: %q", arg)
-		}
-		if nsFlag != "" && nsFlag != parts[0] {
-			return "", "", fmt.Errorf("argument namespace %q conflicts with --namespace %q", parts[0], nsFlag)
-		}
-		return parts[0], parts[1], nil
-	}
-	if nsFlag == "" {
-		return "", "", fmt.Errorf("namespace required: pass --namespace or use <namespace>/<name>")
-	}
-	return nsFlag, arg, nil
-}
-
 // buildGetPath is exported (lowercase) so yaml.go can share without
 // reaching into this file — the path template is the same across get
 // and yaml since both verbs hit the same endpoint.
@@ -132,7 +105,7 @@ func renderGetTable(j Job) error {
 	now := time.Now()
 
 	fmt.Fprintf(w, "Name:\t%s\n", j.Metadata.Name)
-	fmt.Fprintf(w, "Namespace:\t%s\n", dashIfEmpty(j.Metadata.Namespace))
+	fmt.Fprintf(w, "Namespace:\t%s\n", clusteropts.DashIfEmpty(j.Metadata.Namespace))
 	fmt.Fprintf(w, "Status:\t%s\n", j.status())
 	fmt.Fprintf(w, "Completions:\t%s\n", j.completionsLabel())
 	if j.Spec.Parallelism != nil {
@@ -151,7 +124,7 @@ func renderGetTable(j Job) error {
 		fmt.Fprintf(w, "Completion Time:\t%s\n", j.Status.CompletionTime)
 	}
 	fmt.Fprintf(w, "Duration:\t%s\n", j.duration(now))
-	fmt.Fprintf(w, "Created:\t%s\n", dashIfEmpty(j.Metadata.CreationTimestamp))
+	fmt.Fprintf(w, "Created:\t%s\n", clusteropts.DashIfEmpty(j.Metadata.CreationTimestamp))
 	fmt.Fprintf(w, "Age:\t%s\n", j.age(now))
 	if parent := j.parentCronJob(); parent != "" {
 		fmt.Fprintf(w, "Controlled By:\tCronJob/%s\n", parent)

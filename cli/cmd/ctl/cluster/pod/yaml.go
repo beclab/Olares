@@ -2,14 +2,12 @@ package pod
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/yaml"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
 	"github.com/beclab/Olares/cli/pkg/clusterclient"
@@ -48,7 +46,7 @@ point of the verb). For JSON, use ` + "`cluster pod get -o json`" + `.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}
@@ -75,7 +73,7 @@ func runYAML(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name
 		return fmt.Errorf("get pod %s/%s: %w", namespace, name, err)
 	}
 
-	out, err := jsonToYAML(body)
+	out, err := clusteropts.JSONToYAML(body)
 	if err != nil {
 		return fmt.Errorf("convert pod %s/%s response to YAML: %w", namespace, name, err)
 	}
@@ -88,21 +86,3 @@ func runYAML(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name
 	return nil
 }
 
-// jsonToYAML decodes the K8s-native JSON document and re-encodes it
-// as YAML. We don't unmarshal through our typed Pod here — we want to
-// preserve any field the server returned, including ones not modeled
-// in pod/types.go.
-//
-// sigs.k8s.io/yaml uses encoding/json for unmarshal then converts to
-// YAML, which means the output's field order follows JSON-to-YAML
-// alphabetical ordering. That's a deliberate tradeoff: stable output
-// for diff-friendliness, at the cost of not exactly matching kube-
-// apiserver's internal field order. (Same as what `kubectl -o yaml`
-// produces, since kubectl uses the same library.)
-func jsonToYAML(body []byte) ([]byte, error) {
-	var v interface{}
-	if err := json.Unmarshal(body, &v); err != nil {
-		return nil, fmt.Errorf("parse JSON: %w", err)
-	}
-	return yaml.Marshal(v)
-}

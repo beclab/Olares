@@ -140,9 +140,9 @@ func renderListTable(groups []NamespaceGroup, noHeaders bool) error {
 	for _, g := range groups {
 		for _, ns := range g.Data {
 			fmt.Fprintf(w, "%s\t%s\t%s\n",
-				dashIfEmpty(g.Title),
-				dashIfEmpty(ns.Metadata.Name),
-				ageOf(ns.Metadata.CreationTimestamp, now),
+				clusteropts.DashIfEmpty(g.Title),
+				clusteropts.DashIfEmpty(ns.Metadata.Name),
+				clusteropts.Age(ns.Metadata.CreationTimestamp, now),
 			)
 			any = true
 		}
@@ -154,37 +154,3 @@ func renderListTable(groups []NamespaceGroup, noHeaders bool) error {
 	return nil
 }
 
-// ageOf / dashIfEmpty mirror the helpers in cmd/ctl/cluster/pod/types.go.
-// Re-declared here (rather than importing from pod) to keep the
-// application package independent of the pod package — both are leaf
-// nouns, neither should depend on the other.
-func ageOf(ts string, now time.Time) string {
-	if ts == "" {
-		return "-"
-	}
-	t, err := time.Parse(time.RFC3339, ts)
-	if err != nil {
-		return "-"
-	}
-	d := now.Sub(t)
-	if d < 0 {
-		d = 0
-	}
-	switch {
-	case d < time.Minute:
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	case d < time.Hour:
-		return fmt.Sprintf("%dm", int(d.Minutes()))
-	case d < 24*time.Hour:
-		return fmt.Sprintf("%dh", int(d.Hours()))
-	default:
-		return fmt.Sprintf("%dd", int(d.Hours()/24))
-	}
-}
-
-func dashIfEmpty(s string) string {
-	if s == "" {
-		return "-"
-	}
-	return s
-}

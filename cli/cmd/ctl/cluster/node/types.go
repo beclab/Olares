@@ -1,10 +1,11 @@
 package node
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
 )
 
 // Node is the minimal corev1.Node + status subset rendered by the
@@ -114,9 +115,9 @@ func (n Node) Roles() string {
 	return strings.Join(roles, ",")
 }
 
-// Age returns the AGE column. Mirrors pod.ageOf semantics.
+// Age returns the AGE column.
 func (n Node) Age(now time.Time) string {
-	return ageOf(n.Metadata.CreationTimestamp, now)
+	return clusteropts.Age(n.Metadata.CreationTimestamp, now)
 }
 
 // InternalIP returns the first InternalIP address (matches kubectl
@@ -141,34 +142,3 @@ func (n Node) KubeletVersion() string {
 	return n.Status.NodeInfo.KubeletVersion
 }
 
-// ageOf / dashIfEmpty mirror the helpers in cmd/ctl/cluster/pod/types.go.
-func ageOf(ts string, now time.Time) string {
-	if ts == "" {
-		return "-"
-	}
-	t, err := time.Parse(time.RFC3339, ts)
-	if err != nil {
-		return "-"
-	}
-	d := now.Sub(t)
-	if d < 0 {
-		d = 0
-	}
-	switch {
-	case d < time.Minute:
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	case d < time.Hour:
-		return fmt.Sprintf("%dm", int(d.Minutes()))
-	case d < 24*time.Hour:
-		return fmt.Sprintf("%dh", int(d.Hours()))
-	default:
-		return fmt.Sprintf("%dd", int(d.Hours()/24))
-	}
-}
-
-func dashIfEmpty(s string) string {
-	if s == "" {
-		return "-"
-	}
-	return s
-}

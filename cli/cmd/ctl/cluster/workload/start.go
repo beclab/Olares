@@ -65,7 +65,7 @@ needed.
 			if replicas < 1 {
 				return fmt.Errorf("--replicas must be >= 1 for `start`, got %d (use `cluster workload scale --replicas=0` to scale to zero)", replicas)
 			}
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}

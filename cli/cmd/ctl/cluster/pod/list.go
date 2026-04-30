@@ -144,24 +144,24 @@ func renderListTable(items []Pod, showNamespace, noHeaders, paged bool, totalIte
 	for _, p := range items {
 		if showNamespace {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\n",
-				dashIfEmpty(p.Metadata.Namespace),
+				clusteropts.DashIfEmpty(p.Metadata.Namespace),
 				p.Metadata.Name,
 				p.readyCount(),
-				dashIfEmpty(p.statusReason()),
+				clusteropts.DashIfEmpty(p.statusReason()),
 				p.totalRestarts(),
 				p.age(now),
-				dashIfEmpty(p.Spec.NodeName),
-				dashIfEmpty(p.Status.PodIP),
+				clusteropts.DashIfEmpty(p.Spec.NodeName),
+				clusteropts.DashIfEmpty(p.Status.PodIP),
 			)
 		} else {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\t%s\t%s\n",
 				p.Metadata.Name,
 				p.readyCount(),
-				dashIfEmpty(p.statusReason()),
+				clusteropts.DashIfEmpty(p.statusReason()),
 				p.totalRestarts(),
 				p.age(now),
-				dashIfEmpty(p.Spec.NodeName),
-				dashIfEmpty(p.Status.PodIP),
+				clusteropts.DashIfEmpty(p.Spec.NodeName),
+				clusteropts.DashIfEmpty(p.Status.PodIP),
 			)
 		}
 	}

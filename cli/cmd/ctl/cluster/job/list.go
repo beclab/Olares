@@ -110,7 +110,7 @@ func renderListTable(items []Job, showNamespace, noHeaders, paged bool, totalIte
 	for _, j := range items {
 		if showNamespace {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
-				dashIfEmpty(j.Metadata.Namespace), j.Metadata.Name,
+				clusteropts.DashIfEmpty(j.Metadata.Namespace), j.Metadata.Name,
 				j.completionsLabel(), j.status(),
 				j.duration(now), j.age(now))
 		} else {

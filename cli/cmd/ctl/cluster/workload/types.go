@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
 )
 
 // SupportedKinds lists the workload kinds the cluster tree models
@@ -208,50 +210,15 @@ func (w Workload) RolloutInProgress() bool {
 func (w Workload) UpdateStrategyLabel(plural string) string {
 	switch plural {
 	case "deployments":
-		return dashIfEmpty(w.Spec.Strategy.Type)
+		return clusteropts.DashIfEmpty(w.Spec.Strategy.Type)
 	case "statefulsets", "daemonsets":
-		return dashIfEmpty(w.Spec.UpdateStrategy.Type)
+		return clusteropts.DashIfEmpty(w.Spec.UpdateStrategy.Type)
 	}
 	return "-"
 }
 
-// Age returns the AGE column string. Mirrors pod.ageOf semantics so
-// the two list tables read the same way.
+// Age returns the AGE column string.
 func (w Workload) Age(now time.Time) string {
-	return ageOf(w.Metadata.CreationTimestamp, now)
+	return clusteropts.Age(w.Metadata.CreationTimestamp, now)
 }
 
-// ageOf / dashIfEmpty mirror the helpers in cmd/ctl/cluster/pod/types.go.
-// Re-declared here to keep the workload package independent of the
-// pod package — both are leaf nouns, neither should depend on the
-// other.
-func ageOf(ts string, now time.Time) string {
-	if ts == "" {
-		return "-"
-	}
-	t, err := time.Parse(time.RFC3339, ts)
-	if err != nil {
-		return "-"
-	}
-	d := now.Sub(t)
-	if d < 0 {
-		d = 0
-	}
-	switch {
-	case d < time.Minute:
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	case d < time.Hour:
-		return fmt.Sprintf("%dm", int(d.Minutes()))
-	case d < 24*time.Hour:
-		return fmt.Sprintf("%dh", int(d.Hours()))
-	default:
-		return fmt.Sprintf("%dd", int(d.Hours()/24))
-	}
-}
-
-func dashIfEmpty(s string) string {
-	if s == "" {
-		return "-"
-	}
-	return s
-}

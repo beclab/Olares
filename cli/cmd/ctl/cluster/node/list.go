@@ -95,7 +95,7 @@ func renderListTable(items []Node, noHeaders, paged bool, totalItems int) error 
 			n.StatusLabel(),
 			n.Roles(),
 			n.Age(now),
-			dashIfEmpty(n.KubeletVersion()),
+			clusteropts.DashIfEmpty(n.KubeletVersion()),
 			n.InternalIP(),
 		)
 	}

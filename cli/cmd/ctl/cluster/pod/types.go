@@ -3,6 +3,8 @@ package pod
 import (
 	"fmt"
 	"time"
+
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
 )
 
 // Pod is the minimal typed view we decode from both the KubeSphere
@@ -203,42 +205,6 @@ func (p Pod) statusReason() string {
 // AGE column semantics. Uses creationTimestamp; falls back to "-" when
 // missing or unparseable.
 func (p Pod) age(now time.Time) string {
-	return ageOf(p.Metadata.CreationTimestamp, now)
+	return clusteropts.Age(p.Metadata.CreationTimestamp, now)
 }
 
-// ageOf is the shared "elapsed since RFC3339 ts" formatter used by
-// both pod rows and event rows. Defined here (rather than a separate
-// helper file) so list.go / events.go can share it without leaking a
-// pkg-level dependency.
-func ageOf(ts string, now time.Time) string {
-	if ts == "" {
-		return "-"
-	}
-	t, err := time.Parse(time.RFC3339, ts)
-	if err != nil {
-		return "-"
-	}
-	d := now.Sub(t)
-	if d < 0 {
-		d = 0
-	}
-	switch {
-	case d < time.Minute:
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	case d < time.Hour:
-		return fmt.Sprintf("%dm", int(d.Minutes()))
-	case d < 24*time.Hour:
-		return fmt.Sprintf("%dh", int(d.Hours()))
-	default:
-		return fmt.Sprintf("%dd", int(d.Hours()/24))
-	}
-}
-
-// dashIfEmpty is used by the row formatters to render absent fields
-// as "-" instead of empty cells (so columnar output stays alignable).
-func dashIfEmpty(s string) string {
-	if s == "" {
-		return "-"
-	}
-	return s
-}

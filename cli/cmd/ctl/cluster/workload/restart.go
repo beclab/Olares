@@ -76,7 +76,7 @@ Pass --yes to skip the confirmation prompt for scripted use.
 			if concurrency < 1 {
 				return fmt.Errorf("--concurrency must be >= 1, got %d", concurrency)
 			}
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}

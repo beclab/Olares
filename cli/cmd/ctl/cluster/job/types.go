@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
 )
 
 // Job is the minimal typed view we decode from both the KubeSphere
@@ -138,10 +140,9 @@ func (j Job) status() string {
 	}
 }
 
-// age returns the AGE column string. Mirrors pod / workload ageOf
-// semantics so the per-noun list tables read the same way.
+// age returns the AGE column string.
 func (j Job) age(now time.Time) string {
-	return ageOf(j.Metadata.CreationTimestamp, now)
+	return clusteropts.Age(j.Metadata.CreationTimestamp, now)
 }
 
 // parentCronJob returns "<cronjob name>" when this Job is owned by a
@@ -182,36 +183,3 @@ func formatDuration(d time.Duration) string {
 	}
 }
 
-// ageOf / dashIfEmpty mirror the helpers in
-// cmd/ctl/cluster/{pod,workload,application}/...types.go. Re-declared
-// here to keep the job package independent of the others.
-func ageOf(ts string, now time.Time) string {
-	if ts == "" {
-		return "-"
-	}
-	t, err := time.Parse(time.RFC3339, ts)
-	if err != nil {
-		return "-"
-	}
-	d := now.Sub(t)
-	if d < 0 {
-		d = 0
-	}
-	switch {
-	case d < time.Minute:
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	case d < time.Hour:
-		return fmt.Sprintf("%dm", int(d.Minutes()))
-	case d < 24*time.Hour:
-		return fmt.Sprintf("%dh", int(d.Hours()))
-	default:
-		return fmt.Sprintf("%dd", int(d.Hours()/24))
-	}
-}
-
-func dashIfEmpty(s string) string {
-	if s == "" {
-		return "-"
-	}
-	return s
-}

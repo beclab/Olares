@@ -46,7 +46,7 @@ Events block) so reading top-to-bottom traces the Job's lifecycle.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}
@@ -142,12 +142,12 @@ func renderEventsTable(events []pod.Event, noHeaders bool) error {
 			ts = e.Metadata.CreationTimestamp
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\t%s\n",
-			ageOf(ts, now)+" ago",
-			dashIfEmpty(e.Type),
-			dashIfEmpty(e.Reason),
+			clusteropts.Age(ts, now)+" ago",
+			clusteropts.DashIfEmpty(e.Type),
+			clusteropts.DashIfEmpty(e.Reason),
 			count,
-			dashIfEmpty(from),
-			dashIfEmpty(e.Message),
+			clusteropts.DashIfEmpty(from),
+			clusteropts.DashIfEmpty(e.Message),
 		)
 	}
 	return nil

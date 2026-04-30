@@ -57,7 +57,7 @@ Output:
 			if plural == KindAll {
 				return fmt.Errorf("--kind must be one of: deployment, statefulset, daemonset (not %q)", kindRaw)
 			}
-			ns, name, err := splitNsName(namespace, args[0])
+			ns, name, err := clusteropts.SplitNsName(namespace, args[0])
 			if err != nil {
 				return err
 			}
@@ -68,26 +68,6 @@ Output:
 	cmd.Flags().StringVar(&kindRaw, "kind", "", "workload kind: deployment | statefulset | daemonset (REQUIRED)")
 	o.AddOutputFlags(cmd)
 	return cmd
-}
-
-// splitNsName accepts either "ns/name" (no -n) or "name" (with -n).
-// Mirrors cluster/pod/get.go::splitNsName so the two `get` verbs
-// share the same argument grammar.
-func splitNsName(nsFlag, arg string) (string, string, error) {
-	if strings.Contains(arg, "/") {
-		parts := strings.SplitN(arg, "/", 2)
-		if parts[0] == "" || parts[1] == "" {
-			return "", "", fmt.Errorf("invalid <namespace>/<name>: %q", arg)
-		}
-		if nsFlag != "" && nsFlag != parts[0] {
-			return "", "", fmt.Errorf("argument namespace %q conflicts with --namespace %q", parts[0], nsFlag)
-		}
-		return parts[0], parts[1], nil
-	}
-	if nsFlag == "" {
-		return "", "", fmt.Errorf("namespace required: pass --namespace or use <namespace>/<name>")
-	}
-	return nsFlag, arg, nil
 }
 
 func runGet(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name, kindPlural string) error {
@@ -122,9 +102,9 @@ func renderGetTable(w Workload, kindPlural string) error {
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	defer tw.Flush()
 	fmt.Fprintf(tw, "Name:\t%s\n", w.Metadata.Name)
-	fmt.Fprintf(tw, "Namespace:\t%s\n", dashIfEmpty(w.Metadata.Namespace))
-	fmt.Fprintf(tw, "Kind:\t%s\n", dashIfEmpty(w.Kind))
-	fmt.Fprintf(tw, "API Version:\t%s\n", dashIfEmpty(w.APIVersion))
+	fmt.Fprintf(tw, "Namespace:\t%s\n", clusteropts.DashIfEmpty(w.Metadata.Namespace))
+	fmt.Fprintf(tw, "Kind:\t%s\n", clusteropts.DashIfEmpty(w.Kind))
+	fmt.Fprintf(tw, "API Version:\t%s\n", clusteropts.DashIfEmpty(w.APIVersion))
 	fmt.Fprintf(tw, "Ready:\t%s\n", w.Ready(kindPlural))
 	avail := w.Available(kindPlural)
 	if w.RolloutInProgress() {
@@ -144,7 +124,7 @@ func renderGetTable(w Workload, kindPlural string) error {
 		sortStrings(pairs)
 		fmt.Fprintf(tw, "Selector:\t%s\n", strings.Join(pairs, ","))
 	}
-	fmt.Fprintf(tw, "Created:\t%s\n", dashIfEmpty(w.Metadata.CreationTimestamp))
+	fmt.Fprintf(tw, "Created:\t%s\n", clusteropts.DashIfEmpty(w.Metadata.CreationTimestamp))
 	fmt.Fprintf(tw, "Age:\t%s\n", w.Age(time.Now()))
 	if w.Metadata.Generation > 0 {
 		fmt.Fprintf(tw, "Generation:\t%d (observed: %d)\n",
