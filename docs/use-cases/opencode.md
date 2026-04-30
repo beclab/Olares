@@ -1,13 +1,13 @@
 ---
 outline: deep
-description: Set up OpenCode on Olares to run an AI coding agent. Connect it to Ollama-hosted models via browser or local CLI, and use natural language to write, test, and manage code.
+description: Set up OpenCode on Olares to run an AI coding agent. Connect it to Ollama-hosted models or OpenAI, and use natural language to write, test, and manage code.
 head:
   - - meta
     - name: keywords
-      content: Olares, OpenCode, AI coding agent, Ollama, self-hosted, code generation, TUI
-app_version: "1.0.0"
-doc_version: "1.0"
-doc_updated: "2026-04-02"
+      content: Olares, OpenCode, AI coding agent, Ollama, OpenAI, ChatGPT, self-hosted, code generation, TUI
+app_version: "1.0.11"
+doc_version: "1.1"
+doc_updated: "2026-04-27"
 ---
 
 # Set up OpenCode as your AI coding agent
@@ -22,7 +22,7 @@ On Olares, you can use OpenCode in two ways:
 ## Learning objectives
 
 By the end of this tutorial, you will learn how to:
-- Install OpenCode on Olares and connect it to an Ollama-hosted model.
+- Install OpenCode on Olares and connect it to an Ollama-hosted model or OpenAI.
 - Create projects and run coding tasks through the chat interface or the terminal-based UI (TUI).
 - Use OpenCode from your local computer over the LarePass VPN or from inside VS Code.
 - Edit the OpenCode configuration file to manage providers, models, and tools.
@@ -30,7 +30,8 @@ By the end of this tutorial, you will learn how to:
 ## Prerequisites
 
 - An Olares device with sufficient disk space and memory
-- [Ollama installed](./ollama.md) on Olares with at least one model downloaded
+- [Ollama installed](./ollama.md) on Olares with at least one model downloaded, if you plan to use local models
+- A ChatGPT Plus/Pro account or an OpenAI API key, if you plan to use OpenAI
 - Admin privileges to install apps from Market
 - LarePass VPN enabled on your computer (for local CLI usage only)
 
@@ -41,22 +42,21 @@ This option installs OpenCode as an application on your Olares device. You acces
 ### Install OpenCode
 
 1. Open Market and search for "OpenCode".
-2. Click **Get**, then **Install**.
    ![Install OpenCode](/images/manual/use-cases/opencode.png#bordered)
 
-3. Wait for installation to complete, then launch OpenCode from Launchpad.
-
-   After installation, OpenCode needs to download dependency packages. This might take 10 to 30 minutes depending on your network conditions. 
-   
-   To track the download progress:
-   1. Open Control Hub and select the OpenCode project from the sidebar.
-   2. Navigate to **Deployments** > **opencode** and click the running pod.
-   3. Under **Containers**, locate the **init-packages** container, and click <i class="material-symbols-outlined">article</i> to open the log window.
-   ![Check initialization progress in Control Hub](/images/manual/use-cases/opencode-init-package.png#bordered)
+2. Click **Get**, then **Install**, and wait for installation to complete.
 
 After installation, you will see two icons on Launchpad:
 - OpenCode: The main interface for OpenCode.
 - OpenCode Terminal: A command-line terminal for OpenCode. Use this if you prefer working in the TUI.
+
+Open OpenCode from Launchpad. On first launch, OpenCode needs to download dependency packages. This might take 10 to 30 minutes depending on your network conditions.
+
+To track the download progress:
+1. Open Control Hub and select the OpenCode project from the sidebar.
+2. Navigate to **Deployments** > **opencode** and click the running pod.
+3. Under **Containers**, locate the **init-packages** container, and click <i class="material-symbols-outlined">article</i> to open the log window.
+   ![Check initialization progress in Control Hub](/images/manual/use-cases/opencode-init-package.png#bordered)
 
 ### Get the model endpoint
 
@@ -121,6 +121,83 @@ Add your endpoint as a custom provider in OpenCode. The steps are the same for t
 
 5. Click **Submit** to save the configuration. Your newly added provider will appear in the provider list.
    ![Provider list](/images/manual/use-cases/opencode-provider-list.png#bordered)
+
+### Connect to OpenAI
+
+OpenCode supports two practical ways to connect OpenAI:
+
+- **Browser sign-in**: Recommended for ChatGPT Plus or Pro accounts.
+- **API key**: Simple and direct. Usage is billed separately by OpenAI based on token usage, even if you also have a ChatGPT subscription.
+
+:::warning Do not use headless sign-in
+The headless sign-in method is prone to known failures caused by OpenAI security checks. After a failed attempt, the sign-in flow might not recover for a short period of time. Use browser sign-in or an API key instead.
+:::
+
+<tabs>
+<template #Browser-sign-in>
+
+Use this method when you want OpenCode to connect through your ChatGPT Plus or Pro account.
+
+Because OpenCode runs inside an Olares container, the browser callback URL that starts with `localhost:1455` cannot reach OpenCode directly from your browser. Start the browser flow, then relay the final callback URL back to OpenCode manually.
+
+:::warning Keep the authorization session active
+- Complete the steps within 5 minutes. If the session expires, start over.
+- Keep the **Connect OpenAI** dialog open in OpenCode until the connection succeeds.
+- Each callback URL is one-time use. If the attempt fails, close the dialog and repeat the flow to get a new URL.
+:::
+
+1. In OpenCode, click <i class="material-symbols-outlined">settings</i> > **Providers**, then scroll down and select **Connect** next to **OpenAI**.
+   ![Add the OpenAI provider](/images/manual/use-cases/opencode-openai-provider.png#bordered)
+
+2. For the sign-in method, select **ChatGPT Pro/Plus (browser)**.
+   ![Select browser sign-in for OpenAI](/images/manual/use-cases/opencode-openai-browser-signin.png#bordered){width=70%}
+
+3. In the authorization dialog, click the authorization link to open it in your browser.
+   ![Open the OpenAI authorization link](/images/manual/use-cases/opencode-openai-authorization-link.png#bordered){width=70%}
+
+4. Sign in with your ChatGPT account.
+
+   After sign-in, the browser redirects to a URL that starts with `http://localhost:1455` and might show that the page cannot be reached. This is expected. Do not close the page.
+
+5. Copy the full URL from the browser address bar, from `http://localhost:1455` through the end of the URL.
+   ![Open the OpenAI authorization link](/images/manual/use-cases/opencode-openai-auth-url.png#bordered)
+
+6. Open OpenCode Terminal from Launchpad.
+
+7. Run `curl` with the full URL you copied:
+
+   ```bash
+   curl '<paste-the-full-url-you-copied>'
+   ```
+   :::warning
+   Wrap the copied URL in single quotes (`''`) when running `curl`. Otherwise, the shell treats `&` as a special character and truncates the URL.
+   :::
+
+8. Wait until the terminal returns `Authorization Successful`. The waiting dialog in OpenCode should change to connected automatically.
+   ![OpenAI authorization succeeds in OpenCode Terminal](/images/manual/use-cases/opencode-openai-terminal-success.png#bordered)
+
+9. Refresh the OpenCode page to load new OpenAI models.
+   ![OpenAI provider connected](/images/manual/use-cases/opencode-openai-connected.png#bordered){width=70%}
+</template>
+
+<template #API-key>
+
+Use this method when you want a direct OpenAI API connection. It is usually easier to set up than browser sign-in, but OpenAI bills API usage separately by token.
+
+1. Create or copy an OpenAI API key from your OpenAI account.
+2. In OpenCode, click <i class="material-symbols-outlined">settings</i> > **Providers**, then scroll down and select **Connect** next to **OpenAI**.
+   ![Add the OpenAI provider](/images/manual/use-cases/opencode-openai-provider.png#bordered)
+
+3. For the sign-in method, select **API key**.
+   ![Select API key sign-in for OpenAI](/images/manual/use-cases/opencode-openai-api-key-signin.png#bordered){width=70%}
+
+4. Paste your OpenAI API key and click **Continue**.
+   ![Enter the OpenAI API key](/images/manual/use-cases/opencode-openai-api-key.png#bordered){width=70%}
+
+5. Refresh the OpenCode page to load new OpenAI models.
+   ![OpenAI provider connected](/images/manual/use-cases/opencode-openai-connected.png#bordered){width=70%}
+</template>
+</tabs>
 
 ### Create a project
 
