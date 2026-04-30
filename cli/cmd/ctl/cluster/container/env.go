@@ -114,6 +114,9 @@ func runEnv(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name,
 			Containers []containerEnv `json:"containers"`
 		}{Pod: name, Namespace: namespace, Containers: sections})
 	}
+	if o.Quiet {
+		return nil
+	}
 	return renderEnvSections(sections, o.NoHeaders)
 }
 

@@ -66,8 +66,8 @@ Empty (default) means all types.
 // instances exist (see MiddlewareListResponse in
 // apps/packages/app/src/apps/controlPanelCommon/network/middleware.ts).
 type envelope struct {
-	Code int      `json:"code"`
-	Data []Item   `json:"data"`
+	Code int    `json:"code"`
+	Data []Item `json:"data"`
 	// Some upstream paths surface a message field on error; we read
 	// it best-effort to enrich the wrapped error.
 	Message string `json:"message,omitempty"`
@@ -85,7 +85,7 @@ type Item struct {
 	Nodes     int    `json:"nodes"`
 	AdminUser string `json:"adminUser"`
 	Password  string `json:"password,omitempty"`
-	Mongos struct {
+	Mongos    struct {
 		Endpoint string `json:"endpoint,omitempty"`
 		Size     int    `json:"size,omitempty"`
 	} `json:"mongos,omitempty"`
@@ -151,6 +151,9 @@ func runList(ctx context.Context, o *clusteropts.ClusterOptions, typeFilter stri
 		}
 		return o.PrintJSON(out)
 	}
+	if o.Quiet {
+		return nil
+	}
 	return renderListTable(items, o.NoHeaders)
 }
 
@@ -190,4 +193,3 @@ func redactPasswords(items []Item) []Item {
 	}
 	return out
 }
-

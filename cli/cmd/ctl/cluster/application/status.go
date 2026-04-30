@@ -344,6 +344,9 @@ func runStatus(ctx context.Context, o *clusteropts.ClusterOptions, namespace str
 		if o.IsJSON() {
 			return o.PrintJSON(s)
 		}
+		if o.Quiet {
+			return nil
+		}
 		return renderStatusTable(s)
 	}
 

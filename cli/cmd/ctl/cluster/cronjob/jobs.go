@@ -104,6 +104,9 @@ func runJobs(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name
 			Items []job.Job `json:"items"`
 		}{Items: resp.Items})
 	}
+	if o.Quiet {
+		return nil
+	}
 	return renderChildJobsTable(resp.Items, o.NoHeaders)
 }
 

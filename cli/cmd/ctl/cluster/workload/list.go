@@ -120,6 +120,9 @@ func RunList(ctx context.Context, o *clusteropts.ClusterOptions, namespace, kind
 			TotalItems int        `json:"totalItems"`
 		}{Items: collected[0].Items, TotalItems: collected[0].Total})
 	}
+	if o.Quiet {
+		return nil
+	}
 
 	// Flatten + render a single table. Sort by namespace, kind, name
 	// so cross-kind output is diff-friendly across runs.

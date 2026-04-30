@@ -224,7 +224,7 @@ func RunLogs(ctx context.Context, o *clusteropts.ClusterOptions, namespace, podN
 	if err != nil {
 		return err
 	}
-	writeChunk(body)
+	writeChunk(o, body)
 
 	if !opts.Follow {
 		return nil
@@ -281,7 +281,7 @@ func RunLogs(ctx context.Context, o *clusteropts.ClusterOptions, namespace, podN
 			continue
 		}
 		consecErr = 0
-		writeChunk(body)
+		writeChunk(o, body)
 		nextSince = nextNext
 	}
 }
@@ -309,12 +309,16 @@ func pickContainer(p *Pod) (string, error) {
 // trailing newlines so consecutive polling chunks don't collapse into
 // a wall-of-text run-on. Empty body means "no new lines this tick" —
 // stay silent so the user's terminal isn't spammed with blank lines.
-func writeChunk(body []byte) {
+//
+// Honors --quiet by routing through ClusterOptions.WriteStdout (same
+// guard as `cluster {pod,workload,...} yaml`); a quiet --follow run
+// still polls and surfaces hard errors, just doesn't echo log lines.
+func writeChunk(o *clusteropts.ClusterOptions, body []byte) {
 	if len(body) == 0 {
 		return
 	}
-	_, _ = os.Stdout.Write(body)
-	if !strings.HasSuffix(string(body), "\n") {
+	_ = o.WriteStdout(body)
+	if !o.Quiet && !strings.HasSuffix(string(body), "\n") {
 		fmt.Fprintln(os.Stdout)
 	}
 }

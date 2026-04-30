@@ -97,6 +97,9 @@ func RunList(ctx context.Context, o *clusteropts.ClusterOptions, namespace, labe
 			TotalItems int   `json:"totalItems"`
 		}{Items: resp.Items, TotalItems: resp.TotalItems})
 	}
+	if o.Quiet {
+		return nil
+	}
 	return renderListTable(resp.Items, namespace == "", o.NoHeaders, len(resp.Items) < resp.TotalItems, resp.TotalItems)
 }
 

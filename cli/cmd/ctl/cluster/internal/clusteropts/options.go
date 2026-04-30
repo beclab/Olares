@@ -143,8 +143,32 @@ func (o *ClusterOptions) Factory() *cmdutil.Factory { return o.factory }
 // PrintJSON pretty-prints any value as indented JSON to stdout. Used
 // by the read verbs when --output json is set; never used in table
 // mode.
+//
+// Honors --quiet: if Quiet is set the value is silently dropped so
+// scripts that only care about the exit code (e.g. `cluster pod get
+// foo --quiet`) get clean stdout. This matches the equivalent guard in
+// cmd/ctl/market/options.go::printJSON and the --quiet contract
+// documented on AddOutputFlags.
 func (o *ClusterOptions) PrintJSON(v interface{}) error {
+	if o.Quiet {
+		return nil
+	}
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(v)
+}
+
+// WriteStdout forwards a raw byte slice to os.Stdout unless --quiet is
+// set. Used by the YAML render verbs (`cluster {pod,workload,job,cronjob}
+// yaml`) and the log-streaming verb (`cluster pod logs`) which don't go
+// through PrintJSON but still need to honor the --quiet contract.
+//
+// Empty body is a no-op (no spurious blank line) — matches the
+// pre-existing semantics of pkg/clusterclient's GetRaw consumers.
+func (o *ClusterOptions) WriteStdout(b []byte) error {
+	if o.Quiet || len(b) == 0 {
+		return nil
+	}
+	_, err := os.Stdout.Write(b)
+	return err
 }

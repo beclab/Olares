@@ -62,12 +62,11 @@ func runYAML(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name
 	if err != nil {
 		return fmt.Errorf("convert cronjob %s/%s response to YAML: %w", namespace, name, err)
 	}
-	if _, err := os.Stdout.Write(out); err != nil {
+	if err := o.WriteStdout(out); err != nil {
 		return err
 	}
-	if !strings.HasSuffix(string(out), "\n") {
+	if !o.Quiet && !strings.HasSuffix(string(out), "\n") {
 		fmt.Fprintln(os.Stdout)
 	}
 	return nil
 }
-

@@ -118,6 +118,9 @@ func runList(ctx context.Context, o *clusteropts.ClusterOptions, labelSelector, 
 	if o.IsJSON() {
 		return o.PrintJSON(groups)
 	}
+	if o.Quiet {
+		return nil
+	}
 	return renderListTable(groups, o.NoHeaders)
 }
 
@@ -153,4 +156,3 @@ func renderListTable(groups []NamespaceGroup, noHeaders bool) error {
 	}
 	return nil
 }
-

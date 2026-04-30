@@ -88,6 +88,9 @@ func runGet(ctx context.Context, o *clusteropts.ClusterOptions, namespace string
 	if o.IsJSON() {
 		return o.PrintJSON(ns)
 	}
+	if o.Quiet {
+		return nil
+	}
 	return renderGetTable(ns)
 }
 
