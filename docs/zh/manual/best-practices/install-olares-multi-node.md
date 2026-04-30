@@ -53,6 +53,11 @@ export JUICEFS=1 \
 :::
 
 ## 第二步：向集群添加子节点
+
+::: tip 子节点前置条件
+子节点必须处于干净的 Linux 状态，未安装 Olares。如果子节点上之前安装过 Olares，请先运行 `olares-cli uninstall --all` 将设备清理为干净的 Linux 状态。
+:::
+
 1. 在子节点上，使用以下方式下载 `joincluster.sh`：
 ::: code-group
 
