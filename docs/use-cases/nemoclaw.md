@@ -53,7 +53,7 @@ NemoClaw needs the model name and its shared endpoint URL during installation.
 2. Click **Get**, then **Install**.
 3. When prompted, set the environment variables:
 
-   - **NEMOCLAW_ENDPOINT_URL**: Enter or paste the shared endpoint URL, such as `http://94a553e00.shared.olares.com`.
+   - **NEMOCLAW_ENDPOINT_URL**: Enter or paste the shared endpoint URL, and append with `/v1`, such as `http://94a553e00.shared.olares.com/v1`.
    - **NEMOCLAW_MODEL**: Enter or paste the model name, such as `qwen3.5:27b-q4_K_M`.
 
    ![Set environment variables for NemoClaw](/images/manual/use-cases/nemoclaw-set-environment-variables.png#bordered){width=70%}
