@@ -53,6 +53,8 @@ Endpoints (all under https://control-hub.<terminus>):
 	cmd.AddCommand(NewYAMLCommand(f))
 	cmd.AddCommand(NewEventsCommand(f))
 	cmd.AddCommand(NewLogsCommand(f))
+	cmd.AddCommand(NewDeleteCommand(f))
+	cmd.AddCommand(NewRestartCommand(f))
 
 	return cmd
 }

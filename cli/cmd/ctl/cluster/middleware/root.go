@@ -2,16 +2,18 @@
 //
 // Olares' middleware controller exposes a small per-user inventory
 // of managed databases / queues / object stores under
-// /middleware/v1/* on the ControlHub origin. Today we only model
-// the `list` verb. Mutating verbs (password rotation lives at
-// /middleware/v1/<type>/password in the SPA) belong to a future
-// `cluster middleware password set` once we lock down the
-// confirmation UX — that's destructive and ships with Phase 6.
+// /middleware/v1/* on the ControlHub origin. Today's verbs:
+//
+//   - list             read-side inventory (Phase 1).
+//   - password set     password rotation under the password sub-noun
+//                      (Phase 6) — POST /middleware/v1/<type>/password,
+//                      ConfirmDestructive-wrapped.
 package middleware
 
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/middleware/password"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -41,6 +43,7 @@ shows passwords).
 	}
 
 	cmd.AddCommand(NewListCommand(f))
+	cmd.AddCommand(password.NewPasswordCommand(f))
 
 	return cmd
 }
