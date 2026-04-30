@@ -61,13 +61,12 @@ func (l *lldapTokenAuthenticator) AuthenticateRequest(req *http.Request) (*authe
 	}
 
 	// verify token
-	res, err := TokenVerify(l.lldapServer, token, token)
-	if err != nil {
+	if _, err := TokenVerify(l.lldapServer, token, token); err != nil {
 		klog.Errorf("Token verification failed: %v", err)
 		return nil, false, fmt.Errorf("token verification failed: %w", err)
 	}
 
-	klog.Info("token verified in lldap successfully, ", res)
+	klog.Info("token verified in lldap successfully")
 
 	c, err := parseToken(token)
 	if err != nil {

@@ -7,13 +7,13 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
 	"reflect"
 
 	"bytetrade.io/web3os/system-server/pkg/apiserver/v1alpha1/api"
 	permission "bytetrade.io/web3os/system-server/pkg/permission/v1alpha1"
 	prodiverregistry "bytetrade.io/web3os/system-server/pkg/providerregistry/v1alpha1"
 	serviceproxy "bytetrade.io/web3os/system-server/pkg/serviceproxy/v1alpha1"
+	"bytetrade.io/web3os/system-server/pkg/utils"
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/go-resty/resty/v2"
@@ -52,9 +52,8 @@ func (h *Handler) do(req *restful.Request, resp *restful.Response) {
 
 	switch proxyResp := proxyRespIntf.(type) {
 	case *resty.Response:
-		dump, e := httputil.DumpRequest(proxyResp.Request.RawRequest, true)
-		if e != nil {
-			klog.Error("dump request err: ", e)
+		if dump, dumpErr := utils.DumpRequestOutRedacted(proxyResp.Request.RawRequest); dumpErr != nil {
+			klog.Error("dump request err: ", dumpErr)
 		} else {
 			klog.Info("proxy request: ", string(dump))
 		}
@@ -64,9 +63,8 @@ func (h *Handler) do(req *restful.Request, resp *restful.Response) {
 			return
 		}
 
-		dump, err = httputil.DumpResponse(proxyResp.RawResponse, false)
-		if err != nil {
-			klog.Error("dump response err: ", err)
+		if dump, dumpErr := utils.DumpResponseRedacted(proxyResp.RawResponse); dumpErr != nil {
+			klog.Error("dump response err: ", dumpErr)
 		} else {
 			klog.Info("proxy response: ", string(dump))
 		}
@@ -140,9 +138,8 @@ func (h *Handler) doV2(req *restful.Request, resp *restful.Response) {
 	}
 	switch proxyResp := proxyRespIntf.(type) {
 	case *resty.Response:
-		dump, e := httputil.DumpRequest(proxyResp.Request.RawRequest, true)
-		if e != nil {
-			klog.Error("dump request err: ", e)
+		if dump, dumpErr := utils.DumpRequestOutRedacted(proxyResp.Request.RawRequest); dumpErr != nil {
+			klog.Error("dump request err: ", dumpErr)
 		} else {
 			klog.Info("proxy request: ", string(dump))
 		}
@@ -151,9 +148,8 @@ func (h *Handler) doV2(req *restful.Request, resp *restful.Response) {
 			api.HandleError(resp, req, err)
 			return
 		}
-		dump, err = httputil.DumpResponse(proxyResp.RawResponse, false)
-		if err != nil {
-			klog.Error("dump response err: ", err)
+		if dump, dumpErr := utils.DumpResponseRedacted(proxyResp.RawResponse); dumpErr != nil {
+			klog.Error("dump response err: ", dumpErr)
 		} else {
 			klog.Info("proxy response: ", string(dump))
 		}

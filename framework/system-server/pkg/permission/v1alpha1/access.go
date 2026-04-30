@@ -9,7 +9,6 @@ import (
 	"time"
 
 	sysv1alpha1 "bytetrade.io/web3os/system-server/pkg/apis/sys/v1alpha1"
-	"bytetrade.io/web3os/system-server/pkg/utils"
 
 	"github.com/jellydator/ttlcache/v3"
 	"golang.org/x/crypto/bcrypt"
@@ -43,7 +42,7 @@ func (a *AccessManager) getAccessToken(accReq *AccessTokenRequest, ap *sysv1alph
 
 	compareHash := accReq.AppKey + strconv.Itoa(int(accReq.Timestamp)) + ap.Spec.Secret
 	if err := bcrypt.CompareHashAndPassword([]byte(accReq.Token), []byte(compareHash)); err != nil {
-		klog.Error("invalid request: ", utils.PrettyJSON(accReq))
+		klog.Errorf("invalid access token request, app_key=%s, timestamp=%d", accReq.AppKey, accReq.Timestamp)
 		return "", fmt.Errorf("invalid auth token: %s", err.Error())
 	}
 
