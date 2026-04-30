@@ -56,8 +56,8 @@ In ` + "`-o json`" + ` mode the per-container view is emitted verbatim as
 // We expose both the spec and status shapes so callers can decode
 // either side without re-hitting the API.
 type containerView struct {
-	Name   string                `json:"name"`
-	Spec   pod.PodContainer      `json:"spec"`
+	Name   string                  `json:"name"`
+	Spec   pod.PodContainer        `json:"spec"`
 	Status *pod.PodContainerStatus `json:"status,omitempty"`
 }
 
@@ -91,6 +91,9 @@ func runList(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name
 			Containers []containerView `json:"containers"`
 		}{Pod: name, Namespace: namespace, Containers: views})
 	}
+	if o.Quiet {
+		return nil
+	}
 	return renderTable(views, o.NoHeaders)
 }
 
@@ -111,7 +114,7 @@ func renderTable(views []containerView, noHeaders bool) error {
 				ready = "false"
 			}
 			restarts = fmt.Sprintf("%d", v.Status.RestartCount)
-			state = describeContainerState(v.Status.State)
+			state = pod.DescribeContainerState(v.Status.State)
 		}
 		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
 			v.Name, clusteropts.DashIfEmpty(v.Spec.Image), ready, restarts, state, formatPorts(v.Spec.Ports))
@@ -140,31 +143,3 @@ func formatPorts(ports []pod.PodContainerPort) string {
 	}
 	return strings.Join(parts, ",")
 }
-
-// describeContainerState mirrors cluster/pod/get.go::describeContainerState
-// — kept private per package so the leaf packages stay independent
-// of each other.
-func describeContainerState(state map[string]interface{}) string {
-	if state == nil {
-		return "-"
-	}
-	if _, ok := state["running"]; ok {
-		return "Running"
-	}
-	if w, ok := state["waiting"].(map[string]interface{}); ok {
-		if reason, ok := w["reason"].(string); ok && reason != "" {
-			return "Waiting (" + reason + ")"
-		}
-		return "Waiting"
-	}
-	if t, ok := state["terminated"].(map[string]interface{}); ok {
-		reason, _ := t["reason"].(string)
-		ec, _ := t["exitCode"].(float64)
-		if reason != "" {
-			return fmt.Sprintf("Terminated (%s, exit %d)", reason, int(ec))
-		}
-		return fmt.Sprintf("Terminated (exit %d)", int(ec))
-	}
-	return "-"
-}
-

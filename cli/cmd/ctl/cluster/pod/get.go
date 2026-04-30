@@ -268,7 +268,7 @@ func renderGetTable(p Pod) error {
 					ready = "false"
 				}
 				restarts = fmt.Sprintf("%d", cs.RestartCount)
-				state = describeContainerState(cs.State)
+				state = DescribeContainerState(cs.State)
 			}
 			fmt.Fprintf(cw, "%s\t%s\t%s\t%s\t%s\n", c.Name, c.Image, ready, restarts, state)
 		}
@@ -277,10 +277,14 @@ func renderGetTable(p Pod) error {
 	return nil
 }
 
-// describeContainerState turns a containerStatus.state map into a
+// DescribeContainerState turns a containerStatus.state map into a
 // short label suitable for a single column. Mirrors `kubectl describe`'s
 // State block in spirit but compressed to one line.
-func describeContainerState(state map[string]interface{}) string {
+//
+// Exported so sibling tables (currently `cluster container list`) can
+// render the same label without re-implementing the type-assertion dance
+// over the unstructured K8s state shape.
+func DescribeContainerState(state map[string]interface{}) string {
 	if state == nil {
 		return "-"
 	}
