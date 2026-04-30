@@ -142,7 +142,7 @@ func (h *Handler) addBackup(req *restful.Request, resp *restful.Response) {
 	ctx := req.Request.Context()
 	owner := req.HeaderParameter(constant.BflUserKey)
 
-	log.Infof("received backup create request: %s", util.ToJSON(b))
+	log.Infof("received backup create request, name: %s, path: %s, location: %s, policy: %s", b.Name, b.Path, b.Location, util.ToJSON(b.BackupPolicies))
 
 	if err := b.verify(); err != nil {
 		response.HandleError(resp, errors.WithMessage(err, "backup name invalid"))
@@ -550,7 +550,7 @@ func (h *Handler) checkBackupUrl(req *restful.Request, resp *restful.Response) {
 	ctx := req.Request.Context()
 	owner := req.HeaderParameter(constant.BflUserKey)
 
-	log.Infof("received restore check backup url request: %s", util.ToJSON(b))
+	log.Infof("received restore check backup url request, backupUrl: %s", b.BackupUrl)
 
 	urlInfo, err := handlers.ParseBackupUrl(owner, b.BackupUrl)
 	if err != nil {
@@ -603,7 +603,7 @@ func (h *Handler) addRestore(req *restful.Request, resp *restful.Response) {
 	ctx := req.Request.Context()
 	owner := req.HeaderParameter(constant.BflUserKey)
 
-	log.Infof("received restore create request: %s", util.ToJSON(b))
+	log.Infof("received restore create request, backupUrl: %s, snapshotId: %s, path: %s, subPath: %s", b.BackupUrl, b.SnapshotId, b.Path, b.SubPath)
 
 	if err = b.verify(); err != nil {
 		log.Errorf("add restore params invalid, params: %s, error: %v", util.ToJSON(b), err)
@@ -749,7 +749,12 @@ func (h *Handler) addRestore(req *restful.Request, resp *restful.Response) {
 		restoreType.BackupPath = backupPath
 	}
 
-	log.Infof("create restore task: %s", util.ToJSON(restoreType))
+	// log.Infof("create restore task: %s", util.ToJSON(restoreType))
+	log.Infof("create restore task: name: %s, owner: %s, type: %s, path: %s, subPath: %s, backupId: %s, backupName: %s, backupPath: %s, location: %s, endpoint: %s, backupUrl: %s",
+		restoreType.Name, restoreType.Owner, restoreType.Type, restoreType.Path, restoreType.SubPath,
+		restoreType.BackupId, restoreType.BackupName, restoreType.BackupPath, restoreType.Location,
+		restoreType.Endpoint, util.ToJSON(restoreType.BackupUrl),
+	)
 
 	restore, err := h.handler.GetRestoreHandler().CreateRestore(ctx, backupType, restoreType)
 	if err != nil {

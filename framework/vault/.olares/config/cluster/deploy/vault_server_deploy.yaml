@@ -165,6 +165,9 @@ spec:
           value: vault_os_framework
         - name: PL_DATA_POSTGRES_PASSWORD
           value: {{ $pg_password | b64dec }}
+      dnsConfig:  
+        options:
+          - name: single-request-reopen
       volumes:
       - name: vault-data
         hostPath:

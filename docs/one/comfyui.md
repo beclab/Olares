@@ -128,6 +128,12 @@ You can download all output images and videos from Olares One to your local comp
 3. Select the files you wish to save.
 4. Right-click and select **Download** to save them to your local computer.
 
+## Troubleshooting
+
+### CPU temperature rises unusually high
+
+Running large workflows may cause the CPU temperature on Olares One to rise unusually high. See [CPU temperature rises unusually high on Olares One](/use-cases/comfyui-common-issues#cpu-temperature-rises-unusually-high-on-olares-one) for the workaround.
+
 ## Resources
 - [ComfyUI official docs](https://docs.comfy.org/)
 - [Manage models](/use-cases/comfyui-launcher.md#manage-models)

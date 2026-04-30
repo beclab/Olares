@@ -87,11 +87,35 @@ func (h *Handlers) RunCommand(next func(ctx *fiber.Ctx, cmd commands.Interface) 
 
 	return func(ctx *fiber.Ctx) error {
 		c := cmdNew()
-		err := state.CurrentState.TerminusState.ValidateOp(c)
+		err := state.ValidateOp(state.CurrentState.TerminusState, c)
 		if err != nil {
 			return h.ErrJSON(ctx, http.StatusForbidden, err.Error())
 		}
 
 		return next(ctx, c)
+	}
+}
+
+func (h *Handlers) RequireMaster(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
+	return func(ctx *fiber.Ctx) error {
+		switch state.CurrentState.TerminusState {
+		case state.NotInstalled, state.Uninitialized, state.InitializeFailed, state.IPChanging:
+			return h.ErrJSON(ctx, http.StatusForbidden, "operation is not allowed in current state")
+		default:
+			client, err := utils.GetKubeClient()
+			if err != nil {
+				return h.ErrJSON(ctx, http.StatusInternalServerError, fmt.Sprintf("failed to get kube client: %v", err))
+			}
+
+			_, _, role, err := utils.GetThisNodeName(ctx.Context(), client)
+			if err != nil {
+				return h.ErrJSON(ctx, http.StatusInternalServerError, fmt.Sprintf("failed to get this node role: %v", err))
+			}
+
+			if role != "master" {
+				return h.ErrJSON(ctx, http.StatusForbidden, "operation is only allowed on master node")
+			}
+		}
+		return next(ctx)
 	}
 }

@@ -3,12 +3,11 @@ module github.com/beclab/Olares/cli
 go 1.24.11
 
 replace (
-	bytetrade.io/web3os/backups-sdk => github.com/Above-Os/backups-sdk v0.1.17
 	github.com/estesp/manifest-tool/v2 => github.com/estesp/manifest-tool/v2 v2.0.3
+	olares.com/backups-sdk => github.com/Above-Os/backups-sdk v0.1.40
 )
 
 require (
-	bytetrade.io/web3os/backups-sdk v0.0.0-00010101000000-000000000000
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/alecthomas/assert/v2 v2.11.0
@@ -20,6 +19,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0
 	github.com/distribution/reference v0.6.0
 	github.com/dominodatalab/os-release v0.0.0-20190522011736-bcdb4a3e3c2f
+	github.com/gofrs/flock v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/libp2p/go-netroute v0.2.2
@@ -40,8 +40,10 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
+	github.com/zalando/go-keyring v0.2.8
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.46.0
+	golang.org/x/sync v0.19.0
 	golang.org/x/sys v0.39.0
 	golang.org/x/term v0.38.0
 	golang.org/x/text v0.32.0
@@ -54,6 +56,7 @@ require (
 	k8s.io/client-go v0.34.0
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
+	olares.com/backups-sdk v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/controller-runtime v0.22.0
 	sigs.k8s.io/kustomize/kyaml v0.20.1
 )
@@ -90,6 +93,7 @@ require (
 	github.com/containers/image/v5 v5.36.1 // indirect
 	github.com/containers/storage v1.59.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.5.1 // indirect
+	github.com/danieljoos/wincred v1.2.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
@@ -115,6 +119,7 @@ require (
 	github.com/go-resty/resty/v2 v2.16.5 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/gobwas/glob v0.2.4-0.20181002190808-e7a84e9525fe // indirect
+	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
@@ -208,7 +213,6 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools/godoc v0.1.0-deprecated // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect

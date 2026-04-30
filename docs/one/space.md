@@ -98,5 +98,5 @@ Monitor how much data you have used for remote access to avoid exceeding the mon
 ## Resources
 
 - [Olares Space plans and pricing](https://space.olares.com/plans)
-- [Manage Olares](../space/manage-olares.md)
-- [Olares Space billing](../space/billing.md)
+- [Manage Olares](../manual/space/manage-olares.md)
+- [Olares Space billing](../manual/space/billing.md)

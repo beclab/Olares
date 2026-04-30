@@ -1,115 +1,15 @@
 package wizard
 
 import (
-	"crypto/md5"
+	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/cli/pkg/auth"
 )
-
-// Token struct, corresponds to TypeScript Token interface
-type Token struct {
-	AccessToken  string `json:"access_token"`
-	TokenType    string `json:"token_type"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int    `json:"expires_in"`
-	ExpiresAt    int    `json:"expires_at"`
-	SessionID    string `json:"session_id"`
-	FA2          bool   `json:"fa2"`
-}
-
-// FirstFactorRequest represents first factor request structure
-type FirstFactorRequest struct {
-	Username       string `json:"username"`
-	Password       string `json:"password"`
-	KeepMeLoggedIn bool   `json:"keepMeLoggedIn"`
-	RequestMethod  string `json:"requestMethod"`
-	TargetURL      string `json:"targetURL"`
-	AcceptCookie   bool   `json:"acceptCookie"`
-}
-
-// FirstFactorResponse represents first factor response structure
-type FirstFactorResponse struct {
-	Status string `json:"status"`
-	Data   Token  `json:"data"`
-}
-
-// OnFirstFactor implements first factor authentication (ref: BindTerminusBusiness.ts)
-func OnFirstFactor(baseURL, terminusName, osUser, osPwd string, acceptCookie, needTwoFactor bool) (*Token, error) {
-	log.Printf("Starting onFirstFactor for user: %s", osUser)
-
-	// Process password (salted MD5)
-	processedPassword := passwordAddSort(osPwd)
-
-	// Build request
-	reqData := FirstFactorRequest{
-		Username:       osUser,
-		Password:       processedPassword,
-		KeepMeLoggedIn: false,
-		RequestMethod:  "POST",
-		TargetURL:      baseURL,
-		AcceptCookie:   acceptCookie,
-	}
-
-	jsonData, err := json.Marshal(reqData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	// Send HTTP request
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-
-	reqURL := fmt.Sprintf("%s/api/firstfactor?hideCookie=true", baseURL)
-	req, err := http.NewRequest("POST", reqURL, strings.NewReader(string(jsonData)))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	log.Printf("Sending request to: %s", reqURL)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %v", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %v", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP error %d: %s", resp.StatusCode, string(body))
-	}
-
-	var response FirstFactorResponse
-	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	if response.Status != "OK" {
-		return nil, fmt.Errorf("authentication failed: %s", response.Status)
-	}
-
-	log.Printf("First factor authentication successful")
-	return &response.Data, nil
-}
-
-// passwordAddSort implements salted MD5 (ref: TypeScript version)
-func passwordAddSort(password string) string {
-	// Salt and MD5
-	saltedPassword := password + "@Olares2025"
-	hash := md5.Sum([]byte(saltedPassword))
-	return fmt.Sprintf("%x", hash)
-}
 
 // Main authentication function - corresponds to original TypeScript _authenticate function
 func Authenticate(req AuthenticateRequest) (*AuthenticateResponse, error) {
@@ -170,7 +70,7 @@ func Authenticate(req AuthenticateRequest) (*AuthenticateResponse, error) {
 }
 
 // UserBindTerminus main user binding function (ref: TypeScript version)
-func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName string) (string, error) {
+func UserBindTerminus(mnemonic, bflUrl, vaultUrl, authUrl, osPwd, terminusName, localName string) (string, error) {
 	log.Printf("Starting userBindTerminus for user: %s", terminusName)
 
 	// 1. Initialize global storage
@@ -183,28 +83,55 @@ func UserBindTerminus(mnemonic, bflUrl, vaultUrl, osPwd, terminusName, localName
 		log.Printf("Global stores initialized successfully")
 	}
 
+	if authUrl != "" {
+		globalUserStore.SetAuthURL(authUrl)
+		log.Printf("Custom auth URL applied: %s", authUrl)
+	}
+
 	// 2. Initialize platform and App (if not already initialized)
 	var app *App
+	state, err := LoadAppState(globalStorage, globalUserStore.GetDid())
+	if err != nil {
+		return "", fmt.Errorf("failed to load app state: %w", err)
+	}
 	if platform == nil {
 		log.Printf("Initializing platform...")
-
-		// Create App using vaultUrl as base URL
-		app = NewAppWithBaseURL(vaultUrl)
-
-		// Create and set WebPlatform (no need to pass mnemonic, uses global storage)
+		app = NewAppWithState(vaultUrl, state)
 		webPlatform := NewWebPlatform(app.API)
 		SetPlatform(webPlatform)
-
 		log.Printf("Platform initialized successfully with base URL: %s", vaultUrl)
 	} else {
-		// If platform already initialized, create new App instance for signup
-		app = NewAppWithBaseURL(vaultUrl)
+		app = NewAppWithState(vaultUrl, state)
 	}
 
 	log.Printf("Using bflUrl: %s", bflUrl)
 
-	// 3. Call onFirstFactor to get token (ref: TypeScript implementation)
-	token, err := OnFirstFactor(bflUrl, terminusName, localName, osPwd, false, false)
+	// 3. Call /api/firstfactor via the shared pkg/auth implementation.
+	//
+	//    1:1 mirror of apps/packages/app/src/utils/BindTerminusBusiness.ts
+	//    L58-66 (userBindTerminus), which calls onFirstFactor(baseURL,
+	//    name, local_name, osPwd, false /*acceptCookie*/, undefined
+	//    /*needTwoFactor*/, osVersion) and uses the 1st-factor token
+	//    directly without inspecting fa2.
+	//
+	//    We use auth.FirstFactor (low-level) — NOT auth.Login — because:
+	//      - There is no MFA seed yet (it is returned later in
+	//        signupResponse.MFA), so even if Authelia echoes fa2=true we
+	//        cannot respond to it.
+	//      - The first-factor access_token is what the subsequent signup
+	//        endpoints need.
+	//
+	//    NeedTwoFactor=false keeps targetURL = vault.<name>/server (TS
+	//    default). AcceptCookie=false matches the explicit `false` arg
+	//    in TS L62.
+	token, err := auth.FirstFactor(context.TODO(), auth.LoginRequest{
+		AuthURL:       bflUrl,
+		LocalName:     localName,
+		OlaresID:      terminusName,
+		Password:      osPwd,
+		NeedTwoFactor: false,
+		AcceptCookie:  false,
+	})
 	if err != nil {
 		return "", fmt.Errorf("onFirstFactor failed: %v", err)
 	}

@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.cpu",
+  "description": "Per-node CPU details — model / freq / cores / threads / utilisation breakdown / temperature / load average.",
+  "type": "object",
+  "required": ["kind", "meta", "items"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.cpu"},
+    "meta": {"type": "object"},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw": {"type": "object"},
+          "display": {
+            "type": "object",
+            "properties": {
+              "node": {"type": "string"},
+              "model": {"type": "string"},
+              "freq": {"type": "string"},
+              "cores": {"type": ["string", "integer"]},
+              "threads": {"type": ["string", "integer"]},
+              "cpu_util": {"type": "string"},
+              "user": {"type": "string"},
+              "system": {"type": "string"},
+              "iowait": {"type": "string"},
+              "temp": {"type": "string"},
+              "load1": {"type": "string"},
+              "load5": {"type": "string"},
+              "load15": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

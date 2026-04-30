@@ -14,6 +14,14 @@ You can install additional packages in the OpenCode environment:
 - **System packages**: OS-level tools installed through `pkg-install`, a wrapper around the Alpine Linux package manager.
 - **Language packages**: Dependencies installed through native package managers such as `pip` and `npm`.
 
+## Learning objectives
+
+By the end of this tutorial, you will learn how to:
+- List, search, install, and remove system packages with `pkg-install`.
+- Install system packages through the OpenCode chat interface using the `system-admin` skill.
+- Install language-specific dependencies with `pip`, `npm`, `go install`, and `cargo install`.
+- Understand how installed packages persist across container restarts and app upgrades.
+
 ## System packages
 
 The OpenCode container runs as a non-root user, so `sudo` and `apk` are not available directly. All system package management goes through `pkg-install`.

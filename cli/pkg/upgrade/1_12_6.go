@@ -39,7 +39,6 @@ func (u upgrader_1_12_6) PrepareForUpgrade() []task.Interface {
 	tasks = append(tasks, upgradeKubernetesPrometheusRule()...)
 	tasks = append(tasks, upgradeNodeExporterServiceMonitor()...)
 	tasks = append(tasks, upgradeNodeExporter()...)
-	tasks = append(tasks, upgradeKSCore()...)
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks
@@ -50,6 +49,12 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 		&task.LocalTask{
 			Name:   "UpdateL4DeploymentSpec",
 			Action: new(updateL4DeploymentSpec),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "PatchNodeAffinityToRequired",
+			Action: new(patchNodeAffinityToRequired),
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},

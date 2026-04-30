@@ -865,37 +865,6 @@ func (h *Handler) getAllUser() ([]string, error) {
 	return users, nil
 }
 
-func (h *Handler) renderManifest(req *restful.Request, resp *restful.Response) {
-	owner := req.Attribute(constants.UserContextAttribute).(string)
-
-	request := api.ManifestRenderRequest{}
-	err := req.ReadEntity(&request)
-	if err != nil {
-		api.HandleBadRequest(resp, req, err)
-		return
-	}
-	admin, err := kubesphere.GetAdminUsername(req.Request.Context(), h.kubeConfig)
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	isAdmin, err := kubesphere.IsAdmin(req.Request.Context(), h.kubeConfig, owner)
-	if err != nil {
-		klog.Error(err)
-		api.HandleError(resp, req, err)
-		return
-	}
-	renderedYAML, err := utils.RenderManifestFromContent([]byte(request.Content), owner, admin, isAdmin)
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	resp.WriteEntity(api.ManifestRenderResponse{
-		Response: api.Response{Code: 200},
-		Data:     api.ManifestRenderRespData{Content: renderedYAML},
-	})
-}
-
 func (h *Handler) adminUsername(req *restful.Request, resp *restful.Response) {
 	config, err := ctrl.GetConfig()
 	if err != nil {

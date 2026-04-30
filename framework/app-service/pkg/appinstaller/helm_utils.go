@@ -20,14 +20,178 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 )
 
-func (h *HelmOps) SetValues() (values map[string]interface{}, err error) {
+// BuildBaseHelmValues builds the Helm values map used for both image-download
+// (dry-run) and real install/upgrade, keeping template rendering consistent.
+//
+// When dryRun is true the function fills placeholder values for keys that are
+// expensive to obtain or have side effects (OIDC, permissions, userspace paths,
+// cluster-scoped deps, middleware, etc.) so that a Helm template dry-run still
+// produces a complete manifest. When dryRun is false those keys are left unset
+// and the caller (SetValues) is expected to fill them with real data.
+func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig *appcfg.ApplicationConfig, ownerName string, dryRun bool, isUpgrade bool) (values map[string]interface{}, err error) {
 	values = make(map[string]interface{})
+
 	values["bfl"] = map[string]interface{}{
-		"username": h.app.OwnerName,
+		"username": ownerName,
 	}
+
+	isAdmin, err := kubesphere.IsAdmin(ctx, kubeConfig, ownerName)
+	if err != nil {
+		return values, err
+	}
+	values["isAdmin"] = isAdmin
+
+	admin, err := kubesphere.GetAdminUsername(ctx, kubeConfig)
+	if err != nil {
+		return values, err
+	}
+	if isAdmin {
+		admin = ownerName
+	}
+	values["admin"] = admin
+
+	values["GPU"] = map[string]interface{}{
+		"Type": appConfig.GetSelectedGpuTypeValue(),
+		"Cuda": os.Getenv("OLARES_SYSTEM_CUDA_VERSION"),
+	}
+	values["gpu"] = appConfig.GetSelectedGpuTypeValue()
+
+	terminus, err := utils.GetTerminusVersion(ctx, kubeConfig)
+	if err != nil {
+		return values, err
+	}
+	values["sysVersion"] = terminus.Spec.Version
+
+	nodeInfo, err := utils.GetNodeInfo(ctx)
+	if err != nil {
+		return values, err
+	}
+	values["nodes"] = nodeInfo
+
+	deviceName, err := utils.GetDeviceName()
+	if err != nil {
+		return values, err
+	}
+	values["deviceName"] = deviceName
+
+	kClient, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return values, err
+	}
+	nodes, err := kClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return values, err
+	}
+	var arch string
+	for _, node := range nodes.Items {
+		arch = node.Labels["kubernetes.io/arch"]
+		break
+	}
+	values["cluster"] = map[string]interface{}{
+		"arch": arch,
+	}
+
+	values["sharedlib"] = os.Getenv("SHARED_LIB_PATH")
+
+	rootPath := userspacev1.DefaultRootPath
+	if os.Getenv(userspacev1.OlaresRootPath) != "" {
+		rootPath = os.Getenv(userspacev1.OlaresRootPath)
+	}
+	values["rootPath"] = rootPath
+
+	values["downloadCdnURL"] = os.Getenv("OLARES_SYSTEM_CDN_SERVICE")
+	values["fs_type"] = utils.EnvOrDefault("OLARES_SYSTEM_ROOTFS_TYPE", "fs")
+
+	if err := addEnvironmentVariables(ctx, kubeConfig, appConfig, ownerName, values); err != nil {
+		klog.Errorf("Failed to add environment variables: %v", err)
+		return values, err
+	}
+
+	if dryRun {
+		// Placeholder values for keys that require HelmOps context, have side
+		// effects, or are otherwise hard to obtain during the image-download
+		// phase. These ensure the Helm template dry-run renders without errors.
+		values["user"] = map[string]interface{}{"zone": "user-zone"}
+		values["schedule"] = map[string]interface{}{"nodeName": "node"}
+		values["oidc"] = map[string]interface{}{
+			"client": map[string]interface{}{},
+			"issuer": "issuer",
+		}
+		values["userspace"] = map[string]interface{}{
+			"appCache": "appcache",
+			"userData": "userspace/Home",
+		}
+		values["os"] = map[string]interface{}{
+			"appKey":    "appKey",
+			"appSecret": "appSecret",
+		}
+		values["domain"] = map[string]string{}
+		values["dep"] = map[string]interface{}{}
+		values["svcs"] = map[string]interface{}{}
+
+		// Middleware placeholders
+		values["postgres"] = map[string]interface{}{"databases": map[string]interface{}{}}
+		values["mariadb"] = map[string]interface{}{"databases": map[string]interface{}{}}
+		values["mysql"] = map[string]interface{}{"databases": map[string]interface{}{}}
+		values["redis"] = map[string]interface{}{}
+		values["mongodb"] = map[string]interface{}{"databases": map[string]interface{}{}}
+		values["minio"] = map[string]interface{}{"buckets": map[string]interface{}{}}
+		values["rabbitmq"] = map[string]interface{}{"vhosts": map[string]interface{}{}}
+		values["elasticsearch"] = map[string]interface{}{"indexes": map[string]interface{}{}}
+		values["clickhouse"] = map[string]interface{}{"databases": map[string]interface{}{}}
+		values["nats"] = map[string]interface{}{
+			"subjects": map[string]interface{}{},
+			"refs":     map[string]interface{}{},
+		}
+	}
+
+	if appConfig.APIVersion == appcfg.V2 {
+		values["client"] = true
+		if appConfig.InstallType == appcfg.InstallOrUpgradeClientAndServer {
+			values["clientAndServer"] = true
+			values["client"] = false
+		}
+
+		if isUpgrade && isAdmin {
+			values["clientAndServer"] = true
+			values["client"] = false
+		}
+	}
+
+	return values, nil
+}
+
+func (h *HelmOps) SetValues(isUpgrade bool) (values map[string]interface{}, err error) {
+	ctx := context.TODO()
+
+	values, err = BuildBaseHelmValues(ctx, h.kubeConfig, h.app, h.app.OwnerName, false, isUpgrade)
+	if err != nil {
+		return values, err
+	}
+	err = h.AddEnvironmentVariables(values, false)
+	if err != nil {
+		return values, err
+	}
+
+	// Refine admin: prefer the owner of an already-installed cluster-scoped instance.
+	appInstalled, installedApps, err := h.getInstalledApps(ctx)
+	if err != nil {
+		klog.Errorf("Failed to get installed app err=%v", err)
+		return values, err
+	}
+	if appInstalled {
+		for _, a := range installedApps {
+			if a.IsClusterScoped() {
+				values["admin"] = a.Spec.Owner
+				break
+			}
+		}
+	}
+
 	zone, err := h.userZone()
 	if err != nil {
 		klog.Errorf("Failed to find user zone on crd err=%v", err)
@@ -158,25 +322,6 @@ func (h *HelmOps) SetValues() (values map[string]interface{}, err error) {
 	values["svcs"] = svcs
 	klog.Info("svcs: ", svcs)
 
-	var arch string
-	nodes, err := kClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return values, err
-	}
-	for _, node := range nodes.Items {
-		arch = node.Labels["kubernetes.io/arch"]
-		break
-	}
-	values["cluster"] = map[string]interface{}{
-		"arch": arch,
-	}
-	values["GPU"] = map[string]interface{}{
-		"Type": h.app.GetSelectedGpuTypeValue(),
-		"Cuda": os.Getenv("OLARES_SYSTEM_CUDA_VERSION"),
-	}
-
-	values["gpu"] = h.app.GetSelectedGpuTypeValue()
-
 	if h.app.OIDC.Enabled {
 		err = h.createOIDCClient(values, zone, h.app.Namespace)
 		if err != nil {
@@ -185,81 +330,8 @@ func (h *HelmOps) SetValues() (values map[string]interface{}, err error) {
 		}
 	}
 
-	sharedLibPath := os.Getenv("SHARED_LIB_PATH")
-	values["sharedlib"] = sharedLibPath
-
-	ctx := context.TODO()
-	isAdmin, err := kubesphere.IsAdmin(ctx, h.kubeConfig, h.app.OwnerName)
-	if err != nil {
-		return values, err
-	}
-	values["isAdmin"] = isAdmin
-
-	var admin string
-	appInstalled, installedApps, err := h.getInstalledApps(ctx)
-	if err != nil {
-		klog.Errorf("Failed to get installed app err=%v", err)
-		return values, err
-	}
-
-	if appInstalled {
-		for _, a := range installedApps {
-			if a.IsClusterScoped() {
-				admin = a.Spec.Owner
-				break
-			}
-		}
-	}
-
-	if admin == "" {
-		if isAdmin {
-			admin = h.app.OwnerName
-		} else {
-			// should never happen, but just in case
-			klog.Warningf("No admin found for app %s, using the first admin", h.app.AppName)
-			admin, err = kubesphere.GetAdminUsername(ctx, h.kubeConfig)
-			if err != nil {
-				return values, err
-			}
-		}
-	}
-	values["admin"] = admin
-
-	rootPath := userspacev1.DefaultRootPath
-	if os.Getenv(userspacev1.OlaresRootPath) != "" {
-		rootPath = os.Getenv(userspacev1.OlaresRootPath)
-	}
-	values["rootPath"] = rootPath
-
-	values["downloadCdnURL"] = os.Getenv("OLARES_SYSTEM_CDN_SERVICE")
-	values["fs_type"] = utils.EnvOrDefault("OLARES_SYSTEM_ROOTFS_TYPE", "fs")
-
-	terminus, err := utils.GetTerminusVersion(ctx, h.kubeConfig)
-	if err != nil {
-		return values, err
-	}
-	values["sysVersion"] = terminus.Spec.Version
-	if err := h.AddEnvironmentVariables(values); err != nil {
-		klog.Errorf("Failed to add environment variables: %v", err)
-		return values, err
-	}
-
-	nodeInfo, err := utils.GetNodeInfo(ctx)
-	if err != nil {
-		klog.Errorf("failed to get cluster node info")
-		return values, err
-	}
-	values["nodes"] = nodeInfo
-
 	klog.Infof("values[node]: %#v", values["nodes"])
 
-	deviceName, err := utils.GetDeviceName()
-	if err != nil {
-		klog.Errorf("failed to get deviceName %v", err)
-		return values, err
-	}
-
-	values["deviceName"] = deviceName
 	return values, err
 }
 
@@ -295,9 +367,18 @@ func (h *HelmOps) getInstalledApps(ctx context.Context) (installed bool, app []*
 	return
 }
 
-func (h *HelmOps) AddEnvironmentVariables(values map[string]interface{}) error {
+// addEnvironmentVariables reads AppEnv from the cluster and populates the
+// olaresEnv helm values key. This is a read-only operation usable from both
+// BuildBaseHelmValues and SetValues.
+func addEnvironmentVariables(ctx context.Context, kubeConfig *rest.Config, appConfig *appcfg.ApplicationConfig, ownerName string, values map[string]interface{}) error {
 	values[constants.OlaresEnvHelmValuesKey] = make(map[string]interface{})
-	appEnv, err := h.client.AppClient.SysV1alpha1().AppEnvs(h.app.Namespace).Get(h.ctx, apputils.FormatAppEnvName(h.app.AppName, h.app.OwnerName), metav1.GetOptions{})
+
+	appClient, err := versioned.NewForConfig(kubeConfig)
+	if err != nil {
+		return err
+	}
+
+	appEnv, err := appClient.SysV1alpha1().AppEnvs(appConfig.Namespace).Get(ctx, apputils.FormatAppEnvName(appConfig.AppName, ownerName), metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -310,6 +391,27 @@ func (h *HelmOps) AddEnvironmentVariables(values map[string]interface{}) error {
 	}
 
 	klog.Infof("Added environment variables to Helm values: %+v", values[constants.OlaresEnvHelmValuesKey])
+	return nil
+}
+
+// AddEnvironmentVariables populates olaresEnv values and marks the AppEnv as
+// applied. When loadValues is true, it reads the env vars from the cluster into
+// values first; when false it skips the read (useful when BuildBaseHelmValues
+// has already populated them) and only performs the NeedApply side-effect.
+func (h *HelmOps) AddEnvironmentVariables(values map[string]interface{}, loadValues bool) error {
+	if loadValues {
+		if err := addEnvironmentVariables(h.ctx, h.kubeConfig, h.app, h.app.OwnerName, values); err != nil {
+			return err
+		}
+	}
+
+	appEnv, err := h.client.AppClient.SysV1alpha1().AppEnvs(h.app.Namespace).Get(h.ctx, apputils.FormatAppEnvName(h.app.AppName, h.app.OwnerName), metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
 
 	if !appEnv.NeedApply {
 		return nil

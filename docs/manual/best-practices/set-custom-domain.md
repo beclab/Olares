@@ -95,7 +95,7 @@ As the admin, add members to your organization in Olares Space.
 
 In the LarePass app, tap **Create an account** to start the account creation flow.
 
-<!--@include: ../../reusables/custom-domain.md{130,141}-->
+<!--@include: ../../reusables/custom-domain.md{130,145}-->
 
 Your custom Olares ID is now created. Next, to activate Olares:
 

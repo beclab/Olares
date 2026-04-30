@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.gpu.list",
+  "description": "Per-vGPU list from /hami/api/vgpu/v1/gpus. Each `items[i].raw` is HAMI's full GPU object verbatim (uuid, type, shareMode, nodeName, nodeUid, health, coreUtilizedPercent, coreUsed, coreTotal, memoryUsed, memoryUtilized, memoryTotal, memoryUtilizedPercent, vgpuUsed, vgpuTotal, power, powerLimit, temperature) — NB: HAMI returns the list at the TOP LEVEL, not inside a `data` envelope. `items[i].display` carries the SPA-rendered string columns: gpu_id, model, mode, host_node, health, core_util, vram_total, vram_used, power, temperature. The GPU subtree mirrors the SPA: detail pages do NOT hard-block on admin role or CUDA labels (only the sidebar card is hidden). When the SPA would have hidden the card, the CLI populates meta.note with the advisory ('GPU sidebar entry is hidden for non-admin profiles…' or 'no node carries gpu.bytetrade.io/cuda-supported=true…') and proceeds with the HAMI fetch. Empty envelopes carry one of these reasons: 'no_vgpu_integration' (HAMI 404), 'vgpu_unavailable' (HAMI 5xx — meta.error carries the upstream message, meta.http_status the status), or 'no_gpu_detected' (HAMI 200 but the list is empty).",
+  "type": "object",
+  "required": ["kind", "meta", "items"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.gpu.list"},
+    "meta": {
+      "type": "object",
+      "properties": {
+        "empty": {"type": "boolean"},
+        "empty_reason": {
+          "type": "string",
+          "enum": ["no_vgpu_integration", "vgpu_unavailable", "no_gpu_detected"]
+        },
+        "error": {"type": "string", "description": "Upstream HAMI error message when empty_reason='vgpu_unavailable'"},
+        "http_status": {"type": "integer", "description": "Upstream HTTP status when the SPA would have surfaced a non-200"},
+        "note": {"type": "string", "description": "Advisory hint mirroring SPA's sidebar gate (non-admin / no CUDA node) or the HAMI-down explanation"}
+      }
+    },
+    "items": {"type": "array", "items": {"type": "object"}}
+  }
+}

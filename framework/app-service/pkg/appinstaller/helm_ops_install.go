@@ -706,6 +706,11 @@ func (h *HelmOps) checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, er
 			container := pod.Status.ContainerStatuses[i]
 			if *container.Started {
 				startedContainers++
+				continue
+			}
+			// job-created pods with completed status are also treated as started
+			if container.State.Terminated != nil && container.State.Terminated.Reason == "Completed" {
+				startedContainers++
 			}
 		}
 		if startedContainers == totalContainers {
@@ -832,7 +837,7 @@ func ParseAppPermission(data []appcfg.AppPermission) []appcfg.AppPermission {
 
 func (h *HelmOps) Install() error {
 	var err error
-	values, err := h.SetValues()
+	values, err := h.SetValues(false)
 	if err != nil {
 		klog.Errorf("set values err %v", err)
 		return err

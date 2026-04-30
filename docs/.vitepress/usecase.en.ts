@@ -42,6 +42,29 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "OpenCode",
+              link: "/use-cases/opencode",
+              collapsed: true,
+              items: [
+                {
+                  text: "Orchestrate with oh-my-openagent",
+                  link: "/use-cases/opencode-omo",
+                },
+                {
+                  text: "Manage packages",
+                  link: "/use-cases/opencode-packages",
+                },
+                {
+                  text: "Skills and plugins",
+                  link: "/use-cases/opencode-extensions",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/opencode-issues",
+                },
+              ]
+            },
+            {
               text: "Open WebUI",
               collapsed: true,
               items: [
@@ -68,6 +91,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Use ComfyUI in Krita",
                   link: "/use-cases/comfyui-for-krita",
                 },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/comfyui-common-issues",
+                },
               ]
             },
             {
@@ -90,25 +117,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "LLMFit",
               link: "/use-cases/llmfit",
             },
-            {  
-              text: "OpenCode",
-              link: "/use-cases/opencode",
-              collapsed: true,
-              items: [
-                {
-                  text: "Manage packages",
-                  link: "/use-cases/opencode-packages",
-                },
-                {
-                  text: "Skills and plugins",
-                  link: "/use-cases/opencode-extensions",
-                },
-                {
-                  text: "Common issues",
-                  link: "/use-cases/opencode-issues",
-                },
-              ]
-            },
             {
               text: "LobeHub (LobeChat)",
               link: "/use-cases/lobechat",
@@ -126,12 +134,28 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/ace-step",
             },*/
             {
+              text: "AnythingLLM",
+              link: "/use-cases/anythingllm",
+            },
+            {
+              text: "Bifrost",
+              link: "/use-cases/bifrost",
+            },
+            {
               text: "Duix.Avatar",
               link: "/use-cases/duix-avatar",
             },
             {
+              text: "Paperclip",
+              link: "/use-cases/paperclip",
+            },
+            {
               text: "PDFMathTranslate",
               link: "/use-cases/pdfmathtranslate",
+            },
+            {
+              text: "Speaches",
+              link: "/use-cases/speaches",
             },
             // {
             //   text: "Stable Diffusion",
@@ -142,9 +166,14 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/deerflow2",
             },
             {
-              text: "DeerFlow",
-              link: "/use-cases/deerflow",
+              text: "IndexTTS2",
+              link: "/use-cases/indextts2",
             },
+            // {
+            //   text: "DeerFlow",
+            //   link: "/use-cases/deerflow",
+            // },
+
           ]
         },
         {
@@ -209,6 +238,21 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Komga",
               link: "/use-cases/komga",
             },
+            {
+              text: "TREK (NOMAD)",
+              link: "/use-cases/trek",
+              collapsed: true,
+              items: [
+                {
+                  text: "Advanced settings",
+                  link: "/use-cases/trek-advanced-settings",
+                }
+              ]
+            },
+            {
+              text: "*Arrs",
+              link: "/use-cases/arrs",
+            },                        
           ]
         },
         {
@@ -216,19 +260,27 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "Plane",
+              link: "/use-cases/plane",
+            },
+            {  
               text: "Excalidraw",
               link: "/use-cases/excalidraw",
             },
-            {
-              text: "Stirling PDF",
-              link: "/use-cases/stirling-pdf",
-            },
+            // {
+            //   text: "Stirling PDF",
+            //   link: "/use-cases/stirling-pdf",
+            // },
           ]
         },
         {
           text: "Utilities",
           collapsed: false,
           items: [
+            {
+              text: "Falco",
+              link: "/use-cases/falco",
+            },
             {
               text: "FlareSolverr",
               link: "/use-cases/flaresolverr",

@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.ranking",
+  "description": "Workload-grain (per-application) resource ranking — same data source as `applications`, columns subset.",
+  "type": "object",
+  "required": ["kind", "meta", "items"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.ranking"},
+    "meta": {"type": "object"},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw": {"type": "object"},
+          "display": {
+            "type": "object",
+            "properties": {
+              "rank": {"type": ["string", "integer"]},
+              "app": {"type": "string"},
+              "namespace": {"type": "string"},
+              "cpu": {"type": ["string", "number"]},
+              "memory": {"type": ["string", "number"]},
+              "net_in": {"type": ["string", "number"]},
+              "net_out": {"type": ["string", "number"]}
+            }
+          }
+        }
+      }
+    }
+  }
+}
