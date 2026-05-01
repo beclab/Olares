@@ -1,7 +1,8 @@
 // Package cluster implements the `olares-cli cluster` umbrella command
 // tree. Identity (which Olares user) and transport (which cluster) are
-// resolved from the global --profile flag via cmdutil.Factory, exactly
-// like `olares-cli settings` and `olares-cli market`.
+// resolved from the currently-selected profile via cmdutil.Factory
+// (switch with `olares-cli profile use <name>`), exactly like
+// `olares-cli settings` and `olares-cli market`.
 //
 // The subtree exposes a per-user K8s view of an Olares instance —
 // pods / workloads / containers / applications, plus the supporting
@@ -51,8 +52,10 @@ import (
 // one even when individual nouns are still pending later phases.
 //
 // Authentication and transport are inherited from the shared
-// cmdutil.Factory (set up in cli/cmd/ctl/root.go) so the persistent
-// --profile flag flows through unchanged. No per-command auth flags.
+// cmdutil.Factory (set up in cli/cmd/ctl/root.go) so the
+// currently-selected profile flows through unchanged. No per-command
+// auth flags, and no per-invocation profile override — switch with
+// `olares-cli profile use <name>` ahead of time.
 func NewClusterCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cluster",
@@ -62,10 +65,10 @@ func NewClusterCommand(f *cmdutil.Factory) *cobra.Command {
 This umbrella exposes a per-user view of the underlying Kubernetes /
 KubeSphere cluster — the same surface the ControlHub SPA exposes under
 "Cluster" / "Applications" / "Pods". Identity and transport come from
-the active profile (--profile or the currently-selected one), so
-authentication uses the same access token as "olares-cli profile
-login" and the same edge auth chain the Olares web app uses (Authelia
-+ l4-bfl-proxy).
+the currently-selected profile (switch with "olares-cli profile use
+<name>"), so authentication uses the same access token as "olares-cli
+profile login" and the same edge auth chain the Olares web app uses
+(Authelia + l4-bfl-proxy).
 
 The base URL is https://control-hub.<terminus>; the same origin fans
 out to /capi/* (Olares aggregator), /api/v1/* and /apis/<g>/<v>/*

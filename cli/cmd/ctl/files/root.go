@@ -38,8 +38,9 @@ import (
 // field in the JSON body.
 //
 // The Factory is supplied by the root command so credential resolution and
-// HTTP-client setup happen once per process — and so the global `--profile`
-// flag wired up at the root can flow through here unchanged.
+// HTTP-client setup happen once per process. Identity is whichever profile
+// `olares-cli profile use` (or `profile login` / `profile import`) most
+// recently selected; there is no per-invocation override flag.
 //
 // See cmd/ctl/files/path.go for the front-end path schema and
 // docs/notes/olares-cli-auth-profile-config.md for the broader

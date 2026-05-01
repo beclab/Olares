@@ -91,9 +91,10 @@ type Meta struct {
 	// `--timezone` override.
 	FetchedAt string `json:"fetched_at"`
 
-	// Profile is the OlaresID of the active profile (whichever
-	// `--profile` resolved to). Surfaced for log auditing — agents
-	// should NOT use it for routing; routing is implicit in the URL.
+	// Profile is the OlaresID of the currently-selected profile
+	// (switch with `olares-cli profile use <name>`). Surfaced for
+	// log auditing — agents should NOT use it for routing; routing
+	// is implicit in the URL.
 	Profile string `json:"profile,omitempty"`
 
 	// User, when present, is the per-command target user a `--user`

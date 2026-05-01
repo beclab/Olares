@@ -7,8 +7,9 @@ import (
 )
 
 // NewMarketCommand assembles the `olares-cli market` subtree. Identity (which
-// Olares user) and transport (which cluster) are resolved from the global
-// `--profile` flag via cmdutil.Factory rather than per-command flags, so this
+// Olares user) and transport (which cluster) are resolved from the
+// currently-selected profile via cmdutil.Factory (switch with
+// `olares-cli profile use <name>`) rather than per-command flags, so this
 // tree intentionally diverges from `cli/cmd/ctl/app` (which still discovers
 // the cluster via kubeconfig + X-Bfl-User). The two trees can therefore be
 // reviewed side-by-side; once `market` is GA the `app` tree should retire.
@@ -25,8 +26,9 @@ func NewMarketCommand(f *cmdutil.Factory) *cobra.Command {
 
 This command tree is the profile-based parallel of "olares-cli app": same
 verbs (install / upgrade / uninstall / list / status / clone / upload / ...),
-but identity and the API endpoint are resolved from the active profile
-(--profile) instead of from kubeconfig + --user.
+but identity and the API endpoint are resolved from the currently-selected
+profile (switch with "olares-cli profile use <name>") instead of from
+kubeconfig + --user.
 
 Authentication uses the access token from "olares-cli profile login" and the
 same edge auth chain the Olares web app uses (Authelia + l4-bfl-proxy).`,

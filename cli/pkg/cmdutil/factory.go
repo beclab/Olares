@@ -56,11 +56,6 @@ const preflightSkew = 60 * time.Second
 // All accessors are lazy and memoized — calling HTTPClient(ctx) multiple
 // times reuses the same resolved profile + client.
 type Factory struct {
-	// ProfileOverride, when non-empty, forces ResolveProfile to look up this
-	// profile instead of the currently-selected one. Wired from the root
-	// command's persistent `--profile` flag.
-	ProfileOverride string
-
 	credentialOnce sync.Once
 	credentialErr  error
 	credential     *credential.CredentialProvider
@@ -116,7 +111,11 @@ func (f *Factory) ResolveProfile(ctx context.Context) (*credential.ResolvedProfi
 			f.resolveErr = err
 			return
 		}
-		rp, err := cred.Resolve(ctx, f.ProfileOverride)
+		// Identity is always the currently-selected profile; there is no
+		// per-invocation override flag (see cli/cmd/ctl/root.go for why).
+		// `profile login` / `profile import` reach the provider directly
+		// with an explicit --olares-id, bypassing this Factory path.
+		rp, err := cred.Resolve(ctx, "")
 		if err != nil {
 			f.resolveErr = err
 			return

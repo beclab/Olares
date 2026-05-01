@@ -45,9 +45,10 @@ var ErrReported = errors.New("(already reported)")
 // ClusterOptions is the per-command shared option bag for the cluster
 // umbrella, mirroring the per-area MarketOptions / per-settings-area
 // option bags. Identity (--olares-id) and transport (--host) are
-// intentionally absent: the global --profile flag wired through
-// cmdutil.Factory drives both, exactly the way `olares-cli files` /
-// `market` / `settings` resolve identity.
+// intentionally absent: the currently-selected profile (switch with
+// `olares-cli profile use <name>`) wired through cmdutil.Factory drives
+// both, exactly the way `olares-cli files` / `market` / `settings`
+// resolve identity.
 //
 // ClusterOptions wires output flags + the factory + a thin Prepare()
 // that yields a ready-to-use clusterclient.Client pointed at
