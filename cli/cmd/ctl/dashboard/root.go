@@ -66,7 +66,8 @@ Every leaf command emits one of two output shapes:
                         { kind, meta, sections: { ... } }
 
 Authentication, transport and per-user routing are inherited from the
-active profile (--profile). Token refresh on 401/403 is transparent.
+currently-selected profile (switch with "olares-cli profile use <name>").
+Token refresh on 401/403 is transparent.
 
 For agent integration, run "olares-cli dashboard schema" to discover the
 available commands + their JSON Schemas.`,
