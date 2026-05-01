@@ -57,6 +57,7 @@ point of the verb). For JSON, use ` + "`cluster workload get -o json`" + `.
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace (required when the positional argument is a bare name)")
 	cmd.Flags().StringVar(&kindRaw, "kind", "", "workload kind: deployment | statefulset | daemonset (REQUIRED)")
+	o.AddQuietFlag(cmd)
 	return cmd
 }
 

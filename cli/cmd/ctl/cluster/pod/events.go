@@ -3,11 +3,7 @@ package pod
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
-	"sort"
-	"text/tabwriter"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -27,6 +23,10 @@ import (
 // kube-apiserver only allows a small set of fieldSelector keys for
 // events and `involvedObject.name` isn't always one of them on older
 // clusters; client-side filtering covers every server version.
+//
+// Event type + sort key + table renderer + URL builder all live in
+// clusteropts/events.go so `cluster job events` and
+// `cluster application status` share one definition.
 func NewEventsCommand(f *cmdutil.Factory) *cobra.Command {
 	o := clusteropts.NewClusterOptions(f)
 	var (
@@ -63,34 +63,6 @@ Events block) so reading top-to-bottom traces the pod's lifecycle.
 	return cmd
 }
 
-// Event is the minimal corev1.Event view we care about for the
-// rendered table. lastTimestamp is the wall-clock the event was last
-// observed; type is "Normal" / "Warning"; reason+message together
-// describe what happened.
-type Event struct {
-	Metadata struct {
-		Name              string `json:"name"`
-		Namespace         string `json:"namespace,omitempty"`
-		CreationTimestamp string `json:"creationTimestamp,omitempty"`
-	} `json:"metadata"`
-	InvolvedObject struct {
-		Kind      string `json:"kind,omitempty"`
-		Namespace string `json:"namespace,omitempty"`
-		Name      string `json:"name,omitempty"`
-		UID       string `json:"uid,omitempty"`
-	} `json:"involvedObject"`
-	Reason         string `json:"reason,omitempty"`
-	Message        string `json:"message,omitempty"`
-	Type           string `json:"type,omitempty"`
-	Count          int    `json:"count,omitempty"`
-	FirstTimestamp string `json:"firstTimestamp,omitempty"`
-	LastTimestamp  string `json:"lastTimestamp,omitempty"`
-	Source         struct {
-		Component string `json:"component,omitempty"`
-		Host      string `json:"host,omitempty"`
-	} `json:"source,omitempty"`
-}
-
 func runEvents(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name string, limit int) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -100,16 +72,7 @@ func runEvents(ctx context.Context, o *clusteropts.ClusterOptions, namespace, na
 		return err
 	}
 
-	q := url.Values{}
-	if limit > 0 {
-		q.Set("limit", fmt.Sprintf("%d", limit))
-	}
-	path := fmt.Sprintf("/api/v1/namespaces/%s/events", url.PathEscape(namespace))
-	if encoded := q.Encode(); encoded != "" {
-		path += "?" + encoded
-	}
-
-	resp, err := clusterclient.GetK8sList[Event](ctx, client, path)
+	resp, err := clusterclient.GetK8sList[clusteropts.Event](ctx, client, clusteropts.EventsListPath(namespace, limit))
 	if err != nil {
 		return fmt.Errorf("list events for pod %s/%s: %w", namespace, name, err)
 	}
@@ -117,17 +80,17 @@ func runEvents(ctx context.Context, o *clusteropts.ClusterOptions, namespace, na
 	// Filter to events whose involvedObject is the named pod. We
 	// match on Kind=="Pod" so a service / deployment with the same
 	// name in this namespace doesn't confuse the output.
-	var filtered []Event
+	var filtered []clusteropts.Event
 	for _, e := range resp.Items {
 		if e.InvolvedObject.Kind == "Pod" && e.InvolvedObject.Name == name {
 			filtered = append(filtered, e)
 		}
 	}
-	sortEventsByLastTimestamp(filtered)
+	clusteropts.SortEventsByLastTimestamp(filtered)
 
 	if o.IsJSON() {
 		return o.PrintJSON(struct {
-			Items []Event `json:"items"`
+			Items []clusteropts.Event `json:"items"`
 		}{Items: filtered})
 	}
 	if o.Quiet {
@@ -138,72 +101,5 @@ func runEvents(ctx context.Context, o *clusteropts.ClusterOptions, namespace, na
 		fmt.Fprintf(os.Stderr, "no events for pod %s/%s\n", namespace, name)
 		return nil
 	}
-	return renderEventsTable(filtered, o.NoHeaders)
-}
-
-// sortEventsByLastTimestamp orders events oldest-first using
-// lastTimestamp (preferred) with creationTimestamp as a fallback for
-// events the controller hasn't refreshed yet.
-func sortEventsByLastTimestamp(events []Event) {
-	sort.SliceStable(events, func(i, j int) bool {
-		ti := eventSortKey(events[i])
-		tj := eventSortKey(events[j])
-		return ti.Before(tj)
-	})
-}
-
-func eventSortKey(e Event) time.Time {
-	for _, ts := range []string{e.LastTimestamp, e.FirstTimestamp, e.Metadata.CreationTimestamp} {
-		if ts == "" {
-			continue
-		}
-		if t, err := time.Parse(time.RFC3339, ts); err == nil {
-			return t
-		}
-	}
-	return time.Time{}
-}
-
-func renderEventsTable(events []Event, noHeaders bool) error {
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	defer w.Flush()
-
-	if !noHeaders {
-		fmt.Fprintln(w, "LAST SEEN\tTYPE\tREASON\tCOUNT\tFROM\tMESSAGE")
-	}
-
-	now := time.Now()
-	for _, e := range events {
-		count := 1
-		if e.Count > 0 {
-			count = e.Count
-		}
-		from := e.Source.Component
-		if e.Source.Host != "" {
-			if from != "" {
-				from += "/" + e.Source.Host
-			} else {
-				from = e.Source.Host
-			}
-		}
-		ts := e.LastTimestamp
-		if ts == "" {
-			ts = e.Metadata.CreationTimestamp
-		}
-		// Avoid rendering literal "- ago" when the age is unknown:
-		// keep the bare "-" so the column matches every other table.
-		lastSeen := clusteropts.Age(ts, now)
-		if lastSeen != "-" {
-			lastSeen += " ago"
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\t%s\n",
-			lastSeen,
-			clusteropts.DashIfEmpty(e.Type),
-			clusteropts.DashIfEmpty(e.Reason),
-			count,
-			clusteropts.DashIfEmpty(from),
-			clusteropts.DashIfEmpty(e.Message),
-		)
-	}
-	return nil
+	return clusteropts.RenderEventsTable(filtered, o.NoHeaders)
 }

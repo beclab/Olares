@@ -128,7 +128,7 @@ type appStatus struct {
 	FetchedAt string                `json:"fetchedAt"`
 	Workloads map[string]readyTotal `json:"workloads"`
 	Pods      podPhaseCounts        `json:"pods"`
-	Events    []pod.Event           `json:"events"`
+	Events    []clusteropts.Event   `json:"events"`
 
 	WorkloadsErr string `json:"workloadsError,omitempty"`
 	PodsErr      string `json:"podsError,omitempty"`
@@ -169,7 +169,7 @@ func fetchStatus(ctx context.Context, c *clusterclient.Client, namespace string,
 		wlErrsMu   sync.Mutex
 		podsBucket podPhaseCounts
 		podsErr    error
-		events     []pod.Event
+		events     []clusteropts.Event
 		eventsErr  error
 	)
 
@@ -219,8 +219,7 @@ func fetchStatus(ctx context.Context, c *clusterclient.Client, namespace string,
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			path := fmt.Sprintf("/api/v1/namespaces/%s/events", url.PathEscape(namespace))
-			resp, err := clusterclient.GetK8sList[pod.Event](ctx, c, path)
+			resp, err := clusterclient.GetK8sList[clusteropts.Event](ctx, c, clusteropts.EventsListPath(namespace, 0))
 			if err != nil {
 				eventsErr = fmt.Errorf("events: %w", err)
 				return
@@ -311,30 +310,17 @@ func bucketPods(items []pod.Pod) podPhaseCounts {
 	return out
 }
 
-// mostRecentEvents returns the last N events sorted newest-first by
-// lastTimestamp. Falls back to firstTimestamp / creationTimestamp
-// when lastTimestamp is empty (mirrors `cluster pod events`'s
-// eventSortKey semantics — same precedence).
-func mostRecentEvents(events []pod.Event, n int) []pod.Event {
+// mostRecentEvents returns the last N events sorted newest-first
+// using clusteropts.EventSortTime as the key (same precedence as
+// every other event-rendering verb).
+func mostRecentEvents(events []clusteropts.Event, n int) []clusteropts.Event {
 	sort.SliceStable(events, func(i, j int) bool {
-		return eventTimeKey(events[i]).After(eventTimeKey(events[j]))
+		return clusteropts.EventSortTime(events[i]).After(clusteropts.EventSortTime(events[j]))
 	})
 	if n > 0 && len(events) > n {
 		events = events[:n]
 	}
 	return events
-}
-
-func eventTimeKey(e pod.Event) time.Time {
-	for _, ts := range []string{e.LastTimestamp, e.FirstTimestamp, e.Metadata.CreationTimestamp} {
-		if ts == "" {
-			continue
-		}
-		if t, err := time.Parse(time.RFC3339, ts); err == nil {
-			return t
-		}
-	}
-	return time.Time{}
 }
 
 func runStatus(ctx context.Context, o *clusteropts.ClusterOptions, namespace string, watch bool, interval time.Duration, eventsN int) error {
@@ -371,7 +357,7 @@ func runStatus(ctx context.Context, o *clusteropts.ClusterOptions, namespace str
 	first := true
 	for {
 		if !first {
-			if err := sleepCtx(ctx, interval); err != nil {
+			if err := clusteropts.SleepContext(ctx, interval); err != nil {
 				return nil
 			}
 		}
@@ -471,16 +457,3 @@ func renderStatusTable(s appStatus) error {
 	return nil
 }
 
-// sleepCtx is the cancellation-aware sleep used by the polling loop.
-// Re-declared here to keep the application package independent of
-// the workload / pod packages' equivalents.
-func sleepCtx(ctx context.Context, d time.Duration) error {
-	t := time.NewTimer(d)
-	defer t.Stop()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-t.C:
-		return nil
-	}
-}

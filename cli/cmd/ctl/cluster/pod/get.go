@@ -153,7 +153,7 @@ func runGetWatch(ctx context.Context, o *clusteropts.ClusterOptions, namespace, 
 	first := true
 	for {
 		if !first {
-			if err := sleepCtx(ctx, interval); err != nil {
+			if err := clusteropts.SleepContext(ctx, interval); err != nil {
 				return nil
 			}
 		}

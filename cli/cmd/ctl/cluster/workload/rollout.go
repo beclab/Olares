@@ -293,7 +293,7 @@ func runRolloutStatus(ctx context.Context, o *clusteropts.ClusterOptions, namesp
 		default:
 		}
 		if !first {
-			if err := sleepCtx(ctx, interval); err != nil {
+			if err := clusteropts.SleepContext(ctx, interval); err != nil {
 				return nil
 			}
 		}
@@ -330,18 +330,3 @@ func runRolloutStatus(ctx context.Context, o *clusteropts.ClusterOptions, namesp
 	}
 }
 
-// sleepCtx is the cancellation-aware sleep used by the polling loop.
-// Re-declared here (rather than shared with pod/logs.go::sleepCtx) so
-// the workload package stays compile-time independent of the pod
-// package — the helper is trivial enough that duplication beats a
-// shared-utility crate.
-func sleepCtx(ctx context.Context, d time.Duration) error {
-	t := time.NewTimer(d)
-	defer t.Stop()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-t.C:
-		return nil
-	}
-}

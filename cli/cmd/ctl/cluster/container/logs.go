@@ -94,6 +94,7 @@ this verb just delegates.
 	cmd.Flags().BoolVarP(&follow, "follow", "f", false, "keep polling for new lines until interrupted (Ctrl-C to stop)")
 	cmd.Flags().DurationVar(&interval, "interval", 2*time.Second, "polling interval when --follow is set")
 	cmd.Flags().BoolVar(&previous, "previous", false, "fetch the previous container instance's logs (after a crash); incompatible with --follow")
+	o.AddQuietFlag(cmd)
 	return cmd
 }
 

@@ -163,6 +163,7 @@ the SPA pins as well so output is correlatable across windows.
 	cmd.Flags().BoolVarP(&follow, "follow", "f", false, "keep polling for new lines until interrupted (Ctrl-C to stop)")
 	cmd.Flags().DurationVar(&interval, "interval", 2*time.Second, "polling interval when --follow is set")
 	cmd.Flags().BoolVar(&previous, "previous", false, "fetch the previous container instance's logs (after a crash); incompatible with --follow")
+	o.AddQuietFlag(cmd)
 	return cmd
 }
 
@@ -252,7 +253,7 @@ func RunLogs(ctx context.Context, o *clusteropts.ClusterOptions, namespace, podN
 
 	consecErr := 0
 	for {
-		if err := sleepCtx(ctx, interval); err != nil {
+		if err := clusteropts.SleepContext(ctx, interval); err != nil {
 			// Either parent ctx cancel or the user pressed Ctrl-C —
 			// graceful exit.
 			return nil
@@ -331,18 +332,3 @@ func writeChunk(o *clusteropts.ClusterOptions, body []byte) {
 	}
 }
 
-// sleepCtx is the cancellation-aware sleep used by RunLogs's polling
-// loop. Same shape as cli/cmd/ctl/market/watch.go::sleepOrCancel —
-// repeated here rather than imported because that helper is private
-// to package market. Trivial enough to duplicate; not worth lifting
-// to a shared utility just for two callers.
-func sleepCtx(ctx context.Context, d time.Duration) error {
-	t := time.NewTimer(d)
-	defer t.Stop()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-t.C:
-		return nil
-	}
-}

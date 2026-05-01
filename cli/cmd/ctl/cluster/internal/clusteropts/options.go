@@ -107,6 +107,17 @@ func (o *ClusterOptions) AddOutputFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.NoHeaders, "no-headers", false, "omit table headers (useful for scripting)")
 }
 
+// AddQuietFlag wires only `--quiet` / `-q` for verbs whose output
+// shape is fixed (raw log bytes, raw YAML) so `--output` and
+// `--no-headers` would be meaningless. WriteStdout / PrintJSON /
+// the streaming log writer all already honor o.Quiet — this just
+// lets the user reach into that contract from the CLI without
+// pulling in the rest of AddOutputFlags.
+func (o *ClusterOptions) AddQuietFlag(cmd *cobra.Command) {
+	cmd.Flags().BoolVarP(&o.Quiet, "quiet", "q", false,
+		"suppress output; exit code indicates success/failure")
+}
+
 // Prepare resolves the active profile and returns a ready-to-use
 // clusterclient.Client pointed at the per-user ControlHub BFF
 // (https://control-hub.<terminus>). Auth is handled transparently by

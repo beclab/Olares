@@ -45,6 +45,7 @@ point). For JSON, use ` + "`cluster job get -o json`" + `.
 		},
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace (required when the positional argument is a bare name)")
+	o.AddQuietFlag(cmd)
 	return cmd
 }
 

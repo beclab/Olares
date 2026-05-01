@@ -3,16 +3,11 @@ package job
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
-	"sort"
-	"text/tabwriter"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
-	"github.com/beclab/Olares/cli/cmd/ctl/cluster/pod"
 	"github.com/beclab/Olares/cli/pkg/clusterclient"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
@@ -21,9 +16,9 @@ import (
 // [-n NS] [--limit N] [-o table|json]`.
 //
 // Same shape as `cluster pod events`, just with the involvedObject
-// kind filter set to Job. Reuses pod.Event for the wire shape (events
-// are corev1.Event regardless of the kind being targeted) so we don't
-// duplicate the type.
+// kind filter set to Job. Reuses clusteropts.Event for the wire shape
+// (events are corev1.Event regardless of the kind being targeted) so
+// the type, sort key, table renderer, and URL builder are all shared.
 func NewEventsCommand(f *cmdutil.Factory) *cobra.Command {
 	o := clusteropts.NewClusterOptions(f)
 	var (
@@ -67,15 +62,7 @@ func runEvents(ctx context.Context, o *clusteropts.ClusterOptions, namespace, na
 	if err != nil {
 		return err
 	}
-	q := url.Values{}
-	if limit > 0 {
-		q.Set("limit", fmt.Sprintf("%d", limit))
-	}
-	path := fmt.Sprintf("/api/v1/namespaces/%s/events", url.PathEscape(namespace))
-	if encoded := q.Encode(); encoded != "" {
-		path += "?" + encoded
-	}
-	resp, err := clusterclient.GetK8sList[pod.Event](ctx, client, path)
+	resp, err := clusterclient.GetK8sList[clusteropts.Event](ctx, client, clusteropts.EventsListPath(namespace, limit))
 	if err != nil {
 		return fmt.Errorf("list events for job %s/%s: %w", namespace, name, err)
 	}
@@ -83,19 +70,17 @@ func runEvents(ctx context.Context, o *clusteropts.ClusterOptions, namespace, na
 	// Filter by Kind=Job + Name=<name> rather than fieldSelector to
 	// stay portable across kube-apiserver versions (older clusters
 	// don't expose involvedObject.name as a fieldSelector key).
-	var filtered []pod.Event
+	var filtered []clusteropts.Event
 	for _, e := range resp.Items {
 		if e.InvolvedObject.Kind == "Job" && e.InvolvedObject.Name == name {
 			filtered = append(filtered, e)
 		}
 	}
-	sort.SliceStable(filtered, func(i, j int) bool {
-		return eventSortKey(filtered[i]).Before(eventSortKey(filtered[j]))
-	})
+	clusteropts.SortEventsByLastTimestamp(filtered)
 
 	if o.IsJSON() {
 		return o.PrintJSON(struct {
-			Items []pod.Event `json:"items"`
+			Items []clusteropts.Event `json:"items"`
 		}{Items: filtered})
 	}
 	if o.Quiet {
@@ -105,58 +90,5 @@ func runEvents(ctx context.Context, o *clusteropts.ClusterOptions, namespace, na
 		fmt.Fprintf(os.Stderr, "no events for job %s/%s\n", namespace, name)
 		return nil
 	}
-	return renderEventsTable(filtered, o.NoHeaders)
-}
-
-func eventSortKey(e pod.Event) time.Time {
-	for _, ts := range []string{e.LastTimestamp, e.FirstTimestamp, e.Metadata.CreationTimestamp} {
-		if ts == "" {
-			continue
-		}
-		if t, err := time.Parse(time.RFC3339, ts); err == nil {
-			return t
-		}
-	}
-	return time.Time{}
-}
-
-func renderEventsTable(events []pod.Event, noHeaders bool) error {
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	defer w.Flush()
-	if !noHeaders {
-		fmt.Fprintln(w, "LAST SEEN\tTYPE\tREASON\tCOUNT\tFROM\tMESSAGE")
-	}
-	now := time.Now()
-	for _, e := range events {
-		count := 1
-		if e.Count > 0 {
-			count = e.Count
-		}
-		from := e.Source.Component
-		if e.Source.Host != "" {
-			if from != "" {
-				from += "/" + e.Source.Host
-			} else {
-				from = e.Source.Host
-			}
-		}
-		ts := e.LastTimestamp
-		if ts == "" {
-			ts = e.Metadata.CreationTimestamp
-		}
-		// Avoid rendering literal "- ago" when the age is unknown.
-		lastSeen := clusteropts.Age(ts, now)
-		if lastSeen != "-" {
-			lastSeen += " ago"
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\t%s\n",
-			lastSeen,
-			clusteropts.DashIfEmpty(e.Type),
-			clusteropts.DashIfEmpty(e.Reason),
-			count,
-			clusteropts.DashIfEmpty(from),
-			clusteropts.DashIfEmpty(e.Message),
-		)
-	}
-	return nil
+	return clusteropts.RenderEventsTable(filtered, o.NoHeaders)
 }

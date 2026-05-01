@@ -97,17 +97,18 @@ func runEnv(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name,
 		}
 		sections = append(sections, containerEnv{Container: c.Name, Env: c.Env})
 	}
-	if len(sections) == 0 {
-		if containerFilter != "" {
-			return fmt.Errorf("container %q not found in pod %s/%s", containerFilter, namespace, name)
-		}
-		// Pod has no containers (extremely unusual but technically
-		// possible for a malformed object); print and return.
-		fmt.Fprintf(os.Stderr, "no containers in pod %s/%s\n", namespace, name)
-		return nil
+	// Explicit --container that didn't match is a hard error in
+	// every output mode — script and human alike want a non-zero
+	// exit there.
+	if len(sections) == 0 && containerFilter != "" {
+		return fmt.Errorf("container %q not found in pod %s/%s", containerFilter, namespace, name)
 	}
 
 	if o.IsJSON() {
+		// Even when the pod has no containers (malformed but
+		// possible) we emit the envelope with an empty list so
+		// scripts can still parse `.containers` instead of getting
+		// blank stdout.
 		return o.PrintJSON(struct {
 			Pod        string         `json:"pod"`
 			Namespace  string         `json:"namespace"`
@@ -115,6 +116,12 @@ func runEnv(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name,
 		}{Pod: name, Namespace: namespace, Containers: sections})
 	}
 	if o.Quiet {
+		return nil
+	}
+	if len(sections) == 0 {
+		// Table mode, not quiet, and the pod really has no
+		// containers — surface that to the operator on stderr.
+		fmt.Fprintf(os.Stderr, "no containers in pod %s/%s\n", namespace, name)
 		return nil
 	}
 	return renderEnvSections(sections, o.NoHeaders)
