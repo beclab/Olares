@@ -84,6 +84,15 @@ new spec. --interval / --timeout drive that loop.
 			if err != nil {
 				return err
 			}
+			// --interval / --timeout only matter for the post-scale
+			// rollout watch loop. Without --watch they are dead;
+			// fail loud instead of silently ignoring them.
+			if c.Flags().Changed("interval") && !watch {
+				return fmt.Errorf("--interval requires --watch")
+			}
+			if c.Flags().Changed("timeout") && !watch {
+				return fmt.Errorf("--timeout requires --watch")
+			}
 			return runScale(c.Context(), o, ns, name, plural, replicas, watch, interval, timeout, assumeYes)
 		},
 	}

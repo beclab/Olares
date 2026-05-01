@@ -85,6 +85,15 @@ ticks are silent so the output matches real progress 1:1.
 			if err != nil {
 				return err
 			}
+			// rollout-status without --watch returns the snapshot
+			// once and exits, so --interval / --timeout would be
+			// silently dropped — refuse them up-front.
+			if c.Flags().Changed("interval") && !watch {
+				return fmt.Errorf("--interval requires --watch")
+			}
+			if c.Flags().Changed("timeout") && !watch {
+				return fmt.Errorf("--timeout requires --watch")
+			}
 			return runRolloutStatus(c.Context(), o, ns, name, plural, watch, interval, timeout)
 		},
 	}

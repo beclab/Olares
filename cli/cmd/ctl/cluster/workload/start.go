@@ -69,6 +69,14 @@ needed.
 			if err != nil {
 				return err
 			}
+			// Same rationale as `cluster workload scale`: --interval
+			// and --timeout are dead without --watch.
+			if c.Flags().Changed("interval") && !watch {
+				return fmt.Errorf("--interval requires --watch")
+			}
+			if c.Flags().Changed("timeout") && !watch {
+				return fmt.Errorf("--timeout requires --watch")
+			}
 			// assumeYes=true at the call site — start is non-
 			// destructive, no prompt needed.
 			return RunScale(c.Context(), o, ns, name, plural, replicas, watch, interval, timeout, true)

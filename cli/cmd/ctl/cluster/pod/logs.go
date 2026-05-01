@@ -134,6 +134,14 @@ the SPA pins as well so output is correlatable across windows.
 			if previous && follow {
 				return fmt.Errorf("--follow and --previous are mutually exclusive")
 			}
+			// --interval only governs the polling cadence inside the
+			// --follow loop; without --follow there is exactly one
+			// fetch and the flag is dead. Fail loud rather than
+			// silently ignore it — a user who set --interval almost
+			// certainly meant to ask for tailing.
+			if c.Flags().Changed("interval") && !follow {
+				return fmt.Errorf("--interval requires --follow")
+			}
 			return RunLogs(c.Context(), o, ns, name, LogsOptions{
 				Container:    container,
 				TailLines:    tail,

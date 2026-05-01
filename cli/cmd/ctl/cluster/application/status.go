@@ -82,6 +82,12 @@ separate Pods / Workloads / Events tabs. CLI just stitches them.
 			if ns == "" {
 				return fmt.Errorf("namespace must be non-empty")
 			}
+			// Refuse --interval without --watch: the flag only governs
+			// the polling cadence inside the watch loop, so silently
+			// ignoring it on a one-shot snapshot would hide the misuse.
+			if c.Flags().Changed("interval") && !watch {
+				return fmt.Errorf("--interval requires --watch")
+			}
 			return runStatus(c.Context(), o, ns, watch, interval, eventsN)
 		},
 	}

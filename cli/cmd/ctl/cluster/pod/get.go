@@ -62,6 +62,12 @@ line (JSONL stream). Ctrl-C exits cleanly.
 			if err != nil {
 				return err
 			}
+			// Refuse --interval without --watch: the flag only governs
+			// the polling cadence inside the watch loop, so silently
+			// dropping it on a one-shot fetch hides the misuse.
+			if c.Flags().Changed("interval") && !watch {
+				return fmt.Errorf("--interval requires --watch")
+			}
 			if watch {
 				return runGetWatch(c.Context(), o, ns, name, interval)
 			}

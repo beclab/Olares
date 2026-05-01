@@ -67,6 +67,12 @@ this verb just delegates.
 			if previous && follow {
 				return fmt.Errorf("--follow and --previous are mutually exclusive")
 			}
+			// Mirror cluster pod logs: --interval is dead without
+			// --follow, so refuse the combination loudly instead of
+			// silently dropping the flag on the floor.
+			if c.Flags().Changed("interval") && !follow {
+				return fmt.Errorf("--interval requires --follow")
+			}
 			return pod.RunLogs(c.Context(), o, ns, podName, pod.LogsOptions{
 				Container:    ctr,
 				TailLines:    tail,

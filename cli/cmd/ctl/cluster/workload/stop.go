@@ -64,6 +64,14 @@ want to take it offline.
 			if err != nil {
 				return err
 			}
+			// Same rationale as `cluster workload scale`: --interval
+			// and --timeout are dead without --watch.
+			if c.Flags().Changed("interval") && !watch {
+				return fmt.Errorf("--interval requires --watch")
+			}
+			if c.Flags().Changed("timeout") && !watch {
+				return fmt.Errorf("--timeout requires --watch")
+			}
 			return RunScale(c.Context(), o, ns, name, plural, 0, watch, interval, timeout, assumeYes)
 		},
 	}
