@@ -19,15 +19,14 @@ import (
 // used by both `profile whoami` and `profile login`'s eager fetch (which
 // can't import cli/cmd/ctl/settings because settings imports profile),
 // and by the settings tree's me/users-me wrappers (which would otherwise
-// have to thread settings.SettingsClient through what is fundamentally a
-// trivial GET).
+// have to construct their own per-area HTTP client just for the trivial
+// /api/users/<id>/role GET).
 //
-// Why a free standalone client instead of reusing settings.SettingsClient:
-// keeping HTTPClient in pkg/whoami breaks the otherwise-natural cycle
-// (profile imports whoami; settings imports profile.NewWhoamiCommand;
-// settings.SettingsClient lives in settings → profile would have to
-// import settings) and lets login.go fetch the role without pulling the
-// entire settings package into the auth flow.
+// Living in pkg/whoami (rather than in any cmd/ctl/* tree) breaks the
+// otherwise-natural cycle: profile imports whoami; settings imports
+// profile.NewWhoamiCommand; if HTTPClient lived in settings, profile
+// would have to import settings. Keeping it here lets login.go fetch
+// the role without pulling the settings package into the auth flow.
 //
 // Auth + 401/403 reformatting are handled by the upstream http.Client
 // (factory.refreshingTransport injects X-Authorization and auto-rotates

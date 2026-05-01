@@ -31,6 +31,11 @@ type ResolvedProfile struct {
 	FilesURL     string
 	MarketURL    string
 	DashboardURL string
+	// ControlHubURL is the per-user ControlHub BFF base URL
+	// ("https://control-hub.<terminus>"). The `cluster` command tree uses
+	// this — see pkg/olares/id.go::ControlHubURL for the full description
+	// of which path prefixes ride this origin.
+	ControlHubURL string
 
 	AccessToken string
 	// ExpiresAt is the unix-seconds expiry decoded from AccessToken's `exp`

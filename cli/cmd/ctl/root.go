@@ -6,6 +6,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/config"
 	"github.com/beclab/Olares/cli/cmd/ctl/amdgpu"
 	"github.com/beclab/Olares/cli/cmd/ctl/app"
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster"
 	"github.com/beclab/Olares/cli/cmd/ctl/dashboard"
 	"github.com/beclab/Olares/cli/cmd/ctl/disk"
 	"github.com/beclab/Olares/cli/cmd/ctl/files"
@@ -54,11 +55,12 @@ func NewDefaultCommand() *cobra.Command {
 		},
 	}
 	cmds.Flags().BoolVar(&showVendor, "vendor", false, "show the vendor type of olares-cli")
-	// Persistent --profile flag binds straight onto the shared Factory so
-	// that subcommands which use it (factory.ResolveProfile) automatically
-	// honor the override without each having to re-declare the flag.
-	cmds.PersistentFlags().StringVar(&factory.ProfileOverride, "profile", "",
-		"olaresId of the profile to use (overrides the currently-selected one)")
+	// Identity is single-source: whichever profile `olares-cli profile use`
+	// (or the most recent `profile login` / `profile import`) selected. There
+	// is intentionally no per-invocation `--profile` override — agents and
+	// scripts must commit to one role up-front rather than silently hopping
+	// identities mid-pipeline. To target a different profile, run
+	// `olares-cli profile use <name>` first.
 
 	cmds.AddCommand(osinfo.NewCmdInfo())
 	cmds.AddCommand(os.NewOSCommands()...)
@@ -74,6 +76,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(files.NewFilesCommand(factory))
 	cmds.AddCommand(dashboard.NewDashboardCommand(factory))
 	cmds.AddCommand(settings.NewSettingsCommand(factory))
+	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
 	return cmds
 }

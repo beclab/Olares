@@ -817,7 +817,7 @@ olares-cli files repos rename $REPO_ID "Project Alpha (archived)"
 olares-cli files repos rm $REPO_ID --yes
 ```
 
-When operating across multiple Olares instances, prefix each command with `--profile <olaresId>` (see `olares-shared` for the global flag) instead of flipping the persistent current pointer.
+When operating across multiple Olares instances, run `olares-cli profile use <name>` to switch identity before issuing commands. There is no per-invocation `--profile` override — agents/scripts must commit to one profile up-front rather than silently hopping identities mid-pipeline. See `olares-shared` for the full rationale.
 
 ## Security rules
 

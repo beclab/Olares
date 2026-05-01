@@ -36,8 +36,11 @@ var ErrNoProfile = errors.New("no Olares profile is configured: run `olares-cli 
 // declines, ErrNoProfile is returned (or the most informative error from a
 // declining provider, if all returned errors).
 //
-// `profileKey` is an optional override (e.g. an `--olares-id`/`--profile`
-// flag). When empty, the currently-selected profile from config.json is used.
+// `profileKey` is an optional override (e.g. the `--olares-id` flag on
+// `profile login` / `profile import`). When empty, the currently-selected
+// profile from config.json is used. There is intentionally no global
+// per-invocation flag that fills this in for normal verbs; identity is
+// switched explicitly via `olares-cli profile use <name>`.
 func (c *CredentialProvider) Resolve(ctx context.Context, profileKey string) (*ResolvedProfile, error) {
 	cfg, err := cliconfig.LoadMultiProfileConfig()
 	if err != nil {

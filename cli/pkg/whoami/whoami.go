@@ -118,10 +118,10 @@ type envelope struct {
 	Data    Info   `json:"data"`
 }
 
-// Doer is the minimal HTTP surface we need from settings.SettingsClient
-// (and any future caller). Defining it locally keeps the import graph tidy:
-// the whoami package depends on neither cmdutil nor settings, just on
-// cliconfig + net/http.
+// Doer is the minimal HTTP surface this package needs (just one
+// JSON-in/JSON-out method). Defining it locally keeps the import
+// graph tidy: the whoami package depends on neither cmdutil nor
+// settings, just on cliconfig + net/http.
 type Doer interface {
 	DoJSON(ctx context.Context, method, path string, body, out interface{}) error
 }

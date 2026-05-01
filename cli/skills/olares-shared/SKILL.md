@@ -1,7 +1,7 @@
 ---
 name: olares-shared
 version: 1.1.0
-description: "Shared olares-cli foundation: profile model, first-time login (profile login with password + TOTP), bootstrapping a profile from an existing refresh token (profile import), switching/listing/removing profiles, the global --profile flag, where access/refresh tokens live in the OS keychain, automatic access_token refresh via /api/refresh (transparent reactive retry on 401/403; pro-active JWT-exp refresh for streaming uploads; cross-goroutine + cross-process deduplication via flock), and how to recover from auth errors (HTTP 401/403, refresh token invalidated, not logged in, two-factor authentication required). Use whenever the user is configuring olares-cli for the first time, logging in or importing credentials, switching/listing/removing profiles, asking how token refresh works, scripting parallel olares-cli invocations, or seeing errors like 'server rejected the access token', 'refresh token for X became invalid', 'no access token for X', 'already authenticated', or 'two-factor authentication required'; also use when the user asks about refresh tokens, the keychain, olaresId, or profile management."
+description: "Shared olares-cli foundation: profile model, first-time login (profile login with password + TOTP), bootstrapping a profile from an existing refresh token (profile import), switching/listing/removing profiles via profile use, where access/refresh tokens live in the OS keychain, automatic access_token refresh via /api/refresh (transparent reactive retry on 401/403; pro-active JWT-exp refresh for streaming uploads; cross-goroutine + cross-process deduplication via flock), and how to recover from auth errors (HTTP 401/403, refresh token invalidated, not logged in, two-factor authentication required). Use whenever the user is configuring olares-cli for the first time, logging in or importing credentials, switching/listing/removing profiles, asking how token refresh works, or seeing errors like 'server rejected the access token', 'refresh token for X became invalid', 'no access token for X', 'already authenticated', or 'two-factor authentication required'; also use when the user asks about refresh tokens, the keychain, olaresId, or profile management."
 metadata:
   requires:
     bins: ["olares-cli"]
@@ -28,16 +28,7 @@ The `profile` command tree exposes 5 verbs (see [`cmd/ctl/profile/root.go`](cli/
 
 > **There is no `olares-cli auth login` / `auth logout` namespace.** Every auth-related action lives under `profile`. "Logout" is `profile remove`.
 
-## Global `--profile` flag
-
-The root command registers a persistent `--profile <olaresId>` flag (see [`cmd/ctl/root.go`](cli/cmd/ctl/root.go) L57). It overrides the currently-selected profile for one invocation without flipping the persisted current pointer:
-
-```bash
-# Doesn't change current; this single ls runs against alice's credentials.
-olares-cli files ls drive/Home/ --profile alice@olares.com
-```
-
-Use this for: scripting parallel operations against multiple profiles, sanity-checking a specific profile's status, and avoiding pollution of the interactive terminal's current pointer.
+> **There is no per-invocation `--profile` override flag.** Identity is whichever profile is currently selected (set by `profile use`, `profile login`, or `profile import`). Every business verb under `cluster` / `files` / `market` / `settings` / `dashboard` runs against that one profile for the lifetime of the process. To target a different profile, run `olares-cli profile use <name>` first — committing to one role up-front is intentional, so agents don't silently hop identities mid-pipeline.
 
 ## First-time login (mode A: password + optional TOTP)
 

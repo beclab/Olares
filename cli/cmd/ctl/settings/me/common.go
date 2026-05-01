@@ -4,10 +4,10 @@
 //   - The BFL response envelope helper (every endpoint we hit here returns
 //     {code, message, data}).
 //   - The minimal output-format flag plumbing shared by the read verbs
-//     (version / check-update / sso list). We can't reuse
-//     settings.SettingsOptions directly because that type is in package
-//     settings and pulling it in here creates an import cycle (settings
-//     imports me, so me cannot import settings back).
+//     (version / check-update / sso list). Each settings/<area> package
+//     keeps its own per-area Options struct rather than sharing a single
+//     umbrella type, both to dodge the settings → area → settings import
+//     cycle and to let each area pick the flag set it actually needs.
 //
 // Transport reuses cli/pkg/whoami.HTTPClient — a misnomer for historical
 // reasons (it was first built for the whoami endpoint), but in practice
