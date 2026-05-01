@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2"
@@ -154,7 +154,7 @@ func (p *DownloadingApp) exec(ctx context.Context) error {
 		return err
 	}
 
-	values, err := appinstaller.BuildBaseHelmValues(ctx, kubeConfig, appConfig, p.manager.Spec.AppOwner, true, false)
+	values, err := appinstaller.BuildBaseHelmValues(ctx, kubeConfig, appConfig, p.manager.Spec.AppOwner, true)
 	if err != nil {
 		klog.Errorf("build base helm values failed %v", err)
 		return err

@@ -5,18 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
-	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	"golang.org/x/exp/maps"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,9 +41,7 @@ type installHelperIntf interface {
 	getInstalledApps() (installed bool, app []*v1alpha1.Application, err error)
 	getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (appConfig *appcfg.ApplicationConfig, err error)
 	setAppConfig(req *api.InstallRequest, appName string)
-	validate(isAdmin bool, installedApps []*v1alpha1.Application) error
-	resolveInstallType(appConfig *appcfg.ApplicationConfig) (string, error)
-	overlayAppConfig(installType string) (*appcfg.ApplicationConfig, error)
+	validate(bool, []*v1alpha1.Application) error
 	setAppEnv(overrides []sysv1alpha1.AppEnvVar) error
 	applyAppEnv(ctx context.Context) error
 	applyApplicationManager(marketSource string) (opID string, err error)
@@ -149,13 +147,13 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		SelectedGpu:  insReq.SelectedGpuType,
 	})
 	klog.Infof("chartVersion: %s", chartVersion)
-	klog.Infof("apiVersion: %s", apiVersion)
 
 	if err != nil {
 		klog.Errorf("Failed to get api version err=%v", err)
 		api.HandleBadRequest(resp, req, err)
 		return
 	}
+	klog.Infof("apiVersion: %s", apiVersion)
 
 	client, err := utils.GetClient()
 	if err != nil {
@@ -225,23 +223,10 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return
 	}
-	if !appCfg.AllowMultipleInstall && insReq.RawAppName != "" {
+	if !appCfg.AllowMultipleInstall && insReq.RawAppName != "" ||
+		(appCfg.AllowMultipleInstall && (apiVersion == appcfg.V2 || appCfg.AppScope.ClusterScoped)) {
 		klog.Errorf("app %s can not be clone", app)
 		api.HandleBadRequest(resp, req, fmt.Errorf("app %s can not be clone", app))
-		return
-	}
-
-	installType, err := helper.resolveInstallType(appCfg)
-	if err != nil {
-		klog.Errorf("Failed to resolve install type err=%v", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-
-	appCfg, err = helper.overlayAppConfig(installType)
-	if err != nil {
-		klog.Errorf("Failed to overlay app config err=%v", err)
-		api.HandleError(resp, req, err)
 		return
 	}
 
@@ -293,29 +278,6 @@ func (h *Handler) getOriginChartVersion(rawAppName, owner string) (string, error
 	return "", fmt.Errorf("rawApp %s not found", rawAppName)
 }
 
-func (h *installHandlerHelper) sharedNamespaceExists(appConfig *appcfg.ApplicationConfig) (bool, error) {
-	sharedNamespace := ""
-	for _, s := range appConfig.SubCharts {
-		if s.Shared {
-			sharedNamespace = s.Namespace(appConfig.OwnerName, s.Name)
-			break
-		}
-	}
-	if sharedNamespace == "" {
-		return false, errors.New("v2 app has no shared namespace")
-	}
-
-	var ns corev1.Namespace
-	err := h.h.ctrlClient.Get(context.TODO(), types.NamespacedName{Name: sharedNamespace}, &ns)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
 func (h *installHandlerHelper) getAdminUsers() (admin []string, isAdmin bool, err error) {
 	adminList, err := kubesphere.GetAdminUserList(h.req.Request.Context(), h.h.kubeConfig)
 	if err != nil {
@@ -331,20 +293,6 @@ func (h *installHandlerHelper) getAdminUsers() (admin []string, isAdmin bool, er
 	}
 
 	return
-}
-
-func (h *installHandlerHelper) resolveInstallType(appConfig *appcfg.ApplicationConfig) (string, error) {
-	if appConfig.APIVersion == appcfg.V1 || appConfig.APIVersion == "" {
-		return appcfg.InstallOrUpgradeV1, nil
-	}
-	exists, err := h.sharedNamespaceExists(appConfig)
-	if err != nil {
-		return "", err
-	}
-	if !exists {
-		return appcfg.InstallOrUpgradeClientAndServer, nil
-	}
-	return appcfg.InstallOrUpgradeClientOnly, nil
 }
 
 func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.Application) (err error) {
@@ -430,6 +378,7 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 		return
 	}
 
+	//resourceType, err := CheckAppRequirement(h.h.kubeConfig, h.token, h.appConfig)
 	resourceType, resourceConditionType, err := apputils.CheckAppRequirement(h.token, h.appConfig, v1alpha1.InstallOp)
 	if err != nil {
 		klog.Errorf("Failed to check app requirement err=%v", err)
@@ -484,7 +433,7 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 
 func (h *installHandlerHelper) _validateClusterScope(isAdmin bool, installedApp []*v1alpha1.Application) (err error) {
 	for _, installedApp := range installedApp {
-		if h.appConfig.AppScope.ClusterScoped && installedApp.IsClusterScoped() {
+		if h.appConfig.AppScope.ClusterScoped && appcfg.IsClusterScoped(installedApp) {
 			return errors.New("only one cluster scoped app can install in on cluster")
 		}
 	}
@@ -526,7 +475,7 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 			appOwner := installedApp.Spec.Owner
 			if slices.Contains(adminUsers, appOwner) {
 				// check the app is installed as cluster scope
-				if installedApp.IsClusterScoped() {
+				if appcfg.IsClusterScoped(installedApp) {
 					cluserAppInstalled = true
 					installedCluserAppOwner = appOwner
 				}
@@ -572,25 +521,6 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 	h.appConfig = appConfig
 
 	return
-}
-
-func (h *installHandlerHelper) overlayAppConfig(installType string) (*appcfg.ApplicationConfig, error) {
-	if h.appConfig == nil {
-		return nil, fmt.Errorf("app config is nil")
-	}
-	if !config.IsNewManifestVersion(h.appConfig.CfgFileVersion) {
-		return h.appConfig, nil
-	}
-
-	h.appConfig.ApplyOverlay(installType)
-
-	appRequirement, err := h.appConfig.ResolveRequirement(h.appConfig.SelectedGpuType, installType)
-	if err != nil {
-		return nil, fmt.Errorf("resolve requirement: %w", err)
-	}
-	h.appConfig.Requirement = *appRequirement
-
-	return h.appConfig, nil
 }
 
 func (h *installHandlerHelper) setAppConfig(req *api.InstallRequest, appName string) {
@@ -769,14 +699,17 @@ func (h *installHandlerHelper) applyAppEnv(ctx context.Context) (err error) {
 	return
 }
 
+func (h *installHandlerHelperV2) setAppConfig(req *api.InstallRequest, appName string) {
+	return
+}
+
 func (h *installHandlerHelperV2) _validateClusterScope(isAdmin bool, installedApps []*v1alpha1.Application) (err error) {
 	klog.Info("validate cluster scope for install handler v2")
 
 	// check if subcharts has a client chart
 	for _, subChart := range h.appConfig.SubCharts {
 		if !subChart.Shared {
-			subChartName := utils.GetChartName(h.appConfig.AppName, h.appConfig.RawAppName, subChart.Name)
-			if subChartName != h.app {
+			if subChart.Name != h.app {
 				err := fmt.Errorf("non-shared subchart must has the same name with the app, subchart name is %s but the main app is %s", subChart.Name, h.app)
 				klog.Error(err)
 				api.HandleBadRequest(h.resp, h.req, err)

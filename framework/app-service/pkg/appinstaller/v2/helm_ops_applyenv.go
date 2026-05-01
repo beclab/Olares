@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	helmrelease "helm.sh/helm/v3/pkg/release"
 	"k8s.io/klog/v2"
 )

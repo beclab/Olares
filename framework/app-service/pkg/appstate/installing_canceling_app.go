@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"time"
 
-	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
@@ -16,6 +14,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"helm.sh/helm/v3/pkg/storage/driver"
 	corev1 "k8s.io/api/core/v1"
@@ -122,15 +121,15 @@ func (p *InstallingCancelingApp) handleInstallCancel(ctx context.Context) error 
 					klog.Errorf("Failed to create Kubernetes client: %v", err)
 					return err
 				}
-				chartName := utils.GetChartName(appCfg.AppName, appCfg.RawAppName, chart.Name)
 
-				sharedChartNamespace, err := client.CoreV1().Namespaces().Get(ctx, chart.Namespace(appCfg.OwnerName, chartName), metav1.GetOptions{})
+				sharedChartNamespace, err := client.CoreV1().Namespaces().Get(ctx, appcfg.ChartNamespace(&chart, appCfg.OwnerName), metav1.GetOptions{})
+
 				if err != nil {
 					if apierrors.IsNotFound(err) {
-						klog.Infof("Shared chart namespace %s not found, skipping uninstall", chart.Namespace(appCfg.OwnerName, chartName))
+						klog.Infof("Shared chart namespace %s not found, skipping uninstall", appcfg.ChartNamespace(&chart, appCfg.OwnerName))
 						break
 					}
-					klog.Errorf("Failed to get shared chart namespace %s: %v", chart.Namespace(appCfg.OwnerName, chartName), err)
+					klog.Errorf("Failed to get shared chart namespace %s: %v", appcfg.ChartNamespace(&chart, appCfg.OwnerName), err)
 					return err
 				}
 
