@@ -11,12 +11,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
-	"github.com/beclab/Olares/cli/pkg/clusterclient"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
 // NewListCommand: `olares-cli cluster namespace list [-l SEL]
-// [--limit N] [-o table|json]`.
+// [--limit N] [--page N] [--all] [-o table|json]`.
 //
 // Calls SPA's getNamespacesList
 // (apps/packages/app/src/apps/controlPanelCommon/network/index.ts:256):
@@ -24,10 +23,8 @@ import (
 // scoping decides what's visible; CLI never filters or expands.
 func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 	o := clusteropts.NewClusterOptions(f)
-	var (
-		labelSelector string
-		limit         int
-	)
+	p := clusteropts.NewPaginationOptions()
+	var labelSelector string
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "list K8s namespaces visible to the active profile",
@@ -36,14 +33,18 @@ func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 Output (table mode): NAME, PHASE, WORKSPACE, AGE — flat kubectl-
 style listing. WORKSPACE is read from the kubesphere.io/workspace
 label when present, "-" otherwise.
+
+Pagination: --limit sets the page size (default 100). --page picks one
+1-indexed page (default 1). --all drains every page until exhausted
+and is mutually exclusive with --page > 1.
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runList(c.Context(), o, labelSelector, limit)
+			return runList(c.Context(), o, p, labelSelector)
 		},
 	}
 	cmd.Flags().StringVarP(&labelSelector, "label", "l", "", "label selector to filter namespaces (K8s syntax)")
-	cmd.Flags().IntVar(&limit, "limit", 100, "max items to fetch in one request (server-side cap)")
+	p.AddPaginationFlags(cmd)
 	o.AddOutputFlags(cmd)
 	return cmd
 }
@@ -62,26 +63,29 @@ type nsItem struct {
 	} `json:"status,omitempty"`
 }
 
-func runList(ctx context.Context, o *clusteropts.ClusterOptions, labelSelector string, limit int) error {
+func runList(ctx context.Context, o *clusteropts.ClusterOptions, p *clusteropts.PaginationOptions, labelSelector string) error {
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	if err := p.Validate(); err != nil {
+		return err
 	}
 	client, err := o.Prepare()
 	if err != nil {
 		return err
 	}
-	q := url.Values{}
-	if labelSelector != "" {
-		q.Set("labelSelector", labelSelector)
-	}
-	if limit > 0 {
-		q.Set("limit", fmt.Sprintf("%d", limit))
-	}
-	path := "/kapis/resources.kubesphere.io/v1alpha3/namespaces"
-	if encoded := q.Encode(); encoded != "" {
-		path += "?" + encoded
-	}
-	resp, err := clusterclient.GetKubeSphereList[nsItem](ctx, client, path)
+	items, total, err := clusteropts.FetchAllKubeSphere[nsItem](ctx, client, p, func(page int) string {
+		q := url.Values{}
+		if labelSelector != "" {
+			q.Set("labelSelector", labelSelector)
+		}
+		p.AppendQueryForPage(q, page)
+		path := "/kapis/resources.kubesphere.io/v1alpha3/namespaces"
+		if encoded := q.Encode(); encoded != "" {
+			path += "?" + encoded
+		}
+		return path
+	})
 	if err != nil {
 		return fmt.Errorf("list namespaces: %w", err)
 	}
@@ -89,15 +93,18 @@ func runList(ctx context.Context, o *clusteropts.ClusterOptions, labelSelector s
 		return o.PrintJSON(struct {
 			Items      []nsItem `json:"items"`
 			TotalItems int      `json:"totalItems"`
-		}{Items: resp.Items, TotalItems: resp.TotalItems})
+			Page       int      `json:"page"`
+			Limit      int      `json:"limit"`
+			All        bool     `json:"all,omitempty"`
+		}{Items: items, TotalItems: total, Page: p.Page, Limit: p.Limit, All: p.All})
 	}
 	if o.Quiet {
 		return nil
 	}
-	return renderListTable(resp.Items, o.NoHeaders, len(resp.Items) < resp.TotalItems, resp.TotalItems)
+	return renderListTable(items, o.NoHeaders, p, total)
 }
 
-func renderListTable(items []nsItem, noHeaders bool, paged bool, totalItems int) error {
+func renderListTable(items []nsItem, noHeaders bool, p *clusteropts.PaginationOptions, totalItems int) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	defer w.Flush()
 	if !noHeaders {
@@ -116,10 +123,7 @@ func renderListTable(items []nsItem, noHeaders bool, paged bool, totalItems int)
 			clusteropts.Age(ns.Metadata.CreationTimestamp, now),
 		)
 	}
-	if paged {
-		w.Flush()
-		fmt.Fprintf(os.Stderr, "(showing %d of %d total — pass --limit %d to see more)\n",
-			len(items), totalItems, totalItems)
-	}
+	w.Flush()
+	clusteropts.PrintPageHint(os.Stderr, p, len(items), totalItems)
 	return nil
 }

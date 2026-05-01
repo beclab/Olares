@@ -12,7 +12,7 @@ import (
 )
 
 // NewPodsCommand: `olares-cli cluster job pods <ns/name | name>
-// [-n NS] [-l ...] [--field-selector ...] [--limit N]`.
+// [-n NS] [-l ...] [--field-selector ...] [--limit N] [--page N] [--all]`.
 //
 // Two-step: GET the Job to read its .metadata.uid, then list pods
 // scoped server-side via labelSelector=controller-uid=<uid>. Mirrors
@@ -24,13 +24,14 @@ import (
 // stays bit-identical to `cluster pod list -l controller-uid=<uid>
 // -n <ns>`. --label / --field-selector are appended to the
 // controller-uid clause so users can further filter on top.
+// Pagination (--limit / --page / --all) is forwarded verbatim.
 func NewPodsCommand(f *cmdutil.Factory) *cobra.Command {
 	o := clusteropts.NewClusterOptions(f)
+	p := clusteropts.NewPaginationOptions()
 	var (
 		namespace     string
 		labelSelector string
 		fieldSelector string
-		limit         int
 	)
 	cmd := &cobra.Command{
 		Use:   "pods <ns/name | name>",
@@ -51,18 +52,18 @@ filters or scopes pods locally.
 			if err != nil {
 				return err
 			}
-			return runPods(c.Context(), o, ns, name, labelSelector, fieldSelector, limit)
+			return runPods(c.Context(), o, p, ns, name, labelSelector, fieldSelector)
 		},
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace (required when the positional argument is a bare name)")
 	cmd.Flags().StringVarP(&labelSelector, "label", "l", "", "additional label selector to filter pods (K8s syntax; ANDed with controller-uid=<uid>)")
 	cmd.Flags().StringVar(&fieldSelector, "field-selector", "", "field selector to filter pods (K8s syntax)")
-	cmd.Flags().IntVar(&limit, "limit", 100, "max items to fetch in one request (server-side cap)")
+	p.AddPaginationFlags(cmd)
 	o.AddOutputFlags(cmd)
 	return cmd
 }
 
-func runPods(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name, extraLabel, fieldSelector string, limit int) error {
+func runPods(ctx context.Context, o *clusteropts.ClusterOptions, p *clusteropts.PaginationOptions, namespace, name, extraLabel, fieldSelector string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -82,5 +83,5 @@ func runPods(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name
 	if extraLabel != "" {
 		selector += "," + extraLabel
 	}
-	return pod.RunList(ctx, o, namespace, selector, fieldSelector, limit)
+	return pod.RunList(ctx, o, p, namespace, selector, fieldSelector)
 }

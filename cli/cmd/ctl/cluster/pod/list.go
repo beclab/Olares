@@ -11,12 +11,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
-	"github.com/beclab/Olares/cli/pkg/clusterclient"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
 // NewListCommand: `olares-cli cluster pod list [-n ns] [-l selector]
-// [--limit N] [-o table|json] [--no-headers] [--quiet]`.
+// [--limit N] [--page N] [--all] [-o table|json] [--no-headers] [--quiet]`.
 //
 // Calls the SPA's getPodsList endpoint
 // (apps/packages/app/src/apps/controlPanelCommon/network/index.ts:52):
@@ -31,13 +30,16 @@ import (
 // so the result is still grep-able. CLI does not infer a "default
 // namespace" from username or any other client-side heuristic; the
 // security model is server-decides (see skills/olares-cluster).
+//
+// Pagination matches the SPA wire shape (limit + 1-indexed page).
+// Use --all to drain every page in one command.
 func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 	o := clusteropts.NewClusterOptions(f)
+	p := clusteropts.NewPaginationOptions()
 	var (
 		namespace     string
 		labelSelector string
 		fieldSelector string
-		limit         int
 	)
 
 	cmd := &cobra.Command{
@@ -57,36 +59,50 @@ exists but isn't visible to your token).
 --label uses K8s label-selector syntax (e.g. "app=foo,tier=frontend").
 --field-selector forwards K8s field selectors verbatim
 (e.g. "spec.nodeName=node-1").
+
+Pagination: --limit sets the page size (default 100). --page picks one
+1-indexed page (default 1). --all drains every page until exhausted
+and is mutually exclusive with --page > 1.
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return RunList(c.Context(), o, namespace, labelSelector, fieldSelector, limit)
+			return RunList(c.Context(), o, p, namespace, labelSelector, fieldSelector)
 		},
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "scope to a single namespace (default: all namespaces visible to your profile)")
 	cmd.Flags().StringVarP(&labelSelector, "label", "l", "", "label selector to filter pods (K8s syntax)")
 	cmd.Flags().StringVar(&fieldSelector, "field-selector", "", "field selector to filter pods (K8s syntax)")
-	cmd.Flags().IntVar(&limit, "limit", 100, "max items to fetch in one request (server-side cap; KubeSphere returns the page even if more exist)")
+	p.AddPaginationFlags(cmd)
 	o.AddOutputFlags(cmd)
 	return cmd
 }
 
 // RunList is the exported entry point so sibling packages (e.g.
 // cluster/application) can share the same fetch + render path
-// without duplicating the table layout. opts is required; pass a
-// fresh clusteropts.NewClusterOptions(f) when calling from outside
-// cobra. namespace="" means cross-namespace.
-func RunList(ctx context.Context, o *clusteropts.ClusterOptions, namespace, labelSelector, fieldSelector string, limit int) error {
+// without duplicating the table layout. opts and pagination are both
+// required; pass a fresh clusteropts.NewClusterOptions(f) +
+// clusteropts.NewPaginationOptions() when calling from outside cobra.
+// namespace="" means cross-namespace.
+func RunList(
+	ctx context.Context,
+	o *clusteropts.ClusterOptions,
+	p *clusteropts.PaginationOptions,
+	namespace, labelSelector, fieldSelector string,
+) error {
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	if err := p.Validate(); err != nil {
+		return err
 	}
 	client, err := o.Prepare()
 	if err != nil {
 		return err
 	}
 
-	path := buildListPath(namespace, labelSelector, fieldSelector, limit)
-	resp, err := clusterclient.GetKubeSphereList[Pod](ctx, client, path)
+	items, total, err := clusteropts.FetchAllKubeSphere[Pod](ctx, client, p, func(page int) string {
+		return buildListPath(namespace, labelSelector, fieldSelector, p, page)
+	})
 	if err != nil {
 		return fmt.Errorf("list pods: %w", err)
 	}
@@ -95,19 +111,26 @@ func RunList(ctx context.Context, o *clusteropts.ClusterOptions, namespace, labe
 		return o.PrintJSON(struct {
 			Items      []Pod `json:"items"`
 			TotalItems int   `json:"totalItems"`
-		}{Items: resp.Items, TotalItems: resp.TotalItems})
+			Page       int   `json:"page"`
+			Limit      int   `json:"limit"`
+			All        bool  `json:"all,omitempty"`
+		}{Items: items, TotalItems: total, Page: p.Page, Limit: p.Limit, All: p.All})
 	}
 	if o.Quiet {
 		return nil
 	}
-	return renderListTable(resp.Items, namespace == "", o.NoHeaders, len(resp.Items) < resp.TotalItems, resp.TotalItems)
+	return renderListTable(items, namespace == "", o.NoHeaders, p, total)
 }
 
 // buildListPath assembles the KubeSphere pods endpoint plus query
 // string. Splits the namespace decision into the path itself (rather
 // than a query param) so we get the cross-namespace endpoint when -n
 // is empty.
-func buildListPath(namespace, label, field string, limit int) string {
+//
+// page is the 1-indexed page number for THIS request — driven by
+// FetchAllKubeSphere's drain loop in --all mode, or p.Page in
+// single-page mode.
+func buildListPath(namespace, label, field string, p *clusteropts.PaginationOptions, page int) string {
 	base := "/kapis/resources.kubesphere.io/v1alpha3/pods"
 	if namespace != "" {
 		// PathEscape is the right tool here: namespace is a path
@@ -122,16 +145,14 @@ func buildListPath(namespace, label, field string, limit int) string {
 	if field != "" {
 		q.Set("fieldSelector", field)
 	}
-	if limit > 0 {
-		q.Set("limit", fmt.Sprintf("%d", limit))
-	}
+	p.AppendQueryForPage(q, page)
 	if encoded := q.Encode(); encoded != "" {
 		return base + "?" + encoded
 	}
 	return base
 }
 
-func renderListTable(items []Pod, showNamespace, noHeaders, paged bool, totalItems int) error {
+func renderListTable(items []Pod, showNamespace, noHeaders bool, p *clusteropts.PaginationOptions, total int) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	defer w.Flush()
 
@@ -169,12 +190,7 @@ func renderListTable(items []Pod, showNamespace, noHeaders, paged bool, totalIte
 		}
 	}
 
-	if paged {
-		// Server-side pagination capped this batch; print a soft
-		// hint so users know to bump --limit.
-		w.Flush()
-		fmt.Fprintf(os.Stderr, "(showing %d of %d total — pass --limit %d to see more)\n",
-			len(items), totalItems, totalItems)
-	}
+	w.Flush()
+	clusteropts.PrintPageHint(os.Stderr, p, len(items), total)
 	return nil
 }

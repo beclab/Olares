@@ -12,17 +12,18 @@ import (
 )
 
 // NewPodsCommand: `olares-cli cluster application pods <namespace>
-// [-l ...] [--field-selector ...] [--limit ...] [-o ...]`.
+// [-l ...] [--field-selector ...] [--limit ...] [--page ...] [--all] [-o ...]`.
 //
 // Convenience alias for `cluster pod list -n <namespace> ...`,
 // symmetric with `cluster application workloads`. Same server-side
-// scoping rules apply.
+// scoping rules apply, same pagination semantics
+// (--limit / --page / --all all forwarded verbatim).
 func NewPodsCommand(f *cmdutil.Factory) *cobra.Command {
 	o := clusteropts.NewClusterOptions(f)
+	p := clusteropts.NewPaginationOptions()
 	var (
 		labelSelector string
 		fieldSelector string
-		limit         int
 	)
 	cmd := &cobra.Command{
 		Use:   "pods <namespace>",
@@ -31,7 +32,7 @@ func NewPodsCommand(f *cmdutil.Factory) *cobra.Command {
 
 Equivalent to ` + "`cluster pod list -n <namespace>`" + ` — the verb just
 makes the application-side pivot from ` + "`application list`" + ` explicit.
---label / --field-selector / --limit are forwarded verbatim.
+--label / --field-selector / --limit / --page / --all are forwarded verbatim.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -39,12 +40,12 @@ makes the application-side pivot from ` + "`application list`" + ` explicit.
 			if ns == "" {
 				return fmt.Errorf("namespace must be non-empty")
 			}
-			return pod.RunList(c.Context(), o, ns, labelSelector, fieldSelector, limit)
+			return pod.RunList(c.Context(), o, p, ns, labelSelector, fieldSelector)
 		},
 	}
 	cmd.Flags().StringVarP(&labelSelector, "label", "l", "", "label selector to filter pods (K8s syntax)")
 	cmd.Flags().StringVar(&fieldSelector, "field-selector", "", "field selector to filter pods (K8s syntax)")
-	cmd.Flags().IntVar(&limit, "limit", 100, "max items to fetch in one request (server-side cap; KubeSphere returns the page even if more exist)")
+	p.AddPaginationFlags(cmd)
 	o.AddOutputFlags(cmd)
 	return cmd
 }

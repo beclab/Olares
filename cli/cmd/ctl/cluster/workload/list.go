@@ -6,24 +6,29 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"strings"
 	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
-	"github.com/beclab/Olares/cli/pkg/clusterclient"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
 // NewListCommand: `olares-cli cluster workload list [-n NS]
 // [--kind all|deployment|statefulset|daemonset] [-l SEL] [--limit N]
-// [-o table|json] [--no-headers] [--quiet]`.
+// [--page N] [--all] [-o table|json] [--no-headers] [--quiet]`.
 //
 // Default --kind is "all" — the verb fans out one KubeSphere request
 // per kind in SupportedKinds and merges the results into a single
 // table with a KIND column. --kind <single> issues one request and
 // drops the KIND column from the output.
+//
+// Pagination is per-kind. In --all mode each kind drains independently
+// (so a deployment-heavy ns doesn't starve statefulsets). In --page
+// mode the same page index is requested from every kind — useful for
+// "give me page 2 across the board" symmetry.
 //
 // Calls SPA's getWorkloadList
 // (apps/packages/app/src/apps/controlPanelCommon/network/index.ts:297):
@@ -31,11 +36,11 @@ import (
 // `/kapis/.../namespaces/<ns>/<kind>` per-ns.
 func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 	o := clusteropts.NewClusterOptions(f)
+	p := clusteropts.NewPaginationOptions()
 	var (
 		namespace     string
 		kindRaw       string
 		labelSelector string
-		limit         int
 	)
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -52,25 +57,38 @@ daemonset (singular or plural; "deploy" / "sts" / "ds" also accepted)
 to scope to a single kind and drop the KIND column.
 
 --label uses K8s label-selector syntax (e.g. "app=foo,tier=frontend").
+
+Pagination: --limit sets the page size per kind (default 100). --page
+picks one 1-indexed page per kind (default 1). --all drains every
+page until exhausted (per-kind, independently) and is mutually
+exclusive with --page > 1.
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return RunList(c.Context(), o, namespace, kindRaw, labelSelector, limit)
+			return RunList(c.Context(), o, p, namespace, kindRaw, labelSelector)
 		},
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "scope to a single namespace (default: all namespaces visible to your profile)")
 	cmd.Flags().StringVar(&kindRaw, "kind", KindAll, "workload kind: all | deployment | statefulset | daemonset")
 	cmd.Flags().StringVarP(&labelSelector, "label", "l", "", "label selector to filter workloads (K8s syntax)")
-	cmd.Flags().IntVar(&limit, "limit", 100, "max items per kind to fetch in one request (server-side cap)")
+	p.AddPaginationFlags(cmd)
 	o.AddOutputFlags(cmd)
 	return cmd
 }
 
 // RunList is the exported entry point so sibling packages
 // (cluster/application) can share the same fetch + render path.
-func RunList(ctx context.Context, o *clusteropts.ClusterOptions, namespace, kindRaw, labelSelector string, limit int) error {
+func RunList(
+	ctx context.Context,
+	o *clusteropts.ClusterOptions,
+	p *clusteropts.PaginationOptions,
+	namespace, kindRaw, labelSelector string,
+) error {
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	if err := p.Validate(); err != nil {
+		return err
 	}
 	plural, err := NormalizeKind(kindRaw)
 	if err != nil {
@@ -95,30 +113,44 @@ func RunList(ctx context.Context, o *clusteropts.ClusterOptions, namespace, kind
 	}
 	var collected []kindResult
 	for _, k := range kindsToFetch {
-		path := buildListPath(k, namespace, labelSelector, limit)
-		resp, err := clusterclient.GetKubeSphereList[Workload](ctx, client, path)
+		items, total, err := clusteropts.FetchAllKubeSphere[Workload](ctx, client, p, func(page int) string {
+			return buildListPath(k, namespace, labelSelector, p, page)
+		})
 		if err != nil {
 			return fmt.Errorf("list %s: %w", k, err)
 		}
 		// Some KubeSphere versions strip Kind from list items —
 		// stamp it from the per-call context so the KIND column is
 		// always populated downstream.
-		for i := range resp.Items {
-			if resp.Items[i].Kind == "" {
-				resp.Items[i].Kind = SingularKind(k)
+		for i := range items {
+			if items[i].Kind == "" {
+				items[i].Kind = SingularKind(k)
 			}
 		}
-		collected = append(collected, kindResult{Kind: k, Items: resp.Items, Total: resp.TotalItems})
+		collected = append(collected, kindResult{Kind: k, Items: items, Total: total})
 	}
 
 	if o.IsJSON() {
-		if multi {
-			return o.PrintJSON(collected)
+		// JSON envelope mirrors the single-kind verbs (page/limit/all
+		// alongside items/totalItems) so scripts can paginate against
+		// any list verb with the same parser. For multi-kind, items
+		// and totalItems are wrapped per-kind under `kinds`.
+		type jsonOut struct {
+			Kinds []kindResult `json:"kinds,omitempty"`
+			Items []Workload   `json:"items,omitempty"`
+			Total int          `json:"totalItems,omitempty"`
+			Page  int          `json:"page"`
+			Limit int          `json:"limit"`
+			All   bool         `json:"all,omitempty"`
 		}
-		return o.PrintJSON(struct {
-			Items      []Workload `json:"items"`
-			TotalItems int        `json:"totalItems"`
-		}{Items: collected[0].Items, TotalItems: collected[0].Total})
+		out := jsonOut{Page: p.Page, Limit: p.Limit, All: p.All}
+		if multi {
+			out.Kinds = collected
+		} else {
+			out.Items = collected[0].Items
+			out.Total = collected[0].Total
+		}
+		return o.PrintJSON(out)
 	}
 	if o.Quiet {
 		return nil
@@ -136,8 +168,21 @@ func RunList(ctx context.Context, o *clusteropts.ClusterOptions, namespace, kind
 		for _, w := range r.Items {
 			rows = append(rows, row{Workload: w, KindPlural: r.Kind})
 		}
-		if len(r.Items) < r.Total {
-			pagedKinds = append(pagedKinds, fmt.Sprintf("%s (%d of %d)", r.Kind, len(r.Items), r.Total))
+		// In single-page mode we may have fetched only a subset of
+		// each kind. In --all mode, FetchAllKubeSphere already drained
+		// so this branch never trips. Per-kind hint defers to the
+		// shared format used by single-kind verbs by computing the
+		// same range string.
+		if !p.All && len(r.Items) < r.Total {
+			pageStart := (p.Page-1)*p.Limit + 1
+			pageEnd := pageStart + len(r.Items) - 1
+			if pageEnd >= pageStart {
+				pagedKinds = append(pagedKinds,
+					fmt.Sprintf("%s (items %d-%d of %d)", r.Kind, pageStart, pageEnd, r.Total))
+			} else {
+				pagedKinds = append(pagedKinds,
+					fmt.Sprintf("%s (no items on page %d; total %d)", r.Kind, p.Page, r.Total))
+			}
 		}
 	}
 	sort.SliceStable(rows, func(i, j int) bool {
@@ -186,7 +231,8 @@ func RunList(ctx context.Context, o *clusteropts.ClusterOptions, namespace, kind
 	}
 	if len(pagedKinds) > 0 {
 		w.Flush()
-		fmt.Fprintf(os.Stderr, "(some kinds were paged: %v — pass --limit higher to see more)\n", pagedKinds)
+		fmt.Fprintf(os.Stderr, "(some kinds were paged: %s — pass --page %d or --all to see more)\n",
+			strings.Join(pagedKinds, "; "), p.Page+1)
 	}
 	if len(rows) == 0 {
 		w.Flush()
@@ -199,7 +245,7 @@ func RunList(ctx context.Context, o *clusteropts.ClusterOptions, namespace, kind
 // query string. Splits the namespace decision into the path itself
 // rather than a query param so we hit the cross-namespace endpoint
 // when -n is empty.
-func buildListPath(kindPlural, namespace, label string, limit int) string {
+func buildListPath(kindPlural, namespace, label string, p *clusteropts.PaginationOptions, page int) string {
 	base := "/kapis/resources.kubesphere.io/v1alpha3/" + kindPlural
 	if namespace != "" {
 		base = "/kapis/resources.kubesphere.io/v1alpha3/namespaces/" +
@@ -209,9 +255,7 @@ func buildListPath(kindPlural, namespace, label string, limit int) string {
 	if label != "" {
 		q.Set("labelSelector", label)
 	}
-	if limit > 0 {
-		q.Set("limit", fmt.Sprintf("%d", limit))
-	}
+	p.AppendQueryForPage(q, page)
 	if encoded := q.Encode(); encoded != "" {
 		return base + "?" + encoded
 	}
