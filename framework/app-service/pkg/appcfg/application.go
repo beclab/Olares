@@ -2,14 +2,13 @@ package appcfg
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
-	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
-	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/oac"
+	manifestsysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,8 +20,6 @@ type AppPermission interface{}
 type AppDataPermission string
 type AppCachePermission string
 type UserDataPermission string
-
-type Middleware interface{}
 
 type AppRequirement struct {
 	Memory *resource.Quantity
@@ -65,14 +62,14 @@ type ApplicationConfig struct {
 	Target               string
 	AppName              string // name of application displayed on shortcut
 	OwnerName            string // name of owner who installed application
-	Entrances            []v1alpha1.Entrance
-	Ports                []v1alpha1.ServicePort
-	TailScale            v1alpha1.TailScale
+	Entrances            []Entrance
+	Ports                []ServicePort
+	TailScale            TailScale
 	Icon                 string          // base64 icon data
 	Permission           []AppPermission // app permission requests
 	Requirement          AppRequirement
 	Policies             []AppPolicy
-	Middleware           *tapr.Middleware
+	Middleware           *Middleware
 	ResetCookieEnabled   bool
 	Dependencies         []Dependency
 	Conflicts            []Conflict
@@ -94,18 +91,15 @@ type ApplicationConfig struct {
 	ServiceAccountName   *string
 	Provider             []Provider
 	Type                 string
-	Envs                 []sysv1alpha1.AppEnvVar
+	Envs                 []manifestsysv1alpha1.AppEnvVar
 	Images               []string
 	AllowMultipleInstall bool
 	RawAppName           string
 	PodsSelectors        []metav1.LabelSelector
 	HardwareRequirement  Hardware
-	SharedEntrances      []v1alpha1.Entrance
+	SharedEntrances      []Entrance
 	SelectedGpuType      string
 	Resources            []ResourceMode
-	InstallType          string
-	Client               *ConfigOverlay
-	ClientAndServer      *ConfigOverlay
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
@@ -129,40 +123,40 @@ func (c *ApplicationConfig) HasClusterSharedCharts() bool {
 	return false
 }
 
-func (c *ApplicationConfig) GenEntranceURL(ctx context.Context) ([]v1alpha1.Entrance, error) {
-	app := &v1alpha1.Application{
-		Spec: v1alpha1.ApplicationSpec{
+func (c *ApplicationConfig) GenEntranceURL(ctx context.Context) ([]Entrance, error) {
+	app := &Application{
+		Spec: ApplicationSpec{
 			Owner:     c.OwnerName,
 			Name:      c.AppName,
 			Entrances: c.Entrances,
 		},
 	}
 
-	return app.GenEntranceURL(ctx)
+	return GenEntranceURL(ctx, app)
 }
 
-func (c *ApplicationConfig) GetEntrances(ctx context.Context) (map[string]v1alpha1.Entrance, error) {
+func (c *ApplicationConfig) GetEntrances(ctx context.Context) (map[string]Entrance, error) {
 	entrances, err := c.GenEntranceURL(ctx)
 	if err != nil {
 		klog.Errorf("failed to generate entrance URL: %v", err)
 		return nil, err
 	}
 
-	return utils.ListToMap(entrances, func(e v1alpha1.Entrance) string {
+	return utils.ListToMap(entrances, func(e Entrance) string {
 		return e.Name
 	}), nil
 }
 
-func (c *ApplicationConfig) GenSharedEntranceURL(ctx context.Context) ([]v1alpha1.Entrance, error) {
-	app := &v1alpha1.Application{
-		Spec: v1alpha1.ApplicationSpec{
+func (c *ApplicationConfig) GenSharedEntranceURL(ctx context.Context) ([]Entrance, error) {
+	app := &Application{
+		Spec: ApplicationSpec{
 			Owner:           c.OwnerName,
 			Name:            c.AppName,
 			SharedEntrances: c.SharedEntrances,
 		},
 	}
 
-	return app.GenSharedEntranceURL(ctx)
+	return GenSharedEntranceURL(ctx, app)
 }
 
 func (c *ApplicationConfig) GetSelectedGpuTypeValue() string {
@@ -170,122 +164,6 @@ func (c *ApplicationConfig) GetSelectedGpuTypeValue() string {
 		return "none"
 	}
 	return c.SelectedGpuType
-}
-
-func (c *ApplicationConfig) DeepCopy() *ApplicationConfig {
-	data, err := json.Marshal(c)
-	if err != nil {
-		klog.Errorf("failed to marshal ApplicationConfig for deep copy: %v", err)
-		return nil
-	}
-	out := &ApplicationConfig{}
-	if err := json.Unmarshal(data, out); err != nil {
-		klog.Errorf("failed to unmarshal ApplicationConfig for deep copy: %v", err)
-		return nil
-	}
-	return out
-}
-
-// ApplyOverlay mutates c in place, merging fields from the Server/Client
-// overlay (selected by installType) into the top-level config. It's a no-op
-// when c is nil or no overlay is defined for the given installType.
-func (c *ApplicationConfig) ApplyOverlay(installType string) {
-	if c == nil {
-		return
-	}
-	c.InstallType = installType
-	c.applyConfigOverlay(installType)
-}
-
-func (c *ApplicationConfig) applyConfigOverlay(installType string) {
-	var overlay *ConfigOverlay
-	klog.Infof("applyConfigOverlay: installType: %v", installType)
-	switch installType {
-	case InstallOrUpgradeClientAndServer:
-		overlay = c.ClientAndServer
-	case InstallOrUpgradeClientOnly:
-		overlay = c.Client
-	}
-	if overlay == nil {
-		return
-	}
-
-	c.Entrances = overlay.Entrances
-	c.Middleware = overlay.Middleware
-
-	if overlay.Permission != nil {
-		var permission []AppPermission
-		if overlay.Permission.AppData {
-			permission = append(permission, AppDataRW)
-		}
-		if overlay.Permission.AppCache {
-			permission = append(permission, AppCacheRW)
-		}
-		if len(overlay.Permission.UserData) > 0 {
-			permission = append(permission, UserDataRW)
-		}
-		if len(overlay.Permission.Provider) > 0 {
-			var perm []ProviderPermission
-			for _, s := range overlay.Permission.Provider {
-				perm = append(perm, ProviderPermission(s))
-			}
-			permission = append(permission, perm)
-		}
-		c.Permission = permission
-	}
-
-	if overlay.Options != nil {
-		c.ResetCookieEnabled = overlay.Options.ResetCookie.Enabled
-		c.Dependencies = overlay.Options.Dependencies
-		c.Conflicts = overlay.Options.Conflicts
-		c.AppScope = overlay.Options.AppScope
-		c.WsConfig = overlay.Options.WsConfig
-		c.Upload = overlay.Options.Upload
-		c.MobileSupported = overlay.Options.MobileSupported
-		c.OIDC = overlay.Options.OIDC
-		c.ApiTimeout = overlay.Options.ApiTimeout
-		c.AllowedOutboundPorts = overlay.Options.AllowedOutboundPorts
-		c.Images = overlay.Options.Images
-		c.AllowMultipleInstall = overlay.Options.AllowMultipleInstall
-	}
-	c.Provider = overlay.Provider
-	c.Envs = overlay.Envs
-}
-
-func (c *ApplicationConfig) ResolveRequirement(selectedGpu, installType string) (*AppRequirement, error) {
-	if len(c.Resources) == 0 {
-		return nil, fmt.Errorf("empty spec resources")
-	}
-
-	mode := resolveResourceMode(c.Resources, selectedGpu)
-	if mode == nil {
-		return nil, fmt.Errorf("mode %s not found in spec resources", selectedGpu)
-	}
-	if c.APIVersion == V1 {
-		req := parseResourceRequirement(&mode.ResourceRequirement)
-		return &req, nil
-	}
-
-	if mode.Client == nil && mode.Server == nil {
-		if mode.ResourceRequirement == (ResourceRequirement{}) {
-			return nil, fmt.Errorf("empty resource requirement")
-		}
-		req := parseResourceRequirement(&mode.ResourceRequirement)
-		return &req, nil
-	}
-
-	switch installType {
-	case InstallOrUpgradeClientOnly:
-		if mode.Client == nil {
-			return nil, fmt.Errorf("client resource requirement can not be empty")
-		}
-		req := parseResourceRequirement(mode.Client)
-		return &req, nil
-	case InstallOrUpgradeClientAndServer:
-		req := sumResourceRequirements(mode.Server, mode.Client)
-		return &req, nil
-	}
-	return nil, fmt.Errorf("no resource requirement found")
 }
 
 func resolveResourceMode(modes []ResourceMode, selectedGpu string) *ResourceMode {
@@ -310,56 +188,87 @@ func resolveResourceMode(modes []ResourceMode, selectedGpu string) *ResourceMode
 	return nil
 }
 
-func parseResourceRequirement(req *ResourceRequirement) AppRequirement {
-	parseQty := func(s string) *resource.Quantity {
+// ParseResourceRequirement converts the scalar required* fields of a
+// ResourceRequirement into an AppRequirement. Empty fields and values that
+// fail with resource.ErrFormatWrong are treated as "not set" and produce a
+// nil quantity; any other parse error is returned to the caller. This mirrors
+// the behaviour of parseLegacyAppRequirement so the two code paths agree on
+// what "invalid manifest" means.
+func ParseResourceRequirement(req *ResourceRequirement) (AppRequirement, error) {
+	parseQty := func(s string) (*resource.Quantity, error) {
 		if s == "" {
-			return nil
+			return nil, nil
 		}
 		q, err := resource.ParseQuantity(s)
 		if err != nil {
-			return nil
+			if errors.Is(err, resource.ErrFormatWrong) {
+				return nil, nil
+			}
+			return nil, err
 		}
-		return &q
+		return &q, nil
+	}
+
+	cpu, err := parseQty(req.RequiredCPU)
+	if err != nil {
+		return AppRequirement{}, fmt.Errorf("parse required cpu %q: %w", req.RequiredCPU, err)
+	}
+	mem, err := parseQty(req.RequiredMemory)
+	if err != nil {
+		return AppRequirement{}, fmt.Errorf("parse required memory %q: %w", req.RequiredMemory, err)
+	}
+	disk, err := parseQty(req.RequiredDisk)
+	if err != nil {
+		return AppRequirement{}, fmt.Errorf("parse required disk %q: %w", req.RequiredDisk, err)
+	}
+	gpu, err := parseQty(req.RequiredGPU)
+	if err != nil {
+		return AppRequirement{}, fmt.Errorf("parse required gpu %q: %w", req.RequiredGPU, err)
 	}
 
 	return AppRequirement{
-		CPU:    parseQty(req.RequiredCPU),
-		Memory: parseQty(req.RequiredMemory),
-		Disk:   parseQty(req.RequiredDisk),
-		GPU:    parseQty(req.RequiredGPU),
-	}
+		CPU:    cpu,
+		Memory: mem,
+		Disk:   disk,
+		GPU:    gpu,
+	}, nil
 }
 
-func sumResourceRequirements(parts ...*ResourceRequirement) AppRequirement {
-	parseAndAdd := func(existing *resource.Quantity, s string) *resource.Quantity {
-		if s == "" {
-			return existing
+// ResolveRequirement returns the effective resource requirement for the app,
+// taking the selected GPU type and manifest version into account. It is the
+// single source of truth for picking between the new spec.resources matrix
+// and the legacy scalar spec.required* fields.
+//
+//   - New manifest format (>= 0.12.0): pick the ResourceMode that matches
+//     selectedGpu from c.Resources (which must be non-empty).
+//   - Legacy manifest format (< 0.12.0): return c.Requirement directly. The
+//     scalar fields are expected to already be populated (and any
+//     supportedGpu special-resource overrides applied) at conversion time.
+func (c *ApplicationConfig) ResolveRequirement(selectedGpu string) (*AppRequirement, error) {
+	if oac.IsNewOlaresManifestVersion(c.CfgFileVersion) {
+		if len(c.Resources) == 0 {
+			return nil, fmt.Errorf("empty spec resources")
 		}
-		q, err := resource.ParseQuantity(s)
+		mode := resolveResourceMode(c.Resources, selectedGpu)
+		if mode == nil {
+			return nil, fmt.Errorf("mode %s not found in spec resources", selectedGpu)
+		}
+		req, err := ParseResourceRequirement(&mode.ResourceRequirement)
 		if err != nil {
-			return existing
+			return nil, fmt.Errorf("resolve requirement for mode %s: %w", mode.Mode, err)
 		}
-		if existing == nil {
-			return &q
-		}
-		existing.Add(q)
-		return existing
+		return &req, nil
 	}
 
-	var cpu, mem, disk, gpu *resource.Quantity
-	for _, p := range parts {
-		if p == nil {
-			continue
-		}
-		cpu = parseAndAdd(cpu, p.RequiredCPU)
-		mem = parseAndAdd(mem, p.RequiredMemory)
-		disk = parseAndAdd(disk, p.RequiredDisk)
-		gpu = parseAndAdd(gpu, p.RequiredGPU)
-	}
-	return AppRequirement{CPU: cpu, Memory: mem, Disk: disk, GPU: gpu}
+	req := c.Requirement
+	return &req, nil
 }
 
-func (p *ProviderPermission) GetNamespace(ownerName string) string {
+// ProviderPermissionNamespace returns the namespace a provider permission
+// resolves to for the given owner. It used to be a method on ProviderPermission,
+// but that type is now an alias to manifest.ProviderPermission and methods
+// cannot be defined on non-local types.
+func ProviderPermissionNamespace(p *ProviderPermission, ownerName string) string {
 	if p.Namespace != "" {
 		if p.Namespace == "user-space" || p.Namespace == "user-system" {
 			return fmt.Sprintf("%s-%s", p.Namespace, ownerName)

@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
@@ -22,6 +21,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/registry"
 	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	wfv1alpha1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 	appcfg_mod "github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -372,8 +372,6 @@ func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 		return constants.AMDGPU
 	case utils.StrixHaloChipType:
 		return constants.AMDGPU
-	case utils.MthreadsM100ChipType:
-		return ""
 	case utils.CPUType:
 		klog.Info("CPU type is selected, no GPU resource will be injected")
 		return ""

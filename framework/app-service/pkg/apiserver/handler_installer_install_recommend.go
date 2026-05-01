@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/workflowinstaller"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/go-resty/resty/v2"

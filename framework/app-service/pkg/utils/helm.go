@@ -3,13 +3,11 @@ package utils
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"strings"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	refdocker "github.com/containerd/containerd/reference/docker"
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
@@ -18,7 +16,6 @@ import (
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/downloader"
-	"helm.sh/helm/v3/pkg/engine"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/kube"
 	kubefake "helm.sh/helm/v3/pkg/kube/fake"
@@ -230,61 +227,4 @@ func GetRefFromResourceList(chartPath string, values map[string]interface{}, ima
 		}
 	}
 	return filteredRefs, nil
-}
-
-func RenderManifest(filepath, owner, admin string, isAdmin bool) (string, error) {
-	templateData, err := os.ReadFile(filepath)
-	if err != nil {
-		return "", err
-	}
-	return RenderManifestFromContent(templateData, owner, admin, isAdmin)
-}
-
-func RenderManifestFromContent(content []byte, owner, admin string, isAdmin bool) (string, error) {
-	c := &chart.Chart{
-		Metadata: &chart.Metadata{
-			Name:    "chart",
-			Version: "0.0.1",
-		},
-		Templates: []*chart.File{
-			{
-				Name: "OlaresManifest.yaml",
-				Data: content,
-			},
-		},
-	}
-	//admin := owner
-	//if isAdmin {
-	//
-	//}
-	values := map[string]interface{}{
-		"admin": admin,
-		"bfl": map[string]string{
-			"username": owner,
-		},
-		"isAdmin": isAdmin,
-	}
-
-	valuesToRender, err := chartutil.ToRenderValues(c, values, chartutil.ReleaseOptions{}, nil)
-	if err != nil {
-		return "", err
-	}
-
-	e := engine.Engine{}
-	renderedTemplates, err := e.Render(c, valuesToRender)
-	if err != nil {
-		return "", err
-	}
-
-	renderedYAML := renderedTemplates["chart/OlaresManifest.yaml"]
-
-	return renderedYAML, nil
-}
-
-func GetChartName(appName, rawAppName, chartName string) string {
-	if appName != rawAppName {
-		suffix := strings.TrimPrefix(appName, rawAppName)
-		return fmt.Sprintf("%s%s", chartName, suffix)
-	}
-	return chartName
 }

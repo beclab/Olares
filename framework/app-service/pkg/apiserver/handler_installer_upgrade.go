@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
@@ -17,6 +16,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,8 +31,6 @@ type upgradeHelperIntf interface {
 	validate() error
 	applyAppEnv(ctx context.Context) error
 	setAndEncodingAppCofnig(prevCfg *appcfg.ApplicationConfig) (string, error)
-	resolveUpgradeType(appConfig *appcfg.ApplicationConfig, isAdmin bool) string
-	overlayAppConfig(upgradeType string) (*appcfg.ApplicationConfig, error)
 }
 
 var _ upgradeHelperIntf = (upgradeHelperIntf)(nil)
@@ -214,34 +212,6 @@ func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 	return appConfig, nil
 }
 
-func (h *upgradeHandlerHelper) resolveUpgradeType(appConfig *appcfg.ApplicationConfig, isAdmin bool) string {
-	if appConfig.APIVersion == appcfg.V1 || appConfig.APIVersion == "" {
-		return appcfg.InstallOrUpgradeV1
-	}
-	if isAdmin {
-		return appcfg.InstallOrUpgradeClientAndServer
-	}
-	return appcfg.InstallOrUpgradeClientOnly
-}
-
-func (h *upgradeHandlerHelper) overlayAppConfig(upgradeType string) (*appcfg.ApplicationConfig, error) {
-	if h.appConfig == nil {
-		return nil, fmt.Errorf("app config is nil")
-	}
-	if !config.IsNewManifestVersion(h.appConfig.CfgFileVersion) {
-		return h.appConfig, nil
-	}
-	h.appConfig.ApplyOverlay(upgradeType)
-
-	appRequirement, err := h.appConfig.ResolveRequirement(h.appConfig.SelectedGpuType, upgradeType)
-	if err != nil {
-		return nil, fmt.Errorf("resolve requirement: %w", err)
-	}
-	h.appConfig.Requirement = *appRequirement
-
-	return h.appConfig, nil
-}
-
 func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
@@ -355,24 +325,16 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	}
 
 	var prevCfg appcfg.ApplicationConfig
-	err = appMgr.GetAppConfig(&prevCfg)
+	err = appcfg.GetAppConfig(&appMgr, &prevCfg)
 	if err != nil {
 		klog.Errorf("Failed to get previous app config err=%v", err)
 		api.HandleError(resp, req, err)
 		return
 	}
 
-	appConfig, err := helper.getAppConfig(&prevCfg, adminUsers, marketSource, isAdmin)
+	_, err = helper.getAppConfig(&prevCfg, adminUsers, marketSource, isAdmin)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
-		return
-	}
-	upgradeType := helper.resolveUpgradeType(appConfig, isAdmin)
-
-	appConfig, err = helper.overlayAppConfig(upgradeType)
-	if err != nil {
-		klog.Errorf("Failed to get overlay config err=%v", err)
-		api.HandleError(resp, req, err)
 		return
 	}
 

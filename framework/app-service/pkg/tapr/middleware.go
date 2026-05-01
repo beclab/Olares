@@ -237,7 +237,6 @@ func Apply(middleware *Middleware, kubeConfig *rest.Config, appName, appNamespac
 			"password": resp.Password,
 			"vhosts":   resp.Vhosts,
 		}
-		klog.Infof("values.rabbitmq: %v", vals["rabbitmq"])
 	}
 
 	if middleware.Elasticsearch != nil {
@@ -259,7 +258,6 @@ func Apply(middleware *Middleware, kubeConfig *rest.Config, appName, appNamespac
 			"indexes":     resp.Indexes,
 			"indexPrefix": resp.IndexPrefix,
 		}
-		klog.Infof("values.elasticsearch: %v", vals["elasticsearch"])
 	}
 
 	if middleware.Nats != nil {
@@ -280,11 +278,9 @@ func Apply(middleware *Middleware, kubeConfig *rest.Config, appName, appNamespac
 			"subjects": resp.Subjects,
 			"refs":     resp.Refs,
 		}
-		klog.Infof("vals[nats]: %v", vals["nats"])
 	}
 
 	if middleware.MariaDB != nil {
-		klog.Infof("middleware.MariaDB: %#v", middleware.MariaDB)
 		username := fmt.Sprintf("%s-%s-%s", middleware.MariaDB.Username, ownerName, appName)
 		err := process(kubeConfig, appName, appNamespace, namespace, username, TypeMariaDB, ownerName, middleware)
 		if err != nil {
@@ -302,7 +298,6 @@ func Apply(middleware *Middleware, kubeConfig *rest.Config, appName, appNamespac
 			"password":  resp.Password,
 			"databases": resp.Databases,
 		}
-		klog.Infof("values.mariadb: %v", vals["mariadb"])
 	}
 
 	if middleware.MySQL != nil {
@@ -324,7 +319,6 @@ func Apply(middleware *Middleware, kubeConfig *rest.Config, appName, appNamespac
 			"password":  resp.Password,
 			"databases": resp.Databases,
 		}
-		klog.Infof("values.mysql: %v", vals["mysql"])
 	}
 	if middleware.ClickHouse != nil {
 		username := fmt.Sprintf("%s-%s-%s", middleware.ClickHouse.Username, ownerName, appName)
@@ -344,7 +338,6 @@ func Apply(middleware *Middleware, kubeConfig *rest.Config, appName, appNamespac
 			"password":  resp.Password,
 			"databases": resp.Databases,
 		}
-		klog.Infof("values.clickhouse: %v", vals["clickhouse"])
 	}
 
 	return nil

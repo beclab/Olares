@@ -11,7 +11,6 @@ import (
 
 	"golang.org/x/exp/maps"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
@@ -19,6 +18,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -61,7 +61,7 @@ func (h *Handler) status(req *restful.Request, resp *restful.Response) {
 	now := metav1.Now()
 	sts := appinstaller.Status{
 		Name:              am.Spec.AppName,
-		AppID:             v1alpha1.AppName(am.Spec.AppName).GetAppID(),
+		AppID:             appcfg.AppName(am.Spec.AppName).GetAppID(),
 		Namespace:         am.Spec.AppNamespace,
 		CreationTimestamp: now,
 		Source:            am.Spec.Source,
@@ -115,7 +115,7 @@ func (h *Handler) appsStatus(req *restful.Request, resp *restful.Response) {
 			now := metav1.Now()
 			status := appinstaller.Status{
 				Name:              am.Spec.AppName,
-				AppID:             v1alpha1.AppName(am.Spec.AppName).GetAppID(),
+				AppID:             appcfg.AppName(am.Spec.AppName).GetAppID(),
 				Namespace:         am.Spec.AppNamespace,
 				CreationTimestamp: now,
 				Source:            am.Spec.Source,
@@ -445,8 +445,8 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			Spec: v1alpha1.ApplicationSpec{
 				Name:            am.Spec.AppName,
 				RawAppName:      am.Spec.RawAppName,
-				Appid:           v1alpha1.AppName(am.Spec.AppName).GetAppID(),
-				IsSysApp:        v1alpha1.AppName(am.Spec.AppName).IsSysApp(),
+				Appid:           appcfg.AppName(am.Spec.AppName).GetAppID(),
+				IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           owner,
 				Entrances:       appconfig.Entrances,
@@ -766,8 +766,8 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			Spec: v1alpha1.ApplicationSpec{
 				Name:            am.Spec.AppName,
 				RawAppName:      am.Spec.RawAppName,
-				Appid:           v1alpha1.AppName(am.Spec.AppName).GetAppID(),
-				IsSysApp:        v1alpha1.AppName(am.Spec.AppName).IsSysApp(),
+				Appid:           appcfg.AppName(am.Spec.AppName).GetAppID(),
+				IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
 				Entrances:       appconfig.Entrances,
@@ -813,14 +813,14 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 	}
 
 	for _, app := range appsMap {
-		entrances, err := app.GenEntranceURL(req.Request.Context())
+		entrances, err := appcfg.GenEntranceURL(req.Request.Context(), app)
 		if err != nil {
 			api.HandleError(resp, req, err)
 			return
 		}
 		app.Spec.Entrances = entrances
 
-		sharedEntrances, err := app.GenSharedEntranceURL(req.Request.Context())
+		sharedEntrances, err := appcfg.GenSharedEntranceURL(req.Request.Context(), app)
 		if err != nil {
 			api.HandleError(resp, req, err)
 			return

@@ -204,7 +204,7 @@ func (h *HelmOps) unregisterAppPerm(sa *string, ownerName string, perm []appcfg.
 	for _, p := range perm {
 		requires = append(requires, appcfg.PermissionRequire{
 			ProviderName:      p.ProviderName,
-			ProviderNamespace: p.GetNamespace(ownerName),
+			ProviderNamespace: appcfg.ProviderPermissionNamespace(p.ProviderPermission, ownerName),
 			ServiceAccount:    sa,
 			ProviderAppName:   p.AppName,
 			ProviderDomain:    p.Domain,
