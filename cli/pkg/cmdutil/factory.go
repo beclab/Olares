@@ -360,24 +360,56 @@ func (t *refreshingTransport) clock() time.Time {
 	return time.Now()
 }
 
-// send injects token (when non-empty) and forwards to the base transport.
-// Clones the request so the caller's *http.Request is left untouched (some
-// callers retry at a higher level).
+// send injects access_token (when non-empty) and forwards to the base
+// transport. Three pieces of auth state ride together — see the SPA's
+// successful /capi/app/detail request (captured 2026-05-01) for the
+// exact recipe:
 //
-// 2026-04-28 KI-12 / KI-15 / KI-16 reverted: an earlier draft also
-// pasted the access_token into an `auth_token` cookie. That broke 31
-// previously-working verbs because Authelia's ext-authz on the desktop
-// ingress treats `auth_token` as its OWN session-id cookie (not the
-// JWT access_token) — pasting an unrecognized value triggered a
-// global redirect-to-login → 400 Bad Request HTML response on every
-// path. Until we figure out the real cookie name (or stop pretending
-// CLI requests are SPA-shaped), only X-Authorization rides here.
+//  1. X-Authorization: <jwt>
+//     The Olares edge stack (Authelia ext-authz → l4-bfl-proxy) reads
+//     this for identity. Set on every request as the primary auth
+//     signal. See framework/l4-bfl-proxy/internal/translator/translator.go
+//     (RequestHeaders allow-list) and framework/bfl/pkg/apiserver/
+//     filters.go (UserAuthorizationTokenKey = "X-Authorization").
+//
+//  2. Cookie: auth_token=<jwt>
+//     Per-service hosts (dashboard.<terminus>, control-hub.<terminus>,
+//     files.<terminus>, market.<terminus>) emit `Set-Cookie:
+//     auth_token=<jwt>; domain=<terminus>; path=/` on every 200, and
+//     several /capi/* handlers (notably /capi/app/detail and
+//     /capi/namespaces/group) read identity from THIS cookie rather
+//     than X-Authorization — without it they reply `500 Not Login`
+//     (BFL) or `403 system:anonymous` (controlhub→K8s API server).
+//     The cookie value is the same JWT we put in X-Authorization.
+//
+//     The earlier KI-12 / KI-15 / KI-16 note (committed 2026-04-28)
+//     said `auth_token` cookie broke 31 verbs because Authelia treated
+//     it as its own session slot. That symptom is real but only on
+//     desktop.<terminus>, where Authelia's ext-authz session lives.
+//     The CLI doesn't talk to desktop.<terminus> — every command goes
+//     to a per-service host, where this cookie IS the canonical
+//     identity carrier (proven by the browser's successful 200s on
+//     dashboard.<terminus>/capi/app/detail using exactly this header).
+//
+//  3. X-Unauth-Error: Non-Redirect
+//     Tells the edge to return JSON 401 instead of an HTML 302 redirect
+//     to /login when auth fails. Without it, an expired token surfaces
+//     as a JSON-decode parse error (the historical "400 Bad Request
+//     HTML response" symptom referenced in the KI-12/15/16 note).
+//
+// Clones the request so the caller's *http.Request is left untouched
+// (some callers retry at a higher level). AddCookie appends to any
+// pre-existing Cookie header rather than replacing it; in the unlikely
+// event the caller pre-set its own auth_token cookie both values are
+// sent (per RFC 6265 §5.4 the server picks one, typically the first).
 func (t *refreshingTransport) send(req *http.Request, token string) (*http.Response, error) {
 	if token == "" {
 		return t.base.RoundTrip(req)
 	}
 	clone := req.Clone(req.Context())
 	clone.Header.Set("X-Authorization", token)
+	clone.AddCookie(&http.Cookie{Name: "auth_token", Value: token})
+	clone.Header.Set("X-Unauth-Error", "Non-Redirect")
 	return t.base.RoundTrip(clone)
 }
 

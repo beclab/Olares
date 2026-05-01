@@ -608,3 +608,52 @@ func TestTokenCell_RaceFree(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+// TestRoundTrip_AuthCookieAndUnauthErrorInjected pins the browser-
+// faithful auth posture: every authenticated request carries
+// X-Authorization, Cookie: auth_token=<jwt>, AND X-Unauth-Error:
+// Non-Redirect.
+//
+// The combination is what makes /capi/app/detail and
+// /capi/namespaces/group return 200 instead of "500 Not Login" /
+// "403 system:anonymous", and X-Unauth-Error keeps a stale-token
+// failure from coming back as an HTML 302 to /login that the JSON
+// decoder would choke on. This is the captured browser request shape
+// from 2026-05-01 against a production Olares deployment.
+func TestRoundTrip_AuthCookieAndUnauthErrorInjected(t *testing.T) {
+	var (
+		seenAuth   string
+		seenCookie *http.Cookie
+		seenUnauth string
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenAuth = r.Header.Get("X-Authorization")
+		seenCookie, _ = r.Cookie("auth_token")
+		seenUnauth = r.Header.Get("X-Unauth-Error")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	store := &fakeStore{}
+	tr, _ := newTransport(t, store, "unused", "AT-1")
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
+	resp, err := tr.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("RoundTrip: %v", err)
+	}
+	resp.Body.Close()
+
+	if seenAuth != "AT-1" {
+		t.Errorf("X-Authorization = %q, want AT-1", seenAuth)
+	}
+	if seenCookie == nil {
+		t.Fatalf("auth_token cookie missing — /capi/* will reject as anonymous")
+	}
+	if seenCookie.Value != "AT-1" {
+		t.Errorf("auth_token cookie value = %q, want AT-1", seenCookie.Value)
+	}
+	if seenUnauth != "Non-Redirect" {
+		t.Errorf("X-Unauth-Error = %q, want Non-Redirect (without it, edge returns HTML 302 → JSON parse failure)", seenUnauth)
+	}
+}
