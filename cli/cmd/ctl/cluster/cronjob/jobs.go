@@ -112,8 +112,11 @@ func runJobs(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name
 
 // renderChildJobsTable lays out the child Jobs in the same column
 // shape as `cluster job list` so users can read both outputs without
-// re-parsing. We reuse job.Job's helper methods (status / duration /
-// age) so the column rules stay shared with the job package.
+// re-parsing. We reuse the exported job.Job.StatusLabel() helper so
+// the STATUS column matches `cluster job list` exactly — otherwise a
+// suspended Job would show as "Suspended" in `cluster job list` and
+// "Pending" here, and the case-insensitivity / Failing-state handling
+// would silently diverge.
 func renderChildJobsTable(items []job.Job, noHeaders bool) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	defer w.Flush()
@@ -122,32 +125,18 @@ func renderChildJobsTable(items []job.Job, noHeaders bool) error {
 	}
 	now := time.Now()
 	for _, j := range items {
-		// We render NAME / COMPLETIONS (succeeded/total) / STATUS /
-		// AGE — DURATION is dropped because the job.Job helpers
-		// computing it are unexported.
+		// NAME / COMPLETIONS (succeeded/total) / STATUS / AGE.
+		// DURATION is dropped because the job.Job duration helper
+		// is unexported and adding a fifth column here would push
+		// the table past the SPA's lazy-load tree layout.
 		comp := "-"
 		if j.Spec.Completions != nil {
 			comp = fmt.Sprintf("%d/%d", j.Status.Succeeded, *j.Spec.Completions)
 		} else {
 			comp = fmt.Sprintf("%d", j.Status.Succeeded)
 		}
-		status := "Pending"
-		for _, c := range j.Status.Conditions {
-			if c.Status != "True" {
-				continue
-			}
-			switch c.Type {
-			case "Complete":
-				status = "Complete"
-			case "Failed":
-				status = "Failed"
-			}
-		}
-		if status == "Pending" && j.Status.Active > 0 {
-			status = "Running"
-		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-			j.Metadata.Name, comp, status,
+			j.Metadata.Name, comp, j.StatusLabel(),
 			clusteropts.Age(j.Metadata.CreationTimestamp, now))
 	}
 	if len(items) == 0 {

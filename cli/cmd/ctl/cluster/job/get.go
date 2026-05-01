@@ -109,7 +109,7 @@ func renderGetTable(j Job) error {
 
 	fmt.Fprintf(w, "Name:\t%s\n", j.Metadata.Name)
 	fmt.Fprintf(w, "Namespace:\t%s\n", clusteropts.DashIfEmpty(j.Metadata.Namespace))
-	fmt.Fprintf(w, "Status:\t%s\n", j.status())
+	fmt.Fprintf(w, "Status:\t%s\n", j.StatusLabel())
 	fmt.Fprintf(w, "Completions:\t%s\n", j.completionsLabel())
 	if j.Spec.Parallelism != nil {
 		fmt.Fprintf(w, "Parallelism:\t%d\n", *j.Spec.Parallelism)

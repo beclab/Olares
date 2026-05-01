@@ -123,12 +123,12 @@ func renderListTable(items []Job, showNamespace, noHeaders bool, p *clusteropts.
 		if showNamespace {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
 				clusteropts.DashIfEmpty(j.Metadata.Namespace), j.Metadata.Name,
-				j.completionsLabel(), j.status(),
+				j.completionsLabel(), j.StatusLabel(),
 				j.duration(now), j.age(now))
 		} else {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 				j.Metadata.Name,
-				j.completionsLabel(), j.status(),
+				j.completionsLabel(), j.StatusLabel(),
 				j.duration(now), j.age(now))
 		}
 	}

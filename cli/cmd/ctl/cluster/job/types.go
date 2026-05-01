@@ -111,11 +111,20 @@ func (j Job) duration(now time.Time) string {
 	return formatDuration(d)
 }
 
-// status returns the kubectl-style STATUS label: "Complete" /
-// "Failed" / "Suspended" (when spec.suspend=true) / "Running" /
-// "Pending". Mirrors how the SPA's `getWorkloadStatus` derives a
-// job's state for the tree view.
-func (j Job) status() string {
+// StatusLabel returns the kubectl-style STATUS column value:
+// "Complete" / "Failed" / "Suspended" (when spec.suspend=true) /
+// "Running" / "Failing" / "Pending". Mirrors how the SPA's
+// `getWorkloadStatus` derives a job's state for the tree view.
+//
+// The name avoids a collision with the K8s-native `Status` field
+// on Job; callers that want the raw status block use `j.Status`,
+// callers that want the rendered label use `j.StatusLabel()`.
+//
+// Exported so sibling packages (e.g. `cluster cronjob jobs`'s
+// `renderChildJobsTable`) render the same column the same way —
+// otherwise the same suspended Job would print "Suspended" in
+// `cluster job list` and "Pending" in `cluster cronjob jobs`.
+func (j Job) StatusLabel() string {
 	if j.Spec.Suspend != nil && *j.Spec.Suspend {
 		return "Suspended"
 	}

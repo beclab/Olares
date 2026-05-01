@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -364,7 +363,13 @@ func runStatus(ctx context.Context, o *clusteropts.ClusterOptions, namespace str
 		first = false
 
 		s := fetchStatus(ctx, c, namespace, eventsN)
-		if errors.Is(ctx.Err(), context.Canceled) {
+		// Bail on either Canceled (Ctrl-C / SIGTERM) or
+		// DeadlineExceeded (parent set a timeout). Sibling watch
+		// loops in pod/get.go and workload/rollout.go check both;
+		// we used to only check Canceled and would do one wasted
+		// fetchStatus tick after the deadline before SleepContext
+		// caught the error.
+		if ctx.Err() != nil {
 			return nil
 		}
 		if clearable {
