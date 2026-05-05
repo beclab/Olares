@@ -185,6 +185,16 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           ]
         },
         {
+          text: "Embodied AI",
+          collapsed: false,
+          items: [
+            {
+              text: "Isaac Lab",
+              link: "/use-cases/isaac-lab",
+            },
+          ]
+        },
+        {
           text: "Virtual machine",
           collapsed: false,
           items: [
