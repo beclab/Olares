@@ -107,6 +107,7 @@ NemoClaw lets you chat with your agent in either the OpenClaw Web UI or the Open
 </template>
 
 <template #In-NemoClaw-CLI>
+
 1. Open the NemoClaw CLI app from Launchpad.
 2. Run the following command to connect to the sandbox:
 
@@ -201,7 +202,7 @@ NemoClaw runs OpenClaw inside a sandboxed runtime, so you must configure the cha
 3. Run the channel configuration wizard:
 
    ```bash
-   openclaw configure --section channels
+   openclaw configure
    ```
 
 4. Follow the prompts to add Discord:
@@ -255,7 +256,7 @@ You need a [Brave Search API](https://brave.com/search/api/) key. The free "Data
 3. Run the web tool configuration wizard:
 
    ```bash
-   openclaw configure --section web
+   openclaw configure
    ```
 
 4. Configure as follows:
