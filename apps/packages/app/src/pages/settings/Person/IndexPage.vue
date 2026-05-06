@@ -11,13 +11,6 @@
 		</div>
 		<BtList>
 			<bt-form-item
-				v-if="terminusDStore.olaresInfo"
-				:title="t('My hardware')"
-				:description="t('View and manage your Olares hardware')"
-				:chevron-right="true"
-				@click="gotoPage('/hardware')"
-			/>
-			<bt-form-item
 				:title="t('olares_space')"
 				:description="t('Check your subscribed plan and usage on Olares Space')"
 				:chevron-right="true"

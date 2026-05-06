@@ -67,6 +67,7 @@ export enum MENU_TYPE {
 	VPN = 'VPN',
 	Network = 'Network',
 	GPU = 'GPU',
+	Hardware = 'Hardware',
 	Restore = 'Restore',
 	Developer = 'Developer',
 	Video = 'Video',
@@ -129,6 +130,12 @@ const BaseMenuItems: Record<MENU_TYPE, MenuItem> = {
 		img: 'settings/imgs/root/gpu.svg',
 		description:
 			'Manage and monitor all available GPU resources across your nodes.'
+	},
+	[MENU_TYPE.Hardware]: {
+		label: 'home_menus.hardware',
+		key: MENU_TYPE.Hardware,
+		img: 'settings/imgs/root/device.svg',
+		description: 'View and manage your Olares hardware.'
 	},
 	[MENU_TYPE.Backup]: {
 		label: 'home_menus.backup',

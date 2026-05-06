@@ -13,6 +13,7 @@ export default {
 		users: '账户',
 		vpn: 'VPN',
 		gpu: 'GPU',
+		hardware: '硬件',
 		restore: '恢复',
 		developer: '开发者',
 		video: '视频',
