@@ -838,7 +838,7 @@ func parseLegacyAppRequirement(cfg *appcfg.AppConfiguration, selectedGpu string)
 			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType, utils.StrixHaloChipType}
 		}
 
-		if selectedGpu != "" {
+		if selectedGpu != "" && gpu != nil && !gpu.IsZero() {
 			found := false
 			for _, supportedGpu := range cfg.Spec.SupportedGpu {
 				if str, ok := supportedGpu.(string); ok && str == selectedGpu {
