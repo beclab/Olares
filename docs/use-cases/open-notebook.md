@@ -1,5 +1,5 @@
 ---
-outline: [2, 3]
+outline: deep
 description: Install and use Open Notebook on Olares to collect sources, generate AI insights, chat with your knowledge base, create notes, and generate podcasts from your research materials.
 head:
   - - meta
@@ -7,14 +7,14 @@ head:
       content: Olares, Open Notebook, AI notebook, research assistant, sources, notes, RAG, knowledge base, podcast, transformations
 app_version: "1.0.4"
 doc_version: "1.0"
-doc_updated: "2026-04-30"
+doc_updated: "2026-05-07"
 ---
 
 # Build a research notebook with Open Notebook
 
 Open Notebook is an AI-powered research workspace for collecting source materials, generating structured insights, chatting with your knowledge base, and turning research into editable notes or podcast episodes.
 
-This guide walks you through your first complete workflow in Open Notebook. To make the workflow easier to follow, it uses an AI research project as an example. You can use the same workflow for papers, courses, meeting notes, market research, product research, or any other topic.
+This guide walks you through your first complete Open Notebook workflow using an AI research project as an example. You can apply the same workflow to papers, courses, meeting notes, market research, product research, or other topics.
 
 ## Learning objectives
 
@@ -31,17 +31,14 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-Before you begin, make sure you have:
+Before you begin, make sure you have access to the models you want to use.
 
-- Access to at least one AI model provider, such as Ollama, OpenAI Compatible, OpenAI, Google AI, or another supported provider.
-- Access to an embedding model for vector search and retrieval.
-- Optional: access to a speech-to-text model if you want to process audio or video sources.
-- Optional: access to a text-to-speech model if you want to generate podcasts.
+- Required: At least one language model and an embedding model for vector search.
+- Required for podcast generation: A text-to-speech (TTS) model.
+- Optional: A speech-to-text (STT) model for processing audio or video sources.
 
 :::info Recommended local AI services
-For local AI workflows on Olares, you can use [Ollama](ollama.md) for language and embedding models, and [Speaches](speaches.md) for speech-to-text and text-to-speech.
-
-Open Notebook can also use other supported cloud or OpenAI-compatible providers.
+For local AI workflows on Olares, you can use local language or embedding model services exposed through an **Ollama-compatible** endpoint, and [Speaches](speaches.md) for speech-to-text and text-to-speech.
 :::
 
 ## How Open Notebook works
@@ -55,7 +52,7 @@ Open Notebook organizes your work around four main content types:
 | **Insight** | AI-generated output created from a source by a transformation, such as a <br>summary or key takeaways. |
 | **Note** | Editable knowledge saved inside a notebook. A note can be written manually,<br> saved from an AI response, or created from an insight. |
 
-In this guide, you will create a notebook for a sample AI research project, add sources about AI, generate summaries and insights, chat with the materials, save useful outputs as notes, and turn selected materials into a podcast.
+In this guide, you will create a sample AI research notebook, add sources, generate insights, chat with the materials, save notes, and create a podcast.
 
 ## Install Open Notebook
 
@@ -69,33 +66,34 @@ After installation, configure the required models before starting your first res
 
 ## Connect AI models
 
-Open Notebook needs AI models to summarize sources, answer questions, retrieve source context, and generate podcasts. You only need to set this up once.
+Open Notebook uses AI models for summaries, chat, retrieval, and podcast generation. You only need to set them up once.
 
 Go to **Manage** > **Models**. Setting up models has four main steps:
 
 ### Get provider endpoints
 
-If you use local Olares apps, such as Ollama, Speaches, or Whisper-WebUI, as AI providers, copy their endpoints first.
+If you use local Olares model services, copy their endpoints first.
 
-1. Go to Olares **Settings** > **Applications** and click the app.
+1. Go to Olares **Settings** > **Applications** and click the model service app.
 2. Look for **Shared entrances** and copy the endpoint.
 3. If **Shared entrances** is not available for the app, copy its **API Entrance** or standard entrance instead.
 
-:::tip Endpoint format
-Use the endpoint format required by the provider:
-
-- **Ollama**: Use the endpoint exactly as copied. Do not append `/v1`.
-- **OpenAI-compatible providers**, such as Speaches or Whisper-WebUI: Append `/v1` to the endpoint.
-
-For example, if the Speaches endpoint is `http://edd26bab0.shared.olares.com`, configure it in Open Notebook as `http://edd26bab0.shared.olares.com/v1`
-:::
-
 ### Add a provider configuration
 
-1. In Open Notebook, go to **Manage** > **Models** and find the provider you want to use.
-2. Click **Add Configuration** under the provider, such as Ollama or OpenAI Compatible.
+In Open Notebook, add the configuration under the provider type that matches the model service:
+
+- Use **Ollama** if the model service app name, app page, or icon shows **Ollama**.
+
+   ![Ollama-compatible model service](/images/manual/use-cases/open-notebook-ollama-compatible-service.png#bordered){width=90%}
+
+- If the service does not show **Ollama**, use another matching provider type, such as **OpenAI Compatible**.
+
+1. Go to **Manage** > **Models** and find the provider you want to use.
+2. Click **Add Configuration** under the provider.
 3. Enter a name for the configuration.
-4. Paste the endpoint URL you copied.
+4. In **Base URL**, paste the endpoint you copied.
+   - If the example URL includes `/v1`, append `/v1` to the endpoint.
+   - If the example URL does not include `/v1`, paste the endpoint exactly as copied.
 5. Enter an API key if required.
 6. Click **Add Configuration**.
 
@@ -114,7 +112,7 @@ Go back to **Default Model Assignments** at the top of **Manage** > **Models**. 
 
 | Slot | What to select  |
 | :--| :-- |
-| Chat Model   | A language model. |
+| Chat Model | A language model. |
 | Embedding Model | An embedding model.  |
 | Text-to-Speech Model | A TTS model, if you generate podcasts. |
 | Speech-to-Text Model | An STT model, if you process audio or video. |
@@ -149,7 +147,7 @@ This guide provides sample text about generative AI. Add it as a **Text** source
 ### Add a text source
 
 1. Open the notebook you just created.
-2. Click **Add Source** > **Add Source**.
+2. In the **Source** area, click **Add Source** > **Add Source**.
 3. Click the **Enter Text** tab.
 4. Paste the following content:
    ```plain
@@ -178,25 +176,18 @@ This guide provides sample text about generative AI. Add it as a **Text** source
    | Transformation | Use it when |
    |:---------------|:------------|
    | **Dense Summary** | You want a compact, information-rich overview of the source. <br>Recommended for the first run. |
-   | **Simple Summary** | You want a shorter, easier-to-read summary before deciding<br> whether the source is worth reading in detail. |
-   | **Key Insights** | You want the main takeaways, important claims, or notable <br>findings. |
-   | **Paper Analysis** | You are processing an academic paper and want a structured<br> analysis of research question, method, findings, and limitations. |
-   | **Reflection Questions** | You want questions for deeper thinking, discussion, or<br> follow-up research. |
+   | **Simple Summary** | You want a shorter summary before reading in detail. |
+   | **Key Insights** | You want main takeaways, claims, or findings. |
+   | **Paper Analysis** | You are processing an academic paper. |
+   | **Reflection Questions** | You want questions for discussion or follow-up research. |
    | **Table of Contents** | You want to understand the structure of a long source. |
 
-   :::tip
-   For your first run, select only one transformation. You can open the source's **Insights** tab later and click **Generate New Insight** to apply another transformation.
-   :::
 10. Keep **Enable search vector embedding** selected.
 11. Click **Done**.
 
 ![Add first source](/images/manual/use-cases/open-notebook-add-first-source.png#bordered){width=70%}
 
-Open Notebook starts processing the source. After processing completes, the source becomes available for insights, chat, notes, and citations.
-
-:::info Processing time
-Processing time depends on source size, selected transformations, model speed, and available hardware resources. Small web pages may finish quickly, while large files may take longer.
-:::
+Open Notebook starts processing the source. When processing finishes, you can use it for insights, chat, notes, and citations.
 
 ### Add other source types
 
@@ -204,14 +195,14 @@ After the first workflow succeeds, you can add other materials in a similar way.
 
 | Source type | Supported content |
 | :-- | :-- |
-| **Upload file** | Documents, images, archives, and media files. Audio or video files require a Speech-to-Text model. |
+| **Upload file** | Documents, images, archives, and media files. <br>Audio or video files require a Speech-to-Text model. |
 | **Add URL** | Web pages and other supported online content. |
 | **Enter text** | Content pasted or typed directly. |
 
 :::warning Avoid heavy processing
-When using local models, especially on a single-GPU setup, avoid processing too many large sources or applying too many transformations at the same time. This may cause slow processing, timeouts, or failed tasks.
+When using local models, process one source with one transformation first. Processing many large sources or applying multiple transformations at the same time may cause slow processing, timeouts, or failed tasks.
 
-For better stability, process one source with one transformation first. You can generate additional insights later from the source's **Insights** tab by using **Generate New Insight**.
+You can generate additional insights later from the source's **Insights** tab by using **Generate New Insight**.
 :::
 
 ## Review generated insights
@@ -246,13 +237,12 @@ After your sources are processed, you can ask questions based on the materials i
 
 1. Open your notebook.
 2. In **Chat with Notebook**, select the model you want to use.
-3. Click the icon next to each source to change the source context level.
-   
+3. Click the icon next to each source to choose how much of each source the AI can use:
       | Icon | Context level | Recommended use |
       | :-- | :--  | :-- |
-      | <i class="material-symbols-outlined">news</i> | Full content: The AI can use the<br> full source content. | Use for the most important sources when you need detailed answers and citations. |
-      | <i class="material-symbols-outlined">lightbulb_2</i> | Insights only: The AI can use<br> generated summaries or insights. | Use for background sources when a summary is enough. |
-      | <i class="material-symbols-outlined">visibility_off</i>| Not included in chat: The AI cannot<br> use this source.| Use for irrelevant, sensitive, or unnecessary sources.  |
+      | <i class="material-symbols-outlined">news</i> | Full content | Use for the most important sources when you need detailed answers and citations. |
+      | <i class="material-symbols-outlined">lightbulb_2</i> | Insights only | Use for background sources when a summary is enough. |
+      | <i class="material-symbols-outlined">visibility_off</i>| Not included in chat| Use for irrelevant, sensitive, or unnecessary sources.  |
    
 4. Enter your question and send it.
 
@@ -266,17 +256,20 @@ When an answer includes citations, click them to open the referenced source pass
 
 ## Create notes
 
-Notes are editable knowledge items inside a notebook. Use them to keep summaries, outlines, questions, drafts, or your own conclusions.
+Notes are editable items for summaries, outlines, questions, drafts, or conclusions.
 
 ### Save an AI answer as a note
 
 When you receive a useful answer in chat:
 
 1. Click the <i class="material-symbols-outlined">save</i> icon under the AI response.
-2. After the note appears in **Notes** with the `AI Generated` tag, open it.
-3. Enter a note title, then click **Save Note**.
+2. In the **Notes** area, click the saved note with the `AI Generated` tag to review it.
+  
+   ![AI generated note](/images/manual/use-cases/open-notebook-ai-note.png#bordered){width=70%}
 
-You can edit the note later, use it as part of future notebook context, or include it in podcast generation.
+3. Update the title or content when needed, then click **Save Note**.
+
+You can use saved notes as part of future notebook context, or include them in podcast generation.
 
 ### Create a note manually
 
@@ -290,6 +283,8 @@ You can also create notes manually.
 
 Your note appears in the **Notes** area with a `Human` tag.
 
+![Manually created note](/images/manual/use-cases/open-notebook-manual-note.png#bordered){width=70%}
+
 ## Generate a podcast
 
 After you have sources, insights, and notes, you can turn your research materials into a podcast episode.
@@ -297,53 +292,57 @@ After you have sources, insights, and notes, you can turn your research material
 Podcast generation requires:
 
 - A language model for outline generation.
-- A language model for script generation.
+- A language model for transcript generation.
 - A text-to-speech model for audio generation.
 - Processed sources or notes to use as context.
 
 ### Configure podcast profiles
 
-Before generating a podcast, make sure the podcast profiles have the required models and voices configured.
+Before generating a podcast, configure the required models and voices in podcast profiles.
 
 1. Go to **Create** > **Podcasts**, then click the **Profiles** tab.
 2. Open any profile marked with **Needs Configuration** or a warning icon.
-3. For a **Speaker Profile**, select a voice model and a supported voice for each speaker.
+3. For a **Speaker Profile**, select a voice model and enter a voice ID supported by that model.
+
+   :::warning Use a voice ID supported by the selected TTS model
+   The default voice ID in a speaker profile may not be supported by your selected TTS model. For example, `nova` is not available in `speaches-ai/Kokoro-82M-v1.0-ONNX`. Use a supported Kokoro voice ID such as `af_heart` instead.
+   :::
+
 4. For an **Episode Profile**, select the speaker profile, outline model, transcript model, language, segment count, and briefing.
 5. Save your changes.
 
-:::tip Start simple
-For your first podcast, use one speaker and a short briefing. After the first episode works, you can try multi-speaker formats or more detailed instructions.
-:::
-
 ### Generate the audio
 
-1. Click **Episodes** tab and click **Generate Podcast**.
+1. Click the **Episodes** tab, then click **Generate Podcast**.
 2. Select the sources or notes to include.
 3. Select the episode profile.
 4. Set the episode name.
 5. Add extra instructions if needed.
-
-   ![Generate podcast](/images/manual/use-cases/open-notebook-generate-podcast.png#bordered){width=90%}
-
+   :::tip Match the language and voice
+   Some TTS voices work best with specific languages. Make sure the podcast language matches the selected voice. If you use an English voice, add extra instructions such as: `Generate the entire podcast script in ENGLISH only.`
+   :::
 6. Click **Generate**. 
+
+![Generate podcast](/images/manual/use-cases/open-notebook-generate-podcast.png#bordered){width=90%}
 
 After the episode is complete, you can:
 
 - Play it in the browser.
 - Download the audio file.
-- Review the generated transcript, if available.
+- Review the generated transcript in **Details**.
 
-:::info Generation time
-Podcast generation can take several minutes. Text-to-speech is usually the slowest stage, especially for longer episodes or multi-speaker podcasts.
-:::
+![Generated podcast](/images/manual/use-cases/open-notebook-podcast-result.png#bordered){width=90%}
 
-## Explore: Search across your knowledge base
+
+## Explore more features
+
+### Search across your knowledge base
 
 Go to **Process** > **Ask and Search** when you want to find information across your sources and notes.
 
-### Ask a question
+#### Ask a question
 
-Use **Ask** when you want a complete answer instead of reviewing search results manually.
+Use **Ask** when you want a synthesized answer.
 
 1. Open **Process** > **Ask and Search**.
 2. Click the **Ask** tab.
@@ -357,9 +356,13 @@ Use **Ask** when you want a complete answer instead of reviewing search results 
 
 4. Click **Ask**.
 
-### Search for source fragments
+Open Notebook returns a synthesized answer based on matching content from your knowledge base.
 
-Use **Search** when you want to find and inspect matching content yourself.
+![Ask a question](/images/manual/use-cases/open-notebook-ask-result.png#bordered){width=90%}
+
+#### Search for source fragments
+
+Use **Search** when you want to inspect matching fragments yourself.
 
 1. Open **Process** > **Ask and Search**.
 2. Click the **Search** tab.
@@ -368,12 +371,73 @@ Use **Search** when you want to find and inspect matching content yourself.
    - **Vector Search**: Use this when you remember the meaning but not the exact wording.
 4. Enter your query.
 
-
 :::warning Embedding model required
 Vector search requires a configured Embedding Model. The source also needs embeddings enabled during processing. If embeddings are missing or incorrectly configured, vector search may return no useful results.
 :::
 
+### Customize transformations
+
+Transformations are reusable AI prompts that turn source content into structured insights, such as summaries, key takeaways, paper analysis, or reflection questions.
+
+:::tip How transformations are applied
+Use **Manage** > **Transformations** to view, edit, test, or create templates.
+
+To apply a transformation to a source:
+- Select a transformation when adding a source.
+- For an existing source, open the source, go to the **Insights** tab, and click **Generate New Insight**.
+:::
+
+You can either edit an existing transformation or create a new one.
+
+#### Edit an existing transformation
+
+Use this when a built-in transformation is close to what you need.
+
+1. Go to **Manage** > **Transformations**.
+2. Find the transformation you want to adjust, then click **Edit**.
+3. Modify the title, description, or prompt.
+4. Click **Edit Transformation** to save your changes.
+
+Editing a transformation only changes how it works the next time you apply it. Existing insights are not updated automatically. To get a new result, run the transformation again from the source's **Insights** tab.
+
+#### Create a new transformation
+
+Use this when you want a separate template for a specific analysis task.
+
+1. Go to **Manage** > **Transformations**.
+2. Click **Create New**.
+3. Enter a name, title, description, and prompt.
+4. Click **Create New**.
+
+   ![New transformation](/images/manual/use-cases/open-notebook-new-trans.png#bordered){width=90%}
+
+#### Test a transformation
+
+Before applying a transformation to real sources, test it with a short sample.
+
+1. In **Manage** > **Transformations**, find the transformation you want to test.
+2. Click **Playground**.
+3. Paste a short excerpt from a source.
+4. Run the transformation and review the output.
+5. If the output does not meet your expectation, click **Edit** to refine the prompt, then test again.
+
+:::tip Test before applying to full sources
+Use **Playground** to check the output format, length, and accuracy before applying a transformation to full sources.
+:::
+
 ## FAQs
+
+### Why is processing slow or unstable?
+
+Processing can be slow or unstable for two common reasons:
+
+- You are processing multiple sources or applying multiple transformations at the same time.
+- Other GPU-intensive apps are using GPU resources needed by Open Notebook or its configured model services.
+
+To improve performance:
+
+1. Process one source with one transformation first.
+2. Stop or pause other GPU-intensive apps. Keep only the model services assigned in **Manage** > **Models** running. See [Manage GPU resources](/manual/olares/settings/single-gpu.md) for details.
 
 ### Why does vector search return no useful results?
 
@@ -385,27 +449,24 @@ Vector search requires:
 If vector search returns no useful results:
 
 1. Go to **Manage** > **Models** and check the **Embedding Model** assignment.
-2. Make sure the selected model is an embedding model, not a chat model.
+2. Make sure the selected model is an embedding model, not a language model.
 3. Check whether the source was processed with **Enable search vector embedding** selected.
-4. Reprocess the source if needed.
+4. Reprocess the source.
 
 ### Why does podcast generation fail?
 
-Podcast generation may fail if required models are missing, selected sources are not ready, the TTS model is unavailable, or the script language does not match the selected voice.
+Podcast generation may fail if required models are missing, selected sources are not ready, the TTS provider is unavailable, the transcript language does not match the selected voice, or the speaker voice ID is not supported by the selected TTS model.
 
 Check the following:
 
 - The episode profile has an outline model and a transcript model.
-- The speaker profile has a valid TTS model and voice.
+- The speaker profile has a valid TTS model.
+- Each speaker uses a voice ID supported by the selected TTS model.
 - The selected sources are processed and ready.
-- The podcast language matches the selected TTS voice.
+- The podcast language matches the selected voice.
 - The TTS provider is running.
 
-### Why is processing slow or unstable when I add multiple sources or transformations?
-
-When using local models, especially on a single-GPU setup, processing multiple sources or applying multiple transformations at the same time can overload available resources. This may cause slow processing, duplicate generation, timeouts, or failed tasks.
-
-For better stability, process one source with one transformation first. You can generate additional insights later from the source's **Insights** tab by using **Generate New Insight**.
+If the error message lists supported voice IDs, update the speaker profile with one of those IDs, then create a new podcast generation task.
 
 ## Learn more
 
