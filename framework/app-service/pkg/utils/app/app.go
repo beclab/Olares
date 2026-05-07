@@ -835,10 +835,10 @@ func parseLegacyAppRequirement(cfg *appcfg.AppConfiguration, selectedGpu string)
 	if !oac.IsNewOlaresManifestVersion(cfg.ConfigVersion) {
 		// Default supportedGpu list when the manifest leaves it empty.
 		if len(cfg.Spec.SupportedGpu) == 0 {
-			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType}
+			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType, utils.StrixHaloChipType}
 		}
 
-		if selectedGpu != "" {
+		if selectedGpu != "" && gpu != nil && !gpu.IsZero() {
 			found := false
 			for _, supportedGpu := range cfg.Spec.SupportedGpu {
 				if str, ok := supportedGpu.(string); ok && str == selectedGpu {
