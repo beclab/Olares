@@ -97,7 +97,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "Open Notebook",
-              link: "/use-cases/open-notebook",
+              link: "/zh/use-cases/open-notebook",
             },            
             // {
             //   text: "Dify",
