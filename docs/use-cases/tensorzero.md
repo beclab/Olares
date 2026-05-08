@@ -224,8 +224,8 @@ Construct the correct model name using the following prefixes based on the resou
 </template>
 <template #AgentZero>
 
-1. Open Agent Zero, and then go to **Settings** > **Agent Settings** > **Chat Model**.
-2. Configure the following details:
+1. Open Agent Zero, and then go to **Settings** > **Agent Settings**.
+2. Click **Chat Model**, configure the following details, and then click **Save**.
 
     - **Chat model provider**: Select **Other OpenAI compatible**.
     - **Chat model name**: Enter `tensorzero::function_name::my_function_name`.
@@ -234,33 +234,31 @@ Construct the correct model name using the following prefixes based on the resou
 
     ![TensorZero config in AgentZero](/images/manual/use-cases/tensorzero-agentzero.png#bordered)
 
-3. Click **Save**.
-4. To configure memory embeddings, go to the **Embedding Model** section, and configure:
+3. Click **Embedding Model**, configure the following details, and then click **Save**.
 
     - **Embedding model provider**: Select **Other OpenAI compatible**.
-    - **Embedding model name**: Enter `tensorzero::embedding_model_name::nomic_embed`.
+    - **Embedding model name**: Enter `openai/tensorzero::embedding_model_name::nomic_embed`.
     - **API key**: Enter any text.
-    - **Embedding model API base URL**: Enter your TensorZero URL ending with /openai/v1. For example, `https://ea581361.laresprime.olares.com/openai/v1`
+    - **Embedding model API base URL**: Enter your TensorZero URL ending with /openai/v1. For example, `https://ea581361.laresprime.olares.com/openai/v1`.
 
     ![TensorZero config in AgentZero, embedding model config](/images/manual/use-cases/tensorzero-agentzero-embed.png#bordered)    
 
-5. Click **Save**.
-5. Start a new chat. 
+4. Start a new chat. 
 
     ![TensorZero chat in AgentZero](/images/manual/use-cases/tensorzero-agentzero-chat.png#bordered)
+
+5. To test the embedding model's memory effect, tell the agent a specific fact to remember, and then ask it to recall the fact.
+
+    ![TensorZero memory verify in AgentZero](/images/manual/use-cases/tensorzero-agentzero-memory.png#bordered)
 
 6. Open TensorZero, and check the observability data. For example, on the **Inferences** page, each request you send appears as a log entry, which confirms that TensorZero routes the traffic successfully. 
 
     ![TensorZero inferences page](/images/manual/use-cases/tensorzero-agentzero-inferences.png#bordered)
 
-6. Select an entry to view the details.
+7. Select an entry to view the details.
 
     ![TensorZero chat in AgentZero inference details](/images/manual/use-cases/tensorzero-agentzero-inference-details.png#bordered)
 
-</template>
-<template #OpenNotebook>
-
-pending environment
 </template>
 </Tabs>
 
