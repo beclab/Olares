@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -34,6 +35,7 @@ func UninstallGpuDrivers() error {
 		},
 	}
 
-	return p.Start()
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	return p.Start(context.Background())
 
 }

@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -25,7 +26,8 @@ func StartOlares() error {
 		Runtime: runtime,
 	}
 
-	return p.Start()
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	return p.Start(context.Background())
 }
 
 func StopOlares(timeout, checkInterval time.Duration) error {
@@ -47,5 +49,6 @@ func StopOlares(timeout, checkInterval time.Duration) error {
 		Runtime: runtime,
 	}
 
-	return p.Start()
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	return p.Start(context.Background())
 }

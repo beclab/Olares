@@ -70,14 +70,16 @@ func (t *RemoteTask) Init(runtime connector.Runtime, moduleCache *cache.Cache, p
 	t.Default()
 }
 
-func (t *RemoteTask) Execute() *ending.TaskResult {
+func (t *RemoteTask) Execute(parent context.Context) *ending.TaskResult {
 	if t.TaskResult.IsFailed() {
 		return t.TaskResult
 	}
 	routinePool := make(chan struct{}, DefaultCon)
 	defer close(routinePool)
 
-	ctx, cancel := context.WithTimeout(context.Background(), t.Timeout)
+	// Derive the per-task timeout from the caller's ctx so upstream
+	// cancellation (e.g. SIGINT) propagates promptly through SSH.
+	ctx, cancel := context.WithTimeout(parent, t.Timeout)
 	defer cancel()
 	wg := &sync.WaitGroup{}
 	for i := range t.Hosts {
