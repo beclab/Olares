@@ -16,7 +16,12 @@ func NewCmdUninstallOs() *cobra.Command {
 		Use:   "uninstall",
 		Short: "Uninstall Olares",
 		Run: func(cmd *cobra.Command, args []string) {
-			err := pipelines.UninstallTerminusPipeline()
+			opts := pipelines.UninstallTerminusOptions{
+				Phase:   viper.GetString(common.FlagUninstallPhase),
+				All:     viper.GetBool(common.FlagUninstallAll),
+				Storage: pipelines.StorageOptionsFromViper(),
+			}
+			err := pipelines.UninstallTerminusPipeline(opts)
 			if err != nil {
 				log.Fatalf("error: %v", err)
 			}

@@ -19,20 +19,28 @@ import (
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/phase/system"
-	"github.com/spf13/viper"
 )
 
-func PrepareSystemPipeline(components []string) error {
+// PrepareSystemOptions carries the user-supplied configuration for
+// PrepareSystemPipeline. All flag / env / viper resolution happens
+// in the cmd/ctl layer.
+type PrepareSystemOptions struct {
+	KubeType        string
+	MinikubeProfile string
+	Storage         *common.Storage
+}
+
+func PrepareSystemPipeline(opts PrepareSystemOptions, components []string) error {
 	var terminusVersion, _ = phase.GetOlaresVersion()
 	if terminusVersion != "" && len(components) == 0 {
 		return errors.New("Olares is already installed, please uninstall it first.")
 	}
 
 	var arg = common.NewArgument()
-	arg.SetKubeVersion(viper.GetString(common.FlagKubeType))
-	arg.SetMinikubeProfile(viper.GetString(common.FlagMiniKubeProfile))
+	arg.SetKubeVersion(opts.KubeType)
+	arg.SetMinikubeProfile(opts.MinikubeProfile)
 	arg.SetOlaresVersion(version.VERSION)
-	arg.SetStorage(getStorageConfig())
+	arg.SetStorage(opts.Storage)
 	arg.ClearMasterHostConfig()
 
 	runtime, err := common.NewKubeRuntime(*arg)

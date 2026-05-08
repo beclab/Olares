@@ -7,6 +7,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/pipelines"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func NewCmdInstallOs() *cobra.Command {
@@ -14,7 +15,25 @@ func NewCmdInstallOs() *cobra.Command {
 		Use:   "install",
 		Short: "Install Olares",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := pipelines.CliInstallTerminusPipeline(); err != nil {
+			opts := pipelines.InstallTerminusOptions{
+				KubeType:        viper.GetString(common.FlagKubeType),
+				OlaresVersion:   viper.GetString(common.FlagVersion),
+				MinikubeProfile: viper.GetString(common.FlagMiniKubeProfile),
+				Storage:         pipelines.StorageOptionsFromViper(),
+				Swap: common.SwapConfig{
+					EnablePodSwap:    viper.GetBool(common.FlagEnablePodSwap),
+					Swappiness:       viper.GetInt(common.FlagSwappiness),
+					EnableZRAM:       viper.GetBool(common.FlagEnableZRAM),
+					ZRAMSize:         viper.GetString(common.FlagZRAMSize),
+					ZRAMSwapPriority: viper.GetInt(common.FlagZRAMSwapPriority),
+				},
+				WithJuiceFS: viper.GetBool(common.FlagEnableJuiceFS),
+			}
+			if viper.IsSet(common.FlagEnableReverseProxy) {
+				val := viper.GetBool(common.FlagEnableReverseProxy)
+				opts.EnableReverseProxy = &val
+			}
+			if err := pipelines.CliInstallTerminusPipeline(opts); err != nil {
 				log.Fatalf("error: %v", err)
 			}
 		},

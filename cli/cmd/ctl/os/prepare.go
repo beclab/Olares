@@ -7,6 +7,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/pipelines"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func NewCmdPrepare() *cobra.Command {
@@ -14,7 +15,12 @@ func NewCmdPrepare() *cobra.Command {
 		Use:   "prepare [component1 component2 ...]",
 		Short: "Prepare install",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := pipelines.PrepareSystemPipeline(args); err != nil {
+			opts := pipelines.PrepareSystemOptions{
+				KubeType:        viper.GetString(common.FlagKubeType),
+				MinikubeProfile: viper.GetString(common.FlagMiniKubeProfile),
+				Storage:         pipelines.StorageOptionsFromViper(),
+			}
+			if err := pipelines.PrepareSystemPipeline(opts, args); err != nil {
 				log.Fatalf("error: %v", err)
 			}
 		},

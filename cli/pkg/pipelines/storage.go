@@ -20,7 +20,7 @@ func CliInstallStoragePipeline() error {
 
 	arg := common.NewArgument()
 	arg.SetOlaresVersion(version.VERSION)
-	arg.SetStorage(getStorageConfig())
+	arg.SetStorage(StorageOptionsFromViper())
 
 	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
@@ -33,7 +33,11 @@ func CliInstallStoragePipeline() error {
 	return system.InstallStoragePipeline(runtime).Start()
 }
 
-func getStorageConfig() *common.Storage {
+// StorageOptionsFromViper reads the storage-related flags from the
+// global viper registry. It is the single bridge between viper and
+// the *common.Storage configuration consumed by pipelines; the cmd/ctl
+// layer is the only intended caller.
+func StorageOptionsFromViper() *common.Storage {
 	storageType := viper.GetString(common.FlagStorageType)
 	if storageType == "" {
 		storageType = common.ManagedMinIO
