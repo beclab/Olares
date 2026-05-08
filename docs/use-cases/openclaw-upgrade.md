@@ -39,9 +39,9 @@ The OpenClaw 2026.02.25 update introduced a security enhancement that requires e
     
     ![Error logs](/images/manual/use-cases/container-logs.png#bordered)
 
-3. Open **Settings**, go to **Application** > **OpenClaw** > **Control UI** > **Set up endpoint**, and then copy the endpoint address.
+3. Open **Settings**, go to **Application** > **OpenClaw** > **Control UI** >. Under **Endpoint settings**, copy the endpoint address.
 
-    ![OpenClaw endpoint address](/images/manual/use-cases/openclaw-endpoint.png#bordered){width=70%}    
+    ![OpenClaw endpoint address](/images/manual/use-cases/onetest01-endpoint-openclaw-control-ui.png#bordered){width=70%}    
 
 4. Open **Files**, go to **Application** > **Data** > **clawdbot** > **config**, right-click the `openclaw.json` file, and then download it.
 

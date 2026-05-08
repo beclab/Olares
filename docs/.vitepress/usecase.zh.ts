@@ -30,7 +30,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "启用沙盒",
                   link: "/use-cases/openclaw-enable-sandbox",
-                },                                 
+                },
                 {
                   text: "升级 OpenClaw",
                   link: "/zh/use-cases/openclaw-upgrade",
@@ -38,7 +38,30 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "常见问题",
                   link: "/zh/use-cases/openclaw-common-issues",
-                }                
+                }
+              ]
+            },
+            {
+              text: "OpenCode",
+              link: "/zh/use-cases/opencode",
+              collapsed: true,
+              items: [
+                {
+                  text: "使用 oh-my-openagent 编排多 Agent",
+                  link: "/zh/use-cases/opencode-omo",
+                },
+                {
+                  text: "包管理",
+                  link: "/zh/use-cases/opencode-packages",
+                },
+                {
+                  text: "技能与插件",
+                  link: "/zh/use-cases/opencode-extensions",
+                },
+                {
+                  text: "常见问题",
+                  link: "/zh/use-cases/opencode-issues",
+                },
               ]
             },
             {
@@ -58,7 +81,15 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "在 Krita 中使用 ComfyUI",
                   link: "/zh/use-cases/comfyui-for-krita",
                 },
+                {
+                  text: "常见问题",
+                  link: "/zh/use-cases/comfyui-common-issues",
+                },
               ]
+            },
+            {
+              text: "NemoClaw",
+              link: "/zh/use-cases/nemoclaw",
             },
             {
               text: "Context7",
@@ -80,25 +111,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "LLMFit",
               link: "/zh/use-cases/llmfit",
             },
-            {  
-              text: "OpenCode",
-              link: "/zh/use-cases/opencode",
-              collapsed: true,
-              items: [
-                {
-                  text: "包管理",
-                  link: "/zh/use-cases/opencode-packages",
-                },
-                {
-                  text: "技能与插件",
-                  link: "/zh/use-cases/opencode-extensions",
-                },
-                {
-                  text: "常见问题",
-                  link: "/zh/use-cases/opencode-issues",
-                },
-              ]
-            },
             {
               text: "LobeHub (LobeChat)",
               link: "/zh/use-cases/lobechat",
@@ -116,12 +128,28 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/ace-step",
             },*/
             {
+              text: "AnythingLLM",
+              link: "/zh/use-cases/anythingllm",
+            },
+            {
+              text: "Bifrost",
+              link: "/zh/use-cases/bifrost",
+            },
+            {
               text: "Duix.Avatar",
               link: "/zh/use-cases/duix-avatar",
             },
             {
+              text: "Paperclip",
+              link: "/zh/use-cases/paperclip",
+            },
+            {
               text: "PDFMathTranslate",
               link: "/zh/use-cases/pdfmathtranslate",
+            },
+            {
+              text: "Speaches",
+              link: "/zh/use-cases/speaches",
             },
             // {
             //   text: "Stable Diffusion",
@@ -132,9 +160,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/deerflow2",
             },
             {
-              text: "DeerFlow",
-              link: "/zh/use-cases/deerflow",
+              text: "IndexTTS2",
+              link: "/zh/use-cases/indextts2",
             },
+            {
+              text: "NOFX",
+              link: "/zh/use-cases/nofx",
+            },
+            // {
+            //   text: "DeerFlow",
+            //   link: "/zh/use-cases/deerflow",
+            // },
           ]
         },
         {
@@ -199,6 +235,21 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Komga",
               link: "/zh/use-cases/komga",
             },
+            {
+              text: "TREK (NOMAD)",
+              link: "/zh/use-cases/trek",
+              collapsed: true,
+              items: [
+                {
+                  text: "Advanced settings",
+                  link: "/zh/use-cases/trek-advanced-settings",
+                }
+              ]
+            },
+            {
+              text: "*Arrs",
+              link: "/zh/use-cases/arrs",
+            },                        
           ]
         },
         {
@@ -206,6 +257,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "Plane",
+              link: "/zh/use-cases/plane",
+            },
+            {  
               text: "Excalidraw",
               link: "/zh/use-cases/excalidraw",
             },
@@ -213,16 +268,20 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "RNA Sequencing",
               link: "/zh/use-cases/rna-sequencing",
             },
-            {
-              text: "Stirling PDF",
-              link: "/zh/use-cases/stirling-pdf",
-            },
+            // {
+            //   text: "Stirling PDF",
+            //   link: "/zh/use-cases/stirling-pdf",
+            // },
           ],
         },
         {
           text: "工具",
           collapsed: false,
           items: [
+            {
+              text: "Falco",
+              link: "/zh/use-cases/falco",
+            },
             {
               text: "FlareSolverr",
               link: "/zh/use-cases/flaresolverr",

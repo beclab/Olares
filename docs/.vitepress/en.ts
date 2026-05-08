@@ -439,18 +439,23 @@ const side = {
       collapsed: true,
       items: [
         {
-          text: "Manage accounts",
+          text: "Set up accounts",
           collapsed: true,
           items: [
             { text: "Create an account", link: "/manual/larepass/create-account" },
             { text: "Create with a custom domain", link: "/manual/larepass/create-org-account" },
             { text: "Import an account", link: "/manual/larepass/import-account" },
-            { text: "Back up mnemonics", link: "/manual/larepass/back-up-mnemonics" },
-            { text: "Manage integrations", link: "/manual/larepass/integrations" },
           ],
         },
-        { text: "Use VPN", link: "/manual/larepass/private-network" },
         {
+          text: "Manage accounts",
+          collapsed: true,
+          items: [
+           { text: "Switch accounts", link: "/manual/larepass/switch-account" },       
+            { text: "Back up mnemonics", link: "/manual/larepass/back-up-mnemonics" },
+          ],
+        },
+        { text: "Manage integrations", link: "/manual/larepass/integrations" },        {
           text: "Manage device",
           collapsed: true,
           items: [
@@ -458,6 +463,7 @@ const side = {
             { text: "Manage Olares", link: "/manual/larepass/manage-olares" },
           ],
         },
+        { text: "Use VPN", link: "/manual/larepass/private-network" },
         { text: "Manage files", link: "/manual/larepass/manage-files" },
         // collapsed: true,
         //items: [

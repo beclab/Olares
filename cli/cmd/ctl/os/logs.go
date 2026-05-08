@@ -3,6 +3,7 @@ package os
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -14,9 +15,12 @@ import (
 	"strings"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/util"
@@ -348,11 +352,6 @@ func collectKubernetesLogs(tw *tar.Writer, options *LogCollectOptions) error {
 		return nil
 	}
 
-	fmt.Println("collecting envoy config...")
-	if err := collectEnvoyConfig(tw); err != nil && !options.IgnoreKubeErrors {
-		return fmt.Errorf("failed to collect envoy config: %v", err)
-	}
-
 	if _, err := util.GetCommand("kubectl"); err != nil {
 		fmt.Printf("warning: kubectl not found, skipping collecting cluster info from kube-apiserver\n")
 		return nil
@@ -404,6 +403,11 @@ func collectKubernetesLogs(tw *tar.Writer, options *LogCollectOptions) error {
 				return fmt.Errorf("failed to write %s description data: %v", res, err)
 			}
 		}
+	}
+
+	fmt.Println("collecting envoy config...")
+	if err := collectEnvoyConfig(tw); err != nil && !options.IgnoreKubeErrors {
+		return fmt.Errorf("failed to collect envoy config: %v", err)
 	}
 
 	return nil
@@ -491,6 +495,34 @@ func collectNetworkConfigs(tw *tar.Writer, options *LogCollectOptions) error {
 	return nil
 }
 func collectEnvoyConfig(tw *tar.Writer) error {
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		fmt.Printf("  skipping envoy config: failed to get kubeconfig: %v\n", err)
+		return nil
+	}
+	scheme := kruntime.NewScheme()
+	if err := appsv1.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("failed to add apps/v1 scheme: %v", err)
+	}
+	c, err := ctrlclient.New(config, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		return fmt.Errorf("failed to create kubernetes client: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var deploy appsv1.Deployment
+	key := ctrlclient.ObjectKey{Namespace: "os-network", Name: "l4-bfl-proxy"}
+	if err := c.Get(ctx, key, &deploy); err != nil {
+		fmt.Printf("  skipping envoy config: l4-bfl-proxy deployment not found: %v\n", err)
+		return nil
+	}
+	if deploy.Status.AvailableReplicas == 0 {
+		fmt.Println("  skipping envoy config: l4-bfl-proxy deployment is not ready (no available replicas)")
+		return nil
+	}
+
 	url := "http://127.0.0.1:19000/config_dump"
 	client := &http.Client{
 		Timeout: 5 * time.Second,

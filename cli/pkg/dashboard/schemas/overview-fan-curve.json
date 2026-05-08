@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.fan.curve",
+  "description": "10-row hardcoded fan-curve specification table (CPU/GPU RPM ↔ temperature range). 1:1 with SPA Fan/config.ts.tableData. Gated to Olares One — non-One devices return an empty envelope with meta.empty_reason='not_olares_one'.",
+  "type": "object",
+  "required": ["kind", "meta", "items"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.fan.curve"},
+    "meta": {
+      "type": "object",
+      "properties": {
+        "empty": {"type": "boolean"},
+        "empty_reason": {"type": "string", "enum": ["not_olares_one"]},
+        "note": {"type": "string"},
+        "device_name": {"type": "string"}
+      }
+    },
+    "items": {"type": "array", "items": {"type": "object"}}
+  }
+}

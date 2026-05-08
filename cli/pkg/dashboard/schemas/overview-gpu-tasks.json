@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.gpu.tasks",
+  "description": "Per-vGPU task list from /hami/api/vgpu/v1/containers. `items[i].raw` is HAMI's full task object verbatim (name, status, podUid, nodeName, nodeUid, type, deviceShareModes[], devicesCoreUtilizedPercent[], devicesMemUtilized[], allocatedDevices, allocatedCores, allocatedMem, createTime, startTime, endTime, namespace, deviceIds[], resourcePool, flavor, priority, appName) — NB: HAMI returns the list at the TOP LEVEL (`{items:[…]}`), no `data` envelope. `items[i].display` carries SPA-style columns: task_name, status, mode, host_node, core_util, mem_used, pod_uid. SPA reads the first element of each per-device array (deviceShareModes[0], devicesCoreUtilizedPercent[0], devicesMemUtilized[0]) — the CLI mirrors that for `display`, but multi-device tasks keep the full arrays in `raw`. Gating mirrors gpu.list: SOFT — admin / CUDA hints land in meta.note; empty envelopes carry one of 'no_vgpu_integration' (HAMI 404), 'vgpu_unavailable' (HAMI 5xx — meta.error / meta.http_status), or 'no_gpu_detected' (HAMI 200 but empty list).",
+  "type": "object",
+  "required": ["kind", "meta", "items"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.gpu.tasks"},
+    "meta": {
+      "type": "object",
+      "properties": {
+        "empty": {"type": "boolean"},
+        "empty_reason": {
+          "type": "string",
+          "enum": ["no_vgpu_integration", "vgpu_unavailable", "no_gpu_detected"]
+        },
+        "error": {"type": "string"},
+        "http_status": {"type": "integer"},
+        "note": {"type": "string"}
+      }
+    },
+    "items": {"type": "array", "items": {"type": "object"}}
+  }
+}

@@ -81,6 +81,8 @@ type Systems interface {
 	IsAmdApu() bool
 	IsAmdGPU() bool
 	IsAmdGPUOrAPU() bool
+	IsMThreadsM1000() bool
+	IsStrixHalo() bool
 
 	IsUbuntu() bool
 	IsDebian() bool
@@ -253,8 +255,16 @@ func (s *SystemInfo) IsAmdGPU() bool {
 	return s.HasAmdGPU
 }
 
+func (s *SystemInfo) IsStrixHalo() bool {
+	return s.CpuInfo.IsStrixHalo
+}
+
 func (s *SystemInfo) IsAmdGPUOrAPU() bool {
 	return s.CpuInfo.HasAmdAPU || s.HasAmdGPU
+}
+
+func (s *SystemInfo) IsMThreadsM1000() bool {
+	return s.CpuInfo.IsMThreadsM1000
 }
 
 func (s *SystemInfo) IsUbuntu() bool {
@@ -469,6 +479,8 @@ type CpuInfo struct {
 	CpuPhysicalCount int    `json:"cpu_physical_count"`
 	IsGB10Chip       bool   `json:"is_gb10_chip,omitempty"`
 	HasAmdAPU        bool   `json:"has_amd_apu,omitempty"`
+	IsMThreadsM1000  bool   `json:"is_mthreads_m1000,omitempty"`
+	IsStrixHalo      bool   `json:"is_strix_halo,omitempty"`
 }
 
 // Not considering the case where AMD GPU and AMD APU coexist.
@@ -537,8 +549,19 @@ func getCpu() *CpuInfo {
 		hasAmdAPU = false
 	}
 
+	// check if it is Strix Halo
+	isStrixHalo, err := HasStrixHaloLocal()
+	if err != nil {
+		fmt.Printf("Error checking Strix Halo: %v\n", err)
+		isStrixHalo = false
+	}
+
+	// check if it is mthreads m1000
+	ret.IsMThreadsM1000 = IsMThreadsAIBookM1000Local()
+
 	ret.IsGB10Chip = isGB10Chip
 	ret.HasAmdAPU = hasAmdAPU
+	ret.IsStrixHalo = isStrixHalo
 
 	return ret
 }

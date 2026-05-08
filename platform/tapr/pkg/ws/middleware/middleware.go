@@ -34,7 +34,8 @@ func RequireHeader() func(c *fiber.Ctx) error {
 		var forwarded = headers[constants.WsHeaderForwardeFor]
 		var cookie = headers[constants.WsHeaderCookie]
 
-		klog.Infof("ws-client conn: %s, accessPublic: %v, token: %s, user: %s , header: %+v", connId, accessPublic, token, userName, headers)
+		klog.Infof("ws-client conn: %s, accessPublic: %v, tokenFp: %s, user: %s, userAgent: %v, forwarded: %v",
+			connId, accessPublic, utils.MD5(token), userName, userAgent, forwarded)
 
 		var secWebsocketProtocol, ok = headers[constants.WsHeaderSecWebsocketProtocol]
 		if ok && len(secWebsocketProtocol) > 0 {

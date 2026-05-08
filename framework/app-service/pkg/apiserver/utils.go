@@ -4,23 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	v1alpha1client "github.com/beclab/Olares/framework/app-service/pkg/client/clientset/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned/scheme"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/middlewareinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
+	"github.com/beclab/Olares/framework/oac"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned/scheme"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -40,7 +39,6 @@ import (
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 )
 
 func getAppByName(req *restful.Request, resp *restful.Response) (*v1alpha1.Application, error) {
@@ -413,19 +411,12 @@ func getWorkflowConfigFromRepo(ctx context.Context, options *apputils.ConfigOpti
 		return nil, err
 	}
 
-	f, err := os.Open(chartPath + "/" + apputils.AppCfgFileName)
+	cfg, err := oac.LoadAppConfiguration(
+		chartPath,
+		oac.WithOwner(options.Owner),
+		oac.WithAdmin(options.Admin),
+	)
 	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	var cfg appcfg.AppConfiguration
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
 
@@ -437,7 +428,7 @@ func getWorkflowConfigFromRepo(ctx context.Context, options *apputils.ConfigOpti
 		RepoURL:      options.RepoURL,
 		Namespace:    namespace,
 		OwnerName:    options.Owner,
-		Cfg:          &cfg}, nil
+		Cfg:          cfg}, nil
 }
 
 func getMiddlewareConfigFromRepo(ctx context.Context, options *apputils.ConfigOptions) (*middlewareinstaller.MiddlewareConfig, error) {
@@ -446,19 +437,12 @@ func getMiddlewareConfigFromRepo(ctx context.Context, options *apputils.ConfigOp
 		return nil, err
 	}
 
-	f, err := os.Open(chartPath + "/OlaresManifest.yaml")
+	cfg, err := oac.LoadAppConfiguration(
+		chartPath,
+		oac.WithOwner(options.Owner),
+		oac.WithAdmin(options.Admin),
+	)
 	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	var cfg appcfg.AppConfiguration
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
 
@@ -472,7 +456,7 @@ func getMiddlewareConfigFromRepo(ctx context.Context, options *apputils.ConfigOp
 		RepoURL:        options.RepoURL,
 		Namespace:      namespace,
 		OwnerName:      options.Owner,
-		Cfg:            &cfg}, nil
+		Cfg:            cfg}, nil
 }
 
 func CheckMiddlewareRequirement(ctx context.Context, kubeConfig *rest.Config, middleware *tapr.Middleware) (bool, error) {

@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.gpu.detail.full",
+  "description": "Per-GPU 'details page' (SPA Overview2/GPU/GPUsDetails.vue). Sections envelope with three keys: `detail` (HAMI /v1/gpu basic info, single-item leaf with `device_no` / `driver_version` merged in from the power range query's metric labels), `gauges` (6 instant-vector gauges in fixed order: alloc_core / alloc_mem / util_core / util_mem / power / temperature), `trends` (4 range-vector trends in fixed order: alloc_trend [core+memory] / usage_trend [core+memory] / power_trend / temp_trend). Default time window is 8h ending now; override with --since/--start/--end. `meta.window` carries {since,start,end,step}; `meta.warnings` collects per-query soft failures (any single query 5xx/timeout populates the failed item's `raw.error` and adds a `gauges <key>: ...` or `trends <key>: ...` entry to warnings, the rest of the envelope still renders). HAMI 404 -> empty_reason='no_vgpu_integration'; 5xx on /v1/gpu -> 'vgpu_unavailable' (meta.error / meta.http_status); 200 with empty body -> 'no_gpu_detected'. Soft advisory (non-admin / no CUDA node) lands in meta.note + stderr in table mode.",
+  "type": "object",
+  "required": ["kind", "meta", "sections"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.gpu.detail.full"},
+    "meta": {
+      "type": "object",
+      "properties": {
+        "fetched_at": {"type": "string"},
+        "window": {
+          "type": "object",
+          "required": ["start", "end"],
+          "properties": {
+            "since": {"type": "string", "description": "Relative window like '8h' / '1h' (empty when --start/--end drove the window)"},
+            "start": {"type": "string", "description": "ISO-style 'YYYY-MM-DD HH:mm:ss' in the active timezone"},
+            "end":   {"type": "string"},
+            "step":  {"type": "string", "description": "SPA-style coarse step: '1m' / '10m' / '20m' / '30m' / '60m'"}
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Per-query soft-failure messages (e.g. 'gauges \"util_core\": HAMI returned HTTP 502'). Empty / missing when all 10 queries succeeded."
+        },
+        "empty": {"type": "boolean"},
+        "empty_reason": {
+          "type": "string",
+          "enum": ["no_vgpu_integration", "vgpu_unavailable", "no_gpu_detected"]
+        },
+        "error": {"type": "string"},
+        "http_status": {"type": "integer"},
+        "note": {"type": "string"}
+      }
+    },
+    "sections": {
+      "type": "object",
+      "required": ["detail", "gauges", "trends"],
+      "properties": {
+        "detail": {
+          "type": "object",
+          "description": "Single-item envelope wrapping HAMI's /v1/gpu body. `items[0].raw` is the HAMI document verbatim plus `device_no` / `driver_version` (extracted from the power range query's metric labels — the SPA does the same).",
+          "properties": {
+            "kind": {"const": "dashboard.overview.gpu.detail"},
+            "items": {"type": "array", "minItems": 0, "maxItems": 1}
+          }
+        },
+        "gauges": {
+          "type": "object",
+          "description": "Six gauges in fixed SPA order. Each item.raw carries {key, title, unit, query, value, used, total, percent} and (on failure) `error`. Keys are stable: alloc_core / alloc_mem / util_core / util_mem / power / temperature.",
+          "properties": {
+            "kind": {"const": "dashboard.overview.gpu.gauges"},
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "raw": {
+                    "type": "object",
+                    "properties": {
+                      "key":     {"type": "string", "enum": ["alloc_core", "alloc_mem", "util_core", "util_mem", "power", "temperature"]},
+                      "title":   {"type": "string"},
+                      "unit":    {"type": "string"},
+                      "query":   {"type": "string"},
+                      "value":   {"type": "number"},
+                      "used":    {"type": "number"},
+                      "total":   {"type": "number"},
+                      "percent": {"type": "number"},
+                      "error":   {"type": "string"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "trends": {
+          "type": "object",
+          "description": "Four trends in fixed SPA order: alloc_trend (core+memory), usage_trend (core+memory), power_trend (power), temp_trend (temperature). Each item.raw carries {key, title, unit, lines: [{label, query, labels?, points: [{timestamp, value}]}]}; `labels` may include device_no / driver_version harvested from HAMI's series metric.",
+          "properties": {
+            "kind": {"const": "dashboard.overview.gpu.trends"},
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "raw": {
+                    "type": "object",
+                    "properties": {
+                      "key":   {"type": "string", "enum": ["alloc_trend", "usage_trend", "power_trend", "temp_trend"]},
+                      "title": {"type": "string"},
+                      "unit":  {"type": "string"},
+                      "lines": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": ["label"],
+                          "properties": {
+                            "label":  {"type": "string"},
+                            "query":  {"type": "string"},
+                            "labels": {"type": "object", "additionalProperties": {"type": "string"}},
+                            "points": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "timestamp": {"type": "string"},
+                                  "value":     {"type": "number"}
+                                }
+                              }
+                            },
+                            "error": {"type": "string"}
+                          }
+                        }
+                      },
+                      "error": {"type": "string"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

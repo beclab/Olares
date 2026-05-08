@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"time"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -128,7 +128,7 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 		case appv1alpha1.Stopping:
 			return appstate.NewSuspendingApp(appmgr, &am, 30*time.Minute)
 		case appv1alpha1.Upgrading:
-			return appstate.NewUpgradingApp(appmgr, &am, 30*time.Minute)
+			return appstate.NewUpgradingApp(appmgr, &am, 24*time.Hour, 30*time.Minute)
 		case appv1alpha1.ApplyingEnv:
 			return appstate.NewApplyingEnvApp(appmgr, &am, 30*time.Minute)
 		case appv1alpha1.Resuming:

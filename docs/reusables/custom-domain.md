@@ -8,7 +8,7 @@ search: false
   Block 2 – Add domain (TXT + NS):         lines 34-73
   Block 3 – Create a new organization:      lines 76-106
   Block 4 – Add a new user:                 lines 109-127
-  Block 5 – Join an existing organization:  lines 130-141
+  Block 5 – Join an existing organization:  lines 130-145
 
   Used by:
   - manual/best-practices/set-custom-domain.md (Blocks 1-5)
@@ -135,6 +135,10 @@ As an organization admin, you can manage your organization's member list at any 
    ![Join an exisitng organization](/images/manual/tutorials/custom-domain-join-org.png)
 
 3. Enter the username with the domain part (e.g., `alice@space.n1.monster`) and the password provided by the admin.
+   
+   :::tip One-time password
+   This password verifies your identity when you create your Olares ID, and is for one-time use only.
+   :::
 
    ![Join an organization with Olares ID and password](/images/manual/tutorials/custom-domain-member-olares-id.png)
 

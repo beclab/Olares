@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
@@ -17,6 +16,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +27,7 @@ import (
 
 type upgradeHelperIntf interface {
 	getAdminUsers() (admin []string, isAdmin bool, err error)
-	getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (err error)
+	getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (appConfig *appcfg.ApplicationConfig, err error)
 	validate() error
 	applyAppEnv(ctx context.Context) error
 	setAndEncodingAppCofnig(prevCfg *appcfg.ApplicationConfig) (string, error)
@@ -70,7 +70,7 @@ func (h *upgradeHandlerHelper) getAdminUsers() (admins []string, isAdmin bool, e
 	return
 }
 
-func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, _ bool) (err error) {
+func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, _ bool) (*appcfg.ApplicationConfig, error) {
 	var admin string
 	if !prevCfg.AppScope.ClusterScoped {
 		// installed as non-admin
@@ -101,11 +101,11 @@ func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, a
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
-		return
+		return nil, err
 	}
 
 	h.appConfig = appConfig
-	return nil
+	return appConfig, nil
 }
 
 func (h *upgradeHandlerHelper) validate() error {
@@ -174,13 +174,13 @@ func (h *upgradeHandlerHelper) applyAppEnv(ctx context.Context) (err error) {
 	return
 }
 
-func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (err error) {
+func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (*appcfg.ApplicationConfig, error) {
 	klog.Info("Getting app config for V2")
 	if len(adminUsers) == 0 {
 		err := fmt.Errorf("no admin users found")
 		klog.Error(err)
 		api.HandleError(h.resp, h.req, err)
-		return err
+		return nil, err
 	}
 
 	var admin string
@@ -204,12 +204,12 @@ func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
-		return
+		return nil, err
 	}
 
 	h.appConfig = appConfig
 
-	return nil
+	return appConfig, nil
 }
 
 func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
@@ -267,7 +267,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	if appMgr.Spec.RawAppName != "" {
 		rawAppName = appMgr.Spec.RawAppName
 	}
-	apiVersion, _, err := apputils.GetApiVersionFromAppConfig(req.Request.Context(), &apputils.ConfigOptions{
+	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
 		RawAppName:   rawAppName,
 		Owner:        owner,
@@ -325,14 +325,14 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	}
 
 	var prevCfg appcfg.ApplicationConfig
-	err = appMgr.GetAppConfig(&prevCfg)
+	err = appcfg.GetAppConfig(&appMgr, &prevCfg)
 	if err != nil {
 		klog.Errorf("Failed to get previous app config err=%v", err)
 		api.HandleError(resp, req, err)
 		return
 	}
 
-	err = helper.getAppConfig(&prevCfg, adminUsers, marketSource, isAdmin)
+	_, err = helper.getAppConfig(&prevCfg, adminUsers, marketSource, isAdmin)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return

@@ -3,52 +3,57 @@ package state
 import (
 	"errors"
 
+	clistate "github.com/beclab/Olares/cli/pkg/daemon/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 )
 
-type ProcessingState string
+// Wire-format types live in the cli module so that olaresd and the
+// olares-cli command share a single source of truth. Daemon code keeps
+// using the unqualified names below via these type aliases.
+
+type ProcessingState = clistate.ProcessingState
 
 const (
-	Completed  ProcessingState = "completed"
-	Failed     ProcessingState = "failed"
-	InProgress ProcessingState = "in-progress"
+	Completed  = clistate.Completed
+	Failed     = clistate.Failed
+	InProgress = clistate.InProgress
 )
 
-type TerminusState string
+type TerminusState = clistate.TerminusState
 
 const (
-	NotInstalled     TerminusState = "not-installed"
-	Installing       TerminusState = "installing"
-	InstallFailed    TerminusState = "install-failed"
-	Uninitialized    TerminusState = "uninitialized"
-	Initializing     TerminusState = "initializing"
-	InitializeFailed TerminusState = "initialize-failed"
-	TerminusRunning  TerminusState = "terminus-running"
-	InvalidIpAddress TerminusState = "invalid-ip-address"
-	SystemError      TerminusState = "system-error"
-	SelfRepairing    TerminusState = "self-repairing"
-	IPChanging       TerminusState = "ip-changing"
-	IPChangeFailed   TerminusState = "ip-change-failed"
-	AddingNode       TerminusState = "adding-node"
-	RemovingNode     TerminusState = "removing-node"
-	Uninstalling     TerminusState = "uninstalling"
-	Upgrading        TerminusState = "upgrading"
-	DiskModifing     TerminusState = "disk-modifing"
-	Shutdown         TerminusState = "shutdown"
-	Restarting       TerminusState = "restarting"
-	Checking         TerminusState = "checking"
-	NetworkNotReady  TerminusState = "network-not-ready"
+	NotInstalled     = clistate.NotInstalled
+	Installing       = clistate.Installing
+	InstallFailed    = clistate.InstallFailed
+	Uninitialized    = clistate.Uninitialized
+	Initializing     = clistate.Initializing
+	InitializeFailed = clistate.InitializeFailed
+	TerminusRunning  = clistate.TerminusRunning
+	InvalidIpAddress = clistate.InvalidIpAddress
+	SystemError      = clistate.SystemError
+	SelfRepairing    = clistate.SelfRepairing
+	IPChanging       = clistate.IPChanging
+	IPChangeFailed   = clistate.IPChangeFailed
+	AddingNode       = clistate.AddingNode
+	RemovingNode     = clistate.RemovingNode
+	Uninstalling     = clistate.Uninstalling
+	Upgrading        = clistate.Upgrading
+	DiskModifing     = clistate.DiskModifing
+	Shutdown         = clistate.Shutdown
+	Restarting       = clistate.Restarting
+	Checking         = clistate.Checking
+	NetworkNotReady  = clistate.NetworkNotReady
 )
 
-func (s TerminusState) String() string {
-	return string(s)
+// ValidateOp returns nil if the operation is allowed in the given
+// state, or a descriptive error otherwise. It replaces the previous
+// (TerminusState).ValidateOp method, since methods cannot be defined
+// on an alias of a type from another package.
+func ValidateOp(s TerminusState, op commands.Interface) error {
+	return getValidator(s).ValidateOp(op)
 }
 
-func (s TerminusState) ValidateOp(op commands.Interface) error {
-	return s.getValidator().ValidateOp(op)
-}
-
-func (s TerminusState) getValidator() Validator {
+func getValidator(s TerminusState) Validator {
 	switch s {
 	case NotInstalled:
 		return &NotInstalledValidator{}

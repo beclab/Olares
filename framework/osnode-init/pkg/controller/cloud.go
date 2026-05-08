@@ -166,15 +166,15 @@ func getClusterId(ctx context.Context, client dynamic.Interface) (cluster_id, ak
 	annotations := data.GetAnnotations()
 	if annotations != nil {
 		if ak, ok = annotations[LABEL_ACCESS_KEY]; ok {
-			klog.Info("found access key, ", ak)
+			// klog.Info("found access key, ", ak)
 		}
 
 		if sk, ok = annotations[LABEL_SECRET_KEY]; ok {
-			klog.Info("found secret key, ", sk)
+			// klog.Info("found secret key, ", sk)
 		}
 
 		if st, ok = annotations[LABEL_SESSION_TOKEN]; ok {
-			klog.Info("found session token, ", st)
+			// klog.Info("found session token, ", st)
 		}
 
 		return

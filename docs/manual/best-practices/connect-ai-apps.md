@@ -84,7 +84,7 @@ This example uses `qwen2.5:1.5b` as the model. Make sure you have downloaded it 
 
 1. On Olares, open Settings, then go to **Applications** > **Ollama**.
 2. In **Shared entrances**, select **Ollama API**.
-   ![Ollama shared entrance](/images/manual/tutorials/api-ollama-shared.png#bordered){width=80%}
+   ![Ollama shared entrance](/images/manual/use-cases/obtain-ollama-hosturl2.png#bordered)
    
 3. Copy the shared endpoint URL.
 4. Open LobeHub, then go to **Settings** > **AI Service Provider** > **Ollama**.
@@ -114,9 +114,9 @@ Ensure that your device is on the same local network as Olares or has the VPN en
 :::
 
 1. On Olares, open Settings, then go to **Application** > **Ollama**.
-2. In **Entrances**, click **Ollama API**.
+2. Under **Entrances**, click **Ollama API**.
 3. Set the **Authentication level** to **Internal**.
-4. Click **Set up endpoint**, then copy the endpoint URL displayed.
+4. Under **Endpoint settings**, copy the endpoint URL displayed next to **Endpoint**.
 5. Create a new Ollama credential in n8n:
 
    a. In n8n, select **+** > **Credential** from the left navigation bar.
@@ -137,9 +137,9 @@ You can connect your local IDE to Ollama running on your Olares system, so that 
 This example uses `llama3.1:8b`, `qwen2.5-coder:7b`, and `qwen2.5-coder:1.5b`. Make sure you have downloaded these models before starting.
 
 1. On Olares, open Settings, then go to **Application** > **Ollama**.
-2. In **Entrances**, click **Ollama API**.
+2. Under **Entrances**, click **Ollama API**.
 3. Set the **Authentication level** to **Internal**.
-4. Click **Set up endpoint**, then copy the endpoint URL displayed.
+4. Under **Endpoint settings**, copy the endpoint URL displayed next to **Endpoint**.
 5. In your local IDE (for example, IntelliJ IDEA), open the Continue panel.
 6. Configure models in Continue to use Ollama:
 

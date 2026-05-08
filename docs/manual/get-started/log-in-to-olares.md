@@ -6,10 +6,10 @@ search: false
 1. Open the Olares desktop address in your browser, and press any key to continue.
 2. On the login page, enter your Olares login password.
 
-   ![Log in](/images/manual/get-started/log-in.png#bordered)
+   ![Log in](/images/manual/get-started/log-in1.png#bordered)
 3. You will be prompted to complete two-factor verification. You can confirm the login on LarePass, or manually enter the 6-digit verification code.
 
-   ![Confirm login](/images/manual/larepass/confirm-login.png#bordered)
+   ![Confirm login](/images/manual/larepass/confirm-login1.png#bordered)
    ::: info
    The verification code is time-sensitive. Ensure you enter it before it expires.
    :::

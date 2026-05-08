@@ -6,21 +6,22 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"k8s.io/klog/v2"
 	"net/http/httputil"
 	"strconv"
 	"time"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/go-resty/resty/v2"
@@ -37,7 +38,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
 )
 
 var (
@@ -344,7 +344,7 @@ func (h *HelmOps) registerAppPerm(sa *string, ownerName string, perm []appcfg.Pe
 	for _, p := range perm {
 		requires = append(requires, appcfg.PermissionRequire{
 			ProviderAppName:   p.AppName,
-			ProviderNamespace: p.GetNamespace(ownerName),
+			ProviderNamespace: appcfg.ProviderPermissionNamespace(p.ProviderPermission, ownerName),
 			ServiceAccount:    sa,
 			ProviderName:      p.ProviderName,
 			ProviderDomain:    p.Domain,
@@ -659,10 +659,7 @@ func (h *HelmOps) findServerPods() ([]corev1.Pod, error) {
 		if !c.Shared {
 			continue
 		}
-
-		chartName := utils.GetChartName(h.app.AppName, h.app.RawAppName, c.Name)
-
-		ns := c.Namespace(h.app.OwnerName, chartName)
+		ns := appcfg.ChartNamespace(&c, h.app.OwnerName)
 		podList, err := h.client.KubeClient.Kubernetes().CoreV1().Pods(ns).List(h.ctx, metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("app %s get pods err %v", h.app.AppName, err)
@@ -705,6 +702,11 @@ func (h *HelmOps) checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, er
 		for i := len(pod.Status.ContainerStatuses) - 1; i >= 0; i-- {
 			container := pod.Status.ContainerStatuses[i]
 			if *container.Started {
+				startedContainers++
+				continue
+			}
+			// job-created pods with completed status are also treated as started
+			if container.State.Terminated != nil && container.State.Terminated.Reason == "Completed" {
 				startedContainers++
 			}
 		}
@@ -949,13 +951,6 @@ func (h *HelmOps) App() *appcfg.ApplicationConfig {
 	return h.app
 }
 
-func (h *HelmOps) IsCloneApp() bool {
-	if h.app.AppName != h.app.RawAppName {
-		return true
-	}
-	return false
-}
-
 func (h *HelmOps) KubeConfig() *rest.Config {
 	return h.kubeConfig
 }
@@ -1036,6 +1031,5 @@ func (h *HelmOps) RegisterOrUnregisterAppProvider(operation ProviderOperation) e
 			return errors.New(string(resp.Body()))
 		}
 	}
-
 	return nil
 }

@@ -3,14 +3,11 @@ package utils
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"strings"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
-	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	refdocker "github.com/containerd/containerd/reference/docker"
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
@@ -19,7 +16,6 @@ import (
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/downloader"
-	"helm.sh/helm/v3/pkg/engine"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/kube"
 	kubefake "helm.sh/helm/v3/pkg/kube/fake"
@@ -113,65 +109,6 @@ func GetResourceListFromChart(chartPath string, values map[string]interface{}) (
 		klog.Infof("getchart err=%v", err)
 		return nil, err
 	}
-
-	// fake values for helm dry run
-	//values := make(map[string]interface{})
-	//values["bfl"] = map[string]interface{}{
-	//	"username": "bfl-username",
-	//}
-	values["user"] = map[string]interface{}{
-		"zone": "user-zone",
-	}
-	values["schedule"] = map[string]interface{}{
-		"nodeName": "node",
-	}
-	values["oidc"] = map[string]interface{}{
-		"client": map[string]interface{}{},
-		"issuer": "issuer",
-	}
-	values["userspace"] = map[string]interface{}{
-		"appCache": "appcache",
-		"userData": "userspace/Home",
-	}
-	values["os"] = map[string]interface{}{
-		"appKey":    "appKey",
-		"appSecret": "appSecret",
-	}
-
-	values["domain"] = map[string]string{}
-	values["cluster"] = map[string]string{}
-	values["dep"] = map[string]interface{}{}
-	values["postgres"] = map[string]interface{}{
-		"databases": map[string]interface{}{},
-	}
-	values["mariadb"] = map[string]interface{}{
-		"databases": map[string]interface{}{},
-	}
-	values["mysql"] = map[string]interface{}{
-		"databases": map[string]interface{}{},
-	}
-	values["redis"] = map[string]interface{}{}
-	values["mongodb"] = map[string]interface{}{
-		"databases": map[string]interface{}{},
-	}
-	values["minio"] = map[string]interface{}{
-		"buckets": map[string]interface{}{},
-	}
-	values["rabbitmq"] = map[string]interface{}{
-		"vhosts": map[string]interface{}{},
-	}
-	values["elasticsearch"] = map[string]interface{}{
-		"indexes": map[string]interface{}{},
-	}
-	values["clickhouse"] = map[string]interface{}{
-		"databases": map[string]interface{}{},
-	}
-	values["svcs"] = map[string]interface{}{}
-	values["nats"] = map[string]interface{}{
-		"subjects": map[string]interface{}{},
-		"refs":     map[string]interface{}{},
-	}
-	values[constants.OlaresEnvHelmValuesKey] = map[string]interface{}{}
 
 	ret, err := instAction.RunWithContext(context.Background(), chartRequested, values)
 	if err != nil {
@@ -290,61 +227,4 @@ func GetRefFromResourceList(chartPath string, values map[string]interface{}, ima
 		}
 	}
 	return filteredRefs, nil
-}
-
-func RenderManifest(filepath, owner, admin string, isAdmin bool) (string, error) {
-	templateData, err := os.ReadFile(filepath)
-	if err != nil {
-		return "", err
-	}
-	return RenderManifestFromContent(templateData, owner, admin, isAdmin)
-}
-
-func RenderManifestFromContent(content []byte, owner, admin string, isAdmin bool) (string, error) {
-	c := &chart.Chart{
-		Metadata: &chart.Metadata{
-			Name:    "chart",
-			Version: "0.0.1",
-		},
-		Templates: []*chart.File{
-			{
-				Name: "OlaresManifest.yaml",
-				Data: content,
-			},
-		},
-	}
-	//admin := owner
-	//if isAdmin {
-	//
-	//}
-	values := map[string]interface{}{
-		"admin": admin,
-		"bfl": map[string]string{
-			"username": owner,
-		},
-		"isAdmin": isAdmin,
-	}
-
-	valuesToRender, err := chartutil.ToRenderValues(c, values, chartutil.ReleaseOptions{}, nil)
-	if err != nil {
-		return "", err
-	}
-
-	e := engine.Engine{}
-	renderedTemplates, err := e.Render(c, valuesToRender)
-	if err != nil {
-		return "", err
-	}
-
-	renderedYAML := renderedTemplates["chart/OlaresManifest.yaml"]
-
-	return renderedYAML, nil
-}
-
-func GetChartName(appName, rawAppName, chartName string) string {
-	if appName != rawAppName {
-		suffix := strings.TrimPrefix(appName, rawAppName)
-		return fmt.Sprintf("%s%s", chartName, suffix)
-	}
-	return chartName
 }

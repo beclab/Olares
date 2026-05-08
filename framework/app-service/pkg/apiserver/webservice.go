@@ -3,9 +3,9 @@ package apiserver
 import (
 	"net/http"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
-	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/emicklei/go-restful/v3"
@@ -657,12 +657,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamInstallationID, "the id of a installation or uninstallation")).
 		Returns(http.StatusOK, "Success to cancel app install", &api.InstallationResponse{}))
-
-	ws.Route(ws.POST("/apps/manifest/render").
-		To(handler.renderManifest).
-		Doc("render olares manifest").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "Success to render olares manifest", &api.ManifestRenderResponse{}))
 
 	ws.Route(ws.POST("/systemenvs").
 		To(handler.createSystemEnv).

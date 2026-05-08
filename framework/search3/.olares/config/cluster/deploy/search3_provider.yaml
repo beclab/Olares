@@ -28,6 +28,9 @@ rules:
       - "/document/*"
       - "/document?*"
       - "/document"
+      - "/task/*"
+      - "/search/*"
+      - "/image/*"
     verbs: ["*"]
 
 ---

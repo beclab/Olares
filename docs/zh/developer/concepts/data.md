@@ -105,7 +105,7 @@ Olares 同样接管了 Redis 集群的备份和恢复工作，用户无需为 Re
 - 用户
 
   [文件管理](../../manual/olares/files/index.md)<br>
-  [备份与恢复](../../space/backup-restore.md)
+  [备份与恢复](../../manual/space/backup-restore.md)
 
 - 开发者
 

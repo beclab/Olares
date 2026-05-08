@@ -104,7 +104,7 @@ func NotifyBackup(ctx context.Context, cloudApiUrl string, backup *Backup) error
 		var result *Response
 		client := resty.New().SetTimeout(15 * time.Second).
 			SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}).
-			SetDebug(true)
+			SetDebug(false)
 
 		resp, err := client.R().
 			SetContext(ctx).
@@ -155,7 +155,7 @@ func NotifySnapshot(ctx context.Context, cloudApiUrl string, snapshot *Snapshot)
 		var headers = make(map[string]string)
 		headers[restful.HEADER_ContentType] = "application/x-www-form-urlencoded"
 
-		result, err := httpx.Post[Response](ctx, url, headers, data, true)
+		result, err := httpx.Post[Response](ctx, url, headers, data, constant.DebugMode)
 		if err != nil {
 			return err
 		}
@@ -189,7 +189,7 @@ func NotifyStopBackup(ctx context.Context, cloudApiUrl string, userId, token, ba
 		var headers = make(map[string]string)
 		headers[restful.HEADER_ContentType] = "application/x-www-form-urlencoded"
 
-		result, err := httpx.Post[Response](ctx, url, headers, data, true)
+		result, err := httpx.Post[Response](ctx, url, headers, data, constant.DebugMode)
 		if err != nil {
 			log.Errorf("[notify] delete backup record failed: %v", err)
 			return err
@@ -218,7 +218,7 @@ func CheckCloudStorageQuotaAndPermission(ctx context.Context, cloudApiUrl string
 	var data = fmt.Sprintf("userid=%s&token=%s", userId, token)
 	var result *Usage
 
-	log.Infof("[notify] check backup usage data: %s", data)
+	log.Info("[notify] check backup usage")
 
 	if err := retry.OnError(backoff, func(err error) bool {
 		return true
@@ -228,7 +228,7 @@ func CheckCloudStorageQuotaAndPermission(ctx context.Context, cloudApiUrl string
 		var headers = make(map[string]string)
 		headers[restful.HEADER_ContentType] = "application/x-www-form-urlencoded"
 
-		result, err = httpx.Post[Usage](ctx, url, headers, data, true)
+		result, err = httpx.Post[Usage](ctx, url, headers, data, constant.DebugMode)
 		if err != nil {
 			log.Errorf("[notify] check backup usage failed: %v", err)
 			return err
@@ -243,6 +243,8 @@ func CheckCloudStorageQuotaAndPermission(ctx context.Context, cloudApiUrl string
 			log.Errorf("[notify] check backup usage failed, data is nil")
 			return fmt.Errorf("check backup usage failed, data is nil")
 		}
+
+		log.Infof("[notify] usaged: %s", util.ToJSON(result.Data))
 
 		return nil
 	}); err != nil {

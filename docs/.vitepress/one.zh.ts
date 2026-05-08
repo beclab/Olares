@@ -18,6 +18,16 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Known issues",
           link: "/zh/one/known-issues",
         },
+        {
+          text: "Troubleshooting",
+          collapsed: true,
+          items: [
+            {
+              text: "Cannot enter BIOS",
+              link: "/zh/one/ts-bios-black-screen",
+            },
+          ],
+        },         
       ],
     },
     {
@@ -139,19 +149,35 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/ace-step",
         },*/
 
-        {
-          text: "Deep research with DeerFlow",
-          link: "/zh/one/deerflow",
-        },
+        // {
+        //   text: "Deep research with DeerFlow",
+        //   link: "/zh/one/deerflow",
+        // },
       ]
     },
     {
       text: "Advanced",
       items: [
         {
-          text: "SSH into Olares One",
-          link: "/zh/one/access-terminal-ssh",
-        },
+          text: "Access Olares One terminal",
+          collapsed: true,
+          link: "/zh/one/access-overview",
+          items:
+            [
+              {
+                text: "Access via Control Hub",
+                link: "/zh/one/access-terminal-control-hub",
+              },
+              {
+                text: "Access via SSH",
+                link: "/zh/one/access-terminal-ssh",
+              },
+              {
+                text: "Access directly on the device",
+                link: "/zh/one/access-physical-console",
+              },
+            ]
+        },        
         {
           text: "Expand storage",
           collapsed: true,
@@ -219,6 +245,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Update OS",
           link: "/zh/one/update",
         },
+        {
+          text: "Update firmware",
+          link: "/zh/one/update-firmware",
+        },        
         {
           text: "Back up & restore data",
           link: "/zh/one/backup-resotre",

@@ -60,6 +60,7 @@ To get detailed help for any command, run `olares-cli help`.
 | `prepare`  | `olares-cli prepare [options]` | Prepares the environment for the installation process, including setting up essential services and configurations of Olares. |
 | `release`   | `olares-cli release [options]` | Packages Olares installation resources for distribution or deployment.  |
 | `start`  | `olares-cli start [options]` | Starts Olares services and components. |
+| `status`  | `olares-cli status [options]` | Queries the local olaresd daemon and prints the current Olares system status. |
 | `stop` | `olares-cli stop [options]` | Stops Olares services and components.  |
 | `uninstall` | `olares-cli uninstall [options]` | Uninstalls Olares completely, or roll back the installation to a specific phase. |
 | `upgrade` | `olares-cli upgrade <subcommand> [options]` | Upgrades Olares and checks upgrade readiness and compatibility.|

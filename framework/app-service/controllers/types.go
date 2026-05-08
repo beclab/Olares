@@ -3,7 +3,7 @@ package controllers
 import (
 	"encoding/json"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 )
 
 const (

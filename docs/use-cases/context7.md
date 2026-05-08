@@ -16,6 +16,8 @@ Context7 is a Model Context Protocol (MCP) server that provides AI coding assist
 
 On Olares, you can connect Context7 to Olares-hosted AI agents like Agent Zero, LibreChat, and OpenCode, or to external coding assistants like Cursor and Claude Desktop.
 
+This guide focuses on establishing the MCP connection between Context7 and your AI tools. 
+
 ## Learning objectives
 
 In this guide, you will learn how to:
@@ -23,6 +25,10 @@ In this guide, you will learn how to:
 - (Optional) Register an API key for higher rate limits.
 - Connect Context7 to Olares-hosted AI agents.
 - Connect Context7 to external coding assistants like Cursor.
+
+## Prerequisites
+
+Before proceeding, ensure that your AI agents (Agent Zero, LibreChat, OpenCode, etc.) are already fully functional. You must have configured their required settings such as the model provider, model name, and base URLs. 
 
 ## Install Context7
 
@@ -125,7 +131,7 @@ Before proceeding, ensure that you have configured the necessary settings within
 
 To use Context7 with Olares-hosted AI agents, you need to obtain the MCP endpoint URL first, and then configure Context7 in your preferred agent app.
 
-1. Open Settings, and then go to **Applications** > **Context7** > **Context7 MCP**
+1. Open Settings, and then go to **Applications** > **Context7** > **Context7 MCP**.
 2. Copy the endpoint URL. For example, `https://f86d25051.olaresdemo.olares.com`.
 
     ![Context7 MCP endpoint](/images/manual/use-cases/context7-mcp-endpoint.png#bordered){width=70%}
@@ -269,11 +275,18 @@ Create a configuration file to register Context7 as a remote MCP server, then re
 
 You can also connect Context7 to coding assistants running on your computer, such as Cursor or Claude Desktop. This section uses Cursor as an example.
 
-1. Open Cursor, and then go to **Settings** > **Tools & MCP** > **Add custom MCP**.
+1. Open the LarePass desktop client on your computer, and then enable **VPN connection** to connect to Olares.
+   ![Enable LarePass VPN on desktop](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
+
+    :::tip On the same local network?
+    If your computer and Olares are on the same LAN, you can skip VPN and use the `.local` domain instead. Replace `https://f86d25051.{username}.olares.com` with `http://f86d25051.{username}.olares.local` in the config in Step 3. For details, see [Use `.local` domain](../manual/best-practices/local-access.md#method-2-use-local-domain).
+    :::
+
+2. Open Cursor, and then go to **Settings** > **Tools & MCP** > **Add custom MCP**.
 
   ![Cursor settings](/images/manual/use-cases/context7-cursor-settings.png#bordered){width=70%}
 
-2. Enter the following configurations in the `mcp.json` file. Replace `<your-context7-endpoint>` with your Context7 MCP endpoint.
+3. Enter the following configurations in the `mcp.json` file. Replace `<your-context7-endpoint>` with your Context7 MCP endpoint.
 
     ```json
     {
@@ -284,11 +297,11 @@ You can also connect Context7 to coding assistants running on your computer, suc
       }
     }
     ```
-3. Save the changes. Now Context7 is enabled.
+4. Save the changes. Now Context7 is enabled.
 
   ![Context7 enabled in Cursor](/images/manual/use-cases/cursor-context7-enabled.png#bordered){width=50%}
 
-4. Ask in the chat. For example,
+5. Ask in the chat. For example,
 
     ```text
     Use the Context7 MCP server to look up the latest React 19 documentation.
@@ -364,6 +377,29 @@ No. The Context7 instance on Olares serves as an MCP server for AI assistants, n
 Your AI might not realize it has access to Context7. Unless you explicitly ask it to use Context7, it might fall back on its own training data, which could be outdated.
 
 To fix this issue, add a phrase like “Use Context7” to your question. For example, ask "Use Context7 to find how to use the `use` hook in React 19" instead of "How do I use the `use` hook in React 19".
+
+## Common issues
+
+### Manual configuration required for OpenCode on ARM-based machines
+
+If you are running OpenCode V1.0.4 on an ARM-based machine, the terminal command does not apply the configuration changes correctly. Instead, you must configure it manually via the Files app:
+
+1. Open Files and navigate to **Application** > **Data** > **opencode** > **.config** > **opencode**.
+2. Right-click `config.jsonc` and select **Rename**. Rename the file to `config.json` so you can edit it directly in Files. OpenCode recognizes both extensions.
+3. Double-click `config.json` to open it, and then click <i class="material-symbols-outlined">edit_square</i> to enter the edit mode.
+4. Paste the following `mcp` JSON block into the file. Replace `<your-context7-endpoint>` with your Context7 MCP endpoint.
+
+    ```json
+      "mcp": {
+        "context7": {
+          "type": "remote",
+          "url": "<your-context7-endpoint>/mcp",
+          "enabled": true
+        }
+      }
+    ```
+
+5. Click <i class="material-symbols-outlined">save</i> to save the changes.
 
 ## Learn more
 
