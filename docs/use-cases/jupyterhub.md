@@ -20,7 +20,7 @@ In this guide, you will learn how to:
 - Install JupyterHub and set up the admin account.
 - Launch notebook servers and write code in JupyterLab.
 - Add and manage JupyterHub users.
-- Adjust notebook resource limits as an admin.
+- Customize notebook profiles as an admin.
 
 ## Install JupyterHub
 
@@ -64,11 +64,17 @@ After signing in, you will see the JupyterHub dashboard. From here, you can star
 
 1. From the dashboard, click **Start My Server**.
 
-2. Select a notebook image, then click **Start**. 
+2. Select a notebook profile, then click **Start**. 
 
-   The default option is **Base Environment**. It uses the `base-notebook` image and is suitable for most users.
+   The default option is **Base Environment**. It provides a minimal Python-only Jupyter environment and is suitable for most users.
 
-   ![Select notebook image](/images/manual/use-cases/jupyterhub-select-image.png#bordered){width=90%}
+   ![Select notebook profile](/images/manual/use-cases/jupyterhub-select-profile.png#bordered){width=90%}
+
+   :::info
+   When you start a notebook server for the first time with a selected profile, JupyterHub needs to pull the corresponding notebook image. This may take several minutes depending on the image size and your network connection.
+
+   If you want to use a different notebook image, ask an admin to [customize the notebook profile](#optional-customize-notebook-profiles).
+   :::
 
 3. Wait for the server to start. After the server starts, the Jupyter Notebook interface opens.
 
@@ -146,11 +152,15 @@ After the user is added on the **Admin** page, they can sign in with the account
 
 ![Admin page - create user](/images/manual/use-cases/jupyterhub-admin-create-user.png#bordered){width=90%}
 
-## Optional: Adjust notebook resource limits
+## Optional: Customize notebook profiles
 
-Each notebook server runs in its own container with predefined CPU and memory limits. Most users do not need to change these settings.
+Each notebook profile defines the image and resource limits used when a user starts a notebook server. Most users do not need to change these settings.
 
-As an admin, you can adjust the resource limits for each notebook profile from the JupyterHub ConfigMap. If you are not sure which values to use, keep the defaults. Increasing resource limits may cause notebook servers to stay in **Pending** if your Olares cluster does not have enough available CPU or memory.
+As an admin, you can customize profiles from the JupyterHub ConfigMap.
+
+:::warning GPU acceleration is not supported
+JupyterHub on Olares currently does not support GPU acceleration for notebook servers. Use CPU-based notebook images only. Do not use CUDA-enabled image tags, such as tags prefixed with `cuda12-` or `cuda-`.
+:::
 
 The default profiles and their resource limits are:
 
@@ -165,36 +175,61 @@ The default profiles and their resource limits are:
 | All Spark (Complete) | 2 / 4 | 4 GB / 8 GB |
 | R Environment | 1 / 2 | 2 GB / 4 GB |
 
-To adjust resource limits for a profile:
+To customize a notebook profile:
 
-1. In Control Hub, select the JupyterHub project from the Browse panel.
+1. In Control Hub, go to **Browse**, then select the JupyterHub project.
 
-2. Under **Configmaps**, click `jupyterhub-config`, and then click <i class="material-symbols-outlined">edit_square</i> in the top-right to open the YAML editor.
+2. Under **Configmaps**, select `jupyterhub-config`, then click <i class="material-symbols-outlined">edit_square</i> in the top-right of the details panel to open the YAML editor.
 
    ![JupyterHub ConfigMap](/images/manual/use-cases/jupyterhub-configmap.png#bordered){width=90%}
 
-3. In the `data` section, find the `jupyterhub_config.py` content. Locate the `profile_list` entries, and modify the `cpu_guarantee`, `mem_guarantee`, `cpu_limit`, or `mem_limit` values for the desired profile.
+3. In the YAML editor, find `c.KubeSpawner.profile_list`.
 
-4. Click **Confirm** to save the changes.
+4. Locate the profile you want to modify, then update the values under `kubespawner_override`.
 
-5. Return to **Deployments** > **jupyterhub**, and then click **Restart** in the right panel.
+   - To change the notebook image, modify `image`. The value must be a full image address.
+   - To change resource limits, modify `cpu_guarantee`, `mem_guarantee`, `cpu_limit`, or `mem_limit`.
 
-Wait until the status icon turns green. The updated limits apply to new or restarted notebook servers.
+   A profile entry contains fields like these:
+
+   ```python
+   'kubespawner_override': {
+       'image': 'docker.io/beclab/jupyter-base-notebook:notebook-7.0.6',
+       'cpu_guarantee': 0.1,
+       'mem_guarantee': '1G',
+       'cpu_limit': 1,
+       'mem_limit': '1G',
+   }
+   ```
+
+5. Click **Confirm** to save the changes.
+
+6. Return to **Deployments** > **jupyterhub**, and then click **Restart** in the right panel.
+
+Wait until the status icon turns green. The updated profile settings apply when users start a new notebook server for that profile.
 
 ## FAQ
 
 ### A user's server is stuck in "Pending" status
 
-#### Cause
+A notebook server may stay in **Pending** when the cluster does not have enough CPU or memory resources to start the server container.
 
-The cluster does not have enough CPU or memory resources to start the notebook server container.
+As an admin, you can:
 
-#### Solution
+- Stop unused notebook servers to free up resources.
+- If the selected notebook profile requires more resources than your cluster can provide, [customize the notebook profile](#optional-customize-notebook-profiles), then ask the user to start the server again.
 
-- As a user, contact the JupyterHub admin.
-- As an admin:
-  - Stop unused notebook servers to free up resources.
-  - If the selected notebook profile requires more resources than your cluster can provide, [adjust the notebook resource limits](#optional-adjust-notebook-resource-limits), then ask the user to start the server again.
+### How do I use a different notebook image?
+
+To use a different notebook image, an admin needs to update the `image` value in the JupyterHub ConfigMap. For detailed steps, see [Customize notebook profiles](#optional-customize-notebook-profiles).
+
+Use CPU-based notebook images only, because GPU acceleration is not currently supported for notebook servers.
+
+### GPU acceleration is not supported
+
+JupyterHub on Olares currently does not support GPU acceleration for notebook servers. The default notebook profiles use CPU-based images.
+
+Do not use CUDA-enabled image tags, such as tags prefixed with `cuda12-` or `cuda-`. For more information, see [CUDA-enabled variants](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#cuda-enabled-variants) in the Jupyter Docker Stacks documentation.
 
 ## Learn more
 
