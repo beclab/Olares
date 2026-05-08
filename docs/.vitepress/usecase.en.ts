@@ -145,10 +145,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Bifrost",
               link: "/use-cases/bifrost",
             },
-            {
+            /*{
               text: "Duix.Avatar",
               link: "/use-cases/duix-avatar",
-            },
+            },*/
             {
               text: "Paperclip",
               link: "/use-cases/paperclip",

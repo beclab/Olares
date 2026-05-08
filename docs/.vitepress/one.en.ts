@@ -80,6 +80,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/files",
         },
         {
+          text: "Back up & restore data",
+          link: "/one/backup-restore",
+        },
+        {
           text: "Install & update apps",
           link: "/one/market",
         },
@@ -95,7 +99,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Deploy an app",
           link: "/one/deploy",
         },
-
       ]
     },
     {
@@ -249,10 +252,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Update firmware",
           link: "/one/update-firmware",
         },        
-        {
-          text: "Back up & restore data",
-          link: "/one/backup-resotre",
-        },
         {
           text: "Restore Olares One",
           items: [
