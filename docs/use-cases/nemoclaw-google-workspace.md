@@ -65,7 +65,7 @@ The gog skill lets your NemoClaw agent interact with Google Workspace services s
    openclaw config --section skills
    ```
 
-3. Follow the prompts to configure your installation. Use the arrow keys to navigate and press **Enter** to confirm.
+4. Follow the prompts to configure your installation. Use the arrow keys to navigate and press **Enter** to confirm.
 
     | Settings | Option |
     |:---------|:-------|
@@ -129,10 +129,10 @@ The gog skill lets your NemoClaw agent interact with Google Workspace services s
 
 ## Step 4: Use Google Workspace with your agent
 
-You can now use `gog` commands in the NemoClaw CLI sandbox (`my-assistant`). For example, to create an meeting:
+You can now use `gog` commands in the NemoClaw CLI sandbox (`my-assistant`). For example, to create a meeting:
 
 ```bash
-sandbox@my-assistant:~$ gog calendar create primary \   
+sandbox@my-assistant:~$ gog calendar create primary \
   --summary "Coffee with Team" \
   --from "2026-05-09T10:00:00+02:00" \
   --to "2026-05-09T11:00:00+02:00" \
@@ -140,7 +140,7 @@ sandbox@my-assistant:~$ gog calendar create primary \
 ```
 
 Example output:
-```bash
+```text
 id      5gsacgvqem82o29cct65oq2234
 summary Coffee with Team
 timezone        Europe/Amsterdam
@@ -155,7 +155,7 @@ description     Catching up at the local cafe
 reminders       (calendar default)
 link    https://www.google.com/calendar/event?eid=...
 ```
-Click the link, you will be directed to the Google Calendar page and check the newly created event.
+Click the link to open the event in Google Calendar and verify it.
 
 ![Create calendar event with gog](/images/manual/use-cases/gog-calendar-event.png#bordered){width=70%}
 
