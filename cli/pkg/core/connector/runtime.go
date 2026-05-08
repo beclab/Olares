@@ -18,7 +18,6 @@ package connector
 
 import (
 	"fmt"
-	"os"
 	"os/user"
 	"path"
 	"path/filepath"
@@ -48,7 +47,7 @@ type BaseRuntime struct {
 	k8sClient       *kubernetes.Clientset
 }
 
-func NewBaseRuntime(name string, connector Connector, baseDir string, olaresVersion string, consoleLogFileName string, consoleLogTruncate bool, systemInfo Systems) BaseRuntime {
+func NewBaseRuntime(name string, connector Connector, baseDir string, olaresVersion string, consoleLogFileName string, consoleLogTruncate bool, systemInfo Systems) (BaseRuntime, error) {
 	base := BaseRuntime{
 		ObjName:         name,
 		connector:       connector,
@@ -64,19 +63,16 @@ func NewBaseRuntime(name string, connector Connector, baseDir string, olaresVers
 		baseDir = fmt.Sprintf("%s\\%s", systemInfo.GetHomeDir(), common.DefaultBaseDir)
 	}
 	if err := base.GenerateBaseDir(baseDir); err != nil {
-		fmt.Printf("[ERRO]: Failed to create base dir: %s\n", err)
-		os.Exit(1)
+		return BaseRuntime{}, errors.Wrap(err, "failed to create base dir")
 	}
 	if err := base.GenerateWorkDir(); err != nil {
-		fmt.Printf("[ERRO]: Failed to create work dir: %s\n", err)
-		os.Exit(1)
+		return BaseRuntime{}, errors.Wrap(err, "failed to create work dir")
 	}
 	if err := base.InitLogger(consoleLogFileName, consoleLogTruncate); err != nil {
-		fmt.Printf("[ERRO]: Failed to init log entry: %s\n", err)
-		os.Exit(1)
+		return BaseRuntime{}, errors.Wrap(err, "failed to init log entry")
 	}
 
-	return base
+	return base, nil
 }
 
 func (b *BaseRuntime) GetSystemInfo() Systems {
