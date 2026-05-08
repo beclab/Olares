@@ -14,8 +14,6 @@ doc_updated: "2026-05-07"
 
 TensorZero is an all-in-one platform to manage, connect, and monitor your AI models. It acts as a central gateway that connects your client applications to your local AI models. It records every chat and request so you can track performance, and it helps you test different setups to get the best results.
 
-Unlike basic tools, TensorZero operates on a strict permission system. You must explicitly list every model and task you want to use in its configuration file before it allows any application to connect.
-
 ## Learning objectives
 
 In this guide, you will learn how to:
@@ -57,11 +55,11 @@ You define the model to tell TensorZero where the AI is, and then you link it to
 This example connects a local Ollama model.
 
 1. Open Settings, go to **Applications** > **Ollama** > **Shared entrances** > **Ollama API**, and then copy the endpoint URL. For example, `http://d54536a50.shared.olares.com`.
-2. Open Control Hub, go to **tensorzero-{username}** > **Configmaps** > **gateway-startups**, and then click <i class="material-symbols-outlined">edit_square</i>.
+2. Open Control Hub, go to **Browse** > **tensorzero-{username}** > **Configmaps** > **gateway-startups**, and then click <i class="material-symbols-outlined">edit_square</i>.
 
     ![Edit config file in Control Hub](/images/manual/use-cases/tensorzero-ctrl-hub.png#bordered)
 
-3. In the editor, scroll down to the end, and then add the following snippet. Replace the `api_base` with your copied Ollama URL and append /v1. Replace the `model_name` with the exact downloaded model name in your Ollama instance.
+3. In the editor, scroll down to the end, and then add the following snippet. Replace `api_base` with your copied Ollama endpoint URL and append /v1. Replace `model_name` with the exact name of the model you downloaded in Ollama.
 
     This configuration registers your Ollama model under an internal alias (`qwen3_5_9b`) and creates a client-facing function (`my_function_name`) that routes incoming app requests to that model.
 
@@ -111,7 +109,9 @@ This example connects a local Ollama model.
 Many apps require embedding models to search through documents or build memory features. TensorZero treats embedding models  separately from chat models. You must define a dedicated embedding model. Do not use a chat function for memory tasks.
 
 1. Open the **gateway-startups** ConfigMap again and edit the `tensorzero.toml` file.
-2. Append the following snippet to define an embedding model. This configuration registers your Ollama embedding model under the alias `nomic_embed`.
+2. Add the following snippet to define an embedding model. Replace `model_name` with the exact name of the embedding model you downloaded in Ollama.
+
+    This configuration registers your Ollama embedding model under the alias `nomic_embed`.
 
     ```python
     # embedding_models
@@ -133,17 +133,13 @@ Many apps require embedding models to search through documents or build memory f
 
     ![Connect to embedding model](/images/manual/use-cases/tensorzero-config-embedding.png#bordered)    
 
-    :::tip
-    Make sure the `model_name` matches the exact name of the embedding model you downloaded in Ollama. For example, `nomic-embed-text`.
-    :::
-
 3. Click **Confirm**, and then restart the TensorZero container.
 
 ## Verify the connection
 
 Use the built-in Playground to test that your function works correctly with your Ollama model.
 
-If you have not used TensorZero before, you must manually create at least one test case (a "Datapoint") before the Playground chat interface can appear.
+The Playground requires at least one test case, called a Datapoint, to display the chat interface. If you do not have one, you must create it manually.
 
 1. Open TensorZero from the Launchpad.
 2. Select **Datasets** from the left sidebar.
@@ -304,7 +300,7 @@ The following example demonstrates how to configure OpenCode to access this MCP 
 
 ### `model` field must start with `tensorzero::function_name::...`
 
-**Why it happens**: You entered a raw model name (e.g., `qwen3.5:9b`) or an incorrect format in your client’s model field.
+**Why it happens**: You entered a raw model name like `qwen3.5:9b` or an incorrect format in your client’s model field.
 
 **How to fix**: Always use one of these three exact formats, depending on what you want to connect:
 
@@ -320,7 +316,7 @@ The following example demonstrates how to configure OpenCode to access this MCP 
 
 **How to fix**:
 1. Open Control Hub, go to **tensorzero-{username}** > **Deployments** > **tensorzero** > **Pods**, and then click the tensorzero pod.
-2. In the **Containers** section, locate **gateway**, and then click the Container Logs icon next to it.
+2. In the **Containers** section, locate **gateway**, and then click <i class="material-symbols-outlined">article</i> next to it.
 
     ![Container logs](/images/manual/use-cases/tensorzero-container-logs.png#bordered)
 
