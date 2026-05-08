@@ -210,7 +210,7 @@ Wait until the status icon turns green. The updated profile settings apply when 
 
 ## FAQ
 
-### A user's server is stuck in "Pending" status
+### Why is my notebook server stuck in "Pending" status?
 
 A notebook server may stay in **Pending** when the cluster does not have enough CPU or memory resources to start the server container.
 
@@ -225,7 +225,7 @@ To use a different notebook image, an admin needs to update the `image` value in
 
 Use CPU-based notebook images only, because GPU acceleration is not currently supported for notebook servers.
 
-### GPU acceleration is not supported
+### Can I use GPU acceleration?
 
 JupyterHub on Olares currently does not support GPU acceleration for notebook servers. The default notebook profiles use CPU-based images.
 
