@@ -1,20 +1,30 @@
 ---
 outline: [2, 3]
-description: Run NemoClaw on Olares with a local LLM such as Qwen3.5. Set up an always-on AI agent backed by the NVIDIA OpenShell runtime, with no cloud API required.
+description: Run NemoClaw on Olares with a local LLM such as Gemma4. Set up an always-on AI agent backed by the NVIDIA OpenShell runtime, with no cloud API required.
 head:
   - - meta
     - name: keywords
-      content: Olares, NemoClaw, NVIDIA, OpenShell, OpenClaw, local LLM, AI assistant, self-hosted AI, Qwen, Discord, Brave Search, web search, ClawHub, skills, plugins, BlueBubbles, Olares CLI
-app_version: "1.0.3"
+      content: Olares, NemoClaw, NVIDIA, OpenShell, OpenClaw, local LLM, AI assistant, self-hosted AI, Gemma4, Discord, SearXNG, web search, ClawHub, skills, plugins, BlueBubbles, Olares CLI
+app_version: "1.0.5"
 doc_version: "1.1"
-doc_updated: "2026-04-30"
+doc_updated: "2026-05-08"
 ---
 
 # Run NemoClaw with a local LLM
 
 NemoClaw is an open-source reference stack from NVIDIA that runs OpenClaw with the NVIDIA OpenShell runtime bundled.
 
-This guide walks you through running NemoClaw on Olares with the Qwen3.5 27B Q4_K_M model app as the backend LLM.
+This guide walks you through running NemoClaw on Olares with the Gemma4 26B model app as the backend LLM.
+
+## Learning objectives
+
+In this guide, you will learn how to:
+
+- Install and configure NemoClaw with a local LLM.
+- Keep the model loaded for always-on responses.
+- Connect the agent to Discord for remote chat.
+- Enable real-time web search with SearXNG.
+- Manage Olares files and apps through natural language.
 
 ## Prerequisites
 
@@ -25,19 +35,19 @@ This guide walks you through running NemoClaw on Olares with the Qwen3.5 27B Q4_
 
 NemoClaw needs the model name and its shared endpoint URL during installation.
 
-1. Open your model app from Launchpad and note the model name shown on the page. In this example, it's `qwen3.5:27b-q4_K_M`.
+1. Open your model app from Launchpad and note the model name shown on the page. In this example, it's `gemma4:26b`.
 
-   ![Model name shown in the model app](/images/one/qwen3.5-27b-downloaded.png#bordered)
+   ![Model name shown in the model app](/images/manual/use-cases/gemma4-26b-downloaded.png#bordered)
 
-2. Open Settings, then go to **Applications** > **Qwen3.5 27B Q4_K_M (Ollama)**.
-3. In **Shared entrances**, select **Qwen3.5 27B Q4_K_M** to view the endpoint URL.
+2. Open Settings, then go to **Applications** > **Gemma4 26B Q4_K_M (Ollama)**.
+3. In **Shared entrances**, select **Gemma4 26B Q4_K_M** to view the endpoint URL.
 
-   ![Get shared endpoint](/images/manual/use-cases/deerflow2-shared-entrance.png#bordered){width=90%}
+   ![Get shared endpoint](/images/manual/use-cases/gemma4-26b-shared-laresprime.png#bordered){width=90%}
 
 4. Note the shared endpoint. For example:
 
    ```plain
-   http://94a553e00.shared.olares.com
+   http://2e53d5230.shared.olares.com
    ```
 
    :::tip Why the shared endpoint?
@@ -53,8 +63,8 @@ NemoClaw needs the model name and its shared endpoint URL during installation.
 2. Click **Get**, then **Install**.
 3. When prompted, set the environment variables:
 
-   - **NEMOCLAW_ENDPOINT_URL**: Enter or paste the shared endpoint URL, and append `/v1`, such as `http://94a553e00.shared.olares.com/v1`.
-   - **NEMOCLAW_MODEL**: Enter or paste the model name, such as `qwen3.5:27b-q4_K_M`.
+   - **NEMOCLAW_ENDPOINT_URL**: Enter or paste the shared endpoint URL, and append `/v1`, such as `http://2e53d5230.shared.olares.com/v1`.
+   - **NEMOCLAW_MODEL**: Enter or paste the model name, such as `gemma4:26b`.
 
    ![Set environment variables for NemoClaw](/images/manual/use-cases/nemoclaw-set-environment-variables.png#bordered){width=70%}
 
@@ -66,6 +76,10 @@ NemoClaw needs the model name and its shared endpoint URL during installation.
 
    Installation takes about 15 minutes, depending on your network. During this time, NemoClaw installs the NVIDIA OpenShell runtime and runs the initial agent onboarding.
 
+   :::warning
+   Keep the model app running during installation. The initial onboarding requires the model to be reachable, and the installation won't complete if the model stops or becomes unavailable.
+   :::
+
 When the installation finishes, two shortcuts appear on Launchpad:
 
 - **NemoClaw CLI**: The terminal interface for running NemoClaw and OpenClaw commands.
@@ -75,7 +89,7 @@ When the installation finishes, two shortcuts appear on Launchpad:
 
 By default, the local LLM unloads from memory after 5 minutes of inactivity, and the next reply has to wait for the model to reload. For an always-on agent, enable the keep-alive setting on the model app to keep it resident in memory.
 
-1. Open Settings and go to **Applications** > **Qwen3.5 27B Q4_K_M (Ollama)** > **Manage environment variables**.
+1. Open Settings and go to **Applications** > **Gemma4 26B Q4_K_M** > **Manage environment variables**.
 2. Find **KEEP_ALIVE**, click <i class="material-symbols-outlined">edit_square</i>, set the value to **true**, and click **Confirm**.
 
    ![Enable KEEP_ALIVE for the model app](/images/manual/use-cases/keep-alive-enable.png#bordered){width=80%}
@@ -202,7 +216,7 @@ NemoClaw runs OpenClaw inside a sandboxed runtime, so you must configure the cha
 3. Run the channel configuration wizard:
 
    ```bash
-   openclaw configure
+   openclaw config --section channels
    ```
 
 4. Follow the prompts to add Discord:
@@ -211,29 +225,32 @@ NemoClaw runs OpenClaw inside a sandboxed runtime, so you must configure the cha
    | Where will the Gateway run | Local (this machine) |
    | Channels | Configure/link |
    | Select a channel | Discord (Bot API) |
-   | Bot token | Paste the token from Step 1. |
-   | DM policy | Pairing |
+   | How do you want to provide this Discord bot token? | Enter Discord bot token, and paste the token from Step 1.|
+   | Configure Discord channels access | Yes |
+   | Discord channels access | Open (allow all channels) |
+
+5. When finished, when prompted to select a channel, select **Finished**.
+
+6. When prompted to configure DM (Direct Message) access policies, select **Pairing**.
 
 ### Step 4: Authorize your Discord account
 
 For security, the bot doesn't respond to unauthorized users. You must pair your Discord account with the bot.
 
-1. Open Discord and send a Direct Message (DM) to your bot.
+1. Open Discord and send a direct message to your bot.
 
-   The bot replies with a pairing code, such as `M9ZEHYT7`.
+   The bot replies with a pairing code and a command.
 
    ![Pairing code from the bot DM](/images/manual/use-cases/nemoclaw-discord-pairing-code.png#bordered)
 
-2. Switch back to the NemoClaw CLI sandbox shell and approve the pairing:
+2. Switch back to the NemoClaw CLI sandbox shell and use the command provided by the bot to approve the pairing. For example:
 
    ```bash
-   openclaw pairing approve discord {Your-Pairing-Code}
+   openclaw pairing approve discord FY6PAVY8
    ```
-
-   For example:
-
-   ```bash
-   openclaw pairing approve discord M9ZEHYT7
+   When you see the following, it means the Discord is authorized:
+   ```text
+   Approved discord sender 1277468602303385654.
    ```
 
 3. After approval, you can chat with your agent directly in Discord.
@@ -242,130 +259,54 @@ For security, the bot doesn't respond to unauthorized users. You must pair your 
 
 ## Enable web search
 
-By default, the agent answers only from its training data. To let it fetch real-time internet information, enable the web search tool with Brave Search.
+By default, the agent answers only from its training data. To let it fetch real-time internet information, you can use a web search provider. The following uses SearXNG as an example, which you can install as a self-hosted instance from Olares Market.
 
-You need a [Brave Search API](https://brave.com/search/api/) key. The free "Data for Search" tier is usually enough for personal use.
+1. Install SearXNG from Olares Market.
+2. Open Settings, then go to **Applications** > **SearXNG**.
+3. In **Shared entrances**, select **SearXNG** to view the endpoint URL.
 
-1. Open the NemoClaw CLI app from Launchpad.
-2. Connect to the runtime sandbox:
+   ![Get shared endpoint](/images/manual/use-cases/searxng-shared-laresprime.png#bordered){width=90%}
+4. Copy the shared endpoint. For example:
+
+   ```plain
+   http://d1236e020.shared.olares.com
+   ```
+
+5. Open the NemoClaw CLI app from Launchpad.
+6. Connect to the runtime sandbox:
 
    ```bash
    nemoclaw my-assistant connect
    ```
 
-3. Run the web tool configuration wizard:
+7. Run the web tool configuration wizard:
 
    ```bash
-   openclaw configure
+   openclaw config --section web
    ```
 
-4. Configure as follows:
+8. Configure as follows:
 
    | Settings | Option |
    |:---------|:-------|
    | Where will the Gateway run | Local (this machine) |
    | Enable web_search | Yes |
-   | Search provider | Brave Search |
-   | Brave Search API key | Your Brave Search API key |
+   | Search provider | SearXNG |
+   | SearXNG Base URL | Paste the shared SearXNG endpoint from Step 4 |
    | Enable web_fetch (keyless HTTP fetch) | Yes |
 
-5. To verify, ask your agent a question that requires real-time information. For example:
+8. To verify, ask your agent a question that requires real-time information. For example:
 
    ```text
    What are today's top tech news headlines?
    ```
 
    The agent should fetch and cite live web results.
+   ![Web search results](/images/manual/use-cases/nemoclaw-web-search-result.png#bordered){width=90%}
 
 ## Manage Olares with Olares CLI
 
-Skills add new capabilities to the agent. The Olares CLI skills let the agent manage files and apps on your Olares device through natural language. For other skills, see [Manage skills and plugins](openclaw-skills.md).
-
-### Step 1: Log in to Olares CLI
-
-Olares CLI requires your account password and two-factor authentication code. Sign in from the NemoClaw CLI before the agent can use the Olares CLI skills.
-
-1. Open the NemoClaw CLI app from Launchpad.
-2. Connect to the runtime sandbox:
-
-   ```bash
-   nemoclaw my-assistant connect
-   ```
-
-   Wait until the terminal shows the sandbox prompt, such as `sandbox@my-assistant:~$`.
-
-3. Log in to your Olares account. Replace `<your-olares-id>` with your Olares ID:
-
-   ```bash
-   olares-cli profile login --olares-id <your-olares-id>
-   ```
-
-   For example:
-
-   ```bash
-   olares-cli profile login --olares-id laresprime@olares.com
-   ```
-
-   Follow the prompts to enter your Olares login password and the two-factor authentication code from the LarePass app.
-
-4. If you encounter an X.509 certificate error, run the following commands to work around the certificate check:
-
-   a. Extract the certificate chain. Replace `<username>` with your Olares username (the part before `@`):
-
-      ```bash
-      openssl s_client -proxy 10.200.0.1:3128 -connect auth.<username>.olares.com:443 -showcerts </dev/null 2>/dev/null \
-        | awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/{print}' > /tmp/openshell-chain.pem
-      ```
-
-   b. Set the trusted CA certificate file for the current shell:
-
-      ```bash
-      export SSL_CERT_FILE=/tmp/openshell-chain.pem
-      ```
-
-   c. Run the login command from step 3 again.
-
-### Step 2: Install Olares skills from ClawHub
-
-1. Open the OpenClaw Web UI and go to **Skills**.
-2. In the ClawHub search box, enter `olares` to find Olares skills.
-
-   ![Olares skills in ClawHub](/images/manual/use-cases/nemoclaw-install-olares-skills.png#bordered)
-
-3. Install Olares Shared first because it's the foundation of the other Olares skills.
-4. Install the remaining Olares skills, such as Olares Files and Olares Market.
-
-:::info Retry on 429 errors
-If you see a 429 error when downloading a skill, wait a moment and try again.
-:::
-
-### Step 3: Chat with the agent in natural language
-
-Open the OpenClaw Web UI or the OpenClaw TUI and ask the agent in natural language. For example:
-
-- To list all files and folders under `/drive/Home/`:
-
-  ```text
-  List drive/Home/
-  ```
-
-- To read a file:
-
-  ```text
-  Read the last 10 lines of the nemoclaw.log file in the Home directory.
-  ```
-
-- To install an app from Olares Market:
-
-  ```text
-  Install Firefox
-  ```
-
-- To uninstall an app from Olares Market:
-
-  ```text
-  Uninstall Firefox
-  ```
+Skills add new capabilities to the agent. The Olares CLI skills let the agent manage files and apps on your Olares device through natural language. For details, see [Manage Olares with Olares CLI](nemoclaw-olares-cli.md). For other skills, see [Manage skills and plugins](openclaw-skills.md).
 
 ## Install plugins
 
@@ -394,7 +335,7 @@ Each message you send and each agent reply might appear twice in the chat. This 
 
 ### Olares CLI login and skills don't persist across restarts
 
-NemoClaw doesn't persist your Olares CLI login or installed ClawHub skills across restarts. After restarting NemoClaw, log in to Olares CLI again and reinstall the Olares skills. For details, see [Manage Olares with Olares CLI](#manage-olares-with-olares-cli).
+NemoClaw doesn't persist your Olares CLI login or installed ClawHub skills across restarts. After restarting NemoClaw, log in to Olares CLI again and reinstall the Olares skills. For details, see [Manage Olares with Olares CLI](nemoclaw-olares-cli.md).
 
 ## Learn more
 
