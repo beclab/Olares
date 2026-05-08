@@ -244,8 +244,37 @@ func (b *BaseRuntime) GetCommandSed() string {
 	return b.cmdSed
 }
 
+// Copy returns a per-goroutine snapshot of BaseRuntime that is safe to
+// mutate concurrently with the original (and with sibling copies).
+//
+// The previous implementation was a single-line `runtime := *b` shallow
+// copy. The struct, however, owns three mutable collections that get
+// written during a pipeline run (`allHosts` slice via AppendHost /
+// DeleteHost, `roleHosts` and `deprecatedHosts` maps via the same paths
+// plus AppendRoleMap / RoleMapDelete). Combined with
+// `RemoteTask.Execute`'s per-host `selfRuntime := t.Runtime.Copy()` in
+// `Parallel` mode, any concurrent mutation of the parent runtime (or
+// another sibling copy) would race on the shared backing array / maps.
+//
+// We now allocate fresh slice / map containers while intentionally
+// keeping the `Host` values themselves shared (they own SSH connection
+// state and must not be duplicated) and the runner pointer / Argument
+// pointer shared (read-mostly after construction).
 func (b *BaseRuntime) Copy() Runtime {
 	runtime := *b
+
+	runtime.allHosts = append([]Host(nil), b.allHosts...)
+
+	runtime.roleHosts = make(map[string][]Host, len(b.roleHosts))
+	for role, hosts := range b.roleHosts {
+		runtime.roleHosts[role] = append([]Host(nil), hosts...)
+	}
+
+	runtime.deprecatedHosts = make(map[string]string, len(b.deprecatedHosts))
+	for k, v := range b.deprecatedHosts {
+		runtime.deprecatedHosts[k] = v
+	}
+
 	return &runtime
 }
 
