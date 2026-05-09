@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, NOFX, AI trading, autonomous agent, crypto, Hyperliquid, self-hosted
-app_version: "1.0.4"
-doc_version: "1.0"
-doc_updated: "2026-04-30"
+app_version: "1.0.5"
+doc_version: "1.1"
+doc_updated: "2026-05-09"
 ---
 
 # Set up an autonomous AI trading agent with NOFX
@@ -43,7 +43,7 @@ In this guide, you will learn how to:
 
    ![NOFX in Market](/images/manual/use-cases/nofx.png#bordered)
 
-2. Click **Get**, and then click **Install**. Wait for installation to finish.
+2. Click **Get**, and then click **Install**. Wait for the installation to finish.
 
 ## Sign up and fund the AI wallet
 
@@ -202,7 +202,50 @@ If you configure your own API key, NOFX routes the requests directly through you
 
 ### Can I use a local model?
 
-The current version does not support local models.
+Yes, you can use a local model, but ensure it meets the following requirements:
+- It must support OpenAI-compatible API calls.
+- It needs strong instruction-following capabilities, a sufficient context window, and fast inference speeds. Otherwise, the model might fail to output valid trading instructions.
+
+To configure a local model:
+1. On the **Config** page, click **+ MODELS_CONFIG**.
+2. Click **Other API Providers**, and then select **OpenAI**.
+3. In the **API Key** field, enter any text string.
+4. In the **Base URL** field, enter your local model endpoint URL. Ensure the URL ends with `/v1`.
+
+   Olares offers two ways to serve local models. For either way, get the shared entrance URL:
+
+   <Tabs>
+   <template #Ollama>
+
+   One app that hosts multiple models behind a single shared endpoint.
+
+   a. Open Settings, and then go to **Applications** > **Ollama**.
+
+   b. In **Shared entrances**, select **Ollama API** to view the shared endpoint URL.
+
+      ![Ollama shared entrance in Settings](/images/manual/use-cases/ollama-shared.png#bordered){width=80%}
+
+   c. Copy the shared endpoint. For example, `http://d54536a50.shared.olares.com`.
+   
+   d. Append `/v1` to this endpoint URL, that is `http://d54536a50.shared.olares.com/v1`.
+   </template>
+   <template #Single-model-apps>
+
+   Each app packages one specific model and exposes its own shared endpoint. Take **Qwen3.5 9B Q4_K_M (Ollama)** for example.
+
+   a. Open Settings, and then go to **Applications** > **Qwen3.5 9B Q4_K_M (Ollama)**.
+   
+   b. In **Shared entrances**, select **Qwen3.5 9B Q4_K_M** to view the endpoint URL.
+
+      ![Qwen3.5 9B shared entrance](/images/manual/use-cases/anythingllm-qwen359b-shared-entrance.png#bordered){width=80%}
+
+   c. Copy the shared endpoint URL. For example, `http://bd5355000.shared.olares.com`.
+   
+   d. Append `/v1` to this endpoint URL, that is `http://bd5355000.shared.olares.com/v1`.
+   </template>
+   </Tabs>
+
+5. Click **Save Configuration**.
 
 ### Model didn't output structured JSON decision
 
@@ -210,3 +253,26 @@ Some models cannot reliably produce decisions in JSON format. To work around thi
 - Switch to a different model.
 - Adjust the model parameters.
 - Edit the prompt below the model settings to instruct the model to output valid JSON format.
+
+### Context deadline exceeded
+
+The following error indicates that the AI model took too long to respond:
+
+`Failed to get AI decision: AI API call failed: failed to send request: Post "https://.../v1/chat/completions": context deadline exceeded`
+
+NOFX currently enforces a strict timeout limit of 120 seconds.
+
+If you consistently encounter this issue, try the following methods to reduce the model's response time:
+- Switch to a faster AI model.
+- Lower the model's reasoning or thinking parameters to generate quicker responses.
+- Enable the `KEEP_ALIVE` setting to keep the model loaded in Settings.
+
+### Opening amount too small
+
+The following error occurs because NOFX enforces strict minimum trade sizes for contracts:
+
+`Failed to get AI decision: failed to parse AI response: decision validation failed: decision #1 validation failed: ETHUSDT opening amount too small (12.00 USDT), must be ≥60.00 USDT`
+
+To resolve the issue, adjust your strategy's trade size to meet the following minimum requirements:
+- BTC and ETH contracts: Allocate at least 60.00 USDT per trade.
+- Other tokens: Allocate at least 12.00 USDT per trade.
