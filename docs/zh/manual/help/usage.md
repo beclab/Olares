@@ -67,7 +67,7 @@ description: 查找关于 Olares 使用及社区应用的常见问题解答。
     ![Ollama Docker image hub](/images/zh/manual/use-cases/faq-ollama-container-update.png#bordered)
 
 5. 将该字段更新为新的官方镜像名称和标签。例如，将 `docker.io/beclab/ollama-ollama:0.20.5` 改为 `docker.io/ollama/ollama:0.23.1`。
-6. 点击 **确认**。系统会自动拉取新镜像并重启容器。大体积镜像可能需要数分钟下载。完成后，容器状态会恢复为 **Running**。
+6. 点击 **Confirm**。系统会自动拉取新镜像并重启容器。大体积镜像可能需要数分钟下载。完成后，容器状态会恢复为 **Running**。
 
     ![Ollama Docker image updated in Control Hub](/images/zh/manual/use-cases/faq-ollama-container-updated.png#bordered)
 
