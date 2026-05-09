@@ -8,5 +8,6 @@ func NewWizardCommand() *cobra.Command {
 		Short: "activation wizard operations",
 	}
 	cmd.AddCommand(NewCmdActivate())
+	cmd.AddCommand(NewCmdFrp())
 	return cmd
 }
