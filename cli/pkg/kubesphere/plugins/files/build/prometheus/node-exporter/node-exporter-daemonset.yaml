@@ -37,13 +37,14 @@ spec:
         - --web.listen-address=127.0.0.1:9100
         - --path.sysfs=/host/sys
         - --path.rootfs=/host/root
+        - --path.udev.data=/host/root/run/udev/data
         - --no-collector.wifi
         - --collector.cpu.info
         - --collector.network_route
         - --collector.netdev.address-info
         - --collector.filesystem.ignored-mount-points=^/(dev|proc|sys|var/lib/docker/.+)($|/)
         - --collector.filesystem.ignored-fs-types=^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs)$
-        image: beclab/node-exporter:0.0.8
+        image: beclab/node-exporter:0.0.10
         name: node-exporter
         securityContext:
           privileged: true
