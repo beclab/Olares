@@ -30,7 +30,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "启用沙盒",
                   link: "/use-cases/openclaw-enable-sandbox",
-                },                                 
+                },
                 {
                   text: "升级 OpenClaw",
                   link: "/zh/use-cases/openclaw-upgrade",
@@ -38,7 +38,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "常见问题",
                   link: "/zh/use-cases/openclaw-common-issues",
-                }                
+                }
               ]
             },
             {
@@ -88,6 +88,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "NemoClaw",
+              link: "/zh/use-cases/nemoclaw",
+            },
+            {
               text: "Context7",
               link: "/zh/use-cases/context7",
             },
@@ -131,10 +135,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Bifrost",
               link: "/zh/use-cases/bifrost",
             },
-            {
+            /*{
               text: "Duix.Avatar",
               link: "/zh/use-cases/duix-avatar",
-            },
+            },*/
             {
               text: "Paperclip",
               link: "/zh/use-cases/paperclip",
@@ -159,6 +163,14 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "IndexTTS2",
               link: "/zh/use-cases/indextts2",
             },
+            {
+              text: "NOFX",
+              link: "/zh/use-cases/nofx",
+            },
+            {
+              text: "TensorZero",
+              link: "/zh/use-cases/tensorzero",
+            },            
             // {
             //   text: "DeerFlow",
             //   link: "/zh/use-cases/deerflow",

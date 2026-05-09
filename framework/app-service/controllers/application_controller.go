@@ -10,16 +10,16 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 
 	"github.com/thoas/go-funk"
 	"helm.sh/helm/v3/pkg/action"
@@ -298,7 +298,7 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 		appid = name
 		isSysApp = true
 	} else {
-		appid = appv1alpha1.AppName(name).GetAppID()
+		appid = appcfg.AppName(name).GetAppID()
 	}
 	settings, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
 
@@ -412,7 +412,7 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	if userspace.IsSysApp(name) {
 		appid = name
 	} else {
-		appid = appv1alpha1.AppName(name).GetAppID()
+		appid = appcfg.AppName(name).GetAppID()
 	}
 	settings, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
 

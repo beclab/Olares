@@ -3,12 +3,12 @@ package v2
 import (
 	"errors"
 	"fmt"
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	v1 "github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	helmrelease "helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/storage/driver"
@@ -34,7 +34,7 @@ func (h *HelmOpsV2) Upgrade() error {
 		return err
 	}
 	if status.Info.Status == helmrelease.StatusDeployed {
-		values, err := h.SetValues(true)
+		values, err := h.SetValues()
 		if err != nil {
 			klog.Errorf("set values err %v", err)
 			return err
@@ -109,26 +109,25 @@ func (h *HelmOpsV2) Upgrade() error {
 
 func (h *HelmOpsV2) upgrade(values map[string]interface{}) error {
 	for _, chart := range h.App().SubCharts {
-		chartName := utils.GetChartName(h.App().AppName, h.App().RawAppName, chart.Name)
 		if chart.Shared {
 			isAdmin, err := kubesphere.IsAdmin(h.Context(), h.KubeConfig(), h.App().OwnerName)
 			if err != nil {
-				klog.Errorf("Failed to check if user is admin for chart %s: %v", chartName, err)
+				klog.Errorf("Failed to check if user is admin for chart %s: %v", chart.Name, err)
 				return err
 			}
 
 			if !isAdmin {
-				klog.Infof("Skipping upgrading of shared chart %s for non-admin user %s", chartName, h.App().OwnerName)
+				klog.Infof("Skipping upgrading of shared chart %s for non-admin user %s", chart.Name, h.App().OwnerName)
 				continue
 			}
 		}
 
-		status, err := h.status(chartName)
+		status, err := h.status(chart.Name)
 		if err != nil {
 			if errors.Is(err, driver.ErrReleaseNotFound) && chart.Shared {
 				// upgrading single chart to multi-charts app,
 				klog.Infof("[upgrading] chart %s not found, installing it", chart.Name)
-				actionConfig, settings, err := helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName, chartName))
+				actionConfig, settings, err := helm.InitConfig(h.KubeConfig(), appcfg.ChartNamespace(&chart, h.App().OwnerName))
 				if err != nil {
 					klog.Errorf("Failed to create action config for shared chart %s: %v", chart.Name, err)
 					return err
@@ -139,9 +138,9 @@ func (h *HelmOpsV2) upgrade(values map[string]interface{}) error {
 					actionConfig,
 					settings,
 					chart.Name,
-					chart.ChartPath(h.App().AppName, chart.Name),
+					appcfg.ChartPath(h.App().AppName, chart.Name),
 					h.App().RepoURL,
-					chart.Namespace(h.App().OwnerName, chartName),
+					appcfg.ChartNamespace(&chart, h.App().OwnerName),
 					values,
 				)
 				if err != nil {
@@ -158,7 +157,7 @@ func (h *HelmOpsV2) upgrade(values map[string]interface{}) error {
 			settings := h.Settings()
 			if chart.Shared {
 				// re-create action config for shared chart
-				actionConfig, settings, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName, chartName))
+				actionConfig, settings, err = helm.InitConfig(h.KubeConfig(), appcfg.ChartNamespace(&chart, h.App().OwnerName))
 				if err != nil {
 					klog.Errorf("Failed to create action config for shared chart %s: %v", chart.Name, err)
 					return err
@@ -170,7 +169,7 @@ func (h *HelmOpsV2) upgrade(values map[string]interface{}) error {
 				actionConfig,
 				settings,
 				chart.Name,
-				chart.ChartPath(h.App().AppName, chart.Name),
+				appcfg.ChartPath(h.App().AppName, chart.Name),
 				h.App().RepoURL,
 				h.App().Namespace,
 				values,

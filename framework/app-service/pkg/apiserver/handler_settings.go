@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
@@ -21,6 +20,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -599,7 +599,7 @@ func (h *Handler) getApplicationPermission(req *restful.Request, resp *restful.R
 	}
 
 	var appConfig appcfg.ApplicationConfig
-	err = am.GetAppConfig(&appConfig)
+	err = appcfg.GetAppConfig(&am, &appConfig)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		api.HandleError(resp, req, err)
@@ -736,7 +736,7 @@ func (h *Handler) getApplicationProviderList(req *restful.Request, resp *restful
 	}
 
 	var appConfig appcfg.ApplicationConfig
-	err = am.GetAppConfig(&appConfig)
+	err = appcfg.GetAppConfig(&am, &appConfig)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		api.HandleError(resp, req, err)

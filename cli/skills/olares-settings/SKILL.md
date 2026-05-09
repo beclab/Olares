@@ -25,7 +25,7 @@ gpu           video        search        backup        restore     advanced
 
 …plus a 13th non-canonical tree, `me`, that hosts the SPA's avatar / Person dropdown self-service items. **`me` is intentionally outside the 12 canonical Settings docs sections**; it lives under `settings` for CLI discoverability, not because it's a docs section.
 
-> The shape is always `olares-cli settings <area> <verb>` (or `<area> <noun> <verb>` when the area has multiple sub-resources, e.g. `settings vpn devices list`, `settings backup plans list`). Every verb honours the global `--profile` flag inherited from the umbrella.
+> The shape is always `olares-cli settings <area> <verb>` (or `<area> <noun> <verb>` when the area has multiple sub-resources, e.g. `settings vpn devices list`, `settings backup plans list`). Every verb runs against the currently-selected profile; switch with `olares-cli profile use <name>` ahead of time (there is no per-invocation override flag).
 
 ## Authentication transport
 
