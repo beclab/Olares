@@ -861,29 +861,37 @@ spec:
           record: 'node:node_memory_utilisation:'
         - expr: |
             sum by (node, role) (
-              irate(node_disk_reads_completed_total{job="node-exporter"}[5m])
-            * on (namespace, pod) group_left(node, role)
+              (
+            irate(node_disk_reads_completed_total{job="node-exporter"}[5m])
+            unless on (instance, device)
+            node_disk_info{external="1"}) * on (namespace, pod) group_left(node, role)
               node_namespace_pod:kube_pod_info:
             )
           record: node:data_volume_iops_reads:sum
         - expr: |
             sum by (node, role) (
-              irate(node_disk_writes_completed_total{job="node-exporter"}[5m])
-            * on (namespace, pod) group_left(node, role)
+              (
+            irate(node_disk_writes_completed_total{job="node-exporter"}[5m])
+            unless on (instance, device)
+            node_disk_info{external="1"}) * on (namespace, pod) group_left(node, role)
               node_namespace_pod:kube_pod_info:
             )
           record: node:data_volume_iops_writes:sum
         - expr: |
             sum by (node, role) (
-              irate(node_disk_read_bytes_total{job="node-exporter"}[5m])
-            * on (namespace, pod) group_left(node, role)
+              (
+            irate(node_disk_read_bytes_total{job="node-exporter"}[5m])
+            unless on (instance, device)
+            node_disk_info{external="1"}) * on (namespace, pod) group_left(node, role)
               node_namespace_pod:kube_pod_info:
             )
           record: node:data_volume_throughput_bytes_read:sum
         - expr: |
             sum by (node, role) (
-              irate(node_disk_written_bytes_total{job="node-exporter"}[5m])
-            * on (namespace, pod) group_left(node, role)
+              (
+            irate(node_disk_written_bytes_total{job="node-exporter"}[5m])
+            unless on (instance, device)
+            node_disk_info{external="1"}) * on (namespace, pod) group_left(node, role)
               node_namespace_pod:kube_pod_info:
             )
           record: node:data_volume_throughput_bytes_written:sum
@@ -914,10 +922,10 @@ spec:
             )
           record: node:node_net_bytes_received:sum_irate
         - expr: |
-            sum by(node, role) (sum(max(node_filesystem_files{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}) by (device, pod, namespace)) by (pod, namespace) * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:)
+            sum by(node, role) (sum(max(label_replace(node_filesystem_files{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}, "base_device", "$1", "device", "/dev/(nvme\\d+n\\d+|mmcblk\\d+|[a-z]+)p?\\d*") unless on (instance, base_device) label_replace(node_disk_info{external="1"}, "base_device", "$1", "device", "(.*)")) by (device, pod, namespace)) by (pod, namespace) * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:)
           record: 'node:node_inodes_total:'
         - expr: |
-            sum by(node, role) (sum(max(node_filesystem_files_free{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}) by (device, pod, namespace)) by (pod, namespace) * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:)
+            sum by(node, role) (sum(max(label_replace(node_filesystem_files_free{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}, "base_device", "$1", "device", "/dev/(nvme\\d+n\\d+|mmcblk\\d+|[a-z]+)p?\\d*") unless on (instance, base_device) label_replace(node_disk_info{external="1"}, "base_device", "$1", "device", "(.*)")) by (device, pod, namespace)) by (pod, namespace) * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:)
           record: 'node:node_inodes_free:'
         - expr: |
             sum by (node, role) (node_load1{job="node-exporter"} * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:) / node:node_num_cpu:sum
@@ -956,19 +964,19 @@ spec:
             user:pod_abnormal:count / count(node_namespace_pod:kube_pod_info:{node!=""} unless on (pod, namespace) kube_pod_status_phase{job="kube-state-metrics", phase="Succeeded"}>0) by (node, role)
           record: user:pod_abnormal:ratio
         - expr: |
-            sum(max(node_filesystem_avail_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"} * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:) by (device, node, role)) by (node, role)
+            sum(max(label_replace(node_filesystem_avail_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"} * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:, "base_device", "${1}", "device", "/dev/(nvme\\d+n\\d+|mmcblk\\d+|[a-z]+)p?\\d*") unless on (instance, base_device) label_replace(node_disk_info{external="1"}, "base_device", "${1}", "device", "(.*)")) by (device, node, role)) by (node, role)
           record: 'node:disk_space_available:'
         - expr: |
-            1- sum(max(node_filesystem_avail_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"} * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:) by (device, node, role)) by (node, role) / sum(max(node_filesystem_size_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"} * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:) by (device, node, role)) by (node, role)
+            1 - sum(max(label_replace(node_filesystem_avail_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"} * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:, "base_device", "${1}", "device", "/dev/(nvme\\d+n\\d+|mmcblk\\d+|[a-z]+)p?\\d*") unless on (instance, base_device) label_replace(node_disk_info{external="1"}, "base_device", "${1}", "device", "(.*)")) by (device, node, role)) by (node, role) / sum(max(label_replace(node_filesystem_size_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"} * on (namespace, pod) group_left(node, role) node_namespace_pod:kube_pod_info:, "base_device", "${1}", "device", "/dev/(nvme\\d+n\\d+|mmcblk\\d+|[a-z]+)p?\\d*") unless on (instance, base_device) label_replace(node_disk_info{external="1"}, "base_device", "${1}", "device", "(.*)")) by (device, node, role)) by (node, role)
           record: node:disk_space_utilization:ratio
         - expr: |
             (1 - (node:node_inodes_free: / node:node_inodes_total:))
           record: node:disk_inode_utilization:ratio
         - expr: |
-            label_replace(sum by (disk_name,instance) (label_replace(max by (device,instance) (node_filesystem_size_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}),"disk_name", "$1", "device", "/dev/(nvme[0-9]+n[0-9]+|sd[a-z]+|xvd[a-z]+|vd[a-z]+).*")),"node","$1","instance","(.*)")
+            label_replace(sum by (disk_name,instance) (label_replace(max by (device,instance) (node_filesystem_size_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}),"disk_name", "$1", "device", "/dev/(nvme[0-9]+n[0-9]+|sd[a-z]+|xvd[a-z]+|vd[a-z]+).*") unless on (instance, disk_name) label_replace(node_disk_info{external="1"}, "disk_name", "$1", "device", "(.*)")),"node","$1","instance","(.*)")
           record: node:disk_capacity:size
         - expr: |
-            label_replace(sum by (disk_name,instance) (label_replace(max by (device,instance) (node_filesystem_avail_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}),"disk_name", "$1", "device", "/dev/(nvme[0-9]+n[0-9]+|sd[a-z]+|xvd[a-z]+|vd[a-z]+).*")),"node","$1","instance","(.*)")
+            label_replace(sum by (disk_name,instance) (label_replace(max by (device,instance) (node_filesystem_avail_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}),"disk_name", "$1", "device", "/dev/(nvme[0-9]+n[0-9]+|sd[a-z]+|xvd[a-z]+|vd[a-z]+).*") unless on (instance, disk_name) label_replace(node_disk_info{external="1"}, "disk_name", "$1", "device", "(.*)")),"node","$1","instance","(.*)")
           record: node:disk_avail:size
         - expr: |
             (1-node:disk_avail:size/node:disk_capacity:size)
@@ -1003,7 +1011,7 @@ spec:
             cluster:pod_running:count / sum(kube_node_status_capacity{resource="pods", job="kube-state-metrics"})
           record: cluster:pod_utilization:ratio
         - expr: |
-            1 - sum(max(node_filesystem_avail_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}) by (device, instance)) / sum(max(node_filesystem_size_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}) by (device, instance))
+            1 - sum(max(label_replace(node_filesystem_avail_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}, "base_device", "$1", "device", "/dev/(nvme\\d+n\\d+|mmcblk\\d+|[a-z]+)p?\\d*") unless on (instance, base_device) label_replace(node_disk_info{external="1",}, "base_device", "$1", "device", "(.*)")) by (device, instance)) / sum(max(label_replace(node_filesystem_size_bytes{device=~"/dev/.*", device!~"/dev/loop\\d+", job="node-exporter"}, "base_device", "$1", "device", "/dev/(nvme\\d+n\\d+|mmcblk\\d+|[a-z]+)p?\\d*") unless on (instance, base_device) label_replace(node_disk_info{external="1",}, "base_device", "$1", "device", "(.*)")) by (device, instance))
           record: cluster:disk_utilization:ratio
         - expr: |
             1 - sum(node:node_inodes_free:) / sum(node:node_inodes_total:)
