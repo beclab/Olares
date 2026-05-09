@@ -7,7 +7,7 @@ head:
       content: Olares, TensorZero, LLMOps, AI gateway, observability, evaluation, MCP, Ollama, self-hosted
 app_version: "1.0.5"
 doc_version: "1.0"
-doc_updated: "2026-05-07"
+doc_updated: "2026-05-09"
 ---
 
 # Use TensorZero as an AI model gateway and observability platform
@@ -47,7 +47,7 @@ Before you edit the file, review the following rules to avoid errors:
 - **Exact naming**: When you connect other apps to TensorZero, you must prepend your model aliases with specific prefixes, such as `tensorzero::model_name::<alias>` and `tensorzero::function_name::<alias>`.
 
     :::tip
-    For applications that use the LiteLLM framework, such as the embedding feature in AgentZero, you must include the `openai/` prefix in the model name. For example, `openai/tensorzero::embedding_model_name::nomic_embed`.
+    For applications that use the LiteLLM framework, such as the embedding feature in AgentZero, you must include the `openai/` prefix in the embedding model name. For example, use `openai/tensorzero::embedding_model_name::nomic_embed`.
     :::
 
 - **Formatting rules**: The configuration file uses the TOML text format. You must maintain at least one empty line between different sections, for example, between `[models]` and `[functions]`. If you remove the empty lines, the application fails to start.
@@ -67,10 +67,10 @@ This example connects a local Ollama model.
 
 3. In the editor, scroll down to the end, and then add the following snippet:
 
-    - Replace `api_base` with your copied Ollama endpoint URL and append /v1.
+    - Replace `api_base` with your copied Ollama endpoint URL and append `/v1`.
     - Replace `model_name` with the exact name of the model you downloaded in Ollama.
 
-    This configuration registers your Ollama model under the alias `qwen3_5_9b`, and creates a client-facing function `my_function_name` that routes incoming app requests to that model.
+    This configuration registers your Ollama model under the alias `qwen3_5_9b`, and creates a client-facing function `general_chat` that routes incoming app requests to that model.
 
     ```python
     # models
@@ -91,11 +91,11 @@ This example connects a local Ollama model.
 
     # functions
 
-    [functions.my_function_name]
+    [functions.general_chat]
 
     type = "chat"
 
-    [functions.my_function_name.variants.my_variant_name]
+    [functions.general_chat.variants.my_default_variant]
 
     type = "chat_completion"
 
@@ -153,7 +153,7 @@ The Playground requires at least one test case, called a Datapoint, to display t
 
     For example, to create a basic geography test:
     - **Dataset**: Specify a name to create a new collection of test cases. For example, `Baseline tests`.
-    - **Function**: Select the function you configured earlier. For example, `my_function_name`.
+    - **Function**: Select the function you configured earlier. For example, `general_chat`.
     - **Input**: Select **+ User Message**, click **+ Text**, and then enter a test prompt. For example, `What is the capital of Spain?`.
     - **Output**: Select **+ Text**, and then enter the exact answer you expect the model to generate. For example, `Madrid`.
     - (Optional) **Tags** and **Metadata**: Enter labels to help identify this test case later. For example, add a tag with **Key** set to `type` and **Value** set to `QA`.
@@ -162,7 +162,7 @@ The Playground requires at least one test case, called a Datapoint, to display t
 
 4. Click **Create Datapoint**.
 5. Select **Playground** from the left sidebar.
-6. Select your function, the dataset you just created, and the variant. The chat interface appears. If you receive a normal reply, the setup is successful.
+6. Select your function, the dataset you just created, and your variant. The chat interface appears. If you receive a normal reply, the setup is successful.
 
     ![Verify connection](/images/manual/use-cases/tensorzero-playground.png#bordered)   
 
@@ -186,9 +186,14 @@ Construct the correct model name using the following prefixes based on the resou
 
 | Resource type | TOML definition | Required string format | Example |
 | :--- | :--- | :--- | :--- |
-| **Function** | `[functions.xxx]` | `tensorzero::function_name::<alias>` | `tensorzero::function_name::my_function_name` |
-| **Model** | `[models.xxx]` | `tensorzero::model_name::<alias>` | `tensorzero::model_name::qwen3_5_9b` |
-| **Embedding** | `[embedding_models.xxx]` | `tensorzero::embedding_model_name::<alias>` | `tensorzero::embedding_model_name::nomic_embed` |
+| **Function** | `[functions.<alias>]` | `tensorzero::function_name::<alias>` | `tensorzero::function_name::general_chat` |
+| **Model** | `[models.<alias>]` | `tensorzero::model_name::<alias>` | `tensorzero::model_name::qwen3_5_9b` |
+| **Embedding** | `[embedding_models.<alias>]` | `tensorzero::embedding_model_name::<alias>` | `tensorzero::embedding_model_name::nomic_embed` |
+
+:::tip
+- Do not use dots or colons in your alias names. For example, use `qwen3_5_9b`, not `qwen3.5:9b`.
+- If the model name does not work, prepend `openai/` to satisfy the LiteLLM framework and try again. For example, use `openai/tensorzero::embedding_model_name::nomic_embed`.
+:::
 
 ### Connect your clients
 
@@ -207,7 +212,7 @@ Construct the correct model name using the following prefixes based on the resou
     - **Base URL**: Enter your TensorZero endpoint URL ending with `/openai/v1`. For example, `https://ea581361.laresprime.olares.com/openai/v1`.
     - **API key**: Enter any text. This field cannot be empty.
     - **Models**:
-        - **Model ID**: Enter the exact function string, `tensorzero::function_name::my_function_name`.
+        - **Model ID**: Enter the exact function string, `tensorzero::function_name::general_chat`.
         - **Display Name**: Enter a descriptive name for easy identification in the interface, such as `TensorZero Qwen`.
 
     ![TensorZero config in OpenCode](/images/manual/use-cases/tensorzero-opencode.png#bordered){width=70%}     
@@ -235,7 +240,7 @@ Construct the correct model name using the following prefixes based on the resou
 2. Click **Chat Model**, configure as follows, and then click **Save**.
 
     - **Chat model provider**: Select **Other OpenAI compatible**.
-    - **Chat model name**: Enter `tensorzero::function_name::my_function_name`.
+    - **Chat model name**: Enter `tensorzero::function_name::general_chat`.
     - **Chat model API base URL**: Enter your TensorZero endpoint URL ending with `/openai/v1`. For example, `https://ea581361.laresprime.olares.com/openai/v1`.
     - **API key**: Enter any text. This field cannot be empty.
 
@@ -251,7 +256,7 @@ Construct the correct model name using the following prefixes based on the resou
         :::
 
     - **API key**: Enter any text. This field cannot be empty.
-    - **Embedding model API base URL**: Enter your TensorZero endpoint URL ending with /openai/v1. For example, `https://ea581361.laresprime.olares.com/openai/v1`.
+    - **Embedding model API base URL**: Enter your TensorZero endpoint URL ending with `/openai/v1`. For example, `https://ea581361.laresprime.olares.com/openai/v1`.
 
     ![TensorZero config in AgentZero, embedding model config](/images/manual/use-cases/tensorzero-agentzero-embed.png#bordered)    
 
@@ -278,7 +283,7 @@ Construct the correct model name using the following prefixes based on the resou
 
 TensorZero includes a built-in Model Context Protocol (MCP) server located at the `/mcp` endpoint. This feature allows your AI agent to look up the performance data.
 
-For example, you can ask your agent to retrieve the average response time for `my_function_name` today, and the agent will use the MCP connection to read the logs and report the data back to you.
+For example, you can ask your agent to retrieve the average response time for `general_chat` today, and the agent will use the MCP connection to read the logs and report the data back to you.
 
 The following example demonstrates how to configure OpenCode to access this MCP tool.
 
@@ -315,7 +320,7 @@ In TensorZero, both models and functions allow your applications to communicate 
 - **Model (`tensorzero::model_name::...`)**: This represents the raw AI engine. While you can connect your client applications directly to a model, doing so bypasses TensorZero's advanced monitoring features.
 - **Function (`tensorzero::function_name::...`)**: This represents the specific task your application is performing, such as `coding_assistant` or `text_summarizer`. Connecting through a function can use TensorZero's detailed observability and statistical tracking. It also allows you to link multiple different functions to the same underlying model, helping you track and optimize each specific task separately.
 
-### `model` field must start with `tensorzero::function_name::...`
+### Error: model field must start with `tensorzero::function_name::...`
 
 **Why it happens**: You entered a raw model name like `qwen3.5:9b` or an incorrect format in your client’s model field.
 
@@ -323,9 +328,18 @@ In TensorZero, both models and functions allow your applications to communicate 
 
 | You want to call | Format | Example |
 | :--- | :--- | :--- |
-| A function | `tensorzero::function_name::<alias>` | `tensorzero::function_name::my_function_name` |
+| A function | `tensorzero::function_name::<alias>` | `tensorzero::function_name::general_chat` |
 | A model directly | `tensorzero::model_name::<alias>` | `tensorzero::model_name::qwen3_5_9b` |
 | An embedding model | `tensorzero::embedding_model_name::<alias>` | `tensorzero::embedding_model_name::nomic_embed` |
+
+### Error: `litellm.BadRequestError: LLM Provider NOT provided`
+
+**Why it happens**: This error occurs in applications that rely on the LiteLLM framework, such as the embedding feature in AgentZero. These specific applications do not automatically recognize the standard TensorZero model string. They require an explicit provider prefix to understand how to format the connection.
+
+**How to fix**:
+Review the error message details to identify exactly which model is failing. Open your application settings and add `openai/` to the very beginning of that model name.
+
+For example, if the error mentions `model=tensorzero::embedding_model_name::nomic_embed`, you must change your embedding model name or ID to `openai/tensorzero::embedding_model_name::nomic_embed`. Save your settings and try the request again.
 
 ### TensorZero fails to start after I edit the configuration file
 
@@ -366,4 +380,3 @@ Try the following methods:
 
 - [Set up Bifrost as an AI model gateway](bifrost.md)
 - [Use LiteLLM as a unified AI model gateway](litellm.md)
-- [Set up OpenCode as your AI coding agent](opencode.md)
