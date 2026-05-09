@@ -71,7 +71,7 @@ This example connects a local Ollama model.
 
     This configuration registers your Ollama model under the alias `qwen3_5_9b`, and creates a client-facing function `general_chat` that routes incoming app requests to that model.
 
-    ```bash
+    ```toml
     # models
     [models.qwen3_5_9b]
     routing = ["ollama"]
@@ -108,7 +108,7 @@ Some apps require embedding models to search through documents or build memory f
 
     This configuration registers your Ollama embedding model under the alias `nomic_embed`.
 
-    ```bash
+    ```toml
     # embedding_models
     [embedding_models.nomic_embed]
     routing = ["ollama"]
@@ -154,7 +154,7 @@ To connect other apps to TensorZero, get its entrance address.
 
 1. Open Settings, and then go to **Applications** > **TensorZero** > **Entrances** > **TensorZero**.
 
-    ![TensorZero endpoint addres](/images/manual/use-cases/tensorzero-endpoint.png#bordered){width=70%} 
+    ![TensorZero endpoint address](/images/manual/use-cases/tensorzero-endpoint.png#bordered){width=70%} 
 
 2. Copy the endpoint URL. For example, `https://ea581361.laresprime.olares.com`. For OpenAI‑compatible clients, you must append `/openai/v1` to this URL.
 
