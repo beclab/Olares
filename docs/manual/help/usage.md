@@ -33,7 +33,7 @@ Yes. You can install [Studio](../../developer/develop/tutorial/index.md) to code
 
 ### Can I manually update an application version?
 
-:::tip Important notes
+:::tip Important
 We strongly recommend always updating applications through the Olares Market to ensure stability and compatibility.
 :::
 
