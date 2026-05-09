@@ -20,7 +20,7 @@ In this guide, you will learn how to:
 - Install TensorZero on Olares.
 - Understand how TensorZero manages AI connections.
 - Connect a chat model and a function.
-- Connect an embedding model for document searching and AI memory.
+- (Optional) Connect an embedding model.
 - Test your setup using the built-in Playground.
 - Connect other apps to TensorZero.
 - Enable your AI agent to read performance data via the built-in MCP server.
@@ -28,6 +28,7 @@ In this guide, you will learn how to:
 ## Prerequisites
 
 - Ensure [Ollama is installed](ollama.md) with at least one chat model downloaded (e.g., `qwen3.5:9b`) and one embedding model downloaded (e.g., `nomic-embed-text`).
+- Ensure your client applications, such as OpenCode and AgentZero, are already installed and fully functional. This guide covers only the specific settings required to connect them to TensorZero.
 
 ## Install TensorZero
 
@@ -42,13 +43,18 @@ In this guide, you will learn how to:
 TensorZero does not provide a graphical interface for configuring models. You manage all settings by editing its configuration file in Control Hub.
 
 Before you edit the file, review the following rules to avoid errors:
-- **Strict permission**: TensorZero rejects direct requests to raw model names like `gpt-4o` and `qwen3.5`. You must define an alias for every model you want to use.
+- **Strict permission**: TensorZero rejects direct requests to raw model names like `gpt-4o` and `qwen3.5`. You must define an alias for every model you want to use. Do not use dots or colons in your alias names. For example, use `qwen3_5_9b`, not `qwen3.5:9b`.
 - **Exact naming**: When you connect other apps to TensorZero, you must prepend your model aliases with specific prefixes, such as `tensorzero::model_name::<alias>` and `tensorzero::function_name::<alias>`.
+
+    :::tip
+    For applications that use the LiteLLM framework, such as the embedding feature in AgentZero, you must include the `openai/` prefix in the model name. For example, `openai/tensorzero::embedding_model_name::nomic_embed`.
+    :::
+
 - **Formatting rules**: The configuration file uses the TOML text format. You must maintain at least one empty line between different sections, for example, between `[models]` and `[functions]`. If you remove the empty lines, the application fails to start.
 
 ## Configure a chat model and function
 
-To make TensorZero work, you need two things: a model (the AI engine) and a function (the access point your apps use to communicate with that engine).
+To make TensorZero work, you need two things: a model to act as the AI engine, and a function to serve as the access point your apps use to communicate with that engine.
 
 You define the model to tell TensorZero where the AI is, and then you link it to a function to handle the requests. 
 
@@ -59,9 +65,12 @@ This example connects a local Ollama model.
 
     ![Edit config file in Control Hub](/images/manual/use-cases/tensorzero-ctrl-hub.png#bordered)
 
-3. In the editor, scroll down to the end, and then add the following snippet. Replace `api_base` with your copied Ollama endpoint URL and append /v1. Replace `model_name` with the exact name of the model you downloaded in Ollama.
+3. In the editor, scroll down to the end, and then add the following snippet:
 
-    This configuration registers your Ollama model under an internal alias (`qwen3_5_9b`) and creates a client-facing function (`my_function_name`) that routes incoming app requests to that model.
+    - Replace `api_base` with your copied Ollama endpoint URL and append /v1.
+    - Replace `model_name` with the exact name of the model you downloaded in Ollama.
+
+    This configuration registers your Ollama model under the alias `qwen3_5_9b`, and creates a client-facing function `my_function_name` that routes incoming app requests to that model.
 
     ```python
     # models
@@ -93,23 +102,19 @@ This example connects a local Ollama model.
     model = "qwen3_5_9b"
     ```
 
-    :::warning
-    Ensure you leave an empty line between `[models.qwen3_5_9b]` and `[functions.my_function_name]`. Do not use dots or colons in your alias names. For example, use `qwen3_5_9b`, not `qwen3.5:9b`.
-    :::
-
     ![Connect to Ollama](/images/manual/use-cases/tensorzero-config-ollama.png#bordered)
 
 4. Click **Confirm**.
-5. Go to **Deployments** > **tensorzero**, and then click **Restart**. Wait about 30 seconds for the application to apply the new settings.
+5. Go to **Deployments** > **tensorzero**, and then click **Restart** for the application to apply the new settings.
 
     ![TensorZero pod restart](/images/manual/use-cases/tensorzero-pod-restart.png#bordered)
 
-## Configure an embedding model
+## (Optional) Configure an embedding model
 
 Many apps require embedding models to search through documents or build memory features. TensorZero treats embedding models  separately from chat models. You must define a dedicated embedding model. Do not use a chat function for memory tasks.
 
-1. Open the **gateway-startups** ConfigMap again and edit the `tensorzero.toml` file.
-2. Add the following snippet to define an embedding model. Replace `model_name` with the exact name of the embedding model you downloaded in Ollama.
+1. Go to **Configmaps** > **gateway-startups** again, and then click <i class="material-symbols-outlined">edit_square</i>.
+2. In the editor, scroll down to the end, and then add the following snippet to define an embedding model. Replace `model_name` with the exact name of the embedding model you downloaded in Ollama.
 
     This configuration registers your Ollama embedding model under the alias `nomic_embed`.
 
@@ -133,7 +138,8 @@ Many apps require embedding models to search through documents or build memory f
 
     ![Connect to embedding model](/images/manual/use-cases/tensorzero-config-embedding.png#bordered)    
 
-3. Click **Confirm**, and then restart the TensorZero container.
+3. Click **Confirm**.
+4. Go to **Deployments** > **tensorzero**, and then click **Restart** for the application to apply the new settings.
 
 ## Verify the connection
 
@@ -143,13 +149,14 @@ The Playground requires at least one test case, called a Datapoint, to display t
 
 1. Open TensorZero from the Launchpad.
 2. Select **Datasets** from the left sidebar.
-3. Click **New Datapoint**, and configure the test case details. For example, to create a basic geography test:
+3. Click **New Datapoint**, and then configure the test case details.
 
+    For example, to create a basic geography test:
     - **Dataset**: Specify a name to create a new collection of test cases. For example, `Baseline tests`.
     - **Function**: Select the function you configured earlier. For example, `my_function_name`.
     - **Input**: Select **+ User Message**, click **+ Text**, and then enter a test prompt. For example, `What is the capital of Spain?`.
     - **Output**: Select **+ Text**, and then enter the exact answer you expect the model to generate. For example, `Madrid`.
-    - (Optional) **Tags** and **Metadata**: Enter any labels to help identify this test later. For example, add a tag with **Key** set to `type` and **Value** set to `QA`.
+    - (Optional) **Tags** and **Metadata**: Enter labels to help identify this test case later. For example, add a tag with **Key** set to `type` and **Value** set to `QA`.
 
     ![Create a new datapoint](/images/manual/use-cases/tensorzero-new-datapoint.png#bordered)      
 
@@ -161,7 +168,7 @@ The Playground requires at least one test case, called a Datapoint, to display t
 
 ## Obtain the TensorZero endpoint
 
-To connect other apps to TensorZero, get the entrance address.
+To connect other apps to TensorZero, get its entrance address.
 
 1. Open Settings, and then go to **Applications** > **TensorZero** > **Entrances** > **TensorZero**.
 
@@ -197,15 +204,15 @@ Construct the correct model name using the following prefixes based on the resou
 3. Enter the following details, and then click **Submit**.
    - **Provider ID**: A unique identifier for the model provider. For example, `olares-ollama-tensorzero`.
    - **Display name**: The name shown in the provider list. For example, `Olares TensorZero`.
-    - **Base URL**: Paste your TensorZero URL ending with `/openai/v1`. For example, `https://ea581361.laresprime.olares.com/openai/v1`.
-    - **API key**: Enter any text. TensorZero ignores this by default, but OpenCode requires a value.
+    - **Base URL**: Enter your TensorZero endpoint URL ending with `/openai/v1`. For example, `https://ea581361.laresprime.olares.com/openai/v1`.
+    - **API key**: Enter any text. This field cannot be empty.
     - **Models**:
         - **Model ID**: Enter the exact function string, `tensorzero::function_name::my_function_name`.
-        - **Display Name**: Enter a friendly name, such as `TensorZero Qwen`.
+        - **Display Name**: Enter a descriptive name for easy identification in the interface, such as `TensorZero Qwen`.
 
     ![TensorZero config in OpenCode](/images/manual/use-cases/tensorzero-opencode.png#bordered){width=70%}     
 
-4. Refresh OpenCode, and then go to **Settings** > **Models** > **Olares TensorZero**.
+4. Refresh OpenCode, go to **Settings** > **Models**, and then locate your custom provider **Olares TensorZero**.
 5. Verify the model you added is enabled.
 
     ![TensorZero enabled in OpenCode](/images/manual/use-cases/tensorzero-opencode-enable.png#bordered)   
@@ -225,21 +232,26 @@ Construct the correct model name using the following prefixes based on the resou
 <template #AgentZero>
 
 1. Open Agent Zero, and then go to **Settings** > **Agent Settings**.
-2. Click **Chat Model**, configure the following details, and then click **Save**.
+2. Click **Chat Model**, configure as follows, and then click **Save**.
 
     - **Chat model provider**: Select **Other OpenAI compatible**.
     - **Chat model name**: Enter `tensorzero::function_name::my_function_name`.
-    - **Chat model API base URL**: Enter your TensorZero URL ending with /openai/v1. For example, `https://ea581361.laresprime.olares.com/openai/v1`.
-    - **API key**: Enter any text. 
+    - **Chat model API base URL**: Enter your TensorZero endpoint URL ending with `/openai/v1`. For example, `https://ea581361.laresprime.olares.com/openai/v1`.
+    - **API key**: Enter any text. This field cannot be empty.
 
     ![TensorZero config in AgentZero](/images/manual/use-cases/tensorzero-agentzero.png#bordered)
 
-3. Click **Embedding Model**, configure the following details, and then click **Save**.
+3. Click **Embedding Model**, configure as follows, and then click **Save**.
 
     - **Embedding model provider**: Select **Other OpenAI compatible**.
     - **Embedding model name**: Enter `openai/tensorzero::embedding_model_name::nomic_embed`.
-    - **API key**: Enter any text.
-    - **Embedding model API base URL**: Enter your TensorZero URL ending with /openai/v1. For example, `https://ea581361.laresprime.olares.com/openai/v1`.
+
+        :::tip
+        For applications that use the LiteLLM framework, such as the embedding feature in AgentZero, you must include the `openai/` prefix in the model name.
+        :::
+
+    - **API key**: Enter any text. This field cannot be empty.
+    - **Embedding model API base URL**: Enter your TensorZero endpoint URL ending with /openai/v1. For example, `https://ea581361.laresprime.olares.com/openai/v1`.
 
     ![TensorZero config in AgentZero, embedding model config](/images/manual/use-cases/tensorzero-agentzero-embed.png#bordered)    
 
@@ -264,7 +276,7 @@ Construct the correct model name using the following prefixes based on the resou
 
 ## Access the built-in MCP server
 
-TensorZero includes a built-in Model Context Protocol (MCP) server located at the `/mcp` endpoint. This feature allows your AI agent to look up its own performance data.
+TensorZero includes a built-in Model Context Protocol (MCP) server located at the `/mcp` endpoint. This feature allows your AI agent to look up the performance data.
 
 For example, you can ask your agent to retrieve the average response time for `my_function_name` today, and the agent will use the MCP connection to read the logs and report the data back to you.
 
