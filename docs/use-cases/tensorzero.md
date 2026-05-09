@@ -308,6 +308,13 @@ The following example demonstrates how to configure OpenCode to access this MCP 
 
 ## FAQs
 
+### What is the difference between connecting to a model versus a function?
+
+In TensorZero, both models and functions allow your applications to communicate with the AI, but connecting your applications to a function is highly recommended.
+
+- **Model (`tensorzero::model_name::...`)**: This represents the raw AI engine. While you can connect your client applications directly to a model, doing so bypasses TensorZero's advanced monitoring features.
+- **Function (`tensorzero::function_name::...`)**: This represents the specific task your application is performing, such as `coding_assistant` or `text_summarizer`. Connecting through a function can use TensorZero's detailed observability and statistical tracking. It also allows you to link multiple different functions to the same underlying model, helping you track and optimize each specific task separately.
+
 ### `model` field must start with `tensorzero::function_name::...`
 
 **Why it happens**: You entered a raw model name like `qwen3.5:9b` or an incorrect format in your client’s model field.
