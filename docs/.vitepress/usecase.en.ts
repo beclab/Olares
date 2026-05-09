@@ -177,6 +177,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "NOFX",
               link: "/use-cases/nofx",
             },
+            {
+              text: "TensorZero",
+              link: "/use-cases/tensorzero",
+            },            
             // {
             //   text: "DeerFlow",
             //   link: "/use-cases/deerflow",
