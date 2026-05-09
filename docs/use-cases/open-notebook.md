@@ -108,17 +108,19 @@ After adding a provider configuration, add the models that Open Notebook can use
 
 ### Set default models
 
-Go back to **Default Model Assignments** at the top of **Manage** > **Models**. Here, you tell Open Notebook which model to use for each task. Assign the models you added to the slots you need:
+Go back to **Default Model Assignments** at the top of **Manage** > **Models**, then assign models to the slots you need.
 
-| Slot | What to select  |
-| :--| :-- |
-| Chat Model | A language model. |
-| Embedding Model | An embedding model.  |
-| Text-to-Speech Model | A TTS model, if you generate podcasts. |
-| Speech-to-Text Model | An STT model, if you process audio or video. |
-| Transformation Model | A language model. |
-| Tools Model | A language model, if you use tool-based tasks. |
-| Large Context Model | A language model suitable for long documents. |
+The examples below match the setup used in this guide. You can replace them with other local or cloud models based on your hardware and use case.
+
+| Slot | What to select | Example for this guide |
+| :-- | :-- | :-- |
+| Chat Model | A language model. | `qwen3:14b` |
+| Embedding Model | An embedding model. | `qwen3-embedding:0.6b` |
+| Text-to-Speech Model | A TTS model, if you generate podcasts. | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
+| Speech-to-Text Model | An STT model, if you process audio or video. | `Systran/faster-whisper-small` |
+| Transformation Model | A language model. | `qwen3:14b` |
+| Tools Model | A language model, if you use tool-based tasks. | `qwen3:14b` |
+| Large Context Model | A language model suitable for long documents. | `qwen3:14b` |
 
 If **Auto-assign Defaults** is available, you can use it to fill available slots automatically, then review the selections.
 
