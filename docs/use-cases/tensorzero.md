@@ -40,7 +40,7 @@ In this guide, you will learn how to:
 
 ## Understand the configuration requirements
 
-TensorZero does not provide a graphical interface for configuring models. You manage all settings by editing its configuration file in Control Hub.
+TensorZero does not provide a graphical interface for configuring models. You manage all settings by editing its configuration file in Files.
 
 Before you edit the file, review the following rules to avoid errors:
 - **Strict permission**: TensorZero rejects direct requests to raw model names like `gpt-4o` and `qwen3.5`. You must define an alias for every model you want to use. Do not use dots or colons in your alias names. For example, use `qwen3_5_9b`, not `qwen3.5:9b`.
@@ -61,51 +61,39 @@ You define the model to tell TensorZero where the AI is, and then you link it to
 This example connects a local Ollama model.
 
 1. Open Settings, go to **Applications** > **Ollama** > **Shared entrances** > **Ollama API**, and then copy the endpoint URL. For example, `http://d54536a50.shared.olares.com`.
-2. Open Control Hub, go to **Browse** > **tensorzero-{username}** > **Configmaps** > **gateway-startups**, and then click <i class="material-symbols-outlined">edit_square</i>.
-
-    ![Edit config file in Control Hub](/images/manual/use-cases/tensorzero-ctrl-hub.png#bordered)
-
-3. In the editor, scroll down to the end, and then add the following snippet:
+2. Open Files, and then go to **Data** > **tensorzero** > **config**.
+3. Right-click `tensorzero.toml`, and then rename it to `tensorzero.toml.txt`.
+4. Double-click `tensorzero.toml.txt`, and then click <i class="material-symbols-outlined">edit_square</i>.
+5. In the editor, add the following snippet:
 
     - Replace `api_base` with your copied Ollama endpoint URL and append `/v1`.
     - Replace `model_name` with the exact name of the model you downloaded in Ollama.
 
     This configuration registers your Ollama model under the alias `qwen3_5_9b`, and creates a client-facing function `general_chat` that routes incoming app requests to that model.
 
-    ```python
+    ```bash
     # models
-
     [models.qwen3_5_9b]
-
     routing = ["ollama"]
-
     [models.qwen3_5_9b.providers.ollama]
-
     type = "openai"
-
     api_base = "<ollama-shared-entrance>/v1"
-
     model_name = "qwen3.5:9b"
-
     api_key_location = "none"
 
     # functions
-
     [functions.general_chat]
-
     type = "chat"
-
     [functions.general_chat.variants.my_default_variant]
-
     type = "chat_completion"
-
     model = "qwen3_5_9b"
     ```
 
     ![Connect to Ollama](/images/manual/use-cases/tensorzero-config-ollama.png#bordered)
 
-4. Click **Confirm**.
-5. Go to **Deployments** > **tensorzero**, and then click **Restart** for the application to apply the new settings.
+6. Click <i class="material-symbols-outlined">save</i>, and then close the file.
+7. Rename `tensorzero.toml.txt` back to `tensorzero.toml`.
+8. Open Control Hub, go to **Browse** > **tensorzero-{username}** > **Deployments** > **tensorzero**, and then click **Restart** for the application to apply the new settings.
 
     ![TensorZero pod restart](/images/manual/use-cases/tensorzero-pod-restart.png#bordered)
 
@@ -113,33 +101,24 @@ This example connects a local Ollama model.
 
 Many apps require embedding models to search through documents or build memory features. TensorZero treats embedding models  separately from chat models. You must define a dedicated embedding model. Do not use a chat function for memory tasks.
 
-1. Go to **Configmaps** > **gateway-startups** again, and then click <i class="material-symbols-outlined">edit_square</i>.
-2. In the editor, scroll down to the end, and then add the following snippet to define an embedding model. Replace `model_name` with the exact name of the embedding model you downloaded in Ollama.
+1. Add the following snippet in `tensorzero.toml` to define an embedding model. Replace `model_name` with the exact name of the embedding model you downloaded in Ollama.
 
     This configuration registers your Ollama embedding model under the alias `nomic_embed`.
 
-    ```python
+    ```bash
     # embedding_models
-
     [embedding_models.nomic_embed]
-
     routing = ["ollama"]
-
     [embedding_models.nomic_embed.providers.ollama]
-
     type = "openai"
-
     api_base = "<ollama-shared-entrance>/v1"
-
     model_name = "nomic-embed-text"
-
     api_key_location = "none"
     ```
 
     ![Connect to embedding model](/images/manual/use-cases/tensorzero-config-embedding.png#bordered)    
 
-3. Click **Confirm**.
-4. Go to **Deployments** > **tensorzero**, and then click **Restart** for the application to apply the new settings.
+2. Restart the **tensorzero** container in Control Hub for the application to apply the new settings.
 
 ## Verify the connection
 
