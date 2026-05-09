@@ -16,7 +16,7 @@ Use this guide if the included USB drive is unavailable, contains an earlier OS 
 :::warning Use the Olares One ISO only
 Use only the Olares One ISO linked in this guide to create the bootable USB drive.
 
-Do not use any Olares ISO downloaded from other Olares installation pages. Otherwise, your device may be recognized as **Generic** instead of **Olares One**, and some Olares One-specific features may be unavailable.
+Do not use Olares ISO images linked from other Olares installation documentation, as they are intended for generic hardware. If you use a standard self-hosted ISO, your device may be recognized as **Generic** instead of **Olares One**, and some Olares One-specific features may be unavailable.
 :::
 
 ## Prerequisites
