@@ -86,7 +86,7 @@ description: 查找关于 Olares 使用及社区应用的常见问题解答。
 
 下列步骤以 OpenClaw 为例演示如何手动更新。
 
-1. 访问 Olares 官方 Docker 仓库：https://hub.docker.com/u/beclab。
+1. 访问 [Olares 官方 Docker 仓库](https://hub.docker.com/u/beclab)。
 2. 搜索 `OpenClaw`，进入详情页，查看 **Tags** 标签页，记下最新的版本标签。例如 `2026.5.7`。
 
     ![Search for latest docker image in Olares Docker registry](/images/manual/help/faq-openclaw-latest-image.png#bordered)
@@ -99,7 +99,7 @@ description: 查找关于 Olares 使用及社区应用的常见问题解答。
 5. 仅更新现有 `beclab` 镜像的版本标签。例如，将 `beclab/openclaw-openclaw:2026.3.12` 改为 `beclab/openclaw-openclaw:2026.5.7`。
 6. 点击 **Confirm**。系统会自动拉取新镜像并重启容器。大体积镜像可能需要数分钟下载。完成后，容器状态会恢复为 **Running**。
 
-    ![OpenClaw Docker image updated in Control Hub](/images/manual/help/faq-openclaw-container-updated.png#bordered)
+    ![OpenClaw Docker image updated in Control Hub](/images/zh/manual/use-cases/faq-openclaw-container-updated.png#bordered)
 
 7. 在控制面板中打开容器的终端，执行版本命令 `openclaw -v` 以确认更新成功。
 

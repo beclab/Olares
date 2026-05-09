@@ -34,7 +34,7 @@ Yes. You can install [Studio](../../developer/develop/tutorial/index.md) to code
 ### Can I manually update an application version?
 
 :::tip Important
-We strongly recommend always updating applications through the Olares Market to ensure stability and compatibility.
+We recommend always updating applications through the Olares Market to ensure stability and compatibility.
 :::
 
 Before publishing an update to the Market, the Olares team thoroughly tests new versions to ensure compatibility and stability. In some cases, an application might show an internal prompt for a new update before it is officially available in the Market.
@@ -87,7 +87,7 @@ For some frequently updated AI applications, Olares might have already mirrored 
 
 The following steps demonstrate how to manually update using OpenClaw as an example.
 
-1. Go to the official Olares Docker registry at https://hub.docker.com/u/beclab.
+1. Go to the official [Olares Docker registry](https://hub.docker.com/u/beclab).
 2. Search for `OpenClaw`, go to its details page, check the **Tags** tab, and then note down the latest version tag. For example, `2026.5.7`.
 
     ![Search for latest docker image in Olares Docker registry](/images/manual/help/faq-openclaw-latest-image.png#bordered)
