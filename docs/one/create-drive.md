@@ -18,10 +18,6 @@ This will permanently delete all accounts, settings, and data on the device. Thi
 ## Prerequisites
 
 - A monitor and keyboard connected to Olares One.
-- A bootable USB drive for Olares One. You can use either:
-
-  - **The included USB drive.** It may contain an earlier OS image, depending on when your device was shipped. You can still use it to reinstall the system, then update Olares OS after activation if needed.
-
 - The bootable USB drive that came with Olares One.
  
    :::info Installed OS version
@@ -89,7 +85,7 @@ After the reboot, the system starts in a clean factory state and shows a text-ba
 
 You can then activate Olares One again via LarePass. For detailed instructions, see [First boot](first-boot.md).
 
-## Step 5: Check for system updates
+## Step 5: Check for system updates (optional)
 
 The included USB drive may install an earlier OS version. After activation, you can update Olares OS in LarePass. For detailed steps, see [Update OS](update.md).
 
