@@ -62,6 +62,6 @@ search: false
 
 ### 为什么专用网络连接显示“连接中”后会自动关闭？
 
-如果开启专用网络连接后，状态一直停留在”连接中“，随后自动关闭，可能是 LarePass 客户端设备的系统时间不正确。
+如果开启专用网络连接后，状态一直停留在“连接中”，随后自动关闭，可能是 LarePass 客户端设备的系统时间不正确。
 
 参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working.md#vpn-turns-off-automatically-after-showing-connecting)解决该问题。

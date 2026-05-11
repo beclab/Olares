@@ -53,6 +53,15 @@ LarePass 会展示设备到 Olares 的连接状态，帮助你判断或诊断网
 :::
 
 ## 故障排查
+
+### 专用网络显示“连接中”后自动关闭
+
+如果开启专用网络连接后，状态一直停留在“连接中”，随后自动关闭，可能是 LarePass 客户端设备的系统时间不正确。
+
+参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working.md#vpn-turns-off-automatically-after-showing-connecting)解决该问题。
+
+### LarePass 中的诊断消息
+
 出现连接问题时，LarePass 会显示诊断信息。常见提示及处理办法如下：
 
 ![异常消息](/images/zh/manual/larepass/abnormal-state.jpg)
