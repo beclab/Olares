@@ -1,4 +1,4 @@
-package v1alpha1
+package appcfg
 
 import (
 	"context"
@@ -14,14 +14,24 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// Helpers in this file replace methods that used to live on the in-tree
+// Application / ApplicationManager types (see api/app.bytetrade.io/v1alpha1
+// /helper.go before the migration). Because those types are now aliases to
+// github.com/beclab/api types, methods cannot be defined on them directly,
+// so the helpers are exposed as package-level functions instead.
+
+// DefaultThirdLevelDomainConfig is re-exported here for backwards
+// compatibility with call sites that referenced the in-tree alias.
 type DefaultThirdLevelDomainConfig struct {
 	AppName          string `json:"appName"`
 	EntranceName     string `json:"entranceName"`
 	ThirdLevelDomain string `json:"thirdLevelDomain"`
 }
 
-func (a *Application) IsClusterScoped() bool {
-	if a.Spec.Settings == nil {
+// IsClusterScoped reports whether the given application is cluster scoped,
+// mirroring the old (*Application).IsClusterScoped() method.
+func IsClusterScoped(a *Application) bool {
+	if a == nil || a.Spec.Settings == nil {
 		return false
 	}
 	if v, ok := a.Spec.Settings["clusterScoped"]; ok && v == "true" {
@@ -30,34 +40,43 @@ func (a *Application) IsClusterScoped() bool {
 	return false
 }
 
-func (a *ApplicationManager) GetAppConfig(appConfig any) (err error) {
-	err = json.Unmarshal([]byte(a.Spec.Config), appConfig)
-	if err != nil {
+// GetAppConfig decodes the JSON-encoded Spec.Config of the given manager into
+// appConfig.
+func GetAppConfig(a *ApplicationManager, appConfig any) error {
+	if err := json.Unmarshal([]byte(a.Spec.Config), appConfig); err != nil {
 		klog.Errorf("unmarshal to appConfig failed %v", err)
 		return err
 	}
-
-	return
+	return nil
 }
 
-func (a *ApplicationManager) SetAppConfig(appConfig any) error {
+// SetAppConfig marshals appConfig and stores it into a.Spec.Config.
+func SetAppConfig(a *ApplicationManager, appConfig any) error {
 	configBytes, err := json.Marshal(appConfig)
 	if err != nil {
 		klog.Errorf("marshal appConfig failed %v", err)
 		return err
 	}
-
 	a.Spec.Config = string(configBytes)
-
 	return nil
 }
 
-func (a *ApplicationManager) GetMarketSource() string {
+// GetMarketSource returns the market source annotation stored on the manager.
+func GetMarketSource(a *ApplicationManager) string {
+	if a == nil || a.Annotations == nil {
+		return ""
+	}
 	return a.Annotations[constants.AppMarketSourceKey]
 }
 
+// AppName provides helpers to derive app IDs and to check the well-known
+// classes of app names (system, generated, etc.). It is a local named string
+// type so helper methods can hang off of it.
 type AppName string
 
+// GetAppID returns the stable ID for the given app name. System apps use the
+// raw name whereas user apps use the first 8 hex characters of the name's MD5
+// digest.
 func (s AppName) GetAppID() string {
 	if s.IsSysApp() {
 		return string(s)
@@ -79,13 +98,18 @@ func (s AppName) IsGeneratedApp() bool {
 	return userspace.IsGeneratedApp(string(s))
 }
 
+// SharedEntranceIdPrefix returns the 8-char md5 prefix used as the base for
+// shared entrance URLs for the app.
 func (s AppName) SharedEntranceIdPrefix() string {
 	hash := md5.Sum([]byte(s.GetAppID() + "shared"))
 	hashString := hex.EncodeToString(hash[:])
 	return hashString[:8]
 }
 
-func (app *Application) GenEntranceURL(ctx context.Context) ([]Entrance, error) {
+// GenEntranceURL fills in entrance URLs on app.Spec.Entrances based on the
+// user's zone. It is a package-level re-implementation of the in-tree
+// (*Application).GenEntranceURL method.
+func GenEntranceURL(ctx context.Context, app *Application) ([]Entrance, error) {
 	zone, err := kubesphere.GetUserZone(ctx, app.Spec.Owner)
 	if err != nil {
 		klog.Errorf("failed to get user zone: %v", err)
@@ -94,8 +118,7 @@ func (app *Application) GenEntranceURL(ctx context.Context) ([]Entrance, error) 
 	if len(zone) > 0 {
 		var appDomainConfigs []DefaultThirdLevelDomainConfig
 		if defaultThirdLevelDomainConfig, ok := app.Spec.Settings["defaultThirdLevelDomainConfig"]; ok && len(defaultThirdLevelDomainConfig) > 0 {
-			err := json.Unmarshal([]byte(app.Spec.Settings["defaultThirdLevelDomainConfig"]), &appDomainConfigs)
-			if err != nil {
+			if err := json.Unmarshal([]byte(defaultThirdLevelDomainConfig), &appDomainConfigs); err != nil {
 				klog.Errorf("unmarshal defaultThirdLevelDomainConfig error %v", err)
 				return nil, err
 			}
@@ -118,7 +141,8 @@ func (app *Application) GenEntranceURL(ctx context.Context) ([]Entrance, error) 
 	return app.Spec.Entrances, nil
 }
 
-func (app *Application) GenSharedEntranceURL(ctx context.Context) ([]Entrance, error) {
+// GenSharedEntranceURL fills in URLs for the app's shared entrances.
+func GenSharedEntranceURL(ctx context.Context, app *Application) ([]Entrance, error) {
 	zone, err := kubesphere.GetUserZone(ctx, app.Spec.Owner)
 	if err != nil {
 		klog.Errorf("failed to get user zone: %v", err)

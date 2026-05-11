@@ -1022,7 +1022,7 @@ func (ec *envoyConfig) WithUpload() *envoyConfig {
 	return ec
 }
 
-func (ec *envoyConfig) WithProxyOutBound(appcfg *appcfg.ApplicationConfig, perms []appcfg.PermissionCfg) (*envoyConfig, error) {
+func (ec *envoyConfig) WithProxyOutBound(appCfg *appcfg.ApplicationConfig, perms []appcfg.PermissionCfg) (*envoyConfig, error) {
 	if len(perms) == 0 {
 		ec.bs.StaticResources.Listeners = append(ec.bs.StaticResources.Listeners, &envoy_listener.Listener{
 			Name:    "listener_outbound",
@@ -1110,7 +1110,7 @@ func (ec *envoyConfig) WithProxyOutBound(appcfg *appcfg.ApplicationConfig, perms
 		if p.Svc != "" {
 			svc = p.Svc
 		}
-		namespace := p.GetNamespace(appcfg.OwnerName)
+		namespace := appcfg.ProviderPermissionNamespace(p.ProviderPermission, appCfg.OwnerName)
 		svcDomain := fmt.Sprintf("%s.%s:%d", svc, namespace, p.Port)
 		routesMap[svcDomain] = append(routesMap[svcDomain],
 			route{
@@ -1234,7 +1234,7 @@ func (ec *envoyConfig) WithProxyOutBound(appcfg *appcfg.ApplicationConfig, perms
 						{
 							HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 								Endpoint: &endpointv3.Endpoint{
-									Address: createSocketAddress("system-server.user-system-"+appcfg.OwnerName, 28080), // service proxy port
+									Address: createSocketAddress("system-server.user-system-"+appCfg.OwnerName, 28080), // service proxy port
 								},
 							},
 						},

@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
@@ -16,6 +15,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
