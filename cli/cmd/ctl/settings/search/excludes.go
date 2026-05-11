@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -16,10 +17,10 @@ import (
 //
 // Backed by /api/search/monitorsetting/exclude-pattern, which the SPA's
 // FileSearch.vue uses to render the "exclude pattern" list. The wire
-// body is search3's {code, message, data: string[]} envelope.
+// body is search3's {code, message, data: [{pattern,must}, ...]} envelope.
 //
-// `add` / `rm` POST against /exclude-pattern/part with body
-// `{exclude_pattern: [...]}`.
+// `add` / `rm` use /exclude-pattern/part with body `{exclude_pattern: [...]}`
+// (plain pattern strings; unchanged).
 //
 // SPA reference: apps/packages/app/src/api/settings/search.ts
 //   addExcludePattern(values)    -> PUT    /exclude-pattern/part
@@ -44,6 +45,29 @@ Subcommands:
 	cmd.AddCommand(newExcludesAddCommand(f))
 	cmd.AddCommand(newExcludesRmCommand(f))
 	return cmd
+}
+
+type excludePatternEntry struct {
+	Pattern string `json:"pattern"`
+	Must    bool   `json:"must"`
+}
+
+func fetchExcludePatterns(ctx context.Context, d Doer) ([]excludePatternEntry, error) {
+	var rows []excludePatternEntry
+	if err := doGetEnvelope(ctx, d, "/api/search/monitorsetting/exclude-pattern", &rows); err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// excludePatternMustIndex merges duplicate pattern keys: if any row has
+// must:true for a pattern, the pattern is treated as built-in / non-removable.
+func excludePatternMustIndex(rows []excludePatternEntry) map[string]bool {
+	out := make(map[string]bool, len(rows))
+	for _, e := range rows {
+		out[e.Pattern] = out[e.Pattern] || e.Must
+	}
+	return out
 }
 
 func newExcludesListCommand(f *cmdutil.Factory) *cobra.Command {
@@ -74,8 +98,8 @@ func runExcludesList(ctx context.Context, f *cmdutil.Factory, outputRaw string) 
 		return err
 	}
 
-	var rows []string
-	if err := doGetEnvelope(ctx, pc.doer, "/api/search/monitorsetting/exclude-pattern", &rows); err != nil {
+	rows, err := fetchExcludePatterns(ctx, pc.doer)
+	if err != nil {
 		return err
 	}
 
@@ -83,8 +107,25 @@ func runExcludesList(ctx context.Context, f *cmdutil.Factory, outputRaw string) 
 	case FormatJSON:
 		return printJSON(os.Stdout, rows)
 	default:
-		return renderStringList(os.Stdout, rows, "no exclude patterns")
+		return renderExcludePatternsTable(os.Stdout, rows)
 	}
+}
+
+func renderExcludePatternsTable(w io.Writer, rows []excludePatternEntry) error {
+	if len(rows) == 0 {
+		_, err := fmt.Fprintln(w, "no exclude patterns")
+		return err
+	}
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	if _, err := fmt.Fprintln(tw, "PATTERN\tMUST"); err != nil {
+		return err
+	}
+	for _, r := range rows {
+		if _, err := fmt.Fprintf(tw, "%s\t%t\n", r.Pattern, r.Must); err != nil {
+			return err
+		}
+	}
+	return tw.Flush()
 }
 
 func renderStringList(w io.Writer, rows []string, emptyMsg string) error {
@@ -124,7 +165,8 @@ func newExcludesRmCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "remove one or more exclude patterns",
 		Long: `Remove one or more exclude patterns from the search index. The
 patterns must match existing entries verbatim; use "list" to see what
-is currently configured.
+is currently configured. Built-in patterns (must=true in list output)
+cannot be removed.
 
 Example:
   olares-cli settings search excludes rm "node_modules"
@@ -168,6 +210,23 @@ func runExcludesRm(ctx context.Context, f *cmdutil.Factory, patterns []string) e
 	if err != nil {
 		return err
 	}
+
+	current, err := fetchExcludePatterns(ctx, pc.doer)
+	if err != nil {
+		return err
+	}
+	mustIdx := excludePatternMustIndex(current)
+
+	var blocked []string
+	for _, p := range clean {
+		if mustIdx[p] {
+			blocked = append(blocked, p)
+		}
+	}
+	if len(blocked) > 0 {
+		return fmt.Errorf("cannot remove built-in exclude pattern(s): %s", strings.Join(blocked, ", "))
+	}
+
 	body := map[string][]string{"exclude_pattern": clean}
 	if err := doMutateEnvelope(ctx, pc.doer, "DELETE", "/api/search/monitorsetting/exclude-pattern/part", body, nil); err != nil {
 		return err

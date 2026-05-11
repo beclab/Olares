@@ -21,7 +21,7 @@ func NewSearchCommand(f *cmdutil.Factory) *cobra.Command {
 Subcommands:
   status
   rebuild
-  excludes list
+  excludes list (patterns with a MUST column; built-in rows cannot be removed)
   excludes add <pattern>...
   excludes rm  <pattern>...
   dirs list

@@ -10,9 +10,7 @@
 //	whoami        cached role + olaresId           (alias for `olares-cli profile whoami`)
 //	version       current OS version
 //	check-update  is there a newer release
-//	sso list      issued SSO authorization tokens
-//	sso revoke    revoke an SSO token
-//	password set  change own password
+//	sso list      issued SSO authorization tokens (revoke + password change ship hidden)
 //
 // All `me` verbs are roleNormal-floor: every authenticated user can call
 // them. Browser-bound / TermiPass-bound Person sub-pages (Hardware QR,
@@ -27,12 +25,11 @@ import (
 )
 
 // NewMeCommand returns the `settings me` parent. The parent prints help
-// by default; subcommands cover whoami / version / check-update / SSO
-// session management / password change.
+// by default; subcommands cover whoami / version / check-update / SSO list.
 func NewMeCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "me",
-		Short: "Self-service settings for the current user (whoami / version / check-update / sso / password)",
+		Short: "Self-service settings for the current user (whoami / version / check-update / sso list)",
 		Long: `Self-service "about me" subcommands.
 
 This is the 13th, non-canonical sub-tree under "settings" — it exists so
@@ -45,8 +42,6 @@ Subcommands:
   version                 current OS version
   check-update            check for a newer release
   sso list                list issued SSO authorization tokens
-  sso revoke <id>         revoke an SSO token
-  password set            change the current user's password
 `,
 	}
 	cmd.SilenceUsage = true

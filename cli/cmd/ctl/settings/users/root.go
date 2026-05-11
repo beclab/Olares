@@ -17,31 +17,34 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewUsersCommand returns the `settings users` parent: list and inspect
-// Olares users, plus the `me` whoami shortcut. Owner-only CRUD (create /
-// delete / set-password / set-limits) is out of scope for now.
+// NewUsersCommand returns the `settings users` parent: list and inspect Olares users,
+// create/delete (HTTP-backed, same routes as Termipass), plus the `me` whoami shortcut.
+// set-password / set-limits remain out of scope until wired here.
 func NewUsersCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "users",
 		Short: "Manage Olares users (Settings -> Users)",
-		Long: `Manage Olares users — list and inspect.
+		Long: `Manage Olares users.
 
 This corresponds to the Users section of the Olares Settings UI
 (apps/packages/app/src/pages/settings/Account/), backed by
 user-service's /api/users surface.
 
 Subcommands:
-  list                    list users
-  get <name>              inspect a single user
-  me                      alias for "olares-cli profile whoami"
+  list                         list users
+  get <name>                   inspect a single user
+  create <username>           create user (set --role, --cpu, --memory-gb or use --defaults)
+  delete <username>           delete user (default: wait for Deleted on /status; --no-wait to exit after DELETE)
+  me                           alias for "olares-cli profile whoami"
 
-Out of scope for now (owner-only CRUD):
-  create, delete, set-password, set-limits
+Not implemented here yet: set-password / set-limits (use SPA or REST).
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(NewMeCommand(f))
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(NewGetCommand(f))
+	cmd.AddCommand(NewCreateCommand(f))
+	cmd.AddCommand(NewDeleteCommand(f))
 	return cmd
 }
