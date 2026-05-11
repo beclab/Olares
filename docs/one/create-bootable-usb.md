@@ -46,7 +46,7 @@ Do not use Olares ISO images linked from other Olares installation documentation
 
    c. Click **Flash!** to write the installer to the USB drive.
 
-   ![Bootable USB](/images/one/balenaEtcher.png#bordered)
+   ![Balena Etcher flashing screen](/images/one/balenaEtcher.png#bordered)
 
 5. Wait until flashing and validation are complete.
 
