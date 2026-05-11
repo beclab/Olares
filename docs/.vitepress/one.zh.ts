@@ -18,6 +18,16 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Known issues",
           link: "/zh/one/known-issues",
         },
+        {
+          text: "Troubleshooting",
+          collapsed: true,
+          items: [
+            {
+              text: "Cannot enter BIOS",
+              link: "/zh/one/ts-bios-black-screen",
+            },
+          ],
+        },         
       ],
     },
     {
@@ -69,6 +79,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Manage files",
           link: "/zh/one/files",
         },
+        {
+          text: "Back up & restore data",
+          link: "/zh/one/backup-restore",
+        },        
         {
           text: "Install & update apps",
           link: "/zh/one/market",
@@ -239,10 +253,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Update firmware",
           link: "/zh/one/update-firmware",
         },        
-        {
-          text: "Back up & restore data",
-          link: "/zh/one/backup-resotre",
-        },
         {
           text: "Restore Olares One",
           items: [

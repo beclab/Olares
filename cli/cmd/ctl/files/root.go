@@ -9,12 +9,14 @@ import (
 // NewFilesCommand returns the `files` parent command, ready to be added to
 // the olares-cli root.
 //
-// Current verbs (mkdir is the next obvious add):
+// Current verbs:
 //
 //	files ls       — list a directory                  (cmd/ctl/files/ls.go)
 //	files upload   — resumable chunked upload          (cmd/ctl/files/upload.go)
 //	files download — single-file or recursive pull     (cmd/ctl/files/download.go)
 //	files cat      — stream a file to stdout           (cmd/ctl/files/cat.go)
+//	files mkdir    — create a directory (with -p)      (cmd/ctl/files/mkdir.go,
+//	                                                    internal/files/mkdir/mkdir.go)
 //	files rm       — batched DELETE                    (cmd/ctl/files/rm.go)
 //	files cp       — server-side copy via paste        (cmd/ctl/files/cp.go)
 //	files mv       — server-side move via paste        (cmd/ctl/files/cp.go, action="move")
@@ -38,8 +40,9 @@ import (
 // field in the JSON body.
 //
 // The Factory is supplied by the root command so credential resolution and
-// HTTP-client setup happen once per process — and so the global `--profile`
-// flag wired up at the root can flow through here unchanged.
+// HTTP-client setup happen once per process. Identity is whichever profile
+// `olares-cli profile use` (or `profile login` / `profile import`) most
+// recently selected; there is no per-invocation override flag.
 //
 // See cmd/ctl/files/path.go for the front-end path schema and
 // docs/notes/olares-cli-auth-profile-config.md for the broader
@@ -79,6 +82,7 @@ Examples:
 		NewUploadCommand(f),
 		NewDownloadCommand(f),
 		NewCatCommand(f),
+		NewMkdirCommand(f),
 		NewRmCommand(f),
 		NewCpCommand(f),
 		NewMvCommand(f),

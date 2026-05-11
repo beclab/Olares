@@ -31,6 +31,34 @@ import (
 	"github.com/beclab/Olares/cli/pkg/credential"
 )
 
+// statusAuthFailureOlares459 is the non-standard status code Olares' edge
+// stack (Authelia ext-authz wired through l4-bfl-proxy) returns when an
+// otherwise-valid request fails authentication — typically because the
+// X-Authorization JWT has expired or 2FA needs re-arming. The body looks
+// like `{"fa2":false,"method":"...","session_id":"<edge-jwt>","target_url":"..."}`.
+//
+// The web app treats 459 as a refresh trigger, parallel to 401:
+// `apps/packages/app/src/platform/platformAjaxSender.ts:89` maps it to
+// `ErrorCode.TOKE_INVILID`. We mirror that here — without this, every
+// expired-token request through the per-service hosts (files.<terminus>,
+// dashboard.<terminus>, etc.) returns 459 verbatim and refreshingTransport
+// never gets the chance to rotate the token. The 401 path is still kept
+// for endpoints that DON'T sit behind the Authelia edge (notably
+// /api/refresh on auth.<terminus>, which the SPA also special-cases).
+const statusAuthFailureOlares459 = 459
+
+// isAuthFailureStatus reports whether resp.StatusCode means "request was
+// rejected because the caller's token is no longer accepted, please get
+// a fresh one and retry". Centralised so the two callers (RoundTrip's
+// reactive path and any future pre-validation) stay in sync.
+func isAuthFailureStatus(status int) bool {
+	switch status {
+	case http.StatusUnauthorized, http.StatusForbidden, statusAuthFailureOlares459:
+		return true
+	}
+	return false
+}
+
 // preflightSkew is the safety window applied when deciding whether to
 // proactively refresh a non-replayable request's token. If the JWT's exp
 // is within this margin of now (or already past), we rotate the token
@@ -56,11 +84,6 @@ const preflightSkew = 60 * time.Second
 // All accessors are lazy and memoized — calling HTTPClient(ctx) multiple
 // times reuses the same resolved profile + client.
 type Factory struct {
-	// ProfileOverride, when non-empty, forces ResolveProfile to look up this
-	// profile instead of the currently-selected one. Wired from the root
-	// command's persistent `--profile` flag.
-	ProfileOverride string
-
 	credentialOnce sync.Once
 	credentialErr  error
 	credential     *credential.CredentialProvider
@@ -116,7 +139,11 @@ func (f *Factory) ResolveProfile(ctx context.Context) (*credential.ResolvedProfi
 			f.resolveErr = err
 			return
 		}
-		rp, err := cred.Resolve(ctx, f.ProfileOverride)
+		// Identity is always the currently-selected profile; there is no
+		// per-invocation override flag (see cli/cmd/ctl/root.go for why).
+		// `profile login` / `profile import` reach the provider directly
+		// with an explicit --olares-id, bypassing this Factory path.
+		rp, err := cred.Resolve(ctx, "")
 		if err != nil {
 			f.resolveErr = err
 			return
@@ -288,13 +315,13 @@ func (t *refreshingTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode != http.StatusUnauthorized && resp.StatusCode != http.StatusForbidden {
+	if !isAuthFailureStatus(resp.StatusCode) {
 		return resp, nil
 	}
 	if !canRetry(req) {
 		// Non-replayable body — pre-flight already had its chance
 		// (and either rotated the token or decided not to). Either
-		// way, body is consumed; surface the 401 verbatim.
+		// way, body is consumed; surface the auth failure verbatim.
 		return resp, nil
 	}
 	// Drain + close so the underlying connection can be reused.
@@ -360,15 +387,56 @@ func (t *refreshingTransport) clock() time.Time {
 	return time.Now()
 }
 
-// send injects token (when non-empty) and forwards to the base transport.
-// Clones the request so the caller's *http.Request is left untouched (some
-// callers retry at a higher level).
+// send injects access_token (when non-empty) and forwards to the base
+// transport. Three pieces of auth state ride together — see the SPA's
+// successful /capi/app/detail request (captured 2026-05-01) for the
+// exact recipe:
+//
+//  1. X-Authorization: <jwt>
+//     The Olares edge stack (Authelia ext-authz → l4-bfl-proxy) reads
+//     this for identity. Set on every request as the primary auth
+//     signal. See framework/l4-bfl-proxy/internal/translator/translator.go
+//     (RequestHeaders allow-list) and framework/bfl/pkg/apiserver/
+//     filters.go (UserAuthorizationTokenKey = "X-Authorization").
+//
+//  2. Cookie: auth_token=<jwt>
+//     Per-service hosts (dashboard.<terminus>, control-hub.<terminus>,
+//     files.<terminus>, market.<terminus>) emit `Set-Cookie:
+//     auth_token=<jwt>; domain=<terminus>; path=/` on every 200, and
+//     several /capi/* handlers (notably /capi/app/detail and
+//     /capi/namespaces/group) read identity from THIS cookie rather
+//     than X-Authorization — without it they reply `500 Not Login`
+//     (BFL) or `403 system:anonymous` (controlhub→K8s API server).
+//     The cookie value is the same JWT we put in X-Authorization.
+//
+//     The earlier KI-12 / KI-15 / KI-16 note (committed 2026-04-28)
+//     said `auth_token` cookie broke 31 verbs because Authelia treated
+//     it as its own session slot. That symptom is real but only on
+//     desktop.<terminus>, where Authelia's ext-authz session lives.
+//     The CLI doesn't talk to desktop.<terminus> — every command goes
+//     to a per-service host, where this cookie IS the canonical
+//     identity carrier (proven by the browser's successful 200s on
+//     dashboard.<terminus>/capi/app/detail using exactly this header).
+//
+//  3. X-Unauth-Error: Non-Redirect
+//     Tells the edge to return JSON 401 instead of an HTML 302 redirect
+//     to /login when auth fails. Without it, an expired token surfaces
+//     as a JSON-decode parse error (the historical "400 Bad Request
+//     HTML response" symptom referenced in the KI-12/15/16 note).
+//
+// Clones the request so the caller's *http.Request is left untouched
+// (some callers retry at a higher level). AddCookie appends to any
+// pre-existing Cookie header rather than replacing it; in the unlikely
+// event the caller pre-set its own auth_token cookie both values are
+// sent (per RFC 6265 §5.4 the server picks one, typically the first).
 func (t *refreshingTransport) send(req *http.Request, token string) (*http.Response, error) {
 	if token == "" {
 		return t.base.RoundTrip(req)
 	}
 	clone := req.Clone(req.Context())
 	clone.Header.Set("X-Authorization", token)
+	clone.AddCookie(&http.Cookie{Name: "auth_token", Value: token})
+	clone.Header.Set("X-Unauth-Error", "Non-Redirect")
 	return t.base.RoundTrip(clone)
 }
 

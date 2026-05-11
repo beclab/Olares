@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.disk.main",
+  "description": "Per-physical-disk table — device / type / health / total / used / avail / util / model / serial / protocol / firmware / temp / power_on_hours / written / 4k_native / host.",
+  "type": "object",
+  "required": ["kind", "meta", "items"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.disk.main"},
+    "meta": {"type": "object"},
+    "items": {"type": "array", "items": {"type": "object"}}
+  }
+}

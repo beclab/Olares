@@ -31,7 +31,7 @@ func (u *UpdateNodeMThreadsGPUInfo) Execute(runtime connector.Runtime) error {
 		return nil
 	}
 
-	if runtime.GetSystemInfo().IsAmdApu() {
+	if runtime.GetSystemInfo().IsMThreadsM1000() {
 		return gpu.UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), nil, nil, nil, ptr.To(gpu.MThreadsM1000Type))
 	}
 

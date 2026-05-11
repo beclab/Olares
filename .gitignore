@@ -48,3 +48,9 @@ framework/app-service/bin
 /files/
 market/
 user-service/
+
+/settings/
+apps/packages/app/.quasar/*
+cli/cmd/ctl/settings/scripts/*
+cli/cmd/ctl/settings/KNOWN_ISSUES.md
+cli/cmd/ctl/settings/NOTES.md

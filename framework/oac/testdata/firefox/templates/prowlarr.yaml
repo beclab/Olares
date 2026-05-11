@@ -1,0 +1,101 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+{{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}
+  name: prowlarr
+{{- else }}
+  name: {{ .Release.Name }}
+{{- end }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: prowlarr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+{{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}
+      app: prowlarr
+{{- else }}
+      app: {{ .Release.Name }}
+{{- end }}
+  template:
+    metadata:
+      labels:
+{{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}
+        app: prowlarr
+{{- else }}
+        app: {{ .Release.Name }}
+{{- end }}
+    spec:
+      containers:
+      - env:
+        - name: PGID
+          value: "1000" 
+        - name: PUID
+          value: "1000" 
+        - name: UMASK
+          value: "002"
+        - name: TZ
+          value: Etc/UTC
+        name: prowlarr
+        image: docker.io/aboveos/hotio-prowlarr:latest
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        ports:
+        - containerPort: 9696
+        volumeMounts:
+        - mountPath: /config
+          name: prowlarr-config
+      volumes:
+      - name: prowlarr-config
+        hostPath:
+          type: DirectoryOrCreate
+          path: {{ .Values.userspace.appData }}/prowlarr 
+        
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+{{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}
+  name: prowlarr-svc
+{{- else }}
+  name: {{ .Release.Name }}-svc
+{{- end }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}
+  ports:
+    - protocol: TCP
+      port: 9696
+      targetPort: 9696
+
+
+---
+apiVersion: sys.bytetrade.io/v1alpha1
+kind: ProviderRegistry
+metadata:
+  name: legacy-{{ .Release.Name }}
+  namespace: user-system-{{ .Values.bfl.username }}
+spec:
+  dataType: legacy_prowlarr
+  deployment: prowlarr
+  description: prowlarr legacy api
+  endpoint: prowlarr-svc.{{ .Release.Namespace }}:9696
+  group: api.prowlarr
+  kind: provider
+  namespace: {{ .Release.Namespace }}
+  version: v2
+  opApis:
+  - name: All
+    uri: /  
+status:
+  state: active

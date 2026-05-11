@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.physical",
+  "description": "9-row cluster-level metric table (CPU/Memory/Disk/Pods/Network in/out + extras) — mirrors the SPA's Physical Resources panel.",
+  "type": "object",
+  "required": ["kind", "meta", "items"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.physical"},
+    "meta": {"type": "object"},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw": {"type": "object"},
+          "display": {
+            "type": "object",
+            "properties": {
+              "metric": {"type": "string"},
+              "value": {"type": ["string", "number"]},
+              "unit": {"type": "string"},
+              "utilisation": {"type": ["string", "number"]},
+              "detail": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

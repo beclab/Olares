@@ -30,7 +30,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Enable sandbox",
                   link: "/use-cases/openclaw-enable-sandbox",
-                },                                 
+                },
                 {
                   text: "Upgrade OpenClaw",
                   link: "/use-cases/openclaw-upgrade",
@@ -38,7 +38,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Common issues",
                   link: "/use-cases/openclaw-common-issues",
-                },                
+                },
               ]
             },
             {
@@ -98,6 +98,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "NemoClaw",
+              link: "/use-cases/nemoclaw",
+            },
+            {
               text: "Context7",
               link: "/use-cases/context7",
             },
@@ -141,10 +145,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Bifrost",
               link: "/use-cases/bifrost",
             },
-            {
+            /*{
               text: "Duix.Avatar",
               link: "/use-cases/duix-avatar",
-            },
+            },*/
             {
               text: "Paperclip",
               link: "/use-cases/paperclip",
@@ -172,6 +176,12 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Hermes Agent",
               link: "/use-cases/hermes",
+              text: "NOFX",
+              link: "/use-cases/nofx",
+            },
+            {
+              text: "TensorZero",
+              link: "/use-cases/tensorzero",
             },            
             // {
             //   text: "DeerFlow",

@@ -1,21 +1,33 @@
 // Package profile implements the `olares-cli profile` command tree.
 //
-// Phase 1 surface (5 subcommands, no separate `auth` namespace):
+// Surface today (alphabetical, no separate `auth` namespace):
 //
 //	profile list                # list all profiles + login status, mark current
 //	profile use <name|->        # switch current profile (`-` reverts to previous)
 //	profile remove <name>       # delete profile + its stored token
 //	profile login --olares-id <id> ...     # password-based login (mode A)
 //	profile import --olares-id <id> ...    # refresh-token bootstrap (mode B)
+//	profile whoami [--refresh]             # show identity + cached role
 //
-// See docs/notes/olares-cli-auth-profile-config.md for the full design.
+// `whoami` doubles as `olares-cli settings users me` and `olares-cli
+// settings me whoami` — all three call into pkg/whoami.Run. See
+// docs/notes/olares-cli-auth-profile-config.md for the full design.
 package profile
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
+
+	"github.com/beclab/Olares/cli/pkg/cmdutil"
+)
 
 // NewProfileCommand returns the `profile` parent command, ready to be added
 // to the olares-cli root.
-func NewProfileCommand() *cobra.Command {
+//
+// The Factory is required by `whoami` (and the eager fetch on login /
+// import); the other verbs ignore it. We thread it through so the
+// settings/me + settings/users-me aliases can share the same plumbing
+// without each rebuilding the auth-aware http.Client themselves.
+func NewProfileCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "profile",
 		Short: "manage olares-cli profiles (one profile = one Olares instance + one user identity)",
@@ -35,6 +47,7 @@ HKCU\Software\OlaresCli\keychain on windows. The plaintext
 		NewRemoveCommand(),
 		NewLoginCommand(),
 		NewImportCommand(),
+		NewWhoamiCommand(f),
 	} {
 		// Don't dump cobra usage on every runtime error — those are user
 		// errors (bad creds, network, already-authenticated) whose message

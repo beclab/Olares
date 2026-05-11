@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.fan",
+  "description": "Sections envelope: live = 1-row real-time fan/temperature/power; curve = 10-row hardcoded fan-curve spec. Gated to Olares One — non-One devices return an empty envelope with meta.empty_reason='not_olares_one' on both the top-level and each section.",
+  "type": "object",
+  "required": ["kind", "meta"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.fan"},
+    "meta": {
+      "type": "object",
+      "properties": {
+        "empty": {"type": "boolean"},
+        "empty_reason": {"type": "string", "enum": ["not_olares_one"]},
+        "note": {"type": "string"},
+        "device_name": {"type": "string"}
+      }
+    },
+    "sections": {
+      "type": "object",
+      "properties": {
+        "live": {"$ref": "overview-fan-live.json"},
+        "curve": {"$ref": "overview-fan-curve.json"}
+      }
+    }
+  }
+}

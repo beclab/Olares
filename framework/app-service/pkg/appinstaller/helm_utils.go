@@ -8,15 +8,15 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	userspacev1 "github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
@@ -32,7 +32,7 @@ import (
 // cluster-scoped deps, middleware, etc.) so that a Helm template dry-run still
 // produces a complete manifest. When dryRun is false those keys are left unset
 // and the caller (SetValues) is expected to fill them with real data.
-func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig *appcfg.ApplicationConfig, ownerName string, dryRun bool, isUpgrade bool) (values map[string]interface{}, err error) {
+func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig *appcfg.ApplicationConfig, ownerName string, dryRun bool) (values map[string]interface{}, err error) {
 	values = make(map[string]interface{})
 
 	values["bfl"] = map[string]interface{}{
@@ -149,26 +149,13 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 		}
 	}
 
-	if appConfig.APIVersion == appcfg.V2 {
-		values["client"] = true
-		if appConfig.InstallType == appcfg.InstallOrUpgradeClientAndServer {
-			values["clientAndServer"] = true
-			values["client"] = false
-		}
-
-		if isUpgrade && isAdmin {
-			values["clientAndServer"] = true
-			values["client"] = false
-		}
-	}
-
 	return values, nil
 }
 
-func (h *HelmOps) SetValues(isUpgrade bool) (values map[string]interface{}, err error) {
+func (h *HelmOps) SetValues() (values map[string]interface{}, err error) {
 	ctx := context.TODO()
 
-	values, err = BuildBaseHelmValues(ctx, h.kubeConfig, h.app, h.app.OwnerName, false, isUpgrade)
+	values, err = BuildBaseHelmValues(ctx, h.kubeConfig, h.app, h.app.OwnerName, false)
 	if err != nil {
 		return values, err
 	}
@@ -185,7 +172,7 @@ func (h *HelmOps) SetValues(isUpgrade bool) (values map[string]interface{}, err 
 	}
 	if appInstalled {
 		for _, a := range installedApps {
-			if a.IsClusterScoped() {
+			if appcfg.IsClusterScoped(a) {
 				values["admin"] = a.Spec.Owner
 				break
 			}

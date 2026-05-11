@@ -2,7 +2,8 @@
 // into a more specific subpackage.
 //
 // id.go: parse an Olares ID (e.g. "alice@olares.com") and derive the URLs of
-// the per-user services that olares-cli talks to (auth / vault / desktop).
+// the per-user services that olares-cli talks to (auth / vault / desktop /
+// files / market / dashboard).
 //
 // Background: every Olares user is identified by an "olaresId" of the form
 // "<local>@<domain>". The terminus name is the same identity rendered with a
@@ -83,8 +84,38 @@ func (id ID) VaultURL(localPrefix string) string {
 
 // DesktopURL returns the per-user desktop base URL, e.g.
 // "https://desktop.alice.olares.com".
+//
+// IMPORTANT: this is the desktop launcher SPA's origin (see
+// apps/docker/system-frontend/nginx/desktop.conf). Its nginx exposes a
+// minimal location set ("/api", "/server", "/notification", "/video",
+// "/api/{device,logout,refresh}", "/kapis", "/seahub", "/ws"). Code that
+// targets verbs covered by the Settings SPA — anything under "/headscale",
+// "/apis/backup", "/admin", "/drive", "/vault", "/images",
+// "/api/cloud/sign" — must use SettingsURL instead. See KNOWN_ISSUES.md
+// KI-12 / KI-16 for the regression that surfaced this distinction.
 func (id ID) DesktopURL(localPrefix string) string {
 	return fmt.Sprintf("https://desktop.%s%s", localPrefix, id.TerminusName())
+}
+
+// SettingsURL returns the per-user settings SPA base URL, e.g.
+// "https://settings.alice.olares.com".
+//
+// This is the origin the Settings SPA uses (see
+// settings/src/application/settings.ts:42 — `tokenStore.setUrl(window.location.origin)`).
+// Its nginx (apps/docker/system-frontend/nginx/settings.conf) is the
+// superset that fans out to user-service ("/api", "/headscale",
+// "/api/cloud/sign"), backup-server ("/apis/backup"), Infisical
+// ("/admin"), files-service ("/drive", "/api/resources"),
+// vault-admin-server ("/vault"), and the image proxy ("/images").
+//
+// olares-cli's `settings ...` command tree should always be built against
+// this URL — DesktopURL appears to "work" for ~90% of verbs only because
+// both nginx configs forward "/api/*" to the same user-service upstream.
+// Verbs that hit any settings-only location regressed to HTML / 404 when
+// they were hard-wired to DesktopURL (KI-12 vpn devices, KI-16 backup /
+// restore plans, KI-6 apps secrets).
+func (id ID) SettingsURL(localPrefix string) string {
+	return fmt.Sprintf("https://settings.%s%s", localPrefix, id.TerminusName())
 }
 
 // FilesURL returns the per-user files-backend base URL, e.g.
@@ -103,4 +134,47 @@ func (id ID) FilesURL(localPrefix string) string {
 // header here as it does for files / vault / desktop.
 func (id ID) MarketURL(localPrefix string) string {
 	return fmt.Sprintf("https://market.%s%s", localPrefix, id.TerminusName())
+}
+
+// DashboardURL returns the per-user dashboard BFF base URL, e.g.
+// "https://dashboard.alice.olares.com". The dashboard SPA itself is served
+// here, and its Koa-based ks-apiserver-proxy backend is reachable at the
+// same origin under `/capi/*` (custom aggregation), `/(k)?api(s)?/*`
+// (wildcard kubesphere proxy), `/user-service/*` (BFL) and `/hami/*`
+// (HAMI vGPU). Same edge auth chain as the other per-user URLs —
+// X-Authorization is honored and 401/403 are recoverable via /api/refresh.
+// olares-cli's `dashboard` command tree talks to this URL.
+func (id ID) DashboardURL(localPrefix string) string {
+	return fmt.Sprintf("https://dashboard.%s%s", localPrefix, id.TerminusName())
+}
+
+// ControlHubURL returns the per-user control-hub BFF base URL, e.g.
+// "https://control-hub.alice.olares.com". The ControlHub SPA (a fork of
+// KubeSphere Console living under apps/packages/app/src/apps/controlHub)
+// is served from this origin; its dev-time proxy config in
+// apps/packages/app/config/control-hub.js confirms that the same origin
+// fans out to the K8s/KubeSphere proxy stack:
+//
+//   - "/capi/*"                  → Olares custom aggregator (per-user
+//                                  app/workspace metadata, e.g.
+//                                  /capi/app/detail)
+//   - "/api/v1/*", "/apis/*"     → wildcard K8s API proxy (native shapes
+//                                  like {kind, apiVersion, metadata, spec,
+//                                  status})
+//   - "/kapis/*"                 → KubeSphere aggregated API proxy
+//                                  (paginated {items, totalItems}
+//                                  envelopes)
+//   - "/user-service/*"          → BFL (re-using the same auth chain as
+//                                  desktop/settings)
+//   - "/middleware/*"            → Olares middleware controller
+//
+// Same edge auth chain as the other per-user URLs — X-Authorization is
+// honored and 401/403 are recoverable via /api/refresh. Per-user
+// resource scoping (which namespaces / workspaces a user can see) is
+// enforced server-side by the ControlHub backend; CLI code must NOT
+// attempt to filter or gate based on locally cached role/identity (see
+// olares-cluster SKILL.md). olares-cli's `cluster` command tree talks
+// to this URL.
+func (id ID) ControlHubURL(localPrefix string) string {
+	return fmt.Sprintf("https://control-hub.%s%s", localPrefix, id.TerminusName())
 }

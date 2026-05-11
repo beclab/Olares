@@ -498,7 +498,7 @@ func reformatShareHTTPErr(err error, olaresID, op string) error {
 	var hErr *share.HTTPError
 	if errors.As(err, &hErr) {
 		switch hErr.Status {
-		case 401, 403:
+		case 401, 403, 459:
 			if olaresID != "" {
 				return fmt.Errorf("server rejected the access token (HTTP %d) during %s; please run: olares-cli profile login --olares-id %s",
 					hErr.Status, op, olaresID)
