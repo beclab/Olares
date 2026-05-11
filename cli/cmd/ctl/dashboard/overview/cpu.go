@@ -4,10 +4,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	pkgoverview "github.com/beclab/Olares/cli/pkg/dashboard/overview"
 )
 
 func newOverviewCPUCommand(f *cmdutil.Factory) *cobra.Command {
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:           "cpu",
 		Short:         "Per-node CPU details (model / freq / cores / utilisation breakdown / temp / load avg)",
 		Example:       `  olares-cli dashboard overview cpu -o json`,
@@ -17,8 +18,11 @@ func newOverviewCPUCommand(f *cmdutil.Factory) *cobra.Command {
 			if err := common.Validate(); err != nil {
 				return err
 			}
-			return runPerNodeMetric(c.Context(), f, KindOverviewCPU, cpuMetricSet(), cpuColumns(), cpuDisplay)
+			cli, err := prepareClient(c.Context(), f)
+			if err != nil {
+				return err
+			}
+			return pkgoverview.RunCPU(c.Context(), cli, common)
 		},
 	}
-	return cmd
 }

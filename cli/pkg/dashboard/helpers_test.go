@@ -66,17 +66,10 @@ func vgpuUnavailableFromError(c *Client, err error, kind string, now time.Time) 
 	return VgpuUnavailableFromError(c, common, err, kind, now, os.Stderr)
 }
 
-// renderDiskTemperature is the disk-area "0 → '-'" wrapper around
-// the pkg-shared RenderTemperature helper. It originally lived as a
-// cmd-side alias next to writeDiskMainTable; relocating it here keeps
-// the test contract intact without forcing the disk subpackage to
-// expose it for tests.
-func renderDiskTemperature(celsius float64, target format.TempUnit) string {
-	if celsius == 0 {
-		return "-"
-	}
-	return RenderTemperature(celsius, target)
-}
+// renderDiskTemperature was previously aliased here for the
+// pkg-root TestRenderDiskTemperature test; in P7 the test moved to
+// cli/pkg/dashboard/overview/disk/main_test.go (next to the actual
+// production helper), so the shim no longer has any consumer.
 
 // firstAnyInArray / toFloat / renderTemperature are exported under
 // PascalCase in pkg; the test file references the lowercase shape that

@@ -1,16 +1,14 @@
 package gpu
 
 import (
-	"context"
-	"time"
-
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	pkggpu "github.com/beclab/Olares/cli/pkg/dashboard/overview/gpu"
 )
 
 func newOverviewGPUDetailFullCommand(f *cmdutil.Factory) *cobra.Command {
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:           "detail <uuid>",
 		Short:         "Per-GPU detail page (info + gauges + trends; SPA Overview2/GPU/GPUsDetails)",
 		Args:          cobra.ExactArgs(1),
@@ -20,31 +18,11 @@ func newOverviewGPUDetailFullCommand(f *cmdutil.Factory) *cobra.Command {
 			if err := common.Validate(); err != nil {
 				return err
 			}
-			return runOverviewGPUDetailFull(c.Context(), f, args[0])
-		},
-	}
-	return cmd
-}
-
-func runOverviewGPUDetailFull(ctx context.Context, f *cmdutil.Factory, uuid string) error {
-	c, err := buildDashboardClient(ctx, f)
-	if err != nil {
-		return err
-	}
-	r := &Runner{
-		Flags:       common,
-		Recommended: 30 * time.Second,
-		Iter: func(ctx context.Context, iter int, now time.Time) (Envelope, error) {
-			start, end, since := resolveGPUDetailWindow(now, gpuDetailDefaultSince)
-			env, err := buildGPUDetailFullEnvelope(ctx, c, uuid, start, end, since)
+			cli, err := prepareClient(c.Context(), f)
 			if err != nil {
-				return env, err
+				return err
 			}
-			if common.Output == OutputJSON {
-				return env, nil
-			}
-			return env, writeGPUDetailFullTable(env)
+			return pkggpu.RunDetail(c.Context(), cli, common, args[0])
 		},
 	}
-	return r.Run(ctx)
 }
