@@ -237,6 +237,10 @@ NemoClaw runs OpenClaw inside a sandboxed runtime, so you must configure the cha
 
 6. When prompted to configure DM (Direct Message) access policies, select **Pairing**.
 
+:::info Discord channel stuck in `startup-not-ready`
+If the Discord channel shows `startup-not-ready` in the OpenClaw Web UI, restart the gateway. See [Common issues](nemoclaw-common-issues.md#discord-channel-stuck-in-startup-not-ready-state) for the steps.
+:::
+
 ### Step 4: Authorize your Discord account
 
 For security, the bot doesn't respond to unauthorized users. You must pair your Discord account with the bot.

@@ -18,6 +18,8 @@ This page lists common issues for NemoClaw on Olares and their workarounds.
 
 After configuring Discord in the NemoClaw CLI sandbox, the channel might show `startup-not-ready` in the Web UI.
 
+![Startup not ready error in OpenClaw Web UI](/images/manual/use-cases/nemoclaw-startup-not-ready.png#bordered){width=60%}
+
 To recover, restart the gateway from the NemoClaw CLI:
 
 1. Open the NemoClaw CLI app from Launchpad.
@@ -44,3 +46,27 @@ NemoClaw might fail to create the default workspace files during installation. A
 ## Olares CLI login and skills don't persist across restarts
 
 NemoClaw doesn't persist your Olares CLI login or installed ClawHub skills across restarts. After restarting NemoClaw, log in to Olares CLI again and reinstall the Olares skills. For details, see [Manage Olares with Olares CLI](nemoclaw-olares-cli.md).
+
+## OpenClaw Web UI shows `unauthorized: gateway token missing`
+
+After NemoClaw restarts, the OpenClaw Web UI might display the following error:
+
+```text
+unauthorized: gateway token missing (open the dashboard URL and paste the token in Control UI settings)
+```
+
+To recover, retrieve the gateway token from the NemoClaw CLI and paste it into the Control UI settings:
+
+1. Open the NemoClaw CLI app from Launchpad.
+
+2. At the shell prompt, run the following command to print the gateway token:
+
+   ```bash
+   nemoclaw my-assistant gateway-token --quiet
+   ```
+
+3. Copy the token displayed in the terminal.
+
+4. Return to the OpenClaw Web UI, paste the token in the **Gateway Token** field, then click **Connect**.
+
+   ![Paste gateway token in OpenClaw Web UI](/images/manual/use-cases/nemoclaw-gateway-token.png#bordered){width=60%}
