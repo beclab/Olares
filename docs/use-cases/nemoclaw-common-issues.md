@@ -14,15 +14,28 @@ doc_updated: "2026-05-11"
 
 This page lists common issues for NemoClaw on Olares and their workarounds.
 
-## Discord channel lookup fails
+## Discord channel stuck in `startup-not-ready` state
 
-When configuring Discord in the NemoClaw CLI sandbox, you might see the following error:
+After configuring Discord in the NemoClaw CLI sandbox, the channel might show `startup-not-ready` in the Web UI.
 
-```text
-Channel lookup failed; keeping entries as typed. TypeError: fetch failed
-```
+To recover, restart the gateway from the NemoClaw CLI:
 
-To work around this, restart the NemoClaw container from Control Hub and try the Discord configuration again.
+1. Open the NemoClaw CLI app from Launchpad.
+
+2. At the shell prompt, stop the gateway:
+
+   ```bash
+   docker exec openshell-cluster-nemoclaw kubectl -n openshell exec my-assistant -c agent -- \
+     sh -lc 'openclaw gateway stop 2>/dev/null || pkill -9 -f "openclaw.*gateway|openclaw-gateway|gateway run" 2>/dev/null || true'
+   ```
+
+3. Start the gateway:
+
+   ```bash
+   sh /opt/nemoclaw/sandbox-ensure-gateway.sh
+   ```
+
+Wait about 10 to 15 seconds, then refresh. The channel should now be ready.
 
 ## Missing default workspace files
 
