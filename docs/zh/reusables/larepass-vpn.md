@@ -52,7 +52,7 @@ search: false
 
 如果网络扩展或 VPN 配置未完整设置，或网络扩展出现卡死、损坏，macOS 会阻止 LarePass 建立专用网络隧道。
 
-参考 [LarePass 专用网络无法使用](/manual/help/ts-larepass-vpn-not-working#vpn-toggle-does-nothing-or-stays-stuck) 中的步骤重置扩展并恢复专用网络连接。
+参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working#vpn-toggle-does-nothing-or-stays-stuck)中的步骤重置扩展并恢复专用网络连接。
 
 ### 为什么在 Windows 上无法启用 LarePass 专用网络？
 
