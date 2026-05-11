@@ -105,8 +105,6 @@ spec:
           - --rc-addr
           - :5572
           - --rc-no-auth
-          - --log-level
-          - INFO
           - --no-check-certificate
           - --s3-directory-markers
           - --fs-cache-expire-duration
@@ -144,7 +142,7 @@ spec:
 {{ end }}
 
         - name: samba-server
-          image: beclab/samba-server:0.0.8
+          image: beclab/samba-server:0.0.10
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -210,7 +208,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.162
+          image: beclab/files-server:v0.2.164
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -810,9 +808,11 @@ data:
           proxy_buffering off;
 
           proxy_connect_timeout 15s;
-          proxy_send_timeout 90s;
-          proxy_read_timeout 90s;
-          send_timeout 90s;
+          proxy_send_timeout    1800s;
+          proxy_read_timeout    1800s;
+          send_timeout          1800s;
+          client_body_timeout   1800s;
+          keepalive_timeout     1830s;
           proxy_max_temp_file_size 0;
 
           client_body_buffer_size 64m;
