@@ -52,6 +52,36 @@ type ProfileConfig struct {
 	// InsecureSkipVerify disables TLS verification for HTTP calls under this
 	// profile. Dev only.
 	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
+
+	// OwnerRole is the role this user has on the target Olares, populated
+	// best-effort from /api/backend/v1/user-info on login / import / whoami.
+	// One of the BFL wire constants from
+	// framework/bfl/pkg/constants/constants.go:
+	//
+	//	"owner"   — the (single) instance owner; full privileges.
+	//	"admin"   — has all privileges except managing other admins and a
+	//	            handful of hardware/restart-class operations.
+	//	"normal"  — least-privileged user; the SPA labels this "User" in
+	//	            the UI. We keep the wire value verbatim and translate
+	//	            to the friendly label only in printed output.
+	//
+	// Empty when unknown — pre-existing profiles created before this field
+	// existed, or first-run before whoami has been called. Empty MUST be
+	// treated as "skip preflight, let the server decide" so older configs
+	// keep working without a forced re-login.
+	//
+	// Stored on ProfileConfig (rather than a separate identity.json or the
+	// keychain) because it's not a secret, it's stable across re-logins for
+	// the same olaresId, and it travels naturally with the rest of the
+	// profile when users back up / migrate ~/.olares-cli/.
+	OwnerRole string `json:"ownerRole,omitempty"`
+
+	// WhoamiRefreshedAt is the unix-second timestamp of the last successful
+	// /api/backend/v1/user-info call that wrote OwnerRole. Used by `profile
+	// whoami` (and the `settings users me` / `settings me whoami` aliases)
+	// to render "last refreshed" hints, and by Phase 1+ preflight code to
+	// decide whether the cache is stale enough to refetch silently.
+	WhoamiRefreshedAt int64 `json:"whoamiRefreshedAt,omitempty"`
 }
 
 // DisplayName returns Name if set, else OlaresID. Used in CLI output where we
@@ -135,6 +165,37 @@ func (m *MultiProfileConfig) Upsert(p ProfileConfig) *ProfileConfig {
 	}
 	m.Profiles = append(m.Profiles, p)
 	return &m.Profiles[len(m.Profiles)-1]
+}
+
+// SetOwnerRole atomically updates the OwnerRole + WhoamiRefreshedAt fields
+// for the profile keyed by olaresID, then persists config.json.
+//
+// Returns:
+//   - changed: true iff OwnerRole transitioned to a different non-empty
+//     value (used by callers to decide whether to print a "role changed"
+//     notice). A first-time write (empty → role) also reports changed=true
+//     because that's a new piece of information from the user's perspective.
+//   - err:     any I/O / serialization error from SaveMultiProfileConfig.
+//
+// If no profile matches olaresID we return (false, error) — callers should
+// surface this rather than silently writing nothing, because every code
+// path here only runs after a successful API call against that olaresID.
+//
+// refreshedAt is the wall-clock the caller observed the API success at;
+// passed in (rather than re-read here) so test code and replay-style
+// flows can pin it deterministically.
+func (m *MultiProfileConfig) SetOwnerRole(olaresID, role string, refreshedAt int64) (changed bool, err error) {
+	target := m.FindByOlaresID(olaresID)
+	if target == nil {
+		return false, fmt.Errorf("profile %q not found", olaresID)
+	}
+	prev := target.OwnerRole
+	target.OwnerRole = role
+	target.WhoamiRefreshedAt = refreshedAt
+	if err := SaveMultiProfileConfig(m); err != nil {
+		return false, fmt.Errorf("save config: %w", err)
+	}
+	return role != "" && prev != role, nil
 }
 
 // Remove deletes a profile by Name or OlaresID. If the removed profile was

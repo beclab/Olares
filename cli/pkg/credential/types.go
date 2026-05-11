@@ -24,9 +24,10 @@ type ResolvedProfile struct {
 	OlaresID   string
 	UserUID    string
 
-	AuthURL      string
-	VaultURL     string
-	DesktopURL   string
+	AuthURL    string
+	VaultURL   string
+	DesktopURL string
+	SettingsURL string
 	FilesURL     string
 	MarketURL    string
 	DashboardURL string
