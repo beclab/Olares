@@ -17,21 +17,12 @@ This will permanently delete all accounts, settings, and data on the device. Thi
 
 ## Prerequisites
 
-### Hardware
-
 - A monitor and keyboard connected to Olares One.
-
-### Installation media
-
 - A bootable USB drive for Olares One. You can use either:
 
-   - **The included USB drive.** It may contain an earlier OS image, depending on when your device was shipped. You can still use it to reinstall the system, then update Olares OS after activation if needed.
+  - **The included USB drive.** It may contain an earlier OS image, depending on when your device was shipped. You can still use it to reinstall the system, then update Olares OS after activation if needed.
 
-   - **A new bootable USB drive.** To install the latest OS image directly, create a bootable USB drive from the [Olares One ISO](https://cdn.olares.com/one/olares-latest-amd64.iso) using a tool such as [Balena Etcher](https://etcher.balena.io/). For detailed instructions, see [Create an Olares One bootable USB drive](create-bootable-usb.md).
-
-  :::warning Use the Olares One ISO only
-  Do not use the standard self-hosted Olares ISO. Otherwise, your device will be recognized as **Generic** instead of **Olares One**, and some Olares One-specific features may be unavailable.
-  :::
+  - **A new bootable USB drive.** To install the latest OS image directly, create a new bootable USB drive for Olares One. For detailed instructions, see [Create an Olares One bootable USB drive](create-bootable-usb.md).
 
 ## Step 1: Boot from the USB drive
 
@@ -93,7 +84,7 @@ After the reboot, the system starts in a clean factory state and shows a text-ba
 
 You can then activate Olares One again via LarePass. For detailed instructions, see [First boot](first-boot.md).
 
-## Step 5: Optional: Update Olares OS
+## Step 5: Check for system updates
 
 If you reinstalled Olares One using the included USB drive, the installed OS version may not be the latest. After activation, check for system updates in LarePass.
 
