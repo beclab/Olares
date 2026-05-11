@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -79,6 +80,13 @@ Examples:
 // audio / image / pdf / text / textImmutable / invalid_link); empty for
 // directories. We pass it through verbatim and let the user see the same
 // label the web app would.
+//
+// Cloud-drive compatibility (awss3 / google / dropbox / tencent): the
+// server emits these listings with `mode` and `modified` as the EMPTY
+// STRING ("") instead of an integer / RFC3339 timestamp, and prefers
+// `fileSize` over `size` for the byte count. listingItem.UnmarshalJSON
+// flex-decodes both shapes so the rendered table doesn't need
+// per-namespace branching upstream.
 type listingItem struct {
 	Name      string    `json:"name"`
 	IsDir     bool      `json:"isDir"`
@@ -90,11 +98,66 @@ type listingItem struct {
 	Type      string    `json:"type"`
 }
 
+// UnmarshalJSON tolerates the cloud-drive envelope's empty-string
+// `modified` / `mode` and `fileSize`-instead-of-`size` fields. The
+// json.RawMessage indirection is so we can detect "" before delegating
+// to time.Time / uint32 decoding (which would otherwise reject "").
+func (it *listingItem) UnmarshalJSON(b []byte) error {
+	type itemRaw struct {
+		Name      string          `json:"name"`
+		IsDir     bool            `json:"isDir"`
+		IsSymlink bool            `json:"isSymlink"`
+		Size      int64           `json:"size"`
+		FileSize  int64           `json:"fileSize"`
+		Modified  json.RawMessage `json:"modified"`
+		Mode      json.RawMessage `json:"mode"`
+		Path      string          `json:"path"`
+		Type      string          `json:"type"`
+	}
+	var r itemRaw
+	if err := json.Unmarshal(b, &r); err != nil {
+		return err
+	}
+	it.Name = r.Name
+	it.IsDir = r.IsDir
+	it.IsSymlink = r.IsSymlink
+	it.Size = r.Size
+	if it.Size == 0 && r.FileSize != 0 {
+		// Cloud-drive listings always populate `fileSize`; some
+		// server versions also populate `size` to the same value,
+		// but defending against the shape that doesn't makes the
+		// rendered SIZE column robust either way.
+		it.Size = r.FileSize
+	}
+	it.Path = r.Path
+	it.Type = r.Type
+
+	t, err := decodeFlexTime(r.Modified)
+	if err != nil {
+		return fmt.Errorf("decode listingItem.modified: %w", err)
+	}
+	it.Modified = t
+
+	m, err := decodeFlexUint32(r.Mode)
+	if err != nil {
+		return fmt.Errorf("decode listingItem.mode: %w", err)
+	}
+	it.Mode = m
+	return nil
+}
+
 // listingResponse decodes both the parent-directory envelope (used to print
 // a one-line header before the table) and the items it contains. NumDirs /
 // NumFiles come from the backend; we use them verbatim when present and
 // fall back to counting `Items` if the backend reports zeros (defensive —
 // older response shapes may not populate them for every fileType).
+//
+// Cloud-drive envelopes (awss3 / google / dropbox / tencent) put the
+// children under a top-level `data` array instead of `items`, omit the
+// parent's `numDirs` / `numFiles` / `modified`, and may emit the
+// parent's `mode` / `modified` as empty strings. We tolerate all of
+// those and surface them to the renderer in the unified shape it
+// already knows how to display.
 type listingResponse struct {
 	Name      string        `json:"name"`
 	Path      string        `json:"path"`
@@ -104,6 +167,133 @@ type listingResponse struct {
 	NumDirs   int           `json:"numDirs"`
 	NumFiles  int           `json:"numFiles"`
 	Items     []listingItem `json:"items"`
+}
+
+// UnmarshalJSON normalises the cloud-drive envelope into the same
+// shape the Drive/Sync renderer expects: items merged from `data` when
+// `items` is missing, and `mode` / `modified` flex-decoded.
+func (l *listingResponse) UnmarshalJSON(b []byte) error {
+	type respRaw struct {
+		Name      string          `json:"name"`
+		Path      string          `json:"path"`
+		Modified  json.RawMessage `json:"modified"`
+		Mode      json.RawMessage `json:"mode"`
+		IsSymlink bool            `json:"isSymlink"`
+		NumDirs   int             `json:"numDirs"`
+		NumFiles  int             `json:"numFiles"`
+		Items     []listingItem   `json:"items"`
+		// Data is the cloud-drive variant of `items`. The server
+		// returns one OR the other depending on namespace; if the
+		// backend ever populates both, items wins (it's the canonical
+		// drive/sync/cache/external shape and any cloud-drive server
+		// that emits both must be in the middle of a migration).
+		Data []listingItem `json:"data"`
+	}
+	var r respRaw
+	if err := json.Unmarshal(b, &r); err != nil {
+		return err
+	}
+	l.Name = r.Name
+	l.Path = r.Path
+	l.IsSymlink = r.IsSymlink
+	l.NumDirs = r.NumDirs
+	l.NumFiles = r.NumFiles
+	l.Items = r.Items
+	if len(l.Items) == 0 && len(r.Data) > 0 {
+		l.Items = r.Data
+	}
+
+	t, err := decodeFlexTime(r.Modified)
+	if err != nil {
+		return fmt.Errorf("decode listingResponse.modified: %w", err)
+	}
+	l.Modified = t
+
+	m, err := decodeFlexUint32(r.Mode)
+	if err != nil {
+		return fmt.Errorf("decode listingResponse.mode: %w", err)
+	}
+	l.Mode = m
+	return nil
+}
+
+// decodeFlexTime parses a JSON value that may be either an RFC3339
+// timestamp string (Drive/Sync style — `"modified":"2026-04-17T19:31:51Z"`)
+// or an empty string / null / missing field (cloud-drive style —
+// `"modified":""`). Empty maps to time.Time's zero value, which the
+// renderer already treats as "no modification time available".
+//
+// We do NOT classify a malformed timestamp as zero — that would mask
+// server-side bugs. Bad JSON returns the underlying error so the user
+// sees it instead of a silently-blank MODIFIED column.
+func decodeFlexTime(raw json.RawMessage) (time.Time, error) {
+	if isEmptyJSON(raw) {
+		return time.Time{}, nil
+	}
+	if raw[0] == '"' {
+		var s string
+		if err := json.Unmarshal(raw, &s); err != nil {
+			return time.Time{}, err
+		}
+		if s == "" {
+			return time.Time{}, nil
+		}
+		t, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			return time.Time{}, err
+		}
+		return t, nil
+	}
+	// Server may also emit a numeric Unix-seconds timestamp in some
+	// future version; keep the JSON-number path open so we don't fail
+	// hard if it ships.
+	var n int64
+	if err := json.Unmarshal(raw, &n); err != nil {
+		return time.Time{}, err
+	}
+	if n == 0 {
+		return time.Time{}, nil
+	}
+	return time.Unix(n, 0).UTC(), nil
+}
+
+// decodeFlexUint32 parses a JSON value that may be either a number
+// (Drive/Sync style — `"mode":33188`) or an empty string / null /
+// missing field (cloud-drive style — `"mode":""`). Empty maps to 0,
+// which formatMode renders via its `mode == 0` branch
+// ("d---------" / "----------" / "L---------" depending on the
+// IsDir/IsSymlink bits).
+func decodeFlexUint32(raw json.RawMessage) (uint32, error) {
+	if isEmptyJSON(raw) {
+		return 0, nil
+	}
+	if raw[0] == '"' {
+		var s string
+		if err := json.Unmarshal(raw, &s); err != nil {
+			return 0, err
+		}
+		if s == "" {
+			return 0, nil
+		}
+		n, err := strconv.ParseUint(s, 10, 32)
+		if err != nil {
+			return 0, err
+		}
+		return uint32(n), nil
+	}
+	var n uint32
+	if err := json.Unmarshal(raw, &n); err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
+// isEmptyJSON reports whether `raw` is the JSON null, the empty
+// string `""`, or absent/whitespace. Centralised so the two flex
+// decoders agree on what counts as "no value here".
+func isEmptyJSON(raw json.RawMessage) bool {
+	s := strings.TrimSpace(string(raw))
+	return s == "" || s == "null" || s == `""`
 }
 
 func runLs(ctx context.Context, f *cmdutil.Factory, out io.Writer, rawPath string, o *lsOptions) error {

@@ -28,10 +28,14 @@ type Entry struct {
 // parent-level Name / Modified / NumDirs / NumFiles fields (see
 // cli/cmd/ctl/files/ls.go's listingResponse for the shape `files ls`
 // renders) — the walker doesn't need them, so we don't decode them.
+//
+// `FileSize` is the cloud-drive variant of `size` (see the comment on
+// List); we decode both and prefer the populated one in the caller.
 type itemEnvelope struct {
-	Name  string `json:"name"`
-	IsDir bool   `json:"isDir"`
-	Size  int64  `json:"size"`
+	Name     string `json:"name"`
+	IsDir    bool   `json:"isDir"`
+	Size     int64  `json:"size"`
+	FileSize int64  `json:"fileSize"`
 }
 
 // List does GET /api/resources/<encPlainPath>/ and returns the entries
@@ -43,6 +47,21 @@ type itemEnvelope struct {
 // The envelope includes a `parent` block, but we only consume `items`
 // here; callers that need parent metadata should Stat the path
 // separately.
+//
+// Two envelope shapes are accepted:
+//
+//   - Drive / Sync / Cache / External / Share: children live in
+//     `items`, each with `size` (number) and the per-FileInfo metadata.
+//   - Cloud drives (awss3 / google / dropbox / tencent): children
+//     live in `data` instead, and each child reports its byte count
+//     under `fileSize` (the server-side `size` field is also populated
+//     on most versions but not all). Listings on these namespaces are
+//     what `cat` / the recursive walker hit when the user navigates
+//     into a connected cloud bucket.
+//
+// The decode tolerates the `mode`/`modified` empty-string values that
+// cloud listings emit by simply not decoding them — the walker only
+// needs (Name, IsDir, Size).
 func (c *Client) List(ctx context.Context, plainPath string) ([]Entry, error) {
 	if !strings.HasSuffix(plainPath, "/") {
 		plainPath += "/"
@@ -54,18 +73,24 @@ func (c *Client) List(ctx context.Context, plainPath string) ([]Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Decode into the local struct first so we can convert each item
-	// into the public Entry without leaking json tags into our public
-	// surface.
 	var env struct {
 		Items []itemEnvelope `json:"items"`
+		Data  []itemEnvelope `json:"data"`
 	}
 	if err := json.Unmarshal(body, &env); err != nil {
 		return nil, fmt.Errorf("decode listing response: %w", err)
 	}
-	out := make([]Entry, 0, len(env.Items))
-	for _, it := range env.Items {
-		out = append(out, Entry{Name: it.Name, IsDir: it.IsDir, Size: it.Size})
+	source := env.Items
+	if len(source) == 0 && len(env.Data) > 0 {
+		source = env.Data
+	}
+	out := make([]Entry, 0, len(source))
+	for _, it := range source {
+		size := it.Size
+		if size == 0 && it.FileSize != 0 {
+			size = it.FileSize
+		}
+		out = append(out, Entry{Name: it.Name, IsDir: it.IsDir, Size: size})
 	}
 	return out, nil
 }
