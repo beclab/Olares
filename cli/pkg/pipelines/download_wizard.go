@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -25,7 +26,8 @@ func DownloadInstallationWizard() error {
 	}
 
 	p := download.NewDownloadWizard(runtime, viper.GetString(common.FlagURLOverride), viper.GetString(common.FlagReleaseID))
-	if err := p.Start(); err != nil {
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	if err := p.Start(context.Background()); err != nil {
 		logger.Errorf("download wizard failed %v", err)
 		return err
 	}

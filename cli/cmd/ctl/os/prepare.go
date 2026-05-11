@@ -14,7 +14,7 @@ func NewCmdPrepare() *cobra.Command {
 		Use:   "prepare [component1 component2 ...]",
 		Short: "Prepare install",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := pipelines.PrepareSystemPipeline(args); err != nil {
+			if err := pipelines.PrepareSystemPipeline(cmd.Context(), args); err != nil {
 				log.Fatalf("error: %v", err)
 			}
 		},

@@ -17,6 +17,8 @@
 package task
 
 import (
+	"context"
+
 	"github.com/beclab/Olares/cli/pkg/core/cache"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/ending"
@@ -26,6 +28,6 @@ type Interface interface {
 	GetName() string
 	GetDesc() string
 	Init(runtime connector.Runtime, moduleCache *cache.Cache, pipelineCache *cache.Cache)
-	Execute() *ending.TaskResult
+	Execute(ctx context.Context) *ending.TaskResult
 	ExecuteRollback()
 }

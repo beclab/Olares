@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -32,7 +33,8 @@ func MasterInfoPipeline() error {
 		Modules: []module.Module{&terminus.GetMasterInfoModule{Print: true}},
 		Runtime: runtime,
 	}
-	if err := p.Start(); err != nil {
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	if err := p.Start(context.Background()); err != nil {
 		return err
 	}
 	return nil
