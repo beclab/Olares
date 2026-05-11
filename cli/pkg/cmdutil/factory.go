@@ -31,6 +31,34 @@ import (
 	"github.com/beclab/Olares/cli/pkg/credential"
 )
 
+// statusAuthFailureOlares459 is the non-standard status code Olares' edge
+// stack (Authelia ext-authz wired through l4-bfl-proxy) returns when an
+// otherwise-valid request fails authentication — typically because the
+// X-Authorization JWT has expired or 2FA needs re-arming. The body looks
+// like `{"fa2":false,"method":"...","session_id":"<edge-jwt>","target_url":"..."}`.
+//
+// The web app treats 459 as a refresh trigger, parallel to 401:
+// `apps/packages/app/src/platform/platformAjaxSender.ts:89` maps it to
+// `ErrorCode.TOKE_INVILID`. We mirror that here — without this, every
+// expired-token request through the per-service hosts (files.<terminus>,
+// dashboard.<terminus>, etc.) returns 459 verbatim and refreshingTransport
+// never gets the chance to rotate the token. The 401 path is still kept
+// for endpoints that DON'T sit behind the Authelia edge (notably
+// /api/refresh on auth.<terminus>, which the SPA also special-cases).
+const statusAuthFailureOlares459 = 459
+
+// isAuthFailureStatus reports whether resp.StatusCode means "request was
+// rejected because the caller's token is no longer accepted, please get
+// a fresh one and retry". Centralised so the two callers (RoundTrip's
+// reactive path and any future pre-validation) stay in sync.
+func isAuthFailureStatus(status int) bool {
+	switch status {
+	case http.StatusUnauthorized, http.StatusForbidden, statusAuthFailureOlares459:
+		return true
+	}
+	return false
+}
+
 // preflightSkew is the safety window applied when deciding whether to
 // proactively refresh a non-replayable request's token. If the JWT's exp
 // is within this margin of now (or already past), we rotate the token
@@ -287,13 +315,13 @@ func (t *refreshingTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode != http.StatusUnauthorized && resp.StatusCode != http.StatusForbidden {
+	if !isAuthFailureStatus(resp.StatusCode) {
 		return resp, nil
 	}
 	if !canRetry(req) {
 		// Non-replayable body — pre-flight already had its chance
 		// (and either rotated the token or decided not to). Either
-		// way, body is consumed; surface the 401 verbatim.
+		// way, body is consumed; surface the auth failure verbatim.
 		return resp, nil
 	}
 	// Drain + close so the underlying connection can be reused.
