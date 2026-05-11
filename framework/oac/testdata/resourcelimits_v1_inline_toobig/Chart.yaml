@@ -1,0 +1,6 @@
+apiVersion: v2
+name: resourcelimits-v1-inline-toobig
+description: fixture — chart requests exceed manifest inline caps
+type: application
+version: 0.1.0
+appVersion: "1"

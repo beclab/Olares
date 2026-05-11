@@ -1,0 +1,58 @@
+olaresManifest.version: '0.8.1'
+metadata:
+  name: firefox
+  description: Firefox Browser
+  icon: https://file.bttcdn.com/appstore/firefox/icon.png
+  appid: firefox
+  version: '1.0.1'
+  title: Firefox
+  categories:
+  - Utilities
+permission:
+  appData: true
+  appCache: true
+  userData:
+  - Home
+spec:
+  versionName: '131.0.3'
+  fullDescription: |
+    Firefox Browser, also known as Mozilla Firefox or simply Firefox, is a free and open-source web browser developed by the Mozilla Foundation and its subsidiary, the Mozilla Corporation. Firefox uses the Gecko layout engine to render web pages, which implements current and anticipated web standards.
+  developer: Mozilla
+  website: https://www.mozilla.org/
+  submitter: Olares
+  locale:
+  - en-US
+  - zh-CN
+  requiredMemory: 512Mi
+  limitedMemory: 13Gi
+  requiredDisk: 128Mi
+  limitedDisk: 256Mi
+  requiredCpu: 0.5
+  limitedCpu: 5
+  doc: https://support.mozilla.org/
+  supportArch:
+  - amd64
+  - arm64
+options:
+  dependencies:
+  - name: firefox
+    type: application
+    version: ">=0.1.0"
+  - name: olares
+    type: system
+    version: '>=1.10.1-0'
+entrances:
+{{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}
+- name: firefox
+  port: 3000
+  host: firefox
+  title: Firefox
+  icon: https://file.bttcdn.com/appstore/firefox/icon.png
+{{- else }}
+- name: firefox-svc
+  port: 9696
+  host: firefox-svc
+  title: Prowlarr
+  icon: https://file.bttcdn.com/appstore/prowlarr/icon.png
+{{- end }}
+olaresManifest.type: app
