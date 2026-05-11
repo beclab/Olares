@@ -26,8 +26,12 @@
 package files
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/beclab/Olares/cli/internal/files/upload"
 )
 
 // TestUploadRootAndDriveType exercises every supported upload
@@ -224,6 +228,204 @@ func TestUploadRootAndDriveType_DirectConstruction(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), tc.wantSub) {
 				t.Errorf("err = %q, want substring %q", err.Error(), tc.wantSub)
+			}
+		})
+	}
+}
+
+// TestSubPathForBuildPlan pins the FrontendPath.SubPath →
+// upload.BuildPlan-input conversion so the namespace-root regression
+// (`upload ./mydir/ drive/Home/` failing with `remote "" must end
+// with '/'`) cannot return without breaking this test.
+//
+// The conversion has to satisfy two invariants simultaneously:
+//
+//  1. The trailing-slash directory hint MUST survive when the
+//     destination is the namespace root (SubPath="/"). Stripping the
+//     leading '/' verbatim collapses the only slash, leaving "" which
+//     BuildPlan reads as "no directory hint" and rejects directory
+//     uploads.
+//  2. Non-root paths MUST come through in the relative form
+//     BuildPlan expects ("Documents/Backups/"), not the absolute
+//     form ParseFrontendPath emits ("/Documents/Backups/"). Otherwise
+//     ParentDir computation in parentDirFor would double the leading
+//     slash on the way out.
+//
+// Anchoring this here (rather than implicitly through a runUpload
+// integration test) keeps the contract obvious for future readers:
+// the conversion is a self-contained function with a tiny test, so
+// any change has to update both at once.
+func TestSubPathForBuildPlan(t *testing.T) {
+	cases := []struct {
+		name     string
+		path     string
+		wantSub  string
+	}{
+		// The bug: bare extend (with or without trailing slash) used
+		// to produce "" → BuildPlan rejected directory uploads. Both
+		// forms must now return "/" so directory uploads to the
+		// namespace root succeed across every fileType.
+		{
+			name:    "drive Home root, trailing slash (regression: was '', now '/')",
+			path:    "drive/Home/",
+			wantSub: "/",
+		},
+		{
+			name:    "drive Home bare extend, no trailing slash (parser synthesizes SubPath='/')",
+			path:    "drive/Home",
+			wantSub: "/",
+		},
+		{
+			name:    "drive Data root",
+			path:    "drive/Data/",
+			wantSub: "/",
+		},
+		{
+			name:    "sync repo root",
+			path:    "sync/repo-abc/",
+			wantSub: "/",
+		},
+		{
+			name:    "cache node root",
+			path:    "cache/node-1/",
+			wantSub: "/",
+		},
+		{
+			name:    "external node root",
+			path:    "external/node-1/",
+			wantSub: "/",
+		},
+		{
+			name:    "awss3 account root",
+			path:    "awss3/account-x/",
+			wantSub: "/",
+		},
+		{
+			name:    "google account root",
+			path:    "google/account-x/",
+			wantSub: "/",
+		},
+		{
+			name:    "dropbox account root",
+			path:    "dropbox/account-x/",
+			wantSub: "/",
+		},
+
+		// Non-root paths: leading '/' is stripped, trailing '/' is
+		// preserved so BuildPlan can still see the directory hint.
+		{
+			name:    "drive Home subdir with trailing slash",
+			path:    "drive/Home/Documents/",
+			wantSub: "Documents/",
+		},
+		{
+			name:    "drive Home subdir without trailing slash (file rename target)",
+			path:    "drive/Home/Documents/2026.pdf",
+			wantSub: "Documents/2026.pdf",
+		},
+		{
+			name:    "deep subdir with trailing slash",
+			path:    "drive/Home/Documents/Backups/",
+			wantSub: "Documents/Backups/",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			fp, err := ParseFrontendPath(tc.path)
+			if err != nil {
+				t.Fatalf("ParseFrontendPath(%q): %v", tc.path, err)
+			}
+			got := subPathForBuildPlan(fp)
+			if got != tc.wantSub {
+				t.Errorf("subPathForBuildPlan(%q) = %q, want %q",
+					tc.path, got, tc.wantSub)
+			}
+		})
+	}
+}
+
+// TestSubPathForBuildPlan_DirectoryUploadToRoot is the end-to-end
+// regression test for the original bug report: uploading a directory
+// to a namespace root failed with `local "./mydir/" is a directory;
+// remote "" must end with '/'`. We exercise the full chain
+// ParseFrontendPath → subPathForBuildPlan → upload.BuildPlan with
+// a real directory on disk to make sure the fix is wired correctly
+// (i.e. that the helper's output is what runUpload actually feeds to
+// BuildPlan). Without the fix, BuildPlan would return the
+// "must end with '/'" error for every namespace tested here.
+func TestSubPathForBuildPlan_DirectoryUploadToRoot(t *testing.T) {
+	cases := []struct {
+		name      string
+		path      string
+		apiRoot   string
+		chunkRoot string
+		wantPD    string
+	}{
+		{
+			name:      "drive Home root",
+			path:      "drive/Home/",
+			apiRoot:   "/drive/Home",
+			chunkRoot: "/drive/Home",
+			wantPD:    "/drive/Home/",
+		},
+		{
+			name:      "drive Data root",
+			path:      "drive/Data/",
+			apiRoot:   "/drive/Data",
+			chunkRoot: "/drive/Data",
+			wantPD:    "/drive/Data/",
+		},
+		// Sync's chunkRoot is empty (chunks go to seafhttp/upload-aj
+		// which expects an inside-repo parent_dir); the API parent_dir
+		// still anchors at /sync/<repo>/.
+		{
+			name:      "sync repo root (chunkRoot empty by design)",
+			path:      "sync/repo-abc/",
+			apiRoot:   "/sync/repo-abc",
+			chunkRoot: "",
+			wantPD:    "/sync/repo-abc/",
+		},
+		{
+			name:      "cache node root",
+			path:      "cache/node-1/",
+			apiRoot:   "/cache/node-1",
+			chunkRoot: "/cache/node-1",
+			wantPD:    "/cache/node-1/",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			src := filepath.Join(dir, "mydir")
+			if err := os.MkdirAll(src, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("a"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			fp, err := ParseFrontendPath(tc.path)
+			if err != nil {
+				t.Fatalf("ParseFrontendPath(%q): %v", tc.path, err)
+			}
+			remoteSub := subPathForBuildPlan(fp)
+			plan, err := upload.BuildPlan(src, remoteSub, tc.apiRoot, tc.chunkRoot)
+			if err != nil {
+				t.Fatalf("BuildPlan: directory upload to %q rejected: %v",
+					tc.path, err)
+			}
+			if plan.ParentDir != tc.wantPD {
+				t.Errorf("ParentDir = %q, want %q", plan.ParentDir, tc.wantPD)
+			}
+			if len(plan.Files) != 1 {
+				t.Fatalf("Files = %d, want 1", len(plan.Files))
+			}
+			// The source folder name should appear as the first
+			// path component (mydir/a.txt), matching the LarePass
+			// folder-upload UX where the picked folder's name is
+			// preserved on the server.
+			if plan.Files[0].RelativePath != "mydir/a.txt" {
+				t.Errorf("Files[0].RelativePath = %q, want %q",
+					plan.Files[0].RelativePath, "mydir/a.txt")
 			}
 		})
 	}

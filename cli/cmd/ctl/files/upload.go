@@ -209,9 +209,7 @@ func runUpload(
 	if err != nil {
 		return err
 	}
-	// SubPath always starts with '/' from the parser; strip the leading
-	// slash so BuildPlan sees a relative form like "Documents/Backups/".
-	remoteSub := strings.TrimPrefix(fp.SubPath, "/")
+	remoteSub := subPathForBuildPlan(fp)
 
 	rp, err := f.ResolveProfile(ctx)
 	if err != nil {
@@ -605,4 +603,46 @@ func pluralYies(n int) string {
 		return "y"
 	}
 	return "ies"
+}
+
+// subPathForBuildPlan converts a parsed FrontendPath into the form
+// upload.BuildPlan expects (a "relative" sub path, e.g.
+// "Documents/Backups/"), preserving the trailing-slash directory hint
+// even when the user is targeting the namespace root.
+//
+// FrontendPath.SubPath always starts with '/'. Naively stripping that
+// prefix is enough for any non-root path ("/Documents/" → "Documents/"),
+// but the namespace root collapses to SubPath="/" → "" — at which
+// point BuildPlan can no longer tell "user typed `drive/Home/` and
+// wants a directory upload" from "user typed `drive/Home` (or did
+// something equivalent) and wants a single-file upload with no
+// destination subpath". The bug user-visible symptom is:
+//
+//	$ olares-cli files upload ./mydir/ drive/Home/
+//	Error: local "./mydir/" is a directory; remote "" must end with '/'
+//
+// — even though the source path's trailing slash and the parsed
+// directory intent both agree it's a directory upload. Re-adding the
+// '/' here so the directory hint survives the conversion fixes the
+// regression for ALL namespace-root targets uniformly (drive/Home/,
+// drive/Data/, sync/<repo>/, cache/<node>/, external/<node>/,
+// awss3/<account>/, google/<account>/, dropbox/<account>/) without
+// touching BuildPlan's contract — BuildPlan already treats "/" as
+// "directory upload to the root" via its `strings.Trim(..., "/")`
+// + `strings.HasSuffix(..., "/")` pair.
+//
+// For single-file uploads to the root (e.g.
+// `upload aaa.txt drive/Home/`) this is a no-op:
+// planForFile's `cleanRemote=="" && remoteIsDir` branch and the
+// previous `cleanRemote=="" && !remoteIsDir` branch both compute
+// `relativeRoot==""` + `remoteName=base`, so the wire-level
+// parent_dir is identical.
+func subPathForBuildPlan(fp FrontendPath) string {
+	sub := strings.TrimPrefix(fp.SubPath, "/")
+	if sub == "" {
+		// The lone trailing '/' — preserve it so BuildPlan reads
+		// the destination as a directory.
+		return "/"
+	}
+	return sub
 }
