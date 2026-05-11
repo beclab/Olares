@@ -17,7 +17,6 @@
 package pipeline
 
 import (
-	"os"
 	"sync"
 	"time"
 
@@ -127,10 +126,16 @@ func (p *Pipeline) RunModule(m module.Module) *ending.ModuleResult {
 			}
 
 		case module.GoroutineModuleType:
+			// We previously os.Exit(1)'d here on failure, which skipped
+			// every defer in the pipeline (SSH cleanup, log flush, ...).
+			// We now surface the failure through the shared
+			// ModuleResult and log it; a follow-up will wire ctx
+			// cancellation so the rest of the pipeline can bail out.
 			go func() {
 				m.Run(result)
 				if result.IsFailed() {
-					os.Exit(1)
+					logger.Errorf("[Module] %s (goroutine) failed: %v",
+						m.GetName(), result.CombineResult)
 				}
 			}()
 		default:
