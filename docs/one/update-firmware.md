@@ -9,30 +9,11 @@ head:
 
 # Update firmware
 
-To ensure system stability and access the latest hardware features, you might need to update the Embedded Controller (EC) and BIOS firmware on your Olares One device.
+To ensure system stability and access the latest hardware features, you may need to update the Embedded Controller (EC) and BIOS firmware on your Olares One device.
 
-## Prerequisites
+## Version history
 
-- A USB flash drive formatted to `FAT32`.
-- A monitor and a USB keyboard connected to your Olares One.
-
-## Check current firmware versions
-
-Before proceeding with an update, check your current system versions to determine if an update is needed.
-
-1. Power on the Olares One device or restart it if it is already running.
-2. When the Olares logo appears, immediately press and hold the **F7** key to enter the boot menu.
-3. Select **Enter Setup** to access the BIOS.
-
-    ![Enter setup for BIOS](/images/one/enter-setup-bios.png#bordered)
-
-4. On the **Main** tab, check the values next to **System BIOS Version** and **EC FW Version**.
-
-    ![Verify versions in BIOS](/images/one/enter-setup-bios1.png#bordered)
-
-## Download firmware updates
-
-If your current versions are older than the ones listed below, download the packages to your computer to proceed.
+Review the following changelogs for features or fixes included in each update.
 
 :::info
 Only the latest firmware versions are available for download.
@@ -53,6 +34,12 @@ Only the latest firmware versions are available for download.
 | [1.01 (Download)](http://cdn.olares.com/common/OlaresOne_BIOS_1.01.zip) | 2025-12-04 | <ul><li>Fix the issue where SSDs unexpectedly disconnect by disabling ASPM and L-state power management for SSD1 and SSD2.</li></ul> |
 | 1.00 | 2025-11-28 | <ul><li>Update version naming convention.</li></ul> |
 | C400 | 2025-11-05 | <ul><li>Hide advanced BIOS options by default.</li><li>Remove MCU version display.</li><li>Fix the issue where memory tests report errors by enabling SAGV.</li></ul> |
+
+## Prerequisites
+
+- A USB flash drive formatted to `FAT32`.
+- A monitor and a USB keyboard connected to your Olares One.
+- The EC or BIOS update package, downloaded to your computer.
 
 ## Update the EC firmware
 
