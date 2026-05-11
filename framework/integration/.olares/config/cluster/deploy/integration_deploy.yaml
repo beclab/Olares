@@ -42,7 +42,7 @@ spec:
             limits:
               cpu: "500m"
               memory: 350Mi
-        - image: beclab/integration-server:0.0.3
+        - image: beclab/integration-server:0.0.4
           imagePullPolicy: IfNotPresent
           name: integration
           ports:
