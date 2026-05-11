@@ -14,7 +14,7 @@ Olares 的设计初衷是让你随时随地都能无缝访问自己的服务。
 ## 目标
 通过本教程，你将学会如何：
 
-- 使用 LarePass VPN 建立安全、高速的本地连接。
+- 使用 LarePass 专用网络建立安全、高速的本地连接。
 - 使用 `.local` 域名访问 Olares 服务。
 - 配置本地 DNS，使全网设备可通过标准 URL 进行本地访问。
 - 手动修改 Hosts 文件，确保特定计算机在无外网环境下也能访问。
@@ -22,8 +22,8 @@ Olares 的设计初衷是让你随时随地都能无缝访问自己的服务。
 ## 选择连接方式
 有四种建立本地连接的方法：
 
-* **[方法 1：启用 LarePass VPN](#方法-1-启用-larepass-vpn)**<br/>
-  利用 LarePass VPN 自动检测本地网络并优化连接速度，无需更改任何设置。
+* **[方法 1：启用 LarePass 专用网络](#方法-1-启用-larepass-专用网络)**<br/>
+  利用 LarePass 专用网络自动检测本地网络并优化连接速度，无需更改任何设置。
 * **[方法 2：使用 `.local` 域名](#方法-2-使用-local-域名)**<br/>
   通过特定的本地 URL 格式访问设备。无需安装任何软件。
 * **[方法 3：配置本地 DNS](#方法-3-配置本地-dns)**<br/>
@@ -31,14 +31,14 @@ Olares 的设计初衷是让你随时随地都能无缝访问自己的服务。
 * **[方法 4：修改 Hosts 文件](#方法-4-修改-hosts-文件)**<br/>
   在单台计算机上手动将标准 Olares URL 映射到本地 IP。
 
-## 方法 1：启用 LarePass VPN
-LarePass VPN 旨在兼顾连接安全与性能优化。启用后，LarePass 会自动检测设备是否处于同一网络，并切换至**内网**模式。
+## 方法 1：启用 LarePass 专用网络
+LarePass 专用网络旨在兼顾连接安全与性能优化。启用后，LarePass 会自动检测设备是否处于同一网络，并切换至**内网**模式。
 
 <!--@include: ../../reusables/larepass-vpn.md{19,24}-->
 
-在用来访问 Olares 的当前设备上直接启用 LarePass VPN。
+在用来访问 Olares 的当前设备上直接启用 LarePass 专用网络。
 
-<!--@include: ../../reusables/larepass-vpn.md{26,50}-->
+<!--@include: ../../reusables/larepass-vpn.md{26,56}-->
 
 ## 方法 2：使用 `.local` 域名
 
@@ -187,6 +187,6 @@ ping desktop.<username>.olares.cn
 
 ## 常见问题
 
-<!--@include: ../../reusables/larepass-vpn.md{50,57}-->
+<!--@include: ../../reusables/larepass-vpn.md{57,63}-->
 
 <!--@include: ../../reusables/local-domain.md{42,75}-->

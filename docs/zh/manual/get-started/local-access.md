@@ -1,26 +1,26 @@
 ---
 outline: [2,3]
-description: 了解如何使用 LarePass VPN 或 .local 域名安全访问 Olares 服务。
+description: 了解如何使用 LarePass 专用网络或 .local 域名安全访问 Olares 服务。
 ---
 # 安全访问 Olares 服务
 
 通常，你会通过浏览器使用类似 `https://desktop.<username>.olares.com` 的网址访问 Olares，从而在任何设备上随时访问服务。你可以从家庭网络或外网安全访问 Olares。
 
-- [使用 LarePass VPN](#使用-larepass-vpn)：无论在内网还是外网均可使用。
+- [使用 LarePass 专用网络](#使用-larepass-专用网络)：无论在内网还是外网均可使用。
 - [使用 .local 域名](#使用-local-域名)：仅当客户端设备与 Olares 在同一局域网时使用。
 
-## 使用 LarePass VPN
+## 使用 LarePass 专用网络
 
-建议启用 LarePass VPN，以获得更安全、高效的连接。客户端会自动检测网络环境并选择最佳连接方式：
+建议启用 LarePass 专用网络，以获得更安全、高效的连接。客户端会自动检测网络环境并选择最佳连接方式：
 
 - **居家**：建立直连内网，加快局域网文件传输。
 - **远程**：切换至加密隧道，保障远程访问安全。
 
 <!--@include: ../../reusables/larepass-vpn.md{19,24}-->
 
-在用来访问 Olares 的当前设备上直接启用 LarePass VPN。
+在用来访问 Olares 的当前设备上直接启用 LarePass 专用网络。
 
-<!--@include: ../../reusables/larepass-vpn.md{26,50}-->
+<!--@include: ../../reusables/larepass-vpn.md{26,56}-->
 
 ## 使用 .local 域名
 
@@ -39,7 +39,7 @@ description: 了解如何使用 LarePass VPN 或 .local 域名安全访问 Olare
 
 ### 常见问题
 
-<!--@include: ../../reusables/larepass-vpn.md{50,57}-->
+<!--@include: ../../reusables/larepass-vpn.md{57,63}-->
 
 <!--@include: ../../reusables/local-domain.md{42,75}-->
 

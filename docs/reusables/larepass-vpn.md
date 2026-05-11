@@ -2,8 +2,8 @@
 search: false
 ---
 <!-- Reusable LarePass VPN content. Include by line range.
-     Steps (no headings): Step 1 7-16, Step 2 18-41, Step 3 42-49.
-     FAQs: 50-57 -->
+     Steps (no headings): Step 1 7-16, Step 2 18-48, Step 3 49-56.
+     FAQs: 57-63 -->
 
 To use the secure VPN connection, the LarePass client must be installed on the device you are using to access Olares.
 
@@ -39,6 +39,12 @@ On iOS or macOS, you may be prompted to add a VPN Configuration to your system s
    ![Enable LarePass VPN on desktop](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
 </template>
 </tabs>
+
+:::tip VPN connection cannot be enabled
+If you turn on the VPN connection but the status remains on **Connecting** and then turns off automatically, the system time on your LarePass client device may be incorrect.
+
+Check the time on your current device and turn on automatic time synchronization. On mobile, check your phone's time. On desktop, check your computer's time. After that, try enabling the VPN connection again.
+:::
 
 Once enabled, check the status indicator in LarePass to verify the connection type:
 

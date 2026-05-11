@@ -34,6 +34,12 @@ On iOS or macOS, you may be prompted to add a VPN Configuration to your system s
 </template>
 </tabs>
 
+:::tip VPN connection cannot be enabled
+If you turn on the VPN connection but the status remains on **Connecting** and then turns off automatically, the system time on your LarePass client device may be incorrect.
+
+Check the time on your current device and turn on automatic time synchronization. On mobile, check your phone's time. On desktop, check your computer's time. After that, try enabling the VPN connection again.
+:::
+
 ## Understand connection status
 LarePass displays the connection status between your device and Olares, helping you understand or diagnose your current network connection.
 
