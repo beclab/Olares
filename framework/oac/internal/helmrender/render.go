@@ -104,6 +104,7 @@ func newActionConfig() (*action.Configuration, error) {
 		KubeClient:     &kubefake.FailingKubeClient{PrintingKubeClient: kubefake.PrintingKubeClient{Out: ioutil.Discard}},
 		Capabilities:   chartutil.DefaultCapabilities,
 		RegistryClient: registryClient,
+		Log:            func(s string, i ...interface{}) {},
 	}
 	return &cfg, nil
 }
