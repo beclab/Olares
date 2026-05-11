@@ -110,6 +110,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Manage Olares with Olares CLI",
                   link: "/use-cases/nemoclaw-olares-cli",
                 },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/nemoclaw-common-issues",
+                },
               ]
             },
             {

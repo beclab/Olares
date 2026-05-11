@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, NemoClaw, Olares CLI, ClawHub, skills, natural language, file management, app installation
-app_version: "1.0.5"
+app_version: "1.0.8"
 doc_version: "1.0"
-doc_updated: "2026-05-08"
+doc_updated: "2026-05-11"
 ---
 
 # Manage Olares with Olares CLI
@@ -68,6 +68,7 @@ Olares CLI requires your account password. Sign in from the NemoClaw CLI before 
 
 3. Install the **Olares Shared** skill first because it's the foundation of the other Olares skills.
 4. Install the remaining Olares skills, such as **Olares Files** and **Olares Market**.
+5. Open the chat page in the OpenClaw Web UI and run `/new` to start a new session so the agent picks up the newly installed skills. If you've configured channels such as Discord, also run `/new` in each channel conversation.
 
 :::info Retry on 429 errors
 If you see a 429 error when downloading a skill, wait a moment and try again.
@@ -83,7 +84,7 @@ Open the OpenClaw Web UI or the OpenClaw TUI and ask the agent in natural langua
   List drive/Home/
   ```
 
-  ![List files result](/images/manual/use-cases/nemoclaw-openclaw-olares-cli-list-files.png#bordered){width=70%}
+  ![List files result](/images/manual/use-cases/nemoclaw-openclaw-olares-cli-list-files.png#bordered)
 
 - To read a file:
 
@@ -91,7 +92,7 @@ Open the OpenClaw Web UI or the OpenClaw TUI and ask the agent in natural langua
   Read the last 10 lines of the nemoclaw.log file in the Home directory.
   ```
 
-  ![Read file result](/images/manual/use-cases/nemoclaw-openclaw-olares-cli-read-file.png#bordered){width=70%}
+  ![Read file result](/images/manual/use-cases/nemoclaw-openclaw-olares-cli-read-file.png#bordered)
 
 - To install an app from Olares Market:
 
@@ -104,12 +105,6 @@ Open the OpenClaw Web UI or the OpenClaw TUI and ask the agent in natural langua
   ```text
   Uninstall Firefox
   ```
-
-## Known issues
-
-### Olares CLI login and skills don't persist across restarts
-
-NemoClaw doesn't persist your Olares CLI login or installed ClawHub skills across restarts. After restarting NemoClaw, log in to Olares CLI again and reinstall the Olares skills.
 
 ## Learn more
 

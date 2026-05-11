@@ -5,14 +5,14 @@ head:
   - - meta
     - name: keywords
       content: Olares, NemoClaw, Google Workspace, Gmail, Google Calendar, Google Drive, gog, skills, OAuth, AI agent
-app_version: "1.0.5"
+app_version: "1.0.8"
 doc_version: "1.0"
 doc_updated: "2026-05-08"
 ---
 
 # Integrate with Google Workspace
 
-The gog skill lets your NemoClaw agent interact with Google Workspace services such as Gmail, Google Calendar, and Google Drive. Once configured, you can ask your agent to search emails, schedule meetings, or access files in natural language.
+The gog skill lets your NemoClaw agent interact with Google Workspace services such as Gmail, Google Calendar, and Google Drive. Once configured, you can ask your agent to search emails, schedule meetings, or access files in natural language. This guide uses Google Calendar as the example.
 
 ## Prerequisites
 
@@ -74,6 +74,12 @@ The gog skill lets your NemoClaw agent interact with Google Workspace services s
     | Install missing skill dependencies | Navigate to the skill **gog**, press **Space** to select it, then press **Enter**. |
     | Set [API_KEY] for [skill] | Select **No** for all these settings. |
 
+5. Open the chat page in the OpenClaw Web UI and run `/new` to start a new session so the agent picks up the newly installed skill. If you've configured channels such as Discord, also run `/new` in each channel conversation.
+
+   :::tip
+   You can also install skills from the OpenClaw Web UI. Go to **Skills**, search for `gog` in ClawHub, and click **Install**.
+   :::
+
 ## Step 3: Authenticate with Google
 
 1. Upload the downloaded JSON file to the directory that NemoClaw can access:
@@ -89,8 +95,13 @@ The gog skill lets your NemoClaw agent interact with Google Workspace services s
    ```bash
    gog auth credentials inbox/client_secret_....json
    ```
+   Example output:
+   ```text
+   path    /sandbox/.config/gogcli/credentials.json
+   client  default
+   ```
 
-3. Start the authentication flow. Replace the `email`, `services`, and `redirect-host` values with your own:
+3. Start the authentication flow. Replace the email, services, and redirect host values with your own:
 
    ```bash
    gog auth add your-email@example.com --services gmail,calendar,drive,contacts,sheets,docs \
@@ -129,7 +140,12 @@ The gog skill lets your NemoClaw agent interact with Google Workspace services s
 
 ## Step 4: Use Google Workspace with your agent
 
-You can now use `gog` commands in the NemoClaw CLI sandbox (`my-assistant`). For example, to create a meeting:
+You can use Google Workspace either from the NemoClaw CLI sandbox directly or through the OpenClaw agent in chat.
+
+<tabs>
+<template #In-NemoClaw-CLI-sandbox>
+
+Use `gog` commands directly in the sandbox shell. For example, to create a meeting:
 
 ```bash
 sandbox@my-assistant:~$ gog calendar create primary \
@@ -140,6 +156,7 @@ sandbox@my-assistant:~$ gog calendar create primary \
 ```
 
 Example output:
+
 ```text
 id      5gsacgvqem82o29cct65oq2234
 summary Coffee with Team
@@ -155,21 +172,34 @@ description     Catching up at the local cafe
 reminders       (calendar default)
 link    https://www.google.com/calendar/event?eid=...
 ```
+
 Click the link to open the event in Google Calendar and verify it.
 
 ![Create calendar event with gog](/images/manual/use-cases/gog-calendar-event.png#bordered){width=70%}
 
-You can also ask your agent in natural language through the OpenClaw Web UI or TUI. For example:
+</template>
+
+<template #Through-the-agent>
+
+When chatting through the OpenClaw TUI, Web UI, or a channel such as Discord, the agent might not call `gog` the first time you ask in natural language. Ask it explicitly to use `gog` first. For example:
 
 ```text
-Create a meeting on my Google Calendar at 12 PM today, Pacific time
+Use gog to list my Google Calendar events for this week.
 ```
 
-<!-- ![Create calendar event via chat](/images/manual/use-cases/nemoclaw-google-calendar-chat.png#bordered) -->
+After the agent uses `gog` once, you can continue in natural language. For example:
 
-:::tip
-If the agent doesn't call `gog` after authentication, restart NemoClaw so the agent picks up the new skill.
-:::
+```text
+Create a meeting on my Google Calendar at 12 PM today, Pacific time.
+```
+
+![Create calendar event via chat](/images/manual/use-cases/nemoclaw-google-calendar-chat.png#bordered)
+
+Click the link to open the event in Google Calendar and verify it.
+
+![Calendar event created](/images/manual/use-cases/nemoclaw-google-calendar-event.png#bordered){width=70%}
+</template>
+</tabs>
 
 ## Learn more
 

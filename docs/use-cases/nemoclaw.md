@@ -4,10 +4,10 @@ description: Run NemoClaw on Olares with a local LLM such as Gemma4. Set up an a
 head:
   - - meta
     - name: keywords
-      content: Olares, NemoClaw, NVIDIA, OpenShell, OpenClaw, local LLM, AI assistant, self-hosted AI, Gemma4, Discord, SearXNG, web search, ClawHub, skills, plugins, BlueBubbles, Olares CLI
-app_version: "1.0.5"
+      content: Olares, NemoClaw, NVIDIA, OpenShell, OpenClaw, local LLM, AI assistant, Discord, web search, ClawHub, skills, plugins
+app_version: "1.0.8"
 doc_version: "1.1"
-doc_updated: "2026-05-08"
+doc_updated: "2026-05-11"
 ---
 
 # Run NemoClaw with a local LLM
@@ -16,15 +16,19 @@ NemoClaw is an open-source reference stack from NVIDIA that runs OpenClaw with t
 
 This guide walks you through running NemoClaw on Olares with the Gemma4 26B model app as the backend LLM.
 
+:::warning Alpha software
+NemoClaw is an early preview release from NVIDIA and is not recommended for production use. For official updates and community feedback, see [NVIDIA/NemoClaw](https://github.com/NVIDIA/NemoClaw).
+:::
+
 ## Learning objectives
 
 In this guide, you will learn how to:
 
 - Install and configure NemoClaw with a local LLM.
 - Keep the model loaded for always-on responses.
+- Start your first chat with the agent.
 - Connect the agent to Discord for remote chat.
-- Enable real-time web search with SearXNG.
-- Manage Olares files and apps through natural language.
+- Enable real-time web search.
 
 ## Prerequisites
 
@@ -225,7 +229,7 @@ NemoClaw runs OpenClaw inside a sandboxed runtime, so you must configure the cha
    | Where will the Gateway run | Local (this machine) |
    | Channels | Configure/link |
    | Select a channel | Discord (Bot API) |
-   | How do you want to provide this Discord bot token? | Enter Discord bot token, and paste the token from Step 1.|
+   | How do you want to provide this Discord bot token? | Enter Discord bot token, and paste the token from Step 1. |
    | Configure Discord channels access | Yes |
    | Discord channels access | Open (allow all channels) |
 
@@ -295,7 +299,7 @@ By default, the agent answers only from its training data. To let it fetch real-
    | SearXNG Base URL | Paste the shared SearXNG endpoint from Step 4 |
    | Enable web_fetch (keyless HTTP fetch) | Yes |
 
-8. To verify, ask your agent a question that requires real-time information. For example:
+9. To verify, ask your agent a question that requires real-time information. For example:
 
    ```text
    What are today's top tech news headlines?
@@ -304,9 +308,25 @@ By default, the agent answers only from its training data. To let it fetch real-
    The agent should fetch and cite live web results.
    ![Web search results](/images/manual/use-cases/nemoclaw-web-search-result.png#bordered){width=90%}
 
-## Manage Olares with Olares CLI
+## Install skills
 
-Skills add new capabilities to the agent. The Olares CLI skills let the agent manage files and apps on your Olares device through natural language. For details, see [Manage Olares with Olares CLI](nemoclaw-olares-cli.md). For other skills, see [Manage skills and plugins](openclaw-skills.md).
+Skills add capabilities to your agent, such as managing Olares files and apps or integrating with Google Workspace.
+
+1. Open the OpenClaw Web UI from Launchpad.
+2. Go to **Skills**.
+3. Search for the skill in ClawHub and click **Install**.
+4. Open the chat page in the OpenClaw Web UI and run `/new` to start a new session so the agent picks up the newly installed skill. If you've configured channels such as Discord, also run `/new` in each channel conversation.
+
+   :::tip
+   You can also install skills from the NemoClaw CLI sandbox using `openclaw config --section skills`.
+   :::
+
+For walkthroughs of common skills, see:
+
+- [Manage Olares with Olares CLI](nemoclaw-olares-cli.md): Let the agent operate files and apps on your Olares device through natural language.
+- [Integrate with Google Workspace](nemoclaw-google-workspace.md): Connect Gmail, Calendar, and Drive via the gog skill.
+
+For more on managing skills, see [Manage skills and plugins](openclaw-skills.md).
 
 ## Install plugins
 
@@ -327,18 +347,11 @@ Plugins extend OpenClaw with additional channels and integrations.
 
 For other plugins, use the standard `openclaw plugins list` and `openclaw plugins install <name>` commands inside the runtime. For details, see [Manage skills and plugins](openclaw-skills.md).
 
-## Known issues
+## Common issues
 
-### Duplicate messages
-
-Each message you send and each agent reply might appear twice in the chat. This is a known issue in the current NemoClaw version on Olares and doesn't affect the underlying agent state.
-
-### Olares CLI login and skills don't persist across restarts
-
-NemoClaw doesn't persist your Olares CLI login or installed ClawHub skills across restarts. After restarting NemoClaw, log in to Olares CLI again and reinstall the Olares skills. For details, see [Manage Olares with Olares CLI](nemoclaw-olares-cli.md).
+For a list of common issues and workarounds, see [Common issues](nemoclaw-common-issues.md).
 
 ## Learn more
 
 - [NVIDIA NemoClaw](https://build.nvidia.com/nemoclaw): Official reference stack and documentation from NVIDIA.
 - [OpenClaw](openclaw.md): Set up OpenClaw features such as persona setup.
-- [Common issues](openclaw-common-issues.md): Troubleshoot model timing and context window settings.
