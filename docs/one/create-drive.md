@@ -88,5 +88,3 @@ You can then activate Olares One again via LarePass. For detailed instructions, 
 ## Step 5: Check for system updates (optional)
 
 The included USB drive may install an earlier OS version. After activation, you can update Olares OS in LarePass. For detailed steps, see [Update OS](update.md).
-
-For detailed instructions, see [Update OS](update.md).
