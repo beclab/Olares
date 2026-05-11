@@ -162,6 +162,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/pdfmathtranslate",
             },
             {
+              text: "Whisper-WebUI",
+              link: "/use-cases/whisper-webui",
+            },
+            {
               text: "Speaches",
               link: "/use-cases/speaches",
             },
