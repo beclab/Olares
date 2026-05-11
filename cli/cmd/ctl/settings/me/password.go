@@ -17,6 +17,8 @@ import (
 
 // `olares-cli settings me password ...`
 //
+// Hidden from public --help (cobra Hidden); the full path remains callable.
+//
 // Backed by POST /api/users/<username>/password on user-service. The SPA
 // calls this from the Settings -> Account -> Password change-password
 // dialog, with the body shape (`stores/settings/user.ts:121`):
@@ -49,6 +51,7 @@ Subcommands:
   set                          change the current user's password
 `,
 	}
+	cmd.Hidden = true
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newPasswordSetCommand(f))
 	return cmd
