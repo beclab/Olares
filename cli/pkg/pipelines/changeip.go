@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -38,7 +39,8 @@ func ChangeIPPipeline() error {
 	}
 
 	var p = cluster.ChangeIP(runtime)
-	if err := p.Start(); err != nil {
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	if err := p.Start(context.Background()); err != nil {
 		logger.Errorf("failed to run change ip pipeline: %v", err)
 		return err
 	}

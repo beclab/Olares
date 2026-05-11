@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"fmt"
 	"path"
 
@@ -31,7 +32,8 @@ func DownloadInstallationPackage() error {
 	}
 
 	p := download.NewDownloadPackage(manifest, runtime)
-	if err := p.Start(); err != nil {
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	if err := p.Start(context.Background()); err != nil {
 		logger.Errorf("download package failed %v", err)
 		return err
 	}
