@@ -98,6 +98,22 @@ func HasAmdAPUOrGPU(execRuntime Runtime) (bool, error) {
 	})
 }
 
+func HasStrixHaloLocal() (bool, error) {
+	return hasStrixHaloChip(func(s string) (string, error) {
+		out, err := exec.Command("sh", "-c", s).Output()
+		if err != nil {
+			return "", err
+		}
+		return string(out), nil
+	})
+}
+
+func HasStrixHalo(execRuntime Runtime) (bool, error) {
+	return hasStrixHaloChip(func(s string) (string, error) {
+		return execRuntime.GetRunner().SudoCmd(s, false, false)
+	})
+}
+
 func RocmVersion() (*semver.Version, error) {
 	const rocmVersionFile = "/opt/rocm/.info/version"
 	data, err := os.ReadFile(rocmVersionFile)
@@ -114,4 +130,32 @@ func RocmVersion() (*semver.Version, error) {
 		return nil, fmt.Errorf("invalid rocm version: %s", curStr)
 	}
 	return cur, nil
+}
+
+func hasStrixHaloChip(cmdExec func(s string) (string, error)) (bool, error) {
+	target := "Ryzen AI Max"
+
+	// try lscpu first: extract 'Model name' field
+	out, err := cmdExec("lscpu 2>/dev/null | awk -F': *' '/^Model name/{print $2; exit}' || true")
+	if err != nil {
+		return false, err
+	}
+	if out != "" {
+		lo := strings.ToLower(strings.TrimSpace(out))
+		if strings.Contains(lo, strings.ToLower(target)) {
+			return true, nil
+		}
+	}
+	// fallback to /proc/cpuinfo
+	out, err = cmdExec("awk -F': *' '/^model name/{print $2; exit}' /proc/cpuinfo 2>/dev/null || true")
+	if err != nil {
+		return false, err
+	}
+	if out != "" {
+		lo := strings.ToLower(strings.TrimSpace(out))
+		if strings.Contains(lo, strings.ToLower(target)) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

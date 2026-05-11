@@ -390,13 +390,13 @@ func (r *RocmChecker) Check(runtime connector.Runtime) error {
 		return nil
 	}
 
-	// detect AMD APU/GPU presence
-	amdGPUExists, err := connector.HasAmdAPUOrGPU(runtime)
+	// detect Strix-Halo presence
+	strixHaloExists, err := connector.HasStrixHalo(runtime)
 	if err != nil {
 		return err
 	}
-	// no AMD APU/GPU found, no need to check rocm
-	if !amdGPUExists {
+	// no Strix-Halo found, no need to check rocm
+	if !strixHaloExists {
 		return nil
 	}
 
