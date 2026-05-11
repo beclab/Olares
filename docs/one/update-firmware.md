@@ -17,7 +17,7 @@ Review the following changelogs for features or fixes included in each update.
 
 :::tip How to check your current firmware versions
 1. Power on the device or restart it if it is already running.
-2. When the Olares logo appears, immediately press and hold the **F7**, select **Enter Setup**, and then check the versions on the **Main** tab.
+2. When the Olares logo appears, immediately press and hold the **F7**, select **Enter Setup** to access the BIOS, and then check the versions on the **Main** tab.
 
     ![Check current firmware versions in BIOS](/images/one/enter-setup-bios1.png#bordered){width=70%}
 ::: 
