@@ -14,9 +14,10 @@ import (
 )
 
 // NewAdvancedCommand returns the `settings advanced` parent: containerd
-// registries / images inspection plus system / user env management.
-// JWS-gated writes (registries mutations, OS upgrade, reboot / shutdown,
-// log collection) are not in scope until a JWS-key sourcing path lands.
+// registries / images inspection, system / user env management, and async
+// diagnostic log collection.
+// JWS-gated writes (registries mutations, OS upgrade, reboot / shutdown)
+// stay out of scope until a JWS-key sourcing path exists.
 func NewAdvancedCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "advanced",
@@ -25,7 +26,7 @@ func NewAdvancedCommand(f *cmdutil.Factory) *cobra.Command {
 
   - containerd registries / mirrors / images
   - system + user env
-  - log collection (terminusd /api/command/collectLogs)
+  - diagnostic log collection (POST /api/command/collectLogs)
   - OS upgrade lifecycle
   - hardware / restart-class actions (reboot, shutdown, ssh-password)
 
@@ -34,13 +35,13 @@ Subcommands:
   registries list
   images list [--registry <name>]
   env (system|user) list / set --var KEY=VAL
+  collect-logs
 
 Out of scope until a JWS key sourcing path exists:
   registries mirrors put/delete, registries prune,
   images delete / prune,
   upgrade state / start / cancel,
   reboot / shutdown / ssh-password,
-  collect-logs (terminusd-signed)
 `,
 	}
 	cmd.SilenceUsage = true
@@ -48,5 +49,6 @@ Out of scope until a JWS key sourcing path exists:
 	cmd.AddCommand(NewRegistriesCommand(f))
 	cmd.AddCommand(NewImagesCommand(f))
 	cmd.AddCommand(NewEnvCommand(f))
+	cmd.AddCommand(NewCollectLogsCommand(f))
 	return cmd
 }

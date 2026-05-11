@@ -72,7 +72,7 @@ Floor assignment mirrors the SPA's `apps/.../stores/settings/admin.ts:menus` + p
 
 | Floor | Verbs |
 |---|---|
-| **Admin (owner / admin)** | `users list`, `users get`; `network reverse-proxy get`, `network frp list`, `network external-network get`, `network hosts-file get`; `gpu list`; `advanced status`, `advanced registries list`, `advanced images list`; `vpn ssh status/enable/disable`, `vpn subroutes status`, `vpn acl all/get/add/remove`, `vpn public-domain-policy get` |
+| **Admin (owner / admin)** | `users list`, `users get`; `network reverse-proxy get`, `network frp list`, `network external-network get`, `network hosts-file get`; `gpu list`; `advanced status`, `advanced collect-logs`, `advanced registries list`, `advanced images list`; `vpn ssh status/enable/disable`, `vpn subroutes status`, `vpn acl all/get/add/remove`, `vpn public-domain-policy get` |
 | **Normal (any authenticated user)** | `me whoami / version / check-update / sso list`; `apps list/get`, `apps entrances list`, `apps env get`, `apps domain get`, `apps policy get`; `vpn devices list`, `vpn devices routes <id>`; `appearance get`, `appearance language set`; `integration accounts list/list-by-type/get/add/delete`; `video config get`; `search status`, `search excludes list`, `search dirs list`, `search rebuild`; `backup plans list`, `backup snapshots list`; `restore plans list`; `advanced env system list`, `advanced env user list` |
 
 Practical implications for the agent:
@@ -106,7 +106,7 @@ Different upstreams return JSON in different envelopes. Each area has its own `c
 | `gpu` | `/api/gpu/list` | BFL envelope (HAMI behind it) | distinct from the top-level `olares-cli gpu` (kubeconfig-driven, cluster-wide) |
 | `video` | `/api/files/video/config` | BFL envelope, but inner data is decoded as `json.RawMessage` (`doGetEnvelopeRaw`) | Schema is provider-versioned; `--output table` collapses to a one-line summary |
 | `search` | `/api/search/task/stats/merged`, `/api/search/monitorsetting/exclude-pattern`, `/api/search/monitorsetting/include-directory/full_content` | BFL envelope | `status` returns a string, `excludes list` / `dirs list` return `[]string` |
-| `advanced` | `/api/system/status`, `/api/containerd/registries`, `/api/containerd/images?registry=<n>` | BFL envelope (terminusd → olaresd `returnSucceed`) | `status` table view is a summary; `--output json` for the full struct |
+| `advanced` | `/api/system/status`, `/api/containerd/registries`, `/api/containerd/images?registry=<n>`, `POST /api/command/collectLogs` | BFL envelope (terminusd → olaresd `returnSucceed`) | `status` table view is a summary; `--output json` for the full struct; `collect-logs` is **admin-gated** in the CLI (same as `status`), POSTs then polls `/api/system/status` until done (SPA uses `X-Signature`; user-service falls back to `X-Authorization` for the CLI) |
 | `backup` | `/apis/backup/v1/plans/backup`, `/apis/backup/v1/plans/backup/:id/snapshots` | BFL envelope; **different ingress prefix** (`/apis/backup/v1`, not `/api`) | The SPA's axios global interceptor unwraps `data.data`, which is why upstream code reads `{backups: [...]}` directly |
 | `restore` | `/apis/backup/v1/plans/restore` | BFL envelope; same `/apis/backup/v1` prefix | mirrors `settings backup plans list` shape |
 
@@ -187,6 +187,7 @@ olares-cli settings advanced status               # large struct; -o json for th
 olares-cli settings advanced registries list
 olares-cli settings advanced images list
 olares-cli settings advanced images list --registry docker.io
+olares-cli settings advanced collect-logs             # admin floor; waits for completion; prints /Home/pod_logs (experimental — UNVERIFIED_COMMANDS.md)
 ```
 
 ### `backup` / `restore`
@@ -200,6 +201,8 @@ olares-cli settings restore plans list
 ## Currently available — mutating commands (smoke-verified)
 
 Every mutating verb in this section has been confirmed against a live Olares instance in the latest smoke run (see [`cli/cmd/ctl/settings/scripts/local_report_phase15a.md`](cli/cmd/ctl/settings/scripts/local_report_phase15a.md)). All of them hit the `<DesktopURL>` ingress over `X-Authorization` and none require a JWS-signed body. Verbs that ship in the binary but were not exercised (or did not pass) live in [`cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) — treat them as experimental until they show up here.
+
+**Also ships (awaiting smoke):** `advanced collect-logs` — **owner/admin** (CLI `PreflightRole`); POST `/api/command/collectLogs` then poll `/api/system/status` until success/failure; details in [`UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md).
 
 ### `appearance` — language
 
@@ -269,7 +272,6 @@ The verbs below are **not shipped** in this release. They either need more desig
 - **Network writes that require a JWS-signed device-id header** — hosts-file write, FRP server register / delete, SSL enable / disable / update, external-network master switch (the SPA carries these with `X-Signature` headers the CLI doesn't yet produce).
 - **Containerd registry mutations** — `registries mirrors put / delete`, `images delete / prune` (also `X-Signature`-gated).
 - **Hardware / restart-class** — reboot, shutdown, ssh-password, OS upgrade — these go through TermiPass-issued JWS over a QR callback URL; CLI support arrives once a JWS key sourcing path lands.
-- **Collect logs** — `POST /api/command/collectLogs` is `X-Signature`-gated.
 - **Backup plan create / update** — full `BackupPolicy` + `LocationConfig` vector; needs either a `--from-file plan.json` mode or an upstream "create from defaults" shortcut before shipping.
 - **Restore plan update / non-cancel delete** — backup-server has no routes for these.
 
