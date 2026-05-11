@@ -3,12 +3,11 @@ module github.com/beclab/Olares/cli
 go 1.24.11
 
 replace (
-	bytetrade.io/web3os/backups-sdk => github.com/Above-Os/backups-sdk v0.1.17
 	github.com/estesp/manifest-tool/v2 => github.com/estesp/manifest-tool/v2 v2.0.3
+	olares.com/backups-sdk => github.com/Above-Os/backups-sdk v0.1.40
 )
 
 require (
-	bytetrade.io/web3os/backups-sdk v0.0.0-00010101000000-000000000000
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/alecthomas/assert/v2 v2.11.0
@@ -57,6 +56,7 @@ require (
 	k8s.io/client-go v0.34.0
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
+	olares.com/backups-sdk v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/controller-runtime v0.22.0
 	sigs.k8s.io/kustomize/kyaml v0.20.1
 )
