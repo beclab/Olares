@@ -21,7 +21,6 @@
 package backup
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -31,7 +30,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
@@ -175,28 +173,3 @@ func fmtUnix(sec int64) string {
 	return time.Unix(sec, 0).Format(time.RFC3339)
 }
 
-// confirmDestructive guards plan / snapshot deletion behind a y/N
-// prompt unless --yes was passed. Mirrors the shape used in
-// settings/vpn/common.go: non-TTY stdin without --yes is a hard error
-// rather than an implicit yes.
-func confirmDestructive(prompt io.Writer, in io.Reader, message string) error {
-	if f, ok := in.(*os.File); ok {
-		if !term.IsTerminal(int(f.Fd())) {
-			return fmt.Errorf("stdin is not a terminal — pass --yes to confirm: %s", message)
-		}
-	}
-	if _, err := fmt.Fprintf(prompt, "%s [y/N]: ", message); err != nil {
-		return err
-	}
-	rd := bufio.NewReader(in)
-	line, err := rd.ReadString('\n')
-	if err != nil && err != io.EOF {
-		return fmt.Errorf("read confirmation: %w", err)
-	}
-	switch strings.ToLower(strings.TrimSpace(line)) {
-	case "y", "yes":
-		return nil
-	default:
-		return fmt.Errorf("aborted by user")
-	}
-}

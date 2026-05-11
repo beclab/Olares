@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/cliutil"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -161,10 +162,10 @@ func runPlansDelete(ctx context.Context, f *cmdutil.Factory, id string, assumeYe
 	if id == "" {
 		return fmt.Errorf("delete requires a plan id")
 	}
-	if !assumeYes {
-		if err := confirmDestructive(os.Stderr, os.Stdin, fmt.Sprintf("Delete backup plan %q (and orphan its snapshots)?", id)); err != nil {
-			return err
-		}
+	if err := cliutil.ConfirmDestructive(os.Stderr, os.Stdin,
+		fmt.Sprintf("Delete backup plan %q (and orphan its snapshots)?", id),
+		assumeYes); err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {

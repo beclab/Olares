@@ -1,6 +1,7 @@
 // Package settings implements the `olares-cli settings` umbrella command
 // tree. Identity (which Olares user) and transport (which cluster) are
-// resolved from the global --profile flag via cmdutil.Factory, exactly like
+// resolved from the currently-selected profile via cmdutil.Factory
+// (switch with `olares-cli profile use <name>`), exactly like
 // `olares-cli files` and `olares-cli market`.
 //
 // The subtree mirrors the 12 canonical sections of the Olares Settings UI
@@ -36,8 +37,10 @@ import (
 // areas from day one — even when individual verbs are still pending.
 //
 // Authentication and transport are inherited from the shared cmdutil.Factory
-// (set up in cli/cmd/ctl/root.go) so the persistent --profile flag flows
-// through unchanged. No per-command auth flags.
+// (set up in cli/cmd/ctl/root.go) so the currently-selected profile flows
+// through unchanged. No per-command auth flags, and no per-invocation
+// profile override — switch with `olares-cli profile use <name>` ahead of
+// time.
 func NewSettingsCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "settings",
@@ -54,12 +57,12 @@ Plus a 13th, non-canonical "me" sub-tree for the SPA's avatar/Person
 dropdown self-service items (whoami / version / sso / password) —
 folded in here for CLI discoverability.
 
-Identity and transport come from the active profile (--profile or the
-currently-selected one), so authentication uses the same access token as
-"olares-cli profile login" and the same edge auth chain the Olares web app
-uses (Authelia + l4-bfl-proxy). Most APIs ride https://desktop.<terminus>;
-backup / restore use the same origin with a /apis/backup/v1/* prefix
-served by BFL's backup-server.
+Identity and transport come from the currently-selected profile (switch
+with "olares-cli profile use <name>"), so authentication uses the same
+access token as "olares-cli profile login" and the same edge auth chain
+the Olares web app uses (Authelia + l4-bfl-proxy). Most APIs ride
+https://desktop.<terminus>; backup / restore use the same origin with a
+/apis/backup/v1/* prefix served by BFL's backup-server.
 `,
 	}
 	// SilenceUsage only: on failure print the RunE error (like profile/files),

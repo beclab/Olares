@@ -137,8 +137,8 @@ func humanizeAgo(secs int64) string {
 // wrappers stay cosmetic.
 //
 // Inputs:
-//   - client     the SettingsClient-shaped Doer (DoJSON only); resolved by
-//                the caller from cmdutil.Factory.
+//   - client     a Doer (DoJSON only); resolved by the caller from
+//                cmdutil.Factory (typically whoami.NewHTTPClient).
 //   - cfg        the loaded MultiProfileConfig. Mutated in place when a
 //                refetch happens; saved by FetchAndCache via SetOwnerRole.
 //   - olaresID   the olaresId of the profile whose role we report.

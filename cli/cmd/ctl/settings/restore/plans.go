@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/cliutil"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -387,10 +388,10 @@ func runPlansCancel(ctx context.Context, f *cmdutil.Factory, id string, assumeYe
 	if id == "" {
 		return fmt.Errorf("cancel requires a plan id")
 	}
-	if !assumeYes {
-		if err := confirmDestructive(os.Stderr, os.Stdin, fmt.Sprintf("Cancel restore plan %q?", id)); err != nil {
-			return err
-		}
+	if err := cliutil.ConfirmDestructive(os.Stderr, os.Stdin,
+		fmt.Sprintf("Cancel restore plan %q?", id),
+		assumeYes); err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {

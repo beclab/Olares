@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
+	"github.com/beclab/Olares/cli/pkg/cliutil"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
@@ -158,7 +159,7 @@ func runDevicesDelete(ctx context.Context, f *cmdutil.Factory, deviceID string, 
 		return err
 	}
 
-	if err := confirmDestructive(os.Stderr, os.Stdin,
+	if err := cliutil.ConfirmDestructive(os.Stderr, os.Stdin,
 		fmt.Sprintf("Delete Headscale device %q? Bound TermiPass sessions will be invalidated.", deviceID),
 		assumeYes); err != nil {
 		return err

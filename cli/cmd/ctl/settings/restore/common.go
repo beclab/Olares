@@ -12,7 +12,6 @@
 package restore
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -110,31 +109,6 @@ func doMutateEnvelope(ctx context.Context, d Doer, method, path string, body, ou
 		return fmt.Errorf("%s %s: decode data: %w", method, path, err)
 	}
 	return nil
-}
-
-// confirmDestructive guards the cancel verb. Mirrors the helper in
-// settings/backup and settings/vpn — non-TTY stdin without --yes is a
-// hard error rather than an implicit yes.
-func confirmDestructive(prompt io.Writer, in io.Reader, message string) error {
-	if f, ok := in.(*os.File); ok {
-		if !term.IsTerminal(int(f.Fd())) {
-			return fmt.Errorf("stdin is not a terminal — pass --yes to confirm: %s", message)
-		}
-	}
-	if _, err := fmt.Fprintf(prompt, "%s [y/N]: ", message); err != nil {
-		return err
-	}
-	rd := bufio.NewReader(in)
-	line, err := rd.ReadString('\n')
-	if err != nil && err != io.EOF {
-		return fmt.Errorf("read confirmation: %w", err)
-	}
-	switch strings.ToLower(strings.TrimSpace(line)) {
-	case "y", "yes":
-		return nil
-	default:
-		return fmt.Errorf("aborted by user")
-	}
 }
 
 // readPasswordOnce returns the password either from --password (literal),
