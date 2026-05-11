@@ -356,11 +356,13 @@ func runLs(ctx context.Context, f *cmdutil.Factory, out io.Writer, rawPath strin
 	return renderListing(out, fp, listing)
 }
 
-// formatHTTPError turns a non-2xx response into a user-facing error. 401/403
-// is special-cased to match DefaultProvider's CTA so the user sees the same
-// hint whether the local check or the remote check is what failed.
+// formatHTTPError turns a non-2xx response into a user-facing error.
+// 401/403/459 are special-cased to match DefaultProvider's CTA so the user
+// sees the same hint whether the local check or the remote check is what
+// failed. 459 is Olares' edge (Authelia) "auth failed" status — see
+// pkg/cmdutil/factory.go::statusAuthFailureOlares459.
 func formatHTTPError(status int, body []byte, olaresID, url string) error {
-	if status == http.StatusUnauthorized || status == http.StatusForbidden {
+	if status == http.StatusUnauthorized || status == http.StatusForbidden || status == 459 {
 		return fmt.Errorf("server rejected the access token (HTTP %d); please run: olares-cli profile login --olares-id %s",
 			status, olaresID)
 	}

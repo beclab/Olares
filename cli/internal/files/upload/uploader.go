@@ -172,8 +172,18 @@ type UploadResult struct {
 // Resumable.js treats as non-retryable (resumable.js: see the
 // `permanentErrors` option, which the web app passes as the array
 // below). 5xx is partial: 500/501 are fatal, 502/503/504 are not.
+//
+// 459 is Olares' edge "auth failed" status (see
+// pkg/cmdutil/factory.go::statusAuthFailureOlares459). For chunk
+// uploads the body is non-replayable, so the transport's reactive
+// 401/459 retry can't fire — pre-flight refresh handles the common
+// case, but if the chunk still gets a 459 (e.g. JWT had no exp claim
+// so pre-flight skipped, or the refreshed token was also rejected),
+// retrying the same chunk with the same token will keep failing.
+// Mark it permanent so the user sees the auth-failure CTA instead of
+// a backoff loop.
 var permanentStatuses = map[int]struct{}{
-	400: {}, 401: {}, 403: {}, 404: {}, 409: {}, 415: {},
+	400: {}, 401: {}, 403: {}, 404: {}, 409: {}, 415: {}, 459: {},
 	440: {}, 441: {}, 442: {}, 443: {},
 	500: {}, 501: {},
 }

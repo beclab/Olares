@@ -97,6 +97,13 @@ func WrapPermissionErr(err error, olaresID, verbDescr string) error {
 		status = http.StatusForbidden
 	case isHTTPStatus(err, http.StatusUnauthorized):
 		status = http.StatusUnauthorized
+	case isHTTPStatus(err, 459):
+		// Olares' edge (Authelia ext-authz) signals "auth failed" with
+		// 459 — see pkg/cmdutil/factory.go::statusAuthFailureOlares459.
+		// The transport already retried after a /api/refresh; reaching
+		// here means the refreshed token was ALSO rejected, which the
+		// user should treat as "re-login + role check" same as 401/403.
+		status = 459
 	default:
 		return err
 	}

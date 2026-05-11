@@ -78,12 +78,23 @@ func Refresh(ctx context.Context, req RefreshRequest) (*Token, error) {
 		return nil, fmt.Errorf("read /api/refresh body: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		// 401/403 means the refresh-token grant itself is no longer
-		// honored — the only recovery is a fresh login. Wrap with the
-		// typed sentinel so credential.Refresher can stamp
-		// InvalidatedAt and surface ErrTokenInvalidated. Any other
-		// non-200 stays an opaque error (treated as transient).
-		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		// 401/403/459 mean the refresh-token grant itself is no
+		// longer honored — the only recovery is a fresh login. Wrap
+		// with the typed sentinel so credential.Refresher can stamp
+		// InvalidatedAt and surface ErrTokenInvalidated.
+		//
+		// 459 is Olares' edge (Authelia ext-authz wired through
+		// l4-bfl-proxy) signalling "auth failed" with a JSON body
+		// like `{"fa2":false,"session_id":"...","target_url":"..."}`.
+		// /api/refresh sits on auth.<terminus> which usually doesn't
+		// pass through that filter, but we treat 459 here the same as
+		// 401/403 to stay consistent with the SPA's mapping in
+		// apps/packages/app/src/platform/platformAjaxSender.ts:89
+		// (459 → ErrorCode.TOKE_INVILID). Any other non-200 stays an
+		// opaque error (treated as transient).
+		if resp.StatusCode == http.StatusUnauthorized ||
+			resp.StatusCode == http.StatusForbidden ||
+			resp.StatusCode == 459 {
 			return nil, fmt.Errorf("%w: /api/refresh returned HTTP %d: %s", ErrRefreshUnauthorized, resp.StatusCode, truncate(raw))
 		}
 		return nil, fmt.Errorf("/api/refresh returned HTTP %d: %s", resp.StatusCode, truncate(raw))
