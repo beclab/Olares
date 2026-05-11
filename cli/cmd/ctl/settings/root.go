@@ -7,8 +7,8 @@
 // The subtree mirrors the 12 canonical sections of the Olares Settings UI
 // documented at https://docs.olares.com/manual/olares/settings/, plus a
 // 13th, non-canonical "me" sub-tree that hosts the SPA's avatar/Person
-// dropdown self-service items (whoami / version / SSO / password). The
-// 13th sub-tree is intentionally *outside* the 12 docs sections and is
+// dropdown self-service items (whoami / version / check-update / SSO list).
+// This sub-tree is intentionally *outside* the 12 docs sections and is
 // documented as such in its own package — it ships under `settings` for
 // discoverability, not because it's a docs section.
 package settings
@@ -54,7 +54,7 @@ This umbrella mirrors the 12 documented sections:
   gpu           video        search        backup        restore     advanced
 
 Plus a 13th, non-canonical "me" sub-tree for the SPA's avatar/Person
-dropdown self-service items (whoami / version / sso / password) —
+dropdown self-service items (whoami / version / check-update / sso list) —
 folded in here for CLI discoverability.
 
 Identity and transport come from the currently-selected profile (switch
