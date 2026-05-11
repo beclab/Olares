@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -11,7 +12,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func UninstallTerminusPipeline() error {
+func UninstallTerminusPipeline(ctx context.Context) error {
 	kubeType := phase.GetKubeType()
 
 	sysversion, _ := phase.GetOlaresVersion()
@@ -43,7 +44,7 @@ func UninstallTerminusPipeline() error {
 	}
 
 	var p = cluster.UninstallTerminus(phase, runtime)
-	if err := p.Start(); err != nil {
+	if err := p.Start(ctx); err != nil {
 		logger.Errorf("uninstall Olares failed: %v", err)
 		return err
 	}

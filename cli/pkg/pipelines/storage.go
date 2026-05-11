@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"fmt"
 	"path"
 
@@ -30,7 +31,8 @@ func CliInstallStoragePipeline() error {
 	manifest := path.Join(runtime.GetInstallerDir(), "installation.manifest")
 	runtime.Arg.SetManifest(manifest)
 
-	return system.InstallStoragePipeline(runtime).Start()
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	return system.InstallStoragePipeline(runtime).Start(context.Background())
 }
 
 func getStorageConfig() *common.Storage {

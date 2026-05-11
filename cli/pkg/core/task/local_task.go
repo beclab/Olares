@@ -95,14 +95,14 @@ func (l *LocalTask) Default() {
 	}
 }
 
-func (l *LocalTask) Execute() *ending.TaskResult {
+func (l *LocalTask) Execute(ctx context.Context) *ending.TaskResult {
 	if l.TaskResult.IsFailed() {
 		return l.TaskResult
 	}
 
 	host := l.Runtime.GetLocalHost()
 	selfRuntime := l.Runtime.Copy()
-	l.RunWithTimeout(selfRuntime, host)
+	l.RunWithTimeout(ctx, selfRuntime, host)
 
 	if l.TaskResult.IsFailed() {
 		l.TaskResult.ErrResult()
@@ -113,8 +113,11 @@ func (l *LocalTask) Execute() *ending.TaskResult {
 	return l.TaskResult
 }
 
-func (l *LocalTask) RunWithTimeout(runtime connector.Runtime, host connector.Host) {
-	ctx, cancel := context.WithTimeout(context.Background(), l.Timeout)
+// RunWithTimeout derives its per-task timeout from the parent ctx so
+// upstream cancellation (e.g. from a SIGINT in main) propagates here
+// promptly.
+func (l *LocalTask) RunWithTimeout(parent context.Context, runtime connector.Runtime, host connector.Host) {
+	ctx, cancel := context.WithTimeout(parent, l.Timeout)
 	defer cancel()
 
 	resCh := make(chan error)

@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"path"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -52,6 +53,7 @@ func InstallGpuDrivers() error {
 		Runtime: runtime,
 	}
 
-	return p.Start()
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	return p.Start(context.Background())
 
 }

@@ -1,6 +1,8 @@
 package pipelines
 
 import (
+	"context"
+
 	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/module"
@@ -25,6 +27,7 @@ func StartPreCheckPipeline() error {
 		},
 		Runtime: runtime,
 	}
-	return p.Start()
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	return p.Start(context.Background())
 
 }

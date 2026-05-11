@@ -17,6 +17,7 @@
 package pipeline
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -62,13 +63,30 @@ func (p *Pipeline) Init() error {
 	return nil
 }
 
-func (p *Pipeline) Start() error {
+// Start runs the pipeline with the given context. The context is
+// propagated to every Module / Task: cancelling it (e.g. from a
+// SIGINT/SIGTERM in main) makes the pipeline bail out at the next
+// module boundary and abort any in-flight task timeout.
+//
+// A nil ctx is replaced with context.Background() for backwards
+// compatibility with callers that have not been migrated yet.
+func (p *Pipeline) Start(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	logger.Infof("[Job] [%s] start ...", p.Name)
 	if err := p.Init(); err != nil {
 		logger.Errorf("[Job] %s execute failed %v", p.Name, err)
 		return errors.Wrapf(err, "Job %s execute failed", p.Name)
 	}
 	for i := range p.Modules {
+		// Bail out before starting the next module if the caller has
+		// cancelled the context.
+		if err := ctx.Err(); err != nil {
+			logger.Errorf("[Job] [%s] cancelled: %v", p.Name, err)
+			return errors.Wrapf(err, "Job %s cancelled", p.Name)
+		}
+
 		m := p.Modules[i]
 		if m.IsSkip() {
 			continue
@@ -82,7 +100,7 @@ func (p *Pipeline) Start() error {
 		for j := range p.ModulePostHooks {
 			m.AppendPostHook(p.ModulePostHooks[j])
 		}
-		res := p.RunModule(m)
+		res := p.RunModule(ctx, m)
 		err := m.CallPostHook(res)
 		if res.IsFailed() {
 			logger.Errorf("[Job] [%s] execute failed %v", p.Name, err)
@@ -113,14 +131,14 @@ func (p *Pipeline) Start() error {
 	return nil
 }
 
-func (p *Pipeline) RunModule(m module.Module) *ending.ModuleResult {
+func (p *Pipeline) RunModule(ctx context.Context, m module.Module) *ending.ModuleResult {
 	m.Slogan()
 
 	result := ending.NewModuleResult()
 	for {
 		switch m.Is() {
 		case module.TaskModuleType:
-			m.Run(result)
+			m.Run(ctx, result)
 			if result.IsFailed() {
 				return result
 			}
@@ -128,18 +146,18 @@ func (p *Pipeline) RunModule(m module.Module) *ending.ModuleResult {
 		case module.GoroutineModuleType:
 			// We previously os.Exit(1)'d here on failure, which skipped
 			// every defer in the pipeline (SSH cleanup, log flush, ...).
-			// We now surface the failure through the shared
-			// ModuleResult and log it; a follow-up will wire ctx
-			// cancellation so the rest of the pipeline can bail out.
+			// Now we surface the failure through the shared
+			// ModuleResult and log it; with ctx plumbing in place the
+			// rest of the pipeline can also be cancelled by the caller.
 			go func() {
-				m.Run(result)
+				m.Run(ctx, result)
 				if result.IsFailed() {
 					logger.Errorf("[Module] %s (goroutine) failed: %v",
 						m.GetName(), result.CombineResult)
 				}
 			}()
 		default:
-			m.Run(result)
+			m.Run(ctx, result)
 			if result.IsFailed() {
 				return result
 			}

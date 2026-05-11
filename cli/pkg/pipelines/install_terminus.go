@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"fmt"
 	"path"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func CliInstallTerminusPipeline() error {
+func CliInstallTerminusPipeline(ctx context.Context) error {
 	var terminusVersion, _ = phase.GetOlaresVersion()
 	if terminusVersion != "" {
 		return errors.New("Olares is already installed, please uninstall it first.")
@@ -50,7 +51,7 @@ func CliInstallTerminusPipeline() error {
 
 	var p = cluster.InstallSystemPhase(runtime)
 	logger.InfoInstallationProgress("Start to Install Olares ...")
-	if err := p.Start(); err != nil {
+	if err := p.Start(ctx); err != nil {
 		return err
 	}
 
