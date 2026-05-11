@@ -13,7 +13,7 @@ Currently, Olares on Windows has certain limitations including:
 We recommend using it only for development or testing purposes.
 :::
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## System requirements
 
@@ -31,7 +31,7 @@ We recommend using it only for development or testing purposes.
 
 ### Optional hardware
 
-<!--@include: ./gpu-requirements.md{5,}-->
+<!--@include: ./gpu-requirements.md#gpu-requirements-->
 
 :::tip Windows verification
 You can also confirm your GPU in **Task Manager > Performance**. To verify the driver is accessible in WSL, run `nvidia-smi` in your WSL terminal.
@@ -121,7 +121,7 @@ You can also confirm your GPU in **Task Manager > Performance**. To verify the d
    You can get the IPv4 address in advance by running `ipconfig` in the Windows command line.
    :::
 
-<!--@include: ./reusables.md{9,11}-->
+<!--@include: ./reusables.md#root-password-tip-->
 
 :::info Errors during installation?
 If an error occurs during installation, use the following command to uninstall first:
@@ -131,13 +131,15 @@ wsl --unregister ubuntu
 After uninstalling, retry the installation by running the original installation command.
 :::
 
-<!--@include: ./reusables.md{23,37}-->
+<!--@include: ./reusables.md#prepare-wizard-heading-->
+
+<!--@include: ./reusables.md#prepare-wizard-details-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->
 
 ## FAQ
 

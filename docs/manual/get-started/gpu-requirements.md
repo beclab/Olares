@@ -2,6 +2,7 @@
 search: false
 ---
 
+<!-- #region gpu-requirements -->
 A GPU is not required to install Olares, but is necessary for most AI applications. Only NVIDIA GPUs are supported.
 
 - **Architecture**: Turing or newer (GTX 16xx, RTX 20xx, 30xx, 40xx, 50xx series, and later).
@@ -36,3 +37,4 @@ The code name prefix maps to GPU architecture as follows:
 
 You can also verify against the [full compatible GPU list](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus) from the NVIDIA open driver repository.
 :::
+<!-- #endregion gpu-requirements -->

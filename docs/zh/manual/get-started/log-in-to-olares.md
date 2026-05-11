@@ -3,6 +3,7 @@ search: false
 ---
 ## 登录 Olares
 
+<!-- #region log-in-to-olares-steps -->
 1. 打开 Olares 桌面地址，按任意键继续。
 2. 在登录页面输入 Olares 登录密码。
 
@@ -15,3 +16,4 @@ search: false
    ![确认登录](/images/manual/larepass/confirm-login1.png#bordered)
 
 登录后你就会看到 Olares 桌面。🎉
+<!-- #endregion log-in-to-olares-steps -->

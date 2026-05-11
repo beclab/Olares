@@ -1,12 +1,12 @@
 ---
 search: false
 ---
-<!-- Reusable .local domain content. Include by line range.
-     Order: description, URL+HTTP, Windows, then FAQs.
-     Ranges: description 7-8, URL+HTTP 10-23, Windows 25-40 (content only 26-40), FAQs 42-75 -->
+<!-- Reusable .local domain content. Include by named region. -->
 
+<!-- #region local-domain-overview -->
 When your device is on the same local network as Olares, you can use a `.local` domain to reach your services so traffic stays on your LAN.
 
+<!-- #region local-domain-url-format -->
 Use a multi-level `.local` hostname that mirrors your standard URL. This format works with Olares system apps and community apps.
 
 :::tip
@@ -21,9 +21,12 @@ https://<entrance_id>.<username>.olares.com
 ```text
 http://<entrance_id>.<username>.olares.local
 ```
+<!-- #endregion local-domain-url-format -->
+<!-- #endregion local-domain-overview -->
 
 ### Windows
 
+<!-- #region windows-local-domain -->
 On Windows, `.local` hostnames are not resolved by default. Use the LarePass desktop app to add the necessary entries to your hosts file so multi-level `.local` URLs resolve to your Olares device.
 
 1. Open the LarePass app, click your avatar, then **Settings**.
@@ -38,7 +41,9 @@ On Windows, `.local` hostnames are not resolved by default. Use the LarePass des
    b. Open the `hosts` file in a text editor. You should see the `.local` entries that LarePass added.
 
    ![Hosts file updated by LarePass](/images/one/larepass-updated-hosts.png#bordered)
+<!-- #endregion windows-local-domain -->
 
+<!-- #region local-domain-faq -->
 ### Why doesn't the .local domain work in Chrome on macOS?
 
 Chrome may block local URLs if macOS has not granted it local network access.
@@ -72,3 +77,4 @@ To fix it:
 
    ![Safari Privacy settings for .local](/images/manual/get-started/safari-privacy-settings.png#bordered){width=70%}
 4. Reload the `.local` page.
+<!-- #endregion local-domain-faq -->

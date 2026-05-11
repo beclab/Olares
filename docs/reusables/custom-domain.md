@@ -2,22 +2,16 @@
 search: false
 ---
 <!--
-  Reusable content blocks for custom domain setup.
-
-  Block 1 – Create a DID:                  lines 21-31
-  Block 2 – Add domain (TXT + NS):         lines 34-73
-  Block 3 – Create a new organization:      lines 76-106
-  Block 4 – Add a new user:                 lines 109-127
-  Block 5 – Join an existing organization:  lines 130-145
+  Reusable content blocks for custom domain setup. Include by named region.
 
   Used by:
-  - manual/best-practices/set-custom-domain.md (Blocks 1-5)
-  - manual/larepass/create-org-account.md (Blocks 1, 3, 5)
-  - manual/space/host-domain.md (Block 2)
-  - manual/space/manage-domain.md (Block 4)
+  - manual/best-practices/set-custom-domain.md
+  - manual/larepass/create-org-account.md
+  - manual/space/host-domain.md
+  - manual/space/manage-domain.md
 -->
 
-<!-- Block 1: Create a DID -->
+<!-- #region custom-domain-create-did -->
 A DID (Decentralized Identifier) is a temporary account state before you get your final Olares ID. You can only associate a custom domain with the account when it is in the DID stage. To create one:
 
 1. In the LarePass app, go to the account creation page.
@@ -29,10 +23,11 @@ A DID (Decentralized Identifier) is a temporary account state before you get you
    This creates an Olares account in the DID stage. On the **Switch account** page, it displays as "No Olares ID bound" with an identifier like `did:key:xxxx`.
 
    ![DID stage](/images/manual/tutorials/did-stage1.png)
+<!-- #endregion custom-domain-create-did -->
 
-<!-- Block 2: Add domain (TXT + NS) -->
 The following steps use `space.n1.monster` as an example custom domain.
 
+<!-- #region custom-domain-add-domain-steps -->
 1. In Olares Space, go to the **Domain management** page and select **Set up domain name**.
 
    ![Domain management page with Set up domain name button](/images/manual/tutorials/custom-domain-set-up-domain-name.png#bordered)
@@ -71,8 +66,9 @@ The following steps use `space.n1.monster` as an example custom domain.
    :::
 
 Once TXT and NS records are verified, you can proceed to create an organization in LarePass.
+<!-- #endregion custom-domain-add-domain-steps -->
 
-<!-- Block 3: Create a new organization -->
+<!-- #region custom-domain-create-organization -->
 1. Open LarePass on your phone, and in the account creation page, tap <i class="material-symbols-outlined">display_settings</i> in the top-right corner to go to the **Advanced account creation** page.
    ![Advanced account creation option in LarePass](/images/manual/tutorials/custom-domain-advanced.png)
 
@@ -101,11 +97,47 @@ Once TXT and NS records are verified, you can proceed to create an organization 
    ![Olares ID created with admin privileges](/images/manual/tutorials/custom-domain-admin-id-created.png)
 
    Your Olares ID is now created and has admin privileges to manage users under this domain.
+<!-- #endregion custom-domain-create-organization -->
 
-6. Tap **Next** to navigate to the Olares activation page.
-   ![Discover Olares in LarePass](/images/manual/tutorials/custom-domain-discover-olares.png#bordered)
+<!-- #region custom-domain-install-and-activate-olares -->
+Now you can install and activate Olares with your Olares ID.
 
-<!-- Block 4: Add a new user -->
+The installation steps are similar to the standard process. The following example uses Linux. For other systems, refer to the [installation guide](/manual/get-started/install-olares).
+
+:::warning Same network required
+To avoid activation failures, ensure that both your phone and the Olares device are connected to the same network.
+:::
+
+1. Open a terminal on the machine where you want to install Olares, and run the following command:
+
+   ```bash
+   export PREINSTALL=1 &&
+   curl -sSfL https://olares.sh | bash -
+   ```
+
+   This runs a partial installation (prepare phase only) without proceeding to full setup.
+
+2. Open LarePass on your phone, and on your Olares activation page, tap **Discover nearby Olares**. LarePass will list the detected Olares instances in the same network.
+3. Select the target Olares instance from the list and tap **Install now**.
+
+   ![ISO Activate](/images/manual/larepass/iso-activate1.png#bordered)
+
+4. When the installation completes, tap **Activate now**.
+5. In the **Select a reverse proxy** dialog, select a node that is closer to your geographical location. The installer will then configure the HTTPS certificate and DNS for Olares.
+
+   :::tip Note
+   - You can change this setting later on the [Change reverse proxy](/manual/olares/settings/change-frp.md) page in Olares.
+   - If your Olares device is connected to a public IP network, this step will be skipped automatically.
+   :::
+
+6. Follow the on-screen instructions to set the login password for Olares, then tap **Complete**.
+
+   ![ISO Activate-2](/images/manual/larepass/iso-activate-4.png#bordered)
+
+Once activation is complete, LarePass will display the desktop address of your Olares device with the custom domain, such as `https://desktop.alex.space.n1.monster`.
+<!-- #endregion custom-domain-install-and-activate-olares -->
+
+<!-- #region custom-domain-add-user -->
 1. In Olares Space, refresh the **Domain management** page, the domain status now updated to **Allocated**.
    ![Domain member list in Olares Space](/images/manual/tutorials/custom-domain-view-user.png#bordered)
 
@@ -121,12 +153,13 @@ Once TXT and NS records are verified, you can proceed to create an organization 
 
 5. (Optional) Repeat steps 2 and 3 to add more users.
 6. Provide the username and password to the member.
+<!-- #endregion custom-domain-add-user -->
 
 :::tip Manage member list
 As an organization admin, you can manage your organization's member list at any time from the **Domain management** page.
 :::
 
-<!-- Block 5: Join an existing organization -->
+<!-- #region custom-domain-join-organization -->
 1. On the account creation page, tap <i class="material-symbols-outlined">display_settings</i> in the top-right corner to go to the **Advanced account creation** page.
 
    ![Advanced account creation option in LarePass](/images/manual/tutorials/custom-domain-advanced.png)
@@ -143,3 +176,4 @@ As an organization admin, you can manage your organization's member list at any 
    ![Join an organization with Olares ID and password](/images/manual/tutorials/custom-domain-member-olares-id.png)
 
 4. Tap **Continue**.
+<!-- #endregion custom-domain-join-organization -->

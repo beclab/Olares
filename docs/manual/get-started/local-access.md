@@ -16,11 +16,13 @@ It is recommended to enable the LarePass VPN to ensure your connection is always
 - **At home**: It establishes a direct Intranet connection to allow faster file transfers on your local network.
 - **From remote**: It switches to a secure encrypted tunnel so you remain connected safely when accessing remotely.
 
-<!--@include: ../../reusables/larepass-vpn.md{19,24}-->
+<!--@include: ../../reusables/larepass-vpn.md#vpn-setup-notes-->
 
 Enable the LarePass VPN directly on the device you are currently using to access Olares.
 
-<!--@include: ../../reusables/larepass-vpn.md{26,50}-->
+<!--@include: ../../reusables/larepass-vpn.md#enable-larepass-vpn-->
+
+<!--@include: ../../reusables/larepass-vpn.md#check-vpn-status-->
 
 ## Using the .local domain
 
@@ -28,20 +30,20 @@ Use the `.local` domain when your device and Olares are on the same LAN.
 
 ### URL format
 
-<!--@include: ../../reusables/local-domain.md{7,23}-->
+<!--@include: ../../reusables/local-domain.md#local-domain-overview-->
 
 ### macOS
 
 No setup is needed. Use the local URL in your browser (for example, `http://desktop.<username>.olares.local`).
 
 ### Windows
-<!--@include: ../../reusables/local-domain.md{26,40}-->
+<!--@include: ../../reusables/local-domain.md#windows-local-domain-->
 
 ## FAQs
 
-<!--@include: ../../reusables/larepass-vpn.md{51,67}-->
+<!--@include: ../../reusables/larepass-vpn.md#larepass-vpn-faq-->
 
-<!--@include: ../../reusables/local-domain.md{42,75}-->
+<!--@include: ../../reusables/local-domain.md#local-domain-faq-->
 
 ## Learn more
 - [Access Olares locally](../best-practices/local-access.md): Explore detailed instructions for all available local network connection methods.

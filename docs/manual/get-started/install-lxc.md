@@ -8,7 +8,7 @@ LXC (Linux Containers) is a lightweight virtualization method that runs applicat
 Currently, Olares on LXC has certain limitations. We recommend using it only for development or testing purposes.
 :::
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## System requirements
 
@@ -24,11 +24,11 @@ Currently, Olares on LXC has certain limitations. We recommend using it only for
   - PVE 8.2.2
   - Linux container: Debian 12 (for existing LXC containers on PVE)
 
-<!--@include: ./reusables.md{63,65}-->
+<!--@include: ./reusables.md#version-compatibility-->
 
 ### Optional hardware
 
-<!--@include: ./gpu-requirements.md{5,}-->
+<!--@include: ./gpu-requirements.md#gpu-requirements-->
 
 :::tip LXC device passthrough required
 To use the GPU within Olares on LXC, you must configure device passthrough first. Refer to [Configure GPU passthrough in PVE](/manual/best-practices/install-olares-gpu-passthrough.md#configure-gpu-passthrough-in-pve) for instructions.
@@ -154,10 +154,18 @@ To install Olares on an existing LXC container, skip to step 2 directly. Make su
 
 Run the following installation command inside the LXC container:
 
-<!--@include: ./reusables.md{5,37}-->
+<!--@include: ./reusables.md#install-script-command-->
+
+<!--@include: ./reusables.md#root-password-tip-->
+
+<!--@include: ./reusables.md#installation-error-tip-->
+
+<!--@include: ./reusables.md#prepare-wizard-heading-->
+
+<!--@include: ./reusables.md#prepare-wizard-details-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->

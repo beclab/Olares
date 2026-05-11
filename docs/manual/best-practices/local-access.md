@@ -34,11 +34,13 @@ There are four ways to establish a local connection:
 ## Method 1: Enable LarePass VPN
 The LarePass VPN is designed to secure your connection while optimizing performance. When enabled, LarePass detects if you are on the same network as your device and switches to **Intranet** mode.
 
-<!--@include: ../../reusables/larepass-vpn.md{19,24}-->
+<!--@include: ../../reusables/larepass-vpn.md#vpn-setup-notes-->
 
 Enable the LarePass VPN directly on the device you are currently using to access Olares.
 
-<!--@include: ../../reusables/larepass-vpn.md{26,50}-->
+<!--@include: ../../reusables/larepass-vpn.md#enable-larepass-vpn-->
+
+<!--@include: ../../reusables/larepass-vpn.md#check-vpn-status-->
 
 ## Method 2: Use `.local` domain
 
@@ -63,7 +65,7 @@ http://<entrance_id>-<username>-olares.local
 
 The multi-level format below matches the structure of your standard Olares URL. Use it as shown.
 
-<!--@include: ../../reusables/local-domain.md{7,23}-->
+<!--@include: ../../reusables/local-domain.md#local-domain-overview-->
 
 ![Multi-level local domain](/images/manual/get-started/multilevel-local-domain-mac.png#bordered)
 
@@ -74,7 +76,7 @@ Therefore, no extra setup is needed. You can directly use local URL in your brow
 
 #### Windows
 
-<!--@include: ../../reusables/local-domain.md{26,40}-->
+<!--@include: ../../reusables/local-domain.md#windows-local-domain-->
 
 ## Method 3: Configure local DNS
 For a seamless experience where standard URLs resolve to your local IP address automatically, you can configure your network DNS. This configuration ensures consistent access across all devices on the network without requiring individual client setup.
@@ -187,6 +189,6 @@ If the IP address starts with `192.168`, it indicates successful configuration.
 
 ## FAQs
 
-<!--@include: ../../reusables/larepass-vpn.md{51,67}-->
+<!--@include: ../../reusables/larepass-vpn.md#larepass-vpn-faq-->
 
-<!--@include: ../../reusables/local-domain.md{42,75}-->
+<!--@include: ../../reusables/local-domain.md#local-domain-faq-->
