@@ -21,10 +21,10 @@ import (
 // non-privileged callers see themselves rather than a 403. Server flow
 // (users.controller.ts:71-93):
 //
-//   1. proxy app-service /app-service/v1/users (ListResult with all users)
-//   2. resolve currentUser by olaresId.split('@')[0]
-//   3. if currentUser is owner/admin → return as-is
-//      else → return only currentUser
+//  1. proxy app-service /app-service/v1/users (ListResult with all users)
+//  2. resolve currentUser by olaresId.split('@')[0]
+//  3. if currentUser is owner/admin → return as-is
+//     else → return only currentUser
 //
 // Wire shape (after step 3, what NestJS sends back):
 //
@@ -108,7 +108,7 @@ func runList(ctx context.Context, f *cmdutil.Factory, outputRaw string) error {
 	}
 
 	var resp appServiceListResult[userInfo]
-	if err := decodeListResult(ctx, pc.doer, "/api/users/v2", &resp); err != nil {
+	if err := decodeListResult(ctx, pc.Doer, "/api/users/v2", &resp); err != nil {
 		return err
 	}
 
