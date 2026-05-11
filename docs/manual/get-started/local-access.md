@@ -20,7 +20,7 @@ It is recommended to enable the LarePass VPN to ensure your connection is always
 
 Enable the LarePass VPN directly on the device you are currently using to access Olares.
 
-<!--@include: ../../reusables/larepass-vpn.md{26,56}-->
+<!--@include: ../../reusables/larepass-vpn.md{26,50}-->
 
 ## Using the .local domain
 
@@ -37,9 +37,9 @@ No setup is needed. Use the local URL in your browser (for example, `http://desk
 ### Windows
 <!--@include: ../../reusables/local-domain.md{26,40}-->
 
-### FAQs
+## FAQs
 
-<!--@include: ../../reusables/larepass-vpn.md{57,63}-->
+<!--@include: ../../reusables/larepass-vpn.md{51,67}-->
 
 <!--@include: ../../reusables/local-domain.md{42,75}-->
 

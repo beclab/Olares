@@ -1,13 +1,14 @@
 ---
-outline: [2, 3]
-description: Troubleshoot LarePass VPN not working on macOS or Windows.
+outline: deep
+description: Troubleshoot LarePass VPN connection issues on macOS, Windows, and mobile devices.
 ---
-
 # LarePass VPN not working
 
-Use this guide when the LarePass VPN toggle does nothing, the VPN stays stuck in "connecting", or a previously working VPN connection suddenly stops on macOS or Windows.
+Use this guide when LarePass VPN does not work on macOS, Windows, or mobile devices. This includes cases where the VPN toggle does nothing, the VPN stays stuck in "Connecting", a previously working VPN connection suddenly stops, or the VPN turns off automatically after showing "Connecting".
 
-## Condition
+## VPN toggle does nothing or stays stuck
+
+### Condition
 
 **macOS**<br>
 - Clicking the VPN toggle in the LarePass desktop client does nothing, or the VPN status stays stuck in "connecting".
@@ -16,15 +17,15 @@ Use this guide when the LarePass VPN toggle does nothing, the VPN stays stuck in
 **Windows**<br>
 - Clicking the VPN toggle in the LarePass desktop client does nothing, or the VPN cannot be enabled.
 
-## Cause
+### Cause
 
 - **macOS**: LarePass VPN requires both a system-level network extension and a VPN configuration to be fully set up. If you skipped or did not complete either step during the initial setup prompt, or if the network extension has become stuck or corrupted, macOS will block LarePass from creating the VPN tunnel.
 
 - **Windows**: Third-party antivirus or security software may mistakenly flag the LarePass desktop client as suspicious, preventing the VPN service from starting.
 
-## Solution
+### Solution
 
-### macOS
+#### macOS
 
 Reset the network extension and complete the full setup flow to restore the VPN.
 
@@ -51,7 +52,7 @@ Depending on your macOS version, the UI might look slightly different.
    c. When prompted to add VPN configurations, click **Allow**.
    ![Prompt to add VPN configuration](/images/manual/help/ts-vpn-add-vpn-configuration.png#bordered){width=30%}
 
-### Windows
+#### Windows
 
 :::info LarePass blocked on first launch
 If your antivirus blocked LarePass when you first opened it after installation, allow the app in your security software before following the steps below.
@@ -64,3 +65,21 @@ If your antivirus blocked LarePass when you first opened it after installation, 
 3. Apply the changes and restart your antivirus or security software if required.
 4. Quit and reopen the LarePass desktop client.
 5. Try enabling **VPN connection** again from within LarePass.
+
+## VPN turns off automatically after showing Connecting
+
+### Condition
+
+You turn on the VPN connection, but the status stays on "Connecting" for a while. Then the VPN connection turns off automatically.
+
+### Cause
+
+The system time on the LarePass client device may be incorrect, which can cause the VPN handshake to fail.
+
+### Solution
+
+1. Open the date and time settings on the device where you are using LarePass.
+2. Turn on automatic time synchronization.
+   - **Mobile**: Check your phone's date and time settings.
+   - **Desktop**: Check your computer's date and time settings.
+3. Reopen LarePass and enable the VPN connection again.

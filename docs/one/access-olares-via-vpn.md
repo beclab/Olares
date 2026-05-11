@@ -26,12 +26,12 @@ While this address works from anywhere, it's recommended to enable the LarePass 
 
 ## Step 2: Enable LarePass VPN
 
-<!--@include: ../reusables/larepass-vpn.md{18,48}-->
+<!--@include: ../reusables/larepass-vpn.md{18,42}-->
 
 ## Step 3: Verify the connection type
 
-<!--@include: ../reusables/larepass-vpn.md{49,56}-->
+<!--@include: ../reusables/larepass-vpn.md{43,50}-->
 
 ## Troubleshooting
 
-<!--@include: ../reusables/larepass-vpn.md{57,63}-->
+<!--@include: ../reusables/larepass-vpn.md{51,67}-->

@@ -38,7 +38,7 @@ The LarePass VPN is designed to secure your connection while optimizing performa
 
 Enable the LarePass VPN directly on the device you are currently using to access Olares.
 
-<!--@include: ../../reusables/larepass-vpn.md{26,56}-->
+<!--@include: ../../reusables/larepass-vpn.md{26,50}-->
 
 ## Method 2: Use `.local` domain
 
@@ -187,6 +187,6 @@ If the IP address starts with `192.168`, it indicates successful configuration.
 
 ## FAQs
 
-<!--@include: ../../reusables/larepass-vpn.md{57,63}-->
+<!--@include: ../../reusables/larepass-vpn.md{51,67}-->
 
 <!--@include: ../../reusables/local-domain.md{42,75}-->

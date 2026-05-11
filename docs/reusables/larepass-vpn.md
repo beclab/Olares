@@ -2,8 +2,8 @@
 search: false
 ---
 <!-- Reusable LarePass VPN content. Include by line range.
-     Steps (no headings): Step 1 7-16, Step 2 18-48, Step 3 49-56.
-     FAQs: 57-63 -->
+     Steps (no headings): Step 1 7-16, Step 2 18-42, Step 3 43-50.
+     FAQs: 51-67 -->
 
 To use the secure VPN connection, the LarePass client must be installed on the device you are using to access Olares.
 
@@ -40,12 +40,6 @@ On iOS or macOS, you may be prompted to add a VPN Configuration to your system s
 </template>
 </tabs>
 
-:::tip VPN connection cannot be enabled
-If you turn on the VPN connection but the status remains on **Connecting** and then turns off automatically, the system time on your LarePass client device may be incorrect.
-
-Check the time on your current device and turn on automatic time synchronization. On mobile, check your phone's time. On desktop, check your computer's time. After that, try enabling the VPN connection again.
-:::
-
 Once enabled, check the status indicator in LarePass to verify the connection type:
 
 | Status       | Description                                              |
@@ -56,8 +50,18 @@ Once enabled, check the status indicator in LarePass to verify the connection ty
 
 ### Why doesn't LarePass VPN work on my Mac anymore?
 
-macOS blocks the VPN tunnel if the network extension or VPN configuration was not fully set up, or if the extension has become stuck or corrupted. See [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working) to reset the extension and restore the VPN.
+macOS may block the VPN tunnel if the network extension or VPN configuration was not fully set up, or if the extension has become stuck or corrupted.
+
+To resolve this issue, follow [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working#vpn-toggle-does-nothing-or-stays-stuck) to reset the extension and restore the VPN.
 
 ### Why can't I enable LarePass VPN on Windows?
 
-Third-party antivirus or security software may mistakenly flag LarePass as suspicious, preventing the VPN service from starting. See [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working) to resolve the issue.
+Third-party antivirus or security software may mistakenly flag LarePass as suspicious, preventing the VPN service from starting.
+
+To resolve this issue, see [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working#vpn-toggle-does-nothing-or-stays-stuck).
+
+### Why does the VPN connection turn off after showing Connecting?
+
+If you turn on the VPN connection, but the status stays on **Connecting** for a while and then turns off automatically, the system time on your LarePass client device may be incorrect.
+
+To resolve this issue, see [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working.md#vpn-turns-off-automatically-after-showing-connecting).

@@ -2,8 +2,8 @@
 search: false
 ---
 <!-- 可复用的 LarePass 专用网络内容。按行号范围引用。
-     步骤（无标题）：Step 1 7-16，Step 2 18-48，Step 3 49-56。
-     常见问题：57-63 -->
+     步骤（无标题）：Step 1 7-16，Step 2 18-42，Step 3 43-50。
+     常见问题：51-67 -->
 
 要使用安全专用网络连接，必须在用来访问 Olares 的设备上安装 LarePass 客户端。
 
@@ -40,12 +40,6 @@ search: false
 </template>
 </tabs>
 
-:::tip 无法开启专用网络连接
-如果开启专用网络连接后，连接状态一直停留在**连接中**，随后自动关闭，可能是 LarePass 客户端设备的系统时间不正确。
-
-请检查当前设备的时间，并开启自动对时。手机端请检查手机时间，桌面端请检查电脑时间。完成后，重新尝试开启专用网络连接。
-:::
-
 启用后，在 LarePass 中查看状态指示以确认连接类型：
 
 | 状态       | 描述                                             |
@@ -56,8 +50,18 @@ search: false
 
 ### 为什么在 Mac 上无法再启用 LarePass 专用网络？
 
-如果网络扩展或 VPN 配置未完整设置，或网络扩展出现卡死、损坏，macOS 会阻止 LarePass 建立专用网络隧道。参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working)，重置扩展并恢复专用网络连接。
+如果网络扩展或 VPN 配置未完整设置，或网络扩展出现卡死、损坏，macOS 会阻止 LarePass 建立专用网络隧道。
+
+参考 [LarePass 专用网络无法使用](/manual/help/ts-larepass-vpn-not-working#vpn-toggle-does-nothing-or-stays-stuck) 中的步骤重置扩展并恢复专用网络连接。
 
 ### 为什么在 Windows 上无法启用 LarePass 专用网络？
 
-第三方杀毒或安全软件可能误将 LarePass 标记为可疑程序，导致专用网络服务无法启动。参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working)解决该问题。
+第三方杀毒或安全软件可能误将 LarePass 标记为可疑程序，导致专用网络服务无法启动。
+
+参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working)解决该问题。
+
+### 为什么专用网络连接显示“连接中”后会自动关闭？
+
+如果开启专用网络连接后，状态一直停留在”连接中“，随后自动关闭，可能是 LarePass 客户端设备的系统时间不正确。
+
+参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working.md#vpn-turns-off-automatically-after-showing-connecting)解决该问题。

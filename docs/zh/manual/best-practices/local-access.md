@@ -38,7 +38,7 @@ LarePass 专用网络旨在兼顾连接安全与性能优化。启用后，LareP
 
 在用来访问 Olares 的当前设备上直接启用 LarePass 专用网络。
 
-<!--@include: ../../reusables/larepass-vpn.md{26,56}-->
+<!--@include: ../../reusables/larepass-vpn.md{26,50}-->
 
 ## 方法 2：使用 `.local` 域名
 
@@ -186,7 +186,6 @@ ping desktop.<username>.olares.cn
 
 
 ## 常见问题
+<!--@include: ../../reusables/larepass-vpn.md{51,67}-->
 
-<!--@include: ../../reusables/larepass-vpn.md{57,63}-->
-
-<!--@include: ../../reusables/local-domain.md{42,75}-->
+<!--@include: ../../reusables/local-domain.md{41,75}-->
