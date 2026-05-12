@@ -7,7 +7,7 @@ description: Technical guide for installing and activating an Olares device usin
 
 This tutorial walks you through activating an Olares device (e.g., Olares One) using the Olares CLI tool. The process assumes the device is freshly unboxed and has not been installed or activated.
 
-## Learning bjectives
+## Learning objectives
 
 In this tutorial, you will learn how to:
 
