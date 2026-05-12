@@ -90,8 +90,7 @@ Run the activation command to configure and secure your device. This process con
 
     | Parameter | Description |
     |:----------|:------------|
-    | `olares-id` | The Olares ID you created in LarePass, <br>for example
-  `alice123@olares.com`. |
+    | `olares-id` | The Olares ID you created in LarePass, for example `alice123@olares.com`. |
     | `mnemonic` | The 12-word mnemonic phrase of your Olares ID. |
     | `password` | The default Olares login password from Step 3. |
     | `reset-password` | A new login password to replace the default one. |
