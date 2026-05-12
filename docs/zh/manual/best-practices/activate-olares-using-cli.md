@@ -17,10 +17,12 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 
 ## 前提条件
 
-- **设备连接**：已通过键盘和屏幕直连 Olares 设备，或已通过 SSH 登录到该设备。
-- **网络连接**：Olares 设备需要连接到互联网，以便下载安装包、查询 FRP 服务器和完成激活。
-- **root 权限**：确保拥有 root 权限。所有安装和激活命令都需要在设备上使用 `sudo` 或 root 权限执行。
-- **LarePass 准备**：已使用 LarePass 应用注册了 Olares ID。
+开始之前，确保满足以下要求：
+
+- 可以通过键盘和屏幕直接操作 Olares 设备，或者通过 SSH 连接设备。
+- 设备已连接互联网，用于下载安装包、查询 FRP 服务器和完成激活。
+- 可以以 root 用户身份运行命令，或者在命令前添加 `sudo`。
+- 已使用 LarePass 应用注册了 Olares ID，并[备份了 12 个单词的助记词](/zh/manual/larepass/back-up-mnemonics.md)。
 
     ![快速创建](/images/zh/manual/tutorials/create-olares-id.png)
 
@@ -84,15 +86,15 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 
     | 参数 | 说明 |
     |:----------|:------------|
-    | `olares-id` | Olares 生态系统中的唯一标识符。注册后可在 LarePass 应用中找到。 |
-    | `mnemonic` | LarePass 应用中的助记词。 |
+    | `olares-id` | 在 LarePass 中创建的 Olares ID，例如 `alice123@olares.com`。 |
+    | `mnemonic` | Olares ID 对应的 12 单词助记词。 |
     | `password` | 步骤 3 中生成的 Olares 默认登录密码。 |
-    | `reset-password` | 为 Olares 指定一个新的登录密码。 |
-    | `authurl` | 输入步骤 3 中生成的 `wizard-url`。 |
-    | `vault` | 输入 `wizard-url` 并加 `/server`后缀。 |
-    | `bfl` | 输入步骤 3 中生成的 `wizard-url`。 |
-    | `host` | 输入步骤 2 中选择的 FRP 主机地址。 |
-    | `enable-tunnel` | 设置为 `true` 以启用隧道模式进行激活。 |
+    | `reset-password` | 用于替换默认密码的新登录密码。 |
+    | `authurl` | 步骤 3 中的 Wizard URL。 |
+    | `vault` | 步骤 3 中的 Wizard URL，后接 `/server`。 |
+    | `bfl` | 步骤 3 中的 Wizard URL。 |
+    | `host` | 步骤 2 中选择的 FRP 主机地址。 |
+    | `enable-tunnel` | 设置为 `true` 以启用隧道模式。 |
 
 2. 将以下命令中的占位符替换为实际值，然后运行。
 
