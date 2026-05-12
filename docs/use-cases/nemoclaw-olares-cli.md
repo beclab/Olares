@@ -68,7 +68,7 @@ Olares CLI requires your account password. Sign in from the NemoClaw CLI before 
 
 3. Install the **Olares Shared** skill first because it's the foundation of the other Olares skills.
 4. Install the remaining Olares skills, such as **Olares Files** and **Olares Market**.
-5. Open the chat page in the OpenClaw Web UI and run `/new` to start a new session so the agent picks up the newly installed skills. If you've configured channels such as Discord, also run `/new` in each channel conversation.
+5. Open the chat page in the OpenClaw Web UI and run `/reset` to start a new session so the agent picks up the newly installed skills. If you've configured channels such as Discord, also run `/reset` in each channel conversation.
 
 :::info Retry on 429 errors
 If you see a 429 error when downloading a skill, wait a moment and try again.

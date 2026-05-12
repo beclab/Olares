@@ -74,7 +74,7 @@ The gog skill lets your NemoClaw agent interact with Google Workspace services s
     | Install missing skill dependencies | Navigate to the skill **gog**, press **Space** to select it, then press **Enter**. |
     | Set [API_KEY] for [skill] | Select **No** for all these settings. |
 
-5. Open the chat page in the OpenClaw Web UI and run `/new` to start a new session so the agent picks up the newly installed skill. If you've configured channels such as Discord, also run `/new` in each channel conversation.
+5. Open the chat page in the OpenClaw Web UI and run `/reset` to start a new session so the agent picks up the newly installed skill. If you've configured channels such as Discord, also run `/reset` in each channel conversation.
 
    :::tip
    You can also install skills from the OpenClaw Web UI. Go to **Skills**, search for `gog` in ClawHub, and click **Install**.

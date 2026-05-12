@@ -319,7 +319,7 @@ Skills add capabilities to your agent, such as managing Olares files and apps or
 1. Open the OpenClaw Web UI from Launchpad.
 2. Go to **Skills**.
 3. Search for the skill in ClawHub and click **Install**.
-4. Open the chat page in the OpenClaw Web UI and run `/new` to start a new session so the agent picks up the newly installed skill. If you've configured channels such as Discord, also run `/new` in each channel conversation.
+4. Open the chat page in the OpenClaw Web UI and run `/reset` to start a new session so the agent picks up the newly installed skill. If you've configured channels such as Discord, also run `/reset` in each channel conversation.
 
    :::tip
    You can also install skills from the NemoClaw CLI sandbox using `openclaw config --section skills`.
