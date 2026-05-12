@@ -18,10 +18,15 @@ In this tutorial, you will learn how to:
 
 ## Prerequisites
 
-- **Connection to device**: You have logged into the Olares device physically or via SSH.
-- **Network connectivity**: The device must have access to the internet to download packages, query FRP servers, and complete activation.
-- **Root privileges**: Ensure you have root privileges. All installation and activation commands require `sudo` or root access on the device.
-- **LarePass preparation**: You have registered an Olares ID using the LarePass app.
+  Before you begin, make sure the following requirements are met:
+
+  - You can access the Olares device directly with a keyboard and monitor, or via
+  SSH.
+  - The device has internet access to download packages, query FRP servers, and
+  complete activation.
+  - You can run commands as the root user, or prepend commands with `sudo`.
+  - You have created an Olares ID using the LarePass app, and have [backed up your
+   12-word mnemonic phrase](../larepass/back-up-mnemonics.md).
 
     ![Fast creation](/images/manual/get-started/create-olares-id.png)
 
@@ -57,7 +62,7 @@ Find an available FRP host to enable remote access to your device.
 
 2. Select a host address from the output list and save it for the activation step.
 
-## Step 3: Install Olares OS
+## Step 3: Install Olares
 
 :::info For Olares One hardware
 A fresh Olares One device is shipped in an uninstalled state. You must run the installation command to set up Olares first before you attempt activation.
@@ -85,14 +90,15 @@ Run the activation command to configure and secure your device. This process con
 
     | Parameter | Description |
     |:----------|:------------|
-    | `olares-id` | The unique identifier within the Olares ecosystem.<br>Find it in the LarePass app after registration. |
-    | `mnemonic` | Your user backup phrase from the LarePass app. |
+    | `olares-id` | The Olares ID you created in LarePass, <br>for example
+  `alice123@olares.com`. |
+    | `mnemonic` | The 12-word mnemonic phrase of your Olares ID. |
     | `password` | The default Olares login password generated in Step 3. |
     | `reset-password` | Specify a new login password for Olares. |
     | `authurl` | Enter the `wizard-url` generated in Step 3. |
     | `vault` | Enter the `wizard-url` and append `/server`.  |
     | `bfl` | Enter the `wizard-url` generated in Step 3. |
-    | `host` | Specify the FRP host address selected in Step 2. |
+    | `host` | Enter the FRP host address specified in Step 2. |
     | `enable-tunnel` | Enter `true` to activate using tunnel mode. |
 
 2. Replace the placeholders in the following command with your specific values, and then run it.
