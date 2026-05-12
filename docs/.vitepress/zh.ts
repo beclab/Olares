@@ -67,6 +67,10 @@ const side = {
             {
               text: "无法在应用独占模式移除已暂停应用",
               link: "/zh/manual/help/ts-cs-app-reappears",
+            },
+            {
+              text: "控制面板启停后应用状态不一致",
+              link: "/zh/manual/help/ts-inconsistent-app-status",
             },            
           ],
         },

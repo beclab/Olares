@@ -69,6 +69,10 @@ const side = {
               text: "Cannot remove a stopped app in App exclusive mode",
               link: "/manual/help/ts-cs-app-reappears",
             },
+            {
+              text: "App status differs after Control Hub start or stop",
+              link: "/manual/help/ts-inconsistent-app-status",
+            },
           ],
         },
         {
