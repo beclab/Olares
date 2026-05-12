@@ -130,4 +130,4 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 ## 了解更多
 
 - [创建 Olares ID](/zh/manual/get-started/create-olares-id.md)
-- [Olares CLI](/../zh/developer/install/cli/olares-cli.md)
+- [Olares CLI](/zh/developer/install/cli/olares-cli.md)
