@@ -17,16 +17,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Known issues",
           link: "/zh/one/known-issues",
-        },
-        {
-          text: "Troubleshooting",
-          collapsed: true,
-          items: [
-            {
-              text: "Cannot enter BIOS",
-              link: "/zh/one/ts-bios-black-screen",
-            },
-          ],
         },         
       ],
     },
@@ -250,7 +240,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/update",
         },
         {
-          text: "Update firmware",
+          text: "Manage BIOS",
           link: "/zh/one/update-firmware",
         },        
         {
