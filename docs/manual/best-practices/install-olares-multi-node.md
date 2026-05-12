@@ -17,7 +17,7 @@ This feature is currently in the **Alpha** stage and is not recommended for prod
 If you want to set up a multi-node Olares cluster using two Olares One devices, see [Connect two Olares One](/one/connect-two-olares-one.md).
 :::
 
-## Objectives
+## Learning objectives
 
 In this tutorial, you will learn how to:
 

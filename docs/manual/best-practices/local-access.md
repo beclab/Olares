@@ -11,7 +11,7 @@ However, accessing your devices locally provides several advantages:
 - **Enhanced privacy**: Keep your traffic contained within your home network for added security.
 - **Offline independence**: Access your data and apps even when your internet service is unavailable.
 
-## Objectives
+## Learning objectives
 By the end of this tutorial, you will learn how to:
 
 - Establish a secure, high-speed local connection using the LarePass VPN.
