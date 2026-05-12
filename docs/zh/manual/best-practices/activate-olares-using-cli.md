@@ -18,6 +18,7 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 ## 前提条件
 
 - **设备连接**：已通过键盘和屏幕直连 Olares 设备，或已通过 SSH 登录到该设备。
+- **网络连接**：Olares 设备需要连接到互联网，以便下载安装包、查询 FRP 服务器和完成激活。
 - **root 权限**：确保拥有 root 权限。所有安装和激活命令都需要在设备上使用 `sudo` 或 root 权限执行。
 - **LarePass 准备**：已使用 LarePass 应用注册了 Olares ID。
 
@@ -130,4 +131,4 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 ## 了解更多
 
 - [创建 Olares ID](/zh/manual/get-started/create-olares-id.md)
-- [Olares CLI](/zh/developer/install/cli/olares-cli.md)
+- [Olares CLI 命令行工具](/zh/developer/install/cli/olares-cli.md)

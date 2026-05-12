@@ -7,7 +7,7 @@ description: Technical guide for installing and activating an Olares device usin
 
 This tutorial walks you through activating an Olares device (e.g., Olares One) using the Olares CLI tool. The process assumes the device is freshly unboxed and has not been installed or activated.
 
-## Objectives
+## Learning bjectives
 
 In this tutorial, you will learn how to:
 
@@ -19,6 +19,7 @@ In this tutorial, you will learn how to:
 ## Prerequisites
 
 - **Connection to device**: You have logged into the Olares device physically or via SSH.
+- **Network connectivity**: The device must have access to the internet to download packages, query FRP servers, and complete activation.
 - **Root privileges**: Ensure you have root privileges. All installation and activation commands require `sudo` or root access on the device.
 - **LarePass preparation**: You have registered an Olares ID using the LarePass app.
 
