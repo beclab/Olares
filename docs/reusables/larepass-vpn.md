@@ -2,8 +2,8 @@
 search: false
 ---
 <!-- Reusable LarePass VPN content. Include by line range.
-     Steps (no headings): Step 1 7-16, Step 2 18-41, Step 3 42-49.
-     FAQs: 50-57 -->
+     Steps (no headings): Step 1 7-16, Step 2 18-42, Step 3 43-50.
+     FAQs: 51-67 -->
 
 To use the secure VPN connection, the LarePass client must be installed on the device you are using to access Olares.
 
@@ -50,8 +50,18 @@ Once enabled, check the status indicator in LarePass to verify the connection ty
 
 ### Why doesn't LarePass VPN work on my Mac anymore?
 
-macOS blocks the VPN tunnel if the network extension or VPN configuration was not fully set up, or if the extension has become stuck or corrupted. See [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working) to reset the extension and restore the VPN.
+macOS may block the VPN tunnel if the network extension or VPN configuration was not fully set up, or if the extension has become stuck or corrupted.
+
+To resolve this issue, follow [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working#macos-reset-the-network-extension) to reset the extension and restore the VPN.
 
 ### Why can't I enable LarePass VPN on Windows?
 
-Third-party antivirus or security software may mistakenly flag LarePass as suspicious, preventing the VPN service from starting. See [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working) to resolve the issue.
+Third-party antivirus or security software may mistakenly flag LarePass as suspicious, preventing the VPN service from starting.
+
+To resolve this issue, see [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working#windows-add-larepass-to-the-allowlist).
+
+### Why does the VPN connection turn off after showing Connecting?
+
+If you turn on the VPN connection, but the status stays on **Connecting** for a while and then turns off automatically, the system time on your LarePass client device may be incorrect.
+
+To resolve this issue, see [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working.md#sync-device-time).
