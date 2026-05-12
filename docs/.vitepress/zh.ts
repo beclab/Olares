@@ -69,7 +69,7 @@ const side = {
               link: "/zh/manual/help/ts-cs-app-reappears",
             },
             {
-              text: "控制面板启停后应用状态不一致",
+              text: "控制面板启停应用后状态不一致",
               link: "/zh/manual/help/ts-inconsistent-app-status",
             },            
           ],
