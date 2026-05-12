@@ -268,6 +268,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               text: "Reinstall Olares OS",
               link: "/zh/one/create-drive",
             },
+            {
+              text: "Create bootable USB drive",
+              link: "/zh/one/create-bootable-usb",
+            },
           ],
         },
       ]
