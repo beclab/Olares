@@ -522,6 +522,10 @@ const side = {
       collapsed: true,
       items: [
         {
+          text: "使用 Olares CLI 激活 Olares 设备",
+          link: "/zh/manual/best-practices/activate-olares-using-cli",
+        },        
+        {
           text: "设置自定义域名",
           link: "/zh/manual/best-practices/set-custom-domain",
         },
