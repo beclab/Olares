@@ -93,13 +93,13 @@ Run the activation command to configure and secure your device. This process con
     | `olares-id` | The Olares ID you created in LarePass, <br>for example
   `alice123@olares.com`. |
     | `mnemonic` | The 12-word mnemonic phrase of your Olares ID. |
-    | `password` | The default Olares login password generated in Step 3. |
-    | `reset-password` | Specify a new login password for Olares. |
-    | `authurl` | Enter the `wizard-url` generated in Step 3. |
-    | `vault` | Enter the `wizard-url` and append `/server`.  |
-    | `bfl` | Enter the `wizard-url` generated in Step 3. |
-    | `host` | Enter the FRP host address specified in Step 2. |
-    | `enable-tunnel` | Enter `true` to activate using tunnel mode. |
+    | `password` | The default Olares login password from Step 3. |
+    | `reset-password` | A new login password to replace the default one. |
+    | `authurl` | The Wizard URL from Step 3. |
+    | `vault` | The Wizard URL from Step 3, followed by `/server`.  |
+    | `bfl` | The Wizard URL from Step 3. |
+    | `host` | The FRP host address from Step 2. |
+    | `enable-tunnel` | Set to `true` to enable tunnel mode. |
 
 2. Replace the placeholders in the following command with your specific values, and then run it.
 
