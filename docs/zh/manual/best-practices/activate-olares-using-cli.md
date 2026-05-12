@@ -7,7 +7,7 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 
 本教程介绍如何使用 Olares CLI 工具激活 Olares 设备（例如 Olares One）。以下步骤假定设备是全新开箱的，尚未安装或激活。
 
-## 目标
+## 学习目标
 
 通过本教程，你将学习：
 - 下载并解压 Olares CLI 工具。
