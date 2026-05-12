@@ -9,16 +9,16 @@ Use this guide when an app's status in Control Hub does not match what you see i
 ## Condition
 
 - After you stop an app in Control Hub:
-    - In **Settings** > **Applications**, the app still appears as **Running**.
-    - In **Market** > **My Olares**, the app still shows the **Open** button.
-    - In Launchpad, the app still appears available to open, without the orange paused indicator.
-    - When you open the app from Launchpad or Market, the app fails to load.
+  - In **Settings** > **Applications**, the app still appears as **Running**.
+  - In **Market** > **My Olares**, the app still shows the **Open** button.
+  - In Launchpad, the app still appears available to open, without the orange paused indicator.
+  - When you open the app from Launchpad or Market, the app fails to load.
 
 - After you start an app in Control Hub:
-    - In **Settings** > **Applications**, the app still appears as **Stopped**.
-    - In **Market** > **My Olares**, the app still shows the **Stopped** button.
-    - In Launchpad, the app still appears paused, with an orange indicator near the app name.
-    - When you open the app from Launchpad, Olares asks you to resume the app first.
+  - In **Settings** > **Applications**, the app still appears as **Stopped**.
+  - In **Market** > **My Olares**, the app still shows the **Stopped** button.
+  - In Launchpad, the app still appears paused, with an orange indicator near the app name.
+  - When you open the app from Launchpad, Olares asks you to resume the app first.
 
 ## Cause
 
@@ -28,21 +28,19 @@ When you start or stop an app from Control Hub, the app workload is changed dire
 
 ## Solution
 
-Use Settings or Market to perform the corresponding action and sync the app status:
+To sync the app status, repeat the same operation from Settings or Market.
 
-- If you stopped the app in Control Hub, select **Stop**.
-- If you started the app in Control Hub, select **Resume**.
+The following steps use the case where you have stopped the app in Control Hub, but the app still appears as running in Launchpad, Settings, or Market.
 
-**From Settings**
+1. Open **Settings** > **Applications**, or open **Market** > **My Olares**.
 
-1. Go to **Settings** > **Applications**.
 2. Find the affected app.
-3. Click **Stop** or **Resume**.
 
-**From Market**
+3. Stop the app again from Settings or Market:
 
-1. Go to **Market** > **My Olares**.
-2. Find the affected app.
-3. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the app's operation button, and select **Stop** or **Resume**.
+   - In Settings, click **Stop**.
+   - In Market, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the app's operation button, and select **Stop**.
 
-Wait a few moments. The app status in Launchpad, Settings, and Market should now match the app state set from Control Hub.
+4. Wait a few moments. The app status in Launchpad, Settings, and Market should now match the status in Control Hub.
+
+If you have started the app in Control Hub, but the app still appears as stopped in Launchpad, Settings, or Market, follow the same steps and select **Resume** instead.
