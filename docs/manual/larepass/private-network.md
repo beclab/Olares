@@ -56,7 +56,7 @@ When accessing private entrances from an external environment through VPN, if th
 
 ### VPN turns off automatically after showing Connecting
 
-If the VPN status stays on **Connecting** for a while and then turns off automatically, see [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working#vpn-turns-off-automatically-after-showing-connecting).
+If the VPN status stays on **Connecting** for a while and then turns off automatically, see [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working).
 
 ### Diagnostic messages in LarePass
 

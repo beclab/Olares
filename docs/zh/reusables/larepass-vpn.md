@@ -52,16 +52,16 @@ search: false
 
 如果网络扩展或 VPN 配置未完整设置，或网络扩展出现卡死、损坏，macOS 会阻止 LarePass 建立专用网络隧道。
 
-参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working#vpn-toggle-does-nothing-or-stays-stuck)中的步骤重置扩展并恢复专用网络连接。
+参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working#macos-重置网络扩展)中的步骤重置扩展并恢复专用网络连接。
 
 ### 为什么在 Windows 上无法启用 LarePass 专用网络？
 
 第三方杀毒或安全软件可能误将 LarePass 标记为可疑程序，导致专用网络服务无法启动。
 
-参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working)解决该问题。
+参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working#windows-将-larepass-加入白名单)解决该问题。
 
 ### 为什么专用网络连接显示“连接中”后会自动关闭？
 
 如果开启专用网络连接后，状态一直停留在“连接中”，随后自动关闭，可能是 LarePass 客户端设备的系统时间不正确。
 
-参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working.md#vpn-turns-off-automatically-after-showing-connecting)解决该问题。
+参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working.md#同步设备时间)解决该问题。

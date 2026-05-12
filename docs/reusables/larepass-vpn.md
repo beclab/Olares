@@ -52,16 +52,16 @@ Once enabled, check the status indicator in LarePass to verify the connection ty
 
 macOS may block the VPN tunnel if the network extension or VPN configuration was not fully set up, or if the extension has become stuck or corrupted.
 
-To resolve this issue, follow [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working#vpn-toggle-does-nothing-or-stays-stuck) to reset the extension and restore the VPN.
+To resolve this issue, follow [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working#macos-reset-the-network-extension) to reset the extension and restore the VPN.
 
 ### Why can't I enable LarePass VPN on Windows?
 
 Third-party antivirus or security software may mistakenly flag LarePass as suspicious, preventing the VPN service from starting.
 
-To resolve this issue, see [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working#vpn-toggle-does-nothing-or-stays-stuck).
+To resolve this issue, see [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working#windows-add-larepass-to-the-allowlist).
 
 ### Why does the VPN connection turn off after showing Connecting?
 
 If you turn on the VPN connection, but the status stays on **Connecting** for a while and then turns off automatically, the system time on your LarePass client device may be incorrect.
 
-To resolve this issue, see [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working.md#vpn-turns-off-automatically-after-showing-connecting).
+To resolve this issue, see [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working.md#sync-device-time).
