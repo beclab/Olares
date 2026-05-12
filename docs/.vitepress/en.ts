@@ -525,6 +525,10 @@ const side = {
       collapsed: true,
       items: [
         {
+          text: "Activate Olares device using Olares CLI",
+          link: "/manual/best-practices/activate-olares-using-cli",
+        },        
+        {
           text: "Set up custom domain",
           link: "/manual/best-practices/set-custom-domain",
         },
