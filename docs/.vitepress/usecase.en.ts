@@ -66,15 +66,28 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "Open WebUI",
+              link: "/use-cases/openwebui",
               collapsed: true,
               items: [
                 {
-                  text: "Set up with model apps",
-                  link: "/use-cases/openwebui",
+                  text: "Multi-user setup",
+                  link: "/use-cases/openwebui-multiuser",
                 },
                 {
-                  text: "Set up with Ollama",
-                  link: "/use-cases/openwebui-ollama",
+                  text: "Audio configuration",
+                  link: "/use-cases/openwebui-audio",
+                },
+                {
+                  text: "Web search",
+                  link: "/use-cases/openwebui-search",
+                },
+                {
+                  text: "Knowledge base",
+                  link: "/use-cases/openwebui-knowledge",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/openwebui-common-issues",
                 },
               ]
             },
