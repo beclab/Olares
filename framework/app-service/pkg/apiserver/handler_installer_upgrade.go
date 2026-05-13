@@ -52,8 +52,17 @@ type upgradeHandlerHelperV2 struct {
 	*upgradeHandlerHelper
 }
 
+// upgradeHandlerHelperV3 reuses the v1 upgrade flow but treats the caller as
+// admin (v3 apps are admin-managed; the gate above
+// already verified that). Concretely it overrides getAppConfig to always
+// pass IsAdmin=true and Admin=h.owner so GetAppConfig doesn't try to install
+// the upgrade as a different user.
+type upgradeHandlerHelperV3 struct {
+	*upgradeHandlerHelper
+}
+
 func (h *upgradeHandlerHelper) getAdminUsers() (admins []string, isAdmin bool, err error) {
-	adminList, err := kubesphere.GetAdminUserList(h.req.Request.Context(), h.h.kubeConfig)
+	adminList, err := kubesphere.GetOwnerOrAdminList(h.req.Request.Context(), h.h.kubeConfig)
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
 		return
@@ -174,6 +183,34 @@ func (h *upgradeHandlerHelper) applyAppEnv(ctx context.Context) (err error) {
 	return
 }
 
+func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, _ bool) (*appcfg.ApplicationConfig, error) {
+	klog.Info("Getting app config for V3")
+	appConfig, _, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+		App:          h.app,
+		Owner:        h.owner,
+		RepoURL:      h.request.RepoURL,
+		Version:      h.request.Version,
+		Token:        h.token,
+		Admin:        h.owner,
+		MarketSource: marketSource,
+		IsAdmin:      true,
+		RawAppName:   h.rawAppName,
+		SelectedGpu:  prevCfg.SelectedGpuType,
+	})
+	if err != nil {
+		api.HandleError(h.resp, h.req, err)
+		return nil, err
+	}
+	// Mirror the v3 install path: v3 apps live in a deterministic
+	// cluster-wide namespace regardless of what the (new) manifest declares.
+	// Without this the upgrade would write the chart's namespace back into
+	// the AM's Spec.Config and downstream HelmOps / ApplyEnv would target a
+	// different namespace than the one the app was originally installed in.
+	appConfig.Namespace = apputils.V3AppNamespace(h.app)
+	h.appConfig = appConfig
+	return appConfig, nil
+}
+
 func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (*appcfg.ApplicationConfig, error) {
 	klog.Info("Getting app config for V2")
 	if len(adminUsers) == 0 {
@@ -235,7 +272,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	}
 
 	var appMgr appv1alpha1.ApplicationManager
-	appMgrName, err := apputils.FmtAppMgrName(app, owner, "")
+	appMgrName, isV3, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -244,6 +281,18 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
+	}
+
+	if isV3 || appcfg.IsV3(&appMgr) {
+		isAdmin, ierr := kubesphere.IsAdmin(req.Request.Context(), h.kubeConfig, owner)
+		if ierr != nil {
+			api.HandleError(resp, req, ierr)
+			return
+		}
+		if !isAdmin {
+			api.HandleForbidden(resp, req, fmt.Errorf("only admin users can upgrade v3 app %q", app))
+			return
+		}
 	}
 
 	if appMgr.Spec.Source != request.Source.String() {
@@ -283,7 +332,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	var helper upgradeHelperIntf
 	switch apiVersion {
 	case appcfg.V1:
-		klog.Info("Using install handler helper for V1")
+		klog.Info("Using upgrade handler helper for V1")
 		h := &upgradeHandlerHelper{
 			h:          h,
 			req:        req,
@@ -297,8 +346,24 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 
 		helper = h
 	case appcfg.V2:
-		klog.Info("Using install handler helper for V2")
+		klog.Info("Using upgrade handler helper for V2")
 		h := &upgradeHandlerHelperV2{
+			upgradeHandlerHelper: &upgradeHandlerHelper{
+				h:          h,
+				req:        req,
+				resp:       resp,
+				request:    request,
+				app:        app,
+				rawAppName: rawAppName,
+				owner:      owner,
+				token:      token,
+			},
+		}
+
+		helper = h
+	case appcfg.V3:
+		klog.Info("Using upgrade handler helper for V3")
+		h := &upgradeHandlerHelperV3{
 			upgradeHandlerHelper: &upgradeHandlerHelper{
 				h:          h,
 				req:        req,
