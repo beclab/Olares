@@ -49,6 +49,7 @@ type installHelperIntf interface {
 
 var _ installHelperIntf = (*installHandlerHelper)(nil)
 var _ installHelperIntf = (*installHandlerHelperV2)(nil)
+var _ installHelperIntf = (*installHandlerHelperV3)(nil)
 
 type installHandlerHelper struct {
 	h                    *Handler
@@ -65,6 +66,10 @@ type installHandlerHelper struct {
 }
 
 type installHandlerHelperV2 struct {
+	installHandlerHelper
+}
+
+type installHandlerHelperV3 struct {
 	installHandlerHelper
 }
 
@@ -199,6 +204,26 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 
 		h.validateClusterScope = h._validateClusterScope
 		helper = h
+	case appcfg.V3:
+		klog.Info("Using install handler helper for V3")
+		h := &installHandlerHelperV3{
+			installHandlerHelper: installHandlerHelper{
+				h:          h,
+				req:        req,
+				resp:       resp,
+				app:        app,
+				rawAppName: rawAppName,
+				owner:      owner,
+				token:      token,
+				insReq:     insReq,
+				client:     client,
+			},
+		}
+
+		// v3 reuses the v1 cluster-scope validation; admin gating + shared-namespace
+		// forcing is handled by the helper's own overrides.
+		h.validateClusterScope = h._validateClusterScope
+		helper = h
 	default:
 		klog.Errorf("Unsupported app config api version: %s", apiVersion)
 		api.HandleBadRequest(resp, req, fmt.Errorf("unsupported app config api version: %s", apiVersion))
@@ -224,7 +249,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		return
 	}
 	if !appCfg.AllowMultipleInstall && insReq.RawAppName != "" ||
-		(appCfg.AllowMultipleInstall && (apiVersion == appcfg.V2 || appCfg.AppScope.ClusterScoped)) {
+		(appCfg.AllowMultipleInstall && apiVersion == appcfg.V2) {
 		klog.Errorf("app %s can not be clone", app)
 		api.HandleBadRequest(resp, req, fmt.Errorf("app %s can not be clone", app))
 		return
@@ -279,7 +304,7 @@ func (h *Handler) getOriginChartVersion(rawAppName, owner string) (string, error
 }
 
 func (h *installHandlerHelper) getAdminUsers() (admin []string, isAdmin bool, err error) {
-	adminList, err := kubesphere.GetAdminUserList(h.req.Request.Context(), h.h.kubeConfig)
+	adminList, err := kubesphere.GetOwnerOrAdminList(h.req.Request.Context(), h.h.kubeConfig)
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
 		return
@@ -550,13 +575,26 @@ func (h *installHandlerHelper) setAppConfig(req *api.InstallRequest, appName str
 }
 
 func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opID string, err error) {
+	name, _ := apputils.FmtAppMgrName(h.app, h.owner, h.appConfig.Namespace)
+	return h.applyAppMgr(name, nil, marketSource)
+}
+
+// applyAppMgr is the shared create-or-patch implementation used by V1 / V2
+// (via installHandlerHelper.applyApplicationManager) and V3
+// (via installHandlerHelperV3.applyApplicationManager).
+//
+// `name` is the deterministic AM object name; `extraLabels` is merged into
+// metadata.labels on both Create and Patch — V1/V2 pass nil; V3 passes
+// {AppScopeLabel: AppScopeShared} to mark the AM as a shared app. Passing
+// an empty / nil map intentionally omits the "labels" key from the merge
+// patch so existing labels are NOT cleared (a JSON merge patch with
+// `"labels": null` would delete the field entirely).
+func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]string, marketSource string) (opID string, err error) {
 	config, err := json.Marshal(h.appConfig)
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
 		return
 	}
-	var a *v1alpha1.ApplicationManager
-	name, _ := apputils.FmtAppMgrName(h.app, h.owner, h.appConfig.Namespace)
 	images := make([]api.Image, 0)
 	if len(h.insReq.Images) != 0 {
 		images = h.insReq.Images
@@ -586,7 +624,14 @@ func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opI
 			OpType:       v1alpha1.InstallOp,
 		},
 	}
-	a, err = h.client.AppV1alpha1().ApplicationManagers().Get(h.req.Request.Context(), name, metav1.GetOptions{})
+	if len(extraLabels) > 0 {
+		appMgr.Labels = make(map[string]string, len(extraLabels))
+		for k, v := range extraLabels {
+			appMgr.Labels[k] = v
+		}
+	}
+
+	a, err := h.client.AppV1alpha1().ApplicationManagers().Get(h.req.Request.Context(), name, metav1.GetOptions{})
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			api.HandleError(h.resp, h.req, err)
@@ -603,18 +648,25 @@ func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opI
 			api.HandleBadRequest(h.resp, h.req, err)
 			return
 		}
-		// update Spec.Config
-		patchData := map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
-					api.AppTokenKey:                 h.token,
-					api.AppRepoURLKey:               h.insReq.RepoURL,
-					api.AppVersionKey:               h.appConfig.Version,
-					api.AppMarketSourceKey:          marketSource,
-					api.AppInstallSourceKey:         "app-service",
-					constants.ApplicationTitleLabel: h.appConfig.Title,
-				},
+		metadataPatch := map[string]interface{}{
+			"annotations": map[string]interface{}{
+				api.AppTokenKey:                 h.token,
+				api.AppRepoURLKey:               h.insReq.RepoURL,
+				api.AppVersionKey:               h.appConfig.Version,
+				api.AppMarketSourceKey:          marketSource,
+				api.AppInstallSourceKey:         "app-service",
+				constants.ApplicationTitleLabel: h.appConfig.Title,
 			},
+		}
+		if len(extraLabels) > 0 {
+			labelsPatch := make(map[string]interface{}, len(extraLabels))
+			for k, v := range extraLabels {
+				labelsPatch[k] = v
+			}
+			metadataPatch["labels"] = labelsPatch
+		}
+		patchData := map[string]interface{}{
+			"metadata": metadataPatch,
 			"spec": map[string]interface{}{
 				"opType":     v1alpha1.InstallOp,
 				"config":     string(config),
@@ -763,6 +815,70 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 	h.appConfig = appConfig
 
 	return
+}
+
+// ----- v3 helper overrides -----
+
+// getAdminUsers returns the admin user list and rejects non-admin callers
+// with a 403 — v3 / shared apps are admin-managed.
+func (h *installHandlerHelperV3) getAdminUsers() (admin []string, isAdmin bool, err error) {
+	admin, isAdmin, err = h.installHandlerHelper.getAdminUsers()
+	if err != nil {
+		return
+	}
+	if !isAdmin {
+		err = errors.New("only admin users can install v3 / shared apps")
+		api.HandleForbidden(h.resp, h.req, err)
+		return
+	}
+	return
+}
+
+func (h *installHandlerHelperV3) getInstalledApps() (installed bool, apps []*v1alpha1.Application, err error) {
+	return
+}
+
+// getAppConfig loads the chart with admin context (the caller is admin —
+// gated above) and forces the namespace to the deterministic shared one so
+// every code path agrees on it regardless of what the manifest specified.
+func (h *installHandlerHelperV3) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (appConfig *appcfg.ApplicationConfig, err error) {
+	appConfig, _, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+		App:          h.app,
+		RawAppName:   h.rawAppName,
+		Owner:        h.owner,
+		RepoURL:      h.insReq.RepoURL,
+		Version:      chartVersion,
+		Admin:        h.owner,
+		IsAdmin:      true,
+		MarketSource: marketSource,
+		SelectedGpu:  selectedGpuType,
+	})
+	if err != nil {
+		klog.Errorf("Failed to get appconfig err=%v", err)
+		api.HandleBadRequest(h.resp, h.req, err)
+		return
+	}
+	appConfig.Namespace = apputils.V3AppNamespace(h.app)
+	h.appConfig = appConfig
+	return
+}
+
+// applyApplicationManager creates / updates the cluster-wide v3 AM at the
+// deterministic name SharedAppMgrName(app) and stamps the
+// AppScopeLabel=shared marker on it so listers / proxy can identify the AM
+// as a shared app without re-reading the embedded config.
+//
+// The actual create-or-patch flow is shared with V1/V2 via applyAppMgr —
+// V3 only needs to override the AM name (to the cluster-wide deterministic
+// one) and supply the scope label. The shared namespace itself comes
+// through h.appConfig.Namespace, which V3.getAppConfig already rewrote to
+// SharedAppNamespace(app).
+func (h *installHandlerHelperV3) applyApplicationManager(marketSource string) (opID string, err error) {
+	name := apputils.V3AppMgrName(h.app)
+	labels := map[string]string{
+		constants.AppApiVersionLabel: constants.AppVersionV3,
+	}
+	return h.applyAppMgr(name, labels, marketSource)
 }
 
 func (h *Handler) isDeployAllowed(req *restful.Request, resp *restful.Response) {

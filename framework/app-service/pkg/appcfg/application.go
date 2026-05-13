@@ -47,6 +47,7 @@ type APIVersion string
 const (
 	V1 APIVersion = "v1"
 	V2 APIVersion = "v2"
+	V3 APIVersion = "v3"
 )
 
 type ApplicationConfig struct {
@@ -100,6 +101,12 @@ type ApplicationConfig struct {
 	SharedEntrances      []Entrance
 	SelectedGpuType      string
 	Resources            []ResourceMode
+	// NeedsSharedAccess signals that the app needs cross-namespace access to a
+	// v3 app's services (e.g. for service-mesh sidecar injection).
+	// Force-set to true for v3 apps in toApplicationConfig regardless of
+	// manifest value because v3 apps are themselves the destination of shared
+	// traffic and naturally need the same treatment.
+	NeedsSharedAccess bool
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
@@ -108,6 +115,11 @@ func (c *ApplicationConfig) IsMiddleware() bool {
 
 func (c *ApplicationConfig) IsV2() bool {
 	return c.APIVersion == V2
+}
+
+// IsV3 reports whether the app is declared with apiVersion: v3.
+func (c *ApplicationConfig) IsV3() bool {
+	return c.APIVersion == V3
 }
 
 func (c *ApplicationConfig) IsMultiCharts() bool {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -20,6 +19,11 @@ var (
 	userAnnotationCPULimitKey    = "bytetrade.io/user-cpu-limit"
 	userAnnotationMemoryLimitKey = "bytetrade.io/user-memory-limit"
 	userIndex                    = "bytetrade.io/user-index"
+)
+
+const (
+	userOwnerRole = "owner"
+	userAdminRole = "admin"
 )
 
 type Options struct {
@@ -123,8 +127,8 @@ type UserInfo struct {
 	Role string
 }
 
-// GetAdminUserList returns admin list, an error if there is any.
-func GetAdminUserList(ctx context.Context, kubeConfig *rest.Config) ([]UserInfo, error) {
+// GetOwnerOrAdminList returns owner/admin list, an error if there is any.
+func GetOwnerOrAdminList(ctx context.Context, kubeConfig *rest.Config) ([]UserInfo, error) {
 	adminUserList := make([]UserInfo, 0)
 
 	gvr := schema.GroupVersionResource{
@@ -148,7 +152,7 @@ func GetAdminUserList(ctx context.Context, kubeConfig *rest.Config) ([]UserInfo,
 		}
 		annotations := u.GetAnnotations()
 		role := annotations[userAnnotationOwnerRole]
-		if role == "owner" || role == "admin" {
+		if role == userOwnerRole || role == userAdminRole {
 			adminUserList = append(adminUserList, UserInfo{Name: u.GetName(), Role: role})
 		}
 	}
@@ -157,7 +161,7 @@ func GetAdminUserList(ctx context.Context, kubeConfig *rest.Config) ([]UserInfo,
 }
 
 func IsAdmin(ctx context.Context, kubeConfig *rest.Config, owner string) (bool, error) {
-	adminList, err := GetAdminUserList(ctx, kubeConfig)
+	adminList, err := GetOwnerOrAdminList(ctx, kubeConfig)
 	if err != nil {
 		return false, err
 	}
@@ -170,7 +174,7 @@ func IsAdmin(ctx context.Context, kubeConfig *rest.Config, owner string) (bool, 
 }
 
 func GetOwner(ctx context.Context, kubeConfig *rest.Config) (string, error) {
-	adminList, err := GetAdminUserList(ctx, kubeConfig)
+	adminList, err := GetOwnerOrAdminList(ctx, kubeConfig)
 	if err != nil {
 		return "", err
 	}

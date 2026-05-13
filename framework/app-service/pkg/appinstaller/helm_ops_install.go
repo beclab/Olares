@@ -112,6 +112,13 @@ func (h *HelmOps) install(values map[string]interface{}) error {
 	return err
 }
 
+// InstallChart exposes the helm chart-install step so version-specific
+// HelmOps wrappers (v3, ...) can reuse the v1 install pipeline while
+// substituting other steps. Thin wrapper over the package-private install.
+func (h *HelmOps) InstallChart(values map[string]interface{}) error {
+	return h.install(values)
+}
+
 // NewHelmOps constructs a new helmOps.
 func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, token string, options Opt) (HelmOpsInterface, error) {
 	actionConfig, settings, err := helm.InitConfig(kubeConfig, app.Namespace)
@@ -136,35 +143,37 @@ func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.Applic
 	return ops, nil
 }
 
-// AddApplicationLabelsToDeployment add application label to deployment or statefulset
+// AddApplicationLabelsToDeployment add application label to deployment or statefulset.
+//
+// The body is split into two reusable steps:
+//   - BuildDeploymentLabelPatchData prepares the in-memory patch payloads
+//     (namespace labels and main-workload metadata).
+//   - ApplyDeploymentLabelPatch issues the actual k8s patches.
+//
+// Version-specific wrappers (v3, ...) can call Build first, layer their own
+// labels onto the returned maps, then call Apply so each resource is patched
+// exactly once with the combined payload.
 func (h *HelmOps) AddApplicationLabelsToDeployment() error {
-	k8s, err := kubernetes.NewForConfig(h.kubeConfig)
-	if err != nil {
-		klog.Error("create kubernetes client error, ", err)
-		return err
-	}
+	nsLabels, workloadPatchData := h.BuildDeploymentLabelPatchData()
+	return h.ApplyDeploymentLabelPatch(nsLabels, workloadPatchData)
+}
 
-	// add namespace to workspace
-	patch := "{\"metadata\": {\"labels\":{\"kubesphere.io/workspace\":\"system-workspace\"}}}"
-	_, err = k8s.CoreV1().Namespaces().Patch(h.ctx, h.app.Namespace,
-		types.MergePatchType, []byte(patch), metav1.PatchOptions{})
-	if err != nil {
-		klog.Errorf("patch namespace %s error %v", h.app.Namespace, err)
-		return err
-	}
-	if h.app.Type == appv1alpha1.Middleware.String() {
-		err = h.tryToAddApplicationLabelsToCluster()
-		if err != nil {
-			return err
-		}
+// BuildDeploymentLabelPatchData prepares the patch payloads for the
+// namespace and the app's main workload (deployment, fallback statefulset).
+//
+// Both returned maps are mutable: callers (typically version-specific
+// HelmOps wrappers) may add extra entries before handing them to
+// ApplyDeploymentLabelPatch.
+func (h *HelmOps) BuildDeploymentLabelPatchData() (nsLabels map[string]string, workloadPatchData map[string]interface{}) {
+	nsLabels = map[string]string{
+		"kubesphere.io/workspace": "system-workspace",
 	}
 
 	services := ToEntrancesLabel(h.app.Entrances)
 	ports := ToAppTCPUDPPorts(h.app.Ports)
-
 	tailScale := ToTailScale(h.app.TailScale)
 
-	patchData := map[string]interface{}{
+	workloadPatchData = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
 				constants.ApplicationNameLabel:       h.app.AppName,
@@ -192,14 +201,46 @@ func (h *HelmOps) AddApplicationLabelsToDeployment() error {
 			},
 		},
 	}
+	return
+}
 
-	patchByte, err := json.Marshal(patchData)
+// ApplyDeploymentLabelPatch sends the namespace and workload patches to the
+// cluster. For middleware apps the KubeBlocks Cluster CR is also patched
+// (existing behaviour). See BuildDeploymentLabelPatchData for the payload
+// builder side.
+func (h *HelmOps) ApplyDeploymentLabelPatch(nsLabels map[string]string, workloadPatchData map[string]interface{}) error {
+	k8s, err := kubernetes.NewForConfig(h.kubeConfig)
+	if err != nil {
+		klog.Error("create kubernetes client error, ", err)
+		return err
+	}
+
+	nsPatchBytes, err := json.Marshal(map[string]interface{}{
+		"metadata": map[string]interface{}{"labels": nsLabels},
+	})
+	if err != nil {
+		klog.Errorf("marshal namespace label patch for %s err=%v", h.app.Namespace, err)
+		return err
+	}
+	_, err = k8s.CoreV1().Namespaces().Patch(h.ctx, h.app.Namespace,
+		types.MergePatchType, nsPatchBytes, metav1.PatchOptions{})
+	if err != nil {
+		klog.Errorf("patch namespace %s error %v", h.app.Namespace, err)
+		return err
+	}
+
+	if h.app.Type == appv1alpha1.Middleware.String() {
+		if err := h.tryToAddApplicationLabelsToCluster(); err != nil {
+			return err
+		}
+	}
+
+	patchByte, err := json.Marshal(workloadPatchData)
 	if err != nil {
 		klog.Errorf("Failed to marshal patch data %v", err)
 		return err
 	}
-
-	patch = string(patchByte)
+	patch := string(patchByte)
 
 	// TODO: add ownerReferences of user
 	deployment, err := k8s.AppsV1().Deployments(h.app.Namespace).Get(h.ctx, h.app.AppName, metav1.GetOptions{})
