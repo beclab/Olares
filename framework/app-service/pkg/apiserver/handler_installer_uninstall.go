@@ -15,7 +15,6 @@ import (
 
 	"github.com/emicklei/go-restful/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 )
 
@@ -44,29 +43,12 @@ func (h *Handler) uninstall(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	name, err := apputils.FmtAppMgrName(app, owner, "")
-	if err != nil {
-		api.HandleError(resp, req, err)
+	name, amPtr, ok := h.loadAuthorizedLifecycleAM(req.Request.Context(), req, resp, app, owner)
+	if !ok {
 		return
 	}
+	am := *amPtr
 
-	var am v1alpha1.ApplicationManager
-	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: name}, &am)
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-
-	//var application v1alpha1.Application
-	//err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: name}, &application)
-	//if err != nil {
-	//	api.HandleError(resp, req, err)
-	//	return
-	//}
-	//if application.Spec.IsSysApp {
-	//	api.HandleBadRequest(resp, req, errors.New("can not uninstall sys app"))
-	//	return
-	//}
 	if !appstate.IsOperationAllowed(am.Status.State, v1alpha1.UninstallOp) {
 		api.HandleBadRequest(resp, req, fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.UninstallOp, am.Status.State))
 		return

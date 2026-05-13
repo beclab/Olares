@@ -41,6 +41,9 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 		// if error, response in function. Do nothing
 		return
 	}
+	if !h.gateSharedAppWrite(req, resp, app) {
+		return
+	}
 
 	bodyData, err := ioutil.ReadAll(req.Request.Body)
 	if err != nil {
@@ -88,6 +91,9 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 		api.HandleError(resp, req, err)
 		klog.Errorf("Failed to get app name=%s err=%v", app.Spec.Name, err)
 		// if error, response in function. Do nothing
+		return
+	}
+	if !h.gateSharedAppWrite(req, resp, app) {
 		return
 	}
 	entranceName := req.PathParameter(ParamEntranceName)
@@ -315,6 +321,9 @@ func (h *Handler) setupAppAuthLevel(req *restful.Request, resp *restful.Response
 		// if error, response in function. Do nothing
 		return
 	}
+	if !h.gateSharedAppWrite(req, resp, app) {
+		return
+	}
 
 	entranceName := req.PathParameter(ParamEntranceName)
 
@@ -386,6 +395,9 @@ func (h *Handler) setupAppEntrancePolicy(req *restful.Request, resp *restful.Res
 	if err != nil {
 		klog.Errorf("Failed to get app name=%s err=%v", app.Spec.Name, err)
 		// if error, response in function. Do nothing
+		return
+	}
+	if !h.gateSharedAppWrite(req, resp, app) {
 		return
 	}
 

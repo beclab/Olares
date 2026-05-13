@@ -306,11 +306,16 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	if deployment.GetLabels()[constants.ApplicationRawAppNameLabel] != "" {
 		rawAppName = deployment.GetLabels()[constants.ApplicationRawAppNameLabel]
 	}
+	appLabels := map[string]string{}
+	if v, ok := deployment.GetLabels()[constants.AppApiVersionLabel]; ok && v != "" {
+		appLabels[constants.AppApiVersionLabel] = v
+	}
 	// create the application cr
 	newapp := &appv1alpha1.Application{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmtAppName(name, req.Namespace),
+			Name:   fmtAppName(name, req.Namespace),
+			Labels: appLabels,
 		},
 		Spec: appv1alpha1.ApplicationSpec{
 			Name:            name,
@@ -464,6 +469,15 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	}
 	klog.Infof("deploymentname: %s, version: %v", deployment.GetName(), deployment.GetResourceVersion())
 	appCopy.Annotations[deploymentResourceVersionAnnotation] = deployment.GetResourceVersion()
+
+	// Propagate the v3 marker from the deployment so the
+	// Application CR carries it for downstream visibility / proxy fan-out.
+	if v, ok := deployment.GetLabels()[constants.AppApiVersionLabel]; ok && v != "" {
+		if appCopy.Labels == nil {
+			appCopy.Labels = make(map[string]string)
+		}
+		appCopy.Labels[constants.AppApiVersionLabel] = v
+	}
 
 	err = r.Patch(ctx, appCopy, client.MergeFrom(app))
 	if err != nil {
