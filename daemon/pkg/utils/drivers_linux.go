@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/beclab/Olares/daemon/pkg/commands"
@@ -417,7 +418,10 @@ func UmountUsbDevice(ctx context.Context, path string) error {
 	return errors.New("not a mounted usb path")
 }
 
-var brokenMounts []string
+var (
+	brokenMounts   []string
+	brokenMountsMu sync.RWMutex
+)
 
 func UmountOrRecordBrokenMounts(ctx context.Context, baseDir string) error {
 	mounter := mountutils.New("")
@@ -451,9 +455,13 @@ func UmountOrRecordBrokenMounts(ctx context.Context, baseDir string) error {
 		}
 	}
 
-	brokenMounts = currentBrokenMounts
-	if len(brokenMounts) > 0 {
-		klog.Infof("current broken mounts: %v", brokenMounts)
+	updatedBrokenMounts := slices.Clone(currentBrokenMounts)
+	brokenMountsMu.Lock()
+	brokenMounts = updatedBrokenMounts
+	brokenMountsMu.Unlock()
+
+	if len(updatedBrokenMounts) > 0 {
+		klog.Infof("current broken mounts: %v", updatedBrokenMounts)
 		// notify broken mounts
 		NotifyBrokenMounts(ctx)
 	}
@@ -461,6 +469,9 @@ func UmountOrRecordBrokenMounts(ctx context.Context, baseDir string) error {
 }
 
 func IsBrokenMount(path string) bool {
+	brokenMountsMu.RLock()
+	defer brokenMountsMu.RUnlock()
+
 	return slices.Contains(brokenMounts, path)
 }
 
