@@ -41,7 +41,7 @@ For supported GPUs, Olares automatically handles driver installation. It support
 
 ### How do I manually install NVIDIA drivers if automatic setup fails?
 
-The Olares installer detects and installs drivers automatically. However, if your system previously had NVIDIA drivers installed, the process might be skip or fail due to conflicts.
+The Olares installer detects and installs drivers automatically. However, if your system previously had NVIDIA drivers installed, the process might skip or fail due to conflicts.
 
 To resolve this:
 1. Reboot the machine after the Olares installation to clear any old driver components.
@@ -52,9 +52,9 @@ To resolve this:
 
 While these error messages suggest a problem with Custom Resource Definitions (CRDs), they often indicate poor disk performance.
 
-Olares relies on etcd, the backing database for Kubernetes. etcd is very sensitive to storage speed. If you install Olares on a slow disk, such as a traditional HDD, etcd cannot respond fast enough. This causes the API server to time out while attempting to apply CRDs.
+Olares relies on etcd, the backing database for Kubernetes. etcd is highly sensitive to storage speed. If you install Olares on a slow disk, such as a traditional HDD, etcd cannot respond fast enough. This causes the API server to time out while attempting to apply CRDs.
 
-Install Olares on SSD storage to fix this issue.
+To fix the issue, install Olares on SSD storage.
 
 ### How do I find the password if the Olares installation times out without showing it?
 

@@ -30,7 +30,7 @@ Olares is for anyone who wants to use powerful AI tools locally without complex 
 
 ### How is Olares different from NAS operating systems?
 
-Olares functions fundamentally as a Personal AI Cloud rather than a storage server. Traditional NAS systems like Synology DSM or CasaOS are optimized primarily for storing files and hosting lightweight containers.
+Olares functions fundamentally as a personal AI cloud rather than a storage server. Traditional NAS systems like Synology DSM or CasaOS are optimized primarily for storing files and hosting lightweight containers.
 
 Olares focuses on high-performance computing:
 * **Orchestrating resources**: It natively manages hardware resources such as GPUs to power local AI workloads.
@@ -54,7 +54,7 @@ For strict local control, choose these options:
 - **VPN-only mode**: Restrict your Olares device so it remains accessible remotely only via VPN.
 - **Local-only access**: Access Olares services via .local domains even if the router has no internet access.
 
-For detailed local access options, refer to [Access Olares services locally](../get-started/local-access.md).
+For detailed local access options, refer to [Access Olares services securely](../get-started/local-access.md).
 
 We are actively developing an option to support full device activation in completely offline environments.
 
@@ -85,7 +85,7 @@ Olares offers two optional cloud-assisted services for convenience, but free alt
 
 ### How often does Olares update?
 
-Olares releases a major update approximately every 2 months. View specific changes in the [changelog](https://www.olares.com/changelog).
+Olares releases a major update approximately every 2 months. View specific changes in the [Changelog](https://www.olares.com/changelog).
 
 ## License
 
