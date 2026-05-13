@@ -9,7 +9,7 @@ head:
 
 # Manage BIOS
 
-This document explains how to manage the BIOS settings on your Olares One device, including how to check the current version, download and perform firmware updates, unlock advanced settings, and troubleshoot the black screen issue caused by display configurations.
+This document explains how to manage the BIOS settings on your Olares One device, including how to check the current firmware versions, download and perform firmware updates, unlock advanced settings, and troubleshoot the black screen issue caused by display configurations.
 
 ## Check firmware versions
 
@@ -180,7 +180,7 @@ If you need to perform deep hardware configuration, you can unlock the hidden ad
 
     Do not change this setting to **HG** (Hybrid Graphic). Selecting **HG** will route the video output to an inactive interface, resulting in a completely black screen on startup.
 
-    If you accidentally changed this setting and lose display output, refer to the [Troubleshooting](#cannot-enter-bios-black-screen) section below to perform a blind reset.
+    If you accidentally changed this setting and lose display output, refer to the [Troubleshooting](#cannot-enter-bios-black-screen) section to perform a blind reset.
     :::
 
 ## Troubleshooting

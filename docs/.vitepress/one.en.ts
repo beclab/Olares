@@ -237,10 +237,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Update OS",
           link: "/one/update",
-        },
-        {
-          text: "Manage BIOS",
-          link: "/one/update-firmware",
         },        
         {
           text: "Restore Olares One",
@@ -263,6 +259,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
             },
           ],
         },
+        {
+          text: "Manage BIOS",
+          link: "/one/update-firmware",
+        },        
       ]
     },
   ],
