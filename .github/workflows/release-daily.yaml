@@ -218,6 +218,18 @@ jobs:
         run: |
           bash build/build.sh ${{ needs.daily-version.outputs.version }} ${{ needs.release-id.outputs.id }}
 
+      - name: Download CLI release assets
+        env:
+          VERSION: ${{ needs.daily-version.outputs.version }}
+          RELEASE_ID: ${{ needs.release-id.outputs.id }}
+          REPO_PATH: ${{ secrets.REPO_PATH }}
+        run: |
+          mkdir -p cli-output
+          for target in linux_amd64 linux_arm linux_arm64 darwin_arm64 windows_amd64; do
+            file="olares-cli-v${VERSION}_${target}.${RELEASE_ID}.tar.gz"
+            curl -sSfL -o "cli-output/${file}" "https://cdn.olares.com${REPO_PATH}${file}"
+          done
+
       - name: 'Archives'
         run: |
           cp .dist/install-wizard/install.sh build/base-package
@@ -239,6 +251,7 @@ jobs:
             build/base-package/publicAddnode.sh
             build/base-package/version.hint
             build/base-package/publicRestoreInstaller.sh
+            cli-output/*.tar.gz
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
