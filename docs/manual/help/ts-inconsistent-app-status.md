@@ -32,7 +32,7 @@ When you start or stop an app from Control Hub, the app workload is changed dire
 
 To sync the app status, perform the same operation again in Settings or Market.
 
-The following steps use the case where you have stopped the app in Control Hub, but the app still appears as running in Launchpad, Settings, or Market.
+The following steps use the case where you have stopped the app in Control Hub, but the app still appears as running in Desktop, Settings, or Market.
 
 <Tabs>
 <template #In-Settings>
