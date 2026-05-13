@@ -1,13 +1,12 @@
 ---
 outline: deep
-description: Administrators' guide for managing ComfyUI on Olares with ComfyUI Launcher, covering service control, network configuration, model and plugin management, Python dependencies, and troubleshooting.
+description: Administrators' guide for managing ComfyUI on Olares, covering service control, network configuration, model and plugin management, Python dependencies, and troubleshooting.
 ---
+# Manage ComfyUI on Olares
 
-# Manage ComfyUI using ComfyUI Launcher
+ComfyUI Launcher is the primary management tool for ComfyUI administrators. Use it to control the ComfyUI service across the cluster, and manage models, plugins, the runtime environment, and network settings.
 
-ComfyUI Launcher is the core management tool for ComfyUI administrators. Use it to control the ComfyUI service across the cluster, and manage models, plugins, the runtime environment, and network settings.
-
-This guide walks you through using ComfyUI Launcher for service management, routine administration, and troubleshooting.
+Some model-related actions, such as downloading missing models from the **Errors** tab in the ComfyUI client, are completed outside ComfyUI Launcher. This guide walks you through both Launcher-based tasks and related in-client workflows.
 
 ## Learning objectives
 
@@ -107,7 +106,9 @@ ComfyUI supports multiple ways to add models. Choose the method that best matche
 | Method | Use this when | Notes |
 |--|--|--|
 | **ComfyUI Launcher** | The model is a public Hugging Face<br> model that does not require login or<br> a token. | In most cases, this is the easiest way to download the model directly to Olares. |
-| **Upload local models** | The model requires login, a token,<br> approval, or manual download, or it<br> comes from a source not supported<br> by ComfyUI Launcher. | Download the model file to your local device first, then upload it through Files or LarePass. |
+| **Server Download** | A workflow reports a missing model,<br> and the error provides a direct<br> downloadable model URL. | Available by default in ComfyUI 1.0.32 and later. It downloads the model directly to the Olares host. Does not support models that require login, access approval, or other authorization. |
+| **Use from Library** | A workflow reports a missing model,<br> but you already have a compatible<br> alternative installed. | Requires no downloading. You should verify compatibility yourself. |
+| **Upload local models** | The model requires login, approval,<br> a token, or manual download, or it<br> comes from a source not supported<br> by ComfyUI Launcher or Server Download. | Download the model file to your local device first, then upload it through Files or LarePass. |
 | **Downloader nodes** | A custom node provides its own<br> model downloader. | Follow the custom node documentation for setup, storage location, and model requirements. |
 
 ### Download with ComfyUI Launcher
@@ -147,15 +148,65 @@ Use this method when you already have a direct download URL for a model file tha
 
    ![Custom download](/images/manual/use-cases/comfyui-model-link.png#bordered){width=90%}
 
-### Upload local models
+### Use Server Download
 
-Use this method when the model requires login, a token, approval, or manual download, or when the model source is not supported by ComfyUI Launcher.
+Use this method to download missing models directly to the Olares host from the ComfyUI client.
 
-1. Download the model file to your local device. If needed, see [Models cannot be downloaded in ComfyUI Launcher](./comfyui-common-issues#models-cannot-be-downloaded-in-comfyui-launcher).
-2. Open Files from the Launchpad.
-3. Navigate to `External/olares/ai/model`.
-4. Open the folder that matches the model type. If you're not sure which folder to use, see [Understand the `model` directory structure](#understand-the-model-directory-structure).
-5. Upload the model file to the target folder.
+:::info
+Server Download is a ComfyUI plugin enabled by default in ComfyUI 1.0.32 and later.
+
+It supports only model URLs that can be accessed directly without login, access approval, or other authorization. For restricted models, [upload them manually](#upload-local-models).
+
+To turn off this feature, see [Disable Server Download](#disable-server-download).
+:::
+
+1. In the ComfyUI client, click an empty area on the canvas to open **Workflow Overview**. Then, select the **Errors** tab and find the **Missing Models** section.
+
+    ![Errors tab](/images/manual/use-cases/comfyui-errors-tab.png#bordered)
+
+2. Find the required model in the list, click **Copy URL**, then click **Server Download**.
+
+    Server Download reads the URL from your clipboard. Do not copy other text between these two actions.
+
+   ![Copy model URL](/images/manual/use-cases/comfyui-server-download-copy-url.png#bordered)
+
+3. If this is your first time using Server Download, the browser asks for permission to read from the clipboard. Click **Allow**.
+
+4. In the download dialog, verify the auto-filled information:
+
+   - **URL**: If the URL is incorrect, clear the field and paste it manually.
+   - **File Name**: Click **Auto** to detect and fill the file name.
+   - **Model Type**: Make sure it matches the category shown in **Missing Models**, such as `checkpoints`, `loras`, or `diffusion_models`.
+
+   :::warning Verify the model type
+   The auto-detected **Model Type** may be incorrect. If the workflow includes an on-canvas note with model storage locations, use it as an additional reference. Models saved to the wrong folder will still be reported as missing.
+   :::
+
+   ![Server Download dialog](/images/manual/use-cases/comfyui-download-model-to-server.png#bordered)
+
+5. Start the download and wait for it to complete.
+
+   Server Download does not currently support pausing, resuming, or retrying downloads. If a download fails, start a new download task.
+
+6. Once the download is complete, refresh the ComfyUI page. You can now use the model in your workflow.
+
+To verify or manage downloaded files, open Files and go to the corresponding subfolder under `External/olares/ai/comfyui/ComfyUI/models`.
+
+### Use existing models from library
+
+Use this method when a workflow reports a missing model, but you already have a compatible alternative in the model library.
+
+**Use from Library** lets you select models from `External/olares/ai/model`. The button is available only when the corresponding model-type folder exists and contains model files.
+
+1. In the ComfyUI client, click the empty area in the canvas to open the **Workflow Overview**, then go to the **Errors** tab and locate the **Missing Models** section.
+2. Under the missing model, click the **Use from Library** dropdown.
+3. Select an existing model from your local storage to replace the missing one.
+
+    ![Use from library](/images/manual/use-cases/comfyui-use-from-lib.png#bordered)
+
+:::warning Evaluate compatibility
+You must evaluate model compatibility yourself. Selecting an incompatible model will cause the workflow to fail or produce unexpected results.
+:::
 
 ### Use downloader nodes
 
@@ -164,6 +215,16 @@ Some custom nodes can download models automatically.
 Follow the documentation provided by the node author for setup, storage location, and model requirements.
 
 If the workflow still reports a missing model after download, check whether the file was saved to the expected location and whether it matches the model type expected by the workflow.
+
+### Upload local models
+
+Use this method when the model requires login, a token, approval, or manual download, or when the model source is not supported by ComfyUI Launcher or Server Download.
+
+1. Download the model file to your local device. If needed, see [Models cannot be downloaded directly to Olares](./comfyui-common-issues#models-cannot-be-downloaded-directly-to-olares).
+2. Open Files from the Launchpad.
+3. Navigate to `External/olares/ai/model`.
+4. Open the folder that matches the model type. If you're not sure which folder to use, see [Understand the `model` directory structure](#understand-the-model-directory-structure).
+5. Upload the model file to the target folder.
 
 ### Delete models
 
@@ -211,6 +272,22 @@ To install plugins directly from GitHub repositories:
 4. Click **INSTALL PLUGIN**.
    
    ![Download plugin](/images/manual/use-cases/comfyui-plugin-install.png#bordered)
+
+### Disable Server Download
+
+The **Server Download** button in the ComfyUI client is provided by the `comfyui-server-downloader` plugin, which is enabled by default in ComfyUI 1.0.32 and later.
+
+To disable it:
+
+1. In ComfyUI Launcher, go to **Plugins** > **Plugin library**.
+2. Under **Available Plugins**, search for `server-download`.
+3. In the `comfyui-server-downloader` row, click the dropdown arrow in the **Actions** column and select **Disable**.
+
+   ![Disable Server Download](/images/manual/use-cases/comfyui-disable-server-download.png#bordered)
+
+4. Go to the **Home** tab and click **RESTART** to apply the changes.
+
+Once the service restarts, the **Server Download** button will no longer appear in the ComfyUI client.
 
 ## Manage environment
 
