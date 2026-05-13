@@ -103,13 +103,13 @@ Make sure the model type matches the target folder so ComfyUI can detect and use
 
 ComfyUI supports multiple ways to add models. Choose the method that best matches the model source and your workflow.
 
-| Method | Use this when | Notes |
+| Method | Best for | Notes |
 |--|--|--|
-| **ComfyUI Launcher** | The model is a public Hugging Face<br> model that does not require login or<br> a token. | In most cases, this is the easiest way to download the model directly to Olares. |
-| **Server Download** | A workflow reports a missing model,<br> and the error provides a direct<br> downloadable model URL. | Available by default in ComfyUI 1.0.32 and later. It downloads the model directly to the Olares host. Does not support models that require login, access approval, or other authorization. |
-| **Use from Library** | A workflow reports a missing model,<br> but you already have a compatible<br> alternative installed. | Requires no downloading. You should verify compatibility yourself. |
-| **Upload local models** | The model requires login, approval,<br> a token, or manual download, or it<br> comes from a source not supported<br> by ComfyUI Launcher or Server Download. | Download the model file to your local device first, then upload it through Files or LarePass. |
-| **Downloader nodes** | A custom node provides its own<br> model downloader. | Follow the custom node documentation for setup, storage location, and model requirements. |
+| **Download with ComfyUI Launcher** | Public models, resource packages, or<br> direct model URLs that do not require<br> login, access approval, or a token. | The easiest way to download standard models directly to Olares. |
+| **Use Server Download** | Missing models listed in the ComfyUI<br> client with a direct downloadable URL. | Downloads directly to the Olares host. Does not support models that require login, access approval, a token, or other authorization. |
+| **Use from Library** | Missing models where you already<br> have a compatible alternative installed. | Uses models from `External/olares/ai/model`. No download required, but you need to verify compatibility yourself. |
+| **Upload local models** | Restricted models that require login, <br>access approval, a token, or manual <br>download, or models from unsupported<br> sources. | Download the file to your local device first, then upload it through Files or LarePass. |
+| **Use downloader nodes** | Custom nodes that provide their own <br>built-in model downloaders. | Follow the node documentation. Setup, storage location, and requirements may vary by node. |
 
 ### Download with ComfyUI Launcher
 
