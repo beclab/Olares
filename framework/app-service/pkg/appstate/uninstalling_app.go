@@ -86,7 +86,6 @@ func (p *UninstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 						klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.Uninstalled.String(), err)
 						return
 					}
-
 				}
 			}()
 

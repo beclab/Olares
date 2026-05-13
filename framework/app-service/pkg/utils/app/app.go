@@ -373,6 +373,43 @@ func FmtAppMgrName(app, owner, ns string) (string, error) {
 	return fmt.Sprintf("%s-%s", namespace, app), nil
 }
 
+// V3AppNamespace returns the deterministic namespace used for a v3 /
+// shared app. Single source of truth so install handlers, lookups and the
+// proxy all agree on the same value.
+func V3AppNamespace(app string) string {
+	return fmt.Sprintf("%s-shared", app)
+}
+
+// V3AppMgrName returns the deterministic ApplicationManager name for a
+// v3  app: '{app}-shared-{app}', following the same '{ns}-{app}' rule
+// FmtAppMgrName uses for v1/v2.
+func V3AppMgrName(app string) string {
+	return fmt.Sprintf("%s-%s", V3AppNamespace(app), app)
+}
+
+// ResolveAppMgrName returns the ApplicationManager name for the given app:
+//   - if a v3 AM exists at SharedAppMgrName(app), return that name
+//     and isShared=true.
+//   - otherwise fall back to FmtAppMgrName(app, owner, "") and isV3=false.
+//
+// Lifecycle handlers should call this first so any admin can target a shared
+// app regardless of who originally installed it. Install does NOT need this
+// helper — install creates the AM, it doesn't look it up.
+func ResolveAppMgrName(ctx context.Context, app, owner string) (name string, isV3 bool, err error) {
+	versioned, err := utils.GetClient()
+	if err != nil {
+		return "", false, err
+	}
+	v3Name := V3AppMgrName(app)
+	if _, getErr := versioned.AppV1alpha1().ApplicationManagers().Get(ctx, v3Name, metav1.GetOptions{}); getErr == nil {
+		return v3Name, true, nil
+	} else if !apierrors.IsNotFound(getErr) {
+		return "", false, getErr
+	}
+	name, err = FmtAppMgrName(app, owner, "")
+	return name, false, err
+}
+
 // TryConnect try to connect to a service with specified host and port.
 func TryConnect(host string, port string) bool {
 	timeout := time.Second
@@ -1004,6 +1041,16 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		SharedEntrances:      cfg.SharedEntrances,
 		SelectedGpuType:      opt.SelectedGpu,
 		Resources:            cfg.Spec.Resources,
+		NeedsSharedAccess:    cfg.Options.NeedsSharedAccess,
+	}
+
+	// v3 / shared apps are themselves the destination of cross-namespace
+	// shared traffic and need the same downstream treatment (mesh sidecar,
+	// NetworkPolicy, etc.) as v1/v2 apps that opt in. Force the flag true
+	// for v3 regardless of manifest value so v3 authors don't have to
+	// remember to set it.
+	if appConfig.IsV3() {
+		appConfig.NeedsSharedAccess = true
 	}
 
 	// Resolve the effective requirement once based on manifest version +
