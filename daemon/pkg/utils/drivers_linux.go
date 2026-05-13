@@ -417,7 +417,9 @@ func UmountUsbDevice(ctx context.Context, path string) error {
 	return errors.New("not a mounted usb path")
 }
 
-func UmountBrokenMount(ctx context.Context, baseDir string) error {
+var brokenMounts []string
+
+func UmountOrRecordBrokenMounts(ctx context.Context, baseDir string) error {
 	mounter := mountutils.New("")
 	list, err := mounter.List()
 	if err != nil {
@@ -425,14 +427,20 @@ func UmountBrokenMount(ctx context.Context, baseDir string) error {
 		return err
 	}
 
+	var currentBrokenMounts []string
 	for _, m := range list {
 		if strings.HasPrefix(m.Path, baseDir) && !strings.HasPrefix(m.Path, path.Join(baseDir, "ai")) {
 			if r := checkMount(m.Path, time.Second); r.Broken {
 
-				klog.Infof("broken mountpoint: %v, %v, %v", m.Path, m.Device, r.Reason)
-
-				if err = umountAndRemovePath(ctx, m.Path); err != nil {
-					return err
+				switch m.Type {
+				case "cifs", "nfs":
+					// record the broken mount record, and notify via the files API
+					currentBrokenMounts = append(currentBrokenMounts, m.Path)
+				default:
+					klog.Infof("broken mountpoint: %v, %v, %v", m.Path, m.Device, r.Reason)
+					if err = umountAndRemovePath(ctx, m.Path); err != nil {
+						return err
+					}
 				}
 			} else if !isDeviceExists(m.Device) {
 				klog.Infof("device not exists mountpoint: %v, %v", m.Path, m.Device)
@@ -443,7 +451,17 @@ func UmountBrokenMount(ctx context.Context, baseDir string) error {
 		}
 	}
 
+	brokenMounts = currentBrokenMounts
+	if len(brokenMounts) > 0 {
+		klog.Infof("current broken mounts: %v", brokenMounts)
+		// notify broken mounts
+		NotifyBrokenMounts(ctx)
+	}
 	return nil
+}
+
+func IsBrokenMount(path string) bool {
+	return slices.Contains(brokenMounts, path)
 }
 
 // apt install cifs-utils
@@ -582,7 +600,7 @@ func MountedSambaPath(ctx context.Context) ([]mountedPath, error) {
 	var paths []mountedPath
 	for _, m := range list {
 		if m.Type == "cifs" {
-			paths = append(paths, mountedPath{m.Path, SMB, IsCifsInvalid(&m), "", "", "", m.Device, isReadOnly(&m)})
+			paths = append(paths, mountedPath{m.Path, SMB, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m)})
 		}
 	}
 
@@ -623,9 +641,9 @@ func MountedPath(ctx context.Context) ([]mountedPath, error) {
 		}():
 			paths = append(paths, mountedPath{m.Path, HDD, false, hdds[idx].IDSerial, hdds[idx].IDSerialShort, hdds[idx].PartitionUUID, "", false})
 		case m.Type == "cifs":
-			paths = append(paths, mountedPath{m.Path, SMB, IsCifsInvalid(&m), "", "", "", m.Device, isReadOnly(&m)})
+			paths = append(paths, mountedPath{m.Path, SMB, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m)})
 		case m.Type == "nfs":
-			paths = append(paths, mountedPath{m.Path, NFS, IsNfsInvalid(&m), "", "", "", m.Device, isReadOnly(&m)})
+			paths = append(paths, mountedPath{m.Path, NFS, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m)})
 		}
 
 	}
