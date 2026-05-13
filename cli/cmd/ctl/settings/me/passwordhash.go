@@ -147,3 +147,9 @@ func saltedPassword(password, osVersion string) string {
 	sum := md5.Sum([]byte(password + passwordSaltSuffix)) // #nosec G401 -- protocol mandate
 	return hex.EncodeToString(sum[:])
 }
+
+// SaltedPassword exports saltedPassword for sibling settings packages that
+// call the same /api/users wire contract as the SPA (e.g. settings users).
+func SaltedPassword(password, osVersion string) string {
+	return saltedPassword(password, osVersion)
+}

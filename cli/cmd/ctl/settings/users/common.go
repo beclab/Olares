@@ -17,6 +17,7 @@
 package users
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -63,8 +64,8 @@ type Doer interface {
 }
 
 type preparedClient struct {
-	profile *credential.ResolvedProfile
-	doer    Doer
+	Profile *credential.ResolvedProfile
+	Doer    Doer
 }
 
 func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
@@ -80,8 +81,8 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 		return nil, err
 	}
 	return &preparedClient{
-		profile: rp,
-		doer:    whoami.NewHTTPClient(hc, rp.DesktopURL, rp.OlaresID),
+		Profile: rp,
+		Doer:    whoami.NewHTTPClient(hc, rp.DesktopURL, rp.OlaresID),
 	}, nil
 }
 
@@ -178,6 +179,74 @@ func decodeObjectResult[T any](ctx context.Context, d Doer, path string, out *T)
 		return fmt.Errorf("decode GET %s response: %w", path, err)
 	}
 	return nil
+}
+
+// decodeUsersMutateBody decodes POST/DELETE /api/users responses. user-service
+// returns axios' data.data only — often {"name":"u"} — not a BFL envelope.
+// When an envelope {code,data} is present (code 0 or 200), data is decoded
+// into out; explicit non-success codes become errors.
+func decodeUsersMutateBody(raw []byte, out interface{}) error {
+	raw = bytes.TrimSpace(raw)
+	if len(raw) == 0 {
+		return fmt.Errorf("empty response body")
+	}
+	var probe map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &probe); err != nil {
+		return fmt.Errorf("decode response: %w", err)
+	}
+	if _, hasCode := probe["code"]; !hasCode {
+		if err := json.Unmarshal(raw, out); err != nil {
+			return fmt.Errorf("decode response: %w", err)
+		}
+		return nil
+	}
+	var code int
+	if err := json.Unmarshal(probe["code"], &code); err != nil {
+		return fmt.Errorf("decode response code: %w", err)
+	}
+	if code != 0 && code != 200 {
+		msg := extractProbeString(probe, "message")
+		if msg == "" {
+			msg = extractProbeString(probe, "error")
+		}
+		if msg == "" {
+			msg = fmt.Sprintf("server returned code=%d", code)
+		}
+		return fmt.Errorf("%s", msg)
+	}
+	dataRaw, ok := probe["data"]
+	if !ok || len(dataRaw) == 0 || string(dataRaw) == "null" {
+		if err := json.Unmarshal(raw, out); err != nil {
+			return fmt.Errorf("decode response: %w", err)
+		}
+		return nil
+	}
+	if err := json.Unmarshal(dataRaw, out); err != nil {
+		return fmt.Errorf("decode response data: %w", err)
+	}
+	return nil
+}
+
+func extractProbeString(probe map[string]json.RawMessage, key string) string {
+	raw, ok := probe[key]
+	if !ok || len(raw) == 0 {
+		return ""
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(s)
+}
+
+// doMutateUsersAPI sends a mutating /api/users request and decodes the body
+// with decodeUsersMutateBody (never assume a BFL-only envelope).
+func doMutateUsersAPI(ctx context.Context, d Doer, method, path string, body interface{}, out interface{}) error {
+	var raw json.RawMessage
+	if err := d.DoJSON(ctx, method, path, body, &raw); err != nil {
+		return err
+	}
+	return decodeUsersMutateBody(raw, out)
 }
 
 func printJSON(w io.Writer, v interface{}) error {

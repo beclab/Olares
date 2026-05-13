@@ -40,6 +40,9 @@ func NewDefaultCommand() *cobra.Command {
 		Short:             "Olares Installer",
 		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
 		Version:           version.VERSION,
+		// SilenceErrors: cmd/main.go prints the error once on non-zero exit; without
+		// this, Cobra also prints to stderr and users see duplicate "Error:" lines.
+		SilenceErrors: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			viper.BindPFlags(cmd.InheritedFlags())
 			viper.BindPFlags(cmd.PersistentFlags())

@@ -24,13 +24,13 @@ import (
 // because each entry point matches a different mental model:
 //
 //   - profile whoami         → "where am I logged in / which profile is
-//                              active" — same family as profile list,
-//                              profile use.
+//     active" — same family as profile list,
+//     profile use.
 //   - settings users me      → docs.olares.com/manual/olares/settings/
-//                              UI mapping; you found Users in the SPA
-//                              menu, the SPA shows you at the top.
+//     UI mapping; you found Users in the SPA
+//     menu, the SPA shows you at the top.
 //   - settings me whoami     → tucked under the Person dropdown in the
-//                              SPA; CLI-friendly self-service tree.
+//     SPA; CLI-friendly self-service tree.
 //
 // All three call the same code; the help text disambiguates which is
 // which.

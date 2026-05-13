@@ -80,7 +80,7 @@ func runGet(ctx context.Context, f *cmdutil.Factory, username, outputRaw string)
 
 	var u userInfo
 	path := "/api/users/" + username
-	if err := decodeObjectResult(ctx, pc.doer, path, &u); err != nil {
+	if err := decodeObjectResult(ctx, pc.Doer, path, &u); err != nil {
 		return err
 	}
 

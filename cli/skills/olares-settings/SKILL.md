@@ -72,7 +72,7 @@ Floor assignment mirrors the SPA's `apps/.../stores/settings/admin.ts:menus` + p
 
 | Floor | Verbs |
 |---|---|
-| **Admin (owner / admin)** | `users list`, `users get`; `network reverse-proxy get`, `network frp list`, `network external-network get`, `network hosts-file get`; `gpu list`; `advanced status`, `advanced registries list`, `advanced images list`; `vpn ssh status/enable/disable`, `vpn subroutes status`, `vpn acl all/get/add/remove`, `vpn public-domain-policy get` |
+| **Admin (owner / admin)** | `users list`, `users get`, `users create`, `users delete`; `network reverse-proxy get`, `network frp list`, `network external-network get`, `network hosts-file get`; `gpu list`; `advanced status`, `advanced registries list`, `advanced images list`; `vpn ssh status/enable/disable`, `vpn subroutes status`, `vpn acl all/get/add/remove`, `vpn public-domain-policy get` |
 | **Normal (any authenticated user)** | `me whoami / version / check-update / sso list`; `apps list/get`, `apps entrances list`, `apps env get`, `apps domain get`, `apps policy get`; `vpn devices list`, `vpn devices routes <id>`; `appearance get`, `appearance language set`; `integration accounts list/list-by-type/get/add/delete`; `video config get`; `search status`, `search excludes list`, `search dirs list`, `search rebuild`; `backup plans list`, `backup snapshots list`; `restore plans list`; `advanced env system list`, `advanced env user list` |
 
 Practical implications for the agent:
@@ -96,7 +96,7 @@ Different upstreams return JSON in different envelopes. Each area has its own `c
 | Area | Endpoint family | Decoder | Notes |
 |---|---|---|---|
 | `me` | `/api/olares-info`, `/api/checkLastOsVersion`, `/api/device/sso` | BFL envelope (`doGetEnvelope`) | self-service identity + version + SSO sessions on the active profile |
-| `users` | `/api/users/v2` (list), `/api/users/:name` (single) | `decodeListResult` for app-service `{code:200, data:[...], totals:N}` on list; direct `UserInfo` decode on single | `users/v2` enforces server-side role filtering — normal users see only themselves |
+| `users` | `/api/users/v2` (list), `/api/users/:name` (single), `POST /api/users`, `DELETE /api/users/:name` | list: `decodeListResult`; get: envelope-aware `decodeObjectResult`; create/delete: `doMutateUsersAPI` (`decodeUsersMutateBody`) because Nest returns axios inner `{name}` | list: normal users see only themselves; mutating routes lack extra RBAC in user-service today |
 | `apps` | `/api/myapps` | BFL envelope, `appInfo.ports` decoded as `[]servicePort` (5-field object array: name / host / port / exposePort / protocol) | `apps get <name>` filters the list client-side because there's no per-app endpoint; honours `--all` / `--show-system` to mirror the SPA's filters |
 | `vpn` | `/headscale/machine`, `/headscale/machine/:id/routes` | Raw Headscale JSON (no envelope), `route.id` is `string` | SPA hits `<SettingsURL>/headscale/...` (settings nginx, not desktop) without `/api` prefix |
 | `vpn` | `/api/launcher-public-domain-access-policy` | Already-unwrapped BFL inner data (`{deny_all: 0|1}`) | user-service strips the envelope |
@@ -106,7 +106,7 @@ Different upstreams return JSON in different envelopes. Each area has its own `c
 | `gpu` | `/api/gpu/list` | BFL envelope (HAMI behind it) | distinct from the top-level `olares-cli gpu` (kubeconfig-driven, cluster-wide) |
 | `video` | `/api/files/video/config` | BFL envelope, but inner data is decoded as `json.RawMessage` (`doGetEnvelopeRaw`) | Schema is provider-versioned; `--output table` collapses to a one-line summary |
 | `search` | `/api/search/task/stats/merged`, `/api/search/monitorsetting/exclude-pattern`, `/api/search/monitorsetting/include-directory/full_content` | BFL envelope | `status` returns a string, `excludes list` / `dirs list` return `[]string` |
-| `advanced` | `/api/system/status`, `/api/containerd/registries`, `/api/containerd/images?registry=<n>` | BFL envelope (terminusd → olaresd `returnSucceed`) | `status` table view is a summary; `--output json` for the full struct |
+| `advanced` | `/api/system/status`, `/api/containerd/registries`, `/api/containerd/images?registry=<n>`, `POST /api/command/collectLogs` | BFL envelope (terminusd → olaresd `returnSucceed`) | `status` table view is a summary; `--output json` for the full struct. `POST /api/command/collectLogs` is for the **Terminus SPA Developer UI** (polls `/api/system/status`); it is **not** a `settings advanced` CLI verb — use top-level **`olares-cli logs`** for CLI log collection |
 | `backup` | `/apis/backup/v1/plans/backup`, `/apis/backup/v1/plans/backup/:id/snapshots` | BFL envelope; **different ingress prefix** (`/apis/backup/v1`, not `/api`) | The SPA's axios global interceptor unwraps `data.data`, which is why upstream code reads `{backups: [...]}` directly |
 | `restore` | `/apis/backup/v1/plans/restore` | BFL envelope; same `/apis/backup/v1` prefix | mirrors `settings backup plans list` shape |
 
@@ -132,8 +132,15 @@ olares-cli settings me sso list                   # SSO tokens currently bound t
 ```bash
 olares-cli settings users list                    # roster, server-side role-filtered
 olares-cli settings users get alice               # single user record
+olares-cli settings users create bob --defaults                                  # SPA preset: normal, 1 CPU, 4G memory; auto password; DID precheck; waits for provisioning
+olares-cli settings users create alice --role admin --cpu 2 --memory-gb 8 --no-wait   # explicit quota; skip provisioning wait for automation
+olares-cli settings users delete bob              # after DELETE, polls /status until Deleted (like Termipass); type yes or use --yes
+olares-cli settings users delete bob --yes --no-wait   # automation: no prompt, exit right after DELETE (user may still be Deleting in list)
 olares-cli settings users me                      # alias of `me whoami`
 ```
+
+`create`/`delete` hit the Termipass user-service routes, not `olares-cli user create` (kube CR).
+
 
 ### `apps` — installed app inventory (mirror of Settings -> Apps)
 
@@ -200,6 +207,8 @@ olares-cli settings restore plans list
 ## Currently available — mutating commands (smoke-verified)
 
 Every mutating verb in this section has been confirmed against a live Olares instance in the latest smoke run (see [`cli/cmd/ctl/settings/scripts/local_report_phase15a.md`](cli/cmd/ctl/settings/scripts/local_report_phase15a.md)). All of them hit the `<DesktopURL>` ingress over `X-Authorization` and none require a JWS-signed body. Verbs that ship in the binary but were not exercised (or did not pass) live in [`cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) — treat them as experimental until they show up here.
+
+**Also ships (awaiting smoke):** `users create` / `users delete` — **admin-floor** preflight; `create` uses `--defaults` (normal / 1 / 4G) or explicit `--role`, `--cpu`, `--memory-gb`; DID precheck; no `--password`; **`delete` by default waits** until removal is reported finished (optional `--delete-poll` / `--delete-timeout`, `--no-wait` for exit-after-accept); **`delete`** needs the whole word `yes` unless **`--yes`**. Smoke pairing: `INCLUDE_USERS_MUTATE=1`. Backend gap: user-service does not role-gate POST/DELETE beyond authentication.
 
 ### `appearance` — language
 
@@ -269,7 +278,6 @@ The verbs below are **not shipped** in this release. They either need more desig
 - **Network writes that require a JWS-signed device-id header** — hosts-file write, FRP server register / delete, SSL enable / disable / update, external-network master switch (the SPA carries these with `X-Signature` headers the CLI doesn't yet produce).
 - **Containerd registry mutations** — `registries mirrors put / delete`, `images delete / prune` (also `X-Signature`-gated).
 - **Hardware / restart-class** — reboot, shutdown, ssh-password, OS upgrade — these go through TermiPass-issued JWS over a QR callback URL; CLI support arrives once a JWS key sourcing path lands.
-- **Collect logs** — `POST /api/command/collectLogs` is `X-Signature`-gated.
 - **Backup plan create / update** — full `BackupPolicy` + `LocationConfig` vector; needs either a `--from-file plan.json` mode or an upstream "create from defaults" shortcut before shipping.
 - **Restore plan update / non-cancel delete** — backup-server has no routes for these.
 
@@ -323,8 +331,9 @@ olares-cli settings integration accounts get awss3 my-bucket -o json
 ## Security rules
 
 - **Never** echo `<access_token>` or any field returned by `me sso list` into the terminal beyond what the table view already shows. SSO tokens identify a TermiPass-bound device session and should never be logged or pasted into chat.
+- `settings users create` / `settings users delete` are destructive (`delete` needs the whole word `yes` unless **`--yes`**). **`delete` waits by default until status is Deleted** (`--no-wait` skips that). `create` always generates the initial password once to stdout; treat transcripts accordingly.
 - `settings users get <username>` returns the same record the SPA shows on the user detail page; treat its email / olaresId as PII and avoid forwarding it outside the requesting workflow.
 - For writes that take secrets (`integration accounts add awss3|tencent` is the verified one in this surface), **always** read the secret from an env var or stdin pipe — never paste it into the chat or expand it inline in an `olares-cli ...` command line you suggest. Bash history retention is the user's responsibility; the agent should default to env-var / pipe style invocations (`--access-key-secret "$AWS_SECRET_ACCESS_KEY"`, `printf '%s\n' "$VAR" | ... --password-stdin`) whenever the verb supports it.
-- Other secret-bearing verbs (e.g. `me password set`, `backup password set`, `restore plans check-url / create-from-url`) live in [`UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) until they're smoke-greened; the same env-var / stdin-pipe rule applies whenever you exercise them by hand.
+- Other secret-bearing verbs (e.g. `backup password set`, `restore plans check-url / create-from-url`) live in [`UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) until they're smoke-greened; the same env-var / stdin-pipe rule applies whenever you exercise them by hand.
 - Read-only verbs do **not** carry "this will change X" prompts — only mutating verbs do, and the prompts they do carry come from the upstream server's own response messages. Don't fabricate one for read verbs.
 - The `me whoami --refresh` recovery path is the only authentication-adjacent action this skill should ever recommend. **All** other auth recovery (login expiry, profile import, 2FA) belongs in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
