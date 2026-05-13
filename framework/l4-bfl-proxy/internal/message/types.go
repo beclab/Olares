@@ -40,6 +40,10 @@ type AppInfo struct {
 	Entrances []*EntranceInfo
 	Ports     []*PortInfo
 	Settings  map[string]string
+	// IsShared marks v3 / shared apps (cluster-wide, admin-managed). Kept
+	// as a marker on AppInfo so future per-app behaviour (logging, metrics,
+	// etc.) can distinguish them; access itself is no longer gated.
+	IsShared bool
 }
 
 type EntranceInfo struct {
