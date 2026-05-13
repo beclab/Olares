@@ -19,7 +19,6 @@ import (
 
 	"github.com/emicklei/go-restful/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 )
 
@@ -39,25 +38,22 @@ func (h *Handler) suspend(req *restful.Request, resp *restful.Response) {
 		api.HandleBadRequest(resp, req, errors.New("sys app can not be suspend"))
 		return
 	}
-	name, err := apputils.FmtAppMgrName(app, owner, "")
-	if err != nil {
-		api.HandleError(resp, req, err)
+	name, amPtr, ok := h.loadAuthorizedLifecycleAM(req.Request.Context(), req, resp, app, owner)
+	if !ok {
 		return
 	}
-	var am v1alpha1.ApplicationManager
-	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: name}, &am)
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
+	am := *amPtr
 	if !appstate.IsOperationAllowed(am.Status.State, v1alpha1.StopOp) {
 		api.HandleBadRequest(resp, req, fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.StopOp, am.Status.State))
 		return
 	}
 	am.Spec.OpType = v1alpha1.StopOp
+	if am.Annotations == nil {
+		am.Annotations = make(map[string]string)
+	}
 	am.Annotations[api.AppStopAllKey] = fmt.Sprintf("%t", request.All)
 
-	err = h.ctrlClient.Update(req.Request.Context(), &am)
+	err := h.ctrlClient.Update(req.Request.Context(), &am)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -97,18 +93,11 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	name, err := apputils.FmtAppMgrName(app, owner, "")
-	if err != nil {
-		api.HandleError(resp, req, err)
+	name, amPtr, ok := h.loadAuthorizedLifecycleAM(req.Request.Context(), req, resp, app, owner)
+	if !ok {
 		return
 	}
-	var am v1alpha1.ApplicationManager
-
-	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: name}, &am)
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
+	am := *amPtr
 	if !appstate.IsOperationAllowed(am.Status.State, v1alpha1.ResumeOp) {
 		api.HandleBadRequest(resp, req, fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.ResumeOp, am.Status.State))
 		return
@@ -150,6 +139,9 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
+	}
+	if am.Annotations == nil {
+		am.Annotations = make(map[string]string)
 	}
 	am.Annotations[api.AppResumeAllKey] = fmt.Sprintf("%t", false)
 	if isAdmin {

@@ -128,6 +128,11 @@ const (
 	AppSharedEntrancesLabel = "app.bytetrade.io/shared-entrance"
 	AppMiddlewareLabel      = "app.bytetrade.io/middleware"
 
+	// AppApiVersionLabel marks an Application / ApplicationManager as a v3
+	// app (cluster-wide, admin-managed).
+	AppApiVersionLabel = "app.bytetrade.io/api-version"
+	AppVersionV3       = "v3"
+
 	OneContainerMultiDeviceSplitSymbol = ":"
 	ArchLabelKey                       = "kubernetes.io/arch"
 	CudaVersionLabelKey                = "gpu.bytetrade.io/cuda"

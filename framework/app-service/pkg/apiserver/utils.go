@@ -41,6 +41,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// getAppByName returns the Application matching {ParamAppName} for the
+// caller. Lookup order:
+//  1. legacy v1/v2 install owned by the caller (Spec.Owner == owner),
+//  2. cluster-wide v3 install of the same name.
+//
+// Callers performing write operations on a v3 / shared app MUST gate the
+// response themselves (admin-only) — getAppByName itself does NOT enforce
+// authorisation; it just returns the underlying Application.
 func getAppByName(req *restful.Request, resp *restful.Response) (*v1alpha1.Application, error) {
 	appName := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute) // get owner from request token
@@ -59,10 +67,21 @@ func getAppByName(req *restful.Request, resp *restful.Response) (*v1alpha1.Appli
 		return nil, err
 	}
 
-	for _, app := range applist.Items {
-		if app.Spec.Name == appName && app.Spec.Owner == owner {
-			return &app, nil
+	var v3App *v1alpha1.Application
+	for i := range applist.Items {
+		app := &applist.Items[i]
+		if app.Spec.Name != appName {
+			continue
 		}
+		if app.Spec.Owner == owner {
+			return app, nil
+		}
+		if appcfg.IsV3(app) {
+			v3App = app
+		}
+	}
+	if v3App != nil {
+		return v3App, nil
 	}
 
 	api.HandleNotFound(resp, req, fmt.Errorf("the application %s not found", appName))
