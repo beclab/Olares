@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/l4-bfl-proxy/internal/message"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -255,13 +255,87 @@ func (p *Provider) buildResources(ctx context.Context) (*message.Resources, erro
 	if err != nil {
 		return nil, err
 	}
-	users, err := p.listUsers(ctx, rawAppsMap)
+	userList, err := p.getUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rawAppsMap = fanOutSharedApps(rawAppsMap, userList)
+	users, err := p.listUsers(ctx, userList, rawAppsMap)
 	if err != nil {
 		return nil, err
 	}
 	res.Users = users
 
 	return res, nil
+}
+
+// fanOutSharedApps mutates the per-owner apps map so v3 / shared apps
+// (labelled app.bytetrade.io/scope=shared) appear in EVERY user's slice
+// unconditionally. Shared apps are open to all users, so every user gets
+// the real upstream cluster routes — there is no per-user gate.
+//
+// v1 / v2 apps are left untouched — they remain only under their installer
+// (Spec.Owner). The original entries for shared apps under their install-user
+// owner are preserved (the admin who installed it still sees it via the
+// admin branch anyway, and other users are added on top).
+func fanOutSharedApps(rawAppsMap map[string][]*appv1alpha1.Application,
+	userList []iamv1alpha2.User,
+) map[string][]*appv1alpha1.Application {
+	if len(rawAppsMap) == 0 || len(userList) == 0 {
+		return rawAppsMap
+	}
+
+	// Collect v3 apps and de-dupe by name (the same v3 app should
+	// only appear once in the cluster — but be defensive).
+	v3Apps := make(map[string]*appv1alpha1.Application)
+	for _, apps := range rawAppsMap {
+		for _, app := range apps {
+			if isV3App(app) {
+				if _, ok := v3Apps[app.Spec.Name]; !ok {
+					v3Apps[app.Spec.Name] = app
+				}
+			}
+		}
+	}
+	if len(v3Apps) == 0 {
+		return rawAppsMap
+	}
+
+	// Iterate shared apps in a deterministic (sorted) order so the
+	// resulting per-user slice is stable across reconciles. Without this
+	// the map-range randomness would produce different append orders each
+	// pass and force unnecessary Envoy snapshot diffs downstream.
+	v3Names := make([]string, 0, len(v3Apps))
+	for name := range v3Apps {
+		v3Names = append(v3Names, name)
+	}
+	sort.Strings(v3Names)
+
+	for _, u := range userList {
+		existing := make(map[string]bool, len(rawAppsMap[u.Name]))
+		for _, app := range rawAppsMap[u.Name] {
+			existing[app.Spec.Name] = true
+		}
+
+		for _, name := range v3Names {
+			if existing[name] {
+				continue
+			}
+			rawAppsMap[u.Name] = append(rawAppsMap[u.Name], v3Apps[name])
+			existing[name] = true
+		}
+	}
+	return rawAppsMap
+}
+
+// isV3App reports whether the Application is a v3 app, based on
+// the AppApiVersionLabel that the v3 install handler / Application controller
+// stamp on it.
+func isV3App(app *appv1alpha1.Application) bool {
+	if app == nil {
+		return false
+	}
+	return app.Labels["app.bytetrade.io/api-version"] == "v3"
 }
 
 // fileserverGlobalData holds pod/node data shared across all users within a
@@ -375,18 +449,14 @@ func (p *Provider) buildAppInfos(appList []*appv1alpha1.Application) []*message.
 			Entrances: entrances,
 			Ports:     ports,
 			Settings:  settings,
+			IsShared:  isV3App(app),
 		})
 	}
 	return result
 }
 
-func (p *Provider) listUsers(ctx context.Context, rawAppsMap map[string][]*appv1alpha1.Application) ([]*message.UserInfo, error) {
+func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, rawAppsMap map[string][]*appv1alpha1.Application) ([]*message.UserInfo, error) {
 	var result []*message.UserInfo
-
-	userList, err := p.getUsers(ctx)
-	if err != nil {
-		return nil, err
-	}
 
 	// Fetch cluster-wide data once; reused for every user below.
 	allCerts, err := p.getCustomDomainCerts(ctx)
@@ -676,7 +746,13 @@ func (p *Provider) getUsers(ctx context.Context) ([]iamv1alpha2.User, error) {
 		klog.Errorf("provider: list users from cache failed: %v", err)
 		return nil, fmt.Errorf("list users from cache failed: %v", err)
 	}
-	users := userList.Items
+	users := make([]iamv1alpha2.User, 0)
+	for _, user := range userList.Items {
+		if user.Status.State != "Created" {
+			continue
+		}
+		users = append(users, user)
+	}
 	return users, nil
 }
 

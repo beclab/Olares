@@ -553,3 +553,91 @@ func TestSanitizeName(t *testing.T) {
 	assert.Equal(t, "api_resources_cache", sanitizeName("/api/resources/cache/"))
 	assert.Equal(t, "example_com", sanitizeName("example.com"))
 }
+
+// ---------------------------------------------------------------------------
+// v3 / shared app routing — open to all users (no gating)
+// ---------------------------------------------------------------------------
+
+// makeSharedApp returns a v3 / shared AppInfo with one entrance.
+func makeSharedApp() *message.AppInfo {
+	return &message.AppInfo{
+		Name:      "shareme",
+		Appid:     "shareme",
+		Namespace: "shareme-shared",
+		Owner:     "admin",
+		IsShared:  true,
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "shareme-svc", Port: 8080},
+		},
+	}
+}
+
+// makeSharedAppWithCustom returns a v3 / shared AppInfo with a custom domain.
+func makeSharedAppWithCustom() *message.AppInfo {
+	a := makeSharedApp()
+	a.Settings = map[string]string{
+		"customDomain": `{"web":{"third_party_domain":"shareme.example.io"}}`,
+	}
+	return a
+}
+
+// Any user (admin or normal) reaches the real upstream of a v3 / shared app.
+func TestBuildAppVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
+	for _, name := range []string{"admin", "alice"} {
+		t.Run(name, func(t *testing.T) {
+			tr := &Translator{cfg: &Config{}}
+			user := &message.UserInfo{Name: name, Language: "en"}
+			clusterSet := make(map[string]*ir.ClusterIR)
+
+			vhosts := tr.buildAppVirtualHosts(user, makeSharedApp(), name+".example.com", false, clusterSet)
+			require.Len(t, vhosts, 1)
+			require.Len(t, vhosts[0].Routes, 1)
+			r := vhosts[0].Routes[0]
+			assert.Nil(t, r.DirectResponse, "no 403 gate is emitted; shared apps are open")
+			assert.NotEmpty(t, r.Cluster, "every user must reach the upstream cluster")
+			assert.NotEmpty(t, clusterSet, "an upstream cluster must be registered")
+		})
+	}
+}
+
+// v1/v2 (non-shared) apps continue to reach their upstream cluster directly.
+func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := &message.AppInfo{
+		Name:      "v1app",
+		Appid:     "v1app",
+		Namespace: "v1app-alice",
+		Owner:     "alice",
+		IsShared:  false,
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "v1app-svc", Port: 8080},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 1)
+	assert.Nil(t, vhosts[0].Routes[0].DirectResponse)
+	assert.NotEmpty(t, clusterSet)
+}
+
+// Custom domains for shared apps are also open to every user.
+func TestBuildCustomDomainVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
+	for _, name := range []string{"admin", "alice"} {
+		t.Run(name, func(t *testing.T) {
+			tr := &Translator{cfg: &Config{}}
+			user := &message.UserInfo{Name: name, Language: "en", Zone: name + ".example.com"}
+			clusterSet := make(map[string]*ir.ClusterIR)
+
+			vhosts := tr.buildCustomDomainVirtualHosts(user, makeSharedAppWithCustom(), clusterSet)
+			require.Len(t, vhosts, 1)
+			require.Len(t, vhosts[0].Routes, 1)
+			assert.Nil(t, vhosts[0].Routes[0].DirectResponse, "no 403 gate on custom domain")
+			assert.NotEmpty(t, vhosts[0].Routes[0].Cluster)
+			assert.NotEmpty(t, clusterSet)
+			assert.Equal(t, []string{"shareme.example.io"}, vhosts[0].Domains)
+		})
+	}
+}
