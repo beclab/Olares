@@ -33,6 +33,10 @@ func (u upgrader_1_12_6) AddedBreakingChange() bool {
 	return false
 }
 
+func (u upgrader_1_12_6) NeedRestart() bool {
+	return true
+}
+
 func (u upgrader_1_12_6) PrepareForUpgrade() []task.Interface {
 	tasks := make([]task.Interface, 0)
 	tasks = append(tasks, upgradeKsConfig()...)
@@ -78,6 +82,24 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 			Delay:  5 * time.Second,
 		},
 	)
+}
+
+func (u upgrader_1_12_6) UpdateOlaresVersion() []task.Interface {
+	var tasks []task.Interface
+	tasks = append(tasks,
+		&task.LocalTask{
+			Name:   "UpgradeGPUDriver",
+			Action: new(upgradeGPUDriverIfNeeded),
+		},
+	)
+	tasks = append(tasks, u.upgraderBase.UpdateOlaresVersion()...)
+	tasks = append(tasks,
+		&task.LocalTask{
+			Name:   "RebootIfNeeded",
+			Action: new(rebootIfNeeded),
+		},
+	)
+	return tasks
 }
 
 func init() {
