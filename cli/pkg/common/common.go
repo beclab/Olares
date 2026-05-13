@@ -23,7 +23,7 @@ import (
 const (
 	DefaultK8sVersion          = "v1.33.3"
 	DefaultK3sVersion          = "v1.33.3-k3s"
-	CurrentVerifiedCudaVersion = "13.1"
+	CurrentVerifiedCudaVersion = "13.2"
 )
 
 const (
