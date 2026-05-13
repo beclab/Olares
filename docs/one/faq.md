@@ -168,7 +168,7 @@ We are actively testing compatibility with VR and AR devices, such as Quest 3, t
 
 Olares One supports gaming by streaming as a Steam server via Moonlight, or playing directly via a connected monitor.
 
-In direct play scenarios, testing shows Cyberpunk 2077 achieves approximately 90% of the performance compared to the same hardware running Windows. his aligns with other high-end Linux gaming setups. We anticipate further compatibility improvements as SteamOS adoption grows.
+In direct play scenarios, testing shows Cyberpunk 2077 achieves approximately 90% of the performance compared to the same hardware running Windows. This aligns with other high-end Linux gaming setups. We anticipate further compatibility improvements as SteamOS adoption grows.
 
 ## Operating system
 
@@ -299,7 +299,7 @@ We plan to introduce updates for users who wish to manage their own reverse prox
 
 Yes. Olares provides a fully local access option using a `.local` domain.
 
-If the device resides on a LAN but lacks public access, use the `.local` domain to access all features normally. Without internet connectivity, features relying on external services, such as the App Market, remain unavailable.
+If the device resides on a LAN but lacks public access, use the `.local` domain to access all features normally. Without internet connectivity, features relying on external services, such as the Olares Market, remain unavailable.
 
 ### Can Olares One function as a media server?
 
@@ -309,6 +309,6 @@ Yes. Olares One can function as a Plex server. It supports hardware-accelerated 
 
 Yes. Olares One supports SMB sharing, allowing you to sync files with or back up data to an external NAS.
 
-### Is the filesystem encrypted?
+### Is the file system encrypted?
 
 By default, the system does not use full-disk encryption. We plan to make this a standard, user-configurable option in future updates.
