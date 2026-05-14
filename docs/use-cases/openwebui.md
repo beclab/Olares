@@ -12,7 +12,9 @@ doc_updated: "2026-05-13"
 
 # Set up Open WebUI for local AI chat
 
-Open WebUI provides a user-friendly chat interface for local models on your Olares device. It does not include any models by default, so you need to connect it to a model backend. This guide covers two configuration options: using Ollama to pull models directly from the Ollama Registry, or using a dedicated pre-configured model app such as Qwen3.5 27B Q4_K_M (Ollama).
+Open WebUI provides a user-friendly chat interface for local models on your Olares device. It does not include any models by default, so you need to connect it to a model backend.
+
+This guide covers two configuration options: using Ollama to pull models directly from the Ollama Registry, or using a dedicated pre-configured model app such as Qwen3.5 27B Q4_K_M (Ollama).
 
 ## Learning objectives
 
@@ -42,18 +44,9 @@ The first time you launch Open WebUI, you need to create a local administrator a
 
 1. Open Open WebUI from the Launchpad.
 2. On the welcome page, click **Get started**.
+3. Enter your name, email, and password to create the admin account.
 
    ![Create account](/images/one/open-webui-create-account.png#bordered)
-
-3. Enter your name, email, and password to create the account.
-
-   :::info First account is admin
-   The first account created has full administrator privileges for managing models and settings.
-   :::
-
-   :::info Local account only
-   This account is stored locally on your Olares device and does not connect to external services.
-   :::
 
 ## Configure model backend
 
@@ -65,7 +58,7 @@ While Ollama (Option A) offers flexibility, hosting multiple models simultaneous
 For optimal performance and stability when using multiple models, install independent model apps (Option B) instead of using the general Ollama application.
 :::
 
-### Option A: Use Ollama (Recommended)
+### Option A: Use Ollama
 
 Use Ollama to pull and switch between different models from the Ollama Registry for greater flexibility.
 
@@ -98,8 +91,8 @@ Visit [Ollama Library](https://ollama.com) to browse available models and get th
 
 1. Open Open WebUI.
 2. Click your profile icon and select **Admin Panel**.
-3. Navigate to **Settings** > **Models**.
-4. Click **Manage** in the top right to open the **Manage Models** dialog.
+3. Go to **Settings** > **Models**.
+4. Click **Manage** in the top right to open the **Manage Models** window.
 5. Under **Pull a model from Ollama.com**, enter the model name. For example: `llama3.2`.
 
    ![Download from settings](/images/one/open-webui-download-from-settings1.png#bordered)
@@ -115,11 +108,11 @@ Models range from 2 GB to 20+ GB. Download time depends on your network speed.
 
 #### Verify the connection
 
-Open WebUI automatically detects and connects to your local Ollama installation. The connection is successful when your downloaded model appears in the dropdown menu at the top of the chat page.
+Open WebUI automatically detects and connects to your local Ollama installation. The connection is successful when your downloaded model appears in the model drop-down list at the top of the chat page.
 
-### Option B: Use a model app
+### Option B: Use model apps
 
-Model apps package a specific model with pre-configured settings. This option is best if you want a ready-to-use model without managing the Ollama Registry.
+A model app packages a specific model with pre-configured settings. This option is best if you want a ready-to-use model without managing the Ollama Registry.
 
 #### Install the model app
 
@@ -142,16 +135,12 @@ When you see the completion screen, the model is ready.
 
 To allow Open WebUI to communicate with this specific model, you need to obtain its shared endpoint URL.
 
-1. Open Olares Settings, and then navigate to **Applications** > **[Model App Name]**.
-2. In **Shared entrances**, select the model to view the endpoint URL.
+1. Open Olares Settings, and then go to **Applications** > **[Model App Name]**.
+2. In **Shared entrances**, select the model to view its endpoint URL.
 
    ![Get shared endpoint](/images/one/qwen3.5-27b-shared-entrance.png#bordered){width=70%}
 
-3. Copy the shared endpoint. For example:
-
-   ```plain
-   http://94a553e00.shared.olares.com
-   ```
+3. Copy the endpoint URL. For example, `http://94a553e00.shared.olares.com`.
 
 :::tip Why not use the URL shown on the model page?
 The URL shown on the model app page is user-specific and relies on browser-based frontend calls. If your device and Olares are not on the same local network, those calls might trigger Olares sign-in and you might encounter cross-origin restrictions (CORS). To avoid these issues, use the shared endpoint URL.
@@ -162,12 +151,12 @@ The URL shown on the model app page is user-specific and relies on browser-based
 Now, return to Open WebUI to link the model using the endpoint URL you just copied.
 
 1. In Open WebUI, click your profile icon and select **Admin Panel**.
-2. Navigate to **Settings** > **Connections**.
+2. Go to **Settings** > **Connections**.
 3. On the right of **Manage Ollama API Connections**, click <span class="material-symbols-outlined">add</span> to add a new connection.
-4. In the **URL** field, paste the model app's shared endpoint URL you copied earlier.
-5. Click **Save**. Open WebUI verifies the connection automatically.
+4. In the **URL** field, paste the model app's endpoint URL you copied earlier.
+5. Click **Save**. 
 
-   When you see "Ollama API settings updated", the connection is established.
+   Open WebUI verifies the connection automatically. When you see the "Ollama API settings updated" message, the connection is established.
 
    ![Connection established](/images/one/open-webui-connection-established.png#bordered)
 
@@ -175,7 +164,7 @@ Now, return to Open WebUI to link the model using the endpoint URL you just copi
 
 Once you connect a model, you are ready to use the chat interface.
 
-1. On the chat page, select the dropdown at the top and choose your configured model.
+1. In the model drop-down list, select your configured model.
 
    ![Select model](/images/one/open-webui-qwen3.5-27b.png#bordered)
 
