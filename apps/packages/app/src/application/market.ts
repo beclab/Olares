@@ -1,17 +1,19 @@
 import { CacheRequestBarrier } from 'src/stores/market/CacheRequestBarrier';
 import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
 import { WebsocketSharedWorkerEnum } from 'src/websocket/interface';
+import { usePreCheckStore } from 'src/stores/market/preCheck';
 import { useSettingStore } from 'src/stores/market/setting';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import { useCenterStore } from 'src/stores/market/center';
-import { useTokenStore } from 'src/stores/market/token';
-import { bus, BUS_EVENT, busEmit } from '../utils/bus';
-import { useUserStore } from '../stores/market/user';
+import { useAppStore } from 'src/stores/market/appStore';
+import { useTokenStore } from 'src/stores/settings/token';
+import { useUserStore } from '../stores/settings/user';
 import { useMenuStore } from '../stores/market/menu';
 import globalConfig from 'src/api/market/config';
+import { bus, BUS_EVENT } from '../utils/bus';
 import { DeviceType } from '@bytetrade/core';
-import { NormalApplication } from './base';
+import { NormalApplication, getApplication } from './base';
 import { supportLanguages } from '../i18n';
 import { i18n } from 'src/boot/i18n';
 import axios from 'axios';
@@ -19,14 +21,72 @@ import axios from 'axios';
 export class MarketApplication extends NormalApplication {
 	applicationName = 'market';
 	socketStore = useWebsocketManager2Store();
-	userStore = useUserStore();
+	preCheckStore = usePreCheckStore();
 	menuStore = useMenuStore();
+
+	protected shouldEnsureSocketAlive(): boolean {
+		return !globalConfig.isOfficial;
+	}
 
 	onErrorMessage = (failureMessage: string) => {
 		BtNotify.show({
 			type: NotifyDefinedType.FAILED,
-			message: failureMessage
+			message: i18n.global.t(failureMessage)
 		});
+	};
+
+	refreshData = async () => {
+		const appStore = useAppStore();
+		const centerStore = useCenterStore();
+		await appStore.init();
+		const sourceRequest = appStore.initSourceRequest();
+		centerStore.init();
+
+		const settingStore = useSettingStore();
+		settingStore.init();
+		const settingRequest = settingStore.initConfigRequest();
+
+		if (!globalConfig.isOfficial) {
+			const preCheckRequest = this.preCheckStore.initSystemRequest();
+
+			const barrier = new CacheRequestBarrier(
+				['user', 'setting', 'source'],
+				(data, isFromCache) => {
+					console.log('CacheRequestBarrier callback');
+					if (isFromCache) {
+						console.log('CacheRequestBarrier first (from cache)');
+						centerStore.loadFirstData();
+					} else {
+						console.log('CacheRequestBarrier refresh');
+						centerStore.fetchNewData(true);
+					}
+				}
+			);
+			barrier.addRequest('user', preCheckRequest);
+			barrier.addRequest('setting', settingRequest);
+			barrier.addRequest('source', sourceRequest);
+			const tokenStore = useTokenStore();
+			const host = window.location.origin;
+			tokenStore.setUrl(host);
+			const userStore = useUserStore();
+			userStore.get_accounts();
+		} else {
+			const barrier = new CacheRequestBarrier(
+				['setting', 'source'],
+				(data, isFromCache) => {
+					console.log('CacheRequestBarrier callback');
+					if (isFromCache) {
+						console.log('CacheRequestBarrier first (from cache)');
+						centerStore.loadFirstData();
+					} else {
+						console.log('CacheRequestBarrier refresh');
+						centerStore.fetchNewData(true);
+					}
+				}
+			);
+			barrier.addRequest('setting', settingRequest);
+			barrier.addRequest('source', sourceRequest);
+		}
 	};
 
 	initializeApp = async () => {
@@ -40,63 +100,12 @@ export class MarketApplication extends NormalApplication {
 			}
 		);
 		menuStore.leftDrawerOpen = !deviceStore.isMobile;
-		const centerStore = useCenterStore();
+
 		if (!globalConfig.isOfficial) {
-			const userRequest = this.userStore.init();
-			const settingStore = useSettingStore();
-			const settingRequest = settingStore.init();
-			const centerRequest = await centerStore.init();
 			this.socketStore.start();
-
-			const barrier = new CacheRequestBarrier(
-				['user', 'setting', 'center'],
-				(data, isFirstLoad) => {
-					console.log('CacheRequestBarrier callback');
-					if (isFirstLoad) {
-						console.log('CacheRequestBarrier first');
-						centerStore.loadFirstData();
-					} else {
-						console.log('CacheRequestBarrier refresh');
-						centerStore.fetchNewData(true);
-					}
-				}
-			);
-			barrier.addRequest('user', userRequest);
-			barrier.addRequest('setting', settingRequest);
-			barrier.addRequest('center', centerRequest);
-		} else {
-			const settingStore = useSettingStore();
-			const settingRequest = settingStore.init();
-			const centerRequest = await centerStore.init();
-			const barrier = new CacheRequestBarrier(
-				['setting', 'center'],
-				(data, isFirstLoad) => {
-					console.log('CacheRequestBarrier callback');
-					if (isFirstLoad) {
-						console.log('CacheRequestBarrier first');
-						centerStore.loadFirstData();
-					} else {
-						console.log('CacheRequestBarrier refresh');
-						centerStore.fetchNewData(true);
-					}
-				}
-			);
-			barrier.addRequest('setting', settingRequest);
-			barrier.addRequest('center', centerRequest);
 		}
-	};
 
-	onVisibilityChange = () => {
-		if (document.visibilityState === 'visible') {
-			console.log('Page is active');
-			if (this.socketStore.isClosed()) {
-				this.initializeApp().catch((err) => {
-					console.error('Error during app re-initialization:', err);
-				});
-			}
-		} else {
-			console.log('Page is in background');
-		}
+		await this.refreshData();
 	};
 
 	async appLoadPrepare(data: any) {
@@ -121,9 +130,9 @@ export class MarketApplication extends NormalApplication {
 	}
 
 	async appMounted(): Promise<void> {
+		await super.appMounted();
 		await this.initializeApp();
 		bus.on(BUS_EVENT.APP_BACKEND_ERROR, this.onErrorMessage);
-		document.addEventListener('visibilitychange', this.onVisibilityChange);
 	}
 
 	async appRedirectUrl(): Promise<void> {}
@@ -131,7 +140,6 @@ export class MarketApplication extends NormalApplication {
 	async appUnMounted(): Promise<void> {
 		await super.appUnMounted();
 		bus.off(BUS_EVENT.APP_BACKEND_ERROR, this.onErrorMessage);
-		document.removeEventListener('visibilitychange', this.onVisibilityChange);
 	}
 
 	websocketConfig = {
@@ -148,15 +156,16 @@ export class MarketApplication extends NormalApplication {
 				try {
 					const body = JSON.parse(data.data);
 					if (body) {
-						const center = useCenterStore();
+						console.log(body);
+						const appStore = useAppStore();
 						if (body['notify_type'] == 'app_state_change') {
-							center.updateAppStatusBySocket(body);
+							appStore.updateAppStatusBySocket(body);
 						} else if (body['notify_type'] == 'market_system_point') {
-							center.updateMarketSystemBySocket(body);
+							appStore.updateMarketSystemBySocket(body);
 						} else if (body['notify_type'] == 'image_state_change') {
-							center.updateDownloadedImageSizeBySocket(body);
+							appStore.updateDownloadedImageSizeBySocket(body);
 						} else if (body['notify_type'] == 'payment_state_update') {
-							center.updateLocalStatus(
+							appStore.updateLocalStatus(
 								body.extensions.app_name,
 								body.extensions.source_id,
 								{
@@ -164,6 +173,12 @@ export class MarketApplication extends NormalApplication {
 									data: body?.extensions_obj?.payment_data
 								}
 							);
+						} else if (body['eventType'] == 'usersUpdate') {
+							const userStore = useUserStore();
+							userStore.get_accounts();
+							const preCheckStore = usePreCheckStore();
+							const request = preCheckStore.initSystemRequest();
+							request.get();
 						}
 					}
 				} catch (e) {
@@ -171,13 +186,10 @@ export class MarketApplication extends NormalApplication {
 					console.log(e);
 				}
 			} else if (data.type == 'reconnected') {
-				const userStore = useUserStore();
-				const centerStore = useCenterStore();
-				if (!globalConfig.isOfficial) {
-					const request = userStore.init();
-					request.get();
-					centerStore.fetchNewData();
-				}
+				console.log('[market] socket reconnected, refreshing data');
+				(getApplication() as MarketApplication).refreshData().catch((err) => {
+					console.error('Error refreshing market data after reconnect:', err);
+				});
 			}
 		}
 	};
@@ -201,6 +213,10 @@ export class MarketApplication extends NormalApplication {
 						resolve(axios.request(config));
 					});
 				});
+			}
+
+			if (response.config.url!.indexOf('/api/users') >= 0) {
+				return response.data.data;
 			}
 			return data;
 		});

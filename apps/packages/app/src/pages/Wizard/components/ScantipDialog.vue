@@ -49,7 +49,6 @@ const onCancel = () => {
 
 		.dialog-desc {
 			width: 360px;
-			background: #f6f6f6;
 			margin: 0 auto;
 			border-radius: 8px;
 		}

@@ -114,7 +114,7 @@ onMounted(() => {
 	align-items: center;
 	justify-content: center;
 	border-radius: 50px;
-	border: 10px solid $white;
+	border: 10px solid white;
 	box-sizing: border-box;
 }
 

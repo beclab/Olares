@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
 import { date } from 'quasar';
-import { getFileType, getFileIcon } from '@bytetrade/core';
+import { getFileTypeI18nKey, getFileIcon } from '@bytetrade/core';
+import { i18n } from 'src/boot/i18n';
 import { format } from '../utils/format';
 import { useUserStore } from './user';
-import { CommonFetch } from './../api';
-import { seahub } from './../api';
+import { seahub } from 'src/api';
 import {
 	SearchCategory,
 	ServiceParamsType,
@@ -13,15 +13,13 @@ import {
 	TextSearchItem,
 	SearchV2Type
 } from 'src/utils/interface/search';
-import { dataAPIs, filesIsV1 } from 'src/api/files';
-import { common } from 'src/api/files';
+import { dataAPIs } from 'src/api/files';
 import { useWebsocketManager2Store } from './websocketManager2';
 import { AppInfo } from 'src/utils/interface/applications';
 import { getApplication } from 'src/application/base';
-import { useAppStore } from './desktop/app';
+import { useApplicationStore } from './desktop/app';
 import { useTokenStore } from './token';
 import { driveTypeBySearchMeta } from 'src/api/files/v2/common/common';
-import { dataAPIs as dataAPIsV2 } from 'src/api/files/v2';
 import { APP_STATUS } from 'src/constant/constants';
 import { useAppAbilitiesStore } from './appAbilities';
 import {
@@ -34,6 +32,7 @@ import {
 
 import { v4 as uuidv4 } from 'uuid';
 import { uninstalledAppState } from 'src/constant/config';
+import { axiosInstanceProxy } from 'src/platform/httpProxy';
 
 const { humanStorageSize } = format;
 
@@ -59,7 +58,6 @@ export type SearchState = {
 	waiting: boolean;
 	conversationId: string | null;
 	searchList: SearchItemType[];
-	filesSearchItem: SearchItemType;
 	filesV2SearchItem: SearchItemType;
 	wiseSearchItem: SearchItemType;
 	chatList: ChatMsg[];
@@ -75,14 +73,6 @@ export const useSearchStore = defineStore('search', {
 			waiting: false,
 			conversationId: null,
 			chatList: [],
-			filesSearchItem: {
-				name: 'Files Search',
-				title: 'Drive',
-				icon: './app-icon/drive.svg',
-				type: 'Command',
-				id: 'drive',
-				serviceType: ServiceType.Files
-			},
 			filesV2SearchItem: {
 				name: 'Files Search',
 				title: 'Drive',
@@ -136,7 +126,7 @@ export const useSearchStore = defineStore('search', {
 			let myApps: AppInfo[] = [];
 			let wiseInstalled = false;
 			if (getApplication().applicationName == 'desktop') {
-				const appStore = useAppStore();
+				const appStore = useApplicationStore();
 				myApps = appStore.myApps;
 				if (
 					myApps.find(
@@ -178,11 +168,7 @@ export const useSearchStore = defineStore('search', {
 			res = [...res, ...apps];
 
 			// , ...myApps
-			if (filesIsV1()) {
-				res.splice(0, 0, this.filesSearchItem);
-			} else {
-				res.splice(0, 0, this.filesV2SearchItem);
-			}
+			res.splice(0, 0, this.filesV2SearchItem);
 
 			console.log('getCommandres', res);
 			return res;
@@ -190,7 +176,14 @@ export const useSearchStore = defineStore('search', {
 
 		async getAppList() {
 			try {
-				const data: any = await CommonFetch.post(
+				const userStore = useUserStore();
+				const axiosProxy = axiosInstanceProxy({
+					baseURL: this.getBaseurl(),
+					headers: {
+						'X-Authorization': userStore.current_user?.access_token || ''
+					}
+				});
+				const data: any = await axiosProxy.post(
 					this.getBaseurl() + '/server/myApps',
 					{}
 				);
@@ -247,7 +240,7 @@ export const useSearchStore = defineStore('search', {
 				const items = res.items;
 
 				items.map((item: any) => {
-					item.fileType = getFileType(item.name);
+					item.fileType = i18n.global.t(getFileTypeI18nKey(item.name));
 					item.fileIcon = getFileIcon(item.name);
 					item.size = humanStorageSize(item.size);
 					item.created = date.formatDate(
@@ -312,37 +305,25 @@ export const useSearchStore = defineStore('search', {
 
 			for (let i = 0; i < res.length; i++) {
 				const el = res[i];
-				el.fileType = getFileType(el.title);
+				el.fileType = i18n.global.t(getFileTypeI18nKey(el.title));
 				el.fileIcon = getFileIcon(el.title);
 				if (el.resource_uri) {
-					if (filesIsV1()) {
-						el.driveType = common().driveTypeBySearchPath(el.resource_uri);
-					} else {
-						el.driveType = driveTypeBySearchMeta({
-							fileType: el.meta?.file_type as any,
-							fileExtend: el.meta?.extend
-						});
-					}
+					el.driveType = driveTypeBySearchMeta({
+						fileType: el.meta?.file_type as any,
+						fileExtend: el.meta?.extend
+					});
 					if (el.driveType) {
-						if (filesIsV1()) {
-							el.isDir = el.resource_uri.endsWith('/');
-							const path = dataAPIs(el.driveType).formatSearchPath(
-								el.resource_uri
-							);
-							el.path = path;
-						} else {
-							if (el.meta) {
-								if (el.meta.is_dir) {
-									el.isDir = el.meta.is_dir;
-								}
-								const path = dataAPIsV2(el.driveType).displayPath({
-									isDir: el.meta.is_dir,
-									fileExtend: el.meta.extend,
-									path: el.meta.path,
-									fileType: el.meta.file_type
-								});
-								el.path = path;
+						if (el.meta) {
+							if (el.meta.is_dir) {
+								el.isDir = el.meta.is_dir;
 							}
+							const path = dataAPIs(el.driveType).displayPath({
+								isDir: el.meta.is_dir,
+								fileExtend: el.meta.extend,
+								path: el.meta.path,
+								fileType: el.meta.file_type
+							});
+							el.path = path;
 						}
 					} else {
 						el.path = el.resource_uri;
@@ -394,7 +375,7 @@ export const useSearchStore = defineStore('search', {
 			const path = lastIndex !== -1 ? data.path.slice(0, lastIndex) : data.path;
 			const name =
 				lastIndex !== -1 ? data.path.slice(lastIndex + 1) : data.path;
-			const fileType = getFileType(name) || 'blob';
+			const fileType = i18n.global.t(getFileTypeI18nKey(name)) || 'blob';
 			const fileIcon = getFileIcon(name);
 
 			const searchRes: TextSearchItem = {

@@ -1,5 +1,4 @@
 /**
- * 限制数字大小
  * @param {*} num
  * @param {*} min
  * @param {*} max
@@ -26,7 +25,6 @@ export const limitFloat = (num, min = 0, max = 100) => {
 };
 
 /**
- * 匹配是否为数组中的值
  * @param {*} arr
  * @param {*} val
  * @returns
@@ -39,7 +37,6 @@ export const matchValue = (arr, val) => {
 };
 
 /**
- * 等待
  * @param {*} delay
  * @returns
  */
@@ -52,7 +49,6 @@ export const sleep = (delay) =>
 	});
 
 /**
- * 防抖函数
  * @param {*} func
  * @param {*} delay
  * @returns
@@ -70,7 +66,6 @@ export const debounce = (func, delay = 200) => {
 };
 
 /**
- * 节流函数
  * @param {*} func
  * @param {*} delay
  * @returns
@@ -97,7 +92,6 @@ export const throttle = (func, delay = 200) => {
 };
 
 /**
- * 判断字符串全是某个字符
  * @param {*} s
  * @param {*} c
  * @param {*} i
@@ -114,7 +108,6 @@ export const isAllchar = (s, c, i = 0) => {
 };
 
 /**
- * 字符串通配符(*)匹配
  * @param {*} s
  * @param {*} p
  * @returns
@@ -151,7 +144,6 @@ export const isMatch = (s, p) => {
 };
 
 /**
- * 类型检查
  * @param {*} o
  * @returns
  */
@@ -161,7 +153,6 @@ export const type = (o) => {
 };
 
 /**
- * sha256
  * @param {*} text
  * @returns
  */
@@ -174,13 +165,11 @@ export const sha256 = async (text, salt) => {
 };
 
 /**
- * 生成随机事件名称
  * @returns
  */
 export const genEventName = () => btoa(Math.random()).slice(3, 11);
 
 /**
- * 判断两个 Set 是否相同
  * @param {*} a
  * @param {*} b
  * @returns
@@ -191,7 +180,6 @@ export const isSameSet = (a, b) => {
 };
 
 /**
- * 去掉字符串末尾某个字符
  * @param {*} s
  * @param {*} c
  * @param {*} count
@@ -206,7 +194,6 @@ export const removeEndchar = (s, c, count = 1) => {
 };
 
 /**
- * 匹配字符串及语言标识
  * @param {*} str
  * @param {*} sign
  * @returns
@@ -229,7 +216,6 @@ export const matchInputStr = (str, sign) => {
 };
 
 /**
- * 判断是否英文单词
  * @param {*} str
  * @returns
  */
@@ -239,7 +225,6 @@ export const isValidWord = (str) => {
 };
 
 /**
- * blob转为base64
  * @param {*} blob
  * @returns
  */
@@ -249,4 +234,111 @@ export const blobToBase64 = (blob) => {
 		reader.onloadend = () => resolve(reader.result);
 		reader.readAsDataURL(blob);
 	});
+};
+
+/**
+ * @param {string} text
+ * @param {boolean} partial
+ * @returns {string}
+ */
+export const stripMarkdownCodeBlock = (text, partial = false) => {
+	if (!text) return '';
+
+	const fullMatch = text.match(/^```(?:json|xml|text)?\s*\n?([\s\S]*?)\n?```$/);
+	if (fullMatch) {
+		return fullMatch[1];
+	}
+
+	if (partial) {
+		const startMatch = text.match(/^```(?:json|xml|text)?\s*\n?([\s\S]*)$/);
+		if (startMatch) {
+			text = startMatch[1];
+		}
+
+		const endMatch = text.match(/^([\s\S]*?)\n?```$/);
+		if (endMatch) {
+			text = endMatch[1];
+		}
+	}
+
+	return text;
+};
+
+/**
+ * @param {Array} supportedLangs
+ * @param {string} fallback
+ * @returns {string}
+ */
+export const getBrowserPreferredLang = (supportedLangs, fallback = 'en') => {
+	const browserLang =
+		(typeof navigator !== 'undefined' &&
+			(navigator.language || navigator.userLanguage)) ||
+		fallback;
+
+	if (supportedLangs.includes(browserLang)) {
+		return browserLang;
+	}
+
+	const langPrefix = browserLang.split('-')[0];
+	if (supportedLangs.includes(langPrefix)) {
+		return langPrefix;
+	}
+
+	if (langPrefix === 'zh') {
+		if (browserLang.includes('TW') || browserLang.includes('HK')) {
+			return 'zh-TW';
+		}
+		return 'zh-CN';
+	}
+
+	return fallback;
+};
+
+/**
+ */
+const BLOCK_ELEMENTS = [
+	'p',
+	'div',
+	'h1',
+	'h2',
+	'h3',
+	'h4',
+	'h5',
+	'h6',
+	'li',
+	'blockquote',
+	'pre',
+	'article',
+	'section',
+	'header',
+	'footer',
+	'aside',
+	'main',
+	'td',
+	'th',
+	'dt',
+	'dd'
+];
+
+/**
+ * @param {HTMLElement} element
+ * @param {string} text
+ * @param {number} lengthThreshold
+ * @returns {boolean}
+ */
+export const shouldUseNewline = (element, text, lengthThreshold = 20) => {
+	if (!element || !text) {
+		return false;
+	}
+
+	const tagName = element.tagName?.toLowerCase();
+	if (tagName && BLOCK_ELEMENTS.includes(tagName)) {
+		return true;
+	}
+
+	if (text.length >= lengthThreshold) {
+		return true;
+	}
+
+	return false;
 };

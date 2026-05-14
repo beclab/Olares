@@ -6,10 +6,10 @@
 
 	<bt-scroll-area class="nav-height-scroll-area-conf">
 		<bt-list first>
-			<bt-form-item :title="t('select_authority')">
+			<!-- <bt-form-item :title="t('select_authority')">
 				<bt-select v-model="authorityType" :options="authorityLevel" />
-			</bt-form-item>
-			<error-message-tip
+			</bt-form-item> -->
+			<!-- <error-message-tip
 				v-if="authorityType === '3' || authorityType === '4'"
 				:is-error="!isRegIP"
 				:error-message="t('errors.ip_input_error')"
@@ -24,7 +24,7 @@
 						:right="true"
 					/>
 				</bt-form-item>
-			</error-message-tip>
+			</error-message-tip> -->
 			<bt-form-item :title="t('select_factor_model')" :width-separator="false">
 				<bt-select v-model="factorModel" :options="factorOptions" />
 			</bt-form-item>
@@ -35,6 +35,7 @@
 				flat
 				class="confirm-btn q-px-md q-mt-lg"
 				:label="t('save')"
+				:loading="saveLoading"
 				@click="setIps"
 			/>
 		</div>
@@ -60,7 +61,7 @@ export interface AuthorityType {
 }
 
 const { t } = useI18n();
-
+const saveLoading = ref(false);
 const authorityStore = useAuthorityStore();
 
 const appointIP = ref<string | undefined | null>('');
@@ -130,7 +131,10 @@ const setIps = () => {
 		allow_cidrs: ips,
 		auth_policy: factorModel.value
 	};
-	authorityStore.setIps(parmas);
+	saveLoading.value = true;
+	authorityStore.setIps(parmas).finally(() => {
+		saveLoading.value = false;
+	});
 };
 
 const isRegIP = computed(() => {

@@ -7,6 +7,7 @@ export interface TailScalePluginInterface {
 		authKey: string | undefined;
 		server: string;
 		acceptDns: boolean;
+		authToken: string;
 	}): void;
 	close(): void;
 
@@ -29,5 +30,5 @@ export interface TailScalePluginInterface {
 		state: string;
 	}>;
 
-	resendCache(options: { server: string }): Promise<void>;
+	resendCache(options: { server: string; authToken: string }): Promise<void>;
 }

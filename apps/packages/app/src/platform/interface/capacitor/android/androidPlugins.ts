@@ -87,6 +87,10 @@ export interface AndroidUniversalPlugin {
 		totalSpace: number;
 	}>;
 
+	getRecaptchaToken(): Promise<{
+		token: string;
+	}>;
+
 	openLocationSettings(): void;
 	openBluetoothSettings(): void;
 	openAppSettings(): void;

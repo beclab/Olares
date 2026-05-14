@@ -42,7 +42,7 @@ import MyPage from '@apps/control-panel-common/src/containers/MyPage.vue';
 import Yaml from './Yaml.vue';
 import QButtonStyle from '@apps/control-panel-common/src/components/QButtonStyle.vue';
 import { get } from 'lodash';
-import { QBtn, QTooltip } from 'quasar'; // 确保已导入 Quasar 组件
+import { QBtn, QTooltip } from 'quasar'; // Ensure Quasar components are imported
 import { useIsStudio } from '@apps/control-hub/src/stores/hook';
 const isStudio = useIsStudio();
 const usePod = UsePod();

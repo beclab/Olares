@@ -1,0 +1,44 @@
+@mixin cp-q-table-scrollbar-appearance {
+	scrollbar-width: thin;
+	scrollbar-color: #BCBDBE transparent;
+
+	&::-webkit-scrollbar {
+		width: 12px;
+		height: 12px;
+		background: transparent;
+	}
+
+	&::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	&::-webkit-scrollbar-thumb {
+		background-color: #BCBDBE;
+		border-radius: 999px;
+		border: none;
+		background-clip: padding-box;
+		margin: 0;
+		min-height: 24px;
+		min-width: 24px;
+		opacity: 1;
+		cursor: default;
+		will-change: auto;
+		transition: background-color 0.2s ease;
+	}
+
+	&::-webkit-scrollbar-thumb:hover {
+		background-color: #BCBDBE;
+	}
+}
+
+@mixin cp-q-table-middle-dark-scrollbar {
+	body.body--dark & {
+		::v-deep(.q-table__middle.scroll) {
+			@include cp-q-table-scrollbar-appearance;
+		}
+	}
+}
+
+body.body--dark .cp-q-table-dark-scrollbar .q-table__middle.scroll {
+	@include cp-q-table-scrollbar-appearance;
+}

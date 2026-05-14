@@ -10,12 +10,14 @@ export type UpgradeStateStore = {
 		upgradingState: string;
 		terminusState: string;
 	};
+	refreshTimer: any;
 };
 
 export const useUpgradeStore = defineStore('upgrade', {
 	state: () => {
 		return {
-			state: UpgradeState.NotRunning
+			state: UpgradeState.NotRunning,
+			refreshTimer: undefined
 		} as UpgradeStateStore;
 	},
 	getters: {
@@ -51,17 +53,22 @@ export const useUpgradeStore = defineStore('upgrade', {
 			}
 		},
 		async requestUpgradeStatus() {
-			const tokenStore = useTokenStore();
-			const res: any = await axios.get(tokenStore.url + '/api/system/status');
-			this.upgradeDetail = res;
-			if (this.isUpgrading) {
-				this.setStateByUpgradingState(this.upgradeDetail.upgradingState);
-			} else {
-				if (this.state == UpgradeState.StatusRunning) {
-					this.state = UpgradeState.StatusComplete;
+			try {
+				const tokenStore = useTokenStore();
+				const res: any = await axios.get(tokenStore.url + '/api/system/status');
+				this.upgradeDetail = res;
+				if (this.isUpgrading) {
+					this.setStateByUpgradingState(this.upgradeDetail.upgradingState);
 				} else {
-					this.state = UpgradeState.NotRunning;
+					this.stopRefreshUpgradeState();
+					if (this.state == UpgradeState.StatusRunning) {
+						this.state = UpgradeState.StatusComplete;
+					} else {
+						this.state = UpgradeState.NotRunning;
+					}
 				}
+			} catch (error) {
+				/* empty */
 			}
 		},
 		setStateByUpgradingState(upgradingState: string) {
@@ -71,8 +78,22 @@ export const useUpgradeStore = defineStore('upgrade', {
 					break;
 				default:
 					this.state = UpgradeState.StatusRunning;
+					this.startRefreshActivedMachine();
 					break;
 			}
+		},
+
+		startRefreshActivedMachine(ms = 5000) {
+			if (this.refreshTimer) {
+				return;
+			}
+			this.refreshTimer = setInterval(async () => {
+				this.update_upgrade_state_info();
+			}, ms);
+		},
+		stopRefreshUpgradeState() {
+			clearInterval(this.refreshTimer);
+			this.refreshTimer = undefined;
 		}
 	}
 });

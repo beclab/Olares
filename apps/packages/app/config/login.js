@@ -1,5 +1,5 @@
 const boot = ['i18n', 'loginUI', 'baseAxios', 'application/login'];
-const css = ['app.scss'];
+const css = ['login/app.scss'];
 
 const getConfig = (ctx) => {
 	if (!ctx.dev) {
@@ -10,7 +10,9 @@ const getConfig = (ctx) => {
 		const chainWebpackMobile = require('./Login/config');
 		chainWebpackMobile.build.chainWebpack(ctx, chain, { isClient });
 	};
+
 	const proxy = require('./Login/proxy');
+
 	return {
 		boot,
 		css,
@@ -23,10 +25,11 @@ const getConfig = (ctx) => {
 		devServer: {
 			proxy: proxy,
 			host: process.env.DEV_DOMAIN,
-			https: true
+			https: process.env.PROTOCOL === 'https://'
 		},
 		sourceFiles: {
-			indexHtmlTemplate: 'src/index.template.login.html'
+			indexHtmlTemplate: 'src/index.template.login.html',
+			variables: 'login/variables.scss'
 		},
 		htmlVariables: {
 			productName: 'Olares'

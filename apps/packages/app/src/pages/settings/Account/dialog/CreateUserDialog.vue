@@ -79,15 +79,11 @@ import { useAdminStore } from 'src/stores/settings/admin';
 import { OLARES_ROLE, SelectorProps } from 'src/constant';
 import BtSelect from 'src/components/base/BtSelect.vue';
 import { getApplication } from 'src/application/base';
+import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
 
 const { t } = useI18n();
 
 const PASSWORD_RULE = {
-	LENGTH_RULE: '^.{8,32}$',
-	LOWERCASE_RULE: '^(?=.*[a-z])',
-	UPPERCASE_RULE: '^(?=.*[A-Z])',
-	DIGIT_RULE: '^(?=.*[0-9])',
-	SYMBOL_RULE: '^(?=.*[@$!%*?&_.])',
 	ALL_RULE:
 		'^(.*[a-z].*[A-Z].*[0-9].*)$|^(.*[a-z].*[0-9].*[A-Z].*)$|^(.*[A-Z].*[a-z].*[0-9].*)$|^(.*[A-Z].*[0-9].*[a-z].*)$|^(.*[0-9].*[a-z].*[A-Z].*)$|^(.*[0-9].*[A-Z].*[a-z].*)$|^(\$2[ayb]\$.{56})$'
 };
@@ -134,6 +130,10 @@ const CustomRef = ref();
 
 let checkAccountCreateProgress: any = null;
 
+function refreshUserListAsync() {
+	accountStore.get_accounts();
+}
+
 const createUserName = async () => {
 	if (userName.value.length === 0) {
 		return;
@@ -143,46 +143,92 @@ const createUserName = async () => {
 		return;
 	}
 
-	password = generatePasword();
+	const adminDomain = adminStore.olaresId.split('@')[1];
 
-	while (!allRule.test(password)) {
+	let splitUserName = userName.value.split('@');
+
+	if (splitUserName.length > 1 && splitUserName[1] !== adminDomain) {
+		notifyFailed(
+			t('Only accounts belonging to the domain {domain} can be created.', {
+				domain: adminDomain
+			})
+		);
+		return;
+	}
+
+	const realCreate = async () => {
+		userName.value = splitUserName[0];
+
+		let currentUserName = userName.value;
+
 		password = generatePasword();
-	}
-	Loading.show();
 
-	const currentUserName =
-		userName.value + '@' + adminStore.olaresId.split('@')[1];
-
-	if (adminStore.olaresd) {
-		const data = await didStore.resolve_name(currentUserName);
-		if (!data) {
-			Loading.hide();
-			return;
+		while (!allRule.test(password)) {
+			password = generatePasword();
 		}
-	} else {
-		const data = await didStore.resolve_name_by_did(currentUserName);
-		if (!data) {
-			Loading.hide();
-			return;
+		Loading.show();
+
+		if (!currentUserName.endsWith(adminDomain)) {
+			currentUserName = currentUserName + '@' + adminDomain;
 		}
+
+		if (adminStore.olaresd) {
+			const data = await didStore.resolve_name(currentUserName);
+			if (!data) {
+				Loading.hide();
+				return;
+			}
+		} else {
+			const data = await didStore.resolve_name_by_did(currentUserName);
+			if (!data) {
+				Loading.hide();
+				return;
+			}
+		}
+
+		try {
+			await accountStore.create_account({
+				name: userName.value,
+				owner_role: newRole.value,
+				password: passwordAddSort(password, adminStore.terminus.osVersion),
+				cpu_limit: '' + cpuLimit.value,
+				memory_limit: '' + memoryLimit.value + 'G'
+			});
+
+			checkAccountCreateProgress = setInterval(async () => {
+				checkAccountCreate(userName.value);
+			}, 4 * 1000);
+		} catch (error: any) {
+			console.log(error);
+			Loading.hide();
+			refreshUserListAsync();
+		}
+	};
+
+	if (Number(cpuLimit.value) < 1 || Number(memoryLimit.value) < 3) {
+		quasar
+			.dialog({
+				component: ReminderDialogComponent,
+				componentProps: {
+					title: t('Low resources allocation'),
+					message: t(
+						'The resources allocation is low. We recommend at least 1 CPU core and 3 GB of RAM. Lower settings may lead to poor experience. Are you sure you want to proceed?'
+					),
+					cancelText: t('cancel'),
+					confirmText: t('confirm')
+				}
+			})
+			.onOk(async () => {
+				await realCreate();
+			})
+			.onCancel(() => {
+				cpuLimit.value = '1';
+				memoryLimit.value = '3';
+			});
+		return;
 	}
 
-	try {
-		await accountStore.create_account({
-			name: userName.value,
-			owner_role: newRole.value,
-			password: passwordAddSort(password, adminStore.terminus.osVersion),
-			cpu_limit: '' + cpuLimit.value,
-			memory_limit: '' + memoryLimit.value + 'G'
-		});
-
-		checkAccountCreateProgress = setInterval(async () => {
-			checkAccountCreate(userName.value);
-		}, 4 * 1000);
-	} catch (error: any) {
-		console.log(error);
-		Loading.hide();
-	}
+	await realCreate();
 };
 /**
  * check wait creat account state
@@ -196,6 +242,12 @@ async function checkAccountCreate(username: string) {
 
 		if (data.status == AccountStatus.Created) {
 			Loading.hide();
+			refreshUserListAsync();
+			const socketStore = useWebsocketManager2Store();
+			socketStore.apply('usersUpdate', {
+				type: 'add',
+				username: username
+			});
 			if (checkAccountCreateProgress) {
 				clearInterval(checkAccountCreateProgress);
 				checkAccountCreateProgress = null;
@@ -238,12 +290,19 @@ async function checkAccountCreate(username: string) {
 				});
 		} else if (data.status === AccountStatus.Failed) {
 			Loading.hide();
+			refreshUserListAsync();
+			if (checkAccountCreateProgress) {
+				clearInterval(checkAccountCreateProgress);
+				checkAccountCreateProgress = null;
+			}
 			notifyFailed(
-				data.message || t('An error occurred while creating the user.')
+				(data as any).message || t('An error occurred while creating the user.')
 			);
+			CustomRef.value.onDialogCancel();
 		}
 	} catch (e: any) {
 		Loading.hide();
+		refreshUserListAsync();
 		if (checkAccountCreateProgress) {
 			clearInterval(checkAccountCreateProgress);
 			checkAccountCreateProgress = null;

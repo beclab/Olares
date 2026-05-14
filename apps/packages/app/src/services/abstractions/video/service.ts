@@ -89,17 +89,17 @@ export enum DownMixStereoAlgorithmType {
 
 export const downMixStereoAlgorithmTypeOptions = [
 	{
-		label: DownMixStereoAlgorithmType.None,
+		label: i18n.global.t('None'),
 		value: DownMixStereoAlgorithmType.None,
 		enable: true
 	},
 	{
-		label: DownMixStereoAlgorithmType.Dave750,
+		label: i18n.global.t('Dave750'),
 		value: DownMixStereoAlgorithmType.Dave750,
 		enable: true
 	},
 	{
-		label: DownMixStereoAlgorithmType.NightmodeDialogue,
+		label: i18n.global.t('NightmodeDialogue'),
 		value: DownMixStereoAlgorithmType.NightmodeDialogue,
 		enable: true
 	}
@@ -125,47 +125,47 @@ export const encoderPresetTypeOptions = [
 		enable: true
 	},
 	{
-		label: EncoderPresetType.veryslow,
+		label: i18n.global.t('Very slow'),
 		value: EncoderPresetType.veryslow,
 		enable: true
 	},
 	{
-		label: EncoderPresetType.slower,
+		label: i18n.global.t('Slower'),
 		value: EncoderPresetType.slower,
 		enable: true
 	},
 	{
-		label: EncoderPresetType.slow,
+		label: i18n.global.t('Slow'),
 		value: EncoderPresetType.slow,
 		enable: true
 	},
 	{
-		label: EncoderPresetType.medium,
+		label: i18n.global.t('Medium'),
 		value: EncoderPresetType.medium,
 		enable: true
 	},
 	{
-		label: EncoderPresetType.fast,
+		label: i18n.global.t('Fast'),
 		value: EncoderPresetType.fast,
 		enable: true
 	},
 	{
-		label: EncoderPresetType.faster,
+		label: i18n.global.t('Faster'),
 		value: EncoderPresetType.faster,
 		enable: true
 	},
 	{
-		label: EncoderPresetType.veryfast,
+		label: i18n.global.t('Very fast'),
 		value: EncoderPresetType.veryfast,
 		enable: true
 	},
 	{
-		label: EncoderPresetType.superfast,
+		label: i18n.global.t('Super fast'),
 		value: EncoderPresetType.superfast,
 		enable: true
 	},
 	{
-		label: EncoderPresetType.ultrafast,
+		label: i18n.global.t('Ultra fast'),
 		value: EncoderPresetType.ultrafast,
 		enable: true
 	}

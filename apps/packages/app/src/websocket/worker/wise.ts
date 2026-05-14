@@ -21,12 +21,19 @@ export class WiseWebsocketBean extends BaseWebsocketBean {
 		super.initWebSocket(data, statusUpdate);
 	}
 
-	otherTypeMethods(data: { type: string; data: any }) {
-		if (data.type === 'addTaskHistory') {
-			this.insertTransferItem(data.data);
-			return true;
+	otherTypeMethods(data: {
+		type: string;
+		data: any;
+		_port?: MessagePort;
+	}): boolean {
+		switch (data.type) {
+			case 'addTaskHistory':
+				this.insertTransferItem(data.data);
+				return true;
+
+			default:
+				return false;
 		}
-		return false;
 	}
 
 	websocketOnMessage(event: MessageEvent): void {
@@ -38,6 +45,26 @@ export class WiseWebsocketBean extends BaseWebsocketBean {
 				progress: `${messageData.percent || 0}`,
 				id: messageData.task_id
 			});
+		} else if (messageType === WiseWSType.ENCLOSURE) {
+			this.connections.forEach((port) =>
+				port.postMessage({
+					type: 'message',
+					data: {
+						type: WiseWSType.ENCLOSURE,
+						data: messageData
+					}
+				})
+			);
+		} else if (messageType === WiseWSType.SYNC) {
+			this.connections.forEach((port) =>
+				port.postMessage({
+					type: 'message',
+					data: {
+						type: WiseWSType.SYNC,
+						data: messageData
+					}
+				})
+			);
 		}
 	}
 
@@ -47,6 +74,7 @@ export class WiseWebsocketBean extends BaseWebsocketBean {
 				port.postMessage({
 					type: 'message',
 					data: {
+						type: 'transfer',
 						item,
 						data: downloadItem
 					}

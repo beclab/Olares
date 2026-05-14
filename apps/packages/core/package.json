@@ -1,0 +1,26 @@
+{
+    "name": "@bytetrade/core",
+    "version": "0.1.0",
+    "description": "didvault core module",
+    "main": "src/index.ts",
+    "license": "GPLv3",
+    "dependencies": {
+        "axios": "1.15.2",
+        "date-fns": "2.22.1",
+        "lodash": "^4.18.1",
+        "multiformats": "9.6.4",
+        "semver": "^7.7.2",
+        "typescript": "^4.9.5",
+        "uuid": "9.0.1"
+    },
+    "scripts": {
+        "build": "rm -rf assets && tsc"
+    },
+    "lint-staged": {
+        "*.{js,jsx,ts,tsx}": "eslint --cache --fix",
+        "*.{ts,tsx,css,md}": "prettier --write"
+    },
+    "overrides": {
+        "follow-redirects": "^1.16.0"
+    }
+}

@@ -61,6 +61,67 @@
 					</q-item-section>
 				</q-item>
 
+				<q-item
+					id="setting_5"
+					class="q-mt-xl setting_item"
+					v-if="localHostAppsAbilities"
+				>
+					<q-item-section>
+						<!-- <TerminusSetSecurity></TerminusSetSecurity> -->
+						<div>
+							<div>
+								<div class="text-h6 text-ink-1">
+									{{ t('Enable local service domain') }}
+								</div>
+								<div class="text-ink-2 text-body2 q-mt-md">
+									{{
+										t(
+											"Automatically configures the system's Hosts file to direct Olares applications to the local device."
+										)
+									}}
+								</div>
+								<div class="q-mt-md text-body2 text-ink-3">
+									({{ t('Administrator privileges are required.') }})
+								</div>
+								<div
+									class="adminBtn text-body3 q-mt-md"
+									v-if="addedApps.length == 0"
+									@click="addAllAppToLocalHost"
+								>
+									<q-icon name="sym_r_add" class="icon q-mr-xs" size="16px" />
+									{{ t('add') }}
+								</div>
+								<div class="row items-center" v-else>
+									<div
+										class="adminBtn text-body3 q-mt-md q-mr-md"
+										v-if="missingApps.length > 0"
+										@click="addAllAppToLocalHost"
+									>
+										<q-icon
+											name="sym_r_sync"
+											class="icon q-mr-xs"
+											size="16px"
+										/>
+										{{ t('app.update') }}
+									</div>
+
+									<div
+										class="adminBtn text-body3 q-mt-md"
+										@click="removeAllAppsLocalHost"
+									>
+										<q-icon
+											name="sym_r_delete"
+											class="icon q-mr-xs"
+											size="16px"
+										/>
+										{{ t('app.remove') }}
+									</div>
+								</div>
+							</div>
+						</div>
+					</q-item-section>
+				</q-item>
+
 				<q-item id="setting_5" class="q-mt-xl setting_item">
 					<q-item-section>
 						<TerminusSetSecurity></TerminusSetSecurity>
@@ -151,7 +212,7 @@
 									>
 										<q-icon name="sym_r_sync" size="16px" class="q-mr-xs" />
 										<q-spinner-dots
-											color="sub-title"
+											color="ink-2"
 											v-if="settings.updateStatus.status == 'checking'"
 										/>
 										<span v-else>
@@ -204,17 +265,28 @@ import TerminusSetTheme from '../../../components/common/TerminusSetTheme.vue';
 
 import { notifySuccess } from '../../../utils/notifyRedefinedUtil';
 import { LarePassElectronUpdateStatus } from 'src/platform/interface/electron/interface';
-import { busOff, busOn } from '../../../utils/bus';
+import { busEmit, busOff, busOn, NetworkUpdateMode } from '../../../utils/bus';
 import LarePassUpdateReminderDialog from '../../../components/dialog/LarePassUpdateReminderDialog.vue';
 import TerminusSetLanguage from 'src/components/common/TerminusSetLanguage.vue';
 import TerminusSetSecurity from 'src/components/common/TerminusSetSecurity.vue';
 import TerminusCheckBox from 'src/components/common/TerminusCheckBox.vue';
 import VaultFileImportComponent from 'src/components/setting/VaultFileImportComponent.vue';
+import { useMDNSStore } from 'src/stores/mdns';
+import { TerminusStatus } from 'src/services/abstractions/mdns/service';
+
+import { useUserStore } from 'src/stores/user';
+import { useSearchStore } from 'src/stores/search';
+import { notifyFailed } from 'src/utils/settings/btNotify';
+import { useTermipassStore } from 'src/stores/termipass';
 
 const menuStore = useMenuStore();
 const { t } = useI18n();
 
 const $q = useQuasar();
+
+const userStore = useUserStore();
+
+const searchStore = useSearchStore();
 
 const settings = reactive({
 	automatically: true,
@@ -240,6 +312,9 @@ const router = useRouter();
 const route = useRoute();
 const scrollAreaRef = ref();
 const isScroll = ref(false);
+const termipassStore = useTermipassStore();
+
+const olaresSystemStatus = ref<TerminusStatus | undefined>();
 
 watch(
 	() => route.params.direction,
@@ -352,6 +427,145 @@ const transmissionrKeepUpdate = async (value: boolean) => {
 			await window.electron.api.settings.getTaskPreventSleepBoot();
 	}
 };
+
+const localHostAppsAbilities = ref(false);
+
+const addedApps = ref<string[]>([]);
+const missingApps = ref<string[]>([]);
+
+const getSyncLocalHostAbilities = async () => {
+	if (!$q.platform.is.win && !$q.platform.is.linux) {
+		return;
+	}
+	try {
+		const mdnsStore = useMDNSStore();
+		const instance = await mdnsStore.getOlaresStatusInfoInstance();
+		const res = await instance.get('/api/system/status');
+
+		const status: TerminusStatus = res.data.data;
+		olaresSystemStatus.value = status;
+
+		localHostAppsAbilities.value = true;
+
+		getAllAppStatusAddStatus();
+	} catch (error) {
+		localHostAppsAbilities.value = false;
+	}
+};
+
+getSyncLocalHostAbilities();
+
+const getAllAppStatusAddStatus = async () => {
+	if ($q.platform.is.electron) {
+		const addLocalHostsApps = await getAllNeedAddToLocalApps();
+		const info = await window.electron.api.settings.getOlaresLocalAppHosts(
+			userStore.current_user!.name,
+			addLocalHostsApps
+		);
+		addedApps.value = info.added;
+		missingApps.value = info.missing;
+	}
+};
+
+const addAllAppToLocalHost = async () => {
+	if (
+		!userStore.current_user ||
+		!olaresSystemStatus.value ||
+		!olaresSystemStatus.value.hostIp
+	) {
+		return;
+	}
+
+	const addLocalHostsApps = await getAllNeedAddToLocalApps();
+
+	if ($q.platform.is.electron) {
+		$q.loading.show();
+		try {
+			const result =
+				await window.electron.api.settings.updateOlaresLocalAppHosts(
+					userStore.current_user.name,
+					addLocalHostsApps
+				);
+			$q.loading.hide();
+			if (result) {
+				notifySuccess(t('success'));
+				busEmit('network_update', NetworkUpdateMode.update);
+			} else {
+				notifyFailed(t('failed'));
+			}
+			getAllAppStatusAddStatus();
+		} catch (error) {
+			$q.loading.hide();
+			notifyFailed(t('failed'));
+		}
+	}
+};
+
+const removeAllAppsLocalHost = async () => {
+	if (
+		!userStore.current_user ||
+		!olaresSystemStatus.value ||
+		!olaresSystemStatus.value.hostIp
+	) {
+		return;
+	}
+
+	if ($q.platform.is.electron) {
+		$q.loading.show();
+		try {
+			const result =
+				await window.electron.api.settings.updateOlaresLocalAppHosts(
+					userStore.current_user.name,
+					[]
+				);
+			$q.loading.hide();
+			if (result) {
+				notifySuccess(t('success'));
+				if ($q.platform.is.linux) {
+					// userStore.current_user.isLocal = false;
+					termipassStore.state.publicActions.updateIsLocal(false);
+				} else {
+					busEmit('network_update', NetworkUpdateMode.update);
+				}
+			} else {
+				notifyFailed(t('failed'));
+			}
+			getAllAppStatusAddStatus();
+		} catch (error) {
+			$q.loading.hide();
+			notifyFailed(t('failed'));
+		}
+	}
+};
+
+const getAllNeedAddToLocalApps = async () => {
+	if (
+		!userStore.current_user ||
+		!olaresSystemStatus.value ||
+		!olaresSystemStatus.value.hostIp
+	) {
+		return [];
+	}
+	const appendLine = (host: string) => {
+		return olaresSystemStatus.value!.hostIp + ' ' + host;
+	};
+
+	const addLocalHostsApps: string[] = [
+		appendLine(userStore.current_user.local_default_host),
+		appendLine('auth.' + userStore.current_user.local_default_host),
+		appendLine('desktop.' + userStore.current_user.local_default_host)
+	];
+
+	await searchStore.getAppList();
+
+	searchStore.appList.forEach((e) => {
+		addLocalHostsApps.push(
+			appendLine(e.id + '.' + userStore.current_user!.local_default_host)
+		);
+	});
+
+	return addLocalHostsApps;
+};
 </script>
 
 <style scoped lang="scss">
@@ -369,8 +583,7 @@ const transmissionrKeepUpdate = async (value: boolean) => {
 		padding: 0 32px;
 
 		.adminBtn {
-			border: 1px solid $yellow;
-			background-color: $yellow;
+			background-color: $primary;
 			display: inline-block;
 			color: $grey-10;
 			padding: 7px 12px;
@@ -378,7 +591,18 @@ const transmissionrKeepUpdate = async (value: boolean) => {
 			cursor: pointer;
 
 			&:hover {
-				background-color: $yellow-3;
+				background-color: $theme-primary-hover;
+			}
+		}
+
+		.delete {
+			border: 1px solid $blue-4;
+			color: $blue-4;
+			padding: 4px 8px;
+			border-radius: 6px;
+
+			&:hover {
+				background-color: $theme-primary-hover;
 			}
 		}
 

@@ -18,7 +18,7 @@ import {
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import MyTree from '@apps/control-panel-common/src/components/Menu/MyTree.vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 
 const menuOptions = {
 	title: 'title',

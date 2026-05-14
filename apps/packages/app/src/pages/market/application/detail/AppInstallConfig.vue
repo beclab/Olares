@@ -26,75 +26,31 @@
 	/>
 	<install-configuration
 		:name="t('detail.require_memory')"
-		:data="
-			appEntry && appEntry.requiredMemory
-				? getValueByUnit(
-						appEntry.requiredMemory,
-						getSuitableUnit(appEntry.requiredMemory, 'memory')
-				  )
-				: '-'
-		"
-		:unit="
-			appEntry && appEntry.requiredMemory
-				? getSuitableUnit(appEntry.requiredMemory, 'memory')
-				: '-'
-		"
+		:data="formatMemory(appEntry?.requiredMemory).value"
+		:unit="formatMemory(appEntry?.requiredMemory).unit"
 	/>
 	<install-configuration
 		:name="t('detail.require_disk')"
-		:data="
-			appEntry && appEntry.requiredDisk
-				? getValueByUnit(
-						appEntry.requiredDisk,
-						getSuitableUnit(appEntry.requiredDisk, 'memory')
-				  )
-				: '-'
-		"
-		:unit="
-			appEntry && appEntry.requiredDisk
-				? getSuitableUnit(appEntry.requiredDisk, 'memory')
-				: '-'
-		"
+		:data="formatMemory(appEntry?.requiredDisk).value"
+		:unit="formatMemory(appEntry?.requiredDisk).unit"
 	/>
 	<install-configuration
 		:name="t('detail.require_cpu')"
-		:data="
-			appEntry && appEntry.requiredCPU
-				? getValueByUnit(
-						appEntry.requiredCPU,
-						getSuitableUnit(appEntry.requiredCPU, 'cpu')
-				  )
-				: '-'
-		"
-		:unit="
-			appEntry && appEntry.requiredCPU
-				? getSuitableUnit(appEntry.requiredCPU, 'cpu')
-				: '-'
-		"
+		:data="formatCPU(appEntry?.requiredCPU).value"
+		:unit="formatCPU(appEntry?.requiredCPU).unit"
 	/>
 	<install-configuration
 		:name="t('detail.require_gpu')"
-		:data="
-			appEntry && appEntry.requiredGPU
-				? getValueByUnit(
-						appEntry.requiredGPU,
-						getSuitableUnit(appEntry.requiredGPU, 'memory')
-				  )
-				: '-'
-		"
-		:unit="
-			appEntry && appEntry.requiredGPU
-				? getSuitableUnit(appEntry.requiredGPU, 'memory')
-				: '-'
-		"
+		:data="formatMemory(appEntry?.requiredGPU).value"
+		:unit="formatMemory(appEntry?.requiredGPU).unit"
 		:last="true"
 	/>
 </template>
 
 <script setup lang="ts">
 import InstallConfiguration from '../../../../components/appintro/InstallConfiguration.vue';
+import { CPUResource, MemoryResource } from '@icebergtsn/k8s-resources';
 import { convertLanguageCodeToName } from '../../../../utils/utils';
-import { getSuitableUnit, getValueByUnit } from '../../../../utils/monitoring';
 import { computed, PropType } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -112,6 +68,91 @@ const props = defineProps({
 		require: true
 	}
 });
+
+function splitK8sResource(str: string): { value: string; unit: string } {
+	const trimmed = str.trim();
+	if (!trimmed) {
+		return { value: '-', unit: '-' };
+	}
+
+	const match = trimmed.match(/^(\d+(?:\.\d+)?)([a-zA-Z]+)?$/);
+	if (!match) {
+		return { value: trimmed, unit: '' };
+	}
+
+	let value = match[1];
+	const unit = match[2] || '';
+
+	const num = Number(value);
+	if (Number.isFinite(num)) {
+		const fixed = Number(num.toFixed(2));
+		value = fixed.toString();
+	}
+
+	return { value, unit };
+}
+
+function formatCPU(raw: string | number | undefined | null) {
+	if (raw === undefined || raw === null || raw === '') {
+		return { value: '-', unit: '-' };
+	}
+
+	try {
+		let res: CPUResource | null = null;
+		if (typeof raw === 'number') {
+			res = CPUResource.fromCores(raw);
+		} else {
+			const s = String(raw).trim();
+			if (!s) return { value: '-', unit: '-' };
+			if (/^\d+(\.\d+)?$/.test(s)) {
+				res = CPUResource.fromCores(parseFloat(s));
+			} else {
+				res = new CPUResource(s);
+			}
+		}
+
+		const str = res.toString();
+		const { value, unit } = splitK8sResource(str);
+		return {
+			value,
+			unit: unit || 'core'
+		};
+	} catch (e) {
+		console.error('formatCPU error', e);
+		return { value: '-', unit: '-' };
+	}
+}
+
+function formatMemory(raw: string | number | undefined | null) {
+	if (raw === undefined || raw === null || raw === '') {
+		return { value: '-', unit: '-' };
+	}
+
+	try {
+		let res: MemoryResource | null = null;
+		if (typeof raw === 'number') {
+			res = MemoryResource.fromBytes(raw);
+		} else {
+			const s = String(raw).trim();
+			if (!s) return { value: '-', unit: '-' };
+			if (/^\d+(\.\d+)?$/.test(s)) {
+				res = MemoryResource.fromBytes(Number(s));
+			} else {
+				res = new MemoryResource(s);
+			}
+		}
+
+		const str = res.toString();
+		const { value, unit } = splitK8sResource(str);
+		return {
+			value,
+			unit: unit || 'B'
+		};
+	} catch (e) {
+		console.error('formatMemory error', e);
+		return { value: '-', unit: '-' };
+	}
+}
 
 const { t } = useI18n();
 const language = computed(() => {

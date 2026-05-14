@@ -4,35 +4,46 @@ export const GLOBAL_KEY = '*';
 export const REMAIN_KEY = '-';
 export const SHADOW_KEY = '>>>';
 
-export const DEFAULT_SELECTOR = `:is(li, p, h1, h2, h3, h4, h5, h6, dd, blockquote, .kiss-p)`;
-export const DEFAULT_KEEP_SELECTOR = `code, img, svg, pre`;
+export const DEFAULT_SELECTOR = `:is(
+	p, li, h1, h2, h3, h4, h5, h6,
+	td, th, caption,
+	dd, dt, figcaption, blockquote, q,
+	article, section,
+	div[class*="content"], div[class*="text"], div[class*="body"], div[class*="paragraph"],
+	div[class*="description"], div[class*="summary"], div[class*="excerpt"],
+	span:not([class*="icon"]):not([class*="svg"]),
+	a:not([class*="button"]):not([class*="btn"]),
+	label, legend,
+	.kiss-p
+)`;
+export const DEFAULT_KEEP_SELECTOR = `code, pre, kbd, samp, var, img, svg, video, audio, canvas, math, [class*="code"], [class*="highlight"]`;
 export const DEFAULT_RULE = {
-	pattern: '', // 匹配网址
-	selector: '', // 选择器
-	keepSelector: '', // 保留元素选择器
-	terms: '', // 专业术语
-	translator: GLOBAL_KEY, // 翻译服务
-	fromLang: GLOBAL_KEY, // 源语言
-	toLang: GLOBAL_KEY, // 目标语言
-	textStyle: GLOBAL_KEY, // 译文样式
-	transOpen: GLOBAL_KEY, // 开启翻译
-	bgColor: '', // 译文颜色
-	textDiyStyle: '', // 自定义译文样式
-	selectStyle: '', // 选择器节点样式
-	parentStyle: '', // 选择器父节点样式
-	injectJs: '', // 注入JS
-	injectCss: '', // 注入CSS
-	transOnly: GLOBAL_KEY, // 是否仅显示译文
-	transTiming: GLOBAL_KEY, // 翻译时机/鼠标悬停翻译
-	transTag: GLOBAL_KEY, // 译文元素标签
-	transTitle: GLOBAL_KEY, // 是否同时翻译页面标题
-	detectRemote: GLOBAL_KEY, // 是否使用远程语言检测
-	skipLangs: [], // 不翻译的语言
-	fixerSelector: '', // 修复函数选择器
-	fixerFunc: GLOBAL_KEY, // 修复函数
-	transStartHook: '', // 钩子函数
-	transEndHook: '', // 钩子函数
-	transRemoveHook: '' // 钩子函数
+	pattern: '',
+	selector: '',
+	keepSelector: '',
+	terms: '',
+	translator: GLOBAL_KEY,
+	fromLang: GLOBAL_KEY,
+	toLang: GLOBAL_KEY,
+	textStyle: GLOBAL_KEY,
+	transOpen: GLOBAL_KEY,
+	bgColor: '',
+	textDiyStyle: '',
+	selectStyle: '',
+	parentStyle: '',
+	injectJs: '',
+	injectCss: '',
+	transOnly: GLOBAL_KEY,
+	transTiming: GLOBAL_KEY,
+	transTag: GLOBAL_KEY,
+	transTitle: GLOBAL_KEY,
+	detectRemote: GLOBAL_KEY,
+	skipLangs: [],
+	fixerSelector: '',
+	fixerFunc: GLOBAL_KEY,
+	transStartHook: '',
+	transEndHook: '',
+	transRemoveHook: ''
 };
 
 const DEFAULT_DIY_STYLE = `color: #666;
@@ -149,7 +160,7 @@ const RULES_MAP = {
 			selector: `.s-prose ${DEFAULT_SELECTOR}, .comment-copy, .question-hyperlink, .s-post-summary--content-title, .s-post-summary--content-excerpt`,
 			keepSelector: `${DEFAULT_KEEP_SELECTOR}, .math-container`
 		},
-	'www.npmjs.com/package, developer.chrome.com/docs, medium.com, react.dev, create-react-app.dev, pytorch.org':
+	'www.npmjs.com/package, developer.chrome.com/docs, react.dev, create-react-app.dev, pytorch.org':
 		{
 			selector: `article ${DEFAULT_SELECTOR}`
 		},
@@ -162,10 +173,10 @@ const RULES_MAP = {
 		selector: `.markdown-body ${DEFAULT_SELECTOR}, .repo-description p, .Layout-sidebar .f4, .container-lg .py-4 .f5, .container-lg .my-4 .f5, .Box-row .pr-4, .Box-row article .mt-1, [itemprop="description"], .markdown-title, bdi, .ws-pre-wrap, .status-meta, span.status-meta, .col-10.color-fg-muted, .TimelineItem-body, .pinned-item-list-item-content .color-fg-muted, .markdown-body td, .markdown-body th`,
 		keepSelector: DEFAULT_KEEP_SELECTOR
 	},
-	'twitter.com': {
-		selector: `[data-testid="tweetText"], [data-testid="birdwatch-pivot"]>div.css-1rynq56`,
-		keepSelector: `img, a, .r-18u37iz, .css-175oi2r`
-	},
+	// 'twitter.com, x.com': {
+	// 	selector: `[data-testid="tweetText"], [data-testid="longformRichTextComponent"] [data-contents] > div, article [lang] > span, article [dir="auto"], [data-testid="birdwatch-pivot"]>div.css-1rynq56, .public-DraftStyleDefault-block span[data-text="true"], article h2, article h3`,
+	// 	keepSelector: `img, a, .r-18u37iz, .css-175oi2r, br, svg, [role="link"]`
+	// },
 	'm.youtube.com': {
 		selector: `.slim-video-information-title .yt-core-attributed-string, .media-item-headline .yt-core-attributed-string, .comment-text .yt-core-attributed-string, .typography-body-2b .yt-core-attributed-string, #ytp-caption-window-container .ytp-caption-segment`,
 		selectStyle: `-webkit-line-clamp: unset; max-height: none; height: auto;`,

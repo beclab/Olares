@@ -1,13 +1,16 @@
 import { defineStore } from 'pinia';
+import { Token } from 'src/constant/constants';
 
 export type RootState = {
 	url: string | null;
+	token: Token | null;
 };
 
 export const useTokenStore = defineStore('token', {
 	state: () => {
 		return {
-			url: null
+			url: null,
+			token: null
 		} as RootState;
 	},
 	getters: {},

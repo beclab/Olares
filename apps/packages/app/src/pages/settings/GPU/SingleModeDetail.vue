@@ -38,12 +38,14 @@
 					>
 						<UnbindGPU
 							:app="props.row.app"
+							:app-name="props.row.value"
 							@un-bind-app="emit('unbind', props.row.value)"
 						/>
 						<SwitchGPU
 							v-if="availableGpuList.length > 1"
 							:currentGPU="currentGPU"
 							:appName="props.row.value"
+							:app="props.row.app"
 						/>
 					</q-td>
 				</template>
@@ -53,12 +55,12 @@
 	</q-list>
 	<div
 		class="full-width row justify-end q-mt-lg"
-		v-if="availableApps.length > 0"
+		v-if="availableApps.length > 0 && selectApps.length == 0"
 	>
 		<q-btn
 			dense
 			class="bind-app q-px-md q-py-sm text-body3 text-ink-2 bg-background-1"
-			:label="selectApps.length == 0 ? t('Bind App') : t('Switch App')"
+			:label="t('Assign app')"
 			no-caps
 			@click="bindApp"
 		/>
@@ -101,11 +103,11 @@ const deviceStore = useDeviceStore();
 const emit = defineEmits(['bindApp', 'switchApp', 'unbind']);
 
 const bindApp = () => {
-	if (props.selectApps.length == 0) {
-		emit('bindApp');
-	} else {
-		emit('switchApp');
-	}
+	// if (props.selectApps.length == 0) {
+	emit('bindApp');
+	// } else {
+	// 	emit('switchApp');
+	// }
 };
 
 const appColumns: any = computed(() => {

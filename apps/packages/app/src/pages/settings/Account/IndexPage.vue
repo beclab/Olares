@@ -6,17 +6,14 @@
 	<bt-scroll-area class="nav-height-scroll-area-conf">
 		<app-menu-feature :menu-type="MENU_TYPE.Users" />
 		<bt-list v-show="accountStore.accounts.length > 0">
-			<template
+			<user-item
 				v-for="(account, index) in accountStore.accounts"
 				:key="account.uid"
-			>
-				<user-item
-					:account="account"
-					:margin-top="index !== 0"
-					:width-separator="index !== accountStore.accounts.length - 1"
-					@click="pushToUserInfo(account)"
-				/>
-			</template>
+				:account="account"
+				:margin-top="index !== 0"
+				:width-separator="index !== accountStore.accounts.length - 1"
+				@click="pushToUserInfo(account)"
+			/>
 		</bt-list>
 		<list-bottom-func-btn
 			v-show="accountStore.accounts.length > 0"

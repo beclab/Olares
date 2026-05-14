@@ -4,7 +4,7 @@
 			{{
 				userStore.passwordReseted
 					? t('change_local_password')
-					: t(
+					: _t(
 							'This password is only used for unlocking {AppName} on this device',
 							{
 								AppName: 'LarePass'
@@ -42,6 +42,7 @@
 <script setup lang="ts">
 import { useTerminusSetSecurityPassword } from 'src/composables/mobile/useTerminusSetSecurityPassword';
 import CustomButton from 'src/pages/Plugin/components/CustomButton.vue';
+import { _t } from 'src/utils/i18n';
 const { t, userStore, changePassword } = useTerminusSetSecurityPassword();
 </script>
 

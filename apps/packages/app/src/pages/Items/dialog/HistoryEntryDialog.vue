@@ -9,21 +9,21 @@
 		@onSubmit="onRestore"
 	>
 		<q-card-section class="q-pt-xs q-px-none">
-			<div class="row items-center justify-start">
+			<div class="row items-center justify-start full-width">
 				<BtIcon
 					src="historyIcon"
 					:width="30"
 					:height="30"
 					class="historyIcon"
 				/>
-				<div class="column items-start justify-start">
-					<div class="text-ink-1 text-subtitle1 name">
+				<div class="column items-start justify-start title-content">
+					<div class="text-ink-1 text-subtitle1 content">
 						{{ itemState.name }}
 					</div>
-					<div class="text-blue text-body3 date">
+					<div class="text-blue text-body3 date content">
 						{{ formatDateTime(updated) }}
 					</div>
-					<div class="text-ink-3 text-body3 updated">
+					<div class="text-ink-3 text-body3 updated content">
 						<span class="semibold">
 							{{ formatDateFromNow(updated) }}
 						</span>
@@ -37,12 +37,16 @@
 							<BtIcon src="name" :width="14" :height="14" />
 							<span class="text-ink-2 q-ml-xs">{{ t('name') }}</span>
 						</div>
-						<div class="q-mx-md text-color-title">
-							<span v-if="name !== item.name">
-								<s>{{ item.name }}</s> {{ name }}
+						<div class="q-mx-md text-color-title" style="flex: 1">
+							<span
+								v-if="historyEntry.name !== itemState.name"
+								style="word-break: break-all"
+							>
+								<s>{{ itemState.name }}</s>
+								{{ historyEntry.name }}
 							</span>
-							<span v-else>
-								{{ name }}
+							<span v-else style="word-break: break-all">
+								{{ historyEntry.name }}
 							</span>
 						</div>
 					</div>
@@ -54,29 +58,50 @@
 						</div>
 						<div class="q-mx-md text-color-title">
 							<template v-for="(tag, index) in unchanged" :key="index">
-								<span class="tagSpan"
-									><i class="row items-center justify-center">
-										<BtIcon src="tagChip" :width="14" :height="14" />{{ tag }}
-									</i></span
-								>
+								<span class="tagSpan">
+									<div class="row items-center justify-center">
+										<BtIcon
+											src="tagChip"
+											:width="14"
+											:height="14"
+											style="flex: 0 0 16px"
+										/>
+										<div
+											style="word-break: break-all; margin-left: 6px; flex: 1"
+										>
+											{{ tag }}
+										</div>
+									</div>
+								</span>
 							</template>
 							<template v-for="(tag, index) in added" :key="index">
-								<span class="tagSpan"
-									><s class="row items-center justify-center">
-										<BtIcon src="tagChip" :width="14" :height="14" /><span>{{
-											tag
-										}}</span>
-									</s></span
-								>
+								<span class="tagSpan">
+									<s class="row items-center justify-center">
+										<BtIcon src="tagChip" :width="14" :height="14" />
+										<div
+											style="word-break: break-all; margin-left: 6px; flex: 1"
+										>
+											{{ tag }}
+										</div>
+									</s>
+								</span>
 							</template>
 							<template v-for="(tag, index) in removed" :key="index">
-								<span class="text-blue tagSpan highlighted"
-									><i class="row items-center justify-center">
-										<BtIcon src="tagChipActive" :width="14" :height="14" />{{
-											tag
-										}}
-									</i></span
-								>
+								<span class="text-blue tagSpan highlighted">
+									<div class="row items-center justify-center">
+										<BtIcon
+											src="tagChipActive"
+											:width="14"
+											:height="14"
+											style="flex: 0 0 16px"
+										/>
+										<div
+											style="word-break: break-all; margin-left: 6px; flex: 1"
+										>
+											{{ tag }}
+										</div>
+									</div>
+								</span>
 							</template>
 						</div>
 					</div>
@@ -104,7 +129,7 @@
 									class="row items-center justify-start text-blue fieldItem"
 								>
 									<q-icon :name="fieldDef(field).icon" size="18px" />
-									<span class="q-ml-xs">{{ field.name }}</span>
+									<span class="q-ml-xs">{{ translate(field.name) }}</span>
 								</span>
 							</s>
 							<span
@@ -112,7 +137,9 @@
 								v-if="historyField(index)"
 							>
 								<q-icon :name="fieldDef(field).icon" size="18px" />
-								<span class="q-ml-xs">{{ historyField(index).name }}</span>
+								<span class="q-ml-xs">{{
+									translate(historyField(index).name)
+								}}</span>
 							</span>
 						</div>
 						<div class="field-value">
@@ -140,7 +167,7 @@
 							<span class="row items-center justify-start text-blue fieldItem">
 								<q-icon :name="fieldDef(field).icon" size="18px" />
 								<span class="q-ml-xs"
-									>{{ field.name }}({{ t('restore') }})</span
+									>{{ translate(field.name) }}({{ t('restore') }})</span
 								>
 							</span>
 						</div>
@@ -158,7 +185,7 @@
 
 <script lang="ts" setup>
 import { ref } from 'vue';
-import { formatDateTime } from '@didvault/sdk/src/util';
+import { formatDateTime, translate } from '@didvault/sdk/src/util';
 import { formatDateFromNow } from 'src/utils/format';
 import { FIELD_DEFS } from '@didvault/sdk/src/core';
 import { useI18n } from 'vue-i18n';
@@ -182,7 +209,7 @@ const itemState = ref(props.item.value.toRaw());
 
 const historyEntry = ref(itemState.value.history[props.historyIndex]);
 
-const { updated, name } = historyEntry.value;
+const { updated } = historyEntry.value;
 
 const added = itemState.value.tags.filter(
 	(tag: any) => !historyEntry.value.tags.includes(tag)
@@ -222,18 +249,31 @@ const { t } = useI18n();
 <style lang="scss" scoped>
 .historyIcon {
 	margin: 0 10px 0 0px;
+	flex: 0 0 30px;
+}
+
+.title-content {
+	width: calc(100% - 50px);
+	overflow: hidden;
+
+	.content {
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		width: 100%;
+		overflow: hidden;
+	}
 }
 
 .stretch {
 	.horizontal {
 		border-bottom: 1px solid $separator;
-		padding: 0 0px;
-		line-height: 44px;
+		padding: 8px 0px;
+		// line-height: 44px;
 
 		.tagSpan {
-			height: 22px;
-			line-height: 22px;
-			padding: 0px 4px;
+			// height: 22px;
+			// line-height: 22px;
+			padding: 6px 4px;
 			border: 1px solid $separator;
 			border-radius: 4px;
 			display: inline-block;
@@ -258,9 +298,13 @@ const { t } = useI18n();
 		}
 
 		.field-value {
-			height: 32px;
+			// min-height: 32px;
 			line-height: 22px;
 			padding-left: 18px;
+			word-break: break-all;
+			overflow-wrap: break-word;
+			white-space: pre-wrap;
+			overflow: hidden;
 
 			s {
 				margin-right: 10px;

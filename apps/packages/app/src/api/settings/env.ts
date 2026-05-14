@@ -30,9 +30,19 @@ export async function getUserEnvList(): Promise<BaseEnv[]> {
 	return await axios.get(`${tokenStore.url}/api/env/userenvs`);
 }
 
+export async function addUserEnv(env: BaseEnv) {
+	const tokenStore = useTokenStore();
+	return await axios.post(`${tokenStore.url}/api/env/userenvs`, env);
+}
+
 export async function updateUserEnv(body: UpdateEnvBody): Promise<BaseEnv> {
 	const tokenStore = useTokenStore();
 	return await axios.put(`${tokenStore.url}/api/env/userenvs`, body);
+}
+
+export async function deleteUserEnv(envName: string): Promise<BaseEnv> {
+	const tokenStore = useTokenStore();
+	return await axios.delete(`${tokenStore.url}/api/env/userenvs/${envName}`);
 }
 
 export async function remoteOptionsProxy(endpoint: string): Promise<any> {

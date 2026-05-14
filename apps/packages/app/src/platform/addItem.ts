@@ -24,7 +24,8 @@ export async function updateUIToAddWeb(
 ) {
 	console.log('approvalTypeRef-2');
 	const userStore = useUserStore();
-	if (!(await userStore.unlockFirst())) {
+	const vaultStore = useVaultStore();
+	if (!(await userStore.unlockFirst()) || vaultStore.editing_item) {
 		return;
 	}
 	const meunStore = useMenuStore();
@@ -65,40 +66,30 @@ export async function updateUIToAddWeb(
 		}
 	}
 
-	// const item: any = await addNewItem(
-	// 	// selectedTemplate.toString() || '',
-	// 	username ? username : '',
-	// 	selectedTemplate.icon,
-	// 	selectedTemplate.fields,
-	// 	[]
-	// );
-	const name = !direct ? '' : username || '';
-	const editing_item = await addItem(
-		name,
-		selectedTemplate.icon,
-		selectedTemplate.fields,
-		[]
-	);
+	if (!direct) {
+		const item: any = await addNewItem(
+			// selectedTemplate.toString() || '',
+			username ? username : '',
+			selectedTemplate.icon,
+			selectedTemplate.fields,
+			[]
+		);
 
-	// menuStore.isEdit = true;
+		vaultStore.editing_item = item;
 
-	if (!editing_item) {
-		return;
-	}
-
-	// if (editing_item) {
-	// 	const id = editing_item.id;
-	// 	// emits('toolabClick', id);
-	// }
-	if (!direct && editing_item) {
-		const vaultStore = useVaultStore();
-		vaultStore.editing_item = editing_item;
-	}
-
-	if (editing_item && router && !direct) {
-		router.push({
-			path: '/items/' + editing_item.id
-		});
+		if (item && router && !direct) {
+			router.push({
+				path: '/items/' + item.item.id
+			});
+		}
+	} else {
+		await addItem(
+			// selectedTemplate.toString() || '',
+			username ? username : '',
+			selectedTemplate.icon,
+			selectedTemplate.fields,
+			[]
+		);
 	}
 }
 

@@ -74,7 +74,7 @@
 import { getRevisions } from '@apps/control-hub/src/network';
 import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import { getLocalTime } from '@apps/control-hub/src/utils';
 import { get, sortBy } from 'lodash-es';
 import { getValue } from '@apps/control-hub/src/utils/yaml';

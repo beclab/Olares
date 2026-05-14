@@ -7,7 +7,7 @@ import {
 	ItemTemplate
 } from '@didvault/sdk/src/core';
 import { useSSIStore } from '../../../stores/ssi';
-import { useCloudStore } from '../../../stores/cloud';
+import { DomainSubmission, useCloudStore } from '../../../stores/cloud';
 import { app } from '../../../globals';
 import { i18n } from '../../../boot/i18n';
 import { getPresentationJWS, VCCardInfo } from 'src/utils/vc';
@@ -82,4 +82,39 @@ export async function submitPresentation(
 		}
 		return submission;
 	}
+}
+
+export async function submitDomainPresentationV2(
+	request_type: string,
+	holder: string,
+	holderPrivateKey: PrivateJwk,
+	vc: string,
+	address: string,
+	domain: string,
+	adminOlaresId: string
+): Promise<DomainSubmission> {
+	const ssiStore = useSSIStore();
+	const cloudStore = useCloudStore();
+
+	const definition = await ssiStore.get_presentation_definition(request_type);
+	if (!definition) {
+		throw new Error(i18n.global.t('errors.no_presentation_definition'));
+	}
+
+	const jws = await getPresentationJWS(
+		holder,
+		holderPrivateKey,
+		definition,
+		vc
+	);
+
+	const submission = await cloudStore.verifyDomainPresentation2(
+		jws,
+		domain,
+		adminOlaresId
+	);
+	if (!submission) {
+		throw new Error(i18n.global.t('no_submission_result'));
+	}
+	return submission;
 }

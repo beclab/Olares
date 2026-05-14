@@ -1,17 +1,19 @@
 import { getI18nValue, TRANSACTION_PAGE } from 'src/constant/constants';
-import { useCenterStore } from 'src/stores/market/center';
+import { getRawAppTitle, uninstalledApp } from 'src/constant/config';
+import { useAppStore } from 'src/stores/market/appStore';
+import { useMenuStore } from 'src/stores/market/menu';
 import { useColor } from '@bytetrade/ui';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
-import { isCloneApp, uninstalledApp } from 'src/constant/config';
 
-export default function useAppCard(props) {
-	const centerStore = useCenterStore();
+export default function useAppCard(props: any) {
+	const appStore = useAppStore();
+	const menuStore = useMenuStore();
 	const router = useRouter();
 	const { locale } = useI18n();
 	const appAggregation = computed(() => {
-		return centerStore.getAppAggregationInfo(props.appName, props.sourceId);
+		return appStore.getAppAggregationInfo(props.appName, props.sourceId);
 	});
 	const { color: separatorColor } = useColor('separator');
 
@@ -27,16 +29,11 @@ export default function useAppCard(props) {
 	);
 
 	const appTitle = computed(() => {
-		if (isCloneApp(appAggregation.value?.app_status_latest?.status)) {
-			return appAggregation.value?.app_status_latest?.status.title;
-		} else {
-			return (
-				getI18nValue(
-					appAggregation.value?.app_simple_latest?.app_simple_info?.app_title,
-					locale.value
-				) ?? ''
-			);
-		}
+		return getRawAppTitle(
+			locale.value,
+			appAggregation.value?.app_status_latest?.status,
+			appAggregation.value?.app_simple_latest?.app_simple_info
+		);
 	});
 
 	const appDesc = computed(
@@ -80,15 +77,14 @@ export default function useAppCard(props) {
 				sourceId: props.sourceId
 			},
 			query: {
-				...router.currentRoute.value.query
+				...router.currentRoute.value.query,
+				menuItem: menuStore.currentItem
 			}
 		});
 	}
 
 	const sourceName = computed(() => {
-		const source = centerStore.sources.find(
-			(item) => item.id === props.sourceId
-		);
+		const source = appStore.sources.find((item) => item.id === props.sourceId);
 		if (source) {
 			return source.name;
 		} else {

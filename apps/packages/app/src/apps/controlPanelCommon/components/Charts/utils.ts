@@ -14,6 +14,7 @@ export const chartEntervalOfWidth = (width: number) => {
 	} else {
 		chartInterval = 'auto';
 	}
+	return chartInterval;
 };
 
 export function formatter(params: any, unit: string) {

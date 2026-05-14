@@ -42,7 +42,9 @@
 								loaded: format.formatFileSize(progress.loaded),
 								total: format.formatFileSize(progress.total)
 						  })
-						: (getFileType(file.name) || t('vault_t.unkown_file_type')) +
+						: (te(getFileTypeI18nKey(file.name))
+								? t(getFileTypeI18nKey(file.name))
+								: t('vault_t.unkown_file_type')) +
 						  ' - ' +
 						  format.formatFileSize(file.size)
 				}}
@@ -56,9 +58,10 @@ import { ref } from 'vue';
 import { app } from '../../globals';
 import { ErrorCode } from '@didvault/sdk/src/core';
 import { useI18n } from 'vue-i18n';
-import { getFileType } from '@bytetrade/core';
+import { getFileTypeI18nKey } from '@bytetrade/core';
 import { format } from '../../utils/format';
 import { useQuasar } from 'quasar';
+import { notifyFailed } from 'src/utils/notifyRedefinedUtil';
 
 const props = defineProps({
 	itemID: {
@@ -89,37 +92,43 @@ async function onOKClick() {
 		return;
 	}
 
-	const att = await app.createAttachment(
-		props.itemID!,
-		props.file!,
-		name.value
-	);
-
-	const upload = att.uploadProgress!;
-
-	const handler = () => (progress.value = upload.uploadProgress);
-	upload.addEventListener('progress', handler);
 	try {
-		await upload.completed;
-	} catch (e) {
-		console.error(e);
-	}
-	upload.removeEventListener('progress', handler);
+		const att = await app.createAttachment(
+			props.itemID!,
+			props.file!,
+			name.value
+		);
 
-	progress.value = null;
-	loading.value = false;
-	if (upload.error) {
-		error.value =
-			upload.error.code === ErrorCode.PROVISIONING_QUOTA_EXCEEDED
-				? t('vault_t.storage_limit_exceeded')
-				: t('vault_t.upload_failed_please_try_again');
-	} else {
+		const upload = att.uploadProgress!;
+
+		const handler = () => (progress.value = upload.uploadProgress);
+		upload.addEventListener('progress', handler);
+		try {
+			await upload.completed;
+		} catch (e) {
+			console.error(e);
+		}
+		upload.removeEventListener('progress', handler);
+
+		progress.value = null;
 		loading.value = false;
-		onDialogOK();
+		if (upload.error) {
+			error.value =
+				upload.error.code === ErrorCode.PROVISIONING_QUOTA_EXCEEDED
+					? t('vault_t.storage_limit_exceeded')
+					: t('vault_t.upload_failed_please_try_again');
+		} else {
+			loading.value = false;
+			onDialogOK();
+		}
+	} catch (error) {
+		console.log('error --->', error);
+		loading.value = false;
+		notifyFailed(error);
 	}
 }
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 const CustomRef = ref();
 
 const onDialogOK = () => {

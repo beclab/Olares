@@ -25,6 +25,9 @@ import { i18n } from '../../boot/i18n';
 import { _authenticate } from '@didvault/sdk/src/authenticate';
 import { busOff, busOn } from 'src/utils/bus';
 
+import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
+import { AppState } from '@didvault/sdk/src/core/app';
+
 export const getWebPlatform = () => {
 	return defaultGetPlatform() as WebPlatform;
 };
@@ -56,7 +59,7 @@ export class WebPlatform extends SubAppPlatform {
 					body.event == 'vault.org.update'
 				) {
 					if (!app.state.locked) {
-						app.synchronize();
+						this.vaultSync();
 					}
 				}
 			} else if (
@@ -64,7 +67,7 @@ export class WebPlatform extends SubAppPlatform {
 				body.eventType == 'vault.org.update'
 			) {
 				if (!app.state.locked) {
-					app.synchronize();
+					this.vaultSync();
 				}
 			}
 		});
@@ -170,11 +173,24 @@ export class WebPlatform extends SubAppPlatform {
 	async homeMounted(): Promise<void> {
 		commonHomeMounted();
 		busOn('appSubscribe', this.stateUpdate);
+
+		const websocketStore = useWebsocketManager2Store();
+		websocketStore.start();
 	}
 
 	async homeUnMounted(): Promise<void> {
 		commonHomeUnMounted();
 		busOff('appSubscribe', this.stateUpdate);
+
+		const websocketStore = useWebsocketManager2Store();
+		websocketStore.dispose();
+
+		const store = useMenuStore();
+		store.clear();
+
+		await app.lock();
+		const user = useUserStore();
+		await user.users?.lock();
 	}
 
 	async getDeviceInfo(): Promise<DeviceInfo> {
@@ -200,5 +216,9 @@ export class WebPlatform extends SubAppPlatform {
 		const data: any = await axios.get(baseUrl + '/bfl/info/v1/olares-info');
 
 		return data;
+	}
+
+	reconfigAppStateDefaultValue(appState: AppState): void {
+		appState.settings.autoLockDelay = 1;
 	}
 }

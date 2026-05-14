@@ -9,7 +9,8 @@ export type IPCVpnEventName =
 	| 'currentNodeId'
 	| 'peersState'
 	| 'electronVpnStatusUpdate'
-	| 'resendCache';
+	| 'resendCache'
+	| 'getVpnAbility';
 
 export type IPCFilesEventName =
 	| 'loginAccount'
@@ -26,6 +27,7 @@ export type IPCFilesEventName =
 	| 'removeCurrentAccount'
 	| 'updateSyncStatus'
 	| 'updateSyncServerUrl'
+	| 'updateSyncAuthtoken'
 	| 'repoSyncPathIsExist'
 	| 'syncNotificationMessage';
 
@@ -111,12 +113,15 @@ export type IPCSettingsEventName =
 	| 'updateStatusEvent'
 	| 'newVersionEvent'
 	| 'skipNewVersion'
-	| 'updateNewVersion';
+	| 'updateNewVersion'
+	| 'updateOlaresLocalAppHosts'
+	| 'getOlaresLocalAppHosts';
 
 export interface IOpenVpnInterface {
 	server: string;
 	authKey: string;
 	acceptDns: boolean;
+	authToken: string;
 }
 
 export interface IFilesLoginAccountInterface {
@@ -219,6 +224,8 @@ export interface IUploadStartFile {
 	moreInfo?: IUploadCloudParams;
 
 	node?: string;
+
+	auth_token: string;
 }
 
 export interface IUploadCloudParams {
@@ -238,6 +245,8 @@ export interface IDownloadStartFile {
 	path: string;
 	size: number;
 	savePath?: string;
+
+	auth_token: string;
 }
 
 export type LarePassElectronUpdateStatus =
@@ -266,7 +275,11 @@ declare global {
 					listenerVpnStatusUpdate: (
 						callback: (_event: any, list: any) => void
 					) => void;
-					resendCache: (data: { server: string }) => Promise<void>;
+					resendCache: (data: {
+						server: string;
+						authToken: string;
+					}) => Promise<void>;
+					getVpnAbility: () => Promise<boolean>;
 				};
 				files: {
 					/** seafile **/
@@ -275,7 +288,7 @@ declare global {
 					isAutoSyncEnable: () => Promise<boolean>;
 					hasLocalRepo: (repo_id: string) => Promise<boolean>;
 					openLocalRepo: (repo_id: string, subPath?: string) => void;
-					repoAddSync: (data: IFilesRepoAddSyncInterface) => Promise<boolean>;
+					repoAddSync: (data: IFilesRepoAddSyncInterface) => Promise<string>;
 					repoRemoveSync: (repo_id: string) => Promise<boolean>;
 					syncRepoImmediately: (repo_id: string) => Promise<boolean>;
 					repoSyncInfo: (repo_id: string) => Promise<string>;
@@ -286,6 +299,7 @@ declare global {
 					) => Promise<boolean>;
 					updateSyncStatus: (status: IFilesSyncStatus) => void;
 					updateSyncServerUrl: (url: string) => void;
+					updateSyncAuthtoken: (authToken: string) => void;
 					repoSyncPathIsExist: (path: string) => Promise<boolean>;
 					syncNotificationMessage: () => void;
 				};
@@ -458,6 +472,20 @@ declare global {
 
 					skipNewVersion: (version: string) => Promise<void>;
 					updateNewVersion: (autoUpdate: boolean) => Promise<void>;
+
+					//only windows
+					updateOlaresLocalAppHosts: (
+						olaresId: string,
+						appsHost: string[]
+					) => Promise<boolean>;
+
+					getOlaresLocalAppHosts: (
+						olaresId: string,
+						appsHost: string[]
+					) => Promise<{
+						added: string[];
+						missing: string[];
+					}>;
 				};
 			};
 

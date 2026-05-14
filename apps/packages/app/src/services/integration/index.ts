@@ -11,6 +11,7 @@ import { SpaceAuthService } from './space';
 import { AWSS3AuthService } from './awss3';
 import { AccountType } from '@bytetrade/core';
 import { TencentAuthService } from './tencent';
+import { useUserStore } from 'src/stores/user';
 class IntegrationService implements IntegrationServiceInterface {
 	supportAuthList = [
 		{
@@ -74,6 +75,8 @@ class IntegrationService implements IntegrationServiceInterface {
 		}
 	];
 
+	needUnlockFirstTypes = [AccountType.Space];
+
 	getAccountByType(request_type: AccountType) {
 		return this.supportAuthList.find((e) => e.type == request_type);
 	}
@@ -87,6 +90,7 @@ class IntegrationService implements IntegrationServiceInterface {
 			message: '',
 			addMode: AccountAddMode.common
 		};
+
 		try {
 			const authAccountInstance = this.getInstanceByType(request_type);
 			if (!authAccountInstance) {
@@ -98,9 +102,13 @@ class IntegrationService implements IntegrationServiceInterface {
 				return result;
 			}
 			if (result.account) {
-				result.status = true;
 				const opendalStore = useIntegrationStore();
-				await opendalStore.createAccount(result.account);
+				const accountResult = await opendalStore.createAccount(result.account);
+				if (accountResult.data && accountResult.data.code == 0) {
+					result.status = true;
+				} else {
+					result.message = accountResult.data?.message || '';
+				}
 			}
 		} catch (e) {
 			result.message = e.message ? e.message : 'Auth failed';

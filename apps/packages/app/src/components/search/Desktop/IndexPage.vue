@@ -32,6 +32,7 @@
 					:handSearchFiles="handSearchFiles"
 					:commandList="commandList"
 					@goBack="goBack"
+					@openApp="openAppPath"
 				/>
 
 				<files-component
@@ -110,6 +111,15 @@ const openWindow = async (item: any) => {
 	emits('appClick', {
 		appid: item.id,
 		data: {}
+	} as AppClickInfo);
+};
+
+const openAppPath = async (item: { id: any }, path?: string) => {
+	emits('appClick', {
+		appid: item.id,
+		data: {
+			path
+		}
 	} as AppClickInfo);
 };
 

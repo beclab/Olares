@@ -1,47 +1,6 @@
 import { useUserStore } from '../stores/user';
-import { Router } from 'vue-router';
 import { VaultType, VaultItem } from '@didvault/sdk/src/core';
 import { app } from '../globals';
-
-export const needBindStatusOkToNext = (
-	router: Router,
-	isNativeMobile: boolean
-) => {
-	const showTypeRef = current_user_bind_status();
-
-	let path = '';
-
-	switch (showTypeRef) {
-		case BIND_STATUS.TERMINUS_NAME_NONE:
-			path = '/select_terminus_name';
-			break;
-		case BIND_STATUS.OS_NONE:
-			if (process.env.IS_PC_TEST || !isNativeMobile) {
-				path = '/scan_local';
-			} else {
-				path = '/scan';
-			}
-			break;
-		case BIND_STATUS.VC_NONE:
-			path = '/addVC';
-			break;
-
-		case BIND_STATUS.OS_WAIT_DNS_OK:
-			return false;
-
-		default:
-			break;
-	}
-
-	if (path.length) {
-		router.push({
-			path
-		});
-		return false;
-	}
-
-	return true;
-};
 
 export function getVaultsByType(type: VaultType): VaultItem[] {
 	const res: VaultItem[] = [];

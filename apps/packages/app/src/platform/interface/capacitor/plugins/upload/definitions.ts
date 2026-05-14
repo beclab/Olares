@@ -23,10 +23,12 @@ export interface FileUploadOptions {
 	account?: string;
 
 	node?: string;
+
+	auth_token: string;
 }
 
 export interface FileUploadResult {
-	code: number; //0 成功 1失败
+	code: number; // 0 success, 1 failure
 	message: string;
 	path: string;
 	id: number;

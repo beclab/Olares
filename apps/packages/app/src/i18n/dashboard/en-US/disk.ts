@@ -22,6 +22,12 @@ const options = {
 	AVAILABLE_SPACE: 'Available space',
 	USAGE_RATE: 'Usage rate',
 	MOUNT_POINT: 'Mount point',
+	LSBLK_NAME: 'Name',
+	LSBLK_SIZE: 'Size',
+	LSBLK_FSTYPE: 'File system',
+	LSBLK_FSUSED: 'Used',
+	LSBLK_FSUSE_PERCENT: 'Usage %',
+	LSBLK_UNIT_AUTO: 'Auto',
 	YES_4K: 'Yes',
 	NO_4K: 'No'
 };

@@ -12,6 +12,7 @@ import { axiosInstanceProxy } from '../platform/httpProxy';
 import { useUserStore } from './user';
 import { useDeviceStore } from './device';
 import { getApplication } from 'src/application/base';
+import { getOrganizationResponseErrorByCode } from 'src/utils/interface/did';
 
 export type SSIState = {
 	// did_url: string | undefined;
@@ -142,6 +143,24 @@ export const useSSIStore = defineStore('did', {
 				response.data.code != 0
 			) {
 				throw Error(response.data.message || 'Submit Presentation Failure');
+			}
+			return response.data.data;
+		},
+
+		async join_organization(jws: string) {
+			const response: any = await this.vcInstance().post('/olaresid/join_org', {
+				jws
+			});
+
+			if (
+				(response.status != 201 && response.status != 200) ||
+				response.data.code != 0
+			) {
+				const message = getOrganizationResponseErrorByCode(
+					response.data.code,
+					response.data.message
+				);
+				throw Error(message);
 			}
 			return response.data.data;
 		},

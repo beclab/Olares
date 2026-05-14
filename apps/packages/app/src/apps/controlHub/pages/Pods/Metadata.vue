@@ -9,7 +9,7 @@ import Metadata from '@apps/control-panel-common/src/containers/Metadata.vue';
 import { UsePod } from '@apps/control-panel-common/src/stores/PodData';
 import { toRefs, computed } from 'vue';
 import MyCard from '@apps/control-panel-common/src/components/MyCard2.vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import MyPage from '@apps/control-panel-common/src/containers/MyPage.vue';
 import { get } from 'lodash';
 

@@ -2,7 +2,7 @@
 	<div class="account_box">
 		<div class="q-pa-md wrap account_center" style="word-wrap: break-word">
 			<div class="boot_justify1">
-				<div :style="{ width: '124px', height: '124px' }">
+				<div :style="{ width: '100%', height: '100%' }">
 					<img :src="tokenStore.avatar_url" style="width: 100%; height: 100%" />
 				</div>
 			</div>
@@ -25,10 +25,11 @@
 					{{ t(failInfo.message) }}
 					<a
 						v-if="failInfo.showLink"
-						href="https://docs.olares.xyz/manual/get-started/activate-olares.html"
+						href="https://docs.olares.com/manual/get-started/activate-olares.html"
 						target="_blank"
-						>{{ t('err_learn_more') }}.</a
 					>
+						{{ t('err_learn_more') }}.
+					</a>
 				</p>
 			</div>
 		</div>
@@ -40,6 +41,7 @@ import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTokenStore } from '../../../stores/wizard-step';
 import { AccountErrMessage } from '../../../utils/constants';
+import { getLoginResponseErrorMessage } from 'src/utils/interface/login';
 
 const { t } = useI18n();
 const tokenStore = useTokenStore();
@@ -66,7 +68,12 @@ const click = async (): Promise<boolean> => {
 		tokenStore.setStep(2);
 
 		return true;
-	} catch (err) {
+	} catch (error) {
+		if (error.response?.data?.message) {
+			failInfo.value.message = t(
+				getLoginResponseErrorMessage(error.response.data.message)
+			);
+		}
 		failFlag.value = true;
 		return false;
 	} finally {

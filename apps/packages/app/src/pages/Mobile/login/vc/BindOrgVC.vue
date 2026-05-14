@@ -1,9 +1,9 @@
 <template>
 	<div class="bind_org_vc_root">
 		<BindTerminusVCContent class="bind-terminus-vc-root">
-			<template v-slot:desc>
+			<!-- <template v-slot:desc>
 				{{ t('choose_to_join_existing_org') }}
-			</template>
+			</template> -->
 			<template v-slot:content>
 				<account-operations
 					class="q-mt-lg"
@@ -23,7 +23,10 @@
 		<div class="bind_org_vc_root__img row items-center justify-center">
 			<TerminusChangeUserHeader>
 				<template v-slot:back>
-					<div class="column justify-center items-center" style="width: 32px">
+					<div
+						class="column justify-center items-center q-ml-md"
+						style="width: 32px"
+					>
 						<q-icon name="sym_r_chevron_left" size="24px" class="text-ink-2" />
 					</div>
 				</template>

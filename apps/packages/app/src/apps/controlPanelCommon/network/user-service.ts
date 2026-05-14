@@ -8,7 +8,7 @@ import {
 import { SystemFanResponse } from '@apps/dashboard/src/types/network';
 
 export const getUserList = (): Promise<AxiosResponse<any>> => {
-	return api.get('/user-service/api/users');
+	return api.get('/user-service/api/users/v2');
 };
 
 export const getAppsList = (): Promise<AxiosResponse<AppListResponse>> => {

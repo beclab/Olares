@@ -45,21 +45,29 @@ export function parseBlacklistData(data) {
 		});
 	});
 
-	Object.entries(data.domains).forEach(([domain, regexList]) => {
-		if (Array.isArray(regexList) && regexList.length > 0) {
-			regexList.forEach((regexStr: string) => {
-				const pureRegex = regexStr.replace(/^\/|\/$/g, '');
-				rules.push({
-					pattern: new RegExp(pureRegex, 'i')
-				});
-			});
+	let regexList: any = {};
+	Object.keys(data.domains).forEach((domain) => {
+		regexList = data.domains[domain];
+		let pattern;
+		if (regexList.isBlacklist) {
+			try {
+				const pureRegex = regexList.isBlacklist.replace(/^\/|\/$/g, '');
+				pattern = new RegExp(pureRegex, 'i');
+			} catch (e) {
+				pattern = undefined;
+			}
 		} else {
 			const escapedDomain = domain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-			const domainRegex = `^(https?:\\/\\/)?([a-zA-Z0-9-]+\\.)*${escapedDomain}\\/?.*`;
-			rules.push({
-				pattern: new RegExp(domainRegex, 'i')
-			});
+			pattern = new RegExp(
+				`^(https?:\\/\\/)?([a-zA-Z0-9-]+\\.)*${escapedDomain}(\\/.*)?$`,
+				'i'
+			);
 		}
+
+		rules.push({
+			...regexList,
+			pattern
+		});
 	});
 
 	return rules;
@@ -96,7 +104,7 @@ export async function validateUrlWithReasonAsync(
 	const currentBlacklistRules = await getBlacklistRulesAsync();
 	console.log('parsedBlacklistRules--2', currentBlacklistRules, lowerUrl);
 	for (const rule of currentBlacklistRules) {
-		if (rule.pattern.test(lowerUrl)) {
+		if (rule.pattern && rule.pattern.test(lowerUrl)) {
 			return {
 				valid: false,
 				status: URL_VALID_STATUS.BLOCKED,

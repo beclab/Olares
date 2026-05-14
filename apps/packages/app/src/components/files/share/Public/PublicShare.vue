@@ -43,7 +43,7 @@
 					:error-message="datesLimitRule(days)"
 				/>
 
-				<el-config-provider :locale="lang">
+				<DatePickerStyle>
 					<el-date-picker
 						class="q-mt-sm"
 						style="width: 100%; height: 40px"
@@ -55,9 +55,10 @@
 						placeholder="YYYY-MM-DD HH:mm"
 						popper-class="share-link-date-picker-popper"
 						:disabled-date="disabledDate"
+						unlink-panels
 					>
 					</el-date-picker>
-				</el-config-provider>
+				</DatePickerStyle>
 				<terminus-check-box
 					class="q-mt-lg"
 					v-model="uploadLimiteOpen"
@@ -125,7 +126,7 @@
 						</div>
 						<div
 							class="action-btn row items-center justify-center text-ink-3"
-							@click="copyLinkAndPassword"
+							@click="copyLinkAndPassword(false)"
 						>
 							<q-icon name="sym_r_content_copy" size="20px"></q-icon>
 						</div>
@@ -138,7 +139,7 @@
 
 <script lang="ts" setup>
 import { useI18n } from 'vue-i18n';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { FilesIdType, useFilesStore } from '../../../../stores/files';
 
 import { useDataStore } from '../../../../stores/data';
@@ -148,8 +149,8 @@ import BtCheckBoxComponent from '../../../settings/base/BtCheckBoxComponent.vue'
 import { ElDatePicker, ElConfigProvider } from 'element-plus';
 import TerminusCheckBox from '../../../common/TerminusCheckBox.vue';
 
-import 'element-plus/dist/index.css';
-import 'element-plus/theme-chalk/dark/css-vars.css';
+import DatePickerStyle from 'src/components/style/DatePickerStyle.vue';
+
 import { formatFileModified } from '../../../../utils/file';
 
 import GeneratePassword from '../GeneratePassword.vue';
@@ -169,7 +170,6 @@ const { t } = useI18n();
 
 const {
 	copyLinkAndPassword,
-	lang,
 	shareResult,
 	publicPassword,
 	setExpirationInDays,
@@ -219,7 +219,6 @@ const onSubmit = async () => {
 		CustomRef.value.onDialogOK();
 	}
 };
-
 onMounted(async () => {});
 </script>
 

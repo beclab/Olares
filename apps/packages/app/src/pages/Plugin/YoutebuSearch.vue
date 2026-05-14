@@ -1,7 +1,7 @@
 <template>
 	<div class="youtube-search-container relative-position">
 		<q-resize-observer @resize="onResize" />
-		<q-card flat bordered class="my-card bg-white">
+		<q-card flat bordered class="my-card">
 			<div class="q-gutter-y-lg">
 				<q-card-section class="q-pa-none">
 					<div class="row items-center no-wrap">

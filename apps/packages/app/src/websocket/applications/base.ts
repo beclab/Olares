@@ -9,6 +9,8 @@ export class BaseWebsocketBean {
 	reconnectGapTime = 3000;
 	heartFailNum = 10;
 
+	socketEntrance = true;
+
 	initWebSocket(
 		data: {
 			url: string;
@@ -16,9 +18,13 @@ export class BaseWebsocketBean {
 			loginData: {
 				token: string;
 			};
+			protocols?: string | string[];
 		},
 		statusUpdate: () => void
 	): void {
+		if (!this.socketEntrance) {
+			return;
+		}
 		if (this.websocket) {
 			if (
 				this.websocket.status === WebSocketStatusEnum.open &&
@@ -43,6 +49,7 @@ export class BaseWebsocketBean {
 			heartFailNum: this.heartFailNum,
 			reconnectMaxNum: this.reconnectMaxNum,
 			reconnectGapTime: this.reconnectGapTime,
+			protocols: data.protocols,
 			onopen: async () => {
 				if (data.login) {
 					this.websocket?.send({
@@ -76,7 +83,11 @@ export class BaseWebsocketBean {
 		statusUpdate();
 	}
 
-	otherTypeMethods(_data: { type: string; data: any }): boolean {
+	otherTypeMethods(_data: {
+		type: string;
+		data: any;
+		_port?: MessagePort;
+	}): boolean {
 		return false;
 	}
 
@@ -96,6 +107,9 @@ export class BaseWebsocketBean {
 			return data.event == 'pong';
 		}
 		return false;
+	}
+	addConnection(port: MessagePort) {
+		this.connections.add(port);
 	}
 }
 

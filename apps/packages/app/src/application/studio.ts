@@ -7,11 +7,12 @@ import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
 import { WebsocketSharedWorkerEnum } from 'src/websocket/interface';
 import { useDockerStore } from '@apps/studio/stores/docker';
 import { replaceLastSubdomain } from 'src/utils/olares-url';
+import { i18n } from '../boot/studio-i18n';
 
 export class StudioApplication extends NormalApplication {
 	applicationName = 'studio';
 	async appLoadPrepare(data: any): Promise<void> {
-		super.appLoadPrepare(data);
+		super.appLoadPrepare({ ...data, i18n });
 
 		const socketStore = useWebsocketManager2Store();
 		socketStore.start();
@@ -89,16 +90,6 @@ export class StudioApplication extends NormalApplication {
 		});
 
 		this.responseIntercepts.push((response) => {
-			if (!response || response.status != 200 || !response.data) {
-				BtNotify.show({
-					type: NotifyDefinedType.FAILED,
-					message: response.status
-				});
-				throw Error('Network error, please try again later');
-			}
-
-			const res = response.data;
-
 			let urlPath = '';
 			try {
 				if (response.config.url) {
@@ -112,9 +103,23 @@ export class StudioApplication extends NormalApplication {
 				urlPath = response.config.url || '';
 			}
 
+			const isControlHubApi = urlPath.startsWith('/api/v1/');
+
+			if (!isControlHubApi) {
+				if (!response || response.status != 200 || !response.data) {
+					BtNotify.show({
+						type: NotifyDefinedType.FAILED,
+						message: response.status
+					});
+					throw Error('Network error, please try again later');
+				}
+			}
+
+			const res = response.data;
+
 			if (
 				urlPath.startsWith('/api/') &&
-				!urlPath.startsWith('/api/v1/') &&
+				!isControlHubApi &&
 				!urlPath.startsWith('/api/command/install-app') &&
 				res?.code !== 200
 			) {

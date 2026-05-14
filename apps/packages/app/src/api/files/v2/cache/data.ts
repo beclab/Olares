@@ -9,7 +9,7 @@ import { DriveMenuType } from './type';
 import * as files from './utils';
 import { TransferItem, TransferFront } from 'src/utils/interface/transfer';
 
-import { createURL, getPurePath } from '../utils';
+import { createURL, decodeURIComponentSafe, getPurePath } from '../utils';
 import { encodeUrl, decodeUrl } from 'src/utils/encode';
 import { i18n } from 'src/boot/i18n';
 import { getFileIcon } from '@bytetrade/core';
@@ -118,7 +118,7 @@ export default class CacheDataAPI extends DriveDataAPI {
 
 		const previewPath = files.cacheCommonUrl(
 			'preview',
-			decodeURIComponent(path),
+			decodeURIComponentSafe(path),
 			node
 		);
 		return createURL(previewPath, params, false);
@@ -130,12 +130,7 @@ export default class CacheDataAPI extends DriveDataAPI {
 		};
 		const { path, node } = getAppDataPath(file.path);
 
-		let newPath = path;
-		try {
-			newPath = decodeURIComponent(path);
-		} catch (error) {
-			console.log(error);
-		}
+		const newPath = decodeURIComponentSafe(path);
 
 		const res = createURL(
 			files.cacheCommonUrl('raw', newPath, node),
@@ -201,6 +196,15 @@ export default class CacheDataAPI extends DriveDataAPI {
 			}
 		}
 
+		const path = files.cacheRemoveCachePrefix(item.path);
+
+		const oPath = path.split('/').slice(2).join('/');
+
+		const oParentPath = oPath.substring(
+			0,
+			oPath.length - item.name.length - (item.path.endsWith('/') ? 1 : 0)
+		);
+
 		const res: FileItem = {
 			extension,
 			isDir: item.isFolder,
@@ -217,7 +221,10 @@ export default class CacheDataAPI extends DriveDataAPI {
 			url: item.url || '',
 			driveType: item.driveType!,
 			param: '',
-			fileExtend: 'cache'
+			fileExtend: item.node ? item.node : '',
+			fileType: 'cache',
+			oPath,
+			oParentPath
 		};
 
 		return res;

@@ -17,6 +17,7 @@
 						:is-dir="selectItem?.isDir"
 						:modified="selectItem?.modified"
 						:path="selectItem?.path"
+						:driveType="selectItem?.driveType"
 						style="width: 30px; height: 30px"
 					/>
 
@@ -35,7 +36,8 @@
 						v-if="
 							!disableHomeMenu &&
 							permission === 'rw' &&
-							!selectItem?.isShareItem
+							!selectItem?.isShareItem &&
+							!isExternalRoot
 						"
 						icon="sym_r_move_up"
 						:label="t('files.cut')"
@@ -43,14 +45,21 @@
 						@on-item-click="onItemClick"
 					/>
 					<file-operation-item
-						v-if="permission === 'rw' && !selectItem?.isShareItem"
+						v-if="
+							permission === 'rw' && !selectItem?.isShareItem && !isExternalRoot
+						"
 						icon="sym_r_content_copy"
 						:label="t('copy')"
 						:action="OPERATE_ACTION.COPY"
 						@on-item-click="onItemClick"
 					/>
 					<file-operation-item
-						v-if="selectItem && !selectItem.isDir && !selectItem?.isShareItem"
+						v-if="
+							selectItem &&
+							!selectItem.isDir &&
+							!selectItem?.isShareItem &&
+							!isExternalRoot
+						"
 						icon="sym_r_browser_updated"
 						:label="t('buttons.download')"
 						:action="OPERATE_ACTION.DOWNLOAD"
@@ -58,6 +67,7 @@
 					/>
 					<file-operation-item
 						v-if="
+							isShareEnable() &&
 							(driveType === DriveType.Sync ||
 								driveType === DriveType.Drive ||
 								driveType === DriveType.External ||
@@ -73,6 +83,7 @@
 					/>
 					<file-operation-item
 						v-if="
+							isShareEnable() &&
 							(driveType === DriveType.Drive ||
 								driveType === DriveType.Data ||
 								driveType === DriveType.Cache ||
@@ -87,6 +98,7 @@
 					/>
 					<file-operation-item
 						v-if="
+							isShareEnable() &&
 							(driveType === DriveType.Drive || driveType === DriveType.Data) &&
 							selectItem?.isDir &&
 							!selectItem?.isShareItem
@@ -97,16 +109,11 @@
 						@on-item-click="onItemClick"
 					/>
 					<file-operation-item
-						v-if="driveType === DriveType.Sync && !selectItem?.isShareItem"
-						icon="sym_r_share_windows"
-						:label="t('buttons.share')"
-						:action="OPERATE_ACTION.SHARE"
-					/>
-					<file-operation-item
 						v-if="
 							!disableHomeMenu &&
 							permission === 'rw' &&
-							!selectItem?.isShareItem
+							!selectItem?.isShareItem &&
+							!isExternalRoot
 						"
 						icon="sym_r_delete"
 						:label="t('delete')"
@@ -118,7 +125,8 @@
 						v-if="
 							!disableHomeMenu &&
 							permission === 'rw' &&
-							!selectItem?.isShareItem
+							!selectItem?.isShareItem &&
+							!isExternalRoot
 						"
 						icon="sym_r_edit_square"
 						:label="t('buttons.rename')"
@@ -136,13 +144,6 @@
 						:action="OPERATE_ACTION.RESET_PASSWORD"
 					/>
 
-					<!-- {
-										name: 'files_popup_menu.Edit permissions',
-										icon: 'sym_r_admin_panel_settings',
-										action: OPERATE_ACTION.EDIT_PERMISSIONS,
-										condition: (event: EventType) =>
-											filesIsV2() && event.isEditPermissionsEnable && event.isSelected
-									}, -->
 					<file-operation-item
 						v-if="
 							!!selectItem?.isShareItem &&
@@ -162,6 +163,13 @@
 					/>
 
 					<file-operation-item
+						v-if="isExternalRoot"
+						icon="sym_r_delete"
+						:label="t('files_popup_menu.unmount')"
+						:action="OPERATE_ACTION.UNMOUNT"
+					/>
+
+					<file-operation-item
 						icon="sym_r_contract"
 						:label="t('files.attributes')"
 						:action="OPERATE_ACTION.ATTRIBUTES"
@@ -172,7 +180,6 @@
 										icon: 'sym_r_folder_supervised',
 										action: OPERATE_ACTION.SHARE_IN_INTERNAL,
 										condition: (event: EventType) =>
-											filesIsV2() &&
 											(event.type === DriveType.Drive || event.type === DriveType.Sync) &&
 											event.isSelected &&
 											event.isDir
@@ -198,8 +205,12 @@ import { notifySuccess } from '../../../utils/notifyRedefinedUtil';
 import { OPERATE_ACTION } from '../../../utils/contact';
 import { getParams } from '../../../utils/utils';
 import { useI18n } from 'vue-i18n';
-import { useFilesStore, FilesIdType } from './../../../stores/files';
-import { common } from './../../../api';
+import {
+	useFilesStore,
+	FilesIdType,
+	ExternalType
+} from './../../../stores/files';
+import { common, isShareEnable } from './../../../api';
 import { useOperateinStore } from './../../../stores/operation';
 import { DriveType } from '../../../utils/interface/files';
 import { ShareType, SharePermission } from 'src/utils/interface/share';
@@ -257,24 +268,28 @@ const copied = ref(false);
 const route = useRoute();
 const isSyncAndRepo = ref(false);
 const operateinStore = useOperateinStore();
+const isExternalRoot = ref(false);
 
 const onShow = async () => {
 	const driveType = common().formatUrltoDriveType(route.fullPath);
+
 	const id = route.query.id;
 	isSyncAndRepo.value = driveType == DriveType.Sync && !id;
 
-	const index = filesStore.currentFileList[props.origin_id]?.items.findIndex(
-		(item) => item.index === props.index
-	);
+	const item = filesStore.getTargetFileItem(props.index, props.origin_id);
 
-	if (!index) {
-		return;
-	}
+	if (item) {
+		menuStore.shareRepoInfo = JSON.parse(JSON.stringify(item));
 
-	if (index !== -1) {
-		menuStore.shareRepoInfo = JSON.parse(
-			JSON.stringify(filesStore.currentFileList[props.origin_id]?.items)
-		)[index];
+		if (common().displayConnectServer(route.fullPath) && item.externalType) {
+			isExternalRoot.value = [
+				ExternalType.HDD,
+				ExternalType.SMB,
+				ExternalType.USB
+			].includes(item.externalType);
+		} else {
+			isExternalRoot.value = false;
+		}
 
 		if (getParams(menuStore.shareRepoInfo.path, 'id')) {
 			menuStore.shareRepoInfo.id = getParams(
@@ -291,7 +306,7 @@ const onShow = async () => {
 
 		stopScrollMove();
 		filesStore.resetSelected();
-		filesStore.addSelected(index);
+		filesStore.addSelected(props.index);
 	}
 };
 
@@ -308,17 +323,11 @@ const onItemClick = async (action: OPERATE_ACTION) => {
 };
 
 const disableHomeMenu = computed(() => {
-	const index = filesStore.currentFileList[props.origin_id]?.items.findIndex(
-		(item) => item.index === props.index
-	);
-	if (!index || index < 0) {
+	const item = filesStore.getTargetFileItem(props.index, props.origin_id);
+	if (!item) {
 		return false;
 	}
-
-	return operateinStore.isDisableMenuItem(
-		filesStore.currentFileList[props.origin_id]?.items[index].name || '',
-		route.path
-	);
+	return operateinStore.isDisableMenuItem(item.name || '', route.path);
 });
 
 const selectItem = computed(() => {

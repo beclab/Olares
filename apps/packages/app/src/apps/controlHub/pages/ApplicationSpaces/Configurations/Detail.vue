@@ -53,7 +53,7 @@ import {
 import { getSecretsData } from '@apps/control-hub/src/network';
 import MyLoading from '@apps/control-hub/src/components/MyLoading.vue';
 import { get } from 'lodash';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import DataDetail from '@apps/control-panel-common/src/containers/DataDetail.vue';
 import { safeBtoa } from '@apps/control-panel-common/src/utils/base64';
 import Yaml from '@apps/control-hub/src/containers/Yaml.vue';

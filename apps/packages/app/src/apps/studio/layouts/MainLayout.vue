@@ -3,7 +3,7 @@
 		<q-drawer class="my-drawer" behavior="desktop" show-if-above :width="240">
 			<q-scroll-area style="height: calc(100vh)">
 				<bt-menu
-					active-class="text-body1 bg-teal-soft text-teal-pressed"
+					active-class="text-body1 my-active-link"
 					:items="menuStore.menuList"
 					expand-separator
 					v-model="menuStore.currentItem"
@@ -38,6 +38,7 @@ import { pushToSystem } from './../utils/utils';
 import { useFileStore } from '../stores/file';
 import { resetStatus } from '../common/reset';
 import { useDockerStore } from '../stores/docker';
+import { useLocaleWatch } from 'src/composables/common/useLocaleWatch';
 
 const store = useDevelopingApps();
 const menuStore = useMenuStore();
@@ -64,6 +65,10 @@ watch(
 
 onMounted(() => {
 	menuStore.updateApplications();
+});
+
+useLocaleWatch(() => {
+	menuStore.updateMenuLabels();
 });
 
 const changeItemMenu = (data: any): void => {
@@ -143,5 +148,10 @@ const changeItemMenu = (data: any): void => {
 		font-weight: 400;
 		line-height: 24px;
 	}
+}
+
+::v-deep(.my-active-link) {
+	color: $theme-menu-color-hover;
+	background: $theme-menu-bg-hover;
 }
 </style>

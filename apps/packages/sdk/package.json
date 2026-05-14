@@ -12,6 +12,7 @@
         "test": "echo \"No test specified\" && exit 0"
     },
     "dependencies": {
+        "@bytetrade/core": "../core",
         "@tiptap/core": "2.0.0-beta.182",
         "@tiptap/starter-kit": "2.0.0-beta.191",
         "@types/autosize": "4.0.1",
@@ -29,7 +30,6 @@
         "bcrypt": "6.0.0",
         "buffer": "6.0.3",
         "core-js": "^3.6.5",
-        "crypto-browserify": "3.12.1",
         "date-fns": "2.22.1",
         "event-target-shim": "6.0.2",
         "http-server": "14.1.0",
@@ -39,20 +39,20 @@
         "lit": "2.0.2",
         "localforage": "1.9.0",
         "marked": "4.0.18",
+        "nats": "^2.28.2",
         "node-rsa": "1.1.1",
         "papaparse": "5.3.1",
         "pinia": "^2.0.11",
         "qrcode": "1.5.0",
         "reflect-metadata": "0.1.13",
-        "turndown": "7.1.1",
+        "turndown": "^7.2.2",
         "typescript": "4.5.4",
         "ua-parser-js": "0.7.41",
         "vue-i18n": "^9.14.5",
         "workbox-precaching": "6.2.0",
         "workbox-sw": "6.1.5",
         "workbox-window": "6.1.5",
-        "zxcvbn": "4.4.2",
-        "nats": "^2.28.2"
+        "zxcvbn": "4.4.2"
     },
     "devDependencies": {
         "@types/bcrypt": "6.0.0",
@@ -63,8 +63,6 @@
         "eslint": "^8.10.0",
         "eslint-config-prettier": "^8.1.0",
         "eslint-plugin-vue": "^9.0.0",
-        "node-polyfill": "^1.0.0",
-        "node-polyfill-webpack-plugin": "1.1.4",
         "prettier": "^2.5.1",
         "tsconfig-paths-webpack-plugin": "^4.0.0"
     },
@@ -83,5 +81,9 @@
         "node": ">= 12.22.1",
         "npm": ">= 6.13.4",
         "yarn": ">= 1.21.1"
+    },
+    "overrides": {
+        "follow-redirects": "^1.16.0",
+        "postcss": "^8.5.10"
     }
 }

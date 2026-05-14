@@ -24,6 +24,13 @@ export class SpaceAuthService extends OperateIntegrationAuth<SpaceIntegrationAcc
 			const cloudStore = useCloudStore();
 			const userStore = useUserStore();
 
+			if (!(await userStore.unlockFirst())) {
+				reject({
+					message: 'Need login'
+				});
+				return;
+			}
+
 			const time = new Date().getTime();
 			const secret = uid().replace(/-/g, '');
 			const sign_body = {
@@ -32,10 +39,6 @@ export class SpaceAuthService extends OperateIntegrationAuth<SpaceIntegrationAcc
 				time
 			};
 
-			if (!(await userStore.unlockFirst())) {
-				reject('Need login');
-				return;
-			}
 			Loading.show();
 
 			const did = await getDID(userStore.current_mnemonic?.mnemonic);
@@ -73,7 +76,9 @@ export class SpaceAuthService extends OperateIntegrationAuth<SpaceIntegrationAcc
 						}
 					});
 				} else {
-					reject('Login fail');
+					reject({
+						message: response.message || 'Login failed'
+					});
 				}
 			} catch (error) {
 				reject(error);

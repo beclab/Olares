@@ -10,7 +10,7 @@
 			<div id="previewer" class="bg-background-3">
 				<header-bar>
 					<div
-						class="q-ml-md text-ink-1 text-subtitle3"
+						class="q-ml-md text-ink-1 text-subtitle3 title"
 						:style="
 							$q.platform.is.electron && $q.platform.is.mac
 								? 'margin-left: 90px;'
@@ -146,6 +146,10 @@ import { dataAPIs } from '../../../api';
 import { format } from '../../../utils/format';
 import { notifySuccess } from 'src/utils/notifyRedefinedUtil';
 import { useI18n } from 'vue-i18n';
+import HotkeyManager from 'src/directives/hotkeyManager';
+import { FILES_HOTKEY } from 'src/api/files/hotKeys';
+
+import { getFileIcon, txtReadonlyTypes } from '@bytetrade/core';
 
 const props = defineProps({
 	origin_id: {
@@ -242,9 +246,11 @@ const next = async () => {
 	const index = items.findIndex(
 		(e) => e.name == filesStore.previewItem[props.origin_id]?.name
 	);
-	if (index < 0 || index + 1 > items.length) {
+
+	if (index < 0 || index + 1 >= items.length) {
 		return;
 	}
+
 	let nextItem = items[index + 1];
 	filesStore.previewItem[props.origin_id] = nextItem;
 	await open(nextItem);
@@ -280,7 +286,9 @@ watch(
 			newVal.type.toLowerCase() === 'textImmutable'
 		) {
 			store.preview.isEditEnable =
-				dataAPI.fileEditEnable && newVal.size <= dataAPI.fileEditLimitSize;
+				dataAPI.fileEditEnable &&
+				newVal.size <= dataAPI.fileEditLimitSize &&
+				!txtReadonlyTypes.includes(newVal.extension.replace('.', ''));
 			currentView.value = FileEditor;
 		} else if (newVal.type.toLowerCase() === 'epub') {
 			currentView.value = FileEpubPreview;
@@ -342,8 +350,6 @@ const download = async (e: any) => {
 		OPERATE_ACTION.DOWNLOAD,
 		driveType,
 		async (action: OPERATE_ACTION, data: any) => {
-			console.log('handleFileOperate action', action);
-			console.log('handleFileOperate data', data);
 			notifySuccess(t('Download task added'));
 		}
 	);
@@ -367,32 +373,42 @@ const showOperation = () => {
 	}
 };
 
-const keydownEnter = (event: any) => {
-	event.stopPropagation();
-	switch (event.keyCode) {
-		case 37:
-			prev();
-			break;
-
-		case 39:
-			next();
-			break;
-
-		default:
-			break;
-	}
-};
-
 onBeforeMount(() => {
 	store.preview.isShow = true;
 });
 
 onMounted(async () => {
-	window.addEventListener('keydown', keydownEnter);
+	HotkeyManager.registerHotkeys(
+		{
+			[FILES_HOTKEY.FILES.left]: () => {
+				prev();
+			},
+			[FILES_HOTKEY.FILES.right]: () => {
+				next();
+			},
+			[FILES_HOTKEY.FILES.down]: () => {
+				close();
+			}
+		},
+		['files']
+	);
 });
 
 onUnmounted(() => {
-	window.removeEventListener('keydown', keydownEnter);
+	HotkeyManager.unregisterHotkeys(
+		{
+			[FILES_HOTKEY.FILES.left]: () => {
+				prev();
+			},
+			[FILES_HOTKEY.FILES.right]: () => {
+				next();
+			},
+			[FILES_HOTKEY.FILES.down]: () => {
+				close();
+			}
+		},
+		['files']
+	);
 	store.preview.fullSize = false;
 	store.preview.isShow = false;
 });
@@ -422,5 +438,12 @@ onUnmounted(() => {
 .android-pad-height {
 	height: calc(100vh - 30px);
 	margin-top: 30px;
+}
+
+#previewer .title {
+	max-width: calc(100% - 300px);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 </style>

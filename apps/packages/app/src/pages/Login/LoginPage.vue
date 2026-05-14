@@ -1,6 +1,16 @@
 <template>
 	<div class="bg-container">
-		<img fit="fill" class="desktop-bg" :src="bgSrc" />
+		<div
+			class="bg-container"
+			:class="{
+				'bg-mode-fill': tokenStore.user.style === IMG_CONTENT_MODE.Fill,
+				'bg-mode-cover': tokenStore.user.style === IMG_CONTENT_MODE.Stretch,
+				'bg-mode-repeat': tokenStore.user.style === IMG_CONTENT_MODE.Tile
+			}"
+			:style="{
+				backgroundImage: `url(${bgSrc})`
+			}"
+		/>
 	</div>
 	<transition appear leave-active-class="animated fadeOut">
 		<component :is="currentComponent"></component>
@@ -13,6 +23,7 @@ import { CurrentView } from '../../utils/constants';
 import SecondFactor from './SecondFactor/SecondFactorForm.vue';
 import FirstFactor from './FirstFactor.vue';
 import MobileVerification from './MobileVerification.vue';
+import { IMG_CONTENT_MODE } from '../../constant';
 
 const tokenStore = useTokenStore();
 
@@ -57,6 +68,24 @@ const bgSrc = computed(() => {
 	justify-content: center;
 	align-items: center;
 	overflow: hidden;
+
+	.bg-mode-fill {
+		background-size: 100% 100%;
+		background-repeat: no-repeat;
+		background-position: center;
+	}
+
+	.bg-mode-cover {
+		background-size: cover;
+		background-repeat: no-repeat;
+		background-position: center;
+	}
+
+	.bg-mode-repeat {
+		background-size: auto;
+		background-repeat: repeat;
+		background-position: 0 0;
+	}
 }
 
 .bg-container .desktop-bg {

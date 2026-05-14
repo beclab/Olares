@@ -18,7 +18,7 @@
 
 					<bt-switch
 						size="sm"
-						truthy-track-color="light-blue-default"
+						truthy-track-color="blue-default"
 						v-model="videoStore.others.enableThrottling.value"
 						@update:model-value="updateEnableThrottling"
 					/>
@@ -54,7 +54,7 @@
 
 					<bt-switch
 						size="sm"
-						truthy-track-color="light-blue-default"
+						truthy-track-color="blue-default"
 						v-model="videoStore.others.enableSegmentDeletion.value"
 						@update:model-value="updateEnableSegmentDeletion"
 					/>

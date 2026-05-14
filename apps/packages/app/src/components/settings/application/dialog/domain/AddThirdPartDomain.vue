@@ -22,7 +22,8 @@
 				class="q-mt-md"
 				v-if="
 					reverseProxyMode == ReverseProxyMode.OlaresTunnel ||
-					reverseProxyMode == ReverseProxyMode.SelfBuiltFrp
+					reverseProxyMode == ReverseProxyMode.SelfBuiltFrp ||
+					reverseProxyMode == ReverseProxyMode.NoNeed
 				"
 				:label="t('Upload HTTPS Certificate')"
 				v-model="cert"
@@ -32,7 +33,8 @@
 				class="q-mt-md"
 				v-if="
 					reverseProxyMode == ReverseProxyMode.OlaresTunnel ||
-					reverseProxyMode == ReverseProxyMode.SelfBuiltFrp
+					reverseProxyMode == ReverseProxyMode.SelfBuiltFrp ||
+					reverseProxyMode == ReverseProxyMode.NoNeed
 				"
 				:label="t('Upload HTTPS Private Key')"
 				v-model="key"
@@ -45,9 +47,10 @@
 import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
 import { useDeviceStore } from 'src/stores/device';
-import { ReverseProxyMode } from 'src/constant/index';
+import { ReverseProxyMode } from 'src/constant';
 import TerminusEdit from '../../../base/TerminusEdit.vue';
 import TerminusTextareaEdit from '../../../base/TerminusTextareaEdit.vue';
+import { isValidDomain } from 'src/components/settings/application/dialog/domain/isValidDomain';
 
 const props = defineProps({
 	reverseProxyMode: {
@@ -72,6 +75,7 @@ const { t } = useI18n();
 
 const CustomRef = ref();
 const deviceStore = useDeviceStore();
+
 async function onOKClick() {
 	CustomRef.value.onDialogOK({
 		data: data.value,
@@ -96,14 +100,6 @@ const confirmEnable = computed(() => {
 	}
 	return data.value && data.value.length > 0;
 });
-
-function isValidDomain(domain: string) {
-	const domainRegex = /^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z]{2,63})+$/;
-	if (domain.length > 253) {
-		return false;
-	}
-	return domainRegex.test(domain);
-}
 
 // const httpCertRule = () => {
 // 	let certAvailable = isHttpsCertificate(

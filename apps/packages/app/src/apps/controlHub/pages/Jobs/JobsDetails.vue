@@ -138,7 +138,7 @@ import QTableStyle from '@apps/control-panel-common/src/components/QTableStyle.v
 import Status from '@apps/control-panel-common/src/components/Status.vue';
 import Yaml2 from '../NamespacePods/Yaml2.vue';
 import DeleteDialog from '@apps/control-panel-common/src/components/DeleteDialog.vue';
-import { useQuasar } from 'quasar';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import { useI18n } from 'vue-i18n';
 import PodContainer from '@apps/control-panel-common/src/containers/PodsList/PodContainer.vue';
 import RouterViewTransition from '@apps/control-panel-common/src/components/RouterViewTransition.vue';
@@ -147,7 +147,6 @@ import EnvironmentsLayout from '@apps/control-panel-common/src/containers/Enviro
 import QButtonStyle from '@apps/control-panel-common/src/components/QButtonStyle.vue';
 import Empty from '@apps/control-panel-common/src/components/Empty.vue';
 
-const $q = useQuasar();
 const { t } = useI18n();
 
 const module = 'jobs';
@@ -375,8 +374,8 @@ const confirmHandler = async () => {
 	deleteLoading.value = true;
 	try {
 		const res = await deleteJob(apiVersion, namespace, module, name, params);
-		$q.notify({
-			type: 'positive',
+		BtNotify.show({
+			type: NotifyDefinedType.SUCCESS,
 			message: t('DELETED_SUCCESSFULLY')
 		});
 
@@ -388,8 +387,8 @@ const confirmHandler = async () => {
 			}
 		});
 	} catch (error) {
-		$q.notify({
-			type: 'negative',
+		BtNotify.show({
+			type: NotifyDefinedType.FAILED,
 			message: JSON.stringify(error || '')
 		});
 	}

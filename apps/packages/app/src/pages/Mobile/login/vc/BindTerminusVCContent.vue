@@ -12,7 +12,10 @@
 						class="terminus_bind_base_root__logo"
 						:src="getRequireImage('login/create_terminus_name.svg')"
 					/>
-					<div class="terminus_bind_base_root__desc text-body2">
+					<div
+						class="terminus_bind_base_root__desc text-body2"
+						:class="descClasses"
+					>
 						<slot name="desc"></slot>
 					</div>
 					<div class="terminus_bind_base_root__content">
@@ -60,6 +63,11 @@ defineProps({
 		default: ConfirmButtonStatus.normal
 	},
 	btnIcon: {
+		type: String,
+		required: false,
+		default: ''
+	},
+	descClasses: {
 		type: String,
 		required: false,
 		default: ''
@@ -128,5 +136,8 @@ const onError = () => {
 		padding-left: 20px;
 		padding-right: 20px;
 	}
+}
+::v-deep(.q-scrollarea__content) {
+	max-width: 100%;
 }
 </style>

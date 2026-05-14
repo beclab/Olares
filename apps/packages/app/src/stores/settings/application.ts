@@ -10,8 +10,13 @@ import {
 	ApplicationCustonDomain
 } from 'src/constant/global';
 import { uninstalledAppState } from 'src/constant/config';
+import { APP_STATUS } from 'src/constant/constants';
 
-export const systemApplicationIdList = [''];
+let applicationsFetchTask: Promise<void> | null = null;
+const pendingAppStateByName: Record<
+	string,
+	{ state: string; entrances?: any; sharedEntrances?: any }
+> = {};
 
 export const useApplicationStore = defineStore('application', {
 	state: () => ({
@@ -22,7 +27,9 @@ export const useApplicationStore = defineStore('application', {
 
 	getters: {
 		usegpuApplications: (state) => {
-			return state.applications.filter((e) => e.requiredGpu.length > 0);
+			return state.applications.filter(
+				(e) => e.requiredGpu.length > 0 && e.state == APP_STATUS.RUNNING
+			);
 		},
 		installApplication: (state) => {
 			return state.applications.filter(
@@ -54,30 +61,85 @@ export const useApplicationStore = defineStore('application', {
 			this.applications.push(a);
 		},
 
-		updateOneApplicationState(name: string, state: string, entrances?: any) {
-			for (let i = 0; i < this.applications.length; ++i) {
-				if (this.applications[i].name == name) {
-					this.applications[i].state = state;
-					if (entrances) {
-						this.applications[i].entrances = entrances;
-					}
-					return;
+		updateOneApplicationState(
+			name: string,
+			state: string,
+			entrances?: any,
+			sharedEntrances?: any
+		): void {
+			const applyLocalState = (
+				nextState: string,
+				nextEntrances?: any,
+				sharedEntrances?: any
+			) => {
+				const app = this.getApplicationById(name);
+				if (!app) {
+					return false;
 				}
+				app.state = nextState;
+				if (nextEntrances) {
+					app.entrances = nextEntrances;
+				}
+				if (sharedEntrances) {
+					app.sharedEntrances = sharedEntrances;
+				}
+				return true;
+			};
+
+			if (applyLocalState(state, entrances, sharedEntrances)) {
+				return;
 			}
+
+			const pendingUpdate = { state, entrances, sharedEntrances };
+			pendingAppStateByName[name] = pendingUpdate;
+
+			void this.get_applications()
+				.then(() => {
+					const latestUpdate = pendingAppStateByName[name];
+					if (!latestUpdate) {
+						return;
+					}
+
+					applyLocalState(
+						latestUpdate.state,
+						latestUpdate.entrances,
+						latestUpdate.sharedEntrances
+					);
+				})
+				.catch((error) => {
+					console.error('[application] refresh apps failed:', error);
+				})
+				.finally(() => {
+					// Only clear if no newer push has overwritten this entry.
+					if (pendingAppStateByName[name] === pendingUpdate) {
+						delete pendingAppStateByName[name];
+					}
+				});
 		},
 
 		async get_applications() {
-			const tokenStore = useTokenStore();
-			const data: any = await axios.get(tokenStore.url + '/api/myapps');
-			if (this.applications.length != data.length) {
-				this.applications = data;
-			} else {
-				for (let i = 0; i < data.length; ++i) {
-					if (data[i].name !== 'settings') {
-						this.updateOneApplication(data[i]);
+			if (applicationsFetchTask) {
+				await applicationsFetchTask;
+				return;
+			}
+
+			applicationsFetchTask = (async () => {
+				const tokenStore = useTokenStore();
+				const data: any = await axios.get(tokenStore.url + '/api/myapps');
+				if (this.applications.length != data.length) {
+					this.applications = data;
+				} else {
+					for (let i = 0; i < data.length; ++i) {
+						if (data[i].name !== 'settings') {
+							this.updateOneApplication(data[i]);
+						}
 					}
 				}
-			}
+			})().finally(() => {
+				applicationsFetchTask = null;
+			});
+
+			await applicationsFetchTask;
 		},
 
 		async resume(name: string) {
@@ -86,9 +148,12 @@ export const useApplicationStore = defineStore('application', {
 			await axios.get(tokenStore.url + '/api/app/resume/' + name);
 		},
 
-		async suspend(name: string) {
+		async suspend(name: string, all: boolean) {
 			const tokenStore = useTokenStore();
-			await axios.get(tokenStore.url + '/api/app/suspend/' + name);
+			await axios.post(tokenStore.url + '/api/app/suspend', {
+				name: name,
+				all: all
+			});
 		},
 
 		async status(name: string) {

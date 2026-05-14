@@ -31,8 +31,7 @@ function hashToNode(name: string) {
 
 export class WebCryptoProviderLocal implements CryptoProvider {
 	async randomBytes(n: number): Promise<Uint8Array> {
-		const bytes = require('randombytes')(n);
-		return bytes;
+		return new Uint8Array(webCrypto.randomBytes(n));
 	}
 
 	async hash(input: Uint8Array, params: HashParams): Promise<Uint8Array> {

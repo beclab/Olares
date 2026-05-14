@@ -1,6 +1,6 @@
 <template>
-	<div class="launch_pad_page in_center_page" @click="dismiss">
-		<div class="launch_page_mask"></div>
+	<div class="launch_pad_page" @click="dismiss">
+		<div class="launch_page_mask in_center_page"></div>
 		<div class="launch_pad_box in-center" ref="launchpadPage">
 			<div class="launch_pad_search" ref="searchBox">
 				<q-input
@@ -39,7 +39,7 @@
 					transition-prev="slide-right"
 					transition-next="slide-left"
 					swipeable
-					animated
+					:animated="carouselAnimated"
 					class="bg-grey-1 shadow-2 rounded-borders pad_carousel"
 					ref="carousel"
 				>
@@ -52,6 +52,7 @@
 						<div
 							v-for="(element, index) in appStore.launchPadApps[indexList]"
 							:key="'app_' + index"
+							:class="isDisplay ? 'vibrate-1' : ''"
 							:style="`
 									border-radius: 16px;
 									position:absolute;
@@ -80,14 +81,9 @@
 								"
 								class="delete_launch"
 								@click.stop="
-									deleteLaunch(
-										appStore.desktopApps[element].icon,
-										appStore.desktopApps[element].title,
-										element,
-										$event
-									)
+									deleteLaunch(appStore.desktopApps[element], $event)
 								"
-							></div>
+							/>
 
 							<div
 								class="install_loading_status"
@@ -107,7 +103,6 @@
 							</div>
 							<img
 								:key="appStore.desktopApps[element].title"
-								crossorigin="anonymous"
 								:src="appStore.desktopApps[element].icon"
 								:style="`width:${appStore.DESKTOP_APP_SIZE}px;height:${
 									appStore.DESKTOP_APP_SIZE
@@ -172,15 +167,24 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useQuasar } from 'quasar';
 import { DesktopAppInfo, DesktopPosition, AppClickInfo } from './type/types';
 import { useI18n } from 'vue-i18n';
-import { useAppStore, systemApps } from '../../stores/desktop/app';
+import {
+	useApplicationStore,
+	systemApps,
+	localStoreKeys
+} from 'src/stores/desktop/app';
 import ConfirmDialog from './components/ConfirmDialog.vue';
-import { borderRadiusFormat } from '../../utils/desktop/utils';
-import { ENTRANCE_STATUS, APP_STATUS } from '../../constant/constants';
-import { isDoingState, isUninstallableState } from 'src/constant/config';
+import { borderRadiusFormat } from 'src/utils/desktop/utils';
+import { ENTRANCE_STATUS, APP_STATUS } from 'src/constant/constants';
+import { isDoingState } from 'src/constant/config';
+import { AppService } from 'src/stores/market/appService';
+import { useAppStore } from 'src/stores/market/appStore';
+import { notifyFailed } from 'src/utils/settings/btNotify';
+import { useLaunchpadSearch } from 'src/application/launchpadSearch';
+import { debounce } from 'lodash';
 
 defineProps({
 	isShowLaunch: {
@@ -194,9 +198,19 @@ const emits = defineEmits(['appClick', 'dismiss', 'drag_launch_app']);
 const { t } = useI18n();
 const launchpadPage = ref<HTMLElement>();
 const searchBox = ref<HTMLElement>();
-onMounted(() => {
-	let grid_x: number = Math.floor(launchpadPage.value!.offsetWidth / 20);
-	const grid_y: number = Math.floor(launchpadPage.value!.offsetHeight / 11.5);
+
+const $q = useQuasar();
+const appStore = useApplicationStore();
+
+function applyLaunchpadMetrics() {
+	const el = launchpadPage.value;
+	if (!el) return;
+	const offsetWidth = el.offsetWidth;
+	const offsetHeight = el.offsetHeight;
+	if (offsetWidth < 8 || offsetHeight < 8) return;
+
+	let grid_x: number = Math.floor(offsetWidth / 20);
+	const grid_y: number = Math.floor(offsetHeight / 11.5);
 	grid_x = grid_x < grid_y ? grid_x : grid_y;
 
 	appStore.DESKTOP_APP_SIZE = grid_x;
@@ -205,30 +219,51 @@ onMounted(() => {
 
 	appStore.DOCKER_APP_START_Y_GAP =
 		Math.floor(
-			launchpadPage.value!.offsetHeight -
+			offsetHeight -
 				appStore.DESKTOP_APP_Y_NUM * grid_x -
 				(appStore.DESKTOP_APP_Y_NUM - 1) * appStore.DESKTOP_APP_Y_GAP
 		) * 0.15;
 
 	appStore.DOCKER_APP_START_X_GAP =
 		Math.floor(
-			launchpadPage.value!.offsetWidth -
+			offsetWidth -
 				appStore.DESKTOP_APP_X_NUM * grid_x -
 				(appStore.DESKTOP_APP_X_NUM - 1) * appStore.DESKTOP_APP_X_GAP
 		) * 0.5;
 	appStore.DOCKER_APP_END_X_GAP = appStore.DOCKER_APP_START_X_GAP;
 
-	appStore.resize();
+	const search = appStore.launchpadSearchQuery;
+	if (search.length > 0) {
+		void appStore.update_search_result(search);
+	} else {
+		appStore.resize();
+	}
+}
+
+const debouncedApplyLaunchpadMetrics = debounce(applyLaunchpadMetrics, 120);
+
+onMounted(() => {
+	applyLaunchpadMetrics();
+	window.addEventListener('resize', debouncedApplyLaunchpadMetrics);
 });
 
-const $q = useQuasar();
-const appStore = useAppStore();
-const searchVal = ref<string>('');
-const isFocus = ref<boolean>(false);
+onBeforeUnmount(() => {
+	debouncedApplyLaunchpadMetrics.cancel();
+	window.removeEventListener('resize', debouncedApplyLaunchpadMetrics);
+});
 
 const isDisplay = ref<boolean>(false);
-
 let slide = ref(0);
+
+const {
+	searchVal,
+	isFocus,
+	carouselAnimated,
+	focusSearch,
+	blurSearch,
+	updateSearch,
+	cleanSearchVal
+} = useLaunchpadSearch(slide);
 let isDelete = false;
 let isInDrag = ref(false);
 let chooseInUse = ref(-1);
@@ -278,14 +313,7 @@ const openWindow = async (item: DesktopAppInfo) => {
 const dismiss = () => {
 	if (isDelete) {
 		isDelete = false;
-		for (var i = 0; i < appStore.desktopApps.length; i++) {
-			const draggedEl: any = document.getElementById(
-				appStore.desktopApps[i].id
-			);
-
-			draggedEl?.classList.remove('vibrate-1');
-			isDisplay.value = false;
-		}
+		isDisplay.value = false;
 	} else {
 		if (isFocus.value) {
 			isFocus.value = false;
@@ -313,49 +341,32 @@ const handleHold = () => {
 
 	isDelete = true;
 
-	for (var i = 0; i < appStore.desktopApps.length; i++) {
-		const draggedEl: any = document.getElementById(appStore.desktopApps[i].id);
-
-		draggedEl?.classList.add('vibrate-1');
-		isDisplay.value = true;
-	}
+	isDisplay.value = true;
 };
 
-function focusSearch() {
-	isFocus.value = true;
-}
-
-function blurSearch() {
-	isFocus.value = false;
-}
-
-function deleteLaunch(
-	icon: string,
-	launchTitle: string,
-	index: number,
-	e: any
-) {
-	console.log('deleteLaunch e', e);
-	const message = t('message_desktop.delete_app', {
-		appName: launchTitle
-	});
-	$q.dialog({
-		component: ConfirmDialog,
-		componentProps: {
-			title: t('delete'),
-			icon,
-			message,
-			showCancel: true
-		}
-	}).onOk(async () => {
+function deleteLaunch(appInfo: DesktopAppInfo, e: any) {
+	console.log(appInfo);
+	const marketAppStore = useAppStore();
+	const marketApp = marketAppStore.findAppByName(
+		appInfo && appInfo.fatherName ? appInfo.fatherName : ''
+	);
+	if (marketApp) {
 		e.target.parentNode.classList.add('uninstallAni');
-		const fatherName = appStore.desktopApps[index].fatherName;
-
 		setTimeout(async () => {
-			await appStore.uninstall_application(fatherName);
+			await AppService.uninstallApp(
+				marketApp.status,
+				{
+					app_name: marketApp.appId,
+					source: marketApp.sourceId,
+					version: marketApp.version
+				},
+				$q
+			);
 			e.target.parentNode.classList.remove('uninstallAni');
 		}, 500);
-	});
+	} else {
+		notifyFailed('Failed to retrieve app information');
+	}
 }
 
 const getAppIndexInDesktop = (id: string) => {
@@ -557,14 +568,18 @@ const onDragEnd = async () => {
 		draggedEl?.classList.remove('drag-start');
 		drag_launch_app = null;
 	}
-};
 
-const updateSearch = (val: string) => {
-	appStore.update_search_result(val);
-};
-
-const cleanSearchVal = () => {
-	searchVal.value = '';
+	console.log('appStore.desktopApps[element] ===>', appStore.desktopApps);
+	const apps = appStore.desktopApps
+		.map((e) => {
+			return {
+				id: e.id,
+				index: e.index
+			};
+		})
+		.sort((a, b) => a.index - b.index);
+	console.log('appStore.apps', apps);
+	localStorage.setItem(localStoreKeys.LAUNCH_PAD, JSON.stringify(apps));
 };
 
 const goto = (value: number) => {
@@ -573,6 +588,9 @@ const goto = (value: number) => {
 </script>
 
 <style lang="scss" scoped>
+$ease-out-cubic: cubic-bezier(0.25, 0.1, 0.25, 1);
+$launch-pad-animation-duration: 0.6s;
+
 .drag-enter {
 	border: 1px dashed white;
 }
@@ -587,20 +605,24 @@ const goto = (value: number) => {
 		min-height: 155px;
 		border-radius: 8px;
 	}
+
 	.launch_dialog_span {
 		width: 300px;
 	}
+
 	.launch_dialog_btn {
 		position: absolute;
 		bottom: 0px;
 		right: 0px;
 	}
+
 	.launch_pad_dialog {
 		width: 70px;
 		height: 70px;
 		border-radius: 16px;
 	}
 }
+
 .pad_carousel {
 	background: transparent !important;
 	box-shadow: none !important;
@@ -623,6 +645,7 @@ const goto = (value: number) => {
 .column_none {
 	overflow: hidden !important;
 }
+
 .column_launch_pad_apps {
 	.launch_pad_apps_name {
 		width: 140%;
@@ -636,25 +659,31 @@ const goto = (value: number) => {
 		white-space: nowrap;
 		text-overflow: ellipsis;
 		margin-top: 12px;
+
 		.app_state {
 			display: inline-block;
 			width: 8px;
 			height: 8px;
 			border-radius: 4px;
+
 			&.suspend_color {
 				background-color: $warning;
 			}
+
 			&.crash_color {
 				background-color: $negative;
 			}
+
 			&.running_color {
 				background-color: $positive;
 			}
+
 			&.upgrade_error_color {
 				background-color: $blue;
 			}
 		}
 	}
+
 	.delete_launch {
 		width: 20px;
 		height: 20px;
@@ -668,6 +697,7 @@ const goto = (value: number) => {
 		z-index: 100;
 		cursor: pointer;
 	}
+
 	.install_loading_status {
 		position: absolute;
 		top: 0px;
@@ -680,11 +710,13 @@ const goto = (value: number) => {
 		display: flex;
 		align-items: center;
 		justify-content: center;
+
 		svg {
 			transform: rotate(-90deg);
 			border-radius: 50%;
 			height: 40%;
 		}
+
 		circle {
 			fill: rgba(0, 0, 0, 0.5);
 			stroke: rgba(255, 255, 255, 1);
@@ -692,6 +724,7 @@ const goto = (value: number) => {
 			stroke-dasharray: 0 100;
 			animation: fillup 5s linear infinite;
 		}
+
 		@keyframes fillup {
 			to {
 				stroke-dasharray: 158 158;
@@ -700,6 +733,7 @@ const goto = (value: number) => {
 		}
 	}
 }
+
 .launch_pad_page {
 	width: 100%;
 	height: 100%;
@@ -707,6 +741,7 @@ const goto = (value: number) => {
 	position: relative;
 	top: 0px;
 	left: 0px;
+
 	.launch_page_mask {
 		position: absolute;
 		left: 0;
@@ -714,9 +749,8 @@ const goto = (value: number) => {
 		z-index: -1;
 		width: 100%;
 		height: 100%;
-		background: rgba(0, 0, 0, 0.5);
-		backdrop-filter: blur(10px);
 	}
+
 	.launch_search {
 		width: 240px;
 		height: 32px !important;
@@ -730,14 +764,17 @@ const goto = (value: number) => {
 		background: rgba(246, 246, 246, 0.1);
 		box-shadow: 0px 0px 40px 0px rgba(0, 0, 0, 0.2),
 			0px 0px 2px 0px rgba(0, 0, 0, 0.4);
+
 		.search_icon {
 			margin-bottom: 8px;
 			color: rgba(255, 255, 255, 0.8);
 		}
+
 		.search_clean {
 			margin-bottom: 10px;
 			color: rgba(255, 255, 255, 0.8);
 		}
+
 		.search_input {
 			position: absolute;
 			top: 0px;
@@ -752,6 +789,7 @@ const goto = (value: number) => {
 		}
 	}
 }
+
 .launch_pad_box {
 	width: calc(100% - 108px);
 	height: 100%;
@@ -759,6 +797,7 @@ const goto = (value: number) => {
 	margin-left: 108px;
 	padding-top: 36px;
 	overflow: hidden;
+
 	.launch_pad_search {
 		width: 100%;
 		height: 44px;
@@ -782,101 +821,73 @@ const goto = (value: number) => {
 	background-color: rgba(255, 255, 255, 0.3);
 	border-radius: 4px;
 	cursor: pointer;
+
 	&.active {
 		background-color: rgba(255, 255, 255, 1);
 	}
 }
+
 .in_center_page {
-	-webkit-animation: puff_in_center_page 0.6s;
-	animation: puff_in_center_page 0.6s;
+	animation: puff_in_center_page $launch-pad-animation-duration $ease-out-cubic
+		forwards;
 }
-@-webkit-keyframes puff_in_center_page {
-	0% {
-		opacity: 0;
-	}
-	100% {
-		opacity: 1;
-	}
-}
+
 @keyframes puff_in_center_page {
 	0% {
-		opacity: 0;
+		background: rgba(0, 0, 0, 0);
+		backdrop-filter: blur(0px);
 	}
 	100% {
-		opacity: 1;
+		background: rgba(0, 0, 0, 0.5);
+		backdrop-filter: blur(10px);
 	}
-}
-.in-center {
-	-webkit-animation: puff-in-center 0.6s;
-	animation: puff-in-center 0.6s;
 }
 
-@-webkit-keyframes puff-in-center {
-	0% {
-		-webkit-transform: scale(0);
-		transform: scale(0);
-		opacity: 0;
-	}
-	50% {
-		-webkit-transform: scale(1.03);
-		transform: scale(1.03);
-		opacity: 0;
-	}
-	60% {
-		-webkit-transform: scale(1.02);
-		transform: scale(1.02);
-		opacity: 0.6;
-	}
-	100% {
-		-webkit-transform: scale(1);
-		transform: scale(1);
-		opacity: 1;
-	}
+.in-center {
+	transform-origin: center;
+	animation: puff-in-center $launch-pad-animation-duration $ease-out-cubic
+		forwards;
 }
+
 @keyframes puff-in-center {
 	0% {
-		-webkit-transform: scale(0);
-		transform: scale(0);
-		opacity: 0;
-	}
-	50% {
-		-webkit-transform: scale(1.03);
 		transform: scale(1.03);
 		opacity: 0;
 	}
-	60% {
-		-webkit-transform: scale(1.02);
-		transform: scale(1.02);
-		opacity: 0.6;
-	}
 
 	100% {
-		-webkit-transform: scale(1);
 		transform: scale(1);
 		opacity: 1;
 	}
 }
+
 :global(.q-field--standard .q-field__control:before) {
 	border: none;
 }
+
 :global(.q-field--standard .q-field__control:after) {
 	height: 0px;
 }
+
 :global(.q-field__native) {
 	font-family: Roboto-Medium, Roboto;
 	font-weight: 500;
 	// color: #ffffff;
 }
+
 :global(.q-field__marginal) {
 	height: 100%;
 	padding-right: 4px !important;
 }
+
 .q-field__marginal :global(.q-field__control) {
 	height: 44px;
 }
+
 .ghost {
 	opacity: 0 !important;
 }
+
 .vibrate-1 {
 	-webkit-animation: vibrate-1 0.3s linear infinite both;
 	animation: vibrate-1 0.3s linear infinite both;
@@ -897,6 +908,7 @@ const goto = (value: number) => {
 		-webkit-transform: rotate(4deg);
 	}
 }
+
 @keyframes vibrate-1 {
 	0% {
 		transform: rotate(4deg);

@@ -5,6 +5,7 @@
 		:ok="t('confirm')"
 		:cancel="t('cancel')"
 		:ok-loading="submitLoading ? t('loading') : false"
+		:platform="$q.platform.is.mobile ? 'mobile' : 'web'"
 		size="small"
 		@onSubmit="submit"
 	>
@@ -38,6 +39,7 @@ import { useFilesStore } from '../../../stores/files';
 import { useI18n } from 'vue-i18n';
 import { DriveType } from '../../../utils/interface/files';
 import { useOperateinStore } from './../../../stores/operation';
+import { busEmit } from 'src/utils/bus';
 
 const props = defineProps({
 	item: {
@@ -51,8 +53,6 @@ const props = defineProps({
 });
 
 const $q = useQuasar();
-const filesStore = useFilesStore();
-const operateinStore = useOperateinStore();
 
 const { t } = useI18n();
 
@@ -68,12 +68,8 @@ const submit = async () => {
 		await dataAPI.deleteRepo(props.item as any);
 		submitLoading.value = false;
 		CustomRef.value.onDialogOK();
-		await filesStore.getMenu();
-		await filesStore.setBrowserUrl(
-			operateinStore.defaultPath,
-			DriveType.Drive,
-			true
-		);
+
+		busEmit('reposUpdate', true);
 	} catch (error) {
 		submitLoading.value = false;
 	}

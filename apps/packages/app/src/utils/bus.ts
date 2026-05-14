@@ -57,6 +57,7 @@ export type BusEventName =
 	| 'network_update'
 	| 'terminus_actived'
 	| 'terminus_update'
+	| 'account_token_refreshed'
 
 	// android
 	| 'appStateChange'
@@ -92,6 +93,7 @@ export type BusEventName =
 	| 'feedUpdate'
 	| 'appRestore'
 	| 'uploadOK'
+	| 'entryRetry'
 
 	//
 	| 'enclosureUpdate'
@@ -114,9 +116,13 @@ export type BusEventName =
 
 	// files
 	| 'fileItemOpenOperation'
-	| 'fileUploadComleted';
+	| 'fileUploadComleted'
+	| 'reposUpdate'
+	| 'updateCopyItems'
+	| 'resetCopyItems';
 
 export type BroadcastToUIMethod =
 	| 'UNLOCKED_UPDATE'
 	| 'VAULT_TAB_UPDATE'
-	| 'COLLECTION_TAB_UPDATE';
+	| 'COLLECTION_TAB_UPDATE'
+	| 'TRANSLATE_SCRIPT_READY';

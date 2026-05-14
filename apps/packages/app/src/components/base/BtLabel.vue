@@ -3,11 +3,11 @@
 		<q-icon
 			v-if="name"
 			size="24px"
-			color="blue-default"
+			color="primary"
 			:name="name"
 			style="margin-right: 4px"
 		/>
-		<div class="text-body-1 text-blue-default text-right">{{ label }}</div>
+		<div class="text-body-1 text-primary text-right">{{ label }}</div>
 	</div>
 </template>
 

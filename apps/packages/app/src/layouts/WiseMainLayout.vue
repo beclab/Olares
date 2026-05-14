@@ -1,7 +1,7 @@
 <template>
 	<wise-restore-view />
 	<q-layout view="hHh Lpr fFf" class="layout layout-app">
-		<div class="main-layout">
+		<div class="main-layout" id="wise-content">
 			<q-drawer
 				v-model="configStore.leftDrawerOpen"
 				@update:model-value="updateLeftDrawer"
@@ -102,10 +102,17 @@
 					<bt-popup style="width: 200px">
 						<bt-popup-item
 							v-close-popup
-							icon="sym_r_swap_vert"
-							:title="t('main.transmission')"
-							:hotkey="WISE_HOTKEY.SETTING.TRANSACTION"
-							@on-item-click="configStore.setMenuType(MenuType.Transmission)"
+							icon="sym_r_download"
+							:title="t('main.download_list')"
+							:hotkey="WISE_HOTKEY.SETTING.DOWNLOAD"
+							@on-item-click="configStore.setMenuType(MenuType.Download)"
+						/>
+						<bt-popup-item
+							v-close-popup
+							icon="sym_r_upload"
+							:title="t('main.upload_list')"
+							:hotkey="WISE_HOTKEY.SETTING.UPLOAD"
+							@on-item-click="configStore.setMenuType(MenuType.Upload)"
 						/>
 						<bt-popup-item
 							v-close-popup
@@ -168,6 +175,7 @@
 					</router-view>
 
 					<files-uploader
+						id="wise-upload"
 						accept="video/*, audio/*, application/pdf, application/epub+zip, application/vnd.amazon.ebook"
 						:auto-bind-resumable="false"
 						@files-update="filesUpdate"
@@ -185,6 +193,15 @@
 			>
 				<right-drawer-layout />
 			</q-drawer>
+		</div>
+
+		<div v-if="isDragOver" class="drag-mask">
+			<div class="upload-btn bg-background-3">
+				<q-icon size="40px" name="sym_r_upload_file" color="orange-default" />
+			</div>
+			<div class="text-subtitle1 text-white q-mt-lg">
+				{{ t('Drop files anywhere to upload') }}
+			</div>
 		</div>
 	</q-layout>
 </template>
@@ -204,6 +221,11 @@ import Waiter from '../utils/simpleWaiter';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
 import { MenuType, SupportDetails, TabType } from '../utils/rss-menu';
+import {
+	DragUploadUtil,
+	ProcessedEvent,
+	FileFilterErrorInfo
+} from 'src/utils/DragUploadUtils';
 import { FilePath, useFilesStore } from '../stores/files';
 import HotkeyManager from 'src/directives/hotkeyManager';
 import { WISE_HOTKEY } from 'src/directives/wiseHotkey';
@@ -214,6 +236,7 @@ import { useRssStore } from 'src/stores/rss';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { dataAPIs } from '../api';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 
 const keepAliveExclude = ref('EntryReadingPage');
 const configStore = useConfigStore();
@@ -228,6 +251,7 @@ const targetRef = ref();
 const filterStore = useFilterStore();
 const rssStore = useRssStore();
 const rssWait = new Waiter<string>();
+const isDragOver = ref(false);
 
 const items = computed(() => {
 	return configStore.recommendationOpen
@@ -291,8 +315,10 @@ watch(
 				[WISE_HOTKEY.ADD.COOKIES]: () => addCookies(),
 				[WISE_HOTKEY.ADD.LINKS]: () => addEntries(),
 				[WISE_HOTKEY.ADD.URL]: () => addEntry(),
-				[WISE_HOTKEY.SETTING.TRANSACTION]: () =>
-					configStore.setMenuType(MenuType.Transmission),
+				[WISE_HOTKEY.SETTING.DOWNLOAD]: () =>
+					configStore.setMenuType(MenuType.Download),
+				[WISE_HOTKEY.SETTING.UPLOAD]: () =>
+					configStore.setMenuType(MenuType.Upload),
 				[WISE_HOTKEY.SETTING.TAG]: () => configStore.setMenuType(MenuType.Tags),
 				[WISE_HOTKEY.SETTING.RSS]: () =>
 					configStore.setMenuType(MenuType.RSS_Feeds),
@@ -447,11 +473,40 @@ watch(
 	}
 );
 
+const dragUploadInstance = ref<DragUploadUtil | null>(null);
+
 onMounted(async () => {
 	console.log('main onMounted');
 	console.log(route.path);
 	configStore.setThemeSetting(configStore.themeSetting);
 	restoreMenu();
+
+	dragUploadInstance.value = new DragUploadUtil({
+		dropTarget: '#wise-content',
+		fileInputSelector: '#wise-upload',
+		allowedFileTypes: [
+			'video/*',
+			'audio/*',
+			'application/pdf',
+			'application/epub+zip',
+			'application/vnd.amazon.ebook'
+		],
+		onTargetProcessed: (processedEvent: ProcessedEvent) => {
+			filesUpdate(processedEvent);
+		},
+		onDragEnter: () => {
+			isDragOver.value = true;
+		},
+		onDragLeave: () => {
+			isDragOver.value = false;
+		},
+		onFileFilterError: (errorInfo: FileFilterErrorInfo) => {
+			BtNotify.show({
+				type: NotifyDefinedType.FAILED,
+				message: errorInfo.message
+			});
+		}
+	});
 });
 
 const restoreMenu = () => {
@@ -516,9 +571,8 @@ const restoreMenu = () => {
 };
 
 onBeforeUnmount(() => {
-	if (rssWait) {
-		rssWait.clear();
-	}
+	rssWait?.clear();
+	dragUploadInstance.value?.destroy();
 });
 
 function onMenuItemChange(data: { key; item }) {
@@ -546,7 +600,7 @@ const addCookies = () => {
 		component: MultiTextDialog,
 		componentProps: {
 			title: 'dialog.upload_cookie',
-			label: 'dialog.Add cookies',
+			label: 'dialog.Add cookie',
 			link: false
 		}
 	});
@@ -571,12 +625,14 @@ const showUploadDialog = () => {
 		component: TransferUploadAddDialog,
 		componentProps: {
 			files: filesRef.value,
-			origins: [DriveType.Drive]
+			origins: [DriveType.Drive],
+			historySize: 5,
+			defaultPath: '/Files/Home/Documents/'
 		}
 	}).onOk((fileSavePath: FilePath) => {
 		fileStore.uploadSelectFile(targetRef.value, fileSavePath);
-		configStore.setMenuType(MenuType.Transmission);
-		configStore.setMenuTab(TabType.Upload);
+		configStore.setMenuType(MenuType.Upload);
+		configStore.setMenuTab(TabType.Uploading);
 	});
 };
 </script>
@@ -675,6 +731,29 @@ const showUploadDialog = () => {
 
 .slide-right-enter-from {
 	transform: translateX(-100%);
+}
+
+.drag-mask {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(0, 0, 0, 0.4);
+	backdrop-filter: blur(20px);
+	-webkit-backdrop-filter: blur(20px);
+	z-index: 9999;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	pointer-events: none;
+}
+
+.upload-btn {
+	border-radius: 20px;
+	padding: 16px;
 }
 </style>
 

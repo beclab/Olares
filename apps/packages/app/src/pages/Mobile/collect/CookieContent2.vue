@@ -1,13 +1,18 @@
 <template>
-	<BtTooltip2 anchor="top middle" self="center middle">
-		<template #tooltip v-if="cookieIcon.tooltip">
-			<div style="max-width: 220px">{{ cookieIcon.tooltip }}</div>
+	<BtTooltip2 anchor="center left" self="center right">
+		<template #tooltip v-if="tooltip">
+			<div class="custom-tooltip-wrapper">{{ tooltip }}</div>
+		</template>
+		<template #tooltip v-else-if="cookieIcon.tooltip">
+			<div class="custom-tooltip-wrapper">
+				{{ cookieIcon.tooltip }}
+			</div>
 		</template>
 		<div>
 			<CustomButton
 				class="q-px-md"
 				outline
-				:disable="cookieList.length === 0"
+				:disable="cookieList.length === 0 || disable"
 				:loading="
 					appAbilitiesStore.loading || collectStore.loading || pushLoading
 				"
@@ -49,6 +54,13 @@ import { useUserStore } from 'src/stores/user';
 import { useCollect } from 'src/composables/bex/useCollect';
 import { COOKIE_LEVEL } from 'src/utils/rss-types';
 
+interface Props {
+	tooltip?: string;
+	disable?: boolean;
+}
+
+defineProps<Props>();
+
 const $q = useQuasar();
 const { t } = useI18n();
 const browserCookieStore = useBrowserCookieStore();
@@ -81,7 +93,7 @@ const cookieIcon = computed(() => {
 
 	const tooltip = [
 		t('bex.cookie_upload_tooltip'),
-		t('bex.cookie_expired_reupload')
+		t('cookie_expired_reupload')
 	];
 	return {
 		icon: icons[cookieStatusCode.value],
@@ -144,5 +156,9 @@ onUnmounted(() => {
 	position: absolute;
 	bottom: 0;
 	right: 0;
+}
+.custom-tooltip-wrapper {
+	width: 80px;
+	white-space: normal;
 }
 </style>

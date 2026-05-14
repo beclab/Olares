@@ -50,7 +50,7 @@ const memoryValue = ref('');
 const memoryUnit = ref<string>('Mi');
 const memoryUnitOptions = ['Mi', 'Gi'];
 
-// 解析初始值
+// Parse initial value.
 const parseInitialValue = (value: string) => {
 	if (!value) return;
 
@@ -62,7 +62,7 @@ const parseInitialValue = (value: string) => {
 		memoryValue.value = trimmedValue.slice(0, -2);
 		memoryUnit.value = 'Mi';
 	} else if (trimmedValue.match(/^\d+(\.\d+)?$/)) {
-		// 纯数字，默认为 Mi
+		// Plain number defaults to Mi.
 		memoryValue.value = trimmedValue;
 		memoryUnit.value = 'Mi';
 	}

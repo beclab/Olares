@@ -11,7 +11,7 @@ export enum TransferFront {
 export enum TransferStatus {
 	Prepare = 'prepare',
 	// Pausing = 'pausing',
-	// Paused = 'paused',
+	Paused = 'paused',
 	Resuming = 'resuming',
 	Checking = 'checking',
 	Canceling = 'canceling',
@@ -71,6 +71,7 @@ export interface TransferItem {
 	currentPhase: number;
 	totalPhase: number;
 	phaseTaskId?: string;
+	retry?: number;
 }
 
 export interface TransferItemInMemory extends TransferItem {

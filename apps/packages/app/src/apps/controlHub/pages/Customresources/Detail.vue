@@ -120,14 +120,13 @@ import QInputStyle from '@apps/control-panel-common/src/components/QInputStyle.v
 import Empty3 from '@apps/control-panel-common/src/components/Empty3.vue';
 import MoreSelection from '@apps/control-panel-common/src/components/MoreSelection.vue';
 import Yaml2 from '../NamespacePods/Yaml2.vue';
-import { useQuasar } from 'quasar';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import QTableStyle2 from '@apps/control-panel-common/src/components/QTableStyle2.vue';
 import DeleteDialog from '@apps/control-panel-common/src/components/DeleteDialog.vue';
 import MyLoading2 from '@apps/control-panel-common/src/components/MyLoading2.vue';
 import { useI18n } from 'vue-i18n';
 import { useAppDetailStore } from '@apps/control-hub/stores/AppDetail';
 const appDetailStore = useAppDetailStore();
-const $q = useQuasar();
 const { t } = useI18n();
 const options = [
 	{
@@ -268,16 +267,16 @@ const confirmHandler = async () => {
 		const res = await deleteCustomResources(params);
 		deleteLoading.value = false;
 		deleteDialogRef.value && deleteDialogRef.value.hide();
-		$q.notify({
-			type: 'positive',
+		BtNotify.show({
+			type: NotifyDefinedType.SUCCESS,
 			message: t('DELETED_SUCCESSFULLY')
 		});
 		fetchData();
 	} catch (error) {
 		deleteLoading.value = false;
 
-		$q.notify({
-			type: 'negative',
+		BtNotify.show({
+			type: NotifyDefinedType.FAILED,
 			message: JSON.stringify(error)
 		});
 	}

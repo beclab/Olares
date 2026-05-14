@@ -1,3 +1,4 @@
+import { useConfigStore } from 'src/stores/rss-config';
 import axios, { CancelToken } from 'axios';
 import {
 	CreateEntry,
@@ -8,7 +9,6 @@ import {
 	UrlCheck,
 	SOURCE_TYPE
 } from 'src/utils/rss-types';
-import { useConfigStore } from 'src/stores/rss-config';
 
 /**
  * When deleting an entry, if the user hovers over the current item while the deletion is in progress and the
@@ -52,6 +52,13 @@ export async function removeEntry(urls: string[], removeFile: boolean) {
 			remove_flag: removeFile
 		}
 	});
+}
+
+export async function retryEntry(id: string) {
+	const configStore = useConfigStore();
+	return await axios.put(
+		configStore.url + `/knowledge/entry/extract-retry/${id}`
+	);
 }
 
 export async function updateReadProgress(

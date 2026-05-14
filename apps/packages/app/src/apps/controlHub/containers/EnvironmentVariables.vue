@@ -65,7 +65,7 @@ import { get, has, isEmpty, isNil, uniqBy, flatten } from 'lodash';
 import { safeAtob } from '@apps/control-panel-common/src/utils/base64';
 import axios from 'axios';
 import MyCard from '@apps/control-panel-common/src/components/MyCard2.vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import { joinSelector } from '@apps/control-hub/src/utils';
 import { ObjectMapper } from '@apps/control-hub/src/utils/object.mapper';
 import Event from '@apps/control-panel-common/src/containers/Event.vue';

@@ -1,0 +1,25 @@
+@import '../app.scss';
+@import '../common/vault/base.scss';
+
+.larepass-global-ok-button {
+	background: $primary !important;
+	color: $grey-10 !important;
+}
+
+
+//Desktop
+.theme-desktop-light-bg {
+	background: linear-gradient(234.72deg,
+			rgba(254, 251, 228, 0.9) 3.44%,
+			rgba(255, 255, 255, 0.9) 24.04%,
+			rgba(251, 251, 233, 0.9) 54.51%,
+			rgba(255, 243, 183, 0.9) 77.26%,
+			rgba(255, 255, 243, 0.9) 99.53%),
+		linear-gradient(180deg,
+			rgba(254, 255, 228, 0.3) 1.13%,
+			rgba(255, 229, 135, 0.3) 98.87%);
+}
+
+.theme-desktop-dark-bg {
+	background: rgba(22, 22, 22, 1);
+}

@@ -1,5 +1,5 @@
 const boot = ['i18n', 'profileUI', 'application/profile'];
-const css = ['adaptive.profile.scss'];
+const css = [];
 
 const getConfig = (ctx) => {
 	if (!ctx.dev) {
@@ -21,10 +21,11 @@ const getConfig = (ctx) => {
 			distDir: 'dist/apps/profile-preview'
 		},
 		sourceFiles: {
-			indexHtmlTemplate: 'src/index.template.profile.html'
+			indexHtmlTemplate: 'src/index.template.profile.html',
+			variables: 'profile/variables.scss'
 		},
 		htmlVariables: {
-			productName: 'Profile | Terminus HomePage'
+			productName: 'Profile | Olares HomePage'
 		}
 	};
 };

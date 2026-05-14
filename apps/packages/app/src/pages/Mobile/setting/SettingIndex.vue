@@ -23,12 +23,12 @@
 			<template v-slot:content>
 				<div class="terminus-info q-pt-xs">
 					<div class="module-content q-mt-md q-pa-lg">
-						<div class="row items-center justify-between">
-							<div>
+						<div class="row items-center justify-between full-width">
+							<div style="flex: 1; overflow: hidden; margin-right: 20px">
 								<div class="home-module-title">
 									{{ t('main.my_terminus') }}
 								</div>
-								<div class="text-ink-3 text-body3">
+								<div class="text-ink-3 text-body3 full-width ellipsis">
 									{{ userName }}
 								</div>
 							</div>
@@ -37,7 +37,6 @@
 								:title="t('vpn.title')"
 								v-model="vpnToggleStatus"
 								:disabled="scaleStore.isDisconnecting"
-								@update:model-value="updateVpnStatus"
 							/>
 							<switch-component
 								v-else
@@ -46,7 +45,7 @@
 								@update:model-value="updateOffLineMode"
 							/>
 						</div>
-						<div v-if="mdnsStore.apiMachine && monitorStore.usages">
+						<div v-if="monitorStore.usages">
 							<div class="row items-center full-width justify-between q-mt-md">
 								<div class="module-content-item items-50 q-pa-md">
 									<olares-info :title="t('network')" @click="enterNetworkPage">
@@ -57,7 +56,7 @@
 								</div>
 								<div class="module-content-item items-50 q-pa-md">
 									<olares-info
-										v-if="mdnsStore.apiMachine.status"
+										v-if="mdnsStore.apiMachine && mdnsStore.apiMachine.status"
 										:title="t('system')"
 										:hiddenArrow="
 											mdnsStore.apiMachine.status.terminusName != user.name
@@ -66,6 +65,18 @@
 									>
 										<template v-slot:detail>
 											<olares-status :status="mdnsStore.apiMachine.status" />
+										</template>
+									</olares-info>
+									<olares-info
+										v-else-if="userStore.currentOlaresdAvailable"
+										:title="t('system')"
+										:hiddenArrow="false"
+										@click="enterScanMachineInfo"
+									>
+										<template v-slot:detail>
+											<div class="text-ink-3 text-body3 q-mt-xs">
+												{{ t('Search Olares') }}
+											</div>
 										</template>
 									</olares-info>
 
@@ -171,6 +182,7 @@ import { useScaleStore } from '../../../stores/scale';
 import { useMDNSStore } from '../../../stores/mdns';
 import OlaresUnreachable from '../../../components/setting/OlaresUnreachable.vue';
 import TerminusTipDialog from '../../../components/dialog/TerminusTipDialog.vue';
+import { getNativeAppPlatform } from '../../../application/platform';
 
 const { t } = useI18n();
 const isBex = ref(process.env.IS_BEX);
@@ -227,11 +239,11 @@ if (user.setup_finished) {
 let moniter = ref<any>(null);
 
 onMounted(async () => {
-	monitorStore.loadMonitor();
-	mdnsStore.getOlaresInfo();
+	monitorStore.loadMonitors();
+	mdnsStore.getOlaresInfos();
 	moniter.value = setInterval(() => {
-		monitorStore.loadMonitor();
-		mdnsStore.getOlaresInfo();
+		monitorStore.loadMonitors();
+		mdnsStore.getOlaresInfos();
 	}, 1000 * 30);
 });
 
@@ -248,19 +260,23 @@ const setPath = async (path: string) => {
 };
 
 const scanQrCode = () => {
-	$router.push({
-		path: '/scanQrCode'
-	});
+	const nativalPlatform = getNativeAppPlatform();
+	nativalPlatform.scanQRCodeAndDispatch();
 };
 
 const enterScanMachineInfo = async () => {
-	if (
-		!mdnsStore.apiMachine ||
-		!mdnsStore.apiMachine.status ||
-		mdnsStore.apiMachine.status.terminusName != user.name
-	) {
+	if (mdnsStore.apiMachine) {
+		if (
+			mdnsStore.apiMachine.status &&
+			mdnsStore.apiMachine.status.terminusName != user.name
+		) {
+			return;
+		}
+	}
+	if (!userStore.currentOlaresdAvailable) {
 		return;
 	}
+
 	if (!(await userStore.unlockFirst()) || isBex.value) {
 		return;
 	}
@@ -313,8 +329,8 @@ const offLineModeRef = ref(userStore.current_user?.offline_mode || false);
 
 const updateOffLineMode = async () => {
 	userStore.updateOfflineMode(offLineModeRef.value);
-	monitorStore.loadMonitor();
-	mdnsStore.getOlaresInfo();
+	monitorStore.loadMonitors();
+	mdnsStore.getOlaresInfos();
 };
 </script>
 
@@ -370,38 +386,6 @@ const updateOffLineMode = async () => {
 				.items-50 {
 					width: calc(50% - 6px);
 					height: 64px;
-				}
-
-				.usage {
-					// height: 72px;
-				}
-
-				.olares-unreachable-bg {
-					background: #fff7f2;
-					border: 1px solid $separator;
-					border-radius: 12px;
-
-					.title {
-						color: $ink-1;
-					}
-
-					&__introduce {
-						width: calc(100% - 135px);
-						height: 100%;
-
-						.detail {
-							color: $ink-2;
-						}
-
-						.backup {
-							background: $yellow;
-							border-radius: 8px;
-							height: 32px;
-							text-align: center;
-							color: $grey-10;
-							width: 93px;
-						}
-					}
 				}
 			}
 

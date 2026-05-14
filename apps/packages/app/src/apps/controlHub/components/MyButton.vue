@@ -1,20 +1,36 @@
 <template>
-	<div class="operate-btn q-px-sm row items-center justify-center">
+	<div
+		class="operate-btn q-px-sm row items-center justify-center"
+		:class="disable ? 'disabled' : ''"
+		@click="handleClick"
+	>
 		<q-icon :name="icon" size="16px" v-if="icon" />
 		<span class="operate-btn-install">{{ label }}</span>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, withDefaults } from 'vue';
 interface Props {
 	icon: string;
 	label: string;
+	disable?: boolean;
 }
 
-withDefaults(defineProps<Props>(), {
-	label: ''
+const props = withDefaults(defineProps<Props>(), {
+	label: '',
+	disable: false
 });
+
+const emit = defineEmits(['click']);
+
+const handleClick = (e: MouseEvent) => {
+	if (props.disable) {
+		e.stopPropagation();
+		e.preventDefault();
+		return;
+	}
+	emit('click', e);
+};
 </script>
 
 <style scoped lang="scss">

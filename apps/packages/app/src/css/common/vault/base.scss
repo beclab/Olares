@@ -1,0 +1,62 @@
+.itemView {
+	.hearder-input {
+		.text {
+			color: #212322;
+		}
+	}
+
+	.tagSelect {
+		.tagChip {
+			border: 1px solid #212322;
+		}
+	}
+
+	.listRow {
+		border-bottom: 1px solid $separator;
+	}
+
+	.footer {
+		.reset {
+			color: #4d4742;
+		}
+	}
+}
+
+.filedMenu {
+	.menuItem {
+		height: 32px;
+		padding: 0 4px;
+		border-radius: 4px;
+		margin: 2px 0;
+	}
+}
+
+
+.titleBg {
+	background: $grey-11;
+}
+
+.itemlist {
+	.vaultCard {
+		border-radius: 12px;
+		margin: 16px;
+
+		&:hover {
+			background: $background-hover;
+		}
+	}
+
+	.vaultCardActive {
+		background: $background-3;
+	}
+}
+
+.border-color-primary {
+	border-color: $primary !important;
+}
+
+.bg-hover-ink-3 {
+	&:hover {
+		background-color: $ink-3;
+	}
+}

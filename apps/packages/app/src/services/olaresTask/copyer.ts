@@ -116,6 +116,9 @@ class Copyer implements OlaresCopyTask {
 	private async formatTransferData(updatedTask: CopyTaskItem) {
 		const transferStore = useTransfer2Store();
 
+		updatedTask.dest = updatedTask.dest.replace(/\/\//g, '/');
+		updatedTask.source = updatedTask.source.replace(/\/\//g, '/');
+
 		const isDir = updatedTask.is_dir;
 		const appendSourceDir = appendPath(updatedTask.source, isDir ? '/' : '');
 		const appendDestDir = appendPath(updatedTask.dest, isDir ? '/' : '');
@@ -136,7 +139,6 @@ class Copyer implements OlaresCopyTask {
 			isDir,
 			dstDriveType
 		);
-		console.log('updatedTask.dest ===>', updatedTask.dest);
 
 		if (
 			!updatedTask.transfer_id ||

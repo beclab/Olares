@@ -136,7 +136,7 @@ import {
 } from '@apps/control-panel-common/src/network/middleware';
 import Empty from '@apps/control-panel-common/src/components/Empty.vue';
 import Empty2 from '@apps/control-panel-common/src/components/Empty2.vue';
-import { useQuasar } from 'quasar';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import { PATTERN_PASSWORD } from '@apps/control-panel-common/src/utils/constants.js';
 import { useRoute } from 'vue-router';
 import QTableStyle from '@apps/control-panel-common/src/components/QTableStyle2.vue';
@@ -149,7 +149,6 @@ import { get } from 'lodash';
 const middlewareStore = useMiddlewareStore();
 const { t } = useI18n();
 const route = useRoute();
-const $q = useQuasar();
 const visible = ref(false);
 const user = reactive({
 	name: '',
@@ -346,16 +345,16 @@ const submit = () => {
 	loading2.value = true;
 	updateMiddlewarePassword(middleware, params)
 		.then((res) => {
-			$q.notify({
-				type: 'positive',
+			BtNotify.show({
+				type: NotifyDefinedType.SUCCESS,
 				message: res.data.message
 			});
 			loading2.value = false;
 			visible.value = false;
 		})
 		.catch((err) => {
-			$q.notify({
-				type: 'negative',
+			BtNotify.show({
+				type: NotifyDefinedType.FAILED,
 				message: err.message
 			});
 			loading2.value = false;

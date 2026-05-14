@@ -147,6 +147,22 @@
 				<bt-loading :loading="subscribeLoading" />
 			</template>
 		</q-btn>
+
+		<q-btn
+			v-if="!isPDF"
+			class="q-mr-sm btn-size-sm btn-no-text btn-no-border"
+			color="ink-2"
+			outline
+			no-caps
+			icon="sym_r_refresh"
+			@click="retryPullEntry"
+			:loading="retrying"
+		>
+			<bt-tooltip :label="t('Recrawl content')" />
+			<template v-slot:loading>
+				<bt-loading :loading="retrying" />
+			</template>
+		</q-btn>
 		<!--		<q-btn-->
 		<!--			v-if="-->
 		<!--				configStore.menuChoice.type === MenuType.Trend &&-->
@@ -192,19 +208,24 @@ import { WISE_HOTKEY } from '../../../../directives/wiseHotkey';
 import { useConfigStore } from '../../../../stores/rss-config';
 import { useReaderStore } from '../../../../stores/rss-reader';
 import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
-import { computed, onBeforeUnmount, onMounted } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { FILE_TYPE } from '../../../../utils/rss-types';
 import { MenuType } from '../../../../utils/rss-menu';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { useRouter } from 'vue-router';
+import { retryEntry } from '../../../../api/wise';
+import { useRssStore } from '../../../../stores/rss';
+import { busEmit } from '../../../../utils/bus';
 
 const { t } = useI18n();
 const $q = useQuasar();
 const router = useRouter();
+const rssStore = useRssStore();
 const configStore = useConfigStore();
 const readerStore = useReaderStore();
 const abilityStore = useAbilityStore();
+const retrying = ref(false);
 let hotkeyMap;
 
 // const showReasonDialog = () => {
@@ -269,6 +290,25 @@ const onShare = () => {
 	}
 };
 
+const retryPullEntry = async () => {
+	if (!readerStore.readingEntry) return;
+
+	const entryId = readerStore.readingEntry.id;
+	retrying.value = true;
+
+	try {
+		await retryEntry(entryId);
+		await rssStore.syncEntries();
+		// Refresh current entry to update UI
+		await readerStore.entryUpdate(entryId);
+		busEmit('entryRetry');
+	} catch (e) {
+		console.log(e);
+	} finally {
+		retrying.value = false;
+	}
+};
+
 const setSubscribe = async () => {
 	await abilityStore.getAbiAbility();
 	if (!readerStore.subscribed && !abilityStore.rssubscribe) {
@@ -303,9 +343,8 @@ const setSubscribe = async () => {
 };
 
 const setReadLater = (readLater: boolean) => {
-	readerStore.setCurrentReadLater(readLater).then(() => {
-		router.back();
-	});
+	readerStore.setCurrentReadLater(readLater);
+	router.back();
 };
 
 const updateEntry = async (entryId: string, routerAction = '') => {

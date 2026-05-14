@@ -35,9 +35,10 @@
 						<transition-group name="list">
 							<template
 								v-for="(item, index) in userStore.user?.social.data"
-								:key="index"
+								:key="item?.platform ?? index"
 							>
 								<social-edit-item
+									v-if="item"
 									:platform="item.platform"
 									:url="item.url"
 									v-model:user-name="item.username"

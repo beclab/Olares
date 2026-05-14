@@ -3,6 +3,7 @@ import { getCollectInfo } from 'src/api/common/knowledge';
 import { AbilityData } from 'src/core/abilities';
 import {
 	CollectInfo,
+	DownloadInfoItem,
 	DownloadItem,
 	DownloadStatusEnum
 } from 'src/types/commonApi';
@@ -14,6 +15,7 @@ import { BaseSiteCardProps } from 'src/components/collection/collect';
 import { downloadFileNew } from 'src/api/wise/download';
 import { busOn } from 'src/utils/bus';
 import axios, { CancelTokenSource } from 'axios';
+import { get, round } from 'lodash';
 const CancelToken = axios.CancelToken;
 let CollectSearchCancelTokenSource: undefined | CancelTokenSource = undefined;
 
@@ -24,12 +26,24 @@ interface SiteInfo {
 }
 
 interface AppAbilitiesStore {
-	data: CollectInfo & { web_site_info: SiteInfo };
+	data: CollectInfo & {
+		web_site_info: SiteInfo;
+		user_selections?: Record<string, string>;
+	};
 	loading: boolean;
 	collectLoading: boolean;
 	currentRequestId: number | null;
 	url?: string;
-	cache: Map<string, CollectInfo & { web_site_info: SiteInfo }>;
+	retryUrl?: string;
+	cache: Map<
+		string,
+		CollectInfo & {
+			web_site_info: SiteInfo;
+			user_selections?: Record<string, string>;
+		}
+	>;
+	errorCode: number | null;
+	errorMessage: string;
 }
 
 const defaultData = {
@@ -38,10 +52,14 @@ const defaultData = {
 	is_feed_available: '',
 	feed: [],
 	download: {
-		list: [],
 		source: '',
-		title: '',
-		thumbnail: ''
+		info: [
+			{
+				title: '',
+				thumbnail: '',
+				list: []
+			}
+		]
 	},
 	entry: {
 		exist: false,
@@ -62,7 +80,8 @@ const defaultData = {
 		cookieExist: false,
 		cookieExpired: false,
 		is_entry_available: ''
-	}
+	},
+	user_selections: {}
 };
 
 export const useCollectSiteStore = defineStore('collectSite', {
@@ -72,13 +91,27 @@ export const useCollectSiteStore = defineStore('collectSite', {
 		collectLoading: false,
 		currentRequestId: null,
 		url: '',
-		cache: new Map()
+		cache: new Map(),
+		errorCode: null,
+		errorMessage: ''
 	}),
 	getters: {
 		cookie: (state) => state.data.cookie || defaultData.cookie,
 		feed: (state) => state.data.feed || defaultData.feed,
-		download: (state) => {
-			const data = state.data.download || defaultData.download;
+		currentDownloadInfo: (state): DownloadInfoItem => {
+			const cachedData =
+				process.env.PLATFORM_BEX_ALL && state.url
+					? state.cache.get(state.url)
+					: state.data;
+
+			return get(cachedData, 'download.info[0]', defaultData.download.info[0]);
+		},
+		download(): (DownloadItem & {
+			title: string;
+			icon: string;
+			url: string;
+		})[] {
+			const data = this.currentDownloadInfo;
 			return data.list.map((item) => ({
 				title: data.title,
 				icon: data.thumbnail,
@@ -95,6 +128,9 @@ export const useCollectSiteStore = defineStore('collectSite', {
 				: false
 	},
 	actions: {
+		deleteCache(url: string) {
+			url && this.cache.delete(url);
+		},
 		syncCache() {
 			if (process.env.PLATFORM_BEX_ALL && this.url) {
 				this.cache.set(this.url, { ...this.data });
@@ -102,27 +138,49 @@ export const useCollectSiteStore = defineStore('collectSite', {
 		},
 		async init() {
 			busOn('wiseDownloadProcess', (message) => {
-				const data = message.data;
-				const target = this.getDownloadByTaskId(data.task_id);
-				if (target) {
-					target.file = data.name;
-					if (data.percent && data.percent >= 100) {
-						target.download_status = DownloadStatusEnum.COMPLETE;
-						target.is_exist = true;
-					} else {
-						target.percent = data.percent;
+				try {
+					const data = message.data;
+					const target = this.getDownloadByTaskId(data.task_id);
+					console.log('percent', data);
+					if (target) {
+						target.file = data.name ?? target.file;
+						target.percent = data.percent ?? target.percent;
+						target.file_type = data.file_type ?? target.file_type;
+						target.download_status = data.status ?? target.download_status;
+						target.created_time = data.created_time ?? target.created_time;
+						target.is_exist =
+							target.download_status === DownloadStatusEnum.COMPLETE;
+
+						this.syncCache();
 					}
-					this.syncCache();
+				} catch (error) {
+					console.log(error);
 				}
 			});
+		},
+		async updateDownloadStatusByTaskId(
+			task_id: number,
+			download_status: DownloadStatusEnum
+		) {
+			const target = this.getDownloadByTaskId(task_id);
+			if (target) {
+				target.download_status = download_status ?? target.download_status;
+			}
 		},
 		async reset() {
 			this.data = { ...defaultData };
 			this.loading = false;
 			this.collectLoading = false;
 			this.url = undefined;
+			this.retryUrl = undefined;
+			this.resetCode();
+		},
+		async resetCode() {
+			this.errorCode = null;
+			this.errorMessage = '';
 		},
 		async search(url: string) {
+			this.resetCode();
 			if (!url) {
 				return;
 			}
@@ -139,7 +197,7 @@ export const useCollectSiteStore = defineStore('collectSite', {
 			} else {
 				this.reset();
 			}
-
+			this.retryUrl = url;
 			this.loading = true;
 			const requestId = Date.now();
 			this.currentRequestId = requestId;
@@ -148,26 +206,40 @@ export const useCollectSiteStore = defineStore('collectSite', {
 					CollectSearchCancelTokenSource.cancel();
 				CollectSearchCancelTokenSource = CancelToken.source();
 
-				const res = await getCollectInfo(
+				const result = await getCollectInfo(
 					url,
 					CollectSearchCancelTokenSource.token
 				);
-				const web_site_info = {
-					url: url,
-					title: '',
-					icon: ''
-				};
-				const newData = { ...res, web_site_info };
 
-				this.data = newData;
-				if (process.env.PLATFORM_BEX_ALL) {
-					this.cache.set(url, newData);
+				if (result.code === 0) {
+					const web_site_info = {
+						url: url,
+						title: '',
+						icon: ''
+					};
+					const newData = { ...result.data, web_site_info };
+
+					this.data = newData;
+
+					if (process.env.PLATFORM_BEX_ALL) {
+						this.cache.set(url, newData);
+					}
+				} else if (result.code && result.code !== 0) {
+					this.errorCode = result.code;
+					this.errorMessage = result.message || result.msg || '';
 				}
-			} catch (error) {
-				if (!axios.isCancel(error) && process.env.PLATFORM_BEX_ALL) {
+			} catch (error: any) {
+				if (!axios.isCancel(error)) {
+					this.deleteCache(url);
+					this.errorCode = 599;
+					this.errorMessage =
+						error.response?.data?.message ||
+						error.response?.statusText ||
+						error.message;
+
 					BtNotify.show({
 						type: NotifyDefinedType.FAILED,
-						message: error
+						message: this.errorMessage || error
 					});
 				}
 			} finally {
@@ -200,15 +272,15 @@ export const useCollectSiteStore = defineStore('collectSite', {
 		},
 
 		getDownloadById(id: string) {
-			const index = this.data.download.list.findIndex((item) => item.id === id);
-			return this.data.download.list[index];
+			const list = get(this.data, 'download.info[0].list', []);
+			const index = list.findIndex((item) => item.id === id);
+			return list[index];
 		},
 
 		getDownloadByTaskId(task_id: number) {
-			const index = this.data.download.list.findIndex(
-				(item) => item.task_id === task_id
-			);
-			return this.data.download.list[index];
+			const list = get(this.data, 'download.info[0].list', []);
+			const index = list.findIndex((item) => item.task_id === task_id);
+			return list[index];
 		},
 
 		async addFeed(feed_url: string) {
@@ -300,14 +372,28 @@ export const useCollectSiteStore = defineStore('collectSite', {
 			target.loading = true;
 			try {
 				const result = await downloadFileNew(params);
-				target.download_status = DownloadStatusEnum.DOWNLOADING;
-				target.task_id = result?.id;
-				this.syncCache();
+				if (result?.id) {
+					target.download_status = result.status || DownloadStatusEnum.WAITING;
+					target.task_id = result?.id;
+					this.syncCache();
+				}
 			} catch (error) {
 				//
 			}
 			target.loading = true;
 			this.syncCache();
+		},
+
+		saveUserSelection(fileType: string, itemId: string) {
+			if (!this.data.user_selections) {
+				this.data.user_selections = {};
+			}
+			this.data.user_selections[fileType] = itemId;
+			this.syncCache();
+		},
+
+		getUserSelection(fileType: string): string | undefined {
+			return this.data.user_selections?.[fileType];
 		}
 	}
 });

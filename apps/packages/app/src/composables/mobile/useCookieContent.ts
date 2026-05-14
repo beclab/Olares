@@ -41,7 +41,7 @@ export function useCookieContent() {
 		{ label: t('cookie_action.overwrite_browser'), value: 'overwrite' }
 	];
 
-	// 初始化本地存储的消息配置
+	// Initialize message config from local storage.
 	const initLocalMessage = () => {
 		const optionsLocal = localStorage.getItem(cookieTooltipOption);
 		if (optionsLocal) {

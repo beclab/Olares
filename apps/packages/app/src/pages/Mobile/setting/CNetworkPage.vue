@@ -58,7 +58,7 @@
 					<template v-slot:side>
 						<bt-switch
 							size="sm"
-							truthy-track-color="light-blue-default"
+							truthy-track-color="blue-default"
 							v-model="offLineModeRef"
 							@update:model-value="updateOffLineMode"
 						/>
@@ -75,10 +75,15 @@
 							{{ t('user_current_status.vpn.title') }}
 						</div>
 					</template>
+					<template v-slot:detail v-if="!!scaleStore.localAddress">
+						<div class="text-ink-3">
+							{{ scaleStore.localAddress }}
+						</div>
+					</template>
 					<template v-slot:side>
 						<bt-switch
 							size="sm"
-							truthy-track-color="light-blue-default"
+							truthy-track-color="blue-default"
 							v-model="vpnToggleStatus"
 						/>
 					</template>

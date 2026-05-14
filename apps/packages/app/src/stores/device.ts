@@ -22,7 +22,6 @@ export type DeviceStoreState = {
 	networkOnLine: boolean;
 	isLandscape: boolean;
 	theme: ThemeDefinedMode;
-	isScaning: boolean;
 	isInEditor: boolean;
 	connectType: 'wifi' | 'cellular' | 'none';
 	isMobile: boolean;
@@ -36,7 +35,6 @@ export const useDeviceStore = defineStore('device', {
 			theme: ThemeDefinedMode.LIGHT,
 			isInEditor: false,
 			connectType: 'wifi',
-			isScaning: false,
 			isMobile: false
 		} as DeviceStoreState;
 	},
@@ -60,6 +58,10 @@ export const useDeviceStore = defineStore('device', {
 
 			if (userStore.id) {
 				info.id = userStore.id;
+			}
+
+			if (userStore.current_user?.setup_finished) {
+				info.sso = userStore.current_user.access_token;
 			}
 
 			info.tailScaled = scaleStore.isOn;

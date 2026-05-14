@@ -45,7 +45,7 @@ enum CurrentPageType {
 import { ref, PropType } from 'vue';
 import { useDialogPluginComponent } from 'quasar';
 import { useFilesStore, PickType, MenuItemType } from '../../stores/files';
-import { common, filesIsV2 } from './../../api';
+import { common } from './../../api';
 import { DriveType } from '../../utils/interface/files';
 
 import FilesShardPage from '../../pages/Mobile/file/FilesShardPage.vue';
@@ -57,10 +57,7 @@ const props = defineProps({
 		type: Array as PropType<DriveType[]>,
 		required: false,
 		default: () => {
-			if (filesIsV2()) {
-				return [DriveType.Drive, DriveType.External];
-			}
-			return [DriveType.Drive, DriveType.External, DriveType.Sync];
+			return [DriveType.Drive, DriveType.External];
 		}
 	},
 	origin_id: {

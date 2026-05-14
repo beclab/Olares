@@ -68,7 +68,7 @@
 <script lang="ts" setup>
 import { addMarketSource } from '../../../api/market/private/source';
 import { notifyFailed } from '../../../utils/notifyRedefinedUtil';
-import { useCenterStore } from '../../../stores/market/center';
+import { useAppStore } from '../../../stores/market/appStore';
 import { useI18n } from 'vue-i18n';
 import { ref } from 'vue';
 import {
@@ -82,7 +82,7 @@ const { t } = useI18n();
 const name = ref<string>('');
 const url = ref<string>('');
 const description = ref<string>('');
-const centerStore = useCenterStore();
+const appStore = useAppStore();
 const isLoading = ref(false);
 const errorMessageTitle = ref('');
 const errorMessageURL = ref('');
@@ -105,9 +105,9 @@ const onOK = async () => {
 		description: description.value,
 		type: MARKET_SOURCE_TYPE.REMOTE
 	})
-		.then((data) => {
+		.then((data: any) => {
 			if (data) {
-				centerStore.sources = data.sources;
+				appStore.sources = data.sources;
 				customRef.value.onDialogOK();
 			}
 		})
@@ -133,7 +133,7 @@ const validateTitle = () => {
 		return;
 	}
 
-	if (centerStore.sources.find((item) => item.name === name.value)) {
+	if (appStore.sources.find((item) => item.name === name.value)) {
 		errorMessageTitle.value = t(
 			'Source ID already exists. Please use a different name.',
 			{ sourceId: name.value }
@@ -163,7 +163,7 @@ const validateUrl = () => {
 		return;
 	}
 
-	const exists = centerStore.sources.some((item) => {
+	const exists = appStore.sources.some((item) => {
 		if (!item.base_url) return false;
 		let storedUrl = item.base_url.trim();
 		if (!/^https:\/\//i.test(storedUrl)) {

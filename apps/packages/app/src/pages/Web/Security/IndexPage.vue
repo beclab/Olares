@@ -1,5 +1,5 @@
 <template>
-	<q-page class="column report bg-white">
+	<q-page class="column report">
 		<div
 			class="row items-center q-pl-sm q-mt-md text-subtitle2 title"
 			style="margin-bottom: 20px"

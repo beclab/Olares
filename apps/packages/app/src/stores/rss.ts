@@ -1,3 +1,12 @@
+import { sendMessageToWorker } from '../pages/Wise/database/sqliteService';
+import { SyncMessageType, SyncState } from '../websocket/public/syncTypes';
+import { pdfCache } from 'src/pages/Wise/reader/pdf/services/pdfCache';
+import { clearFilters } from '../pages/Wise/database/tables/view';
+import { getSyncClient } from '../websocket/public/syncClient';
+import { useTransfer2Store } from './transfer2';
+import { MenuType } from 'src/utils/rss-menu';
+import { useConfigStore } from './rss-config';
+import { busEmit } from '../utils/bus';
 import { defineStore } from 'pinia';
 import {
 	CreateNote,
@@ -12,7 +21,6 @@ import {
 	SimpleEntry,
 	SOURCE_TYPE
 } from 'src/utils/rss-types';
-import { MenuType } from 'src/utils/rss-menu';
 import {
 	createFeed,
 	createLabel,
@@ -40,14 +48,12 @@ import {
 	updateLabel,
 	updateNote
 } from 'src/api/wise';
-import { useConfigStore } from './rss-config';
 import {
 	binaryInsert,
 	CompareFeed,
 	CompareRecentlyEntry,
 	extractHtml
 } from 'src/utils/rss-utils';
-import { busEmit } from '../utils/bus';
 import {
 	DATABASE_VERSION,
 	SYNC_ENTRY_TIME,
@@ -55,7 +61,8 @@ import {
 	SYNC_LABEL_TIME,
 	SYNC_NOTE_TIME,
 	SYNC_REMOVE_TIME,
-	WISE_DATABASE
+	WISE_DATABASE,
+	WISE_TRANSFER_TIME
 } from '../utils/localStorageConstant';
 import {
 	addOrUpdateEntries,
@@ -87,11 +94,20 @@ import {
 	getAllLabels,
 	removeLabelById
 } from '../pages/Wise/database/tables/label';
-import { sendMessageToWorker } from '../pages/Wise/database/sqliteService';
-import { useTransfer2Store } from './transfer2';
-import { clearFilters } from '../pages/Wise/database/tables/view';
-import { i18n } from 'src/boot/i18n';
-import { useBlacklistStore } from 'src/stores/settings/blacklist';
+
+// Get sync client instance (automatically initializes BroadcastChannel)
+function ensureSyncClient() {
+	const client = getSyncClient();
+	client.init();
+	return client;
+}
+
+export type SyncType =
+	| 'syncFeeds'
+	| 'syncEntries'
+	| 'syncLabels'
+	| 'syncNotes'
+	| 'syncRemoveData';
 
 export type DataState = {
 	loading: boolean;
@@ -100,26 +116,24 @@ export type DataState = {
 	recommends: Record<string, Entry>;
 	recentlyList: Entry[];
 
-	lastEntrySyncTime: number;
-	lastFeedSyncTime: number;
 	feeds: Feed[];
 	wait_sync_feeds: string[];
-	lastLabelSyncTime: number;
 	labels: Label[];
-	lastNoteSyncTime: number;
 	notes: Note[];
-	lastRemoveSyncTime: number;
+	syncDebounceTimer: any;
+	syncLastExecTime: any;
+	syncLastRunTime: any;
+	syncFirstTriggerTime: any;
 };
 
 export const useRssStore = defineStore('rss', {
 	state: () => {
 		return {
 			loading: false,
-			lastEntrySyncTime: 0,
-			lastFeedSyncTime: 0,
-			lastLabelSyncTime: 0,
-			lastNoteSyncTime: 0,
-			lastRemoveSyncTime: 0,
+			syncDebounceTimer: {},
+			syncLastExecTime: {},
+			syncLastRunTime: {},
+			syncFirstTriggerTime: {},
 			recentlyList: [],
 			wait_sync_feeds: [],
 			show_recommends: [],
@@ -157,29 +171,42 @@ export const useRssStore = defineStore('rss', {
 			console.log('load');
 			await sendMessageToWorker('init');
 
-			if (localStorage.getItem(SYNC_FEED_TIME)) {
-				this.lastFeedSyncTime = Number(localStorage.getItem(SYNC_FEED_TIME));
-			}
-			if (localStorage.getItem(SYNC_ENTRY_TIME)) {
-				this.lastEntrySyncTime = Number(localStorage.getItem(SYNC_ENTRY_TIME));
-			}
-			if (localStorage.getItem(SYNC_REMOVE_TIME)) {
-				this.lastRemoveSyncTime = Number(
-					localStorage.getItem(SYNC_REMOVE_TIME)
-				);
-			}
-			if (localStorage.getItem(SYNC_LABEL_TIME)) {
-				this.lastLabelSyncTime = Number(localStorage.getItem(SYNC_LABEL_TIME));
-			}
-			if (localStorage.getItem(SYNC_NOTE_TIME)) {
-				this.lastNoteSyncTime = Number(localStorage.getItem(SYNC_NOTE_TIME));
-			}
+			// Read initial timestamps from localStorage
+			const initialSyncState: Partial<SyncState> = {
+				lastEntrySyncTime: localStorage.getItem(SYNC_ENTRY_TIME)
+					? Number(localStorage.getItem(SYNC_ENTRY_TIME))
+					: 0,
+				lastFeedSyncTime: localStorage.getItem(SYNC_FEED_TIME)
+					? Number(localStorage.getItem(SYNC_FEED_TIME))
+					: 0,
+				lastLabelSyncTime: localStorage.getItem(SYNC_LABEL_TIME)
+					? Number(localStorage.getItem(SYNC_LABEL_TIME))
+					: 0,
+				lastNoteSyncTime: localStorage.getItem(SYNC_NOTE_TIME)
+					? Number(localStorage.getItem(SYNC_NOTE_TIME))
+					: 0,
+				lastRemoveSyncTime: localStorage.getItem(SYNC_REMOVE_TIME)
+					? Number(localStorage.getItem(SYNC_REMOVE_TIME))
+					: 0
+			};
 
-			console.log('load entry:', this.lastEntrySyncTime);
-			console.log('load feed:', this.lastFeedSyncTime);
-			console.log('load labels:', this.lastLabelSyncTime);
-			console.log('load notes:', this.lastNoteSyncTime);
-			console.log('load remove:', this.lastRemoveSyncTime);
+			// Initialize sync client and get shared sync state
+			const client = ensureSyncClient();
+			const syncState = await client.initSync(initialSyncState);
+
+			// Use sync state (may have been updated by other tabs)
+			this.setSyncTime('syncEntries', syncState.lastEntrySyncTime);
+			this.setSyncTime('syncFeeds', syncState.lastFeedSyncTime);
+			this.setSyncTime('syncLabels', syncState.lastLabelSyncTime);
+			this.setSyncTime('syncNotes', syncState.lastNoteSyncTime);
+			this.setSyncTime('syncRemoveData', syncState.lastRemoveSyncTime);
+			console.log('[RssStore] Sync state:', syncState);
+
+			console.log('load entry:', this.getSyncTime('syncEntries'));
+			console.log('load feed:', this.getSyncTime('syncFeeds'));
+			console.log('load labels:', this.getSyncTime('syncLabels'));
+			console.log('load notes:', this.getSyncTime('syncNotes'));
+			console.log('load remove:', this.getSyncTime('syncRemoveData'));
 
 			const feedList = await getAllFeeds();
 			feedList.forEach((feed) => {
@@ -199,7 +226,6 @@ export const useRssStore = defineStore('rss', {
 			this.loading = false;
 		},
 		async clear() {
-			await sendMessageToWorker('init');
 			await clearEntries();
 			await clearFeeds();
 			await clearNotes();
@@ -208,13 +234,34 @@ export const useRssStore = defineStore('rss', {
 			await sendMessageToWorker('close');
 			const transferStore = useTransfer2Store();
 			await transferStore.clearTransferData();
+
+			// Clear timestamps from localStorage
+			localStorage.removeItem(WISE_TRANSFER_TIME);
 			localStorage.removeItem(SYNC_FEED_TIME);
 			localStorage.removeItem(SYNC_ENTRY_TIME);
 			localStorage.removeItem(SYNC_LABEL_TIME);
 			localStorage.removeItem(SYNC_NOTE_TIME);
 			localStorage.removeItem(SYNC_REMOVE_TIME);
 			localStorage.setItem(WISE_DATABASE, DATABASE_VERSION);
-			await sendMessageToWorker('init');
+
+			// Reset sync state in SharedWorker
+			try {
+				const client = ensureSyncClient();
+				if (client.isConnected()) {
+					await client.resetSync();
+					console.log('[RssStore] SharedWorker sync state reset');
+				}
+			} catch (error) {
+				console.error(
+					'[RssStore] Failed to reset SharedWorker sync state:',
+					error
+				);
+			}
+
+			// Reset local state
+			this.syncLastExecTime = {};
+			this.syncLastRunTime = {};
+			await pdfCache.clear();
 		},
 		async sync() {
 			await this.syncFeeds();
@@ -223,132 +270,398 @@ export const useRssStore = defineStore('rss', {
 			await this.syncNotes();
 			await this.syncRemoveData();
 		},
-
 		async syncEntries() {
-			let data: Entry[] = [];
-			do {
-				data = await syncEntries(this.lastEntrySyncTime);
-				await addOrUpdateEntries(
-					data.map((item) => {
-						return { ...item, summary: extractHtml(item) };
-					})
-				);
+			const client = ensureSyncClient();
 
-				for (const entry of data) {
-					const time = new Date(entry.updatedAt).getTime();
-					if (time > this.lastEntrySyncTime) {
-						this.lastEntrySyncTime = time;
-						localStorage.setItem(
-							SYNC_ENTRY_TIME,
-							this.lastEntrySyncTime.toString()
+			// Try to acquire sync lock
+			let lockResult: {
+				granted: boolean;
+				syncTime: number;
+				syncState: SyncState;
+			} | null = null;
+			if (client.isConnected()) {
+				try {
+					lockResult = await client.requestSyncLock(
+						SyncMessageType.SYNC_ENTRIES
+					);
+					if (!lockResult) {
+						console.log('[RssStore] syncEntries: Waiting for lock (queued)');
+						return; // Already queued, waiting for SharedWorker callback
+					}
+					// Use timestamp from SharedWorker
+					this.setSyncTime(
+						'syncEntries',
+						lockResult.syncState.lastEntrySyncTime
+					);
+				} catch (error) {
+					console.warn(
+						'[RssStore] Failed to get sync lock, proceeding with local sync:',
+						error
+					);
+				}
+			}
+
+			try {
+				let data: Entry[] = [];
+				// Use temp variable to track max timestamp, update after all complete
+				let maxSyncTime = this.getSyncTime('syncEntries');
+
+				do {
+					data = await syncEntries(maxSyncTime);
+					await addOrUpdateEntries(
+						data.map((item) => {
+							return { ...item, summary: extractHtml(item) };
+						})
+					);
+
+					// Only track max timestamp, don't update immediately
+					for (const entry of data) {
+						const time = new Date(entry.updatedAt).getTime();
+						if (time > maxSyncTime) {
+							maxSyncTime = time;
+						}
+					}
+				} while (data.length >= 100);
+
+				// Only update timestamp after all data is written successfully
+				if (maxSyncTime > this.getSyncTime('syncEntries')) {
+					this.setSyncTime('syncEntries', maxSyncTime);
+					if (client.isConnected()) {
+						await client.updateSyncTime(
+							'entry',
+							this.getSyncTime('syncEntries')
 						);
 					}
+					localStorage.setItem(
+						SYNC_ENTRY_TIME,
+						this.getSyncTime('syncEntries').toString()
+					);
 				}
-			} while (data.length >= 100);
+
+				// Notify sync completed
+				if (client.isConnected()) {
+					client.syncCompleted(SyncMessageType.SYNC_ENTRIES, true);
+				}
+			} catch (error) {
+				console.error('[RssStore] syncEntries error:', error);
+				if (client.isConnected()) {
+					client.syncCompleted(
+						SyncMessageType.SYNC_ENTRIES,
+						false,
+						String(error)
+					);
+				}
+				throw error;
+			}
 		},
 		async syncFeeds() {
-			let data: Feed[] = [];
-			do {
-				data = await syncFeeds(this.lastFeedSyncTime);
-				await addOrUpdateFeeds(data);
+			const client = ensureSyncClient();
 
-				for (const feed of data) {
-					const time = new Date(feed.updated_at).getTime();
-					if (time > this.lastFeedSyncTime) {
-						this.lastFeedSyncTime = time;
-						localStorage.setItem(
-							SYNC_FEED_TIME,
-							this.lastFeedSyncTime.toString()
-						);
+			// Try to acquire sync lock
+			let lockResult: {
+				granted: boolean;
+				syncTime: number;
+				syncState: SyncState;
+			} | null = null;
+			if (client.isConnected()) {
+				try {
+					lockResult = await client.requestSyncLock(SyncMessageType.SYNC_FEEDS);
+					if (!lockResult) {
+						console.log('[RssStore] syncFeeds: Waiting for lock (queued)');
+						return;
 					}
-
-					this._addLocalFeed(feed);
+					this.setSyncTime('syncFeeds', lockResult.syncState.lastFeedSyncTime);
+				} catch (error) {
+					console.warn('[RssStore] Failed to get sync lock for feeds:', error);
 				}
-			} while (data.length >= 100);
+			}
+
+			try {
+				let data: Feed[] = [];
+				// Use temp variable to track max timestamp
+				let maxSyncTime = this.getSyncTime('syncFeeds');
+
+				do {
+					data = await syncFeeds(maxSyncTime);
+					await addOrUpdateFeeds(data);
+
+					for (const feed of data) {
+						const time = new Date(feed.updated_at).getTime();
+						if (time > maxSyncTime) {
+							maxSyncTime = time;
+						}
+						this._addLocalFeed(feed);
+					}
+				} while (data.length >= 100);
+
+				// Only update timestamp after all data is written successfully
+				if (maxSyncTime > this.getSyncTime('syncFeeds')) {
+					this.setSyncTime('syncFeeds', maxSyncTime);
+					if (client.isConnected()) {
+						await client.updateSyncTime('feed', this.getSyncTime('syncFeeds'));
+					}
+					localStorage.setItem(
+						SYNC_FEED_TIME,
+						this.getSyncTime('syncFeeds').toString()
+					);
+				}
+
+				if (client.isConnected()) {
+					client.syncCompleted(SyncMessageType.SYNC_FEEDS, true);
+				}
+			} catch (error) {
+				console.error('[RssStore] syncFeeds error:', error);
+				if (client.isConnected()) {
+					client.syncCompleted(
+						SyncMessageType.SYNC_FEEDS,
+						false,
+						String(error)
+					);
+				}
+				throw error;
+			}
 		},
 		async syncLabels() {
-			let data: Label[] = [];
-			do {
-				data = await syncLabels(this.lastLabelSyncTime);
-				await addOrUpdateLabels(data);
+			const client = ensureSyncClient();
 
-				for (const label of data) {
-					const time = new Date(label.updated_at).getTime();
-					if (time > this.lastLabelSyncTime) {
-						this.lastLabelSyncTime = time;
-						localStorage.setItem(
-							SYNC_LABEL_TIME,
-							this.lastLabelSyncTime.toString()
+			// Try to acquire sync lock
+			let lockResult: {
+				granted: boolean;
+				syncTime: number;
+				syncState: SyncState;
+			} | null = null;
+			if (client.isConnected()) {
+				try {
+					lockResult = await client.requestSyncLock(
+						SyncMessageType.SYNC_LABELS
+					);
+					if (!lockResult) {
+						console.log('[RssStore] syncLabels: Waiting for lock (queued)');
+						return;
+					}
+					this.setSyncTime(
+						'syncLabels',
+						lockResult.syncState.lastLabelSyncTime
+					);
+				} catch (error) {
+					console.warn('[RssStore] Failed to get sync lock for labels:', error);
+				}
+			}
+
+			try {
+				let data: Label[] = [];
+				// Use temp variable to track max timestamp
+				let maxSyncTime = this.getSyncTime('syncLabels');
+
+				do {
+					data = await syncLabels(maxSyncTime);
+					await addOrUpdateLabels(data);
+
+					for (const label of data) {
+						const time = new Date(label.updated_at).getTime();
+						if (time > maxSyncTime) {
+							maxSyncTime = time;
+						}
+						this._addLocalLabel(label);
+					}
+				} while (data.length >= 100);
+
+				// Only update timestamp after all data is written successfully
+				if (maxSyncTime > this.getSyncTime('syncLabels')) {
+					this.setSyncTime('syncLabels', maxSyncTime);
+					if (client.isConnected()) {
+						await client.updateSyncTime(
+							'label',
+							this.getSyncTime('syncLabels')
 						);
 					}
-
-					this._addLocalLabel(label);
+					localStorage.setItem(
+						SYNC_LABEL_TIME,
+						this.getSyncTime('syncLabels').toString()
+					);
 				}
-			} while (data.length >= 100);
+
+				if (client.isConnected()) {
+					client.syncCompleted(SyncMessageType.SYNC_LABELS, true);
+				}
+			} catch (error) {
+				console.error('[RssStore] syncLabels error:', error);
+				if (client.isConnected()) {
+					client.syncCompleted(
+						SyncMessageType.SYNC_LABELS,
+						false,
+						String(error)
+					);
+				}
+				throw error;
+			}
 		},
 		async syncNotes() {
-			let data: Note[] = [];
-			do {
-				data = await syncNotes(this.lastNoteSyncTime);
-				await addOrUpdateNotes(data);
+			const client = ensureSyncClient();
 
-				for (const note of data) {
-					const time = new Date(note.updated_at).getTime();
-					if (time > this.lastNoteSyncTime) {
-						this.lastNoteSyncTime = time;
-						localStorage.setItem(
-							SYNC_NOTE_TIME,
-							this.lastNoteSyncTime.toString()
-						);
+			// Try to acquire sync lock
+			let lockResult: {
+				granted: boolean;
+				syncTime: number;
+				syncState: SyncState;
+			} | null = null;
+			if (client.isConnected()) {
+				try {
+					lockResult = await client.requestSyncLock(SyncMessageType.SYNC_NOTES);
+					if (!lockResult) {
+						console.log('[RssStore] syncNotes: Waiting for lock (queued)');
+						return;
 					}
-
-					this._addLocalNote(note);
+					this.setSyncTime('syncNotes', lockResult.syncState.lastNoteSyncTime);
+				} catch (error) {
+					console.warn('[RssStore] Failed to get sync lock for notes:', error);
 				}
-			} while (data.length >= 100);
+			}
+
+			try {
+				let data: Note[] = [];
+				// Use temp variable to track max timestamp
+				let maxSyncTime = this.getSyncTime('syncNotes');
+
+				do {
+					data = await syncNotes(maxSyncTime);
+					await addOrUpdateNotes(data);
+
+					for (const note of data) {
+						const time = new Date(note.updated_at).getTime();
+						if (time > maxSyncTime) {
+							maxSyncTime = time;
+						}
+						this._addLocalNote(note);
+					}
+				} while (data.length >= 100);
+
+				// Only update timestamp after all data is written successfully
+				if (maxSyncTime > this.getSyncTime('syncNotes')) {
+					this.setSyncTime('syncNotes', maxSyncTime);
+					if (client.isConnected()) {
+						await client.updateSyncTime('note', this.getSyncTime('syncNotes'));
+					}
+					localStorage.setItem(
+						SYNC_NOTE_TIME,
+						this.getSyncTime('syncNotes').toString()
+					);
+				}
+
+				if (client.isConnected()) {
+					client.syncCompleted(SyncMessageType.SYNC_NOTES, true);
+				}
+			} catch (error) {
+				console.error('[RssStore] syncNotes error:', error);
+				if (client.isConnected()) {
+					client.syncCompleted(
+						SyncMessageType.SYNC_NOTES,
+						false,
+						String(error)
+					);
+				}
+				throw error;
+			}
 		},
 		async syncRemoveData() {
-			let data: RemoveData[] = [];
-			do {
-				data = await syncRemove(this.lastRemoveSyncTime);
+			const client = ensureSyncClient();
 
-				for (const remove of data) {
-					const time = new Date(remove.created_at).getTime();
-					if (time > this.lastRemoveSyncTime) {
-						this.lastRemoveSyncTime = time;
-						localStorage.setItem(
-							SYNC_REMOVE_TIME,
-							this.lastRemoveSyncTime.toString()
+			// Try to acquire sync lock
+			let lockResult: {
+				granted: boolean;
+				syncTime: number;
+				syncState: SyncState;
+			} | null = null;
+			if (client.isConnected()) {
+				try {
+					lockResult = await client.requestSyncLock(
+						SyncMessageType.SYNC_REMOVE
+					);
+					if (!lockResult) {
+						console.log('[RssStore] syncRemoveData: Waiting for lock (queued)');
+						return;
+					}
+					this.setSyncTime(
+						'syncRemoveData',
+						lockResult.syncState.lastRemoveSyncTime
+					);
+				} catch (error) {
+					console.warn('[RssStore] Failed to get sync lock for remove:', error);
+				}
+			}
+
+			try {
+				let data: RemoveData[] = [];
+				// Use temp variable to track max timestamp
+				let maxSyncTime = this.getSyncTime('syncRemoveData');
+
+				do {
+					data = await syncRemove(maxSyncTime);
+
+					for (const remove of data) {
+						const time = new Date(remove.created_at).getTime();
+						if (time > maxSyncTime) {
+							maxSyncTime = time;
+						}
+
+						switch (remove.remove_type) {
+							case RemoveType.Entry:
+								await removeEntryById(remove.remove_id);
+								break;
+							case RemoveType.Feed:
+								this.feeds = this.feeds.filter(
+									(feed) => feed.id !== String(remove.remove_id)
+								);
+								this.wait_sync_feeds = this.wait_sync_feeds.filter(
+									(feed) => feed !== String(remove.remove_id)
+								);
+								await removeFeedById(remove.remove_id);
+								break;
+							case RemoveType.Label:
+								this.labels = this.labels.filter(
+									(label) => label.id !== String(remove.remove_id)
+								);
+								await removeLabelById(remove.remove_id);
+								break;
+							case RemoveType.Note:
+								this.notes = this.notes.filter(
+									(note) => note.id !== String(remove.remove_id)
+								);
+								await removeNoteById(remove.remove_id);
+								break;
+						}
+					}
+				} while (data.length >= 100);
+
+				// Only update timestamp after all data is processed successfully
+				if (maxSyncTime > this.getSyncTime('syncRemoveData')) {
+					this.setSyncTime('syncRemoveData', maxSyncTime);
+					if (client.isConnected()) {
+						await client.updateSyncTime(
+							'remove',
+							this.getSyncTime('syncRemoveData')
 						);
 					}
-
-					switch (remove.remove_type) {
-						case RemoveType.Entry:
-							removeEntryById(remove.remove_id);
-							break;
-						case RemoveType.Feed:
-							this.feeds = this.feeds.filter(
-								(feed) => feed.id !== String(remove.id)
-							);
-							this.wait_sync_feeds = this.wait_sync_feeds.filter(
-								(feed) => feed !== String(remove.id)
-							);
-							removeFeedById(remove.remove_id);
-							break;
-						case RemoveType.Label:
-							this.labels = this.labels.filter(
-								(label) => label.id !== String(remove.id)
-							);
-							removeLabelById(remove.remove_id);
-							break;
-						case RemoveType.Note:
-							this.notes = this.notes.filter(
-								(note) => note.id !== String(remove.id)
-							);
-							removeNoteById(remove.remove_id);
-							break;
-					}
+					localStorage.setItem(
+						SYNC_REMOVE_TIME,
+						this.getSyncTime('syncRemoveData').toString()
+					);
 				}
-			} while (data.length >= 100);
+
+				if (client.isConnected()) {
+					client.syncCompleted(SyncMessageType.SYNC_REMOVE, true);
+				}
+			} catch (error) {
+				console.error('[RssStore] syncRemoveData error:', error);
+				if (client.isConnected()) {
+					client.syncCompleted(
+						SyncMessageType.SYNC_REMOVE,
+						false,
+						String(error)
+					);
+				}
+				throw error;
+			}
 		},
 		async syncWaitFeeds() {
 			if (this.wait_sync_feeds.length === 0) {
@@ -380,7 +693,64 @@ export const useRssStore = defineStore('rss', {
 				console.error('sync_wait_feeds error:', err);
 			}
 		},
+		getSyncTime(methodName: SyncType) {
+			return this.syncLastExecTime[methodName] || 0;
+		},
+		setSyncTime(methodName: SyncType, time: number) {
+			this.syncLastExecTime[methodName] = time;
+		},
+		async triggerSyncLight(syncMethod: any, methodName: SyncType) {
+			if (!this.syncFirstTriggerTime[methodName]) {
+				this.syncFirstTriggerTime[methodName] = Date.now();
+			}
+			const firstTime = this.syncFirstTriggerTime[methodName];
+			const MAX_WAIT_TIME = 5000;
+			const MIN_INTERVAL = 3000;
 
+			if (this.syncDebounceTimer[methodName]) {
+				clearTimeout(this.syncDebounceTimer[methodName]);
+			}
+
+			const elapsed = Date.now() - firstTime;
+			const delay = Math.max(0, Math.min(1000, MAX_WAIT_TIME - elapsed));
+
+			this.syncDebounceTimer[methodName] = setTimeout(async () => {
+				const now = Date.now();
+				const lastRunTime = this.syncLastRunTime[methodName] || 0;
+				if (now - lastRunTime < MIN_INTERVAL) {
+					console.log(
+						`triggerSync [${methodName}] Execution frequency is too high, skipping this time`
+					);
+					this.syncFirstTriggerTime[methodName] = null;
+					return;
+				}
+
+				try {
+					this.syncLastRunTime[methodName] = now;
+					await syncMethod();
+					console.log(
+						`triggerSync [${methodName}] Synchronization completed successfully`
+					);
+				} catch (error) {
+					console.error(
+						`triggerSync [${methodName}] Synchronization failed`,
+						error
+					);
+				} finally {
+					this.syncFirstTriggerTime[methodName] = null;
+				}
+			}, delay);
+		},
+		async pushTrigger(methodName: SyncType) {
+			const methodMap = {
+				syncFeeds: this.syncFeeds.bind(this),
+				syncEntries: this.syncEntries.bind(this),
+				syncLabels: this.syncLabels.bind(this),
+				syncNotes: this.syncNotes.bind(this),
+				syncRemoveData: this.syncRemoveData.bind(this)
+			};
+			await this.triggerSyncLight(methodMap[methodName], methodName);
+		},
 		async removeSourceEntries(
 			source: string,
 			entries: SimpleEntry[],
@@ -415,7 +785,7 @@ export const useRssStore = defineStore('rss', {
 				await removeEntryById(entry.id);
 			} else {
 				console.log('local entry update', localEntry);
-				// this.entryStore?.setItem<Entry>(entry.id, localEntry);
+				await updateEntryById(entry.id, localEntry);
 			}
 		},
 
@@ -551,7 +921,9 @@ export const useRssStore = defineStore('rss', {
 					status: entry.status,
 					file_type: entry.file_type || ''
 				};
-				const index = this.show_recommends.indexOf(le);
+				const index = this.show_recommends.findIndex(
+					(item) => item.id === le.id
+				);
 				if (index >= 0) {
 					this.show_recommends.splice(index, 1, le);
 				} else {
@@ -633,7 +1005,7 @@ export const useRssStore = defineStore('rss', {
 						if (feed.sources.length === 0) {
 							console.log('==> feed remove');
 							await removeFeedById(feedId);
-							delete this.feeds[feedId];
+							this.feeds = this.feeds.filter((f) => f.id !== feedId);
 						} else {
 							console.log('==> feed update', feed);
 							await updateFeedById(feedId, feed);

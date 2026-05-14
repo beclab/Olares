@@ -43,8 +43,9 @@
 </template>
 
 <script lang="ts" setup>
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useDeviceStore } from '../../stores/settings/device';
+import { handleMarketBack } from '../../utils/marketBack';
 
 defineProps({
 	appTitle: {
@@ -75,10 +76,10 @@ defineProps({
 });
 
 const router = useRouter();
+const route = useRoute();
 const deviceStore = useDeviceStore();
 const clickReturn = () => {
-	if (window.history && window.history.state && !window.history.state.back) {
-		router.replace('/');
+	if (handleMarketBack(router, route, { onlyAppRouteUseMenuItem: true })) {
 		return;
 	}
 	router.back();
