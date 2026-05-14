@@ -14,7 +14,7 @@ doc_updated: "2026-05-14"
 
 Open WebUI supports retrieval-augmented generation (RAG) to help local AI models answer questions based on your uploaded documents or curated knowledge bases.
 
-This guide explains how to analyze individual documents during a chat session and how to build persistent knowledge collections for repeated use.
+This guide explains how to analyze individual documents during a chat session and how to build persistent knowledge collections for reuse.
 
 ## Learning objectives
 
@@ -23,14 +23,14 @@ In this guide, you will learn how to:
 - Configure an embedding model to process document text.
 - Upload and analyze individual documents in a chat session.
 - Build and manage a persistent knowledge base.
-- Configure an advanced content extraction engine for complex document layouts.
+- (Optional) Configure an advanced content extraction engine for complex document layouts.
 
 ## Prerequisites
 
 Before you begin, ensure you have the following in place:
 
 - [Open WebUI](openwebui.md) installed and configured with at least one active model backend.
-- An embedding model application (for example, Qwen3 Embedding) installed from Market.
+- An embedding model application installed, such as **Qwen3 Embedding 0.6B (Ollama)**.
 - Administrator privileges for the Open WebUI instance.
 
 ## Configure embedding model
@@ -47,11 +47,11 @@ Document understanding requires an embedding model to convert text into vector d
 
 Attach documents directly to a chat session for one-off analysis and summarization.
 
-1. Start a new chat in Open WebUI.
+1. Start a new chat.
 2. Select the model.
-3. Click <i class="material-symbols-outlined">add_2</i> in the message input area, and then select **Upload Files**.
+3. Click <i class="material-symbols-outlined">add_2</i> under the message input field, and then select **Upload Files**.
 
-   ![Upload files in Open WebUI](/images/manual/use-cases/openwebui-upload-files.png#bordered) -->
+   ![Upload files in Open WebUI](/images/manual/use-cases/openwebui-upload-files.png#bordered)
 
 3. Upload a PDF or a text file.
 4. Enter a prompt asking the model to analyze the document. For example:
@@ -70,8 +70,8 @@ For documents you want to reuse across multiple chats, create a persistent knowl
 
 1. In Open WebUI, click your profile icon, and then go to **Workspace** > **Knowledge**.
 2. Click **New Knowledge**.
-3. In the **What are you working on?** field, enter a name for your knowledge base. For example: `Product FAQs`.
-4. In the **What are you trying to achieve?** field, enter an optional description. For example: `Frequently asked questions and support guides for Olares products`.
+3. In the **What are you working on** field, enter a name for your knowledge base. For example: `Product FAQs`.
+4. In the **What are you trying to achieve** field, enter a description. For example: `Frequently asked questions and support guides for Olares products`.
 
    ![Create knowledge](/images/manual/use-cases/openwebui-create-knowledge.png#bordered)
 
@@ -84,7 +84,7 @@ For documents you want to reuse across multiple chats, create a persistent knowl
 
 1. Start a new chat.
 2. Select the model.
-3. Click <i class="material-symbols-outlined">add_2</i> in the message input area, and then select **Attach Knowledge**.
+3. Click <i class="material-symbols-outlined">add_2</i> under the message input field, and then select **Attach Knowledge**.
 4. Choose the knowledge collection you want to use.
 
    ![Attach knowledge base to chat](/images/manual/use-cases/openwebui-attach-knowledge-base.png#bordered)
@@ -95,7 +95,7 @@ For documents you want to reuse across multiple chats, create a persistent knowl
 
 ## (Optional) Configure an advanced extraction engine
 
-By default, Open WebUI uses a simple text extraction engine. For complex document layouts containing tables or intricate formatting, switch to PaddleOCR for better accuracy.
+By default, Open WebUI uses a simple text extraction engine. For complex document layouts containing tables or complicated formatting, switch to PaddleOCR for better accuracy.
 
 :::warning Performance impact
 PaddleOCR requires more GPU VRAM and processes documents slower than the default engine. Use this engine only when document layout quality is critical.
