@@ -1,12 +1,12 @@
 ---
 search: false
 ---
-<!-- 可复用的 .local 域名内容。按行号范围引用。
-     顺序：描述、URL+HTTP、Windows、常见问题。
-     范围：描述 7-8，URL+HTTP 10-23，Windows 25-40（仅正文 26-40），常见问题 42-75 -->
+<!-- 可复用的 .local 域名内容。请通过命名 region 引用。 -->
 
+<!-- #region local-domain-overview -->
 当设备与 Olares 在同一局域网时，可使用 `.local` 域名访问服务，使流量保持在本地网络。
 
+<!-- #region local-domain-url-format -->
 使用与标准 URL 结构一致的多级 `.local` 主机名。此格式适用于 Olares 系统应用和社区应用。
 
 :::tip
@@ -21,9 +21,12 @@ https://<entrance_id>.<username>.olares.com
 ```text
 http://<entrance_id>.<username>.olares.local
 ```
+<!-- #endregion local-domain-url-format -->
+<!-- #endregion local-domain-overview -->
 
 ### Windows
 
+<!-- #region windows-local-domain -->
 在 Windows 上，`.local` 主机名默认不会解析。使用 LarePass 桌面端在 hosts 文件中添加所需条目，使多级 `.local` URL 解析到你的 Olares 设备。
 
 1. 打开 LarePass 应用，点击头像，选择**设置**。
@@ -37,7 +40,9 @@ http://<entrance_id>.<username>.olares.local
    b. 用记事本打开 `hosts` 文件，可以看到 LarePass 添加的 `.local` 条目。
 
    ![LarePass 更新后的 hosts 文件](/images/one/larepass-updated-hosts.png#bordered)
+<!-- #endregion windows-local-domain -->
 
+<!-- #region local-domain-faq -->
 ### 为什么在 macOS 的 Chrome 中 .local 域名无法使用？
 
 如果 macOS 没有授予 Chrome 本地网络访问权限，Chrome 可能会拦截本地 URL。
@@ -71,3 +76,4 @@ Safari 对 iframe 中的 `.local` 及其他非 HTTPS 内容处理更严格，可
 
    ![Safari 隐私设置（.local）](/images/manual/get-started/safari-privacy-settings.png#bordered){width=70%}
 4. 重新加载 `.local` 页面。
+<!-- #endregion local-domain-faq -->

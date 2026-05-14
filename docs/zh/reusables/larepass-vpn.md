@@ -1,10 +1,9 @@
 ---
 search: false
 ---
-<!-- 可复用的 LarePass 专用网络内容。按行号范围引用。
-     步骤（无标题）：Step 1 7-16，Step 2 18-42，Step 3 43-50。
-     常见问题：51-67 -->
+<!-- 可复用的 LarePass 专用网络内容。请通过命名 region 引用。 -->
 
+<!-- #region install-larepass-client -->
 要使用安全专用网络连接，必须在用来访问 Olares 的设备上安装 LarePass 客户端。
 
 - **移动端**：使用在创建 Olares ID 时安装的 LarePass 应用。
@@ -13,16 +12,20 @@ search: false
 1. 访问 <AppLinkCN />。
 2. 下载与当前操作系统匹配的版本。
 3. 安装应用并使用 Olares ID 登录。
+<!-- #endregion install-larepass-client -->
 
 安装完成后，在设备上直接启用专用网络连接。
 
+<!-- #region vpn-setup-notes -->
 :::tip 始终启用专用网络以进行远程访问
 保持 LarePass 专用网络开启。它会自动优先选择最快可用路由，无需手动切换即可获得最佳速度。
 :::
 :::info iOS 和 macOS 设置
 首次在 iOS 或 macOS 上启用时，系统可能会提示添加 VPN 配置。选择允许以完成设置。
 :::
+<!-- #endregion vpn-setup-notes -->
 
+<!-- #region enable-larepass-vpn -->
 <tabs>
 <template #使用-LarePass-移动端>
 
@@ -39,7 +42,9 @@ search: false
    ![桌面端开启 LarePass 专用网络](/images/zh/manual/get-started/larepass-vpn-desktop.png#bordered)
 </template>
 </tabs>
+<!-- #endregion enable-larepass-vpn -->
 
+<!-- #region check-vpn-status -->
 启用后，在 LarePass 中查看状态指示以确认连接类型：
 
 | 状态       | 描述                                             |
@@ -47,7 +52,9 @@ search: false
 | **内网**   | 通过本地局域网 IP 直连，速度最快。                 |
 | **P2P**    | 设备间直接加密隧道，速度较快。                    |
 | **DERP**   | 经安全中继服务器路由，作为备用。                  |
+<!-- #endregion check-vpn-status -->
 
+<!-- #region larepass-vpn-faq -->
 ### 为什么在 Mac 上无法再启用 LarePass 专用网络？
 
 如果网络扩展或 VPN 配置未完整设置，或网络扩展出现卡死、损坏，macOS 会阻止 LarePass 建立专用网络隧道。
@@ -65,3 +72,4 @@ search: false
 如果开启专用网络连接后，状态一直停留在“连接中”，随后自动关闭，可能是 LarePass 客户端设备的系统时间不正确。
 
 参考 [LarePass 专用网络无法使用](/zh/manual/help/ts-larepass-vpn-not-working.md#同步设备时间)解决该问题。
+<!-- #endregion larepass-vpn-faq -->

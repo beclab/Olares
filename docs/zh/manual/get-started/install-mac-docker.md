@@ -13,7 +13,7 @@ Mac 版 Olares 目前存在以下限制：
 建议仅用于开发或测试环境。
 :::
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 
 ## 系统要求
@@ -118,4 +118,4 @@ docker run -d --privileged -v oic-data:/var \
 
 <!--@include: ./manage-olares-container.md-->
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->

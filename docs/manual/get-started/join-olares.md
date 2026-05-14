@@ -19,17 +19,17 @@ See [Create an Olares ID](./create-olares-id.md) for instructions.
 
 Once your Olares ID is ready, use the wizard URL and one-time password shared by your admin to complete activation. This process connects the Olares cluster with your Olares ID using LarePass.
 
-<!--@include: ./activate-olares.md{8,16}-->
-<!--@include: ./activate-olares.md{24,25}-->
-<!--@include: ./activate-olares.md{29,33}-->
+<!--@include: ./activate-olares.md#activation-wizard-basics-->
+<!--@include: ./activate-olares.md#activate-with-larepass-intro-->
+<!--@include: ./activate-olares.md#scan-qr-and-reset-password-->
 
-<!--@include: ./activate-olares.md{39,39}-->
+<!--@include: ./activate-olares.md#activation-complete-redirect-->
 
 
 
 ## Step 3: Log in to Olares
 
-<!--@include: ./log-in-to-olares.md{6,17}-->
+<!--@include: ./log-in-to-olares.md#log-in-to-olares-steps-->
 
 ## Resources
 

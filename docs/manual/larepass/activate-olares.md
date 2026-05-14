@@ -16,6 +16,7 @@ For member users, the same network requirement does **not** apply.
 
 If you [installed Olares via the one-line script](../get-started/install-olares.md) and completed the initial setup in the wizard:
 
+<!-- #region script-activation-steps -->
 ![Activate Olares](/images/manual/larepass/activate-olares1.png#bordered)
 
 1. Open the LarePass app.
@@ -23,12 +24,13 @@ If you [installed Olares via the one-line script](../get-started/install-olares.
 3. Follow the on-screen instructions on LarePass to reset the login password for Olares. 
 
 After successful activation, the LarePass app returns to the home screen, and the Wizard redirects you to the login page.
+<!-- #endregion script-activation-steps -->
 
 ## Activate after ISO installation
 
 If you installed Olares via ISO on PVE or are using an Olares hardware device with ISO pre-installed:
 
-<!--@include: ../get-started/install-and-activate-olares.md{9,25}-->
+<!--@include: ../get-started/install-and-activate-olares.md#iso-activation-flow-->
 
 ## Activate Olares using Bluetooth
 
@@ -54,7 +56,7 @@ Select the reactivation method based on how you reinstalled Olares:
 
 If you used the one-line script to reinstall Olares and have already completed the initial setup wizard, follow these steps to reactivate with your existing Olares ID:
 
-<!--@include: ../larepass/activate-olares.md{18,25}-->
+<!--@include: ../larepass/activate-olares.md#script-activation-steps-->
 </template>
 <template #ISO-or-Docker-reinstallation>
 
@@ -69,7 +71,15 @@ If you reinstalled Olares using an ISO file or a Docker image, follow these step
 
     ![Reactivate Olares](/images/manual/larepass/reactivate-olares.png#bordered)
 
-<!--@include: ../get-started/install-and-activate-olares.md{10,20}-->
+4. On your Olares activation page, tap **Discover nearby Olares**. LarePass will list the detected Olares instances in the same network.
+5. Select the target Olares instance from the list and tap **Install now**.
+6. When the installation completes, click **Activate now**.
+7. In the **Select a reverse proxy** dialog, select a node that is closer to your geographical location. The installer will then configure HTTPs certificate and DNS for Olares.
+
+    :::tip Note
+    - You can change this setting later on the [Change reverse proxy](../olares/settings/change-frp.md) page in Olares.
+    - If your Olares device is connected to a public IP network, this step will be skipped automatically.
+    :::
 
 8. Follow the on-screen instructions to reset the login password for Olares, and then tap **Complete**.
 

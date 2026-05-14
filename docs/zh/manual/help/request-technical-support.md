@@ -6,7 +6,7 @@ description: 了解如何获取 Olares 技术支持。
 如果你无法通过故障排查指南解决问题，可以导出系统日志并联系 Olares 团队获取帮助。
 
 ## 第一步：导出系统日志
-<!--@include: ../../reusables/export-system-logs.md{8,14}-->
+<!--@include: ../../reusables/export-system-logs.md#export-system-logs-steps-->
 
 ## 第二步：联系 Olares 团队
 

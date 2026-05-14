@@ -7,7 +7,7 @@ description: Install Olares on a physical machine using the official ISO image, 
 
 This guide explains how to install Olares on a physical machine using the official ISO image.
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## System requirements
 
@@ -24,7 +24,7 @@ This guide explains how to install Olares on a physical machine using the offici
 
 ### Optional hardware
 
-<!--@include: ./gpu-requirements.md{5,}-->
+<!--@include: ./gpu-requirements.md#gpu-requirements-->
 
 ## Create a bootable USB drive
 
@@ -89,4 +89,4 @@ After rebooting, the system will enter Ubuntu.
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->
