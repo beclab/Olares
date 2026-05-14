@@ -66,7 +66,30 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "Open WebUI",
+              collapsed: true,
               link: "/zh/use-cases/openwebui",
+              items: [
+                {
+                  text: "设置多用户访问",
+                  link: "/zh/use-cases/openwebui-multiuser",
+                },
+                {
+                  text: "配置语音交互",
+                  link: "/zh/use-cases/openwebui-audio",
+                },
+                {
+                  text: "启用网页搜索",
+                  link: "/zh/use-cases/openwebui-search",
+                },
+                {
+                  text: "在聊天中查询文档",
+                  link: "/zh/use-cases/openwebui-knowledge",
+                },
+                {
+                  text: "常见问题",
+                  link: "/zh/use-cases/openwebui-common-issues",
+                },
+              ]
             },
             {
               text: "ComfyUI",
