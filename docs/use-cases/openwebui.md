@@ -59,6 +59,12 @@ The first time you launch Open WebUI, you need to create a local administrator a
 
 Open WebUI requires a backend model to generate responses. Choose one of the following options to configure your model backend.
 
+:::tip Recommendation for multiple models
+While Ollama (Option A) offers flexibility, hosting multiple models simultaneously within a single Ollama instance might lead to resource scheduling conflicts.
+
+For optimal performance and stability when using multiple models, install independent model apps (Option B) instead of using the general Ollama application.
+:::
+
 ### Option A: Use Ollama (Recommended)
 
 Use Ollama to pull and switch between different models from the Ollama Registry for greater flexibility.

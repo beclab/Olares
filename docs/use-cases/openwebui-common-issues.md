@@ -7,7 +7,7 @@ head:
       content: Olares, Open WebUI, common issues, troubleshooting, model download
 app_version: "1.0.20"
 doc_version: "1.0"
-doc_updated: "2026-05-13"
+doc_updated: "2026-05-14"
 ---
 
 # Common issues
@@ -44,3 +44,20 @@ To resume the download:
 1. Click the model selector again.
 2. Enter the exact same model name.
 3. Select **Pull from Ollama.com**. The download will resume from where it left off.
+
+## Microphone "Permission denied" error
+
+When attempting to use the dictate button or Voice Mode, you receive the following error messages:
+- `Permission denied when accessing microphone: NotAllowedError: Permission denied`
+- `Permission denied when accessing media devices`
+
+### Cause
+
+The Olares desktop displays applications inside embedded frames (iframes). For strict security and privacy reasons, modern web browsers prevent embedded frames from accessing sensitive hardware like your microphone, even if you already granted the browser permission in your system settings.
+
+### Solution
+
+Run Open WebUI in a standalone browser tab to bypass the iframe security restriction:
+1. In the top-right corner of the Open WebUI window on the Olares desktop, select <i class="material-symbols-outlined">open_in_new</i> to open it in a new browser tab.
+2. In the new browser tab, select the microphone icon in the chat interface.
+3. When the browser prompts you, allow microphone access.

@@ -7,69 +7,99 @@ head:
       content: Olares, Open WebUI, web search, SearXNG, embedding, RAG
 app_version: "1.0.20"
 doc_version: "1.0"
-doc_updated: "2026-05-13"
+doc_updated: "2026-05-14"
 ---
 
 # Enable web search
 
-You can equip Open WebUI with web search capabilities so your local LLM can retrieve current information from the internet. This requires an embedding model and the SearXNG search engine.
+Add web search capabilities to Open WebUI to allow your local AI models to retrieve up-to-date information from the internet. This integration requires an active embedding model to process the documents and the SearXNG search engine to fetch the web results.
+
+## Learning objectives
+
+In this guide, you will learn how to:
+
+- Retrieve the required endpoint URLs for your embedding model and SearXNG.
+- Configure the document embedding and web search settings in Open WebUI.
+- Perform a web-assisted search during a chat session.
 
 ## Prerequisites
 
-- [Open WebUI and a model backend installed](openwebui.md) on Olares
-- An embedding model service installed, such as qwen3-embedding
-- Admin privileges on Open WebUI
+Before you begin, ensure you have the following in place:
 
-## Configure embedding model
+- [Open WebUI](https://www.google.com/search?q=openwebui.md) installed and configured with at least one active model backend.
+- SearXNG installed.
+- An embedding model application installed, such as **Qwen3 Embedding 0.6B (Ollama)**.
+- Administrator privileges for the Open WebUI instance.
 
-1. In Open WebUI, click your **profile icon** and select **Admin Panel**.
-2. Navigate to **Settings** > **Documents**.
-3. Set **Embedding Model Engine** to **Ollama**. Do not use the default SentenceTransformers engine.
-   <!-- ![Embedding settings](/images/manual/use-cases/openwebui/embedding-settings.png#bordered) -->
-4. Get the embedding service endpoint:
+## Retrieve service details
 
-   a. Open Olares Settings, then navigate to **Applications** > **[Embedding App]**.
+To link Open WebUI with your background services, you need to locate the connection endpoints for both your embedding model and SearXNG.
 
-   b. In **Shared entrances**, copy the endpoint URL.
+### Get embedding model details
 
-   c. Open the embedding app from Launchpad and note the model name shown on the main page.
+1. Open Qwen3 Embedding 0.6B (Ollama) from the Launchpad.
+2. Note down the exact model name displayed on the main page. For example, `qwen3-embedding:0.6b`.
 
-5. Return to Open WebUI and fill in the fields:
-   - **Ollama Base URL**: Paste the embedding endpoint URL.
-   - **Embedding Model**: Enter the model name you noted.
-6. Click **Save**.
+   ![Qwen3 Embedding 0.6B](/images/manual/use-cases/qwen3-embedding.png#bordered)
 
-## Install SearXNG
+3. Open Olares **Settings**, and then go to **Applications** > **Qwen3 Embedding 0.6B (Ollama)**.
+4. Under **Shared entrances**, click **Qwen3 Embedding 0.6B**, and then copy the endpoint URL. For example, `http://eae5afcf0.shared.olares.com`.
 
-1. Open Market and search for "SearXNG".
-2. Click **Get**, then **Install**, and wait for installation to complete.
-3. Open Olares Settings and navigate to **Applications** > **SearXNG**.
-4. In **Shared entrances**, copy the endpoint URL. For example:
-   ```plain
-   http://d1236e020.shared.olares.com
-   ```
+### Get SearXNG endpoint
 
-## Configure web search
+1. In Olares **Settings**, go to **Applications** > **SearXNG**.
+2. Under **Shared entrances**, copy the endpoint URL. For example, `http://d1236e020.shared.olares.com`.
 
-1. In the Open WebUI Admin Panel, navigate to **Settings** > **Web Search**.
-2. Turn on the toggle in the top-right corner.
-3. Set the following fields:
-   - **Search Engine**: Select **SearXNG**.
-   - **Searxng Query URL**: Enter your SearXNG endpoint URL followed by `/search?q=<query>`. For example:
-     ```plain
-     http://d1236e020.shared.olares.com/search?q=<query>
-     ```
-4. Leave other fields at their defaults.
-5. Click **Save**.
+   ![SearXNG shared endpoint](/images/manual/use-cases/openwebui-searxng-shared-endpoint.png#bordered){width=70%}
+
+## Configure Open WebUI
+
+Apply the details you retrieved to the Open WebUI configuration panel.
+
+### Set up document embeddings
+
+1. In Open WebUI, select your profile icon, and then go to **Admin Panel** > **Settings** > **Documents**.
+2. Under the **Embedding** section, specify the following settings:
+
+   - **Embedding Model Engine**: Select **Ollama**.
+   - **API Base URL**: Enter the embedding model endpoint URL you noted earlier.
+   - **Embedding Model**: Enter the embedding model name you noted earlier.
+
+3. Scroll down to the bottom of the page, and then click **Reindex** in the lower right for the changes to take effect.
+4. Select **Save**.
+
+### Enable web search
+
+1. Go to **Admin Panel** > **Settings** > **Web Search**.
+2. Turn on the **Web Search** toggle in the top-right corner.
+3. Specify the following settings:
+
+   - **Web Search Engine**: Select **SearXNG**.
+   - **Searxng Query URL**: Enter your SearXNG endpoint URL and append `/search?q=<query>` to the end. 
+   
+      For example, `http://d1236e020.shared.olares.com/search?q=<query>`.
+   - **Bypass Web Loader**: Enable this setting to bypass anti-scraping protections on target websites, ensuring the AI successfully retrieves and reads the webpage content without being blocked.
+
+   ![SearXNG configurations in Open WebUI](/images/manual/use-cases/openwebui-searxng-config.png#bordered)
+
+4. Leave the other fields at their default values.
+5. Select **Save**.
 
 ## Verify the configuration
 
+Test the feature to ensure the AI successfully browses the web for current events.
+
 1. Start a new chat in Open WebUI.
-2. Enable the **Web Search** toggle near the message input field.
-   <!-- ![Web search toggle](/images/manual/use-cases/openwebui/web-search-toggle.png#bordered) -->
-3. Ask a question that requires recent information. For example:
+2. Select the chat model.
+3. Click the **Integrations** icon under the message input field, and then enable **Web Search**.
+
+   ![Web search enable in Open WebUI chat](/images/manual/use-cases/openwebui-web-search-enable.png#bordered)
+
+4. Enter a prompt that requires recent information. For example:
+
    ```plain
-   Search the latest news about Olares One
+   What’s the latest news about Olares One
    ```
-4. The response should include search results with source links.
-   <!-- ![Search results](/images/manual/use-cases/openwebui/search-results.png#bordered) -->
+5. Submit the prompt. The AI generates a response that includes the retrieved search results and their source links. 
+
+   ![Web search results in Open WebUI](/images/manual/use-cases/openwebui-web-search-results.png#bordered)
