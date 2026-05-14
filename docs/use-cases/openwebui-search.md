@@ -78,7 +78,11 @@ Apply the details you retrieved to the Open WebUI configuration panel.
    - **Searxng Query URL**: Enter your SearXNG endpoint URL and append `/search?q=<query>` to the end. 
    
       For example, `http://d1236e020.shared.olares.com/search?q=<query>`.
-   - **Bypass Web Loader**: Enable this setting to bypass anti-scraping protections on target websites, ensuring the AI successfully retrieves and reads the webpage content without being blocked.
+   - **Bypass Web Loader**: Enable this setting to use search engine summaries and avoid search failures caused by website anti-scraping protections.
+
+      :::tip Full-text retrieval
+      If you need the AI to read the full contents of web pages instead of search summaries, leave **Bypass Web Loader** disabled and configure a dedicated online extraction service such as Tavily in the **Loader** section on the same page.
+      :::
 
    ![SearXNG configurations in Open WebUI](/images/manual/use-cases/openwebui-searxng-config.png#bordered)
 

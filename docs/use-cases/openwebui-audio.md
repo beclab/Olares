@@ -113,7 +113,7 @@ Modern web browsers block microphone access for applications running inside the 
 :::warning Resource usage
 Using audio features invokes the LLM, STT, and TTS models simultaneously. Make sure your device has enough VRAM and memory for all three models to load and switch smoothly. If resources run low, Olares might stop apps to protect the system, causing brief unavailability.
 
-For production use, consider setting the GPU mode to **Time slicing** to prevent resource contention between models.
+For production use, consider setting the GPU mode to **Memory slicing** to prevent resource contention between models.
 :::
 
 :::tip Non-English speech
