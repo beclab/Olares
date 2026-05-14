@@ -21,7 +21,7 @@ In this guide, you will learn how to:
 
 - Retrieve the required STT and TTS configuration details from Speaches.
 - Configure Open WebUI to use Speaches as the audio backend.
-- Verify speech-to-text, text-to-speech, and continuous voice modes.
+- Verify speech-to-text, text-to-speech, and continuous voice mode.
 
 ## Prerequisites
 
@@ -34,23 +34,25 @@ Before you begin, ensure you have the following in place:
 
 ## Retrieve Speaches configuration details
 
-To link Open WebUI and Speaches, you must identify specific model names and obtain the Speaches shared endpoint URL.
+To link Open WebUI and Speaches, you must obtain the Speaches shared endpoint URL and identify the specific STT and TTS model names used within Speaches.
+
+### Get the shared endpoint URL
+
+1. Open Olares Settings, and then go to **Applications** > **Speaches**.
+2. In **Shared entrances**, click **Speaches API**, and then note down the endpoint URL.
+
+   For example, `http://edd26bab0.shared.olares.com`.
+
+   ![Speaches shared entrance](/images/manual/use-cases/openwebui-speaches-shared-entrance.png#bordered){width=70%}
 
 ### Find model and voice names
 
 1. Open Speaches from the Launchpad.
 2. Go to the **Speech-to-Text** tab, click the **Model** drop-down list, and then note down the default STT model name `Systran/faster-whisper-small`.
-3. Go to the **Text-to-Speech** tab, click the **Model** drop-down list, select the default TTS model name `speaches-ai/Kokoro-82M-v1.0-ONNX`, and then note down the model name.
+3. Go to the **Text-to-Speech** tab, click the **Model** drop-down list, select the default TTS model `speaches-ai/Kokoro-82M-v1.0-ONNX`, and then note down the model name.
 4. From the **Voice** drop-down list, select a voice for the AI to use when reading responses aloud, and then note down the voice name. For example, `am_eric`.
 
    ![Text-to-speech generation](/images/manual/use-cases/speaches-tts.png#bordered){width=90%}   
-
-### Get the shared endpoint URL
-
-1. Open Olares Settings, and then go to **Applications** > **Speaches**.
-2. In **Shared entrances**, click **Speaches API**, and then note down the endpoint URL. For example, `http://edd26bab0.shared.olares.com`.
-
-   ![Speaches shared entrance](/images/manual/use-cases/openwebui-speaches-shared-entrance.png#bordered){width=70%}
 
 ## Configure audio settings in Open WebUI
 
@@ -85,7 +87,7 @@ Modern web browsers block microphone access for applications running inside the 
 ### Test speech-to-text
 
 1. Start a new chat in Open WebUI.
-2. Select a chat model.
+2. Select a model.
 3. Click <i class="material-symbols-outlined">mic</i> next to the message input field.
 
    ![Dictate button](/images/manual/use-cases/openwebui-dictate-button.png#bordered)
@@ -111,7 +113,7 @@ Modern web browsers block microphone access for applications running inside the 
 :::warning Resource usage
 Using audio features invokes the LLM, STT, and TTS models simultaneously. Make sure your device has enough VRAM and memory for all three models to load and switch smoothly. If resources run low, Olares might stop apps to protect the system, causing brief unavailability.
 
-For production use, consider setting **GPU mode** to **Time slicing** to prevent resource contention between models.
+For production use, consider setting the GPU mode to **Time slicing** to prevent resource contention between models.
 :::
 
 :::tip Non-English speech
