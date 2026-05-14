@@ -36,7 +36,7 @@ Before you begin, ensure you have the following in place:
 To link Open WebUI with your background services, you need to locate the connection endpoints for both your embedding model and SearXNG.
 
 ### Get embedding model details
-
+<!--Note this section is reused in openwebui-knowledge, from line 38 to 46>
 1. Open Qwen3 Embedding 0.6B (Ollama) from the Launchpad.
 2. Note down the exact model name displayed on the main page. For example, `qwen3-embedding:0.6b`.
 
@@ -57,7 +57,7 @@ To link Open WebUI with your background services, you need to locate the connect
 Apply the details you retrieved to the Open WebUI configuration panel.
 
 ### Set up document embeddings
-
+<!--Note this section is reused in openwebui-knowledge, from line 61 to 69>
 1. In Open WebUI, select your profile icon, and then go to **Admin Panel** > **Settings** > **Documents**.
 2. Under the **Embedding** section, specify the following settings:
 
