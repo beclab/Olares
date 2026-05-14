@@ -26,7 +26,7 @@ In this guide, you will learn how to:
 
 Before you begin, ensure you have the following in place:
 
-- [Open WebUI](https://www.google.com/search?q=openwebui.md) installed and configured with at least one active model backend.
+- [Open WebUI](openwebui.md) installed and configured with at least one active model backend.
 - SearXNG installed.
 - An embedding model application installed, such as **Qwen3 Embedding 0.6B (Ollama)**.
 - Administrator privileges for the Open WebUI instance.
