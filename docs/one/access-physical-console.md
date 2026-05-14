@@ -37,7 +37,7 @@ If you have not activated Olares OS yet, use the default password `olares`.
 
 If you have already activated Olares OS, obtain the saved password from the LarePass mobile app.
 
-<!--@include: ./reusables-reset-ssh.md{9,17}-->
+<!--@include: ./reusables-reset-ssh.md#view-saved-ssh-password-->
 
 </template>
 </tabs>

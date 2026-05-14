@@ -23,7 +23,7 @@ When your computer or phone is on the same local network as Olares One, you can 
 
 ## URL format
 
-<!--@include: ../reusables/local-domain.md{10,23}-->
+<!--@include: ../reusables/local-domain.md#local-domain-url-format-->
 
 ## macOS
 
@@ -31,11 +31,11 @@ No setup is needed. Use the local URL in your browser (for example, `http://desk
 
 ## Windows
 
-<!--@include: ../reusables/local-domain.md{26,40}-->
+<!--@include: ../reusables/local-domain.md#windows-local-domain-->
 
 ## Troubleshooting
 
-<!--@include: ../reusables/local-domain.md{42,75}-->
+<!--@include: ../reusables/local-domain.md#local-domain-faq-->
 
 ## Learn more
 - [Access Olares services locally](../manual/best-practices/local-access.md): DNS configuration, hosts file, and other local access methods.

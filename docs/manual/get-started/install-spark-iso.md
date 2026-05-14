@@ -8,7 +8,7 @@ description: Install Olares on NVIDIA DGX Spark using the official ISO image, in
 
 This guide explains how to install Olares on NVIDIA DGX Spark using the official ISO image.
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## System requirements
 
@@ -120,4 +120,4 @@ If needed, you can manually adjust the memory allocation for each AI application
 3. Click <i class="material-symbols-outlined">edit_square</i> next to the VRAM value.
 4. In the **Edit VRAM allocation** dialog, enter the desired VRAM amount in GB and click **Confirm**.
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->

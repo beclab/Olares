@@ -7,7 +7,7 @@ description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括
 
 本文介绍如何通过官方 ISO 镜像在物理机上安装 Olares 系统。
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## 系统要求
 
@@ -24,7 +24,7 @@ description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括
 
 ### 可选硬件
 
-<!--@include: ./gpu-requirements.md{5,}-->
+<!--@include: ./gpu-requirements.md#gpu-requirements-->
 
 ## 制作启动盘
 
@@ -85,4 +85,4 @@ description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->

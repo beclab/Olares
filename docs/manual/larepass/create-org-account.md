@@ -13,7 +13,7 @@ In Olares, custom domains are managed through organizations. To use a custom dom
 
 ## Create a DID
 
-<!--@include: ../../reusables/custom-domain.md{21,31}-->
+<!--@include: ../../reusables/custom-domain.md#custom-domain-create-did-->
 
 Once you have a DID:
 - If you are the domain owner setting up the organization, continue to [Create a new organization](#create-a-new-organization).
@@ -25,7 +25,7 @@ Before you start, make sure the custom domain has been [set up in Olares Space](
 
 As the domain owner, create an organization and get your Olares ID under your custom domain.
 
-<!--@include: ../../reusables/custom-domain.md{76,103}-->
+<!--@include: ../../reusables/custom-domain.md#custom-domain-create-organization-->
 
 After setting up the domain, you can [add members](../space/manage-domain.md) in Olares Space.
 
@@ -33,6 +33,6 @@ After setting up the domain, you can [add members](../space/manage-domain.md) in
 
 If the domain admin has already created the organization and added you, use the username and password provided by the admin to join.
 
-<!--@include: ../../reusables/custom-domain.md{130,145}-->
+<!--@include: ../../reusables/custom-domain.md#custom-domain-join-organization-->
 
 Your Olares ID is now created. You can proceed to [install and activate Olares](../get-started/install-olares.md).

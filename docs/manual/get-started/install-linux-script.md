@@ -5,7 +5,7 @@ description: Detailed instructions for installing Olares on Linux systems includ
 # Install Olares on Linux via the script
 This guide explains how to install Olares on Linux using the provided installation script.
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## System requirements
 
@@ -21,20 +21,28 @@ This guide explains how to install Olares on Linux using the provided installati
   - Ubuntu 22.04-25.04 LTS
   - Debian 12 or 13
 
-<!--@include: ./reusables.md{63,65}-->
+<!--@include: ./reusables.md#version-compatibility-->
 
 ### Optional hardware
 
-<!--@include: ./gpu-requirements.md{5,}-->
+<!--@include: ./gpu-requirements.md#gpu-requirements-->
 
 ## Install Olares
 
 In your terminal, run the following command:
 
-<!--@include: ./reusables.md{4,36}-->
+<!--@include: ./reusables.md#install-script-command-->
+
+<!--@include: ./reusables.md#root-password-tip-->
+
+<!--@include: ./reusables.md#installation-error-tip-->
+
+<!--@include: ./reusables.md#prepare-wizard-heading-->
+
+<!--@include: ./reusables.md#prepare-wizard-details-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->

@@ -9,7 +9,7 @@ You can install Olares directly on Proxmox Virtual Environment (PVE) using an IS
 Currently, Olares on PVE has certain limitations. We recommend using it only for development or testing purposes.
 :::
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## System requirements
 ### Required specifications
@@ -22,11 +22,11 @@ Currently, Olares on PVE has certain limitations. We recommend using it only for
   :::
 - **Supported systems**: PVE 8.2.2
 
-<!--@include: ./reusables.md{63,65}-->
+<!--@include: ./reusables.md#version-compatibility-->
 
 ### Optional hardware
 
-<!--@include: ./gpu-requirements.md{5,}-->
+<!--@include: ./gpu-requirements.md#gpu-requirements-->
 
 :::tip GPU passthrough required
 To use the GPU within Olares on PVE, you must configure GPU passthrough first. Refer to [Configure GPU passthrough in PVE](/manual/best-practices/install-olares-gpu-passthrough.md#configure-gpu-passthrough-in-pve) for instructions.
@@ -101,4 +101,4 @@ After the VM restarts, it will boot into the Ubuntu system.
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{38,43}-->
+<!--@include: ./reusables.md#protect-olares-id-->

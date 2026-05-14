@@ -2,22 +2,16 @@
 search: false
 ---
 <!--
-  自定义域名设置的复用内容块。
-
-  Block 1 – 创建 DID:              lines 21-31
-  Block 2 – 添加域名 (TXT + NS):   lines 34-73
-  Block 3 – 创建新组织:             lines 76-106
-  Block 4 – 添加新用户:             lines 109-127
-  Block 5 – 加入已有组织:           lines 130-145
+  自定义域名设置的复用内容块。请通过命名 region 引用。
 
   引用方:
-  - manual/best-practices/set-custom-domain.md (Blocks 1-5)
-  - manual/larepass/create-org-account.md (Blocks 1, 3, 5)
-  - manual/space/host-domain.md (Block 2)
-  - manual/space/manage-domain.md (Block 4)
+  - manual/best-practices/set-custom-domain.md
+  - manual/larepass/create-org-account.md
+  - manual/space/host-domain.md
+  - manual/space/manage-domain.md
 -->
 
-<!-- Block 1: Create a DID -->
+<!-- #region custom-domain-create-did -->
 DID（去中心化标识符）是获取最终 Olares ID 之前的临时账户状态。只有在 DID 阶段，才能将自定义域名与账户关联。创建步骤如下：
 
 1. 在 LarePass 应用中，打开账户创建页面。
@@ -29,10 +23,11 @@ DID（去中心化标识符）是获取最终 Olares ID 之前的临时账户状
    此操作将创建一个处于 DID 阶段的 Olares 账户。在**切换账户**页面，该账户显示为"未关联 Olares ID"，标识符类似 `did:key:xxxx`。
 
    ![DID 阶段](/images/manual/tutorials/did-stage1.png)
+<!-- #endregion custom-domain-create-did -->
 
-<!-- Block 2: Add domain (TXT + NS) -->
 以下步骤以 `space.n1.monster` 为例。
 
+<!-- #region custom-domain-add-domain-steps -->
 1. 在 Olares Space 中，进入**域名管理**页面，点击**域名设置**。
 
    ![域名管理页面中的域名设置按钮](/images/manual/tutorials/custom-domain-set-up-domain-name.png#bordered)
@@ -71,8 +66,9 @@ DID（去中心化标识符）是获取最终 Olares ID 之前的临时账户状
    :::
 
 TXT 和 NS 记录验证通过后，可以在 LarePass 中创建组织。
+<!-- #endregion custom-domain-add-domain-steps -->
 
-<!-- Block 3: Create a new organization -->
+<!-- #region custom-domain-create-organization -->
 1. 在手机上打开 LarePass，在账户创建页面点击右上角的 <i class="material-symbols-outlined">display_settings</i>，进入**高级账户创建**页面。
    ![LarePass 中的高级账户创建选项](/images/manual/tutorials/custom-domain-advanced.png)
 
@@ -101,11 +97,47 @@ TXT 和 NS 记录验证通过后，可以在 LarePass 中创建组织。
    ![已创建具有管理员权限的 Olares ID](/images/manual/tutorials/custom-domain-admin-id-created.png)
 
    Olares ID 已创建，并拥有管理该域名下用户的管理员权限。
+<!-- #endregion custom-domain-create-organization -->
 
-6. 点击**下一步**，进入 Olares 激活页面。
-   ![在 LarePass 中发现 Olares](/images/manual/tutorials/custom-domain-discover-olares.png#bordered)
+<!-- #region custom-domain-install-and-activate-olares -->
+现在可以使用你的 Olares ID 安装并激活 Olares 了。
 
-<!-- Block 4: Add a new user -->
+安装步骤与标准流程类似。以下以 Linux 为例，其他系统请参阅[安装指南](/zh/manual/get-started/install-olares)。
+
+:::warning 检查网络连接
+为避免激活失败，请确保你的手机和 Olares 设备连接到同一网络。
+:::
+
+1. 在要安装 Olares 的设备上打开终端，运行以下命令：
+
+   ```bash
+   export PREINSTALL=1 &&
+   curl -sSfL https://cn.olares.sh | bash -
+   ```
+
+   此命令仅执行预安装阶段，不会进入完整安装流程。
+
+2. 在手机上打开 LarePass，并在账号激活页面点击**发现附近的 Olares**。LarePass 将列出同一网络中检测到的 Olares 实例。
+3. 从列表中选择目标 Olares 实例，并点击**立即安装**。
+
+   ![ISO 激活](/images/manual/larepass/iso-activate1.png#bordered)
+
+4. 安装完成后，点击**立即激活**。
+5. 在**选择反向代理**对话框中，选择一个地理位置离你较近的节点并点击**确认**。安装程序会自动为 Olares 配置 HTTPS 证书和 DNS。
+
+   :::tip 提示
+   - 你可以稍后在 Olares 中的[更改反向代理](/zh/manual/olares/settings/change-frp.md)页面调整此设置。
+   - 如果你的 Olares 设备连接的是公网 IP 网络，此步骤会自动跳过。
+   :::
+
+6. 按照屏幕提示设置 Olares 的登录密码，然后点击**完成**。
+
+   ![ISO Activate-2](/images/manual/larepass/iso-activate-4.png#bordered)
+
+激活完成后，LarePass 将显示带有自定义域名的 Olares 桌面地址，如 `https://desktop.alex.space.n1.monster`。
+<!-- #endregion custom-domain-install-and-activate-olares -->
+
+<!-- #region custom-domain-add-user -->
 1. 在 Olares Space 中刷新**域名管理**页面，域名状态已更新为**已分配**。
    ![Olares Space 中的域名成员列表](/images/manual/tutorials/custom-domain-view-user.png#bordered)
 
@@ -121,12 +153,13 @@ TXT 和 NS 记录验证通过后，可以在 LarePass 中创建组织。
 
 5. （可选）重复步骤 2 和 3 添加更多用户。
 6. 将用户名和密码提供给成员。
+<!-- #endregion custom-domain-add-user -->
 
 :::tip 管理成员列表
 作为组织管理员，你可以随时在**域名管理**页面管理组织成员列表。
 :::
 
-<!-- Block 5: Join an existing organization -->
+<!-- #region custom-domain-join-organization -->
 1. 在账户创建页面，点击右上角的 <i class="material-symbols-outlined">display_settings</i>，进入**高级账户创建**页面。
 
    ![LarePass 中的高级账户创建选项](/images/manual/tutorials/custom-domain-advanced.png)
@@ -143,3 +176,4 @@ TXT 和 NS 记录验证通过后，可以在 LarePass 中创建组织。
    ![使用 Olares ID 和密码加入组织](/images/manual/tutorials/custom-domain-member-olares-id.png)
 
 4. 点击**继续**。
+<!-- #endregion custom-domain-join-organization -->

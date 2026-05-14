@@ -22,16 +22,20 @@ While this address works from anywhere, it's recommended to enable the LarePass 
 
 ## Step 1: Download LarePass
 
-<!--@include: ../reusables/larepass-vpn.md{7,16}-->
+<!--@include: ../reusables/larepass-vpn.md#install-larepass-client-->
 
 ## Step 2: Enable LarePass VPN
 
-<!--@include: ../reusables/larepass-vpn.md{18,42}-->
+Once installed, enable the VPN directly on the device.
+
+<!--@include: ../reusables/larepass-vpn.md#vpn-setup-notes-->
+
+<!--@include: ../reusables/larepass-vpn.md#enable-larepass-vpn-->
 
 ## Step 3: Verify the connection type
 
-<!--@include: ../reusables/larepass-vpn.md{43,50}-->
+<!--@include: ../reusables/larepass-vpn.md#check-vpn-status-->
 
 ## Troubleshooting
 
-<!--@include: ../reusables/larepass-vpn.md{51,67}-->
+<!--@include: ../reusables/larepass-vpn.md#larepass-vpn-faq-->

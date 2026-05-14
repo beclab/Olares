@@ -22,7 +22,9 @@ Make sure you have:
 
 ## Add your domain
 
-<!--@include: ../../reusables/custom-domain.md{34,73}-->
+The following steps use `space.n1.monster` as an example custom domain.
+
+<!--@include: ../../reusables/custom-domain.md#custom-domain-add-domain-steps-->
 
 ## What's next
 

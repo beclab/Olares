@@ -1,10 +1,9 @@
 ---
 search: false
 ---
-<!-- Reusable LarePass VPN content. Include by line range.
-     Steps (no headings): Step 1 7-16, Step 2 18-42, Step 3 43-50.
-     FAQs: 51-67 -->
+<!-- Reusable LarePass VPN content. Include by named region. -->
 
+<!-- #region install-larepass-client -->
 To use the secure VPN connection, the LarePass client must be installed on the device you are using to access Olares.
 
 - **Mobile**: Use the LarePass app installed during the Olares ID creation process.
@@ -13,16 +12,20 @@ To use the secure VPN connection, the LarePass client must be installed on the d
 1. Visit <AppLinkGlobal />.
 2. Download the version compatible with your operating system.
 3. Install the application and log in with your Olares ID.
+<!-- #endregion install-larepass-client -->
 
 Once installed, enable the VPN directly on the device.
 
+<!-- #region vpn-setup-notes -->
 :::tip Always enable VPN for remote access
 Keep LarePass VPN enabled. It automatically prioritizes the fastest available route to ensure you always get the best speed possible without manual switching.
 :::
 :::info iOS and macOS setup
 On iOS or macOS, you may be prompted to add a VPN Configuration to your system settings the first time you enable the feature. Allow this to complete the setup.
 :::
+<!-- #endregion vpn-setup-notes -->
 
+<!-- #region enable-larepass-vpn -->
 <tabs>
 <template #On-LarePass-mobile-client>
 
@@ -39,7 +42,9 @@ On iOS or macOS, you may be prompted to add a VPN Configuration to your system s
    ![Enable LarePass VPN on desktop](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
 </template>
 </tabs>
+<!-- #endregion enable-larepass-vpn -->
 
+<!-- #region check-vpn-status -->
 Once enabled, check the status indicator in LarePass to verify the connection type:
 
 | Status       | Description                                              |
@@ -47,7 +52,9 @@ Once enabled, check the status indicator in LarePass to verify the connection ty
 | **Intranet** | Direct connection via your local LAN IP. Fastest speeds. |
 | **P2P**      | Direct encrypted tunnel between devices. High speed.     |
 | **DERP**     | Routed via a secure relay server. Used as a fallback.    |
+<!-- #endregion check-vpn-status -->
 
+<!-- #region larepass-vpn-faq -->
 ### Why doesn't LarePass VPN work on my Mac anymore?
 
 macOS may block the VPN tunnel if the network extension or VPN configuration was not fully set up, or if the extension has become stuck or corrupted.
@@ -65,3 +72,4 @@ To resolve this issue, see [LarePass VPN not working](/manual/help/ts-larepass-v
 If you turn on the VPN connection, but the status stays on **Connecting** for a while and then turns off automatically, the system time on your LarePass client device may be incorrect.
 
 To resolve this issue, see [LarePass VPN not working](/manual/help/ts-larepass-vpn-not-working.md#sync-device-time).
+<!-- #endregion larepass-vpn-faq -->
