@@ -39,15 +39,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 
 	ws := newWebService()
 
-	// handler_service
-	ws.Route(ws.GET("/applications/{"+ParamAppNamespace+"}/{"+ParamAppName+"}").
-		To(handler.get).
-		Doc("Get the application").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamAppName, "the namespace of a application")).
-		Param(ws.PathParameter(ParamAppName, "the name of a application")).
-		Returns(http.StatusOK, "Success to get a application", nil))
-
 	ws.Route(ws.GET("/applications").
 		To(handler.list).
 		Doc("List user's applications").
@@ -421,20 +412,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to get a apps status", nil))
 
-	ws.Route(ws.GET("/apps/{"+ParamAppName+"}/operate_history").
-		To(handler.operateHistory).
-		Doc("get specified app operate history").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamAppName, "the name of application")).
-		Returns(http.StatusOK, "Success to get a apps status", nil))
-
-	ws.Route(ws.GET("/apps/operate_history").
-		To(handler.allOperateHistory).
-		Doc("get specified all app operate history").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamAppName, "the name of application")).
-		Returns(http.StatusOK, "Success to get a apps operate history", nil))
-
 	ws.Route(ws.GET("/apps").
 		To(handler.apps).
 		Doc("get list of app").
@@ -452,13 +429,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("get list of application managers for all user, exclude system apps").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "success to get list of application managers", nil))
-
-	ws.Route(ws.GET("/apps/{"+ParamAppName+"}").
-		To(handler.getApp).
-		Doc("get an app").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamAppName, "the name of application")).
-		Returns(http.StatusOK, "success to get an app", nil))
 
 	ws.Route(ws.GET("/apps/{"+ParamAppName+"}/env").
 		To(handler.getAppEnv).
@@ -596,19 +566,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("get recommends operate list").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "get recommends operate list", nil))
-
-	ws.Route(ws.GET("/recommends/{"+ParamWorkflowName+"}/operate_history").
-		To(handler.operateRecommendHistory).
-		Doc("get specified recommend operate history").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamWorkflowName, "the name of recommend")).
-		Returns(http.StatusOK, "Success to get a recommend status", nil))
-
-	ws.Route(ws.GET("/recommends/operate_history").
-		To(handler.allOperateRecommendHistory).
-		Doc("get specified all recommend operate history").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "get specified all recommend operate history", nil))
 
 	// middleware route
 	ws.Route(ws.POST("/middlewares/{"+ParamAppName+"}/install").
@@ -772,7 +729,7 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Returns(http.StatusOK, "Success to get admin username", nil))
 
 	ws.Route(ws.GET("/users/admins").
-		To(handler.adminUserList).
+		To(handler.ownerOrAdminList).
 		Doc("return admin list").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to get admin username", nil))
