@@ -47,8 +47,8 @@ To link Open WebUI with your background services, you need to locate the connect
 
 ### Get SearXNG endpoint
 
-1. In Olares **Settings**, go to **Applications** > **SearXNG**.
-2. Under **Shared entrances**, copy the endpoint URL. For example, `http://d1236e020.shared.olares.com`.
+1. Open Olares Settings, and then go to **Applications** > **SearXNG**.
+2. Under **Shared entrances**, click **SearXNG**, and then copy the endpoint URL. For example, `http://d1236e020.shared.olares.com`.
 
    ![SearXNG shared endpoint](/images/manual/use-cases/openwebui-searxng-shared-endpoint.png#bordered){width=70%}
 
@@ -65,15 +65,15 @@ Apply the details you retrieved to the Open WebUI configuration panel.
    - **API Base URL**: Enter the embedding model endpoint URL you noted earlier.
    - **Embedding Model**: Enter the embedding model name you noted earlier.
 
-3. Scroll down to the bottom of the page, and then click **Reindex** in the lower right for the changes to take effect.
+3. Scroll down to the bottom of the page, and then click **Reindex** in the lower-right corner to apply the changes.
 4. Select **Save**.
 
 ### Enable web search
 
 1. Go to **Admin Panel** > **Settings** > **Web Search**.
-2. Turn on the **Web Search** toggle in the top-right corner.
-3. Specify the following settings:
+2. Specify the following settings:
 
+   - **Web Search**: Enable this setting.
    - **Web Search Engine**: Select **SearXNG**.
    - **Searxng Query URL**: Enter your SearXNG endpoint URL and append `/search?q=<query>` to the end. 
    
@@ -82,15 +82,15 @@ Apply the details you retrieved to the Open WebUI configuration panel.
 
    ![SearXNG configurations in Open WebUI](/images/manual/use-cases/openwebui-searxng-config.png#bordered)
 
-4. Leave the other fields at their default values.
-5. Select **Save**.
+3. Leave the other fields at their default values.
+4. Select **Save**.
 
 ## Verify the configuration
 
-Test the feature to ensure the AI successfully browses the web for current events.
+Test the feature to ensure the AI successfully retrieves up-to-date information from the web.
 
-1. Start a new chat in Open WebUI.
-2. Select the chat model.
+1. Start a new chat.
+2. Select the model.
 3. Click the **Integrations** icon under the message input field, and then enable **Web Search**.
 
    ![Web search enable in Open WebUI chat](/images/manual/use-cases/openwebui-web-search-enable.png#bordered)
