@@ -70,19 +70,19 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/openwebui",
               items: [
                 {
-                  text: "多用户设置",
+                  text: "设置多用户访问",
                   link: "/zh/use-cases/openwebui-multiuser",
                 },
                 {
-                  text: "音频配置",
+                  text: "配置语音交互",
                   link: "/zh/use-cases/openwebui-audio",
                 },
                 {
-                  text: "网页搜索",
+                  text: "启用网页搜索",
                   link: "/zh/use-cases/openwebui-search",
                 },
                 {
-                  text: "知识库",
+                  text: "在聊天中查询文档",
                   link: "/zh/use-cases/openwebui-knowledge",
                 },
                 {

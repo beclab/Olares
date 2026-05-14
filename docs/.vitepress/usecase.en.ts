@@ -70,19 +70,19 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "Multi-user setup",
+                  text: "Set up multi-user access",
                   link: "/use-cases/openwebui-multiuser",
                 },
                 {
-                  text: "Audio configuration",
+                  text: "Configure voice interactions",
                   link: "/use-cases/openwebui-audio",
                 },
                 {
-                  text: "Web search",
+                  text: "Enable web search",
                   link: "/use-cases/openwebui-search",
                 },
                 {
-                  text: "Knowledge base",
+                  text: "Query documents in chat",
                   link: "/use-cases/openwebui-knowledge",
                 },
                 {
