@@ -1,0 +1,20 @@
+<div class="vdr"
+     :style="positionStyle"
+     :class="`${(active || isActive) ? 'active' : 'inactive'} ${contentClass ? contentClass: ''}`"
+     @mousedown="bodyDown($event)"
+     @touchstart="bodyDown($event)"
+     @touchend="up($event)"
+     ref="container"
+     tabindex="0">
+    <div :style="sizeStyle" class="content-container" ref="container2">
+        <slot></slot>
+    </div>
+    <div
+            v-for="stick in sticks"
+            class="vdr-stick"
+            :class="['vdr-stick-' + stick, isResizable ? '' : 'not-resizable']"
+            @mousedown.stop.prevent="stickDown(stick, $event)"
+            @touchstart.stop.prevent="stickDown(stick, $event)"
+            :style="vdrStick(stick)">
+    </div>
+</div>

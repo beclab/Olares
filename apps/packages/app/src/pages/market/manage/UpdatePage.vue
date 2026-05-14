@@ -63,27 +63,33 @@ import EmptyView from '../../../components/base/EmptyView.vue';
 import { AppService } from '../../../stores/market/appService';
 import { useDeviceStore } from '../../../stores/settings/device';
 import { useCenterStore } from '../../../stores/market/center';
+import { useAppStore } from '../../../stores/market/appStore';
 import { useMenuStore } from '../../../stores/market/menu';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 
 const centerStore = useCenterStore();
+const appStore = useAppStore();
 const deviceStore = useDeviceStore();
 const menuStore = useMenuStore();
 const { t } = useI18n();
 
 const showList = computed(() => {
-	return centerStore.updateList.concat(centerStore.upgradingList);
+	return centerStore.updateList.concat(appStore.upgradingList);
 });
 
 const onUpdateAll = () => {
 	centerStore.updateList.forEach((value) => {
 		const array = value.split('_');
 		if (array.length === 2) {
-			const status = centerStore.getAppStatus(array[1], array[0]);
-			const simpleLatest = centerStore.getAppSimpleInfo(array[1], array[0]);
-			if (status && simpleLatest) {
-				AppService.upgradeApp(status, {
+			const statusLatest = appStore.getAppStatus(array[1], array[0]);
+			const simpleLatest = appStore.getAppSimpleInfo(
+				array[1],
+				array[0],
+				statusLatest.status
+			);
+			if (statusLatest && simpleLatest) {
+				AppService.upgradeApp(statusLatest, {
 					app_name: array[1],
 					source: array[0],
 					version: simpleLatest.app_simple_info.app_version

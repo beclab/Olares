@@ -21,7 +21,7 @@
 									:ratio="1"
 									width="32px"
 									spinner-size="0"
-									@click="openUrl(item.url)"
+									@click="openUrl(item)"
 								>
 									<template #loading>
 										<q-skeleton
@@ -65,6 +65,9 @@ import appDeleteIcon from 'src/assets/plugin/app-delete.svg';
 import { useAppsStore } from 'src/stores/bex/apps';
 import ShakeDom from 'src/pages/Plugin/components/ShakeDom.vue';
 import StepScroll from 'src/pages/Plugin/components/StepScroll.vue';
+import { useUserStore } from 'src/stores/user';
+import { useLocalForModule } from 'src/utils/bex/moduleUseLocal';
+import type { AppListItem } from '@apps/control-panel-common/network/network';
 
 const appsStore = useAppsStore();
 
@@ -74,9 +77,12 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const openUrl = (url: string) => {
+const openUrl = (item: AppListItem) => {
 	if (!props.showAction) {
-		appsStore.openUrl(url);
+		const userStore = useUserStore();
+		const useLocal = useLocalForModule(item.name);
+		const fullUrl = userStore.getModuleSever(item.id, 'https:', '', useLocal);
+		appsStore.openUrl(fullUrl);
 	}
 };
 </script>

@@ -515,6 +515,7 @@ const { type } = require('os');
 						(function () {
 							file.uniqueIdentifier = uniqueIdentifier;
 							var f = new ResumableFile($, file, uniqueIdentifier);
+							f.pause(true);
 							$.files.push(f);
 							files.push(f);
 							f.container =
@@ -589,7 +590,7 @@ const { type } = require('os');
 						$.resumableObj.fire('fileError', $, message);
 						break;
 					case 'success':
-						if (_error) return;
+						_error = false;
 						$.resumableObj.fire('fileProgress', $, message); // it's at least progress
 						if ($.isComplete()) {
 							$.resumableObj.fire('fileSuccess', $, message);
@@ -1166,7 +1167,8 @@ const { type } = require('os');
 						$.callback('success', JSON.stringify(result.data));
 						$.resumableObj.uploadNextChunk();
 					} else {
-						$.preprocessState = 0;
+						$.preprocessState = 2;
+						$.callback('error', '');
 					}
 				}
 			};

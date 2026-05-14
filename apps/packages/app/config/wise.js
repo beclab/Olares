@@ -7,7 +7,7 @@ const boot = [
 	'application/wise',
 	'hotkeys'
 ];
-const css = ['app.scss', 'document.scss'];
+const css = ['wise/app.scss'];
 const path = require('path');
 
 const extendWebpack = (ctx, cfg) => {
@@ -45,7 +45,8 @@ const getConfig = (ctx) => {
 			// distDir: 'dist/apps/wise'
 		},
 		sourceFiles: {
-			indexHtmlTemplate: 'src/index.template.wise.html'
+			indexHtmlTemplate: 'src/index.template.wise.html',
+			variables: 'wise/variables.scss'
 		},
 		htmlVariables: {
 			productName: 'Wise'

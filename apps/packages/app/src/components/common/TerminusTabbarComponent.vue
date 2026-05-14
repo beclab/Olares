@@ -23,7 +23,7 @@
 
 				<div
 					class="tab-title-base text-body3"
-					:class="current !== index ? 'text-grey-6' : 'text-ink-1'"
+					:class="current !== index ? 'text-ink-2' : 'text-ink-1'"
 				>
 					{{ t(item.name) }}
 				</div>
@@ -57,7 +57,7 @@
 			</div>
 		</div>
 
-		<div class="safe-area-bottom"></div>
+		<div v-if="$q.platform.is.ios" class="safe-area-bottom" />
 	</div>
 </template>
 
@@ -67,6 +67,7 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useFilesStore } from './../../stores/files';
 import { useTermipassStore } from '../../stores/termipass';
+import { useQuasar } from 'quasar';
 
 const props = defineProps({
 	current: {
@@ -81,6 +82,8 @@ const emit = defineEmits(['updateCurrent']);
 const $router = useRouter();
 
 const termipassStore = useTermipassStore();
+
+const $q = useQuasar();
 
 const { t } = useI18n();
 

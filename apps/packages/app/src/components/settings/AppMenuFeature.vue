@@ -27,14 +27,22 @@
 					</div>
 				</div>
 			</div>
-			<div style="flex: 0 0 24" v-if="clickable && !buttonSlot">
+			<div style="flex: 0 0 24" v-if="clickable && !button && !endSlot">
 				<q-icon
 					class="text-ink-2"
 					name="sym_r_keyboard_arrow_right"
 					size="24px"
 				/>
 			</div>
-			<slot name="button" />
+			<q-btn
+				v-if="!!button && !endSlot"
+				dense
+				class="add-button q-px-md q-py-sm text-body3 text-ink-2"
+				:label="button"
+				no-caps
+				@click="emit('onButtonClick')"
+			/>
+			<slot name="end" />
 		</div>
 	</bt-list>
 </template>
@@ -64,6 +72,10 @@ const props = defineProps({
 	clickable: {
 		type: Boolean,
 		default: false
+	},
+	button: {
+		type: String,
+		required: false
 	}
 });
 
@@ -71,13 +83,23 @@ const menuItem = computed(() => {
 	return useMenuItem(props.menuType);
 });
 
-const buttonSlot = !!useSlots().button;
+const endSlot = !!useSlots().end;
 const { t } = useI18n();
+const emit = defineEmits(['onButtonClick']);
+
+console.log(props.clickable);
+console.log(!!props.button);
+console.log(endSlot);
 </script>
 
 <style scoped lang="scss">
 .menu-icon {
 	width: 40px;
 	height: 40px;
+}
+
+.add-button {
+	flex: 0 0 64;
+	border: solid 1px $btn-stroke;
 }
 </style>

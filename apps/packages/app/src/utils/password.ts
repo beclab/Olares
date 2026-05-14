@@ -63,3 +63,12 @@ const replaceRandomChar = (password: string, chars: string) => {
 		password.substring(randomIndex + 1)
 	);
 };
+
+export const escapePasswordHtml = (password: string) => {
+	return password
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#039;');
+};

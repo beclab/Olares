@@ -110,18 +110,21 @@ const verifyPassword = async () => {
 		return;
 	}
 
-	try {
-		if (!userStore.users || userStore.users.locked) {
-			notifyFailed(t('please_unlock_first'));
-			return;
-		}
-		await userStore.users.unlock(oldPasswordRef.value).then(() => {
-			resetPasswordConfirm();
-		});
-		await CustomRef.value.onDialogOK();
-	} catch (error) {
-		notifyFailed(t('wrong_password_please_try_again'));
+	if (!userStore.users) {
+		return;
 	}
+
+	// Read-only check the old password BEFORE running `resetPasswordConfirm`,
+	// so a wrong old password cannot reach `userStore.updateUserPassword`.
+	const oldPasswordValid = await userStore.users.verifyPassword(
+		oldPasswordRef.value
+	);
+	if (!oldPasswordValid) {
+		notifyFailed(t('wrong_password_please_try_again'));
+		return;
+	}
+
+	resetPasswordConfirm();
 };
 
 const resetPasswordConfirm = async () => {
@@ -132,7 +135,7 @@ const resetPasswordConfirm = async () => {
 			newPassword
 		);
 		if (resetPasswordStatus.status) {
-			app.lock();
+			await CustomRef.value.onDialogOK();
 		} else {
 			notifyFailed(resetPasswordStatus.message);
 		}

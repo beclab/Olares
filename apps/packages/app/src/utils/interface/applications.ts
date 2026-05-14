@@ -18,4 +18,5 @@ export interface AppInfo {
 	openMethod: string;
 	isSysApp: boolean;
 	fatherState: string;
+	isClusterScoped: boolean;
 }

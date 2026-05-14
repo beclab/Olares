@@ -5,23 +5,22 @@ import { taskPool } from './pool';
 import {
 	MSG_FETCH,
 	MSG_GET_HTTPCACHE,
+	MSG_PUT_HTTPCACHE,
+	MSG_CLEAR_CACHES,
 	CACHE_NAME,
 	DEFAULT_FETCH_INTERVAL,
-	DEFAULT_FETCH_LIMIT
+	DEFAULT_FETCH_LIMIT,
+	DEFAULT_CACHE_TIMEOUT,
+	DEFAULT_HTTP_TIMEOUT
 } from '../config';
 import { isBg } from './browser';
 import { genTransReq } from '../apis/trans';
 import { kissLog } from './log';
 import { blobToBase64 } from './utils';
+import { performanceMonitor } from './performance';
 
-const TIMEOUT = 5000;
+const TIMEOUT = DEFAULT_HTTP_TIMEOUT;
 
-/**
- * 构造缓存 request
- * @param {*} input
- * @param {*} init
- * @returns
- */
 const newCacheReq = async (input, init) => {
 	let request = new Request(input, init);
 	if (request.method !== 'GET') {
@@ -34,12 +33,6 @@ const newCacheReq = async (input, init) => {
 	return request;
 };
 
-/**
- * 油猴脚本的请求封装
- * @param {*} input
- * @param {*} init
- * @returns
- */
 export const fetchGM = async (input, { method = 'GET', headers, body } = {}) =>
 	new Promise((resolve, reject) => {
 		GM.xmlHttpRequest({
@@ -47,7 +40,6 @@ export const fetchGM = async (input, { method = 'GET', headers, body } = {}) =>
 			url: input,
 			headers,
 			data: body,
-			// withCredentials: true,
 			timeout: TIMEOUT,
 			onload: ({ response, responseHeaders, status, statusText }) => {
 				const headers = {};
@@ -68,11 +60,6 @@ export const fetchGM = async (input, { method = 'GET', headers, body } = {}) =>
 		});
 	});
 
-/**
- * 发起请求
- * @param {*} param0
- * @returns
- */
 export const fetchPatcher = async (input, init, transOpts, apiSetting) => {
 	if (transOpts?.translator) {
 		[input, init] = await genTransReq(transOpts, apiSetting);
@@ -90,8 +77,6 @@ export const fetchPatcher = async (input, init, transOpts, apiSetting) => {
 			info = GM.info;
 		}
 
-		// Tampermonkey --> .connects
-		// Violentmonkey --> .connect
 		const connects = info?.script?.connects || info?.script?.connect || [];
 		const url = new URL(input);
 		const isSafe = connects.find((item) => url.hostname.endsWith(item));
@@ -116,11 +101,6 @@ export const fetchPatcher = async (input, init, transOpts, apiSetting) => {
 	return fetch(input, init);
 };
 
-/**
- * 解析 response
- * @param {*} res
- * @returns
- */
 const parseResponse = async (res) => {
 	if (!res) {
 		return null;
@@ -136,17 +116,34 @@ const parseResponse = async (res) => {
 	return await res.text();
 };
 
-/**
- * 查询 caches
- * @param {*} input
- * @param {*} param1
- * @returns
- */
 export const getHttpCache = async (input, { method, headers, body }) => {
 	try {
 		const req = await newCacheReq(input, { method, headers, body });
 		const cache = await caches.open(CACHE_NAME);
 		const res = await cache.match(req);
+
+		if (!res) {
+			return null;
+		}
+
+		const cacheControl = res.headers.get('Cache-Control');
+		if (cacheControl) {
+			const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
+			if (maxAgeMatch) {
+				const maxAge = parseInt(maxAgeMatch[1], 10);
+				const cachedTime = parseInt(
+					res.headers.get('X-Cached-Time') || '0',
+					10
+				);
+				const now = Math.floor(Date.now() / 1000);
+
+				if (now - cachedTime > maxAge) {
+					await cache.delete(req);
+					return null;
+				}
+			}
+		}
+
 		return parseResponse(res);
 	} catch (err) {
 		kissLog(err, 'get cache');
@@ -154,27 +151,35 @@ export const getHttpCache = async (input, { method, headers, body }) => {
 	return null;
 };
 
-/**
- * 插入 caches
- * @param {*} input
- * @param {*} param1
- * @param {*} res
- */
-export const putHttpCache = async (input, { method, headers, body }, res) => {
+export const putHttpCache = async (
+	input,
+	{ method, headers, body },
+	res,
+	maxAge = DEFAULT_CACHE_TIMEOUT
+) => {
 	try {
 		const req = await newCacheReq(input, { method, headers, body });
 		const cache = await caches.open(CACHE_NAME);
-		await cache.put(req, res);
+
+		const clonedRes = res.clone();
+		const resBody = await clonedRes.text();
+		const newHeaders = new Headers(clonedRes.headers);
+
+		newHeaders.set('Cache-Control', `max-age=${maxAge}`);
+		newHeaders.set('X-Cached-Time', Math.floor(Date.now() / 1000).toString());
+
+		const newRes = new Response(resBody, {
+			status: clonedRes.status,
+			statusText: clonedRes.statusText,
+			headers: newHeaders
+		});
+
+		await cache.put(req, newRes);
 	} catch (err) {
 		kissLog(err, 'put cache');
 	}
 };
 
-/**
- * 处理请求
- * @param {*} param0
- * @returns
- */
 export const fetchHandle = async ({
 	input,
 	useCache,
@@ -182,7 +187,6 @@ export const fetchHandle = async ({
 	apiSetting,
 	...init
 }) => {
-	// 发送请求
 	const res = await fetchPatcher(input, init, transOpts, apiSetting);
 	if (!res) {
 		throw new Error('Unknow error');
@@ -197,49 +201,50 @@ export const fetchHandle = async ({
 		throw new Error(JSON.stringify(msg));
 	}
 
-	// 插入缓存
 	if (useCache) {
-		await putHttpCache(input, init, res.clone());
+		await putHttpCachePolyfill(input, init, res.clone());
 	}
 
 	return parseResponse(res);
 };
 
-/**
- * fetch 兼容性封装
- * @param {*} args
- * @returns
- */
 export const fetchPolyfill = (args) => {
 	console.log('fetchPolyfill', isExt, !isBg);
-	// 插件
 	if (isExt && !isBg()) {
 		return sendBgMsg(MSG_FETCH, args);
 	}
 
-	// 油猴/网页/BackgroundPage
 	return fetchHandle(args);
 };
 
-/**
- * getHttpCache 兼容性封装
- * @param {*} input
- * @param {*} init
- * @returns
- */
 export const getHttpCachePolyfill = (input, init) => {
-	// 插件
 	if (isExt && !isBg()) {
 		return sendBgMsg(MSG_GET_HTTPCACHE, { input, init });
 	}
 
-	// 油猴/网页/BackgroundPage
 	return getHttpCache(input, init);
 };
 
-/**
- * 请求池实例
- */
+export const putHttpCachePolyfill = (input, init, res, maxAge) => {
+	if (isExt && !isBg()) {
+		return sendBgMsg(MSG_PUT_HTTPCACHE, { input, init, data: res, maxAge });
+	}
+
+	return putHttpCache(input, init, res, maxAge);
+};
+
+export const clearAllCaches = async () => {
+	try {
+		if (isExt && !isBg()) {
+			await sendBgMsg(MSG_CLEAR_CACHES);
+		} else {
+			await caches.delete(CACHE_NAME);
+		}
+	} catch (err) {
+		kissLog(err, 'clear caches');
+	}
+};
+
 export const fetchPool = taskPool(
 	fetchPolyfill,
 	null,
@@ -247,46 +252,53 @@ export const fetchPool = taskPool(
 	DEFAULT_FETCH_LIMIT
 );
 
-/**
- * 数据请求
- * @param {*} input
- * @param {*} param1
- * @returns
- */
 export const fetchData = async (input, { useCache, usePool, ...args } = {}) => {
 	if (!input?.trim()) {
 		throw new Error('URL is empty');
 	}
 
-	// 查询缓存
+	const startTime = performance.now();
+
 	if (useCache) {
 		const cache = await getHttpCachePolyfill(input, args);
 		if (cache) {
+			const duration = performance.now() - startTime;
+			performanceMonitor.recordCacheHit();
+			performanceMonitor.recordRequestTime(duration);
 			return cache;
 		}
 	}
 
-	// 通过任务池发送请求
-	if (usePool) {
-		return fetchPool.push({ input, useCache, ...args });
-	}
+	try {
+		let result;
 
-	// 直接请求
-	return fetchPolyfill({ input, useCache, ...args });
+		if (usePool) {
+			result = await fetchPool.push({ input, useCache, ...args });
+		} else {
+			result = await fetchPolyfill({ input, useCache, ...args });
+		}
+
+		const duration = performance.now() - startTime;
+		if (useCache) {
+			performanceMonitor.recordCacheMiss();
+		}
+		performanceMonitor.recordRequestTime(duration);
+
+		return result;
+	} catch (err) {
+		const duration = performance.now() - startTime;
+		if (useCache) {
+			performanceMonitor.recordCacheMiss();
+		}
+		performanceMonitor.recordRequestTime(duration);
+		throw err;
+	}
 };
 
-/**
- * 更新 fetch pool 参数
- * @param {*} interval
- * @param {*} limit
- */
 export const updateFetchPool = (interval, limit) => {
 	fetchPool.update(interval, limit);
 };
 
-/**
- * 清空任务池
- */
 export const clearFetchPool = () => {
 	fetchPool.clear();
 };

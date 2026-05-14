@@ -155,7 +155,6 @@ onBeforeMount(() => {
 
 <style lang="scss" scoped>
 .layout-content-wrapper {
-	// background: $bg-content;
 	transform: translate(0);
 }
 .control-hub-sidebar {
@@ -170,8 +169,8 @@ onBeforeMount(() => {
 }
 
 ::v-deep(.my-active-link) {
-	color: $blue-6;
-	background: $blue-soft;
+	color: $theme-menu-color-hover;
+	background: $theme-menu-bg-hover;
 }
 ::v-deep(.q-drawer.q-drawer--bordered) {
 	border-color: $separator;

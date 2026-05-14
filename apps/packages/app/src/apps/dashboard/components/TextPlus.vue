@@ -14,11 +14,10 @@
 
 <script setup>
 import { useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
+import { notifySuccess } from 'src/utils/settings/btNotify';
 
 const router = useRouter();
-const $q = useQuasar();
 const { t } = useI18n();
 
 const props = defineProps({
@@ -35,11 +34,7 @@ const handleCopy = () => {
 	document.execCommand('copy');
 	document.body.removeChild(textarea);
 
-	$q.notify({
-		type: 'positive',
-		message: t('COPY_SUCCESSFUL'),
-		position: 'top'
-	});
+	notifySuccess(t('COPY_SUCCESSFUL'));
 };
 
 const handleClick = () => {

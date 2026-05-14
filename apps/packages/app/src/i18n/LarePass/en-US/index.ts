@@ -50,8 +50,8 @@ export default {
 	'Create Olares ID': 'Create Olares ID',
 	'Must be at least 8 characters long containing numbers [0-9] and lowercase letters [a-z].':
 		'Must be at least 8 characters long containing numbers (0-9) and lowercase letters (a-z).',
-	'Must be 8 to 63 characters long, containing only numbers [0-9] and lowercase letters [a-z].':
-		'Must be 8 to 63 characters long, containing only numbers [0-9] and lowercase letters [a-z].',
+	'Must be 8 to 24 characters long, containing only numbers [0-9] and lowercase letters [a-z].':
+		'Must be 8 to 24 characters long, containing only numbers [0-9] and lowercase letters [a-z].',
 	'Olares ID successfully created': 'Olares ID successfully created',
 	'Have an Olares in your LAN and ready to activate it as an admin?':
 		'Have an Olares in your LAN and ready to activate it as an admin?',
@@ -134,7 +134,7 @@ export default {
 	'Host name': 'Host name',
 	CPU: 'CPU',
 	GPU: 'GPU',
-	Memroy: 'Memroy',
+	Memory: 'Memory',
 	DISK: 'Disk',
 	System: 'System',
 	'Kernel version': 'Kernel version',
@@ -377,5 +377,28 @@ export default {
 		"We automatically reset a secure SSH login password.<br><br>{password}<br><br>You don't need to remember the password; it's automatically saved in Vault, which you can view later in Vault or modify in Settings.",
 	'Not now': 'Not now',
 	'Synchronizing, please try again later.':
-		'Synchronizing, please try again later.'
+		'Synchronizing, please try again later.',
+	'Password entered incorrectly multiple times. Account locked for {minutes} minutes. Please try again later.':
+		'For your account’s security, it has been temporarily locked due to multiple incorrect password attempts. Please try again in {minutes} minute(s).',
+	'Enable local service domain': 'Enable local service domain',
+	"Automatically configures the system's Hosts file to direct Olares applications to the local device.":
+		"Automatically configures the system's Hosts file to direct Olares applications to the local device.",
+	'Administrator privileges are required.':
+		'Administrator privileges are required.',
+	'Password reset failed: {reason}': 'Password reset failed: {reason}',
+	'Re-login failed: {reason}': 'Re-login failed: {reason}',
+	'Organization member name': 'Organization member name',
+	'Organization member names are not available, for example:':
+		'Organization member names are not available, for example:',
+	organization_errors: {
+		'This name is not available': 'This name is not available',
+		'Must be 2-24 characters, use lowercase letters and numbers only':
+			'Must be 2-24 characters, use lowercase letters and numbers only',
+		'Organization not found, Check your Olares ID and try again':
+			'Organization not found. Check your Olares ID and try again.',
+		'Incorrect Olares ID or password': 'Incorrect Olares ID or password'
+	},
+	'No domains available yet': 'No domains available yet',
+	'2–24 characters, lowercase letters and numbers only':
+		'2–24 characters, lowercase letters and numbers only'
 };

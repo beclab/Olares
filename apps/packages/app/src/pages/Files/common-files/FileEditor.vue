@@ -2,19 +2,21 @@
 	<div id="editor-container" v-show="store.preview.isEditing">
 		<div id="editor"></div>
 	</div>
-	<div
-		class="info-content text-subtitle3 text-ink-1"
-		:class="$q.platform.is.mobile ? 'q-pa-md' : 'q-pa-lg'"
+
+	<component
 		v-if="!store.preview.isEditing"
+		:content="mdContent"
+		:is="currentView"
 	>
-		{{ filesStore.previewItem[origin_id].content }}
-	</div>
+	</component>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, watch, onUnmounted } from 'vue';
+import { ref, onMounted, watch, onUnmounted, computed } from 'vue';
 import ace from 'ace-builds/src-min-noconflict/ace.js';
 import modelist from 'ace-builds/src-min-noconflict/ext-modelist.js';
+import 'ace-builds/src-min-noconflict/theme-chrome';
+import 'ace-builds/src-min-noconflict/theme-tomorrow_night';
 import { useDataStore } from '../../../stores/data';
 import { useQuasar } from 'quasar';
 import 'ace-builds/webpack-resolver';
@@ -22,6 +24,8 @@ import { useFilesStore, FilesIdType } from '../../../stores/files';
 
 import { notifyFailed } from '../../../utils/notifyRedefinedUtil';
 import { dataAPIs } from '../../../api';
+import FilesMarkdownPreview from './TextPreviews/FilesMarkdownPreview.vue';
+import FilesNormalTxtPreview from './TextPreviews/FilesNormalTxtPreview.vue';
 
 const props = defineProps({
 	origin_id: {
@@ -38,25 +42,40 @@ const filesStore = useFilesStore();
 
 const item = filesStore.previewItem[props.origin_id];
 const dataAPI = dataAPIs(item.driveType);
+const currentView = ref();
 
 onMounted(async () => {
+	if (filesStore.previewItem[props.origin_id].extension == '.md') {
+		currentView.value = FilesMarkdownPreview;
+	} else {
+		currentView.value = FilesNormalTxtPreview;
+	}
+
 	if (filesStore.previewItem[props.origin_id].content == undefined) {
 		await dataAPI.formatFileContent(filesStore.previewItem[props.origin_id]);
 	}
 
 	const fileContent = `${
-		filesStore.previewItem[props.origin_id].content || ''
+		(typeof filesStore.previewItem[props.origin_id].content == 'object'
+			? JSON.stringify(filesStore.previewItem[props.origin_id].content, null, 2)
+			: filesStore.previewItem[props.origin_id].content) || ''
 	}`;
 
-	editor.value = ace.edit('editor', {
-		value: fileContent,
-		showPrintMargin: false,
-		readOnly: filesStore.previewItem[props.origin_id].type === 'textImmutable',
-		theme: 'ace/theme/chrome',
-		mode: modelist.getModeForPath(filesStore.previewItem[props.origin_id].name)
-			.mode,
-		wrap: true
-	});
+	try {
+		editor.value = ace.edit('editor', {
+			value: fileContent,
+			showPrintMargin: false,
+			readOnly:
+				filesStore.previewItem[props.origin_id].type === 'textImmutable',
+			theme: $q.dark.isActive ? 'ace/theme/tomorrow_night' : 'ace/theme/chrome',
+			mode: modelist.getModeForPath(
+				filesStore.previewItem[props.origin_id].name
+			).mode,
+			wrap: true
+		});
+	} catch (error) {
+		/* empty */
+	}
 });
 
 onUnmounted(() => {
@@ -87,6 +106,7 @@ const save = async () => {
 		notifyFailed(e.message);
 	}
 };
+
 watch(
 	() => store.preview.isSaving,
 	() => {
@@ -95,17 +115,8 @@ watch(
 		}
 	}
 );
-</script>
-<style scoped lang="scss">
-.file-editor-root {
-	width: 100%;
-	height: 100%;
-}
 
-.info-content {
-	overflow-y: scroll;
-	height: 100%;
-	white-space: pre-wrap;
-	word-wrap: break-word;
-}
-</style>
+const mdContent = computed(() => {
+	return filesStore.previewItem[props.origin_id].content;
+});
+</script>

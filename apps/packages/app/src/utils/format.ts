@@ -5,7 +5,7 @@ import { i18n } from 'src/boot/i18n';
 const formatFileSize = (
 	bytes: number,
 	fixed = 2,
-	space = '',
+	space = ' ',
 	isUnit?: boolean
 ) => {
 	const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -70,3 +70,11 @@ export const stringToIntHash = (
 
 	return (result % (upperbound - lowerbound)) + lowerbound;
 };
+
+export const utf8BytesLength = (content: string) => {
+	const encoder = new TextEncoder();
+	const uint8Array = encoder.encode(content);
+	return uint8Array.length;
+};
+
+export const fileNameMaxLength = 240;

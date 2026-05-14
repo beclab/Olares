@@ -3,7 +3,7 @@
 		<div class="desktop_app_box">
 			<div
 				class="desktop_app"
-				:style="`height:${DOCKER_APP_TOTAL_HEIGHT + 230}px;`"
+				:style="`height:${DOCKER_APP_TOTAL_HEIGHT + 180}px;`"
 			>
 				<div class="desktop_user_avatar">
 					<div class="desktop_avatar" @click="openProfile">
@@ -121,9 +121,9 @@
 						<img src="../../assets/desktop/dock-notify.svg" alt="notify" />
 						<div class="badge" v-if="notificationStore.newMessage" />
 					</div>
-					<div class="dock_icon" @click="onLogout">
+					<!-- <div class="dock_icon" @click="onLogout">
 						<img src="../../assets/desktop/dock-logout.svg" alt="logout" />
-					</div>
+					</div> -->
 				</div>
 			</div>
 		</div>
@@ -131,10 +131,11 @@
 </template>
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { Loading, Notify, useQuasar } from 'quasar';
+import { Loading, useQuasar } from 'quasar';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import { DockerAppInfo, AppClickInfo } from './type/types';
 import { useTokenStore } from '../../stores/desktop/token';
-import { useAppStore } from '../../stores/desktop/app';
+import { useApplicationStore } from '../../stores/desktop/app';
 import { borderRadiusFormat } from '../../utils/desktop/utils';
 import ConfirmDialog from './components/ConfirmDialog.vue';
 import { useI18n } from 'vue-i18n';
@@ -161,7 +162,7 @@ const emits = defineEmits([
 ]);
 
 const tokenStore = useTokenStore();
-const appStore = useAppStore();
+const appStore = useApplicationStore();
 const notificationStore = useNotificationStore();
 
 const { t } = useI18n();
@@ -187,8 +188,8 @@ const onLogout = async () => {
 			const auth_url = tokenStore.getAuthURL() + '?logout=1';
 			window.location.replace(auth_url);
 		} catch (err) {
-			Notify.create({
-				type: 'negative',
+			BtNotify.show({
+				type: NotifyDefinedType.FAILED,
 				message: (err as Error).message
 			});
 		} finally {

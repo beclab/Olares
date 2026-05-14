@@ -362,16 +362,20 @@ const downloadLogs = async () => {
 	marketLogs(500)
 		.then((result) => {
 			console.log(result);
-			if (result && result.records && result.records.length > 0) {
-				const terminusStore = useTerminusStore();
-				const logContent = JSON.stringify(result.records, null, 2);
-				const blob = new Blob([logContent], {
-					type: 'text/plain;charset=utf-8'
-				});
-				saveAs(
-					blob,
-					`${terminusStore.olaresId}-${Date.now()}-market-frontend.log`
-				);
+			if (result) {
+				if (result.records && result.records.length > 0) {
+					const terminusStore = useTerminusStore();
+					const logContent = JSON.stringify(result.records, null, 2);
+					const blob = new Blob([logContent], {
+						type: 'text/plain;charset=utf-8'
+					});
+					saveAs(
+						blob,
+						`${terminusStore.olaresId}-${Date.now()}-market-frontend.log`
+					);
+				} else {
+					bus.emit('app_backend_error', 'No log records available');
+				}
 			} else {
 				bus.emit('app_backend_error', 'get log records error');
 			}

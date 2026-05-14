@@ -1,0 +1,30 @@
+@import '../app.scss';
+
+.files-global-ok-button {
+	background: $primary !important;
+	color: $grey-10 !important;
+}
+
+.q-separator--dark {
+	background: $separator !important;
+}
+
+body.body--dark {
+	background: $theme-background-dark !important;
+}
+
+body.body--light {
+	background: $theme-background-light !important;
+}
+
+.q-separator--dark {
+	background: $separator !important;
+}
+
+.q-dark {
+	background: $theme-background-dark !important;
+}
+
+.q-drawer {
+	background-color: transparent !important;
+}

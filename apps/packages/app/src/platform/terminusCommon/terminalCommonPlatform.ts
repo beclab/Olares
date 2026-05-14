@@ -46,6 +46,7 @@ import { useAppAbilitiesStore } from 'src/stores/appAbilities';
 import { watch } from 'vue';
 import { useFilesStore } from 'src/stores/files';
 import { useFilesCopyStore } from 'src/stores/files-copy';
+import { bexVaultUpdate } from 'src/utils/bexFront';
 
 interface UploadDeviceInfoDevice {
 	time: number;
@@ -165,7 +166,7 @@ export class TerminusCommonPlatform extends SubAppPlatform {
 					body.event == 'vault.org.update'
 				) {
 					if (!app.state.locked) {
-						app.synchronize();
+						this.vaultSync();
 					}
 				}
 			} else if (
@@ -173,8 +174,13 @@ export class TerminusCommonPlatform extends SubAppPlatform {
 				body.eventType == 'vault.org.update'
 			) {
 				if (!app.state.locked) {
-					app.synchronize();
+					this.vaultSync();
 				}
+			} else if (body.eventType == 'userAvatarUpdate') {
+				setTimeout(() => {
+					const termipassStore = useTermipassStore();
+					termipassStore.state.publicActions.startTerminusInfoRefresh();
+				}, 3000);
 			}
 		});
 
@@ -199,10 +205,7 @@ export class TerminusCommonPlatform extends SubAppPlatform {
 					}
 				})
 				.onOk(() => {
-					if (
-						!this.isPad &&
-						(this.quasar?.platform.is.mobile || process.env.IS_BEX)
-					) {
+					if (!this.isPad && this.quasar?.platform.is.mobile) {
 						this.router?.push({
 							path: '/change_pwd'
 						});
@@ -343,12 +346,6 @@ export class TerminusCommonPlatform extends SubAppPlatform {
 	async homeMounted(): Promise<void> {
 		busOn('appSubscribe', this.stateUpdate);
 		commonHomeMounted();
-
-		const menuStore = useMenuStore();
-		menuStore.syncInfo = {
-			syncing: app.state.syncing || false,
-			lastSyncTime: date.formatDate(app.state.lastSync, 'HH:mm:ss')
-		};
 
 		const termipassState = useTermipassStore();
 		termipassState.state.publicActions.resetCheckEnable(true);
@@ -571,5 +568,13 @@ export class TerminusCommonPlatform extends SubAppPlatform {
 				}
 				this.currentMessage = undefined;
 			});
+	}
+
+	async vaultSync() {
+		app.synchronize().then(() => {
+			setTimeout(() => {
+				bexVaultUpdate();
+			}, 2000);
+		});
 	}
 }

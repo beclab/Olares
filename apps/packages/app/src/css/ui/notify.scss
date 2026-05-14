@@ -1,0 +1,46 @@
+.success-notify-class {
+  border: 1px solid #29cc5f !important;
+  border-radius: 20px !important;
+  background-image: linear-gradient(to right, #29cc5f1a, #29cc5f1a) !important;
+}
+
+.failed-notify-class {
+  border: 1px solid #ff4d4d !important;
+  border-radius: 8px !important;
+  background-image: linear-gradient(to right, #e52e391a, #e52e391a) !important;
+  // background-color: red;
+  color: green;
+}
+
+.warning-notify-class {
+  border: 1px solid #febe01 !important;
+  border-radius: 8px !important;
+  background-image: linear-gradient(to right, #febe011a, #febe011a) !important;
+}
+
+.loading-notify-class {
+  border: 1px solid #ebebeb !important;
+  border-radius: 8px !important;
+  background-image: linear-gradient(to right, #f6f6f6, #f6f6f6) !important;
+}
+
+.progress-notify-class {
+  border: 1px solid #3377ff !important;
+  border-radius: 8px !important;
+  background-image: linear-gradient(to right, #3377ff1a, #3377ff1a) !important;
+}
+
+.q-notification {
+  word-break: break-all !important;
+}
+
+// Keep bottom-positioned notifications above the Android system navigation bar
+// when the WebView is in edge-to-edge mode. Falls back to 0 on platforms
+// without safe-area insets (desktop, iOS without notch, etc.).
+.q-notifications__list--bottom {
+  padding-bottom: env(safe-area-inset-bottom) !important;
+}
+
+.q-notifications__list--top {
+  padding-top: env(safe-area-inset-top) !important;
+}

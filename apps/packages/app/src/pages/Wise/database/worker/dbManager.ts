@@ -192,7 +192,8 @@ export class DBManager {
 						'algorithms',
 						'extra',
 						'entries',
-						'notes'
+						'notes',
+						'task_ids'
 					];
 					if (jsonColumns.includes(col)) {
 						try {

@@ -1,25 +1,10 @@
 <template>
-	<adaptive-layout auto>
-		<template v-slot:mobile>
-			<div
-				class="mobile-status-circle row items-center justify-center"
-				:style="{
-					'--top': size - 6 + 'px',
-					'--left': size - 6 + 'px'
-				}"
-			>
-				<div class="mobile-status-content" :class="backgroundClass" />
-			</div>
-		</template>
-		<template v-slot:pc>
-			<div class="row items-center">
-				<div class="pc-status-circle" :class="backgroundClass" />
-				<div class="text-body2 pc-application-status">
-					{{ appStatusText }}
-				</div>
-			</div>
-		</template>
-	</adaptive-layout>
+	<div class="row items-center">
+		<div class="pc-status-circle" :class="backgroundClass" />
+		<div class="text-caption text-ink-3 pc-application-status">
+			{{ appStatusText }}
+		</div>
+	</div>
 </template>
 
 <script setup lang="ts">
@@ -99,16 +84,13 @@ const appStatusText = computed(() => {
 
 <style scoped lang="scss">
 .pc-status-circle {
-	width: 12px;
-	height: 12px;
-	margin-right: 6px;
+	width: 8px;
+	height: 8px;
+	margin-right: 4px;
 	border-radius: 50%;
 }
 .pc-application-status {
-	text-align: right;
-	color: $ink-2;
 	text-transform: capitalize;
-	margin-right: 4px;
 }
 
 .mobile-status-circle {

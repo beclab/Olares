@@ -9,6 +9,7 @@ import {
 	SSOToken
 } from '@bytetrade/core';
 import { MENU_TYPE, MenuItem, OLARES_ROLE, useMenuItem } from 'src/constant';
+import { Cookies } from 'quasar';
 
 export type UserSate = {
 	terminus: OlaresInfo;
@@ -112,6 +113,9 @@ export const useAdminStore = defineStore('admin', {
 					]
 				];
 			}
+		},
+		islocal(): boolean {
+			return window.location.hostname.endsWith('olares.local');
 		}
 	},
 
@@ -212,6 +216,26 @@ export const useAdminStore = defineStore('admin', {
 			});
 
 			return sortedRoles[0] as OLARES_ROLE;
+		},
+		async logout() {
+			try {
+				const tokenStore = useTokenStore();
+				await axios.post(tokenStore.url + '/api/logout');
+				Cookies.remove('auth_token');
+			} catch (e) {
+				return e;
+			}
+		},
+
+		getAuthURL() {
+			let url = window.location.protocol + '//' + 'auth.';
+			if (this.islocal) {
+				url = url + this.olaresId.split('@')[0] + '.olares.local';
+			} else {
+				const name = this.olaresId.replace('@', '.');
+				url = url + name;
+			}
+			return url;
 		}
 	}
 });

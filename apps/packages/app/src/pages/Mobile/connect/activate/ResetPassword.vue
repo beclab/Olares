@@ -125,16 +125,29 @@ const onConfirm = async () => {
 			user.access_token,
 			userStore.getUserTerminusInfo(user.id).osVersion
 		);
-		await loginTerminus(user, newPassword, true);
 	} catch (e) {
 		$q.loading.hide();
-		notifyFailed(e.message);
+		notifyFailed(
+			t('Password reset failed: {reason}', {
+				reason: e.message
+			})
+		);
+		return;
+	}
+
+	try {
+		await loginTerminus(user, newPassword, true);
+	} catch (error) {
+		$q.loading.hide();
+		notifyFailed(t('Re-login failed: {reason}', { reason: error.message }));
+		router.push({ path: '/ConnectTerminus' });
 		return;
 	}
 
 	try {
 		user.setup_finished = true;
 		user.wizard = '';
+		user.terminus_activate_status = 'completed';
 		const olaresInfo = userStore.getUserTerminusInfo(user.id);
 		const needResetSSH = await needResetSSHPassword();
 		if (needResetSSH) {

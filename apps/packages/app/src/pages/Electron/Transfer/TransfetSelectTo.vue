@@ -19,28 +19,16 @@ import DialogIndex from './../../../components/FilesDialog/DialogIndex.vue';
 import { FilePath, PickType, useFilesStore } from '../../../stores/files';
 import { computed, PropType, ref } from 'vue';
 import { DriveType } from '../../../utils/interface/files';
-import { filesIsV2 } from 'src/api';
 
 const props = defineProps({
 	origins: {
 		type: Array as PropType<DriveType[]>,
 		required: false,
 		default: () => {
-			if (filesIsV2()) {
-				return [
-					DriveType.Drive,
-					// 0730 hide sync
-					// DriveType.Sync,
-					DriveType.External,
-					DriveType.Cache,
-					DriveType.Data,
-					DriveType.GoogleDrive
-				];
-			}
 			return [
 				DriveType.Drive,
-				DriveType.External,
 				DriveType.Sync,
+				DriveType.External,
 				DriveType.Cache,
 				DriveType.Data,
 				DriveType.GoogleDrive
@@ -66,11 +54,15 @@ const selectFolder = () => {
 			origins: props.origins,
 			masterNode: props.masterNode
 		}
-	}).onOk(async (value: FilePath) => {
-		console.log(value);
-		filePath.value = value;
-		emits('setSelectPath', value);
-	});
+	})
+		.onOk(async (value: FilePath) => {
+			console.log(value);
+			filePath.value = value;
+			emits('setSelectPath', value);
+		})
+		.onCancel(() => {
+			emits('setSelectCancel');
+		});
 };
 
 const filePath = ref<FilePath | undefined>(filesStore.currentPath[1]);
@@ -86,7 +78,7 @@ defineExpose({
 	selectFolder
 });
 
-const emits = defineEmits(['setSelectPath']);
+const emits = defineEmits(['setSelectPath', 'setSelectCancel']);
 </script>
 
 <style scoped lang="scss">

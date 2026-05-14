@@ -96,7 +96,7 @@ const onError = () => {
 	}
 
 	.bottom-view-line {
-		background-color: $grey-2;
+		background-color: $separator;
 		height: 1px;
 		width: 100%;
 	}

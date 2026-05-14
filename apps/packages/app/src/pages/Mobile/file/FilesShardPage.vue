@@ -90,7 +90,6 @@ import {
 } from './../../../stores/files';
 import TerminusTitleBar from '../../../components/common/TerminusTitleBar.vue';
 import { DriveType } from '../../../utils/interface/files';
-import { filesIsV2 } from 'src/api';
 import { FileSharedService } from 'src/platform/interface/capacitor/plugins/share';
 
 const props = defineProps({
@@ -98,10 +97,7 @@ const props = defineProps({
 		type: Array as PropType<DriveType[]>,
 		required: false,
 		default: () => {
-			if (filesIsV2()) {
-				return [DriveType.Drive, DriveType.External];
-			}
-			return [DriveType.Drive, DriveType.External, DriveType.Sync];
+			return [DriveType.Drive, DriveType.External];
 		}
 	},
 	origin_id: {

@@ -126,7 +126,9 @@
 				>
 				</q-input>
 			</card-form-item>
-
+			<card-form-item name="SSH Enable" :required="false" tip="SSH Enable">
+				<q-toggle color="teal-6" v-model="imageConfig.sshEnable" />
+			</card-form-item>
 			<card-form-item name="GPU" :required="false" tip="GPU">
 				<q-toggle color="teal-6" v-model="imageConfig.requiredGpu" />
 			</card-form-item>
@@ -204,7 +206,8 @@ const imageConfig = reactive({
 	gpuVendor: VENDOR.NVIDIA,
 	requiredMemory: '',
 	requiredDisk: '',
-	ports: ''
+	ports: '',
+	sshEnable: false
 });
 
 const updateEnv = (value) => {

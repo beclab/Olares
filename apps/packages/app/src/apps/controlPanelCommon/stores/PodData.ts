@@ -1,19 +1,22 @@
 import { PodsMapper } from '@apps/control-panel-common/src/utils/object.mapper';
 import { defineStore } from 'pinia';
-import { get, isEmpty, isEqual } from 'lodash';
-import { t } from '@apps/dashboard/src/boot/i18n';
+import { get, isEmpty } from 'lodash';
+import { t, i18n } from 'src/boot/control-hub-i18n';
 import { getLocalTime } from '@apps/control-panel-common/src/utils';
 
 export const UsePod = defineStore('poddata', {
-	state: (): { detail: any; data: any } => ({
-		detail: undefined,
+	state: (): { data: any } => ({
 		data: undefined
 	}),
+	getters: {
+		detail: (state) => {
+			const _locale = i18n.global.locale.value;
+			return getAttrs(state.data);
+		}
+	},
 	actions: {
 		setDetail(data: any) {
 			const detail = PodsMapper(data);
-			const statusList = getAttrs(detail);
-			this.detail = statusList;
 			this.data = detail;
 		}
 	}

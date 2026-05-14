@@ -5,6 +5,8 @@
 			image="settings/imgs/root/search.svg"
 			:label="t('Search Index')"
 			:description="t('Rebuilds search index using the latest settings.')"
+			:button="t('Rebuild')"
+			@on-button-click="rebuildTask"
 		>
 			<template v-slot:status>
 				<div
@@ -20,18 +22,20 @@
 					{{ t('Completed') }}
 				</div>
 			</template>
-			<template v-slot:button>
-				<q-btn
-					dense
-					class="rebuild-button q-px-md q-py-sm text-body3 text-ink-2"
-					:label="t('Rebuild')"
-					no-caps
-					@click="rebuildTask"
-				/>
-			</template>
 		</app-menu-feature>
 
-		<module-title class="q-mt-xl">
+		<div
+			v-if="showFailList"
+			class="text-body3 text-ink-3 row justify-start items-center"
+		>
+			<q-icon class="q-ml-sm" name="sym_r_report" size="16px" />
+			<span>{{ t('Failed to create full-text index for some files.') }}</span>
+			<span class="text-info cursor-pointer" @click="viewFailedFileList">
+				{{ t('Click to view the list') }}
+			</span>
+		</div>
+
+		<module-title class="q-mt-lg">
 			<div class="row justify-start items-center">
 				<div>{{ t('Excluded Files') }}</div>
 				<q-icon size="16px" name="sym_r_help" class="text-ink-3 q-ml-xs">
@@ -55,13 +59,16 @@
 		<bt-list v-if="excludedFiles.length > 0">
 			<bt-form-item
 				v-for="(item, index) in excludedFiles"
-				:key="item"
-				:title="item"
+				:key="item.pattern + '-' + index"
 				:margin-top="false"
 				:chevron-right="false"
 				:widthSeparator="index !== excludedFiles.length - 1"
 			>
+				<template #title>
+					<excluded-pattern-title :text="item.pattern" />
+				</template>
 				<q-btn
+					v-if="!item.must"
 					class="btn-size-lg"
 					icon="sym_r_delete"
 					text-color="ink-1"
@@ -162,8 +169,7 @@
 			ref="transferSelectRef"
 			class="q-mt-xs"
 			@setSelectPath="setSelectPath"
-			:origins="BackupPathOrigins"
-			:master-node="true"
+			:origins="SearchPathOrigins"
 		>
 			<div />
 		</transfet-select-to>
@@ -177,11 +183,16 @@ import AppMenuFeature from 'src/components/settings/AppMenuFeature.vue';
 import BtFormItem from 'src/components/settings/base/BtFormItem.vue';
 import ModuleTitle from 'src/components/settings/ModuleTitle.vue';
 import BtList from 'src/components/settings/base/BtList.vue';
-import { notifyFailed, notifySuccess } from 'src/utils/settings/btNotify';
+import ExcludedPatternTitle from 'src/pages/settings/Search/ExcludedPatternTitle.vue';
+import { notifySuccess, notifyFailed } from 'src/utils/settings/btNotify';
 import { onMounted, onUnmounted, ref } from 'vue';
-import { BackupPathOrigins } from 'src/constant';
+import { ExcludePatternItem, SearchPathOrigins } from 'src/constant';
 import { FilePath } from 'src/stores/files';
 import { dataAPIs } from 'src/api/files/v2';
+import { decodeUrl } from 'src/utils/encode';
+import { BtDialog } from '@bytetrade/ui';
+import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import {
 	addExcludePattern,
 	addSearchDirectories,
@@ -192,22 +203,27 @@ import {
 	getSearchTaskStatus,
 	rebuildSearchTask
 } from 'src/api/settings/search';
-import { BtDialog } from '@bytetrade/ui';
-import { useI18n } from 'vue-i18n';
-import { decodeUrl } from 'src/utils/encode';
 
+const MAX_EXCLUDED_PATTERN_LENGTH = 1024;
+
+const showFailList = ref(false);
 const { t } = useI18n();
-const excludedFiles = ref<string[]>([]);
+const router = useRouter();
+const excludedFiles = ref<ExcludePatternItem[]>([]);
 const fullSearchPaths = ref<string[]>([]);
 type SearchTaskStatus = 'running' | 'completed';
 const taskStatus = ref<SearchTaskStatus>('running');
-let taskStatusTimer: NodeJS.Timeout;
+let taskStatusTimer: ReturnType<typeof setInterval> | null = null;
 const transferSelectRef = ref();
 
 const handleEmptyComponentBtnClick = () => {
 	if (transferSelectRef.value) {
 		transferSelectRef.value.selectFolder();
 	}
+};
+
+const viewFailedFileList = () => {
+	router.push('/search/failed-files');
 };
 
 onMounted(async () => {
@@ -224,23 +240,45 @@ onUnmounted(() => {
 });
 
 const fetchSearchTaskStatus = async () => {
-	taskStatus.value = await getSearchTaskStatus();
-	// if (taskStatus.value === 'running') {
 	if (taskStatusTimer) {
 		clearInterval(taskStatusTimer);
+		taskStatusTimer = null;
 	}
+
+	const applyMergedPayload = (raw: unknown) => {
+		const row = (raw as { data?: Record<string, unknown> })?.data ?? raw;
+		const { status, full_content_task_error } = row as {
+			status: SearchTaskStatus;
+			full_content_task_error?: boolean;
+		};
+		taskStatus.value = status;
+		showFailList.value = Boolean(full_content_task_error);
+	};
+
+	try {
+		const res = await getSearchTaskStatus();
+		applyMergedPayload(res);
+	} catch (error) {
+		console.error('fetchSearchTaskStatus', error);
+		return;
+	}
+
+	if (taskStatus.value !== 'running') {
+		return;
+	}
+
 	taskStatusTimer = setInterval(async () => {
 		try {
-			taskStatus.value = await getSearchTaskStatus();
+			const res = await getSearchTaskStatus();
+			applyMergedPayload(res);
 			if (taskStatus.value === 'completed') {
-				clearInterval(taskStatusTimer);
+				clearInterval(taskStatusTimer!);
 				taskStatusTimer = null;
 			}
 		} catch (error) {
 			console.error('fetchSearchTaskStatus interval', error);
 		}
 	}, 10 * 1000);
-	// }
 };
 
 const fetchExcludedPatterns = async () => {
@@ -253,7 +291,8 @@ const fetchExcludedPatterns = async () => {
 
 const fetSearchDirectories = async () => {
 	try {
-		fullSearchPaths.value = await getSearchDirectories();
+		const list = (await getSearchDirectories()) as unknown as string[];
+		fullSearchPaths.value = list;
 	} catch (error) {
 		console.error('e===>', error);
 	}
@@ -275,32 +314,49 @@ const addPattern = () => {
 		cancel: true,
 		prompt: {
 			model: '',
-			type: 'text', // optional
-			name: t('Excluded File Patterns'),
-			placeholder: t('Excluded File Patterns')
+			type: 'text',
+			name: t('Excluded file patterns'),
+			placeholder: t('Excluded file patterns'),
+			isValid: (value: string) => {
+				const trimmed = String(value ?? '').trim();
+				if (!trimmed) {
+					notifyFailed(t('Excluded pattern cannot be empty or only spaces'));
+					return false;
+				}
+				if (trimmed.length > MAX_EXCLUDED_PATTERN_LENGTH) {
+					notifyFailed(
+						t('Excluded pattern is too long (max {max} characters)', {
+							max: MAX_EXCLUDED_PATTERN_LENGTH
+						})
+					);
+					return false;
+				}
+				return true;
+			}
 		},
 		okText: t('base.confirm')
 	})
 		.then((res) => {
-			if (res) {
-				addExcludePattern([res])
-					.then(() => {
-						notifySuccess('success');
-						fetchExcludedPatterns();
-					})
-					.catch((error) => {
-						console.error('e===>', error);
-					});
-			} else {
-				console.log('click cancel');
+			if (!res) {
+				return;
 			}
+			const trimmed = String(res).trim();
+			addExcludePattern([trimmed])
+				.then(async () => {
+					notifySuccess('success');
+					await fetchExcludedPatterns();
+					await fetchSearchTaskStatus();
+				})
+				.catch((error) => {
+					console.error('e===>', error);
+				});
 		})
 		.catch((err) => {
-			console.log('click ok', err);
+			console.log('click error', err);
 		});
 };
 
-const deletePattern = (pattern: string) => {
+const deletePattern = (item: ExcludePatternItem) => {
 	BtDialog.show({
 		title: t('Delete pattern'),
 		message: t(
@@ -312,10 +368,11 @@ const deletePattern = (pattern: string) => {
 	})
 		.then((res) => {
 			if (res) {
-				deleteExcludePattern([pattern])
-					.then(() => {
+				deleteExcludePattern([item.pattern])
+					.then(async () => {
 						notifySuccess('success');
-						fetchExcludedPatterns();
+						await fetchExcludedPatterns();
+						await fetchSearchTaskStatus();
 					})
 					.catch((error) => {
 						console.error('e===>', error);
@@ -342,9 +399,10 @@ const deleteDirectory = (directory: string) => {
 		.then((res) => {
 			if (res) {
 				deleteSearchDirectories([directory])
-					.then(() => {
+					.then(async () => {
 						notifySuccess('success');
-						fetSearchDirectories();
+						await fetSearchDirectories();
+						await fetchSearchTaskStatus();
 					})
 					.catch((error) => {
 						console.error('e===>', error);
@@ -365,9 +423,10 @@ const setSelectPath = async (fileSavePath: FilePath) => {
 	// console.log(decodeUrl(path));
 	if (path) {
 		addSearchDirectories([path])
-			.then(() => {
+			.then(async () => {
 				notifySuccess('success');
-				fetSearchDirectories();
+				await fetSearchDirectories();
+				await fetchSearchTaskStatus();
 			})
 			.catch((error) => {
 				console.error('e===>', error);

@@ -1,10 +1,31 @@
 <template>
-	<page-title-component :show-back="true" :title="t('Endpoint management')">
+	<page-title-component :show-back="true" :title="t('Mirror management')">
+		<template v-slot:end>
+			<div
+				v-if="deviceStore.isMobile"
+				class="row justify-center items-center"
+				@click="addRegistry()"
+			>
+				<q-icon name="sym_r_add" color="ink-1" size="32px" />
+				<div class="text-body3 add-title" v-if="!deviceStore.isMobile">
+					{{ t('Add mirror') }}
+				</div>
+			</div>
+		</template>
 	</page-title-component>
 	<bt-scroll-area class="nav-height-scroll-area-conf">
 		<AdaptiveLayout>
 			<template v-slot:pc>
-				<q-list class="q-py-md q-list-class">
+				<bt-list>
+					<bt-form-item
+						:title="t('Repo name')"
+						:margin-top="false"
+						:chevron-right="false"
+						:data="registry"
+						:widthSeparator="false"
+					/>
+				</bt-list>
+				<q-list class="q-mt-lg q-py-md q-list-class">
 					<div
 						v-if="endpoints && endpoints.length > 0"
 						class="column item-margin-left item-margin-right"
@@ -20,17 +41,22 @@
 							hide-pagination
 							hide-selected-banner
 							hide-bottom
+							wrap-cells
 							:rowsPerPageOptions="[0]"
 						>
 							<template v-slot:body-cell-url="props">
-								<q-td :props="props" class="text-ink-1 text-body1">
+								<q-td
+									:props="props"
+									class="text-ink-1 text-body1 ellipsis"
+									style="max-width: 220px"
+								>
 									{{ props.row }}
 								</q-td>
 							</template>
 							<template v-slot:body-cell-sorting="props">
 								<q-td :props="props" class="text-ink-1 text-body1 items-center">
 									<!-- {{ props.row }} -->
-									<div class="row">
+									<div class="row" style="min-width: 40px">
 										<bt-action-icon
 											name="sym_r_keyboard_arrow_up"
 											:icon-size="16"
@@ -47,15 +73,14 @@
 								</q-td>
 							</template>
 							<template v-slot:body-cell-actions="props">
-								<q-td
-									:props="props"
-									class="text-ink-1 text-body1 row items-center justify-end"
-								>
-									<bt-action-icon
-										name="sym_r_delete"
-										:icon-size="20"
-										@click.stop="removeConfirm(props.row)"
-									/>
+								<q-td :props="props" class="text-ink-1 text-body1">
+									<div class="row items-center justify-end">
+										<bt-action-icon
+											name="sym_r_delete"
+											:icon-size="20"
+											@click.stop="removeConfirm(props.row)"
+										/>
+									</div>
 								</q-td>
 							</template>
 						</q-table>
@@ -67,6 +92,18 @@
 						:empty-image-top="40"
 					/>
 				</q-list>
+
+				<div class="row justify-end items-center q-my-lg">
+					<div
+						class="add-btn row justify-end items-center"
+						@click="addRegistry()"
+					>
+						<q-icon name="sym_r_add" color="ink-1" size="20px" />
+						<div class="text-body3 add-title" v-if="!deviceStore.isMobile">
+							{{ t('Add mirror') }}
+						</div>
+					</div>
+				</div>
 			</template>
 			<template v-slot:mobile>
 				<div v-if="endpoints && endpoints.length > 0">
@@ -132,35 +169,34 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import ReminderDialogComponent from '../../../../components/settings/ReminderDialogComponent.vue';
+import EditMirrorDialog from 'src/pages/settings/Developer/pages/dialog/EditMirrorDialog.vue';
+import BtActionIcon from '../../../../components/settings/base/BtActionIcon.vue';
 import PageTitleComponent from 'src/components/settings/PageTitleComponent.vue';
-import { useI18n } from 'vue-i18n';
-import AdaptiveLayout from 'src/components/settings/AdaptiveLayout.vue';
 import BtGridItem from '../../../../components/settings/base/BtGridItem.vue';
+import AdaptiveLayout from 'src/components/settings/AdaptiveLayout.vue';
+import EmptyComponent from 'src/components/settings/EmptyComponent.vue';
 import BtGrid from 'src/components/settings/base/BtGrid.vue';
 
-import EmptyComponent from 'src/components/settings/EmptyComponent.vue';
-import { useMirrorStore } from '../../../../stores/settings/mirror';
-import BtActionIcon from '../../../../components/settings/base/BtActionIcon.vue';
-
+import { notifyFailed, notifySuccess } from 'src/utils/settings/btNotify';
+import { useDeviceStore } from 'src/stores/settings/device';
+import { useMirrorStore } from 'src/stores/settings/mirror';
 import { useRoute, useRouter } from 'vue-router';
-import ReminderDialogComponent from '../../../../components/settings/ReminderDialogComponent.vue';
+import { onMounted, ref } from 'vue';
 import { useQuasar } from 'quasar';
-import { notifySuccess } from '../../../../utils/settings/btNotify';
+import { useI18n } from 'vue-i18n';
+import BtList from 'src/components/settings/base/BtList.vue';
+import BtFormItem from 'src/components/settings/base/BtFormItem.vue';
+import cloneDeep from 'lodash/cloneDeep';
 
 const { t } = useI18n();
-
-const mirrorStore = useMirrorStore();
-
-const route = useRoute();
-
-const registry = ref((route.query.registry as string) || '');
-
-const endpoints = ref([] as string[]);
-
 const $q = useQuasar();
-
+const route = useRoute();
 const router = useRouter();
+const deviceStore = useDeviceStore();
+const mirrorStore = useMirrorStore();
+const endpoints = ref([] as string[]);
+const registry = ref((route.query.registry as string) || '');
 
 onMounted(async () => {
 	endpoints.value = await mirrorStore.getRegistryEndpoint(registry.value);
@@ -232,9 +268,58 @@ const columns: any = [
 		sortable: false
 	}
 ];
+
+const addRegistry = () => {
+	$q.dialog({
+		component: EditMirrorDialog,
+		componentProps: {}
+	}).onOk(async (data: { endpoint: string }) => {
+		const currentEndpoints = endpoints.value || [];
+		if (currentEndpoints.includes(data.endpoint)) {
+			notifySuccess(t('successful'));
+			return;
+		}
+		const newEndpoints = cloneDeep(currentEndpoints);
+		newEndpoints.push(data.endpoint);
+		try {
+			endpoints.value = await mirrorStore.putRegistryEndpoint(
+				registry.value,
+				newEndpoints
+			);
+			notifySuccess(t('successful'));
+		} catch (error) {
+			// notifyFailed(error);
+			if (
+				error.response &&
+				error.response.data &&
+				error.response.data.message
+			) {
+				notifyFailed(error.response.data.message);
+			} else {
+				notifyFailed(error);
+			}
+		}
+	});
+};
 </script>
 
 <style scoped lang="scss">
+.add-btn {
+	border-radius: 8px;
+	padding: 6px 12px;
+	border: 1px solid $separator;
+	cursor: pointer;
+	text-decoration: none;
+
+	.add-title {
+		color: $ink-2;
+	}
+}
+
+.add-btn:hover {
+	background-color: $background-3;
+}
+
 ::v-deep(.q-table tbody td) {
 	font-size: 16px;
 }

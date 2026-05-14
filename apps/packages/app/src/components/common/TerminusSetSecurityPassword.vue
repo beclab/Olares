@@ -34,8 +34,7 @@ const { t, userStore, changePassword } = useTerminusSetSecurityPassword();
 
 <style lang="scss" scoped>
 .adminBtn {
-	border: 1px solid $yellow;
-	background-color: $yellow;
+	background-color: $primary;
 	display: inline-block;
 	color: $grey-10;
 	padding: 7px 12px;
@@ -43,7 +42,7 @@ const { t, userStore, changePassword } = useTerminusSetSecurityPassword();
 	cursor: pointer;
 
 	&:hover {
-		background-color: $yellow-3;
+		background-color: $theme-primary-hover;
 	}
 }
 </style>

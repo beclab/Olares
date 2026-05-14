@@ -7,6 +7,7 @@
 		:cancel="t('buttons.cancel')"
 		:size="$q.platform.is.mobile ? 'small' : 'medium'"
 		:platform="$q.platform.is.mobile ? 'mobile' : 'web'"
+		:okDisabled="!name"
 		@onSubmit="submit"
 		@onHide="handleClose"
 		@onCancel="handleClose"
@@ -54,7 +55,6 @@ const CustomRef = ref();
 
 const submit = async () => {
 	if (!name.value) {
-		notifyWarning('The input content cannot be empty!');
 		return false;
 	}
 
@@ -65,6 +65,10 @@ const submit = async () => {
 		});
 
 		return false;
+	}
+
+	if (loading.value) {
+		return;
 	}
 
 	// const dataAPI = dataAPIs();
@@ -110,8 +114,24 @@ nextTick(() => {
 		border: 1px solid $input-stroke;
 		background-color: transparent;
 		&:focus {
-			border: 1px solid $yellow-disabled;
+			border: 1px solid $theme-input-focus-border;
 		}
+	}
+
+	.input--block {
+		margin-bottom: 0.5em;
+		display: block;
+		width: 100%;
+		height: 36px;
+		padding: 0 10px;
+	}
+
+	/*will be remove*/
+	input::placeholder {
+		/*text-align: left !important;*/
+		font-size: 14px !important;
+		font-weight: 400 !important;
+		/* color: #adadad !important; */
 	}
 }
 </style>

@@ -17,10 +17,16 @@
 			<span class="text-body2 text-ink-1" v-else>{{ $t('files.lonely') }}</span>
 		</div>
 
-		<div v-else id="listing" ref="listing" class="list file-icons">
+		<div
+			v-else
+			id="listing"
+			ref="listing"
+			class="list file-icons"
+			:class="{ 'col-grid': !!colResize }"
+		>
 			<BtScrollArea :style="`height: 100%`">
 				<div class="common-div">
-					<files-table-header :origin_id="origin_id" />
+					<files-table-header :origin_id="origin_id" :col-grid="!!colResize" />
 
 					<ListingItem
 						v-for="item in filesStore.currentDirItems(origin_id)"
@@ -48,11 +54,17 @@
 </template>
 
 <script lang="ts" setup>
-import { PropType } from 'vue';
-import { useFilesStore, PickType } from './../../stores/files';
+import { PropType, inject } from 'vue';
+import { useFilesStore, PickType } from 'src/stores/files';
 import ListingItem from '../../components/files/ListingItem.vue';
 import FilesTableHeader from '../../components/files/FilesTableHeader.vue';
 import { stringToBase64 } from '@didvault/sdk/src/core';
+import {
+	COL_RESIZE_KEY,
+	ColResizeContext
+} from 'src/composables/useColumnResize';
+
+const colResize = inject<ColResizeContext | null>(COL_RESIZE_KEY, null);
 
 const filesStore = useFilesStore();
 

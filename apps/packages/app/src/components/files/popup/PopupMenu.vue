@@ -41,6 +41,7 @@ import InfoDialog from '../prompts/InfoDialog.vue';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { notifyFailed } from 'src/utils/notifyRedefinedUtil';
+import { SharePermission } from 'src/utils/interface/share';
 
 const props = defineProps({
 	item: {
@@ -77,7 +78,6 @@ const showPopupProxy = (value: boolean) => {
 	if (value) {
 		onBeforeShow();
 	}
-
 	emits('showPopupProxy', value);
 };
 
@@ -103,6 +103,28 @@ const onBeforeShow = async () => {
 
 const onBeforeShowDrive = async () => {
 	menuList.value = popupMenu.filter((e) => {
+		if (
+			e.action == OPERATE_ACTION.DELETE ||
+			e.action == OPERATE_ACTION.RENAME
+		) {
+			const permission =
+				filesStore.currentFileList[props.origin_id]?.permission;
+			if (permission && permission == SharePermission.View) {
+				return false;
+			}
+			const hasSelected = filesStore.currentFileList[
+				props.origin_id
+			]?.items?.filter((item) => {
+				return filesStore.selected[props.origin_id].includes(item.index);
+			});
+			const hasSameValue = hasSelected?.find((item) =>
+				operateinStore.isDisableMenuItem(item.name, route.path)
+			);
+			if (hasSameValue) {
+				return false;
+			}
+		}
+
 		return (
 			(e.action === OPERATE_ACTION.RENAME &&
 				filesStore.selected[props.origin_id] &&
@@ -196,10 +218,8 @@ const checkShardUser = () => {
 };
 
 const handleEvent = async (action: OPERATE_ACTION, e: any) => {
-	const path = '/';
 	switch (action) {
 		case OPERATE_ACTION.SHARE_WITH:
-			console.log('shareRepoInfo', props.item);
 			filesStore.shareRepoInfo = props.item as any;
 			dataStore.showHover('share-internal-dialog');
 			break;
@@ -213,19 +233,19 @@ const handleEvent = async (action: OPERATE_ACTION, e: any) => {
 			break;
 		case OPERATE_ACTION.UNSYNCHRONIZE:
 			if ($q.platform.is.electron && props.item) {
-				if (
-					menuStore.syncReposLastStatusMap[props.item.id] &&
-					(menuStore.syncReposLastStatusMap[props.item.id].status ==
-						SYNC_STATE.ING ||
-						menuStore.syncReposLastStatusMap[props.item.id].status ==
-							SYNC_STATE.WAITING ||
-						menuStore.syncReposLastStatusMap[props.item.id].status ==
-							SYNC_STATE.INIT)
-				) {
-					notifyFailed(t('Synchronizing, please try again later.'));
-				} else {
-					window.electron.api.files.repoRemoveSync(props.item.id);
-				}
+				// if (
+				// 	menuStore.syncReposLastStatusMap[props.item.id] &&
+				// 	(menuStore.syncReposLastStatusMap[props.item.id].status ==
+				// 		SYNC_STATE.ING ||
+				// 		menuStore.syncReposLastStatusMap[props.item.id].status ==
+				// 			SYNC_STATE.WAITING ||
+				// 		menuStore.syncReposLastStatusMap[props.item.id].status ==
+				// 			SYNC_STATE.INIT)
+				// ) {
+				// 	notifyFailed(t('Synchronizing, please try again later.'));
+				// } else {
+				window.electron.api.files.repoRemoveSync(props.item.id);
+				// }
 			}
 			break;
 		case OPERATE_ACTION.SYNC_IMMEDIATELY:
@@ -243,13 +263,7 @@ const handleEvent = async (action: OPERATE_ACTION, e: any) => {
 			break;
 
 		case OPERATE_ACTION.ATTRIBUTES:
-			// dataStore.showHover('info');
 			syncRepoInfo();
-
-			break;
-
-		case OPERATE_ACTION.EXIT_SHARING:
-			deleteShareRepo();
 			break;
 
 		default:
@@ -349,57 +363,6 @@ const syncRepoInfo = () => {
 		}).onOk(async () => {
 			console.log('ok');
 		});
-	} catch (error) {
-		return false;
-	}
-};
-
-const deleteShareRepo = async () => {
-	const cur_item = props.item;
-	if (!cur_item?.repo_id) {
-		return false;
-	}
-
-	try {
-		BtDialog.show({
-			title: t('files_popup_menu.exit_sharing'),
-			message: t('exit_sharing_message'),
-			okStyle: {
-				background: 'yellow-default',
-				color: '#1F1F1F'
-			},
-			cancel: true,
-			okText: t('base.confirm'),
-			cancelText: t('base.cancel')
-		})
-			.then(async (res: any) => {
-				if (res) {
-					let path = '';
-					if (cur_item?.share_type === 'personal') {
-						path = `seahub/api/v2.1/shared-repos/${cur_item.repo_id}/?share_type=${cur_item.share_type}&user=${cur_item.user_email}`;
-					} else {
-						path = `seahub/api2/beshared-repos/${cur_item?.repo_id}/?share_type=personal&from=${cur_item?.owner_email}`;
-					}
-					console.log('deleteShareRepo path', path);
-
-					await seahub().deleteRepo(path);
-
-					const curRouteRepoId = getParams(route.fullPath, 'id');
-					if (curRouteRepoId === cur_item?.repo_id && cur_item?.owner_email) {
-						if (filesStore.backStack[props.origin_id].length > 0) {
-							filesStore.back(props.origin_id);
-						} else {
-							router.push({
-								path: operateinStore.defaultPath
-							});
-						}
-					}
-					filesStore.getMenu();
-				}
-			})
-			.catch((err: Error) => {
-				console.log('click cancel', err);
-			});
 	} catch (error) {
 		return false;
 	}

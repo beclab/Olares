@@ -1,0 +1,23 @@
+services:
+  web:
+    container_name: web
+    image: quay.io/kompose/web
+    ports:
+      - '8080:8080'
+    environment:
+      - GET_HOSTS_FROM=dns
+    labels:
+      olares.service.type: Entrance # Identifies the app entrance
+
+  redis-leader:
+    container_name: redis-leader
+    image: redis
+    ports:
+      - '6379'
+
+  redis-replica:
+    container_name: redis-replica
+    image: redis
+    ports:
+      - '6379'
+    command: redis-server --replicaof redis-leader 6379 --dir /tmp

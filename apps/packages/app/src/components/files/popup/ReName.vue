@@ -6,6 +6,7 @@
 		:cancel="t('cancel')"
 		:ok-loading="submitLoading ? t('loading') : false"
 		size="medium"
+		:okDisabled="!name"
 		@onSubmit="submit"
 	>
 		<div
@@ -31,6 +32,7 @@ import { useFilesStore } from '../../../stores/files';
 import { DriveType } from '../../../utils/interface/files';
 
 import { useI18n } from 'vue-i18n';
+import { busEmit } from 'src/utils/bus';
 
 const props = defineProps({
 	item: {
@@ -64,7 +66,7 @@ const submit = async () => {
 		await dataAPI.renameRepo(props.item, name.value);
 		submitLoading.value = false;
 		CustomRef.value.onDialogOK();
-		await filesStore.getMenu();
+		busEmit('reposUpdate');
 	} catch (error) {
 		submitLoading.value = false;
 	}
@@ -77,7 +79,7 @@ const submit = async () => {
 	border: 1px solid $input-stroke;
 	background-color: transparent;
 	&:focus {
-		border: 1px solid $yellow-disabled;
+		border: 1px solid $theme-input-focus-border;
 	}
 }
 </style>

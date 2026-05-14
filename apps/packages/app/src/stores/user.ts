@@ -1,10 +1,8 @@
 import { defineStore } from 'pinia';
 import {
 	PrivateJwk,
-	TerminusInfo,
 	OlaresInfo,
 	Token,
-	DefaultTerminusInfo,
 	DefaultOlaresInfo,
 	TerminusDefaultDomain
 } from '@bytetrade/core';
@@ -45,11 +43,16 @@ import {
 } from './userStorageAction';
 import { signJWS } from 'src/layouts/dialog/sign';
 import { TermiPassVpnStatus } from 'src/platform/terminusCommon/terminusCommonInterface';
-// import { useTransfer2Store } from './transfer2';
+import { notifyFailed } from 'src/utils/notifyRedefinedUtil';
+import { useCloudStore } from './cloud';
 
 export const defaultPassword = 'Terminus_p_d_abcd1234.';
 
 export const userMaxCount = 20;
+
+export const UserTemporaryLockTimer = 15 * 60 * 1000;
+
+export const UserTemporaryLockErrorMaxCount = 6;
 
 export interface UserSate {
 	users: LocalUserVault | undefined;
@@ -61,7 +64,6 @@ export interface UserSate {
 		terminusName: string | undefined;
 		mnemonic: string | undefined;
 		osName: string | undefined;
-		//localServer 只在mobile有
 		localServer: boolean;
 	};
 	openBiometric: boolean;
@@ -87,9 +89,17 @@ export interface UserSate {
 	isNewCreateUser: boolean;
 
 	defaultDomain: DefaultDomainValueType;
+
+	temporaryLockUsers: {
+		userId: string;
+		timer: number;
+		errorCount: number;
+	}[];
+
+	usetTerminusInfoCache: Record<string, OlaresInfo | undefined>;
 }
 
-export let UsersTerminusInfo: Record<string, OlaresInfo | undefined> = {};
+// export let UsersTerminusInfo: Record<string, OlaresInfo | undefined> = {};
 
 export const useUserStore = defineStore('user', {
 	state: () => {
@@ -121,7 +131,9 @@ export const useUserStore = defineStore('user', {
 			launchCounts: 0,
 			passwordReseted: false,
 			isNewCreateUser: false,
-			defaultDomain: 'global'
+			defaultDomain: 'global',
+			temporaryLockUsers: [],
+			usetTerminusInfoCache: {}
 		} as UserSate;
 	},
 	getters: {
@@ -177,14 +189,38 @@ export const useUserStore = defineStore('user', {
 			if (!this.current_user) {
 				return '';
 			}
-			const array: string[] = this.current_user.name.split('@');
-			if (array.length == 1) {
-				return 'https://' + 'local.' + array[0] + '.' + TerminusDefaultDomain;
-			} else if (array.length == 2) {
-				return 'https://' + 'local.' + array[0] + '.' + array[1];
+			return (this.current_user as any).local_terminus_url;
+		},
+		currentUserTokenExpired(): boolean {
+			if (!this.current_user) {
+				return false;
 			}
+			const access_token = this.current_user.access_token.split('.')[1];
 
-			return '';
+			const ssoToken: SSOTokenRaw = JSON.parse(base64ToString(access_token));
+
+			const exp = ssoToken.exp;
+
+			return exp < new Date().getTime() / 1000;
+		},
+		currentUserOlaresInfo(): OlaresInfo {
+			if (!this.current_id) {
+				return {
+					...DefaultOlaresInfo
+				};
+			}
+			return (
+				this.usetTerminusInfoCache[this.current_id || ''] || {
+					...DefaultOlaresInfo,
+					olaresId: this.users?.items.get(this.current_id)?.name || ''
+				}
+			);
+		},
+		currentOlaresdAvailable(): boolean {
+			return (
+				this.currentUserOlaresInfo.olaresd == '1' ||
+				this.currentUserOlaresInfo.terminusd == '1'
+			);
 		}
 	},
 	actions: {
@@ -220,7 +256,7 @@ export const useUserStore = defineStore('user', {
 						: backupListString
 					: [];
 			const terminusInfos = await userModeGetItem('terminusInfos');
-			UsersTerminusInfo =
+			this.usetTerminusInfoCache =
 				terminusInfos != undefined
 					? typeof terminusInfos == 'string'
 						? JSON.parse(terminusInfos)
@@ -228,6 +264,27 @@ export const useUserStore = defineStore('user', {
 					: {};
 			this.id = (await userModeGetItem('local-user-id')) || undefined;
 			this.current_id = (await userModeGetItem('current-user-id')) || undefined;
+
+			const temporaryLockUsersData = await userModeGetItem(
+				'temporaryLockUsers'
+			);
+
+			this.temporaryLockUsers =
+				temporaryLockUsersData != undefined
+					? typeof temporaryLockUsersData == 'string'
+						? JSON.parse(temporaryLockUsersData)
+						: temporaryLockUsersData
+					: [];
+
+			// if ()
+			this.temporaryLockUsers = this.temporaryLockUsers.filter(
+				(e) => e.timer > new Date().getTime() - UserTemporaryLockTimer
+			);
+
+			userModeSetItem(
+				'temporaryLockUsers',
+				JSON.stringify(this.temporaryLockUsers)
+			);
 
 			this.openBiometric = (await userModeGetItem('openBiometric')) || false;
 
@@ -238,8 +295,6 @@ export const useUserStore = defineStore('user', {
 			if (this.id) {
 				this.users = new LocalUserVault();
 				const res = await userModeGetItem('users');
-				console.log('res ===>', res);
-
 				if (!res) {
 					return;
 				}
@@ -290,40 +345,14 @@ export const useUserStore = defineStore('user', {
 				return '';
 			}
 
-			// if (process.env.NODE_ENV === 'development') {
-			// 	// url = '/server';
-			// 	return '';
-			// }
-
 			const user =
 				userID.length > 0 ? this.users?.items.get(userID) : this.current_user;
+
 			if (!user) {
 				return '';
 			}
 
-			const array: string[] = user.name.split('@');
-			let server = '';
-			if (array.length == 2) {
-				server =
-					protocol +
-					'//' +
-					module +
-					'.' +
-					(useLocal && user.id == this.current_id ? user.local_url : '') +
-					array[0] +
-					'.' +
-					array[1] +
-					suffix;
-			} else {
-				server =
-					protocol +
-					'//' +
-					array[0] +
-					(useLocal && user.id == this.current_id ? user.local_url : '') +
-					'.' +
-					TerminusDefaultDomain +
-					suffix;
-			}
+			const server = user.get_module_url(module, protocol, suffix, useLocal);
 
 			return server;
 		},
@@ -376,6 +405,7 @@ export const useUserStore = defineStore('user', {
 			await userModeRemoveItem('backupList');
 			await userModeRemoveItem('terminusInfos');
 			await userModeRemoveItem('launchCounts');
+			await userModeRemoveItem('temporaryLockUsers');
 
 			this.id = undefined;
 			this.users = undefined;
@@ -576,14 +606,15 @@ export const useUserStore = defineStore('user', {
 				};
 			}
 
-			await this.users.lock();
-
-			try {
-				await this.users.unlock(oldPassword);
-			} catch (error) {
+			// Verify the old password without touching the currently active
+			// `_key` or `mnemonics`. After `unlockFirst()` the vault is already
+			// unlocked and `mnemonics` is populated; we want to keep it that
+			// way until we have successfully built the new vault below.
+			const oldPasswordValid = await this.users.verifyPassword(oldPassword);
+			if (!oldPasswordValid) {
 				return {
 					status: false,
-					message: error.message ? `${error.message}` : 'Unlock fail'
+					message: i18n.global.t('wrong_password_please_try_again')
 				};
 			}
 
@@ -711,6 +742,9 @@ export const useUserStore = defineStore('user', {
 
 			const appsStore = useAppsStore();
 			appsStore.resetAppList();
+
+			const spaceStore = useCloudStore();
+			spaceStore.reset();
 		},
 
 		async backupCurrentUser() {
@@ -734,6 +768,8 @@ export const useUserStore = defineStore('user', {
 			await userModeSetItem('backupList', JSON.stringify(this.backupList));
 		},
 		async currentUserRefreshToken(forceRefresh = false) {
+			console.log('forceRefresh --->', forceRefresh);
+
 			if (!this.current_user) {
 				return {
 					status: false,
@@ -798,8 +834,13 @@ export const useUserStore = defineStore('user', {
 					};
 				}
 
+				let refreshTokenBaseUrl = this.getModuleSever('auth');
+				if (user.tailscale_activated && user.isLargeVersion12_3) {
+					refreshTokenBaseUrl = this.getModuleSever('headscale');
+				}
+
 				const token: Token = await refresh_token(
-					this.getModuleSever('auth'),
+					refreshTokenBaseUrl,
 					user.refresh_token,
 					user.access_token
 				);
@@ -822,6 +863,9 @@ export const useUserStore = defineStore('user', {
 						user.id
 					);
 				}
+
+				busEmit('account_token_refreshed');
+
 				const scale = useScaleStore();
 				if (scale.vpnStatus == TermiPassVpnStatus.on) {
 					scale.resendCache();
@@ -872,7 +916,7 @@ export const useUserStore = defineStore('user', {
 		},
 
 		currentUserSaveTerminusInfo(terminusInfo: OlaresInfo | undefined) {
-			UsersTerminusInfo[this.current_id || ''] = terminusInfo;
+			this.usetTerminusInfoCache[this.current_id || ''] = terminusInfo;
 		},
 
 		async setUserTerminusInfo(
@@ -880,9 +924,9 @@ export const useUserStore = defineStore('user', {
 			terminusInfo: OlaresInfo | undefined
 		) {
 			if (terminusInfo) {
-				UsersTerminusInfo[userId] = terminusInfo;
+				this.usetTerminusInfoCache[userId] = terminusInfo;
 			} else {
-				delete UsersTerminusInfo[userId];
+				delete this.usetTerminusInfoCache[userId];
 			}
 			const user = this.current_user;
 			if (
@@ -896,12 +940,15 @@ export const useUserStore = defineStore('user', {
 				await this.save();
 			}
 
-			userModeSetItem('terminusInfos', JSON.stringify(UsersTerminusInfo));
+			userModeSetItem(
+				'terminusInfos',
+				JSON.stringify(this.usetTerminusInfoCache)
+			);
 		},
 
 		getUserTerminusInfo(userId: string) {
 			return (
-				UsersTerminusInfo[userId] || {
+				this.usetTerminusInfoCache[userId] || {
 					...DefaultOlaresInfo,
 					olaresId: this.users?.items.get(userId)?.name || ''
 				}
@@ -909,12 +956,15 @@ export const useUserStore = defineStore('user', {
 		},
 
 		async removeTerminusInfoByUserId(id: string) {
-			UsersTerminusInfo[id] = undefined;
-			await userModeSetItem('backupList', JSON.stringify(UsersTerminusInfo));
+			this.usetTerminusInfoCache[id] = undefined;
+			await userModeSetItem(
+				'backupList',
+				JSON.stringify(this.usetTerminusInfoCache)
+			);
 		},
 
 		terminusInfo() {
-			const olaresInfo = UsersTerminusInfo[this.current_id || ''] || {
+			const olaresInfo = this.usetTerminusInfoCache[this.current_id || ''] || {
 				...DefaultOlaresInfo,
 				olaresId: this.current_user?.name || ''
 			};
@@ -939,8 +989,23 @@ export const useUserStore = defineStore('user', {
 
 			return new Promise<boolean>(async (resolve) => {
 				if (this.passwordReseted) {
+					const lockStatus = this.currentUserIsTemporaryLocked();
+					if (lockStatus.locked) {
+						notifyFailed(
+							i18n.global.t(
+								'Password entered incorrectly multiple times. Account locked for {minutes} minutes. Please try again later.',
+								{
+									minutes: lockStatus.leftTimes
+								}
+							)
+						);
+						resolve(false);
+						return;
+					}
+
 					const unclocked = await unlockUserFirstBusiness(props);
 					if (unclocked) {
+						this.removeCurrentUserTemporaryLocked();
 						if (next) {
 							next();
 						}
@@ -1071,8 +1136,84 @@ export const useUserStore = defineStore('user', {
 			}
 
 			item.access_token = access_token;
-			item.access_token = session_id;
+			item.session_id = session_id;
 			await userModeSetItem('users', users);
+		},
+		async tryLockCurrentUser() {
+			if (!this.current_id) {
+				return;
+			}
+			const lockUserIndex = this.temporaryLockUsers.findIndex(
+				(e) => e.userId == this.current_id
+			);
+
+			let lockUser = {
+				errorCount: 1,
+				userId: this.current_id,
+				timer: new Date().getTime()
+			};
+
+			if (lockUserIndex < 0) {
+				this.temporaryLockUsers.push(lockUser);
+			} else {
+				lockUser = this.temporaryLockUsers[lockUserIndex];
+				if (lockUser.errorCount < UserTemporaryLockErrorMaxCount) {
+					lockUser.errorCount = lockUser.errorCount + 1;
+					lockUser.timer = new Date().getTime();
+				}
+			}
+			console.log('this.temporaryLockUsers', this.temporaryLockUsers);
+
+			await userModeSetItem(
+				'temporaryLockUsers',
+				JSON.stringify(this.temporaryLockUsers)
+			);
+		},
+		removeCurrentUserTemporaryLocked() {
+			if (!this.current_id) {
+				return;
+			}
+			const lockUserIndex = this.temporaryLockUsers.findIndex(
+				(e) => e.userId == this.current_id
+			);
+			if (lockUserIndex < 0) {
+				return;
+			}
+			this.temporaryLockUsers.splice(lockUserIndex, 1);
+			userModeSetItem(
+				'temporaryLockUsers',
+				JSON.stringify(this.temporaryLockUsers)
+			);
+		},
+		currentUserIsTemporaryLocked() {
+			if (!this.current_id) {
+				return {
+					locked: false,
+					leftTimes: 0
+				};
+			}
+			const tLockedUser = this.temporaryLockUsers.find(
+				(e) => e.userId == this.current_id
+			);
+			if (!tLockedUser) {
+				return {
+					locked: false,
+					leftTimes: 0
+				};
+			}
+			if (tLockedUser.timer <= new Date().getTime() - UserTemporaryLockTimer) {
+				this.removeCurrentUserTemporaryLocked();
+			}
+
+			return {
+				locked:
+					tLockedUser.errorCount >= UserTemporaryLockErrorMaxCount &&
+					tLockedUser.timer > new Date().getTime() - UserTemporaryLockTimer,
+				leftTimes: Math.ceil(
+					(tLockedUser.timer + UserTemporaryLockTimer - new Date().getTime()) /
+						60000
+				)
+			};
 		}
 	}
 });

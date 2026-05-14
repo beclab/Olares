@@ -511,7 +511,7 @@ export class App {
 		for (const vault of this.vaults) {
 			for (const item of vault.items) {
 				if (process.env.PLATFORM !== 'MOBILE') {
-					const removeTypeArray = [VaultType.VC, VaultType.TerminusTotp];
+					const removeTypeArray = [VaultType.VC];
 					if (removeTypeArray.includes(item.type)) {
 						continue;
 					}
@@ -1021,20 +1021,35 @@ export class App {
 		console.log('start create vault item');
 		console.log(template.fields[0].value);
 
-		const item = await this.createItem({
-			name: this.account.name,
-			vault,
-			fields: template?.fields.map(
-				(f) => new Field({ ...f, value: f.value || '' })
-			),
-			tags: [],
-			icon: template?.icon,
-			type: VaultType.TerminusTotp
-		});
-		//delete
-		console.log('create vault item ===>');
-		console.log(item);
-		console.log(item.fields[0].value);
+
+        let needCreateItem = true;
+        // if (this.mainVault.items)
+        if (this.mainVault && this.mainVault.items) {
+            for (const item of this.mainVault.items) {
+                if (item.type == VaultType.TerminusTotp && item.fields[0].value == data.mfa) {
+                    needCreateItem = false; 
+                }
+            }
+        }
+      
+        console.log('needCreateItem ===>', needCreateItem);
+        if (needCreateItem) {
+            const item = await this.createItem({
+                name: this.account.name,
+                vault,
+                fields: template?.fields.map(
+                    (f) => new Field({ ...f, value: f.value || '' })
+                ),
+                tags: [],
+                icon: template?.icon,
+                type: VaultType.TerminusTotp
+            });
+            //delete
+            console.log('create vault item ===>');
+            console.log(item);
+            console.log(item.fields[0].value);     
+        }
+
 
         await this.api.activeAccount(
 			new ActiveAccountParams({
@@ -1292,13 +1307,15 @@ export class App {
 
 		// Copy over secret properties so we don't have to
 		// unlock the account object again.
-		if (this.account) {
-			account.copySecrets(this.account);
-		}
+        if (this.account.did == account.did) {
+            if (this.account) {
+			    account.copySecrets(this.account);
+		    }
 
-		// Update and save state
-		this.setState({ account });
-		await this.save();
+		    this.setState({ account });
+		    await this.save();
+        }
+		
 	}
 
 	/**
@@ -1587,7 +1604,7 @@ export class App {
 		groups: { name: string; readonly: boolean }[] = []
 	): Promise<Vault> {
 		if (!members.length && !groups.length) {
-			throw new Error('You have to assign at least one member or group!');
+			throw new Error($l('You have to assign at least one member or group'));
 		}
 
 		let vault = new Vault();
@@ -1637,9 +1654,9 @@ export class App {
 		/** Groups that should have access to the vault */
 		groups: { name: string; readonly: boolean }[] = []
 	) {
-		if (!members.length && !groups.length) {
-			throw new Error('You have to assign at least one member or group!');
-		}
+		// if (!members.length && !groups.length) {
+		// 	throw new Error('You have to assign at least one member or group!');
+		// }
 
 		await this.updateOrg(orgId, async (org: Org) => {
 			// Update name (the name of the actual [[Vault]] name will be
@@ -1799,10 +1816,10 @@ export class App {
 					e.code,
 					org?.canRead(vault, this.account)
 						? $l(
-								'You have been granted access to this vault, but before you can see its contents somebody else with access to it has to log into their account first. Once you have full access, this warning will disappear automatically.'
+								'You have been granted access to this vault, but before you can see its contents somebody else with access to it has to log into their account first, Once you have full access, this warning will disappear automatically'
 						  )
 						: $l(
-								'This vault could not be synchronized because you no longer have access to it.'
+								'This vault could not be synchronized because you no longer have access to it'
 						  )
 				);
 			}
@@ -1884,10 +1901,10 @@ export class App {
 					e.code,
 					org?.canRead(vault, account)
 						? $l(
-								'You have been granted access to this vault, but before you can see its contents somebody else with access to it has to log into their account first. Once you have full access, this warning will disappear automatically.'
+								'You have been granted access to this vault, but before you can see its contents somebody else with access to it has to log into their account first, Once you have full access, this warning will disappear automatically'
 						  )
 						: $l(
-								'This vault could not be synchronized because you no longer have access to it.'
+								'This vault could not be synchronized because you no longer have access to it'
 						  )
 				);
 			}
@@ -1935,7 +1952,7 @@ export class App {
 					throw new Err(
 						ErrorCode.OUTDATED_REVISION,
 						$l(
-							`Local changes to this vault could not be synchronized because there was a problem retrieving information for this vault's organization. If this problem persists please contact customer support!`
+							`Local changes to this vault could not be synchronized because there was a problem retrieving information for this vault's organization, If this problem persists please contact customer support!`
 						)
 					);
 				}
@@ -1957,7 +1974,7 @@ export class App {
 					throw new Err(
 						ErrorCode.PROVISIONING_NOT_ALLOWED,
 						$l(
-							'Syncing local changes failed because the organization this vault belongs to is frozen.'
+							'Syncing local changes failed because the organization this vault belongs to is frozen'
 						)
 					);
 				}
@@ -1966,7 +1983,7 @@ export class App {
 					throw new Err(
 						ErrorCode.INSUFFICIENT_PERMISSIONS,
 						$l(
-							"Syncing local changes failed because you don't have write permissions for this vault."
+							"Syncing local changes failed because you don't have write permissions for this vault"
 						)
 					);
 				}

@@ -1,5 +1,5 @@
 <template>
-	<page-title-component :title="t('Encoding Scheme')" :show-back="true" />
+	<page-title-component :title="t('Video formats')" :show-back="true" />
 	<bt-scroll-area class="nav-height-scroll-area-conf">
 		<adaptive-layout>
 			<template v-slot:pc>
@@ -22,7 +22,7 @@
 					>
 						<bt-switch
 							size="sm"
-							truthy-track-color="light-blue-default"
+							truthy-track-color="blue-default"
 							v-model="videoStore.encodingeScheme.allowHevcEncoding.value"
 							@update:model-value="updateAllowHevcEncoding"
 						/>
@@ -33,7 +33,7 @@
 					>
 						<bt-switch
 							size="sm"
-							truthy-track-color="light-blue-default"
+							truthy-track-color="blue-default"
 							v-model="videoStore.encodingeScheme.allowAv1Encoding.value"
 							@update:model-value="updateAllowAv1Encoding"
 						/>
@@ -54,7 +54,7 @@
 					>
 						<bt-switch
 							size="sm"
-							truthy-track-color="light-blue-default"
+							truthy-track-color="blue-default"
 							v-model="videoStore.encodingeScheme.allowHevcEncoding.value"
 							@update:model-value="updateAllowHevcEncoding"
 						/>
@@ -65,7 +65,7 @@
 					>
 						<bt-switch
 							size="sm"
-							truthy-track-color="light-blue-default"
+							truthy-track-color="blue-default"
 							v-model="videoStore.encodingeScheme.allowAv1Encoding.value"
 							@update:model-value="updateAllowAv1Encoding"
 						/>

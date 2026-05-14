@@ -28,6 +28,13 @@
 
 					<div class="q-ml-sm text-body3">
 						{{ t('base.download_failed') }}
+
+						<bt-tooltip
+							v-if="record?.message"
+							:label="record?.message"
+							max-width="240px"
+							align="start"
+						/>
 					</div>
 				</div>
 
@@ -77,7 +84,19 @@
 				<div
 					v-else-if="
 						record?.status === TransferStatus.Prepare ||
-						record?.status === TransferStatus.Pending ||
+						record?.status === TransferStatus.Pending
+					"
+					class="row"
+				>
+					<bt-loading :loading="true" size="16px" />
+
+					<div class="q-ml-sm text-body3 text-orange-default">
+						{{ t('pending') }}
+					</div>
+				</div>
+
+				<div
+					v-else-if="
 						record?.status === TransferStatus.Canceling ||
 						record?.status === TransferStatus.Checking ||
 						record?.status === TransferStatus.Resuming ||
@@ -88,7 +107,7 @@
 				>
 					<bt-loading :loading="true" size="16px" />
 
-					<div class="q-ml-sm text-body3 text-ink-3">
+					<div class="q-ml-sm text-body3 text-orange-default">
 						{{
 							record.progress && record.size
 								? (upload ? t('base.uploading') : t('base.downloading')) +
@@ -121,14 +140,22 @@
 				<bt-tooltip :label="t('base.more')" />
 				<bt-popup style="width: 176px">
 					<bt-popup-item
-						v-if="record?.status !== TransferStatus.Error && !record.isPaused"
+						v-if="
+							record?.status !== TransferStatus.Error &&
+							record?.status !== TransferStatus.Canceled &&
+							!record.isPaused
+						"
 						v-close-popup
 						icon="sym_r_pause"
 						:title="t('download.pause')"
 						@on-item-click="pauseOrResume"
 					/>
 					<bt-popup-item
-						v-if="record?.status !== TransferStatus.Error && record.isPaused"
+						v-if="
+							record?.status !== TransferStatus.Error &&
+							record?.status !== TransferStatus.Canceled &&
+							record.isPaused
+						"
 						v-close-popup
 						icon="sym_r_download"
 						:title="t('download.resume')"
@@ -149,7 +176,7 @@
 						@on-item-click="pauseOrResume"
 					/>
 					<bt-popup-item
-						v-else
+						v-else-if="record?.status !== TransferStatus.Canceled"
 						v-close-popup
 						icon="sym_r_block"
 						:title="t('base.cancel')"
@@ -194,18 +221,18 @@ import BtLoading from '../../base/BtLoading.vue';
 import BtPopupItem from '../../base/BtPopupItem.vue';
 import BaseCheckBoxDialog from '../../base/BaseCheckBoxDialog.vue';
 import TransferClient from '../../../services/transfer';
-import { useConfigStore } from '../../../stores/rss-config';
-import { ENTRY_STATUS, getFileTypeByName } from '../../../utils/rss-types';
-import { useTransfer2Store } from '../../../stores/transfer2';
-import { uploadDeleteEntry } from '../../../api/wise/upload';
 import { getSuitableUnit, getValueByUnit } from 'src/utils/monitoring';
-import {
-	TransferStatus,
-	TransferItemInMemory
-} from '../../../utils/interface/transfer';
+import { ENTRY_STATUS, getFileTypeByName } from 'src/utils/rss-types';
+import { useConfigStore } from 'src/stores/rss-config';
+import { useTransfer2Store } from 'src/stores/transfer2';
+import { uploadDeleteEntry } from 'src/api/wise/upload';
 import { PropType } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
+import {
+	TransferStatus,
+	TransferItemInMemory
+} from 'src/utils/interface/transfer';
 
 const { t } = useI18n();
 const transfer2Store = useTransfer2Store();
@@ -288,10 +315,11 @@ const onCancel = async () => {
 	if (!props.record) {
 		return;
 	}
-	if (!props.upload) {
+	if (props.upload) {
+		transfer2Store.cancel(props.record);
+	} else {
 		TransferClient.client.clouder?.cancelTask(props.record);
 	}
-	// transfer2Store.cancel(props.record);
 };
 
 const onRemove = () => {

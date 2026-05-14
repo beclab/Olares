@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { t } from '@apps/dashboard/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 export const initOptions = [
 	{
 		label: t('ALL'),

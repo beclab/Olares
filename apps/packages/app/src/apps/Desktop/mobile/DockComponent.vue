@@ -29,7 +29,7 @@
 </template>
 <script lang="ts" setup>
 import { DockerAppInfo, AppClickInfo } from '../type/types';
-import { useAppStore } from '../../../stores/desktop/app';
+import { useApplicationStore } from '../../../stores/desktop/app';
 
 defineProps({
 	drag_launch_app: {
@@ -40,7 +40,7 @@ defineProps({
 
 const emits = defineEmits([]);
 
-const appStore = useAppStore();
+const appStore = useApplicationStore();
 
 const openWindow = async (item: DockerAppInfo) => {
 	emits('appClick', {
@@ -84,7 +84,6 @@ defineExpose({
 	.desktop-app-box {
 		width: 100%;
 		display: flex;
-		align-items: center;
 		justify-content: space-around;
 		position: fixed;
 		bottom: 76px;

@@ -27,6 +27,9 @@ export const useUserStore = defineStore('settingsUser', {
 		currentUserInfo(): AccountInfo | undefined {
 			const admin = useAdminStore();
 			return this.accounts.find((a) => admin.user.name === a.name);
+		},
+		activeUsers(): AccountInfo[] {
+			return this.accounts.filter((account) => account.wizard_complete);
 		}
 	},
 

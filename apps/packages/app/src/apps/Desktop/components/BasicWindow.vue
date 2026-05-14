@@ -134,6 +134,11 @@
 import { ref, defineComponent, onMounted, nextTick, onUnmounted } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
+import {
+	createDesktopWindowTracer,
+	DESKTOP_WINDOW_TRACE_TAG,
+	DESKTOP_WINDOW_TRACE_SCOPE
+} from 'src/utils/trace/clients/desktopWindowTrace';
 
 interface WindowRect {
 	left: number;
@@ -182,7 +187,12 @@ export default defineComponent({
 		const dragRef = ref();
 		const isFull = ref(false);
 		const clickNew = ref(false);
+		const iframeLoadStartAt = ref(0);
+		let iframeLoadTimeout: ReturnType<typeof setTimeout> | null = null;
 		const $q = useQuasar();
+		const traceWindow = createDesktopWindowTracer(() =>
+			DESKTOP_WINDOW_TRACE_SCOPE.window(value.value.id)
+		);
 
 		const app_icon: string = value.value.icon;
 
@@ -286,11 +296,34 @@ export default defineComponent({
 					},
 					'*'
 				);
+			} else if (event.data.message === 'language_update') {
+				iframeRef.value.contentWindow.postMessage(
+					{
+						message: 'language_apps_update',
+						info: event.data.info
+					},
+					'*'
+				);
 			}
 		};
 
 		onMounted(() => {
 			window.addEventListener('message', message);
+			iframeLoadStartAt.value = Date.now();
+			traceWindow(DESKTOP_WINDOW_TRACE_TAG.IFRAME_MOUNT, {
+				title: value.value.title,
+				url: value.value.pathto
+					? value.value.url + '?pathto=' + value.value.pathto
+					: value.value.url
+			});
+			iframeLoadTimeout = setTimeout(() => {
+				if (iframeLoad.value) {
+					traceWindow(DESKTOP_WINDOW_TRACE_TAG.IFRAME_LOAD_TIMEOUT, {
+						elapsedMs: Date.now() - iframeLoadStartAt.value,
+						url: iframeRef.value?.src || value.value.url
+					});
+				}
+			}, 12000);
 
 			nextTick(() => {
 				new MutationObserver(function (mutations) {
@@ -318,11 +351,28 @@ export default defineComponent({
 					// IE
 					iframeRef.value.attachEvent('onload', () => {
 						iframeLoad.value = false;
+						traceWindow(DESKTOP_WINDOW_TRACE_TAG.IFRAME_LOAD_SUCCESS, {
+							elapsedMs: Date.now() - iframeLoadStartAt.value,
+							url: iframeRef.value?.src || value.value.url
+						});
 					});
 				} else {
 					// not IE
 					iframeRef.value.onload = function () {
 						iframeLoad.value = false;
+						traceWindow(DESKTOP_WINDOW_TRACE_TAG.IFRAME_LOAD_SUCCESS, {
+							elapsedMs: Date.now() - iframeLoadStartAt.value,
+							url: iframeRef.value?.src || value.value.url
+						});
+					};
+				}
+				if (iframeRef.value) {
+					iframeRef.value.onerror = function (err: unknown) {
+						traceWindow(DESKTOP_WINDOW_TRACE_TAG.IFRAME_LOAD_ERROR, {
+							elapsedMs: Date.now() - iframeLoadStartAt.value,
+							url: iframeRef.value?.src || value.value.url,
+							err
+						});
 					};
 				}
 			});
@@ -330,6 +380,10 @@ export default defineComponent({
 
 		onUnmounted(() => {
 			window.removeEventListener('message', message);
+			if (iframeLoadTimeout) {
+				clearTimeout(iframeLoadTimeout);
+				iframeLoadTimeout = null;
+			}
 		});
 
 		return {

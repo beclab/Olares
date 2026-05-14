@@ -3,7 +3,7 @@ export default {
 	'Setup Canceled': '设置已取消',
 	'{browser} on {platform}': '{browser} 在 {platform} 上',
 	'{platform} device': '{platform} 设备',
-	'The request was canceled.': '请求已取消',
+	'The request was canceled': '请求已取消',
 	'One-Time Password': '二次验证码',
 	Username: '用户名',
 	Password: '密码',
@@ -65,15 +65,15 @@ export default {
 	Authenticator: '验证器',
 	Document: '文件',
 	Custom: '自定义',
-	'You have been granted access to this vault, but before you can see its contents somebody else with access to it has to log into their account first. Once you have full access, this warning will disappear automatically.':
+	'You have been granted access to this vault, but before you can see its contents somebody else with access to it has to log into their account first, Once you have full access, this warning will disappear automatically':
 		'您已获得此 Vault 的访问权限。然而，您需先等任何一位有访问权的用户登录并访问此 Vault 之后才可以看到 Vault 内容。此警告会在您获取完全访问权限后自动消失。',
-	'This vault could not be synchronized because you no longer have access to it.':
+	'This vault could not be synchronized because you no longer have access to it':
 		'您没有访问权限，此 Vault 无法同步。',
-	"Local changes to this vault could not be synchronized because there was a problem retrieving information for this vault's organization. If this problem persists please contact customer support!":
+	"Local changes to this vault could not be synchronized because there was a problem retrieving information for this vault's organization, If this problem persists please contact customer support!":
 		'对此 Vault 的本地更改无法被同步，因为在获取 Vault 所属组织的信息时发生了错误。如果此问题持续发生，请联系客户支持！',
-	'Syncing local changes failed because the organization this vault belongs to is frozen.':
+	'Syncing local changes failed because the organization this vault belongs to is frozen':
 		'对此 Vault 的本地更改无法被同步，因为此 Vault 所属的组织已被冻结。',
-	"Syncing local changes failed because you don't have write permissions for this vault.":
+	"Syncing local changes failed because you don't have write permissions for this vault":
 		'对此 Vault 的本地更改无法被同步，因为您没有此 Vault 的写入权限。',
 	'This group name is not available!': '此团队名称不可用！',
 	'A group with this name already exists!': '此团队名称已存在！',
@@ -98,5 +98,7 @@ export default {
 		"'minMemberUpdated' 属性不能减少！",
 	None: '空',
 	'Field Name': '字段名',
-	'Field type': '字段类型'
+	'Field type': '字段类型',
+	'You have to assign at least one member or group':
+		'您必须至少分配一个成员或团队'
 };

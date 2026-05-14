@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import axios from 'axios';
 import { useTokenStore } from './token';
 import { VRAMMode } from '../../constant';
-import { notifyFailed, notifySuccess } from 'src/utils/notifyRedefinedUtil';
+import { notifySuccess } from 'src/utils/notifyRedefinedUtil';
 import { i18n } from 'src/boot/i18n';
 
 export interface GPUInfo {
@@ -16,6 +16,7 @@ export interface GPUInfo {
 	health: boolean;
 	//   "sharemode": "1",
 	sharemode: VRAMMode;
+	allowedShareModes?: string[];
 	apps?: [
 		{
 			appName: string;

@@ -29,9 +29,7 @@ export async function facebookLogin(
 
 	const FACEBOOK_PERMISSIONS = ['email'];
 	const result = await LarePassSocialLogin.login({
-		// permissions: FACEBOOK_PERMISSIONS
 		provider: 'facebook',
-		// permissions: FACEBOOK_PERMISSIONS
 		options: {
 			permissions: FACEBOOK_PERMISSIONS
 		}

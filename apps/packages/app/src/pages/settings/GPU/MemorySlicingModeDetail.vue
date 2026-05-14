@@ -45,17 +45,22 @@
 							class="detail-btn row justify-center items-center q-mr-xs"
 							@click="editVRAM(props.row.value)"
 						>
-							<q-icon size="18px" name="sym_r_edit_square" />
+							<q-icon size="18px" name="sym_r_edit_square">
+								<q-tooltip>
+									{{ t('Edit VRAM allocation') }}
+								</q-tooltip>
+							</q-icon>
 						</div>
 						<UnbindGPU
 							:app="props.row.app"
+							:app-name="props.row.value"
 							@un-bind-app="emit('unbind', props.row.value)"
 						/>
 						<SwitchGPU
 							v-if="availableGpuList.length > 1"
 							:currentGPU="currentGPU"
 							:appName="props.row.value"
-							:app="props.value.app"
+							:app="props.row.app"
 						/>
 					</q-td>
 				</template>
@@ -70,7 +75,7 @@
 		<q-btn
 			dense
 			class="bind-app q-px-md q-py-sm text-body3 text-ink-2 bg-background-1"
-			:label="t('Bind App')"
+			:label="t('Assign app')"
 			no-caps
 			@click="bindApp"
 		/>

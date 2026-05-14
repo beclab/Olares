@@ -100,14 +100,20 @@
 					</div>
 				</div>
 
-				<terminus-item class="q-mt-md" @click="copyFunc" :item-height="64">
+				<terminus-item
+					class="q-mt-md"
+					@click="copyFunc"
+					:item-height="64"
+					:contentFrontendClasses="'full-width'"
+					:detailClasses="'full-width'"
+				>
 					<template v-slot:title>
-						<div class="text-subtitle2">
+						<div class="text-subtitle2 ellipsis">
 							{{ t('Domain information') }}
 						</div>
 					</template>
 					<template v-slot:detail>
-						<div class="text-body3 text-ink-3">
+						<div class="text-body3 text-ink-3 ellipsis">
 							{{ domain }}
 						</div>
 					</template>
@@ -267,6 +273,7 @@ import { useRouter } from 'vue-router';
 import { notifySuccess } from '../../../utils/notifyRedefinedUtil';
 import { formatDateToDMHM } from '../../../utils/utils';
 import ScanLocalMachine from '../connect/activate/ScanLocalMachine.vue';
+import { getApplication } from 'src/application/base';
 
 const isScaning = ref(false);
 
@@ -358,7 +365,7 @@ const enterUpgrade = async () => {
 
 const copyFunc = async () => {
 	try {
-		await getPlatform().setClipboard(domain.value);
+		await getApplication().copyToClipboard(domain.value);
 		notifySuccess(t('copy_success'));
 	} catch (error) {
 		console.error(error.message);

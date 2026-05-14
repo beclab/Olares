@@ -11,7 +11,7 @@ const ACCESS_TOKEN = process.env.ACCESS_TOKEN || '';
 
 const SESSION_ID = process.env.SESSION_ID || '';
 
-const BASE32_SECRET = process.env.BASE32_SECRET || ''
+const BASE32_SECRET = process.env.BASE32_SECRET || '';
 
 const OTP_AUTH_URL = process.env.OPT_AUTH_URL || '';
 

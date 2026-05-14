@@ -6,8 +6,10 @@
 		<img v-if="isDir || type === 'Folder'" :src="folderIcon(name)" />
 		<template v-else-if="getFileIcon(name) === 'image' && isThumbsEnabled">
 			<img
+				v-if="!!imageContent"
 				style="border-radius: 4px"
-				:src="thumbnailUrl"
+				:src="imageContent"
+				crossorigin="use-credentials"
 				@error.once="
 					(e) => {
 						e.target.src = fileIcon(name);
@@ -29,12 +31,13 @@
 
 <script lang="ts" setup>
 import { getFileIcon } from '@bytetrade/core';
-import { computed, PropType } from 'vue';
+import { computed, onMounted, PropType, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { enableThumbs } from '../../utils/constants';
 import { FileItem, useFilesStore } from '../../stores/files';
 import { useOperateinStore } from './../../stores/operation';
 import { DriveType } from '../../utils/interface/files';
+import { useUserStore } from 'src/stores/user';
 
 const props = defineProps({
 	name: {
@@ -81,6 +84,7 @@ const props = defineProps({
 const filesStore = useFilesStore();
 const route = useRoute();
 const operateinStore = useOperateinStore();
+const userStore = useUserStore();
 
 const folderIcon = (name: any) => {
 	let src = '/img/folder-';
@@ -120,6 +124,8 @@ const isThumbsEnabled = computed(function () {
 	return enableThumbs;
 });
 
+const imageContent = ref<any>();
+
 const thumbnailUrl = computed(function () {
 	if (props.thumbnailLink) {
 		return props.thumbnailLink;
@@ -146,6 +152,31 @@ const thumbnailUrl = computed(function () {
 
 	return filesStore.getPreviewURL(file, 'thumb');
 });
+
+onMounted(async () => {
+	if (getFileIcon(props.name) === 'image' && isThumbsEnabled) {
+		imageContent.value = await loadImageContent(thumbnailUrl.value);
+	}
+});
+
+const loadImageContent = async (src: string) => {
+	if (!userStore.current_user || !userStore.current_user.isLocal) {
+		return src;
+	}
+	try {
+		const response = await fetch(src, {
+			headers: {
+				'X-Authorization': userStore.current_user.access_token
+			}
+		});
+		const blob = await response.blob();
+		const url = URL.createObjectURL(blob);
+		return url;
+	} catch (error) {
+		console.error('Error converting HEIC to JPEG:', error);
+		return fileIcon(props.name);
+	}
+};
 </script>
 
 <style lang="scss" scoped>

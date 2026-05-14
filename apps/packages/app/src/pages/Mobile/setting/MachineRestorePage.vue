@@ -208,7 +208,7 @@ const uninstallSuccess = async () => {
 	user.wizard = 'restore';
 	user.terminus_activate_status = 'wait_activate_vault';
 	user.setup_finished = false;
-	user.isLocal = false;
+	termipassStore.state.publicActions.updateIsLocal(false);
 	userStore.users!.items.update(user);
 	await userStore.save();
 	setSenderUrl({

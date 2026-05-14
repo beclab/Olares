@@ -190,10 +190,6 @@ const mobileCommon: RouteRecordRaw[] = [
 				component: () => import('src/pages/Mobile/cloud/login/IndexMobile.vue')
 			},
 			{
-				path: '/scanQrCode',
-				component: () => import('src/pages/Mobile/ScanQRCodePage.vue')
-			},
-			{
 				path: '/space_management',
 				component: () =>
 					import('src/pages/Mobile/setting/SpaceManagementPage.vue')

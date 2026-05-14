@@ -12,13 +12,13 @@
 import { onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Result, FileSearchAIQuestionMessage } from '@bytetrade/core';
-import { useAppStore } from '../stores/desktop/app';
+import { useApplicationStore } from '../stores/desktop/app';
 import { useSearchStore } from 'src/stores/search';
 import { useUpgradeStore } from '../stores/desktop/upgrade';
 import { bus } from '..//utils/bus';
 
 const router = useRouter();
-const appStore = useAppStore();
+const appStore = useApplicationStore();
 const searchState = useSearchStore();
 const upgradeStore = useUpgradeStore();
 const timer = ref();

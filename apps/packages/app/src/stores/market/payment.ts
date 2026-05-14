@@ -1,15 +1,17 @@
+import PaymentRecoverDialog from 'src/components/appcard/PaymentRecoverDialog.vue';
 import PaymentQueryDialog from 'src/components/appcard/PaymentQueryDialog.vue';
 import { paymentWithProduct } from 'src/payment/service/paymentService';
 import { PAYMENT_STATUS, PaymentOrderData } from 'src/constant/constants';
 import { notifyFailed, notifySuccess } from 'src/utils/settings/btNotify';
 import { pollingService } from 'src/payment/service/pollingService';
-import { useCenterStore } from 'src/stores/market/center';
+import { useAppStore } from 'src/stores/market/appStore';
 import { BtDialog } from '@bytetrade/ui';
 import { QVueGlobals } from 'quasar';
 import { defineStore } from 'pinia';
 import {
 	getAppPaymentStatus,
 	getAppPurchase,
+	recoverAppPurchase,
 	startBackendPolling,
 	submitTransaction
 } from 'src/api/market/private/payment';
@@ -20,7 +22,12 @@ export const usePaymentStore = defineStore('payment', {
 	},
 
 	actions: {
-		async fetchPaymentInfo(appId: string, sourceId: string) {
+		async fetchPaymentInfo(
+			appId: string,
+			sourceId: string,
+			t: any,
+			q: QVueGlobals
+		) {
 			if (!appId || !sourceId) {
 				console.error(
 					`appId:${appId} and sourceId:${sourceId} setPaymentStatus error`
@@ -39,13 +46,91 @@ export const usePaymentStore = defineStore('payment', {
 				notifyFailed('getAppPaymentStatus result null');
 				return;
 			}
-			const centerStore = useCenterStore();
+			const appStore = useAppStore();
 			if (result.status === PAYMENT_STATUS.SYNCING) {
-				notifySuccess('The backend is querying data, please wait.');
+				notifySuccess(t('The backend is querying data, please wait.'));
 			}
-			centerStore.updateLocalStatus(appId, sourceId, {
+			appStore.updateLocalStatus(appId, sourceId, {
 				status: result.status
 			});
+
+			if (result.status !== PAYMENT_STATUS.PURCHASED) {
+				q.dialog({
+					component: PaymentRecoverDialog,
+					componentProps: {
+						appId,
+						sourceId,
+						tokenInfo: result.token_info[0]
+					}
+				});
+			}
+
+			return result;
+		},
+		async recoverAppPurchase(appId: string, sourceId: string, t: any) {
+			let result;
+			try {
+				result = await recoverAppPurchase(appId, sourceId);
+			} catch (e) {
+				console.error(e);
+				notifyFailed(e.response.data.message || e.message);
+				return;
+			}
+			if (!result) {
+				notifyFailed('recoverAppPurchase result null');
+				return;
+			}
+
+			const appStore = useAppStore();
+			if (result.status === PAYMENT_STATUS.SYNCING) {
+				notifySuccess(t('The backend is querying data, please wait.'));
+			}
+			appStore.updateLocalStatus(appId, sourceId, {
+				status: result.status
+			});
+
+			const localStatus = appStore.getLocalStatus(appId, sourceId)?.status;
+			if (localStatus === PAYMENT_STATUS.SIGNATURE_REQUIRED) {
+				BtDialog.show({
+					title: t('Identity Verification Required'),
+					message: t(
+						'Please open the Larepass mobile app for verification to proceed with the process'
+					),
+					okText: t('Verify Now')
+				})
+					.then((res) => {
+						if (res) {
+							//Todo
+						} else {
+							//Todo;
+						}
+					})
+					.catch((err) => {
+						console.log('click error', err);
+					});
+				return;
+			}
+
+			if (localStatus === PAYMENT_STATUS.SIGNATURE_NEED_RESIGN) {
+				BtDialog.show({
+					title: t('Signature Required'),
+					message: t(
+						'Please open the Larepass mobile app to sign and complete the App purchase'
+					),
+					okText: t('Sign Now')
+				})
+					.then((res) => {
+						if (res) {
+							//Todo
+						} else {
+							//Todo;
+						}
+					})
+					.catch((err) => {
+						console.log('click error', err);
+					});
+				return;
+			}
 			return result;
 		},
 		async queryPaymentInfo(
@@ -66,20 +151,21 @@ export const usePaymentStore = defineStore('payment', {
 				notifyFailed('getAppPurchase result null');
 				return;
 			}
-			const centerStore = useCenterStore();
+			const appStore = useAppStore();
 			if (result.status === PAYMENT_STATUS.SYNCING) {
 				notifySuccess('The backend is querying data, please wait.');
 			}
-			centerStore.updateLocalStatus(appId, sourceId, {
+			appStore.updateLocalStatus(appId, sourceId, {
 				status: result.status
 			});
 
-			const localStatus = centerStore.getLocalStatus(appId, sourceId)?.status;
+			const localStatus = appStore.getLocalStatus(appId, sourceId)?.status;
 
 			const confirmPay = () => {
 				if (
 					localStatus !== PAYMENT_STATUS.NOT_BUY &&
 					localStatus !== PAYMENT_STATUS.PAYMENT_REQUIRED &&
+					localStatus !== PAYMENT_STATUS.NOTIFICATION_SENT &&
 					localStatus !== PAYMENT_STATUS.PAYMENT_RETRY_REQUIRED
 				) {
 					return;
@@ -101,7 +187,9 @@ export const usePaymentStore = defineStore('payment', {
 								);
 							})
 							.catch((error) => {
-								notifyFailed(error.message);
+								const msg =
+									error instanceof Error ? error.message : String(error);
+								notifyFailed(msg || 'Payment failed');
 							});
 
 						pollingService.startTxPolling(txHash, {
@@ -116,7 +204,9 @@ export const usePaymentStore = defineStore('payment', {
 										);
 									})
 									.catch((error) => {
-										notifyFailed(error.message);
+										const msg =
+											error instanceof Error ? error.message : String(error);
+										notifyFailed(msg || 'Payment failed');
 									});
 							},
 							onError: (error) => {
@@ -128,7 +218,8 @@ export const usePaymentStore = defineStore('payment', {
 						});
 					})
 					.catch((error) => {
-						notifyFailed(error.message);
+						const msg = error instanceof Error ? error.message : String(error);
+						notifyFailed(msg || 'Payment failed');
 					});
 			};
 
@@ -216,7 +307,9 @@ export const usePaymentStore = defineStore('payment', {
 									notifySuccess('Success, waiting for data synchronization...');
 								})
 								.catch((error) => {
-									notifyFailed(error.message);
+									const msg =
+										error instanceof Error ? error.message : String(error);
+									notifyFailed(msg || 'Payment failed');
 								});
 						} else {
 							BtDialog.show({
@@ -240,7 +333,9 @@ export const usePaymentStore = defineStore('payment', {
 											);
 										})
 										.catch((error) => {
-											notifyFailed(error.message);
+											const msg =
+												error instanceof Error ? error.message : String(error);
+											notifyFailed(msg || 'Payment failed');
 										});
 								} else {
 									notifyFailed(

@@ -175,17 +175,17 @@ export default {
 	'Source URL already exists. Please use a different source URL':
 		'Source URL already exists. Please use a different source URL',
 	'Also uninstall the shared server (affects all users)':
-		'Also uninstall the shared server (affects all users)',
+		'Also uninstall the shared server (affects all users). ',
 	'Warning! Uninstalling the shared server will:':
 		'Warning! Uninstalling the shared server will:\n• Terminate the app access for all users immediately\n• Permanently delete all stored user data\n\nThis action cannot be undone. Please confirm that you acknowledge these consequences and wish to proceed with a full uninstallation of {appName}.',
 	'Cannot delete this source. Please uninstall all apps installed from this source, then try again.':
 		'Cannot delete this source. Please uninstall all apps installed from this source, then try again.',
-	'Configure Environment Variables': 'Configure Environment Variables',
+	'Configure Environment Variables': 'Configure {title} Environment Variables',
 	httpsRequired: 'The URL must start with https://',
 	invalidUrlFormat: 'Invalid URL format',
 	upgrade_app_version: `Upgrade app version from {currentVersion} to {targetVersion}`,
 	'This value is set by a system environment variable':
-		'This value is set by a system environment variable. To change it, please go to Settings > Developer > System Environment and change [{envName}]',
+		'This value is set by a system environment variable. To change it, please go to Settings > Advanced > System environment variables and change [{envName}]',
 	'Clone App': 'Clone app',
 	'Only lowercase letters and numbers are allowed; special characters and spaces are not permitted.':
 		'Only lowercase letters and numbers are allowed; special characters and spaces are not permitted.',
@@ -238,9 +238,169 @@ export default {
 	'Desktop shortcut name for': 'Desktop shortcut name for {name}',
 	Clone: 'Clone',
 	'Also stop the shared server （affects all users)':
-		'Also stop the shared server (affects all users)',
+		'Also stop the shared server (affects all users). ',
 	'Are you sure you want to stop the shared app':
 		'Are you sure you want to stop the shared app "{app}"?',
 	'Are you sure you want to resume the shared app "{app}" ?（affects all users）':
-		'Are you sure you want to resume the shared app "{app}"? (affects all users)'
+		'Are you sure you want to resume the shared app "{app}"? (affects all users)',
+	'Do you want to buy app for':
+		'Do you want to buy "{name}" for {price} {unit}?',
+	'Purchase App': 'Purchase App',
+	Cancel: 'Cancel',
+	Buy: 'Buy',
+	'Restore purchase': 'Restore purchase',
+	'This app has been removed, the operation is rejected.':
+		'This app has been removed, the operation is rejected.',
+	'NSFW settings': 'NSFW settings',
+	'Blocking NSFW applications': 'Blocking NSFW applications',
+	'No log records available': 'No log records available',
+	'get log records error': 'get log records error',
+
+	debug: {
+		common: {
+			appName: 'App Name',
+			version: 'Version',
+			copied: 'Copied',
+			copy: 'Copy',
+			refresh: 'Refresh',
+			export: 'Export',
+			clear: 'Clear',
+			all: 'All',
+			noMatchedData: 'No matched data'
+		},
+		panel: {
+			nav: {
+				monitor: 'Status Monitor',
+				map: 'Map Data',
+				search: 'App Search',
+				labels: 'Labels',
+				entryDiff: 'Entry Diff'
+			}
+		},
+		appSearch: {
+			title: 'App Search',
+			keyword: 'Search keyword',
+			placeholder: 'Enter app name, title, or description...',
+			found: 'Found {count} results',
+			emptyKeyword: 'Enter keywords to search apps',
+			noMatch: 'No matching app found',
+			resultList: 'Search results',
+			selectHint: 'Select a result to view details',
+			weight: 'Weight'
+		},
+		jsonView: {
+			selectKey: 'Select a key to view data',
+			copyFailed: 'Copy failed:'
+		},
+		sidebar: {
+			searchPlaceholder: 'Search key...',
+			noMatchedKey: 'No matched key'
+		},
+		mapViewer: {
+			title: 'Map Data Viewer'
+		},
+		labels: {
+			title: 'App Labels Viewer',
+			totalWithLabels: '{count} apps with labels',
+			groupStats: 'Label group stats',
+			singleStats: 'Single label stats',
+			appList: 'App list',
+			selectApp: 'Select an app to view details'
+		},
+		statusFloat: {
+			title: 'Status Monitor',
+			clickToStart: 'Click ▶ to start monitoring',
+			dragHint: 'Drag header to move | Total {count}',
+			openFullPage: 'Open full page'
+		},
+		statusMonitor: {
+			title: 'App Status Monitor',
+			stop: 'Stop',
+			start: 'Start',
+			import: 'Import',
+			filterPlaceholder: 'Filter app name...',
+			clear: 'Clear',
+			export: 'Export',
+			importReadonlyMode: 'Imported snapshot mode (read-only)',
+			fileLabel: 'File: ',
+			exportTimeLabel: 'Export time: ',
+			importTimeLabel: 'Import time: ',
+			appCount: 'App count',
+			callCount: 'Calls',
+			total: 'Total',
+			api: 'API',
+			socket: 'Socket',
+			local: 'Local',
+			anomaly: 'Issues',
+			rejected: 'Rejected',
+			regression: 'Regression',
+			clearFilter: 'Clear filter',
+			monitoredApps: 'Monitored apps',
+			updatesCount: '{count} updates',
+			waitingStateChange: 'Waiting for state changes...',
+			clickStartMonitor: 'Click to start monitoring',
+			stateTransitionLog: 'State transition logs',
+			viewAll: 'View all',
+			onlySelectedApp: 'Only selected app',
+			currentSelectedDetail: 'Current selected detail',
+			oldTime: 'Old time:',
+			newTime: 'New time:',
+			diff: 'Diff:',
+			collapse: 'Collapse',
+			detail: 'Detail',
+			noLogsForApp: 'No logs for selected app',
+			noLogs: 'No logs',
+			importFailed: 'Import failed',
+			importMissingLogsArray: 'Import failed: missing logs array',
+			importSuccess: 'Import success: {count} logs (switched to snapshot mode)',
+			importSnapshotFailed: 'Import snapshot failed: {message}',
+			checkFileFormat: 'Please check file format',
+			noDetailData: 'No detail data available',
+			serializeFailed: 'Failed to serialize detail data'
+		},
+		entryDiff: {
+			title: 'app_entry / raw_data diff',
+			exportJson: 'Export JSON',
+			exportDoc: 'Export Doc',
+			total: 'Total',
+			comparable: 'Comparable',
+			mismatch: 'Mismatch',
+			missingRaw: 'Missing raw_data',
+			searchPlaceholder: 'Search key / app / diff path',
+			allSources: 'All Sources',
+			currentSource: 'Current source',
+			allFields: 'All fields',
+			mismatchItems: 'Mismatch items',
+			noMismatchDetected: 'No mismatch detected',
+			detail: 'Detail',
+			selectLeftItem: 'Select an item on the left to view details',
+			missingAppEntry: 'Missing app_entry',
+			fieldMismatch: 'Field mismatch',
+			generatedAt: 'Generated at',
+			filters: 'Filters',
+			report: {
+				overview: '## Overview',
+				metricValue: '| Metric | Value |',
+				appFullInfoTotal: 'appFullInfo total',
+				currentViewCount: 'current view count',
+				currentViewMismatchCount: 'current view mismatch count',
+				currentViewMissingCount: 'current view missing count',
+				bySource: '## By source',
+				bySourceHeader: '| Source | Total | mismatch | missing |',
+				byField: '## By mismatched field',
+				byFieldHeader: '| Field | Count |',
+				topDiffPaths: '## Top 30 diff paths',
+				pathCountHeader: '| Path | Count |',
+				fieldExamples: '## Field examples (1 per field)',
+				noFieldExamples: 'No field examples under current filters.',
+				fieldLabel: 'Field',
+				relatedPaths: 'Related paths',
+				appEntryBlock: '**app_entry block**',
+				rawDataBlock: '**raw_data block**',
+				itemsCurrentView: '## Item list (current view)',
+				itemsHeader:
+					'| key | source | app | status | fields | diffPathCount | diffPathsPreview |'
+			}
+		}
+	}
 };

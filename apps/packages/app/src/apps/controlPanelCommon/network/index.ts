@@ -35,6 +35,7 @@ import {
 	MiddlewareType
 } from './middleware';
 import { isEmpty } from 'lodash';
+import { stringifyParamsForPost } from '@apps/dashboard/src/utils/net';
 export * from './user-service';
 
 export const getNodeMonitoring = (
@@ -149,10 +150,11 @@ export const getNamespaces = (
 	params: NamespacesParam,
 	config?: Record<string, any>
 ): Promise<AxiosResponse<NamespacesResponse>> => {
-	return api.get('/kapis/monitoring.kubesphere.io/v1alpha3/namespaces', {
-		params,
-		...config
-	});
+	return api.post(
+		'/kapis/monitoring.kubesphere.io/v1alpha3/namespaces',
+		stringifyParamsForPost(params as Record<string, unknown>),
+		config
+	);
 };
 
 export const getUsers = <T = any>(

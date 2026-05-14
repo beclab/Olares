@@ -172,6 +172,7 @@ export const useMenuStore = defineStore('filesMenu', {
 		},
 		async checkRepoSyncStatus() {
 			window.electron.api.files.syncNotificationMessage();
+			// console.log('this.syncRepoIdsList --->', this.syncRepoIdsList);
 
 			for (let index = 0; index < this.syncRepoIdsList.length; index++) {
 				if (this.syncRepoIdsUpdating) {
@@ -182,6 +183,8 @@ export const useMenuStore = defineStore('filesMenu', {
 				const repoSyncInfo = await window.electron.api.files.repoSyncInfo(
 					repo_id
 				);
+				// console.log('repoSyncInfo ===>', repoSyncInfo);
+
 				if (repoSyncInfo.length == 0 || repoSyncInfo == 'repo not in sync') {
 					if (
 						!this.syncReposLastStatusMap[repo_id] ||

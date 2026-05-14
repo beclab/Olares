@@ -38,7 +38,7 @@
 				class="row items-center justify-center"
 			>
 				<audio
-					:src="raw"
+					:src="displayRaw"
 					controls
 					:autoplay="autoPlay"
 					@play="autoPlay = true"
@@ -59,6 +59,7 @@ import { StatusBar } from '@capacitor/status-bar';
 import { useFilesStore, FilesIdType } from '../../../stores/files';
 import { format } from '../../../utils/format';
 import { getNativeAppPlatform } from 'src/application/platform';
+import { useUserStore } from 'src/stores/user';
 
 const props = defineProps({
 	origin_id: {
@@ -80,15 +81,13 @@ const size = ref(
 	humanStorageSize(filesStore.previewItem[props.origin_id].size ?? 0)
 );
 
+const displayRaw = ref('');
+
 const raw = computed(function () {
 	if (
 		filesStore.previewItem[props.origin_id].type === 'image' &&
 		!fullSize.value
 	) {
-		console.log(
-			'filesStore.previewItem[props.origin_id], ===>',
-			filesStore.previewItem[props.origin_id]
-		);
 		return filesStore.getPreviewURL(
 			filesStore.previewItem[props.origin_id],
 			'big'
@@ -100,23 +99,35 @@ const raw = computed(function () {
 	);
 });
 
-onMounted(() => {
-	if (
-		$q.platform.is.nativeMobile &&
-		filesStore.previewItem[props.origin_id].type == 'video'
-	) {
-		ScreenOrientation.unlock();
-		StatusBar.hide();
-	}
-});
+const loadImageContent = async () => {
+	try {
+		const userStore = useUserStore();
 
-onUnmounted(() => {
+		const response = await fetch(raw.value, {
+			headers: {
+				'X-Authorization': userStore.current_user!.access_token
+			}
+		});
+		const blob = await response.blob();
+		const url = URL.createObjectURL(blob);
+		displayRaw.value = url;
+	} catch (error) {
+		console.error('Error converting HEIC to JPEG:', error);
+	}
+};
+
+onMounted(() => {
+	const userStore = useUserStore();
 	if (
 		$q.platform.is.nativeMobile &&
-		filesStore.previewItem[props.origin_id].type == 'video'
+		$q.platform.is.android &&
+		userStore.current_user &&
+		userStore.current_user.isLocal &&
+		filesStore.previewItem[props.origin_id].type != 'image'
 	) {
-		getNativeAppPlatform().resetOrientationLockType();
-		StatusBar.show();
+		loadImageContent();
+	} else {
+		displayRaw.value = raw.value;
 	}
 });
 </script>

@@ -1,7 +1,7 @@
 import { reactive } from 'vue';
 import { parseDateRange } from './date';
 import { get } from 'lodash';
-import { t } from '@apps/dashboard/src/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 
 export const dateFilterOption = [
 	{

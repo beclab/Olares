@@ -1,7 +1,7 @@
 <template>
 	<div
 		class="bt-checkbox row justify-start items-center cursor-pointer"
-		@click.stop="emit('update:modelValue', !modelValue)"
+		@click.stop="handleCheckboxClick"
 	>
 		<q-img
 			class="bt-checkbox__img"
@@ -16,17 +16,25 @@
 			"
 		/>
 		<div
-			v-if="label"
+			v-if="label || linkLabel"
 			class="bt-checkbox__label text-body3 text-ink-2"
 			:style="{ maxWidth: maxWidth ? maxWidth : 'calc(100% - 32px)' }"
 		>
-			{{ label }}
+			<span v-if="label">{{ label }}</span>
+			<a
+				v-if="linkLabel && link"
+				:href="link"
+				target="_blank"
+				class="bt-checkbox__link"
+			>
+				{{ linkLabel }}
+			</a>
 		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
-defineProps({
+const props = defineProps({
 	modelValue: {
 		type: Boolean,
 		required: true
@@ -34,6 +42,16 @@ defineProps({
 	label: {
 		type: String,
 		required: false
+	},
+	link: {
+		type: String,
+		required: false,
+		default: ''
+	},
+	linkLabel: {
+		type: String,
+		required: false,
+		default: ''
 	},
 	circle: {
 		type: Boolean,
@@ -61,6 +79,14 @@ defineProps({
 	}
 });
 const emit = defineEmits(['update:modelValue']);
+
+const handleCheckboxClick = (e: MouseEvent) => {
+	const target = e.target as HTMLElement;
+	if (target.tagName === 'A' || target.closest('a')) {
+		return;
+	}
+	emit('update:modelValue', !props.modelValue);
+};
 </script>
 
 <style lang="scss" scoped>
@@ -71,6 +97,13 @@ const emit = defineEmits(['update:modelValue']);
 	&__img {
 		width: 16px;
 		height: 16px;
+	}
+
+	&__link {
+		color: $blue-default;
+		text-decoration: underline;
+		cursor: pointer;
+		white-space: nowrap;
 	}
 
 	&__label {

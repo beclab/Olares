@@ -49,7 +49,7 @@ import AppStoreBody from '../../../components/base/AppStoreBody.vue';
 import EmptyView from '../../../components/base/EmptyView.vue';
 import TitleBar from '../../../components/base/TitleBar.vue';
 import { useDeviceStore } from '../../../stores/settings/device';
-import { useCenterStore } from '../../../stores/market/center';
+import { useAppStore } from '../../../stores/market/appStore';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
@@ -58,14 +58,14 @@ const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
 const showShadow = ref(false);
-const centerStore = useCenterStore();
+const appStore = useAppStore();
 const deviceStore = useDeviceStore();
 
 const sourceId = route.params.sourceId as string;
 const appName = route.params.appName as string;
 
 const appAggregation = computed(() => {
-	return centerStore.getAppAggregationInfo(appName, sourceId);
+	return appStore.getAppAggregationInfo(appName, sourceId);
 });
 
 const versionList = computed(() => {

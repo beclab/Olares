@@ -125,6 +125,7 @@ export interface CreateWithOneImageConfig {
 	ports?: number[];
 	requiredGpu: boolean;
 	gpuVendor?: VENDOR.NVIDIA;
+	sshEnable?: boolean;
 }
 
 export interface VariableType {

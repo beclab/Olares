@@ -18,7 +18,7 @@ import {
 	UPLOAD_LINKS_OPEN
 } from '../utils/localStorageConstant';
 import { useRssStore } from 'src/stores/rss';
-import { nextTick } from 'vue';
+import { getKnowledgeDBInit } from 'src/api/wise';
 
 export type DataState = {
 	menuInited: boolean;
@@ -41,6 +41,7 @@ export type DataState = {
 	readingFontFamily: string;
 	readingContentPending: number;
 	themeSetting: string;
+	knowledgeDBInitTime: string;
 };
 
 export const useConfigStore = defineStore('config', {
@@ -70,7 +71,8 @@ export const useConfigStore = defineStore('config', {
 			readingFontSize: 16,
 			readingFontFamily: '',
 			readingContentPending: 80,
-			themeSetting: THEME_TYPE.AUTO
+			themeSetting: THEME_TYPE.AUTO,
+			knowledgeDBInitTime: ''
 		} as unknown as DataState;
 	},
 	actions: {
@@ -81,9 +83,17 @@ export const useConfigStore = defineStore('config', {
 			if (themeLocal) {
 				this.themeSetting = themeLocal;
 			}
-			this.setUserTabs(MenuType.Transmission, [
-				TabType.Download,
-				TabType.Upload
+			this.setUserTabs(MenuType.Download, [
+				TabType.All,
+				TabType.Downloading,
+				TabType.Complete,
+				TabType.Failed
+			]);
+			this.setUserTabs(MenuType.Upload, [
+				TabType.All,
+				TabType.Uploading,
+				TabType.Complete,
+				TabType.Failed
 			]);
 			const rssStore = useRssStore();
 			this.setUserTabs(
@@ -103,6 +113,12 @@ export const useConfigStore = defineStore('config', {
 			}
 			console.log('baseUrl ===>', url);
 			return url;
+		},
+		async getKnowledgeDBInit() {
+			const data: any = await getKnowledgeDBInit();
+			if (data) {
+				this.knowledgeDBInitTime = data;
+			}
 		},
 		setMenuType(type: MenuType | string, params = {}) {
 			this.menuChoice.type = type;

@@ -1,5 +1,8 @@
 <template>
-	<q-layout class="main-layout row items-center justify-evenly">
+	<q-layout
+		class="main-layout row items-center justify-evenly"
+		:class="$q.dark.isActive ? 'main-layout-dark-bg' : 'main-layout-light-bg'"
+	>
 		<div class="settings_box">
 			<div class="settings_left">
 				<bt-scroll-area class="full-height">
@@ -58,22 +61,51 @@ import SettingAvatar from 'src/components/settings/base/SettingAvatar.vue';
 import { useBackgroundStore } from 'src/stores/settings/background';
 import { useAdminStore } from 'src/stores/settings/admin';
 import { onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute, useRouter, isNavigationFailure } from 'vue-router';
 import { MENU_TYPE } from 'src/constant';
-import globalConfig from 'src/api/market/config';
+import { useQuasar } from 'quasar';
 
 const router = useRouter();
 const route = useRoute();
+const $q = useQuasar();
 const adminStore = useAdminStore();
 const backgroundStore = useBackgroundStore();
 
 const itemsRef = ref();
 const itemMenu = ref('/');
 
+function syncItemMenuFromRoute() {
+	if (!itemsRef.value?.[0]?.children?.length) {
+		return;
+	}
+	const menuKeys = new Set(Object.values(MENU_TYPE) as string[]);
+	const menuRoutes = router
+		.getRoutes()
+		.filter((r) => typeof r.name === 'string' && menuKeys.has(r.name))
+		.map((r) => ({ name: r.name as string, path: r.path.toLocaleLowerCase() }))
+		.sort((a, b) => b.path.length - a.path.length);
+
+	const currentPath = route.path.toLocaleLowerCase();
+	const matched = menuRoutes.find(
+		(r) => currentPath === r.path || currentPath.startsWith(`${r.path}/`)
+	);
+
+	if (matched?.name === MENU_TYPE.Root) {
+		itemMenu.value = '/';
+		return;
+	}
+
+	if (matched?.name) itemMenu.value = matched.name;
+}
+
 const changeItemMenu = (data: any): void => {
 	const type = data.key;
-	itemMenu.value = type;
-	router.push({ name: type });
+	itemMenu.value = type === MENU_TYPE.Root ? '/' : type;
+	router.push({ name: type }).then((result) => {
+		if (isNavigationFailure(result)) {
+			syncItemMenuFromRoute();
+		}
+	});
 };
 
 if (location.pathname === '/') {
@@ -95,14 +127,11 @@ const configMenus = () => {
 	];
 
 	if (itemsRef.value.length > 0) {
-		const finditem = itemsRef.value[0].children.find((e: { key: string }) =>
-			route.path.startsWith(('/' + e.key).toLocaleLowerCase())
-		);
-		if (finditem) {
-			itemMenu.value = finditem.key;
-		}
+		syncItemMenuFromRoute();
 	}
 };
+
+watch(() => route.fullPath, syncItemMenuFromRoute);
 
 watch(
 	() => backgroundStore.locale,
@@ -160,11 +189,15 @@ watch(
 }
 
 .main-layout::v-deep .my-active-link {
-	color: $blue-default;
-	background-color: $blue-alpha;
+	color: $theme-menu-color-hover;
+	background-color: $theme-menu-bg-hover;
 }
 
-.main-layout {
-	background-color: $background-1;
+.main-layout-dark-bg {
+	background-color: $theme-background-dark;
+}
+
+.main-layout-light-bg {
+	background-color: $theme-background-light;
 }
 </style>

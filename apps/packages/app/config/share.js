@@ -1,5 +1,6 @@
-const boot = ['i18n', 'smartEnginEntrance', 'baseAxios', 'application/share'];
-const css = ['app.scss'];
+const boot = ['i18n', 'filesUI', 'baseAxios', 'application/share'];
+// const css = ['app.scss'];
+const css = ['files/app.scss'];
 
 const getConfig = (ctx) => {
 	if (!ctx.dev) {
@@ -20,7 +21,8 @@ const getConfig = (ctx) => {
 			distDir: 'dist/apps/share'
 		},
 		sourceFiles: {
-			indexHtmlTemplate: 'src/index.template.share.html'
+			indexHtmlTemplate: 'src/index.template.share.html',
+			variables: 'files/variables.scss'
 		},
 		htmlVariables: {
 			productName: 'Share'

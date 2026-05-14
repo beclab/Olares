@@ -7,7 +7,7 @@
 		<!-- <listing-files-header v-if="!filesStore.isShard" /> -->
 
 		<div
-			id="listing"
+			id="listing-mobile"
 			ref="listing"
 			:class="store.user.viewMode + ' file-icons'"
 		>
@@ -260,7 +260,7 @@ const leftClick = () => {
 </script>
 
 <style scoped lang="scss">
-#listing {
+#listing-mobile {
 	width: 100%;
 	height: 100%;
 	position: relative;

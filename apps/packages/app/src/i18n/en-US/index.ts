@@ -45,6 +45,7 @@ export default {
 	'10-32 characters': '10-32 characters',
 	'Contains lowercase letters': 'Contains lowercase letters',
 	'Contains uppercase letters': 'Contains uppercase letters',
+	'Contains letters': 'Contains letters',
 	'Contains numbers': 'Contains numbers',
 	'Contains symbols': "Contains symbols from {'@'}$!%*?&_.",
 	'Wise is not installed. Please go to the Market to install this app.':
@@ -203,8 +204,9 @@ export default {
 		only_valid_numbers_can_be_entered: 'Please enter a valid number',
 		memory_limit_is_empty: 'Memory limit is required',
 		old_password_is_empty: 'Old password is required',
-		at_least_8_digits_long: 'Must be at least 8 digits long',
-		at_least_10_digits_long: 'Must be at least 10 digits long',
+		at_least_8_digits_long: 'Must be at least 8 characters long',
+		at_least_10_digits_long: 'Must be at least 10 characters long',
+		at_least_number_digits_long: 'Must be at least {number} characters long',
 		at_least_one_uppercase_and_lowercase_letter:
 			'Must include at least one uppercase and one lowercase letter ',
 		repassword_do_not_match_password: "Passwords don't match",
@@ -239,7 +241,12 @@ export default {
 		ip_is_empty: 'IP address cannot be empty',
 		host_is_error: 'Enter a valid hostname',
 		host_is_error_duplicate: 'The hostname is already in use',
-		ip_is_error: 'Enter a valid IP address'
+		ip_is_error: 'Enter a valid IP address',
+		at_least_one_letter: 'Must include at least one letter',
+		include_invalid_characters:
+			"Includes invalid characters: {invalidChars}. Only letters, numbers, {'@'}$!%*?&_. are allowed.",
+		password_length_too_long:
+			'Password too long. Maximum 32 characters allowed.'
 	},
 	time: {
 		time: 'Time',
@@ -496,7 +503,138 @@ export default {
 		'Copy link': 'Copy link',
 		'Original path': 'Original path',
 		'Revoke Olares sharing?': 'Revoke Olares sharing?',
-		'Add user accounts': 'Add user accounts'
+		'Add user accounts': 'Add user accounts',
+		'The file name is too long, rename it and try again: {file}':
+			'The file name is too long, rename it and try again: {file}',
+		file_types: {
+			unknown: 'File',
+			word_97_2003: 'Microsoft Word 97-2003 Document',
+			word: 'Microsoft Word Document',
+			odt: 'OpenDocument Text',
+			pages: 'Pages Document',
+			rtf: 'Rich Text Document',
+			pdf: 'PDF Document',
+			powerpoint: 'Microsoft PowerPoint Presentation',
+			excel: 'Microsoft Excel Worksheet',
+			csv: 'Microsoft Excel Comma Separated Values File',
+			tsv: 'Tab Separated Values File',
+			xml: 'XML Document',
+			html: 'HTML Document',
+			jpeg: 'JPEG image',
+			png: 'PNG image',
+			gif: 'GIF image',
+			raw: 'RAW image',
+			bmp: 'Bitmap image',
+			svg: 'SVG Document',
+			webp: 'WebP image',
+			heic: 'HEIC image',
+			tiff: 'TIFF image',
+			epub: 'EPUB File',
+			txt: 'Text Document',
+			md: 'Markdown File',
+			mdx: 'MDX Document',
+			json: 'JSON File',
+			ipynb: 'Jupyter Notebook',
+			rst: 'reStructuredText Document',
+			adoc: 'AsciiDoc Document',
+			org: 'Org Mode Document',
+			latex: 'LaTeX Document',
+			bibtex: 'BibTeX Bibliography',
+			subtitle: 'Subtitle File',
+			zip: 'Compressed (zipped) Folder',
+			rar: 'WinRAR archive',
+			seven_zip: '7-Zip archive',
+			tar: 'TAR archive',
+			gzip: 'GZIP archive',
+			bzip2: 'BZIP2 archive',
+			mp3: 'MP3 Audio File',
+			m4a: 'M4A Audio File',
+			wav: 'Wave Sound',
+			aac: 'AAC Audio File',
+			flac: 'FLAC Audio File',
+			ogg: 'OGG Audio File',
+			ape: "Monkey's Audio File",
+			mp4: 'MP4 Video',
+			video: 'Video Clip',
+			python: 'Python Source File',
+			c: 'C Source File',
+			cpp: 'C++ Source File',
+			c_header: 'C/C++ Header File',
+			java: 'Java Source File',
+			js: 'JavaScript File',
+			jsx: 'JavaScript JSX File',
+			ts: 'TypeScript File',
+			tsx: 'TypeScript JSX File',
+			vue: 'Vue Component',
+			php: 'PHP Source File',
+			sql: 'SQL File',
+			css: 'Cascading Style Sheet Document',
+			sh: 'Shell Script File',
+			vbs: 'VBScript File',
+			swift: 'Swift Source File',
+			objective_c: 'Objective-C Source File',
+			csharp: 'C# Source File',
+			fsharp: 'F# Source File',
+			go: 'Go Source File',
+			ruby: 'Ruby Source File',
+			perl: 'Perl Script File',
+			perl_module: 'Perl Module File',
+			lua: 'Lua Source File',
+			vbp: 'Visual Basic Project File',
+			fortran: 'Fortran Source File',
+			pascal: 'Pascal Source File',
+			delphi: 'Delphi Project File',
+			rust: 'Rust Source File',
+			asm: 'Assembly Source File',
+			kotlin: 'Kotlin Source File',
+			r: 'R Source File',
+			scratch: 'Scratch Project File',
+			dart: 'Dart Source File',
+			scala: 'Scala Source File',
+			groovy: 'Groovy Source File',
+			gradle: 'Gradle Build File',
+			clojure: 'Clojure Source File',
+			haskell: 'Haskell Source File',
+			elixir: 'Elixir Source File',
+			erlang: 'Erlang Source File',
+			ocaml: 'OCaml Source File',
+			nim: 'Nim Source File',
+			zig: 'Zig Source File',
+			solidity: 'Solidity Source File',
+			yaml: 'YAML File',
+			toml: 'TOML File',
+			config: 'Configuration Settings',
+			env: 'Environment File',
+			plist: 'Property List File',
+			log: 'Log File',
+			properties: 'Properties File',
+			editorconfig: 'EditorConfig File',
+			htaccess: 'Apache Configuration File',
+			lock: 'Lock File',
+			powershell: 'Windows PowerShell Script',
+			bat: 'Windows Batch File',
+			gitignore: 'Git Ignore File',
+			gitattributes: 'Git Attributes File',
+			dockerfile: 'Dockerfile',
+			dockerignore: 'Docker Ignore File',
+			makefile: 'Makefile',
+			cmake: 'CMake File',
+			apk: 'Android Package',
+			xapk: 'Android Extended Package',
+			aab: 'Android App Bundle',
+			ipa: 'iOS App Package',
+			exe: 'Windows Executable',
+			msi: 'Windows Installer Package',
+			appx: 'Windows Application Package',
+			dmg: 'macOS Disk Image',
+			pkg: 'macOS Installer Package',
+			macos_app: 'macOS Application',
+			deb: 'Debian Package',
+			rpm: 'Red Hat Package',
+			snap: 'Snap Package',
+			flatpak: 'Flatpak Package',
+			appimage: 'AppImage Application'
+		}
 	},
 	prompts: {
 		copy: 'Copy',
@@ -730,8 +868,9 @@ export default {
 	after_verification_code_bind_olares:
 		'Enter the verification code. Then, bind your Olares Space account to the current DID.',
 	domain_list_under_account_desc:
-		'Bind your custom domain for the new organization in Olares Space. For detailed binding steps, refer to Olares documentation.',
-	confirm_bind_domain_name_desc: 'Confirm the domain binding',
+		'Set up a custom domain for your new organization in Olares Space. For detailed steps, see the Olares documentation.  ',
+	confirm_bind_domain_name_desc:
+		'Create your Olares ID with the custom domain to become the organization admin',
 	confirm_bind_domain_bingding_desc:
 		'Set up email binding rules for your organization. For now, only Gmail and Google Workspace emails are supported.',
 	confirm_bind_domain_text_record_desc:
@@ -740,14 +879,14 @@ export default {
 		"Add the following Name Server (NS) information to '{domain}'",
 	confirm_bind_domain_common_desc: 'Bind this domain name?',
 	enter_domain_name_organization_want_to_join:
-		'Enter the domain name of your organization, for example:',
+		'Enter your full Olares ID (e.g., {org}) and password to join the organization. Your credentials are provided by the organization admin.',
 	bind_organization_vc_last_step_desc:
 		'Enter the email address for verification. If unsure, contact your organization admin or check the documentation.',
 	bind_organization_vc_last_step_desc_more_note:
 		'Please note that we currently only support Gmail or Google Workspace email addresses',
 
 	congratulations_on_successfully_owning_a_olares_id:
-		'Congratulations! Now you have an Olares ID!',
+		'Olares ID successfully created',
 	complete_your_olares_device_activation:
 		'Scan the QR code on the Wizard page to start activation',
 	network_configuration: 'Network setup',
@@ -1000,6 +1139,7 @@ export default {
 		autostart_settings: 'Autostart settings'
 	},
 	change_local_password: 'Change your local LarePass password',
+	local_password: 'Local LarePass password',
 	please_enter_the_old_password: 'Enter the old password',
 	backup_mnemonic_phrase: 'Backup mnemonic phrase',
 	security_verification: 'Security verification',
@@ -1013,8 +1153,10 @@ export default {
 	domain: {
 		wait_txt_resolve_desc: 'Configuring TXT record',
 		wait_ns_resolve_desc: 'Configuring NS record',
-		wait_request_vc_desc: "Applying for the domain's verifiable credential ",
-		wait_submit_vp_desc: "Submitting the domain's verifiable presentation",
+		wait_request_vc_desc:
+			'Requesting a verifiable credential for your domain... ',
+		wait_submit_vp_desc:
+			'Submitting the verifiable presentation for your domain...',
 		wait_rule_set_desc: 'Configuring rules',
 		bind_desc: 'Completed',
 		allocated_desc: 'Allocated',
@@ -1314,7 +1456,9 @@ export default {
 		scan_code: 'Scan QR code',
 		'SSH login password cannot be edited':
 			'SSH login password cannot be edited',
-		'VC data cannot be edited': 'VC data cannot be edited'
+		'VC data cannot be edited': 'VC data cannot be edited',
+		'Enter value here': 'Enter value here',
+		'Enter password': 'Enter password'
 	},
 	auto_lock: 'Auto lock',
 	lock_automatically: 'Lock automatically',
@@ -1472,6 +1616,7 @@ export default {
 		feed_name: 'Feed name',
 		more: 'More',
 		open: 'Open',
+		open_in_wise: 'Open in Wise',
 		recommend_reason: 'Reason for recommendation',
 		debug_info: 'Debug info',
 		none: 'None',
@@ -1559,6 +1704,8 @@ export default {
 		transmission: 'Transmission',
 		download: 'Download',
 		upload: 'Upload',
+		download_list: 'Download list',
+		upload_list: 'Upload list',
 		sort_by: 'Sort by',
 		date_published: 'Date published',
 		date_created: 'Date created',
@@ -1604,7 +1751,12 @@ export default {
 		my_terminus: 'My Olares',
 		terminus: 'Olares',
 		terminus_market: 'Olares Market',
-		install_terminus_os: 'Install Olares'
+		install_terminus_os: 'Install Olares',
+		all: 'All',
+		uploading: 'Uploading',
+		downloading: 'Downloading',
+		complete: 'Complete',
+		failed: 'Failed'
 	},
 	app: {
 		get: 'Get',
@@ -1681,8 +1833,8 @@ export default {
 		'Downloads files from the URL directly to Olares without creating a library record.',
 	invalid_url: 'Invalid URL',
 	upload_cookie_info:
-		'To add this content, you will need to log in to the site and upload cookies. ',
-	cookie_expired_reupload: 'Some cookies expired. Please re-upload',
+		'To add this content, you will need to log in to the site and upload cookie. ',
+	cookie_expired_reupload: 'Some cookie expired. Please re-upload',
 	upload_cookies: 'Upload',
 	add_tag_info: 'Please add the page to library before adding any tags.',
 	parsing_waitting: 'Parsing content. Please wait...',
@@ -1691,9 +1843,9 @@ export default {
 	url_value_empty: 'Invalid URL (empty or non-string)',
 	url_malformed_format: 'Invalid URL (malformed format)',
 	url_unsupported: 'Invalid URL (unsupported protocol)',
-	'Reset SSH Password': 'Reset SSH login password',
 	Link: 'Link',
 	Domain: 'Domain',
+	Applications: 'Applications',
 	'Application variable validation failed':
 		'Application variable validation failed, invalid {type}',
 	'cannot be empty': 'cannot be empty',
@@ -1701,7 +1853,83 @@ export default {
 		'does not meet format requirements (regex validation failed: {regex})',
 	'must be a number': 'must be a number',
 	'invalid email format': 'invalid email format',
-
+	'Insufficient disk space. Unable to install the application. Please stop other running applications to free up storage.':
+		'Insufficient disk space. Unable to install the application. Please stop other running applications to free up storage.',
+	'Insufficient system CPU. Unable to install the application. Please stop other running applications to free up resources.':
+		'Insufficient system CPU. Unable to install the application. Please stop other running applications to free up resources.',
+	'Insufficient system memory. Unable to install the application. Please stop other running applications to free up memory.':
+		'Insufficient system memory. Unable to install the application. Please stop other running applications to free up memory.',
+	'No available GPU found. Unable to install the application.':
+		'No available GPU found. Unable to install the application.',
+	'Available GPU is insufficient to install this application. The requested GPU memory cannot exceed the maximum GPU memory of the node.':
+		'Available GPU is insufficient to install this application. The requested GPU memory cannot exceed the maximum GPU memory of the node.',
+	'Available CPU is insufficient to install this application. Please stop other applications to free up resources.':
+		'Available CPU is insufficient to install this application. Please stop other applications to free up resources.',
+	'Available memory is insufficient to install this application. Please stop other applications to free up resources.':
+		'Available memory is insufficient to install this application. Please stop other applications to free up resources.',
+	'Insufficient user CPU. Unable to install the application. Please stop other running applications to free up resources.':
+		'Insufficient user CPU. Unable to install the application. Please stop other running applications to free up resources.',
+	'Insufficient user memory. Unable to install the application. Please stop other running applications to free up memory.':
+		'Insufficient user memory. Unable to install the application. Please stop other running applications to free up memory.',
+	'Insufficient disk space. Unable to resume the application. Please stop other running applications to free up storage.':
+		'Insufficient disk space. Unable to resume the application. Please stop other running applications to free up storage.',
+	'Insufficient system CPU. Unable to resume the application. Please stop other running applications to free up resources.':
+		'Insufficient system CPU. Unable to resume the application. Please stop other running applications to free up resources.',
+	'Insufficient system memory. Unable to resume the application. Please stop other running applications to free up memory.':
+		'Insufficient system memory. Unable to resume the application. Please stop other running applications to free up memory.',
+	'No available GPU found. Unable to resume the application.':
+		'No available GPU found. Unable to resume the application.',
+	'Available GPU is insufficient to resume this application. The requested GPU memory cannot exceed the maximum GPU memory of the node.':
+		'Available GPU is insufficient to resume this application. The requested GPU memory cannot exceed the maximum GPU memory of the node.',
+	'Available CPU is insufficient to resume this application. Please stop other applications to free up resources.':
+		'Available CPU is insufficient to resume this application. Please stop other applications to free up resources.',
+	'Available memory is insufficient to resume this application. Please stop other applications to free up resources.':
+		'Available memory is insufficient to resume this application. Please stop other applications to free up resources.',
+	'Insufficient user CPU. Unable to resume the application. Please stop other running applications to free up resources.':
+		'Insufficient user CPU. Unable to resume the application. Please stop other running applications to free up resources.',
+	'Insufficient user memory. Unable to resume the application. Please stop other running applications to free up memory.':
+		'Insufficient user memory. Unable to resume the application. Please stop other running applications to free up memory.',
+	'Insufficient video memory. The application has been automatically stopped as memory usage exceeded the limit.':
+		'Insufficient video memory. The application has been automatically stopped as memory usage exceeded the limit.',
+	'Also remove all local data': 'Also remove all local data.',
+	'Allow encoding in HEVC format': 'Allow encoding in HEVC format',
+	'Allow encoding in AV1 format': 'Allow encoding in AV1 format',
+	'Audio boost when downmixing': 'Audio boost when downmixing',
+	'Stereo Downmix Algorithm': 'Stereo Downmix Algorithm',
+	Dave750: 'Dave750',
+	NightmodeDialogue: 'NightmodeDialogue',
+	'Encoder preset': 'Encoder preset',
+	'Are you sure to delete the account?': 'Are you sure to delete the account?',
+	'Drop files anywhere to upload': 'Drop files anywhere to upload',
+	'Select...': 'Select...',
+	'Learn more': 'Learn more',
+	'Close Table of Contents': 'Close Table of Contents',
+	'Table of Contents': 'Table of Contents',
+	'Previous Page': 'Previous Page',
+	'Next Page': 'Next Page',
+	Scroll: 'Scroll',
+	'Page Turn': 'Page Turn',
+	Light: 'Light',
+	Sepia: 'Sepia',
+	Dark: 'Dark',
+	Reset: 'Reset',
+	'No table of contents available': 'No table of contents available',
+	'Loading Failed': 'Loading Failed',
+	Retry: 'Retry',
+	'Current Page': 'Current Page',
+	'Failed to retrieve app information': 'Failed to retrieve app information',
+	bt_uploader_image_too_large: 'Image size cannot exceed {maxMb} MB.',
+	bt_uploader_read_file_failed:
+		'Could not read the selected file. Try another format or file.',
+	bt_uploader_upload_failed: 'Image upload failed. Please try again.',
+	bt_uploader_image_dimensions_too_small:
+		'Image dimensions (width × height) must be at least {minWidth} × {minHeight} pixels.',
+	bt_uploader_image_format_not_allowed: 'PNG, JPG, or GIF only.',
+	env_ref_picker_tooltip:
+		'Choose another system or user environment variable from the list.',
+	env_ref_system_var_missing:
+		'Unable to find System Environment Variables [{envName}]',
+	Details: 'Details',
 	...larepass_en,
 	...wise_en,
 	...settings_en,

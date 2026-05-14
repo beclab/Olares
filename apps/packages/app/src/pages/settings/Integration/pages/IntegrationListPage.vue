@@ -1,7 +1,7 @@
 <template>
 	<page-title-component
 		:show-back="true"
-		:title="t('Link Your Accounts & Data')"
+		:title="t('Link your accounts & data')"
 	/>
 	<app-menu-empty
 		v-if="integrationStore.accounts.length === 0"

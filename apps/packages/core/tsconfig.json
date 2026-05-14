@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "strict": false,
+    // "esModuleInterop": true,
+    // "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    // "checkJs": true,
+    "allowJs": true,
+    "declaration": true,
+    // "declarationMap": false,
+    // "allowSyntheticDefaultImports": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    // "lib": ["ES2022", "DOM"],
+    "target": "ES6",
+    "module": "node16",
+    // "moduleResolution": "NodeNext",
+    "baseUrl": ".",
+    // "outDir": "dist/es",
+    // "noEmitHelpers": true,
+    "experimentalDecorators": true,
+    "moduleResolution": "node16",
+    "paths": {},
+    "outDir": "./assets",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules/**/*.ts"]
+}

@@ -1,16 +1,16 @@
 <template>
 	<span v-if="loading">
-		{{ gap }}
+		<span v-html="gap"></span>
 		<LoadingIcon />
 	</span>
 
 	<span v-else-if="text && !sameLang">
 		<template v-if="keeps.length > 0">
-			{{ gap }}
+			<span v-html="gap"></span>
 			<span v-html="processedText" v-bind="styles" />
 		</template>
 		<template v-else>
-			{{ gap }}
+			<span v-html="gap"></span>
 			<span v-bind="styles">{{ text }}</span>
 		</template>
 	</span>
@@ -34,6 +34,7 @@ import {
 } from '../../config';
 import { useTranslate } from '../../hooks/Translate';
 import interpreter from '../../libs/interpreter';
+import { shouldUseNewline } from '../../libs/utils';
 
 const props = defineProps({
 	q: String,
@@ -90,7 +91,13 @@ const gap = computed(() => {
 	if (rule.value.transOnly === 'true') {
 		return '';
 	}
-	return props.q.length >= props.translator.setting.newlineLength ? '\n' : ' ';
+	return shouldUseNewline(
+		props.element,
+		props.q,
+		props.translator.setting.newlineLength
+	)
+		? '<br>'
+		: '&nbsp;&nbsp;';
 });
 
 const styles = computed(() => ({

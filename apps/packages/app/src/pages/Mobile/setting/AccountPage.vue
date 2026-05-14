@@ -11,7 +11,10 @@
 				<q-list class="accountCentent">
 					<div class="column items-center">
 						<div class="accountCentent__avatar">
-							<TerminusAvatar :info="userStore.terminusInfo()" :size="64" />
+							<TerminusAvatar
+								:info="userStore.currentUserOlaresInfo"
+								:size="64"
+							/>
 						</div>
 
 						<div
@@ -42,7 +45,7 @@
 								</div>
 								<bt-switch
 									size="sm"
-									truthy-track-color="light-blue-default"
+									truthy-track-color="blue-default"
 									v-model="offLineModeRef"
 									@update:model-value="updateOffLineMode"
 								/>
@@ -75,7 +78,7 @@
 								</div>
 								<bt-switch
 									size="sm"
-									truthy-track-color="light-blue-default"
+									truthy-track-color="blue-default"
 									v-model="vpnToggleStatus"
 								/>
 							</div>

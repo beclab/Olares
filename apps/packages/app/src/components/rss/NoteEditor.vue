@@ -7,7 +7,7 @@
 
 			<div v-if="false" class="note-operate">
 				<q-btn
-					class="btn-size-xs btn-no-text btn-no-border btn-circle-border bg-white"
+					class="btn-size-xs btn-no-text btn-no-border btn-circle-border"
 					color="ink-2"
 					outline
 					no-caps

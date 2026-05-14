@@ -280,6 +280,7 @@ export type DeploymentsDetailResponse = Role & {
 export interface AppListItem {
 	id: string;
 	name: string;
+	rawAppName: string;
 	namespace: string;
 	deployment: string;
 	owner: string;

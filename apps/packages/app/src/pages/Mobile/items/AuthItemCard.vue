@@ -159,7 +159,7 @@ onUnmounted(() => {
 
 	.hideCode-light {
 		i {
-			background: $white;
+			background: white;
 		}
 	}
 	.hideCode-dark {

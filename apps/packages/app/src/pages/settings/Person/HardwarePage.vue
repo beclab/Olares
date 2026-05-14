@@ -21,7 +21,7 @@
 				<olares-status :status="terminusDStore.olaresInfo" :node-size="8" />
 			</bt-form-item>
 			<bt-form-item
-				:title="t('Device Identifier')"
+				:title="t('Device identifier')"
 				:data="adminStore.olares_device_id"
 			/>
 			<bt-form-item
@@ -34,7 +34,7 @@
 				:width-separator="isOlareOne"
 			/>
 			<!--			<bt-form-item-->
-			<!--				:title="t('Memroy')"-->
+			<!--				:title="t('Memory')"-->
 			<!--				:data="terminusDStore.olaresInfo.memory || '&#45;&#45;'"-->
 			<!--			/>-->
 			<!--			<bt-form-item-->
@@ -67,12 +67,14 @@
 			/>
 
 			<CustomButton
+				v-if="adminStore.isOwner"
 				:label="t('Shutdown')"
 				icon="sym_r_power_settings_new"
 				class="q-mr-md"
 				@click="shutdownOlares"
 			/>
 			<CustomButton
+				v-if="adminStore.isOwner"
 				:label="t('Restart')"
 				icon="sym_r_reset_tv"
 				@click="restartOlares"

@@ -2,7 +2,7 @@
 	<div class="terminus-account-avatar">
 		<TerminusAvatar
 			class="avatar-circle q-mr-sm"
-			:info="userStore.terminusInfo()"
+			:info="userStore.currentUserOlaresInfo"
 			:size="40"
 			@click="onOKChoose"
 			style="position: relative"

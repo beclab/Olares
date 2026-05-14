@@ -237,6 +237,7 @@ export interface Entry {
 	extra: EntryExtra;
 	__v: string;
 	debug_recommend_info: any;
+	task_ids: number[];
 
 	//frontend
 	summary: string;

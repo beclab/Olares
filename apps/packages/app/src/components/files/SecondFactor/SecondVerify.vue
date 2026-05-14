@@ -120,7 +120,6 @@ onUnmounted(() => {
 			line-height: 48px;
 			text-align: center;
 			color: $ink-1;
-			background: $white;
 			box-shadow: 0px 2px 12px 0px $grey-2;
 			opacity: 1;
 			border-radius: 8px;

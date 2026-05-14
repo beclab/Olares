@@ -10,7 +10,7 @@
 				:is-paste="false"
 				:mnemonics="mnemonic"
 			/>
-			<div class="mnemonics_login" v-if="encrypting">
+			<div class="mnemonics_login text-white" v-if="encrypting">
 				<q-icon
 					name="sym_r_visibility_off"
 					class="text-ink-on-brand"
@@ -51,7 +51,7 @@ const openCheckLogin = async () => {
 	if (!(await userStore.unlockFirst())) {
 		return;
 	}
-	//TODO: 助记词写入逻辑前置
+	// TODO: move mnemonic write logic earlier in the flow.
 	if (!mnemonic.value) {
 		mnemonic.value = userStore.current_mnemonic?.mnemonic || '';
 		selectMnemonicsView.value.reloadMnemonics(mnemonic.value.split(' '));
@@ -92,7 +92,6 @@ onBeforeUnmount(() => {
 		align-items: center;
 		justify-content: center;
 		padding: 0 20px;
-		color: $white;
 
 		.content {
 			line-height: 24px;

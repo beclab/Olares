@@ -42,6 +42,7 @@ import { useUserStore } from '../../stores/user';
 import { getRequireImage } from 'src/utils/imageUtils';
 import { useQuasar } from 'quasar';
 import SwitchAccount from '../SwitchAccount.vue';
+import { getNativeAppPlatform } from 'src/application/platform';
 
 const props = defineProps({
 	scan: {
@@ -93,9 +94,8 @@ const scanQrCode = () => {
 	if (!props.scan) {
 		return;
 	}
-	router.push({
-		path: '/scanQrCode'
-	});
+	const nativalPlatform = getNativeAppPlatform();
+	nativalPlatform.scanQRCodeAndDispatch();
 };
 const emits = defineEmits(['redefinedAvatarAction']);
 </script>

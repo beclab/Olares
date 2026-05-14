@@ -131,12 +131,21 @@ const open = async (item: TextSearchItem) => {
 		filesStore.setBrowserUrl(item.path, item.driveType);
 	} else if (props.item?.title === 'Wise') {
 		const appAbilitiesStore = useAppAbilitiesStore();
-		const baseurl = appAbilitiesStore.getAppDomain('wise');
-		const url = baseurl + '/' + item.meta?.file_type + '/' + item.meta?.id;
-		const openUrl = url.startsWith('https') ? url : 'https://' + url;
-		let enterUrl = new URL(openUrl);
-		enterUrl.searchParams.append('preview_name', item.title);
-		getApplication().openUrl(enterUrl.toString());
+		let baseurl = appAbilitiesStore.getAppDomain('wise');
+
+		if (
+			item.meta &&
+			(!!item.meta.filter_id || !!item.meta.file_type) &&
+			(!!item.meta.entry_id || !!!item.meta.id)
+		) {
+			baseurl =
+				baseurl +
+				'/' +
+				(item.meta.filter_id || item.meta.file_type) +
+				'/' +
+				(item.meta.entry_id || item.meta.id);
+		}
+		getApplication().openUrl(baseurl);
 	}
 	setTimeout(() => {
 		emits('hideSearchDialog');

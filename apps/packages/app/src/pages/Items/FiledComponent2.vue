@@ -28,7 +28,9 @@
 						mask="date"
 						:rules="['date']"
 						@update:model-value="onUpdate"
-						:placeholder="placeholder[field.type]"
+						:placeholder="
+							placeholder[field.type] || t('vault_t.Enter value here')
+						"
 						input-class="text-body3 text-ink-2"
 						class="filedInput"
 						input-style="width: 100%; text-indent: 10px; height: 32px;"
@@ -66,7 +68,9 @@
 						borderless
 						mask="####/##"
 						@update:model-value="onUpdate"
-						:placeholder="placeholder[field.type]"
+						:placeholder="
+							placeholder[field.type] || t('vault_t.Enter value here')
+						"
 						input-class="text-body3 text-ink-2"
 						class="filedInput"
 						input-style="width: 100%; text-indent: 10px;"
@@ -98,7 +102,9 @@
 						dense
 						v-model="fieldValue"
 						@update:model-value="onUpdate"
-						:placeholder="placeholder[field.type]"
+						:placeholder="
+							placeholder[field.type] || t('vault_t.Enter value here')
+						"
 						input-style="width: 100%; text-indent: 10px;"
 						input-class="text-body3 text-body3"
 						class="filedInput"
@@ -195,7 +201,7 @@
 
 			<div class="row item-center justify-end infoOperateWrap">
 				<div
-					class="row items-center justify-center q-px-sm q-py-xs q-mr-md bg-grey-11-hover infoOperate text-ink-1"
+					class="row items-center justify-center q-px-sm q-py-xs q-mr-md infoOperate text-ink-1"
 					@click="openUrl(fieldValue)"
 					v-if="field.type == 'url' && fieldValue.startsWith('http')"
 				>
@@ -203,7 +209,7 @@
 					<span class="text-body3 q-ml-xs">{{ t('base.open') }}</span>
 				</div>
 				<div
-					class="row items-center justify-center q-px-sm q-py-xs q-mr-md bg-grey-11-hover infoOperate text-ink-1"
+					class="row items-center justify-center q-px-sm q-py-xs q-mr-md infoOperate text-ink-1"
 					@click="copyFile(fieldValue)"
 				>
 					<q-icon name="sym_r_content_copy" size="14px" />
@@ -211,7 +217,7 @@
 				</div>
 				<div
 					v-if="isEditable"
-					class="row items-center justify-center q-px-sm q-py-xs bg-grey-11-hover infoOperate text-ink-1"
+					class="row items-center justify-center q-px-sm q-py-xs infoOperate text-ink-1"
 					@click="onEdit"
 				>
 					<q-icon name="sym_r_edit_note" size="14px" />
@@ -219,7 +225,7 @@
 				</div>
 				<div
 					v-if="!isEditable"
-					class="row items-center justify-center q-px-sm q-py-xs bg-grey-11-hover infoOperate text-ink-1"
+					class="row items-center justify-center q-px-sm q-py-xs infoOperate text-ink-1"
 					disabled
 				>
 					<q-icon name="sym_r_edit_note" size="14px" />
@@ -241,6 +247,7 @@ import { notifyFailed, notifySuccess } from '../../utils/notifyRedefinedUtil';
 import { useI18n } from 'vue-i18n';
 import { translate } from '@didvault/sdk/src/util';
 import { date } from 'quasar';
+import { getApplication } from 'src/application/base';
 
 const props = defineProps({
 	index: {
@@ -270,14 +277,13 @@ const props = defineProps({
 });
 
 const $q = useQuasar();
+const { t } = useI18n();
 const _masked = false;
 const fieldValue = ref(props.field.value);
 const mouseFlag = ref();
 const showAddField = ref(false);
 const placeholderOption = {
-	username: 'Enter value Here',
-	password: 'Enter passWord',
-	url: 'Enter value Here'
+	password: t('vault_t.Enter password')
 };
 const placeholder = reactive(placeholderOption);
 const myTotp = ref();
@@ -288,8 +294,6 @@ const fieldType = ref(props.field.type);
 const isMobile = ref($q.platform.is.mobile);
 
 const format = ref(_fieldDef.value.format || ((value: string) => value));
-
-const { t } = useI18n();
 
 watch(
 	() => props.field.value,
@@ -385,8 +389,8 @@ const copyFile = (fieldValue: string) => {
 		copyTxt = myTotp.value.token;
 	}
 
-	getPlatform()
-		.setClipboard(copyTxt)
+	getApplication()
+		.copyToClipboard(copyTxt)
 		.then(() => {
 			notifySuccess(t('copy_success'));
 		})

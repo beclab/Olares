@@ -20,13 +20,33 @@
 								domain.status == DOMAIN_STATUS.WAIT_SUBMIT_VP)
 						"
 					>
-						<div class="module-title text-subtitle3">
+						<div class="module-title text-subtitle3 text-ink-3">
 							{{ t('Domain name') }}
 						</div>
 						<div
-							class="domain-name text-body2 row items-center q-pl-md q-mt-xs"
+							class="domain-name-bg text-body2 row items-center q-px-md q-mt-xs"
 						>
-							{{ domainName }}
+							<div class="domain-name">
+								{{ domainName }}
+							</div>
+						</div>
+
+						<terminus-edit
+							class="q-mt-lg"
+							v-model="adminUser"
+							:label="t('Olares ID')"
+							:show-password-img="false"
+							:inputHeight="36"
+						/>
+						<div
+							class="text-body3 q-mt-sm"
+							:class="
+								btnStatusRef == ConfirmButtonStatus.error
+									? 'text-negative'
+									: 'text-ink-3'
+							"
+						>
+							{{ t('2–24 characters, lowercase letters and numbers only') }}
 						</div>
 					</div>
 					<div
@@ -178,21 +198,28 @@ import {
 	UserItem,
 	VaultType
 } from '@didvault/sdk/src/core';
-import { getDomainVC } from './domain';
-import { app } from '../../../../globals';
+import { getDomainSchema, getDomainVC, getDomainVaultItems } from './domain';
+import { app, ClientSchema } from '../../../../globals';
 import { PrivateJwk, Submission } from '@bytetrade/core';
 import { useUserStore } from '../../../../stores/user';
-import { submitPresentation } from '../../vc/vcutils';
+import { submitDomainPresentationV2 } from '../../vc/vcutils';
 import BindTerminusVCContent from '../../login/vc/BindTerminusVCContent.vue';
 import TerminusTitleBar from '../../../../components/common/TerminusTitleBar.vue';
 import { ConfirmButtonStatus } from '../../../../utils/constants';
-import { getPlatform } from '@didvault/sdk/src/core';
 import {
 	notifyFailed,
 	notifySuccess
 } from '../../../../utils/notifyRedefinedUtil';
 import { useI18n } from 'vue-i18n';
 import { VCCardInfo } from '../../../../utils/vc';
+import { getApplication } from 'src/application/base';
+import TerminusEdit from '../../../../components/common/TerminusEdit.vue';
+import { useSSIStore } from 'src/stores/ssi';
+import { getOrganizationResponseErrorMessage } from 'src/utils/interface/did';
+import {
+	basicOrganizationTerminusNameMineLength,
+	basicTerminusNameMaxLength
+} from '../../login/vc/BindVCBusiness';
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -221,15 +248,24 @@ const domainName = ref('');
 const domain = ref<Domain | undefined>();
 let result = ref<VCCardInfo | undefined>(undefined);
 
+const normalRule = new RegExp('^[a-z0-9]+$');
+
 const suffixRef = ref('');
 
 const ns = ref<string[]>([]);
 
+const adminUser = ref('');
+
+const ssiStore = useSSIStore();
+
 onMounted(async () => {
 	const base: string = route.params.base as string;
 	domainName.value = Encoder.bytesToString(Encoder.base64UrlToBytes(base));
-	domain.value = await cloudStore.selectDomain(domainName.value);
+	configueDomain();
+});
 
+const configueDomain = async () => {
+	domain.value = await cloudStore.selectDomain(domainName.value);
 	if (domain.value && domain.value.status == DOMAIN_STATUS.WAIT_NS_RESOLVE) {
 		try {
 			let jsonString = domain.value.ns!.replace('[', '');
@@ -239,9 +275,12 @@ onMounted(async () => {
 			console.error(error.message);
 		}
 	}
-});
+};
 
 async function requestVC() {
+	if (!domain.value) {
+		return;
+	}
 	$q.loading.show();
 	try {
 		let user: UserItem = userStore.users!.items.get(userStore.current_id!)!;
@@ -261,41 +300,59 @@ async function requestVC() {
 			throw new Error(t('errors.get_privatejwk_failure'));
 		}
 
-		result.value = await getDomainVC(
-			owner,
-			did,
-			domainName.value,
-			user.cloud_id,
-			privateJWK
-		);
-
 		const vault = app.mainVault;
 		if (!vault) {
 			throw new Error(t('errors.main_vault_is_null'));
 		}
 
-		const template: ItemTemplate | undefined = cloneItemTemplates().find(
-			(template) => template.id === 'vc'
-		);
-		if (!template) {
-			throw new Error(t('errors.template_is_null'));
+		if (domain.value.status == DOMAIN_STATUS.WAIT_REQUEST_VC) {
+			const template: ItemTemplate | undefined = cloneItemTemplates().find(
+				(template) => template.id === 'vc'
+			);
+			if (!template) {
+				throw new Error(t('errors.template_is_null'));
+			}
+			result.value = await getDomainVC(
+				owner,
+				did,
+				domainName.value,
+				user.cloud_id,
+				privateJWK
+			);
+			template.fields[0].value = domainName.value;
+			template.fields[1].value = result.value?.manifest;
+			template.fields[2].value = result.value?.verifiable_credential;
+
+			await app.createItem({
+				name: 'Domain ' + domainName.value,
+				vault,
+				fields: template?.fields.map(
+					(f) => new Field({ ...f, value: f.value || '' })
+				),
+				tags: [],
+				icon: template?.icon,
+				type: VaultType.VC
+			});
+		} else {
+			const items = getDomainVaultItems(domainName.value);
+			if (items.length > 0) {
+				result.value = {
+					type: 'Domain',
+					manifest: items[0].card.manifest,
+					verifiable_credential: items[0].card.verifiable_credential
+				};
+			} else {
+				const { manifest } = await getDomainSchema();
+				result.value = {
+					type: 'Domain',
+					manifest: manifest,
+					verifiable_credential: JSON.parse(domain.value.fullString!)
+						.verifiableCredentials[0]
+				};
+			}
 		}
-		template.fields[0].value = domainName.value;
-		template.fields[1].value = result.value?.manifest;
-		template.fields[2].value = result.value?.verifiable_credential;
 
-		await app.createItem({
-			name: 'Domain ' + domainName.value,
-			vault,
-			fields: template?.fields.map(
-				(f) => new Field({ ...f, value: f.value || '' })
-			),
-			tags: [],
-			icon: template?.icon,
-			type: VaultType.VC
-		});
-
-		const submission: Submission = await submitPresentation(
+		const submission = await submitDomainPresentationV2(
 			'Domain',
 			did,
 			privateJWK,
@@ -304,18 +361,25 @@ async function requestVC() {
 				result.value!.verifiable_credential.length
 			),
 			owner,
-			domainName.value
+			domainName.value,
+			adminUser.value.endsWith('@' + domainName.value)
+				? adminUser.value.split('@')[0]
+				: adminUser.value + '@' + domainName.value
 		);
 
 		if (!submission || submission.status !== 'approved') {
 			throw new Error(submission.reason);
 		}
-		await cloudStore.getDomains();
-		domain.value = await cloudStore.selectDomain(domainName.value);
+		user.name = submission.adminOlaresId;
+		userStore.users!.items.update(user);
+		await userStore.save();
+		router.replace({
+			path: '/bind_vc_success'
+		});
 	} catch (error) {
-		console.log(error);
-
-		notifyFailed(error.message);
+		notifyFailed(getOrganizationResponseErrorMessage(error.message));
+		cloudStore.domain_init = false;
+		configueDomain();
 	} finally {
 		$q.loading.hide();
 	}
@@ -365,6 +429,15 @@ const btnStatusRef = computed(function () {
 		domain.value.status == DOMAIN_STATUS.WAIT_REQUEST_VC ||
 		domain.value.status == DOMAIN_STATUS.WAIT_SUBMIT_VP
 	) {
+		if (adminUser.value.length < basicOrganizationTerminusNameMineLength) {
+			return ConfirmButtonStatus.disable;
+		}
+		if (!normalRule.test(adminUser.value)) {
+			return ConfirmButtonStatus.error;
+		}
+		if (adminUser.value.length > basicTerminusNameMaxLength) {
+			return ConfirmButtonStatus.error;
+		}
 		return ConfirmButtonStatus.normal;
 	}
 
@@ -479,7 +552,7 @@ const confirmAction = () => {
 
 const copyFunc = async (content: string) => {
 	try {
-		await getPlatform().setClipboard(content);
+		await getApplication().copyToClipboard(content);
 		notifySuccess(t('copy_success'));
 	} catch (error) {
 		console.error(error.message);
@@ -495,16 +568,21 @@ const copyFunc = async (content: string) => {
 
 	.module-title {
 		text-align: left;
-		color: $grey-5;
 	}
 
-	.domain-name {
+	.domain-name-bg {
 		border: 1px solid $separator;
 		width: 100%;
 		height: 36px;
 		border-radius: 8px;
-		background: $grey-1;
+		background: $background-2;
 		color: $ink-1;
+		.domain-name {
+			width: 100%;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			overflow: hidden;
+		}
 	}
 
 	.copy-item {

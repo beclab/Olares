@@ -51,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import { computed, ref, watch } from 'vue';
 import CountdownDialog from './CountdownDialog.vue';
 import QButtonStyle from '@apps/control-panel-common/src/components/QButtonStyle.vue';

@@ -159,7 +159,7 @@ const deleteAction = async () => {
 			router.back();
 		} catch (error) {
 			$q.loading.hide();
-			notifyFailed(error.message);
+			// notifyFailed(error.message);
 		}
 	});
 };

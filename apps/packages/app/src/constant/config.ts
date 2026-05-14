@@ -1,12 +1,15 @@
 import {
 	APP_STATUS,
+	AppSimpleInfo,
+	AppSimpleInfoLatest,
 	AppStatusInfo,
 	AppStatusLatest,
+	getI18nValue,
 	PAYMENT_STATUS
 } from 'src/constant/constants';
 import { TerminusEntrance } from '@bytetrade/core';
 import { Version } from 'src/utils/version';
-import { useCenterStore } from 'src/stores/market/center';
+import { useAppStore } from 'src/stores/market/appStore';
 
 export enum CFG_TYPE {
 	APPLICATION = 'app',
@@ -68,7 +71,6 @@ const showAppTextStatus = new Set<string>([
 	APP_STATUS.STOP.DEFAULT,
 	APP_STATUS.PENDING.DEFAULT,
 	APP_STATUS.UNINSTALL.DEFAULT,
-	APP_STATUS.UPGRADE.DEFAULT,
 	APP_STATUS.INITIALIZE.DEFAULT,
 	APP_STATUS.INSTALL.DEFAULT,
 	APP_STATUS.PENDING.CANCEL_FAILED,
@@ -174,12 +176,41 @@ const uninstalledAppStates = new Set<string>([
 	APP_STATUS.UNINSTALL.COMPLETED
 ]);
 
-export function uninstalledApp(app: AppStatusInfo): boolean {
-	return app && uninstalledAppStates.has(app.state);
+export function uninstalledApp(app?: AppStatusInfo): boolean {
+	return !!(app && uninstalledAppStates.has(app.state));
 }
 
-export function isCloneApp(app: AppStatusInfo): boolean {
-	return app && !!app.rawAppName && app.rawAppName !== app.name;
+export function suspendApp(simpleLatest?: AppSimpleInfoLatest): boolean {
+	if (!simpleLatest) {
+		return true;
+	}
+	return (
+		!!simpleLatest?.app_simple_info?.app_labels?.includes('suspend') ||
+		!!simpleLatest?.app_simple_info?.app_labels?.includes('remove')
+	);
+}
+
+export function nsfwApp(simpleLatest?: AppSimpleInfoLatest): boolean {
+	if (!simpleLatest) {
+		return true;
+	}
+	return !!simpleLatest?.app_simple_info?.app_labels?.includes('nsfw');
+}
+
+export function isCloneApp(app?: AppStatusInfo): boolean {
+	return !!(app && !!app.rawAppName && app.rawAppName !== app.name);
+}
+
+export function getRawAppTitle(
+	locale: string,
+	status?: AppStatusInfo,
+	simple?: AppSimpleInfo
+): string {
+	if (status && isCloneApp(status)) {
+		return status.title ?? '';
+	} else {
+		return getI18nValue(simple?.app_title, locale) ?? '';
+	}
 }
 
 export function uninstalledAppState(state: string): boolean {
@@ -242,6 +273,7 @@ export function getPaymentTextByState(state: string): string {
 		[PAYMENT_STATUS.SIGNATURE_NEED_RESIGN]: 'app.sign',
 		[PAYMENT_STATUS.SIGNATURE_REQUIRED]: 'app.sign',
 		[PAYMENT_STATUS.PAYMENT_REQUIRED]: 'app.pay',
+		[PAYMENT_STATUS.NOTIFICATION_SENT]: 'app.pay',
 		[PAYMENT_STATUS.WAITING_DEVELOPER_CONFIRMATION]: 'app.reviewing',
 		[PAYMENT_STATUS.PAYMENT_RETRY_REQUIRED]: 'app.view'
 	};
@@ -254,10 +286,12 @@ export function canUpgrade(
 	sourceId: string
 ) {
 	if (isUpgradable(statusLatest.status)) {
-		const centerStore = useCenterStore();
-		const simpleLatest = isCloneApp(statusLatest.status)
-			? centerStore.getAppSimpleInfo(statusLatest.status.rawAppName, sourceId)
-			: centerStore.getAppSimpleInfo(appId, sourceId);
+		const appStore = useAppStore();
+		const simpleLatest = appStore.getAppSimpleInfo(
+			appId,
+			sourceId,
+			statusLatest.status
+		);
 		if (
 			simpleLatest &&
 			simpleLatest.app_simple_info.app_version &&
@@ -270,6 +304,10 @@ export function canUpgrade(
 				);
 				const myVersion = new Version(statusLatest.version);
 				if (latestVersion.isGreater(myVersion)) {
+					//suspend app return
+					if (suspendApp(simpleLatest)) {
+						return false;
+					}
 					return true;
 				}
 			} catch (e) {

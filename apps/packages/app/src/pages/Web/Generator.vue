@@ -202,6 +202,7 @@ import { AVAILABLE_LANGUAGES } from '../../passphrase/wordlists';
 
 import { randomString, chars, getPlatform } from '@didvault/sdk/src/core';
 import { notifyFailed, notifySuccess } from '../../utils/notifyRedefinedUtil';
+import { getApplication } from '../../application/base';
 
 export default defineComponent({
 	name: 'passwordGenerator',
@@ -284,9 +285,8 @@ export default defineComponent({
 					copyText = chartPanel.value;
 					break;
 			}
-			const platform = getPlatform();
-			platform
-				.setClipboard(copyText)
+			getApplication()
+				.copyToClipboard(copyText)
 				.then(() => {
 					// success!
 					notifySuccess(t('copy_success'));

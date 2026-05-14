@@ -8,7 +8,7 @@ import { BtNotify, NotifyDefinedType, BtDialog } from '@bytetrade/ui';
 import { useDataStore } from './data';
 import { MenuItem } from '../utils/contact';
 
-import { CommonFetch, common, filesUtil, filesIsV2 } from '../api';
+import { CommonFetch, common, filesUtil, isShareEnable } from '../api';
 import { dataAPIs } from '../api/files';
 import { useTransfer2Store } from './transfer2';
 import { i18n } from '../boot/i18n';
@@ -26,6 +26,9 @@ import { notifySuccess } from 'src/utils/notifyRedefinedUtil';
 import { Platform } from 'quasar';
 import { ShareType } from 'src/utils/interface/share';
 import { getApplication } from 'src/application/base';
+import { busEmit } from 'src/utils/bus';
+import { decodeURIComponentSafe } from 'src/utils/encode';
+import axios from 'axios';
 
 export interface EventType {
 	type?: DriveType;
@@ -67,7 +70,12 @@ export interface CopyStoragesType {
 
 export type DataState = {
 	contextmenu: ContextType[];
+	//drive home white list
 	disableMenuItem: string[];
+	//external folder white list
+	externalFolderWhiteList: string[];
+	// external/ai/ folder white list
+	externalAiFolderWhiteList: string[];
 	copyFiles: CopyStoragesType[];
 	defaultPath: string;
 	executing: boolean;
@@ -90,7 +98,7 @@ export const useOperateinStore = defineStore('operation', {
 					icon: 'sym_r_folder_supervised',
 					action: OPERATE_ACTION.SHARE_IN_INTERNAL,
 					condition: (event: EventType) =>
-						filesIsV2() &&
+						isShareEnable() &&
 						(event.type === DriveType.Drive ||
 							event.type === DriveType.Data ||
 							event.type === DriveType.Sync ||
@@ -104,7 +112,7 @@ export const useOperateinStore = defineStore('operation', {
 					icon: 'sym_r_smb_share',
 					action: OPERATE_ACTION.SHARE_IN_SMB,
 					condition: (event: EventType) =>
-						filesIsV2() &&
+						isShareEnable() &&
 						(event.type === DriveType.Drive ||
 							event.type === DriveType.Data ||
 							event.type === DriveType.External ||
@@ -117,7 +125,7 @@ export const useOperateinStore = defineStore('operation', {
 					icon: 'sym_r_link',
 					action: OPERATE_ACTION.SHARE_IN_PUBLIC,
 					condition: (event: EventType) =>
-						filesIsV2() &&
+						isShareEnable() &&
 						(event.type === DriveType.Drive || event.type === DriveType.Data) &&
 						event.isSelected &&
 						event.isDir
@@ -127,7 +135,6 @@ export const useOperateinStore = defineStore('operation', {
 					icon: 'sym_r_visibility_lock',
 					action: OPERATE_ACTION.RESET_PASSWORD,
 					condition: (event: EventType) =>
-						filesIsV2() &&
 						event.type === DriveType.Share &&
 						event.isSelected &&
 						event.isPublicShare
@@ -171,14 +178,14 @@ export const useOperateinStore = defineStore('operation', {
 					icon: 'sym_r_backup',
 					action: OPERATE_ACTION.BACKUP,
 					condition: (event: EventType) =>
-						event.canBackup && event.selectCount == 1 && filesIsV2()
+						event.canBackup && event.selectCount == 1
 				},
 				{
 					name: 'files_popup_menu.Edit permissions',
 					icon: 'sym_r_admin_panel_settings',
 					action: OPERATE_ACTION.EDIT_PERMISSIONS,
 					condition: (event: EventType) =>
-						filesIsV2() && event.isEditPermissionsEnable && event.isSelected
+						event.isEditPermissionsEnable && event.isSelected
 				},
 				{
 					name: 'files_popup_menu.delete',
@@ -276,8 +283,12 @@ export const useOperateinStore = defineStore('operation', {
 				MenuItem.DATA,
 				MenuItem.CACHE,
 				MenuItem.CODE,
-				MenuItem.MUSIC
+				MenuItem.MUSIC,
+				'Ollama',
+				'Huggingface'
 			],
+			externalFolderWhiteList: ['ai'],
+			externalAiFolderWhiteList: ['output', 'model', 'comfyui', 'ollama'],
 			executing: false,
 			copyFiles: [],
 			defaultPath: '/Files/Home/',
@@ -415,10 +426,11 @@ export const useOperateinStore = defineStore('operation', {
 						const isMobile =
 							process.env.PLATFORM == 'MOBILE' || Platform.is.mobile;
 
-						const selectFiles =
-							filesStore.currentFileList[origin_id]?.items[
-								filesStore.selected[origin_id][0]
-							];
+						const selectFiles = filesStore.getTargetFileItem(
+							filesStore.selected[origin_id][0],
+							origin_id
+						);
+
 						if (!selectFiles) {
 							return;
 						}
@@ -450,7 +462,7 @@ export const useOperateinStore = defineStore('operation', {
 					this.openLocalFolder(route, origin_id);
 					break;
 				case OPERATE_ACTION.CANCEL:
-					this.resetCopyFiles();
+					this.resetCopyFiles(true);
 					break;
 
 				case OPERATE_ACTION.UNMOUNT:
@@ -468,16 +480,17 @@ export const useOperateinStore = defineStore('operation', {
 
 		async openSetting(origin_id) {
 			const filesStore = useFilesStore();
-			const selectFiles =
-				filesStore.currentFileList[origin_id]?.items[
-					filesStore.selected[origin_id][0]
-				];
+			const selectFiles = filesStore.getTargetFileItem(
+				filesStore.selected[origin_id][0],
+				origin_id
+			);
+
 			if (!selectFiles) {
 				return;
 			}
 
 			let origin = window.location.origin;
-			if (process.env.APPLICATION == 'LAREPASS') {
+			if (getApplication().applicationName == 'larepass') {
 				const user = useUserStore();
 				origin = user.getModuleSever('files');
 			}
@@ -559,15 +572,33 @@ export const useOperateinStore = defineStore('operation', {
 				if (taskId < 0) {
 					continue;
 				}
-
+				let headers = {} as any;
+				if (getApplication().applicationName == 'larepass') {
+					const userStore = useUserStore();
+					headers = {
+						'X-Authorization': userStore.current_user!.access_token
+					};
+				}
 				if (info.isFolder) {
 					TransferClient.waitAddSubtasks[taskId] = {
 						finished: false,
 						subtasks: []
 					};
-					const response: any = await fetch(info.url);
-					const reader = response.body.getReader();
+
+					const instance = axios.create({
+						headers
+					});
+					const response = await instance.get(info.url, {
+						headers: headers,
+						adapter: 'fetch',
+						responseType: 'stream'
+					});
+
+					const reader = (
+						response.data as ReadableStream<Uint8Array>
+					).getReader();
 					const decoder = new TextDecoder('utf-8');
+
 					let lastLeftString = '';
 					/* eslint-disable no-constant-condition */
 					while (true) {
@@ -770,14 +801,15 @@ export const useOperateinStore = defineStore('operation', {
 			const filesStore = useFilesStore();
 			const repo_id = route.query.id as string;
 
-			const item =
-				filesStore.currentFileList[origin_id]?.items[
-					filesStore.selected[origin_id][0]
-				];
+			const item = filesStore.getTargetFileItem(
+				filesStore.selected[origin_id][0],
+				origin_id
+			);
+
 			if (!item || !item.isDir) {
 				return undefined;
 			}
-			const itemUrl = decodeURIComponent(item.path);
+			const itemUrl = decodeURIComponentSafe(item.path);
 			const pathFromStart =
 				itemUrl.indexOf(filesStore.activeMenu(origin_id).label) +
 				filesStore.activeMenu(origin_id).label.length;
@@ -787,15 +819,25 @@ export const useOperateinStore = defineStore('operation', {
 			}
 		},
 
-		updateCopyFiles(copyStorages: CopyStoragesType[], isCut: boolean) {
+		updateCopyFiles(
+			copyStorages: CopyStoragesType[],
+			isCut: boolean,
+			sentMessage = true
+		) {
 			this.isCut = isCut;
 			this.copyFiles = copyStorages;
+			if (sentMessage) {
+				busEmit('updateCopyItems');
+			}
 		},
 
-		resetCopyFiles() {
-			if (this.isCut) {
+		resetCopyFiles(forceReset = false, sentMessage = true) {
+			if (this.isCut || forceReset) {
 				this.copyFiles = [];
 				this.isCut = false;
+				if (sentMessage) {
+					busEmit('resetCopyItems');
+				}
 			}
 		},
 
@@ -803,10 +845,11 @@ export const useOperateinStore = defineStore('operation', {
 			const dataStore = useDataStore();
 			const filesStore = useFilesStore();
 
-			const selectFile =
-				filesStore.currentFileList[origin_id]?.items[
-					filesStore.selected[origin_id][0]
-				];
+			const selectFile = filesStore.getTargetFileItem(
+				filesStore.selected[origin_id][0],
+				origin_id
+			);
+
 			let node = '';
 			if (filesStore.nodes.length > 0) {
 				node = filesStore.currentNode[FilesIdType.PAGEID].name;
@@ -815,23 +858,16 @@ export const useOperateinStore = defineStore('operation', {
 				return;
 			}
 
-			let path =
-				'/api/unmount/external/' +
+			const path =
+				'/api/unmount/' +
+				selectFile.fileType +
+				'/' +
+				selectFile.fileExtend +
+				'/' +
 				selectFile.name +
+				'/' +
 				'?external_type=' +
 				selectFile.externalType;
-			if (filesIsV2()) {
-				path =
-					'/api/unmount/' +
-					selectFile.fileType +
-					'/' +
-					selectFile.fileExtend +
-					'/' +
-					selectFile.name +
-					'/' +
-					'?external_type=' +
-					selectFile.externalType;
-			}
 
 			const data = await CommonFetch.post(dataStore.baseURL() + path, {});
 
@@ -840,9 +876,12 @@ export const useOperateinStore = defineStore('operation', {
 					type: NotifyDefinedType.SUCCESS,
 					message: i18n.global.t('unmount_success')
 				});
-				filesStore.setBrowserUrl(
-					route.fullPath,
-					filesStore.activeMenu(origin_id).driveType
+
+				const currentPath = filesStore.currentPath[origin_id];
+				await filesStore.refushCurrentRouter(
+					currentPath.path + currentPath.param,
+					filesStore.activeMenu(origin_id).driveType,
+					origin_id
 				);
 			}
 		},
@@ -894,8 +933,24 @@ export const useOperateinStore = defineStore('operation', {
 			if (path === '/Files/Home/' && this.disableMenuItem.includes(name)) {
 				return true;
 			}
+			if (
+				(this.ieExternalRootPath(path) &&
+					this.externalFolderWhiteList.includes(name)) ||
+				(this.isExternalAiPath(path) &&
+					this.externalAiFolderWhiteList.includes(name))
+			) {
+				return true;
+			}
 
 			return false;
+		},
+		ieExternalRootPath(path: string) {
+			const regex = /^\/Files\/External\/[^\/]+\/?$/;
+			return regex.test(path);
+		},
+		isExternalAiPath(path: string) {
+			const regex = /^\/Files\/External\/[^\/]+\/ai\/?$/;
+			return regex.test(path);
 		}
 	}
 });

@@ -2,9 +2,10 @@ const boot = [
 	'dashboard-i18n',
 	'baseAxios',
 	'dashboardUI',
-	'application/dashboard'
+	'application/dashboard',
+	'adaptive-body-class'
 ];
-const css = ['dashboard/app.scss'];
+const css = ['dashboard/app.scss', 'quasar-layout.scss'];
 
 const proxyTarget = process.env.ACCOUNT_DOMAIN;
 

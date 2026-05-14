@@ -16,7 +16,7 @@
 <script lang="ts" setup>
 import AppCardHideBorder from '../../components/appcard/AppCardHideBorder.vue';
 import { useDeviceStore } from '../../stores/settings/device';
-import { onBeforeUnmount, onMounted, PropType, ref } from 'vue';
+import { computed, PropType } from 'vue';
 import { getSliceArray } from '../../utils/utils';
 import { useQuasar } from 'quasar';
 
@@ -26,8 +26,8 @@ const props = defineProps({
 		require: true
 	},
 	appList: {
-		type: Object as PropType<string[]>,
-		default: [] as string[]
+		type: Array as PropType<string[]>,
+		default: undefined
 	},
 	showSize: {
 		type: String,
@@ -36,40 +36,37 @@ const props = defineProps({
 });
 
 const $q = useQuasar();
-const allAppList = ref();
-const showAppList = ref();
-const showAppSize = ref();
 const deviceStore = useDeviceStore();
-const sizeArray = deviceStore.isMobile ? ['3'] : props.showSize.split(',');
-
-onMounted(async () => {
-	if (props.appList) {
-		allAppList.value = props.appList;
-		updateAppList();
+const sizeArray = computed(() => {
+	if (deviceStore.isMobile) {
+		return [3];
 	}
-	window.addEventListener('resize', () => {
-		updateAppList();
-	});
+	return props.showSize
+		.split(',')
+		.map((item) => Number(item.trim()))
+		.filter((item) => !Number.isNaN(item));
 });
 
-onBeforeUnmount(() => {
-	window.removeEventListener('resize', () => {
-		updateAppList();
-	});
+const showAppSize = computed(() => {
+	const [lg = 15, md = lg, sm = md] = sizeArray.value;
+	if (deviceStore.isMobile) {
+		return lg;
+	}
+	if ($q.screen.lg || $q.screen.xl) {
+		return lg;
+	}
+	if ($q.screen.md) {
+		return md;
+	}
+	return sm;
 });
 
-const updateAppList = () => {
-	showAppSize.value = deviceStore.isMobile
-		? Number(sizeArray[0])
-		: $q.screen.lg || $q.screen.xl
-		? Number(sizeArray[0])
-		: $q.screen.md
-		? Number(sizeArray[1])
-		: Number(sizeArray[2]);
-	if (props.appList) {
-		showAppList.value = getSliceArray(allAppList.value, showAppSize.value);
+const showAppList = computed(() => {
+	if (!props.appList) {
+		return [];
 	}
-};
+	return getSliceArray(props.appList, showAppSize.value);
+});
 </script>
 
 <style scoped lang="scss"></style>

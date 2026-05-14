@@ -20,14 +20,14 @@
         "ts-node": "10.9.2",
         "ts-node-dev": "2.0.0",
         "typescript": "4.9.5",
-        "webpack": "5.101.3",
+        "webpack": "^5.104.1",
         "webpack-cli": "5.1.4"
     },
     "dependencies": {
         "@didvault/sdk": "../sdk",
-        "bcrypt": "6.0.0",
         "ansi-colors": "4.1.1",
-        "axios": "1.12.0",
+        "axios": "1.15.2",
+        "bcrypt": "6.0.0",
         "date-fns": "2.22.1",
         "dotenv": "16.0.0",
         "fs-extra": "10.0.0",
@@ -51,5 +51,8 @@
     "engines": {
         "node": "16.13.1",
         "npm": "8.2.0"
+    },
+    "overrides": {
+        "follow-redirects": "^1.16.0"
     }
 }

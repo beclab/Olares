@@ -1,7 +1,7 @@
 export default [
 	{
 		path: '/',
-		component: () => import('layouts/FilesMainLayout.vue'),
+		component: () => import('layouts/files/MainLayout.vue'),
 		beforeEnter: (
 			to: any,
 			_from: any,
@@ -70,7 +70,36 @@ export default [
 			// 	meta: {
 			// 		requiresAuth: true
 			// 	}
+			// },
+			// {
+			// 	path: '/mobile/home',
+			// 	meta: {
+			// 		tabIdentify: 'file',
+			// 		minimizeApp: 'true'
+			// 	},
+			// 	component: () => import('pages/Mobile/file/FileRootPage.vue')
 			// }
+		]
+	},
+	{
+		path: '/',
+		component: () => import('layouts/files/MainLayout.vue'),
+		children: [
+			{
+				path: '/repo/:repo',
+				meta: {
+					tabIdentify: 'file'
+				},
+				component: () => import('pages/Mobile/file/FilesRepoPage.vue')
+			},
+			{
+				path: '/Files/',
+				component: () => import('src/pages/Mobile/file/FileRootPage.vue')
+			},
+			{
+				path: '/files',
+				component: () => import('src/pages/Mobile/file/FileRootPage.vue')
+			}
 		]
 	}
 ];

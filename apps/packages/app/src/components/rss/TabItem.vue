@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import '../../css/page.scss';
+import '../../css/wise/page.scss';
 
 const prop = defineProps({
 	selected: {

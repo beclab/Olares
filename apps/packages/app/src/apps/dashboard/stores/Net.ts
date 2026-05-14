@@ -1,7 +1,7 @@
 import { IP_METHOD_OPTION, SystemIFSItem } from './../types/network';
 import { defineStore } from 'pinia';
 import { getSystemIFS } from '@apps/dashboard/src/network';
-import { t } from '@apps/dashboard/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 import { Locker } from '../types/main';
 
 enum IP_METHOD {

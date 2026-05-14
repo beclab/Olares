@@ -1,0 +1,15 @@
+.popup-menu {
+	border-radius: 8px;
+	background: #fff;
+	box-shadow: none;
+	box-shadow: 0px 4px 10px 0px rgba(0, 0, 0, 0.2);
+	overflow: hidden;
+	padding: 0 8px;
+	.popup-item {
+		border-radius: 4px;
+		padding: 2px 8px;
+		.q-focus-helper {
+			opacity: 0.1;
+		}
+	}
+}

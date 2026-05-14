@@ -38,6 +38,7 @@ import { getAppPlatform } from 'src/application/platform';
 import { UserItem } from '@didvault/sdk/src/core';
 import TerminusDesktopTipDialog from '../../../components/dialog/TerminusDesktopTipDialog.vue';
 import AndroidPlugins from 'src/platform/interface/capacitor/android/androidPlugins';
+import { getSenderUrl, setSenderUrl } from 'src/globals';
 
 const { t } = useI18n();
 
@@ -54,6 +55,7 @@ onMounted(async () => {
 	const user = userStore.current_user;
 	if (user) {
 		if (user.setup_finished) {
+			await userStore.currentUserRefreshToken();
 			busEmit('account_update');
 			if (process.env.PLATFORM == 'DESKTOP' || getAppPlatform().isPad) {
 				router.replace('/Files/Home/');
@@ -76,6 +78,17 @@ onMounted(async () => {
 
 const connectUser = async (user: UserItem) => {
 	const info: OlaresInfo | null = await getTerminusInfo(user); //terminus_name
+	if (info) {
+		const localInfo = await getTerminusInfo(user, 5000, undefined, true);
+		if (localInfo) {
+			user.isLocal = true;
+			if (getSenderUrl() != user.vault_url) {
+				setSenderUrl({
+					url: user.vault_url
+				});
+			}
+		}
+	}
 	if (process.env.PLATFORM != 'MOBILE') {
 		if (!info || !info.wizardStatus || info.wizardStatus !== 'completed') {
 			$q.dialog({

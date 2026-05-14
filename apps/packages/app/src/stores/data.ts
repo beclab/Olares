@@ -3,6 +3,7 @@ import { useUserStore } from './user';
 import { baseURL as fileBaseURL } from '../utils/constants';
 import { useFilesStore } from './files';
 import { useMenuStore } from './files-menu';
+import { getApplication } from 'src/application/base';
 
 export type DataState = {
 	user: any;
@@ -114,20 +115,13 @@ export const useDataStore = defineStore('data', {
 
 		baseURL() {
 			const user = useUserStore();
-
-			if (process.env.NODE_ENV === 'development') {
-				return fileBaseURL;
-			} else {
-				if (
-					process.env.PLATFORM == 'DESKTOP' ||
-					process.env.PLATFORM == 'MOBILE'
-				) {
-					const baseURL = user.getModuleSever('files');
-					return baseURL;
-				} else {
-					return fileBaseURL;
-				}
+			if (
+				getApplication().applicationName == 'larepass' &&
+				process.env.NODE_ENV !== 'development'
+			) {
+				return user.getModuleSever('files');
 			}
+			return fileBaseURL;
 		}
 	}
 });

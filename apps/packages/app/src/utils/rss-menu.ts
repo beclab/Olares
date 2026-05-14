@@ -5,7 +5,8 @@ export enum MenuType {
 	Trend = 'trend',
 	History = 'history',
 	Custom = 'custom',
-	Transmission = 'transmission',
+	Download = 'download',
+	Upload = 'upload',
 	Filtered_Views = 'filteredViews',
 	Tags = 'tags',
 	RSS_Feeds = 'edFeeds',
@@ -20,16 +21,23 @@ export enum TabType {
 	Seen = 'seen',
 	Inbox = 'inbox',
 	ReadLater = 'readLater',
-	Download = 'download',
-	Upload = 'upload'
+	All = 'all',
+	Uploading = 'uploading',
+	Downloading = 'downloading',
+	Complete = 'complete',
+	Failed = 'failed'
 }
 
 export const MenuInfoMap = computed(() => {
 	const { t } = useI18n();
 	return {
-		[MenuType.Transmission]: {
-			title: t('main.transmission'),
-			icon: 'sym_r_swap_vert'
+		[MenuType.Download]: {
+			title: t('main.download_list'),
+			icon: 'sym_r_download'
+		},
+		[MenuType.Upload]: {
+			title: t('main.upload_list'),
+			icon: 'sym_r_upload'
 		}
 	};
 });
@@ -41,8 +49,11 @@ export const TabInfoMap = computed(() => {
 		[TabType.Seen]: { title: t('main.seen') },
 		[TabType.ReadLater]: { title: t('main.read_later') },
 		[TabType.Inbox]: { title: t('main.inbox') },
-		[TabType.Download]: { title: t('main.download') },
-		[TabType.Upload]: { title: t('main.upload') }
+		[TabType.All]: { title: t('main.all') },
+		[TabType.Uploading]: { title: t('main.uploading') },
+		[TabType.Downloading]: { title: t('main.downloading') },
+		[TabType.Complete]: { title: t('main.complete') },
+		[TabType.Failed]: { title: t('main.failed') }
 	};
 });
 

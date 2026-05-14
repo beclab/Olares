@@ -19,7 +19,7 @@ import {
 } from 'src/utils/interface/transfer';
 import { useDataStore } from 'src/stores/data';
 // import url from '../../utils/url';
-import { createURL, getPurePath } from '../utils';
+import { createURL, decodeURIComponentSafe, getPurePath } from '../utils';
 import { useTransfer2Store } from 'src/stores/transfer2';
 import { encodeUrl, decodeUrl } from 'src/utils/encode';
 import { getextension } from 'src/utils/utils';
@@ -293,13 +293,7 @@ export default class GoogleDataAPI extends DriveDataAPI {
 			size: thumb
 		};
 
-		// const path = files.googleRemovePrefix(pathSplit);
-		let path = files.googleRemovePrefix(pathSplit);
-		try {
-			path = decodeURIComponent(path);
-		} catch (error) {
-			console.log(path);
-		}
+		const path = decodeURIComponentSafe(files.googleRemovePrefix(pathSplit));
 		return createURL(files.googleCommonUrl('preview', path), params);
 	}
 
@@ -307,12 +301,7 @@ export default class GoogleDataAPI extends DriveDataAPI {
 		const params = {
 			...(inline && { inline: 'true' })
 		};
-		let path = files.googleRemovePrefix(file.path);
-		try {
-			path = decodeURIComponent(path);
-		} catch (error) {
-			console.log(path);
-		}
+		const path = decodeURIComponentSafe(files.googleRemovePrefix(file.path));
 		const url = createURL(files.googleCommonUrl('raw', path), params);
 		return url;
 	}
@@ -358,7 +347,10 @@ export default class GoogleDataAPI extends DriveDataAPI {
 			...(inline && { inline: 'true' }),
 			src: DriveType.GoogleDrive
 		};
-		const url = createURL('api/raw/Drive' + file.path, params);
+		const url = createURL(
+			'api/raw/Drive' + decodeURIComponentSafe(file.path),
+			params
+		);
 		return url;
 	}
 
@@ -398,6 +390,13 @@ export default class GoogleDataAPI extends DriveDataAPI {
 
 	formatTransferToFileItem(item: TransferItem): FileItem {
 		const extension = getextension(item.name);
+		const account = item.path.split('/')[3];
+		const path = files.googleRemoveHomePrefix(item.path);
+		const oPath = path.split('/').slice(2).join('/');
+		const oParentPath = oPath.substring(
+			0,
+			oPath.length - item.name.length - (item.path.endsWith('/') ? 1 : 0)
+		);
 
 		const res: FileItem = {
 			extension,
@@ -415,7 +414,10 @@ export default class GoogleDataAPI extends DriveDataAPI {
 			url: item.url || '',
 			driveType: item.driveType!,
 			param: '',
-			fileExtend: 'google'
+			fileType: 'google',
+			fileExtend: account,
+			oPath,
+			oParentPath
 		};
 
 		return res;

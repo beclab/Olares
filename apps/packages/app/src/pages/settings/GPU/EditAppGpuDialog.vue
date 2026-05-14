@@ -3,7 +3,7 @@
 		ref="CustomRef"
 		:title="title"
 		:skip="false"
-		:ok="t('confirm')"
+		:ok="t('save')"
 		size="medium"
 		:cancel="t('cancel')"
 		:platform="deviceStore.platform"
@@ -26,7 +26,7 @@
 		<terminus-edit
 			v-if="memoryInput"
 			v-model="memoryLimit"
-			:label="t('Memroy')"
+			:label="t('Video Memory')"
 			:show-password-img="false"
 			class="q-mt-md"
 			:is-error="
@@ -57,6 +57,7 @@ interface Props {
 		label: string;
 		value: string;
 		isDefault?: boolean;
+		minMemory: number;
 	}[];
 	maxValue: number;
 	memoryInput: boolean;
@@ -68,7 +69,7 @@ const props = withDefaults(defineProps<Props>(), {
 	selectApplicationsOptions: () => [],
 	maxValue: 0,
 	memoryInput: true,
-	title: i18n.global.t('Bind App'),
+	title: i18n.global.t('Assign app'),
 	memeryInit: 0
 });
 
@@ -100,6 +101,18 @@ const memoryLimitRule = (val: string) => {
 				'GB'
 		});
 	}
+
+	const app = props.selectApplicationsOptions.find(
+		(e) => e.value == appSelectMode.value
+	);
+
+	if (app && Number(val) * 1024 < app.minMemory) {
+		return t('Minimum video memory required to allocate {min}', {
+			min:
+				Number(Math.floor((app.minMemory * 100) / 1024).toFixed(2)) / 100 + 'GB'
+		});
+	}
+
 	return '';
 };
 
