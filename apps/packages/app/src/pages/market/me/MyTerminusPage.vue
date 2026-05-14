@@ -47,38 +47,13 @@
 					</template>
 				</app-store-body>
 
-				<div
-					class="tab-parent row justify-start items-center"
-					:style="{ height: deviceStore.isMobile ? '48px' : '80px' }"
-				>
-					<q-tabs
-						:class="
-							deviceStore.isMobile ? 'my-page-tab-mobile' : 'my-page-tabs'
-						"
-						v-model="selectedTab"
-						dense
-						outside-arrows
-						active-color="primary"
-						indicator-color="transparent"
-						align="left"
-						:narrow-indicator="false"
-					>
-						<q-tab
-							v-for="item in showSource"
-							:key="item.id"
-							style="padding: 0"
-							:name="item.id"
-							@click="logStatus(item.id)"
-						>
-							<template v-slot:default>
-								<market-tab-item
-									:selected="item.id === selectedTab"
-									:label="item.name"
-								/>
-							</template>
-						</q-tab>
-					</q-tabs>
-				</div>
+				<source-tabs-with-more
+					v-model="selectedTab"
+					:sources="showSource"
+					:is-mobile="deviceStore.isMobile"
+					:more-label="t('More')"
+					:tab-height="deviceStore.isMobile ? '48px' : '80px'"
+				/>
 
 				<q-tab-panels
 					v-model="selectedTab"
@@ -112,15 +87,15 @@
 import PageContainer from '../../../components/base/PageContainer.vue';
 import BtUploadChart from '../../../components/base/BtUploadChart.vue';
 import AppStoreBody from '../../../components/base/AppStoreBody.vue';
-import BtTabItem from '../../../components/base/BtTabItem.vue';
 import BtLabel from '../../../components/base/BtLabel.vue';
+import SourceTabsWithMore from './SourceTabsWithMore.vue';
 import MarketRemotePage from './MarketRemotePage.vue';
 import MarketLocalPage from './MarketLocalPage.vue';
 import { useDeviceStore } from '../../../stores/settings/device';
 import { useSettingStore } from '../../../stores/market/setting';
-import { useMenuStore } from '../../../stores/market/menu';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { useCenterStore } from '../../../stores/market/center';
+import { useAppStore } from '../../../stores/market/appStore';
+import { useMenuStore } from '../../../stores/market/menu';
 import SimpleWaiter from '../../../utils/simpleWaiter';
 import { busOn, busOff } from '../../../utils/bus';
 import { useRouter } from 'vue-router';
@@ -130,36 +105,33 @@ import {
 	MARKET_SOURCE_TYPE,
 	TRANSACTION_PAGE
 } from '../../../constant/constants';
-import MarketTabItem from '../../../components/appintro/MarketTabItem.vue';
 
 const { t } = useI18n();
 const selectedTab = ref();
 const router = useRouter();
 const rssWaiter = new SimpleWaiter();
-const centerStore = useCenterStore();
 const settingStore = useSettingStore();
 const deviceStore = useDeviceStore();
 const menuStore = useMenuStore();
+const appStore = useAppStore();
 
 const showSource = computed(() => {
 	if (
 		settingStore.initialized &&
-		centerStore.sources &&
-		centerStore.sources.length > 0
+		appStore.sources &&
+		appStore.sources.length > 0
 	) {
-		return centerStore.remoteSource.concat(centerStore.localSource);
+		return appStore.remoteSource.concat(appStore.localSource);
 	}
 	return [];
 });
 
 rssWaiter.waitForCondition(
 	() =>
-		settingStore.initialized &&
-		centerStore.sources &&
-		centerStore.sources.length > 0,
+		settingStore.initialized && appStore.sources && appStore.sources.length > 0,
 	() => {
-		selectedTab.value = centerStore.remoteSource.concat(
-			centerStore.localSource
+		selectedTab.value = appStore.remoteSource.concat(
+			appStore.localSource
 		)[0].id;
 	}
 );
@@ -177,8 +149,8 @@ const goPreferencePage = () => {
 };
 
 const routeToUpload = () => {
-	const localSource = centerStore.localSource.find(
-		(item) => item.id === MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD
+	const localSource = appStore.localSource.find(
+		(item: any) => item.id === MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD
 	);
 	if (localSource) {
 		selectedTab.value = localSource.id;
@@ -192,11 +164,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
 	busOff('uploadOK', routeToUpload);
 });
-
-const logStatus = (sourceId) => {
-	console.log(centerStore.appStatusMap);
-	console.log(centerStore.getSourceInstalledApp(sourceId));
-};
 </script>
 
 <style scoped lang="scss">
@@ -204,23 +171,6 @@ const logStatus = (sourceId) => {
 	width: 100%;
 	height: 100%;
 	padding: var(--paddingTop) var(--paddingX) 0;
-
-	.tab-parent {
-		width: 100%;
-		max-width: 100%;
-		overflow: scroll;
-	}
-
-	.my-page-tabs {
-		border-radius: 8px;
-		border: 1px solid $separator;
-	}
-
-	.my-page-tab-mobile {
-		width: 100%;
-		padding: 0 8px;
-		box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.1);
-	}
 
 	.my-page-panels {
 		width: 100%;
@@ -232,9 +182,5 @@ const logStatus = (sourceId) => {
 			padding: 0;
 		}
 	}
-}
-
-.q-tabs--dense .q-tab {
-	min-height: 32px;
 }
 </style>

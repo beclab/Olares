@@ -11,6 +11,7 @@ import { useDataStore } from 'src/stores/data';
 import { FileType } from './utils';
 import { getApplication } from 'src/application/base';
 import { useShareStore } from 'src/stores/share/share';
+import { decodeURIComponentSafe } from '../utils';
 
 export function formatUrltoDriveType(href: string): DriveType | undefined {
 	if (!href) {
@@ -49,7 +50,7 @@ export function formatUrltoDriveType(href: string): DriveType | undefined {
 
 export function formatUrltoActiveMenu(href: string): ActiveMenuType {
 	if (href.startsWith('/Files/Home')) {
-		const label = decodeURIComponent(href).split('/')[3] || MenuItem.HOME;
+		const label = decodeURIComponentSafe(href).split('/')[3] || MenuItem.HOME;
 
 		const isHome = href === '/Files/Home/';
 		return {
@@ -58,14 +59,14 @@ export function formatUrltoActiveMenu(href: string): ActiveMenuType {
 			driveType: DriveType.Drive
 		};
 	} else if (href.startsWith('/Files/External')) {
-		const label = decodeURIComponent(href).split('/')[2];
+		const label = decodeURIComponentSafe(href).split('/')[2];
 		return {
 			label: label,
 			id: label,
 			driveType: DriveType.External
 		};
 	} else if (href.startsWith('/Seahub')) {
-		const label = decodeURIComponent(href).split('/')[2];
+		const label = decodeURIComponentSafe(href).split('/')[2];
 		const splitUrl = href.split('?');
 		const repo_id = getParams(splitUrl.length > 1 ? splitUrl[1] : href, 'id');
 
@@ -131,7 +132,7 @@ export function formatUrltoActiveMenu(href: string): ActiveMenuType {
 	// 	};
 	// }
 	else {
-		const label = decodeURIComponent(href).split('/')[2];
+		const label = decodeURIComponentSafe(href).split('/')[2];
 		return {
 			label: label,
 			id: label,
@@ -185,6 +186,8 @@ export const driveTypeBySearchPathV2 = (path: string): DriveType => {
 		return DriveType.Cache;
 	} else if (path.startsWith('share')) {
 		return DriveType.Share;
+	} else if (path.startsWith('external')) {
+		return DriveType.External;
 	}
 	return DriveType.Drive;
 };
@@ -239,7 +242,6 @@ export const displayConnectServer = (path: string) => {
 };
 
 export const isShareRootPage = (path: string) => {
-	// return ['/ShareWith/', '/ShareBy/'].includes(path);
 	return ['/Share/'].includes(path);
 };
 
@@ -248,8 +250,6 @@ export const videoPlayUrl = (raw: string, node: string) => {
 
 	if (getApplication().applicationName == 'share') {
 		const shareStore = useShareStore();
-		console.log('shareStore.share ===>', shareStore.share);
-
 		node = shareStore.share?.node || '';
 	}
 

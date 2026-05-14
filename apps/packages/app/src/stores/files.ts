@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { getFileIcon } from '@bytetrade/core';
 // import Origin from '../api/origin';
-import { CommonFetch, dataAPIs, common, filesIsV1 } from './../api';
+import { CommonFetch, dataAPIs, common } from './../api';
 
 import { FilesSortType } from '../utils/contact';
 import { deduplicateByField } from '../utils/file';
@@ -21,11 +21,13 @@ import { notifySuccess } from './../utils/notifyRedefinedUtil';
 import { IUploadFileInfo } from 'src/platform/interface/electron/interface';
 import { useDataStore } from './data';
 import { delay } from 'src/utils/utils';
-import { filesIsV2 } from 'src/api';
+import { isShareEnable } from 'src/api';
 import { SharePermission, ShareType } from 'src/utils/interface/share';
 import { SyncRepoMineType } from 'src/api/files/v2/sync/type';
 import { appendPath } from 'src/api/files/path';
 import { getNativeAppPlatform } from 'src/application/platform';
+import { getApplication } from 'src/application/base';
+import { decodeURIComponentSafe } from 'src/utils/encode';
 
 export enum FilesIdType {
 	PAGEID = 0,
@@ -406,7 +408,7 @@ export const useFilesStore = defineStore('files', {
 						selectedEnable: (value: string) => {
 							return !operateinStore.isDisableMenuItem(
 								filesStore.currentFileListMap(id)[value].name,
-								filesStore.currentFileListMap(id)[value].path
+								filesStore.currentFileList[id]?.path || ''
 							);
 						}
 					};
@@ -450,18 +452,32 @@ export const useFilesStore = defineStore('files', {
 					? true
 					: false;
 			},
+		backPathIsHome:
+			(state) =>
+			(id = FilesIdType.PAGEID) => {
+				return (
+					state.backStack[id] &&
+					state.backStack[id].length == 1 &&
+					state.backStack[id][0].driveType == DriveType.Drive &&
+					state.backStack[id][0].path == '/Files/Home/'
+				);
+			},
 
 		getCurrentRepo:
 			(state) =>
 			(path: string, id = FilesIdType.PAGEID) => {
-				if (state.backStack[id].length == 0) {
-					return '0';
+				if (
+					!state.backStack ||
+					!state.backStack[id] ||
+					state.backStack[id].length == 0
+				) {
+					return i18n.global.t(`files_menu.Home`);
 				}
 				const isEndWith =
 					state.backStack[id][state.backStack[id].length - 1].path.endsWith(
 						'/'
 					);
-				const currentPath = decodeURIComponent(
+				const currentPath = decodeURIComponentSafe(
 					state.backStack[id][state.backStack[id].length - 1].path
 				).split('/');
 
@@ -572,18 +588,9 @@ export const useFilesStore = defineStore('files', {
 				path.path == this.currentPath[id].path &&
 				path.param == this.currentPath[id].param
 			) {
+				const items = this._sortList(res.items, id);
+				res.items = items;
 				this.currentFileList[id] = res;
-				// Re-apply the active sort preference to freshly fetched items.
-				// Without this, navigating between directories resets the displayed order
-				// to the server default even though activeSort[id] is still set, causing
-				// the UI to show stale order until the user clicks sort twice (issue #2446).
-				if (this.activeSort[id] && this.currentFileList[id]) {
-					this.currentFileList[id]!.items = this.sortList(
-						this.currentFileItems(id),
-						this.currentDirItems(id),
-						id
-					);
-				}
 			}
 			return fileList;
 		},
@@ -609,6 +616,7 @@ export const useFilesStore = defineStore('files', {
 			}
 
 			this.currentPath[id] = path;
+			this.resetSelected(id);
 
 			if (!isBack && isPrev) {
 				this.backStack[id].push(path);
@@ -667,9 +675,9 @@ export const useFilesStore = defineStore('files', {
 				});
 				const result = await this.setFilePath(path, false, true, id);
 				this.addSelected(
-					this.currentFileList[id]?.items?.findIndex(
-						(item) => item.name === decodeURIComponent(lastItem)
-					),
+					this.currentFileList[id]?.items?.find(
+						(item) => item.name === decodeURIComponentSafe(lastItem)
+					)?.index,
 					id
 				);
 				await this.openPreviewDialog();
@@ -701,8 +709,14 @@ export const useFilesStore = defineStore('files', {
 
 		registerUniqueKey(path: string, driveType: DriveType, param: string) {
 			const userStore = useUserStore();
-
-			let key = userStore.current_user?.name + '=' + path + '=' + driveType;
+			let decodePath = path;
+			try {
+				decodePath = decodeURIComponent(path);
+			} catch (error) {
+				/* empty */
+			}
+			let key =
+				userStore.current_user?.name + '=' + decodePath + '=' + driveType;
 			if (param) {
 				key = key + '=' + param;
 			}
@@ -771,11 +785,6 @@ export const useFilesStore = defineStore('files', {
 			if (id == FilesIdType.SHARE && this.backStack[id].length == 1) {
 				return;
 			}
-			const path = this.backStack[id].pop();
-
-			if (this.backStack[id].length == 0 && process.env.PLATFORM == 'MOBILE') {
-				return;
-			}
 
 			const initPath = new FilePath({
 				path: '/Files/Home',
@@ -783,6 +792,24 @@ export const useFilesStore = defineStore('files', {
 				isDir: true,
 				driveType: DriveType.Drive
 			});
+
+			if (this.backPathIsHome(id)) {
+				const path = this.backStack[id].pop();
+				if (path) {
+					if (!this.previousStack[id]) {
+						this.previousStack[id] = [path];
+					} else {
+						this.previousStack[id].push(path);
+					}
+				}
+				return;
+			}
+
+			const path = this.backStack[id].pop();
+
+			if (this.backStack[id].length == 0 && process.env.PLATFORM == 'MOBILE') {
+				return;
+			}
 
 			const currentPath =
 				this.backStack[id][this.backStack[id].length - 1] || initPath;
@@ -794,7 +821,7 @@ export const useFilesStore = defineStore('files', {
 					this.previousStack[id].push(path);
 				}
 
-				this.setFilePath(currentPath, true, true, id);
+				await this.setFilePath(currentPath, true, true, id);
 			}
 		},
 
@@ -812,8 +839,6 @@ export const useFilesStore = defineStore('files', {
 		},
 
 		getTargetFileItem(index: number, id: number = FilesIdType.PAGEID) {
-			console.log(' this.currentFileList[id] ===>', this.currentFileList[id]);
-
 			return this.currentFileList[id]?.items.find(
 				(item) => item.index == index
 			);
@@ -854,9 +879,7 @@ export const useFilesStore = defineStore('files', {
 			if (itemFile) {
 				cur_item = JSON.parse(JSON.stringify(itemFile));
 			} else {
-				cur_item = this.currentFileList[id]?.items.find(
-					(item) => item.index === this.selected[id][0]
-				);
+				cur_item = this.getTargetFileItem(this.selected[id][0], id);
 			}
 
 			const api = dataAPIs(cur_item.driveType, id);
@@ -871,7 +894,7 @@ export const useFilesStore = defineStore('files', {
 			let awaitNumber = 0;
 			while (
 				!store.preview.isShow ||
-				(this.masterNode == '' && filesIsV2() && awaitNumber < 5)
+				(this.masterNode == '' && awaitNumber < 5)
 			) {
 				awaitNumber++;
 				await delay(300);
@@ -1116,6 +1139,15 @@ export const useFilesStore = defineStore('files', {
 		) {
 			for (let i = 0; i < origins.length; i++) {
 				const origin = origins[i];
+
+				if (origin == DriveType.Share && !isShareEnable()) {
+					continue;
+				}
+
+				if (origin == DriveType.Sync && !isShareEnable()) {
+					continue;
+				}
+
 				const cur_api = this.driveTypeToApi(origin);
 				const driveAPI = dataAPIs(origin);
 				if (!cur_api || !driveAPI) {
@@ -1135,7 +1167,7 @@ export const useFilesStore = defineStore('files', {
 
 				const curDrive: any[] = await driveAPI.fetchMenuRepo();
 
-				if (curDrive.length <= 0) {
+				if (curDrive.length <= 0 && origin !== DriveType.Sync) {
 					continue;
 				}
 
@@ -1154,7 +1186,7 @@ export const useFilesStore = defineStore('files', {
 						...this.menu[id][curMenuIndex].children!,
 						...curDrive
 					];
-
+					this.menu[id][curMenuIndex].label = cur_api.menuBar.label;
 					if (origin !== DriveType.Sync) {
 						this.menu[id][curMenuIndex].children = deduplicateByField(
 							curDriveMenu,
@@ -1282,9 +1314,9 @@ export const useFilesStore = defineStore('files', {
 			delete this.currentNode[id];
 		},
 		shareBaseUrl() {
-			if (process.env.APPLICATION === 'FILES') {
-				return this.getModuleSever('share', 'https:');
-			} else if (process.env.APPLICATION == 'LAREPASS') {
+			if (getApplication().applicationName === 'files') {
+				return this.getModuleSever('share', window.location.protocol);
+			} else if (getApplication().applicationName == 'larepass') {
 				const user = useUserStore();
 				const baseURL = user.getModuleSever('share');
 				return baseURL;

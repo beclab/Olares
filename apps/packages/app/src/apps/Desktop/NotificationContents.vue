@@ -1,30 +1,23 @@
 <template>
-	<div v-if="notificationStore.data.length > 0" class="clear-all-bar">
-		<span class="clear-all-btn" @click="notificationStore.deleteAll(); notificationStore.showNotification = false">
-			<span class="clearAllTxt">Clear All</span>
-			<q-icon class="icon" name="close" size="12px" />
-		</span>
-	</div>
-	<div v-for="(item, index) in notificationStore.data" :key="item.id">
-		<div class="title" style="margin-top: 32px" v-if="item.open">
-			<div class="brige">{{ item.appName }}</div>
-			<div class="">
-				<span
-					class="cancel q-ml-sm"
-					@click="notificationStore.deleteItem(item, -1)"
-				>
-					<span class="clearTxt">Clear All</span>
-					<span class="cancel-icon">
-						<q-icon class="icon" name="close" size="12px" />
-					</span>
-				</span>
-
-				<span class="less" @click="item.open = false">Show less</span>
-				<span class="less-icon">
-					<q-icon class="icon" name="expand_less" size="12px" />
-				</span>
-			</div>
+	<div class="row items-center justify-end title">
+		<div class="cancel q-ml-sm" @click="deleteAll">
+			<span class="clearTxt">{{ $t('Clear all') }}</span>
+			<!-- <span class="cancel-icon">
+					<q-icon class="icon" name="close" size="12px" />
+				</span> -->
 		</div>
+
+		<!-- <span class="less" @click="item.open = false">Show less</span>
+			<span class="less-icon">
+				<q-icon class="icon" name="expand_less" size="12px" />
+			</span> -->
+	</div>
+
+	<div v-for="(item, index) in notificationStore.data" :key="item.id">
+		<!-- <div class="title" style="margin-top: 32px" v-if="item.open">
+			<div class="brige">{{ item.appName }}</div>
+
+		</div> -->
 
 		<div
 			class="content"
@@ -37,14 +30,14 @@
 				</div>
 				<div class="info">
 					<div class="row items-center justify-between">
-						<div class="tit text-subtitle2 text-ink1">
+						<div class="tit text-subtitle2 text-grey-10">
 							{{ item.childrens.slice(-1)[0].title }}
 						</div>
-						<div class="q-ml-lg text-body3 text-ink-2">
+						<div class="q-ml-lg text-body3 text-grey-8">
 							{{ formatStampTime(item.childrens.slice(-1)[0].createTime) }}
 						</div>
 					</div>
-					<div class="message text-body3 text-ink1">
+					<div class="message text-body3 text-grey-10">
 						{{ item.childrens.slice(-1)[0].body }}
 					</div>
 				</div>
@@ -69,14 +62,14 @@
 				</div>
 				<div class="info">
 					<div class="row items-center justify-between">
-						<div class="tit text-subtitle2 text-ink1">
+						<div class="tit text-subtitle2 text-grey-10">
 							{{ cell.title }}
 						</div>
-						<div class="q-ml-lg text-body3 text-ink-2">
+						<div class="q-ml-lg text-body3 text-grey-8">
 							{{ formatStampTime(cell.createTime) }}
 						</div>
 					</div>
-					<div class="message text-body3 text-ink1">{{ cell.body }}</div>
+					<div class="message text-body3 text-grey-10">{{ cell.body }}</div>
 				</div>
 
 				<span
@@ -117,44 +110,18 @@ const formatStampTime = (createTime: number) => {
 
 	return date.formatDate(createTime, 'HH:mm:ss');
 };
+
+const deleteAll = () => {
+	notificationStore.deleteAll();
+	notificationStore.toggleNotificaitonDisplay();
+};
 </script>
 
 <style scoped lang="scss">
-.clear-all-bar {
-	display: flex;
-	justify-content: flex-end;
-	margin-bottom: 8px;
-
-	.clear-all-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-		height: 28px;
-		padding: 0 12px;
-		border-radius: 14px;
-		background: rgba(246, 246, 246, 0.4);
-		box-shadow: 0px 0px 40px 0px rgba(0, 0, 0, 0.2),
-			0px 0px 2px 0px rgba(0, 0, 0, 0.4);
-		backdrop-filter: blur(30px);
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		color: #5c5551;
-		font-size: 12px;
-		cursor: pointer;
-
-		.icon {
-			color: #5c5551;
-		}
-
-		&:hover {
-			background: rgba(230, 230, 230, 0.6);
-		}
-	}
-}
-
 .title {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
+	// display: flex;
+	// align-items: center;
+	// justify-content: space-between;
 	margin-bottom: 12px;
 	.brige {
 		color: #ffffff;
@@ -206,8 +173,8 @@ const formatStampTime = (createTime: number) => {
 			0px 0px 2px 0px rgba(0, 0, 0, 0.4);
 		backdrop-filter: blur(30px);
 		cursor: pointer;
-		position: relative;
-		float: right;
+		// position: relative;
+		// float: right;
 		.cancel-icon {
 			width: 22px;
 			height: 22px;
@@ -223,23 +190,24 @@ const formatStampTime = (createTime: number) => {
 			}
 		}
 		.clearTxt {
-			display: none;
-			float: right;
+			// display: none;
+			display: inline-block;
+			// float: right;
 			transition: all 1s ease-in-out;
 		}
 		&:hover {
 			.clearTxt {
-				display: inline-block;
+				// display: inline-block;
 			}
 			.cancel-icon {
-				display: none;
+				// display: none;
 			}
 		}
 		&:hover + .less {
-			display: none;
+			// display: none;
 		}
 		&:hover ~ .less-icon {
-			opacity: 1;
+			// opacity: 1;
 		}
 	}
 }
@@ -251,10 +219,11 @@ const formatStampTime = (createTime: number) => {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		fill: rgba(246, 246, 246, 0.5);
+
 		stroke-width: 1px;
 		stroke: rgba(255, 255, 255, 0.2);
 		backdrop-filter: blur(120px);
+		fill: rgba(246, 246, 246, 0.5);
 		background: linear-gradient(
 				0deg,
 				rgba(246, 246, 246, 0.5),

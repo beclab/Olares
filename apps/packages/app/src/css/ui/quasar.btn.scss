@@ -1,0 +1,88 @@
+.q-btn {
+	border-radius: 8px !important;
+	min-height: 24px !important;
+
+	&.btn-size-xs {
+		font-size: 10px !important;
+		padding: 4px 8px !important;
+		border-radius: 4px !important;
+
+		.q-btn__content {
+			line-height: 12px !important;
+		}
+		.q-icon {
+			font-size: 12px !important;
+		}
+	}
+
+	&.btn-size-xs.btn-no-text {
+		padding: 4px !important;
+		.q-icon {
+			font-size: 16px !important;
+		}
+	}
+
+	&.btn-size-sm {
+		font-size: 12px !important;
+		padding: 8px 12px !important;
+		.q-btn__content {
+			line-height: 16px !important;
+		}
+		.q-icon {
+			font-size: 14px !important;
+		}
+	}
+
+	&.btn-size-sm.btn-no-text {
+		padding: 6px !important;
+		.q-icon {
+			font-size: 20px !important;
+		}
+	}
+
+	&.btn-size-md {
+		font-size: 16px !important;
+		padding: 8px 20px !important;
+		.q-btn__content {
+			line-height: 24px !important;
+		}
+		.q-icon {
+			font-size: 18px !important;
+		}
+	}
+
+	&.btn-size-md.btn-no-text {
+		padding: 8px !important;
+		.q-icon {
+			font-size: 24px !important;
+		}
+	}
+
+	&:before {
+		box-shadow: none !important;
+	}
+
+	&.q-hoverable:hover > .q-focus-helper {
+		opacity: 0.1 !important;
+	}
+
+	&.q-focusable:focus > .q-focus-helper {
+		opacity: 0.2 !important;
+	}
+
+	&.text-grey-8:before {
+		border: 1px solid $grey-2 !important;
+	}
+
+	&.btn-no-border:before {
+		border: none !important;
+	}
+
+	&.btn-circle-border {
+		border-radius: 50% !important;
+	}
+
+	.q-icon.on-left {
+		margin-right: 4px !important;
+	}
+}

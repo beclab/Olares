@@ -56,11 +56,21 @@ const enterActive = () => {
 	&__name {
 		text-align: center;
 		color: $ink-1;
+		max-width: 80%;
+		word-break: break-all;
+		overflow-wrap: break-word;
+		white-space: pre-wrap;
+		overflow: hidden;
 	}
 
 	&__info {
 		text-align: center;
 		color: $ink-2;
+		max-width: 80%;
+		word-break: break-all;
+		overflow-wrap: break-word;
+		white-space: pre-wrap;
+		overflow: hidden;
 	}
 }
 </style>

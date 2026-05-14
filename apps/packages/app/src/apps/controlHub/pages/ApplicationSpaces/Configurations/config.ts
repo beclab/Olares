@@ -9,7 +9,7 @@ import Secrets from '@apps/control-hub/src/assets/Secrets.svg';
 import Configmaps from '@apps/control-hub/src/assets/Configmaps.svg';
 import ServiceAccounts from '@apps/control-hub/src/assets/ServiceAccounts.svg';
 import { componentName } from '@apps/control-hub/src/router/const';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 
 const data = [
 	{

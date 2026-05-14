@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="bg-grey-11-hover root row items-center justify-between"
+		class="root row items-center justify-between"
 		:style="{
 			'pointer-events': disable ? 'none' : '',
 			border: check ? '1px solid $blue' : ''

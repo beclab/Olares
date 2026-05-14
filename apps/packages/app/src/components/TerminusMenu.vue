@@ -8,7 +8,9 @@
 		<div
 			class="contain-header cursor-pointer items-center"
 			:style="
-				$q.platform.is.electron && $q.platform.is.win ? '' : 'margin-top:24px;'
+				$q.platform.is.electron && ($q.platform.is.win || $q.platform.is.linux)
+					? ''
+					: 'margin-top:24px;'
 			"
 			@dblclick.stop
 			:class="
@@ -121,7 +123,7 @@
 					@click.stop="handleActive(menu)"
 					:active="menu.identify === menuStore.terminusActiveMenu"
 					class="q-px-md q-mb-xs q-py-none text-grey-8 text-body1"
-					active-class="text-ink-1 bg-background-2"
+					active-class="text-ink-1 bg-theme-main-menu-bg-hover"
 					style="border-radius: 8px"
 					:class="
 						deviceStore.isLandscape
@@ -147,7 +149,7 @@
 						class="trans-title row items-center justify-between"
 						:class="
 							menu.identify === menuStore.terminusActiveMenu
-								? 'title-active text-body1'
+								? 'theme-main-menu-color-hover text-body1'
 								: 'title-normal text-body1'
 						"
 					>
@@ -306,6 +308,7 @@ const deviceStore = useDeviceStore();
 			height: 40px;
 			border-radius: 20px;
 			overflow: hidden;
+			flex: 0 0 40px;
 		}
 
 		.userinfo {

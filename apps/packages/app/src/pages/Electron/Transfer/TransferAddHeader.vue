@@ -12,25 +12,13 @@
 			</template>
 		</CustomButton>
 
-		<template v-if="filesIsV2()">
-			<WiseAbilityTooltipContainer>
-				<CustomButton
-					@click="addCloudTask"
-					outline
-					:disable="!appAbilitiesStore.wise.running"
-					class="q-mr-sm"
-				>
-					<template #label>
-						<div class="text-body3 text-ink-2">
-							<q-icon class="q-mr-xs" name="sym_r_link" size="20px" />
-							{{ t('files.Link Download') }}
-						</div>
-					</template>
-				</CustomButton>
-			</WiseAbilityTooltipContainer>
-		</template>
-		<template v-else>
-			<CustomButton @click="addCloudTask" outline class="q-mr-sm">
+		<!-- <WiseAbilityTooltipContainer>
+			<CustomButton
+				@click="addCloudTask"
+				outline
+				:disable="!appAbilitiesStore.wise.running"
+				class="q-mr-sm"
+			>
 				<template #label>
 					<div class="text-body3 text-ink-2">
 						<q-icon class="q-mr-xs" name="sym_r_link" size="20px" />
@@ -38,7 +26,7 @@
 					</div>
 				</template>
 			</CustomButton>
-		</template>
+		</WiseAbilityTooltipContainer> -->
 	</div>
 </template>
 
@@ -47,7 +35,6 @@ import { useI18n } from 'vue-i18n';
 import WiseAbilityTooltipContainer from '../../../components/WiseAbilityTooltipContainer.vue';
 import { useAppAbilitiesStore } from '../../../stores/appAbilities';
 import CustomButton from '../../Plugin/components/CustomButton.vue';
-import { filesIsV2 } from '../../../api';
 const appAbilitiesStore = useAppAbilitiesStore();
 
 const { t } = useI18n();

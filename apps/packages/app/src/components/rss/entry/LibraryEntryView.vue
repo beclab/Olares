@@ -26,6 +26,106 @@
 		<template v-slot:bottom>
 			<!--			downloadableFileTypes(entry?.file_type)-->
 			<div class="layout-feed-other">
+				<div v-if="transferItem" class="row justify-start items-center q-mr-sm">
+					<div
+						v-if="transferItem?.status === TransferStatus.Error"
+						class="row text-orange-default"
+					>
+						<q-icon size="16px" name="sym_r_error" />
+
+						<div class="q-ml-sm text-body3">
+							{{ t('base.download_failed') }}
+
+							<bt-tooltip
+								v-if="transferItem.message"
+								:label="transferItem.message"
+								max-width="240px"
+								align="start"
+							/>
+						</div>
+					</div>
+
+					<div
+						v-else-if="transferItem?.status === TransferStatus.Canceled"
+						class="row text-orange-default"
+					>
+						<q-icon size="16px" name="sym_r_block" />
+
+						<div class="q-ml-sm text-body3">
+							{{ t('download.cancelled') }}
+						</div>
+					</div>
+					<div
+						v-else-if="transferItem?.isPaused"
+						class="row text-orange-default"
+					>
+						<q-icon size="16px" name="sym_r_download" />
+
+						<div class="q-ml-sm text-body3">
+							{{
+								transferItem.progress && transferItem.size
+									? t('download.paused') +
+									  ':' +
+									  Math.round(transferItem.progress * 100) +
+									  '%'
+									: t('download.paused') +
+									  ':' +
+									  getValueByUnit(
+											transferItem.bytes,
+											getSuitableUnit(transferItem.bytes, 'memory')
+									  ) +
+									  ' ' +
+									  getSuitableUnit(transferItem.bytes, 'memory')
+							}}
+						</div>
+					</div>
+
+					<div
+						v-else-if="
+							transferItem?.status === TransferStatus.Prepare ||
+							transferItem?.status === TransferStatus.Pending
+						"
+						class="row"
+					>
+						<bt-loading :loading="true" size="16px" />
+
+						<div class="q-ml-sm text-body3 text-orange-default">
+							{{ t('pending') }}
+						</div>
+					</div>
+
+					<div
+						v-else-if="
+							transferItem?.status === TransferStatus.Canceling ||
+							transferItem?.status === TransferStatus.Checking ||
+							transferItem?.status === TransferStatus.Resuming ||
+							transferItem?.status === TransferStatus.Removing ||
+							transferItem?.status === TransferStatus.Running
+						"
+						class="row"
+					>
+						<bt-loading :loading="true" size="16px" />
+
+						<div class="q-ml-sm text-body3 text-orange-default">
+							{{
+								transferItem.progress && transferItem.size
+									? t('base.downloading') +
+									  ':' +
+									  Math.round(transferItem.progress * 100) +
+									  '%'
+									: t('base.downloading') +
+									  ':' +
+									  getValueByUnit(
+											transferItem.bytes,
+											getSuitableUnit(transferItem.bytes, 'memory')
+									  ) +
+									  ' ' +
+									  getSuitableUnit(transferItem.bytes, 'memory')
+							}}
+						</div>
+					</div>
+				</div>
+
 				<feed-icon
 					v-if="feedRef && feedTitle"
 					:feed="feedRef"
@@ -70,12 +170,14 @@
 				/>
 				<div
 					v-if="entry?.local_file_path"
-					class="text-ink-3 entry-feed-title text-body3 q-mr-xs"
+					class="text-ink-3 entry-feed-path text-body3 q-mr-xs"
+					:class="
+						entry?.local_file_path && entry?.title ? 'cursor-pointer' : ''
+					"
+					@click.stop="openFile(DRIVER_FILE_PREFIX + entry?.local_file_path)"
 				>
-					{{
-						DRIVER_FILE_PREFIX +
-						decodeURIComponent(entry?.local_file_path.replace(entry?.title, ''))
-					}}
+					{{ getLocalPath }}
+					<q-tooltip>{{ getLocalPath }}</q-tooltip>
 				</div>
 
 				<q-icon
@@ -177,14 +279,6 @@ import {
 	ref,
 	watch
 } from 'vue';
-import { useRouter } from 'vue-router';
-import FeedIcon from '../FeedIcon.vue';
-import TagEditPopup from '../TagEditPopup.vue';
-import { useI18n } from 'vue-i18n';
-import BtTooltip from '../../base/BtTooltip.vue';
-import BaseEntryView from './BaseEntryView.vue';
-import { busOff, busOn } from 'src/utils/bus';
-import { utcToStamp } from 'src/utils/rss-utils';
 import {
 	downloadableFileTypes,
 	downloadedFileTypes
@@ -196,13 +290,26 @@ import {
 	Entry
 } from 'src/utils/rss-types';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
+import FeedIcon from '../FeedIcon.vue';
 import CreateView from '../CreateView.vue';
+import TagEditPopup from '../TagEditPopup.vue';
+import BtTooltip from '../../base/BtTooltip.vue';
+import BaseEntryView from './BaseEntryView.vue';
+import { busOff, busOn } from 'src/utils/bus';
+import { utcToStamp } from 'src/utils/rss-utils';
 import BtLoading from '../../base/BtLoading.vue';
 import { MenuType } from 'src/utils/rss-menu';
 import { useRssStore } from 'src/stores/rss';
 import { useConfigStore } from 'src/stores/rss-config';
-import BaseCheckBoxDialog from '../../base/BaseCheckBoxDialog.vue';
 import { useReaderStore } from 'src/stores/rss-reader';
+import BaseCheckBoxDialog from '../../base/BaseCheckBoxDialog.vue';
+import { TransferStatus } from 'src/utils/interface/transfer';
+import { getSuitableUnit, getValueByUnit } from 'src/utils/monitoring';
+import TransferClient from 'src/services/transfer';
+import { useTransferStore } from 'src/stores/rss-transfer';
+import { useTransfer2Store } from 'src/stores/transfer2';
 
 const $q = useQuasar();
 const { t } = useI18n();
@@ -216,6 +323,7 @@ const inboxLoading = ref(false);
 const isRemoveLoading = ref(false);
 const isReadLater = ref(false);
 const readLaterLoading = ref(false);
+const transfer2Store = useTransfer2Store();
 
 const props = defineProps({
 	entry: {
@@ -250,6 +358,37 @@ const fileLost = computed(() => {
 		props.entry?.crawler &&
 		!props.entry.local_file_path
 	);
+});
+
+const transferItem = computed(() => {
+	if (props.entry?.task_ids && props.entry?.task_ids.length > 0) {
+		const identify = TransferClient.client.clouder?.taskIdentify(
+			String(props.entry?.task_ids[0])
+		);
+		console.log('entry identify', identify);
+		let transferId = transfer2Store.filesCloudTransferMap[identify] || -1;
+		if (transferId > 0) {
+			const record = transfer2Store.transferMap[transferId];
+			console.log(record);
+			if (record) {
+				return record;
+			}
+		}
+	}
+
+	return null;
+});
+
+const getLocalPath = computed(() => {
+	try {
+		return (
+			DRIVER_FILE_PREFIX + decodeURIComponent(props.entry?.local_file_path)
+		);
+	} catch (e) {
+		console.error(props.entry);
+		console.error(e);
+		return DRIVER_FILE_PREFIX + props.entry?.local_file_path;
+	}
 });
 
 watch(
@@ -309,6 +448,16 @@ const getTimePrefix = () => {
 		case SORT_TYPE.UPDATED:
 			return t('base.last_updated');
 	}
+};
+
+const openFile = (path: string) => {
+	if (!path) {
+		return;
+	}
+	const suffix = decodeURIComponent(path);
+	const configStore = useConfigStore();
+	let url = configStore.getModuleSever('files', 'https:', suffix);
+	window.open(url);
 };
 
 const getTime = (entry: Entry) => {
@@ -443,6 +592,13 @@ function onEntryClick() {
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		overflow: hidden;
+		min-width: 20px;
+	}
+
+	.entry-feed-path {
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		overflow: hidden;
 		min-width: 50px;
 		flex: 3;
 	}
@@ -458,7 +614,7 @@ function onEntryClick() {
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		overflow: hidden;
-		min-width: 40px;
+		min-width: 20px;
 	}
 }
 </style>

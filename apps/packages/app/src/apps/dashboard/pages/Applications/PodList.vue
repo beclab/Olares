@@ -85,7 +85,7 @@ import { onMounted, ref, watch, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Empty from '@apps/control-panel-common/src/components/Empty.vue';
 import { getResult } from '@apps/dashboard/src/utils/monitoring';
-import { t } from '@apps/dashboard/src/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 import axios from 'axios';
 import { UsePod } from '@apps/control-panel-common/src/stores/PodData';
 import FullPageWithBack from '@apps/control-panel-common/src/components/FullPageWithBack.vue';

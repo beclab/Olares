@@ -13,7 +13,7 @@ import { useOperateinStore, CopyStoragesType } from 'src/stores/operation';
 import { OPERATE_ACTION } from 'src/utils/contact';
 
 import url from 'src/utils/url';
-import { createURL, getPurePath } from '../utils';
+import { createURL, decodeURIComponentSafe, getPurePath } from '../utils';
 import { useDataStore } from 'src/stores/data';
 import { useTransfer2Store } from 'src/stores/transfer2';
 import {
@@ -215,12 +215,7 @@ export default class Awss3DataAPI extends DriveDataAPI {
 			size: thumb
 		};
 
-		let path = files.awss3RemovePrefix(pathSplit);
-		try {
-			path = decodeURIComponent(path);
-		} catch (error) {
-			/* empty */
-		}
+		const path = decodeURIComponentSafe(files.awss3RemovePrefix(pathSplit));
 		return createURL(files.awss3CommonUrl('preview', path), params);
 	}
 
@@ -228,12 +223,7 @@ export default class Awss3DataAPI extends DriveDataAPI {
 		const params = {
 			...(inline && { inline: 'true' })
 		};
-		let path = files.awss3RemovePrefix(file.path);
-		try {
-			path = decodeURIComponent(path);
-		} catch (error) {
-			/* empty */
-		}
+		const path = decodeURIComponentSafe(files.awss3RemovePrefix(file.path));
 		const url = createURL(files.awss3CommonUrl('raw', path), params);
 		return url;
 	}
@@ -245,7 +235,6 @@ export default class Awss3DataAPI extends DriveDataAPI {
 		try {
 			const newPath = file.path;
 			const url = files.awss3RemovePrefix(newPath);
-			console.log('url ===>', url);
 			const res = await this.commonAxios.get(files.awss3CommonUrl('raw', url), {
 				params: {
 					inline: true
@@ -279,7 +268,7 @@ export default class Awss3DataAPI extends DriveDataAPI {
 
 		const path = appendPath(
 			filesUtil.commonUrlTypeExtend('raw', file.fileType, file.fileExtend),
-			encodeUrl(file.path)
+			decodeURIComponentSafe(file.path)
 		);
 
 		const url = createURL(path, params);
@@ -288,6 +277,13 @@ export default class Awss3DataAPI extends DriveDataAPI {
 
 	formatTransferToFileItem(item: TransferItem): FileItem {
 		const extension = getextension(item.name);
+		const account = item.path.split('/')[3];
+		const path = files.awss3RemoveHomePrefix(item.path);
+		const oPath = path.split('/').slice(2).join('/');
+		const oParentPath = oPath.substring(
+			0,
+			oPath.length - item.name.length - (item.path.endsWith('/') ? 1 : 0)
+		);
 		const res: FileItem = {
 			extension,
 			isDir: item.isFolder,
@@ -304,7 +300,10 @@ export default class Awss3DataAPI extends DriveDataAPI {
 			url: item.url || '',
 			driveType: item.driveType!,
 			param: '',
-			fileExtend: 'awss3'
+			fileType: 'awss3',
+			fileExtend: account,
+			oPath,
+			oParentPath
 		};
 		return res;
 	}

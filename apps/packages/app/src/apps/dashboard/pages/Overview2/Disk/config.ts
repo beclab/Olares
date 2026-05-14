@@ -1,49 +1,105 @@
 import { PodItem } from '@apps/dashboard/src/types/network';
 import {
 	getLastMonitoringData,
-	getLastMonitoringDataWithPath
+	getLastMonitoringDataWithPath,
+	getSuitableValue,
+	getValueByUnit
 } from '@apps/dashboard/src/utils/monitoring';
 import { get, isNumber, round, sortBy, includes } from 'lodash';
-import { t } from '@apps/dashboard/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 import { convertTemperature } from '@apps/dashboard/src/utils/cpu';
 import { getDiskSize } from '@apps/dashboard/src/utils/disk';
 
-export const columns: any = [
+export type LsblkMetricRow = {
+	name: string;
+	node: string;
+	pkname?: string;
+	size?: string;
+	fstype?: string;
+	mountpoint?: string;
+	fsused?: string;
+	fsuse_percent?: string;
+};
+
+export type LsblkFlatRow = LsblkMetricRow & {
+	__depth: number;
+	__key: string;
+	__treePrefix: string;
+};
+
+export const displayLsblkCell = (v: unknown): string => {
+	if (v === null || v === undefined) return '-';
+	const s = String(v).trim();
+	return s === '' ? '-' : s;
+};
+
+export const LSBLK_DISK_FIXED_UNITS = [
+	'Ti',
+	'Gi',
+	'Mi',
+	'Ki',
+	'Bytes'
+] as const;
+
+const capitalizeUnitSuffix = (unit: string) => {
+	const c = unit.charAt(0).toUpperCase() + unit.slice(1).toLowerCase();
+	return c.replace(/_/g, ' ');
+};
+
+export const formatLsblkDiskValue = (
+	raw: unknown,
+	unitMode: 'auto' | (typeof LSBLK_DISK_FIXED_UNITS)[number]
+): string => {
+	if (raw === null || raw === undefined) return '-';
+	const s = String(raw).trim();
+	if (s === '' || s === '-') return '-';
+	if (Number.isNaN(Number(s))) return '-';
+
+	if (unitMode === 'auto') {
+		return String(getSuitableValue(s, 'disk'));
+	}
+
+	const count = getValueByUnit(s, unitMode);
+	const unitText = ` ${capitalizeUnitSuffix(unitMode)}`;
+	return `${count}${unitText}`;
+};
+
+export const getLsblkColumns = () => [
 	{
-		name: 'device',
-		label: t('DISK_OP.FILE_SYSTEM'),
+		name: 'name',
+		label: t('DISK_OP.LSBLK_NAME'),
 		align: 'left',
-		field: 'device'
+		field: 'name'
 	},
 	{
-		name: 'total',
+		name: 'size',
 		align: 'left',
-		label: t('DISK_OP.TOTAL_CAPACITY'),
-		field: 'total'
+		label: t('DISK_OP.LSBLK_SIZE'),
+		field: (row: LsblkFlatRow) => displayLsblkCell(row.size)
 	},
 	{
-		name: 'usage',
+		name: 'fstype',
 		align: 'left',
-		label: t('DISK_OP.USED_SPACE'),
-		field: 'usage'
-	},
-	{
-		name: 'available',
-		align: 'left',
-		label: t('DISK_OP.AVAILABLE_SPACE'),
-		field: 'available'
-	},
-	{
-		name: 'utilisation',
-		align: 'left',
-		label: t('DISK_OP.USAGE_RATE'),
-		field: 'utilisation'
+		label: t('DISK_OP.LSBLK_FSTYPE'),
+		field: (row: LsblkFlatRow) => displayLsblkCell(row.fstype)
 	},
 	{
 		name: 'mountpoint',
-		align: 'right',
+		align: 'left',
 		label: t('DISK_OP.MOUNT_POINT'),
-		field: 'mountpoint'
+		field: (row: LsblkFlatRow) => displayLsblkCell(row.mountpoint)
+	},
+	{
+		name: 'fsused',
+		align: 'left',
+		label: t('DISK_OP.LSBLK_FSUSED'),
+		field: (row: LsblkFlatRow) => displayLsblkCell(row.fsused)
+	},
+	{
+		name: 'fsuse_percent',
+		align: 'right',
+		label: t('DISK_OP.LSBLK_FSUSE_PERCENT'),
+		field: (row: LsblkFlatRow) => displayLsblkCell(row.fsuse_percent)
 	}
 ];
 
@@ -59,7 +115,8 @@ export const MetricTypes = {
 	device_size_usage: 'node_device_size_usage',
 	device_partition_size_total: 'node_device_partition_size_total',
 	filesystem_size_bytes: 'node_filesystem_size_bytes',
-	device_size_utilisation: 'node_device_size_utilisation'
+	device_size_utilisation: 'node_device_size_utilisation',
+	disk_lsblk_info: 'node_disk_lsblk_info'
 };
 type DiskType = 'HDD' | 'SSD';
 
@@ -126,7 +183,6 @@ export const getDiskOptions = (
 			health_ok_status,
 			disk_size_ratio: used_size / capacity_size,
 			used_size: used_value,
-			capacity_show: !!capacity_size,
 			capacity_size: t('DISK_OP.AVAILABLE', { count: capacity_value }),
 			rotational: getDiskType(get(item, 'metric.rotational', '-')),
 			name: get(item, 'metric.name', ''),
@@ -197,70 +253,175 @@ export const getDiskOptions = (
 	return result;
 };
 
+const metricFromSample = (m: Record<string, string>): LsblkMetricRow => ({
+	name: m.name ?? '',
+	node: m.node ?? '',
+	pkname: m.pkname,
+	size: m.size,
+	fstype: m.fstype,
+	mountpoint: m.mountpoint,
+	fsused: m.fsused,
+	fsuse_percent: m.fsuse_percent
+});
+
+const hasPknameLabels = (rows: LsblkMetricRow[]) =>
+	rows.some((r) => {
+		const p = r.pkname?.trim();
+		return !!p;
+	});
+
+const collectSubtreeByPkname = (
+	allRows: LsblkMetricRow[],
+	rootName: string
+): LsblkMetricRow[] => {
+	const byName = new Map(allRows.map((r) => [r.name, r]));
+	const seen = new Set<string>();
+	const queue: string[] = [];
+
+	if (byName.has(rootName)) {
+		seen.add(rootName);
+		queue.push(rootName);
+	}
+
+	while (queue.length) {
+		const n = queue.shift()!;
+		for (const r of allRows) {
+			const pk = (r.pkname || '').trim();
+			if (pk === n && !seen.has(r.name)) {
+				seen.add(r.name);
+				queue.push(r.name);
+			}
+		}
+	}
+
+	if (seen.size === 0) {
+		const addDesc = (parent: string) => {
+			for (const r of allRows) {
+				const pk = (r.pkname || '').trim();
+				if (pk === parent && !seen.has(r.name)) {
+					seen.add(r.name);
+					addDesc(r.name);
+				}
+			}
+		};
+		addDesc(rootName);
+	}
+
+	return allRows.filter((r) => seen.has(r.name));
+};
+
+const resolveParent = (
+	r: LsblkMetricRow,
+	rootName: string,
+	nameSet: Set<string>
+): string | undefined => {
+	if (r.name === rootName) return undefined;
+	const pk = r.pkname?.trim();
+	if (pk && nameSet.has(pk)) return pk;
+
+	const prefixes = [...nameSet].filter(
+		(n) => n.length > 0 && n !== r.name && r.name.startsWith(n)
+	);
+	prefixes.sort((a, b) => b.length - a.length);
+	const best = prefixes[0];
+	if (best) return best;
+	if (nameSet.has(rootName)) return rootName;
+	return undefined;
+};
+
+const buildLsblkTreePrefix = (depth: number, lastStack: boolean[]): string => {
+	if (depth === 0) return '';
+	let s = '';
+	for (let i = 0; i < depth - 1; i++) {
+		s += lastStack[i] ? '    ' : '│   ';
+	}
+	s += lastStack[depth - 1] ? '└── ' : '├── ';
+	return s;
+};
+
+const flattenLsblkHierarchy = (
+	rows: LsblkMetricRow[],
+	rootName: string,
+	nodeId: string
+): LsblkFlatRow[] => {
+	const nameSet = new Set(rows.map((r) => r.name));
+	const byName = new Map(rows.map((r) => [r.name, r]));
+
+	if (!nameSet.has(rootName)) {
+		return rows
+			.slice()
+			.sort((a, b) => a.name.localeCompare(b.name))
+			.map((r) => ({
+				...r,
+				__depth: 0,
+				__treePrefix: '',
+				__key: `${nodeId}::${r.name}`
+			}));
+	}
+
+	const children = new Map<string, LsblkMetricRow[]>();
+	for (const r of rows) {
+		if (r.name === rootName) continue;
+		let p = resolveParent(r, rootName, nameSet);
+		if (!p || !nameSet.has(p)) p = rootName;
+		if (!children.has(p)) children.set(p, []);
+		children.get(p)!.push(r);
+	}
+	for (const [, list] of children) {
+		list.sort((a, b) => a.name.localeCompare(b.name));
+	}
+
+	const out: LsblkFlatRow[] = [];
+	const walk = (rname: string, depth: number, lastStack: boolean[]) => {
+		const r = byName.get(rname);
+		if (!r) return;
+		const treePrefix =
+			depth === 0 ? '' : buildLsblkTreePrefix(depth, lastStack);
+		out.push({
+			...r,
+			__depth: depth,
+			__treePrefix: treePrefix,
+			__key: `${nodeId}::${r.name}`
+		});
+		const ch = children.get(rname);
+		if (ch) {
+			ch.forEach((c, idx) => {
+				const isLast = idx === ch.length - 1;
+				walk(c.name, depth + 1, [...lastStack, isLast]);
+			});
+		}
+	};
+	walk(rootName, 0, []);
+	return out;
+};
+
 export const getDiskPartitionRows = (
 	data: { [key: string]: string },
 	name: string,
 	node: string
-) => {
-	//
-	const device_partition_size_total: any = get(
+): LsblkFlatRow[] => {
+	const disk_lsblk_info: any = get(
 		data,
-		`${MetricTypes.device_partition_size_total}.data.result`,
+		`${MetricTypes.disk_lsblk_info}.data.result`,
 		[]
 	);
 
-	const device_size_usage: any = get(
-		data,
-		`${MetricTypes.device_size_usage}.data.result`,
-		[]
-	);
-
-	const device_size_utilisation: any = get(
-		data,
-		`${MetricTypes.device_size_utilisation}.data.result`,
-		[]
-	);
-
-	const filesystem_size_bytes: any = get(
-		data,
-		`${MetricTypes.filesystem_size_bytes}.data.result`,
-		[]
-	);
-	const rows = device_partition_size_total
+	const allForNode: LsblkMetricRow[] = disk_lsblk_info
 		.filter(
-			(item) => item.metric.device.startsWith(name) && item.metric.node === node
+			(item: { metric: Record<string, string> }) => item.metric.node === node
 		)
-		.map((item) => ({
-			device: item.metric.device,
-			total: getDiskSize(item.value[1]),
-			totalSize: item.value[1]
-		}));
-	const result = rows.map((item) => {
-		const utilisationTarget = device_size_utilisation.find(
-			(info) => info.metric.device === item.device
+		.map((item: { metric: Record<string, string> }) =>
+			metricFromSample(item.metric)
 		);
 
-		const filesystemBytesTarget = filesystem_size_bytes.filter(
-			(info) => info.metric.device === item.device
+	let subset: LsblkMetricRow[];
+	if (hasPknameLabels(allForNode)) {
+		subset = collectSubtreeByPkname(allForNode, name);
+	} else {
+		subset = allForNode.filter(
+			(r) => r.name === name || r.name.startsWith(name)
 		);
+	}
 
-		const sortedData = sortBy(
-			filesystemBytesTarget,
-			(obj) =>
-				obj.metric.mountpoint.split('/').filter((part) => part !== '').length
-		);
-		const currentTotalSize = item.totalSize;
-		const utilisation = utilisationTarget.value[1];
-		const usageSize = round(currentTotalSize * utilisation, 0);
-
-		return {
-			...item,
-			usage: getDiskSize(usageSize),
-			available: getDiskSize(currentTotalSize - usageSize),
-			utilisation: round(utilisation * 100, 1) + '%',
-			mountpoint: sortedData[0].metric.mountpoint
-		};
-	});
-
-	return result;
+	return flattenLsblkHierarchy(subset, name, node);
 };

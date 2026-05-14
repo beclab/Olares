@@ -3,6 +3,7 @@ import { AbilityData } from 'src/core/abilities';
 import { getAppAbilities } from 'src/api/settings/ability';
 import { useUserStore } from './user';
 import { busEmit } from 'src/utils/bus';
+import { useLocalForModule } from 'src/utils/bex/moduleUseLocal';
 
 interface AppAbilitiesStore {
 	data: AbilityData;
@@ -11,9 +12,16 @@ interface AppAbilitiesStore {
 const WISE_NAME = 'wise';
 const TRANSLATE_NAME = 'translate';
 const YTDLP_NAME = 'ytdlp';
-type APP_KEYS = typeof WISE_NAME | typeof TRANSLATE_NAME | typeof YTDLP_NAME;
+const RSSUBSCRIBE = 'rssubscribe';
+const TWITTER = 'twitter';
+export type APP_KEYS =
+	| typeof WISE_NAME
+	| typeof TRANSLATE_NAME
+	| typeof YTDLP_NAME
+	| typeof RSSUBSCRIBE
+	| typeof TWITTER;
 
-const defaultData = {
+export const defaultData = {
 	vault: false,
 	wise: {
 		running: false,
@@ -35,6 +43,20 @@ const defaultData = {
 		url: '',
 		name: YTDLP_NAME,
 		title: 'YT-DLP'
+	},
+	rssubscribe: {
+		running: false,
+		id: '',
+		url: '',
+		name: RSSUBSCRIBE,
+		title: 'RSS Subscribe'
+	},
+	twitter: {
+		running: false,
+		id: '',
+		url: '',
+		name: TWITTER,
+		title: 'Twitter/X plugin'
 	}
 };
 
@@ -50,7 +72,15 @@ export const useAppAbilitiesStore = defineStore('appAbilities', {
 			...defaultData.translate,
 			...state.data?.translate
 		}),
-		ytdlp: (state) => ({ ...defaultData.ytdlp, ...state.data?.ytdlp })
+		ytdlp: (state) => ({ ...defaultData.ytdlp, ...state.data?.ytdlp }),
+		rssubscribe: (state) => ({
+			...defaultData.rssubscribe,
+			...state.data?.rssubscribe
+		}),
+		twitter: (state) => ({
+			...defaultData.twitter,
+			...state.data?.twitter
+		})
 	},
 	actions: {
 		async init() {
@@ -73,9 +103,15 @@ export const useAppAbilitiesStore = defineStore('appAbilities', {
 		async busEmitAbilityUpdate() {
 			busEmit('appAbilitiesUpdate');
 		},
-		getAppDomain(key: APP_KEYS) {
+		getAppDomain(key: APP_KEYS, path = '') {
 			const userStore = useUserStore();
-			return userStore.getModuleSever(this.data[key].id);
+			const useLocal = useLocalForModule(key);
+			return userStore.getModuleSever(
+				this.data[key].id,
+				'https:',
+				path,
+				useLocal
+			);
 		}
 	}
 });

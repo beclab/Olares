@@ -2,7 +2,11 @@ import { Router } from 'vue-router';
 import { useBexStore } from '../../../stores/bex';
 
 export const useApproval = (router: Router) => {
-	const resolveApproval = async (data?: any, forceReject = false) => {
+	const resolveApproval = async (
+		data?: any,
+		forceReject = false,
+		defaultRoute = '/home'
+	) => {
 		const store = useBexStore();
 		const approval = await store.controller.getApproval();
 
@@ -10,7 +14,7 @@ export const useApproval = (router: Router) => {
 			await store.controller.resolveApproval(data, forceReject);
 		}
 		setTimeout(() => {
-			router.replace('/home');
+			router.replace(defaultRoute);
 		});
 	};
 

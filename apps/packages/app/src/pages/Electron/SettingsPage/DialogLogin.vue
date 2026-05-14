@@ -6,7 +6,7 @@
 		:cancel="t('cancel')"
 		:size="isWeb ? 'medium' : 'small'"
 		:platform="isWeb ? 'web' : 'mobile'"
-		@onSubmit="onDialogOK"
+		@onSubmit="login"
 	>
 		<terminus-edit
 			v-model="password"
@@ -69,7 +69,7 @@ const onDialogOK = () => {
 				border: 1px solid $input-stroke;
 				background-color: transparent;
 				&:focus {
-					border: 1px solid $yellow-disabled;
+					border: 1px solid $theme-input-focus-border;
 				}
 			}
 		}

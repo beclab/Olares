@@ -92,7 +92,7 @@ const props = defineProps({
 
 async function gotoRestore() {
 	if (props.plan && props.plan.id) {
-		router.push('/backup/restore/' + props.plan.id);
+		router.push('/restore/task/' + props.plan.id);
 	}
 }
 

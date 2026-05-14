@@ -22,7 +22,7 @@ export class VaultApplication extends NormalApplication {
 
 	async appLoadPrepare(data: any): Promise<void> {
 		//@ts-ignore
-		(() => import('../css/styles.css'))();
+		// (() => import('../css/styles.css'))();
 		registerTranslateMethod(i18n.global.t, 'locale.');
 		super.appLoadPrepare(data);
 		setPlatform(this.platform);

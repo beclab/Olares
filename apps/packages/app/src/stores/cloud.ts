@@ -86,6 +86,10 @@ export interface DomainRule {
 	ruleData: string;
 }
 
+export interface DomainSubmission extends Submission {
+	adminOlaresId: string;
+}
+
 export enum DOMAIN_STATUS {
 	WAIT_TXT_RESOLVE = 'WAIT_TXT',
 	WAIT_NS_RESOLVE = 'WAIT_NS',
@@ -255,6 +259,31 @@ export const useCloudStore = defineStore('cloud', {
 			}
 			return response.data;
 		},
+		async verifyDomainPresentation2(
+			jws: string,
+			domain: string,
+			adminOlaresId: string
+		): Promise<DomainSubmission | null> {
+			const userStore = useUserStore();
+			if (!userStore.current_user) {
+				return null;
+			}
+			await this.autoLogin();
+			const response: any = await axios.post(
+				this.getUrl() + '/v1/domain/submitDomainVP',
+				{
+					userid: userStore.current_user.cloud_id,
+					token: userStore.current_user.cloud_token,
+					domain: domain,
+					jws: jws,
+					admin_olares_id: adminOlaresId
+				}
+			);
+			if (response.code != 200 && response.code != 0) {
+				throw Error(response.data.message || 'Submit Presentation Failure');
+			}
+			return response.data;
+		},
 		async selectDomain(domain: string): Promise<Domain | undefined> {
 			const userStore = useUserStore();
 			if (!userStore.current_user) {
@@ -353,6 +382,10 @@ export const useCloudStore = defineStore('cloud', {
 				return GolbalHost.OLARES_SPACE_URL.cn;
 			}
 			return GolbalHost.OLARES_SPACE_URL.en;
+		},
+		reset() {
+			this.domains = [];
+			this.domain_init = false;
 		}
 	}
 });

@@ -11,26 +11,35 @@
 							style="border-radius: 10px"
 						/>
 
-						<application-status
-							v-if="!hideStatus && deviceStore.isMobile"
-							:status="status"
+						<img
+							v-if="csApp"
+							class="application_cs_icon"
+							:style="{ '--csSize': '12px' }"
+							:src="getRequireImage('share_app.svg')"
 						/>
 					</div>
-					<div
-						class="application-name"
-						:class="{
-							'text-body2': !deviceStore.isMobile,
-							'text-subtitle3-m': deviceStore.isMobile
-						}"
-					>
-						{{ title }}
-					</div>
+					<div class="column justify-start q-ml-sm">
+						<div class="row justify-start items-center">
+							<span
+								class="text-ink-1"
+								:class="{
+									'text-body1': !deviceStore.isMobile,
+									'text-subtitle3-m': deviceStore.isMobile
+								}"
+							>
+								{{ title }}
+							</span>
 
-					<application-status
-						v-if="!hideStatus && !deviceStore.isMobile"
-						class="q-ml-md"
-						:status="status"
-					/>
+							<span
+								v-if="rawAppName && rawAppName !== appName"
+								class="text-info bg-blue-alpha text-caption q-ml-sm clone-label"
+							>
+								{{ t('Clone') }}
+							</span>
+						</div>
+
+						<application-status v-if="!hideStatus" :status="status" />
+					</div>
 				</div>
 			</q-item-section>
 			<q-item-section side class="item-margin-right">
@@ -53,6 +62,8 @@
 import BtSeparator from '../base/BtSeparator.vue';
 import ApplicationStatus from './ApplicationStatus.vue';
 import { useDeviceStore } from 'src/stores/settings/device';
+import { getRequireImage } from 'src/utils/imageUtils';
+import { useI18n } from 'vue-i18n';
 
 defineProps({
 	icon: {
@@ -60,6 +71,18 @@ defineProps({
 		require: true
 	},
 	title: {
+		type: String,
+		require: true
+	},
+	csApp: {
+		type: Boolean,
+		require: true
+	},
+	appName: {
+		type: String,
+		require: true
+	},
+	rawAppName: {
 		type: String,
 		require: true
 	},
@@ -86,6 +109,7 @@ defineProps({
 });
 
 const deviceStore = useDeviceStore();
+const { t } = useI18n();
 </script>
 
 <style scoped lang="scss">
@@ -103,9 +127,21 @@ const deviceStore = useDeviceStore();
 			height: 32px;
 			border-radius: 8px;
 		}
-		.application-name {
-			color: $ink-1;
-			margin-left: 8px;
+
+		.application_cs_icon {
+			background: transparent;
+			width: var(--csSize);
+			height: var(--csSize);
+			position: absolute;
+			filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.2));
+			right: 0;
+			bottom: 0;
+			z-index: 3;
+		}
+
+		.clone-label {
+			padding: 2px 4px;
+			border-radius: 4px;
 		}
 	}
 }

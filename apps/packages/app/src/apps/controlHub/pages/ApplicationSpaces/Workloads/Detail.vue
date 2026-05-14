@@ -69,6 +69,7 @@
 								:icon="item.icon"
 								:label="item.label"
 								@click="item.onClick"
+								:disable="!!item.disable"
 							>
 							</MyButton>
 						</div>
@@ -116,8 +117,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, withDefaults, computed, watch, readonly } from 'vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { ref, computed, watch } from 'vue';
+import { t } from 'src/boot/control-hub-i18n';
 import EnvironmentVariables from '@apps/control-hub/src/containers/EnvironmentVariables.vue';
 import Yaml from '@apps/control-hub/src/pages/NamespacePods/Yaml.vue';
 import MyContentPage from '@apps/control-hub/src/components/MyContentPage.vue';

@@ -1,6 +1,6 @@
 import { notifyFailed } from 'src/utils/settings/btNotify';
-import { useCenterStore } from 'src/stores/market/center';
 import { AppService } from 'src/stores/market/appService';
+import { useAppStore } from 'src/stores/market/appStore';
 import { BtDialog, useColor } from '@bytetrade/ui';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
@@ -22,11 +22,11 @@ import {
 	MARKET_SOURCE_OFFICIAL
 } from 'src/constant/constants';
 
-export default function useAppAction(props) {
-	const { t, locale } = useI18n();
+export default function useAppAction(props: any) {
+	const { t } = useI18n();
 	const { color: blueDefault } = useColor('blue-default');
 	const { color: white } = useColor('ink-on-brand');
-	const centerStore = useCenterStore();
+	const appStore = useAppStore();
 	const $q = useQuasar();
 
 	const showMore = computed(() => {
@@ -49,7 +49,7 @@ export default function useAppAction(props) {
 	});
 
 	const supportClone = computed(() => {
-		const aggregation = centerStore.getAppAggregationInfo(
+		const aggregation = appStore.getAppAggregationInfo(
 			props.appName,
 			props.sourceId
 		);
@@ -78,7 +78,10 @@ export default function useAppAction(props) {
 	});
 
 	const showOpenInUpgrade = computed(() => {
-		return canUpgrade(props.item, props.appName, props.sourceId);
+		return (
+			props.item.status.state === APP_STATUS.RUNNING &&
+			canUpgrade(props.item, props.appName, props.sourceId)
+		);
 	});
 
 	const showStop = computed(() => {
@@ -129,14 +132,10 @@ export default function useAppAction(props) {
 		if (!props.item || !props.item.status) {
 			return;
 		}
-		AppService.resumeApp(
-			props.item.status,
-			{
-				app_name: props.appName,
-				source: props.sourceId
-			},
-			$q
-		);
+		AppService.resumeApp(props.item.status, {
+			app_name: props.appName,
+			source: props.sourceId
+		});
 	}
 
 	function onUpdateOpen() {
@@ -225,11 +224,14 @@ export default function useAppAction(props) {
 			//has clone app return
 			if (supportClone.value) {
 				const cloneAppList: string[] = [];
-				centerStore.appStatusMap.forEach((statusLatest, combinedId) => {
+				appStore.appStatusMap.forEach((statusLatest, combinedId) => {
+					const { sourceId } = appStore.splitCombinedId(combinedId);
 					if (
 						statusLatest &&
 						isCloneApp(statusLatest.status) &&
-						statusLatest.status.rawAppName === props.appName
+						!uninstalledApp(statusLatest.status) &&
+						statusLatest.status.rawAppName === props.appName &&
+						sourceId === props.sourceId
 					) {
 						cloneAppList.push(combinedId);
 					}
@@ -317,14 +319,10 @@ export default function useAppAction(props) {
 				});
 				break;
 			case APP_STATUS.RESUME.FAILED:
-				await AppService.resumeApp(
-					props.item.status,
-					{
-						app_name: props.appName,
-						source: props.sourceId
-					},
-					$q
-				);
+				await AppService.resumeApp(props.item.status, {
+					app_name: props.appName,
+					source: props.sourceId
+				});
 				break;
 			case APP_STATUS.STOP.FAILED:
 				await AppService.stopApp(

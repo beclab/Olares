@@ -1,6 +1,6 @@
 <template>
 	<div class="olares-unreachable-bg q-pa-md">
-		<div class="title text-suntitle3">
+		<div class="text-suntitle3 text-grey-10">
 			{{ t('Olares unreachable. Try Search Olares if:') }}
 		</div>
 		<div class="row items-center justify-between bottom-bg">
@@ -19,7 +19,7 @@
 							class="bg-ink-2"
 						></div>
 					</div>
-					<div class="text-ink-2 q-ml-xs" style="width: calc(100% - 20px)">
+					<div class="text-grey-8 q-ml-xs" style="width: calc(100% - 20px)">
 						{{ item }}
 					</div>
 				</div>
@@ -67,9 +67,6 @@ const searchOlares = () => {
 	border: 1px solid $separator;
 	border-radius: 12px;
 
-	.title {
-		color: $ink-1;
-	}
 	.bottom-bg {
 		// background-color: red;
 

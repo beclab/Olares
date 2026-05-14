@@ -1,20 +1,26 @@
 <template>
 	<div v-if="member && org" class="orgMemberView bg-background-1">
 		<div class="header">
-			<div class="row justify-between q-pa-md">
-				<div :class="['row', 'items-center', 'view-hearder']">
+			<div class="row justify-between q-pa-md full-width">
+				<div
+					:class="['row', 'items-center', 'view-hearder']"
+					style="flex: 1; overflow: hidden"
+				>
 					<q-icon
 						v-if="isMobile"
 						name="sym_r_chevron_left"
 						color="ink-1"
 						size="24px"
 						@click="goBack"
+						style="flex: 0 0 24px"
 					/>
 					<div class="hearder-input column justify-center">
-						<div class="text-subtitle2 text-ink-1 text-weight-bold">
+						<div
+							class="text-subtitle2 text-ink-1 text-weight-bold full-width ellipsis"
+						>
 							{{ member.did }}
 						</div>
-						<div class="text-overline text-ink-3">
+						<div class="text-overline text-ink-3 full-width ellipsis">
 							@{{ userStore.getCurrentDomain() }}
 						</div>
 					</div>
@@ -37,237 +43,143 @@
 							{{ t('suspended') }}
 						</span>
 					</div>
-
-					<!-- <q-item-section class="q-mx-sm" v-if="!isOwner && accountIsOwner">
-						<q-icon name="sym_r_more_horiz" size="28px">
-							<q-menu class="popup-menu">
-								<q-list dense padding style="width: 160px"> -->
-					<!-- <q-item
-										class="row items-center justify-start popup-item"
-										clickable
-										dense
-										v-close-popup
-										@click="onRemoveMember"
-									>
-										<q-icon class="q-mr-xs" name="sym_r_delete" size="20px" />
-										{{ t('remove') }}
-									</q-item> -->
-					<!-- <q-item
-										class="row items-center justify-start popup-item"
-										clickable
-										dense
-										v-close-popup
-										@click="onSuspendedMember"
-										v-if="!isSuspended"
-									>
-										<q-icon class="q-mr-xs" name="sym_r_block" size="20px" />
-										{{ t('suspend') }}
-									</q-item> -->
-					<!-- <q-item
-										class="row items-center justify-start popup-item"
-										clickable
-										dense
-										v-close-popup
-										@click="_unsuspendMember"
-										v-if="isSuspended"
-									>
-										<q-icon class="q-mr-xs" name="sym_r_block" size="20px" />
-										<q-icon size="22px" name="block" class="q-mr-xs" />
-										{{ t('unsuspend') }}
-									</q-item> -->
-					<!-- <q-item
-										class="row items-center justify-start popup-item"
-										clickable
-										dense
-										v-close-popup
-										@click="onMakeAdmin"
-										v-if="!isAdmin"
-									>
-										<q-icon
-											class="q-mr-xs"
-											name="sym_r_manage_accounts"
-											size="20px"
-										/>
-										{{ t('make_admin') }}
-									</q-item> -->
-					<!-- <q-item
-										class="row items-center justify-start popup-item"
-										clickable
-										dense
-										v-close-popup
-										@click="onRemoveAdmin"
-										v-if="isAdmin"
-									>
-										<q-icon
-											class="q-mr-xs"
-											name="sym_r_person_cancel"
-											size="20px"
-										/>
-										{{ t('remove_admin') }}
-									</q-item> -->
-					<!-- <q-item
-										class="row items-center justify-start popup-item"
-										dense
-										clickable
-										v-close-popup
-										@click="onMakeOwner"
-										v-if="accountIsOwner && !isOwner"
-									>
-										<q-icon
-											class="q-mr-xs"
-											name="sym_r_person_raised_hand"
-											size="20px"
-										/>
-										{{ t('make_owner') }}
-									</q-item> -->
-					<!-- </q-list>
-							</q-menu>
-						</q-icon>
-					</q-item-section> -->
 				</div>
 			</div>
 		</div>
 		<div class="container2">
-			<q-scroll-area
-				style="height: 100%"
-				:thumb-style="scrollBarStyle.thumbStyle"
-			>
-				<div>
-					<div class="listRow column justify-center">
-						<div class="header q-pa-md row justify-between q-mb-sm">
-							<div class="items-center">
-								<span class="text-ink-2 text-body3 text-li-title">
-									{{ t('Vault') }}
-								</span>
-							</div>
-							<div>
-								<q-icon name="sym_r_add" size="20px" color="ink-1" />
-								<q-menu
-									class="popup-menu bg-background-2"
-									flat
-									v-if="_availableVaults.length > 0"
-								>
-									<q-list class="q-py-sm" dense>
-										<template
-											v-for="(vault, index) in _availableVaults"
-											:key="'avn' + index"
-										>
-											<q-item
-												class="row items-center justify-start popup-item"
-												clickable
-												v-close-popup
-												@click="_addVault(vault)"
-												style="width: 140px; white-space: nowrap"
-											>
-												{{ vault.name }}
-											</q-item>
-											<q-separator v-if="index < _availableVaults.length - 1" />
-										</template>
-									</q-list>
-								</q-menu>
-								<q-menu class="popup-menu bg-background-2" flat v-else>
-									<q-list class="q-py-sm" dense>
+			<terminus-scroll-area style="height: 100%">
+				<div class="listRow column justify-center">
+					<div class="header q-pa-md row justify-between q-mb-sm">
+						<div class="items-center">
+							<span class="text-ink-2 text-body3 text-li-title">
+								{{ t('Vault') }}
+							</span>
+						</div>
+						<div>
+							<q-icon name="sym_r_add" size="20px" color="ink-1" />
+							<q-menu
+								class="popup-menu bg-background-2"
+								flat
+								v-if="_availableVaults.length > 0"
+							>
+								<q-list class="q-py-sm" dense>
+									<template
+										v-for="(vault, index) in _availableVaults"
+										:key="'avn' + index"
+									>
 										<q-item
-											class="row items-center justify-center text-ink-1 text-body3"
+											class="row items-center justify-start popup-item"
 											clickable
 											v-close-popup
-											style="white-space: nowrap"
+											@click="_addVault(vault)"
+											style="width: 140px; white-space: nowrap"
 										>
-											{{ t('no_more_vaults_available') }}
+											{{ vault.name }}
 										</q-item>
-									</q-list>
-								</q-menu>
-							</div>
-						</div>
-
-						<div class="body q-pa-md">
-							<div v-if="_vaults.length == 0 && _indirectVaults.length == 0">
-								{{ t('this_member_does_not_have_access_to_any_vaults_yet') }}
-							</div>
-							<div v-else>
-								<div v-for="(v, index) in _vaults" :key="'va' + index">
-									<div
-										class="vault-list bg-background-1 q-pa-md row items-center justify-between"
+										<q-separator v-if="index < _availableVaults.length - 1" />
+									</template>
+								</q-list>
+							</q-menu>
+							<q-menu class="popup-menu bg-background-2" flat v-else>
+								<q-list class="q-py-sm" dense>
+									<q-item
+										class="row items-center justify-center text-ink-1 text-body3"
+										clickable
+										v-close-popup
+										style="white-space: nowrap"
 									>
-										<div class="col-7 rowLeft">
-											<div class="avator q-mr-md">
-												<q-icon name="sym_r_deployed_code" size="20px" />
-											</div>
-											<div>
-												{{
-													org.vaults.find((vault) => vault.id === v.id)?.name
-												}}
-											</div>
-										</div>
+										{{ t('no_more_vaults_available') }}
+									</q-item>
+								</q-list>
+							</q-menu>
+						</div>
+					</div>
 
-										<div class="col-5 rowRight">
-											<q-select
-												v-if="accountDid !== member.did"
-												class="select-input"
-												popup-content-class="options_selected_Account"
-												dropdown-icon="sym_r_expand_more"
-												:model-value="v"
-												dense
-												borderless
-												:options="authOptions"
-												option-label="auth"
-												@update:model-value="
-													(value) => {
-														v.readonly = value === 'Readonly' ? true : false;
-														v.auth = value;
-														updateMember(v, value);
-														// onEdit();
-													}
-												"
-												style="width: 100px"
+					<div class="body q-pa-md">
+						<div v-if="_vaults.length == 0 && _indirectVaults.length == 0">
+							{{ t('this_member_does_not_have_access_to_any_vaults_yet') }}
+						</div>
+						<div v-else>
+							<div v-for="(v, index) in _vaults" :key="'va' + index">
+								<div
+									class="vault-list q-pa-md row items-center justify-between"
+								>
+									<div class="col-7 rowLeft">
+										<div class="avator q-mr-md">
+											<q-icon name="sym_r_deployed_code" size="20px" />
+										</div>
+										<div class="row-left-name">
+											{{ org.vaults.find((vault) => vault.id === v.id)?.name }}
+										</div>
+									</div>
+
+									<div class="col-5 rowRight">
+										<q-select
+											v-if="accountDid !== member.did"
+											class="select-input"
+											popup-content-class="options_selected_Account"
+											dropdown-icon="sym_r_expand_more"
+											:model-value="v"
+											dense
+											borderless
+											:options="authOptions"
+											option-label="auth"
+											@update:model-value="
+												(value) => {
+													v.readonly = value === 'Readonly' ? true : false;
+													v.auth = value;
+													updateMember(v, value);
+													// onEdit();
+												}
+											"
+											style="width: 100px"
+										>
+											<template
+												v-slot:option="{ itemProps, opt, toggleOption }"
 											>
-												<template
-													v-slot:option="{ itemProps, opt, toggleOption }"
-												>
-													<q-item v-bind="itemProps">
-														<q-item-section>
-															<q-item-label>{{ opt }}</q-item-label>
-														</q-item-section>
-														<q-item-section side>
-															<q-checkbox
-																v-if="opt === v.auth"
-																:model-value="true"
-																checked-icon="sym_r_check_circle"
-																unchecked-icon=""
-																indeterminate-icon="help"
-																@update:model-value="toggleOption"
-																color="ink-2"
-															/>
-														</q-item-section>
-													</q-item>
-												</template>
-											</q-select>
-											<q-icon
-												class="clear q-mx-xs text-ink-2"
-												size="20px"
-												name="sym_r_delete"
-												style="justify-content: stretch"
-												@click="
-													_removeVault(
-														org.vaults.find((vault) => vault.id === v.id)
-													)
-												"
-											/>
-										</div>
+												<q-item v-bind="itemProps">
+													<q-item-section>
+														<q-item-label>{{ opt }}</q-item-label>
+													</q-item-section>
+													<q-item-section side>
+														<q-checkbox
+															v-if="opt === v.auth"
+															:model-value="true"
+															checked-icon="sym_r_check_circle"
+															unchecked-icon=""
+															indeterminate-icon="help"
+															@update:model-value="toggleOption"
+															color="ink-2"
+														/>
+													</q-item-section>
+												</q-item>
+											</template>
+										</q-select>
+										<q-icon
+											class="clear q-mx-xs text-ink-2"
+											size="20px"
+											name="sym_r_delete"
+											style="justify-content: stretch"
+											@click="
+												_removeVault(
+													org.vaults.find((vault) => vault.id === v.id)
+												)
+											"
+										/>
 									</div>
-									<q-separator v-if="index < _vaults.length - 1" />
 								</div>
+								<q-separator v-if="index < _vaults.length - 1" />
+							</div>
 
-								<div v-for="(v, index) in _indirectVaults" :key="'iva' + index">
-									<div class="listRow q-pa-md row items-center justify-between">
-										{{ org.vaults.find((vault) => vault.id === v.id)?.name }}
-									</div>
+							<div v-for="(v, index) in _indirectVaults" :key="'iva' + index">
+								<div class="listRow q-pa-md row items-center justify-between">
+									{{ org.vaults.find((vault) => vault.id === v.id)?.name }}
 								</div>
 							</div>
 						</div>
 					</div>
 				</div>
-			</q-scroll-area>
+			</terminus-scroll-area>
 		</div>
 		<div
 			v-if="accountIsAdmin && hasChanges"
@@ -319,6 +231,9 @@ import {
 import { useI18n } from 'vue-i18n';
 import { BtDialog } from '@bytetrade/ui';
 import { busOn, busOff } from '../../../../utils/bus';
+
+import TerminusScrollArea from 'src/components/common/TerminusScrollArea2.vue';
+
 const $q = useQuasar();
 
 const route = useRoute();
@@ -661,6 +576,7 @@ const { t } = useI18n();
 }
 .orgMemberView {
 	height: 100%;
+	width: 100%;
 	display: flex;
 	flex-direction: column;
 
@@ -669,6 +585,8 @@ const { t } = useI18n();
 
 		.hearder-input {
 			height: 44px;
+			flex: 1;
+			overflow: hidden;
 		}
 
 		&:focus-within {
@@ -681,6 +599,7 @@ const { t } = useI18n();
 	}
 
 	.view-option {
+		flex: 0 0 80px;
 		.role {
 			height: 24px;
 			padding: 0 4px;
@@ -763,11 +682,13 @@ const { t } = useI18n();
 	overflow: hidden;
 
 	.header {
+		width: 100%;
 		background-color: $background-3;
 		border-bottom: 1px solid $separator;
 	}
 
 	.body {
+		width: 100%;
 		.vault-list {
 			width: 100%;
 			cursor: pointer;
@@ -776,6 +697,13 @@ const { t } = useI18n();
 				display: flex;
 				align-items: center;
 				justify-content: flex-start;
+			}
+
+			.row-left-name {
+				overflow: hidden;
+				flex: 1;
+				text-overflow: ellipsis;
+				white-space: nowrap;
 			}
 
 			.rowRight {

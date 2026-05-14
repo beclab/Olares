@@ -54,8 +54,9 @@
 					width="100%"
 					height="40px"
 					:size="5"
+					:file-guard="imagesUploadFormatGuard"
 					fileName="image"
-					accept=".jpg, .jpeg, .png, .gif, image/*"
+					:accept="IMAGES_UPLOAD_V1_ACCEPT"
 					action="/images/upload/v1"
 					@ok="ok"
 					@loading="update"
@@ -381,6 +382,15 @@ import SliderComponent from '@apps/profile/src/components/profile/base/SliderCom
 import ColorPickerV2 from '@apps/profile/src/components/profile/design/ColorPickerV2.vue';
 import EditContainer from '@apps/profile/src/pages/profile/EditContainer.vue';
 import BioButton from '@apps/profile/src/components/profile/base/BioButton.vue';
+import { useUserStore } from '@apps/profile/src/stores/profileUser';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useColor } from '@bytetrade/ui';
+import { useI18n } from 'vue-i18n';
+import {
+	createImagesUploadV1FormatGuard,
+	IMAGES_UPLOAD_V1_ACCEPT
+} from '../../utils/upload/imagesUploadV1Formats';
+import _ from 'lodash';
 import {
 	AppearanceTheme,
 	BLOCK_STYLE_TYPE,
@@ -393,14 +403,11 @@ import {
 	BACKGROUND_IMAGE_PRESET,
 	FONT_ARRAY
 } from '@apps/profile/src/types/Preset';
-import { BtNotify, NotifyDefinedType, useColor } from '@bytetrade/ui';
-import { computed, onMounted, ref, watch } from 'vue';
-import { useUserStore } from '@apps/profile/src/stores/profileUser';
-import { useI18n } from 'vue-i18n';
-import _ from 'lodash';
 
 const userStore = useUserStore();
 const { t } = useI18n();
+
+const imagesUploadFormatGuard = createImagesUploadV1FormatGuard(t);
 const link1 = useColor('link-1');
 const noneFilter = ref();
 const darkFilter = ref();
@@ -496,12 +503,8 @@ const ok = (response: { code: string; data: any; message: any }) => {
 	}
 };
 
-const fail = (response: { code: string; data: any; message: any }) => {
+const fail = () => {
 	loading.value = false;
-	BtNotify.show({
-		type: NotifyDefinedType.FAILED,
-		message: response.message
-	});
 };
 
 const onColorChange = () => {

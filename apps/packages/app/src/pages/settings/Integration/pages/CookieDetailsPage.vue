@@ -1,8 +1,8 @@
 <template>
-	<page-title-component :show-back="true" :title="t('Cookie Management')">
+	<page-title-component :show-back="true" :title="t('Cookie management')">
 		<template v-slot:end>
 			<CustomButton
-				:label="t('Delete All')"
+				:label="t('Delete all')"
 				icon="sym_r_delete"
 				class="q-mr-md"
 				@click="deleteAggregatedCookie"
@@ -97,7 +97,7 @@ const router = useRouter();
 
 const deleteAggregatedCookie = () => {
 	BtDialog.show({
-		title: t('Delete All'),
+		title: t('Delete all'),
 		message: t('Are you sure you want to delete all cookies for the domain', {
 			domain: route.params.mainDomain
 		}),

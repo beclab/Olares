@@ -1,8 +1,7 @@
 <template>
 	<div
-		class="column itemlist bg-background-1"
+		class="column itemlist larepass-content"
 		:class="isWeb ? 'borderRight' : ''"
-		v-if="!deviceStore.isScaning"
 	>
 		<div
 			class="row items-center justify-between"
@@ -34,13 +33,16 @@
 		<q-list class="" style="width: 100%; height: calc(100% - 60px)">
 			<TerminusUserHeaderReminder v-if="!isBex" />
 			<template v-if="ids.length > 0">
-				<!-- <q-scroll-area
-					style="height: 100%"
-					:thumb-style="scrollBarStyle.thumbStyle"
-				> -->
 				<div
 					:class="isMobile ? 'mobile-list-padding' : 'web-list-padding'"
-					style="height: 100%"
+					:style="
+						!isBex &&
+						termipassStore &&
+						termipassStore.totalStatus &&
+						termipassStore.totalStatus.isError == 2
+							? 'height: calc(100% - 36px)'
+							: 'height: 100%'
+					"
 				>
 					<terminus-select-all
 						ref="terminusSelect"
@@ -52,6 +54,7 @@
 							<item-card-auth
 								v-if="
 									itemsMap[file.id].item.type === 3 ||
+									itemsMap[file.id].item.type === 4 ||
 									itemsMap[file.id].item.icon === 'authenticator'
 								"
 								:selectIds="selectIds"
@@ -67,16 +70,6 @@
 						</template>
 					</terminus-select-all>
 				</div>
-
-				<div
-					style="padding-bottom: 60px; width: 100%; height: 1px"
-					v-if="
-						termipassStore &&
-						termipassStore.totalStatus &&
-						termipassStore.totalStatus.isError == 2
-					"
-				/>
-				<!-- </q-scroll-area> -->
 			</template>
 
 			<div
@@ -106,12 +99,6 @@
 			@addFile="addFile"
 		/>
 	</div>
-	<ScanComponent
-		v-if="deviceStore.isScaning"
-		ref="scanCt"
-		@cancel="scanCancel"
-		@scan-result="scanResult"
-	/>
 </template>
 
 <script lang="ts" setup>
@@ -142,7 +129,7 @@ import {
 	bexFrontBusOn,
 	bexFrontBusOff
 } from '../../platform/interface/bex/utils';
-import { addItem } from '../../platform/addItem';
+import { addItem, addNewItem } from '../../platform/addItem';
 import {
 	notifyFailed,
 	notifySuccess,
@@ -164,10 +151,10 @@ import TerminusUserHeaderReminder from '../../components/common/TerminusUserHead
 import TerminusSelectAll from './../../components/common/TerminusSelectAll.vue';
 import AddFiles from './../Mobile/file/AddFiles.vue';
 import DirOperationDialog from './DirOperationDialog.vue';
-import ScanComponent from '../../components/common/ScanComponent.vue';
-import { useDeviceStore } from '../../stores/device';
 import throttle from 'lodash.throttle';
 import { decodeAuthenticatorMigrationUrl } from 'src/platform/addItem';
+import { getNativeAppPlatform } from 'src/application/platform';
+import { decodeURIComponentSafe } from 'src/api/files/v2/utils';
 
 function filterByString(fs: string, rec: VaultItem) {
 	if (!fs) {
@@ -191,11 +178,9 @@ const Route = useRoute();
 const menuStore = useMenuStore();
 const vaultStore = useVaultStore();
 const termipassStore = useTermipassStore();
-const deviceStore = useDeviceStore();
 
 const filterInput = ref('');
 const filterShowing = ref(ItemHeaderModel.DEFAULT);
-
 const { t } = useI18n();
 
 const isBex = ref(process.env.IS_BEX);
@@ -256,7 +241,7 @@ const toolabClick = (value: any) => {
 async function onCreate() {
 	let option: any = null;
 
-	if (menuStore.currentItem === 'vault' && menuStore.vaultId) {
+	if (menuStore.vaultId) {
 		const vaul = app.getVault(menuStore.vaultId);
 		option = {
 			value: vaul?.id,
@@ -316,8 +301,8 @@ async function onCreate() {
 				vault
 			);
 
-			if (editing_item) {
-				const id = editing_item.id;
+			if (editing_item?.item.id) {
+				const id = editing_item.item.id;
 				emits('toolabClick', id);
 			}
 			vaultStore.editing_item = editing_item;
@@ -332,8 +317,7 @@ async function createItem(
 	tags: string[],
 	vault: Vault | null | undefined
 ) {
-	const editing_item = await addItem(name, icon, fields, tags, vault);
-
+	let editing_item = await addNewItem(name, icon, fields, tags, vault);
 	return editing_item;
 }
 
@@ -471,7 +455,7 @@ const updateItems = (
 		}
 
 		if (process.env.PLATFORM !== 'MOBILE') {
-			const removeTypeArray = [VaultType.VC, VaultType.TerminusTotp];
+			const removeTypeArray = [VaultType.VC];
 			if (removeTypeArray.includes(item.type)) {
 				continue;
 			}
@@ -561,6 +545,13 @@ watch(
 		if (newVal) {
 			getItems();
 		}
+	}
+);
+
+watch(
+	() => menuStore.currentItem,
+	() => {
+		handleClose();
 	}
 );
 
@@ -789,37 +780,42 @@ const createCode = async (secret?: string, name?: string, batch = false) => {
 		template.fields[0].value = secret;
 	}
 
-	const editing_item: any = await addItem(
+	if (name || batch) {
+		const editing_item: any = await addItem(
+			name || '',
+			template.icon,
+			template.fields,
+			[],
+			app.mainVault,
+			[],
+			undefined
+		);
+		return;
+	}
+
+	const editing_item = await createItem(
 		name || '',
 		template.icon,
 		template.fields,
 		[],
-		app.mainVault,
-		[],
-		undefined
+		app.mainVault
 	);
 
-	if ((editing_item.id && editing_item.name) || batch) {
+	if (editing_item?.item.id) {
+		const id = editing_item.item.id;
+		emits('toolabClick', id);
+	}
+	menuStore.isEdit = true;
+	vaultStore.editing_item = editing_item;
+};
+
+const scanCode = async () => {
+	const nativalPlatform = getNativeAppPlatform();
+	const result = await nativalPlatform.scanQRCode();
+	if (!result) {
 		return;
 	}
 
-	menuStore.isEdit = true;
-
-	const id = editing_item.id ? editing_item.id : editing_item.item.id;
-	emits('toolabClick', id);
-};
-
-// const scanIng = ref(false);
-
-const scanCode = () => {
-	deviceStore.isScaning = true;
-};
-
-const scanCancel = () => {
-	deviceStore.isScaning = false;
-};
-
-const scanResult = async (result: string) => {
 	if (
 		!result.startsWith('otpauth-migration:') &&
 		!result.startsWith('otpauth')
@@ -829,11 +825,10 @@ const scanResult = async (result: string) => {
 	}
 
 	if (result.startsWith('otpauth-migration:')) {
-		scanAuthenticatorResult(result);
-	} else {
-		addScanResultToVault(result, false);
-		deviceStore.isScaning = false;
+		await scanAuthenticatorResult(result);
+		return;
 	}
+	addScanResultToVault(result, false);
 };
 
 const addScanResultToVault = (result: string, batch = false) => {
@@ -863,14 +858,7 @@ const addScanResultToVault = (result: string, batch = false) => {
 	let name =
 		(issuer ? issuer + ':' : '') +
 		(nameList.length > 0 ? nameList[1] : nameList[0]);
-
-	if (name) {
-		try {
-			name = decodeURIComponent(name);
-		} catch (error) {
-			/* empty */
-		}
-	}
+	name = decodeURIComponentSafe(name);
 
 	if (
 		items.find((e) => e.item.name == name && e.item.fields[0].value == secret)
@@ -882,8 +870,6 @@ const addScanResultToVault = (result: string, batch = false) => {
 	return true;
 };
 
-const scanCt = ref();
-
 const scanAuthenticatorResult = async (result: string) => {
 	try {
 		const list = await decodeAuthenticatorMigrationUrl(result);
@@ -892,9 +878,6 @@ const scanAuthenticatorResult = async (result: string) => {
 			addScanResultToVault(item, true);
 		});
 		notifySuccess(t('success'));
-		setTimeout(() => {
-			scanCt.value.checkScanPermissionAndStart();
-		}, 1000);
 	} catch (error) {
 		console.log('error ===>', error);
 	}

@@ -480,7 +480,7 @@ const columnsCompleted = [
 	}
 ];
 
-const pauseOrResumeAction = (item: any) => {
+const pauseOrResumeAction = (item: TransferItem) => {
 	const termipassStore = useTermipassStore();
 	if (termipassStore.totalStatus?.status === TermiPassStatus.OfflineMode) {
 		return BtNotify.show({
@@ -489,7 +489,11 @@ const pauseOrResumeAction = (item: any) => {
 		});
 	}
 	if (item.status == TransferStatus.Error) {
-		transferStore.recoverErrorTransfer(item.id);
+		if (item.front == TransferFront.cloud) {
+			transferStore.resume(item);
+			return;
+		}
+		transferStore.recoverErrorTransfer(item.id!);
 		return;
 	}
 	if (item.isPaused) {
@@ -734,7 +738,7 @@ const toastTransferItemMessage = (message: string) => {
 .transfer-page-root {
 	width: 100%;
 	height: 100%;
-	background: $background-1;
+	// background: $background-1;
 	overflow: hidden;
 
 	.folder-name {

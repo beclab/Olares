@@ -149,9 +149,9 @@ import MySplitter from '../MySplitter.vue';
 import MyContentHeader from '../MyContentHeader.vue';
 import { updateWidths, size, initSize } from './config';
 import defaultIcon from '../../assets/default.svg';
+import { useColor } from '@bytetrade/ui';
 
 const router = useRouter();
-
 interface Props {
 	data: any;
 	menuOptions?: MenuOptions;
@@ -173,14 +173,14 @@ interface Props {
 	headerAfterHide?: boolean;
 	headerBeforeHide?: boolean;
 }
+const { color: themeMenuBgHover } = useColor('theme-menu-bg-hover');
 
 const props = withDefaults(defineProps<Props>(), {
 	data: [],
 	defaultActive: [],
 	hiddenEmpty: false,
 	index: 0,
-	selectedColor: 'blue-default',
-	selectedBackgroundColor: 'rgba(34, 111, 255, 0.12)'
+	selectedColor: 'theme-menu-color-hover'
 });
 
 const options = ref({});
@@ -220,6 +220,20 @@ onUpdated(() => {
 
 const resetSelected = () => {
 	selected.value = [];
+};
+
+const setSelected = (id: string) => {
+	if (!id) {
+		return;
+	}
+	if (selected.value === id) {
+		selected.value = null as any;
+		nextTick(() => {
+			selected.value = id;
+		});
+	} else {
+		selected.value = id;
+	}
 };
 
 const isEmpty = computed(() => {
@@ -319,7 +333,9 @@ const imgFilter = (prop: Record<string, any>) => {
 const onResize = (size: { height: number; width: number }) => {
 	updateWidths(props.index, size.width);
 };
-const selectedBG = computed(() => props.selectedBackgroundColor);
+const selectedBG = computed(
+	() => props.selectedBackgroundColor ?? themeMenuBgHover.value
+);
 
 onUnmounted(() => {
 	initSize();
@@ -327,7 +343,13 @@ onUnmounted(() => {
 
 autoScroll();
 
-defineExpose({ resetSelected, setExpanded, getExpandedNodes, selectedNodes });
+defineExpose({
+	resetSelected,
+	setExpanded,
+	getExpandedNodes,
+	selectedNodes,
+	setSelected
+});
 </script>
 <style lang="scss" scoped>
 .my-menu-before-wrapper {

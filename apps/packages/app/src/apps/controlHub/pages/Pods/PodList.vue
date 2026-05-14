@@ -145,7 +145,7 @@ import Empty3 from '@apps/control-panel-common/src/components/Empty3.vue';
 import MoreSelection from '@apps/control-panel-common/src/components/MoreSelection.vue';
 import Yaml from '@apps/control-hub/src/pages/Pods/Yaml.vue';
 import DeleteDialog from '@apps/control-panel-common/src/components/DeleteDialog.vue';
-import { useQuasar } from 'quasar';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import MyLoading2 from '@apps/control-panel-common/src/components/MyLoading2.vue';
 import { useI18n } from 'vue-i18n';
 import QSectionStyle from '@apps/control-panel-common/src/components/QSectionStyle.vue';
@@ -153,7 +153,6 @@ import BtSelect from '@apps/control-panel-common/src/components/Select.vue';
 import { useAppDetailStore } from '@apps/control-hub/stores/AppDetail';
 
 const appDetailStore = useAppDetailStore();
-const $q = useQuasar();
 const { t } = useI18n();
 const options = computed(() => {
 	const option1 = [
@@ -413,15 +412,18 @@ const submitHandler = async () => {
 			currentItem.value.namespace,
 			currentItem.value.name
 		);
-		$q.notify({
-			type: 'positive',
+		BtNotify.show({
+			type: NotifyDefinedType.SUCCESS,
 			message: 'Suscess'
 		});
 		fetchData();
 	} catch (error: any) {
-		$q.notify({
-			type: 'negative',
-			message: error
+		BtNotify.show({
+			type: NotifyDefinedType.FAILED,
+			message:
+				typeof error === 'object' && error !== null && 'message' in error
+					? String((error as { message?: string }).message)
+					: String(error)
 		});
 	}
 	deleteDialogRef.value?.hide();

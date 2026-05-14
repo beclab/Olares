@@ -1,0 +1,445 @@
+.olares-md-preview.olares-light {
+	color: var(--olares-editor-foreground);
+	background-color: var(--olares-editor-background);
+	--olares-editor-foreground: #3b3b3b;
+	--olares-editor-background: #ffffff;
+	--olares-editor-font-family: 'SF Mono', Monaco, Menlo, Consolas, 'Ubuntu Mono',
+		'Liberation Mono', 'DejaVu Sans Mono', 'Courier New', monospace;
+	--olares-textCodeBlock-background: #f8f8f8;
+	--olares-widget-border: #e5e5e5;
+	--olares-textBlockQuote-border: #d0d7de;
+	--olares-textBlockQuote-background: #f6f8fa;
+	--olares-textLink-foreground: #005fb8;
+	--olares-textPreformat-foreground: #005fb8;
+	--olares-textPreformat-background: #0000001f;
+}
+
+.olares-md-preview.olares-dark {
+	color: var(--olares-editor-foreground);
+	background-color: var(--olares-editor-background);
+	--olares-editor-foreground: #cccccc;
+	--olares-editor-background: #1f1f1f;
+	--olares-editor-font-family: 'SF Mono', Monaco, Menlo, Consolas, 'Ubuntu Mono',
+		'Liberation Mono', 'DejaVu Sans Mono', 'Courier New', monospace;
+	--olares-textCodeBlock-background: #2b2b2b;
+	--olares-widget-border: #313131;
+	--olares-textBlockQuote-border: #616161;
+	--olares-textBlockQuote-background: #2b2b2b;
+	--olares-textLink-foreground: #4daafc;
+	--olares-textPreformat-foreground: #4daafc;
+	--olares-textPreformat-background: #3c3c3c;
+}
+
+.olares-md-preview {
+	font-size: var(--markdown-font-size, 14px);
+	padding: 1em 26px 0;
+	line-height: var(--markdown-line-height, 22px);
+	word-wrap: break-word;
+	box-sizing: border-box;
+}
+
+.olares-md-preview [align='center'] {
+	text-align: center;
+}
+
+.q-card .olares-md-preview a,
+.body--dark .q-card .olares-md-preview a {
+	color: var(--olares-textLink-foreground) !important;
+}
+
+.q-card .olares-md-preview.olares-light,
+.q-card .olares-md-preview.olares-dark {
+	color: var(--olares-editor-foreground) !important;
+}
+
+.olares-md-preview *,
+.olares-md-preview *::before,
+.olares-md-preview *::after {
+	box-sizing: inherit;
+}
+
+.olares-md-preview h1,
+.olares-md-preview h2,
+.olares-md-preview h3,
+.olares-md-preview h4,
+.olares-md-preview h5,
+.olares-md-preview h6,
+.olares-md-preview p,
+.olares-md-preview ol,
+.olares-md-preview ul,
+.olares-md-preview pre {
+	margin-top: 0;
+}
+
+.olares-md-preview h1,
+.olares-md-preview h2,
+.olares-md-preview h3,
+.olares-md-preview h4,
+.olares-md-preview h5,
+.olares-md-preview h6 {
+	font-weight: 600;
+	margin-top: 24px;
+	margin-bottom: 16px;
+	line-height: 1.25;
+}
+
+.olares-md-preview sub,
+.olares-md-preview sup {
+	line-height: 0;
+}
+
+.olares-md-preview ul ul:first-child,
+.olares-md-preview ul ol:first-child,
+.olares-md-preview ol ul:first-child,
+.olares-md-preview ol ol:first-child {
+	margin-bottom: 0;
+}
+
+.olares-md-preview img,
+.olares-md-preview video {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+.olares-md-preview a {
+	text-decoration: none;
+	color: var(--olares-textLink-foreground);
+}
+
+.olares-md-preview a:hover {
+	text-decoration: underline;
+}
+
+.olares-md-preview a:focus,
+.olares-md-preview input:focus,
+.olares-md-preview select:focus,
+.olares-md-preview textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+.olares-md-preview p {
+	margin-bottom: 16px;
+}
+
+.olares-md-preview li p {
+	margin-bottom: 0.7em;
+}
+
+.olares-md-preview ul,
+.olares-md-preview ol {
+	margin-bottom: 0.7em;
+}
+
+.olares-md-preview hr {
+	border: 0;
+	height: 1px;
+	border-bottom: 1px solid;
+}
+
+.olares-md-preview h1 {
+	font-size: 2em;
+	margin-top: 0;
+	padding-bottom: 0.3em;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+.olares-md-preview h2 {
+	font-size: 1.5em;
+	padding-bottom: 0.3em;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+.olares-md-preview h3 {
+	font-size: 1.25em;
+}
+
+.olares-md-preview h4 {
+	font-size: 1em;
+}
+
+.olares-md-preview h5 {
+	font-size: 0.875em;
+}
+
+.olares-md-preview h6 {
+	font-size: 0.85em;
+}
+
+.olares-md-preview table {
+	border-collapse: collapse;
+	margin-bottom: 0.7em;
+}
+
+.olares-md-preview th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+.olares-md-preview th,
+.olares-md-preview td {
+	padding: 5px 10px;
+}
+
+.olares-md-preview table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+.olares-md-preview blockquote {
+	margin: 0 0 16px;
+	padding: 12px 16px 12px 12px;
+	border-left-width: 4px;
+	border-left-style: solid;
+	border-radius: 2px;
+	border-left-color: var(--olares-textBlockQuote-border);
+	background-color: var(--olares-textBlockQuote-background);
+	color: var(--olares-editor-foreground);
+}
+
+.olares-md-preview blockquote > :first-child {
+	margin-top: 0;
+}
+
+.olares-md-preview blockquote > :last-child {
+	margin-bottom: 0;
+}
+
+.olares-md-preview code {
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+/* Inline code: align with VS Code textPreformat */
+.olares-md-preview :not(pre) > code {
+	color: var(--olares-textPreformat-foreground);
+	background-color: var(--olares-textPreformat-background);
+	border-radius: 4px;
+	padding: 0.1em 0.35em;
+}
+
+.olares-md-preview pre {
+	background-color: var(--olares-textCodeBlock-background);
+	border: 1px solid var(--olares-widget-border);
+}
+
+.olares-md-preview pre:not(.hljs),
+.olares-md-preview pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+.olares-md-preview pre code {
+	display: inline-block;
+	color: var(--olares-editor-foreground);
+	tab-size: 4;
+	background: none;
+	padding: 0;
+	border-radius: 0;
+}
+
+.olares-md-preview.olares-light th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.olares-md-preview.olares-dark th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.olares-md-preview.olares-light h1,
+.olares-md-preview.olares-light h2,
+.olares-md-preview.olares-light hr,
+.olares-md-preview.olares-light td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.olares-md-preview.olares-dark h1,
+.olares-md-preview.olares-dark h2,
+.olares-md-preview.olares-dark hr,
+.olares-md-preview.olares-dark td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+.olares-md-preview.olares-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+/* ---- highlight.css (VS dark syntax + light overrides), scoped to preview root ---- */
+.olares-md-preview .hljs-keyword,
+.olares-md-preview .hljs-literal,
+.olares-md-preview .hljs-symbol,
+.olares-md-preview .hljs-name {
+	color: #569cd6;
+}
+
+.olares-md-preview .hljs-link {
+	color: #569cd6;
+	text-decoration: underline;
+}
+
+.olares-md-preview .hljs-built_in,
+.olares-md-preview .hljs-type {
+	color: #4ec9b0;
+}
+
+.olares-md-preview .hljs-number,
+.olares-md-preview .hljs-class {
+	color: #b8d7a3;
+}
+
+.olares-md-preview .hljs-string,
+.olares-md-preview .hljs-meta-string {
+	color: #d69d85;
+}
+
+.olares-md-preview .hljs-regexp,
+.olares-md-preview .hljs-template-tag {
+	color: #9a5334;
+}
+
+.olares-md-preview .hljs-subst,
+.olares-md-preview .hljs-function,
+.olares-md-preview .hljs-title,
+.olares-md-preview .hljs-params,
+.olares-md-preview .hljs-formula {
+	color: #dcdcdc;
+}
+
+.olares-md-preview .hljs-comment,
+.olares-md-preview .hljs-quote {
+	color: #57a64a;
+	font-style: italic;
+}
+
+.olares-md-preview .hljs-doctag {
+	color: #608b4e;
+}
+
+.olares-md-preview .hljs-meta,
+.olares-md-preview .hljs-meta-keyword,
+.olares-md-preview .hljs-tag {
+	color: #9b9b9b;
+}
+
+.olares-md-preview .hljs-variable,
+.olares-md-preview .hljs-template-variable {
+	color: #bd63c5;
+}
+
+.olares-md-preview .hljs-attr,
+.olares-md-preview .hljs-attribute,
+.olares-md-preview .hljs-builtin-name {
+	color: #9cdcfe;
+}
+
+.olares-md-preview .hljs-section {
+	color: gold;
+}
+
+.olares-md-preview .hljs-emphasis {
+	font-style: italic;
+}
+
+.olares-md-preview .hljs-strong {
+	font-weight: bold;
+}
+
+.olares-md-preview .hljs-bullet,
+.olares-md-preview .hljs-selector-tag,
+.olares-md-preview .hljs-selector-id,
+.olares-md-preview .hljs-selector-class,
+.olares-md-preview .hljs-selector-attr,
+.olares-md-preview .hljs-selector-pseudo {
+	color: #d7ba7d;
+}
+
+.olares-md-preview .hljs-addition {
+	background-color: var(
+		--olares-diffEditor-insertedTextBackground,
+		rgba(155, 185, 85, 0.2)
+	);
+	color: rgb(155, 185, 85);
+	display: inline-block;
+	width: 100%;
+}
+
+.olares-md-preview .hljs-deletion {
+	background: var(
+		--olares-diffEditor-removedTextBackground,
+		rgba(255, 0, 0, 0.2)
+	);
+	color: rgb(255, 0, 0);
+	display: inline-block;
+	width: 100%;
+}
+
+/* hljs color palette in light theme (matches VS Code highlight.css) */
+.olares-md-preview.olares-light .hljs-function,
+.olares-md-preview.olares-light .hljs-params,
+.olares-md-preview.olares-light .hljs-number,
+.olares-md-preview.olares-light .hljs-class {
+	color: inherit;
+}
+
+.olares-md-preview.olares-light .hljs-comment,
+.olares-md-preview.olares-light .hljs-quote,
+.olares-md-preview.olares-light .hljs-number,
+.olares-md-preview.olares-light .hljs-class,
+.olares-md-preview.olares-light .hljs-variable {
+	color: #008000;
+}
+
+.olares-md-preview.olares-light .hljs-keyword,
+.olares-md-preview.olares-light .hljs-selector-tag,
+.olares-md-preview.olares-light .hljs-name,
+.olares-md-preview.olares-light .hljs-tag {
+	color: #00f;
+}
+
+.olares-md-preview.olares-light .hljs-built_in,
+.olares-md-preview.olares-light .hljs-builtin-name {
+	color: #007acc;
+}
+
+.olares-md-preview.olares-light .hljs-string,
+.olares-md-preview.olares-light .hljs-section,
+.olares-md-preview.olares-light .hljs-attribute,
+.olares-md-preview.olares-light .hljs-literal,
+.olares-md-preview.olares-light .hljs-template-tag,
+.olares-md-preview.olares-light .hljs-template-variable,
+.olares-md-preview.olares-light .hljs-type {
+	color: #a31515;
+}
+
+.olares-md-preview.olares-light .hljs-subst,
+.olares-md-preview.olares-light .hljs-selector-attr,
+.olares-md-preview.olares-light .hljs-selector-pseudo,
+.olares-md-preview.olares-light .hljs-meta,
+.olares-md-preview.olares-light .hljs-meta-keyword {
+	color: #2b91af;
+}
+
+.olares-md-preview.olares-light .hljs-title,
+.olares-md-preview.olares-light .hljs-doctag {
+	color: #808080;
+}
+
+.olares-md-preview.olares-light .hljs-attr {
+	color: #f00;
+}
+
+.olares-md-preview.olares-light .hljs-symbol,
+.olares-md-preview.olares-light .hljs-bullet,
+.olares-md-preview.olares-light .hljs-link {
+	color: #00b0e8;
+}
+
+.olares-md-preview.olares-light .hljs-emphasis {
+	font-style: italic;
+}
+
+.olares-md-preview.olares-light .hljs-strong {
+	font-weight: bold;
+}

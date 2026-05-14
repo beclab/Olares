@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useBackgroundStore } from './background';
 import { useAdminStore } from './admin';
 import { OlaresTunneV2Interface } from 'src/utils/interface/frp';
+import { useTerminusDStore } from './terminusd';
 
 export interface ReverseProxy {
 	frp_server: string;
@@ -73,10 +74,17 @@ export const useNetworkStore = defineStore('network', {
 		async getOlaresTunnelsV2() {
 			const tokenStore = useTokenStore();
 			const adminStore = useAdminStore();
+			const terminusDStore = useTerminusDStore();
 			try {
+				if (!terminusDStore.olaresInfo) {
+					await terminusDStore.system_status();
+				}
 				const olaresTunnels: any = await axios.post(
 					`${tokenStore.url}/api/frp-servers-v2`,
-					{ name: adminStore.olaresId }
+					{
+						name: adminStore.olaresId,
+						device_name: terminusDStore.olaresInfo?.device_name
+					}
 				);
 				this.olaresTunnelsV2 = olaresTunnels;
 			} catch (error) {

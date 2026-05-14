@@ -7,7 +7,9 @@
 			<slot name="title" />
 		</div>
 		<windows-header-actions
-			v-if="$q.platform.is.electron && $q.platform.is.win"
+			v-if="
+				$q.platform.is.electron && ($q.platform.is.win || $q.platform.is.linux)
+			"
 		/>
 	</div>
 </template>

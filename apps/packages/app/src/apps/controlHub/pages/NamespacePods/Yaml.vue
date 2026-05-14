@@ -96,7 +96,7 @@ import { objectToYaml, yamlToObject } from './yaml';
 import { useRoute } from 'vue-router';
 import { Loading, Notify, useQuasar } from 'quasar';
 import { ObjectMapper } from '@apps/control-hub/src/utils/object.mapper';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import { get, set } from 'lodash-es';
 import { saveAs } from 'file-saver';
 import Dialog2 from '@apps/control-panel-common/src/components/Dialog/Dialog.vue';

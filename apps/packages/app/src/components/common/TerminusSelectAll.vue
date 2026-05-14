@@ -111,7 +111,10 @@ const timeout = ref();
 const longPressDuration = ref(500);
 const deviceStore = useDeviceStore();
 
-const arraysEqual = (arr1, arr2): boolean => {
+const arraysEqual = (
+	arr1: IdsType[] | DateMarker[] | EnableSelect[],
+	arr2: IdsType[]
+): boolean => {
 	if (arr1.length !== arr2.length) return false;
 
 	const cur_arr1: any[] = [];
@@ -119,6 +122,8 @@ const arraysEqual = (arr1, arr2): boolean => {
 		let arrItem = arr1[i];
 		if (arrItem.date) {
 			cur_arr1.push(arrItem.date);
+		} else if (arrItem.id) {
+			cur_arr1.push(arrItem.id);
 		} else {
 			cur_arr1.push(arrItem);
 		}

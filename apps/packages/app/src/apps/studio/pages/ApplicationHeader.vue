@@ -24,33 +24,34 @@
 				</span>
 			</div> -->
 
-			<div class="row items-center">
-				<div
-					class="status"
-					v-if="
-						dockerStore.appStatus && dockerStore.appStatus != APP_STATUS.EMPTY
-					"
-				>
-					<span
-						class="color q-mr-sm"
-						:style="{
-							background: app_status_style[dockerStore.appStatus].color
-						}"
-					></span>
-					<span
-						class="text-subtitle3 text-ink-2 row items-center q-gutter-x-md"
-					>
-						<span>{{ t(`appStatus.${dockerStore.appStatus}`) }}</span>
-					</span>
+			<template
+				v-if="
+					dockerStore.appStatus && dockerStore.appStatus != APP_STATUS.EMPTY
+				"
+			>
+				<div class="row items-center">
+					<div class="status">
+						<span
+							class="color q-mr-sm"
+							:style="{
+								background: app_status_style[dockerStore.appStatus].color
+							}"
+						></span>
+						<span
+							class="text-subtitle3 text-ink-2 row items-center q-gutter-x-md"
+						>
+							<span>{{ t(`appStatus.${dockerStore.appStatus}`) }}</span>
+						</span>
+					</div>
 				</div>
-			</div>
 
-			<q-separator
-				class="q-mx-md"
-				v-if="dockerStore.appStatus"
-				vertical
-				inset
-			/>
+				<q-separator
+					class="q-mx-md"
+					v-if="dockerStore.appStatus"
+					vertical
+					inset
+				/>
+			</template>
 
 			<div
 				class="operate-btn q-mr-sm q-px-sm"
@@ -602,9 +603,7 @@ async function onRename() {
 		try {
 			if (store.current_app) {
 				await dockerStore.rename_app(store.current_app.appName, newTitle);
-				// 更新本地存储的应用信息
 				store.current_app.title = newTitle;
-				// 刷新应用列表
 				await store.getApps();
 				await menuStore.updateApplications();
 			}

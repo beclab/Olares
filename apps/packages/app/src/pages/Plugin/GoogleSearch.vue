@@ -3,7 +3,7 @@
 		class="google-search-container"
 		:style="{ opacity: transparent ? 0 : 1 }"
 	>
-		<q-card flat bordered class="my-card bg-white">
+		<q-card flat bordered class="my-card">
 			<q-card-section class="q-pa-none">
 				<div class="row items-center no-wrap">
 					<q-img

@@ -131,7 +131,7 @@ import {
 	getNamespacesDetail
 } from '@apps/control-hub/src/network';
 import { get, isEmpty } from 'lodash';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import { getLocalTime, joinSelector } from '@apps/control-hub/src/utils';
 import DetailPage from '@apps/control-panel-common/src/containers/DetailPage.vue';
 import { ObjectMapper } from '@apps/control-hub/src/utils/object.mapper';
@@ -162,7 +162,8 @@ const isStudio2 = useIsStudio2();
 
 const $q = useQuasar();
 let loading = ref(false);
-const statusList = ref();
+const rawDetail = ref();
+const statusList = computed(() => getAttrs(rawDetail.value));
 const route = useRoute();
 const router = useRouter();
 const endpoints = ref([]);
@@ -206,11 +207,12 @@ const fetchList = () => {
 
 const fetchDetail = () => {
 	const { namespace, name }: any = route.params;
-	statusList.value = [];
+	rawDetail.value = undefined;
 	detail.value = {};
 	getServicesData(namespace, name).then((res) => {
-		detail.value = ObjectMapper.services(res.data);
-		statusList.value = getAttrs(detail.value);
+		const result = ObjectMapper.services(res.data);
+		detail.value = result;
+		rawDetail.value = result;
 	});
 };
 

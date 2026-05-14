@@ -78,7 +78,7 @@ export function sizeFormat(size: number) {
 }
 
 export function borderRadiusFormat(width: number, height: number) {
-	console.log('height', height);
+	// console.log('height', height);
 	return Math.round(width * 0.28);
 }
 

@@ -24,10 +24,10 @@
 			v-for="(items, index) in appData"
 			:key="`${items.title}_${index}`"
 		>
-			<div class="category" v-if="items.category === 'Use'">
+			<div class="category ellipsis" v-if="items.category === 'Use'">
 				{{ t('use_search', { content: searchTxt }) }}
 			</div>
-			<div class="category" v-if="items.category === 'Result'">
+			<div class="category ellipsis" v-if="items.category === 'Result'">
 				{{ t('result') }}
 			</div>
 			<template v-if="items.children">
@@ -49,7 +49,6 @@
 							class="name q-ml-sm text-ink-2"
 							>{{ item.name }}</span
 						>
-						<!-- <span class="desc">{{ item.type }}</span> -->
 					</div>
 					<div class="desc q-mr-sm text-ink-2">
 						{{

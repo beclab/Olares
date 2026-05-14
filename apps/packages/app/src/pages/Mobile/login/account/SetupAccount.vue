@@ -70,11 +70,17 @@ const createDid = async () => {
 	if (!(await userStore.unlockFirst())) {
 		return;
 	}
-	const { message } = await createUser();
-	if (message) {
-		notifyFailed(message);
-	} else {
-		$router.replace({ path: '/BindTerminusName' });
+	try {
+		$q.loading.show();
+		const { message } = await createUser();
+		$q.loading.hide();
+		if (message) {
+			notifyFailed(message);
+		} else {
+			$router.replace({ path: '/BindTerminusName' });
+		}
+	} catch (error) {
+		$q.loading.hide();
 	}
 };
 

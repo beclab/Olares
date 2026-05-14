@@ -2,7 +2,7 @@
 	<div class="user-header_bg">
 		<div class="user-header row items-center justify-between">
 			<div class="row items-center">
-				<TerminusAccountAvatar />
+				<TerminusAccountAvatar v-if="isLarePass" />
 				<div class="text-ink-1 text-h5 user-header__title">
 					{{ title }}
 				</div>
@@ -24,6 +24,7 @@ import { useUserStore } from '../../stores/user';
 import { ref } from 'vue';
 import TerminusUserHeaderReminder from './TerminusUserHeaderReminder.vue';
 import TerminusAccountAvatar from './TerminusAccountAvatar.vue';
+import { getApplication } from 'src/application/base';
 
 defineProps({
 	title: {
@@ -35,6 +36,7 @@ defineProps({
 
 const userStore = useUserStore();
 const userNameRef = ref('');
+const isLarePass = getApplication().applicationName == 'larepass';
 
 getUser();
 
@@ -43,6 +45,9 @@ userStore.$subscribe(() => {
 });
 
 function getUser() {
+	if (!userStore.users) {
+		return;
+	}
 	const user = userStore.users!.items.get(userStore.current_id!)!;
 	if (user) {
 		userNameRef.value = user.name ? user.name : '';

@@ -4,14 +4,16 @@
 			class="upload"
 			width="120px"
 			height="120px"
-			:size="1"
+			:size="5"
+			:min-image-width="400"
+			:min-image-height="400"
+			:file-guard="imagesUploadFormatGuard"
 			fileName="image"
-			accept=".jpg, .jpeg, .png, .gif, image/*"
+			:accept="IMAGES_UPLOAD_V1_ACCEPT"
 			action="/images/upload/v1"
 			:parmas="{ policy: 'public' }"
 			type="avator"
 			@ok="ok"
-			@fail="fail"
 		>
 			<div class="upload-image-inner column justify-center items-center">
 				<q-icon size="20px" name="sym_r_add_photo_alternate" />
@@ -31,10 +33,14 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import {
+	createImagesUploadV1FormatGuard,
+	IMAGES_UPLOAD_V1_ACCEPT
+} from 'src/utils/upload/imagesUploadV1Formats';
 import { useUserStore } from '@apps/profile/src/stores/profileUser';
-import { useQuasar } from 'quasar';
+import { notifyFailed } from 'src/utils/settings/btNotify';
 import { bus } from '@apps/profile/src/utils/bus';
+import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 defineProps({
@@ -44,9 +50,10 @@ defineProps({
 	}
 });
 
-const $q = useQuasar();
 const userStore = useUserStore();
 const { t } = useI18n();
+
+const imagesUploadFormatGuard = createImagesUploadV1FormatGuard(t);
 
 const currentPath = ref();
 onMounted(async () => {
@@ -58,7 +65,7 @@ const ok = async (response: any) => {
 	console.log(response.data);
 
 	if (response.code !== 200) {
-		$q.notify(response.message);
+		notifyFailed(String(response.message ?? ''));
 		return;
 	}
 
@@ -67,10 +74,6 @@ const ok = async (response: any) => {
 		imageUrl: currentPath.value,
 		avatar: currentPath.value
 	});
-};
-
-const fail = (response: unknown) => {
-	console.log('fail', response);
 };
 </script>
 

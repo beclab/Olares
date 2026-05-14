@@ -42,7 +42,7 @@ export default defineComponent({
 	width: 320px;
 	padding-left: 100px;
 	.search-icon {
-		color: $white;
+		color: white;
 	}
 
 	&:focus-within {

@@ -4,13 +4,15 @@ import {
 	MSG_TRANS_TOGGLE_STYLE,
 	MSG_TRANS_GETRULE,
 	MSG_TRANS_PUTRULE,
-	MSG_OPEN_TRANBOX
+	MSG_OPEN_TRANBOX,
+	MSG_TRANSLATE_READY
 	// APP_LCNAME,
 	// DEFAULT_TRANBOX_SETTING
 } from './config';
 import { getSettingWithDefault } from './libs/storage';
 import { Translator } from './libs/translator';
 import { isIframe, sendIframeMsg } from './libs/iframe';
+import { sendBgMsg } from './libs/msg';
 // import Slection from "./views/Selection";
 import { touchTapListener } from './libs/touch';
 import { debounce, genEventName } from './libs/utils';
@@ -26,6 +28,13 @@ import {
 	REACT_APP_OPTIONSPAGE_DEV,
 	REACT_APP_OPTIONSPAGE
 } from './env';
+
+/**
+ * Message queue for handling messages received during initialization
+ */
+let messageQueue = [];
+let translator = null;
+let isInitialized = false;
 
 /**
  * Tampermonkey script settings page
@@ -47,34 +56,64 @@ function runSettingPage() {
 }
 
 /**
- * Extension listens to background events
- * @param {*} translator
+ * Handle message from extension
+ * @param {*} message
+ * @param {*} sender
+ * @param {*} sendResponse
+ * @returns
  */
-function runtimeListener(translator) {
+function handleMessage(message, sender, sendResponse) {
+	if (!translator) {
+		console.warn('[KISS-Translator] Translator not initialized yet');
+		sendResponse({ error: 'Translator not initialized' });
+		return true;
+	}
+
+	const { action, args } = message;
+	switch (action) {
+		case MSG_TRANS_TOGGLE:
+			translator.toggle();
+			sendIframeMsg(MSG_TRANS_TOGGLE);
+			break;
+		case MSG_TRANS_TOGGLE_STYLE:
+			translator.toggleStyle();
+			sendIframeMsg(MSG_TRANS_TOGGLE_STYLE);
+			break;
+		case MSG_TRANS_GETRULE:
+			break;
+		case MSG_TRANS_PUTRULE:
+			translator.updateRule(args);
+			sendIframeMsg(MSG_TRANS_PUTRULE, args);
+			break;
+		case MSG_OPEN_TRANBOX:
+			window.dispatchEvent(new CustomEvent(MSG_OPEN_TRANBOX));
+			break;
+		default:
+			sendResponse({ error: `message action is unavailable: ${action}` });
+			return true;
+	}
+	sendResponse({ data: translator.rule });
+	return true;
+}
+
+/**
+ * Setup early message listener before initialization completes
+ * This ensures messages are not lost during async initialization
+ * @param {boolean} isUserscript
+ */
+function setupEarlyListener(isUserscript) {
+	if (isUserscript) return;
+
 	browser?.runtime.onMessage.addListener((message, sender, sendResponse) => {
-		const { action, args } = message;
-		switch (action) {
-			case MSG_TRANS_TOGGLE:
-				translator.toggle();
-				sendIframeMsg(MSG_TRANS_TOGGLE);
-				break;
-			case MSG_TRANS_TOGGLE_STYLE:
-				translator.toggleStyle();
-				sendIframeMsg(MSG_TRANS_TOGGLE_STYLE);
-				break;
-			case MSG_TRANS_GETRULE:
-				break;
-			case MSG_TRANS_PUTRULE:
-				translator.updateRule(args);
-				sendIframeMsg(MSG_TRANS_PUTRULE, args);
-				break;
-			case MSG_OPEN_TRANBOX:
-				window.dispatchEvent(new CustomEvent(MSG_OPEN_TRANBOX));
-				break;
-			default:
-				return { error: `message action is unavailable: ${action}` };
+		if (!isInitialized) {
+			// Queue messages received during initialization
+			messageQueue.push({ message, sender, sendResponse });
+			return true; // Keep sendResponse callback alive
 		}
-		sendResponse({ data: translator.rule });
+
+		// Process messages directly after initialization
+		const result = handleMessage(message, sender, sendResponse);
+		return result;
 	});
 }
 
@@ -228,17 +267,21 @@ export async function run(isUserscript = false) {
 			return;
 		}
 
-		// Read settings
+		// Setup message listener early (synchronous, before async operations)
+		// This ensures we can receive messages even during initialization
+		setupEarlyListener(isUserscript);
+
+		// Read settings (async)
 		const setting = await getSettingWithDefault();
 
 		// Blacklist
 		if (isInBlacklist(href, setting)) {
 			return;
 		}
-		console.log('fffff-1', href, setting);
-		// Translate webpage
+
+		// Translate webpage (async)
 		const rule = await matchRule(href, setting);
-		const translator = new Translator(rule, setting);
+		translator = new Translator(rule, setting);
 
 		// Adapt iframe
 		if (isIframe) {
@@ -246,8 +289,33 @@ export async function run(isUserscript = false) {
 			return;
 		}
 
-		// Listen to messages
-		!isUserscript && runtimeListener(translator);
+		// Mark as initialized
+		isInitialized = true;
+
+		try {
+			sendBgMsg(MSG_TRANSLATE_READY, { ready: true });
+		} catch (err) {
+			console.error('[KISS-Translator] Failed to notify ready status:', err);
+		}
+
+		// Process queued messages
+		if (messageQueue.length > 0) {
+			messageQueue.forEach(({ message, sender, sendResponse }) => {
+				try {
+					const result = handleMessage(message, sender, sendResponse);
+					if (!result) {
+						sendResponse({ error: 'Message processing failed' });
+					}
+				} catch (err) {
+					console.error(
+						'[KISS-Translator] Error processing queued message:',
+						err
+					);
+					sendResponse({ error: err.message });
+				}
+			});
+			messageQueue = [];
+		}
 
 		// Input box translation
 		inputTranslate(setting);

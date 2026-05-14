@@ -31,9 +31,9 @@ export const useTerminusStore = defineStore('terminus', {
 			if (parts.length > 1) {
 				const processedParts = parts.slice(1);
 				const processedHostname = processedParts.join('.');
-				url = 'https://' + processedHostname;
+				url = window.location.protocol + '//' + processedHostname;
 			} else {
-				url = 'https://' + window.location.hostname;
+				url = window.location.protocol + '//' + window.location.hostname;
 			}
 			this.terminusInfo = await axios.get(url + '/api/olares-info', {});
 		},
@@ -43,11 +43,13 @@ export const useTerminusStore = defineStore('terminus', {
 				lastId
 			) => currentId === (lastId ?? ''),
 			onSuccess = () => {},
-			onFailure = () => {}
+			onFailure = () => {},
+			onFinally = () => {}
 		) {
 			if (!this.terminusInfo || !this.terminusInfo.id) {
-				console.log('===> Validation check failed');
+				console.log('===> Validation check new machine');
 				await onFailure();
+				await onFinally();
 				return;
 			}
 
@@ -64,6 +66,7 @@ export const useTerminusStore = defineStore('terminus', {
 				console.log('===> Validation failed');
 				await onFailure();
 			}
+			await onFinally();
 		}
 	}
 });

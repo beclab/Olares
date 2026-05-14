@@ -1,5 +1,5 @@
 const boot = ['i18n', 'desktopUI', 'baseAxios', 'application/desktop'];
-const css = ['app.scss'];
+const css = ['desktop/app.scss'];
 
 const getConfig = (ctx) => {
 	if (!ctx.dev) {
@@ -12,7 +12,6 @@ const getConfig = (ctx) => {
 	};
 
 	const proxy = require('./Desktop/proxy');
-	const proxyLocal = require('./Desktop/proxy-local');
 
 	return {
 		boot,
@@ -25,7 +24,8 @@ const getConfig = (ctx) => {
 			distDir: 'dist/apps/desktop'
 		},
 		sourceFiles: {
-			indexHtmlTemplate: 'src/index.template.desktop.html'
+			indexHtmlTemplate: 'src/index.template.desktop.html',
+			variables: 'desktop/variables.scss'
 		},
 		htmlVariables: {
 			productName: 'Olares'
@@ -34,7 +34,7 @@ const getConfig = (ctx) => {
 		devServer: {
 			proxy: proxy,
 			host: process.env.DEV_DOMAIN,
-			https: true
+			https: process.env.PROTOCOL === 'https://'
 		},
 		pwa: {
 			workboxPluginMode: 'InjectManifest', // 'GenerateSW' or 'InjectManifest'

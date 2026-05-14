@@ -5,7 +5,7 @@
 			id="videoPlayer"
 			:played-time="playedTime"
 			:path="path"
-			:progress="!src"
+			:progress="!!src"
 			:src="videoRealPath"
 		/>
 	</div>

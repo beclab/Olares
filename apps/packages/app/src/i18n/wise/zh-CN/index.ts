@@ -10,7 +10,7 @@ export default {
 		add_link: '添加链接',
 		batch_add_link: '批量添加链接',
 		'Add links': '添加链接数({number})',
-		'Add cookies': '添加Cookie数({number})',
+		'Add cookie': '添加 Cookie 数({number})',
 		more_import_options: '更多导入选项',
 		add_webpage: '添加网页',
 		webpage_url: '网页链接',
@@ -137,5 +137,16 @@ export default {
 		'Enable batch link upload': '开启批量上传链接',
 		'Enable batch cookie upload': '开启批量上传 Cookie',
 		'Upload settings': '上传设置'
-	}
+	},
+	Thumbnail: '缩略图',
+	TOC: '目录',
+	'Checking cache...': '正在检查缓存...',
+	'Reading from cache...': '正在读取缓存...',
+	'Downloading document...': '正在下载文档...',
+	'Parsing document...': '正在解析文档...',
+	'Preparing pages...': '正在准备页面...',
+	'Loading...': '加载中...',
+	'First time loading, will be cached for instant access':
+		'首次加载时，文件会被缓存，后续可即时访问',
+	'Recrawl content': '重新抓取内容'
 };

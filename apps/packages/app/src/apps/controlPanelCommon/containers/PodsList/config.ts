@@ -45,17 +45,18 @@ const getNewValues = (origin = [], newValue = []) => {
 
 const getNewRefreshedResult = (
 	currentResult = [],
-	originResult: any[] = []
+	originResult: any[] = [],
+	resourceKey: string = resourceName
 ) => {
 	const newResult = [...originResult];
 
 	currentResult.forEach((record: any, index) => {
-		const newResourceName = get(record, `metric.${resourceName}`);
+		const newResourceName = get(record, `metric.${resourceKey}`);
 		let recordData: any = null;
 
 		if (newResourceName) {
 			const originRecord = newResult.find(
-				(_record) => get(_record, `metric.${resourceName}`) === newResourceName
+				(_record) => get(_record, `metric.${resourceKey}`) === newResourceName
 			);
 
 			if (isEmpty(originRecord)) {
@@ -76,7 +77,11 @@ const getNewRefreshedResult = (
 	return newResult;
 };
 
-export const getRefreshResult = (newData = {}, origin = {}) => {
+export const getRefreshResult = (
+	newData = {},
+	origin = {},
+	resourceKey?: string
+) => {
 	const data = origin;
 	if (isEmpty(data)) {
 		return newData;
@@ -92,7 +97,7 @@ export const getRefreshResult = (newData = {}, origin = {}) => {
 			set(
 				metric,
 				'data.result',
-				getNewRefreshedResult(currentResult, originResult)
+				getNewRefreshedResult(currentResult, originResult, resourceKey)
 			);
 		}
 	});

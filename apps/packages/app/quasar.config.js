@@ -19,7 +19,6 @@ dotenv.config();
 
 module.exports = configure(function (ctx) {
 	const config = require('./config')(ctx);
-
 	return {
 		// https://v2.quasar.dev/quasar-cli-webpack/supporting-ts
 		supportTS: {
@@ -46,19 +45,19 @@ module.exports = configure(function (ctx) {
 		extras: config.extras,
 
 		vendor: {
-			remove: ['moment', '@bytetrade/ui', 'video.js']
+			remove: ['moment', 'video.js']
 		},
 
 		// Full list of options: https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-build
 		build: {
 			distDir: config.build.distDir,
 			vueRouterMode: config.build.vueRouterMode, // available values: 'hash', 'history'
-			uglifyOptions: {
-				// drop_console: true
-				compress: {
-					drop_console: true
-				}
-			},
+			// uglifyOptions: {
+			// 	// drop_console: true
+			// 	compress: {
+			// 		drop_console: true
+			// 	}
+			// },
 
 			env: {
 				PL_SERVER_URL: process.env.PL_SERVER_URL,
@@ -85,6 +84,7 @@ module.exports = configure(function (ctx) {
 				IS_PROD: process.env.NODE_ENV == 'production',
 				RSS_DEBUG_URL: process.env.RSS_DEBUG_URL,
 				WISE_SUB_DOMAIN: process.env.WISE_SUB_DOMAIN,
+				PROTOCOL: process.env.PROTOCOL ? process.env.PROTOCOL : 'https://',
 				...config.build.env
 			},
 			// transpile: false,

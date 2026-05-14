@@ -1,7 +1,5 @@
 <template>
-	<div
-		class="layoutHeader text-subtitle1 row items-center justify-between background-1"
-	>
+	<div class="layoutHeader text-subtitle1 row items-center justify-between">
 		<div
 			class="row items-center justify-between header-content drag-content-header q-pl-md"
 		>
@@ -140,7 +138,6 @@
 				</div>
 			</div>
 		</div>
-
 		<TerminusUserHeaderReminder />
 	</div>
 </template>
@@ -148,7 +145,7 @@
 <script lang="ts" setup>
 import { nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { common, commonV2, dataAPIs } from '../../../api';
+import { common, dataAPIs } from '../../../api';
 import { useDataStore } from '../../../stores/data';
 import { hideHeaderOpt } from './../../../utils/file';
 import { bytetrade } from '@bytetrade/core';
@@ -238,7 +235,7 @@ watch(
 			displayConnectServer.value = false;
 		}
 		if (currentDriveType.value == DriveType.Share) {
-			isSharePageRoot.value = commonV2.isShareRootPage(newVal[0]);
+			isSharePageRoot.value = common().isShareRootPage(newVal[0]);
 		} else {
 			isSharePageRoot.value = false;
 		}
@@ -306,29 +303,14 @@ const openPopupMenu = async () => {
 	}
 
 	if (filesStore.selected[props.origin_id].length > 0) {
-		hoverItemAvtive.value =
-			filesStore.currentFileList[props.origin_id]?.items[
-				filesStore.selected[props.origin_id][0]
-			];
+		hoverItemAvtive.value = filesStore.getTargetFileItem(
+			filesStore.selected[props.origin_id][0],
+			props.origin_id
+		);
 		return false;
 	}
 
 	hoverItemAvtive.value = filesStore.currentFileList[props.origin_id];
-
-	// const driveType = common().formatUrltoDriveType(Route.path);
-	// const currentMenus = filesStore.menu[props.origin_id].find(
-	// 	(item) => item && item.children && item.children[0]?.driveType === driveType
-	// );
-
-	// const activeMenu = currentMenus?.children?.find(
-	// 	(item) => item.label === filesStore.activeMenu(props.origin_id).label
-	// );
-
-	// const dataAPI = dataAPIs();
-	// const res = await dataAPI.getCurrentRepoInfo(Route.fullPath);
-
-	// hoverItemAvtive.value = { ...activeMenu, ...res };
-	// console.log('hoverItemAvtive', hoverItemAvtive.value);
 };
 
 const openConnectServer = () => {
@@ -375,7 +357,6 @@ const openConnectServerPath = (connectData, paths) => {
 .layoutHeader {
 	color: $ink-1;
 	padding: 0;
-	background-color: $background-1;
 
 	.header-content {
 		height: 56px;

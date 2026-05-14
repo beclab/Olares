@@ -49,6 +49,7 @@ export interface Application {
 	websocketConfig: {
 		useShareWorker: boolean;
 		shareWorkerName: string;
+		console?: boolean;
 
 		externalInfo(): any;
 

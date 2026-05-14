@@ -153,7 +153,7 @@ const onConfirm = async () => {
 			$q.loading.hide();
 		} catch (error) {
 			$q.loading.hide();
-			notifyFailed(error.message);
+			// notifyFailed(error.message);
 		}
 	} else {
 		router.go(-2);

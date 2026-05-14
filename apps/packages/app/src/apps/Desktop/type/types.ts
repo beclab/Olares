@@ -40,6 +40,7 @@ export interface DesktopAppInfo {
 	fatherName: string | null;
 	isSysApp: boolean;
 	fatherState: string;
+	isClusterScoped: boolean;
 }
 
 export interface DockerAppInfo {

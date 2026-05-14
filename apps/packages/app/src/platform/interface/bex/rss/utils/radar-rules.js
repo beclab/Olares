@@ -11829,12 +11829,12 @@ export const defaultRules = {
 				],
 				target: (params, url) => {
 					const GITS_MAP = {
-						bh3: 1, // '崩坏三',
-						ys: 2, // '原神',
-						bh2: 3, // '崩坏二',
-						wd: 4, // '未定事件簿',
-						sr: 6, // '崩坏：星穹铁道',
-						zzz: 8 // '绝区零'
+						bh3: 1, // 'Honkai Impact 3rd',
+						ys: 2, // 'Genshin Impact',
+						bh2: 3, // 'Honkai Impact 2',
+						wd: 4, // 'Tears of Themis',
+						sr: 6, // 'Honkai: Star Rail',
+						zzz: 8 // 'Zenless Zone Zero'
 					};
 					const { game } = params;
 					const gids = GITS_MAP[game];

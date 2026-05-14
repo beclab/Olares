@@ -161,16 +161,16 @@ class UploadTransferType implements TransferBaseType {
 		if (!item.id) {
 			return;
 		}
-
+		const store = useTransfer2Store();
 		let result = false;
 		if (item.isFolder) {
 			await this.pauseOrResumeFolderTask(item);
+			delete store.taskCurrentSingleFiles[TransferFront.upload][item.id];
 			result = true;
 		} else {
 			result = await TransferClient.client.uploader.pause(item);
 		}
 
-		const store = useTransfer2Store();
 		if (result) {
 			await store.pausedOrResumeTaskStatus(item.id, true);
 			await store.updateTaskStatus(item.id, TransferStatus.Pending);
@@ -479,6 +479,7 @@ class UploadTransferType implements TransferBaseType {
 			)
 			.toArray();
 		const store = useTransfer2Store();
+
 		items.forEach(async (e) => {
 			if (e.id && store.filesInFolderMap[e.id]) {
 				store.filesInFolderMap[e.id].isPaused = isPaused;

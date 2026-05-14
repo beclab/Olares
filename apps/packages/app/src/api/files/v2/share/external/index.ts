@@ -7,7 +7,7 @@ import { DriveType } from 'src/utils/interface/files';
 import { useDataStore } from 'src/stores/data';
 import { decodeUrl, encodeUrl } from 'src/utils/encode';
 import { useShareStore } from 'src/stores/share/share';
-import { createURL } from '../../utils';
+import { createURL, decodeURIComponentSafe } from '../../utils';
 import { useTransfer2Store } from 'src/stores/transfer2';
 import {
 	TransferFront,
@@ -41,19 +41,27 @@ export default class PublicShareAPI extends ShareAPI {
 		return data;
 	}
 
-	async getFileServerUploadLink(folderPath: string): Promise<any> {
-		const dataStore = useDataStore();
-		const baseURL = dataStore.baseURL();
+	async getFileServerUploadLink(
+		folderPath: string,
+		repoID?: string,
+		dirName?: string,
+		externalQuery?: any
+	): Promise<any> {
 		const node = this.getUploadNode();
 		const path = folderPath;
 
-		const url =
-			appendPath(baseURL, '/upload/upload-link/', !!node ? `${node}/` : '') +
-			`?file_path=${encodeUrl(path)}&from=web`;
+		const params = {
+			...externalQuery,
+			file_path: path,
+			from: 'web'
+		};
 
-		const res = await this.commonAxios.get(url, {
-			responseType: 'text'
-		});
+		const url = createURL(
+			appendPath('/upload/upload-link/', !!node ? `${node}/` : ''),
+			params
+		);
+
+		const res = await this.commonAxios.get(url);
 
 		const shareStore = useShareStore();
 
@@ -67,12 +75,7 @@ export default class PublicShareAPI extends ShareAPI {
 		}
 
 		const { path, path_id } = files.getShareDataPath(file.path);
-		let curPath = path;
-		try {
-			curPath = decodeURIComponent(curPath);
-		} catch (error) {
-			console.log(path);
-		}
+		const curPath = decodeURIComponentSafe(path);
 
 		const params = {
 			inline: 'true',
@@ -98,13 +101,8 @@ export default class PublicShareAPI extends ShareAPI {
 		};
 
 		const { path, path_id } = files.getShareDataPath(file.path);
-		let curPath = path;
+		const curPath = decodeURIComponentSafe(path);
 
-		try {
-			curPath = decodeURIComponent(curPath);
-		} catch (error) {
-			console.log(curPath);
-		}
 		const url = createURL(
 			files.shareCommonUrl('raw', path_id, curPath),
 			params
@@ -209,19 +207,9 @@ export default class PublicShareAPI extends ShareAPI {
 			}
 
 			const cur_file = this.formatTransferToFileItem(transferItem);
-			let decodeCurlFilePath = cur_file.path;
-			try {
-				decodeCurlFilePath = decodeURIComponent(cur_file.path);
-			} catch (error) {
-				console.log('error', error);
-			}
+			const decodeCurlFilePath = decodeURIComponentSafe(cur_file.path);
 
-			let decoodeFullPath = fullPath;
-			try {
-				decoodeFullPath = decodeURIComponent(fullPath);
-			} catch (error) {
-				console.log('error', error);
-			}
+			const decoodeFullPath = decodeURIComponentSafe(fullPath);
 
 			if (decodeCurlFilePath.indexOf(decoodeFullPath) >= 0) {
 				filesStore.setBrowserUrl(
@@ -232,13 +220,7 @@ export default class PublicShareAPI extends ShareAPI {
 				);
 			} else {
 				let parentPath = decodeCurlFilePath;
-
-				let decodeCurlFileName = cur_file.name;
-				try {
-					decodeCurlFileName = decodeURIComponent(decodeCurlFileName);
-				} catch (error) {
-					/* empty */
-				}
+				const decodeCurlFileName = decodeURIComponentSafe(cur_file.name);
 				if (
 					!parentPath.endsWith('/') &&
 					parentPath.endsWith(decodeCurlFileName)

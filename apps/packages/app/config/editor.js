@@ -1,5 +1,5 @@
 const boot = ['i18n', 'baseAxios', 'profileUI', 'application/profile'];
-const css = ['app.profile.scss', 'adaptive.profile.scss'];
+const css = ['profile/app.profile.scss'];
 
 const getConfig = (ctx) => {
 	if (!ctx.dev) {
@@ -23,10 +23,11 @@ const getConfig = (ctx) => {
 			distDir: 'dist/apps/profile-editor'
 		},
 		sourceFiles: {
-			indexHtmlTemplate: 'src/index.template.profile.html'
+			indexHtmlTemplate: 'src/index.template.profile.html',
+			variables: 'profile/variables-editor.scss'
 		},
 		htmlVariables: {
-			productName: 'Profile | Terminus HomePage'
+			productName: 'Profile | Olares HomePage'
 		}
 	};
 };

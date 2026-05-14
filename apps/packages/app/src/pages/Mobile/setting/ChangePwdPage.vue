@@ -110,17 +110,22 @@ const verifyPassword = async () => {
 		return;
 	}
 
-	try {
-		if (!userStore.users || userStore.users.locked) {
-			notifyFailed(t('please_unlock_first'));
-			return;
-		}
-		await userStore.users.unlock(oldPasswordRef.value).then(() => {
-			resetPasswordConfirm();
-		});
-	} catch (error) {
-		notifyFailed(t('wrong_password_please_try_again'));
+	if (!userStore.users) {
+		return;
 	}
+
+	// Read-only check the old password BEFORE running `resetPasswordConfirm`,
+	// so a wrong old password cannot reach `userStore.updateUserPassword`
+	// (and on mobile cannot trigger biometric setup either).
+	const oldPasswordValid = await userStore.users.verifyPassword(
+		oldPasswordRef.value
+	);
+	if (!oldPasswordValid) {
+		notifyFailed(t('wrong_password_please_try_again'));
+		return;
+	}
+
+	resetPasswordConfirm();
 };
 
 const resetPasswordConfirm = async () => {
@@ -130,6 +135,13 @@ const resetPasswordConfirm = async () => {
 			oldPasswordRef.value,
 			newPassword
 		);
+
+		// Bail out early on failure so we never run the biometric side-effects
+		// below for a password change that did not actually succeed.
+		if (!resetPasswordStatus.status) {
+			notifyFailed(resetPasswordStatus.message);
+			return;
+		}
 
 		if (
 			$q.platform.is.nativeMobile &&
@@ -141,12 +153,8 @@ const resetPasswordConfirm = async () => {
 			}
 		}
 
-		if (resetPasswordStatus.status) {
-			// app.lock();
-			router.back();
-		} else {
-			notifyFailed(resetPasswordStatus.message);
-		}
+		// app.lock();
+		router.back();
 	} catch (error) {
 		if (error.message) {
 			notifyFailed(error.message);

@@ -3,13 +3,16 @@ import { ErrorGroup } from 'src/constant/errorGroupHandler';
 import { TerminusEntrance, TermiPassDeviceInfo } from '@bytetrade/core';
 import { OrderDataBase } from 'src/payment/types';
 import { BaseEnv } from 'src/constant/index';
+
 export interface MarketData {
 	user_data: {
-		sources: {
-			'Official-Market-Sources': SourceData;
-			local: SourceData;
-		};
 		hash: string;
+		sources: {
+			'market.olares': SourceData;
+			studio: SourceData;
+			upload: SourceData;
+			cli: SourceData;
+		};
 	};
 	user_id: string;
 	timestamp: number;
@@ -59,6 +62,7 @@ function collectAllSources(sourceObj) {
 	traverse(sourceObj);
 	return sources;
 }
+
 export const ALL_MARKET_OFFICIAL_SOURCES = collectAllSources(
 	MARKET_SOURCE_OFFICIAL
 );
@@ -87,6 +91,12 @@ export interface SourceOthers {
 	tops: RankApp[];
 	pages: Page[];
 	tags: MenuData[];
+}
+
+export interface Backer {
+	name: string;
+	number: number;
+	uid?: string | number;
 }
 
 export class MenuData {
@@ -119,6 +129,7 @@ export interface AppSimpleInfo {
 	app_description: AppI18n;
 	app_version: string;
 	app_title: AppI18n;
+	app_labels: string[];
 	categories: string[];
 	support_arch: string;
 }
@@ -139,7 +150,7 @@ export interface AppFullInfo {
 export interface PaymentOrderData {
 	from: string;
 	to: string;
-	ras_public_key: string;
+	rsa_public_key: string;
 	product: Array<{ product_id: string }>;
 	price_config: PriceConfig;
 	token_info: SupportToken[];
@@ -219,6 +230,7 @@ export interface AppStatusLatest {
 
 export interface AppStatusInfo {
 	entranceStatuses: TerminusEntrance[];
+	sharedEntrances: TerminusEntrance[];
 	lastTransitionTime: string;
 	name: string;
 	state: string;
@@ -226,7 +238,10 @@ export interface AppStatusInfo {
 	progress: string;
 	statusTime: string;
 	rawAppName: string;
+	title?: string;
 	updateTime: string;
+	reason?: string;
+	message?: string;
 }
 
 export enum STATUS_OPERATE_TYPE {
@@ -243,7 +258,7 @@ export interface AppFullInfoLatest {
 	type: string;
 	timestamp: number;
 	version: string;
-	raw_package: any;
+	raw_data: AppEntry;
 	values: any;
 	app_info: AppFullInfo;
 	rendered_package: any;
@@ -256,21 +271,23 @@ interface AppI18n {
 }
 
 export function getI18nValue<T = string>(
-	i18nObject: Record<string, T> | undefined,
+	i18nObject: unknown,
 	locale: string,
 	defaultValue?: T
 ): T | undefined {
 	if (!i18nObject) return defaultValue;
 
-	if (i18nObject[locale] !== undefined) {
-		return i18nObject[locale];
+	const dict = i18nObject as Record<string, T>;
+
+	if (dict[locale] !== undefined) {
+		return dict[locale];
 	}
 
-	if (i18nObject['en-US'] !== undefined) {
-		return i18nObject['en-US'];
+	if (dict['en-US'] !== undefined) {
+		return dict['en-US'];
 	}
 
-	return Object.values(i18nObject)[0] ?? defaultValue;
+	return Object.values(dict)[0] ?? defaultValue;
 }
 
 export interface TopicInfo {
@@ -663,6 +680,10 @@ export const APP_STATUS = {
 	}
 } as const;
 
+export enum APP_REJECT_REASON {
+	HAMI_UNSCHEDULABLE = 'HamiUnschedulable'
+}
+
 export enum ENTRANCE_STATUS {
 	NOT_READY = 'notReady',
 	STOPPED = 'stopped',
@@ -678,6 +699,7 @@ export enum PAYMENT_STATUS {
 	PURCHASED = 'purchased',
 	WAITING_DEVELOPER_CONFIRMATION = 'waiting_developer_confirmation',
 	PAYMENT_RETRY_REQUIRED = 'payment_retry_required',
+	NOTIFICATION_SENT = 'notification_sent',
 	PAYMENT_REQUIRED = 'payment_required',
 	SIGNATURE_REQUIRED = 'signature_required',
 	SIGNATURE_NEED_RESIGN = 'signature_need_resign',
@@ -693,7 +715,7 @@ export enum APP_PAYMENT_TYPE {
 
 export interface AppLocalInfo {
 	status: LOCAL_STATUS | PAYMENT_STATUS;
-	data: any;
+	data?: any;
 }
 
 export interface AppStatusChange {
@@ -756,26 +778,26 @@ export function getDeviceIconName(device: TermiPassDeviceInfo): string {
 		switch (device.platform) {
 			case 'android':
 			case 'Android':
-				switch (device.manufacturer) {
-					case 'Xiaomi':
+				switch (device.manufacturer?.toLowerCase()) {
+					case 'xiaomi':
 						name = 'xiaomi';
 						break;
-					case 'HUAWEI':
+					case 'huawei':
 						name = 'huawei';
 						break;
-					case 'Honor':
+					case 'honor':
 						name = 'honor';
 						break;
-					case 'Oppo':
+					case 'oppo':
 						name = 'oppo';
 						break;
-					case 'Vivo':
+					case 'vivo':
 						name = 'vivo';
 						break;
-					case 'Samsung':
+					case 'samsung':
 						name = 'samsung';
 						break;
-					case 'Google':
+					case 'google':
 						name = 'google';
 						break;
 					default:
@@ -882,4 +904,16 @@ export function generatePageDataItemKey(item: any, index: number) {
 
 export function getAppCombinedId(sourceId: string, appName: string): string {
 	return `${sourceId}_${appName}`;
+}
+
+export function getEffectiveTime(status: AppStatusLatest): number {
+	// const updateTime = new Date(status.status.updateTime).getTime();
+	// if (!isNaN(updateTime) && status.status.updateTime) {
+	// 	return updateTime;
+	// }
+	const statusTime = new Date(status.status.statusTime).getTime();
+	if (!isNaN(statusTime) && status.status.statusTime) {
+		return statusTime;
+	}
+	return 0;
 }

@@ -21,6 +21,7 @@
 			<template v-slot:after>
 				<div class="files-right">
 					<app-edit-file
+						v-show="fileStore.fileInfo.name"
 						:fileInfo="fileStore.fileInfo"
 						:isEditing="fileStore.isEditing"
 						@on-save-file="onSaveFile"
@@ -249,6 +250,15 @@ const onSelected = async (value) => {
 	}
 };
 
+const getLanguageFromExtension = (ext: string): string => {
+	const cleanExt = ext.startsWith('.') ? ext.slice(1) : ext;
+	const langMap: Record<string, string> = {
+		yml: 'yaml',
+		yaml: 'yaml'
+	};
+	return langMap[cleanExt] || cleanExt;
+};
+
 const fetchData = async (value) => {
 	await fileStore.getFile(value);
 
@@ -259,9 +269,9 @@ const fetchData = async (value) => {
 	fileStore.fileInfo.code = fileStore.currentFileData.content
 		? fileStore.currentFileData.content
 		: '';
-	fileStore.fileInfo.lang = fileStore.currentFileData.extension.startsWith('.')
-		? fileStore.currentFileData.extension.slice(1)
-		: fileStore.currentFileData.extension;
+	fileStore.fileInfo.lang = getLanguageFromExtension(
+		fileStore.currentFileData.extension
+	);
 	fileStore.fileInfo.name = fileStore.currentFileData.name;
 
 	console.log('fileInfo', fileStore.fileInfo);
@@ -288,7 +298,7 @@ const checkFileSave = (value) => {
 
 const handleKeyDown = async (event) => {
 	if (
-		(event.ctrlKey || event.metaKey) && // Ctrl (Windows/Linux) 或 Cmd (Mac)
+		(event.ctrlKey || event.metaKey) &&
 		event.key === 's' &&
 		!event.shiftKey &&
 		!event.altKey

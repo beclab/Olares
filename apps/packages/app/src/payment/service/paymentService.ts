@@ -106,10 +106,14 @@ export async function paymentWithProduct(paymentInfo: PaymentOrderData) {
 		const signedOrder = await web3Service.signOrder(orderData);
 		console.info('✅ Order signed successfully');
 
+		if (!paymentInfo.rsa_public_key) {
+			throw new Error('rsa public key is missing');
+		}
+
 		console.info('Encrypting order data...');
 		await encryptService.processOrderData(
 			signedOrder,
-			paymentInfo.ras_public_key
+			paymentInfo.rsa_public_key
 		);
 		const encryptedData = encryptService.getEncryptedData();
 		if (!encryptedData.value) {

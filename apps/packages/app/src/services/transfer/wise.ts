@@ -11,6 +11,7 @@ import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
 import { TransferItem } from 'src/utils/interface/transfer';
 import { DownloadRecord } from 'src/utils/interface/rss';
 import { useTerminusStore } from 'src/stores/terminus';
+import { WISE_TRANSFER_TIME } from 'src/utils/localStorageConstant';
 
 export const wiseUploader = {
 	...commonUploader,
@@ -29,8 +30,6 @@ export const wiseUploader = {
 		return true;
 	}
 };
-
-const cloudHistoryIdentify = 'cloud-transfer-wise';
 
 export const wiseClouder = {
 	...commonClouder,
@@ -183,7 +182,7 @@ export const wiseClouder = {
 	},
 
 	async getCurrentUserCloudTransferSaveInfo() {
-		const info = localStorage.getItem(cloudHistoryIdentify);
+		const info = localStorage.getItem(WISE_TRANSFER_TIME);
 		if (!info) {
 			return undefined;
 		}
@@ -197,7 +196,7 @@ export const wiseClouder = {
 				: '',
 			timer
 		};
-		localStorage.setItem(cloudHistoryIdentify, JSON.stringify(saveInfo));
+		localStorage.setItem(WISE_TRANSFER_TIME, JSON.stringify(saveInfo));
 		return saveInfo;
 	},
 	getQueryId(): string {

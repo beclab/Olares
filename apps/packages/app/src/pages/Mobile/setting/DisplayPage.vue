@@ -34,7 +34,7 @@
 							<template v-slot:side>
 								<bt-switch
 									size="sm"
-									truthy-track-color="light-blue-default"
+									truthy-track-color="blue-default"
 									v-model="isThemeAuto"
 									@update:model-value="changeAutoTheme"
 								/>
@@ -121,7 +121,7 @@
 					<template v-slot:side>
 						<bt-switch
 							size="sm"
-							truthy-track-color="light-blue-default"
+							truthy-track-color="blue-default"
 							v-model="transferOnlyWifiStatus"
 							@update:model-value="updateTransferOnlyWifiStatus"
 						/>
@@ -318,7 +318,7 @@ configVersion();
 			}
 		}
 		.adminBtn {
-			border: 1px solid $yellow;
+			border: 1px solid $primary;
 			background-color: $yellow-1;
 			display: inline-block;
 			color: $ink-2;
@@ -327,7 +327,7 @@ configVersion();
 			cursor: pointer;
 
 			&:hover {
-				background-color: $yellow-3;
+				background-color: $theme-primary-hover;
 			}
 		}
 
@@ -380,7 +380,7 @@ configVersion();
 
 .module-sub-title {
 	text-align: left;
-	color: $prompt-message;
+	color: $ink-2;
 	text-transform: capitalize;
 }
 </style>

@@ -1,4 +1,4 @@
-import { getFileType } from '@bytetrade/core';
+import { getFileTypeI18nKey } from '@bytetrade/core';
 import { FileItem, useFilesStore } from 'src/stores/files';
 import { getextension } from 'src/utils/utils';
 import { i18n } from 'src/boot/i18n';
@@ -21,6 +21,14 @@ export function formatDrive(data: any, url: string, origin_id: number) {
 
 	curItems.map((el, index) => {
 		const extension = getextension(el.name);
+
+		const externalType =
+			!el.isDir || appendPath('/', el.name, '/') != el.path
+				? undefined
+				: el.externalType && normalExternalTypes.includes(el.externalType)
+				? undefined
+				: el.externalType;
+
 		el.oPath = el.path;
 		el.oParentPath = el.path.substring(
 			0,
@@ -31,11 +39,10 @@ export function formatDrive(data: any, url: string, origin_id: number) {
 		el.driveType = DriveType.External;
 		el.extension = extension;
 		el.modified = new Date(el.modified).getTime();
-		el.type = el.isDir ? i18n.global.t('files.folders') : getFileType(el.name);
-		el.externalType =
-			el.externalType && normalExternalTypes.includes(el.externalType)
-				? undefined
-				: el.externalType;
+		el.type = el.isDir
+			? i18n.global.t('files.folders')
+			: i18n.global.t(getFileTypeI18nKey(el.name));
+		el.externalType = externalType;
 	});
 
 	data.items = curItems;

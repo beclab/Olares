@@ -1,22 +1,19 @@
 import {
 	dataAPIs,
 	common,
-	commonV2,
 	seahub,
 	utils,
 	shareToUser,
 	SyncDataAPI,
 	syncUtil,
 	syncFilesFormat,
-	filesIsV1,
-	filesIsV2
+	isShareEnable
 } from './files';
 import { CommonFetch } from './files/fetch';
 
 export {
 	dataAPIs,
 	common,
-	commonV2,
 	CommonFetch,
 	seahub,
 	shareToUser,
@@ -24,6 +21,5 @@ export {
 	utils as filesUtil,
 	syncUtil,
 	syncFilesFormat,
-	filesIsV1,
-	filesIsV2
+	isShareEnable
 };

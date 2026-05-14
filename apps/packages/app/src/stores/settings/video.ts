@@ -96,7 +96,7 @@ export const useVideoStore = defineStore('video', {
 		},
 		encodingQuality: {
 			encoderPreset: {
-				name: i18n.global.t('Encoder Preset'),
+				name: i18n.global.t('Encoder preset'),
 				value: EncoderPresetType.Automatic
 			},
 			h265Crf: {
@@ -110,7 +110,7 @@ export const useVideoStore = defineStore('video', {
 		},
 		others: {
 			enableThrottling: {
-				name: i18n.global.t('Throttle Transcodes'),
+				name: i18n.global.t('Throttle transcodes'),
 				value: true
 			},
 			enableSegmentDeletion: {

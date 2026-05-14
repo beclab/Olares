@@ -45,8 +45,8 @@ export default {
 	'Create Olares ID': '创建 Olares ID',
 	'Must be at least 8 characters long containing numbers [0-9] and lowercase letters [a-z].':
 		'不少于 8 个字符，支持数字和小写字母。',
-	'Must be 8 to 63 characters long, containing only numbers [0-9] and lowercase letters [a-z].':
-		'8-63 个字符，支持数字和小写字母。',
+	'Must be 8 to 24 characters long, containing only numbers [0-9] and lowercase letters [a-z].':
+		'8-24 个字符，支持数字和小写字母。',
 	'Olares ID successfully created': 'Olares ID 创建成功！',
 	'Have an Olares in your LAN and ready to activate it as an admin?':
 		'想要以管理员身份激活局域网中的 Olares 设备？',
@@ -125,7 +125,7 @@ export default {
 	'Host name': '主机名称',
 	CPU: 'CPU',
 	GPU: 'GPU',
-	Memroy: '内存',
+	Memory: '内存',
 	DISK: '磁盘',
 	System: '系统',
 	'Kernel version': '内核版本',
@@ -354,5 +354,28 @@ export default {
 	"We automatically reset a secure SSH login password<br>{password}<br>You don't need to remember the password; it's automatically saved in Vault, which you can view later in Vault or modify in Settings":
 		'我们自动重新设置了安全的SSH登陆密码。<br><br>{password}<br><br> 您无需记录密码，它已自动保存在Vault中，您可以稍后在Vault中查看，或者在Settings里修改。',
 	'Not now': '暂不升级',
-	'Synchronizing, please try again later.': '正在同步中，请稍后再试'
+	'Synchronizing, please try again later.': '正在同步中，请稍后再试',
+	'Password entered incorrectly multiple times. Account locked for {minutes} minutes. Please try again later.':
+		'多次输入密码错误，为保障账户安全，您的账号已被暂时锁定。{minutes}分钟后可重试。',
+	'Enable local service domain': '启用本地服务域名',
+	"Automatically configures the system's Hosts file to direct Olares applications to the local device.":
+		'自动配置系统 Hosts 文件，使Olares应用指向本地设备。',
+	'Administrator privileges are required.': '需要管理员权限',
+	'Password reset failed: {reason}': '密码重置失败: {reason}',
+	'Re-login failed: {reason}': '重新登录失败: {reason}',
+	'Organization member name': '组织成员名称',
+	'Organization member names are not available, for example:':
+		'组织成员名称不可用，例如：',
+	organization_errors: {
+		'This name is not available': '该名称不可用',
+		'Use lowercase letters and numbers only': '仅限小写字母和数字',
+		'Must be 2-24 characters, use lowercase letters and numbers only':
+			'长度需为 2-24 个字符，仅限小写字母和数字',
+		'Organization not found, Check your Olares ID and try again':
+			'未找到该组织。请检查 Olares ID 后重试。',
+		'Incorrect Olares ID or password': 'Olares ID 或密码错误'
+	},
+	'No domains available yet': '暂无可用域名',
+	'2–24 characters, lowercase letters and numbers only':
+		'2-24 个字符，仅限小写字母和数字'
 };

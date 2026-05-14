@@ -95,7 +95,7 @@ export const useMirrorStore = defineStore('mirror', {
 		async getRegistryImages(registry?: string) {
 			const admin = useAdminStore();
 			const tokenStore = useTokenStore();
-			const data: any = await axios.get(
+			let data: any = await axios.get(
 				`${tokenStore.url}/api/containerd/images`,
 				{
 					headers: {
@@ -107,7 +107,17 @@ export const useMirrorStore = defineStore('mirror', {
 				}
 			);
 			if (data && data.length > 0) {
-				(data as RegistryImage[]).sort((a: RegistryImage, b: RegistryImage) => {
+				data = (data as RegistryImage[]).filter(
+					(e) => e.repo_tags != undefined && e.repo_tags.length > 0
+				);
+
+				data.sort((a: RegistryImage, b: RegistryImage) => {
+					if (!a.repo_tags) {
+						return 1;
+					}
+					if (!b.repo_tags) {
+						return -1;
+					}
 					if (a.repo_tags.length > 0 && b.repo_tags.length > 0) {
 						const aTag = a.repo_tags[0];
 						const bTag = b.repo_tags[0];

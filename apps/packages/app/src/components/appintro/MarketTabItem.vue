@@ -34,7 +34,7 @@
 				<div
 					class="absolute"
 					style="height: 3px; width: 20px; bottom: 0"
-					:class="selected ? 'bg-blue-default' : 'bg-transparent'"
+					:class="selected ? 'bg-primary' : 'bg-transparent'"
 				/>
 			</div>
 		</template>
@@ -76,8 +76,8 @@ defineProps({
 .tab-item-root-selected {
 	@extend .tab-item-root;
 	border-radius: 8px;
-	color: $blue-default;
-	background-color: $blue-soft;
+	color: $primary;
+	background-color: $theme-menu-bg-hover;
 }
 
 .tab-item-title {
@@ -96,7 +96,7 @@ defineProps({
 
 .tab-item-root-selected-mobile {
 	@extend .tab-item-root-mobile;
-	color: $blue-default;
+	color: $primary;
 }
 
 .tab-item-title-mobile {

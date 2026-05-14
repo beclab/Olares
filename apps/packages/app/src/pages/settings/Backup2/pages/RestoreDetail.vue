@@ -7,7 +7,7 @@
 
 			<bt-form-item
 				v-if="restore && restore?.backupType === BackupResourcesType.app"
-				:title="t('Backup App')"
+				:title="t('Back up app')"
 				:data="restore?.backupAppTypeName"
 			/>
 

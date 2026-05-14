@@ -45,9 +45,12 @@
 				>
 					<terminus-file-icon
 						class="q-mr-md"
-						:name="currentFile.name"
-						:type="attrInfo.type.value"
-						:is-dir="currentFile.isDir"
+						:name="currentFile?.name"
+						:type="currentFile?.type"
+						:is-dir="currentFile?.isDir"
+						:modified="currentFile?.modified"
+						:path="currentFile?.path"
+						:driveType="currentFile?.driveType"
 						:iconSize="40"
 					/>
 
@@ -122,7 +125,9 @@
 									/>
 
 									<q-btn
-										v-if="key === 'md5' || key == 'linkAddress'"
+										v-if="
+											(key === 'md5' && value.value) || key == 'linkAddress'
+										"
 										class="btn-size-xs btn-no-text q-ml-sm"
 										dense
 										flat
@@ -187,7 +192,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, reactive, nextTick, PropType } from 'vue';
+import { ref, onMounted, reactive, nextTick, PropType, onUnmounted } from 'vue';
 import { format } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { formatFileModified } from '../../../utils/file';
@@ -212,6 +217,10 @@ import { SharePermission, ShareType } from 'src/utils/interface/share';
 import { useRouter } from 'vue-router';
 import { getApplication } from 'src/application/base';
 import { decodeUrl, encodeUrl } from 'src/utils/encode';
+
+import HotkeyManager from 'src/directives/hotkeyManager';
+import { FILES_HOTKEY } from 'src/api/files/hotKeys';
+
 const activeImage = './img/checkbox/check_box_blue.svg';
 const normalImage = './img/checkbox/uncheck_box_light.svg';
 const normalDarkImage = './img/checkbox/uncheck_box_dark.svg';
@@ -247,7 +256,6 @@ const currentFile = ref(
 				props.origin_id
 		  )
 );
-console.log('currentFile ===>', currentFile.value);
 
 const attrInfo = reactive({
 	type: {
@@ -344,10 +352,12 @@ const permissionOption = ref([
 
 const md5InDriveType = [
 	DriveType.Drive,
-	DriveType.External,
+	// DriveType.External,
 	DriveType.Cache,
 	DriveType.Data
 ];
+
+const md5MaxSize = 50 * 1024 * 1024 * 1024; // 50GB
 
 const permissionInDriveType = [
 	DriveType.Drive,
@@ -490,7 +500,10 @@ onMounted(() => {
 	if (currentFile.value.isDir) {
 		attrInfo.md5.show = false;
 	} else {
-		if (md5InDriveType.includes(currentFile.value.driveType)) {
+		if (
+			md5InDriveType.includes(currentFile.value.driveType) &&
+			currentFile.value.size <= md5MaxSize
+		) {
 			getMd5();
 		} else {
 			attrInfo.md5.show = false;
@@ -498,6 +511,15 @@ onMounted(() => {
 	}
 
 	initAttrInfo();
+
+	HotkeyManager.registerHotkeys(
+		{
+			[FILES_HOTKEY.FILES.ENTER]: () => {
+				onSubmit();
+			}
+		},
+		['files']
+	);
 });
 
 const onCancel = () => {
@@ -516,6 +538,17 @@ const onSubmit = async () => {
 	store.closeHovers();
 	CustomRef.value.onDialogOK();
 };
+
+onUnmounted(() => {
+	HotkeyManager.unregisterHotkeys(
+		{
+			[FILES_HOTKEY.FILES.ENTER]: () => {
+				onSubmit();
+			}
+		},
+		['files']
+	);
+});
 </script>
 
 <style>
@@ -573,7 +606,7 @@ const onSubmit = async () => {
 
 		.title {
 			text-align: left;
-			color: $prompt-message;
+			color: $ink-2;
 			width: 100px;
 
 			text-overflow: ellipsis;

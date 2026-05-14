@@ -39,14 +39,15 @@
 					}))
 				"
 				@update:model-value="changeModel"
-				style="width: 100%"
 			>
 				<template v-slot:option="{ itemProps, opt, selected, toggleOption }">
-					<q-item v-bind="itemProps">
+					<q-item v-bind="itemProps" style="max-width: calc(100vw - 95px)">
 						<q-item-section>
-							<q-item-label>{{ opt.label }}</q-item-label>
+							<div class="label-content">
+								{{ opt.label }}
+							</div>
 						</q-item-section>
-						<q-item-section side>
+						<q-item-section side v-if="selected">
 							<q-checkbox
 								:model-value="selected"
 								checked-icon="sym_r_check_circle"
@@ -135,7 +136,7 @@ const onDialogOK = () => {
 	}
 
 	::v-deep(.q-field__native) {
-		color: $ink-2;
+		color: $ink-2 !important;
 	}
 }
 .d-creatVault {
@@ -162,5 +163,11 @@ const onDialogOK = () => {
 			border: 1px solid $separator;
 		}
 	}
+}
+.label-content {
+	width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 </style>

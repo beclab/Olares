@@ -72,7 +72,7 @@
 										:is-paste="false"
 									/>
 
-									<div class="mnemonics_login" v-if="encrypting">
+									<div class="mnemonics_login text-white" v-if="encrypting">
 										<q-icon name="visibility_off" />
 										<div class="q-my-md text-body3 content">
 											{{ t('backup_mnemonics_reminder_info') }}
@@ -134,7 +134,7 @@
 								:is-paste="false"
 							/>
 
-							<div class="mnemonics_login" v-if="encrypting">
+							<div class="mnemonics_login text-white" v-if="encrypting">
 								<q-icon name="visibility_off" />
 								<div class="q-my-md text-body3 content">
 									{{ t('backup_mnemonics_reminder_info') }}
@@ -350,7 +350,7 @@ const isMnemonicBackup = ref(
 
 	.module-sub-title {
 		text-align: left;
-		color: $prompt-message;
+		color: $ink-2;
 		text-transform: capitalize;
 	}
 
@@ -372,11 +372,9 @@ const isMnemonicBackup = ref(
 			align-items: center;
 			justify-content: center;
 			padding: 0 20px;
-			color: $white;
 
 			.content {
 				text-align: center;
-				color: $white;
 			}
 
 			.click {

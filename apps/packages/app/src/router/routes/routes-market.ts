@@ -71,7 +71,10 @@ const routes = [
 			}
 		]
 	},
-
+	{
+		path: '/dev',
+		component: () => import('pages/market/debug/DebugPanel.vue')
+	},
 	// Always leave this as last one,
 	// but you can also remove it
 	{

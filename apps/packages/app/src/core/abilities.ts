@@ -9,4 +9,6 @@ export interface AbilityData {
 	wise: AbilityItem & { title: string };
 	translate: AbilityItem & { title: string };
 	ytdlp: AbilityItem & { title: string };
+	rssubscribe: AbilityItem & { title: string };
+	twitter: AbilityItem & { title: string };
 }

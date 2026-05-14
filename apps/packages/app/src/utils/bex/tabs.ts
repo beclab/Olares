@@ -1,12 +1,20 @@
 import { Platform } from 'quasar';
 import { getApplication } from 'src/application/base';
 import { browser } from 'src/platform/interface/bex/browser/target';
+import { useUserStore } from 'src/stores/user';
 
 interface TabInfo {
 	title: string;
 	url: string;
 	favIconUrl: string;
 }
+
+type TabChangeType = 'pageChange' | 'statusChange';
+
+export const TAB_CHANGE_TYPE = {
+	PAGE_CHANGE: 'pageChange' as TabChangeType,
+	STATUS_CHANGE: 'statusChange' as TabChangeType
+};
 
 export const openUrl = (url: string, target: '_blank' | '_self' = '_blank') => {
 	const fullUrl = url.startsWith('http') ? url : `https://${url}`;
@@ -46,6 +54,7 @@ export const listenToTabChanges = (
 	if (Platform.is.bex) {
 		const chromeListener = (
 			tabId: number,
+			// @ts-ignore
 			changeInfo: chrome.tabs.TabChangeInfo,
 			tab: chrome.tabs.Tab
 		) => {
@@ -57,7 +66,7 @@ export const listenToTabChanges = (
 				});
 			}
 		};
-
+		// @ts-ignore
 		const activatedListener = (activeInfo: chrome.tabs.TabActiveInfo) => {
 			chrome.tabs.get(activeInfo.tabId, (tab) => {
 				callback({
@@ -132,22 +141,40 @@ export const createTabChangeListenerInCurrentWindow = (handleActivated) => {
 	let currentWindowId;
 	let activatedListener;
 	let updatedListener;
+	const tabUrlMap = new Map<number, string>();
 
 	const initPromise = browser.windows.getCurrent().then((window) => {
 		currentWindowId = window.id;
 
 		activatedListener = (activeInfo) => {
 			if (activeInfo.windowId === currentWindowId) {
-				handleActivated(activeInfo);
+				handleActivated({
+					...activeInfo,
+					type: TAB_CHANGE_TYPE.PAGE_CHANGE
+				});
 			}
 		};
 
 		updatedListener = (tabId, changeInfo, tab) => {
-			if (tab.windowId === currentWindowId && changeInfo.url) {
+			const shouldTrigger =
+				tab.url !== undefined && tab.status && changeInfo.status && tab.active;
+
+			if (tab.windowId === currentWindowId && shouldTrigger) {
+				const lastUrl = tabUrlMap.get(tabId);
+				const type: TabChangeType =
+					lastUrl === tab.url
+						? TAB_CHANGE_TYPE.STATUS_CHANGE
+						: TAB_CHANGE_TYPE.PAGE_CHANGE;
+
+				tabUrlMap.set(tabId, tab.url);
+
+				console.log('testset-1');
 				handleActivated({
 					tabId,
 					windowId: tab.windowId,
-					changeInfo
+					changeInfo,
+					tab,
+					type
 				});
 			}
 		};
@@ -167,6 +194,7 @@ export const createTabChangeListenerInCurrentWindow = (handleActivated) => {
 				}
 				activatedListener = null;
 				updatedListener = null;
+				tabUrlMap.clear();
 			}),
 
 		initPromise

@@ -4,7 +4,7 @@ import { MenuItem } from 'src/utils/contact';
 import { OPERATE_ACTION } from 'src/utils/contact';
 import { useDataStore } from 'src/stores/data';
 import { i18n } from 'src/boot/i18n';
-import { createURL } from '../utils';
+import { createURL, decodeURIComponentSafe } from '../utils';
 
 import {
 	notifyWaitingShow,
@@ -287,13 +287,13 @@ export default class SyncDataAPI extends Origin {
 
 			const repo_id = getParams(path, 'id');
 			const pathFromStart =
-				decodeURIComponent(path).indexOf(
+				decodeURIComponentSafe(path).indexOf(
 					filesStore.activeMenu(this.origin_id).label
 				) + filesStore.activeMenu(this.origin_id).label.length;
-			const pathFromEnd = decodeURIComponent(path).lastIndexOf('?');
+			const pathFromEnd = decodeURIComponentSafe(path).lastIndexOf('?');
 
 			const to = files.formatPathtoUrl(
-				decodeURIComponent(path).slice(pathFromStart, pathFromEnd) +
+				decodeURIComponentSafe(path).slice(pathFromStart, pathFromEnd) +
 					el.name +
 					(el.from.endsWith('/') ? '/' : ''),
 				repo_id
@@ -335,28 +335,28 @@ export default class SyncDataAPI extends Origin {
 			}
 
 			const pathFromStart =
-				decodeURIComponent(el.path).indexOf(
+				decodeURIComponentSafe(el.path).indexOf(
 					filesStore.activeMenu(this.origin_id).label
 				) + filesStore.activeMenu(this.origin_id).label.length;
 
-			const pathFromEnd = decodeURIComponent(el.path).lastIndexOf('?');
+			const pathFromEnd = decodeURIComponentSafe(el.path).lastIndexOf('?');
 			const repo_id = getParams(el.path, 'id');
 
 			const from =
-				'/' +
+				'/sync/' +
 				repo_id +
-				decodeURIComponent(el.path).slice(pathFromStart, pathFromEnd) +
+				decodeURIComponentSafe(el.path).slice(pathFromStart, pathFromEnd) +
 				(el.isDir ? '' : el.name);
 
 			const toStart =
-				decodeURIComponent(path).indexOf(
+				decodeURIComponentSafe(path).indexOf(
 					filesStore.activeMenu(this.origin_id).label
 				) + filesStore.activeMenu(this.origin_id).label.length;
-			const toEnd = decodeURIComponent(path).lastIndexOf('?');
+			const toEnd = decodeURIComponentSafe(path).lastIndexOf('?');
 			const to =
-				'/' +
+				'/sync/' +
 				repo_id +
-				decodeURIComponent(path).slice(toStart, toEnd) +
+				decodeURIComponentSafe(path).slice(toStart, toEnd) +
 				el.name;
 
 			items.push({
@@ -549,10 +549,12 @@ export default class SyncDataAPI extends Origin {
 		const filesStore = useFilesStore();
 		const repoId = filesStore.activeMenu(this.origin_id).id;
 		const pathlen =
-			decodeURIComponent(path).indexOf(
+			decodeURIComponentSafe(path).indexOf(
 				filesStore.activeMenu(this.origin_id).label
 			) + filesStore.activeMenu(this.origin_id).label.length;
-		const p = `${decodeURIComponent(path).slice(pathlen)}${dirName}/`;
+		const p = encodeUrl(
+			`${decodeURIComponentSafe(path).slice(pathlen)}${dirName}/`
+		);
 		await files.createDir(p, repoId);
 	}
 
@@ -562,9 +564,9 @@ export default class SyncDataAPI extends Origin {
 			await files.deleteRepo({
 				repoId: item.repo_id
 			});
-			notifySuccess('Successful!');
+			notifySuccess(i18n.global.t('success'));
 		} catch (error) {
-			notifyFailed('Failed!');
+			console.log(error);
 		}
 		notifyHide();
 	}
@@ -577,7 +579,7 @@ export default class SyncDataAPI extends Origin {
 	}
 
 	getAttrPath(item: FileItem): string {
-		const decodePath = decodeURIComponent(item.path);
+		const decodePath = decodeURIComponentSafe(item.path);
 		const path = decodePath.slice(
 			0,
 			decodePath.indexOf('?') > 0 ? decodePath.indexOf('?') : decodePath.length
@@ -587,17 +589,19 @@ export default class SyncDataAPI extends Origin {
 
 	async getFileServerUploadLink(
 		folderPath: string,
-		repoID?: string
+		repoID?: string,
+		dirName?: string,
+		externalQuery?: any
 	): Promise<any> {
-		const dataStore = useDataStore();
-		const baseURL = dataStore.baseURL();
 		const path = appendPath('/sync', repoID || '', folderPath);
 		const node = this.getUploadNode();
-		const url =
-			baseURL +
-			`/upload/upload-link/${node}/?file_path=` +
-			encodeUrl(path) +
-			'&from=web';
+		const params = {
+			...externalQuery,
+			file_path: path,
+			from: 'web'
+		};
+
+		const url = createURL(`/upload/upload-link/${node}/`, params);
 
 		const res = await this.commonAxios.get(url);
 
@@ -628,7 +632,11 @@ export default class SyncDataAPI extends Origin {
 	async onSaveFile(item: any, content: any): Promise<void> {
 		const { repo_id } = this.getRepoIdByFileItem(item);
 		files.updateFile(
-			appendPath(item.parentPath || '', item.name, item.isDir ? '/' : ''),
+			appendPath(
+				encodeUrl(item.parentPath) || '',
+				encodeUrl(item.name),
+				item.isDir ? '/' : ''
+			),
 			repo_id,
 			content
 		);
@@ -666,8 +674,12 @@ export default class SyncDataAPI extends Origin {
 				: fullPathSplit[0]
 		}?${fullPathSplit[1]}`;
 		const parentPath = item.parentPath
-			? this.getParentPath(item.parentPath)
+			? item.parentPath.startsWith('/')
+				? item.parentPath
+				: '/' + item.parentPath
 			: '';
+		const repo_id = getParams(item.path, 'id');
+
 		const res: FileItem = {
 			extension,
 			isDir: item.isFolder,
@@ -683,7 +695,9 @@ export default class SyncDataAPI extends Origin {
 			url: item.url || '',
 			driveType: item.driveType!,
 			param: '',
-			fileExtend: 'sync'
+			fileExtend: repo_id,
+			fileType: 'sync',
+			oParentPath: parentPath
 		};
 
 		return res;
@@ -697,7 +711,7 @@ export default class SyncDataAPI extends Origin {
 			const p: string = pathArr[i];
 			arr.push(p);
 		}
-		const res = decodeURIComponent(arr.join('/'));
+		const res = decodeURIComponentSafe(arr.join('/'));
 		if (res.startsWith('/')) {
 			return res;
 		} else {
@@ -821,13 +835,13 @@ export default class SyncDataAPI extends Origin {
 		const filesStore = useFilesStore();
 		const repo_id = getParams(path, 'id');
 		const pathFromStart =
-			decodeURIComponent(path).indexOf(
+			decodeURIComponentSafe(path).indexOf(
 				filesStore.activeMenu(this.origin_id).label
 			) + filesStore.activeMenu(this.origin_id).label.length;
-		const pathFromEnd = decodeURIComponent(path).lastIndexOf('?');
+		const pathFromEnd = decodeURIComponentSafe(path).lastIndexOf('?');
 
 		const to = files.formatPathtoUrl(
-			decodeURIComponent(path).slice(pathFromStart, pathFromEnd),
+			decodeURIComponentSafe(path).slice(pathFromStart, pathFromEnd),
 			repo_id
 		);
 		return to;
@@ -861,19 +875,9 @@ export default class SyncDataAPI extends Origin {
 
 			const cur_file = this.formatTransferToFileItem(transferItem);
 
-			let decodeCurlFilePath = cur_file.path;
-			try {
-				decodeCurlFilePath = decodeURIComponent(cur_file.path);
-			} catch (error) {
-				console.log('error', error);
-			}
+			const decodeCurlFilePath = decodeURIComponentSafe(cur_file.path);
 
-			let decoodeFullPath = pathFullpath;
-			try {
-				decoodeFullPath = decodeURIComponent(pathFullpath);
-			} catch (error) {
-				console.log('error', error);
-			}
+			const decoodeFullPath = decodeURIComponentSafe(pathFullpath);
 
 			if (decodeCurlFilePath.indexOf(decoodeFullPath) >= 0) {
 				filesStore.setBrowserUrl(
@@ -887,12 +891,7 @@ export default class SyncDataAPI extends Origin {
 
 				const parentPath = fullPathSplit[0];
 
-				let decodeCurlFilePath = parentPath;
-				try {
-					decodeCurlFilePath = decodeURIComponent(decodeCurlFilePath);
-				} catch (error) {
-					console.log('error', error);
-				}
+				const decodeCurlFilePath = decodeURIComponentSafe(parentPath);
 
 				const url = encodeUrl(decodeCurlFilePath) + '?' + fullPathSplit[1];
 

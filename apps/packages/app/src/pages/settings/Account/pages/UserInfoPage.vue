@@ -85,7 +85,11 @@
 			<bt-form-item
 				:title="t('state')"
 				:data="
-					userInfo?.wizard_complete ? userInfo.state : t('waiting_onBoard')
+					userInfo.state === AccountStatus.Failed
+						? t('Failed')
+						: userInfo?.wizard_complete
+						? userInfo.state
+						: t('waiting_onBoard')
 				"
 			/>
 			<!-- <bt-form-item
@@ -119,7 +123,13 @@
 			/>
 		</bt-list>
 
-		<bt-list v-if="!userInfo?.wizard_complete && managerPermission">
+		<bt-list
+			v-if="
+				userInfo.state !== AccountStatus.Failed &&
+				!userInfo?.wizard_complete &&
+				managerPermission
+			"
+		>
 			<bt-form-item
 				:title="t('reset_password')"
 				:chevronRight="true"
@@ -129,7 +139,11 @@
 			/>
 		</bt-list>
 
-		<bt-list v-if="!userInfo?.wizard_complete">
+		<bt-list
+			v-if="
+				userInfo.state !== AccountStatus.Failed && !userInfo?.wizard_complete
+			"
+		>
 			<AdaptiveLayout>
 				<template v-slot:pc>
 					<bt-form-item
@@ -166,6 +180,7 @@
 
 		<bt-list
 			v-if="
+				userInfo.state !== AccountStatus.Failed &&
 				userInfo?.wizard_complete &&
 				!isDemo &&
 				(managerPermission || isCurrentUser)
@@ -194,14 +209,13 @@
 				v-if="managerPermission"
 				@funcClick="deleteUser"
 				:title="t('delete_user')"
-				style="margin-right: 20px"
+				:class="userInfo.state === AccountStatus.Failed ? '' : 'q-mr-lg'"
 			/>
 
 			<ListBottomFuncBtn
-				v-if="managerPermission"
+				v-if="managerPermission && userInfo.state !== AccountStatus.Failed"
 				@funcClick="changeQuota"
 				:title="t('modify_limits')"
-				style="margin-right: 20px"
 			/>
 		</div>
 	</bt-scroll-area>
@@ -240,6 +254,8 @@ import {
 	get_user_resource,
 	UserUsage
 } from 'src/types/resource';
+
+import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
 
 const userStore = useUserStore();
 const tokenStore = useTokenStore();
@@ -286,8 +302,16 @@ async function changeQuota() {
 					memory_limit: data.memoryLimit + 'G',
 					cpu_limit: '' + data.cpuLimit
 				});
-				userInfo.value.cpu_limit = data.cpuLimit;
-				userInfo.value.memory_limit = data.memoryLimit + 'G';
+				await userStore.update_account_info(userInfo.value.name);
+				userInfo.value = userStore.getUserByName(userInfo.value.name);
+
+				if (usage.value) {
+					usage.value = {
+						...usage.value,
+						user_cpu_total: data.cpuLimit,
+						user_memory_total: String(Number(data.memoryLimit) * 1e9)
+					};
+				}
 			} catch (e: any) {
 				console.log(e);
 			}
@@ -358,6 +382,13 @@ async function checkAccountDelete(username: string) {
 				clearInterval(checkAccountDeleteProgress);
 			}
 			userStore.removeLocalAccount(username);
+
+			const socketStore = useWebsocketManager2Store();
+			socketStore.apply('usersUpdate', {
+				type: 'delete',
+				username: username
+			});
+
 			setTimeout(() => {
 				Loading.hide();
 				router.replace('/user');
@@ -379,31 +410,45 @@ const resetPassword = async () => {
 	if (!userInfo.value) {
 		return;
 	}
-	const password = generatePasword();
-	try {
-		await userStore.reset_account_password({
-			password: passwordAddSort(password, adminStore.terminus.osVersion),
-			current_password: '',
-			username: userInfo.value?.name
-		});
-		quasar.dialog({
+	quasar
+		.dialog({
 			component: ReminderDialogComponent,
 			componentProps: {
-				title: t('reset_password_successfully'),
-				message: t('new_password_is', {
-					password
+				title: t('reset_password'),
+				message: t('Are you sure to reset password for', {
+					olaresName: userInfo.value.terminusName
 				}),
-				useCancel: false
+				confirmText: t('confirm'),
+				cancelText: t('cancel')
+			}
+		})
+		.onOk(async () => {
+			const password = generatePasword();
+			try {
+				await userStore.reset_account_password({
+					password: passwordAddSort(password, adminStore.terminus.osVersion),
+					current_password: '',
+					username: userInfo.value?.name
+				});
+				quasar.dialog({
+					component: ReminderDialogComponent,
+					componentProps: {
+						title: t('reset_password_successfully'),
+						message: t('new_password_is', {
+							password
+						}),
+						useCancel: false
+					}
+				});
+			} catch (error: any) {
+				if (error) {
+					// quasar.notify(error.message);
+				}
 			}
 		});
-	} catch (error: any) {
-		if (error) {
-			// quasar.notify(error.message);
-		}
-	}
 };
 
-let updateUserInfoInterval: number | null = null;
+let updateUserInfoInterval: NodeJS.Timeout | null = null;
 
 async function executeUpdateAccount(username: string) {
 	try {
@@ -440,12 +485,12 @@ async function updateUserInfo(username: string) {
 		userInfo.value = userStore.getUserByName(Route.params.name as string);
 		executeUpdateAccount(username);
 
-		if (userInfo.value?.roles.find((r) => r === OLARES_ROLE.OWNER)) {
-			get_cluster_resource().then((res) => {
+		if (userInfo.value?.roles.find((r: any) => r === OLARES_ROLE.OWNER)) {
+			get_cluster_resource().then((res: any) => {
 				usage.value = res;
 			});
 		} else {
-			get_user_resource(username).then((res) => {
+			get_user_resource(username).then((res: any) => {
 				usage.value = res;
 			});
 		}

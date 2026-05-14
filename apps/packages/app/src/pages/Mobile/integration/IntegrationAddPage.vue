@@ -45,6 +45,7 @@ import TerminusItem from '../../../components/common/TerminusItem.vue';
 import { useRoute, useRouter } from 'vue-router';
 import { notifyFailed } from '../../../utils/notifyRedefinedUtil';
 import { useQuasar } from 'quasar';
+import { useUserStore } from 'src/stores/user';
 
 const route = useRoute();
 const { t } = useI18n();
@@ -65,15 +66,22 @@ const getAccountIcon = (account: IntegrationAccountInfo) => {
 };
 
 const accountCreate = async (item: IntegrationAccountInfo) => {
+	if (integrationService.needUnlockFirstTypes.includes(item.type)) {
+		const userStore = useUserStore();
+		if (!(await userStore.unlockFirst())) {
+			return;
+		}
+	}
 	$q.loading.show();
-	const webSupport = await integrationService.requestIntegrationAuth(
-		item.type,
-		{
+	let webSupport;
+	try {
+		webSupport = await integrationService.requestIntegrationAuth(item.type, {
 			router,
 			backup: isBackup
-		}
-	);
-	$q.loading.hide();
+		});
+	} finally {
+		$q.loading.hide();
+	}
 	if (webSupport.addMode == AccountAddMode.common) {
 		if (webSupport.status) {
 			router.back();

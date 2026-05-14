@@ -61,9 +61,7 @@ export const commonDownloader = {
 export const commonUploader = {
 	async start(uploadingItem: TransferItem) {
 		const item = Resumable.getFiles().find((e) => e.id == uploadingItem.id);
-		console.log('item ===>', item?.isPaused());
-
-		if (!item || !item.isPaused()) {
+		if (!item) {
 			return true;
 		}
 		return await this.resume(uploadingItem);
@@ -88,7 +86,7 @@ export const commonUploader = {
 			return false;
 		}
 		if (!file.isPaused()) {
-			file.pause();
+			file.pause(true);
 		}
 		return true;
 	},
@@ -100,10 +98,9 @@ export const commonUploader = {
 		if (!file) {
 			return true;
 		}
-
 		if (file.isPaused()) {
 			file._pause = false;
-			file.upload();
+			file.retry();
 		} else {
 			file.retry();
 		}
@@ -149,9 +146,10 @@ export const commonClouder = {
 			}
 		);
 
-		busOn('account_update', () => {
-			const userStore = useUserStore();
-			if (!userStore.current_user?.setup_finished) {
+		busOn('appAbilitiesUpdate', async () => {
+			const appAbilitiesStore = useAppAbilitiesStore();
+			// if (appAbilitiesStore.)
+			if (!appAbilitiesStore.wise.running) {
 				return;
 			}
 			this.syncCloudData();
@@ -345,13 +343,11 @@ export const commonClouder = {
 				'/knowledge/download/larepass_task_query',
 				{
 					params: {
-						larepass_id,
+						// larepass_id,
 						update_time
 					}
 				}
 			);
-			console.log('history ===>', history);
-			// return history;
 			return history &&
 				history.data &&
 				history.data.data &&

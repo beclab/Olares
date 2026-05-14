@@ -35,6 +35,7 @@
 				style="margin-left: 12px"
 				v-if="inputImg.length > 0"
 			/>
+			<div v-if="prefix" class="text-ink-3 text-body3">{{ prefix }}</div>
 			<q-input
 				:model-value="modelValue"
 				:type="inputTypeRef"
@@ -172,6 +173,10 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 		required: false
+	},
+	prefix: {
+		type: String,
+		required: false
 	}
 });
 
@@ -286,14 +291,14 @@ const editBorderClass = computed(() => {
 	}
 
 	&__bg {
+		padding: 0 16px;
 		width: 100%;
 		margin-top: 4px;
 		position: relative;
 
 		&__input {
 			height: 100%;
-			width: calc(100% - 30px);
-			margin-left: 16px;
+			flex: 1;
 			color: $ink-2;
 		}
 	}

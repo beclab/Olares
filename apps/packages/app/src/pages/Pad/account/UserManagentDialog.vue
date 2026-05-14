@@ -252,7 +252,6 @@ const _deleteAccount = async () => {
 					}
 
 					.did {
-						color: $sub-title;
 						word-break: break-all;
 					}
 				}

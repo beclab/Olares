@@ -188,11 +188,6 @@ export const useTokenStore = defineStore('token', {
 				GolbalHost.FRP_LIST_URL[
 					GolbalHost.userNameToEnvironment(this.olaresId)
 				];
-			// const url = frpBaseUrl.endsWith('/')
-			// 	? frpBaseUrl + 'v2/servers'
-			// 	: frpBaseUrl + '/v2/servers';
-			// console.log('frpUrl ===>', url);
-			// const axios = axios.
 			const instance = axios.create({
 				baseURL: frpBaseUrl,
 				timeout: 1000 * 10,
@@ -304,6 +299,11 @@ export const useTokenStore = defineStore('token', {
 					enable: true
 				};
 			});
+		},
+
+		isMainAccountWizard() {
+			const origin = window.location.origin;
+			return origin.indexOf('30180') > -1;
 		}
 	}
 });

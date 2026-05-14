@@ -81,23 +81,19 @@ const volumes = ref([]);
 const getResourceInfo = (type: string, detail: any) => {
 	const { resources = {} } = detail;
 	const resourceType = resources[type];
-	console.log('resourceType', resourceType);
-	return (
+	const data =
 		resourceType &&
 		Object.keys(resourceType)
 			.map((key) => {
 				const isCpu = key === 'cpu';
-				const value =
-					isCpu && resourceType[key].endsWith('m')
-						? parseInt(resourceType[key], 10) / 1000
-						: resourceType[key];
+				const value = resourceType[key];
 
 				return t(`${key.toUpperCase().replace(/[^A-Z]/g, '_')}_VALUE`, {
 					value
 				});
 			})
-			.join('/')
-	);
+			.join('/');
+	return data;
 };
 
 const ports = (detail: any) => {

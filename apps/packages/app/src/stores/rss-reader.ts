@@ -110,37 +110,31 @@ export const useReaderStore = defineStore('reader', {
 			}
 		},
 
-		async setCurrentReadLater(readLater: boolean) {
-			if (this.readingEntry) {
-				const entry = this.readingEntry;
-				try {
-					if (readLater) {
-						this.readLaterLoading = true;
-					} else {
-						this.inboxLoading = true;
+		setCurrentReadLater(readLater: boolean) {
+			if (!this.readingEntry) return;
+
+			const entryId = this.readingEntry.id;
+			const previousReadLater = this.readLater;
+
+			// Optimistic update: update local state immediately
+			this.readLater = readLater;
+			this.readingEntry.readlater = readLater;
+
+			// Background sync with rollback on failure
+			const rssStore = useRssStore();
+			updateEntryReadLater({
+				entry_ids: [entryId],
+				status: readLater
+			})
+				.then(() => rssStore.syncEntries())
+				.then(() => this.entryUpdate(entryId))
+				.catch((e) => {
+					console.error('Failed to sync read later status:', e);
+					this.readLater = previousReadLater;
+					if (this.readingEntry?.id === entryId) {
+						this.readingEntry.readlater = previousReadLater;
 					}
-					await updateEntryReadLater({
-						entry_ids: [entry.id],
-						status: readLater
-					});
-					this.readLater = readLater;
-					if (readLater) {
-						this.readLaterLoading = false;
-					} else {
-						this.inboxLoading = false;
-					}
-				} catch (e) {
-					console.log(e);
-					if (readLater) {
-						this.readLaterLoading = false;
-					} else {
-						this.inboxLoading = false;
-					}
-				}
-				const rssStore = useRssStore();
-				await rssStore.syncEntries();
-				await this.entryUpdate(entry.id);
-			}
+				});
 		},
 
 		async setCurrentSubscribe(removeFile?: boolean) {

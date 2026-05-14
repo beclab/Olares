@@ -103,17 +103,6 @@ const desktop: RouteRecordRaw[] = [
 	},
 	{
 		path: '/',
-		component: () => import('layouts/MobileMainLayout.vue'),
-		name: 'MobileMainLayout',
-		children: [
-			{
-				path: '/scanQrCode',
-				component: () => import('src/pages/Mobile/ScanQRCodePage.vue')
-			}
-		]
-	},
-	{
-		path: '/',
 		component: () => import('layouts/TermipassMainLayout.vue'),
 		name: 'TermipassMainLayout',
 		children: [

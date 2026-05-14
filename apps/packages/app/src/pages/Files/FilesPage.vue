@@ -29,7 +29,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { useDataStore } from '../../stores/data';
 import { useFilesStore, FilesIdType } from '../../stores/files';
 import { useRoute, onBeforeRouteUpdate } from 'vue-router';
@@ -99,13 +99,6 @@ const checkUserStatus = (status: any) => {
 	return true;
 };
 
-const keyEvent = (event: any) => {
-	if (event.keyCode === 112) {
-		event.preventDefault();
-		store.showHover('help');
-	}
-};
-
 const isPreview = ref(false);
 
 onBeforeRouteUpdate((_to, from, next) => {
@@ -116,29 +109,15 @@ onBeforeRouteUpdate((_to, from, next) => {
 	}
 	next();
 });
-
-onMounted(async () => {
-	window.addEventListener('keydown', keyEvent);
-});
-
-onUnmounted(() => {
-	window.removeEventListener('keydown', keyEvent);
-	if (store.showShell) {
-		store.toggleShell();
-	}
-});
 </script>
 
 <style lang="scss" scoped>
 .container {
 	width: 100%;
 	height: 100%;
-	// position: absolute;
-	// left: 0;
-	// top: 0;
+
 	display: flex;
 	flex-direction: column;
-	background: $background-1;
 	overflow: hidden;
 
 	header,

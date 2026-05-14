@@ -8,6 +8,7 @@ import { CapacitorHttp } from '@capacitor/core';
 import { AppState } from '@didvault/sdk/src/core/app';
 import { RouteLocationNormalizedLoaded } from 'vue-router';
 import { QVueGlobals } from 'quasar';
+import { app } from 'src/globals';
 
 export class SubAppPlatform extends WebPlatform implements AppPlatform {
 	async appLoadPrepare(_data: any): Promise<void> {
@@ -72,14 +73,15 @@ export class SubAppPlatform extends WebPlatform implements AppPlatform {
 	userAgent = navigator.userAgent;
 
 	socialKeys = {
-		facebook: {
-			appId: '',
-			clientToken: ''
-		},
+		facebook: { appId: '', clientToken: '' },
 		google: {
 			webClientId: '',
 			iOSClientId: '',
 			androidClientId: ''
 		}
 	};
+
+	async vaultSync() {
+		await app.synchronize();
+	}
 }

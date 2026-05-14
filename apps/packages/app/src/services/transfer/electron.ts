@@ -14,9 +14,9 @@ import { dataAPIs } from 'src/api';
 import { commonClouder } from './common';
 import { compareUrlHost, replaceUrlHost } from 'src/utils/file';
 import { TransferItem } from 'src/utils/interface/transfer';
-import { filesIsV2 } from 'src/api/files';
 import { dataAPIs as dataAPIsV2 } from 'src/api/files/v2';
 import { busEmit } from 'src/utils/bus';
+import { decodeURIComponentSafe } from 'src/api/files/v2/utils';
 export class ElectronTransfer implements TransferClientService {
 	downloader = {
 		start: async function (item: TransferItem): Promise<boolean> {
@@ -28,16 +28,23 @@ export class ElectronTransfer implements TransferClientService {
 			if (!compareUrlHost(item.url!, baseUrl)) {
 				url = replaceUrlHost(item.url!, baseUrl);
 			}
+			const userStore = useUserStore();
 			const data: IDownloadStartFile = {
 				id: item.id,
 				url: url!,
 				fileName: item.name,
 				path: '',
-				size: item.size
+				size: item.size,
+				auth_token:
+					(item.userId
+						? userStore.users?.items.get(item.userId)?.access_token
+						: '') || ''
 			};
 
 			const transferStore = useTransfer2Store();
 			const appendPath = Platform.is.win ? '\\' : '/';
+			console.log('start download item --->', item);
+
 			const transferInfo = await window.electron.api.download2.getDownloadInfo(
 				item.id!
 			);
@@ -145,7 +152,7 @@ export class ElectronTransfer implements TransferClientService {
 
 				const dataAPI = dataAPIs(item.driveType);
 
-				if (item.size == 0 && filesIsV2()) {
+				if (item.size == 0) {
 					const apiV2 = dataAPIsV2(item.driveType);
 					apiV2.uploadEmptyFile(item.id!).then(() => {
 						window.electron.api.upload.clearData(item.id!);
@@ -160,13 +167,9 @@ export class ElectronTransfer implements TransferClientService {
 					return true;
 				}
 
-				let uploadPath = await dataAPI.formatUploadTransferPath(item);
-
-				try {
-					uploadPath = decodeURIComponent(uploadPath);
-				} catch (error) {
-					console.log('error ===>', error);
-				}
+				const uploadPath = decodeURIComponentSafe(
+					await dataAPI.formatUploadTransferPath(item)
+				);
 
 				const moreInfo = dataAPI.getUploadTransferItemMoreInfo(item);
 
@@ -182,7 +185,11 @@ export class ElectronTransfer implements TransferClientService {
 					relativePath: item.relatePath,
 					size: item.size,
 					node: item.node,
-					moreInfo: moreInfo
+					moreInfo: moreInfo,
+					auth_token:
+						(item.userId
+							? userStore.users?.items.get(item.userId)?.access_token
+							: '') || ''
 				};
 
 				return await window.electron.api.upload.start(uploadOptions);

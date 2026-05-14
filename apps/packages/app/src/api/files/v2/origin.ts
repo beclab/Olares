@@ -150,7 +150,8 @@ export default abstract class Origin {
 	abstract getFileServerUploadLink(
 		folderPath: string,
 		repoID?: string,
-		dirName?: string
+		dirName?: string,
+		externalQuery?: any
 	): Promise<any>;
 
 	/**

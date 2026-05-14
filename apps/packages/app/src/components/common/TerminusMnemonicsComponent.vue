@@ -59,6 +59,7 @@ import { walletService } from '../../wallet';
 import { useI18n } from 'vue-i18n';
 
 import { notifySuccess } from '../../utils/notifyRedefinedUtil';
+import { getApplication } from 'src/application/base';
 
 const { t } = useI18n();
 
@@ -245,7 +246,7 @@ const pasteFunc = async () => {
 		}
 	} else {
 		try {
-			await getPlatform().setClipboard(props.mnemonics);
+			await getApplication().copyToClipboard(props.mnemonics);
 			notifySuccess(t('copy_success'));
 		} catch (error) {
 			console.error(error.message);

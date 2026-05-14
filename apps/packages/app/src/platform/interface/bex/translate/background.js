@@ -2,6 +2,9 @@ import { browser } from './libs/browser';
 import {
 	MSG_FETCH,
 	MSG_GET_HTTPCACHE,
+	MSG_PUT_HTTPCACHE,
+	MSG_CLEAR_CACHES,
+	MSG_UPDATE_ICON,
 	MSG_TRANS_TOGGLE,
 	MSG_OPEN_OPTIONS,
 	MSG_SAVE_RULE,
@@ -12,15 +15,22 @@ import {
 	MSG_INJECT_JS,
 	MSG_INJECT_CSS,
 	MSG_UPDATE_CSP,
+	MSG_TRANSLATE_READY,
 	DEFAULT_CSPLIST,
 	CMD_TOGGLE_TRANSLATE,
 	CMD_TOGGLE_STYLE,
 	CMD_OPEN_OPTIONS,
-	CMD_OPEN_TRANBOX
+	CMD_OPEN_TRANBOX,
+	PORT_STREAM_FETCH
 } from './config';
 import { getSettingWithDefault, tryInitDefaultData } from './libs/storage';
 import { trySyncSettingAndRules } from './libs/sync';
-import { fetchHandle, getHttpCache } from './libs/fetch';
+import {
+	fetchHandle,
+	getHttpCache,
+	putHttpCache,
+	clearAllCaches
+} from './libs/fetch';
 import { sendTabMsg } from './libs/msg';
 import { trySyncAllSubRules } from './libs/subRules';
 import { tryClearCaches } from './libs';
@@ -28,6 +38,7 @@ import { saveRule } from './libs/rules';
 import { getCurTabId } from './libs/msg';
 import { injectInlineJs, injectInternalCss } from './libs/injector';
 import { kissLog } from './libs/log';
+import { busEmit } from 'src/utils/bus';
 
 globalThis.ContextType = 'BACKGROUND';
 
@@ -116,8 +127,8 @@ async function addContextMenus(contextMenuType = 1) {
 }
 
 export function translateInit() {
-	browser.runtime.onInstalled.addListener(() => {
-		tryInitDefaultData();
+	browser.runtime.onInstalled.addListener(async () => {
+		await tryInitDefaultData();
 
 		addContextMenus();
 
@@ -188,6 +199,33 @@ export async function translateMessageHandler(msg) {
 			// eslint-disable-next-line no-case-declarations
 			const { input, init } = args;
 			return await getHttpCache(input, init);
+		case MSG_PUT_HTTPCACHE:
+			// eslint-disable-next-line no-case-declarations
+			const { input: inputPut, init: initPut, data, maxAge } = args;
+			return await putHttpCache(inputPut, initPut, data, maxAge);
+		case MSG_CLEAR_CACHES:
+			return await clearAllCaches();
+		case MSG_UPDATE_ICON:
+			// Update extension icon based on translation state
+			try {
+				const iconPath = args
+					? {
+							16: 'icons/logo16_active.png',
+							32: 'icons/logo32_active.png',
+							48: 'icons/logo48_active.png',
+							128: 'icons/logo128_active.png'
+					  }
+					: {
+							16: 'icons/logo16.png',
+							32: 'icons/logo32.png',
+							48: 'icons/logo48.png',
+							128: 'icons/logo128.png'
+					  };
+				await browser.action.setIcon({ path: iconPath });
+			} catch (err) {
+				kissLog(err, 'update icon');
+			}
+			return;
 		case MSG_OPEN_OPTIONS:
 			return await browser.runtime.openOptionsPage();
 		case MSG_SAVE_RULE:
@@ -212,6 +250,12 @@ export async function translateMessageHandler(msg) {
 			return await addContextMenus(args);
 		case MSG_COMMAND_SHORTCUTS:
 			return await browser.commands.getAll();
+		case MSG_TRANSLATE_READY:
+			busEmit('BROADCAST_TO_UI', {
+				method: 'TRANSLATE_SCRIPT_READY',
+				params: args
+			});
+			return;
 		default:
 			throw new Error(`message action is unavailable: ${action}`);
 	}

@@ -1,6 +1,6 @@
 <template>
 	<div class="around-borders-lg">
-		<div class="my-table-container">
+		<div class="my-table-container cp-q-table-dark-scrollbar">
 			<slot></slot>
 		</div>
 	</div>

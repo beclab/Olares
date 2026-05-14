@@ -10,7 +10,10 @@
 						: 'scroll-area-conf-open1'
 				"
 			>
-				<div class="terminus-unlock-page column justify-start items-center">
+				<div
+					class="terminus-unlock-page column justify-start items-center"
+					v-if="!temLockedInfo.locked"
+				>
 					<q-img
 						class="terminus-unlock-page__brand"
 						:src="getRequireImage(logo)"
@@ -30,8 +33,28 @@
 						{{ reminderText }}
 					</div>
 				</div>
+				<div
+					class="terminus-unlock-page column justify-start items-center"
+					v-else
+				>
+					<q-img
+						class="terminus-unlock-page__brand"
+						:src="getRequireImage(logo)"
+					/>
+					<span class="terminus-unlock-page__desc login-sub-title">{{
+						t(
+							'Password entered incorrectly multiple times. Account locked for {minutes} minutes. Please try again later.',
+							{
+								minutes: temLockedInfo.leftTimes
+							}
+						)
+					}}</span>
+				</div>
 			</q-scroll-area>
-			<div class="bottom-content row items-center justify-center">
+			<div
+				class="bottom-content row items-center justify-center"
+				v-if="!temLockedInfo.locked"
+			>
 				<q-icon
 					v-if="biometricIcon"
 					size="48px"
@@ -117,6 +140,8 @@ const keyboardOpen = ref(false);
 const lockTime = ref(app.settings.autoLockDelay);
 const autoUnlock = ref(app.settings.autoLock);
 
+const temLockedInfo = ref(userStore.currentUserIsTemporaryLocked());
+
 const reminderText = ref(
 	autoUnlock.value
 		? _t('unlock.auth_lock_reminder', {
@@ -194,6 +219,9 @@ function onTextChange() {
 }
 
 const unlockByBiometric = async () => {
+	if (temLockedInfo.value.locked) {
+		return;
+	}
 	const password = await getNativeAppPlatform().unlockByBiometric();
 	if (!password || password.length === 0) {
 		notifyFailed(
@@ -201,20 +229,38 @@ const unlockByBiometric = async () => {
 		);
 		return;
 	}
-	await loginByPassword(password);
+	await loginByPassword(password, true);
 };
 
-const loginByPassword = async (password: string) => {
+const unlockByTypeBiometric = ref(false);
+
+const loginByPassword = async (password: string, biometric = false) => {
+	unlockByTypeBiometric.value = biometric;
 	await unlockByPwd(password, unlockResult);
 };
 
 const unlockResult = {
 	onSuccess: async (data: any) => {
 		sendUnlock();
+		userStore.removeCurrentUserTemporaryLocked();
 		emit('unlockSuccess', data);
 	},
-	onFailure: (message: string) => {
-		notifyFailed(message);
+	onFailure: async (message: string) => {
+		await userStore.tryLockCurrentUser();
+		temLockedInfo.value = userStore.currentUserIsTemporaryLocked();
+		if (temLockedInfo.value.locked) {
+			notifyFailed(
+				t(
+					'Password entered incorrectly multiple times. Account locked for {minutes} minutes. Please try again later.',
+					{
+						minutes: temLockedInfo.value.leftTimes
+					}
+				)
+			);
+			onCancelClick();
+		} else {
+			notifyFailed(message);
+		}
 	}
 };
 

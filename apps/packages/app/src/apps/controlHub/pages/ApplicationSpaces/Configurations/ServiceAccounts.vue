@@ -60,13 +60,13 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { getServiceaccountsItem } from '@apps/control-hub/src/network';
 import { ObjectMapper } from '@apps/control-hub/src/utils/object.mapper';
 import Detail from './Detail.vue';
 import { get, isEmpty } from 'lodash-es';
 import DetailPage from '@apps/control-panel-common/src/containers/DetailPage.vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import { getLocalTime } from '@apps/control-hub/src/utils';
 import MyCard from '@apps/control-panel-common/src/components/MyCard2.vue';
 import MyPage from '@apps/control-panel-common/src/containers/MyPage.vue';
@@ -81,7 +81,8 @@ const isStudio2 = useIsStudio2();
 const loading = ref(false);
 const secrets = ref();
 const data = ref();
-const detail = ref();
+const rawData = ref();
+const detail = computed(() => getAttrs(rawData.value));
 const route = useRoute();
 const serviceAccountName = ref();
 const yamlRef = ref();
@@ -119,7 +120,7 @@ const getAttrs = (detail: any) => {
 
 const fetchList = () => {
 	const { namespace, name }: any = route.params;
-	detail.value = [];
+	rawData.value = undefined;
 	data.value = {};
 	loading.value = true;
 	getServiceaccountsItem(namespace, name)
@@ -128,7 +129,7 @@ const fetchList = () => {
 
 			const result = ObjectMapper.serviceaccounts(res.data);
 			data.value = result;
-			detail.value = getAttrs(result);
+			rawData.value = result;
 			serviceAccountName.value = result.name;
 		})
 		.finally(() => {

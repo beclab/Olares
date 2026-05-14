@@ -14,16 +14,16 @@ export default {
 			'无法获取 NFT 图像。您尚未绑定区块链地址，无法访问相应的 NFT 图像。请在设置中绑定您的钱包，然后返回此处选择 NFT。',
 		go_to_binding: '绑定钱包',
 		upload_image: '上传图像',
-		select_local_image_desc: '选择本地图像，上传并编辑',
+		select_local_image_desc: '本地图片上传并裁剪',
 		recommend_sizes:
-			'为了最佳显示效果，请使用超过 400x400 px 的 PNG 或 JPG 图像，且大小不超过 5MB。',
+			'请选取超过 400×400 px 的 JPG、JPEG、PNG、GIF 图片上传，且大小不超过 5MB。',
 		header_style: '头部风格',
 		classic: '经典',
 		portrait: '肖像',
 		banner: '头图',
 		profile_picture: 'Profile 图片',
 		upload_avatar_desc:
-			'请选取超过 400x400 px 的 JPG、PNG图片上传，且大小不超过 5MB。',
+			'请选取超过 400×400 px 的 JPG、JPEG、PNG、GIF 图片上传，且大小不超过 5MB。',
 		profile_picture_shape: '图片形状',
 		profile_picture_size: '图片尺寸',
 		profile_picture_outline: '图片轮廓',
@@ -103,16 +103,14 @@ export default {
 		corner_radius: '圆角设置',
 		font: '字体'
 	},
-	share: {
-		share_your_profile: '分享 Profile',
-		share_your_profile_desc: '让更多人认识您',
-		share_via_qr_code: '通过二维码分享',
-		share_via_qr_code_desc: '通过此二维码立即分享 Profile',
-		share_profile_picture: '分享 Profile 图片',
-		share_on_x: '分享到 X',
-		share_on_facebook: '分享到 Facebook',
-		share_on_linkedin: '分享到 Linkedin',
-		download_png: '下载 PNG',
-		high_quality_image: '高清图像'
-	}
+	share_your_profile: '分享 Profile',
+	share_your_profile_desc: '让更多人认识您',
+	share_via_qr_code: '通过二维码分享',
+	share_via_qr_code_desc: '通过此二维码立即分享 Profile',
+	share_profile_picture: '分享 Profile 图片',
+	share_on_x: '分享到 X',
+	share_on_facebook: '分享到 Facebook',
+	share_on_linkedin: '分享到 Linkedin',
+	download_png: '下载 PNG',
+	high_quality_image: '高清图像'
 };

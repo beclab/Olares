@@ -10,7 +10,10 @@
 			id="video-previewer"
 			:style="{
 				'padding-top':
-					$q.platform.is.electron && $q.platform.is.win ? '34px' : '12px'
+					$q.platform.is.electron &&
+					($q.platform.is.win || $q.platform.is.linux)
+						? '34px'
+						: '12px'
 			}"
 		>
 			<div
