@@ -20,7 +20,7 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/utils/certmanager"
 	"bytetrade.io/web3os/bfl/pkg/watchers"
-	appv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	appv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/pkg/errors"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -101,7 +101,7 @@ func (s *Subscriber) Do(ctx context.Context, obj interface{}, action watchers.Ac
 		return errors.New("invalid object")
 	}
 
-	if ok = s.isOwnerApp(request.Spec.Owner); !ok {
+	if ok = s.isOwnerApp(request); !ok {
 		return nil
 	}
 
@@ -146,7 +146,11 @@ func (s *Subscriber) removeCustomDomainRetry(request *appv1.Application) error {
 
 func (s *Subscriber) checkCustomDomainStatus(app *appv1.Application) error {
 	var err error
-	customDomains, ok := app.Spec.Settings[constants.ApplicationCustomDomain]
+	// For v3 apps the customDomain blob lives in
+	// Spec.UserSettings[constants.Username]; for v1/v2 it's still
+	// Spec.Settings. EffectiveSettings hides the difference.
+	effective := app.EffectiveSettings(constants.Username)
+	customDomains, ok := effective[constants.ApplicationCustomDomain]
 	if !ok || customDomains == "" {
 		return nil
 	}
@@ -206,7 +210,19 @@ func (s *Subscriber) checkCustomDomainStatus(app *appv1.Application) error {
 	if err != nil {
 		return err
 	}
-	app.Spec.Settings[constants.ApplicationCustomDomain] = string(cdos)
+	// Write back into the same slot we read from: v3 → UserSettings[u],
+	// v1/v2 → Spec.Settings.
+	if appv1.IsV3(app) {
+		if app.Spec.UserSettings == nil {
+			app.Spec.UserSettings = make(map[string]map[string]string)
+		}
+		if app.Spec.UserSettings[constants.Username] == nil {
+			app.Spec.UserSettings[constants.Username] = make(map[string]string)
+		}
+		app.Spec.UserSettings[constants.Username][constants.ApplicationCustomDomain] = string(cdos)
+	} else {
+		app.Spec.Settings[constants.ApplicationCustomDomain] = string(cdos)
+	}
 	if err = s.updateApp(app); err != nil {
 		return err
 	}
@@ -393,7 +409,9 @@ func (s *Subscriber) removeCustomDomainCnameData(app *appv1.Application) error {
 		return nil
 	}
 
-	customDomainData := app.Spec.Settings[constants.ApplicationCustomDomain]
+	// Reflect v3 per-user storage when reading the customDomain blob so
+	// we delete the right user's cloudflare CNAMEs on app delete.
+	customDomainData := app.EffectiveSettings(constants.Username)[constants.ApplicationCustomDomain]
 	if customDomainData == "" {
 		return nil
 	}
@@ -464,6 +482,13 @@ func (s *Subscriber) getObj(appName string) (*appv1.Application, error) {
 	return s.dynamicClient.Get(context.Background(), appName, metav1.GetOptions{})
 }
 
-func (s *Subscriber) isOwnerApp(owner string) bool {
-	return owner == constants.Username
+// isOwnerApp reports whether this BFL instance should react to the given
+// Application. For v1/v2 it's the legacy Spec.Owner check; for v3 the CR
+// is cluster-wide and every BFL instance is a stake-holder (each BFL
+// manages its own user's per-user overlay).
+func (s *Subscriber) isOwnerApp(app *appv1.Application) bool {
+	if appv1.IsV3(app) {
+		return true
+	}
+	return app.Spec.Owner == constants.Username
 }
