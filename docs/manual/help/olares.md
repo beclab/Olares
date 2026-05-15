@@ -37,7 +37,7 @@ Olares focuses on high-performance computing:
 * **Sandboxing**: It enforces strict application isolation, providing a security model that goes beyond standard file servers.
 
 For detailed comparisons, refer to [Compare Olares and NAS](https://blog.olares.com/compare-olares-and-nas/).
-
+<!-- #region faq-why-olares-id -->
 ### Why is an Olares ID required?
 
 The Olares ID is currently required to automate secure remote access for your device. It allows the system to configure a reverse proxy, register a subdomain, and manage HTTPS certificates on your behalf. Without it, ccessing your device from outside your home requires manual handling of complex network configurations, such as port forwarding and DNS management.
@@ -45,7 +45,7 @@ The Olares ID is currently required to automate secure remote access for your de
 You own your Olares ID entirely. Olares does not store your credentials or recover your data if you lose your mnemonic phrase.
 
 We plan to introduce new activation options that make the Olares ID optional for users who prefer to configure their own network access.
-
+<!-- #endregion faq-why-olares-id -->
 ### Is internet access required to use Olares?
 
 Olares supports local-first usage, though initial activation currently requires internet access.
@@ -68,13 +68,13 @@ We are working on decoupling functions to support usage without the LarePass app
 
 * **CLI activation**: Use the `olares-cli` tool to activate Olares directly from the terminal without using the LarePass app for the activation step. However, note that you must still use the LarePass app to create your Olares ID before running the `olares-cli` tool. For detailed instructions, see Activate an Olares device using the Olares CLI.
 * **Standalone components**: We plan to provide standalone deployment options for components like the Reverse Proxy, DID service, and Market repo in future updates.
-
+<!-- #region custom-domain -->
 ### Can I use my own domain name?
 
 Yes. You can use your own custom domain instead of the default `olares.com` domain. Setting this up currently requires the LarePass app.
 
 For details, refer to [Set up a custom domain for your Olares](../best-practices/set-custom-domain.md).
-
+<!-- #endregion custom-domain -->
 ### Do I need to pay for Olares?
 
 Olares OS is free and open source for self-hosting. Olares One is a one-time hardware purchase.

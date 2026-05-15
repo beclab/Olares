@@ -107,19 +107,9 @@ You can continue browsing this documentation to discover more use cases and adva
 
 ## FAQs
 
-### Why is an Olares ID required?
+<!--@include: ../manual/help/olares.md#faq-why-olares-id-->
 
-The Olares ID is currently required to automate secure remote access for your device. It allows the system to configure a reverse proxy, register a subdomain, and manage HTTPS certificates on your behalf. Without this, you would need to manually handle complex network configurations such as port forwarding and DNS management to access your device from outside your home.
-
-Unlike a centralized cloud account, the Olares ID is owned entirely by you. We never see your credentials, and we cannot recover your data if you lose your mnemonic phrase.
-
-We understand the community's preference for flexibility. In the upcoming March update, we plan to introduce new activation options that will make the Olares ID optional if you prefer to configure your own network access.
-
-### Can I use my own domain name?
-
-Yes. You can use your own custom domain instead of the default `olares.com` domain. Note that setting this up currently requires the LarePass app.
-
-For details, refer to [Set up a custom domain for your Olares](../manual/best-practices/set-custom-domain.md).
+<!--@include: ../manual/help/olares.md#custom-domain-->
 
 ## Resources
 - [Access Olares using local network](access-olares-via-vpn.md)
