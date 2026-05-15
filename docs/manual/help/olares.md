@@ -66,7 +66,7 @@ LarePass is the official client for Olares. It acts as a secure bridge to enable
 
 We are working on decoupling functions to support usage without the LarePass app:
 
-* **CLI activation**: We plan to move activation logic into the `olares-cli` to support a terminal-based setup without the app.
+* **CLI activation**: Use the `olares-cli` tool to activate Olares directly from the terminal without using the LarePass app for the activation step. However, note that you must still use the LarePass app to create your Olares ID before running the `olares-cli` tool. For detailed instructions, see Activate an Olares device using the Olares CLI.
 * **Standalone components**: We plan to provide standalone deployment options for components like the Reverse Proxy, DID service, and Market repo in future updates.
 
 ### Can I use my own domain name?
@@ -77,11 +77,11 @@ For details, refer to [Set up a custom domain for your Olares](../best-practices
 
 ### Do I need to pay for Olares?
 
-Olares OS is free and open source for self-hosting. Purchasing Olares One requires a one-time hardware cost.
+Olares OS is free and open source for self-hosting. Olares One is a one-time hardware purchase.
 
 Olares offers two optional cloud-assisted services for convenience, but free alternatives are available so you are never locked in:
 * **Cloud backup**: Subscribe to Olares Space for integrated cloud backups. Alternatively, back up to your own external storage or an S3-compatible service for free.
-* **Remote access (FRP)**: Access devices remotely using the built-in Fast Reverse Proxy (FRP) service. This includes 2 GB of free monthly traffic, with paid options for higher usage. For a completely free alternative, access Olares services via LarePass VPN, or configure and use your own proxy server.
+* **Remote access (FRP)**: Access devices remotely using the built-in Fast Reverse Proxy (FRP) service. This includes 2 GB of free monthly traffic, with paid options for higher usage. For a completely free alternative, access Olares services via LarePass VPN, or configure and use your own FRP server.
 
 ### How often does Olares update?
 
@@ -93,7 +93,7 @@ Olares releases a major update approximately every 2 months. View specific chang
 
 Yes. The Olares OS software is open source, ensuring transparency and community collaboration. The project includes a family of repositories licensed under different models:
 
-* **Olares and LarePass**: Licensed under AGPL-3.0. View the [GitHub organization](https://github.com/beclab).
+* **Olares and LarePass**: Licensed under AGPL-3.0. View the [GitHub organization](https://github.com/beclab) for details.
 * **Protocol projects**: Projects like the Smart contract system for Olares ID use Apache 2.0.
 * **Third-party apps**: Developers adopt their chosen licenses.
 
@@ -123,6 +123,6 @@ Sandboxing is a security standard that prevents a single malicious app from comp
 
 ### Does the system support multi-user environments?
 
-Yes. Olares supports sub-accounts with a built-in roles and permissions system, including Super Admin, Admin, and Member roles.
+Yes. Olares supports sub-accounts with built-in roles and permissions. The available roles are Super Admin, Admin, and Member.
 
 This allows a team to access shared tools on a single server. For example, you can share files within the same Olares cluster or install a large AI model once for everyone to use.
