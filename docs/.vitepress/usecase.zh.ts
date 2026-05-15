@@ -314,7 +314,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Plane",
               link: "/zh/use-cases/plane",
             },
-            {  
+            {
               text: "Excalidraw",
               link: "/zh/use-cases/excalidraw",
             },
@@ -326,6 +326,16 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             //   text: "Stirling PDF",
             //   link: "/zh/use-cases/stirling-pdf",
             // },
+          ],
+        },
+        {
+          text: "金融",
+          collapsed: false,
+          items: [
+            {
+              text: "Freqtrade",
+              link: "/zh/use-cases/freqtrade",
+            },
           ],
         },
         {
