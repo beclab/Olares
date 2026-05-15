@@ -6,9 +6,18 @@ import (
 	"path/filepath"
 
 	"github.com/beclab/Olares/cli/pkg/common"
+	cc "github.com/beclab/Olares/cli/pkg/core/common"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/spf13/cobra"
 )
+
+// initInstallAppGatewayLogger matches connector.BaseRuntime logging used during full install.
+func initInstallAppGatewayLogger(installerDir string) {
+	logDir := filepath.Join(installerDir, "logs", "app-gateway-install")
+	consoleLog := filepath.Join(logDir, cc.InstallLogFile)
+	logger.InitLog(logDir, consoleLog, true)
+}
 
 func NewCmdInstallAppGatewayStack() *cobra.Command {
 	var installerDir string
@@ -25,11 +34,15 @@ func NewCmdInstallAppGatewayStack() *cobra.Command {
 				log.Fatal("error: --installer-dir is required")
 			}
 
-			_ = os.Setenv("OLARES_INSTALLER_DIR", filepath.Clean(installerDir))
+			installerDir = filepath.Clean(installerDir)
+			_ = os.Setenv("OLARES_INSTALLER_DIR", installerDir)
 			_ = os.Setenv("APP_GATEWAY_STACK_ENABLED", "1")
 			if kubeconfig != "" {
 				_ = os.Setenv("KUBECONFIG", kubeconfig)
 			}
+
+			initInstallAppGatewayLogger(installerDir)
+			defer func() { _ = logger.Sync() }()
 
 			runtime := &common.KubeRuntime{Arg: &common.Argument{}}
 			kubeAction := common.KubeAction{KubeConf: &common.KubeConf{Arg: runtime.Arg}}
@@ -56,7 +69,7 @@ func NewCmdInstallAppGatewayStack() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&installerDir, "installer-dir", "", "Olares installer dist directory (e.g. .dist)")
-	cmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig path (optional)")
+	cmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig path (optional; default ~/.kube/config — on Olares node usually copied from /etc/rancher/k3s/k3s.yaml)")
 	cmd.Flags().BoolVar(&withAppGatewayChart, "with-app-gateway-chart", true, "Install app-gateway Helm chart (after vendor; ignored with --chart-only)")
 	cmd.Flags().BoolVar(&chartOnly, "chart-only", false, "Install only the app-gateway Helm chart (vendor stack must already be installed)")
 

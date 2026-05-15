@@ -4,7 +4,8 @@
      1. No watch config is set, OR
      2. Watch is configured with type NamespaceSelector
 */}}
-{{ if and ($kube.deploy) (eq $kube.deploy.type "GatewayNamespace") (or (not $kube.watch) (and $kube.watch (eq $kube.watch.type "NamespaceSelector"))) }}
+{{ if and $kube.deploy (eq $kube.deploy.type "GatewayNamespace") }}
+{{ if or (not $kube.watch) (and $kube.watch (eq $kube.watch.type "NamespaceSelector")) }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -33,6 +34,7 @@ subjects:
 ---
 {{ end }}
 {{ end }}
+{{ end }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -42,9 +44,11 @@ metadata:
   {{- include "eg.labels" . | nindent 4 }}
 rules:
 {{ include "eg.rbac.infra.basic" . }}
-{{ if and (.Values.config.envoyGateway.provider.kubernetes) (.Values.config.envoyGateway.provider.kubernetes.watch) (.Values.config.envoyGateway.provider.kubernetes.deploy) (eq .Values.config.envoyGateway.provider.kubernetes.deploy.type "GatewayNamespace") (.Values.config.envoyGateway.provider.kubernetes.watch.namespaces) (gt (len .Values.config.envoyGateway.provider.kubernetes.watch.namespaces) 0) }}
-{{ include "eg.rbac.controllernamespace.secrets.read" . }}
-{{ end }}
+{{- with .Values.config.envoyGateway.provider.kubernetes }}
+{{- if and .watch .deploy (eq .deploy.type "GatewayNamespace") .watch.namespaces (gt (len .watch.namespaces) 0) }}
+{{ include "eg.rbac.controllernamespace.secrets.read" $ }}
+{{- end }}
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

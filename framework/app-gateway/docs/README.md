@@ -1,54 +1,40 @@
 # app-gateway 运维速查
 
-完整说明（发版、版本、闭环）：  
+完整说明：  
 [archdoc/方案/app-gateway/app-gateway-Olares发版与安装说明-2026-05-15.md](../../../../archdoc/方案/app-gateway/app-gateway-Olares发版与安装说明-2026-05-15.md)
 
 ---
 
-## 发行包根目录（`--installer-dir`）怎么制作
+## kubeconfig（Olares 节点补装）
 
-须包含：
+`install-app-gateway` 与 `kubectl` 使用同一 kubeconfig 加载规则。
 
-- `wizard/config/app-gateway-vendor/`（四个 chart + `VENDOR_VERSION.lock.yaml`）
-- `wizard/config/apps/app-gateway/Chart.yaml`
+| 场景 | 路径 |
+|------|------|
+| Olares **控制面本机**（推荐） | `~/.kube/config`（可省略 `--kubeconfig`） |
+| K3s 真源 | `/etc/rancher/k3s/k3s.yaml` |
+| 远程连 API | kubeconfig 中 `server` 须为 **控制面 IP:6443**，非 `127.0.0.1` |
 
-**最小包（已装 Olares、仅补装 app-gateway）：**
+```bash
+export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/config}"
+kubectl get nodes
+olares-cli install-app-gateway --installer-dir /path/to/.dist-agw
+```
+
+---
+
+## 发行包根目录（`--installer-dir`）
+
+须含 `wizard/config/app-gateway-vendor/` 与 `wizard/config/apps/app-gateway/Chart.yaml`。
 
 ```bash
 export OLARES_SOURCE_ROOT=/path/to/Olares
 export OLARES_INSTALLER_DIR=/path/to/.dist-agw
 bash /path/to/devops/dev/platform-gateway/scripts/package-olares-installer-slice.sh
-# 发行包根目录 = $OLARES_INSTALLER_DIR
-```
-
-**完整 Olares 发行包：**
-
-```bash
-cd /path/to/Olares
-bash build/package.sh
-# 发行包根目录 = .dist（或 $DIST_PATH）
 ```
 
 ---
 
-## 已在运行的 Olares 集群上安装
+## 版本
 
-```bash
-# 1) 制作发行包（见上）
-export INSTALLER=/path/to/Olares/.dist-agw
-
-# 2) 使用含 install-app-gateway 的 olares-cli
-export KUBECONFIG=/path/to/kubeconfig
-olares-cli install-app-gateway \
-  --installer-dir "${INSTALLER}" \
-  --kubeconfig "${KUBECONFIG}"
-```
-
-验证：`kubectl -n linkerd get deploy`；`kubectl -n app-gateway get deploy,gatewayclass`
-
----
-
-## 版本与代码
-
-- 审批版本：Linkerd chart **2026.5.1**，Envoy Gateway **v1.8.0**
-- `pkg/packaging/versions.go`、`.olares/config/app-gateway-vendor/VENDOR_VERSION.lock.yaml`
+Linkerd chart **2026.5.1**，Envoy Gateway **v1.8.0** — `VENDOR_VERSION.lock.yaml`、`pkg/packaging/versions.go`

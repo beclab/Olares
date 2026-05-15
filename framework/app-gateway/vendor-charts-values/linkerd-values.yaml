@@ -1,4 +1,4 @@
 # Linkerd control-plane values — archdoc/方案/app-gateway/app-gateway-Olares发版与安装说明-2026-05-15.md
 identity:
   issuer:
-    scheme: kubernetes.io/tls
+    scheme: linkerd.io/tls

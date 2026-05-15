@@ -1,5 +1,7 @@
 # Keep in sync with framework/app-gateway/config/defaults.yaml
 namespace: app-gateway
+# EG vendor install creates app-gateway NS first (helm --create-namespace); do not re-apply Namespace here.
+namespaceCreate: false
 
 gateway:
   name: app-gateway
