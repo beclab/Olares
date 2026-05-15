@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/storage/driver"
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
@@ -255,4 +256,23 @@ func logReleaseUpgrade(release *release.Release) {
 		"NAMESPACE", release.Namespace,
 		"STATUS", release.Info.Status.String(),
 		"REVISION", release.Version)
+}
+
+// LoadValuesFile reads a Helm values YAML file into a map (missing file → empty map).
+func LoadValuesFile(path string) (map[string]interface{}, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return map[string]interface{}{}, nil
+		}
+		return nil, err
+	}
+	if len(data) == 0 {
+		return map[string]interface{}{}, nil
+	}
+	out := map[string]interface{}{}
+	if err := yaml.Unmarshal(data, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }

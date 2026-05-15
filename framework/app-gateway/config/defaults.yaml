@@ -1,0 +1,18 @@
+# app-gateway 统一配置（唯一真源）
+# 修改命名空间或网关名时只改本文件，然后执行：
+#   make -C framework/app-gateway sync-config
+# 发版前由 build/sync-config.sh 同步到 Helm values 与 DevOps 环境变量片段。
+
+namespace: app-gateway
+
+gateway:
+  name: app-gateway
+  gatewayClassName: olares-app-gateway
+
+demo:
+  enabled: true
+  host: demo.agw.local
+
+# Linkerd 控制面独立命名空间；Envoy Gateway 控制面与 Gateway API 业务对象共用上方 namespace。
+vendor:
+  linkerdNamespace: linkerd

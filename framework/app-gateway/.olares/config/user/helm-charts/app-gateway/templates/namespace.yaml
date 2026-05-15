@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "app-gateway.namespace" . }}
+  labels:
+    app.kubernetes.io/name: app-gateway
+    applications.app.bytetrade.io/author: bytetrade.io
+  annotations:
+    linkerd.io/inject: enabled
+    bytetrade.io/ns-type: platform

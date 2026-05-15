@@ -3,6 +3,7 @@ module github.com/beclab/Olares/cli
 go 1.24.11
 
 replace (
+	github.com/beclab/Olares/framework/app-gateway => ../framework/app-gateway
 	github.com/estesp/manifest-tool/v2 => github.com/estesp/manifest-tool/v2 v2.0.3
 	olares.com/backups-sdk => github.com/Above-Os/backups-sdk v0.1.40
 )
@@ -11,6 +12,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/alecthomas/assert/v2 v2.11.0
+	github.com/beclab/Olares/framework/app-gateway v0.0.0
 	github.com/beclab/Olares/framework/app-service v0.0.0-20260311124303-23a6533bc2ad
 	github.com/beclab/api v0.0.2
 	github.com/cavaliergopher/grab/v3 v3.0.1

@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -55,6 +56,10 @@ func (m *Manager) Package() error {
 	}
 
 	if err := m.packageGPU(); err != nil {
+		return err
+	}
+
+	if err := m.packageAppGatewayVendor(); err != nil {
 		return err
 	}
 
@@ -125,6 +130,25 @@ func (m *Manager) packageGPU() error {
 		filepath.Join(m.olaresRepoRoot, "infrastructure/gpu/.olares/config/gpu"),
 		filepath.Join(m.distPath, "wizard/config/gpu"),
 	)
+}
+
+func (m *Manager) packageAppGatewayVendor() error {
+	src := filepath.Join(m.olaresRepoRoot, "framework/app-gateway/vendor-charts")
+	script := filepath.Join(m.olaresRepoRoot, "framework/app-gateway/build/bundle-vendor-charts.sh")
+	if _, err := os.Stat(filepath.Join(src, "envoy-gateway-helm")); err != nil {
+		fmt.Println("app-gateway vendor-charts missing; running bundle-vendor-charts.sh ...")
+		cmd := exec.Command("bash", script)
+		cmd.Dir = filepath.Join(m.olaresRepoRoot, "framework/app-gateway/build")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("bundle app-gateway vendor charts: %w\n%s", err, out)
+		}
+	}
+	dest := filepath.Join(m.distPath, "wizard/config/app-gateway-vendor")
+	fmt.Println("packaging app-gateway-vendor ...")
+	if err := os.RemoveAll(dest); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return util.CopyDirectory(src, dest)
 }
 
 func (m *Manager) packageEnvConfig() error {
