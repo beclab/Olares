@@ -781,6 +781,8 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	var namespace string
 	if appcfg.Namespace != "" {
 		namespace, _ = utils.AppNamespace(options.App, options.Owner, appcfg.Namespace)
+	} else if appcfg.APIVersion == "v3" {
+		namespace = V3AppNamespace(options.App)
 	} else {
 		namespace = fmt.Sprintf("%s-%s", options.App, options.Owner)
 	}
