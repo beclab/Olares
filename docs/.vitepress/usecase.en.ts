@@ -181,6 +181,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Bifrost",
               link: "/use-cases/bifrost",
             },
+            {
+              text: "Claude Code",
+              link: "/use-cases/claude-code",
+            },
             /*{
               text: "Duix.Avatar",
               link: "/use-cases/duix-avatar",
