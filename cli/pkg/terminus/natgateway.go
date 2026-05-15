@@ -59,7 +59,7 @@ func (s *GetNATGatewayIP) Execute(runtime connector.Runtime) error {
 		}
 	LOOP:
 		if !retry {
-			fmt.Printf(prompt)
+			fmt.Print(prompt)
 		} else {
 			fmt.Printf("\nEnter the NAT gateway IP: ")
 		}

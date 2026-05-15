@@ -314,7 +314,7 @@ func (a *Argument) SetMinikubeProfile(profile string) {
 	a.MinikubeProfile = profile
 	if profile == "" && a.SystemInfo.IsDarwin() {
 		fmt.Printf("\nNote: Minikube profile is not set, will try to use the default profile: \"%s\"\n", MinikubeDefaultProfile)
-		fmt.Println("if this is not expected, please specify it explicitly by setting the --profile/-p option\n")
+		fmt.Println("if this is not expected, please specify it explicitly by setting the --profile/-p option")
 		a.MinikubeProfile = MinikubeDefaultProfile
 	}
 }
@@ -323,7 +323,7 @@ func (a *Argument) SetWSLDistribution(distribution string) {
 	a.WSLDistribution = distribution
 	if distribution == "" && a.SystemInfo.IsWindows() {
 		fmt.Printf("\nNote: WSL distribution is not set, will try to use the default distribution: \"%s\"\n", WSLDefaultDistribution)
-		fmt.Println("if this is not expected, please specify it explicitly by setting the --distribution/-d option\n")
+		fmt.Println("if this is not expected, please specify it explicitly by setting the --distribution/-d option")
 		a.WSLDistribution = WSLDefaultDistribution
 	}
 }
