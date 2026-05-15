@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, ComfyUI, Stable Diffusion, AI image generation, self-hosted, ComfyUI Launcher
-app_version: "1.0.21"
+app_version: "1.0.34"
 doc_version: "1.0"
-doc_updated: "2026-03-20"
+doc_updated: "2026-05-13"
 ---
 # ComfyUI
 
@@ -88,5 +88,5 @@ To understand each node and what it does, see [ComfyUI text-to-image workflow no
 
 ## Learn more
 
-- [Manage ComfyUI using ComfyUI Launcher](comfyui-launcher.md): Control the ComfyUI service, manage models, plugins, and Python dependencies.
+- [Manage ComfyUI on Olares](comfyui-launcher.md): Control the ComfyUI service, manage models, plugins, Python dependencies, and troubleshooting tasks.
 - [AI art creation with ComfyUI and Krita](comfyui-for-krita.md): Integrate ComfyUI with Krita for AI-powered digital art workflows.

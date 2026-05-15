@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Common issues and solutions for ComfyUI on Olares, including startup problems, launcher log messages, missing models, workflow errors, and high CPU temperature on Olares One
+description: Common issues and solutions for ComfyUI on Olares, including startup problems, launcher log messages, model download limitations, workflow errors, and high CPU temperature on Olares One.
 head:
   - - meta
     - name: keywords
@@ -32,9 +32,9 @@ This is usually caused by insufficient resources or incorrect GPU allocation. To
 
 If ComfyUI starts successfully, most of these messages do not require action. Investigate logs only if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
 
-## Models cannot be downloaded in ComfyUI Launcher
+## Models cannot be downloaded directly to Olares
 
-Some models require a login, access token, or approval before you can download them. ComfyUI Launcher cannot download these models directly.
+Some models require login, access approval, a token, or manual confirmation before they can be downloaded. These models cannot be downloaded directly to Olares through ComfyUI Launcher or Server Download.
 
 To solve it, find the download link using one of the methods below. Then download the model manually and [upload it](/use-cases/comfyui-launcher.md#upload-local-models) to the correct folder in Olares Files.
 
