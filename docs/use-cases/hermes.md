@@ -184,15 +184,7 @@ The Hermes gateway is a separate service independent from the Hermes CLI. It han
    - (Optional) **Home channel ID**: Enter the ID of the Discord channel where the bot operates. 
 
 4. Select **Done**.
-5. At the **Restart the gateway to pick up changes** prompt, enter `y`.
-
-    :::tip Manual restart
-    To restart the gateway manually, enter the following command:
-
-    ```bash
-    hermes gateway
-    ```
-    :::
+5. When prompted to **Restart the gateway to pick up changes**, enter `y`.
 
 #### Step 4: Authorize your account
 
