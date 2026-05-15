@@ -201,12 +201,6 @@ func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 		api.HandleError(h.resp, h.req, err)
 		return nil, err
 	}
-	// Mirror the v3 install path: v3 apps live in a deterministic
-	// cluster-wide namespace regardless of what the (new) manifest declares.
-	// Without this the upgrade would write the chart's namespace back into
-	// the AM's Spec.Config and downstream HelmOps / ApplyEnv would target a
-	// different namespace than the one the app was originally installed in.
-	appConfig.Namespace = apputils.V3AppNamespace(h.app)
 	h.appConfig = appConfig
 	return appConfig, nil
 }

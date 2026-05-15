@@ -40,11 +40,19 @@ func (h *Handler) list(req *restful.Request, resp *restful.Response) {
 
 	// Filter Applications using the unified visibility check: legacy
 	// owner-by-namespace for v1/v2, visible to all users for v3 / shared apps.
+	// For v3 apps, overlay Spec.UserSettings[owner] on Spec.Settings/Entrances
+	// so the caller sees their own customDomain/policy/authLevel choices.
 	var filteredApps []appv1alpha1.Application
-	for _, a := range allApps.Items {
-		if vis.VisibleApp(&a) {
-			filteredApps = append(filteredApps, a)
+	for i := range allApps.Items {
+		a := allApps.Items[i]
+		if !vis.VisibleApp(&a) {
+			continue
 		}
+
+		a.Spec.Settings = a.EffectiveSettings(owner)
+		a.Spec.Entrances = a.EffectiveEntrances(owner)
+
+		filteredApps = append(filteredApps, a)
 	}
 
 	// get pending app's from app managers
@@ -258,8 +266,8 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			continue
 		}
 		if v, ok := appsMap[a.Name]; ok {
-			v.Spec.Settings = a.Spec.Settings
-			v.Spec.Entrances = a.Spec.Entrances
+			v.Spec.Settings = a.EffectiveSettings(owner)
+			v.Spec.Entrances = a.EffectiveEntrances(owner)
 			v.Spec.Ports = a.Spec.Ports
 		}
 	}
