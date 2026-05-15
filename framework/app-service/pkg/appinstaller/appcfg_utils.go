@@ -3,39 +3,8 @@ package appinstaller
 import (
 	"encoding/json"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
-	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
-
-	"github.com/emicklei/go-restful/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// GetAppConfigFromCRD et app uninstallation config from crd
-func GetAppConfigFromCRD(app, owner string,
-	client *clientset.ClientSet, req *restful.Request) (*appcfg.ApplicationConfig, error) {
-	// run with request context for incoming client
-	applist, err := client.AppClient.AppV1alpha1().Applications().List(req.Request.Context(), metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	// get by application's owner and name
-	for _, a := range applist.Items {
-		if a.Spec.Owner == owner && a.Spec.Name == app {
-			// TODO: other configs
-			return &appcfg.ApplicationConfig{
-				AppName:   app,
-				Namespace: a.Spec.Namespace,
-				//ChartsName: "charts/apps",
-				OwnerName: owner,
-			}, nil
-		}
-	}
-
-	return nil, api.ErrResourceNotFound
-}
 
 func ToEntrances(s string) (entrances []v1alpha1.Entrance, err error) {
 	err = json.Unmarshal([]byte(s), &entrances)

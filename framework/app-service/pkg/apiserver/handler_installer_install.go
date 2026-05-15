@@ -858,7 +858,6 @@ func (h *installHandlerHelperV3) getAppConfig(adminUsers []string, marketSource 
 		api.HandleBadRequest(h.resp, h.req, err)
 		return
 	}
-	appConfig.Namespace = apputils.V3AppNamespace(h.app)
 	h.appConfig = appConfig
 	return
 }
