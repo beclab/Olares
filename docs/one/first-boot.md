@@ -111,6 +111,8 @@ You can continue browsing this documentation to discover more use cases and adva
 
 <!--@include: ../manual/help/olares.md#custom-domain-->
 
+For details, refer to [Set up a custom domain for your Olares](/manual/best-practices/set-custom-domain.md).
+
 ## Resources
 - [Access Olares using local network](access-olares-via-vpn.md)
 - [Olares ID](../developer/concepts/olares-id.md)

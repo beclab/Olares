@@ -72,9 +72,9 @@ We are working on decoupling functions to support usage without the LarePass app
 ### Can I use my own domain name?
 
 Yes. You can use your own custom domain instead of the default `olares.com` domain. Setting this up currently requires the LarePass app.
-
-For details, refer to [Set up a custom domain for your Olares](../best-practices/set-custom-domain.md).
 <!-- #endregion custom-domain -->
+For details, refer to [Set up a custom domain for your Olares](../best-practices/set-custom-domain.md).
+
 ### Do I need to pay for Olares?
 
 Olares OS is free and open source for self-hosting. Olares One is a one-time hardware purchase.
