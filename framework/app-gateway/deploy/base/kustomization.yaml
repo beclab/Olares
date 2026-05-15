@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: os-framework
+
+resources:
+  - namespace-os-framework.yaml
+  - namespace-agw-demo.yaml
+  - gatewayclass.yaml
+  - gateway.yaml
+  - demo-upstream.yaml
+  - demo-meshed-client.yaml
+  - demo-httproute.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: olares-app-gateway
+  app.kubernetes.io/managed-by: olares-kustomize

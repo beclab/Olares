@@ -1,0 +1,8 @@
+apiVersion: v2
+name: app-gateway
+description: Olares app-gateway (Gateway API resources on Envoy Gateway)
+type: application
+version: 0.0.1
+appVersion: "0.0.1"
+maintainers:
+  - name: bytetrade.io
