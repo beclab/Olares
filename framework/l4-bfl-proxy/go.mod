@@ -3,7 +3,7 @@ module github.com/beclab/l4-bfl-proxy
 go 1.24.11
 
 require (
-	github.com/beclab/api v0.0.6
+	github.com/beclab/api v0.0.7
 	github.com/envoyproxy/go-control-plane v0.14.0
 	github.com/envoyproxy/go-control-plane/envoy v1.36.0
 	github.com/stretchr/testify v1.11.1
