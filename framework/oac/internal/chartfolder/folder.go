@@ -13,7 +13,7 @@ import (
 	"regexp"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 
 	olm "github.com/beclab/Olares/framework/oac/internal/manifest"
 )
