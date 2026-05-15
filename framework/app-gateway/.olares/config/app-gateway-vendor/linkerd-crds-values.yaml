@@ -1,0 +1,3 @@
+# Linkerd CRDs values — approved chart 2026.5.1
+# Envoy Gateway ships Gateway API CRDs; keep Gateway API install out of Linkerd.
+installGatewayAPI: false

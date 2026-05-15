@@ -1,7 +1,5 @@
 # app-gateway 统一配置（唯一真源）
-# 修改命名空间或网关名时只改本文件，然后执行：
-#   make -C framework/app-gateway sync-config
-# 发版前由 build/sync-config.sh 同步到 Helm values 与 DevOps 环境变量片段。
+# 修改命名空间或网关名时只改本文件，并同步 .olares/config/user/helm-charts/app-gateway/values.yaml
 
 namespace: app-gateway
 

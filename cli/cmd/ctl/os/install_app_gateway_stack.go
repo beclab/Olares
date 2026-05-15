@@ -14,10 +14,11 @@ func NewCmdInstallAppGatewayStack() *cobra.Command {
 	var installerDir string
 	var kubeconfig string
 	var withAppGatewayChart bool
+	var chartOnly bool
 
 	cmd := &cobra.Command{
 		Use:   "install-app-gateway",
-		Short: "Install Linkerd + Envoy Gateway + app-gateway (helm SDK)",
+		Short: "Re-install unified ingress stack (Linkerd + Envoy Gateway + app-gateway); normal installs use olares-cli os install",
 		Run: func(cmd *cobra.Command, args []string) {
 			if installerDir == "" {
 				_ = cmd.Usage()
@@ -32,6 +33,13 @@ func NewCmdInstallAppGatewayStack() *cobra.Command {
 
 			runtime := &common.KubeRuntime{Arg: &common.Argument{}}
 			kubeAction := common.KubeAction{KubeConf: &common.KubeConf{Arg: runtime.Arg}}
+
+			if chartOnly {
+				if err := (&terminus.InstallAppGatewayChart{KubeAction: kubeAction}).Execute(runtime); err != nil {
+					log.Fatalf("error: install app-gateway chart: %v", err)
+				}
+				return
+			}
 
 			if err := (&terminus.InstallAppGatewayVendor{KubeAction: kubeAction}).Execute(runtime); err != nil {
 				log.Fatalf("error: install vendor: %v", err)
@@ -49,7 +57,8 @@ func NewCmdInstallAppGatewayStack() *cobra.Command {
 
 	cmd.Flags().StringVar(&installerDir, "installer-dir", "", "Olares installer dist directory (e.g. .dist)")
 	cmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig path (optional)")
-	cmd.Flags().BoolVar(&withAppGatewayChart, "with-app-gateway-chart", true, "Install app-gateway Helm chart")
+	cmd.Flags().BoolVar(&withAppGatewayChart, "with-app-gateway-chart", true, "Install app-gateway Helm chart (after vendor; ignored with --chart-only)")
+	cmd.Flags().BoolVar(&chartOnly, "chart-only", false, "Install only the app-gateway Helm chart (vendor stack must already be installed)")
 
 	return cmd
 }

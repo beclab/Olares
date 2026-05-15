@@ -58,3 +58,7 @@
 ## 版本与支持
 
 app-gateway 的能力与行为以当前 Olares 发行说明及平台文档为准。升级平台时，网关组件将随平台一并升级；请勿单独替换或混用未在发行说明中列出的第三方网关版本。
+
+**安装**：随 **Olares 平台安装 / 升级** 自动完成（`InstallAppGatewayVendorModule`，无需用户单独安装步骤）。运维补装可使用 **`olares-cli install-app-gateway`**。  
+**说明文档**（devops）：`devops/dev/platform-gateway/APP-GATEWAY-OLARES-INSTALL.md`  
+**发版 / 安装 / 版本**：[`docs/README.md`](docs/README.md) → archdoc `方案/app-gateway/app-gateway-Olares发版与安装说明-2026-05-15.md`

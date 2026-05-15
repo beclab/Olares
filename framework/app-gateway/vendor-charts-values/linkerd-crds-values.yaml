@@ -1,0 +1,3 @@
+# Linkerd CRDs values — see archdoc app-gateway-Olares发版与安装说明
+# Envoy Gateway ships Gateway API CRDs; keep Gateway API install out of Linkerd.
+installGatewayAPI: false

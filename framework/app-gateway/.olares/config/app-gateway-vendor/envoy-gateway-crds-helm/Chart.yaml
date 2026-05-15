@@ -1,0 +1,25 @@
+apiVersion: v2
+name: gateway-crds-helm
+description: A Helm chart for Envoy Gateway CRDs
+type: application
+
+version: v0.0.0-latest
+appVersion: "latest"
+icon: https://raw.githubusercontent.com/envoyproxy/gateway/main/site/assets/icons/logo.svg
+
+maintainers:
+  - name: envoy-gateway-steering-committee
+    url: https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md
+  - name: envoy-gateway-maintainers
+    url: https://github.com/envoyproxy/gateway/blob/main/CODEOWNERS
+
+keywords:
+  - gateway-api
+  - envoyproxy
+  - envoy-gateway
+  - eg
+
+home: https://gateway.envoyproxy.io/
+
+sources:
+  - https://github.com/envoyproxy/gateway

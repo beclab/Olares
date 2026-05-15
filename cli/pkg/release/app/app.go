@@ -3,9 +3,10 @@ package app
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+
+	agwpack "github.com/beclab/Olares/framework/app-gateway/pkg/packaging"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/util"
@@ -59,7 +60,7 @@ func (m *Manager) Package() error {
 		return err
 	}
 
-	if err := m.packageAppGatewayVendor(); err != nil {
+	if err := m.packageAppGateway(); err != nil {
 		return err
 	}
 
@@ -132,18 +133,12 @@ func (m *Manager) packageGPU() error {
 	)
 }
 
-func (m *Manager) packageAppGatewayVendor() error {
-	src := filepath.Join(m.olaresRepoRoot, "framework/app-gateway/vendor-charts")
-	script := filepath.Join(m.olaresRepoRoot, "framework/app-gateway/build/bundle-vendor-charts.sh")
-	if _, err := os.Stat(filepath.Join(src, "envoy-gateway-helm")); err != nil {
-		fmt.Println("app-gateway vendor-charts missing; running bundle-vendor-charts.sh ...")
-		cmd := exec.Command("bash", script)
-		cmd.Dir = filepath.Join(m.olaresRepoRoot, "framework/app-gateway/build")
-		if out, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("bundle app-gateway vendor charts: %w\n%s", err, out)
-		}
-	}
+func (m *Manager) packageAppGateway() error {
+	src := agwpack.VendorDir(m.olaresRepoRoot)
 	dest := filepath.Join(m.distPath, "wizard/config/app-gateway-vendor")
+	if err := agwpack.ValidateVendorDir(src); err != nil {
+		return fmt.Errorf("cannot package app-gateway-vendor: %w", err)
+	}
 	fmt.Println("packaging app-gateway-vendor ...")
 	if err := os.RemoveAll(dest); err != nil && !os.IsNotExist(err) {
 		return err

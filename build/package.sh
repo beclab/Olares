@@ -78,15 +78,8 @@ run_cmd "cp -rf framework/bfl/.olares/config/launcher ${DIST}/wizard/config/"
 echo "packaging gpu ..."
 run_cmd "cp -rf infrastructure/gpu/.olares/config/gpu ${DIST}/wizard/config/"
 
-if command -v yq >/dev/null 2>&1; then
-    echo "sync app-gateway config (namespace defaults) ..."
-    run_cmd "make -C ${BASE_DIR}/../framework/app-gateway sync-config"
-else
-    echo "skip app-gateway config sync: yq not found"
-fi
-
-echo "packaging app-gateway vendor charts ..."
-run_cmd "bash ${BASE_DIR}/package-app-gateway-vendor.sh"
+echo "packaging app-gateway vendor ..."
+run_cmd "cp -rf framework/app-gateway/.olares/config/app-gateway-vendor ${DIST}/wizard/config/"
 
 echo "packaging env config ..."
 run_cmd "cp -rf build/system-env.yaml ${DIST}/system-env.yaml"

@@ -1,0 +1,63 @@
+{{ if .Values.config.envoyGateway.provider.kubernetes }}
+{{ $kube := .Values.config.envoyGateway.provider.kubernetes }}
+{{/* Create ClusterRole for GatewayNamespace mode when:
+     1. No watch config is set, OR
+     2. Watch is configured with type NamespaceSelector
+*/}}
+{{ if and ($kube.deploy) (eq $kube.deploy.type "GatewayNamespace") (or (not $kube.watch) (and $kube.watch (eq $kube.watch.type "NamespaceSelector"))) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "eg.fullname" $ }}-cluster-infra-manager
+  labels:
+  {{- include "eg.labels" $ | nindent 4 }}
+rules:
+{{ include "eg.rbac.infra.basic" . }}
+{{ include "eg.rbac.infra.tokenreview" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "eg.fullname" $ }}-cluster-infra-manager
+  labels:
+  {{- include "eg.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: '{{ include "eg.fullname" $ }}-cluster-infra-manager'
+subjects:
+- kind: ServiceAccount
+  name: 'envoy-gateway'
+  namespace: {{ include "eg.namespace" $ }}
+---
+{{ end }}
+{{ end }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "eg.fullname" . }}-infra-manager
+  namespace: {{ include "eg.namespace" . }}
+  labels:
+  {{- include "eg.labels" . | nindent 4 }}
+rules:
+{{ include "eg.rbac.infra.basic" . }}
+{{ if and (.Values.config.envoyGateway.provider.kubernetes) (.Values.config.envoyGateway.provider.kubernetes.watch) (.Values.config.envoyGateway.provider.kubernetes.deploy) (eq .Values.config.envoyGateway.provider.kubernetes.deploy.type "GatewayNamespace") (.Values.config.envoyGateway.provider.kubernetes.watch.namespaces) (gt (len .Values.config.envoyGateway.provider.kubernetes.watch.namespaces) 0) }}
+{{ include "eg.rbac.controllernamespace.secrets.read" . }}
+{{ end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "eg.fullname" . }}-infra-manager
+  namespace: {{ include "eg.namespace" . }}
+  labels:
+  {{- include "eg.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: '{{ include "eg.fullname" . }}-infra-manager'
+subjects:
+- kind: ServiceAccount
+  name: 'envoy-gateway'
+  namespace: {{ include "eg.namespace" . }}
