@@ -9,7 +9,7 @@ AGW_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 OUT="${AGW_ROOT}/.olares/config/app-gateway-vendor"
 VALS_SRC="${AGW_ROOT}/vendor-charts-values"
 
-for f in envoy-gateway-values.yaml linkerd-values.yaml linkerd-crds-values.yaml; do
+for f in envoy-gateway-values.yaml envoy-gateway-crds-values.yaml linkerd-values.yaml linkerd-crds-values.yaml; do
   cp -f "${VALS_SRC}/${f}" "${OUT}/${f}"
 done
 

@@ -1,4 +1,5 @@
 # Linkerd control-plane values — approved chart 2026.5.1; see archdoc app-gateway-Olares发版与安装说明
+# Use chart-managed TLS (linkerd.io/tls). kubernetes.io/tls requires a pre-created linkerd-identity-issuer secret.
 identity:
   issuer:
-    scheme: kubernetes.io/tls
+    scheme: linkerd.io/tls

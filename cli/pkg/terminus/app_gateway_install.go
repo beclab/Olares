@@ -15,7 +15,9 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -100,7 +102,7 @@ func (t *InstallAppGatewayVendor) Execute(runtime connector.Runtime) error {
 
 	appGatewayNS, linkerdNamespace := vendorNamespaces()
 
-	actionLinkerd, settingsLinkerd, err := utils.InitConfig(config, linkerdNamespace)
+	actionLinkerd, settingsLinkerd, err := utils.InitConfigForAppGateway(config, linkerdNamespace)
 	if err != nil {
 		return err
 	}
@@ -128,21 +130,25 @@ func (t *InstallAppGatewayVendor) Execute(runtime connector.Runtime) error {
 	if err != nil {
 		egVals = map[string]interface{}{}
 	}
+	egCRDsVals, err := utils.LoadValuesFile(filepath.Join(vendor, "envoy-gateway-crds-values.yaml"))
+	if err != nil {
+		egCRDsVals = map[string]interface{}{}
+	}
 
-	actionEG, settingsEG, err := utils.InitConfig(config, appGatewayNS)
+	actionEG, settingsEG, err := utils.InitConfigForAppGateway(config, appGatewayNS)
 	if err != nil {
 		return err
 	}
 
 	crdsChart := filepath.Join(vendor, "envoy-gateway-crds-helm")
-	logger.InfoInstallationProgress(fmt.Sprintf("Installing Envoy Gateway CRDs into %s (helm SDK) ...", appGatewayNS))
-	if err := utils.UpgradeCharts(ctx, actionEG, settingsEG, helmReleaseEGCRDs, crdsChart, "", appGatewayNS, egVals, false); err != nil {
+	logger.InfoInstallationProgress(fmt.Sprintf("Installing Envoy Gateway CRDs into %s (helm template + kubectl apply) ...", appGatewayNS))
+	if err := utils.TemplateAndServerSideApply(ctx, actionEG, settingsEG, helmReleaseEGCRDs, crdsChart, appGatewayNS, egCRDsVals); err != nil {
 		return errors.Wrap(err, "install envoy gateway crds")
 	}
 
 	egChart := filepath.Join(vendor, "envoy-gateway-helm")
 	logger.InfoInstallationProgress(fmt.Sprintf("Installing Envoy Gateway control plane into %s (helm SDK) ...", appGatewayNS))
-	if err := utils.UpgradeCharts(ctx, actionEG, settingsEG, helmReleaseEG, egChart, "", appGatewayNS, egVals, false); err != nil {
+	if err := utils.UpgradeChartsSkipCRDs(ctx, actionEG, settingsEG, helmReleaseEG, egChart, "", appGatewayNS, egVals, false); err != nil {
 		return errors.Wrap(err, "install envoy gateway")
 	}
 
@@ -222,7 +228,7 @@ func (t *InstallAppGatewayChart) Execute(runtime connector.Runtime) error {
 	if err != nil {
 		return err
 	}
-	actionConfig, settings, err := utils.InitConfig(config, ns)
+	actionConfig, settings, err := utils.InitConfigForAppGateway(config, ns)
 	if err != nil {
 		return err
 	}
@@ -231,7 +237,8 @@ func (t *InstallAppGatewayChart) Execute(runtime connector.Runtime) error {
 	defer cancel()
 
 	vals := map[string]interface{}{
-		"namespace": ns,
+		"namespace":       ns,
+		"namespaceCreate": false,
 		"gateway": map[string]interface{}{
 			"name":             def.Gateway.Name,
 			"gatewayClassName": def.Gateway.GatewayClassName,
@@ -248,6 +255,38 @@ func (t *InstallAppGatewayChart) Execute(runtime connector.Runtime) error {
 		}
 	}
 
+	k8sClient, err := client.New(config, client.Options{})
+	if err != nil {
+		return err
+	}
+	if err := ensureAppGatewayNamespaceMetadata(ctx, k8sClient, ns); err != nil {
+		return errors.Wrap(err, "prepare app-gateway namespace")
+	}
+
 	logger.InfoInstallationProgress(fmt.Sprintf("Installing app-gateway chart into namespace %s (helm SDK) ...", ns))
-	return utils.UpgradeCharts(ctx, actionConfig, settings, helmReleaseAppGateway, chartPath, "", ns, vals, false)
+	return utils.UpgradeChartsInExistingNamespace(ctx, actionConfig, settings, helmReleaseAppGateway, chartPath, "", ns, vals, false)
+}
+
+// ensureAppGatewayNamespaceMetadata applies Olares platform labels/annotations when EG install
+// created the namespace via helm --create-namespace (no chart-owned Namespace manifest).
+func ensureAppGatewayNamespaceMetadata(ctx context.Context, c client.Client, ns string) error {
+	var existing corev1.Namespace
+	if err := c.Get(ctx, types.NamespacedName{Name: ns}, &existing); err != nil {
+		return err
+	}
+	patch := client.MergeFrom(existing.DeepCopy())
+	if existing.Labels == nil {
+		existing.Labels = map[string]string{}
+	}
+	existing.Labels["app.kubernetes.io/name"] = "app-gateway"
+	existing.Labels["applications.app.bytetrade.io/author"] = "bytetrade.io"
+	if existing.Annotations == nil {
+		existing.Annotations = map[string]string{}
+	}
+	existing.Annotations["linkerd.io/inject"] = "enabled"
+	existing.Annotations["bytetrade.io/ns-type"] = "platform"
+	if err := c.Patch(ctx, &existing, patch); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	return nil
 }
