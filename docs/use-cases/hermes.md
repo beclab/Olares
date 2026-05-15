@@ -1,13 +1,13 @@
 ---
-outline: [2, 3]
+outline: [2,3]
 description: Learn how to install and configure Hermes Agent on Olares and connect it to Discord.
 head:
   - - meta
     - name: keywords
       content: Olares, Hermes, Hermes Agent, autonomous AI, self-improving AI, Discord bot, self-hosted
-app_version: "0.1.1"
+app_version: "1.3.2"
 doc_version: "1.0"
-doc_updated: "2026-04-29"
+doc_updated: "2026-05-15"
 ---
 
 # Set up a self-directed AI agent with Hermes
@@ -30,13 +30,14 @@ In this guide, you will learn how to:
 
 ## Install Hermes Agent
 
-1. From the Olares Market, search for "Hermes".
+1. Open Market and search for "Hermes".
 
    ![Install Hermes Agent](/images/manual/use-cases/hermes-agent.png#bordered)
 
 2. Click **Get**, and then click **Install**. When the installation finishes, two shortcuts appear in the Launchpad:
-    - Dashboard: The graphical dashboard
+
     - Hermes CLI: The command line interface
+    - Dashboard: The graphical dashboard
 
     ![Hermes entry points](/images/manual/use-cases/hermes-entry-points.png#bordered){width=50%}
 
@@ -62,7 +63,7 @@ Run a quick setup to connect Hermes Agent to your local model.
     ollama ps
     ```
 
-4. Copy and save the value as shown in the **CONTEXT** column. For example, `128000`.
+4. Copy and save the value as shown in the **CONTEXT** column. For example, `32768`.
 5. Open Settings, go to **Applications** > **Ollama** > **Shared entrances** > **Ollama API**, and then copy the endpoint address. For example, `http://d54536a50.shared.olares.com`.
 
     ![Obtain Ollama API](/images/manual/use-cases/ollama-endpoint1.png#bordered){width=65%}
@@ -83,9 +84,9 @@ Run a quick setup to connect Hermes Agent to your local model.
     | How would you like to set up Hermes | Select **Quick setup - provider, model & messaging (recommended)**. |
     | Select provider | Select **Custom endpoint (enter URL manually)**.  |
     | API base URL  | Enter your model's API address and append `/v1` to the end.<br>For example, `http://d54536a50.shared.olares.com/v1`.  |
-    | API key  | Enter a placeholder value, such as `ollama-local`.<br>The input remains hidden for security. |
+    | API key  | Enter any text as a placeholder value, such as `ollama-local`.<br>The input remains hidden for security. |
     | Available models | Enter the number corresponding to your target model<br> from the generated list. |
-    | Context length in tokens | Enter a value greater than `65536` or the exact context window<br> of your running model. Do not leave this field blank. |
+    | Context length in tokens | Enter a value greater than `65536` or at least the exact context window<br> of your running model. Do not leave this field blank. |
     | Display name |  Enter a name for easy identification, such as `ollama-local`.|
     | Connect a messaging platform | Select **Skip - set up later with `hermes setup gateway`**. |
 
@@ -103,7 +104,7 @@ The Terminal User Interface (TUI) runs directly in the Hermes CLI with no extra 
    If you exited the wizard, manually start the chat by entering `hermes chat` in the Hermes CLI.
    :::
 
-    ![Hermes setup complete](/images/manual/use-cases/hermes-setup-complete.png#bordered){width=70%}
+    ![Hermes setup complete](/images/manual/use-cases/hermes-setup-complete.png#bordered)
 
 2. Send a message, such as `what can you do`, to verify that the agent responds correctly.
 
@@ -177,14 +178,21 @@ The Hermes gateway is a separate service independent from the Hermes CLI. It han
 
 2. Select **Discord** as your messaging platform.
 3. Follow the prompts to configure the bot integration:
-   - **Bot token**: Enter the bot token generated from your Discord Developer Portal. The input remains hidden.
-   - **Allowed user IDs or usernames**: Enter your Discord user ID to restrict access to yourself.
-   - **Home channel ID**: Enter the ID of the Discord channel where the bot operates. 
-4. Enter the following command to start the gateway:
 
-   ```bash
-   hermes gateway run
-   ```
+   - **Discord bot token**: Enter the bot token generated from your Discord Developer Portal. The input remains hidden.
+   - **Allowed user IDs or usernames**: Enter your Discord user ID to restrict access to yourself.
+   - (Optional) **Home channel ID**: Enter the ID of the Discord channel where the bot operates. 
+
+4. Select **Done**.
+5. At the **Restart the gateway to pick up changes** prompt, enter `y`.
+
+    :::tip Manual restart
+    To restart the gateway manually, enter the following command:
+
+    ```bash
+    hermes gateway
+    ```
+    :::
 
 #### Step 4: Authorize your account
 

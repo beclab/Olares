@@ -164,14 +164,16 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/indextts2",
             },
             {
-              text: "Hermes Agent",
-              link: "/zh/use-cases/hermes",
               text: "NOFX",
               link: "/zh/use-cases/nofx",
             },
             {
               text: "TensorZero",
               link: "/zh/use-cases/tensorzero",
+            },
+            {
+              text: "Hermes Agent",
+              link: "/zh/use-cases/hermes", 
             },            
             // {
             //   text: "DeerFlow",
