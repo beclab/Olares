@@ -1,0 +1,3 @@
+# Approved third-party versions for app-gateway-vendor (architecture review required to change).
+linkerd_edge_chart_version: "2026.5.1"
+envoy_gateway: "v1.8.0"

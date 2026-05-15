@@ -1,0 +1,18 @@
+{{- if or (and .Values.podDisruptionBudget.minAvailable (ge (int .Values.podDisruptionBudget.minAvailable) 1) ) (and .Values.podDisruptionBudget.maxUnavailable (ge (int .Values.podDisruptionBudget.maxUnavailable) 1) )}}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: envoy-gateway
+  namespace: {{ include "eg.namespace" . }}
+spec:
+  {{- if and .Values.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if .Values.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      control-plane: envoy-gateway
+    {{- include "eg.selectorLabels" . | nindent 6 }}
+{{- end }}
