@@ -1,0 +1,6 @@
+apiVersion: v2
+name: crds
+description: Envoy Gateway and Gateway API CRDs
+type: application
+version: 0.0.0
+appVersion: "0.0.0"

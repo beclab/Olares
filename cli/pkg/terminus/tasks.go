@@ -279,6 +279,12 @@ func (t *CheckPrepared) Execute(runtime connector.Runtime) error {
 		return errors.New("Olares dependencies is not prepared, refuse to continue")
 	}
 
+	if t.Force && appGatewayStackEnabled() {
+		if err := ValidateAppGatewayInstallerArtifacts(runtime.GetInstallerDir()); err != nil {
+			return errors.Wrap(err, "Olares installer package incomplete for unified ingress (app-gateway)")
+		}
+	}
+
 	return nil
 }
 

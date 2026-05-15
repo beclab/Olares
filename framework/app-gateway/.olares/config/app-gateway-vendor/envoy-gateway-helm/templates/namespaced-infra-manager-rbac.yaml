@@ -1,0 +1,66 @@
+{{ $watchedNamespaces := list }}
+{{ if .Values.config.envoyGateway.provider.kubernetes }}
+{{ $kube := .Values.config.envoyGateway.provider.kubernetes }}
+{{ if and ($kube.watch) ($kube.deploy) (eq $kube.deploy.type "GatewayNamespace") }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "eg.fullname" $ }}-infra-manager-tokenreview
+  labels:
+  {{- include "eg.labels" $ | nindent 4 }}
+rules:
+{{ include "eg.rbac.infra.tokenreview" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "eg.fullname" $ }}-infra-manager-tokenreview
+  labels:
+  {{- include "eg.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: '{{ include "eg.fullname" $ }}-infra-manager-tokenreview'
+subjects:
+- kind: ServiceAccount
+  name: 'envoy-gateway'
+  namespace: {{ include "eg.namespace" $ }}
+{{ if $kube.watch.namespaces }}
+{{ if gt (len $kube.watch.namespaces) 0 }}
+{{ $watchedNamespaces = $kube.watch.namespaces }}
+{{ end }}
+{{ end }}
+{{ end }}
+{{ end }}
+{{ if gt (len $watchedNamespaces) 0 }}
+{{ range $_, $ns := $watchedNamespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "eg.fullname" $ }}-namespaced-infra-manager
+  namespace: {{ $ns | quote }}
+  labels:
+  {{- include "eg.labels" $ | nindent 4 }}
+rules:
+{{ include "eg.rbac.infra.basic" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "eg.fullname" $ }}-namespaced-infra-manager
+  namespace: {{ $ns | quote }}
+  labels:
+  {{- include "eg.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: '{{ include "eg.fullname" $ }}-namespaced-infra-manager'
+subjects:
+- kind: ServiceAccount
+  name: 'envoy-gateway'
+  namespace: {{ include "eg.namespace" $ }}
+---
+{{- end }}
+{{- end }}

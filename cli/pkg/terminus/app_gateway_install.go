@@ -8,6 +8,7 @@ import (
 	"time"
 
 	agwconfig "github.com/beclab/Olares/framework/app-gateway/pkg/config"
+	agwpack "github.com/beclab/Olares/framework/app-gateway/pkg/packaging"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
@@ -22,6 +23,7 @@ import (
 
 const (
 	appGatewayVendorDirName = "app-gateway-vendor"
+	helmReleaseLinkerdCRDs  = "linkerd-crds"
 	helmReleaseLinkerd      = "linkerd"
 	helmReleaseEGCRDs       = "eg-crds"
 	helmReleaseEG           = "eg"
@@ -56,12 +58,22 @@ func appGatewayHelmChartPath(installerDir string) string {
 	return filepath.Join(installerDir, "wizard", "config", "apps", "app-gateway")
 }
 
+// appGatewayStackEnabled reports whether the unified ingress stack is part of this run.
+// Default is on for Olares install/upgrade; set APP_GATEWAY_STACK_ENABLED=0 only for exceptional dev skips.
 func appGatewayStackEnabled() bool {
 	v := os.Getenv("APP_GATEWAY_STACK_ENABLED")
 	return v == "" || v == "1" || v == "true" || v == "TRUE"
 }
 
-// InstallAppGatewayVendor installs Linkerd control plane and Envoy Gateway using helm SDK only.
+// ValidateAppGatewayInstallerArtifacts ensures the Olares installer bundle contains vendor + chart.
+func ValidateAppGatewayInstallerArtifacts(installerDir string) error {
+	if err := agwpack.ValidateInstallerBundle(installerDir); err != nil {
+		return errors.Wrap(err, "app-gateway")
+	}
+	return nil
+}
+
+// InstallAppGatewayVendor installs Linkerd (CRDs chart then control plane) and Envoy Gateway using helm SDK only.
 type InstallAppGatewayVendor struct {
 	common.KubeAction
 }
@@ -72,10 +84,11 @@ func (t *InstallAppGatewayVendor) Execute(runtime connector.Runtime) error {
 		return nil
 	}
 
-	vendor := appGatewayVendorPath(resolveInstallerDir(runtime))
-	if _, err := os.Stat(filepath.Join(vendor, "envoy-gateway-helm")); err != nil {
-		return errors.Wrapf(err, "app-gateway vendor charts not found under installer (run Olares package build with bundle-vendor-charts)")
+	installerDir := resolveInstallerDir(runtime)
+	if err := ValidateAppGatewayInstallerArtifacts(installerDir); err != nil {
+		return err
 	}
+	vendor := appGatewayVendorPath(installerDir)
 
 	config, err := ctrl.GetConfig()
 	if err != nil {
@@ -87,23 +100,27 @@ func (t *InstallAppGatewayVendor) Execute(runtime connector.Runtime) error {
 
 	appGatewayNS, linkerdNamespace := vendorNamespaces()
 
-	// Linkerd control plane
-	linkerdChart := filepath.Join(vendor, "linkerd-control-plane-chart")
-	if st, err := os.Stat(linkerdChart); err == nil && st.IsDir() {
-		actionConfig, settings, err := utils.InitConfig(config, linkerdNamespace)
-		if err != nil {
-			return err
-		}
-		linkerdVals, err := utils.LoadValuesFile(filepath.Join(vendor, "linkerd-values.yaml"))
-		if err != nil {
-			linkerdVals = map[string]interface{}{}
-		}
-		logger.InfoInstallationProgress("Installing Linkerd control plane (helm SDK) ...")
-		if err := utils.UpgradeCharts(ctx, actionConfig, settings, helmReleaseLinkerd, linkerdChart, "", linkerdNamespace, linkerdVals, false); err != nil {
-			return errors.Wrap(err, "install linkerd control plane")
-		}
-	} else {
-		logger.Warn("linkerd-control-plane-chart not bundled; skip Linkerd install")
+	actionLinkerd, settingsLinkerd, err := utils.InitConfig(config, linkerdNamespace)
+	if err != nil {
+		return err
+	}
+	linkerdCRDsChart := filepath.Join(vendor, "linkerd-crds-chart")
+	linkerdCPChart := filepath.Join(vendor, "linkerd-control-plane-chart")
+	crdsVals, err := utils.LoadValuesFile(filepath.Join(vendor, "linkerd-crds-values.yaml"))
+	if err != nil {
+		crdsVals = map[string]interface{}{}
+	}
+	logger.InfoInstallationProgress("Installing Linkerd CRDs chart (helm SDK) ...")
+	if err := utils.UpgradeCharts(ctx, actionLinkerd, settingsLinkerd, helmReleaseLinkerdCRDs, linkerdCRDsChart, "", linkerdNamespace, crdsVals, false); err != nil {
+		return errors.Wrap(err, "install linkerd-crds")
+	}
+	linkerdVals, err := utils.LoadValuesFile(filepath.Join(vendor, "linkerd-values.yaml"))
+	if err != nil {
+		linkerdVals = map[string]interface{}{}
+	}
+	logger.InfoInstallationProgress("Installing Linkerd control plane (helm SDK) ...")
+	if err := utils.UpgradeCharts(ctx, actionLinkerd, settingsLinkerd, helmReleaseLinkerd, linkerdCPChart, "", linkerdNamespace, linkerdVals, false); err != nil {
+		return errors.Wrap(err, "install linkerd control plane")
 	}
 
 	// Envoy Gateway CRDs + control plane
@@ -190,10 +207,10 @@ func (t *InstallAppGatewayChart) Execute(runtime connector.Runtime) error {
 	}
 
 	installerDir := resolveInstallerDir(runtime)
-	chartPath := appGatewayHelmChartPath(installerDir)
-	if _, err := os.Stat(chartPath); err != nil {
-		return errors.Wrapf(err, "app-gateway helm chart not found at %s (run Olares package.sh)", chartPath)
+	if err := ValidateAppGatewayInstallerArtifacts(installerDir); err != nil {
+		return err
 	}
+	chartPath := appGatewayHelmChartPath(installerDir)
 
 	ns := resolveAppGatewayNamespace()
 	def, err := agwconfig.Load()

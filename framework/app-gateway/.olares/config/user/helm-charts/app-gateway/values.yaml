@@ -1,4 +1,4 @@
-# AUTO-GENERATED from config/defaults.yaml — do not edit namespace here; run: make sync-config
+# Keep in sync with framework/app-gateway/config/defaults.yaml
 namespace: app-gateway
 
 gateway:

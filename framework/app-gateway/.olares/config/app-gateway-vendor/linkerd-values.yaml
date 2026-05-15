@@ -1,0 +1,4 @@
+# Linkerd control-plane values — approved chart 2026.5.1; see archdoc app-gateway-Olares发版与安装说明
+identity:
+  issuer:
+    scheme: kubernetes.io/tls
