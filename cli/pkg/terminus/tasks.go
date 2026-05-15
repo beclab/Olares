@@ -645,7 +645,7 @@ func (a *UpdateKubeKeyHosts) Execute(runtime connector.Runtime) error {
 		},
 	}
 	if err := tplAction.Execute(runtime); err != nil {
-		return errors.Wrapf(err, fmt.Sprintf("failed to generate update hosts script: %s", scriptPath))
+		return errors.Wrapf(err, "failed to generate update hosts script: %s", scriptPath)
 	}
 	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("chmod +x %s", scriptPath), false, false); err != nil {
 		return errors.Wrap(errors.WithStack(err), "failed to chmod +x update hosts script")
