@@ -64,11 +64,6 @@ Run a quick setup to connect Hermes Agent to your local model.
     ```
 
 4. Copy and save the value as shown in the **CONTEXT** column. For example, `32768`.
-
-    :::info
-    Hermes Agent requires a minimum context window of 65536 (64K). If your model's context is smaller than this, you must manually specify the context size during the setup wizard later.
-    :::
-
 5. Open Settings, go to **Applications** > **Ollama** > **Shared entrances** > **Ollama API**, and then copy the endpoint address. For example, `http://d54536a50.shared.olares.com`.
 
     ![Obtain Ollama API](/images/manual/use-cases/ollama-endpoint1.png#bordered){width=65%}
