@@ -11,11 +11,11 @@ import (
 	"testing"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/kube"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/yaml"
 
 	"github.com/beclab/Olares/framework/oac/internal/manifest"
 	"github.com/beclab/Olares/framework/oac/internal/resources"

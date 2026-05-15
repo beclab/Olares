@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/beclab/Olares/framework/oac"
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 const testdataFullManifest = "testdata/full_manifest"
@@ -46,6 +46,11 @@ func TestLoadAppConfiguration_PreservesAllYAMLFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadAppConfiguration: %v", err)
 	}
+	fmt.Printf("-----------\n")
+	fmt.Printf("%#v", cfg.Options)
+
+	fmt.Printf("-----------\n")
+
 	if cfg == nil {
 		t.Fatal("expected non-nil *AppConfiguration")
 	}
