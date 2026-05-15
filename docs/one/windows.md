@@ -186,6 +186,8 @@ Use this section to install the Intel graphics driver in Windows and verify that
 3. Expand **Display adapters**.
 4. Confirm that the Intel graphics device appears and is running without errors.
 
+   ![Intel integrated GPU](/images/manual/use-cases/windows-intel-gpu.png#bordered)
+
 ## FAQ
 
 ### The Windows VM shows a blank screen or no desktop
