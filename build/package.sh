@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 
 function run_cmd(){
     echo "$*"
@@ -76,6 +78,8 @@ run_cmd "cp -rf framework/bfl/.olares/config/launcher ${DIST}/wizard/config/"
 echo "packaging gpu ..."
 run_cmd "cp -rf infrastructure/gpu/.olares/config/gpu ${DIST}/wizard/config/"
 
+echo "packaging app-gateway vendor ..."
+run_cmd "cp -rf framework/app-gateway/.olares/config/app-gateway-vendor ${DIST}/wizard/config/"
 
 echo "packaging env config ..."
 run_cmd "cp -rf build/system-env.yaml ${DIST}/system-env.yaml"
