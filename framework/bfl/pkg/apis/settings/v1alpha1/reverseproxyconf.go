@@ -17,7 +17,7 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/utils"
 	"bytetrade.io/web3os/bfl/pkg/utils/certmanager"
 	"bytetrade.io/web3os/bfl/pkg/utils/k8sutil"
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/emicklei/go-restful"
@@ -258,11 +258,17 @@ func (configurator *ReverseProxyConfigurator) setProxyTypeForRelevantComponents(
 	if err != nil {
 		return errors.Wrap(err, "failed to list applications")
 	}
-	for _, app := range appList.Items {
-		if app.Spec.Owner != constants.Username {
+	for i := range appList.Items {
+		app := &appList.Items[i]
+		isV3 := appv1alpha1.IsV3(app)
+		// v1/v2: only this user's apps. v3: every app, but we only care
+		// when this user has a customDomain overlay.
+		if !isV3 && app.Spec.Owner != constants.Username {
 			continue
 		}
-		customDomainSettingsStr, ok := app.Spec.Settings[constants.ApplicationCustomDomain]
+
+		effSettings := app.EffectiveSettings(constants.Username)
+		customDomainSettingsStr, ok := effSettings[constants.ApplicationCustomDomain]
 		if !ok || customDomainSettingsStr == "" {
 			continue
 		}
@@ -289,8 +295,19 @@ func (configurator *ReverseProxyConfigurator) setProxyTypeForRelevantComponents(
 		if err != nil {
 			return errors.Wrapf(err, "failed to marshal custom domain settings of app %s", app.Name)
 		}
-		app.Spec.Settings[constants.ApplicationCustomDomain] = string(customDomainSettingsByte)
-		if err := configurator.ctrlClient.Update(ctx, &app); err != nil {
+
+		if isV3 {
+			if app.Spec.UserSettings == nil {
+				app.Spec.UserSettings = make(map[string]map[string]string)
+			}
+			if app.Spec.UserSettings[constants.Username] == nil {
+				app.Spec.UserSettings[constants.Username] = make(map[string]string)
+			}
+			app.Spec.UserSettings[constants.Username][constants.ApplicationCustomDomain] = string(customDomainSettingsByte)
+		} else {
+			app.Spec.Settings[constants.ApplicationCustomDomain] = string(customDomainSettingsByte)
+		}
+		if err := configurator.ctrlClient.Update(ctx, app); err != nil {
 			return errors.Wrapf(err, "failed to update reverse proxy type to application %s", app.Name)
 		}
 	}
