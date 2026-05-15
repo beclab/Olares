@@ -64,6 +64,11 @@ Run a quick setup to connect Hermes Agent to your local model.
     ```
 
 4. Copy and save the value as shown in the **CONTEXT** column. For example, `32768`.
+
+    :::info
+    Hermes Agent requires a minimum context window of 65536 (64K). If your model's context is smaller than this, you must manually specify the context size during the setup wizard later.
+    :::
+
 5. Open Settings, go to **Applications** > **Ollama** > **Shared entrances** > **Ollama API**, and then copy the endpoint address. For example, `http://d54536a50.shared.olares.com`.
 
     ![Obtain Ollama API](/images/manual/use-cases/ollama-endpoint1.png#bordered){width=65%}
@@ -86,7 +91,7 @@ Run a quick setup to connect Hermes Agent to your local model.
     | API base URL  | Enter your model's API address and append `/v1` to the end.<br>For example, `http://d54536a50.shared.olares.com/v1`.  |
     | API key  | Enter any text as a placeholder value, such as `ollama-local`.<br>The input remains hidden for security. |
     | Available models | Enter the number corresponding to your target model<br> from the generated list. |
-    | Context length in tokens | Enter a value greater than `65536` or at least the exact context window<br> of your running model. Do not leave this field blank. |
+    | Context length in tokens | <ul><li>If your model's context window is less than `65536`,<br>enter a value greater than `65536`.</li><li>If your model's context window is more than `65536`,<br>leave this field blank to auto-detect.</li></ul> |
     | Display name |  Enter a name for easy identification, such as `ollama-local`.|
     | Connect a messaging platform | Select **Skip - set up later with `hermes setup gateway`**. |
 
@@ -166,10 +171,6 @@ To chat with your agent remotely, connect it to a Discord bot.
 
 Connect Hermes Agent to your Discord bot by configuring and running the Hermes gateway.
 
-:::warning
-The Hermes gateway is a separate service independent from the Hermes CLI. It handles messages from Discord, while the CLI is for local terminal chat. The gateway runs in the foreground. Leave the Hermes CLI window open to keep the Discord bot online. If you close the window, the bot disconnects.
-:::
-
 1. Open the Hermes CLI, and then enter the following command to start the configuration wizard:
 
    ```bash
@@ -185,6 +186,7 @@ The Hermes gateway is a separate service independent from the Hermes CLI. It han
 
 4. Select **Done**.
 5. When prompted to **Restart the gateway to pick up changes**, enter `y`.
+6. Check your bot status in Discord. A green status icon confirms the bot is online, which means the gateway restarted successfully and the configuration is correct.
 
 #### Step 4: Authorize your account
 
@@ -207,6 +209,27 @@ To manually adjust parameters, edit the configuration files directly, and then r
 2. Go to **Data** > **hermesagent** > **home**, and locate the configuration files, such as `config.yaml` and `.env`. 
 
 The file structure and configuration options match the official defaults. For detailed parameter descriptions, see the [Hermes configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
+
+## FAQs
+
+### How to manually restart the Hermes gateway?
+
+You can restart the gateway manually using one of the following methods:
+
+- **Use the Hermes CLI**
+
+    This is the fastest method. Open the Hermes CLI from the Launchpad, and then run the following command:
+
+    ```bash
+    touch /opt/data/.gateway-restart-requested
+    ```
+- **Use the Hermes Dashboard**
+
+    This is the most intuitive method. Open the Hermes Dashboard from the Launchpad, and then select **Restart Gateway** in the left sidebar.
+
+- **Use Control Hub**
+
+    Open Control Hub, and then go to **Browse** > **{username}** > **hermesagent-{username}** > **Deployments** > **hermesagent**, and then click **Restart** in the upper-right corner. This method completely restarts the entire service, which takes slightly longer.
 
 ## Next steps
 

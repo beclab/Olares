@@ -42,6 +42,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "Hermes Agent",
+              link: "/use-cases/hermes",  
+            },             
+            {
               text: "OpenCode",
               link: "/use-cases/opencode",
               collapsed: true,
@@ -180,11 +184,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "TensorZero",
               link: "/use-cases/tensorzero",
-            },
-            {
-              text: "Hermes Agent",
-              link: "/use-cases/hermes",  
-            },            
+            },           
             // {
             //   text: "DeerFlow",
             //   link: "/use-cases/deerflow",
