@@ -157,6 +157,35 @@ To end your RDP session, simply close the RDP window.
 
 The Windows VM continues running on your Olares device and is always ready for you to reconnect.
 
+## Advanced: Enable Intel integrated GPU for Windows VM
+
+On Olares One, the Windows app deployed from the Olares Market already includes the GPU-related configuration required for Intel integrated GPU support.
+
+Use this section to install the Intel graphics driver in Windows and verify that Windows can detect the Intel graphics device through RDP.
+
+### Install the Intel graphics driver in Windows
+
+1. Connect to the Windows VM using RDP.
+
+2. Open a browser in Windows.
+
+3. Download the latest Intel graphics driver from Intel:
+
+   ```plain
+   https://www.intel.cn/content/www/cn/zh/download/785597/intel-arc-graphics-windows.html
+   ```
+
+4. Install the driver.
+
+5. Restart Windows if prompted.
+
+### Verify the result
+
+1. Reconnect to the Windows VM using RDP.
+2. Open **Device Manager**.
+3. Expand **Display adapters**.
+4. Confirm that the Intel graphics device appears and is running without errors.
+
 ## FAQ
 
 ### The Windows VM shows a blank screen or no desktop
