@@ -78,7 +78,9 @@ We plan to introduce the ability to run a lightweight browser or ChromeOS instan
 
 ### Can I update or configure the BIOS?
 
-Yes. You can update the BIOS as new versions are released. All BIOS options are fully unlocked, allowing you to configure settings according to your needs.
+Yes. You can update the BIOS and Embedded Controller (EC) firmware as new versions release. While the system hides advanced BIOS options by default to maintain stability, you can also unlock them to perform deep hardware configurations according to your needs.
+
+For detailed instructions, see [Manage BIOS](../one/update-firmware.md).
 
 ### Is Olares One designed for "always-on" operation?
 
