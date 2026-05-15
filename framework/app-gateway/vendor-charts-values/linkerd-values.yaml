@@ -1,0 +1,3 @@
+identity:
+  issuer:
+    scheme: kubernetes.io/tls

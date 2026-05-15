@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agw-demo
+  labels:
+    app.kubernetes.io/name: agw-demo
+  annotations:
+    linkerd.io/inject: enabled
+    # Olares 集群若要求 ns-type 才能访问 linkerd-identity，见 devops LINKERD-MESH-OPERATIONS.md
+    bytetrade.io/ns-type: platform

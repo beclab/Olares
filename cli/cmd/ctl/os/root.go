@@ -10,6 +10,7 @@ func NewOSCommands() []*cobra.Command {
 		NewCmdRootDownload(),
 		NewCmdPrepare(),
 		NewCmdInstallOs(),
+		NewCmdInstallAppGatewayStack(),
 		NewCmdUninstallOs(),
 		NewCmdChangeIP(),
 		NewCmdRelease(),

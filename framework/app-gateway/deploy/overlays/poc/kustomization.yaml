@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# PoC：为 Gateway 生成的 Service 打 NodePort 补丁需在 EG 创建 Service 后由脚本处理；
+# 此处仅标注演示 Host，供 smoke 使用。
+configMapGenerator:
+  - name: app-gateway-poc-config
+    namespace: agw-demo
+    literals:
+      - DEMO_HOST=demo.agw.local
+      - GATEWAY_NAMESPACE=os-framework
+      - GATEWAY_NAME=app-gateway
