@@ -12,7 +12,7 @@ This page lists the FAQs about installing, configuring, activating, and logging 
 
 Install Olares on Linux (Ubuntu or Debian) for best performance.
 
-For product evaluation, install Olares on the following platforms:
+You can also install Olares on the following platforms. However, use them only for testing, because they do not support all features:
 * Proxmox VE
 * Raspberry Pi
 * macOS
@@ -70,9 +70,11 @@ An installation timeout often indicates some services failed to start correctly.
 
 ### Is it possible to activate Olares with a non-local network?
 
-Yes. Before activation, users typically access the activation wizard using the local IP address, which requires the device and the client to be on the same network. However, if Olares uses a public IP, such as on a public cloud, this local network limitation no longer applies.
+Yes. Standard activation requires the Olares device and your client device, such as your phone, to connect to the same local network. This requirement applies whether you access the activation wizard via a local IP address in a web browser, or use the **Discover nearby Olares** feature in the LarePass app after an ISO installation.
 
-Note that IP access is only used during activation. After activation, access devices via domain names on both internal and external networks.
+However, if Olares uses a public IP address, such as on a public cloud, this local network limitation no longer applies.
+
+After activation, access devices via domain names on both internal and external networks, regardless of the initial setup method.
 
 ### My Olares is powered on and connected to LAN, but I can't find it in LarePass. What should I do?
 
