@@ -154,7 +154,7 @@ To chat with your agent remotely, connect it to a Discord bot.
 
     ![OAuth2 URL Generator](/images/manual/use-cases/hermes-oauth21.png#bordered)
 
-    b. Scroll down to **Bot Permissions**, set as the following image. You can modify the settings later.
+    b. Scroll down to **Bot Permissions**, set the permissions as shown in the following image. You can modify the settings later.
 
     ![Bot permissions](/images/manual/use-cases/hermes-bot-permissions.png#bordered)
 
