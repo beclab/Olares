@@ -1,0 +1,43 @@
+{{- if .Values.demo.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: http-echo
+  namespace: {{ include "app-gateway.namespace" . }}
+  labels:
+    app: http-echo
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-echo
+  template:
+    metadata:
+      labels:
+        app: http-echo
+      annotations:
+        linkerd.io/inject: enabled
+    spec:
+      containers:
+        - name: echo
+          image: hashicorp/http-echo:0.2.3
+          args:
+            - -text=olares-app-gateway-upstream-ok
+          ports:
+            - containerPort: 5678
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: http-echo
+  namespace: {{ include "app-gateway.namespace" . }}
+spec:
+  selector:
+    app: http-echo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5678
+{{- end }}

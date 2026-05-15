@@ -1,0 +1,25 @@
+{{- if .Values.demo.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: curl-client
+  namespace: {{ include "app-gateway.namespace" . }}
+  labels:
+    app: curl-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: curl-client
+  template:
+    metadata:
+      labels:
+        app: curl-client
+      annotations:
+        linkerd.io/inject: enabled
+    spec:
+      containers:
+        - name: curl
+          image: curlimages/curl:8.5.0
+          command: ["sleep", "infinity"]
+{{- end }}
