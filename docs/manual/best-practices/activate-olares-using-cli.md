@@ -5,34 +5,43 @@ description: Technical guide for installing and activating an Olares device usin
 
 # Activate an Olares device using the Olares CLI
 
-This tutorial walks you through activating an Olares device (e.g., Olares One) using the Olares CLI tool. The process assumes the device is freshly unboxed and has not been installed or activated.
+This tutorial walks you through activating an Olares device (e.g., Olares One) using the Olares CLI tool.
+
+The process assumes the device is freshly unboxed and has not been installed or activated.
+
+:::warning Important
+The default `olares-cli` included in the current system lacks the activation feature. You must download a standalone daily build CLI to perform the activation as outlined in Step 1.
+:::
 
 ## Learning objectives
 
 In this tutorial, you will learn how to:
 
 - Download and extract the Olares CLI tool.
-- Install the Olares OS on a new device.
+- Install Olares on a new device.
 - Retrieve a Fast Reverse Proxy (FRP) host for remote access.
 - Run the activation command to configure your device.
 
 ## Prerequisites
 
-  Before you begin, make sure the following requirements are met:
+Before you begin, ensure the following requirements are met:
 
-  - You can access the Olares device directly with a keyboard and monitor, or via
-  SSH.
-  - The device has internet access to download packages, query FRP servers, and
-  complete activation.
-  - You can run commands as the root user, or prepend commands with `sudo`.
-  - You have created an Olares ID using the LarePass app, and have [backed up your
-   12-word mnemonic phrase](../larepass/back-up-mnemonics.md).
+- You can access the Olares device directly with a keyboard and monitor, or via SSH.
+- The device has internet access to download packages, query FRP servers, and complete activation.
+- You can run commands as the root user, or prepend commands with `sudo`.
+- You have created an Olares ID using the LarePass app, and have [backed up your 12-word mnemonic phrase](../larepass/back-up-mnemonics.md).
 
     ![Fast creation](/images/manual/get-started/create-olares-id.png)
 
-## Step 1: Download and extract the CLI tool
+- You have reviewed the followig notes:
 
-1. Download the Olares CLI package.
+    - **Version dependencies**: A strict version correspondence exists between `olares-cli`, `olaresd`, and the cluster version.
+    - **Do not overwrite system files**: Never move or copy the downloaded standalone CLI to overwrite the system `/usr/bin/olares-cli` file. Overwriting this file breaks the version chain and impacts future system upgrades.
+    - **Execution path differences**: Run `./olares-cli` to execute the standalone version downloaded to the current directory. Do not run `olares-cli` directly, because it executes the built-in system version which lacks activation features.
+
+## Step 1: Download and prepare the standalone CLI tool
+
+1. Download the standalone Olares CLI package.
 
     ```bash
     curl -sSOL https://cdn.olares.com/common/olares-cli-amd64.8cbdc32.tar.gz
@@ -44,6 +53,12 @@ In this tutorial, you will learn how to:
     tar xzf olares-cli-amd64.8cbdc32.tar.gz
     ```
 
+3. Grant executable permissions to the extracted binary file.
+
+    ```bash
+    chmod +x olares-cli
+    ```
+
 ## Step 2: Retrieve the FRP list
 
 Find an available FRP host to enable remote access to your device.
@@ -51,13 +66,13 @@ Find an available FRP host to enable remote access to your device.
 1. Run the following command. Replace `{olares-id}` with your registered Olares ID.
 
     ```bash
-    olares-cli wizard frp {olares-id}
+    ./olares-cli wizard frp {olares-id}
     ```
 
     **Example:**
 
     ```bash
-    olares-cli wizard frp alice123@olares.com
+    ./olares-cli wizard frp alice123@olares.com
     ```
 
 2. Select a host address from the output list and save it for the activation step.
@@ -68,13 +83,14 @@ Find an available FRP host to enable remote access to your device.
 A fresh Olares One device is shipped in an uninstalled state. You must run the installation command to set up Olares first before you attempt activation.
 :::
 
-1. Run the install command.
+1. Run the install command as root.
 
     ```bash
     sudo olares-cli install
     ```
-
-2. Wait for the installation process to finish. The terminal outputs a local gateway address and a default password. Save these details for the activation step.
+2. when prompted to Enter the domain name (olares.com by default): enter `olares.com`.
+3. enter the olares ID (which you registered in the LarePAss app): Enter `alice2026@olares.com`
+2. Wait for the installation process to finish. The terminal outputs a wizard URL, which serves as the local gateway address, and a default password. Save these details for the activation step.
 
     **Example:**
     - **Wizard URL**: The local gateway address, such as `http://192.168.50.123:30180`.
@@ -103,7 +119,7 @@ Run the activation command to configure and secure your device. This process con
 2. Replace the placeholders in the following command with your specific values, and then run it.
 
     ```bash
-    sudo olares-cli wizard activate {olares-id} \
+    sudo ./olares-cli wizard activate {olares-id} \
     --mnemonic "{mnemonic}" \
     --password="{password}" \
     --reset-password="{reset-password}" \
@@ -119,7 +135,7 @@ Run the activation command to configure and secure your device. This process con
     If the Olares ID is `alice123@olares.com`, the Wizard URL is `http://192.168.50.123:30180`, and the selected FRP host is `bb.hongkong.frp.olares.com`, run:
 
     ```bash
-    sudo olares-cli wizard activate alice123@olares.com \
+    sudo ./olares-cli wizard activate alice123@olares.com \
     --mnemonic "abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef" \
     --password="v0kSmyVN" \
     --reset-password="Ab1234@" \
