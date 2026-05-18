@@ -11,6 +11,7 @@ func NewOSCommands() []*cobra.Command {
 		NewCmdPrepare(),
 		NewCmdInstallOs(),
 		NewCmdInstallAppGatewayStack(),
+		NewCmdMaintainLinkerdPKI(),
 		NewCmdUninstallOs(),
 		NewCmdChangeIP(),
 		NewCmdRelease(),
