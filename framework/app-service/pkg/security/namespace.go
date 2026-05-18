@@ -37,7 +37,33 @@ var (
 	OSProtectedNamespaces = []string{
 		"os-protected",
 	}
+
+	// AppGatewayMeshNamespaces are namespaces used by the Olares app-gateway stack
+	// (Linkerd control plane + Envoy Gateway). Reconcile adds app-gateway-mesh-np
+	// alongside the default others-np without changing others-np behavior.
+	AppGatewayMeshNamespaces = []string{
+		"linkerd",
+		"app-gateway",
+		"linkerd-viz",
+	}
 )
+
+// IsAppGatewayMeshNamespace reports whether ns is reconciled by the app-gateway mesh NP flow.
+func IsAppGatewayMeshNamespace(ns string) bool {
+	return funk.Contains(AppGatewayMeshNamespaces, ns)
+}
+
+// AppGatewayMeshPeerNamespace returns the paired namespace for app-gateway-mesh-np ingress.
+func AppGatewayMeshPeerNamespace(ns string) string {
+	switch ns {
+	case "linkerd":
+		return "app-gateway"
+	case "app-gateway", "linkerd-viz":
+		return "linkerd"
+	default:
+		return ""
+	}
+}
 
 // IsUserInternalNamespaces returns true if namespace is user level namespace for a user application, false otherwise.
 func IsUserInternalNamespaces(ns string) (bool, string) {
