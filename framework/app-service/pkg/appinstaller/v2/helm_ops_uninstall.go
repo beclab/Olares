@@ -2,6 +2,7 @@ package v2
 
 import (
 	"context"
+	"fmt"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"strings"
 
@@ -48,6 +49,15 @@ func (h *HelmOpsV2) UninstallAll() error {
 			}
 
 			h.ClearMiddlewareRequests("os-platform")
+
+			// Host-path cache is shared with pod mounts; wait for the release's
+			// pods to fully terminate before deleting their backing directories.
+			if len(appCacheDirs) > 0 {
+				if err := h.WaitForPodsDeleted(client, namespace); err != nil {
+					err = fmt.Errorf("wait for pods in namespace %s to be deleted failed, proceeding with cleanup: %v", namespace, err)
+					return err
+				}
+			}
 
 			err = h.ClearCache(client, appCacheDirs)
 			if err != nil {
