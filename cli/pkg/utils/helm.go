@@ -194,6 +194,24 @@ func TemplateAndServerSideApply(ctx context.Context, actionConfig *action.Config
 	return kubectlServerSideApply(ctx, settings, rel.Manifest)
 }
 
+// KubectlApplyFile runs kubectl apply -f on a manifest file (used for supplemental cluster resources).
+func KubectlApplyFile(ctx context.Context, settings *cli.EnvSettings, manifestPath string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return errors.Wrap(err, "kubectl not found in PATH")
+	}
+	cmd := exec.CommandContext(ctx, kubectl, "apply", "--server-side", "--force-conflicts", "-f", manifestPath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if settings != nil && settings.KubeConfig != "" {
+		cmd.Env = append(os.Environ(), "KUBECONFIG="+settings.KubeConfig)
+	}
+	if err := cmd.Run(); err != nil {
+		return errors.Wrap(err, "kubectl apply -f")
+	}
+	return nil
+}
+
 func kubectlServerSideApply(ctx context.Context, settings *cli.EnvSettings, manifest string) error {
 	kubectl, err := exec.LookPath("kubectl")
 	if err != nil {
